@@ -12,7 +12,7 @@
 </script>
 
 <script lang="ts">
-  import TicketHistoryForm from '../components/acerola-ticket-history-form/acerola-ticket-history-form.svelte';
+  import TicketHistoryForm from '$lib/components/acerola-ticket-history-form/acerola-ticket-history-form.svelte';
   import { useTicketHistoryFormModel } from '$lib/hooks/use-ticket-history-form/use-ticket-history-form.svelte';
 
   let { ticket }: TicketHistoryFormSlotProps = $props();

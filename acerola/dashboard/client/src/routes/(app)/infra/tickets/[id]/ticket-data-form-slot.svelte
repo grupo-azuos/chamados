@@ -9,7 +9,7 @@
 </script>
 
 <script lang="ts">
-  import TicketDataForm from '../components/acerola-ticket-data-form/acerola-ticket-data-form.svelte';
+  import TicketDataForm from '$lib/components/acerola-ticket-data-form/acerola-ticket-data-form.svelte';
   import { useTicketDataFormModel } from '$lib/hooks/use-ticket-data-form/use-ticket-data-form.svelte';
 
   let { ticket }: TicketDataFormSlotProps = $props();

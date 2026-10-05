@@ -7,7 +7,7 @@
   import EmptyState from '$lib/components/acerola-empty-state/acerola-empty-state.svelte';
   import ErrorState from '$lib/components/acerola-error-state/acerola-error-state.svelte';
   import { useTicketDetailModel } from '$lib/hooks/use-ticket-detail/use-ticket-detail.svelte';
-  import TicketDetailView from '../components/acerola-ticket-detail-view/acerola-ticket-detail-view.svelte';
+  import TicketDetailView from '$lib/components/acerola-ticket-detail-view/acerola-ticket-detail-view.svelte';
   import TicketDataFormSlot from './ticket-data-form-slot.svelte';
   import TicketHistoryFormSlot from './ticket-history-form-slot.svelte';
 
@@ -15,13 +15,13 @@
    * A rota só compõe: chama o model e entrega para a view (CONTRIBUTING §3).
    *
    * A ficha é uma ROTA, e não um diálogo sobre a fila, porque o chamado tem endereço próprio:
-   * dá para colar `/tickets/7` numa conversa e dizer "é deste que estou falando".
+   * dá para colar `/infra/tickets/7` numa conversa e dizer "é deste que estou falando".
    */
   const id = Number(page.params.id);
 
   const detail = useTicketDetailModel(id);
 
-  const backToQueue = () => void goto('/tickets');
+  const backToQueue = () => void goto('/infra/tickets');
 </script>
 
 <svelte:head>
@@ -30,7 +30,7 @@
 
 <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
 {#if detail.state.isMissing}
-  <div class="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
+  <div class="mx-auto w-full max-w-3xl py-10">
     <EmptyState
       data={{
         title: 'Não encontrei este chamado',
@@ -42,7 +42,7 @@
     </EmptyState>
   </div>
 {:else if detail.state.error}
-  <div class="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
+  <div class="mx-auto w-full max-w-3xl py-10">
     <ErrorState
       data={{ title: 'Não consegui abrir este chamado', message: detail.state.error }}
       actions={{ onRetry: detail.actions.onRetry }}
