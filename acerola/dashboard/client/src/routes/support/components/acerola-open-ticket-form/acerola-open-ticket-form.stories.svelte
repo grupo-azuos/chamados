@@ -248,3 +248,23 @@
     actions,
   }}
 />
+
+<!-- O bot já mandou o protocolo: a tela avisa e não oferece o link. -->
+<Story
+  name="OpenedAndSentByBot"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: true,
+      screenshotName: null,
+      attachments: [],
+      opened: {
+        protocol: 'CH-0013',
+        whatsAppLink: 'https://wa.me/5562999999999?text=Protocolo',
+        isNoticeSent: true,
+      },
+    },
+    state: {},
+    actions,
+  }}
+/>

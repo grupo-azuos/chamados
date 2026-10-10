@@ -8,6 +8,7 @@ import { type TicketNoticeOutcome } from '@template/shared/schemas/ticket.schema
 import { type Env } from '../../../lib/config/env.schema';
 import { ENV } from '../../../lib/config/env.token';
 import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
+import { TicketAssigneesService } from './ticket-assignees.service';
 import { signTicketAccess } from './ticket-invite.util';
 import { WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
 
@@ -26,45 +27,79 @@ export class TicketWhatsappNotifierService {
   constructor(
     @Inject(ENV) private readonly env: Env,
     @Optional() private readonly messaging?: WhatsappMessagingService,
+    @Optional() private readonly assignees?: TicketAssigneesService,
   ) {}
 
-  /** "Recebi o seu chamado" — logo depois de aberto pelo site com um responsável escolhido. */
-  opened(ticket: TicketRow): Promise<TicketNoticeOutcome> {
-    return this.notify(ticket, 'ticket_opened');
+  /**
+   * "Recebi o seu chamado" — logo depois de aberto pelo site. Sai pelo número do responsável
+   * escolhido; quando a pessoa não escolheu ninguém, pelo de alguém que atende a área e tem
+   * WhatsApp vinculado. Esse alguém só ENVIA: o chamado continua sem responsável.
+   */
+  async opened(ticket: TicketRow): Promise<TicketNoticeOutcome> {
+    return this.notify(ticket, 'ticket_opened', await this.senderFor(ticket));
+  }
+
+  private async senderFor(ticket: TicketRow): Promise<NoticeSender | null> {
+    if (ticket.assigneeId) return assigneeOf(ticket);
+    if (!this.messaging || !this.assignees) return null;
+
+    for (const attendant of await this.assignees.listForArea(ticket.area)) {
+      if (await this.messaging.isLinked(attendant.id)) return attendant;
+    }
+
+    return null;
   }
 
   /** "O seu chamado ficou pronto" — quando quem atende clica em avisar. */
   ready(ticket: TicketRow): Promise<TicketNoticeOutcome> {
-    return this.notify(ticket, 'ticket_ready');
+    return this.notify(ticket, 'ticket_ready', assigneeOf(ticket));
   }
 
   private async notify(
     ticket: TicketRow,
     kind: 'ticket_opened' | 'ticket_ready',
+    sender: NoticeSender | null,
   ): Promise<TicketNoticeOutcome> {
     const recipient = toWhatsAppNumber(ticket.contactPhone);
     /* Ter o telefone não autoriza usá-lo: só recebe quem pediu para ser avisado. */
     if (!ticket.notifyWhatsapp || !recipient) return 'not_wanted';
-    if (!ticket.assigneeId) return 'no_assignee';
+    if (!sender) return 'no_assignee';
     if (!this.messaging) return 'not_configured';
 
     return this.messaging.send({
-      senderUserId: ticket.assigneeId,
+      senderUserId: sender.id,
       to: recipient,
       kind,
       ticketId: ticket.id,
-      values: ticketValues(ticket, this.env),
+      values: ticketValues(ticket, this.env, sender.name),
     });
   }
 }
 
-/** As variáveis de um chamado para os textos — as mesmas em toda mensagem que fala dele. */
-export function ticketValues(ticket: TicketRow, env: Env): Record<string, string | null> {
+/** De quem é o número que envia, e o nome que assina a mensagem. */
+type NoticeSender = { id: string; name: string | null };
+
+function assigneeOf(ticket: TicketRow): NoticeSender | null {
+  return ticket.assigneeId ? { id: ticket.assigneeId, name: ticket.assignee } : null;
+}
+
+/**
+ * As variáveis de um chamado para os textos — as mesmas em toda mensagem que fala dele.
+ *
+ * `{{responsavel}}` é quem ASSINA a mensagem: o responsável do chamado e, quando ele ainda não
+ * tem um, o dono do número que está enviando (`senderName`). Sem isso, a mensagem de abertura
+ * de um chamado sem responsável sairia "Aqui é —".
+ */
+export function ticketValues(
+  ticket: TicketRow,
+  env: Env,
+  senderName: string | null = null,
+): Record<string, string | null> {
   return {
     nome: ticket.requesterName,
     protocolo: formatTicketProtocol(ticket.id),
     area: ticketAreaLabel(ticket.area),
-    responsavel: ticket.assignee,
+    responsavel: ticket.assignee ?? senderName,
     solucao: ticket.solution,
     link: ticketAccessLink(ticket.id, env),
   };

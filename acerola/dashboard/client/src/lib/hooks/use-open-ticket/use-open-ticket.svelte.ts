@@ -11,6 +11,7 @@ import {
 import { refuseScreenshot } from '@template/shared/domain/screenshot-catalog.util';
 import { buildWhatsAppLink } from '@template/shared/domain/ticket-whatsapp.util';
 import {
+  type OpenedTicket as ApiOpenedTicket,
   type Ticket,
   ticketFormSchema,
   type TicketFormValues,
@@ -39,7 +40,10 @@ export type OpenTicketField =
 /** O que a pessoa vê depois de abrir: o protocolo para anotar. */
 export type OpenedTicket = {
   protocol: string;
+  /** O link para a pessoa mandar o protocolo a si mesma — o plano B de quando o bot não enviou. */
   whatsAppLink: string | null;
+  /** O bot já mandou o protocolo para o WhatsApp dela. Com isto, o botão do link nem aparece. */
+  isNoticeSent: boolean;
 };
 
 export type OpenTicketModel = {
@@ -135,8 +139,12 @@ export function useOpenTicketModel(): OpenTicketModel {
   const save = mirrorStore(
     createMutation({
       mutationFn: (values: TicketFormValues) => ticketsApi.create(values, screenshot, attachments),
-      onSuccess: (ticket: Ticket) => {
-        opened = { protocol: ticket.protocol, whatsAppLink: buildNotice(ticket) };
+      onSuccess: (ticket: ApiOpenedTicket) => {
+        opened = {
+          protocol: ticket.protocol,
+          whatsAppLink: buildNotice(ticket),
+          isNoticeSent: ticket.openingNotice === 'sent',
+        };
       },
     }),
   );

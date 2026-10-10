@@ -246,6 +246,15 @@ export const TICKET_NOTICE_OUTCOMES = [
 export type TicketNoticeOutcome = (typeof TICKET_NOTICE_OUTCOMES)[number];
 
 export const ticketNoticeSchema = z.object({ outcome: z.enum(TICKET_NOTICE_OUTCOMES) });
+
+/**
+ * O que ABRIR um chamado devolve: o chamado, mais o que aconteceu com o aviso de WhatsApp —
+ * a tela diz "enviamos o protocolo para o seu WhatsApp" só quando ele de fato saiu.
+ */
+export const openedTicketSchema = ticketSchema.extend({
+  openingNotice: z.enum(TICKET_NOTICE_OUTCOMES),
+});
+export type OpenedTicket = z.infer<typeof openedTicketSchema>;
 export type TicketNotice = z.infer<typeof ticketNoticeSchema>;
 
 /** Por que o aviso não saiu, em palavras de gente — o que a tela mostra junto do link manual. */

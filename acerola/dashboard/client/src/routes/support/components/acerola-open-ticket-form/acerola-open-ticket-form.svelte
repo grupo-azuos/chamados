@@ -52,7 +52,11 @@
       screenshotName: string | null;
       /** Os arquivos escolhidos, ainda não enviados. */
       attachments: File[];
-      opened: { protocol: string; whatsAppLink: string | null } | null;
+      /**
+       * O chamado que acabou de abrir. `isNoticeSent`: o bot já mandou o protocolo para o
+       * WhatsApp da pessoa — a tela avisa disso e não oferece o link para ela mandar a si mesma.
+       */
+      opened: { protocol: string; whatsAppLink: string | null; isNoticeSent?: boolean } | null;
       systemProjects?: { value: string; label: string }[];
       /** Quem atende a área escolhida. Vazio esconde o campo: escolher é opcional. */
       assignees?: { value: string; label: string }[];
@@ -298,7 +302,11 @@
         Guarde este número — é com ele que você acompanha o andamento aqui mesmo.
       </p>
 
-      {#if data.opened.whatsAppLink}
+      {#if data.opened.isNoticeSent}
+        <p class="text-success text-sm font-medium" role="status">
+          Enviamos o protocolo e o link de acompanhamento para o seu WhatsApp.
+        </p>
+      {:else if data.opened.whatsAppLink}
         <a
           class="bg-primary text-primary-foreground hover:bg-primary/90 control-md rounded-control inline-flex items-center text-sm font-semibold"
           href={data.opened.whatsAppLink}

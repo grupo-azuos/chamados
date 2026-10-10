@@ -9,6 +9,7 @@ import {
   type TicketHistoryFormValues,
 } from '@template/shared/schemas/ticket-history.schema';
 import {
+  type OpenedTicket,
   type PublicTicket,
   type Ticket,
   type TicketAssigneeOption,
@@ -129,7 +130,7 @@ export const ticketsApi = {
    * deixaria um chamado apontando para uma imagem que nunca subiu.
    */
   create: (values: TicketFormValues, screenshot: File | null, attachments: readonly File[] = []) =>
-    apiRequest<Ticket>('/tickets', {
+    apiRequest<OpenedTicket>('/tickets', {
       method: 'POST',
       body: toTicketFormData(values, screenshot, attachments),
     }),
