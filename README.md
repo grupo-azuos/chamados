@@ -227,6 +227,9 @@ Em produção o container fica atrás de um proxy (Traefik, Caddy ou nginx), e p
 configurada nele — tamanho máximo de upload, limite das rotas públicas, `API_TRUST_PROXY_HOPS`.
 Os exemplos prontos estão em [`acerola/dashboard/docs/reverse-proxy.md`](acerola/dashboard/docs/reverse-proxy.md).
 
+O bot de WhatsApp é um programa à parte, com imagem própria (`docker/bot.dockerfile`) e que só
+sobe com o perfil `whatsapp` do compose — ver [`acerola/dashboard/docs/whatsapp-bot.md`](acerola/dashboard/docs/whatsapp-bot.md).
+
 ---
 
 ## Autenticação e autorização
