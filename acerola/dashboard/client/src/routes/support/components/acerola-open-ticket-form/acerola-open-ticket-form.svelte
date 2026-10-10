@@ -56,6 +56,11 @@
       systemProjects?: { value: string; label: string }[];
       /** Quem atende a área escolhida. Vazio esconde o campo: escolher é opcional. */
       assignees?: { value: string; label: string }[];
+      /**
+       * Quem chegou pelo link do WhatsApp: com quem está abrindo o chamado e em quais áreas
+       * essa pessoa atende — só essas aparecem para escolher.
+       */
+      invite?: { assigneeName: string; areas: TicketArea[] } | null;
     };
     state: {
       isSubmitting?: boolean;
@@ -64,6 +69,8 @@
       attachmentError?: string | null;
       systemProjectsLoading?: boolean;
       systemProjectsError?: string | null;
+      /** O link do WhatsApp não vale mais: um aviso, e o formulário segue normal. */
+      inviteError?: string | null;
     };
     actions: {
       onChange: (field: OpenTicketField, value: string) => void;
@@ -173,6 +180,10 @@
   const fields = $derived(data.fields);
   const systemProjects = $derived(data.systemProjects ?? []);
   const assignees = $derived(data.assignees ?? []);
+  /* Com convite, só as áreas que aquele responsável atende: escolher outra o tiraria do chamado. */
+  const areaCards = $derived(
+    data.invite ? AREA_CARDS.filter((card) => data.invite?.areas.includes(card.value)) : AREA_CARDS,
+  );
 
   /* As opções de tipo de problema dependem da ÁREA escolhida — Manutenção não tem "rede
      caiu" na lista, nem Infra tem "ar-condicionado". */
@@ -334,6 +345,15 @@
       <!-- Uma etapa por vez: `Timeline` de um item só dá o cabeçalho (ícone + título) sem a
            linha de conexão, que só faz sentido quando há uma próxima etapa visível. -->
       <div bind:this={stepContentEl}>
+      {#if data.invite}
+        <p class="rounded-box border-primary/20 bg-primary/5 text-ink-700 border px-3.5 py-2.5 text-sm" role="status">
+          Você está abrindo um chamado com <strong>{data.invite.assigneeName}</strong>.
+        </p>
+      {:else if formState.inviteError}
+        <p class="rounded-box border-warning/30 bg-warning/5 text-ink-700 border px-3.5 py-2.5 text-sm" role="status">
+          {formState.inviteError} Você ainda pode abrir o chamado por aqui.
+        </p>
+      {/if}
       <Timeline>
         {#if stepId === 'area'}
           <TimelineStep
@@ -341,7 +361,7 @@
             ui={{ isLast: true, tone: 'brand' }}
           >
             <div class="grid gap-3 sm:grid-cols-3">
-              {#each AREA_CARDS as card (card.value)}
+              {#each areaCards as card (card.value)}
                 {@const isSelected = fields.area.value === card.value}
                 <button
                   type="button"

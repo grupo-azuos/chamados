@@ -12,9 +12,11 @@ e é separado do resto: o servidor de chamados não conhece o WhatsApp, só a AP
 - **Chamado pronto.** Na ficha do chamado, **Avisar no WhatsApp** envia pelo número do
   responsável. Quando não sai (sem vínculo, limite do dia), a tela diz o motivo e oferece o link
   para enviar à mão.
-- **Chamado por conversa.** Quem manda `/chamado` para o número de um responsável recebe o
-  formulário, devolve preenchido e o chamado nasce com aquele responsável. Quem atende mais de
-  uma área (ou é super admin) pergunta antes de qual área é. `cancelar` encerra a conversa.
+- **Chamado a partir do WhatsApp.** Quem manda `/chamado` para o número de um responsável
+  recebe UMA mensagem com um link assinado. O link abre o `/support` já com o responsável, o
+  telefone de quem escreveu e, quando o responsável atende uma área só, a área. O chamado é
+  preenchido na tela, e a confirmação com o protocolo chega pelo WhatsApp do responsável.
+  O link vale 30 minutos e não pode ser alterado: a assinatura é conferida pelo servidor.
 - **Textos.** O super admin edita cada mensagem em **Meu Perfil › Textos do bot**, com variáveis
   entre chaves duplas (`{{protocolo}}`) e prévia.
 - **Limite.** Cada número manda no máximo `WHATSAPP_DAILY_LIMIT` mensagens automáticas por dia
@@ -24,10 +26,13 @@ e é separado do resto: o servidor de chamados não conhece o WhatsApp, só a AP
 ### O que o bot lê
 
 O número vinculado é o WhatsApp de alguém, e quase tudo o que chega nele não é chamado. O bot só
-encaminha ao servidor a mensagem que é **exatamente** `/chamado` e as mensagens de uma conversa
-de abertura em andamento (até ela terminar, ser cancelada ou passar 15 minutos). Todo o resto
-fica no bot e é descartado. Ele só responde em conversa privada — nunca em grupo — e ignora
-mensagem com mais de 2 minutos, para não responder em lote ao voltar de uma queda.
+encaminha ao servidor a mensagem que é **exatamente** `/chamado`. Todo o resto fica no bot e é
+descartado. Ele só responde em conversa privada — nunca em grupo — e ignora mensagem com mais
+de 2 minutos, para não responder em lote ao voltar de uma queda.
+
+O link das mensagens usa o `APP_PUBLIC_URL` do servidor: ele precisa ser um endereço que quem
+recebe consiga abrir. Sem a variável, vale a primeira origem de `API_CORS_ORIGIN` — que na
+máquina de desenvolvimento é `localhost`, e só abre nela.
 
 ## Ligar o servidor ao bot
 

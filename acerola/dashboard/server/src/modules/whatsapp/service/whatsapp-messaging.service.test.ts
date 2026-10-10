@@ -112,7 +112,7 @@ describe('WhatsappMessagingService.reply', () => {
   const reply = {
     senderUserId: 'u-ana',
     recipient: '5562999990002',
-    kind: 'intake_form' as const,
+    kind: 'intake_link' as const,
     values: {},
     ticketId: null,
   };
@@ -121,7 +121,7 @@ describe('WhatsappMessagingService.reply', () => {
   it('hands back the text and counts it, leaving the delivery to the bot', async () => {
     const { service, bot, messages } = makeService();
 
-    expect(await service.reply(reply)).toBe('text:intake_form');
+    expect(await service.reply(reply)).toBe('text:intake_link');
     expect(messages.record).toHaveBeenCalledOnce();
     expect(bot.sendText).not.toHaveBeenCalled();
   });

@@ -44,6 +44,7 @@ import {
   TicketAssigneeOptionsQueryDto,
   TicketDashboardQueryDto,
   TicketDto,
+  TicketInviteDto,
   TicketListQueryDto,
   TicketListResponseDto,
   TicketNoticeDto,
@@ -143,6 +144,19 @@ export class TicketsController {
     @Query() query: TicketAssigneeOptionsQueryDto,
   ): Promise<TicketAssigneeOptionDto[]> {
     return this.service.listAssigneeOptions(query.area);
+  }
+
+  @Get('invites/:token')
+  @Public()
+  @ApiOperation({
+    summary: 'Lê um convite de chamado (público)',
+    description:
+      'O convite é o link assinado que o bot de WhatsApp manda a quem escreve `/chamado`. Devolve o responsável, as áreas que ele atende e o telefone de quem escreveu, para o formulário abrir preenchido. Link forjado ou vencido: 404.',
+  })
+  @ApiOkResponse({ type: TicketInviteDto })
+  @ApiNotFoundResponse({ description: 'O link não vale mais.' })
+  async readInvite(@Param('token') token: string): Promise<TicketInviteDto> {
+    return this.service.readInvite(token);
   }
 
   @Get('protocol/:protocol')

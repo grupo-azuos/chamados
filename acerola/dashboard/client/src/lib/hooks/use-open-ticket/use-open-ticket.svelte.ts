@@ -1,5 +1,13 @@
 import { createForm } from '@tanstack/svelte-form';
+import { page } from '$app/state';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
+import { formatPhoneInput } from '@template/shared/domain/phone.util';
+import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
+import {
+  invitePhoneForForm,
+  TICKET_INVITE_PARAM,
+  type TicketInvite,
+} from '@template/shared/domain/ticket-invite.util';
 import { refuseScreenshot } from '@template/shared/domain/screenshot-catalog.util';
 import { buildWhatsAppLink } from '@template/shared/domain/ticket-whatsapp.util';
 import {
@@ -46,6 +54,11 @@ export type OpenTicketModel = {
     systemProjects: { value: string; label: string }[];
     /** Quem atende a área escolhida — as opções de "com quem você quer falar". */
     assignees: { value: string; label: string }[];
+    /**
+     * O convite, quando a pessoa chegou pelo link do WhatsApp: com quem ela está abrindo o
+     * chamado e em quais áreas. Nulo no caminho normal.
+     */
+    invite: { assigneeName: string; areas: TicketArea[] } | null;
   };
   state: {
     isSubmitting: boolean;
@@ -56,6 +69,8 @@ export type OpenTicketModel = {
     attachmentError: string | null;
     systemProjectsLoading: boolean;
     systemProjectsError: string | null;
+    /** O link do WhatsApp não vale mais (vencido ou alterado). O formulário abre normal, sem ele. */
+    inviteError: string | null;
   };
   actions: {
     onChange: (field: OpenTicketField, value: string) => void;
@@ -146,6 +161,29 @@ export function useOpenTicketModel(): OpenTicketModel {
      sozinhas quando a área muda. Falhou? A lista fica vazia e o campo some — escolher o
      responsável é opcional, e a falta dele não pode impedir ninguém de pedir socorro. */
   let assignees = $state<TicketAssigneeOption[]>([]);
+
+  /* O convite do WhatsApp (`/support?convite=…`). Lido uma vez, na chegada: ele preenche o
+     responsável, o telefone e — quando o responsável atende uma área só — a área. Link que não
+     vale mais não trava nada: a pessoa abre o chamado pelo formulário normal. */
+  let invite = $state<TicketInvite | null>(null);
+  let inviteError = $state<string | null>(null);
+  const inviteToken = page.url.searchParams.get(TICKET_INVITE_PARAM);
+  if (inviteToken) {
+    void ticketsApi
+      .invite(inviteToken)
+      .then((received) => {
+        invite = received;
+        form.setFieldValue('assigneeId', received.assignee.id);
+        form.setFieldValue('notifyWhatsapp', true);
+        const phone = invitePhoneForForm(received.phone);
+        if (phone) form.setFieldValue('contactPhone', formatPhoneInput(phone));
+        const [onlyArea, ...others] = received.areas;
+        if (onlyArea && others.length === 0) form.setFieldValue('area', onlyArea);
+      })
+      .catch((error: unknown) => {
+        inviteError = readError(error) ?? 'Este link não vale mais. Peça outro pelo WhatsApp.';
+      });
+  }
   $effect(() => {
     const area = values.current.area;
     assignees = [];
@@ -190,6 +228,7 @@ export function useOpenTicketModel(): OpenTicketModel {
         screenshotName: screenshot?.name ?? null,
         attachments,
         opened,
+        invite: invite ? { assigneeName: invite.assignee.name, areas: invite.areas } : null,
         assignees: assignees.map((option) => ({ value: option.id, label: option.name })),
         systemProjects: (projects.current.data ?? []).map((project) => ({
           value: String(project.id),
@@ -205,10 +244,16 @@ export function useOpenTicketModel(): OpenTicketModel {
         attachmentError,
         systemProjectsLoading: projects.current.isPending,
         systemProjectsError: projects.current.isError ? readError(projects.current.error) : null,
+        inviteError,
       };
     },
     actions: {
-      onChange: (field, value) => form.setFieldValue(field, value as never),
+      onChange: (field, value) => {
+        /* Quem chegou pelo link do WhatsApp já escolheu com quem falar: trocar de área (que
+           limpa o responsável) não pode desfazer essa escolha. */
+        const kept = field === 'assigneeId' && value === '' && invite ? invite.assignee.id : value;
+        form.setFieldValue(field, kept as never);
+      },
       /* `validateField` só marca o campo como "tocado" quando existe um `form.Field` montado
          — e esses hooks nunca montam um, só chamam `setFieldValue`/`validateField` direto.
          Sem marcar aqui, o erro nunca aparecia ao SAIR do campo, só depois de um envio (ver

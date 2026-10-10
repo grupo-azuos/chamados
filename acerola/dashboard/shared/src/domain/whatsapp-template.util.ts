@@ -11,10 +11,7 @@
 export const WHATSAPP_TEMPLATE_KEYS = [
   'ticket_opened',
   'ticket_ready',
-  'intake_area',
-  'intake_form',
-  'intake_invalid',
-  'intake_created',
+  'intake_link',
   'limit_alert',
 ] as const;
 
@@ -44,35 +41,13 @@ export const WHATSAPP_TEMPLATES: Record<WhatsappTemplateKey, WhatsappTemplateDef
     defaultBody:
       'Olá, {{nome}}! O seu chamado *{{protocolo}}* foi finalizado.\n\n*Solução:* {{solucao}}\n\nDetalhes: {{link}}',
   },
-  intake_area: {
-    label: 'Pergunta de área',
+  intake_link: {
+    label: 'Link para abrir chamado',
     description:
-      'Primeira resposta ao /chamado quando o responsável atende mais de uma área. {{opcoes}} é a lista numerada.',
-    variables: ['responsavel', 'opcoes'],
+      'A resposta ao /chamado: o link que abre o formulário já com o responsável e o telefone de quem escreveu.',
+    variables: ['responsavel', 'link', 'validade'],
     defaultBody:
-      'Olá! Aqui é o atendimento de *{{responsavel}}*.\n\nSobre o que é o chamado? Responda só com o *número*:\n\n{{opcoes}}\n\n> _Para desistir, envie *cancelar*._',
-  },
-  intake_form: {
-    label: 'Formulário do chamado',
-    description:
-      'O formulário que a pessoa copia, preenche e devolve. {{formulario}} são os campos, com as opções numeradas.',
-    variables: ['responsavel', 'area', 'formulario'],
-    defaultBody:
-      'Para abrir um chamado de *{{area}}* com {{responsavel}}, copie esta mensagem, preencha depois dos dois-pontos e envie:\n\n{{formulario}}\n\n> _Para desistir, envie *cancelar*._',
-  },
-  intake_invalid: {
-    label: 'Formulário com erro',
-    description: 'Enviada quando o formulário voltou incompleto. {{erros}} é a lista do que falta.',
-    variables: ['erros'],
-    defaultBody:
-      'Quase lá! Não consegui abrir o chamado porque:\n\n{{erros}}\n\nCorrija e envie o formulário de novo.',
-  },
-  intake_created: {
-    label: 'Chamado criado pela conversa',
-    description: 'Confirmação depois que o formulário é aceito.',
-    variables: ['nome', 'protocolo', 'area', 'responsavel', 'link'],
-    defaultBody:
-      'Pronto, {{nome}}! O chamado *{{protocolo}}* ({{area}}) foi aberto com {{responsavel}}.\n\nAcompanhe por aqui: {{link}}',
+      'Olá! Aqui é o atendimento de *{{responsavel}}*.\n\nPara abrir o seu chamado, toque no link e preencha o formulário:\n{{link}}\n\n> _O link vale por {{validade}} minutos._',
   },
   limit_alert: {
     label: 'Alerta de limite',

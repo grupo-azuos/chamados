@@ -181,6 +181,39 @@
   }}
 />
 
+<!-- Chegou pelo link do WhatsApp: o aviso de com quem está falando, e só as áreas dessa pessoa. -->
+<Story
+  name="FromWhatsAppLink"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: true,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+      invite: { assigneeName: 'Ana Lima', areas: ['infra', 'manutencao'] },
+    },
+    state: {},
+    actions,
+  }}
+/>
+
+<!-- Caso limite: o link venceu. O formulário abre normal, com um aviso. -->
+<Story
+  name="ExpiredWhatsAppLink"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: false,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+    },
+    state: { inviteError: 'Este link não vale mais. Peça outro pelo WhatsApp.' },
+    actions,
+  }}
+/>
+
 <!-- Com responsáveis para escolher: o campo aparece no último passo ("Como te avisamos"). -->
 <Story
   name="WithAssignees"
