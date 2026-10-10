@@ -3,7 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { type Env } from '../../../lib/config/env.schema';
 import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
 import { type WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
-import { TicketWhatsappNotifierService, ticketValues } from './ticket-whatsapp-notifier.service';
+import { verifyTicketAccess } from './ticket-invite.util';
+import {
+  ticketAccessLink,
+  TicketWhatsappNotifierService,
+  ticketValues,
+} from './ticket-whatsapp-notifier.service';
 
 const env = { API_CORS_ORIGIN: 'https://chamados.exemplo.com/, http://localhost:5005' } as Env;
 
@@ -62,6 +67,16 @@ describe('TicketWhatsappNotifierService', () => {
     expect(messaging.send.mock.calls[0]?.[0]).toMatchObject({ kind: 'ticket_opened' });
   });
 
+  /* O link da mensagem abre direto AQUELE chamado: assinado, para ninguém trocar o número. */
+  it('puts in the message a signed link that opens that very ticket', () => {
+    const secret = 's'.repeat(40);
+    const link = ticketAccessLink(7, { ...env, BOT_API_TOKEN: secret } as Env);
+    const token = link.split('chamado=')[1] ?? '';
+
+    expect(link).toMatch(/^https:\/\/chamados\.exemplo\.com\/support\?chamado=/);
+    expect(verifyTicketAccess(token, secret)).toBe(7);
+  });
+
   it('prefers the public address over the first allowed origin', () => {
     const values = ticketValues(ticket(), {
       ...env,
@@ -101,5 +116,10 @@ describe('TicketWhatsappNotifierService', () => {
 
   it('says the integration is not configured when messaging is absent', async () => {
     expect(await new TicketWhatsappNotifierService(env).ready(ticket())).toBe('not_configured');
+  });
+
+  /* Sem segredo para assinar, o link cai na página de consulta — nunca um link sem assinatura. */
+  it('falls back to the plain lookup page when there is nothing to sign with', () => {
+    expect(ticketAccessLink(7, env)).toBe('https://chamados.exemplo.com/support');
   });
 });

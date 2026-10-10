@@ -61,7 +61,7 @@ import { TicketHistoriesRepository } from '../repository/ticket-histories.reposi
 import { TICKET_NOT_FOUND, TicketAccessService } from './ticket-access.service';
 import { TicketAttachmentsService, type UploadedAttachment } from './ticket-attachments.service';
 import { TicketAssigneesService } from './ticket-assignees.service';
-import { verifyTicketInvite } from './ticket-invite.util';
+import { verifyTicketAccess, verifyTicketInvite } from './ticket-invite.util';
 import { TicketHistoriesService } from './ticket-histories.service';
 import {
   type TicketNoticeOutcome,
@@ -385,10 +385,26 @@ export class TicketsService {
    * Aceita o protocolo como a pessoa o digitou (`CH-0007`, `ch 7`, `7`): quem anotou no
    * celular raramente digita o traço, e recusar por causa disso transforma um acerto em erro.
    */
+  /**
+   * O chamado de um LINK DE CONSULTA — o link assinado que vai nas mensagens de WhatsApp. Abre
+   * direto aquele chamado, com os mesmos campos da consulta por protocolo. Link que não confere:
+   * 404, igual a um chamado que não existe.
+   */
+  async findByAccessToken(token: string): Promise<PublicTicket> {
+    const id = this.env?.BOT_API_TOKEN ? verifyTicketAccess(token, this.env.BOT_API_TOKEN) : null;
+    if (!id) throw new NotFoundException(NOT_FOUND);
+
+    return this.findPublicById(id);
+  }
+
   async findByProtocol(protocol: string): Promise<PublicTicket> {
     const id = parseTicketProtocol(protocol);
     if (!id) throw new NotFoundException(NOT_FOUND);
 
+    return this.findPublicById(id);
+  }
+
+  private async findPublicById(id: number): Promise<PublicTicket> {
     const row = await this.repository.findById(id);
     if (!row) throw new NotFoundException(NOT_FOUND);
 

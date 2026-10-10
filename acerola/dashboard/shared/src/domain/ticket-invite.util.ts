@@ -16,6 +16,12 @@ export type TicketInvite = {
   phone: string | null;
 };
 
+/**
+ * O parâmetro do LINK DE CONSULTA: `/support?chamado=…`. É o link que vai nas mensagens de um
+ * chamado ("acompanhe por aqui"): abre direto AQUELE chamado, sem a pessoa digitar protocolo.
+ */
+export const TICKET_ACCESS_PARAM = 'chamado';
+
 /** O nome do parâmetro do link: `/support?convite=…`. */
 export const TICKET_INVITE_PARAM = 'convite';
 

@@ -14,7 +14,7 @@ import { TicketAccessService } from './ticket-access.service';
 import { type TicketAssigneesService } from './ticket-assignees.service';
 import { type TicketAttachmentsService } from './ticket-attachments.service';
 import { type TicketHistoriesService } from './ticket-histories.service';
-import { signTicketInvite } from './ticket-invite.util';
+import { signTicketAccess, signTicketInvite } from './ticket-invite.util';
 import { type TicketWhatsappNotifierService } from './ticket-whatsapp-notifier.service';
 import { TicketsService } from './tickets.service';
 
@@ -110,9 +110,15 @@ function makeService(
   const service = new TicketsService(
     tickets,
     { upload: vi.fn(), createDownloadUrl: vi.fn() } as unknown as StorageService,
-    { attach: vi.fn().mockResolvedValue([]) } as unknown as TicketAttachmentsService,
+    {
+      attach: vi.fn().mockResolvedValue([]),
+      list: vi.fn().mockResolvedValue([]),
+    } as unknown as TicketAttachmentsService,
     new TicketAccessService(tickets),
-    { recordOpening: vi.fn().mockResolvedValue(undefined) } as unknown as TicketHistoriesService,
+    {
+      recordOpening: vi.fn().mockResolvedValue(undefined),
+      listPublic: vi.fn().mockResolvedValue([]),
+    } as unknown as TicketHistoriesService,
     { record: vi.fn().mockResolvedValue({}) } as unknown as TicketHistoriesRepository,
     undefined,
     undefined,
@@ -249,6 +255,31 @@ describe('TicketsService.readInvite', () => {
     const { service } = makeService({ areas: [] });
 
     await expect(service.readInvite(token, NOW)).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe('TicketsService.findByAccessToken', () => {
+  // feliz
+  it('opens the ticket of a signed link, with the public fields only', async () => {
+    const { service, repository } = makeService();
+
+    const ticket = await service.findByAccessToken(signTicketAccess(7, SECRET));
+
+    expect(repository.findById).toHaveBeenCalledWith(7);
+    expect(ticket.protocol).toBe('CH-0007');
+    expect(ticket).not.toHaveProperty('contactPhone');
+  });
+
+  // triste
+  /* Trocar o número dentro do link não abre o chamado de outra pessoa. */
+  it('refuses a link that was tampered with, without reading any ticket', async () => {
+    const { service, repository } = makeService();
+
+    await expect(service.findByAccessToken(`${signTicketAccess(7, SECRET)}x`)).rejects.toThrow(
+      NotFoundException,
+    );
+    await expect(service.findByAccessToken('lixo')).rejects.toThrow(NotFoundException);
+    expect(repository.findById).not.toHaveBeenCalled();
   });
 });
 

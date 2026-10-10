@@ -146,6 +146,19 @@ export class TicketsController {
     return this.service.listAssigneeOptions(query.area);
   }
 
+  @Get('access/:token')
+  @Public()
+  @ApiOperation({
+    summary: 'Consulta um chamado pelo link assinado (público)',
+    description:
+      'O link de consulta é o que vai nas mensagens de WhatsApp de um chamado. Abre direto aquele chamado, com os mesmos campos da consulta por protocolo. Link alterado: 404.',
+  })
+  @ApiOkResponse({ type: PublicTicketDto })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  async findByAccessToken(@Param('token') token: string): Promise<PublicTicketDto> {
+    return this.service.findByAccessToken(token);
+  }
+
   @Get('invites/:token')
   @Public()
   @ApiOperation({
