@@ -7,9 +7,11 @@
   import RoleListView from '$lib/components/acerola-role-list-view/acerola-role-list-view.svelte';
   import { useRolesModel } from '$lib/hooks/use-roles/use-roles.svelte';
   import { useWhatsappLinkModel } from '$lib/hooks/use-whatsapp-link/use-whatsapp-link.svelte';
+  import { useWhatsappTemplatesModel } from '$lib/hooks/use-whatsapp-templates/use-whatsapp-templates.svelte';
   import RoleFormSlot from '../roles/role-form-slot.svelte';
   import WhatsappLinkCard from './components/acerola-whatsapp-link-card/acerola-whatsapp-link-card.svelte';
   import WhatsappLinkDialog from './components/acerola-whatsapp-link-dialog/acerola-whatsapp-link-dialog.svelte';
+  import WhatsappTemplatesDialog from './components/acerola-whatsapp-templates-dialog/acerola-whatsapp-templates-dialog.svelte';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
@@ -17,6 +19,9 @@
   const list = useRolesModel();
   /* `untrack`: o id de quem está logado não muda enquanto a tela está aberta. */
   const whatsapp = useWhatsappLinkModel(untrack(() => data.user?.id ?? ''));
+  /* Os textos do bot são do super admin: para os demais o botão nem aparece. */
+  const templates = useWhatsappTemplatesModel();
+  const canEditTemplates = $derived(data.user?.role === 'superadmin');
 
   type FormTarget = { role: InternalRole | null } | null;
   let formTarget = $state<FormTarget>(null);
@@ -49,18 +54,28 @@
   {#snippet afterProfile()}
     {#if whatsapp.state.canLink}
       <WhatsappLinkCard
-        data={{ phone: whatsapp.data.phone }}
+        data={{
+          phone: whatsapp.data.phone,
+          sentToday: whatsapp.data.sentToday,
+          dailyLimit: whatsapp.data.dailyLimit,
+        }}
         state={{
           isLoading: whatsapp.state.isLoading,
           isConfigured: whatsapp.state.isConfigured,
           linkState: whatsapp.state.linkState,
           error: whatsapp.state.error,
         }}
-        actions={{ onLink: whatsapp.actions.onOpen, onUnlink: whatsapp.actions.onAskUnlink }}
+        actions={{
+          onLink: whatsapp.actions.onOpen,
+          onUnlink: whatsapp.actions.onAskUnlink,
+          onEditTemplates: canEditTemplates ? templates.actions.onOpen : undefined,
+        }}
       />
     {/if}
   {/snippet}
 </RoleListView>
+
+<WhatsappTemplatesDialog data={templates.data} state={templates.state} actions={templates.actions} />
 
 <WhatsappLinkDialog
   data={{ qrImage: whatsapp.data.qrImage }}

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
@@ -33,7 +33,7 @@ export class WhatsappTemplatesController {
     return this.service.list(user);
   }
 
-  @Put(':key')
+  @Patch(':key')
   @ApiOperation({
     summary: 'Troca o texto de uma mensagem do bot',
     description:
