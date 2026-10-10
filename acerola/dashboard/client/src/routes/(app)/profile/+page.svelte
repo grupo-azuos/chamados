@@ -1,16 +1,22 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
   import { ROLE_CONTEXT_LABELS } from '@template/shared/schemas/user.schema';
 
   import ConfirmDialog from '$lib/components/acerola-confirm-dialog/acerola-confirm-dialog.svelte';
   import RoleListView from '$lib/components/acerola-role-list-view/acerola-role-list-view.svelte';
   import { useRolesModel } from '$lib/hooks/use-roles/use-roles.svelte';
+  import { useWhatsappLinkModel } from '$lib/hooks/use-whatsapp-link/use-whatsapp-link.svelte';
   import RoleFormSlot from '../roles/role-form-slot.svelte';
+  import WhatsappLinkCard from './components/acerola-whatsapp-link-card/acerola-whatsapp-link-card.svelte';
+  import WhatsappLinkDialog from './components/acerola-whatsapp-link-dialog/acerola-whatsapp-link-dialog.svelte';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
 
   const list = useRolesModel();
+  /* `untrack`: o id de quem está logado não muda enquanto a tela está aberta. */
+  const whatsapp = useWhatsappLinkModel(untrack(() => data.user?.id ?? ''));
 
   type FormTarget = { role: InternalRole | null } | null;
   let formTarget = $state<FormTarget>(null);
@@ -37,6 +43,51 @@
     ...list.actions,
     onCreate: () => (formTarget = { role: null }),
     onEdit: (role: InternalRole) => (formTarget = { role }),
+  }}
+>
+  <!-- Só para quem pode vincular: os demais nem veem o cartão. -->
+  {#snippet afterProfile()}
+    {#if whatsapp.state.canLink}
+      <WhatsappLinkCard
+        data={{ phone: whatsapp.data.phone }}
+        state={{
+          isLoading: whatsapp.state.isLoading,
+          isConfigured: whatsapp.state.isConfigured,
+          linkState: whatsapp.state.linkState,
+          error: whatsapp.state.error,
+        }}
+        actions={{ onLink: whatsapp.actions.onOpen, onUnlink: whatsapp.actions.onAskUnlink }}
+      />
+    {/if}
+  {/snippet}
+</RoleListView>
+
+<WhatsappLinkDialog
+  data={{ qrImage: whatsapp.data.qrImage }}
+  state={{
+    step: whatsapp.state.step,
+    secondsLeft: whatsapp.state.secondsLeft,
+    isLinking: whatsapp.state.isLinking,
+    error: whatsapp.state.linkError,
+  }}
+  actions={{ onConfirm: whatsapp.actions.onConfirmRisks, onClose: whatsapp.actions.onClose }}
+/>
+
+<ConfirmDialog
+  data={{
+    title: 'Desvincular seu WhatsApp?',
+    description: `O número ${whatsapp.data.phone} deixa de enviar as mensagens dos chamados. Para voltar, será preciso ler o QR code de novo.`,
+    confirmLabel: 'Desvincular',
+    confirmingLabel: 'Desvinculando…',
+  }}
+  state={{
+    isOpen: whatsapp.state.isUnlinkOpen,
+    isConfirming: whatsapp.state.isUnlinking,
+    error: whatsapp.state.unlinkError,
+  }}
+  actions={{
+    onConfirm: whatsapp.actions.onConfirmUnlink,
+    onCancel: whatsapp.actions.onCancelUnlink,
   }}
 />
 
