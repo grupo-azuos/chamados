@@ -13,7 +13,7 @@ e é separado do resto: o servidor de chamados não conhece o WhatsApp, só a AP
 No `server/.env`, aponte para o bot e repita o token dele:
 
 ```bash
-BOT_API_URL=http://127.0.0.1:3010
+BOT_API_URL=http://127.0.0.1:4005
 BOT_API_TOKEN=<o mesmo BOT_API_TOKEN do bot/.env>
 ```
 
@@ -35,14 +35,29 @@ Por isso o bot **não** é um workspace do `package.json` da raiz: tem `package.
 
 ## Rodar na sua máquina
 
+O bot sobe junto com o resto:
+
 ```bash
 cd acerola/dashboard
-npm run bot:install            # instala as dependências do bot (uma vez)
-cp bot/.env.example bot/.env   # e preencha BOT_API_TOKEN e BOT_SESSION_KEY
-npm run dev:bot                # sobe em http://127.0.0.1:3010
+cp bot/.env.example bot/.env   # uma vez: preencha BOT_API_TOKEN e BOT_SESSION_KEY
+npm run dev                    # API :3005 + tela :5005 + bot :4005
 ```
 
-Para conferir lint, tipos e testes do bot: `npm run bot:check`.
+Na primeira vez, o `npm run dev` instala as dependências do bot sozinho. Sem o `bot/.env` o bot
+não sobe — o resto do sistema funciona normalmente, e o terminal avisa o que falta.
+
+Cada porta é trocada no `.env` do próprio programa:
+
+| Programa | Porta padrão | Onde trocar |
+|---|---|---|
+| API (Nest) | 3005 | `API_PORT`, em `server/.env` |
+| Tela (Vite) | 5005 | `VITE_PORT`, em `client/.env` |
+| Bot | 4005 | `BOT_PORT`, em `bot/.env` |
+
+Trocou a porta do bot? Troque junto o `BOT_API_URL` em `server/.env`, que é por onde o servidor
+o encontra. Trocou a da API? O mesmo vale para `VITE_API_PORT`, em `client/.env`.
+
+Para subir só o bot: `npm run dev:bot`. Para conferir lint, tipos e testes dele: `npm run bot:check`.
 
 ## Rodar com Docker
 

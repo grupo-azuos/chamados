@@ -7,7 +7,7 @@ import { z } from 'zod';
 const envSchema = z.object({
   /** Só a máquina local por padrão: quem fala com o bot é o servidor, nunca a internet. */
   BOT_HOST: z.string().trim().min(1).default('127.0.0.1'),
-  BOT_PORT: z.coerce.number().int().min(1).max(65_535).default(3010),
+  BOT_PORT: z.coerce.number().int().min(1).max(65_535).default(4005),
   /**
    * O segredo que o servidor apresenta em toda chamada. Quem tem este valor manda mensagem
    * pelo WhatsApp de qualquer pessoa vinculada — por isso o tamanho mínimo.

@@ -21,5 +21,5 @@ COPY --from=build /bot/dist dist
 RUN mkdir /data && chown node:node /data
 USER node
 ENV BOT_DATA_DIR=/data
-EXPOSE 3010
+EXPOSE 4005
 CMD ["node", "dist/main.js"]
