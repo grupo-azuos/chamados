@@ -151,6 +151,12 @@ export const ticketSchema = z.object({
   githubIssueUrl: z.string().nullable().optional(),
 
   assignee: z.string().nullable(),
+  /**
+   * O id de quem é o responsável. O `assignee` de cima é o NOME, para mostrar; este é quem ele
+   * é de fato — é por este id que o sistema acha o WhatsApp vinculado do responsável. Nulo em
+   * chamado sem responsável e nos antigos, de antes de o id existir.
+   */
+  assigneeId: z.string().nullable().optional(),
   solution: z.string().nullable(),
   createdAt: z.string().datetime(),
   startedAt: z.string().datetime().nullable(),
@@ -202,11 +208,57 @@ export const publicTicketSchema = ticketSchema
 
 export type PublicTicket = z.infer<typeof publicTicketSchema>;
 
+/** O id que o autenticador entrega é curto; o teto existe só para o campo não aceitar um texto qualquer. */
+const ASSIGNEE_ID_MAX_LENGTH = 128;
+
+/** Uma pessoa que pode ser escolhida como responsável: só o que a tela pública precisa mostrar. */
+export const ticketAssigneeOptionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+export type TicketAssigneeOption = z.infer<typeof ticketAssigneeOptionSchema>;
+
+/** De qual área são os responsáveis pedidos. */
+export const ticketAssigneeOptionsQuerySchema = z.object({ area: ticketAreaSchema });
+
+/**
+ * O desfecho de um aviso por WhatsApp. `sent` é o único em que a mensagem saiu; os demais
+ * dizem por quê não — e a tela oferece o link manual no lugar.
+ */
+export const TICKET_NOTICE_OUTCOMES = [
+  'sent',
+  'not_configured',
+  'not_connected',
+  'not_linked',
+  'recipient_not_found',
+  'limit_reached',
+  'no_assignee',
+  'not_wanted',
+  'failed',
+] as const;
+export type TicketNoticeOutcome = (typeof TICKET_NOTICE_OUTCOMES)[number];
+
+export const ticketNoticeSchema = z.object({ outcome: z.enum(TICKET_NOTICE_OUTCOMES) });
+export type TicketNotice = z.infer<typeof ticketNoticeSchema>;
+
+/** Por que o aviso não saiu, em palavras de gente — o que a tela mostra junto do link manual. */
+export const TICKET_NOTICE_MESSAGES: Record<Exclude<TicketNoticeOutcome, 'sent'>, string> = {
+  not_configured: 'O WhatsApp não está configurado nesta instalação.',
+  not_connected: 'O WhatsApp do responsável está desconectado.',
+  not_linked: 'O responsável ainda não vinculou o WhatsApp.',
+  recipient_not_found: 'O telefone informado no chamado não tem WhatsApp.',
+  limit_reached: 'O responsável já atingiu o limite de mensagens de hoje.',
+  no_assignee: 'O chamado ainda não tem responsável.',
+  not_wanted: 'Quem abriu o chamado não pediu aviso por WhatsApp.',
+  failed: 'Não consegui enviar pelo WhatsApp agora.',
+};
+
 /**
  * Abrir chamado. É público — quem envia não tem identidade, então tudo que identifica a
  * pessoa vem daqui mesmo (nome, telefone). O que NÃO vem do corpo: a situação (todo chamado
- * nasce aberto), o responsável e a solução — esses são do TI, e aceitá-los aqui deixaria
- * qualquer um abrir um chamado já resolvido por outra pessoa.
+ * nasce aberto) e a solução — esses são do TI, e aceitá-los aqui deixaria qualquer um abrir
+ * um chamado já resolvido por outra pessoa. O responsável pode ser ESCOLHIDO (`assigneeId`),
+ * mas só entre os que atendem a área; o nome dele nunca vem do corpo.
  *
  * O print não está no schema: ele viaja como arquivo, na mesma requisição, e é o controller
  * que o recebe. Validar imagem é trabalho de quem lê os bytes, não do Zod.
@@ -235,6 +287,15 @@ export const createTicketSchema = z
         z.coerce.number().int().positive().nullable(),
       )
       .optional(),
+    /**
+     * O responsável que quem abre ESCOLHEU, entre os que atendem aquela área. Opcional: sem
+     * escolha, o chamado nasce sem responsável, como sempre. O servidor confere se o escolhido
+     * de fato atende a área — o id vem de uma tela pública e não é de confiança.
+     */
+    assigneeId: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().trim().min(1).max(ASSIGNEE_ID_MAX_LENGTH).optional(),
+    ),
   })
   .superRefine((value, ctx) => {
     checkProblemTypeMatchesArea(value, ctx);
@@ -262,6 +323,7 @@ export const ticketFormSchema = z
     notifyWhatsapp: z.boolean(),
     description: descriptionSchema,
     projectId: z.string().default(''),
+    assigneeId: z.string().default(''),
   })
   .superRefine((value, ctx) => {
     checkProblemTypeMatchesArea(value, ctx);
@@ -301,9 +363,13 @@ export const updateTicketSchema = z.object({
   computerId: z.number().int().positive().nullable().optional(),
   /** O sistema do chamado. Nulo DESVINCULA. */
   projectId: z.number().int().positive().nullable().optional(),
-  /* O RESPONSÁVEL não entra aqui: ele não se troca à mão. Quem assume o chamado vira
-     responsável ao lançar o primeiro histórico (`toTicketMove`). Um `assignee` no corpo é
-     ignorado, como `status` e `solution`. */
+  /**
+   * TROCAR O RESPONSÁVEL — só o super admin. Para os demais o campo é recusado pelo servidor:
+   * quem assume um chamado vira responsável ao lançar o primeiro histórico (`toTicketMove`), e
+   * não escolhendo o próprio nome. O NOME (`assignee`) nunca vem do corpo: sai do cadastro de
+   * quem tem este id.
+   */
+  assigneeId: z.string().trim().min(1).max(ASSIGNEE_ID_MAX_LENGTH).optional(),
 });
 
 export type UpdateTicketInput = z.input<typeof updateTicketSchema>;
