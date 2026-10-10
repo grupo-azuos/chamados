@@ -43,6 +43,7 @@ import { assertCanAttendTicket, assertCanRead } from '../../../lib/policy/policy
 import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
 import { type BuiltDocument } from '../../../lib/report/document.type';
 import { type ReportColumn } from '../../../lib/report/report.type';
+import { capReportRows } from '../../../lib/report/report-limit.util';
 import { buildReport, formatReportDate, reportSubtitle } from '../../../lib/report/report.util';
 import { StorageService } from '../../../lib/storage/storage.service';
 import { describeTicketChanges, toUpdateHistory } from '../mapper/ticket-histories.mapper';
@@ -160,18 +161,19 @@ export class TicketsService {
 
   /**
    * Baixar o relatório: os MESMOS filtros da fila, mas sem página — o arquivo leva tudo que
-   * casou, no formato escolhido.
+   * casou, no formato escolhido, até o teto de linhas (`REPORT_MAX_ROWS`). Passou do teto, o
+   * subtítulo avisa que há mais.
    */
   async exportList(user: RequestUser, query: TicketReportQuery): Promise<BuiltDocument> {
     assertCanRead(user.role, 'os chamados');
 
     const areas = await this.access.accessibleAreas(user);
-    const rows = await this.repository.listAll(query, areas);
+    const { rows, isTruncated } = capReportRows(await this.repository.listAll(query, areas));
 
     return buildReport({
       format: query.format,
       title: 'Chamados',
-      subtitle: reportSubtitle(rows.length, 'chamado', 'chamados'),
+      subtitle: reportSubtitle(rows.length, 'chamado', 'chamados', isTruncated),
       fileName: 'chamados',
       columns: TICKET_REPORT_COLUMNS,
       rows,
