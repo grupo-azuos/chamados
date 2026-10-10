@@ -1,10 +1,14 @@
 import { isJidUser, isLidUser, jidNormalizedUser, type WAMessage } from 'baileys';
 
+import { phoneFromJid } from './whatsapp-transport.js';
+
 /** Uma mensagem de texto que chegou numa conversa privada, pronta para a camada de conversa. */
 export type PrivateText = {
   /** O endereço da conversa no WhatsApp — é para ele que a resposta volta. */
   chatId: string;
   text: string;
+  /** O telefone de quem escreveu, quando dá para saber. */
+  phone: string | null;
 };
 
 /* Mensagem mais velha que isto não é respondida. Quando o bot volta de uma queda, o WhatsApp
@@ -39,7 +43,7 @@ export function readPrivateText(
 
   const text = textOf(message);
 
-  return text ? { chatId, text } : null;
+  return text ? { chatId, text, phone: phoneOf(message, chatId) } : null;
 }
 
 /* Sem horário a mensagem conta como velha: na dúvida, o bot não responde. */
@@ -50,6 +54,17 @@ function isRecent(message: WAMessage, nowSeconds: number): boolean {
 /* Texto simples chega num campo; texto com link ou em resposta a outra mensagem, em outro. */
 function textOf(message: WAMessage): string | null | undefined {
   return message.message?.conversation ?? message.message?.extendedTextMessage?.text;
+}
+
+/**
+ * O telefone de quem escreveu. No endereço de telefone, é o próprio endereço. No anônimo
+ * (`@lid`) o WhatsApp esconde o número de propósito; às vezes ele vem num campo à parte da
+ * mensagem, e quando não vem é nulo — o formulário do chamado pergunta.
+ */
+function phoneOf(message: WAMessage, chatId: string): string | null {
+  const alternate = (message.key as { senderPn?: string | null }).senderPn;
+
+  return phoneFromJid(isJidUser(chatId) ? chatId : alternate);
 }
 
 /* Conversa privada tem dois formatos de endereço: o do telefone e o identificador anônimo

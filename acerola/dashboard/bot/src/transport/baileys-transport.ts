@@ -87,13 +87,13 @@ export function createBaileysTransport(
     /* `notify` é mensagem que acabou de chegar. Os outros tipos são histórico sendo
        sincronizado, e histórico não se responde. */
     socket.ev.on('messages.upsert', ({ messages, type }) => {
-      if (type === 'notify') void answer(socket, messages);
+      if (type === 'notify') void answer(sessionId, socket, messages);
     });
 
     return session;
   }
 
-  async function answer(socket: WASocket, messages: WAMessage[]): Promise<void> {
+  async function answer(sessionId: string, socket: WASocket, messages: WAMessage[]): Promise<void> {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const ownChatIds = ownChatIdsOf(socket.user);
 
@@ -104,7 +104,7 @@ export function createBaileysTransport(
       if (sentByBot.has(message.key.id ?? '')) continue;
 
       const incoming = readPrivateText(message, nowSeconds, ownChatIds);
-      const reply = incoming ? respond(incoming.text) : null;
+      const reply = incoming ? await respond({ sessionId, ...incoming }).catch(() => null) : null;
       if (!incoming || !reply) continue;
 
       /* Uma resposta que falhou não pode derrubar as outras nem o socket. */
