@@ -21,7 +21,11 @@ function message(
 describe('readPrivateText', () => {
   // feliz
   it('reads the text of a message from a private chat', () => {
-    expect(readPrivateText(message(), NOW)).toEqual({ chatId: PRIVATE_CHAT, text: '/chamado' });
+    expect(readPrivateText(message(), NOW)).toEqual({
+      chatId: PRIVATE_CHAT,
+      text: '/chamado',
+      phone: '5562999990002',
+    });
   });
 
   /* Texto com link ou resposta a outra mensagem chega neste outro campo. */
@@ -29,6 +33,18 @@ describe('readPrivateText', () => {
     const extended = message({ message: { extendedTextMessage: { text: '/chamado' } } });
 
     expect(readPrivateText(extended, NOW)?.text).toBe('/chamado');
+  });
+
+  /* No endereço anônimo o número só existe se o WhatsApp o mandar à parte. */
+  it('takes the phone from the separate field of an anonymous address, when there is one', () => {
+    const withPhone = message({}, {
+      remoteJid: '123456789012345@lid',
+      senderPn: '5562999990003@s.whatsapp.net',
+    } as never);
+    const withoutPhone = message({}, { remoteJid: '123456789012345@lid' });
+
+    expect(readPrivateText(withPhone, NOW)?.phone).toBe('5562999990003');
+    expect(readPrivateText(withoutPhone, NOW)?.phone).toBeNull();
   });
 
   it('accepts the anonymous address WhatsApp uses in place of the phone', () => {
