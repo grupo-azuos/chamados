@@ -45,6 +45,7 @@ function ticketRow(overrides: Partial<TicketWithComputer> = {}): TicketWithCompu
     description: 'A impressora não puxa papel.',
     screenshotKey: null,
     assignee: null,
+    assigneeId: null,
     solution: null,
     createdAt: CREATED_AT,
     startedAt: null,

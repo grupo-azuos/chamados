@@ -200,7 +200,9 @@ describe('useTicketDetailModel', () => {
   });
 
   it('says why the service order could not be generated', async () => {
-    vi.mocked(ticketsApi.serviceOrder).mockRejectedValue(new ApiError(500, 'Falha ao gerar o PDF.'));
+    vi.mocked(ticketsApi.serviceOrder).mockRejectedValue(
+      new ApiError(500, 'Falha ao gerar o PDF.'),
+    );
     const model = mountModel();
 
     model.actions.onDownloadServiceOrder();

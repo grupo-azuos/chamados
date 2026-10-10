@@ -41,6 +41,7 @@ function ticket(over: Partial<TicketWithComputer> = {}): TicketWithComputer {
     description: 'A impressora não puxa papel.',
     screenshotKey: null,
     assignee: null,
+    assigneeId: null,
     solution: null,
     createdAt: CREATED_AT,
     startedAt: null,
@@ -193,7 +194,12 @@ describe('toTicketMove', () => {
 
   it('keeps the text of every closing history as what was done', () => {
     for (const type of CLOSING_TICKET_HISTORY_TYPES) {
-      const move = toTicketMove(ticket(), entry(type as ManualTicketHistoryType, ' Feito. '), ANA, NOW);
+      const move = toTicketMove(
+        ticket(),
+        entry(type as ManualTicketHistoryType, ' Feito. '),
+        ANA,
+        NOW,
+      );
 
       expect(move.solution, type).toBe('Feito.');
     }
@@ -235,7 +241,11 @@ describe('toTicketMove', () => {
   });
 
   it('does not touch the stage nor its stamps for a history that only adds to the timeline', () => {
-    const waiting = ticket({ status: 'waiting_requester', assignee: 'Carlos', startedAt: CREATED_AT });
+    const waiting = ticket({
+      status: 'waiting_requester',
+      assignee: 'Carlos',
+      startedAt: CREATED_AT,
+    });
     const move = toTicketMove(waiting, entry('note'), ANA, NOW);
 
     expect(move).not.toHaveProperty('status');
@@ -260,7 +270,13 @@ describe('describeTicketChanges', () => {
   });
 
   it('names the machine that was linked and the one that was unlinked', () => {
-    const linked = ticket({ computerId: 11, projectId: null, githubIssueNumber: null, githubIssueUrl: null, computerName: 'RECEPCAO-01' });
+    const linked = ticket({
+      computerId: 11,
+      projectId: null,
+      githubIssueNumber: null,
+      githubIssueUrl: null,
+      computerName: 'RECEPCAO-01',
+    });
 
     expect(describeTicketChanges(ticket(), linked)).toBe('Máquina: nenhum → RECEPCAO-01');
     expect(describeTicketChanges(linked, ticket())).toBe('Máquina: RECEPCAO-01 → nenhum');

@@ -9,7 +9,7 @@ describe('parseBotEnv', () => {
   it('fills the defaults when only the secrets are given', () => {
     expect(parseBotEnv(valid)).toMatchObject({
       BOT_HOST: '127.0.0.1',
-      BOT_PORT: 3010,
+      BOT_PORT: 4005,
       BOT_DATA_DIR: './data',
       BOT_LOG_LEVEL: 'info',
     });

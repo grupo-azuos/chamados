@@ -103,6 +103,8 @@ export const tickets = pgTable(
 
     /* O atendimento: quem do TI assumiu e o que foi feito. */
     assignee: text('assignee'),
+    /** O id de quem é o responsável — `assignee` é só o nome. Nulo nos chamados antigos. */
+    assigneeId: text('assignee_id'),
     solution: text('solution'),
 
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })

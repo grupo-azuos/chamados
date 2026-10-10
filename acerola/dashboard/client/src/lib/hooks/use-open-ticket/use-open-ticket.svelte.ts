@@ -1,11 +1,21 @@
 import { createForm } from '@tanstack/svelte-form';
-import { createMutation, createQuery } from '@tanstack/svelte-query';
+import { page } from '$app/state';
+import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
+import { formatPhoneInput } from '@template/shared/domain/phone.util';
+import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
+import {
+  invitePhoneForForm,
+  TICKET_INVITE_PARAM,
+  type TicketInvite,
+} from '@template/shared/domain/ticket-invite.util';
 import { refuseScreenshot } from '@template/shared/domain/screenshot-catalog.util';
 import { buildWhatsAppLink } from '@template/shared/domain/ticket-whatsapp.util';
 import {
+  type OpenedTicket as ApiOpenedTicket,
   type Ticket,
   ticketFormSchema,
   type TicketFormValues,
+  type TicketAssigneeOption,
 } from '@template/shared/schemas/ticket.schema';
 
 import { readError } from '$lib/api/http-client';
@@ -24,12 +34,16 @@ export type OpenTicketField =
   | 'priority'
   | 'contactPhone'
   | 'description'
-  | 'projectId';
+  | 'projectId'
+  | 'assigneeId';
 
 /** O que a pessoa vê depois de abrir: o protocolo para anotar. */
 export type OpenedTicket = {
   protocol: string;
+  /** O link para a pessoa mandar o protocolo a si mesma — o plano B de quando o bot não enviou. */
   whatsAppLink: string | null;
+  /** O bot já mandou o protocolo para o WhatsApp dela. Com isto, o botão do link nem aparece. */
+  isNoticeSent: boolean;
 };
 
 export type OpenTicketModel = {
@@ -42,6 +56,13 @@ export type OpenTicketModel = {
     attachments: File[];
     opened: OpenedTicket | null;
     systemProjects: { value: string; label: string }[];
+    /** Quem atende a área escolhida — as opções de "com quem você quer falar". */
+    assignees: { value: string; label: string }[];
+    /**
+     * O convite, quando a pessoa chegou pelo link do WhatsApp: com quem ela está abrindo o
+     * chamado e em quais áreas. Nulo no caminho normal.
+     */
+    invite: { assigneeName: string; areas: TicketArea[] } | null;
   };
   state: {
     isSubmitting: boolean;
@@ -52,6 +73,8 @@ export type OpenTicketModel = {
     attachmentError: string | null;
     systemProjectsLoading: boolean;
     systemProjectsError: string | null;
+    /** O link do WhatsApp não vale mais (vencido ou alterado). O formulário abre normal, sem ele. */
+    inviteError: string | null;
   };
   actions: {
     onChange: (field: OpenTicketField, value: string) => void;
@@ -81,6 +104,7 @@ const EMPTY_VALUES: TicketFormValues = {
   notifyWhatsapp: false,
   description: '',
   projectId: '',
+  assigneeId: '',
 };
 
 /**
@@ -101,6 +125,8 @@ export function useOpenTicketModel(): OpenTicketModel {
   let screenshotError = $state<string | null>(null);
   let opened = $state<OpenedTicket | null>(null);
 
+  const queryClient = useQueryClient();
+
   const projects = mirrorStore(
     createQuery(
       writable({
@@ -113,8 +139,12 @@ export function useOpenTicketModel(): OpenTicketModel {
   const save = mirrorStore(
     createMutation({
       mutationFn: (values: TicketFormValues) => ticketsApi.create(values, screenshot, attachments),
-      onSuccess: (ticket: Ticket) => {
-        opened = { protocol: ticket.protocol, whatsAppLink: buildNotice(ticket) };
+      onSuccess: (ticket: ApiOpenedTicket) => {
+        opened = {
+          protocol: ticket.protocol,
+          whatsAppLink: buildNotice(ticket),
+          isNoticeSent: ticket.openingNotice === 'sent',
+        };
       },
     }),
   );
@@ -134,6 +164,56 @@ export function useOpenTicketModel(): OpenTicketModel {
   const fieldMeta = form.useSelector((state) => state.fieldMeta);
   const isSubmitted = form.useSelector((state) => state.submissionAttempts > 0);
 
+  /* Os responsáveis dependem da ÁREA, que a pessoa escolhe no primeiro passo. Busca própria, e
+     não uma consulta com a área na chave: as opções de uma consulta já criada não trocam
+     sozinhas quando a área muda. Falhou? A lista fica vazia e o campo some — escolher o
+     responsável é opcional, e a falta dele não pode impedir ninguém de pedir socorro. */
+  let assignees = $state<TicketAssigneeOption[]>([]);
+
+  /* O convite do WhatsApp (`/support?convite=…`). Lido uma vez, na chegada: ele preenche o
+     responsável, o telefone e — quando o responsável atende uma área só — a área. Link que não
+     vale mais não trava nada: a pessoa abre o chamado pelo formulário normal. */
+  let invite = $state<TicketInvite | null>(null);
+  let inviteError = $state<string | null>(null);
+  const inviteToken = page.url.searchParams.get(TICKET_INVITE_PARAM);
+  if (inviteToken) {
+    void ticketsApi
+      .invite(inviteToken)
+      .then((received) => {
+        invite = received;
+        form.setFieldValue('assigneeId', received.assignee.id);
+        form.setFieldValue('notifyWhatsapp', true);
+        const phone = invitePhoneForForm(received.phone);
+        if (phone) form.setFieldValue('contactPhone', formatPhoneInput(phone));
+        const [onlyArea, ...others] = received.areas;
+        if (onlyArea && others.length === 0) form.setFieldValue('area', onlyArea);
+      })
+      .catch((error: unknown) => {
+        inviteError = readError(error) ?? 'Este link não vale mais. Peça outro pelo WhatsApp.';
+      });
+  }
+  $effect(() => {
+    const area = values.current.area;
+    assignees = [];
+    if (!area) return;
+
+    let isCurrent = true;
+    void queryClient
+      .fetchQuery({
+        queryKey: ['public', 'ticket-assignee-options', area],
+        queryFn: () => ticketsApi.assigneeOptions(area),
+        staleTime: 60_000,
+      })
+      .then((options) => {
+        if (isCurrent) assignees = options;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isCurrent = false;
+    };
+  });
+
   const fieldOf = (field: OpenTicketField) =>
     toFieldState(values.current[field], fieldMeta.current[field], isSubmitted.current);
 
@@ -150,11 +230,14 @@ export function useOpenTicketModel(): OpenTicketModel {
           contactPhone: fieldOf('contactPhone'),
           description: fieldOf('description'),
           projectId: fieldOf('projectId'),
+          assigneeId: fieldOf('assigneeId'),
         },
         notifyWhatsapp: values.current.notifyWhatsapp,
         screenshotName: screenshot?.name ?? null,
         attachments,
         opened,
+        invite: invite ? { assigneeName: invite.assignee.name, areas: invite.areas } : null,
+        assignees: assignees.map((option) => ({ value: option.id, label: option.name })),
         systemProjects: (projects.current.data ?? []).map((project) => ({
           value: String(project.id),
           label: project.name,
@@ -169,10 +252,16 @@ export function useOpenTicketModel(): OpenTicketModel {
         attachmentError,
         systemProjectsLoading: projects.current.isPending,
         systemProjectsError: projects.current.isError ? readError(projects.current.error) : null,
+        inviteError,
       };
     },
     actions: {
-      onChange: (field, value) => form.setFieldValue(field, value as never),
+      onChange: (field, value) => {
+        /* Quem chegou pelo link do WhatsApp já escolheu com quem falar: trocar de área (que
+           limpa o responsável) não pode desfazer essa escolha. */
+        const kept = field === 'assigneeId' && value === '' && invite ? invite.assignee.id : value;
+        form.setFieldValue(field, kept as never);
+      },
       /* `validateField` só marca o campo como "tocado" quando existe um `form.Field` montado
          — e esses hooks nunca montam um, só chamam `setFieldValue`/`validateField` direto.
          Sem marcar aqui, o erro nunca aparecia ao SAIR do campo, só depois de um envio (ver

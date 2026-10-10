@@ -3,9 +3,63 @@
 O bot é o programa que conversa com o WhatsApp. Ele fica **inteiro** em `acerola/dashboard/bot/`
 e é separado do resto: o servidor de chamados não conhece o WhatsApp, só a API HTTP do bot.
 
-> **Situação:** esta é a primeira etapa. O bot já vincula um número (QR code), guarda a conexão
-> cifrada e envia mensagem de texto. A tela de vínculo no perfil e o uso pelos chamados entram
-> nas próximas etapas (issue #18).
+## O que ele faz
+
+- **Vínculo.** Admin e super admin vinculam o próprio número em **Meu Perfil**, lendo um QR code.
+- **Chamado pelo site.** No `/support`, quem abre escolhe com quem quer falar, entre quem atende
+  a área. O escolhido vira o responsável e, se a pessoa pediu aviso, o WhatsApp dele manda o
+  "recebi o seu chamado".
+- **Chamado pronto.** Na ficha do chamado, **Avisar no WhatsApp** envia pelo número do
+  responsável. Quando não sai (sem vínculo, limite do dia), a tela diz o motivo e oferece o link
+  para enviar à mão.
+- **Chamado a partir do WhatsApp.** Quem manda `/chamado` para o número de um responsável
+  recebe UMA mensagem com um link assinado. O link abre o `/support` já com o responsável, o
+  telefone de quem escreveu e, quando o responsável atende uma área só, a área. O chamado é
+  preenchido na tela, e a confirmação com o protocolo chega pelo WhatsApp do responsável.
+  O link vale 30 minutos e não pode ser alterado: a assinatura é conferida pelo servidor.
+- **Link de consulta.** Toda mensagem de um chamado ("recebi o seu chamado", "ficou pronto")
+  leva um link assinado que abre direto AQUELE chamado na consulta pública, sem digitar
+  protocolo. Não vence. Trocar o número dentro do link não abre o chamado de outra pessoa: a
+  assinatura deixa de conferir.
+- **Textos.** O super admin edita cada mensagem em **Meu Perfil › Textos do bot**, com variáveis
+  entre chaves duplas (`{{protocolo}}`) e prévia.
+- **Limite.** Cada número manda no máximo `WHATSAPP_DAILY_LIMIT` mensagens automáticas por dia
+  (padrão 100). Em 70% a pessoa é avisada no próprio WhatsApp e no perfil; no teto, o sistema
+  para de enviar por ela até o dia seguinte.
+
+### O que o bot lê
+
+O número vinculado é o WhatsApp de alguém, e quase tudo o que chega nele não é chamado. O bot só
+encaminha ao servidor a mensagem que é **exatamente** `/chamado`. Todo o resto fica no bot e é
+descartado. Ele só responde em conversa privada — nunca em grupo — e ignora mensagem com mais
+de 2 minutos, para não responder em lote ao voltar de uma queda.
+
+O link das mensagens usa o `APP_PUBLIC_URL` do servidor: ele precisa ser um endereço que quem
+recebe consiga abrir. Sem a variável, vale a primeira origem de `API_CORS_ORIGIN` — que na
+máquina de desenvolvimento é `localhost`, e só abre nela.
+
+## Ligar o servidor ao bot
+
+No `server/.env`, aponte para o bot e repita o token dele:
+
+```bash
+BOT_API_URL=http://127.0.0.1:4005
+BOT_API_TOKEN=<o mesmo BOT_API_TOKEN do bot/.env>
+```
+
+No `bot/.env`, diga ao bot onde fica o servidor — é para lá que ele leva o `/chamado`:
+
+```bash
+BOT_SERVER_URL=http://127.0.0.1:3005/api
+```
+
+Opcionais no `server/.env`: `WHATSAPP_DAILY_LIMIT` (padrão 100) e `APP_PUBLIC_URL`, o endereço
+público da tela, usado nos links das mensagens (sem ele, vale a primeira origem de
+`API_CORS_ORIGIN`).
+
+Sem essas duas variáveis o sistema funciona inteiro; o cartão de WhatsApp do perfil só avisa que
+a integração não foi configurada. O servidor guarda em `whatsapp_connections` **quem** vinculou
+e **qual número** — a conexão em si nunca sai do bot.
 
 ## Por que é um programa à parte
 
@@ -21,14 +75,29 @@ Por isso o bot **não** é um workspace do `package.json` da raiz: tem `package.
 
 ## Rodar na sua máquina
 
+O bot sobe junto com o resto:
+
 ```bash
 cd acerola/dashboard
-npm run bot:install            # instala as dependências do bot (uma vez)
-cp bot/.env.example bot/.env   # e preencha BOT_API_TOKEN e BOT_SESSION_KEY
-npm run dev:bot                # sobe em http://127.0.0.1:3010
+cp bot/.env.example bot/.env   # uma vez: preencha BOT_API_TOKEN e BOT_SESSION_KEY
+npm run dev                    # API :3005 + tela :5005 + bot :4005
 ```
 
-Para conferir lint, tipos e testes do bot: `npm run bot:check`.
+Na primeira vez, o `npm run dev` instala as dependências do bot sozinho. Sem o `bot/.env` o bot
+não sobe — o resto do sistema funciona normalmente, e o terminal avisa o que falta.
+
+Cada porta é trocada no `.env` do próprio programa:
+
+| Programa | Porta padrão | Onde trocar |
+|---|---|---|
+| API (Nest) | 3005 | `API_PORT`, em `server/.env` |
+| Tela (Vite) | 5005 | `VITE_PORT`, em `client/.env` |
+| Bot | 4005 | `BOT_PORT`, em `bot/.env` |
+
+Trocou a porta do bot? Troque junto o `BOT_API_URL` em `server/.env`, que é por onde o servidor
+o encontra. Trocou a da API? O mesmo vale para `VITE_API_PORT`, em `client/.env`.
+
+Para subir só o bot: `npm run dev:bot`. Para conferir lint, tipos e testes dele: `npm run bot:check`.
 
 ## Rodar com Docker
 

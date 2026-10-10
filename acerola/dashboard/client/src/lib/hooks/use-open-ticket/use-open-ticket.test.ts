@@ -1,4 +1,4 @@
-import { type Ticket } from '@template/shared/schemas/ticket.schema';
+import { type OpenedTicket } from '@template/shared/schemas/ticket.schema';
 import { render, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,13 +7,20 @@ import Harness from './use-open-ticket-harness.test.svelte';
 import { type OpenTicketModel } from './use-open-ticket.svelte';
 
 vi.mock('$lib/api/tickets.api', () => ({
-  ticketsApi: { create: vi.fn(), systemProjectOptions: vi.fn() },
+  ticketsApi: {
+    create: vi.fn(),
+    systemProjectOptions: vi.fn(),
+    assigneeOptions: vi.fn().mockResolvedValue([]),
+  },
 }));
 
 const { ticketsApi } = await import('$lib/api/tickets.api');
 
-function ticket(over: Partial<Ticket> = {}): Ticket {
+/* O que ABRIR devolve: o chamado, mais o desfecho do aviso de WhatsApp. Por padrão o aviso não
+   saiu — é o caso de quem não pediu para ser avisado. */
+function ticket(over: Partial<OpenedTicket> = {}): OpenedTicket {
   return {
+    openingNotice: 'not_wanted',
     id: 22,
     protocol: 'CH-0022',
     status: 'open',
@@ -34,7 +41,7 @@ function ticket(over: Partial<Ticket> = {}): Ticket {
     createdAt: '2026-09-23T12:00:00.000Z',
     updatedAt: '2026-09-23T12:00:00.000Z',
     ...over,
-  } as Ticket;
+  } as OpenedTicket;
 }
 
 function mountModel(): OpenTicketModel {
@@ -155,6 +162,34 @@ describe('useOpenTicketModel', () => {
 
     await waitFor(() => expect(model.data.opened).not.toBeNull());
     expect(model.data.opened?.whatsAppLink).toBeNull();
+    expect(model.data.opened?.isNoticeSent).toBe(false);
+  });
+
+  /* Só diz que enviou quando o servidor confirma que a mensagem saiu pelo bot. */
+  it('tells that the bot sent the protocol only when the server says it went out', async () => {
+    vi.mocked(ticketsApi.create).mockResolvedValue(
+      ticket({ notifyWhatsapp: true, contactPhone: '11987654321', openingNotice: 'sent' }),
+    );
+    const model = mountModel();
+
+    await fillMinimum(model);
+    model.actions.onSubmit();
+
+    await waitFor(() => expect(model.data.opened?.isNoticeSent).toBe(true));
+  });
+
+  it('does not claim the protocol was sent when the bot could not send it', async () => {
+    vi.mocked(ticketsApi.create).mockResolvedValue(
+      ticket({ notifyWhatsapp: true, contactPhone: '11987654321', openingNotice: 'not_linked' }),
+    );
+    const model = mountModel();
+
+    await fillMinimum(model);
+    model.actions.onSubmit();
+
+    await waitFor(() => expect(model.data.opened).not.toBeNull());
+    expect(model.data.opened?.isNoticeSent).toBe(false);
+    expect(model.data.opened?.whatsAppLink).toContain('5511987654321');
   });
 
   /* Abrir outro é um formulário NOVO: reaproveitar os valores do anterior faria a pessoa

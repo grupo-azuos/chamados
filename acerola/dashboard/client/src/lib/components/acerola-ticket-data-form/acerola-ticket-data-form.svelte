@@ -13,7 +13,13 @@
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
   import { type FormFieldState } from '$lib/types/form-field.type';
 
-  export type TicketDataField = 'priority' | 'area' | 'problemType' | 'computerId' | 'projectId';
+  export type TicketDataField =
+    | 'priority'
+    | 'area'
+    | 'problemType'
+    | 'computerId'
+    | 'projectId'
+    | 'assigneeId';
 
   /**
    * Os DADOS do chamado que o TI corrige: urgência, área, tipo, máquina e sistema.
@@ -29,7 +35,12 @@
   export type AcerolaTicketDataFormProps = {
     data: {
       ticket: Ticket;
-      fields: Record<TicketDataField, FormFieldState>;
+      /* O responsável é opcional: só existe para quem pode trocá-lo (o super admin). */
+      fields: Record<Exclude<TicketDataField, 'assigneeId'>, FormFieldState> & {
+        assigneeId?: FormFieldState;
+      };
+      /** Quem pode ser o responsável. Vazio (o padrão) esconde o campo. */
+      assignees?: { value: string; label: string }[];
       /** As máquinas do inventário, para vincular o chamado a uma delas. */
       machines: { value: string; label: string }[];
       /** Os projetos/sistemas para vincular o chamado. */
@@ -158,6 +169,18 @@
         ui={{ ariaLabel: 'Sistema / Software', placeholder: 'Nenhum', fullWidth: true }}
         state={{ isDisabled: formState?.isSubmitting }}
         actions={{ onChange: (value: string) => actions.onChange('projectId', value) }}
+      />
+    </FilterField>
+  {/if}
+
+  <!-- Trocar o responsável é do super admin: para os demais as opções não chegam e o campo some. -->
+  {#if fields.assigneeId && data.assignees && data.assignees.length > 0}
+    <FilterField data={{ label: 'Responsável' }}>
+      <OptionPicker
+        data={{ value: fields.assigneeId.value, options: data.assignees }}
+        ui={{ ariaLabel: 'Responsável', placeholder: 'Sem responsável', fullWidth: true }}
+        state={{ isDisabled: formState?.isSubmitting }}
+        actions={{ onChange: (value: string) => actions.onChange('assigneeId', value) }}
       />
     </FilterField>
   {/if}
