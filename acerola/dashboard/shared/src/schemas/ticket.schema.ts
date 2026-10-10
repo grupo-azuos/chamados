@@ -218,6 +218,13 @@ export const ticketAssigneeOptionSchema = z.object({
 });
 export type TicketAssigneeOption = z.infer<typeof ticketAssigneeOptionSchema>;
 
+/** O convite de chamado, como a tela pública o recebe ao abrir o link do WhatsApp. */
+export const ticketInviteSchema = z.object({
+  assignee: ticketAssigneeOptionSchema,
+  areas: z.array(ticketAreaSchema),
+  phone: z.string().nullable(),
+});
+
 /** De qual área são os responsáveis pedidos. */
 export const ticketAssigneeOptionsQuerySchema = z.object({ area: ticketAreaSchema });
 

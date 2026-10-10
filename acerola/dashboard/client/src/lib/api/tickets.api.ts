@@ -1,4 +1,5 @@
 import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
+import { type TicketInvite } from '@template/shared/domain/ticket-invite.util';
 import { type TicketAttachment } from '@template/shared/schemas/ticket-attachment.schema';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
 import { type ReportFormat } from '@template/shared/schemas/report.schema';
@@ -40,6 +41,13 @@ export type TicketDashboard = {
  */
 export const ticketsApi = {
   /** Lista pública e mínima dos sistemas válidos para vincular um chamado a uma Issue. */
+  /**
+   * O convite de chamado: o link assinado que o bot de WhatsApp manda a quem escreve `/chamado`.
+   * Devolve com quem a pessoa quer falar e o telefone dela, para o formulário abrir preenchido.
+   */
+  invite: (token: string) =>
+    apiRequest<TicketInvite>(`/tickets/invites/${encodeURIComponent(token)}`),
+
   /** Quem pode ser o responsável por um chamado desta área — público, para o formulário. */
   assigneeOptions: (area: TicketArea) =>
     apiRequest<TicketAssigneeOption[]>('/tickets/assignee-options', { query: { area } }),

@@ -6,7 +6,7 @@ import { WhatsappIntakeController } from './controller/whatsapp-intake.controlle
 import { WhatsappIntakeService } from './service/whatsapp-intake.service';
 
 /**
- * Abrir chamado por conversa. É um módulo à parte porque junta os dois mundos — o WhatsApp e
+ * Abrir chamado a partir do WhatsApp. É um módulo à parte porque junta os dois mundos — o WhatsApp e
  * os chamados — sem que um precise conhecer o outro.
  */
 @Module({

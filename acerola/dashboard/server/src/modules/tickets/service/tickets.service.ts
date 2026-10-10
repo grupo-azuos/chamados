@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   Optional,
@@ -12,6 +13,7 @@ import {
   ticketProblemTypeLabel,
   type TicketArea,
 } from '@template/shared/domain/ticket-catalog.util';
+import { type TicketInvite } from '@template/shared/domain/ticket-invite.util';
 import {
   parseTicketProtocol,
   formatTicketProtocol,
@@ -45,6 +47,8 @@ import {
   assertCanRead,
   assertIsSuperAdmin,
 } from '../../../lib/policy/policy-assert.util';
+import { type Env } from '../../../lib/config/env.schema';
+import { ENV } from '../../../lib/config/env.token';
 import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
 import { type BuiltDocument } from '../../../lib/report/document.type';
 import { type ReportColumn } from '../../../lib/report/report.type';
@@ -57,6 +61,7 @@ import { TicketHistoriesRepository } from '../repository/ticket-histories.reposi
 import { TICKET_NOT_FOUND, TicketAccessService } from './ticket-access.service';
 import { TicketAttachmentsService, type UploadedAttachment } from './ticket-attachments.service';
 import { TicketAssigneesService } from './ticket-assignees.service';
+import { verifyTicketInvite } from './ticket-invite.util';
 import { TicketHistoriesService } from './ticket-histories.service';
 import {
   type TicketNoticeOutcome,
@@ -147,11 +152,34 @@ export class TicketsService {
     @Optional() private readonly softwareProjectsService?: SoftwareProjectsService,
     @Optional() private readonly assignees?: TicketAssigneesService,
     @Optional() private readonly notifier?: TicketWhatsappNotifierService,
+    @Optional() @Inject(ENV) private readonly env?: Env,
   ) {}
 
   /** Quem pode ser escolhido como responsável por um chamado desta área (lista pública). */
   async listAssigneeOptions(area: TicketArea): Promise<TicketAssigneeOption[]> {
     return (await this.assignees?.listForArea(area)) ?? [];
+  }
+
+  /**
+   * O que um convite de chamado diz — o link que o bot manda a quem escreve `/chamado`. A tela
+   * pública usa a resposta para abrir o formulário já com o responsável e o telefone.
+   *
+   * Convite forjado, vencido ou de alguém que deixou de atender: 404, sem dizer qual dos três.
+   */
+  async readInvite(token: string, nowSeconds: number = Date.now() / 1000): Promise<TicketInvite> {
+    const invite = this.env?.BOT_API_TOKEN
+      ? verifyTicketInvite(token, this.env.BOT_API_TOKEN, nowSeconds)
+      : null;
+    const attendant = invite ? await this.assignees?.areasOf(invite.assigneeId) : null;
+    if (!invite || !attendant || attendant.areas.length === 0) {
+      throw new NotFoundException('Este link não vale mais. Peça outro pelo WhatsApp.');
+    }
+
+    return {
+      assignee: { id: invite.assigneeId, name: attendant.name },
+      areas: attendant.areas,
+      phone: invite.phone,
+    };
   }
 
   /**

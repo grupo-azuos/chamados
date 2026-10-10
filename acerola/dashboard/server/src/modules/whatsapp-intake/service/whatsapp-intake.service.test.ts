@@ -1,9 +1,8 @@
-import { buildIntakeForm } from '@template/shared/domain/whatsapp-intake.util';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type Env } from '../../../lib/config/env.schema';
 import { type TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
-import { type TicketsService } from '../../tickets/service/tickets.service';
+import { verifyTicketInvite } from '../../tickets/service/ticket-invite.util';
 import { type WhatsappConnectionsRepository } from '../../whatsapp/repository/whatsapp-connections.repository';
 import { botSessionId } from '../../whatsapp/service/bot-client.service';
 import { type WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
@@ -11,7 +10,7 @@ import { isBot } from '../controller/whatsapp-intake.controller';
 import { type InboundMessage, WhatsappIntakeService } from './whatsapp-intake.service';
 
 const NOW = 1_800_000_000_000;
-const MINUTE = 60_000;
+const SECRET = 't'.repeat(40);
 const SESSION = botSessionId('u-ana');
 
 const inbound = (text: string, extra: Partial<InboundMessage> = {}): InboundMessage => ({
@@ -22,15 +21,14 @@ const inbound = (text: string, extra: Partial<InboundMessage> = {}): InboundMess
   ...extra,
 });
 
-function filledForm(): string {
-  return buildIntakeForm({ area: 'infra', projects: [], phone: '5562999990002' })
-    .replace('*Nome:* ', '*Nome:* Bia Costa')
-    .replace('*Setor (número):* ', '*Setor (número):* 6')
-    .replace('*Tipo (número):* ', '*Tipo (número):* 3')
-    .replace('*Descrição:* ', '*Descrição:* A impressora não puxa papel.');
-}
-
-function makeService(options: { areas?: string[]; hasRoom?: boolean; linked?: boolean } = {}) {
+function makeService(
+  options: {
+    areas?: string[];
+    hasRoom?: boolean;
+    linked?: boolean;
+    secret?: string | undefined;
+  } = {},
+) {
   const connections = {
     list: vi
       .fn()
@@ -41,144 +39,81 @@ function makeService(options: { areas?: string[]; hasRoom?: boolean; linked?: bo
   const assignees = {
     areasOf: vi.fn().mockResolvedValue({ name: 'Ana Lima', areas: options.areas ?? ['infra'] }),
   };
-  const tickets = {
-    create: vi.fn().mockResolvedValue({ id: 7, requesterName: 'Bia Costa', assignee: 'Ana Lima' }),
-    listSystemProjectOptions: vi.fn().mockResolvedValue([{ id: 11, name: 'Portal' }]),
-  };
   const messaging = {
     reply: vi.fn(async (message: { kind: string; values: Record<string, string> }) =>
       options.hasRoom === false ? null : `text:${message.kind}`,
     ),
   };
+  const env = {
+    API_CORS_ORIGIN: 'http://localhost:5005',
+    BOT_API_TOKEN: 'secret' in options ? options.secret : SECRET,
+  } as Env;
   const service = new WhatsappIntakeService(
-    { API_CORS_ORIGIN: 'http://localhost:5005' } as Env,
+    env,
     connections as unknown as WhatsappConnectionsRepository,
     assignees as unknown as TicketAssigneesService,
-    tickets as unknown as TicketsService,
     messaging as unknown as WhatsappMessagingService,
   );
 
-  return { service, tickets, messaging, assignees };
+  return { service, messaging };
+}
+
+/** O convite que foi dentro do link da última resposta. */
+function inviteOf(messaging: ReturnType<typeof makeService>['messaging']) {
+  const link = messaging.reply.mock.calls[0]?.[0].values.link ?? '';
+
+  return { link, token: link.split('convite=')[1] ?? '' };
 }
 
 describe('WhatsappIntakeService', () => {
   // feliz
-  /* Quem atende uma área só: o /chamado já devolve o formulário daquela área. */
-  it('answers the command with the form when the attendant has a single area', async () => {
+  it('answers the command with one link, and leaves no conversation open', async () => {
     const { service, messaging } = makeService();
 
     expect(await service.handle(inbound('/chamado'), NOW)).toEqual({
-      reply: 'text:intake_form',
-      isOpen: true,
+      reply: 'text:intake_link',
+      isOpen: false,
     });
     expect(messaging.reply.mock.calls[0]?.[0]).toMatchObject({
       senderUserId: 'u-ana',
-      kind: 'intake_form',
-      values: { responsavel: 'Ana Lima', area: 'Infraestrutura' },
+      recipient: '5562999990002',
+      kind: 'intake_link',
+      values: { responsavel: 'Ana Lima', validade: '30' },
     });
   });
 
-  it('opens the ticket with the attendant as assignee when the form comes back filled', async () => {
-    const { service, tickets } = makeService();
+  /* O link leva, assinado, com quem a pessoa quer falar, o telefone dela e a validade. */
+  it('signs into the link who the attendant is, the phone of who wrote and the deadline', async () => {
+    const { service, messaging } = makeService();
 
-    await service.handle(inbound('/chamado'), NOW);
-    const answer = await service.handle(inbound(filledForm()), NOW + MINUTE);
+    await service.handle(inbound(' /CHAMADO '), NOW);
+    const { link, token } = inviteOf(messaging);
 
-    expect(answer).toEqual({ reply: 'text:intake_created', isOpen: false });
-    /* O último argumento desliga o aviso de "chamado aberto": a confirmação já vai na conversa. */
-    expect(tickets.create).toHaveBeenCalledWith(
-      {
-        requesterName: 'Bia Costa',
-        department: 'financeiro',
-        problemType: 'printer',
-        projectId: null,
-        contactPhone: '5562999990002',
-        description: 'A impressora não puxa papel.',
-        area: 'infra',
-        priority: 'medium',
-        notifyWhatsapp: true,
-        assigneeId: 'u-ana',
-      },
-      undefined,
-      [],
-      { skipOpeningNotice: true },
-    );
+    expect(link).toMatch(/^http:\/\/localhost:5005\/support\?convite=/);
+    expect(verifyTicketInvite(token, SECRET, NOW / 1000)).toEqual({
+      assigneeId: 'u-ana',
+      phone: '5562999990002',
+      expiresAt: NOW / 1000 + 30 * 60,
+    });
   });
 
-  /* Super admin, ou admin de mais de uma área: primeiro a pergunta de qual. */
-  it('asks the area first when the attendant has more than one, then sends that form', async () => {
-    const { service, messaging } = makeService({ areas: ['infra', 'manutencao'] });
+  it('still sends the link when WhatsApp hides the phone: the form asks for it', async () => {
+    const { service, messaging } = makeService();
 
-    expect((await service.handle(inbound('/chamado'), NOW)).reply).toBe('text:intake_area');
-    expect(messaging.reply.mock.calls[0]?.[0].values.opcoes).toBe(
-      '1. Infraestrutura\n2. Manutenção',
-    );
+    await service.handle(inbound('/chamado', { phone: null, chatId: '123@lid' }), NOW);
 
-    expect((await service.handle(inbound('2'), NOW + MINUTE)).reply).toBe('text:intake_form');
-    expect(messaging.reply.mock.calls[1]?.[0].values.area).toBe('Manutenção');
-  });
-
-  it('lists the systems in the form of the Sistema area', async () => {
-    const { service, messaging } = makeService({ areas: ['sistema'] });
-
-    await service.handle(inbound('/chamado'), NOW);
-
-    expect(messaging.reply.mock.calls[0]?.[0].values.formulario).toContain('*Opções de sistema*\n1. Portal');
+    expect(verifyTicketInvite(inviteOf(messaging).token, SECRET, NOW / 1000)?.phone).toBeNull();
   });
 
   // triste
-  it('says what is missing and keeps the conversation open when the form is incomplete', async () => {
-    const { service, tickets, messaging } = makeService();
-
-    await service.handle(inbound('/chamado'), NOW);
-    const answer = await service.handle(inbound('Nome: Bia'), NOW + MINUTE);
-
-    expect(answer).toEqual({ reply: 'text:intake_invalid', isOpen: true });
-    expect(messaging.reply.mock.calls[1]?.[0].values.erros).toContain('- ');
-    expect(tickets.create).not.toHaveBeenCalled();
-  });
-
-  it('asks the area again when the choice is not on the list', async () => {
-    const { service } = makeService({ areas: ['infra', 'manutencao'] });
-
-    await service.handle(inbound('/chamado'), NOW);
-
-    expect(await service.handle(inbound('9'), NOW + MINUTE)).toEqual({
-      reply: 'text:intake_area',
-      isOpen: true,
-    });
-  });
-
-  /* Conversa comum não abre chamado nem recebe resposta. */
-  it('stays silent for a message outside any conversation', async () => {
+  /* Conversa comum não recebe resposta nem gasta mensagem do dia. */
+  it('stays silent for anything that is not the command', async () => {
     const { service, messaging } = makeService();
 
-    expect(await service.handle(inbound('oi, tudo bem?'), NOW)).toEqual({
-      reply: null,
-      isOpen: false,
-    });
+    for (const text of ['oi, tudo bem?', '/chamado urgente', 'Nome: Bia', '1']) {
+      expect(await service.handle(inbound(text), NOW)).toEqual({ reply: null, isOpen: false });
+    }
     expect(messaging.reply).not.toHaveBeenCalled();
-  });
-
-  it('closes the conversation when the person cancels, or takes too long', async () => {
-    const { service, tickets } = makeService();
-
-    await service.handle(inbound('/chamado'), NOW);
-    expect(await service.handle(inbound('Cancelar'), NOW + MINUTE)).toEqual({
-      reply: null,
-      isOpen: false,
-    });
-    expect(await service.handle(inbound(filledForm()), NOW + 2 * MINUTE)).toEqual({
-      reply: null,
-      isOpen: false,
-    });
-
-    await service.handle(inbound('/chamado'), NOW);
-    expect(await service.handle(inbound(filledForm()), NOW + 16 * MINUTE)).toEqual({
-      reply: null,
-      isOpen: false,
-    });
-    expect(tickets.create).not.toHaveBeenCalled();
   });
 
   /* Teto do dia atingido: o bot se cala, em vez de gastar mais uma mensagem dizendo que não pode. */
@@ -189,35 +124,22 @@ describe('WhatsappIntakeService', () => {
   });
 
   it('stays silent for a number that is not linked, or whose owner attends no area', async () => {
-    expect(await makeService({ linked: false }).service.handle(inbound('/chamado'), NOW)).toEqual({
-      reply: null,
-      isOpen: false,
-    });
-    expect(await makeService({ areas: [] }).service.handle(inbound('/chamado'), NOW)).toEqual({
-      reply: null,
-      isOpen: false,
-    });
+    const silence = { reply: null, isOpen: false };
+
+    expect(await makeService({ linked: false }).service.handle(inbound('/chamado'), NOW)).toEqual(
+      silence,
+    );
+    expect(await makeService({ areas: [] }).service.handle(inbound('/chamado'), NOW)).toEqual(
+      silence,
+    );
   });
 
-  it('closes quietly when the ticket cannot be created', async () => {
-    const { service, tickets } = makeService();
-    tickets.create.mockRejectedValue(new Error('database down'));
+  /* Sem o segredo não há com o que assinar: melhor o silêncio que um link que qualquer um forja. */
+  it('sends no link when there is no secret to sign it with', async () => {
+    const { service, messaging } = makeService({ secret: undefined });
 
-    await service.handle(inbound('/chamado'), NOW);
-
-    expect(await service.handle(inbound(filledForm()), NOW + MINUTE)).toEqual({
-      reply: null,
-      isOpen: false,
-    });
-  });
-
-  it('keeps the conversation of one person apart from another', async () => {
-    const { service } = makeService();
-
-    await service.handle(inbound('/chamado'), NOW);
-    const other = inbound(filledForm(), { chatId: '5562999990003@s.whatsapp.net' });
-
-    expect(await service.handle(other, NOW + MINUTE)).toEqual({ reply: null, isOpen: false });
+    expect(await service.handle(inbound('/chamado'), NOW)).toEqual({ reply: null, isOpen: false });
+    expect(messaging.reply).not.toHaveBeenCalled();
   });
 });
 

@@ -52,6 +52,27 @@ async function advanceTo(user: ReturnType<typeof userEvent.setup>, index: number
 
 describe('AcerolaOpenTicketForm', () => {
   // feliz
+  /* Quem chegou pelo link do WhatsApp vê com quem está abrindo o chamado, e só as áreas dele. */
+  it('says who the ticket is being opened with and offers only the areas that person attends', () => {
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: true,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        invite: { assigneeName: 'Ana Lima', areas: ['infra', 'manutencao'] },
+      },
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Você está abrindo um chamado com Ana Lima.',
+    );
+    expect(screen.getByText('Infraestrutura')).toBeInTheDocument();
+    expect(screen.getByText('Manutenção')).toBeInTheDocument();
+    expect(screen.queryByText('Sistema')).not.toBeInTheDocument();
+  });
+
   it('offers who attends the area on the last step, as an optional choice', async () => {
     const user = userEvent.setup();
     setup({
@@ -337,6 +358,16 @@ describe('AcerolaOpenTicketForm', () => {
 
     expect(screen.getByLabelText(/seu nome/i)).toBeInTheDocument();
     expect(screen.getByText('Informe seu nome')).toBeInTheDocument();
+  });
+
+  /* Link vencido não trava ninguém: um aviso, e o formulário de sempre, com as três áreas. */
+  it('warns that the WhatsApp link is no longer valid and keeps the normal form', () => {
+    setup({ state: { inviteError: 'Este link não vale mais. Peça outro pelo WhatsApp.' } });
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Este link não vale mais. Peça outro pelo WhatsApp. Você ainda pode abrir o chamado por aqui.',
+    );
+    expect(screen.getByText('Sistema')).toBeInTheDocument();
   });
 
   /* Escolher com quem falar é opcional: sem opções para a área, o campo nem aparece. */
