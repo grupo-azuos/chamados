@@ -26,6 +26,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             acerola/dashboard/package-lock.json
+            acerola/dashboard/bot/package-lock.json
             acerola/agent/svelte/package-lock.json
 
       - uses: actions/setup-go@v5
@@ -40,6 +41,11 @@ jobs:
       # dependência precisa rodar para se ler a licença dela.
       - name: Instala as dependências do painel
         working-directory: acerola/dashboard
+        run: npm ci --ignore-scripts
+
+      # O bot de WhatsApp é um pacote à parte, com instalação própria (ver bot/README.md).
+      - name: Instala as dependências do bot de WhatsApp
+        working-directory: acerola/dashboard/bot
         run: npm ci --ignore-scripts
 
       - name: Instala as dependências da tela do agente
