@@ -2,11 +2,13 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ticketAreaLabel } from '@template/shared/domain/ticket-catalog.util';
 import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { toWhatsAppNumber } from '@template/shared/domain/ticket-whatsapp.util';
+import { TICKET_ACCESS_PARAM } from '@template/shared/domain/ticket-invite.util';
 import { type TicketNoticeOutcome } from '@template/shared/schemas/ticket.schema';
 
 import { type Env } from '../../../lib/config/env.schema';
 import { ENV } from '../../../lib/config/env.token';
 import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
+import { signTicketAccess } from './ticket-invite.util';
 import { WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
 
 /** O desfecho de um aviso: os do envio, mais os motivos que o próprio chamado dá para não enviar. */
@@ -64,8 +66,19 @@ export function ticketValues(ticket: TicketRow, env: Env): Record<string, string
     area: ticketAreaLabel(ticket.area),
     responsavel: ticket.assignee,
     solucao: ticket.solution,
-    link: `${publicUrl(env)}/support`,
+    link: ticketAccessLink(ticket.id, env),
   };
+}
+
+/**
+ * O link que abre direto AQUELE chamado na consulta pública, assinado. Sem o segredo para
+ * assinar (integração desligada), cai na página de consulta, onde a pessoa digita o protocolo.
+ */
+export function ticketAccessLink(ticketId: number, env: Env): string {
+  const base = `${publicUrl(env)}/support`;
+  if (!env.BOT_API_TOKEN) return base;
+
+  return `${base}?${TICKET_ACCESS_PARAM}=${signTicketAccess(ticketId, env.BOT_API_TOKEN)}`;
 }
 
 function publicUrl(env: Env): string {

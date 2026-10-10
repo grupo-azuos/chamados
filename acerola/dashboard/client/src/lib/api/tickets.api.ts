@@ -41,6 +41,10 @@ export type TicketDashboard = {
  */
 export const ticketsApi = {
   /** Lista pública e mínima dos sistemas válidos para vincular um chamado a uma Issue. */
+  /** O chamado de um link de consulta — o link assinado que vai nas mensagens de WhatsApp. */
+  findByAccessToken: (token: string) =>
+    apiRequest<PublicTicket>(`/tickets/access/${encodeURIComponent(token)}`),
+
   /**
    * O convite de chamado: o link assinado que o bot de WhatsApp manda a quem escreve `/chamado`.
    * Devolve com quem a pessoa quer falar e o telefone dela, para o formulário abrir preenchido.

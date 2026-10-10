@@ -28,12 +28,17 @@ export type TicketInvitePayload = { assigneeId: string; phone: string | null; ex
 
 /* A chave de assinatura sai do segredo do bot, mas não É o segredo do bot: derivar dá uma
    chave só para convites, e vazar uma assinatura não diz nada sobre o token. */
-function signingKey(secret: string): Buffer {
-  return createHmac('sha256', secret).update('ticket-invite').digest();
+function signingKey(secret: string, purpose: string): Buffer {
+  return createHmac('sha256', secret).update(purpose).digest();
 }
 
-function sign(content: string, secret: string): string {
-  return createHmac('sha256', signingKey(secret)).update(content).digest('base64url');
+/* Cada tipo de link tem a própria chave: a assinatura de um convite não serve de assinatura de
+   um link de consulta, mesmo que alguém acerte o formato do conteúdo. */
+const INVITE_PURPOSE = 'ticket-invite';
+const ACCESS_PURPOSE = 'ticket-access';
+
+function sign(content: string, secret: string, purpose: string = INVITE_PURPOSE): string {
+  return createHmac('sha256', signingKey(secret, purpose)).update(content).digest('base64url');
 }
 
 export function signTicketInvite(payload: TicketInvitePayload, secret: string): string {
@@ -65,9 +70,14 @@ export function verifyTicketInvite(
 }
 
 /* Comparação em tempo constante: `===` deixaria descobrir a assinatura caractere por caractere. */
-function hasValidSignature(content: string, signature: string, secret: string): boolean {
+function hasValidSignature(
+  content: string,
+  signature: string,
+  secret: string,
+  purpose: string = INVITE_PURPOSE,
+): boolean {
   const presented = Buffer.from(signature);
-  const expected = Buffer.from(sign(content, secret));
+  const expected = Buffer.from(sign(content, secret, purpose));
 
   return presented.length === expected.length && timingSafeEqual(presented, expected);
 }
@@ -78,4 +88,30 @@ function parseJson(text: string): unknown {
   } catch {
     return null;
   }
+}
+
+/**
+ * O LINK DE CONSULTA de um chamado — o que vai nas mensagens ("acompanhe por aqui").
+ *
+ * Leva só o número do chamado, assinado. Quem tem o link abre AQUELE chamado sem digitar
+ * protocolo; quem não tem não consegue fabricar um para o chamado de outra pessoa trocando o
+ * número. Não vence: é para a pessoa voltar a ele enquanto o chamado existir.
+ */
+const accessSchema = z.object({ t: z.number().int().positive() });
+
+export function signTicketAccess(ticketId: number, secret: string): string {
+  const content = Buffer.from(JSON.stringify({ t: ticketId })).toString('base64url');
+
+  return `${content}.${sign(content, secret, ACCESS_PURPOSE)}`;
+}
+
+/** O número do chamado que o link abre — ou nulo quando a assinatura não confere. */
+export function verifyTicketAccess(token: string, secret: string): number | null {
+  const [content, signature, ...rest] = token.split('.');
+  if (!content || !signature || rest.length > 0) return null;
+  if (!hasValidSignature(content, signature, secret, ACCESS_PURPOSE)) return null;
+
+  const payload = accessSchema.safeParse(parseJson(Buffer.from(content, 'base64url').toString()));
+
+  return payload.success ? payload.data.t : null;
 }
