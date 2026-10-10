@@ -1,6 +1,7 @@
 import { pino } from 'pino';
 
 import { parseBotEnv } from './config/env.js';
+import { replyToMessage } from './conversation/ticket-conversation.js';
 import { createBotServer } from './http/bot-server.js';
 import { createEncryptedFileStore } from './store/encrypted-file-store.js';
 import { createBaileysTransport } from './transport/baileys-transport.js';
@@ -15,6 +16,7 @@ async function bootstrap(): Promise<void> {
   const transport = createBaileysTransport(
     store,
     logger.child({ scope: 'baileys' }, { level: 'warn' }),
+    replyToMessage,
   );
   const server = createBotServer(transport, env.BOT_API_TOKEN);
 
