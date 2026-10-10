@@ -393,6 +393,11 @@ export const ticketDataFormSchema = z
     computerId: z.string(),
     /** O sistema de software selecionado no select. */
     projectId: z.string().optional(),
+    /**
+     * O responsável escolhido no select — só o super admin vê o campo. Vazio ou igual ao atual
+     * quer dizer "não trocar": o view-model só manda o campo quando ele de fato mudou.
+     */
+    assigneeId: z.string().optional(),
   })
   .superRefine(checkProblemTypeMatchesArea);
 

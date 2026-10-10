@@ -58,6 +58,12 @@ function history(over: Partial<TicketHistory> = {}): TicketHistory {
 const historyForm = createRawSnippet(() => ({ render: () => '<p>formulário de histórico</p>' }));
 const dataForm = createRawSnippet(() => ({ render: () => '<p>formulário de dados</p>' }));
 
+const baseActions = {
+  onBack: vi.fn(),
+  onDownloadServiceOrder: vi.fn(),
+  onRemoveAttachment: vi.fn(),
+};
+
 function setup(props: Partial<AcerolaTicketDetailViewProps> = {}) {
   const actions = {
     onBack: vi.fn(),
@@ -81,7 +87,9 @@ function setup(props: Partial<AcerolaTicketDetailViewProps> = {}) {
 describe('totalMinutesOf', () => {
   // feliz
   it('adds up the time informed along the timeline', () => {
-    expect(totalMinutesOf([history({ minutesSpent: 20 }), history(), history({ minutesSpent: 45 })])).toBe(65);
+    expect(
+      totalMinutesOf([history({ minutesSpent: 20 }), history(), history({ minutesSpent: 45 })]),
+    ).toBe(65);
   });
 
   // triste
@@ -228,5 +236,75 @@ describe('AcerolaTicketDetailView', () => {
 
     expect(screen.getByText('Não consegui gerar a ordem de serviço.')).toBeInTheDocument();
     expect(screen.getByText('Não consegui ler a linha do tempo.')).toBeInTheDocument();
+  });
+
+  // feliz
+  /* Com a ação de envio, o botão manda a mensagem pelo sistema em vez de abrir o link. */
+  it('sends the notice through the system when there is a send action', async () => {
+    const onNotify = vi.fn();
+    setup({
+      data: {
+        ticket,
+        histories: [],
+        attachments: [],
+        whatsAppLink: 'https://example.invalid/whatsapp',
+      },
+      actions: { ...baseActions, onNotify },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Avisar no WhatsApp' }));
+
+    expect(onNotify).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('link', { name: /whatsapp/i })).not.toBeInTheDocument();
+  });
+
+  it('confirms that the message went out', () => {
+    setup({
+      data: {
+        ticket,
+        histories: [],
+        attachments: [],
+        whatsAppLink: 'https://example.invalid/whatsapp',
+      },
+      state: { notice: { isSent: true, message: 'Mensagem enviada pelo WhatsApp de Ana Lima.' } },
+      actions: { ...baseActions, onNotify: vi.fn() },
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Mensagem enviada pelo WhatsApp de Ana Lima.',
+    );
+  });
+
+  // triste
+  /* Não saiu (sem vínculo, limite do dia…): o motivo aparece e o link manual volta. */
+  it('falls back to the manual link, with the reason, when the message could not go out', () => {
+    setup({
+      data: {
+        ticket,
+        histories: [],
+        attachments: [],
+        whatsAppLink: 'https://example.invalid/whatsapp',
+      },
+      state: { notice: { isSent: false, message: 'O responsável ainda não vinculou o WhatsApp.' } },
+      actions: { ...baseActions, onNotify: vi.fn() },
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'O responsável ainda não vinculou o WhatsApp.',
+    );
+    expect(screen.getByRole('link', { name: 'Abrir a conversa e enviar' })).toHaveAttribute(
+      'href',
+      'https://example.invalid/whatsapp',
+    );
+    expect(screen.queryByRole('button', { name: 'Avisar no WhatsApp' })).not.toBeInTheDocument();
+  });
+
+  it('offers no notice at all for who did not ask to be notified', () => {
+    setup({
+      data: { ticket, histories: [], attachments: [], whatsAppLink: null },
+      actions: { ...baseActions, onNotify: vi.fn() },
+    });
+
+    expect(screen.queryByRole('button', { name: 'Avisar no WhatsApp' })).not.toBeInTheDocument();
   });
 });

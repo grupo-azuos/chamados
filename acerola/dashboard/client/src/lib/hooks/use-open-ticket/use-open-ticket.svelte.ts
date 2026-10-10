@@ -1,11 +1,12 @@
 import { createForm } from '@tanstack/svelte-form';
-import { createMutation, createQuery } from '@tanstack/svelte-query';
+import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { refuseScreenshot } from '@template/shared/domain/screenshot-catalog.util';
 import { buildWhatsAppLink } from '@template/shared/domain/ticket-whatsapp.util';
 import {
   type Ticket,
   ticketFormSchema,
   type TicketFormValues,
+  type TicketAssigneeOption,
 } from '@template/shared/schemas/ticket.schema';
 
 import { readError } from '$lib/api/http-client';
@@ -24,7 +25,8 @@ export type OpenTicketField =
   | 'priority'
   | 'contactPhone'
   | 'description'
-  | 'projectId';
+  | 'projectId'
+  | 'assigneeId';
 
 /** O que a pessoa vê depois de abrir: o protocolo para anotar. */
 export type OpenedTicket = {
@@ -42,6 +44,8 @@ export type OpenTicketModel = {
     attachments: File[];
     opened: OpenedTicket | null;
     systemProjects: { value: string; label: string }[];
+    /** Quem atende a área escolhida — as opções de "com quem você quer falar". */
+    assignees: { value: string; label: string }[];
   };
   state: {
     isSubmitting: boolean;
@@ -81,6 +85,7 @@ const EMPTY_VALUES: TicketFormValues = {
   notifyWhatsapp: false,
   description: '',
   projectId: '',
+  assigneeId: '',
 };
 
 /**
@@ -100,6 +105,8 @@ export function useOpenTicketModel(): OpenTicketModel {
   let attachmentError = $state<string | null>(null);
   let screenshotError = $state<string | null>(null);
   let opened = $state<OpenedTicket | null>(null);
+
+  const queryClient = useQueryClient();
 
   const projects = mirrorStore(
     createQuery(
@@ -134,6 +141,33 @@ export function useOpenTicketModel(): OpenTicketModel {
   const fieldMeta = form.useSelector((state) => state.fieldMeta);
   const isSubmitted = form.useSelector((state) => state.submissionAttempts > 0);
 
+  /* Os responsáveis dependem da ÁREA, que a pessoa escolhe no primeiro passo. Busca própria, e
+     não uma consulta com a área na chave: as opções de uma consulta já criada não trocam
+     sozinhas quando a área muda. Falhou? A lista fica vazia e o campo some — escolher o
+     responsável é opcional, e a falta dele não pode impedir ninguém de pedir socorro. */
+  let assignees = $state<TicketAssigneeOption[]>([]);
+  $effect(() => {
+    const area = values.current.area;
+    assignees = [];
+    if (!area) return;
+
+    let isCurrent = true;
+    void queryClient
+      .fetchQuery({
+        queryKey: ['public', 'ticket-assignee-options', area],
+        queryFn: () => ticketsApi.assigneeOptions(area),
+        staleTime: 60_000,
+      })
+      .then((options) => {
+        if (isCurrent) assignees = options;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isCurrent = false;
+    };
+  });
+
   const fieldOf = (field: OpenTicketField) =>
     toFieldState(values.current[field], fieldMeta.current[field], isSubmitted.current);
 
@@ -150,11 +184,13 @@ export function useOpenTicketModel(): OpenTicketModel {
           contactPhone: fieldOf('contactPhone'),
           description: fieldOf('description'),
           projectId: fieldOf('projectId'),
+          assigneeId: fieldOf('assigneeId'),
         },
         notifyWhatsapp: values.current.notifyWhatsapp,
         screenshotName: screenshot?.name ?? null,
         attachments,
         opened,
+        assignees: assignees.map((option) => ({ value: option.id, label: option.name })),
         systemProjects: (projects.current.data ?? []).map((project) => ({
           value: String(project.id),
           label: project.name,

@@ -27,7 +27,8 @@
     | 'priority'
     | 'contactPhone'
     | 'description'
-    | 'projectId';
+    | 'projectId'
+    | 'assigneeId';
 
   /**
    * O formulário PÚBLICO de abrir chamado — em ETAPAS, uma por vez, tipo onboarding.
@@ -53,6 +54,8 @@
       attachments: File[];
       opened: { protocol: string; whatsAppLink: string | null } | null;
       systemProjects?: { value: string; label: string }[];
+      /** Quem atende a área escolhida. Vazio esconde o campo: escolher é opcional. */
+      assignees?: { value: string; label: string }[];
     };
     state: {
       isSubmitting?: boolean;
@@ -169,6 +172,7 @@
 
   const fields = $derived(data.fields);
   const systemProjects = $derived(data.systemProjects ?? []);
+  const assignees = $derived(data.assignees ?? []);
 
   /* As opções de tipo de problema dependem da ÁREA escolhida — Manutenção não tem "rede
      caiu" na lista, nem Infra tem "ar-condicionado". */
@@ -179,6 +183,8 @@
   function handleAreaChange(value: string): void {
     actions.onChange('area', value);
     if (value !== 'sistema') actions.onChange('projectId', '');
+    /* Quem atende muda com a área: o responsável escolhido para a anterior não vale mais. */
+    actions.onChange('assigneeId', '');
     /* Trocar de área pode deixar o tipo escolhido fora da lista nova — o primeiro tipo da
        área nova é sempre válido, e evita mandar um tipo órfão no envio. */
     const firstOfArea = ticketProblemTypeOptionsForArea(value as TicketArea)[0];
@@ -574,6 +580,26 @@
           </TimelineStep>
         {:else}
           <TimelineStep data={{ title: 'Como te avisamos', icon: MessageCircle }} ui={{ isLast: true, tone: 'success' }}>
+            {#if assignees.length > 0}
+              <div class="mb-3 flex flex-col gap-1.5">
+                <span class="text-ink-700 text-sm font-medium">Com quem você quer falar?</span>
+                <OptionPicker
+                  data={{ value: fields.assigneeId.value, options: assignees }}
+                  ui={{
+                    ariaLabel: 'Responsável pelo chamado',
+                    placeholder: 'Sem preferência',
+                    fullWidth: true,
+                  }}
+                  state={{ isDisabled: formState.isSubmitting }}
+                  actions={{ onChange: (value: string) => actions.onChange('assigneeId', value) }}
+                />
+                <p class="text-muted-foreground text-xs">
+                  Opcional. Quem você escolher fica responsável pelo chamado e, se você marcar o
+                  aviso abaixo, é do WhatsApp dessa pessoa que a mensagem chega.
+                </p>
+              </div>
+            {/if}
+
             <label
               class="flex cursor-pointer items-start gap-2.5 rounded-box border border-border/80 bg-muted/20 px-3.5 py-3 text-sm text-ink-700 transition-colors hover:bg-muted/40"
             >

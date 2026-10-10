@@ -10,6 +10,8 @@ import {
 import {
   type PublicTicket,
   type Ticket,
+  type TicketAssigneeOption,
+  type TicketNotice,
   type TicketFormValues,
   type TicketListQuery,
   type UpdateTicketInput,
@@ -38,6 +40,17 @@ export type TicketDashboard = {
  */
 export const ticketsApi = {
   /** Lista pública e mínima dos sistemas válidos para vincular um chamado a uma Issue. */
+  /** Quem pode ser o responsável por um chamado desta área — público, para o formulário. */
+  assigneeOptions: (area: TicketArea) =>
+    apiRequest<TicketAssigneeOption[]>('/tickets/assignee-options', { query: { area } }),
+
+  /**
+   * Avisa pelo WhatsApp que o chamado ficou pronto, pelo número do responsável. Devolve o
+   * desfecho: quando não é `sent`, a tela oferece o link manual.
+   */
+  notifyReady: (id: number) =>
+    apiRequest<TicketNotice>(`/tickets/${id}/whatsapp-notice`, { method: 'POST' }),
+
   systemProjectOptions: () =>
     apiRequest<{ id: number; name: string }[]>('/tickets/system-project-options'),
 
@@ -198,6 +211,7 @@ function toTicketFormData(
 
   if (values.anydeskId) form.set('anydeskId', values.anydeskId);
   if (values.projectId) form.set('projectId', values.projectId);
+  if (values.assigneeId) form.set('assigneeId', values.assigneeId);
   if (screenshot) form.set('screenshot', screenshot);
   /* `append`, e não `set`: são vários no mesmo campo, e `set` deixaria só o último. */
   for (const attachment of attachments) form.append('attachments', attachment);
