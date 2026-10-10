@@ -3,9 +3,23 @@
 O bot é o programa que conversa com o WhatsApp. Ele fica **inteiro** em `acerola/dashboard/bot/`
 e é separado do resto: o servidor de chamados não conhece o WhatsApp, só a API HTTP do bot.
 
-> **Situação:** esta é a primeira etapa. O bot já vincula um número (QR code), guarda a conexão
-> cifrada e envia mensagem de texto. A tela de vínculo no perfil e o uso pelos chamados entram
-> nas próximas etapas (issue #18).
+> **Situação:** o bot vincula um número (QR code), guarda a conexão cifrada e envia mensagem de
+> texto. Admin e super admin já vinculam o próprio número em **Meu Perfil**. O uso pelos chamados
+> (enviar o chamado, avisar que ficou pronto, abrir por conversa) entra nas próximas etapas
+> (issue #18).
+
+## Ligar o servidor ao bot
+
+No `server/.env`, aponte para o bot e repita o token dele:
+
+```bash
+BOT_API_URL=http://127.0.0.1:3010
+BOT_API_TOKEN=<o mesmo BOT_API_TOKEN do bot/.env>
+```
+
+Sem essas duas variáveis o sistema funciona inteiro; o cartão de WhatsApp do perfil só avisa que
+a integração não foi configurada. O servidor guarda em `whatsapp_connections` **quem** vinculou
+e **qual número** — a conexão em si nunca sai do bot.
 
 ## Por que é um programa à parte
 
