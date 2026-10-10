@@ -29,6 +29,26 @@
   }}
 />
 
+<!-- Perto do limite do dia: o contador fica em tom de aviso. -->
+<Story
+  name="NearLimit"
+  args={{
+    data: { phone: '+55 (62) 99999-0001', sentToday: 74, dailyLimit: 100 },
+    state: { isConfigured: true, linkState: 'connected' },
+    actions,
+  }}
+/>
+
+<!-- O super admin também edita os textos do bot. -->
+<Story
+  name="SuperAdmin"
+  args={{
+    data: { phone: '+55 (62) 99999-0001', sentToday: 8, dailyLimit: 100 },
+    state: { isConfigured: true, linkState: 'connected' },
+    actions: { ...actions, onEditTemplates: fn() },
+  }}
+/>
+
 <!-- Vínculo começado e não terminado: o botão continua de onde parou. -->
 <Story
   name="Pairing"

@@ -6,12 +6,16 @@ import WhatsappLinkCard, {
   type AcerolaWhatsappLinkCardProps,
 } from './acerola-whatsapp-link-card.svelte';
 
-function renderCard(state: Partial<AcerolaWhatsappLinkCardProps['state']> = {}, phone = '') {
-  const actions = { onLink: vi.fn(), onUnlink: vi.fn() };
+function renderCard(
+  state: Partial<AcerolaWhatsappLinkCardProps['state']> = {},
+  phone = '',
+  extra: { sentToday?: number; dailyLimit?: number; onEditTemplates?: () => void } = {},
+) {
+  const actions = { onLink: vi.fn(), onUnlink: vi.fn(), onEditTemplates: extra.onEditTemplates };
 
   render(WhatsappLinkCard, {
     props: {
-      data: { phone },
+      data: { phone, sentToday: extra.sentToday, dailyLimit: extra.dailyLimit },
       state: { isConfigured: true, linkState: 'disconnected', ...state },
       actions,
     },
@@ -68,5 +72,57 @@ describe('AcerolaWhatsappLinkCard', () => {
     renderCard({ error: 'Não consegui falar com o serviço de WhatsApp.' });
 
     expect(screen.getByText('Não consegui falar com o serviço de WhatsApp.')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('tells how many automatic messages went out today', () => {
+    renderCard({ linkState: 'connected' }, '+55 (62) 99999-0001', {
+      sentToday: 12,
+      dailyLimit: 100,
+    });
+
+    expect(screen.getByText(/12 de 100 mensagens automáticas hoje/)).toBeInTheDocument();
+    expect(screen.queryByText(/Perto do limite/)).not.toBeInTheDocument();
+  });
+
+  /* A 70% do teto o contador avisa — o mesmo ponto em que o WhatsApp da pessoa recebe o alerta. */
+  it('warns when the day is close to the safe limit, and when it was reached', () => {
+    renderCard({ linkState: 'connected' }, '+55 (62) 99999-0001', {
+      sentToday: 70,
+      dailyLimit: 100,
+    });
+    expect(screen.getByText(/Perto do limite seguro do dia/)).toBeInTheDocument();
+  });
+
+  it('says the limit was reached and when sending comes back', () => {
+    renderCard({ linkState: 'connected' }, '+55 (62) 99999-0001', {
+      sentToday: 100,
+      dailyLimit: 100,
+    });
+
+    expect(screen.getByText(/Limite atingido/)).toBeInTheDocument();
+  });
+
+  it('opens the bot texts for who is allowed to edit them', async () => {
+    const onEditTemplates = vi.fn();
+    renderCard({}, '', { onEditTemplates });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Textos do bot' }));
+
+    expect(onEditTemplates).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  /* Só o super admin recebe a ação: sem ela, o botão dos textos não existe. */
+  it('hides the bot texts button from who cannot edit them', () => {
+    renderCard();
+
+    expect(screen.queryByRole('button', { name: 'Textos do bot' })).not.toBeInTheDocument();
+  });
+
+  it('shows no counter while there is no linked number', () => {
+    renderCard({}, '', { sentToday: 5, dailyLimit: 100 });
+
+    expect(screen.queryByText(/mensagens automáticas hoje/)).not.toBeInTheDocument();
   });
 });

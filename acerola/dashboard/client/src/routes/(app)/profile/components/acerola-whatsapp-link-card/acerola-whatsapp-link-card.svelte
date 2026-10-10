@@ -1,5 +1,8 @@
 <script lang="ts" module>
-  import type { WhatsappLinkState } from '@template/shared/schemas/whatsapp-connection.schema';
+  import {
+    isNearWhatsappLimit,
+    type WhatsappLinkState,
+  } from '@template/shared/schemas/whatsapp-connection.schema';
 
   /**
    * O cartão de WhatsApp do perfil: mostra se há um número vinculado e oferece vincular ou
@@ -12,6 +15,9 @@
     data: {
       /** O número vinculado, já formatado para leitura. Vazio quando não há. */
       phone: string;
+      /** Quantas mensagens automáticas saíram hoje por este número, e o teto do dia. */
+      sentToday?: number;
+      dailyLimit?: number;
     };
     state: {
       isLoading?: boolean;
@@ -20,7 +26,12 @@
       linkState: WhatsappLinkState;
       error?: string | null;
     };
-    actions: { onLink: () => void; onUnlink: () => void };
+    actions: {
+      onLink: () => void;
+      onUnlink: () => void;
+      /** Abrir a edição dos textos do bot. Só é passada para o super admin: sem ela, o botão some. */
+      onEditTemplates?: () => void;
+    };
   };
 </script>
 
@@ -30,10 +41,17 @@
   import ActionButton from '$lib/components/acerola-action-button/acerola-action-button.svelte';
   import ErrorState from '$lib/components/acerola-error-state/acerola-error-state.svelte';
   import StatusBadge from '$lib/components/acerola-status-badge/acerola-status-badge.svelte';
+  import { cn } from '$lib/utils/cn';
 
   let { data, state, actions }: AcerolaWhatsappLinkCardProps = $props();
 
   const isConnected = $derived(state.linkState === 'connected');
+  const sentToday = $derived(data.sentToday ?? 0);
+  const dailyLimit = $derived(data.dailyLimit ?? 0);
+  /* A 70% do teto o contador fica em tom de aviso — o mesmo ponto em que o WhatsApp da pessoa
+     recebe o alerta. No teto, o sistema para de enviar por ela até amanhã. */
+  const isNearLimit = $derived(dailyLimit > 0 && isNearWhatsappLimit(sentToday, dailyLimit));
+  const hasReachedLimit = $derived(dailyLimit > 0 && sentToday >= dailyLimit);
   /* Um vínculo começado e não terminado continua de onde parou. */
   const linkLabel = $derived(state.linkState === 'pairing' ? 'Continuar vínculo' : 'Vincular WhatsApp');
 </script>
@@ -68,6 +86,16 @@
           Seu número <span class="text-foreground font-medium">{data.phone}</span> envia as mensagens
           dos chamados em que você é o responsável.
         </p>
+        {#if dailyLimit > 0}
+          <p class={cn('mt-1 text-xs', isNearLimit ? 'text-warning font-medium' : 'text-muted-foreground')}>
+            {sentToday} de {dailyLimit} mensagens automáticas hoje.
+            {#if hasReachedLimit}
+              Limite atingido: o sistema volta a enviar por você amanhã.
+            {:else if isNearLimit}
+              Perto do limite seguro do dia.
+            {/if}
+          </p>
+        {/if}
       {:else}
         <p class="text-muted-foreground text-xs">
           Vincule seu número para o sistema enviar, em seu nome, as mensagens dos chamados em que
@@ -84,7 +112,14 @@
   </div>
 
   {#if !state.isLoading && state.isConfigured}
-    <div class="shrink-0">
+    <div class="flex shrink-0 flex-wrap items-center gap-2">
+      {#if actions.onEditTemplates}
+        <ActionButton
+          data={{ label: 'Textos do bot' }}
+          ui={{ variant: 'ghost' }}
+          actions={{ onClick: actions.onEditTemplates }}
+        />
+      {/if}
       {#if isConnected}
         <ActionButton
           data={{ label: 'Desvincular' }}

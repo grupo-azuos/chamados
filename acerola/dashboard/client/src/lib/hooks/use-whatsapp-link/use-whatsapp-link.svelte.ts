@@ -121,7 +121,14 @@ export function useWhatsappLinkModel(userId: string) {
 
   return {
     get data() {
-      return { phone: formatLinkedPhone(query.current.data?.phone), qrImage };
+      const connection = query.current.data;
+
+      return {
+        phone: formatLinkedPhone(connection?.phone),
+        qrImage,
+        sentToday: connection?.sentToday ?? 0,
+        dailyLimit: connection?.dailyLimit ?? 0,
+      };
     },
     get state() {
       const connection = query.current.data;
