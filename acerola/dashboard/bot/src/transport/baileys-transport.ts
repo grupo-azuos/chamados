@@ -2,6 +2,7 @@ import {
   Browsers,
   type ConnectionState,
   DisconnectReason,
+  type WAMessage,
   makeCacheableSignalKeyStore,
   makeWASocket,
   type WASocket,
@@ -10,8 +11,10 @@ import { type Logger } from 'pino';
 
 import { type SessionStore } from '../store/session-store.js';
 import { loadAuthState } from './baileys-auth-state.js';
+import { readPrivateText } from './baileys-message.js';
 import {
   DISCONNECTED_STATUS,
+  type MessageResponder,
   normalizePhone,
   phoneFromJid,
   RecipientNotFoundError,
@@ -32,7 +35,11 @@ const RECONNECT_DELAY_MS = 5000;
  * Uma sessão por pessoa vinculada, cada uma com o próprio socket. O estado que o resto enxerga
  * é só o `SessionStatus`; o socket nunca sai daqui.
  */
-export function createBaileysTransport(store: SessionStore, logger: Logger): WhatsAppTransport {
+export function createBaileysTransport(
+  store: SessionStore,
+  logger: Logger,
+  respond: MessageResponder,
+): WhatsAppTransport {
   const sessions = new Map<string, Session>();
   let isClosing = false;
 
@@ -55,8 +62,28 @@ export function createBaileysTransport(store: SessionStore, logger: Logger): Wha
 
     socket.ev.on('creds.update', () => void saveCreds());
     socket.ev.on('connection.update', (update) => void onUpdate(sessionId, session, update));
+    /* `notify` é mensagem que acabou de chegar. Os outros tipos são histórico sendo
+       sincronizado, e histórico não se responde. */
+    socket.ev.on('messages.upsert', ({ messages, type }) => {
+      if (type === 'notify') void answer(socket, messages);
+    });
 
     return session;
+  }
+
+  async function answer(socket: WASocket, messages: WAMessage[]): Promise<void> {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    for (const message of messages) {
+      const incoming = readPrivateText(message, nowSeconds);
+      const reply = incoming ? respond(incoming.text) : null;
+      if (!incoming || !reply) continue;
+
+      /* Uma resposta que falhou não pode derrubar as outras nem o socket. */
+      await socket
+        .sendMessage(incoming.chatId, { text: reply })
+        .catch((error: unknown) => logger.error({ error }, 'failed to reply'));
+    }
   }
 
   async function onUpdate(
