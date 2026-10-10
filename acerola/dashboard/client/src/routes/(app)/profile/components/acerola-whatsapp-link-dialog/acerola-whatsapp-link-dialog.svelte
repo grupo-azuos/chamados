@@ -47,7 +47,7 @@
     DialogFooter,
     DialogHeader,
     DialogTitle,
-  } from '$lib/components/ui/dialog';
+  } from '$lib/components/acerola-dialog/acerola-dialog';
 
   let { data, state, actions }: AcerolaWhatsappLinkDialogProps = $props();
 
