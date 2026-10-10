@@ -20,5 +20,22 @@ export const whatsappConnectionSchema = z.object({
   qr: z.string().nullable(),
   /** O número vinculado, só dígitos com DDI. Nulo enquanto não conectou. */
   phone: z.string().nullable(),
+  /** Quantas mensagens automáticas saíram hoje pelo número desta pessoa. */
+  sentToday: z.number().int().min(0),
+  /** O teto diário. Ao chegar nele, o sistema para de enviar por este número até amanhã. */
+  dailyLimit: z.number().int().min(1),
 });
+
+/** A partir de quanto do teto o sistema avisa: 70%. */
+export const WHATSAPP_LIMIT_ALERT_RATIO = 0.7;
+
+/** A quantidade de mensagens em que o aviso de limite dispara. */
+export function whatsappAlertThreshold(dailyLimit: number): number {
+  return Math.ceil(dailyLimit * WHATSAPP_LIMIT_ALERT_RATIO);
+}
+
+/** Perto do limite? É o que pinta o contador do perfil de amarelo. */
+export function isNearWhatsappLimit(sentToday: number, dailyLimit: number): boolean {
+  return sentToday >= whatsappAlertThreshold(dailyLimit);
+}
 export type WhatsappConnection = z.infer<typeof whatsappConnectionSchema>;
