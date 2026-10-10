@@ -17,6 +17,7 @@
     contactPhone: field(''),
     description: field(''),
     projectId: field(''),
+    assigneeId: field(''),
   };
 
   const filledFields: Record<OpenTicketField, FormFieldState> = {
@@ -29,6 +30,7 @@
     contactPhone: field('62 99999-9999'),
     description: field('A impressora da sala não puxa papel.'),
     projectId: field(''),
+    assigneeId: field(''),
   };
 
   const actions = {
@@ -173,6 +175,26 @@
       screenshotName: null,
     attachments: [],
       opened: { protocol: 'CH-0013', whatsAppLink: null },
+    },
+    state: {},
+    actions,
+  }}
+/>
+
+<!-- Com responsáveis para escolher: o campo aparece no último passo ("Como te avisamos"). -->
+<Story
+  name="WithAssignees"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: true,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+      assignees: [
+        { value: 'u-ana', label: 'Ana Lima' },
+        { value: 'u-bia', label: 'Bia Costa' },
+      ],
     },
     state: {},
     actions,

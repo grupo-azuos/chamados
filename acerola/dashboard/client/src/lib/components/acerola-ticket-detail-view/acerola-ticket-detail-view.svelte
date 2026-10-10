@@ -49,11 +49,19 @@
       attachmentError?: string | null;
       isDownloadingServiceOrder?: boolean;
       serviceOrderError?: string | null;
+      isNotifying?: boolean;
+      /** O resultado do último aviso por WhatsApp: saiu, ou por que não saiu. */
+      notice?: { isSent: boolean; message: string } | null;
     };
     actions: {
       onBack: () => void;
       onDownloadServiceOrder: () => void;
       onRemoveAttachment: (attachment: TicketAttachment) => void;
+      /**
+       * Avisar pelo WhatsApp do responsável. Com esta ação, o botão ENVIA; sem ela (ou quando
+       * o envio não sai), o que aparece é o link que abre a conversa para enviar à mão.
+       */
+      onNotify?: () => void;
     };
     /** O formulário de novo histórico. */
     historyForm: Snippet;
@@ -92,6 +100,10 @@
 
   let { data, state: viewState, actions, historyForm, dataForm }: AcerolaTicketDetailViewProps =
     $props();
+
+  /* O botão envia sozinho enquanto há uma ação de envio e o último envio não falhou. Depois de
+     uma falha, dá lugar ao link manual — o plano B de sempre. */
+  const sendsNotice = $derived(Boolean(actions.onNotify) && viewState?.notice?.isSent !== false);
 
   const ticket = $derived(data.ticket);
   const isClosed = $derived(isClosedTicketStatus(ticket.status));
@@ -139,7 +151,14 @@
       description: `Aberto por ${ticket.requesterName} em ${formatDateTime(ticket.createdAt)}`,
     }}
   >
-    {#if data.whatsAppLink}
+    {#if data.whatsAppLink && sendsNotice}
+      <ActionButton
+        data={{ label: 'Avisar no WhatsApp', loadingLabel: 'Enviando…' }}
+        ui={{ variant: 'secondary', icon: MessageCircle }}
+        state={{ isLoading: viewState?.isNotifying }}
+        actions={{ onClick: () => actions.onNotify?.() }}
+      />
+    {:else if data.whatsAppLink}
       <a
         class="control-md rounded-control border-success/20 bg-success/10 text-success hover:bg-success/20 inline-flex items-center gap-2 border text-sm font-semibold transition-colors"
         href={data.whatsAppLink}
@@ -147,7 +166,7 @@
         rel="noopener"
       >
         <MessageCircle class="size-4" aria-hidden="true" />
-        Avisar no WhatsApp
+        {viewState?.notice ? 'Abrir a conversa e enviar' : 'Avisar no WhatsApp'}
       </a>
     {/if}
     <ActionButton
@@ -157,6 +176,15 @@
       actions={{ onClick: actions.onDownloadServiceOrder }}
     />
   </PageHeader>
+
+  {#if viewState?.notice}
+    <p role="status" class={viewState.notice.isSent ? 'text-success text-sm' : 'text-warning text-sm'}>
+      {viewState.notice.message}
+      {#if !viewState.notice.isSent && data.whatsAppLink}
+        Use o botão acima para abrir a conversa e enviar você mesmo.
+      {/if}
+    </p>
+  {/if}
 
   <!-- O estágio fica logo abaixo do título, com a urgência: são as duas coisas que quem abre a
        ficha quer saber antes de ler qualquer outra. -->

@@ -18,6 +18,7 @@ const fields: Record<OpenTicketField, FormFieldState> = {
   contactPhone: field('62 99999-9999'),
   description: field('A impressora não puxa papel.'),
   projectId: field(''),
+  assigneeId: field(''),
 };
 
 const actions = {
@@ -51,6 +52,28 @@ async function advanceTo(user: ReturnType<typeof userEvent.setup>, index: number
 
 describe('AcerolaOpenTicketForm', () => {
   // feliz
+  it('offers who attends the area on the last step, as an optional choice', async () => {
+    const user = userEvent.setup();
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        assignees: [
+          { value: 'u-ana', label: 'Ana Lima' },
+          { value: 'u-bia', label: 'Bia Costa' },
+        ],
+      },
+    });
+
+    await advanceTo(user, 4);
+
+    expect(screen.getByText('Com quem você quer falar?')).toBeInTheDocument();
+    expect(screen.getByText(/Opcional\./)).toBeInTheDocument();
+  });
+
   it('opens on the area step, with the three cards to choose from', () => {
     setup();
 
@@ -314,6 +337,16 @@ describe('AcerolaOpenTicketForm', () => {
 
     expect(screen.getByLabelText(/seu nome/i)).toBeInTheDocument();
     expect(screen.getByText('Informe seu nome')).toBeInTheDocument();
+  });
+
+  /* Escolher com quem falar é opcional: sem opções para a área, o campo nem aparece. */
+  it('hides the assignee choice when nobody is offered for the area', async () => {
+    const user = userEvent.setup();
+    setup();
+
+    await advanceTo(user, 4);
+
+    expect(screen.queryByText('Com quem você quer falar?')).not.toBeInTheDocument();
   });
 
   it('shows the server refusal on the last step without throwing away what was typed', async () => {
