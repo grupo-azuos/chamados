@@ -32,7 +32,9 @@ const ticket: Ticket = {
   updatedBy: null,
 };
 
-function data(over: Partial<AcerolaTicketDataFormProps['data']> = {}): AcerolaTicketDataFormProps['data'] {
+function data(
+  over: Partial<AcerolaTicketDataFormProps['data']> = {},
+): AcerolaTicketDataFormProps['data'] {
   return {
     ticket,
     fields: {
@@ -136,7 +138,9 @@ describe('AcerolaTicketDataForm', () => {
   it('offers nothing to add when every area already takes part', () => {
     setup({ data: data({ availableParticipantAreas: [] }) });
 
-    expect(screen.queryByRole('button', { name: /adicionar .* ao chamado/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /adicionar .* ao chamado/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('says there is no participant area instead of showing an empty list', () => {
@@ -169,6 +173,31 @@ describe('AcerolaTicketDataForm', () => {
     setup();
 
     expect(screen.queryByLabelText(/responsável/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Responsável')).not.toBeInTheDocument();
+  });
+
+  // feliz
+  /* O campo de responsável só existe para quem recebe as opções — o super admin. */
+  it('offers the assignee choice when the options are given', () => {
+    const base = data();
+    setup({
+      data: {
+        ...base,
+        fields: { ...base.fields, assigneeId: { value: 'u-ana', error: null } },
+        assignees: [
+          { value: 'u-ana', label: 'Ana Lima' },
+          { value: 'u-bia', label: 'Bia Costa' },
+        ],
+      },
+    });
+
+    expect(screen.getByText('Responsável')).toBeInTheDocument();
+  });
+
+  // triste
+  it('hides the assignee choice from who cannot change it', () => {
+    setup();
+
     expect(screen.queryByText('Responsável')).not.toBeInTheDocument();
   });
 });

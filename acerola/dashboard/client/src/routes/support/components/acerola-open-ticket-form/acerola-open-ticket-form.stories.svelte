@@ -17,6 +17,7 @@
     contactPhone: field(''),
     description: field(''),
     projectId: field(''),
+    assigneeId: field(''),
   };
 
   const filledFields: Record<OpenTicketField, FormFieldState> = {
@@ -29,6 +30,7 @@
     contactPhone: field('62 99999-9999'),
     description: field('A impressora da sala não puxa papel.'),
     projectId: field(''),
+    assigneeId: field(''),
   };
 
   const actions = {
@@ -179,6 +181,59 @@
   }}
 />
 
+<!-- Chegou pelo link do WhatsApp: o aviso de com quem está falando, e só as áreas dessa pessoa. -->
+<Story
+  name="FromWhatsAppLink"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: true,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+      invite: { assigneeName: 'Ana Lima', areas: ['infra', 'manutencao'] },
+    },
+    state: {},
+    actions,
+  }}
+/>
+
+<!-- Caso limite: o link venceu. O formulário abre normal, com um aviso. -->
+<Story
+  name="ExpiredWhatsAppLink"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: false,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+    },
+    state: { inviteError: 'Este link não vale mais. Peça outro pelo WhatsApp.' },
+    actions,
+  }}
+/>
+
+<!-- Com responsáveis para escolher: o campo aparece no último passo ("Como te avisamos"). -->
+<Story
+  name="WithAssignees"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: true,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+      assignees: [
+        { value: 'u-ana', label: 'Ana Lima' },
+        { value: 'u-bia', label: 'Bia Costa' },
+      ],
+    },
+    state: {},
+    actions,
+  }}
+/>
+
 <Story
   name="OpenedWithWhatsApp"
   args={{
@@ -188,6 +243,26 @@
       screenshotName: null,
     attachments: [],
       opened: { protocol: 'CH-0013', whatsAppLink: 'https://wa.me/5562999999999?text=Protocolo' },
+    },
+    state: {},
+    actions,
+  }}
+/>
+
+<!-- O bot já mandou o protocolo: a tela avisa e não oferece o link. -->
+<Story
+  name="OpenedAndSentByBot"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: true,
+      screenshotName: null,
+      attachments: [],
+      opened: {
+        protocol: 'CH-0013',
+        whatsAppLink: 'https://wa.me/5562999999999?text=Protocolo',
+        isNoticeSent: true,
+      },
     },
     state: {},
     actions,

@@ -53,6 +53,8 @@ services:
     environment:
       BOT_HOST: 0.0.0.0
       BOT_DATA_DIR: /data
+      # Para onde o bot leva o /chamado: o serviço `app`, pela rede interna do compose.
+      BOT_SERVER_URL: http://app:3005/api
     volumes:
       - bot-data:/data
     healthcheck:
@@ -61,7 +63,7 @@ services:
           'CMD',
           'node',
           '-e',
-          "fetch('http://127.0.0.1:' + (process.env.BOT_PORT || 3010) + '/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+          "fetch('http://127.0.0.1:' + (process.env.BOT_PORT || 4005) + '/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
         ]
       interval: 30s
       timeout: 10s

@@ -75,6 +75,7 @@ describe('toFormValues', () => {
       problemType: 'network',
       computerId: '11',
       projectId: '5',
+      assigneeId: '',
     });
   });
 
@@ -108,6 +109,25 @@ describe('toUpdateInput', () => {
     expect(input).not.toHaveProperty('status');
     expect(input).not.toHaveProperty('solution');
   });
+
+  /* Só o super admin troca o responsável: o campo só viaja quando de fato mudou. */
+  it('sends the assignee only when it was changed', () => {
+    const values = { ...toFormValues(ticket()), assigneeId: 'u-bia' };
+
+    expect(toUpdateInput(values, 'u-ana')).toMatchObject({ assigneeId: 'u-bia' });
+    expect(toUpdateInput(values, null)).toMatchObject({ assigneeId: 'u-bia' });
+  });
+
+  // triste
+  /* Mandar o mesmo responsável faria o servidor exigir super admin de quem só mudou a prioridade. */
+  it('leaves the assignee out when it is the same, or empty', () => {
+    const same = { ...toFormValues(ticket()), assigneeId: 'u-ana' };
+    const empty = { ...toFormValues(ticket()), assigneeId: '' };
+
+    expect(toUpdateInput(same, 'u-ana')).not.toHaveProperty('assigneeId');
+    expect(toUpdateInput(empty, 'u-ana')).not.toHaveProperty('assigneeId');
+    expect(toUpdateInput(toFormValues(ticket()))).not.toHaveProperty('assigneeId');
+  });
 });
 
 describe('toAvailableParticipantAreas', () => {
@@ -129,9 +149,9 @@ describe('toAvailableParticipantAreas', () => {
 describe('toMachineOptions', () => {
   // feliz
   it('shows the nickname with the technical name next to it', () => {
-    expect(toMachineOptions([{ id: 3, name: 'RECEPCAO-01', displayName: 'Recepção — balcão' }])).toEqual(
-      [{ value: '3', label: 'Recepção — balcão (RECEPCAO-01)' }],
-    );
+    expect(
+      toMachineOptions([{ id: 3, name: 'RECEPCAO-01', displayName: 'Recepção — balcão' }]),
+    ).toEqual([{ value: '3', label: 'Recepção — balcão (RECEPCAO-01)' }]);
   });
 
   // triste
@@ -183,7 +203,9 @@ describe('useTicketDataFormModel', () => {
   it('offers the machines of the inventory to link the ticket to', async () => {
     const model = mountModel();
 
-    await waitFor(() => expect(model.data.machines).toEqual([{ value: '3', label: 'RECEPCAO-01' }]));
+    await waitFor(() =>
+      expect(model.data.machines).toEqual([{ value: '3', label: 'RECEPCAO-01' }]),
+    );
   });
 
   it('adds a participant area right away, without waiting for the form', async () => {
@@ -204,7 +226,9 @@ describe('useTicketDataFormModel', () => {
     model.actions.onAddParticipantArea('manutencao');
 
     await waitFor(() =>
-      expect(model.data.availableParticipantAreas.map((area) => area.value)).not.toContain('manutencao'),
+      expect(model.data.availableParticipantAreas.map((area) => area.value)).not.toContain(
+        'manutencao',
+      ),
     );
   });
 

@@ -17,12 +17,21 @@ export type SessionStatus = {
 
 export const DISCONNECTED_STATUS: SessionStatus = { state: 'disconnected', qr: null, phone: null };
 
-export type IncomingMessage = {
+/** Um texto que chegou numa conversa privada de um número vinculado. */
+export type ReceivedText = {
   sessionId: string;
-  /** Quem mandou, só dígitos com DDI. */
-  from: string;
+  chatId: string;
   text: string;
+  /** O telefone de quem escreveu, só dígitos com DDI — nulo quando o WhatsApp não o informa. */
+  phone: string | null;
 };
+
+/**
+ * Quem decide o que responder a um texto que chegou. Devolve a resposta, ou nulo para ficar em
+ * silêncio. O transporte entrega só texto de conversa privada e recente — e manda a resposta de
+ * volta para a mesma conversa.
+ */
+export type MessageResponder = (message: ReceivedText) => Promise<string | null>;
 
 export type WhatsAppTransport = {
   /** Começa (ou retoma) o vínculo. Chamar de novo com a sessão viva não reinicia nada. */

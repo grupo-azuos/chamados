@@ -77,7 +77,9 @@ export class TicketServiceOrdersService {
     };
     const buffer = await buildServiceOrderPdf(order, { ...draft, webOrigin: this.webOrigin() });
 
-    await this.repository.record(toServiceOrderInsert(order, draft, fingerprintOf(buffer), user.email));
+    await this.repository.record(
+      toServiceOrderInsert(order, draft, fingerprintOf(buffer), user.email),
+    );
 
     return toReport(order, buffer);
   }

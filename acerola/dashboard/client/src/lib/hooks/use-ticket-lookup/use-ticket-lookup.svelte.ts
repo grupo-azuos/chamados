@@ -22,6 +22,8 @@ export type TicketLookupModel = {
   actions: {
     onProtocolChange: (protocol: string) => void;
     onSearch: () => void;
+    /** Abre o chamado de um link de consulta (o link assinado das mensagens de WhatsApp). */
+    onOpenLink: (token: string) => void;
   };
 };
 
@@ -41,7 +43,15 @@ export function useTicketLookupModel(): TicketLookupModel {
 
   const search = mirrorStore(
     createMutation({
-      mutationFn: (value: string) => ticketsApi.findByProtocol(value),
+      /* Dois caminhos para o mesmo chamado: o protocolo digitado, ou o link assinado. */
+      mutationFn: (input: { protocol: string } | { token: string }) =>
+        'token' in input
+          ? ticketsApi.findByAccessToken(input.token)
+          : ticketsApi.findByProtocol(input.protocol),
+      /* Veio pelo link: o campo passa a mostrar o protocolo do chamado que abriu. */
+      onSuccess: (ticket: PublicTicket) => {
+        protocol = ticket.protocol;
+      },
     }),
   );
 
@@ -70,8 +80,9 @@ export function useTicketLookupModel(): TicketLookupModel {
       },
       onSearch: () => {
         if (!isValidTicketProtocol(protocol)) return;
-        search.current.mutate(protocol.trim());
+        search.current.mutate({ protocol: protocol.trim() });
       },
+      onOpenLink: (token) => search.current.mutate({ token }),
     },
   };
 }

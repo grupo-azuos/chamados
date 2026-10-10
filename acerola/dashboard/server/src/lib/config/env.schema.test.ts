@@ -25,6 +25,7 @@ describe('parseEnv', () => {
       API_RATE_LIMIT: 300,
       API_WEBHOOK_RATE_LIMIT: 12,
       API_TRUST_PROXY_HOPS: 0,
+      WHATSAPP_DAILY_LIMIT: 100,
       R2_SIGNED_URL_TTL_SECONDS: 300,
     });
   });

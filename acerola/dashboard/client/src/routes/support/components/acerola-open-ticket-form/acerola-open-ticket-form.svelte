@@ -27,7 +27,8 @@
     | 'priority'
     | 'contactPhone'
     | 'description'
-    | 'projectId';
+    | 'projectId'
+    | 'assigneeId';
 
   /**
    * O formulário PÚBLICO de abrir chamado — em ETAPAS, uma por vez, tipo onboarding.
@@ -51,8 +52,19 @@
       screenshotName: string | null;
       /** Os arquivos escolhidos, ainda não enviados. */
       attachments: File[];
-      opened: { protocol: string; whatsAppLink: string | null } | null;
+      /**
+       * O chamado que acabou de abrir. `isNoticeSent`: o bot já mandou o protocolo para o
+       * WhatsApp da pessoa — a tela avisa disso e não oferece o link para ela mandar a si mesma.
+       */
+      opened: { protocol: string; whatsAppLink: string | null; isNoticeSent?: boolean } | null;
       systemProjects?: { value: string; label: string }[];
+      /** Quem atende a área escolhida. Vazio esconde o campo: escolher é opcional. */
+      assignees?: { value: string; label: string }[];
+      /**
+       * Quem chegou pelo link do WhatsApp: com quem está abrindo o chamado e em quais áreas
+       * essa pessoa atende — só essas aparecem para escolher.
+       */
+      invite?: { assigneeName: string; areas: TicketArea[] } | null;
     };
     state: {
       isSubmitting?: boolean;
@@ -61,6 +73,8 @@
       attachmentError?: string | null;
       systemProjectsLoading?: boolean;
       systemProjectsError?: string | null;
+      /** O link do WhatsApp não vale mais: um aviso, e o formulário segue normal. */
+      inviteError?: string | null;
     };
     actions: {
       onChange: (field: OpenTicketField, value: string) => void;
@@ -169,6 +183,11 @@
 
   const fields = $derived(data.fields);
   const systemProjects = $derived(data.systemProjects ?? []);
+  const assignees = $derived(data.assignees ?? []);
+  /* Com convite, só as áreas que aquele responsável atende: escolher outra o tiraria do chamado. */
+  const areaCards = $derived(
+    data.invite ? AREA_CARDS.filter((card) => data.invite?.areas.includes(card.value)) : AREA_CARDS,
+  );
 
   /* As opções de tipo de problema dependem da ÁREA escolhida — Manutenção não tem "rede
      caiu" na lista, nem Infra tem "ar-condicionado". */
@@ -179,6 +198,8 @@
   function handleAreaChange(value: string): void {
     actions.onChange('area', value);
     if (value !== 'sistema') actions.onChange('projectId', '');
+    /* Quem atende muda com a área: o responsável escolhido para a anterior não vale mais. */
+    actions.onChange('assigneeId', '');
     /* Trocar de área pode deixar o tipo escolhido fora da lista nova — o primeiro tipo da
        área nova é sempre válido, e evita mandar um tipo órfão no envio. */
     const firstOfArea = ticketProblemTypeOptionsForArea(value as TicketArea)[0];
@@ -281,7 +302,11 @@
         Guarde este número — é com ele que você acompanha o andamento aqui mesmo.
       </p>
 
-      {#if data.opened.whatsAppLink}
+      {#if data.opened.isNoticeSent}
+        <p class="text-success text-sm font-medium" role="status">
+          Enviamos o protocolo e o link de acompanhamento para o seu WhatsApp.
+        </p>
+      {:else if data.opened.whatsAppLink}
         <a
           class="bg-primary text-primary-foreground hover:bg-primary/90 control-md rounded-control inline-flex items-center text-sm font-semibold"
           href={data.opened.whatsAppLink}
@@ -328,6 +353,15 @@
       <!-- Uma etapa por vez: `Timeline` de um item só dá o cabeçalho (ícone + título) sem a
            linha de conexão, que só faz sentido quando há uma próxima etapa visível. -->
       <div bind:this={stepContentEl}>
+      {#if data.invite}
+        <p class="rounded-box border-primary/20 bg-primary/5 text-ink-700 border px-3.5 py-2.5 text-sm" role="status">
+          Você está abrindo um chamado com <strong>{data.invite.assigneeName}</strong>.
+        </p>
+      {:else if formState.inviteError}
+        <p class="rounded-box border-warning/30 bg-warning/5 text-ink-700 border px-3.5 py-2.5 text-sm" role="status">
+          {formState.inviteError} Você ainda pode abrir o chamado por aqui.
+        </p>
+      {/if}
       <Timeline>
         {#if stepId === 'area'}
           <TimelineStep
@@ -335,7 +369,7 @@
             ui={{ isLast: true, tone: 'brand' }}
           >
             <div class="grid gap-3 sm:grid-cols-3">
-              {#each AREA_CARDS as card (card.value)}
+              {#each areaCards as card (card.value)}
                 {@const isSelected = fields.area.value === card.value}
                 <button
                   type="button"
@@ -574,6 +608,26 @@
           </TimelineStep>
         {:else}
           <TimelineStep data={{ title: 'Como te avisamos', icon: MessageCircle }} ui={{ isLast: true, tone: 'success' }}>
+            {#if assignees.length > 0}
+              <div class="mb-3 flex flex-col gap-1.5">
+                <span class="text-ink-700 text-sm font-medium">Com quem você quer falar?</span>
+                <OptionPicker
+                  data={{ value: fields.assigneeId.value, options: assignees }}
+                  ui={{
+                    ariaLabel: 'Responsável pelo chamado',
+                    placeholder: 'Sem preferência',
+                    fullWidth: true,
+                  }}
+                  state={{ isDisabled: formState.isSubmitting }}
+                  actions={{ onChange: (value: string) => actions.onChange('assigneeId', value) }}
+                />
+                <p class="text-muted-foreground text-xs">
+                  Opcional. Quem você escolher fica responsável pelo chamado e, se você marcar o
+                  aviso abaixo, é do WhatsApp dessa pessoa que a mensagem chega.
+                </p>
+              </div>
+            {/if}
+
             <label
               class="flex cursor-pointer items-start gap-2.5 rounded-box border border-border/80 bg-muted/20 px-3.5 py-3 text-sm text-ink-700 transition-colors hover:bg-muted/40"
             >

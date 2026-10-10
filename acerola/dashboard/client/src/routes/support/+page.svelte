@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { page } from '$app/state';
+  import { TICKET_ACCESS_PARAM } from '@template/shared/domain/ticket-invite.util';
   import ActionButton from '$lib/components/acerola-action-button/acerola-action-button.svelte';
   import OpenTicketForm from './components/acerola-open-ticket-form/acerola-open-ticket-form.svelte';
   import TicketLookupDrawer from './components/acerola-ticket-lookup-drawer/acerola-ticket-lookup-drawer.svelte';
@@ -19,7 +21,11 @@
 
   /* Se o drawer de consulta está aberto é qual peça da tela está na frente, não dado do
      chamado — por isso mora aqui, igual ao `answering` da tela interna de Chamados. */
-  let isLookupOpen = $state(false);
+  /* Quem chega pelo link de consulta (`?chamado=…`, o das mensagens de WhatsApp) já cai com o
+     chamado aberto na consulta, sem digitar protocolo. Lido uma vez, na chegada. */
+  const accessToken = page.url.searchParams.get(TICKET_ACCESS_PARAM);
+  let isLookupOpen = $state(accessToken !== null);
+  if (accessToken) lookup.actions.onOpenLink(accessToken);
 </script>
 
 <svelte:head>

@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import type { Snippet } from 'svelte';
   import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
   import {
     ROLE_CONTEXT_LABELS,
@@ -14,6 +15,11 @@
   import { type RolesFilter } from '$lib/hooks/use-roles/use-roles.svelte';
 
   export type AcerolaRoleListViewProps = {
+    /**
+     * O que a tela quer mostrar logo abaixo do cartão de perfil, antes da lista de cargos — hoje,
+     * o vínculo de WhatsApp. Entra pronto: este componente não sabe o que é.
+     */
+    afterProfile?: Snippet;
     data: {
       currentUser?: {
         name: string;
@@ -105,7 +111,7 @@
   import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
 
-  let { data, state, actions }: AcerolaRoleListViewProps = $props();
+  let { afterProfile, data, state, actions }: AcerolaRoleListViewProps = $props();
 
   const tableView = useTableViewModel();
 
@@ -185,6 +191,8 @@
       </div>
     </div>
   {/if}
+
+  {@render afterProfile?.()}
 
   <!-- 2. Cabeçalho de Cargos da Equipe -->
   <PageHeader
