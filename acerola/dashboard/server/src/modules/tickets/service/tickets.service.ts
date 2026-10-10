@@ -177,7 +177,9 @@ export class TicketsService {
 
   /* Quem escolheu um responsável e pediu aviso recebe o "recebi o seu chamado" pelo número
      dele. Em segundo plano, e sem derrubar nada: o chamado já está gravado. */
-  private announceOpening(row: TicketRow): void {
+  private announceOpening(row: TicketRow, isSkipped = false): void {
+    if (isSkipped) return;
+
     void this.notifier?.opened(row).catch(() => undefined);
   }
 
@@ -301,6 +303,9 @@ export class TicketsService {
     input: CreateTicketInput,
     screenshot?: UploadedScreenshot,
     attachments: readonly UploadedAttachment[] = [],
+    /* Quem abriu pela CONVERSA já recebe a confirmação na própria conversa: mandar também o
+       aviso de "chamado aberto" seriam duas mensagens dizendo a mesma coisa. */
+    options: { skipOpeningNotice?: boolean } = {},
   ): Promise<Ticket> {
     if (input.area === 'sistema') {
       const projectId = Number(input.projectId);
@@ -318,7 +323,7 @@ export class TicketsService {
     const screenshotKey = await this.storeScreenshot(screenshot);
     const row = await this.repository.insert(toTicketInsert(input, screenshotKey, assignee));
 
-    this.announceOpening(row);
+    this.announceOpening(row, options.skipOpeningNotice);
 
     /* Os arquivos entram DEPOIS do chamado existir, porque é a ele que eles pertencem. Um
        arquivo fora das regras derruba a requisição — e o chamado já gravado fica, sem os

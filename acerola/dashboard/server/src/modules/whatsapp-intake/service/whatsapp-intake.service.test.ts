@@ -85,18 +85,24 @@ describe('WhatsappIntakeService', () => {
     const answer = await service.handle(inbound(filledForm()), NOW + MINUTE);
 
     expect(answer).toEqual({ reply: 'text:intake_created', isOpen: false });
-    expect(tickets.create).toHaveBeenCalledWith({
-      requesterName: 'Bia Costa',
-      department: 'financeiro',
-      problemType: 'printer',
-      projectId: null,
-      contactPhone: '5562999990002',
-      description: 'A impressora não puxa papel.',
-      area: 'infra',
-      priority: 'medium',
-      notifyWhatsapp: true,
-      assigneeId: 'u-ana',
-    });
+    /* O último argumento desliga o aviso de "chamado aberto": a confirmação já vai na conversa. */
+    expect(tickets.create).toHaveBeenCalledWith(
+      {
+        requesterName: 'Bia Costa',
+        department: 'financeiro',
+        problemType: 'printer',
+        projectId: null,
+        contactPhone: '5562999990002',
+        description: 'A impressora não puxa papel.',
+        area: 'infra',
+        priority: 'medium',
+        notifyWhatsapp: true,
+        assigneeId: 'u-ana',
+      },
+      undefined,
+      [],
+      { skipOpeningNotice: true },
+    );
   });
 
   /* Super admin, ou admin de mais de uma área: primeiro a pergunta de qual. */

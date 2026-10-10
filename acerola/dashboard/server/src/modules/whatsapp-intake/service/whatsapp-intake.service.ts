@@ -184,15 +184,21 @@ export class WhatsappIntakeService {
     }
 
     const ticket = await this.tickets
-      .create({
-        ...parsed.data,
-        area,
-        priority: 'medium',
-        /* Quem abriu pela conversa já está falando por WhatsApp: é por lá que quer o aviso. */
-        notifyWhatsapp: true,
-        assigneeId: userId,
-        projectId: parsed.data.projectId,
-      })
+      .create(
+        {
+          ...parsed.data,
+          area,
+          priority: 'medium',
+          /* Quem abriu pela conversa já está falando por WhatsApp: é por lá que quer o aviso. */
+          notifyWhatsapp: true,
+          assigneeId: userId,
+          projectId: parsed.data.projectId,
+        },
+        undefined,
+        [],
+        /* A confirmação já vai na própria conversa (`intake_created`). */
+        { skipOpeningNotice: true },
+      )
       .catch((error: unknown) => {
         this.logger.error(
           'failed to create ticket from WhatsApp',
