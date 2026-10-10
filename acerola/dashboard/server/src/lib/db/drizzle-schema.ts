@@ -21,6 +21,7 @@ import { ticketAttachments } from './schema/ticket-attachments.schema';
 import { ticketHistories } from './schema/ticket-histories.schema';
 import { ticketServiceOrders } from './schema/ticket-service-orders.schema';
 import { tickets } from './schema/tickets.schema';
+import { whatsappConnections } from './schema/whatsapp-connections.schema';
 
 /**
  * O objeto de schema que o Drizzle exige para as consultas relacionais.
@@ -35,6 +36,7 @@ import { tickets } from './schema/tickets.schema';
 export const drizzleSchema = {
   githubConnections,
   githubOauthStates,
+  whatsappConnections,
   tasks,
   softwareProjects,
   softwareTimelineEvents,
