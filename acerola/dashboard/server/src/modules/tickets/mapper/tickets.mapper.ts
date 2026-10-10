@@ -60,6 +60,7 @@ export function toTicket(
     computerName: row.computerName,
     ...projectMeta,
     assignee: row.assignee,
+    assigneeId: row.assigneeId,
     solution: row.solution,
     createdAt: row.createdAt.toISOString(),
     startedAt: toNullableIsoString(row.startedAt),
@@ -108,8 +109,13 @@ export function toPublicTicket(
 export function toTicketInsert(
   input: CreateTicketInput,
   screenshotKey: string | null,
+  /* O responsável JÁ CONFERIDO pelo service (quem atende a área). O nome vem do cadastro
+     dele, nunca do corpo: `input.assigneeId` sozinho não é de confiança. */
+  assignee: { id: string; name: string } | null = null,
 ): TicketInsert {
   return {
+    assignee: assignee?.name ?? null,
+    assigneeId: assignee?.id ?? null,
     requesterName: input.requesterName.trim(),
     area: input.area,
     department: input.department,
@@ -137,8 +143,15 @@ export function toTicketUpdate(
   input: UpdateTicketInput,
   actorEmail: string,
   now: Date = new Date(),
+  /* O novo responsável, já conferido pelo service (só o super admin troca). Ausente = não mexe. */
+  assignee?: { id: string; name: string },
 ): Partial<TicketInsert> {
   const update: Partial<TicketInsert> = { updatedAt: now, updatedBy: actorEmail };
+
+  if (assignee) {
+    update.assignee = assignee.name;
+    update.assigneeId = assignee.id;
+  }
 
   setIfDefined(update, 'priority', input.priority);
   /* Reclassificar a área — a policy (`TicketsService.update`) já confirmou que quem pediu

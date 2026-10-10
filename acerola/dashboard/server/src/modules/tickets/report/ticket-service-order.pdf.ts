@@ -70,10 +70,7 @@ export async function buildServiceOrderPdf(
 }
 
 /** A definição da ordem de serviço: os blocos, na ordem em que a pessoa lê. */
-function serviceOrderDocument(
-  order: ServiceOrder,
-  issue: ServiceOrderIssue,
-): DocumentDefinition {
+function serviceOrderDocument(order: ServiceOrder, issue: ServiceOrderIssue): DocumentDefinition {
   const { ticket } = order;
   const shortCode = shortServiceOrderCode(issue.code);
 

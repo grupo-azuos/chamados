@@ -33,13 +33,18 @@ import {
   type CreateTicketInput,
   type PublicTicket,
   type Ticket,
+  type TicketAssigneeOption,
   type TicketListQuery,
   type TicketReportQuery,
   type UpdateTicketInput,
 } from '@template/shared/schemas/ticket.schema';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
-import { assertCanAttendTicket, assertCanRead } from '../../../lib/policy/policy-assert.util';
+import {
+  assertCanAttendTicket,
+  assertCanRead,
+  assertIsSuperAdmin,
+} from '../../../lib/policy/policy-assert.util';
 import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
 import { type BuiltDocument } from '../../../lib/report/document.type';
 import { type ReportColumn } from '../../../lib/report/report.type';
@@ -51,7 +56,12 @@ import { toPublicTicket, toTicket, toTicketInsert, toTicketUpdate } from '../map
 import { TicketHistoriesRepository } from '../repository/ticket-histories.repository';
 import { TICKET_NOT_FOUND, TicketAccessService } from './ticket-access.service';
 import { TicketAttachmentsService, type UploadedAttachment } from './ticket-attachments.service';
+import { TicketAssigneesService } from './ticket-assignees.service';
 import { TicketHistoriesService } from './ticket-histories.service';
+import {
+  type TicketNoticeOutcome,
+  TicketWhatsappNotifierService,
+} from './ticket-whatsapp-notifier.service';
 import { TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
 
 /** Sem repetir — somar a mesma área participante duas vezes não deve duplicar na resposta. */
@@ -135,7 +145,71 @@ export class TicketsService {
     private readonly historiesRepository: TicketHistoriesRepository,
     @Optional() private readonly githubService?: GithubService,
     @Optional() private readonly softwareProjectsService?: SoftwareProjectsService,
+    @Optional() private readonly assignees?: TicketAssigneesService,
+    @Optional() private readonly notifier?: TicketWhatsappNotifierService,
   ) {}
+
+  /** Quem pode ser escolhido como responsável por um chamado desta área (lista pública). */
+  async listAssigneeOptions(area: TicketArea): Promise<TicketAssigneeOption[]> {
+    return (await this.assignees?.listForArea(area)) ?? [];
+  }
+
+  /**
+   * O responsável escolhido, conferido: ele precisa atender a área do chamado. O id vem de
+   * fora (uma tela pública, ou o corpo de uma edição) e não é de confiança.
+   */
+  private async resolveAssignee(
+    area: TicketArea,
+    /* `unknown` porque o tipo de ENTRADA do contrato não sabe que o campo já foi normalizado. */
+    assigneeId: unknown,
+  ): Promise<{ id: string; name: string } | null> {
+    if (typeof assigneeId !== 'string' || !assigneeId) return null;
+
+    const assignee = await this.assignees?.resolve(area, assigneeId);
+    if (!assignee) {
+      throw new UnprocessableEntityException(
+        'O responsável escolhido não atende esta área. Escolha outro.',
+      );
+    }
+
+    return assignee;
+  }
+
+  /* Quem escolheu um responsável e pediu aviso recebe o "recebi o seu chamado" pelo número
+     dele. Em segundo plano, e sem derrubar nada: o chamado já está gravado. */
+  private announceOpening(row: TicketRow): void {
+    void this.notifier?.opened(row).catch(() => undefined);
+  }
+
+  /**
+   * Trocar o responsável é do super admin. O novo precisa atender a área em que o chamado vai
+   * FICAR — a nova, se esta mesma edição o reclassificou. Sem `assigneeId` no corpo, não mexe.
+   */
+  private async resolveReassignment(
+    user: RequestUser,
+    currentArea: TicketArea,
+    input: UpdateTicketInput,
+  ): Promise<{ id: string; name: string } | undefined> {
+    if (input.assigneeId === undefined) return undefined;
+
+    assertIsSuperAdmin(user.role, 'o responsável do chamado');
+
+    return (await this.resolveAssignee(input.area ?? currentArea, input.assigneeId)) ?? undefined;
+  }
+
+  /**
+   * Avisa pelo WhatsApp que o chamado ficou pronto, pelo número do responsável. Devolve o
+   * desfecho em vez de lançar: quando não sai (sem vínculo, teto do dia), a tela cai no link
+   * manual de sempre.
+   */
+  async notifyReady(user: RequestUser, id: number): Promise<{ outcome: TicketNoticeOutcome }> {
+    assertCanAttendTicket(user.role);
+
+    const reach = await this.access.reach(user, id);
+    this.access.assertCanWrite(reach);
+
+    return { outcome: (await this.notifier?.ready(reach.ticket)) ?? 'not_configured' };
+  }
 
   async listSystemProjectOptions(): Promise<{ id: number; name: string }[]> {
     return (await this.softwareProjectsService?.listTicketOptions()) ?? [];
@@ -240,8 +314,11 @@ export class TicketsService {
       }
     }
 
+    const assignee = await this.resolveAssignee(input.area, input.assigneeId);
     const screenshotKey = await this.storeScreenshot(screenshot);
-    const row = await this.repository.insert(toTicketInsert(input, screenshotKey));
+    const row = await this.repository.insert(toTicketInsert(input, screenshotKey, assignee));
+
+    this.announceOpening(row);
 
     /* Os arquivos entram DEPOIS do chamado existir, porque é a ele que eles pertencem. Um
        arquivo fora das regras derruba a requisição — e o chamado já gravado fica, sem os
@@ -310,7 +387,11 @@ export class TicketsService {
       this.access.assertCanManageArea(reach, 'reclassificar');
     }
 
-    const row = await this.repository.update(id, toTicketUpdate(input, user.email));
+    const assignee = await this.resolveReassignment(user, current.area, input);
+    const row = await this.repository.update(
+      id,
+      toTicketUpdate(input, user.email, new Date(), assignee),
+    );
 
     /* O que mudou vai para a linha do tempo, com quem mudou. Salvar sem mudar nada não deixa
        rastro: uma linha do tempo cheia de "alteração" vazia esconde as que importam. */

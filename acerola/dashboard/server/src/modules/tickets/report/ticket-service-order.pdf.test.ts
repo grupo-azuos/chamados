@@ -30,6 +30,7 @@ const ticket: TicketWithComputer = {
   description: 'A impressora não puxa papel.',
   screenshotKey: null,
   assignee: 'Ana Lima',
+  assigneeId: null,
   solution: 'Troquei o rolete; a bandeja 2 segue com defeito.',
   createdAt: new Date('2026-03-01T08:00:00.000Z'),
   startedAt: new Date('2026-03-01T09:00:00.000Z'),
@@ -121,7 +122,10 @@ describe('buildServiceOrderPdf', () => {
     );
 
     const short = await buildServiceOrderPdf({ ticket, protocol: 'CH-0007', histories: [] }, issue);
-    const buffer = await buildServiceOrderPdf({ ticket, protocol: 'CH-0007', histories: long }, issue);
+    const buffer = await buildServiceOrderPdf(
+      { ticket, protocol: 'CH-0007', histories: long },
+      issue,
+    );
 
     expect(buffer.length).toBeGreaterThan(short.length);
   });
@@ -132,14 +136,20 @@ describe('buildServiceOrderPdf', () => {
     const order = { ticket, protocol: 'CH-0007', histories: [history({ minutesSpent: 30 })] };
 
     const first = await buildServiceOrderPdf(order, issue);
-    const second = await buildServiceOrderPdf(order, { ...issue, issuedAt: new Date(issue.issuedAt) });
+    const second = await buildServiceOrderPdf(order, {
+      ...issue,
+      issuedAt: new Date(issue.issuedAt),
+    });
 
     expect(fingerprint(second)).toBe(fingerprint(first));
   });
 
   /* O link de conferência vai dentro do arquivo, com o código INTEIRO da emissão. */
   it('carries the link to the page that checks it', async () => {
-    const buffer = await buildServiceOrderPdf({ ticket, protocol: 'CH-0007', histories: [] }, issue);
+    const buffer = await buildServiceOrderPdf(
+      { ticket, protocol: 'CH-0007', histories: [] },
+      issue,
+    );
 
     expect(buffer.toString('latin1')).toContain(`http://localhost:5005/verify/${issue.code}`);
   });
@@ -148,7 +158,15 @@ describe('buildServiceOrderPdf', () => {
   it('still builds the document for a ticket with no history and no solution', async () => {
     const buffer = await buildServiceOrderPdf(
       {
-        ticket: { ...ticket, solution: null, projectId: null, githubIssueNumber: null, githubIssueUrl: null, computerName: null, assignee: null },
+        ticket: {
+          ...ticket,
+          solution: null,
+          projectId: null,
+          githubIssueNumber: null,
+          githubIssueUrl: null,
+          computerName: null,
+          assignee: null,
+        },
         protocol: 'CH-0007',
         histories: [],
       },

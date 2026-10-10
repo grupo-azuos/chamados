@@ -28,6 +28,24 @@ export type BotStatus = { state: WhatsappLinkState; qr: string | null; phone: st
    está fora do ar — e a tela não pode ficar pendurada esperando. */
 const BOT_TIMEOUT_MS = 8000;
 
+/**
+ * O que aconteceu com um envio:
+ *   sent                 o bot aceitou a mensagem
+ *   not_configured       esta instalação não tem o bot
+ *   not_connected        a pessoa não tem número vinculado, ou ele está desconectado
+ *   recipient_not_found  o destino não tem WhatsApp
+ *   failed               qualquer outra falha (bot fora do ar, erro interno)
+ */
+export type BotSendOutcome =
+  'sent' | 'not_configured' | 'not_connected' | 'recipient_not_found' | 'failed';
+
+/* O código HTTP do bot diz o desfecho (ver `bot/src/http/bot-server.ts`). */
+const SEND_OUTCOMES: Record<number, BotSendOutcome> = {
+  202: 'sent',
+  409: 'not_connected',
+  422: 'recipient_not_found',
+};
+
 export const BOT_NOT_CONFIGURED_MESSAGE =
   'A integração com o WhatsApp ainda não foi configurada. Solicite a configuração ao administrador.';
 export const BOT_UNAVAILABLE_MESSAGE =
@@ -59,11 +77,35 @@ export class BotClientService {
     await this.request(userId, 'DELETE', '');
   }
 
+  /**
+   * Manda um texto pelo número de `userId`. NUNCA lança: devolve o que aconteceu, porque quem
+   * chama quase sempre tem um plano B (o link manual) e uma mensagem que não saiu não pode
+   * derrubar a abertura de um chamado.
+   */
+  async sendText(userId: string, to: string, text: string): Promise<BotSendOutcome> {
+    if (!this.isConfigured) return 'not_configured';
+
+    const response = await fetch(this.urlFor(userId, '/messages'), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.env.BOT_API_TOKEN!}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ to, text }),
+      signal: AbortSignal.timeout(BOT_TIMEOUT_MS),
+    }).catch(() => null);
+
+    return SEND_OUTCOMES[response?.status ?? 0] ?? 'failed';
+  }
+
+  private urlFor(userId: string, action: string): string {
+    return `${this.env.BOT_API_URL!.replace(/\/+$/, '')}/sessions/${botSessionId(userId)}${action}`;
+  }
+
   private async request(userId: string, method: string, action: string): Promise<unknown> {
     if (!this.isConfigured) throw new ServiceUnavailableException(BOT_NOT_CONFIGURED_MESSAGE);
 
-    const url = `${this.env.BOT_API_URL!.replace(/\/+$/, '')}/sessions/${botSessionId(userId)}${action}`;
-    const response = await fetch(url, {
+    const response = await fetch(this.urlFor(userId, action), {
       method,
       headers: { Authorization: `Bearer ${this.env.BOT_API_TOKEN!}` },
       signal: AbortSignal.timeout(BOT_TIMEOUT_MS),
