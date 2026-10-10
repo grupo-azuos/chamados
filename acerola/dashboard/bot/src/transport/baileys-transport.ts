@@ -1,5 +1,4 @@
 import {
-  Browsers,
   type ConnectionState,
   DisconnectReason,
   type WAMessage,
@@ -25,6 +24,17 @@ import {
 
 type Session = { socket: WASocket; status: SessionStatus; hasConnected: boolean };
 
+/**
+ * Como o bot aparece em "Aparelhos conectados", no celular de quem vinculou.
+ *
+ * O primeiro item é o NOME que a pessoa lê. O segundo escolhe o ÍCONE, e só entre os que o
+ * WhatsApp oferece (Chrome, Firefox, Edge, Safari, computador…) — não existe ícone próprio. O
+ * terceiro é a versão, que não aparece.
+ *
+ * Isto é enviado na hora de ler o QR code: mudar aqui só vale para vínculo NOVO.
+ */
+const DEVICE_IDENTITY: [string, string, string] = ['Acerola Ticket', 'Chrome', '1.0.0'];
+
 /* Um respiro antes de religar: sem ele, uma queda de rede vira um laço de reconexão, e laço de
    reconexão é o tipo de comportamento que o WhatsApp lê como automação. */
 const RECONNECT_DELAY_MS = 5000;
@@ -48,7 +58,7 @@ export function createBaileysTransport(
     const socket = makeWASocket({
       auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger) },
       logger,
-      browser: Browsers.appropriate('Acerola'),
+      browser: DEVICE_IDENTITY,
       /* Não aparecer "online" nem puxar o histórico inteiro: o bot só precisa mandar e ouvir. */
       markOnlineOnConnect: false,
       syncFullHistory: false,
