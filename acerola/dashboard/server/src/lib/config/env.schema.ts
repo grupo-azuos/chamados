@@ -22,6 +22,16 @@ export const envSchema = z.object({
     .string()
     .regex(/^[a-fA-F0-9]{64}$/)
     .optional(),
+  /**
+   * O bot de WhatsApp (`acerola/dashboard/bot`), um programa à parte que o servidor chama por
+   * HTTP. As duas são opcionais: sem elas o sistema funciona inteiro, só sem o vínculo de
+   * WhatsApp — a tela avisa que a integração não foi configurada.
+   *
+   * O token é o MESMO `BOT_API_TOKEN` do bot. Quem o tem manda mensagem pelo WhatsApp de
+   * qualquer pessoa vinculada: é segredo de servidor, nunca de tela.
+   */
+  BOT_API_URL: z.string().url().optional(),
+  BOT_API_TOKEN: z.string().min(32).optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3005),
