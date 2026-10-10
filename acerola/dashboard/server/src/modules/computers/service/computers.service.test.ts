@@ -206,7 +206,9 @@ describe('ComputersService.exportList', () => {
     expect(String(sheet?.getRow(2).getCell(1).value)).toMatch(/^Só os primeiros 5\.000 computadores/);
     /* Título, subtítulo, linha em branco e cabeçalho: os dados começam na linha 5. */
     expect(sheet?.rowCount).toBe(REPORT_MAX_ROWS + 4);
-  });
+    /* Prazo próprio: montar e reler uma planilha de cinco mil linhas leva perto de um segundo
+       sozinho, e estoura os cinco do padrão quando a máquina está rodando tudo junto. */
+  }, 30_000);
 
   it('refuses an unidentified request without touching the repository', async () => {
     const listAll = vi.fn();
