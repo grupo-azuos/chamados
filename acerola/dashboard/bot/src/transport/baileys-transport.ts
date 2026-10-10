@@ -10,7 +10,7 @@ import { type Logger } from 'pino';
 
 import { type SessionStore } from '../store/session-store.js';
 import { loadAuthState } from './baileys-auth-state.js';
-import { readPrivateText } from './baileys-message.js';
+import { ownChatIdsOf, readPrivateText } from './baileys-message.js';
 import {
   DISCONNECTED_STATUS,
   type MessageResponder,
@@ -35,6 +35,8 @@ type Session = { socket: WASocket; status: SessionStatus; hasConnected: boolean 
  */
 const DEVICE_IDENTITY: [string, string, string] = ['Acerola Ticket', 'Chrome', '1.0.0'];
 
+const SENT_IDS_KEPT = 200;
+
 /* Um respiro antes de religar: sem ele, uma queda de rede vira um laço de reconexão, e laço de
    reconexão é o tipo de comportamento que o WhatsApp lê como automação. */
 const RECONNECT_DELAY_MS = 5000;
@@ -52,6 +54,16 @@ export function createBaileysTransport(
 ): WhatsAppTransport {
   const sessions = new Map<string, Session>();
   let isClosing = false;
+  /* Os ids das últimas respostas do bot — ver o laço em `answer`. */
+  const sentByBot = new Set<string>();
+
+  function rememberSent(id: string | null | undefined): void {
+    if (!id) return;
+
+    sentByBot.add(id);
+    /* Só as mais recentes importam: a mais antiga sai para a lista não crescer para sempre. */
+    if (sentByBot.size > SENT_IDS_KEPT) sentByBot.delete(sentByBot.values().next().value ?? '');
+  }
 
   async function open(sessionId: string): Promise<Session> {
     const { state, saveCreds } = await loadAuthState(store, sessionId);
@@ -83,15 +95,22 @@ export function createBaileysTransport(
 
   async function answer(socket: WASocket, messages: WAMessage[]): Promise<void> {
     const nowSeconds = Math.floor(Date.now() / 1000);
+    const ownChatIds = ownChatIdsOf(socket.user);
 
     for (const message of messages) {
-      const incoming = readPrivateText(message, nowSeconds);
+      /* Na conversa da pessoa com ela mesma, a resposta do bot também chega como "mensagem
+         dela". Sem pular as que o próprio bot mandou, uma resposta que fosse igual a um comando
+         faria o bot responder a si mesmo, sem parar. */
+      if (sentByBot.has(message.key.id ?? '')) continue;
+
+      const incoming = readPrivateText(message, nowSeconds, ownChatIds);
       const reply = incoming ? respond(incoming.text) : null;
       if (!incoming || !reply) continue;
 
       /* Uma resposta que falhou não pode derrubar as outras nem o socket. */
       await socket
         .sendMessage(incoming.chatId, { text: reply })
+        .then((sent) => rememberSent(sent?.key.id))
         .catch((error: unknown) => logger.error({ error }, 'failed to reply'));
     }
   }

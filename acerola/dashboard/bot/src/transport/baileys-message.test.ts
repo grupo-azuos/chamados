@@ -1,7 +1,7 @@
 import { type WAMessage } from 'baileys';
 import { describe, expect, it } from 'vitest';
 
-import { readPrivateText } from './baileys-message.js';
+import { ownChatIdsOf, readPrivateText } from './baileys-message.js';
 
 const NOW = 1_800_000_000;
 const PRIVATE_CHAT = '5562999990002@s.whatsapp.net';
@@ -37,10 +37,23 @@ describe('readPrivateText', () => {
     expect(readPrivateText(fromLid, NOW)?.chatId).toBe('123456789012345@lid');
   });
 
+  /* "Mensagem para mim mesmo": não há mais ninguém na conversa, e é como quem vinculou testa. */
+  it('reads what the linked person wrote to their own number', () => {
+    const own = ['5562999990001@s.whatsapp.net', '999888777@lid'];
+    const toSelf = message({}, { fromMe: true, remoteJid: '5562999990001@s.whatsapp.net' });
+    const toSelfByLid = message({}, { fromMe: true, remoteJid: '999888777@lid' });
+
+    expect(readPrivateText(toSelf, NOW, own)?.text).toBe('/chamado');
+    expect(readPrivateText(toSelfByLid, NOW, own)?.text).toBe('/chamado');
+  });
+
   // triste
-  /* Senão o bot responderia à própria pessoa, em qualquer conversa em que ela escrevesse. */
-  it('ignores what the linked person sent', () => {
+  /* Senão o bot responderia na conversa de qualquer pessoa para quem ela digitasse o comando. */
+  it('ignores what the linked person sent to someone else', () => {
+    const own = ['5562999990001@s.whatsapp.net'];
+
     expect(readPrivateText(message({}, { fromMe: true }), NOW)).toBeNull();
+    expect(readPrivateText(message({}, { fromMe: true }), NOW, own)).toBeNull();
   });
 
   it('ignores groups, broadcast lists, status and channels', () => {
@@ -69,5 +82,20 @@ describe('readPrivateText', () => {
 
   it('ignores a message without a chat address (edge case)', () => {
     expect(readPrivateText(message({}, { remoteJid: undefined }), NOW)).toBeNull();
+  });
+});
+
+describe('ownChatIdsOf', () => {
+  // feliz
+  it('drops the device part of the phone and anonymous addresses', () => {
+    expect(
+      ownChatIdsOf({ id: '5562999990001:12@s.whatsapp.net', lid: '999888777:12@lid' }),
+    ).toEqual(['5562999990001@s.whatsapp.net', '999888777@lid']);
+  });
+
+  // triste
+  it('answers an empty list while the session has no identity yet', () => {
+    expect(ownChatIdsOf(undefined)).toEqual([]);
+    expect(ownChatIdsOf({})).toEqual([]);
   });
 });
