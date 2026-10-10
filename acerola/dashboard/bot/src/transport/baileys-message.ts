@@ -1,4 +1,4 @@
-import { isJidUser, isLidUser, type WAMessage } from 'baileys';
+import { isJidUser, isLidUser, jidNormalizedUser, type WAMessage } from 'baileys';
 
 /** Uma mensagem de texto que chegou numa conversa privada, pronta para a camada de conversa. */
 export type PrivateText = {
@@ -17,14 +17,24 @@ const MAX_MESSAGE_AGE_SECONDS = 120;
  * O texto de uma mensagem que o bot PODE responder — ou nulo.
  *
  * O número vinculado é o WhatsApp pessoal de alguém, então o filtro é restritivo. Fica de fora:
- *  - o que a própria pessoa mandou (senão o bot responderia a ela mesma, em qualquer conversa);
+ *  - o que a própria pessoa mandou para OUTRA pessoa (senão o bot responderia na conversa de
+ *    qualquer um para quem ela digitasse o comando);
  *  - grupo, lista de transmissão, status e canal: o bot só fala em conversa privada;
  *  - o que não é texto (foto, áudio, figurinha);
  *  - mensagem antiga (ver `MAX_MESSAGE_AGE_SECONDS`).
+ *
+ * A exceção ao primeiro item é a conversa da pessoa COM ELA MESMA ("Mensagem para mim mesmo"):
+ * ali não há mais ninguém, e é o jeito de quem vinculou testar o bot sem um segundo celular.
+ * `ownChatIds` são os endereços dessa conversa.
  */
-export function readPrivateText(message: WAMessage, nowSeconds: number): PrivateText | null {
+export function readPrivateText(
+  message: WAMessage,
+  nowSeconds: number,
+  ownChatIds: readonly string[] = [],
+): PrivateText | null {
   const chatId = message.key.remoteJid;
-  if (message.key.fromMe || !chatId || !isPrivateChat(chatId)) return null;
+  if (!chatId || !isPrivateChat(chatId)) return null;
+  if (message.key.fromMe && !ownChatIds.includes(jidNormalizedUser(chatId))) return null;
   if (!isRecent(message, nowSeconds)) return null;
 
   const text = textOf(message);
@@ -46,4 +56,12 @@ function textOf(message: WAMessage): string | null | undefined {
    (`@lid`) que o WhatsApp passou a usar no lugar dele. */
 function isPrivateChat(chatId: string): boolean {
   return Boolean(isJidUser(chatId) || isLidUser(chatId));
+}
+
+/**
+ * Os endereços da conversa de alguém consigo mesmo: o do telefone e o anônimo (`@lid`), sem a
+ * parte que identifica o aparelho.
+ */
+export function ownChatIdsOf(user: { id?: string; lid?: string } | undefined): string[] {
+  return [user?.id, user?.lid].filter((id): id is string => Boolean(id)).map(jidNormalizedUser);
 }
