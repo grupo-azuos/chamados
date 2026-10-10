@@ -24,10 +24,10 @@ const inbound = (text: string, extra: Partial<InboundMessage> = {}): InboundMess
 
 function filledForm(): string {
   return buildIntakeForm({ area: 'infra', projects: [], phone: '5562999990002' })
-    .replace('Nome: ', 'Nome: Bia Costa')
-    .replace('Setor (número): ', 'Setor (número): 6')
-    .replace('Tipo (número): ', 'Tipo (número): 3')
-    .replace('Descrição: ', 'Descrição: A impressora não puxa papel.');
+    .replace('*Nome:* ', '*Nome:* Bia Costa')
+    .replace('*Setor (número):* ', '*Setor (número):* 6')
+    .replace('*Tipo (número):* ', '*Tipo (número):* 3')
+    .replace('*Descrição:* ', '*Descrição:* A impressora não puxa papel.');
 }
 
 function makeService(options: { areas?: string[]; hasRoom?: boolean; linked?: boolean } = {}) {
@@ -110,7 +110,9 @@ describe('WhatsappIntakeService', () => {
     const { service, messaging } = makeService({ areas: ['infra', 'manutencao'] });
 
     expect((await service.handle(inbound('/chamado'), NOW)).reply).toBe('text:intake_area');
-    expect(messaging.reply.mock.calls[0]?.[0].values.opcoes).toBe('1 Infraestrutura\n2 Manutenção');
+    expect(messaging.reply.mock.calls[0]?.[0].values.opcoes).toBe(
+      '1. Infraestrutura\n2. Manutenção',
+    );
 
     expect((await service.handle(inbound('2'), NOW + MINUTE)).reply).toBe('text:intake_form');
     expect(messaging.reply.mock.calls[1]?.[0].values.area).toBe('Manutenção');
@@ -121,9 +123,7 @@ describe('WhatsappIntakeService', () => {
 
     await service.handle(inbound('/chamado'), NOW);
 
-    expect(messaging.reply.mock.calls[0]?.[0].values.formulario).toContain(
-      'Opções de sistema: 1 Portal',
-    );
+    expect(messaging.reply.mock.calls[0]?.[0].values.formulario).toContain('*Opções de sistema*\n1. Portal');
   });
 
   // triste
@@ -134,7 +134,7 @@ describe('WhatsappIntakeService', () => {
     const answer = await service.handle(inbound('Nome: Bia'), NOW + MINUTE);
 
     expect(answer).toEqual({ reply: 'text:intake_invalid', isOpen: true });
-    expect(messaging.reply.mock.calls[1]?.[0].values.erros).toContain('• ');
+    expect(messaging.reply.mock.calls[1]?.[0].values.erros).toContain('- ');
     expect(tickets.create).not.toHaveBeenCalled();
   });
 

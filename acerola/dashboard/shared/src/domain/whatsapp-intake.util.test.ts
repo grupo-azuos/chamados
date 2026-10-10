@@ -27,16 +27,19 @@ describe('buildIntakeForm', () => {
   it('asks name, sector, type and description, with numbered options below', () => {
     const form = buildIntakeForm(infra);
 
-    expect(form).toContain('Nome: ');
-    expect(form).toContain('Setor (número): ');
-    expect(form).toContain('Tipo (número): ');
-    expect(form).toContain('Descrição: ');
-    expect(form).toMatch(/Opções de setor: 1 /);
-    expect(form).toMatch(/Opções de tipo: 1 /);
+    expect(form).toContain('*Nome:* ');
+    expect(form).toContain('*Setor (número):* ');
+    expect(form).toContain('*Tipo (número):* ');
+    expect(form).toContain('*Descrição:* ');
+    /* Lista numerada do WhatsApp: título em negrito e um item por linha. */
+    expect(form).toContain('*Opções de setor*\n1. ');
+    expect(form).toContain('*Opções de tipo*\n1. Internet / Rede\n2. ');
   });
 
   it('asks which system only in the Sistema area', () => {
-    expect(buildIntakeForm(sistema)).toContain('Opções de sistema: 1 Portal do Cliente · 2 Folha');
+    expect(buildIntakeForm(sistema)).toContain(
+      '*Opções de sistema*\n1. Portal do Cliente\n2. Folha',
+    );
     expect(buildIntakeForm(infra)).not.toContain('Sistema (número)');
   });
 
@@ -44,7 +47,7 @@ describe('buildIntakeForm', () => {
   /* Sem o telefone informado pelo WhatsApp, o chamado ficaria sem contato: o formulário pergunta. */
   it('asks the phone only when WhatsApp did not tell it', () => {
     expect(buildIntakeForm(infra)).not.toContain('Telefone');
-    expect(buildIntakeForm({ ...infra, phone: null })).toContain('Telefone com DDD: ');
+    expect(buildIntakeForm({ ...infra, phone: null })).toContain('*Telefone com DDD:* ');
   });
 });
 
@@ -52,10 +55,10 @@ describe('parseIntakeReply', () => {
   // feliz
   it('turns a filled form into a ticket, taking the phone from WhatsApp', () => {
     const reply = `${buildIntakeForm(infra)}`
-      .replace('Nome: ', 'Nome: Bia Costa')
-      .replace('Setor (número): ', 'Setor (número): 6')
-      .replace('Tipo (número): ', 'Tipo (número): 3')
-      .replace('Descrição: ', 'Descrição: A impressora não puxa papel.');
+      .replace('*Nome:* ', '*Nome:* Bia Costa')
+      .replace('*Setor (número):* ', '*Setor (número):* 6')
+      .replace('*Tipo (número):* ', '*Tipo (número):* 3')
+      .replace('*Descrição:* ', '*Descrição:* A impressora não puxa papel.');
 
     expect(parseIntakeReply(reply, infra)).toEqual({
       ok: true,
@@ -78,7 +81,9 @@ describe('parseIntakeReply', () => {
       'Descrição: A impressora não puxa papel.',
       'Já tentei desligar e ligar.',
       '',
-      'Opções de setor: 1 Analyze · 2 Certificado',
+      '*Opções de setor*',
+      '1. Analyze',
+      '2. Certificado',
     ]);
 
     const result = parseIntakeReply(reply, infra);
@@ -118,6 +123,34 @@ describe('parseIntakeReply', () => {
     expect(result.ok && result.data.contactPhone).toBe('62999990003');
   });
 
+  /* O rótulo em negrito deixa um asterisco depois dos dois-pontos: ele não entra no valor. */
+  it('does not carry the bold marker of the label into the value', () => {
+    const reply = filled([
+      '*Nome:* Bia Costa',
+      '*Setor (número):* 6',
+      '*Tipo (número):* 3',
+      '*Descrição:* Não imprime.',
+    ]);
+
+    const result = parseIntakeReply(reply, infra);
+
+    expect(result.ok && result.data.requesterName).toBe('Bia Costa');
+    expect(result.ok && result.data.description).toBe('Não imprime.');
+  });
+
+  /* A pessoa pode devolver a mensagem inteira, com as listas: os itens delas não viram campo. */
+  it('ignores the option lists copied along with the form', () => {
+    const reply = buildIntakeForm(infra)
+      .replace('*Nome:* ', '*Nome:* Bia Costa')
+      .replace('*Setor (número):* ', '*Setor (número):* 6')
+      .replace('*Tipo (número):* ', '*Tipo (número):* 3')
+      .replace('*Descrição:* ', '*Descrição:* Não imprime.');
+
+    const result = parseIntakeReply(reply, infra);
+
+    expect(result.ok && result.data.description).toBe('Não imprime.');
+  });
+
   // triste
   /* Tudo o que falta sai de uma vez: a pessoa corrige numa mensagem só. */
   it('lists everything that is missing at once', () => {
@@ -155,7 +188,7 @@ describe('parseIntakeReply', () => {
 describe('area choice', () => {
   // feliz
   it('numbers the areas and reads the choice by number or by name', () => {
-    expect(buildAreaOptions(['infra', 'manutencao'])).toBe('1 Infraestrutura\n2 Manutenção');
+    expect(buildAreaOptions(['infra', 'manutencao'])).toBe('1. Infraestrutura\n2. Manutenção');
     expect(parseAreaChoice(' 2 ', ['infra', 'manutencao'])).toBe('manutencao');
     expect(parseAreaChoice('infraestrutura', ['infra', 'manutencao'])).toBe('infra');
     expect(parseAreaChoice('Manutencao', ['infra', 'manutencao'])).toBe('manutencao');

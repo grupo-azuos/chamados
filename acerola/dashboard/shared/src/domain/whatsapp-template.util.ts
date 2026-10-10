@@ -50,7 +50,7 @@ export const WHATSAPP_TEMPLATES: Record<WhatsappTemplateKey, WhatsappTemplateDef
       'Primeira resposta ao /chamado quando o responsável atende mais de uma área. {{opcoes}} é a lista numerada.',
     variables: ['responsavel', 'opcoes'],
     defaultBody:
-      'Olá! Aqui é o atendimento de {{responsavel}}.\n\nSobre o que é o chamado? Responda só com o *número*:\n\n{{opcoes}}',
+      'Olá! Aqui é o atendimento de *{{responsavel}}*.\n\nSobre o que é o chamado? Responda só com o *número*:\n\n{{opcoes}}\n\n> _Para desistir, envie *cancelar*._',
   },
   intake_form: {
     label: 'Formulário do chamado',
@@ -58,7 +58,7 @@ export const WHATSAPP_TEMPLATES: Record<WhatsappTemplateKey, WhatsappTemplateDef
       'O formulário que a pessoa copia, preenche e devolve. {{formulario}} são os campos, com as opções numeradas.',
     variables: ['responsavel', 'area', 'formulario'],
     defaultBody:
-      'Para abrir um chamado de *{{area}}* com {{responsavel}}, copie a mensagem abaixo, preencha depois dos dois-pontos e envie:\n\n{{formulario}}',
+      'Para abrir um chamado de *{{area}}* com {{responsavel}}, copie esta mensagem, preencha depois dos dois-pontos e envie:\n\n{{formulario}}\n\n> _Para desistir, envie *cancelar*._',
   },
   intake_invalid: {
     label: 'Formulário com erro',
