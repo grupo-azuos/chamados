@@ -48,9 +48,21 @@ export function formatReportDate(value: Date | null): string {
 }
 
 /** A linha padrão embaixo do título: quantos vieram, e quando o arquivo foi gerado. */
-export function reportSubtitle(count: number, singular: string, plural: string): string {
+/**
+ * A linha embaixo do título. Relatório cortado AVISA que foi cortado: um arquivo que parece
+ * completo e não é leva alguém a decidir em cima de número errado.
+ */
+export function reportSubtitle(
+  count: number,
+  singular: string,
+  plural: string,
+  isTruncated = false,
+): string {
   const noun = count === 1 ? singular : plural;
   const generatedAt = new Date().toLocaleString('pt-BR', { timeZone: REPORT_TIME_ZONE });
+  const counted = isTruncated
+    ? `Só os primeiros ${count.toLocaleString('pt-BR')} ${noun} — há mais; refine o filtro para ver o resto`
+    : `${count} ${noun}`;
 
-  return `${count} ${noun} · gerado em ${generatedAt}`;
+  return `${counted} · gerado em ${generatedAt}`;
 }

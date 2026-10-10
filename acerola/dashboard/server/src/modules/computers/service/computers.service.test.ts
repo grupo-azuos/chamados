@@ -1,10 +1,12 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { type AgentSnapshot } from '@template/shared/schemas/agent-snapshot.schema';
 import { computerListQuerySchema } from '@template/shared/schemas/computer.schema';
+import ExcelJS from 'exceljs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type ComputerRow } from '../../../lib/db/schema/computers.schema';
+import { REPORT_FETCH_LIMIT, REPORT_MAX_ROWS } from '../../../lib/report/report-limit.util';
 import { AgentPresenceService } from '../presence/agent-presence.service';
 import { LiveWatchService } from '../presence/live-watch.service';
 import { type ComputersRepository } from '../repository/computers.repository';
@@ -188,6 +190,24 @@ describe('ComputersService.exportList', () => {
   });
 
   // triste
+  /* O repositório devolve uma linha a mais que o teto quando há mais: o arquivo sai cortado no
+     teto e o subtítulo avisa, para ninguém tomar o relatório por completo. */
+  it('cuts the file at the ceiling and warns in the subtitle when there is more', async () => {
+    const rows = Array.from({ length: REPORT_FETCH_LIMIT }, (_, index) =>
+      computerRow({ id: index + 1 }),
+    );
+    const { service } = makeService({ listAll: vi.fn().mockResolvedValue(rows) });
+
+    const report = await service.exportList(ana, { format: 'xlsx' });
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(report.buffer as unknown as ExcelJS.Buffer);
+    const sheet = workbook.worksheets[0];
+    expect(String(sheet?.getRow(2).getCell(1).value)).toMatch(/^Só os primeiros 5\.000 computadores/);
+    /* Título, subtítulo, linha em branco e cabeçalho: os dados começam na linha 5. */
+    expect(sheet?.rowCount).toBe(REPORT_MAX_ROWS + 4);
+  });
+
   it('refuses an unidentified request without touching the repository', async () => {
     const listAll = vi.fn();
     const { service } = makeService({ listAll });
