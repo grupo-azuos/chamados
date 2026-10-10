@@ -43,7 +43,10 @@ export function readPrivateText(
 
   const text = textOf(message);
 
-  return text ? { chatId, text, phone: phoneOf(message, chatId) } : null;
+  /* Na conversa da pessoa com ela mesma, quem escreve É o número vinculado. */
+  const phone = message.key.fromMe ? ownPhoneOf(ownChatIds) : phoneOf(message, chatId);
+
+  return text ? { chatId, text, phone } : null;
 }
 
 /* Sem horário a mensagem conta como velha: na dúvida, o bot não responde. */
@@ -65,6 +68,11 @@ function phoneOf(message: WAMessage, chatId: string): string | null {
   const alternate = (message.key as { senderPn?: string | null }).senderPn;
 
   return phoneFromJid(isJidUser(chatId) ? chatId : alternate);
+}
+
+/* O telefone do número vinculado: entre os endereços dele, o que é de telefone (o outro é anônimo). */
+function ownPhoneOf(ownChatIds: readonly string[]): string | null {
+  return phoneFromJid(ownChatIds.find((id) => isJidUser(id)));
 }
 
 /* Conversa privada tem dois formatos de endereço: o do telefone e o identificador anônimo

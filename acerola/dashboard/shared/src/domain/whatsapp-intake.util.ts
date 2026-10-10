@@ -42,8 +42,14 @@ const NAME_MIN_LENGTH = 2;
 const DESCRIPTION_MIN_LENGTH = 5;
 const PHONE_MIN_DIGITS = 10;
 
+/* Uma lista NUMERADA do WhatsApp: `1. item`, um por linha — ele a desenha como lista de verdade. */
 function numbered(labels: readonly string[]): string {
-  return labels.map((label, index) => `${index + 1} ${label}`).join(' · ');
+  return labels.map((label, index) => `${index + 1}. ${label}`).join('\n');
+}
+
+/* Um bloco de opções: o título em negrito e a lista embaixo. */
+function optionsBlock(title: string, labels: readonly string[]): string {
+  return `*${title}*\n${numbered(labels)}`;
 }
 
 function needsProject(context: IntakeContext): boolean {
@@ -52,7 +58,7 @@ function needsProject(context: IntakeContext): boolean {
 
 /** As opções numeradas de uma pergunta de área: `1 Infraestrutura`, uma por linha. */
 export function buildAreaOptions(areas: readonly TicketArea[]): string {
-  return areas.map((area, index) => `${index + 1} ${TICKET_AREA_LABELS[area]}`).join('\n');
+  return numbered(areas.map((area) => TICKET_AREA_LABELS[area]));
 }
 
 /** A área que a pessoa escolheu, pelo número ou pelo nome. Nulo quando não deu para entender. */
@@ -66,25 +72,39 @@ export function parseAreaChoice(text: string, areas: readonly TicketArea[]): Tic
 }
 
 /**
- * Os campos do formulário, com as listas numeradas embaixo. As listas começam com "Opções de"
- * — é essa palavra que diz à leitura onde a descrição da pessoa termina.
+ * Os campos do formulário, com as listas numeradas embaixo, na formatação do WhatsApp: rótulo
+ * em negrito e lista de verdade (`1. item`). Os títulos das listas começam com "Opções de" — é
+ * essa palavra que diz à leitura onde a descrição da pessoa termina.
  */
 export function buildIntakeForm(context: IntakeContext): string {
   const types = ticketProblemTypesForArea(context.area);
-  const fields = ['Nome: ', 'Setor (número): ', 'Tipo (número): '];
+  const fields = ['*Nome:* ', '*Setor (número):* ', '*Tipo (número):* '];
   const options = [
-    `Opções de setor: ${numbered(DEPARTMENTS.map((department) => DEPARTMENT_LABELS[department]))}`,
-    `Opções de tipo: ${numbered(types.map((type) => TICKET_PROBLEM_TYPE_LABELS[type]))}`,
+    optionsBlock(
+      'Opções de setor',
+      DEPARTMENTS.map((department) => DEPARTMENT_LABELS[department]),
+    ),
+    optionsBlock(
+      'Opções de tipo',
+      types.map((type) => TICKET_PROBLEM_TYPE_LABELS[type]),
+    ),
   ];
 
   if (needsProject(context)) {
-    fields.push('Sistema (número): ');
-    options.push(`Opções de sistema: ${numbered(context.projects.map((project) => project.name))}`);
+    fields.push('*Sistema (número):* ');
+    options.push(
+      optionsBlock(
+        'Opções de sistema',
+        context.projects.map((project) => project.name),
+      ),
+    );
   }
-  if (!context.phone) fields.push('Telefone com DDD: ');
-  fields.push('Descrição: ');
+  /* O telefone é o de quem está escrevendo, e o bot quase sempre o sabe. O campo só aparece no
+     caso raro em que o WhatsApp esconde o número — sem ele o chamado ficaria sem contato. */
+  if (!context.phone) fields.push('*Telefone com DDD:* ');
+  fields.push('*Descrição:* ');
 
-  return `${fields.join('\n')}\n\n${options.join('\n')}`;
+  return `${fields.join('\n')}\n\n${options.join('\n\n')}`;
 }
 
 type FieldKey = 'name' | 'department' | 'type' | 'project' | 'phone' | 'description';
@@ -106,29 +126,40 @@ function normalize(text: string): string {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[*_~]/g, '').trim().toLowerCase();
 }
 
-function fieldOf(label: string): FieldKey | 'options' | null {
+function fieldOf(label: string): FieldKey | null {
   const normalized = normalize(label);
-  if (normalized.startsWith(OPTIONS_PREFIX)) return 'options';
 
   return FIELD_PREFIXES.find(([prefix]) => normalized.startsWith(prefix))?.[1] ?? null;
 }
 
+/* O título de uma lista de opções ("*Opções de setor*"), com ou sem dois-pontos. */
+function isOptionsTitle(line: string): boolean {
+  return normalize(line).startsWith(OPTIONS_PREFIX);
+}
+
+/* O que a pessoa escreveu depois dos dois-pontos, sem o resto do negrito que o rótulo deixa
+   para trás ("*Nome:* Bia" → "Bia"). */
+function valueOf(raw: string): string {
+  return raw.replace(/^[\s*_]+/, '').trim();
+}
+
 /**
  * Separa o texto nos campos. A descrição é o único campo que pode ter várias linhas: tudo o
- * que vem depois dela, até uma lista de opções ou outro campo, é descrição.
+ * que vem depois dela, até uma lista de opções ou outro campo, é descrição. Depois do título
+ * de uma lista, nada mais é campo — são as opções, que a pessoa pode ter copiado junto.
  */
 function readFields(text: string): Partial<Record<FieldKey, string>> {
   const fields: Partial<Record<FieldKey, string>> = {};
   let isInDescription = false;
 
   for (const line of text.split(/\r?\n/)) {
+    if (isOptionsTitle(line)) break;
+
     const match = LINE_PATTERN.exec(line);
     const field = match ? fieldOf(match[1] ?? '') : null;
 
-    if (field === 'options') {
-      isInDescription = false;
-    } else if (field) {
-      fields[field] = (match?.[2] ?? '').trim();
+    if (field) {
+      fields[field] = valueOf(match?.[2] ?? '');
       isInDescription = field === 'description';
     } else if (isInDescription) {
       fields.description = `${fields.description ?? ''}\n${line}`.trim();

@@ -61,6 +61,10 @@ describe('readPrivateText', () => {
 
     expect(readPrivateText(toSelf, NOW, own)?.text).toBe('/chamado');
     expect(readPrivateText(toSelfByLid, NOW, own)?.text).toBe('/chamado');
+    /* Quem escreve é o próprio número vinculado — mesmo quando a conversa usa o endereço
+       anônimo, o telefone sai do endereço de telefone dele. */
+    expect(readPrivateText(toSelf, NOW, own)?.phone).toBe('5562999990001');
+    expect(readPrivateText(toSelfByLid, NOW, own)?.phone).toBe('5562999990001');
   });
 
   // triste

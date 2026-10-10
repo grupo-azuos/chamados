@@ -179,7 +179,8 @@ export class WhatsappIntakeService {
     const parsed = parseIntakeReply(message.text, await this.contextFor(area, message.phone));
     if (!parsed.ok) {
       return this.say(userId, key, conversation, message, 'intake_invalid', {
-        erros: parsed.errors.map((error) => `• ${error}`).join('\n'),
+        /* `- item` é a lista com marcadores do WhatsApp. */
+        erros: parsed.errors.map((error) => `- ${error}`).join('\n'),
       });
     }
 
