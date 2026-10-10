@@ -30,6 +30,7 @@ import { assertCanCreate, assertCanRead } from '../../../lib/policy/policy-asser
 import { type ComputerRow } from '../../../lib/db/schema/computers.schema';
 import { type BuiltDocument, type DocumentTone } from '../../../lib/report/document.type';
 import { type ReportColumn } from '../../../lib/report/report.type';
+import { capReportRows } from '../../../lib/report/report-limit.util';
 import { buildReport, formatReportDate, reportSubtitle } from '../../../lib/report/report.util';
 import {
   toComputer,
@@ -152,17 +153,18 @@ export class ComputersService {
 
   /**
    * Baixar o relatório: os MESMOS filtros da lista, mas sem página — o arquivo leva todo o
-   * parque que casou, no formato escolhido.
+   * parque que casou, no formato escolhido, até o teto de linhas (`REPORT_MAX_ROWS`). Passou do
+   * teto, o subtítulo avisa que há mais.
    */
   async exportList(user: RequestUser, query: ComputerReportQuery): Promise<BuiltDocument> {
     assertCanRead(user.role, 'os computadores');
 
-    const rows = await this.repository.listAll(query);
+    const { rows, isTruncated } = capReportRows(await this.repository.listAll(query));
 
     return buildReport({
       format: query.format,
       title: 'Inventário',
-      subtitle: reportSubtitle(rows.length, 'computador', 'computadores'),
+      subtitle: reportSubtitle(rows.length, 'computador', 'computadores', isTruncated),
       fileName: 'inventario',
       columns: COMPUTER_REPORT_COLUMNS,
       rows,

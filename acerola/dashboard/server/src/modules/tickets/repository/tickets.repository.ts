@@ -22,6 +22,7 @@ import {
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
+import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
 import { computers } from '../../../lib/db/schema/computers.schema';
 import { internalRoles } from '../../../lib/db/schema/internal-roles.schema';
@@ -125,7 +126,8 @@ export class TicketsRepository {
         .leftJoin(computers, eq(computers.id, tickets.computerId))
         .leftJoin(softwareProjects, eq(softwareProjects.id, tickets.projectId))
         .where(await this.scopedWhere(query, areas))
-        .orderBy(desc(tickets.createdAt), desc(tickets.id)),
+        .orderBy(desc(tickets.createdAt), desc(tickets.id))
+        .limit(REPORT_FETCH_LIMIT),
       'listar chamados para o relatório',
     );
   }

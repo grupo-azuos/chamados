@@ -22,6 +22,7 @@ import {
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
+import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
 import { qualified } from '../../../lib/db/sql-column.util';
 import { asTimestamp } from '../../../lib/db/sql-timestamp.util';
@@ -124,7 +125,8 @@ export class ComputersRepository {
         .select()
         .from(computers)
         .where(buildWhere(query))
-        .orderBy(asc(computers.healthScore), computers.name),
+        .orderBy(asc(computers.healthScore), computers.name)
+        .limit(REPORT_FETCH_LIMIT),
       'listar computadores para o relatório',
     );
   }

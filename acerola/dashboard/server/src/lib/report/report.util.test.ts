@@ -9,6 +9,7 @@ import {
 } from './document-palette.util';
 import { type BuiltDocument } from './document.type';
 import { type ReportRequest } from './report.type';
+import { REPORT_MAX_ROWS } from './report-limit.util';
 import { buildReport, formatReportDate, reportDocument, reportSubtitle } from './report.util';
 
 type Row = { name: string; department: string; status: 'Crítica' | 'Boa' };
@@ -281,5 +282,13 @@ describe('reportSubtitle', () => {
   it('counts a single record in the singular, and none in the plural', () => {
     expect(reportSubtitle(1, 'chamado', 'chamados')).toMatch(/^1 chamado · gerado em /);
     expect(reportSubtitle(0, 'chamado', 'chamados')).toMatch(/^0 chamados · gerado em /);
+  });
+
+  /* Relatório cortado tem que dizer que foi cortado — senão parece completo. */
+  it('warns that there is more when the report was cut', () => {
+    const subtitle = reportSubtitle(REPORT_MAX_ROWS, 'chamado', 'chamados', true);
+
+    expect(subtitle).toMatch(/^Só os primeiros 5\.000 chamados — há mais; refine o filtro/);
+    expect(subtitle).toMatch(/ · gerado em /);
   });
 });
