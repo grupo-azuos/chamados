@@ -116,7 +116,10 @@ export class TicketsRepository {
    * MESMOS filtros da tela, e por isso reaproveita `buildWhere`; sem paginação de propósito,
    * porque o relatório existe justamente para levar o que a tela não mostra de uma vez.
    */
-  async listAll(query: TicketReportQuery, areas: readonly TicketArea[]): Promise<TicketWithComputer[]> {
+  async listAll(
+    query: TicketReportQuery,
+    areas: readonly TicketArea[],
+  ): Promise<TicketWithComputer[]> {
     if (areas.length === 0) return [];
 
     return runQuery(
@@ -143,7 +146,10 @@ export class TicketsRepository {
    * foi chamada para ajudar não apareceria na fila de nenhuma das duas — some de Manutenção,
    * que não é a área original, e some de Infraestrutura para quem não tem cargo lá.
    */
-  private async scopedWhere(query: TicketFilter, areas: readonly TicketArea[]): Promise<SQL | undefined> {
+  private async scopedWhere(
+    query: TicketFilter,
+    areas: readonly TicketArea[],
+  ): Promise<SQL | undefined> {
     const visibility = await this.areaReach(areas);
     const context = query.area ? await this.areaReach([query.area]) : undefined;
 
@@ -278,7 +284,10 @@ export class TicketsRepository {
   /** As áreas PARTICIPANTES de um chamado — nunca inclui a área original (`tickets.area`). */
   async listAreasOf(ticketId: number): Promise<TicketArea[]> {
     const rows = await runQuery(
-      this.db.select({ area: ticketAreas.area }).from(ticketAreas).where(eq(ticketAreas.ticketId, ticketId)),
+      this.db
+        .select({ area: ticketAreas.area })
+        .from(ticketAreas)
+        .where(eq(ticketAreas.ticketId, ticketId)),
       'listar áreas participantes do chamado',
     );
 
@@ -321,7 +330,9 @@ export class TicketsRepository {
 
   async removeArea(ticketId: number, area: TicketArea): Promise<void> {
     await runQuery(
-      this.db.delete(ticketAreas).where(and(eq(ticketAreas.ticketId, ticketId), eq(ticketAreas.area, area))),
+      this.db
+        .delete(ticketAreas)
+        .where(and(eq(ticketAreas.ticketId, ticketId), eq(ticketAreas.area, area))),
       'remover área do chamado',
     );
   }

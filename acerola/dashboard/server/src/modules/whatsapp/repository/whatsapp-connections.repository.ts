@@ -24,6 +24,11 @@ export class WhatsappConnectionsRepository {
     );
   }
 
+  /** Todos os vínculos — são poucos: um por pessoa que administra. */
+  async list(): Promise<WhatsappConnectionRow[]> {
+    return runQuery(this.db.select().from(whatsappConnections), 'listar vínculos de WhatsApp');
+  }
+
   /** Grava o número vinculado. Trocar de número mantém a linha e renova a data do vínculo. */
   async save(userId: string, phone: string): Promise<void> {
     const now = new Date();

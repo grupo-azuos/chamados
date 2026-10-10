@@ -27,6 +27,7 @@ function row(over: Partial<TicketWithComputer> = {}): TicketWithComputer {
     description: 'A impressora não puxa papel.',
     screenshotKey: null,
     assignee: null,
+    assigneeId: null,
     solution: null,
     createdAt: CREATED_AT,
     startedAt: null,
@@ -84,6 +85,7 @@ describe('toPublicTicket', () => {
   const answered = row({
     status: 'resolved',
     assignee: 'Carlos do TI',
+    assigneeId: null,
     solution: 'Troquei o rolete.',
     contactPhone: '62999999999',
   });

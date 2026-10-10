@@ -50,15 +50,13 @@ function makeService(
   };
 
   const storageStub: Partial<StorageService> = {
-    upload: vi
-      .fn()
-      .mockImplementation((input) =>
-        Promise.resolve({
-          key: 'ticket-attachments/abc',
-          contentType: input.contentType,
-          sizeBytes: 10,
-        }),
-      ),
+    upload: vi.fn().mockImplementation((input) =>
+      Promise.resolve({
+        key: 'ticket-attachments/abc',
+        contentType: input.contentType,
+        sizeBytes: 10,
+      }),
+    ),
     createDownloadUrl: vi.fn().mockResolvedValue('https://r2.example/assinado'),
     remove: vi.fn().mockResolvedValue(undefined),
     ...storage,
@@ -115,7 +113,12 @@ describe('TicketAttachmentsService.attach', () => {
     const { service, storage } = makeService();
 
     await expect(
-      service.attach(7, [file({ originalname: 'tudo.zip', mimetype: 'application/zip' })], null, 'requester'),
+      service.attach(
+        7,
+        [file({ originalname: 'tudo.zip', mimetype: 'application/zip' })],
+        null,
+        'requester',
+      ),
     ).rejects.toThrow(BadRequestException);
 
     expect(storage.upload).not.toHaveBeenCalled();
@@ -124,9 +127,9 @@ describe('TicketAttachmentsService.attach', () => {
   it('refuses a file over the size of its format', async () => {
     const { service } = makeService();
 
-    await expect(service.attach(7, [file({ size: 11 * MEGABYTE })], null, 'requester')).rejects.toThrow(
-      BadRequestException,
-    );
+    await expect(
+      service.attach(7, [file({ size: 11 * MEGABYTE })], null, 'requester'),
+    ).rejects.toThrow(BadRequestException);
   });
 
   /* Três vídeos de uma vez passariam pelo teto de dois se cada um fosse julgado contra o
@@ -146,7 +149,12 @@ describe('TicketAttachmentsService.attach', () => {
     });
 
     await expect(
-      service.attach(7, [file({ originalname: 'x.mp4', mimetype: 'video/mp4' })], null, 'requester'),
+      service.attach(
+        7,
+        [file({ originalname: 'x.mp4', mimetype: 'video/mp4' })],
+        null,
+        'requester',
+      ),
     ).rejects.toThrow(BadRequestException);
   });
 

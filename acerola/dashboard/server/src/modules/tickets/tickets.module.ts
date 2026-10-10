@@ -14,6 +14,10 @@ import { TicketAttachmentsService } from './service/ticket-attachments.service';
 import { TicketHistoriesService } from './service/ticket-histories.service';
 import { TicketsService } from './service/tickets.service';
 
+import { RolesModule } from '../roles/roles.module';
+import { WhatsappModule } from '../whatsapp/whatsapp.module';
+import { TicketAssigneesService } from './service/ticket-assignees.service';
+import { TicketWhatsappNotifierService } from './service/ticket-whatsapp-notifier.service';
 import { SoftwareProjectsModule } from '../software-projects/software-projects.module';
 
 /**
@@ -21,7 +25,7 @@ import { SoftwareProjectsModule } from '../software-projects/software-projects.m
  * Módulo novo precisa ser registrado em `app.module.ts`.
  */
 @Module({
-  imports: [SoftwareProjectsModule],
+  imports: [SoftwareProjectsModule, RolesModule, WhatsappModule],
   controllers: [
     TicketServiceOrdersController,
     TicketsController,
@@ -38,7 +42,9 @@ import { SoftwareProjectsModule } from '../software-projects/software-projects.m
     TicketAccessService,
     TicketHistoriesService,
     TicketHistoriesRepository,
+    TicketAssigneesService,
+    TicketWhatsappNotifierService,
   ],
-  exports: [TicketsService],
+  exports: [TicketsService, TicketAssigneesService],
 })
 export class TicketsModule {}

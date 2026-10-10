@@ -5,6 +5,7 @@ import { type WhatsappConnection } from '@template/shared/schemas/whatsapp-conne
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { WhatsappConnectionsRepository } from '../repository/whatsapp-connections.repository';
 import { BotClientService, type BotStatus } from './bot-client.service';
+import { WhatsappMessagingService } from './whatsapp-messaging.service';
 
 export const WHATSAPP_LINK_FORBIDDEN_MESSAGE = 'Vincular o WhatsApp é uma ação de administrador.';
 
@@ -22,6 +23,7 @@ export class WhatsappLinkService {
   constructor(
     private readonly bot: BotClientService,
     private readonly repository: WhatsappConnectionsRepository,
+    private readonly messaging: WhatsappMessagingService,
   ) {}
 
   /**
@@ -30,14 +32,15 @@ export class WhatsappLinkService {
    */
   async status(user: RequestUser): Promise<WhatsappConnection> {
     const canLink = canLinkWhatsApp(user);
+    const usage = await this.messaging.usage(user.id);
     if (!this.bot.isConfigured || !canLink) {
-      return { isConfigured: this.bot.isConfigured, canLink, ...DISCONNECTED };
+      return { isConfigured: this.bot.isConfigured, canLink, ...DISCONNECTED, ...usage };
     }
 
     const status = await this.bot.status(user.id);
     await this.remember(user.id, status);
 
-    return { isConfigured: true, canLink: true, ...status };
+    return { isConfigured: true, canLink: true, ...status, ...usage };
   }
 
   /** Começa o vínculo: o bot passa a gerar o QR code, que a tela busca pela situação. */
@@ -47,7 +50,12 @@ export class WhatsappLinkService {
     const status = await this.bot.link(user.id);
     await this.remember(user.id, status);
 
-    return { isConfigured: true, canLink: true, ...status };
+    return {
+      isConfigured: true,
+      canLink: true,
+      ...status,
+      ...(await this.messaging.usage(user.id)),
+    };
   }
 
   async unlink(user: RequestUser): Promise<void> {

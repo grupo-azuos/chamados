@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -38,10 +40,13 @@ import {
   AddTicketAreaDto,
   CreateTicketDto,
   PublicTicketDto,
+  TicketAssigneeOptionDto,
+  TicketAssigneeOptionsQueryDto,
   TicketDashboardQueryDto,
   TicketDto,
   TicketListQueryDto,
   TicketListResponseDto,
+  TicketNoticeDto,
   TicketReportQueryDto,
   UpdateTicketDto,
 } from '../dto/ticket.dto';
@@ -124,6 +129,20 @@ export class TicketsController {
   })
   async listSystemProjectOptions(): Promise<{ id: number; name: string }[]> {
     return this.service.listSystemProjectOptions();
+  }
+
+  @Get('assignee-options')
+  @Public()
+  @ApiOperation({
+    summary: 'Lista quem pode ser o responsável por um chamado de uma área (público)',
+    description:
+      'Os admins daquela área, mais os super admins. Só o nome e o id: é o que o formulário público precisa para a pessoa escolher com quem quer falar.',
+  })
+  @ApiOkResponse({ type: [TicketAssigneeOptionDto] })
+  async listAssigneeOptions(
+    @Query() query: TicketAssigneeOptionsQueryDto,
+  ): Promise<TicketAssigneeOptionDto[]> {
+    return this.service.listAssigneeOptions(query.area);
   }
 
   @Get('protocol/:protocol')
@@ -234,6 +253,21 @@ export class TicketsController {
     @Body() body: UpdateTicketDto,
   ): Promise<TicketDto> {
     return this.service.update(user, id, body);
+  }
+
+  @Post(':id/whatsapp-notice')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Avisa pelo WhatsApp que o chamado ficou pronto',
+    description:
+      'A mensagem sai pelo número vinculado do RESPONSÁVEL pelo chamado. Devolve o desfecho: `sent` quando saiu; qualquer outro valor diz por que não saiu (sem responsável, sem número vinculado, limite do dia atingido, pessoa não pediu aviso), e a tela oferece o link manual.',
+  })
+  @ApiOkResponse({ type: TicketNoticeDto })
+  async notifyReady(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<TicketNoticeDto> {
+    return this.service.notifyReady(user, id);
   }
 
   @Post(':id/areas')

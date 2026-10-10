@@ -5,6 +5,9 @@ import {
   ticketDashboardQuerySchema,
   ticketListQuerySchema,
   ticketReportQuerySchema,
+  ticketAssigneeOptionSchema,
+  ticketAssigneeOptionsQuerySchema,
+  ticketNoticeSchema,
   ticketSchema,
   updateTicketSchema,
 } from '@template/shared/schemas/ticket.schema';
@@ -23,6 +26,9 @@ export class CreateTicketDto extends createZodDto(createTicketSchema) {}
 export class UpdateTicketDto extends createZodDto(updateTicketSchema) {}
 export class AddTicketAreaDto extends createZodDto(addTicketAreaSchema) {}
 export class TicketDto extends createZodDto(ticketSchema) {}
+export class TicketAssigneeOptionDto extends createZodDto(ticketAssigneeOptionSchema) {}
+export class TicketAssigneeOptionsQueryDto extends createZodDto(ticketAssigneeOptionsQuerySchema) {}
+export class TicketNoticeDto extends createZodDto(ticketNoticeSchema) {}
 
 /** O que a consulta pública por protocolo devolve — menos campos, de propósito. */
 export class PublicTicketDto extends createZodDto(publicTicketSchema) {}

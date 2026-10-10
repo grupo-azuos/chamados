@@ -10,10 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type TicketHistoryRow } from '../../../lib/db/schema/ticket-histories.schema';
 import { type TicketHistoriesRepository } from '../repository/ticket-histories.repository';
-import {
-  type TicketsRepository,
-  type TicketWithComputer,
-} from '../repository/tickets.repository';
+import { type TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
 import { TicketAccessService } from './ticket-access.service';
 import { type TicketAttachmentsService } from './ticket-attachments.service';
 import { TicketHistoriesService } from './ticket-histories.service';
@@ -43,6 +40,7 @@ function ticketRow(overrides: Partial<TicketWithComputer> = {}): TicketWithCompu
     description: 'A impressora não puxa papel.',
     screenshotKey: null,
     assignee: 'Ana Lima',
+    assigneeId: null,
     solution: null,
     createdAt: CREATED_AT,
     startedAt: CREATED_AT,
@@ -146,7 +144,12 @@ describe('TicketHistoriesService.create', () => {
   });
 
   it('attaches the files to the history it just recorded, on the support side', async () => {
-    const file = { originalname: 'nota.pdf', mimetype: 'application/pdf', size: 10, buffer: Buffer.from('x') };
+    const file = {
+      originalname: 'nota.pdf',
+      mimetype: 'application/pdf',
+      size: 10,
+      buffer: Buffer.from('x'),
+    };
     const { service, attachments } = setup();
 
     await service.create(ana, 7, entry('note'), [file]);

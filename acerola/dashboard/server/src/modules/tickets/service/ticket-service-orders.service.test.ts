@@ -8,10 +8,7 @@ import {
   type TicketServiceOrderRow,
 } from '../../../lib/db/schema/ticket-service-orders.schema';
 import { type TicketServiceOrdersRepository } from '../repository/ticket-service-orders.repository';
-import {
-  type TicketsRepository,
-  type TicketWithComputer,
-} from '../repository/tickets.repository';
+import { type TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
 import { TicketAccessService } from './ticket-access.service';
 import { type TicketHistoriesService } from './ticket-histories.service';
 import { fingerprintOf, TicketServiceOrdersService } from './ticket-service-orders.service';
@@ -41,6 +38,7 @@ function ticketRow(overrides: Partial<TicketWithComputer> = {}): TicketWithCompu
     description: 'A impressora não puxa papel.',
     screenshotKey: null,
     assignee: 'Ana Lima',
+    assigneeId: null,
     solution: null,
     createdAt: CREATED_AT,
     startedAt: CREATED_AT,
@@ -253,7 +251,10 @@ describe('TicketServiceOrdersService.verify', () => {
 
   it('answers the same for a short code that fits more than one issue', async () => {
     const { service } = setup({
-      issued: [issuedRow(), issuedRow({ id: 2, version: 2, code: `${CODE.slice(0, 20)}${'0'.repeat(44)}` })],
+      issued: [
+        issuedRow(),
+        issuedRow({ id: 2, version: 2, code: `${CODE.slice(0, 20)}${'0'.repeat(44)}` }),
+      ],
     });
 
     await expect(service.verify(CODE.slice(0, 12))).rejects.toThrow(NotFoundException);

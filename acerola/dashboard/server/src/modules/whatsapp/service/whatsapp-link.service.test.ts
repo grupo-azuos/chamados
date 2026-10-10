@@ -5,6 +5,7 @@ import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type WhatsappConnectionsRepository } from '../repository/whatsapp-connections.repository';
 import { type BotClientService, type BotStatus } from './bot-client.service';
 import { WhatsappLinkService } from './whatsapp-link.service';
+import { type WhatsappMessagingService } from './whatsapp-messaging.service';
 
 const admin: RequestUser = {
   id: 'u-admin',
@@ -29,6 +30,7 @@ const regular: RequestUser = {
 const CONNECTED: BotStatus = { state: 'connected', qr: null, phone: '5562999990001' };
 const PAIRING: BotStatus = { state: 'pairing', qr: 'qr-content', phone: null };
 const DISCONNECTED: BotStatus = { state: 'disconnected', qr: null, phone: null };
+const USAGE = { sentToday: 3, dailyLimit: 100 };
 
 function makeService(
   options: { bot?: BotStatus; isConfigured?: boolean; stored?: string | null } = {},
@@ -46,9 +48,11 @@ function makeService(
     save: vi.fn().mockResolvedValue(undefined),
     remove: vi.fn().mockResolvedValue(undefined),
   };
+  const messaging = { usage: vi.fn().mockResolvedValue(USAGE) };
   const service = new WhatsappLinkService(
     bot as unknown as BotClientService,
     repository as unknown as WhatsappConnectionsRepository,
+    messaging as unknown as WhatsappMessagingService,
   );
 
   return { service, bot, repository };
@@ -63,6 +67,7 @@ describe('WhatsappLinkService.status', () => {
       isConfigured: true,
       canLink: true,
       ...CONNECTED,
+      ...USAGE,
     });
     expect(repository.save).toHaveBeenCalledWith('u-admin', '5562999990001');
   });
@@ -101,6 +106,7 @@ describe('WhatsappLinkService.status', () => {
       isConfigured: true,
       canLink: false,
       ...DISCONNECTED,
+      ...USAGE,
     });
     expect(bot.status).not.toHaveBeenCalled();
   });
@@ -112,6 +118,7 @@ describe('WhatsappLinkService.status', () => {
       isConfigured: false,
       canLink: true,
       ...DISCONNECTED,
+      ...USAGE,
     });
     expect(bot.status).not.toHaveBeenCalled();
   });
