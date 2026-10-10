@@ -5,7 +5,7 @@ import { type Env } from '../../../lib/config/env.schema';
 import { BotClientService, botSessionId } from './bot-client.service';
 
 const TOKEN = 't'.repeat(40);
-const configured = { BOT_API_URL: 'http://bot.local:3010/', BOT_API_TOKEN: TOKEN } as Env;
+const configured = { BOT_API_URL: 'http://bot.local:4005/', BOT_API_TOKEN: TOKEN } as Env;
 
 function mockFetch(response: Partial<Response> | Error) {
   const fetchMock = vi.fn(async () => {
@@ -37,7 +37,7 @@ describe('BotClientService', () => {
 
     expect(status).toEqual({ state: 'connected', qr: null, phone: '5562999990001' });
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe(`http://bot.local:3010/sessions/${botSessionId('user/1')}`);
+    expect(url).toBe(`http://bot.local:4005/sessions/${botSessionId('user/1')}`);
     expect(init.method).toBe('GET');
     expect(init.headers).toEqual({ Authorization: `Bearer ${TOKEN}` });
   });
