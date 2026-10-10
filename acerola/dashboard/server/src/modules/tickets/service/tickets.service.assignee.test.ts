@@ -145,6 +145,19 @@ describe('TicketsService.create with a chosen assignee', () => {
     });
     expect(ticket.assigneeId).toBe('u-ana');
     expect(notifier.opened).toHaveBeenCalledOnce();
+    /* O desfecho do aviso volta com o chamado: é o que deixa a tela dizer "enviamos". */
+    expect(ticket.openingNotice).toBe('sent');
+  });
+
+  /* O aviso que falhou não derruba a abertura: o chamado nasce, e o desfecho diz que não saiu. */
+  it('still opens the ticket when the notice blows up, and says it did not go out', async () => {
+    const { service, notifier } = makeService();
+    notifier.opened.mockRejectedValue(new Error('bot down'));
+
+    const ticket = await service.create({ ...input, assigneeId: 'u-ana' });
+
+    expect(ticket.protocol).toBe('CH-0007');
+    expect(ticket.openingNotice).toBe('failed');
   });
 
   it('opens without an assignee when nobody was chosen', async () => {

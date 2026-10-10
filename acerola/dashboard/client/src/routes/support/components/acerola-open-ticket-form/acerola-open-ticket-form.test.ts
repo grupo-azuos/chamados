@@ -312,6 +312,28 @@ describe('AcerolaOpenTicketForm', () => {
     );
   });
 
+  /* O bot já mandou: a tela avisa, e não oferece o link para a pessoa mandar a si mesma. */
+  it('says the protocol was sent to WhatsApp instead of offering the link, when the bot sent it', () => {
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: true,
+        screenshotName: null,
+        attachments: [],
+        opened: {
+          protocol: 'CH-0013',
+          whatsAppLink: 'https://wa.me/5562999999999?text=oi',
+          isNoticeSent: true,
+        },
+      },
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Enviamos o protocolo e o link de acompanhamento para o seu WhatsApp.',
+    );
+    expect(screen.queryByRole('link', { name: /receber o protocolo/i })).not.toBeInTheDocument();
+  });
+
   // triste
   it('shows each validation error next to its own field, never as a summary on top', async () => {
     const user = userEvent.setup();

@@ -34,6 +34,7 @@ import { type Paginated } from '@template/shared/schemas/pagination.schema';
 import {
   type CreateTicketInput,
   type PublicTicket,
+  type OpenedTicket,
   type Ticket,
   type TicketAssigneeOption,
   type TicketListQuery,
@@ -203,12 +204,13 @@ export class TicketsService {
     return assignee;
   }
 
-  /* Quem escolheu um responsável e pediu aviso recebe o "recebi o seu chamado" pelo número
-     dele. Em segundo plano, e sem derrubar nada: o chamado já está gravado. */
-  private announceOpening(row: TicketRow, isSkipped = false): void {
-    if (isSkipped) return;
+  /* Quem pediu aviso recebe o "recebi o seu chamado" pelo WhatsApp de quem atende. O envio é
+     ESPERADO, e o desfecho volta com o chamado: a tela só diz que a mensagem saiu se saiu. */
+  private async announceOpening(row: TicketRow, isSkipped = false): Promise<TicketNoticeOutcome> {
+    if (isSkipped) return 'not_wanted';
 
-    void this.notifier?.opened(row).catch(() => undefined);
+    /* Nunca derruba a abertura: o chamado já está gravado, e o aviso é um extra. */
+    return (await this.notifier?.opened(row).catch(() => 'failed' as const)) ?? 'not_configured';
   }
 
   /**
@@ -334,7 +336,7 @@ export class TicketsService {
     /* Quem abriu pela CONVERSA já recebe a confirmação na própria conversa: mandar também o
        aviso de "chamado aberto" seriam duas mensagens dizendo a mesma coisa. */
     options: { skipOpeningNotice?: boolean } = {},
-  ): Promise<Ticket> {
+  ): Promise<OpenedTicket> {
     if (input.area === 'sistema') {
       const projectId = Number(input.projectId);
       if (
@@ -351,7 +353,7 @@ export class TicketsService {
     const screenshotKey = await this.storeScreenshot(screenshot);
     const row = await this.repository.insert(toTicketInsert(input, screenshotKey, assignee));
 
-    this.announceOpening(row, options.skipOpeningNotice);
+    const openingNotice = await this.announceOpening(row, options.skipOpeningNotice);
 
     /* Os arquivos entram DEPOIS do chamado existir, porque é a ele que eles pertencem. Um
        arquivo fora das regras derruba a requisição — e o chamado já gravado fica, sem os
@@ -376,7 +378,7 @@ export class TicketsService {
       );
     }
 
-    return this.toFullTicket(row, []);
+    return { ...(await this.toFullTicket(row, [])), openingNotice };
   }
 
   /**

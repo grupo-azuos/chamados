@@ -39,6 +39,7 @@ import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   AddTicketAreaDto,
   CreateTicketDto,
+  OpenedTicketDto,
   PublicTicketDto,
   TicketAssigneeOptionDto,
   TicketAssigneeOptionsQueryDto,
@@ -108,14 +109,14 @@ export class TicketsController {
       'Não exige login. Os arquivos viajam na mesma requisição: o print do erro no campo `screenshot` e os demais anexos no campo `attachments` — PDF, Word, Excel, PNG/JPG e MP4, cada formato com o teto dele. A situação e o responsável não são aceitos no corpo: todo chamado nasce aberto e sem responsável.',
   })
   @ApiBody({ type: CreateTicketDto })
-  @ApiCreatedResponse({ type: TicketDto })
+  @ApiCreatedResponse({ type: OpenedTicketDto })
   @ApiUnprocessableEntityResponse({
     description: 'Algum campo está fora do contrato, ou o print não é uma imagem aceita.',
   })
   async create(
     @Body() body: CreateTicketDto,
     @UploadedFiles() files?: TicketUploads,
-  ): Promise<TicketDto> {
+  ): Promise<OpenedTicketDto> {
     return this.service.create(body, files?.screenshot?.[0], files?.attachments ?? []);
   }
 
