@@ -27,7 +27,8 @@ import { type TicketInsert, type TicketRow } from '../../../lib/db/schema/ticket
 import { type TicketWithComputer } from '../repository/tickets.repository';
 
 /** Quem está lançando: o nome que fica escrito e a identidade (e-mail) que fica de prova. */
-export type HistoryAuthor = { name: string; email: string };
+/** `id` é opcional só por causa de quem ainda não o informa; com ele, o responsável fica achável. */
+export type HistoryAuthor = { name: string; email: string; id?: string };
 
 /** O que a pessoa informou ao lançar — já validado (e normalizado) pelo contrato. */
 export type HistoryEntry = z.infer<typeof createTicketHistorySchema>;
@@ -129,7 +130,10 @@ export function toTicketMove(
 
   /* Quem lança o primeiro histórico num chamado sem responsável vira o responsável: é a
      resposta para "quem pegou isso?" sem depender de alguém lembrar de preencher o campo. */
-  if (!ticket.assignee) move.assignee = author.name;
+  if (!ticket.assignee) {
+    move.assignee = author.name;
+    move.assigneeId = author.id ?? null;
+  }
 
   if (next === ticket.status) return move;
 

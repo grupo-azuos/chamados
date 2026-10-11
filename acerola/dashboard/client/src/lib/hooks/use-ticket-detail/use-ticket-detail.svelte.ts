@@ -3,7 +3,11 @@ import { ticketStatusLabel } from '@template/shared/domain/ticket-status.util';
 import { buildWhatsAppLink } from '@template/shared/domain/ticket-whatsapp.util';
 import { type TicketAttachment } from '@template/shared/schemas/ticket-attachment.schema';
 import { type TicketHistory } from '@template/shared/schemas/ticket-history.schema';
-import { type Ticket } from '@template/shared/schemas/ticket.schema';
+import {
+  type Ticket,
+  TICKET_NOTICE_MESSAGES,
+  type TicketNotice,
+} from '@template/shared/schemas/ticket.schema';
 import { writable } from 'svelte/store';
 
 import { ApiError, readError } from '$lib/api/http-client';
@@ -26,6 +30,9 @@ export type TicketDetailModel = {
   };
   state: {
     isLoading: boolean;
+    isNotifying: boolean;
+    /** Nulo enquanto ninguém clicou em avisar. */
+    notice: TicketNoticeResult | null;
     /** O chamado não existe (ou não é de uma área que a pessoa atende). */
     isMissing: boolean;
     error: string | null;
@@ -42,8 +49,24 @@ export type TicketDetailModel = {
     onRetry: () => void;
     onRemoveAttachment: (attachment: TicketAttachment) => void;
     onDownloadServiceOrder: () => void;
+    /** Avisa pelo WhatsApp do responsável que o chamado ficou pronto. */
+    onNotify: () => void;
   };
 };
+
+/** O que aconteceu com o aviso por WhatsApp: saiu, ou por que não saiu. */
+export type TicketNoticeResult = { isSent: boolean; message: string };
+
+export function toNoticeResult(notice: TicketNotice, assignee: string | null): TicketNoticeResult {
+  if (notice.outcome === 'sent') {
+    return {
+      isSent: true,
+      message: `Mensagem enviada pelo WhatsApp de ${assignee ?? 'quem atende'}.`,
+    };
+  }
+
+  return { isSent: false, message: TICKET_NOTICE_MESSAGES[notice.outcome] };
+}
 
 /**
  * A FICHA de um chamado: os dados dele, a linha do tempo e os arquivos.
@@ -99,7 +122,25 @@ export function useTicketDetailModel(id: number): TicketDetailModel {
       mutationFn: (attachmentId: number) => ticketsApi.removeAttachment(id, attachmentId),
       onSettled: async () => {
         removingAttachmentId = null;
-        await queryClient.invalidateQueries({ queryKey: [...TICKETS_QUERY_KEY, 'attachments', id] });
+        await queryClient.invalidateQueries({
+          queryKey: [...TICKETS_QUERY_KEY, 'attachments', id],
+        });
+      },
+    }),
+  );
+
+  /* O resultado do último aviso. Fica na tela até a pessoa sair do chamado: é a confirmação
+     de que a mensagem saiu — ou o motivo de não ter saído, ao lado do link manual. */
+  let notice = $state<TicketNoticeResult | null>(null);
+  const notify = mirrorStore(
+    createMutation({
+      mutationFn: () => ticketsApi.notifyReady(id),
+      onSuccess: (result: TicketNotice) => {
+        notice = toNoticeResult(result, ticket.current.data?.assignee ?? null);
+      },
+      /* Falha de rede também cai no link manual: o que importa é a pessoa conseguir avisar. */
+      onError: () => {
+        notice = { isSent: false, message: TICKET_NOTICE_MESSAGES.failed };
       },
     }),
   );
@@ -121,6 +162,8 @@ export function useTicketDetailModel(id: number): TicketDetailModel {
 
       return {
         isLoading: ticket.current.isPending,
+        isNotifying: notify.current.isPending,
+        notice,
         isMissing,
         error: isMissing ? null : readError(ticket.current.error),
         isTimelineLoading: histories.current.isPending,
@@ -133,6 +176,9 @@ export function useTicketDetailModel(id: number): TicketDetailModel {
       };
     },
     actions: {
+      onNotify: () => {
+        if (!notify.current.isPending) notify.current.mutate();
+      },
       onRetry: () => {
         void ticket.current.refetch();
         void histories.current.refetch();

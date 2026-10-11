@@ -67,7 +67,12 @@ describe('toServiceOrderInsert', () => {
   // triste
   /* Nulo NÃO é zero: "0 min" diria que o atendimento não tomou tempo nenhum. */
   it('keeps the time empty when nobody informed any', () => {
-    const insert = toServiceOrderInsert({ ...order, histories: [] }, draft, 'f'.repeat(64), 'ana@azuos.com.br');
+    const insert = toServiceOrderInsert(
+      { ...order, histories: [] },
+      draft,
+      'f'.repeat(64),
+      'ana@azuos.com.br',
+    );
 
     expect(insert.totalMinutes).toBeNull();
     expect(insert.historyCount).toBe(0);

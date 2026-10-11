@@ -177,8 +177,9 @@ desenvolvimento: sem `DATABASE_URL` no `.env`, o server recusa subir.
 
 ## Comandos
 
-Os PDFs dependem do compilador Typst 0.15.1, configurado nos `mise.toml` da raiz e do
-painel. Instale as ferramentas e inicie o servidor com o ambiente do mise:
+Os documentos (PDF, Word e Excel) são gerados por bibliotecas do próprio projeto — `pdfmake`,
+`docx` e `exceljs` —, instaladas pelo `npm install`: nenhum programa à parte é necessário.
+Instale as ferramentas e inicie o servidor com o ambiente do mise:
 
 ```bash
 mise install
@@ -208,9 +209,9 @@ Todos rodam dentro de `acerola/dashboard/`:
 
 ### Docker
 
-A imagem final inclui o executável Typst 0.15.1 e os templates, fontes e imagens copiados
-pelo build do Nest. O host Docker não precisa de uma instalação separada do Typst.
-O build verifica `typst --version` para falhar antes do deploy se o binário não executar.
+A imagem final inclui as fontes e a logo dos documentos, copiadas pelo build do Nest. O
+`dockerfile` ainda traz o executável do Typst, de quando os PDFs eram compilados por ele: o
+sistema não o usa mais, e a remoção é de quem administra o projeto (o arquivo é protegido).
 
 
 ```bash
@@ -221,6 +222,13 @@ docker compose -f docker/compose.yml up --build
 Uma imagem só: o Nest serve `/api` **e** a tela na mesma porta. O banco (Neon) e os arquivos
 (R2) são remotos, então não há volume de dados — o container precisa só das variáveis do
 `server/.env` (`DATABASE_URL`, `R2_*`) para subir.
+
+Em produção o container fica atrás de um proxy (Traefik, Caddy ou nginx), e parte da proteção é
+configurada nele — tamanho máximo de upload, limite das rotas públicas, `API_TRUST_PROXY_HOPS`.
+Os exemplos prontos estão em [`acerola/dashboard/docs/reverse-proxy.md`](acerola/dashboard/docs/reverse-proxy.md).
+
+O bot de WhatsApp é um programa à parte, com imagem própria (`docker/bot.dockerfile`) e que só
+sobe com o perfil `whatsapp` do compose — ver [`acerola/dashboard/docs/whatsapp-bot.md`](acerola/dashboard/docs/whatsapp-bot.md).
 
 ---
 

@@ -14,7 +14,11 @@
     "client"
   ],
   "scripts": {
-    "dev": "concurrently -n server,client -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "predev": "npm install --prefix bot --no-audit --no-fund --silent",
+    "dev": "concurrently -n server,client,bot -c blue,magenta,green \"npm run dev -w server\" \"npm run dev -w client\" \"npm run dev --prefix bot\"",
+    "dev:bot": "npm run dev --prefix bot",
+    "bot:install": "npm ci --prefix bot",
+    "bot:check": "npm run lint --prefix bot && npm run typecheck --prefix bot && npm test --prefix bot",
     "build": "npm run build -w @template/shared && npm run build -w server && npm run build -w client",
     "test": "npm run test -w @template/shared && npm run test -w server && npm run test -w client",
     "test:e2e": "npm run test:e2e -w server && npm run test:e2e -w client",

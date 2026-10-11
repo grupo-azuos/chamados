@@ -22,6 +22,7 @@ import {
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
+import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
 import { computers } from '../../../lib/db/schema/computers.schema';
 import { internalRoles } from '../../../lib/db/schema/internal-roles.schema';
@@ -115,7 +116,10 @@ export class TicketsRepository {
    * MESMOS filtros da tela, e por isso reaproveita `buildWhere`; sem paginação de propósito,
    * porque o relatório existe justamente para levar o que a tela não mostra de uma vez.
    */
-  async listAll(query: TicketReportQuery, areas: readonly TicketArea[]): Promise<TicketWithComputer[]> {
+  async listAll(
+    query: TicketReportQuery,
+    areas: readonly TicketArea[],
+  ): Promise<TicketWithComputer[]> {
     if (areas.length === 0) return [];
 
     return runQuery(
@@ -125,7 +129,8 @@ export class TicketsRepository {
         .leftJoin(computers, eq(computers.id, tickets.computerId))
         .leftJoin(softwareProjects, eq(softwareProjects.id, tickets.projectId))
         .where(await this.scopedWhere(query, areas))
-        .orderBy(desc(tickets.createdAt), desc(tickets.id)),
+        .orderBy(desc(tickets.createdAt), desc(tickets.id))
+        .limit(REPORT_FETCH_LIMIT),
       'listar chamados para o relatório',
     );
   }
@@ -141,7 +146,10 @@ export class TicketsRepository {
    * foi chamada para ajudar não apareceria na fila de nenhuma das duas — some de Manutenção,
    * que não é a área original, e some de Infraestrutura para quem não tem cargo lá.
    */
-  private async scopedWhere(query: TicketFilter, areas: readonly TicketArea[]): Promise<SQL | undefined> {
+  private async scopedWhere(
+    query: TicketFilter,
+    areas: readonly TicketArea[],
+  ): Promise<SQL | undefined> {
     const visibility = await this.areaReach(areas);
     const context = query.area ? await this.areaReach([query.area]) : undefined;
 
@@ -276,7 +284,10 @@ export class TicketsRepository {
   /** As áreas PARTICIPANTES de um chamado — nunca inclui a área original (`tickets.area`). */
   async listAreasOf(ticketId: number): Promise<TicketArea[]> {
     const rows = await runQuery(
-      this.db.select({ area: ticketAreas.area }).from(ticketAreas).where(eq(ticketAreas.ticketId, ticketId)),
+      this.db
+        .select({ area: ticketAreas.area })
+        .from(ticketAreas)
+        .where(eq(ticketAreas.ticketId, ticketId)),
       'listar áreas participantes do chamado',
     );
 
@@ -319,7 +330,9 @@ export class TicketsRepository {
 
   async removeArea(ticketId: number, area: TicketArea): Promise<void> {
     await runQuery(
-      this.db.delete(ticketAreas).where(and(eq(ticketAreas.ticketId, ticketId), eq(ticketAreas.area, area))),
+      this.db
+        .delete(ticketAreas)
+        .where(and(eq(ticketAreas.ticketId, ticketId), eq(ticketAreas.area, area))),
       'remover área do chamado',
     );
   }
