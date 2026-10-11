@@ -1,11 +1,7 @@
 import { renderDocxDocument } from './document-docx.util';
 import { renderPdfDocument } from './document-pdf.util';
 import { renderXlsxDocument } from './document-xlsx.util';
-import {
-  type BuiltDocument,
-  type DocumentDefinition,
-  type DocumentFormat,
-} from './document.type';
+import { type BuiltDocument, type DocumentDefinition, type DocumentFormat } from './document.type';
 
 const CONTENT_TYPES: Record<DocumentFormat, string> = {
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -31,7 +27,10 @@ export async function buildDocument(
   };
 }
 
-async function renderDocument(definition: DocumentDefinition, format: DocumentFormat): Promise<Buffer> {
+async function renderDocument(
+  definition: DocumentDefinition,
+  format: DocumentFormat,
+): Promise<Buffer> {
   if (format === 'xlsx') return renderXlsxDocument(definition);
   if (format === 'docx') return renderDocxDocument(definition);
 

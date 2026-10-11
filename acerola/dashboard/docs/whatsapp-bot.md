@@ -65,7 +65,7 @@ e **qual número** — a conexão em si nunca sai do bot.
 
 1. **Troca futura.** Hoje quem fala com o WhatsApp é o [Baileys](https://github.com/WhiskeySockets/Baileys),
    que não é oficial. No dia em que a API oficial do WhatsApp entrar, troca-se só a camada de
-   transporte do bot (`src/transport/`); o servidor e a tela não mudam.
+   transporte do bot (`src/modules/sessions/`); o servidor e a tela não mudam.
 2. **Licença.** O Baileys depende de código GPL-3.0 (`libsignal`). Num programa à parte — com
    instalação, processo e imagem Docker próprios — essa licença não alcança o resto do projeto,
    que é MIT. Detalhes em `THIRD-PARTY-NOTICES.md`.
@@ -83,8 +83,9 @@ cp bot/.env.example bot/.env   # uma vez: preencha BOT_API_TOKEN e BOT_SESSION_K
 npm run dev                    # API :3005 + tela :5005 + bot :4005
 ```
 
-Na primeira vez, o `npm run dev` instala as dependências do bot sozinho. Sem o `bot/.env` o bot
-não sobe — o resto do sistema funciona normalmente, e o terminal avisa o que falta.
+O `npm run dev` confere as dependências do bot antes de subir (e as instala na primeira vez).
+Sem o `bot/.env` o bot não sobe e diz, no terminal, qual variável falta — o resto do sistema
+funciona normalmente.
 
 Cada porta é trocada no `.env` do próprio programa:
 
@@ -141,8 +142,14 @@ Respostas de erro do envio: `409` (`not_connected`) quando o número não está 
 ## Onde fica cada coisa
 
 ```
-bot/src/config/      variáveis de ambiente, validadas na subida
-bot/src/store/       onde a conexão fica guardada (cifrada)
-bot/src/transport/   a porta do WhatsApp e quem a atende hoje (Baileys) — a parte que será trocada
-bot/src/http/        a API que o servidor chama
+bot/src/main.ts                    sobe o bot: lê o ambiente, liga as peças e escuta
+bot/src/lib/config/                variáveis de ambiente, validadas na subida (env.schema.ts)
+bot/src/lib/http/                  a API que o servidor chama e o envio do /chamado ao servidor
+bot/src/lib/storage/               onde a conexão fica guardada (cifrada)
+bot/src/modules/sessions/          a porta do WhatsApp e quem a atende hoje (Baileys) — a parte que será trocada
+bot/src/modules/conversations/     o porteiro: o que sai do bot para o servidor
 ```
+
+É o mesmo desenho do servidor (`lib/<infra>/` e `modules/<assunto>/`), com os mesmos sufixos
+de arquivo: `.schema.ts` para contrato, `.type.ts` para tipo e `.util.ts` para função — cada
+um com o `.test.ts` ao lado.

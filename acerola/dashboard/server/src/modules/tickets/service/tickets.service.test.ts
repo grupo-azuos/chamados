@@ -7,13 +7,17 @@ import { ticketListQuerySchema } from '@template/shared/schemas/ticket.schema';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type Env } from '../../../lib/config/env.schema';
 
 import { type StorageService } from '../../../lib/storage/storage.service';
 import { type TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
 import { type TicketHistoriesRepository } from '../repository/ticket-histories.repository';
 import { TicketAccessService } from './ticket-access.service';
+import { type TicketAssigneesService } from './ticket-assignees.service';
 import { type TicketAttachmentsService } from './ticket-attachments.service';
 import { type TicketHistoriesService } from './ticket-histories.service';
+import { signTicketAccess, signTicketInvite } from './ticket-invite.util';
+import { type TicketWhatsappNotifierService } from './ticket-whatsapp-notifier.service';
 import { type GithubService } from '../../software-projects/service/github.service';
 import { type SoftwareProjectsService } from '../../software-projects/service/software-projects.service';
 import { TicketsService, type UploadedScreenshot } from './tickets.service';
@@ -816,5 +820,268 @@ describe('TicketsService.myAreas', () => {
 
     await expect(service.myAreas(noRole)).rejects.toThrow(ForbiddenException);
     expect(contextRolesFor).not.toHaveBeenCalled();
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────────────────
+   O RESPONSÁVEL e o WhatsApp: escolhido na abertura, trocado pelo super admin, o convite e o
+   link de consulta que chegam pelo WhatsApp, e o aviso de chamado pronto.
+
+   Estes caminhos montam o serviço com três dependências que os de cima não usam (quem atende
+   cada área, quem avisa, e o segredo que assina os links) — por isso têm fábrica própria.
+   ───────────────────────────────────────────────────────────────────────────────────────── */
+
+const LINK_SECRET = 's'.repeat(40);
+const LINK_NOW = 1_800_000_000;
+
+const rootUser: RequestUser = {
+  id: 'u-root',
+  email: 'root@exemplo.com',
+  name: 'Root',
+  role: 'superadmin',
+};
+const adminUser: RequestUser = {
+  id: 'u-ana',
+  email: 'ana@exemplo.com',
+  name: 'Ana Lima',
+  role: 'admin',
+};
+
+const openInput = {
+  requesterName: 'Bia Costa',
+  area: 'infra' as const,
+  department: 'financeiro' as const,
+  problemType: 'printer' as const,
+  contactPhone: '62999990002',
+  description: 'A impressora não puxa papel.',
+};
+
+function makeAssigneeService(
+  options: { attends?: boolean; areas?: string[]; roles?: Record<string, string> } = {},
+) {
+  const repository = {
+    insert: vi.fn(async (values: Partial<TicketWithComputer>) => ticketRow(values)),
+    update: vi.fn(async (_id: number, values: Partial<TicketWithComputer>) => ticketRow(values)),
+    findById: vi.fn().mockResolvedValue(ticketRow({ notifyWhatsapp: true })),
+    listAreasOf: vi.fn().mockResolvedValue([]),
+    listAreasFor: vi.fn().mockResolvedValue(new Map()),
+    contextRolesFor: vi
+      .fn()
+      .mockResolvedValue(
+        options.roles ?? { infra: 'admin', sistema: 'admin', manutencao: 'admin' },
+      ),
+  };
+  const assignees = {
+    resolve: vi
+      .fn()
+      .mockResolvedValue(options.attends === false ? null : { id: 'u-ana', name: 'Ana Lima' }),
+    listForArea: vi.fn().mockResolvedValue([{ id: 'u-ana', name: 'Ana Lima' }]),
+    areasOf: vi.fn().mockResolvedValue({ name: 'Ana Lima', areas: options.areas ?? ['infra'] }),
+  };
+  const notifier = {
+    opened: vi.fn().mockResolvedValue('sent'),
+    ready: vi.fn().mockResolvedValue('sent'),
+  };
+  const tickets = repository as unknown as TicketsRepository;
+  const service = new TicketsService(
+    tickets,
+    storageStub as unknown as StorageService,
+    attachmentsStub as unknown as TicketAttachmentsService,
+    new TicketAccessService(tickets),
+    historiesStub as unknown as TicketHistoriesService,
+    historiesRepositoryStub as unknown as TicketHistoriesRepository,
+    undefined,
+    undefined,
+    assignees as unknown as TicketAssigneesService,
+    notifier as unknown as TicketWhatsappNotifierService,
+    { BOT_API_TOKEN: LINK_SECRET } as Env,
+  );
+
+  return { service, repository, assignees, notifier };
+}
+
+describe('TicketsService.create with a chosen assignee', () => {
+  // feliz
+  /* O NOME vem do cadastro de quem atende, nunca do corpo: só o id é aceito de fora. */
+  it('records the chosen person as assignee, by the name on file, and announces the opening', async () => {
+    const { service, repository, assignees, notifier } = makeAssigneeService();
+
+    const ticket = await service.create({ ...openInput, assigneeId: 'u-ana' });
+
+    expect(assignees.resolve).toHaveBeenCalledWith('infra', 'u-ana');
+    expect(repository.insert.mock.calls[0]?.[0]).toMatchObject({
+      assignee: 'Ana Lima',
+      assigneeId: 'u-ana',
+    });
+    expect(ticket.assigneeId).toBe('u-ana');
+    expect(notifier.opened).toHaveBeenCalledOnce();
+    /* O desfecho do aviso volta com o chamado: é o que deixa a tela dizer "enviamos". */
+    expect(ticket.openingNotice).toBe('sent');
+  });
+
+  /* O aviso que falhou não derruba a abertura: o chamado nasce, e o desfecho diz que não saiu. */
+  it('still opens the ticket when the notice blows up, and says it did not go out', async () => {
+    const { service, notifier } = makeAssigneeService();
+    notifier.opened.mockRejectedValue(new Error('bot down'));
+
+    const ticket = await service.create({ ...openInput, assigneeId: 'u-ana' });
+
+    expect(ticket.protocol).toBe('CH-0007');
+    expect(ticket.openingNotice).toBe('failed');
+  });
+
+  it('opens without an assignee when nobody was chosen', async () => {
+    const { service, repository, assignees } = makeAssigneeService();
+
+    await service.create(openInput);
+
+    expect(assignees.resolve).not.toHaveBeenCalled();
+    expect(repository.insert.mock.calls[0]?.[0]).toMatchObject({
+      assignee: null,
+      assigneeId: null,
+    });
+  });
+
+  it('skips the opening notice when asked to', async () => {
+    const { service, notifier } = makeAssigneeService();
+
+    await service.create({ ...openInput, assigneeId: 'u-ana' }, undefined, [], {
+      skipOpeningNotice: true,
+    });
+
+    expect(notifier.opened).not.toHaveBeenCalled();
+  });
+
+  // triste
+  /* O id vem de uma tela pública: quem não atende a área não vira responsável só por pedir. */
+  it('refuses a chosen person who does not attend the area, and creates nothing', async () => {
+    const { service, repository } = makeAssigneeService({ attends: false });
+
+    await expect(service.create({ ...openInput, assigneeId: 'u-outro' })).rejects.toThrow(
+      UnprocessableEntityException,
+    );
+    expect(repository.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe('TicketsService.update of the assignee', () => {
+  // feliz
+  it('lets the super admin hand the ticket to someone who attends the area', async () => {
+    const { service, repository } = makeAssigneeService();
+
+    await service.update(rootUser, 7, { assigneeId: 'u-ana' });
+
+    expect(repository.update.mock.calls[0]?.[1]).toMatchObject({
+      assignee: 'Ana Lima',
+      assigneeId: 'u-ana',
+    });
+  });
+
+  // triste
+  /* Escalada de privilégio: admin comum não escolhe o responsável — nem a si mesmo. */
+  it('refuses an admin who tries to change the assignee', async () => {
+    const { service, repository } = makeAssigneeService();
+
+    await expect(service.update(adminUser, 7, { assigneeId: 'u-ana' })).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses a new assignee who does not attend the area', async () => {
+    const { service, repository } = makeAssigneeService({ attends: false });
+
+    await expect(service.update(rootUser, 7, { assigneeId: 'u-outro' })).rejects.toThrow(
+      UnprocessableEntityException,
+    );
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('leaves the assignee alone when the edit does not mention it', async () => {
+    const { service, repository, assignees } = makeAssigneeService();
+
+    await service.update(adminUser, 7, { priority: 'high' });
+
+    expect(assignees.resolve).not.toHaveBeenCalled();
+    expect(repository.update.mock.calls[0]?.[1]).not.toHaveProperty('assigneeId');
+  });
+});
+
+describe('TicketsService.readInvite', () => {
+  const token = signTicketInvite(
+    { assigneeId: 'u-ana', phone: '5562999990002', expiresAt: LINK_NOW + 1800 },
+    LINK_SECRET,
+  );
+
+  // feliz
+  it('tells who the attendant is, the areas and the phone carried by the link', async () => {
+    const { service } = makeAssigneeService({ areas: ['infra', 'manutencao'] });
+
+    expect(await service.readInvite(token, LINK_NOW)).toEqual({
+      assignee: { id: 'u-ana', name: 'Ana Lima' },
+      areas: ['infra', 'manutencao'],
+      phone: '5562999990002',
+    });
+  });
+
+  // triste
+  it('refuses a link that expired or was tampered with', async () => {
+    const { service } = makeAssigneeService();
+
+    await expect(service.readInvite(token, LINK_NOW + 1801)).rejects.toThrow(NotFoundException);
+    await expect(service.readInvite(`${token}x`, LINK_NOW)).rejects.toThrow(NotFoundException);
+    await expect(service.readInvite('lixo', LINK_NOW)).rejects.toThrow(NotFoundException);
+  });
+
+  /* Quem mandou o link deixou de atender: o convite deixa de valer junto. */
+  it('refuses a link of someone who no longer attends any area', async () => {
+    const { service } = makeAssigneeService({ areas: [] });
+
+    await expect(service.readInvite(token, LINK_NOW)).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe('TicketsService.findByAccessToken', () => {
+  // feliz
+  it('opens the ticket of a signed link, with the public fields only', async () => {
+    const { service, repository } = makeAssigneeService();
+
+    const ticket = await service.findByAccessToken(signTicketAccess(7, LINK_SECRET));
+
+    expect(repository.findById).toHaveBeenCalledWith(7);
+    expect(ticket.protocol).toBe('CH-0007');
+    expect(ticket).not.toHaveProperty('contactPhone');
+  });
+
+  // triste
+  /* Trocar o número dentro do link não abre o chamado de outra pessoa. */
+  it('refuses a link that was tampered with, without reading any ticket', async () => {
+    const { service, repository } = makeAssigneeService();
+
+    await expect(service.findByAccessToken(`${signTicketAccess(7, LINK_SECRET)}x`)).rejects.toThrow(
+      NotFoundException,
+    );
+    await expect(service.findByAccessToken('lixo')).rejects.toThrow(NotFoundException);
+    expect(repository.findById).not.toHaveBeenCalled();
+  });
+});
+
+describe('TicketsService.notifyReady', () => {
+  // feliz
+  it('hands back how the notice went', async () => {
+    const { service, notifier } = makeAssigneeService();
+
+    expect(await service.notifyReady(adminUser, 7)).toEqual({ outcome: 'sent' });
+    expect(notifier.ready).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  /* Quem só consulta a área não dispara mensagem pelo número de ninguém. */
+  it('refuses who can only read the area of the ticket', async () => {
+    const { service, notifier } = makeAssigneeService({ roles: { infra: 'user' } });
+    const regular: RequestUser = { id: 'u-x', email: 'x@exemplo.com', name: 'X', role: 'user' };
+
+    await expect(service.notifyReady(regular, 7)).rejects.toThrow(ForbiddenException);
+    expect(notifier.ready).not.toHaveBeenCalled();
   });
 });

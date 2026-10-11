@@ -8,7 +8,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { AuthModule } from './lib/auth/auth.module';
 import { AppConfigModule } from './lib/config/app-config.module';
 import { DbModule } from './lib/db/db.module';
-import { LoggingModule } from './lib/logging/logging.module';
+import { LoggingModule } from './lib/http/logging.module';
 import { SecurityModule } from './lib/security/security.module';
 import { StorageModule } from './lib/storage/storage.module';
 import { AuthApiModule } from './modules/auth/auth.module';

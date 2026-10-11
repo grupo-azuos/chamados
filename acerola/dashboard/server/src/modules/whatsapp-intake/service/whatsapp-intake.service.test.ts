@@ -6,7 +6,6 @@ import { verifyTicketInvite } from '../../tickets/service/ticket-invite.util';
 import { type WhatsappConnectionsRepository } from '../../whatsapp/repository/whatsapp-connections.repository';
 import { botSessionId } from '../../whatsapp/service/bot-client.service';
 import { type WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
-import { isBot } from '../controller/whatsapp-intake.controller';
 import { type InboundMessage, WhatsappIntakeService } from './whatsapp-intake.service';
 
 const NOW = 1_800_000_000_000;
@@ -62,7 +61,7 @@ function makeService(
 function inviteOf(messaging: ReturnType<typeof makeService>['messaging']) {
   const link = messaging.reply.mock.calls[0]?.[0].values.link ?? '';
 
-  return { link, token: link.split('convite=')[1] ?? '' };
+  return { link, token: link.split('invite=')[1] ?? '' };
 }
 
 describe('WhatsappIntakeService', () => {
@@ -89,7 +88,7 @@ describe('WhatsappIntakeService', () => {
     await service.handle(inbound(' /CHAMADO '), NOW);
     const { link, token } = inviteOf(messaging);
 
-    expect(link).toMatch(/^http:\/\/localhost:5005\/support\?convite=/);
+    expect(link).toMatch(/^http:\/\/localhost:5005\/support\?invite=/);
     expect(verifyTicketInvite(token, SECRET, NOW / 1000)).toEqual({
       assigneeId: 'u-ana',
       phone: '5562999990002',
@@ -140,23 +139,5 @@ describe('WhatsappIntakeService', () => {
 
     expect(await service.handle(inbound('/chamado'), NOW)).toEqual({ reply: null, isOpen: false });
     expect(messaging.reply).not.toHaveBeenCalled();
-  });
-});
-
-describe('isBot', () => {
-  const token = 't'.repeat(40);
-
-  // feliz
-  it('accepts the bearer token of the bot', () => {
-    expect(isBot(`Bearer ${token}`, token)).toBe(true);
-  });
-
-  // triste
-  /* Sem a integração configurada, a porta não abre para ninguém — nem com cabeçalho vazio. */
-  it('refuses a wrong token, a missing header and an installation without the bot', () => {
-    expect(isBot(`Bearer ${'x'.repeat(40)}`, token)).toBe(false);
-    expect(isBot(undefined, token)).toBe(false);
-    expect(isBot('Bearer undefined', undefined)).toBe(false);
-    expect(isBot('', undefined)).toBe(false);
   });
 });

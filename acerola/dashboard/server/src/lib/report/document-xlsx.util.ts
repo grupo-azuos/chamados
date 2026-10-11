@@ -78,7 +78,11 @@ export async function renderXlsxDocument(definition: DocumentDefinition): Promis
   workbook.created = definition.createdAt ?? new Date();
 
   const sheet = workbook.addWorksheet(sheetNameOf(definition.title));
-  const cursor: SheetCursor = { sheet, columnCount: columnCountOf(definition), row: FIRST_BLOCK_ROW };
+  const cursor: SheetCursor = {
+    sheet,
+    columnCount: columnCountOf(definition),
+    row: FIRST_BLOCK_ROW,
+  };
 
   sheet.columns = columnWidthsOf(definition, cursor.columnCount).map((width) => ({ width }));
   writeTitle(cursor, definition);
@@ -269,7 +273,8 @@ function writeEntry(cursor: SheetCursor, entry: DocumentEntry): void {
 
   writeText(cursor, entry.details, { size: 9, color: DOCUMENT_PALETTE.subtext });
   writeText(cursor, entry.body, {});
-  if (entry.note) writeText(cursor, entry.note, { size: 9, italic: true, color: DOCUMENT_PALETTE.subtext });
+  if (entry.note)
+    writeText(cursor, entry.note, { size: 9, italic: true, color: DOCUMENT_PALETTE.subtext });
 
   cursor.row += 1;
 }
@@ -281,7 +286,8 @@ function writeTable(cursor: SheetCursor, block: TableBlock): void {
   writeHeaderRow(cursor, block.headers);
 
   /* Só o cabeçalho da primeira tabela congela: é o que fica à vista ao rolar a lista. */
-  if (cursor.sheet.views.length === 0) cursor.sheet.views = [{ state: 'frozen', ySplit: headerRow }];
+  if (cursor.sheet.views.length === 0)
+    cursor.sheet.views = [{ state: 'frozen', ySplit: headerRow }];
 
   block.rows.forEach((row, index) => writeDataRow(cursor, row, index));
   if (block.rows.length === 0) writeText(cursor, block.emptyText, EMPTY_STATE_STYLE);
@@ -338,7 +344,12 @@ function writeVerification(cursor: SheetCursor, verification: DocumentVerificati
   cursor.row += 1;
 }
 
-function writeMergedRow(cursor: SheetCursor, rowIndex: number, text: string, style: TextStyle): void {
+function writeMergedRow(
+  cursor: SheetCursor,
+  rowIndex: number,
+  text: string,
+  style: TextStyle,
+): void {
   cursor.sheet.mergeCells(rowIndex, 1, rowIndex, cursor.columnCount);
   const cell = cursor.sheet.getCell(rowIndex, 1);
   cell.value = text;
