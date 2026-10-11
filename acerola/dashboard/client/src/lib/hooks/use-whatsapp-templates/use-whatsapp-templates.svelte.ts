@@ -23,7 +23,7 @@ export const TEMPLATE_PREVIEW_VALUES: Record<string, string> = {
   area: 'Infraestrutura',
   responsavel: 'Ana Lima',
   solucao: 'Troquei o cabo de rede e testei a conexão.',
-  link: 'https://chamados.exemplo.com/support?convite=exemplo',
+  link: 'https://chamados.exemplo.com/support?ticket=exemplo',
   validade: '30',
   enviadas: '70',
   limite: '100',

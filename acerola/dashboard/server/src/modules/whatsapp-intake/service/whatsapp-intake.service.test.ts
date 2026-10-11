@@ -62,7 +62,7 @@ function makeService(
 function inviteOf(messaging: ReturnType<typeof makeService>['messaging']) {
   const link = messaging.reply.mock.calls[0]?.[0].values.link ?? '';
 
-  return { link, token: link.split('convite=')[1] ?? '' };
+  return { link, token: link.split('invite=')[1] ?? '' };
 }
 
 describe('WhatsappIntakeService', () => {
@@ -89,7 +89,7 @@ describe('WhatsappIntakeService', () => {
     await service.handle(inbound(' /CHAMADO '), NOW);
     const { link, token } = inviteOf(messaging);
 
-    expect(link).toMatch(/^http:\/\/localhost:5005\/support\?convite=/);
+    expect(link).toMatch(/^http:\/\/localhost:5005\/support\?invite=/);
     expect(verifyTicketInvite(token, SECRET, NOW / 1000)).toEqual({
       assigneeId: 'u-ana',
       phone: '5562999990002',
