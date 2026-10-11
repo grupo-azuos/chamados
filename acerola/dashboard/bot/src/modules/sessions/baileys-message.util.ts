@@ -1,6 +1,6 @@
 import { isJidUser, isLidUser, jidNormalizedUser, type WAMessage } from 'baileys';
 
-import { phoneFromJid } from './whatsapp-transport.js';
+import { phoneFromJid } from './whatsapp-phone.util.js';
 
 /** Uma mensagem de texto que chegou numa conversa privada, pronta para a camada de conversa. */
 export type PrivateText = {

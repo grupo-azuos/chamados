@@ -3,12 +3,12 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 
 import { z } from 'zod';
 
-import { isValidSessionId } from '../store/session-store.js';
+import { type WhatsAppTransport } from '../../modules/sessions/whatsapp-transport.type.js';
 import {
   RecipientNotFoundError,
   SessionNotConnectedError,
-  type WhatsAppTransport,
-} from '../transport/whatsapp-transport.js';
+} from '../../modules/sessions/whatsapp-transport.util.js';
+import { isValidSessionId } from '../storage/session-id.util.js';
 
 /* Uma mensagem de WhatsApp tem teto de 65.536 caracteres; o corpo JSON inteiro cabe com folga. */
 const MAX_BODY_BYTES = 128 * 1024;

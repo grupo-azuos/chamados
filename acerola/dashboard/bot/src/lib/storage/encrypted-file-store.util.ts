@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { decryptSessionValue, encryptSessionValue } from './session-cipher.js';
-import { assertValidSessionId, isValidSessionId, type SessionStore } from './session-store.js';
+import { decryptSessionValue, encryptSessionValue } from './session-cipher.util.js';
+import { assertValidSessionId, isValidSessionId } from './session-id.util.js';
+import { type SessionStore } from './session-store.type.js';
 
 /**
  * As conexões em DISCO, um arquivo cifrado por chave, uma pasta por sessão.

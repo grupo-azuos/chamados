@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createServerForwarder } from './server-forwarder.js';
+import { createServerForwarder } from './server-forwarder.util.js';
 
 const TOKEN = 't'.repeat(40);
 const message = { sessionId: 'a'.repeat(64), chatId: 'chat', text: '/chamado', phone: null };

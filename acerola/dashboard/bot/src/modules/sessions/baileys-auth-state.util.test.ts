@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { type SessionStore } from '../store/session-store.js';
-import { loadAuthState } from './baileys-auth-state.js';
+import { type SessionStore } from '../../lib/storage/session-store.type.js';
+import { loadAuthState } from './baileys-auth-state.util.js';
 
 function memoryStore(): SessionStore & { data: Map<string, string> } {
   const data = new Map<string, string>();

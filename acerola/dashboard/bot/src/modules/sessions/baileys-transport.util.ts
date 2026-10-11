@@ -8,19 +8,20 @@ import {
 } from 'baileys';
 import { type Logger } from 'pino';
 
-import { type SessionStore } from '../store/session-store.js';
-import { loadAuthState } from './baileys-auth-state.js';
-import { ownChatIdsOf, readPrivateText } from './baileys-message.js';
+import { type SessionStore } from '../../lib/storage/session-store.type.js';
+import { loadAuthState } from './baileys-auth-state.util.js';
+import { ownChatIdsOf, readPrivateText } from './baileys-message.util.js';
+import { normalizePhone, phoneFromJid } from './whatsapp-phone.util.js';
 import {
-  DISCONNECTED_STATUS,
   type MessageResponder,
-  normalizePhone,
-  phoneFromJid,
-  RecipientNotFoundError,
-  SessionNotConnectedError,
   type SessionStatus,
   type WhatsAppTransport,
-} from './whatsapp-transport.js';
+} from './whatsapp-transport.type.js';
+import {
+  DISCONNECTED_STATUS,
+  RecipientNotFoundError,
+  SessionNotConnectedError,
+} from './whatsapp-transport.util.js';
 
 type Session = { socket: WASocket; status: SessionStatus; hasConnected: boolean };
 

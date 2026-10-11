@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizePhone, phoneFromJid } from './whatsapp-transport.js';
+import { normalizePhone, phoneFromJid } from './whatsapp-phone.util.js';
 
 describe('normalizePhone', () => {
   // feliz

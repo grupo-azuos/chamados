@@ -1,7 +1,7 @@
 import { type WAMessage } from 'baileys';
 import { describe, expect, it } from 'vitest';
 
-import { ownChatIdsOf, readPrivateText } from './baileys-message.js';
+import { ownChatIdsOf, readPrivateText } from './baileys-message.util.js';
 
 const NOW = 1_800_000_000;
 const PRIVATE_CHAT = '5562999990002@s.whatsapp.net';
