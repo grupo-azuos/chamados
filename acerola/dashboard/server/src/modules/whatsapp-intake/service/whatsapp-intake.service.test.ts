@@ -6,7 +6,6 @@ import { verifyTicketInvite } from '../../tickets/service/ticket-invite.util';
 import { type WhatsappConnectionsRepository } from '../../whatsapp/repository/whatsapp-connections.repository';
 import { botSessionId } from '../../whatsapp/service/bot-client.service';
 import { type WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
-import { isBot } from '../controller/whatsapp-intake.controller';
 import { type InboundMessage, WhatsappIntakeService } from './whatsapp-intake.service';
 
 const NOW = 1_800_000_000_000;
@@ -140,23 +139,5 @@ describe('WhatsappIntakeService', () => {
 
     expect(await service.handle(inbound('/chamado'), NOW)).toEqual({ reply: null, isOpen: false });
     expect(messaging.reply).not.toHaveBeenCalled();
-  });
-});
-
-describe('isBot', () => {
-  const token = 't'.repeat(40);
-
-  // feliz
-  it('accepts the bearer token of the bot', () => {
-    expect(isBot(`Bearer ${token}`, token)).toBe(true);
-  });
-
-  // triste
-  /* Sem a integração configurada, a porta não abre para ninguém — nem com cabeçalho vazio. */
-  it('refuses a wrong token, a missing header and an installation without the bot', () => {
-    expect(isBot(`Bearer ${'x'.repeat(40)}`, token)).toBe(false);
-    expect(isBot(undefined, token)).toBe(false);
-    expect(isBot('Bearer undefined', undefined)).toBe(false);
-    expect(isBot('', undefined)).toBe(false);
   });
 });

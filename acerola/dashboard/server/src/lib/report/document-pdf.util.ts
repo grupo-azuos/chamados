@@ -239,7 +239,13 @@ function drawEntry(entry: DocumentEntry): Content {
     { text: entry.body },
   ];
   if (entry.note) {
-    lines.push({ text: entry.note, fontSize: 8, italics: true, color: COLOR.subtext, margin: [0, 2, 0, 0] });
+    lines.push({
+      text: entry.note,
+      fontSize: 8,
+      italics: true,
+      color: COLOR.subtext,
+      margin: [0, 2, 0, 0],
+    });
   }
 
   const barColor = pdfColor(DOCUMENT_TONE_COLORS[entry.badge.tone].fill);
@@ -296,7 +302,11 @@ function drawHeaderCell(header: string): TableCell {
 function drawCell(cell: DocumentCell): TableCell {
   if (!cell.tone) return { text: cell.text };
 
-  return { text: cell.text, bold: true, color: pdfColor(DOCUMENT_TONE_SOFT_COLORS[cell.tone].text) };
+  return {
+    text: cell.text,
+    bold: true,
+    color: pdfColor(DOCUMENT_TONE_SOFT_COLORS[cell.tone].text),
+  };
 }
 
 function drawEmptyState(text: string): Content {
