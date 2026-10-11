@@ -23,7 +23,7 @@ export const TEMPLATE_PREVIEW_VALUES: Record<string, string> = {
   area: 'Infraestrutura',
   responsavel: 'Ana Lima',
   solucao: 'Troquei o cabo de rede e testei a conexão.',
-  link: 'https://chamados.exemplo.com/support?convite=exemplo',
+  link: 'https://chamados.exemplo.com/support?ticket=exemplo',
   validade: '30',
   enviadas: '70',
   limite: '100',
@@ -84,7 +84,12 @@ export function useWhatsappTemplatesModel() {
     }),
   );
   const restore = mirrorStore(
-    createMutation({ mutationFn: whatsappIntegrationApi.restoreTemplate, onSuccess: accept }),
+    createMutation({
+      /* Função própria, e não a da API direto: a biblioteca passa um segundo argumento de
+         contexto, que não é para chegar na chamada. */
+      mutationFn: (key: string) => whatsappIntegrationApi.restoreTemplate(key),
+      onSuccess: accept,
+    }),
   );
 
   function select(key: string): void {

@@ -71,6 +71,11 @@ acerola/dashboard/
 │   │   │   └── components/acerola-<nome>/  componente DA FEATURE
 │   ├── e2e/<fluxo>.e2e.ts                  E2E da web (Playwright)
 │   └── tests/                              mocks e apoio de teste
+├── bot/                                    bot de WhatsApp — pacote À PARTE (não é workspace)
+│   └── src/
+│       ├── main.ts                         sobe o bot
+│       ├── lib/<infra>/                    config, http, storage — mesmo desenho do server
+│       └── modules/<assunto>/              sessions, conversations
 └── scripts/seed/<entities>/                dados de teste
 
 acerola/agent/
@@ -86,6 +91,12 @@ acerola/agent/
 tela em mais de um contexto (os de Chamados) é compartilhado e mora em `lib/components/`. Só o
 que não é de contexto nenhum (`profile`, `roles`) fica direto em `routes/(app)/`. A margem do
 conteúdo é da casca (`acerola-app-shell`): o elemento raiz da tela não leva `px-*`/`pt-*`/`pb-*`.
+
+**O `bot/` tem `package.json` e instalação próprios**, de propósito: o Baileys depende de código
+GPL, e mantê-lo fora dos workspaces é o que deixa o resto do projeto MIT
+(`acerola/dashboard/docs/whatsapp-bot.md`). Por dentro vale o padrão do server: `lib/<infra>/`
+e `modules/<assunto>/`, todo arquivo com sufixo de papel (`.schema.ts`, `.type.ts`, `.util.ts`)
+e o `.test.ts` ao lado. Não é Nest: não há `controller/`, `service/` nem `repository/`.
 
 **Pasta que não está neste mapa não é criada.** Precisa de uma pasta nova em `lib/`? Pare e
 pergunte. Pasta fora deste mapa (um `lib/table-view/`, um `lib/context/`) é violação — o check reprova.

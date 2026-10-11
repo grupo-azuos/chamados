@@ -9,8 +9,8 @@ import { NEON_TOKEN_VERIFIER } from './neon-token.token';
 import { createNeonTokenVerifier, type NeonTokenVerifier } from './neon-token.util';
 import { RolesGuard } from './roles.guard';
 
-import { NeonUserDirectoryProvider } from './user-directory/neon-user-directory.provider';
-import { USER_DIRECTORY_PROVIDER } from './user-directory/user-directory.token';
+import { NeonUserDirectoryProvider } from './neon-user-directory.provider';
+import { USER_DIRECTORY_PROVIDER } from './user-directory.token';
 
 /**
  * Duas perguntas, dois mecanismos, nesta ordem:

@@ -6,8 +6,8 @@ import {
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
-import { type UserDirectoryProvider } from '../../../lib/auth/user-directory/user-directory.interface';
-import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory/user-directory.token';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
+import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
 import { assertIsAdmin, assertIsSuperAdmin } from '../../../lib/policy/policy-assert.util';
 import { toInternalRole, toInternalRoleInsert } from '../mapper/roles.mapper';
 import { RolesRepository } from '../repository/roles.repository';

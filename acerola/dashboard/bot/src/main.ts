@@ -1,11 +1,11 @@
 import { pino } from 'pino';
 
-import { parseBotEnv } from './config/env.js';
-import { createConversationGate } from './conversation/ticket-conversation.js';
-import { createBotServer } from './http/bot-server.js';
-import { createServerForwarder } from './http/server-forwarder.js';
-import { createEncryptedFileStore } from './store/encrypted-file-store.js';
-import { createBaileysTransport } from './transport/baileys-transport.js';
+import { parseBotEnv } from './lib/config/env.schema.js';
+import { createBotServer } from './lib/http/bot-server.util.js';
+import { createServerForwarder } from './lib/http/server-forwarder.util.js';
+import { createEncryptedFileStore } from './lib/storage/encrypted-file-store.util.js';
+import { createConversationGate } from './modules/conversations/ticket-conversation.util.js';
+import { createBaileysTransport } from './modules/sessions/baileys-transport.util.js';
 
 async function bootstrap(): Promise<void> {
   const env = parseBotEnv(process.env);
