@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
          testar o que só existe lá — a câmera, o toque. A API continua só em localhost: o
          celular fala com `/api` nesta mesma porta, e quem encaminha é o proxy abaixo. */
       host: true,
-      port: Number(env.VITE_PORT || 5001),
+      port: Number(env.VITE_PORT || 5005),
       /* Porta ocupada não derruba o Vite: ele procura a próxima livre e imprime qual pegou.
          Aqui isso é seguro, e na API não seria — ninguém aponta para a porta da TELA, então
          trocá-la não quebra nada; a tela é que aponta para a API (ver o proxy abaixo), e por

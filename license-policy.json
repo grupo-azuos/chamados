@@ -68,6 +68,12 @@
       "package": "buffers",
       "license": "UNKNOWN",
       "reason": "Pacote de 2011 sem licença declarada no package.json nem arquivo LICENSE. Vem de exceljs -> unzipper -> binary (exportação de relatório em Excel, no servidor). É do mesmo autor de traverse e chainsaw, publicados como MIT/X11, mas a licença DESTE pacote não está escrita em lugar nenhum: risco residual aceito, a rever se o exceljs for trocado."
+    },
+    {
+      "ecosystem": "node",
+      "package": "libsignal",
+      "license": "GPL-3.0",
+      "reason": "USADO, MAS ISOLADO. É a criptografia do WhatsApp, dependência obrigatória do Baileys (não existe versão do Baileys sem ela). Fica SÓ no bot de WhatsApp (acerola/dashboard/bot), que é um programa à parte: instalação própria, processo e imagem Docker próprios, e fala com o servidor só por HTTP. O servidor, a tela e o pacote shared não instalam nem importam este pacote — 'forbiddenImports' reprova se alguém passar a importar o Baileys de lá. Consequência aceita em 2026-10-10 por quem administra o projeto: rodar o bot no próprio servidor não obriga a nada; quem DISTRIBUIR o bot (entregar a imagem ou o código a terceiros) precisa fazê-lo sob GPL-3.0, com o código-fonte do bot. O aviso está em THIRD-PARTY-NOTICES.md. Sai junto com o Baileys no dia em que a API oficial do WhatsApp entrar."
     }
   ],
   "forbiddenImports": [
@@ -87,10 +93,29 @@
       "pattern": "@daveyplate/better-auth-ui",
       "reason": "depende de @triplit/client, que é AGPL-3.0."
     },
-    { "pattern": "@triplit/client", "reason": "licença AGPL-3.0-only." },
-    { "pattern": "@triplit/react", "reason": "família @triplit, tratada como AGPL-3.0." },
-    { "pattern": "@triplit/db", "reason": "família @triplit, tratada como AGPL-3.0." },
-    { "pattern": "@triplit/logger", "reason": "família @triplit, tratada como AGPL-3.0." },
-    { "pattern": "ua-parser-js", "reason": "licença AGPL-3.0-or-later (a partir da versão 2)." }
+    {
+      "pattern": "@triplit/client",
+      "reason": "licença AGPL-3.0-only."
+    },
+    {
+      "pattern": "@triplit/react",
+      "reason": "família @triplit, tratada como AGPL-3.0."
+    },
+    {
+      "pattern": "@triplit/db",
+      "reason": "família @triplit, tratada como AGPL-3.0."
+    },
+    {
+      "pattern": "@triplit/logger",
+      "reason": "família @triplit, tratada como AGPL-3.0."
+    },
+    {
+      "pattern": "ua-parser-js",
+      "reason": "licença AGPL-3.0-or-later (a partir da versão 2)."
+    },
+    {
+      "pattern": "baileys",
+      "reason": "o Baileys puxa código GPL-3.0 (libsignal) e só pode ser importado dentro de acerola/dashboard/bot. O servidor fala com o bot por HTTP."
+    }
   ]
 }

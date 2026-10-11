@@ -1,8 +1,5 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
-import {
-  nextTicketStatus,
-  refuseTicketHistory,
-} from '@template/shared/domain/ticket-history.util';
+import { nextTicketStatus, refuseTicketHistory } from '@template/shared/domain/ticket-history.util';
 import { isClosedTicketStatus } from '@template/shared/domain/ticket-status.util';
 import { type TicketAttachment } from '@template/shared/schemas/ticket-attachment.schema';
 import {
@@ -89,7 +86,7 @@ export class TicketHistoriesService {
     this.assertFits(reach, entry);
     this.attachments.assertAcceptable(files);
 
-    const author = { name: user.name, email: user.email };
+    const author = { name: user.name, email: user.email, id: user.id };
     const row = await this.repository.record(
       toHistoryInsert(reach.ticket, entry, author),
       toTicketMove(reach.ticket, entry, author),

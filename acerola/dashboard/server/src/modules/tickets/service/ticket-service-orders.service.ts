@@ -10,7 +10,7 @@ import { type Env } from '../../../lib/config/env.schema';
 import { ENV } from '../../../lib/config/env.token';
 import { type TicketServiceOrderRow } from '../../../lib/db/schema/ticket-service-orders.schema';
 import { assertCanRead } from '../../../lib/policy/policy-assert.util';
-import { type BuiltReport } from '../../../lib/report/report.types';
+import { type BuiltDocument } from '../../../lib/report/document.type';
 import {
   type ServiceOrderDraft,
   toIssue,
@@ -55,7 +55,7 @@ export class TicketServiceOrdersService {
    * clicar dez vezes não cria dez versões. A pergunta "mudou?" é feita do jeito mais direto
    * que existe — redesenhar a última emissão e ver se a impressão digital ainda bate.
    */
-  async issue(user: RequestUser, ticketId: number): Promise<BuiltReport> {
+  async issue(user: RequestUser, ticketId: number): Promise<BuiltDocument> {
     assertCanRead(user.role, 'os chamados');
 
     const reach = await this.access.reach(user, ticketId);
@@ -77,7 +77,9 @@ export class TicketServiceOrdersService {
     };
     const buffer = await buildServiceOrderPdf(order, { ...draft, webOrigin: this.webOrigin() });
 
-    await this.repository.record(toServiceOrderInsert(order, draft, fingerprintOf(buffer), user.email));
+    await this.repository.record(
+      toServiceOrderInsert(order, draft, fingerprintOf(buffer), user.email),
+    );
 
     return toReport(order, buffer);
   }
@@ -128,7 +130,7 @@ export function fingerprintOf(buffer: Buffer): string {
   return createHash('sha256').update(buffer).digest('hex');
 }
 
-function toReport(order: ServiceOrder, buffer: Buffer): BuiltReport {
+function toReport(order: ServiceOrder, buffer: Buffer): BuiltDocument {
   return {
     buffer,
     fileName: `ordem-de-servico-${order.protocol}.pdf`,

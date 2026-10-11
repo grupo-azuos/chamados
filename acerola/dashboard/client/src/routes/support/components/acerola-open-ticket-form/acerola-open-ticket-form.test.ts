@@ -18,6 +18,7 @@ const fields: Record<OpenTicketField, FormFieldState> = {
   contactPhone: field('62 99999-9999'),
   description: field('A impressora não puxa papel.'),
   projectId: field(''),
+  assigneeId: field(''),
 };
 
 const actions = {
@@ -51,6 +52,49 @@ async function advanceTo(user: ReturnType<typeof userEvent.setup>, index: number
 
 describe('AcerolaOpenTicketForm', () => {
   // feliz
+  /* Quem chegou pelo link do WhatsApp vê com quem está abrindo o chamado, e só as áreas dele. */
+  it('says who the ticket is being opened with and offers only the areas that person attends', () => {
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: true,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        invite: { assigneeName: 'Ana Lima', areas: ['infra', 'manutencao'] },
+      },
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Você está abrindo um chamado com Ana Lima.',
+    );
+    expect(screen.getByText('Infraestrutura')).toBeInTheDocument();
+    expect(screen.getByText('Manutenção')).toBeInTheDocument();
+    expect(screen.queryByText('Sistema')).not.toBeInTheDocument();
+  });
+
+  it('offers who attends the area on the last step, as an optional choice', async () => {
+    const user = userEvent.setup();
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        assignees: [
+          { value: 'u-ana', label: 'Ana Lima' },
+          { value: 'u-bia', label: 'Bia Costa' },
+        ],
+      },
+    });
+
+    await advanceTo(user, 4);
+
+    expect(screen.getByText('Com quem você quer falar?')).toBeInTheDocument();
+    expect(screen.getByText(/Opcional\./)).toBeInTheDocument();
+  });
+
   it('opens on the area step, with the three cards to choose from', () => {
     setup();
 
@@ -268,6 +312,28 @@ describe('AcerolaOpenTicketForm', () => {
     );
   });
 
+  /* O bot já mandou: a tela avisa, e não oferece o link para a pessoa mandar a si mesma. */
+  it('says the protocol was sent to WhatsApp instead of offering the link, when the bot sent it', () => {
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: true,
+        screenshotName: null,
+        attachments: [],
+        opened: {
+          protocol: 'CH-0013',
+          whatsAppLink: 'https://wa.me/5562999999999?text=oi',
+          isNoticeSent: true,
+        },
+      },
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Enviamos o protocolo e o link de acompanhamento para o seu WhatsApp.',
+    );
+    expect(screen.queryByRole('link', { name: /receber o protocolo/i })).not.toBeInTheDocument();
+  });
+
   // triste
   it('shows each validation error next to its own field, never as a summary on top', async () => {
     const user = userEvent.setup();
@@ -314,6 +380,26 @@ describe('AcerolaOpenTicketForm', () => {
 
     expect(screen.getByLabelText(/seu nome/i)).toBeInTheDocument();
     expect(screen.getByText('Informe seu nome')).toBeInTheDocument();
+  });
+
+  /* Link vencido não trava ninguém: um aviso, e o formulário de sempre, com as três áreas. */
+  it('warns that the WhatsApp link is no longer valid and keeps the normal form', () => {
+    setup({ state: { inviteError: 'Este link não vale mais. Peça outro pelo WhatsApp.' } });
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Este link não vale mais. Peça outro pelo WhatsApp. Você ainda pode abrir o chamado por aqui.',
+    );
+    expect(screen.getByText('Sistema')).toBeInTheDocument();
+  });
+
+  /* Escolher com quem falar é opcional: sem opções para a área, o campo nem aparece. */
+  it('hides the assignee choice when nobody is offered for the area', async () => {
+    const user = userEvent.setup();
+    setup();
+
+    await advanceTo(user, 4);
+
+    expect(screen.queryByText('Com quem você quer falar?')).not.toBeInTheDocument();
   });
 
   it('shows the server refusal on the last step without throwing away what was typed', async () => {

@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   Optional,
@@ -12,6 +13,7 @@ import {
   ticketProblemTypeLabel,
   type TicketArea,
 } from '@template/shared/domain/ticket-catalog.util';
+import { type TicketInvite } from '@template/shared/domain/ticket-invite.util';
 import {
   parseTicketProtocol,
   formatTicketProtocol,
@@ -32,16 +34,26 @@ import { type Paginated } from '@template/shared/schemas/pagination.schema';
 import {
   type CreateTicketInput,
   type PublicTicket,
+  type OpenedTicket,
   type Ticket,
+  type TicketAssigneeOption,
   type TicketListQuery,
   type TicketReportQuery,
   type UpdateTicketInput,
 } from '@template/shared/schemas/ticket.schema';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
-import { assertCanAttendTicket, assertCanRead } from '../../../lib/policy/policy-assert.util';
+import {
+  assertCanAttendTicket,
+  assertCanRead,
+  assertIsSuperAdmin,
+} from '../../../lib/policy/policy-assert.util';
+import { type Env } from '../../../lib/config/env.schema';
+import { ENV } from '../../../lib/config/env.token';
 import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
-import { type BuiltReport, type ReportColumn } from '../../../lib/report/report.types';
+import { type BuiltDocument } from '../../../lib/report/document.type';
+import { type ReportColumn } from '../../../lib/report/report.type';
+import { capReportRows } from '../../../lib/report/report-limit.util';
 import { buildReport, formatReportDate, reportSubtitle } from '../../../lib/report/report.util';
 import { StorageService } from '../../../lib/storage/storage.service';
 import { describeTicketChanges, toUpdateHistory } from '../mapper/ticket-histories.mapper';
@@ -49,7 +61,13 @@ import { toPublicTicket, toTicket, toTicketInsert, toTicketUpdate } from '../map
 import { TicketHistoriesRepository } from '../repository/ticket-histories.repository';
 import { TICKET_NOT_FOUND, TicketAccessService } from './ticket-access.service';
 import { TicketAttachmentsService, type UploadedAttachment } from './ticket-attachments.service';
+import { TicketAssigneesService } from './ticket-assignees.service';
+import { verifyTicketAccess, verifyTicketInvite } from './ticket-invite.util';
 import { TicketHistoriesService } from './ticket-histories.service';
+import {
+  type TicketNoticeOutcome,
+  TicketWhatsappNotifierService,
+} from './ticket-whatsapp-notifier.service';
 import { TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
 
 /** Sem repetir — somar a mesma área participante duas vezes não deve duplicar na resposta. */
@@ -133,7 +151,97 @@ export class TicketsService {
     private readonly historiesRepository: TicketHistoriesRepository,
     @Optional() private readonly githubService?: GithubService,
     @Optional() private readonly softwareProjectsService?: SoftwareProjectsService,
+    @Optional() private readonly assignees?: TicketAssigneesService,
+    @Optional() private readonly notifier?: TicketWhatsappNotifierService,
+    @Optional() @Inject(ENV) private readonly env?: Env,
   ) {}
+
+  /** Quem pode ser escolhido como responsável por um chamado desta área (lista pública). */
+  async listAssigneeOptions(area: TicketArea): Promise<TicketAssigneeOption[]> {
+    return (await this.assignees?.listForArea(area)) ?? [];
+  }
+
+  /**
+   * O que um convite de chamado diz — o link que o bot manda a quem escreve `/chamado`. A tela
+   * pública usa a resposta para abrir o formulário já com o responsável e o telefone.
+   *
+   * Convite forjado, vencido ou de alguém que deixou de atender: 404, sem dizer qual dos três.
+   */
+  async readInvite(token: string, nowSeconds: number = Date.now() / 1000): Promise<TicketInvite> {
+    const invite = this.env?.BOT_API_TOKEN
+      ? verifyTicketInvite(token, this.env.BOT_API_TOKEN, nowSeconds)
+      : null;
+    const attendant = invite ? await this.assignees?.areasOf(invite.assigneeId) : null;
+    if (!invite || !attendant || attendant.areas.length === 0) {
+      throw new NotFoundException('Este link não vale mais. Peça outro pelo WhatsApp.');
+    }
+
+    return {
+      assignee: { id: invite.assigneeId, name: attendant.name },
+      areas: attendant.areas,
+      phone: invite.phone,
+    };
+  }
+
+  /**
+   * O responsável escolhido, conferido: ele precisa atender a área do chamado. O id vem de
+   * fora (uma tela pública, ou o corpo de uma edição) e não é de confiança.
+   */
+  private async resolveAssignee(
+    area: TicketArea,
+    /* `unknown` porque o tipo de ENTRADA do contrato não sabe que o campo já foi normalizado. */
+    assigneeId: unknown,
+  ): Promise<{ id: string; name: string } | null> {
+    if (typeof assigneeId !== 'string' || !assigneeId) return null;
+
+    const assignee = await this.assignees?.resolve(area, assigneeId);
+    if (!assignee) {
+      throw new UnprocessableEntityException(
+        'O responsável escolhido não atende esta área. Escolha outro.',
+      );
+    }
+
+    return assignee;
+  }
+
+  /* Quem pediu aviso recebe o "recebi o seu chamado" pelo WhatsApp de quem atende. O envio é
+     ESPERADO, e o desfecho volta com o chamado: a tela só diz que a mensagem saiu se saiu. */
+  private async announceOpening(row: TicketRow, isSkipped = false): Promise<TicketNoticeOutcome> {
+    if (isSkipped) return 'not_wanted';
+
+    /* Nunca derruba a abertura: o chamado já está gravado, e o aviso é um extra. */
+    return (await this.notifier?.opened(row).catch(() => 'failed' as const)) ?? 'not_configured';
+  }
+
+  /**
+   * Trocar o responsável é do super admin. O novo precisa atender a área em que o chamado vai
+   * FICAR — a nova, se esta mesma edição o reclassificou. Sem `assigneeId` no corpo, não mexe.
+   */
+  private async resolveReassignment(
+    user: RequestUser,
+    currentArea: TicketArea,
+    input: UpdateTicketInput,
+  ): Promise<{ id: string; name: string } | undefined> {
+    if (input.assigneeId === undefined) return undefined;
+
+    assertIsSuperAdmin(user.role, 'o responsável do chamado');
+
+    return (await this.resolveAssignee(input.area ?? currentArea, input.assigneeId)) ?? undefined;
+  }
+
+  /**
+   * Avisa pelo WhatsApp que o chamado ficou pronto, pelo número do responsável. Devolve o
+   * desfecho em vez de lançar: quando não sai (sem vínculo, teto do dia), a tela cai no link
+   * manual de sempre.
+   */
+  async notifyReady(user: RequestUser, id: number): Promise<{ outcome: TicketNoticeOutcome }> {
+    assertCanAttendTicket(user.role);
+
+    const reach = await this.access.reach(user, id);
+    this.access.assertCanWrite(reach);
+
+    return { outcome: (await this.notifier?.ready(reach.ticket)) ?? 'not_configured' };
+  }
 
   async listSystemProjectOptions(): Promise<{ id: number; name: string }[]> {
     return (await this.softwareProjectsService?.listTicketOptions()) ?? [];
@@ -159,18 +267,19 @@ export class TicketsService {
 
   /**
    * Baixar o relatório: os MESMOS filtros da fila, mas sem página — o arquivo leva tudo que
-   * casou, no formato escolhido.
+   * casou, no formato escolhido, até o teto de linhas (`REPORT_MAX_ROWS`). Passou do teto, o
+   * subtítulo avisa que há mais.
    */
-  async exportList(user: RequestUser, query: TicketReportQuery): Promise<BuiltReport> {
+  async exportList(user: RequestUser, query: TicketReportQuery): Promise<BuiltDocument> {
     assertCanRead(user.role, 'os chamados');
 
     const areas = await this.access.accessibleAreas(user);
-    const rows = await this.repository.listAll(query, areas);
+    const { rows, isTruncated } = capReportRows(await this.repository.listAll(query, areas));
 
     return buildReport({
       format: query.format,
       title: 'Chamados',
-      subtitle: reportSubtitle(rows.length, 'chamado', 'chamados'),
+      subtitle: reportSubtitle(rows.length, 'chamado', 'chamados', isTruncated),
       fileName: 'chamados',
       columns: TICKET_REPORT_COLUMNS,
       rows,
@@ -224,7 +333,10 @@ export class TicketsService {
     input: CreateTicketInput,
     screenshot?: UploadedScreenshot,
     attachments: readonly UploadedAttachment[] = [],
-  ): Promise<Ticket> {
+    /* Quem abriu pela CONVERSA já recebe a confirmação na própria conversa: mandar também o
+       aviso de "chamado aberto" seriam duas mensagens dizendo a mesma coisa. */
+    options: { skipOpeningNotice?: boolean } = {},
+  ): Promise<OpenedTicket> {
     if (input.area === 'sistema') {
       const projectId = Number(input.projectId);
       if (
@@ -237,8 +349,11 @@ export class TicketsService {
       }
     }
 
+    const assignee = await this.resolveAssignee(input.area, input.assigneeId);
     const screenshotKey = await this.storeScreenshot(screenshot);
-    const row = await this.repository.insert(toTicketInsert(input, screenshotKey));
+    const row = await this.repository.insert(toTicketInsert(input, screenshotKey, assignee));
+
+    const openingNotice = await this.announceOpening(row, options.skipOpeningNotice);
 
     /* Os arquivos entram DEPOIS do chamado existir, porque é a ele que eles pertencem. Um
        arquivo fora das regras derruba a requisição — e o chamado já gravado fica, sem os
@@ -263,7 +378,7 @@ export class TicketsService {
       );
     }
 
-    return this.toFullTicket(row, []);
+    return { ...(await this.toFullTicket(row, [])), openingNotice };
   }
 
   /**
@@ -272,10 +387,26 @@ export class TicketsService {
    * Aceita o protocolo como a pessoa o digitou (`CH-0007`, `ch 7`, `7`): quem anotou no
    * celular raramente digita o traço, e recusar por causa disso transforma um acerto em erro.
    */
+  /**
+   * O chamado de um LINK DE CONSULTA — o link assinado que vai nas mensagens de WhatsApp. Abre
+   * direto aquele chamado, com os mesmos campos da consulta por protocolo. Link que não confere:
+   * 404, igual a um chamado que não existe.
+   */
+  async findByAccessToken(token: string): Promise<PublicTicket> {
+    const id = this.env?.BOT_API_TOKEN ? verifyTicketAccess(token, this.env.BOT_API_TOKEN) : null;
+    if (!id) throw new NotFoundException(NOT_FOUND);
+
+    return this.findPublicById(id);
+  }
+
   async findByProtocol(protocol: string): Promise<PublicTicket> {
     const id = parseTicketProtocol(protocol);
     if (!id) throw new NotFoundException(NOT_FOUND);
 
+    return this.findPublicById(id);
+  }
+
+  private async findPublicById(id: number): Promise<PublicTicket> {
     const row = await this.repository.findById(id);
     if (!row) throw new NotFoundException(NOT_FOUND);
 
@@ -307,7 +438,11 @@ export class TicketsService {
       this.access.assertCanManageArea(reach, 'reclassificar');
     }
 
-    const row = await this.repository.update(id, toTicketUpdate(input, user.email));
+    const assignee = await this.resolveReassignment(user, current.area, input);
+    const row = await this.repository.update(
+      id,
+      toTicketUpdate(input, user.email, new Date(), assignee),
+    );
 
     /* O que mudou vai para a linha do tempo, com quem mudou. Salvar sem mudar nada não deixa
        rastro: uma linha do tempo cheia de "alteração" vazia esconde as que importam. */

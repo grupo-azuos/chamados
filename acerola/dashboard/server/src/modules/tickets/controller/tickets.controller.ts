@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -14,6 +16,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { TICKET_UPLOAD_MAX_BYTES, uploadLimit } from '../../../lib/http/upload-limit.util';
+import { UploadTooLargeInterceptor } from '../../../lib/http/upload-too-large.interceptor';
 import {
   ApiBody,
   ApiConsumes,
@@ -35,11 +39,16 @@ import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   AddTicketAreaDto,
   CreateTicketDto,
+  OpenedTicketDto,
   PublicTicketDto,
+  TicketAssigneeOptionDto,
+  TicketAssigneeOptionsQueryDto,
   TicketDashboardQueryDto,
   TicketDto,
+  TicketInviteDto,
   TicketListQueryDto,
   TicketListResponseDto,
+  TicketNoticeDto,
   TicketReportQueryDto,
   UpdateTicketDto,
 } from '../dto/ticket.dto';
@@ -84,10 +93,14 @@ export class TicketsController {
   @Post()
   @Public()
   @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'screenshot', maxCount: 1 },
-      { name: 'attachments', maxCount: MAX_ATTACHMENTS_PER_REQUEST },
-    ]),
+    UploadTooLargeInterceptor,
+    FileFieldsInterceptor(
+      [
+        { name: 'screenshot', maxCount: 1 },
+        { name: 'attachments', maxCount: MAX_ATTACHMENTS_PER_REQUEST },
+      ],
+      uploadLimit(TICKET_UPLOAD_MAX_BYTES),
+    ),
   )
   @ApiConsumes('multipart/form-data', 'application/json')
   @ApiOperation({
@@ -96,14 +109,14 @@ export class TicketsController {
       'Não exige login. Os arquivos viajam na mesma requisição: o print do erro no campo `screenshot` e os demais anexos no campo `attachments` — PDF, Word, Excel, PNG/JPG e MP4, cada formato com o teto dele. A situação e o responsável não são aceitos no corpo: todo chamado nasce aberto e sem responsável.',
   })
   @ApiBody({ type: CreateTicketDto })
-  @ApiCreatedResponse({ type: TicketDto })
+  @ApiCreatedResponse({ type: OpenedTicketDto })
   @ApiUnprocessableEntityResponse({
     description: 'Algum campo está fora do contrato, ou o print não é uma imagem aceita.',
   })
   async create(
     @Body() body: CreateTicketDto,
     @UploadedFiles() files?: TicketUploads,
-  ): Promise<TicketDto> {
+  ): Promise<OpenedTicketDto> {
     return this.service.create(body, files?.screenshot?.[0], files?.attachments ?? []);
   }
 
@@ -118,6 +131,46 @@ export class TicketsController {
   })
   async listSystemProjectOptions(): Promise<{ id: number; name: string }[]> {
     return this.service.listSystemProjectOptions();
+  }
+
+  @Get('assignee-options')
+  @Public()
+  @ApiOperation({
+    summary: 'Lista quem pode ser o responsável por um chamado de uma área (público)',
+    description:
+      'Os admins daquela área, mais os super admins. Só o nome e o id: é o que o formulário público precisa para a pessoa escolher com quem quer falar.',
+  })
+  @ApiOkResponse({ type: [TicketAssigneeOptionDto] })
+  async listAssigneeOptions(
+    @Query() query: TicketAssigneeOptionsQueryDto,
+  ): Promise<TicketAssigneeOptionDto[]> {
+    return this.service.listAssigneeOptions(query.area);
+  }
+
+  @Get('access/:token')
+  @Public()
+  @ApiOperation({
+    summary: 'Consulta um chamado pelo link assinado (público)',
+    description:
+      'O link de consulta é o que vai nas mensagens de WhatsApp de um chamado. Abre direto aquele chamado, com os mesmos campos da consulta por protocolo. Link alterado: 404.',
+  })
+  @ApiOkResponse({ type: PublicTicketDto })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  async findByAccessToken(@Param('token') token: string): Promise<PublicTicketDto> {
+    return this.service.findByAccessToken(token);
+  }
+
+  @Get('invites/:token')
+  @Public()
+  @ApiOperation({
+    summary: 'Lê um convite de chamado (público)',
+    description:
+      'O convite é o link assinado que o bot de WhatsApp manda a quem escreve `/chamado`. Devolve o responsável, as áreas que ele atende e o telefone de quem escreveu, para o formulário abrir preenchido. Link forjado ou vencido: 404.',
+  })
+  @ApiOkResponse({ type: TicketInviteDto })
+  @ApiNotFoundResponse({ description: 'O link não vale mais.' })
+  async readInvite(@Param('token') token: string): Promise<TicketInviteDto> {
+    return this.service.readInvite(token);
   }
 
   @Get('protocol/:protocol')
@@ -228,6 +281,21 @@ export class TicketsController {
     @Body() body: UpdateTicketDto,
   ): Promise<TicketDto> {
     return this.service.update(user, id, body);
+  }
+
+  @Post(':id/whatsapp-notice')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Avisa pelo WhatsApp que o chamado ficou pronto',
+    description:
+      'A mensagem sai pelo número vinculado do RESPONSÁVEL pelo chamado. Devolve o desfecho: `sent` quando saiu; qualquer outro valor diz por que não saiu (sem responsável, sem número vinculado, limite do dia atingido, pessoa não pediu aviso), e a tela oferece o link manual.',
+  })
+  @ApiOkResponse({ type: TicketNoticeDto })
+  async notifyReady(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<TicketNoticeDto> {
+    return this.service.notifyReady(user, id);
   }
 
   @Post(':id/areas')

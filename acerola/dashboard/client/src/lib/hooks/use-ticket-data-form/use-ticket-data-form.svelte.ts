@@ -5,11 +5,13 @@ import {
   type Ticket,
   ticketDataFormSchema,
   type TicketDataFormValues,
+  type TicketAssigneeOption,
 } from '@template/shared/schemas/ticket.schema';
 import { writable } from 'svelte/store';
 
 import { computersApi } from '$lib/api/computers.api';
 import { readError } from '$lib/api/http-client';
+import { page } from '$app/state';
 import { softwareProjectsApi } from '$lib/api/software-projects.api';
 import { ticketsApi } from '$lib/api/tickets.api';
 import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
@@ -22,7 +24,8 @@ import { type FormFieldState } from '$lib/types/form-field.type';
 /** Uma página grande o bastante para caber o parque inteiro num campo de escolha. */
 const MACHINE_OPTIONS_PAGE_SIZE = 200;
 
-export type TicketDataField = 'priority' | 'area' | 'problemType' | 'computerId' | 'projectId';
+export type TicketDataField =
+  'priority' | 'area' | 'problemType' | 'computerId' | 'projectId' | 'assigneeId';
 
 export type TicketDataFormModel = {
   data: {
@@ -34,6 +37,11 @@ export type TicketDataFormModel = {
     projects: { value: string; label: string }[];
     /** As áreas que ainda PODEM entrar como participante — todas, menos as que já estão. */
     availableParticipantAreas: { value: TicketArea; label: string }[];
+    /**
+     * Quem pode ser o responsável — só vem preenchido para o super admin, que é quem pode
+     * trocar. Vazio esconde o campo.
+     */
+    assignees: { value: string; label: string }[];
   };
   state: {
     isSubmitting: boolean;
@@ -88,12 +96,17 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
     ),
   );
 
+  /* Trocar o responsável é do super admin: só ele recebe as opções, e sem opções o campo nem
+     aparece. As opções são as da área que está no formulário — reclassificar muda quem atende. */
+  const canReassign = page.data.user?.role === 'superadmin';
+  let assignees = $state<TicketAssigneeOption[]>([]);
+
   let isSaved = $state(false);
 
   const save = mirrorStore(
     createMutation({
       mutationFn: (values: TicketDataFormValues) =>
-        ticketsApi.update(ticket.id, toUpdateInput(values)),
+        ticketsApi.update(ticket.id, toUpdateInput(values, ticket.assigneeId)),
       onSuccess: async () => {
         isSaved = true;
         await queryClient.invalidateQueries({ queryKey: TICKETS_QUERY_KEY });
@@ -156,6 +169,27 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
   const fieldOf = (field: TicketDataField): FormFieldState =>
     toFieldState(values.current[field], fieldMeta.current[field], isSubmitted.current);
 
+  $effect(() => {
+    const area = values.current.area;
+    if (!canReassign) return;
+
+    let isCurrent = true;
+    void queryClient
+      .fetchQuery({
+        queryKey: [...TICKETS_QUERY_KEY, 'assignee-options', area],
+        queryFn: () => ticketsApi.assigneeOptions(area),
+        staleTime: 60_000,
+      })
+      .then((options) => {
+        if (isCurrent) assignees = options;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isCurrent = false;
+    };
+  });
+
   return {
     /* `get` em vez de valor: o model é montado uma vez e a tela lê dele a cada tecla. */
     get data() {
@@ -167,7 +201,9 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
           problemType: fieldOf('problemType'),
           computerId: fieldOf('computerId'),
           projectId: fieldOf('projectId'),
+          assigneeId: fieldOf('assigneeId'),
         },
+        assignees: assignees.map((option) => ({ value: option.id, label: option.name })),
         machines: toMachineOptions(machines.current.data?.items ?? []),
         projects: toProjectOptions(projects.current.data?.items ?? []),
         availableParticipantAreas: toAvailableParticipantAreas(currentTicket),
@@ -221,6 +257,7 @@ export function toFormValues(ticket: Ticket): TicketDataFormValues {
     computerId: ticket.computerId === null ? '' : String(ticket.computerId),
     projectId:
       ticket.projectId !== null && ticket.projectId !== undefined ? String(ticket.projectId) : '',
+    assigneeId: ticket.assigneeId ?? '',
   };
 }
 
@@ -230,8 +267,19 @@ export function toFormValues(ticket: Ticket): TicketDataFormValues {
  * `null` e "não mandar o campo" são coisas diferentes no contrato: um desfaz o vínculo, o
  * outro não mexe nele. Aqui sempre se manda, porque o formulário sempre tem uma resposta.
  */
-export function toUpdateInput(values: TicketDataFormValues) {
+export function toUpdateInput(
+  values: TicketDataFormValues,
+  currentAssigneeId: string | null | undefined = null,
+) {
+  /* O responsável só vai quando MUDOU: mandar o mesmo de sempre faria o servidor exigir super
+     admin de quem só corrigiu a prioridade. Vazio também não vai — não existe "sem responsável". */
+  const assigneeId =
+    values.assigneeId && values.assigneeId !== (currentAssigneeId ?? '')
+      ? values.assigneeId
+      : undefined;
+
   return {
+    ...(assigneeId ? { assigneeId } : {}),
     priority: values.priority,
     area: values.area,
     problemType: values.problemType,
