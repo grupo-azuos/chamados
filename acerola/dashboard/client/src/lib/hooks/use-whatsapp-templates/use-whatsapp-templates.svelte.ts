@@ -84,7 +84,12 @@ export function useWhatsappTemplatesModel() {
     }),
   );
   const restore = mirrorStore(
-    createMutation({ mutationFn: whatsappIntegrationApi.restoreTemplate, onSuccess: accept }),
+    createMutation({
+      /* Função própria, e não a da API direto: a biblioteca passa um segundo argumento de
+         contexto, que não é para chegar na chamada. */
+      mutationFn: (key: string) => whatsappIntegrationApi.restoreTemplate(key),
+      onSuccess: accept,
+    }),
   );
 
   function select(key: string): void {
