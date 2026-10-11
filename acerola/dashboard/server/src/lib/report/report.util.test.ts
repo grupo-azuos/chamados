@@ -202,7 +202,10 @@ describe('buildReport — docx', () => {
      vira a faixa da ficha) não sobra com campo nenhum, e não pode derrubar a exportação. */
   it('builds a valid file when the only column is the one that titles each record', async () => {
     const report = await buildReport(
-      request({ format: 'docx', columns: [{ header: 'Máquina', value: (row) => row.name, isTitle: true }] }),
+      request({
+        format: 'docx',
+        columns: [{ header: 'Máquina', value: (row) => row.name, isTitle: true }],
+      }),
     );
 
     expect(report.buffer.subarray(0, 2).toString('ascii')).toBe('PK');

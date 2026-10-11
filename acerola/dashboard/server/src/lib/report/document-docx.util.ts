@@ -165,7 +165,9 @@ function writeTitleCell(title: string, subtitle: string | undefined): TableCell 
     new Paragraph({
       alignment: AlignmentType.RIGHT,
       spacing: { after: subtitle ? 40 : 80 },
-      children: [new TextRun({ text: title, bold: true, size: 36, color: DOCUMENT_PALETTE.primary })],
+      children: [
+        new TextRun({ text: title, bold: true, size: 36, color: DOCUMENT_PALETTE.primary }),
+      ],
     }),
   ];
   if (subtitle) {
@@ -193,7 +195,9 @@ function writeBlock(block: DocumentBlock): DocxChild[] {
     case 'heading':
       return [writeHeading(block.text)];
     case 'paragraph':
-      return [new Paragraph({ children: [new TextRun({ text: block.text })], spacing: { after: 120 } })];
+      return [
+        new Paragraph({ children: [new TextRun({ text: block.text })], spacing: { after: 120 } }),
+      ];
     case 'badges':
       return [writeBadges(block.items)];
     case 'fields':
@@ -209,7 +213,12 @@ function writeHeading(text: string): Paragraph {
   return new Paragraph({
     spacing: { before: 280, after: 120 },
     children: [
-      new TextRun({ text: text.toUpperCase(), bold: true, size: 20, color: DOCUMENT_PALETTE.primary }),
+      new TextRun({
+        text: text.toUpperCase(),
+        bold: true,
+        size: 20,
+        color: DOCUMENT_PALETTE.primary,
+      }),
     ],
   });
 }
@@ -218,14 +227,20 @@ function writeBadges(badges: DocumentBadge[]): Paragraph {
   return new Paragraph({
     spacing: { after: 160 },
     children: badges.flatMap((badge, index) => [
-      ...(index === 0 ? [] : [new TextRun({ text: BADGE_SEPARATOR, color: DOCUMENT_PALETTE.subtext })]),
+      ...(index === 0
+        ? []
+        : [new TextRun({ text: BADGE_SEPARATOR, color: DOCUMENT_PALETTE.subtext })]),
       writeBadge(badge),
     ]),
   });
 }
 
 function writeBadge(badge: DocumentBadge): TextRun {
-  return new TextRun({ text: badge.text, bold: true, color: DOCUMENT_TONE_COLORS[badge.tone].fill });
+  return new TextRun({
+    text: badge.text,
+    bold: true,
+    color: DOCUMENT_TONE_COLORS[badge.tone].fill,
+  });
 }
 
 function writeFields(fields: DocumentField[]): Table | Paragraph {
