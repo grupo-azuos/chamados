@@ -83,8 +83,9 @@ cp bot/.env.example bot/.env   # uma vez: preencha BOT_API_TOKEN e BOT_SESSION_K
 npm run dev                    # API :3005 + tela :5005 + bot :4005
 ```
 
-Na primeira vez, o `npm run dev` instala as dependências do bot sozinho. Sem o `bot/.env` o bot
-não sobe — o resto do sistema funciona normalmente, e o terminal avisa o que falta.
+O `npm run dev` confere as dependências do bot antes de subir (e as instala na primeira vez).
+Sem o `bot/.env` o bot não sobe e diz, no terminal, qual variável falta — o resto do sistema
+funciona normalmente.
 
 Cada porta é trocada no `.env` do próprio programa:
 

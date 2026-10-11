@@ -1,7 +1,7 @@
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 import { describe, expect, it, vi } from 'vitest';
 
-import { type UserDirectoryProvider } from '../../../lib/auth/user-directory/user-directory.interface';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { type InternalRoleRow } from '../../../lib/db/schema/internal-roles.schema';
 import { type RolesRepository } from '../../roles/repository/roles.repository';
 import { TicketAssigneesService } from './ticket-assignees.service';
