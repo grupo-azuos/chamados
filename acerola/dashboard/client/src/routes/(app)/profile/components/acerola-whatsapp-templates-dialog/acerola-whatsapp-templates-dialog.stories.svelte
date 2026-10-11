@@ -27,7 +27,7 @@
   };
 
   const { Story } = defineMeta({
-    title: 'Profile/AcerolaWhatsappTemplatesDialog',
+    title: 'Features/Profile/AcerolaWhatsappTemplatesDialog',
     component: WhatsappTemplatesDialog,
   });
 </script>

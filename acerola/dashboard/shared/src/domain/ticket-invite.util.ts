@@ -17,13 +17,15 @@ export type TicketInvite = {
 };
 
 /**
- * O parâmetro do LINK DE CONSULTA: `/support?chamado=…`. É o link que vai nas mensagens de um
+ * O parâmetro do LINK DE CONSULTA: `/support?ticket=…`. É o link que vai nas mensagens de um
  * chamado ("acompanhe por aqui"): abre direto AQUELE chamado, sem a pessoa digitar protocolo.
+ *
+ * Em inglês, como toda rota e todo identificador: é parte do endereço, não texto de tela.
  */
-export const TICKET_ACCESS_PARAM = 'chamado';
+export const TICKET_ACCESS_PARAM = 'ticket';
 
-/** O nome do parâmetro do link: `/support?convite=…`. */
-export const TICKET_INVITE_PARAM = 'convite';
+/** O parâmetro do link de convite: `/support?invite=…`. */
+export const TICKET_INVITE_PARAM = 'invite';
 
 /** Por quanto tempo o link vale. Curto de propósito: é para abrir agora, não para guardar. */
 export const TICKET_INVITE_TTL_MINUTES = 30;

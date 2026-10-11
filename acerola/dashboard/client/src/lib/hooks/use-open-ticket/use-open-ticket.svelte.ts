@@ -170,7 +170,7 @@ export function useOpenTicketModel(): OpenTicketModel {
      responsável é opcional, e a falta dele não pode impedir ninguém de pedir socorro. */
   let assignees = $state<TicketAssigneeOption[]>([]);
 
-  /* O convite do WhatsApp (`/support?convite=…`). Lido uma vez, na chegada: ele preenche o
+  /* O convite do WhatsApp (`/support?invite=…`). Lido uma vez, na chegada: ele preenche o
      responsável, o telefone e — quando o responsável atende uma área só — a área. Link que não
      vale mais não trava nada: a pessoa abre o chamado pelo formulário normal. */
   let invite = $state<TicketInvite | null>(null);

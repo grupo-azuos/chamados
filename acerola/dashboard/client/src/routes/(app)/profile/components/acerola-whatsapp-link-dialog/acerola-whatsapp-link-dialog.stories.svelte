@@ -11,7 +11,7 @@
     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="%23cbd5e1"/></svg>';
 
   const { Story } = defineMeta({
-    title: 'Profile/AcerolaWhatsappLinkDialog',
+    title: 'Features/Profile/AcerolaWhatsappLinkDialog',
     component: WhatsappLinkDialog,
   });
 </script>

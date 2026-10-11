@@ -21,7 +21,7 @@
 
   /* Se o drawer de consulta está aberto é qual peça da tela está na frente, não dado do
      chamado — por isso mora aqui, igual ao `answering` da tela interna de Chamados. */
-  /* Quem chega pelo link de consulta (`?chamado=…`, o das mensagens de WhatsApp) já cai com o
+  /* Quem chega pelo link de consulta (`?ticket=…`, o das mensagens de WhatsApp) já cai com o
      chamado aberto na consulta, sem digitar protocolo. Lido uma vez, na chegada. */
   const accessToken = page.url.searchParams.get(TICKET_ACCESS_PARAM);
   let isLookupOpen = $state(accessToken !== null);

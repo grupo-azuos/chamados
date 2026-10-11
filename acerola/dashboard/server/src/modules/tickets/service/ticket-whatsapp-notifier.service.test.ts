@@ -98,9 +98,9 @@ describe('TicketWhatsappNotifierService', () => {
   it('puts in the message a signed link that opens that very ticket', () => {
     const secret = 's'.repeat(40);
     const link = ticketAccessLink(7, { ...env, BOT_API_TOKEN: secret } as Env);
-    const token = link.split('chamado=')[1] ?? '';
+    const token = link.split('ticket=')[1] ?? '';
 
-    expect(link).toMatch(/^https:\/\/chamados\.exemplo\.com\/support\?chamado=/);
+    expect(link).toMatch(/^https:\/\/chamados\.exemplo\.com\/support\?ticket=/);
     expect(verifyTicketAccess(token, secret)).toBe(7);
   });
 

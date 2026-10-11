@@ -7,7 +7,7 @@
   const actions = { onLink: fn(), onUnlink: fn() };
 
   const { Story } = defineMeta({
-    title: 'Profile/AcerolaWhatsappLinkCard',
+    title: 'Features/Profile/AcerolaWhatsappLinkCard',
     component: WhatsappLinkCard,
     parameters: { layout: 'padded' },
   });
