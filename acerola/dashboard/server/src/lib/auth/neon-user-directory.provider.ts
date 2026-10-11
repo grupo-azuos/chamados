@@ -2,11 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 import { asc, eq } from 'drizzle-orm';
 
-import { runMaybe, runQuery } from '../../db/db-error.util';
-import { DB } from '../../db/db.token';
-import { type Database } from '../../db/db.type';
-import { neonAuthUsers, type NeonAuthUserRow } from '../../db/neon-auth-user.table';
-import { type UserDirectoryProvider } from './user-directory.interface';
+import { runMaybe, runQuery } from '../db/db-error.util';
+import { DB } from '../db/db.token';
+import { type Database } from '../db/db.type';
+import { neonAuthUsers, type NeonAuthUserRow } from '../db/neon-auth-user.table';
+import { type UserDirectoryProvider } from './user-directory.type';
 
 /**
  * Converte a linha lida da tabela externa `neon_auth.user` no tipo limpo `DirectoryUser`.

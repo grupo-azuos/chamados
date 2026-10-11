@@ -3,8 +3,8 @@ import { TICKET_AREAS, type TicketArea } from '@template/shared/domain/ticket-ca
 import { type TicketAssigneeOption } from '@template/shared/schemas/ticket.schema';
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 
-import { type UserDirectoryProvider } from '../../../lib/auth/user-directory/user-directory.interface';
-import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory/user-directory.token';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
+import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
 import { type InternalRoleRow } from '../../../lib/db/schema/internal-roles.schema';
 import { RolesRepository } from '../../roles/repository/roles.repository';
 

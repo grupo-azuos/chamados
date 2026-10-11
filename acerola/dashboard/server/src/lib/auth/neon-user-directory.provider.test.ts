@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { type Database } from '../../db/db.type';
-import { type NeonAuthUserRow } from '../../db/neon-auth-user.table';
+import { type Database } from '../db/db.type';
+import { type NeonAuthUserRow } from '../db/neon-auth-user.table';
 import { NeonUserDirectoryProvider } from './neon-user-directory.provider';
 
 function createMockRow(overrides: Partial<NeonAuthUserRow> = {}): NeonAuthUserRow {

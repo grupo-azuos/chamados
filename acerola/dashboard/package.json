@@ -14,7 +14,7 @@
     "client"
   ],
   "scripts": {
-    "predev": "node scripts/dev/ensure-bot-installed.mjs",
+    "predev": "npm install --prefix bot --no-audit --no-fund --silent",
     "dev": "concurrently -n server,client,bot -c blue,magenta,green \"npm run dev -w server\" \"npm run dev -w client\" \"npm run dev --prefix bot\"",
     "dev:bot": "npm run dev --prefix bot",
     "bot:install": "npm ci --prefix bot",
