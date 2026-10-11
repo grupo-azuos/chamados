@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { type ForwardToServer } from '../conversation/ticket-conversation.js';
+import { type ForwardToServer } from '../../modules/conversations/ticket-conversation.util.js';
 
 const replySchema = z.object({ reply: z.string().nullable(), isOpen: z.boolean() });
 

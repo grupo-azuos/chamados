@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { decryptSessionValue, encryptSessionValue } from './session-cipher.js';
+import { decryptSessionValue, encryptSessionValue } from './session-cipher.util.js';
 
 const KEY = 'a'.repeat(64);
 const OTHER_KEY = 'b'.repeat(64);

@@ -3,12 +3,12 @@ import { type Server } from 'node:http';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { type WhatsAppTransport } from '../../modules/sessions/whatsapp-transport.type.js';
 import {
   RecipientNotFoundError,
   SessionNotConnectedError,
-  type WhatsAppTransport,
-} from '../transport/whatsapp-transport.js';
-import { createBotServer } from './bot-server.js';
+} from '../../modules/sessions/whatsapp-transport.util.js';
+import { createBotServer } from './bot-server.util.js';
 
 const TOKEN = 't'.repeat(40);
 const CONNECTED = { state: 'connected', qr: null, phone: '5562999990001' } as const;

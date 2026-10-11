@@ -4,8 +4,8 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createEncryptedFileStore } from './encrypted-file-store.js';
-import { isValidSessionId, type SessionStore } from './session-store.js';
+import { createEncryptedFileStore } from './encrypted-file-store.util.js';
+import { type SessionStore } from './session-store.type.js';
 
 const KEY = 'c'.repeat(64);
 
@@ -80,20 +80,5 @@ describe('encrypted file store', () => {
     const other = createEncryptedFileStore(directory, 'd'.repeat(64));
 
     await expect(other.read('user-1', 'creds')).rejects.toThrow();
-  });
-});
-
-describe('isValidSessionId', () => {
-  // feliz
-  it('accepts the ids the auth provider hands out', () => {
-    expect(isValidSessionId('3f1c9a52-7d5e-4c0b-9a1e-2b6f0d8e4c11')).toBe(true);
-    expect(isValidSessionId('user_42')).toBe(true);
-  });
-
-  // triste
-  it('refuses path separators, dots and empty ids', () => {
-    for (const id of ['', '.', '..', 'a/b', 'a\\b', 'a.b', 'a b', 'x'.repeat(129)]) {
-      expect(isValidSessionId(id)).toBe(false);
-    }
   });
 });

@@ -39,7 +39,7 @@ const BOT_TIMEOUT_MS = 8000;
 export type BotSendOutcome =
   'sent' | 'not_configured' | 'not_connected' | 'recipient_not_found' | 'failed';
 
-/* O código HTTP do bot diz o desfecho (ver `bot/src/http/bot-server.ts`). */
+/* O código HTTP do bot diz o desfecho (ver `bot/src/lib/http/bot-server.util.ts`). */
 const SEND_OUTCOMES: Record<number, BotSendOutcome> = {
   202: 'sent',
   409: 'not_connected',

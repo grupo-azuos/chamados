@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseBotEnv } from './env.js';
+import { parseBotEnv } from './env.schema.js';
 
 const valid = { BOT_API_TOKEN: 't'.repeat(32), BOT_SESSION_KEY: 'a'.repeat(64) };
 

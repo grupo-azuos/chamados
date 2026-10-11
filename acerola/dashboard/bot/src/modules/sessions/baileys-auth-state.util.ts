@@ -8,7 +8,7 @@ import {
   type SignalDataTypeMap,
 } from 'baileys';
 
-import { type SessionStore } from '../store/session-store.js';
+import { type SessionStore } from '../../lib/storage/session-store.type.js';
 
 const CREDS_KEY = 'creds';
 
