@@ -5,7 +5,7 @@
  * que não tem nada a ver com chamado, e nada disso pode sair do bot. Esta camada decide o que
  * é encaminhado ao servidor:
  *
- *   - a mensagem que é EXATAMENTE o comando `/chamado`;
+ *   - a mensagem que é EXATAMENTE um comando: `/chamado` ou `/acesso`;
  *   - as mensagens de uma conversa que o servidor disse estar aberta (a pessoa está no meio de
  *     abrir um chamado), até ela fechar ou vencer.
  *
@@ -17,6 +17,11 @@
 
 /** O comando que começa tudo. */
 export const TICKET_COMMAND = '/chamado';
+
+/** O comando do pedido de acesso: o servidor pergunta os dados um por um, na conversa. */
+export const ACCESS_REQUEST_COMMAND = '/acesso';
+
+const COMMANDS: readonly string[] = [TICKET_COMMAND, ACCESS_REQUEST_COMMAND];
 
 /* Sem resposta do servidor de que a conversa continua, ela vence sozinha neste tempo — o mesmo
    prazo que o servidor dá para a pessoa devolver o formulário. */
@@ -40,7 +45,7 @@ export type ForwardToServer = (message: IncomingMessage) => Promise<ServerReply 
 export type ConversationGate = (message: IncomingMessage, now?: number) => Promise<string | null>;
 
 export function isTicketCommand(text: string): boolean {
-  return text.trim().toLowerCase() === TICKET_COMMAND;
+  return COMMANDS.includes(text.trim().toLowerCase());
 }
 
 export function createConversationGate(forward: ForwardToServer): ConversationGate {

@@ -28,10 +28,16 @@ describe('isTicketCommand', () => {
     expect(isTicketCommand('  /CHAMADO \n')).toBe(true);
   });
 
+  it('recognizes the access request command too', () => {
+    expect(isTicketCommand('/acesso')).toBe(true);
+    expect(isTicketCommand(' /Acesso ')).toBe(true);
+  });
+
   // triste
   it('refuses the command inside a sentence, and ordinary conversation', () => {
     expect(isTicketCommand('como uso o /chamado?')).toBe(false);
     expect(isTicketCommand('/chamado urgente')).toBe(false);
+    expect(isTicketCommand('/acesso ao sistema')).toBe(false);
     expect(isTicketCommand('oi')).toBe(false);
     expect(isTicketCommand('')).toBe(false);
   });
