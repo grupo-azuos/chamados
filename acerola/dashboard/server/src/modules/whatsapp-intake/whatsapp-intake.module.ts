@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { TicketsModule } from '../tickets/tickets.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { WhatsappIntakeController } from './controller/whatsapp-intake.controller';
+import { WhatsappAccessRequestService } from './service/whatsapp-access-request.service';
 import { WhatsappIntakeService } from './service/whatsapp-intake.service';
 
 /**
@@ -12,6 +13,6 @@ import { WhatsappIntakeService } from './service/whatsapp-intake.service';
 @Module({
   imports: [TicketsModule, WhatsappModule],
   controllers: [WhatsappIntakeController],
-  providers: [WhatsappIntakeService],
+  providers: [WhatsappIntakeService, WhatsappAccessRequestService],
 })
 export class WhatsappIntakeModule {}
