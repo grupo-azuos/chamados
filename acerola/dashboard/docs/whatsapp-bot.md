@@ -21,6 +21,14 @@ e é separado do resto: o servidor de chamados não conhece o WhatsApp, só a AP
   sem WhatsApp ou número desvinculado: para na hora. A ficha do chamado mostra cada aviso (na
   fila, enviado, não saiu, descartado) e oferece **Reenviar** para o que parou. As respostas
   da conversa (`/chamado`, `/acesso`) não passam pela fila: o bot responde na hora.
+- **Conversa que sobrevive a reinício.** O pedido de acesso em andamento fica no banco
+  (`whatsapp_conversations`) e a lista de conversas abertas fica no bot, cifrada, em
+  `BOT_DATA_DIR/.conversations`. Reiniciar o servidor ou o bot no meio do `/acesso` não faz a
+  pessoa perder o que já respondeu.
+- **Sem mensagem lida duas vezes.** O bot manda ao servidor o identificador de cada mensagem, e o
+  servidor guarda os que já leu por 1 dia (`whatsapp_inbound_messages`, só o identificador, nunca
+  o texto). A mesma mensagem entregue de novo pelo WhatsApp (numa reconexão) é ignorada, sem
+  fechar a conversa.
 - **Chamado a partir do WhatsApp.** Quem manda `/chamado` para o número de um responsável
   recebe UMA mensagem com um link assinado. O link abre o `/support` já com o responsável, o
   telefone de quem escreveu e, quando o responsável atende uma área só, a área. O chamado é
