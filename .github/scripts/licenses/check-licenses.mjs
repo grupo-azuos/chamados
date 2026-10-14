@@ -37,7 +37,7 @@ const NODE_ROOTS = ['chamados/dashboard', 'chamados/dashboard/bot', 'chamados/ag
 
 /** O módulo Go, e o nome dele: os pacotes do PRÓPRIO projeto não são dependência. */
 const GO_ROOT = 'chamados/agent';
-const GO_OWN_MODULE = 'github.com/vinicius-gpl/acerola-ticket';
+const GO_OWN_MODULE = 'github.com/grupo-azuos/chamados';
 /** Versão fixa: a ferramenta que confere licença não pode mudar sozinha de um dia para o outro. */
 const GO_LICENSES = 'github.com/google/go-licenses/v2@v2.0.1';
 /** O agente é um programa de Windows: é para esse sistema que as dependências são lidas. */
