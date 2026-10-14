@@ -23,7 +23,13 @@ describe.skipIf(!testDatabaseUrl)('WhatsApp API (e2e)', () => {
   beforeAll(async () => {
     started = await createE2eApp(testDatabaseUrl!);
     app = started.app;
-    await started.truncate('whatsapp_connections', 'whatsapp_messages', 'whatsapp_templates');
+    await started.truncate(
+      'whatsapp_connections',
+      'whatsapp_messages',
+      'whatsapp_templates',
+      'whatsapp_conversations',
+      'whatsapp_inbound_messages',
+    );
   });
 
   afterAll(async () => {

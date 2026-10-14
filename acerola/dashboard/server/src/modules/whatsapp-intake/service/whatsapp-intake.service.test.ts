@@ -6,6 +6,7 @@ import { verifyTicketInvite } from '../../tickets/service/ticket-invite.util';
 import { type WhatsappConnectionsRepository } from '../../whatsapp/repository/whatsapp-connections.repository';
 import { botSessionId } from '../../whatsapp/service/bot-client.service';
 import { type WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
+import { type WhatsappInboundMessagesRepository } from '../repository/whatsapp-inbound-messages.repository';
 import { type WhatsappAccessRequestService } from './whatsapp-access-request.service';
 import { type InboundMessage, WhatsappIntakeService } from './whatsapp-intake.service';
 
@@ -53,15 +54,27 @@ function makeService(
     forget: vi.fn(),
     handle: vi.fn().mockResolvedValue({ reply: 'text:access_name', isOpen: true }),
   };
+  /* A caixa de entrada, de mentira: lembra os identificadores que já passaram. */
+  const seen = new Set<string>();
+  const inbox = {
+    claim: vi.fn(async (sessionId: string, messageId: string) => {
+      const key = `${sessionId}:${messageId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+
+      return true;
+    }),
+  };
   const service = new WhatsappIntakeService(
     env,
     connections as unknown as WhatsappConnectionsRepository,
     assignees as unknown as TicketAssigneesService,
     messaging as unknown as WhatsappMessagingService,
     accessRequests as unknown as WhatsappAccessRequestService,
+    inbox as unknown as WhatsappInboundMessagesRepository,
   );
 
-  return { service, messaging, accessRequests };
+  return { service, messaging, accessRequests, inbox };
 }
 
 /** O convite que foi dentro do link da última resposta. */
@@ -131,7 +144,30 @@ describe('WhatsappIntakeService', () => {
     expect(accessRequests.handle).not.toHaveBeenCalled();
   });
 
+  /* Bot antigo, sem identificador: não há como saber se repetiu — a mensagem passa. */
+  it('reads a message without id, as an older bot sends it', async () => {
+    const { service, inbox } = makeService();
+
+    expect(await service.handle(inbound('/acesso'), NOW)).toMatchObject({ isOpen: true });
+    expect(inbox.claim).not.toHaveBeenCalled();
+  });
+
   // triste
+  /* A caixa de entrada: a mesma mensagem entregue de novo não é lida duas vezes, e o bot é
+     avisado de que é repetida para não fechar a conversa por causa dela. */
+  it('does not read twice the same message delivered again by WhatsApp', async () => {
+    const { service, accessRequests } = makeService();
+    const message = inbound('/acesso', { messageId: 'WA-1' });
+
+    await service.handle(message, NOW);
+
+    expect(await service.handle(message, NOW)).toEqual({
+      reply: null,
+      isOpen: false,
+      isDuplicate: true,
+    });
+    expect(accessRequests.handle).toHaveBeenCalledOnce();
+  });
   it('does not hand over an access request from a number that is not linked', async () => {
     const { service, accessRequests } = makeService({ linked: false });
 

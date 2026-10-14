@@ -12,11 +12,15 @@ export const inboundMessageSchema = z.object({
     .string()
     .regex(/^\d{10,15}$/)
     .nullable(),
+  /** O identificador da mensagem no WhatsApp. Opcional: um bot antigo não o envia. */
+  messageId: z.string().min(1).max(128).nullable().optional(),
 });
 
 export const inboundReplySchema = z.object({
   reply: z.string().nullable(),
   isOpen: z.boolean(),
+  /** A mensagem já tinha chegado: o bot não responde e não mexe na conversa. */
+  isDuplicate: z.boolean().optional(),
 });
 
 export class InboundMessageDto extends createZodDto(inboundMessageSchema) {}
