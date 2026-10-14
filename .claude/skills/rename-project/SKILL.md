@@ -5,7 +5,7 @@ description: Coloca o nome do MVP onde as pessoas o veem — título da aba do n
 
 # Dar nome ao MVP
 
-**Por padrão, só os nomes visíveis mudam.** A pasta do sistema (hoje `acerola/dashboard/`) e o pacote
+**Por padrão, só os nomes visíveis mudam.** A pasta do sistema (hoje `chamados/dashboard/`) e o pacote
 interno `@template/shared` não aparecem para quem usa o sistema, e trocá-los mexe na estrutura
 protegida do projeto (hooks, CI, regras) — só quem administra o projeto libera isso, e só
 quando pedir explicitamente.
@@ -26,12 +26,12 @@ Caminhos a partir da raiz do repositório:
 
 | Onde | De | Para |
 |---|---|---|
-| `acerola/dashboard/client/index.html` | `<title>Template</title>` | `<title><Nome></title>` |
-| `acerola/dashboard/client/src/lib/brand/brand-mark.tsx` | `'Template'` | `'<Nome>'` (é o que aparece na barra lateral) |
-| `acerola/dashboard/server/src/main.ts` | `.setTitle('Template')` | `.setTitle('<Nome>')` |
-| `acerola/dashboard/server/src/main.ts` | `'API do MVP.'` | `'API do <Nome>.'` |
+| `chamados/dashboard/client/index.html` | `<title>Template</title>` | `<title><Nome></title>` |
+| `chamados/dashboard/client/src/lib/brand/brand-mark.tsx` | `'Template'` | `'<Nome>'` (é o que aparece na barra lateral) |
+| `chamados/dashboard/server/src/main.ts` | `.setTitle('Template')` | `.setTitle('<Nome>')` |
+| `chamados/dashboard/server/src/main.ts` | `'API do MVP.'` | `'API do <Nome>.'` |
 | `README.md` | `# Template de MVP` e o primeiro parágrafo | `# <Nome>` e uma ou duas frases do que o MVP faz, na voz da pessoa |
-| `acerola/dashboard/package.json` | `"description"` | uma frase do MVP |
+| `chamados/dashboard/package.json` | `"description"` | uma frase do MVP |
 
 Não mexa em `CLAUDE.md`, `CONTRIBUTING.md`, `.claude/`, `.github/`, hooks nem
 configurações — são protegidos e não carregam o nome do MVP.
@@ -39,7 +39,7 @@ configurações — são protegidos e não carregam o nome do MVP.
 ## 4. Verificar e terminar
 
 ```bash
-cd acerola/dashboard
+cd chamados/dashboard
 npm run lint && npm run typecheck && npm test
 ```
 

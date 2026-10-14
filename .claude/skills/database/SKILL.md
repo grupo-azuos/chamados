@@ -5,7 +5,7 @@ description: Cria ou muda tabelas do Postgres (Neon) com Drizzle — arquivo de 
 
 # Banco de dados (Postgres + Drizzle)
 
-Caminhos relativos a `acerola/dashboard/`.
+Caminhos relativos a `chamados/dashboard/`.
 
 ## Como funciona (explique assim para a pessoa, se ela perguntar)
 

@@ -1,0 +1,2 @@
+sh chamados/dashboard/scripts/git/branch-guard.sh commit
+cd chamados/dashboard && npm run lint

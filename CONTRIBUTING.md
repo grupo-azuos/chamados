@@ -102,22 +102,22 @@ Booleano de estado usa prefixo `is`/`has`. Callback usa prefixo `on`. O handler 
 ```text
 lib/components/ui/                                ⛔ CLI do shadcn-svelte. NÃO EDITE.
 lib/hooks/ui/                                     ⛔ hook que o CLI gera ("hooks": "$lib/hooks/ui" no components.json).
-lib/components/acerola-<nome>/                    ✅ genérico: envolve o ui, sem domínio, usado por 2+ features.
-routes/(app)/<context>/<feature>/components/acerola-<nome>/ ✅ da feature: conhece o domínio, só a própria rota importa.
+lib/components/azuos-<nome>/                    ✅ genérico: envolve o ui, sem domínio, usado por 2+ features.
+routes/(app)/<context>/<feature>/components/azuos-<nome>/ ✅ da feature: conhece o domínio, só a própria rota importa.
 ```
 
 Regras:
 
-1. **Prefixo `acerola-*` em todo componente próprio**, genérico ou de feature.
+1. **Prefixo `azuos-*` em todo componente próprio**, genérico ou de feature.
 2. **Existe no shadcn-svelte? Instale** (`npx shadcn-svelte@latest add <nome>`, dentro de
-   `client/`) e envolva num `acerola-*` com `tv()`. Recriar à mão é proibido; copiar o markup do
+   `client/`) e envolva num `azuos-*` com `tv()`. Recriar à mão é proibido; copiar o markup do
    baixado para editar também.
 3. **Rodar o `add` sobrescreve `ui/`** — e é para sobrescrever mesmo. Por isso nada nosso mora lá.
 4. **Nunca reescrever componente existente.** Mudança limitada ao que foi pedido.
-5. **Campo de formulário tem `h-10`**, na variante base do `acerola-*`. Nem mais, nem menos. A
+5. **Campo de formulário tem `h-10`**, na variante base do `azuos-*`. Nem mais, nem menos. A
    tela não compensa altura.
-6. **Só `lib/components/acerola-*` importa `lib/components/ui/`.** Componente de feature importa
-   os `acerola-*` genéricos. Feature não importa componente de outra feature.
+6. **Só `lib/components/azuos-*` importa `lib/components/ui/`.** Componente de feature importa
+   os `azuos-*` genéricos. Feature não importa componente de outra feature.
 7. **A rota só compõe**: hook + componente + classes de cor, espaço e layout. UI/UX de componente
    na rota é violação.
 
@@ -129,7 +129,7 @@ Regra completa, árvore de decisão e checagens: skill `design-system`.
 
 ## 6. Storybook para 100% dos componentes
 
-Componente `acerola-*` (em `lib/components/` ou em `routes/**/components/`) **sem** `.stories.svelte` não entra.
+Componente `azuos-*` (em `lib/components/` ou em `routes/**/components/`) **sem** `.stories.svelte` não entra.
 
 Cada story cobre, no mínimo:
 
@@ -323,9 +323,9 @@ Regras:
 
 | Tipo           | Padrão                                      | Exemplo                                                |
 | -------------- | ------------------------------------------- | ------------------------------------------------------- |
-| Componente genérico | `lib/components/acerola-<nome>/acerola-<nome>.svelte` | `lib/components/acerola-text-field/acerola-text-field.svelte` |
-| Componente de feature | `routes/(app)/<context>/<feature>/components/acerola-<nome>/acerola-<nome>.svelte` | `routes/(app)/infra/tasks/components/acerola-task-list-view/acerola-task-list-view.svelte` |
-| Story          | `acerola-<nome>.stories.svelte`             | `acerola-task-list-view.stories.svelte`                |
+| Componente genérico | `lib/components/azuos-<nome>/azuos-<nome>.svelte` | `lib/components/azuos-text-field/azuos-text-field.svelte` |
+| Componente de feature | `routes/(app)/<context>/<feature>/components/azuos-<nome>/azuos-<nome>.svelte` | `routes/(app)/infra/tasks/components/azuos-task-list-view/azuos-task-list-view.svelte` |
+| Story          | `azuos-<nome>.stories.svelte`             | `azuos-task-list-view.stories.svelte`                |
 | Hook (view-model) | `lib/hooks/use-<nome>/use-<nome>.svelte.ts` — pasta própria, prefixo `use-`, nunca arquivo solto | `lib/hooks/use-task-list/use-task-list.svelte.ts`   |
 | Teste          | `<arquivo>.test.ts`                         | `task-status.util.test.ts`     |
 | E2E            | `<fluxo>.e2e.ts`                            | `tasks.e2e.ts`                 |
@@ -378,11 +378,11 @@ Local:
 
 | Local       | Alcance                     |
 | ----------- | --------------------------- |
-| `backend`   | `acerola/dashboard/server/` |
-| `web`       | `acerola/dashboard/client/` |
+| `backend`   | `chamados/dashboard/server/` |
+| `web`       | `chamados/dashboard/client/` |
 | `db`        | Banco, migrations e seeds   |
-| `contracts` | `acerola/dashboard/shared/` |
-| `docker`    | `acerola/dashboard/docker/` |
+| `contracts` | `chamados/dashboard/shared/` |
+| `docker`    | `chamados/dashboard/docker/` |
 | `ci`        | `.github/`                  |
 | `docs`      | `.md` na raiz               |
 | `deps`      | Atualização de dependência  |

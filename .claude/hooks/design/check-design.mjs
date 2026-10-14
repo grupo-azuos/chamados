@@ -34,7 +34,7 @@ const REPO_ROOT = join(__dirname, '..', '..', '..');
 const BASELINE_FILE = join(__dirname, 'design-baseline.json');
 
 /** O que entra na varredura, relativo à raiz do repositório. */
-const SCAN_ROOTS = [...APPS.map((app) => app.src), 'acerola/dashboard/server/src'];
+const SCAN_ROOTS = [...APPS.map((app) => app.src), 'chamados/dashboard/server/src'];
 const TEXT_FILE = /\.(svelte|ts|md)$/;
 const SKIPPED_DIRS = new Set(['node_modules', 'dist', 'build', '.svelte-kit', 'coverage']);
 const SCAN_ROOT_PATHS = new Set(SCAN_ROOTS.map((root) => join(REPO_ROOT, root)));
@@ -50,7 +50,7 @@ function walk(dir, out) {
   }
 }
 
-/** Acha todo `docs/` dentro de `acerola/**`, sem redescer nas árvores já cobertas por `SCAN_ROOTS`. */
+/** Acha todo `docs/` dentro de `chamados/**`, sem redescer nas árvores já cobertas por `SCAN_ROOTS`. */
 function walkDocs(dir, out) {
   if (!existsSync(dir)) return;
 
@@ -66,7 +66,7 @@ function walkDocs(dir, out) {
 function loadFiles() {
   const paths = [];
   for (const root of SCAN_ROOTS) walk(join(REPO_ROOT, root), paths);
-  walkDocs(join(REPO_ROOT, 'acerola'), paths);
+  walkDocs(join(REPO_ROOT, 'chamados'), paths);
 
   return [...new Set(paths)].map((full) => ({
     path: relative(REPO_ROOT, full).split(sep).join('/'),
@@ -105,7 +105,7 @@ function inScope(relPath) {
   if (!TEXT_FILE.test(relPath)) return false;
   if (SCAN_ROOTS.some((root) => relPath === root || relPath.startsWith(`${root}/`))) return true;
 
-  return relPath.startsWith('acerola/') && /(^|\/)docs\/[^/]+\.md$/.test(relPath);
+  return relPath.startsWith('chamados/') && /(^|\/)docs\/[^/]+\.md$/.test(relPath);
 }
 
 /** Lê o evento do Claude Code no stdin e devolve o caminho do arquivo editado, relativo à raiz. */

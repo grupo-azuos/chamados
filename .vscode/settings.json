@@ -5,12 +5,12 @@
     "source.fixAll.eslint": "explicit"
   },
   "eslint.workingDirectories": [
-    { "directory": "acerola/dashboard/shared", "changeProcessCWD": true },
-    { "directory": "acerola/dashboard/server", "changeProcessCWD": true },
-    { "directory": "acerola/dashboard/client", "changeProcessCWD": true }
+    { "directory": "chamados/dashboard/shared", "changeProcessCWD": true },
+    { "directory": "chamados/dashboard/server", "changeProcessCWD": true },
+    { "directory": "chamados/dashboard/client", "changeProcessCWD": true }
   ],
   "prettier.requireConfig": true,
-  "typescript.tsdk": "acerola/dashboard/node_modules/typescript/lib",
+  "typescript.tsdk": "chamados/dashboard/node_modules/typescript/lib",
   "files.associations": {
     "*.css": "tailwindcss"
   },

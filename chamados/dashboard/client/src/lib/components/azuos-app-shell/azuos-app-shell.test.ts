@@ -1,0 +1,216 @@
+import { render, screen, within } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import BarChart3 from '@lucide/svelte/icons/chart-column';
+import ListChecks from '@lucide/svelte/icons/list-checks';
+import { createRawSnippet } from 'svelte';
+import { describe, expect, it, vi } from 'vitest';
+
+import AppShell, { type AzuosAppShellProps } from './azuos-app-shell.svelte';
+
+const items = [
+  {
+    key: 'tasks',
+    label: 'Tarefas',
+    to: '/tasks',
+    icon: ListChecks,
+    context: 'infra',
+    feature: 'tasks',
+  },
+  {
+    key: 'reports',
+    label: 'Relatórios',
+    to: '/reports',
+    icon: BarChart3,
+    context: 'infra',
+    feature: 'reports',
+  },
+] as const;
+
+const content = createRawSnippet(() => ({
+  render: () => '<div>Conteúdo da rota</div>',
+}));
+
+function renderShell(props: Omit<AzuosAppShellProps, 'children'>): ReturnType<typeof render> {
+  return render(AppShell, { props: { ...props, children: content } });
+}
+
+describe('AzuosAppShell', () => {
+  it('renders with the server-provided sidebar state on the first render', () => {
+    renderShell({ initialSidebarOpen: false });
+
+    expect(document.querySelector('[data-slot="sidebar"]')).toHaveAttribute(
+      'data-state',
+      'collapsed',
+    );
+  });
+
+  // feliz
+  it('draws the content and the menu items', () => {
+    renderShell({ ui: { items } });
+
+    expect(screen.getByText('Conteúdo da rota')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Tarefas' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Relatórios' })).toBeInTheDocument();
+  });
+
+  it('shows the badge when the counter comes through data', () => {
+    renderShell({ ui: { items }, data: { badges: { reports: 4 } } });
+
+    expect(screen.getByText('4')).toBeInTheDocument();
+  });
+
+  it('shows who is using the system in the footer', () => {
+    renderShell({ data: { user: { name: 'Ana Souza', email: 'a@b.c', role: 'Administrador' } } });
+
+    expect(screen.getByText('Ana Souza')).toBeInTheDocument();
+    expect(screen.getByText('Administrador')).toBeInTheDocument();
+  });
+
+  // feliz
+  /* As telas públicas ficam à mão, e abrem em outra aba para não tirar ninguém do painel. */
+  it('links to opening a ticket and validating a document, in a new tab', () => {
+    renderShell({});
+
+    const support = screen.getByRole('link', { name: 'Abrir chamado' });
+    const verify = screen.getByRole('link', { name: 'Validar documento' });
+
+    expect(support).toHaveAttribute('href', '/support');
+    expect(verify).toHaveAttribute('href', '/verify');
+    expect(support).toHaveAttribute('target', '_blank');
+  });
+
+  // triste
+  /* Os links públicos não entram no menu da tela: não são telas do módulo. */
+  it('keeps the public links out of the module menu', () => {
+    renderShell({ ui: { items } });
+
+    expect(screen.getAllByRole('link', { name: 'Abrir chamado' })).toHaveLength(1);
+  });
+
+  /* Os módulos ficam no cabeçalho da sidebar e permanecem acessíveis com um clique. */
+  it('shows the module switcher in the sidebar and asks to switch on a click', async () => {
+    const onAreaContextChange = vi.fn();
+    renderShell({
+      data: {
+        areaOptions: [
+          { value: 'infra', label: 'Infraestrutura' },
+          { value: 'sistema', label: 'Sistema' },
+          { value: 'manutencao', label: 'Manutenção' },
+        ],
+      },
+      state: { areaContext: 'infra' },
+      actions: { onAreaContextChange },
+    });
+
+    const group = screen.getByRole('group', { name: 'Módulos' });
+    expect(within(group).getAllByRole('button')).toHaveLength(3);
+
+    await userEvent.click(within(group).getByRole('button', { name: 'Manutenção' }));
+
+    expect(onAreaContextChange).toHaveBeenCalledWith('manutencao');
+  });
+
+  /* Cada contexto tem um desenho na frente do texto: a pessoa acha a área pelo formato. */
+  it('draws the icon of each context next to its name', () => {
+    renderShell({
+      data: {
+        areaOptions: [
+          { value: 'manutencao', label: 'Manutenção', icon: ListChecks },
+          { value: 'infra', label: 'Infraestrutura', icon: BarChart3 },
+          { value: 'sistema', label: 'Sistema' },
+        ],
+      },
+      state: { areaContext: 'manutencao' },
+    });
+
+    const group = screen.getByRole('group', { name: 'Módulos' });
+
+    expect(
+      within(group).getByRole('button', { name: 'Manutenção' }).querySelector('svg'),
+    ).not.toBeNull();
+    expect(
+      within(group).getByRole('button', { name: 'Infraestrutura' }).querySelector('svg'),
+    ).not.toBeNull();
+    /* Opção sem ícone continua valendo: só o texto. */
+    expect(within(group).getByRole('button', { name: 'Sistema' }).querySelector('svg')).toBeNull();
+    expect(within(group).getByRole('button', { name: 'Sistema' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  /* O seletor de módulos é sempre só ícones; o nome aparece no tooltip, aberto ou recolhido. */
+  it('keeps the modules horizontal when expanded and vertical when collapsed with accessible names', () => {
+    renderShell({
+      data: {
+        areaOptions: [
+          { value: 'sistema', label: 'Sistema' },
+          { value: 'infra', label: 'Infraestrutura' },
+        ],
+      },
+      state: { areaContext: 'infra' },
+    });
+
+    const group = screen.getByRole('group', { name: 'Módulos' });
+    expect(group).toHaveClass('flex-row', 'group-data-[collapsible=icon]:flex-col');
+    expect(within(group).getByRole('button', { name: 'Infraestrutura' })).toBeInTheDocument();
+    expect(within(group).queryByText('Infraestrutura')).not.toBeInTheDocument();
+  });
+
+  /* Recolhida, a barra é uma fila só de ícones: o divisor separa os de módulo dos de tela. */
+  it('separates the module icons from the screen icons only when collapsed', () => {
+    const { container } = renderShell({
+      data: { areaOptions: [{ value: 'infra', label: 'Infraestrutura' }] },
+    });
+
+    const separator = container.querySelector('[data-sidebar="header"] [data-sidebar="separator"]');
+    expect(separator).toHaveClass('hidden', 'h-px', 'group-data-[collapsible=icon]:block');
+  });
+
+  // triste
+  /* Quem atende uma área só (ou nenhuma) não tem o que escolher: o seletor nem aparece. */
+  it('draws no context selector when there is nothing to choose', () => {
+    renderShell({ data: { areaOptions: [] } });
+
+    expect(screen.queryByRole('group', { name: 'Módulos' })).not.toBeInTheDocument();
+  });
+
+  /* Sem módulos para separar, o divisor também não aparece. */
+  it('draws no separator when there are no modules', () => {
+    const { container } = renderShell({ data: { areaOptions: [] } });
+
+    expect(container.querySelector('[data-sidebar="header"] [data-sidebar="separator"]')).toBeNull();
+  });
+
+  /* Zero não vira selo: um "0" ao lado de cada item seria ruído. */
+  it('draws no badge for a zero counter', () => {
+    renderShell({ ui: { items }, data: { badges: { reports: 0 } } });
+
+    expect(screen.getByText('Conteúdo da rota')).toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('does not break without an identity', () => {
+    renderShell({});
+
+    expect(screen.getByText('Visitante')).toBeInTheDocument();
+  });
+
+  it('does nothing if "Sair" is clicked without an onLogout handler', async () => {
+    renderShell({});
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
+  });
+});
+
+describe('AppShell logout', () => {
+  // feliz
+  it('calls onLogout when "Sair" is clicked', async () => {
+    const onLogout = vi.fn();
+    renderShell({ actions: { onLogout } });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
+
+    expect(onLogout).toHaveBeenCalledOnce();
+  });
+});
