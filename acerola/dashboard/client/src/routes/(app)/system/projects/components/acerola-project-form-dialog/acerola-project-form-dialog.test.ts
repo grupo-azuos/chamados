@@ -15,7 +15,12 @@ function createMockModel(overrides?: Partial<SoftwareProjectFormModel>): Softwar
         repositoryUrl: { value: '', error: null },
         status: { value: 'active', error: null },
         color: { value: 'blue', error: null },
+        responsibleId: { value: 'u-ana', error: null },
       },
+      responsibleOptions: [
+        { value: '', label: 'Sem responsável' },
+        { value: 'u-ana', label: 'Ana Lima' },
+      ],
       ...overrides?.data,
     },
     state: {
@@ -46,6 +51,15 @@ describe('AcerolaProjectFormDialog', () => {
     expect(screen.getByText('Novo Sistema')).toBeInTheDocument();
     expect(screen.getByText('Nome do sistema')).toBeInTheDocument();
     expect(screen.getByText('Repositório no GitHub')).toBeInTheDocument();
+  });
+
+  it('shows who answers for the system', () => {
+    render(ProjectFormDialog, {
+      props: { open: true, model: createMockModel(), onClose: vi.fn() },
+    });
+
+    expect(screen.getByText('Responsável')).toBeInTheDocument();
+    expect(screen.getByText('Ana Lima')).toBeInTheDocument();
   });
 
   it('renders error message when model has state error', () => {

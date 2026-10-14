@@ -284,6 +284,7 @@ describe('createBaileysTransport — answering', () => {
       chatId: '5562999990002@s.whatsapp.net',
       text: '/chamado',
       phone: '5562999990002',
+      messageId: 'in-1',
     });
     expect(socket.sendMessage).toHaveBeenCalledWith('5562999990002@s.whatsapp.net', {
       text: 'resposta',

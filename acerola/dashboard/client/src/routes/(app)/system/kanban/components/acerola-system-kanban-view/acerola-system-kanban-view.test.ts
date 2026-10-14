@@ -55,6 +55,8 @@ function renderView(
             repositoryUrl: 'owner/repo',
             githubRepoOwner: 'owner',
             githubRepoName: 'repo',
+            responsibleId: null,
+            responsibleName: null,
             status: 'active',
             color: 'blue',
             openTicketsCount: 1,

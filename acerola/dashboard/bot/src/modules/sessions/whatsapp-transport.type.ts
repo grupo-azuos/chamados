@@ -25,6 +25,8 @@ export type ReceivedText = {
   text: string;
   /** O telefone de quem escreveu, só dígitos com DDI — nulo quando o WhatsApp não o informa. */
   phone: string | null;
+  /** O identificador da mensagem no WhatsApp: a mesma mensagem entregue de novo traz o mesmo. */
+  messageId?: string | null;
 };
 
 /**

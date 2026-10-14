@@ -8,10 +8,12 @@ import { WhatsappTemplatesRepository } from './repository/whatsapp-templates.rep
 import { BotClientService } from './service/bot-client.service';
 import { WhatsappLinkService } from './service/whatsapp-link.service';
 import { WhatsappMessagingService } from './service/whatsapp-messaging.service';
+import { WhatsappOutboxService } from './service/whatsapp-outbox.service';
 import { WhatsappTemplatesService } from './service/whatsapp-templates.service';
 
 /**
- * O WhatsApp do lado do servidor: vínculo, textos e envio com limite. Não conhece chamado —
+ * O WhatsApp do lado do servidor: vínculo, textos, fila de saída e envio com limite. Não
+ * conhece chamado (só guarda o número dele em cada aviso) —
  * quem liga uma coisa à outra é o módulo de chamados (que usa o envio daqui) e o de conversa
  * (`whatsapp-intake`, que usa os dois).
  */
@@ -24,6 +26,7 @@ import { WhatsappTemplatesService } from './service/whatsapp-templates.service';
     WhatsappTemplatesRepository,
     WhatsappLinkService,
     WhatsappMessagingService,
+    WhatsappOutboxService,
     WhatsappTemplatesService,
   ],
   exports: [BotClientService, WhatsappMessagingService, WhatsappConnectionsRepository],
