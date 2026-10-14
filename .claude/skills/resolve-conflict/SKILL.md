@@ -51,13 +51,13 @@ só as linhas.
 
 Nunca diga o caminho do arquivo para a pessoa. Diga **a tela ou a parte** que ela reconhece:
 
-| Arquivo (em `acerola/dashboard/`) | Como falar |
+| Arquivo (em `chamados/dashboard/`) | Como falar |
 |---|---|
 | `client/src/routes/<rota>/+page.svelte` | "a tela **<título>**" — o título está no `PageHeader` da view que a rota usa |
-| `client/src/routes/(app)/<context>/<feature>/components/acerola-<x>-view/…` | "a tela **<título do PageHeader>**" |
-| `client/src/routes/(app)/<context>/<feature>/components/acerola-<x>-form-dialog/…` | "o formulário de **<x>**" (título do `DialogTitle`) |
+| `client/src/routes/(app)/<context>/<feature>/components/azuos-<x>-view/…` | "a tela **<título do PageHeader>**" |
+| `client/src/routes/(app)/<context>/<feature>/components/azuos-<x>-form-dialog/…` | "o formulário de **<x>**" (título do `DialogTitle`) |
 | `client/src/lib/hooks/use-<x>/use-<x>.svelte.ts` | "o funcionamento da tela **<x>**" (filtros, botões, o que carrega) |
-| `client/src/lib/components/acerola-<x>/acerola-<x>.svelte` | "o componente **<x>**, usado nas telas A, B…" (descubra com `Grep` quem importa) |
+| `client/src/lib/components/azuos-<x>/azuos-<x>.svelte` | "o componente **<x>**, usado nas telas A, B…" (descubra com `Grep` quem importa) |
 | `client/src/lib/navigation/navigation.ts` | "o **menu lateral**" |
 | `client/src/lib/theme/tokens.css` | "as **cores** do sistema" |
 | `shared/src/schemas/<x>.schema.ts` | "as **regras do cadastro de <x>**" (campos obrigatórios, limites, mensagens de erro) |
@@ -108,12 +108,12 @@ mudar uma regra que ela criou), sugira **conversar com ela** antes, e mostre o n
 
 - **`package-lock.json`**: fique com a versão da develop e regenere.
   ```bash
-  git checkout --theirs -- acerola/dashboard/package-lock.json   # "theirs" = develop, neste merge
+  git checkout --theirs -- chamados/dashboard/package-lock.json   # "theirs" = develop, neste merge
   ```
-  Resolva o `package.json` à mão (as duas listas somadas) e rode `cd acerola/dashboard && npm install`.
+  Resolva o `package.json` à mão (as duas listas somadas) e rode `cd chamados/dashboard && npm install`.
 - **`server/drizzle/`** (migrations): **nunca** junte SQL à mão.
   1. Fique com **todas** as migrations e o `meta/` da develop (`git checkout --theirs --
-     acerola/dashboard/server/drizzle`).
+     chamados/dashboard/server/drizzle`).
   2. Resolva os arquivos de **schema** (`server/src/lib/db/schema/`) mantendo as duas mudanças.
   3. Apague do disco as migrations que eram **só desta branch** (as que não estão na develop).
   4. `npm run build -w @template/shared && npm run db:generate` — gera uma migration nova com a

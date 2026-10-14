@@ -1,0 +1,77 @@
+{
+  "name": "template-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Azuos Chamados — Nest de um lado, React do outro, SQLite no meio.",
+  "engines": {
+    "node": ">=24.0.0 <25.0.0",
+    "npm": ">=10"
+  },
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "predev": "npm install --prefix bot --no-audit --no-fund --silent",
+    "dev": "concurrently -n server,client,bot -c blue,magenta,green \"npm run dev -w server\" \"npm run dev -w client\" \"npm run dev --prefix bot\"",
+    "dev:bot": "npm run dev --prefix bot",
+    "bot:install": "npm ci --prefix bot",
+    "bot:check": "npm run lint --prefix bot && npm run typecheck --prefix bot && npm test --prefix bot",
+    "build": "npm run build -w @template/shared && npm run build -w server && npm run build -w client",
+    "test": "npm run test -w @template/shared && npm run test -w server && npm run test -w client",
+    "test:e2e": "npm run test:e2e -w server && npm run test:e2e -w client",
+    "test:mutation": "npm run test:mutation -w @template/shared && npm run test:mutation -w server && npm run test:mutation -w client",
+    "lint": "npm run lint -w @template/shared && npm run lint -w server && npm run lint -w client",
+    "format": "npm run format -w @template/shared && npm run format -w server && npm run format -w client",
+    "typecheck": "npm run typecheck -w @template/shared && npm run typecheck -w server && npm run typecheck -w client && tsc -p scripts",
+    "storybook": "npm run storybook -w client",
+    "api:docs": "npm run docs -w server",
+    "api:client": "npm run api:client -w client",
+    "db:generate": "npm run db:generate -w server",
+    "db:migrate": "npm run db:migrate -w server",
+    "db:studio": "npm run db:studio -w server",
+    "db:reset": "npm run build -w @template/shared && tsx scripts/seed/seed-all.ts --reset",
+    "db:reset-system-demo": "npm run build -w @template/shared && tsx scripts/seed/system-demo/seed-system-demo.ts",
+    "seed:all": "npm run build -w @template/shared && tsx scripts/seed/seed-all.ts",
+    "seed:software-projects": "npm run build -w @template/shared && tsx scripts/seed/software-projects/seed-software-projects.ts",
+    "seed:tasks": "npm run build -w @template/shared && tsx scripts/seed/tasks/seed-tasks.ts",
+    "seed:tickets": "npm run build -w @template/shared && tsx scripts/seed/tickets/seed-tickets.ts",
+    "seed:computers": "npm run build -w @template/shared && tsx scripts/seed/computers/seed-computers.ts",
+    "seed:maintenances": "npm run build -w @template/shared && tsx scripts/seed/maintenances/seed-maintenances.ts",
+    "seed:parts": "npm run build -w @template/shared && tsx scripts/seed/parts/seed-parts.ts",
+    "seed:network": "npm run build -w @template/shared && tsx scripts/seed/network/seed-network.ts",
+    "seed:inventory": "npm run build -w @template/shared && tsx scripts/seed/inventory-items/seed-inventory-items.ts",
+    "seed:inventory-movements": "npm run build -w @template/shared && tsx scripts/seed/inventory-movements/seed-inventory-movements.ts",
+    "seed:maintenance-quotes": "npm run build -w @template/shared && tsx scripts/seed/maintenance-quotes/seed-maintenance-quotes.ts",
+    "seed:transfers": "npm run build -w @template/shared && tsx scripts/seed/transfers/seed-transfers.ts",
+    "seed:users": "npm run build -w @template/shared && tsx scripts/seed/users/seed-users.ts",
+    "user:promote": "node scripts/promote-user.mjs",
+    "user:admin": "node scripts/promote-user.mjs",
+    "prepare": "cd ../.. && husky chamados/dashboard/.husky && node chamados/dashboard/scripts/git/setup-git.mjs"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/types": "^19.5.0",
+    "@types/node": "^24.13.4",
+    "postgres": "^3.4.5",
+    "concurrently": "^9.0.1",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "husky": "^9.1.6",
+    "tsx": "^4.19.1",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@sveltejs/kit": {
+      "cookie": "^0.7.2"
+    },
+    "@nestjs/swagger": {
+      "js-yaml": "^5.4.3"
+    },
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
+  }
+}

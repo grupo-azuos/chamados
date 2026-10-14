@@ -73,7 +73,7 @@
       "ecosystem": "node",
       "package": "libsignal",
       "license": "GPL-3.0",
-      "reason": "USADO, MAS ISOLADO. É a criptografia do WhatsApp, dependência obrigatória do Baileys (não existe versão do Baileys sem ela). Fica SÓ no bot de WhatsApp (acerola/dashboard/bot), que é um programa à parte: instalação própria, processo e imagem Docker próprios, e fala com o servidor só por HTTP. O servidor, a tela e o pacote shared não instalam nem importam este pacote — 'forbiddenImports' reprova se alguém passar a importar o Baileys de lá. Consequência aceita em 2026-10-10 por quem administra o projeto: rodar o bot no próprio servidor não obriga a nada; quem DISTRIBUIR o bot (entregar a imagem ou o código a terceiros) precisa fazê-lo sob GPL-3.0, com o código-fonte do bot. O aviso está em THIRD-PARTY-NOTICES.md. Sai junto com o Baileys no dia em que a API oficial do WhatsApp entrar."
+      "reason": "USADO, MAS ISOLADO. É a criptografia do WhatsApp, dependência obrigatória do Baileys (não existe versão do Baileys sem ela). Fica SÓ no bot de WhatsApp (chamados/dashboard/bot), que é um programa à parte: instalação própria, processo e imagem Docker próprios, e fala com o servidor só por HTTP. O servidor, a tela e o pacote shared não instalam nem importam este pacote — 'forbiddenImports' reprova se alguém passar a importar o Baileys de lá. Consequência aceita em 2026-10-10 por quem administra o projeto: rodar o bot no próprio servidor não obriga a nada; quem DISTRIBUIR o bot (entregar a imagem ou o código a terceiros) precisa fazê-lo sob GPL-3.0, com o código-fonte do bot. O aviso está em THIRD-PARTY-NOTICES.md. Sai junto com o Baileys no dia em que a API oficial do WhatsApp entrar."
     }
   ],
   "forbiddenImports": [
@@ -115,7 +115,7 @@
     },
     {
       "pattern": "baileys",
-      "reason": "o Baileys puxa código GPL-3.0 (libsignal) e só pode ser importado dentro de acerola/dashboard/bot. O servidor fala com o bot por HTTP."
+      "reason": "o Baileys puxa código GPL-3.0 (libsignal) e só pode ser importado dentro de chamados/dashboard/bot. O servidor fala com o bot por HTTP."
     }
   ]
 }

@@ -5,7 +5,7 @@ description: Confere se o trabalho está pronto para entregar pelo Definition of
 
 # Verificar
 
-Rode tudo em `acerola/dashboard/`. Pare no primeiro vermelho, corrija, e rode de novo desde aquele passo.
+Rode tudo em `chamados/dashboard/`. Pare no primeiro vermelho, corrija, e rode de novo desde aquele passo.
 **Não diga que está pronto sem ter visto cada passo passar.**
 
 ## 1. Máquina
@@ -39,7 +39,7 @@ teste. Se o erro não é do código da feature (ou só some mexendo em configura
 
 Revise o `git diff` do trabalho:
 
-- [ ] **Componente novo/alterado (`lib/components/acerola-*` ou `routes/**/components/acerola-*`) tem `.stories.svelte`** com estados e caso limite.
+- [ ] **Componente novo/alterado (`lib/components/azuos-*` ou `routes/**/components/azuos-*`) tem `.stories.svelte`** com estados e caso limite.
 - [ ] **`npm run check:design` passa** (sem violação nova). Corrigiu dívida? `-- --update` e commite a baseline menor.
 - [ ] **Nenhum componente existente foi reescrito**: `git diff develop --stat` só mostra o que foi pedido.
 - [ ] **Lógica nova tem teste feliz e triste**; escalada de privilégio (viewer escrevendo,
