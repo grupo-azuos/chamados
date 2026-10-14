@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { type Env } from '../../../lib/config/env.schema';
+import { type WhatsappConversationRow } from '../../../lib/db/schema/whatsapp-conversations.schema';
+import { type WhatsappConversationsRepository } from '../repository/whatsapp-conversations.repository';
 import { type TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import { type TicketsService } from '../../tickets/service/tickets.service';
 import { type WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
@@ -46,18 +48,26 @@ function makeService(
     ),
   };
   const env = { API_CORS_ORIGIN: 'http://localhost:5005', BOT_API_TOKEN: 't'.repeat(40) } as Env;
+  /* O banco, de mentira: o mesmo contrato do repositório, guardado num Map. */
+  const stored = new Map<string, WhatsappConversationRow>();
+  const conversations = {
+    find: vi.fn(async (key: string) => stored.get(key) ?? null),
+    save: vi.fn(async (row: WhatsappConversationRow) => void stored.set(row.key, row)),
+    remove: vi.fn(async (key: string) => void stored.delete(key)),
+  };
   const service = new WhatsappAccessRequestService(
     env,
     assignees as unknown as TicketAssigneesService,
     tickets as unknown as TicketsService,
     messaging as unknown as WhatsappMessagingService,
+    conversations as unknown as WhatsappConversationsRepository,
   );
 
   /* Uma troca da conversa: a mensagem da pessoa e o que o bot respondeu. */
   const say = (text: string, extra: Partial<InboundMessage> = {}, now = NOW) =>
     service.handle('u-ana', inbound(text, extra), now);
 
-  return { service, tickets, messaging, say };
+  return { service, tickets, messaging, say, conversations, stored };
 }
 
 const lastKind = (messaging: ReturnType<typeof makeService>['messaging']) =>
@@ -122,10 +132,31 @@ describe('WhatsappAccessRequestService', () => {
   it('knows the messages of an open request, and only those', async () => {
     const { service, say } = makeService();
 
-    expect(service.isFor(inbound('oi'), NOW)).toBe(false);
+    expect(await service.isFor(inbound('oi'), NOW)).toBe(false);
     await say('/acesso');
-    expect(service.isFor(inbound('Maria Clara'), NOW)).toBe(true);
-    expect(service.isFor(inbound('Maria Clara'), NOW + 16 * MINUTE)).toBe(false);
+    expect(await service.isFor(inbound('Maria Clara'), NOW)).toBe(true);
+    expect(await service.isFor(inbound('Maria Clara'), NOW + 16 * MINUTE)).toBe(false);
+  });
+
+  /* O que importa da conversa no banco: um servidor novo (reinício) continua de onde parou. */
+  it('picks up the request where it stopped after the server restarts', async () => {
+    const { say, conversations, stored } = makeService();
+    await say('/acesso');
+    await say('Maria Clara Souza');
+    expect(conversations.save).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        key: `${'a'.repeat(64)}:5562999990002@s.whatsapp.net`,
+        draft: expect.objectContaining({ requesterName: 'Maria Clara Souza' }),
+      }),
+    );
+
+    const restarted = makeService();
+    for (const [key, row] of stored) restarted.stored.set(key, row);
+
+    expect(await restarted.say('maria@empresa.com.br')).toEqual({
+      reply: 'text:access_department',
+      isOpen: true,
+    });
   });
 
   // triste
@@ -143,7 +174,7 @@ describe('WhatsappAccessRequestService', () => {
 
     await say('/acesso');
     expect(await say('cancelar')).toEqual(SILENCE);
-    expect(service.isFor(inbound('Maria Clara'), NOW)).toBe(false);
+    expect(await service.isFor(inbound('Maria Clara'), NOW)).toBe(false);
   });
 
   it('forgets a request left unanswered for too long', async () => {
@@ -164,7 +195,7 @@ describe('WhatsappAccessRequestService', () => {
     const { service, say } = makeService({ hasRoom: false });
 
     expect(await say('/acesso')).toEqual(SILENCE);
-    expect(service.isFor(inbound('Maria Clara'), NOW)).toBe(false);
+    expect(await service.isFor(inbound('Maria Clara'), NOW)).toBe(false);
   });
 
   it('goes silent when the ticket could not be saved', async () => {

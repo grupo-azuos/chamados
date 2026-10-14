@@ -1,9 +1,12 @@
+import { join } from 'node:path';
+
 import { pino } from 'pino';
 
 import { parseBotEnv } from './lib/config/env.schema.js';
 import { createBotServer } from './lib/http/bot-server.util.js';
 import { createServerForwarder } from './lib/http/server-forwarder.util.js';
 import { createEncryptedFileStore } from './lib/storage/encrypted-file-store.util.js';
+import { createOpenConversationMemory } from './lib/storage/open-conversations.util.js';
 import { createConversationGate } from './modules/conversations/ticket-conversation.util.js';
 import { createBaileysTransport } from './modules/sessions/baileys-transport.util.js';
 
@@ -21,6 +24,11 @@ async function bootstrap(): Promise<void> {
       ? createServerForwarder(env.BOT_SERVER_URL, env.BOT_API_TOKEN)
       : async () => null,
     { limit: env.BOT_INBOUND_LIMIT, windowMs: env.BOT_INBOUND_WINDOW_MINUTES * 60_000 },
+    /* Pasta própria, com ponto no nome: a lista de conexões só lê pastas de id de sessão, e
+       não pode confundir esta com um número vinculado. */
+    createOpenConversationMemory(
+      createEncryptedFileStore(join(env.BOT_DATA_DIR, '.conversations'), env.BOT_SESSION_KEY),
+    ),
   );
   const transport = createBaileysTransport(
     store,

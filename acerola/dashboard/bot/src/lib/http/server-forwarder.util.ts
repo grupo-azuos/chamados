@@ -2,7 +2,11 @@ import { z } from 'zod';
 
 import { type ForwardToServer } from '../../modules/conversations/ticket-conversation.util.js';
 
-const replySchema = z.object({ reply: z.string().nullable(), isOpen: z.boolean() });
+const replySchema = z.object({
+  reply: z.string().nullable(),
+  isOpen: z.boolean(),
+  isDuplicate: z.boolean().optional(),
+});
 
 /* O servidor cria um chamado no meio desta chamada; mais que isto é ele fora do ar. */
 const SERVER_TIMEOUT_MS = 15_000;
