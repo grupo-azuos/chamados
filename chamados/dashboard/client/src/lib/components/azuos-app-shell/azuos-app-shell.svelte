@@ -19,6 +19,10 @@
    * arredondado por cima. A cor vem dos tokens `--sidebar-*` em `lib/theme/tokens.css` — não de
    * `class` empilhada no componente baixado.
    *
+   * O visual é o do paralegal, a outra casa do Grupo Azuos: barra azul da marca nos dois
+   * temas, logo branca oficial no topo (só o símbolo quando recolhida), módulo escolhido em
+   * amarelo e o Zuzu debruçado na beirada acima de quem entrou.
+   *
    * Os itens vêm da lista do módulo dono, em `lib/navigation/navigation.ts`, e entram por
    * `ui.items`. Tela nova no menu é uma linha lá, não aqui.
    */
@@ -91,6 +95,7 @@
   import AppShellNavEntry from '$lib/components/azuos-app-shell-nav-entry/azuos-app-shell-nav-entry.svelte';
   import EffectsToggle from '$lib/components/azuos-effects-toggle/azuos-effects-toggle.svelte';
   import ThemeToggle from '$lib/components/azuos-theme-toggle/azuos-theme-toggle.svelte';
+  import Zuzu from '$lib/components/azuos-zuzu/azuos-zuzu.svelte';
 
   /* `state` (o prop) precisa de outro nome aqui dentro: um binding local chamado `state` faz
      o compilador ler `$state(...)` como inscrição numa store `state`, em vez da rune — o
@@ -127,16 +132,22 @@
   <!-- `collapsible="icon"` e não `offcanvas`: recolhida, a barra vira uma faixa de ícones.
        Sumir por inteiro tiraria da tela a única pista de onde estão as outras telas. -->
   <Sidebar collapsible="icon" variant="inset">
-    <SidebarHeader class="group-data-[collapsible=icon]:p-1">
-      <div class="flex items-center px-1 group-data-[collapsible=icon]:hidden">
+    <SidebarHeader class="gap-2 group-data-[collapsible=icon]:p-1">
+      <!-- A logo é a versão branca, feita para fundo escuro — por isso ela só existe aqui
+           dentro, sobre o azul da barra, e nunca sobre o branco do conteúdo. Recolhida, a
+           barra não tem largura para o nome: fica só o símbolo oficial. -->
+      <div class="flex items-center px-2 py-1.5 group-data-[collapsible=icon]:hidden">
         <BrandMark ui={{ size: 'sm' }} />
+      </div>
+      <div class="hidden items-center justify-center py-1.5 group-data-[collapsible=icon]:flex">
+        <BrandMark ui={{ size: 'sm', variant: 'icon' }} />
       </div>
 
       {#if data?.areaOptions && data.areaOptions.length > 0}
         <div
           role="group"
           aria-label="Módulos"
-          class="bg-sidebar-accent/40 border-sidebar-border flex w-full flex-row items-center justify-center gap-1 rounded-control border p-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0"
+          class="flex w-full flex-row items-center justify-center gap-1 rounded-control bg-white/10 p-1 ring-1 ring-white/15 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:ring-0"
         >
           {#each data.areaOptions as option (option.value)}
             {@const Icon = option.icon}
@@ -149,7 +160,7 @@
                     aria-label={option.label}
                     aria-pressed={shellState?.areaContext === option.value}
                     onclick={() => actions?.onAreaContextChange?.(option.value)}
-                    class="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex h-10 min-w-0 flex-1 items-center justify-center rounded-chip transition-colors aria-pressed:bg-sidebar-primary aria-pressed:text-sidebar-primary-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
+                    class="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex h-10 min-w-0 flex-1 items-center justify-center rounded-chip transition-colors aria-pressed:bg-brand-yellow-400 aria-pressed:text-brand-blue-900 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
                   >
                     {#if Icon}<Icon
                         class="size-6 group-data-[collapsible=icon]:size-[18px]"
@@ -162,6 +173,9 @@
             </Tooltip.Root>
           {/each}
         </div>
+
+        <!-- O módulo escolhido é o único em amarelo, com o ícone no azul mais escuro — branco
+             sobre o amarelo da marca não passa no contraste. É o mesmo seletor do paralegal. -->
 
         <!-- Só com a barra recolhida: aberta, a caixa em volta dos módulos já os separa do menu;
              recolhida, a caixa some e os ícones de módulo e de tela viram uma fila só.
@@ -228,6 +242,18 @@
           </SidebarMenuItem>
         {/each}
       </SidebarMenu>
+
+      <!-- A BEIRADA em que o Zuzu se debruça, logo acima de quem entrou — como no paralegal.
+           A pose é `leaning`: ele se apoia em algo, e sem uma linha embaixo ficaria flutuando
+           no meio da barra. A imagem desce 6px sobre a borda de propósito: as asas cruzam a
+           linha e ele parece segurar nela. Parado, porque o rodapé não é lugar de chamar
+           atenção o dia inteiro. Recolhida, a barra não tem largura para ele — e mascote
+           cortado ao meio não é carinho. -->
+      <div
+        class="border-sidebar-border pointer-events-none flex justify-center border-b group-data-[collapsible=icon]:hidden"
+      >
+        <Zuzu data={{ pose: 'leaning' }} ui={{ size: 86, className: '-mb-1.5' }} />
+      </div>
 
       <!-- A mesma folga do menu de cima: aqui são o cartão de quem entrou e o Sair. -->
       <SidebarMenu class="gap-1">
