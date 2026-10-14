@@ -22,6 +22,7 @@ import { TicketAssigneesService } from '../../tickets/service/ticket-assignees.s
 import { ticketAccessLink } from '../../tickets/service/ticket-whatsapp-notifier.service';
 import { TicketsService } from '../../tickets/service/tickets.service';
 import { WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
+import { WhatsappConversationsRepository } from '../repository/whatsapp-conversations.repository';
 import type { InboundMessage, InboundReply } from './whatsapp-intake.service';
 
 type Conversation = {
@@ -55,45 +56,58 @@ const QUESTION_TEMPLATES: Record<AccessRequestStep, WhatsappTemplateKey> = {
  * Sistema, tipo "Pedido de acesso". A regra de cada resposta mora em `access-request.util`;
  * aqui fica a conversa: guardar o rascunho, mandar a próxima pergunta e criar o chamado.
  *
- * O estado fica em memória, como era o formulário do `/chamado`: é curto (minutos) e o sistema
- * roda numa instância só. Perder num reinício custa a pessoa mandar `/acesso` de novo.
+ * O estado fica no banco (`whatsapp_conversations`): publicar uma versão nova do servidor no
+ * meio de um pedido não faz a pessoa perder o que já respondeu.
  */
 @Injectable()
 export class WhatsappAccessRequestService {
   private readonly logger = new Logger(WhatsappAccessRequestService.name);
-  private readonly conversations = new Map<string, Conversation>();
 
   constructor(
     @Inject(ENV) private readonly env: Env,
     private readonly assignees: TicketAssigneesService,
     private readonly tickets: TicketsService,
     private readonly messaging: WhatsappMessagingService,
+    private readonly conversations: WhatsappConversationsRepository,
   ) {}
 
   /** Se a mensagem é desta conversa: o próprio comando, ou uma resposta a um pedido em aberto. */
-  isFor(message: InboundMessage, now: number): boolean {
+  async isFor(message: InboundMessage, now: number): Promise<boolean> {
     if (isAccessRequestCommand(message.text)) return true;
 
-    return (this.conversations.get(keyOf(message))?.expiresAt ?? 0) > now;
+    return ((await this.load(keyOf(message)))?.expiresAt ?? 0) > now;
   }
 
   /** Esquece o pedido em aberto daquela conversa — a pessoa mudou de assunto (ex.: `/chamado`). */
-  forget(message: InboundMessage): void {
-    this.conversations.delete(keyOf(message));
+  async forget(message: InboundMessage): Promise<void> {
+    await this.conversations.remove(keyOf(message));
   }
 
   async handle(userId: string, message: InboundMessage, now: number): Promise<InboundReply> {
     const key = keyOf(message);
     if (isAccessRequestCommand(message.text)) return this.start(userId, key, message, now);
 
-    const conversation = this.conversations.get(key);
+    const conversation = await this.load(key);
     if (!conversation || conversation.expiresAt <= now || isAccessRequestCancel(message.text)) {
-      this.conversations.delete(key);
+      await this.conversations.remove(key);
 
       return SILENCE;
     }
 
     return this.answer(key, conversation, message, now);
+  }
+
+  private async load(key: string): Promise<Conversation | null> {
+    const row = await this.conversations.find(key);
+    if (!row) return null;
+
+    return {
+      userId: row.userId,
+      attendantName: row.attendantName,
+      assigneeId: row.assigneeId ?? undefined,
+      draft: row.draft,
+      expiresAt: row.expiresAt.getTime(),
+    };
   }
 
   private async start(
@@ -176,7 +190,7 @@ export class WhatsappAccessRequestService {
     conversation: Conversation,
     message: InboundMessage,
   ): Promise<InboundReply> {
-    this.conversations.delete(key);
+    await this.conversations.remove(key);
 
     const ticket = await this.createTicket(conversation);
     if (!ticket) return SILENCE;
@@ -257,12 +271,19 @@ export class WhatsappAccessRequestService {
       values,
     });
     if (!text) {
-      this.conversations.delete(key);
+      await this.conversations.remove(key);
 
       return SILENCE;
     }
 
-    this.conversations.set(key, conversation);
+    await this.conversations.save({
+      key,
+      userId: conversation.userId,
+      attendantName: conversation.attendantName,
+      assigneeId: conversation.assigneeId ?? null,
+      draft: conversation.draft,
+      expiresAt: new Date(conversation.expiresAt),
+    });
 
     return { reply: text, isOpen: true };
   }
