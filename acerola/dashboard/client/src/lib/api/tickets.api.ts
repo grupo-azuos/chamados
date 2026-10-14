@@ -18,6 +18,7 @@ import {
   type TicketListQuery,
   type UpdateTicketInput,
 } from '@template/shared/schemas/ticket.schema';
+import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
 
 import { apiDownload, apiRequest, type Downloaded } from './http-client';
 
@@ -63,6 +64,13 @@ export const ticketsApi = {
    */
   notifyReady: (id: number) =>
     apiRequest<TicketNotice>(`/tickets/${id}/whatsapp-notice`, { method: 'POST' }),
+
+  whatsappNotices: (id: number) => apiRequest<WhatsappNotice[]>(`/tickets/${id}/whatsapp-notices`),
+
+  retryWhatsappNotice: (id: number, noticeId: number) =>
+    apiRequest<WhatsappNotice>(`/tickets/${id}/whatsapp-notices/${noticeId}/retry`, {
+      method: 'POST',
+    }),
 
   systemProjectOptions: () =>
     apiRequest<{ id: number; name: string }[]>('/tickets/system-project-options'),

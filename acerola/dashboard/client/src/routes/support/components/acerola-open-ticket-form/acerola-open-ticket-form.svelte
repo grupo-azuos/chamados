@@ -304,7 +304,7 @@
 
       {#if data.opened.isNoticeSent}
         <p class="text-success text-sm font-medium" role="status">
-          Enviamos o protocolo e o link de acompanhamento para o seu WhatsApp.
+          O protocolo e o link de acompanhamento vão chegar no seu WhatsApp.
         </p>
       {:else if data.opened.whatsAppLink}
         <a

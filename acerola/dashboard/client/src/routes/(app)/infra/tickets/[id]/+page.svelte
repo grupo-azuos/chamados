@@ -8,6 +8,7 @@
   import ErrorState from '$lib/components/acerola-error-state/acerola-error-state.svelte';
   import { useTicketDetailModel } from '$lib/hooks/use-ticket-detail/use-ticket-detail.svelte';
   import TicketDetailView from '$lib/components/acerola-ticket-detail-view/acerola-ticket-detail-view.svelte';
+  import WhatsappNoticeList from '$lib/components/acerola-whatsapp-notice-list/acerola-whatsapp-notice-list.svelte';
   import TicketDataFormSlot from './ticket-data-form-slot.svelte';
   import TicketHistoryFormSlot from './ticket-history-form-slot.svelte';
 
@@ -76,6 +77,17 @@
       {#key ticket.id}
         <TicketDataFormSlot {ticket} />
       {/key}
+    {/snippet}
+
+    {#snippet notices()}
+      <WhatsappNoticeList
+        data={{ notices: detail.data.notices }}
+        state={{
+          retryingId: detail.state.retryingNoticeId,
+          error: detail.state.noticeError,
+        }}
+        actions={{ onRetry: detail.actions.onRetryNotice }}
+      />
     {/snippet}
   </TicketDetailView>
 {/if}
