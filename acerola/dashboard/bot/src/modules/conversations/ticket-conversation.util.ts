@@ -9,11 +9,18 @@
  *   - as mensagens de uma conversa que o servidor disse estar aberta (a pessoa está no meio de
  *     abrir um chamado), até ela fechar ou vencer.
  *
- * Todo o resto fica aqui e é esquecido. Quem sabe o que responder — o formulário, a leitura
+ * Todo o resto fica aqui e é esquecido. Mesmo o que passaria tem teto por conversa
+ * (`inbound-rate-limit.util`): acima dele, silêncio. Quem sabe o que responder — o formulário, a leitura
  * dele, a criação do chamado — é o servidor; o bot só entrega.
  *
  * Não conhece o Baileys: recebe texto, devolve texto.
  */
+
+import {
+  createRateLimiter,
+  DEFAULT_INBOUND_RATE_LIMIT,
+  type InboundRateLimit,
+} from './inbound-rate-limit.util.js';
 
 /** O comando que começa tudo. */
 export const TICKET_COMMAND = '/chamado';
@@ -48,9 +55,13 @@ export function isTicketCommand(text: string): boolean {
   return COMMANDS.includes(text.trim().toLowerCase());
 }
 
-export function createConversationGate(forward: ForwardToServer): ConversationGate {
+export function createConversationGate(
+  forward: ForwardToServer,
+  rateLimit: InboundRateLimit = DEFAULT_INBOUND_RATE_LIMIT,
+): ConversationGate {
   /* conversa → quando vence. */
   const open = new Map<string, number>();
+  const withinLimit = createRateLimiter(rateLimit);
 
   /* Fecha ou renova a conversa conforme o servidor disse. Servidor fora do ar conta como
      fechada: o bot não continua encaminhando o que a pessoa escrever para quem não responde. */
@@ -67,6 +78,9 @@ export function createConversationGate(forward: ForwardToServer): ConversationGa
 
       return null;
     }
+    /* Só conta o que iria ao servidor: conversa comum não é do bot, nem limitada por ele. A
+       conversa aberta continua aberta — passada a janela, a pessoa segue de onde parou. */
+    if (!withinLimit(key, now)) return null;
 
     const answer = await forward(message);
     remember(key, answer, now);

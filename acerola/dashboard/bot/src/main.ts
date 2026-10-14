@@ -20,6 +20,7 @@ async function bootstrap(): Promise<void> {
     env.BOT_SERVER_URL
       ? createServerForwarder(env.BOT_SERVER_URL, env.BOT_API_TOKEN)
       : async () => null,
+    { limit: env.BOT_INBOUND_LIMIT, windowMs: env.BOT_INBOUND_WINDOW_MINUTES * 60_000 },
   );
   const transport = createBaileysTransport(
     store,
