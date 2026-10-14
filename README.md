@@ -1,4 +1,4 @@
-# acerola-ticket
+# Azuos Chamados
 
 MVP para validar uma ideia com gente de verdade usando, construído a partir de um template de código com padrão consistente.
 
@@ -50,7 +50,7 @@ Em seguida, peça **`/renomear-projeto`** para o nome do seu MVP aparecer nas te
 <summary>Prefere fazer à mão? São quatro comandos.</summary>
 
 ```bash
-cd acerola/dashboard # o sistema fica uma pasta abaixo da raiz
+cd chamados/dashboard # o sistema fica uma pasta abaixo da raiz
 npm install # baixa as dependências (demora alguns minutos na primeira vez)
 npm run seed:all # cria o banco e grava os dados de teste
 npm run dev # sobe o sistema
@@ -100,17 +100,17 @@ Skills são receitas prontas. O Claude usa sozinho quando o pedido combina, e vo
 
 ## Estrutura
 
-A raiz do repositório só guarda documentação e configuração de equipe. O sistema inteiro vive em `acerola/dashboard/`.
+A raiz do repositório só guarda documentação e configuração de equipe. O sistema inteiro vive em `chamados/dashboard/`.
 
 ```text
-acerola-ticket/                         # raiz do repositório git
+azuos-ticket/                         # raiz do repositório git
 ├── README.md · CONTRIBUTING.md         # para pessoas
 ├── CLAUDE.md                           # para o Claude
 ├── .claude/skills/                     # as receitas do Claude
 ├── .github/                            # CI e modelo de PR
 ├── .vscode/                            # configuração e extensões recomendadas
 │
-└── acerola/
+└── chamados/
     └── dashboard/                      # o sistema — "npm install" roda aqui
         ├── package.json                # workspaces: shared, server, client
         │
@@ -183,14 +183,14 @@ Instale as ferramentas e inicie o servidor com o ambiente do mise:
 
 ```bash
 mise install
-cd acerola/dashboard
+cd chamados/dashboard
 mise exec -- npm run dev
 ```
 
 Depois de instalar uma ferramenta nova, reinicie o servidor para atualizar seu `PATH`.
 
 
-Todos rodam dentro de `acerola/dashboard/`:
+Todos rodam dentro de `chamados/dashboard/`:
 
 | Comando                           | O que faz                                                                    |
 | --------------------------------- | ---------------------------------------------------------------------------- |
@@ -215,7 +215,7 @@ sistema não o usa mais, e a remoção é de quem administra o projeto (o arquiv
 
 
 ```bash
-cd acerola/dashboard
+cd chamados/dashboard
 docker compose -f docker/compose.yml up --build
 ```
 
@@ -225,10 +225,10 @@ Uma imagem só: o Nest serve `/api` **e** a tela na mesma porta. O banco (Neon) 
 
 Em produção o container fica atrás de um proxy (Traefik, Caddy ou nginx), e parte da proteção é
 configurada nele — tamanho máximo de upload, limite das rotas públicas, `API_TRUST_PROXY_HOPS`.
-Os exemplos prontos estão em [`acerola/dashboard/docs/reverse-proxy.md`](acerola/dashboard/docs/reverse-proxy.md).
+Os exemplos prontos estão em [`chamados/dashboard/docs/reverse-proxy.md`](chamados/dashboard/docs/reverse-proxy.md).
 
 O bot de WhatsApp é um programa à parte, com imagem própria (`docker/bot.dockerfile`) e que só
-sobe com o perfil `whatsapp` do compose — ver [`acerola/dashboard/docs/whatsapp-bot.md`](acerola/dashboard/docs/whatsapp-bot.md).
+sobe com o perfil `whatsapp` do compose — ver [`chamados/dashboard/docs/whatsapp-bot.md`](chamados/dashboard/docs/whatsapp-bot.md).
 
 ---
 
@@ -336,7 +336,7 @@ A chave fica só no `.git/config` do seu clone — não é versionada e não lib
 
 Ela libera as duas travas: o hook do git e o hook do Claude Code.
 
-A lista do que é protegido fica em `acerola/dashboard/scripts/git/protected-structure.txt` (§17 do CONTRIBUTING). Login e autenticação não fazem mais parte dessa lista — ver CONTRIBUTING §17.
+A lista do que é protegido fica em `chamados/dashboard/scripts/git/protected-structure.txt` (§17 do CONTRIBUTING). Login e autenticação não fazem mais parte dessa lista — ver CONTRIBUTING §17.
 
 No GitHub, proteja a `main` (o hook local não pega merge **fast-forward**, e quem tem o clone pode desligar hooks): **Settings → Branches → Add branch ruleset** para `main`, com **Restrict updates** e **Require a pull request before merging**, liberando só você. Marque também o repositório como **Template repository** (Settings → General).
 

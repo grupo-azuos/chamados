@@ -56,8 +56,8 @@
     "deny": [
       "Bash(npm install --force*)",
       "Bash(npm install --legacy-peer-deps*)",
-      "Read(./acerola/dashboard/server/.env)",
-      "Read(./acerola/dashboard/client/.env)"
+      "Read(./chamados/dashboard/server/.env)",
+      "Read(./chamados/dashboard/client/.env)"
     ]
   },
   "hooks": {

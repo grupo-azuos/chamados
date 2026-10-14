@@ -25,24 +25,24 @@ Uma mudança que toca dois locais são **dois commits**. Os locais:
 
 | Local | Arquivos |
 |---|---|
-| `contracts` | `acerola/dashboard/shared/` |
-| `db` | `acerola/dashboard/server/src/lib/db/`, `acerola/dashboard/server/drizzle/`, `acerola/dashboard/scripts/seed/` |
-| `backend` | o resto de `acerola/dashboard/server/` |
-| `web` | `acerola/dashboard/client/` |
-| `docker` | `acerola/dashboard/docker/` |
+| `contracts` | `chamados/dashboard/shared/` |
+| `db` | `chamados/dashboard/server/src/lib/db/`, `chamados/dashboard/server/drizzle/`, `chamados/dashboard/scripts/seed/` |
+| `backend` | o resto de `chamados/dashboard/server/` |
+| `web` | `chamados/dashboard/client/` |
+| `docker` | `chamados/dashboard/docker/` |
 | `ci` | `.github/` |
 | `docs` | `.md` da raiz |
 | `deps` | só `package.json`/`package-lock.json` por atualização de dependência |
 | `claude` | `.claude/`, `CLAUDE.md` |
 
 Ordem quando é uma feature: `contracts` → `db` → `backend` → `web`.
-Arquivo que não cabe em nenhum (ex.: `acerola/dashboard/package.json` com script novo de seed): junte
+Arquivo que não cabe em nenhum (ex.: `chamados/dashboard/package.json` com script novo de seed): junte
 com o local mais relevante da mesma mudança.
 
 Adicione **por caminho**, nunca `git add -A` às cegas:
 
 ```bash
-git add acerola/dashboard/shared
+git add chamados/dashboard/shared
 git diff --cached --stat     # confira o que vai
 ```
 
