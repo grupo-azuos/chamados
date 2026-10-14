@@ -44,6 +44,17 @@ describe('createRateLimiter', () => {
     expect(allow('chat', NOW + 10 * MINUTE + 1)).toBe(true);
   });
 
+  /* A faxina não pode apagar quem ainda está dentro da janela. */
+  it('keeps counting a recent conversation after the cleanup runs', () => {
+    const allow = createRateLimiter({ limit: 1, windowMs: 10 * MINUTE });
+    allow('old', NOW);
+    allow('recent', NOW + 9 * MINUTE);
+
+    expect(allow('other', NOW + 11 * MINUTE)).toBe(true);
+    expect(allow('recent', NOW + 11 * MINUTE)).toBe(false);
+    expect(allow('old', NOW + 11 * MINUTE)).toBe(true);
+  });
+
   it('keeps one conversation apart from another', () => {
     const allow = createRateLimiter({ limit: 1, windowMs: 10 * MINUTE });
     allow('a', NOW);
