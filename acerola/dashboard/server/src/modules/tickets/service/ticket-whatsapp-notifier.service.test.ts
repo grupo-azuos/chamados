@@ -33,10 +33,12 @@ const ATTENDANTS = [
   { id: 'u-dora', name: 'Dora Pires' },
 ];
 
-function makeNotifier(outcome = 'sent', linked: string[] = ['u-dora']) {
+function makeNotifier(outcome = 'queued', linked: string[] = ['u-dora']) {
   const messaging = {
-    send: vi.fn().mockResolvedValue(outcome),
+    queue: vi.fn().mockResolvedValue(outcome),
     isLinked: vi.fn(async (userId: string) => linked.includes(userId)),
+    notices: vi.fn().mockResolvedValue([{ id: 4 }]),
+    retry: vi.fn().mockResolvedValue(null),
   };
   const assignees = { listForArea: vi.fn().mockResolvedValue(ATTENDANTS) };
   const notifier = new TicketWhatsappNotifierService(
@@ -51,11 +53,11 @@ function makeNotifier(outcome = 'sent', linked: string[] = ['u-dora']) {
 describe('TicketWhatsappNotifierService', () => {
   // feliz
   /* Sai pelo número do RESPONSÁVEL, para o telefone de quem abriu, já com DDI. */
-  it('sends the ready notice through the number of the assignee', async () => {
+  it('queues the ready notice through the number of the assignee', async () => {
     const { notifier, messaging } = makeNotifier();
 
-    expect(await notifier.ready(ticket())).toBe('sent');
-    expect(messaging.send).toHaveBeenCalledWith({
+    expect(await notifier.ready(ticket())).toBe('queued');
+    expect(messaging.queue).toHaveBeenCalledWith({
       senderUserId: 'u-ana',
       to: '5562999990002',
       kind: 'ticket_ready',
@@ -76,7 +78,7 @@ describe('TicketWhatsappNotifierService', () => {
 
     await notifier.opened(ticket({ solution: null }));
 
-    expect(messaging.send.mock.calls[0]?.[0]).toMatchObject({ kind: 'ticket_opened' });
+    expect(messaging.queue.mock.calls[0]?.[0]).toMatchObject({ kind: 'ticket_opened' });
   });
 
   /* Ninguém foi escolhido: envia quem atende a área e tem WhatsApp vinculado, e é o nome dessa
@@ -86,9 +88,9 @@ describe('TicketWhatsappNotifierService', () => {
 
     const outcome = await notifier.opened(ticket({ assignee: null, assigneeId: null }));
 
-    expect(outcome).toBe('sent');
+    expect(outcome).toBe('queued');
     expect(assignees.listForArea).toHaveBeenCalledWith('infra');
-    expect(messaging.send.mock.calls[0]?.[0]).toMatchObject({
+    expect(messaging.queue.mock.calls[0]?.[0]).toMatchObject({
       senderUserId: 'u-dora',
       values: { responsavel: 'Dora Pires' },
     });
@@ -119,14 +121,14 @@ describe('TicketWhatsappNotifierService', () => {
     const { notifier, messaging } = makeNotifier();
 
     expect(await notifier.ready(ticket({ notifyWhatsapp: false }))).toBe('not_wanted');
-    expect(messaging.send).not.toHaveBeenCalled();
+    expect(messaging.queue).not.toHaveBeenCalled();
   });
 
   it('does not message a phone that is not a phone', async () => {
     const { notifier, messaging } = makeNotifier();
 
     expect(await notifier.ready(ticket({ contactPhone: 'ramal 12' }))).toBe('not_wanted');
-    expect(messaging.send).not.toHaveBeenCalled();
+    expect(messaging.queue).not.toHaveBeenCalled();
   });
 
   /* "Chamado pronto" é do responsável: sem um, não sai pelo número de outra pessoa. */
@@ -134,16 +136,16 @@ describe('TicketWhatsappNotifierService', () => {
     const { notifier, messaging } = makeNotifier();
 
     expect(await notifier.ready(ticket({ assigneeId: null }))).toBe('no_assignee');
-    expect(messaging.send).not.toHaveBeenCalled();
+    expect(messaging.queue).not.toHaveBeenCalled();
   });
 
   it('sends no opening notice when nobody who attends the area has a linked number', async () => {
-    const { notifier, messaging } = makeNotifier('sent', []);
+    const { notifier, messaging } = makeNotifier('queued', []);
 
     const outcome = await notifier.opened(ticket({ assignee: null, assigneeId: null }));
 
     expect(outcome).toBe('no_assignee');
-    expect(messaging.send).not.toHaveBeenCalled();
+    expect(messaging.queue).not.toHaveBeenCalled();
   });
 
   it('hands back why the message did not go out', async () => {
@@ -153,6 +155,21 @@ describe('TicketWhatsappNotifierService', () => {
 
   it('says the integration is not configured when messaging is absent', async () => {
     expect(await new TicketWhatsappNotifierService(env).ready(ticket())).toBe('not_configured');
+  });
+
+  it('lists no notices, and retries none, when messaging is absent', async () => {
+    const notifier = new TicketWhatsappNotifierService(env);
+
+    expect(await notifier.notices(7)).toEqual([]);
+    expect(await notifier.retry(7, 4)).toBeNull();
+  });
+
+  it('passes the ticket notices and the retry through to messaging', async () => {
+    const { notifier, messaging } = makeNotifier();
+
+    expect(await notifier.notices(7)).toEqual([{ id: 4 }]);
+    expect(await notifier.retry(7, 4)).toBeNull();
+    expect(messaging.retry).toHaveBeenCalledWith(7, 4);
   });
 
   /* Sem segredo para assinar, o link cai na página de consulta — nunca um link sem assinatura. */

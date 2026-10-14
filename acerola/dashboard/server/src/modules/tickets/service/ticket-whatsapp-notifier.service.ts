@@ -4,6 +4,7 @@ import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.ut
 import { toWhatsAppNumber } from '@template/shared/domain/ticket-whatsapp.util';
 import { TICKET_ACCESS_PARAM } from '@template/shared/domain/ticket-invite.util';
 import { type TicketNoticeOutcome } from '@template/shared/schemas/ticket.schema';
+import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
 
 import { type Env } from '../../../lib/config/env.schema';
 import { ENV } from '../../../lib/config/env.token';
@@ -21,6 +22,9 @@ export type { TicketNoticeOutcome };
  *
  * Nada aqui lança: avisar é um extra, e um aviso que não saiu não pode impedir um chamado de
  * ser aberto nem de ser atendido.
+ *
+ * O aviso não sai na hora: entra na FILA DE SAÍDA (`queued`) e o entregador do WhatsApp o
+ * manda em seguida, tentando de novo se o bot ou o celular de quem atende estiver fora.
  */
 @Injectable()
 export class TicketWhatsappNotifierService {
@@ -55,6 +59,16 @@ export class TicketWhatsappNotifierService {
     return this.notify(ticket, 'ticket_ready', assigneeOf(ticket));
   }
 
+  /** Os avisos do chamado na fila de saída: saíram, esperam ou pararam. */
+  async notices(ticketId: number): Promise<WhatsappNotice[]> {
+    return (await this.messaging?.notices(ticketId)) ?? [];
+  }
+
+  /** O "Reenviar" da ficha. Nulo quando o aviso não parou (está na fila ou já saiu). */
+  async retry(ticketId: number, noticeId: number): Promise<WhatsappNotice | null> {
+    return (await this.messaging?.retry(ticketId, noticeId)) ?? null;
+  }
+
   private async notify(
     ticket: TicketRow,
     kind: 'ticket_opened' | 'ticket_ready',
@@ -66,7 +80,7 @@ export class TicketWhatsappNotifierService {
     if (!sender) return 'no_assignee';
     if (!this.messaging) return 'not_configured';
 
-    return this.messaging.send({
+    return this.messaging.queue({
       senderUserId: sender.id,
       to: recipient,
       kind,
