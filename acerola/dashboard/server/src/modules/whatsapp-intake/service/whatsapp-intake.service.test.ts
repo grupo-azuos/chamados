@@ -6,6 +6,7 @@ import { verifyTicketInvite } from '../../tickets/service/ticket-invite.util';
 import { type WhatsappConnectionsRepository } from '../../whatsapp/repository/whatsapp-connections.repository';
 import { botSessionId } from '../../whatsapp/service/bot-client.service';
 import { type WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
+import { type WhatsappAccessRequestService } from './whatsapp-access-request.service';
 import { type InboundMessage, WhatsappIntakeService } from './whatsapp-intake.service';
 
 const NOW = 1_800_000_000_000;
@@ -47,14 +48,20 @@ function makeService(
     API_CORS_ORIGIN: 'http://localhost:5005',
     BOT_API_TOKEN: 'secret' in options ? options.secret : SECRET,
   } as Env;
+  const accessRequests = {
+    isFor: vi.fn((message: InboundMessage) => message.text.trim() === '/acesso'),
+    forget: vi.fn(),
+    handle: vi.fn().mockResolvedValue({ reply: 'text:access_name', isOpen: true }),
+  };
   const service = new WhatsappIntakeService(
     env,
     connections as unknown as WhatsappConnectionsRepository,
     assignees as unknown as TicketAssigneesService,
     messaging as unknown as WhatsappMessagingService,
+    accessRequests as unknown as WhatsappAccessRequestService,
   );
 
-  return { service, messaging };
+  return { service, messaging, accessRequests };
 }
 
 /** O convite que foi dentro do link da última resposta. */
@@ -104,7 +111,34 @@ describe('WhatsappIntakeService', () => {
     expect(verifyTicketInvite(inviteOf(messaging).token, SECRET, NOW / 1000)?.phone).toBeNull();
   });
 
+  /* O pedido de acesso tem conversa própria: a porta só entrega, com o dono do número. */
+  it('hands the access request over to its own conversation', async () => {
+    const { service, accessRequests } = makeService();
+
+    expect(await service.handle(inbound('/acesso'), NOW)).toEqual({
+      reply: 'text:access_name',
+      isOpen: true,
+    });
+    expect(accessRequests.handle).toHaveBeenCalledWith('u-ana', inbound('/acesso'), NOW);
+  });
+
+  it('forgets an open access request when the person sends /chamado', async () => {
+    const { service, accessRequests } = makeService();
+
+    await service.handle(inbound('/chamado'), NOW);
+
+    expect(accessRequests.forget).toHaveBeenCalledWith(inbound('/chamado'));
+    expect(accessRequests.handle).not.toHaveBeenCalled();
+  });
+
   // triste
+  it('does not hand over an access request from a number that is not linked', async () => {
+    const { service, accessRequests } = makeService({ linked: false });
+
+    expect(await service.handle(inbound('/acesso'), NOW)).toEqual({ reply: null, isOpen: false });
+    expect(accessRequests.handle).not.toHaveBeenCalled();
+  });
+
   /* Conversa comum não recebe resposta nem gasta mensagem do dia. */
   it('stays silent for anything that is not the command', async () => {
     const { service, messaging } = makeService();

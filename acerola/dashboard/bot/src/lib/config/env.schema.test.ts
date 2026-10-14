@@ -12,6 +12,8 @@ describe('parseBotEnv', () => {
       BOT_PORT: 4005,
       BOT_DATA_DIR: './data',
       BOT_LOG_LEVEL: 'info',
+      BOT_INBOUND_LIMIT: 20,
+      BOT_INBOUND_WINDOW_MINUTES: 10,
     });
   });
 

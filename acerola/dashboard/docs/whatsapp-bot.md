@@ -26,6 +26,11 @@ e é separado do resto: o servidor de chamados não conhece o WhatsApp, só a AP
 - **Limite.** Cada número manda no máximo `WHATSAPP_DAILY_LIMIT` mensagens automáticas por dia
   (padrão 100). Em 70% a pessoa é avisada no próprio WhatsApp e no perfil; no teto, o sistema
   para de enviar por ela até o dia seguinte.
+- **Limite por quem escreve.** Um mesmo número manda ao bot de um responsável no máximo
+  `BOT_INBOUND_LIMIT` mensagens (padrão 20) a cada `BOT_INBOUND_WINDOW_MINUTES` minutos (padrão
+  10), contando só comandos e respostas de conversa aberta. Acima disso o bot fica em silêncio
+  com aquele número, sem aviso, até a janela andar — assim quem dispara `/chamado` sem parar não
+  gasta o limite do dia de quem atende. Conversa comum nunca conta.
 
 ### O que o bot lê
 

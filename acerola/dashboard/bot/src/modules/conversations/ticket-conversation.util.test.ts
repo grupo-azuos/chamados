@@ -28,10 +28,16 @@ describe('isTicketCommand', () => {
     expect(isTicketCommand('  /CHAMADO \n')).toBe(true);
   });
 
+  it('recognizes the access request command too', () => {
+    expect(isTicketCommand('/acesso')).toBe(true);
+    expect(isTicketCommand(' /Acesso ')).toBe(true);
+  });
+
   // triste
   it('refuses the command inside a sentence, and ordinary conversation', () => {
     expect(isTicketCommand('como uso o /chamado?')).toBe(false);
     expect(isTicketCommand('/chamado urgente')).toBe(false);
+    expect(isTicketCommand('/acesso ao sistema')).toBe(false);
     expect(isTicketCommand('oi')).toBe(false);
     expect(isTicketCommand('')).toBe(false);
   });
@@ -115,5 +121,28 @@ describe('conversation gate', () => {
     expect(await gate(message('Nome: Bia'), NOW + MINUTE)).toBeNull();
     expect(await gate(message('alô?'), NOW + 2 * MINUTE)).toBeNull();
     expect(forward).toHaveBeenCalledTimes(2);
+  });
+
+  /* Quem dispara `/chamado` sem parar não gasta o limite do dia de quem atende. */
+  it('goes silent with a number that passes the inbound limit', async () => {
+    const forward = vi.fn<ForwardToServer>().mockResolvedValue({ reply: 'link', isOpen: false });
+    const gate = createConversationGate(forward, { limit: 2, windowMs: 10 * MINUTE });
+
+    await gate(message('/chamado'), NOW);
+    await gate(message('/chamado'), NOW + 1);
+
+    expect(await gate(message('/chamado'), NOW + 2)).toBeNull();
+    expect(forward).toHaveBeenCalledTimes(2);
+    expect(await gate(message('/chamado', '5562999990003@s.whatsapp.net'), NOW + 3)).toBe('link');
+  });
+
+  it('does not count ordinary conversation toward the limit', async () => {
+    const forward = vi.fn<ForwardToServer>().mockResolvedValue({ reply: 'link', isOpen: false });
+    const gate = createConversationGate(forward, { limit: 1, windowMs: 10 * MINUTE });
+
+    await gate(message('oi'), NOW);
+    await gate(message('tudo bem?'), NOW + 1);
+
+    expect(await gate(message('/chamado'), NOW + 2)).toBe('link');
   });
 });
