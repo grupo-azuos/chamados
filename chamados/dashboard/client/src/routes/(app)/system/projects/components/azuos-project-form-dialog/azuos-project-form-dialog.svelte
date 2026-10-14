@@ -88,7 +88,7 @@
             label: 'Repositório no GitHub',
             name: 'repositoryUrl',
             value: model.data.fields.repositoryUrl.value,
-            placeholder: 'Ex: vinicius-gpl/acerola-ticket ou https://github.com/...',
+            placeholder: 'Ex: grupo-azuos/chamados ou https://github.com/...',
             isRequired: true,
           }}
           state={{
