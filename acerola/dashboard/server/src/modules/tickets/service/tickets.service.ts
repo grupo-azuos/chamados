@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -41,6 +42,7 @@ import {
   type TicketReportQuery,
   type UpdateTicketInput,
 } from '@template/shared/schemas/ticket.schema';
+import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
@@ -204,8 +206,9 @@ export class TicketsService {
     return assignee;
   }
 
-  /* Quem pediu aviso recebe o "recebi o seu chamado" pelo WhatsApp de quem atende. O envio é
-     ESPERADO, e o desfecho volta com o chamado: a tela só diz que a mensagem saiu se saiu. */
+  /* Quem pediu aviso recebe o "recebi o seu chamado" pelo WhatsApp de quem atende. O aviso
+     entra na fila de saída (é só uma gravação no banco, sem esperar o bot) e o desfecho volta
+     com o chamado: `queued`, ou por que nem entrou — e aí a tela oferece o link manual. */
   private async announceOpening(row: TicketRow, isSkipped = false): Promise<TicketNoticeOutcome> {
     if (isSkipped) return 'not_wanted';
 
@@ -241,6 +244,35 @@ export class TicketsService {
     this.access.assertCanWrite(reach);
 
     return { outcome: (await this.notifier?.ready(reach.ticket)) ?? 'not_configured' };
+  }
+
+  /** Os avisos de WhatsApp do chamado — quem pode ver o chamado vê se os avisos saíram. */
+  async whatsappNotices(user: RequestUser, id: number): Promise<WhatsappNotice[]> {
+    assertCanAttendTicket(user.role);
+    await this.access.reach(user, id);
+
+    return (await this.notifier?.notices(id)) ?? [];
+  }
+
+  /** Reenviar é escrever no chamado: pede a mesma permissão de avisar. */
+  async retryWhatsappNotice(
+    user: RequestUser,
+    id: number,
+    noticeId: number,
+  ): Promise<WhatsappNotice> {
+    assertCanAttendTicket(user.role);
+
+    const reach = await this.access.reach(user, id);
+    this.access.assertCanWrite(reach);
+
+    const notice = await this.notifier?.retry(id, noticeId);
+    if (!notice) {
+      throw new ConflictException(
+        'Este aviso não pode ser reenviado: ele está na fila ou já saiu.',
+      );
+    }
+
+    return notice;
   }
 
   async listSystemProjectOptions(): Promise<{ id: number; name: string }[]> {

@@ -20,6 +20,7 @@ import { TICKET_UPLOAD_MAX_BYTES, uploadLimit } from '../../../lib/http/upload-l
 import { UploadTooLargeInterceptor } from '../../../lib/http/upload-too-large.interceptor';
 import {
   ApiBody,
+  ApiConflictResponse,
   ApiConsumes,
   ApiCreatedResponse,
   ApiForbiddenResponse,
@@ -51,6 +52,7 @@ import {
   TicketNoticeDto,
   TicketReportQueryDto,
   UpdateTicketDto,
+  WhatsappNoticeDto,
 } from '../dto/ticket.dto';
 import { type UploadedAttachment } from '../service/ticket-attachments.service';
 import {
@@ -288,7 +290,7 @@ export class TicketsController {
   @ApiOperation({
     summary: 'Avisa pelo WhatsApp que o chamado ficou pronto',
     description:
-      'A mensagem sai pelo número vinculado do RESPONSÁVEL pelo chamado. Devolve o desfecho: `sent` quando saiu; qualquer outro valor diz por que não saiu (sem responsável, sem número vinculado, limite do dia atingido, pessoa não pediu aviso), e a tela oferece o link manual.',
+      'A mensagem sai pelo número vinculado do RESPONSÁVEL pelo chamado. Devolve o desfecho: `queued` quando entrou na fila de saída (sai em seguida, com novas tentativas se o WhatsApp estiver fora); qualquer outro valor diz por que nem entrou (sem responsável, sem número vinculado, pessoa não pediu aviso), e a tela oferece o link manual.',
   })
   @ApiOkResponse({ type: TicketNoticeDto })
   async notifyReady(
@@ -296,6 +298,39 @@ export class TicketsController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<TicketNoticeDto> {
     return this.service.notifyReady(user, id);
+  }
+
+  @Get(':id/whatsapp-notices')
+  @ApiOperation({
+    summary: 'Lista os avisos de WhatsApp de um chamado',
+    description:
+      'Os avisos que o chamado gerou ("chamado recebido", "chamado pronto"), do mais novo para o mais antigo: se saíram, se estão na fila ou se pararam — e por quê. Não traz o texto nem o telefone.',
+  })
+  @ApiOkResponse({ type: [WhatsappNoticeDto] })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  async notices(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<WhatsappNoticeDto[]> {
+    return this.service.whatsappNotices(user, id);
+  }
+
+  @Post(':id/whatsapp-notices/:noticeId/retry')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reenvia um aviso de WhatsApp que não saiu',
+    description:
+      'Põe de volta na fila um aviso que parou (`failed` ou `discarded`), com mais 1 dia de tentativas. O que está na fila ou já saiu não é reenviado.',
+  })
+  @ApiOkResponse({ type: WhatsappNoticeDto })
+  @ApiNotFoundResponse({ description: 'Chamado ou aviso não encontrado.' })
+  @ApiConflictResponse({ description: 'O aviso está na fila ou já saiu.' })
+  async retryNotice(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('noticeId', ParseIntPipe) noticeId: number,
+  ): Promise<WhatsappNoticeDto> {
+    return this.service.retryWhatsappNotice(user, id, noticeId);
   }
 
   @Post(':id/areas')

@@ -8,6 +8,7 @@ import {
   TICKET_NOTICE_MESSAGES,
   type TicketNotice,
 } from '@template/shared/schemas/ticket.schema';
+import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
 import { writable } from 'svelte/store';
 
 import { ApiError, readError } from '$lib/api/http-client';
@@ -17,6 +18,13 @@ import { TICKETS_QUERY_KEY } from '$lib/hooks/use-ticket-list/use-ticket-list.sv
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 
 const NOT_FOUND = 404;
+/* O entregador do servidor passa a cada 5 s; olhar com a mesma frequência basta. */
+const NOTICE_REFRESH_MS = 5000;
+
+/** Algum aviso ainda está na fila? É o que mantém a lista se atualizando sozinha. */
+export function hasQueuedNotice(notices: readonly WhatsappNotice[]): boolean {
+  return notices.some((queued) => queued.status === 'pending');
+}
 
 export type TicketDetailModel = {
   data: {
@@ -27,6 +35,8 @@ export type TicketDetailModel = {
     attachments: TicketAttachment[];
     /** O link de aviso, pronto. Nulo quando a pessoa não pediu para ser avisada. */
     whatsAppLink: string | null;
+    /** Os avisos de WhatsApp do chamado, do mais novo para o mais antigo. */
+    notices: WhatsappNotice[];
   };
   state: {
     isLoading: boolean;
@@ -44,8 +54,13 @@ export type TicketDetailModel = {
     attachmentError: string | null;
     isDownloadingServiceOrder: boolean;
     serviceOrderError: string | null;
+    /** Qual aviso está sendo reenviado — trava só a linha dele. */
+    retryingNoticeId: number | null;
+    noticeError: string | null;
   };
   actions: {
+    /** Põe de volta na fila um aviso de WhatsApp que parou. */
+    onRetryNotice: (notice: WhatsappNotice) => void;
     onRetry: () => void;
     onRemoveAttachment: (attachment: TicketAttachment) => void;
     onDownloadServiceOrder: () => void;
@@ -62,6 +77,13 @@ export function toNoticeResult(notice: TicketNotice, assignee: string | null): T
     return {
       isSent: true,
       message: `Mensagem enviada pelo WhatsApp de ${assignee ?? 'quem atende'}.`,
+    };
+  }
+  /* Na fila é o caminho feliz: o servidor entrega em seguida, e a lista de avisos acompanha. */
+  if (notice.outcome === 'queued') {
+    return {
+      isSent: true,
+      message: `Aviso na fila: sai pelo WhatsApp de ${assignee ?? 'quem atende'} em instantes.`,
     };
   }
 
@@ -113,6 +135,32 @@ export function useTicketDetailModel(id: number): TicketDetailModel {
     ),
   );
 
+  const noticesKey = [...TICKETS_QUERY_KEY, 'whatsapp-notices', id];
+  const notices = mirrorStore(
+    createQuery(
+      writable({
+        queryKey: noticesKey,
+        queryFn: () => ticketsApi.whatsappNotices(id),
+        retry: false,
+        /* Enquanto algum aviso está na fila, a lista se atualiza sozinha: quem clicou em avisar
+           vê o "Na fila" virar "Enviado" sem recarregar a página. */
+        refetchInterval: (query: { state: { data?: WhatsappNotice[] } }) =>
+          hasQueuedNotice(query.state.data ?? []) ? NOTICE_REFRESH_MS : false,
+      }),
+    ),
+  );
+
+  let retryingNoticeId = $state<number | null>(null);
+  const retryNotice = mirrorStore(
+    createMutation({
+      mutationFn: (noticeId: number) => ticketsApi.retryWhatsappNotice(id, noticeId),
+      onSettled: async () => {
+        retryingNoticeId = null;
+        await queryClient.invalidateQueries({ queryKey: noticesKey });
+      },
+    }),
+  );
+
   let removingAttachmentId = $state<number | null>(null);
   let isDownloadingServiceOrder = $state(false);
   let serviceOrderError = $state<string | null>(null);
@@ -135,8 +183,9 @@ export function useTicketDetailModel(id: number): TicketDetailModel {
   const notify = mirrorStore(
     createMutation({
       mutationFn: () => ticketsApi.notifyReady(id),
-      onSuccess: (result: TicketNotice) => {
+      onSuccess: async (result: TicketNotice) => {
         notice = toNoticeResult(result, ticket.current.data?.assignee ?? null);
+        await queryClient.invalidateQueries({ queryKey: noticesKey });
       },
       /* Falha de rede também cai no link manual: o que importa é a pessoa conseguir avisar. */
       onError: () => {
@@ -155,6 +204,7 @@ export function useTicketDetailModel(id: number): TicketDetailModel {
         histories: histories.current.data ?? [],
         attachments: ownFilesOf(attachments.current.data ?? []),
         whatsAppLink: current ? buildNotice(current) : null,
+        notices: notices.current.data ?? [],
       };
     },
     get state() {
@@ -173,9 +223,15 @@ export function useTicketDetailModel(id: number): TicketDetailModel {
         attachmentError: readError(removeAttachment.current.error),
         isDownloadingServiceOrder,
         serviceOrderError,
+        retryingNoticeId,
+        noticeError: readError(retryNotice.current.error),
       };
     },
     actions: {
+      onRetryNotice: (stopped) => {
+        retryingNoticeId = stopped.id;
+        retryNotice.current.mutate(stopped.id);
+      },
       onNotify: () => {
         if (!notify.current.isPending) notify.current.mutate();
       },

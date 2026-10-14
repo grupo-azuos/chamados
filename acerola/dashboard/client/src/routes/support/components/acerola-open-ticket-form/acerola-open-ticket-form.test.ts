@@ -329,7 +329,7 @@ describe('AcerolaOpenTicketForm', () => {
     });
 
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Enviamos o protocolo e o link de acompanhamento para o seu WhatsApp.',
+      'O protocolo e o link de acompanhamento vão chegar no seu WhatsApp.',
     );
     expect(screen.queryByRole('link', { name: /receber o protocolo/i })).not.toBeInTheDocument();
   });
