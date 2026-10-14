@@ -10,8 +10,25 @@ e é separado do resto: o servidor de chamados não conhece o WhatsApp, só a AP
   a área. O escolhido vira o responsável e, se a pessoa pediu aviso, o WhatsApp dele manda o
   "recebi o seu chamado".
 - **Chamado pronto.** Na ficha do chamado, **Avisar no WhatsApp** envia pelo número do
-  responsável. Quando não sai (sem vínculo, limite do dia), a tela diz o motivo e oferece o link
-  para enviar à mão.
+  responsável. Quando nem entra na fila (sem vínculo, pessoa não pediu aviso), a tela diz o
+  motivo e oferece o link para enviar à mão.
+- **Fila de saída.** Os avisos de chamado ("recebi o seu chamado", "ficou pronto") não saem na
+  hora: entram na tabela `whatsapp_messages` como `pending`, e o entregador do servidor
+  (`WhatsappOutboxService`) os manda a cada 5 segundos — **no máximo um por número por volta**,
+  para o ritmo parecer de gente. Bot fora do ar ou celular desconectado: tenta de novo com espera
+  crescente (30 s, 1 min, 2 min… até 30 min), por até 1 dia. Limite do dia esgotado: o "recebi"
+  é descartado (amanhã ele não diz nada) e o "pronto" fica para as 8h do dia seguinte. Telefone
+  sem WhatsApp ou número desvinculado: para na hora. A ficha do chamado mostra cada aviso (na
+  fila, enviado, não saiu, descartado) e oferece **Reenviar** para o que parou. As respostas
+  da conversa (`/chamado`, `/acesso`) não passam pela fila: o bot responde na hora.
+- **Conversa que sobrevive a reinício.** O pedido de acesso em andamento fica no banco
+  (`whatsapp_conversations`) e a lista de conversas abertas fica no bot, cifrada, em
+  `BOT_DATA_DIR/.conversations`. Reiniciar o servidor ou o bot no meio do `/acesso` não faz a
+  pessoa perder o que já respondeu.
+- **Sem mensagem lida duas vezes.** O bot manda ao servidor o identificador de cada mensagem, e o
+  servidor guarda os que já leu por 1 dia (`whatsapp_inbound_messages`, só o identificador, nunca
+  o texto). A mesma mensagem entregue de novo pelo WhatsApp (numa reconexão) é ignorada, sem
+  fechar a conversa.
 - **Chamado a partir do WhatsApp.** Quem manda `/chamado` para o número de um responsável
   recebe UMA mensagem com um link assinado. O link abre o `/support` já com o responsável, o
   telefone de quem escreveu e, quando o responsável atende uma área só, a área. O chamado é
@@ -26,6 +43,11 @@ e é separado do resto: o servidor de chamados não conhece o WhatsApp, só a AP
 - **Limite.** Cada número manda no máximo `WHATSAPP_DAILY_LIMIT` mensagens automáticas por dia
   (padrão 100). Em 70% a pessoa é avisada no próprio WhatsApp e no perfil; no teto, o sistema
   para de enviar por ela até o dia seguinte.
+- **Limite por quem escreve.** Um mesmo número manda ao bot de um responsável no máximo
+  `BOT_INBOUND_LIMIT` mensagens (padrão 20) a cada `BOT_INBOUND_WINDOW_MINUTES` minutos (padrão
+  10), contando só comandos e respostas de conversa aberta. Acima disso o bot fica em silêncio
+  com aquele número, sem aviso, até a janela andar — assim quem dispara `/chamado` sem parar não
+  gasta o limite do dia de quem atende. Conversa comum nunca conta.
 
 ### O que o bot lê
 
@@ -137,7 +159,8 @@ Respostas de erro do envio: `409` (`not_connected`) quando o número não está 
   telefone.
 - **Trocar `BOT_SESSION_KEY` invalida todos os vínculos.**
 - **Banimento.** O Baileys não é oficial, e o WhatsApp pode banir números que usam automação.
-  O teto de mensagens por pessoa e os alertas ficam no servidor (próxima etapa).
+  O teto de mensagens por pessoa, os alertas e o ritmo da fila de saída (uma mensagem por número
+  a cada 5 s) ficam no servidor.
 
 ## Onde fica cada coisa
 

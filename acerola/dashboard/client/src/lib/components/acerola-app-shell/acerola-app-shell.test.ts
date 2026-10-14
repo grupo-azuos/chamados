@@ -66,6 +66,27 @@ describe('AcerolaAppShell', () => {
     expect(screen.getByText('Administrador')).toBeInTheDocument();
   });
 
+  // feliz
+  /* As telas públicas ficam à mão, e abrem em outra aba para não tirar ninguém do painel. */
+  it('links to opening a ticket and validating a document, in a new tab', () => {
+    renderShell({});
+
+    const support = screen.getByRole('link', { name: 'Abrir chamado' });
+    const verify = screen.getByRole('link', { name: 'Validar documento' });
+
+    expect(support).toHaveAttribute('href', '/support');
+    expect(verify).toHaveAttribute('href', '/verify');
+    expect(support).toHaveAttribute('target', '_blank');
+  });
+
+  // triste
+  /* Os links públicos não entram no menu da tela: não são telas do módulo. */
+  it('keeps the public links out of the module menu', () => {
+    renderShell({ ui: { items } });
+
+    expect(screen.getAllByRole('link', { name: 'Abrir chamado' })).toHaveLength(1);
+  });
+
   /* Os módulos ficam no cabeçalho da sidebar e permanecem acessíveis com um clique. */
   it('shows the module switcher in the sidebar and asks to switch on a click', async () => {
     const onAreaContextChange = vi.fn();

@@ -6,7 +6,7 @@
 # lembrava de digitar o título na hora do merge.
 #
 # Aqui o título é conferido ANTES do merge, pela MESMA regra dos commits
-# (`acerola/dashboard/commitlint.config.js`) — e precisa ser do tipo `merge`, porque é isso
+# (`acerola/dashboard/commitlint.config.mjs`) — e precisa ser do tipo `merge`, porque é isso
 # que ele vai virar no histórico:
 #
 #   [merge](web): Chamado vira ordem de serviço — linha do tempo e PDF conferível
@@ -21,9 +21,9 @@ jobs:
   title:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
 
@@ -34,7 +34,7 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          printf '%s\n' "$PR_TITLE" | npx --yes @commitlint/cli@19 --config commitlint.config.js
+          printf '%s\n' "$PR_TITLE" | npx --yes @commitlint/cli@19 --config commitlint.config.mjs
 
           case "$PR_TITLE" in
             "[merge]("*) ;;

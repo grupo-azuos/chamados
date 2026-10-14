@@ -11,25 +11,36 @@ import { signTicketInvite } from '../../tickets/service/ticket-invite.util';
 import { WhatsappConnectionsRepository } from '../../whatsapp/repository/whatsapp-connections.repository';
 import { botSessionId } from '../../whatsapp/service/bot-client.service';
 import { WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
+import { WhatsappInboundMessagesRepository } from '../repository/whatsapp-inbound-messages.repository';
+import { WhatsappAccessRequestService } from './whatsapp-access-request.service';
 
-/** O que o bot manda: de qual número vinculado, de qual conversa, o texto e o telefone de quem escreveu. */
+/**
+ * O que o bot manda: de qual número vinculado, de qual conversa, o texto, o telefone de quem
+ * escreveu e o identificador da mensagem no WhatsApp (nulo num bot antigo, que não o envia).
+ */
 export type InboundMessage = {
   sessionId: string;
   chatId: string;
   text: string;
   phone: string | null;
+  messageId?: string | null;
 };
 
 /**
  * O que o servidor responde: o texto a enviar (ou nulo para silêncio) e se a conversa continua
- * ABERTA. Hoje nunca continua — a resposta ao `/chamado` é um link, e o resto acontece na tela.
- * O campo fica no contrato porque é ele que diz ao bot se deve encaminhar a próxima mensagem.
+ * ABERTA. A resposta ao `/chamado` é um link e fecha na hora; o pedido de acesso (`/acesso`)
+ * fica aberto enquanto o bot espera a próxima resposta. É este campo que diz ao bot se deve
+ * encaminhar a próxima mensagem.
+ *
+ * `isDuplicate`: a mensagem já tinha chegado. O bot não responde e não mexe na conversa —
+ * fechá-la por causa de uma entrega repetida largaria a pessoa no meio do pedido.
  */
-export type InboundReply = { reply: string | null; isOpen: boolean };
+export type InboundReply = { reply: string | null; isOpen: boolean; isDuplicate?: boolean };
 
 export const TICKET_COMMAND = '/chamado';
 
 const SILENCE: InboundReply = { reply: null, isOpen: false };
+const DUPLICATE: InboundReply = { reply: null, isOpen: false, isDuplicate: true };
 const SECONDS_PER_MINUTE = 60;
 
 /**
@@ -50,11 +61,36 @@ export class WhatsappIntakeService {
     private readonly connections: WhatsappConnectionsRepository,
     private readonly assignees: TicketAssigneesService,
     private readonly messaging: WhatsappMessagingService,
+    private readonly accessRequests: WhatsappAccessRequestService,
+    private readonly inbox: WhatsappInboundMessagesRepository,
   ) {}
 
   async handle(message: InboundMessage, now: number = Date.now()): Promise<InboundReply> {
-    if (message.text.trim().toLowerCase() !== TICKET_COMMAND) return SILENCE;
+    if (!(await this.isFirstDelivery(message, now))) return DUPLICATE;
 
+    if (message.text.trim().toLowerCase() === TICKET_COMMAND) {
+      /* `/chamado` no meio de um pedido de acesso é mudar de assunto: o pedido é esquecido. */
+      await this.accessRequests.forget(message);
+
+      return this.sendLink(message, now);
+    }
+    if (await this.accessRequests.isFor(message, now)) {
+      return this.handleAccessRequest(message, now);
+    }
+
+    return SILENCE;
+  }
+
+  /* A caixa de entrada: a mesma mensagem entregue de novo pelo WhatsApp não é lida duas vezes.
+     Sem identificador (bot antigo), não há como saber — e ela passa. */
+  private async isFirstDelivery(message: InboundMessage, now: number): Promise<boolean> {
+    if (!message.messageId) return true;
+
+    return this.inbox.claim(message.sessionId, message.messageId, new Date(now));
+  }
+
+  /* A resposta ao `/chamado`: um link assinado para o formulário. */
+  private async sendLink(message: InboundMessage, now: number): Promise<InboundReply> {
     const userId = await this.userOf(message.sessionId);
     const secret = this.env.BOT_API_TOKEN;
     if (!userId || !secret) return SILENCE;
@@ -79,6 +115,13 @@ export class WhatsappIntakeService {
     });
 
     return { reply, isOpen: false };
+  }
+
+  private async handleAccessRequest(message: InboundMessage, now: number): Promise<InboundReply> {
+    const userId = await this.userOf(message.sessionId);
+    if (!userId) return SILENCE;
+
+    return this.accessRequests.handle(userId, message, now);
   }
 
   /* O bot só conhece o hash do id de cada pessoa (ver `botSessionId`): aqui ele volta a ser o id. */

@@ -24,6 +24,13 @@ const envSchema = z.object({
    * `/chamado`. Opcional: sem ele o bot vincula e envia, mas não responde a quem escreve.
    */
   BOT_SERVER_URL: z.string().url().optional(),
+  /**
+   * Quantas mensagens um mesmo número pode mandar ao bot de um responsável dentro da janela
+   * (`BOT_INBOUND_WINDOW_MINUTES`). Acima disso o bot não responde. Só conta comando e resposta
+   * de conversa aberta — conversa comum nunca é limitada.
+   */
+  BOT_INBOUND_LIMIT: z.coerce.number().int().min(1).default(20),
+  BOT_INBOUND_WINDOW_MINUTES: z.coerce.number().int().min(1).default(10),
   BOT_LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
     .default('info'),

@@ -26,6 +26,10 @@ import {
   whatsappMessages,
   whatsappTemplates,
 } from './schema/whatsapp-connections.schema';
+import {
+  whatsappConversations,
+  whatsappInboundMessages,
+} from './schema/whatsapp-conversations.schema';
 
 /**
  * O objeto de schema que o Drizzle exige para as consultas relacionais.
@@ -43,6 +47,8 @@ export const drizzleSchema = {
   whatsappConnections,
   whatsappMessages,
   whatsappTemplates,
+  whatsappConversations,
+  whatsappInboundMessages,
   tasks,
   softwareProjects,
   softwareTimelineEvents,

@@ -14,6 +14,8 @@
       repositoryUrl: 'vinicius-gpl/acerola-ticket',
       githubRepoOwner: 'vinicius-gpl',
       githubRepoName: 'acerola-ticket',
+      responsibleId: null,
+      responsibleName: null,
       status: 'active',
       color: 'blue',
       openTicketsCount: 3,

@@ -1,16 +1,23 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { type WhatsappTemplateKey } from '@template/shared/domain/whatsapp-template.util';
 import { whatsappAlertThreshold } from '@template/shared/schemas/whatsapp-connection.schema';
+import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
 
 import { type Env } from '../../../lib/config/env.schema';
 import { ENV } from '../../../lib/config/env.token';
+import { type WhatsappMessageRow } from '../../../lib/db/schema/whatsapp-connections.schema';
+import { toWhatsappNotice } from '../mapper/whatsapp-notices.mapper';
 import { WhatsappConnectionsRepository } from '../repository/whatsapp-connections.repository';
 import { WhatsappMessagesRepository } from '../repository/whatsapp-messages.repository';
 import { BotClientService, type BotSendOutcome } from './bot-client.service';
+import { isDiscardedAtLimit, WHATSAPP_QUEUE_TTL_MS } from './whatsapp-outbox.util';
 import { WhatsappTemplatesService } from './whatsapp-templates.service';
 
 /** O desfecho de um envio: os do bot, mais os dois que o servidor decide antes de chamá-lo. */
 export type WhatsappSendOutcome = BotSendOutcome | 'not_linked' | 'limit_reached';
+
+/** O desfecho de pôr na fila: entrou, ou por que nem entrou. */
+export type WhatsappQueueOutcome = 'queued' | 'not_configured' | 'not_linked' | 'limit_reached';
 
 export type WhatsappUsage = { sentToday: number; dailyLimit: number };
 
@@ -24,10 +31,12 @@ export type WhatsappMessage = {
 };
 
 /* O "dia" do limite é o de quem usa o sistema, não o do servidor (que roda em UTC). */
-const LIMIT_TIME_ZONE = 'America/Sao_Paulo';
+export const LIMIT_TIME_ZONE = 'America/Sao_Paulo';
 
 /**
- * TODA mensagem automática passa por aqui — é o único lugar que conta e que trava.
+ * TODA mensagem automática passa por aqui — é o único lugar que conta e que trava. Os avisos
+ * de chamado entram na fila (`queue`) e saem pelo entregador (`deliver`); as respostas da
+ * conversa saem na hora, pelo bot (`reply`).
  *
  * O número é o pessoal de quem atende, e o WhatsApp bloqueia quem parece automação. Por isso
  * cada pessoa tem um teto diário: passou dele, o sistema para de enviar por ela até amanhã.
@@ -60,19 +69,74 @@ export class WhatsappMessagingService {
   }
 
   /**
-   * Manda uma mensagem pelo número de alguém. Nunca lança: quem chama decide o que fazer com
-   * o desfecho (quase sempre, cair no link manual).
+   * Põe na FILA DE SAÍDA uma mensagem pelo número de alguém; quem entrega é o
+   * `WhatsappOutboxService`, que tenta de novo enquanto não sai. Devolve `queued`, ou por que
+   * nem entrou — o que já se sabe agora e não muda esperando (sem bot, sem vínculo).
+   *
+   * Limite do dia já atingido: o "recebi o seu chamado" nem entra (amanhã ele não faz mais
+   * sentido); os outros entram, e o entregador os deixa para o dia seguinte.
    */
-  async send(message: WhatsappMessage): Promise<WhatsappSendOutcome> {
+  async queue(message: WhatsappMessage, now: Date = new Date()): Promise<WhatsappQueueOutcome> {
     if (!this.bot.isConfigured) return 'not_configured';
     if (!(await this.isLinked(message.senderUserId))) return 'not_linked';
-    if (!(await this.hasRoom(message.senderUserId))) return 'limit_reached';
+    if (isDiscardedAtLimit(message.kind) && !(await this.hasRoom(message.senderUserId))) {
+      return 'limit_reached';
+    }
 
-    const text = await this.templates.render(message.kind, message.values);
-    const outcome = await this.bot.sendText(message.senderUserId, message.to, text);
-    if (outcome === 'sent') await this.count(message);
+    await this.messages.enqueue(
+      {
+        senderUserId: message.senderUserId,
+        ticketId: message.ticketId,
+        kind: message.kind,
+        recipient: message.to,
+        body: await this.templates.render(message.kind, message.values),
+        expiresAt: new Date(now.getTime() + WHATSAPP_QUEUE_TTL_MS),
+      },
+      now,
+    );
 
-    return outcome;
+    return 'queued';
+  }
+
+  /**
+   * Entrega UMA mensagem da fila — chamada pelo entregador. Confere de novo o vínculo e o
+   * limite (podem ter mudado desde que ela entrou) e só então chama o bot. Saiu: marca como
+   * enviada e confere o aviso de 70%. O que fazer com qualquer outro desfecho é do entregador.
+   */
+  async deliver(row: WhatsappMessageRow, now: Date = new Date()): Promise<WhatsappSendOutcome> {
+    if (!(await this.isLinked(row.senderUserId))) return 'not_linked';
+    if (!(await this.hasRoom(row.senderUserId))) return 'limit_reached';
+
+    const outcome = await this.bot.sendText(row.senderUserId, row.recipient, row.body ?? '');
+    if (outcome !== 'sent') return outcome;
+
+    await this.messages.markSent(row.id, now);
+    await this.alertNearLimit(row.senderUserId);
+
+    return 'sent';
+  }
+
+  /** Os avisos de um chamado — saíram, estão na fila ou pararam, e por quê. */
+  async notices(ticketId: number): Promise<WhatsappNotice[]> {
+    const rows = await this.messages.listForTicket(ticketId);
+
+    return rows.map(toWhatsappNotice).filter((notice) => notice !== null);
+  }
+
+  /** Põe de volta na fila um aviso que parou, com mais 1 dia de tentativas. Nulo: não dá. */
+  async retry(
+    ticketId: number,
+    noticeId: number,
+    now: Date = new Date(),
+  ): Promise<WhatsappNotice | null> {
+    const row = await this.messages.requeue(
+      ticketId,
+      noticeId,
+      now,
+      new Date(now.getTime() + WHATSAPP_QUEUE_TTL_MS),
+    );
+
+    return row ? toWhatsappNotice(row) : null;
   }
 
   /**
@@ -105,10 +169,14 @@ export class WhatsappMessagingService {
       recipient: message.to,
     });
 
-    const { sentToday, dailyLimit } = await this.usage(message.senderUserId);
+    await this.alertNearLimit(message.senderUserId);
+  }
+
+  private async alertNearLimit(userId: string): Promise<void> {
+    const { sentToday, dailyLimit } = await this.usage(userId);
     /* Exatamente no limiar, e não "a partir dele": o aviso sai UMA vez por dia. */
     if (sentToday === whatsappAlertThreshold(dailyLimit)) {
-      await this.alert(message.senderUserId, sentToday, dailyLimit);
+      await this.alert(userId, sentToday, dailyLimit);
     }
   }
 
