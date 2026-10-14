@@ -48,6 +48,8 @@ export function toSoftwareProject(
     color: row.color,
     githubRepoOwner: repoMeta.owner,
     githubRepoName: repoMeta.name,
+    responsibleId: row.responsibleId,
+    responsibleName: row.responsibleName,
     openTicketsCount,
     pullRequestsCount,
     createdAt: row.createdAt.toISOString(),
@@ -55,9 +57,13 @@ export function toSoftwareProject(
   };
 }
 
+/** Quem responde pelo sistema, já conferido pelo service: o id e o nome do cadastro. */
+export type ProjectResponsible = { id: string; name: string };
+
 export function toSoftwareProjectInsert(
   input: CreateSoftwareProjectInput,
   actorEmail: string,
+  responsible: ProjectResponsible | null = null,
 ): SoftwareProjectInsert {
   const parsedRepo = parseGitHubRepo(input.repositoryUrl);
 
@@ -69,8 +75,27 @@ export function toSoftwareProjectInsert(
     color: input.color,
     githubRepoOwner: parsedRepo?.owner ?? null,
     githubRepoName: parsedRepo?.repo ?? null,
+    ...responsibleColumns(responsible),
     createdBy: actorEmail,
   };
+}
+
+/* As duas colunas do responsável — nulas juntas quando não há ninguém. */
+function responsibleColumns(
+  responsible: ProjectResponsible | null,
+): Pick<SoftwareProjectInsert, 'responsibleId' | 'responsibleName'> {
+  if (!responsible) return { responsibleId: null, responsibleName: null };
+
+  return { responsibleId: responsible.id, responsibleName: responsible.name };
+}
+
+/* `undefined`: o corpo não falou do responsável, e ele fica como está. `null`: tirar. */
+function applyResponsibleUpdate(
+  update: Partial<SoftwareProjectInsert>,
+  responsible: ProjectResponsible | null | undefined,
+): void {
+  if (responsible === undefined) return;
+  Object.assign(update, responsibleColumns(responsible));
 }
 
 function applyDescriptionUpdate(
@@ -97,6 +122,7 @@ export function toSoftwareProjectUpdate(
   input: UpdateSoftwareProjectInput,
   actorEmail: string,
   now: Date = new Date(),
+  responsible?: ProjectResponsible | null,
 ): Partial<SoftwareProjectInsert> {
   const update: Partial<SoftwareProjectInsert> = {
     updatedAt: now,
@@ -108,6 +134,7 @@ export function toSoftwareProjectUpdate(
   applyRepositoryUpdate(update, input.repositoryUrl);
   setIfDefined(update, 'status', input.status);
   setIfDefined(update, 'color', input.color);
+  applyResponsibleUpdate(update, responsible);
 
   return update;
 }

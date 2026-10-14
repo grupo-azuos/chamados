@@ -218,6 +218,13 @@
       "when": 1791982812935,
       "tag": "0030_dark_frog_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791984882096,
+      "tag": "0031_wide_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }

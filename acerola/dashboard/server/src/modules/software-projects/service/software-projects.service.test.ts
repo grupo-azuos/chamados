@@ -1,8 +1,9 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type SoftwareProjectRow } from '../../../lib/db/schema/software-projects.schema';
+import { type TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import { type SoftwareProjectsRepository } from '../repository/software-projects.repository';
 import { type SoftwareTimelineRepository } from '../repository/software-timeline.repository';
 import { type GithubService } from './github.service';
@@ -31,6 +32,8 @@ function projectRow(overrides: Partial<SoftwareProjectRow> = {}): SoftwareProjec
     repositoryUrl: 'vinicius-gpl/acerola-ticket',
     githubRepoOwner: 'vinicius-gpl',
     githubRepoName: 'acerola-ticket',
+    responsibleId: null,
+    responsibleName: null,
     status: 'active',
     color: 'blue',
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -70,11 +73,19 @@ function makeService(
     ...githubOverrides,
   } as unknown as GithubService;
 
+  /* Quem atende Sistema: só a Ana. O nome sai daqui, nunca do corpo. */
+  const assignees = {
+    resolve: vi.fn(async (_area: string, id: string) =>
+      id === 'u-ana' ? { id: 'u-ana', name: 'Ana Lima' } : null,
+    ),
+  } as unknown as TicketAssigneesService;
+
   return {
-    service: new SoftwareProjectsService(repository, timelineRepository, githubService),
+    service: new SoftwareProjectsService(repository, timelineRepository, githubService, assignees),
     repository,
     timelineRepository,
     githubService,
+    assignees,
   };
 }
 
@@ -150,6 +161,51 @@ describe('SoftwareProjectsService', () => {
 
       expect(repository.update).toHaveBeenCalled();
       expect(updated.id).toBe(1);
+    });
+  });
+
+  describe('responsible', () => {
+    // feliz
+    /* O NOME vem do cadastro de quem atende Sistema: só o id é aceito de fora. */
+    it('stamps the name of the responsible from who attends Sistema', async () => {
+      const { service, repository } = makeService();
+
+      await service.create(admin, {
+        name: 'Novo Sistema',
+        repositoryUrl: 'owner/repo',
+        status: 'active',
+        color: 'green',
+        responsibleId: 'u-ana',
+      });
+
+      expect(vi.mocked(repository.insert).mock.calls[0]?.[0]).toMatchObject({
+        responsibleId: 'u-ana',
+        responsibleName: 'Ana Lima',
+      });
+    });
+
+    it('takes the responsible off when the body says null, and keeps it when silent', async () => {
+      const { service, repository, assignees } = makeService();
+
+      await service.update(admin, 1, { responsibleId: null });
+      await service.update(admin, 1, { name: 'Outro nome' });
+
+      expect(vi.mocked(repository.update).mock.calls[0]?.[1]).toMatchObject({
+        responsibleId: null,
+        responsibleName: null,
+      });
+      expect(vi.mocked(repository.update).mock.calls[1]?.[1]).not.toHaveProperty('responsibleId');
+      expect(assignees.resolve).not.toHaveBeenCalled();
+    });
+
+    // triste
+    it('refuses a responsible who does not attend Sistema', async () => {
+      const { service, repository } = makeService();
+
+      await expect(service.update(admin, 1, { responsibleId: 'u-caio' })).rejects.toThrow(
+        UnprocessableEntityException,
+      );
+      expect(repository.update).not.toHaveBeenCalled();
     });
   });
 

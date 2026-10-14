@@ -1,5 +1,7 @@
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
+  import FileCheck from '@lucide/svelte/icons/file-check';
+  import LifeBuoy from '@lucide/svelte/icons/life-buoy';
   import type { Snippet } from 'svelte';
   import type { AreaContext } from '$lib/hooks/use-area-context/use-area-context.svelte';
   import type { NavItem } from '$lib/navigation/navigation';
@@ -55,6 +57,12 @@
     };
     initialSidebarOpen?: boolean;
   };
+
+  /** As telas públicas que ficam à mão no rodapé da barra, acima do perfil. */
+  export const PUBLIC_LINKS: readonly { href: string; label: string; icon: LucideIcon }[] = [
+    { href: '/support', label: 'Abrir chamado', icon: LifeBuoy },
+    { href: '/verify', label: 'Validar documento', icon: FileCheck },
+  ];
 </script>
 
 <script lang="ts">
@@ -202,6 +210,24 @@
         <span class="text-xs font-medium group-data-[collapsible=icon]:hidden">Efeitos</span>
         <EffectsToggle />
       </div>
+
+      <!-- As duas telas PÚBLICAS, à mão de quem atende: abrir um chamado por alguém e conferir
+           um documento emitido. Abrem em outra aba porque ficam fora do painel — sem casca e
+           sem menu —, e quem atende não perde a tela em que estava. -->
+      <SidebarMenu class="gap-1">
+        {#each PUBLIC_LINKS as link (link.href)}
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltipContent={link.label}>
+              {#snippet child({ props })}
+                <a href={link.href} target="_blank" rel="noopener" {...props}>
+                  <link.icon aria-hidden="true" />
+                  <span>{link.label}</span>
+                </a>
+              {/snippet}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        {/each}
+      </SidebarMenu>
 
       <!-- A mesma folga do menu de cima: aqui são o cartão de quem entrou e o Sair. -->
       <SidebarMenu class="gap-1">

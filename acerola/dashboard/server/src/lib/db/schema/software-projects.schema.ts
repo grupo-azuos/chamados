@@ -32,6 +32,13 @@ export const softwareProjects = pgTable(
     color: text('color', { enum: SOFTWARE_PROJECT_COLORS }).notNull().default('blue'),
     githubRepoOwner: text('github_repo_owner'),
     githubRepoName: text('github_repo_name'),
+    /**
+     * Quem responde pelo sistema — só informação, não muda a quem os chamados vão. É sempre
+     * alguém que atende a área de Sistema; o NOME é carimbado pelo servidor a partir do
+     * cadastro de quem atende, nunca vem do corpo (o mesmo desenho do responsável do chamado).
+     */
+    responsibleId: text('responsible_id'),
+    responsibleName: text('responsible_name'),
 
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
       .notNull()
