@@ -29,14 +29,14 @@ jobs:
       R2_BUCKET: ci-placeholder
       NEON_AUTH_URL: https://ci-placeholder.invalid/auth
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Typst
-        uses: typst-community/setup-typst@v3
+        uses: typst-community/setup-typst@v5
         with:
-          version: 0.15.1
+          typst-version: 0.15.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -62,9 +62,9 @@ jobs:
       run:
         working-directory: acerola/dashboard/bot
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
