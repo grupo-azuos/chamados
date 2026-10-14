@@ -61,6 +61,7 @@
   import Plus from '@lucide/svelte/icons/plus';
   import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import Trash2 from '@lucide/svelte/icons/trash-2';
+  import UserRound from '@lucide/svelte/icons/user-round';
 
   import ActionButton from '$lib/components/acerola-action-button/acerola-action-button.svelte';
   import ConfirmDialog from '$lib/components/acerola-confirm-dialog/acerola-confirm-dialog.svelte';
@@ -209,6 +210,17 @@
             <!-- Descrição -->
             <p class="mt-2 line-clamp-2 text-xs text-muted-foreground">
               {project.description || 'Sem descrição cadastrada.'}
+            </p>
+
+            <!-- Quem responde pelo sistema. Sem ninguém, diz isso: espaço vazio pareceria erro. -->
+            <p class="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <UserRound class="size-3.5" aria-hidden="true" />
+              <span>
+                Responsável:
+                <strong class="font-medium text-foreground">
+                  {project.responsibleName ?? 'Sem responsável'}
+                </strong>
+              </span>
             </p>
 
             <!-- Link do Repositório GitHub -->

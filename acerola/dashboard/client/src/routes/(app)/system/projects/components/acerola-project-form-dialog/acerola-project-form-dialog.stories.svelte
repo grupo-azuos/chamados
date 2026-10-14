@@ -14,7 +14,14 @@
         repositoryUrl: { value: '', error: null },
         status: { value: 'active', error: null },
         color: { value: 'blue', error: null },
+        responsibleId: { value: '', error: null },
       },
+      /* Dado INVENTADO: nenhum nome daqui existe. */
+      responsibleOptions: [
+        { value: '', label: 'Sem responsável' },
+        { value: 'u-ana', label: 'Ana Lima' },
+        { value: 'u-bia', label: 'Bia Costa' },
+      ],
     },
     state: {
       isSubmitting: false,
@@ -38,6 +45,22 @@
   args={{
     open: true,
     model: mockModel,
+    onClose: fn(),
+  }}
+/>
+
+<Story
+  name="WithResponsible"
+  args={{
+    open: true,
+    model: {
+      ...mockModel,
+      data: {
+        ...mockModel.data,
+        mode: 'edit',
+        fields: { ...mockModel.data.fields, responsibleId: { value: 'u-ana', error: null } },
+      },
+    },
     onClose: fn(),
   }}
 />

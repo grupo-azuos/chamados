@@ -43,6 +43,25 @@ async function mount(): Promise<SoftwareScheduleModel> {
   return model;
 }
 
+describe('default view', () => {
+  // feliz
+  it('opens on the month view', async () => {
+    const model = await mount();
+
+    expect(model.data.viewMode).toBe('month');
+  });
+
+  // triste
+  /* Mês por padrão não prende ninguém: semana e dia continuam a um clique. */
+  it('still switches to the week view', async () => {
+    const model = await mount();
+
+    model.actions.onViewModeChange('week');
+
+    await waitFor(() => expect(model.data.viewMode).toBe('week'));
+  });
+});
+
 describe('daily GitHub PRs', () => {
   it('filters appointments by project while author and type only affect GitHub activity', async () => {
     const date = new Date().toLocaleDateString('sv-SE');
