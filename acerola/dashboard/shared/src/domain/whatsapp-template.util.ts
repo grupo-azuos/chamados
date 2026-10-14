@@ -12,6 +12,13 @@ export const WHATSAPP_TEMPLATE_KEYS = [
   'ticket_opened',
   'ticket_ready',
   'intake_link',
+  'access_name',
+  'access_email',
+  'access_phone',
+  'access_department',
+  'access_system',
+  'access_invalid',
+  'access_created',
   'limit_alert',
 ] as const;
 
@@ -48,6 +55,52 @@ export const WHATSAPP_TEMPLATES: Record<WhatsappTemplateKey, WhatsappTemplateDef
     variables: ['responsavel', 'link', 'validade'],
     defaultBody:
       'Olá! Aqui é o atendimento de *{{responsavel}}*.\n\nPara abrir o seu chamado, toque no link e preencha o formulário:\n{{link}}\n\n> _O link vale por {{validade}} minutos._',
+  },
+  /* O pedido de acesso (`/acesso`) é uma pergunta por mensagem — ver `access-request.util`. */
+  access_name: {
+    label: 'Pedido de acesso: nome',
+    description: 'A resposta ao /acesso: começa o pedido perguntando o nome completo.',
+    variables: ['responsavel'],
+    defaultBody:
+      'Olá! Aqui é o atendimento de *{{responsavel}}*. Vou registrar o seu *pedido de acesso*.\n\nQual é o seu *nome completo*? (nome e sobrenome)\n\n> _Para desistir, responda cancelar._',
+  },
+  access_email: {
+    label: 'Pedido de acesso: e-mail',
+    description: 'Pergunta o e-mail, depois que a pessoa informou o nome.',
+    variables: ['nome'],
+    defaultBody: 'Obrigado, {{nome}}! Qual é o seu *e-mail*?',
+  },
+  access_phone: {
+    label: 'Pedido de acesso: telefone',
+    description:
+      'Pergunta o telefone. Só é enviada quando o WhatsApp não informa o número de quem escreve.',
+    variables: ['nome'],
+    defaultBody: 'Qual é o seu *telefone com DDD*?',
+  },
+  access_department: {
+    label: 'Pedido de acesso: setor',
+    description: 'Pergunta o setor de quem pede, com a lista numerada de setores.',
+    variables: ['nome', 'opcoes'],
+    defaultBody: 'De qual *setor* você é? Responda com o número:\n\n{{opcoes}}',
+  },
+  access_system: {
+    label: 'Pedido de acesso: sistema',
+    description: 'Pergunta a qual sistema a pessoa precisa de acesso, com a lista numerada.',
+    variables: ['nome', 'opcoes'],
+    defaultBody: 'A qual *sistema* você precisa de acesso? Responda com o número:\n\n{{opcoes}}',
+  },
+  access_invalid: {
+    label: 'Pedido de acesso: resposta não entendida',
+    description: 'Enviada quando uma resposta do pedido de acesso não vale; repete a pergunta.',
+    variables: ['erro'],
+    defaultBody: '{{erro}}',
+  },
+  access_created: {
+    label: 'Pedido de acesso registrado',
+    description: 'Fecha o pedido de acesso, com o protocolo do chamado aberto.',
+    variables: ['nome', 'protocolo', 'sistema', 'link'],
+    defaultBody:
+      'Pronto, {{nome}}! Seu pedido de acesso ao *{{sistema}}* foi registrado com o protocolo *{{protocolo}}*.\n\nAcompanhe por aqui: {{link}}',
   },
   limit_alert: {
     label: 'Alerta de limite',

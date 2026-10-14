@@ -5,18 +5,30 @@
  * que não tem nada a ver com chamado, e nada disso pode sair do bot. Esta camada decide o que
  * é encaminhado ao servidor:
  *
- *   - a mensagem que é EXATAMENTE o comando `/chamado`;
+ *   - a mensagem que é EXATAMENTE um comando: `/chamado` ou `/acesso`;
  *   - as mensagens de uma conversa que o servidor disse estar aberta (a pessoa está no meio de
  *     abrir um chamado), até ela fechar ou vencer.
  *
- * Todo o resto fica aqui e é esquecido. Quem sabe o que responder — o formulário, a leitura
+ * Todo o resto fica aqui e é esquecido. Mesmo o que passaria tem teto por conversa
+ * (`inbound-rate-limit.util`): acima dele, silêncio. Quem sabe o que responder — o formulário, a leitura
  * dele, a criação do chamado — é o servidor; o bot só entrega.
  *
  * Não conhece o Baileys: recebe texto, devolve texto.
  */
 
+import {
+  createRateLimiter,
+  DEFAULT_INBOUND_RATE_LIMIT,
+  type InboundRateLimit,
+} from './inbound-rate-limit.util.js';
+
 /** O comando que começa tudo. */
 export const TICKET_COMMAND = '/chamado';
+
+/** O comando do pedido de acesso: o servidor pergunta os dados um por um, na conversa. */
+export const ACCESS_REQUEST_COMMAND = '/acesso';
+
+const COMMANDS: readonly string[] = [TICKET_COMMAND, ACCESS_REQUEST_COMMAND];
 
 /* Sem resposta do servidor de que a conversa continua, ela vence sozinha neste tempo — o mesmo
    prazo que o servidor dá para a pessoa devolver o formulário. */
@@ -40,12 +52,16 @@ export type ForwardToServer = (message: IncomingMessage) => Promise<ServerReply 
 export type ConversationGate = (message: IncomingMessage, now?: number) => Promise<string | null>;
 
 export function isTicketCommand(text: string): boolean {
-  return text.trim().toLowerCase() === TICKET_COMMAND;
+  return COMMANDS.includes(text.trim().toLowerCase());
 }
 
-export function createConversationGate(forward: ForwardToServer): ConversationGate {
+export function createConversationGate(
+  forward: ForwardToServer,
+  rateLimit: InboundRateLimit = DEFAULT_INBOUND_RATE_LIMIT,
+): ConversationGate {
   /* conversa → quando vence. */
   const open = new Map<string, number>();
+  const withinLimit = createRateLimiter(rateLimit);
 
   /* Fecha ou renova a conversa conforme o servidor disse. Servidor fora do ar conta como
      fechada: o bot não continua encaminhando o que a pessoa escrever para quem não responde. */
@@ -62,6 +78,9 @@ export function createConversationGate(forward: ForwardToServer): ConversationGa
 
       return null;
     }
+    /* Só conta o que iria ao servidor: conversa comum não é do bot, nem limitada por ele. A
+       conversa aberta continua aberta — passada a janela, a pessoa segue de onde parou. */
+    if (!withinLimit(key, now)) return null;
 
     const answer = await forward(message);
     remember(key, answer, now);

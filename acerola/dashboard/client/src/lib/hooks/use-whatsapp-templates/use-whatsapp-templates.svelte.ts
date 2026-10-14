@@ -27,6 +27,9 @@ export const TEMPLATE_PREVIEW_VALUES: Record<string, string> = {
   validade: '30',
   enviadas: '70',
   limite: '100',
+  opcoes: '1. Portal do Cliente\n2. Folha de Pagamento',
+  sistema: 'Portal do Cliente',
+  erro: 'Preciso do seu *nome completo*, com pelo menos dois nomes. Ex.: _Maria Clara_ ou _João Silva_.',
 };
 
 /** Por que o texto não pode ser salvo — ou nulo quando pode. A MESMA regra que o servidor aplica. */
