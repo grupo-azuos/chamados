@@ -13,6 +13,7 @@ import {
   ticketSchema,
   updateTicketSchema,
 } from '@template/shared/schemas/ticket.schema';
+import { whatsappNoticeSchema } from '@template/shared/schemas/whatsapp-notice.schema';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
@@ -31,6 +32,7 @@ export class TicketDto extends createZodDto(ticketSchema) {}
 export class TicketAssigneeOptionDto extends createZodDto(ticketAssigneeOptionSchema) {}
 export class TicketAssigneeOptionsQueryDto extends createZodDto(ticketAssigneeOptionsQuerySchema) {}
 export class TicketNoticeDto extends createZodDto(ticketNoticeSchema) {}
+export class WhatsappNoticeDto extends createZodDto(whatsappNoticeSchema) {}
 export class TicketInviteDto extends createZodDto(ticketInviteSchema) {}
 export class OpenedTicketDto extends createZodDto(openedTicketSchema) {}
 

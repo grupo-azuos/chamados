@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   NotFoundException,
   UnprocessableEntityException,
@@ -881,6 +882,8 @@ function makeAssigneeService(
   const notifier = {
     opened: vi.fn().mockResolvedValue('sent'),
     ready: vi.fn().mockResolvedValue('sent'),
+    notices: vi.fn().mockResolvedValue([{ id: 4, status: 'failed' }]),
+    retry: vi.fn().mockResolvedValue({ id: 4, status: 'pending' }),
   };
   const tickets = repository as unknown as TicketsRepository;
   const service = new TicketsService(
@@ -1083,5 +1086,42 @@ describe('TicketsService.notifyReady', () => {
 
     await expect(service.notifyReady(regular, 7)).rejects.toThrow(ForbiddenException);
     expect(notifier.ready).not.toHaveBeenCalled();
+  });
+});
+
+describe('TicketsService WhatsApp notices', () => {
+  // feliz
+  it('lists the notices of a ticket the person attends', async () => {
+    const { service, notifier } = makeAssigneeService();
+
+    expect(await service.whatsappNotices(adminUser, 7)).toEqual([{ id: 4, status: 'failed' }]);
+    expect(notifier.notices).toHaveBeenCalledWith(7);
+  });
+
+  it('puts a stopped notice back in the queue', async () => {
+    const { service, notifier } = makeAssigneeService();
+
+    expect(await service.retryWhatsappNotice(adminUser, 7, 4)).toEqual({
+      id: 4,
+      status: 'pending',
+    });
+    expect(notifier.retry).toHaveBeenCalledWith(7, 4);
+  });
+
+  // triste
+  /* Reenviar é mandar mensagem pelo número de alguém: quem só consulta não pode. */
+  it('refuses the retry to who can only read the area of the ticket', async () => {
+    const { service, notifier } = makeAssigneeService({ roles: { infra: 'user' } });
+    const regular: RequestUser = { id: 'u-x', email: 'x@exemplo.com', name: 'X', role: 'user' };
+
+    await expect(service.retryWhatsappNotice(regular, 7, 4)).rejects.toThrow(ForbiddenException);
+    expect(notifier.retry).not.toHaveBeenCalled();
+  });
+
+  it('says why when the notice is queued or already sent', async () => {
+    const { service, notifier } = makeAssigneeService();
+    notifier.retry.mockResolvedValueOnce(null);
+
+    await expect(service.retryWhatsappNotice(adminUser, 7, 4)).rejects.toThrow(ConflictException);
   });
 });

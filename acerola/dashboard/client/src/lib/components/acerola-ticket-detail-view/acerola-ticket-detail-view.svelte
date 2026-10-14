@@ -67,6 +67,8 @@
     historyForm: Snippet;
     /** O formulário de correção dos dados. */
     dataForm: Snippet;
+    /** Os avisos de WhatsApp do chamado (saíram, na fila, pararam), logo abaixo do aviso. */
+    notices?: Snippet;
   };
 
   /** A soma do tempo informado nos históricos. Nulo quando ninguém informou tempo nenhum. */
@@ -98,8 +100,14 @@
   import PanelCard from '$lib/components/acerola-panel-card/acerola-panel-card.svelte';
   import StatusBadge from '$lib/components/acerola-status-badge/acerola-status-badge.svelte';
 
-  let { data, state: viewState, actions, historyForm, dataForm }: AcerolaTicketDetailViewProps =
-    $props();
+  let {
+    data,
+    state: viewState,
+    actions,
+    historyForm,
+    dataForm,
+    notices,
+  }: AcerolaTicketDetailViewProps = $props();
 
   /* O botão envia sozinho enquanto há uma ação de envio e o último envio não falhou. Depois de
      uma falha, dá lugar ao link manual — o plano B de sempre. */
@@ -185,6 +193,8 @@
       {/if}
     </p>
   {/if}
+
+  {@render notices?.()}
 
   <!-- O estágio fica logo abaixo do título, com a urgência: são as duas coisas que quem abre a
        ficha quer saber antes de ler qualquer outra. -->
