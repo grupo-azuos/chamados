@@ -25,6 +25,7 @@ describe('readPrivateText', () => {
       chatId: PRIVATE_CHAT,
       text: '/chamado',
       phone: '5562999990002',
+      messageId: 'ABC',
     });
   });
 
