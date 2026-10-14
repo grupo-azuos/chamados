@@ -17,6 +17,8 @@ describe('software-project.schema', () => {
       color: 'blue',
       githubRepoOwner: 'acme',
       githubRepoName: 'financeiro',
+      responsibleId: 'u-ana',
+      responsibleName: 'Ana Lima',
       openTicketsCount: 3,
       pullRequestsCount: 12,
       createdAt: new Date().toISOString(),
