@@ -88,6 +88,9 @@ describe('GithubService', () => {
   let mockDb: unknown;
 
   beforeEach(() => {
+    /* Chamada que o teste não simulou (ex.: o nome do autor) falha na hora, em vez de sair para
+       a internet: na CI o GitHub respondia rápido e o teste passava; sem rede, ele estourava o tempo. */
+    vi.spyOn(global, 'fetch').mockRejectedValue(new Error('unexpected network call'));
     mockDb = {
       select: vi.fn().mockReturnThis(),
       from: vi.fn().mockReturnThis(),
