@@ -1,12 +1,19 @@
 import { type TicketAttachment } from '@template/shared/schemas/ticket-attachment.schema';
 import { type TicketHistory } from '@template/shared/schemas/ticket-history.schema';
 import { type Ticket } from '@template/shared/schemas/ticket.schema';
+import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
 import { render, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-ticket-detail-harness.test.svelte';
-import { buildNotice, ownFilesOf, type TicketDetailModel } from './use-ticket-detail.svelte';
+import {
+  buildNotice,
+  hasQueuedNotice,
+  ownFilesOf,
+  type TicketDetailModel,
+  toNoticeResult,
+} from './use-ticket-detail.svelte';
 
 vi.mock('$lib/api/tickets.api', () => ({
   ticketsApi: {
@@ -15,6 +22,8 @@ vi.mock('$lib/api/tickets.api', () => ({
     attachments: vi.fn(),
     removeAttachment: vi.fn(),
     serviceOrder: vi.fn(),
+    whatsappNotices: vi.fn(),
+    retryWhatsappNotice: vi.fn(),
   },
 }));
 
@@ -91,6 +100,48 @@ function mountModel(id = 22): TicketDetailModel {
   return model;
 }
 
+const failedNotice: WhatsappNotice = {
+  id: 9,
+  kind: 'ticket_ready',
+  status: 'failed',
+  attempts: 9,
+  failureReason: 'not_connected',
+  createdAt: '2026-09-23T12:00:00.000Z',
+  sentAt: null,
+};
+
+describe('toNoticeResult', () => {
+  // feliz
+  /* Na fila é o caminho feliz: não oferece o link manual por cima. */
+  it('treats a queued notice as on its way', () => {
+    expect(toNoticeResult({ outcome: 'queued' }, 'Suporte TI')).toEqual({
+      isSent: true,
+      message: 'Aviso na fila: sai pelo WhatsApp de Suporte TI em instantes.',
+    });
+  });
+
+  // triste
+  it('tells why the notice did not even enter the queue', () => {
+    expect(toNoticeResult({ outcome: 'not_linked' }, 'Suporte TI')).toEqual({
+      isSent: false,
+      message: 'O responsável ainda não vinculou o WhatsApp.',
+    });
+  });
+});
+
+describe('hasQueuedNotice', () => {
+  // feliz
+  it('keeps refreshing while a notice is in the queue', () => {
+    expect(hasQueuedNotice([{ ...failedNotice, status: 'pending' }])).toBe(true);
+  });
+
+  // triste
+  it('stops refreshing when every notice is settled', () => {
+    expect(hasQueuedNotice([failedNotice, { ...failedNotice, id: 2, status: 'sent' }])).toBe(false);
+    expect(hasQueuedNotice([])).toBe(false);
+  });
+});
+
 describe('ownFilesOf', () => {
   // feliz
   it('keeps the files of the ticket itself', () => {
@@ -137,6 +188,40 @@ describe('useTicketDetailModel', () => {
     vi.mocked(ticketsApi.removeAttachment).mockResolvedValue(undefined);
     vi.mocked(ticketsApi.serviceOrder).mockReset();
     vi.mocked(triggerBrowserDownload).mockReset();
+    vi.mocked(ticketsApi.whatsappNotices).mockResolvedValue([failedNotice]);
+    vi.mocked(ticketsApi.retryWhatsappNotice).mockReset();
+    vi.mocked(ticketsApi.retryWhatsappNotice).mockResolvedValue({
+      ...failedNotice,
+      status: 'pending',
+    });
+  });
+
+  // feliz
+  it('loads the WhatsApp notices and puts a stopped one back in the queue', async () => {
+    const model = mountModel();
+
+    await waitFor(() => expect(model.data.notices).toEqual([failedNotice]));
+    model.actions.onRetryNotice(failedNotice);
+
+    await waitFor(() => expect(ticketsApi.retryWhatsappNotice).toHaveBeenCalledWith(22, 9));
+    await waitFor(() => expect(model.state.retryingNoticeId).toBeNull());
+  });
+
+  // triste
+  it('tells why a notice could not be sent again', async () => {
+    vi.mocked(ticketsApi.retryWhatsappNotice).mockRejectedValue(
+      new ApiError(409, 'Este aviso não pode ser reenviado: ele está na fila ou já saiu.'),
+    );
+    const model = mountModel();
+
+    await waitFor(() => expect(model.data.notices).toHaveLength(1));
+    model.actions.onRetryNotice(failedNotice);
+
+    await waitFor(() =>
+      expect(model.state.noticeError).toBe(
+        'Este aviso não pode ser reenviado: ele está na fila ou já saiu.',
+      ),
+    );
   });
 
   // feliz

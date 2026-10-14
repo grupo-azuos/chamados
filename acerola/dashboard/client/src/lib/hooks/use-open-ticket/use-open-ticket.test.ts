@@ -178,6 +178,19 @@ describe('useOpenTicketModel', () => {
     await waitFor(() => expect(model.data.opened?.isNoticeSent).toBe(true));
   });
 
+  /* Na fila o servidor entrega em seguida: a tela diz que vai chegar, sem o link manual. */
+  it('tells the protocol is on its way when the notice entered the queue', async () => {
+    vi.mocked(ticketsApi.create).mockResolvedValue(
+      ticket({ notifyWhatsapp: true, contactPhone: '11987654321', openingNotice: 'queued' }),
+    );
+    const model = mountModel();
+
+    await fillMinimum(model);
+    model.actions.onSubmit();
+
+    await waitFor(() => expect(model.data.opened?.isNoticeSent).toBe(true));
+  });
+
   it('does not claim the protocol was sent when the bot could not send it', async () => {
     vi.mocked(ticketsApi.create).mockResolvedValue(
       ticket({ notifyWhatsapp: true, contactPhone: '11987654321', openingNotice: 'not_linked' }),

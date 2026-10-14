@@ -143,7 +143,9 @@ export function useOpenTicketModel(): OpenTicketModel {
         opened = {
           protocol: ticket.protocol,
           whatsAppLink: buildNotice(ticket),
-          isNoticeSent: ticket.openingNotice === 'sent',
+          /* Na fila conta como enviado: o servidor entrega em seguida e tenta de novo se o
+             WhatsApp estiver fora — o link manual só atrapalharia. */
+          isNoticeSent: ticket.openingNotice === 'sent' || ticket.openingNotice === 'queued',
         };
       },
     }),
