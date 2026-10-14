@@ -13,7 +13,7 @@ Crie uma branch: `feature/remove-tasks-example` (`git-flow`).
 
 ## 1. Apagar
 
-Relativo a `acerola/dashboard/`:
+Relativo a `chamados/dashboard/`:
 
 ```
 shared/src/domain/task-status.util.ts (+ .test.ts)
@@ -25,7 +25,7 @@ scripts/seed/tasks/                             (pasta inteira)
 client/src/lib/api/tasks.api.ts
 client/src/lib/hooks/use-task-list/             (pasta inteira: .svelte.ts, .test.ts, harness)
 client/src/lib/hooks/use-task-form/             (pasta inteira: .svelte.ts, .test.ts, harness)
-client/src/routes/(app)/infra/tasks/                   (pasta inteira: +page, slots, components/acerola-task-*)
+client/src/routes/(app)/infra/tasks/                   (pasta inteira: +page, slots, components/azuos-task-*)
 client/src/lib/components/task-list-view/       (enquanto não migrado para a rota — sistema-de-design §10)
 client/src/lib/components/task-form-dialog/     (idem)
 client/e2e/tasks.e2e.ts
@@ -44,7 +44,7 @@ nem nada de `lib/` que não seja específico de tarefas.
 - `server/src/lib/db/open-database.util.test.ts` — não referencia `tasks` (testa só
   `MIGRATIONS_FOLDER` e `describeDatabaseUrl`, contra Postgres); não precisa mexer.
 - `scripts/seed/seed-all.ts` — tirar `seedTasks` e o `report`.
-- `acerola/dashboard/package.json` — tirar `seed:tasks`.
+- `chamados/dashboard/package.json` — tirar `seed:tasks`.
 - `client/src/lib/navigation/navigation.ts` — tirar o item `tasks`.
 - `client/src/routes/+page.ts` — redirecionar para a tela principal nova (ou mostrar um
   `EmptyState` de boas-vindas se ainda não houver nenhuma).

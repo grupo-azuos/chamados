@@ -20,7 +20,7 @@ for usar, modificar ou redistribuir o projeto.
 ## GSAP — não é código aberto
 
 **O que é:** a biblioteca de animação usada na tela do painel
-(`acerola/dashboard/client/src/lib/motion/motion.ts`).
+(`chamados/dashboard/client/src/lib/motion/motion.ts`).
 
 **Licença:** [GSAP Standard License](https://gsap.com/community/standard-license/) — a licença
 "sem custo" da Webflow, Inc. Não é MIT, não é BSD e não é uma licença aprovada como código
@@ -62,7 +62,7 @@ que este projeto **não importa**. Esse kit depende de pacotes sob AGPL-3.0:
 
 ## Bot de WhatsApp: dependência GPL-3.0, isolada
 
-O bot de WhatsApp (`acerola/dashboard/bot`) usa o [Baileys](https://github.com/WhiskeySockets/Baileys)
+O bot de WhatsApp (`chamados/dashboard/bot`) usa o [Baileys](https://github.com/WhiskeySockets/Baileys)
 (MIT), que depende de `libsignal` — a criptografia do WhatsApp — sob **GPL-3.0**.
 
 - O bot é um **programa à parte**: instalação e imagem Docker próprias, processo próprio, e fala

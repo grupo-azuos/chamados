@@ -6,7 +6,7 @@
 # lembrava de digitar o título na hora do merge.
 #
 # Aqui o título é conferido ANTES do merge, pela MESMA regra dos commits
-# (`acerola/dashboard/commitlint.config.mjs`) — e precisa ser do tipo `merge`, porque é isso
+# (`chamados/dashboard/commitlint.config.mjs`) — e precisa ser do tipo `merge`, porque é isso
 # que ele vai virar no histórico:
 #
 #   [merge](web): Chamado vira ordem de serviço — linha do tempo e PDF conferível
@@ -30,7 +30,7 @@ jobs:
       # O título entra por variável de ambiente, e não colado no comando: título de PR é texto
       # de quem abriu o PR, e colado no script ele poderia virar comando.
       - name: O título segue o formato [merge](local) Mensagem
-        working-directory: acerola/dashboard
+        working-directory: chamados/dashboard
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |

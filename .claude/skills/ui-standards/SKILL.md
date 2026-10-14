@@ -5,9 +5,9 @@ description: O padrão de UI/UX do projeto — tokens de cor, forma (raio, borda
 
 # Padrão de UI/UX
 
-Onde cada arquivo mora, prefixo `acerola-*` e o que a rota pode fazer: skill `design-system`.
+Onde cada arquivo mora, prefixo `azuos-*` e o que a rota pode fazer: skill `design-system`.
 Como escrever o componente: skill `ui-component`. Os nomes abaixo (`PageHeader`, `ErrorState`…)
-são os componentes `acerola-*` correspondentes (`acerola-page-header`, `acerola-error-state`…).
+são os componentes `azuos-*` correspondentes (`azuos-page-header`, `azuos-error-state`…).
 
 O objetivo não é enfeitar: é que **toda tela pareça o mesmo sistema** e que a pessoa nunca fique
 sem saber o que aconteceu.
@@ -22,7 +22,7 @@ token, ele não entra no componente** — ou vira token, ou não é usado.
 | Decisão | Dono | Nunca |
 |---|---|---|
 | Cor, raio, borda, sombra, altura, tipografia | **token** (`tokens.css`) | hex, `rounded-[13px]`, `h-[38px]`, `text-[11px]` no componente |
-| Variante, estado visual, forma do controle | **componente `acerola-*`** (via `tv()`) | rota escolhendo `rounded-*`/`border-*`/`h-*` de componente |
+| Variante, estado visual, forma do controle | **componente `azuos-*`** (via `tv()`) | rota escolhendo `rounded-*`/`border-*`/`h-*` de componente |
 | Qual componente aparece, em que ordem, espaçamento entre eles | **rota** (`+page.svelte`) | rota com `<button>`, `<input>`, `<table>` estilizados à mão |
 | Tabela × cartão, página atual, filtros | **hook** (`use-*`) / preferência global | componente decidindo sozinho pela largura em JS |
 | Texto da tela | **componente de feature** (recebe por `data`) ou rota | genérico com texto de domínio fixo |
@@ -120,7 +120,7 @@ Três degraus definidos em `tokens.css`. **O raio é sempre `rounded-control`, �
 | `control-icon-*` | quadrado | botão só de ícone, mesma altura do vizinho |
 
 Regra que decide: **o que divide fileira tem a mesma altura.** Campo de formulário é sempre
-`control-lg` — nem mais, nem menos —, aplicado no `acerola-*`, nunca na tela.
+`control-lg` — nem mais, nem menos —, aplicado no `azuos-*`, nunca na tela.
 
 ### 3.5 Tipografia
 
@@ -147,8 +147,8 @@ Corpo (visão de dados)
 PaginationBar, quando a lista é paginada
 ```
 
-**Barra de filtros** — cada filtro tem o NOME em cima (`acerola-filter-field` envolvendo o
-`acerola-option-picker`), numa fileira `flex flex-wrap items-end gap-x-4 gap-y-3`. Um
+**Barra de filtros** — cada filtro tem o NOME em cima (`azuos-filter-field` envolvendo o
+`azuos-option-picker`), numa fileira `flex flex-wrap items-end gap-x-4 gap-y-3`. Um
 liga/desliga ("mostrar arquivadas", "só com estoque") também é um filtro com nome e duas
 pastilhas — nunca uma caixa de seleção solta embaixo dos outros. À direita (`ml-auto`), "Limpar
 filtros" (`ghost`, `lg`), que só aparece quando há filtro ativo e some quando o aviso de lista
@@ -196,7 +196,7 @@ colunas, cartão para ler um item por vez. Os dois mostram **os mesmos dados e a
 - No computador, o `TableViewToggle` (na barra de filtros) escolhe entre tabela e cards: dois
   botões numa moldura, o formato em uso preenchido com a cor principal. Abaixo de `xl` ele some.
   É **preferência do sistema, não da tela**: vale para todas as listas e fica guardada no
-  navegador (`acerola-table-view`). Hook: `use-table-view`.
+  navegador (`azuos-table-view`). Hook: `use-table-view`.
 - A troca é **por CSS**, não por JS: os dois blocos são renderizados e um deles fica `hidden`.
   Assim não há pulo de layout na primeira pintura nem diferença entre servidor e navegador.
 
@@ -240,20 +240,20 @@ O par `data-slot` é obrigatório: é por ele que teste e story encontram cada f
 
 ### 6.3 Anatomia da tabela
 
-- Contêiner: o `acerola-table` já entrega `rounded-surface border bg-card shadow-xs overflow-hidden`;
+- Contêiner: o `azuos-table` já entrega `rounded-surface border bg-card shadow-xs overflow-hidden`;
   envolva em `overflow-x-auto` e dê `min-w-[…]` à tabela para a **caixa** rolar, não a página.
 - Cabeçalho: `text-xs font-medium text-muted-foreground`; cada coluna com `min-w-*` fixo.
 - Primeira coluna = identificador, em `font-medium`, com linha secundária `text-xs` embaixo.
 - Coluna de ações por último, `text-right`, cabeçalho `sr-only` "Ações", botões `control-sm`
   ou `control-icon-sm` `ghost` com `aria-label`.
-- Linha: `border-b border-border/60` e hover já vêm do `acerola-table-row`. Sem zebra.
+- Linha: `border-b border-border/60` e hover já vêm do `azuos-table-row`. Sem zebra.
 - Rodapé (snippet `footer` do `Table`): fonte do dado à esquerda, contagem à direita.
 
 ### 6.4 Componente
 
 As 12 listas de hoje repetem o par cartão/tabela à mão (já com o mesmo raio,
 `rounded-surface`). O alvo é um genérico
-`acerola-data-view` que recebe `data.items`, um snippet `card(item)` e um snippet `row(item)` +
+`azuos-data-view` que recebe `data.items`, um snippet `card(item)` e um snippet `row(item)` +
 `columns`, e cuida sozinho de `data-slot`, troca por largura, preferência e contêiner.
 Lista nova usa ele; lista antiga migra quando for tocada.
 
@@ -261,7 +261,7 @@ Lista nova usa ele; lista antiga migra quando for tocada.
 
 ## 7. Paginação
 
-`PaginationBar` (`acerola-pagination-bar`), **embaixo da visão de dados**, servindo tabela e
+`PaginationBar` (`azuos-pagination-bar`), **embaixo da visão de dados**, servindo tabela e
 cartão ao mesmo tempo (trocar de formato não muda de página).
 
 | Situação | Regra |
@@ -287,7 +287,7 @@ cartão ao mesmo tempo (trocar de formato não muda de página).
 
 - Em modal (`Dialog`, `rounded-surface`) para cadastro curto; em tela própria se tiver mais de
   ~8 campos. No celular o diálogo vira gaveta de baixo (`ResponsiveDialogContent`).
-- **Todo campo é `control-lg` (40px) + `rounded-control`**, vindo do `acerola-*`. Textarea usa
+- **Todo campo é `control-lg` (40px) + `rounded-control`**, vindo do `azuos-*`. Textarea usa
   `min-h-24` e o mesmo raio.
 - Rótulo acima do campo (`text-sm font-medium`), **erro colado embaixo do campo**
   (`text-xs text-destructive`) — nunca só um resumo no topo.
@@ -365,7 +365,7 @@ lista vira cartão (§6).
 **Nada rola para o lado, nunca.**
 
 - **Pastilha de escolha quebra linha, não vira tira rolante.** Grupo de opções usa `flex-wrap`;
-  nunca `overflow-x-auto`. O `acerola-option-picker` troca de forma sozinho: em FILTRO são
+  nunca `overflow-x-auto`. O `azuos-option-picker` troca de forma sozinho: em FILTRO são
   pastilhas até 6 opções; em FORMULÁRIO (`ui.fullWidth`, dentro de diálogo) só até 3, numa
   linha de colunas iguais — acima disso vira a lista que abre, com busca. Pastilha não escala
   dentro de um modal: com muitas opções ela quebra em várias fileiras.
@@ -381,7 +381,7 @@ lista vira cartão (§6).
 
 ## 14. Checagem
 
-`npm run check:design` (em `acerola/dashboard`) confere raio, paleta crua, fonte em px, sombra e o
+`npm run check:design` (em `chamados/dashboard`) confere raio, paleta crua, fonte em px, sombra e o
 par cartão/tabela, junto com as regras de estrutura — nos dois apps Svelte (dashboard e agent). Só
 reprova o que é novo; a dívida está na baseline e só diminui. O mesmo check também roda sozinho,
 como hook `PostToolUse`, a cada `Edit`/`Write` do Claude Code — ele avisa na hora se a edição

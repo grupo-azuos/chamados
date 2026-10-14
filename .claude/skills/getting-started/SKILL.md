@@ -26,7 +26,7 @@ git --version
 ## 2. Instalar
 
 ```bash
-cd acerola/dashboard
+cd chamados/dashboard
 npm install
 ```
 

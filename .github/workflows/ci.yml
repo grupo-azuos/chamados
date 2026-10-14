@@ -8,11 +8,11 @@ on:
   pull_request:
 
 # A pasta do projeto, e nao a de cima: o `package.json` e o `package-lock.json` moram em
-# `acerola/dashboard`. Aponta para `acerola` e o `npm ci` falha em 14 segundos dizendo que nao
+# `chamados/dashboard`. Aponta para `azuos` e o `npm ci` falha em 14 segundos dizendo que nao
 # existe lockfile — e nada depois dele chega a rodar.
 defaults:
   run:
-    working-directory: acerola/dashboard
+    working-directory: chamados/dashboard
 
 jobs:
   verify:
@@ -40,7 +40,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: acerola/dashboard/package-lock.json
+          cache-dependency-path: chamados/dashboard/package-lock.json
 
       - run: npm ci
       - run: npm run lint
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: acerola/dashboard/bot
+        working-directory: chamados/dashboard/bot
     steps:
       - uses: actions/checkout@v5
 
@@ -68,7 +68,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: acerola/dashboard/bot/package-lock.json
+          cache-dependency-path: chamados/dashboard/bot/package-lock.json
 
       - run: npm ci
       - run: npm run lint

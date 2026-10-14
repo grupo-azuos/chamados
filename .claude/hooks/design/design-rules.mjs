@@ -35,12 +35,12 @@
 
 /** Os apps Svelte do projeto. Cada um segue as mesmas regras de componente, hook e rota. */
 export const APPS = [
-  { name: 'dashboard', src: 'acerola/dashboard/client/src' },
-  { name: 'agent', src: 'acerola/agent/svelte/src' },
+  { name: 'dashboard', src: 'chamados/dashboard/client/src' },
+  { name: 'agent', src: 'chamados/agent/svelte/src' },
 ];
 
 /** A pasta do server, fora dos apps Svelte (só a regra `storage-folder-language` olha aqui). */
-const SERVER_SRC = 'acerola/dashboard/server/src';
+const SERVER_SRC = 'chamados/dashboard/server/src';
 
 /** Pastas permitidas em `<app>/lib` (skill `design-system` §2), para os dois apps. */
 export const LIB_FOLDERS = [
@@ -59,7 +59,7 @@ export const LIB_FOLDERS = [
  * Primitivos genéricos por natureza: não conhecem domínio (gráfico, barra, medidor, invólucro
  * de um `ui/<x>`), mas hoje têm um consumidor só. Sem esta lista a regra
  * `feature-component-in-lib` os empurraria para dentro da feature — e a segunda tela que
- * precisasse de um gráfico teria de trazê-los de volta. O nome vale com ou sem `acerola-`.
+ * precisasse de um gráfico teria de trazê-los de volta. O nome vale com ou sem `azuos-`.
  */
 export const GENERIC_BY_DESIGN = [
   'radar-chart',
@@ -79,7 +79,7 @@ export const GENERIC_BY_DESIGN = [
 
 /** @param {string} folder */
 function isGenericByDesign(folder) {
-  const name = (segments(folder).at(-1) ?? '').replace(/^acerola-/, '');
+  const name = (segments(folder).at(-1) ?? '').replace(/^azuos-/, '');
 
   return GENERIC_BY_DESIGN.some((entry) =>
     typeof entry === 'string' ? entry === name : entry.test(name),
@@ -218,7 +218,7 @@ function featureOf(path) {
  * Para cada componente de `lib/components`, as features que o usam — seguindo a cadeia: se
  * `dashboard-peaking` só é importado por `dashboard-view`, e `dashboard-view` só pela rota
  * `dashboard`, os dois são do dashboard. O `+layout` da raiz conta como "app inteiro" (`*`).
- * Só compara arquivos do MESMO app — um `acerola-button` do agent nunca é "dono" de um import
+ * Só compara arquivos do MESMO app — um `azuos-button` do agent nunca é "dono" de um import
  * do dashboard, e vice-versa.
  * @param {ProjectFile[]} files @returns {Map<string, Set<string>>}
  */
@@ -322,14 +322,14 @@ function classViolations(files, rule, pattern, allowed = () => false) {
 export const RULES = [
   {
     id: 'component-prefix',
-    description: 'Todo componente próprio mora em pasta `acerola-<nome>/`.',
+    description: 'Todo componente próprio mora em pasta `azuos-<nome>/`.',
     check: (files) =>
       componentFolders(files)
-        .filter((folder) => !segments(folder).at(-1)?.startsWith('acerola-'))
+        .filter((folder) => !segments(folder).at(-1)?.startsWith('azuos-'))
         .map((folder) => ({
           rule: 'component-prefix',
           file: folder,
-          detail: 'pasta sem prefixo acerola-',
+          detail: 'pasta sem prefixo azuos-',
         })),
   },
   {
@@ -495,7 +495,7 @@ export const RULES = [
         'shadow-scale',
         OFF_SCALE_SHADOW,
         (match, file) =>
-          match === 'shadow-2xl' && file.path.includes('/acerola-responsive-dialog-content/'),
+          match === 'shadow-2xl' && file.path.includes('/azuos-responsive-dialog-content/'),
       ),
   },
   {
@@ -585,7 +585,7 @@ export function compareWithBaseline(violations, baseline) {
 /**
  * As violações que tocam um arquivo editado: as dele mesmo, e as da pasta de componente onde
  * ele mora (a violação de `component-prefix`/`component-siblings` é registrada na PASTA, não no
- * arquivo — editar `acerola-x.svelte` precisa acusar a violação de `acerola-x/`).
+ * arquivo — editar `azuos-x.svelte` precisa acusar a violação de `azuos-x/`).
  * @param {Violation[]} violations @param {string} path @returns {Violation[]}
  */
 export function violationsTouching(violations, path) {

@@ -1,0 +1,1 @@
+sh chamados/dashboard/scripts/git/branch-guard.sh merge
