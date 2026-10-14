@@ -10,8 +10,17 @@ e é separado do resto: o servidor de chamados não conhece o WhatsApp, só a AP
   a área. O escolhido vira o responsável e, se a pessoa pediu aviso, o WhatsApp dele manda o
   "recebi o seu chamado".
 - **Chamado pronto.** Na ficha do chamado, **Avisar no WhatsApp** envia pelo número do
-  responsável. Quando não sai (sem vínculo, limite do dia), a tela diz o motivo e oferece o link
-  para enviar à mão.
+  responsável. Quando nem entra na fila (sem vínculo, pessoa não pediu aviso), a tela diz o
+  motivo e oferece o link para enviar à mão.
+- **Fila de saída.** Os avisos de chamado ("recebi o seu chamado", "ficou pronto") não saem na
+  hora: entram na tabela `whatsapp_messages` como `pending`, e o entregador do servidor
+  (`WhatsappOutboxService`) os manda a cada 5 segundos — **no máximo um por número por volta**,
+  para o ritmo parecer de gente. Bot fora do ar ou celular desconectado: tenta de novo com espera
+  crescente (30 s, 1 min, 2 min… até 30 min), por até 1 dia. Limite do dia esgotado: o "recebi"
+  é descartado (amanhã ele não diz nada) e o "pronto" fica para as 8h do dia seguinte. Telefone
+  sem WhatsApp ou número desvinculado: para na hora. A ficha do chamado mostra cada aviso (na
+  fila, enviado, não saiu, descartado) e oferece **Reenviar** para o que parou. As respostas
+  da conversa (`/chamado`, `/acesso`) não passam pela fila: o bot responde na hora.
 - **Chamado a partir do WhatsApp.** Quem manda `/chamado` para o número de um responsável
   recebe UMA mensagem com um link assinado. O link abre o `/support` já com o responsável, o
   telefone de quem escreveu e, quando o responsável atende uma área só, a área. O chamado é
@@ -142,7 +151,8 @@ Respostas de erro do envio: `409` (`not_connected`) quando o número não está 
   telefone.
 - **Trocar `BOT_SESSION_KEY` invalida todos os vínculos.**
 - **Banimento.** O Baileys não é oficial, e o WhatsApp pode banir números que usam automação.
-  O teto de mensagens por pessoa e os alertas ficam no servidor (próxima etapa).
+  O teto de mensagens por pessoa, os alertas e o ritmo da fila de saída (uma mensagem por número
+  a cada 5 s) ficam no servidor.
 
 ## Onde fica cada coisa
 
