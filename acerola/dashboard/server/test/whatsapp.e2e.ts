@@ -106,4 +106,9 @@ describe.skipIf(!testDatabaseUrl)('WhatsApp API (e2e)', () => {
   it('refuses the ready notice to who is not logged in', async () => {
     await request(app.getHttpServer()).post('/api/tickets/1/whatsapp-notice').expect(401);
   });
+
+  it('refuses the notice list and the retry to who is not logged in', async () => {
+    await request(app.getHttpServer()).get('/api/tickets/1/whatsapp-notices').expect(401);
+    await request(app.getHttpServer()).post('/api/tickets/1/whatsapp-notices/1/retry').expect(401);
+  });
 });
