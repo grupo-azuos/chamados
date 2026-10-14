@@ -11,7 +11,7 @@
       id: 1,
       name: 'Azuos Ticket',
       description: 'Sistema central',
-      repositoryUrl: 'vinicius-gpl/acerola-ticket',
+      repositoryUrl: 'grupo-azuos/chamados',
       githubRepoOwner: 'vinicius-gpl',
       githubRepoName: 'azuos-ticket',
       responsibleId: null,

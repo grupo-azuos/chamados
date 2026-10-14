@@ -9,7 +9,7 @@
     id: 1,
     name: 'Azuos Ticket',
     description: 'Sistema central de chamados e governança de TI.',
-    repositoryUrl: 'vinicius-gpl/acerola-ticket',
+    repositoryUrl: 'grupo-azuos/chamados',
     githubRepoOwner: 'vinicius-gpl',
     githubRepoName: 'azuos-ticket',
     /* Dado INVENTADO: nenhum nome daqui existe. */
