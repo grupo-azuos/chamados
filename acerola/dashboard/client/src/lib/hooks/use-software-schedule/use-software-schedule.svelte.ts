@@ -13,6 +13,9 @@ import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte
 
 export type ScheduleViewMode = 'day' | 'week' | 'month';
 
+/** A visão com que o cronograma abre. */
+export const DEFAULT_SCHEDULE_VIEW_MODE: ScheduleViewMode = 'month';
+
 export type DeveloperActivitySummary = {
   author: string;
   mergedPullRequests: number;
@@ -300,7 +303,8 @@ function selectedGithubDay(
 export function useSoftwareScheduleModel(): SoftwareScheduleModel {
   const queryClient = useQueryClient();
   const currentDate = writable<Date>(new SvelteDate());
-  const viewMode = writable<ScheduleViewMode>('week');
+  /* Abre no mês: é a visão que a equipe usa para planejar; semana e dia ficam a um clique. */
+  const viewMode = writable<ScheduleViewMode>(DEFAULT_SCHEDULE_VIEW_MODE);
   let githubDayDate = $state<string | null>(null);
   let githubDayType = $state<'pr' | 'issue' | 'all'>('pr');
   let filters = $state<ScheduleFilters>({ project: '', author: '', type: '' });

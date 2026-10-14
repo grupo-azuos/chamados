@@ -12,6 +12,9 @@
     repositoryUrl: 'vinicius-gpl/acerola-ticket',
     githubRepoOwner: 'vinicius-gpl',
     githubRepoName: 'acerola-ticket',
+    /* Dado INVENTADO: nenhum nome daqui existe. */
+    responsibleId: 'u-ana',
+    responsibleName: 'Ana Lima',
     status: 'active',
     color: 'blue',
     openTicketsCount: 4,
@@ -43,6 +46,9 @@
       repositoryUrl: 'vinicius-gpl/erp-legacy',
       githubRepoOwner: 'vinicius-gpl',
       githubRepoName: 'erp-legacy',
+      /* Caso limite: sistema sem ninguém respondendo por ele. */
+      responsibleId: null,
+      responsibleName: null,
       status: 'deprecated',
       color: 'amber',
       openTicketsCount: 0,
