@@ -229,10 +229,13 @@ export const ticketInviteSchema = z.object({
 export const ticketAssigneeOptionsQuerySchema = z.object({ area: ticketAreaSchema });
 
 /**
- * O desfecho de um aviso por WhatsApp. `sent` é o único em que a mensagem saiu; os demais
- * dizem por quê não — e a tela oferece o link manual no lugar.
+ * O desfecho de um aviso por WhatsApp. `queued` é o caminho feliz: o aviso entrou na fila de
+ * saída e o servidor o entrega em seguida (ver `whatsapp-notice.schema`). `sent` sobra para a
+ * mensagem que saiu na hora. Os demais dizem por que nem entrou na fila — e a tela oferece o
+ * link manual no lugar.
  */
 export const TICKET_NOTICE_OUTCOMES = [
+  'queued',
   'sent',
   'not_configured',
   'not_connected',
@@ -258,7 +261,10 @@ export type OpenedTicket = z.infer<typeof openedTicketSchema>;
 export type TicketNotice = z.infer<typeof ticketNoticeSchema>;
 
 /** Por que o aviso não saiu, em palavras de gente — o que a tela mostra junto do link manual. */
-export const TICKET_NOTICE_MESSAGES: Record<Exclude<TicketNoticeOutcome, 'sent'>, string> = {
+export const TICKET_NOTICE_MESSAGES: Record<
+  Exclude<TicketNoticeOutcome, 'sent' | 'queued'>,
+  string
+> = {
   not_configured: 'O WhatsApp não está configurado nesta instalação.',
   not_connected: 'O WhatsApp do responsável está desconectado.',
   not_linked: 'O responsável ainda não vinculou o WhatsApp.',
