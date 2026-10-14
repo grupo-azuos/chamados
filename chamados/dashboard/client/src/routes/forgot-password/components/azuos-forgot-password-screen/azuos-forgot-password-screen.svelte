@@ -40,7 +40,7 @@
 <div class="bg-background grid min-h-svh lg:grid-cols-2">
   <div class="flex items-center justify-center p-6 sm:p-10">
     <div class="flex w-full max-w-sm flex-col gap-6">
-      <BrandMark ui={{ size: 'lg' }} />
+      <BrandMark ui={{ size: 'lg', variant: 'tile' }} />
 
       {#if isSent}
         <div class="flex flex-col gap-1.5">
@@ -107,7 +107,12 @@
 
   <!-- Escondido abaixo de `lg`, pelo mesmo motivo da tela de login: numa tela pequena o
        formulário já ocupa o espaço inteiro. -->
-  <div class="bg-foreground text-background relative hidden flex-col justify-end p-14 lg:flex">
+  <!-- O lado da MARCA: o azul da barra lateral com a logo branca oficial, que só existe
+       sobre fundo da marca (ver `azuos-brand-mark`). -->
+  <div
+    class="bg-sidebar text-sidebar-accent-foreground relative hidden flex-col justify-between p-14 lg:flex"
+  >
+    <BrandMark ui={{ size: 'lg' }} />
     <p class="text-2xl leading-snug font-semibold">
       Sua senha é só sua: nem quem administra o sistema consegue vê-la.
     </p>

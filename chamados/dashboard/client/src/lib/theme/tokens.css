@@ -47,6 +47,18 @@
    (em vez de inventar equivalentes) é o que garante que continuem iguais.
    ========================================================================== */
 :root {
+  /* ---- Primitivas da marca — os valores oficiais, os mesmos do paralegal ---- */
+  --brand-blue-900: #142b69;
+  --brand-blue-800: #1b3a8c; /* AZUL PRINCIPAL OFICIAL (fundo da logo) */
+  --brand-blue-700: #22429c;
+  --brand-blue-600: #2e52b8;
+  --brand-blue-500: #4265d4;
+  --brand-blue-100: #e1e6f5;
+
+  --brand-yellow-500: #f5c518; /* AMARELO OFICIAL (o ponto da logo) */
+  --brand-yellow-400: #f7ce3c;
+  --brand-yellow-300: #fade7a;
+
   /* Tons de fundo, do mais fundo ao mais alto. `surface` é o que sobe acima do fundo. */
   --crust: #e5e7eb;
   --mantle: #f3f4f6;
@@ -67,21 +79,21 @@
   --card-foreground: #111827;
   --popover: #ffffff;
   --popover-foreground: #111827;
-  --primary: #1b3a8c;
+  --primary: var(--brand-blue-800);
   --primary-foreground: #ffffff;
   --secondary: #f3f4f6;
   --secondary-foreground: #111827;
   --muted: #f3f4f6;
   --muted-foreground: #6b7280;
-  --accent: #e1e6f5;
-  --accent-foreground: #142b69;
-  --accent-hero: #f5c518;
-  --accent-hero-foreground: #142b69;
+  --accent: var(--brand-blue-100);
+  --accent-foreground: var(--brand-blue-900);
+  --accent-hero: var(--brand-yellow-500);
+  --accent-hero-foreground: var(--brand-blue-900);
   --destructive: #e11d48;
   --destructive-foreground: var(--primary-foreground);
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --ring: #2e52b8;
+  --border: #d1d5db;
+  --input: #d1d5db;
+  --ring: var(--brand-blue-600);
 
   /* Os tons de ESTADO. `danger` é o `destructive` acima; estes três não existem na paleta
      do agente, então nascem aqui. No claro são os tons 700 (texto pequeno legível sobre
@@ -97,30 +109,31 @@
   --info: #1d4ed8;
   --info-soft: #dbeafe;
   --destructive-soft: #ffe4e6;
-  --primary-soft: #e1e6f5;
+  --primary-soft: var(--brand-blue-100);
 
   /* As cores de categoria dos gráficos. Ver utils/chart-slice.ts. */
-  --chart-1: #1b3a8c;
-  --chart-2: #f5c518;
-  --chart-3: #4265d4;
+  --chart-1: var(--brand-blue-800);
+  --chart-2: var(--brand-yellow-500);
+  --chart-3: var(--brand-blue-500);
   --chart-4: #10b981;
   --chart-5: #e11d48;
 
   /**
    * ---- Semântica da BARRA LATERAL ----
    *
-   * Ela SEGUE o tema, como no agente. Antes era azul fixa nos dois temas para dar
-   * identidade; a identidade agora vem da paleta inteira, e uma barra que ignora o tema
-   * seria a única parte da tela a ignorá-lo.
+   * Ela NÃO segue o tema da página, como no paralegal: é azul nos dois temas, porque é ela
+   * que carrega a logo — e a logo oficial é branca, feita para fundo escuro. Sobre branco
+   * ela some. No escuro a barra desce um tom (#16265c): encostar no tom do fundo da página
+   * apagaria a separação entre menu e conteúdo.
    */
-  --sidebar: #f8fafc;
-  --sidebar-foreground: #111827;
-  --sidebar-primary: #1b3a8c;
+  --sidebar: var(--brand-blue-800);
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-primary: var(--brand-blue-600);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e1e6f5;
-  --sidebar-accent-foreground: #142b69;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #2e52b8;
+  --sidebar-accent: rgb(255 255 255 / 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.1);
+  --sidebar-ring: var(--brand-yellow-500);
 
   /**
    * ---- Apelidos da paleta antiga ----
@@ -129,8 +142,8 @@
    * tokens semânticos: as 44 telas que já usam `text-ink-700` ou `border-ink-300`
    * passaram a acompanhar o tema sem precisar ser reescritas uma a uma.
    *
-   * A escala `brand-*` foi embora: quem a usava agora usa `primary`, porque os pares que
-   * fixavam `text-white` sobre azul ficariam ilegíveis no tema escuro, onde o azul clareia.
+   * A escala `brand-*` existe só para o que é DA MARCA e não muda com o tema — a parte
+   * escolhida do seletor de módulos, em amarelo. Cor de tela continua sendo `primary`.
    */
   --ink-900: var(--foreground);
   --ink-700: var(--subtext);
@@ -159,20 +172,20 @@
   --card-foreground: #f3f4f6;
   --popover: #111827;
   --popover-foreground: #f3f4f6;
-  --primary: #6e8de0;
-  --primary-foreground: #071745;
+  --primary: var(--brand-blue-500);
+  --primary-foreground: #ffffff;
   --secondary: #1f2937;
   --secondary-foreground: #f3f4f6;
   --muted: #18202f;
   --muted-foreground: #9ca3af;
-  --accent: #16265c;
+  --accent: #1e293b;
   --accent-foreground: #f3f4f6;
   --accent-hero: #f7ce3c;
   --accent-hero-foreground: #45260b;
   --destructive: #fb7185;
-  --border: #243049;
-  --input: #1f2937;
-  --ring: #6e8de0;
+  --border: rgb(255 255 255 / 0.12);
+  --input: rgb(255 255 255 / 0.12);
+  --ring: var(--brand-blue-500);
 
   --success: #34d399;
   --success-soft: #022c22;
@@ -189,14 +202,14 @@
   --chart-4: #34d399;
   --chart-5: #fb7185;
 
-  --sidebar: #0e1626;
-  --sidebar-foreground: #f3f4f6;
-  --sidebar-primary: #6e8de0;
-  --sidebar-primary-foreground: #071745;
-  --sidebar-accent: #16265c;
-  --sidebar-accent-foreground: #f3f4f6;
-  --sidebar-border: #243049;
-  --sidebar-ring: #6e8de0;
+  --sidebar: #16265c;
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-primary: var(--brand-blue-600);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgb(255 255 255 / 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.1);
+  --sidebar-ring: var(--brand-yellow-500);
 
   color-scheme: dark;
 }
@@ -206,6 +219,17 @@
    assim a troca de tema muda a variável, e não a classe gerada.
    ========================================================================== */
 @theme inline {
+  --color-brand-blue-900: var(--brand-blue-900);
+  --color-brand-blue-800: var(--brand-blue-800);
+  --color-brand-blue-700: var(--brand-blue-700);
+  --color-brand-blue-600: var(--brand-blue-600);
+  --color-brand-blue-500: var(--brand-blue-500);
+  --color-brand-blue-100: var(--brand-blue-100);
+
+  --color-brand-yellow-500: var(--brand-yellow-500);
+  --color-brand-yellow-400: var(--brand-yellow-400);
+  --color-brand-yellow-300: var(--brand-yellow-300);
+
   --color-crust: var(--crust);
   --color-mantle: var(--mantle);
   --color-base: var(--base);

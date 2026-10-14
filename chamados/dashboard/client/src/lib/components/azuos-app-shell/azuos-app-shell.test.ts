@@ -67,6 +67,19 @@ describe('AzuosAppShell', () => {
   });
 
   // feliz
+  /* O formato do paralegal: logo branca oficial no topo da barra e o Zuzu debruçado na
+     beirada logo acima de quem entrou. */
+  it('draws the official logo on top and Zuzu leaning above the user', () => {
+    renderShell({ data: { user: { name: 'Ana Souza', email: 'a@b.c', role: 'Administrador' } } });
+
+    const logos = screen.getAllByRole('img', { name: 'Grupo Azuos' });
+    expect(logos.map((logo) => logo.getAttribute('src')).join(' ')).toContain('azuos-logo');
+
+    const zuzu = document.querySelector('[data-slot="sidebar-footer"] img[aria-hidden="true"]');
+    expect(zuzu?.getAttribute('src')).toContain('debrucado');
+  });
+
+  // feliz
   /* As telas públicas ficam à mão, e abrem em outra aba para não tirar ninguém do painel. */
   it('links to opening a ticket and validating a document, in a new tab', () => {
     renderShell({});
