@@ -22,8 +22,21 @@ export type RateLimiter = (key: string, now: number) => boolean;
 export function createRateLimiter({ limit, windowMs }: InboundRateLimit): RateLimiter {
   /* conversa → quando chegou cada mensagem ainda dentro da janela. */
   const hits = new Map<string, number[]>();
+  let lastSweep = 0;
+
+  /* Quem escreveu uma vez e sumiu ficaria na memória para sempre. Uma faxina por janela tira
+     as conversas sem nada dentro dela. */
+  function sweep(now: number): void {
+    if (now - lastSweep < windowMs) return;
+
+    lastSweep = now;
+    for (const [key, times] of hits) {
+      if (times.every((at) => at <= now - windowMs)) hits.delete(key);
+    }
+  }
 
   return (key, now) => {
+    sweep(now);
     const recent = (hits.get(key) ?? []).filter((at) => at > now - windowMs);
     if (recent.length >= limit) {
       hits.set(key, recent);
