@@ -9,6 +9,8 @@ export type PrivateText = {
   text: string;
   /** O telefone de quem escreveu, quando dá para saber. */
   phone: string | null;
+  /** O identificador da mensagem no WhatsApp — o servidor o usa para não ler a mesma duas vezes. */
+  messageId: string | null;
 };
 
 /* Mensagem mais velha que isto não é respondida. Quando o bot volta de uma queda, o WhatsApp
@@ -46,7 +48,7 @@ export function readPrivateText(
   /* Na conversa da pessoa com ela mesma, quem escreve É o número vinculado. */
   const phone = message.key.fromMe ? ownPhoneOf(ownChatIds) : phoneOf(message, chatId);
 
-  return text ? { chatId, text, phone } : null;
+  return text ? { chatId, text, phone, messageId: message.key.id ?? null } : null;
 }
 
 /* Sem horário a mensagem conta como velha: na dúvida, o bot não responde. */
