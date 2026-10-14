@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Optional,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { parseGitHubRepo } from '@template/shared/domain/software-project.util';
 import {
   type CreateSoftwareProjectInput,
@@ -9,7 +14,9 @@ import {
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { assertCanEditSystem, assertCanRead } from '../../../lib/policy/policy-assert.util';
+import { TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import {
+  type ProjectResponsible,
   toSoftwareProject,
   toSoftwareProjectInsert,
   toSoftwareProjectUpdate,
@@ -22,6 +29,8 @@ import { SoftwareTimelineRepository } from '../repository/software-timeline.repo
 import { GithubService } from './github.service';
 
 export const PROJECT_NOT_FOUND = 'Sistema não encontrado.';
+export const RESPONSIBLE_NOT_ATTENDANT =
+  'O responsável escolhido não atende a área de Sistema. Escolha outro.';
 
 @Injectable()
 export class SoftwareProjectsService {
@@ -29,7 +38,23 @@ export class SoftwareProjectsService {
     private readonly repository: SoftwareProjectsRepository,
     private readonly timelineRepository: SoftwareTimelineRepository,
     private readonly githubService: GithubService,
+    @Optional() private readonly assignees?: TicketAssigneesService,
   ) {}
+
+  /**
+   * Quem responde pelo sistema, conferido: precisa atender a área de Sistema, e o nome vem do
+   * cadastro dela — nunca do corpo. `undefined` (o corpo não falou) passa adiante sem consulta.
+   */
+  private async resolveResponsible(
+    responsibleId: string | null | undefined,
+  ): Promise<ProjectResponsible | null | undefined> {
+    if (responsibleId === undefined || responsibleId === null) return responsibleId;
+
+    const attendant = await this.assignees?.resolve('sistema', responsibleId);
+    if (!attendant) throw new UnprocessableEntityException(RESPONSIBLE_NOT_ATTENDANT);
+
+    return { id: attendant.id, name: attendant.name };
+  }
 
   async listTicketOptions(): Promise<{ id: number; name: string }[]> {
     return this.repository.listTicketOptions();
@@ -82,7 +107,10 @@ export class SoftwareProjectsService {
   async create(user: RequestUser, input: CreateSoftwareProjectInput): Promise<SoftwareProject> {
     assertCanEditSystem(user, 'cadastrar sistema');
 
-    const row = await this.repository.insert(toSoftwareProjectInsert(input, user.email));
+    const responsible = await this.resolveResponsible(input.responsibleId);
+    const row = await this.repository.insert(
+      toSoftwareProjectInsert(input, user.email, responsible ?? null),
+    );
 
     // Se o repositório for válido, dispara a sincronização inicial de PRs em background
     const repoInfo = parseGitHubRepo(row.repositoryUrl);
@@ -102,7 +130,11 @@ export class SoftwareProjectsService {
 
     await this.findById(user, id);
 
-    const row = await this.repository.update(id, toSoftwareProjectUpdate(input, user.email));
+    const responsible = await this.resolveResponsible(input.responsibleId);
+    const row = await this.repository.update(
+      id,
+      toSoftwareProjectUpdate(input, user.email, new Date(), responsible),
+    );
 
     const [openTicketsMap, prsMap] = await Promise.all([
       this.repository.countOpenTicketsByProject([id]),

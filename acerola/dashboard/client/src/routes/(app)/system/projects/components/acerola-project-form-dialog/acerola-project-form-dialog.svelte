@@ -129,6 +129,22 @@
           </div>
         </div>
 
+        <!-- Só informação: diz quem responde pelo sistema, sem mudar a quem os chamados vão. -->
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-medium text-foreground">Responsável</span>
+          <SelectField
+            data={{
+              value: model.data.fields.responsibleId.value,
+              options: model.data.responsibleOptions,
+            }}
+            ui={{ ariaLabel: 'Responsável pelo sistema' }}
+            state={{ isDisabled: model.state.isSubmitting }}
+            actions={{
+              onChange: (val) => model.actions.onChange('responsibleId', val),
+            }}
+          />
+        </div>
+
         <TextField
           data={{
             label: 'Descrição',

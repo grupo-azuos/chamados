@@ -26,6 +26,9 @@ export const softwareProjectSchema = z.object({
   color: softwareProjectColorSchema,
   githubRepoOwner: z.string().nullable(),
   githubRepoName: z.string().nullable(),
+  /** Quem responde pelo sistema (só informação). Nulo quando ninguém foi escolhido. */
+  responsibleId: z.string().nullable(),
+  responsibleName: z.string().nullable(),
   openTicketsCount: z.number().int().default(0),
   pullRequestsCount: z.number().int().default(0),
   createdAt: z.string().datetime(),
@@ -58,6 +61,11 @@ export const createSoftwareProjectSchema = z.object({
     .min(1, 'Informe o link do repositório no GitHub'),
   status: softwareProjectStatusSchema.default('active'),
   color: softwareProjectColorSchema.default('blue'),
+  /**
+   * O id de quem responde pelo sistema, entre quem atende a área de Sistema. Nulo tira o
+   * responsável. Só o id entra: o nome quem põe é o servidor.
+   */
+  responsibleId: z.string().trim().min(1).nullable().optional(),
 });
 
 export type CreateSoftwareProjectInput = z.infer<typeof createSoftwareProjectSchema>;
@@ -89,6 +97,8 @@ export const softwareProjectFormSchema = z.object({
     .min(1, 'Informe o link do repositório no GitHub'),
   status: softwareProjectStatusSchema,
   color: softwareProjectColorSchema,
+  /** Vazio é "sem responsável". */
+  responsibleId: z.string(),
 });
 
 export type SoftwareProjectForm = z.infer<typeof softwareProjectFormSchema>;

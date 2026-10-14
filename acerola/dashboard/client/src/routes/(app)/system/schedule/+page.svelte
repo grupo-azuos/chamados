@@ -15,7 +15,7 @@
 </script>
 
 <svelte:head>
-  <title>Cronograma Semanal de Sistemas</title>
+  <title>Cronograma de Sistemas</title>
 </svelte:head>
 
 <WeekScheduleGrid
