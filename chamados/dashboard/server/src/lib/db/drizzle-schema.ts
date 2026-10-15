@@ -1,10 +1,10 @@
-import { neonAuthUsers } from './neon-auth-user.table';
 import { githubConnections, githubOauthStates } from './schema/github-connections.schema';
 import { computerAlerts } from './schema/computer-alerts.schema';
 import { computerSamples } from './schema/computer-samples.schema';
 import { computerTransfers } from './schema/computer-transfers.schema';
 import { computers } from './schema/computers.schema';
 import { internalRoles } from './schema/internal-roles.schema';
+import { superAdmins } from './schema/super-admins.schema';
 import { inventoryItems } from './schema/inventory-items.schema';
 import { inventoryMovements } from './schema/inventory-movements.schema';
 import { maintenanceQuotes } from './schema/maintenance-quotes.schema';
@@ -70,8 +70,7 @@ export const drizzleSchema = {
   maintenanceQuotes,
   networkEvents,
   internalRoles,
-  /* Tabela do Neon Auth, só para leitura — ver `neon-auth-user.table.ts`. */
-  neonAuthUsers,
+  superAdmins,
 };
 
 export type DrizzleSchema = typeof drizzleSchema;
