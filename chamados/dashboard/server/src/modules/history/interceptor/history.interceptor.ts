@@ -62,13 +62,20 @@ function mutationOf(request: Request & { user?: RequestUser }, handler: string):
     method: request.method,
     routePath: typeof route?.path === 'string' ? route.path : request.path,
     handler,
-    params: request.params,
+    params: paramsOf(request.params),
     body: request.body,
-    fileNames: fileNamesOf(request.files as UploadedFiles | undefined),
+    fileNames: fileNamesOf((request as Request & { files?: UploadedFiles }).files),
     actor: request.user ? { id: request.user.id, email: request.user.email } : null,
     ip: request.ip ?? null,
     userAgent: request.get('user-agent') ?? null,
   };
+}
+
+/* Parâmetro de rota repetido vira lista no Express 5; para o histórico vale o primeiro. */
+function paramsOf(params: Record<string, string | string[]>): Record<string, string | undefined> {
+  return Object.fromEntries(
+    Object.entries(params).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]),
+  );
 }
 
 /* Arquivo entra pelo nome: o conteúdo já está no storage, e não cabe no histórico. */

@@ -7,17 +7,27 @@ import {
   departmentOptionsText,
   emptyAccessRequest,
   fillAccessRequestStep,
+  identifiedAs,
   isAccessRequestCancel,
   isAccessRequestCommand,
   nextAccessRequestStep,
   projectOptionsText,
 } from '@template/shared/domain/access-request.util';
+import {
+  identifyPerson,
+  nameTokens,
+  type PersonCandidate,
+  personOptionsText,
+} from '@template/shared/domain/person-match.util';
 import { invitePhoneForForm } from '@template/shared/domain/ticket-invite.util';
 import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { type WhatsappTemplateKey } from '@template/shared/domain/whatsapp-template.util';
 
 import { type Env } from '../../../lib/config/env.schema';
 import { ENV } from '../../../lib/config/env.token';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
+import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
+import { HistoryService } from '../../history/service/history.service';
 import { TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import { ticketAccessLink } from '../../tickets/service/ticket-whatsapp-notifier.service';
 import { TicketsService } from '../../tickets/service/tickets.service';
@@ -43,6 +53,7 @@ const CONVERSATION_TTL_MS = 15 * 60 * 1000;
 
 const QUESTION_TEMPLATES: Record<AccessRequestStep, WhatsappTemplateKey> = {
   name: 'access_name',
+  who: 'access_who',
   email: 'access_email',
   phone: 'access_phone',
   department: 'access_department',
@@ -58,6 +69,10 @@ const QUESTION_TEMPLATES: Record<AccessRequestStep, WhatsappTemplateKey> = {
  *
  * O estado fica no banco (`whatsapp_conversations`): publicar uma versão nova do servidor no
  * meio de um pedido não faz a pessoa perder o que já respondeu.
+ *
+ * QUEM ESTÁ PEDINDO: depois do nome, o bot procura a pessoa no admin-console e desempata pelo
+ * telefone (quem já abriu chamado com aquele número). Reconhecida, o chamado fica ligado à
+ * conta dela, como o aberto pelo site; com várias possíveis, ele pergunta quem é quem.
  */
 @Injectable()
 export class WhatsappAccessRequestService {
@@ -69,6 +84,8 @@ export class WhatsappAccessRequestService {
     private readonly tickets: TicketsService,
     private readonly messaging: WhatsappMessagingService,
     private readonly conversations: WhatsappConversationsRepository,
+    @Inject(USER_DIRECTORY_PROVIDER) private readonly directory: UserDirectoryProvider,
+    private readonly history: HistoryService,
   ) {}
 
   /** Se a mensagem é desta conversa: o próprio comando, ou uma resposta a um pedido em aberto. */
@@ -154,11 +171,43 @@ export class WhatsappAccessRequestService {
     if (!filled.ok)
       return this.say(key, refreshed, message, 'access_invalid', { erro: filled.error });
 
-    const next = { ...refreshed, draft: filled.draft };
-    const nextStep = nextAccessRequestStep(filled.draft);
+    const draft = step === 'name' ? await this.identify(filled.draft) : filled.draft;
+    const next = { ...refreshed, draft };
+    const nextStep = nextAccessRequestStep(draft);
     if (!nextStep) return this.finish(key, next, message);
 
     return this.ask(key, next, message, nextStep, projects);
+  }
+
+  /* Quem é, pelo nome que acabou de chegar: uma pessoa vira vínculo, várias viram pergunta. */
+  private async identify(draft: AccessRequestDraft): Promise<AccessRequestDraft> {
+    const name = draft.requesterName ?? '';
+    const [people, phoneOwners] = await Promise.all([
+      this.peopleNamed(name),
+      draft.phone ? this.tickets.phoneOwnersOf(draft.phone) : Promise.resolve([]),
+    ]);
+    const match = identifyPerson(name, people, phoneOwners);
+
+    if (match.kind === 'one') return identifiedAs(draft, match.person);
+    if (match.kind === 'many') return { ...draft, candidates: match.people };
+
+    return draft;
+  }
+
+  /* Admin-console fora do ar não trava o pedido: ele segue como antes, sem vínculo. */
+  private async peopleNamed(name: string): Promise<PersonCandidate[]> {
+    const [firstName] = nameTokens(name);
+    if (!firstName) return [];
+
+    try {
+      const users = await this.directory.searchUsers(firstName);
+
+      return users.map((user) => ({ id: user.id, name: user.name, email: user.email }));
+    } catch {
+      this.logger.warn('access request: could not search people in the admin-console');
+
+      return [];
+    }
   }
 
   private async ask(
@@ -171,14 +220,16 @@ export class WhatsappAccessRequestService {
     return this.say(key, conversation, message, QUESTION_TEMPLATES[step], {
       responsavel: conversation.attendantName,
       nome: firstName(conversation.draft.requesterName),
-      opcoes: await this.optionsFor(step, projects),
+      opcoes: await this.optionsFor(step, conversation.draft, projects),
     });
   }
 
   private async optionsFor(
     step: AccessRequestStep,
+    draft: AccessRequestDraft,
     projects?: readonly AccessRequestProject[],
   ): Promise<string> {
+    if (step === 'who') return personOptionsText(draft.candidates ?? []);
     if (step === 'department') return departmentOptionsText();
     if (step !== 'system') return '';
 
@@ -194,6 +245,8 @@ export class WhatsappAccessRequestService {
 
     const ticket = await this.createTicket(conversation);
     if (!ticket) return SILENCE;
+
+    await this.recordHistory(ticket, conversation.draft);
 
     const reply = await this.messaging.reply({
       senderUserId: conversation.userId,
@@ -242,7 +295,7 @@ export class WhatsappAccessRequestService {
         undefined,
         [],
         /* A confirmação já vai na própria conversa (`access_created`). */
-        { skipOpeningNotice: true },
+        { skipOpeningNotice: true, requester: requesterOf(conversation.draft) },
       )
       .catch((error: unknown) => {
         this.logger.error(
@@ -252,6 +305,25 @@ export class WhatsappAccessRequestService {
 
         return null;
       });
+  }
+
+  /* O chamado nasceu fora de uma requisição de pessoa: o histórico é gravado aqui, sem autor —
+     quem fez foi o bot. */
+  private async recordHistory(ticket: { id: number }, draft: AccessRequestDraft): Promise<void> {
+    await this.history.record({
+      action: 'tickets.create',
+      actorId: null,
+      actorEmail: null,
+      targetType: 'tickets',
+      targetId: String(ticket.id),
+      targetLabel: formatTicketProtocol(ticket.id),
+      changes: [
+        { field: 'source', from: null, to: 'whatsapp' },
+        { field: 'problemType', from: null, to: 'access_request' },
+        { field: 'requesterId', from: null, to: draft.requesterId ?? null },
+        { field: 'projectId', from: null, to: draft.project?.id ?? null },
+      ],
+    });
   }
 
   /* Uma resposta do bot: reserva no limite do dia, guarda o estado e mantém a conversa aberta.
@@ -292,6 +364,15 @@ export class WhatsappAccessRequestService {
 /* De qual número vinculado e de qual conversa — o mesmo par que o bot usa. */
 function keyOf(message: InboundMessage): string {
   return `${message.sessionId}:${message.chatId}`;
+}
+
+/* A conta de quem pede, quando o bot a reconheceu; sem ela, o chamado nasce sem vínculo. */
+function requesterOf(
+  draft: AccessRequestDraft,
+): { id: string; email: string; name: string } | undefined {
+  if (!draft.requesterId || !draft.email || !draft.requesterName) return undefined;
+
+  return { id: draft.requesterId, email: draft.email, name: draft.requesterName };
 }
 
 /* As mensagens chamam a pessoa pelo primeiro nome: "Obrigado, Maria!", não o nome inteiro. */
