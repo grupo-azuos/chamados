@@ -1,5 +1,5 @@
 ---
-description: Atalho em português para a skill `getting-started`. Primeiro uso do projeto — confere Node/Git, instala dependências, ajuda a configurar as credenciais da Neon (banco) e do Cloudflare R2 (arquivos), cria os dados de teste, sobe o sistema e apresenta a estrutura para quem nunca programou. Use quando a pessoa acabou de clonar, pergunta "como rodo isso?", "por onde começo?" ou o sistema nunca foi instalado nesta máquina.
+description: Atalho em português para a skill `getting-started`. Primeiro uso do projeto — confere Node/Git, instala dependências, ajuda a configurar as credenciais do Postgres e do storage S3 do Supabase, cria os dados de teste, sobe o sistema e apresenta a estrutura para quem nunca programou. Use quando a pessoa acabou de clonar, pergunta "como rodo isso?", "por onde começo?" ou o sistema nunca foi instalado nesta máquina.
 disable-model-invocation: true
 ---
 
