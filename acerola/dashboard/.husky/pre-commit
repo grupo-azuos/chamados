@@ -1,2 +1,0 @@
-sh acerola/dashboard/scripts/git/branch-guard.sh commit
-cd acerola/dashboard && npm run lint

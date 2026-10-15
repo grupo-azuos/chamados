@@ -29,36 +29,6 @@
   "exceptions": [
     {
       "ecosystem": "node",
-      "package": "@triplit/client",
-      "license": "AGPL-3.0-only",
-      "reason": "INSTALADO, MAS NÃO USADO. Vem de @neondatabase/neon-js -> @neondatabase/auth-ui -> @daveyplate/better-auth-ui, o kit de telas React da Neon. Este sistema importa só '@neondatabase/neon-js/auth' (cliente de sessão), que não alcança esse kit. Conferido em 2026-10-04 seguindo os imports e procurando no build de produção: zero ocorrências. A lista 'forbiddenImports' impede que alguém passe a importá-lo."
-    },
-    {
-      "ecosystem": "node",
-      "package": "@triplit/db",
-      "license": "UNKNOWN",
-      "reason": "Mesma família e mesmo caminho de @triplit/client; o package.json não declara licença, e o repositório de origem (aspen-cloud/triplit) é AGPL-3.0. Tratado como AGPL: instalado, não importado, coberto por 'forbiddenImports'."
-    },
-    {
-      "ecosystem": "node",
-      "package": "@triplit/logger",
-      "license": "UNKNOWN",
-      "reason": "Mesma família e mesmo caminho de @triplit/client. Tratado como AGPL: instalado, não importado, coberto por 'forbiddenImports'."
-    },
-    {
-      "ecosystem": "node",
-      "package": "@triplit/react",
-      "license": "UNKNOWN",
-      "reason": "Mesma família e mesmo caminho de @triplit/client. Tratado como AGPL: instalado, não importado, coberto por 'forbiddenImports'."
-    },
-    {
-      "ecosystem": "node",
-      "package": "ua-parser-js",
-      "license": "AGPL-3.0-or-later",
-      "reason": "INSTALADO, MAS NÃO USADO. Dependência direta de @neondatabase/auth-ui (o kit de telas React da Neon), que este sistema não importa. Conferido em 2026-10-04 no build de produção: zero ocorrências. Coberto por 'forbiddenImports'."
-    },
-    {
-      "ecosystem": "node",
       "package": "gsap",
       "license": "Standard 'no charge' license: https://gsap.com/standard-license.",
       "reason": "USADO (animações da tela, em client/src/lib/motion). NÃO é código aberto: é a licença própria da GSAP, gratuita inclusive para uso comercial, que proíbe usar a biblioteca em ferramentas concorrentes da Webflow — o que este sistema não é. Não contamina o nosso código, que segue MIT; mas quem redistribuir o projeto leva o GSAP sob a licença DELE. Se o projeto precisar ser 100% código aberto, é a dependência a trocar. O aviso para quem redistribui está em THIRD-PARTY-NOTICES.md."
@@ -73,7 +43,7 @@
       "ecosystem": "node",
       "package": "libsignal",
       "license": "GPL-3.0",
-      "reason": "USADO, MAS ISOLADO. É a criptografia do WhatsApp, dependência obrigatória do Baileys (não existe versão do Baileys sem ela). Fica SÓ no bot de WhatsApp (acerola/dashboard/bot), que é um programa à parte: instalação própria, processo e imagem Docker próprios, e fala com o servidor só por HTTP. O servidor, a tela e o pacote shared não instalam nem importam este pacote — 'forbiddenImports' reprova se alguém passar a importar o Baileys de lá. Consequência aceita em 2026-10-10 por quem administra o projeto: rodar o bot no próprio servidor não obriga a nada; quem DISTRIBUIR o bot (entregar a imagem ou o código a terceiros) precisa fazê-lo sob GPL-3.0, com o código-fonte do bot. O aviso está em THIRD-PARTY-NOTICES.md. Sai junto com o Baileys no dia em que a API oficial do WhatsApp entrar."
+      "reason": "USADO, MAS ISOLADO. É a criptografia do WhatsApp, dependência obrigatória do Baileys (não existe versão do Baileys sem ela). Fica SÓ no bot de WhatsApp (chamados/dashboard/bot), que é um programa à parte: instalação própria, processo e imagem Docker próprios, e fala com o servidor só por HTTP. O servidor, a tela e o pacote shared não instalam nem importam este pacote — 'forbiddenImports' reprova se alguém passar a importar o Baileys de lá. Consequência aceita em 2026-10-10 por quem administra o projeto: rodar o bot no próprio servidor não obriga a nada; quem DISTRIBUIR o bot (entregar a imagem ou o código a terceiros) precisa fazê-lo sob GPL-3.0, com o código-fonte do bot. O aviso está em THIRD-PARTY-NOTICES.md. Sai junto com o Baileys no dia em que a API oficial do WhatsApp entrar."
     }
   ],
   "forbiddenImports": [
@@ -115,7 +85,7 @@
     },
     {
       "pattern": "baileys",
-      "reason": "o Baileys puxa código GPL-3.0 (libsignal) e só pode ser importado dentro de acerola/dashboard/bot. O servidor fala com o bot por HTTP."
+      "reason": "o Baileys puxa código GPL-3.0 (libsignal) e só pode ser importado dentro de chamados/dashboard/bot. O servidor fala com o bot por HTTP."
     }
   ]
 }

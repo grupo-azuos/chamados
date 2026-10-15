@@ -72,7 +72,7 @@ Siga a skill **`git-flow`** sempre que não estiver em Modo Admin com instruçõ
   tentativas): no Modo Padrão, **pare**, guarde o trabalho e gere o relatório → skill **`support`**.
   Em Modo Admin, investigue e corrija diretamente a raiz do problema.
 
-**Arquivos protegidos** (lista em `acerola/dashboard/scripts/git/protected-structure.txt`): a
+**Arquivos protegidos** (lista em `chamados/dashboard/scripts/git/protected-structure.txt`): a
 base do projeto (regras de lint, tsconfig, hooks, CI, Docker, `CLAUDE.md`, `.claude/`…). Login e
 autenticação **não** são bloqueados por padrão — ver CONTRIBUTING §17. Um hook do Claude Code
 bloqueia a edição e o hook do git bloqueia o commit para usuários normais. **Em Modo Admin**,
@@ -92,11 +92,11 @@ O padrão está em **`CONTRIBUTING.md`**, e ele manda. Os pontos que mais quebra
    `createQuery`/`createMutation`/navegação direta.
 4. **Props em quatro grupos:** `data`, `ui`, `state`, `actions`.
 5. **`lib/components/ui/` e `lib/hooks/ui/` não se editam** (são do CLI do shadcn). Precisa
-   mudar? Envolva num `acerola-*`. Existe no shadcn-svelte? Instale, não recrie.
+   mudar? Envolva num `azuos-*`. Existe no shadcn-svelte? Instale, não recrie.
    **Nunca reescreva um componente existente** — mude só o que foi pedido.
-   **Todo componente próprio tem prefixo `acerola-*`**: genérico em `lib/components/acerola-*`,
-   de feature em `routes/(app)/<context>/<feature>/components/acerola-*`.
-   **Todo campo de formulário tem `h-10`**, definido no `acerola-*`, nunca na tela.
+   **Todo componente próprio tem prefixo `azuos-*`**: genérico em `lib/components/azuos-*`,
+   de feature em `routes/(app)/<context>/<feature>/components/azuos-*`.
+   **Todo campo de formulário tem `h-10`**, definido no `azuos-*`, nunca na tela.
    Detalhes e checagens: skill **`design-system`**.
 6. **Todo componente tem `.stories.svelte`** (default, variantes, estados, caso limite).
 7. **Todo código com lógica tem teste do caminho feliz e do triste** (`// feliz`, `// triste`).
@@ -135,21 +135,21 @@ A pessoa pode chamar pelo nome em inglês (`/troubleshoot`) ou pelo atalho em po
 
 ## Onde fica cada coisa
 
-O sistema fica em **`acerola/dashboard/`** (uma pasta abaixo da raiz). Todo comando `npm` roda lá.
+O sistema fica em **`chamados/dashboard/`** (uma pasta abaixo da raiz). Todo comando `npm` roda lá.
 
 ```
-acerola/dashboard/shared/src/{domain,schemas}/        contrato e regra pura
-acerola/dashboard/server/src/lib/db/schema/           tabelas (Drizzle, Postgres/Neon)
-acerola/dashboard/server/src/modules/<feature>/       API
-acerola/dashboard/server/drizzle/                     migrations (geradas — não edite à mão)
-acerola/dashboard/client/src/routes/(app)/<context>/+layout.svelte  casca e menu do módulo
-acerola/dashboard/client/src/routes/(app)/<context>/<feature>/  tela (só composição, SvelteKit)
-acerola/dashboard/client/src/routes/(app)/<context>/<feature>/components/acerola-<nome>/  componente da feature
-acerola/dashboard/client/src/lib/hooks/use-<nome>/    estado e dados das telas
-acerola/dashboard/client/src/lib/components/acerola-<nome>/  componente genérico
-acerola/dashboard/client/src/lib/components/ui/       ⛔ CLI do shadcn (lib/hooks/ui/ idem)
-acerola/dashboard/client/src/lib/navigation/          menu lateral
-acerola/dashboard/scripts/seed/<entidade>/            dados de teste
+chamados/dashboard/shared/src/{domain,schemas}/        contrato e regra pura
+chamados/dashboard/server/src/lib/db/schema/           tabelas (Drizzle, Postgres do Supabase, schema chamados)
+chamados/dashboard/server/src/modules/<feature>/       API
+chamados/dashboard/server/drizzle/                     migrations (geradas — não edite à mão)
+chamados/dashboard/client/src/routes/(app)/<context>/+layout.svelte  casca e menu do módulo
+chamados/dashboard/client/src/routes/(app)/<context>/<feature>/  tela (só composição, SvelteKit)
+chamados/dashboard/client/src/routes/(app)/<context>/<feature>/components/azuos-<nome>/  componente da feature
+chamados/dashboard/client/src/lib/hooks/use-<nome>/    estado e dados das telas
+chamados/dashboard/client/src/lib/components/azuos-<nome>/  componente genérico
+chamados/dashboard/client/src/lib/components/ui/       ⛔ CLI do shadcn (lib/hooks/ui/ idem)
+chamados/dashboard/client/src/lib/navigation/          menu lateral
+chamados/dashboard/scripts/seed/<entidade>/            dados de teste
 ```
 
 **São três módulos independentes, e o contexto mora no endereço.** `<context>` é uma de três
@@ -159,7 +159,7 @@ quando a mesma coisa existe em dois, são duas telas separadas, e repetir é mel
 compartilhar dado ou regra.
 
 **Cada módulo define a própria casca.** `routes/(app)/<context>/+layout.svelte` monta o
-`acerola-app-shell` com o menu **dele** (`INFRA_NAV_ITEMS`, `SYSTEM_NAV_ITEMS` ou
+`azuos-app-shell` com o menu **dele** (`INFRA_NAV_ITEMS`, `SYSTEM_NAV_ITEMS` ou
 `MAINTENANCE_NAV_ITEMS`, em `lib/navigation/navigation.ts` — uma lista por módulo). O
 `(app)/+layout.svelte` **não desenha casca nenhuma**: ele só carrega a guarda de sessão. Não
 existe filtro de contexto em tempo de execução — a pasta é o filtro.
@@ -174,20 +174,20 @@ repete nas duas de propósito: uma casca só para ambas exigiria uma pasta agrup
 juntaria as duas telas numa única "feature" para a checagem de design e passaria a acusar o
 componente que as duas compartilham.
 
-**A margem do conteúdo é da casca** (`acerola-app-shell`): a tela define só a largura máxima
+**A margem do conteúdo é da casca** (`azuos-app-shell`): a tela define só a largura máxima
 (`mx-auto w-full max-w-6xl`), nunca `px-*`/`pt-*`/`pb-*` no elemento raiz.
 
 ## Comandos
 
 ```bash
-cd acerola/dashboard
+cd chamados/dashboard
 npm run dev            # API :3005 + tela :5005 + bot de WhatsApp :4005
 npm run seed:all       # dados de teste (idempotente)
 npm run db:generate    # depois de mudar tabela
 npm run lint           # ESLint
 npm run typecheck      # TypeScript
 npm test               # unidade + componente
-npm run test:e2e -w server   # E2E da API (banco de teste na Neon, TEST_DATABASE_URL)
+npm run test:e2e -w server   # E2E da API (banco de teste próprio, TEST_DATABASE_URL)
 npm run build          # build de produção
 ```
 
@@ -196,7 +196,7 @@ use o navegador em http://localhost:5005.
 
 ## O que SEMPRE pede confirmação antes
 
-- `npm run db:reset` — **apaga os dados** no banco Postgres (Neon).
+- `npm run db:reset` — **apaga os dados** do schema `chamados` no Postgres do Supabase.
 - `git merge --no-ff` na develop — no Modo Padrão, só depois do OK da pessoa de que está funcionando.
 - `git push`, abrir PR, criar repositório, qualquer coisa que saia da máquina.
 - `git reset --hard`, `git checkout -- .`, `git clean`, apagar branch — perde trabalho.
@@ -217,7 +217,7 @@ use o navegador em http://localhost:5005.
 
 ### Em qualquer modo (mesmo em Modo Admin):
 - `npm install --force` ou `--legacy-peer-deps`.
-- Editar arquivo em `lib/components/ui/` ou `lib/hooks/ui/` (envolva num `acerola-*`), `routeTree.gen.ts` ou `server/drizzle/meta/`.
+- Editar arquivo em `lib/components/ui/` ou `lib/hooks/ui/` (envolva num `azuos-*`), `routeTree.gen.ts` ou `server/drizzle/meta/`.
 - Reescrever componente existente além do que foi pedido, ou recriar à mão componente que o shadcn-svelte já tem.
 - Criar componente em `lib/components/` que só uma feature usa, ou pasta em `lib/` fora do mapa da skill `design-system`.
 - Colocar segredo em variável `VITE_` ou em arquivo versionado (`.env`).

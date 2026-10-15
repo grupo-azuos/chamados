@@ -1,5 +1,5 @@
 # Tarefas que valem para o repositório inteiro (os dois apps). As de cada app continuam no
-# mise.toml de cada pasta: acerola/dashboard e acerola/agent.
+# mise.toml de cada pasta: chamados/dashboard e chamados/agent.
 #
 #   mise run design:check     → reprova só violação de design NOVA (fora da baseline)
 #   mise run licenses:check   → confere a licença de cada dependência (Node e Go) pela política

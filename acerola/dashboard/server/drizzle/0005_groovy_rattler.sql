@@ -1,1 +1,0 @@
-ALTER TABLE "computers" ADD CONSTRAINT "computers_token_hash_unique" UNIQUE("token_hash");

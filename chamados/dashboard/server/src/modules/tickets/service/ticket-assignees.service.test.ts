@@ -1,0 +1,136 @@
+import { type DirectoryUser } from '@template/shared/schemas/user.schema';
+import { describe, expect, it, vi } from 'vitest';
+
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
+import { type InternalRoleRow } from '../../../lib/db/schema/internal-roles.schema';
+import { type RolesRepository } from '../../roles/repository/roles.repository';
+import { TicketAssigneesService } from './ticket-assignees.service';
+
+const user = (id: string, name: string, extra: Partial<DirectoryUser> = {}): DirectoryUser => ({
+  id,
+  name,
+  email: `${id}@exemplo.com`,
+  role: 'user',
+  ...extra,
+});
+/** Um módulo liberado — sem nível: quem escreve é o Administrador do admin-console. */
+const grant = (userId: string, context: string, userEmail: string | null = null) =>
+  ({ userId, userEmail, context }) as InternalRoleRow;
+
+/* O papel de cada um é o do admin-console (`role` da lista de acesso de lá). O super-admin é
+   daqui: mora em `super_admins`, e na lista do admin-console ele é uma pessoa qualquer. */
+const USERS = [
+  user('u-super', 'Zeca Super'),
+  user('u-infra', 'Bia Infra', { role: 'admin' }),
+  user('u-both', 'Ana Duas', { role: 'admin' }),
+  user('u-manager', 'Caio Gestor', { role: 'manager' }),
+  user('u-banned', 'Dora Banida', { role: 'admin', banned: true }),
+  user('u-plain', 'Edu Comum'),
+];
+const ROLES = [
+  grant('u-infra', 'infra'),
+  grant('u-both', 'infra'),
+  grant('other-id', 'sistema', 'U-BOTH@exemplo.com'),
+  grant('u-manager', 'infra'),
+  grant('u-banned', 'infra'),
+];
+const SUPER_ADMINS = [{ userId: null, userEmail: 'u-super@exemplo.com' }];
+
+function makeService(users = USERS, roles = ROLES) {
+  const directory = {
+    listUsers: vi.fn().mockResolvedValue(users),
+    getUserById: vi.fn(async (id: string) => users.find((item) => item.id === id) ?? null),
+  };
+  const repository = {
+    list: vi.fn().mockResolvedValue(roles),
+    listSuperAdmins: vi.fn().mockResolvedValue(SUPER_ADMINS),
+  };
+
+  return new TicketAssigneesService(
+    directory as unknown as UserDirectoryProvider,
+    repository as unknown as RolesRepository,
+  );
+}
+
+describe('TicketAssigneesService.listForArea', () => {
+  // feliz
+  it('lists the admins of the area plus the super admins, by name', async () => {
+    expect(await makeService().listForArea('infra')).toEqual([
+      { id: 'u-both', name: 'Ana Duas' },
+      { id: 'u-infra', name: 'Bia Infra' },
+      { id: 'u-super', name: 'Zeca Super' },
+    ]);
+  });
+
+  /* O módulo pode estar gravado pelo e-mail, e não pelo id: vale do mesmo jeito. */
+  it('matches a role recorded by e-mail, whatever the case', async () => {
+    expect(await makeService().listForArea('sistema')).toEqual([
+      { id: 'u-both', name: 'Ana Duas' },
+      { id: 'u-super', name: 'Zeca Super' },
+    ]);
+  });
+
+  // triste
+  /* Admin de Infra não aparece num chamado de Manutenção: só o super admin atende as três. */
+  it('leaves out the admin of another area', async () => {
+    expect(await makeService().listForArea('manutencao')).toEqual([
+      { id: 'u-super', name: 'Zeca Super' },
+    ]);
+  });
+
+  /* Gestor da área só consulta: não é oferecido como responsável. */
+  it('leaves out managers, regular users and banned accounts', async () => {
+    const ids = (await makeService().listForArea('infra')).map((option) => option.id);
+
+    expect(ids).not.toContain('u-manager');
+    expect(ids).not.toContain('u-plain');
+    expect(ids).not.toContain('u-banned');
+  });
+
+  it('answers an empty list when nobody attends the area (edge case)', async () => {
+    expect(await makeService([user('u-plain', 'Edu Comum')], []).listForArea('infra')).toEqual([]);
+  });
+});
+
+describe('TicketAssigneesService.resolve', () => {
+  // feliz
+  it('finds a person who attends the area', async () => {
+    expect(await makeService().resolve('infra', 'u-infra')).toEqual({
+      id: 'u-infra',
+      name: 'Bia Infra',
+    });
+  });
+
+  // triste
+  /* O id vem de uma tela pública: quem não atende a área não vira responsável só por pedir. */
+  it('refuses a person of another area, a regular user and an unknown id', async () => {
+    const service = makeService();
+
+    expect(await service.resolve('sistema', 'u-infra')).toBeNull();
+    expect(await service.resolve('infra', 'u-plain')).toBeNull();
+    expect(await service.resolve('infra', 'ghost')).toBeNull();
+  });
+});
+
+describe('TicketAssigneesService.areasOf', () => {
+  // feliz
+  it('tells every area of a super admin, and only the own ones of an admin', async () => {
+    const service = makeService();
+
+    expect(await service.areasOf('u-super')).toEqual({
+      name: 'Zeca Super',
+      areas: ['infra', 'sistema', 'manutencao'],
+    });
+    expect(await service.areasOf('u-infra')).toEqual({ name: 'Bia Infra', areas: ['infra'] });
+    expect((await service.areasOf('u-both'))?.areas).toEqual(['infra', 'sistema']);
+  });
+
+  // triste
+  it('tells no area for who administers none, and null for banned or unknown', async () => {
+    const service = makeService();
+
+    expect((await service.areasOf('u-plain'))?.areas).toEqual([]);
+    expect(await service.areasOf('u-banned')).toBeNull();
+    expect(await service.areasOf('ghost')).toBeNull();
+  });
+});

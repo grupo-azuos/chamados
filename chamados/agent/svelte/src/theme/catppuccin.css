@@ -1,0 +1,88 @@
+/* As variáveis do Catppuccin (ver docs/reuse.md), com os valores trocados pela paleta do
+   Grupo Azuos — os mesmos de `chamados/dashboard/client/src/lib/theme/tokens.css`. Os nomes
+   dos temas (`catppuccin-mocha`/`-latte`) ficam, porque o código que alterna o tema os usa. */
+
+:root,
+[data-theme='catppuccin-mocha'] {
+	--crust: #070c17;
+	--mantle: #0e1626;
+	--base: #111827;
+	--surface: #1f2937;
+
+	--background: #0b1220;
+	--foreground: #f3f4f6;
+	--card: #111827;
+	--card-foreground: #f3f4f6;
+	--popover: #111827;
+	--popover-foreground: #f3f4f6;
+	--primary: #6e8de0;
+	--primary-foreground: #071745;
+	--secondary: #1f2937;
+	--secondary-foreground: #f3f4f6;
+	--muted: #18202f;
+	--muted-foreground: #9ca3af;
+	--accent: #16265c;
+	--accent-foreground: #f3f4f6;
+	--accent-hero: #f7ce3c;
+	--accent-hero-foreground: #45260b;
+	--destructive: #fb7185;
+	--destructive-foreground: var(--primary-foreground);
+	--border: #243049;
+	--input: #1f2937;
+	--ring: #6e8de0;
+	--chart-1: #6e8de0;
+	--chart-2: #f7ce3c;
+	--chart-3: #96ade9;
+	--chart-4: #34d399;
+	--chart-5: #fb7185;
+	--sidebar: #0e1626;
+	--sidebar-foreground: #f3f4f6;
+	--sidebar-primary: #6e8de0;
+	--sidebar-primary-foreground: #071745;
+	--sidebar-accent: #16265c;
+	--sidebar-accent-foreground: #f3f4f6;
+	--sidebar-border: #243049;
+	--sidebar-ring: #6e8de0;
+}
+
+[data-theme='catppuccin-latte'] {
+	--crust: #e5e7eb;
+	--mantle: #f3f4f6;
+	--base: #f8fafc;
+	--surface: #e5e7eb;
+
+	--background: #f8fafc;
+	--foreground: #111827;
+	--card: #ffffff;
+	--card-foreground: #111827;
+	--popover: #ffffff;
+	--popover-foreground: #111827;
+	--primary: #1b3a8c;
+	--primary-foreground: #ffffff;
+	--secondary: #f3f4f6;
+	--secondary-foreground: #111827;
+	--muted: #f3f4f6;
+	--muted-foreground: #6b7280;
+	--accent: #e1e6f5;
+	--accent-foreground: #142b69;
+	--accent-hero: #f5c518;
+	--accent-hero-foreground: #142b69;
+	--destructive: #e11d48;
+	--destructive-foreground: #ffffff;
+	--border: #e5e7eb;
+	--input: #e5e7eb;
+	--ring: #2e52b8;
+	--chart-1: #1b3a8c;
+	--chart-2: #f5c518;
+	--chart-3: #4265d4;
+	--chart-4: #10b981;
+	--chart-5: #e11d48;
+	--sidebar: #f8fafc;
+	--sidebar-foreground: #111827;
+	--sidebar-primary: #1b3a8c;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #e1e6f5;
+	--sidebar-accent-foreground: #142b69;
+	--sidebar-border: #e5e7eb;
+	--sidebar-ring: #2e52b8;
+}

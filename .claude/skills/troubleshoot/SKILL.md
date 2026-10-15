@@ -12,7 +12,7 @@ Explique para a pessoa em uma frase o que aconteceu antes de corrigir.
 
 O projeto exige **Node 24 LTS**. Com 25 costuma funcionar, mas não é suportado; com 22 ou menos,
 não sobe. Peça para instalar o 24 (https://nodejs.org, "LTS") ou `mise install` na raiz de
-`acerola/dashboard/`. Depois: apagar `acerola/dashboard/node_modules` e `npm install` de novo.
+`chamados/dashboard/`. Depois: apagar `chamados/dashboard/node_modules` e `npm install` de novo.
 
 ## `npm install` falha
 
@@ -39,7 +39,7 @@ Porta ocupada por outro programa? `API_PORT` no `server/.env` e `VITE_API_PORT` 
 1. O server subiu? No terminal do `npm run dev` precisa aparecer `API em http://localhost:3005/api`.
 2. Erro no terminal do `[server]`? Resolva aquele primeiro — inclusive "Invalid environment":
    falta uma variável no `server/.env` (confira contra o `server/.env.example`, em especial
-   `DATABASE_URL` e as do R2).
+   `DATABASE_URL` e as `S3_*`).
 3. Console do navegador (F12): erro de import → `npm run build -w @template/shared` e recarregar.
 4. Rota nova que dá "Esta tela não existe": o arquivo está em `client/src/routes/<nome>/+page.svelte`?
    No SvelteKit a rota nasce sozinha a partir da pasta — não existe arquivo gerado para
@@ -62,9 +62,9 @@ Porta ocupada por outro programa? `API_PORT` no `server/.env` e `VITE_API_PORT` 
 | Sintoma | O que fazer |
 |---|---|
 | `relation "..." does not exist` / `column "..." does not exist` | Migration não gerada: `database` → gerar. Se foi gerada, reinicie o server (ele aplica sozinho ao subir). |
-| "Invalid environment" citando `DATABASE_URL` | Falta (ou está errada) a connection string da Neon no `server/.env`. Confira contra `server/.env.example`. |
-| 503 / erro de conexão com o banco | A Neon está fora do ar, ou a `DATABASE_URL` aponta para um banco que não existe mais (branch apagada). Confira no painel da Neon. |
-| Dados estranhos, quer recomeçar | `npm run db:reset` — **apaga tudo no banco da Neon, peça confirmação.** |
+| "Invalid environment" citando `DATABASE_URL` | Falta (ou está errada) a connection string do Postgres no `server/.env`. Confira contra `server/.env.example`. |
+| 503 / erro de conexão com o banco | O Postgres do Supabase está fora do alcance (rede/VPN do servidor de homologação), ou a `DATABASE_URL` está errada. |
+| Dados estranhos, quer recomeçar | `npm run db:reset` — **apaga tudo no schema `chamados`, peça confirmação.** |
 
 ## O commit foi recusado
 
@@ -83,17 +83,17 @@ Skill `resolve-conflict`.
 ## O Tower mostra algo diferente
 
 O Tower lê a configuração de Git-Flow do `.git/config` (feita no `npm install`). Se ele pedir
-para "inicializar o Git-Flow", rode `cd acerola/dashboard && npm run prepare` e reabra o repositório no
+para "inicializar o Git-Flow", rode `cd chamados/dashboard && npm run prepare` e reabra o repositório no
 Tower. As branches devem ser `main` e `develop`, com prefixo `feature/`.
 
 ## Storybook não abre
 
-`npm run storybook` (em `acerola/dashboard/`) e http://localhost:6006. Erro de story específica → a story
+`npm run storybook` (em `chamados/dashboard/`) e http://localhost:6006. Erro de story específica → a story
 importa algo que precisa de provider (query client, contexto): veja como `app-shell.stories.svelte` faz.
 
 ## Playwright (`test:e2e` da tela)
 
-Primeira vez: `cd acerola/dashboard/client && npx playwright install chromium` (baixa um navegador —
+Primeira vez: `cd chamados/dashboard/client && npx playwright install chromium` (baixa um navegador —
 avise a pessoa, são ~150 MB). Ele sobe o sistema sozinho, contra um banco de teste — hoje isso
 depende de `TEST_DATABASE_URL` estar configurada no `.env` (o `client/playwright.config.ts`
 ainda referencia a variável antiga do SQLite; se o E2E da tela não subir o banco certo, é caso

@@ -1,0 +1,51 @@
+# syntax=docker/dockerfile:1
+#
+# Uma imagem só. O Nest serve `/api` e o build estático do client na mesma porta
+# (`ServeStaticModule` em `server/src/app.module.ts`) — nada de Nginx aqui: em produção
+# fica atrás de um Traefik, que já resolve o roteamento por domínio. Um segundo processo
+# só pra servir arquivo estático seria uma peça a mais sem função.
+#
+# Não é a imagem mais enxuta possível: a etapa final carrega o `node_modules` inteiro do
+# monorepo, em vez de reinstalar só as dependências de produção do server. Prioridade 0
+# do CONTRIBUTING — funcionar primeiro — vale aqui: enxugar é otimização para depois.
+#
+# `bookworm-slim` por simplicidade — nenhuma dependência atual exige compilar nada na
+# imagem, então trocar para `alpine` é uma otimização possível, não uma necessidade.
+
+# Compilador usado em runtime para os PDFs; mesma versão dos mise.toml e do CI.
+FROM ghcr.io/typst/typst:0.15.1 AS typst
+
+FROM node:24-bookworm-slim AS deps
+WORKDIR /repo
+COPY package.json package-lock.json ./
+COPY shared/package.json shared/package.json
+COPY server/package.json server/package.json
+COPY client/package.json client/package.json
+# `--ignore-scripts`: o `prepare` da raiz configura git e hooks, que não existem (nem fazem
+# sentido) dentro da imagem — e roda antes de os scripts serem copiados.
+RUN npm ci --ignore-scripts
+
+FROM deps AS build
+COPY . .
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run build -w @template/shared \
+  && npm run build -w server \
+  && npm run build -w client
+
+
+FROM node:24-bookworm-slim AS app
+WORKDIR /repo
+ENV NODE_ENV=production
+COPY --from=typst /bin/typst /usr/local/bin/typst
+RUN typst --version
+COPY --from=build /repo/node_modules node_modules
+COPY --from=build /repo/shared/package.json shared/package.json
+COPY --from=build /repo/shared/dist shared/dist
+COPY --from=build /repo/server/package.json server/package.json
+COPY --from=build /repo/server/dist server/dist
+# As migrations vão junto: o server as aplica sozinho ao subir.
+COPY --from=build /repo/server/drizzle server/drizzle
+COPY --from=build /repo/client/dist client/dist
+EXPOSE 3336
+CMD ["node", "server/dist/main.js"]

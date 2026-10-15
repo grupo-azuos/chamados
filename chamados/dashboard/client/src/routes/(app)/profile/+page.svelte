@@ -1,0 +1,130 @@
+<script lang="ts">
+  import { untrack } from 'svelte';
+  import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
+  import { ROLE_CONTEXT_LABELS } from '@template/shared/schemas/user.schema';
+
+  import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
+  import RoleListView from '$lib/components/azuos-role-list-view/azuos-role-list-view.svelte';
+  import { useRolesModel } from '$lib/hooks/use-roles/use-roles.svelte';
+  import { useWhatsappLinkModel } from '$lib/hooks/use-whatsapp-link/use-whatsapp-link.svelte';
+  import { useWhatsappTemplatesModel } from '$lib/hooks/use-whatsapp-templates/use-whatsapp-templates.svelte';
+  import RoleFormSlot from '../roles/role-form-slot.svelte';
+  import WhatsappLinkCard from './components/azuos-whatsapp-link-card/azuos-whatsapp-link-card.svelte';
+  import WhatsappLinkDialog from './components/azuos-whatsapp-link-dialog/azuos-whatsapp-link-dialog.svelte';
+  import WhatsappTemplatesDialog from './components/azuos-whatsapp-templates-dialog/azuos-whatsapp-templates-dialog.svelte';
+  import type { PageData } from './$types';
+
+  let { data }: { data: PageData } = $props();
+
+  /* A lista da equipe é do super-admin: para os demais, o perfil é só o cartão deles. */
+  const isSuperAdmin = untrack(() => data.user?.role === 'superadmin');
+  const list = useRolesModel({ isEnabled: isSuperAdmin });
+  /* `untrack`: o id de quem está logado não muda enquanto a tela está aberta. */
+  const whatsapp = useWhatsappLinkModel(untrack(() => data.user?.id ?? ''));
+  /* Os textos do bot são do super admin: para os demais o botão nem aparece. */
+  const templates = useWhatsappTemplatesModel();
+  const canEditTemplates = $derived(data.user?.role === 'superadmin');
+
+  type FormTarget = { role: InternalRole | null } | null;
+  let formTarget = $state<FormTarget>(null);
+</script>
+
+<svelte:head>
+  <title>Meu perfil</title>
+</svelte:head>
+
+<RoleListView
+  data={{
+    ...list.data,
+    currentUser: data.user
+      ? {
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+          roles: data.user.roles,
+        }
+      : undefined,
+  }}
+  ui={{ showTeam: isSuperAdmin }}
+  state={list.state}
+  actions={{
+    ...list.actions,
+    onCreate: () => (formTarget = { role: null }),
+  }}
+>
+  <!-- Só para quem pode vincular: os demais nem veem o cartão. -->
+  {#snippet afterProfile()}
+    {#if whatsapp.state.canLink}
+      <WhatsappLinkCard
+        data={{
+          phone: whatsapp.data.phone,
+          sentToday: whatsapp.data.sentToday,
+          dailyLimit: whatsapp.data.dailyLimit,
+        }}
+        state={{
+          isLoading: whatsapp.state.isLoading,
+          isConfigured: whatsapp.state.isConfigured,
+          linkState: whatsapp.state.linkState,
+          error: whatsapp.state.error,
+        }}
+        actions={{
+          onLink: whatsapp.actions.onOpen,
+          onUnlink: whatsapp.actions.onAskUnlink,
+          onEditTemplates: canEditTemplates ? templates.actions.onOpen : undefined,
+        }}
+      />
+    {/if}
+  {/snippet}
+</RoleListView>
+
+<WhatsappTemplatesDialog data={templates.data} state={templates.state} actions={templates.actions} />
+
+<WhatsappLinkDialog
+  data={{ qrImage: whatsapp.data.qrImage }}
+  state={{
+    step: whatsapp.state.step,
+    secondsLeft: whatsapp.state.secondsLeft,
+    isLinking: whatsapp.state.isLinking,
+    error: whatsapp.state.linkError,
+  }}
+  actions={{ onConfirm: whatsapp.actions.onConfirmRisks, onClose: whatsapp.actions.onClose }}
+/>
+
+<ConfirmDialog
+  data={{
+    title: 'Desvincular seu WhatsApp?',
+    description: `O número ${whatsapp.data.phone} deixa de enviar as mensagens dos chamados. Para voltar, será preciso ler o QR code de novo.`,
+    confirmLabel: 'Desvincular',
+    confirmingLabel: 'Desvinculando…',
+  }}
+  state={{
+    isOpen: whatsapp.state.isUnlinkOpen,
+    isConfirming: whatsapp.state.isUnlinking,
+    error: whatsapp.state.unlinkError,
+  }}
+  actions={{
+    onConfirm: whatsapp.actions.onConfirmUnlink,
+    onCancel: whatsapp.actions.onCancelUnlink,
+  }}
+/>
+
+{#if formTarget}
+  {#key formTarget.role?.id ?? 'new'}
+    <RoleFormSlot role={formTarget.role} onClose={() => (formTarget = null)} />
+  {/key}
+{/if}
+
+<ConfirmDialog
+  data={{
+    title: 'Tirar este módulo?',
+    description: `"${list.data.pendingDelete?.userEmail || list.data.pendingDelete?.userId || ''}" deixa de ver ${list.data.pendingDelete ? ROLE_CONTEXT_LABELS[list.data.pendingDelete.context] : ''}. Abrir chamado e validar documento continuam disponíveis.`,
+    confirmLabel: 'Tirar módulo',
+    confirmingLabel: 'Tirando…',
+  }}
+  state={{
+    isOpen: list.data.pendingDelete !== null,
+    isConfirming: list.state.isDeleting,
+    error: list.state.deleteError,
+  }}
+  actions={{ onConfirm: list.actions.onConfirmDelete, onCancel: list.actions.onCancelDelete }}
+/>

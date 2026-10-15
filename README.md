@@ -1,4 +1,4 @@
-# acerola-ticket
+# Azuos Chamados
 
 MVP para validar uma ideia com gente de verdade usando, construído a partir de um template de código com padrão consistente.
 
@@ -19,9 +19,9 @@ O template já vem com uma funcionalidade de exemplo — **Tarefas** — funcion
 | **Tower**                             | qualquer recente    | Ver o histórico e as branches (Git-Flow) — opcional |
 | **Python**                            | 3.12                | Usado por algumas ferramentas do Claude             |
 
-O banco é **Postgres na Neon** (nuvem) — não precisa instalar nada localmente, mas precisa de
-uma conta na Neon e de internet para rodar até em desenvolvimento. Veja "Variáveis de ambiente"
-mais abaixo.
+O banco é o **Postgres do Supabase** do Grupo Azuos e os arquivos ficam no **Storage** dele,
+pela API S3 — não precisa instalar nada localmente, mas precisa estar na rede (ou VPN) do servidor
+de homologação. Veja "Variáveis de ambiente" mais abaixo.
 
 Para conferir, abra o terminal do VS Code (`Ctrl+'`) e rode:
 
@@ -50,7 +50,7 @@ Em seguida, peça **`/renomear-projeto`** para o nome do seu MVP aparecer nas te
 <summary>Prefere fazer à mão? São quatro comandos.</summary>
 
 ```bash
-cd acerola/dashboard # o sistema fica uma pasta abaixo da raiz
+cd chamados/dashboard # o sistema fica uma pasta abaixo da raiz
 npm install # baixa as dependências (demora alguns minutos na primeira vez)
 npm run seed:all # cria o banco e grava os dados de teste
 npm run dev # sobe o sistema
@@ -100,17 +100,17 @@ Skills são receitas prontas. O Claude usa sozinho quando o pedido combina, e vo
 
 ## Estrutura
 
-A raiz do repositório só guarda documentação e configuração de equipe. O sistema inteiro vive em `acerola/dashboard/`.
+A raiz do repositório só guarda documentação e configuração de equipe. O sistema inteiro vive em `chamados/dashboard/`.
 
 ```text
-acerola-ticket/                         # raiz do repositório git
+chamados/                             # raiz do repositório git
 ├── README.md · CONTRIBUTING.md         # para pessoas
 ├── CLAUDE.md                           # para o Claude
 ├── .claude/skills/                     # as receitas do Claude
 ├── .github/                            # CI e modelo de PR
 ├── .vscode/                            # configuração e extensões recomendadas
 │
-└── acerola/
+└── chamados/
     └── dashboard/                      # o sistema — "npm install" roda aqui
         ├── package.json                # workspaces: shared, server, client
         │
@@ -125,10 +125,10 @@ acerola-ticket/                         # raiz do repositório git
         │   └── src/
         │       ├── modules/<feature>/  # controller/ service/ repository/ mapper/ dto/
         │       └── lib/
-        │           ├── auth/            # autenticação e identidade
+        │           ├── auth/            # identidade pelo admin-console e trava por módulo
         │           ├── config/          # variáveis de ambiente (Zod)
-        │           ├── db/              # conexão Postgres (Neon), tabelas Drizzle
-        │           ├── storage/         # arquivos no Cloudflare R2
+        │           ├── db/              # conexão Postgres (Supabase, schema chamados), tabelas Drizzle
+        │           ├── storage/         # arquivos pelo protocolo S3 (Supabase Storage)
         │           ├── http/            # formato único de erro
         │           └── policy/          # quem pode o quê
         │
@@ -156,8 +156,8 @@ acerola-ticket/                         # raiz do repositório git
 | Camada                          | Escolha                                                     |
 | ------------------------------- | ----------------------------------------------------------- |
 | **Backend**                     | NestJS 11 + Swagger (`nestjs-zod`)                          |
-| **Banco**                       | **Postgres** na **Neon** via **Drizzle ORM**                |
-| **Arquivos**                    | Cloudflare R2 (compatível com S3)                            |
+| **Banco**                       | **Postgres** do **Supabase** via **Drizzle ORM**             |
+| **Arquivos**                    | Supabase Storage pela API S3                                 |
 | **Frontend**                    | SvelteKit (Svelte 5) + Vite + TypeScript                     |
 | **Dados / Formulários**         | TanStack Query · Form (versões Svelte)                       |
 | **Validação**                   | Zod — o mesmo schema na API e na tela                       |
@@ -166,12 +166,16 @@ acerola-ticket/                         # raiz do repositório git
 | **Testes**                      | Vitest · Testing Library · Supertest · Playwright · Stryker |
 | **Qualidade**                   | ESLint + Prettier · commitlint + husky                      |
 
-### Por que Postgres na Neon
+### O banco é compartilhado com os outros sistemas
 
-O Drizzle mantém as tabelas em TypeScript e as regras no código, então o banco cresce com o MVP
-sem reescrever nada — só migrations novas. A Neon dá um Postgres de verdade desde o primeiro
-dia (inclusive branches de banco para teste), ao custo de precisar de conta e internet mesmo em
-desenvolvimento: sem `DATABASE_URL` no `.env`, o server recusa subir.
+O Postgres é o mesmo do Paralegal, da Gestão de RH e do admin-console. Cada sistema mora num
+**schema** próprio, e as tabelas deste estão em `chamados` (`chamadosSchema.table(...)` em
+`server/src/lib/db/schema/`, nunca `pgTable`). A lista de migrations também é própria:
+`drizzle.__chamados_migrations` — a padrão do Drizzle já é de outro sistema. O `drizzle.config.ts`
+só enxerga o schema `chamados`, para uma migration nunca tocar nas tabelas dos outros.
+
+Os arquivos seguem o mesmo arranjo da Gestão de RH: protocolo S3 puro (`S3_*` no
+`server/.env`), num bucket privado `chamados`. Trocar de provedor é trocar as variáveis.
 
 ---
 
@@ -183,20 +187,20 @@ Instale as ferramentas e inicie o servidor com o ambiente do mise:
 
 ```bash
 mise install
-cd acerola/dashboard
+cd chamados/dashboard
 mise exec -- npm run dev
 ```
 
 Depois de instalar uma ferramenta nova, reinicie o servidor para atualizar seu `PATH`.
 
 
-Todos rodam dentro de `acerola/dashboard/`:
+Todos rodam dentro de `chamados/dashboard/`:
 
 | Comando                           | O que faz                                                                    |
 | --------------------------------- | ---------------------------------------------------------------------------- |
 | `npm run dev`                     | Sobe API (:3005) e tela (:5005), recarregando a cada mudança                 |
 | `npm run seed:all`                | Grava os dados de teste (pode rodar quantas vezes quiser)                    |
-| `npm run db:reset`                | **Apaga** os dados na Neon e recria com os dados de teste                    |
+| `npm run db:reset`                | **Apaga** os dados do schema `chamados` e recria com os dados de teste       |
 | `npm run db:generate`             | Gera a migration depois de mudar uma tabela                                  |
 | `npm run db:studio`               | Abre o Drizzle Studio para olhar o banco                                     |
 | `npm test`                        | Testes de unidade e de componente                                            |
@@ -215,56 +219,92 @@ sistema não o usa mais, e a remoção é de quem administra o projeto (o arquiv
 
 
 ```bash
-cd acerola/dashboard
+cd chamados/dashboard
 docker compose -f docker/compose.yml up --build
 ```
 
-Uma imagem só: o Nest serve `/api` **e** a tela na mesma porta. O banco (Neon) e os arquivos
-(R2) são remotos, então não há volume de dados — o container precisa só das variáveis do
-`server/.env` (`DATABASE_URL`, `R2_*`) para subir.
+Uma imagem só: o Nest serve `/api` **e** a tela na mesma porta. O banco (Postgres do Supabase) e
+os arquivos (storage S3) são remotos, então não há volume de dados — o container precisa só das
+variáveis do `server/.env` (`DATABASE_URL`, `S3_*`) para subir.
 
 Em produção o container fica atrás de um proxy (Traefik, Caddy ou nginx), e parte da proteção é
 configurada nele — tamanho máximo de upload, limite das rotas públicas, `API_TRUST_PROXY_HOPS`.
-Os exemplos prontos estão em [`acerola/dashboard/docs/reverse-proxy.md`](acerola/dashboard/docs/reverse-proxy.md).
+Os exemplos prontos estão em [`chamados/dashboard/docs/reverse-proxy.md`](chamados/dashboard/docs/reverse-proxy.md).
 
 O bot de WhatsApp é um programa à parte, com imagem própria (`docker/bot.dockerfile`) e que só
-sobe com o perfil `whatsapp` do compose — ver [`acerola/dashboard/docs/whatsapp-bot.md`](acerola/dashboard/docs/whatsapp-bot.md).
+sobe com o perfil `whatsapp` do compose — ver [`chamados/dashboard/docs/whatsapp-bot.md`](chamados/dashboard/docs/whatsapp-bot.md).
 
 ---
 
 ## Autenticação e autorização
 
-O MVP **pode ter login, usuários, sessões e permissões** quando a ideia exigir isso.
+**Este sistema não faz login.** Quem identifica as pessoas é o
+[admin-console](https://github.com/grupo-azuos/admin-console) do Grupo Azuos, pelo proxy: o
+Traefik do Coolify pergunta a ele a cada requisição (`forwardAuth`) e injeta quem é a pessoa em
+quatro cabeçalhos — `x-forwarded-user-id`, `-email`, `-name` e `-role`. É o mesmo arranjo do
+Paralegal. Trocar senha, foto e sair é na conta da pessoa, lá ("Minha conta", na barra lateral).
 
-A autenticação identifica quem está fazendo a requisição. A autorização determina o que essa pessoa pode fazer.
+### Quem pode o quê
 
-O sistema pode utilizar autenticação própria, um provedor externo ou `auth-forward`, conforme a necessidade do projeto. Antes de criar ou alterar o mecanismo de autenticação, o Claude deve verificar o que já existe no projeto e evitar criar mecanismos concorrentes sem necessidade.
+São duas peças, de dois lugares:
 
-Quando houver autenticação, as responsabilidades são separadas:
+- **o papel** (Administrador · Gestor · Usuário) é o que o admin-console deu à pessoa neste sistema;
+- **os módulos** (Infraestrutura · Sistema · Manutenção) são liberados aqui, pelo **super-admin**, no
+  perfil dele ("Acessos por módulo").
 
-* `AuthenticationMiddleware` resolve e valida a identidade da requisição.
-* `RolesGuard` controla acesso às rotas conforme os papéis.
-* `lib/policy` determina o que aquela identidade pode fazer sobre cada dado.
-* Uma requisição sem identidade válida recebe `401`.
-* Uma identidade autenticada sem permissão recebe `403`.
-* A identidade usada para auditoria vem da autenticação, nunca de campos enviados livremente pelo cliente.
+| Papel no admin-console | Com o módulo | Sem módulo nenhum |
+|---|---|---|
+| Administrador | mexe em tudo daquele módulo (e atende os chamados da área) | só abre chamado e valida documento |
+| Gestor | só vê os dados do módulo | só abre chamado e valida documento |
+| Usuário | só vê os dados do módulo | só abre chamado e valida documento |
 
-Login não concede autorização automaticamente. Mesmo autenticado, o usuário continua sujeito aos papéis e às policies.
+**O super-admin** vê e altera todas as telas e é o único que libera módulos. Ele não nasce de
+clique nenhum, só do comando, rodado por quem tem o `.env` do servidor:
 
-Sessões não devem ser armazenadas em `localStorage`. Quando baseadas em cookie, devem usar as proteções adequadas ao ambiente, incluindo `HttpOnly`, `Secure` quando aplicável e `SameSite` compatível com o fluxo.
+```bash
+cd chamados/dashboard
+npm run superadmin:promote -- pessoa@azuoscontabil.com.br
+npm run superadmin:promote -- pessoa@azuoscontabil.com.br --remove
+```
 
-Senhas devem ser armazenadas somente por meio de mecanismo de hash apropriado. Nunca devem aparecer em texto puro em banco, logs, seeds, fixtures, respostas da API ou mensagens de erro.
+Abrir e consultar chamado (`/support`) e validar documento (`/verify`) são públicos: não passam
+por regra nenhuma.
 
-Mudanças de autenticação devem possuir testes para login válido, credencial inválida, requisição sem autenticação, sessão inválida ou expirada, logout, usuário sem permissão, tentativa de escalada de privilégio e tentativa de substituir a identidade autenticada por dados enviados pelo cliente.
+No código, a regra está em `shared/src/domain/module-access.util.ts`; toda rota da API declara
+o módulo dela (`@ModuleContext('infra')`), e a trava global (`RolesGuard`) recusa quem não tem o
+módulo e recusa escrita de quem só consulta. Rota sem módulo declarado nasce **fechada**.
 
----
+### Na sua máquina
+
+Sem proxy não há cabeçalho, e o servidor usa a **pessoa de desenvolvimento**
+(`dev@chamados.local`, `USER_MOCK`, ligada fora de produção e recusada em produção). Ela começa
+sem módulo nenhum, como qualquer pessoa; para ver o painel inteiro:
+
+```bash
+npm run superadmin:promote -- dev@chamados.local
+```
+
+### Em produção — três cuidados que não são do código
+
+1. **O container só é alcançável pelo proxy.** O sistema confia nos cabeçalhos sem perguntar de
+   onde vieram — é assim que auth-forward funciona. Sem porta publicada, sem router direto.
+2. **Dois routers no Traefik para o mesmo container:** um com o middleware de login do
+   admin-console (`um-auth`, com `addAuthCookiesToResponse`) para o painel e a API, e outro
+   SEM ele, por `PathPrefix`, só para o que é público — `/support`, `/verify`, os arquivos da
+   tela (`/_app`), as rotas públicas da API (abrir/consultar chamado, validar documento, webhook
+   do WhatsApp e da rede, callback do GitHub, `/api/health`) e o WebSocket `/agent` dos agentes.
+3. **O router público APAGA os `x-forwarded-user-*`** que vierem do navegador (middleware de
+   cabeçalhos do Traefik). Sem isso, alguém forjaria a identidade numa rota aberta.
+
+As variáveis (`ADMIN_CONSOLE_URL`, `ADMIN_CONSOLE_TOKEN`, `ADMIN_CONSOLE_LOGIN_URL`,
+`USER_MOCK`) estão explicadas em `server/.env.example`. Os passos do lado do admin-console
+(cadastrar o sistema `chamados` com o host, gerar o token de serviço) estão no README dele.
 
 ## O que o MVP não faz
 
-* **Isolamento de dados não é automático.** O banco é o Postgres da Neon — compartilhado por
+* **Isolamento de dados não é automático.** O banco é o Postgres do Supabase — compartilhado por
   natureza. Quem usa a mesma `DATABASE_URL` vê os mesmos dados. Para cada pessoa ter o próprio
-  banco de trabalho, cada uma precisa da própria connection string (por exemplo, uma branch de
-  banco na Neon), configurada no `server/.env` de cada máquina.
+  banco de trabalho, cada uma precisa de um Postgres próprio, configurado no `server/.env`.
 
 * **Infraestrutura de produção automaticamente.** O template fornece a aplicação e o suporte à autenticação, mas publicação, domínio, proxy, secrets e demais recursos de produção precisam ser configurados conforme o ambiente.
 
@@ -272,13 +312,8 @@ Mudanças de autenticação devem possuir testes para login válido, credencial 
 
 ### Como a identidade funciona
 
-A identidade depende da estratégia de autenticação configurada para o projeto.
-
-Em desenvolvimento, o projeto pode utilizar uma identidade mock explicitamente configurada para testes. Em ambientes com autenticação própria, a identidade é resolvida pelo mecanismo de login e sessão. Em ambientes com `auth-forward`, a identidade pode ser fornecida pelo proxy autenticador.
-
-Os papéis e permissões são definidos pelo projeto e ficam sob responsabilidade de `server/src/lib/policy/`.
-
-**Antes de publicar um MVP:** utilizar um mecanismo de autenticação adequado ao ambiente, remover identidades mock quando não forem mais necessárias, garantir que o container só seja alcançável pela infraestrutura prevista e trocar dados de teste por dados reais fora do git.
+Ver "Autenticação e autorização", acima: a identidade vem do admin-console, pelo proxy; os
+módulos de cada pessoa são deste sistema; na sua máquina vale a pessoa de desenvolvimento.
 
 ---
 
@@ -336,7 +371,7 @@ A chave fica só no `.git/config` do seu clone — não é versionada e não lib
 
 Ela libera as duas travas: o hook do git e o hook do Claude Code.
 
-A lista do que é protegido fica em `acerola/dashboard/scripts/git/protected-structure.txt` (§17 do CONTRIBUTING). Login e autenticação não fazem mais parte dessa lista — ver CONTRIBUTING §17.
+A lista do que é protegido fica em `chamados/dashboard/scripts/git/protected-structure.txt` (§17 do CONTRIBUTING). Login e autenticação não fazem mais parte dessa lista — ver CONTRIBUTING §17.
 
 No GitHub, proteja a `main` (o hook local não pega merge **fast-forward**, e quem tem o clone pode desligar hooks): **Settings → Branches → Add branch ruleset** para `main`, com **Restrict updates** e **Require a pull request before merging**, liberando só você. Marque também o repositório como **Template repository** (Settings → General).
 
@@ -362,4 +397,4 @@ Dependência com licença que não está na lista **reprova o PR**. O caminho é
 > licença própria da Webflow, e este projeto não o relicencia. Leia
 > [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md) antes de redistribuir.
 
-O mesmo arquivo explica as dependências **AGPL** que a biblioteca de login da Neon instala sem que o sistema use, e o pacote sem licença declarada que vem do `exceljs`.
+O mesmo arquivo explica o pacote sem licença declarada que vem do `exceljs`.

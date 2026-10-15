@@ -20,7 +20,7 @@ for usar, modificar ou redistribuir o projeto.
 ## GSAP — não é código aberto
 
 **O que é:** a biblioteca de animação usada na tela do painel
-(`acerola/dashboard/client/src/lib/motion/motion.ts`).
+(`chamados/dashboard/client/src/lib/motion/motion.ts`).
 
 **Licença:** [GSAP Standard License](https://gsap.com/community/standard-license/) — a licença
 "sem custo" da Webflow, Inc. Não é MIT, não é BSD e não é uma licença aprovada como código
@@ -46,23 +46,17 @@ esse arquivo por animações nativas do navegador elimina a dependência — e e
 
 ---
 
-## Dependências AGPL instaladas, mas não usadas
+## Dependências AGPL — removidas
 
-A biblioteca de login da Neon (`@neondatabase/neon-js`) instala junto um kit de telas React
-que este projeto **não importa**. Esse kit depende de pacotes sob AGPL-3.0:
-`@triplit/client`, `@triplit/db`, `@triplit/logger`, `@triplit/react` e `ua-parser-js`.
-
-- Eles ficam em `node_modules`, mas **não entram no que é entregue**: o projeto usa só o
-  cliente de sessão (`@neondatabase/neon-js/auth`), que não os alcança.
-- O verificador de licenças **reprova** qualquer arquivo do projeto que passe a importá-los
-  (lista `forbiddenImports` em `license-policy.json`).
-- Quem modificar o projeto para usar esse kit de telas passa a estar sujeito à AGPL-3.0.
-
----
+A biblioteca de login da Neon (`@neondatabase/neon-js`) instalava junto um kit de telas React que
+dependia de pacotes sob AGPL-3.0 (`@triplit/*`, `ua-parser-js`). Desde que o login passou para o
+admin-console do Grupo Azuos, essa biblioteca saiu do projeto, e esses pacotes saíram com ela. A
+lista `forbiddenImports` de `license-policy.json` continua barrando-os, para não voltarem por
+engano.
 
 ## Bot de WhatsApp: dependência GPL-3.0, isolada
 
-O bot de WhatsApp (`acerola/dashboard/bot`) usa o [Baileys](https://github.com/WhiskeySockets/Baileys)
+O bot de WhatsApp (`chamados/dashboard/bot`) usa o [Baileys](https://github.com/WhiskeySockets/Baileys)
 (MIT), que depende de `libsignal` — a criptografia do WhatsApp — sob **GPL-3.0**.
 
 - O bot é um **programa à parte**: instalação e imagem Docker próprias, processo próprio, e fala
