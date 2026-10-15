@@ -10,7 +10,7 @@ import { InventoryItemsService } from './service/inventory-items.service';
  * Módulo novo precisa ser registrado em `app.module.ts` — esquecer é o motivo nº 1 de "a
  * rota dá 404".
  *
- * O `StorageModule` entra porque a foto do produto vive no R2, como o print do chamado.
+ * O `StorageModule` entra porque a foto do produto vive no storage, como o print do chamado.
  */
 @Module({
   imports: [StorageModule],

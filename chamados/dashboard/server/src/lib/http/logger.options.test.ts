@@ -25,10 +25,9 @@ function fakeResponse(): ServerResponse & { setHeader: ReturnType<typeof vi.fn> 
 
 const baseEnv = {
   DATABASE_URL: 'postgresql://test:test@localhost/test',
-  R2_ACCOUNT_ID: 'test',
-  R2_ACCESS_KEY_ID: 'test',
-  R2_SECRET_ACCESS_KEY: 'test',
-  R2_BUCKET: 'test',
+  S3_ACCESS_KEY_ID: 'test',
+  S3_SECRET_ACCESS_KEY: 'test',
+  S3_BUCKET: 'test',
   NEON_AUTH_URL: 'https://auth.test.invalid/auth',
 };
 

@@ -14,7 +14,7 @@ import { MAINTENANCE_QUOTES_SEED } from './maintenance-quotes.data';
  * reescreve as mesmas linhas.
  *
  * O DOCUMENTO não é reescrito: quem anexou um arquivo testando a tela não o perde ao rodar o
- * seed de novo, e o arquivo no R2 não vira órfão.
+ * seed de novo, e o arquivo no storage não vira órfão.
  */
 export async function seedMaintenanceQuotes(db: Database): Promise<number> {
   await db

@@ -12,9 +12,9 @@ export { ROLE_CONTEXTS, ROLE_CONTEXT_LABELS, roleContextLabel, type RoleContext 
 /**
  * Identidade — a FORMA de quem está usando o sistema.
  *
- * Quem autentica é o **Neon Auth**: a tela manda e-mail e senha direto para lá, recebe um
- * token assinado e o envia à API a cada requisição. A API confere a assinatura (JWKS) e lê o
- * cadastro em `neon_auth.user`, no mesmo banco. Este arquivo não é o cadastro — é só o que o
+ * Quem autentica é o **admin-console**, pelo proxy: ele injeta quem é a pessoa nos cabeçalhos
+ * `x-forwarded-user-*`, e a API completa com os módulos dela (ver
+ * `server/src/lib/auth/identity.provider.ts`). Este arquivo não é o cadastro — é só o que o
  * servidor precisa para decidir permissão e carimbar autoria.
  *
  * A consequência prática que mais importa: `createdBy` e `updatedBy` vêm de quem está na
@@ -24,9 +24,10 @@ export { ROLE_CONTEXTS, ROLE_CONTEXT_LABELS, roleContextLabel, type RoleContext 
 /**
  * Os três papéis do sistema, do menor para o maior.
  *
- * Eles moram na coluna `role` de `neon_auth.user` e são trocados no painel da Neon — o
- * sistema lê, nunca escreve. Papel desconhecido (ou vazio) cai em `user`, o mais restrito:
- * quem chega sem papel definido precisa receber MENOS acesso, nunca mais.
+ * `user`, `manager` e `admin` vêm do admin-console (o papel da pessoa neste sistema);
+ * `superadmin` só existe aqui, pelo comando `npm run superadmin:promote`. Papel desconhecido
+ * (ou vazio) cai em `user`, o mais restrito: quem chega sem papel definido precisa receber
+ * MENOS acesso, nunca mais.
  */
 export const userRoleSchema = z.enum(['user', 'manager', 'admin', 'superadmin']);
 

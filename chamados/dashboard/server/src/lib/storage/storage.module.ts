@@ -10,17 +10,14 @@ import { OBJECT_STORAGE } from './storage.token';
 let destroy: (() => void) | null = null;
 
 /**
- * Um cliente do R2 para o processo inteiro.
+ * Um cliente S3 para o processo inteiro — Supabase Storage, AWS, MinIO ou R2, conforme o
+ * `.env` (o mesmo arranjo da Gestão de RH).
  *
  * Global pela mesma razão do banco: qualquer feature que guarde arquivo precisa dele, e o
- * cliente mantém um pool de conexões HTTPS — um por módulo multiplicaria isso sem ganho.
+ * cliente mantém um pool de conexões HTTP — um por módulo multiplicaria isso sem ganho.
  *
- * O endereço do serviço é derivado da conta (`https://<conta>.r2.cloudflarestorage.com`), e
- * não é mais uma variável de ambiente: ele é sempre essa fórmula, e torná-lo configurável só
- * criaria uma forma a mais de errar em silêncio.
- *
- * `region: 'auto'` porque o R2 não tem região a escolher — o SDK da AWS exige o campo, então
- * é esse o valor que a Cloudflare manda usar.
+ * `forcePathStyle` vem ligado: o Supabase e o MinIO endereçam o bucket no caminho
+ * (`/bucket/chave`), e não num subdomínio que nem existe no DNS deles.
  */
 @Global()
 @Module({
@@ -30,16 +27,17 @@ let destroy: (() => void) | null = null;
       inject: [ENV],
       useFactory: (env: Env): S3Client => {
         const client = new S3Client({
-          region: 'auto',
-          endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+          region: env.S3_REGION,
+          endpoint: env.S3_ENDPOINT,
+          forcePathStyle: env.S3_FORCE_PATH_STYLE,
           credentials: {
-            accessKeyId: env.R2_ACCESS_KEY_ID,
-            secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+            accessKeyId: env.S3_ACCESS_KEY_ID,
+            secretAccessKey: env.S3_SECRET_ACCESS_KEY,
           },
         });
         destroy = () => client.destroy();
 
-        new Logger(StorageModule.name).log(`R2 no bucket ${env.R2_BUCKET}`);
+        new Logger(StorageModule.name).log(`S3 storage on bucket ${env.S3_BUCKET}`);
 
         return client;
       },

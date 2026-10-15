@@ -1,5 +1,5 @@
 ---
-description: Atalho em português para a skill `database`. Cria ou muda tabelas do Postgres (Neon) com Drizzle — arquivo de schema, registro, geração e revisão da migration, mensagens de erro do banco, recriar o banco e olhar os dados. Use quando a pessoa pede um campo novo, uma tabela nova, relação entre cadastros, "apaga o banco", "zera os dados", "quero ver o que está no banco", ou aparece erro de tabela/coluna inexistente.
+description: Atalho em português para a skill `database`. Cria ou muda tabelas do Postgres (Supabase, schema chamados) com Drizzle — arquivo de schema, registro, geração e revisão da migration, mensagens de erro do banco, recriar o banco e olhar os dados. Use quando a pessoa pede um campo novo, uma tabela nova, relação entre cadastros, "apaga o banco", "zera os dados", "quero ver o que está no banco", ou aparece erro de tabela/coluna inexistente.
 disable-model-invocation: true
 ---
 

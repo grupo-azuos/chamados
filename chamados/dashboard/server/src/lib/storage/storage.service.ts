@@ -77,13 +77,12 @@ function dispositionOf(options: DownloadOptions): string | undefined {
 }
 
 /**
- * Os arquivos do sistema, no Cloudflare R2.
+ * Os arquivos do sistema, pelo protocolo S3 (hoje, o Storage do Supabase da casa).
  *
- * O R2 fala o protocolo do S3, então o SDK da AWS serve — o que muda é o endereço do serviço
- * e a região, que no R2 é sempre `auto` porque não existe escolha de região a fazer.
+ * O código só conhece o protocolo: o provedor é o `S3_ENDPOINT` do `.env`.
  *
  * O bucket é PRIVADO. Ninguém baixa um arquivo por endereço fixo: quem precisa de um pede um
- * link assinado, que vale por poucos minutos (ver `R2_SIGNED_URL_TTL_SECONDS`). Bucket
+ * link assinado, que vale por poucos minutos (ver `S3_SIGNED_URL_TTL_SECONDS`). Bucket
  * público seria mais simples e transformaria qualquer endereço vazado em acesso permanente.
  */
 @Injectable()
@@ -98,7 +97,7 @@ export class StorageService {
 
     await this.client.send(
       new PutObjectCommand({
-        Bucket: this.env.R2_BUCKET,
+        Bucket: this.env.S3_BUCKET,
         Key: key,
         Body: input.content,
         ContentType: input.contentType,
@@ -109,9 +108,9 @@ export class StorageService {
   }
 
   /**
-   * Um link temporário para o navegador pegar o arquivo direto do R2.
+   * Um link temporário para o navegador pegar o arquivo direto do storage.
    *
-   * O arquivo não passa pela API: fazer o Nest baixar do R2 e repassar dobraria o tráfego e
+   * O arquivo não passa pela API: fazer o Nest baixar do storage e repassar dobraria o tráfego e
    * prenderia um processo do server por download.
    *
    * `as` decide o que o navegador faz com ele — MOSTRAR na tela ou BAIXAR —, e são dois gestos
@@ -122,15 +121,15 @@ export class StorageService {
     return getSignedUrl(
       this.client,
       new GetObjectCommand({
-        Bucket: this.env.R2_BUCKET,
+        Bucket: this.env.S3_BUCKET,
         Key: key,
         ResponseContentDisposition: dispositionOf(options),
       }),
-      { expiresIn: this.env.R2_SIGNED_URL_TTL_SECONDS },
+      { expiresIn: this.env.S3_SIGNED_URL_TTL_SECONDS },
     );
   }
 
   async remove(key: string): Promise<void> {
-    await this.client.send(new DeleteObjectCommand({ Bucket: this.env.R2_BUCKET, Key: key }));
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.env.S3_BUCKET, Key: key }));
   }
 }

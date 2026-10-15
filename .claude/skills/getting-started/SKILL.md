@@ -1,6 +1,6 @@
 ---
 name: getting-started
-description: Primeiro uso do projeto — confere Node/Git, instala dependências, ajuda a configurar as credenciais da Neon (banco) e do Cloudflare R2 (arquivos), cria os dados de teste, sobe o sistema e apresenta a estrutura para quem nunca programou. Use quando a pessoa acabou de clonar, pergunta "como rodo isso?", "por onde começo?" ou o sistema nunca foi instalado nesta máquina.
+description: Primeiro uso do projeto — confere Node/Git, instala dependências, ajuda a configurar as credenciais do Postgres e do storage S3 do Supabase, cria os dados de teste, sobe o sistema e apresenta a estrutura para quem nunca programou. Use quando a pessoa acabou de clonar, pergunta "como rodo isso?", "por onde começo?" ou o sistema nunca foi instalado nesta máquina.
 ---
 
 # Começar
@@ -37,22 +37,24 @@ Git-Flow do **Tower** (main, develop, `feature/`…). Se o repositório não tem
 falha na raiz — projeto baixado em .zip), avise a pessoa: o fluxo de trabalho depende de clonar
 pelo GitHub ou pelo Tower. Não crie a `main` por conta própria.
 
-## 3. Banco e arquivos (Neon e Cloudflare R2)
+## 3. Banco e arquivos (Supabase: Postgres e storage S3)
 
-O banco é o Postgres da **Neon** e os arquivos vão para o **Cloudflare R2** — os dois exigem
-credencial, e o server recusa subir sem ela.
+O banco é o **Postgres do Supabase** da casa (compartilhado com os outros sistemas; as tabelas
+deste ficam no schema `chamados`) e os arquivos vão para o **Storage** dele pela API S3 — os dois
+exigem credencial, e o server recusa subir sem ela.
 
 ```bash
 cp server/.env.example server/.env
 ```
 
 Ajude a pessoa a preencher, no `server/.env` que acabou de criar:
-- `DATABASE_URL` — no painel da Neon: o projeto → "Connection string" → a de "Pooled connection".
-- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` — no painel da
-  Cloudflare, seção R2.
+- `DATABASE_URL` — a connection string do Postgres do Supabase (em homologação, a mesma do
+  `server/.env` do Paralegal).
+- `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (e `S3_BUCKET=chamados`) — o
+  endereço `/storage/v1/s3` e as chaves S3 do Supabase (as mesmas da Gestão de RH).
 
-Se ela ainda não tem conta na Neon ou na Cloudflare, isso é criar a conta antes de continuar —
-avise que é um passo de infraestrutura, não do Claude.
+Se ela não tem essas credenciais, quem fornece é quem administra o servidor — avise que é um
+passo de infraestrutura, não do Claude.
 
 ## 4. Dados de teste
 
@@ -80,7 +82,7 @@ Explique em até 10 linhas, em português simples:
 
 - O sistema tem **três partes**: `shared` (as regras e os formatos dos dados, usados pelas
   outras duas), `server` (a API, que guarda no banco) e `client` (as telas).
-- O banco é o **Postgres da Neon** — remoto, não um arquivo na máquina. As credenciais ficam no
+- O banco é o **Postgres do Supabase** — remoto, não um arquivo na máquina. As credenciais ficam no
   `server/.env`, que não vai para o git; os **dados de teste** vão, em `scripts/seed/`.
 - **Tarefas** é um exemplo completo, para servir de molde. Dá para remover depois
   (`remove-example`).

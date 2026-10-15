@@ -11,7 +11,7 @@ import {
   type MaintenanceQuoteRow,
 } from '../../../lib/db/schema/maintenance-quotes.schema';
 
-/** O documento guardado: a chave no R2 e o nome que o arquivo tinha em quem enviou. */
+/** O documento guardado: a chave no storage e o nome que o arquivo tinha em quem enviou. */
 export type StoredAttachment = { key: string; name: string };
 
 /**

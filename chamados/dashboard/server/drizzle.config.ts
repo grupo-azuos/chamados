@@ -21,13 +21,20 @@ export default defineConfig({
   out: './drizzle',
   dbCredentials: { url: databaseUrl },
   /**
-   * Só o schema `public` entra nas migrations.
+   * Só o schema `chamados` entra nas migrations.
    *
-   * O banco também tem o schema `neon_auth`, criado e mantido pelo Neon Auth. Sem este
-   * limite, `npm run db:generate` veria aquelas tabelas como "não declaradas" e escreveria
-   * uma migration apagando o cadastro de pessoas inteiro.
+   * O banco é o Postgres do Supabase da casa, COMPARTILHADO: os outros sistemas têm os schemas
+   * deles (`paralegal`, `gestao_rh`, `admin_console`…). Sem este limite, `npm run db:generate`
+   * veria aquelas tabelas como "não declaradas" e escreveria uma migration apagando os dados
+   * dos outros sistemas.
    */
-  schemaFilter: ['public'],
+  schemaFilter: ['chamados'],
+  /**
+   * A lista de migrations aplicadas, PRÓPRIA deste sistema. A padrão do Drizzle
+   * (`drizzle.__drizzle_migrations`) já é usada por outro sistema no mesmo banco: dividir a
+   * lista faria um sistema achar que as migrations do outro são dele.
+   */
+  migrations: { schema: 'drizzle', table: '__chamados_migrations' },
   verbose: true,
   strict: true,
 });

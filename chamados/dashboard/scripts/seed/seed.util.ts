@@ -37,8 +37,8 @@ export async function openSeedDatabase(): Promise<OpenDatabase> {
  * Esvazia as tabelas para recriar do zero.
  *
  * No SQLite isto apagava o ARQUIVO do banco. Com o Postgres hospedado não existe arquivo para
- * apagar, e derrubar o banco inteiro na Neon seria destruir o que o painel dela administra —
- * então o equivalente honesto é limpar as tabelas e deixar a estrutura de pé.
+ * apagar, e o banco é COMPARTILHADO com os outros sistemas da casa — então o equivalente honesto
+ * é limpar as tabelas DESTE sistema (schema `chamados`) e deixar a estrutura de pé.
  *
  * `TRUNCATE ... RESTART IDENTITY CASCADE` zera junto os contadores de `id`: sem isso, o banco
  * "recriado" continuaria numerando a partir de onde o antigo parou, e nenhum seed com id fixo
@@ -50,9 +50,8 @@ export async function resetDatabase(): Promise<void> {
 
   const opened = await openDatabase(requireDatabaseUrl());
   try {
-    /* Só as tabelas DESTE sistema. O cadastro de pessoas é do Neon Auth, mora no schema
-       `neon_auth` e não se apaga por aqui: quem entra e quem sai é decidido no painel da
-       Neon, e um seed que limpasse aquilo derrubaria o acesso de todo mundo. */
+    /* Só as tabelas DESTE sistema: a conexão procura no schema `chamados` (ver
+       `open-database.util.ts`), e o resto do banco é dos outros sistemas da casa. */
     /* `cascade` leva junto as amostras e os alertas, que só existem presos a um computador. */
     await opened.db.execute(
       sql`truncate table tasks, tickets, computers, computer_transfers, maintenances, parts, part_movements, network_events restart identity cascade`,

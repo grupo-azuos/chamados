@@ -19,9 +19,9 @@ O template já vem com uma funcionalidade de exemplo — **Tarefas** — funcion
 | **Tower**                             | qualquer recente    | Ver o histórico e as branches (Git-Flow) — opcional |
 | **Python**                            | 3.12                | Usado por algumas ferramentas do Claude             |
 
-O banco é **Postgres na Neon** (nuvem) — não precisa instalar nada localmente, mas precisa de
-uma conta na Neon e de internet para rodar até em desenvolvimento. Veja "Variáveis de ambiente"
-mais abaixo.
+O banco é o **Postgres do Supabase** do Grupo Azuos e os arquivos ficam no **Storage** dele,
+pela API S3 — não precisa instalar nada localmente, mas precisa estar na rede (ou VPN) do servidor
+de homologação. Veja "Variáveis de ambiente" mais abaixo.
 
 Para conferir, abra o terminal do VS Code (`Ctrl+'`) e rode:
 
@@ -127,8 +127,8 @@ chamados/                             # raiz do repositório git
         │       └── lib/
         │           ├── auth/            # identidade pelo admin-console e trava por módulo
         │           ├── config/          # variáveis de ambiente (Zod)
-        │           ├── db/              # conexão Postgres (Neon), tabelas Drizzle
-        │           ├── storage/         # arquivos no Cloudflare R2
+        │           ├── db/              # conexão Postgres (Supabase, schema chamados), tabelas Drizzle
+        │           ├── storage/         # arquivos pelo protocolo S3 (Supabase Storage)
         │           ├── http/            # formato único de erro
         │           └── policy/          # quem pode o quê
         │
@@ -156,8 +156,8 @@ chamados/                             # raiz do repositório git
 | Camada                          | Escolha                                                     |
 | ------------------------------- | ----------------------------------------------------------- |
 | **Backend**                     | NestJS 11 + Swagger (`nestjs-zod`)                          |
-| **Banco**                       | **Postgres** na **Neon** via **Drizzle ORM**                |
-| **Arquivos**                    | Cloudflare R2 (compatível com S3)                            |
+| **Banco**                       | **Postgres** do **Supabase** via **Drizzle ORM**             |
+| **Arquivos**                    | Supabase Storage pela API S3                                 |
 | **Frontend**                    | SvelteKit (Svelte 5) + Vite + TypeScript                     |
 | **Dados / Formulários**         | TanStack Query · Form (versões Svelte)                       |
 | **Validação**                   | Zod — o mesmo schema na API e na tela                       |
@@ -166,12 +166,16 @@ chamados/                             # raiz do repositório git
 | **Testes**                      | Vitest · Testing Library · Supertest · Playwright · Stryker |
 | **Qualidade**                   | ESLint + Prettier · commitlint + husky                      |
 
-### Por que Postgres na Neon
+### O banco é compartilhado com os outros sistemas
 
-O Drizzle mantém as tabelas em TypeScript e as regras no código, então o banco cresce com o MVP
-sem reescrever nada — só migrations novas. A Neon dá um Postgres de verdade desde o primeiro
-dia (inclusive branches de banco para teste), ao custo de precisar de conta e internet mesmo em
-desenvolvimento: sem `DATABASE_URL` no `.env`, o server recusa subir.
+O Postgres é o mesmo do Paralegal, da Gestão de RH e do admin-console. Cada sistema mora num
+**schema** próprio, e as tabelas deste estão em `chamados` (`chamadosSchema.table(...)` em
+`server/src/lib/db/schema/`, nunca `pgTable`). A lista de migrations também é própria:
+`drizzle.__chamados_migrations` — a padrão do Drizzle já é de outro sistema. O `drizzle.config.ts`
+só enxerga o schema `chamados`, para uma migration nunca tocar nas tabelas dos outros.
+
+Os arquivos seguem o mesmo arranjo da Gestão de RH: protocolo S3 puro (`S3_*` no
+`server/.env`), num bucket privado `chamados`. Trocar de provedor é trocar as variáveis.
 
 ---
 
@@ -196,7 +200,7 @@ Todos rodam dentro de `chamados/dashboard/`:
 | --------------------------------- | ---------------------------------------------------------------------------- |
 | `npm run dev`                     | Sobe API (:3005) e tela (:5005), recarregando a cada mudança                 |
 | `npm run seed:all`                | Grava os dados de teste (pode rodar quantas vezes quiser)                    |
-| `npm run db:reset`                | **Apaga** os dados na Neon e recria com os dados de teste                    |
+| `npm run db:reset`                | **Apaga** os dados do schema `chamados` e recria com os dados de teste       |
 | `npm run db:generate`             | Gera a migration depois de mudar uma tabela                                  |
 | `npm run db:studio`               | Abre o Drizzle Studio para olhar o banco                                     |
 | `npm test`                        | Testes de unidade e de componente                                            |
@@ -219,9 +223,9 @@ cd chamados/dashboard
 docker compose -f docker/compose.yml up --build
 ```
 
-Uma imagem só: o Nest serve `/api` **e** a tela na mesma porta. O banco (Neon) e os arquivos
-(R2) são remotos, então não há volume de dados — o container precisa só das variáveis do
-`server/.env` (`DATABASE_URL`, `R2_*`) para subir.
+Uma imagem só: o Nest serve `/api` **e** a tela na mesma porta. O banco (Postgres do Supabase) e
+os arquivos (storage S3) são remotos, então não há volume de dados — o container precisa só das
+variáveis do `server/.env` (`DATABASE_URL`, `S3_*`) para subir.
 
 Em produção o container fica atrás de um proxy (Traefik, Caddy ou nginx), e parte da proteção é
 configurada nele — tamanho máximo de upload, limite das rotas públicas, `API_TRUST_PROXY_HOPS`.
@@ -298,10 +302,9 @@ As variáveis (`ADMIN_CONSOLE_URL`, `ADMIN_CONSOLE_TOKEN`, `ADMIN_CONSOLE_LOGIN_
 
 ## O que o MVP não faz
 
-* **Isolamento de dados não é automático.** O banco é o Postgres da Neon — compartilhado por
+* **Isolamento de dados não é automático.** O banco é o Postgres do Supabase — compartilhado por
   natureza. Quem usa a mesma `DATABASE_URL` vê os mesmos dados. Para cada pessoa ter o próprio
-  banco de trabalho, cada uma precisa da própria connection string (por exemplo, uma branch de
-  banco na Neon), configurada no `server/.env` de cada máquina.
+  banco de trabalho, cada uma precisa de um Postgres próprio, configurado no `server/.env`.
 
 * **Infraestrutura de produção automaticamente.** O template fornece a aplicação e o suporte à autenticação, mas publicação, domínio, proxy, secrets e demais recursos de produção precisam ser configurados conforme o ambiente.
 

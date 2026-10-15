@@ -172,7 +172,7 @@ export class TicketAttachmentsService {
   /**
    * Exclui um anexo — do banco e do bucket.
    *
-   * O cadastro sai primeiro. Se a remoção no R2 falhar, sobra um arquivo pago que ninguém
+   * O cadastro sai primeiro. Se a remoção no storage falhar, sobra um arquivo pago que ninguém
    * alcança; na ordem inversa, sobraria uma linha apontando para um arquivo que não existe, e
    * a tela mostraria um anexo que dá erro ao abrir. O primeiro problema é de custo, o segundo
    * é de confiança.

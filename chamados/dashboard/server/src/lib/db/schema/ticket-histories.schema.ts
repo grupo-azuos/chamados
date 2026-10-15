@@ -6,11 +6,12 @@ import {
   check,
   index,
   integer,
-  pgTable,
   serial,
   text,
   timestamp,
 } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 import { tickets } from './tickets.schema';
 
@@ -31,7 +32,7 @@ function valuesFor(values: readonly string[]) {
  * Isso é garantido pelo BANCO, e não só pelo código: um gatilho recusa `update` e `delete`
  * nesta tabela (migration `ticket_records_append_only`), mesmo para quem escrever SQL à mão.
  */
-export const ticketHistories = pgTable(
+export const ticketHistories = chamadosSchema.table(
   'ticket_histories',
   {
     id: serial('id').primaryKey(),

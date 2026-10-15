@@ -39,7 +39,7 @@ Porta ocupada por outro programa? `API_PORT` no `server/.env` e `VITE_API_PORT` 
 1. O server subiu? No terminal do `npm run dev` precisa aparecer `API em http://localhost:3005/api`.
 2. Erro no terminal do `[server]`? Resolva aquele primeiro — inclusive "Invalid environment":
    falta uma variável no `server/.env` (confira contra o `server/.env.example`, em especial
-   `DATABASE_URL` e as do R2).
+   `DATABASE_URL` e as `S3_*`).
 3. Console do navegador (F12): erro de import → `npm run build -w @template/shared` e recarregar.
 4. Rota nova que dá "Esta tela não existe": o arquivo está em `client/src/routes/<nome>/+page.svelte`?
    No SvelteKit a rota nasce sozinha a partir da pasta — não existe arquivo gerado para
@@ -62,9 +62,9 @@ Porta ocupada por outro programa? `API_PORT` no `server/.env` e `VITE_API_PORT` 
 | Sintoma | O que fazer |
 |---|---|
 | `relation "..." does not exist` / `column "..." does not exist` | Migration não gerada: `database` → gerar. Se foi gerada, reinicie o server (ele aplica sozinho ao subir). |
-| "Invalid environment" citando `DATABASE_URL` | Falta (ou está errada) a connection string da Neon no `server/.env`. Confira contra `server/.env.example`. |
-| 503 / erro de conexão com o banco | A Neon está fora do ar, ou a `DATABASE_URL` aponta para um banco que não existe mais (branch apagada). Confira no painel da Neon. |
-| Dados estranhos, quer recomeçar | `npm run db:reset` — **apaga tudo no banco da Neon, peça confirmação.** |
+| "Invalid environment" citando `DATABASE_URL` | Falta (ou está errada) a connection string do Postgres no `server/.env`. Confira contra `server/.env.example`. |
+| 503 / erro de conexão com o banco | O Postgres do Supabase está fora do alcance (rede/VPN do servidor de homologação), ou a `DATABASE_URL` está errada. |
+| Dados estranhos, quer recomeçar | `npm run db:reset` — **apaga tudo no schema `chamados`, peça confirmação.** |
 
 ## O commit foi recusado
 

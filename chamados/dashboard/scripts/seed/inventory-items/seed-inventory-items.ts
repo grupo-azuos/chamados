@@ -15,7 +15,7 @@ import { INVENTORY_ITEMS_SEED } from './inventory-items.data';
  * que é exatamente o que "rodar o seed" promete.
  *
  * A FOTO não é reescrita: quem subiu uma imagem testando a tela não a perde ao rodar o seed
- * de novo, e o arquivo no R2 não vira órfão.
+ * de novo, e o arquivo no storage não vira órfão.
  */
 export async function seedInventoryItems(db: Database): Promise<number> {
   await db
