@@ -242,9 +242,9 @@ pt-BR.
 
 | O quê | Certo | Errado |
 |---|---|---|
-| Pasta/prefixo em bucket R2/S3 | `tickets/`, `ticket-attachments/`, `files/` | `chamados/`, `chamados-anexos/`, `arquivos/` |
+| Pasta/prefixo em bucket S3 | `tickets/`, `ticket-attachments/`, `files/` | `chamados/`, `chamados-anexos/`, `arquivos/` |
 | Chave de objeto, nome de fila, nome de métrica | `ticket.created` | `chamado.criado` |
-| Variável de ambiente | `R2_BUCKET_NAME` | `R2_NOME_BUCKET` |
+| Variável de ambiente | `S3_BUCKET` | `S3_NOME_BUCKET` |
 | Nome de arquivo e pasta (código **e** docs) | `docs/architecture.md` | `docs/ARQUITETURA.md` |
 | Identificador (variável, função, tipo, coluna, rota) | `maintenance` | `manutencao` |
 | Fixture de teste | `'tickets/abc.png'` | `'chamados/abc.png'` |

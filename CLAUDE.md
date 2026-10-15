@@ -139,7 +139,7 @@ O sistema fica em **`chamados/dashboard/`** (uma pasta abaixo da raiz). Todo com
 
 ```
 chamados/dashboard/shared/src/{domain,schemas}/        contrato e regra pura
-chamados/dashboard/server/src/lib/db/schema/           tabelas (Drizzle, Postgres/Neon)
+chamados/dashboard/server/src/lib/db/schema/           tabelas (Drizzle, Postgres do Supabase, schema chamados)
 chamados/dashboard/server/src/modules/<feature>/       API
 chamados/dashboard/server/drizzle/                     migrations (geradas — não edite à mão)
 chamados/dashboard/client/src/routes/(app)/<context>/+layout.svelte  casca e menu do módulo
@@ -187,7 +187,7 @@ npm run db:generate    # depois de mudar tabela
 npm run lint           # ESLint
 npm run typecheck      # TypeScript
 npm test               # unidade + componente
-npm run test:e2e -w server   # E2E da API (banco de teste na Neon, TEST_DATABASE_URL)
+npm run test:e2e -w server   # E2E da API (banco de teste próprio, TEST_DATABASE_URL)
 npm run build          # build de produção
 ```
 
@@ -196,7 +196,7 @@ use o navegador em http://localhost:5005.
 
 ## O que SEMPRE pede confirmação antes
 
-- `npm run db:reset` — **apaga os dados** no banco Postgres (Neon).
+- `npm run db:reset` — **apaga os dados** do schema `chamados` no Postgres do Supabase.
 - `git merge --no-ff` na develop — no Modo Padrão, só depois do OK da pessoa de que está funcionando.
 - `git push`, abrir PR, criar repositório, qualquer coisa que saia da máquina.
 - `git reset --hard`, `git checkout -- .`, `git clean`, apagar branch — perde trabalho.
