@@ -1,7 +1,7 @@
 # Este compose sobe só a aplicação — um serviço, que responde `/api` e o SPA na mesma porta.
 #
-# O banco (Postgres, Neon) e os arquivos (Cloudflare R2) são remotos: não há volume de dados
-# aqui. O container só precisa das variáveis do `server/.env` (DATABASE_URL, R2_*) pra subir —
+# O banco (Postgres do Supabase) e os arquivos (storage S3) são remotos: não há volume de dados
+# aqui. O container só precisa das variáveis do `server/.env` (DATABASE_URL, S3_*) pra subir —
 # sem elas, o server recusa iniciar.
 #
 # Em produção fica atrás de um Traefik (ex.: Coolify), que resolve domínio e TLS;
