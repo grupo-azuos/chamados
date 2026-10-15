@@ -51,20 +51,19 @@ function readArguments() {
 async function main() {
   const { email, remove } = readArguments();
   const dbUrl = readDatabaseUrl();
-  const sql = postgres(dbUrl, {
-    ssl: dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1') ? false : 'require',
-    max: 1,
-  });
+  /* SSL segue o `sslmode` da própria string de conexão: o Supabase da casa, na rede interna,
+     não usa — forçar aqui recusaria a conexão. */
+  const sql = postgres(dbUrl, { max: 1 });
 
   try {
     if (remove) {
-      const removed = await sql`DELETE FROM super_admins WHERE lower(user_email) = ${email} RETURNING id`;
+      const removed = await sql`DELETE FROM chamados.super_admins WHERE lower(user_email) = ${email} RETURNING id`;
       console.log(removed.length ? `✅ ${email} deixou de ser super-admin.` : `ℹ️ ${email} não era super-admin.`);
       return;
     }
 
     await sql`
-      INSERT INTO super_admins (user_email) VALUES (${email})
+      INSERT INTO chamados.super_admins (user_email) VALUES (${email})
       ON CONFLICT (user_email) DO NOTHING
     `;
     console.log(`✅ ${email} agora é super-admin: vê e altera todas as telas e libera os módulos.`);

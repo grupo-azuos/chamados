@@ -1,6 +1,8 @@
 import { TASK_STATUSES } from '@template/shared/domain/task-status.util';
 import { sql } from 'drizzle-orm';
-import { check, index, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { check, index, serial, text, timestamp } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 /**
  * Tarefas — a tabela da feature de EXEMPLO. Uma tabela por arquivo: `<nome>.schema.ts`.
@@ -12,7 +14,7 @@ import { check, index, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-c
  * a mesma linha lida de fusos diferentes continua sendo o mesmo momento. É o que o SQLite
  * não tinha — lá a data era um inteiro em milissegundos, justamente por falta de tipo.
  */
-export const tasks = pgTable(
+export const tasks = chamadosSchema.table(
   'tasks',
   {
     id: serial('id').primaryKey(),

@@ -1,6 +1,8 @@
 import { MAINTENANCE_TYPES } from '@template/shared/domain/maintenance.util';
 import { sql } from 'drizzle-orm';
-import { check, index, integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 import { computers } from './computers.schema';
 
@@ -25,7 +27,7 @@ function valuesFor(values: readonly string[]) {
  * algum dia alguém apagar um, o banco recusa antes de levar junto a prova de que a empresa
  * gastou três manutenções naquele equipamento.
  */
-export const maintenances = pgTable(
+export const maintenances = chamadosSchema.table(
   'maintenances',
   {
     id: serial('id').primaryKey(),

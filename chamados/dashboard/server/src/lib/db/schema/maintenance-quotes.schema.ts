@@ -1,6 +1,8 @@
 import { QUOTE_KINDS, QUOTE_STATUSES } from '@template/shared/domain/maintenance-quote.util';
 import { sql } from 'drizzle-orm';
-import { check, date, index, integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { check, date, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
 function valuesFor(values: readonly string[]) {
@@ -16,10 +18,10 @@ function valuesFor(values: readonly string[]) {
  * `quoted_on` é `date`, sem hora: é o dia escrito no documento, e um dia não muda de acordo
  * com o fuso de quem lê — com `timestamp`, o orçamento do dia 5 apareceria como dia 4 à noite.
  *
- * `attachment_key` é o endereço do arquivo no R2, nunca um link: o link é assinado a cada
+ * `attachment_key` é o endereço do arquivo no storage, nunca um link: o link é assinado a cada
  * leitura e expira, como a foto do inventário.
  */
-export const maintenanceQuotes = pgTable(
+export const maintenanceQuotes = chamadosSchema.table(
   'maintenance_quotes',
   {
     id: serial('id').primaryKey(),

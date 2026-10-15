@@ -1,6 +1,8 @@
 import { TICKET_AREAS } from '@template/shared/domain/ticket-catalog.util';
 import { sql } from 'drizzle-orm';
-import { check, index, integer, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { check, index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 import { tickets } from './tickets.schema';
 
@@ -20,7 +22,7 @@ function valuesFor(values: readonly string[]) {
  * `internal_roles` (entidade × contexto), e permite guardar quem somou a área e quando, sem
  * reinventar paginação para um array crescendo dentro de uma coluna.
  */
-export const ticketAreas = pgTable(
+export const ticketAreas = chamadosSchema.table(
   'ticket_areas',
   {
     id: serial('id').primaryKey(),

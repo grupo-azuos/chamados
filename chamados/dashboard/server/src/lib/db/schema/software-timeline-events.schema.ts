@@ -3,7 +3,9 @@ import {
   TIMELINE_EVENT_TYPES,
 } from '@template/shared/domain/software-project.util';
 import { sql } from 'drizzle-orm';
-import { check, index, integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 import { softwareProjects } from './software-projects.schema';
 
@@ -14,7 +16,7 @@ function valuesFor(values: readonly string[]) {
 /**
  * Eventos da Timeline dos Sistemas (Pull Requests do GitHub, releases, deploys e issues).
  */
-export const softwareTimelineEvents = pgTable(
+export const softwareTimelineEvents = chamadosSchema.table(
   'software_timeline_events',
   {
     id: serial('id').primaryKey(),

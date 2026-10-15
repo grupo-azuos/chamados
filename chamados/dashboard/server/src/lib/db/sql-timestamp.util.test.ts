@@ -24,7 +24,7 @@ describe('asTimestamp', () => {
   it('still goes as a parameter, not glued into the query text', () => {
     const { sql: text } = dialect.sqlToQuery(sql`${tickets.createdAt} >= ${asTimestamp(since)}`);
 
-    expect(text).toBe('"tickets"."created_at" >= $1');
+    expect(text).toBe('"chamados"."tickets"."created_at" >= $1');
   });
 
   /* O caminho pelos ajudantes do Drizzle sempre funcionou. Os dois precisam mandar o MESMO
@@ -79,7 +79,7 @@ describe('asDate', () => {
     const expression = sql<Date | null>`max(${maintenances.performedAt})`;
 
     expect(dialect.sqlToQuery(asDate(expression, maintenances.performedAt)).sql).toBe(
-      'max("maintenances"."performed_at")',
+      'max("chamados"."maintenances"."performed_at")',
     );
   });
 });

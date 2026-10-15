@@ -4,12 +4,13 @@ import {
   check,
   index,
   integer,
-  pgTable,
   serial,
   text,
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 import { tickets } from './tickets.schema';
 
@@ -29,7 +30,7 @@ function valuesFor(values: readonly string[]) {
  * emitido assim" que se reescreve não prova nada. Quem garante é o BANCO: um gatilho recusa
  * `update` e `delete` nesta tabela (migration `ticket_records_append_only`).
  */
-export const ticketServiceOrders = pgTable(
+export const ticketServiceOrders = chamadosSchema.table(
   'ticket_service_orders',
   {
     id: serial('id').primaryKey(),
