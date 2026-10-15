@@ -175,8 +175,9 @@ describe('getRoleInContext & canManageInContext', () => {
   });
 
   // triste
-  it('falls back to default user role when user is null or undefined', () => {
-    expect(getRoleInContext(null, 'infra')).toBe('user');
+  /* Sem pessoa, sem módulo: nunca o papel mínimo de graça. */
+  it('gives no role to nobody', () => {
+    expect(getRoleInContext(null, 'infra')).toBeNull();
     expect(canManageInContext(null, 'manutencao')).toBe(false);
   });
 });

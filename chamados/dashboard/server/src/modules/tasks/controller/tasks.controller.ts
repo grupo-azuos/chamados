@@ -32,6 +32,7 @@ import {
   UpdateTaskDto,
 } from '../dto/task.dto';
 import { TasksService } from '../service/tasks.service';
+import { ModuleContext } from '../../../lib/auth/module-context.decorator';
 
 /**
  * O controller só recebe e entrega. Nenhuma regra aqui: ela vive no service.
@@ -40,6 +41,7 @@ import { TasksService } from '../service/tasks.service';
  * resposta. A documentação fica em http://localhost:3005/docs.
  */
 @ApiTags('Tarefas')
+@ModuleContext('infra')
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly service: TasksService) {}

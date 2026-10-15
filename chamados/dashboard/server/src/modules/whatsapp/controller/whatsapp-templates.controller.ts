@@ -1,6 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
 import {
-  ApiBearerAuth,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -13,10 +12,11 @@ import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { UpdateWhatsappTemplateDto, WhatsappTemplateDto } from '../dto/whatsapp-template.dto';
 import { WhatsappTemplatesService } from '../service/whatsapp-templates.service';
+import { Roles } from '../../../lib/auth/roles.decorator';
 
 /** Os textos que o bot manda. Tudo aqui é do super admin. */
 @ApiTags('Vinculação WhatsApp')
-@ApiBearerAuth('neon-auth')
+@Roles('superadmin')
 @Controller('integrations/whatsapp/templates')
 export class WhatsappTemplatesController {
   constructor(private readonly service: WhatsappTemplatesService) {}

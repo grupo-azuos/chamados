@@ -202,9 +202,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
       .set(asAna())
       .expect(200);
 
-    const line = board.body.find(
-      (row: { computerId: number }) => row.computerId === computerId,
-    );
+    const line = board.body.find((row: { computerId: number }) => row.computerId === computerId);
 
     expect(line).toMatchObject({ status: 'never', lastDoneAt: null, maintenanceCount: 1 });
   });
@@ -246,7 +244,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
     });
   });
 
-  it('lets a manager fix a record created by someone else, stamping who changed it', async () => {
+  it('lets an Administrator of the module fix a record created by someone else, stamping who changed it', async () => {
     const computerId = await registerComputer('PC-DA-ANA-01');
     const created = await registerMaintenance({
       computerId,
@@ -327,12 +325,10 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
   });
 
   /**
-   * ESCALADA DE PRIVILÉGIO: quem é `user` não mexe no registro de outra pessoa.
-   *
-   * É o que separa `user` de `manager` — os dois trabalham, só o segundo responde pelo trabalho
-   * alheio (CONTRIBUTING §7: toda escalada de privilégio tem teste).
+   * ESCALADA DE PRIVILÉGIO: Gestor do módulo só consulta — não mexe em registro nenhum
+   * (CONTRIBUTING §7: toda escalada de privilégio tem teste).
    */
-  it('refuses a plain user on a record created by someone else, with 403', async () => {
+  it('refuses a Manager of the module on a record created by someone else, with 403', async () => {
     const created = await registerMaintenance({
       otherMachine: 'Impressora da recepção',
       type: 'cleaning',
@@ -345,7 +341,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
       .send({ description: 'Mexi no registro da Ana.' })
       .expect(403);
 
-    expect(refused.body.message).toContain('foi criada por outra pessoa');
+    expect(refused.body.message).toContain('só de consulta');
 
     await request(app.getHttpServer())
       .delete(`/api/maintenances/${created.body.id}`)

@@ -40,7 +40,7 @@ async function bootstrap(): Promise<void> {
         .setTitle('Azuos Chamados')
         .setDescription(
           [
-            'API do azuos-ticket.',
+            'API do Azuos Chamados.',
             '',
             'Duas convenções que valem para toda a API:',
             '',
@@ -49,24 +49,16 @@ async function bootstrap(): Promise<void> {
             '',
             '## Autenticação',
             '',
-            'Quem autentica é o **Neon Auth**, não esta API: a tela manda e-mail e senha direto para lá e recebe um token assinado.',
+            'Esta API **não faz login**. Quem autentica é o **admin-console**, pelo proxy (`forwardAuth` do Traefik): ele injeta quem é a pessoa em `x-forwarded-user-id`, `x-forwarded-user-email`, `x-forwarded-user-name` e `x-forwarded-user-role`.',
             '',
-            'Toda requisição precisa apresentar esse token em `Authorization: Bearer <token>`. O servidor confere a assinatura pela chave pública da Neon (JWKS) e lê o papel da pessoa no cadastro (`neon_auth.user`) a cada chamada — papel trocado ou conta banida no painel valem na requisição seguinte.',
+            '## Acesso por módulo',
             '',
-            'Sem token, ou com token vencido, inválido ou de conta que não existe mais: 401.',
+            'Cada rota pertence a um módulo (Infraestrutura, Sistema, Manutenção), liberado por pessoa pelo super-admin. Administrador do módulo lê e altera; Gestor e Usuário do módulo só leem. Sem o módulo: 403. Abrir e consultar chamado e validar documento são públicos.',
+            '',
+            'Sem identidade: 401.',
           ].join('\n'),
         )
         .setVersion('0.1.0')
-        .addBearerAuth(
-          {
-            type: 'http',
-            scheme: 'bearer',
-            bearerFormat: 'JWT',
-            description:
-              'O token que o Neon Auth entrega à tela depois do login. Para experimentar aqui, faça login no sistema e copie o token da chamada que o navegador já faz.',
-          },
-          'neon-auth',
-        )
         .build(),
     ),
   );

@@ -140,31 +140,85 @@ export const envSchema = z.object({
     .optional(),
 
   /**
-   * O endereço do Neon Auth — quem faz o login das pessoas.
+   * O ADMIN-CONSOLE — quem faz o login das pessoas e diz quem pode entrar aqui.
    *
-   * É a MESMA URL do `VITE_NEON_AUTH_URL` do client, sem o prefixo `VITE_`: a tela manda
-   * e-mail e senha para lá, e o servidor usa o mesmo endereço para buscar a chave pública
-   * (`/.well-known/jwks.json`) e conferir a assinatura do token que a tela apresenta.
+   * O login não acontece neste sistema: o proxy (Traefik) pergunta ao admin-console a cada
+   * requisição e injeta quem é a pessoa em quatro cabeçalhos `x-forwarded-user-*` (ver
+   * `lib/auth/identity.provider.ts`). Estas variáveis servem para o SERVIDOR conversar com ele
+   * sem ninguém na frente — a lista de quem tem acesso (seletor de responsável, tela de
+   * acessos) e o perfil de cada pessoa.
    *
-   * Sem padrão de propósito: cada projeto da Neon tem o seu, e um endereço errado aqui não
-   * falharia na partida — falharia no primeiro login, parecendo senha errada.
+   * `ADMIN_CONSOLE_URL` é o endereço que ESTE servidor alcança (pode ser o interno da rede do
+   * Coolify). Sem ela, o sistema sobe, mas as listas de pessoas ficam vazias.
    */
-  NEON_AUTH_URL: z
+  ADMIN_CONSOLE_URL: z
     .string()
     .trim()
-    .min(1, 'Informe a URL do Neon Auth (NEON_AUTH_URL)')
-    .url('NEON_AUTH_URL precisa ser uma URL completa'),
+    .url('ADMIN_CONSOLE_URL precisa ser uma URL completa')
+    .optional(),
+
+  /**
+   * O token de serviço do sistema, gerado na tela do sistema no admin-console
+   * (`um_chamados_…`). Aparece uma vez só lá; perdeu, gera outro. É segredo de servidor.
+   */
+  ADMIN_CONSOLE_TOKEN: z.string().trim().default(''),
+
+  /** Prazo de cada leitura no admin-console: um serviço lento não pode pendurar a tela. */
+  ADMIN_CONSOLE_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000).default(4_000),
+
+  /**
+   * O endereço PÚBLICO da tela de login do admin-console — para onde "Minha conta" leva.
+   * É o que a pessoa vê na barra de endereço (ex.: `https://login.grupoazuos.com.br`).
+   */
+  ADMIN_CONSOLE_LOGIN_URL: z
+    .string()
+    .trim()
+    .url('ADMIN_CONSOLE_LOGIN_URL precisa ser uma URL completa')
+    .optional(),
+
+  /**
+   * A PESSOA DE DESENVOLVIMENTO — só para a máquina de quem programa.
+   *
+   * Sem proxy na frente não há cabeçalho nenhum, e sem identidade nenhuma tela do painel
+   * abre. Com o mock ligado, requisição SEM cabeçalho vira a pessoa fixa de
+   * `identity.provider.ts`. Em produção ele é RECUSADO na partida (ver `parseEnv`): lá, uma
+   * requisição sem cabeçalho é alguém que chegou à API sem passar pelo proxy.
+   *
+   * Sem valor: ligado fora de produção, desligado em produção.
+   */
+  USER_MOCK: z.enum(['true', 'false']).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
 
 export function parseEnv(source: NodeJS.ProcessEnv): Env {
   const result = envSchema.safeParse(source);
-  if (result.success) return result.data;
+  if (result.success) return assertNoMockInProduction(result.data);
 
   const details = result.error.issues
     .map((issue) => `  ${issue.path.join('.') || '(root)'}: ${issue.message}`)
     .join('\n');
 
   throw new Error(`Invalid environment. Check .env against .env.example:\n${details}`);
+}
+
+/**
+ * O mock está ligado? Explícito vence; sem valor, vale "fora de produção".
+ */
+export function isUserMockEnabled(env: Pick<Env, 'USER_MOCK' | 'NODE_ENV'>): boolean {
+  if (env.USER_MOCK !== undefined) return env.USER_MOCK === 'true';
+
+  return env.NODE_ENV !== 'production';
+}
+
+/**
+ * Mock em produção é porta aberta: toda requisição sem cabeçalho viraria a pessoa fixa. O
+ * processo recusa subir em vez de subir aberto.
+ */
+function assertNoMockInProduction(env: Env): Env {
+  if (env.NODE_ENV !== 'production' || env.USER_MOCK !== 'true') return env;
+
+  throw new Error(
+    'Invalid environment. Check .env against .env.example:\n  USER_MOCK: USER_MOCK cannot be true in production',
+  );
 }

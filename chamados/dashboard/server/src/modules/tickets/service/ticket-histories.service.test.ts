@@ -92,7 +92,6 @@ function setup({
   const tickets = {
     findById: vi.fn().mockResolvedValue(ticket),
     listAreasOf: vi.fn().mockResolvedValue([]),
-    contextRolesFor: vi.fn().mockResolvedValue(roles),
   } as unknown as TicketsRepository;
 
   const attachmentsStub = {
@@ -108,15 +107,21 @@ function setup({
     attachmentsStub as unknown as TicketAttachmentsService,
   );
 
-  return { service, record, listByTicket, attachments: attachmentsStub };
+  return {
+    actor: { ...ana, roles } as RequestUser,
+    service,
+    record,
+    listByTicket,
+    attachments: attachmentsStub,
+  };
 }
 
 describe('TicketHistoriesService.create', () => {
   // feliz
   it('records the history and moves the ticket in the same step', async () => {
-    const { service, record } = setup();
+    const { actor, service, record } = setup();
 
-    const history = await service.create(ana, 7, entry('waiting_third_party', 'Pedi a fonte.'));
+    const history = await service.create(actor, 7, entry('waiting_third_party', 'Pedi a fonte.'));
 
     expect(history.statusAfter).toBe('waiting_third_party');
     expect(record.mock.calls[0]?.[0]).toMatchObject({
@@ -132,9 +137,9 @@ describe('TicketHistoriesService.create', () => {
   });
 
   it('closes the ticket with a closing history, keeping what was done', async () => {
-    const { service, record } = setup();
+    const { actor, service, record } = setup();
 
-    await service.create(ana, 7, entry('resolution'));
+    await service.create(actor, 7, entry('resolution'));
 
     expect(record.mock.calls[0]?.[1]).toMatchObject({
       status: 'resolved',
@@ -150,25 +155,25 @@ describe('TicketHistoriesService.create', () => {
       size: 10,
       buffer: Buffer.from('x'),
     };
-    const { service, attachments } = setup();
+    const { actor, service, attachments } = setup();
 
-    await service.create(ana, 7, entry('note'), [file]);
+    await service.create(actor, 7, entry('note'), [file]);
 
     expect(attachments.attach).toHaveBeenCalledWith(7, [file], ana.email, 'support', 31);
   });
 
-  it('lets a "manager" cargo contribute with a history that does not close', async () => {
-    const { service } = setup({ roles: { infra: 'manager' } });
+  it('lets an admin of the area contribute with a history that does not close', async () => {
+    const { actor, service } = setup({ roles: { infra: 'admin' } });
 
-    await expect(service.create(ana, 7, entry('waiting_requester'))).resolves.toMatchObject({
+    await expect(service.create(actor, 7, entry('waiting_requester'))).resolves.toMatchObject({
       statusAfter: 'waiting_requester',
     });
   });
 
   it('lets an admin reopen a closed ticket', async () => {
-    const { service, record } = setup({ ticket: ticketRow({ status: 'resolved' }) });
+    const { actor, service, record } = setup({ ticket: ticketRow({ status: 'resolved' }) });
 
-    await service.create(ana, 7, entry('reopening', 'Voltou a falhar.'));
+    await service.create(actor, 7, entry('reopening', 'Voltou a falhar.'));
 
     expect(record.mock.calls[0]?.[1]).toMatchObject({ status: 'in_progress', solution: null });
   });
@@ -182,63 +187,63 @@ describe('TicketHistoriesService.create', () => {
   });
 
   it('does not write when the ticket does not exist', async () => {
-    const { service, record } = setup({ ticket: null });
+    const { actor, service, record } = setup({ ticket: null });
 
-    await expect(service.create(ana, 99, entry('note'))).rejects.toThrow(NotFoundException);
+    await expect(service.create(actor, 99, entry('note'))).rejects.toThrow(NotFoundException);
     expect(record).not.toHaveBeenCalled();
   });
 
   it('refuses a "user" cargo to record anything at all', async () => {
-    const { service, record } = setup({ roles: { infra: 'user' } });
+    const { actor, service, record } = setup({ roles: { infra: 'user' } });
 
-    await expect(service.create(ana, 7, entry('note'))).rejects.toThrow(ForbiddenException);
+    await expect(service.create(actor, 7, entry('note'))).rejects.toThrow(ForbiddenException);
     expect(record).not.toHaveBeenCalled();
   });
 
   it('refuses someone with no cargo in any area of the ticket', async () => {
-    const { service, record } = setup({ roles: { manutencao: 'admin' } });
+    const { actor, service, record } = setup({ roles: { manutencao: 'admin' } });
 
-    await expect(service.create(ana, 7, entry('note'))).rejects.toThrow(ForbiddenException);
+    await expect(service.create(actor, 7, entry('note'))).rejects.toThrow(ForbiddenException);
     expect(record).not.toHaveBeenCalled();
   });
 
   /* Gestor contribui, mas NUNCA encerra — tirar um chamado da fila é exclusivo de quem
      administra a área (#13). Vale para TODO tipo que encerra, inclusive os que vierem. */
   it.each(['resolution', 'closure_with_caveats', 'cancellation'] as const)(
-    'refuses a "manager" cargo to close a ticket with %s',
+    'refuses who only reads the area to close a ticket with %s',
     async (type) => {
-      const { service, record } = setup({ roles: { infra: 'manager' } });
+      const { actor, service, record } = setup({ roles: { infra: 'user' } });
 
-      await expect(service.create(ana, 7, entry(type))).rejects.toThrow(ForbiddenException);
+      await expect(service.create(actor, 7, entry(type))).rejects.toThrow(ForbiddenException);
       expect(record).not.toHaveBeenCalled();
     },
   );
 
   /* Reabrir desfaz um encerramento: pede o mesmo cargo de quem encerra. */
-  it('refuses a "manager" cargo to reopen a closed ticket', async () => {
-    const { service, record } = setup({
+  it('refuses who only reads the area to reopen a closed ticket', async () => {
+    const { actor, service, record } = setup({
       ticket: ticketRow({ status: 'resolved' }),
-      roles: { infra: 'manager' },
+      roles: { infra: 'user' },
     });
 
-    await expect(service.create(ana, 7, entry('reopening'))).rejects.toThrow(ForbiddenException);
+    await expect(service.create(actor, 7, entry('reopening'))).rejects.toThrow(ForbiddenException);
     expect(record).not.toHaveBeenCalled();
   });
 
   it('refuses a history that does not fit the stage, with the reason from the domain', async () => {
-    const { service, record } = setup({ ticket: ticketRow({ status: 'resolved' }) });
+    const { actor, service, record } = setup({ ticket: ticketRow({ status: 'resolved' }) });
 
-    await expect(service.create(ana, 7, entry('note'))).rejects.toThrow(
+    await expect(service.create(actor, 7, entry('note'))).rejects.toThrow(
       UnprocessableEntityException,
     );
-    await expect(service.create(ana, 7, entry('note'))).rejects.toThrow(/Reabra-o/);
+    await expect(service.create(actor, 7, entry('note'))).rejects.toThrow(/Reabra-o/);
     expect(record).not.toHaveBeenCalled();
   });
 
   /* Recusar o arquivo DEPOIS de gravar deixaria na linha do tempo um "segue a nota em anexo"
      sem anexo nenhum. */
   it('records nothing when a file is out of the rules', async () => {
-    const { service, record } = setup({
+    const { actor, service, record } = setup({
       attachments: {
         assertAcceptable: vi.fn().mockImplementation(() => {
           throw new BadRequestException('Arquivo grande demais.');
@@ -246,7 +251,7 @@ describe('TicketHistoriesService.create', () => {
       },
     });
 
-    await expect(service.create(ana, 7, entry('note'))).rejects.toThrow(BadRequestException);
+    await expect(service.create(actor, 7, entry('note'))).rejects.toThrow(BadRequestException);
     expect(record).not.toHaveBeenCalled();
   });
 });
@@ -254,7 +259,7 @@ describe('TicketHistoriesService.create', () => {
 describe('TicketHistoriesService.list', () => {
   // feliz
   it('gives the timeline with each history carrying its own files', async () => {
-    const { service } = setup({
+    const { actor, service } = setup({
       listByTicket: vi.fn().mockResolvedValue([historyRow({ id: 31 }), historyRow({ id: 32 })]),
       attachments: {
         list: vi.fn().mockResolvedValue([
@@ -264,16 +269,16 @@ describe('TicketHistoriesService.list', () => {
       },
     });
 
-    const timeline = await service.list(ana, 7);
+    const timeline = await service.list(actor, 7);
 
     expect(timeline.map((history) => history.attachments.length)).toEqual([0, 1]);
   });
 
   // triste
   it('refuses to show the timeline of a ticket from an area the person has no cargo in', async () => {
-    const { service, listByTicket } = setup({ roles: { sistema: 'admin' } });
+    const { actor, service, listByTicket } = setup({ roles: { sistema: 'admin' } });
 
-    await expect(service.list(ana, 7)).rejects.toThrow(ForbiddenException);
+    await expect(service.list(actor, 7)).rejects.toThrow(ForbiddenException);
     expect(listByTicket).not.toHaveBeenCalled();
   });
 

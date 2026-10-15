@@ -39,7 +39,6 @@ const ROW: InternalRoleRow = {
   userId: 'user_1',
   userEmail: 'user@empresa.com.br',
   context: 'manutencao',
-  role: 'manager',
   createdAt: new Date('2026-10-01T12:00:00.000Z'),
   createdBy: 'super@empresa.com.br',
   updatedAt: null,
@@ -89,15 +88,18 @@ describe('RolesService', () => {
       expect(result).toHaveLength(1);
     });
 
-    it('allows admin to list all internal roles', async () => {
-      const result = await service.list(ADMIN);
-      expect(result).toHaveLength(1);
+    it('lists who has which module', async () => {
+      const result = await service.list(SUPERADMIN);
       expect(result[0]!.userId).toBe('user_1');
       expect(result[0]!.context).toBe('manutencao');
-      expect(result[0]!.role).toBe('manager');
     });
 
     // triste
+    /* Administrador de módulo não libera módulo para ninguém — nem para si mesmo. */
+    it('refuses an Administrator: only the super-admin sees the accesses', async () => {
+      await expect(service.list(ADMIN)).rejects.toThrow(ForbiddenException);
+    });
+
     it('refuses manager with ForbiddenException', async () => {
       await expect(service.list(MANAGER)).rejects.toThrow(ForbiddenException);
     });
@@ -109,12 +111,11 @@ describe('RolesService', () => {
 
   describe('assign', () => {
     // feliz
-    it('allows superadmin to assign a role in a context', async () => {
+    it('lets the super-admin give a module to a person', async () => {
       const input = {
         userId: 'user_1',
         userEmail: 'user@empresa.com.br',
         context: 'manutencao' as const,
-        role: 'manager' as const,
       };
 
       const result = await service.assign(SUPERADMIN, input);
@@ -122,32 +123,20 @@ describe('RolesService', () => {
         userId: 'user_1',
         userEmail: 'user@empresa.com.br',
         context: 'manutencao',
-        role: 'manager',
         createdBy: SUPERADMIN.email,
         updatedBy: SUPERADMIN.email,
       });
-      expect(result.role).toBe('manager');
+      expect(result.context).toBe('manutencao');
     });
 
     // triste
-    it('refuses admin from assigning roles (only superadmin gives cadastros)', async () => {
+    it('refuses an Administrator giving modules (only the super-admin does)', async () => {
       await expect(
         service.assign(ADMIN, {
           userId: 'user_1',
           context: 'sistema',
-          role: 'admin',
         }),
       ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('refuses assigning superadmin role via service', async () => {
-      await expect(
-        service.assign(SUPERADMIN, {
-          userId: 'user_1',
-          context: 'sistema',
-          role: 'superadmin' as any,
-        }),
-      ).rejects.toThrow(/comando de terminal/i);
     });
 
     it('refuses manager from assigning roles', async () => {
@@ -155,7 +144,6 @@ describe('RolesService', () => {
         service.assign(MANAGER, {
           userId: 'user_1',
           context: 'sistema',
-          role: 'admin',
         }),
       ).rejects.toThrow(ForbiddenException);
     });
@@ -165,7 +153,6 @@ describe('RolesService', () => {
         service.assign(USER, {
           userId: 'user_1',
           context: 'sistema',
-          role: 'admin',
         }),
       ).rejects.toThrow(ForbiddenException);
     });
@@ -196,16 +183,16 @@ describe('RolesService', () => {
   });
 
   describe('listUsers', () => {
-    it('allows superadmin and admin to list directory users', async () => {
-      const usersSuper = await service.listUsers(SUPERADMIN);
-      expect(usersSuper).toHaveLength(1);
-      expect(usersSuper[0]!.name).toBe('Usuario Comum');
-
-      const usersAdmin = await service.listUsers(ADMIN);
-      expect(usersAdmin).toHaveLength(1);
+    // feliz
+    it('lets the super-admin list the people of the system', async () => {
+      const users = await service.listUsers(SUPERADMIN);
+      expect(users).toHaveLength(1);
+      expect(users[0]!.name).toBe('Usuario Comum');
     });
 
-    it('refuses non-admin users from listing directory users', async () => {
+    // triste
+    it('refuses anyone else listing the people', async () => {
+      await expect(service.listUsers(ADMIN)).rejects.toThrow(ForbiddenException);
       await expect(service.listUsers(MANAGER)).rejects.toThrow(ForbiddenException);
       await expect(service.listUsers(USER)).rejects.toThrow(ForbiddenException);
     });

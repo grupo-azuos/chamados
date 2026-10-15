@@ -23,7 +23,18 @@ import { type GithubService } from '../../software-projects/service/github.servi
 import { type SoftwareProjectsService } from '../../software-projects/service/software-projects.service';
 import { TicketsService, type UploadedScreenshot } from './tickets.service';
 
-const ana: RequestUser = { id: '1', email: 'ana@azuos.com.br', name: 'Ana', role: 'user' };
+const ana: RequestUser = {
+  id: '1',
+  email: 'ana@azuos.com.br',
+  name: 'Ana',
+  role: 'user',
+  roles: { infra: 'admin' },
+};
+
+/** A mesma pessoa com outros módulos — o nível por área agora vem da identidade. */
+function withRoles(user: RequestUser, roles: RequestUser['roles']): RequestUser {
+  return { ...user, roles };
+}
 
 /** Ninguém identificado: é o que o guard bloquearia antes, e o que a policy recusa aqui. */
 const noRole = { ...ana, role: undefined } as unknown as RequestUser;
@@ -74,13 +85,12 @@ const attachmentsStub = {
 };
 
 /**
- * O cargo padrão de quem testa: Ana é GESTORA (`manager`) em Infra, e nenhum cargo nos outros
- * dois — é por isso que `ticketRow()` nasce em Infra. `manager`, e não `user`, porque o
- * padrão dos testes que só querem "atender" precisa de alguém que CONSEGUE escrever — `user`
- * só consulta (#13); os testes que exercitam essa fronteira sobrescrevem explicitamente.
+ * O nível padrão de quem testa: Ana é ADMINISTRADORA de Infra (vem de `ana.roles`), e não tem
+ * os outros dois módulos — é por isso que `ticketRow()` nasce em Infra. Administradora porque
+ * os testes que só querem "atender" precisam de alguém que CONSEGUE escrever; quem tem a área
+ * como Gestor ou Usuário só consulta, e os testes dessa fronteira sobrescrevem explicitamente.
  */
 const defaultRepository: Partial<TicketsRepository> = {
-  contextRolesFor: vi.fn().mockResolvedValue({ infra: 'manager' }),
   listAreasOf: vi.fn().mockResolvedValue([]),
   listAreasFor: vi.fn().mockResolvedValue(new Map()),
 };
@@ -526,10 +536,10 @@ describe('TicketsService.dashboard', () => {
      "98 abertos" de Infraestrutura apareceria sobre a fila de Manutenção. */
   it('narrows the metrics to the area asked for', async () => {
     const listForMetrics = vi.fn().mockResolvedValue([]);
-    const contextRolesFor = vi.fn().mockResolvedValue({ infra: 'user', manutencao: 'manager' });
-    const service = makeService({ listForMetrics, contextRolesFor });
+    const roles: RequestUser['roles'] = { infra: 'user', manutencao: 'admin' };
+    const service = makeService({ listForMetrics });
 
-    await service.dashboard(ana, 'manutencao');
+    await service.dashboard(withRoles(ana, roles), 'manutencao');
 
     expect(listForMetrics).toHaveBeenCalledWith(['manutencao']);
   });
@@ -578,15 +588,13 @@ describe('TicketsService — acesso por área', () => {
 
   it('lets a superadmin see every area without even reading internal_roles', async () => {
     const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
-    const contextRolesFor = vi.fn();
-    const service = makeService({ list, contextRolesFor });
+    const service = makeService({ list });
 
     await service.list(superadmin, query());
 
     expect(list.mock.calls[0]?.[1]).toEqual(
       expect.arrayContaining(['infra', 'sistema', 'manutencao']),
     );
-    expect(contextRolesFor).not.toHaveBeenCalled();
   });
 
   // triste
@@ -594,72 +602,72 @@ describe('TicketsService — acesso por área', () => {
      nada, igual a qualquer outro papel. Só super administrador tem o bypass automático. */
   it('gives a plain global admin nothing without area cargo, the same opt-in as everyone', async () => {
     const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
-    const contextRolesFor = vi.fn().mockResolvedValue({});
-    const service = makeService({ list, contextRolesFor });
+    const roles: RequestUser['roles'] = {};
+    const service = makeService({ list });
 
-    await service.list(globalAdmin, query());
-
-    expect(contextRolesFor).toHaveBeenCalled();
+    await service.list(withRoles(globalAdmin, roles), query());
     expect(list).toHaveBeenCalledWith(expect.anything(), []);
   });
 
   it('scopes the queue to nothing when the person has no role anywhere', async () => {
     const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
-    const contextRolesFor = vi.fn().mockResolvedValue({});
-    const service = makeService({ list, contextRolesFor });
+    const roles: RequestUser['roles'] = {};
+    const service = makeService({ list });
 
-    await service.list(ana, query());
+    await service.list(withRoles(ana, roles), query());
 
     expect(list).toHaveBeenCalledWith(expect.anything(), []);
   });
 
   it('refuses to open a ticket from an area the person has no role in', async () => {
-    const contextRolesFor = vi.fn().mockResolvedValue({ manutencao: 'user' });
+    const roles: RequestUser['roles'] = { manutencao: 'user' };
     const service = makeService({
       findById: vi.fn().mockResolvedValue(ticketRow({ area: 'infra' })),
-      contextRolesFor,
     });
 
-    await expect(service.findById(manutencao, 7)).rejects.toThrow(ForbiddenException);
+    await expect(service.findById(withRoles(manutencao, roles), 7)).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('lets a person in through a PARTICIPANT area, even without the original one', async () => {
-    const contextRolesFor = vi.fn().mockResolvedValue({ manutencao: 'user' });
+    const roles: RequestUser['roles'] = { manutencao: 'user' };
     const service = makeService({
       findById: vi.fn().mockResolvedValue(ticketRow({ area: 'infra' })),
       listAreasOf: vi.fn().mockResolvedValue(['manutencao']),
-      contextRolesFor,
     });
 
-    await expect(service.findById(manutencao, 7)).resolves.toMatchObject({ id: 7 });
+    await expect(service.findById(withRoles(manutencao, roles), 7)).resolves.toMatchObject({
+      id: 7,
+    });
   });
 
   it('refuses to reclassify the area with only the "user" role, even having a role there', async () => {
     const update = vi.fn();
-    const contextRolesFor = vi.fn().mockResolvedValue({ infra: 'user' });
+    const roles: RequestUser['roles'] = { infra: 'user' };
     const service = makeService({
       findById: vi.fn().mockResolvedValue(ticketRow({ area: 'infra' })),
       update,
-      contextRolesFor,
     });
 
-    await expect(service.update(ana, 7, { area: 'manutencao' })).rejects.toThrow(
+    await expect(service.update(withRoles(ana, roles), 7, { area: 'manutencao' })).rejects.toThrow(
       ForbiddenException,
     );
     expect(update).not.toHaveBeenCalled();
   });
 
   // feliz
-  it('lets a manager of the ticket area reclassify it', async () => {
+  it('lets an admin of the ticket area reclassify it', async () => {
     const update = vi.fn().mockResolvedValue(ticketRow({ area: 'manutencao' }));
-    const contextRolesFor = vi.fn().mockResolvedValue({ infra: 'manager' });
+    const roles: RequestUser['roles'] = { infra: 'admin' };
     const service = makeService({
       findById: vi.fn().mockResolvedValue(ticketRow({ area: 'infra' })),
       update,
-      contextRolesFor,
     });
 
-    await expect(service.update(ana, 7, { area: 'manutencao' })).resolves.toMatchObject({
+    await expect(
+      service.update(withRoles(ana, roles), 7, { area: 'manutencao' }),
+    ).resolves.toMatchObject({
       area: 'manutencao',
     });
   });
@@ -671,43 +679,42 @@ describe('TicketsService — acesso por área', () => {
   // triste
   it('refuses a "user" cargo to write anything at all, not even the urgency', async () => {
     const update = vi.fn();
-    const contextRolesFor = vi.fn().mockResolvedValue({ infra: 'user' });
+    const roles: RequestUser['roles'] = { infra: 'user' };
     const service = makeService({
       findById: vi.fn().mockResolvedValue(ticketRow({ area: 'infra' })),
       update,
-      contextRolesFor,
     });
 
-    await expect(service.update(ana, 7, { priority: 'high' })).rejects.toThrow(ForbiddenException);
+    await expect(service.update(withRoles(ana, roles), 7, { priority: 'high' })).rejects.toThrow(
+      ForbiddenException,
+    );
     expect(update).not.toHaveBeenCalled();
   });
 
   // feliz
-  it('lets a "manager" cargo correct the ticket data', async () => {
+  it('lets an admin of the area correct the ticket data', async () => {
     const update = vi.fn().mockResolvedValue(ticketRow({ priority: 'high' }));
-    const contextRolesFor = vi.fn().mockResolvedValue({ infra: 'manager' });
+    const roles: RequestUser['roles'] = { infra: 'admin' };
     const service = makeService({
       findById: vi.fn().mockResolvedValue(ticketRow({ area: 'infra' })),
       update,
-      contextRolesFor,
     });
 
-    await expect(service.update(ana, 7, { priority: 'high' })).resolves.toMatchObject({
+    await expect(
+      service.update(withRoles(ana, roles), 7, { priority: 'high' }),
+    ).resolves.toMatchObject({
       priority: 'high',
     });
   });
 
   /* O super administrador corrige e reclassifica QUALQUER chamado, mesmo sem nenhuma linha
-     de cargo interno na área — é o único papel sem fronteira (#13). Se `contextRolesFor`
-     fosse chamado aqui, o bypass teria vazado para uma consulta ao banco. */
+     de módulo — é o único papel sem fronteira. */
   it('lets a superadmin correct and reclassify a ticket with zero cargo anywhere', async () => {
     const superadmin: RequestUser = { ...ana, role: 'superadmin' };
     const update = vi.fn().mockResolvedValue(ticketRow({ area: 'infra' }));
-    const contextRolesFor = vi.fn();
     const service = makeService({
       findById: vi.fn().mockResolvedValue(ticketRow({ area: 'manutencao' })),
       update,
-      contextRolesFor,
     });
 
     await expect(service.update(superadmin, 7, { priority: 'high' })).resolves.toMatchObject({
@@ -716,34 +723,33 @@ describe('TicketsService — acesso por área', () => {
     await expect(service.update(superadmin, 7, { area: 'infra' })).resolves.toMatchObject({
       area: 'infra',
     });
-    expect(contextRolesFor).not.toHaveBeenCalled();
   });
 
   // triste
-  it('refuses to add a participant area without being a manager of the current one', async () => {
+  it('refuses to add a participant area without administering the current one', async () => {
     const addArea = vi.fn();
-    const contextRolesFor = vi.fn().mockResolvedValue({ infra: 'user' });
+    const roles: RequestUser['roles'] = { infra: 'user' };
     const service = makeService({
       findById: vi.fn().mockResolvedValue(ticketRow({ area: 'infra' })),
       addArea,
-      contextRolesFor,
     });
 
-    await expect(service.addArea(ana, 7, 'manutencao')).rejects.toThrow(ForbiddenException);
+    await expect(service.addArea(withRoles(ana, roles), 7, 'manutencao')).rejects.toThrow(
+      ForbiddenException,
+    );
     expect(addArea).not.toHaveBeenCalled();
   });
 
   // feliz
-  it('lets a manager add a participant area', async () => {
+  it('lets an admin of the area add a participant area', async () => {
     const addArea = vi.fn().mockResolvedValue(undefined);
-    const contextRolesFor = vi.fn().mockResolvedValue({ infra: 'manager' });
+    const roles: RequestUser['roles'] = { infra: 'admin' };
     const service = makeService({
       findById: vi.fn().mockResolvedValue(ticketRow({ area: 'infra' })),
       addArea,
-      contextRolesFor,
     });
 
-    const ticket = await service.addArea(ana, 7, 'manutencao');
+    const ticket = await service.addArea(withRoles(ana, roles), 7, 'manutencao');
 
     expect(addArea).toHaveBeenCalledWith({ ticketId: 7, area: 'manutencao', createdBy: ana.email });
     expect(ticket.participantAreas).toEqual(['manutencao']);
@@ -751,28 +757,28 @@ describe('TicketsService — acesso por área', () => {
 
   it('refuses to add the original area as a participant', async () => {
     const addArea = vi.fn();
-    const contextRolesFor = vi.fn().mockResolvedValue({ infra: 'manager' });
+    const roles: RequestUser['roles'] = { infra: 'admin' };
     const service = makeService({
       findById: vi.fn().mockResolvedValue(ticketRow({ area: 'infra' })),
       addArea,
-      contextRolesFor,
     });
 
-    await expect(service.addArea(ana, 7, 'infra')).rejects.toThrow(UnprocessableEntityException);
+    await expect(service.addArea(withRoles(ana, roles), 7, 'infra')).rejects.toThrow(
+      UnprocessableEntityException,
+    );
     expect(addArea).not.toHaveBeenCalled();
   });
 
-  it('lets a manager remove a participant area', async () => {
+  it('lets an admin of the area remove a participant area', async () => {
     const removeArea = vi.fn().mockResolvedValue(undefined);
-    const contextRolesFor = vi.fn().mockResolvedValue({ infra: 'manager' });
+    const roles: RequestUser['roles'] = { infra: 'admin' };
     const service = makeService({
       findById: vi.fn().mockResolvedValue(ticketRow({ area: 'infra' })),
       listAreasOf: vi.fn().mockResolvedValue(['manutencao']),
       removeArea,
-      contextRolesFor,
     });
 
-    const ticket = await service.removeArea(ana, 7, 'manutencao');
+    const ticket = await service.removeArea(withRoles(ana, roles), 7, 'manutencao');
 
     expect(removeArea).toHaveBeenCalledWith(7, 'manutencao');
     expect(ticket.participantAreas).toEqual([]);
@@ -782,45 +788,40 @@ describe('TicketsService — acesso por área', () => {
 describe('TicketsService.myAreas', () => {
   // feliz
   it('lists only the areas the person has a role in', async () => {
-    const contextRolesFor = vi.fn().mockResolvedValue({ infra: 'user', sistema: 'manager' });
-    const service = makeService({ contextRolesFor });
+    const roles: RequestUser['roles'] = { infra: 'user', sistema: 'admin' };
+    const service = makeService({});
 
-    await expect(service.myAreas(ana)).resolves.toEqual(['infra', 'sistema']);
+    await expect(service.myAreas(withRoles(ana, roles))).resolves.toEqual(['infra', 'sistema']);
   });
 
   it('gives a superadmin all three areas without reading internal_roles', async () => {
-    const contextRolesFor = vi.fn();
-    const service = makeService({ contextRolesFor });
+    const service = makeService({});
 
     const areas = await service.myAreas({ ...ana, role: 'superadmin' });
 
     expect(areas).toEqual(expect.arrayContaining(['infra', 'sistema', 'manutencao']));
-    expect(contextRolesFor).not.toHaveBeenCalled();
   });
 
   // triste
   it('gives nobody an area they have no role in', async () => {
-    const contextRolesFor = vi.fn().mockResolvedValue({});
-    const service = makeService({ contextRolesFor });
+    const roles: RequestUser['roles'] = {};
+    const service = makeService({});
 
-    await expect(service.myAreas(ana)).resolves.toEqual([]);
+    await expect(service.myAreas(withRoles(ana, roles))).resolves.toEqual([]);
   });
 
   /* "Admin faz tudo no contexto DELE" — sem cargo em área nenhuma, um admin global não é
      diferente de qualquer outro papel sem cargo. */
   it('gives a plain global admin nothing without area cargo', async () => {
-    const contextRolesFor = vi.fn().mockResolvedValue({});
-    const service = makeService({ contextRolesFor });
+    const service = makeService({});
 
-    await expect(service.myAreas({ ...ana, role: 'admin' })).resolves.toEqual([]);
+    await expect(service.myAreas({ ...ana, role: 'admin', roles: {} })).resolves.toEqual([]);
   });
 
   it('refuses an unidentified request without touching the repository', async () => {
-    const contextRolesFor = vi.fn();
-    const service = makeService({ contextRolesFor });
+    const service = makeService({});
 
     await expect(service.myAreas(noRole)).rejects.toThrow(ForbiddenException);
-    expect(contextRolesFor).not.toHaveBeenCalled();
   });
 });
 
@@ -846,6 +847,7 @@ const adminUser: RequestUser = {
   email: 'ana@exemplo.com',
   name: 'Ana Lima',
   role: 'admin',
+  roles: { infra: 'admin', sistema: 'admin', manutencao: 'admin' },
 };
 
 const openInput = {
@@ -857,20 +859,13 @@ const openInput = {
   description: 'A impressora não puxa papel.',
 };
 
-function makeAssigneeService(
-  options: { attends?: boolean; areas?: string[]; roles?: Record<string, string> } = {},
-) {
+function makeAssigneeService(options: { attends?: boolean; areas?: string[] } = {}) {
   const repository = {
     insert: vi.fn(async (values: Partial<TicketWithComputer>) => ticketRow(values)),
     update: vi.fn(async (_id: number, values: Partial<TicketWithComputer>) => ticketRow(values)),
     findById: vi.fn().mockResolvedValue(ticketRow({ notifyWhatsapp: true })),
     listAreasOf: vi.fn().mockResolvedValue([]),
     listAreasFor: vi.fn().mockResolvedValue(new Map()),
-    contextRolesFor: vi
-      .fn()
-      .mockResolvedValue(
-        options.roles ?? { infra: 'admin', sistema: 'admin', manutencao: 'admin' },
-      ),
   };
   const assignees = {
     resolve: vi
@@ -1081,8 +1076,14 @@ describe('TicketsService.notifyReady', () => {
   // triste
   /* Quem só consulta a área não dispara mensagem pelo número de ninguém. */
   it('refuses who can only read the area of the ticket', async () => {
-    const { service, notifier } = makeAssigneeService({ roles: { infra: 'user' } });
-    const regular: RequestUser = { id: 'u-x', email: 'x@exemplo.com', name: 'X', role: 'user' };
+    const { service, notifier } = makeAssigneeService();
+    const regular: RequestUser = {
+      id: 'u-x',
+      email: 'x@exemplo.com',
+      name: 'X',
+      role: 'user',
+      roles: { infra: 'user' },
+    };
 
     await expect(service.notifyReady(regular, 7)).rejects.toThrow(ForbiddenException);
     expect(notifier.ready).not.toHaveBeenCalled();
@@ -1111,8 +1112,14 @@ describe('TicketsService WhatsApp notices', () => {
   // triste
   /* Reenviar é mandar mensagem pelo número de alguém: quem só consulta não pode. */
   it('refuses the retry to who can only read the area of the ticket', async () => {
-    const { service, notifier } = makeAssigneeService({ roles: { infra: 'user' } });
-    const regular: RequestUser = { id: 'u-x', email: 'x@exemplo.com', name: 'X', role: 'user' };
+    const { service, notifier } = makeAssigneeService();
+    const regular: RequestUser = {
+      id: 'u-x',
+      email: 'x@exemplo.com',
+      name: 'X',
+      role: 'user',
+      roles: { infra: 'user' },
+    };
 
     await expect(service.retryWhatsappNotice(regular, 7, 4)).rejects.toThrow(ForbiddenException);
     expect(notifier.retry).not.toHaveBeenCalled();
