@@ -248,3 +248,40 @@ describe('pickProjects', () => {
     expect(pickProjects('financeiro', MANY)).toEqual([]);
   });
 });
+
+describe('the "no system, just a user" answer', () => {
+  const draft = {
+    ...emptyAccessRequest(null),
+    requesterName: 'Maria Clara',
+    email: 'm@e.com',
+    phone: '62999990000',
+    department: 'rh' as const,
+  };
+
+  // feliz
+  it('finishes the request as a user request when the answer is 0', () => {
+    const filled = fillAccessRequestStep(draft, 'system', '0', PROJECTS);
+
+    expect(filled).toEqual({
+      ok: true,
+      draft: { ...draft, project: null, projects: [], userOnly: true },
+    });
+    expect(filled.ok && nextAccessRequestStep(filled.draft)).toBeNull();
+    expect(
+      accessRequestDescription({
+        requesterName: 'Maria Clara',
+        email: 'm@e.com',
+        phone: '62999990000',
+        projectName: null,
+      }),
+    ).toContain('Pedido de usuário');
+  });
+
+  // triste
+  it('keeps offering the way out when the answer is not understood', () => {
+    expect(fillAccessRequestStep(draft, 'system', '99', PROJECTS)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining('0. Nenhum — só preciso de um usuário'),
+    });
+  });
+});

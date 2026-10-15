@@ -11,7 +11,8 @@ import { MIN_PHONE_DIGITS } from './phone.util';
  * Diferente do `/chamado` (que responde com um link), aqui o bot pergunta UM campo por
  * mensagem: nome completo, e-mail, telefone (só quando o WhatsApp esconde), setor e sistemas.
  * Sistemas são vários de uma vez ("1, 4, 8"): cada um vira um chamado, porque cada sistema tem
- * quem libere o acesso a ele.
+ * quem libere o acesso a ele. Quem ainda não tem usuário nenhum responde "0": o pedido vira UM
+ * chamado de "criar usuário", sem sistema — é para isso que o comando existe.
  *
  * Depois do nome, o servidor procura a pessoa no admin-console (`person-match.util`). Achou
  * uma: o pedido fica ligado a ela e o e-mail vem da conta, sem perguntar. Achou várias: o
@@ -41,6 +42,8 @@ export type AccessRequestDraft = {
   project: AccessRequestProject | null;
   /** Todos os sistemas escolhidos; `project` é o primeiro (rascunho antigo só tinha ele). */
   projects?: AccessRequestProject[] | null;
+  /** "0 — Nenhum": a pessoa só precisa de um usuário, sem acesso a sistema nenhum ainda. */
+  userOnly?: boolean;
   /** A pessoa do admin-console que está pedindo, quando o bot a reconheceu. */
   requesterId?: string | null;
   /** As pessoas com o nome escrito, enquanto o bot espera a resposta do "quem é você?". */
@@ -85,9 +88,14 @@ export function nextAccessRequestStep(draft: AccessRequestDraft): AccessRequestS
   if (!draft.email) return 'email';
   if (!draft.phone) return 'phone';
   if (!draft.department) return 'department';
-  if (!draft.project && !draft.projects?.length) return 'system';
+  if (!hasSystemAnswer(draft)) return 'system';
 
   return null;
+}
+
+/* Já respondeu a pergunta dos sistemas: escolheu algum, ou disse que só precisa do usuário. */
+function hasSystemAnswer(draft: AccessRequestDraft): boolean {
+  return Boolean(draft.project || draft.projects?.length || draft.userOnly);
 }
 
 /**
@@ -130,9 +138,13 @@ export function departmentOptionsText(): string {
   return numbered(DEPARTMENTS.map((department) => DEPARTMENT_LABELS[department]));
 }
 
+export const USER_ONLY_OPTION = '0. Nenhum — só preciso de um usuário';
+
 export function projectOptionsText(projects: readonly AccessRequestProject[]): string {
-  return numbered(projects.map((project) => project.name));
+  return `${numbered(projects.map((project) => project.name))}\n${USER_ONLY_OPTION}`;
 }
+
+const USER_ONLY_ANSWERS = new Set(['0', 'nenhum', 'nenhum sistema']);
 
 function normalize(text: string): string {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[*_~]/g, '').trim().toLowerCase();
@@ -223,6 +235,10 @@ const STEP_RULES: Record<AccessRequestStep, StepRule> = {
     return { ok: true, draft: { ...draft, department } };
   },
   system: (draft, text, projects) => {
+    if (USER_ONLY_ANSWERS.has(normalize(text))) {
+      return { ok: true, draft: { ...draft, project: null, projects: [], userOnly: true } };
+    }
+
     const picked = pickProjects(text, projects);
     const [first] = picked;
     if (!first) {
@@ -278,10 +294,15 @@ export function accessRequestDescription(request: {
   requesterName: string;
   email: string;
   phone: string;
-  projectName: string;
+  /** Nulo é o pedido de usuário, sem sistema ("0 — Nenhum"). */
+  projectName: string | null;
 }): string {
+  const subject = request.projectName
+    ? `Pedido de acesso ao sistema ${request.projectName}`
+    : 'Pedido de usuário (ainda sem acesso a sistema nenhum)';
+
   return [
-    `Pedido de acesso ao sistema ${request.projectName}, feito pelo WhatsApp (/acesso).`,
+    `${subject}, feito pelo WhatsApp (/acesso).`,
     '',
     `Nome: ${request.requesterName}`,
     `E-mail: ${request.email}`,
