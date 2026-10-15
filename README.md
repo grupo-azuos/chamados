@@ -103,7 +103,7 @@ Skills são receitas prontas. O Claude usa sozinho quando o pedido combina, e vo
 A raiz do repositório só guarda documentação e configuração de equipe. O sistema inteiro vive em `chamados/dashboard/`.
 
 ```text
-azuos-ticket/                         # raiz do repositório git
+chamados/                             # raiz do repositório git
 ├── README.md · CONTRIBUTING.md         # para pessoas
 ├── CLAUDE.md                           # para o Claude
 ├── .claude/skills/                     # as receitas do Claude
@@ -125,7 +125,7 @@ azuos-ticket/                         # raiz do repositório git
         │   └── src/
         │       ├── modules/<feature>/  # controller/ service/ repository/ mapper/ dto/
         │       └── lib/
-        │           ├── auth/            # autenticação e identidade
+        │           ├── auth/            # identidade pelo admin-console e trava por módulo
         │           ├── config/          # variáveis de ambiente (Zod)
         │           ├── db/              # conexão Postgres (Neon), tabelas Drizzle
         │           ├── storage/         # arquivos no Cloudflare R2
@@ -234,30 +234,67 @@ sobe com o perfil `whatsapp` do compose — ver [`chamados/dashboard/docs/whatsa
 
 ## Autenticação e autorização
 
-O MVP **pode ter login, usuários, sessões e permissões** quando a ideia exigir isso.
+**Este sistema não faz login.** Quem identifica as pessoas é o
+[admin-console](https://github.com/grupo-azuos/admin-console) do Grupo Azuos, pelo proxy: o
+Traefik do Coolify pergunta a ele a cada requisição (`forwardAuth`) e injeta quem é a pessoa em
+quatro cabeçalhos — `x-forwarded-user-id`, `-email`, `-name` e `-role`. É o mesmo arranjo do
+Paralegal. Trocar senha, foto e sair é na conta da pessoa, lá ("Minha conta", na barra lateral).
 
-A autenticação identifica quem está fazendo a requisição. A autorização determina o que essa pessoa pode fazer.
+### Quem pode o quê
 
-O sistema pode utilizar autenticação própria, um provedor externo ou `auth-forward`, conforme a necessidade do projeto. Antes de criar ou alterar o mecanismo de autenticação, o Claude deve verificar o que já existe no projeto e evitar criar mecanismos concorrentes sem necessidade.
+São duas peças, de dois lugares:
 
-Quando houver autenticação, as responsabilidades são separadas:
+- **o papel** (Administrador · Gestor · Usuário) é o que o admin-console deu à pessoa neste sistema;
+- **os módulos** (Infraestrutura · Sistema · Manutenção) são liberados aqui, pelo **super-admin**, no
+  perfil dele ("Acessos por módulo").
 
-* `AuthenticationMiddleware` resolve e valida a identidade da requisição.
-* `RolesGuard` controla acesso às rotas conforme os papéis.
-* `lib/policy` determina o que aquela identidade pode fazer sobre cada dado.
-* Uma requisição sem identidade válida recebe `401`.
-* Uma identidade autenticada sem permissão recebe `403`.
-* A identidade usada para auditoria vem da autenticação, nunca de campos enviados livremente pelo cliente.
+| Papel no admin-console | Com o módulo | Sem módulo nenhum |
+|---|---|---|
+| Administrador | mexe em tudo daquele módulo (e atende os chamados da área) | só abre chamado e valida documento |
+| Gestor | só vê os dados do módulo | só abre chamado e valida documento |
+| Usuário | só vê os dados do módulo | só abre chamado e valida documento |
 
-Login não concede autorização automaticamente. Mesmo autenticado, o usuário continua sujeito aos papéis e às policies.
+**O super-admin** vê e altera todas as telas e é o único que libera módulos. Ele não nasce de
+clique nenhum, só do comando, rodado por quem tem o `.env` do servidor:
 
-Sessões não devem ser armazenadas em `localStorage`. Quando baseadas em cookie, devem usar as proteções adequadas ao ambiente, incluindo `HttpOnly`, `Secure` quando aplicável e `SameSite` compatível com o fluxo.
+```bash
+cd chamados/dashboard
+npm run superadmin:promote -- pessoa@azuoscontabil.com.br
+npm run superadmin:promote -- pessoa@azuoscontabil.com.br --remove
+```
 
-Senhas devem ser armazenadas somente por meio de mecanismo de hash apropriado. Nunca devem aparecer em texto puro em banco, logs, seeds, fixtures, respostas da API ou mensagens de erro.
+Abrir e consultar chamado (`/support`) e validar documento (`/verify`) são públicos: não passam
+por regra nenhuma.
 
-Mudanças de autenticação devem possuir testes para login válido, credencial inválida, requisição sem autenticação, sessão inválida ou expirada, logout, usuário sem permissão, tentativa de escalada de privilégio e tentativa de substituir a identidade autenticada por dados enviados pelo cliente.
+No código, a regra está em `shared/src/domain/module-access.util.ts`; toda rota da API declara
+o módulo dela (`@ModuleContext('infra')`), e a trava global (`RolesGuard`) recusa quem não tem o
+módulo e recusa escrita de quem só consulta. Rota sem módulo declarado nasce **fechada**.
 
----
+### Na sua máquina
+
+Sem proxy não há cabeçalho, e o servidor usa a **pessoa de desenvolvimento**
+(`dev@chamados.local`, `USER_MOCK`, ligada fora de produção e recusada em produção). Ela começa
+sem módulo nenhum, como qualquer pessoa; para ver o painel inteiro:
+
+```bash
+npm run superadmin:promote -- dev@chamados.local
+```
+
+### Em produção — três cuidados que não são do código
+
+1. **O container só é alcançável pelo proxy.** O sistema confia nos cabeçalhos sem perguntar de
+   onde vieram — é assim que auth-forward funciona. Sem porta publicada, sem router direto.
+2. **Dois routers no Traefik para o mesmo container:** um com o middleware de login do
+   admin-console (`um-auth`, com `addAuthCookiesToResponse`) para o painel e a API, e outro
+   SEM ele, por `PathPrefix`, só para o que é público — `/support`, `/verify`, os arquivos da
+   tela (`/_app`), as rotas públicas da API (abrir/consultar chamado, validar documento, webhook
+   do WhatsApp e da rede, callback do GitHub, `/api/health`) e o WebSocket `/agent` dos agentes.
+3. **O router público APAGA os `x-forwarded-user-*`** que vierem do navegador (middleware de
+   cabeçalhos do Traefik). Sem isso, alguém forjaria a identidade numa rota aberta.
+
+As variáveis (`ADMIN_CONSOLE_URL`, `ADMIN_CONSOLE_TOKEN`, `ADMIN_CONSOLE_LOGIN_URL`,
+`USER_MOCK`) estão explicadas em `server/.env.example`. Os passos do lado do admin-console
+(cadastrar o sistema `chamados` com o host, gerar o token de serviço) estão no README dele.
 
 ## O que o MVP não faz
 
@@ -272,13 +309,8 @@ Mudanças de autenticação devem possuir testes para login válido, credencial 
 
 ### Como a identidade funciona
 
-A identidade depende da estratégia de autenticação configurada para o projeto.
-
-Em desenvolvimento, o projeto pode utilizar uma identidade mock explicitamente configurada para testes. Em ambientes com autenticação própria, a identidade é resolvida pelo mecanismo de login e sessão. Em ambientes com `auth-forward`, a identidade pode ser fornecida pelo proxy autenticador.
-
-Os papéis e permissões são definidos pelo projeto e ficam sob responsabilidade de `server/src/lib/policy/`.
-
-**Antes de publicar um MVP:** utilizar um mecanismo de autenticação adequado ao ambiente, remover identidades mock quando não forem mais necessárias, garantir que o container só seja alcançável pela infraestrutura prevista e trocar dados de teste por dados reais fora do git.
+Ver "Autenticação e autorização", acima: a identidade vem do admin-console, pelo proxy; os
+módulos de cada pessoa são deste sistema; na sua máquina vale a pessoa de desenvolvimento.
 
 ---
 
@@ -362,4 +394,4 @@ Dependência com licença que não está na lista **reprova o PR**. O caminho é
 > licença própria da Webflow, e este projeto não o relicencia. Leia
 > [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md) antes de redistribuir.
 
-O mesmo arquivo explica as dependências **AGPL** que a biblioteca de login da Neon instala sem que o sistema use, e o pacote sem licença declarada que vem do `exceljs`.
+O mesmo arquivo explica o pacote sem licença declarada que vem do `exceljs`.
