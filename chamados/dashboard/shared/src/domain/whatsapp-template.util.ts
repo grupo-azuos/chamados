@@ -13,6 +13,7 @@ export const WHATSAPP_TEMPLATE_KEYS = [
   'ticket_ready',
   'intake_link',
   'access_name',
+  'access_who',
   'access_email',
   'access_phone',
   'access_department',
@@ -63,6 +64,14 @@ export const WHATSAPP_TEMPLATES: Record<WhatsappTemplateKey, WhatsappTemplateDef
     variables: ['responsavel'],
     defaultBody:
       'Olá! Aqui é o atendimento de *{{responsavel}}*. Vou registrar o seu *pedido de acesso*.\n\nQual é o seu *nome completo*? (nome e sobrenome)\n\n> _Para desistir, responda cancelar._',
+  },
+  access_who: {
+    label: 'Pedido de acesso: quem é você',
+    description:
+      'Enviada quando mais de uma pessoa do escritório tem o nome informado: pergunta qual delas está escrevendo.',
+    variables: ['nome', 'opcoes'],
+    defaultBody:
+      'Encontrei mais de uma pessoa com esse nome. Qual delas é você? Responda com o número:\n\n{{opcoes}}',
   },
   access_email: {
     label: 'Pedido de acesso: e-mail',
