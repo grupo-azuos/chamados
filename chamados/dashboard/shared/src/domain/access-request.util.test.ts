@@ -179,3 +179,47 @@ describe('accessRequestDescription', () => {
     expect(description.split('\n')).toContain('Nome: Maria Clara');
   });
 });
+
+describe('the "who is who" step', () => {
+  const ANA_SOUZA = { id: 'a1', name: 'Ana Souza', email: 'ana.souza@empresa.com.br' };
+  const ANA_LIMA = { id: 'a2', name: 'Ana Lima', email: 'ana.lima@empresa.com.br' };
+  const asking = {
+    ...emptyAccessRequest('5562999990000'),
+    requesterName: 'Ana',
+    candidates: [ANA_SOUZA, ANA_LIMA],
+  };
+
+  // feliz
+  it('asks who is who before anything else, and links the request to the one picked', () => {
+    expect(nextAccessRequestStep(asking)).toBe('who');
+
+    const picked = fillAccessRequestStep(asking, 'who', '2', PROJECTS);
+
+    expect(picked).toEqual({
+      ok: true,
+      draft: {
+        ...asking,
+        requesterId: 'a2',
+        requesterName: 'Ana Lima',
+        email: ANA_LIMA.email,
+        candidates: null,
+      },
+    });
+    /* O e-mail veio da conta: o próximo passo já é o setor. */
+    expect(picked.ok && nextAccessRequestStep(picked.draft)).toBe('department');
+  });
+
+  it('goes on without a link when the person is none of them', () => {
+    const none = fillAccessRequestStep(asking, 'who', '0', PROJECTS);
+
+    expect(none.ok && nextAccessRequestStep(none.draft)).toBe('email');
+  });
+
+  // triste
+  it('repeats the list when the answer is not one of the options', () => {
+    expect(fillAccessRequestStep(asking, 'who', '7', PROJECTS)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining('1. Ana Souza'),
+    });
+  });
+});

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { REQUESTER_NAME_MAX_LENGTH } from '../schemas/ticket.schema';
 import { DEPARTMENT_LABELS, DEPARTMENTS, type Department } from './department.util';
+import { type PersonCandidate, personOptionsText, pickPerson } from './person-match.util';
 import { MIN_PHONE_DIGITS } from './phone.util';
 
 /**
@@ -9,6 +10,10 @@ import { MIN_PHONE_DIGITS } from './phone.util';
  *
  * Diferente do `/chamado` (que responde com um link), aqui o bot pergunta UM campo por
  * mensagem: nome completo, e-mail, telefone (só quando o WhatsApp esconde), setor e sistema.
+ *
+ * Depois do nome, o servidor procura a pessoa no admin-console (`person-match.util`). Achou
+ * uma: o pedido fica ligado a ela e o e-mail vem da conta, sem perguntar. Achou várias: o
+ * próximo passo é `who`, o "quem é você?".
  * Foi a escolha de quem usa: quem pede acesso responde no próprio chat, sem abrir formulário.
  *
  * O rascunho guarda o que já foi respondido; a próxima pergunta é sempre o primeiro campo que
@@ -21,7 +26,7 @@ export const ACCESS_REQUEST_COMMAND = '/acesso';
 /* Quem quer desistir no meio responde uma destas palavras. */
 const CANCEL_WORDS: readonly string[] = ['cancelar', '/cancelar'];
 
-export type AccessRequestStep = 'name' | 'email' | 'phone' | 'department' | 'system';
+export type AccessRequestStep = 'name' | 'who' | 'email' | 'phone' | 'department' | 'system';
 
 export type AccessRequestProject = { id: number; name: string };
 
@@ -32,6 +37,10 @@ export type AccessRequestDraft = {
   phone: string | null;
   department: Department | null;
   project: AccessRequestProject | null;
+  /** A pessoa do admin-console que está pedindo, quando o bot a reconheceu. */
+  requesterId?: string | null;
+  /** As pessoas com o nome escrito, enquanto o bot espera a resposta do "quem é você?". */
+  candidates?: PersonCandidate[] | null;
 };
 
 export type AccessRequestFill =
@@ -54,12 +63,21 @@ export function isAccessRequestCancel(text: string): boolean {
 }
 
 export function emptyAccessRequest(phone: string | null): AccessRequestDraft {
-  return { requesterName: null, email: null, phone, department: null, project: null };
+  return {
+    requesterName: null,
+    email: null,
+    phone,
+    department: null,
+    project: null,
+    requesterId: null,
+    candidates: null,
+  };
 }
 
 /** O próximo campo a perguntar — ou nulo quando o pedido está completo. */
 export function nextAccessRequestStep(draft: AccessRequestDraft): AccessRequestStep | null {
   if (!draft.requesterName) return 'name';
+  if (draft.candidates && draft.candidates.length > 0) return 'who';
   if (!draft.email) return 'email';
   if (!draft.phone) return 'phone';
   if (!draft.department) return 'department';
@@ -145,6 +163,17 @@ const STEP_RULES: Record<AccessRequestStep, StepRule> = {
 
     return { ok: true, draft: { ...draft, requesterName } };
   },
+  who: (draft, text) => {
+    const people = draft.candidates ?? [];
+    const picked = pickPerson(text, people);
+    if (!picked) {
+      return fail(`Não entendi. Responda com o *número* da pessoa:\n${personOptionsText(people)}`);
+    }
+    /* "Nenhum desses": segue sem vínculo, e o e-mail é perguntado como antes. */
+    if (picked === 'none') return { ok: true, draft: { ...draft, candidates: null } };
+
+    return { ok: true, draft: identifiedAs(draft, picked) };
+  },
   email: (draft, text) => {
     const email = parseEmail(text);
     if (!email) return fail('Esse e-mail não parece certo. Ex.: _maria.silva@empresa.com.br_.');
@@ -176,6 +205,20 @@ const STEP_RULES: Record<AccessRequestStep, StepRule> = {
     return { ok: true, draft: { ...draft, project } };
   },
 };
+
+/** O rascunho de quem o bot reconheceu: nome e e-mail passam a ser os da conta. */
+export function identifiedAs(
+  draft: AccessRequestDraft,
+  person: PersonCandidate,
+): AccessRequestDraft {
+  return {
+    ...draft,
+    requesterId: person.id,
+    requesterName: person.name,
+    email: person.email,
+    candidates: null,
+  };
+}
 
 function fail(error: string): AccessRequestFill {
   return { ok: false, error };
