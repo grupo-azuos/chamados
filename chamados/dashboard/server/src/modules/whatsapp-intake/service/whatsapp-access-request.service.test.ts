@@ -162,6 +162,40 @@ describe('WhatsappAccessRequestService — quem está pedindo', () => {
   });
 });
 
+describe('WhatsappAccessRequestService — vários sistemas', () => {
+  const PROJECTS = [
+    { id: 7, name: 'Portal do Cliente' },
+    { id: 8, name: 'Folha' },
+    { id: 9, name: 'Paralegal' },
+  ];
+
+  // feliz
+  it('opens one ticket per system picked and lists every protocol', async () => {
+    const { say, tickets, messaging } = makeService({ projects: PROJECTS });
+
+    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '11']) await say(text);
+    expect(await say('1, 3')).toEqual({ reply: 'text:access_created', isOpen: false });
+
+    expect(tickets.create.mock.calls.map((call) => call[0])).toEqual([
+      expect.objectContaining({ projectId: 7 }),
+      expect.objectContaining({ projectId: 9 }),
+    ]);
+    expect(messaging.reply.mock.calls.at(-1)?.[0].values).toMatchObject({
+      sistema: 'Portal do Cliente, Paralegal',
+    });
+  });
+
+  // triste
+  it('asks again when one of the numbers is not in the list', async () => {
+    const { say, tickets } = makeService({ projects: PROJECTS });
+
+    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '11']) await say(text);
+
+    expect(await say('1, 9')).toEqual({ reply: 'text:access_invalid', isOpen: true });
+    expect(tickets.create).not.toHaveBeenCalled();
+  });
+});
+
 describe('WhatsappAccessRequestService', () => {
   // feliz
   it('asks name, e-mail, department and system, then opens the access ticket', async () => {
@@ -194,7 +228,11 @@ describe('WhatsappAccessRequestService', () => {
     );
     expect(messaging.reply.mock.calls.at(-1)?.[0]).toMatchObject({
       ticketId: 42,
-      values: { nome: 'Maria', protocolo: 'CH-0042', sistema: 'Portal do Cliente' },
+      values: {
+        nome: 'Maria',
+        protocolo: '• *CH-0042* — Portal do Cliente',
+        sistema: 'Portal do Cliente',
+      },
     });
   });
 
@@ -287,11 +325,23 @@ describe('WhatsappAccessRequestService', () => {
     expect(await service.isFor(inbound('Maria Clara'), NOW)).toBe(false);
   });
 
-  it('goes silent when the ticket could not be saved', async () => {
+  /* Calar deixaria a pessoa esperando uma resposta que não vem: ela fica sabendo. */
+  it('tells the person when the ticket could not be saved', async () => {
     const { say } = makeService({ createFails: true });
 
     for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '1']) await say(text);
 
-    expect(await say('1')).toEqual(SILENCE);
+    expect(await say('1')).toEqual({ reply: 'text:access_invalid', isOpen: false });
+  });
+
+  /* Sem confirmar quem atende (admin-console fora), o pedido entra na fila em vez de se perder. */
+  it('opens the ticket without assignee when the assignee cannot be confirmed', async () => {
+    const { say, tickets } = makeService();
+    tickets.create.mockRejectedValueOnce(new Error('admin-console down'));
+
+    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '1']) await say(text);
+
+    expect(await say('1')).toEqual({ reply: 'text:access_created', isOpen: false });
+    expect(tickets.create.mock.calls[1]?.[0]).toMatchObject({ assigneeId: undefined });
   });
 });

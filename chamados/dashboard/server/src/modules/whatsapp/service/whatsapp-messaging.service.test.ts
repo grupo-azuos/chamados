@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { type Env } from '../../../lib/config/env.schema';
 import { type WhatsappMessageRow } from '../../../lib/db/schema/whatsapp-connections.schema';
 import { type WhatsappConnectionsRepository } from '../repository/whatsapp-connections.repository';
@@ -40,6 +41,7 @@ function queued(overrides: Partial<WhatsappMessageRow> = {}): WhatsappMessageRow
 
 function makeService(
   options: {
+    directoryFails?: boolean;
     sent?: number;
     limit?: number;
     linked?: boolean;
@@ -68,6 +70,13 @@ function makeService(
     listForTicket: vi.fn(async () => [queued(), queued({ id: 5, kind: 'access_created' })]),
     requeue: vi.fn(async () => (options.requeued === undefined ? queued() : options.requeued)),
   };
+  const directory = {
+    getUserById: vi.fn(async () => {
+      if (options.directoryFails) throw new Error('admin-console down');
+
+      return { id: 'u-ana', name: 'Ana Lima', email: 'ana@empresa.com.br' };
+    }),
+  };
   const templates = { render: vi.fn(async (kind: string) => `text:${kind}`) };
   const service = new WhatsappMessagingService(
     { WHATSAPP_DAILY_LIMIT: options.limit ?? 100 } as Env,
@@ -75,6 +84,7 @@ function makeService(
     connections as unknown as WhatsappConnectionsRepository,
     messages as unknown as WhatsappMessagesRepository,
     templates as unknown as WhatsappTemplatesService,
+    directory as unknown as UserDirectoryProvider,
   );
 
   return { service, bot, messages, templates };
@@ -94,7 +104,7 @@ describe('WhatsappMessagingService.queue', () => {
         ticketId: 7,
         kind: 'ticket_ready',
         recipient: '5562999990002',
-        body: 'text:ticket_ready',
+        body: '*Ana Lima BOT*\n\ntext:ticket_ready',
         expiresAt: new Date(NOW.getTime() + DAY_MS),
       },
       NOW,
@@ -142,7 +152,11 @@ describe('WhatsappMessagingService.deliver', () => {
 
     await service.deliver(queued(), NOW);
 
-    expect(bot.sendText).toHaveBeenLastCalledWith('u-ana', '5562999990001', 'text:limit_alert');
+    expect(bot.sendText).toHaveBeenLastCalledWith(
+      'u-ana',
+      '5562999990001',
+      '*Ana Lima BOT*\n\ntext:limit_alert',
+    );
     expect(messages.markSent).toHaveBeenCalledTimes(1);
   });
 
@@ -225,7 +239,7 @@ describe('WhatsappMessagingService.reply', () => {
   it('hands back the text and counts it, leaving the delivery to the bot', async () => {
     const { service, bot, messages } = makeService();
 
-    expect(await service.reply(reply)).toBe('text:intake_link');
+    expect(await service.reply(reply)).toBe('*Ana Lima BOT*\n\ntext:intake_link');
     expect(messages.record).toHaveBeenCalledOnce();
     expect(bot.sendText).not.toHaveBeenCalled();
   });
@@ -264,5 +278,30 @@ describe('startOfDay', () => {
     const now = new Date('2026-10-11T01:00:00.000Z');
 
     expect(startOfDay(now, 'America/Sao_Paulo').toISOString()).toBe('2026-10-10T03:00:00.000Z');
+  });
+});
+
+describe('WhatsappMessagingService — assinatura do bot', () => {
+  const reply = {
+    senderUserId: 'u-ana',
+    recipient: '5562999990002',
+    kind: 'intake_link' as const,
+    ticketId: null,
+    values: {},
+  };
+
+  // feliz
+  it('signs every message with the name of who attends', async () => {
+    const { service } = makeService();
+
+    expect(await service.reply(reply)).toBe('*Ana Lima BOT*\n\ntext:intake_link');
+  });
+
+  // triste
+  /* Sem o admin-console a mensagem sai assim mesmo, com o nome da casa. */
+  it('still signs the message when the name cannot be read', async () => {
+    const { service } = makeService({ directoryFails: true });
+
+    expect(await service.reply(reply)).toBe('*Azuos BOT*\n\ntext:intake_link');
   });
 });

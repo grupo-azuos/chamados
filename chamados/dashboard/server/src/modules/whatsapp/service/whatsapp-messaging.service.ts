@@ -1,8 +1,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { type WhatsappTemplateKey } from '@template/shared/domain/whatsapp-template.util';
+import {
+  signBotMessage,
+  type WhatsappTemplateKey,
+} from '@template/shared/domain/whatsapp-template.util';
 import { whatsappAlertThreshold } from '@template/shared/schemas/whatsapp-connection.schema';
 import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
 
+import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { type Env } from '../../../lib/config/env.schema';
 import { ENV } from '../../../lib/config/env.token';
 import { type WhatsappMessageRow } from '../../../lib/db/schema/whatsapp-connections.schema';
@@ -52,6 +57,7 @@ export class WhatsappMessagingService {
     private readonly connections: WhatsappConnectionsRepository,
     private readonly messages: WhatsappMessagesRepository,
     private readonly templates: WhatsappTemplatesService,
+    @Inject(USER_DIRECTORY_PROVIDER) private readonly directory: UserDirectoryProvider,
   ) {}
 
   async usage(userId: string): Promise<WhatsappUsage> {
@@ -89,7 +95,7 @@ export class WhatsappMessagingService {
         ticketId: message.ticketId,
         kind: message.kind,
         recipient: message.to,
-        body: await this.templates.render(message.kind, message.values),
+        body: await this.signed(message.senderUserId, message.kind, message.values),
         expiresAt: new Date(now.getTime() + WHATSAPP_QUEUE_TTL_MS),
       },
       now,
@@ -149,10 +155,35 @@ export class WhatsappMessagingService {
   ): Promise<string | null> {
     if (!(await this.hasRoom(message.senderUserId))) return null;
 
-    const text = await this.templates.render(message.kind, message.values);
+    const text = await this.signed(message.senderUserId, message.kind, message.values);
     await this.count({ ...message, to: message.recipient });
 
     return text;
+  }
+
+  /* O texto do modelo, com a assinatura de quem atende no topo (ver `signBotMessage`). */
+  private async signed(
+    userId: string,
+    kind: WhatsappTemplateKey,
+    values: Readonly<Record<string, string | null | undefined>>,
+  ): Promise<string> {
+    const [body, name] = await Promise.all([
+      this.templates.render(kind, values),
+      this.operatorName(userId),
+    ]);
+
+    return signBotMessage(name, body);
+  }
+
+  /* Sem o admin-console, a mensagem sai assim mesmo — assinada com o nome da casa. */
+  private async operatorName(userId: string): Promise<string> {
+    try {
+      return (await this.directory.getUserById(userId))?.name ?? '';
+    } catch {
+      this.logger.warn('could not read the operator name for the bot signature');
+
+      return '';
+    }
   }
 
   private async hasRoom(userId: string): Promise<boolean> {
@@ -186,7 +217,7 @@ export class WhatsappMessagingService {
     const connection = await this.connections.find(userId);
     if (!connection) return;
 
-    const text = await this.templates.render('limit_alert', {
+    const text = await this.signed(userId, 'limit_alert', {
       enviadas: String(sentToday),
       limite: String(dailyLimit),
     });
