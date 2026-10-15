@@ -4,17 +4,15 @@ import { type SessionUser } from '@template/shared/schemas/user.schema';
 import { apiRequest } from './http-client';
 
 /**
- * Perguntas que a tela faz à NOSSA API sobre identidade: "quem sou eu aqui?" e a configuração
- * do Neon Auth quando ela não estiver no bundle compilado do frontend.
+ * Perguntas que a tela faz à NOSSA API sobre identidade: "quem sou eu aqui?" e onde fica a
+ * conta da pessoa no admin-console.
  *
- * Entrar e sair acontecem no Neon Auth (`lib/auth/neon-auth.client.ts`). O que só a nossa
- * API sabe é o PAPEL da pessoa — `user`, `manager` ou `admin` —, lido do cadastro a cada
- * requisição. É por isso que a tela pergunta aqui, e não ao token.
+ * Entrar e sair acontecem no admin-console, pelo proxy. O que só a nossa API sabe é o que a
+ * pessoa pode AQUI — o papel e os módulos dela —, e é por isso que a tela pergunta aqui.
  */
 export const authApi = {
   /** Quem está logado agora — ou lança 401 se ninguém estiver. */
   me: () => apiRequest<SessionUser>('/auth/me'),
-  /** Configuração pública do Neon Auth para a tela. */
+  /** O endereço da conta da pessoa no admin-console (trocar senha, foto, sair). */
   config: () => apiRequest<AuthConfig>('/auth/config'),
 };
-

@@ -4,7 +4,7 @@ import type { LucideIcon } from '@lucide/svelte';
 import Cpu from '@lucide/svelte/icons/cpu';
 import Server from '@lucide/svelte/icons/server';
 import Wrench from '@lucide/svelte/icons/wrench';
-import { createQuery, useQueryClient } from '@tanstack/svelte-query';
+import { createQuery } from '@tanstack/svelte-query';
 import { roleContextLabel } from '@template/shared/domain/role-context.util';
 import {
   USER_ROLE_LABELS,
@@ -14,8 +14,8 @@ import {
 import { untrack } from 'svelte';
 import { writable } from 'svelte/store';
 
+import { authApi } from '$lib/api/auth.api';
 import { ticketsApi } from '$lib/api/tickets.api';
-import { neonAuth } from '$lib/auth/neon-auth.client';
 import {
   type AreaContext,
   useAreaContextModel,
@@ -53,6 +53,8 @@ export type AppShellModel = {
      * ou quando só tem uma (aí não há o que escolher, e o seletor nem aparece).
      */
     areaOptions: { value: AreaContext; label: string; icon: LucideIcon }[];
+    /** A conta da pessoa no admin-console; `null` enquanto não se sabe ou se não há. */
+    accountUrl: string | null;
   };
   /** O menu DO MÓDULO que montou esta casca — o mesmo que entrou por `items`. */
   ui: { items: readonly NavItem[] };
@@ -63,7 +65,6 @@ export type AppShellModel = {
     areaContext: AreaContext;
   };
   actions: {
-    onLogout: () => void;
     onOpenProfile: () => void;
     onCloseProfile: () => void;
     onViewRoles: () => void;
@@ -72,8 +73,8 @@ export type AppShellModel = {
 };
 
 /**
- * O que a casca precisa: quem está usando, qual item do menu está aceso, os contadores e como
- * sair.
+ * O que a casca precisa: quem está usando, qual item do menu está aceso, os contadores e onde
+ * fica a conta da pessoa (no admin-console — sair é lá, não aqui).
  *
  * `user` chega por parâmetro — não é este hook que decide quem está logado, é a guarda de
  * `routes/(app)/+layout.ts`. Por isso ele só monta dentro do grupo `(app)`, depois que a
@@ -97,7 +98,6 @@ export function useAppShellModel(input: {
   /** O menu dele — `INFRA_NAV_ITEMS`, `SYSTEM_NAV_ITEMS` ou `MAINTENANCE_NAV_ITEMS`. */
   items: readonly NavItem[];
 }): AppShellModel {
-  const queryClient = useQueryClient();
   let isProfileOpen = $state(false);
 
   /* As áreas que a pessoa atende (#13) — uma vez, igual ao resto do menu: buscar de novo a
@@ -106,6 +106,18 @@ export function useAppShellModel(input: {
   const areas = mirrorStore(
     createQuery(
       writable({ queryKey: ['tickets', 'areas', 'mine'], queryFn: () => ticketsApi.myAreas() }),
+    ),
+  );
+
+  /* Onde fica a conta da pessoa — uma vez por sessão: o endereço não muda com a navegação.
+     Falha NÃO derruba o menu: o atalho "Minha conta" simplesmente não aparece. */
+  const config = mirrorStore(
+    createQuery(
+      writable({
+        queryKey: ['auth', 'config'],
+        queryFn: () => authApi.config(),
+        staleTime: Infinity,
+      }),
     ),
   );
 
@@ -146,6 +158,9 @@ export function useAppShellModel(input: {
         email: input.user.email,
         role: USER_ROLE_LABELS[input.user.role],
         roles: input.user.roles,
+      },
+      get accountUrl() {
+        return config.current.data?.accountUrl ?? null;
       },
       get areaOptions() {
         const mine = areas.current.data ?? [];
@@ -198,22 +213,6 @@ export function useAppShellModel(input: {
 
         const destination = contextSwitchPath(page.url.pathname, context);
         if (destination) void goto(destination);
-      },
-      /* Quem encerra a sessão é o Neon Auth, e a tentativa é best-effort: mesmo se a rede
-         estiver caída, a pessoa ainda sai daqui. O `queryClient.clear()` é a parte que não
-         pode falhar — sem ele, os dados da pessoa anterior continuariam na tela do próximo
-         que entrasse nesta mesma máquina. */
-      onLogout: () => {
-        void (async () => {
-          try {
-            await neonAuth.signOut();
-          } catch {
-            // segue para o `finally` mesmo assim — sair não pode depender de rede.
-          } finally {
-            queryClient.clear();
-            void goto('/login');
-          }
-        })();
       },
     },
   };

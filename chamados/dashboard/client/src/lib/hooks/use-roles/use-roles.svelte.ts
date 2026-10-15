@@ -44,7 +44,13 @@ const EMPTY_FILTER: RolesFilter = { search: '', context: '' };
 
 export const ROLES_QUERY_KEY = ['roles'] as const;
 
-export function useRolesModel(): RolesModel {
+/**
+ * Os acessos da equipe — só o super-admin os lê (a API recusa os demais com 403). Fora dele,
+ * `isEnabled: false` não faz pergunta nenhuma: uma tela que pede e leva 403 a cada abertura
+ * mostraria um erro para quem nem deveria ver a lista.
+ */
+export function useRolesModel(options: { isEnabled?: boolean } = {}): RolesModel {
+  const isEnabled = options.isEnabled ?? true;
   const queryClient = useQueryClient();
 
   const filterStore = writable<RolesFilter>({ ...EMPTY_FILTER });
@@ -56,6 +62,7 @@ export function useRolesModel(): RolesModel {
     createQuery({
       queryKey: [...ROLES_QUERY_KEY, 'list'],
       queryFn: () => rolesApi.list(),
+      enabled: isEnabled,
     }),
   );
 
@@ -63,6 +70,7 @@ export function useRolesModel(): RolesModel {
     createQuery({
       queryKey: [...ROLES_QUERY_KEY, 'users'],
       queryFn: () => rolesApi.listUsers(),
+      enabled: isEnabled,
     }),
   );
 

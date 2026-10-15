@@ -16,7 +16,9 @@
 
   let { data }: { data: PageData } = $props();
 
-  const list = useRolesModel();
+  /* A lista da equipe é do super-admin: para os demais, o perfil é só o cartão deles. */
+  const isSuperAdmin = untrack(() => data.user?.role === 'superadmin');
+  const list = useRolesModel({ isEnabled: isSuperAdmin });
   /* `untrack`: o id de quem está logado não muda enquanto a tela está aberta. */
   const whatsapp = useWhatsappLinkModel(untrack(() => data.user?.id ?? ''));
   /* Os textos do bot são do super admin: para os demais o botão nem aparece. */
@@ -28,7 +30,7 @@
 </script>
 
 <svelte:head>
-  <title>Meu Perfil e Cargos</title>
+  <title>Meu perfil</title>
 </svelte:head>
 
 <RoleListView
@@ -43,11 +45,11 @@
         }
       : undefined,
   }}
+  ui={{ showTeam: isSuperAdmin }}
   state={list.state}
   actions={{
     ...list.actions,
     onCreate: () => (formTarget = { role: null }),
-    onEdit: (role: InternalRole) => (formTarget = { role }),
   }}
 >
   <!-- Só para quem pode vincular: os demais nem veem o cartão. -->
@@ -114,10 +116,10 @@
 
 <ConfirmDialog
   data={{
-    title: 'Excluir este cargo interno?',
-    description: `O cargo de "${list.data.pendingDelete?.userEmail || list.data.pendingDelete?.userId || ''}" no contexto "${list.data.pendingDelete ? ROLE_CONTEXT_LABELS[list.data.pendingDelete.context] : ''}" será removido, voltando ao perfil restrito padrão.`,
-    confirmLabel: 'Excluir cargo',
-    confirmingLabel: 'Excluindo…',
+    title: 'Tirar este módulo?',
+    description: `"${list.data.pendingDelete?.userEmail || list.data.pendingDelete?.userId || ''}" deixa de ver ${list.data.pendingDelete ? ROLE_CONTEXT_LABELS[list.data.pendingDelete.context] : ''}. Abrir chamado e validar documento continuam disponíveis.`,
+    confirmLabel: 'Tirar módulo',
+    confirmingLabel: 'Tirando…',
   }}
   state={{
     isOpen: list.data.pendingDelete !== null,

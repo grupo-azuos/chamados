@@ -42,6 +42,11 @@
        * esconde o controle: é o caso de quem só tem uma área, ou nenhuma.
        */
       areaOptions?: { value: AreaContext; label: string; icon?: LucideIcon }[];
+      /**
+       * A conta da pessoa no admin-console — trocar senha, foto, sair. Sem endereço, o atalho
+       * não aparece: um link para lugar nenhum é pior que nenhum link.
+       */
+      accountUrl?: string | null;
     };
     ui?: { items?: readonly NavItem[] };
     state?: {
@@ -53,7 +58,6 @@
       areaContext?: AreaContext;
     };
     actions?: {
-      onLogout?: () => void;
       onOpenProfile?: () => void;
       onCloseProfile?: () => void;
       onViewRoles?: () => void;
@@ -71,7 +75,7 @@
 
 <script lang="ts">
   import { untrack } from 'svelte';
-  import LogOut from '@lucide/svelte/icons/log-out';
+  import CircleUser from '@lucide/svelte/icons/circle-user';
   import { BrandMark } from '$lib/components/azuos-brand-mark/azuos-brand-mark';
   import { fadeInUp } from '$lib/motion/motion';
   import {
@@ -255,7 +259,7 @@
         <Zuzu data={{ pose: 'leaning' }} ui={{ size: 86, className: '-mb-1.5' }} />
       </div>
 
-      <!-- A mesma folga do menu de cima: aqui são o cartão de quem entrou e o Sair. -->
+      <!-- A mesma folga do menu de cima: aqui são o cartão de quem entrou e a conta dela. -->
       <SidebarMenu class="gap-1">
         <SidebarMenuItem>
           <SidebarMenuButton
@@ -273,16 +277,22 @@
             </span>
           </SidebarMenuButton>
         </SidebarMenuItem>
-        <SidebarMenuItem>
-          <!-- Sem `tooltip=`: nesse componente baixado, o `props` do gatilho do tooltip é
-               espalhado DEPOIS do `onclick` que passamos e o sobrescreve (bug do vendor, não
-               editamos `lib/components/ui/`). O rótulo continua visível, só some junto com o
-               resto quando a barra recolhe para ícones. -->
-          <SidebarMenuButton onclick={actions?.onLogout}>
-            <LogOut />
-            <span>Sair</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
+        {#if data?.accountUrl}
+          <SidebarMenuItem>
+            <!-- NÃO HÁ "SAIR" AQUI: este sistema não tem login. Quem encerra a sessão é o
+                 admin-console, que fica na frente dele — um botão Sair aqui prometeria um efeito
+                 que a aplicação não tem como cumprir. A conta é onde a pessoa sai, troca a
+                 senha e a foto. -->
+            <SidebarMenuButton tooltipContent="Minha conta">
+              {#snippet child({ props })}
+                <a href={data.accountUrl} {...props}>
+                  <CircleUser aria-hidden="true" />
+                  <span>Minha conta</span>
+                </a>
+              {/snippet}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        {/if}
       </SidebarMenu>
     </SidebarFooter>
 

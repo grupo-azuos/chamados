@@ -8,7 +8,6 @@ const fields = {
   userId: { value: '', error: null },
   userEmail: { value: '', error: null },
   context: { value: 'sistema', error: null },
-  role: { value: 'user', error: null },
 };
 
 function renderDialog(overrides: Partial<AzuosRoleFormDialogProps> = {}) {
@@ -31,27 +30,25 @@ describe('AzuosRoleFormDialog', () => {
   it('renders title for create mode and triggers submit', async () => {
     const actions = renderDialog();
 
-    expect(screen.getByRole('heading', { name: 'Atribuir cargo interno' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Liberar módulo' })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Atribuir cargo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Liberar módulo' }));
     expect(actions.onSubmit).toHaveBeenCalledOnce();
   });
 
-  it('renders title for edit mode', () => {
-    renderDialog({ data: { mode: 'edit', fields } });
-
-    expect(screen.getByRole('heading', { name: 'Alterar cargo interno' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeInTheDocument();
-  });
-
-  it('allows selecting context and role via interactive cards', async () => {
+  it('allows choosing the module via interactive cards', async () => {
     const actions = renderDialog();
 
     await userEvent.click(screen.getByRole('button', { name: /Infraestrutura/i }));
     expect(actions.onChange).toHaveBeenCalledWith('context', 'infra');
+  });
 
-    await userEvent.click(screen.getByRole('button', { name: /Administrador/i }));
-    expect(actions.onChange).toHaveBeenCalledWith('role', 'admin');
+  /* O nível não se escolhe aqui: ele vem do papel no admin-console. */
+  it('offers no level to choose, only the module', () => {
+    renderDialog();
+
+    expect(screen.queryByRole('button', { name: /^Gestor/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/vem do papel dela no/i)).toBeInTheDocument();
   });
 
   it('disables context selection in edit mode', () => {
