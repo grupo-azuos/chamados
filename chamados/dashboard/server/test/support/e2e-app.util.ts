@@ -31,8 +31,8 @@ import {
  *  - **O admin-console**, que identifica a pessoa. Os cabeçalhos `x-forwarded-user-*` são
  *    mandados de verdade e lidos pelo middleware de verdade; o que é fingido é só a leitura
  *    dos módulos no banco — combinar papel e módulo é assunto de `identity.provider.test.ts`.
- *  - **Cloudflare R2**, o armazenamento dos arquivos. O que interessa ao E2E é a REGRA de
- *    quem pode anexar e apagar, não se o Cloudflare recebeu os bytes.
+ *  - **O storage S3**, onde ficam os arquivos. O que interessa ao E2E é a REGRA de quem pode
+ *    anexar e apagar, não se o storage recebeu os bytes.
  *
  * Tudo o mais é real: a migration sobe, a policy decide, a restrição do banco recusa e o
  * filtro de erro traduz. É o que teste com repository fingido não prova.
@@ -91,7 +91,7 @@ class FakeIdentityProvider {
 }
 
 /**
- * O R2 de mentira: uma gaveta na memória.
+ * O storage de mentira: uma gaveta na memória.
  *
  * Guarda o que subiu para o teste poder afirmar que o arquivo saiu do armazenamento quando o
  * anexo é excluído — a regra é "sai do banco E do bucket", e sem isso metade dela ficaria sem

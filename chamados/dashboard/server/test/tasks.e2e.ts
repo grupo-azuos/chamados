@@ -18,7 +18,7 @@ import {
  * fingido não prova.
  *
  * O banco vem da `TEST_DATABASE_URL`, e precisa ser um banco SÓ DELE — um Postgres
- * descartável na máquina ou uma branch do banco na Neon (ver `server/.env.example`). Estes
+ * descartável na máquina (ver `server/.env.example`). Estes
  * testes esvaziam as tabelas antes de rodar; apontar para o banco de trabalho apagaria os
  * dados de quem estivesse usando o sistema.
  *

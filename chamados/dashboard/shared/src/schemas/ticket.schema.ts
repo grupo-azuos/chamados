@@ -105,7 +105,7 @@ const descriptionSchema = z
  * `protocol` é derivado do `id` e vem pronto do servidor: se cada tela formatasse por conta
  * própria, o número no aviso sairia diferente do número na tela.
  *
- * `screenshotUrl` é um link ASSINADO e temporário para o print no R2, gerado a cada leitura.
+ * `screenshotUrl` é um link ASSINADO e temporário para o print no storage, gerado a cada leitura.
  * Não é endereço fixo de propósito — endereço fixo vazado vira acesso permanente à imagem.
  */
 export const ticketSchema = z.object({

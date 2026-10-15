@@ -10,7 +10,7 @@ import { MaintenanceQuotesService } from './service/maintenance-quotes.service';
  * Módulo novo precisa ser registrado em `app.module.ts` — esquecer é o motivo nº 1 de "a
  * rota dá 404".
  *
- * O `StorageModule` entra porque o documento do orçamento vive no R2, como a foto do
+ * O `StorageModule` entra porque o documento do orçamento vive no storage, como a foto do
  * inventário.
  */
 @Module({

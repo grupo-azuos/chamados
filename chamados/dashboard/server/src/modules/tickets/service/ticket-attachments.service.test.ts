@@ -211,7 +211,7 @@ describe('TicketAttachmentsService.remove', () => {
 
     await expect(service.remove(ana, 7, 1)).rejects.toThrow(ForbiddenException);
     expect(repository.remove).not.toHaveBeenCalled();
-    /* Nem do banco, nem do bucket: um arquivo que some do R2 e fica na lista é pior ainda. */
+    /* Nem do banco, nem do bucket: um arquivo que some do storage e fica na lista é pior ainda. */
     expect(storage.remove).not.toHaveBeenCalled();
   });
 
