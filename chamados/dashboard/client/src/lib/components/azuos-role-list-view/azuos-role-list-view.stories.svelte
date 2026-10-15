@@ -11,7 +11,6 @@
       userId: 'usr_1',
       userEmail: 'vinicius@empresa.com.br',
       context: 'infra',
-      role: 'user',
       createdAt: '2026-10-01T12:00:00.000Z',
       createdBy: 'admin@empresa.com.br',
       updatedAt: null,
@@ -22,7 +21,6 @@
       userId: 'usr_1',
       userEmail: 'vinicius@empresa.com.br',
       context: 'sistema',
-      role: 'admin',
       createdAt: '2026-10-01T12:00:00.000Z',
       createdBy: 'admin@empresa.com.br',
       updatedAt: null,
@@ -33,7 +31,6 @@
       userId: 'usr_1',
       userEmail: 'vinicius@empresa.com.br',
       context: 'manutencao',
-      role: 'manager',
       createdAt: '2026-10-01T12:00:00.000Z',
       createdBy: 'admin@empresa.com.br',
       updatedAt: null,
@@ -43,7 +40,6 @@
 
   const baseActions = {
     onCreate: fn(),
-    onEdit: fn(),
     onAskDelete: fn(),
     onSearchChange: fn(),
     onContextChange: fn(),

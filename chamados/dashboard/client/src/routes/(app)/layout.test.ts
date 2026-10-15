@@ -17,7 +17,12 @@ describe('a guarda de sessão', () => {
 
   // feliz
   it('hands the signed-in person to the screens', async () => {
-    const user = { id: 'user-1', name: 'Pessoa de Teste' } as Awaited<ReturnType<typeof authApi.me>>;
+    const user = {
+      id: 'user-1',
+      name: 'Pessoa de Teste',
+      role: 'admin',
+      roles: { infra: 'admin' },
+    } as Awaited<ReturnType<typeof authApi.me>>;
     me.mockResolvedValue(user);
 
     await expect(load()).resolves.toEqual({ user });
@@ -30,6 +35,20 @@ describe('a guarda de sessão', () => {
     const thrown: unknown = await load().catch((error: unknown) => error);
 
     expect(isRedirect(thrown)).toBe(true);
+    expect(thrown).toMatchObject({ status: 307, location: '/support' });
+  });
+
+  /* Sem módulo nenhum, sobram as telas públicas: abrir chamado e validar documento. */
+  it('sends who has no module to the public support screen', async () => {
+    me.mockResolvedValue({
+      id: 'user-2',
+      name: 'Sem Módulo',
+      role: 'admin',
+      roles: {},
+    } as Awaited<ReturnType<typeof authApi.me>>);
+
+    const thrown: unknown = await load().catch((error: unknown) => error);
+
     expect(thrown).toMatchObject({ status: 307, location: '/support' });
   });
 

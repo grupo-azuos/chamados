@@ -1,6 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import { type SessionUser } from '@template/shared/schemas/user.schema';
 
+import { modulesOf } from '@template/shared/domain/module-access.util';
+
 import { authApi } from '$lib/api/auth.api';
 import { ApiError } from '$lib/api/http-client';
 
@@ -21,8 +23,19 @@ import { ApiError } from '$lib/api/http-client';
  * tiraria a pessoa da tela por um problema que login nenhum resolve.
  */
 export async function load(): Promise<{ user: SessionUser }> {
+  const user = await loadUser();
+
+  /* QUEM NÃO TEM MÓDULO NENHUM SÓ ABRE CHAMADO E VALIDA DOCUMENTO — que são as telas
+     públicas. Todo o painel é de algum módulo (e o perfil só tem o que serve a quem atende),
+     então a pessoa vai direto para a Central de Chamados, em vez de ver um painel vazio. */
+  if (modulesOf(user).length === 0) redirect(307, '/support');
+
+  return { user };
+}
+
+async function loadUser(): Promise<SessionUser> {
   try {
-    return { user: await authApi.me() };
+    return await authApi.me();
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) redirect(307, '/support');
     throw error;
