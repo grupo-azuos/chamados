@@ -1,7 +1,6 @@
 import { Controller, Delete, Get, Header, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import {
   ApiBadGatewayResponse,
-  ApiBearerAuth,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiOkResponse,
@@ -14,6 +13,7 @@ import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { WhatsappConnectionDto } from '../dto/whatsapp-connection.dto';
 import { WhatsappLinkService } from '../service/whatsapp-link.service';
+import { AnyModule } from '../../../lib/auth/module-context.decorator';
 
 /**
  * O vínculo do WhatsApp de quem está logado.
@@ -22,7 +22,7 @@ import { WhatsappLinkService } from '../service/whatsapp-link.service';
  * code que sai daqui é a chave para vincular um número, e só o dono da sessão pode vê-lo.
  */
 @ApiTags('Vinculação WhatsApp')
-@ApiBearerAuth('neon-auth')
+@AnyModule()
 @Controller('integrations/whatsapp')
 export class WhatsappLinkController {
   constructor(private readonly service: WhatsappLinkService) {}

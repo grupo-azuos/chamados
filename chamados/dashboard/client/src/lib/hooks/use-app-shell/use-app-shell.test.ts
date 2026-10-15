@@ -12,12 +12,12 @@ import {
 import Harness from './use-app-shell-harness.test.svelte';
 import { type AppShellModel } from './use-app-shell.svelte';
 
-vi.mock('$lib/auth/neon-auth.client', () => ({
-  neonAuth: { signOut: vi.fn() },
-  readAuthToken: vi.fn().mockResolvedValue(null),
+/* O endereço da conta vem da API; aqui ele é fixo, para o teste não depender de rede. */
+vi.mock('$lib/api/auth.api', () => ({
+  authApi: { config: vi.fn().mockResolvedValue({ accountUrl: 'https://login.exemplo.com.br' }) },
 }));
 
-const { neonAuth } = await import('$lib/auth/neon-auth.client');
+const { authApi } = await import('$lib/api/auth.api');
 const { goto } = await import('$app/navigation');
 const { page } = await import('$app/state');
 
@@ -55,9 +55,6 @@ function mountModel(
 }
 
 beforeEach(() => {
-  vi.mocked(neonAuth.signOut)
-    .mockReset()
-    .mockResolvedValue(undefined as never);
   vi.mocked(goto).mockClear();
   openScreen('/');
 });
@@ -159,24 +156,19 @@ describe('useAppShellModel', () => {
     await waitFor(() => expect(goto).toHaveBeenCalledWith('/profile'));
   });
 
-  it('logs out at Neon Auth and navigates to /login', async () => {
+  /* Sair não é daqui: a casca leva à conta da pessoa no admin-console. */
+  it('gives the address of the account at the admin-console', async () => {
     const model = mountModel();
 
-    model.actions.onLogout();
-
-    await waitFor(() => expect(neonAuth.signOut).toHaveBeenCalledOnce());
-    await waitFor(() => expect(goto).toHaveBeenCalledWith('/login'));
+    await waitFor(() => expect(model.data.accountUrl).toBe('https://login.exemplo.com.br'));
   });
 
   // triste
-  /* Sair não pode depender de rede: quem clicou em "Sair" precisa sair da tela de qualquer
-     jeito, e a sessão que sobrar do lado da Neon vence sozinha. */
-  it('still navigates to /login even when the sign out request fails', async () => {
-    vi.mocked(neonAuth.signOut).mockRejectedValueOnce(new Error('network down'));
+  it('gives no account address while the server has not answered or has none', async () => {
+    vi.mocked(authApi.config).mockResolvedValueOnce({ accountUrl: null });
     const model = mountModel();
 
-    model.actions.onLogout();
-
-    await waitFor(() => expect(goto).toHaveBeenCalledWith('/login'));
+    await waitFor(() => expect(authApi.config).toHaveBeenCalled());
+    expect(model.data.accountUrl).toBeNull();
   });
 });

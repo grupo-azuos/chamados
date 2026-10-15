@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   type AssignRoleInput,
   type InternalRole,
@@ -8,15 +8,19 @@ import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
-import { assertIsAdmin, assertIsSuperAdmin } from '../../../lib/policy/policy-assert.util';
+import { assertIsSuperAdmin } from '../../../lib/policy/policy-assert.util';
 import { toInternalRole, toInternalRoleInsert } from '../mapper/roles.mapper';
 import { RolesRepository } from '../repository/roles.repository';
 
 /**
- * Regras de negócio para cargos internos.
- * Consulta permitida para Administrador e Super Administrador.
- * Atribuição e exclusão são exclusivas de Super Administrador (quem dá os cadastros).
- * O cargo de Super Administrador não pode ser atribuído pela interface, apenas via comando CLI.
+ * OS ACESSOS POR MÓDULO — quem é de Infraestrutura, de Sistema, de Manutenção.
+ *
+ * Tudo aqui é do SUPER-ADMIN: consultar, liberar e tirar. Liberar módulo é dar a alguém a
+ * leitura (e, para Administrador, a escrita) de um pedaço inteiro do sistema — não é coisa
+ * que Administrador de módulo dê a si mesmo. O super-admin, por sua vez, não sai daqui: só
+ * existe pelo comando `npm run superadmin:promote`.
+ *
+ * As pessoas oferecidas vêm do admin-console: só quem tem acesso ao sistema lá.
  */
 @Injectable()
 export class RolesService {
@@ -26,33 +30,27 @@ export class RolesService {
   ) {}
 
   async list(actor: RequestUser): Promise<InternalRole[]> {
-    assertIsAdmin(actor.role, 'Consultar cargos internos');
+    assertIsSuperAdmin(actor.role, 'Consultar os acessos');
 
     const rows = await this.repository.list();
     return rows.map(toInternalRole);
   }
 
   async listUsers(actor: RequestUser): Promise<DirectoryUser[]> {
-    assertIsAdmin(actor.role, 'Consultar pessoas do diretório');
+    assertIsSuperAdmin(actor.role, 'Consultar as pessoas');
 
     return this.userDirectory.listUsers();
   }
 
   async listByUser(actor: RequestUser, identifier: string): Promise<InternalRole[]> {
-    assertIsAdmin(actor.role, 'Consultar cargos da pessoa');
+    assertIsSuperAdmin(actor.role, 'Consultar os acessos da pessoa');
 
     const rows = await this.repository.findByUserIdOrEmail(identifier.trim());
     return rows.map(toInternalRole);
   }
 
   async assign(actor: RequestUser, input: AssignRoleInput): Promise<InternalRole> {
-    assertIsSuperAdmin(actor.role, 'Atribuir cargo interno');
-
-    if ((input.role as string) === 'superadmin') {
-      throw new ForbiddenException(
-        'O cargo de Super Administrador só pode ser concedido via comando de terminal.',
-      );
-    }
+    assertIsSuperAdmin(actor.role, 'Liberar módulo');
 
     const insert = toInternalRoleInsert(input, actor.email);
     const row = await this.repository.upsert(insert);
@@ -61,11 +59,11 @@ export class RolesService {
   }
 
   async delete(actor: RequestUser, id: number): Promise<void> {
-    assertIsSuperAdmin(actor.role, 'Excluir cargo interno');
+    assertIsSuperAdmin(actor.role, 'Tirar módulo');
 
     const existing = await this.repository.findById(id);
     if (!existing) {
-      throw new NotFoundException('Cargo interno não encontrado.');
+      throw new NotFoundException('Acesso não encontrado.');
     }
 
     await this.repository.delete(id);

@@ -47,23 +47,6 @@
     },
   };
 
-  const ROLE_DETAILS: { value: UserRole; label: string; description: string }[] = [
-    {
-      value: 'admin',
-      label: USER_ROLE_LABELS.admin,
-      description: 'Gestão ampla e controle total do módulo.',
-    },
-    {
-      value: 'manager',
-      label: USER_ROLE_LABELS.manager,
-      description: 'Gerencia registros e equipe nesta área.',
-    },
-    {
-      value: 'user',
-      label: USER_ROLE_LABELS.user,
-      description: 'Uso operacional padrão e criação de registros.',
-    },
-  ];
 </script>
 
 <script lang="ts">
@@ -170,13 +153,11 @@
           <ShieldCheck class="size-4" aria-hidden="true" />
         </span>
         <DialogTitle class="text-lg font-semibold tracking-tight">
-          {isEdit ? 'Alterar cargo interno' : 'Atribuir cargo interno'}
+          Liberar módulo
         </DialogTitle>
       </div>
       <DialogDescription class="text-xs text-muted-foreground">
-        {isEdit
-          ? 'Atualize o nível de acesso e o papel atribuído a esta pessoa.'
-          : 'Defina a área do sistema e o nível de autoridade concedido.'}
+        Escolha a pessoa e o módulo que ela passa a enxergar.
       </DialogDescription>
     </DialogHeader>
 
@@ -193,7 +174,7 @@
         <TimelineStep
           data={{
             title: 'Identificação da pessoa',
-            description: 'A conta que receberá a atribuição de cargo.',
+            description: 'Só aparece quem tem acesso a este sistema no admin-console.',
             icon: User,
           }}
           ui={{ tone: 'brand' }}
@@ -431,11 +412,11 @@
         <!-- Etapa 2: Área / Contexto -->
         <TimelineStep
           data={{
-            title: 'Área do sistema (contexto)',
-            description: 'Em qual setor ou módulo o cargo terá efeito.',
+            title: 'Módulo',
+            description: 'Qual parte do sistema a pessoa passa a enxergar.',
             icon: Layers,
           }}
-          ui={{ tone: 'neutral' }}
+          ui={{ isLast: true, tone: 'neutral' }}
         >
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {#each ROLE_CONTEXTS as ctx (ctx)}
@@ -468,49 +449,20 @@
           </div>
         </TimelineStep>
 
-        <!-- Etapa 3: Nível de Autoridade (Cargo) -->
-        <TimelineStep
-          data={{
-            title: 'Nível de autoridade (cargo)',
-            description: 'O que essa pessoa pode operar dentro desta área.',
-            icon: ShieldCheck,
-          }}
-          ui={{ isLast: true, tone: 'success' }}
+        <!-- O nível NÃO se escolhe aqui: ele vem do papel da pessoa no admin-console. -->
+        <div
+          class="flex items-center gap-2 rounded-box border border-border/60 bg-muted/30 p-2.5 text-xs text-muted-foreground"
         >
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {#each ROLE_DETAILS as r (r.value)}
-              {@const isSelected = fields.role.value === r.value}
-              <button
-                type="button"
-                onclick={() => actions.onChange('role', r.value)}
-                class={cn(
-                  'flex flex-col items-start gap-1 p-3 rounded-surface border text-left transition-all',
-                  isSelected
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                    : 'border-border/80 bg-card hover:bg-ink-100',
-                )}
-              >
-                <div class="flex w-full items-center justify-between">
-                  <span class="text-xs font-semibold text-foreground">{r.label}</span>
-                  {#if isSelected}
-                    <Check class="size-3.5 text-primary" aria-hidden="true" />
-                  {/if}
-                </div>
-                <span class="text-xs text-muted-foreground leading-tight">{r.description}</span>
-              </button>
-            {/each}
-          </div>
-
-          <div
-            class="flex items-center gap-2 rounded-box border border-border/60 bg-muted/30 p-2.5 text-xs text-muted-foreground"
-          >
-            <Info class="size-4 shrink-0 text-primary" aria-hidden="true" />
-            <span>
-              O cargo <strong>Super Admin</strong> é reservado e só pode ser concedido via comando de
-              terminal no servidor (<code class="font-mono text-xs bg-background px-1 py-0.5 rounded-chip border border-border">npm run user:promote</code>).
-            </span>
-          </div>
-        </TimelineStep>
+          <Info class="size-4 shrink-0 text-primary" aria-hidden="true" />
+          <span>
+            O que a pessoa pode no módulo vem do papel dela no <strong>admin-console</strong>:
+            Administrador mexe em tudo, Gestor e Usuário só consultam. O <strong>Super Admin</strong>
+            só é criado por comando no servidor (<code
+              class="font-mono text-xs bg-background px-1 py-0.5 rounded-chip border border-border"
+              >npm run superadmin:promote</code
+            >).
+          </span>
+        </div>
       </Timeline>
 
       <DialogFooter class="mt-4 flex justify-end gap-2 border-t border-border/80 pt-4">
@@ -522,7 +474,7 @@
         />
         <SubmitButton
           data={{
-            label: isEdit ? 'Salvar alterações' : 'Atribuir cargo',
+            label: 'Liberar módulo',
             loadingLabel: 'Salvando…',
           }}
           state={{ isLoading: formState.isSubmitting }}

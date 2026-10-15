@@ -31,6 +31,7 @@ import {
   TicketAttachmentsService,
   type UploadedAttachment,
 } from '../service/ticket-attachments.service';
+import { AnyModule } from '../../../lib/auth/module-context.decorator';
 
 /**
  * Quantos arquivos cabem numa requisição.
@@ -51,6 +52,7 @@ const MAX_FILES_PER_REQUEST = 25;
  * neles depois.
  */
 @ApiTags('Chamados')
+@AnyModule()
 @Controller('tickets/:id/attachments')
 export class TicketAttachmentsController {
   constructor(private readonly service: TicketAttachmentsService) {}

@@ -9,7 +9,6 @@ describe('toInternalRole', () => {
     userId: 'usr_1',
     userEmail: 'dev@template.local',
     context: 'infra',
-    role: 'user',
     createdAt: new Date('2026-10-01T12:00:00.000Z'),
     createdBy: 'admin@template.local',
     updatedAt: new Date('2026-10-01T13:00:00.000Z'),
@@ -23,7 +22,6 @@ describe('toInternalRole', () => {
       userId: 'usr_1',
       userEmail: 'dev@template.local',
       context: 'infra',
-      role: 'user',
       createdAt: '2026-10-01T12:00:00.000Z',
       createdBy: 'admin@template.local',
       updatedAt: '2026-10-01T13:00:00.000Z',
@@ -46,7 +44,6 @@ describe('toInternalRole', () => {
       userId: 'usr_1',
       userEmail: null,
       context: 'infra',
-      role: 'user',
       createdAt: '2026-10-01T12:00:00.000Z',
       createdBy: null,
       updatedAt: null,
@@ -63,7 +60,6 @@ describe('toInternalRoleInsert', () => {
         userId: ' usr_1 ',
         userEmail: ' ana@empresa.com.br ',
         context: 'manutencao',
-        role: 'manager',
       },
       'admin@empresa.com.br',
     );
@@ -72,7 +68,6 @@ describe('toInternalRoleInsert', () => {
       userId: 'usr_1',
       userEmail: 'ana@empresa.com.br',
       context: 'manutencao',
-      role: 'manager',
       createdBy: 'admin@empresa.com.br',
       updatedBy: 'admin@empresa.com.br',
     });
@@ -85,7 +80,6 @@ describe('toInternalRoleInsert', () => {
         userId: 'usr_2',
         userEmail: '   ',
         context: 'sistema',
-        role: 'admin',
       },
       'admin@empresa.com.br',
     );

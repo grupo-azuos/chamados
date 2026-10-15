@@ -9,17 +9,17 @@ import { type InternalRoleRow } from '../../../lib/db/schema/internal-roles.sche
 import { RolesRepository } from '../../roles/repository/roles.repository';
 
 const ADMIN_ROLE = 'admin';
-const SUPER_ADMIN_ROLE = 'superadmin';
 
 /**
  * QUEM PODE SER O RESPONSÁVEL POR UM CHAMADO DE CADA ÁREA.
  *
- * São os admins daquela área, mais os super admins — que respondem pelas três. Admin de
- * Infraestrutura não aparece num chamado de Sistema: quem abre escolhe entre quem de fato
- * atende aquilo.
+ * Quem ATENDE aquela área: Administrador no admin-console com o módulo da área liberado, mais
+ * os super-admins — que respondem pelas três. Admin de Infraestrutura não aparece num chamado
+ * de Sistema, e Gestor da área também não: ele só consulta.
  *
- * O cargo por área vem dos cargos internos (`internal_roles`); o de super admin, do cadastro
- * do autenticador — a mesma combinação que a identidade de quem faz login usa.
+ * O papel vem da lista do admin-console (quem tem acesso a este sistema); o módulo, de
+ * `internal_roles`; o super-admin, de `super_admins` — a mesma combinação que a identidade de
+ * quem está usando o sistema.
  */
 @Injectable()
 export class TicketAssigneesService {
@@ -30,10 +30,10 @@ export class TicketAssigneesService {
 
   /** As pessoas que atendem `area`, em ordem alfabética. */
   async listForArea(area: TicketArea): Promise<TicketAssigneeOption[]> {
-    const [users, roles] = await Promise.all([this.directory.listUsers(), this.roles.list()]);
+    const [users, grants] = await Promise.all([this.directory.listUsers(), this.loadGrants()]);
 
     return users
-      .filter((user) => !user.banned && areasOf(user, roles).includes(area))
+      .filter((user) => !user.banned && areasOf(user, grants).includes(area))
       .map((user) => ({ id: user.id, name: displayName(user) }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }
@@ -48,21 +48,35 @@ export class TicketAssigneesService {
     const user = await this.directory.getUserById(userId);
     if (!user || user.banned) return null;
 
-    return { name: displayName(user), areas: areasOf(user, await this.roles.list()) };
+    return { name: displayName(user), areas: areasOf(user, await this.loadGrants()) };
+  }
+
+  private async loadGrants(): Promise<Grants> {
+    const [modules, superAdmins] = await Promise.all([
+      this.roles.list(),
+      this.roles.listSuperAdmins(),
+    ]);
+
+    return { modules, superAdmins };
   }
 }
 
-function areasOf(user: DirectoryUser, roles: readonly InternalRoleRow[]): TicketArea[] {
-  if (user.role === SUPER_ADMIN_ROLE) return [...TICKET_AREAS];
+type Grants = {
+  modules: readonly InternalRoleRow[];
+  superAdmins: readonly { userId: string | null; userEmail: string }[];
+};
 
+function areasOf(user: DirectoryUser, grants: Grants): TicketArea[] {
   const email = user.email.toLowerCase();
-  const own = roles.filter(
-    (role) => role.userId === user.id || (role.userEmail ?? '').toLowerCase() === email,
-  );
+  const isMine = (row: { userId: string | null; userEmail: string | null }) =>
+    row.userId === user.id || (row.userEmail ?? '').toLowerCase() === email;
 
-  return TICKET_AREAS.filter((area) =>
-    own.some((role) => role.context === area && role.role === ADMIN_ROLE),
-  );
+  if (grants.superAdmins.some(isMine)) return [...TICKET_AREAS];
+  if (user.role !== ADMIN_ROLE) return [];
+
+  const own = grants.modules.filter(isMine);
+
+  return TICKET_AREAS.filter((area) => own.some((row) => row.context === area));
 }
 
 function displayName(user: DirectoryUser): string {

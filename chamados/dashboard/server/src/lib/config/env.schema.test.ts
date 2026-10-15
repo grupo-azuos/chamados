@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseEnv } from './env.schema';
+import { isUserMockEnabled, parseEnv } from './env.schema';
 
 /** O mínimo que o processo exige: os segredos, que não têm padrão. Valores inventados. */
 const secrets = {
@@ -9,7 +9,6 @@ const secrets = {
   R2_ACCESS_KEY_ID: 'chave-de-exemplo',
   R2_SECRET_ACCESS_KEY: 'segredo-de-exemplo',
   R2_BUCKET: 'files',
-  NEON_AUTH_URL: 'https://ep-exemplo.neonauth.sa-east-1.aws.neon.tech/chamados/auth',
 };
 
 describe('parseEnv', () => {
@@ -27,6 +26,8 @@ describe('parseEnv', () => {
       API_TRUST_PROXY_HOPS: 0,
       WHATSAPP_DAILY_LIMIT: 100,
       R2_SIGNED_URL_TTL_SECONDS: 300,
+      ADMIN_CONSOLE_TOKEN: '',
+      ADMIN_CONSOLE_TIMEOUT_MS: 4000,
     });
   });
 
@@ -44,14 +45,26 @@ describe('parseEnv', () => {
     expect(parseEnv(secrets).API_TRUST_PROXY_HOPS).toBe(0);
   });
 
-  /* Endereço errado do Neon Auth não falha na partida: falha no primeiro login, parecendo
-     senha errada. Por isso a recusa é aqui. */
-  it('refuses to start without the Neon Auth address', () => {
-    expect(() => parseEnv({ ...secrets, NEON_AUTH_URL: undefined })).toThrow(/NEON_AUTH_URL/);
+  // triste
+  /* Mock em produção transforma toda requisição sem cabeçalho na pessoa fixa — que entra
+     sem passar pelo login. O processo recusa subir. */
+  it('refuses to start with the development identity turned on in production', () => {
+    expect(() => parseEnv({ ...secrets, NODE_ENV: 'production', USER_MOCK: 'true' })).toThrow(
+      /USER_MOCK/,
+    );
   });
 
-  it('refuses a Neon Auth address that is not a URL', () => {
-    expect(() => parseEnv({ ...secrets, NEON_AUTH_URL: 'nao-e-url' })).toThrow(/NEON_AUTH_URL/);
+  it('refuses an admin-console address that is not a URL', () => {
+    expect(() => parseEnv({ ...secrets, ADMIN_CONSOLE_URL: 'nao-e-url' })).toThrow(
+      /ADMIN_CONSOLE_URL/,
+    );
+  });
+
+  // feliz
+  it('turns the development identity on outside production and off in production', () => {
+    expect(isUserMockEnabled(parseEnv(secrets))).toBe(true);
+    expect(isUserMockEnabled(parseEnv({ ...secrets, NODE_ENV: 'production' }))).toBe(false);
+    expect(isUserMockEnabled(parseEnv({ ...secrets, USER_MOCK: 'false' }))).toBe(false);
   });
 
   it('reads the port that arrives as text, which is how the environment delivers it', () => {

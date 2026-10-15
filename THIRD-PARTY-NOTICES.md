@@ -46,19 +46,13 @@ esse arquivo por animações nativas do navegador elimina a dependência — e e
 
 ---
 
-## Dependências AGPL instaladas, mas não usadas
+## Dependências AGPL — removidas
 
-A biblioteca de login da Neon (`@neondatabase/neon-js`) instala junto um kit de telas React
-que este projeto **não importa**. Esse kit depende de pacotes sob AGPL-3.0:
-`@triplit/client`, `@triplit/db`, `@triplit/logger`, `@triplit/react` e `ua-parser-js`.
-
-- Eles ficam em `node_modules`, mas **não entram no que é entregue**: o projeto usa só o
-  cliente de sessão (`@neondatabase/neon-js/auth`), que não os alcança.
-- O verificador de licenças **reprova** qualquer arquivo do projeto que passe a importá-los
-  (lista `forbiddenImports` em `license-policy.json`).
-- Quem modificar o projeto para usar esse kit de telas passa a estar sujeito à AGPL-3.0.
-
----
+A biblioteca de login da Neon (`@neondatabase/neon-js`) instalava junto um kit de telas React que
+dependia de pacotes sob AGPL-3.0 (`@triplit/*`, `ua-parser-js`). Desde que o login passou para o
+admin-console do Grupo Azuos, essa biblioteca saiu do projeto, e esses pacotes saíram com ela. A
+lista `forbiddenImports` de `license-policy.json` continua barrando-os, para não voltarem por
+engano.
 
 ## Bot de WhatsApp: dependência GPL-3.0, isolada
 

@@ -192,7 +192,9 @@ describe('AzuosAppShell', () => {
   it('draws no separator when there are no modules', () => {
     const { container } = renderShell({ data: { areaOptions: [] } });
 
-    expect(container.querySelector('[data-sidebar="header"] [data-sidebar="separator"]')).toBeNull();
+    expect(
+      container.querySelector('[data-sidebar="header"] [data-sidebar="separator"]'),
+    ).toBeNull();
   });
 
   /* Zero não vira selo: um "0" ao lado de cada item seria ruído. */
@@ -209,21 +211,21 @@ describe('AzuosAppShell', () => {
     expect(screen.getByText('Visitante')).toBeInTheDocument();
   });
 
-  it('does nothing if "Sair" is clicked without an onLogout handler', async () => {
+  /* Sem login aqui, não há "Sair": a conta (e o sair) é do admin-console. */
+  it('links to the account at the admin-console instead of offering a sign out', () => {
+    renderShell({ data: { accountUrl: 'https://login.exemplo.com.br' } });
+
+    expect(screen.getByRole('link', { name: 'Minha conta' })).toHaveAttribute(
+      'href',
+      'https://login.exemplo.com.br',
+    );
+    expect(screen.queryByRole('button', { name: 'Sair' })).not.toBeInTheDocument();
+  });
+
+  // triste
+  it('offers no account link when the address is unknown', () => {
     renderShell({});
 
-    await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
-  });
-});
-
-describe('AppShell logout', () => {
-  // feliz
-  it('calls onLogout when "Sair" is clicked', async () => {
-    const onLogout = vi.fn();
-    renderShell({ actions: { onLogout } });
-
-    await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
-
-    expect(onLogout).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('link', { name: 'Minha conta' })).not.toBeInTheDocument();
   });
 });

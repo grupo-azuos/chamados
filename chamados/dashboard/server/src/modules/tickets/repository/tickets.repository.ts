@@ -2,7 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
 import { parseTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { ticketStatusesOfGroup } from '@template/shared/domain/ticket-status.util';
-import { type UserRole } from '@template/shared/schemas/user.schema';
 import {
   type TicketListQuery,
   type TicketReportQuery,
@@ -25,7 +24,6 @@ import { DB } from '../../../lib/db/db.token';
 import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
 import { computers } from '../../../lib/db/schema/computers.schema';
-import { internalRoles } from '../../../lib/db/schema/internal-roles.schema';
 import { softwareProjects } from '../../../lib/db/schema/software-projects.schema';
 import { ticketAreas, type TicketAreaInsert } from '../../../lib/db/schema/ticket-areas.schema';
 import { tickets, type TicketInsert, type TicketRow } from '../../../lib/db/schema/tickets.schema';
@@ -252,33 +250,6 @@ export class TicketsRepository {
     if (!saved) throw new Error('update returned no ticket row');
 
     return saved;
-  }
-
-  /**
-   * O cargo da pessoa em CADA área, direto de `internal_roles` — sem o padrão `'user'` que
-   * `roleInContext` aplicaria. A AUSÊNCIA de linha aqui É a resposta "sem acesso" (#13):
-   * diferente do cargo interno (#11), chamado não tem cargo mínimo implícito.
-   */
-  async contextRolesFor(
-    userId: string,
-    userEmail: string | null,
-  ): Promise<Partial<Record<TicketArea, UserRole>>> {
-    const rows = await runQuery(
-      this.db
-        .select({ context: internalRoles.context, role: internalRoles.role })
-        .from(internalRoles)
-        .where(
-          userEmail
-            ? or(eq(internalRoles.userId, userId), eq(internalRoles.userEmail, userEmail))
-            : eq(internalRoles.userId, userId),
-        ),
-      'ler cargos por área do chamado',
-    );
-
-    const byArea: Partial<Record<TicketArea, UserRole>> = {};
-    for (const row of rows) byArea[row.context as TicketArea] = row.role as UserRole;
-
-    return byArea;
   }
 
   /** As áreas PARTICIPANTES de um chamado — nunca inclui a área original (`tickets.area`). */

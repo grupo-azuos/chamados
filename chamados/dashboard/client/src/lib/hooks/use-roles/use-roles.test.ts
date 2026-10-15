@@ -18,7 +18,6 @@ function roleItem(overrides: Partial<InternalRole> = {}): InternalRole {
     userId: 'user_1',
     userEmail: 'user@empresa.com.br',
     context: 'infra',
-    role: 'user',
     createdAt: '2026-10-01T12:00:00.000Z',
     createdBy: 'admin@empresa.com.br',
     updatedAt: null,
@@ -27,9 +26,9 @@ function roleItem(overrides: Partial<InternalRole> = {}): InternalRole {
   };
 }
 
-function mountModel(): RolesModel {
+function mountModel(isEnabled = true): RolesModel {
   let model!: RolesModel;
-  render(Harness, { props: { onReady: (ready: RolesModel) => (model = ready) } });
+  render(Harness, { props: { isEnabled, onReady: (ready: RolesModel) => (model = ready) } });
 
   return model;
 }
@@ -46,9 +45,9 @@ describe('useRolesModel', () => {
     vi.mocked(rolesApi.list)
       .mockReset()
       .mockResolvedValue([
-        roleItem({ id: 1, context: 'infra', role: 'user' }),
-        roleItem({ id: 2, context: 'sistema', role: 'admin' }),
-        roleItem({ id: 3, context: 'manutencao', role: 'manager' }),
+        roleItem({ id: 1, context: 'infra' }),
+        roleItem({ id: 2, context: 'sistema' }),
+        roleItem({ id: 3, context: 'manutencao' }),
       ]);
     vi.mocked(rolesApi.remove).mockReset().mockResolvedValue(undefined);
   });
@@ -70,7 +69,6 @@ describe('useRolesModel', () => {
     await waitFor(() => {
       expect(model.data.roles).toHaveLength(1);
       expect(model.data.roles[0]!.context).toBe('sistema');
-      expect(model.data.roles[0]!.role).toBe('admin');
     });
   });
 
@@ -112,5 +110,15 @@ describe('useRolesModel', () => {
     const model = await mountLoadedModel();
 
     expect(model.state.error).toContain('Esta ação é de Administrador.');
+  });
+
+  // triste
+  /* A lista é do super-admin: para os demais, a tela nem pergunta — perguntar daria 403. */
+  it('asks nothing when the list is not for this person', () => {
+    vi.mocked(rolesApi.list).mockClear();
+
+    mountModel(false);
+
+    expect(rolesApi.list).not.toHaveBeenCalled();
   });
 });

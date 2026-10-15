@@ -6,6 +6,7 @@ import {
   asAna,
   asBia,
   asCaio,
+  asStranger,
   CAIO,
   createE2eApp,
   type E2eApp,
@@ -24,12 +25,10 @@ import {
  * Sem `TEST_DATABASE_URL` a suíte é pulada, em vez de falhar: quem só mexeu na tela não
  * precisa de um banco na nuvem para rodar os testes.
  *
- * **O login em si não entra aqui.** Quem autentica é o Neon Auth, e depender dele faria este
- * teste precisar de uma conta de verdade, de senha guardada em algum lugar e de internet
- * para rodar. O que ele substitui é só o RECONHECIMENTO do token (`IdentityProvider`) —
- * conferir assinatura, papel e banimento é assunto de `identity.provider.test.ts` e
- * `neon-token.util.test.ts`. Daqui para baixo, tudo o que a API faz com uma identidade já
- * conhecida é real.
+ * **O login em si não entra aqui.** Quem autentica é o admin-console, pelo proxy. Os
+ * cabeçalhos que ele injeta são mandados de verdade; o que é fingido é só a leitura dos
+ * módulos (`IdentityProvider`), cuja regra é assunto de `identity.provider.test.ts`. Daqui
+ * para baixo, tudo o que a API faz com uma identidade já conhecida é real.
  */
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
@@ -89,10 +88,10 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
   it('tells who is logged in', async () => {
     const me = await request(app.getHttpServer()).get('/api/auth/me').set(asCaio()).expect(200);
 
-    expect(me.body).toEqual(CAIO);
+    expect(me.body).toEqual({ ...CAIO, image: null });
   });
 
-  it('lets a manager change a task from someone else', async () => {
+  it('lets an Administrator of the module change a task from someone else', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/tasks')
       .set(asAna())
@@ -107,21 +106,25 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
   });
 
   // triste
-  /* A tranca da API: sem token não se lê nem se escreve nada. */
-  it('refuses a request without a token with 401', async () => {
+  /* A tranca da API: sem identidade não se lê nem se escreve nada. */
+  it('refuses a request without identity with 401', async () => {
     await request(app.getHttpServer()).get('/api/tasks').expect(401);
     await request(app.getHttpServer()).get('/api/auth/me').expect(401);
   });
 
-  it('refuses a token it does not recognize with 401', async () => {
-    await request(app.getHttpServer())
-      .get('/api/tasks')
-      .set({ Authorization: 'Bearer token-inventado' })
-      .expect(401);
+  it('refuses someone the proxy identified but this system does not know, with 401', async () => {
+    await request(app.getHttpServer()).get('/api/tasks').set(asStranger()).expect(401);
   });
 
-  /* A regra que separa os papéis: tarefa de outra pessoa é intocável para quem é `user`. */
-  it('refuses a plain user on a task created by someone else, with 403', async () => {
+  /* Cabeçalho pela metade é proxy mal configurado (ou forjado): ninguém entra. */
+  it('refuses a half forwarded identity with 401', async () => {
+    const { 'x-forwarded-user-email': _email, ...partial } = asAna();
+
+    await request(app.getHttpServer()).get('/api/tasks').set(partial).expect(401);
+  });
+
+  /* Gestor do módulo só consulta: não altera nem apaga, nem o que é dos outros nem o seu. */
+  it('refuses a Manager of the module any change, with 403', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/tasks')
       .set(asAna())
