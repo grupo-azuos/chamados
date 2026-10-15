@@ -10,6 +10,7 @@ import {
   parseEmail,
   parseFullName,
   parsePhone,
+  pickProjects,
 } from './access-request.util';
 
 const PROJECTS = [
@@ -136,7 +137,10 @@ describe('fillAccessRequestStep', () => {
 
     expect(named).toEqual({ ok: true, draft: { ...draft, requesterName: 'Maria Clara' } });
     expect(department).toEqual({ ok: true, draft: { ...draft, department: 'rh' } });
-    expect(system).toEqual({ ok: true, draft: { ...draft, project: { id: 9, name: 'Folha' } } });
+    expect(system).toEqual({
+      ok: true,
+      draft: { ...draft, project: { id: 9, name: 'Folha' }, projects: [{ id: 9, name: 'Folha' }] },
+    });
   });
 
   // triste
@@ -221,5 +225,26 @@ describe('the "who is who" step', () => {
       ok: false,
       error: expect.stringContaining('1. Ana Souza'),
     });
+  });
+});
+
+describe('pickProjects', () => {
+  const MANY = [
+    { id: 1, name: 'admin-console' },
+    { id: 2, name: 'gestao-rh' },
+    { id: 3, name: 'paralegal' },
+  ];
+
+  // feliz
+  it('picks several systems by number, in any separator, without repeating', () => {
+    expect(pickProjects('1, 3', MANY).map((project) => project.id)).toEqual([1, 3]);
+    expect(pickProjects('3 e 1 3', MANY).map((project) => project.id)).toEqual([3, 1]);
+    expect(pickProjects('Gestao-RH', MANY).map((project) => project.id)).toEqual([2]);
+  });
+
+  // triste
+  it('picks nothing when a number is out of the list or the name is unknown', () => {
+    expect(pickProjects('1, 7', MANY)).toEqual([]);
+    expect(pickProjects('financeiro', MANY)).toEqual([]);
   });
 });
