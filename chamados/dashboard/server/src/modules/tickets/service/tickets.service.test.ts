@@ -248,6 +248,49 @@ describe('TicketsService.create', () => {
     );
   });
 
+  /* O pedido de usuário do WhatsApp ("0 — Nenhum") é de Sistema, mas sem sistema ainda. */
+  it('opens a user request in Sistema without a project', async () => {
+    const insert = vi
+      .fn()
+      .mockResolvedValue(
+        ticketRow({ area: 'sistema', problemType: 'access_request', projectId: null }),
+      );
+    const isTicketOption = vi.fn();
+    const service = makeService({ insert }, storageStub, attachmentsStub, undefined, {
+      isTicketOption,
+    });
+
+    await service.create({
+      requesterName: 'Bia Costa',
+      area: 'sistema',
+      department: 'financeiro',
+      problemType: 'access_request',
+      contactPhone: '62999999999',
+      description: 'Pedido de usuário.',
+    });
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(isTicketOption).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('still refuses any other Sistema ticket without a project', async () => {
+    const service = makeService({ insert: vi.fn() }, storageStub, attachmentsStub, undefined, {
+      isTicketOption: vi.fn(),
+    });
+
+    await expect(
+      service.create({
+        requesterName: 'Bia Costa',
+        area: 'sistema',
+        department: 'financeiro',
+        problemType: 'bug',
+        contactPhone: '62999999999',
+        description: 'O sistema não carrega.',
+      }),
+    ).rejects.toThrow('Selecione um sistema disponível');
+  });
+
   /* A linha do tempo começa na abertura: sem ela, o primeiro histórico do chamado seria o
      de quem atendeu, e o relatório não diria quando nem por quem ele foi aberto. */
   it('starts the timeline with the opening', async () => {

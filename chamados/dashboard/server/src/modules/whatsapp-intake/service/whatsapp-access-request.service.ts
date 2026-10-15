@@ -48,7 +48,8 @@ type Conversation = {
 
 type CreatedRequest = {
   ticket: { id: number; requesterName: string };
-  project: AccessRequestProject;
+  /** Nulo é o pedido de usuário, sem sistema. */
+  project: AccessRequestProject | null;
 };
 
 const SILENCE: InboundReply = { reply: null, isOpen: false };
@@ -262,9 +263,11 @@ export class WhatsappAccessRequestService {
       values: {
         nome: firstName(first.ticket.requesterName),
         protocolo: created
-          .map(({ ticket, project }) => `• *${formatTicketProtocol(ticket.id)}* — ${project.name}`)
+          .map(
+            ({ ticket, project }) => `• *${formatTicketProtocol(ticket.id)}* — ${labelOf(project)}`,
+          )
           .join('\n'),
-        sistema: created.map(({ project }) => project.name).join(', '),
+        sistema: created.map(({ project }) => labelOf(project)).join(', '),
         link: ticketAccessLink(first.ticket.id, this.env),
       },
     });
@@ -290,10 +293,11 @@ export class WhatsappAccessRequestService {
   }
 
   /* Um chamado por sistema: cada um tem quem libere o acesso a ele. Um que falhe não impede os
-     outros. */
+     outros. Sem sistema ("0 — Nenhum"), é um chamado só: o de criar o usuário. */
   private async createTickets(conversation: Conversation): Promise<CreatedRequest[]> {
     const created: CreatedRequest[] = [];
-    for (const project of projectsOf(conversation.draft)) {
+    const projects = conversation.draft.userOnly ? [null] : projectsOf(conversation.draft);
+    for (const project of projects) {
       const ticket = await this.createTicket(conversation, project);
       if (!ticket) continue;
 
@@ -306,7 +310,7 @@ export class WhatsappAccessRequestService {
 
   private async createTicket(
     conversation: Conversation,
-    project: AccessRequestProject,
+    project: AccessRequestProject | null,
   ): Promise<{ id: number; requesterName: string } | null> {
     const { requesterName, email, phone, department } = conversation.draft;
     if (!requesterName || !email || !phone || !department) return null;
@@ -325,29 +329,24 @@ export class WhatsappAccessRequestService {
         requesterName,
         email,
         phone: contactPhone,
-        projectName: project.name,
+        projectName: project?.name ?? null,
       }),
-      projectId: project.id,
+      projectId: project?.id,
       assigneeId: conversation.assigneeId,
     };
     /* A confirmação já vai na própria conversa (`access_created`). */
     const options = { skipOpeningNotice: true, requester: requesterOf(conversation.draft) };
 
-    try {
-      return await this.tickets.create(input, undefined, [], options);
-    } catch (error) {
+    /* Falhou (o admin-console não confirmou quem atende, por exemplo): a pessoa recebe o aviso
+       de erro em `finish`, e o motivo fica no log para quem administra. */
+    return this.tickets.create(input, undefined, [], options).catch((error: unknown) => {
       this.logger.error(
         'failed to create access request from WhatsApp',
         error instanceof Error ? error.stack : '',
       );
-      if (!input.assigneeId) return null;
-    }
 
-    /* Não deu para confirmar quem atende (o admin-console pode estar fora do ar): o pedido
-       entra na fila, sem responsável, em vez de se perder. */
-    return this.tickets
-      .create({ ...input, assigneeId: undefined }, undefined, [], options)
-      .catch(() => null);
+      return null;
+    });
   }
 
   /* O chamado nasceu fora de uma requisição de pessoa: o histórico é gravado aqui, sem autor —
@@ -355,7 +354,7 @@ export class WhatsappAccessRequestService {
   private async recordHistory(
     ticket: { id: number },
     draft: AccessRequestDraft,
-    project: AccessRequestProject,
+    project: AccessRequestProject | null,
   ): Promise<void> {
     await this.history.record({
       action: 'tickets.create',
@@ -368,7 +367,7 @@ export class WhatsappAccessRequestService {
         { field: 'source', from: null, to: 'whatsapp' },
         { field: 'problemType', from: null, to: 'access_request' },
         { field: 'requesterId', from: null, to: draft.requesterId ?? null },
-        { field: 'projectId', from: null, to: project.id },
+        { field: 'projectId', from: null, to: project?.id ?? null },
       ],
     });
   }
@@ -420,6 +419,10 @@ function requesterOf(
   if (!draft.requesterId || !draft.email || !draft.requesterName) return undefined;
 
   return { id: draft.requesterId, email: draft.email, name: draft.requesterName };
+}
+
+function labelOf(project: AccessRequestProject | null): string {
+  return project?.name ?? 'usuário (sem sistema)';
 }
 
 /* As mensagens chamam a pessoa pelo primeiro nome: "Obrigado, Maria!", não o nome inteiro. */

@@ -185,6 +185,23 @@ describe('WhatsappAccessRequestService — vários sistemas', () => {
     });
   });
 
+  /* Quem ainda não tem conta não tem sistema para pedir: "0" vira o pedido de usuário. */
+  it('opens a single user request, without system, when the answer is none', async () => {
+    const { say, tickets, messaging } = makeService({ projects: PROJECTS });
+
+    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '11']) await say(text);
+    expect(await say('0')).toEqual({ reply: 'text:access_created', isOpen: false });
+
+    expect(tickets.create).toHaveBeenCalledTimes(1);
+    expect(tickets.create.mock.calls[0]?.[0]).toMatchObject({
+      projectId: undefined,
+      description: expect.stringContaining('Pedido de usuário'),
+    });
+    expect(messaging.reply.mock.calls.at(-1)?.[0].values).toMatchObject({
+      sistema: 'usuário (sem sistema)',
+    });
+  });
+
   // triste
   it('asks again when one of the numbers is not in the list', async () => {
     const { say, tickets } = makeService({ projects: PROJECTS });
@@ -334,14 +351,14 @@ describe('WhatsappAccessRequestService', () => {
     expect(await say('1')).toEqual({ reply: 'text:access_invalid', isOpen: false });
   });
 
-  /* Sem confirmar quem atende (admin-console fora), o pedido entra na fila em vez de se perder. */
-  it('opens the ticket without assignee when the assignee cannot be confirmed', async () => {
+  /* Sem confirmar quem atende (admin-console fora), é erro: o chamado não nasce pela metade. */
+  it('does not open the ticket when the assignee cannot be confirmed, and says so', async () => {
     const { say, tickets } = makeService();
     tickets.create.mockRejectedValueOnce(new Error('admin-console down'));
 
     for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '1']) await say(text);
 
-    expect(await say('1')).toEqual({ reply: 'text:access_created', isOpen: false });
-    expect(tickets.create.mock.calls[1]?.[0]).toMatchObject({ assigneeId: undefined });
+    expect(await say('1')).toEqual({ reply: 'text:access_invalid', isOpen: false });
+    expect(tickets.create).toHaveBeenCalledTimes(1);
   });
 });

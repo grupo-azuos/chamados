@@ -6,8 +6,6 @@ import {
 import { whatsappAlertThreshold } from '@template/shared/schemas/whatsapp-connection.schema';
 import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
 
-import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
-import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { type Env } from '../../../lib/config/env.schema';
 import { ENV } from '../../../lib/config/env.token';
 import { type WhatsappMessageRow } from '../../../lib/db/schema/whatsapp-connections.schema';
@@ -57,7 +55,6 @@ export class WhatsappMessagingService {
     private readonly connections: WhatsappConnectionsRepository,
     private readonly messages: WhatsappMessagesRepository,
     private readonly templates: WhatsappTemplatesService,
-    @Inject(USER_DIRECTORY_PROVIDER) private readonly directory: UserDirectoryProvider,
   ) {}
 
   async usage(userId: string): Promise<WhatsappUsage> {
@@ -175,15 +172,9 @@ export class WhatsappMessagingService {
     return signBotMessage(name, body);
   }
 
-  /* Sem o admin-console, a mensagem sai assim mesmo — assinada com o nome da casa. */
+  /* O nome guardado no vínculo do número (ver `whatsapp_connections.operator_name`). */
   private async operatorName(userId: string): Promise<string> {
-    try {
-      return (await this.directory.getUserById(userId))?.name ?? '';
-    } catch {
-      this.logger.warn('could not read the operator name for the bot signature');
-
-      return '';
-    }
+    return (await this.connections.find(userId))?.operatorName ?? '';
   }
 
   private async hasRoom(userId: string): Promise<boolean> {
