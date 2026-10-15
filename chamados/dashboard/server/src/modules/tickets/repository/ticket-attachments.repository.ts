@@ -13,7 +13,7 @@ import {
 /**
  * Os arquivos de um chamado, no banco.
  *
- * Só o cadastro passa por aqui: o ARQUIVO em si vive no R2, e quem fala com ele é o
+ * Só o cadastro passa por aqui: o ARQUIVO em si vive no storage, e quem fala com ele é o
  * `StorageService`. A ordem é sempre a de chegada — quem abre a lista está lendo a história do
  * chamado, e história se lê do começo.
  */

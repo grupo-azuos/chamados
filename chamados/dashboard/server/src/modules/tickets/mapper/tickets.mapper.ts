@@ -17,7 +17,7 @@ import { type TicketWithComputer } from '../repository/tickets.repository';
  * A tradução entre a linha do banco e o contrato. Mora aqui, e não espalhada, porque é aqui
  * que se decide o formato de data que TODA tela recebe.
  *
- * O link do print entra por parâmetro, já assinado: gerar link é ida ao R2, e uma função de
+ * O link do print entra por parâmetro, já assinado: gerar link é ida ao storage, e uma função de
  * tradução que faz chamada de rede não dá para testar sem subir nada.
  */
 function toNullableIsoString(date?: Date | null): string | null {

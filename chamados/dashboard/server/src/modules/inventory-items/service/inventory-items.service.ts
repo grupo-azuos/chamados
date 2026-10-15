@@ -54,7 +54,7 @@ export type UploadedPhoto = {
  * jeito que a Manutenção não mexe no parque de máquinas.
  *
  * A foto é tratada aqui, e não no controller: o controller só recebe e entrega. A imagem é
- * recusada pelo domínio, encolhida pelo ffmpeg e guardada no R2 — e a chave dela é o que vai
+ * recusada pelo domínio, encolhida pelo ffmpeg e guardada no storage — e a chave dela é o que vai
  * para o banco, nunca o link.
  */
 @Injectable()

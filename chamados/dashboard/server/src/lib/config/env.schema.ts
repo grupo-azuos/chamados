@@ -6,7 +6,7 @@ import { z } from 'zod';
  *
  * Quase todo valor tem padrão, de propósito: o template precisa subir com `npm run dev` numa
  * máquina recém-clonada. As exceções são os segredos — endereço do banco e credenciais do
- * R2 —, que entram SEM `.default()`: não existe padrão razoável para um segredo, e o
+ * storage S3 —, que entram SEM `.default()`: não existe padrão razoável para um segredo, e o
  * processo recusando subir e dizendo o nome da variável é melhor do que ele subir e falhar
  * na primeira gravação.
  */
@@ -83,11 +83,12 @@ export const envSchema = z.object({
   API_TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
 
   /**
-   * A string de conexão do Postgres (Neon), no formato
-   * `postgresql://usuario:senha@host/banco?sslmode=require`.
+   * A string de conexão do Postgres (o do Supabase da casa), no formato
+   * `postgresql://usuario:senha@host:5432/postgres`.
    *
-   * É segredo: mora no `.env`, que não é versionado. O painel da Neon mostra essa string
-   * pronta em "Connection string".
+   * O banco é COMPARTILHADO com os outros sistemas do Grupo Azuos: as tabelas deste moram no
+   * schema `chamados`, e as migrations têm a lista própria (`drizzle.__chamados_migrations`).
+   * É segredo: mora no `.env`, que não é versionado.
    */
   DATABASE_URL: z
     .string()
@@ -97,31 +98,44 @@ export const envSchema = z.object({
 
   /**
    * O banco que os testes E2E usam. Eles APAGAM e recriam as tabelas, então nunca pode ser o
-   * mesmo da DATABASE_URL — na Neon, o caminho é criar uma branch do banco só para teste.
+   * mesmo da DATABASE_URL — use um Postgres descartável só para teste.
    *
    * Sem ele os testes E2E não rodam; o resto do sistema sobe normalmente.
    */
   TEST_DATABASE_URL: z.string().trim().optional(),
 
   /**
-   * Credenciais do Cloudflare R2, que fala o protocolo do S3.
+   * O armazenamento de arquivos, pelo PROTOCOLO S3 — o mesmo arranjo da Gestão de RH. Trocar de
+   * provedor (Supabase Storage, AWS, MinIO, R2) é trocar estes valores: o código só conhece o
+   * protocolo.
    *
-   * O endpoint é derivado do `R2_ACCOUNT_ID` (ver storage.service.ts) em vez de ser mais uma
-   * variável: é sempre `https://<conta>.r2.cloudflarestorage.com`, e deixar isso configurável
-   * só criaria uma forma a mais de errar.
+   * `S3_ENDPOINT` vazio usa a AWS; no Supabase é `http(s)://<host>/storage/v1/s3`. Chave e
+   * segredo não têm padrão: sem eles o processo não sobe, dizendo o nome.
    */
-  R2_ACCOUNT_ID: z.string().trim().min(1, 'Informe o ID da conta do Cloudflare (R2_ACCOUNT_ID)'),
-  R2_ACCESS_KEY_ID: z.string().trim().min(1, 'Informe a chave de acesso do R2'),
-  R2_SECRET_ACCESS_KEY: z.string().trim().min(1, 'Informe o segredo do R2'),
-  R2_BUCKET: z.string().trim().min(1, 'Informe o nome do bucket do R2'),
+  S3_ENDPOINT: z
+    .string()
+    .trim()
+    .url('S3_ENDPOINT precisa ser uma URL completa')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+  S3_REGION: z.string().trim().min(1).default('local'),
+  S3_BUCKET: z.string().trim().min(1).default('chamados'),
+  S3_ACCESS_KEY_ID: z.string().trim().min(1, 'Informe a chave de acesso do storage S3'),
+  S3_SECRET_ACCESS_KEY: z.string().trim().min(1, 'Informe o segredo do storage S3'),
+  /* MinIO e Supabase endereçam o bucket no caminho (`/bucket/chave`), não no subdomínio. */
+  S3_FORCE_PATH_STYLE: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 
   /**
    * Por quantos segundos um link de download assinado continua valendo.
    *
    * Curto de propósito: o link dá acesso ao arquivo a quem o tiver, sem passar pela
-   * identidade. Ele existe para o navegador baixar AGORA, não para ser guardado.
+   * identidade. Ele existe para o navegador baixar AGORA, não para ser guardado. O endereço do
+   * link é o do `S3_ENDPOINT`: ele precisa ser alcançável pelo navegador de quem baixa.
    */
-  R2_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(300),
+  S3_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(300),
 
   /**
    * O segredo do webhook do UniFi.
