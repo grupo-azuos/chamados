@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { type Env } from '../../../lib/config/env.schema';
 import { type WhatsappConversationRow } from '../../../lib/db/schema/whatsapp-conversations.schema';
 import { type WhatsappConversationsRepository } from '../repository/whatsapp-conversations.repository';
+import { type HistoryService } from '../../history/service/history.service';
 import { type TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import { type TicketsService } from '../../tickets/service/tickets.service';
 import { type WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
@@ -27,6 +29,9 @@ function makeService(
     hasRoom?: boolean;
     projects?: { id: number; name: string }[];
     createFails?: boolean;
+    people?: { id: string; name: string; email: string }[];
+    phoneOwners?: string[];
+    searchFails?: boolean;
   } = {},
 ) {
   const assignees = {
@@ -36,7 +41,8 @@ function makeService(
     listSystemProjectOptions: vi
       .fn()
       .mockResolvedValue(options.projects ?? [{ id: 7, name: 'Portal do Cliente' }]),
-    create: vi.fn(async (input: { requesterName: string }) => {
+    phoneOwnersOf: vi.fn().mockResolvedValue(options.phoneOwners ?? []),
+    create: vi.fn(async (input: { requesterName: string }, ..._rest: unknown[]) => {
       if (options.createFails) throw new Error('database down');
 
       return { id: 42, requesterName: input.requesterName };
@@ -55,23 +61,106 @@ function makeService(
     save: vi.fn(async (row: WhatsappConversationRow) => void stored.set(row.key, row)),
     remove: vi.fn(async (key: string) => void stored.delete(key)),
   };
+  const directory = {
+    searchUsers: vi.fn(async () => {
+      if (options.searchFails) throw new Error('admin-console down');
+
+      return options.people ?? [];
+    }),
+  };
+  const history = { record: vi.fn().mockResolvedValue(undefined) };
   const service = new WhatsappAccessRequestService(
     env,
     assignees as unknown as TicketAssigneesService,
     tickets as unknown as TicketsService,
     messaging as unknown as WhatsappMessagingService,
     conversations as unknown as WhatsappConversationsRepository,
+    directory as unknown as UserDirectoryProvider,
+    history as unknown as HistoryService,
   );
 
   /* Uma troca da conversa: a mensagem da pessoa e o que o bot respondeu. */
   const say = (text: string, extra: Partial<InboundMessage> = {}, now = NOW) =>
     service.handle('u-ana', inbound(text, extra), now);
 
-  return { service, tickets, messaging, say, conversations, stored };
+  return { service, tickets, messaging, say, conversations, stored, directory, history };
 }
 
 const lastKind = (messaging: ReturnType<typeof makeService>['messaging']) =>
   messaging.reply.mock.calls.at(-1)?.[0].kind;
+
+const MARIA = { id: 'maria-id', name: 'Maria Clara Souza', email: 'maria@empresa.com.br' };
+const MARIA_LIMA = { id: 'lima-id', name: 'Maria Clara Lima', email: 'maria.lima@empresa.com.br' };
+
+describe('WhatsappAccessRequestService — quem está pedindo', () => {
+  // feliz
+  it('recognizes the person by the name, skips the e-mail and links the ticket to them', async () => {
+    const { say, tickets, history, directory } = makeService({ people: [MARIA, MARIA_LIMA] });
+
+    await say('/acesso');
+    expect(await say('Maria Clara Souza')).toEqual({
+      reply: 'text:access_department',
+      isOpen: true,
+    });
+    await say('11');
+    await say('1');
+
+    expect(directory.searchUsers).toHaveBeenCalledWith('maria');
+    expect(tickets.create.mock.calls[0]?.[0]).toMatchObject({ requesterName: 'Maria Clara Souza' });
+    expect(tickets.create.mock.calls[0]?.[3]).toEqual({
+      skipOpeningNotice: true,
+      requester: { id: 'maria-id', email: 'maria@empresa.com.br', name: 'Maria Clara Souza' },
+    });
+    expect(history.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'tickets.create', actorId: null, targetId: '42' }),
+    );
+  });
+
+  it('settles a shared name by who already used the phone', async () => {
+    const { say, tickets } = makeService({ people: [MARIA, MARIA_LIMA], phoneOwners: ['lima-id'] });
+
+    for (const text of ['/acesso', 'Maria Clara', '11', '1']) await say(text);
+
+    expect(tickets.phoneOwnersOf).toHaveBeenCalledWith('5562999990002');
+    expect(tickets.create.mock.calls[0]?.[3]).toMatchObject({ requester: { id: 'lima-id' } });
+  });
+
+  it('asks who is who when the name fits several people, and links the one picked', async () => {
+    const { say, tickets, messaging } = makeService({ people: [MARIA, MARIA_LIMA] });
+
+    await say('/acesso');
+    expect(await say('Maria Clara')).toEqual({ reply: 'text:access_who', isOpen: true });
+    expect(messaging.reply.mock.calls.at(-1)?.[0].values.opcoes).toContain('2. Maria Clara Lima');
+    expect(await say('2')).toEqual({ reply: 'text:access_department', isOpen: true });
+    for (const text of ['11', '1']) await say(text);
+
+    expect(tickets.create.mock.calls[0]?.[3]).toMatchObject({ requester: { id: 'lima-id' } });
+  });
+
+  // triste
+  it('goes on asking the e-mail, unlinked, when the person is none of them', async () => {
+    const { say, tickets } = makeService({ people: [MARIA, MARIA_LIMA] });
+
+    await say('/acesso');
+    await say('Maria Clara');
+    expect(await say('0')).toEqual({ reply: 'text:access_email', isOpen: true });
+    for (const text of ['maria@outra.com', '11', '1']) await say(text);
+
+    expect(tickets.create.mock.calls[0]?.[3]).toEqual({
+      skipOpeningNotice: true,
+      requester: undefined,
+    });
+  });
+
+  /* Admin-console fora do ar não trava o pedido: só não há vínculo. */
+  it('keeps the request going when the people search fails', async () => {
+    const { say } = makeService({ searchFails: true });
+
+    await say('/acesso');
+
+    expect(await say('Maria Clara')).toEqual({ reply: 'text:access_email', isOpen: true });
+  });
+});
 
 describe('WhatsappAccessRequestService', () => {
   // feliz

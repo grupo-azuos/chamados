@@ -370,7 +370,8 @@ export class TicketsService {
   /**
    * Abrir chamado. Pela tela, quem abre está LOGADO, e o chamado fica ligado a ela pelo id do
    * admin-console (`options.requester`) — o nome é o da identidade, nunca o do corpo. Sem
-   * `requester` só entra o bot do WhatsApp, que abre pela conversa.
+   * `requester` só entra o bot do WhatsApp quando não reconheceu quem escreve; reconhecendo,
+   * ele passa a conta da pessoa como `requester`.
    *
    * O print é guardado ANTES do chamado existir. Se a gravação do chamado falhar depois,
    * sobra um arquivo órfão no bucket — o contrário (chamado apontando para um arquivo que
@@ -463,6 +464,11 @@ export class TicketsService {
     const rows = await this.repository.listByRequester(user.id);
 
     return rows.map(toMyTicket);
+  }
+
+  /** Quem já abriu chamado com este telefone — o desempate do bot para reconhecer quem escreve. */
+  async phoneOwnersOf(phone: string): Promise<string[]> {
+    return this.repository.requesterIdsByPhone(phone);
   }
 
   /**
