@@ -2,17 +2,25 @@ import { ROLE_CONTEXTS } from '@template/shared/schemas/user.schema';
 import { sql } from 'drizzle-orm';
 import { check, index, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
-export const USER_ROLES = ['user', 'manager', 'admin'] as const;
-
 /**
- * Cargos internos do sistema, desacoplados do mecanismo de autenticação/entidade.
+ * QUEM É DE QUAL MÓDULO — Infraestrutura, Sistema, Manutenção.
  *
- * Cada linha associa um identificador estável da entidade (ex.: id ou e-mail) a um cargo
- * dentro de um determinado contexto (área do sistema: 'infra', 'sistema', 'manutencao').
+ * Uma linha diz "esta pessoa tem acesso a este módulo". Só isso: o NÍVEL não mora aqui. Quem
+ * diz se a pessoa é Administrador, Gestor ou Usuário é o admin-console, no cabeçalho
+ * `x-forwarded-user-role`; a combinação das duas coisas está em `identity.provider.ts`:
  *
- * Não possui foreign key rígida para `neon_auth.user` de propósito: quando a autenticação
- * migrar para auth-forward ou API própria, a tabela e as permissões continuam intactas
- * sem necessidade de alterar o esquema.
+ *  - Administrador + módulo → mexe em tudo daquele módulo;
+ *  - Gestor ou Usuário + módulo → só vê os dados do módulo;
+ *  - sem linha nenhuma → só abre chamado e valida documento, que são públicos.
+ *
+ * Quem escreve aqui é o super-admin, na tela de Acessos. O nome da tabela ficou o antigo
+ * (`internal_roles`, de quando ela guardava um cargo por módulo) porque renomear tabela pede
+ * confirmação interativa no gerador de migration — e os acessos já liberados continuam
+ * valendo sem migrar dado nenhum.
+ *
+ * `user_id` é o UUID do admin-console. `user_email` existe porque as linhas anteriores à
+ * integração guardam o id do login antigo: a conferência casa por um OU pelo outro, e a
+ * pessoa não perde o acesso por ter trocado de provedor de login.
  */
 export const internalRoles = pgTable(
   'internal_roles',
@@ -20,11 +28,10 @@ export const internalRoles = pgTable(
     id: serial('id').primaryKey(),
     userId: text('user_id').notNull(),
     userEmail: text('user_email'),
-    context: text('context', { enum: ROLE_CONTEXTS as unknown as [string, ...string[]] }).notNull().default('sistema'),
-    role: text('role', { enum: USER_ROLES as unknown as [string, ...string[]] }).notNull().default('user'),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
+    context: text('context', { enum: ROLE_CONTEXTS as unknown as [string, ...string[]] })
       .notNull()
-      .defaultNow(),
+      .default('sistema'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     createdBy: text('created_by'),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
@@ -37,10 +44,6 @@ export const internalRoles = pgTable(
     check(
       'internal_roles_context_valid',
       sql`${table.context} in (${sql.raw(ROLE_CONTEXTS.map((c) => `'${c}'`).join(', '))})`,
-    ),
-    check(
-      'internal_roles_role_valid',
-      sql`${table.role} in (${sql.raw(USER_ROLES.map((r) => `'${r}'`).join(', '))})`,
     ),
   ],
 );
