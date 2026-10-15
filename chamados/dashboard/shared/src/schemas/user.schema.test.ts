@@ -79,9 +79,16 @@ describe('roleInContext', () => {
   });
 
   // triste
-  it('falls back to role or default when context is not defined or user is null', () => {
-    expect(roleInContext(null, 'infra')).toBe('user');
-    expect(roleInContext({ role: 'manager' }, 'infra')).toBe('manager');
+  /* Ser Administrador no admin-console não abre módulo nenhum: sem a linha do módulo, a
+     resposta é "sem acesso", e não o papel geral. */
+  it('gives no role in a module the person does not have, whatever the global role', () => {
+    expect(roleInContext(null, 'infra')).toBeNull();
+    expect(roleInContext({ role: 'admin' }, 'infra')).toBeNull();
+    expect(roleInContext({ role: 'admin', roles: { sistema: 'admin' } }, 'infra')).toBeNull();
+  });
+
+  it('gives the super-admin every module without any row', () => {
+    expect(roleInContext({ role: 'superadmin' }, 'manutencao')).toBe('superadmin');
   });
 });
 
