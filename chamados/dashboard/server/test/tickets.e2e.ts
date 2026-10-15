@@ -9,7 +9,7 @@ import { internalRoles } from '../src/lib/db/schema/internal-roles.schema';
 import { ticketHistories } from '../src/lib/db/schema/ticket-histories.schema';
 import { ticketServiceOrders } from '../src/lib/db/schema/ticket-service-orders.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
-import { BIA, CAIO, asBia, asCaio, createE2eApp, type E2eApp } from './support/e2e-app.util';
+import { BIA, CAIO, asCaio, asStranger, createE2eApp, type E2eApp } from './support/e2e-app.util';
 
 /**
  * O FLUXO DO CHAMADO de ponta a ponta, que é onde o sistema realmente trabalha.
@@ -79,8 +79,8 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     started.storage.files.clear();
 
     await started.db.insert(internalRoles).values([
-      { userId: CAIO.id, userEmail: CAIO.email, context: 'infra', role: 'admin' },
-      { userId: BIA.id, userEmail: BIA.email, context: 'infra', role: 'admin' },
+      { userId: CAIO.id, userEmail: CAIO.email, context: 'infra' },
+      { userId: BIA.id, userEmail: BIA.email, context: 'infra' },
     ]);
   });
 
@@ -129,7 +129,9 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
 
     await launch('waiting_third_party', 'Pedi o rolete ao fornecedor.').expect(201);
     await launch('resume', 'O rolete chegou.').expect(201);
-    await launch('closure_with_caveats', 'Troquei o rolete; a bandeja 2 segue com defeito.').expect(201);
+    await launch('closure_with_caveats', 'Troquei o rolete; a bandeja 2 segue com defeito.').expect(
+      201,
+    );
 
     const ticket = await request(app.getHttpServer())
       .get(`/api/tickets/${created.body.id}`)
@@ -201,7 +203,9 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     expect(report.headers['content-type']).toContain('application/pdf');
     expect(report.headers['content-disposition']).toContain('ordem-de-servico-CH-0001.pdf');
 
-    const fileHash = createHash('sha256').update(report.body as Buffer).digest('hex');
+    const fileHash = createHash('sha256')
+      .update(report.body as Buffer)
+      .digest('hex');
     const [issued] = await started.db.select().from(ticketServiceOrders);
 
     expect(issued).toMatchObject({ version: 1, fileHash, issuedBy: CAIO.email });
@@ -210,7 +214,12 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
       .get(`/api/service-orders/${issued!.code.slice(0, 12)}`)
       .expect(200);
 
-    expect(checked.body).toMatchObject({ protocol: 'CH-0001', version: 1, fileHash, isLatest: true });
+    expect(checked.body).toMatchObject({
+      protocol: 'CH-0001',
+      version: 1,
+      fileHash,
+      isLatest: true,
+    });
     expect(checked.body).not.toHaveProperty('issuedBy');
   });
 
@@ -250,20 +259,29 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const { db } = started;
     const ofTicket = eq(ticketHistories.ticketId, created.body.id);
 
-    await expect(db.update(ticketHistories).set({ description: 'Reescrito.' }).where(ofTicket)).rejects.toThrow();
+    await expect(
+      db.update(ticketHistories).set({ description: 'Reescrito.' }).where(ofTicket),
+    ).rejects.toThrow();
     await expect(db.delete(ticketHistories).where(ofTicket)).rejects.toThrow();
-    await expect(db.update(ticketServiceOrders).set({ fileHash: '0'.repeat(64) })).rejects.toThrow();
+    await expect(
+      db.update(ticketServiceOrders).set({ fileHash: '0'.repeat(64) }),
+    ).rejects.toThrow();
     await expect(db.delete(ticketServiceOrders)).rejects.toThrow();
     await expect(db.delete(tickets).where(eq(tickets.id, created.body.id))).rejects.toThrow();
 
     const [history] = await db.select().from(ticketHistories).where(ofTicket);
     expect(history?.description).toBe('Chamado aberto.');
     expect(await db.select().from(ticketServiceOrders)).toHaveLength(1);
-    await request(app.getHttpServer()).get(`/api/tickets/${created.body.id}`).set(asCaio()).expect(200);
+    await request(app.getHttpServer())
+      .get(`/api/tickets/${created.body.id}`)
+      .set(asCaio())
+      .expect(200);
   });
 
   it('does not find a service order that was never issued', async () => {
-    await request(app.getHttpServer()).get(`/api/service-orders/${'0'.repeat(64)}`).expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/service-orders/${'0'.repeat(64)}`)
+      .expect(404);
     await request(app.getHttpServer()).get('/api/service-orders/abc').expect(404);
   });
 
@@ -313,7 +331,11 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     await request(app.getHttpServer())
       .post(`/api/tickets/${created.body.id}/histories`)
       .set(asCaio())
-      .send({ type: 'note', description: 'Peça cotada com dois fornecedores.', isVisibleToRequester: false })
+      .send({
+        type: 'note',
+        description: 'Peça cotada com dois fornecedores.',
+        isVisibleToRequester: false,
+      })
       .expect(201);
 
     await request(app.getHttpServer())
@@ -602,20 +624,20 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
       .expect(401);
   });
 
-  /* Atender exige cargo na área do chamado (#13, Bia tem `admin` em Infra no `beforeEach`) —
-     e continua exigindo estar identificado, sempre. */
-  it('lets whoever has a cargo in the area answer, and nobody unidentified', async () => {
+  /* Atender exige ser Administrador da área do chamado (Caio administra Infra) — e continua
+     exigindo estar identificado, sempre. */
+  it('lets an Administrator of the area answer, and nobody unidentified', async () => {
     const created = await openTicket().expect(201);
 
     await request(app.getHttpServer())
       .post(`/api/tickets/${created.body.id}/histories`)
-      .set(asBia())
+      .set(asCaio())
       .send({ type: 'start', description: 'Assumi o chamado.' })
       .expect(201);
 
     await request(app.getHttpServer())
       .post(`/api/tickets/${created.body.id}/histories`)
-      .set({ Authorization: 'Bearer token-inventado' })
+      .set(asStranger())
       .send({ type: 'resolution', description: 'Fechei sem me identificar.' })
       .expect(401);
   });

@@ -13,31 +13,38 @@ const user = (id: string, name: string, extra: Partial<DirectoryUser> = {}): Dir
   role: 'user',
   ...extra,
 });
-const role = (userId: string, context: string, roleName: string, userEmail: string | null = null) =>
-  ({ userId, userEmail, context, role: roleName }) as InternalRoleRow;
+/** Um módulo liberado — sem nível: quem escreve é o Administrador do admin-console. */
+const grant = (userId: string, context: string, userEmail: string | null = null) =>
+  ({ userId, userEmail, context }) as InternalRoleRow;
 
+/* O papel de cada um é o do admin-console (`role` da lista de acesso de lá). O super-admin é
+   daqui: mora em `super_admins`, e na lista do admin-console ele é uma pessoa qualquer. */
 const USERS = [
-  user('u-super', 'Zeca Super', { role: 'superadmin' }),
-  user('u-infra', 'Bia Infra'),
-  user('u-both', 'Ana Duas'),
-  user('u-manager', 'Caio Gestor'),
-  user('u-banned', 'Dora Banida', { banned: true }),
+  user('u-super', 'Zeca Super'),
+  user('u-infra', 'Bia Infra', { role: 'admin' }),
+  user('u-both', 'Ana Duas', { role: 'admin' }),
+  user('u-manager', 'Caio Gestor', { role: 'manager' }),
+  user('u-banned', 'Dora Banida', { role: 'admin', banned: true }),
   user('u-plain', 'Edu Comum'),
 ];
 const ROLES = [
-  role('u-infra', 'infra', 'admin'),
-  role('u-both', 'infra', 'admin'),
-  role('other-id', 'sistema', 'admin', 'U-BOTH@exemplo.com'),
-  role('u-manager', 'infra', 'manager'),
-  role('u-banned', 'infra', 'admin'),
+  grant('u-infra', 'infra'),
+  grant('u-both', 'infra'),
+  grant('other-id', 'sistema', 'U-BOTH@exemplo.com'),
+  grant('u-manager', 'infra'),
+  grant('u-banned', 'infra'),
 ];
+const SUPER_ADMINS = [{ userId: null, userEmail: 'u-super@exemplo.com' }];
 
 function makeService(users = USERS, roles = ROLES) {
   const directory = {
     listUsers: vi.fn().mockResolvedValue(users),
     getUserById: vi.fn(async (id: string) => users.find((item) => item.id === id) ?? null),
   };
-  const repository = { list: vi.fn().mockResolvedValue(roles) };
+  const repository = {
+    list: vi.fn().mockResolvedValue(roles),
+    listSuperAdmins: vi.fn().mockResolvedValue(SUPER_ADMINS),
+  };
 
   return new TicketAssigneesService(
     directory as unknown as UserDirectoryProvider,
@@ -55,7 +62,7 @@ describe('TicketAssigneesService.listForArea', () => {
     ]);
   });
 
-  /* O cargo interno pode estar gravado pelo e-mail, e não pelo id: vale do mesmo jeito. */
+  /* O módulo pode estar gravado pelo e-mail, e não pelo id: vale do mesmo jeito. */
   it('matches a role recorded by e-mail, whatever the case', async () => {
     expect(await makeService().listForArea('sistema')).toEqual([
       { id: 'u-both', name: 'Ana Duas' },
@@ -71,6 +78,7 @@ describe('TicketAssigneesService.listForArea', () => {
     ]);
   });
 
+  /* Gestor da área só consulta: não é oferecido como responsável. */
   it('leaves out managers, regular users and banned accounts', async () => {
     const ids = (await makeService().listForArea('infra')).map((option) => option.id);
 

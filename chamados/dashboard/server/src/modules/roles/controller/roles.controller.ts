@@ -33,23 +33,23 @@ import {
 import { RolesService } from '../service/roles.service';
 
 /**
- * Endpoint de administração de cargos internos.
- * Apenas administradores (`admin`) possuem acesso a estas rotas.
+ * A TELA DE ACESSOS: quem é de qual módulo. Tudo aqui é do super-admin.
  */
-@ApiTags('Cargos')
+@ApiTags('Acessos')
 @Controller('roles')
-@Roles('admin', 'superadmin')
+@Roles('superadmin')
 export class RolesController {
   constructor(private readonly service: RolesService) {}
 
   @Get()
   @ApiOperation({
-    summary: 'Listar cargos internos',
-    description: 'Retorna todos os cargos internos atribuídos no sistema.',
+    summary: 'Listar os módulos liberados',
+    description:
+      'Cada linha é uma pessoa com acesso a um módulo (Infraestrutura, Sistema, Manutenção).',
   })
   @ApiOkResponse({ type: InternalRoleListDto })
-  @ApiUnauthorizedResponse({ description: 'Sem token válido.' })
-  @ApiForbiddenResponse({ description: 'Esta ação é de Administrador.' })
+  @ApiUnauthorizedResponse({ description: 'Sem identidade.' })
+  @ApiForbiddenResponse({ description: 'Esta ação é do Super Admin.' })
   async list(@CurrentUser() user: RequestUser): Promise<InternalRoleDto[]> {
     return this.service.list(user);
   }
@@ -57,23 +57,23 @@ export class RolesController {
   @Get('users')
   @ApiOperation({
     summary: 'Listar pessoas do diretório',
-    description: 'Retorna pessoas do diretório de autenticação (Neon Auth/auth-forward) para seleção em cargos.',
+    description: 'As pessoas que têm acesso a este sistema no admin-console, para liberar módulos.',
   })
   @ApiOkResponse({ type: DirectoryUserListDto })
-  @ApiUnauthorizedResponse({ description: 'Sem token válido.' })
-  @ApiForbiddenResponse({ description: 'Esta ação é de Administrador.' })
+  @ApiUnauthorizedResponse({ description: 'Sem identidade.' })
+  @ApiForbiddenResponse({ description: 'Esta ação é do Super Admin.' })
   async listUsers(@CurrentUser() user: RequestUser): Promise<DirectoryUserDto[]> {
     return this.service.listUsers(user);
   }
 
   @Get('user/:identifier')
   @ApiOperation({
-    summary: 'Listar cargos de uma pessoa',
-    description: 'Retorna todos os cargos atribuídos para um usuário em diferentes contextos.',
+    summary: 'Listar os módulos de uma pessoa',
+    description: 'Os módulos liberados para a pessoa, pelo UUID ou pelo e-mail.',
   })
   @ApiOkResponse({ type: InternalRoleListDto })
-  @ApiUnauthorizedResponse({ description: 'Sem token válido.' })
-  @ApiForbiddenResponse({ description: 'Esta ação é de Administrador.' })
+  @ApiUnauthorizedResponse({ description: 'Sem identidade.' })
+  @ApiForbiddenResponse({ description: 'Esta ação é do Super Admin.' })
   async listByUser(
     @CurrentUser() user: RequestUser,
     @Param('identifier') identifier: string,
@@ -84,12 +84,13 @@ export class RolesController {
   @Post()
   @Put()
   @ApiOperation({
-    summary: 'Atribuir ou alterar cargo interno',
-    description: 'Define o cargo de uma pessoa em um determinado contexto do sistema.',
+    summary: 'Liberar um módulo',
+    description:
+      'Dá à pessoa acesso ao módulo. O que ela pode lá dentro vem do papel no admin-console.',
   })
   @ApiOkResponse({ type: InternalRoleDto })
-  @ApiUnauthorizedResponse({ description: 'Sem token válido.' })
-  @ApiForbiddenResponse({ description: 'Esta ação é de Administrador.' })
+  @ApiUnauthorizedResponse({ description: 'Sem identidade.' })
+  @ApiForbiddenResponse({ description: 'Esta ação é do Super Admin.' })
   async assign(
     @CurrentUser() user: RequestUser,
     @Body() body: AssignRoleDto,
@@ -100,13 +101,14 @@ export class RolesController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Excluir atribuição de cargo',
-    description: 'Remove o cargo interno de uma pessoa naquele contexto, revertendo ao padrão restrito.',
+    summary: 'Tirar um módulo',
+    description:
+      'A pessoa deixa de ver aquele módulo. Abrir chamado e validar documento continuam.',
   })
-  @ApiNoContentResponse({ description: 'Cargo removido com sucesso.' })
-  @ApiNotFoundResponse({ description: 'Cargo não encontrado.' })
-  @ApiUnauthorizedResponse({ description: 'Sem token válido.' })
-  @ApiForbiddenResponse({ description: 'Esta ação é de Administrador.' })
+  @ApiNoContentResponse({ description: 'Módulo retirado.' })
+  @ApiNotFoundResponse({ description: 'Acesso não encontrado.' })
+  @ApiUnauthorizedResponse({ description: 'Sem identidade.' })
+  @ApiForbiddenResponse({ description: 'Esta ação é do Super Admin.' })
   async delete(
     @CurrentUser() user: RequestUser,
     @Param('id', ParseIntPipe) id: number,

@@ -117,7 +117,6 @@ function setup({
   const tickets = {
     findById: vi.fn().mockResolvedValue(ticket),
     listAreasOf: vi.fn().mockResolvedValue([]),
-    contextRolesFor: vi.fn().mockResolvedValue(roles),
   } as unknown as TicketsRepository;
 
   const timeline = { list: vi.fn(async () => histories) };
@@ -129,15 +128,21 @@ function setup({
     { API_CORS_ORIGIN: 'http://localhost:5005/, http://localhost:6006' },
   );
 
-  return { service, repository, rows, histories };
+  return {
+    actor: { ...ana, roles } as RequestUser,
+    service,
+    repository,
+    rows,
+    histories,
+  };
 }
 
 describe('TicketServiceOrdersService.issue', () => {
   // feliz
   it('issues the PDF and registers its fingerprint, without keeping the file', async () => {
-    const { service, repository } = setup();
+    const { actor, service, repository } = setup();
 
-    const report = await service.issue(ana, 7);
+    const report = await service.issue(actor, 7);
 
     expect(report.fileName).toBe('ordem-de-servico-CH-0007.pdf');
     expect(report.buffer.subarray(0, 4).toString()).toBe('%PDF');
@@ -156,30 +161,30 @@ describe('TicketServiceOrdersService.issue', () => {
   });
 
   it('gives the issue a long code nobody can guess', async () => {
-    const { service, rows } = setup();
+    const { actor, service, rows } = setup();
 
-    await service.issue(ana, 7);
+    await service.issue(actor, 7);
 
     expect(rows[0]?.code).toMatch(/^[0-9a-f]{64}$/);
   });
 
   /* Clicar dez vezes não cria dez versões: nada mudou, é o MESMO documento. */
   it('gives the very same document again when nothing changed in the ticket', async () => {
-    const { service, repository } = setup();
+    const { actor, service, repository } = setup();
 
-    const first = await service.issue(ana, 7);
-    const second = await service.issue(ana, 7);
+    const first = await service.issue(actor, 7);
+    const second = await service.issue(actor, 7);
 
     expect(fingerprintOf(second.buffer)).toBe(fingerprintOf(first.buffer));
     expect(repository.record).toHaveBeenCalledOnce();
   });
 
   it('issues a new version when the ticket changed since the last one', async () => {
-    const { service, rows, histories } = setup();
+    const { actor, service, rows, histories } = setup();
 
-    const first = await service.issue(ana, 7);
+    const first = await service.issue(actor, 7);
     histories.push(history({ id: 2, description: 'A peça chegou.' }));
-    const second = await service.issue(ana, 7);
+    const second = await service.issue(actor, 7);
 
     expect(rows.map((row) => row.version)).toEqual([1, 2]);
     expect(rows[1]?.code).not.toBe(rows[0]?.code);
@@ -189,16 +194,16 @@ describe('TicketServiceOrdersService.issue', () => {
   // triste
   /* Quem é de Sistema não emite documento de um chamado só de Manutenção. */
   it('refuses who has no role in any area of the ticket', async () => {
-    const { service, repository } = setup({ roles: { sistema: 'admin' } });
+    const { actor, service, repository } = setup({ roles: { sistema: 'admin' } });
 
-    await expect(service.issue(ana, 7)).rejects.toThrow(ForbiddenException);
+    await expect(service.issue(actor, 7)).rejects.toThrow(ForbiddenException);
     expect(repository.record).not.toHaveBeenCalled();
   });
 
   it('refuses a ticket that does not exist', async () => {
-    const { service, repository } = setup({ ticket: null });
+    const { actor, service, repository } = setup({ ticket: null });
 
-    await expect(service.issue(ana, 7)).rejects.toThrow(NotFoundException);
+    await expect(service.issue(actor, 7)).rejects.toThrow(NotFoundException);
     expect(repository.record).not.toHaveBeenCalled();
   });
 });

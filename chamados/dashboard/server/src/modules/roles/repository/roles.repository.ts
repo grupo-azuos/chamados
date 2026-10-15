@@ -9,6 +9,7 @@ import {
   type InternalRoleInsert,
   type InternalRoleRow,
 } from '../../../lib/db/schema/internal-roles.schema';
+import { superAdmins } from '../../../lib/db/schema/super-admins.schema';
 
 /**
  * Acesso ao banco de dados para a tabela `internal_roles`.
@@ -25,6 +26,16 @@ export class RolesRepository {
         .from(internalRoles)
         .orderBy(desc(internalRoles.createdAt), desc(internalRoles.id)),
       'listar cargos internos',
+    );
+  }
+
+  /** Os super-admins — só leitura: quem os cria é o comando `superadmin:promote`. */
+  async listSuperAdmins(): Promise<{ userId: string | null; userEmail: string }[]> {
+    return runQuery(
+      this.db
+        .select({ userId: superAdmins.userId, userEmail: superAdmins.userEmail })
+        .from(superAdmins),
+      'listar super-admins',
     );
   }
 
@@ -54,7 +65,6 @@ export class RolesRepository {
         .onConflictDoUpdate({
           target: [internalRoles.userId, internalRoles.context],
           set: {
-            role: values.role,
             userEmail: values.userEmail,
             updatedAt: new Date(),
             updatedBy: values.updatedBy,
@@ -68,6 +78,9 @@ export class RolesRepository {
   }
 
   async delete(id: number): Promise<void> {
-    await runQuery(this.db.delete(internalRoles).where(eq(internalRoles.id, id)), 'excluir cargo interno');
+    await runQuery(
+      this.db.delete(internalRoles).where(eq(internalRoles.id, id)),
+      'excluir cargo interno',
+    );
   }
 }

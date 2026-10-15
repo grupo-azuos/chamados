@@ -7,7 +7,7 @@ import {
 import { type UserRole } from '@template/shared/schemas/user.schema';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
-import { canManageAnyRecord, isSuperAdmin } from '../../../lib/policy/access.policy';
+import { isSuperAdmin } from '../../../lib/policy/access.policy';
 import { TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
 
 /** O cargo de quem pede, área por área. Área ausente é ausência de cargo — não "cargo mínimo". */
@@ -29,32 +29,36 @@ export const TICKET_NOT_FOUND = 'Chamado não encontrado. Confira o número do p
  * (`TicketsService`) e a linha do tempo dele (`TicketHistoriesService`). Com a regra copiada
  * nas duas, a primeira correção numa delas deixaria a outra aberta.
  *
- * Os níveis, sobre um mesmo chamado: `user` só consulta; `manager` contribui, mas nunca
- * encerra; `admin` faz tudo.
+ * A área do chamado É o módulo (Infraestrutura, Sistema, Manutenção). Sobre um mesmo chamado:
+ * quem tem a área como Administrador ATENDE — assume, muda, encerra; quem a tem como Gestor ou
+ * Usuário só consulta; quem não a tem não vê. Ver `domain/module-access.util.ts`.
  */
 @Injectable()
 export class TicketAccessService {
   constructor(private readonly repository: TicketsRepository) {}
 
   /**
-   * O cargo desta pessoa, área por área — direto do banco, sem o "mínimo `user`" que o cargo
-   * interno (#11) aplica em outros lugares: aqui, sem linha, é SEM ACESSO (ver issue #13).
-   *
-   * Só o SUPER ADMINISTRADOR enxerga tudo por padrão — ele é o único papel sem fronteira
-   * nenhuma no sistema (100%, ponta a ponta). Um administrador GLOBAL (`admin`, sem ser
-   * `superadmin`) não ganha as três áreas de graça: ele "faz tudo no contexto dele", e esse
-   * contexto é o que o cargo interno (#11) diz que é — igual a gestor e a usuário, só que
-   * com o nível mais alto quando o cargo existir.
+   * O nível desta pessoa, área por área — os módulos que o super-admin liberou para ela, com
+   * o nível que o papel do admin-console dá (já resolvidos na identidade). Sem a área, SEM
+   * ACESSO. O super-admin tem todas.
    */
-  async resolve(user: RequestUser): Promise<AreaAccess> {
+  resolve(user: RequestUser): Promise<AreaAccess> {
     if (isSuperAdmin(user.role)) {
-      return TICKET_AREAS.reduce<AreaAccess>((access, area) => {
-        access[area] = 'admin';
-        return access;
-      }, {});
+      return Promise.resolve(
+        TICKET_AREAS.reduce<AreaAccess>((access, area) => {
+          access[area] = 'admin';
+          return access;
+        }, {}),
+      );
     }
 
-    return this.repository.contextRolesFor(user.id, user.email);
+    const access: AreaAccess = {};
+    for (const area of TICKET_AREAS) {
+      const role = user.roles?.[area];
+      if (role) access[area] = role;
+    }
+
+    return Promise.resolve(access);
   }
 
   /** As áreas em que a pessoa tem ALGUM cargo — é o que ela enxerga (#13). */
@@ -81,40 +85,43 @@ export class TicketAccessService {
     }
 
     throw new ForbiddenException(
-      `Você não tem cargo em ${ticketAreaLabel(ticket.area)} nem nas áreas participantes deste chamado.`,
+      `Você não tem acesso a ${ticketAreaLabel(ticket.area)} nem às áreas participantes deste chamado.`,
     );
   }
 
   /**
-   * Atender (mexer em qualquer campo, lançar histórico) exige GESTOR ou ADMINISTRADOR em
-   * alguma área do chamado — quem só tem o cargo `user` numa área só CONSULTA (ver issue #13).
+   * Atender (mexer em qualquer campo, lançar histórico) exige ADMINISTRADOR de alguma área do
+   * chamado — quem tem a área como Gestor ou Usuário só CONSULTA.
    */
   assertCanWrite(reach: TicketInReach): void {
-    if (areasOf(reach).some((area) => canManageAnyRecord(reach.access[area]))) return;
+    if (isAdminInSomeArea(reach)) return;
 
     throw new ForbiddenException(
-      'Seu cargo nestas áreas só permite consultar — não atender chamados.',
+      'Seu acesso a estas áreas é só de consulta — não atende chamados.',
     );
   }
 
-  /**
-   * ENCERRAR ou REABRIR exige ADMINISTRADOR em alguma área — gestor contribui (assume, põe em
-   * espera, registra andamento), mas nunca tira um chamado da fila nem o devolve a ela.
-   */
+  /** ENCERRAR ou REABRIR: o mesmo nível de atender — Administrador de alguma área. */
   assertCanFinalize(reach: TicketInReach): void {
-    if (areasOf(reach).some((area) => reach.access[area] === 'admin')) return;
+    if (isAdminInSomeArea(reach)) return;
 
     throw new ForbiddenException(
       'Só quem administra alguma área deste chamado pode encerrá-lo ou reabri-lo.',
     );
   }
 
-  /** Mudar a área (reclassificar ou somar/tirar participante) exige GESTOR em alguma área. */
+  /** Mudar a área (reclassificar ou somar/tirar participante): Administrador de alguma área. */
   assertCanManageArea(reach: TicketInReach, action: string): void {
-    if (areasOf(reach).some((area) => canManageAnyRecord(reach.access[area]))) return;
+    if (isAdminInSomeArea(reach)) return;
 
-    throw new ForbiddenException(`Só quem gerencia alguma área deste chamado pode ${action} ele.`);
+    throw new ForbiddenException(
+      `Só quem administra alguma área deste chamado pode ${action} ele.`,
+    );
   }
+}
+
+function isAdminInSomeArea(reach: TicketInReach): boolean {
+  return areasOf(reach).some((area) => reach.access[area] === 'admin');
 }
 
 /** Todas as áreas do chamado: a original e as participantes. */
