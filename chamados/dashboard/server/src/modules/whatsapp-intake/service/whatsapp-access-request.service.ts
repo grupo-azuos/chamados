@@ -11,6 +11,7 @@ import {
   isAccessRequestCancel,
   isAccessRequestCommand,
   nextAccessRequestStep,
+  projectsOf,
   projectOptionsText,
 } from '@template/shared/domain/access-request.util';
 import {
@@ -43,6 +44,11 @@ type Conversation = {
   assigneeId: string | undefined;
   draft: AccessRequestDraft;
   expiresAt: number;
+};
+
+type CreatedRequest = {
+  ticket: { id: number; requesterName: string };
+  project: AccessRequestProject;
 };
 
 const SILENCE: InboundReply = { reply: null, isOpen: false };
@@ -243,73 +249,114 @@ export class WhatsappAccessRequestService {
   ): Promise<InboundReply> {
     await this.conversations.remove(key);
 
-    const ticket = await this.createTicket(conversation);
-    if (!ticket) return SILENCE;
-
-    await this.recordHistory(ticket, conversation.draft);
+    const created = await this.createTickets(conversation);
+    const [first] = created;
+    /* Nada foi registrado: a pessoa fica sabendo, em vez de esperar uma resposta que não vem. */
+    if (!first) return this.sayFailed(conversation, message);
 
     const reply = await this.messaging.reply({
       senderUserId: conversation.userId,
       recipient: message.phone ?? message.chatId,
       kind: 'access_created',
-      ticketId: ticket.id,
+      ticketId: first.ticket.id,
       values: {
-        nome: firstName(ticket.requesterName),
-        protocolo: formatTicketProtocol(ticket.id),
-        sistema: conversation.draft.project?.name ?? '',
-        link: ticketAccessLink(ticket.id, this.env),
+        nome: firstName(first.ticket.requesterName),
+        protocolo: created
+          .map(({ ticket, project }) => `• *${formatTicketProtocol(ticket.id)}* — ${project.name}`)
+          .join('\n'),
+        sistema: created.map(({ project }) => project.name).join(', '),
+        link: ticketAccessLink(first.ticket.id, this.env),
       },
     });
 
     return { reply, isOpen: false };
   }
 
+  private async sayFailed(
+    conversation: Conversation,
+    message: InboundMessage,
+  ): Promise<InboundReply> {
+    const reply = await this.messaging.reply({
+      senderUserId: conversation.userId,
+      recipient: message.phone ?? message.chatId,
+      kind: 'access_invalid',
+      ticketId: null,
+      values: {
+        erro: 'Não consegui registrar o seu pedido agora. Tente de novo em instantes com /acesso.',
+      },
+    });
+
+    return { reply, isOpen: false };
+  }
+
+  /* Um chamado por sistema: cada um tem quem libere o acesso a ele. Um que falhe não impede os
+     outros. */
+  private async createTickets(conversation: Conversation): Promise<CreatedRequest[]> {
+    const created: CreatedRequest[] = [];
+    for (const project of projectsOf(conversation.draft)) {
+      const ticket = await this.createTicket(conversation, project);
+      if (!ticket) continue;
+
+      await this.recordHistory(ticket, conversation.draft, project);
+      created.push({ ticket, project });
+    }
+
+    return created;
+  }
+
   private async createTicket(
     conversation: Conversation,
+    project: AccessRequestProject,
   ): Promise<{ id: number; requesterName: string } | null> {
-    const { requesterName, email, phone, department, project } = conversation.draft;
-    if (!requesterName || !email || !phone || !department || !project) return null;
+    const { requesterName, email, phone, department } = conversation.draft;
+    if (!requesterName || !email || !phone || !department) return null;
 
     const contactPhone = invitePhoneForForm(phone);
+    const input = {
+      requesterName,
+      area: 'sistema' as const,
+      department,
+      problemType: 'access_request' as const,
+      priority: 'medium' as const,
+      contactPhone,
+      /* Quem pediu pela conversa já está no WhatsApp: é por lá que quer saber do acesso. */
+      notifyWhatsapp: true,
+      description: accessRequestDescription({
+        requesterName,
+        email,
+        phone: contactPhone,
+        projectName: project.name,
+      }),
+      projectId: project.id,
+      assigneeId: conversation.assigneeId,
+    };
+    /* A confirmação já vai na própria conversa (`access_created`). */
+    const options = { skipOpeningNotice: true, requester: requesterOf(conversation.draft) };
 
+    try {
+      return await this.tickets.create(input, undefined, [], options);
+    } catch (error) {
+      this.logger.error(
+        'failed to create access request from WhatsApp',
+        error instanceof Error ? error.stack : '',
+      );
+      if (!input.assigneeId) return null;
+    }
+
+    /* Não deu para confirmar quem atende (o admin-console pode estar fora do ar): o pedido
+       entra na fila, sem responsável, em vez de se perder. */
     return this.tickets
-      .create(
-        {
-          requesterName,
-          area: 'sistema',
-          department,
-          problemType: 'access_request',
-          priority: 'medium',
-          contactPhone,
-          /* Quem pediu pela conversa já está no WhatsApp: é por lá que quer saber do acesso. */
-          notifyWhatsapp: true,
-          description: accessRequestDescription({
-            requesterName,
-            email,
-            phone: contactPhone,
-            projectName: project.name,
-          }),
-          projectId: project.id,
-          assigneeId: conversation.assigneeId,
-        },
-        undefined,
-        [],
-        /* A confirmação já vai na própria conversa (`access_created`). */
-        { skipOpeningNotice: true, requester: requesterOf(conversation.draft) },
-      )
-      .catch((error: unknown) => {
-        this.logger.error(
-          'failed to create access request from WhatsApp',
-          error instanceof Error ? error.stack : '',
-        );
-
-        return null;
-      });
+      .create({ ...input, assigneeId: undefined }, undefined, [], options)
+      .catch(() => null);
   }
 
   /* O chamado nasceu fora de uma requisição de pessoa: o histórico é gravado aqui, sem autor —
      quem fez foi o bot. */
-  private async recordHistory(ticket: { id: number }, draft: AccessRequestDraft): Promise<void> {
+  private async recordHistory(
+    ticket: { id: number },
+    draft: AccessRequestDraft,
+    project: AccessRequestProject,
+  ): Promise<void> {
     await this.history.record({
       action: 'tickets.create',
       actorId: null,
@@ -321,7 +368,7 @@ export class WhatsappAccessRequestService {
         { field: 'source', from: null, to: 'whatsapp' },
         { field: 'problemType', from: null, to: 'access_request' },
         { field: 'requesterId', from: null, to: draft.requesterId ?? null },
-        { field: 'projectId', from: null, to: draft.project?.id ?? null },
+        { field: 'projectId', from: null, to: project.id },
       ],
     });
   }
