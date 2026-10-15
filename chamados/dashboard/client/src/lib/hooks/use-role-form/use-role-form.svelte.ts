@@ -3,7 +3,6 @@ import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-qu
 import {
   assignRoleSchema,
   type AssignRoleInput,
-  type AssignableUserRole,
   type InternalRole,
 } from '@template/shared/schemas/internal-role.schema';
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
@@ -15,7 +14,7 @@ import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte
 import { ROLES_QUERY_KEY } from '$lib/hooks/use-roles/use-roles.svelte';
 import { type FormFieldState } from '$lib/types/form-field.type';
 
-export type RoleFormField = 'userId' | 'userEmail' | 'context' | 'role';
+export type RoleFormField = 'userId' | 'userEmail' | 'context';
 
 export type RoleFormModel = {
   data: {
@@ -77,14 +76,21 @@ export function useRoleFormModel({
         mode: role ? ('edit' as const) : ('create' as const),
         users: usersQuery.current.data ?? [],
         fields: {
-          userId: toFieldState(values.current.userId, fieldMeta.current.userId, isSubmitted.current),
+          userId: toFieldState(
+            values.current.userId,
+            fieldMeta.current.userId,
+            isSubmitted.current,
+          ),
           userEmail: toFieldState(
             values.current.userEmail,
             fieldMeta.current.userEmail,
             isSubmitted.current,
           ),
-          context: toFieldState(values.current.context, fieldMeta.current.context, isSubmitted.current),
-          role: toFieldState(values.current.role, fieldMeta.current.role, isSubmitted.current),
+          context: toFieldState(
+            values.current.context,
+            fieldMeta.current.context,
+            isSubmitted.current,
+          ),
         },
       };
     },
@@ -122,16 +128,12 @@ function toFormValues(role: InternalRole | null): AssignRoleInput {
       userId: '',
       userEmail: '',
       context: 'sistema',
-      role: 'user',
     };
   }
-
-  const roleValue: AssignableUserRole = role.role === 'superadmin' ? 'admin' : role.role;
 
   return {
     userId: role.userId,
     userEmail: role.userEmail || '',
     context: role.context,
-    role: roleValue,
   };
 }

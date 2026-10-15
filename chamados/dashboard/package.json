@@ -47,8 +47,7 @@
     "seed:maintenance-quotes": "npm run build -w @template/shared && tsx scripts/seed/maintenance-quotes/seed-maintenance-quotes.ts",
     "seed:transfers": "npm run build -w @template/shared && tsx scripts/seed/transfers/seed-transfers.ts",
     "seed:users": "npm run build -w @template/shared && tsx scripts/seed/users/seed-users.ts",
-    "user:promote": "node scripts/promote-user.mjs",
-    "user:admin": "node scripts/promote-user.mjs",
+    "superadmin:promote": "node scripts/promote-superadmin.mjs",
     "prepare": "cd ../.. && husky chamados/dashboard/.husky && node chamados/dashboard/scripts/git/setup-git.mjs"
   },
   "devDependencies": {

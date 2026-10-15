@@ -16,7 +16,7 @@
 
   export type AzuosRoleListViewProps = {
     /**
-     * O que a tela quer mostrar logo abaixo do cartão de perfil, antes da lista de cargos — hoje,
+     * O que a tela quer mostrar logo abaixo do cartão de perfil, antes da lista de acessos — hoje,
      * o vínculo de WhatsApp. Entra pronto: este componente não sabe o que é.
      */
     afterProfile?: Snippet;
@@ -33,6 +33,8 @@
       total: number;
       filter: RolesFilter;
     };
+    /** `showTeam: false` mostra só o cartão da pessoa — a lista da equipe é do super-admin. */
+    ui?: { showTeam?: boolean };
     state: {
       isLoading: boolean;
       isRefetching?: boolean;
@@ -44,7 +46,6 @@
     };
     actions: {
       onCreate: () => void;
-      onEdit: (role: InternalRole) => void;
       onAskDelete: (role: InternalRole) => void;
       onSearchChange: (search: string) => void;
       onContextChange: (context: RoleContext | '') => void;
@@ -58,6 +59,24 @@
     if (role === 'admin' || role === 'Administrador') return 'brand';
     if (role === 'manager' || role === 'Gestor' || role === 'Gerente') return 'info';
     return 'neutral';
+  }
+
+  /**
+   * O que a pessoa pode num módulo, em palavras — o nível vem do papel no admin-console:
+   * Administrador mexe em tudo, Gestor e Usuário só consultam (`domain/module-access.util.ts`).
+   */
+  export function moduleAccessLabel(role: UserRole | undefined): string {
+    if (role === 'superadmin') return USER_ROLE_LABELS.superadmin;
+    if (role === 'admin') return USER_ROLE_LABELS.admin;
+    if (role) return 'Só consulta';
+    return 'Sem acesso';
+  }
+
+  export function moduleAccessTone(role: UserRole | undefined): StatusBadgeTone {
+    if (!role) return 'neutral';
+    if (role === 'user') return 'info';
+
+    return roleTone(role);
   }
 
   export function contextTone(context: RoleContext): StatusBadgeTone {
@@ -81,7 +100,6 @@
 
 <script lang="ts">
   import Info from '@lucide/svelte/icons/info';
-  import Pencil from '@lucide/svelte/icons/pencil';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
   import ShieldCheck from '@lucide/svelte/icons/shield-check';
@@ -111,7 +129,9 @@
   import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
 
-  let { afterProfile, data, state, actions }: AzuosRoleListViewProps = $props();
+  let { afterProfile, data, ui, state, actions }: AzuosRoleListViewProps = $props();
+
+  const showTeam = $derived(ui?.showTeam ?? true);
 
   const tableView = useTableViewModel();
 
@@ -164,22 +184,24 @@
         </div>
       </div>
 
-      <!-- Cargos nos contextos -->
+      <!-- Os módulos da pessoa: o nível é o do papel no admin-console, módulo ausente é sem acesso. -->
       <div class="mt-5 border-t border-border pt-4">
         <h2 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Seus Cargos por Área de Atuação
+          Seus módulos
         </h2>
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {#each ROLE_CONTEXTS as ctx (ctx)}
-            {@const role = (data.currentUser.roles?.[ctx] ?? data.currentUser.role ?? 'user') as UserRole}
+            {@const role = (
+              data.currentUser.role === 'superadmin' ? 'superadmin' : data.currentUser.roles?.[ctx]
+            ) as UserRole | undefined}
             <div class="flex flex-col justify-between rounded-control border border-border bg-muted/20 p-3.5 transition-colors">
               <div class="flex items-center justify-between gap-2">
                 <span class="text-xs font-semibold text-foreground">
                   {ROLE_CONTEXT_LABELS[ctx]}
                 </span>
                 <StatusBadge
-                  data={{ label: USER_ROLE_LABELS[role] }}
-                  ui={{ tone: roleTone(role), size: 'sm' }}
+                  data={{ label: moduleAccessLabel(role) }}
+                  ui={{ tone: moduleAccessTone(role), size: 'sm' }}
                 />
               </div>
               <p class="mt-2 text-xs text-muted-foreground leading-snug">
@@ -194,17 +216,19 @@
 
   {@render afterProfile?.()}
 
-  <!-- 2. Cabeçalho de Cargos da Equipe -->
+  {#if showTeam}
+  <!-- 2. Cabeçalho dos acessos da equipe -->
   <PageHeader
     data={{
-      title: 'Cargos e Perfis da Equipe',
-      description: 'Consulte e atribua cargos internos às pessoas por contexto, desacoplados do mecanismo de autenticação.',
+      title: 'Acessos por módulo',
+      description:
+        'Quem é de Infraestrutura, de Sistema e de Manutenção. O que cada um pode lá dentro vem do papel no admin-console: Administrador mexe em tudo, Gestor e Usuário só consultam.',
     }}
   >
     <TableViewToggle />
     {#if canManage}
       <ActionButton
-        data={{ label: 'Atribuir cargo' }}
+        data={{ label: 'Liberar módulo' }}
         ui={{ icon: Plus }}
         actions={{ onClick: actions.onCreate }}
       />
@@ -217,8 +241,7 @@
     >
       <Info class="size-4 shrink-0 text-primary" aria-hidden="true" />
       <span>
-        Modo de visualização da equipe. Apenas o <strong>Super Admin</strong> possui autorização para
-        conceder ou alterar cadastros de cargos internos.
+        Modo de visualização da equipe. Só o <strong>Super Admin</strong> libera e tira módulos.
       </span>
     </div>
   {/if}
@@ -226,7 +249,7 @@
   <!-- 3. Indicadores de Estatísticas (StatCards) -->
   <StatCardGrid>
     <StatCard
-      data={{ label: 'Cargos Atribuídos', value: data.roles.length }}
+      data={{ label: 'Módulos liberados', value: data.roles.length }}
       ui={{ tone: 'brand', icon: ShieldCheck }}
       state={{ isLoading: state.isLoading }}
     />
@@ -279,21 +302,22 @@
   <!-- 5. Tabela / Estados -->
   {#if state.error}
     <ErrorState
-      data={{ title: 'Erro ao carregar cargos da equipe', message: state.error }}
+      data={{ title: 'Erro ao carregar os acessos da equipe', message: state.error }}
       actions={{ onRetry: actions.onRetry }}
     />
   {:else if state.isLoading}
-    <p class="text-ink-500 py-10 text-center text-sm">Carregando os cargos da equipe…</p>
+    <p class="text-ink-500 py-10 text-center text-sm">Carregando os acessos da equipe…</p>
   {:else if state.isEmpty}
     <EmptyState
       data={{
-        title: 'Nenhum cargo interno atribuído',
-        description: 'Atribua cargos para definir permissões específicas em cada área do sistema.',
+        title: 'Nenhum módulo liberado',
+        description:
+          'Sem módulo, a pessoa só abre chamado e valida documento. Libere o módulo de quem atende cada área.',
       }}
       ui={{ icon: ShieldCheck }}
     >
       <ActionButton
-        data={{ label: 'Atribuir primeiro cargo' }}
+        data={{ label: 'Liberar o primeiro módulo' }}
         ui={{ icon: Plus }}
         actions={{ onClick: actions.onCreate }}
       />
@@ -301,7 +325,7 @@
   {:else if state.isFilteredOut}
     <EmptyState
       data={{
-        title: 'Nenhum cargo com esses filtros',
+        title: 'Nenhum acesso com esses filtros',
         description: 'Tente alterar os termos da busca ou limpar os filtros.',
       }}
       ui={{ icon: SearchX }}
@@ -324,7 +348,7 @@
         <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
         <div
           use:fillFromPointer
-          style:--fill-color={fillColorOf(roleTone(item.role))}
+          style:--fill-color={fillColorOf(contextTone(item.context))}
           class="hover-fill flex flex-col gap-3 rounded-box border border-border bg-card p-4 shadow-xs"
         >
           <div class="flex items-start justify-between gap-3">
@@ -352,12 +376,7 @@
             {#if canManage}
               <div class="flex items-center gap-1 shrink-0">
                 <ActionButton
-                  data={{ label: 'Editar' }}
-                  ui={{ icon: Pencil, variant: 'ghost', size: 'sm', isIconOnly: true }}
-                  actions={{ onClick: () => actions.onEdit(item) }}
-                />
-                <ActionButton
-                  data={{ label: 'Excluir' }}
+                  data={{ label: 'Tirar módulo' }}
                   ui={{
                     icon: Trash2,
                     variant: 'ghost',
@@ -371,28 +390,15 @@
             {/if}
           </div>
 
-          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-border/60">
-            <div class="flex flex-col gap-1">
-              <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Área / Contexto
-              </span>
-              <div>
-                <StatusBadge
-                  data={{ label: ROLE_CONTEXT_LABELS[item.context] }}
-                  ui={{ tone: contextTone(item.context), size: 'sm' }}
-                />
-              </div>
-            </div>
-            <div class="flex flex-col gap-1">
-              <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Cargo Interno
-              </span>
-              <div>
-                <StatusBadge
-                  data={{ label: USER_ROLE_LABELS[item.role] }}
-                  ui={{ tone: roleTone(item.role), size: 'sm' }}
-                />
-              </div>
+          <div class="flex flex-col gap-1 pt-2 border-t border-border/60">
+            <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Módulo
+            </span>
+            <div>
+              <StatusBadge
+                data={{ label: ROLE_CONTEXT_LABELS[item.context] }}
+                ui={{ tone: contextTone(item.context), size: 'sm' }}
+              />
             </div>
           </div>
 
@@ -415,12 +421,11 @@
       )}
       data-slot="role-table-desktop"
     >
-      <Table class="min-w-[760px]">
+      <Table class="min-w-[640px]">
         <TableHeader>
           <TableRow>
             <TableHead class="min-w-[260px]">Pessoa</TableHead>
-            <TableHead class="min-w-[140px]">Contexto / Área</TableHead>
-            <TableHead class="min-w-[140px]">Cargo Interno</TableHead>
+            <TableHead class="min-w-[140px]">Módulo</TableHead>
             <TableHead class="min-w-[160px]">Criado por</TableHead>
             {#if canManage}
               <TableHead class="min-w-[100px] text-right"><span class="sr-only">Ações</span></TableHead>
@@ -457,12 +462,6 @@
                   ui={{ tone: contextTone(item.context), size: 'sm' }}
                 />
               </TableCell>
-              <TableCell>
-                <StatusBadge
-                  data={{ label: USER_ROLE_LABELS[item.role] }}
-                  ui={{ tone: roleTone(item.role), size: 'sm' }}
-                />
-              </TableCell>
               <TableCell class="text-xs text-muted-foreground font-mono">
                 {item.createdBy || '—'}
               </TableCell>
@@ -470,12 +469,7 @@
                 <TableCell class="text-right">
                   <TableActions>
                     <ActionButton
-                      data={{ label: 'Editar' }}
-                      ui={{ icon: Pencil, variant: 'ghost', size: 'sm' }}
-                      actions={{ onClick: () => actions.onEdit(item) }}
-                    />
-                    <ActionButton
-                      data={{ label: 'Excluir' }}
+                      data={{ label: 'Tirar módulo' }}
                       ui={{
                         icon: Trash2,
                         variant: 'ghost',
@@ -492,5 +486,6 @@
         </TableBody>
       </Table>
     </div>
+  {/if}
   {/if}
 </div>

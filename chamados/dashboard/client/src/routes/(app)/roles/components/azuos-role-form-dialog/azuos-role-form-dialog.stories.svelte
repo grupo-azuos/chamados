@@ -8,7 +8,6 @@
     userId: { value: '', error: null },
     userEmail: { value: '', error: null },
     context: { value: 'sistema', error: null },
-    role: { value: 'user', error: null },
   };
 
   const baseActions = { onChange: fn(), onBlur: fn(), onSubmit: fn(), onClose: fn() };
@@ -37,7 +36,6 @@
         userId: { value: 'usr_1', error: null },
         userEmail: { value: 'ana@empresa.com.br', error: null },
         context: { value: 'manutencao', error: null },
-        role: { value: 'manager', error: null },
       },
     },
     state: { isOpen: true },

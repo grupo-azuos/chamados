@@ -10,7 +10,7 @@
 
   import AppShell from './azuos-app-shell.svelte';
 
-  const actions = { onLogout: fn() };
+  const actions = { onOpenProfile: fn() };
 
   const manyItems = [
     { key: 'tasks', label: 'Tarefas', to: '/tasks', icon: ListChecks, context: 'infra', feature: 'tasks' },
@@ -34,7 +34,7 @@
 </script>
 
 <Story name="Default">
-  <AppShell data={{ user }} state={{ activeKey: 'tasks' }} {actions}>
+  <AppShell data={{ user, accountUrl: 'https://login.exemplo.com.br' }} state={{ activeKey: 'tasks' }} {actions}>
     <div class="text-ink-700 p-8 text-sm">Conteúdo da rota entra aqui.</div>
   </AppShell>
 </Story>

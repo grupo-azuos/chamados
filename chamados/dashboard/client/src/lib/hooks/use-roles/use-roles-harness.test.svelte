@@ -3,9 +3,13 @@
 
   import { useRolesModel, type RolesModel } from './use-roles.svelte';
 
-  let { onReady }: { onReady: (model: RolesModel) => void } = $props();
+  let {
+    onReady,
+    isEnabled = true,
+  }: { onReady: (model: RolesModel) => void; isEnabled?: boolean } = $props();
 
   setQueryClientContext(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
 
-  onReady(useRolesModel());
+  // svelte-ignore state_referenced_locally
+  onReady(useRolesModel({ isEnabled }));
 </script>

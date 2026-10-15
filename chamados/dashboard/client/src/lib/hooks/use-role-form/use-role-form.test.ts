@@ -16,7 +16,6 @@ const ROLE: InternalRole = {
   userId: 'usr_1',
   userEmail: 'ana@empresa.com.br',
   context: 'manutencao',
-  role: 'manager',
   createdAt: '2026-10-01T12:00:00.000Z',
   createdBy: 'admin@empresa.com.br',
   updatedAt: null,
@@ -48,7 +47,6 @@ describe('useRoleFormModel', () => {
     expect(model.data.mode).toBe('create');
     expect(model.data.fields.userId.value).toBe('');
     expect(model.data.fields.context.value).toBe('sistema');
-    expect(model.data.fields.role.value).toBe('user');
   });
 
   it('selects and clears user with dedicated actions', () => {
@@ -75,7 +73,6 @@ describe('useRoleFormModel', () => {
     expect(model.data.fields.userId.value).toBe('usr_1');
     expect(model.data.fields.userEmail.value).toBe('ana@empresa.com.br');
     expect(model.data.fields.context.value).toBe('manutencao');
-    expect(model.data.fields.role.value).toBe('manager');
   });
 
   it('submits valid assignment data and calls onSaved', async () => {
@@ -85,7 +82,6 @@ describe('useRoleFormModel', () => {
     model.actions.onChange('userId', 'usr_novo');
     model.actions.onChange('userEmail', 'novo@empresa.com.br');
     model.actions.onChange('context', 'infra');
-    model.actions.onChange('role', 'user');
 
     model.actions.onSubmit();
 
@@ -94,7 +90,6 @@ describe('useRoleFormModel', () => {
         userId: 'usr_novo',
         userEmail: 'novo@empresa.com.br',
         context: 'infra',
-        role: 'user',
       });
       expect(onSaved).toHaveBeenCalled();
     });

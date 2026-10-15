@@ -2,7 +2,7 @@ import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { asAna, asCaio, createE2eApp, type E2eApp } from './support/e2e-app.util';
+import { asAna, asBia, asCaio, createE2eApp, type E2eApp } from './support/e2e-app.util';
 
 /**
  * As rotas do WhatsApp e dos links assinados, de ponta a ponta: roteamento, validação, policy
@@ -60,15 +60,15 @@ describe.skipIf(!testDatabaseUrl)('WhatsApp API (e2e)', () => {
     await request(app.getHttpServer()).get('/api/integrations/whatsapp/status').expect(401);
   });
 
-  /* Escalada de privilégio: usuário comum e gestor não vinculam número nem desvinculam. */
+  /* Escalada de privilégio: quem só consulta não vincula número nem desvincula. */
   it('refuses to start or remove a link for who does not administer', async () => {
     await request(app.getHttpServer())
       .post('/api/integrations/whatsapp/link')
-      .set(asAna())
+      .set(asBia())
       .expect(403);
     await request(app.getHttpServer())
       .delete('/api/integrations/whatsapp')
-      .set(asCaio())
+      .set(asBia())
       .expect(403);
   });
 

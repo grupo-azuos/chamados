@@ -11,7 +11,6 @@ const mockRoles: InternalRole[] = [
     userId: 'usr_1',
     userEmail: 'vinicius@empresa.com.br',
     context: 'infra',
-    role: 'user',
     createdAt: '2026-10-01T12:00:00.000Z',
     createdBy: 'admin@empresa.com.br',
     updatedAt: null,
@@ -22,7 +21,6 @@ const mockRoles: InternalRole[] = [
     userId: 'usr_1',
     userEmail: 'vinicius@empresa.com.br',
     context: 'sistema',
-    role: 'admin',
     createdAt: '2026-10-01T12:00:00.000Z',
     createdBy: 'admin@empresa.com.br',
     updatedAt: null,
@@ -33,7 +31,6 @@ const mockRoles: InternalRole[] = [
 function renderView(overrides: Partial<AzuosRoleListViewProps> = {}) {
   const actions = {
     onCreate: vi.fn(),
-    onEdit: vi.fn(),
     onAskDelete: vi.fn(),
     onSearchChange: vi.fn(),
     onContextChange: vi.fn(),
@@ -70,32 +67,24 @@ describe('AzuosRoleListView', () => {
       },
     });
 
-    expect(screen.getByRole('heading', { name: 'Cargos e Perfis da Equipe' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Acessos por módulo' })).toBeInTheDocument();
     expect(screen.getByText('Vinícius Gabriel')).toBeInTheDocument();
     expect(screen.getAllByText('vinicius@empresa.com.br').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Infraestrutura').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Sistema').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('triggers onCreate when clicking Atribuir cargo', async () => {
+  it('triggers onCreate when clicking Liberar módulo', async () => {
     const actions = renderView();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Atribuir cargo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Liberar módulo' }));
     expect(actions.onCreate).toHaveBeenCalledOnce();
   });
 
-  it('triggers onEdit when clicking Editar', async () => {
+  it('triggers onAskDelete when clicking Tirar módulo', async () => {
     const actions = renderView();
 
-    const editButtons = screen.getAllByRole('button', { name: 'Editar' });
-    await userEvent.click(editButtons[0]!);
-    expect(actions.onEdit).toHaveBeenCalledWith(mockRoles[0]);
-  });
-
-  it('triggers onAskDelete when clicking Excluir', async () => {
-    const actions = renderView();
-
-    const deleteButtons = screen.getAllByRole('button', { name: 'Excluir' });
+    const deleteButtons = screen.getAllByRole('button', { name: 'Tirar módulo' });
     await userEvent.click(deleteButtons[0]!);
     expect(actions.onAskDelete).toHaveBeenCalledWith(mockRoles[0]);
   });
@@ -115,8 +104,8 @@ describe('AzuosRoleListView', () => {
     });
 
     expect(screen.getByText(/Modo de visualização da equipe/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Atribuir cargo' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Liberar módulo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tirar módulo' })).not.toBeInTheDocument();
   });
 
   // triste
@@ -126,7 +115,7 @@ describe('AzuosRoleListView', () => {
       state: { isLoading: false, isEmpty: true, isFilteredOut: false, error: null },
     });
 
-    expect(screen.getByText('Nenhum cargo interno atribuído')).toBeInTheDocument();
+    expect(screen.getByText('Nenhum módulo liberado')).toBeInTheDocument();
   });
 
   it('renders error state when error is provided', () => {
@@ -139,7 +128,7 @@ describe('AzuosRoleListView', () => {
       },
     });
 
-    expect(screen.getByText('Erro ao carregar cargos da equipe')).toBeInTheDocument();
+    expect(screen.getByText('Erro ao carregar os acessos da equipe')).toBeInTheDocument();
   });
 
   it('renders both mobile cards and desktop table for responsive design', () => {
@@ -161,7 +150,6 @@ describe('AzuosRoleListView', () => {
         state: { isLoading: false, isEmpty: false, isFilteredOut: false, error: null },
         actions: {
           onCreate: vi.fn(),
-          onEdit: vi.fn(),
           onAskDelete: vi.fn(),
           onSearchChange: vi.fn(),
           onContextChange: vi.fn(),
@@ -179,5 +167,41 @@ describe('AzuosRoleListView', () => {
     expect(mobileCards?.classList.contains('xl:hidden')).toBe(true);
     expect(desktopTable?.classList.contains('hidden')).toBe(true);
     expect(desktopTable?.classList.contains('xl:block')).toBe(true);
+  });
+
+  // feliz
+  /* O nível em cada módulo vem do papel no admin-console; módulo que a pessoa não tem é "Sem acesso". */
+  it('tells, module by module, what the person can do there', () => {
+    renderView({
+      data: {
+        currentUser: {
+          name: 'Bia',
+          email: 'bia@empresa.com.br',
+          role: 'manager',
+          roles: { infra: 'user' },
+        },
+        roles: [],
+        total: 0,
+        filter: { search: '', context: '' },
+      },
+    });
+
+    expect(screen.getByText('Só consulta')).toBeInTheDocument();
+    expect(screen.getAllByText('Sem acesso')).toHaveLength(2);
+  });
+
+  // triste
+  it('shows only the personal card when the team is not for this person', () => {
+    renderView({
+      data: {
+        currentUser: { name: 'Bia', email: 'bia@empresa.com.br', role: 'manager', roles: {} },
+        roles: mockRoles,
+        total: 2,
+        filter: { search: '', context: '' },
+      },
+      ui: { showTeam: false },
+    });
+
+    expect(screen.queryByRole('heading', { name: 'Acessos por módulo' })).not.toBeInTheDocument();
   });
 });

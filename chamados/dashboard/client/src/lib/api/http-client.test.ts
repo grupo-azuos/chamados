@@ -2,15 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { apiDownload, ApiError, apiRequest, readError } from './http-client';
 
-/* O token é assunto do Neon Auth, e buscá-lo de verdade faria cada teste daqui sair para a
-   internet — e contar uma chamada de `fetch` que não é a que está sendo medida. */
-vi.mock('$lib/auth/neon-auth.client', () => ({
-  readAuthToken: vi.fn().mockResolvedValue('token-de-teste'),
-  neonAuth: {},
-}));
-
-const { readAuthToken } = await import('$lib/auth/neon-auth.client');
-
 function respond(status: number, body?: unknown) {
   return vi.fn().mockResolvedValue(
     new Response(body === undefined ? null : JSON.stringify(body), {
@@ -25,22 +16,10 @@ describe('apiRequest', () => {
     vi.unstubAllGlobals();
   });
 
-  // feliz
-  it('presents the Neon Auth token to the API', async () => {
-    const fetchMock = respond(200, { id: 1 });
-    vi.stubGlobal('fetch', fetchMock);
-
-    await apiRequest('/tasks/1');
-
-    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({
-      Authorization: 'Bearer token-de-teste',
-    });
-  });
-
-  /* Sem sessão a requisição sai mesmo assim, sem cabeçalho: a API responde 401 e a guarda
-     manda para o login. Barrar aqui só esconderia o motivo. */
-  it('goes out without the header when there is no session', async () => {
-    vi.mocked(readAuthToken).mockResolvedValueOnce(null);
+  // triste
+  /* Quem identifica é o proxy, pelo cookie de sessão: a tela não carimba credencial nenhuma —
+     um cabeçalho escrito aqui seria uma afirmação que qualquer um poderia forjar. */
+  it('sends no credential of its own', async () => {
     const fetchMock = respond(200, { id: 1 });
     vi.stubGlobal('fetch', fetchMock);
 
@@ -49,6 +28,7 @@ describe('apiRequest', () => {
     expect(fetchMock.mock.calls[0]?.[1]?.headers).not.toHaveProperty('Authorization');
   });
 
+  // feliz
   it('returns the parsed body', async () => {
     vi.stubGlobal('fetch', respond(200, { id: 1 }));
 
@@ -130,10 +110,13 @@ describe('apiDownload', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ statusCode: 403, message: 'Seu perfil é somente leitura.' }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        }),
+        new Response(
+          JSON.stringify({ statusCode: 403, message: 'Seu perfil é somente leitura.' }),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
       ),
     );
 

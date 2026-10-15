@@ -3,71 +3,60 @@ import { describe, expect, it } from 'vitest';
 import { assignRoleSchema, internalRoleSchema } from './internal-role.schema';
 
 describe('internalRoleSchema', () => {
-  const valid = {
-    id: 1,
-    userId: 'usr_123',
-    userEmail: 'dev@template.local',
-    context: 'infra' as const,
-    role: 'user' as const,
-    createdAt: '2026-10-01T12:00:00.000Z',
-    createdBy: 'admin@template.local',
-    updatedAt: null,
-    updatedBy: null,
-  };
-
   // feliz
-  it('accepts a valid internal role entry', () => {
-    expect(internalRoleSchema.parse(valid)).toEqual(valid);
+  it('accepts a module given to a person', () => {
+    const parsed = internalRoleSchema.parse({
+      id: 1,
+      userId: '11111111-1111-4111-8111-111111111111',
+      userEmail: 'ana@empresa.com.br',
+      context: 'infra',
+      createdAt: '2026-10-01T12:00:00.000Z',
+      createdBy: 'super@empresa.com.br',
+      updatedAt: null,
+      updatedBy: null,
+    });
+
+    expect(parsed.context).toBe('infra');
   });
 
   // triste
-  it('refuses invalid context', () => {
-    expect(internalRoleSchema.safeParse({ ...valid, context: 'invalid_ctx' }).success).toBe(false);
-  });
-
-  it('refuses invalid role', () => {
-    expect(internalRoleSchema.safeParse({ ...valid, role: 'invalid_role' }).success).toBe(false);
+  it('refuses a module that does not exist', () => {
+    expect(
+      internalRoleSchema.safeParse({
+        id: 1,
+        userId: 'usr_1',
+        context: 'financeiro',
+        createdAt: '2026-10-01T12:00:00.000Z',
+      }).success,
+    ).toBe(false);
   });
 });
 
 describe('assignRoleSchema', () => {
   // feliz
-  it('accepts valid assignment input', () => {
-    const input = {
-      userId: 'usr_123',
-      userEmail: 'ana@empresa.com.br',
-      context: 'manutencao' as const,
-      role: 'manager' as const,
-    };
-    expect(assignRoleSchema.parse(input)).toEqual(input);
+  it('accepts a person and a module — the level comes from the admin-console', () => {
+    expect(
+      assignRoleSchema.parse({
+        userId: 'usr_1',
+        userEmail: 'ana@empresa.com.br',
+        context: 'sistema',
+      }),
+    ).toEqual({ userId: 'usr_1', userEmail: 'ana@empresa.com.br', context: 'sistema' });
   });
 
   // triste
-  it('refuses missing userId', () => {
-    const input = {
-      userId: '',
-      context: 'sistema' as const,
-      role: 'admin' as const,
-    };
-    expect(assignRoleSchema.safeParse(input).success).toBe(false);
+  /* Nível não se escolhe aqui: um campo de papel no corpo é descartado, nunca gravado. */
+  it('drops a role sent in the body instead of trusting it', () => {
+    const parsed = assignRoleSchema.parse({
+      userId: 'usr_1',
+      context: 'sistema',
+      role: 'superadmin',
+    });
+
+    expect(parsed).not.toHaveProperty('role');
   });
 
-  it('refuses superadmin assignment via schema', () => {
-    const input = {
-      userId: 'usr_123',
-      context: 'sistema' as const,
-      role: 'superadmin' as any,
-    };
-    expect(assignRoleSchema.safeParse(input).success).toBe(false);
-  });
-
-  it('refuses malformed email when provided', () => {
-    const input = {
-      userId: 'usr_123',
-      userEmail: 'nao-e-email',
-      context: 'sistema' as const,
-      role: 'admin' as const,
-    };
-    expect(assignRoleSchema.safeParse(input).success).toBe(false);
+  it('refuses an assignment without a person', () => {
+    expect(assignRoleSchema.safeParse({ userId: '', context: 'infra' }).success).toBe(false);
   });
 });

@@ -1,195 +1,134 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { type Database } from '../db/db.type';
-import { neonAuthUsers, type NeonAuthUserRow } from '../db/neon-auth-user.table';
-import { internalRoles, type InternalRoleRow } from '../db/schema/internal-roles.schema';
-import { IdentityProvider } from './identity.provider';
-import { type NeonTokenClaims, type NeonTokenVerifier } from './neon-token.util';
+import { internalRoles } from '../db/schema/internal-roles.schema';
+import { superAdmins } from '../db/schema/super-admins.schema';
+import {
+  hasForwardedHeaders,
+  IdentityProvider,
+  readForwardedIdentity,
+  type ForwardedIdentity,
+} from './identity.provider';
 
-const CLAIMS: NeonTokenClaims = {
-  userId: 'neon-user-1',
-  email: 'ana@empresa.com.br',
-  name: 'Ana do token',
+const ANA_ID = '11111111-1111-4111-8111-111111111111';
+
+const HEADERS = {
+  'x-forwarded-user-id': ANA_ID,
+  'x-forwarded-user-email': 'ana@empresa.com.br',
+  'x-forwarded-user-name': 'Ana Souza',
+  'x-forwarded-user-role': 'admin',
 };
 
-function userRow(overrides: Partial<NeonAuthUserRow> = {}): NeonAuthUserRow {
-  return {
-    id: 'neon-user-1',
-    name: 'Ana',
-    email: 'ana@empresa.com.br',
-    emailVerified: true,
-    image: null,
-    createdAt: new Date('2026-09-01T12:00:00.000Z'),
-    updatedAt: null,
-    role: null,
-    banned: false,
-    banReason: null,
-    banExpires: null,
-    ...overrides,
-  };
+const ANA: ForwardedIdentity = {
+  id: ANA_ID,
+  email: 'ana@empresa.com.br',
+  name: 'Ana Souza',
+  role: 'admin',
+};
+
+type Rows = {
+  modules?: { context: string }[];
+  superAdmins?: { id: number; userId: string | null }[];
+};
+
+/** Finge o Drizzle para as duas leituras da identidade e a gravação do UUID do super-admin. */
+function fakeDatabase(rows: Rows = {}): { db: Database; update: ReturnType<typeof vi.fn> } {
+  const from = vi.fn((table) => ({
+    where: vi
+      .fn()
+      .mockResolvedValue(
+        table === internalRoles
+          ? (rows.modules ?? [])
+          : table === superAdmins
+            ? (rows.superAdmins ?? [])
+            : [],
+      ),
+  }));
+  const where = vi.fn().mockResolvedValue([]);
+  const update = vi.fn(() => ({ set: vi.fn(() => ({ where })) }));
+
+  return { db: { select: vi.fn(() => ({ from })), update } as unknown as Database, update };
 }
 
-function internalRoleRow(overrides: Partial<InternalRoleRow> = {}): InternalRoleRow {
-  return {
-    id: 1,
-    userId: 'neon-user-1',
-    userEmail: 'ana@empresa.com.br',
-    context: 'sistema',
-    role: 'manager',
-    createdAt: new Date('2026-10-01T12:00:00Z'),
-    createdBy: 'admin@empresa.com.br',
-    updatedAt: null,
-    updatedBy: null,
-    ...overrides,
-  };
-}
-
-/** Finge o Drizzle para consultas a `neonAuthUsers` e `internalRoles`. */
-function fakeDatabase(userRows: NeonAuthUserRow[], roleRows: InternalRoleRow[] = []): Database {
-  const from = vi.fn((table) => {
-    if (table === neonAuthUsers) {
-      const limit = vi.fn().mockResolvedValue(userRows);
-      const where = vi.fn(() => ({ limit }));
-      return { where };
-    }
-
-    if (table === internalRoles) {
-      const where = vi.fn().mockResolvedValue(roleRows);
-      return { where };
-    }
-
-    return { where: vi.fn(() => ({ limit: vi.fn().mockResolvedValue([]) })) };
-  });
-
-  return { select: vi.fn(() => ({ from })) } as unknown as Database;
-}
-
-function makeProvider(
-  userRows: NeonAuthUserRow[],
-  roleRows: InternalRoleRow[] = [],
-  claims: NeonTokenClaims | null = CLAIMS,
-) {
-  const verify: NeonTokenVerifier = vi.fn().mockResolvedValue(claims);
-
-  return { provider: new IdentityProvider(verify, fakeDatabase(userRows, roleRows)), verify };
-}
-
-describe('IdentityProvider.resolve', () => {
+describe('readForwardedIdentity', () => {
   // feliz
-  it('builds identity with internal roles per context (infra=user, sistema=admin, manutencao=manager)', async () => {
-    const roles: InternalRoleRow[] = [
-      internalRoleRow({ id: 1, context: 'infra', role: 'user' }),
-      internalRoleRow({ id: 2, context: 'sistema', role: 'admin' }),
-      internalRoleRow({ id: 3, context: 'manutencao', role: 'manager' }),
-    ];
-    const { provider } = makeProvider([userRow({ name: 'Ana Maria' })], roles);
-
-    await expect(provider.resolve('token')).resolves.toEqual({
-      id: 'neon-user-1',
-      email: 'ana@empresa.com.br',
-      name: 'Ana Maria',
-      image: null,
-      role: 'admin',
-      roles: {
-        infra: 'user',
-        sistema: 'admin',
-        manutencao: 'manager',
-      },
-    });
+  it('reads the person the admin-console forwarded', () => {
+    expect(readForwardedIdentity(HEADERS)).toEqual(ANA);
   });
 
-  /* Migração suave: se a pessoa não tem cargo interno cadastrado, lê o papel legado de neon_auth.user */
-  it('falls back to legacy role from neon_auth.user when internal_roles is empty', async () => {
-    const { provider } = makeProvider([userRow({ role: 'manager' })], []);
-
-    await expect(provider.resolve('token')).resolves.toMatchObject({
-      role: 'manager',
-      roles: {
-        infra: 'user',
-        sistema: 'manager',
-        manutencao: 'user',
-      },
-    });
-  });
-
-  it('recognizes superadmin from neon_auth.user and grants admin across all contexts by default', async () => {
-    const { provider } = makeProvider([userRow({ role: 'superadmin' })], []);
-
-    await expect(provider.resolve('token')).resolves.toMatchObject({
-      role: 'superadmin',
-      roles: {
-        infra: 'admin',
-        sistema: 'admin',
-        manutencao: 'admin',
-      },
-    });
+  it('reads nobody when nothing was forwarded', () => {
+    expect(readForwardedIdentity({})).toBeNull();
+    expect(hasForwardedHeaders({})).toBe(false);
   });
 
   // triste
-  /* Pessoa nova sem cargo atribuído em lugar nenhum cai no papel mais restrito (user) */
-  it('falls back to the most restricted role (user) when there is no role anywhere', async () => {
-    const { provider } = makeProvider([userRow({ role: null })], []);
+  /* Cabeçalho pela metade é provedor mal configurado: nunca completar com outra coisa. */
+  it('refuses a forwarded identity with a missing piece', () => {
+    const { 'x-forwarded-user-email': _email, ...partial } = HEADERS;
 
-    await expect(provider.resolve('token')).resolves.toMatchObject({
-      role: 'user',
-      roles: {
-        infra: 'user',
-        sistema: 'user',
-        manutencao: 'user',
-      },
+    expect(readForwardedIdentity(partial)).toBeNull();
+    expect(hasForwardedHeaders(partial)).toBe(true);
+  });
+
+  /* `superadmin` só existe no banco deste sistema: no cabeçalho é forjado, e não promove. */
+  it('refuses a forwarded super-admin role instead of promoting anyone', () => {
+    expect(readForwardedIdentity({ ...HEADERS, 'x-forwarded-user-role': 'superadmin' })).toBeNull();
+  });
+
+  it('refuses an id that is not the UUID the admin-console sends', () => {
+    expect(readForwardedIdentity({ ...HEADERS, 'x-forwarded-user-id': 'ana' })).toBeNull();
+  });
+});
+
+describe('IdentityProvider', () => {
+  // feliz
+  it('gives an Administrator full access to the modules they were given, and only those', async () => {
+    const { db } = fakeDatabase({ modules: [{ context: 'infra' }, { context: 'manutencao' }] });
+
+    const user = await new IdentityProvider(db).resolve(ANA);
+
+    expect(user).toMatchObject({ id: ANA_ID, role: 'admin' });
+    expect(user?.roles).toEqual({ infra: 'admin', manutencao: 'admin' });
+  });
+
+  it('makes a Manager with a module read-only there', async () => {
+    const { db } = fakeDatabase({ modules: [{ context: 'infra' }] });
+
+    const user = await new IdentityProvider(db).resolve({ ...ANA, role: 'manager' });
+
+    expect(user?.roles).toEqual({ infra: 'user' });
+  });
+
+  it('gives the super-admin every module, and records the UUID the first time', async () => {
+    const { db, update } = fakeDatabase({ superAdmins: [{ id: 7, userId: null }] });
+
+    const user = await new IdentityProvider(db).resolve({ ...ANA, role: 'user' });
+
+    expect(user?.role).toBe('superadmin');
+    expect(user?.roles).toEqual({ infra: 'admin', sistema: 'admin', manutencao: 'admin' });
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
+  // triste
+  /* Ser Administrador no admin-console não abre módulo nenhum: sem módulo, só o público. */
+  it('gives nothing but the public screens to an Administrator without modules', async () => {
+    const { db } = fakeDatabase();
+
+    const user = await new IdentityProvider(db).resolve(ANA);
+
+    expect(user?.role).toBe('user');
+    expect(user?.roles).toEqual({});
+  });
+
+  /* Uma linha de super-admin já reclamada por OUTRO UUID não promove quem herdou o e-mail. */
+  it('does not promote someone who reuses the e-mail of a claimed super-admin', async () => {
+    const { db, update } = fakeDatabase({
+      superAdmins: [{ id: 7, userId: '22222222-2222-4222-8222-222222222222' }],
     });
-  });
 
-  it('ignores invalid role in internal_roles and falls back to user', async () => {
-    const roles = [internalRoleRow({ context: 'sistema', role: 'superuser' as any })];
-    const { provider } = makeProvider([userRow()], roles);
+    const user = await new IdentityProvider(db).resolve(ANA);
 
-    await expect(provider.resolve('token')).resolves.toMatchObject({
-      role: 'user',
-      roles: {
-        infra: 'user',
-        sistema: 'user',
-        manutencao: 'user',
-      },
-    });
-  });
-
-  it('lets an expired ban through', async () => {
-    const expired = new Date(Date.now() - 60_000);
-    const { provider } = makeProvider([userRow({ banned: true, banExpires: expired })]);
-
-    await expect(provider.resolve('token')).resolves.toMatchObject({ id: 'neon-user-1' });
-  });
-
-  it('refuses when token verification fails, without touching database', async () => {
-    const { provider, verify } = makeProvider([userRow()], [], null);
-
-    await expect(provider.resolve('token-falso')).resolves.toBeNull();
-    expect(verify).toHaveBeenCalledWith('token-falso');
-  });
-
-  it('refuses when person is not in user registry', async () => {
-    const { provider } = makeProvider([]);
-
-    await expect(provider.resolve('token')).resolves.toBeNull();
-  });
-
-  it('refuses someone banned permanently', async () => {
-    const { provider } = makeProvider([userRow({ banned: true, banExpires: null })]);
-
-    await expect(provider.resolve('token')).resolves.toBeNull();
-  });
-
-  it('refuses someone whose ban has not expired', async () => {
-    const future = new Date(Date.now() + 60_000);
-    const { provider } = makeProvider([userRow({ banned: true, banExpires: future })]);
-
-    await expect(provider.resolve('token')).resolves.toBeNull();
-  });
-
-  it('refuses user row without usable email', async () => {
-    const { provider } = makeProvider([userRow({ email: '' })], [], { ...CLAIMS, email: null });
-
-    await expect(provider.resolve('token')).resolves.toBeNull();
+    expect(user?.role).toBe('user');
+    expect(update).not.toHaveBeenCalled();
   });
 });

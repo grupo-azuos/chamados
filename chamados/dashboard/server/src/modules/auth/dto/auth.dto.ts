@@ -8,6 +8,5 @@ import { createZodDto } from 'nestjs-zod';
  */
 export class SessionUserDto extends createZodDto(sessionUserSchema) {}
 
-/** Configuração pública para inicialização do cliente Neon Auth. */
+/** O endereço da conta da pessoa no admin-console. */
 export class AuthConfigDto extends createZodDto(authConfigSchema) {}
-
