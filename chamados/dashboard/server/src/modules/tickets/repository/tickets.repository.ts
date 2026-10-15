@@ -14,6 +14,7 @@ import {
   getTableColumns,
   ilike,
   inArray,
+  isNotNull,
   or,
   sql,
   type SQL,
@@ -188,6 +189,37 @@ export class TicketsRepository {
         .limit(1),
       'ler chamado',
     );
+  }
+
+  /**
+   * Os chamados que UMA PESSOA abriu — "Meus chamados". Mais recentes primeiro, com teto: é
+   * uma lista para acompanhar o que está em andamento, não o arquivo da vida inteira.
+   */
+  async listByRequester(requesterId: string, limit = 50): Promise<TicketRow[]> {
+    return runQuery(
+      this.db
+        .select()
+        .from(tickets)
+        .where(eq(tickets.requesterId, requesterId))
+        .orderBy(desc(tickets.createdAt), desc(tickets.id))
+        .limit(limit),
+      'listar os chamados de quem abriu',
+    );
+  }
+
+  /** O telefone que a pessoa deixou no último chamado — a sugestão quando o perfil não tem. */
+  async lastPhoneOf(requesterId: string): Promise<string | null> {
+    const row = await runMaybe(
+      this.db
+        .select({ phone: tickets.contactPhone })
+        .from(tickets)
+        .where(and(eq(tickets.requesterId, requesterId), isNotNull(tickets.contactPhone)))
+        .orderBy(desc(tickets.createdAt))
+        .limit(1),
+      'ler o último telefone de quem abriu',
+    );
+
+    return row?.phone ?? null;
   }
 
   /**

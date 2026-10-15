@@ -1,6 +1,7 @@
 import { type MiddlewareConsumer, Module, type NestModule, RequestMethod } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 
+import { AdminConsoleProfileProvider } from './admin-console-profile.provider';
 import { AdminConsoleUserDirectoryProvider } from './admin-console-user-directory.provider';
 import { AuthenticationMiddleware } from './authentication.middleware';
 import { IdentityProvider } from './identity.provider';
@@ -22,10 +23,11 @@ import { USER_DIRECTORY_PROVIDER } from './user-directory.token';
 @Module({
   providers: [
     IdentityProvider,
+    AdminConsoleProfileProvider,
     { provide: USER_DIRECTORY_PROVIDER, useClass: AdminConsoleUserDirectoryProvider },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
-  exports: [IdentityProvider, USER_DIRECTORY_PROVIDER],
+  exports: [IdentityProvider, AdminConsoleProfileProvider, USER_DIRECTORY_PROVIDER],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

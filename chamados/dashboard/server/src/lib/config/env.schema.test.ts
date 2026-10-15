@@ -29,6 +29,7 @@ describe('parseEnv', () => {
       S3_FORCE_PATH_STYLE: true,
       ADMIN_CONSOLE_TOKEN: '',
       ADMIN_CONSOLE_TIMEOUT_MS: 4000,
+      ADMIN_CONSOLE_COOKIE_PREFIX: 'azuos',
     });
   });
 
