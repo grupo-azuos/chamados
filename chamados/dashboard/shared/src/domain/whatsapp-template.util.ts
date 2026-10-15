@@ -23,6 +23,17 @@ export const WHATSAPP_TEMPLATE_KEYS = [
   'limit_alert',
 ] as const;
 
+/**
+ * A assinatura no topo de TODA mensagem do bot: "*Ana Lima BOT*". Quem recebe sabe na hora que
+ * a resposta é automática, e de qual atendimento ela vem — o número é o WhatsApp pessoal de
+ * quem atende. Fica fora do modelo editável para nenhuma mensagem sair sem ela.
+ */
+export function signBotMessage(operatorName: string, body: string): string {
+  const name = operatorName.trim() || 'Azuos';
+
+  return `*${name} BOT*\n\n${body}`;
+}
+
 export type WhatsappTemplateKey = (typeof WHATSAPP_TEMPLATE_KEYS)[number];
 
 export type WhatsappTemplateDefinition = {
@@ -93,10 +104,12 @@ export const WHATSAPP_TEMPLATES: Record<WhatsappTemplateKey, WhatsappTemplateDef
     defaultBody: 'De qual *setor* você é? Responda com o número:\n\n{{opcoes}}',
   },
   access_system: {
-    label: 'Pedido de acesso: sistema',
-    description: 'Pergunta a qual sistema a pessoa precisa de acesso, com a lista numerada.',
+    label: 'Pedido de acesso: sistemas',
+    description:
+      'Pergunta a quais sistemas a pessoa precisa de acesso, com a lista numerada. Aceita vários números.',
     variables: ['nome', 'opcoes'],
-    defaultBody: 'A qual *sistema* você precisa de acesso? Responda com o número:\n\n{{opcoes}}',
+    defaultBody:
+      'A quais *sistemas* você precisa de acesso? Responda com os números, separados por vírgula (ex.: _1, 4_):\n\n{{opcoes}}',
   },
   access_invalid: {
     label: 'Pedido de acesso: resposta não entendida',
@@ -106,10 +119,11 @@ export const WHATSAPP_TEMPLATES: Record<WhatsappTemplateKey, WhatsappTemplateDef
   },
   access_created: {
     label: 'Pedido de acesso registrado',
-    description: 'Fecha o pedido de acesso, com o protocolo do chamado aberto.',
+    description:
+      'Fecha o pedido de acesso, com um protocolo por sistema pedido. {{link}} é o do primeiro chamado.',
     variables: ['nome', 'protocolo', 'sistema', 'link'],
     defaultBody:
-      'Pronto, {{nome}}! Seu pedido de acesso ao *{{sistema}}* foi registrado com o protocolo *{{protocolo}}*.\n\nAcompanhe por aqui: {{link}}',
+      'Pronto, {{nome}}! Seu pedido de acesso foi registrado:\n\n{{protocolo}}\n\nAcompanhe por aqui: {{link}}',
   },
   limit_alert: {
     label: 'Alerta de limite',

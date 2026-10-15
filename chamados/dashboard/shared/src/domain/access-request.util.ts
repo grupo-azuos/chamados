@@ -9,7 +9,9 @@ import { MIN_PHONE_DIGITS } from './phone.util';
  * PEDIDO DE ACESSO PELO WHATSAPP — a conversa do `/acesso`, sem WhatsApp nem banco.
  *
  * Diferente do `/chamado` (que responde com um link), aqui o bot pergunta UM campo por
- * mensagem: nome completo, e-mail, telefone (só quando o WhatsApp esconde), setor e sistema.
+ * mensagem: nome completo, e-mail, telefone (só quando o WhatsApp esconde), setor e sistemas.
+ * Sistemas são vários de uma vez ("1, 4, 8"): cada um vira um chamado, porque cada sistema tem
+ * quem libere o acesso a ele.
  *
  * Depois do nome, o servidor procura a pessoa no admin-console (`person-match.util`). Achou
  * uma: o pedido fica ligado a ela e o e-mail vem da conta, sem perguntar. Achou várias: o
@@ -37,6 +39,8 @@ export type AccessRequestDraft = {
   phone: string | null;
   department: Department | null;
   project: AccessRequestProject | null;
+  /** Todos os sistemas escolhidos; `project` é o primeiro (rascunho antigo só tinha ele). */
+  projects?: AccessRequestProject[] | null;
   /** A pessoa do admin-console que está pedindo, quando o bot a reconheceu. */
   requesterId?: string | null;
   /** As pessoas com o nome escrito, enquanto o bot espera a resposta do "quem é você?". */
@@ -81,7 +85,7 @@ export function nextAccessRequestStep(draft: AccessRequestDraft): AccessRequestS
   if (!draft.email) return 'email';
   if (!draft.phone) return 'phone';
   if (!draft.department) return 'department';
-  if (!draft.project) return 'system';
+  if (!draft.project && !draft.projects?.length) return 'system';
 
   return null;
 }
@@ -132,6 +136,30 @@ export function projectOptionsText(projects: readonly AccessRequestProject[]): s
 
 function normalize(text: string): string {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[*_~]/g, '').trim().toLowerCase();
+}
+
+/** Os sistemas escolhidos: vários números ("1, 4 e 8"), ou um nome escrito por inteiro. */
+export function pickProjects(
+  text: string,
+  projects: readonly AccessRequestProject[],
+): AccessRequestProject[] {
+  const parts = normalize(text)
+    .split(/\s*(?:,|;|\be\b|\s)\s*/)
+    .filter((part) => part !== '');
+  const isNumberList = parts.length > 0 && parts.every((part) => /^\d+$/.test(part));
+  if (!isNumberList) {
+    const byName = pick(text, projects, (item) => item.name);
+
+    return byName ? [byName] : [];
+  }
+
+  const picked = parts.map((part) => projects[Number(part) - 1]);
+  if (picked.some((project) => project === undefined)) return [];
+
+  return picked.filter(
+    (project, index): project is AccessRequestProject =>
+      project !== undefined && picked.indexOf(project) === index,
+  );
 }
 
 /** A opção escolhida, pelo número da lista ou pelo nome escrito. */
@@ -195,14 +223,15 @@ const STEP_RULES: Record<AccessRequestStep, StepRule> = {
     return { ok: true, draft: { ...draft, department } };
   },
   system: (draft, text, projects) => {
-    const project = pick(text, projects, (item) => item.name);
-    if (!project) {
+    const picked = pickProjects(text, projects);
+    const [first] = picked;
+    if (!first) {
       return fail(
-        `Não entendi o *sistema*. Responda com o número:\n${projectOptionsText(projects)}`,
+        `Não entendi os *sistemas*. Responda com os números, separados por vírgula (ex.: _1, 4_):\n${projectOptionsText(projects)}`,
       );
     }
 
-    return { ok: true, draft: { ...draft, project } };
+    return { ok: true, draft: { ...draft, project: first, projects: picked } };
   },
 };
 
@@ -225,6 +254,13 @@ function fail(error: string): AccessRequestFill {
 }
 
 /** Preenche o campo do passo com a resposta da pessoa. */
+/** Os sistemas do pedido — o rascunho antigo só guardava um, em `project`. */
+export function projectsOf(draft: AccessRequestDraft): AccessRequestProject[] {
+  if (draft.projects?.length) return draft.projects;
+
+  return draft.project ? [draft.project] : [];
+}
+
 export function fillAccessRequestStep(
   draft: AccessRequestDraft,
   step: AccessRequestStep,
