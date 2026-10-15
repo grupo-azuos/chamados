@@ -4,11 +4,10 @@ import { isUserMockEnabled, parseEnv } from './env.schema';
 
 /** O mínimo que o processo exige: os segredos, que não têm padrão. Valores inventados. */
 const secrets = {
-  DATABASE_URL: 'postgresql://app:senha@ep-exemplo.neon.tech/azuos?sslmode=require',
-  R2_ACCOUNT_ID: 'conta-de-exemplo',
-  R2_ACCESS_KEY_ID: 'chave-de-exemplo',
-  R2_SECRET_ACCESS_KEY: 'segredo-de-exemplo',
-  R2_BUCKET: 'files',
+  DATABASE_URL: 'postgresql://app:senha@banco.exemplo:5432/postgres',
+  S3_ACCESS_KEY_ID: 'chave-de-exemplo',
+  S3_SECRET_ACCESS_KEY: 'segredo-de-exemplo',
+  S3_BUCKET: 'files',
 };
 
 describe('parseEnv', () => {
@@ -25,7 +24,9 @@ describe('parseEnv', () => {
       API_WEBHOOK_RATE_LIMIT: 12,
       API_TRUST_PROXY_HOPS: 0,
       WHATSAPP_DAILY_LIMIT: 100,
-      R2_SIGNED_URL_TTL_SECONDS: 300,
+      S3_SIGNED_URL_TTL_SECONDS: 300,
+      S3_REGION: 'local',
+      S3_FORCE_PATH_STYLE: true,
       ADMIN_CONSOLE_TOKEN: '',
       ADMIN_CONSOLE_TIMEOUT_MS: 4000,
     });
@@ -84,7 +85,6 @@ describe('parseEnv', () => {
      quando o motivo já não estaria à vista. */
   it('refuses to start when a secret is missing, naming it', () => {
     expect(() => parseEnv({})).toThrow(/DATABASE_URL/);
-    expect(() => parseEnv({ DATABASE_URL: secrets.DATABASE_URL })).toThrow(/R2_ACCOUNT_ID/);
   });
 
   /* Apontar o server para um banco que não é Postgres falharia muito depois, com uma
@@ -101,12 +101,26 @@ describe('parseEnv', () => {
 
   /* Link assinado eterno deixa de ser "baixe agora" e vira um endereço público. */
   it('refuses a signed url lifetime longer than an hour', () => {
-    expect(() => parseEnv({ ...secrets, R2_SIGNED_URL_TTL_SECONDS: '7200' })).toThrow(
-      /R2_SIGNED_URL_TTL_SECONDS/,
+    expect(() => parseEnv({ ...secrets, S3_SIGNED_URL_TTL_SECONDS: '7200' })).toThrow(
+      /S3_SIGNED_URL_TTL_SECONDS/,
     );
   });
 
   it('refuses an unknown NODE_ENV', () => {
     expect(() => parseEnv({ ...secrets, NODE_ENV: 'staging' })).toThrow(/NODE_ENV/);
+  });
+
+  // feliz
+  /* O provedor é só o endereço: no Supabase, o caminho do S3 e o bucket no caminho. */
+  it('reads the S3 endpoint and turns path-style on by default', () => {
+    const env = parseEnv({ ...secrets, S3_ENDPOINT: 'http://storage.exemplo:8001/storage/v1/s3' });
+
+    expect(env.S3_ENDPOINT).toBe('http://storage.exemplo:8001/storage/v1/s3');
+    expect(env.S3_FORCE_PATH_STYLE).toBe(true);
+  });
+
+  // triste
+  it('refuses to start without the S3 key, saying its name', () => {
+    expect(() => parseEnv({ ...secrets, S3_ACCESS_KEY_ID: undefined })).toThrow(/S3_ACCESS_KEY_ID/);
   });
 });

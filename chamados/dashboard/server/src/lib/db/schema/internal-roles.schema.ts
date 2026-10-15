@@ -1,6 +1,8 @@
 import { ROLE_CONTEXTS } from '@template/shared/schemas/user.schema';
 import { sql } from 'drizzle-orm';
-import { check, index, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { check, index, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 /**
  * QUEM É DE QUAL MÓDULO — Infraestrutura, Sistema, Manutenção.
@@ -22,7 +24,7 @@ import { check, index, pgTable, serial, text, timestamp, uniqueIndex } from 'dri
  * integração guardam o id do login antigo: a conferência casa por um OU pelo outro, e a
  * pessoa não perde o acesso por ter trocado de provedor de login.
  */
-export const internalRoles = pgTable(
+export const internalRoles = chamadosSchema.table(
   'internal_roles',
   {
     id: serial('id').primaryKey(),

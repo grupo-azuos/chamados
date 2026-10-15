@@ -7,12 +7,13 @@ import {
   check,
   index,
   integer,
-  pgTable,
   serial,
   text,
   timestamp,
   unique,
 } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
 function valuesFor(values: readonly string[]) {
@@ -29,10 +30,10 @@ function valuesFor(values: readonly string[]) {
  * `balance`, movido pela tela de Depósito da Manutenção — com o histórico que explica o
  * número em `inventory_movements`.
  *
- * `photo_key` é o endereço do arquivo no R2, nunca um link: o link é assinado a cada leitura
+ * `photo_key` é o endereço do arquivo no storage, nunca um link: o link é assinado a cada leitura
  * e expira, como o print do chamado.
  */
-export const inventoryItems = pgTable(
+export const inventoryItems = chamadosSchema.table(
   'inventory_items',
   {
     id: serial('id').primaryKey(),

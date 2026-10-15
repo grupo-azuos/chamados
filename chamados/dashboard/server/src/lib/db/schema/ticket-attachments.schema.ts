@@ -6,11 +6,12 @@ import {
   check,
   index,
   integer,
-  pgTable,
   serial,
   text,
   timestamp,
 } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 import { ticketHistories } from './ticket-histories.schema';
 import { tickets } from './tickets.schema';
@@ -35,7 +36,7 @@ function valuesFor(values: readonly string[]) {
  * nome que veio do computador de quem enviou: ele volta para a tela e vai no download, mas
  * não é endereço de nada (ver `buildObjectKey`).
  */
-export const ticketAttachments = pgTable(
+export const ticketAttachments = chamadosSchema.table(
   'ticket_attachments',
   {
     id: serial('id').primaryKey(),
@@ -45,7 +46,7 @@ export const ticketAttachments = pgTable(
      *
      * `cascade`: chamado não se apaga neste sistema, então isto é rede de segurança e não
      * rotina — mas se um dia um chamado sumir, deixar os arquivos dele órfãos no banco (e
-     * pagos no R2) seria pior do que levá-los junto.
+     * pagos no storage) seria pior do que levá-los junto.
      */
     ticketId: integer('ticket_id')
       .notNull()

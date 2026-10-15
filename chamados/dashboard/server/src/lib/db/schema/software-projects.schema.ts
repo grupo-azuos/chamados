@@ -6,11 +6,12 @@ import { sql } from 'drizzle-orm';
 import {
   check,
   index,
-  pgTable,
   serial,
   text,
   timestamp,
 } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 function valuesFor(values: readonly string[]) {
   return sql.raw(values.map((value) => `'${value}'`).join(', '));
@@ -21,7 +22,7 @@ function valuesFor(values: readonly string[]) {
  *
  * Cada sistema guarda seu repositório no GitHub para integração automática com Issues e PRs.
  */
-export const softwareProjects = pgTable(
+export const softwareProjects = chamadosSchema.table(
   'software_projects',
   {
     id: serial('id').primaryKey(),

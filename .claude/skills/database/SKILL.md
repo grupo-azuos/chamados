@@ -1,6 +1,6 @@
 ---
 name: database
-description: Cria ou muda tabelas do Postgres (Neon) com Drizzle — arquivo de schema, registro, geração e revisão da migration, mensagens de erro do banco, recriar o banco e olhar os dados. Use quando a pessoa pede um campo novo, uma tabela nova, relação entre cadastros, "apaga o banco", "zera os dados", "quero ver o que está no banco", ou aparece erro de tabela/coluna inexistente.
+description: Cria ou muda tabelas do Postgres (Supabase, schema chamados) com Drizzle — arquivo de schema, registro, geração e revisão da migration, mensagens de erro do banco, recriar o banco e olhar os dados. Use quando a pessoa pede um campo novo, uma tabela nova, relação entre cadastros, "apaga o banco", "zera os dados", "quero ver o que está no banco", ou aparece erro de tabela/coluna inexistente.
 ---
 
 # Banco de dados (Postgres + Drizzle)
@@ -9,7 +9,9 @@ Caminhos relativos a `chamados/dashboard/`.
 
 ## Como funciona (explique assim para a pessoa, se ela perguntar)
 
-- O banco é o **Postgres da Neon**. A conexão fica em `DATABASE_URL`, no `server/.env` (nunca
+- O banco é o **Postgres do Supabase**, compartilhado com os outros sistemas da casa: toda tabela
+  deste nasce com `chamadosSchema.table(...)` (schema `chamados`), nunca `pgTable`. A conexão
+  fica em `DATABASE_URL`, no `server/.env` (nunca
   vai para o git) — sem ela o server recusa subir e diz qual variável falta.
 - As **tabelas são escritas em TypeScript** (`server/src/lib/db/schema/`).
 - Cada mudança de tabela gera uma **migration** (`server/drizzle/`) — um arquivo SQL que leva o
@@ -82,13 +84,13 @@ Com teste em `db-error.util.test.ts` se a tradução tiver lógica nova.
 
 - Com o server rodando em modo `dev`, ele reinicia e aplica sozinho.
 - Sem server: `npm run db:migrate`, ou `npm run seed:all` (que também aplica).
-- Olhar os dados: `npm run db:studio` (abre o Drizzle Studio no navegador) ou o painel da Neon
-  (Tables, no projeto do banco).
+- Olhar os dados: `npm run db:studio` (abre o Drizzle Studio no navegador) ou o Studio do
+  Supabase (Table Editor, schema `chamados`).
 
 ## Banco com erro grave
 
 Migration commitada que não aplica, histórico de migrations em conflito sem saída, ou o Postgres
-da Neon fora do ar: **não tente consertar direto no painel da Neon** → skill `support`.
+do Supabase fora do ar: **não tente consertar direto no Studio do Supabase** → skill `support`.
 
 ## Recriar do zero — PEÇA CONFIRMAÇÃO ANTES
 
@@ -96,7 +98,7 @@ da Neon fora do ar: **não tente consertar direto no painel da Neon** → skill 
 npm run db:reset
 ```
 
-**Apaga todos os dados** do banco (a mesma Neon que todo mundo do projeto usa) e recria com os
+**Apaga todos os dados** do schema `chamados` (o mesmo banco que todo mundo do projeto usa) e recria com os
 seeds. Diga isso com essas palavras e só rode com um "sim" explícito.
 
 ## Verificar
@@ -106,8 +108,8 @@ npm test -w server
 npm run test:e2e -w server
 ```
 
-O `test:e2e -w server` sobe contra o banco de `TEST_DATABASE_URL` (uma branch separada do banco
-na Neon) e aplica todas as migrations nele — se uma migration estiver quebrada, é ele que acusa.
+O `test:e2e -w server` sobe contra o banco de `TEST_DATABASE_URL` (um Postgres só para
+teste) e aplica todas as migrations nele — se uma migration estiver quebrada, é ele que acusa.
 Sem essa variável no `.env`, os testes E2E são pulados (não falham).
 
 ## Commit

@@ -3,7 +3,9 @@ import {
   WHATSAPP_NOTICE_STATUSES,
 } from '@template/shared/schemas/whatsapp-notice.schema';
 import { sql } from 'drizzle-orm';
-import { check, index, integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 /**
  * O número de WhatsApp que cada pessoa vinculou — o "metadado" do usuário.
@@ -15,7 +17,7 @@ import { check, index, integer, pgTable, serial, text, timestamp } from 'drizzle
  * A identidade continua vindo do autenticador da instalação, e por isso `user_id` é texto sem
  * chave estrangeira — o mesmo desenho de `github_connections`.
  */
-export const whatsappConnections = pgTable('whatsapp_connections', {
+export const whatsappConnections = chamadosSchema.table('whatsapp_connections', {
   userId: text('user_id').primaryKey(),
   /** Só dígitos, com DDI. */
   phone: text('phone').notNull(),
@@ -29,7 +31,7 @@ export type WhatsappConnectionRow = typeof whatsappConnections.$inferSelect;
  * Os textos do bot que o super admin trocou. Só entra aqui o que foi EDITADO: mensagem sem
  * linha usa o texto original, que mora no código (`whatsapp-template.util`, em shared).
  */
-export const whatsappTemplates = pgTable('whatsapp_templates', {
+export const whatsappTemplates = chamadosSchema.table('whatsapp_templates', {
   key: text('key').primaryKey(),
   body: text('body').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
@@ -56,7 +58,7 @@ function valuesFor(values: readonly string[]) {
  * As respostas da conversa (`/chamado`, `/acesso`) não passam pela fila: o bot as entrega na
  * hora, e elas entram aqui já `sent`, só para contar.
  */
-export const whatsappMessages = pgTable(
+export const whatsappMessages = chamadosSchema.table(
   'whatsapp_messages',
   {
     id: serial('id').primaryKey(),

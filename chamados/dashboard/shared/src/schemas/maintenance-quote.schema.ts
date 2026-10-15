@@ -67,7 +67,7 @@ const noteSchema = z
 /**
  * Um orçamento, como a tela o recebe.
  *
- * `attachmentUrl` é um link ASSINADO e temporário para o documento no R2, gerado a cada
+ * `attachmentUrl` é um link ASSINADO e temporário para o documento no storage, gerado a cada
  * leitura — a chave do arquivo nunca sai do servidor, como a foto do inventário.
  */
 export const maintenanceQuoteSchema = z.object({

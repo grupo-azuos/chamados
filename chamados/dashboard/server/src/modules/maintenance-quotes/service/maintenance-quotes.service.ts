@@ -42,7 +42,7 @@ export type UploadedAttachment = {
  * área — a decisão sobre ele é de quem responde por ela.
  *
  * O documento é tratado aqui, e não no controller: ele é recusado pelo domínio e guardado no
- * R2 do jeito que chegou (PDF não se "reduz"), e a chave dele é o que vai para o banco.
+ * storage do jeito que chegou (PDF não se "reduz"), e a chave dele é o que vai para o banco.
  */
 @Injectable()
 export class MaintenanceQuotesService {

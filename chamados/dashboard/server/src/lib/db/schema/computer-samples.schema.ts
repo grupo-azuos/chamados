@@ -3,9 +3,10 @@ import {
   doublePrecision,
   index,
   integer,
-  pgTable,
   timestamp,
 } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 import { computers } from './computers.schema';
 
@@ -22,7 +23,7 @@ import { computers } from './computers.schema';
  * computador, sem sentido próprio. É o único lugar do sistema onde apagar em cascata é certo,
  * e ainda assim máquina não se apaga — se arquiva.
  */
-export const computerSamples = pgTable(
+export const computerSamples = chamadosSchema.table(
   'computer_samples',
   {
     /* `bigserial`: numa frota de 50 máquinas enviando a cada 30 segundos, `serial` (int4)

@@ -135,7 +135,7 @@ export class InventoryItemsController {
   @ApiOperation({
     summary: 'Cadastra um produto no inventário',
     description:
-      'A foto é opcional e viaja no campo `photo`. Ela é reduzida antes de ser guardada — o que fica no R2 é um webp de até 1024px de largura.',
+      'A foto é opcional e viaja no campo `photo`. Ela é reduzida antes de ser guardada — o que fica no storage é um webp de até 1024px de largura.',
   })
   @ApiBody({ type: CreateInventoryItemDto })
   @ApiCreatedResponse({ type: InventoryItemDto })

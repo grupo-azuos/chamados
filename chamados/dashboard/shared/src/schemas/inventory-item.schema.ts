@@ -59,7 +59,7 @@ const noteSchema = optionalText(
 /**
  * Um produto do inventário, como a tela o recebe.
  *
- * `photoUrl` é um link ASSINADO e temporário para a imagem no R2, gerado a cada leitura — a
+ * `photoUrl` é um link ASSINADO e temporário para a imagem no storage, gerado a cada leitura — a
  * chave do arquivo nunca sai do servidor, pelo mesmo motivo do print de chamado.
  */
 export const inventoryItemSchema = z.object({

@@ -20,7 +20,7 @@ describe('userRoleSchema', () => {
     expect(userRoleSchema.options).toEqual(['user', 'manager', 'admin', 'superadmin']);
   });
 
-  /* Quem chega sem papel definido no Neon Auth precisa receber MENOS acesso, nunca mais. */
+  /* Quem chega sem papel definido precisa receber MENOS acesso, nunca mais. */
   it('falls back to the most restricted role', () => {
     expect(DEFAULT_USER_ROLE).toBe('user');
   });

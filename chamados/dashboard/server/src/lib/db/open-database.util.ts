@@ -23,6 +23,20 @@ export const SERVER_ROOT = resolve(__dirname, '..', '..', '..');
 /** As migrations versionadas, geradas por `npm run db:generate`. */
 export const MIGRATIONS_FOLDER = join(SERVER_ROOT, 'drizzle');
 
+/**
+ * Onde fica a lista de migrations aplicadas — a mesma de `drizzle.config.ts`. O banco é
+ * compartilhado com os outros sistemas da casa, e a lista padrão do Drizzle já é de outro.
+ */
+export const MIGRATIONS_SCHEMA = 'drizzle';
+export const MIGRATIONS_TABLE = '__chamados_migrations';
+
+/**
+ * O schema deste sistema, também como caminho de busca da conexão: as tabelas são declaradas
+ * com o schema (`chamadosSchema`), mas os scripts com SQL à mão (seed, truncate dos testes)
+ * escrevem só `tickets` — e assim acham a tabela daqui, e não a de outro sistema.
+ */
+export const DATABASE_SCHEMA = 'chamados';
+
 export type OpenDatabase = {
   db: Database;
   close: () => Promise<void>;
@@ -34,15 +48,15 @@ export type OpenDatabase = {
  * **Uma só não serve.** Painel, Inteligência e Orçamento disparam as consultas deles JUNTAS
  * (`Promise.all`), porque são independentes e enfileirá-las deixaria a tela lenta. Com uma
  * conexão, essas consultas disputam o mesmo canal e a tela inteira cai junto quando algo dá
- * errado em uma delas. Cinco é folgado para um MVP e continua barato na Neon, que cobra por
- * conexão aberta.
+ * errado em uma delas. Cinco é folgado para um MVP e deixa espaço para os outros sistemas
+ * que dividem o mesmo Postgres.
  */
 const POOL_SIZE = 5;
 
 /**
  * Segundos que uma conexão parada fica aberta.
  *
- * A Neon SUSPENDE o banco depois de alguns minutos sem uso, e derruba as conexões junto.
+ * Proxy, firewall ou o próprio Postgres derrubam conexão parada há muito tempo.
  * Guardar um socket aberto por horas significa que a primeira consulta depois do almoço sai
  * por um cano que já morreu — e o erro aparece na tela de quem só abriu o painel. Fechando a
  * conexão parada antes disso, a próxima consulta abre uma nova e funciona.
@@ -64,15 +78,23 @@ export async function openDatabase(url: string): Promise<OpenDatabase> {
   /* Migration aplicada na partida: quem clona o projeto roda `npm run dev` e o banco já
      nasce com as tabelas. Esquecer `db:migrate` não é um passo que alguém deveria poder
      esquecer. */
-  const migrationClient = postgres(url, { max: 1 });
+  const migrationClient = postgres(url, { max: 1, connection: { search_path: DATABASE_SCHEMA } });
 
   try {
-    await migrate(drizzle(migrationClient), { migrationsFolder: MIGRATIONS_FOLDER });
+    await migrate(drizzle(migrationClient), {
+      migrationsFolder: MIGRATIONS_FOLDER,
+      migrationsSchema: MIGRATIONS_SCHEMA,
+      migrationsTable: MIGRATIONS_TABLE,
+    });
   } finally {
     await migrationClient.end();
   }
 
-  const sql = postgres(url, { max: POOL_SIZE, idle_timeout: IDLE_TIMEOUT_SECONDS });
+  const sql = postgres(url, {
+    max: POOL_SIZE,
+    idle_timeout: IDLE_TIMEOUT_SECONDS,
+    connection: { search_path: DATABASE_SCHEMA },
+  });
 
   return { db: drizzle(sql, { schema: drizzleSchema }), close: () => sql.end() };
 }

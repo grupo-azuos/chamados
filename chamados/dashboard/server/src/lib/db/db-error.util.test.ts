@@ -173,7 +173,7 @@ describe('toHttpException', () => {
     expect(message).not.toContain('select');
   });
 
-  /* Conexão caída não é defeito de quem clicou nem defeito permanente: a Neon suspende o
+  /* Conexão caída não é defeito de quem clicou nem defeito permanente: o banco derruba o
      banco parado, e "tente de novo" resolve de verdade. */
   it('treats a dead connection as busy, not as a bug of whoever clicked', () => {
     const dead = Object.assign(new Error('Failed query: select 1'), {

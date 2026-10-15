@@ -5,11 +5,11 @@ import { type Env } from '../config/env.schema';
 import { buildObjectKey, StorageService } from './storage.service';
 
 const env = {
-  R2_BUCKET: 'files',
-  R2_SIGNED_URL_TTL_SECONDS: 300,
+  S3_BUCKET: 'files',
+  S3_SIGNED_URL_TTL_SECONDS: 300,
 } as Env;
 
-/** Um cliente do R2 que só anota o que recebeu, para o teste não falar com a Cloudflare. */
+/** Um cliente S3 que só anota o que recebeu, para o teste não falar com o storage. */
 function fakeClient() {
   const sent: unknown[] = [];
 
@@ -104,10 +104,10 @@ describe('StorageService', () => {
   });
 
   // triste
-  /* A falha do R2 precisa chegar a quem chamou: engolir faria a tela dizer que salvou. */
+  /* A falha do storage precisa chegar a quem chamou: engolir faria a tela dizer que salvou. */
   it('lets a storage failure through instead of swallowing it', async () => {
     const client = {
-      send: vi.fn().mockRejectedValue(new Error('R2 fora do ar')),
+      send: vi.fn().mockRejectedValue(new Error('storage fora do ar')),
     } as unknown as S3Client;
     const service = new StorageService(client, env);
 
@@ -118,6 +118,6 @@ describe('StorageService', () => {
         contentType: 'application/pdf',
         content: Buffer.from('x'),
       }),
-    ).rejects.toThrow('R2 fora do ar');
+    ).rejects.toThrow('storage fora do ar');
   });
 });

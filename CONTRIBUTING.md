@@ -170,7 +170,7 @@ O que não precisa:
 
 **Toda escalada de privilégio tem teste.** Perfil somente leitura tentando escrever, identidade pela metade, autoria enviada no corpo: cada uma é uma linha trocada que passa na revisão sem ninguém ver.
 
-**Níveis:** unitário (Vitest), componente (Vitest + Testing Library), E2E da API (Vitest + Supertest contra o banco de teste na Neon, `TEST_DATABASE_URL`), E2E da web (Playwright), mutação (Stryker).
+**Níveis:** unitário (Vitest), componente (Vitest + Testing Library), E2E da API (Vitest + Supertest contra um banco de teste só dele, `TEST_DATABASE_URL`), E2E da web (Playwright), mutação (Stryker).
 
 ---
 
@@ -275,7 +275,7 @@ Toda mudança de autenticação exige, no mínimo:
 * tentativa de escalada de privilégio;
 * identidade enviada pelo cliente sendo ignorada quando contradiz a identidade autenticada.
 
-### Banco: Postgres (Neon) + Drizzle
+### Banco: Postgres (Supabase) + Drizzle
 
 * **A tabela é TypeScript.** Uma por arquivo, em `server/src/lib/db/schema/<nome>.schema.ts`, registrada em `lib/db/drizzle-schema.ts`.
 
@@ -283,7 +283,7 @@ Toda mudança de autenticação exige, no mínimo:
 
 * **As migrations são aplicadas sozinhas** quando o server sobe e quando um seed roda.
 
-* **O banco é o Postgres da Neon, remoto.** A conexão é a `DATABASE_URL` do `server/.env` — sem ela, o server recusa subir. É compartilhado por natureza: quem usa a mesma connection string vê os mesmos dados.
+* **O banco é o Postgres do Supabase da casa, remoto e compartilhado com os outros sistemas.** A conexão é a `DATABASE_URL` do `server/.env` — sem ela, o server recusa subir. Toda tabela deste sistema mora no schema `chamados` (`chamadosSchema.table(...)`, nunca `pgTable`), e a lista de migrations é a própria (`drizzle.__chamados_migrations`).
 
 * `npm run db:reset` apaga e recria com os seeds — no banco apontado por `DATABASE_URL`.
 

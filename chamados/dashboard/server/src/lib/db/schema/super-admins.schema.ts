@@ -1,4 +1,6 @@
-import { pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 /**
  * O SUPER-ADMIN — quem vê e altera todas as telas, e o único que libera módulos.
@@ -11,7 +13,7 @@ import { pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-co
  * do admin-console é gravado na primeira entrada dela, para trocar de e-mail não tirar o
  * poder de ninguém.
  */
-export const superAdmins = pgTable(
+export const superAdmins = chamadosSchema.table(
   'super_admins',
   {
     id: serial('id').primaryKey(),

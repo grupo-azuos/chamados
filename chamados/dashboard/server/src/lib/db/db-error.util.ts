@@ -165,8 +165,8 @@ const BUSY_CODES = new Set(['40001', '40P01', '55P03', '57014', '08000', '08003'
 /**
  * Falhas de CONEXÃO do driver, que não têm código do Postgres porque não chegaram nele.
  *
- * A Neon suspende o banco depois de alguns minutos parada, e a primeira consulta depois disso
- * pode esbarrar numa conexão que morreu. Isso não é defeito de quem clicou nem defeito
+ * Uma conexão parada pode ter sido derrubada no caminho (rede, proxy, reinício do Postgres), e
+ * a primeira consulta depois disso pode esbarrar nela. Isso não é defeito de quem clicou nem defeito
  * permanente: é 503, e "tente de novo" resolve de verdade.
  */
 const CONNECTION_CODES = new Set([
