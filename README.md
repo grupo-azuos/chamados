@@ -279,6 +279,18 @@ o servidor do chamados repassa o cookie de ACESSO dela (`<ADMIN_CONSOLE_COOKIE_P
 e nunca o de renovação — reapresentado por outro processo, o admin-console o trata como roubo e
 derruba a sessão.
 
+**Pelo WhatsApp** (`/acesso`), o bot pergunta o nome e procura a pessoa no admin-console
+(`GET /api/users?search=`). Se mais de uma tem aquele nome, ganha quem já abriu chamado com o
+mesmo telefone; sem desempate, o bot pergunta "qual delas é você?". Reconhecida, o pedido fica
+ligado à conta dela e o e-mail não é perguntado. Ninguém bate: o pedido segue sem vínculo, como
+antes.
+
+**Histórico.** Toda mudança feita pela API (criar, alterar, apagar) vira uma linha em
+`chamados.history`, no mesmo formato do histórico do admin-console: ação, quem (`actor_id`,
+`actor_email`; nulo quando foi máquina), alvo, IP, navegador e os campos enviados (`changes`).
+Segredo não entra, e texto longo é cortado. A gravação é automática (`HistoryInterceptor`); falha
+no histórico vai para o log e não desfaz a mudança.
+
 No código, a regra está em `shared/src/domain/module-access.util.ts`; toda rota da API declara
 o módulo dela (`@ModuleContext('infra')`), e a trava global (`RolesGuard`) recusa quem não tem o
 módulo e recusa escrita de quem só consulta. Rota sem módulo declarado nasce **fechada**.
