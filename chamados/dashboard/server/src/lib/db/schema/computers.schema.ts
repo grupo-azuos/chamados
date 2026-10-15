@@ -9,11 +9,12 @@ import {
   index,
   integer,
   jsonb,
-  pgTable,
   serial,
   text,
   timestamp,
 } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
 function valuesFor(values: readonly string[]) {
@@ -37,7 +38,7 @@ function valuesFor(values: readonly string[]) {
  * banco, com o histórico inteiro — que é o que sustenta "esta máquina deu problema demais,
  * vamos trocar" na hora de decidir compra.
  */
-export const computers = pgTable(
+export const computers = chamadosSchema.table(
   'computers',
   {
     id: serial('id').primaryKey(),

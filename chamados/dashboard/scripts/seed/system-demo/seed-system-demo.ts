@@ -141,18 +141,18 @@ const RESET_TABLES = [
   'tickets',
 ] as const;
 
-async function clearR2Bucket(): Promise<number> {
+async function clearStorageBucket(): Promise<number> {
   config({ path: join(process.cwd(), 'server/.env'), quiet: true });
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-  const bucket = process.env.R2_BUCKET;
-  if (!accountId || !accessKeyId || !secretAccessKey || !bucket)
-    throw new Error('Credenciais ou bucket do R2 ausentes; objetos não foram removidos.');
+  const accessKeyId = process.env.S3_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
+  const bucket = process.env.S3_BUCKET || 'chamados';
+  if (!accessKeyId || !secretAccessKey)
+    throw new Error('Credenciais do storage S3 ausentes; objetos não foram removidos.');
 
   const client = new S3Client({
-    region: 'auto',
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    region: process.env.S3_REGION || 'local',
+    endpoint: process.env.S3_ENDPOINT || undefined,
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE !== 'false',
     credentials: { accessKeyId, secretAccessKey },
   });
   let deleted = 0;
@@ -172,7 +172,7 @@ async function clearR2Bucket(): Promise<number> {
           new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: objects, Quiet: true } }),
         );
         if (response.Errors?.length)
-          throw new Error(`O R2 recusou a remoção de ${response.Errors.length} objeto(s).`);
+          throw new Error(`O storage recusou a remoção de ${response.Errors.length} objeto(s).`);
         deleted += objects.length;
       }
       continuationToken = page.NextContinuationToken;
@@ -198,14 +198,14 @@ async function seedSystemTickets(tx: DatabaseExecutor): Promise<void> {
 
 async function main(): Promise<void> {
   if (!process.argv.includes('--confirm-reset'))
-    throw new Error('Refusing to reset Neon without the explicit --confirm-reset flag.');
+    throw new Error('Refusing to reset the database without the explicit --confirm-reset flag.');
 
   const { db, close } = await openSeedDatabase();
   let removedObjects = 0;
 
   try {
     await db.transaction(async (tx) => {
-      const tableList = RESET_TABLES.map((table) => `public."${table}"`).join(', ');
+      const tableList = RESET_TABLES.map((table) => `chamados."${table}"`).join(', ');
       await tx.execute(sql.raw(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`));
       await seedSoftwareProjects(tx);
       await seedSystemTickets(tx);
@@ -215,13 +215,13 @@ async function main(): Promise<void> {
       report('chamados do kanban de Sistema', SYSTEM_TICKETS_DEMO_SEED.length);
     });
 
-    removedObjects = await clearR2Bucket();
-    report('objetos removidos do R2', removedObjects);
+    removedObjects = await clearStorageBucket();
+    report('objetos removidos do storage', removedObjects);
   } finally {
     await close();
   }
 
-  console.log('Neon limpo e módulo Sistema populado com dados de demonstração.');
+  console.log('Banco limpo e módulo Sistema populado com dados de demonstração.');
 }
 
 void main();

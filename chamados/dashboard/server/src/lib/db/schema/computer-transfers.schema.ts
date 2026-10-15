@@ -1,6 +1,8 @@
 import { DEPARTMENTS } from '@template/shared/domain/department.util';
 import { sql } from 'drizzle-orm';
-import { check, index, integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 import { computers } from './computers.schema';
 
@@ -22,7 +24,7 @@ function valuesFor(values: readonly string[]) {
  * `restrict` na máquina: apagar um computador com histórico é apagar a explicação de onde ele
  * andou. Máquina que saiu de uso é arquivada, não apagada.
  */
-export const computerTransfers = pgTable(
+export const computerTransfers = chamadosSchema.table(
   'computer_transfers',
   {
     id: serial('id').primaryKey(),

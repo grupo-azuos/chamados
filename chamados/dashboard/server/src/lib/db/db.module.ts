@@ -13,8 +13,8 @@ let close: (() => Promise<void>) | null = null;
  * Uma conexão para o processo inteiro.
  *
  * Global porque todo repository precisa dela. Ter UMA também importa no Postgres hospedado,
- * só que por outro motivo que no SQLite: a Neon cobra por conexão aberta, e um pool por
- * módulo multiplicaria isso sem o sistema ficar mais rápido.
+ * só que por outro motivo que no SQLite: o Postgres é dividido com os outros sistemas da casa,
+ * e um pool por módulo multiplicaria as conexões sem o sistema ficar mais rápido.
  */
 @Global()
 @Module({
@@ -39,7 +39,7 @@ export class DbModule implements OnApplicationShutdown {
 
   /**
    * Encerrar a conexão no desligamento devolve o assento no pool do servidor. Sem isso, um
-   * processo reiniciado várias vezes vai acumulando conexões zumbis até a Neon recusar novas.
+   * processo reiniciado várias vezes vai acumulando conexões zumbis até o Postgres recusar novas.
    */
   async onApplicationShutdown(): Promise<void> {
     if (!close) return;

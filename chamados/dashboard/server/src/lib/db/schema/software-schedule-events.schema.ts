@@ -7,11 +7,12 @@ import {
   check,
   index,
   integer,
-  pgTable,
   serial,
   text,
   timestamp,
 } from 'drizzle-orm/pg-core';
+
+import { chamadosSchema } from './chamados.schema';
 
 import { softwareProjects } from './software-projects.schema';
 
@@ -24,7 +25,7 @@ function valuesFor(values: readonly string[]) {
 /**
  * Eventos da Agenda / Cronograma Semanal (Week Schedule Grid).
  */
-export const softwareScheduleEvents = pgTable(
+export const softwareScheduleEvents = chamadosSchema.table(
   'software_schedule_events',
   {
     id: serial('id').primaryKey(),
