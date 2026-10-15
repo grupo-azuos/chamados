@@ -385,17 +385,7 @@ export class TicketsService {
        aviso de "chamado aberto" seriam duas mensagens dizendo a mesma coisa. */
     options: { skipOpeningNotice?: boolean; requester?: TicketRequester } = {},
   ): Promise<OpenedTicket> {
-    if (input.area === 'sistema') {
-      const projectId = Number(input.projectId);
-      if (
-        !Number.isInteger(projectId) ||
-        !(await this.softwareProjectsService?.isTicketOption(projectId))
-      ) {
-        throw new UnprocessableEntityException(
-          'Selecione um sistema disponível para abrir o chamado.',
-        );
-      }
-    }
+    await this.assertSystemProject(input);
 
     const assignee = await this.resolveAssignee(input.area, input.assigneeId);
     const screenshotKey = await this.storeScreenshot(screenshot);
@@ -464,6 +454,21 @@ export class TicketsService {
     const rows = await this.repository.listByRequester(user.id);
 
     return rows.map(toMyTicket);
+  }
+
+  /* Chamado de Sistema é de um sistema. A exceção é o pedido de USUÁRIO pelo WhatsApp (o
+     "0 — Nenhum" do `/acesso`): quem ainda não tem conta não tem sistema para pedir. */
+  private async assertSystemProject(input: CreateTicketInput): Promise<void> {
+    if (input.area !== 'sistema') return;
+    if (input.problemType === 'access_request' && input.projectId == null) return;
+
+    const projectId = Number(input.projectId);
+    const isOption =
+      Number.isInteger(projectId) &&
+      (await this.softwareProjectsService?.isTicketOption(projectId));
+    if (isOption) return;
+
+    throw new UnprocessableEntityException('Selecione um sistema disponível para abrir o chamado.');
   }
 
   /** Quem já abriu chamado com este telefone — o desempate do bot para reconhecer quem escreve. */

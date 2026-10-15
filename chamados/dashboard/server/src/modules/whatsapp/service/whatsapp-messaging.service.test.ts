@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { type Env } from '../../../lib/config/env.schema';
 import { type WhatsappMessageRow } from '../../../lib/db/schema/whatsapp-connections.schema';
 import { type WhatsappConnectionsRepository } from '../repository/whatsapp-connections.repository';
@@ -41,7 +40,7 @@ function queued(overrides: Partial<WhatsappMessageRow> = {}): WhatsappMessageRow
 
 function makeService(
   options: {
-    directoryFails?: boolean;
+    operatorName?: string | null;
     sent?: number;
     limit?: number;
     linked?: boolean;
@@ -56,11 +55,15 @@ function makeService(
     sendText: vi.fn().mockResolvedValue(options.outcome ?? 'sent'),
   };
   const connections = {
-    find: vi
-      .fn()
-      .mockResolvedValue(
-        options.linked === false ? null : { userId: 'u-ana', phone: '5562999990001' },
-      ),
+    find: vi.fn().mockResolvedValue(
+      options.linked === false
+        ? null
+        : {
+            userId: 'u-ana',
+            phone: '5562999990001',
+            operatorName: options.operatorName === undefined ? 'Ana Lima' : options.operatorName,
+          },
+    ),
   };
   const messages = {
     countSince: vi.fn(async () => sent),
@@ -70,13 +73,6 @@ function makeService(
     listForTicket: vi.fn(async () => [queued(), queued({ id: 5, kind: 'access_created' })]),
     requeue: vi.fn(async () => (options.requeued === undefined ? queued() : options.requeued)),
   };
-  const directory = {
-    getUserById: vi.fn(async () => {
-      if (options.directoryFails) throw new Error('admin-console down');
-
-      return { id: 'u-ana', name: 'Ana Lima', email: 'ana@empresa.com.br' };
-    }),
-  };
   const templates = { render: vi.fn(async (kind: string) => `text:${kind}`) };
   const service = new WhatsappMessagingService(
     { WHATSAPP_DAILY_LIMIT: options.limit ?? 100 } as Env,
@@ -84,7 +80,6 @@ function makeService(
     connections as unknown as WhatsappConnectionsRepository,
     messages as unknown as WhatsappMessagesRepository,
     templates as unknown as WhatsappTemplatesService,
-    directory as unknown as UserDirectoryProvider,
   );
 
   return { service, bot, messages, templates };
@@ -298,9 +293,9 @@ describe('WhatsappMessagingService — assinatura do bot', () => {
   });
 
   // triste
-  /* Sem o admin-console a mensagem sai assim mesmo, com o nome da casa. */
-  it('still signs the message when the name cannot be read', async () => {
-    const { service } = makeService({ directoryFails: true });
+  /* Vínculo antigo, de antes de o nome ser guardado: sai assinada com o nome da casa. */
+  it('still signs the message when the link has no name yet', async () => {
+    const { service } = makeService({ operatorName: null });
 
     expect(await service.reply(reply)).toBe('*Azuos BOT*\n\ntext:intake_link');
   });

@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 
-import { AuthModule } from '../../lib/auth/auth.module';
 import { WhatsappLinkController } from './controller/whatsapp-link.controller';
 import { WhatsappTemplatesController } from './controller/whatsapp-templates.controller';
 import { WhatsappConnectionsRepository } from './repository/whatsapp-connections.repository';
@@ -19,7 +18,6 @@ import { WhatsappTemplatesService } from './service/whatsapp-templates.service';
  * (`whatsapp-intake`, que usa os dois).
  */
 @Module({
-  imports: [AuthModule],
   controllers: [WhatsappLinkController, WhatsappTemplatesController],
   providers: [
     BotClientService,
