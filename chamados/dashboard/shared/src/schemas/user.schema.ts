@@ -43,43 +43,53 @@ export function userRoleLabel(role: UserRole): string {
   return USER_ROLE_LABELS[role];
 }
 
-/** O papel de quem entrou sem papel definido no Neon Auth: o mais restrito que existe. */
+/** O papel de quem chegou sem papel reconhecível: o mais restrito que existe. */
 export const DEFAULT_USER_ROLE: UserRole = 'user';
 
 /**
- * Contextos do sistema nos quais um usuário pode possuir papéis/cargos diferentes.
- *
- * Exemplo: no contexto de infraestrutura o usuário pode ser 'user', em manutenção 'manager'
- * e no sistema interno 'admin'. A lista em si mora em `domain/role-context.util.ts`.
+ * Os módulos do sistema — Infraestrutura, Sistema, Manutenção. A lista em si mora em
+ * `domain/role-context.util.ts`.
  */
 export const roleContextSchema = z.enum(ROLE_CONTEXTS);
 
+/**
+ * O que a pessoa pode em cada MÓDULO, só dos módulos que ela tem.
+ *
+ * MÓDULO AUSENTE É SEM ACESSO — não "acesso mínimo". Antes cada campo nascia `user` por padrão,
+ * e isso dava leitura de todos os módulos a quem não tinha nenhum. Os valores possíveis são
+ * dois (ver `domain/module-access.util.ts`): `admin` mexe em tudo daquele módulo, `user` só vê.
+ */
 export const contextRolesSchema = z.object({
-  infra: userRoleSchema.default('user'),
-  sistema: userRoleSchema.default('user'),
-  manutencao: userRoleSchema.default('user'),
+  infra: userRoleSchema.optional(),
+  sistema: userRoleSchema.optional(),
+  manutencao: userRoleSchema.optional(),
 });
 
 export type ContextRoles = z.infer<typeof contextRolesSchema>;
 
 /**
- * Retorna o papel do usuário dentro de um contexto específico.
- * Se não houver papel atribuído naquele contexto, recorre ao papel geral ou 'user'.
+ * O papel da pessoa num módulo — ou `null`, quando ela não tem aquele módulo.
+ *
+ * O super-admin é a única exceção: ele tem todos, sem precisar de linha nenhuma. Não há
+ * recaída para o papel geral, e é de propósito: ser Administrador no admin-console não abre
+ * módulo nenhum — quem abre é o super-admin, na tela de Acessos.
  */
 export function roleInContext(
   user: { role?: UserRole | null; roles?: Partial<ContextRoles> | null } | null | undefined,
   context: RoleContext,
-): UserRole {
-  if (!user) return DEFAULT_USER_ROLE;
+): UserRole | null {
+  if (!user) return null;
+  if (user.role === 'superadmin') return 'superadmin';
 
-  return user.roles?.[context] ?? user.role ?? DEFAULT_USER_ROLE;
+  return user.roles?.[context] ?? null;
 }
 
 /**
  * Quem está usando o sistema agora.
  *
- * O `id` é o id da pessoa no provedor de autenticação (`neon_auth.user.id` ou proxy auth-forward).
- * O `role` representa o papel principal/sistema, enquanto `roles` traz a separação por contexto.
+ * O `id` é o UUID da pessoa no admin-console (`x-forwarded-user-id`). O `role` é o papel que o
+ * admin-console deu a ela neste sistema (ou `superadmin`), e `roles` traz o que ela pode em
+ * cada módulo que tem.
  * `SessionUser` nunca carrega senha nem token — só o que a policy e a autoria precisam.
  */
 export const sessionUserSchema = z.object({
@@ -94,7 +104,7 @@ export const sessionUserSchema = z.object({
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 
 /**
- * Usuário retornado pelo diretório de autenticação (Neon Auth ou auth-forward).
+ * Uma pessoa do diretório do admin-console — quem tem acesso a este sistema.
  * Usado em listagens de pessoas e seleção em formulários de atribuição de cargos.
  */
 export const directoryUserSchema = z.object({
