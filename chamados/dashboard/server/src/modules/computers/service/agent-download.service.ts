@@ -1,6 +1,7 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -14,14 +15,15 @@ import {
   type AgentReleaseManifest,
 } from '@template/shared/schemas/agent-release.schema';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
-import { StorageService } from '../../../lib/storage/storage.service';
+import { DOWNLOAD_URL_TTL_SECONDS, type FileStorage } from '../../../lib/storage/file-storage.type';
+import { STORAGE } from '../../../lib/storage/storage.token';
 import { AgentReleaseRepository } from '../repository/agent-release.repository';
 
 @Injectable()
 export class AgentDownloadService {
   constructor(
     private readonly releases: AgentReleaseRepository,
-    private readonly storage: StorageService,
+    @Inject(STORAGE) private readonly storage: FileStorage,
   ) {}
 
   async lts(user: RequestUser): Promise<AgentLts | null> {
@@ -56,10 +58,7 @@ export class AgentDownloadService {
       },
     };
     const file = files[kind];
-    const url = await this.storage.createDownloadUrl(file.key, {
-      as: 'attachment',
-      fileName: file.name,
-    });
+    const url = await this.storage.downloadUrl(file.key, DOWNLOAD_URL_TTL_SECONDS, file.name);
     return { version, url };
   }
 
