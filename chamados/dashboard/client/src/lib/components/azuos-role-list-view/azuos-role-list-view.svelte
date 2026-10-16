@@ -142,12 +142,10 @@
     return data.roles.filter((r) => r.context === ctx).length;
   }
 
+  /* Pelo UUID, como o servidor: um e-mail antigo que hoje é de outra pessoa mostraria o nome
+     e a foto dela numa linha que não é dela. */
   function resolveUser(item: InternalRole): DirectoryUser | undefined {
-    return data.users?.find(
-      (u) =>
-        u.id.toLowerCase() === item.userId.toLowerCase() ||
-        (item.userEmail && u.email.toLowerCase() === item.userEmail.toLowerCase()),
-    );
+    return data.users?.find((u) => u.id.toLowerCase() === item.userId.toLowerCase());
   }
 </script>
 
