@@ -5,6 +5,9 @@ import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
+import { withoutMockIdentity } from '../../../lib/auth/mock-identity.util';
+import { type Env } from '../../../lib/config/env.schema';
+import { ENV } from '../../../lib/config/env.token';
 import { type InternalRoleRow } from '../../../lib/db/schema/internal-roles.schema';
 import { RolesRepository } from '../../roles/repository/roles.repository';
 
@@ -26,6 +29,7 @@ export class TicketAssigneesService {
   constructor(
     @Inject(USER_DIRECTORY_PROVIDER) private readonly directory: UserDirectoryProvider,
     private readonly roles: RolesRepository,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   /** As pessoas que atendem `area`, em ordem alfabética. */
@@ -57,7 +61,11 @@ export class TicketAssigneesService {
       this.roles.listSuperAdmins(),
     ]);
 
-    return { modules, superAdmins };
+    /* A pessoa de desenvolvimento não atende ninguém onde ela não pode entrar. */
+    return {
+      modules: withoutMockIdentity(modules, this.env),
+      superAdmins: withoutMockIdentity(superAdmins, this.env),
+    };
   }
 }
 
