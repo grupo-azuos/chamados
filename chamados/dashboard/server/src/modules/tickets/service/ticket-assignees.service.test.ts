@@ -2,6 +2,7 @@ import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
+import { type Env } from '../../../lib/config/env.schema';
 import { type InternalRoleRow } from '../../../lib/db/schema/internal-roles.schema';
 import { type RolesRepository } from '../../roles/repository/roles.repository';
 import { TicketAssigneesService } from './ticket-assignees.service';
@@ -36,7 +37,7 @@ const ROLES = [
 ];
 const SUPER_ADMINS = [{ userId: null, userEmail: 'u-super@exemplo.com' }];
 
-function makeService(users = USERS, roles = ROLES) {
+function makeService(users = USERS, roles = ROLES, env: Partial<Env> = { NODE_ENV: 'test' }) {
   const directory = {
     listUsers: vi.fn().mockResolvedValue(users),
     getUserById: vi.fn(async (id: string) => users.find((item) => item.id === id) ?? null),
@@ -49,6 +50,7 @@ function makeService(users = USERS, roles = ROLES) {
   return new TicketAssigneesService(
     directory as unknown as UserDirectoryProvider,
     repository as unknown as RolesRepository,
+    env as Env,
   );
 }
 
@@ -89,6 +91,21 @@ describe('TicketAssigneesService.listForArea', () => {
 
   it('answers an empty list when nobody attends the area (edge case)', async () => {
     expect(await makeService([user('u-plain', 'Edu Comum')], []).listForArea('infra')).toEqual([]);
+  });
+
+  // triste
+  /* Em produção, a linha que a máquina de quem programa deixou no banco compartilhado não
+     transforma a pessoa de desenvolvimento em responsável. */
+  it('ignores the development person grants in production', async () => {
+    const devUser = user('00000000-0000-0000-0000-000000000001', 'Dev', {
+      email: 'dev@chamados.local',
+      role: 'admin',
+    });
+    const service = makeService([devUser], [grant(devUser.id, 'infra')], {
+      NODE_ENV: 'production',
+    });
+
+    expect(await service.listForArea('infra')).toEqual([]);
   });
 });
 
