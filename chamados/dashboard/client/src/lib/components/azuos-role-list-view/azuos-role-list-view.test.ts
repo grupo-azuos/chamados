@@ -28,6 +28,20 @@ const mockRoles: InternalRole[] = [
   },
 ];
 
+/* Ver `azuos-person-avatar.test.ts`: sem isto o jsdom nunca "carrega" a foto. */
+class InstantLoadImage {
+  complete = false;
+  naturalWidth = 0;
+  addEventListener(type: string, listener: () => void) {
+    if (type === 'load') listener();
+  }
+  removeEventListener() {}
+  set src(_value: string) {
+    this.complete = true;
+    this.naturalWidth = 1;
+  }
+}
+
 function renderView(overrides: Partial<AzuosRoleListViewProps> = {}) {
   const actions = {
     onCreate: vi.fn(),
@@ -203,5 +217,47 @@ describe('AzuosRoleListView', () => {
     });
 
     expect(screen.queryByRole('heading', { name: 'Acessos por módulo' })).not.toBeInTheDocument();
+  });
+  // feliz
+  /* A foto de quem entrou aparece no cartão "Meu perfil", e não só as iniciais. */
+  it('shows the photo of the logged person on the profile card', async () => {
+    vi.stubGlobal('Image', InstantLoadImage);
+    const image = 'https://admin-console.exemplo.com/api/users/u1/avatar?v=3';
+
+    renderView({
+      data: {
+        currentUser: {
+          name: 'Bia',
+          email: 'bia@empresa.com.br',
+          image,
+          role: 'manager',
+          roles: {},
+        },
+        roles: [],
+        total: 0,
+        filter: { search: '', context: '' },
+      },
+      ui: { showTeam: false },
+    });
+
+    const photo = await vi.waitUntil(() => document.querySelector('[data-slot="avatar-image"]'));
+    expect(photo).toHaveAttribute('src', image);
+    vi.unstubAllGlobals();
+  });
+
+  // triste
+  /* A linha é de quem tem o UUID dela: um e-mail antigo, que hoje é de outra pessoa, não troca o
+     nome mostrado. */
+  it('does not show someone else on a row whose old e-mail is theirs now', () => {
+    renderView({
+      data: {
+        roles: [mockRoles[0]!],
+        users: [{ id: 'usr_other', name: 'Outra Pessoa', email: 'vinicius@empresa.com.br' }],
+        total: 1,
+        filter: { search: '', context: '' },
+      },
+    });
+
+    expect(screen.queryByText('Outra Pessoa')).not.toBeInTheDocument();
   });
 });
