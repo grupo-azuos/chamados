@@ -27,7 +27,6 @@ function makeService(
   options: {
     areas?: string[];
     hasRoom?: boolean;
-    projects?: { id: number; name: string }[];
     createFails?: boolean;
     people?: { id: string; name: string; email: string }[];
     phoneOwners?: string[];
@@ -38,9 +37,6 @@ function makeService(
     areasOf: vi.fn().mockResolvedValue({ name: 'Ana Lima', areas: options.areas ?? ['sistema'] }),
   };
   const tickets = {
-    listSystemProjectOptions: vi
-      .fn()
-      .mockResolvedValue(options.projects ?? [{ id: 7, name: 'Portal do Cliente' }]),
     phoneOwnersOf: vi.fn().mockResolvedValue(options.phoneOwners ?? []),
     create: vi.fn(async (input: { requesterName: string }, ..._rest: unknown[]) => {
       if (options.createFails) throw new Error('database down');
@@ -103,7 +99,6 @@ describe('WhatsappAccessRequestService — quem está pedindo', () => {
       isOpen: true,
     });
     await say('11');
-    await say('1');
 
     expect(directory.searchUsers).toHaveBeenCalledWith('maria');
     expect(tickets.create.mock.calls[0]?.[0]).toMatchObject({ requesterName: 'Maria Clara Souza' });
@@ -119,7 +114,7 @@ describe('WhatsappAccessRequestService — quem está pedindo', () => {
   it('settles a shared name by who already used the phone', async () => {
     const { say, tickets } = makeService({ people: [MARIA, MARIA_LIMA], phoneOwners: ['lima-id'] });
 
-    for (const text of ['/acesso', 'Maria Clara', '11', '1']) await say(text);
+    for (const text of ['/acesso', 'Maria Clara', '11']) await say(text);
 
     expect(tickets.phoneOwnersOf).toHaveBeenCalledWith('5562999990002');
     expect(tickets.create.mock.calls[0]?.[3]).toMatchObject({ requester: { id: 'lima-id' } });
@@ -132,7 +127,7 @@ describe('WhatsappAccessRequestService — quem está pedindo', () => {
     expect(await say('Maria Clara')).toEqual({ reply: 'text:access_who', isOpen: true });
     expect(messaging.reply.mock.calls.at(-1)?.[0].values.opcoes).toContain('2. Maria Clara Lima');
     expect(await say('2')).toEqual({ reply: 'text:access_department', isOpen: true });
-    for (const text of ['11', '1']) await say(text);
+    await say('11');
 
     expect(tickets.create.mock.calls[0]?.[3]).toMatchObject({ requester: { id: 'lima-id' } });
   });
@@ -144,7 +139,7 @@ describe('WhatsappAccessRequestService — quem está pedindo', () => {
     await say('/acesso');
     await say('Maria Clara');
     expect(await say('0')).toEqual({ reply: 'text:access_email', isOpen: true });
-    for (const text of ['maria@outra.com', '11', '1']) await say(text);
+    for (const text of ['maria@outra.com', '11']) await say(text);
 
     expect(tickets.create.mock.calls[0]?.[3]).toEqual({
       skipOpeningNotice: true,
@@ -162,60 +157,9 @@ describe('WhatsappAccessRequestService — quem está pedindo', () => {
   });
 });
 
-describe('WhatsappAccessRequestService — vários sistemas', () => {
-  const PROJECTS = [
-    { id: 7, name: 'Portal do Cliente' },
-    { id: 8, name: 'Folha' },
-    { id: 9, name: 'Paralegal' },
-  ];
-
-  // feliz
-  it('opens one ticket per system picked and lists every protocol', async () => {
-    const { say, tickets, messaging } = makeService({ projects: PROJECTS });
-
-    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '11']) await say(text);
-    expect(await say('1, 3')).toEqual({ reply: 'text:access_created', isOpen: false });
-
-    expect(tickets.create.mock.calls.map((call) => call[0])).toEqual([
-      expect.objectContaining({ projectId: 7 }),
-      expect.objectContaining({ projectId: 9 }),
-    ]);
-    expect(messaging.reply.mock.calls.at(-1)?.[0].values).toMatchObject({
-      sistema: 'Portal do Cliente, Paralegal',
-    });
-  });
-
-  /* Quem ainda não tem conta não tem sistema para pedir: "0" vira o pedido de usuário. */
-  it('opens a single user request, without system, when the answer is none', async () => {
-    const { say, tickets, messaging } = makeService({ projects: PROJECTS });
-
-    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '11']) await say(text);
-    expect(await say('0')).toEqual({ reply: 'text:access_created', isOpen: false });
-
-    expect(tickets.create).toHaveBeenCalledTimes(1);
-    expect(tickets.create.mock.calls[0]?.[0]).toMatchObject({
-      projectId: undefined,
-      description: expect.stringContaining('Pedido de usuário'),
-    });
-    expect(messaging.reply.mock.calls.at(-1)?.[0].values).toMatchObject({
-      sistema: 'usuário (sem sistema)',
-    });
-  });
-
-  // triste
-  it('asks again when one of the numbers is not in the list', async () => {
-    const { say, tickets } = makeService({ projects: PROJECTS });
-
-    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '11']) await say(text);
-
-    expect(await say('1, 9')).toEqual({ reply: 'text:access_invalid', isOpen: true });
-    expect(tickets.create).not.toHaveBeenCalled();
-  });
-});
-
 describe('WhatsappAccessRequestService', () => {
   // feliz
-  it('asks name, e-mail, department and system, then opens the access ticket', async () => {
+  it('asks name, e-mail and department, then opens the user request', async () => {
     const { say, tickets, messaging } = makeService();
 
     expect(await say('/acesso')).toEqual({ reply: 'text:access_name', isOpen: true });
@@ -224,9 +168,10 @@ describe('WhatsappAccessRequestService', () => {
       reply: 'text:access_department',
       isOpen: true,
     });
-    expect(await say('11')).toEqual({ reply: 'text:access_system', isOpen: true });
-    expect(await say('1')).toEqual({ reply: 'text:access_created', isOpen: false });
+    expect(await say('11')).toEqual({ reply: 'text:access_created', isOpen: false });
 
+    /* Pedido de usuário não é de sistema nenhum: o chamado nasce sem `projectId`. */
+    expect(tickets.create.mock.calls[0]?.[0]).not.toHaveProperty('projectId');
     expect(tickets.create).toHaveBeenCalledWith(
       expect.objectContaining({
         requesterName: 'Maria Clara Souza',
@@ -235,7 +180,6 @@ describe('WhatsappAccessRequestService', () => {
         problemType: 'access_request',
         contactPhone: '62999990002',
         notifyWhatsapp: true,
-        projectId: 7,
         assigneeId: 'u-ana',
         description: expect.stringContaining('E-mail: maria@empresa.com.br'),
       }),
@@ -245,11 +189,7 @@ describe('WhatsappAccessRequestService', () => {
     );
     expect(messaging.reply.mock.calls.at(-1)?.[0]).toMatchObject({
       ticketId: 42,
-      values: {
-        nome: 'Maria',
-        protocolo: '• *CH-0042* — Portal do Cliente',
-        sistema: 'Portal do Cliente',
-      },
+      values: { nome: 'Maria', protocolo: 'CH-0042' },
     });
   });
 
@@ -268,7 +208,7 @@ describe('WhatsappAccessRequestService', () => {
   it('opens the ticket without assignee when the attendant does not attend Sistema', async () => {
     const { say, tickets } = makeService({ areas: ['infra'] });
 
-    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '1', '1']) await say(text);
+    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '1']) await say(text);
 
     expect(tickets.create.mock.calls[0]?.[0]).toMatchObject({ assigneeId: undefined });
   });
@@ -329,8 +269,7 @@ describe('WhatsappAccessRequestService', () => {
     expect(await say('Maria Clara', {}, NOW + 16 * MINUTE)).toEqual(SILENCE);
   });
 
-  it('does not start when no system accepts tickets, or the attendant has no area', async () => {
-    expect(await makeService({ projects: [] }).say('/acesso')).toEqual(SILENCE);
+  it('does not start when the attendant has no area', async () => {
     expect(await makeService({ areas: [] }).say('/acesso')).toEqual(SILENCE);
   });
 
@@ -346,7 +285,7 @@ describe('WhatsappAccessRequestService', () => {
   it('tells the person when the ticket could not be saved', async () => {
     const { say } = makeService({ createFails: true });
 
-    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '1']) await say(text);
+    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com']) await say(text);
 
     expect(await say('1')).toEqual({ reply: 'text:access_invalid', isOpen: false });
   });
@@ -356,7 +295,7 @@ describe('WhatsappAccessRequestService', () => {
     const { say, tickets } = makeService();
     tickets.create.mockRejectedValueOnce(new Error('admin-console down'));
 
-    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com', '1']) await say(text);
+    for (const text of ['/acesso', 'Maria Clara', 'm@empresa.com']) await say(text);
 
     expect(await say('1')).toEqual({ reply: 'text:access_invalid', isOpen: false });
     expect(tickets.create).toHaveBeenCalledTimes(1);

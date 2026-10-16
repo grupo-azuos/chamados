@@ -1,7 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   type AccessRequestDraft,
-  type AccessRequestProject,
   type AccessRequestStep,
   accessRequestDescription,
   departmentOptionsText,
@@ -11,8 +10,6 @@ import {
   isAccessRequestCancel,
   isAccessRequestCommand,
   nextAccessRequestStep,
-  projectsOf,
-  projectOptionsText,
 } from '@template/shared/domain/access-request.util';
 import {
   identifyPerson,
@@ -46,12 +43,6 @@ type Conversation = {
   expiresAt: number;
 };
 
-type CreatedRequest = {
-  ticket: { id: number; requesterName: string };
-  /** Nulo é o pedido de usuário, sem sistema. */
-  project: AccessRequestProject | null;
-};
-
 const SILENCE: InboundReply = { reply: null, isOpen: false };
 
 /* Quanto tempo o bot espera cada resposta. O mesmo prazo que o bot dá à conversa aberta: depois
@@ -64,14 +55,13 @@ const QUESTION_TEMPLATES: Record<AccessRequestStep, WhatsappTemplateKey> = {
   email: 'access_email',
   phone: 'access_phone',
   department: 'access_department',
-  system: 'access_system',
 };
 
 /**
- * PEDIDO DE ACESSO PELO WHATSAPP (`/acesso`).
+ * PEDIDO DE USUÁRIO PELO WHATSAPP (`/acesso`), para quem ainda não tem conta.
  *
- * O bot pergunta um campo por mensagem e, com tudo respondido, abre um chamado na área de
- * Sistema, tipo "Pedido de acesso". A regra de cada resposta mora em `access-request.util`;
+ * O bot pergunta um campo por mensagem e, com tudo respondido, abre UM chamado na área de
+ * Sistema, tipo "Pedido de acesso", sem sistema — quem atende cria o usuário. A regra de cada resposta mora em `access-request.util`;
  * aqui fica a conversa: guardar o rascunho, mandar a próxima pergunta e criar o chamado.
  *
  * O estado fica no banco (`whatsapp_conversations`): publicar uma versão nova do servidor no
@@ -144,13 +134,6 @@ export class WhatsappAccessRequestService {
     /* Vinculou o número mas não administra mais nenhuma área: não há chamado para abrir com ele. */
     if (!attendant || attendant.areas.length === 0) return SILENCE;
 
-    /* Sem sistema que aceite chamado, o pedido não teria como terminar: melhor nem começar. */
-    if ((await this.tickets.listSystemProjectOptions()).length === 0) {
-      this.logger.warn('access request ignored: no software project accepts tickets');
-
-      return SILENCE;
-    }
-
     const conversation: Conversation = {
       userId,
       attendantName: attendant.name,
@@ -172,8 +155,7 @@ export class WhatsappAccessRequestService {
     const step = nextAccessRequestStep(conversation.draft);
     if (!step) return SILENCE;
 
-    const projects = await this.tickets.listSystemProjectOptions();
-    const filled = fillAccessRequestStep(conversation.draft, step, message.text, projects);
+    const filled = fillAccessRequestStep(conversation.draft, step, message.text);
     const refreshed = { ...conversation, expiresAt: now + CONVERSATION_TTL_MS };
     if (!filled.ok)
       return this.say(key, refreshed, message, 'access_invalid', { erro: filled.error });
@@ -183,7 +165,7 @@ export class WhatsappAccessRequestService {
     const nextStep = nextAccessRequestStep(draft);
     if (!nextStep) return this.finish(key, next, message);
 
-    return this.ask(key, next, message, nextStep, projects);
+    return this.ask(key, next, message, nextStep);
   }
 
   /* Quem é, pelo nome que acabou de chegar: uma pessoa vira vínculo, várias viram pergunta. */
@@ -222,25 +204,12 @@ export class WhatsappAccessRequestService {
     conversation: Conversation,
     message: InboundMessage,
     step: AccessRequestStep,
-    projects?: readonly AccessRequestProject[],
   ): Promise<InboundReply> {
     return this.say(key, conversation, message, QUESTION_TEMPLATES[step], {
       responsavel: conversation.attendantName,
       nome: firstName(conversation.draft.requesterName),
-      opcoes: await this.optionsFor(step, conversation.draft, projects),
+      opcoes: optionsFor(step, conversation.draft),
     });
-  }
-
-  private async optionsFor(
-    step: AccessRequestStep,
-    draft: AccessRequestDraft,
-    projects?: readonly AccessRequestProject[],
-  ): Promise<string> {
-    if (step === 'who') return personOptionsText(draft.candidates ?? []);
-    if (step === 'department') return departmentOptionsText();
-    if (step !== 'system') return '';
-
-    return projectOptionsText(projects ?? (await this.tickets.listSystemProjectOptions()));
   }
 
   private async finish(
@@ -250,25 +219,21 @@ export class WhatsappAccessRequestService {
   ): Promise<InboundReply> {
     await this.conversations.remove(key);
 
-    const created = await this.createTickets(conversation);
-    const [first] = created;
+    const ticket = await this.createTicket(conversation);
     /* Nada foi registrado: a pessoa fica sabendo, em vez de esperar uma resposta que não vem. */
-    if (!first) return this.sayFailed(conversation, message);
+    if (!ticket) return this.sayFailed(conversation, message);
+
+    await this.recordHistory(ticket, conversation.draft);
 
     const reply = await this.messaging.reply({
       senderUserId: conversation.userId,
       recipient: message.phone ?? message.chatId,
       kind: 'access_created',
-      ticketId: first.ticket.id,
+      ticketId: ticket.id,
       values: {
-        nome: firstName(first.ticket.requesterName),
-        protocolo: created
-          .map(
-            ({ ticket, project }) => `• *${formatTicketProtocol(ticket.id)}* — ${labelOf(project)}`,
-          )
-          .join('\n'),
-        sistema: created.map(({ project }) => labelOf(project)).join(', '),
-        link: ticketAccessLink(first.ticket.id, this.env),
+        nome: firstName(ticket.requesterName),
+        protocolo: formatTicketProtocol(ticket.id),
+        link: ticketAccessLink(ticket.id, this.env),
       },
     });
 
@@ -292,25 +257,9 @@ export class WhatsappAccessRequestService {
     return { reply, isOpen: false };
   }
 
-  /* Um chamado por sistema: cada um tem quem libere o acesso a ele. Um que falhe não impede os
-     outros. Sem sistema ("0 — Nenhum"), é um chamado só: o de criar o usuário. */
-  private async createTickets(conversation: Conversation): Promise<CreatedRequest[]> {
-    const created: CreatedRequest[] = [];
-    const projects = conversation.draft.userOnly ? [null] : projectsOf(conversation.draft);
-    for (const project of projects) {
-      const ticket = await this.createTicket(conversation, project);
-      if (!ticket) continue;
-
-      await this.recordHistory(ticket, conversation.draft, project);
-      created.push({ ticket, project });
-    }
-
-    return created;
-  }
-
+  /* Um chamado de Sistema SEM sistema: é o pedido de criar o usuário (ver `TicketsService`). */
   private async createTicket(
     conversation: Conversation,
-    project: AccessRequestProject | null,
   ): Promise<{ id: number; requesterName: string } | null> {
     const { requesterName, email, phone, department } = conversation.draft;
     if (!requesterName || !email || !phone || !department) return null;
@@ -323,15 +272,9 @@ export class WhatsappAccessRequestService {
       problemType: 'access_request' as const,
       priority: 'medium' as const,
       contactPhone,
-      /* Quem pediu pela conversa já está no WhatsApp: é por lá que quer saber do acesso. */
+      /* Quem pediu pela conversa já está no WhatsApp: é por lá que quer saber do pedido. */
       notifyWhatsapp: true,
-      description: accessRequestDescription({
-        requesterName,
-        email,
-        phone: contactPhone,
-        projectName: project?.name ?? null,
-      }),
-      projectId: project?.id,
+      description: accessRequestDescription({ requesterName, email, phone: contactPhone }),
       assigneeId: conversation.assigneeId,
     };
     /* A confirmação já vai na própria conversa (`access_created`). */
@@ -341,7 +284,7 @@ export class WhatsappAccessRequestService {
        de erro em `finish`, e o motivo fica no log para quem administra. */
     return this.tickets.create(input, undefined, [], options).catch((error: unknown) => {
       this.logger.error(
-        'failed to create access request from WhatsApp',
+        'failed to create user request from WhatsApp',
         error instanceof Error ? error.stack : '',
       );
 
@@ -351,11 +294,7 @@ export class WhatsappAccessRequestService {
 
   /* O chamado nasceu fora de uma requisição de pessoa: o histórico é gravado aqui, sem autor —
      quem fez foi o bot. */
-  private async recordHistory(
-    ticket: { id: number },
-    draft: AccessRequestDraft,
-    project: AccessRequestProject | null,
-  ): Promise<void> {
+  private async recordHistory(ticket: { id: number }, draft: AccessRequestDraft): Promise<void> {
     await this.history.record({
       action: 'tickets.create',
       actorId: null,
@@ -367,7 +306,6 @@ export class WhatsappAccessRequestService {
         { field: 'source', from: null, to: 'whatsapp' },
         { field: 'problemType', from: null, to: 'access_request' },
         { field: 'requesterId', from: null, to: draft.requesterId ?? null },
-        { field: 'projectId', from: null, to: project?.id ?? null },
       ],
     });
   }
@@ -421,8 +359,12 @@ function requesterOf(
   return { id: draft.requesterId, email: draft.email, name: draft.requesterName };
 }
 
-function labelOf(project: AccessRequestProject | null): string {
-  return project?.name ?? 'usuário (sem sistema)';
+/* As opções numeradas que a pergunta mostra: as pessoas do "quem é você?" ou os setores. */
+function optionsFor(step: AccessRequestStep, draft: AccessRequestDraft): string {
+  if (step === 'who') return personOptionsText(draft.candidates ?? []);
+  if (step === 'department') return departmentOptionsText();
+
+  return '';
 }
 
 /* As mensagens chamam a pessoa pelo primeiro nome: "Obrigado, Maria!", não o nome inteiro. */
