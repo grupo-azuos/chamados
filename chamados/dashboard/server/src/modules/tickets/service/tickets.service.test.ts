@@ -4,7 +4,10 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { ticketListQuerySchema } from '@template/shared/schemas/ticket.schema';
+import {
+  type CreateTicketInput,
+  ticketListQuerySchema,
+} from '@template/shared/schemas/ticket.schema';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type AdminConsoleProfileProvider } from '../../../lib/auth/admin-console-profile.provider';
@@ -162,9 +165,9 @@ async function withSentScreenshot(
   return { storage, service, screenshot: { storageKey: SCREENSHOT_KEY, fileName: 'erro.png' } };
 }
 
-const openingInput = {
+const openingInput: CreateTicketInput = {
   requesterName: 'Bia Costa',
-  area: 'infra' as const,
+  area: 'infra',
   department: 'financeiro',
   problemType: 'printer',
   contactPhone: '62999999999',
