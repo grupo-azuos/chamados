@@ -81,6 +81,17 @@
   </AppShell>
 </Story>
 
+<!-- Com a foto do admin-console no rodapé, no lugar das iniciais. -->
+<Story name="WithAvatar">
+  <AppShell
+    data={{ user: { ...user, avatarUrl: 'https://i.pravatar.cc/96?img=47' } }}
+    state={{ activeKey: 'tickets' }}
+    {actions}
+  >
+    <div class="text-ink-700 p-8 text-sm">Conteúdo da rota entra aqui.</div>
+  </AppShell>
+</Story>
+
 <!-- Sem identidade: o rodapé não quebra. -->
 <Story name="WithoutUser">
   <AppShell>
