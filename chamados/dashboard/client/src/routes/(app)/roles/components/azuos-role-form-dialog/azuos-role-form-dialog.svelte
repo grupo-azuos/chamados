@@ -144,7 +144,9 @@
 </script>
 
 <Dialog open={formState.isOpen} onOpenChange={(open) => !open && actions.onClose()}>
-  <DialogContent class="max-w-lg sm:max-w-xl">
+  <!-- 2xl, e não xl: com a pessoa escolhida, o cartão dela + "Trocar pessoa" e os três cartões
+       de módulo não cabem em 576px e vazavam pela borda direita. -->
+  <DialogContent class="max-w-lg sm:max-w-2xl">
     <DialogHeader class="gap-1.5">
       <div class="flex items-center gap-2.5">
         <span
@@ -161,7 +163,9 @@
       </DialogDescription>
     </DialogHeader>
 
-    <form novalidate onsubmit={handleSubmit} class="flex flex-col gap-4">
+    <!-- `min-w-0`: o DialogContent é grid, e item de grid não encolhe abaixo do conteúdo sem
+         isso — um nome ou e-mail longo empurrava o formulário inteiro para fora. -->
+    <form novalidate onsubmit={handleSubmit} class="flex min-w-0 flex-col gap-4">
       {#if formState.error}
         <ErrorState
           data={{ title: 'Não foi possível salvar', message: formState.error }}
@@ -394,11 +398,13 @@
                 </div>
 
                 {#if fields.userId.value}
-                  <ActionButton
-                    data={{ label: 'Trocar pessoa' }}
-                    ui={{ variant: 'ghost', size: 'sm' }}
-                    actions={{ onClick: handleClear }}
-                  />
+                  <div class="shrink-0">
+                    <ActionButton
+                      data={{ label: 'Trocar pessoa' }}
+                      ui={{ variant: 'ghost', size: 'sm' }}
+                      actions={{ onClick: handleClear }}
+                    />
+                  </div>
                 {/if}
               </div>
 
