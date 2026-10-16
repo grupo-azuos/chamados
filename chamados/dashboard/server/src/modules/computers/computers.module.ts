@@ -1,3 +1,5 @@
+import { AgentDownloadController } from './controller/agent-download.controller';
+import { AgentDownloadService } from './service/agent-download.service';
 import { Module } from '@nestjs/common';
 
 import { AgentReleaseController } from './controller/agent-release.controller';
@@ -19,8 +21,9 @@ import { ComputersService } from './service/computers.service';
  * precisa subir com o adaptador de WebSocket registrado — ver `main.ts`.
  */
 @Module({
-  controllers: [ComputersController, AgentReleaseController],
+  controllers: [ComputersController, AgentReleaseController, AgentDownloadController],
   providers: [
+    AgentDownloadService,
     AgentReleaseRepository,
     AgentReleaseService,
     ComputersService,

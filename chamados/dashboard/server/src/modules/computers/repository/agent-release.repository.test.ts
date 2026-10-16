@@ -6,12 +6,10 @@ import { AgentReleaseRepository } from './agent-release.repository';
 describe('agent release storage', () => {
   // feliz
   it('reads only the fixed manifest key from the project bucket', async () => {
-    const send = vi
-      .fn()
-      .mockResolvedValue({
-        ContentLength: 2,
-        Body: { transformToString: () => Promise.resolve('{}') },
-      });
+    const send = vi.fn().mockResolvedValue({
+      ContentLength: 2,
+      Body: { transformToString: () => Promise.resolve('{}') },
+    });
     const repository = new AgentReleaseRepository(
       { send } as unknown as S3Client,
       { S3_BUCKET: 'fixture-bucket' } as Env,
@@ -20,7 +18,7 @@ describe('agent release storage', () => {
     expect(send.mock.calls[0]?.[0]).toBeInstanceOf(GetObjectCommand);
     expect(send.mock.calls[0]?.[0].input).toEqual({
       Bucket: 'fixture-bucket',
-      Key: 'agent/latest.json',
+      Key: 'agent/lts.json',
     });
   });
   it('treats only a missing manifest as no release', async () => {
@@ -37,12 +35,10 @@ describe('agent release storage', () => {
   });
   // triste
   it('rejects oversized or invalid JSON', async () => {
-    const send = vi
-      .fn()
-      .mockResolvedValue({
-        ContentLength: 20_000,
-        Body: { transformToString: () => Promise.resolve('{}') },
-      });
+    const send = vi.fn().mockResolvedValue({
+      ContentLength: 20_000,
+      Body: { transformToString: () => Promise.resolve('{}') },
+    });
     const repository = new AgentReleaseRepository(
       { send } as unknown as S3Client,
       { S3_BUCKET: 'fixture' } as Env,
