@@ -197,3 +197,36 @@ gera MSI no Ubuntu, assina com certificado descartável e instala/inicia/desinst
 Windows limpo. Releases usam a mesma construção com o certificado persistente. Antes de liberar
 para todo o parque, valide o primeiro upgrade entre duas versões em máquinas de teste Windows
 10 e 11, com e sem usuário logado e com a rede indisponível no boot.
+
+## Download no dashboard e versão LTS
+
+O menu **Agente Windows** aparece em Infraestrutura e Sistema. A sessão precisa ter
+um desses módulos. O inventário permanece restrito à Infraestrutura. A página baixa
+separadamente o MSI, `publisher.cer` e `install-certificate.ps1`. O backend gera links
+temporários no mesmo bucket privado usado pelo dashboard.
+
+Publicar `agent/vX.Y.Z` arquiva os arquivos, sem promover automaticamente uma LTS.
+Depois de validar a versão, execute **Release/Promote agent LTS** no GitHub Actions,
+informando a tag publicada. Alternativamente, com as variáveis `S3_*` do mesmo bucket
+no ambiente e o SDK instalado pelo lockfile do dashboard:
+
+```sh
+mise run agent:promote-lts -- agent/v1.2.3
+```
+
+A promoção confere a existência dos arquivos e a integridade do MSI e certificado
+antes de atualizar `agent/lts.json`. Não aceita reduzir a versão da LTS. Os arquivos
+anteriores são preservados. O dashboard e o atualizador das máquinas consultam essa
+mesma LTS; sem ela, o dashboard mostra indisponibilidade e o agente não atualiza.
+O endpoint `/api/agent/releases/latest` mantém o nome, mas seleciona a LTS.
+
+Na primeira instalação, mantenha os três arquivos na mesma pasta. Abra o PowerShell
+como administrador nessa pasta e execute:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-certificate.ps1
+```
+
+Depois execute o MSI. Para conectar a máquina, use `configure-machine.ps1`, instalado
+em `C:\Program Files\Azuos\Agent`, com a URL e a chave fornecidas pela Infraestrutura,
+conforme o provisionamento descrito acima.
