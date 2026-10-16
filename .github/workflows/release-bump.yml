@@ -1,4 +1,4 @@
-name: Release/Version bump
+name: Release/Bump
 on:
   workflow_call:
 permissions:
