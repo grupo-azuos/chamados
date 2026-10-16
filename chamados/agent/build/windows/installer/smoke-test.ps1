@@ -3,6 +3,8 @@
 [CmdletBinding()]
 param([Parameter(Mandatory = $true)][string]$MsiPath, [switch]$ProvisionOnly)
 $ErrorActionPreference = 'Stop'
+# msiexec rejeita caminhos com separadores misturados, aceitos pelo PowerShell.
+$MsiPath = [IO.Path]::GetFullPath((Get-Item -LiteralPath $MsiPath).FullName).Replace('/', '\')
 if ($ProvisionOnly) {
     $token = ConvertTo-SecureString 'fixture-provisioning-token' -AsPlainText -Force
     & (Join-Path $PSScriptRoot 'configure-machine.ps1') -ServerUrl 'https://127.0.0.1:1' `
