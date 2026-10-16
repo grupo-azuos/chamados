@@ -171,8 +171,37 @@ O Postgres é o mesmo do Paralegal, da Gestão de RH e do admin-console. Cada si
 `drizzle.__chamados_migrations` — a padrão do Drizzle já é de outro sistema. O `drizzle.config.ts`
 só enxerga o schema `chamados`, para uma migration nunca tocar nas tabelas dos outros.
 
-Os arquivos seguem o mesmo arranjo da Gestão de RH: protocolo S3 puro (`S3_*` no
-`server/.env`), num bucket privado `chamados`. Trocar de provedor é trocar as variáveis.
+### Os arquivos vão direto para o storage
+
+Os arquivos seguem o mesmo arranjo do Paralegal, da Gestão de RH e do admin-console: protocolo
+S3 puro (`S3_*` no `server/.env`), num bucket privado `chamados`. Trocar de provedor é trocar as
+variáveis.
+
+**O arquivo nunca passa pela API.** Todo envio — o print e os anexos do chamado, os anexos de um
+histórico, a foto do inventário, o documento do orçamento — segue três passos:
+
+1. a tela pede o link (`POST .../upload-url`); a API confere **quem pode** (no service) e devolve
+   uma chave na área temporária (`tmp/`) e um link assinado de envio (PUT, 5 minutos);
+2. o navegador envia o arquivo **direto** para o storage por esse link;
+3. a tela grava o chamado, o histórico, o produto ou o orçamento levando a chave. Só então a API
+   confere o arquivo **de verdade** (tamanho e tipo medidos pelo storage, não os declarados pela
+   tela), recusa o que não serve e move o resto para a pasta definitiva (`tickets/`,
+   `ticket-attachments/`, `inventory/`, `maintenance-quotes/`).
+
+O que fica na área temporária sem ser gravado é apagado de hora em hora, depois de 24 horas.
+Para **abrir ou baixar**, a API devolve um link assinado de GET (5 minutos). Os arquivos gravados
+antes deste fluxo continuam onde estavam: mesmas chaves, mesmo bucket.
+
+O `S3_ENDPOINT` é sempre o endereço **público** — é ele que vai nos links que o navegador abre:
+
+| Ambiente | `S3_ENDPOINT` | `S3_REGION` | `S3_SIGNING_HOST` |
+|---|---|---|---|
+| Homologação | `https://s3.homo.grupoazuos.com.br/storage/v1/s3` | `local` | `s3.homo.grupoazuos.com.br:8001` |
+| Produção | `https://<projeto>.supabase.co/storage/v1/s3` | região do projeto | vazio |
+
+Na homologação o `S3_SIGNING_HOST` é obrigatório: o domínio público chega ao Kong do Supabase
+self-hosted pela 8001, e o Storage confere a assinatura com essa porta. Sem ele, toda chamada
+volta `SignatureDoesNotMatch` (medido no Paralegal, contra o mesmo Supabase).
 
 ---
 
