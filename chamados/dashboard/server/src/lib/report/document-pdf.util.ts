@@ -9,7 +9,14 @@ import {
   type TDocumentDefinitions,
 } from 'pdfmake/interfaces';
 
-import { BRAND_LOGO_PATH, brandLogoWidth } from './document-brand.util';
+import {
+  BRAND_NAME,
+  generatedAtLabel,
+  isNumericColumn,
+  LOGO_BLUE_SVG,
+  pageOrientationOf,
+  PDF_FONT,
+} from './document-brand.util';
 import {
   DOCUMENT_PALETTE,
   DOCUMENT_TONE_COLORS,
@@ -29,25 +36,39 @@ import {
 /* As fontes moram ao lado deste arquivo — o build do Nest as copia para o `dist` (ver `assets`
    em nest-cli.json), então o mesmo caminho vale em desenvolvimento e em produção. */
 const FONTS_DIRECTORY = join(__dirname, 'fonts');
-const FONT_FAMILY = 'LiberationSansNarrow';
 
-const PAGE_MARGIN = 36;
-const FOOTER_HEIGHT = 44;
-const BRAND_LOGO_HEIGHT = 46;
+/**
+ * As medidas do PAPEL TIMBRADO da casa, as mesmas da Gestão de RH: tiradas do modelo em Word
+ * que a Azuos usa nas declarações (A4, margens de 3 cm, logo centralizada no topo, faixa azul no
+ * pé, texto em Arial Narrow 12, título em 15 negrito centralizado, tabela de fio preto fino com
+ * cabeçalho em negrito). Mudar um número aqui é sair do padrão dos outros documentos da empresa.
+ *
+ * Tudo em pontos (1 pt = 1/72 de polegada), que é a unidade do PDF.
+ */
+const A4 = { short: 595.28, long: 841.89 };
+const MARGIN = { side: 85.05, top: 85.05, bottom: 106.35 };
+const LOGO = { width: 145.6, top: 17.6 };
+/** A faixa do pé, medida de baixo para cima: assim ela fica no lugar com a folha em pé ou deitada. */
+const FOOTER_BAR = { fromBottom: 84.99, height: 38.7 };
+const FOOTER_FONT_SIZE = 9;
+const TITLE_SIZE = 15;
+const TEXT_SIZE = 12;
+const SMALL_SIZE = 10;
+/** O espaço de dentro da célula do modelo: 0,19 cm de cada lado, quase nada em cima e embaixo. */
+const CELL_PADDING = { side: 5.4, vertical: 1 };
+const LINE_WIDTH = 0.5;
 const QR_CODE_SIZE = 56;
 const FIELDS_PER_ROW = 2;
 
 const COLOR = {
   primary: pdfColor(DOCUMENT_PALETTE.primary),
-  primaryForeground: pdfColor(DOCUMENT_PALETTE.primaryForeground),
-  foreground: pdfColor(DOCUMENT_PALETTE.foreground),
+  ink: pdfColor(DOCUMENT_PALETTE.foreground),
   subtext: pdfColor(DOCUMENT_PALETTE.subtext),
-  border: pdfColor(DOCUMENT_PALETTE.border),
-  surfaceAlt: pdfColor(DOCUMENT_PALETTE.surfaceAlt),
+  white: pdfColor(DOCUMENT_PALETTE.primaryForeground),
 } as const;
 
 pdfMake.setFonts({
-  [FONT_FAMILY]: {
+  [PDF_FONT]: {
     normal: join(FONTS_DIRECTORY, 'LiberationSansNarrow-Regular.ttf'),
     bold: join(FONTS_DIRECTORY, 'LiberationSansNarrow-Bold.ttf'),
     italics: join(FONTS_DIRECTORY, 'LiberationSansNarrow-Italic.ttf'),
@@ -59,25 +80,39 @@ pdfMake.setFonts({
 pdfMake.setUrlAccessPolicy(() => false);
 pdfMake.setLocalAccessPolicy((path) => path.startsWith(__dirname));
 
+type PageSize = { width: number; height: number };
+type TableBlock = Extract<DocumentBlock, { kind: 'table' }>;
+
 /**
- * O documento em PDF, desenhado pelo pdfmake: A4, logo e título no topo, e um rodapé com a
- * referência e "Página X de Y" em toda página. Quebra de página, cabeçalho de tabela repetido
- * e altura de linha são do pdfmake — aqui só se diz o que vai em cada bloco.
+ * O documento em PDF, no papel timbrado: a logo e a faixa azul vão no FUNDO de toda página, o
+ * título em maiúsculas no centro e, no pé, de onde veio o documento, quando foi gerado e a
+ * página. Quebra de página, cabeçalho de tabela repetido e altura de linha são do pdfmake.
  *
  * O desenho não lê o relógio (a data vem de `createdAt`) nem sorteia nada: a mesma definição
  * dá o mesmo arquivo, byte a byte.
  */
 export async function renderPdfDocument(definition: DocumentDefinition): Promise<Buffer> {
+  const generatedAt = generatedAtLabel(definition.createdAt ?? new Date());
+  const orientation = pageOrientationOf(definition);
+  /* O espaço entre as margens, de onde sai a largura de cada coluna das tabelas. */
+  const frame = (orientation === 'landscape' ? A4.long : A4.short) - MARGIN.side * 2;
   const pdfDefinition: TDocumentDefinitions = {
     pageSize: 'A4',
-    pageOrientation: definition.orientation,
-    pageMargins: [PAGE_MARGIN, PAGE_MARGIN, PAGE_MARGIN, PAGE_MARGIN + FOOTER_HEIGHT],
-    info: { title: definition.title, creationDate: definition.createdAt ?? new Date() },
-    defaultStyle: { font: FONT_FAMILY, fontSize: 9.5, color: COLOR.foreground, lineHeight: 1.15 },
-    footer: (currentPage, pageCount) => drawFooter(definition.reference, currentPage, pageCount),
+    pageOrientation: orientation,
+    pageMargins: [MARGIN.side, MARGIN.top, MARGIN.side, MARGIN.bottom],
+    info: {
+      title: definition.title,
+      author: 'Grupo Azuos',
+      creator: BRAND_NAME,
+      creationDate: definition.createdAt ?? new Date(),
+    },
+    defaultStyle: { font: PDF_FONT, fontSize: TEXT_SIZE, color: COLOR.ink, lineHeight: 1.1 },
+    background: (_page, size) => drawLetterhead(size as PageSize),
+    footer: (currentPage, pageCount) =>
+      drawFooter(definition.reference, `${generatedAt} · Página ${currentPage} de ${pageCount}`),
     content: [
-      drawHeader(definition),
-      ...definition.blocks.map(drawBlock),
+      ...drawTitle(definition),
+      ...definition.blocks.map((block) => drawBlock(block, frame)),
       ...(definition.verification ? [drawVerification(definition.verification)] : []),
     ],
   };
@@ -85,54 +120,64 @@ export async function renderPdfDocument(definition: DocumentDefinition): Promise
   return pdfMake.createPdf(pdfDefinition).getBuffer();
 }
 
-function drawHeader(definition: DocumentDefinition): Content {
-  const titleLines: Content[] = [
-    { text: definition.title, fontSize: 18, bold: true, color: COLOR.primary },
+function drawTitle(definition: DocumentDefinition): Content[] {
+  const title: Content = {
+    text: definition.title.toLocaleUpperCase('pt-BR'),
+    fontSize: TITLE_SIZE,
+    bold: true,
+    alignment: 'center',
+    margin: [0, 0, 0, 4],
+  };
+  if (!definition.subtitle) return [{ ...title, margin: [0, 0, 0, 10] }];
+
+  return [title, { text: definition.subtitle, alignment: 'center', margin: [0, 0, 0, 10] }];
+}
+
+/** O timbrado vai no FUNDO de toda página: a logo no topo e a faixa azul no pé. */
+function drawLetterhead(page: PageSize): Content {
+  return [
+    {
+      svg: LOGO_BLUE_SVG,
+      width: LOGO.width,
+      absolutePosition: { x: (page.width - LOGO.width) / 2, y: LOGO.top },
+    },
+    {
+      canvas: [
+        {
+          type: 'rect',
+          x: 0,
+          y: page.height - FOOTER_BAR.fromBottom,
+          w: page.width,
+          h: FOOTER_BAR.height,
+          color: COLOR.primary,
+        },
+      ],
+      absolutePosition: { x: 0, y: 0 },
+    },
   ];
-  if (definition.subtitle) {
-    titleLines.push({ text: definition.subtitle, fontSize: 8.5, color: COLOR.subtext });
-  }
-
-  return {
-    margin: [0, 0, 0, 12],
-    table: {
-      widths: ['auto', '*'],
-      body: [[drawBrand(), { stack: titleLines, alignment: 'right', margin: [0, 10, 0, 0] }]],
-    },
-    /* Só o fio de baixo, na cor principal do tema: separa o cabeçalho do corpo. */
-    layout: {
-      hLineWidth: (index) => (index === 1 ? 1.5 : 0),
-      vLineWidth: () => 0,
-      hLineColor: () => COLOR.primary,
-      paddingLeft: () => 0,
-      paddingRight: () => 0,
-      paddingBottom: () => 8,
-    },
-  };
 }
 
-/** A assinatura da marca: só a logo, sem nome ao lado. */
-function drawBrand(): TableCell {
-  return {
-    image: BRAND_LOGO_PATH,
-    width: brandLogoWidth(BRAND_LOGO_HEIGHT),
-    height: BRAND_LOGO_HEIGHT,
-  };
-}
+/**
+ * O que vai escrito na faixa do pé: de onde veio o documento, quando foi gerado e a página. A
+ * área do rodapé começa onde a margem de baixo começa; o recuo de cima desce o texto até o meio
+ * da faixa.
+ */
+function drawFooter(reference: string, right: string): Content {
+  const lineHeight = FOOTER_FONT_SIZE * 1.1;
+  const top = MARGIN.bottom - FOOTER_BAR.fromBottom + (FOOTER_BAR.height - lineHeight) / 2;
 
-function drawFooter(reference: string, currentPage: number, pageCount: number): Content {
   return {
-    margin: [PAGE_MARGIN, 16, PAGE_MARGIN, 0],
-    fontSize: 8,
-    color: COLOR.subtext,
+    margin: [28, top, 28, 0],
+    fontSize: FOOTER_FONT_SIZE,
+    color: COLOR.white,
     columns: [
-      { text: `${reference} · Documento emitido pelo sistema Azuos Ticket` },
-      { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', width: 'auto' },
+      { text: `${BRAND_NAME} · ${reference}`, bold: true },
+      { text: right, alignment: 'right', width: 'auto' },
     ],
   };
 }
 
-function drawBlock(block: DocumentBlock): Content {
+function drawBlock(block: DocumentBlock, frame: number): Content {
   switch (block.kind) {
     case 'heading':
       return drawHeading(block.text);
@@ -145,19 +190,13 @@ function drawBlock(block: DocumentBlock): Content {
     case 'entries':
       return drawEntries(block.items, block.emptyText);
     case 'table':
-      return drawTable(block.headers, block.rows, block.emptyText);
+      return drawTable(block, frame);
   }
 }
 
+/* O título da seção anda junto com o que vem embaixo: sozinho no pé de uma página, fica órfão. */
 function drawHeading(text: string): Content {
-  return {
-    text: text.toUpperCase(),
-    fontSize: 9,
-    bold: true,
-    color: COLOR.primary,
-    characterSpacing: 0.4,
-    margin: [0, 10, 0, 5],
-  };
+  return { text, bold: true, margin: [0, 10, 0, 4], headlineLevel: 1 };
 }
 
 /** A etiqueta isolada: um retângulo do tamanho do texto, com o fundo suave da situação. */
@@ -171,7 +210,7 @@ function drawBadge(badge: DocumentBadge): Column {
         [
           {
             text: badge.text,
-            fontSize: 8,
+            fontSize: SMALL_SIZE,
             bold: true,
             color: pdfColor(colors.text),
             fillColor: pdfColor(colors.fill),
@@ -184,7 +223,7 @@ function drawBadge(badge: DocumentBadge): Column {
   };
 }
 
-/** Os pares "rótulo: valor" em duas colunas, como um formulário preenchido. */
+/** Os pares "rótulo: valor" em duas colunas, na mesma tabela de fio preto do modelo. */
 function drawFields(fields: DocumentField[]): Content {
   const rows: TableCell[][] = [];
 
@@ -199,24 +238,13 @@ function drawFields(fields: DocumentField[]): Content {
 
   return {
     margin: [0, 0, 0, 6],
-    table: { widths: ['auto', '*', 'auto', '*'], body: rows },
-    layout: {
-      hLineWidth: (index) => (index === 0 ? 0 : 0.5),
-      vLineWidth: () => 0,
-      hLineColor: () => COLOR.border,
-      paddingLeft: () => 0,
-      paddingRight: () => 10,
-      paddingTop: () => 3,
-      paddingBottom: () => 3,
-    },
+    table: { widths: ['auto', '*', 'auto', '*'], body: rows, dontBreakRows: true },
+    layout: MODEL_TABLE,
   };
 }
 
 function drawField(field: DocumentField): TableCell[] {
-  return [
-    { text: field.label, fontSize: 8, bold: true, color: COLOR.subtext },
-    { text: field.value },
-  ];
+  return [{ text: field.label, bold: true }, { text: field.value }];
 }
 
 function drawEntries(entries: DocumentEntry[], emptyText: string): Content {
@@ -229,19 +257,16 @@ function drawEntries(entries: DocumentEntry[], emptyText: string): Content {
 function drawEntry(entry: DocumentEntry): Content {
   const lines: Content[] = [
     {
-      columns: [
-        drawBadge(entry.badge),
-        { text: entry.caption, fontSize: 8.5, bold: true, margin: [0, 1, 0, 0] },
-      ],
+      columns: [drawBadge(entry.badge), { text: entry.caption, bold: true, margin: [0, 1, 0, 0] }],
       columnGap: 6,
     },
-    { text: entry.details, fontSize: 7.5, color: COLOR.subtext, margin: [0, 2, 0, 2] },
+    { text: entry.details, fontSize: SMALL_SIZE, color: COLOR.subtext, margin: [0, 2, 0, 2] },
     { text: entry.body },
   ];
   if (entry.note) {
     lines.push({
       text: entry.note,
-      fontSize: 8,
+      fontSize: SMALL_SIZE,
       italics: true,
       color: COLOR.subtext,
       margin: [0, 2, 0, 0],
@@ -252,6 +277,7 @@ function drawEntry(entry: DocumentEntry): Content {
 
   return {
     margin: [0, 0, 0, 8],
+    unbreakable: true,
     table: { widths: ['*'], body: [[{ stack: lines }]] },
     layout: {
       hLineWidth: () => 0,
@@ -265,48 +291,98 @@ function drawEntry(entry: DocumentEntry): Content {
   };
 }
 
-/* Cabeçalho escuro, listras claras e só linhas horizontais finas — sem grade, que é o que faz
-   uma lista parecer um formulário impresso em vez de um relatório. */
-const TABLE_LAYOUT: CustomTableLayout = {
-  hLineWidth: (index) => (index <= 1 ? 0 : 0.5),
-  vLineWidth: () => 0,
-  hLineColor: () => COLOR.border,
-  fillColor: (rowIndex) => (rowIndex > 0 && rowIndex % 2 === 0 ? COLOR.surfaceAlt : null),
-  paddingLeft: () => 5,
-  paddingRight: () => 5,
-  paddingTop: () => 4,
-  paddingBottom: () => 4,
+/** A tabela do modelo: todas as linhas em fio preto fino, sem fundo. */
+const MODEL_TABLE: CustomTableLayout = {
+  hLineWidth: () => LINE_WIDTH,
+  vLineWidth: () => LINE_WIDTH,
+  hLineColor: () => COLOR.ink,
+  vLineColor: () => COLOR.ink,
+  paddingLeft: () => CELL_PADDING.side,
+  paddingRight: () => CELL_PADDING.side,
+  paddingTop: () => CELL_PADDING.vertical,
+  paddingBottom: () => CELL_PADDING.vertical,
 };
 
-function drawTable(headers: string[], rows: DocumentCell[][], emptyText: string): Content {
-  const table: Content = {
-    fontSize: 8.5,
+function drawTable(block: TableBlock, frame: number): Content {
+  const { headers, rows, emptyText } = block;
+
+  return {
+    fontSize: tableFontSize(headers.length),
     table: {
       /* O cabeçalho se repete em toda página, e uma linha nunca é cortada ao meio. */
       headerRows: 1,
       dontBreakRows: true,
-      widths: headers.map(() => '*'),
-      body: [headers.map(drawHeaderCell), ...rows.map((row) => row.map(drawCell))],
+      keepWithHeaderRows: 1,
+      widths: columnWidths(headers, rows, frame),
+      body: [
+        headers.map((header): TableCell => ({ text: header, bold: true })),
+        ...bodyRows(headers.length, rows, emptyText),
+      ],
     },
-    layout: TABLE_LAYOUT,
+    layout: MODEL_TABLE,
   };
-  if (rows.length > 0) return table;
-
-  return { stack: [table, drawEmptyState(emptyText)] };
 }
 
-function drawHeaderCell(header: string): TableCell {
-  return { text: header, bold: true, color: COLOR.primaryForeground, fillColor: COLOR.primary };
+/* Tabela vazia é UMA linha dizendo isso: só o cabeçalho, sem linha nenhuma, parece defeito. */
+function bodyRows(count: number, rows: DocumentCell[][], emptyText: string): TableCell[][] {
+  if (rows.length === 0) {
+    const blanks = Array.from({ length: count - 1 }, (): TableCell => ({}));
+
+    return [[{ text: emptyText, colSpan: count, alignment: 'center', italics: true }, ...blanks]];
+  }
+
+  const numeric = Array.from({ length: count }, (_, index) => isNumericColumn(rows, index));
+
+  return rows.map((row) =>
+    Array.from({ length: count }, (_, index) =>
+      drawCell(row[index] ?? { text: '' }, numeric[index] ?? false),
+    ),
+  );
 }
 
-function drawCell(cell: DocumentCell): TableCell {
-  if (!cell.tone) return { text: cell.text };
+function drawCell(cell: DocumentCell, isNumeric: boolean): TableCell {
+  const alignment = isNumeric ? 'right' : 'left';
+  if (!cell.tone) return { text: cell.text, alignment };
 
   return {
     text: cell.text,
+    alignment,
     bold: true,
     color: pdfColor(DOCUMENT_TONE_SOFT_COLORS[cell.tone].text),
   };
+}
+
+const WEIGHT = { min: 5, textCap: 22 };
+
+/**
+ * Cada coluna recebe uma fatia proporcional ao que carrega: a de nomes fica larga, a de datas,
+ * estreita. O peso nunca é menor que a MAIOR PALAVRA da coluna — coluna mais estreita que uma
+ * palavra a parte no meio ("Departament-o"), e telefone quebrado em duas linhas não se lê.
+ */
+function columnWidths(headers: string[], rows: DocumentCell[][], frame: number): number[] {
+  const weights = headers.map((header, index) => {
+    const texts = [header, ...rows.map((row) => row[index]?.text ?? '')];
+    const longestText = Math.max(...texts.map((text) => text.length));
+    const longestWord = Math.max(
+      ...texts.flatMap((text) => text.split(/\s+/)).map((word) => word.length),
+    );
+
+    return Math.max(WEIGHT.min, longestWord, Math.min(longestText, WEIGHT.textCap));
+  });
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  /* O que sobra para o texto, descontados o respiro e os fios de cada coluna. */
+  const columns = headers.length;
+  const available = frame - columns * CELL_PADDING.side * 2 - (columns + 1) * LINE_WIDTH;
+
+  return weights.map((weight) => (available * weight) / total);
+}
+
+/**
+ * O modelo usa corpo 12. Tabela com muitas colunas não cabe entre as margens de 3 cm nesse
+ * tamanho, então a letra desce um pouco — só dentro dela; título e texto continuam em 12.
+ */
+function tableFontSize(columns: number): number {
+  return columns <= 5 ? TEXT_SIZE : SMALL_SIZE;
 }
 
 function drawEmptyState(text: string): Content {
@@ -327,11 +403,11 @@ function drawVerification(verification: DocumentVerification): Content {
         [
           { qr: verification.displayUrl, fit: QR_CODE_SIZE, eccLevel: 'M' },
           {
-            fontSize: 8,
+            fontSize: SMALL_SIZE,
             color: COLOR.subtext,
             margin: [6, 0, 0, 0],
             stack: [
-              { text: 'Conferência do documento', bold: true, color: COLOR.foreground },
+              { text: 'Conferência do documento', bold: true, color: COLOR.ink },
               ...verification.lines,
               {
                 text: verification.displayUrl,
@@ -345,9 +421,9 @@ function drawVerification(verification: DocumentVerification): Content {
       ],
     },
     layout: {
-      hLineWidth: (index) => (index === 0 ? 0.5 : 0),
+      hLineWidth: (index) => (index === 0 ? LINE_WIDTH : 0),
       vLineWidth: () => 0,
-      hLineColor: () => COLOR.border,
+      hLineColor: () => COLOR.ink,
       paddingLeft: () => 0,
       paddingTop: () => 8,
     },
