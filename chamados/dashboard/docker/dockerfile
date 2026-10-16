@@ -47,5 +47,5 @@ COPY --from=build /repo/server/dist server/dist
 # As migrations vão junto: o server as aplica sozinho ao subir.
 COPY --from=build /repo/server/drizzle server/drizzle
 COPY --from=build /repo/client/dist client/dist
-EXPOSE 3336
+EXPOSE 3005
 CMD ["node", "server/dist/main.js"]
