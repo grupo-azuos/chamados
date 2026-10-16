@@ -43,6 +43,9 @@ COPY --from=build /repo/node_modules node_modules
 COPY --from=build /repo/shared/package.json shared/package.json
 COPY --from=build /repo/shared/dist shared/dist
 COPY --from=build /repo/server/package.json server/package.json
+# O npm instala aqui o que não coube na raiz (versão diferente da de outro pacote — hoje
+# `docx` e `nanoid`). Sem esta cópia o server cai na partida com "Cannot find module".
+COPY --from=build /repo/server/node_modules server/node_modules
 COPY --from=build /repo/server/dist server/dist
 # As migrations vão junto: o server as aplica sozinho ao subir.
 COPY --from=build /repo/server/drizzle server/drizzle
