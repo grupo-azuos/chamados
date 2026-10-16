@@ -47,6 +47,7 @@ export type AppShellModel = {
       email: string;
       role: string;
       roles?: ContextRoles;
+      avatarUrl: string | null;
     };
     /**
      * Os contextos que esta pessoa atende — vazio quando ela não tem cargo em área nenhuma,
@@ -158,6 +159,8 @@ export function useAppShellModel(input: {
         email: input.user.email,
         role: USER_ROLE_LABELS[input.user.role],
         roles: input.user.roles,
+        /* A foto chega no `/api/auth/me`, lida do admin-console pelo UUID (como no Paralegal). */
+        avatarUrl: input.user.image ?? null,
       },
       get accountUrl() {
         return config.current.data?.accountUrl ?? null;

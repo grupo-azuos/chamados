@@ -31,20 +31,27 @@ const USERS = [
 const ROLES = [
   grant('u-infra', 'infra'),
   grant('u-both', 'infra'),
-  grant('other-id', 'sistema', 'U-BOTH@exemplo.com'),
+  grant('u-both', 'sistema'),
+  /* Linha de outra pessoa, gravada com um e-mail que hoje é da Ana: não pode valer para ela. */
+  grant('other-id', 'manutencao', 'U-BOTH@exemplo.com'),
   grant('u-manager', 'infra'),
   grant('u-banned', 'infra'),
 ];
 const SUPER_ADMINS = [{ userId: null, userEmail: 'u-super@exemplo.com' }];
 
-function makeService(users = USERS, roles = ROLES, env: Partial<Env> = { NODE_ENV: 'test' }) {
+function makeService(
+  users = USERS,
+  roles = ROLES,
+  env: Partial<Env> = { NODE_ENV: 'test' },
+  superAdmins: { userId: string | null; userEmail: string }[] = SUPER_ADMINS,
+) {
   const directory = {
     listUsers: vi.fn().mockResolvedValue(users),
     getUserById: vi.fn(async (id: string) => users.find((item) => item.id === id) ?? null),
   };
   const repository = {
     list: vi.fn().mockResolvedValue(roles),
-    listSuperAdmins: vi.fn().mockResolvedValue(SUPER_ADMINS),
+    listSuperAdmins: vi.fn().mockResolvedValue(superAdmins),
   };
 
   return new TicketAssigneesService(
@@ -64,12 +71,34 @@ describe('TicketAssigneesService.listForArea', () => {
     ]);
   });
 
-  /* O módulo pode estar gravado pelo e-mail, e não pelo id: vale do mesmo jeito. */
-  it('matches a role recorded by e-mail, whatever the case', async () => {
-    expect(await makeService().listForArea('sistema')).toEqual([
-      { id: 'u-both', name: 'Ana Duas' },
+  // triste
+  /* O vínculo é pelo UUID: um e-mail antigo que hoje é de outra pessoa não a faz responsável. */
+  it('does not give a module through an e-mail that belongs to someone else now', async () => {
+    expect(await makeService().listForArea('manutencao')).toEqual([
       { id: 'u-super', name: 'Zeca Super' },
     ]);
+  });
+
+  // feliz
+  /* Trocar de e-mail no admin-console não tira o super-admin já vinculado ao UUID. */
+  it('keeps a claimed super admin after an e-mail change', async () => {
+    const renamed = [user('u-super', 'Zeca Super', { email: 'novo@exemplo.com' })];
+    const service = makeService(renamed, [], { NODE_ENV: 'test' }, [
+      { userId: 'u-super', userEmail: 'u-super@exemplo.com' },
+    ]);
+
+    expect(await service.listForArea('sistema')).toEqual([{ id: 'u-super', name: 'Zeca Super' }]);
+  });
+
+  // triste
+  /* E quem herdou o e-mail de um super-admin já vinculado não vira super-admin. */
+  it('does not make super admin whoever reuses a claimed e-mail', async () => {
+    const heir = [user('u-heir', 'Novo Dono', { email: 'u-super@exemplo.com' })];
+    const service = makeService(heir, [], { NODE_ENV: 'test' }, [
+      { userId: 'u-super', userEmail: 'u-super@exemplo.com' },
+    ]);
+
+    expect(await service.listForArea('sistema')).toEqual([]);
   });
 
   // triste
