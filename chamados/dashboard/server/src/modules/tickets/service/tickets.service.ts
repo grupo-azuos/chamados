@@ -24,6 +24,7 @@ import {
   summarizeTickets,
   type TicketSummary,
 } from '@template/shared/domain/ticket-metrics.util';
+import { departmentFromText } from '@template/shared/domain/department.util';
 import { refuseScreenshot } from '@template/shared/domain/screenshot-catalog.util';
 import {
   ticketPriorityLabel,
@@ -34,8 +35,10 @@ import {
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
 import {
   type CreateTicketInput,
+  type MyTicket,
   type PublicTicket,
   type OpenedTicket,
+  type RequesterDefaults,
   type Ticket,
   type TicketAssigneeOption,
   type TicketListQuery,
@@ -44,6 +47,7 @@ import {
 } from '@template/shared/schemas/ticket.schema';
 import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
 
+import { AdminConsoleProfileProvider } from '../../../lib/auth/admin-console-profile.provider';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   assertCanAttendTicket,
@@ -59,7 +63,14 @@ import { capReportRows } from '../../../lib/report/report-limit.util';
 import { buildReport, formatReportDate, reportSubtitle } from '../../../lib/report/report.util';
 import { StorageService } from '../../../lib/storage/storage.service';
 import { describeTicketChanges, toUpdateHistory } from '../mapper/ticket-histories.mapper';
-import { toPublicTicket, toTicket, toTicketInsert, toTicketUpdate } from '../mapper/tickets.mapper';
+import {
+  toMyTicket,
+  toPublicTicket,
+  toTicket,
+  toTicketInsert,
+  toTicketUpdate,
+  type TicketRequester,
+} from '../mapper/tickets.mapper';
 import { TicketHistoriesRepository } from '../repository/ticket-histories.repository';
 import { TICKET_NOT_FOUND, TicketAccessService } from './ticket-access.service';
 import { TicketAttachmentsService, type UploadedAttachment } from './ticket-attachments.service';
@@ -131,9 +142,10 @@ export type TicketDashboard = TicketSummary & {
  *
  * Duas fronteiras diferentes convivem aqui, e é de propósito:
  *
- * - `create` e `findByProtocol` são de quem NÃO tem login. Não chamam policy porque não há
- *   identidade a consultar — a proteção delas é o que cada uma devolve (`findByProtocol`
- *   devolve o chamado podado) e o que cada uma aceita.
+ * - `create`, `findByProtocol` e `listMine` são de QUEM PEDE: qualquer pessoa logada abre
+ *   chamado e acompanha os seus. A proteção delas é a identidade carimbada (o chamado é de
+ *   quem abriu) e o que cada uma devolve (a consulta devolve o chamado podado, e só para quem
+ *   abriu ou atende a área).
  * - `list`, `findById`, `dashboard` e `update` são do painel, e começam pela policy.
  *
  * Não existe método de exclusão, em nenhuma das duas: chamado sai da fila por estágio.
@@ -156,6 +168,7 @@ export class TicketsService {
     @Optional() private readonly assignees?: TicketAssigneesService,
     @Optional() private readonly notifier?: TicketWhatsappNotifierService,
     @Optional() @Inject(ENV) private readonly env?: Env,
+    @Optional() private readonly profiles?: AdminConsoleProfileProvider,
   ) {}
 
   /** Quem pode ser escolhido como responsável por um chamado desta área (lista pública). */
@@ -355,7 +368,10 @@ export class TicketsService {
   }
 
   /**
-   * Abrir chamado — PÚBLICO. Não há identidade: quem pediu é o que a pessoa digitou.
+   * Abrir chamado. Pela tela, quem abre está LOGADO, e o chamado fica ligado a ela pelo id do
+   * admin-console (`options.requester`) — o nome é o da identidade, nunca o do corpo. Sem
+   * `requester` só entra o bot do WhatsApp quando não reconheceu quem escreve; reconhecendo,
+   * ele passa a conta da pessoa como `requester`.
    *
    * O print é guardado ANTES do chamado existir. Se a gravação do chamado falhar depois,
    * sobra um arquivo órfão no bucket — o contrário (chamado apontando para um arquivo que
@@ -367,23 +383,15 @@ export class TicketsService {
     attachments: readonly UploadedAttachment[] = [],
     /* Quem abriu pela CONVERSA já recebe a confirmação na própria conversa: mandar também o
        aviso de "chamado aberto" seriam duas mensagens dizendo a mesma coisa. */
-    options: { skipOpeningNotice?: boolean } = {},
+    options: { skipOpeningNotice?: boolean; requester?: TicketRequester } = {},
   ): Promise<OpenedTicket> {
-    if (input.area === 'sistema') {
-      const projectId = Number(input.projectId);
-      if (
-        !Number.isInteger(projectId) ||
-        !(await this.softwareProjectsService?.isTicketOption(projectId))
-      ) {
-        throw new UnprocessableEntityException(
-          'Selecione um sistema disponível para abrir o chamado.',
-        );
-      }
-    }
+    await this.assertSystemProject(input);
 
     const assignee = await this.resolveAssignee(input.area, input.assigneeId);
     const screenshotKey = await this.storeScreenshot(screenshot);
-    const row = await this.repository.insert(toTicketInsert(input, screenshotKey, assignee));
+    const row = await this.repository.insert(
+      toTicketInsert(input, screenshotKey, assignee, options.requester),
+    );
 
     const openingNotice = await this.announceOpening(row, options.skipOpeningNotice);
 
@@ -414,33 +422,91 @@ export class TicketsService {
   }
 
   /**
-   * Consulta por protocolo — PÚBLICA, e por isso devolve o chamado podado.
-   *
-   * Aceita o protocolo como a pessoa o digitou (`CH-0007`, `ch 7`, `7`): quem anotou no
-   * celular raramente digita o traço, e recusar por causa disso transforma um acerto em erro.
-   */
-  /**
    * O chamado de um LINK DE CONSULTA — o link assinado que vai nas mensagens de WhatsApp. Abre
-   * direto aquele chamado, com os mesmos campos da consulta por protocolo. Link que não confere:
-   * 404, igual a um chamado que não existe.
+   * direto aquele chamado, com os mesmos campos da consulta por número, para quem pode vê-lo.
+   * Link que não confere: 404, igual a um chamado que não existe.
    */
-  async findByAccessToken(token: string): Promise<PublicTicket> {
+  async findByAccessToken(user: RequestUser, token: string): Promise<PublicTicket> {
     const id = this.env?.BOT_API_TOKEN ? verifyTicketAccess(token, this.env.BOT_API_TOKEN) : null;
     if (!id) throw new NotFoundException(NOT_FOUND);
 
-    return this.findPublicById(id);
+    return this.findPublicById(user, id);
   }
 
-  async findByProtocol(protocol: string): Promise<PublicTicket> {
+  /**
+   * Consulta pelo NÚMERO do chamado, logada.
+   *
+   * Aceita o número como a pessoa o digitou (`CH-0007`, `ch 7`, `7`): quem anotou no celular
+   * raramente digita o traço, e recusar por causa disso transforma um acerto em erro.
+   */
+  async findByProtocol(user: RequestUser, protocol: string): Promise<PublicTicket> {
     const id = parseTicketProtocol(protocol);
     if (!id) throw new NotFoundException(NOT_FOUND);
 
-    return this.findPublicById(id);
+    return this.findPublicById(user, id);
   }
 
-  private async findPublicById(id: number): Promise<PublicTicket> {
+  /**
+   * "Meus chamados": os que a pessoa abriu, mais recentes primeiro. Quem nunca abriu nada vê a
+   * lista vazia — não é erro.
+   */
+  async listMine(user: RequestUser): Promise<MyTicket[]> {
+    const rows = await this.repository.listByRequester(user.id);
+
+    return rows.map(toMyTicket);
+  }
+
+  /* Chamado de Sistema é de um sistema. A exceção é o pedido de USUÁRIO pelo WhatsApp (o
+     "0 — Nenhum" do `/acesso`): quem ainda não tem conta não tem sistema para pedir. */
+  private async assertSystemProject(input: CreateTicketInput): Promise<void> {
+    if (input.area !== 'sistema') return;
+    if (input.problemType === 'access_request' && input.projectId == null) return;
+
+    const projectId = Number(input.projectId);
+    const isOption =
+      Number.isInteger(projectId) &&
+      (await this.softwareProjectsService?.isTicketOption(projectId));
+    if (isOption) return;
+
+    throw new UnprocessableEntityException('Selecione um sistema disponível para abrir o chamado.');
+  }
+
+  /** Quem já abriu chamado com este telefone — o desempate do bot para reconhecer quem escreve. */
+  async phoneOwnersOf(phone: string): Promise<string[]> {
+    return this.repository.requesterIdsByPhone(phone);
+  }
+
+  /**
+   * O que o formulário de abrir chamado já traz: o nome e o e-mail da IDENTIDADE (o nome não
+   * se muda), e telefone e departamento do perfil no admin-console — que a pessoa confirma ou
+   * corrige. Sem telefone no perfil, vale o do último chamado dela. O admin-console fora do ar
+   * não impede ninguém de abrir chamado: só vem menos coisa preenchida.
+   */
+  async requesterDefaults(
+    user: RequestUser,
+    cookieHeader: string | undefined,
+  ): Promise<RequesterDefaults> {
+    const profile = (await this.profiles?.fetchMine(cookieHeader)) ?? null;
+    const phone = profile?.phone ?? (await this.repository.lastPhoneOf(user.id));
+
+    return {
+      name: user.name,
+      email: user.email,
+      phone,
+      department: departmentFromText(profile?.department),
+      jobTitle: profile?.jobTitle ?? null,
+    };
+  }
+
+  /**
+   * Quem pode ver um chamado pela consulta: QUEM ABRIU, ou quem atende alguma área dele.
+   * Qualquer outra pessoa recebe o mesmo 404 de um chamado que não existe — 403 contaria que
+   * aquele número existe e é de outra pessoa.
+   */
+  private async findPublicById(user: RequestUser, id: number): Promise<PublicTicket> {
     const row = await this.repository.findById(id);
     if (!row) throw new NotFoundException(NOT_FOUND);
+    if (!(await this.canLookUp(user, row))) throw new NotFoundException(NOT_FOUND);
 
     const [screenshotUrl, attachments] = await Promise.all([
       this.screenshotUrl(row),
@@ -453,6 +519,17 @@ export class TicketsService {
     const ownFiles = attachments.filter((attachment) => attachment.historyId === null);
 
     return toPublicTicket(row, screenshotUrl, ownFiles, histories);
+  }
+
+  private async canLookUp(user: RequestUser, row: TicketWithComputer): Promise<boolean> {
+    if (row.requesterId && row.requesterId === user.id) return true;
+
+    const [areas, participants] = await Promise.all([
+      this.access.accessibleAreas(user),
+      this.repository.listAreasOf(row.id),
+    ]);
+
+    return [row.area, ...participants].some((area) => areas.includes(area));
   }
 
   async update(user: RequestUser, id: number, input: UpdateTicketInput): Promise<Ticket> {

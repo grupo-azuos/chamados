@@ -13,4 +13,10 @@ export interface UserDirectoryProvider {
 
   /** Busca uma pessoa específica pelo seu identificador único. */
   getUserById(id: string): Promise<DirectoryUser | null>;
+
+  /**
+   * As pessoas do ESCRITÓRIO (não só as deste sistema) cujo nome ou e-mail contém o termo.
+   * É o que o bot do WhatsApp usa para reconhecer quem escreve. Falha é exceção.
+   */
+  searchUsers(term: string): Promise<DirectoryUser[]>;
 }

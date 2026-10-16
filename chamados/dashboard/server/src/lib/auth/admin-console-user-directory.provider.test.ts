@@ -72,7 +72,35 @@ describe('AdminConsoleUserDirectoryProvider', () => {
     expect((await new AdminConsoleUserDirectoryProvider(ENV).getUserById('u-1'))?.name).toBe('Ana');
   });
 
+  /* Na máquina local, a pessoa de desenvolvimento é achada sem perguntar ao admin-console. */
+  it('finds the development person locally when the mock is on', async () => {
+    const fetchMock = answer({});
+    vi.stubGlobal('fetch', fetchMock);
+
+    const user = await new AdminConsoleUserDirectoryProvider({
+      ...ENV,
+      USER_MOCK: 'true',
+    }).getUserById('00000000-0000-0000-0000-000000000001');
+
+    expect(user).toMatchObject({ email: 'dev@chamados.local', banned: false });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   // triste
+  /* Em produção o mock é recusado: o mesmo id vira uma pergunta normal ao admin-console. */
+  it('does not invent the development person when the mock is off', async () => {
+    const fetchMock = answer({ data: { users: [] } });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const user = await new AdminConsoleUserDirectoryProvider({
+      ...ENV,
+      USER_MOCK: 'false',
+    }).getUserById('00000000-0000-0000-0000-000000000001');
+
+    expect(user).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   /* Lista que não pôde ser lida não é "ninguém tem acesso": é erro, com o motivo. */
   it('fails loudly instead of answering an empty list when the admin-console refuses', async () => {
     vi.stubGlobal('fetch', answer({}, 401));

@@ -3,6 +3,7 @@ import { computerAlerts } from './schema/computer-alerts.schema';
 import { computerSamples } from './schema/computer-samples.schema';
 import { computerTransfers } from './schema/computer-transfers.schema';
 import { computers } from './schema/computers.schema';
+import { history } from './schema/history.schema';
 import { internalRoles } from './schema/internal-roles.schema';
 import { superAdmins } from './schema/super-admins.schema';
 import { inventoryItems } from './schema/inventory-items.schema';
@@ -71,6 +72,7 @@ export const drizzleSchema = {
   networkEvents,
   internalRoles,
   superAdmins,
+  history,
 };
 
 export type DrizzleSchema = typeof drizzleSchema;

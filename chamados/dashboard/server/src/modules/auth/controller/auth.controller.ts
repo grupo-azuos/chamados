@@ -3,7 +3,6 @@ import { ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@
 
 import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { AnyModule } from '../../../lib/auth/module-context.decorator';
-import { Public } from '../../../lib/auth/public.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
@@ -27,7 +26,6 @@ export class AuthController {
   ) {}
 
   @Get('config')
-  @Public()
   @ApiOperation({
     summary: 'Configuração pública de autenticação',
     description: 'O endereço da conta da pessoa no admin-console (trocar senha, foto, sair).',

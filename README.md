@@ -254,9 +254,9 @@ São duas peças, de dois lugares:
 
 | Papel no admin-console | Com o módulo | Sem módulo nenhum |
 |---|---|---|
-| Administrador | mexe em tudo daquele módulo (e atende os chamados da área) | só abre chamado e valida documento |
-| Gestor | só vê os dados do módulo | só abre chamado e valida documento |
-| Usuário | só vê os dados do módulo | só abre chamado e valida documento |
+| Administrador | mexe em tudo daquele módulo (e atende os chamados da área) | só abre chamado, acompanha os seus e valida documento |
+| Gestor | só vê os dados do módulo | só abre chamado, acompanha os seus e valida documento |
+| Usuário | só vê os dados do módulo | só abre chamado, acompanha os seus e valida documento |
 
 **O super-admin** vê e altera todas as telas e é o único que libera módulos. Ele não nasce de
 clique nenhum, só do comando, rodado por quem tem o `.env` do servidor:
@@ -267,8 +267,29 @@ npm run superadmin:promote -- pessoa@azuoscontabil.com.br
 npm run superadmin:promote -- pessoa@azuoscontabil.com.br --remove
 ```
 
-Abrir e consultar chamado (`/support`) e validar documento (`/verify`) são públicos: não passam
-por regra nenhuma.
+**Não há rota pública.** Abrir chamado (`/support`) e validar documento (`/verify`) também passam
+pelo login: qualquer pessoa com acesso ao sistema no admin-console — mesmo sem módulo nenhum —
+abre chamado, e o chamado fica ligado a ela pelo id (`requester_id`). O formulário já vem
+preenchido com os dados do perfil dela no admin-console: o nome é travado (é a identidade);
+telefone e departamento ela confirma ou corrige. Ela acompanha em "Meus chamados" ou pelo número
+— e só enxerga os próprios (ou os de uma área que atende).
+
+O perfil vem de `GET /api/me/profile` do admin-console, que só aceita a sessão da própria pessoa:
+o servidor do chamados repassa o cookie de ACESSO dela (`<ADMIN_CONSOLE_COOKIE_PREFIX>_access_token`)
+e nunca o de renovação — reapresentado por outro processo, o admin-console o trata como roubo e
+derruba a sessão.
+
+**Pelo WhatsApp** (`/acesso`), o bot pergunta o nome e procura a pessoa no admin-console
+(`GET /api/users?search=`). Se mais de uma tem aquele nome, ganha quem já abriu chamado com o
+mesmo telefone; sem desempate, o bot pergunta "qual delas é você?". Reconhecida, o pedido fica
+ligado à conta dela e o e-mail não é perguntado. Ninguém bate: o pedido segue sem vínculo, como
+antes.
+
+**Histórico.** Toda mudança feita pela API (criar, alterar, apagar) vira uma linha em
+`chamados.history`, no mesmo formato do histórico do admin-console: ação, quem (`actor_id`,
+`actor_email`; nulo quando foi máquina), alvo, IP, navegador e os campos enviados (`changes`).
+Segredo não entra, e texto longo é cortado. A gravação é automática (`HistoryInterceptor`); falha
+no histórico vai para o log e não desfaz a mudança.
 
 No código, a regra está em `shared/src/domain/module-access.util.ts`; toda rota da API declara
 o módulo dela (`@ModuleContext('infra')`), e a trava global (`RolesGuard`) recusa quem não tem o
@@ -284,20 +305,19 @@ sem módulo nenhum, como qualquer pessoa; para ver o painel inteiro:
 npm run superadmin:promote -- dev@chamados.local
 ```
 
-### Em produção — três cuidados que não são do código
+### Em produção — o que não é do código
 
 1. **O container só é alcançável pelo proxy.** O sistema confia nos cabeçalhos sem perguntar de
    onde vieram — é assim que auth-forward funciona. Sem porta publicada, sem router direto.
-2. **Dois routers no Traefik para o mesmo container:** um com o middleware de login do
-   admin-console (`um-auth`, com `addAuthCookiesToResponse`) para o painel e a API, e outro
-   SEM ele, por `PathPrefix`, só para o que é público — `/support`, `/verify`, os arquivos da
-   tela (`/_app`), as rotas públicas da API (abrir/consultar chamado, validar documento, webhook
-   do WhatsApp e da rede, callback do GitHub, `/api/health`) e o WebSocket `/agent` dos agentes.
-3. **O router público APAGA os `x-forwarded-user-*`** que vierem do navegador (middleware de
-   cabeçalhos do Traefik). Sem isso, alguém forjaria a identidade numa rota aberta.
+2. **Um router com o login** (`forwardAuth` do admin-console, com `addAuthCookiesToResponse`) para
+   tudo — telas e API. **O cookie NÃO é removido** antes do app: o servidor precisa do cookie de
+   acesso para ler o perfil de quem abre chamado.
+3. **Um router SEM login só para máquinas**, que se identificam com token próprio: o agente
+   (`PathPrefix(/agent)`) e o webhook da UniFi (`Path(/api/network/webhook)`). Ele apaga os
+   `x-forwarded-user-*` que vierem de fora. O bot do WhatsApp fala com o servidor pela rede interna.
 
 As variáveis (`ADMIN_CONSOLE_URL`, `ADMIN_CONSOLE_TOKEN`, `ADMIN_CONSOLE_LOGIN_URL`,
-`USER_MOCK`) estão explicadas em `server/.env.example`. Os passos do lado do admin-console
+`ADMIN_CONSOLE_COOKIE_PREFIX`, `USER_MOCK`) estão explicadas em `server/.env.example`. Os passos do lado do admin-console
 (cadastrar o sistema `chamados` com o host, gerar o token de serviço) estão no README dele.
 
 ## O que o MVP não faz

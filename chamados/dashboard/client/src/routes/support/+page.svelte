@@ -38,12 +38,12 @@
       <div>
         <h1 class="text-ink-900 text-2xl font-bold">Central de Chamados TI</h1>
         <p class="text-ink-500 mt-1 text-sm">
-          Abra e acompanhe solicitações de suporte técnico. Não precisa de senha.
+          Abra e acompanhe as suas solicitações de suporte técnico.
         </p>
       </div>
 
       <ActionButton
-        data={{ label: 'Consultar chamado' }}
+        data={{ label: 'Meus chamados' }}
         ui={{ variant: 'secondary', className: 'shrink-0' }}
         actions={{ onClick: () => (isLookupOpen = true) }}
       />
