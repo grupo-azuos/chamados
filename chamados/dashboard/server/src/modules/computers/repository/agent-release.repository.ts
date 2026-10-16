@@ -17,7 +17,7 @@ export class AgentReleaseRepository {
       const result = await this.client.send(
         new GetObjectCommand({
           Bucket: this.env.S3_BUCKET,
-          Key: 'agent/latest.json',
+          Key: 'agent/lts.json',
         }),
         { abortSignal: AbortSignal.timeout(10_000) },
       );

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { agentReleaseManifestSchema } from './agent-release.schema';
+import {
+  agentDownloadKindSchema,
+  agentDownloadQuerySchema,
+  agentReleaseManifestSchema,
+} from './agent-release.schema';
 
 function manifest() {
   const artifact = (file: string) => ({
@@ -36,5 +40,21 @@ describe('agent release manifest', () => {
     data.artifacts.msi.sha256 = 'not-a-hash';
     data.artifacts.msi.sizeBytes = -1;
     expect(agentReleaseManifestSchema.safeParse(data).success).toBe(false);
+  });
+});
+
+describe('agent dashboard download contract', () => {
+  // feliz
+  it('accepts only the public installation artifacts and an exact version', () => {
+    for (const kind of ['msi', 'certificate', 'certificateScript'])
+      expect(agentDownloadKindSchema.safeParse(kind).success).toBe(true);
+    expect(agentDownloadQuerySchema.safeParse({ version: '1.2.3' }).success).toBe(true);
+  });
+  // triste
+  it('rejects private keys, object paths and incomplete versions', () => {
+    for (const kind of ['pfx', 'tickets/private', '../publisher.cer'])
+      expect(agentDownloadKindSchema.safeParse(kind).success).toBe(false);
+    for (const version of [undefined, 'latest', '1.2', '01.2.3'])
+      expect(agentDownloadQuerySchema.safeParse({ version }).success).toBe(false);
   });
 });
