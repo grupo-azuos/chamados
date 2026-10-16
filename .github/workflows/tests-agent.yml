@@ -1,11 +1,11 @@
-name: CI/Agent and releases
+name: Tests/Agent
 on:
   pull_request:
     paths:
       [
         "chamados/agent/**",
         ".github/scripts/release/**",
-        ".github/workflows/agent-*.yml",
+        ".github/workflows/*-agent*.yml",
         ".github/workflows/release-bump.yml",
       ]
   push:
@@ -14,11 +14,11 @@ on:
       [
         "chamados/agent/**",
         ".github/scripts/release/**",
-        ".github/workflows/agent-*.yml",
+        ".github/workflows/*-agent*.yml",
         ".github/workflows/release-bump.yml",
       ]
 permissions:
   contents: read
 jobs:
   check:
-    uses: ./.github/workflows/agent-build.yml
+    uses: ./.github/workflows/build-agent.yml
