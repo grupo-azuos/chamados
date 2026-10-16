@@ -1,12 +1,8 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 
-import {
-  DOCUMENT_FONT_NAME,
-  DOCUMENT_PALETTE,
-  DOCUMENT_TONE_SOFT_COLORS,
-  excelColor,
-} from './document-palette.util';
+import { DOCUMENT_PALETTE, DOCUMENT_TONE_SOFT_COLORS, excelColor } from './document-palette.util';
+import { OFFICE_FONT } from './document-brand.util';
 import { type BuiltDocument } from './document.type';
 import { type ReportRequest } from './report.type';
 import { REPORT_MAX_ROWS } from './report-limit.util';
@@ -14,12 +10,13 @@ import { buildReport, formatReportDate, reportDocument, reportSubtitle } from '.
 
 type Row = { name: string; department: string; status: 'Crítica' | 'Boa' };
 
-/* Layout fixo do Excel: título (1), subtítulo (2), linha em branco (3), cabeçalho (4), dados
-   a partir da 5 — os testes abaixo dependem desses números. */
+/* Layout fixo do Excel (o da Gestão de RH): faixa azul com o título (1–2) e o subtítulo (3), fio
+   amarelo (4), respiro (5), cabeçalho (6) e dados a partir da 7 — os testes dependem disso. */
 const TITLE_ROW = 1;
-const SUBTITLE_ROW = 2;
-const HEADER_ROW = 4;
-const FIRST_DATA_ROW = 5;
+const SUBTITLE_ROW = 3;
+const ACCENT_ROW = 4;
+const HEADER_ROW = 6;
+const FIRST_DATA_ROW = 7;
 
 async function loadSheet(report: BuiltDocument) {
   const workbook = new ExcelJS.Workbook();
@@ -120,29 +117,35 @@ describe('buildReport — xlsx', () => {
     expect(sheet?.getRow(FIRST_DATA_ROW + 1).getCell(2).text).toBe('FISCAL');
   });
 
-  it('paints the status label with the same soft color as the badge on screen', async () => {
+  /* A situação sai em negrito, na cor do selo da tela; o fundo é o da linha (zebrado). */
+  it('writes the status label in the same color as the badge on screen', async () => {
     const sheet = await loadSheet(await buildReport(request()));
 
-    const criticalFill = sheet?.getRow(FIRST_DATA_ROW).getCell(3).fill as ExcelJS.FillPattern;
-    expect(criticalFill.fgColor?.argb).toBe(excelColor(DOCUMENT_TONE_SOFT_COLORS.danger.fill));
-
-    const goodFill = sheet?.getRow(FIRST_DATA_ROW + 1).getCell(3).fill as ExcelJS.FillPattern;
-    expect(goodFill.fgColor?.argb).toBe(excelColor(DOCUMENT_TONE_SOFT_COLORS.success.fill));
+    expect(sheet?.getRow(FIRST_DATA_ROW).getCell(3).font?.color?.argb).toBe(
+      excelColor(DOCUMENT_TONE_SOFT_COLORS.danger.text),
+    );
+    expect(sheet?.getRow(FIRST_DATA_ROW + 1).getCell(3).font?.color?.argb).toBe(
+      excelColor(DOCUMENT_TONE_SOFT_COLORS.success.text),
+    );
+    const zebra = sheet?.getRow(FIRST_DATA_ROW + 1).getCell(1).fill as ExcelJS.FillPattern;
+    expect(zebra.fgColor?.argb).toBe(excelColor(DOCUMENT_PALETTE.surfaceAlt));
   });
 
-  it('writes the title in the brand color, centered', async () => {
+  it('writes the title in white on the blue band, to the right of the logo', async () => {
     const sheet = await loadSheet(await buildReport(request()));
     const titleCell = sheet?.getRow(TITLE_ROW).getCell(1);
+    const band = titleCell?.fill as ExcelJS.FillPattern;
 
-    expect(titleCell?.font?.color?.argb).toBe(excelColor(DOCUMENT_PALETTE.primary));
-    expect(titleCell?.alignment?.horizontal).toBe('center');
+    expect(titleCell?.font?.color?.argb).toBe(excelColor('FFFFFF'));
+    expect(titleCell?.alignment?.horizontal).toBe('right');
+    expect(band.fgColor?.argb).toBe(excelColor(DOCUMENT_PALETTE.primary));
   });
 
-  it('draws a line in the theme color under the title', async () => {
+  it('draws the yellow line under the band', async () => {
     const sheet = await loadSheet(await buildReport(request()));
-    const underline = sheet?.getRow(TITLE_ROW).getCell(1).border?.bottom;
+    const accent = sheet?.getRow(ACCENT_ROW).getCell(1).fill as ExcelJS.FillPattern;
 
-    expect(underline?.color?.argb).toBe(excelColor(DOCUMENT_PALETTE.primary));
+    expect(accent.fgColor?.argb).toBe(excelColor(DOCUMENT_PALETTE.accent));
   });
 
   it('paints the table header with the brand color', async () => {
@@ -158,7 +161,7 @@ describe('buildReport — xlsx', () => {
       (row) => sheet?.getRow(row).getCell(1).font?.name,
     );
 
-    expect(fontNames).toEqual([DOCUMENT_FONT_NAME, DOCUMENT_FONT_NAME, DOCUMENT_FONT_NAME]);
+    expect(fontNames).toEqual([OFFICE_FONT, OFFICE_FONT, OFFICE_FONT]);
   });
 
   it('keeps the header in sight while the list scrolls', async () => {
@@ -198,8 +201,7 @@ describe('buildReport — docx', () => {
     expect(report.buffer.subarray(0, 2).toString('ascii')).toBe('PK');
   });
 
-  /* O Word recusa uma tabela sem linhas: uma lista cuja única coluna é a do título (a que
-     vira a faixa da ficha) não sobra com campo nenhum, e não pode derrubar a exportação. */
+  /* Uma lista de uma coluna só (a do título) também tem de virar um Word válido. */
   it('builds a valid file when the only column is the one that titles each record', async () => {
     const report = await buildReport(
       request({

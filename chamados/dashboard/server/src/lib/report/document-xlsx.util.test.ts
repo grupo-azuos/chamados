@@ -5,12 +5,14 @@ import { DOCUMENT_PALETTE, excelColor } from './document-palette.util';
 import { renderXlsxDocument } from './document-xlsx.util';
 import { type DocumentDefinition } from './document.type';
 
-/* Layout fixo da planilha: título (1), subtítulo (2), linha em branco (3) e os blocos a partir
-   da 4 — num relatório, o cabeçalho da tabela é a linha 4 e os dados começam na 5. */
+/* Layout fixo da planilha, o da Gestão de RH: faixa azul com o título (1–2) e o subtítulo com a
+   data (3), fio amarelo (4), respiro (5) e os blocos a partir da 6 — num relatório, o cabeçalho
+   da tabela é a linha 6 e os dados começam na 7. */
 const TITLE_ROW = 1;
-const SUBTITLE_ROW = 2;
-const HEADER_ROW = 4;
-const FIRST_DATA_ROW = 5;
+const SUBTITLE_ROW = 3;
+const ACCENT_ROW = 4;
+const HEADER_ROW = 6;
+const FIRST_DATA_ROW = 7;
 
 function definition(overrides: Partial<DocumentDefinition> = {}): DocumentDefinition {
   return {
@@ -48,20 +50,33 @@ describe('renderXlsxDocument', () => {
     const sheet = (await load(await renderXlsxDocument(definition()))).worksheets[0];
 
     expect(sheet?.getRow(TITLE_ROW).getCell(1).text).toBe('Chamados');
-    expect(sheet?.getRow(SUBTITLE_ROW).getCell(1).text).toBe('2 chamados · gerado em 02/03/2026');
+    expect(sheet?.getRow(SUBTITLE_ROW).getCell(1).text).toContain(
+      '2 chamados · gerado em 02/03/2026',
+    );
     expect(sheet?.getRow(HEADER_ROW).getCell(1).text).toBe('Protocolo');
     expect(sheet?.getRow(FIRST_DATA_ROW).getCell(2).text).toBe('Bia Costa');
     expect(sheet?.getRow(FIRST_DATA_ROW + 1).getCell(1).text).toBe('CH-0002');
   });
 
-  it('signs the sheet with the brand logo and the primary colour of the theme', async () => {
+  it('draws the brand band: blue with the logo, the yellow line and the blue table header', async () => {
     const workbook = await load(await renderXlsxDocument(definition()));
     const sheet = workbook.worksheets[0];
+    const fillOf = (row: number) =>
+      (sheet?.getRow(row).getCell(1).fill as { fgColor?: { argb?: string } } | undefined)?.fgColor
+        ?.argb;
 
     expect(sheet?.getImages()).toHaveLength(1);
-    expect(sheet?.getRow(TITLE_ROW).getCell(1).font?.color?.argb).toBe(
-      excelColor(DOCUMENT_PALETTE.primary),
-    );
+    expect(fillOf(TITLE_ROW)).toBe(excelColor(DOCUMENT_PALETTE.primary));
+    expect(fillOf(ACCENT_ROW)).toBe(excelColor(DOCUMENT_PALETTE.accent));
+    expect(fillOf(HEADER_ROW)).toBe(excelColor(DOCUMENT_PALETTE.primary));
+    expect(sheet?.getRow(HEADER_ROW).getCell(1).font?.name).toBe('Arial Narrow');
+  });
+
+  it('keeps the table header in sight, with a filter on it', async () => {
+    const sheet = (await load(await renderXlsxDocument(definition()))).worksheets[0];
+
+    expect(sheet?.views[0]).toMatchObject({ state: 'frozen', ySplit: HEADER_ROW });
+    expect(sheet?.autoFilter).toBeTruthy();
   });
 
   // triste
