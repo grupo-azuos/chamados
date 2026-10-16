@@ -10,13 +10,7 @@ import {
   parseEmail,
   parseFullName,
   parsePhone,
-  pickProjects,
 } from './access-request.util';
-
-const PROJECTS = [
-  { id: 7, name: 'Portal do Cliente' },
-  { id: 9, name: 'Folha' },
-];
 
 describe('isAccessRequestCommand', () => {
   // feliz
@@ -113,7 +107,6 @@ describe('nextAccessRequestStep', () => {
         email: 'm@e.com',
         phone: '62999990000',
         department: 'rh',
-        project: PROJECTS[0] ?? null,
       }),
     ).toBeNull();
   });
@@ -131,28 +124,20 @@ describe('fillAccessRequestStep', () => {
 
   // feliz
   it('fills each field with the answer', () => {
-    const named = fillAccessRequestStep(draft, 'name', 'Maria Clara', PROJECTS);
-    const department = fillAccessRequestStep(draft, 'department', '11', PROJECTS);
-    const system = fillAccessRequestStep(draft, 'system', 'folha', PROJECTS);
+    const named = fillAccessRequestStep(draft, 'name', 'Maria Clara');
+    const department = fillAccessRequestStep(draft, 'department', '11');
 
     expect(named).toEqual({ ok: true, draft: { ...draft, requesterName: 'Maria Clara' } });
     expect(department).toEqual({ ok: true, draft: { ...draft, department: 'rh' } });
-    expect(system).toEqual({
-      ok: true,
-      draft: { ...draft, project: { id: 9, name: 'Folha' }, projects: [{ id: 9, name: 'Folha' }] },
-    });
   });
 
   // triste
   it('explains how to answer when it did not understand, with the list again', () => {
-    const name = fillAccessRequestStep(draft, 'name', 'Maria', PROJECTS);
-    const system = fillAccessRequestStep(draft, 'system', '5', PROJECTS);
+    const name = fillAccessRequestStep(draft, 'name', 'Maria');
+    const department = fillAccessRequestStep(draft, 'department', '99');
 
     expect(name).toMatchObject({ ok: false, error: expect.stringContaining('dois nomes') });
-    expect(system).toMatchObject({
-      ok: false,
-      error: expect.stringContaining('1. Portal do Cliente'),
-    });
+    expect(department).toMatchObject({ ok: false, error: expect.stringContaining('11. RH') });
   });
 });
 
@@ -163,10 +148,9 @@ describe('accessRequestDescription', () => {
       requesterName: 'Maria Clara',
       email: 'maria@empresa.com.br',
       phone: '62999990000',
-      projectName: 'Folha',
     });
 
-    expect(description).toContain('Pedido de acesso ao sistema Folha');
+    expect(description).toContain('Pedido de usuário');
     expect(description).toContain('E-mail: maria@empresa.com.br');
     expect(description).toContain('Telefone: 62999990000');
   });
@@ -177,7 +161,6 @@ describe('accessRequestDescription', () => {
       requesterName: 'Maria Clara',
       email: 'm@e.com',
       phone: '6299999000',
-      projectName: '',
     });
 
     expect(description.split('\n')).toContain('Nome: Maria Clara');
@@ -197,7 +180,7 @@ describe('the "who is who" step', () => {
   it('asks who is who before anything else, and links the request to the one picked', () => {
     expect(nextAccessRequestStep(asking)).toBe('who');
 
-    const picked = fillAccessRequestStep(asking, 'who', '2', PROJECTS);
+    const picked = fillAccessRequestStep(asking, 'who', '2');
 
     expect(picked).toEqual({
       ok: true,
@@ -214,74 +197,16 @@ describe('the "who is who" step', () => {
   });
 
   it('goes on without a link when the person is none of them', () => {
-    const none = fillAccessRequestStep(asking, 'who', '0', PROJECTS);
+    const none = fillAccessRequestStep(asking, 'who', '0');
 
     expect(none.ok && nextAccessRequestStep(none.draft)).toBe('email');
   });
 
   // triste
   it('repeats the list when the answer is not one of the options', () => {
-    expect(fillAccessRequestStep(asking, 'who', '7', PROJECTS)).toMatchObject({
+    expect(fillAccessRequestStep(asking, 'who', '7')).toMatchObject({
       ok: false,
       error: expect.stringContaining('1. Ana Souza'),
-    });
-  });
-});
-
-describe('pickProjects', () => {
-  const MANY = [
-    { id: 1, name: 'admin-console' },
-    { id: 2, name: 'gestao-rh' },
-    { id: 3, name: 'paralegal' },
-  ];
-
-  // feliz
-  it('picks several systems by number, in any separator, without repeating', () => {
-    expect(pickProjects('1, 3', MANY).map((project) => project.id)).toEqual([1, 3]);
-    expect(pickProjects('3 e 1 3', MANY).map((project) => project.id)).toEqual([3, 1]);
-    expect(pickProjects('Gestao-RH', MANY).map((project) => project.id)).toEqual([2]);
-  });
-
-  // triste
-  it('picks nothing when a number is out of the list or the name is unknown', () => {
-    expect(pickProjects('1, 7', MANY)).toEqual([]);
-    expect(pickProjects('financeiro', MANY)).toEqual([]);
-  });
-});
-
-describe('the "no system, just a user" answer', () => {
-  const draft = {
-    ...emptyAccessRequest(null),
-    requesterName: 'Maria Clara',
-    email: 'm@e.com',
-    phone: '62999990000',
-    department: 'rh' as const,
-  };
-
-  // feliz
-  it('finishes the request as a user request when the answer is 0', () => {
-    const filled = fillAccessRequestStep(draft, 'system', '0', PROJECTS);
-
-    expect(filled).toEqual({
-      ok: true,
-      draft: { ...draft, project: null, projects: [], userOnly: true },
-    });
-    expect(filled.ok && nextAccessRequestStep(filled.draft)).toBeNull();
-    expect(
-      accessRequestDescription({
-        requesterName: 'Maria Clara',
-        email: 'm@e.com',
-        phone: '62999990000',
-        projectName: null,
-      }),
-    ).toContain('Pedido de usuário');
-  });
-
-  // triste
-  it('keeps offering the way out when the answer is not understood', () => {
-    expect(fillAccessRequestStep(draft, 'system', '99', PROJECTS)).toMatchObject({
-      ok: false,
-      error: expect.stringContaining('0. Nenhum — só preciso de um usuário'),
     });
   });
 });
