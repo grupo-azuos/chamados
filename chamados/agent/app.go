@@ -179,6 +179,9 @@ func (app *App) stopReporting() {
 // existe um salvo. Devolvê-lo recolocaria em texto puro, na memória da tela,
 // o segredo que acabou de ser cifrado em disco.
 func (app *App) ReportingSettings() reporting.Settings {
+	if machine.Installed() {
+		return reporting.Settings{IntervalSeconds: int(reporting.DefaultInterval.Seconds())}
+	}
 	configPath, configPathError := reporting.DefaultConfigPath()
 	if configPathError != nil {
 		return reporting.Settings{}
@@ -189,6 +192,9 @@ func (app *App) ReportingSettings() reporting.Settings {
 
 // ReportingState é exposto ao frontend (via Bind): em que pé está a conexão.
 func (app *App) ReportingState() string {
+	if machine.Installed() {
+		return string(reporting.StateManaged)
+	}
 	app.mu.RLock()
 	reporter := app.reporter
 	app.mu.RUnlock()
