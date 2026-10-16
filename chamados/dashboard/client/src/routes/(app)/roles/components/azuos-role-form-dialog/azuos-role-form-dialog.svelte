@@ -185,7 +185,7 @@
         >
           {#if isEdit}
             <div
-              class="flex items-center justify-between gap-3 rounded-surface border border-border/80 bg-muted/20 p-3.5"
+              class="flex items-center justify-between gap-3 rounded-box border border-border bg-muted/20 p-3.5"
             >
               <div class="flex items-center gap-3 min-w-0">
                 <PersonAvatar
@@ -275,7 +275,7 @@
                       {:else}
                         <div class="flex items-center gap-2 truncate">
                           <User class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                          <span class="text-xs">
+                          <span class="text-sm">
                             {formState.isLoadingUsers
                               ? 'Carregando lista de pessoas…'
                               : 'Selecione uma pessoa da lista…'}
@@ -401,7 +401,7 @@
                   <div class="shrink-0">
                     <ActionButton
                       data={{ label: 'Trocar pessoa' }}
-                      ui={{ variant: 'ghost', size: 'sm' }}
+                      ui={{ variant: 'ghost', size: 'lg' }}
                       actions={{ onClick: handleClear }}
                     />
                   </div>
@@ -432,10 +432,10 @@
                 disabled={isEdit}
                 onclick={() => actions.onChange('context', ctx)}
                 class={cn(
-                  'flex flex-col items-start gap-1 p-3 rounded-surface border text-left transition-all',
+                  'flex flex-col items-start gap-1 p-3 rounded-box border text-left transition-colors',
                   isSelected
                     ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                    : 'border-border/80 bg-card hover:bg-ink-100',
+                    : 'border-border bg-card hover:bg-muted/40',
                   isEdit && 'opacity-60 cursor-not-allowed',
                 )}
               >
@@ -447,31 +447,31 @@
                     <Check class="size-3.5 text-primary" aria-hidden="true" />
                   {/if}
                 </div>
-                <span class="text-xs text-muted-foreground leading-tight">
+                <span class="text-xs leading-snug text-muted-foreground">
                   {CONTEXT_DETAILS[ctx].description}
                 </span>
               </button>
             {/each}
           </div>
-        </TimelineStep>
 
-        <!-- O nível NÃO se escolhe aqui: ele vem do papel da pessoa no admin-console. -->
-        <div
-          class="flex items-center gap-2 rounded-box border border-border/60 bg-muted/30 p-2.5 text-xs text-muted-foreground"
-        >
-          <Info class="size-4 shrink-0 text-primary" aria-hidden="true" />
-          <span>
-            O que a pessoa pode no módulo vem do papel dela no <strong>admin-console</strong>:
-            Administrador mexe em tudo, Gestor e Usuário só consultam. O <strong>Super Admin</strong>
-            só é criado por comando no servidor (<code
-              class="font-mono text-xs bg-background px-1 py-0.5 rounded-chip border border-border"
-              >npm run superadmin:promote</code
-            >).
-          </span>
-        </div>
+          <!-- O nível NÃO se escolhe aqui: ele vem do papel da pessoa no admin-console. -->
+          <div
+            class="flex items-start gap-2.5 rounded-box border border-border/60 bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground"
+          >
+            <Info class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+            <span>
+              O que a pessoa pode no módulo vem do papel dela no <strong>admin-console</strong>:
+              Administrador mexe em tudo, Gestor e Usuário só consultam. O <strong>Super Admin</strong>
+              só é criado por comando no servidor (<code
+                class="font-mono text-xs bg-background px-1 py-0.5 rounded-chip border border-border"
+                >npm run superadmin:promote</code
+              >).
+            </span>
+          </div>
+        </TimelineStep>
       </Timeline>
 
-      <DialogFooter class="mt-4 flex justify-end gap-2 border-t border-border/80 pt-4">
+      <DialogFooter>
         <ActionButton
           data={{ label: 'Cancelar' }}
           ui={{ variant: 'secondary' }}
