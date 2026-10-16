@@ -21,7 +21,6 @@ import { WebhookThrottle } from './webhook-throttle.decorator';
  */
 const env: Env = parseEnv({
   DATABASE_URL: 'postgresql://user:pass@host/db?sslmode=require',
-  NEON_AUTH_URL: 'https://auth.example.com',
   S3_ACCESS_KEY_ID: 'chave',
   S3_SECRET_ACCESS_KEY: 'segredo',
   S3_BUCKET: 'balde',
