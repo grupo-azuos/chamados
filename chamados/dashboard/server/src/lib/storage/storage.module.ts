@@ -44,7 +44,7 @@ let destroy: (() => void) | null = null;
     },
     StorageService,
   ],
-  exports: [StorageService],
+  exports: [StorageService, OBJECT_STORAGE],
 })
 export class StorageModule implements OnApplicationShutdown {
   private readonly logger = new Logger(StorageModule.name);
