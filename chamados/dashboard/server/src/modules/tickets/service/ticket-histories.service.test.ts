@@ -97,8 +97,8 @@ function setup({
   } as unknown as TicketsRepository;
 
   const attachmentsStub = {
-    assertAcceptable: vi.fn(),
-    attach: vi.fn().mockResolvedValue([]),
+    accept: vi.fn().mockImplementation((files: unknown[]) => Promise.resolve(files)),
+    store: vi.fn().mockResolvedValue([]),
     list: vi.fn().mockResolvedValue([]),
     ...attachments,
   };
@@ -152,16 +152,20 @@ describe('TicketHistoriesService.create', () => {
 
   it('attaches the files to the history it just recorded, on the support side', async () => {
     const file = {
-      originalname: 'nota.pdf',
-      mimetype: 'application/pdf',
-      size: 10,
-      buffer: Buffer.from('x'),
+      storageKey: 'tmp/00000000-0000-4000-8000-000000000001.pdf',
+      fileName: 'nota.pdf',
     };
     const { actor, service, attachments } = setup();
 
     await service.create(actor, 7, entry('note'), [file]);
 
-    expect(attachments.attach).toHaveBeenCalledWith(7, [file], ana.email, 'support', 31);
+    /* Histórico novo não tem nada anexado: a cota dele começa vazia. */
+    expect(attachments.accept).toHaveBeenCalledWith([file], []);
+    expect(attachments.store).toHaveBeenCalledWith(7, [file], {
+      author: ana.email,
+      origin: 'support',
+      historyId: 31,
+    });
   });
 
   it('lets an admin of the area contribute with a history that does not close', async () => {
@@ -247,9 +251,7 @@ describe('TicketHistoriesService.create', () => {
   it('records nothing when a file is out of the rules', async () => {
     const { actor, service, record } = setup({
       attachments: {
-        assertAcceptable: vi.fn().mockImplementation(() => {
-          throw new BadRequestException('Arquivo grande demais.');
-        }),
+        accept: vi.fn().mockRejectedValue(new BadRequestException('Arquivo grande demais.')),
       },
     });
 

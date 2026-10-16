@@ -188,6 +188,12 @@ O que não precisa:
 
 * **Quem editou vem da identidade**, nunca do corpo da requisição. `createdBy` e `updatedBy` são carimbados no mapper a partir da identidade autenticada. O cliente nunca pode escolher ou sobrescrever a identidade de quem realizou a operação.
 
+* **Arquivo de quem usa o sistema nunca passa pela API.** Nada de `FileInterceptor`, `multipart/form-data` ou `StreamableFile` para arquivo de usuário. O envio é por link assinado, no mesmo padrão do Paralegal (README, "Os arquivos vão direto para o storage"):
+  * uma rota `POST .../upload-url` confere a permissão **no service** e chama `StagedUploadsService.createUploadTicket` — o arquivo cai na área temporária `tmp/`;
+  * a gravação recebe `{ storageKey, fileName }` (`stagedFileSchema`), mede o arquivo com `inspect` (tamanho e tipo do storage, não os declarados), aplica a regra do domínio, recusa com `discard` o que não serve e move o resto com `promote`;
+  * abrir e baixar é `FileStorage.downloadUrl`, com o nome do arquivo quando é para salvar.
+  O service fala com o contrato `FileStorage` (token `STORAGE`), nunca com o SDK. Nos testes, `MemoryStorage`.
+
 ### Autenticação e autorização
 
 * `AuthenticationMiddleware` resolve e valida a identidade da requisição.
