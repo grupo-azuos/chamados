@@ -30,11 +30,12 @@ function definition(overrides: Partial<DocumentDefinition> = {}): DocumentDefini
 
 describe('renderPdfDocument', () => {
   // feliz
-  it('draws a PDF, with the brand logo inside', async () => {
+  /* A logo do timbrado é o VETOR (desenho, não foto): sai nítida em qualquer zoom e não pesa. */
+  it('draws a PDF on the letterhead, with the vector logo instead of a picture', async () => {
     const pdf = await renderPdfDocument(definition());
 
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
-    expect(pdf.includes('/Subtype /Image')).toBe(true);
+    expect(pdf.includes('/Subtype /Image')).toBe(false);
   });
 
   /* A ordem de serviço guarda a impressão digital do arquivo: a mesma definição tem que dar os
