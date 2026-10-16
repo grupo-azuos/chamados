@@ -171,9 +171,11 @@ export class S3Storage implements FileStorage {
 /**
  * Assina como `host`, mas continua chamando o endpoint.
  *
- * Existe por causa do Supabase self-hosted: o Kong da frente repassa ao Storage a porta de
- * DENTRO dele (8000), e o Storage confere a assinatura com ela — qualquer que seja a porta por
- * onde se chegou. Troca o cabeçalho `Host` que o SDK preencheu a partir do endpoint: a
+ * Existe por causa do Supabase self-hosted da homologação: o domínio público
+ * (`s3.homo.grupoazuos.com.br`) chega ao Kong pela 8001, e o Storage confere a assinatura com
+ * esse `host:porta`, não com o do domínio — medido: sem isto, `SignatureDoesNotMatch`; com
+ * `s3.homo.grupoazuos.com.br:8001`, envio e download funcionam. Troca o cabeçalho `Host` que o
+ * SDK preencheu a partir do endpoint: a
  * assinatura (da chamada e da URL assinada) cobre o host que o provedor confere, e o endereço
  * da conexão e da URL continua o do endpoint.
  */
