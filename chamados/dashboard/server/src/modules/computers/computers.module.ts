@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
 
+import { AgentReleaseController } from './controller/agent-release.controller';
+import { AgentReleaseRepository } from './repository/agent-release.repository';
+import { AgentReleaseService } from './service/agent-release.service';
+
 import { ComputersController } from './controller/computers.controller';
 import { AgentGateway } from './gateway/agent.gateway';
 import { AgentPresenceService } from './presence/agent-presence.service';
@@ -15,8 +19,10 @@ import { ComputersService } from './service/computers.service';
  * precisa subir com o adaptador de WebSocket registrado — ver `main.ts`.
  */
 @Module({
-  controllers: [ComputersController],
+  controllers: [ComputersController, AgentReleaseController],
   providers: [
+    AgentReleaseRepository,
+    AgentReleaseService,
     ComputersService,
     ComputersRepository,
     AgentPresenceService,
