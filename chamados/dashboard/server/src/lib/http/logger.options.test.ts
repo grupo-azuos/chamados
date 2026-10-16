@@ -28,7 +28,6 @@ const baseEnv = {
   S3_ACCESS_KEY_ID: 'test',
   S3_SECRET_ACCESS_KEY: 'test',
   S3_BUCKET: 'test',
-  NEON_AUTH_URL: 'https://auth.test.invalid/auth',
 };
 
 describe('logger options', () => {

@@ -26,17 +26,17 @@ describe('describeDatabaseUrl', () => {
      apontando para o lugar errado. Mas ela vai para o log, então a senha não pode ir junto. */
   it('names the host and the database without leaking the password', () => {
     const described = describeDatabaseUrl(
-      'postgresql://app:senha-secreta@ep-exemplo.neon.tech/azuos?sslmode=require',
+      'postgresql://app:senha-secreta@db.exemplo.com/azuos?sslmode=require',
     );
 
-    expect(described).toBe('ep-exemplo.neon.tech/azuos');
+    expect(described).toBe('db.exemplo.com/azuos');
     expect(described).not.toContain('senha-secreta');
     expect(described).not.toContain('app');
   });
 
   it('says the database is the default one when the string has no path', () => {
-    expect(describeDatabaseUrl('postgresql://app:senha@ep-exemplo.neon.tech')).toBe(
-      'ep-exemplo.neon.tech/(padrão)',
+    expect(describeDatabaseUrl('postgresql://app:senha@db.exemplo.com')).toBe(
+      'db.exemplo.com/(padrão)',
     );
   });
 
