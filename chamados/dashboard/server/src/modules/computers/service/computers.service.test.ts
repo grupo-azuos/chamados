@@ -203,9 +203,10 @@ describe('ComputersService.exportList', () => {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(report.buffer as unknown as ExcelJS.Buffer);
     const sheet = workbook.worksheets[0];
-    expect(String(sheet?.getRow(2).getCell(1).value)).toMatch(/^Só os primeiros 5\.000 computadores/);
-    /* Título, subtítulo, linha em branco e cabeçalho: os dados começam na linha 5. */
-    expect(sheet?.rowCount).toBe(REPORT_MAX_ROWS + 4);
+    /* O subtítulo fica na linha 3, a última da faixa azul do topo. */
+    expect(String(sheet?.getRow(3).getCell(1).value)).toMatch(/^Só os primeiros 5\.000 computadores/);
+    /* Faixa (3 linhas), fio amarelo, respiro e cabeçalho: os dados começam na linha 7. */
+    expect(sheet?.rowCount).toBe(REPORT_MAX_ROWS + 6);
     /* Prazo próprio: montar e reler uma planilha de cinco mil linhas leva perto de um segundo
        sozinho, e estoura os cinco do padrão quando a máquina está rodando tudo junto. */
   }, 30_000);
