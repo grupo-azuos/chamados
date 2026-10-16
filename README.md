@@ -310,7 +310,8 @@ npm run superadmin:promote -- dev@chamados.local
    tudo — telas e API. **O cookie NÃO é removido** antes do app: o servidor precisa do cookie de
    acesso para ler o perfil de quem abre chamado.
 3. **Um router SEM login só para máquinas**, que se identificam com token próprio: o agente
-   (`PathPrefix(/agent)`) e o webhook da UniFi (`Path(/api/network/webhook)`). Ele apaga os
+   (`Path(/agent)`), a consulta de atualização (`GET /api/agent/releases/latest`) e o webhook
+   da UniFi (`Path(/api/network/webhook)`). Ele apaga os
    `x-forwarded-user-*` que vierem de fora. O bot do WhatsApp fala com o servidor pela rede interna.
 
 As variáveis (`ADMIN_CONSOLE_URL`, `ADMIN_CONSOLE_TOKEN`, `ADMIN_CONSOLE_LOGIN_URL`,
@@ -343,6 +344,10 @@ Nada é obrigatório para rodar na sua máquina: todo valor tem padrão. Os exem
 ---
 
 ## Versões
+
+A tag `agent/vX.Y.Z` gera os arquivos do agente e os publica no mesmo bucket S3 privado
+usado pelo dashboard. O agente instalado pode coletar e se atualizar antes do login. Configuração de Secrets, certificado e primeira instalação:
+[guia de releases do agente](chamados/agent/docs/releases.md).
 
 Node na linha **LTS, com a faixa fechada** — `>=24.0.0 <25.0.0`. As travas (ESLint 9, TypeScript 5, NestJS 11) e o motivo de cada uma estão na [seção 13 do CONTRIBUTING](CONTRIBUTING.md#13-versões--só-o-que-ainda-tem-suporte).
 

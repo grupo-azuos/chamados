@@ -1,0 +1,24 @@
+name: CI/Agent and releases
+on:
+  pull_request:
+    paths:
+      [
+        "chamados/agent/**",
+        ".github/scripts/release/**",
+        ".github/workflows/agent-*.yml",
+        ".github/workflows/release-bump.yml",
+      ]
+  push:
+    branches: [main, develop]
+    paths:
+      [
+        "chamados/agent/**",
+        ".github/scripts/release/**",
+        ".github/workflows/agent-*.yml",
+        ".github/workflows/release-bump.yml",
+      ]
+permissions:
+  contents: read
+jobs:
+  check:
+    uses: ./.github/workflows/agent-build.yml
