@@ -192,7 +192,7 @@ O log do serviço gira no início quando ultrapassa 5 MB. Não registra token ne
 O log verbose do Windows Installer ajuda a identificar código 1618 (outro instalador ativo),
 1603 (falha de instalação) ou necessidade de reboot. A repetição respeita o recuo de uma hora.
 
-`CI/Agent and releases` compila o aplicativo e o serviço no Windows, testa regras de tag/bump,
+`Tests/Agent` compila o aplicativo e o serviço no Windows, testa regras de tag/bump,
 gera MSI no Ubuntu, assina com certificado descartável e instala/inicia/desinstala num runner
 Windows limpo. Releases usam a mesma construção com o certificado persistente. Antes de liberar
 para todo o parque, valide o primeiro upgrade entre duas versões em máquinas de teste Windows
@@ -206,7 +206,7 @@ separadamente o MSI, `publisher.cer` e `install-certificate.ps1`. O backend gera
 temporários no mesmo bucket privado usado pelo dashboard.
 
 Publicar `agent/vX.Y.Z` arquiva os arquivos, sem promover automaticamente uma LTS.
-Depois de validar a versão, execute **Release/Promote agent LTS** no GitHub Actions,
+Depois de validar a versão, execute **Release/Agent LTS** no GitHub Actions,
 informando a tag publicada. Alternativamente, com as variáveis `S3_*` do mesmo bucket
 no ambiente e o SDK instalado pelo lockfile do dashboard:
 
