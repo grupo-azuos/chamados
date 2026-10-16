@@ -4,14 +4,12 @@ O formato distribuído é **MSI x64**, para Windows 10 1809 ou superior e Window
 da Microsoft Store. O certificado é autoassinado e fixo entre releases. O TI instala e configura
 uma vez com administrador; depois o serviço pode atualizar sem janela, UAC ou login de usuário.
 
-## Tags exatas e componentes independentes
+## Tag de release do agente
 
-- `agent/v1.2.3`: valida e compila somente o agente, empacota o MSI, assina, publica no GitHub
-  Releases e no bucket S3 privado, e faz o bump de versão em `main` e `develop`.
-- `dashboard/v1.2.3`: valida e compila os workspaces do dashboard e publica a imagem Docker em
-  `ghcr.io/grupo-azuos/chamados/dashboard:1.2.3` e `:latest`. O bot é um produto separado e sua
-  versão não é alterada. A implantação no servidor não é acionada automaticamente: o destino
-  de deploy ainda precisa ser configurado pelo administrador.
+`agent/v1.2.3` valida e compila o agente, gera o MSI assinado, o certificado público e os
+scripts, e envia os arquivos ao **mesmo bucket S3 privado que o dashboard já usa**.
+O destino é o storage do projeto (Supabase Storage pelo protocolo S3); não cria outro bucket.
+Depois faz o bump de versão em `main` e `develop`.
 
 Não há canal no meio, sufixo, prerelease nem zeros à esquerda. `agent/prod/v1.2.3`, `v1.2.3` e
 `agent/v01.2.3` não são releases válidas. Para MSI, major e minor vão até 255; patch até 65535.
@@ -24,24 +22,19 @@ git switch main
 git pull --ff-only
 git tag agent/v0.2.0
 git push origin agent/v0.2.0
-# A versão do dashboard é independente:
-git tag dashboard/v0.2.0
-git push origin dashboard/v0.2.0
 ```
 
 A fonte da versão é a tag. A CI aplica a versão **antes** do build. Depois da publicação cria
-um commit `[chore](agent): Atualiza versão para … [skip ci]` (ou escopo `web`) nas duas branches.
+um commit `[chore](agent): Atualiza versão para … [skip ci]` nas duas branches.
 O commit contém só os arquivos de versão. A tag original não é movida: aponta para o código-fonte
 antes do bump, como no fluxo de referência do `acerola-reader`.
 
 O agente atualiza `wails.json`, `src-go/version/version.go`, `svelte/package.json` e seu lockfile.
-O dashboard atualiza os manifests da raiz, client, server e shared, incluindo as entradas dos
-workspaces no lockfile. Não altera versões de dependências. O bump tenta push normal até três
+Não altera versões de dependências. O bump tenta push normal até três
 vezes em checkouts temporários, sem force push ou rebase; nunca diminui uma versão mais recente.
 
-As releases de cada componente são serializadas; publique uma tag por vez e aguarde o término
-antes da próxima do mesmo componente (GitHub conserva só uma execução pendente por grupo).
-O bump dos dois componentes também compartilha uma fila. Não reutilize uma tag para outros bytes.
+As releases do agente são serializadas; publique uma tag por vez e aguarde o término antes da
+próxima (GitHub conserva só uma execução pendente por grupo). Não reutilize uma tag para outros bytes.
 
 ## Configuração do GitHub, uma vez
 
@@ -64,11 +57,10 @@ configurar a identidade de automação autorizada na proteção. Uma chave SSH n
 sozinha. O job falha se o push for recusado; nunca muda a proteção automaticamente.
 
 A credencial S3 precisa ler e escrever somente no prefixo `agent/`; nunca é embutida no agente.
-A configuração do bucket deve ser a mesma usada pela API. O GitHub Release herda a visibilidade
-do repositório; mantenha-o privado se os instaladores também precisarem ser privados.
-
-A publicação Docker usa `GITHUB_TOKEN` com `packages: write`. Para baixar uma imagem privada
-no Coolify/servidor, configure ali a autenticação de leitura do GHCR.
+Copie a configuração S3 do ambiente do dashboard: mesmo endpoint, região e bucket. Na ausência
+de `S3_BUCKET` nas Variables, a workflow usa `chamados`, o mesmo padrão do backend. Os artefatos
+ficam em `agent/releases/<versão>/` dentro desse bucket. O GitHub Actions apenas executa a
+compilação e transfere artefatos entre seus jobs; a distribuição dos arquivos é feita pelo S3.
 
 ### Gerar o certificado autoassinado persistente
 
@@ -101,7 +93,7 @@ do servidor é outro certificado: o Windows também precisa confiar na CA da red
 
 ## Primeira instalação no Windows 10/11
 
-Baixe da mesma release o `.msi`, `publisher.cer`, `install-certificate.ps1` e
+Baixe da mesma versão no bucket do dashboard o `.msi`, `publisher.cer`, `install-certificate.ps1` e
 `configure-machine.ps1`. Use PowerShell **como administrador**, na pasta dos arquivos. A primeira
 importação de confiança é uma ação explícita do TI; depois as atualizações são silenciosas.
 

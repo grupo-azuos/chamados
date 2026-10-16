@@ -17,8 +17,6 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -37,19 +35,10 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
           S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
           S3_REGION: ${{ vars.S3_REGION }}
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          S3_BUCKET: ${{ vars.S3_BUCKET || 'chamados' }}
           S3_FORCE_PATH_STYLE: ${{ vars.S3_FORCE_PATH_STYLE }}
           S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
           S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --verify-tag --title "Azuos Agent $RELEASE_TAG" --generate-notes --latest=false
-          fi
-          gh release upload "$RELEASE_TAG" release/* --clobber
   bump:
     needs: publish
     uses: ./.github/workflows/release-bump.yml

@@ -3,7 +3,7 @@ on:
   workflow_call:
 permissions:
   contents: write
-# Agente e dashboard podem publicar ao mesmo tempo, mas escrevem versões em fila.
+# Serializa a escrita dos commits de versão nas branches do projeto.
 concurrency:
   group: release-version-bump
   cancel-in-progress: false
