@@ -191,6 +191,17 @@ export const envSchema = z.object({
     .optional(),
 
   /**
+   * O prefixo dos cookies de sessão do admin-console (`<prefixo>_access_token`). É o
+   * `COOKIE_NAME_PREFIX` de lá — hoje `azuos_homo` em homologação e em produção.
+   *
+   * Serve para o servidor ler o perfil de quem está logado (`GET /api/me/profile`, que só
+   * aceita a sessão da própria pessoa) e preencher o formulário de chamado. Só o cookie de
+   * ACESSO é repassado: o de renovação, reapresentado por outro processo, faria o admin-console
+   * tratá-lo como roubo e derrubar a sessão.
+   */
+  ADMIN_CONSOLE_COOKIE_PREFIX: z.string().trim().min(1).default('azuos'),
+
+  /**
    * A PESSOA DE DESENVOLVIMENTO — só para a máquina de quem programa.
    *
    * Sem proxy na frente não há cabeçalho nenhum, e sem identidade nenhuma tela do painel

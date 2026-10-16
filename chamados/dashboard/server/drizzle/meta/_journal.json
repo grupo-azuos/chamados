@@ -8,6 +8,27 @@
       "when": 1792086377402,
       "tag": "0000_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792094230895,
+      "tag": "0001_ticket_requester",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792095561178,
+      "tag": "0002_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792107830183,
+      "tag": "0003_whatsapp_operator_name",
+      "breakpoints": true
     }
   ]
 }

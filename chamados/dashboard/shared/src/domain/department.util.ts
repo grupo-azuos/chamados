@@ -55,3 +55,39 @@ export function isDepartment(value: unknown): value is Department {
 export function departmentOptions(): { value: Department; label: string }[] {
   return DEPARTMENTS.map((value) => ({ value, label: DEPARTMENT_LABELS[value] }));
 }
+
+/**
+ * O departamento da lista a partir do TEXTO que vem do admin-console (lá ele é livre: "Contábil",
+ * "Departamento Pessoal", "RH"…).
+ *
+ * Compara sem acento, sem caixa e sem espaço sobrando, contra o valor e o rótulo de cada um, e
+ * aceita o nome do departamento dentro de um texto maior ("Depto. Fiscal"). Sem um encontro
+ * único, devolve `null`: escolher um departamento por chute colocaria o chamado na estatística
+ * errada — melhor a pessoa escolher.
+ */
+export function departmentFromText(text: string | null | undefined): Department | null {
+  const wanted = normalize(text);
+  if (!wanted) return null;
+
+  const exact = DEPARTMENTS.find((department) => keysOf(department).includes(wanted));
+  if (exact) return exact;
+
+  const inside = DEPARTMENTS.filter((department) =>
+    keysOf(department).some((key) => new RegExp(`\\b${key}\\b`).test(wanted)),
+  );
+
+  return inside.length === 1 ? (inside[0] ?? null) : null;
+}
+
+function keysOf(department: Department): string[] {
+  return [normalize(department), normalize(DEPARTMENT_LABELS[department])];
+}
+
+function normalize(text: string | null | undefined): string {
+  return (text ?? '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}

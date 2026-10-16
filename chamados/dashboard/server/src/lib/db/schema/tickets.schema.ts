@@ -36,10 +36,12 @@ function valuesFor(values: readonly string[]) {
  *
  * Duas coisas fogem do molde de `tasks.schema.ts`, e as duas de propósito:
  *
- * 1. **Não existe `createdBy`.** O chamado é aberto por quem não tem login — o formulário é
- *    público. Quem pediu está em `requester_name` e `contact_phone`, digitados pela própria
- *    pessoa. Carimbar uma identidade que não existe seria inventar autoria. `updated_by`,
- *    esse sim, é o e-mail de quem do TI mexeu, e vem sempre da sessão.
+ * 1. **Quem pediu é a PESSOA do admin-console**, e não um texto digitado: abrir chamado exige
+ *    login, e o chamado guarda o id dela (`requester_id`) e o e-mail. `requester_name` é o
+ *    nome que ela tinha ao abrir (vem da identidade, não do formulário); telefone e
+ *    departamento ela confirma ou corrige no formulário. Os chamados de antes desta mudança
+ *    não têm `requester_id` — eram abertos sem login. `updated_by` é o e-mail de quem do TI
+ *    mexeu, e vem sempre da sessão.
  *
  * 2. **Não existe exclusão.** Nenhum caminho do sistema apaga uma linha daqui: o que sai da
  *    fila sai por `status` (`resolved`, `cancelled`). O histórico inteiro é o que sustenta o
@@ -59,7 +61,10 @@ export const tickets = chamadosSchema.table(
       .notNull()
       .default(DEFAULT_TICKET_PRIORITY),
 
-    /* Quem pediu — digitado no formulário público, porque não há identidade a consultar. */
+    /* Quem pediu: o UUID e o e-mail da pessoa no admin-console, e o nome dela ao abrir. Nulos
+       só nos chamados de antes do login obrigatório. */
+    requesterId: text('requester_id'),
+    requesterEmail: text('requester_email'),
     requesterName: text('requester_name').notNull(),
     /**
      * A ÁREA de quem atende (#13) — escolhida por quem abre, pelo que PARECE o problema.
@@ -122,9 +127,11 @@ export const tickets = chamadosSchema.table(
   (table) => [
     index('tickets_status_idx').on(table.status),
     /* "Os chamados desta área" é a consulta que decide quem enxerga o quê (ver
-       `TicketsRepository.contextRolesFor` + `TicketsService.resolveAreaAccess`). */
+       `TicketAccessService`). */
     index('tickets_area_idx').on(table.area),
     index('tickets_department_idx').on(table.department),
+    /* "Meus chamados" — a lista de quem abriu. */
+    index('tickets_requester_id_idx').on(table.requesterId),
     index('tickets_problem_type_idx').on(table.problemType),
     index('tickets_priority_idx').on(table.priority),
     index('tickets_created_at_idx').on(table.createdAt),

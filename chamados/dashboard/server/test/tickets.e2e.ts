@@ -9,7 +9,15 @@ import { internalRoles } from '../src/lib/db/schema/internal-roles.schema';
 import { ticketHistories } from '../src/lib/db/schema/ticket-histories.schema';
 import { ticketServiceOrders } from '../src/lib/db/schema/ticket-service-orders.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
-import { BIA, CAIO, asCaio, asStranger, createE2eApp, type E2eApp } from './support/e2e-app.util';
+import {
+  BIA,
+  CAIO,
+  asAna,
+  asCaio,
+  asStranger,
+  createE2eApp,
+  type E2eApp,
+} from './support/e2e-app.util';
 
 /**
  * O FLUXO DO CHAMADO de ponta a ponta, que é onde o sistema realmente trabalha.
@@ -45,9 +53,11 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
   let started: E2eApp;
   let app: INestApplication;
 
+  /* Abrir chamado exige login: quem abre é a Ana, e o chamado fica ligado a ela. */
   const openTicket = () =>
     request(app.getHttpServer())
       .post('/api/tickets')
+      .set(asAna())
       .field('requesterName', PEDIDO.requesterName)
       .field('area', PEDIDO.area)
       .field('department', PEDIDO.department)
@@ -88,8 +98,17 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     await app.close();
   });
 
+  // triste
+  /* O sistema não tem rota pública: sem login, não se abre chamado. */
+  it('refuses to open a ticket without identity', async () => {
+    await request(app.getHttpServer())
+      .post('/api/tickets')
+      .field('description', PEDIDO.description)
+      .expect(401);
+  });
+
   // feliz
-  it('opens a ticket from the public portal, with no identity and with files', async () => {
+  it('opens a ticket logged in, linked to the person, with files', async () => {
     const created = await openTicket()
       .attach('screenshot', PRINT, { filename: 'erro.png', contentType: 'image/png' })
       .attach('attachments', NOTA_FISCAL, { filename: 'nota-fiscal.pdf', contentType: PDF })
@@ -212,6 +231,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
 
     const checked = await request(app.getHttpServer())
       .get(`/api/service-orders/${issued!.code.slice(0, 12)}`)
+      .set(asCaio())
       .expect(200);
 
     expect(checked.body).toMatchObject({
@@ -281,8 +301,9 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
   it('does not find a service order that was never issued', async () => {
     await request(app.getHttpServer())
       .get(`/api/service-orders/${'0'.repeat(64)}`)
+      .set(asCaio())
       .expect(404);
-    await request(app.getHttpServer()).get('/api/service-orders/abc').expect(404);
+    await request(app.getHttpServer()).get('/api/service-orders/abc').set(asCaio()).expect(404);
   });
 
   it('lets the IT side correct the ticket data and attach its own files', async () => {
@@ -352,6 +373,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
 
     const found = await request(app.getHttpServer())
       .get('/api/tickets/protocol/CH-0001')
+      .set(asCaio())
       .expect(200);
 
     /* OS DOIS LADOS aparecem: quem abriu confere que a nota chegou e vê o que o TI juntou. */
@@ -418,6 +440,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     for (const typed of ['CH-0001', 'ch 1', '0001', '1']) {
       const found = await request(app.getHttpServer())
         .get(`/api/tickets/protocol/${encodeURIComponent(typed)}`)
+        .set(asCaio())
         .expect(200);
 
       expect(found.body.protocol).toBe('CH-0001');
@@ -533,6 +556,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     /* E o arquivo dela continua lá, visível na consulta pública. */
     const found = await request(app.getHttpServer())
       .get('/api/tickets/protocol/CH-0001')
+      .set(asCaio())
       .expect(200);
 
     expect(found.body.attachments).toHaveLength(1);
@@ -550,6 +574,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
        dos dois males: quem enviou vê o protocolo e anexa o resto pelo painel. */
     const found = await request(app.getHttpServer())
       .get('/api/tickets/protocol/CH-0001')
+      .set(asCaio())
       .expect(200);
 
     expect(found.body.attachments).toHaveLength(0);
@@ -603,8 +628,14 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
   });
 
   it('answers 404 for a protocol that does not exist, and for one that is not a number', async () => {
-    await request(app.getHttpServer()).get('/api/tickets/protocol/CH-9999').expect(404);
-    await request(app.getHttpServer()).get('/api/tickets/protocol/nao-e-protocolo').expect(404);
+    await request(app.getHttpServer())
+      .get('/api/tickets/protocol/CH-9999')
+      .set(asCaio())
+      .expect(404);
+    await request(app.getHttpServer())
+      .get('/api/tickets/protocol/nao-e-protocolo')
+      .set(asCaio())
+      .expect(404);
   });
 
   /* A porta do PAINEL é fechada: a pública é só abrir e consultar por protocolo. */

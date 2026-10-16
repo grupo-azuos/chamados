@@ -9,8 +9,10 @@ import {
   type TicketHistoryFormValues,
 } from '@template/shared/schemas/ticket-history.schema';
 import {
+  type MyTicket,
   type OpenedTicket,
   type PublicTicket,
+  type RequesterDefaults,
   type Ticket,
   type TicketAssigneeOption,
   type TicketNotice,
@@ -51,6 +53,10 @@ export const ticketsApi = {
    * O convite de chamado: o link assinado que o bot de WhatsApp manda a quem escreve `/chamado`.
    * Devolve com quem a pessoa quer falar e o telefone dela, para o formulário abrir preenchido.
    */
+  /** O que o formulário já traz preenchido: os dados da pessoa logada no admin-console. */
+  requesterDefaults: () => apiRequest<RequesterDefaults>('/tickets/requester-defaults'),
+  /** Os chamados que a pessoa logada abriu, mais recentes primeiro. */
+  mine: () => apiRequest<MyTicket[]>('/tickets/mine'),
   invite: (token: string) =>
     apiRequest<TicketInvite>(`/tickets/invites/${encodeURIComponent(token)}`),
 
