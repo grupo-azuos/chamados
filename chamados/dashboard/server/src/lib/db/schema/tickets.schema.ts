@@ -34,7 +34,7 @@ function valuesFor(values: readonly string[]) {
 /**
  * Chamados de suporte de TI.
  *
- * Duas coisas fogem do molde de `tasks.schema.ts`, e as duas de propósito:
+ * Duas coisas fogem do padrão das outras tabelas, e as duas de propósito:
  *
  * 1. **Quem pediu é a PESSOA do admin-console**, e não um texto digitado: abrir chamado exige
  *    login, e o chamado guarda o id dela (`requester_id`) e o e-mail. `requester_name` é o
