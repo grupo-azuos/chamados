@@ -1,0 +1,1 @@
+DROP TABLE "chamados"."tasks" CASCADE;
