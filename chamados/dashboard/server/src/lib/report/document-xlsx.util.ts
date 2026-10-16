@@ -1,12 +1,14 @@
 import ExcelJS, { type Cell, type Worksheet } from 'exceljs';
 
-import { BRAND_LOGO, brandLogoWidth } from './document-brand.util';
 import {
-  DOCUMENT_FONT_NAME,
-  DOCUMENT_PALETTE,
-  DOCUMENT_TONE_SOFT_COLORS,
-  excelColor,
-} from './document-palette.util';
+  BRAND_NAME,
+  generatedAtLabel,
+  isNumericColumn,
+  LOGO_RATIO,
+  LOGO_WHITE_PNG,
+  OFFICE_FONT,
+} from './document-brand.util';
+import { DOCUMENT_PALETTE, DOCUMENT_TONE_SOFT_COLORS, excelColor } from './document-palette.util';
 import {
   type DocumentBadge,
   type DocumentBlock,
@@ -28,7 +30,7 @@ type TextStyle = {
   size?: number;
   color?: string;
   fill?: string;
-  horizontal?: 'left' | 'center';
+  horizontal?: 'left' | 'center' | 'right';
   wrapText?: boolean;
 };
 
@@ -47,37 +49,53 @@ const WIDTH_SAMPLE_SIZE = 200;
 const LABEL_COLUMN_WIDTH = 26;
 const TEXT_COLUMN_WIDTH = 40;
 
-const TITLE_ROW_HEIGHT = 48;
-/* A logo, em pixels, e o quanto ela se afasta do canto da célula (em fração de célula) — cabe
-   dentro da linha do título com uma folga em cima e embaixo. */
-const BRAND_LOGO_HEIGHT = 54;
-const BRAND_LOGO_OFFSET = 0.08;
 const HEADER_ROW_HEIGHT = 22;
 const DATA_ROW_HEIGHT = 20;
 const TEXT_LINE_HEIGHT = 15;
 /* Quantos caracteres cabem numa linha de texto corrido — o Excel não cresce sozinho a altura
    de uma célula mesclada, então a altura é estimada pelo tamanho do texto. */
 const TEXT_LINE_LENGTH = 110;
-
-/* O topo é sempre o mesmo: título, subtítulo e uma linha em branco — assim o primeiro bloco
-   não fica pulando de linha conforme o documento tem ou não subtítulo. */
-const TITLE_ROW = 1;
-const SUBTITLE_ROW = 2;
-const FIRST_BLOCK_ROW = 4;
+/** A soma mínima das colunas: abaixo disso o título da faixa passa por cima da logo. */
+const MIN_SHEET_WIDTH = 100;
+const TEXT_SIZE = 11;
 
 /**
- * O documento em Excel, montado pelo ExcelJS: uma planilha só, com o título no topo e os
- * blocos um embaixo do outro. Uma tabela vira linhas de verdade, que a pessoa filtra e soma;
- * o cabeçalho da primeira fica congelado ao rolar.
- *
- * A situação de cada linha ganha uma etiqueta clara com texto colorido — a MESMA combinação
- * do `StatusBadge` da tela — em vez de pintar a célula inteira de cor forte.
+ * O topo é a FAIXA DA MARCA, a mesma do Excel da Gestão de RH: três linhas azuis com a logo
+ * branca no canto e o título à direita, um fio amarelo embaixo e uma linha de respiro. O
+ * primeiro bloco começa sempre na mesma linha, tenha o documento subtítulo ou não.
+ */
+const ROWS = { bandStart: 1, bandEnd: 3, accent: 4, gap: 5 };
+const FIRST_BLOCK_ROW = 6;
+const BAND_ROW_HEIGHT = 22;
+/** A logo no canto da faixa, em pixels: um bom tamanho para ler sem tomar a faixa inteira. */
+const LOGO_WIDTH = 190;
+const LOGO_OFFSET = { column: 0.2, row: 0.55 };
+
+const THIN_GRID = { style: 'thin', color: { argb: excelColor(DOCUMENT_PALETTE.border) } } as const;
+const CELL_BORDER = { top: THIN_GRID, bottom: THIN_GRID, left: THIN_GRID, right: THIN_GRID };
+
+/**
+ * O documento em Excel, com a cara da marca: faixa azul com a logo, fio amarelo, cabeçalho de
+ * tabela azul com letra branca, linhas alternadas em azul bem claro e grade fina. O cabeçalho da
+ * primeira tabela fica preso ao rolar, com filtro ligado, e a folha imprime numa página de largura.
  */
 export async function renderXlsxDocument(definition: DocumentDefinition): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.created = definition.createdAt ?? new Date();
+  const now = definition.createdAt ?? new Date();
+  workbook.created = now;
+  workbook.creator = BRAND_NAME;
+  workbook.title = definition.title;
 
-  const sheet = workbook.addWorksheet(sheetNameOf(definition.title));
+  const sheet = workbook.addWorksheet(sheetNameOf(definition.title), {
+    views: [{ showGridLines: false }],
+    pageSetup: {
+      paperSize: 9,
+      orientation: definition.orientation,
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+    },
+  });
   const cursor: SheetCursor = {
     sheet,
     columnCount: columnCountOf(definition),
@@ -85,7 +103,7 @@ export async function renderXlsxDocument(definition: DocumentDefinition): Promis
   };
 
   sheet.columns = columnWidthsOf(definition, cursor.columnCount).map((width) => ({ width }));
-  writeTitle(cursor, definition);
+  writeBand(cursor, definition, now);
 
   for (const block of definition.blocks) writeBlock(cursor, block);
   if (definition.verification) writeVerification(cursor, definition.verification);
@@ -114,15 +132,24 @@ function columnCountOf(definition: DocumentDefinition): number {
 }
 
 /** A largura pelo conteúdo de verdade, não só pelo título da coluna — sem isso "Em atendimento" corta. */
+/**
+ * Cada coluna na largura do maior texto dela, dentro de um mínimo e um máximo. Quando a soma fica
+ * estreita demais para a faixa (logo de um lado, título do outro), o que falta é dividido por
+ * igual entre as colunas.
+ */
 function columnWidthsOf(definition: DocumentDefinition, columnCount: number): number[] {
   const table = firstTableOf(definition);
-
-  return Array.from({ length: columnCount }, (_, index) => {
+  const widths = Array.from({ length: columnCount }, (_, index) => {
     const header = table?.headers[index];
     if (table && header !== undefined) return measuredWidth(header, table.rows, index);
 
     return index === 0 ? LABEL_COLUMN_WIDTH : TEXT_COLUMN_WIDTH;
   });
+
+  const missing = MIN_SHEET_WIDTH - widths.reduce((sum, width) => sum + width, 0);
+  if (missing <= 0) return widths;
+
+  return widths.map((width) => width + Math.ceil(missing / widths.length));
 }
 
 function measuredWidth(header: string, rows: DocumentCell[][], columnIndex: number): number {
@@ -139,45 +166,63 @@ function measuredWidth(header: string, rows: DocumentCell[][], columnIndex: numb
  * da mesma cor embaixo — o mesmo cabeçalho do PDF e do Word. O fundo é branco de propósito: a
  * logo é colorida, e sobre uma faixa cheia ela perderia o contorno.
  */
-function writeTitle(cursor: SheetCursor, definition: DocumentDefinition): void {
-  writeMergedRow(cursor, TITLE_ROW, definition.title, {
-    bold: true,
-    size: 16,
-    color: DOCUMENT_PALETTE.primary,
-    horizontal: 'center',
-  });
-  const titleRow = cursor.sheet.getRow(TITLE_ROW);
-  titleRow.height = TITLE_ROW_HEIGHT;
-  for (let column = 1; column <= cursor.columnCount; column += 1) {
-    titleRow.getCell(column).border = {
-      bottom: { style: 'medium', color: { argb: excelColor(DOCUMENT_PALETTE.primary) } },
-    };
+/** A faixa azul com a logo no canto esquerdo e o título do documento à direita. */
+function writeBand(cursor: SheetCursor, definition: DocumentDefinition, now: Date): void {
+  const { sheet, columnCount } = cursor;
+
+  for (let row = ROWS.bandStart; row <= ROWS.bandEnd; row += 1) {
+    sheet.getRow(row).height = BAND_ROW_HEIGHT;
+    paintRow(cursor, row, DOCUMENT_PALETTE.primary);
   }
+  sheet.getRow(ROWS.accent).height = 3;
+  paintRow(cursor, ROWS.accent, DOCUMENT_PALETTE.accent);
+  sheet.getRow(ROWS.gap).height = 8;
+
+  sheet.mergeCells(ROWS.bandStart, 1, ROWS.bandStart + 1, columnCount);
+  const title = sheet.getCell(ROWS.bandStart, 1);
+  title.value = definition.title;
+  title.font = { name: OFFICE_FONT, size: 16, bold: true, color: { argb: excelColor('FFFFFF') } };
+  title.alignment = { horizontal: 'right', vertical: 'bottom', indent: 1 };
+
+  sheet.mergeCells(ROWS.bandEnd, 1, ROWS.bandEnd, columnCount);
+  const details = sheet.getCell(ROWS.bandEnd, 1);
+  details.value = bandDetails(definition.subtitle, now);
+  details.font = { name: OFFICE_FONT, size: 10, color: { argb: excelColor('FFFFFF') } };
+  details.alignment = { horizontal: 'right', vertical: 'top', indent: 1 };
+
   writeBrandLogo(cursor);
-
-  if (!definition.subtitle) return;
-
-  writeMergedRow(cursor, SUBTITLE_ROW, definition.subtitle, {
-    italic: true,
-    size: 10,
-    color: DOCUMENT_PALETTE.subtext,
-    horizontal: 'center',
-  });
 }
 
-/** A logo flutua sobre o canto da linha do título — imagem em planilha não mora dentro de célula. */
+/* O subtítulo e a data em que o arquivo saiu. O subtítulo do relatório já diz "gerado em": não
+   repete. */
+function bandDetails(subtitle: string | undefined, now: Date): string {
+  if (subtitle && /gerado em/i.test(subtitle)) return subtitle;
+
+  return [subtitle, generatedAtLabel(now)].filter(Boolean).join('  ·  ');
+}
+
+function paintRow(cursor: SheetCursor, row: number, color: string): void {
+  for (let column = 1; column <= cursor.columnCount; column += 1) {
+    cursor.sheet.getCell(row, column).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: excelColor(color) },
+    };
+  }
+}
+
 function writeBrandLogo(cursor: SheetCursor): void {
   /* `Buffer` deste projeto e o `Buffer` que o ExcelJS espera vêm de versões diferentes de
      `@types/node` — o mesmo valor em tempo de execução, o TypeScript é que enxerga dois tipos. */
   const imageId = cursor.sheet.workbook.addImage({
-    buffer: BRAND_LOGO as unknown as ExcelJS.Buffer,
+    buffer: LOGO_WHITE_PNG as unknown as ExcelJS.Buffer,
     extension: 'png',
   });
 
   cursor.sheet.addImage(imageId, {
-    tl: { col: BRAND_LOGO_OFFSET, row: BRAND_LOGO_OFFSET },
-    ext: { width: brandLogoWidth(BRAND_LOGO_HEIGHT), height: BRAND_LOGO_HEIGHT },
-    editAs: 'oneCell',
+    tl: { col: LOGO_OFFSET.column, row: LOGO_OFFSET.row },
+    ext: { width: LOGO_WIDTH, height: LOGO_WIDTH / LOGO_RATIO },
+    editAs: 'absolute',
   });
 }
 
@@ -202,11 +247,12 @@ function writeHeading(cursor: SheetCursor, text: string): void {
   /* Uma linha em branco antes, para o título de seção não colar no bloco de cima. */
   if (cursor.row > FIRST_BLOCK_ROW) cursor.row += 1;
 
-  writeMergedRow(cursor, cursor.row, text.toUpperCase(), {
+  writeMergedRow(cursor, cursor.row, text, {
     bold: true,
-    size: 11,
+    size: 13,
     color: DOCUMENT_PALETTE.primary,
   });
+  cursor.sheet.getRow(cursor.row).height = 24;
   cursor.row += 1;
 }
 
@@ -285,46 +331,77 @@ function writeTable(cursor: SheetCursor, block: TableBlock): void {
   const headerRow = cursor.row;
   writeHeaderRow(cursor, block.headers);
 
-  /* Só o cabeçalho da primeira tabela congela: é o que fica à vista ao rolar a lista. */
-  if (cursor.sheet.views.length === 0)
-    cursor.sheet.views = [{ state: 'frozen', ySplit: headerRow }];
+  /* Só o cabeçalho da primeira tabela fica preso, com filtro e repetido na impressão: é o que
+     fica à vista ao rolar a lista. */
+  const isFirstTable = cursor.sheet.views[0]?.state !== 'frozen';
+  if (isFirstTable) {
+    cursor.sheet.views = [{ state: 'frozen', ySplit: headerRow, showGridLines: false }];
+    cursor.sheet.pageSetup.printTitlesRow = `${headerRow}:${headerRow}`;
+  }
 
-  block.rows.forEach((row, index) => writeDataRow(cursor, row, index));
-  if (block.rows.length === 0) writeText(cursor, block.emptyText, EMPTY_STATE_STYLE);
+  if (block.rows.length === 0) return writeEmptyRow(cursor, block.emptyText);
+
+  const numeric = block.headers.map((_, index) => isNumericColumn(block.rows, index));
+  block.rows.forEach((row, index) => writeDataRow(cursor, row, index, numeric));
+
+  /* O filtro só faz sentido com linha para filtrar. */
+  if (isFirstTable) {
+    cursor.sheet.autoFilter = {
+      from: { row: headerRow, column: 1 },
+      to: { row: cursor.row - 1, column: block.headers.length },
+    };
+  }
 }
 
 function writeHeaderRow(cursor: SheetCursor, headers: string[]): void {
   const row = cursor.sheet.getRow(cursor.row);
-  row.values = headers;
   row.height = HEADER_ROW_HEIGHT;
 
-  row.eachCell((cell) => {
+  headers.forEach((header, index) => {
+    const cell = row.getCell(index + 1);
+    cell.value = header;
     styleCell(cell, {
       bold: true,
-      size: 11,
       color: DOCUMENT_PALETTE.primaryForeground,
       fill: DOCUMENT_PALETTE.primary,
+      wrapText: true,
     });
+    cell.border = CELL_BORDER;
   });
   cursor.row += 1;
 }
 
-function writeDataRow(cursor: SheetCursor, cells: DocumentCell[], index: number): void {
+/* Tabela vazia é UMA linha dizendo isso: só o cabeçalho, sem linha nenhuma, parece defeito. */
+function writeEmptyRow(cursor: SheetCursor, text: string): void {
+  writeMergedRow(cursor, cursor.row, text, { ...EMPTY_STATE_STYLE, horizontal: 'center' });
+  cursor.sheet.getCell(cursor.row, 1).border = CELL_BORDER;
+  cursor.sheet.getRow(cursor.row).height = DATA_ROW_HEIGHT;
+  cursor.row += 1;
+}
+
+function writeDataRow(
+  cursor: SheetCursor,
+  cells: DocumentCell[],
+  index: number,
+  numeric: boolean[],
+): void {
   const row = cursor.sheet.getRow(cursor.row);
-  row.values = cells.map((cell) => cell.text);
-  row.height = DATA_ROW_HEIGHT;
-  const zebraFill = index % 2 === 0 ? DOCUMENT_PALETTE.background : DOCUMENT_PALETTE.surfaceAlt;
+  /* Linhas alternadas em azul bem claro, como no Excel da Gestão de RH. */
+  const fill = index % 2 === 1 ? DOCUMENT_PALETTE.surfaceAlt : undefined;
 
-  row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
-    const tone = cells[columnNumber - 1]?.tone;
-    if (tone) return styleBadgeCell(cell, tone);
-
-    styleCell(cell, { fill: zebraFill });
-    /* Só uma linha fina embaixo, no tom do fundo — dá para distinguir a linha sem virar uma
-       grade que compete com as listras. */
-    cell.border = {
-      bottom: { style: 'hair', color: { argb: excelColor(DOCUMENT_PALETTE.surfaceAlt) } },
-    };
+  cells.forEach((value, columnIndex) => {
+    const cell = row.getCell(columnIndex + 1);
+    const toneColor = value.tone ? DOCUMENT_TONE_SOFT_COLORS[value.tone].text : undefined;
+    cell.value = value.text;
+    styleCell(cell, {
+      bold: Boolean(toneColor),
+      color: toneColor,
+      fill,
+      horizontal: numeric[columnIndex] ? 'right' : 'left',
+      wrapText: true,
+    });
+    cell.alignment = { ...cell.alignment, vertical: 'top' };
+    cell.border = CELL_BORDER;
   });
   cursor.row += 1;
 }
@@ -361,16 +438,16 @@ function styleCell(cell: Cell, style: TextStyle): void {
   const isCentered = style.horizontal === 'center';
 
   cell.font = {
-    name: DOCUMENT_FONT_NAME,
+    name: OFFICE_FONT,
     bold: style.bold,
     italic: style.italic,
-    size: style.size,
+    size: style.size ?? TEXT_SIZE,
     color: { argb: excelColor(style.color ?? DOCUMENT_PALETTE.foreground) },
   };
   cell.alignment = {
     vertical: 'middle',
     horizontal: style.horizontal ?? 'left',
-    indent: isCentered ? 0 : 1,
+    indent: isCentered || style.horizontal === 'right' ? 0 : 1,
     wrapText: style.wrapText,
   };
   if (!style.fill) return;
