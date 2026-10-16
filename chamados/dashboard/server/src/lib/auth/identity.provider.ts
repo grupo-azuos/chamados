@@ -156,21 +156,18 @@ export class IdentityProvider {
   }
 
   /**
-   * Os módulos liberados para a pessoa. Casa pelo UUID do admin-console OU pelo e-mail: as
-   * linhas de antes da integração guardam o id do login antigo, e a pessoa não perde o acesso
-   * por ter trocado de provedor de login.
+   * Os módulos liberados para a pessoa — SÓ pelo UUID do admin-console, como no Paralegal.
+   *
+   * O e-mail não entra na conta: trocar de e-mail lá não pode tirar o acesso de ninguém, e um
+   * e-mail antigo passado para outra pessoa não pode levar junto os módulos de quem o usava.
+   * `user_email` fica na linha só para a tela de Acessos mostrar de quem ela é.
    */
   private async modulesOf(forwarded: ForwardedIdentity): Promise<RoleContext[]> {
     const rows = await runQuery(
       this.db
         .select({ context: internalRoles.context })
         .from(internalRoles)
-        .where(
-          or(
-            eq(internalRoles.userId, forwarded.id),
-            sql`lower(${internalRoles.userEmail}) = ${forwarded.email.toLowerCase()}`,
-          ),
-        ),
+        .where(eq(internalRoles.userId, forwarded.id)),
       'consultar os módulos da pessoa',
     );
 

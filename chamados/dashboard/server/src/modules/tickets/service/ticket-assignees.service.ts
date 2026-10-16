@@ -74,15 +74,20 @@ type Grants = {
   superAdmins: readonly { userId: string | null; userEmail: string }[];
 };
 
+/**
+ * A mesma regra da identidade (`identity.provider.ts`): conta o UUID. O e-mail só vale para o
+ * super-admin que ainda não entrou nenhuma vez — a linha sem UUID, que o comando de promoção
+ * cria. Assim um e-mail antigo, passado para outra pessoa, não faz dela responsável.
+ */
 function areasOf(user: DirectoryUser, grants: Grants): TicketArea[] {
   const email = user.email.toLowerCase();
-  const isMine = (row: { userId: string | null; userEmail: string | null }) =>
-    row.userId === user.id || (row.userEmail ?? '').toLowerCase() === email;
+  const isMineSuper = (row: { userId: string | null; userEmail: string }) =>
+    row.userId === null ? row.userEmail.toLowerCase() === email : row.userId === user.id;
 
-  if (grants.superAdmins.some(isMine)) return [...TICKET_AREAS];
+  if (grants.superAdmins.some(isMineSuper)) return [...TICKET_AREAS];
   if (user.role !== ADMIN_ROLE) return [];
 
-  const own = grants.modules.filter(isMine);
+  const own = grants.modules.filter((row) => row.userId === user.id);
 
   return TICKET_AREAS.filter((area) => own.some((row) => row.context === area));
 }
