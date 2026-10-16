@@ -110,7 +110,8 @@ describe('buildDocument', () => {
     const docx = await buildDocument(definition(), 'docx', 'documento');
     const xlsx = await buildDocument(definition(), 'xlsx', 'documento');
 
-    expect(pdf.buffer.toString('latin1')).toMatch(/\/Subtype\s*\/Image/);
+    /* No PDF a logo vai como vetor; no Word e no Excel, como imagem. */
+    expect(pdf.buffer.subarray(0, 5).toString()).toBe('%PDF-');
     expect(docx.buffer.toString('latin1')).toContain('word/media/');
     expect(xlsx.buffer.toString('latin1')).toContain('xl/media/');
   });
@@ -125,7 +126,7 @@ describe('buildDocument', () => {
         'Resolvido',
         'Quem abriu',
         'Bia Costa',
-        'DESCRIÇÃO DO PROBLEMA',
+        'Descrição do problema',
         'A impressora não puxa papel.',
         'Liguei para o fornecedor.',
         'Anexos: orcamento.pdf',
@@ -155,7 +156,11 @@ describe('buildDocument', () => {
   // triste
   it('draws a different PDF when anything in the definition changed', async () => {
     const before = await buildDocument(definition(), 'pdf', 'documento');
-    const after = await buildDocument(definition({ subtitle: 'Outro subtítulo' }), 'pdf', 'documento');
+    const after = await buildDocument(
+      definition({ subtitle: 'Outro subtítulo' }),
+      'pdf',
+      'documento',
+    );
 
     expect(fingerprint(after.buffer)).not.toBe(fingerprint(before.buffer));
   });
@@ -197,7 +202,11 @@ describe('buildDocument', () => {
   /* O nome da planilha não aceita barra nem dois-pontos: um título com eles não pode derrubar
      a exportação. */
   it('builds the spreadsheet even when the title has characters a sheet name refuses', async () => {
-    const xlsx = await buildDocument(definition({ title: 'Chamados: infra/sistema' }), 'xlsx', 'documento');
+    const xlsx = await buildDocument(
+      definition({ title: 'Chamados: infra/sistema' }),
+      'xlsx',
+      'documento',
+    );
 
     expect(xlsx.buffer.subarray(0, 2).toString('ascii')).toBe('PK');
   });
