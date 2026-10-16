@@ -49,9 +49,7 @@
 </script>
 
 <script lang="ts">
-	import AzuosBadge, {
-		type AzuosBadgeTone
-	} from '$lib/components/azuos-badge/azuos-badge.svelte';
+	import AzuosBadge, { type AzuosBadgeTone } from '$lib/components/azuos-badge/azuos-badge.svelte';
 	import AzuosButton from '$lib/components/azuos-button/azuos-button.svelte';
 	import AzuosCard from '$lib/components/azuos-card/azuos-card.svelte';
 
