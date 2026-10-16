@@ -1,7 +1,7 @@
 import { ConflictException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
-import { type StorageService } from '../../../lib/storage/storage.service';
+import { type FileStorage } from '../../../lib/storage/file-storage.type';
 import { type AgentReleaseRepository } from '../repository/agent-release.repository';
 import { AgentDownloadService } from './agent-download.service';
 
@@ -16,12 +16,12 @@ function setup() {
     publishedAt: '2026-10-16T12:00:00.000Z',
     artifacts: { msi: artifact('agent.msi'), certificate: artifact('publisher.cer') },
   });
-  const createDownloadUrl = vi.fn().mockResolvedValue('https://storage.example.test/signed');
+  const downloadUrl = vi.fn().mockResolvedValue('https://storage.example.test/signed');
   const service = new AgentDownloadService(
     { latest } as unknown as AgentReleaseRepository,
-    { createDownloadUrl } as unknown as StorageService,
+    { downloadUrl } as unknown as FileStorage,
   );
-  return { service, latest, createDownloadUrl };
+  return { service, latest, downloadUrl };
 }
 const person = (roles: RequestUser['roles']): RequestUser => ({
   id: 'fixture',
@@ -49,15 +49,16 @@ describe('dashboard agent download', () => {
     ['certificate', 'publisher.cer', 'publisher.cer'],
     ['certificateScript', 'install-certificate.ps1', 'install-certificate.ps1'],
   ] as const)('signs only the selected %s on demand', async (kind, key, fileName) => {
-    const { service, createDownloadUrl } = setup();
+    const { service, downloadUrl } = setup();
     expect(await service.download(person({ infra: 'user' }), kind, '1.2.3')).toEqual({
       version: '1.2.3',
       url: 'https://storage.example.test/signed',
     });
-    expect(createDownloadUrl).toHaveBeenCalledExactlyOnceWith(`agent/releases/1.2.3/${key}`, {
-      as: 'attachment',
+    expect(downloadUrl).toHaveBeenCalledExactlyOnceWith(
+      `agent/releases/1.2.3/${key}`,
+      300,
       fileName,
-    });
+    );
   });
   it('returns no LTS before promotion', async () => {
     const { service, latest } = setup();
@@ -68,29 +69,29 @@ describe('dashboard agent download', () => {
   it.each([{}, { manutencao: 'admin' } as const])(
     'rejects unrelated modules before accessing storage',
     async (roles) => {
-      const { service, latest, createDownloadUrl } = setup();
+      const { service, latest, downloadUrl } = setup();
       await expect(service.lts(person(roles))).rejects.toBeInstanceOf(ForbiddenException);
       await expect(service.download(person(roles), 'msi', '1.2.3')).rejects.toBeInstanceOf(
         ForbiddenException,
       );
       expect(latest).not.toHaveBeenCalled();
-      expect(createDownloadUrl).not.toHaveBeenCalled();
+      expect(downloadUrl).not.toHaveBeenCalled();
     },
   );
   it('refuses mixing downloads after an LTS change', async () => {
-    const { service, createDownloadUrl } = setup();
+    const { service, downloadUrl } = setup();
     await expect(
       service.download(person({ infra: 'user' }), 'msi', '1.2.2'),
     ).rejects.toBeInstanceOf(ConflictException);
-    expect(createDownloadUrl).not.toHaveBeenCalled();
+    expect(downloadUrl).not.toHaveBeenCalled();
   });
   it('refuses arbitrary object keys from malformed metadata', async () => {
-    const { service, latest, createDownloadUrl } = setup();
+    const { service, latest, downloadUrl } = setup();
     latest.mockResolvedValue({ version: '1.2.3', artifacts: { msi: { key: 'tickets/private' } } });
     await expect(
       service.download(person({ sistema: 'user' }), 'msi', '1.2.3'),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
-    expect(createDownloadUrl).not.toHaveBeenCalled();
+    expect(downloadUrl).not.toHaveBeenCalled();
   });
   it('reports storage failure instead of claiming no LTS exists', async () => {
     const { service, latest } = setup();
