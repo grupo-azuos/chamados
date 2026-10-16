@@ -7,7 +7,6 @@ on:
         ".github/scripts/release/**",
         ".github/workflows/agent-*.yml",
         ".github/workflows/release-bump.yml",
-        ".github/workflows/dashboard-release.yml",
       ]
   push:
     branches: [main, develop]
@@ -17,7 +16,6 @@ on:
         ".github/scripts/release/**",
         ".github/workflows/agent-*.yml",
         ".github/workflows/release-bump.yml",
-        ".github/workflows/dashboard-release.yml",
       ]
 permissions:
   contents: read

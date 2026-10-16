@@ -345,9 +345,8 @@ Nada é obrigatório para rodar na sua máquina: todo valor tem padrão. Os exem
 
 ## Versões
 
-As releases são independentes: `agent/vX.Y.Z` gera o MSI assinado e publica no S3;
-`dashboard/vX.Y.Z` publica a imagem Docker no GHCR. O agente instalado pode coletar e se
-atualizar antes do login. Configuração de Secrets, certificado e primeira instalação:
+A tag `agent/vX.Y.Z` gera os arquivos do agente e os publica no mesmo bucket S3 privado
+usado pelo dashboard. O agente instalado pode coletar e se atualizar antes do login. Configuração de Secrets, certificado e primeira instalação:
 [guia de releases do agente](chamados/agent/docs/releases.md).
 
 Node na linha **LTS, com a faixa fechada** — `>=24.0.0 <25.0.0`. As travas (ESLint 9, TypeScript 5, NestJS 11) e o motivo de cada uma estão na [seção 13 do CONTRIBUTING](CONTRIBUTING.md#13-versões--só-o-que-ainda-tem-suporte).
