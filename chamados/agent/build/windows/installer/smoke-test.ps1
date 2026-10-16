@@ -15,7 +15,7 @@ function Invoke-Msi([string]$Operation) {
     $log = Join-Path $env:TEMP "azuos-smoke-$($Operation.TrimStart('/')).log"
     $process = Start-Process -FilePath "$env:SystemRoot\System32\msiexec.exe" -ArgumentList @($Operation, "`"$MsiPath`"", '/qn', '/norestart', '/L*v', "`"$log`"") -Wait -PassThru
     if ($process.ExitCode -notin @(0, 3010)) {
-        Get-Content $log -Tail 100
+        Get-Content $log
         throw "Windows Installer returned $($process.ExitCode)"
     }
 }

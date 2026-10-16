@@ -26,6 +26,27 @@ const summary = execFileSync("msiinfo", ["suminfo", path], {
   encoding: "utf8",
 });
 assert.match(summary, /Template: x64;1046/);
+const buildSearch = table("AppSearch").find(
+  (row) => row.Property === "WINDOWS_CURRENT_BUILD",
+);
+assert.ok(buildSearch);
+const buildRegistry = table("RegLocator").find(
+  (row) => row.Signature_ === buildSearch.Signature_,
+);
+assert.equal(buildRegistry?.Root, "2");
+assert.equal(
+  buildRegistry?.Key,
+  "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+);
+assert.equal(buildRegistry?.Name, "CurrentBuildNumber");
+assert.equal(buildRegistry?.Type, "18");
+assert.ok(
+  table("LaunchCondition").some(
+    (row) =>
+      row.Condition ===
+      "Installed OR (VersionNT64 AND WINDOWS_CURRENT_BUILD >= 17763)",
+  ),
+);
 const service = table("ServiceInstall").find(
   (row) => row.Name === "AzuosAgent",
 );

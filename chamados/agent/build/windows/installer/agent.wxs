@@ -5,7 +5,11 @@
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
     <MajorUpgrade DowngradeErrorMessage="Uma versão mais recente do Azuos Agent já está instalada." />
     <Media Id="1" Cabinet="agent.cab" EmbedCab="yes" />
-    <Condition Message="Este instalador exige Windows 10 1809 ou superior, ou Windows 11, em x64.">VersionNT64 AND WindowsBuild &gt;= 17763</Condition>
+    <!-- WindowsBuild pode informar 9600 por compatibilidade mesmo no Windows 10/11. -->
+    <Property Id="WINDOWS_CURRENT_BUILD">
+      <RegistrySearch Id="WindowsCurrentBuild" Root="HKLM" Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion" Name="CurrentBuildNumber" Type="raw" Win64="yes" />
+    </Property>
+    <Condition Message="Este instalador exige Windows 10 1809 ou superior, ou Windows 11, em x64.">Installed OR (VersionNT64 AND WINDOWS_CURRENT_BUILD &gt;= 17763)</Condition>
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFiles64Folder">
         <Directory Id="AzuosFolder" Name="Azuos">
