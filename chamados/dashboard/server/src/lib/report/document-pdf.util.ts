@@ -54,6 +54,7 @@ const FOOTER_FONT_SIZE = 9;
 const TITLE_SIZE = 15;
 const TEXT_SIZE = 12;
 const SMALL_SIZE = 10;
+const TINY_SIZE = 8;
 /** O espaço de dentro da célula do modelo: 0,19 cm de cada lado, quase nada em cima e embaixo. */
 const CELL_PADDING = { side: 5.4, vertical: 1 };
 const LINE_WIDTH = 0.5;
@@ -353,36 +354,59 @@ function drawCell(cell: DocumentCell, isNumeric: boolean): TableCell {
 }
 
 const WEIGHT = { min: 5, textCap: 22 };
+/**
+ * Quanto ocupa uma letra da Liberation Sans Narrow, em fração do corpo — com folga para o
+ * negrito do cabeçalho. É a medida que garante a maior palavra de cada coluna inteira.
+ */
+const CHARACTER_WIDTH = 0.5;
 
 /**
- * Cada coluna recebe uma fatia proporcional ao que carrega: a de nomes fica larga, a de datas,
- * estreita. O peso nunca é menor que a MAIOR PALAVRA da coluna — coluna mais estreita que uma
- * palavra a parte no meio ("Departament-o"), e telefone quebrado em duas linhas não se lê.
+ * Cada coluna recebe PRIMEIRO o espaço da maior palavra dela — coluna mais estreita que uma
+ * palavra a parte no meio ("Protoc-olo"), e data quebrada em duas linhas não se lê. O que sobra
+ * da folha é dividido pelo que cada coluna ainda carrega além disso: a de nomes fica larga, a de
+ * datas, estreita.
  */
 function columnWidths(headers: string[], rows: DocumentCell[][], frame: number): number[] {
-  const weights = headers.map((header, index) => {
+  const fontSize = tableFontSize(headers.length);
+  const measures = headers.map((header, index) => {
     const texts = [header, ...rows.map((row) => row[index]?.text ?? '')];
     const longestText = Math.max(...texts.map((text) => text.length));
     const longestWord = Math.max(
+      WEIGHT.min,
       ...texts.flatMap((text) => text.split(/\s+/)).map((word) => word.length),
     );
 
-    return Math.max(WEIGHT.min, longestWord, Math.min(longestText, WEIGHT.textCap));
+    return {
+      word: longestWord,
+      extra: Math.max(0, Math.min(longestText, WEIGHT.textCap) - longestWord),
+    };
   });
-  const total = weights.reduce((sum, weight) => sum + weight, 0);
   /* O que sobra para o texto, descontados o respiro e os fios de cada coluna. */
   const columns = headers.length;
   const available = frame - columns * CELL_PADDING.side * 2 - (columns + 1) * LINE_WIDTH;
+  const words = measures.map((measure) => measure.word * fontSize * CHARACTER_WIDTH);
+  const wordsTotal = words.reduce((sum, width) => sum + width, 0);
+  /* Nem as palavras cabem: divide a folha na proporção delas, o melhor que dá. */
+  if (wordsTotal >= available) return words.map((width) => (available * width) / wordsTotal);
 
-  return weights.map((weight) => (available * weight) / total);
+  const extraTotal = measures.reduce((sum, measure) => sum + measure.extra, 0);
+  const spare = available - wordsTotal;
+
+  return words.map((width, index) => {
+    const extra = measures[index]?.extra ?? 0;
+
+    return width + (extraTotal === 0 ? spare / columns : (spare * extra) / extraTotal);
+  });
 }
 
 /**
  * O modelo usa corpo 12. Tabela com muitas colunas não cabe entre as margens de 3 cm nesse
- * tamanho, então a letra desce um pouco — só dentro dela; título e texto continuam em 12.
+ * tamanho, então a letra desce — só dentro dela; título e texto continuam em 12.
  */
 function tableFontSize(columns: number): number {
-  return columns <= 5 ? TEXT_SIZE : SMALL_SIZE;
+  if (columns <= 5) return TEXT_SIZE;
+
+  return columns <= 8 ? SMALL_SIZE : TINY_SIZE;
 }
 
 function drawEmptyState(text: string): Content {
