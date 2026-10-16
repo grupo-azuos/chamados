@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   ForbiddenException,
   UnauthorizedException,
@@ -9,7 +10,8 @@ import {
   type AgentReleaseDownload,
 } from '@template/shared/schemas/agent-release.schema';
 
-import { StorageService } from '../../../lib/storage/storage.service';
+import { DOWNLOAD_URL_TTL_SECONDS, type FileStorage } from '../../../lib/storage/file-storage.type';
+import { STORAGE } from '../../../lib/storage/storage.token';
 import { AgentReleaseRepository } from '../repository/agent-release.repository';
 import { ComputersService } from './computers.service';
 
@@ -18,7 +20,7 @@ export class AgentReleaseService {
   constructor(
     private readonly computers: ComputersService,
     private readonly releases: AgentReleaseRepository,
-    private readonly storage: StorageService,
+    @Inject(STORAGE) private readonly storage: FileStorage,
   ) {}
 
   async latest(authorization: string | undefined): Promise<AgentReleaseDownload | null> {
@@ -38,10 +40,11 @@ export class AgentReleaseService {
       throw new ServiceUnavailableException('A versão do agente está indisponível.');
     const { version, artifacts } = parsed.data;
     const msi = artifacts.msi;
-    const url = await this.storage.createDownloadUrl(msi.key, {
-      as: 'attachment',
-      fileName: `azuos-agent-${version}-x64.msi`,
-    });
+    const url = await this.storage.downloadUrl(
+      msi.key,
+      DOWNLOAD_URL_TTL_SECONDS,
+      `azuos-agent-${version}-x64.msi`,
+    );
 
     return { version, url, sha256: msi.sha256, sizeBytes: msi.sizeBytes };
   }

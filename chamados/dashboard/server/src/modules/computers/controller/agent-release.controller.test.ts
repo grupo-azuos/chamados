@@ -4,7 +4,8 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { RolesGuard } from '../../../lib/auth/roles.guard';
-import { StorageService } from '../../../lib/storage/storage.service';
+import { type FileStorage } from '../../../lib/storage/file-storage.type';
+import { STORAGE } from '../../../lib/storage/storage.token';
 import { AgentReleaseRepository } from '../repository/agent-release.repository';
 import { AgentReleaseService } from '../service/agent-release.service';
 import { ComputersService } from '../service/computers.service';
@@ -23,7 +24,7 @@ describe('agent release HTTP boundary', () => {
         AgentReleaseService,
         { provide: ComputersService, useValue: { authenticateAgent } },
         { provide: AgentReleaseRepository, useValue: { latest } },
-        { provide: StorageService, useValue: {} satisfies Partial<StorageService> },
+        { provide: STORAGE, useValue: {} satisfies Partial<FileStorage> },
       ],
     }).compile();
     app = module.createNestApplication();

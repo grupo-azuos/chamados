@@ -9,11 +9,14 @@ import { type Request } from 'express';
 import { mergeMap, type Observable } from 'rxjs';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
-import { historyEntryOf, isMutation, type MutationRequest } from '../service/history-entry.util';
+import {
+  historyEntryOf,
+  isMutation,
+  type MutationRequest,
+  withoutStagedFiles,
+} from '../service/history-entry.util';
 import { HistoryService } from '../service/history.service';
 import { SKIP_HISTORY } from './skip-history.decorator';
-
-type UploadedFiles = Record<string, { originalname?: string }[]> | { originalname?: string }[];
 
 /**
  * TODA requisição que muda dado deixa uma linha no histórico — sem cada service lembrar.
@@ -57,14 +60,15 @@ export class HistoryInterceptor implements NestInterceptor {
 
 function mutationOf(request: Request & { user?: RequestUser }, handler: string): MutationRequest {
   const route = request.route as { path?: unknown } | undefined;
+  const { body, fileNames } = withoutStagedFiles(request.body);
 
   return {
     method: request.method,
     routePath: typeof route?.path === 'string' ? route.path : request.path,
     handler,
     params: paramsOf(request.params),
-    body: request.body,
-    fileNames: fileNamesOf((request as Request & { files?: UploadedFiles }).files),
+    body,
+    fileNames,
     actor: request.user ? { id: request.user.id, email: request.user.email } : null,
     ip: request.ip ?? null,
     userAgent: request.get('user-agent') ?? null,
@@ -76,12 +80,4 @@ function paramsOf(params: Record<string, string | string[]>): Record<string, str
   return Object.fromEntries(
     Object.entries(params).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]),
   );
-}
-
-/* Arquivo entra pelo nome: o conteúdo já está no storage, e não cabe no histórico. */
-function fileNamesOf(files: UploadedFiles | undefined): string[] {
-  if (!files) return [];
-  const list = Array.isArray(files) ? files : Object.values(files).flat();
-
-  return list.map((file) => file.originalname ?? '').filter((name) => name !== '');
 }

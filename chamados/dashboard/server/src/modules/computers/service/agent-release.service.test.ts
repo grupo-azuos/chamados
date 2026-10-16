@@ -4,7 +4,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
-import { type StorageService } from '../../../lib/storage/storage.service';
+import { type FileStorage } from '../../../lib/storage/file-storage.type';
 import { type AgentReleaseRepository } from '../repository/agent-release.repository';
 import { type ComputersService } from './computers.service';
 import { AgentReleaseService } from './agent-release.service';
@@ -16,26 +16,24 @@ function setup() {
     sha256: 'a'.repeat(64),
     sizeBytes: 123,
   });
-  const latest = vi
-    .fn()
-    .mockResolvedValue({
-      version: '1.2.3',
-      publishedAt: '2026-10-15T12:00:00.000Z',
-      artifacts: { msi: artifact('agent.msi'), certificate: artifact('publisher.cer') },
-    });
-  const createDownloadUrl = vi.fn().mockResolvedValue('https://storage.example.test/signed');
+  const latest = vi.fn().mockResolvedValue({
+    version: '1.2.3',
+    publishedAt: '2026-10-15T12:00:00.000Z',
+    artifacts: { msi: artifact('agent.msi'), certificate: artifact('publisher.cer') },
+  });
+  const downloadUrl = vi.fn().mockResolvedValue('https://storage.example.test/signed');
   const service = new AgentReleaseService(
     { authenticateAgent } as unknown as ComputersService,
     { latest } as unknown as AgentReleaseRepository,
-    { createDownloadUrl } as unknown as StorageService,
+    { downloadUrl } as unknown as FileStorage,
   );
-  return { service, authenticateAgent, latest, createDownloadUrl };
+  return { service, authenticateAgent, latest, downloadUrl };
 }
 
 describe('agent update authorization', () => {
   // feliz
   it('authenticates the existing machine token before signing the MSI URL', async () => {
-    const { service, authenticateAgent, createDownloadUrl } = setup();
+    const { service, authenticateAgent, downloadUrl } = setup();
     expect(await service.latest('Bearer fixture-token')).toEqual({
       version: '1.2.3',
       url: 'https://storage.example.test/signed',
@@ -43,10 +41,11 @@ describe('agent update authorization', () => {
       sizeBytes: 123,
     });
     expect(authenticateAgent).toHaveBeenCalledWith('fixture-token');
-    expect(createDownloadUrl).toHaveBeenCalledWith('agent/releases/1.2.3/agent.msi', {
-      as: 'attachment',
-      fileName: 'azuos-agent-1.2.3-x64.msi',
-    });
+    expect(downloadUrl).toHaveBeenCalledWith(
+      'agent/releases/1.2.3/agent.msi',
+      300,
+      'azuos-agent-1.2.3-x64.msi',
+    );
   });
   it('returns no release before first publication', async () => {
     const { service, latest } = setup();
@@ -72,7 +71,7 @@ describe('agent update authorization', () => {
     expect(latest).not.toHaveBeenCalled();
   });
   it('never signs arbitrary keys from a corrupt manifest', async () => {
-    const { service, latest, createDownloadUrl } = setup();
+    const { service, latest, downloadUrl } = setup();
     latest.mockResolvedValue({
       version: '1.2.3',
       artifacts: { msi: { key: 'tickets/private-photo.png' } },
@@ -80,6 +79,6 @@ describe('agent update authorization', () => {
     await expect(service.latest('Bearer fixture-token')).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
-    expect(createDownloadUrl).not.toHaveBeenCalled();
+    expect(downloadUrl).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { RolesGuard } from '../../../lib/auth/roles.guard';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
-import { StorageService } from '../../../lib/storage/storage.service';
+import { STORAGE } from '../../../lib/storage/storage.token';
 import { AgentReleaseRepository } from '../repository/agent-release.repository';
 import { AgentDownloadService } from '../service/agent-download.service';
 import { AgentDownloadController } from './agent-download.controller';
@@ -22,7 +22,7 @@ describe('dashboard agent download HTTP boundary', () => {
         RolesGuard,
         AgentDownloadService,
         { provide: AgentReleaseRepository, useValue: { latest } },
-        { provide: StorageService, useValue: { createDownloadUrl } },
+        { provide: STORAGE, useValue: { downloadUrl: createDownloadUrl } },
       ],
     }).compile();
     app = module.createNestApplication();
