@@ -146,7 +146,18 @@ describe('useAppShellModel', () => {
       email: 'ana@empresa.com.br',
       role: 'Gestor',
       roles: { sistema: 'admin', infra: 'user', manutencao: 'manager' },
+      avatarUrl: null,
     });
+  });
+
+  // feliz
+  /* A foto vem do admin-console pelo `/api/auth/me`: sem repassá-la, o rodapé fica nas iniciais. */
+  it('passes the admin-console photo on to the shell', () => {
+    const model = mountModel({ image: 'https://admin-console.exemplo.com/api/users/1/avatar?v=2' });
+
+    expect(model.data.user.avatarUrl).toBe(
+      'https://admin-console.exemplo.com/api/users/1/avatar?v=2',
+    );
   });
 
   it('navigates to /profile on onOpenProfile', async () => {
