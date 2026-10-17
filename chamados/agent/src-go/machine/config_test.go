@@ -42,4 +42,13 @@ func TestInvalidConfig(t *testing.T) {
 	if err := validate(Config{ServerURL: "https://dashboard.example.test", SignerSHA256: strings.Repeat("z", 64)}); err == nil {
 		t.Fatal("invalid certificate fingerprint")
 	}
+	if err := validate(Config{ServerURL: "https://dashboard.example.test", AutoUpdate: true}); err == nil {
+		t.Fatal("autoUpdate without signer SHA256 must be rejected")
+	}
+	if err := validate(Config{ServerURL: "https://dashboard.example.test", AutoUpdate: false}); err != nil {
+		t.Fatalf("reporting without autoUpdate should not require signer SHA256: %v", err)
+	}
+	if err := validate(Config{ServerURL: "http://localhost:3000", SignerSHA256: strings.Repeat("a", 64), AutoUpdate: true}); err != nil {
+		t.Fatalf("localhost http should be permitted for local development: %v", err)
+	}
 }
