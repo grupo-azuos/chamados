@@ -117,7 +117,7 @@
           {hasCopiedCommand ? 'Copiado!' : 'Copiar comando'}
         </button>
       </div>
-      <code class="font-mono text-[11px] break-all select-all text-foreground bg-background p-2 rounded-sm border border-border">
+      <code class="font-mono text-xs break-all select-all text-foreground bg-background p-2 rounded-box border border-border">
         .\install-agent.ps1 -Token '{data.token}'
       </code>
     </div>
