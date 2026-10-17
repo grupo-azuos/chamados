@@ -23,6 +23,10 @@ const ROOT_ENV_PATH = resolve(process.cwd(), '.env');
 const envPath = existsSync(SERVER_ENV_PATH) ? SERVER_ENV_PATH : ROOT_ENV_PATH;
 
 function readDatabaseUrl() {
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL.trim().replace(/^['"]|['"]$/g, '');
+  }
+
   if (!existsSync(envPath)) {
     console.error(`❌ Arquivo de ambiente não encontrado em: ${envPath}`);
     process.exit(1);
@@ -30,7 +34,7 @@ function readDatabaseUrl() {
 
   const match = readFileSync(envPath, 'utf-8').match(/^DATABASE_URL=(.+)$/m);
   if (!match?.[1]) {
-    console.error('❌ Variável DATABASE_URL não encontrada no arquivo .env');
+    console.error('❌ Variável DATABASE_URL não encontrada no arquivo .env nem em process.env');
     process.exit(1);
   }
 

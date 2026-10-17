@@ -50,6 +50,7 @@ COPY --from=build /repo/server/dist server/dist
 # As migrations vão junto: o server as aplica sozinho ao subir.
 COPY --from=build /repo/server/drizzle server/drizzle
 COPY --from=build /repo/client/dist client/dist
+COPY --from=build /repo/scripts scripts
 EXPOSE 3336
 # Consulta HTTP interna; falhas e timeouts ficam no histórico de saúde do Docker.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
