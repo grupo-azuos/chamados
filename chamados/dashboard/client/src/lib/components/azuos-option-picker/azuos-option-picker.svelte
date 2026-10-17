@@ -176,7 +176,8 @@
   import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
   import SearchIcon from '@lucide/svelte/icons/search';
 
-  import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
+  import { Popover, PopoverTrigger } from '$lib/components/ui/popover';
+  import PopoverContent from '$lib/components/azuos-search-popover-content/azuos-search-popover-content.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state: fieldState, actions }: AzuosOptionPickerProps = $props();
@@ -269,7 +270,7 @@
       class="min-w-(--bits-popover-anchor-width) w-auto max-w-[min(26rem,calc(100vw-2rem))] p-0"
       align="start"
     >
-      <div class="relative border-b border-border/70 p-2">
+      <div class="relative shrink-0 border-b border-border/70 p-2">
         <SearchIcon
           class="pointer-events-none absolute top-1/2 left-4 size-3.5 -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
@@ -289,7 +290,7 @@
       <!-- `overflow-x-hidden` ao lado do vertical: pelo CSS, pedir rolagem num eixo
            transforma o outro em `auto` sozinho, e uma opção de nome comprido daria barra de
            rolagem horizontal dentro do balão. -->
-      <div class="max-h-[min(24rem,50dvh)] overflow-x-hidden overscroll-contain overflow-y-auto p-1">
+      <div class="min-h-0 max-h-96 overflow-x-hidden overscroll-contain overflow-y-auto p-1">
         {#each filteredOptions as option (option.value || '__all__')}
           {@const isSelected = option.value === data.value}
           <button
