@@ -16,11 +16,11 @@
 </script>
 
 <script lang="ts">
+  import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import { BLOCK_REASON_MAX_LENGTH } from '@template/shared/schemas/computer.schema';
 
   import {
     Dialog,
-    DialogContent,
     DialogDescription,
     DialogFooter,
     DialogHeader,
