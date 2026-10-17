@@ -63,11 +63,18 @@ services:
       # A documentação da API só abre para a rede interna. Troque pela faixa da sua rede.
       - traefik.http.middlewares.azuos-internal.ipallowlist.sourcerange=10.0.0.0/8,192.168.0.0/16
 
+      # forwardAuth do admin-console: valida a sessão e injeta os 4 cabeçalhos de identidade.
+      # No Coolify, cada container precisa definir seu próprio middleware (não use @docker de outro).
+      # Endereço: http://admin-console:3000/api/auth/verify (prod) ou :4000 (homo).
+      - traefik.http.middlewares.azuos-auth.forwardauth.address=http://admin-console:3000/api/auth/verify
+      - traefik.http.middlewares.azuos-auth.forwardauth.authResponseHeaders=x-forwarded-user-id,x-forwarded-user-email,x-forwarded-user-name,x-forwarded-user-role
+      - traefik.http.middlewares.azuos-auth.forwardauth.addAuthCookiesToResponse=azuos_access_token,azuos_refresh_token
+
       # Router principal: tela e API protegidos pelo login (forwardAuth do admin-console)
       - traefik.http.routers.azuos.rule=Host(`chamados.exemplo.com`)
       - traefik.http.routers.azuos.entrypoints=websecure
       - traefik.http.routers.azuos.tls.certresolver=letsencrypt
-      - traefik.http.routers.azuos.middlewares=azuos-body,um-auth@docker
+      - traefik.http.routers.azuos.middlewares=azuos-body,azuos-auth
 
       # Rotas de máquina SEM login: agente (WebSocket e releases) e webhook do UniFi.
       # Identificam-se por token próprio. A prioridade maior faz esta regra ganhar da de cima.
