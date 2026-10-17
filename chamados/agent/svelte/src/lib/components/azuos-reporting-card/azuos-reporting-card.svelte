@@ -99,7 +99,15 @@
 	<div class="flex flex-col gap-2.5">
 		<p class="text-muted-foreground text-xs leading-snug">{STATE_HINT[data.state]}</p>
 
-		{#if data.state !== 'managed'}
+		{#if data.state === 'managed'}
+			{#if data.serverUrl}
+				<div
+					class="bg-muted/40 border-border/60 text-foreground w-full rounded-control border px-2.5 py-1.5 font-mono text-xs truncate"
+				>
+					{data.serverUrl}
+				</div>
+			{/if}
+		{:else}
 			<label class="flex flex-col gap-1">
 				<span class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
 					Endereço do painel
