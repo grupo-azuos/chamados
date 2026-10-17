@@ -1,4 +1,4 @@
-import { isHttpError, isRedirect } from '@sveltejs/kit';
+import { isHttpError } from '@sveltejs/kit';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { authApi } from '$lib/api/auth.api';
@@ -15,14 +15,12 @@ describe('o endereço que não existe', () => {
     me.mockReset();
   });
 
-  // feliz
-  it('sends who has no session to the public support screen', async () => {
-    me.mockRejectedValue(new ApiError(401, 'Unauthorized'));
+  // triste
+  it('lets 401 failure through when there is no session', async () => {
+    const failure = new ApiError(401, 'Unauthorized');
+    me.mockRejectedValue(failure);
 
-    const thrown: unknown = await load().catch((failure: unknown) => failure);
-
-    expect(isRedirect(thrown)).toBe(true);
-    expect(thrown).toMatchObject({ status: 307, location: '/support' });
+    await expect(load()).rejects.toBe(failure);
   });
 
   // triste
