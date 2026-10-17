@@ -50,6 +50,7 @@
 </script>
 
 <script lang="ts">
+  import PopoverContent from '$lib/components/azuos-search-popover-content/azuos-search-popover-content.svelte';
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
@@ -66,7 +67,6 @@
   } from '$lib/components/azuos-dialog/azuos-dialog';
   import {
     Popover,
-    PopoverContent,
     PopoverTrigger,
   } from '$lib/components/azuos-popover/azuos-popover';
   import { cn } from '$lib/utils/cn';
@@ -325,7 +325,7 @@
 
                       <div
                         bind:this={listboxEl}
-                        class="max-h-60 overflow-x-hidden overflow-y-auto divide-y divide-border/40 p-1 w-full"
+                        class="min-h-0 max-h-60 overscroll-contain overflow-x-hidden overflow-y-auto divide-y divide-border/40 p-1 w-full"
                         role="listbox"
                         aria-label="Lista de colaboradores"
                       >
