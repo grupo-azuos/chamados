@@ -257,8 +257,9 @@ Em produção o container fica atrás de um proxy (Traefik, Caddy ou nginx), e p
 configurada nele — tamanho máximo de upload, limite das rotas públicas, `API_TRUST_PROXY_HOPS`.
 Os exemplos prontos estão em [`chamados/dashboard/docs/reverse-proxy.md`](chamados/dashboard/docs/reverse-proxy.md).
 
-O bot de WhatsApp é um programa à parte, com imagem própria (`docker/bot.dockerfile`) e que só
-sobe com o perfil `whatsapp` do compose — ver [`chamados/dashboard/docs/whatsapp-bot.md`](chamados/dashboard/docs/whatsapp-bot.md).
+O bot de WhatsApp é um programa à parte (`chamados/dashboard/bot/`) que sobe dentro do mesmo
+container quando `BOT_API_TOKEN` e `BOT_SESSION_KEY` estão configurados — ver
+[`chamados/dashboard/docs/whatsapp-bot.md`](chamados/dashboard/docs/whatsapp-bot.md).
 
 ---
 
