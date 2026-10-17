@@ -33,6 +33,7 @@ import {
 export type PostgresErrorShape = {
   code: string;
   message?: string;
+  constraint?: string;
   constraint_name?: string;
 };
 
@@ -50,7 +51,12 @@ export function findPostgresError(error: unknown, depth = 0): PostgresErrorShape
   };
   const hasSqlState = typeof candidate.code === 'string' && SQLSTATE.test(candidate.code);
 
-  if (hasSqlState && (candidate.name === 'PostgresError' || typeof candidate.severity === 'string')) {
+  if (
+    hasSqlState &&
+    (candidate.name === 'PostgresError' ||
+      typeof candidate.severity === 'string' ||
+      candidate.name === 'error')
+  ) {
     return candidate as PostgresErrorShape;
   }
 
@@ -60,13 +66,10 @@ export function findPostgresError(error: unknown, depth = 0): PostgresErrorShape
 /**
  * Qual restrição o banco recusou.
  *
- * Aqui o Postgres é melhor que o SQLite: ele diz o NOME da restrição num campo próprio
- * (`constraint_name`), em vez de escondê-lo no meio da mensagem. A versão SQLite disto
- * precisava de expressão regular sobre o texto do erro — e quebrava quando a mensagem mudava
- * de formato entre versões.
+ * O `pg` (node-postgres) chama de `constraint`; o `postgres.js` chamava de `constraint_name`.
  */
 export function constraintNameOf(error: PostgresErrorShape): string {
-  return error.constraint_name?.trim() ?? '';
+  return (error.constraint ?? error.constraint_name)?.trim() ?? '';
 }
 
 /**
