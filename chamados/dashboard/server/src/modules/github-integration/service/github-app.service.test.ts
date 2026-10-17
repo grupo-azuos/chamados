@@ -5,16 +5,21 @@ import { GithubAppService } from './github-app.service';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('GitHub organization authentication', () => {
+  // triste
   it('refuses incomplete installation configuration', async () => {
     const service = new GithubAppService({} as Env);
     await expect(service.accessToken()).rejects.toThrow('Configure o GitHub App');
   });
-  it('uses installation credentials and reuses the temporary token', async () => {
+  // feliz
+  it('uses installation credentials and reuses the temporary token even with double-escaped newlines', async () => {
     const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
     const service = new GithubAppService({
       GITHUB_APP_ID: '123',
       GITHUB_APP_INSTALLATION_ID: '456',
-      GITHUB_APP_PRIVATE_KEY: privateKey.export({ format: 'pem', type: 'pkcs1' }).toString(),
+      GITHUB_APP_PRIVATE_KEY: `"${privateKey
+        .export({ format: 'pem', type: 'pkcs1' })
+        .toString()
+        .replace(/\n/g, '\\\\n')}"`,
     } as Env);
     const fetcher = vi
       .fn()
@@ -37,6 +42,7 @@ describe('GitHub organization authentication', () => {
     const jwt = header.slice(7).split('.');
     expect(JSON.parse(Buffer.from(jwt[1]!, 'base64url').toString())).toMatchObject({ iss: '123' });
   });
+  // triste
   it('does not expose private keys when authentication fails', async () => {
     const service = new GithubAppService({
       GITHUB_APP_ID: '123',

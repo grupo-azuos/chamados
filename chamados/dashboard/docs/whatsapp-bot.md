@@ -89,8 +89,8 @@ e **qual número** — a conexão em si nunca sai do bot.
    que não é oficial. No dia em que a API oficial do WhatsApp entrar, troca-se só a camada de
    transporte do bot (`src/modules/sessions/`); o servidor e a tela não mudam.
 2. **Licença.** O Baileys depende de código GPL-3.0 (`libsignal`). Num programa à parte — com
-   instalação, processo e imagem Docker próprios — essa licença não alcança o resto do projeto,
-   que é MIT. Detalhes em `THIRD-PARTY-NOTICES.md`.
+   instalação e processo próprios, falando com o servidor só por HTTP — essa licença não alcança o
+   resto do projeto, que é MIT. Detalhes em `THIRD-PARTY-NOTICES.md`.
 
 Por isso o bot **não** é um workspace do `package.json` da raiz: tem `package.json` e
 `package-lock.json` próprios, e o `npm install` do painel não instala nada dele.
@@ -126,12 +126,14 @@ Para subir só o bot: `npm run dev:bot`. Para conferir lint, tipos e testes dele
 
 ```bash
 cd chamados/dashboard
-docker compose -f docker/compose.yml --profile whatsapp up --build
+docker compose -f docker/compose.yml up --build
 ```
 
-O bot tem o único volume do projeto (`bot-data`): as conexões cifradas dos números vinculados.
-Perder o volume não perde dado de chamado — só obriga cada pessoa a ler o QR code de novo.
-O sistema roda com **uma instância só** do bot: a conexão com o WhatsApp fica viva dentro dele.
+O bot sobe dentro do mesmo container (`docker/dockerfile`) quando `BOT_API_TOKEN` e
+`BOT_SESSION_KEY` estão definidos, escutando em `127.0.0.1:4005`. O volume (`bot-data`, em `/data`)
+guarda as conexões cifradas dos números vinculados. Perder o volume não perde dado de chamado — só
+obriga cada pessoa a ler o QR code de novo. O sistema roda com **uma instância só** do bot: a
+conexão com o WhatsApp fica viva dentro dele.
 
 ## A API
 
@@ -151,9 +153,9 @@ Respostas de erro do envio: `409` (`not_connected`) quando o número não está 
 
 ## Segurança
 
-- **A API não fica na internet.** O bot escuta só em `127.0.0.1` por padrão; no Docker, só na
-  rede interna do compose. Quem tem o `BOT_API_TOKEN` manda mensagem pelo WhatsApp de qualquer
-  pessoa vinculada.
+- **A API não fica na internet.** O bot escuta só em `127.0.0.1` (inclusive dentro do container
+  Docker), então só o servidor que roda ao lado dele consegue chamá-lo. Quem tem o `BOT_API_TOKEN`
+  manda mensagem pelo WhatsApp de qualquer pessoa vinculada.
 - **A conexão é cifrada em disco** (AES-256-GCM, chave em `BOT_SESSION_KEY`). Quem tem esses
   dados é aquele WhatsApp: lê e manda mensagem como a pessoa. Nem o nome dos arquivos revela
   telefone.

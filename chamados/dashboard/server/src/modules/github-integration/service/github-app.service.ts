@@ -41,7 +41,10 @@ export class GithubAppService {
       const payload = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({ iat: now - 60, exp: now + 540, iss: this.env.GITHUB_APP_ID })}`;
       const signature = createSign('RSA-SHA256')
         .update(payload)
-        .sign(this.env.GITHUB_APP_PRIVATE_KEY!.replace(/\\n/g, '\n'), 'base64url');
+        .sign(
+          this.env.GITHUB_APP_PRIVATE_KEY!.replace(/^['"]+|['"]+$/g, '').replace(/\\+n/g, '\n'),
+          'base64url',
+        );
       const response = await fetch(
         `https://api.github.com/app/installations/${this.env.GITHUB_APP_INSTALLATION_ID}/access_tokens`,
         {
