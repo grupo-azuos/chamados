@@ -50,6 +50,7 @@
 </script>
 
 <script lang="ts">
+  import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
@@ -58,7 +59,6 @@
   import TimelineStep from '$lib/components/azuos-timeline-step/azuos-timeline-step.svelte';
   import {
     Dialog,
-    DialogContent,
     DialogDescription,
     DialogFooter,
     DialogHeader,
