@@ -16,7 +16,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import postgres from 'postgres';
+import { Pool } from 'pg';
 
 const SERVER_ENV_PATH = resolve(process.cwd(), 'server', '.env');
 const ROOT_ENV_PATH = resolve(process.cwd(), '.env');
@@ -55,21 +55,22 @@ function readArguments() {
 async function main() {
   const { email, remove } = readArguments();
   const dbUrl = readDatabaseUrl();
-  /* SSL segue o `sslmode` da própria string de conexão: o Supabase da casa, na rede interna,
-     não usa — forçar aqui recusaria a conexão. */
-  const sql = postgres(dbUrl, { max: 1 });
+  const pool = new Pool({ connectionString: dbUrl, max: 1 });
 
   try {
     if (remove) {
-      const removed = await sql`DELETE FROM chamados.super_admins WHERE lower(user_email) = ${email} RETURNING id`;
-      console.log(removed.length ? `✅ ${email} deixou de ser super-admin.` : `ℹ️ ${email} não era super-admin.`);
+      const res = await pool.query(
+        'DELETE FROM chamados.super_admins WHERE lower(user_email) = $1 RETURNING id',
+        [email],
+      );
+      console.log(res.rowCount ? `✅ ${email} deixou de ser super-admin.` : `ℹ️ ${email} não era super-admin.`);
       return;
     }
 
-    await sql`
-      INSERT INTO chamados.super_admins (user_email) VALUES (${email})
-      ON CONFLICT (user_email) DO NOTHING
-    `;
+    await pool.query(
+      'INSERT INTO chamados.super_admins (user_email) VALUES ($1) ON CONFLICT (user_email) DO NOTHING',
+      [email],
+    );
     console.log(`✅ ${email} agora é super-admin: vê e altera todas as telas e libera os módulos.`);
     console.log('💡 A pessoa precisa ter acesso ao sistema chamados no admin-console para entrar.');
   } catch (error) {
@@ -81,7 +82,7 @@ async function main() {
     );
     process.exit(1);
   } finally {
-    await sql.end();
+    await pool.end();
   }
 }
 

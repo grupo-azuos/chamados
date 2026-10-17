@@ -1,8 +1,8 @@
 import { join, resolve } from 'node:path';
 
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { Pool, type PoolConfig } from 'pg';
 
 import { type Database } from './db.type';
 import { drizzleSchema } from './drizzle-schema';
@@ -37,85 +37,81 @@ export const MIGRATIONS_TABLE = '__chamados_migrations';
  */
 export const DATABASE_SCHEMA = 'chamados';
 
+/**
+ * Como o pool conversa com o Postgres — e por que é o pool do `pg` (node-postgres).
+ *
+ * O banco de produção fica atrás do pooler do Supabase em modo transação (porta 6543), que empresta
+ * uma conexão do banco por consulta e a devolve ao fim dela. O driver anterior (`postgres`), com
+ * todas as conexões ocupadas, EMENDAVA a consulta seguinte numa conexão em uso, sem esperar a
+ * anterior — e não tem como desligar isso. As emendadas ficavam sem resposta (ClientRead) e as
+ * telas travavam para sempre. O pool do `pg` faz uma consulta por conexão: a excedente espera na
+ * fila do próprio servidor, e o banco nunca recebe mais consultas simultâneas do que o tamanho
+ * do pool. O `pg` também não prepara consulta (o Drizzle não dá nome a elas), que é o que o
+ * modo transação exige.
+ */
+export function poolOptionsFor(url: string, poolSize = 5): PoolConfig {
+  return {
+    connectionString: url,
+    max: poolSize,
+    idleTimeoutMillis: 60_000,
+    maxLifetimeSeconds: 30 * 60,
+    connectionTimeoutMillis: 10_000,
+  };
+}
+
+export type OpenDatabaseOptions = {
+  url: string;
+  poolSize?: number;
+};
+
 export type OpenDatabase = {
   db: Database;
   close: () => Promise<void>;
 };
 
 /**
- * Quantas conexões o sistema mantém abertas.
+ * Conecta no Postgres e aplica as migrations pendentes.
  *
- * **Uma só não serve.** Painel, Inteligência e Orçamento disparam as consultas deles JUNTAS
- * (`Promise.all`), porque são independentes e enfileirá-las deixaria a tela lenta. Com uma
- * conexão, essas consultas disputam o mesmo canal e a tela inteira cai junto quando algo dá
- * errado em uma delas. Cinco é folgado para um MVP e deixa espaço para os outros sistemas
- * que dividem o mesmo Postgres.
+ * É a ÚNICA porta para o banco: o `DbModule`, os seeds e os testes E2E passam por aqui.
  */
-const POOL_SIZE = 5;
+export async function openDatabase(
+  optionsOrUrl: string | OpenDatabaseOptions,
+): Promise<OpenDatabase> {
+  const options: OpenDatabaseOptions =
+    typeof optionsOrUrl === 'string' ? { url: optionsOrUrl } : optionsOrUrl;
+  const { url, poolSize = 5 } = options;
 
-/**
- * Segundos que uma conexão parada fica aberta.
- *
- * Proxy, firewall ou o próprio Postgres derrubam conexão parada há muito tempo.
- * Guardar um socket aberto por horas significa que a primeira consulta depois do almoço sai
- * por um cano que já morreu — e o erro aparece na tela de quem só abriu o painel. Fechando a
- * conexão parada antes disso, a próxima consulta abre uma nova e funciona.
- */
-const IDLE_TIMEOUT_SECONDS = 30;
+  await applyMigrations(url);
 
-/**
- * O pooler em modo transação do Supabase atende na porta 6543 e não suporta
- * prepared statements. A porta é o que decide, desligando prepare automaticamente.
- */
-export function isTransactionPooler(url: string): boolean {
-  try {
-    return new URL(url).port === '6543';
-  } catch {
-    return false;
-  }
+  const pool = new Pool(poolOptionsFor(url, poolSize));
+  /* Erro numa conexão PARADA (o pooler fechou, a rede caiu) chega como evento do pool. Sem este
+     ouvinte, o Node derruba o processo inteiro; com ele, a conexão sai do pool e a próxima
+     consulta abre outra. */
+  pool.on('error', () => undefined);
+
+  return {
+    db: drizzle(pool, { schema: drizzleSchema }),
+    close: () => pool.end(),
+  };
 }
 
 /**
- * Abre a conexão com o Postgres e aplica as migrations pendentes.
- *
- * É a ÚNICA porta para o banco: o `DbModule`, os seeds e os testes E2E passam por aqui.
- *
- * A MIGRATION roda numa conexão SÓ DELA, aberta e fechada aqui: o `migrate` do Drizzle aplica
- * uma migration por vez e precisa que a trava de migração e o DDL aconteçam na mesma conexão.
- * Com o pool, dois processos subindo juntos (o server e um seed, por exemplo) poderiam aplicar
- * a mesma migration duas vezes. Depois que o banco está no lugar, o sistema passa a usar o
- * pool — que é o que permite as telas buscarem várias coisas ao mesmo tempo.
+ * Conexão própria, de UMA conexão, fechada ao terminar: o pool da aplicação nasce depois e não
+ * herda nada daqui. O Drizzle aplica as pendentes numa transação só.
  */
-export async function openDatabase(url: string): Promise<OpenDatabase> {
-  const isTxPooler = isTransactionPooler(url);
-
-  /* Migration aplicada na partida: quem clona o projeto roda `npm run dev` e o banco já
-     nasce com as tabelas. Esquecer `db:migrate` não é um passo que alguém deveria poder
-     esquecer. */
-  const migrationClient = postgres(url, {
-    max: 1,
-    prepare: !isTxPooler,
-    connection: { search_path: DATABASE_SCHEMA },
-  });
+async function applyMigrations(url: string): Promise<void> {
+  const pool = new Pool(poolOptionsFor(url, 1));
+  pool.on('error', () => undefined);
 
   try {
-    await migrate(drizzle(migrationClient), {
+    await migrate(drizzle(pool), {
       migrationsFolder: MIGRATIONS_FOLDER,
       migrationsSchema: MIGRATIONS_SCHEMA,
       migrationsTable: MIGRATIONS_TABLE,
     });
   } finally {
-    await migrationClient.end();
+    await pool.end();
   }
-
-  const sql = postgres(url, {
-    max: POOL_SIZE,
-    idle_timeout: IDLE_TIMEOUT_SECONDS,
-    prepare: !isTxPooler,
-    connection: { search_path: DATABASE_SCHEMA },
-  });
-
-  return { db: drizzle(sql, { schema: drizzleSchema }), close: () => sql.end() };
 }
 
 /**

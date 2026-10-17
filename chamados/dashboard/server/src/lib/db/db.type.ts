@@ -1,9 +1,9 @@
-import { type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { type NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { type DrizzleSchema } from './drizzle-schema';
 
 /** O tipo da conexão, para os repositories não repetirem o genérico do Drizzle. */
-export type Database = PostgresJsDatabase<DrizzleSchema>;
+export type Database = NodePgDatabase<DrizzleSchema>;
 
 /**
  * O tipo de quem executa uma consulta: a conexão OU uma transação aberta sobre ela.
