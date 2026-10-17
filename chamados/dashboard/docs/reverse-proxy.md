@@ -11,8 +11,7 @@ Os exemplos usam `chamados.exemplo.com` e a porta `3005` (o valor de `API_PORT`)
 | O quê | Por quê |
 |---|---|
 | HTTPS | O login viaja nessas requisições. |
-| Limitar o tamanho da requisição | Abrir chamado é público e aceita anexos. Sem teto, alguém manda arquivos enormes e derruba o servidor. |
-| Limite apertado nas duas rotas públicas | `POST /api/tickets` (abrir chamado) e `GET /api/tickets/protocol/...` (consultar). O protocolo é sequencial; sem limite, dá para varrer todos os chamados. |
+| Limitar o tamanho da requisição | Abrir chamado aceita anexos. Sem teto, alguém manda arquivos enormes e derruba o servidor. |
 | Fechar `/docs` e `/docs-json` | É a documentação da API. Não precisa estar aberta para a internet. |
 | Repassar WebSocket em `/agent` | É por onde o agente instalado nas máquinas conversa com o sistema. |
 
@@ -20,8 +19,6 @@ Os números dos exemplos:
 
 - **64 MB por requisição.** O maior anexo aceito é um vídeo de 50 MB. Quem mandar vários vídeos de
   uma vez é recusado pelo proxy e precisa enviar em partes — é o preço de um teto que protege.
-- **10 requisições por minuto por IP** nas rotas públicas, com folga para 5 em rajada. Uma pessoa
-  abrindo um chamado e consultando o protocolo não chega perto disso.
 
 O webhook da rede (`POST /api/network/webhook`) **não** precisa de regra no proxy: o sistema já o
 limita sozinho (`API_WEBHOOK_RATE_LIMIT`).
@@ -66,18 +63,19 @@ services:
       # A documentação da API só abre para a rede interna. Troque pela faixa da sua rede.
       - traefik.http.middlewares.azuos-internal.ipallowlist.sourcerange=10.0.0.0/8,192.168.0.0/16
 
-      # Tudo: tela, API e o WebSocket do agente (o Traefik repassa WebSocket sozinho).
+      # Router principal: tela e API protegidos pelo login (forwardAuth do admin-console)
       - traefik.http.routers.azuos.rule=Host(`chamados.exemplo.com`)
       - traefik.http.routers.azuos.entrypoints=websecure
       - traefik.http.routers.azuos.tls.certresolver=letsencrypt
-      - traefik.http.routers.azuos.middlewares=azuos-body
+      - traefik.http.routers.azuos.middlewares=azuos-body,um-auth@docker
 
-      # As duas rotas públicas. A prioridade maior faz esta regra ganhar da de cima.
-      - traefik.http.routers.azuos-public.rule=Host(`chamados.exemplo.com`) && ((Method(`POST`) && Path(`/api/tickets`)) || PathPrefix(`/api/tickets/protocol/`))
-      - traefik.http.routers.azuos-public.priority=100
-      - traefik.http.routers.azuos-public.entrypoints=websecure
-      - traefik.http.routers.azuos-public.tls.certresolver=letsencrypt
-      - traefik.http.routers.azuos-public.middlewares=azuos-body,azuos-public
+      # Rotas de máquina SEM login: agente (WebSocket e releases) e webhook do UniFi.
+      # Identificam-se por token próprio. A prioridade maior faz esta regra ganhar da de cima.
+      - traefik.http.routers.azuos-machines.rule=Host(`chamados.exemplo.com`) && (Path(`/agent`) || (Method(`GET`) && Path(`/api/agent/releases/latest`)) || (Method(`POST`) && Path(`/api/network/webhook`)))
+      - traefik.http.routers.azuos-machines.priority=100
+      - traefik.http.routers.azuos-machines.entrypoints=websecure
+      - traefik.http.routers.azuos-machines.tls.certresolver=letsencrypt
+      - traefik.http.routers.azuos-machines.middlewares=azuos-body
 
       # A documentação da API.
       - traefik.http.routers.azuos-docs.rule=Host(`chamados.exemplo.com`) && (PathPrefix(`/docs`) || Path(`/docs-json`))
