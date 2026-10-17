@@ -7,6 +7,7 @@ import {
 import { agentDownloadApi } from '$lib/api/agent-download.api';
 import { readError } from '$lib/api/http-client';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { downloadAgentInstallerScript } from '$lib/utils/agent-installer-script.util';
 
 export type AgentDownloadModel = {
   data: { release: AgentLts | null };
@@ -16,7 +17,11 @@ export type AgentDownloadModel = {
     downloadError: string | null;
     downloading: AgentDownloadKind | null;
   };
-  actions: { onRetry: () => void; onDownload: (kind: AgentDownloadKind) => void };
+  actions: {
+    onRetry: () => void;
+    onDownload: (kind: AgentDownloadKind) => void;
+    onDownloadInstallerScript: () => void;
+  };
 };
 
 /** Cada clique pede um link novo: uma aba aberta por horas não guarda URL vencida. */
@@ -61,6 +66,10 @@ export function useAgentDownloadModel(): AgentDownloadModel {
         void release.current.refetch();
       },
       onDownload: (kind) => void download(kind),
+      onDownloadInstallerScript: () => {
+        const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
+        downloadAgentInstallerScript({ serverUrl: origin });
+      },
     },
   };
 }
