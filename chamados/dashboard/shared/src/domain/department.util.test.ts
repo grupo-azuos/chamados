@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEPARTMENT_LABELS,
   DEPARTMENTS,
+  departmentFromText,
   departmentLabel,
   departmentOptions,
   isDepartment,
@@ -69,5 +70,28 @@ describe('departments shared with tickets', () => {
 
   it('is the same label, read from either side', () => {
     expect(ticketDepartmentLabel('recepcao')).toBe(departmentLabel('recepcao'));
+  });
+});
+
+describe('departmentFromText', () => {
+  // feliz
+  it('finds the department whatever the accent or case the admin-console used', () => {
+    expect(departmentFromText('Contábil')).toBe('contabil');
+    expect(departmentFromText('  RECEPCAO ')).toBe('recepcao');
+    expect(departmentFromText('rh')).toBe('rh');
+  });
+
+  it('finds the department named inside a longer text', () => {
+    expect(departmentFromText('Departamento Pessoal')).toBe('pessoal');
+    expect(departmentFromText('Depto. Fiscal')).toBe('fiscal');
+  });
+
+  // triste
+  /* Chutar colocaria o chamado na estatística errada: sem encontro único, a pessoa escolhe. */
+  it('gives nothing when there is no single match', () => {
+    expect(departmentFromText('Diretoria')).toBeNull();
+    expect(departmentFromText('Fiscal e Contábil')).toBeNull();
+    expect(departmentFromText('')).toBeNull();
+    expect(departmentFromText(null)).toBeNull();
   });
 });

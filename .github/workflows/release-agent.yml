@@ -1,0 +1,47 @@
+name: Release/Agent
+on:
+  push:
+    tags: ["agent/v*"]
+permissions:
+  contents: read
+concurrency:
+  group: agent-release
+  cancel-in-progress: false
+jobs:
+  build:
+    uses: ./.github/workflows/build-agent.yml
+    with:
+      release: true
+    secrets: inherit
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: agent-release
+          path: release
+      - name: Install storage SDK from the project lockfile
+        working-directory: chamados/dashboard
+        run: npm ci --ignore-scripts
+      - name: Upload version archive and latest manifest to private S3
+        run: node .github/scripts/release/publish-agent.mjs
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_REGION: ${{ vars.S3_REGION }}
+          S3_BUCKET: ${{ vars.S3_BUCKET || 'chamados' }}
+          S3_FORCE_PATH_STYLE: ${{ vars.S3_FORCE_PATH_STYLE }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+  bump:
+    needs: publish
+    uses: ./.github/workflows/release-bump.yml
+    permissions:
+      contents: write
+    secrets: inherit

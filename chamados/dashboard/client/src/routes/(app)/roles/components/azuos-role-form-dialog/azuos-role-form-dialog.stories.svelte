@@ -27,6 +27,32 @@
   }}
 />
 
+<!-- O caso que vazava a borda: pessoa escolhida (cartão + "Trocar pessoa") com nome e e-mail
+     longos, ao lado dos três cartões de módulo. -->
+<Story
+  name="WithSelectedPerson"
+  args={{
+    data: {
+      mode: 'create',
+      users: [
+        {
+          id: 'usr_2',
+          name: 'Wellington Queiroz de Albuquerque Nogueira',
+          email: 'wellington.queiroz.albuquerque@empresa-exemplo.com.br',
+          role: 'admin',
+        },
+      ],
+      fields: {
+        userId: { value: 'usr_2', error: null },
+        userEmail: { value: 'wellington.queiroz.albuquerque@empresa-exemplo.com.br', error: null },
+        context: { value: 'infra', error: null },
+      },
+    },
+    state: { isOpen: true },
+    actions: baseActions,
+  }}
+/>
+
 <Story
   name="Edit"
   args={{

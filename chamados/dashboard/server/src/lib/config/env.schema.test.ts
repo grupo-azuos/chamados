@@ -24,11 +24,11 @@ describe('parseEnv', () => {
       API_WEBHOOK_RATE_LIMIT: 12,
       API_TRUST_PROXY_HOPS: 0,
       WHATSAPP_DAILY_LIMIT: 100,
-      S3_SIGNED_URL_TTL_SECONDS: 300,
       S3_REGION: 'local',
       S3_FORCE_PATH_STYLE: true,
       ADMIN_CONSOLE_TOKEN: '',
       ADMIN_CONSOLE_TIMEOUT_MS: 4000,
+      ADMIN_CONSOLE_COOKIE_PREFIX: 'azuos',
     });
   });
 
@@ -99,10 +99,14 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ ...secrets, API_PORT: '99999' })).toThrow(/API_PORT/);
   });
 
-  /* Link assinado eterno deixa de ser "baixe agora" e vira um endereço público. */
-  it('refuses a signed url lifetime longer than an hour', () => {
-    expect(() => parseEnv({ ...secrets, S3_SIGNED_URL_TTL_SECONDS: '7200' })).toThrow(
-      /S3_SIGNED_URL_TTL_SECONDS/,
+  /* O host da assinatura vai num cabeçalho: URL inteira ali é erro de quem preencheu. */
+  it('takes the signing host as host:port, and refuses a full URL', () => {
+    expect(
+      parseEnv({ ...secrets, S3_SIGNING_HOST: 's3.homo.grupoazuos.com.br:8001' }).S3_SIGNING_HOST,
+    ).toBe('s3.homo.grupoazuos.com.br:8001');
+    expect(parseEnv({ ...secrets, S3_SIGNING_HOST: '' }).S3_SIGNING_HOST).toBeUndefined();
+    expect(() => parseEnv({ ...secrets, S3_SIGNING_HOST: 'https://s3.exemplo' })).toThrow(
+      /S3_SIGNING_HOST/,
     );
   });
 

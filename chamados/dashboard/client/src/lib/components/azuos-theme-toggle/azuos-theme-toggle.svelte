@@ -12,10 +12,19 @@
    * está claro — o ícone mostra o tema DE AGORA, não para onde o clique leva.
    */
   const theme = useThemeModel();
+
+  const SIDEBAR_ICON = 'text-brand-yellow-400 hover:bg-sidebar-accent hover:text-brand-yellow-300';
 </script>
 
 <ActionButton
   data={{ label: theme.theme === 'dark' ? 'Mudar para o tema claro' : 'Mudar para o tema escuro' }}
-  ui={{ variant: 'ghost', size: 'sm', icon: theme.theme === 'dark' ? Moon : Sun, isIconOnly: true }}
+  ui={{
+    variant: 'ghost',
+    size: 'sm',
+    icon: theme.theme === 'dark' ? Moon : Sun,
+    isIconOnly: true,
+    /* Mora na barra lateral azul: o amarelo da marca é o que aparece ali. */
+    className: SIDEBAR_ICON,
+  }}
   actions={{ onClick: theme.actions.onToggle }}
 />

@@ -14,6 +14,8 @@
    * fraco. Como no tema, o ícone mostra o modo DE AGORA, não para onde o clique leva.
    */
   const effects = useEffectsModel();
+
+  const SIDEBAR_ICON = 'text-brand-yellow-400 hover:bg-sidebar-accent hover:text-brand-yellow-300';
 </script>
 
 <ActionButton
@@ -28,6 +30,8 @@
     size: 'sm',
     icon: effects.level === 'full' ? Sparkles : Gauge,
     isIconOnly: true,
+    /* Mora na barra lateral azul: o amarelo da marca é o que aparece ali. */
+    className: SIDEBAR_ICON,
   }}
   actions={{ onClick: effects.actions.onToggle }}
 />

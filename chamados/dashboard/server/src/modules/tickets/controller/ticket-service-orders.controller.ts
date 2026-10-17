@@ -11,7 +11,6 @@ import {
 import { type Response } from 'express';
 
 import { CurrentUser } from '../../../lib/auth/current-user.decorator';
-import { Public } from '../../../lib/auth/public.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { PublicServiceOrderDto } from '../dto/service-order.dto';
 import { TicketServiceOrdersService } from '../service/ticket-service-orders.service';
@@ -21,7 +20,8 @@ import { AnyModule } from '../../../lib/auth/module-context.decorator';
  * A ORDEM DE SERVIÇO como documento: emitir (pelo painel) e conferir (por qualquer pessoa).
  *
  * Emitir é `POST`, e não `GET`: a emissão REGISTRA algo — a impressão digital do arquivo que
- * saiu. A conferência é `@Public()` de propósito: quem recebe o papel não tem conta no painel.
+ * saiu. A conferência é de qualquer pessoa LOGADA (o sistema não tem rota pública): ela não
+ * precisa de módulo, porque só confere se o papel que tem na mão é autêntico.
  * Ela só lê, e devolve o mínimo (ver `publicServiceOrderSchema`).
  *
  * Não há `@Patch` nem `@Delete`: emissão não se corrige nem se apaga.
@@ -58,9 +58,8 @@ export class TicketServiceOrdersController {
   }
 
   @Get('service-orders/:reference')
-  @Public()
   @ApiOperation({
-    summary: 'Confere uma ordem de serviço emitida (público)',
+    summary: 'Confere uma ordem de serviço emitida',
     description:
       'Não exige login. Aceita o código inteiro da emissão ou a versão curta impressa no rodapé. Devolve só o que serve para conferir o papel: protocolo, versão, data, estágio na emissão e a impressão digital do arquivo. Nada é gravado.',
   })

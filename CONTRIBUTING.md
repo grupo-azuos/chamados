@@ -59,7 +59,7 @@ No template Svelte, mostre cedo os estados de carregamento, erro e vazio com `{#
 A camada de apresentação não sabe de onde o dado vem. O hook não sabe como o dado é desenhado. Os dois se encontram na rota.
 
 ```text
-routes/tasks/+page.svelte         → compõe: chama o hook, passa para o componente
+routes/(app)/infra/parts/+page.svelte → compõe: chama o hook, passa para o componente
 lib/hooks/use-…/use-….svelte.ts   → estado, efeitos, queries, mutations, handlers. ZERO template.
 lib/components/…/….svelte         → função pura de props → template. ZERO hook de dado.
 ```
@@ -188,6 +188,12 @@ O que não precisa:
 
 * **Quem editou vem da identidade**, nunca do corpo da requisição. `createdBy` e `updatedBy` são carimbados no mapper a partir da identidade autenticada. O cliente nunca pode escolher ou sobrescrever a identidade de quem realizou a operação.
 
+* **Arquivo de quem usa o sistema nunca passa pela API.** Nada de `FileInterceptor`, `multipart/form-data` ou `StreamableFile` para arquivo de usuário. O envio é por link assinado, no mesmo padrão do Paralegal (README, "Os arquivos vão direto para o storage"):
+  * uma rota `POST .../upload-url` confere a permissão **no service** e chama `StagedUploadsService.createUploadTicket` — o arquivo cai na área temporária `tmp/`;
+  * a gravação recebe `{ storageKey, fileName }` (`stagedFileSchema`), mede o arquivo com `inspect` (tamanho e tipo do storage, não os declarados), aplica a regra do domínio, recusa com `discard` o que não serve e move o resto com `promote`;
+  * abrir e baixar é `FileStorage.downloadUrl`, com o nome do arquivo quando é para salvar.
+  O service fala com o contrato `FileStorage` (token `STORAGE`), nunca com o SDK. Nos testes, `MemoryStorage`.
+
 ### Autenticação e autorização
 
 * `AuthenticationMiddleware` resolve e valida a identidade da requisição.
@@ -300,9 +306,9 @@ scripts/seed/
 
 ├── seed.util.ts
 ├── seed-all.ts
-└── tasks/
-    ├── tasks.data.ts
-    └── seed-tasks.ts
+└── parts/
+    ├── parts.data.ts
+    └── seed-parts.ts
 ```
 
 Regras:
@@ -324,16 +330,16 @@ Regras:
 | Tipo           | Padrão                                      | Exemplo                                                |
 | -------------- | ------------------------------------------- | ------------------------------------------------------- |
 | Componente genérico | `lib/components/azuos-<nome>/azuos-<nome>.svelte` | `lib/components/azuos-text-field/azuos-text-field.svelte` |
-| Componente de feature | `routes/(app)/<context>/<feature>/components/azuos-<nome>/azuos-<nome>.svelte` | `routes/(app)/infra/tasks/components/azuos-task-list-view/azuos-task-list-view.svelte` |
-| Story          | `azuos-<nome>.stories.svelte`             | `azuos-task-list-view.stories.svelte`                |
-| Hook (view-model) | `lib/hooks/use-<nome>/use-<nome>.svelte.ts` — pasta própria, prefixo `use-`, nunca arquivo solto | `lib/hooks/use-task-list/use-task-list.svelte.ts`   |
-| Teste          | `<arquivo>.test.ts`                         | `task-status.util.test.ts`     |
-| E2E            | `<fluxo>.e2e.ts`                            | `tasks.e2e.ts`                 |
-| Módulo Nest    | `<feature>.<papel>.ts`                      | `tasks.service.ts`             |
-| Schema Zod     | `<nome>.schema.ts`                          | `task.schema.ts`               |
-| Tabela Drizzle | `<nome-no-plural>.schema.ts`                | `tasks.schema.ts`              |
+| Componente de feature | `routes/(app)/<context>/<feature>/components/azuos-<nome>/azuos-<nome>.svelte` | `routes/(app)/infra/parts/components/azuos-part-list-view/azuos-part-list-view.svelte` |
+| Story          | `azuos-<nome>.stories.svelte`             | `azuos-part-list-view.stories.svelte`                |
+| Hook (view-model) | `lib/hooks/use-<nome>/use-<nome>.svelte.ts` — pasta própria, prefixo `use-`, nunca arquivo solto | `lib/hooks/use-part-list/use-part-list.svelte.ts`   |
+| Teste          | `<arquivo>.test.ts`                         | `part-catalog.util.test.ts`    |
+| E2E            | `<fluxo>.e2e.ts`                            | `tickets.e2e.ts`               |
+| Módulo Nest    | `<feature>.<papel>.ts`                      | `parts.service.ts`             |
+| Schema Zod     | `<nome>.schema.ts`                          | `part.schema.ts`               |
+| Tabela Drizzle | `<nome-no-plural>.schema.ts`                | `parts.schema.ts`              |
 | Util puro      | `<nome>.util.ts`                            | `format-date.util.ts`          |
-| Seed           | `seed-<entidade>.ts` + `<entidade>.data.ts` | `seed-tasks.ts`                |
+| Seed           | `seed-<entidade>.ts` + `<entidade>.data.ts` | `seed-parts.ts`                |
 
 Export nomeado sempre. `export default` só onde o framework exige.
 
@@ -352,9 +358,9 @@ Formato obrigatório:
 Exemplos:
 
 ```text
-[feat](backend): Endpoint de listagem de tarefas com filtro por situação
+[feat](backend): Endpoint de listagem de chamados com filtro por situação
 [fix](web): Erro do formulário some quando o título é corrigido
-[refactor](web): Extrai view-model da tela de tarefas
+[refactor](web): Extrai view-model da tela de chamados
 [test](backend): Caminho triste da edição feita por perfil de consulta
 [chore](docker): Sobe o Node da imagem para a 24 LTS
 ```

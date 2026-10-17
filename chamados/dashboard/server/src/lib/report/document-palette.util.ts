@@ -2,38 +2,33 @@ import { type DocumentTone } from './document.type';
 
 /**
  * As cores dos documentos, num lugar só: os três geradores (PDF, Word e Excel) leem daqui, e é
- * por isso que um título é do mesmo roxo nos três.
+ * por isso que um título é do mesmo azul nos três.
  *
- * Os valores são os do TEMA CLARO da tela (`client/src/lib/theme/tokens.css`), copiados sem
- * alteração — o documento tem a mesma identidade do painel. O servidor não lê CSS, então a
- * cópia é à mão: mudou um token lá, muda o mesmo nome aqui.
+ * São as cores oficiais da marca (`client/src/lib/theme/tokens.css`), as mesmas do papel
+ * timbrado da Gestão de RH: azul Azuos, o fio amarelo e texto em preto. O servidor não lê CSS,
+ * então a cópia é à mão: mudou lá, muda aqui.
  *
  * Sempre em hexadecimal SEM `#`: é o formato que o ExcelJS e o docx esperam. O PDF precisa do
  * `#` na frente, e por isso `pdfColor` o acrescenta.
  */
 export const DOCUMENT_PALETTE = {
   /** `--primary` — título, cabeçalho de tabela, faixa de ficha, fio sob o cabeçalho. */
-  primary: '7C3AED',
+  primary: '1B3A8C',
   /** `--primary-foreground`. */
   primaryForeground: 'FFFFFF',
   /** `--foreground`. */
-  foreground: '0F172A',
-  /** `--muted-foreground`. */
-  subtext: '64748B',
-  /** `--border`. */
-  border: 'E2E8F0',
-  /** `--background` — a linha zebrada da tabela. */
-  surfaceAlt: 'F8FAFC',
+  foreground: '000000',
+  /** O amarelo da marca — o fio sob a faixa azul do Excel. */
+  accent: 'F5C518',
+  /** Texto de apoio: datas, detalhes, a linha de "nenhum registro". */
+  subtext: '5B6478',
+  /** O fio da grade do Excel — azul bem claro, para não competir com o cabeçalho. */
+  border: 'C9D2EA',
+  /** A linha zebrada da tabela do Excel. */
+  surfaceAlt: 'F4F6FC',
   /** `--card` — o papel. */
   background: 'FFFFFF',
 } as const;
-
-/**
- * A fonte dos documentos. No Word e no Excel vai só o NOME (quem abre o arquivo usa a fonte do
- * próprio computador); no PDF a fonte vai embutida, e por isso lá se usa a Liberation Sans
- * Narrow de `fonts/` — de mesma largura, e de licença livre.
- */
-export const DOCUMENT_FONT_NAME = 'Arial Narrow';
 
 /**
  * O selo CHEIO — fundo saturado, texto claro. Bom como uma etiqueta isolada, cercada de espaço
@@ -45,7 +40,7 @@ export const DOCUMENT_TONE_COLORS: Record<DocumentTone, { fill: string; text: st
   success: { fill: '047857', text: 'FFFFFF' },
   warning: { fill: 'B45309', text: 'FFFFFF' },
   danger: { fill: 'E11D48', text: 'FFFFFF' },
-  brand: { fill: '7C3AED', text: 'FFFFFF' },
+  brand: { fill: '1B3A8C', text: 'FFFFFF' },
 };
 
 /**
@@ -59,7 +54,7 @@ export const DOCUMENT_TONE_SOFT_COLORS: Record<DocumentTone, { fill: string; tex
   success: { fill: 'D1FAE5', text: '047857' },
   warning: { fill: 'FEF3C7', text: 'B45309' },
   danger: { fill: 'FFE4E6', text: 'E11D48' },
-  brand: { fill: 'EDE9FE', text: '7C3AED' },
+  brand: { fill: 'E8EDF8', text: '1B3A8C' },
 };
 
 /** O hexadecimal com `FF` de opacidade na frente — o formato ARGB que o ExcelJS pede. */

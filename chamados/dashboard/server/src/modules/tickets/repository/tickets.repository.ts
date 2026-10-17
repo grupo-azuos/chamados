@@ -14,6 +14,7 @@ import {
   getTableColumns,
   ilike,
   inArray,
+  isNotNull,
   or,
   sql,
   type SQL,
@@ -48,6 +49,10 @@ export type TicketPage = {
 /**
  * As colunas do chamado mais o apelido da máquina e nome do projeto.
  */
+/* Quantos dígitos do fim do telefone identificam o número, com ou sem DDI e nono dígito. */
+const PHONE_MATCH_DIGITS = 8;
+const PHONE_OWNERS_LIMIT = 20;
+
 const ticketColumns = {
   ...getTableColumns(tickets),
   computerName: sql<string | null>`coalesce(${computers.displayName}, ${computers.name})`,
@@ -188,6 +193,62 @@ export class TicketsRepository {
         .limit(1),
       'ler chamado',
     );
+  }
+
+  /**
+   * Os chamados que UMA PESSOA abriu — "Meus chamados". Mais recentes primeiro, com teto: é
+   * uma lista para acompanhar o que está em andamento, não o arquivo da vida inteira.
+   */
+  async listByRequester(requesterId: string, limit = 50): Promise<TicketRow[]> {
+    return runQuery(
+      this.db
+        .select()
+        .from(tickets)
+        .where(eq(tickets.requesterId, requesterId))
+        .orderBy(desc(tickets.createdAt), desc(tickets.id))
+        .limit(limit),
+      'listar os chamados de quem abriu',
+    );
+  }
+
+  /** O telefone que a pessoa deixou no último chamado — a sugestão quando o perfil não tem. */
+  async lastPhoneOf(requesterId: string): Promise<string | null> {
+    const row = await runMaybe(
+      this.db
+        .select({ phone: tickets.contactPhone })
+        .from(tickets)
+        .where(and(eq(tickets.requesterId, requesterId), isNotNull(tickets.contactPhone)))
+        .orderBy(desc(tickets.createdAt))
+        .limit(1),
+      'ler o último telefone de quem abriu',
+    );
+
+    return row?.phone ?? null;
+  }
+
+  /**
+   * Quem já abriu chamado com este telefone. Compara os oito últimos dígitos: o WhatsApp manda
+   * o número com 55 e às vezes sem o nono dígito, e o formulário guarda com máscara.
+   */
+  async requesterIdsByPhone(digits: string): Promise<string[]> {
+    const ending = digits.replace(/\D/g, '').slice(-PHONE_MATCH_DIGITS);
+    if (ending.length < PHONE_MATCH_DIGITS) return [];
+
+    const rows = await runQuery(
+      this.db
+        .selectDistinct({ requesterId: tickets.requesterId })
+        .from(tickets)
+        .where(
+          and(
+            isNotNull(tickets.requesterId),
+            sql`right(regexp_replace(${tickets.contactPhone}, '[^0-9]', '', 'g'), ${PHONE_MATCH_DIGITS}) = ${ending}`,
+          ),
+        )
+        .limit(PHONE_OWNERS_LIMIT),
+      'procurar quem já usou o telefone',
+    );
+
+    return rows.flatMap((row) => (row.requesterId ? [row.requesterId] : []));
   }
 
   /**

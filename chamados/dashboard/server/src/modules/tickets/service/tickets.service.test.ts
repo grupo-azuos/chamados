@@ -4,13 +4,19 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { ticketListQuerySchema } from '@template/shared/schemas/ticket.schema';
+import {
+  type CreateTicketInput,
+  ticketListQuerySchema,
+} from '@template/shared/schemas/ticket.schema';
 import { describe, expect, it, vi } from 'vitest';
 
+import { type AdminConsoleProfileProvider } from '../../../lib/auth/admin-console-profile.provider';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type Env } from '../../../lib/config/env.schema';
 
-import { type StorageService } from '../../../lib/storage/storage.service';
+import { type FileStorage } from '../../../lib/storage/file-storage.type';
+import { MemoryStorage } from '../../../lib/storage/memory-storage';
+import { StagedUploadsService } from '../../../lib/storage/staged-uploads.service';
 import { type TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
 import { type TicketHistoriesRepository } from '../repository/ticket-histories.repository';
 import { TicketAccessService } from './ticket-access.service';
@@ -21,7 +27,7 @@ import { signTicketAccess, signTicketInvite } from './ticket-invite.util';
 import { type TicketWhatsappNotifierService } from './ticket-whatsapp-notifier.service';
 import { type GithubService } from '../../software-projects/service/github.service';
 import { type SoftwareProjectsService } from '../../software-projects/service/software-projects.service';
-import { TicketsService, type UploadedScreenshot } from './tickets.service';
+import { TicketsService } from './tickets.service';
 
 const ana: RequestUser = {
   id: '1',
@@ -46,6 +52,8 @@ function ticketRow(overrides: Partial<TicketWithComputer> = {}): TicketWithCompu
     id: 7,
     status: 'open',
     priority: 'medium',
+    requesterId: null,
+    requesterEmail: null,
     requesterName: 'Bia Costa',
     area: 'infra',
     department: 'financeiro',
@@ -73,9 +81,11 @@ function ticketRow(overrides: Partial<TicketWithComputer> = {}): TicketWithCompu
 }
 
 const storageStub = {
-  upload: vi.fn().mockResolvedValue({ key: 'tickets/abc.png' }),
-  createDownloadUrl: vi.fn().mockResolvedValue('https://r2.example/signed'),
+  downloadUrl: vi.fn().mockResolvedValue('https://r2.example/signed'),
 };
+
+/* A área temporária de verdade, sobre o storage em memória: é por ela que o print chega. */
+const stagingStub = new StagedUploadsService(new MemoryStorage());
 
 /* Os anexos têm serviço próprio, com testes próprios: aqui só se confere que o chamado o
    chama. Um duplo que não faz nada é o suficiente — e mantém este teste sobre chamados. */
@@ -106,10 +116,11 @@ const historiesRepositoryStub = { record: vi.fn().mockResolvedValue({}) };
 
 function makeService(
   repository: Partial<TicketsRepository>,
-  storage: Partial<StorageService> = storageStub,
+  storage: Partial<FileStorage> = storageStub,
   attachments: Partial<TicketAttachmentsService> = attachmentsStub,
   github: Partial<GithubService> = {},
   softwareProjects: Partial<SoftwareProjectsService> = {},
+  staging: StagedUploadsService = stagingStub,
 ) {
   const tickets = { ...defaultRepository, ...repository } as TicketsRepository;
 
@@ -117,7 +128,8 @@ function makeService(
      testes exercitam, e um duplo dela testaria o duplo. */
   return new TicketsService(
     tickets,
-    storage as StorageService,
+    storage as FileStorage,
+    staging,
     attachments as TicketAttachmentsService,
     new TicketAccessService(tickets),
     historiesStub as unknown as TicketHistoriesService,
@@ -129,11 +141,37 @@ function makeService(
 
 const query = (overrides: Record<string, unknown> = {}) => ticketListQuerySchema.parse(overrides);
 
-const pngScreenshot: UploadedScreenshot = {
-  originalname: 'erro.png',
-  mimetype: 'image/png',
-  size: 1024,
-  buffer: Buffer.from('fake'),
+const SCREENSHOT_KEY = 'tmp/00000000-0000-4000-8000-000000000001.png';
+
+/**
+ * O print que o navegador já enviou: o storage em memória com o arquivo na área temporária, e
+ * o serviço montado sobre ele.
+ */
+async function withSentScreenshot(
+  repository: Partial<TicketsRepository>,
+  file: { contentType: string; sizeBytes: number } = { contentType: 'image/png', sizeBytes: 1024 },
+) {
+  const storage = new MemoryStorage();
+  await storage.put(SCREENSHOT_KEY, Buffer.alloc(file.sizeBytes), file.contentType);
+  const service = makeService(
+    repository,
+    storage,
+    attachmentsStub,
+    {},
+    {},
+    new StagedUploadsService(storage),
+  );
+
+  return { storage, service, screenshot: { storageKey: SCREENSHOT_KEY, fileName: 'erro.png' } };
+}
+
+const openingInput: CreateTicketInput = {
+  requesterName: 'Bia Costa',
+  area: 'infra',
+  department: 'financeiro',
+  problemType: 'printer',
+  contactPhone: '62999999999',
+  description: 'A impressora não puxa papel.',
 };
 
 describe('TicketsService.list', () => {
@@ -187,7 +225,7 @@ describe('TicketsService.findById', () => {
 
 describe('TicketsService.create', () => {
   // feliz
-  it('opens a ticket without any login at all', async () => {
+  it('opens a ticket for whoever is logged in', async () => {
     const insert = vi.fn().mockResolvedValue(ticketRow());
     const service = makeService({ insert });
 
@@ -245,6 +283,49 @@ describe('TicketsService.create', () => {
     );
   });
 
+  /* O pedido de usuário do WhatsApp ("0 — Nenhum") é de Sistema, mas sem sistema ainda. */
+  it('opens a user request in Sistema without a project', async () => {
+    const insert = vi
+      .fn()
+      .mockResolvedValue(
+        ticketRow({ area: 'sistema', problemType: 'access_request', projectId: null }),
+      );
+    const isTicketOption = vi.fn();
+    const service = makeService({ insert }, storageStub, attachmentsStub, undefined, {
+      isTicketOption,
+    });
+
+    await service.create({
+      requesterName: 'Bia Costa',
+      area: 'sistema',
+      department: 'financeiro',
+      problemType: 'access_request',
+      contactPhone: '62999999999',
+      description: 'Pedido de usuário.',
+    });
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(isTicketOption).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('still refuses any other Sistema ticket without a project', async () => {
+    const service = makeService({ insert: vi.fn() }, storageStub, attachmentsStub, undefined, {
+      isTicketOption: vi.fn(),
+    });
+
+    await expect(
+      service.create({
+        requesterName: 'Bia Costa',
+        area: 'sistema',
+        department: 'financeiro',
+        problemType: 'bug',
+        contactPhone: '62999999999',
+        description: 'O sistema não carrega.',
+      }),
+    ).rejects.toThrow('Selecione um sistema disponível');
+  });
+
   /* A linha do tempo começa na abertura: sem ela, o primeiro histórico do chamado seria o
      de quem atendeu, e o relatório não diria quando nem por quem ele foi aberto. */
   it('starts the timeline with the opening', async () => {
@@ -263,68 +344,53 @@ describe('TicketsService.create', () => {
     expect(historiesStub.recordOpening).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }));
   });
 
-  it('stores the screenshot and keeps its key on the ticket', async () => {
-    const insert = vi.fn().mockResolvedValue(ticketRow({ screenshotKey: 'tickets/abc.png' }));
-    const upload = vi.fn().mockResolvedValue({ key: 'tickets/abc.png' });
-    const service = makeService(
-      { insert },
-      { upload, createDownloadUrl: vi.fn().mockResolvedValue('https://r2.example/signed') },
-    );
+  it('moves the screenshot out of the staging area and keeps its key on the ticket', async () => {
+    const insert = vi.fn().mockResolvedValue(ticketRow());
+    const { storage, service, screenshot } = await withSentScreenshot({ insert });
 
-    await service.create(
-      {
-        requesterName: 'Bia Costa',
-        area: 'infra' as const,
-        department: 'financeiro',
-        problemType: 'printer',
-        contactPhone: '62999999999',
-        description: 'A impressora não puxa papel.',
-      },
-      pngScreenshot,
-    );
+    await service.create({ ...openingInput, screenshot });
 
-    expect(upload).toHaveBeenCalledOnce();
-    expect(insert.mock.calls[0]?.[0]).toMatchObject({ screenshotKey: 'tickets/abc.png' });
+    const key = insert.mock.calls[0]?.[0].screenshotKey as string;
+    expect(key).toMatch(/^tickets\/[0-9a-f-]{36}\.png$/);
+    expect(await storage.head(key)).not.toBeNull();
+    expect(await storage.head(SCREENSHOT_KEY)).toBeNull();
   });
 
   // triste
   it('refuses a screenshot that is not an image, without opening the ticket', async () => {
     const insert = vi.fn();
-    const service = makeService({ insert });
-
-    const attempt = service.create(
-      {
-        requesterName: 'Bia Costa',
-        area: 'infra' as const,
-        department: 'financeiro',
-        problemType: 'printer',
-        contactPhone: '62999999999',
-        description: 'A impressora não puxa papel.',
-      },
-      { ...pngScreenshot, mimetype: 'application/x-msdownload', originalname: 'virus.exe' },
+    const { storage, service, screenshot } = await withSentScreenshot(
+      { insert },
+      { contentType: 'application/x-msdownload', sizeBytes: 1024 },
     );
+
+    const attempt = service.create({ ...openingInput, screenshot });
 
     await expect(attempt).rejects.toThrow(UnprocessableEntityException);
     expect(insert).not.toHaveBeenCalled();
+    expect(storage.size).toBe(0);
   });
 
-  it('refuses a screenshot bigger than the ceiling', async () => {
+  /* A tela declarou um print pequeno; o link aceita o que for enviado. Vale o que o storage mediu. */
+  it('refuses a screenshot that turned out bigger than the ceiling', async () => {
     const insert = vi.fn();
-    const service = makeService({ insert });
-
-    const attempt = service.create(
-      {
-        requesterName: 'Bia Costa',
-        area: 'infra' as const,
-        department: 'financeiro',
-        problemType: 'printer',
-        contactPhone: '62999999999',
-        description: 'A impressora não puxa papel.',
-      },
-      { ...pngScreenshot, size: 9 * 1024 * 1024 },
+    const { service, screenshot } = await withSentScreenshot(
+      { insert },
+      { contentType: 'image/png', sizeBytes: 9 * 1024 * 1024 },
     );
 
-    await expect(attempt).rejects.toThrow(/8 MB/);
+    await expect(service.create({ ...openingInput, screenshot })).rejects.toThrow(/8 MB/);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('refuses a screenshot that never reached the storage', async () => {
+    const insert = vi.fn();
+    const service = makeService({ insert });
+    const missing = { storageKey: SCREENSHOT_KEY, fileName: 'erro.png' };
+
+    await expect(service.create({ ...openingInput, screenshot: missing })).rejects.toThrow(
+      NotFoundException,
+    );
     expect(insert).not.toHaveBeenCalled();
   });
 });
@@ -334,14 +400,16 @@ describe('TicketsService.findByProtocol', () => {
   it('finds the ticket from the protocol as it was printed', async () => {
     const service = makeService({ findById: vi.fn().mockResolvedValue(ticketRow()) });
 
-    await expect(service.findByProtocol('CH-0007')).resolves.toMatchObject({ protocol: 'CH-0007' });
+    await expect(service.findByProtocol(ana, 'CH-0007')).resolves.toMatchObject({
+      protocol: 'CH-0007',
+    });
   });
 
   it('accepts the protocol typed from memory, with no dash and no zeros', async () => {
     const findById = vi.fn().mockResolvedValue(ticketRow());
     const service = makeService({ findById });
 
-    await service.findByProtocol('7');
+    await service.findByProtocol(ana, '7');
 
     expect(findById).toHaveBeenCalledWith(7);
   });
@@ -351,7 +419,7 @@ describe('TicketsService.findByProtocol', () => {
     const answered = ticketRow({ assignee: 'Carlos do TI', solution: 'Troquei o rolete.' });
     const service = makeService({ findById: vi.fn().mockResolvedValue(answered) });
 
-    const ticket = await service.findByProtocol('CH-0007');
+    const ticket = await service.findByProtocol(ana, 'CH-0007');
 
     expect(ticket).not.toHaveProperty('contactPhone');
     expect(ticket).not.toHaveProperty('assignee');
@@ -367,7 +435,7 @@ describe('TicketsService.findByProtocol', () => {
       list: vi.fn().mockResolvedValue([file(1, null), file(2, 31)]),
     });
 
-    const ticket = await service.findByProtocol('CH-0007');
+    const ticket = await service.findByProtocol(ana, 'CH-0007');
 
     expect(ticket.attachments.map((attachment) => attachment.id)).toEqual([1]);
   });
@@ -376,14 +444,14 @@ describe('TicketsService.findByProtocol', () => {
     const findById = vi.fn();
     const service = makeService({ findById });
 
-    await expect(service.findByProtocol('meu chamado')).rejects.toThrow(NotFoundException);
+    await expect(service.findByProtocol(ana, 'meu chamado')).rejects.toThrow(NotFoundException);
     expect(findById).not.toHaveBeenCalled();
   });
 
   it('says not found for a protocol that does not exist', async () => {
     const service = makeService({ findById: vi.fn().mockResolvedValue(null) });
 
-    await expect(service.findByProtocol('CH-9999')).rejects.toThrow(NotFoundException);
+    await expect(service.findByProtocol(ana, 'CH-9999')).rejects.toThrow(NotFoundException);
   });
 });
 
@@ -883,7 +951,8 @@ function makeAssigneeService(options: { attends?: boolean; areas?: string[] } = 
   const tickets = repository as unknown as TicketsRepository;
   const service = new TicketsService(
     tickets,
-    storageStub as unknown as StorageService,
+    storageStub as unknown as FileStorage,
+    stagingStub,
     attachmentsStub as unknown as TicketAttachmentsService,
     new TicketAccessService(tickets),
     historiesStub as unknown as TicketHistoriesService,
@@ -943,9 +1012,7 @@ describe('TicketsService.create with a chosen assignee', () => {
   it('skips the opening notice when asked to', async () => {
     const { service, notifier } = makeAssigneeService();
 
-    await service.create({ ...openInput, assigneeId: 'u-ana' }, undefined, [], {
-      skipOpeningNotice: true,
-    });
+    await service.create({ ...openInput, assigneeId: 'u-ana' }, { skipOpeningNotice: true });
 
     expect(notifier.opened).not.toHaveBeenCalled();
   });
@@ -1044,7 +1111,7 @@ describe('TicketsService.findByAccessToken', () => {
   it('opens the ticket of a signed link, with the public fields only', async () => {
     const { service, repository } = makeAssigneeService();
 
-    const ticket = await service.findByAccessToken(signTicketAccess(7, LINK_SECRET));
+    const ticket = await service.findByAccessToken(ana, signTicketAccess(7, LINK_SECRET));
 
     expect(repository.findById).toHaveBeenCalledWith(7);
     expect(ticket.protocol).toBe('CH-0007');
@@ -1056,10 +1123,10 @@ describe('TicketsService.findByAccessToken', () => {
   it('refuses a link that was tampered with, without reading any ticket', async () => {
     const { service, repository } = makeAssigneeService();
 
-    await expect(service.findByAccessToken(`${signTicketAccess(7, LINK_SECRET)}x`)).rejects.toThrow(
-      NotFoundException,
-    );
-    await expect(service.findByAccessToken('lixo')).rejects.toThrow(NotFoundException);
+    await expect(
+      service.findByAccessToken(ana, `${signTicketAccess(7, LINK_SECRET)}x`),
+    ).rejects.toThrow(NotFoundException);
+    await expect(service.findByAccessToken(ana, 'lixo')).rejects.toThrow(NotFoundException);
     expect(repository.findById).not.toHaveBeenCalled();
   });
 });
@@ -1130,5 +1197,129 @@ describe('TicketsService WhatsApp notices', () => {
     notifier.retry.mockResolvedValueOnce(null);
 
     await expect(service.retryWhatsappNotice(adminUser, 7, 4)).rejects.toThrow(ConflictException);
+  });
+});
+
+describe('TicketsService — quem pede, logado', () => {
+  const bia: RequestUser = {
+    id: '22222222-2222-4222-8222-222222222222',
+    email: 'bia@azuos.com.br',
+    name: 'Bia Costa',
+    role: 'user',
+    roles: {},
+  };
+  const input = {
+    requesterName: 'Nome digitado no corpo',
+    area: 'infra' as const,
+    department: 'financeiro' as const,
+    problemType: 'printer' as const,
+    contactPhone: '62999999999',
+    description: 'A impressora não puxa papel.',
+  };
+
+  function withProfiles(
+    repository: Partial<TicketsRepository>,
+    profiles: Partial<AdminConsoleProfileProvider> = {},
+  ): TicketsService {
+    const tickets = { ...defaultRepository, ...repository } as TicketsRepository;
+
+    return new TicketsService(
+      tickets,
+      storageStub as unknown as FileStorage,
+      stagingStub,
+      attachmentsStub as unknown as TicketAttachmentsService,
+      new TicketAccessService(tickets),
+      historiesStub as unknown as TicketHistoriesService,
+      historiesRepositoryStub as unknown as TicketHistoriesRepository,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      profiles as AdminConsoleProfileProvider,
+    );
+  }
+
+  // feliz
+  /* Autoria vem da identidade: o chamado é de quem está logado, com o nome do admin-console. */
+  it('links the ticket to the person and takes the name from the identity, not the body', async () => {
+    const insert = vi.fn().mockResolvedValue(ticketRow());
+    const service = withProfiles({ insert });
+
+    await service.create(input, {
+      requester: { id: bia.id, email: bia.email, name: bia.name },
+    });
+
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requesterId: bia.id,
+        requesterEmail: bia.email,
+        requesterName: 'Bia Costa',
+      }),
+    );
+  });
+
+  it('lets the person look up her own ticket by number, without any module', async () => {
+    const service = withProfiles({
+      findById: vi.fn().mockResolvedValue(ticketRow({ requesterId: bia.id })),
+    });
+
+    await expect(service.findByProtocol(bia, 'CH-0007')).resolves.toMatchObject({ id: 7 });
+  });
+
+  it('lists the tickets the person opened', async () => {
+    const listByRequester = vi.fn().mockResolvedValue([ticketRow({ requesterId: bia.id })]);
+    const service = withProfiles({ listByRequester });
+
+    const mine = await service.listMine(bia);
+
+    expect(listByRequester).toHaveBeenCalledWith(bia.id);
+    expect(mine).toEqual([expect.objectContaining({ id: 7, protocol: 'CH-0007' })]);
+  });
+
+  /* O nome é da identidade; telefone e departamento vêm do perfil do admin-console. */
+  it('prefills the form from the admin-console profile', async () => {
+    const fetchMine = vi.fn().mockResolvedValue({
+      name: 'Outro nome no perfil',
+      email: bia.email,
+      phone: '62988887777',
+      department: 'Departamento Pessoal',
+      jobTitle: 'Analista',
+    });
+    const service = withProfiles({}, { fetchMine });
+
+    await expect(service.requesterDefaults(bia, 'azuos_access_token=abc')).resolves.toEqual({
+      name: 'Bia Costa',
+      email: bia.email,
+      phone: '62988887777',
+      department: 'pessoal',
+      jobTitle: 'Analista',
+    });
+  });
+
+  // triste
+  /* 404, e não 403: dizer "é de outra pessoa" contaria que o número existe. */
+  it('hides the ticket of someone else from who does not attend its area', async () => {
+    const service = withProfiles({
+      findById: vi.fn().mockResolvedValue(ticketRow({ requesterId: 'outra-pessoa' })),
+    });
+
+    await expect(service.findByProtocol(bia, 'CH-0007')).rejects.toThrow(NotFoundException);
+  });
+
+  /* O admin-console fora do ar não impede ninguém de abrir chamado: só vem menos preenchido. */
+  it('still prefills name and the last phone when the admin-console does not answer', async () => {
+    const service = withProfiles(
+      { lastPhoneOf: vi.fn().mockResolvedValue('62977776666') },
+      { fetchMine: vi.fn().mockResolvedValue(null) },
+    );
+
+    await expect(service.requesterDefaults(bia, undefined)).resolves.toEqual({
+      name: 'Bia Costa',
+      email: bia.email,
+      phone: '62977776666',
+      department: null,
+      jobTitle: null,
+    });
   });
 });
