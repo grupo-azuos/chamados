@@ -117,6 +117,7 @@
     <DialogPrimitive.Close
       bind:ref={closeRef}
       data-slot="dialog-close"
+      aria-label="Fechar diálogo"
       tabindex={showCloseButton ? 0 : -1}
       aria-hidden={showCloseButton ? undefined : true}
       class={showCloseButton

@@ -86,7 +86,7 @@ describe('AzuosProjectTimelineDialog', () => {
       },
     });
 
-    const closeBtn = screen.getByText('✕');
+    const closeBtn = screen.getByRole('button', { name: 'Fechar diálogo' });
     await userEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalled();
   });
