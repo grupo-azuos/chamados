@@ -45,3 +45,15 @@ describe('AzuosResponsiveDialogContent', () => {
     expect(screen.getByText('Excluir esta peça?', { exact: true })).toBeInTheDocument();
   });
 });
+
+// triste: cancelar um gesto nunca confirma o fechamento do diálogo.
+it('keeps the dialog open when a long drag is cancelled', async () => {
+  const onOpenChange = vi.fn();
+  render(ResponsiveDialogContentHarness, { props: { onOpenChange } });
+  const handle = screen.getByTestId('drag-handle');
+  await fireEvent.pointerDown(handle, { clientY: 0 });
+  await fireEvent.pointerMove(handle, { clientY: 200 });
+  await fireEvent.pointerCancel(handle);
+  expect(onOpenChange).not.toHaveBeenCalled();
+  expect(screen.getByText('Excluir esta peça?')).toBeInTheDocument();
+});
