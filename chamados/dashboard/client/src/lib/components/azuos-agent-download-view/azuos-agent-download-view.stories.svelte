@@ -11,7 +11,7 @@
     release: { version: '1.2.3', publishedAt: '2026-10-16T12:00:00.000Z', sizeBytes: 45_000_000 },
   };
   const state = { isLoading: false, error: null, downloadError: null, downloading: null };
-  const actions = { onRetry: fn(), onDownload: fn() };
+  const actions = { onRetry: fn(), onDownload: fn(), onDownloadInstallerScript: fn() };
 </script>
 
 <Story name="Default" args={{ data, state, actions }} />

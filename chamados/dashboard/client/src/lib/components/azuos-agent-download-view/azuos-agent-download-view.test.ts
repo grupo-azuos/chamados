@@ -5,7 +5,11 @@ const data = {
   release: { version: '1.2.3', publishedAt: '2026-10-16T12:00:00.000Z', sizeBytes: 45_000_000 },
 };
 const state = { isLoading: false, error: null, downloadError: null, downloading: null };
-const actions = () => ({ onRetry: vi.fn(), onDownload: vi.fn() });
+const actions = () => ({
+  onRetry: vi.fn(),
+  onDownload: vi.fn(),
+  onDownloadInstallerScript: vi.fn(),
+});
 
 describe('AzuosAgentDownloadView', () => {
   // feliz
@@ -14,8 +18,12 @@ describe('AzuosAgentDownloadView', () => {
     render(AgentDownloadView, { data, state, actions: callbacks });
     expect(screen.getByText('Azuos Agent 1.2.3')).toBeInTheDocument();
     await fireEvent.click(screen.getByRole('button', { name: 'Baixar instalador' }));
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'Baixar script de instalação (install-agent.ps1)' }),
+    );
     await fireEvent.click(screen.getByRole('button', { name: 'Baixar certificado' }));
     await fireEvent.click(screen.getByRole('button', { name: 'Baixar script do certificado' }));
+    expect(callbacks.onDownloadInstallerScript).toHaveBeenCalledOnce();
     expect(callbacks.onDownload.mock.calls).toEqual([
       ['msi'],
       ['certificate'],
