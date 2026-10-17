@@ -29,26 +29,25 @@ describe('a guarda de sessão', () => {
   });
 
   // triste
-  it('sends who has no session to the public support screen', async () => {
-    me.mockRejectedValue(new ApiError(401, 'Unauthorized'));
+  it('lets 401 failure through when there is no session', async () => {
+    const failure = new ApiError(401, 'Unauthorized');
+    me.mockRejectedValue(failure);
 
-    const thrown: unknown = await load().catch((error: unknown) => error);
-
-    expect(isRedirect(thrown)).toBe(true);
-    expect(thrown).toMatchObject({ status: 307, location: '/support' });
+    await expect(load()).rejects.toBe(failure);
   });
 
-  /* Sem módulo nenhum, sobram as telas públicas: abrir chamado e validar documento. */
-  it('sends who has no module to the public support screen', async () => {
+  /* Sem módulo nenhum, o usuário vai para a Central de Chamados (/support). */
+  it('sends who has no module to the support screen', async () => {
     me.mockResolvedValue({
       id: 'user-2',
       name: 'Sem Módulo',
-      role: 'admin',
+      role: 'user',
       roles: {},
     } as Awaited<ReturnType<typeof authApi.me>>);
 
     const thrown: unknown = await load().catch((error: unknown) => error);
 
+    expect(isRedirect(thrown)).toBe(true);
     expect(thrown).toMatchObject({ status: 307, location: '/support' });
   });
 

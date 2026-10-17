@@ -111,7 +111,7 @@ const EMPTY_VALUES: TicketFormValues = {
 };
 
 /**
- * O formulário PÚBLICO de abrir chamado — sem login.
+ * O formulário de abrir chamado para qualquer usuário autenticado.
  *
  * Depois de abrir, a tela troca de assunto: em vez do formulário, mostra o protocolo. Esse é
  * o único dado que a pessoa precisa guardar, e enterrá-lo num aviso que some em três segundos
