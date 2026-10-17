@@ -51,4 +51,10 @@ func TestInvalidConfig(t *testing.T) {
 	if err := validate(Config{ServerURL: "http://localhost:3000", SignerSHA256: strings.Repeat("a", 64), AutoUpdate: true}); err != nil {
 		t.Fatalf("localhost http should be permitted for local development: %v", err)
 	}
+	if err := validate(Config{ServerURL: "http://192.168.1.50:3000", AutoUpdate: false}); err != nil {
+		t.Fatalf("private IP http should be permitted: %v", err)
+	}
+	if err := validate(Config{ServerURL: "http://servidor-local:3000", AutoUpdate: false}); err != nil {
+		t.Fatalf("local hostname http should be permitted: %v", err)
+	}
 }
