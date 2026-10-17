@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 
 import { type Database } from '../db/db.type';
 import { internalRoles } from '../db/schema/internal-roles.schema';
@@ -118,6 +119,35 @@ describe('IdentityProvider', () => {
 
     expect(user?.role).toBe('user');
     expect(user?.roles).toEqual({});
+  });
+
+  // feliz
+  /* Trocar de e-mail no admin-console não tira o super-admin: a linha já tem o UUID dela. */
+  it('keeps the super-admin after an e-mail change, without recording the UUID again', async () => {
+    const { db, update } = fakeDatabase({ superAdmins: [{ id: 7, userId: ANA_ID }] });
+
+    const user = await new IdentityProvider(db).resolve({
+      ...ANA,
+      email: 'ana.nova@empresa.com.br',
+    });
+
+    expect(user?.role).toBe('superadmin');
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  // triste
+  /* Os módulos são procurados só pelo UUID: o e-mail não entra na consulta, então um e-mail
+     antigo herdado por outra pessoa não leva junto os módulos de quem o usava. */
+  it('looks the modules up by the UUID alone, never by the e-mail', async () => {
+    const moduleWhere = vi.fn().mockResolvedValue([]);
+    const from = vi.fn((table) => ({
+      where: table === internalRoles ? moduleWhere : vi.fn().mockResolvedValue([]),
+    }));
+    const db = { select: vi.fn(() => ({ from })), update: vi.fn() } as unknown as Database;
+
+    await new IdentityProvider(db).resolve(ANA);
+
+    expect(moduleWhere).toHaveBeenCalledWith(eq(internalRoles.userId, ANA_ID));
   });
 
   /* Uma linha de super-admin já reclamada por OUTRO UUID não promove quem herdou o e-mail. */

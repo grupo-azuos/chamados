@@ -1,8 +1,9 @@
 import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 
-import { type Env } from '../config/env.schema';
+import { isUserMockEnabled, type Env } from '../config/env.schema';
 import { ENV } from '../config/env.token';
+import { MOCK_IDENTITY } from './identity.provider';
 import { type UserDirectoryProvider } from './user-directory.type';
 
 /**
@@ -15,6 +16,8 @@ import { type UserDirectoryProvider } from './user-directory.type';
  *    oferecer quem nem consegue abrir o sistema. O `me` é o sistema dono do token; não existe
  *    parâmetro para pedir a lista de outro.
  *  - `GET /api/users?ids=` — uma pessoa só, pelo UUID.
+ *  - `GET /api/users?search=` — quem tem o termo no nome ou no e-mail, no escritório inteiro:
+ *    quem pede acesso pelo WhatsApp ainda não está na lista deste sistema.
  *
  * Três decisões:
  *
@@ -28,7 +31,20 @@ import { type UserDirectoryProvider } from './user-directory.type';
  */
 const CACHE_TTL_MS = 60_000;
 
+/* Busca por um primeiro nome comum ("Ana") traz bastante gente; o desempate é local. */
+const SEARCH_PAGE_SIZE = 50;
+
 const UNAVAILABLE = 'Não consegui ler as pessoas no admin-console. Tente de novo em instantes.';
+
+const MOCK_DIRECTORY_USER: DirectoryUser = {
+  id: MOCK_IDENTITY.id,
+  name: MOCK_IDENTITY.name,
+  email: MOCK_IDENTITY.email,
+  image: null,
+  role: MOCK_IDENTITY.role,
+  banned: false,
+  createdAt: null,
+};
 
 type AccessListResponse = {
   data?: {
@@ -71,6 +87,10 @@ export class AdminConsoleUserDirectoryProvider implements UserDirectoryProvider 
   }
 
   async getUserById(id: string): Promise<DirectoryUser | null> {
+    /* A pessoa de desenvolvimento não existe no admin-console: sem isto, o que ela vincula na
+       máquina local (o WhatsApp, por exemplo) nunca acharia quem atende. */
+    if (id === MOCK_IDENTITY.id && isUserMockEnabled(this.env)) return MOCK_DIRECTORY_USER;
+
     const fromList = this.cached?.users.find((user) => user.id === id);
     if (fromList) return fromList;
 
@@ -79,6 +99,14 @@ export class AdminConsoleUserDirectoryProvider implements UserDirectoryProvider 
     );
 
     return toDirectoryUsers(body.data?.users, (user) => user.profile?.avatarUrl)[0] ?? null;
+  }
+
+  async searchUsers(term: string): Promise<DirectoryUser[]> {
+    const body = await this.read<UsersResponse>(
+      `/api/users?search=${encodeURIComponent(term)}&pageSize=${SEARCH_PAGE_SIZE}`,
+    );
+
+    return toDirectoryUsers(body.data?.users, (user) => user.profile?.avatarUrl);
   }
 
   private async read<T>(path: string): Promise<T> {

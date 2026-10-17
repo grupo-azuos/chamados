@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type Env } from '../../../lib/config/env.schema';
 import { type InternalRoleRow } from '../../../lib/db/schema/internal-roles.schema';
 import { type RolesRepository } from '../repository/roles.repository';
 import { RolesService } from './roles.service';
@@ -78,7 +79,7 @@ describe('RolesService', () => {
       }),
     };
 
-    service = new RolesService(repository, userDirectory as never);
+    service = new RolesService(repository, userDirectory as never, { NODE_ENV: 'test' } as Env);
   });
 
   describe('list', () => {

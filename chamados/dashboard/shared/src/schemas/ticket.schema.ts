@@ -18,6 +18,7 @@ import {
 import { paginationQuerySchema } from './pagination.schema';
 import { reportFormatSchema } from './report.schema';
 import { ticketAttachmentSchema } from './ticket-attachment.schema';
+import { MAX_STAGED_FILES, stagedFileSchema } from './staged-file.schema';
 import { publicTicketHistorySchema } from './ticket-history.schema';
 
 /**
@@ -208,6 +209,41 @@ export const publicTicketSchema = ticketSchema
 
 export type PublicTicket = z.infer<typeof publicTicketSchema>;
 
+/**
+ * Um chamado na lista "Meus chamados" — o que a pessoa abriu, logada. Só o resumo: o detalhe
+ * (linha do tempo, arquivos) sai pela consulta do número, que devolve o `PublicTicket`.
+ */
+export const myTicketSchema = ticketSchema.pick({
+  id: true,
+  protocol: true,
+  status: true,
+  priority: true,
+  area: true,
+  problemType: true,
+  description: true,
+  createdAt: true,
+});
+
+export type MyTicket = z.infer<typeof myTicketSchema>;
+
+/**
+ * O que o formulário de abrir chamado já traz preenchido — os dados da pessoa no
+ * admin-console (`GET /api/me/profile`).
+ *
+ * O NOME é da identidade e não se muda aqui. Telefone e departamento vêm sugeridos e a pessoa
+ * corrige; `department` é `null` quando o texto do admin-console não bate com um único
+ * departamento da lista.
+ */
+export const requesterDefaultsSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  phone: z.string().nullable(),
+  department: ticketDepartmentSchema.nullable(),
+  jobTitle: z.string().nullable(),
+});
+
+export type RequesterDefaults = z.infer<typeof requesterDefaultsSchema>;
+
 /** O id que o autenticador entrega é curto; o teto existe só para o campo não aceitar um texto qualquer. */
 const ASSIGNEE_ID_MAX_LENGTH = 128;
 
@@ -282,8 +318,9 @@ export const TICKET_NOTICE_MESSAGES: Record<
  * um chamado já resolvido por outra pessoa. O responsável pode ser ESCOLHIDO (`assigneeId`),
  * mas só entre os que atendem a área; o nome dele nunca vem do corpo.
  *
- * O print não está no schema: ele viaja como arquivo, na mesma requisição, e é o controller
- * que o recebe. Validar imagem é trabalho de quem lê os bytes, não do Zod.
+ * O print e os anexos NÃO viajam aqui: o navegador já os enviou direto para o storage, por link
+ * assinado (ver `staged-file.schema`), e o corpo leva só a chave de cada um. Quem confere o
+ * arquivo de verdade (formato, tamanho) é o servidor, com o que o storage mediu.
  */
 export const createTicketSchema = z
   .object({
@@ -318,6 +355,10 @@ export const createTicketSchema = z
       (value) => (value === '' ? undefined : value),
       z.string().trim().min(1).max(ASSIGNEE_ID_MAX_LENGTH).optional(),
     ),
+    /** O print do erro, já enviado. */
+    screenshot: stagedFileSchema.optional(),
+    /** Os demais anexos, já enviados. O teto de verdade é por formato, e é do domínio. */
+    attachments: z.array(stagedFileSchema).max(MAX_STAGED_FILES).default([]),
   })
   .superRefine((value, ctx) => {
     checkProblemTypeMatchesArea(value, ctx);

@@ -8,6 +8,9 @@ import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
+import { withoutMockIdentity } from '../../../lib/auth/mock-identity.util';
+import { type Env } from '../../../lib/config/env.schema';
+import { ENV } from '../../../lib/config/env.token';
 import { assertIsSuperAdmin } from '../../../lib/policy/policy-assert.util';
 import { toInternalRole, toInternalRoleInsert } from '../mapper/roles.mapper';
 import { RolesRepository } from '../repository/roles.repository';
@@ -27,12 +30,13 @@ export class RolesService {
   constructor(
     private readonly repository: RolesRepository,
     @Inject(USER_DIRECTORY_PROVIDER) private readonly userDirectory: UserDirectoryProvider,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   async list(actor: RequestUser): Promise<InternalRole[]> {
     assertIsSuperAdmin(actor.role, 'Consultar os acessos');
 
-    const rows = await this.repository.list();
+    const rows = withoutMockIdentity(await this.repository.list(), this.env);
     return rows.map(toInternalRole);
   }
 

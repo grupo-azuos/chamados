@@ -54,7 +54,7 @@ export async function resetDatabase(): Promise<void> {
        `open-database.util.ts`), e o resto do banco é dos outros sistemas da casa. */
     /* `cascade` leva junto as amostras e os alertas, que só existem presos a um computador. */
     await opened.db.execute(
-      sql`truncate table tasks, tickets, computers, computer_transfers, maintenances, parts, part_movements, network_events restart identity cascade`,
+      sql`truncate table tickets, computers, computer_transfers, maintenances, parts, part_movements, network_events restart identity cascade`,
     );
   } finally {
     await opened.close();

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { apiDownload, ApiError, apiRequest, readError } from './http-client';
+import { apiDownload, ApiError, apiRequest, readError, uploadFile } from './http-client';
 
 function respond(status: number, body?: unknown) {
   return vi.fn().mockResolvedValue(
@@ -23,7 +23,7 @@ describe('apiRequest', () => {
     const fetchMock = respond(200, { id: 1 });
     vi.stubGlobal('fetch', fetchMock);
 
-    await apiRequest('/tasks/1');
+    await apiRequest('/tickets/1');
 
     expect(fetchMock.mock.calls[0]?.[1]?.headers).not.toHaveProperty('Authorization');
   });
@@ -32,22 +32,22 @@ describe('apiRequest', () => {
   it('returns the parsed body', async () => {
     vi.stubGlobal('fetch', respond(200, { id: 1 }));
 
-    await expect(apiRequest('/tasks/1')).resolves.toEqual({ id: 1 });
+    await expect(apiRequest('/tickets/1')).resolves.toEqual({ id: 1 });
   });
 
   it('drops empty filters from the query string', async () => {
     const fetchMock = respond(200, []);
     vi.stubGlobal('fetch', fetchMock);
 
-    await apiRequest('/tasks', { query: { search: '', status: 'done', page: 1, owner: null } });
+    await apiRequest('/tickets', { query: { search: '', status: 'done', page: 1, owner: null } });
 
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/tasks?status=done&page=1');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/tickets?status=done&page=1');
   });
 
   it('answers undefined for 204, instead of failing to parse an empty body', async () => {
     vi.stubGlobal('fetch', respond(204));
 
-    await expect(apiRequest('/tasks/1', { method: 'DELETE' })).resolves.toBeUndefined();
+    await expect(apiRequest('/tickets/1', { method: 'DELETE' })).resolves.toBeUndefined();
   });
 
   // triste
@@ -61,7 +61,7 @@ describe('apiRequest', () => {
       }),
     );
 
-    const error = (await apiRequest('/tasks', { method: 'POST', body: {} }).catch(
+    const error = (await apiRequest('/tickets', { method: 'POST', body: {} }).catch(
       (caught: unknown) => caught,
     )) as ApiError;
 
@@ -74,7 +74,7 @@ describe('apiRequest', () => {
   it('turns a body that is not the API format into a message with the status', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<html>', { status: 502 })));
 
-    await expect(apiRequest('/tasks')).rejects.toThrow(/502/);
+    await expect(apiRequest('/tickets')).rejects.toThrow(/502/);
   });
 });
 
@@ -138,5 +138,81 @@ describe('readError', () => {
   // triste
   it('explains a network failure in words the person can act on', () => {
     expect(readError(new TypeError('Failed to fetch'))).toMatch(/servidor/);
+  });
+});
+
+describe('uploadFile', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const pdf = () => new File(['%PDF'], 'Nota fiscal.pdf', { type: 'application/pdf' });
+
+  // feliz
+  /* O arquivo vai DIRETO para o storage: a API só emite o link, e o arquivo nunca passa por ela. */
+  it('asks the API for the link and sends the file straight to the storage', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            storageKey: 'tmp/abc.pdf',
+            uploadUrl: 'https://s3.exemplo/put',
+            expiresIn: 300,
+          }),
+          { status: 201, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const staged = await uploadFile('/tickets/upload-url', pdf());
+
+    expect(staged).toEqual({ storageKey: 'tmp/abc.pdf', fileName: 'Nota fiscal.pdf' });
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      fileName: 'Nota fiscal.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 4,
+    });
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('https://s3.exemplo/put');
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/pdf' },
+    });
+  });
+
+  // triste
+  it('says which file failed when the storage refuses it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              storageKey: 'tmp/abc.pdf',
+              uploadUrl: 'https://s3.exemplo/put',
+              expiresIn: 300,
+            }),
+            { status: 201, headers: { 'Content-Type': 'application/json' } },
+          ),
+        )
+        .mockResolvedValueOnce(new Response(null, { status: 403 })),
+    );
+
+    await expect(uploadFile('/tickets/upload-url', pdf())).rejects.toThrow(
+      'Não consegui enviar Nota fiscal.pdf (403)',
+    );
+  });
+
+  // triste
+  it('sends nothing to the storage when the API refuses the link', async () => {
+    const fetchMock = respond(403, { statusCode: 403, message: 'Seu cargo só permite consultar.' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(uploadFile('/inventory-items/photo/upload-url', pdf())).rejects.toThrow(
+      'Seu cargo só permite consultar.',
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

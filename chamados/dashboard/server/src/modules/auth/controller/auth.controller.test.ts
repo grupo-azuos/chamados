@@ -17,6 +17,7 @@ function directory(overrides: Partial<UserDirectoryProvider> = {}): UserDirector
   return {
     listUsers: vi.fn().mockResolvedValue([]),
     getUserById: vi.fn().mockResolvedValue(null),
+    searchUsers: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
 }

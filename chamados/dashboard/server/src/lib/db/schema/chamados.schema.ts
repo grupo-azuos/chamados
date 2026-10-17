@@ -6,7 +6,7 @@ import { pgSchema } from 'drizzle-orm/pg-core';
  * O banco é o do Supabase do Grupo Azuos, COMPARTILHADO com os outros sistemas (Paralegal,
  * Gestão de RH, admin-console…). Cada um mora num schema próprio, e este é o do chamados:
  * toda tabela daqui nasce com `chamadosSchema.table(...)`, nunca com `pgTable(...)` — que
- * criaria a tabela no `public`, a área comum, onde um nome repetido (`tasks`, `tickets`)
+ * criaria a tabela no `public`, a área comum, onde um nome repetido (`tickets`, `computers`)
  * colidiria com o de outro sistema.
  */
 export const chamadosSchema = pgSchema('chamados');

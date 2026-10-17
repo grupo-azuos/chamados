@@ -50,8 +50,7 @@ describe('renderDocxDocument', () => {
   });
 
   // triste
-  /* Uma ficha cuja única coluna é o título não tem linha de campo nenhuma — e o Word recusa
-     tabela vazia. O gerador desenha só a faixa do título, em vez de quebrar. */
+  /* Uma tabela de uma coluna só ainda tem de sair como tabela de verdade, sem quebrar. */
   it('does not break on a record that has nothing but its title', async () => {
     const onlyTitle = definition({
       blocks: [

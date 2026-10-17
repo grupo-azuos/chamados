@@ -9,12 +9,12 @@ import AppShell, { type AzuosAppShellProps } from './azuos-app-shell.svelte';
 
 const items = [
   {
-    key: 'tasks',
-    label: 'Tarefas',
-    to: '/tasks',
+    key: 'tickets',
+    label: 'Chamados',
+    to: '/tickets',
     icon: ListChecks,
     context: 'infra',
-    feature: 'tasks',
+    feature: 'tickets',
   },
   {
     key: 'reports',
@@ -29,6 +29,20 @@ const items = [
 const content = createRawSnippet(() => ({
   render: () => '<div>Conteúdo da rota</div>',
 }));
+
+/* Ver `azuos-person-avatar.test.ts`: sem isto o jsdom nunca "carrega" a foto. */
+class InstantLoadImage {
+  complete = false;
+  naturalWidth = 0;
+  addEventListener(type: string, listener: () => void) {
+    if (type === 'load') listener();
+  }
+  removeEventListener() {}
+  set src(_value: string) {
+    this.complete = true;
+    this.naturalWidth = 1;
+  }
+}
 
 function renderShell(props: Omit<AzuosAppShellProps, 'children'>): ReturnType<typeof render> {
   return render(AppShell, { props: { ...props, children: content } });
@@ -49,7 +63,7 @@ describe('AzuosAppShell', () => {
     renderShell({ ui: { items } });
 
     expect(screen.getByText('Conteúdo da rota')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Tarefas' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Chamados' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Relatórios' })).toBeInTheDocument();
   });
 
@@ -64,6 +78,30 @@ describe('AzuosAppShell', () => {
 
     expect(screen.getByText('Ana Souza')).toBeInTheDocument();
     expect(screen.getByText('Administrador')).toBeInTheDocument();
+  });
+
+  // feliz
+  /* A foto de quem entrou aparece no rodapé, e não só as iniciais. */
+  it('shows the photo of who is using the system', async () => {
+    vi.stubGlobal('Image', InstantLoadImage);
+    const avatarUrl = 'https://admin-console.exemplo.com/api/users/1/avatar?v=2';
+
+    const { container } = renderShell({
+      data: { user: { name: 'Ana Souza', email: 'a@b.c', role: 'Administrador', avatarUrl } },
+    });
+
+    const image = await vi.waitUntil(() => container.querySelector('[data-slot="avatar-image"]'));
+    expect(image).toHaveAttribute('src', avatarUrl);
+    vi.unstubAllGlobals();
+  });
+
+  // triste
+  it('falls back to the initials when there is no photo', () => {
+    renderShell({
+      data: { user: { name: 'Ana Souza', email: 'a@b.c', role: 'Administrador', avatarUrl: null } },
+    });
+
+    expect(screen.getByText('AS')).toBeInTheDocument();
   });
 
   // feliz

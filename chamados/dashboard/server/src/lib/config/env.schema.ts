@@ -105,12 +105,14 @@ export const envSchema = z.object({
   TEST_DATABASE_URL: z.string().trim().optional(),
 
   /**
-   * O armazenamento de arquivos, pelo PROTOCOLO S3 — o mesmo arranjo da Gestão de RH. Trocar de
-   * provedor (Supabase Storage, AWS, MinIO, R2) é trocar estes valores: o código só conhece o
-   * protocolo.
+   * O armazenamento de arquivos, pelo PROTOCOLO S3 — o mesmo arranjo do Paralegal e da Gestão
+   * de RH. Trocar de provedor (Supabase Storage, AWS, MinIO, R2) é trocar estes valores: o
+   * código só conhece o protocolo.
    *
-   * `S3_ENDPOINT` vazio usa a AWS; no Supabase é `http(s)://<host>/storage/v1/s3`. Chave e
-   * segredo não têm padrão: sem eles o processo não sobe, dizendo o nome.
+   * `S3_ENDPOINT` vazio usa a AWS; no Supabase é `https://<host>/storage/v1/s3`. Chave e
+   * segredo não têm padrão: sem eles o processo não sobe, dizendo o nome. O endpoint também
+   * vai nos links assinados que o navegador usa para enviar e baixar: é sempre o endereço
+   * PÚBLICO, nunca o IP da rede interna.
    */
   S3_ENDPOINT: z
     .string()
@@ -127,15 +129,21 @@ export const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((value) => value === 'true'),
-
   /**
-   * Por quantos segundos um link de download assinado continua valendo.
+   * O `host:porta` com que o PROVEDOR confere a assinatura, quando não é o do `S3_ENDPOINT`.
    *
-   * Curto de propósito: o link dá acesso ao arquivo a quem o tiver, sem passar pela
-   * identidade. Ele existe para o navegador baixar AGORA, não para ser guardado. O endereço do
-   * link é o do `S3_ENDPOINT`: ele precisa ser alcançável pelo navegador de quem baixa.
+   * Existe por causa do Supabase self-hosted da homologação: o domínio público chega ao Kong
+   * pela 8001, e o Storage confere a assinatura com essa porta, não com a do domínio. Medido:
+   * sem a variável, `SignatureDoesNotMatch`; com `s3.homo.grupoazuos.com.br:8001`, envio e
+   * download funcionam, do servidor e do navegador. Vazio, assina com o próprio `S3_ENDPOINT`
+   * (produção, AWS, MinIO, R2).
    */
-  S3_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(300),
+  S3_SIGNING_HOST: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9.-]+(:\d{1,5})?$/, 'Precisa ser host ou host:porta, sem http://')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
 
   /**
    * O segredo do webhook do UniFi.
@@ -189,6 +197,17 @@ export const envSchema = z.object({
     .trim()
     .url('ADMIN_CONSOLE_LOGIN_URL precisa ser uma URL completa')
     .optional(),
+
+  /**
+   * O prefixo dos cookies de sessão do admin-console (`<prefixo>_access_token`). É o
+   * `COOKIE_NAME_PREFIX` de lá — hoje `azuos_homo` em homologação e em produção.
+   *
+   * Serve para o servidor ler o perfil de quem está logado (`GET /api/me/profile`, que só
+   * aceita a sessão da própria pessoa) e preencher o formulário de chamado. Só o cookie de
+   * ACESSO é repassado: o de renovação, reapresentado por outro processo, faria o admin-console
+   * tratá-lo como roubo e derrubar a sessão.
+   */
+  ADMIN_CONSOLE_COOKIE_PREFIX: z.string().trim().min(1).default('azuos'),
 
   /**
    * A PESSOA DE DESENVOLVIMENTO — só para a máquina de quem programa.
