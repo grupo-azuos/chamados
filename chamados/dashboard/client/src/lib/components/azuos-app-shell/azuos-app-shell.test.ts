@@ -190,7 +190,7 @@ describe('AzuosAppShell', () => {
     );
   });
 
-  /* O seletor de módulos é sempre só ícones; o nome aparece no tooltip, aberto ou recolhido. */
+  /* O seletor preserva os nomes acessíveis mesmo quando o tooltip está desativado. */
   it('keeps the modules horizontal when expanded and vertical when collapsed with accessible names', () => {
     renderShell({
       data: {
@@ -267,3 +267,4 @@ describe('AzuosAppShell', () => {
     expect(screen.queryByRole('link', { name: 'Minha conta' })).not.toBeInTheDocument();
   });
 });
+
