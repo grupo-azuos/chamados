@@ -4,9 +4,11 @@ vi.mock('$lib/api/agent-download.api', () => ({
   agentDownloadApi: { lts: vi.fn(), download: vi.fn() },
 }));
 vi.mock('$lib/utils/download-file.util', () => ({ triggerUrlDownload: vi.fn() }));
+vi.mock('$lib/utils/agent-installer-script.util', () => ({ downloadAgentInstallerScript: vi.fn() }));
 import { ApiError } from '$lib/api/http-client';
 import { agentDownloadApi } from '$lib/api/agent-download.api';
 import { triggerUrlDownload } from '$lib/utils/download-file.util';
+import { downloadAgentInstallerScript } from '$lib/utils/agent-installer-script.util';
 import { type AgentDownloadModel } from './use-agent-download.svelte';
 import Harness from './use-agent-download-harness.test.svelte';
 
@@ -63,5 +65,10 @@ describe('useAgentDownloadModel', () => {
     vi.mocked(agentDownloadApi.lts).mockRejectedValue(new ApiError(503, 'Storage indisponível.'));
     const model = await mount();
     expect(model.state.error).toBe('Storage indisponível.');
+  });
+  it('triggers installer script download with current origin', async () => {
+    const model = await mount();
+    model.actions.onDownloadInstallerScript();
+    expect(downloadAgentInstallerScript).toHaveBeenCalledOnce();
   });
 });
