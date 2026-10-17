@@ -64,6 +64,18 @@ const POOL_SIZE = 5;
 const IDLE_TIMEOUT_SECONDS = 30;
 
 /**
+ * O pooler em modo transação do Supabase atende na porta 6543 e não suporta
+ * prepared statements. A porta é o que decide, desligando prepare automaticamente.
+ */
+export function isTransactionPooler(url: string): boolean {
+  try {
+    return new URL(url).port === '6543';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Abre a conexão com o Postgres e aplica as migrations pendentes.
  *
  * É a ÚNICA porta para o banco: o `DbModule`, os seeds e os testes E2E passam por aqui.
@@ -75,10 +87,16 @@ const IDLE_TIMEOUT_SECONDS = 30;
  * pool — que é o que permite as telas buscarem várias coisas ao mesmo tempo.
  */
 export async function openDatabase(url: string): Promise<OpenDatabase> {
+  const isTxPooler = isTransactionPooler(url);
+
   /* Migration aplicada na partida: quem clona o projeto roda `npm run dev` e o banco já
      nasce com as tabelas. Esquecer `db:migrate` não é um passo que alguém deveria poder
      esquecer. */
-  const migrationClient = postgres(url, { max: 1, connection: { search_path: DATABASE_SCHEMA } });
+  const migrationClient = postgres(url, {
+    max: 1,
+    prepare: !isTxPooler,
+    connection: { search_path: DATABASE_SCHEMA },
+  });
 
   try {
     await migrate(drizzle(migrationClient), {
@@ -93,6 +111,7 @@ export async function openDatabase(url: string): Promise<OpenDatabase> {
   const sql = postgres(url, {
     max: POOL_SIZE,
     idle_timeout: IDLE_TIMEOUT_SECONDS,
+    prepare: !isTxPooler,
     connection: { search_path: DATABASE_SCHEMA },
   });
 

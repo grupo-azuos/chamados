@@ -2,7 +2,7 @@ import { isAbsolute, join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { describeDatabaseUrl, MIGRATIONS_FOLDER, SERVER_ROOT } from './open-database.util';
+import { describeDatabaseUrl, isTransactionPooler, MIGRATIONS_FOLDER, SERVER_ROOT } from './open-database.util';
 
 /**
  * `openDatabase` não é testada aqui: ela conecta num Postgres de verdade e aplica migrations.
@@ -10,6 +10,20 @@ import { describeDatabaseUrl, MIGRATIONS_FOLDER, SERVER_ROOT } from './open-data
  * TEST_DATABASE_URL. No SQLite dava para abrir um banco em memória e testar tudo aqui; o
  * Postgres não tem equivalente, e fingir um banco testaria o dublê, não o sistema.
  */
+describe('isTransactionPooler', () => {
+  it('detects Supabase transaction pooler on port 6543', () => {
+    expect(isTransactionPooler('postgresql://postgres.xxx:pass@aws-0-sa-east-1.pooler.supabase.com:6543/postgres')).toBe(true);
+  });
+
+  it('returns false for direct connections or session pooler on port 5432', () => {
+    expect(isTransactionPooler('postgresql://postgres.xxx:pass@aws-0-sa-east-1.pooler.supabase.com:5432/postgres')).toBe(false);
+  });
+
+  it('handles invalid urls gracefully', () => {
+    expect(isTransactionPooler('invalid-url')).toBe(false);
+  });
+});
+
 describe('MIGRATIONS_FOLDER', () => {
   // feliz
   /* O server sobe de pastas diferentes (dev, Docker, seed). Resolver pelo diretório atual
