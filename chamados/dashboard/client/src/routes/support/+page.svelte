@@ -8,11 +8,12 @@
   import { useTicketLookupModel } from '$lib/hooks/use-ticket-lookup/use-ticket-lookup.svelte';
 
   /**
-   * A tela PÚBLICA: abrir e acompanhar chamado, sem login.
+   * Central de chamados: abrir e acompanhar chamado por qualquer usuário autenticado
+   * (usuário, gestor ou administrador), mesmo sem módulo atribuído.
    *
-   * Ela mora FORA do grupo `(app)` de propósito — aquele grupo tem a guarda de sessão e o
-   * menu lateral, e os dois estão errados aqui: quem está sem impressora não tem conta no
-   * painel, e exigir login para pedir socorro significaria não receber o pedido.
+   * Fica fora do grupo `(app)` de propósito porque não usa o menu lateral dos módulos
+   * internos (Infra/Sistema/Manutenção), sendo a tela de entrada para usuários
+   * sem módulo atribuído e ponto central de suporte.
    *
    * A rota só compõe: chama os dois models e entrega para as views (CONTRIBUTING §3).
    */
@@ -57,10 +58,10 @@
   <main class="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-4 py-10 sm:px-6">
     <OpenTicketForm data={open.data} state={open.state} actions={open.actions} />
 
-    <!-- Para a raiz: quem não entrou passa pelo login do admin-console (é o proxy quem pede),
-         e quem já entrou cai nos Chamados do seu módulo. -->
+    <!-- Para a raiz: se for do time com módulo, cai nos chamados do módulo.
+         data-sveltekit-reload garante navegação completa pelo proxy. -->
     <p class="text-ink-500 text-center text-xs">
-      É do time de TI? <a class="text-primary underline" href="/">Abrir o painel</a>
+      É do time de TI? <a class="text-primary underline" data-sveltekit-reload href="/">Abrir o painel</a>
     </p>
   </main>
 </div>

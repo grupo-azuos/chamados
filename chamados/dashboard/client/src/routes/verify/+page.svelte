@@ -3,7 +3,7 @@
   import ServiceOrderLookupForm from './components/azuos-service-order-lookup-form/azuos-service-order-lookup-form.svelte';
 
   /**
-   * A ENTRADA da conferência de documentos — PÚBLICA, sem login.
+   * A ENTRADA da conferência de documentos por qualquer usuário autenticado.
    *
    * O QR code e o link do PDF já levam direto a `/verify/<código>`. Esta tela é para quem tem
    * só o papel: digita o código do rodapé e cai na mesma conferência. É também para onde
@@ -23,8 +23,7 @@
     <div class="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
       <h1 class="text-ink-900 text-2xl font-bold">Conferir ordem de serviço</h1>
       <p class="text-ink-500 mt-1 text-sm">
-        Digite o código do documento para ver se ele é o que o sistema emitiu. Não precisa de
-        senha.
+        Digite o código do documento para ver se ele é o que o sistema emitiu.
       </p>
     </div>
   </header>
