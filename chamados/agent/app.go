@@ -56,6 +56,7 @@ type App struct {
 	actions         chan func(context.Context)
 	viewReady       chan struct{}
 	isWindowVisible bool
+	startupOpen     bool
 
 	// O envio ao painel central: o que está rodando agora, e como pará-lo.
 	// Trocar a chave na tela derruba o envio antigo e sobe um novo.
@@ -70,6 +71,12 @@ func NewApp() *App {
 		actions:     make(chan func(context.Context), 4),
 		viewReady:   make(chan struct{}, 1),
 	}
+}
+
+func (app *App) SetStartupOpen(open bool) {
+	app.mu.Lock()
+	app.startupOpen = open
+	app.mu.Unlock()
 }
 
 func (app *App) isVisible() bool {
