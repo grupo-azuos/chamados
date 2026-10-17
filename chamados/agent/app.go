@@ -131,8 +131,8 @@ func (app *App) startup(ctx context.Context) {
 // seja erro — nem toda instalação deste agente é de uma máquina que o TI
 // acompanha pelo painel.
 func (app *App) reportToDashboard(ctx context.Context) {
-	// O serviço é o dono da conexão quando a máquina está de fato configurada em disco.
-	if machine.Installed() && machine.Configured() {
+	// O serviço é o dono da conexão quando o instalador de máquina está presente.
+	if machine.Installed() {
 		log.Print("reporting: managed by Windows service")
 		return
 	}
@@ -188,7 +188,7 @@ func (app *App) stopReporting() {
 // existe um salvo. Devolvê-lo recolocaria em texto puro, na memória da tela,
 // o segredo que acabou de ser cifrado em disco.
 func (app *App) ReportingSettings() reporting.Settings {
-	if machine.Installed() && machine.Configured() {
+	if machine.Installed() {
 		if content, err := os.ReadFile(filepath.Join(machine.Directory(), "machine.json")); err == nil {
 			var cfg machine.Config
 			if err := json.Unmarshal(content, &cfg); err == nil {
@@ -211,7 +211,7 @@ func (app *App) ReportingSettings() reporting.Settings {
 
 // ReportingState é exposto ao frontend (via Bind): em que pé está a conexão.
 func (app *App) ReportingState() string {
-	if machine.Installed() && machine.Configured() {
+	if machine.Installed() {
 		return string(reporting.StateManaged)
 	}
 	app.mu.RLock()
@@ -231,7 +231,7 @@ func (app *App) ReportingState() string {
 // A mensagem de erro que volta daqui APARECE NA TELA, então ela é a única
 // coisa deste arquivo escrita em português.
 func (app *App) SaveReportingSettings(serverURL string, token string) string {
-	if machine.Installed() && machine.Configured() {
+	if machine.Installed() {
 		return "Esta instalação é gerenciada pelo TI. Use o script de configuração do serviço."
 	}
 	configPath, configPathError := reporting.DefaultConfigPath()
