@@ -60,7 +60,8 @@ if (-not $isAdmin) {
             if ($val -is [switch]) {
                 if ($val.IsPresent) { $argsList += " -$key" }
             } else {
-                $argsList += " -$key \`"$val\`""
+                $escaped = "$val".Replace('"', '\`"')
+                $argsList += " -$key \`"$escaped\`""
             }
         }
     }
@@ -163,7 +164,7 @@ if ([string]::IsNullOrWhiteSpace($Token) -or $Token -eq '__TOKEN__') {
     Write-Host "Cole a chave (token) do computador gerada no dashboard:" -ForegroundColor Yellow
     $Token = Read-Host
 }
-$Token = $Token.Trim()
+$Token = $Token.Trim().Trim("'\`"")
 if ([string]::IsNullOrWhiteSpace($Token)) {
     throw "A chave do computador é obrigatória para conectar a máquina."
 }
@@ -186,15 +187,24 @@ foreach ($name in @('machine.json', 'machine.json.tmp', 'updates')) {
 
 $systemSid = New-Object Security.Principal.SecurityIdentifier('S-1-5-18')
 $adminSid = New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')
+$usersSid = New-Object Security.Principal.SecurityIdentifier('S-1-5-32-545')
 
 $acl = New-Object Security.AccessControl.DirectorySecurity
 $acl.SetAccessRuleProtection($true, $false)
-$acl.SetOwner($systemSid)
+try {
+    $acl.SetOwner($adminSid)
+} catch {}
 foreach ($sid in @($systemSid, $adminSid)) {
     $rule = New-Object Security.AccessControl.FileSystemAccessRule($sid, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
     $acl.AddAccessRule($rule)
 }
-Set-Acl -LiteralPath $directory -AclObject $acl
+$usersRule = New-Object Security.AccessControl.FileSystemAccessRule($usersSid, 'ReadAndExecute', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
+$acl.AddAccessRule($usersRule)
+try {
+    Set-Acl -LiteralPath $directory -AclObject $acl
+} catch {
+    Write-Warning "Aviso ao definir permissões do diretório: $_"
+}
 
 Add-Type -AssemblyName System.Security
 $bytes = [Text.Encoding]::UTF8.GetBytes($Token)
@@ -239,8 +249,12 @@ $json = $config | ConvertTo-Json
 $path = Join-Path $directory 'machine.json'
 [IO.File]::WriteAllText("$path.tmp", $json, (New-Object Text.UTF8Encoding($false)))
 $fileAcl = Get-Acl -LiteralPath "$path.tmp"
-$fileAcl.SetOwner($systemSid)
-Set-Acl -LiteralPath "$path.tmp" -AclObject $fileAcl
+try {
+    $fileAcl.SetOwner($adminSid)
+    Set-Acl -LiteralPath "$path.tmp" -AclObject $fileAcl
+} catch {
+    Write-Warning "Aviso ao definir dono do arquivo: $_"
+}
 Move-Item -LiteralPath "$path.tmp" -Destination $path -Force
 Write-Host "   Configuração gravada com sucesso em $path." -ForegroundColor Green
 
