@@ -124,8 +124,8 @@
 
   let contentEl: HTMLDivElement | undefined = $state();
   const isMobile = new MediaQuery('(max-width: 767px)');
-  const canShowTooltip = $derived(!sidebarOpen && !isMobile.current);
   let sidebarOpen = $state(untrack(() => initialSidebarOpen));
+  const canShowTooltip = $derived(!sidebarOpen && !isMobile.current);
 
   /* A troca de tela nasce com um fade sutil — sem isso, uma rota substitui a outra num corte
      seco, e o sistema inteiro parece uma sucessão de telas desconectadas em vez de um só
