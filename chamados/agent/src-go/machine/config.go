@@ -62,15 +62,19 @@ func validate(config Config) error {
 	if err != nil {
 		return errors.New("machine: invalid server URL")
 	}
-	if endpoint.Scheme != "https" || endpoint.Host == "" || endpoint.User != nil {
+	if (endpoint.Scheme != "https" && !(endpoint.Scheme == "http" && (endpoint.Hostname() == "localhost" || endpoint.Hostname() == "127.0.0.1"))) || endpoint.Host == "" || endpoint.User != nil {
 		return errors.New("machine: server origin must be HTTPS without credentials")
 	}
 	if endpoint.RawQuery != "" || endpoint.Fragment != "" || strings.Trim(endpoint.Path, "/") != "" {
 		return errors.New("machine: server origin must not contain a path, query or fragment")
 	}
-	fingerprint, err := hex.DecodeString(config.SignerSHA256)
-	if err != nil || len(fingerprint) != 32 {
-		return errors.New("machine: invalid signer SHA256")
+	if config.SignerSHA256 != "" {
+		fingerprint, err := hex.DecodeString(config.SignerSHA256)
+		if err != nil || len(fingerprint) != 32 {
+			return errors.New("machine: invalid signer SHA256")
+		}
+	} else if config.AutoUpdate {
+		return errors.New("machine: signer SHA256 is required when autoUpdate is enabled")
 	}
 	return nil
 }
