@@ -5,11 +5,10 @@
   import ServiceOrderVerifyView from '../components/azuos-service-order-verify-view/azuos-service-order-verify-view.svelte';
 
   /**
-   * A CONFERÊNCIA de uma ordem de serviço — PÚBLICA, sem login.
+   * A CONFERÊNCIA de uma ordem de serviço por qualquer usuário autenticado.
    *
-   * Mora FORA do grupo `(app)`, como a tela de abrir chamado: quem recebe o documento (um
-   * fornecedor, uma auditoria, quem pediu o atendimento) não tem conta no painel. É para cá que
-   * o link e o QR code do rodapé do PDF apontam.
+   * Mora fora do grupo `(app)` porque não utiliza a casca de navegação dos módulos internos.
+   * É para cá que o link e o QR code do rodapé do PDF apontam.
    *
    * A rota só compõe: chama o model e entrega para a view (CONTRIBUTING §3).
    */
