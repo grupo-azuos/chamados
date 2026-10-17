@@ -102,7 +102,7 @@
 		{#if data.state === 'managed'}
 			{#if data.serverUrl}
 				<div
-					class="bg-muted/40 border-border/60 text-foreground w-full rounded-control border px-2.5 py-1.5 font-mono text-xs truncate"
+					class="bg-muted/40 border-border/60 text-foreground rounded-control w-full truncate border px-2.5 py-1.5 font-mono text-xs"
 				>
 					{data.serverUrl}
 				</div>
