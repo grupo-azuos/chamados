@@ -414,7 +414,7 @@ export class TicketsService {
         row.id,
         row.projectId,
         formatTicketProtocol(row.id),
-        `Chamado ${formatTicketProtocol(row.id)} - ${row.problemType}`,
+        `Chamado ${formatTicketProtocol(row.id)} - ${ticketProblemTypeLabel(row.problemType)}`,
         row.description,
         row.requesterName,
       );
@@ -569,7 +569,7 @@ export class TicketsService {
         row.id,
         row.projectId,
         formatTicketProtocol(row.id),
-        `Chamado ${formatTicketProtocol(row.id)} - ${row.problemType}`,
+        `Chamado ${formatTicketProtocol(row.id)} - ${ticketProblemTypeLabel(row.problemType)}`,
         row.description,
         row.requesterName,
         user.id,
