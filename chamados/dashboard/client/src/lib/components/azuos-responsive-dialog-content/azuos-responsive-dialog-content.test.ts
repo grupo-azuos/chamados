@@ -12,6 +12,17 @@ describe('AzuosResponsiveDialogContent', () => {
     expect(screen.getByRole('button', { name: /fechar/i })).toBeInTheDocument();
   });
 
+  // triste
+  /* No bits-ui o X recebe `data-state="open"`; com a classe do shadcn ele ficava com fundo de
+     destaque o tempo todo, fora do padrão dos outros sistemas. */
+  it('does not paint the close button while the dialog is open', () => {
+    render(ResponsiveDialogContentHarness, { props: { onOpenChange: vi.fn() } });
+
+    const close = screen.getByRole('button', { name: 'Fechar diálogo' });
+    expect(close).toHaveAttribute('data-state', 'open');
+    expect(close.className).not.toMatch(/data-\[state=open\]:bg-/);
+  });
+
   it('closes when the handle is dragged down past the threshold', async () => {
     const onOpenChange = vi.fn();
     render(ResponsiveDialogContentHarness, { props: { onOpenChange } });

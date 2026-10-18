@@ -146,6 +146,9 @@
     <!-- Sem botão visível, o gatilho continua existindo (é nele que o arrastar clica
          sozinho), mas sai do foco e da leitura de tela — do contrário sobraria um botão
          "Fechar" fantasma no tab, sem nada visível que explique o que é. -->
+    <!-- Sem `data-[state=open]:bg-accent`, que vem do modelo do shadcn: no bits-ui o botão de
+         fechar recebe `data-state="open"` (no Radix, não), e o X ficava com fundo azul o tempo
+         todo — diferente dos outros sistemas da casa. -->
     <DialogPrimitive.Close
       bind:ref={closeRef}
       data-slot="dialog-close"
@@ -153,7 +156,7 @@
       tabindex={showCloseButton ? 0 : -1}
       aria-hidden={showCloseButton ? undefined : true}
       class={showCloseButton
-        ? 'absolute top-4 right-4 rounded-chip opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=\'size-\'])]:size-4 cursor-pointer'
+        ? 'absolute top-4 right-4 rounded-chip opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=\'size-\'])]:size-4 cursor-pointer'
         : 'sr-only'}
     >
       {#if showCloseButton}
