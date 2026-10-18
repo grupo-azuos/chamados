@@ -48,6 +48,10 @@ export const softwareScheduleEvents = chamadosSchema.table(
       .notNull()
       .defaultNow(),
     createdBy: text('created_by').notNull(),
+    /* Quem marcou, pela identidade (id e nome do admin-console). Nulos nos agendamentos de antes
+       desta coluna: para eles vale o e-mail de `createdBy`. */
+    createdById: text('created_by_id'),
+    createdByName: text('created_by_name'),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
   },
