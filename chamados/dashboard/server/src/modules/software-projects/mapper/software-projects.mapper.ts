@@ -176,5 +176,9 @@ export function toSoftwareScheduleEvent(
     endTime: row.endTime,
     note: row.note,
     createdAt: row.createdAt.toISOString(),
+    createdById: row.createdById ?? null,
+    createdByEmail: row.createdBy,
+    /* Agendamento antigo não tem o nome: mostra o e-mail, que identifica do mesmo jeito. */
+    createdByName: row.createdByName ?? row.createdBy,
   };
 }
