@@ -34,3 +34,29 @@ export function nextBrasiliaTime(now: Date, hour: number): Date {
 export function msUntilBrasiliaTime(now: Date, hour: number): number {
   return nextBrasiliaTime(now, hour).getTime() - now.getTime();
 }
+
+/**
+ * O mês corrente no calendário de Brasília: o instante em que ele começa e o em que o próximo
+ * começa (fim exclusivo), mais o ano e o mês (0–11) de lá.
+ *
+ * Sem isto, o mês seguia o relógio do servidor (UTC): o que acontecesse das 21h à meia-noite do
+ * último dia, em Brasília, caía no mês seguinte.
+ */
+export function brasiliaMonthRange(now: Date): {
+  start: Date;
+  end: Date;
+  year: number;
+  month: number;
+} {
+  const local = new Date(now.getTime() + BRASILIA_UTC_OFFSET_HOURS * HOUR_MS);
+  const year = local.getUTCFullYear();
+  const month = local.getUTCMonth();
+  const offset = -BRASILIA_UTC_OFFSET_HOURS;
+
+  return {
+    start: new Date(Date.UTC(year, month, 1, offset)),
+    end: new Date(Date.UTC(year, month + 1, 1, offset)),
+    year,
+    month,
+  };
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { msUntilBrasiliaTime, nextBrasiliaTime } from './daily-schedule.util';
+import { brasiliaMonthRange, msUntilBrasiliaTime, nextBrasiliaTime } from './daily-schedule.util';
 
 describe('daily-schedule.util', () => {
   // feliz
@@ -35,5 +35,31 @@ describe('daily-schedule.util', () => {
     expect(() => nextBrasiliaTime(now, 24)).toThrow(RangeError);
     expect(() => nextBrasiliaTime(now, -1)).toThrow(RangeError);
     expect(() => nextBrasiliaTime(now, 1.5)).toThrow(RangeError);
+  });
+});
+
+describe('brasiliaMonthRange', () => {
+  // feliz
+  it('starts and ends the month at midnight in Brasília', () => {
+    const range = brasiliaMonthRange(new Date('2026-10-17T15:00:00Z'));
+
+    expect(range).toMatchObject({ year: 2026, month: 9 });
+    expect(range.start.toISOString()).toBe('2026-10-01T03:00:00.000Z');
+    expect(range.end.toISOString()).toBe('2026-11-01T03:00:00.000Z');
+  });
+
+  // triste
+  /* 31/10 às 22h em Brasília já é 1º/11 em UTC — mas ainda é outubro para quem usa o sistema. */
+  it('keeps the last evening of the month in that month', () => {
+    const range = brasiliaMonthRange(new Date('2026-11-01T01:00:00Z'));
+
+    expect(range).toMatchObject({ year: 2026, month: 9 });
+  });
+
+  // triste
+  it('turns the year in December', () => {
+    const range = brasiliaMonthRange(new Date('2026-12-20T12:00:00Z'));
+
+    expect(range.end.toISOString()).toBe('2027-01-01T03:00:00.000Z');
   });
 });
