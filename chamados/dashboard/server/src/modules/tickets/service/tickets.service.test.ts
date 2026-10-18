@@ -277,7 +277,8 @@ describe('TicketsService.create', () => {
       7,
       8,
       'CH-0007',
-      'Chamado CH-0007 - bug',
+      /* O título vai em português: o GitHub mostra para gente, não para o sistema. */
+      'Chamado CH-0007 - Erro no sistema',
       'O sistema não carrega.',
       'Bia Costa',
     );

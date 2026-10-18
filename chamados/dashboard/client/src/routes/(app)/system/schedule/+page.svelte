@@ -1,6 +1,9 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { canEditSystem } from '@template/shared/domain/system-access.util';
+  import {
+    canChangeScheduleEvent,
+    canEditSystem,
+  } from '@template/shared/domain/system-access.util';
   import { type SoftwareScheduleEvent } from '@template/shared/schemas/software-schedule.schema';
 
   import WeekScheduleGrid from './components/azuos-week-schedule-grid/azuos-week-schedule-grid.svelte';
@@ -32,8 +35,10 @@
     onNewEventAt: (date, startTime) => {
       if (canEditSystem(page.data.user)) newSlot = { date, startTime };
     },
+    /* Só quem marcou (ou o Super Admin) abre o formulário; os outros veem na dica quem marcou. */
     onSelectEvent: (event) => {
-      if (canEditSystem(page.data.user)) selectedEvent = event;
+      if (canEditSystem(page.data.user) && canChangeScheduleEvent(page.data.user, event))
+        selectedEvent = event;
     },
   }}
 />

@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { canChangeScheduleEvent } from '@template/shared/domain/system-access.util';
 import {
   type CreateSoftwareScheduleEventInput,
   type SoftwareScheduleEvent,
@@ -14,6 +15,8 @@ import { toSoftwareScheduleEvent } from '../mapper/software-projects.mapper';
 import { SoftwareScheduleRepository } from '../repository/software-schedule.repository';
 
 export const SCHEDULE_EVENT_NOT_FOUND = 'Compromisso não encontrado.';
+export const SCHEDULE_EVENT_NOT_YOURS =
+  'Só quem marcou este compromisso (ou o Super Administrador) pode alterá-lo ou excluí-lo.';
 
 function buildScheduleEventUpdate(
   input: UpdateSoftwareScheduleEventInput,
@@ -73,7 +76,10 @@ export class SoftwareScheduleService {
       startTime: input.startTime,
       endTime: input.endTime,
       note: input.note ?? null,
+      /* Autoria vem da identidade, nunca do corpo. */
       createdBy: user.email,
+      createdById: user.id,
+      createdByName: user.name,
     });
 
     return toSoftwareScheduleEvent(row);
@@ -86,7 +92,7 @@ export class SoftwareScheduleService {
   ): Promise<SoftwareScheduleEvent> {
     assertCanEditSystem(user, 'alterar agendamento do cronograma');
 
-    await this.findById(user, id);
+    await this.findOwnedOrRefuse(user, id);
 
     const updatePayload = buildScheduleEventUpdate(input, user.email);
     const row = await this.repository.update(id, updatePayload);
@@ -97,7 +103,15 @@ export class SoftwareScheduleService {
   async remove(user: RequestUser, id: number): Promise<void> {
     assertCanEditSystem(user, 'excluir agendamento do cronograma');
 
-    await this.findById(user, id);
+    await this.findOwnedOrRefuse(user, id);
     await this.repository.remove(id);
+  }
+
+  /** O agendamento, se existe e se esta pessoa pode mexer nele (quem marcou ou Super Admin). */
+  private async findOwnedOrRefuse(user: RequestUser, id: number): Promise<SoftwareScheduleEvent> {
+    const event = await this.findById(user, id);
+    if (!canChangeScheduleEvent(user, event)) throw new ForbiddenException(SCHEDULE_EVENT_NOT_YOURS);
+
+    return event;
   }
 }

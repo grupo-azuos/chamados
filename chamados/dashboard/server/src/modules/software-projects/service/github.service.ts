@@ -32,6 +32,9 @@ type RawGithubPr = {
 
 type RawGithubUser = { name?: string | null };
 
+/** Como aparece o que o App da organização faz no GitHub (as issues abertas a partir de chamados). */
+export const CHAMADOS_BOT_NAME = 'GitHub Chamados Bot';
+
 function resolvePrStatus(mergedAt?: string | null, state?: string): 'open' | 'merged' | 'closed' {
   if (mergedAt) return 'merged';
   if (state === 'closed') return 'closed';
@@ -247,7 +250,9 @@ export class GithubService {
         created_at: string;
         closed_at?: string | null;
         closed_by?: { login?: string } | null;
+        performed_via_github_app?: { id?: number } | null;
       }>;
+      const appId = this.app?.appId ?? null;
       const pageItems = rows
         .filter((row) => !row.pull_request)
         .map((row) => ({
@@ -263,7 +268,20 @@ export class GithubService {
             row.state === 'closed' && row.closed_at ? row.closed_at : row.created_at,
           ),
         }));
-      items.push(...(await this.addAuthorNames(pageItems, token)));
+      /* Issue aberta pelo nosso App (a partir de um chamado): quem aparece é o bot, com nome de
+         gente, e não `app-chamados[bot]`. Fechada, o autor é quem fechou — essa é uma pessoa. */
+      const ownBotIssues = new Set(
+        rows
+          .filter((row) => !row.pull_request && row.state !== 'closed')
+          .filter((row) => appId !== null && row.performed_via_github_app?.id === appId)
+          .map((row) => `#${row.number}`),
+      );
+      const named = await this.addAuthorNames(pageItems, token);
+      items.push(
+        ...named.map((item) =>
+          ownBotIssues.has(item.externalId) ? { ...item, authorName: CHAMADOS_BOT_NAME } : item,
+        ),
+      );
       if (!response.headers.get('link')?.includes('rel="next"')) return items;
     }
   }
