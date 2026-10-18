@@ -22,6 +22,10 @@ export const softwareScheduleEventSchema = z.object({
   endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Horário no formato HH:mm'),
   note: z.string().nullable(),
   createdAt: z.string().datetime(),
+  /** Quem marcou — para a tela mostrar e decidir se oferece alterar e excluir. */
+  createdById: z.string().nullable(),
+  createdByEmail: z.string(),
+  createdByName: z.string(),
 });
 
 export type SoftwareScheduleEvent = z.infer<typeof softwareScheduleEventSchema>;
