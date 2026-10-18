@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, gt, lt } from 'drizzle-orm';
+import { runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
 import {
@@ -28,6 +29,16 @@ export class GithubConnectionsRepository {
         target: githubConnections.userId,
         set: { ...data, updatedAt: new Date() },
       });
+  }
+
+  /** Quem vinculou o GitHub: o login de lá e o id da pessoa aqui. */
+  async listLogins(): Promise<{ userId: string; login: string }[]> {
+    return runQuery(
+      this.db
+        .select({ userId: githubConnections.userId, login: githubConnections.login })
+        .from(githubConnections),
+      'listar contas do GitHub vinculadas',
+    );
   }
 
   async remove(userId: string) {

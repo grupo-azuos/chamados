@@ -8,6 +8,8 @@ import { type SoftwareProjectsRepository } from '../repository/software-projects
 import { type SoftwareTimelineRepository } from '../repository/software-timeline.repository';
 import { type GithubService } from './github.service';
 import { SoftwareProjectsService } from './software-projects.service';
+import { type GithubConnectionsRepository } from '../../github-integration/repository/github-connections.repository';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 
 const admin: RequestUser = {
   id: '1',
@@ -246,6 +248,83 @@ describe('SoftwareProjectsService', () => {
 
       await expect(service.syncAllGithub(admin)).rejects.toThrow('Super Administrador');
       expect(repository.listAll).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('author names', () => {
+    function withDirectory(listUsers: () => Promise<unknown>) {
+      const repository = {
+        findById: vi.fn().mockResolvedValue(
+          projectRow({ githubRepoOwner: 'org', githubRepoName: 'repo' }),
+        ),
+        countOpenTicketsByProject: vi.fn().mockResolvedValue({}),
+        countPullRequestsByProject: vi.fn().mockResolvedValue({}),
+      } as unknown as SoftwareProjectsRepository;
+      const timelineRepository = {
+        upsertMany: vi.fn().mockResolvedValue(0),
+      } as unknown as SoftwareTimelineRepository;
+      const githubService = {
+        fetchPullRequests: vi.fn().mockResolvedValue([
+          {
+            externalId: '#1',
+            title: 'PR',
+            url: 'u',
+            author: 'Vinicius-GPL',
+            authorName: 'vinicius-gpl',
+            status: 'merged',
+            eventDate: new Date(),
+          },
+          {
+            externalId: '#2',
+            title: 'PR',
+            url: 'u',
+            author: 'externa',
+            authorName: 'Pessoa de Fora',
+            status: 'open',
+            eventDate: new Date(),
+          },
+        ]),
+        fetchIssues: vi.fn().mockResolvedValue([]),
+      } as unknown as GithubService;
+      const connections = {
+        listLogins: vi.fn().mockResolvedValue([{ userId: 'u-vini', login: 'vinicius-gpl' }]),
+      } as unknown as GithubConnectionsRepository;
+      const directory = { listUsers: vi.fn(listUsers) } as unknown as UserDirectoryProvider;
+      const service = new SoftwareProjectsService(
+        repository,
+        timelineRepository,
+        githubService,
+        undefined,
+        connections,
+        directory,
+      );
+      return { service, timelineRepository };
+    }
+
+    // feliz
+    /* Quem vinculou o GitHub aparece com o nome do admin-console — o mesmo do resto do sistema. */
+    it('shows linked people by their admin-console name, and others by their GitHub name', async () => {
+      const { service, timelineRepository } = withDirectory(async () => [
+        { id: 'u-vini', name: 'Vinicius Gabriel', email: 'v@empresa.com.br' },
+      ]);
+
+      await service.syncGithubPrs(admin, 1);
+
+      const rows = vi.mocked(timelineRepository.upsertMany).mock.calls[0]?.[0] ?? [];
+      expect(rows.map((row) => row.authorName)).toEqual(['Vinicius Gabriel', 'Pessoa de Fora']);
+    });
+
+    // triste
+    it('keeps the GitHub names when the admin-console is down, without failing the sync', async () => {
+      const { service, timelineRepository } = withDirectory(async () => {
+        throw new Error('admin-console fora do ar');
+      });
+
+      const result = await service.syncGithubPrs(admin, 1);
+
+      expect(result.synced).toBe(2);
+      const rows = vi.mocked(timelineRepository.upsertMany).mock.calls[0]?.[0] ?? [];
+      expect(rows.map((row) => row.authorName)).toEqual(['vinicius-gpl', 'Pessoa de Fora']);
     });
   });
 
