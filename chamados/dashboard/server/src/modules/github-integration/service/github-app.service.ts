@@ -11,6 +11,12 @@ export class GithubAppService {
 
   constructor(@Inject(ENV) private readonly env: Env) {}
 
+  /** O id do App da organização — é por ele que se reconhece o que o próprio App criou no GitHub. */
+  get appId(): number | null {
+    const id = Number(this.env.GITHUB_APP_ID);
+    return Number.isInteger(id) && id > 0 ? id : null;
+  }
+
   get isConfigured(): boolean {
     return Boolean(
       this.env.GITHUB_APP_ID &&

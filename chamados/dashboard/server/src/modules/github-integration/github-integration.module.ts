@@ -8,6 +8,6 @@ import { GithubAppService } from './service/github-app.service';
 @Module({
   controllers: [GithubIntegrationController],
   providers: [GithubConnectionsRepository, GithubOauthService, GithubLinkedGuard, GithubAppService],
-  exports: [GithubOauthService, GithubLinkedGuard, GithubAppService],
+  exports: [GithubOauthService, GithubLinkedGuard, GithubAppService, GithubConnectionsRepository],
 })
 export class GithubIntegrationModule {}

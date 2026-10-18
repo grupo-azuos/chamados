@@ -69,6 +69,43 @@ describe('GithubService', () => {
     expect(String(fetcher.mock.calls[0]?.[0])).toContain('sort=updated&direction=desc');
   });
 
+  // feliz
+  it('names the issues our own App opened as the Chamados bot, and keeps other bots as they are', async () => {
+    const app = { accessToken: vi.fn().mockResolvedValue('t'), appId: 42 };
+    const service = new GithubService({} as Database, app as unknown as GithubAppService);
+    const issue = (number: number, login: string, appId: number | null, state = 'open') => ({
+      number,
+      title: `Issue ${number}`,
+      html_url: `https://github.com/org/repo/issues/${number}`,
+      user: { login },
+      state,
+      created_at: '2026-10-16T12:00:00Z',
+      closed_at: state === 'closed' ? '2026-10-17T12:00:00Z' : null,
+      closed_by: state === 'closed' ? { login: 'vinicius-gpl' } : null,
+      performed_via_github_app: appId ? { id: appId } : null,
+    });
+    vi.spyOn(global, 'fetch').mockImplementation(async (url) =>
+      String(url).includes('/users/')
+        ? new Response(JSON.stringify({ name: null }))
+        : new Response(
+            JSON.stringify([
+              issue(27, 'app-chamados[bot]', 42),
+              issue(28, 'dependabot[bot]', 7),
+              issue(29, 'app-chamados[bot]', 42, 'closed'),
+            ]),
+          ),
+    );
+
+    const result = await service.fetchIssues('org', 'repo');
+
+    expect(result.map((item) => [item.externalId, item.author, item.authorName])).toEqual([
+      ['#27', 'app-chamados[bot]', 'GitHub Chamados Bot'],
+      ['#28', 'dependabot[bot]', 'dependabot[bot]'],
+      /* Fechada: o autor é quem fechou, uma pessoa — não o bot que abriu. */
+      ['#29', 'vinicius-gpl', 'vinicius-gpl'],
+    ]);
+  });
+
   it('excludes pull requests returned by the issues endpoint', async () => {
     const service = new GithubService({} as Database);
     vi.spyOn(global, 'fetch').mockResolvedValue(

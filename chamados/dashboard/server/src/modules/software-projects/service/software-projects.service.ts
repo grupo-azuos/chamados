@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   Optional,
@@ -13,6 +14,9 @@ import {
 } from '@template/shared/schemas/software-project.schema';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
+import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
+import { GithubConnectionsRepository } from '../../github-integration/repository/github-connections.repository';
 import {
   assertCanEditSystem,
   assertCanRead,
@@ -53,7 +57,36 @@ export class SoftwareProjectsService {
     private readonly timelineRepository: SoftwareTimelineRepository,
     private readonly githubService: GithubService,
     @Optional() private readonly assignees?: TicketAssigneesService,
+    @Optional() private readonly connections?: GithubConnectionsRepository,
+    @Optional()
+    @Inject(USER_DIRECTORY_PROVIDER)
+    private readonly directory?: UserDirectoryProvider,
   ) {}
+
+  /**
+   * Login do GitHub (minúsculo) → nome no admin-console, de quem vinculou a conta aqui. É o que
+   * faz `vinicius-gpl` aparecer como a pessoa que o resto do sistema conhece.
+   *
+   * Admin-console fora do ar não derruba a sincronização: fica o nome que veio do GitHub.
+   */
+  private async linkedNames(): Promise<Map<string, string>> {
+    if (!this.connections || !this.directory) return new Map();
+    try {
+      const [links, people] = await Promise.all([
+        this.connections.listLogins(),
+        this.directory.listUsers(),
+      ]);
+      const nameById = new Map(people.map((person) => [person.id, person.name]));
+      return new Map(
+        links.flatMap((link) => {
+          const name = nameById.get(link.userId);
+          return name ? [[link.login.toLowerCase(), name] as const] : [];
+        }),
+      );
+    } catch {
+      return new Map();
+    }
+  }
 
   /**
    * Quem responde pelo sistema, conferido: precisa atender a área de Sistema, e o nome vem do
@@ -173,7 +206,8 @@ export class SoftwareProjectsService {
       return { synced: 0, message: 'URL do GitHub não reconhecida.' };
     }
 
-    const { prs, issues } = await this.syncRepository(id, repoInfo, user.email, user.id);
+    const names = await this.linkedNames();
+    const { prs, issues } = await this.syncRepository(id, repoInfo, user.email, user.id, names);
 
     return {
       synced: prs,
@@ -211,12 +245,20 @@ export class SoftwareProjectsService {
     since?: Date,
   ): Promise<GithubSyncAllResult> {
     const result: GithubSyncAllResult = { projects: 0, prs: 0, issues: 0, failed: [], message: '' };
+    const names = await this.linkedNames();
 
     for (const project of await this.repository.listAll()) {
       const repoInfo = repositoryOf(project);
       if (!repoInfo) continue;
       try {
-        const synced = await this.syncRepository(project.id, repoInfo, actorEmail, userId, since);
+        const synced = await this.syncRepository(
+          project.id,
+          repoInfo,
+          actorEmail,
+          userId,
+          names,
+          since,
+        );
         result.projects++;
         result.prs += synced.prs;
         result.issues += synced.issues;
@@ -235,9 +277,11 @@ export class SoftwareProjectsService {
     repoInfo: { owner: string; repo: string },
     actorEmail: string,
     userId: string | undefined,
+    names: ReadonlyMap<string, string>,
     since?: Date,
   ): Promise<{ prs: number; issues: number }> {
     const { owner, repo } = repoInfo;
+    const nameOf = (login: string, fallback: string) => names.get(login.toLowerCase()) ?? fallback;
     const prs = await this.githubService.fetchPullRequests(owner, repo, userId, since);
     await this.timelineRepository.upsertMany(
       prs.map((pr) => ({
@@ -247,7 +291,7 @@ export class SoftwareProjectsService {
         title: pr.title,
         url: pr.url,
         author: pr.author,
-        authorName: pr.authorName,
+        authorName: nameOf(pr.author, pr.authorName),
         status: pr.status,
         eventDate: pr.eventDate,
         createdBy: actorEmail,
@@ -256,7 +300,13 @@ export class SoftwareProjectsService {
 
     const issues = await this.githubService.fetchIssues(owner, repo, userId, since);
     await this.timelineRepository.upsertMany(
-      issues.map((issue) => ({ projectId, type: 'issue' as const, ...issue, createdBy: actorEmail })),
+      issues.map((issue) => ({
+        projectId,
+        type: 'issue' as const,
+        ...issue,
+        authorName: nameOf(issue.author, issue.authorName),
+        createdBy: actorEmail,
+      })),
     );
 
     return { prs: prs.length, issues: issues.length };
@@ -275,7 +325,8 @@ export class SoftwareProjectsService {
     userId: string,
   ): Promise<void> {
     try {
-      await this.syncRepository(projectId, { owner, repo }, actorEmail, userId);
+      const names = await this.linkedNames();
+      await this.syncRepository(projectId, { owner, repo }, actorEmail, userId, names);
     } catch {
       // Ignora erro em sincronização silenciosa de background
     }
