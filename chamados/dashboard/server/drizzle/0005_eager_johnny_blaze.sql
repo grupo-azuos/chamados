@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "software_timeline_external_unique" ON "chamados"."software_timeline_events" USING btree ("project_id","type","external_id");
