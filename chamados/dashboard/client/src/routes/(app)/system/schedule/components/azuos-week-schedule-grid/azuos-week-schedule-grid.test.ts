@@ -40,7 +40,7 @@ function renderView(
     endTime: '11:00',
     color: 'green' as const,
     category: 'deploy' as const,
-    createdAt: '2026-10-01T00:00:00Z',
+    createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
   };
 
   const mockDays = [
@@ -219,6 +219,8 @@ describe('AzuosWeekScheduleGrid', () => {
       const tooltip = document.getElementById(appointment.getAttribute('aria-describedby')!);
       expect(tooltip).toHaveTextContent('Deploy da v1.4');
       expect(tooltip).toHaveTextContent('06/10/2026 · 09:00 – 11:00');
+      /* Quem marcou aparece para todo mundo — é como se sabe a quem perguntar. */
+      expect(tooltip).toHaveTextContent('Marcado por Ana Lima');
       await userEvent.click(appointment);
       expect(actions.onSelectEvent).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     },
@@ -338,6 +340,9 @@ describe('AzuosWeekScheduleGrid', () => {
       color: 'green' as const,
       category: 'deploy' as const,
       createdAt: '2026-10-01T00:00:00Z',
+      createdById: 'u-ana',
+      createdByEmail: 'ana@empresa.com.br',
+      createdByName: 'Ana Lima',
     }));
     const actions = renderView({
       data: {
@@ -371,7 +376,7 @@ describe('AzuosWeekScheduleGrid', () => {
       endTime: '21:00',
       color: 'green' as const,
       category: 'deploy' as const,
-      createdAt: '2026-10-01T00:00:00Z',
+      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
     };
     const actions = renderView({
       data: {

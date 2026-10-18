@@ -614,6 +614,7 @@
                         >{event.date.split('-').reverse().join('/')} · {event.startTime} – {event.endTime}</span
                       >
                       {#if event.projectName}<span>Projeto: {event.projectName}</span>{/if}
+                      <span>Marcado por {event.createdByName}</span>
                       {#if event.note}<span>{event.note}</span>{/if}</Tooltip.Content
                     ></Tooltip.Root
                   >
@@ -776,6 +777,7 @@
                         >{event.date.split('-').reverse().join('/')} · {event.startTime} – {event.endTime}</span
                       >
                       {#if event.projectName}<span>Projeto: {event.projectName}</span>{/if}
+                      <span>Marcado por {event.createdByName}</span>
                       {#if event.note}<span>{event.note}</span>{/if}</Tooltip.Content
                     ></Tooltip.Root
                   >
@@ -882,6 +884,7 @@
                   >{event.date.split('-').reverse().join('/')} · {event.startTime} – {event.endTime}</span
                 >
                 {#if event.projectName}<span>Projeto: {event.projectName}</span>{/if}
+                <span>Marcado por {event.createdByName}</span>
                 {#if event.note}<span>{event.note}</span>{/if}</Tooltip.Content
               ></Tooltip.Root
             >
