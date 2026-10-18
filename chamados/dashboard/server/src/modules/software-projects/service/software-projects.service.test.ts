@@ -68,7 +68,7 @@ function makeService(
   } as unknown as SoftwareProjectsRepository;
 
   const timelineRepository = {
-    upsertPr: vi.fn().mockResolvedValue(undefined),
+    upsertMany: vi.fn().mockResolvedValue(0),
     ...timelineOverrides,
   } as unknown as SoftwareTimelineRepository;
 
@@ -181,16 +181,16 @@ describe('SoftwareProjectsService', () => {
         color: 'green',
       });
 
-      await vi.waitFor(() => expect(timelineRepository.upsertPr).toHaveBeenCalled());
+      await vi.waitFor(() => expect(timelineRepository.upsertMany).toHaveBeenCalledTimes(2));
       expect(githubService.fetchIssues).toHaveBeenCalledWith(
         'vinicius-gpl',
         'acerola-ticket',
         admin.id,
         undefined,
       );
-      expect(timelineRepository.upsertPr).toHaveBeenCalledWith(
+      expect(timelineRepository.upsertMany).toHaveBeenLastCalledWith([
         expect.objectContaining({ projectId: 1, type: 'issue', externalId: '#7', status: 'closed' }),
-      );
+      ]);
     });
 
     // triste
@@ -209,7 +209,7 @@ describe('SoftwareProjectsService', () => {
       });
 
       expect(project.id).toBe(1);
-      expect(timelineRepository.upsertPr).not.toHaveBeenCalled();
+      expect(timelineRepository.upsertMany).not.toHaveBeenCalled();
     });
   });
 
@@ -370,7 +370,9 @@ describe('SoftwareProjectsService', () => {
       const result = await service.syncGithubPrs(admin, 1);
 
       expect(result.synced).toBe(1);
-      expect(timelineRepository.upsertPr).toHaveBeenCalledTimes(1);
+      /* Um lote para os PRs e um para as issues — nunca uma gravação por item. */
+      expect(timelineRepository.upsertMany).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(timelineRepository.upsertMany).mock.calls[0]?.[0]).toHaveLength(1);
     });
   });
 });

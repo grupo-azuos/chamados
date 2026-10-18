@@ -36,6 +36,13 @@
       "when": 1792112521154,
       "tag": "0004_drop_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792295059446,
+      "tag": "0005_eager_johnny_blaze",
+      "breakpoints": true
     }
   ]
 }

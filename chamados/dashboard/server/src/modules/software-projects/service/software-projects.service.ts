@@ -239,10 +239,10 @@ export class SoftwareProjectsService {
   ): Promise<{ prs: number; issues: number }> {
     const { owner, repo } = repoInfo;
     const prs = await this.githubService.fetchPullRequests(owner, repo, userId, since);
-    for (const pr of prs) {
-      await this.timelineRepository.upsertPr({
+    await this.timelineRepository.upsertMany(
+      prs.map((pr) => ({
         projectId,
-        type: 'pr',
+        type: 'pr' as const,
         externalId: pr.externalId,
         title: pr.title,
         url: pr.url,
@@ -251,18 +251,13 @@ export class SoftwareProjectsService {
         status: pr.status,
         eventDate: pr.eventDate,
         createdBy: actorEmail,
-      });
-    }
+      })),
+    );
 
     const issues = await this.githubService.fetchIssues(owner, repo, userId, since);
-    for (const issue of issues) {
-      await this.timelineRepository.upsertPr({
-        projectId,
-        type: 'issue',
-        ...issue,
-        createdBy: actorEmail,
-      });
-    }
+    await this.timelineRepository.upsertMany(
+      issues.map((issue) => ({ projectId, type: 'issue' as const, ...issue, createdBy: actorEmail })),
+    );
 
     return { prs: prs.length, issues: issues.length };
   }
