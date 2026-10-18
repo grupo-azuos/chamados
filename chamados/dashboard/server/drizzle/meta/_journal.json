@@ -43,6 +43,13 @@
       "when": 1792295059446,
       "tag": "0005_eager_johnny_blaze",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792297241321,
+      "tag": "0006_thankful_champions",
+      "breakpoints": true
     }
   ]
 }

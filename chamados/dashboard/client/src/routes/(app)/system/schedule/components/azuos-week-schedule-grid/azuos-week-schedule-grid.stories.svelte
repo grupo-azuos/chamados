@@ -18,7 +18,7 @@
       endTime: '11:00',
       color: 'green',
       category: 'deploy',
-      createdAt: '2026-10-01T00:00:00Z',
+      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
     },
     {
       id: 2,
@@ -31,7 +31,7 @@
       endTime: '16:00',
       color: 'blue',
       category: 'standup',
-      createdAt: '2026-10-01T00:00:00Z',
+      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
     },
   ];
 
