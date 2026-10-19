@@ -1,14 +1,24 @@
-import { render, screen, fireEvent } from '@testing-library/svelte';
+import { render, screen, fireEvent, within } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import AgentDownloadView from './azuos-agent-download-view.svelte';
 const data = {
   release: { version: '1.2.3', publishedAt: '2026-10-16T12:00:00.000Z', sizeBytes: 45_000_000 },
+  releases: [],
 };
-const state = { isLoading: false, error: null, downloadError: null, downloading: null };
+const state = {
+  isLoading: false,
+  error: null,
+  downloadError: null,
+  downloading: null,
+  isLoadingReleases: false,
+  releasesError: null,
+  downloadingVersion: null,
+};
 const actions = () => ({
   onRetry: vi.fn(),
   onDownload: vi.fn(),
   onDownloadInstallerScript: vi.fn(),
+  onDownloadVersion: vi.fn(),
 });
 
 describe('AzuosAgentDownloadView', () => {
@@ -32,14 +42,14 @@ describe('AzuosAgentDownloadView', () => {
   });
   // triste
   it('offers no download when no LTS has been promoted', () => {
-    render(AgentDownloadView, { data: { release: null }, state, actions: actions() });
+    render(AgentDownloadView, { data: { release: null, releases: [] }, state, actions: actions() });
     expect(screen.getByText('Nenhuma versão LTS disponível')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Baixar instalador' })).not.toBeInTheDocument();
   });
   it('announces storage errors and allows retry', async () => {
     const callbacks = actions();
     render(AgentDownloadView, {
-      data: { release: null },
+      data: { release: null, releases: [] },
       state: { ...state, error: 'Não consegui consultar a versão.' },
       actions: callbacks,
     });
@@ -54,5 +64,32 @@ describe('AzuosAgentDownloadView', () => {
       actions: actions(),
     });
     expect(screen.getByRole('button', { name: 'Baixar certificado' })).toBeDisabled();
+  });
+
+  it('lists older published versions and marks the LTS', async () => {
+    const callbacks = actions();
+    render(AgentDownloadView, {
+      data: {
+        ...data,
+        releases: [
+          { version: '1.2.3', publishedAt: '2026-10-16T12:00:00.000Z', sizeBytes: 45_000_000, isLts: true },
+          { version: '1.0.2', publishedAt: '2026-09-16T12:00:00.000Z', sizeBytes: 40_000_000, isLts: false },
+        ],
+      },
+      state,
+      actions: callbacks,
+    });
+
+    const older = screen.getByText('1.0.2').closest('li') as HTMLElement;
+    await fireEvent.click(within(older).getByRole('button', { name: 'MSI' }));
+
+    expect(screen.getByText('LTS')).toBeInTheDocument();
+    expect(callbacks.onDownloadVersion).toHaveBeenCalledWith('1.0.2', 'msi');
+  });
+
+  it('explains the temporary PowerShell execution policy', () => {
+    render(AgentDownloadView, { data, state, actions: actions() });
+    expect(screen.getByText(/-Scope Process/)).toBeInTheDocument();
+    expect(screen.getByText(/só para essa janela/)).toBeInTheDocument();
   });
 });

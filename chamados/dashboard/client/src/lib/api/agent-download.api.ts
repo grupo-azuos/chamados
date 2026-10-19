@@ -1,6 +1,7 @@
 import {
   agentLtsSchema,
   agentFileLinkSchema,
+  agentReleaseItemSchema,
   type AgentDownloadKind,
 } from '@template/shared/schemas/agent-release.schema';
 import { apiRequest } from './http-client';
@@ -14,5 +15,13 @@ export const agentDownloadApi = {
   download: async (kind: AgentDownloadKind, version: string) =>
     agentFileLinkSchema.parse(
       await apiRequest<unknown>(`/agent/downloads/lts/${kind}`, { query: { version } }),
+    ),
+  releases: async () =>
+    agentReleaseItemSchema.array().parse(await apiRequest<unknown>('/agent/downloads/releases')),
+  downloadVersion: async (kind: AgentDownloadKind, version: string) =>
+    agentFileLinkSchema.parse(
+      await apiRequest<unknown>(
+        `/agent/downloads/releases/${encodeURIComponent(version)}/${kind}`,
+      ),
     ),
 };
