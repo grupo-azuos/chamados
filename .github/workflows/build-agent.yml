@@ -61,6 +61,14 @@ jobs:
           go vet ./...
           go test ./...
           go build -trimpath -ldflags '-s -w' -o build/bin/azuos-agent-service.exe ./src-go/cmd/service
+      - name: Verify desktop PE version matches the MSI file version
+        working-directory: chamados/agent
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $info = [Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path 'build/bin/Azuos Agent.exe'))
+          $actual = "$($info.FileMajorPart).$($info.FileMinorPart).$($info.FileBuildPart).$($info.FilePrivatePart)"
+          if ($actual -ne "$env:RELEASE_VERSION.0") { throw "Desktop PE version $actual differs from MSI version $env:RELEASE_VERSION.0" }
       - uses: actions/upload-artifact@v4
         with:
           name: agent-bin
@@ -89,6 +97,15 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: bash .github/scripts/release/package-agent.sh "$RELEASE_VERSION"
+      - name: Test compiled MSI regression checks
+        run: node --test .github/scripts/release/package-agent.test.mjs
+      - name: Build legacy upgrade regression fixture
+        run: bash .github/scripts/release/upgrade-fixture.sh "release/azuos-agent-${{ needs.build.outputs.version }}-x64.msi" "$RUNNER_TEMP/legacy-agent.msi"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent-upgrade-fixture
+          path: ${{ runner.temp }}/legacy-agent.msi
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: agent-unsigned-msi
@@ -104,6 +121,10 @@ jobs:
         with:
           name: agent-unsigned-msi
           path: chamados/agent/build/release
+      - uses: actions/download-artifact@v4
+        with:
+          name: agent-upgrade-fixture
+          path: ${{ runner.temp }}/agent-upgrade-fixture
       - name: Use a disposable certificate for PR checks only
         if: ${{ !inputs.release }}
         run: |
@@ -125,13 +146,14 @@ jobs:
             $env:AGENT_SIGNING_PASSWORD = $env:RELEASE_PASSWORD
           }
           ./chamados/agent/build/windows/installer/package.ps1 -Version $env:RELEASE_VERSION
-      - name: Install, start and uninstall on a clean Windows runner
+      - name: Test clean install, legacy upgrade, missing-file repair and uninstall
         env:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: |
           $dir = Join-Path $pwd 'chamados/agent/build/release'
           & "$dir/install-certificate.ps1"
-          ./chamados/agent/build/windows/installer/smoke-test.ps1 -MsiPath "$dir/azuos-agent-$env:RELEASE_VERSION-x64.msi"
+          & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -ExecutionPolicy Bypass -File ./chamados/agent/build/windows/installer/smoke-test.ps1 -MsiPath "$dir/azuos-agent-$env:RELEASE_VERSION-x64.msi" -LegacyMsiPath "$env:RUNNER_TEMP/agent-upgrade-fixture/legacy-agent.msi"
+          if ($LASTEXITCODE -ne 0) { throw 'Windows installation regression tests failed' }
       - uses: actions/upload-artifact@v4
         with:
           name: agent-release

@@ -15,7 +15,9 @@
         <Directory Id="AzuosFolder" Name="Azuos">
           <Directory Id="INSTALLFOLDER" Name="Agent">
             <Component Id="DesktopApp" Guid="*" Win64="yes">
-              <File Id="AgentExe" Source="$(var.BinDir)/Azuos Agent.exe" KeyPath="yes" />
+              <!-- wixl não lê VERSIONINFO do PE. Deve coincidir com a versão real,
+                   conferida no runner Windows antes do empacotamento. -->
+              <File Id="AgentExe" Source="$(var.BinDir)/Azuos Agent.exe" DefaultVersion="$(var.Version).0" KeyPath="yes" />
               <RegistryValue Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Run" Name="AzuosAgent" Value="&quot;[#AgentExe]&quot; --background" Type="string" />
             </Component>
             <Component Id="AgentService" Guid="*" Win64="yes">
@@ -49,7 +51,9 @@
       </Directory>
       <Directory Id="CommonAppDataFolder">
           <Directory Id="AGENTDATA" Name="AzuosAgent">
-            <Component Id="MachineDirectory" Guid="595EFC25-75C4-4284-A9DE-DC9BE4C967B4" Permanent="yes" Win64="yes">
+            <!-- Permanent é aplicado na tabela Component por package-agent.sh;
+                 wixl 0.103 ignora o atributo WiX correspondente. -->
+            <Component Id="MachineDirectory" Guid="595EFC25-75C4-4284-A9DE-DC9BE4C967B4" Win64="yes">
               <CreateFolder />
             </Component>
           </Directory>
