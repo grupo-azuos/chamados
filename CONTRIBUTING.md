@@ -650,3 +650,11 @@ Ele não pode:
 * alterar as travas estruturais do projeto apenas para fazer uma feature passar.
 
 **O objetivo é permitir que o Claude implemente autenticação de ponta a ponta sem transformar autenticação em uma área proibida do projeto.**
+
+## Identificação e métricas
+
+Antes de mudanças, commits e merges, siga `.claude/skills/participant-identity/SKILL.md`.
+Complete apenas os dados ausentes em `docs/project.json`; em conta compartilhada, confirme a
+pessoa da sessão. Commits atômicos mantêm o formato do projeto e levam os trailers de
+identificação descritos em `docs/project-metrics.md`. Essa validação vale também em modo admin.
+Dados históricos desconhecidos ficam pendentes, sem inventar autoria, datas ou departamentos.

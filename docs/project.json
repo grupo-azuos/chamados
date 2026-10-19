@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "repository": "grupo-azuos/chamados",
+  "project_type": "application",
+  "status": null,
+  "participants": [
+    {
+      "id": "vinicius-gabriel",
+      "name": "Vinicius Gabriel",
+      "email": "github@vinicius-gpl.com",
+      "department": "TI",
+      "role": "technical",
+      "github_logins": [
+        "vinicius-gpl"
+      ],
+      "git_emails": [
+        "github@vinicius-gpl.com",
+        "157775713+vinicius-gpl@users.noreply.github.com",
+        "vinicius.gabriel.p.leitao@gmail.com",
+        "vinicius.gabriel.p.leitao+github@gmail.com"
+      ],
+      "prior_it_experience": null,
+      "position": "junior"
+    }
+  ],
+  "shared_accounts": [],
+  "tools": [
+    "Claude Code",
+    "VS Code",
+    "Codex"
+  ],
+  "milestones": {
+    "started_at": null,
+    "mvp_at": null,
+    "production_at": null,
+    "abandoned_at": null
+  },
+  "requirements_meetings": null,
+  "technical_blockers": [],
+  "traditional_estimate_days": null,
+  "pending_fields": [
+    "status",
+    "milestones.started_at",
+    "milestones.mvp_at",
+    "milestones.production_at",
+    "requirements_meetings",
+    "traditional_estimate_days"
+  ],
+  "evidence": [
+    {
+      "source": "git_history",
+      "first_commit_at": "2026-09-19T17:11:16-03:00",
+      "ref": "origin/develop",
+      "note": "Data do histórico consultado; não confirma início real ou conclusão do MVP."
+    },
+    {
+      "source": "owner_confirmation",
+      "confirmed_at": "2026-10-19",
+      "note": "Papéis e nomes informados pelo responsável; campos não informados permanecem null. Vinicius é desenvolvedor júnior e Guilherme auxiliar, ambos de TI; Guilherme não tinha experiência prévia em TI."
+    },
+    {
+      "source": "template_documentation",
+      "path": "README.md",
+      "note": "Claude Code + VS Code são o padrão declarado no template; não prova uso em cada commit histórico."
+    },
+    {
+      "source": "current_instrumentation",
+      "tool": "Codex",
+      "note": "Ferramenta usada para instrumentar este repositório."
+    }
+  ]
+}
