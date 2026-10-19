@@ -202,8 +202,15 @@ O log verbose do Windows Installer ajuda a identificar código 1618 (outro insta
 
 `Tests/Agent` compila o aplicativo e o serviço no Windows, testa regras de tag/bump,
 gera MSI no Ubuntu, assina com certificado descartável e instala/inicia/desinstala num runner
-Windows limpo. Releases usam a mesma construção com o certificado persistente. Antes de liberar
-para todo o parque, valide o primeiro upgrade entre duas versões em máquinas de teste Windows
+Windows limpo. Releases usam a mesma construção com o certificado persistente.
+
+O pipeline confere a versão numérica real do PE da interface contra `File.Version` no MSI
+(`X.Y.Z.0`). O `wixl` não extrai esse campo do executável: `DefaultVersion` no WiX é obrigatório.
+Sem ele, o Windows pode ignorar a interface por considerá-la mais antiga e removê-la durante
+o upgrade. A validação do MSI rejeita essa omissão. O teste Windows verifica os quatro arquivos,
+repara a interface removida e faz upgrade de um pacote de teste com os metadados antigos.
+
+Antes de liberar para todo o parque, valide o primeiro upgrade entre duas versões em máquinas de teste Windows
 10 e 11, com e sem usuário logado e com a rede indisponível no boot.
 
 ## Download no dashboard e versão LTS

@@ -11,6 +11,9 @@ wixl -a x64 -D "Version=$version" -D "BinDir=$root/agent-bin" -D "SourceDir=$sou
 # Completa campos que wixl não preenche; o MSI compilado é conferido ao final.
 msibuild "$msi" -s 'Azuos Agent' 'Azuos' 'x64;1046'
 msibuild "$msi" -q "UPDATE \`ServiceInstall\` SET \`ErrorControl\` = 32769 WHERE \`ServiceInstall\` = 'InstallService'"
+# msidbComponentAttributes64bit (256) | Permanent (16): preserva a pasta e
+# a identidade da máquina durante upgrade/desinstalação. wixl ignora Permanent.
+msibuild "$msi" -q "UPDATE \`Component\` SET \`Attributes\` = 272 WHERE \`Component\` = 'MachineDirectory'"
 # wixl não expõe Schedule no MajorUpgrade: remove a versão antiga dentro da transação,
 # após InstallInitialize. Se a instalação falhar, o Windows Installer pode revertê-la.
 msibuild "$msi" -q 'UPDATE `InstallExecuteSequence` SET `Sequence` = 1501 WHERE `Action` = '\''RemoveExistingProducts'\'''
