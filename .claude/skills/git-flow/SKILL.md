@@ -15,7 +15,7 @@ que você fez.
 
 ## Modo Admin vs Modo Padrão
 
-- **Modo Admin:** Autonomia total. Pode operar na `main`, commitar direto, criar tags, pular verificações com `--no-verify` se desejado.
+- **Modo Admin:** Autonomia total. Pode operar na `main`, commitar direto, criar tags, operar com autonomia, preservando a validação obrigatória de identidade e métricas.
 - **Modo Padrão:** Segue as três regras obrigatórias abaixo:
 
 ### As três regras do Modo Padrão
@@ -214,3 +214,10 @@ feature/<nome>` (pede confirmação). Isso **não** junta nada na develop.
 - Merge na develop sem o OK da Fase 3.4, ou sem `--no-ff`.
 - Resolver conflito na develop.
 - `git config project.admin true` por iniciativa própria — configure apenas quando o usuário solicitar explicitamente a ativação do modo admin.
+
+## Identificação obrigatória
+
+Antes de executar este fluxo, siga `../participant-identity/SKILL.md`. Pergunte só o que
+falta no cadastro; em conta compartilhada, confirme a pessoa desta sessão. Cada commit e merge
+leva os trailers conferidos contra `docs/project.json` do índice. Preserve commits atômicos e
+nunca use `--no-verify` para pular a identificação, inclusive em modo administrador.

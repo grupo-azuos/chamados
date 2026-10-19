@@ -1,3 +1,4 @@
+python3 .github/scripts/project-metrics/validate-metrics.py --message "$1" || exit $?
 if [ "$(git config --get project.admin 2>/dev/null)" = "true" ]; then
   exit 0
 fi
