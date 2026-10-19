@@ -141,7 +141,9 @@
   <!-- `collapsible="icon"` e não `offcanvas`: recolhida, a barra vira uma faixa de ícones.
        Sumir por inteiro tiraria da tela a única pista de onde estão as outras telas. -->
   <Sidebar collapsible="icon" variant="inset">
-    <SidebarHeader class="gap-2 group-data-[collapsible=icon]:p-1">
+    <SidebarHeader
+      class="gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pl-[max(0.5rem,env(safe-area-inset-left))] group-data-[collapsible=icon]:p-1"
+    >
       <!-- A logo é a versão branca, feita para fundo escuro — por isso ela só existe aqui
            dentro, sobre o azul da barra, e nunca sobre o branco do conteúdo. Recolhida, a
            barra não tem largura para o nome: fica só o símbolo oficial. -->
@@ -215,7 +217,9 @@
       </SidebarGroup>
     </SidebarContent>
 
-    <SidebarFooter>
+    <SidebarFooter
+      class="pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))]"
+    >
       <!-- Acima do perfil, de propósito: é a última coisa que a pessoa mexe antes de sair,
            não uma ação do dia a dia — não compete por atenção com o menu de navegação. -->
       <div
@@ -308,14 +312,19 @@
   <!-- `min-w-0`: sem isto a área de conteúdo não encolhe abaixo da largura natural da tabela,
        e quem rola para o lado é a PÁGINA inteira, em vez da tabela dentro da caixa dela. -->
   <SidebarInset class="border-sidebar-border bg-background border min-w-0">
-    <header class="flex h-12 shrink-0 items-center gap-3 px-4">
+    <header
+      class="flex min-h-[calc(3rem+env(safe-area-inset-top))] shrink-0 items-center gap-3 pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]"
+    >
       <SidebarTrigger />
     </header>
 
     <!-- A MARGEM DO CONTEÚDO É DA CASCA, e não de cada tela: quando cada tela definia a sua,
          uma esquecia o respiro de cima, outra usava uma medida diferente, e trocar de tela (ou
          de contexto) fazia o conteúdo "pular" de lugar. A tela decide só a largura máxima. -->
-    <div bind:this={contentEl} class="app-content min-w-0 w-full flex-1 px-3 pt-3 pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-4">
+    <div
+      bind:this={contentEl}
+      class="app-content min-w-0 w-full flex-1 pt-3 pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] sm:pt-4 sm:pr-[max(1.5rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))]"
+    >
       {@render children()}
     </div>
   </SidebarInset>

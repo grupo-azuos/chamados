@@ -2,15 +2,31 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta name="description" content="Sistema de chamados e atendimento interno do Grupo Azuos." />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#1b3a8c" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Chamados" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="icon" href="%sveltekit.assets%/favicon.ico" sizes="any" />
     <link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/favicon.svg" />
-    <link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/icon.svg" media="(prefers-color-scheme: dark)" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="%sveltekit.assets%/icon.svg"
+      media="(prefers-color-scheme: dark)"
+    />
     <link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
-    <link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
+    <link
+      rel="manifest"
+      href="%sveltekit.assets%/manifest.webmanifest"
+      crossorigin="use-credentials"
+    />
     <title>Chamados · Grupo Azuos</title>
     <script>
       // Aplica o tema salvo ANTES da primeira pintura da tela — sem isso, quem usa o modo
@@ -19,7 +35,8 @@
         try {
           const saved = localStorage.getItem('azuos-theme');
           const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          const theme = saved === 'light' || saved === 'dark' ? saved : prefersDark ? 'dark' : 'light';
+          const theme =
+            saved === 'light' || saved === 'dark' ? saved : prefersDark ? 'dark' : 'light';
           document.documentElement.setAttribute('data-theme', theme);
         } catch {
           // Sem localStorage (modo privado, política do navegador)? Fica no tema claro padrão.
