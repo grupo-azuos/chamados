@@ -124,7 +124,7 @@ describe('dashboard published agent versions', () => {
     const repository = {
       latest: vi.fn().mockResolvedValue(manifest('1.10.0')),
       listVersions: vi.fn().mockResolvedValue(versions),
-      manifestOf: vi.fn(async (version: string) => manifest(version)),
+      manifestOf: vi.fn(async (version: string): Promise<unknown> => manifest(version)),
     };
     const downloadUrl = vi.fn().mockResolvedValue('https://storage.example.test/signed');
     const service = new AgentDownloadService(
