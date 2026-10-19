@@ -73,10 +73,32 @@ assert.equal(
   table("CustomAction").find((row) => row.Action === "CloseTray")?.Type,
   "3170",
 );
-assert.equal(table("File").length, 4);
+const files = table("File");
+assert.equal(files.length, 4);
+assert.equal(
+  files.find((row) => row.File === "AgentExe")?.Version,
+  `${version}.0`,
+);
+assert.ok(!table("MsiFileHash").some((row) => row.File_ === "AgentExe"));
+const desktop = table("Component").find(
+  (row) => row.Component === "DesktopApp",
+);
+assert.equal(desktop?.KeyPath, "AgentExe");
+assert.equal(
+  table("Component").find((row) => row.Component === "MachineDirectory")
+    ?.Attributes,
+  "272",
+);
+assert.ok(
+  table("FeatureComponents").some((row) => row.Component_ === "DesktopApp"),
+);
 const shortcuts = table("Shortcut");
-assert.ok(shortcuts.some((row) => row.Shortcut === "ApplicationStartMenuShortcut"));
-assert.ok(shortcuts.some((row) => row.Shortcut === "ApplicationDesktopShortcut"));
+assert.ok(
+  shortcuts.some((row) => row.Shortcut === "ApplicationStartMenuShortcut"),
+);
+assert.ok(
+  shortcuts.some((row) => row.Shortcut === "ApplicationDesktopShortcut"),
+);
 console.log(
   "MSI verified: x64, version, service, rollback sequence and protected machine directory",
 );
