@@ -9,7 +9,10 @@ Leia `docs/project.json`, `docs/project-metrics.md` e `docs/metrics-privacy.md`.
 
 ## Aviso antes da coleta
 
-Siga `docs/metrics-notice-flow.md`. No primeiro contato da conversa, antes de solicitar
+Siga `docs/metrics-notice-flow.md`. Consulte primeiro `privacy.controller_source` e os
+responsáveis já documentados em `docs/project.json`; não peça de novo razão social ou contato
+que a fonte existente já informa. Inclua o responsável pelo relatório/artigo e essa finalidade
+mesmo para circulação interna, sem confundi-lo com controlador ou encarregado. No primeiro contato da conversa, antes de solicitar
 identidade ou dados para métricas, apresente ao usuário o texto completo produzido por
 `privacyNotice` em `.github/scripts/project-metrics/privacy-notice.mjs`, com o cadastro
 atual. O SessionStart já fornece esse texto; saída de hook não conta como exibição ao usuário.

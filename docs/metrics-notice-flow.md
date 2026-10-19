@@ -1,6 +1,6 @@
 # Aviso de privacidade apresentado pelo agente
 
-Versão do texto: `2026-10-19.1`. O texto exibido vem de
+Versão do texto: `2026-10-19.2`. O texto exibido vem de
 `.github/scripts/project-metrics/privacy-notice.mjs`, preenchido com `privacy` de
 `docs/project.json`. O hook SessionStart entrega esse texto ao agente como contexto;
 isso **não prova que o usuário o viu**. O agente deve publicá-lo na conversa.
@@ -20,8 +20,9 @@ ciência não é consentimento. Não preencher um consentimento em nome da pesso
 ## Governança pendente
 
 Enquanto `privacy.governance_status` for `pending_review`, apresente o aviso provisório
-e informe as decisões faltantes. Encaminhe-as ao responsável da empresa: controlador,
-contato, finalidade, base legal e retenção, acesso e operadores/transferências.
+e informe as decisões faltantes. Consulte primeiro o cadastro e a fonte existente do Gestão RH, antes de perguntar algo já
+documentado. Controlador e contatos já estão preenchidos; encaminhe à empresa as decisões
+ainda faltantes sobre base legal, retenção, acesso e operadores/transferências.
 Não iniciar nova coleta por participante, ampliar tratamento ou produzir relatório
 individual alegando que o uso de ID resolve a LGPD. Continue ajudando com o código sem
 pedir novos dados pessoais para métricas. Não apagar nem reatribuir evidências antigas.
@@ -40,7 +41,7 @@ registre no participante apenas:
 ```json
 {
   "notice_receipt": {
-    "notice_version": "2026-10-19.1",
+    "notice_version": "2026-10-19.2",
     "presented_at": "<instante real em ISO 8601 UTC>",
     "channel": "agent_chat"
   }
@@ -71,3 +72,17 @@ existentes e sua reutilização. A skill não decide esses fatos pela empresa.
 
 - [LGPD: transparência, bases legais, direitos e segurança](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709compilado.htm).
 - [ANPD: guia de legítimo interesse e teste de balanceamento](https://www.gov.br/anpd/pt-br/assuntos/noticias/anpd-lanca-guia-orientativo-sobre-legitimo-interesse).
+
+## Versões e identidade dos responsáveis
+
+A versão `2026-10-19.1` e a nova `2026-10-19.2` estão preservadas em
+`docs/privacy-notices/`. Não editar snapshots já publicados; mudanças materiais no texto,
+nos responsáveis ou nas condições exigem nova versão e snapshot. O Git preserva o contexto
+do cadastro que originou cada versão. O recibo do agente não inclui transcrição da conversa.
+
+O responsável pelo relatório/artigo é Vinícius Gabriel Pereira Leitão, com o e-mail
+registrado em `privacy.report_author`; esse papel não substitui o controlador nem o canal
+do encarregado. A finalidade de relatório/artigo deve ser informada mesmo quando o material
+não sai da empresa. Publicação externa continua sem autorização automática. Ao criar outro
+projeto pelo template, confirmar o escopo e os responsáveis; não copiar identidades como
+se fossem fatos de outra empresa.

@@ -3,10 +3,35 @@
 Estado: **governança pendente de revisão pela empresa**. Este documento organiza medidas de
 engenharia e decisões necessárias; não declara conformidade com a LGPD nem aprovação da ANPD.
 
+## Responsáveis e fonte existente
+
+Controlador identificado no aviso do Gestão RH: **AZUOS Assessoria Contábil LTDA**,
+CNPJ **18.028.812/0001-00**, Rua S1, nº 398, Quadra 153, Lote 25, Setor Bueno,
+Goiânia/GO, CEP 74230-220. Site: https://azuoscontabil.com.br.
+
+Encarregado informado nessa fonte: **Thyago Souza**. Os canais para pedidos de privacidade
+são **support@azuoscontabil.com.br** e **contato@azuoscontabil.com.br**.
+
+**Vinícius Gabriel Pereira Leitão** é o responsável pela elaboração do relatório técnico
+e eventual artigo, inclusive se circular somente dentro da empresa. Contato:
+**github@vinicius-gpl.com**, obtido do `git config user.email` a pedido do próprio responsável.
+Essa atribuição de autoria não o designa automaticamente controlador ou encarregado e não
+exige identificar os demais participantes nos relatórios.
+
+A identificação da empresa e seus canais vêm de `PRIVACY_CONTROLLER`, no arquivo
+`gestao-rh/shared/src/domain/privacy-notice.util.ts` do repositório `grupo-azuos/gestao-rh`,
+aviso `1.0.0`. O commit consultado está em `privacy.controller_source` de `docs/project.json`.
+A tela do formulário público e seu rodapé consomem essa mesma constante. A política
+existente trata de admissão/seleção, dados sensíveis e banco de talentos; suas bases legais,
+prazos de um ano, coleta de IP/navegador e mecanismo de leitura não foram copiados para
+métricas de desenvolvimento. Governança pendente aqui se refere à base legal e retenção
+específicas das métricas, não à ausência de identificação da empresa.
+
 ## Finalidade e minimização
 
 A finalidade proposta é acompanhar a construção e a evolução dos sistemas, a participação de
-negócio e técnica e as intervenções necessárias. Contagem de commits não representa esforço ou
+negócio e técnica e as intervenções necessárias, para análise interna e elaboração de relatório
+técnico e eventual artigo por Vinícius Gabriel Pereira Leitão, inclusive de circulação interna. Contagem de commits não representa esforço ou
 produtividade e não deve gerar classificação automática de desempenho de funcionários.
 
 O padrão de novos participantes é um ID aleatório opaco (`p-` seguido de 32 caracteres
