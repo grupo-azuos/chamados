@@ -99,6 +99,7 @@ pessoa pedir — push publica. Terminar e juntar na develop é o `git-flow`, Fas
 ## Identificação obrigatória
 
 Antes de executar este fluxo, siga `../participant-identity/SKILL.md`. Pergunte só o que
-falta no cadastro; em conta compartilhada, confirme a pessoa desta sessão. Cada commit e merge
+falta para identificar o código/papel; nome e e-mail são opcionais. Em conta compartilhada,
+confirme o código da pessoa desta sessão e siga `docs/metrics-privacy.md`. Cada commit e merge
 leva os trailers conferidos contra `docs/project.json` do índice. Preserve commits atômicos e
 nunca use `--no-verify` para pular a identificação, inclusive em modo administrador.
