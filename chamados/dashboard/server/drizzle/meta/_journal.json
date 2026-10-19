@@ -50,6 +50,13 @@
       "when": 1792297241321,
       "tag": "0006_thankful_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792434922625,
+      "tag": "0007_local_merge_timeline",
+      "breakpoints": true
     }
   ]
 }
