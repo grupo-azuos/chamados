@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -44,9 +44,68 @@ describe('AzuosStatCard', () => {
 
     await userEvent.hover(screen.getByText('100/100'));
 
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+    // O jsdom não mede o balão: o posicionador o mantém oculto mesmo com o estado aberto.
+    expect(await screen.findByRole('tooltip', { hidden: true })).toHaveTextContent(
       'Picos de uso não alteram esta pontuação.',
     );
+    expect(
+      screen.getByRole('button', { name: 'Como calculamos condição dos recursos' }),
+    ).toHaveAttribute('data-state', 'instant-open');
+  });
+
+  it('updates plain state props without treating them as a store and keeps the tooltip usable', async () => {
+    const data = {
+      label: 'Condição dos recursos',
+      value: '76/100',
+      tooltip: 'Perde 12 pontos por aviso de atenção.',
+    };
+    const actions = { onClick: vi.fn() };
+    const { rerender } = render(StatCard, {
+      props: { data, state: { isLoading: true, isSelected: false }, actions },
+    });
+
+    expect(screen.queryByText('76/100')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Condição dos recursos: filtrar a lista' }),
+    ).toHaveAttribute('aria-pressed', 'false');
+
+    await rerender({ data, state: { isLoading: false, isSelected: true }, actions });
+
+    expect(screen.getByText('76/100')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Condição dos recursos: tirar o filtro' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.hover(screen.getByText('76/100'));
+    expect(await screen.findByRole('tooltip', { hidden: true })).toHaveTextContent(data.tooltip);
+    expect(
+      screen.getByRole('button', { name: 'Como calculamos condição dos recursos' }),
+    ).toHaveAttribute('data-state', 'instant-open');
+  });
+
+  it('opens the calculation by keyboard and closes it with Escape without a layout provider', async () => {
+    render(StatCard, {
+      props: {
+        data: {
+          label: 'Condição dos recursos',
+          value: '100/100',
+          tooltip: 'Picos de uso não alteram esta pontuação.',
+        },
+      },
+    });
+    const trigger = screen.getByRole('button', {
+      name: 'Como calculamos condição dos recursos',
+    });
+
+    await userEvent.tab();
+
+    expect(trigger).toHaveFocus();
+    const tooltip = await screen.findByRole('tooltip', { hidden: true });
+    expect(trigger).toHaveAttribute('aria-describedby', tooltip.id);
+    expect(trigger).toHaveAttribute('data-state', 'instant-open');
+
+    await userEvent.keyboard('{Escape}');
+
+    await waitFor(() => expect(trigger).toHaveAttribute('data-state', 'closed'));
   });
 
   /* Um número que exclui algo precisa dizer o que excluiu, ou dois painéis passam a
