@@ -114,6 +114,6 @@ perguntar **"Está funcionando do jeito que você queria?"**. Merge na develop s
 
 Antes de executar este fluxo, siga `../participant-identity/SKILL.md`. Pergunte só o que
 falta para identificar o código/papel; nome e e-mail são opcionais. Em conta compartilhada,
-confirme o código da pessoa desta sessão e siga `docs/metrics-privacy.md`. Cada commit e merge
+confirme o código da pessoa desta sessão e siga `docs/privacy/metrics-privacy.md`. Cada commit e merge
 leva os trailers conferidos contra `docs/project.json` do índice. Preserve commits atômicos e
 nunca use `--no-verify` para pular a identificação, inclusive em modo administrador.

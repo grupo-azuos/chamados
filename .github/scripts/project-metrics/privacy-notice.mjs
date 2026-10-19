@@ -1,6 +1,6 @@
 import { ensure, isText } from './validation.util.mjs';
 
-export const NOTICE_VERSION = '2026-10-19.1';
+export const NOTICE_VERSION = '2026-10-19.2';
 
 function governanceDetails(privacy) {
   const fields = [
@@ -11,6 +11,23 @@ function governanceDetails(privacy) {
   ];
 
   return fields.map(([key, label]) => `${label}: ${privacy?.[key] ?? 'pendente de definição pela empresa'}.`);
+}
+
+function responsibleParties(privacy) {
+  const fields = [
+    ['controller_cnpj', 'CNPJ'],
+    ['controller_address', 'Endereço do controlador'],
+    ['controller_site', 'Site do controlador'],
+  ];
+  const details = fields
+    .filter(([key]) => isText(privacy?.[key]))
+    .map(([key, label]) => `${label}: ${privacy[key]}.`);
+  if (privacy?.privacy_officer)
+    details.push(`Encarregado de dados: ${privacy.privacy_officer.name}; ${privacy.privacy_officer.email}.`);
+  if (privacy?.report_author)
+    details.push(`Responsável pelo relatório/artigo: ${privacy.report_author.name}; ${privacy.report_author.email}. ${privacy.report_author.responsibility}`);
+
+  return details;
 }
 
 export function privacyNotice(registry) {
@@ -27,12 +44,13 @@ export function privacyNotice(registry) {
     'O repositório e seu histórico são acessíveis a quem tem suas permissões; em repositório público, qualquer pessoa pode acessar. GitHub e a ferramenta de IA utilizada podem processar informações conforme seus serviços e contratos, inclusive fora do Brasil; a empresa deve revisar os mecanismos aplicáveis.',
     'Nome/e-mail opcionais só podem ser gravados em repositório privado com governança aprovada e pedido específico seu. Um commit permanece no histórico, clones e backups; retirar o campo atual não apaga essas cópias.',
     ...governanceDetails(privacy),
+    ...responsibleParties(privacy),
     'Você pode pedir informações, acesso, correção e demais direitos aplicáveis, incluindo eliminação nas hipóteses legais. A empresa deve avaliar cada pedido e os limites de conservação, sem prometer apagar todo o histórico.',
     'Relatórios externos dependem de autorização específica da empresa e revisão de agregação e risco de identificação. Este aviso não autoriza publicação identificada nem classificação automática de desempenho.',
     'A apresentação ou ciência deste aviso não é consentimento, contrato nem autorização ampla de uso dos dados.',
     approved
       ? 'Governança registrada como aprovada pela empresa; isso não equivale a aprovação da ANPD.'
-      : 'GOVERNANÇA PENDENTE: este é um aviso provisório. A empresa ainda precisa definir e revisar as condições acima antes de iniciar nova coleta de métricas por participante, ampliar seu uso ou gerar relatórios. O uso de ID também exige base legal.',
+      : 'GOVERNANÇA DAS MÉTRICAS PENDENTE: o controlador, os canais de privacidade e o responsável pelo relatório/artigo estão identificados. A base legal e a retenção específicas das métricas ainda precisam ser definidas e revisadas pela empresa antes de iniciar nova coleta por participante, ampliar seu uso ou gerar relatórios. Os prazos e bases do formulário de admissão do RH não autorizam automaticamente essas métricas. O uso de ID também exige base legal.',
   ].join('\n\n');
 }
 
@@ -47,4 +65,22 @@ export function validateNoticeReceipt(person, privacy) {
     'Notice receipt requires a valid presentation timestamp',
   );
   ensure(receipt.channel === 'agent_chat', 'Notice receipt requires the agent_chat channel');
+}
+
+export function validateNoticeResponsibilities(privacy) {
+  if (privacy === undefined) return;
+  ['controller_cnpj', 'controller_address', 'controller_site'].forEach((field) => {
+    if (privacy[field] === undefined) return;
+    ensure(isText(privacy[field]), `Privacy ${field} must be non-empty text`);
+  });
+  ['privacy_officer', 'report_author'].forEach((field) => {
+    const person = privacy[field];
+    if (person === undefined) return;
+    ensure(isText(person?.name) && isText(person?.email), `${field} requires name and email`);
+  });
+  if (privacy.report_author === undefined) return;
+  ensure(
+    isText(privacy.report_author.responsibility),
+    'Report author requires a documented responsibility',
+  );
 }

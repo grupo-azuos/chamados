@@ -32,7 +32,7 @@ function sessionContext(cwd) {
   const root = repositoryRoot(cwd);
   const registry = parseRegistry(readFileSync(resolve(root, REGISTRY_PATH), 'utf8'));
   process.stdout.write(
-    'Antes de pedir dados de métricas, siga .claude/skills/participant-identity/SKILL.md e docs/metrics-notice-flow.md. Leia docs/metrics-privacy.md. Mostre ao usuário na conversa o aviso abaixo; contexto do hook não significa apresentação. Não invente ciência ou consentimento. Confirme a pessoa em contas compartilhadas. Governança pendente também limita métricas por ID; continue ajudando com o código sem nova coleta.\n\n',
+    'Antes de pedir dados de métricas, siga .claude/skills/participant-identity/SKILL.md e docs/privacy/metrics-notice-flow.md. Leia docs/privacy/metrics-privacy.md. Mostre ao usuário na conversa o aviso abaixo; contexto do hook não significa apresentação. Não invente ciência ou consentimento. Confirme a pessoa em contas compartilhadas. Governança pendente também limita métricas por ID; continue ajudando com o código sem nova coleta.\n\n',
   );
   process.stdout.write(`${privacyNotice(registry)}\n`);
 }
