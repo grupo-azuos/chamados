@@ -102,3 +102,10 @@ Sugira, nesta ordem:
    aprova no fim, quando estiver funcionando.
 3. Se ela usa o Tower: ele já mostra o Git-Flow configurado, e as branches que você criar
    aparecem lá.
+
+## Identificação obrigatória
+
+Antes de executar este fluxo, siga `../participant-identity/SKILL.md`. Pergunte só o que
+falta no cadastro; em conta compartilhada, confirme a pessoa desta sessão. Cada commit e merge
+leva os trailers conferidos contra `docs/project.json` do índice. Preserve commits atômicos e
+nunca use `--no-verify` para pular a identificação, inclusive em modo administrador.
