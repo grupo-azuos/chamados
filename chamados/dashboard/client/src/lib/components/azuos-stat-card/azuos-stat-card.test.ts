@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import Building2 from '@lucide/svelte/icons/building-2';
@@ -12,6 +13,40 @@ describe('AzuosStatCard', () => {
 
     expect(screen.getByText('Clientes')).toBeInTheDocument();
     expect(screen.getByText('560')).toBeInTheDocument();
+  });
+
+  it('shows a keyboard-accessible trigger when a tooltip is provided', () => {
+    render(StatCard, {
+      props: {
+        data: {
+          label: 'Condição dos recursos',
+          value: '100/100',
+          tooltip: 'Picos de uso não alteram esta pontuação.',
+        },
+      },
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Como calculamos condição dos recursos' }),
+    ).toBeInTheDocument();
+  });
+
+  it('explains the calculation when hovering the card value', async () => {
+    render(StatCard, {
+      props: {
+        data: {
+          label: 'Condição dos recursos',
+          value: '100/100',
+          tooltip: 'Picos de uso não alteram esta pontuação.',
+        },
+      },
+    });
+
+    await userEvent.hover(screen.getByText('100/100'));
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Picos de uso não alteram esta pontuação.',
+    );
   });
 
   /* Um número que exclui algo precisa dizer o que excluiu, ou dois painéis passam a
