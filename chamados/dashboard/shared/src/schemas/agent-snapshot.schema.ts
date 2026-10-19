@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * O QUE O AGENTE ENVIA — o contrato de fronteira entre o agente em Go e o dashboard.
  *
- * Este schema é a cópia fiel da `metrics.Snapshot` do agente (`src-go/metrics/types.go`),
+ * Este schema é a cópia fiel da `metrics.Snapshot` do agente (`src-go/modules/metrics/types.go`),
  * campo por campo, com os mesmos nomes das tags `json` de lá. Isso é de propósito: o agente
  * não remodela nada para falar com o servidor — ele manda o que já monta para a própria tela
  * dele. Qualquer tradução no meio seria mais um lugar para os dois lados discordarem.

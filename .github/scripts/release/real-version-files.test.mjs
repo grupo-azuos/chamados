@@ -15,7 +15,7 @@ const root = resolve(import.meta.dirname, "../../..");
 const script = join(root, ".github/scripts/release/version.mjs");
 const files = [
   "chamados/agent/wails.json",
-  "chamados/agent/src-go/version/version.go",
+  "chamados/agent/src-go/lib/version/version.go",
   "chamados/agent/svelte/package.json",
   "chamados/agent/svelte/package-lock.json",
 ];
