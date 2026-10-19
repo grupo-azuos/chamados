@@ -19,10 +19,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Confere as regras de código dos scripts e hooks
+        run: npm exec --yes --package=eslint@9.39.5 -- eslint --config .github/scripts/eslint.config.mjs .github/scripts/project-metrics .claude/hooks --no-error-on-unmatched-pattern
       - name: Valida o cadastro e testa as métricas
         run: |
           node .github/scripts/project-metrics/validate-metrics.mjs --check
           node --test '.github/scripts/project-metrics/*.test.mjs'
+      - name: Testa os hooks do Claude
+        run: |
+          if [ -d .claude/hooks ]; then
+            node --test '.claude/hooks/**/*.test.mjs'
+          fi
       - name: Confere os commits novos
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}

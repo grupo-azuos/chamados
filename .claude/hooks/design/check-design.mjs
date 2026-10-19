@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { collectDocumentation, collectTextFiles, readEditedPaths } from './project-files.mjs';
 
 import {
   APPS,
@@ -36,39 +37,19 @@ const BASELINE_FILE = join(__dirname, 'design-baseline.json');
 /** O que entra na varredura, relativo à raiz do repositório. */
 const SCAN_ROOTS = [...APPS.map((app) => app.src), 'chamados/dashboard/server/src'];
 const TEXT_FILE = /\.(svelte|ts|md)$/;
-const SKIPPED_DIRS = new Set(['node_modules', 'dist', 'build', '.svelte-kit', 'coverage']);
-const SCAN_ROOT_PATHS = new Set(SCAN_ROOTS.map((root) => join(REPO_ROOT, root)));
 
-function walk(dir, out) {
-  if (!existsSync(dir)) return;
-
-  for (const entry of readdirSync(dir)) {
-    if (SKIPPED_DIRS.has(entry)) continue;
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) walk(full, out);
-    else if (TEXT_FILE.test(entry)) out.push(full);
-  }
-}
-
-/** Acha todo `docs/` dentro de `chamados/**`, sem redescer nas árvores já cobertas por `SCAN_ROOTS`. */
-function walkDocs(dir, out) {
-  if (!existsSync(dir)) return;
-
-  for (const entry of readdirSync(dir)) {
-    if (SKIPPED_DIRS.has(entry)) continue;
-    const full = join(dir, entry);
-    if (!statSync(full).isDirectory() || SCAN_ROOT_PATHS.has(full)) continue;
-    if (entry === 'docs') walk(full, out);
-    else walkDocs(full, out);
-  }
+function acceptsFile(path) {
+  return TEXT_FILE.test(path);
 }
 
 function loadFiles() {
-  const paths = [];
-  for (const root of SCAN_ROOTS) walk(join(REPO_ROOT, root), paths);
-  walkDocs(join(REPO_ROOT, 'chamados'), paths);
+  const covered = new Set(SCAN_ROOTS.map((path) => join(REPO_ROOT, path)));
+  const appRoot = APPS[0].src.split('/')[0];
+  const sourceFiles = [...covered].flatMap((path) => collectTextFiles(path, acceptsFile));
+  const docs = collectDocumentation(join(REPO_ROOT, appRoot), covered, acceptsFile);
+  const rootDocs = collectTextFiles(join(REPO_ROOT, 'docs'), acceptsFile);
 
-  return [...new Set(paths)].map((full) => ({
+  return [...new Set([...sourceFiles, ...docs, ...rootDocs])].map((full) => ({
     path: relative(REPO_ROOT, full).split(sep).join('/'),
     content: readFileSync(full, 'utf8'),
   }));
@@ -81,6 +62,9 @@ function loadBaseline() {
 }
 
 function saveBaseline(violations) {
+  const { added } = compareWithBaseline(violations, loadBaseline());
+  if (added.length > 0)
+    throw new Error('Cannot increase the design baseline; fix new violations first');
   const counts = countByKey(violations);
   const sorted = Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
   writeFileSync(BASELINE_FILE, `${JSON.stringify(sorted, null, 2)}\n`);
@@ -105,58 +89,30 @@ function inScope(relPath) {
   if (!TEXT_FILE.test(relPath)) return false;
   if (SCAN_ROOTS.some((root) => relPath === root || relPath.startsWith(`${root}/`))) return true;
 
-  return relPath.startsWith('chamados/') && /(^|\/)docs\/[^/]+\.md$/.test(relPath);
+  if (/^docs\/[^/]+\.md$/.test(relPath)) return true;
+
+  return (
+    relPath.startsWith(`${APPS[0].src.split('/')[0]}/`) && /(^|\/)docs\/[^/]+\.md$/.test(relPath)
+  );
 }
 
-/** Lê o evento do Claude Code no stdin e devolve o caminho do arquivo editado, relativo à raiz. */
-function readHookFilePath() {
-  let raw;
-  try {
-    raw = readFileSync(0, 'utf8');
-  } catch {
-    return undefined;
-  }
-  if (!raw.trim()) return undefined;
-
-  let event;
-  try {
-    event = JSON.parse(raw);
-  } catch {
-    return undefined;
-  }
-
-  const filePath = event?.tool_input?.file_path;
-  if (typeof filePath !== 'string' || filePath === '') return undefined;
-
-  return relative(REPO_ROOT, filePath).split(sep).join('/');
-}
-
-/** Modo hook: só paga o preço de varrer o projeto quando o arquivo editado entra na varredura. */
+/** Só varre o projeto quando algum arquivo editado pertence ao escopo de design. */
 function runHook() {
-  const relPath = readHookFilePath();
-  if (relPath === undefined || !inScope(relPath)) {
-    process.exitCode = 0;
-
-    return;
-  }
-
+  const paths = readEditedPaths(REPO_ROOT, readFileSync(0, 'utf8'))
+    .map((path) => relative(REPO_ROOT, path).split(sep).join('/'))
+    .filter(inScope);
+  if (paths.length === 0) return;
   const files = loadFiles();
   const violations = RULES.flatMap((rule) => rule.check(files));
   const { added } = compareWithBaseline(violations, loadBaseline());
-  const touching = violationsTouching(added, relPath);
-
-  if (touching.length === 0) {
-    process.exitCode = 0;
-
-    return;
-  }
-
+  const touching = [...new Set(paths.flatMap((path) => violationsTouching(added, path)))];
+  if (touching.length === 0) return;
   report(
     (text) => process.stderr.write(text),
-    `Design: ${touching.length} violação(ões) NOVA(S) em ${relPath}:`,
+    `Design: ${touching.length} violação(ões) nova(s):`,
     touching,
   );
-  process.stderr.write('\nCorrija agora — skill design-system/ui-standards.\n');
+  process.stderr.write('Corrija agora — skill design-system / ui-standards.\n');
   process.exitCode = 2;
 }
 
@@ -174,24 +130,28 @@ function main() {
 
   if (args.has('--update')) {
     saveBaseline(violations);
-    console.log(`Baseline regravada: ${violations.length} violações conhecidas.`);
+    writeLine(`Baseline regravada: ${violations.length} violações conhecidas.`);
 
     return;
   }
 
   if (args.has('--all'))
-    report((text) => process.stdout.write(text), `Todas as violações (${violations.length}):`, violations);
+    report(
+      (text) => process.stdout.write(text),
+      `Todas as violações (${violations.length}):`,
+      violations,
+    );
 
   const { added, fixed } = compareWithBaseline(violations, loadBaseline());
 
   if (fixed.length > 0) {
-    console.log(
+    writeLine(
       `\n✓ ${fixed.length} item(ns) da baseline foram corrigidos. Rode "npm run check:design -- --update" e commite a baseline menor.`,
     );
   }
 
   if (added.length === 0) {
-    console.log(`\n✓ Design: nenhuma violação nova (${violations.length} conhecidas na baseline).`);
+    writeLine(`\n✓ Design: nenhuma violação nova (${violations.length} conhecidas na baseline).`);
 
     return;
   }
@@ -201,8 +161,17 @@ function main() {
     `Design: ${added.length} violação(ões) NOVA(S) — corrija antes de commitar:`,
     added,
   );
-  console.log('\nRegras: skills design-system e ui-standards (.claude/skills).');
+  writeLine('\nRegras: skills design-system e ui-standards (.claude/skills).');
   process.exitCode = 1;
 }
 
-main();
+function writeLine(text) {
+  process.stdout.write(`${text}\n`);
+}
+
+try {
+  main();
+} catch (error) {
+  process.stderr.write(`Design: ${error.message}\n`);
+  process.exitCode = process.argv.includes('--hook') ? 2 : 1;
+}
