@@ -655,6 +655,6 @@ Ele não pode:
 
 Antes de mudanças, commits e merges, siga `.claude/skills/participant-identity/SKILL.md`.
 Use ID opaco por padrão em `docs/project.json`; nome e e-mail são opcionais. Em conta
-compartilhada, confirme a pessoa/código da sessão. Leia `docs/metrics-privacy.md` antes de salvar perfis. Commits atômicos mantêm o formato do projeto e levam os trailers de
-identificação descritos em `docs/project-metrics.md`. Essa validação vale também em modo admin.
+compartilhada, confirme a pessoa/código da sessão. Leia `docs/privacy/metrics-privacy.md` antes de salvar perfis. Commits atômicos mantêm o formato do projeto e levam os trailers de
+identificação descritos em `docs/metrics/project-metrics.md`. Essa validação vale também em modo admin.
 Dados históricos desconhecidos ficam pendentes, sem inventar autoria, datas ou departamentos.

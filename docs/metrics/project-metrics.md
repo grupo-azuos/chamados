@@ -2,7 +2,7 @@
 
 `docs/project.json` é o cadastro versionado. Chaves e valores enumerados são em inglês;
 dados conhecidos preservam sua origem e desconhecidos permanecem `null`. A política de
-privacidade e as decisões pendentes estão em [`metrics-privacy.md`](./metrics-privacy.md).
+privacidade e as decisões pendentes estão em [`metrics-privacy.md`](../privacy/metrics-privacy.md).
 
 ## Participantes e commits
 

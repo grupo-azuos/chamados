@@ -5,11 +5,11 @@ description: Identifica a pessoa por um código opaco, completa somente os dados
 
 # Participante e métricas
 
-Leia `docs/project.json`, `docs/project-metrics.md` e `docs/metrics-privacy.md`.
+Leia `docs/project.json`, `docs/metrics/project-metrics.md` e `docs/privacy/metrics-privacy.md`.
 
 ## Aviso antes da coleta
 
-Siga `docs/metrics-notice-flow.md`. Consulte primeiro `privacy.controller_source` e os
+Siga `docs/privacy/metrics-notice-flow.md`. Consulte primeiro `privacy.controller_source` e os
 responsáveis já documentados em `docs/project.json`; não peça de novo razão social ou contato
 que a fonte existente já informa. Inclua o responsável pelo relatório/artigo e essa finalidade
 mesmo para circulação interna, sem confundi-lo com controlador ou encarregado. No primeiro contato da conversa, antes de solicitar

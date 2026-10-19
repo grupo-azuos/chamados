@@ -76,7 +76,7 @@ existentes e sua reutilização. A skill não decide esses fatos pela empresa.
 ## Versões e identidade dos responsáveis
 
 A versão `2026-10-19.1` e a nova `2026-10-19.2` estão preservadas em
-`docs/privacy-notices/`. Não editar snapshots já publicados; mudanças materiais no texto,
+`docs/privacy/notices/`. Não editar snapshots já publicados; mudanças materiais no texto,
 nos responsáveis ou nas condições exigem nova versão e snapshot. O Git preserva o contexto
 do cadastro que originou cada versão. O recibo do agente não inclui transcrição da conversa.
 
