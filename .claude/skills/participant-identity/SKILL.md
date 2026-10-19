@@ -7,6 +7,25 @@ description: Identifica a pessoa por um código opaco, completa somente os dados
 
 Leia `docs/project.json`, `docs/project-metrics.md` e `docs/metrics-privacy.md`.
 
+## Aviso antes da coleta
+
+Siga `docs/metrics-notice-flow.md`. No primeiro contato da conversa, antes de solicitar
+identidade ou dados para métricas, apresente ao usuário o texto completo produzido por
+`privacyNotice` em `.github/scripts/project-metrics/privacy-notice.mjs`, com o cadastro
+atual. O SessionStart já fornece esse texto; saída de hook não conta como exibição ao usuário.
+Mostre-o na conversa, não só um link. Reapresente se mudar a versão, condições ou pessoa.
+Se já foi apresentado à mesma pessoa nesta conversa, não repetir sem motivo.
+
+Ciência não é consentimento: não exigir aceite para trabalhar. Governança pendente significa
+mostrar o aviso provisório, informar as decisões faltantes e continuar ajudando com código
+sem iniciar nova coleta de métricas por participante nem pedir nome/e-mail. ID também está
+sujeito à LGPD. Não inventar decisões da empresa ou solicitar ao usuário comum que as aprove.
+
+Com governança aprovada, após a apresentação efetiva e a confirmação da pessoa, registre
+`notice_receipt` com versão vigente, instante real de apresentação e canal `agent_chat`,
+conforme o documento. Não transcrever a conversa, presumir leitura ou criar recibos
+retroativos. Esse registro não constitui consentimento ou autorização para publicação.
+
 ## Código da pessoa
 
 Confirme quem está nesta conversa usando um código de participante já existente. Em conta

@@ -44,6 +44,14 @@ de qualquer cadastro, confirmar a configuração real no GitHub. O Git não ofer
 se os colaboradores do código não puderem acessar nomes/e-mails, guardar o vínculo em um
 cadastro separado com acesso restrito. Não alterar a visibilidade do repositório automaticamente.
 
+## Aviso apresentado pelo agente
+
+O fluxo obrigatório está em [metrics-notice-flow.md](metrics-notice-flow.md). O SessionStart
+fornece ao agente o aviso preenchido; ele precisa mostrá-lo na conversa antes de pedir dados.
+A apresentação não é consentimento. A pendência de base legal também alcança dados por ID,
+não apenas nomes e e-mails. O recibo só pode ser registrado depois da apresentação real,
+com governança aprovada; não é prova de leitura.
+
 ## Aviso e decisões da empresa
 
 Antes da coleta identificada, o aviso revisado precisa explicar: quem controla os dados, qual

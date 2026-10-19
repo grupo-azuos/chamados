@@ -1,3 +1,4 @@
+import { NOTICE_VERSION } from './privacy-notice.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { projectFixture } from './metrics-fixture.mjs';
@@ -48,8 +49,13 @@ test('accepts a requested profile in a restricted repository with reviewed gover
   data.participants[0].email = 'new@example.com';
   data.participants[0].profile_disclosure = {
     requested_by_participant: true,
-    notice_version: '1',
+    notice_version: NOTICE_VERSION,
     recorded_at: '2026-10-19',
+  };
+  data.participants[0].notice_receipt = {
+    notice_version: NOTICE_VERSION,
+    presented_at: '2026-10-19T12:00:00.000Z',
+    channel: 'agent_chat',
   };
   // feliz: o pedido é registrado; a definição da base legal é uma decisão separada.
   assert.doesNotThrow(() => validateProfileChanges(projectFixture(), data));
