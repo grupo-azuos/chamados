@@ -148,6 +148,7 @@
   };
 
   function timelineKind(event: SoftwareTimelineEvent): string {
+    if (event.type === 'merge') return 'Merge local';
     if (event.type === 'issue')
       return event.status === 'closed' ? 'Issue resolvida' : 'Issue aberta';
     if (event.status === 'merged') return 'PR mergeado';
@@ -165,9 +166,20 @@
 </script>
 
 {#snippet dayPullRequests(day: DayColumn)}
-  {#each ['pr', 'issue'] as type (type)}
+  {#each ['pr', 'issue', 'merge'] as type (type)}
     {@const count = day.githubEvents?.filter((event) => event.type === type).length ?? 0}
-    {@const noun = type === 'pr' ? (count === 1 ? 'PR' : 'PRs') : count === 1 ? 'issue' : 'issues'}
+    {@const noun =
+      type === 'pr'
+        ? count === 1
+          ? 'PR'
+          : 'PRs'
+        : type === 'issue'
+          ? count === 1
+            ? 'issue'
+            : 'issues'
+          : count === 1
+            ? 'merge'
+            : 'merges'}
     {#if count > 0}
       <Tooltip.Root
         ><Tooltip.Trigger
@@ -177,10 +189,13 @@
               type="button"
               class="control-sm w-full rounded-control px-1 text-left text-xs font-medium text-primary hover:bg-primary-soft"
               aria-label="Ver {count} {noun} do dia {day.dateString.split('-').reverse().join('/')}"
-              onclick={() =>
-                type === 'pr'
-                  ? actions.onOpenGithubDay?.(day.dateString)
-                  : actions.onOpenGithubDay?.(day.dateString, 'issue')}
+              onclick={() => {
+                if (type === 'pr') return actions.onOpenGithubDay?.(day.dateString);
+                return actions.onOpenGithubDay?.(
+                  day.dateString,
+                  type === 'issue' ? 'issue' : 'merge',
+                );
+              }}
               >Ver {count} {noun} do dia</button
             >
           {/snippet}</Tooltip.Trigger
@@ -345,7 +360,7 @@
     {#if data.filters}
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div class="grid flex-1 grid-cols-1 gap-3 sm:flex sm:flex-wrap">
-          {#each [{ key: 'project', label: 'Projeto', hint: 'Filtrar agendamentos, PRs e issues por projeto', value: data.filters.project, options: data.filters.projectOptions, onChange: actions.onProjectFilterChange }, { key: 'author', label: 'Autor', hint: 'Filtrar PRs e issues pelo autor registrado no GitHub', value: data.filters.author, options: data.filters.authorOptions, onChange: actions.onAuthorFilterChange }, { key: 'type', label: 'Tipo', hint: 'Mostrar PRs, issues ou ambos na agenda', value: data.filters.type, options: [{ value: '', label: 'Todos' }, { value: 'pr', label: 'PRs' }, { value: 'issue', label: 'Issues' }], onChange: actions.onTypeFilterChange }] as filter (filter.key)}
+          {#each [{ key: 'project', label: 'Projeto', hint: 'Filtrar agendamentos, PRs, issues e merges por projeto', value: data.filters.project, options: data.filters.projectOptions, onChange: actions.onProjectFilterChange }, { key: 'author', label: 'Autor', hint: 'Filtrar PRs, issues e merges pelo autor registrado no GitHub', value: data.filters.author, options: data.filters.authorOptions, onChange: actions.onAuthorFilterChange }, { key: 'type', label: 'Tipo', hint: 'Mostrar PRs, issues, merges ou todos na agenda', value: data.filters.type, options: [{ value: '', label: 'Todos' }, { value: 'pr', label: 'PRs' }, { value: 'issue', label: 'Issues' }, { value: 'merge', label: 'Merges locais' }], onChange: actions.onTypeFilterChange }] as filter (filter.key)}
             <div class="min-w-0 space-y-1.5 sm:min-w-40 sm:flex-1 sm:basis-48 sm:max-w-64">
               <span class="text-xs font-medium text-muted-foreground">{filter.label}</span>
               <Tooltip.Root
@@ -365,7 +380,7 @@
                         data={{ value: filter.value, options: filter.options }}
                         ui={{
                           ariaLabel: `Filtrar por ${filter.label.toLowerCase()}`,
-                          fullWidth: true,
+                          fullWidth: filter.key !== 'type',
                           mode: filter.key === 'type' ? 'auto' : 'combobox',
                           searchPlaceholder: `Buscar ${filter.label.toLowerCase()}…`,
                         }}
@@ -897,14 +912,14 @@
       <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 class="text-sm font-semibold text-foreground">Atividade do GitHub no período</h2>
         <p class="text-xs text-muted-foreground">
-          PRs entram pela data de criação/merge; issues resolvidas, pela data de fechamento.
+          PRs e merges locais usam a data do merge; issues resolvidas usam a data de fechamento.
         </p>
       </div>
       {#if !data.githubEvents?.length}
         <p class="rounded-box bg-muted/30 p-4 text-center text-xs text-muted-foreground">
           {#if data.filters?.isActive}Nenhuma atividade encontrada com os filtros atuais.
           {:else}Nenhuma atividade sincronizada neste período. Sincronize os projetos para carregar
-            PRs e issues.{/if}
+            PRs, issues e merges locais.{/if}
         </p>
       {:else}
         <div class="max-h-[32rem] space-y-4 overflow-y-auto pr-2">

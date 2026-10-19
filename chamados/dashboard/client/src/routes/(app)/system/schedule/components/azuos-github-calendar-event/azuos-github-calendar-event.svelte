@@ -9,7 +9,9 @@
     inTimeGrid = false,
   }: { event: SoftwareTimelineEvent; compact?: boolean; inTimeGrid?: boolean } = $props();
 
-  const kind = $derived(event.type === 'pr' ? 'Pull Request' : 'Issue');
+  const kind = $derived(
+    event.type === 'pr' ? 'Pull Request' : event.type === 'issue' ? 'Issue' : 'Merge local',
+  );
   const status = $derived(
     event.type === 'issue'
       ? event.status === 'closed'
@@ -40,7 +42,7 @@
       minute: '2-digit',
     })}</time
   >
-  · {event.type === 'pr' ? 'PR' : 'Issue'}
+  · {event.type === 'pr' ? 'PR' : event.type === 'issue' ? 'Issue' : 'Merge'}
   {event.externalId}
 {/snippet}
 
