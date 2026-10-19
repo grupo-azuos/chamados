@@ -46,8 +46,12 @@ Respostas de autenticação e erros HTTP são preservados. O aviso offline apare
 a requisição de navegação falhar por falta de rede; ele não permite consultar ou gravar chamados.
 
 O app passa a usar a versão publicada ao carregar suas páginas novamente. Ele não força um
-recarregamento enquanto alguém está preenchendo um formulário. Os ícones vêm de `brand/logo/web`
-e já incluem versões comuns e maskable de 192/512 pixels e o apple-touch-icon.
+recarregamento enquanto alguém está preenchendo um formulário. O manifesto oferece o
+`favicon.svg` quadrado da marca como ícone vetorial (`sizes: "any"`), além dos PNGs comuns e
+maskable de 192/512 pixels e do apple-touch-icon vindos de `brand/logo/web`. O navegador
+escolhe o formato suportado; os PNGs continuam disponíveis para plataformas que precisam
+deles, incluindo o apple-touch-icon do iPhone/iPad. A atualização de um ícone já instalado
+depende do navegador e pode exigir reinstalar o PWA para aparecer imediatamente.
 
 ## Conferência após publicar
 
