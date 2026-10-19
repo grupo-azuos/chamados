@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { privacyNotice } from './privacy-notice.mjs';
 import { parseRegistry } from './project-registry.mjs';
 import {
   REGISTRY_PATH,
@@ -27,15 +28,18 @@ function parseArguments(args) {
   return { mode, values };
 }
 
-function sessionContext() {
+function sessionContext(cwd) {
+  const root = repositoryRoot(cwd);
+  const registry = parseRegistry(readFileSync(resolve(root, REGISTRY_PATH), 'utf8'));
   process.stdout.write(
-    'Siga .claude/skills/participant-identity/SKILL.md antes de mudanças e commits. Leia docs/project.json e docs/metrics-privacy.md. Confirme a pessoa em cada sessão compartilhada, sem reaproveitar outra identidade. Peça somente dados ausentes e necessários depois de verificar a governança de privacidade. Nunca trate fornecimento de dados como consentimento automático. Use o modo de trailers definido no cadastro, também em merges e modo administrador.\n',
+    'Antes de pedir dados de métricas, siga .claude/skills/participant-identity/SKILL.md e docs/metrics-notice-flow.md. Leia docs/metrics-privacy.md. Mostre ao usuário na conversa o aviso abaixo; contexto do hook não significa apresentação. Não invente ciência ou consentimento. Confirme a pessoa em contas compartilhadas. Governança pendente também limita métricas por ID; continue ajudando com o código sem nova coleta.\n\n',
   );
+  process.stdout.write(`${privacyNotice(registry)}\n`);
 }
 
 export function main(args = process.argv.slice(2), cwd = process.cwd()) {
   const { mode, values } = parseArguments(args);
-  if (mode === '--session-hook') return sessionContext();
+  if (mode === '--session-hook') return sessionContext(cwd);
   const root = repositoryRoot(cwd);
   if (mode === '--message')
     return validateMessage(root, readFileSync(resolve(cwd, values[0]), 'utf8'));

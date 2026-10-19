@@ -40,6 +40,10 @@ function validateDisclosure(person, privacy) {
     isText(disclosure.notice_version) && isText(disclosure.recorded_at),
     'Record the notice version and request date',
   );
+  ensure(
+    person.notice_receipt?.notice_version === disclosure.notice_version,
+    'Record presentation of the disclosed notice before adding an identified profile',
+  );
 }
 
 export function validateProfileChanges(previous, current) {

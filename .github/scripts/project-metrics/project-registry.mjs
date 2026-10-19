@@ -1,3 +1,4 @@
+import { validateNoticeReceipt } from './privacy-notice.mjs';
 import {
   ensure,
   isText,
@@ -192,6 +193,7 @@ export function parseRegistry(raw) {
   data.shared_accounts.forEach((account) => validateSharedAccount(account, identifiers));
   data.technical_interventions?.forEach((entry) => validateIntervention(entry, identifiers));
   validatePrivacy(data.privacy);
+  data.participants.forEach((person) => validateNoticeReceipt(person, data.privacy));
 
   return data;
 }
