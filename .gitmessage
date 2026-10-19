@@ -37,10 +37,7 @@
 # Tocou dois locais? São dois commits. Nunca [feat](backend,web).
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Atribuição obrigatória no bloco final, preenchida pela skill participant-identity:
-# Participant-Id: ID em docs/project.json
-# Participant-Name: Nome confirmado
-# Participant-Email: E-mail confirmado
-# Department: Departamento confirmado
+# Métricas: somente ID opaco, papel e ferramenta. Nome/e-mail são opcionais no cadastro.
+# Participant-Id: p-<32 caracteres hexadecimais aleatórios>
 # Participant-Role: business | technical | automation
 # AI-Tool: Ferramenta realmente usada
