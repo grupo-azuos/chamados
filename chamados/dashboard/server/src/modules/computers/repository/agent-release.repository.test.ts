@@ -1,4 +1,4 @@
-import { type S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { type S3Client, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { describe, expect, it, vi } from 'vitest';
 import { type Env } from '../../../lib/config/env.schema';
 import { AgentReleaseRepository } from './agent-release.repository';
@@ -46,5 +46,26 @@ describe('agent release storage', () => {
     await expect(repository.latest()).rejects.toThrow('too large');
     send.mockResolvedValue({ Body: { transformToString: () => Promise.resolve('broken') } });
     await expect(repository.latest()).rejects.toThrow();
+  });
+
+  it('lists only semantic version folders from the releases prefix', async () => {
+    const send = vi.fn().mockResolvedValue({
+      CommonPrefixes: [
+        { Prefix: 'agent/releases/1.0.2/' },
+        { Prefix: 'agent/releases/rascunho/' },
+      ],
+    });
+    const repository = new AgentReleaseRepository(
+      { send } as unknown as S3Client,
+      { S3_BUCKET: 'fixture' } as Env,
+    );
+
+    await expect(repository.listVersions()).resolves.toEqual(['1.0.2']);
+    expect(send.mock.calls[0]?.[0]).toBeInstanceOf(ListObjectsV2Command);
+    expect(send.mock.calls[0]?.[0].input).toMatchObject({
+      Bucket: 'fixture',
+      Prefix: 'agent/releases/',
+      Delimiter: '/',
+    });
   });
 });
