@@ -12,24 +12,33 @@ export type Theme = 'light' | 'dark';
 
 const STORAGE_KEY = 'azuos-theme';
 
-function systemPrefersDark(): boolean {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
-}
-
-/** Nada salvo ainda? Segue a preferência do sistema operacional, não um padrão fixo. */
+/** Nada salvo ainda? O sistema começa no tema claro, independentemente do tema do dispositivo. */
 function loadInitial(): Theme {
   if (typeof window === 'undefined') return 'light';
 
-  const saved = window.localStorage.getItem(STORAGE_KEY);
-  if (saved === 'light' || saved === 'dark') return saved;
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved === 'light' || saved === 'dark') return saved;
+  } catch {
+    return 'light';
+  }
 
-  return systemPrefersDark() ? 'dark' : 'light';
+  return 'light';
 }
 
 function apply(theme: Theme): void {
   if (typeof document === 'undefined') return;
 
   document.documentElement.setAttribute('data-theme', theme);
+}
+
+function save(theme: Theme): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    // Armazenamento bloqueado não impede trocar o tema na sessão atual.
+    return;
+  }
 }
 
 let theme = $state<Theme>(loadInitial());
@@ -43,7 +52,7 @@ export function useThemeModel() {
     actions: {
       onToggle: () => {
         theme = theme === 'dark' ? 'light' : 'dark';
-        window.localStorage.setItem(STORAGE_KEY, theme);
+        save(theme);
         apply(theme);
       },
     },

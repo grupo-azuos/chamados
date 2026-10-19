@@ -10,31 +10,27 @@ async function freshTheme() {
   return import('./theme.svelte');
 }
 
-function mockSystemPrefersDark(prefersDark: boolean): void {
-  vi.stubGlobal(
-    'matchMedia',
-    vi.fn().mockReturnValue({ matches: prefersDark }) as unknown as typeof window.matchMedia,
-  );
-}
-
 beforeEach(() => {
   window.localStorage.clear();
   document.documentElement.removeAttribute('data-theme');
-  mockSystemPrefersDark(false);
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
 describe('useThemeModel', () => {
   // feliz
-  it('segue o sistema operacional quando nada foi salvo ainda', async () => {
-    mockSystemPrefersDark(true);
+  it('starts in light mode when no preference is saved, even if the OS prefers dark', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia,
+    );
     const { useThemeModel } = await freshTheme();
 
-    expect(useThemeModel().theme).toBe('dark');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(useThemeModel().theme).toBe('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 
   it('alterna entre claro e escuro e guarda a escolha', async () => {
@@ -50,20 +46,34 @@ describe('useThemeModel', () => {
     expect(theme.theme).toBe('light');
   });
 
-  it('a escolha salva vale mais que a preferência do sistema', async () => {
-    mockSystemPrefersDark(true);
-    window.localStorage.setItem(STORAGE_KEY, 'light');
+  it('respects a saved theme preference', async () => {
+    window.localStorage.setItem(STORAGE_KEY, 'dark');
+    const { useThemeModel } = await freshTheme();
+
+    expect(useThemeModel().theme).toBe('dark');
+  });
+
+  // triste
+  it('ignores an invalid saved value and falls back to light mode', async () => {
+    window.localStorage.setItem(STORAGE_KEY, 'catppuccin-mocha');
     const { useThemeModel } = await freshTheme();
 
     expect(useThemeModel().theme).toBe('light');
   });
 
-  // triste
-  it('ignora um valor inválido salvo e cai na preferência do sistema', async () => {
-    window.localStorage.setItem(STORAGE_KEY, 'catppuccin-mocha');
-    mockSystemPrefersDark(true);
+  it('keeps the theme usable when browser storage is blocked', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Storage unavailable', 'SecurityError');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Storage unavailable', 'SecurityError');
+    });
     const { useThemeModel } = await freshTheme();
+    const theme = useThemeModel();
 
-    expect(useThemeModel().theme).toBe('dark');
+    expect(theme.theme).toBe('light');
+    expect(() => theme.actions.onToggle()).not.toThrow();
+    expect(theme.theme).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 });

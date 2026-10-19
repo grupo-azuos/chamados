@@ -5,6 +5,7 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const config = {
   preprocess: vitePreprocess(),
   kit: {
+    serviceWorker: { register: true },
     adapter: adapter({
       pages: 'dist',
       assets: 'dist',

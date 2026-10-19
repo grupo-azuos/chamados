@@ -16,6 +16,7 @@
       label: string;
       value: number | string;
       hint?: string | null;
+      tooltip?: string;
     };
     ui?: {
       tone?: StatCardTone;
@@ -71,6 +72,9 @@
 </script>
 
 <script lang="ts">
+  import Info from '@lucide/svelte/icons/info';
+
+  import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
   import { cn } from '$lib/utils/cn';
   import { Skeleton } from '$lib/components/ui/skeleton';
 
@@ -79,9 +83,38 @@
   const tone = $derived(ui?.tone ?? 'neutral');
   const Icon = $derived(ui?.icon);
   const isClickable = $derived(Boolean(actions?.onClick));
+  const labelClass = $derived(cn('text-xs font-semibold tracking-wider uppercase', TONE_LABEL[tone]));
+  let isTooltipOpen = $state(false);
 </script>
 
+{#snippet labelRow(className: string)}
+  <div class={className}>
+    <p class={labelClass}>{data.label}</p>
+    {#if data.tooltip}
+      <Tooltip.Root bind:open={isTooltipOpen}>
+        <Tooltip.Trigger>
+          {#snippet child({ props })}
+            <button
+              {...props}
+              type="button"
+              aria-label={`Como calculamos ${data.label.toLocaleLowerCase('pt-BR')}`}
+              class="text-ink-500 hover:text-ink-700 focus-visible:ring-ring relative z-10 inline-flex size-5 shrink-0 cursor-help items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <Info size={14} aria-hidden="true" />
+            </button>
+          {/snippet}
+        </Tooltip.Trigger>
+        <Tooltip.Content class="max-w-sm flex-col items-start gap-1 whitespace-normal text-left">
+          {data.tooltip}
+        </Tooltip.Content>
+      </Tooltip.Root>
+    {/if}
+  </div>
+{/snippet}
+
 <div
+  onpointerenter={() => (isTooltipOpen = Boolean(data.tooltip))}
+  onpointerleave={() => (isTooltipOpen = false)}
   class={cn(
     /* Cartão é SUPERFÍCIE: o mesmo raio do `Card`, do diálogo e da tabela
        (`lib/theme/tokens.css`). Vinha com raio de controle e encostava visualmente nos
@@ -115,14 +148,10 @@
       <span class={cn('flex size-8 shrink-0 items-center justify-center rounded-chip', TONE_ICON[tone])}>
         <Icon size={15} aria-hidden="true" />
       </span>
-      <p class={cn('text-xs font-semibold tracking-wider uppercase', TONE_LABEL[tone])}>
-        {data.label}
-      </p>
+      {@render labelRow('flex min-w-0 items-center gap-1')}
     </div>
   {:else}
-    <p class={cn('mb-1 text-xs font-semibold tracking-wider uppercase', TONE_LABEL[tone])}>
-      {data.label}
-    </p>
+    {@render labelRow('mb-1 flex items-center gap-1')}
   {/if}
 
   {#if state?.isLoading}

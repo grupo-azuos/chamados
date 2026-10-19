@@ -6,7 +6,7 @@ import PendingArea from './azuos-pending-area.svelte';
 const data = {
   title: 'Inventário',
   summary: 'Os computadores da empresa, com o que cada um tem dentro.',
-  features: ['Cada máquina se cadastra sozinha.', 'Nota de saúde de 0 a 100.'],
+  features: ['Cada máquina se cadastra sozinha.', 'Condição dos recursos de 0 a 100.'],
 };
 
 describe('AzuosPendingArea', () => {
@@ -24,7 +24,7 @@ describe('AzuosPendingArea', () => {
     render(PendingArea, { props: { data } });
 
     expect(screen.getByText('Cada máquina se cadastra sozinha.')).toBeInTheDocument();
-    expect(screen.getByText('Nota de saúde de 0 a 100.')).toBeInTheDocument();
+    expect(screen.getByText('Condição dos recursos de 0 a 100.')).toBeInTheDocument();
   });
 
   it('says plainly that the area is not built yet', () => {

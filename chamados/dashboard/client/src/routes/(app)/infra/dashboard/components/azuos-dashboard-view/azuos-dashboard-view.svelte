@@ -82,7 +82,7 @@
       parts.push(`${machine.maintenanceCount} manutenções já feitas`);
     }
 
-    return parts.length > 0 ? parts.join(' · ') : `Nota de saúde ${machine.healthScore}/100`;
+    return parts.length > 0 ? parts.join(' · ') : `Condição dos recursos ${machine.healthScore}/100`;
   }
 
   /** O tempo médio em palavras. Nulo NÃO vira "0 h": zero anunciaria atendimento instantâneo. */

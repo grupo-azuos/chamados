@@ -19,7 +19,7 @@
       features: [
         'Cada máquina se cadastra sozinha quando o agente é instalado nela.',
         'Ficha com processador, memória, discos, placa de vídeo e sistema.',
-        'Nota de saúde de 0 a 100, com os avisos que a baixaram.',
+        'Condição dos recursos de 0 a 100, com os avisos que reduzem a pontuação.',
         'Online ou offline agora, e quando foi visto pela última vez.',
       ],
     },
