@@ -18,7 +18,7 @@
     DialogTitle,
   } from '$lib/components/azuos-dialog/azuos-dialog';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
-  import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
+  import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { type SoftwareScheduleFormModel } from '$lib/hooks/use-software-schedule-form/use-software-schedule-form.svelte';
@@ -137,10 +137,16 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div class="flex flex-col gap-1.5">
           <span class="text-xs font-medium text-foreground">Categoria</span>
-          <SelectField
+          <OptionPicker
             data={{
               value: model.data.fields.category.value,
               options: categoryOptions,
+            }}
+            ui={{
+              ariaLabel: 'Categoria do compromisso',
+              fullWidth: true,
+              mode: 'combobox',
+              searchPlaceholder: 'Buscar categoria…',
             }}
             actions={{
               onChange: (val) => model.actions.onChange('category', val),
@@ -151,10 +157,16 @@
         {#if projects.length > 0}
           <div class="flex flex-col gap-1.5">
             <span class="text-xs font-medium text-foreground"> Sistema vinculado (opcional) </span>
-            <SelectField
+            <OptionPicker
               data={{
                 value: model.data.fields.projectId.value ?? '',
                 options: projectOptions,
+              }}
+              ui={{
+                ariaLabel: 'Sistema vinculado',
+                fullWidth: true,
+                mode: 'combobox',
+                searchPlaceholder: 'Buscar sistema…',
               }}
               actions={{
                 onChange: (val) => model.actions.onChange('projectId', val),

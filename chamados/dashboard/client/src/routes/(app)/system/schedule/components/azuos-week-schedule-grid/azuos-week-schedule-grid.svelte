@@ -358,10 +358,14 @@
     </div>
 
     {#if data.filters}
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div class="grid flex-1 grid-cols-1 gap-3 sm:flex sm:flex-wrap">
+      <div class="rounded-surface border border-border bg-card/70 p-3 sm:p-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {#each [{ key: 'project', label: 'Projeto', hint: 'Filtrar agendamentos, PRs, issues e merges por projeto', value: data.filters.project, options: data.filters.projectOptions, onChange: actions.onProjectFilterChange }, { key: 'author', label: 'Autor', hint: 'Filtrar PRs, issues e merges pelo autor registrado no GitHub', value: data.filters.author, options: data.filters.authorOptions, onChange: actions.onAuthorFilterChange }, { key: 'type', label: 'Tipo', hint: 'Mostrar PRs, issues, merges ou todos na agenda', value: data.filters.type, options: [{ value: '', label: 'Todos' }, { value: 'pr', label: 'PRs' }, { value: 'issue', label: 'Issues' }, { value: 'merge', label: 'Merges locais' }], onChange: actions.onTypeFilterChange }] as filter (filter.key)}
-            <div class="min-w-0 space-y-1.5 sm:min-w-40 sm:flex-1 sm:basis-48 sm:max-w-64">
+            <div
+              class="min-w-0 space-y-1.5 {filter.key === 'type'
+                ? 'sm:col-span-2 xl:col-span-1'
+                : ''}"
+            >
               <span class="text-xs font-medium text-muted-foreground">{filter.label}</span>
               <Tooltip.Root
                 open={filterTooltipOpen === filter.key}
@@ -380,8 +384,8 @@
                         data={{ value: filter.value, options: filter.options }}
                         ui={{
                           ariaLabel: `Filtrar por ${filter.label.toLowerCase()}`,
-                          fullWidth: filter.key !== 'type',
-                          mode: filter.key === 'type' ? 'auto' : 'combobox',
+                          fullWidth: true,
+                          mode: 'combobox',
                           searchPlaceholder: `Buscar ${filter.label.toLowerCase()}…`,
                         }}
                         actions={{ onChange: (value) => filter.onChange?.(value) }}
@@ -393,22 +397,24 @@
               </Tooltip.Root>
             </div>
           {/each}
+          {#if data.filters.isActive}
+            <Tooltip.Root>
+              <Tooltip.Trigger>
+                {#snippet child({ props })}
+                  <button
+                    {...props}
+                    type="button"
+                    class="control-lg w-full rounded-control px-3 text-xs font-medium text-primary hover:bg-primary-soft sm:col-span-2 sm:w-fit xl:col-span-3"
+                    onclick={actions.onClearFilters}>Limpar filtros</button
+                  >
+                {/snippet}
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                >Mostrar todos os projetos, autores, PRs, issues e merges</Tooltip.Content
+              >
+            </Tooltip.Root>
+          {/if}
         </div>
-        {#if data.filters.isActive}
-          <Tooltip.Root
-            ><Tooltip.Trigger
-              >{#snippet child({ props })}
-                <button
-                  {...props}
-                  type="button"
-                  class="control-lg self-start rounded-control px-3 text-xs font-medium text-primary hover:bg-primary-soft"
-                  onclick={actions.onClearFilters}>Limpar filtros</button
-                >
-              {/snippet}</Tooltip.Trigger
-            ><Tooltip.Content>Mostrar todos os projetos, autores, PRs e issues</Tooltip.Content
-            ></Tooltip.Root
-          >
-        {/if}
       </div>
     {/if}
 
