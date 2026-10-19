@@ -19,6 +19,16 @@ export type FetchedPr = {
   eventDate: Date;
 };
 
+export type FetchedMerge = {
+  externalId: string;
+  title: string;
+  url: string;
+  author: string;
+  authorName: string;
+  status: 'merged';
+  eventDate: Date;
+};
+
 type RawGithubPr = {
   number: number;
   title: string;
@@ -31,6 +41,18 @@ type RawGithubPr = {
 };
 
 type RawGithubUser = { name?: string | null };
+
+type RawGithubCommit = {
+  sha: string;
+  html_url: string;
+  commit: {
+    message: string;
+    committer?: { date?: string; name?: string };
+    author?: { date?: string; name?: string };
+  };
+  author?: { login?: string } | null;
+  parents: Array<{ sha: string }>;
+};
 
 /** Como aparece o que o App da organização faz no GitHub (as issues abertas a partir de chamados). */
 export const CHAMADOS_BOT_NAME = 'GitHub Chamados Bot';
@@ -283,6 +305,70 @@ export class GithubService {
         ),
       );
       if (!response.headers.get('link')?.includes('rel="next"')) return items;
+    }
+  }
+
+  /**
+   * Lista merges sem PR que chegaram à branch develop. Commits associados a PRs são ignorados,
+   * para não contar duas vezes a mesma entrega já exibida como Pull Request.
+   */
+  async fetchLocalMerges(
+    owner: string,
+    repo: string,
+    userId?: string,
+    since?: Date,
+  ): Promise<FetchedMerge[]> {
+    const token = this.app ? await this.app.accessToken() : this.token;
+    const sinceParam = since ? `&since=${encodeURIComponent(since.toISOString())}` : '';
+    const baseUrl = `https://api.github.com/repos/${owner}/${repo}/commits?sha=develop&per_page=100${sinceParam}`;
+    const merges: FetchedMerge[] = [];
+
+    try {
+      for (let page = 1; ; page++) {
+        const response = await fetch(`${baseUrl}&page=${page}`, {
+          headers: this.headers(token),
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!response.ok) {
+          if (userId) throw this.repositoryAccessError(response.status, owner, repo, 'Contents: read');
+          this.logger.warn(`GitHub API devolveu status ${response.status} ao buscar merges de ${owner}/${repo}`);
+          return [];
+        }
+
+        const commits = (await response.json()) as RawGithubCommit[];
+        const candidates = commits.filter((commit) => commit.parents.length > 1);
+        const local = await Promise.all(candidates.map(async (commit) => {
+          const associated = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/commits/${commit.sha}/pulls`,
+            { headers: this.headers(token), signal: AbortSignal.timeout(10_000) },
+          );
+          if (!associated.ok) throw new BadGatewayException('Não foi possível identificar os merges sem PR.');
+          const pullRequests = (await associated.json()) as unknown[];
+          if (pullRequests.length) return null;
+
+          const login = commit.author?.login ?? commit.commit.author?.name ?? 'github';
+          const title = commit.commit.message.split('\n')[0]?.trim() || `Merge ${commit.sha.slice(0, 7)}`;
+          return {
+            externalId: commit.sha.slice(0, 7),
+            title,
+            url: commit.html_url,
+            author: login,
+            authorName: login,
+            status: 'merged' as const,
+            eventDate: new Date(commit.commit.committer?.date ?? commit.commit.author?.date ?? Date.now()),
+          };
+        }));
+        merges.push(...local.filter((merge): merge is FetchedMerge => merge !== null));
+        if (!response.headers.get('link')?.includes('rel="next"')) break;
+      }
+      return this.addAuthorNames(merges, token);
+    } catch (error) {
+      if (!userId) {
+        this.logger.warn(`Falha na comunicação com o GitHub para merges de ${owner}/${repo}: ${String(error)}`);
+        return [];
+      }
+      if (error instanceof BadGatewayException) throw error;
+      throw new BadGatewayException('Não foi possível sincronizar os merges sem PR. Tente novamente.');
     }
   }
 

@@ -77,6 +77,7 @@ function makeService(
   const githubService = {
     fetchPullRequests: vi.fn().mockResolvedValue([]),
     fetchIssues: vi.fn().mockResolvedValue([]),
+    fetchLocalMerges: vi.fn().mockResolvedValue([]),
     createIssue: vi.fn().mockResolvedValue(null),
     syncTicketToIssueInBackground: vi.fn(),
     ...githubOverrides,
@@ -183,14 +184,14 @@ describe('SoftwareProjectsService', () => {
         color: 'green',
       });
 
-      await vi.waitFor(() => expect(timelineRepository.upsertMany).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() => expect(timelineRepository.upsertMany).toHaveBeenCalledTimes(3));
       expect(githubService.fetchIssues).toHaveBeenCalledWith(
         'vinicius-gpl',
         'acerola-ticket',
         admin.id,
         undefined,
       );
-      expect(timelineRepository.upsertMany).toHaveBeenLastCalledWith([
+      expect(timelineRepository.upsertMany).toHaveBeenNthCalledWith(2, [
         expect.objectContaining({ projectId: 1, type: 'issue', externalId: '#7', status: 'closed' }),
       ]);
     });
@@ -285,6 +286,7 @@ describe('SoftwareProjectsService', () => {
           },
         ]),
         fetchIssues: vi.fn().mockResolvedValue([]),
+        fetchLocalMerges: vi.fn().mockResolvedValue([]),
       } as unknown as GithubService;
       const connections = {
         listLogins: vi.fn().mockResolvedValue([{ userId: 'u-vini', login: 'vinicius-gpl' }]),
@@ -449,8 +451,8 @@ describe('SoftwareProjectsService', () => {
       const result = await service.syncGithubPrs(admin, 1);
 
       expect(result.synced).toBe(1);
-      /* Um lote para os PRs e um para as issues — nunca uma gravação por item. */
-      expect(timelineRepository.upsertMany).toHaveBeenCalledTimes(2);
+      /* Um lote para cada tipo de atividade — nunca uma gravação por item. */
+      expect(timelineRepository.upsertMany).toHaveBeenCalledTimes(3);
       expect(vi.mocked(timelineRepository.upsertMany).mock.calls[0]?.[0]).toHaveLength(1);
     });
   });

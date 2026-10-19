@@ -44,6 +44,7 @@ export type GithubSyncAllResult = {
   projects: number;
   prs: number;
   issues: number;
+  merges: number;
   failed: string[];
   message: string;
 };
@@ -207,11 +208,11 @@ export class SoftwareProjectsService {
     }
 
     const names = await this.linkedNames();
-    const { prs, issues } = await this.syncRepository(id, repoInfo, user.email, user.id, names);
+    const { prs, issues, merges } = await this.syncRepository(id, repoInfo, user.email, user.id, names);
 
     return {
       synced: prs,
-      message: `${prs} Pull Requests e ${issues} issues sincronizados com sucesso.`,
+      message: `${prs} Pull Requests, ${issues} issues e ${merges} merges locais sem PR sincronizados com sucesso.`,
     };
   }
 
@@ -244,7 +245,14 @@ export class SoftwareProjectsService {
     userId: string | undefined,
     since?: Date,
   ): Promise<GithubSyncAllResult> {
-    const result: GithubSyncAllResult = { projects: 0, prs: 0, issues: 0, failed: [], message: '' };
+    const result: GithubSyncAllResult = {
+      projects: 0,
+      prs: 0,
+      issues: 0,
+      merges: 0,
+      failed: [],
+      message: '',
+    };
     const names = await this.linkedNames();
 
     for (const project of await this.repository.listAll()) {
@@ -262,6 +270,7 @@ export class SoftwareProjectsService {
         result.projects++;
         result.prs += synced.prs;
         result.issues += synced.issues;
+        result.merges += synced.merges;
       } catch {
         result.failed.push(project.name);
       }
@@ -279,7 +288,7 @@ export class SoftwareProjectsService {
     userId: string | undefined,
     names: ReadonlyMap<string, string>,
     since?: Date,
-  ): Promise<{ prs: number; issues: number }> {
+  ): Promise<{ prs: number; issues: number; merges: number }> {
     const { owner, repo } = repoInfo;
     const nameOf = (login: string, fallback: string) => names.get(login.toLowerCase()) ?? fallback;
     const prs = await this.githubService.fetchPullRequests(owner, repo, userId, since);
@@ -309,7 +318,18 @@ export class SoftwareProjectsService {
       })),
     );
 
-    return { prs: prs.length, issues: issues.length };
+    const merges = await this.githubService.fetchLocalMerges(owner, repo, userId, since);
+    await this.timelineRepository.upsertMany(
+      merges.map((merge) => ({
+        projectId,
+        type: 'merge' as const,
+        ...merge,
+        authorName: nameOf(merge.author, merge.authorName),
+        createdBy: actorEmail,
+      })),
+    );
+
+    return { prs: prs.length, issues: issues.length, merges: merges.length };
   }
 
   /**
@@ -347,7 +367,7 @@ function repositoryOf(project: {
 }
 
 function syncAllMessage(result: GithubSyncAllResult): string {
-  const done = `${result.projects} sistemas sincronizados: ${result.prs} Pull Requests e ${result.issues} issues.`;
+  const done = `${result.projects} sistemas sincronizados: ${result.prs} Pull Requests, ${result.issues} issues e ${result.merges} merges sem PR.`;
   if (!result.failed.length) return done;
 
   return `${done} Não foi possível sincronizar: ${result.failed.join(', ')}.`;

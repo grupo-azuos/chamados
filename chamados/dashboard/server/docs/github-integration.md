@@ -6,11 +6,11 @@ As roles internas controlam o acesso. Gestores consultam os dados sincronizados 
 
 ## Configuração por instalação licenciada
 
-1. Crie um GitHub App e instale-o na organização, selecionando os repositórios que o Azuos pode acessar. Permissões de repositório: **Issues: Read and write**, **Pull requests: Read-only**, **Metadata: Read-only**.
+1. Crie um GitHub App e instale-o na organização, selecionando os repositórios que o Azuos pode acessar. Permissões de repositório: **Issues: Read and write**, **Pull requests: Read-only**, **Contents: Read-only**, **Metadata: Read-only**. `Contents: Read-only` permite consultar os commits enviados para `develop`.
 2. Configure no servidor `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID` e `GITHUB_APP_PRIVATE_KEY`. A chave é o PEM gerado no GitHub e aceita quebras de linha escapadas como `\n`. Nunca coloque essas credenciais no client.
 3. Na página do GitHub App, use o **Client ID** (não o App ID) e gere um **Client secret**. Configure `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET`, `GITHUB_OAUTH_REDIRECT_URI`, `GITHUB_OAUTH_FRONTEND_URL` e `GITHUB_OAUTH_ENCRYPTION_KEY`, conforme `.env.example`. Em “Identifying and authorizing users”, cadastre os callbacks indicados abaixo. A chave de criptografia deve ter 32 bytes em hexadecimal.
 4. Execute `npm run db:migrate -w server` na pasta `chamados/dashboard` para criar as tabelas de conexão e estados OAuth.
-5. Vincule a conta do admin usando o botão do login ou a tela obrigatória ao entrar em Sistema. Cadastre o repositório no projeto e acione **Sincronizar**. PRs e issues da equipe aparecem na timeline do projeto, inclusive os PRs sem chamado.
+5. Vincule a conta do admin usando o botão do login ou a tela obrigatória ao entrar em Sistema. Cadastre o repositório no projeto e acione **Sincronizar**. PRs, issues e commits de merge sem PR enviados para `develop` aparecem na timeline do projeto.
 
 Callback de desenvolvimento: `http://localhost:4001/api/integrations/github/callback`.
 
