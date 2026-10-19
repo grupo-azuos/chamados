@@ -53,5 +53,7 @@ export const agentLtsSchema = z.object({
   sizeBytes: z.number().int().positive(),
 });
 export type AgentLts = z.infer<typeof agentLtsSchema>;
+export const agentReleaseItemSchema = agentLtsSchema.extend({ isLts: z.boolean() });
+export type AgentReleaseItem = z.infer<typeof agentReleaseItemSchema>;
 export const agentFileLinkSchema = z.object({ version: agentVersionSchema, url: z.string().url() });
 export type AgentFileLink = z.infer<typeof agentFileLinkSchema>;
