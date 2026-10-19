@@ -19,12 +19,20 @@
   const noun = $derived(
     data.type === 'issue'
       ? (['issue', 'issues'] as const)
-      : data.type === 'all'
-        ? (['atividade', 'atividades'] as const)
-        : (['PR', 'PRs'] as const),
+      : data.type === 'merge'
+        ? (['merge', 'merges'] as const)
+        : data.type === 'all'
+          ? (['atividade', 'atividades'] as const)
+          : (['PR', 'PRs'] as const),
   );
   const title = $derived(
-    data.type === 'issue' ? 'Issues' : data.type === 'all' ? 'Atividades do GitHub' : 'PRs',
+    data.type === 'issue'
+      ? 'Issues'
+      : data.type === 'merge'
+        ? 'Merges locais'
+        : data.type === 'all'
+          ? 'Atividades do GitHub'
+          : 'PRs',
   );
 </script>
 
@@ -33,8 +41,8 @@
     <DialogHeader>
       <DialogTitle>{title} do dia {data.date.split('-').reverse().join('/')}</DialogTitle>
       <DialogDescription>
-        Do mais cedo ao mais tarde, no horário local. PRs mergeados usam o horário do merge; os
-        demais, o da criação. Issues resolvidas usam o horário de fechamento; abertas, o de criação.
+        Do mais cedo ao mais tarde, no horário local. PRs mergeados e merges locais usam o horário
+        do merge; os demais, o da criação. Issues resolvidas usam o horário de fechamento.
       </DialogDescription>
     </DialogHeader>
     <div class="max-h-[60vh] space-y-3 overflow-y-auto">
@@ -50,15 +58,17 @@
               })}</time
             >
             <span
-              >{event.type === 'issue'
-                ? event.status === 'closed'
-                  ? 'Resolvida'
-                  : 'Aberta'
-                : event.status === 'merged'
-                  ? 'Mergeado'
-                  : event.status === 'closed'
-                    ? 'Fechado'
-                    : 'Aberto'}</span
+              >{event.type === 'merge'
+                ? 'Merge local'
+                : event.type === 'issue'
+                  ? event.status === 'closed'
+                    ? 'Resolvida'
+                    : 'Aberta'
+                  : event.status === 'merged'
+                    ? 'Mergeado'
+                    : event.status === 'closed'
+                      ? 'Fechado'
+                      : 'Aberto'}</span
             >
           </div>
           {#if event.url}
@@ -70,7 +80,9 @@
               >{data.type === 'all'
                 ? event.type === 'issue'
                   ? 'Issue '
-                  : 'PR '
+                  : event.type === 'merge'
+                    ? 'Merge '
+                    : 'PR '
                 : ''}{event.externalId} · {event.title}</a
             >
           {:else}
@@ -86,9 +98,11 @@
         <p class="py-4 text-center text-sm text-muted-foreground">
           {data.type === 'issue'
             ? 'Nenhuma issue sincronizada neste dia.'
-            : data.type === 'all'
-              ? 'Nenhuma atividade sincronizada neste dia.'
-              : 'Nenhum PR sincronizado neste dia.'}
+            : data.type === 'merge'
+              ? 'Nenhum merge local sincronizado neste dia.'
+              : data.type === 'all'
+                ? 'Nenhuma atividade sincronizada neste dia.'
+                : 'Nenhum PR sincronizado neste dia.'}
         </p>
       {/each}
     </div>

@@ -39,6 +39,19 @@
   {template}
 />
 <Story
+  name="LocalMerge"
+  args={{
+    event: {
+      ...event,
+      type: 'merge',
+      externalId: 'a1b2c3d',
+      title: 'Merge branch de suporte',
+      url: 'https://github.com/example/project/commit/a1b2c3d',
+    },
+  }}
+  {template}
+/>
+<Story
   name="MissingDetails"
   args={{ event: { ...event, author: null, projectName: null, url: null } }}
   {template}

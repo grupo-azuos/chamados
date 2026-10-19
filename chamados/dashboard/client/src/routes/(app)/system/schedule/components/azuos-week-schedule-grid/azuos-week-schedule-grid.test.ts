@@ -143,9 +143,16 @@ describe('AzuosWeekScheduleGrid', () => {
     });
     expect(screen.getByRole('button', { name: 'Filtrar por projeto' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Filtrar por autor' })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Filtrar por tipo' })).toBeInTheDocument();
+    const openTypePicker = async () => {
+      if (screen.queryByRole('group', { name: 'Filtrar por tipo' })) return;
+      await userEvent.click(screen.getByRole('button', { name: 'Filtrar por tipo' }));
+    };
+    await openTypePicker();
     await userEvent.click(screen.getByRole('button', { name: 'Issues' }));
     expect(actions.onTypeFilterChange).toHaveBeenCalledWith('issue');
+    await openTypePicker();
+    await userEvent.click(screen.getByRole('button', { name: 'Merges locais' }));
+    expect(actions.onTypeFilterChange).toHaveBeenCalledWith('merge');
     await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
     expect(actions.onClearFilters).toHaveBeenCalledOnce();
   });
