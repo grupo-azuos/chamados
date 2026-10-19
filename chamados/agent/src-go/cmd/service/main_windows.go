@@ -8,10 +8,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/grupo-azuos/chamados/chamados/agent/src-go/machine"
-	agentservice "github.com/grupo-azuos/chamados/chamados/agent/src-go/service"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
+
+	agentservice "github.com/grupo-azuos/chamados/chamados/agent/src-go/app/service"
+	"github.com/grupo-azuos/chamados/chamados/agent/src-go/lib/infra/machine"
 )
 
 type handler struct{}

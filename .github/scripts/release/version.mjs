@@ -37,7 +37,7 @@ export function versionFiles(component) {
   if (component === "agent")
     return [
       "chamados/agent/wails.json",
-      "chamados/agent/src-go/version/version.go",
+      "chamados/agent/src-go/lib/version/version.go",
       "chamados/agent/svelte/package.json",
       "chamados/agent/svelte/package-lock.json",
     ];
