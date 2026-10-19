@@ -212,6 +212,14 @@ try {
         Write-Host "   Verificando instalação existente..." -ForegroundColor Yellow
     }
 
+    # Código 0 do MSI não garante que todos os componentes foram instalados.
+    $installedDirectory = Join-Path $env:ProgramFiles 'Azuos\\Agent'
+    foreach ($requiredFile in @('Azuos Agent.exe', 'azuos-agent-service.exe', 'configure-machine.ps1', 'install-certificate.ps1')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $installedDirectory $requiredFile))) {
+            throw "Instalação incompleta: arquivo ausente $requiredFile em $installedDirectory. Repare o MSI antes de continuar."
+        }
+    }
+
     # 6. Configuração em %ProgramData%\\AzuosAgent\\machine.json
     Write-Host "[3/4] Gravando configuração segura da máquina..." -ForegroundColor Cyan
     $directory = Join-Path $env:ProgramData 'AzuosAgent'
