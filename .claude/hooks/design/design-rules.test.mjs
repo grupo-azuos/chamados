@@ -80,10 +80,7 @@ describe('feature-component-in-lib', () => {
         `${DASHBOARD_ROUTES}/(app)/tickets/+page.svelte`,
         `components/azuos-button/azuos-button`,
       ),
-      file(
-        `${DASHBOARD_ROUTES}/(app)/parts/+page.svelte`,
-        `components/azuos-button/azuos-button`,
-      ),
+      file(`${DASHBOARD_ROUTES}/(app)/parts/+page.svelte`, `components/azuos-button/azuos-button`),
       file(`${DASHBOARD_ROUTES}/+layout.svelte`, `components/azuos-shell/azuos-shell`),
     ];
 
@@ -304,7 +301,10 @@ describe('class rules', () => {
   // feliz
   it('ignores the shadcn CLI folder, in either app', () => {
     const files = [
-      file(`${DASHBOARD_LIB}/ui/card/card.svelte`, '<div class="rounded-2xl text-neutral-400"></div>'),
+      file(
+        `${DASHBOARD_LIB}/ui/card/card.svelte`,
+        '<div class="rounded-2xl text-neutral-400"></div>',
+      ),
       file(`${AGENT_LIB}/ui/card/card.svelte`, '<div class="rounded-2xl text-neutral-400"></div>'),
     ];
 
@@ -426,7 +426,11 @@ describe('baseline', () => {
 
 describe('violationsTouching', () => {
   const inFolder = { rule: 'component-prefix', file: `${DASHBOARD_LIB}/text-field`, detail: 'x' };
-  const elsewhere = { rule: 'raw-palette', file: `${DASHBOARD_LIB}/azuos-card/azuos-card.svelte`, detail: 'x' };
+  const elsewhere = {
+    rule: 'raw-palette',
+    file: `${DASHBOARD_LIB}/azuos-card/azuos-card.svelte`,
+    detail: 'x',
+  };
 
   // feliz
   it('matches the violation file itself', () => {

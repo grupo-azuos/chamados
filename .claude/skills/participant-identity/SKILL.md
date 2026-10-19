@@ -1,60 +1,78 @@
 ---
 name: participant-identity
-description: Identifica a pessoa que está trabalhando no projeto, completa somente os dados ausentes em docs/project.json e atribui commits atômicos. Use no início da sessão, antes de mudanças, commits e merges, sobretudo com contas compartilhadas.
+description: Identifica a pessoa por um código opaco, completa somente os dados necessários às métricas e atribui commits atômicos. Use no início da sessão, antes de mudanças, commits e merges, especialmente com contas compartilhadas. Nome e e-mail são opcionais.
 ---
 
 # Participante e métricas
 
-Leia `docs/project.json` e `docs/project-metrics.md`. O cadastro é do projeto, não da conta GitHub.
+Leia `docs/project.json`, `docs/project-metrics.md` e `docs/metrics-privacy.md`.
 
-1. Identifique a pessoa da conversa. Login e e-mail do Git ajudam a procurar cadastros, mas uma
-   conta de `shared_accounts` nunca identifica uma pessoa. Em cada nova sessão compartilhada,
-   pergunte quem está trabalhando, mesmo que exista só um participante cadastrado. Não reaproveite
-   silenciosamente a identidade de outra sessão. Não pergunte novamente quando a pessoa já se
-   identificou nesta conversa.
-2. Procure um participante existente antes de criar outro. Peça em uma pergunta curta somente os
-   campos obrigatórios ausentes: nome, e-mail pessoal/profissional de autoria, departamento e papel
-   (`business`, `technical` ou `automation`). Não adivinhe sobrenome, departamento ou e-mail a partir
-   do projeto. Use o nome declarado pela pessoa, com acentos. Cadastro de métricas não cria conta de
-   acesso ao sistema e não altera `git config user.*` nem as regras de autenticação.
-3. Atualize o participante em `docs/project.json`, incluindo `github_logins`, `git_emails` e, quando
-   compartilhada, a relação em `shared_accounts[].participant_ids`. Não atribua todo o passado de
-   uma conta compartilhada a quem se identificou agora. Preserve autores e pendências históricos.
-   Registre em `evidence` a origem das confirmações, sem copiar a conversa inteira.
-4. Confirme as ferramentas realmente usadas quando desconhecidas. Claude Code e VS Code são o
-   padrão do template, não prova sobre toda entrega passada. Registre outras ferramentas em `tools`.
-   Pergunte sobre experiência prévia em TI uma vez, sem bloquear trabalho por informação histórica
-   indisponível. Guilherme é auxiliar técnico sem experiência prévia; não o classifique como
-   usuário de negócio só para melhorar a métrica.
-5. Atualize somente os marcos, reuniões e bloqueios que a pessoa confirmou. `null` significa
-   desconhecido; zero é uma afirmação. Primeiro commit, primeira PR e release não provam data de
-   início, MVP ou produção. Nunca reescreva histórico para inserir atribuição retroativa.
-6. Separe mudanças por resultado/local conforme `git-commit` e `CONTRIBUTING.md`. Inclua o cadastro
-   novo/corrigido no primeiro commit que depende dele, com `git add` por caminho. O hook lê o índice:
-   salvar o JSON no disco sem prepará-lo para commit não basta.
-7. Preserve `[tipo](local): Mensagem` e acrescente exatamente um de cada trailer abaixo, com
-   valores iguais aos do participante cadastrado. `AI-Tool` é a ferramenta usada nesta entrega
-   (use `none` em trabalho manual e cadastre essa opção em `tools`, quando necessário).
+## Código da pessoa
+
+Confirme quem está nesta conversa usando um código de participante já existente. Em conta
+compartilhada, não reutilize a pessoa da sessão anterior e não associe todo o histórico da
+conta a quem acabou de chegar. Se a pessoa não tiver código, gere um aleatório com
+`p-${randomUUID().replaceAll('-', '')}` usando `node:crypto`; confirme o papel (`business`,
+`technical` ou `automation`) e informe o código criado. Não exigir conta no GitHub, nome,
+e-mail ou departamento. Não derivar o código de nome, e-mail ou login.
+
+Se a pessoa já se identificou nesta conversa, use a informação; não pergunte novamente.
+Procure o código no cadastro antes de criar outro. Códigos antigos aparecem em `legacy_ids`
+apenas nos cadastros privados migrados; os novos trailers usam o ID opaco atual.
+
+Registre apenas ID, papel e ferramentas efetivamente usadas. Os campos pessoais ausentes
+continuam `null`, e listas de logins/e-mails continuam vazias. Experiência prévia em TI é
+opcional; não a transformar em requisito para trabalhar nem confundir experiência com papel.
+
+Confirme as ferramentas quando desconhecidas. Claude Code + VS Code é o padrão do template,
+não prova sobre todas as entregas históricas. O nome da ferramenta usada entra em `AI-Tool`.
+
+## Nome e e-mail opcionais
+
+Não perguntar nome/e-mail como condição para gravar trabalho. Se a pessoa oferecer ou pedir
+para cadastrar esses dados, explique o aviso de privacidade, o repositório de destino e o uso
+proposto; registre somente os campos pedidos. Antes de persistir, confirme a visibilidade real
+do repositório e as decisões de governança em `privacy`. Repositório público não recebe perfil
+identificado; governança pendente significa continuar com o ID e encaminhar a decisão à empresa.
+Nunca inventar a base legal ou tratar o oferecimento de um e-mail como consentimento irrestrito.
+
+Quando as condições estiverem preenchidas, salve o perfil em um commit próprio de cadastro,
+com `profile_disclosure` contendo pedido da pessoa, versão do aviso e data. Nome/e-mail ficam
+no cadastro restrito, não nos trailers de cada mudança. O Git não restringe acesso por arquivo:
+se a equipe do código não puder ler o cadastro, é necessário um armazenamento separado.
+Cadastro de métricas não cria login no sistema e não altera `git config user.*`.
+
+## Dados do projeto e commits
+
+Ao criar um projeto a partir do template, confira o `origin`: `repository` deve identificar o
+novo projeto e `project_type` deve refletir sua finalidade. Registre a origem do template em
+`evidence`; não atribua seus autores automaticamente ao novo usuário. Não inventar marcos nem
+contar a fotografia inicial do template como entrega do usuário.
+
+Atualize apenas datas, reuniões e intervenções confirmadas. `null` significa desconhecido.
+Primeiro commit, primeira PR e release não comprovam início, MVP ou produção. Intervenções ficam
+em `technical_interventions`, com categoria, responsável, evidência e commits; vários commits
+podem pertencer à mesma intervenção. Não inferir duração a partir do intervalo entre commits.
+
+Siga `git-commit` e `CONTRIBUTING.md`: uma mudança coerente por commit e arquivos preparados por
+caminho. Inclua o cadastro de um novo ID no primeiro commit que o utiliza. O hook lê o índice;
+salvar o JSON no disco sem `git add` não basta. Preserve `[tipo](local): Mensagem`, com o bloco:
 
 ```text
-Participant-Id: <id estável do participante>
-Participant-Name: <nome confirmado>
-Participant-Email: <e-mail confirmado>
-Department: <departamento confirmado>
-Participant-Role: <business|technical|automation>
-AI-Tool: <ferramenta realmente usada>
+Participant-Id: p-<32 caracteres hexadecimais aleatórios>
+Participant-Role: business
+AI-Tool: Claude Code
 ```
 
-Em trabalho conjunto, confirme a pessoa responsável por cada commit; não invente autoria de
-colegas. Mantenha os demais participantes no cadastro e explique a colaboração no corpo do commit.
-Os trailers valem também para merges, commits de manutenção e modo administrador. Não há exceção
-para bot: cadastre a identidade da automação. O histórico anterior à adoção permanece intacto.
+O papel e a ferramenta precisam corresponder ao cadastro. Não adicionar `Participant-Name`,
+`Participant-Email` ou `Department` aos trailers novos. A regra também vale para manutenção,
+merges e modo administrador. Automação usa seu próprio participante. A pessoa responsável por
+cada commit deve ser confirmada; não inventar coautoria.
 
-O hook recusou? Leia os campos indicados, pergunte apenas o que ainda falta, corrija e prepare os
-arquivos novamente. Não desative hooks, não use `--no-verify` e não substitua dados ausentes por
-`unknown`, `N/A`, dados da conta compartilhada ou dados de outra pessoa.
+O hook recusou? Corrija o campo indicado, pedindo somente a informação necessária que ainda
+falta, prepare novamente o arquivo e tente outra vez. Não desativar hooks nem usar
+`--no-verify`. Não reescrever histórico e não distribuir cópias manuais do cadastro por branches.
 
-Para PRs, mantenha a mensagem de merge no padrão e inclua os trailers do responsável confirmado.
-O CI valida todos os commits novos após a adoção. Ao trazer commits antigos, preserve o histórico.
-Não distribua cópias do cadastro manualmente pelas branches de funcionalidades: ele chega pelo
-merge normal da `develop`.
+O modo antigo identificado é aceito somente para validar o histórico existente. Os novos
+projetos e commits usam o modelo pseudonimizado descrito acima. IDs não tornam os metadados
+nativos de autor do Git anônimos. Relatório público usa agregados revisados, não o cadastro.

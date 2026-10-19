@@ -16,15 +16,22 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: '3.12'
-      - name: Valida cadastro e testa atribuição
+          node-version: 24
+      - name: Confere as regras de código dos scripts e hooks
+        run: npm exec --yes --package=eslint@9.39.5 -- eslint --config .github/scripts/eslint.config.mjs .github/scripts/project-metrics .claude/hooks --no-error-on-unmatched-pattern
+      - name: Valida o cadastro e testa as métricas
         run: |
-          python3 .github/scripts/project-metrics/validate-metrics.py --check
-          python3 .github/scripts/project-metrics/test-metrics.py
+          node .github/scripts/project-metrics/validate-metrics.mjs --check
+          node --test '.github/scripts/project-metrics/*.test.mjs'
+      - name: Testa os hooks do Claude
+        run: |
+          if [ -d .claude/hooks ]; then
+            node --test '.claude/hooks/**/*.test.mjs'
+          fi
       - name: Confere os commits novos
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: python3 .github/scripts/project-metrics/validate-metrics.py --range "$BASE_SHA" "$HEAD_SHA"
+        run: node .github/scripts/project-metrics/validate-metrics.mjs --range "$BASE_SHA" "$HEAD_SHA"
