@@ -141,7 +141,7 @@ export type SoftwareScheduleModel = {
     onViewModeChange: (mode: ScheduleViewMode) => void;
     onRetry: () => void;
     onDeleteEvent: (id: number) => Promise<boolean>;
-    onOpenGithubDay: (date: string, type?: 'pr' | 'issue' | 'all') => void;
+    onOpenGithubDay: (date: string, type?: 'pr' | 'issue' | 'merge' | 'all') => void;
     onCloseGithubDay: () => void;
     onGithubDayPageChange: (page: number) => void;
     onProjectFilterChange: (value: string) => void;
@@ -282,7 +282,7 @@ function selectedGithubDay(
   date: string | null,
   page: number,
   pageSize: number,
-  type: 'pr' | 'issue' | 'all',
+  type: 'pr' | 'issue' | 'merge' | 'all',
 ): SoftwareScheduleModel['data']['githubDay'] {
   if (!date) return null;
   const prs =
@@ -387,7 +387,7 @@ export function useSoftwareScheduleModel(): SoftwareScheduleModel {
   /* Abre no mês: é a visão que a equipe usa para planejar; semana e dia ficam a um clique. */
   const viewMode = writable<ScheduleViewMode>(DEFAULT_SCHEDULE_VIEW_MODE);
   let githubDayDate = $state<string | null>(null);
-  let githubDayType = $state<'pr' | 'issue' | 'all'>('pr');
+  let githubDayType = $state<'pr' | 'issue' | 'merge' | 'all'>('pr');
   let filters = $state<ScheduleFilters>({ project: '', author: '', type: '' });
   let githubDayPage = $state(1);
   const githubDayPageSize = 5;
@@ -547,7 +547,7 @@ export function useSoftwareScheduleModel(): SoftwareScheduleModel {
         githubDayPage = 1;
       },
       onTypeFilterChange: (value) => {
-        filters.type = value === 'pr' || value === 'issue' ? value : '';
+        filters.type = value === 'pr' || value === 'issue' || value === 'merge' ? value : '';
         githubDayPage = 1;
       },
       onClearFilters: () => {

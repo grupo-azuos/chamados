@@ -36,3 +36,8 @@
 #
 # Tocou dois locais? São dois commits. Nunca [feat](backend,web).
 # ─────────────────────────────────────────────────────────────────────────────
+
+# Métricas: somente ID opaco, papel e ferramenta. Nome/e-mail são opcionais no cadastro.
+# Participant-Id: p-<32 caracteres hexadecimais aleatórios>
+# Participant-Role: business | technical | automation
+# AI-Tool: Ferramenta realmente usada

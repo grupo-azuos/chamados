@@ -85,13 +85,17 @@
   open={dialogState?.isOpen ?? true}
   onOpenChange={(isOpen: boolean) => (isOpen ? undefined : actions.onClose())}
 >
-  <DialogContent>
+  <DialogContent class="sm:max-w-xl">
     <DialogHeader class="gap-1.5">
       <div class="flex items-center gap-2.5">
-        <span class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary/10 text-primary">
+        <span
+          class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary/10 text-primary"
+        >
           <KeyRound class="size-4" aria-hidden="true" />
         </span>
-        <DialogTitle class="text-lg font-semibold tracking-tight">Token de {data.computerName}</DialogTitle>
+        <DialogTitle class="min-w-0 break-words pr-8 text-lg font-semibold tracking-tight">
+          Token de {data.computerName}
+        </DialogTitle>
       </div>
       <DialogDescription class="text-xs text-muted-foreground">
         Guarde agora: por segurança, este código não pode ser mostrado de novo. Se perder, gere
@@ -100,13 +104,15 @@
     </DialogHeader>
 
     <div
-      class="rounded-box border border-border/80 bg-foreground p-4 font-mono text-xs text-background break-all select-all flex items-center justify-between gap-3"
+      class="min-w-0 rounded-box border border-border/80 bg-foreground p-4 font-mono text-xs text-background break-all select-all flex items-center gap-3"
       data-testid="agent-token"
     >
-      <span class="tracking-wider">{data.token}</span>
+      <span class="min-w-0 break-all tracking-wider">{data.token}</span>
     </div>
 
-    <div class="rounded-box border border-border bg-muted/40 p-3 text-xs text-muted-foreground flex flex-col gap-2">
+    <div
+      class="rounded-box border border-border bg-muted/40 p-3 text-xs text-muted-foreground flex flex-col gap-2"
+    >
       <div class="flex items-center justify-between gap-2">
         <span class="font-medium text-foreground">Comando no PowerShell:</span>
         <button
@@ -117,7 +123,9 @@
           {hasCopiedCommand ? 'Copiado!' : 'Copiar comando'}
         </button>
       </div>
-      <code class="font-mono text-xs break-all select-all text-foreground bg-background p-2 rounded-box border border-border">
+      <code
+        class="block min-w-0 whitespace-normal break-all font-mono text-xs select-all text-foreground bg-background p-2 rounded-box border border-border"
+      >
         .\install-agent.ps1 -Token '{data.token}'
       </code>
     </div>
@@ -127,20 +135,24 @@
       automaticamente e aparecerá aqui com a ficha completa.
     </p>
 
-    <DialogFooter class="flex flex-col sm:flex-row gap-2">
+    <DialogFooter class="flex flex-col gap-2">
       <ActionButton
         data={{ label: 'Baixar script desta máquina' }}
-        ui={{ variant: 'secondary', icon: Download }}
+        ui={{ variant: 'secondary', icon: Download, className: 'w-full justify-center' }}
         actions={{ onClick: () => downloadScript() }}
       />
       <ActionButton
         data={{ label: hasCopied ? 'Copiado' : 'Copiar código' }}
-        ui={{ variant: 'secondary', icon: hasCopied ? Check : Copy }}
+        ui={{
+          variant: 'secondary',
+          icon: hasCopied ? Check : Copy,
+          className: 'w-full justify-center',
+        }}
         actions={{ onClick: () => void copyToken() }}
       />
       <ActionButton
         data={{ label: 'Já guardei' }}
-        ui={{ className: 'sm:w-auto' }}
+        ui={{ className: 'w-full justify-center' }}
         actions={{ onClick: actions.onClose }}
       />
     </DialogFooter>

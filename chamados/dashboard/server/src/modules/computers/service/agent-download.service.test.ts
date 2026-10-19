@@ -101,3 +101,69 @@ describe('dashboard agent download', () => {
     );
   });
 });
+
+describe('dashboard published agent versions', () => {
+  const manifest = (version: string) => ({
+    version,
+    publishedAt: '2026-10-16T12:00:00.000Z',
+    artifacts: {
+      msi: {
+        key: `agent/releases/${version}/agent.msi`,
+        sha256: 'a'.repeat(64),
+        sizeBytes: 123,
+      },
+      certificate: {
+        key: `agent/releases/${version}/publisher.cer`,
+        sha256: 'b'.repeat(64),
+        sizeBytes: 10,
+      },
+    },
+  });
+
+  function setupVersions(versions: string[]) {
+    const repository = {
+      latest: vi.fn().mockResolvedValue(manifest('1.10.0')),
+      listVersions: vi.fn().mockResolvedValue(versions),
+      manifestOf: vi.fn(async (version: string): Promise<unknown> => manifest(version)),
+    };
+    const downloadUrl = vi.fn().mockResolvedValue('https://storage.example.test/signed');
+    const service = new AgentDownloadService(
+      repository as unknown as AgentReleaseRepository,
+      { downloadUrl } as unknown as FileStorage,
+    );
+    return { service, repository, downloadUrl };
+  }
+
+  it('lists semantic versions newest first and marks the LTS', async () => {
+    const { service } = setupVersions(['1.9.0', '1.10.0', '1.0.2']);
+
+    const versions = await service.releases(person({ sistema: 'user' }));
+
+    expect(versions.map(({ version, isLts }) => [version, isLts])).toEqual([
+      ['1.10.0', true],
+      ['1.9.0', false],
+      ['1.0.2', false],
+    ]);
+  });
+
+  it('signs an artifact from an older published version', async () => {
+    const { service, downloadUrl } = setupVersions(['1.10.0', '1.0.2']);
+
+    await service.downloadVersion(person({ infra: 'user' }), 'msi', '1.0.2');
+
+    expect(downloadUrl).toHaveBeenCalledWith(
+      'agent/releases/1.0.2/agent.msi',
+      300,
+      'azuos-agent-1.0.2-x64.msi',
+    );
+  });
+
+  it('does not offer an unpublished version', async () => {
+    const { service, repository } = setupVersions([]);
+    repository.manifestOf.mockResolvedValueOnce(null);
+
+    await expect(
+      service.downloadVersion(person({ infra: 'user' }), 'msi', '9.9.9'),
+    ).rejects.toThrow('não foi publicada');
+  });
+});

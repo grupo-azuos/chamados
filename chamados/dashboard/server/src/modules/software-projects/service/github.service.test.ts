@@ -134,6 +134,45 @@ describe('GithubService', () => {
     ]);
   });
 
+  // feliz
+  it('returns only develop merge commits that have no associated pull request', async () => {
+    const service = new GithubService({} as Database);
+    vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+      if (String(url).endsWith('/pulls'))
+        return new Response(String(url).includes('def123456789') ? '[{"number":4}]' : '[]');
+      if (String(url).includes('/users/')) return new Response(JSON.stringify({ name: 'Dev' }));
+      return new Response(
+        JSON.stringify([
+          {
+            sha: 'abc123456789',
+            html_url: 'https://github.com/org/repo/commit/abc123456789',
+            commit: { message: 'Merge feature local', committer: { date: '2026-10-16T12:00:00Z' } },
+            author: { login: 'dev' },
+            parents: [{ sha: 'one' }, { sha: 'two' }],
+          },
+          {
+            sha: 'def123456789',
+            html_url: 'https://github.com/org/repo/commit/def123456789',
+            commit: { message: 'Merge pull request #4', committer: { date: '2026-10-16T13:00:00Z' } },
+            author: { login: 'dev' },
+            parents: [{ sha: 'three' }, { sha: 'four' }],
+          },
+          {
+            sha: 'ghi123456789',
+            html_url: 'https://github.com/org/repo/commit/ghi123456789',
+            commit: { message: 'regular commit' },
+            parents: [{ sha: 'five' }],
+          },
+        ]),
+      );
+    });
+
+    await expect(service.fetchLocalMerges('org', 'repo')).resolves.toMatchObject([
+      { externalId: 'abc1234', title: 'Merge feature local', author: 'dev', status: 'merged' },
+    ]);
+    expect(String(vi.mocked(fetch).mock.calls[0]?.[0])).toContain('sha=develop');
+  });
+
   it('attributes resolved issues to the closer and uses the close date', async () => {
     const service = new GithubService({} as Database);
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(

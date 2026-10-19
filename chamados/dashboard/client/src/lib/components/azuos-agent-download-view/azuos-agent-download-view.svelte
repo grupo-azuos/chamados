@@ -11,9 +11,27 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { formatDateTime } from '$lib/utils/format-date';
+  import { type AgentDownloadKind } from '@template/shared/schemas/agent-release.schema';
 
   let { data, state, actions }: AzuosAgentDownloadViewProps = $props();
+
+  const VERSION_FILES: { kind: AgentDownloadKind; label: string }[] = [
+    { kind: 'msi', label: 'MSI' },
+    { kind: 'certificate', label: 'Certificado' },
+    { kind: 'certificateScript', label: 'Script' },
+  ];
+
+  function megabytes(sizeBytes: number): string {
+    return (sizeBytes / 1024 / 1024).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+  }
+
+  function isPreparing(version: string, kind: AgentDownloadKind): boolean {
+    return state.downloadingVersion?.version === version && state.downloadingVersion.kind === kind;
+  }
+
+  const isAnyDownloading = $derived(state.downloading !== null || state.downloadingVersion !== null);
 </script>
 
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
@@ -61,7 +79,7 @@
         <ActionButton
           data={{ label: 'Baixar instalador', loadingLabel: 'Preparando…' }}
           ui={{ icon: Download }}
-          state={{ isLoading: state.downloading === 'msi', isDisabled: state.downloading !== null }}
+          state={{ isLoading: state.downloading === 'msi', isDisabled: isAnyDownloading }}
           actions={{ onClick: () => actions.onDownload('msi') }}
         />
       </div>
@@ -82,8 +100,13 @@
             Baixe o instalador MSI, o certificado e o script de instalação automática abaixo.
           </li>
           <li>
-            Clique com o botão direito no arquivo <code class="font-mono text-xs font-semibold">install-agent.ps1</code>
-            e escolha <strong>Executar com o PowerShell</strong> (ele solicitará elevação de Administrador automaticamente).
+            Se o Windows bloquear o script por não ter assinatura digital, abra o PowerShell como
+            Administrador na pasta dos arquivos e execute:
+            <code class="mt-2 block break-all rounded-box border border-border bg-muted/40 p-3 font-mono text-xs text-foreground select-all">
+              Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force; &amp; ".\install-agent.ps1"
+            </code>
+            A liberação vale só para essa janela do PowerShell. O script também pode solicitar
+            elevação pelo UAC.
           </li>
           <li>
             O script instalará o certificado e o agente em silêncio. Quando solicitado na janela,
@@ -101,7 +124,7 @@
             ui={{ variant: 'secondary', icon: Download }}
             state={{
               isLoading: state.downloading === 'certificate',
-              isDisabled: state.downloading !== null,
+              isDisabled: isAnyDownloading,
             }}
             actions={{ onClick: () => actions.onDownload('certificate') }}
           />
@@ -110,7 +133,7 @@
             ui={{ variant: 'secondary', icon: Download }}
             state={{
               isLoading: state.downloading === 'certificateScript',
-              isDisabled: state.downloading !== null,
+              isDisabled: isAnyDownloading,
             }}
             actions={{ onClick: () => actions.onDownload('certificateScript') }}
           />
@@ -121,11 +144,69 @@
         </p>
       </div>
     </section>
-    {#if state.downloadError}
-      <ErrorState
-        data={{ title: 'Não consegui preparar o download', message: state.downloadError }}
-        actions={{ onRetry: actions.onRetry }}
-      />
+  {/if}
+
+  <section
+    class="rounded-surface border border-border bg-card p-6 shadow-xs"
+    aria-label="Todas as versões"
+  >
+    <h2 class="text-foreground font-semibold">Todas as versões</h2>
+    <p class="text-muted-foreground mt-1 text-sm">
+      Até 30 versões publicadas, da mais nova para a mais antiga. Prefira a LTS.
+    </p>
+
+    {#if state.isLoadingReleases}
+      <p role="status" class="text-muted-foreground mt-4 text-sm">Consultando as versões…</p>
+    {:else if state.releasesError}
+      <div class="mt-4">
+        <ErrorState
+          data={{ title: 'Não consegui listar as versões', message: state.releasesError }}
+          ui={{ variant: 'inline' }}
+          actions={{ onRetry: actions.onRetry }}
+        />
+      </div>
+    {:else if data.releases.length === 0}
+      <p class="text-muted-foreground bg-muted/40 rounded-box mt-4 p-3 text-sm">
+        Nenhuma versão do agente foi publicada ainda.
+      </p>
+    {:else}
+      <ul class="mt-4 divide-y divide-border">
+        {#each data.releases as item (item.version)}
+          <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-foreground font-semibold">{item.version}</span>
+                {#if item.isLts}
+                  <StatusBadge data={{ label: 'LTS' }} ui={{ tone: 'success', size: 'sm' }} />
+                {/if}
+              </div>
+              <p class="text-muted-foreground mt-0.5 text-xs">
+                {formatDateTime(item.publishedAt)} · {megabytes(item.sizeBytes)} MB
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              {#each VERSION_FILES as file (file.kind)}
+                <ActionButton
+                  data={{ label: file.label, loadingLabel: 'Preparando…' }}
+                  ui={{ variant: 'secondary', size: 'sm', icon: Download }}
+                  state={{
+                    isLoading: isPreparing(item.version, file.kind),
+                    isDisabled: isAnyDownloading,
+                  }}
+                  actions={{ onClick: () => actions.onDownloadVersion(item.version, file.kind) }}
+                />
+              {/each}
+            </div>
+          </li>
+        {/each}
+      </ul>
     {/if}
+  </section>
+
+  {#if state.downloadError}
+    <ErrorState
+      data={{ title: 'Não consegui preparar o download', message: state.downloadError }}
+      actions={{ onRetry: actions.onRetry }}
+    />
   {/if}
 </div>

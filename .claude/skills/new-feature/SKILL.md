@@ -109,3 +109,11 @@ Na branch da feature, um por local, nesta ordem: `contracts` → `db` → `backe
 Trazer a develop, `verify`, fazer você mesmo o fluxo no navegador (listar, criar com erro
 de validação, corrigir, editar, excluir), mostrar à pessoa o passo a passo para conferir e
 perguntar **"Está funcionando do jeito que você queria?"**. Merge na develop só com o OK.
+
+## Identificação obrigatória
+
+Antes de executar este fluxo, siga `../participant-identity/SKILL.md`. Pergunte só o que
+falta para identificar o código/papel; nome e e-mail são opcionais. Em conta compartilhada,
+confirme o código da pessoa desta sessão e siga `docs/privacy/metrics-privacy.md`. Cada commit e merge
+leva os trailers conferidos contra `docs/project.json` do índice. Preserve commits atômicos e
+nunca use `--no-verify` para pular a identificação, inclusive em modo administrador.

@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "repository": "grupo-azuos/chamados",
+  "project_type": "application",
+  "status": null,
+  "participants": [
+    {
+      "id": "p-3f660a9404234e1eac85599e0099dc30",
+      "name": null,
+      "email": null,
+      "department": null,
+      "role": "technical",
+      "github_logins": [],
+      "git_emails": [],
+      "prior_it_experience": null,
+      "position": null
+    }
+  ],
+  "shared_accounts": [],
+  "tools": [
+    "Claude Code",
+    "VS Code",
+    "Codex"
+  ],
+  "milestones": {
+    "started_at": null,
+    "mvp_at": null,
+    "production_at": null,
+    "abandoned_at": null
+  },
+  "requirements_meetings": null,
+  "technical_blockers": [],
+  "traditional_estimate_days": null,
+  "pending_fields": [
+    "status",
+    "milestones.started_at",
+    "milestones.mvp_at",
+    "milestones.production_at",
+    "requirements_meetings",
+    "traditional_estimate_days",
+    "privacy.lawful_basis",
+    "privacy.retention_policy"
+  ],
+  "evidence": [
+    {
+      "source": "git_history",
+      "first_commit_at": "2026-09-19T17:11:16-03:00",
+      "ref": "origin/develop",
+      "note": "Data do histórico consultado; não confirma início real ou conclusão do MVP."
+    },
+    {
+      "source": "owner_confirmation",
+      "confirmed_at": "2026-10-19",
+      "note": "Papéis históricos informados pelo responsável; perfis pessoais não são publicados no cadastro atual."
+    },
+    {
+      "source": "template_documentation",
+      "path": "README.md",
+      "note": "Claude Code + VS Code são o padrão declarado no template; não prova uso em cada commit histórico."
+    },
+    {
+      "source": "current_instrumentation",
+      "tool": "Codex",
+      "note": "Ferramenta usada para instrumentar este repositório."
+    },
+    {
+      "source": "existing_privacy_notice",
+      "repository": "grupo-azuos/gestao-rh",
+      "commit": "15d42b8a2bcf700a6b2ace54828c86afdb2373f4",
+      "path": "gestao-rh/shared/src/domain/privacy-notice.util.ts",
+      "note": "Identificação do controlador e canais de privacidade recuperados do aviso versionado do Gestão RH. Bases legais e retenção de admissão/seleção não foram transferidas para as métricas."
+    },
+    {
+      "source": "owner_confirmation",
+      "confirmed_at": "2026-10-19",
+      "note": "Vinícius Gabriel Pereira Leitão confirmou ser responsável pela elaboração do relatório/artigo, mesmo para circulação interna. E-mail github@vinicius-gpl.com lido de git config user.email do clone Gestão RH; não altera o autor Git nem publica o perfil de participantes."
+    }
+  ],
+  "privacy": {
+    "commit_identity": "pseudonymous",
+    "governance_status": "pending_review",
+    "purpose": "Acompanhar a construção e evolução dos projetos, a participação técnica e de negócio, as ferramentas de IA e as intervenções, para análise interna e elaboração de relatório técnico e eventual artigo sobre desenvolvimento assistido por IA",
+    "controller": "AZUOS Assessoria Contábil LTDA",
+    "contact": "support@azuoscontabil.com.br ou contato@azuoscontabil.com.br",
+    "lawful_basis": null,
+    "retention_policy": null,
+    "repository_visibility": "public",
+    "visibility_checked_at": "2026-10-19",
+    "publication_status": "not_authorized",
+    "controller_cnpj": "18.028.812/0001-00",
+    "controller_address": "Rua S1, nº 398, Quadra 153, Lote 25, Setor Bueno, Goiânia/GO, CEP 74230-220",
+    "controller_site": "https://azuoscontabil.com.br",
+    "privacy_officer": {
+      "name": "Thyago Souza",
+      "email": "support@azuoscontabil.com.br"
+    },
+    "report_author": {
+      "name": "Vinícius Gabriel Pereira Leitão",
+      "email": "github@vinicius-gpl.com",
+      "responsibility": "Elaboração do relatório técnico e de eventual artigo sobre desenvolvimento assistido por IA, inclusive para circulação interna."
+    },
+    "controller_source": {
+      "repository": "grupo-azuos/gestao-rh",
+      "commit": "15d42b8a2bcf700a6b2ace54828c86afdb2373f4",
+      "path": "gestao-rh/shared/src/domain/privacy-notice.util.ts",
+      "notice_version": "1.0.0",
+      "scope": "controller_identity_and_privacy_contacts"
+    }
+  },
+  "technical_interventions": []
+}

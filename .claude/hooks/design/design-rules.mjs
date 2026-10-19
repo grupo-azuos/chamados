@@ -214,6 +214,15 @@ function featureOf(path) {
   return `${parts[0]}/${parts[1]}`;
 }
 
+function importerOwners(importer, folders, app, ownersOf) {
+  if (isStoryOrTest(importer.path)) return [];
+  const owner = folders.find((folder) => importer.path.startsWith(`${folder}/`));
+  if (owner) return [...ownersOf(owner)];
+  if (!importer.path.startsWith(`${routesDir(app)}/`)) return ['*'];
+
+  return [featureOf(importer.path)];
+}
+
 /**
  * Para cada componente de `lib/components`, as features que o usam — seguindo a cadeia: se
  * `dashboard-peaking` só é importado por `dashboard-view`, e `dashboard-view` só pela rota
@@ -222,6 +231,7 @@ function featureOf(path) {
  * do dashboard, e vice-versa.
  * @param {ProjectFile[]} files @returns {Map<string, Set<string>>}
  */
+
 export function featureOwners(files) {
   const libFolders = componentFolders(files).filter((folder) => {
     const app = appOf(folder);
@@ -257,19 +267,9 @@ export function featureOwners(files) {
 
     const owners = new Set();
     const app = appOf(folder);
-    for (const importer of importersOf.get(folder) ?? []) {
-      if (isStoryOrTest(importer.path)) continue;
-      const libOwner = libFolders.find((other) => importer.path.startsWith(`${other}/`));
-      if (libOwner) {
-        for (const owner of ownersOf(libOwner)) owners.add(owner);
-        continue;
-      }
-      if (!importer.path.startsWith(`${routesDir(app)}/`)) {
-        owners.add('*');
-        continue;
-      }
-      owners.add(featureOf(importer.path));
-    }
+    (importersOf.get(folder) ?? [])
+      .flatMap((importer) => importerOwners(importer, libFolders, app, ownersOf))
+      .forEach((owner) => owners.add(owner));
 
     resolving.delete(folder);
     memo.set(folder, owners);
@@ -292,30 +292,27 @@ function lineOf(content, index) {
 
 /** Uma violação por classe distinta por arquivo — a baseline conta, não lista linhas. */
 /**
- * @param {ProjectFile[]} files
+ * @param {ProjectFile} file
  * @param {string} rule
  * @param {RegExp} pattern
- * @param {(match: string, file: ProjectFile) => boolean} [allowed]
+ * @param {(match: string, file: ProjectFile) => boolean} allowed
  * @returns {Violation[]}
  */
+function fileClassViolations(file, rule, pattern, allowed) {
+  if (!isStyledSource(file.path)) return [];
+
+  return [...file.content.matchAll(pattern)]
+    .filter((match) => !allowed(match[0], file))
+    .map((match) => ({
+      rule,
+      file: file.path,
+      detail: match[0],
+      line: lineOf(file.content, match.index),
+    }));
+}
+
 function classViolations(files, rule, pattern, allowed = () => false) {
-  const out = [];
-
-  for (const file of files) {
-    if (!isStyledSource(file.path)) continue;
-
-    for (const match of file.content.matchAll(pattern)) {
-      if (allowed(match[0], file)) continue;
-      out.push({
-        rule,
-        file: file.path,
-        detail: match[0],
-        line: lineOf(file.content, match.index),
-      });
-    }
-  }
-
-  return out;
+  return files.flatMap((file) => fileClassViolations(file, rule, pattern, allowed));
 }
 
 /** @type {Rule[]} */
@@ -589,5 +586,7 @@ export function compareWithBaseline(violations, baseline) {
  * @param {Violation[]} violations @param {string} path @returns {Violation[]}
  */
 export function violationsTouching(violations, path) {
-  return violations.filter((violation) => path === violation.file || path.startsWith(`${violation.file}/`));
+  return violations.filter(
+    (violation) => path === violation.file || path.startsWith(`${violation.file}/`),
+  );
 }

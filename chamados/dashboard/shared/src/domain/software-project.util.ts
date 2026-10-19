@@ -36,12 +36,13 @@ export const SOFTWARE_PROJECT_COLOR_LABELS: Record<SoftwareProjectColor, string>
   indigo: 'Índigo',
 };
 
-export const TIMELINE_EVENT_TYPES = ['pr', 'issue', 'release', 'deploy', 'maintenance'] as const;
+export const TIMELINE_EVENT_TYPES = ['pr', 'issue', 'merge', 'release', 'deploy', 'maintenance'] as const;
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
 
 export const TIMELINE_EVENT_TYPE_LABELS: Record<TimelineEventType, string> = {
   pr: 'Pull Request',
   issue: 'Issue',
+  merge: 'Merge local',
   release: 'Versão / Release',
   deploy: 'Publicação / Deploy',
   maintenance: 'Manutenção Programada',

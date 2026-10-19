@@ -450,3 +450,5 @@ Dependência com licença que não está na lista **reprova o PR**. O caminho é
 > [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md) antes de redistribuir.
 
 O mesmo arquivo explica o pacote sem licença declarada que vem do `exceljs`.
+
+Consulte o [índice da documentação](docs/index.md) para os guias do projeto, métricas e privacidade.

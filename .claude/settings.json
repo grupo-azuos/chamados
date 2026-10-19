@@ -91,6 +91,17 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.github/scripts/project-metrics/validate-metrics.mjs\" --session-hook"
+          }
+        ]
+      }
     ]
   }
 }
