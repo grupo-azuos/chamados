@@ -3,6 +3,7 @@ import { createQuery } from '@tanstack/svelte-query';
 import {
   type AgentDownloadKind,
   type AgentLts,
+  type AgentReleaseItem,
 } from '@template/shared/schemas/agent-release.schema';
 import { agentDownloadApi } from '$lib/api/agent-download.api';
 import { readError } from '$lib/api/http-client';
@@ -10,16 +11,20 @@ import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte
 import { downloadAgentInstallerScript } from '$lib/utils/agent-installer-script.util';
 
 export type AgentDownloadModel = {
-  data: { release: AgentLts | null };
+  data: { release: AgentLts | null; releases: AgentReleaseItem[] };
   state: {
     isLoading: boolean;
     error: string | null;
     downloadError: string | null;
     downloading: AgentDownloadKind | null;
+    isLoadingReleases: boolean;
+    releasesError: string | null;
+    downloadingVersion: { version: string; kind: AgentDownloadKind } | null;
   };
   actions: {
     onRetry: () => void;
     onDownload: (kind: AgentDownloadKind) => void;
+    onDownloadVersion: (version: string, kind: AgentDownloadKind) => void;
     onDownloadInstallerScript: () => void;
   };
 };
@@ -29,12 +34,16 @@ export function useAgentDownloadModel(): AgentDownloadModel {
   const release = mirrorStore(
     createQuery({ queryKey: ['agent-lts'], queryFn: agentDownloadApi.lts, staleTime: 30_000 }),
   );
+  const releases = mirrorStore(
+    createQuery({ queryKey: ['agent-releases'], queryFn: agentDownloadApi.releases, staleTime: 30_000 }),
+  );
   let downloading = $state<AgentDownloadKind | null>(null);
+  let downloadingVersion = $state<{ version: string; kind: AgentDownloadKind } | null>(null);
   let downloadError = $state<string | null>(null);
 
   async function download(kind: AgentDownloadKind): Promise<void> {
     const version = release.current.data?.version;
-    if (!version || downloading) return;
+    if (!version || downloading || downloadingVersion) return;
     downloading = kind;
     downloadError = null;
     try {
@@ -48,9 +57,23 @@ export function useAgentDownloadModel(): AgentDownloadModel {
     }
   }
 
+  async function downloadVersion(version: string, kind: AgentDownloadKind): Promise<void> {
+    if (downloading || downloadingVersion) return;
+    downloadingVersion = { version, kind };
+    downloadError = null;
+    try {
+      const file = await agentDownloadApi.downloadVersion(kind, version);
+      triggerUrlDownload(file.url);
+    } catch (error) {
+      downloadError = readError(error);
+    } finally {
+      downloadingVersion = null;
+    }
+  }
+
   return {
     get data() {
-      return { release: release.current.data ?? null };
+      return { release: release.current.data ?? null, releases: releases.current.data ?? [] };
     },
     get state() {
       return {
@@ -58,14 +81,19 @@ export function useAgentDownloadModel(): AgentDownloadModel {
         error: readError(release.current.error),
         downloadError,
         downloading,
+        isLoadingReleases: releases.current.isPending,
+        releasesError: readError(releases.current.error),
+        downloadingVersion,
       };
     },
     actions: {
       onRetry: () => {
         downloadError = null;
         void release.current.refetch();
+        void releases.current.refetch();
       },
       onDownload: (kind) => void download(kind),
+      onDownloadVersion: (version, kind) => void downloadVersion(version, kind),
       onDownloadInstallerScript: () => {
         const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
         downloadAgentInstallerScript({ serverUrl: origin });

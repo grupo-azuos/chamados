@@ -1,7 +1,7 @@
 import { render, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('$lib/api/agent-download.api', () => ({
-  agentDownloadApi: { lts: vi.fn(), download: vi.fn() },
+  agentDownloadApi: { lts: vi.fn(), download: vi.fn(), releases: vi.fn(), downloadVersion: vi.fn() },
 }));
 vi.mock('$lib/utils/download-file.util', () => ({ triggerUrlDownload: vi.fn() }));
 vi.mock('$lib/utils/agent-installer-script.util', () => ({ downloadAgentInstallerScript: vi.fn() }));
@@ -33,6 +33,14 @@ describe('useAgentDownloadModel', () => {
     vi.mocked(agentDownloadApi.download).mockResolvedValue({
       version: '1.2.3',
       url: 'https://storage.example.test/signed',
+    });
+    vi.mocked(agentDownloadApi.releases).mockResolvedValue([
+      { version: '1.2.3', publishedAt: '2026-10-16T12:00:00.000Z', sizeBytes: 123, isLts: true },
+      { version: '1.0.2', publishedAt: '2026-09-16T12:00:00.000Z', sizeBytes: 100, isLts: false },
+    ]);
+    vi.mocked(agentDownloadApi.downloadVersion).mockResolvedValue({
+      version: '1.0.2',
+      url: 'https://storage.example.test/older',
     });
   });
   // feliz
@@ -70,5 +78,13 @@ describe('useAgentDownloadModel', () => {
     const model = await mount();
     model.actions.onDownloadInstallerScript();
     expect(downloadAgentInstallerScript).toHaveBeenCalledOnce();
+  });
+
+  it('downloads an older published version through a fresh signed link', async () => {
+    const model = await mount();
+    model.actions.onDownloadVersion('1.0.2', 'msi');
+    await waitFor(() => expect(triggerUrlDownload).toHaveBeenCalledWith('https://storage.example.test/older'));
+    expect(agentDownloadApi.downloadVersion).toHaveBeenCalledWith('msi', '1.0.2');
+    expect(model.state.downloadingVersion).toBeNull();
   });
 });
