@@ -19,6 +19,7 @@
     search: string;
     department: Department | '';
     healthStatus: HealthStatus | '';
+    onlyOnline: boolean;
     includeArchived: boolean;
   };
 
@@ -63,6 +64,7 @@
       onSearchChange: (search: string) => void;
       onDepartmentChange: (department: Department | '') => void;
       onHealthStatusChange: (healthStatus: HealthStatus | '') => void;
+      onOnlineChange: (onlyOnline: boolean) => void;
       onArchivedChange: (includeArchived: boolean) => void;
       onClearFilters: () => void;
       onRetry: () => void;
@@ -85,6 +87,7 @@
 
   /** "Arquivadas": a opção sem valor ("Ocultar") vem do `allLabel` do seletor. */
   const ARCHIVED_OPTIONS = [{ value: 'yes', label: 'Mostrar' }];
+  const CONNECTION_OPTIONS = [{ value: 'online', label: 'Online agora' }];
 
   /**
    * O nome que a pessoa reconhece.
@@ -140,6 +143,7 @@
       data.filter.search ||
       data.filter.department ||
       data.filter.healthStatus ||
+      data.filter.onlyOnline ||
       data.filter.includeArchived,
     ),
   );
@@ -151,7 +155,15 @@
 
   function filterByHealth(status: HealthStatus) {
     actions.onHealthStatusChange(data.filter.healthStatus === status ? '' : status);
+    scrollToFilters();
+  }
 
+  function filterByOnline() {
+    actions.onOnlineChange(!data.filter.onlyOnline);
+    scrollToFilters();
+  }
+
+  function scrollToFilters() {
     const prefersLessMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     filtersElement?.scrollIntoView?.({
       behavior: prefersLessMotion ? 'auto' : 'smooth',
@@ -191,10 +203,11 @@
     <StatCard
       data={{ label: 'Online agora', value: summary?.online ?? 0 }}
       ui={{ tone: 'success' }}
-      state={{ isLoading: state.isSummaryLoading }}
+      state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.onlyOnline }}
+      actions={{ onClick: filterByOnline }}
     />
     <!-- Estes dois são ATALHOS do filtro de saúde: clicar liga o mesmo filtro das pastilhas, e
-         clicar de novo desliga. "Máquinas" e "Online agora" não têm filtro correspondente. -->
+         clicar de novo desliga. "Online agora" também alterna o filtro de conexão. -->
     <StatCard
       data={{ label: 'Saúde crítica', value: summary?.critical ?? 0 }}
       ui={{ tone: 'danger' }}
@@ -243,6 +256,13 @@
           actions={{
             onChange: (value: string) => actions.onDepartmentChange(value as Department | ''),
           }}
+        />
+      </FilterField>
+      <FilterField data={{ label: 'Conexão' }}>
+        <OptionPicker
+          data={{ value: data.filter.onlyOnline ? 'online' : '', options: CONNECTION_OPTIONS }}
+          ui={{ ariaLabel: 'Filtrar por conexão', allLabel: 'Todas' }}
+          actions={{ onChange: (value) => actions.onOnlineChange(value === 'online') }}
         />
       </FilterField>
       <FilterField data={{ label: 'Saúde' }}>

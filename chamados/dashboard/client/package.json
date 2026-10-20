@@ -53,7 +53,7 @@
     "@storybook/addon-a11y": "^10.6.0",
     "@storybook/addon-svelte-csf": "^5.1.2",
     "@storybook/svelte": "^10.6.0",
-    "@storybook/svelte-vite": "^10.6.0",
+    "@storybook/sveltekit": "^10.6.0",
     "@stryker-mutator/core": "^10.0.0",
     "@stryker-mutator/vitest-runner": "^10.0.0",
     "@sveltejs/kit": "^2.70.3",

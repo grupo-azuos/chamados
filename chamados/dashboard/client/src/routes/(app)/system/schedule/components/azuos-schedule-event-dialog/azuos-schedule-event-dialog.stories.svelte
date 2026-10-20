@@ -45,3 +45,9 @@
     onClose: fn(),
   }}
 />
+
+<Story
+  name="Mobile"
+  globals={{ viewport: { value: 'celular' } }}
+  args={{ open: true, model: mockModel, projects: [], onClose: fn() }}
+/>

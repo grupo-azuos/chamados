@@ -140,6 +140,16 @@ describe('useComputerListModel', () => {
     );
   });
 
+  it('sends and clears the online-only filter', async () => {
+    const model = await mountLoadedModel();
+    model.actions.onOnlineChange(true);
+    await waitFor(() => expect(computersApi.list).toHaveBeenCalledWith(
+      expect.objectContaining({ onlyOnline: true }),
+    ));
+    model.actions.onClearFilters();
+    await waitFor(() => expect(model.data.filter.onlyOnline).toBe(false));
+  });
+
   /* Arquivada saiu de uso: só entra na consulta quando alguém pede por ela. */
   it('leaves archived machines out until they are asked for', async () => {
     const model = await mountLoadedModel();

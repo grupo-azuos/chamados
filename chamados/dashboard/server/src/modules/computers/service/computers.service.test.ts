@@ -139,6 +139,29 @@ function makeService(
 const query = (overrides: Record<string, unknown> = {}) => computerListQuerySchema.parse(overrides);
 
 describe('ComputersService.list', () => {
+  it('filters by live connections before repository pagination and counting', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [computerRow()], total: 1 });
+    const presence = new AgentPresenceService();
+    presence.connect(7, 'RECEPCAO-01');
+    const { service } = makeService({ list }, presence);
+    const onlyOnline = query({ onlyOnline: true, page: 2, pageSize: 1 });
+
+    await service.list(ana, onlyOnline);
+
+    expect(list).toHaveBeenCalledWith(onlyOnline, [7]);
+  });
+
+  // triste
+  it('passes an empty set to the repository when no agent is connected', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const { service } = makeService({ list });
+    const onlyOnline = query({ onlyOnline: true });
+
+    const page = await service.list(ana, onlyOnline);
+
+    expect(list).toHaveBeenCalledWith(onlyOnline, []);
+    expect(page.total).toBe(0);
+  });
   // feliz
   it('returns the page translated into the contract', async () => {
     const { service } = makeService({
@@ -181,6 +204,16 @@ describe('ComputersService.list', () => {
 });
 
 describe('ComputersService.exportList', () => {
+  it('applies the live connection filter to exports too', async () => {
+    const listAll = vi.fn().mockResolvedValue([computerRow()]);
+    const presence = new AgentPresenceService();
+    presence.connect(7, 'RECEPCAO-01');
+    const { service } = makeService({ listAll }, presence);
+
+    await service.exportList(ana, { format: 'pdf', onlyOnline: true });
+
+    expect(listAll).toHaveBeenCalledWith({ format: 'pdf', onlyOnline: true }, [7]);
+  });
   // feliz
   it('builds the file from every machine that matched, not only a page', async () => {
     const listAll = vi.fn().mockResolvedValue([computerRow(), computerRow({ id: 8 })]);
