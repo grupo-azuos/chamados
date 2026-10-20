@@ -65,6 +65,9 @@ describe('AzuosScheduleEventDialog', () => {
 
     expect(screen.getByText('Novo Compromisso')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /Título do compromisso/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Data' })).toHaveTextContent('18 de out. de 2026');
+    expect(screen.getByRole('button', { name: 'Início' })).toHaveTextContent('09:00');
+    expect(screen.getByRole('button', { name: 'Fim' })).toHaveTextContent('10:00');
   });
 
   it('calls onClose when close button is clicked', async () => {

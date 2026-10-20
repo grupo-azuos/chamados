@@ -21,6 +21,8 @@
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import DatePicker from '$lib/components/azuos-date-picker/azuos-date-picker.svelte';
+  import TimePicker from '$lib/components/azuos-time-picker/azuos-time-picker.svelte';
   import { type SoftwareScheduleFormModel } from '$lib/hooks/use-software-schedule-form/use-software-schedule-form.svelte';
 
   let {
@@ -42,6 +44,9 @@
   } = $props();
 
   const isEdit = $derived(model.data.mode === 'edit');
+  const id = $props.id();
+  const dateId = `${id}-date`;
+  const dateErrorId = `${dateId}-error`;
 
   const categoryOptions = SCHEDULE_EVENT_CATEGORIES.map((cat) => ({
     value: cat,
@@ -205,59 +210,60 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1.25fr_1fr_1fr]">
-        <TextField
-          data={{
-            label: 'Data',
-            name: 'date',
-            value: model.data.fields.date.value,
-            isRequired: true,
-          }}
-          ui={{ type: 'date', className: 'min-w-0' }}
-          state={{
-            error: model.data.fields.date.error,
-            isDisabled: model.state.isSubmitting,
-          }}
-          actions={{
-            onChange: (val: string) => model.actions.onChange('date', val),
-            onBlur: () => model.actions.onBlur('date'),
-          }}
-        />
+      <div class="grid grid-cols-2 gap-3">
+        <div class="col-span-2 flex min-w-0 flex-col gap-1.5">
+          <label for={dateId} class="text-sm font-medium text-ink-700">
+            Data <span class="text-destructive" aria-hidden="true">*</span>
+          </label>
+          <DatePicker
+            id={dateId}
+            name="date"
+            ariaLabel="Data"
+            value={model.data.fields.date.value}
+            disabled={model.state.isSubmitting}
+            ariaInvalid={Boolean(model.data.fields.date.error)}
+            ariaDescribedBy={model.data.fields.date.error ? dateErrorId : undefined}
+            showMonthYearSelects
+            onValueChange={(value) => model.actions.onChange('date', value ?? '')}
+            onBlur={() => model.actions.onBlur('date')}
+          />
+          {#if model.data.fields.date.error}
+            <p id={dateErrorId} role="alert" class="text-xs font-medium text-destructive">
+              {model.data.fields.date.error}
+            </p>
+          {/if}
+        </div>
 
-        <TextField
+        <TimePicker
           data={{
             label: 'Início',
             name: 'startTime',
             value: model.data.fields.startTime.value,
-            placeholder: '09:00',
             isRequired: true,
           }}
-          ui={{ type: 'time', className: 'min-w-0' }}
           state={{
             error: model.data.fields.startTime.error,
             isDisabled: model.state.isSubmitting,
           }}
           actions={{
-            onChange: (val: string) => model.actions.onChange('startTime', val),
+            onChange: (value) => model.actions.onChange('startTime', value),
             onBlur: () => model.actions.onBlur('startTime'),
           }}
         />
 
-        <TextField
+        <TimePicker
           data={{
             label: 'Fim',
             name: 'endTime',
             value: model.data.fields.endTime.value,
-            placeholder: '10:00',
             isRequired: true,
           }}
-          ui={{ type: 'time', className: 'min-w-0' }}
           state={{
             error: model.data.fields.endTime.error,
             isDisabled: model.state.isSubmitting,
           }}
           actions={{
-            onChange: (val: string) => model.actions.onChange('endTime', val),
+            onChange: (value) => model.actions.onChange('endTime', value),
             onBlur: () => model.actions.onBlur('endTime'),
           }}
         />
