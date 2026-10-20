@@ -89,7 +89,7 @@ const COMPUTER_REPORT_COLUMNS: ReportColumn<ComputerRow>[] = [
     value: (row) => healthStatusLabel(row.healthStatus),
     tone: (row) => healthStatusTone(row.healthStatus),
   },
-  { header: 'Nota de saúde', value: (row) => `${row.healthScore}/100` },
+  { header: 'Condição dos recursos', value: (row) => `${row.healthScore}/100` },
   { header: 'Situação', value: situationOf, tone: situationTone },
   { header: 'Sistema operacional', value: (row) => row.os ?? 'Não informado' },
   { header: 'Memória', value: (row) => formatMemoryReport(row.totalMemoryBytes) },

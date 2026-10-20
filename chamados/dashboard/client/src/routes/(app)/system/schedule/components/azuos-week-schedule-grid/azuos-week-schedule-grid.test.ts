@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -143,15 +143,16 @@ describe('AzuosWeekScheduleGrid', () => {
     });
     expect(screen.getByRole('button', { name: 'Filtrar por projeto' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Filtrar por autor' })).toBeInTheDocument();
-    const openTypePicker = async () => {
-      if (screen.queryByRole('group', { name: 'Filtrar por tipo' })) return;
+    const chooseType = async (label: string) => {
       await userEvent.click(screen.getByRole('button', { name: 'Filtrar por tipo' }));
+      // O jsdom não mede o popover; a lista aberta fica marcada como oculta pelo posicionador.
+      const search = await screen.findByPlaceholderText('Buscar tipo…');
+      const popup = search.closest('[data-slot="popover-content"]') as HTMLElement;
+      await fireEvent.click(within(popup).getByText(label, { exact: true }));
     };
-    await openTypePicker();
-    await userEvent.click(screen.getByRole('button', { name: 'Issues' }));
+    await chooseType('Issues');
     expect(actions.onTypeFilterChange).toHaveBeenCalledWith('issue');
-    await openTypePicker();
-    await userEvent.click(screen.getByRole('button', { name: 'Merges locais' }));
+    await chooseType('Merges locais');
     expect(actions.onTypeFilterChange).toHaveBeenCalledWith('merge');
     await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
     expect(actions.onClearFilters).toHaveBeenCalledOnce();

@@ -120,7 +120,7 @@ describe('problemSummaryOf', () => {
   /* Sem alerta e sem histórico, o que sobra é a nota — e ela é dita, não escondida. */
   it('falls back to the health score when there is nothing else to say', () => {
     expect(problemSummaryOf(machine({ activeAlerts: 0, maintenanceCount: 0 }))).toBe(
-      'Nota de saúde 63/100',
+      'Condição dos recursos 63/100',
     );
   });
 });

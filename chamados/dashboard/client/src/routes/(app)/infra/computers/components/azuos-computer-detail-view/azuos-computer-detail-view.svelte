@@ -467,7 +467,12 @@
 
   <StatCardGrid>
     <StatCard
-      data={{ label: 'Nota de saúde', value: `${computer.healthScore}/100` }}
+      data={{
+        label: 'Condição dos recursos',
+        value: `${computer.healthScore}/100`,
+        tooltip:
+          'Começa em 100 pontos. Perde 12 por aviso de atenção (RAM instalada abaixo de 8 GB, menos de 10% do disco livre ou mais de 30 dias sem reiniciar) e 25 por aviso crítico (menos de 5% do disco livre). Picos de uso de CPU e RAM aparecem nos alertas, mas não alteram esta pontuação.',
+      }}
       ui={{ tone: CARD_TONES[computer.healthStatus] }}
     />
     <!-- O rótulo muda junto com a origem do número: com o agente ligado é "agora"; com ele

@@ -58,6 +58,9 @@ Abra **<http://localhost:5005>**. A documentação da API fica em **<http://loca
 
 </details>
 
+O dashboard também pode ser instalado como PWA no Windows, Android e iPhone/iPad.
+Veja [instalação, autenticação e limites do PWA](chamados/dashboard/docs/pwa.md).
+
 ---
 
 ## Como pedir as coisas ao Claude

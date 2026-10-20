@@ -25,6 +25,17 @@
   }}
 />
 
+<Story
+  name="WithTooltip"
+  args={{
+    data: {
+      label: 'Condição dos recursos',
+      value: '100/100',
+      tooltip: 'Começa em 100 pontos e perde pontos conforme os avisos de recursos.',
+    },
+  }}
+/>
+
 <!-- Atalho de filtro: clicar no cartão filtra a lista pelo que ele conta. O selecionado ganha
      o contorno; clicar nele de novo tira o filtro. -->
 <Story name="ClickableShortcuts" args={{ data: { label: 'Total', value: 0 } }}>
