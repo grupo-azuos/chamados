@@ -104,6 +104,12 @@ describe('updateComputerSchema', () => {
 });
 
 describe('computerListQuerySchema', () => {
+  it('parses online-only filters without treating the string false as true', () => {
+    expect(computerListQuerySchema.parse({ onlyOnline: 'true' }).onlyOnline).toBe(true);
+    expect(computerListQuerySchema.parse({ onlyOnline: 'false' }).onlyOnline).toBe(false);
+    expect(computerListQuerySchema.parse({ onlyOnline: false }).onlyOnline).toBe(false);
+    expect(computerListQuerySchema.parse({}).onlyOnline).toBeUndefined();
+  });
   // feliz
   it('fills in the default page when the screen sends no filter', () => {
     const parsed = computerListQuerySchema.parse({});

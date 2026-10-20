@@ -58,12 +58,15 @@
       routeKey?: string;
       isProfileOpen?: boolean;
       areaContext?: AreaContext;
+      isSigningOut?: boolean;
+      logoutError?: string | null;
     };
     actions?: {
       onOpenProfile?: () => void;
       onCloseProfile?: () => void;
       onViewRoles?: () => void;
       onAreaContextChange?: (context: AreaContext) => void;
+      onSignOut?: () => void;
     };
     initialSidebarOpen?: boolean;
   };
@@ -81,6 +84,7 @@
   import { cn } from '$lib/utils/cn';
   import SidebarControls from '$lib/components/azuos-sidebar-controls/azuos-sidebar-controls.svelte';
   import CircleUser from '@lucide/svelte/icons/circle-user';
+  import LogOut from '@lucide/svelte/icons/log-out';
   import { BrandMark } from '$lib/components/azuos-brand-mark/azuos-brand-mark';
   import { fadeInUp } from '$lib/motion/motion';
   import {
@@ -302,10 +306,7 @@
         </SidebarMenuItem>
         {#if data?.accountUrl}
           <SidebarMenuItem>
-            <!-- NÃO HÁ "SAIR" AQUI: este sistema não tem login. Quem encerra a sessão é o
-                 admin-console, que fica na frente dele — um botão Sair aqui prometeria um efeito
-                 que a aplicação não tem como cumprir. A conta é onde a pessoa sai, troca a
-                 senha e a foto. -->
+            <!-- A conta continua no admin-console; o botão abaixo encaminha o logout a ele. -->
             <SidebarMenuButton tooltipContent={canShowTooltip ? 'Minha conta' : undefined}>
               {#snippet child({ props })}
                 <a href={data.accountUrl} {...props}>
@@ -316,7 +317,27 @@
             </SidebarMenuButton>
           </SidebarMenuItem>
         {/if}
+        {#if actions?.onSignOut}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltipContent={canShowTooltip ? 'Sair' : undefined}
+              disabled={shellState?.isSigningOut}
+              onclick={actions.onSignOut}
+              aria-label={shellState?.isSigningOut ? 'Saindo…' : 'Sair'}
+            >
+              <LogOut aria-hidden="true" />
+              <span class="group-data-[collapsible=icon]:hidden">
+                {shellState?.isSigningOut ? 'Saindo…' : 'Sair'}
+              </span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        {/if}
       </SidebarMenu>
+      {#if shellState?.logoutError}
+        <p role="alert" class="px-2 text-xs text-sidebar-foreground group-data-[collapsible=icon]:sr-only">
+          {shellState.logoutError}
+        </p>
+      {/if}
     </SidebarFooter>
 
     <!-- A borda arrastável: recolher também pela lateral, sem procurar o botão. -->

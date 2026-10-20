@@ -39,6 +39,8 @@
       /** Mantém a busca disponível mesmo com poucas opções. */
       mode?: 'auto' | 'combobox';
       searchPlaceholder?: string;
+      /** Mostra o nome completo do item escolhido no hover e no foco do combo. */
+      showSelectedTooltip?: boolean;
     };
     state?: { isDisabled?: boolean };
     actions: { onChange: (value: string) => void };
@@ -178,6 +180,7 @@
 
   import { Popover, PopoverTrigger } from '$lib/components/ui/popover';
   import PopoverContent from '$lib/components/azuos-search-popover-content/azuos-search-popover-content.svelte';
+  import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state: fieldState, actions }: AzuosOptionPickerProps = $props();
@@ -206,6 +209,30 @@
     query = '';
   }
 </script>
+
+{#snippet comboTrigger(props: Record<string, unknown>)}
+  <PopoverTrigger
+    {...props}
+    disabled={fieldState?.isDisabled}
+    aria-label={ui?.ariaLabel}
+    class={cn(
+      'control-lg',
+      'rounded-control inline-flex min-w-0 max-w-full w-full cursor-pointer items-center justify-between gap-2 border border-border/70 bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60',
+      ui?.fullWidth ? 'sm:w-full' : 'sm:w-auto sm:min-w-[180px]',
+      ui?.className,
+    )}
+  >
+    <span class="flex min-w-0 items-center gap-2">
+      {#if selectedOption?.icon}
+        <selectedOption.icon class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+      {:else if selectedOption?.tone}
+        <span class={optionDot({ tone: selectedOption.tone })} aria-hidden="true"></span>
+      {/if}
+      <span class="truncate">{selectedOption?.label ?? ui?.placeholder ?? 'Selecione'}</span>
+    </span>
+    <ChevronDownIcon class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+  </PopoverTrigger>
+{/snippet}
 
 {#if isPillMode}
   <!-- Grupo de botões num TRILHO só — uma pastilha ativa "flutuando" dentro de uma tira com
@@ -236,30 +263,27 @@
   </div>
 {:else}
   <Popover bind:open={isOpen}>
-    <PopoverTrigger
-      disabled={fieldState?.isDisabled}
-      aria-label={ui?.ariaLabel}
-      class={cn(
-        /* Os mesmos 40px do trilho de pastilhas e de todo campo: os dois modos deste componente
-           moram lado a lado numa barra de filtro e têm de alinhar. */
-        'control-lg',
-        'rounded-control inline-flex min-w-0 max-w-full w-full cursor-pointer items-center justify-between gap-2 border border-border/70 bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60',
-        ui?.fullWidth ? 'sm:w-full' : 'sm:w-auto sm:min-w-[180px]',
-        ui?.className,
-      )}
-    >
-      <!-- A bolinha do tom acompanha a opção escolhida: sem ela, ao virar lista o tipo perderia
-           a cor que tinha como pastilha. -->
-      <span class="flex min-w-0 items-center gap-2">
-        {#if selectedOption?.icon}
-          <selectedOption.icon class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-        {:else if selectedOption?.tone}
-          <span class={optionDot({ tone: selectedOption.tone })} aria-hidden="true"></span>
-        {/if}
-        <span class="truncate">{selectedOption?.label ?? ui?.placeholder ?? 'Selecione'}</span>
-      </span>
-      <ChevronDownIcon class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-    </PopoverTrigger>
+    {#if ui?.showSelectedTooltip}
+      <Tooltip.Provider delayDuration={200}>
+        <Tooltip.Root
+          disabled={isOpen || isMobile.current || !data.value || !selectedOption || fieldState?.isDisabled}
+        >
+          <Tooltip.Trigger>
+            {#snippet child({ props })}
+              {@render comboTrigger(props)}
+            {/snippet}
+          </Tooltip.Trigger>
+          <Tooltip.Content
+            role="tooltip"
+            side="top"
+            sideOffset={8}
+            class="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal break-words"
+          >{selectedOption?.label}</Tooltip.Content>
+        </Tooltip.Root>
+      </Tooltip.Provider>
+    {:else}
+      {@render comboTrigger({})}
+    {/if}
     <!-- A LARGURA DO BALÃO É AMARRADA À DO BOTÃO, entre um piso e um teto.
          Com largura fixa, ele nascia estreito sob um botão largo (e as opções saíam
          cortadas) ou largo sob um botão estreito (e o balão parecia solto, fora do lugar).

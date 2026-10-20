@@ -158,10 +158,12 @@ export class ComputersService {
   async list(user: RequestUser, query: ComputerListQuery): Promise<Paginated<ComputerListItem>> {
     assertCanRead(user.role, 'os computadores');
 
-    const page = await this.repository.list(query);
     /* Os ids online vêm de uma vez: perguntar linha a linha daria o mesmo resultado com mais
        trabalho, e a lista pode ter duzentas máquinas. */
     const online = this.presence.onlineIds();
+    const page = query.onlyOnline
+      ? await this.repository.list(query, [...online])
+      : await this.repository.list(query);
 
     return {
       items: page.rows.map((row) => toComputerListItem(row, online.has(row.id))),
@@ -179,7 +181,10 @@ export class ComputersService {
   async exportList(user: RequestUser, query: ComputerReportQuery): Promise<BuiltDocument> {
     assertCanRead(user.role, 'os computadores');
 
-    const { rows, isTruncated } = capReportRows(await this.repository.listAll(query));
+    const matching = query.onlyOnline
+      ? await this.repository.listAll(query, [...this.presence.onlineIds()])
+      : await this.repository.listAll(query);
+    const { rows, isTruncated } = capReportRows(matching);
 
     return buildReport({
       format: query.format,

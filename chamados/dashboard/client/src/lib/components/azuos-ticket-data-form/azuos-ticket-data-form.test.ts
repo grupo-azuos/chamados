@@ -1,6 +1,6 @@
 import { type Ticket } from '@template/shared/schemas/ticket.schema';
 import { TICKET_PRIORITY_LABELS } from '@template/shared/domain/ticket-status.util';
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -89,6 +89,19 @@ describe('AzuosTicketDataForm', () => {
 
     expect(given.onChange).toHaveBeenCalledWith('priority', 'low');
     expect(given.onSubmit).toHaveBeenCalledOnce();
+  });
+
+  // feliz
+  it('keeps machines searchable even when there is only one and allows clearing the link', async () => {
+    const { actions: given } = setup();
+    expect(screen.queryByRole('group', { name: 'Máquina' })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Máquina' }));
+    const search = await screen.findByPlaceholderText('Buscar máquina…');
+    const popup = search.closest('[data-slot="popover-content"]') as HTMLElement;
+    await fireEvent.click(within(popup).getByText('Nenhuma'));
+
+    expect(given.onChange).toHaveBeenCalledWith('computerId', '');
   });
 
   it('confirms the data was saved', () => {

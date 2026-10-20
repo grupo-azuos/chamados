@@ -16,6 +16,7 @@ export type ComputerListFilter = {
   search: string;
   department: Department | '';
   healthStatus: HealthStatus | '';
+  onlyOnline: boolean;
   /** Arquivadas saíram de uso: só aparecem quando alguém pede por elas. */
   includeArchived: boolean;
 };
@@ -57,6 +58,7 @@ export type ComputerListModel = {
     onSearchChange: (search: string) => void;
     onDepartmentChange: (department: Department | '') => void;
     onHealthStatusChange: (healthStatus: HealthStatus | '') => void;
+    onOnlineChange: (onlyOnline: boolean) => void;
     onArchivedChange: (includeArchived: boolean) => void;
     onClearFilters: () => void;
     onRetry: () => void;
@@ -69,6 +71,7 @@ const EMPTY_FILTER: ComputerListFilter = {
   search: '',
   department: '',
   healthStatus: '',
+  onlyOnline: false,
   includeArchived: false,
 };
 
@@ -80,6 +83,7 @@ function scopeOf(filter: ComputerListFilter) {
     search: filter.search.trim() || undefined,
     department: filter.department || undefined,
     healthStatus: filter.healthStatus || undefined,
+    onlyOnline: filter.onlyOnline || undefined,
     includeArchived: filter.includeArchived || undefined,
   };
 }
@@ -136,6 +140,7 @@ export function useComputerListModel(): ComputerListModel {
       writable({
         queryKey: [...COMPUTERS_QUERY_KEY, 'summary'],
         queryFn: () => computersApi.list({ page: 1, pageSize: MAX_PAGE_SIZE }),
+        refetchInterval: COMPUTER_NAME_REFRESH_MS,
       }),
     ),
   );
@@ -165,6 +170,7 @@ export function useComputerListModel(): ComputerListModel {
         filterStore.update((current) => ({ ...current, department })),
       onHealthStatusChange: (healthStatus) =>
         filterStore.update((current) => ({ ...current, healthStatus })),
+      onOnlineChange: (onlyOnline) => filterStore.update((current) => ({ ...current, onlyOnline })),
       onArchivedChange: (includeArchived) =>
         filterStore.update((current) => ({ ...current, includeArchived })),
       onClearFilters: () => filterStore.set({ ...EMPTY_FILTER }),
@@ -205,7 +211,12 @@ type ListQueryLike = {
 function hasAnyFilter(filter: ComputerListFilter): boolean {
   if (filter.search.trim() !== '') return true;
 
-  return filter.department !== '' || filter.healthStatus !== '' || filter.includeArchived;
+  return (
+    filter.department !== '' ||
+    filter.healthStatus !== '' ||
+    filter.includeArchived ||
+    filter.onlyOnline
+  );
 }
 
 function buildListState(

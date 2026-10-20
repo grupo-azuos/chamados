@@ -13,6 +13,7 @@ import {
   getTableColumns,
   gte,
   ilike,
+  inArray,
   isNotNull,
   isNull,
   or,
@@ -87,8 +88,8 @@ function computerColumns() {
 export class ComputersRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(query: ComputerListQuery): Promise<ComputerPage> {
-    const where = buildWhere(query);
+  async list(query: ComputerListQuery, onlineIds?: number[]): Promise<ComputerPage> {
+    const where = buildWhere(query, onlineIds);
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([
@@ -119,12 +120,12 @@ export class ComputersRepository {
    * TODO o parque que casa com o filtro, sem página — é o que o relatório baixa. Os MESMOS
    * filtros da tela, por isso reaproveita `buildWhere`.
    */
-  async listAll(query: ComputerReportQuery): Promise<ComputerRow[]> {
+  async listAll(query: ComputerReportQuery, onlineIds?: number[]): Promise<ComputerRow[]> {
     return runQuery(
       this.db
         .select()
         .from(computers)
-        .where(buildWhere(query))
+        .where(buildWhere(query, onlineIds))
         .orderBy(asc(computers.healthScore), computers.name)
         .limit(REPORT_FETCH_LIMIT),
       'listar computadores para o relatório',
@@ -299,8 +300,11 @@ type ComputerFilter = Pick<
  * A máquina arquivada fica de FORA por padrão: ela saiu de uso, e quem abre o inventário está
  * trabalhando com o que está em uso hoje.
  */
-function buildWhere(query: ComputerFilter): SQL | undefined {
+function buildWhere(query: ComputerFilter, onlineIds?: number[]): SQL | undefined {
   const filters: (SQL | undefined)[] = [];
+
+  /* Lista vazia significa que ninguém está conectado, não ausência de filtro. */
+  if (onlineIds) filters.push(onlineIds.length ? inArray(computers.id, onlineIds) : sql`false`);
 
   if (!query.includeArchived) filters.push(eq(computers.isArchived, false));
 

@@ -67,6 +67,7 @@ const emptyFilter: ComputerListFilter = {
   department: '',
   healthStatus: '',
   includeArchived: false,
+  onlyOnline: false,
 };
 
 const actions = {
@@ -74,6 +75,7 @@ const actions = {
   onDepartmentChange: vi.fn(),
   onHealthStatusChange: vi.fn(),
   onArchivedChange: vi.fn(),
+  onOnlineChange: vi.fn(),
   onClearFilters: vi.fn(),
   onRetry: vi.fn(),
   onOpen: vi.fn(),
@@ -162,7 +164,22 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     renderWithFilter();
 
     expect(screen.queryByRole('button', { name: /Máquinas:/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Online agora/ })).toBeNull();
+  });
+
+  it('filters by online status from both the card and the connection selector', async () => {
+    renderWithFilter();
+    await userEvent.click(screen.getByRole('button', { name: 'Online agora: filtrar a lista' }));
+    expect(actions.onOnlineChange).toHaveBeenLastCalledWith(true);
+    await userEvent.click(screen.getByRole('button', { name: 'Online agora' }));
+    expect(actions.onOnlineChange).toHaveBeenLastCalledWith(true);
+  });
+
+  it('marks the online card as selected and lets it clear the filter', async () => {
+    renderWithFilter({ onlyOnline: true });
+    const card = screen.getByRole('button', { name: 'Online agora: tirar o filtro' });
+    expect(card).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(card);
+    expect(actions.onOnlineChange).toHaveBeenLastCalledWith(false);
   });
 });
 

@@ -1,4 +1,4 @@
-import { type StorybookConfig } from '@storybook/svelte-vite';
+import { type StorybookConfig } from '@storybook/sveltekit';
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.svelte'],
@@ -7,7 +7,7 @@ const config: StorybookConfig = {
      que continua sendo addon — e é o que o CONTRIBUTING exige em todo primitivo. O
      addon-svelte-csf traz o formato `<Story>` que o Svelte 5 usa no lugar do CSF3 do React. */
   addons: ['@storybook/addon-a11y', '@storybook/addon-svelte-csf'],
-  framework: { name: '@storybook/svelte-vite', options: {} },
+  framework: { name: '@storybook/sveltekit', options: {} },
   core: { disableTelemetry: true },
 };
 

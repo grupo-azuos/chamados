@@ -77,6 +77,7 @@
 <script lang="ts">
   import PlusIcon from '@lucide/svelte/icons/plus';
   import XIcon from '@lucide/svelte/icons/x';
+  import LaptopIcon from '@lucide/svelte/icons/laptop';
 
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
@@ -91,7 +92,10 @@
 
   /* "Nenhuma" precisa ser uma opção de verdade: é assim que se desfaz um vínculo errado. O
      valor vazio é o que o view-model traduz de volta para nulo ao salvar. */
-  const machineOptions = $derived([{ value: '', label: 'Nenhuma' }, ...data.machines]);
+  const machineOptions = $derived([
+    { value: '', label: 'Nenhuma' },
+    ...data.machines.map((machine) => ({ ...machine, icon: LaptopIcon })),
+  ]);
   const projectOptions = $derived([{ value: '', label: 'Nenhum' }, ...(data.projects ?? [])]);
 
   /* As opções de tipo de problema dependem da ÁREA escolhida — Manutenção não tem
@@ -151,12 +155,19 @@
 
   <!-- A máquina é preenchida AQUI, e não no formulário público: quem pede socorro não sabe por
        qual nome o sistema conhece o computador dele. É este vínculo que faz a ficha da máquina
-       saber quantos problemas ela já deu. O `OptionPicker` vira busca sozinho quando passa de
-       poucas opções — achar "a da recepção" entre cinquenta é digitar "recep". -->
+       saber quantos problemas ela já deu. A busca fica disponível mesmo com poucas máquinas,
+       para que nomes longos nunca virem pastilhas altas na coluna lateral. -->
   <FilterField data={{ label: 'Máquina' }}>
     <OptionPicker
       data={{ value: fields.computerId.value, options: machineOptions }}
-      ui={{ ariaLabel: 'Máquina', placeholder: 'Nenhuma', fullWidth: true }}
+      ui={{
+        ariaLabel: 'Máquina',
+        placeholder: 'Nenhuma',
+        fullWidth: true,
+        mode: 'combobox',
+        searchPlaceholder: 'Buscar máquina…',
+        showSelectedTooltip: true,
+      }}
       state={{ isDisabled: formState?.isSubmitting }}
       actions={{ onChange: (value: string) => actions.onChange('computerId', value) }}
     />

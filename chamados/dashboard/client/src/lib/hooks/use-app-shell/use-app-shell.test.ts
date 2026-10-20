@@ -14,9 +14,14 @@ import { type AppShellModel } from './use-app-shell.svelte';
 
 /* O endereço da conta vem da API; aqui ele é fixo, para o teste não depender de rede. */
 vi.mock('$lib/api/auth.api', () => ({
-  authApi: { config: vi.fn().mockResolvedValue({ accountUrl: 'https://login.exemplo.com.br' }) },
+  authApi: {
+    config: vi.fn().mockResolvedValue({ accountUrl: 'https://login.exemplo.com.br' }),
+    logout: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
+vi.mock('$lib/utils/leave-session.util', () => ({ leaveSession: vi.fn() }));
+const { leaveSession } = await import('$lib/utils/leave-session.util');
 const { authApi } = await import('$lib/api/auth.api');
 const { goto } = await import('$app/navigation');
 const { page } = await import('$app/state');
@@ -56,10 +61,26 @@ function mountModel(
 
 beforeEach(() => {
   vi.mocked(goto).mockClear();
+  vi.mocked(leaveSession).mockClear();
+  vi.mocked(authApi.logout).mockReset().mockResolvedValue(undefined);
   openScreen('/');
 });
 
 describe('useAppShellModel contexts', () => {
+  it('ends the session before leaving the dashboard', async () => {
+    const model = mountModel();
+    model.actions.onSignOut();
+    await waitFor(() => expect(authApi.logout).toHaveBeenCalledOnce());
+    await waitFor(() => expect(leaveSession).toHaveBeenCalledOnce());
+  });
+
+  it('stays on the dashboard and exposes an error if logout fails', async () => {
+    vi.mocked(authApi.logout).mockRejectedValueOnce(new Error('Sessão indisponível.'));
+    const model = mountModel();
+    model.actions.onSignOut();
+    await waitFor(() => expect(model.state.logoutError).toBe('Sessão indisponível.'));
+    expect(leaveSession).not.toHaveBeenCalled();
+  });
   // feliz
   /* O menu é o do MÓDULO QUE MONTOU a casca, e nada mais: quem decide é a pasta do layout,
      não um filtro em tempo de execução. Infraestrutura cuida do parque de máquinas; Sistema
@@ -167,7 +188,7 @@ describe('useAppShellModel', () => {
     await waitFor(() => expect(goto).toHaveBeenCalledWith('/profile'));
   });
 
-  /* Sair não é daqui: a casca leva à conta da pessoa no admin-console. */
+  /* A conta e o encerramento da sessão continuam sendo do admin-console. */
   it('gives the address of the account at the admin-console', async () => {
     const model = mountModel();
 

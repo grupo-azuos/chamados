@@ -117,6 +117,22 @@
   </AppShell>
 </Story>
 
+<Story name="WithSignOut" asChild>
+  <AppShell data={{ user }} actions={{ ...actions, onSignOut: fn() }}>
+    <div class="p-4 text-sm">O botão Sair fica no rodapé do menu.</div>
+  </AppShell>
+</Story>
+
+<Story name="SignOutFailed" asChild>
+  <AppShell
+    data={{ user }}
+    state={{ logoutError: 'Não consegui encerrar a sessão no admin-console. Tente novamente.' }}
+    actions={{ ...actions, onSignOut: fn() }}
+  >
+    <div class="p-4 text-sm">O erro aparece no menu para permitir uma nova tentativa.</div>
+  </AppShell>
+</Story>
+
 <!-- Caso limite: conteúdo mais alto que a tela não deve empurrar o menu para fora. -->
 <Story name="TallContent">
   <AppShell data={{ user }} state={{ activeKey: 'tickets' }}>

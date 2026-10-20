@@ -276,8 +276,8 @@ describe('AzuosAppShell', () => {
     expect(screen.getByText('Visitante')).toBeInTheDocument();
   });
 
-  /* Sem login aqui, não há "Sair": a conta (e o sair) é do admin-console. */
-  it('links to the account at the admin-console instead of offering a sign out', () => {
+  /* Sem callback de encerramento, só oferece o atalho de conta que recebeu. */
+  it('links to the account when no sign-out action was supplied', () => {
     renderShell({ data: { accountUrl: 'https://login.exemplo.com.br' } });
 
     expect(screen.getByRole('link', { name: 'Minha conta' })).toHaveAttribute(
@@ -285,6 +285,22 @@ describe('AzuosAppShell', () => {
       'https://login.exemplo.com.br',
     );
     expect(screen.queryByRole('button', { name: 'Sair' })).not.toBeInTheDocument();
+  });
+
+  it('offers sign out even without an account link', async () => {
+    const onSignOut = vi.fn();
+    renderShell({ actions: { onSignOut } });
+    await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
+    expect(onSignOut).toHaveBeenCalledOnce();
+  });
+
+  it('prevents repeated logout and displays a failure when it cannot end the session', () => {
+    renderShell({
+      actions: { onSignOut: vi.fn() },
+      state: { isSigningOut: true, logoutError: 'Não consegui encerrar a sessão.' },
+    });
+    expect(screen.getByRole('button', { name: 'Saindo…' })).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Não consegui encerrar a sessão.');
   });
 
   // triste
