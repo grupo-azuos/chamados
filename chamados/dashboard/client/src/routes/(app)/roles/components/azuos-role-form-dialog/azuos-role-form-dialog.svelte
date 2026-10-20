@@ -15,6 +15,8 @@
       mode: 'create' | 'edit';
       users?: DirectoryUser[];
       fields: Record<RoleFormField, FormFieldState>;
+      contexts: RoleContext[];
+      contextsError?: string | null;
     };
     state: {
       isOpen: boolean;
@@ -25,6 +27,7 @@
     actions: {
       onChange: (field: RoleFormField, value: string) => void;
       onBlur: (field: RoleFormField) => void;
+      onContextsChange: (contexts: RoleContext[]) => void;
       onSelectUser?: (user: DirectoryUser) => void;
       onClearUser?: () => void;
       onSubmit: () => void;
@@ -155,11 +158,11 @@
           <ShieldCheck class="size-4" aria-hidden="true" />
         </span>
         <DialogTitle class="text-lg font-semibold tracking-tight">
-          Liberar módulo
+          Liberar módulos
         </DialogTitle>
       </div>
       <DialogDescription class="text-xs text-muted-foreground">
-        Escolha a pessoa e o módulo que ela passa a enxergar.
+        Escolha a pessoa e marque um ou mais módulos para liberar.
       </DialogDescription>
     </DialogHeader>
 
@@ -217,11 +220,11 @@
             </div>
           {:else}
             <div class="flex flex-col gap-2 w-full">
-              <div class="flex items-center gap-2 w-full">
+              <div class="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                 <div class="flex-1 min-w-0 relative w-full">
                   <Popover bind:open={isComboboxOpen}>
                     <PopoverTrigger
-                      disabled={formState.isLoadingUsers}
+                      disabled={formState.isLoadingUsers || formState.isSubmitting}
                       style="width: 100%;"
                       class={cn(
                         'control-lg rounded-control',
@@ -239,7 +242,7 @@
                             ui={{ size: 'md' }}
                           />
                           <div class="min-w-0">
-                            <div class="flex items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                               <span class="block text-xs font-semibold text-foreground truncate">
                                 {selectedUser?.name || fields.userEmail.value || fields.userId.value}
                               </span>
@@ -398,10 +401,11 @@
                 </div>
 
                 {#if fields.userId.value}
-                  <div class="shrink-0">
+                  <div class="shrink-0 self-start sm:self-auto">
                     <ActionButton
                       data={{ label: 'Trocar pessoa' }}
                       ui={{ variant: 'ghost', size: 'lg' }}
+                      state={{ isDisabled: formState.isSubmitting }}
                       actions={{ onClick: handleClear }}
                     />
                   </div>
@@ -418,25 +422,34 @@
         <!-- Etapa 2: Área / Contexto -->
         <TimelineStep
           data={{
-            title: 'Módulo',
-            description: 'Qual parte do sistema a pessoa passa a enxergar.',
+            title: 'Módulos',
+            description: 'Selecione um ou mais. Os acessos já liberados são preservados.',
             icon: Layers,
           }}
           ui={{ isLast: true, tone: 'neutral' }}
         >
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div
+            role="group"
+            aria-label="Módulos para liberar"
+            aria-describedby={data.contextsError ? 'role-contexts-error' : undefined}
+            class="grid grid-cols-1 sm:grid-cols-3 gap-2.5"
+          >
             {#each ROLE_CONTEXTS as ctx (ctx)}
-              {@const isSelected = fields.context.value === ctx}
+              {@const isSelected = data.contexts.includes(ctx)}
               <button
                 type="button"
-                disabled={isEdit}
-                onclick={() => actions.onChange('context', ctx)}
+                disabled={isEdit || formState.isSubmitting}
+                aria-pressed={isSelected}
+                aria-invalid={Boolean(data.contextsError)}
+                onclick={() => actions.onContextsChange(
+                  isSelected ? data.contexts.filter((context) => context !== ctx) : [...data.contexts, ctx],
+                )}
                 class={cn(
                   'flex flex-col items-start gap-1 p-3 rounded-box border text-left transition-colors',
                   isSelected
                     ? 'border-primary bg-primary/5 ring-1 ring-primary'
                     : 'border-border bg-card hover:bg-muted/40',
-                  isEdit && 'opacity-60 cursor-not-allowed',
+                  (isEdit || formState.isSubmitting) && 'opacity-60 cursor-not-allowed',
                 )}
               >
                 <div class="flex w-full items-center justify-between">
@@ -453,6 +466,14 @@
               </button>
             {/each}
           </div>
+
+          {#if data.contextsError}
+            <p id="role-contexts-error" role="alert" class="text-xs text-destructive">{data.contextsError}</p>
+          {:else}
+            <p aria-live="polite" class="text-xs text-muted-foreground">
+              {data.contexts.length === 0 ? 'Nenhum módulo selecionado.' : data.contexts.length === 1 ? '1 módulo selecionado.' : `${data.contexts.length} módulos selecionados.`}
+            </p>
+          {/if}
 
           <!-- O nível NÃO se escolhe aqui: ele vem do papel da pessoa no admin-console. -->
           <div
@@ -480,7 +501,7 @@
         />
         <SubmitButton
           data={{
-            label: 'Liberar módulo',
+            label: data.contexts.length === 1 ? 'Liberar módulo' : data.contexts.length > 1 ? `Liberar ${data.contexts.length} módulos` : 'Liberar módulos',
             loadingLabel: 'Salvando…',
           }}
           state={{ isLoading: formState.isSubmitting }}

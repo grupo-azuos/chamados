@@ -6,7 +6,7 @@ import Harness from './use-role-form-harness.test.svelte';
 import { type RoleFormModel } from './use-role-form.svelte';
 
 vi.mock('$lib/api/roles.api', () => ({
-  rolesApi: { assign: vi.fn(), listUsers: vi.fn().mockResolvedValue([]) },
+  rolesApi: { assignMany: vi.fn(), listUsers: vi.fn().mockResolvedValue([]) },
 }));
 
 const { rolesApi } = await import('$lib/api/roles.api');
@@ -37,7 +37,7 @@ function mountModel(role: InternalRole | null = null, onSaved = vi.fn()): RoleFo
 
 describe('useRoleFormModel', () => {
   beforeEach(() => {
-    vi.mocked(rolesApi.assign).mockReset().mockResolvedValue(ROLE);
+    vi.mocked(rolesApi.assignMany).mockReset().mockResolvedValue([ROLE]);
   });
 
   // feliz
@@ -46,7 +46,7 @@ describe('useRoleFormModel', () => {
 
     expect(model.data.mode).toBe('create');
     expect(model.data.fields.userId.value).toBe('');
-    expect(model.data.fields.context.value).toBe('sistema');
+    expect(model.data.contexts).toEqual([]);
   });
 
   it('selects and clears user with dedicated actions', () => {
@@ -72,7 +72,7 @@ describe('useRoleFormModel', () => {
     expect(model.data.mode).toBe('edit');
     expect(model.data.fields.userId.value).toBe('usr_1');
     expect(model.data.fields.userEmail.value).toBe('ana@empresa.com.br');
-    expect(model.data.fields.context.value).toBe('manutencao');
+    expect(model.data.contexts).toEqual(['manutencao']);
   });
 
   it('submits valid assignment data and calls onSaved', async () => {
@@ -81,21 +81,46 @@ describe('useRoleFormModel', () => {
 
     model.actions.onChange('userId', 'usr_novo');
     model.actions.onChange('userEmail', 'novo@empresa.com.br');
-    model.actions.onChange('context', 'infra');
+    model.actions.onContextsChange(['infra', 'sistema']);
 
     model.actions.onSubmit();
 
     await waitFor(() => {
-      expect(rolesApi.assign).toHaveBeenCalledWith({
+      expect(rolesApi.assignMany).toHaveBeenCalledWith({
         userId: 'usr_novo',
         userEmail: 'novo@empresa.com.br',
-        context: 'infra',
+        contexts: ['infra', 'sistema'],
       });
       expect(onSaved).toHaveBeenCalled();
     });
   });
 
   // triste
+  it('rejects a submission without selected modules', async () => {
+    const model = mountModel(null);
+    model.actions.onSelectUser({ id: 'usr_novo', name: 'Pessoa Nova', email: 'novo@empresa.com.br' });
+    model.actions.onSubmit();
+
+    await waitFor(() => {
+      expect(model.data.contextsError).toBe('Selecione pelo menos um módulo');
+      expect(rolesApi.assignMany).not.toHaveBeenCalled();
+    });
+  });
+
+  it('keeps all selections and stays open after a failed save', async () => {
+    vi.mocked(rolesApi.assignMany).mockRejectedValue(new Error('Network failed'));
+    const onSaved = vi.fn();
+    const model = mountModel(null, onSaved);
+    model.actions.onSelectUser({ id: 'usr_novo', name: 'Pessoa Nova', email: 'novo@empresa.com.br' });
+    model.actions.onContextsChange(['infra', 'sistema', 'manutencao']);
+    model.actions.onSubmit();
+
+    await waitFor(() => expect(model.state.error).toBeTruthy());
+    expect(model.data.contexts).toEqual(['infra', 'sistema', 'manutencao']);
+    expect(model.data.fields.userId.value).toBe('usr_novo');
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
   it('shows error on empty userId submit', async () => {
     const model = mountModel(null);
 
@@ -103,7 +128,7 @@ describe('useRoleFormModel', () => {
 
     await waitFor(() => {
       expect(model.data.fields.userId.error).toBeTruthy();
-      expect(rolesApi.assign).not.toHaveBeenCalled();
+      expect(rolesApi.assignMany).not.toHaveBeenCalled();
     });
   });
 });

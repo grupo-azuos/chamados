@@ -7,15 +7,14 @@ import RoleFormDialog, { type AzuosRoleFormDialogProps } from './azuos-role-form
 const fields = {
   userId: { value: '', error: null },
   userEmail: { value: '', error: null },
-  context: { value: 'sistema', error: null },
 };
 
 function renderDialog(overrides: Partial<AzuosRoleFormDialogProps> = {}) {
-  const actions = { onChange: vi.fn(), onBlur: vi.fn(), onSubmit: vi.fn(), onClose: vi.fn() };
+  const actions = { onContextsChange: vi.fn(), onChange: vi.fn(), onBlur: vi.fn(), onSubmit: vi.fn(), onClose: vi.fn() };
 
   render(RoleFormDialog, {
     props: {
-      data: { mode: 'create', fields },
+      data: { mode: 'create', fields, contexts: [] },
       state: { isOpen: true },
       actions,
       ...overrides,
@@ -30,9 +29,9 @@ describe('AzuosRoleFormDialog', () => {
   it('renders title for create mode and triggers submit', async () => {
     const actions = renderDialog();
 
-    expect(screen.getByRole('heading', { name: 'Liberar módulo' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Liberar módulos' })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Liberar módulo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Liberar módulos' }));
     expect(actions.onSubmit).toHaveBeenCalledOnce();
   });
 
@@ -40,7 +39,16 @@ describe('AzuosRoleFormDialog', () => {
     const actions = renderDialog();
 
     await userEvent.click(screen.getByRole('button', { name: /Infraestrutura/i }));
-    expect(actions.onChange).toHaveBeenCalledWith('context', 'infra');
+    expect(actions.onContextsChange).toHaveBeenCalledWith(['infra']);
+  });
+
+  it('keeps the other selections when a module is removed', async () => {
+    const actions = renderDialog({ data: { mode: 'create', fields, contexts: ['infra', 'sistema'] } });
+
+    expect(screen.getByRole('button', { name: /Sistema/i })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(screen.getByRole('button', { name: /Infraestrutura/i }));
+    expect(actions.onContextsChange).toHaveBeenCalledWith(['sistema']);
+    expect(screen.getByRole('button', { name: 'Liberar 2 módulos' })).toBeInTheDocument();
   });
 
   /* O nível não se escolhe aqui: ele vem do papel no admin-console. */
@@ -52,7 +60,7 @@ describe('AzuosRoleFormDialog', () => {
   });
 
   it('disables context selection in edit mode', () => {
-    renderDialog({ data: { mode: 'edit', fields } });
+    renderDialog({ data: { mode: 'edit', fields, contexts: ['sistema'] } });
 
     const infraBtn = screen.getByRole('button', { name: /Infraestrutura/i });
     expect(infraBtn).toBeDisabled();
@@ -78,7 +86,7 @@ describe('AzuosRoleFormDialog', () => {
     ];
 
     const actions = renderDialog({
-      data: { mode: 'create', users: mockUsers, fields },
+      data: { mode: 'create', users: mockUsers, fields, contexts: [] },
     });
 
     // Clica no combobox para abrir as opções
@@ -99,7 +107,7 @@ describe('AzuosRoleFormDialog', () => {
     ];
 
     renderDialog({
-      data: { mode: 'create', users: mockUsers, fields },
+      data: { mode: 'create', users: mockUsers, fields, contexts: [] },
     });
 
     await userEvent.click(screen.getByRole('button', { name: /Selecionar pessoa da lista/i }));
@@ -124,6 +132,7 @@ describe('AzuosRoleFormDialog', () => {
       data: {
         mode: 'create',
         fields: selectedFields,
+        contexts: [],
         users: [{ id: 'usr_carlos', name: 'Carlos Oliveira', email: 'carlos@empresa.com.br' }],
       },
     });

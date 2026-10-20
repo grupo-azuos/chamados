@@ -1,5 +1,6 @@
 import {
   type AssignRoleInput,
+  type AssignRolesInput,
   type InternalRole,
 } from '@template/shared/schemas/internal-role.schema';
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
@@ -18,6 +19,9 @@ export const rolesApi = {
     apiRequest<InternalRole[]>(`/roles/user/${encodeURIComponent(identifier)}`),
 
   assign: (body: AssignRoleInput) => apiRequest<InternalRole>('/roles', { method: 'POST', body }),
+
+  assignMany: (body: AssignRolesInput) =>
+    apiRequest<InternalRole[]>('/roles/batch', { method: 'POST', body }),
 
   remove: (id: number) => apiRequest<void>(`/roles/${id}`, { method: 'DELETE' }),
 };
