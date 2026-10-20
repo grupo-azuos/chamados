@@ -81,6 +81,24 @@
   </AppShell>
 </Story>
 
+<!-- No celular, abra o menu para ver uma linha por módulo, com ícone e nome. -->
+<Story name="MobileAreaContext" globals={{ viewport: { value: 'celular', isRotated: false } }}>
+  <AppShell
+    data={{
+      user,
+      areaOptions: [
+        { value: 'infra', label: 'Infraestrutura', icon: Server },
+        { value: 'sistema', label: 'Sistema', icon: Cpu },
+        { value: 'manutencao', label: 'Manutenção', icon: Wrench },
+      ],
+    }}
+    state={{ areaContext: 'infra' }}
+    {actions}
+  >
+    <div class="text-ink-700 p-8 text-sm">Abra o menu para escolher um módulo pelo nome.</div>
+  </AppShell>
+</Story>
+
 <!-- Com a foto do admin-console no rodapé, no lugar das iniciais. -->
 <Story name="WithAvatar">
   <AppShell
