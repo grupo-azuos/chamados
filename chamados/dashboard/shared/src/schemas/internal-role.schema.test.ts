@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { assignRoleSchema, internalRoleSchema } from './internal-role.schema';
+import { assignRoleSchema, assignRolesSchema, internalRoleSchema } from './internal-role.schema';
 
 describe('internalRoleSchema', () => {
   // feliz
@@ -58,5 +58,27 @@ describe('assignRoleSchema', () => {
 
   it('refuses an assignment without a person', () => {
     expect(assignRoleSchema.safeParse({ userId: '', context: 'infra' }).success).toBe(false);
+  });
+});
+
+
+describe('assignRolesSchema', () => {
+  // feliz
+  it('accepts multiple modules for the same person without taking a role from the body', () => {
+    const parsed = assignRolesSchema.parse({ userId: 'usr_1', userEmail: 'ana@empresa.com.br',
+      contexts: ['infra', 'sistema'], role: 'superadmin' });
+    expect(parsed.contexts).toEqual(['infra', 'sistema']);
+    expect(parsed).not.toHaveProperty('role');
+  });
+
+  // triste
+  it('requires an explicit nonempty selection', () => {
+    expect(assignRolesSchema.safeParse({ userId: 'usr_1', contexts: [] }).success).toBe(false);
+    expect(assignRolesSchema.safeParse({ userId: 'usr_1' }).success).toBe(false);
+  });
+
+  it('rejects duplicates and unknown modules', () => {
+    expect(assignRolesSchema.safeParse({ userId: 'usr_1', contexts: ['infra', 'infra'] }).success).toBe(false);
+    expect(assignRolesSchema.safeParse({ userId: 'usr_1', contexts: ['infra', 'financeiro'] }).success).toBe(false);
   });
 });

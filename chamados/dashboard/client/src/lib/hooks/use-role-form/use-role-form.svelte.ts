@@ -1,11 +1,11 @@
 import { createForm } from '@tanstack/svelte-form';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import {
-  assignRoleSchema,
-  type AssignRoleInput,
+  assignRolesSchema,
+  type AssignRolesInput,
   type InternalRole,
 } from '@template/shared/schemas/internal-role.schema';
-import { type DirectoryUser } from '@template/shared/schemas/user.schema';
+import { type DirectoryUser, type RoleContext } from '@template/shared/schemas/user.schema';
 
 import { readError } from '$lib/api/http-client';
 import { rolesApi } from '$lib/api/roles.api';
@@ -14,18 +14,21 @@ import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte
 import { ROLES_QUERY_KEY } from '$lib/hooks/use-roles/use-roles.svelte';
 import { type FormFieldState } from '$lib/types/form-field.type';
 
-export type RoleFormField = 'userId' | 'userEmail' | 'context';
+export type RoleFormField = 'userId' | 'userEmail';
 
 export type RoleFormModel = {
   data: {
     mode: 'create' | 'edit';
     users: DirectoryUser[];
     fields: Record<RoleFormField, FormFieldState>;
+    contexts: RoleContext[];
+    contextsError: string | null;
   };
   state: { isSubmitting: boolean; isLoadingUsers: boolean; error: string | null };
   actions: {
     onChange: (field: RoleFormField, value: string) => void;
     onBlur: (field: RoleFormField) => void;
+    onContextsChange: (contexts: RoleContext[]) => void;
     onSelectUser: (user: DirectoryUser) => void;
     onClearUser: () => void;
     onSubmit: () => void;
@@ -43,7 +46,7 @@ export function useRoleFormModel({
 
   const save = mirrorStore(
     createMutation({
-      mutationFn: (values: AssignRoleInput) => rolesApi.assign(values),
+      mutationFn: (values: AssignRolesInput) => rolesApi.assignMany(values),
       onSuccess: async () => {
         await queryClient.invalidateQueries({ queryKey: ROLES_QUERY_KEY });
         onSaved();
@@ -60,8 +63,8 @@ export function useRoleFormModel({
 
   const form = createForm(() => ({
     defaultValues: toFormValues(role ?? null),
-    validators: { onChange: assignRoleSchema },
-    onSubmit: ({ value }: { value: AssignRoleInput }) => {
+    validators: { onChange: assignRolesSchema },
+    onSubmit: ({ value }: { value: AssignRolesInput }) => {
       save.current.mutate(value);
     },
   }));
@@ -86,12 +89,13 @@ export function useRoleFormModel({
             fieldMeta.current.userEmail,
             isSubmitted.current,
           ),
-          context: toFieldState(
-            values.current.context,
-            fieldMeta.current.context,
-            isSubmitted.current,
-          ),
         },
+        contexts: values.current.contexts,
+        contextsError: toFieldState(
+          values.current.contexts,
+          fieldMeta.current.contexts,
+          isSubmitted.current,
+        ).error,
       };
     },
     get state() {
@@ -106,6 +110,11 @@ export function useRoleFormModel({
       onBlur: (field) => {
         form.setFieldMeta(field, (prev) => ({ ...prev, isTouched: true }));
         void form.validateField(field, 'change');
+      },
+      onContextsChange: (contexts) => {
+        form.setFieldValue('contexts', contexts);
+        form.setFieldMeta('contexts', (prev) => ({ ...prev, isTouched: true }));
+        void form.validateField('contexts', 'change');
       },
       onSelectUser: (user) => {
         form.setFieldValue('userId', user.id);
@@ -122,18 +131,18 @@ export function useRoleFormModel({
   };
 }
 
-function toFormValues(role: InternalRole | null): AssignRoleInput {
+function toFormValues(role: InternalRole | null): AssignRolesInput {
   if (!role) {
     return {
       userId: '',
       userEmail: '',
-      context: 'sistema',
+      contexts: [],
     };
   }
 
   return {
     userId: role.userId,
-    userEmail: role.userEmail || '',
-    context: role.context,
+    userEmail: role.userEmail ?? null,
+    contexts: [role.context],
   };
 }

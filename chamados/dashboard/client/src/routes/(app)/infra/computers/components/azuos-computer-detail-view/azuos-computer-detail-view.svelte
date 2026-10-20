@@ -242,7 +242,18 @@
 </script>
 
 <script lang="ts">
+  import Archive from '@lucide/svelte/icons/archive';
+  import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import Building2 from '@lucide/svelte/icons/building-2';
+  import CircleCheck from '@lucide/svelte/icons/circle-check';
+  import Cpu from '@lucide/svelte/icons/cpu';
+  import HardDrive from '@lucide/svelte/icons/hard-drive';
+  import LockKeyhole from '@lucide/svelte/icons/lock-keyhole';
+  import LockKeyholeOpen from '@lucide/svelte/icons/lock-keyhole-open';
+  import MemoryStick from '@lucide/svelte/icons/memory-stick';
+  import ShieldCheck from '@lucide/svelte/icons/shield-check';
+  import UserRound from '@lucide/svelte/icons/user-round';
   import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
   import KeyRound from '@lucide/svelte/icons/key-round';
   import Pencil from '@lucide/svelte/icons/pencil';
@@ -251,6 +262,7 @@
   import Wrench from '@lucide/svelte/icons/wrench';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import ComputerLivePanel from '../azuos-computer-live-panel/azuos-computer-live-panel.svelte';
   import ComputerProcessTable from '../azuos-computer-process-table/azuos-computer-process-table.svelte';
@@ -330,121 +342,102 @@
     actions={{ onClick: actions.onBack }}
   />
 
-  <PageHeader
-    data={{
-      title: computer.displayName?.trim() || computer.hardware?.hostname?.trim() || computer.name,
-      description: `${computer.hardware?.hostname?.trim() || computer.name} · ${computer.department ? departmentLabel(computer.department) : 'Sem departamento'} · ${computer.responsibleName ?? 'Sem responsável'}`,
-    }}
-  >
-    {#if disposed}
-      <ActionButton
-        data={{ label: 'Voltar ao inventário' }}
-        ui={{ variant: 'secondary', icon: Undo2 }}
-        state={{ isDisabled: viewState?.isSaving }}
-        actions={{ onClick: () => (pending = 'restore') }}
-      />
-    {:else}
-      <ActionButton
-        data={{ label: 'Editar identificação' }}
-        ui={{ variant: 'secondary', icon: Pencil }}
-        state={{ isDisabled: viewState?.isSaving }}
-        actions={{ onClick: actions.onEdit }}
-      />
-      <ActionButton
-        data={{ label: 'Gerar token novo' }}
-        ui={{ variant: 'secondary', icon: KeyRound }}
-        state={{ isDisabled: viewState?.isSaving }}
-        actions={{ onClick: () => (pending = 'token') }}
-      />
-      <!-- Transferir só faz sentido para máquina em uso: arquivada e descartada não estão na
-           mesa de ninguém para mudar de sala. -->
-      {#if !computer.isArchived}
+  <section aria-label="Identificação do computador" class="bg-card rounded-surface min-w-0 border p-4 shadow-xs sm:p-5">
+    <PageHeader
+      data={{
+        title: computer.displayName?.trim() || computer.hardware?.hostname?.trim() || computer.name,
+        description: computer.hardware?.hostname?.trim() || computer.name,
+      }}
+      ui={{ className: 'sm:items-start [&>div:first-child]:flex-1' }}
+    >
+      {#if disposed}
         <ActionButton
-          data={{ label: 'Transferir' }}
-          ui={{ variant: 'secondary', icon: ArrowLeftRight }}
+          data={{ label: 'Voltar ao inventário' }}
+          ui={{ variant: 'secondary', icon: Undo2 }}
           state={{ isDisabled: viewState?.isSaving }}
-          actions={{ onClick: actions.onTransfer }}
+          actions={{ onClick: () => (pending = 'restore') }}
+        />
+      {:else}
+        <ActionButton
+          data={{ label: 'Editar identificação' }}
+          ui={{ variant: 'primary', icon: Pencil }}
+          state={{ isDisabled: viewState?.isSaving }}
+          actions={{ onClick: actions.onEdit }}
+        />
+        {#if !computer.isArchived}
+          <ActionButton
+            data={{ label: 'Transferir' }}
+            ui={{ variant: 'secondary', icon: ArrowLeftRight }}
+            state={{ isDisabled: viewState?.isSaving }}
+            actions={{ onClick: actions.onTransfer }}
+          />
+        {/if}
+        <ActionMenu
+          data={{ label: 'Mais ações', items: [
+            { id: 'token', label: 'Gerar token novo', icon: KeyRound },
+            { id: computer.isBlocked ? 'unblock' : 'block', label: computer.isBlocked ? 'Desbloquear' : 'Bloquear', icon: computer.isBlocked ? LockKeyholeOpen : LockKeyhole },
+            { id: computer.isArchived ? 'unarchive' : 'archive', label: computer.isArchived ? 'Tirar do arquivo' : 'Arquivar', icon: computer.isArchived ? ArchiveRestore : Archive },
+            ...(!computer.isArchived ? [{ id: 'dispose', label: 'Descartar', icon: Trash2, isDestructive: true, separatorBefore: true }] : []),
+          ] }}
+          state={{ isDisabled: viewState?.isSaving }}
+          actions={{ onSelect: (id) => (pending = id as typeof pending) }}
         />
       {/if}
-    {/if}
-    {#if disposed}
-      <!-- Descartada: nada de bloquear nem arquivar. A única ação é desfazer. -->
-    {:else if computer.isBlocked}
-      <ActionButton
-        data={{ label: 'Desbloquear' }}
-        ui={{ variant: 'secondary' }}
-        state={{ isDisabled: viewState?.isSaving }}
-        actions={{ onClick: () => (pending = 'unblock') }}
+    </PageHeader>
+
+    <dl class="mt-5 grid gap-4 sm:grid-cols-2">
+      <div class="flex min-w-0 items-start gap-2.5">
+        <Building2 class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <div class="min-w-0">
+          <dt class="text-ink-500 text-xs">Departamento</dt>
+          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computer.department ? departmentLabel(computer.department) : 'Sem departamento'}</dd>
+        </div>
+      </div>
+      <div class="flex min-w-0 items-start gap-2.5">
+        <UserRound class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <div class="min-w-0">
+          <dt class="text-ink-500 text-xs">Responsável</dt>
+          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computer.responsibleName ?? 'Sem responsável'}</dd>
+        </div>
+      </div>
+    </dl>
+
+    <div class="border-border/60 mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
+      <StatusBadge
+        data={{ label: healthStatusLabel(computer.healthStatus) }}
+        ui={{ tone: healthStatusTone(computer.healthStatus) }}
       />
-    {:else}
-      <ActionButton
-        data={{ label: 'Bloquear' }}
-        ui={{ variant: 'secondary' }}
-        state={{ isDisabled: viewState?.isSaving }}
-        actions={{ onClick: () => (pending = 'block') }}
-      />
-    {/if}
-    {#if disposed}
-      <!-- Já saiu de uso: arquivar não teria o que fazer. -->
-    {:else if computer.isArchived}
-      <ActionButton
-        data={{ label: 'Tirar do arquivo' }}
-        ui={{ variant: 'secondary' }}
-        state={{ isDisabled: viewState?.isSaving }}
-        actions={{ onClick: () => (pending = 'unarchive') }}
-      />
-    {:else}
-      <ActionButton
-        data={{ label: 'Arquivar' }}
-        ui={{ variant: 'secondary' }}
-        state={{ isDisabled: viewState?.isSaving }}
-        actions={{ onClick: () => (pending = 'archive') }}
-      />
-      <!-- Descartar é a decisão pesada: sai de uso de vez, com motivo. Arquivar é a leve. -->
-      <ActionButton
-        data={{ label: 'Descartar' }}
-        ui={{ variant: 'danger', icon: Trash2 }}
-        state={{ isDisabled: viewState?.isSaving }}
-        actions={{ onClick: () => (pending = 'dispose') }}
-      />
-    {/if}
-  </PageHeader>
+      {#if disposed && computer.disposalType}
+        <StatusBadge
+          data={{ label: `Descartada · ${disposalTypeLabel(computer.disposalType)}` }}
+          ui={{ tone: disposalTypeTone(computer.disposalType) }}
+        />
+      {/if}
+      {#if computer.isArchived}
+        <StatusBadge data={{ label: 'Arquivada' }} ui={{ tone: 'neutral' }} />
+      {/if}
+      {#if computer.isBlocked}
+        <StatusBadge data={{ label: 'Bloqueada' }} ui={{ tone: 'danger' }} />
+      {/if}
+      {#if computer.isOnline}
+        <StatusBadge data={{ label: 'Online' }} ui={{ tone: 'success' }} />
+      {:else}
+        <StatusBadge data={{ label: 'Offline' }} ui={{ tone: 'neutral' }} />
+      {/if}
+      <span class="text-ink-500 w-full text-xs sm:ml-auto sm:w-auto">
+        Vista {formatTimeAgo(computer.lastSeenAt)}
+        {#if computer.lastSeenAt}
+          · {formatDateTime(computer.lastSeenAt)}
+        {/if}
+      </span>
+    </div>
+  </section>
 
   <!-- A falha de uma AÇÃO aparece aqui em cima, em vermelho, e fica até resolver: gravação
        que falha calada vira "o sistema não salva" (CONTRIBUTING §15). -->
   {#if viewState?.actionError}
     <ErrorState data={{ title: 'Não consegui salvar', message: viewState.actionError }} />
   {/if}
-
-  <div class="flex flex-wrap items-center gap-2">
-    <StatusBadge
-      data={{ label: healthStatusLabel(computer.healthStatus) }}
-      ui={{ tone: healthStatusTone(computer.healthStatus) }}
-    />
-    {#if disposed && computer.disposalType}
-      <StatusBadge
-        data={{ label: `Descartada · ${disposalTypeLabel(computer.disposalType)}` }}
-        ui={{ tone: disposalTypeTone(computer.disposalType) }}
-      />
-    {/if}
-    {#if computer.isArchived}
-      <StatusBadge data={{ label: 'Arquivada' }} ui={{ tone: 'neutral' }} />
-    {/if}
-    {#if computer.isBlocked}
-      <StatusBadge data={{ label: 'Bloqueada' }} ui={{ tone: 'danger' }} />
-    {/if}
-    {#if computer.isOnline}
-      <StatusBadge data={{ label: 'Online' }} ui={{ tone: 'success' }} />
-    {:else}
-      <StatusBadge data={{ label: 'Offline' }} ui={{ tone: 'neutral' }} />
-    {/if}
-    <span class="text-ink-500 text-xs">
-      Vista {formatTimeAgo(computer.lastSeenAt)}
-      {#if computer.lastSeenAt}
-        · {formatDateTime(computer.lastSeenAt)}
-      {/if}
-    </span>
-  </div>
 
   {#if disposed && computer.disposalType}
     <p class="text-ink-700 bg-muted rounded-box border px-3 py-2 text-sm">
@@ -465,32 +458,33 @@
     </p>
   {/if}
 
-  <StatCardGrid>
+  <StatCardGrid ui={{ className: 'lg:grid-cols-2 xl:grid-cols-4' }}>
     <StatCard
       data={{
         label: 'Condição dos recursos',
         value: `${computer.healthScore}/100`,
+        hint: 'Capacidade e condição da máquina',
         tooltip:
           'Começa em 100 pontos. Perde 12 por aviso de atenção (RAM instalada abaixo de 8 GB, menos de 10% do disco livre ou mais de 30 dias sem reiniciar) e 25 por aviso crítico (menos de 5% do disco livre). Picos de uso de CPU e RAM aparecem nos alertas, mas não alteram esta pontuação.',
       }}
-      ui={{ tone: CARD_TONES[computer.healthStatus] }}
+      ui={{ tone: CARD_TONES[computer.healthStatus], icon: ShieldCheck, className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }}
     />
     <!-- O rótulo muda junto com a origem do número: com o agente ligado é "agora"; com ele
          fora do ar vira "na última leitura", porque é o que o número é. Um cartão que diz
          "agora" em cima de um retrato de minutos atrás faz decidir errado. -->
     <StatCard
-      data={{ label: `Processador ${nowSuffix}`, value: formatPercent(now.cpuPercent) }}
-      ui={{ tone: 'info' }}
+      data={{ label: `Processador ${nowSuffix}`, value: formatPercent(now.cpuPercent), hint: 'Uso total do processador' }}
+      ui={{ tone: 'info', icon: Cpu, className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }}
       state={{ isLoading: viewState?.isSamplesLoading }}
     />
     <StatCard
-      data={{ label: `Memória ${nowSuffix}`, value: formatPercent(now.memoryPercent) }}
-      ui={{ tone: 'info' }}
+      data={{ label: `Memória ${nowSuffix}`, value: formatPercent(now.memoryPercent), hint: live ? `${formatBytes(live.memory.usedBytes)} de ${formatBytes(live.memory.totalBytes)}` : 'Memória em uso' }}
+      ui={{ tone: 'info', icon: MemoryStick, className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }}
       state={{ isLoading: viewState?.isSamplesLoading }}
     />
     <StatCard
-      data={{ label: `Disco ${nowSuffix}`, value: formatPercent(now.diskPercent) }}
-      ui={{ tone: 'brand' }}
+      data={{ label: `Disco ${nowSuffix}`, value: formatPercent(now.diskPercent), hint: 'Espaço ocupado nos volumes' }}
+      ui={{ tone: 'brand', icon: HardDrive, className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }}
       state={{ isLoading: viewState?.isSamplesLoading }}
     />
   </StatCardGrid>
@@ -499,9 +493,12 @@
   <section class="bg-card rounded-surface border p-4">
     <h2 class="text-ink-900 mb-2 text-sm font-semibold">O que precisa de atenção</h2>
     {#if computer.warnings.length === 0}
-      <p class="text-ink-500 text-sm">
-        Nada apontado nesta máquina. O agente avisa aqui assim que algo passar do limite.
-      </p>
+      <div class="flex items-start gap-3">
+        <CircleCheck class="text-success mt-0.5 size-5 shrink-0" aria-hidden="true" />
+        <p class="text-ink-500 text-sm leading-relaxed">
+          Nenhum aviso de condição dos recursos. Picos de uso ficam no histórico de alertas abaixo.
+        </p>
+      </div>
     {:else}
       <ul class="flex flex-col gap-2">
         {#each computer.warnings as warning, index (index)}
@@ -518,7 +515,7 @@
   </section>
 
   <section class="bg-card rounded-surface border p-4">
-    <div class="mb-3 flex items-baseline justify-between gap-3">
+    <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
       <h2 class="text-ink-900 text-sm font-semibold">O que está acontecendo agora</h2>
       {#if live}
         <span class="text-ink-500 shrink-0 text-xs">Lido {formatTimeAgo(live.receivedAt)}</span>

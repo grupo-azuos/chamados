@@ -11,10 +11,12 @@
 
 <Story name="Default" />
 
-<!-- Onde ele mora de verdade: ao lado do rótulo, no rodapé do menu lateral. -->
+<!-- A variante de contraste para superfícies azuis continua disponível. -->
 <Story name="InSidebarFooter">
   <div class="bg-sidebar text-sidebar-foreground flex w-56 items-center justify-between rounded-box p-2">
     <span class="text-xs font-medium opacity-70">Tema</span>
     <ThemeToggle />
   </div>
 </Story>
+
+<Story name="OnSurface" args={{ ui: { variant: 'surface' } }} />

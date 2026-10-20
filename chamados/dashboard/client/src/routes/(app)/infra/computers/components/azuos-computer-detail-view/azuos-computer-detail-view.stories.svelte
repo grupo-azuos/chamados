@@ -6,6 +6,8 @@
     type ComputerSample,
   } from '@template/shared/schemas/computer.schema';
 
+  import { type ComputerLive } from '@template/shared/schemas/computer-live.schema';
+
   import { type Maintenance } from '@template/shared/schemas/maintenance.schema';
 
   import ComputerDetailView from './azuos-computer-detail-view.svelte';
@@ -182,6 +184,27 @@
     onTicketPageChange: () => {},
   };
 
+  const live: ComputerLive = {
+    computerId: 3,
+    measuredAt: new Date().toISOString(),
+    receivedAt: new Date().toISOString(),
+    isOnline: true,
+    cpu: { percentTotal: 6, percentPerCore: [8, 5, 12, 2, 15, 2, 9, 3, 6, 0, 12, 3] },
+    memory: { totalBytes: 16 * GB, usedBytes: 13 * GB, freeBytes: 3 * GB, usedPercent: 81.25,
+      swapTotalBytes: 8 * GB, swapUsedBytes: GB, swapUsedPercent: 12.5 },
+    disks: [{ mountpoint: 'C:', fstype: 'NTFS', totalBytes: 240 * GB, usedBytes: 64 * GB,
+      freeBytes: 176 * GB, usedPercent: 26.67 }],
+    diskIo: { readBytesPerSec: 0, writeBytesPerSec: 0 },
+    network: [{ name: 'Ethernet', bytesRecvPerSec: 5 * 1024, bytesSentPerSec: 18 * 1024 }],
+    processes: [],
+  };
+
+  const liveData = {
+    computer: computer({ displayName: 'Estação do atendimento', healthScore: 100, healthStatus: 'good', warnings: [] }),
+    samples, live, alerts: [], alertPaging: { page: 1, pageSize: 25, total: 0 },
+    ticketPaging: { page: 1, pageSize: 25, total: 0 }, tickets: [], maintenances: [], partMovements: [], transfers: [],
+  };
+
   /** Uma página de 25, com o total que o servidor devolveria. */
   const paging = { page: 1, pageSize: 25, total: alerts.length };
   const noPaging = { page: 1, pageSize: 25, total: 0 };
@@ -286,3 +309,24 @@
     actions,
   }}
 />
+
+
+<Story name="Live readings" args={{ data: liveData, actions }} />
+
+<Story name="Long identity on mobile" asChild>
+  <div class="mx-auto w-full max-w-sm">
+    <ComputerDetailView
+      data={{ ...liveData, computer: { ...liveData.computer,
+        displayName: 'Estação de atendimento e conferência de documentos da recepção',
+        name: 'DESKTOP-ATENDIMENTO-RECEPCAO-SEGUNDO-ANDAR',
+        responsibleName: 'Equipe de atendimento e conferência de documentos' },
+        live: { ...live, network: [{ name: 'Adaptador Ethernet da recepção no segundo andar', bytesRecvPerSec: 512000, bytesSentPerSec: 18432000 }] } }}
+      {actions}
+    />
+  </div>
+</Story>
+
+<Story name="Saving" args={{ data: liveData, actions, state: { isSaving: true } }} />
+
+<Story name="Disposed" args={{ data: { ...liveData, computer: { ...liveData.computer,
+  isOnline: false, disposedAt: '2026-10-01T12:00:00.000Z', disposalType: 'scrap', disposalReason: 'Equipamento substituído após avaliação técnica.' } }, actions }} />

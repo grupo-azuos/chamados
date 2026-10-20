@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   type AssignRoleInput,
+  type AssignRolesInput,
   type InternalRole,
 } from '@template/shared/schemas/internal-role.schema';
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
@@ -60,6 +61,20 @@ export class RolesService {
     const row = await this.repository.upsert(insert);
 
     return toInternalRole(row);
+  }
+
+  async assignMany(actor: RequestUser, input: AssignRolesInput): Promise<InternalRole[]> {
+    assertIsSuperAdmin(actor.role, 'Liberar módulos');
+
+    const inserts = input.contexts.map((context) =>
+      toInternalRoleInsert({
+        userId: input.userId,
+        userEmail: input.userEmail,
+        context,
+      }, actor.email),
+    );
+    const rows = await this.repository.upsertMany(inserts);
+    return rows.map(toInternalRole);
   }
 
   async delete(actor: RequestUser, id: number): Promise<void> {

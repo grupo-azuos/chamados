@@ -13,6 +13,8 @@
    */
   const theme = useThemeModel();
 
+  let { ui }: { ui?: { variant?: 'sidebar' | 'surface' } } = $props();
+
   const SIDEBAR_ICON = 'text-brand-yellow-400 hover:bg-sidebar-accent hover:text-brand-yellow-300';
 </script>
 
@@ -23,8 +25,8 @@
     size: 'sm',
     icon: theme.theme === 'dark' ? Moon : Sun,
     isIconOnly: true,
-    /* Mora na barra lateral azul: o amarelo da marca é o que aparece ali. */
-    className: SIDEBAR_ICON,
+    /* Amarelo sobre a barra azul; cor primária sobre o cartão do perfil. */
+    className: ui?.variant === 'surface' ? 'text-primary hover:bg-primary/10 hover:text-primary' : SIDEBAR_ICON,
   }}
   actions={{ onClick: theme.actions.onToggle }}
 />

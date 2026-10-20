@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { roleContextSchema } from './user.schema';
+import { ROLE_CONTEXTS, roleContextSchema } from './user.schema';
 
 /**
  * UM MÓDULO LIBERADO PARA UMA PESSOA — Infraestrutura, Sistema ou Manutenção.
@@ -33,3 +33,14 @@ export const assignRoleSchema = z.object({
 });
 
 export type AssignRoleInput = z.infer<typeof assignRoleSchema>;
+
+/** Uma seleção explícita de módulos, sem repetir nem remover acessos já existentes. */
+export const assignRolesSchema = assignRoleSchema.omit({ context: true }).extend({
+  contexts: z
+    .array(roleContextSchema)
+    .min(1, 'Selecione pelo menos um módulo')
+    .max(ROLE_CONTEXTS.length, 'Seleção de módulos inválida')
+    .refine((contexts) => new Set(contexts).size === contexts.length, 'Não repita módulos'),
+});
+
+export type AssignRolesInput = z.infer<typeof assignRolesSchema>;

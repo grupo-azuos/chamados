@@ -9,6 +9,7 @@
   import { useWhatsappLinkModel } from '$lib/hooks/use-whatsapp-link/use-whatsapp-link.svelte';
   import { useWhatsappTemplatesModel } from '$lib/hooks/use-whatsapp-templates/use-whatsapp-templates.svelte';
   import RoleFormSlot from '../roles/role-form-slot.svelte';
+  import ProfilePreferences from './components/azuos-profile-preferences/azuos-profile-preferences.svelte';
   import WhatsappLinkCard from './components/azuos-whatsapp-link-card/azuos-whatsapp-link-card.svelte';
   import WhatsappLinkDialog from './components/azuos-whatsapp-link-dialog/azuos-whatsapp-link-dialog.svelte';
   import WhatsappTemplatesDialog from './components/azuos-whatsapp-templates-dialog/azuos-whatsapp-templates-dialog.svelte';
@@ -53,8 +54,9 @@
     onCreate: () => (formTarget = { role: null }),
   }}
 >
-  <!-- Só para quem pode vincular: os demais nem veem o cartão. -->
+  <!-- Preferências de todos; vínculo de WhatsApp só para quem pode vincular. -->
   {#snippet afterProfile()}
+    <ProfilePreferences />
     {#if whatsapp.state.canLink}
       <WhatsappLinkCard
         data={{

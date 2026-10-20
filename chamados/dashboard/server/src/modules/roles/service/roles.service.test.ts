@@ -57,6 +57,7 @@ describe('RolesService', () => {
       findById: vi.fn().mockResolvedValue(ROW),
       findByUserIdOrEmail: vi.fn().mockResolvedValue([ROW]),
       upsert: vi.fn().mockResolvedValue(ROW),
+      upsertMany: vi.fn().mockResolvedValue([ROW]),
       delete: vi.fn().mockResolvedValue(undefined),
     } as unknown as RolesRepository;
 
@@ -156,6 +157,39 @@ describe('RolesService', () => {
           context: 'sistema',
         }),
       ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('assignMany', () => {
+    // feliz
+    it('sends all modules to one atomic save using the authenticated author', async () => {
+      vi.mocked(repository.upsertMany).mockResolvedValue([
+        { ...ROW, context: 'infra' }, { ...ROW, id: 2, context: 'sistema' },
+      ]);
+      const result = await service.assignMany(SUPERADMIN, { userId: ' user_1 ',
+        userEmail: 'user@empresa.com.br', contexts: ['infra', 'sistema'] });
+
+      expect(repository.upsertMany).toHaveBeenCalledOnce();
+      expect(repository.upsertMany).toHaveBeenCalledWith(['infra', 'sistema'].map((context) => ({
+        userId: 'user_1', userEmail: 'user@empresa.com.br', context,
+        createdBy: SUPERADMIN.email, updatedBy: SUPERADMIN.email,
+      })));
+      expect(result.map((role) => role.context)).toEqual(['infra', 'sistema']);
+      expect(repository.delete).not.toHaveBeenCalled();
+    });
+
+    // triste
+    it.each([ADMIN, MANAGER, USER])('rejects bulk grants by $role', async (actor) => {
+      await expect(service.assignMany(actor, { userId: 'user_1', contexts: ['infra', 'sistema'] }))
+        .rejects.toThrow(ForbiddenException);
+      expect(repository.upsertMany).not.toHaveBeenCalled();
+    });
+
+    it('propagates a failed save instead of reporting partial success', async () => {
+      vi.mocked(repository.upsertMany).mockRejectedValue(new Error('Database unavailable'));
+      await expect(service.assignMany(SUPERADMIN, { userId: 'user_1', contexts: ['infra', 'sistema'] }))
+        .rejects.toThrow('Database unavailable');
+      expect(repository.upsert).not.toHaveBeenCalled();
     });
   });
 
