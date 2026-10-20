@@ -105,8 +105,6 @@
   import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import AppShellNavEntry from '$lib/components/azuos-app-shell-nav-entry/azuos-app-shell-nav-entry.svelte';
-  import EffectsToggle from '$lib/components/azuos-effects-toggle/azuos-effects-toggle.svelte';
-  import ThemeToggle from '$lib/components/azuos-theme-toggle/azuos-theme-toggle.svelte';
   import Zuzu from '$lib/components/azuos-zuzu/azuos-zuzu.svelte';
 
   /* `state` (o prop) precisa de outro nome aqui dentro: um binding local chamado `state` faz
@@ -238,24 +236,6 @@
     <SidebarFooter
       class="pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))]"
     >
-      <!-- Acima do perfil, de propósito: é a última coisa que a pessoa mexe antes de sair,
-           não uma ação do dia a dia — não compete por atenção com o menu de navegação. -->
-      <div
-        class="text-sidebar-foreground/70 flex items-center justify-between px-2 py-1 group-data-[collapsible=icon]:justify-center"
-      >
-        <span class="text-xs font-medium group-data-[collapsible=icon]:hidden">Tema</span>
-        <ThemeToggle />
-      </div>
-
-      <!-- Efeitos visuais completos ou leves: o sistema escolhe sozinho pela máquina, e aqui a
-           pessoa pode mandar. Mesma linha discreta do tema, pelo mesmo motivo. -->
-      <div
-        class="text-sidebar-foreground/70 flex items-center justify-between px-2 py-1 group-data-[collapsible=icon]:justify-center"
-      >
-        <span class="text-xs font-medium group-data-[collapsible=icon]:hidden">Efeitos</span>
-        <EffectsToggle />
-      </div>
-
       <!-- As duas telas PÚBLICAS, à mão de quem atende: abrir um chamado por alguém e conferir
            um documento emitido. Abrem em outra aba porque ficam fora do painel — sem casca e
            sem menu —, e quem atende não perde a tela em que estava. -->

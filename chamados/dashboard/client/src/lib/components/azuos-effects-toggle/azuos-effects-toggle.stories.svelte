@@ -15,7 +15,7 @@
 
 <Story name="Default" />
 
-<!-- Onde ele mora de verdade: numa linha do menu lateral, ao lado do rótulo. -->
+<!-- Variante de contraste para superfícies azuis. -->
 <Story name="InSidebarRow">
   <div class="flex w-56 items-center justify-between">
     <span class="text-xs font-medium">Efeitos</span>
@@ -38,3 +38,5 @@
     </div>
   </div>
 </Story>
+
+<Story name="OnSurface" args={{ ui: { variant: 'surface' } }} />
