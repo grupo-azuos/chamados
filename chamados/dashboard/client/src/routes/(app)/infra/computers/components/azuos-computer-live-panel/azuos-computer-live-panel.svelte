@@ -50,8 +50,8 @@
     ui={{ icon: MonitorOff }}
   />
 {:else}
-  <div class="grid gap-6 lg:grid-cols-2">
-    <div class="min-w-0">
+  <div class="grid gap-3 lg:grid-cols-2 lg:items-start">
+    <section aria-label="Uso do processador" class="bg-muted/30 rounded-box min-w-0 border p-4 lg:row-span-2">
       <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">
         Processador — {formatPercent(live.cpu.percentTotal)} no total
       </h3>
@@ -59,15 +59,15 @@
       {#if live.cpu.percentPerCore.length === 0}
         <p class="text-ink-500 text-xs">Esta versão do agente não informa o uso por núcleo.</p>
       {:else}
-        <div class="grid gap-2 sm:grid-cols-2">
+        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
           {#each live.cpu.percentPerCore as core, index (index)}
             <UsageMeter data={{ label: `Núcleo ${index + 1}`, percentage: core }} />
           {/each}
         </div>
       {/if}
-    </div>
+    </section>
 
-    <div class="min-w-0">
+    <section aria-label="Uso da memória" class="bg-muted/30 rounded-box min-w-0 border p-4">
       <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">Memória</h3>
       <UsageMeter
         data={{ label: 'Em uso', percentage: live.memory.usedPercent, detail: memoryDetail }}
@@ -86,9 +86,9 @@
           />
         </div>
       {/if}
-    </div>
+    </section>
 
-    <div class="min-w-0">
+    <section aria-label="Uso dos volumes" class="bg-muted/30 rounded-box min-w-0 border p-4">
       <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">Volumes</h3>
 
       {#if live.disks.length === 0}
@@ -111,9 +111,9 @@
         Leitura {perSecond(live.diskIo.readBytesPerSec)} · Escrita
         {perSecond(live.diskIo.writeBytesPerSec)}
       </p>
-    </div>
+    </section>
 
-    <div class="min-w-0">
+    <section aria-label="Tráfego de rede" class="bg-muted/30 rounded-box min-w-0 border p-4 lg:col-span-2">
       <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">Rede</h3>
 
       {#if activeInterfaces.length === 0}
@@ -121,15 +121,16 @@
       {:else}
         <dl class="grid gap-2">
           {#each activeInterfaces as item (item.name)}
-            <div class="flex items-baseline justify-between gap-2">
-              <dt class="text-ink-700 truncate text-xs">{item.name}</dt>
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+              <dt class="text-ink-700 text-xs break-words">{item.name}</dt>
               <dd class="text-ink-900 shrink-0 text-xs tabular-nums">
-                ↓ {perSecond(item.bytesRecvPerSec)} · ↑ {perSecond(item.bytesSentPerSec)}
+                <span class="mr-3 inline-block">↓ {perSecond(item.bytesRecvPerSec)}</span>
+                <span class="inline-block">↑ {perSecond(item.bytesSentPerSec)}</span>
               </dd>
             </div>
           {/each}
         </dl>
       {/if}
-    </div>
+    </section>
   </div>
 {/if}

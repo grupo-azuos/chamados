@@ -392,7 +392,8 @@ describe('AzuosComputerDetailView', () => {
     const user = userEvent.setup();
     renderDetail();
 
-    await user.click(screen.getByRole('button', { name: 'Arquivar' }));
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Arquivar' }));
     expect(actions.onArchivedChange).not.toHaveBeenCalled();
 
     /* O botão da pergunta, e não o da barra de ações: os dois dizem o mesmo verbo de
@@ -403,11 +404,23 @@ describe('AzuosComputerDetailView', () => {
     expect(actions.onArchivedChange).toHaveBeenCalledWith(true);
   });
 
-  it('offers to take the machine out of the archive once it is archived', () => {
+  it('offers to take the machine out of the archive once it is archived', async () => {
+    const user = userEvent.setup();
     renderDetail({ isArchived: true });
 
-    expect(screen.getByRole('button', { name: 'Tirar do arquivo' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Arquivar' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    expect(screen.getByRole('menuitem', { name: 'Tirar do arquivo' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Arquivar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Descartar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Transferir' })).not.toBeInTheDocument();
+  });
+
+  it('keeps a disposed machine read-only until it is restored', () => {
+    renderDetail({ disposedAt: '2026-10-01T12:00:00.000Z', disposalType: 'scrap', disposalReason: 'Equipamento substituído.' });
+
+    expect(screen.queryByRole('button', { name: 'Mais ações' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Editar identificação' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Transferir' })).not.toBeInTheDocument();
   });
 
   // triste
