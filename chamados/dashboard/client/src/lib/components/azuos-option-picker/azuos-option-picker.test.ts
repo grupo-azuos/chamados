@@ -38,6 +38,33 @@ const many = Array.from({ length: 7 }, (_value, index) => ({
   label: `Opção ${index}`,
 }));
 
+describe('AzuosOptionPicker — selected name tooltip', () => {
+  const label = 'Sala de atendimento compartilhada (ATENDIMENTO-ESTACAO-04)';
+  const props = {
+    data: { value: '1', options: [{ value: '1', label }] },
+    ui: { ariaLabel: 'Máquina', mode: 'combobox' as const, showSelectedTooltip: true },
+    actions: { onChange: vi.fn() },
+  };
+
+  // feliz
+  it('shows the full selected name on hover and still opens search on click', async () => {
+    render(OptionPicker, { props });
+    const trigger = screen.getByRole('button', { name: 'Máquina' });
+    await userEvent.hover(trigger);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(label);
+
+    await userEvent.click(trigger);
+    expect(await screen.findByPlaceholderText('Buscar…')).toBeInTheDocument();
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('shows the full selected name on keyboard focus', async () => {
+    render(OptionPicker, { props });
+    await userEvent.tab();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(label);
+  });
+});
+
 /** Seis opções: ainda são pastilhas numa barra de filtro, mas não cabem num campo de formulário. */
 const six = Array.from({ length: 6 }, (_value, index) => ({
   value: `type-${index}`,

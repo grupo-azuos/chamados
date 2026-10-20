@@ -61,6 +61,18 @@
     onRemoveParticipantArea: () => {},
   };
 
+  const longMachineData: AzuosTicketDataFormProps['data'] = {
+    ...data,
+    fields: { ...data.fields, computerId: { value: '4', error: null } },
+    machines: [
+      ...machines,
+      {
+        value: '4',
+        label: 'Sala de atendimento compartilhada — computador da equipe de suporte (ATENDIMENTO-ESTACAO-04)',
+      },
+    ],
+  };
+
   const { Story } = defineMeta({
     title: 'Components/AzuosTicketDataForm',
     component: TicketDataForm,
@@ -69,6 +81,17 @@
 </script>
 
 <Story name="Default" args={{ data, actions }} />
+
+<!-- A largura da coluna lateral: nome comprido fica completo no tooltip e na lista. -->
+<Story name="LongMachineName" asChild>
+  <div class="w-full max-w-sm">
+    <TicketDataForm data={longMachineData} {actions} />
+  </div>
+</Story>
+
+<Story name="MachinePickerMobile" globals={{ viewport: { value: 'celular' } }} asChild>
+  <TicketDataForm data={longMachineData} {actions} />
+</Story>
 
 <!-- Chamado recém-aberto: sem máquina vinculada ainda. -->
 <Story
@@ -126,8 +149,8 @@
 />
 
 <!-- Caso limite: na coluna lateral estreita da ficha, na largura de um celular. -->
-<Story name="OnPhone">
-  <div class="w-[360px]">
+<Story name="OnPhone" asChild>
+  <div class="w-full max-w-[360px]">
     <TicketDataForm
       data={{ ...data, ticket: { ...ticket, participantAreas: ['sistema', 'manutencao'] }, availableParticipantAreas: [] }}
       {actions}

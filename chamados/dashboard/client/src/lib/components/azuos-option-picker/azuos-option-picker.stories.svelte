@@ -63,6 +63,19 @@
 />
 
 <Story name="Disabled" args={{ ...baseArgs, state: { isDisabled: true } }} template={inBox} />
+
+<Story
+  name="SelectedNameTooltip"
+  args={{
+    data: {
+      value: '1',
+      options: [{ value: '1', label: 'Sala de atendimento compartilhada (ATENDIMENTO-ESTACAO-04)' }],
+    },
+    ui: { ariaLabel: 'Máquina', mode: 'combobox', fullWidth: true, showSelectedTooltip: true },
+    actions: { onChange: fn() },
+  }}
+  template={inBox}
+/>
 <Story
   name="SearchWithFewOptions"
   args={{ ...baseArgs, ui: { ...baseArgs.ui, mode: 'combobox', fullWidth: true } }}
