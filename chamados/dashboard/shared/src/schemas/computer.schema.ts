@@ -226,6 +226,10 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   department: departmentSchema.optional(),
   healthStatus: healthStatusSchema.optional(),
+  /** Query strings precisam distinguir "false" de true; Boolean("false") não serve. */
+  onlyOnline: z
+    .union([z.boolean(), z.enum(['true', 'false']).transform((value) => value === 'true')])
+    .optional(),
   /** Por padrão as arquivadas NÃO vêm: elas saíram de uso e só atrapalhariam a lista. */
   includeArchived: z.coerce.boolean().optional(),
   /**
