@@ -25,6 +25,7 @@ import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { Roles } from '../../../lib/auth/roles.decorator';
 import {
   AssignRoleDto,
+  AssignRolesDto,
   DirectoryUserDto,
   DirectoryUserListDto,
   InternalRoleDto,
@@ -79,6 +80,21 @@ export class RolesController {
     @Param('identifier') identifier: string,
   ): Promise<InternalRoleDto[]> {
     return this.service.listByUser(user, identifier);
+  }
+
+  @Post('batch')
+  @ApiOperation({
+    summary: 'Liberar módulos de uma vez',
+    description: 'Salva todos os módulos selecionados juntos e preserva os demais acessos.',
+  })
+  @ApiOkResponse({ type: InternalRoleListDto })
+  @ApiUnauthorizedResponse({ description: 'Sem identidade.' })
+  @ApiForbiddenResponse({ description: 'Esta ação é do Super Admin.' })
+  async assignMany(
+    @CurrentUser() user: RequestUser,
+    @Body() body: AssignRolesDto,
+  ): Promise<InternalRoleDto[]> {
+    return this.service.assignMany(user, body);
   }
 
   @Post()

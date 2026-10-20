@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, desc, eq, or } from 'drizzle-orm';
+import { asc, desc, eq, or, sql } from 'drizzle-orm';
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
@@ -75,6 +75,25 @@ export class RolesRepository {
     );
 
     return row as InternalRoleRow;
+  }
+
+  /** Um INSERT só: todos os módulos entram ou a operação inteira é desfeita pelo banco. */
+  async upsertMany(values: InternalRoleInsert[]): Promise<InternalRoleRow[]> {
+    return runQuery(
+      this.db
+        .insert(internalRoles)
+        .values(values)
+        .onConflictDoUpdate({
+          target: [internalRoles.userId, internalRoles.context],
+          set: {
+            userEmail: sql`excluded.user_email`,
+            updatedAt: new Date(),
+            updatedBy: sql`excluded.updated_by`,
+          },
+        })
+        .returning(),
+      'salvar módulos da pessoa',
+    );
   }
 
   async delete(id: number): Promise<void> {
