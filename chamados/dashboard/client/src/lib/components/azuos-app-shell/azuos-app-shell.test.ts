@@ -203,9 +203,36 @@ describe('AzuosAppShell', () => {
     });
 
     const group = screen.getByRole('group', { name: 'Módulos' });
-    expect(group).toHaveClass('flex-row', 'group-data-[collapsible=icon]:flex-col');
+    expect(group).toHaveClass('flex-col', 'md:flex-row', 'group-data-[collapsible=icon]:flex-col');
     expect(within(group).getByRole('button', { name: 'Infraestrutura' })).toBeInTheDocument();
-    expect(within(group).queryByText('Infraestrutura')).not.toBeInTheDocument();
+    expect(within(group).getByText('Infraestrutura')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('shows the module name on hover while the sidebar is expanded', async () => {
+    renderShell({
+      data: { areaOptions: [{ value: 'infra', label: 'Infraestrutura', icon: ListChecks }] },
+    });
+
+    await userEvent.hover(screen.getByRole('button', { name: 'Infraestrutura' }));
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Infraestrutura');
+  });
+
+  // feliz
+  it('shows the module name on keyboard focus and dismisses it with Escape', async () => {
+    renderShell({
+      data: { areaOptions: [{ value: 'sistema', label: 'Sistema', icon: BarChart3 }] },
+    });
+
+    await userEvent.tab();
+
+    expect(screen.getByRole('button', { name: 'Sistema' })).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Sistema');
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
   /* Recolhida, a barra é uma fila só de ícones: o divisor separa os de módulo dos de tela. */

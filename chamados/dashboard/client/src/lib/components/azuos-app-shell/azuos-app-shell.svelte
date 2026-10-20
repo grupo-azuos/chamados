@@ -78,6 +78,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
+  import { cn } from '$lib/utils/cn';
   import SidebarControls from '$lib/components/azuos-sidebar-controls/azuos-sidebar-controls.svelte';
   import CircleUser from '@lucide/svelte/icons/circle-user';
   import { BrandMark } from '$lib/components/azuos-brand-mark/azuos-brand-mark';
@@ -158,11 +159,13 @@
         <div
           role="group"
           aria-label="Módulos"
-          class="flex w-full flex-row items-center justify-center gap-1 rounded-control bg-white/10 p-1 ring-1 ring-white/15 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:ring-0"
+          class="flex w-full flex-col items-stretch justify-center gap-1 rounded-control bg-white/10 p-1 ring-1 ring-white/15 md:flex-row md:items-center group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:ring-0"
         >
           {#each data.areaOptions as option (option.value)}
             {@const Icon = option.icon}
-            <Tooltip.Root disabled={!canShowTooltip}>
+            <!-- No desktop, os nomes aparecem no hover e no foco mesmo com a barra aberta.
+                 No celular ficam no próprio botão: tocar troca de módulo, sem etapa extra. -->
+            <Tooltip.Root disabled={isMobile.current}>
               <Tooltip.Trigger>
                 {#snippet child({ props })}
                   <button
@@ -171,16 +174,27 @@
                     aria-label={option.label}
                     aria-pressed={shellState?.areaContext === option.value}
                     onclick={() => actions?.onAreaContextChange?.(option.value)}
-                    class="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex h-10 min-w-0 flex-1 items-center justify-center rounded-chip transition-colors aria-pressed:bg-brand-yellow-400 aria-pressed:text-brand-blue-900 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
+                    class="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex min-h-12 min-w-0 items-center justify-start gap-3 rounded-chip px-3 py-2 transition-colors aria-pressed:bg-brand-yellow-400 aria-pressed:text-brand-blue-900 md:h-10 md:min-h-0 md:flex-1 md:justify-center md:p-0 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
                   >
                     {#if Icon}<Icon
-                        class="size-6 group-data-[collapsible=icon]:size-[18px]"
+                        class="size-6 shrink-0 group-data-[collapsible=icon]:size-[18px]"
                         aria-hidden="true"
                       />{/if}
+                    <span
+                      class={cn(
+                        'min-w-0 text-left text-sm break-words md:text-center md:text-xs',
+                        Icon && 'md:hidden',
+                      )}
+                    >{option.label}</span>
                   </button>
                 {/snippet}
               </Tooltip.Trigger>
-              <Tooltip.Content side="right" align="center">{option.label}</Tooltip.Content>
+              <Tooltip.Content
+                role="tooltip"
+                side={sidebarOpen ? 'bottom' : 'right'}
+                sideOffset={8}
+                align="center"
+              >{option.label}</Tooltip.Content>
             </Tooltip.Root>
           {/each}
         </div>
