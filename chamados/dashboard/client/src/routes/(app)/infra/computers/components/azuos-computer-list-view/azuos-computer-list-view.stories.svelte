@@ -121,6 +121,7 @@
     department: '',
     healthStatus: '',
     includeArchived: false,
+    onlyOnline: false,
   };
 
   const actions = {
@@ -128,6 +129,7 @@
     onDepartmentChange: () => {},
     onHealthStatusChange: () => {},
     onArchivedChange: () => {},
+    onOnlineChange: () => {},
     onClearFilters: () => {},
     onRetry: () => {},
     onOpen: () => {},
@@ -148,6 +150,33 @@
     component: ComputerListView,
   });
 </script>
+
+<script lang="ts">
+  let onlyOnline = $state(false);
+  const onlineFilter = $derived({ ...emptyFilter, onlyOnline });
+  const visibleComputers = $derived(onlyOnline ? computers.filter((computer) => computer.isOnline) : computers);
+  const onlineActions = {
+    ...actions,
+    onOnlineChange: (value: boolean) => (onlyOnline = value),
+    onClearFilters: () => (onlyOnline = false),
+  };
+</script>
+
+<Story name="OnlineFilter" asChild>
+  <ComputerListView
+    data={{ computers: visibleComputers, total: visibleComputers.length, summary, filter: onlineFilter }}
+    state={settled}
+    actions={onlineActions}
+  />
+</Story>
+
+<Story name="OnlineFilterMobile" globals={{ viewport: { value: 'celular' } }} asChild>
+  <ComputerListView
+    data={{ computers: visibleComputers, total: visibleComputers.length, summary, filter: onlineFilter }}
+    state={settled}
+    actions={onlineActions}
+  />
+</Story>
 
 <Story
   name="Default"
