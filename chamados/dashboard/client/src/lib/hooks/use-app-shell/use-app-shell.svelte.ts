@@ -4,7 +4,7 @@ import type { LucideIcon } from '@lucide/svelte';
 import Cpu from '@lucide/svelte/icons/cpu';
 import Server from '@lucide/svelte/icons/server';
 import Wrench from '@lucide/svelte/icons/wrench';
-import { createQuery } from '@tanstack/svelte-query';
+import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { roleContextLabel } from '@template/shared/domain/role-context.util';
 import {
   USER_ROLE_LABELS,
@@ -15,6 +15,8 @@ import { untrack } from 'svelte';
 import { writable } from 'svelte/store';
 
 import { authApi } from '$lib/api/auth.api';
+import { readError } from '$lib/api/http-client';
+import { leaveSession } from '$lib/utils/leave-session.util';
 import { ticketsApi } from '$lib/api/tickets.api';
 import {
   type AreaContext,
@@ -64,18 +66,21 @@ export type AppShellModel = {
     routeKey: string;
     isProfileOpen: boolean;
     areaContext: AreaContext;
+    isSigningOut: boolean;
+    logoutError: string | null;
   };
   actions: {
     onOpenProfile: () => void;
     onCloseProfile: () => void;
     onViewRoles: () => void;
     onAreaContextChange: (context: AreaContext) => void;
+    onSignOut: () => void;
   };
 };
 
 /**
  * O que a casca precisa: quem está usando, qual item do menu está aceso, os contadores e onde
- * fica a conta da pessoa (no admin-console — sair é lá, não aqui).
+ * fica a conta da pessoa e como encaminhar o encerramento da sessão ao admin-console.
  *
  * `user` chega por parâmetro — não é este hook que decide quem está logado, é a guarda de
  * `routes/(app)/+layout.ts`. Por isso ele só monta dentro do grupo `(app)`, depois que a
@@ -100,6 +105,16 @@ export function useAppShellModel(input: {
   items: readonly NavItem[];
 }): AppShellModel {
   let isProfileOpen = $state(false);
+  const queryClient = useQueryClient();
+  const signOut = mirrorStore(
+    createMutation({
+      mutationFn: () => authApi.logout(),
+      onSuccess: () => {
+        queryClient.clear();
+        leaveSession();
+      },
+    }),
+  );
 
   /* As áreas que a pessoa atende (#13) — uma vez, igual ao resto do menu: buscar de novo a
      cada navegação repetiria a mesma consulta a cada clique. Falha NÃO derruba o menu —
@@ -193,9 +208,12 @@ export function useAppShellModel(input: {
         routeKey: page.url.pathname,
         isProfileOpen,
         areaContext: input.context,
+        isSigningOut: signOut.current.isPending,
+        logoutError: readError(signOut.current.error),
       };
     },
     actions: {
+      onSignOut: () => signOut.current.mutate(),
       onOpenProfile: () => {
         void goto('/profile');
       },

@@ -15,4 +15,6 @@ export const authApi = {
   me: () => apiRequest<SessionUser>('/auth/me'),
   /** O endereço da conta da pessoa no admin-console (trocar senha, foto, sair). */
   config: () => apiRequest<AuthConfig>('/auth/config'),
+  /** A API encaminha a revogação ao admin-console e devolve os cookies que ele apagou. */
+  logout: () => apiRequest<void>('/auth/logout', { method: 'POST', body: {} }),
 };
