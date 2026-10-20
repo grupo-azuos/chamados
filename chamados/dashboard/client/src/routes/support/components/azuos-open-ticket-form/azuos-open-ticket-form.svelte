@@ -354,13 +354,13 @@
     <form novalidate onsubmit={handleSubmit}>
       <!-- Uma etapa por vez: `Timeline` de um item só dá o cabeçalho (ícone + título) sem a
            linha de conexão, que só faz sentido quando há uma próxima etapa visível. -->
-      <div bind:this={stepContentEl}>
+      <div bind:this={stepContentEl} class="flex flex-col gap-5 sm:gap-6">
       {#if data.invite}
-        <p class="rounded-box border-primary/20 bg-primary/5 text-ink-700 border px-3.5 py-2.5 text-sm" role="status">
+        <p class="rounded-box border-primary/20 bg-primary/5 text-ink-700 border p-4 text-sm leading-relaxed break-words" role="status">
           Você está abrindo um chamado com <strong>{data.invite.assigneeName}</strong>.
         </p>
       {:else if formState.inviteError}
-        <p class="rounded-box border-warning/30 bg-warning/5 text-ink-700 border px-3.5 py-2.5 text-sm" role="status">
+        <p class="rounded-box border-warning/30 bg-warning/5 text-ink-700 border p-4 text-sm leading-relaxed break-words" role="status">
           {formState.inviteError} Você ainda pode abrir o chamado por aqui.
         </p>
       {/if}

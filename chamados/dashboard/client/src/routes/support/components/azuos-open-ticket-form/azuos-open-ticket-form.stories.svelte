@@ -198,6 +198,27 @@
   }}
 />
 
+<!-- Nome comprido no celular: o aviso quebra linha e mantém espaço até a escolha da área. -->
+<Story
+  name="FromWhatsAppLinkMobile"
+  globals={{ viewport: { value: 'celular' } }}
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: true,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+      invite: {
+        assigneeName: 'Ana Mariana da Equipe de Atendimento',
+        areas: ['infra', 'sistema', 'manutencao'],
+      },
+    },
+    state: {},
+    actions,
+  }}
+/>
+
 <!-- Caso limite: o link venceu. O formulário abre normal, com um aviso. -->
 <Story
   name="ExpiredWhatsAppLink"
