@@ -20,6 +20,9 @@ const GB = 1024 ** 3;
 function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
   return {
     ticketsThisMonth: 0,
+    preventiveStatus: 'ok',
+    lastPreventiveAt: '2026-10-01T12:00:00.000Z',
+    activeAlerts: 0,
     id: 9,
     name: 'RECEPCAO-09',
     displayName: 'Recepção — micro antigo do balcão',

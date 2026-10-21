@@ -107,6 +107,7 @@
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
 
+  import ComputerMaintenanceStatus from '../azuos-computer-maintenance-status/azuos-computer-maintenance-status.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
@@ -397,6 +398,11 @@
             </div>
           </div>
 
+          <div class="mt-3 min-w-0 rounded-box border border-border/60 bg-muted/20 p-3">
+            <p class="text-muted-foreground mb-2 text-xs">Manutenção</p>
+            <ComputerMaintenanceStatus data={{ computer }} />
+          </div>
+
           <div class="border-border/60 mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
             <span class="text-xs text-ink-500">
               Chamados no mês: <strong class="text-foreground">{computer.ticketsThisMonth}</strong>
@@ -421,12 +427,13 @@
       class={cn('overflow-x-auto', tableView.forceCards ? 'hidden' : 'hidden xl:block')}
       data-slot="computer-table-desktop"
     >
-      <Table class="min-w-[880px]">
+      <Table class="min-w-[1080px]">
         <TableHeader>
           <TableRow>
             <TableHead class="min-w-[240px]">Máquina</TableHead>
             <TableHead class="min-w-[180px]">Responsável</TableHead>
             <TableHead class="min-w-[120px]">Saúde</TableHead>
+            <TableHead class="min-w-[200px]">Manutenção</TableHead>
             <TableHead class="min-w-[120px]">Chamados no mês</TableHead>
             <TableHead class="min-w-[120px]">Situação</TableHead>
             <TableHead class="min-w-[110px]">Vista</TableHead>
@@ -462,6 +469,9 @@
                 <span class="block text-xs text-ink-500 tabular-nums">
                   {computer.healthScore}/100
                 </span>
+              </TableCell>
+              <TableCell class="max-w-[240px]">
+                <ComputerMaintenanceStatus data={{ computer }} />
               </TableCell>
               <!-- Quantos problemas esta máquina deu no mês corrente. Zero fica cinza e
                    discreto: a coluna existe para as que DÃO trabalho saltarem aos olhos. -->

@@ -13,6 +13,9 @@
     return {
       id: 1,
       ticketsThisMonth: 0,
+      preventiveStatus: 'ok',
+      lastPreventiveAt: '2026-10-01T12:00:00.000Z',
+      activeAlerts: 0,
       name: 'RECEPCAO-01',
       displayName: 'Recepção — balcão',
       responsibleName: 'Bia Costa',
@@ -283,5 +286,24 @@
     data: { computers: [longNamed], total: 1, summary, filter: emptyFilter },
     state: settled,
     actions,
+  }}
+/>
+
+
+<Story
+  name="Maintenance signals"
+  args={{
+    data: {
+      computers: [
+        computer({ id: 21, displayName: 'Recepção — avaliar recursos e manutenção', healthScore: 100,
+          activeAlerts: 2, preventiveStatus: 'due', lastPreventiveAt: '2026-04-01T12:00:00.000Z' }),
+        computer({ id: 22, displayName: 'Fiscal — sem preventiva registrada', isOnline: false,
+          preventiveStatus: 'never', lastPreventiveAt: null }),
+        computer({ id: 23, displayName: 'Atendimento — alerta em andamento', activeAlerts: 1 }),
+        computer({ id: 24, displayName: 'Financeiro — preventiva em dia' }),
+      ],
+      total: 4, summary: { total: 4, online: 3, critical: 0, attention: 0, neverSeen: 0 }, filter: emptyFilter,
+    },
+    state: settled, actions,
   }}
 />
