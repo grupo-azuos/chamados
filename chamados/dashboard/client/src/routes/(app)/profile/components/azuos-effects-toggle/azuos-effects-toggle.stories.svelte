@@ -8,7 +8,7 @@
    * aqui muda o `data-effects` do `<html>`, e o cartão de exemplo abaixo responde na hora.
    */
   const { Story } = defineMeta({
-    title: 'Components/AzuosEffectsToggle',
+    title: 'Features/Profile/AzuosEffectsToggle',
     component: EffectsToggle,
   });
 </script>

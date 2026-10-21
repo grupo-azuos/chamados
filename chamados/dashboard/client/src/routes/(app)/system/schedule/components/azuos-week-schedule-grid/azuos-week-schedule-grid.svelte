@@ -41,7 +41,7 @@
       onNewEventAt?: (date: string, startTime?: string) => void;
       onSelectEvent: (event: SoftwareScheduleEvent) => void;
       onRetry: () => void;
-      onOpenGithubDay?: (date: string, type?: 'pr' | 'issue' | 'all') => void;
+      onOpenGithubDay?: (date: string, type?: 'pr' | 'issue' | 'merge' | 'all') => void;
       onProjectFilterChange?: (value: string) => void;
       onAuthorFilterChange?: (value: string) => void;
       onTypeFilterChange?: (value: string) => void;
