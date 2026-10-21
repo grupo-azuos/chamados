@@ -1,5 +1,6 @@
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { type MaintenanceSchedule } from '@template/shared/schemas/maintenance.schema';
+import { SvelteMap } from 'svelte/reactivity';
 import { writable } from 'svelte/store';
 
 import { readError } from '$lib/api/http-client';
@@ -32,7 +33,7 @@ export function allSchedulesQuery() {
 export function schedulesByComputer(
   schedules: readonly MaintenanceSchedule[] | undefined,
 ): Map<number, MaintenanceSchedule> {
-  return new Map((schedules ?? []).map((schedule) => [schedule.computerId, schedule]));
+  return new SvelteMap((schedules ?? []).map((schedule) => [schedule.computerId, schedule]));
 }
 
 export type MaintenanceScheduleModel = {

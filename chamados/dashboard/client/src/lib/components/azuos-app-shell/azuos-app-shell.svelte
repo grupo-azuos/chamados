@@ -301,8 +301,8 @@
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltipContent={canShowTooltip ? 'Sair' : undefined}
-              disabled={shellState?.isSigningOut}
-              onclick={actions.onSignOut}
+              aria-disabled={shellState?.isSigningOut}
+              onclick={shellState?.isSigningOut ? undefined : actions.onSignOut}
               aria-label={shellState?.isSigningOut ? 'Saindo…' : 'Sair'}
             >
               <LogOut aria-hidden="true" />

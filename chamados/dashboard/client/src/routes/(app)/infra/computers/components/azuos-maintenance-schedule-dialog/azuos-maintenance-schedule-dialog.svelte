@@ -44,7 +44,7 @@
     DialogFooter,
     DialogHeader,
     DialogTitle,
-  } from '$lib/components/ui/dialog';
+  } from '$lib/components/azuos-dialog/azuos-dialog';
 
   let { data, state: dialogState, actions }: AzuosMaintenanceScheduleDialogProps = $props();
 
