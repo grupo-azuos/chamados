@@ -299,16 +299,22 @@
         {/if}
         {#if actions?.onSignOut}
           <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltipContent={canShowTooltip ? 'Sair' : undefined}
-              disabled={shellState?.isSigningOut}
-              onclick={actions.onSignOut}
-              aria-label={shellState?.isSigningOut ? 'Saindo…' : 'Sair'}
-            >
-              <LogOut aria-hidden="true" />
-              <span class="group-data-[collapsible=icon]:hidden">
-                {shellState?.isSigningOut ? 'Saindo…' : 'Sair'}
-              </span>
+            <!-- Pelo `child` o botão de verdade recebe `disabled`: o tipo do SidebarMenuButton não aceita. -->
+            <SidebarMenuButton tooltipContent={canShowTooltip ? 'Sair' : undefined}>
+              {#snippet child({ props })}
+                <button
+                  {...props}
+                  type="button"
+                  disabled={shellState?.isSigningOut}
+                  onclick={actions.onSignOut}
+                  aria-label={shellState?.isSigningOut ? 'Saindo…' : 'Sair'}
+                >
+                  <LogOut aria-hidden="true" />
+                  <span class="group-data-[collapsible=icon]:hidden">
+                    {shellState?.isSigningOut ? 'Saindo…' : 'Sair'}
+                  </span>
+                </button>
+              {/snippet}
             </SidebarMenuButton>
           </SidebarMenuItem>
         {/if}

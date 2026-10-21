@@ -9,6 +9,7 @@ import { superAdmins } from './schema/super-admins.schema';
 import { inventoryItems } from './schema/inventory-items.schema';
 import { inventoryMovements } from './schema/inventory-movements.schema';
 import { maintenanceQuotes } from './schema/maintenance-quotes.schema';
+import { maintenanceSchedules } from './schema/maintenance-schedules.schema';
 import { maintenances } from './schema/maintenances.schema';
 import { networkEvents } from './schema/network-events.schema';
 import { partMovements } from './schema/part-movements.schema';
@@ -62,6 +63,7 @@ export const drizzleSchema = {
   computerAlerts,
   computerTransfers,
   maintenances,
+  maintenanceSchedules,
   parts,
   partMovements,
   inventoryItems,

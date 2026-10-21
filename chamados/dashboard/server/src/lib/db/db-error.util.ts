@@ -95,6 +95,9 @@ const CONFLICT_MESSAGES: Record<string, string> = {
      da parede. O nome, esse repete à vontade — há cinco cadeiras iguais em salas diferentes. */
   inventory_items_code_unique:
     'Já existe um produto com esse código de patrimônio. Confira a etiqueta ou abra o cadastro que já existe.',
+  /* Uma máquina tem um agendamento por vez: remarcar é trocar a data do que já existe. */
+  maintenance_schedules_computer_id_unique:
+    'Esta máquina já tem uma manutenção agendada. Remarque a data em vez de agendar outra.',
 };
 
 /** Mensagem por `check` do banco, pela mesma chave. */

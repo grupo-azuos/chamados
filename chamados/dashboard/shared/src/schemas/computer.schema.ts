@@ -4,6 +4,7 @@ import { ALERT_METRICS } from '../domain/computer-alert.util';
 import { DISPOSAL_TYPES } from '../domain/disposal.util';
 import { DEPARTMENTS } from '../domain/department.util';
 import { HEALTH_STATUSES } from '../domain/computer-health.util';
+import { PREVENTIVE_STATUSES } from '../domain/maintenance.util';
 import { MAX_PAGE_SIZE, paginatedSchema, paginationQuerySchema } from './pagination.schema';
 import { reportFormatSchema } from './report.schema';
 
@@ -47,7 +48,7 @@ const optionalText = (max: number, tooLong: string) =>
 
 const displayNameSchema = optionalText(
   DISPLAY_NAME_MAX_LENGTH,
-  `O apelido pode ter até ${DISPLAY_NAME_MAX_LENGTH} caracteres`,
+  `O nome do dispositivo pode ter até ${DISPLAY_NAME_MAX_LENGTH} caracteres`,
 );
 
 const responsibleNameSchema = optionalText(
@@ -150,6 +151,10 @@ export type Computer = z.infer<typeof computerSchema>;
  */
 export const computerListItemSchema = computerSchema.extend({
   ticketsThisMonth: z.number().int().nonnegative(),
+  /** Nulo para máquinas fora de uso; calculado pela mesma régua do quadro de preventivas. */
+  preventiveStatus: z.enum(PREVENTIVE_STATUSES).nullable(),
+  lastPreventiveAt: z.string().datetime().nullable(),
+  activeAlerts: z.number().int().nonnegative(),
 });
 
 export type ComputerListItem = z.infer<typeof computerListItemSchema>;
@@ -343,3 +348,10 @@ export type ComputerAlertListQuery = z.infer<typeof computerAlertListQuerySchema
 export const paginatedComputerAlertSchema = paginatedSchema(computerAlertSchema);
 
 export type PaginatedComputerAlerts = z.infer<typeof paginatedComputerAlertSchema>;
+
+/** Somente os dados necessários para escolher o responsável no cadastro do dispositivo. */
+export const computerResponsibleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+export type ComputerResponsible = z.infer<typeof computerResponsibleSchema>;

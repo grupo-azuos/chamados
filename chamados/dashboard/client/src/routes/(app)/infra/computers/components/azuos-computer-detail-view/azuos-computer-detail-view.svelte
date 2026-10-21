@@ -20,10 +20,14 @@
     type ComputerSample,
   } from '@template/shared/schemas/computer.schema';
   import {
+    lastPreventiveAtOf,
     maintenanceTypeLabel,
     maintenanceTypeTone,
   } from '@template/shared/domain/maintenance.util';
-  import { type Maintenance } from '@template/shared/schemas/maintenance.schema';
+  import {
+    type Maintenance,
+    type MaintenanceSchedule,
+  } from '@template/shared/schemas/maintenance.schema';
   import { movementTypeLabel, movementTypeTone } from '@template/shared/domain/part-catalog.util';
   import { type PartMovement } from '@template/shared/schemas/part.schema';
   import { type Transfer } from '@template/shared/schemas/transfer.schema';
@@ -57,6 +61,8 @@
       live: ComputerLive | null;
       /** O que já foi feito nesta máquina. Vem da feature de Manutenção; a ficha só lê. */
       maintenances: Maintenance[];
+      /** O dia combinado para abrir a máquina. Nulo quando ninguém agendou. */
+      schedule?: MaintenanceSchedule | null;
       /** Os chamados que apontam para esta máquina. A ficha só lê; quem vincula é quem atende. */
       tickets: Ticket[];
       /** As peças que saíram do depósito para esta máquina. A ficha também só lê. */
@@ -69,6 +75,9 @@
       isAlertsLoading?: boolean;
       isLiveLoading?: boolean;
       isMaintenancesLoading?: boolean;
+      isScheduleLoading?: boolean;
+      isCancellingSchedule?: boolean;
+      scheduleError?: string | null;
       isTicketsLoading?: boolean;
       isPartsLoading?: boolean;
       isTransfersLoading?: boolean;
@@ -79,6 +88,9 @@
       onEdit: () => void;
       /** Abre o formulário de manutenção já com esta máquina escolhida. */
       onRegisterMaintenance: () => void;
+      /** Abre o diálogo de agendar (ou remarcar) a manutenção desta máquina. */
+      onScheduleMaintenance: () => void;
+      onCancelSchedule: () => void;
       /** Abre o diálogo de mudar a máquina de departamento. */
       onTransfer: () => void;
       onArchivedChange: (isArchived: boolean) => void;
@@ -288,6 +300,7 @@
   import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
   import { formatDateTime } from '$lib/utils/format-date';
+  import MaintenanceScheduleCard from '../azuos-maintenance-schedule-card/azuos-maintenance-schedule-card.svelte';
   import { formatPercent, formatTimeAgo } from '$lib/utils/format-machine';
 
   /* O prop precisa de outro nome aqui dentro: um binding local chamado `state` faz o
@@ -323,6 +336,9 @@
   /* Máquina descartada é SÓ LEITURA: editar, bloquear ou gerar token nela seria mexer no
      passado — o cadastro precisa continuar contando o que ela era quando saiu. */
   const disposed = $derived(isDisposed(computer));
+  /* O prazo da preventiva sai do próprio histórico da ficha: é ele que a pessoa está vendo
+     logo abaixo, então a conta bate com o que está na tela. */
+  const lastPreventiveAt = $derived(lastPreventiveAtOf(data.maintenances));
 
   function confirmPending(): void {
     if (pending === 'archive') actions.onArchivedChange(true);
@@ -456,6 +472,24 @@
       <span class="font-semibold">Motivo do bloqueio:</span>
       {computer.blockReason}
     </p>
+  {/if}
+
+  <!-- O próximo compromisso de manutenção vem antes dos números: é a única coisa da ficha com
+       data marcada, e o que pede ação primeiro. Máquina fora de uso não tem compromisso. -->
+  {#if !disposed}
+    <MaintenanceScheduleCard
+      data={{ schedule: data.schedule ?? null, lastPreventiveAt }}
+      state={{
+        isLoading: viewState?.isScheduleLoading || viewState?.isMaintenancesLoading,
+        isCancelling: viewState?.isCancellingSchedule,
+        error: viewState?.scheduleError,
+      }}
+      actions={{
+        onSchedule: actions.onScheduleMaintenance,
+        onCancel: actions.onCancelSchedule,
+        onRegister: actions.onRegisterMaintenance,
+      }}
+    />
   {/if}
 
   <StatCardGrid ui={{ className: 'lg:grid-cols-2 xl:grid-cols-4' }}>

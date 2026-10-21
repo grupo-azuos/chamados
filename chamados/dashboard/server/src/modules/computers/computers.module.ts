@@ -1,6 +1,10 @@
 import { AgentDownloadController } from './controller/agent-download.controller';
+import { AgentBundleService } from './service/agent-bundle.service';
 import { AgentDownloadService } from './service/agent-download.service';
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../../lib/auth/auth.module';
+import { ComputerResponsiblesController } from './controller/computer-responsibles.controller';
+import { ComputerResponsiblesService } from './service/computer-responsibles.service';
 
 import { AgentReleaseController } from './controller/agent-release.controller';
 import { AgentReleaseRepository } from './repository/agent-release.repository';
@@ -22,8 +26,12 @@ import { SampleCleanupService } from './service/sample-cleanup.service';
  * precisa subir com o adaptador de WebSocket registrado — ver `main.ts`.
  */
 @Module({
-  controllers: [ComputersController, AgentReleaseController, AgentDownloadController],
+  imports: [AuthModule],
+  // A rota estática /responsibles precisa ser registrada antes de /:id.
+  controllers: [ComputerResponsiblesController, ComputersController, AgentReleaseController, AgentDownloadController],
   providers: [
+    ComputerResponsiblesService,
+    AgentBundleService,
     AgentDownloadService,
     AgentReleaseRepository,
     AgentReleaseService,

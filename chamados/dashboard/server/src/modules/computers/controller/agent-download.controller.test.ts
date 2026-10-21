@@ -7,6 +7,7 @@ import { RolesGuard } from '../../../lib/auth/roles.guard';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { STORAGE } from '../../../lib/storage/storage.token';
 import { AgentReleaseRepository } from '../repository/agent-release.repository';
+import { AgentBundleService } from '../service/agent-bundle.service';
 import { AgentDownloadService } from '../service/agent-download.service';
 import { AgentDownloadController } from './agent-download.controller';
 
@@ -15,12 +16,17 @@ describe('dashboard agent download HTTP boundary', () => {
   let user: RequestUser | undefined;
   const latest = vi.fn().mockResolvedValue(null);
   const createDownloadUrl = vi.fn().mockResolvedValue('https://storage.example.test/signed');
+  const bundle = vi.fn().mockResolvedValue({
+    fileName: 'azuos-agent-1.2.3-x64.zip',
+    content: Buffer.from('PK-fixture'),
+  });
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       controllers: [AgentDownloadController],
       providers: [
         RolesGuard,
         AgentDownloadService,
+        { provide: AgentBundleService, useValue: { bundle } },
         { provide: AgentReleaseRepository, useValue: { latest } },
         { provide: STORAGE, useValue: { downloadUrl: createDownloadUrl } },
       ],
@@ -102,5 +108,33 @@ describe('dashboard agent download HTTP boundary', () => {
       .expect(400);
     await request(app.getHttpServer()).get('/api/agent/downloads/lts/msi').expect(400);
     expect(createDownloadUrl).not.toHaveBeenCalled();
+  });
+
+  // feliz
+  it('returns the install package as a zip attachment that is never cached', async () => {
+    user = {
+      id: 'fixture',
+      name: 'Pessoa',
+      email: 'fixture@example.test',
+      role: 'user',
+      roles: { infra: 'admin' },
+    };
+    const response = await request(app.getHttpServer())
+      .post('/api/agent/downloads/bundle')
+      .send({ version: '1.2.3', serverUrl: 'https://chamados.example.test', token: 'abc', computerId: 7 })
+      .expect(200);
+
+    expect(response.headers['content-type']).toBe('application/zip');
+    expect(response.headers['content-disposition']).toBe('attachment; filename="azuos-agent-1.2.3-x64.zip"');
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
+  // triste
+  it('rejects a token sent without the machine it belongs to', async () => {
+    bundle.mockClear();
+    await request(app.getHttpServer())
+      .post('/api/agent/downloads/bundle')
+      .send({ version: '1.2.3', serverUrl: 'https://chamados.example.test', token: 'abc' })
+      .expect(400);
+    expect(bundle).not.toHaveBeenCalled();
   });
 });

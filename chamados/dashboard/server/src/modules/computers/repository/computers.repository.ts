@@ -26,8 +26,9 @@ import { DB } from '../../../lib/db/db.token';
 import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
 import { qualified } from '../../../lib/db/sql-column.util';
-import { asTimestamp } from '../../../lib/db/sql-timestamp.util';
+import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
+import { maintenances } from '../../../lib/db/schema/maintenances.schema';
 import {
   computerAlerts,
   type ComputerAlertInsert,
@@ -44,8 +45,12 @@ import {
   type ComputerRow,
 } from '../../../lib/db/schema/computers.schema';
 
-/** A máquina com o número de chamados do mês junto — é o que a lista do inventário mostra. */
-export type ComputerWithTickets = ComputerRow & { ticketsThisMonth: number };
+/** Agregados da lista, na mesma consulta: chamados do mês, última preventiva e alertas ativos. */
+export type ComputerWithTickets = ComputerRow & {
+  ticketsThisMonth: number;
+  lastPreventiveAt: Date | null;
+  activeAlerts: number;
+};
 
 export type ComputerPage = {
   rows: ComputerWithTickets[];
@@ -76,6 +81,17 @@ export type ComputerPage = {
 function computerColumns() {
   return {
     ...getTableColumns(computers),
+    lastPreventiveAt: asDate(sql<Date | null>`(
+      select max(${qualified(maintenances.performedAt)}) from ${maintenances}
+      where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
+        and ${qualified(maintenances.type)} in ('preventive', 'corrective')
+    )`, maintenances.performedAt),
+    activeAlerts: sql<number>`(
+      select count(*)::int from ${computerAlerts}
+      where ${qualified(computerAlerts.computerId)} = ${qualified(computers.id)}
+        and ${qualified(computerAlerts.status)} = 'active'
+        and ${qualified(computerAlerts.recoveredAt)} is null
+    )`,
     ticketsThisMonth: sql<number>`(
       select count(*)::int from ${tickets}
       where ${qualified(tickets.computerId)} = ${qualified(computers.id)}
@@ -301,33 +317,40 @@ type ComputerFilter = Pick<
  * trabalhando com o que está em uso hoje.
  */
 function buildWhere(query: ComputerFilter, onlineIds?: number[]): SQL | undefined {
-  const filters: (SQL | undefined)[] = [];
+  const filters: (SQL | undefined)[] = [...lifecycleFilters(query)];
 
   /* Lista vazia significa que ninguém está conectado, não ausência de filtro. */
   if (onlineIds) filters.push(onlineIds.length ? inArray(computers.id, onlineIds) : sql`false`);
+  if (query.department) filters.push(eq(computers.department, query.department));
+  if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
+  if (query.search) filters.push(searchFilter(query.search));
+
+  return filters.length > 0 ? and(...filters) : undefined;
+}
+
+/** Arquivada e descartada: em que ponto da vida a máquina está. Separado para o `buildWhere` caber no limite de complexidade. */
+function lifecycleFilters(query: ComputerFilter): SQL[] {
+  const filters: SQL[] = [];
 
   if (!query.includeArchived) filters.push(eq(computers.isArchived, false));
 
   /* A tela de Descarte pede SÓ as descartadas; todas as outras listas as escondem. Sem este
      par, a máquina que saiu de uso continuaria contando no parque e nos números do painel. */
-  if (query.onlyDisposed) filters.push(isNotNull(computers.disposedAt));
-  if (!query.onlyDisposed) filters.push(isNull(computers.disposedAt));
+  filters.push(query.onlyDisposed ? isNotNull(computers.disposedAt) : isNull(computers.disposedAt));
   if (query.disposalType) filters.push(eq(computers.disposalType, query.disposalType));
-  if (query.department) filters.push(eq(computers.department, query.department));
-  if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
 
-  if (query.search) {
-    const term = `%${query.search}%`;
-    filters.push(
-      or(
-        ilike(computers.name, term),
-        ilike(computers.displayName, term),
-        sql`(${computers.lastSnapshot}->'host'->>'hostname') ilike ${term}`,
-        ilike(computers.responsibleName, term),
-        ilike(computers.cpuModel, term),
-      ),
-    );
-  }
+  return filters;
+}
 
-  return filters.length > 0 ? and(...filters) : undefined;
+/** A busca livre olha nome, apelido, hostname, responsável e processador. */
+function searchFilter(search: string): SQL | undefined {
+  const term = `%${search}%`;
+
+  return or(
+    ilike(computers.name, term),
+    ilike(computers.displayName, term),
+    sql`(${computers.lastSnapshot}->'host'->>'hostname') ilike ${term}`,
+    ilike(computers.responsibleName, term),
+    ilike(computers.cpuModel, term),
+  );
 }

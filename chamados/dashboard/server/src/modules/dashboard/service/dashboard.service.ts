@@ -29,6 +29,9 @@ const WORST_MACHINES_LIMIT = 6;
 /** Quantas barras cabem num gráfico sem virar régua ilegível. */
 const CHART_LIMIT = 8;
 
+/** Quantas manutenções agendadas o painel lista — o resto está na tela de Manutenção. */
+const SCHEDULED_LIMIT = 8;
+
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
@@ -71,6 +74,7 @@ export class DashboardService {
       openedByDay,
       resolvedByDay,
       maintenancesByDay,
+      scheduled,
     ] = await Promise.all([
         this.repository.healthCounts(),
         this.repository.neverSeenCount(),
@@ -90,6 +94,7 @@ export class DashboardService {
         this.repository.ticketsOpenedByDay(since),
         this.repository.ticketsResolvedByDay(since),
         this.repository.maintenancesByDay(since),
+        this.repository.scheduledMaintenances(SCHEDULED_LIMIT),
       ]);
 
     const plan = buildMaintenancePlan(
@@ -139,6 +144,10 @@ export class DashboardService {
         })),
         /* "Já foi feita a de hoje" é o que decide entre cobrar e parabenizar. */
         doneToday: maintenanceLog.some((entry) => isToday(entry.performedAt)),
+        scheduled: scheduled.map((entry) => ({
+          ...entry,
+          department: (entry.department as Department | null) ?? null,
+        })),
       },
     };
   }

@@ -1,12 +1,16 @@
 <script lang="ts" module>
   import {
+    daysUntilDay,
     maintenanceTypeLabel,
+    scheduleCountdownLabel,
+    scheduleTone,
     type MaintenanceType,
   } from '@template/shared/domain/maintenance.util';
   import {
     type MaintenanceEntry,
     type MaintenanceLog,
     type PlannedMaintenance,
+    type ScheduledMaintenance,
   } from '@template/shared/schemas/dashboard.schema';
 
   /**
@@ -27,6 +31,8 @@
       /** O que o plano automático manda abrir hoje, e se já foi feito. */
       plannedToday: readonly PlannedMaintenance[];
       isDoneToday: boolean;
+      /** As manutenções agendadas por alguém — atrasadas primeiro. Vazio some do bloco. */
+      scheduled?: readonly ScheduledMaintenance[];
     };
     state?: { isLoading?: boolean };
     ui?: { className?: string };
@@ -54,6 +60,13 @@
   /** "por Carlos", quando se sabe quem fez. */
   export function performerOf(entry: MaintenanceEntry): string {
     return entry.performedBy?.trim() ? `por ${entry.performedBy}` : 'sem responsável anotado';
+  }
+
+  /** `AAAA-MM-DD` → "05/11", sem passar por fuso: no painel, o ano é o de agora. */
+  export function shortDayOf(day: string): string {
+    const [, month, date] = day.split('-');
+
+    return `${date}/${month}`;
   }
 
   /** "há 4 meses sem abrir", ou "nunca foi aberta". */
@@ -119,6 +132,32 @@
           <li class="text-xs">
             <span class="font-medium">{planned.computerName}</span>
             <span class="opacity-80"> · {waitingOf(planned)}</span>
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
+
+  <!-- As agendadas também pedem ação, mas com data marcada: vêm depois do plano de hoje e
+       antes do histórico. -->
+  {#if (data.scheduled ?? []).length > 0}
+    <div class="bg-muted/50 mb-4 rounded-box border p-3" data-slot="dashboard-scheduled">
+      <p class="text-foreground flex items-center gap-2 text-xs font-semibold">
+        <CalendarClock class="size-4 shrink-0" aria-hidden="true" />
+        Manutenções agendadas
+      </p>
+      <ul class="mt-2 space-y-1.5">
+        {#each data.scheduled ?? [] as scheduled (scheduled.computerId)}
+          {@const days = daysUntilDay(scheduled.scheduledFor) ?? 0}
+          <li class="flex items-start justify-between gap-2 text-xs">
+            <span class="min-w-0 break-words">
+              <span class="font-medium">{scheduled.computerName}</span>
+              <span class="text-muted-foreground"> · {shortDayOf(scheduled.scheduledFor)}{scheduled.note ? ` · ${scheduled.note}` : ''}</span>
+            </span>
+            <StatusBadge
+              data={{ label: scheduleCountdownLabel(days) }}
+              ui={{ tone: scheduleTone(days), size: 'sm' }}
+            />
           </li>
         {/each}
       </ul>

@@ -26,13 +26,19 @@ try {
     Export-Certificate -Cert $certificate -FilePath $publicCertificate | Out-Null
     Import-Certificate -FilePath $publicCertificate -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
     Import-Certificate -FilePath $publicCertificate -CertStoreLocation 'Cert:\LocalMachine\TrustedPublisher' | Out-Null
-    foreach ($script in @('install-certificate.ps1', 'configure-machine.ps1')) {
+    foreach ($script in @('install-certificate.ps1', 'configure-machine.ps1', 'install-agent.ps1')) {
         $signature = Set-AuthenticodeSignature -FilePath (Join-Path $output $script) -Certificate $certificate -HashAlgorithm SHA256 -TimestampServer 'http://timestamp.digicert.com'
         if ($signature.Status -ne 'Valid') { throw "Script signing failed: $script ($($signature.Status))" }
     }
     $msi = Join-Path $output "azuos-agent-$Version-x64.msi"
     Sign-File $msi
     Export-Certificate -Cert $certificate -FilePath (Join-Path $output 'publisher.cer') | Out-Null
+    # O pacote completo: quem instala baixa um arquivo só, com tudo na mesma pasta. O
+    # install-agent.ps1 daqui pergunta o token; o pacote com token embutido sai do dashboard.
+    $bundle = Join-Path $output "azuos-agent-$Version-x64.zip"
+    $bundleFiles = @("azuos-agent-$Version-x64.msi", 'publisher.cer', 'install-certificate.ps1', 'install-agent.ps1') |
+        ForEach-Object { Join-Path $output $_ }
+    Compress-Archive -LiteralPath $bundleFiles -DestinationPath $bundle -CompressionLevel Optimal -Force
     $artifacts = @{}
     foreach ($entry in @{ msi = "azuos-agent-$Version-x64.msi"; certificate = 'publisher.cer' }.GetEnumerator()) {
         $path = Join-Path $output $entry.Value

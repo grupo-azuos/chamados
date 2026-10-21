@@ -2,9 +2,10 @@ import {
   agentLtsSchema,
   agentFileLinkSchema,
   agentReleaseItemSchema,
+  type AgentBundleRequest,
   type AgentDownloadKind,
 } from '@template/shared/schemas/agent-release.schema';
-import { apiRequest } from './http-client';
+import { apiDownload, apiRequest, type Downloaded } from './http-client';
 
 export const agentDownloadApi = {
   lts: async () => {
@@ -24,4 +25,7 @@ export const agentDownloadApi = {
         `/agent/downloads/releases/${encodeURIComponent(version)}/${kind}`,
       ),
     ),
+  /** O zip com MSI, certificado e scripts; POST porque o token, quando vem, vai no corpo. */
+  bundle: (request: AgentBundleRequest): Promise<Downloaded> =>
+    apiDownload('/agent/downloads/bundle', { method: 'POST', body: request }),
 };

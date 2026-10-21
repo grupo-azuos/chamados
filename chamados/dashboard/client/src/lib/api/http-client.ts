@@ -25,7 +25,7 @@ export class ApiError extends Error {
 
 export type RequestOptions = {
   credentials?: RequestCredentials;
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined | null>;
   signal?: AbortSignal;
@@ -108,6 +108,7 @@ export async function apiDownload(path: string, options: RequestOptions = {}): P
     method: options.method ?? 'GET',
     signal: options.signal,
     headers: buildHeaders(options),
+    body: toRequestBody(options.body),
   });
 
   if (!response.ok) throw await toApiError(response);

@@ -1,6 +1,8 @@
 <script lang="ts" module>
   import { DEPARTMENTS, DEPARTMENT_LABELS } from '@template/shared/domain/department.util';
 
+  import type { ComputerResponsible } from '@template/shared/schemas/computer.schema';
+
   import { type FormFieldState } from '$lib/types/form-field.type';
 
   export type ComputerFormField = 'name' | 'displayName' | 'responsibleName' | 'department';
@@ -22,9 +24,10 @@
   export type AzuosComputerFormDialogProps = {
     data: {
       mode: 'create' | 'edit';
+      responsibles?: ComputerResponsible[];
       fields: Record<ComputerFormField, FormFieldState>;
     };
-    state: { isOpen: boolean; isSubmitting?: boolean; error?: string | null };
+    state: { isOpen: boolean; isSubmitting?: boolean; error?: string | null; isLoadingResponsibles?: boolean; responsiblesError?: string | null };
     actions: {
       onChange: (field: ComputerFormField, value: string) => void;
       onBlur: (field: ComputerFormField) => void;
@@ -121,10 +124,10 @@
              ocupa a linha inteira também; ao CADASTRAR, divide a linha com o nome. -->
         <TextField
           data={{
-            label: 'Apelido',
+            label: 'Nome do dispositivo',
             name: 'displayName',
             value: fields.displayName.value,
-            placeholder: 'Como o pessoal chama essa máquina',
+            placeholder: 'Ex: Computador da recepção',
           }}
           ui={{ className: isEdit ? 'sm:col-span-2' : undefined }}
           state={{
@@ -141,19 +144,31 @@
 
       <!-- Atribuição e departamento -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        <TextField
-          data={{
-            label: 'Responsável',
-            name: 'responsibleName',
-            value: fields.responsibleName.value,
-            placeholder: 'Quem usa a máquina no dia a dia',
-          }}
-          state={{ error: fields.responsibleName.error, isDisabled: state.isSubmitting }}
-          actions={{
-            onChange: (value: string) => actions.onChange('responsibleName', value),
-            onBlur: () => actions.onBlur('responsibleName'),
-          }}
-        />
+        <div class="flex min-w-0 flex-col gap-1.5">
+          <span class="text-ink-700 text-sm font-medium">Responsável</span>
+          <OptionPicker
+            data={{ value: fields.responsibleName.value,
+              options: [
+                { value: '', label: 'Sem responsável' },
+                ...(data.responsibles ?? []).map((person) => ({ value: person.id, label: person.name })),
+              ] }}
+            ui={{ ariaLabel: 'Responsável', mode: 'combobox', fullWidth: true,
+              placeholder: 'Selecione ou informe um nome', searchPlaceholder: 'Buscar pessoa ou digitar nome…',
+              allowCustomValue: true, selectedLabel: fields.responsibleName.value || 'Sem responsável', showSelectedTooltip: true }}
+            state={{ isDisabled: state.isSubmitting, error: fields.responsibleName.error }}
+            actions={{
+              onChange: (id) => actions.onChange('responsibleName', data.responsibles?.find((person) => person.id === id)?.name ?? ''),
+              onCustomValue: (name) => actions.onChange('responsibleName', name),
+            }}
+          />
+          {#if state.isLoadingResponsibles}
+            <p class="text-ink-500 text-xs">Carregando pessoas… Você também pode digitar um nome.</p>
+          {:else if state.responsiblesError}
+            <p role="status" class="text-warning text-xs">A lista de pessoas não carregou. Digite o nome do responsável na busca.</p>
+          {:else}
+            <p class="text-ink-500 text-xs">Não encontrou a pessoa? Digite o nome e escolha “Usar”.</p>
+          {/if}
+        </div>
 
         <div class="flex flex-col gap-1.5">
           <span class="text-ink-700 text-sm font-medium">Departamento</span>

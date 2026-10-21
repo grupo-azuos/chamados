@@ -9,6 +9,7 @@
   } from '@template/shared/domain/maintenance.util';
   import {
     type Maintenance,
+    type MaintenanceSchedule,
     type PreventiveDue,
   } from '@template/shared/schemas/maintenance.schema';
 
@@ -34,6 +35,8 @@
       maintenances: Maintenance[];
       total: number;
       preventive: PreventiveDue[];
+      /** As manutenções agendadas — o quadro de preventivas as mostra no alto. */
+      schedules?: MaintenanceSchedule[];
       filter: MaintenanceListFilter;
       removing: Maintenance | null;
       paging?: {
@@ -144,9 +147,12 @@
   </PageHeader>
 
   <PreventiveBoard
-    data={{ rows: data.preventive }}
+    data={{ rows: data.preventive, schedules: data.schedules }}
     state={{ isLoading: viewState.isPreventiveLoading }}
-    actions={{ onRegister: (row) => actions.onRegister(row.computerId) }}
+    actions={{
+      onRegister: (row) => actions.onRegister(row.computerId),
+      onRegisterMachine: (computerId) => actions.onRegister(computerId),
+    }}
   />
 
   <!-- A falha de uma AÇÃO fica na tela, em vermelho, até resolver (CONTRIBUTING §15). -->

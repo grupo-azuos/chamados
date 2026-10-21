@@ -391,7 +391,7 @@ describe('toComputerListItem', () => {
   /* O número existe só na LISTA: é ele que responde "esta máquina dá trabalho?" de relance,
      sem abrir a ficha de cada uma. */
   it('carries how many tickets the machine gave this month', () => {
-    const item = toComputerListItem({ ...computerRow(), ticketsThisMonth: 4 }, true);
+    const item = toComputerListItem({ ...computerRow(), lastPreventiveAt: null, activeAlerts: 0, ticketsThisMonth: 4 }, true);
 
     expect(item.ticketsThisMonth).toBe(4);
     expect(item.isOnline).toBe(true);
@@ -400,7 +400,41 @@ describe('toComputerListItem', () => {
   // triste
   it('keeps zero as zero, and not as absence', () => {
     expect(
-      toComputerListItem({ ...computerRow(), ticketsThisMonth: 0 }, false).ticketsThisMonth,
+      toComputerListItem({ ...computerRow(), lastPreventiveAt: null, activeAlerts: 0, ticketsThisMonth: 0 }, false).ticketsThisMonth,
     ).toBe(0);
+  });
+});
+
+
+describe('toComputerListItem maintenance signals', () => {
+  // feliz
+  it('exposes a due preventive and current alerts without changing the resource score', () => {
+    const item = toComputerListItem({ ...computerRow(), ticketsThisMonth: 0,
+      lastPreventiveAt: new Date('2020-01-01T12:00:00.000Z'), activeAlerts: 2 }, true);
+    expect(item.preventiveStatus).toBe('due');
+    expect(item.lastPreventiveAt).toBe('2020-01-01T12:00:00.000Z');
+    expect(item.activeAlerts).toBe(2);
+    expect(item.healthScore).toBe(computerRow().healthScore);
+  });
+
+  it('clears a preventive need once maintenance is recorded', () => {
+    const item = toComputerListItem({ ...computerRow(), ticketsThisMonth: 0,
+      lastPreventiveAt: new Date(), activeAlerts: 0 }, true);
+    expect(item.preventiveStatus).toBe('ok');
+    expect(item.activeAlerts).toBe(0);
+  });
+
+  // triste
+  it('distinguishes no maintenance history from an up-to-date preventive', () => {
+    const item = toComputerListItem({ ...computerRow(), ticketsThisMonth: 0,
+      lastPreventiveAt: null, activeAlerts: 0 }, false);
+    expect(item.preventiveStatus).toBe('never');
+    expect(item.lastPreventiveAt).toBeNull();
+  });
+
+  it('does not demand preventive work on archived devices', () => {
+    const item = toComputerListItem({ ...computerRow(), isArchived: true, ticketsThisMonth: 0,
+      lastPreventiveAt: null, activeAlerts: 0 }, false);
+    expect(item.preventiveStatus).toBeNull();
   });
 });

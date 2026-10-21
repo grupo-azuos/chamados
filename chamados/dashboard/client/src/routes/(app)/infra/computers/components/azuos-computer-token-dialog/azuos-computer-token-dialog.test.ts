@@ -62,19 +62,42 @@ describe('AzuosComputerTokenDialog', () => {
     writeSpy.mockRestore();
   });
 
-  it('triggers onDownloadScript when clicking the download script button', async () => {
-    const onDownloadScript = vi.fn();
+  it('asks for the install package with this token when the zip button is clicked', async () => {
+    const onDownloadBundle = vi.fn();
     const user = userEvent.setup();
 
     render(ComputerTokenDialog, {
       props: {
         data: { computerName: 'RECEPCAO-01', token: TOKEN },
-        actions: { onClose: vi.fn(), onDownloadScript },
+        actions: { onClose: vi.fn(), onDownloadBundle },
       },
     });
 
-    await user.click(screen.getByRole('button', { name: 'Baixar script desta máquina' }));
-    expect(onDownloadScript).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole('button', { name: 'Baixar pacote de instalação (.zip)' }));
+    expect(onDownloadBundle).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('shows why the package failed, keeping the token on screen', () => {
+    render(ComputerTokenDialog, {
+      props: {
+        data: { computerName: 'RECEPCAO-01', token: TOKEN },
+        state: { bundleError: 'Este token não é desta máquina.' },
+        actions: { onClose: vi.fn(), onDownloadBundle: vi.fn() },
+      },
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Este token não é desta máquina.');
+    expect(screen.getByTestId('agent-token')).toHaveTextContent(TOKEN);
+  });
+
+  // triste
+  it('hides the package button when the screen cannot build one', () => {
+    render(ComputerTokenDialog, {
+      props: { data: { computerName: 'RECEPCAO-01', token: TOKEN }, actions: { onClose: vi.fn() } },
+    });
+
+    expect(screen.queryByRole('button', { name: /pacote de instalação/ })).not.toBeInTheDocument();
   });
 
   // triste

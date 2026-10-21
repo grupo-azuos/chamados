@@ -8,9 +8,12 @@
   import ComputerTokenDialog from '../components/azuos-computer-token-dialog/azuos-computer-token-dialog.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import { useAgentBundleModel } from '$lib/hooks/use-agent-bundle/use-agent-bundle.svelte';
   import { useComputerDetailModel } from '$lib/hooks/use-computer-detail/use-computer-detail.svelte';
+  import { useMaintenanceScheduleModel } from '$lib/hooks/use-maintenance-schedule/use-maintenance-schedule.svelte';
   import MaintenanceFormSlot from '../../maintenance/maintenance-form-slot.svelte';
   import ComputerFormSlot from '../computer-form-slot.svelte';
+  import ScheduleFormSlot from './schedule-form-slot.svelte';
   import TransferFormSlot from './transfer-form-slot.svelte';
 
   /**
@@ -23,11 +26,14 @@
   const id = Number(page.params.id);
 
   const detail = useComputerDetailModel(id);
+  const schedule = useMaintenanceScheduleModel(id);
+  const bundle = useAgentBundleModel();
 
   /* Qual peça está na frente — não é dado. */
   let isEditing = $state(false);
   let isRegisteringMaintenance = $state(false);
   let isTransferring = $state(false);
+  let isScheduling = $state(false);
 </script>
 
 <svelte:head>
@@ -70,12 +76,20 @@
       live: detail.data.live,
       tickets: detail.data.tickets,
       maintenances: detail.data.maintenances,
+      schedule: schedule.data.schedule,
       partMovements: detail.data.partMovements,
       transfers: detail.data.transfers,
     }}
-    state={detail.state}
+    state={{
+      ...detail.state,
+      isScheduleLoading: schedule.state.isLoading,
+      isCancellingSchedule: schedule.state.isCancelling,
+      scheduleError: schedule.state.error,
+    }}
     actions={{
       ...detail.actions,
+      onScheduleMaintenance: () => (isScheduling = true),
+      onCancelSchedule: schedule.actions.onCancel,
       onEdit: () => (isEditing = true),
       onRegisterMaintenance: () => (isRegisteringMaintenance = true),
       onTransfer: () => (isTransferring = true),
@@ -105,6 +119,16 @@
   />
 {/if}
 
+<!-- Agendar e remarcar são o mesmo diálogo: com data marcada, ele já abre com ela. -->
+{#if isScheduling && detail.data.computer}
+  <ScheduleFormSlot
+    computerId={detail.data.computer.id}
+    machineName={detail.data.computer.displayName ?? detail.data.computer.name}
+    schedule={schedule.data.schedule}
+    onClose={() => (isScheduling = false)}
+  />
+{/if}
+
 <!-- `{#key}` pelo id: a transferência de outra máquina abre com as escolhas dela, zeradas. -->
 {#if isTransferring && detail.data.computer}
   {#key detail.data.computer.id}
@@ -119,6 +143,11 @@
 {#if detail.data.newToken && detail.data.computer}
   <ComputerTokenDialog
     data={{ computerName: detail.data.computer.name, token: detail.data.newToken }}
-    actions={{ onClose: detail.actions.onDismissToken }}
+    state={{ isDownloadingBundle: bundle.state.isDownloading, bundleError: bundle.state.error }}
+    actions={{
+      onClose: detail.actions.onDismissToken,
+      onDownloadBundle: () =>
+        detail.data.newToken && bundle.actions.onDownload({ token: detail.data.newToken, computerId: id }),
+    }}
   />
 {/if}

@@ -7,7 +7,7 @@ import Harness from './use-computer-form-harness.test.svelte';
 import { type ComputerFormModel, type CreatedAgentToken } from './use-computer-form.svelte';
 
 vi.mock('$lib/api/computers.api', () => ({
-  computersApi: { create: vi.fn(), update: vi.fn() },
+  computersApi: { create: vi.fn(), update: vi.fn(), responsibles: vi.fn().mockResolvedValue([]) },
 }));
 
 const { computersApi } = await import('$lib/api/computers.api');
@@ -71,6 +71,7 @@ function mountModel(
 
 describe('useComputerFormModel', () => {
   beforeEach(() => {
+    vi.mocked(computersApi.responsibles).mockResolvedValue([]);
     vi.mocked(computersApi.create).mockResolvedValue({
       computer: computer(),
       token: 'agt_novo',
@@ -88,7 +89,11 @@ describe('useComputerFormModel', () => {
     model.actions.onSubmit();
 
     await waitFor(() =>
-      expect(onSaved).toHaveBeenCalledWith({ token: 'agt_novo', computerName: 'RECEPCAO-01' }),
+      expect(onSaved).toHaveBeenCalledWith({
+        token: 'agt_novo',
+        computerId: expect.any(Number),
+        computerName: 'RECEPCAO-01',
+      }),
     );
   });
 
@@ -162,4 +167,14 @@ describe('useComputerFormModel', () => {
     await waitFor(() => expect(model.state.error).toBe('Já existe uma máquina com esse nome.'));
     expect(onSaved).not.toHaveBeenCalled();
   });
+
+  it('keeps directory failures separate from saving and preserves a manual name', async () => {
+    vi.mocked(computersApi.responsibles).mockRejectedValue(new ApiError(503, 'Diretório indisponível'));
+    const model = mountModel();
+    await waitFor(() => expect(model.state.responsiblesError).toBe('Diretório indisponível'));
+    expect(model.state.error).toBeNull();
+    model.actions.onChange('responsibleName', 'Equipe externa');
+    expect(model.data.fields.responsibleName.value).toBe('Equipe externa');
+  });
+
 });

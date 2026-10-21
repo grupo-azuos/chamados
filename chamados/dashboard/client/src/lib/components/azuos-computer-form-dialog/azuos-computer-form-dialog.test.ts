@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -97,5 +97,41 @@ describe('AzuosComputerFormDialog', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Já existe uma máquina com esse nome.');
     expect(screen.getByDisplayValue('RECEPCAO-01')).toBeInTheDocument();
+  });
+});
+
+
+describe('AzuosComputerFormDialog responsible directory', () => {
+  // feliz
+  it('names the display field and selects a directory person by name', async () => {
+    const onChange = vi.fn();
+    render(ComputerFormDialog, { props: {
+      data: { mode: 'create', fields: fields(), responsibles: [
+        { id: 'person-1', name: 'Ana Exemplo' },
+      ] }, state: { isOpen: true }, actions: { ...actions, onChange },
+    } });
+    expect(screen.getByLabelText('Nome do dispositivo')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Responsável' }));
+    /* O jsdom não mede o balão; buscamos dentro dele mesmo quando marcado como oculto. */
+    const search = await screen.findByPlaceholderText('Buscar pessoa ou digitar nome…');
+    const popup = search.closest('[data-slot="popover-content"]') as HTMLElement;
+    expect(within(popup).queryByText(/@/)).not.toBeInTheDocument();
+    await fireEvent.click(within(popup).getByText('Ana Exemplo'));
+    expect(onChange).toHaveBeenCalledWith('responsibleName', 'Ana Exemplo');
+  });
+
+  // triste
+  it('allows a free name when the directory is unavailable', async () => {
+    const onChange = vi.fn();
+    render(ComputerFormDialog, { props: {
+      data: { mode: 'create', fields: fields(), responsibles: [] },
+      state: { isOpen: true, responsiblesError: 'Diretório indisponível' }, actions: { ...actions, onChange },
+    } });
+    expect(screen.getByRole('status')).toHaveTextContent('A lista de pessoas não carregou');
+    await userEvent.click(screen.getByRole('button', { name: 'Responsável' }));
+    const search = await screen.findByPlaceholderText('Buscar pessoa ou digitar nome…');
+    await fireEvent.input(search, { target: { value: 'Equipe externa' } });
+    await fireEvent.click(await screen.findByText('Usar “Equipe externa”'));
+    expect(onChange).toHaveBeenCalledWith('responsibleName', 'Equipe externa');
   });
 });

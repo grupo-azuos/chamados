@@ -41,9 +41,12 @@
       searchPlaceholder?: string;
       /** Mostra o nome completo do item escolhido no hover e no foco do combo. */
       showSelectedTooltip?: boolean;
+      /** Permite confirmar o texto da busca como valor livre, além das opções conhecidas. */
+      allowCustomValue?: boolean;
+      selectedLabel?: string;
     };
-    state?: { isDisabled?: boolean };
-    actions: { onChange: (value: string) => void };
+    state?: { isDisabled?: boolean; error?: string | null };
+    actions: { onChange: (value: string) => void; onCustomValue?: (value: string) => void };
   };
 
   /**
@@ -188,14 +191,20 @@
   const isMobile = new MediaQuery('(max-width: 639px)');
   let isOpen = $state(false);
   let query = $state('');
+  const fieldId = $props.id();
+  const errorId = `${fieldId}-error`;
 
   const options = $derived(resolveOptions(data, ui?.allLabel));
   const layout = $derived(ui?.fullWidth ? 'form' : 'filter');
   const isPillMode = $derived(
-    !isMobile.current && ui?.mode !== 'combobox' && options.length <= PILL_MAX_OPTIONS[layout],
+    !isMobile.current && !ui?.allowCustomValue && ui?.mode !== 'combobox' && options.length <= PILL_MAX_OPTIONS[layout],
   );
   const gridColumns = $derived(resolveGridColumns(options.length));
   const selectedOption = $derived(options.find((option) => option.value === data.value) ?? null);
+
+  const selectedLabel = $derived(ui?.selectedLabel ?? selectedOption?.label ??
+    (ui?.allowCustomValue && data.value ? data.value : ui?.placeholder ?? 'Selecione'));
+  const customValue = $derived(ui?.allowCustomValue ? query.trim() : '');
 
   const filteredOptions = $derived(
     query.trim()
@@ -203,8 +212,9 @@
       : options,
   );
 
-  function select(value: string): void {
-    actions.onChange(value);
+  function select(value: string, custom = false): void {
+    if (custom && actions.onCustomValue) actions.onCustomValue(value);
+    else actions.onChange(value);
     isOpen = false;
     query = '';
   }
@@ -215,6 +225,8 @@
     {...props}
     disabled={fieldState?.isDisabled}
     aria-label={ui?.ariaLabel}
+    aria-invalid={Boolean(fieldState?.error)}
+    aria-describedby={fieldState?.error ? errorId : undefined}
     class={cn(
       'control-lg',
       'rounded-control inline-flex min-w-0 max-w-full w-full cursor-pointer items-center justify-between gap-2 border border-border/70 bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60',
@@ -228,7 +240,7 @@
       {:else if selectedOption?.tone}
         <span class={optionDot({ tone: selectedOption.tone })} aria-hidden="true"></span>
       {/if}
-      <span class="truncate">{selectedOption?.label ?? ui?.placeholder ?? 'Selecione'}</span>
+      <span class="truncate">{selectedLabel}</span>
     </span>
     <ChevronDownIcon class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
   </PopoverTrigger>
@@ -266,7 +278,7 @@
     {#if ui?.showSelectedTooltip}
       <Tooltip.Provider delayDuration={200}>
         <Tooltip.Root
-          disabled={isOpen || isMobile.current || !data.value || !selectedOption || fieldState?.isDisabled}
+          disabled={isOpen || isMobile.current || !data.value || (!selectedOption && !ui?.allowCustomValue) || fieldState?.isDisabled}
         >
           <Tooltip.Trigger>
             {#snippet child({ props })}
@@ -278,7 +290,7 @@
             side="top"
             sideOffset={8}
             class="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal break-words"
-          >{selectedOption?.label}</Tooltip.Content>
+          >{selectedLabel}</Tooltip.Content>
         </Tooltip.Root>
       </Tooltip.Provider>
     {:else}
@@ -306,7 +318,7 @@
           aria-label={ui?.searchPlaceholder ?? 'Buscar opções'}
           class={cn(
             /* A busca do balão é um controle como os outros: degrau `sm` da régua. */
-            'control-sm rounded-control',
+            ui?.allowCustomValue ? 'control-lg rounded-control' : 'control-sm rounded-control',
             'w-full border border-border/60 bg-muted/30 pr-2 pl-7 text-xs text-foreground outline-none focus:border-primary',
           )}
         />
@@ -341,7 +353,20 @@
         {:else}
           <p class="px-2.5 py-3 text-center text-xs text-muted-foreground">Nada encontrado.</p>
         {/each}
+        {#if customValue}
+          <button
+            type="button"
+            onclick={() => select(customValue, true)}
+            class="text-primary hover:bg-primary/10 flex min-h-11 w-full cursor-pointer items-center rounded-chip px-3 py-2.5 text-left text-sm font-medium break-words"
+          >Usar “{customValue}”</button>
+        {:else if ui?.allowCustomValue && filteredOptions.length === 0}
+          <p class="px-3 pb-3 text-xs text-muted-foreground">Digite um nome na busca para usá-lo.</p>
+        {/if}
       </div>
     </PopoverContent>
   </Popover>
+{/if}
+
+{#if fieldState?.error}
+  <p id={errorId} role="alert" class="mt-1 text-xs text-destructive">{fieldState.error}</p>
 {/if}

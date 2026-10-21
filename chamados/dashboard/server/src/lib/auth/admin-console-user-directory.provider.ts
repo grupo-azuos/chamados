@@ -7,17 +7,19 @@ import { MOCK_IDENTITY } from './identity.provider';
 import { type UserDirectoryProvider } from './user-directory.type';
 
 /**
- * AS PESSOAS DESTE SISTEMA, lidas no admin-console.
+ * AS PESSOAS DO DIRETÓRIO, lidas no admin-console.
  *
- * Duas rotas de lá, com o token de serviço do sistema (`ADMIN_CONSOLE_TOKEN`):
+ * Rotas de lá, com o token de serviço do sistema (`ADMIN_CONSOLE_TOKEN`):
  *
  *  - `GET /api/systems/me/access` — QUEM PODE ENTRAR AQUI, com o papel de cada um. É a lista
- *    do seletor de responsável e da tela de Acessos: oferecer o escritório inteiro seria
- *    oferecer quem nem consegue abrir o sistema. O `me` é o sistema dono do token; não existe
+ *    da tela de Acessos e das atribuições que exigem acesso ao sistema.
+ *    O `me` é o sistema dono do token; não existe
  *    parâmetro para pedir a lista de outro.
  *  - `GET /api/users?ids=` — uma pessoa só, pelo UUID.
  *  - `GET /api/users?search=` — quem tem o termo no nome ou no e-mail, no escritório inteiro:
  *    quem pede acesso pelo WhatsApp ainda não está na lista deste sistema.
+ *  - `GET /api/users?page=&pageSize=` — o escritório inteiro, incluindo quem não acessa o
+ *    Chamados. Todas as páginas são lidas para escolher o responsável por um computador.
  *
  * Três decisões:
  *
@@ -33,6 +35,7 @@ const CACHE_TTL_MS = 60_000;
 
 /* Busca por um primeiro nome comum ("Ana") traz bastante gente; o desempate é local. */
 const SEARCH_PAGE_SIZE = 50;
+const DIRECTORY_PAGE_SIZE = 200;
 
 const UNAVAILABLE = 'Não consegui ler as pessoas no admin-console. Tente de novo em instantes.';
 
@@ -59,6 +62,7 @@ type AccessListResponse = {
 };
 
 type UsersResponse = {
+  meta?: { pagination?: { totalPages?: unknown } };
   data?: {
     users?: {
       id?: unknown;
@@ -73,6 +77,7 @@ type UsersResponse = {
 export class AdminConsoleUserDirectoryProvider implements UserDirectoryProvider {
   private readonly logger = new Logger(AdminConsoleUserDirectoryProvider.name);
   private cached: { users: DirectoryUser[]; at: number } | null = null;
+  private cachedAll: { users: DirectoryUser[]; at: number } | null = null;
 
   constructor(@Inject(ENV) private readonly env: Env) {}
 
@@ -83,6 +88,25 @@ export class AdminConsoleUserDirectoryProvider implements UserDirectoryProvider 
     const users = toDirectoryUsers(body.data?.people, (person) => person.presentation?.avatarUrl);
     this.cached = { users, at: Date.now() };
 
+    return users;
+  }
+
+  async listAllUsers(): Promise<DirectoryUser[]> {
+    if (this.cachedAll && Date.now() - this.cachedAll.at < CACHE_TTL_MS) return this.cachedAll.users;
+
+    const first = await this.read<UsersResponse>(`/api/users?page=1&pageSize=${DIRECTORY_PAGE_SIZE}`);
+    const pages = directoryPageCount(first);
+    const people = toDirectoryUsers(first.data?.users, (user) => user.profile?.avatarUrl);
+    for (let page = 2; page <= pages; page += 1) {
+      const body = await this.read<UsersResponse>(`/api/users?page=${page}&pageSize=${DIRECTORY_PAGE_SIZE}`);
+      directoryPageCount(body);
+      people.push(...toDirectoryUsers(body.data?.users, (user) => user.profile?.avatarUrl));
+    }
+
+    const users = [...new Map(people.map((person) => [person.id, person])).values()]
+      .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+    /* O cache só é publicado depois da última página, para não guardar uma lista incompleta. */
+    this.cachedAll = { users, at: Date.now() };
     return users;
   }
 
@@ -139,6 +163,15 @@ export class AdminConsoleUserDirectoryProvider implements UserDirectoryProvider 
 
     return { accept: 'application/json', authorization: `Bearer ${this.env.ADMIN_CONSOLE_TOKEN}` };
   }
+}
+
+/** Resposta sem paginação não prova que o diretório terminou: não truncamos a lista em silêncio. */
+function directoryPageCount(body: UsersResponse): number {
+  const pages = body?.meta?.pagination?.totalPages;
+  if (!Array.isArray(body?.data?.users) || typeof pages !== 'number' || !Number.isSafeInteger(pages) || pages < 0) {
+    throw new ServiceUnavailableException(UNAVAILABLE);
+  }
+  return pages;
 }
 
 type RawPerson = { id?: unknown; name?: unknown; email?: unknown; role?: unknown };

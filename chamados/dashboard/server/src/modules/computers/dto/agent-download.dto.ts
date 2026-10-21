@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import {
+  agentBundleRequestSchema,
   agentDownloadQuerySchema,
   agentLtsSchema,
   agentFileLinkSchema,
@@ -9,3 +10,4 @@ export class AgentDownloadQueryDto extends createZodDto(agentDownloadQuerySchema
 export class AgentLtsDto extends createZodDto(agentLtsSchema) {}
 export class AgentFileLinkDto extends createZodDto(agentFileLinkSchema) {}
 export class AgentReleaseItemDto extends createZodDto(agentReleaseItemSchema) {}
+export class AgentBundleRequestDto extends createZodDto(agentBundleRequestSchema) {}

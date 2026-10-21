@@ -31,7 +31,9 @@
     return state.downloadingVersion?.version === version && state.downloadingVersion.kind === kind;
   }
 
-  const isAnyDownloading = $derived(state.downloading !== null || state.downloadingVersion !== null);
+  const isAnyDownloading = $derived(
+    state.downloading !== null || state.downloadingVersion !== null || state.isDownloadingBundle,
+  );
 </script>
 
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
@@ -97,7 +99,8 @@
         </p>
         <ol class="text-foreground mt-4 list-decimal space-y-3 pl-5 text-sm">
           <li>
-            Baixe o instalador MSI, o certificado e o script de instalação automática abaixo.
+            Baixe o pacote completo (.zip) e descompacte no computador. Ele já traz o instalador
+            MSI, o certificado e os scripts — ou baixe cada arquivo separado, abaixo.
           </li>
           <li>
             Se o Windows bloquear o script por não ter assinatura digital, abra o PowerShell como
@@ -115,8 +118,14 @@
         </ol>
         <div class="mt-5 flex flex-wrap gap-3">
           <ActionButton
-            data={{ label: 'Baixar script de instalação (install-agent.ps1)' }}
+            data={{ label: 'Baixar pacote completo (.zip)', loadingLabel: 'Montando o pacote…' }}
             ui={{ icon: Download }}
+            state={{ isLoading: state.isDownloadingBundle, isDisabled: isAnyDownloading }}
+            actions={{ onClick: () => actions.onDownloadBundle() }}
+          />
+          <ActionButton
+            data={{ label: 'Baixar script de instalação (install-agent.ps1)' }}
+            ui={{ variant: 'secondary', icon: Download }}
             actions={{ onClick: () => actions.onDownloadInstallerScript?.() }}
           />
           <ActionButton
@@ -207,6 +216,12 @@
     <ErrorState
       data={{ title: 'Não consegui preparar o download', message: state.downloadError }}
       actions={{ onRetry: actions.onRetry }}
+    />
+  {/if}
+  {#if state.bundleError}
+    <ErrorState
+      data={{ title: 'Não consegui montar o pacote', message: state.bundleError }}
+      actions={{ onRetry: actions.onDownloadBundle }}
     />
   {/if}
 </div>

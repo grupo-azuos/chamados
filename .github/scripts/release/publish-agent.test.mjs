@@ -15,7 +15,9 @@ function fixture() {
   });
   for (const file of [
     "azuos-agent-1.2.3-x64.msi",
+    "azuos-agent-1.2.3-x64.zip",
     "publisher.cer",
+    "install-agent.ps1",
     "configure-machine.ps1",
     "install-certificate.ps1",
     "SHA256SUMS",
@@ -48,7 +50,7 @@ test("publishes all artifacts before latest and permits identical retry", async 
   try {
     await publish(directory, "1.2.3", get, put);
     assert.equal(order.at(-1), "agent/latest.json");
-    assert.equal(objects.size, 7);
+    assert.equal(objects.size, 9);
     await publish(directory, "1.2.3", get, put);
     // triste: a mesma tag não pode substituir bytes já publicados.
     objects.set(

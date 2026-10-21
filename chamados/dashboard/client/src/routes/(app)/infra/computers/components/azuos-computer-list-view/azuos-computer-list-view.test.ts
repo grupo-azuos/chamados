@@ -1,5 +1,5 @@
 import { type ComputerListItem } from '@template/shared/schemas/computer.schema';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -13,6 +13,9 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
   return {
     id: 1,
     ticketsThisMonth: 0,
+    preventiveStatus: 'ok',
+    lastPreventiveAt: '2026-10-01T12:00:00.000Z',
+    activeAlerts: 0,
     name: 'RECEPCAO-01',
     displayName: 'Recepção — balcão',
     responsibleName: 'Bia Costa',
@@ -297,5 +300,21 @@ describe('AzuosComputerListView', () => {
 
     expect(screen.getByText('Carregando os computadores…')).toBeInTheDocument();
     expect(screen.queryByText('Nenhum computador cadastrado')).not.toBeInTheDocument();
+  });
+});
+
+
+describe('AzuosComputerListView maintenance parity', () => {
+  it('shows preventive and critical signals in both cards and table, even at 100 points', () => {
+    const { container } = render(ComputerListView, { props: {
+      data: { computers: [computer({ activeAlerts: 2, preventiveStatus: 'due', lastPreventiveAt: '2020-01-01T12:00:00.000Z' })],
+        total: 1, summary, filter: emptyFilter }, state: settled, actions,
+    } });
+    for (const slot of ['computer-cards-mobile', 'computer-table-desktop']) {
+      const section = container.querySelector(`[data-slot="${slot}"]`) as HTMLElement;
+      expect(within(section).getByText('Preventiva vencida')).toBeInTheDocument();
+      expect(within(section).getByText('2 alertas críticos ativos')).toBeInTheDocument();
+      expect(within(section).getByText('100/100')).toBeInTheDocument();
+    }
   });
 });

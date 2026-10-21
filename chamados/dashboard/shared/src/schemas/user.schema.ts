@@ -105,7 +105,7 @@ export const sessionUserSchema = z.object({
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 
 /**
- * Uma pessoa do diretório do admin-console — quem tem acesso a este sistema.
+ * Uma pessoa do diretório do admin-console — para acesso ao sistema ou atribuição de patrimônio.
  * Usado em listagens de pessoas e seleção em formulários de atribuição de cargos.
  */
 export const directoryUserSchema = z.object({

@@ -99,3 +99,10 @@
   args={{ ...baseArgs, ui: { ariaLabel: 'Urgência', fullWidth: true } }}
   template={inBox}
 />
+
+<Story
+  name="AllowCustomValue"
+  args={{ data: { value: 'Equipe externa', options: [{ value: 'p-1', label: 'Ana Exemplo · ana@exemplo.invalid' }] },
+    ui: { ariaLabel: 'Responsável', fullWidth: true, allowCustomValue: true, selectedLabel: 'Equipe externa' },
+    actions: { onChange: fn(), onCustomValue: fn() } }}
+/>

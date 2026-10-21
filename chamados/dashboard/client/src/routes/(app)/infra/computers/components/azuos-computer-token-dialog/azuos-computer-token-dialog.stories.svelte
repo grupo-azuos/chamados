@@ -6,7 +6,7 @@
   /* Token INVENTADO: nenhum código que funcione entra num arquivo versionado. */
   const TOKEN = 'agt_3f9a6c1e8b4d47a2b0c5e7f1a9d2b6c4';
 
-  const actions = { onClose: () => {} };
+  const actions = { onClose: () => {}, onDownloadBundle: () => {} };
 
   const { Story } = defineMeta({
     title: 'Features/Computers/AzuosComputerTokenDialog',
@@ -30,6 +30,22 @@
   name="Long machine name"
   args={{
     data: { computerName: 'PARALEGAL-08-ESTACAO-COMPARTILHADA', token: TOKEN },
+    actions,
+  }}
+/>
+
+<!-- Montando o zip: o botão fica ocupado até o arquivo chegar. -->
+<Story
+  name="Building package"
+  args={{ data: { computerName: 'RECEPCAO-01', token: TOKEN }, state: { isDownloadingBundle: true }, actions }}
+/>
+
+<!-- Falha ao montar o pacote: o motivo aparece, e o token continua na tela. -->
+<Story
+  name="Package failed"
+  args={{
+    data: { computerName: 'RECEPCAO-01', token: TOKEN },
+    state: { bundleError: 'Faltam arquivos desta versão do agente. Avise a Infraestrutura.' },
     actions,
   }}
 />

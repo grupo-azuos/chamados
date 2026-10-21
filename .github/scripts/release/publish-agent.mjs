@@ -8,8 +8,10 @@ import { compareVersions, parseTag } from "./version.mjs";
 
 const digest = (body) => createHash("sha256").update(body).digest("hex");
 export function releaseFiles(directory, version) {
+  // O zip e o install-agent.ps1 entram a partir desta versão do build: são aceitos, mas não
+  // exigidos, para que versões antigas sem eles ainda possam ser promovidas a LTS.
   const allowed =
-    /^(azuos-agent-\d+\.\d+\.\d+-x64\.msi|publisher\.cer|install-certificate\.ps1|configure-machine\.ps1|latest\.json|SHA256SUMS)$/;
+    /^(azuos-agent-\d+\.\d+\.\d+-x64\.(msi|zip)|publisher\.cer|install-certificate\.ps1|configure-machine\.ps1|install-agent\.ps1|latest\.json|SHA256SUMS)$/;
   const names = readdirSync(directory);
   if (names.some((name) => !allowed.test(name)))
     throw new Error("Unexpected file in release directory");
@@ -95,6 +97,7 @@ async function main() {
   const Bucket = process.env.S3_BUCKET;
   const types = {
     msi: "application/octet-stream",
+    zip: "application/zip",
     cer: "application/pkix-cert",
     ps1: "text/plain",
     json: "application/json",

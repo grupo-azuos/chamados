@@ -83,6 +83,7 @@
         maintenanceByType: { day: [], week: [], month: [] },
         plannedToday: [],
         doneToday: false,
+        scheduled: [],
       },
       ...over,
     };

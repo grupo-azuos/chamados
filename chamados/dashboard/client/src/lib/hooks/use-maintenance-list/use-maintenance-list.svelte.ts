@@ -2,12 +2,15 @@ import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-qu
 import { type MaintenanceType } from '@template/shared/domain/maintenance.util';
 import {
   type Maintenance,
+  type MaintenanceSchedule,
   type PreventiveDue,
 } from '@template/shared/schemas/maintenance.schema';
 import { derived, writable } from 'svelte/store';
 
 import { readError } from '$lib/api/http-client';
 import { maintenancesApi } from '$lib/api/maintenances.api';
+import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
+import { allSchedulesQuery } from '$lib/hooks/use-maintenance-schedule/use-maintenance-schedule.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 
 export const MAINTENANCES_PAGE_SIZE = 15;
@@ -25,6 +28,8 @@ export type MaintenanceListModel = {
     total: number;
     /** A situação da preventiva de cada máquina — não acompanha o filtro da lista. */
     preventive: PreventiveDue[];
+    /** As manutenções agendadas, da data mais próxima à mais distante. */
+    schedules: MaintenanceSchedule[];
     filter: MaintenanceListFilter;
     /** Qual registro está esperando confirmação de exclusão. */
     removing: Maintenance | null;
@@ -119,6 +124,9 @@ export function useMaintenanceListModel(
     ),
   );
 
+  /* Os agendamentos, como o quadro: sobre o parque, não sobre a busca. */
+  const schedules = mirrorStore(allSchedulesQuery());
+
   /* Qual registro está na pergunta de exclusão. É dado de tela, e morre com ela. */
   const removingStore = writable<Maintenance | null>(null);
   const removing = mirrorStore(removingStore);
@@ -128,7 +136,10 @@ export function useMaintenanceListModel(
       mutationFn: (id: number) => maintenancesApi.remove(id),
       onSuccess: async () => {
         removingStore.set(null);
-        await queryClient.invalidateQueries({ queryKey: MAINTENANCES_QUERY_KEY });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: MAINTENANCES_QUERY_KEY }),
+          queryClient.invalidateQueries({ queryKey: COMPUTERS_QUERY_KEY }),
+        ]);
       },
     }),
   );
@@ -140,6 +151,7 @@ export function useMaintenanceListModel(
         maintenances: list.current.data?.items ?? [],
         total: list.current.data?.total ?? 0,
         preventive: preventive.current.data ?? [],
+        schedules: schedules.current.data ?? [],
         filter: filter.current,
         removing: removing.current,
         paging: {
@@ -178,6 +190,7 @@ export function useMaintenanceListModel(
       onRetry: () => {
         void list.current.refetch();
         void preventive.current.refetch();
+        void schedules.current.refetch();
       },
       onAskRemove: (maintenance) => removingStore.set(maintenance),
       onCancelRemove: () => removingStore.set(null),

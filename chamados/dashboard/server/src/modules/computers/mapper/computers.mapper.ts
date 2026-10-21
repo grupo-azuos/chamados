@@ -1,3 +1,4 @@
+import { preventiveStatusOf } from '@template/shared/domain/maintenance.util';
 import { computeHealth } from '@template/shared/domain/computer-health.util';
 import {
   agentSnapshotSchema,
@@ -28,7 +29,14 @@ import { type ComputerInsert, type ComputerRow } from '../../../lib/db/schema/co
  */
 /** A linha da LISTA: a máquina mais a conta de chamados do mês. */
 export function toComputerListItem(row: ComputerWithTickets, isOnline: boolean): ComputerListItem {
-  return { ...toComputer(row, isOnline), ticketsThisMonth: row.ticketsThisMonth };
+  const lastPreventiveAt = row.lastPreventiveAt?.toISOString() ?? null;
+  return {
+    ...toComputer(row, isOnline),
+    ticketsThisMonth: row.ticketsThisMonth,
+    preventiveStatus: row.isArchived || row.disposedAt ? null : preventiveStatusOf(lastPreventiveAt),
+    lastPreventiveAt,
+    activeAlerts: row.activeAlerts,
+  };
 }
 
 function hostnameFromSnapshot(value: unknown): string | null {

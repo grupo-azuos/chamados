@@ -201,6 +201,21 @@ export const plannedMaintenanceSchema = z.object({
 export type PlannedMaintenance = z.infer<typeof plannedMaintenanceSchema>;
 
 /**
+ * Uma manutenção AGENDADA por alguém — diferente do plano automático, que o sistema monta
+ * sozinho. O dia vai sem hora (`AAAA-MM-DD`): quem conta "faltam N dias" é a tela, no
+ * relógio de quem está olhando.
+ */
+export const scheduledMaintenanceSchema = z.object({
+  computerId: z.number().int(),
+  computerName: z.string(),
+  department: departmentSchema.nullable(),
+  scheduledFor: z.string(),
+  note: z.string().nullable(),
+});
+
+export type ScheduledMaintenance = z.infer<typeof scheduledMaintenanceSchema>;
+
+/**
  * Tudo que o painel do sistema antigo mostrava e este ainda não mostrava.
  *
  * Vai num objeto à parte, e não solto no `dashboardSchema`, porque é um bloco de tela: quem
@@ -216,6 +231,8 @@ export const dashboardPanelsSchema = z.object({
   /** O que o plano automático manda fazer hoje, e se já foi feito. */
   plannedToday: z.array(plannedMaintenanceSchema),
   doneToday: z.boolean(),
+  /** As próximas manutenções agendadas, atrasadas primeiro — a data mais antiga no alto. */
+  scheduled: z.array(scheduledMaintenanceSchema),
 });
 
 export type DashboardPanels = z.infer<typeof dashboardPanelsSchema>;

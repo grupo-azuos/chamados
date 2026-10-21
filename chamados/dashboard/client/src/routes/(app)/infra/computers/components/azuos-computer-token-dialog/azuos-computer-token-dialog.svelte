@@ -11,10 +11,11 @@
    */
   export type AzuosComputerTokenDialogProps = {
     data: { computerName: string; token: string };
-    state?: { isOpen?: boolean };
+    state?: { isOpen?: boolean; isDownloadingBundle?: boolean; bundleError?: string | null };
     actions: {
       onClose: () => void;
-      onDownloadScript?: () => void;
+      /** Baixa o zip de instalação com este token dentro. Sem ela, o botão não aparece. */
+      onDownloadBundle?: () => void;
     };
   };
 </script>
@@ -33,7 +34,6 @@
     DialogTitle,
   } from '$lib/components/azuos-dialog/azuos-dialog';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import { downloadAgentInstallerScript } from '$lib/utils/agent-installer-script.util';
 
   import KeyRound from '@lucide/svelte/icons/key-round';
 
@@ -64,20 +64,6 @@
     } catch {
       hasCopiedCommand = false;
     }
-  }
-
-  function downloadScript(): void {
-    if (actions.onDownloadScript) {
-      actions.onDownloadScript();
-      return;
-    }
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const safeName = data.computerName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-    downloadAgentInstallerScript({
-      serverUrl: origin,
-      token: data.token,
-      fileName: `instalar-${safeName || 'agente'}.ps1`,
-    });
   }
 </script>
 
@@ -131,16 +117,23 @@
     </div>
 
     <p class="text-ink-500 text-sm">
-      Instale o agente no computador com o instalador e o script acima. A máquina conectará
-      automaticamente e aparecerá aqui com a ficha completa.
+      Baixe o pacote de instalação: ele já leva este token. No computador, descompacte e rode o
+      install-agent.ps1 — a máquina conecta sozinha e aparece aqui com a ficha completa.
     </p>
 
+    {#if dialogState?.bundleError}
+      <p role="alert" class="text-destructive text-sm">{dialogState.bundleError}</p>
+    {/if}
+
     <DialogFooter class="flex flex-col gap-2">
-      <ActionButton
-        data={{ label: 'Baixar script desta máquina' }}
-        ui={{ variant: 'secondary', icon: Download, className: 'w-full justify-center' }}
-        actions={{ onClick: () => downloadScript() }}
-      />
+      {#if actions.onDownloadBundle}
+        <ActionButton
+          data={{ label: 'Baixar pacote de instalação (.zip)', loadingLabel: 'Montando o pacote…' }}
+          ui={{ variant: 'secondary', icon: Download, className: 'w-full justify-center' }}
+          state={{ isLoading: dialogState?.isDownloadingBundle ?? false }}
+          actions={{ onClick: () => actions.onDownloadBundle?.() }}
+        />
+      {/if}
       <ActionButton
         data={{ label: hasCopied ? 'Copiado' : 'Copiar código' }}
         ui={{
