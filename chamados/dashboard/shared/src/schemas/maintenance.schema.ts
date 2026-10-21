@@ -176,3 +176,71 @@ export const preventiveDueSchema = z.object({
 });
 
 export type PreventiveDue = z.infer<typeof preventiveDueSchema>;
+
+export const SCHEDULE_NOTE_MAX_LENGTH = 300;
+
+/** Um DIA sem hora, como o campo de data do navegador entrega: `AAAA-MM-DD`. */
+const scheduleDaySchema = z
+  .string({ required_error: 'Informe a data' })
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe uma data válida')
+  .refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00`)), 'Informe uma data válida');
+
+const scheduleNoteSchema = optionalText(
+  SCHEDULE_NOTE_MAX_LENGTH,
+  `O que vai ser feito pode ter até ${SCHEDULE_NOTE_MAX_LENGTH} caracteres`,
+);
+
+/**
+ * Uma MANUTENÇÃO AGENDADA como a tela a recebe: a máquina, o dia combinado e o que se pretende
+ * fazer. Uma por máquina — remarcar troca a data, não cria outra.
+ *
+ * O dia vai como `AAAA-MM-DD`, sem hora: agenda-se um dia, e com hora a meia-noite de um fuso
+ * viraria a véspera em outro.
+ */
+export const maintenanceScheduleSchema = z.object({
+  computerId: z.number().int(),
+  computerName: z.string(),
+  computerDisplayName: z.string().nullable(),
+  computerDepartment: departmentSchema.nullable(),
+  scheduledFor: z.string(),
+  note: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  createdBy: z.string(),
+  updatedAt: z.string().datetime().nullable(),
+  updatedBy: z.string().nullable(),
+});
+
+export type MaintenanceSchedule = z.infer<typeof maintenanceScheduleSchema>;
+
+/** Agendar ou remarcar. A máquina vai no endereço, não no corpo. */
+export const saveMaintenanceScheduleSchema = z.object({
+  scheduledFor: scheduleDaySchema,
+  note: scheduleNoteSchema.optional(),
+});
+
+export type SaveMaintenanceScheduleInput = z.input<typeof saveMaintenanceScheduleSchema>;
+
+/**
+ * A forma do FORMULÁRIO de agendamento.
+ *
+ * Data no passado é recusada AQUI, e não na API: "hoje" depende do relógio de quem está na
+ * frente da tela, e o servidor pode estar em outro fuso. Remarcar para o passado não faz
+ * sentido para quem está agendando — mas uma linha antiga que ficou atrasada continua válida.
+ */
+export function maintenanceScheduleFormSchema(today: string) {
+  return z.object({
+    scheduledFor: scheduleDaySchema.refine(
+      (value) => value >= today,
+      'Escolha hoje ou um dia depois de hoje',
+    ),
+    note: z.string().max(SCHEDULE_NOTE_MAX_LENGTH, `Até ${SCHEDULE_NOTE_MAX_LENGTH} caracteres`),
+  });
+}
+
+export type MaintenanceScheduleFormValues = { scheduledFor: string; note: string };
+
+export const maintenanceScheduleListQuerySchema = z.object({
+  computerId: z.coerce.number().int().optional(),
+});
+
+export type MaintenanceScheduleListQuery = z.infer<typeof maintenanceScheduleListQuerySchema>;

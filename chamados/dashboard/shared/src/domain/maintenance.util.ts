@@ -197,3 +197,46 @@ export const FREQUENT_MAINTENANCE_COUNT = 3;
 export function isFrequentlyServiced(count: number): boolean {
   return count >= FREQUENT_MAINTENANCE_COUNT;
 }
+
+/** O dia de hoje no relógio LOCAL, como `AAAA-MM-DD` — o formato do campo de data. */
+export function localDayOf(now: Date = new Date()): string {
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * Quantos dias faltam até um DIA agendado (`AAAA-MM-DD`). Zero é hoje; negativo é atraso.
+ * Nulo quando o texto não é uma data.
+ *
+ * A conta é por dia de calendário, à meia-noite local dos dois lados: agendada para amanhã
+ * "falta 1 dia" às 8h e às 23h, e não vira "vence hoje" no meio da tarde.
+ */
+export function daysUntilDay(day: string, now: Date = new Date()): number | null {
+  const target = Date.parse(`${day}T00:00:00`);
+  if (Number.isNaN(target)) return null;
+
+  const today = Date.parse(`${localDayOf(now)}T00:00:00`);
+
+  /* `round` e não `floor`: no dia em que o horário de verão muda, a diferença é 23 ou 25 horas. */
+  return Math.round((target - today) / MILLISECONDS_PER_DAY);
+}
+
+/** A frase do agendamento, igual em toda tela: "faltam 5 dias", "é hoje", "atrasada há 2 dias". */
+export function scheduleCountdownLabel(days: number): string {
+  if (days === 0) return 'é hoje';
+  if (days === 1) return 'falta 1 dia';
+  if (days > 1) return `faltam ${days} dias`;
+  if (days === -1) return 'atrasada há 1 dia';
+
+  return `atrasada há ${-days} dias`;
+}
+
+/** O tom do agendamento: vermelho atrasado, âmbar hoje ou amanhã, azul com folga. */
+export function scheduleTone(days: number): 'danger' | 'warning' | 'info' {
+  if (days < 0) return 'danger';
+  if (days <= 1) return 'warning';
+
+  return 'info';
+}
