@@ -25,7 +25,7 @@ export class ApiError extends Error {
 
 export type RequestOptions = {
   credentials?: RequestCredentials;
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined | null>;
   signal?: AbortSignal;

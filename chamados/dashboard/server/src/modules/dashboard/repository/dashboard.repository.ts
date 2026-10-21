@@ -9,6 +9,7 @@ import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
 import { qualified } from '../../../lib/db/sql-column.util';
 import { computerAlerts } from '../../../lib/db/schema/computer-alerts.schema';
 import { computers } from '../../../lib/db/schema/computers.schema';
+import { maintenanceSchedules } from '../../../lib/db/schema/maintenance-schedules.schema';
 import { maintenances } from '../../../lib/db/schema/maintenances.schema';
 import { parts } from '../../../lib/db/schema/parts.schema';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
@@ -476,6 +477,31 @@ export class DashboardRepository {
    * prazo. Repetir a consulta em vez de chamar o service de lá mantém o painel com uma ida
    * só ao banco por pergunta.
    */
+  /**
+   * As manutenções AGENDADAS das máquinas em uso, da data mais antiga para a mais distante —
+   * assim a atrasada aparece primeiro, que é a que pede ação.
+   */
+  async scheduledMaintenances(limit: number): Promise<
+    { computerId: number; computerName: string; department: string | null; scheduledFor: string; note: string | null }[]
+  > {
+    return runQuery(
+      this.db
+        .select({
+          computerId: computers.id,
+          computerName: sql<string>`coalesce(${computers.displayName}, ${computers.name})`,
+          department: computers.department,
+          scheduledFor: maintenanceSchedules.scheduledFor,
+          note: maintenanceSchedules.note,
+        })
+        .from(maintenanceSchedules)
+        .innerJoin(computers, eq(maintenanceSchedules.computerId, computers.id))
+        .where(and(eq(computers.isArchived, false), isNull(computers.disposedAt)))
+        .orderBy(maintenanceSchedules.scheduledFor, computers.name)
+        .limit(limit),
+      'ler as manutenções agendadas',
+    );
+  }
+
   async lastPreventiveByMachine(): Promise<{ lastDoneAt: Date | null }[]> {
     return runQuery(
       this.db

@@ -41,6 +41,7 @@ function summary(over: Partial<Dashboard> = {}): Dashboard {
       maintenanceByType: { day: [], week: [], month: [] },
       plannedToday: [],
       doneToday: false,
+      scheduled: [],
     },
     ...over,
   };
