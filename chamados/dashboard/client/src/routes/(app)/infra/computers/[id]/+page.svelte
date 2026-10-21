@@ -85,6 +85,8 @@
       isScheduleLoading: schedule.state.isLoading,
       isCancellingSchedule: schedule.state.isCancelling,
       scheduleError: schedule.state.error,
+      isDownloadingInstaller: bundle.state.isDownloading,
+      installerError: bundle.state.error,
     }}
     actions={{
       ...detail.actions,
@@ -93,6 +95,7 @@
       onEdit: () => (isEditing = true),
       onRegisterMaintenance: () => (isRegisteringMaintenance = true),
       onTransfer: () => (isTransferring = true),
+      onDownloadInstaller: () => void bundle.actions.onDownload(),
       onBack: () => void goto('/infra/computers'),
     }}
   />

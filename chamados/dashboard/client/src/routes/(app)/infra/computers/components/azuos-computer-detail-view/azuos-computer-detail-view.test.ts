@@ -140,6 +140,7 @@ const actions = {
   onArchivedChange: vi.fn(),
   onBlockedChange: vi.fn(),
   onRegenerateToken: vi.fn(),
+  onDownloadInstaller: vi.fn(),
   onDispose: vi.fn(),
   onRestore: vi.fn(),
   onBack: vi.fn(),
@@ -427,6 +428,42 @@ describe('AzuosComputerDetailView', () => {
     await user.click(within(confirmation).getByRole('button', { name: 'Arquivar' }));
 
     expect(actions.onArchivedChange).toHaveBeenCalledWith(true);
+  });
+
+  // feliz
+  it('downloads the installer straight from the menu, without asking', async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Baixar instalador (.zip)' }));
+
+    expect(actions.onDownloadInstaller).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  // triste
+  it('says when the installer could not be built', () => {
+    render(ComputerDetailView, {
+      props: {
+        data: {
+          computer: computer(),
+          samples,
+          live: null,
+          tickets: [],
+          alerts: [],
+          alertPaging: paging,
+          ticketPaging: { ...paging, total: 0 },
+          maintenances: [],
+          partMovements: [],
+          transfers: [],
+        },
+        state: { installerError: 'Nenhuma versão do agente foi publicada ainda.' },
+        actions,
+      },
+    });
+
+    expect(screen.getByText('Não consegui montar o instalador')).toBeInTheDocument();
   });
 
   it('offers to take the machine out of the archive once it is archived', async () => {

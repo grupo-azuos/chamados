@@ -179,6 +179,7 @@
     onArchivedChange: () => {},
     onBlockedChange: () => {},
     onRegenerateToken: () => {},
+    onDownloadInstaller: () => {},
     onDispose: () => {},
     onRestore: () => {},
     onBack: () => {},
@@ -316,6 +317,17 @@
     data: { computer: computer(), samples, live: null,
         tickets: [], alerts, alertPaging: paging, ticketPaging: noPaging, maintenances, partMovements: [], transfers },
     state: { actionError: 'Você não tem permissão para alterar o cadastro.' },
+    actions,
+  }}
+/>
+
+<!-- O instalador não saiu (nenhuma versão publicada, bucket fora): o motivo fica na tela. -->
+<Story
+  name="Installer error"
+  args={{
+    data: { computer: computer(), samples, live: null,
+        tickets: [], alerts, alertPaging: paging, ticketPaging: noPaging, maintenances, partMovements: [], transfers },
+    state: { installerError: 'Nenhuma versão do agente foi publicada ainda.' },
     actions,
   }}
 />
