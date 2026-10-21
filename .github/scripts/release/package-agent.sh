@@ -23,7 +23,7 @@ acl_table="$table_dir/MsiLockPermissionsEx.idt"
 trap 'rm -rf "$table_dir"' EXIT
 printf 'MsiLockPermissionsEx\tLockObject\tTable\tSDDLText\tCondition\ns72\ts72\ts32\tl0\tS255\nMsiLockPermissionsEx\tMsiLockPermissionsEx\nSecureAgentData\tAGENTDATA\tCreateFolder\tO:SYG:SYD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)\t\n' > "$acl_table"
 msibuild "$msi" -i "$acl_table"
-cp "$source_dir/install-certificate.ps1" "$source_dir/configure-machine.ps1" "$root/release/"
+cp "$source_dir/install-certificate.ps1" "$source_dir/configure-machine.ps1" "$source_dir/install-agent.ps1" "$root/release/"
 # A ação padrão de processo fecha a bandeja antes da remoção dos arquivos. A falha
 # é ignorada quando ninguém está logado; o serviço é parado pelo ServiceControl.
 printf 'Action\tType\tSource\tTarget\n%s\n%s\n%s\n' 's72	i2	S72	S255' 'CustomAction	Action' 'CloseTray	3170	SystemFolder	"[SystemFolder]taskkill.exe" /F /IM "Azuos Agent.exe"' > "$table_dir/CustomAction.idt"

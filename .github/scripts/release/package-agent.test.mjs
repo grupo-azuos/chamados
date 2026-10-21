@@ -24,6 +24,7 @@ test(
         "chamados/agent/build/windows/installer/agent.wxs",
         "chamados/agent/build/windows/installer/configure-machine.ps1",
         "chamados/agent/build/windows/installer/install-certificate.ps1",
+        "chamados/agent/build/windows/installer/install-agent.ps1",
         "chamados/agent/build/windows/icon.ico",
       ]) {
         mkdirSync(dirname(join(root, file)), { recursive: true });
