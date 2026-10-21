@@ -19,6 +19,7 @@ const USER: RequestUser = {
 function directory(overrides: Partial<UserDirectoryProvider> = {}): UserDirectoryProvider {
   return {
     listUsers: vi.fn().mockResolvedValue([]),
+    listAllUsers: vi.fn().mockResolvedValue([]),
     getUserById: vi.fn().mockResolvedValue(null),
     searchUsers: vi.fn().mockResolvedValue([]),
     ...overrides,

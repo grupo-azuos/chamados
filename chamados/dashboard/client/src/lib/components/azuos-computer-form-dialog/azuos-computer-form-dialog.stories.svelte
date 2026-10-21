@@ -106,8 +106,8 @@
 <script lang="ts">
   let directoryFields = $state(fields());
   const directoryUsers = [
-    { id: 'person-1', name: 'Ana Exemplo', email: 'ana@exemplo.invalid' },
-    { id: 'person-2', name: 'Bruno Exemplo', email: 'bruno@exemplo.invalid' },
+    { id: 'person-1', name: 'Ana Exemplo' },
+    { id: 'person-2', name: 'Bruno Exemplo' },
   ];
 </script>
 

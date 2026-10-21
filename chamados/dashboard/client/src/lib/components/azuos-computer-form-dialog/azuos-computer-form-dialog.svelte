@@ -150,7 +150,7 @@
             data={{ value: fields.responsibleName.value,
               options: [
                 { value: '', label: 'Sem responsável' },
-                ...(data.responsibles ?? []).map((person) => ({ value: person.id, label: `${person.name} · ${person.email}` })),
+                ...(data.responsibles ?? []).map((person) => ({ value: person.id, label: person.name })),
               ] }}
             ui={{ ariaLabel: 'Responsável', mode: 'combobox', fullWidth: true,
               placeholder: 'Selecione ou informe um nome', searchPlaceholder: 'Buscar pessoa ou digitar nome…',
