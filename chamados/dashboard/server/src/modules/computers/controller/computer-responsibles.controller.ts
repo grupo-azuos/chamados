@@ -14,7 +14,7 @@ export class ComputerResponsiblesController {
   constructor(private readonly service: ComputerResponsiblesService) {}
 
   @Get('responsibles')
-  @ApiOperation({ summary: 'Lista responsáveis com acesso ao Chamados no admin-console' })
+  @ApiOperation({ summary: 'Lista os nomes do diretório completo para responsáveis por computadores' })
   @ApiOkResponse({ type: [ComputerResponsibleDto] })
   @ApiForbiddenResponse({ description: 'Cadastro de computadores não permitido.' })
   @ApiServiceUnavailableResponse({ description: 'Diretório indisponível; o nome ainda pode ser informado manualmente.' })

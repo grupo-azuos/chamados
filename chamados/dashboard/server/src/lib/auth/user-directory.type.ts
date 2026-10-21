@@ -11,6 +11,9 @@ export interface UserDirectoryProvider {
   /** As pessoas que têm acesso a este sistema. Falha de leitura é exceção, nunca lista vazia. */
   listUsers(): Promise<DirectoryUser[]>;
 
+  /** Todas as pessoas do escritório, mesmo sem acesso ao sistema, para atribuição de patrimônio. */
+  listAllUsers(): Promise<DirectoryUser[]>;
+
   /** Busca uma pessoa específica pelo seu identificador único. */
   getUserById(id: string): Promise<DirectoryUser | null>;
 
