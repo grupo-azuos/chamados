@@ -1,6 +1,7 @@
 import { type ComputerLiveResponse } from '@template/shared/schemas/computer-live.schema';
 import {
   type Computer,
+  type ComputerResponsible,
   type ComputerListItem,
   type ComputerAlertListQuery,
   type ComputerListQuery,
@@ -24,6 +25,8 @@ import { apiDownload, apiRequest, type Downloaded } from './http-client';
  * histórico dela é o que sustenta "esta aqui deu problema demais, vamos trocar".
  */
 export const computersApi = {
+  responsibles: () => apiRequest<ComputerResponsible[]>('/computers/responsibles'),
+
   list: (query: Partial<ComputerListQuery>) =>
     apiRequest<Paginated<ComputerListItem>>('/computers', {
       query: {

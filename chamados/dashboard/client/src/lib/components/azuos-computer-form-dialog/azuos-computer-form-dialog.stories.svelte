@@ -102,3 +102,22 @@
     actions,
   }}
 />
+
+<script lang="ts">
+  let directoryFields = $state(fields());
+  const directoryUsers = [
+    { id: 'person-1', name: 'Ana Exemplo', email: 'ana@exemplo.invalid' },
+    { id: 'person-2', name: 'Bruno Exemplo', email: 'bruno@exemplo.invalid' },
+  ];
+</script>
+
+<Story name="DirectoryResponsibles" asChild>
+  <ComputerFormDialog
+    data={{ mode: 'create', fields: directoryFields, responsibles: directoryUsers }}
+    state={{ isOpen: true }}
+    actions={{ ...actions, onChange: (name, value) => (directoryFields = { ...directoryFields, [name]: field(value) }) }}
+  />
+</Story>
+
+<Story name="DirectoryUnavailable" args={{ data: { mode: 'create', fields: fields() }, state: { isOpen: true, responsiblesError: 'Diretório indisponível' }, actions }} />
+<Story name="DirectoryLoading" args={{ data: { mode: 'create', fields: fields() }, state: { isOpen: true, isLoadingResponsibles: true }, actions }} />
