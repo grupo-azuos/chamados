@@ -22,6 +22,13 @@ describe('AzuosComputerMaintenanceStatus', () => {
     expect(screen.getByText(/Próxima em .* · faltam 82 dias/)).toBeInTheDocument();
   });
 
+  it('shows the scheduled day with how many days are left', () => {
+    const inFiveDays = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    const day = `${inFiveDays.getFullYear()}-${String(inFiveDays.getMonth() + 1).padStart(2, '0')}-${String(inFiveDays.getDate()).padStart(2, '0')}`;
+    render(ComputerMaintenanceStatus, { props: { data: { computer, scheduledFor: day } } });
+    expect(screen.getByText(/Agendada .* · faltam 5 dias/)).toBeInTheDocument();
+  });
+
   // triste
   it('does not describe missing history as a completed preventive', () => {
     render(ComputerMaintenanceStatus, { props: { data: { computer: { ...computer,

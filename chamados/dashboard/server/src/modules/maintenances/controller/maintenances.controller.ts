@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import {
@@ -29,7 +30,10 @@ import {
   MaintenanceDto,
   MaintenanceListQueryDto,
   MaintenanceListResponseDto,
+  MaintenanceScheduleDto,
+  MaintenanceScheduleListQueryDto,
   PreventiveDueDto,
+  SaveMaintenanceScheduleDto,
   UpdateMaintenanceDto,
 } from '../dto/maintenance.dto';
 import { MaintenancesService } from '../service/maintenances.service';
@@ -69,6 +73,50 @@ export class MaintenancesController {
   @ApiOkResponse({ type: [PreventiveDueDto] })
   async preventive(@CurrentUser() user: RequestUser): Promise<PreventiveDueDto[]> {
     return this.service.preventive(user);
+  }
+
+  /* As rotas de agendamento vêm ANTES de `:id`: senão "schedules" seria lido como o id de
+     uma manutenção, e a rota responderia 400. */
+  @Get('schedules')
+  @ApiOperation({
+    summary: 'Lista as manutenções agendadas',
+    description:
+      'Do dia mais próximo para o mais distante. `computerId` recorta a de uma máquina — é o que a ficha usa. Máquina fora de uso fica de fora.',
+  })
+  @ApiOkResponse({ type: [MaintenanceScheduleDto] })
+  async listSchedules(
+    @CurrentUser() user: RequestUser,
+    @Query() query: MaintenanceScheduleListQueryDto,
+  ): Promise<MaintenanceScheduleDto[]> {
+    return this.service.listSchedules(user, query);
+  }
+
+  @Put('schedules/:computerId')
+  @ApiOperation({
+    summary: 'Agenda ou remarca a manutenção de uma máquina',
+    description:
+      'Uma por máquina: chamar de novo troca a data. Registrar uma manutenção nessa máquina cumpre o agendamento, e ele some sozinho.',
+  })
+  @ApiOkResponse({ type: MaintenanceScheduleDto })
+  @ApiNotFoundResponse({ description: 'Máquina não encontrada ou fora de uso.' })
+  @ApiUnprocessableEntityResponse({ description: 'A data está fora do contrato.' })
+  async saveSchedule(
+    @CurrentUser() user: RequestUser,
+    @Param('computerId', ParseIntPipe) computerId: number,
+    @Body() body: SaveMaintenanceScheduleDto,
+  ): Promise<MaintenanceScheduleDto> {
+    return this.service.saveSchedule(user, computerId, body);
+  }
+
+  @Delete('schedules/:computerId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Cancela a manutenção agendada de uma máquina' })
+  @ApiNoContentResponse({ description: 'Agendamento cancelado (ou não havia nenhum).' })
+  async cancelSchedule(
+    @CurrentUser() user: RequestUser,
+    @Param('computerId', ParseIntPipe) computerId: number,
+  ): Promise<void> {
+    return this.service.cancelSchedule(user, computerId);
   }
 
   @Get(':id')

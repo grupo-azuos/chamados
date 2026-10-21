@@ -434,6 +434,7 @@
           log: summary.panels.maintenanceLog,
           plannedToday: summary.panels.plannedToday,
           isDoneToday: summary.panels.doneToday,
+          scheduled: summary.panels.scheduled,
         }}
       />
     </div>

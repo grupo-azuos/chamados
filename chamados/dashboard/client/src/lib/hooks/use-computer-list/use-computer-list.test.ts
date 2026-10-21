@@ -5,7 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '$lib/api/http-client';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 import Harness from './use-computer-list-harness.test.svelte';
-import { summarizeComputers, type ComputerListModel } from './use-computer-list.svelte';
+import {
+  scheduledDayByComputer,
+  summarizeComputers,
+  type ComputerListModel,
+} from './use-computer-list.svelte';
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
@@ -20,6 +24,11 @@ vi.mock('$lib/api/computers.api', () => ({
 }));
 
 vi.mock('$lib/utils/download-file.util', () => ({ triggerBrowserDownload: vi.fn() }));
+
+/* Os agendamentos vêm da Manutenção: sem nenhum, a lista não muda. */
+vi.mock('$lib/api/maintenances.api', () => ({
+  maintenancesApi: { schedules: vi.fn().mockResolvedValue([]) },
+}));
 
 const { computersApi } = await import('$lib/api/computers.api');
 const { goto } = await import('$app/navigation');
@@ -254,5 +263,30 @@ describe('useComputerListModel', () => {
         expect(model.state.exportingFormat).toBeNull();
       });
     });
+  });
+});
+
+describe('scheduledDayByComputer', () => {
+  const schedule = {
+    computerId: 7,
+    computerName: 'PC-7',
+    computerDisplayName: null,
+    computerDepartment: null,
+    scheduledFor: '2026-11-05',
+    note: null,
+    createdAt: '2026-10-21T12:00:00.000Z',
+    createdBy: 'suporte@teste.local',
+    updatedAt: null,
+    updatedBy: null,
+  };
+
+  // feliz
+  it('gives each machine its scheduled day', () => {
+    expect(scheduledDayByComputer([schedule])).toEqual({ 7: '2026-11-05' });
+  });
+
+  // triste
+  it('gives nothing while the schedules have not arrived', () => {
+    expect(scheduledDayByComputer(undefined)).toEqual({});
   });
 });

@@ -7,7 +7,12 @@ import Harness from './use-maintenance-list-harness.test.svelte';
 import { type MaintenanceListModel } from './use-maintenance-list.svelte';
 
 vi.mock('$lib/api/maintenances.api', () => ({
-  maintenancesApi: { list: vi.fn(), preventive: vi.fn(), remove: vi.fn() },
+  maintenancesApi: {
+    list: vi.fn(),
+    preventive: vi.fn(),
+    remove: vi.fn(),
+    schedules: vi.fn().mockResolvedValue([]),
+  },
 }));
 
 const { maintenancesApi } = await import('$lib/api/maintenances.api');

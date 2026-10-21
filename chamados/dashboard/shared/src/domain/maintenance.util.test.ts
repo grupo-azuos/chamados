@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  daysUntilDay,
   daysUntilPreventive,
   isFrequentlyServiced,
   lastPreventiveAtOf,
@@ -10,6 +11,8 @@ import {
   preventiveCountdownLabel,
   preventiveStatusOf,
   resetsPreventiveClock,
+  scheduleCountdownLabel,
+  scheduleTone,
 } from './maintenance.util';
 
 const NOW = Date.parse('2026-09-23T12:00:00.000Z');
@@ -149,5 +152,42 @@ describe('isFrequentlyServiced', () => {
   it('does not flag a machine serviced twice', () => {
     expect(isFrequentlyServiced(2)).toBe(false);
     expect(isFrequentlyServiced(0)).toBe(false);
+  });
+});
+
+describe('daysUntilDay', () => {
+  const morning = new Date(2026, 9, 21, 8, 0);
+  const night = new Date(2026, 9, 21, 23, 30);
+
+  // feliz
+  it('counts calendar days, whatever the hour', () => {
+    expect(daysUntilDay('2026-10-22', morning)).toBe(1);
+    expect(daysUntilDay('2026-10-22', night)).toBe(1);
+    expect(daysUntilDay('2026-10-21', night)).toBe(0);
+    expect(daysUntilDay('2026-11-05', morning)).toBe(15);
+  });
+
+  // triste
+  it('goes negative when the date has passed, and refuses what is not a date', () => {
+    expect(daysUntilDay('2026-10-18', morning)).toBe(-3);
+    expect(daysUntilDay('amanhã', morning)).toBeNull();
+  });
+});
+
+describe('scheduleCountdownLabel', () => {
+  // feliz
+  it('speaks in days left', () => {
+    expect(scheduleCountdownLabel(5)).toBe('faltam 5 dias');
+    expect(scheduleCountdownLabel(1)).toBe('falta 1 dia');
+    expect(scheduleCountdownLabel(0)).toBe('é hoje');
+  });
+
+  // triste
+  it('calls a missed date late, never "faltam -2 dias"', () => {
+    expect(scheduleCountdownLabel(-1)).toBe('atrasada há 1 dia');
+    expect(scheduleCountdownLabel(-2)).toBe('atrasada há 2 dias');
+    expect(scheduleTone(-2)).toBe('danger');
+    expect(scheduleTone(0)).toBe('warning');
+    expect(scheduleTone(9)).toBe('info');
   });
 });

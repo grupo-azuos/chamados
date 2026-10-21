@@ -2,12 +2,16 @@ import { type Department } from '@template/shared/domain/department.util';
 import {
   type CreateMaintenanceInput,
   type Maintenance,
+  type MaintenanceSchedule,
   type UpdateMaintenanceInput,
 } from '@template/shared/schemas/maintenance.schema';
 
 import { setIfDefined } from '../../../lib/db/partial-update.util';
 import { type MaintenanceInsert } from '../../../lib/db/schema/maintenances.schema';
-import { type MaintenanceWithComputer } from '../repository/maintenances.repository';
+import {
+  type MaintenanceWithComputer,
+  type ScheduleWithComputer,
+} from '../repository/maintenances.repository';
 
 /**
  * A tradução entre a linha do banco e o contrato.
@@ -96,4 +100,22 @@ export function toMaintenanceUpdate(
   }
 
   return values;
+}
+
+/** O agendamento como a tela o recebe, com o nome da máquina tirado do inventário. */
+export function toMaintenanceSchedule(row: ScheduleWithComputer): MaintenanceSchedule {
+  const { schedule, computer } = row;
+
+  return {
+    computerId: schedule.computerId,
+    computerName: computer.name,
+    computerDisplayName: computer.displayName,
+    computerDepartment: (computer.department as Department | null) ?? null,
+    scheduledFor: schedule.scheduledFor,
+    note: schedule.note,
+    createdAt: schedule.createdAt.toISOString(),
+    createdBy: schedule.createdBy,
+    updatedAt: schedule.updatedAt?.toISOString() ?? null,
+    updatedBy: schedule.updatedBy,
+  };
 }

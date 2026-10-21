@@ -321,55 +321,96 @@ export class GithubService {
     const token = this.app ? await this.app.accessToken() : this.token;
     const sinceParam = since ? `&since=${encodeURIComponent(since.toISOString())}` : '';
     const baseUrl = `https://api.github.com/repos/${owner}/${repo}/commits?sha=develop&per_page=100${sinceParam}`;
-    const merges: FetchedMerge[] = [];
 
     try {
-      for (let page = 1; ; page++) {
-        const response = await fetch(`${baseUrl}&page=${page}`, {
-          headers: this.headers(token),
-          signal: AbortSignal.timeout(10_000),
-        });
-        if (!response.ok) {
-          if (userId) throw this.repositoryAccessError(response.status, owner, repo, 'Contents: read');
-          this.logger.warn(`GitHub API devolveu status ${response.status} ao buscar merges de ${owner}/${repo}`);
-          return [];
-        }
-
-        const commits = (await response.json()) as RawGithubCommit[];
-        const candidates = commits.filter((commit) => commit.parents.length > 1);
-        const local = await Promise.all(candidates.map(async (commit) => {
-          const associated = await fetch(
-            `https://api.github.com/repos/${owner}/${repo}/commits/${commit.sha}/pulls`,
-            { headers: this.headers(token), signal: AbortSignal.timeout(10_000) },
-          );
-          if (!associated.ok) throw new BadGatewayException('Não foi possível identificar os merges sem PR.');
-          const pullRequests = (await associated.json()) as unknown[];
-          if (pullRequests.length) return null;
-
-          const login = commit.author?.login ?? commit.commit.author?.name ?? 'github';
-          const title = commit.commit.message.split('\n')[0]?.trim() || `Merge ${commit.sha.slice(0, 7)}`;
-          return {
-            externalId: commit.sha.slice(0, 7),
-            title,
-            url: commit.html_url,
-            author: login,
-            authorName: login,
-            status: 'merged' as const,
-            eventDate: new Date(commit.commit.committer?.date ?? commit.commit.author?.date ?? Date.now()),
-          };
-        }));
-        merges.push(...local.filter((merge): merge is FetchedMerge => merge !== null));
-        if (!response.headers.get('link')?.includes('rel="next"')) break;
-      }
-      return this.addAuthorNames(merges, token);
+      return await this.collectLocalMerges(baseUrl, owner, repo, token, userId);
     } catch (error) {
-      if (!userId) {
-        this.logger.warn(`Falha na comunicação com o GitHub para merges de ${owner}/${repo}: ${String(error)}`);
-        return [];
-      }
-      if (error instanceof BadGatewayException) throw error;
-      throw new BadGatewayException('Não foi possível sincronizar os merges sem PR. Tente novamente.');
+      return this.localMergesErrorFallback(error, owner, repo, userId);
     }
+  }
+
+  /** Percorre as páginas de commits da develop juntando os merges sem PR. */
+  private async collectLocalMerges(
+    baseUrl: string,
+    owner: string,
+    repo: string,
+    token: string | undefined,
+    userId?: string,
+  ): Promise<FetchedMerge[]> {
+    const merges: FetchedMerge[] = [];
+
+    for (let page = 1; ; page++) {
+      const response = await fetch(`${baseUrl}&page=${page}`, {
+        headers: this.headers(token),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) return this.localMergesStatusFallback(response.status, owner, repo, userId);
+
+      const commits = (await response.json()) as RawGithubCommit[];
+      merges.push(...(await this.localMergesOf(commits, owner, repo, token)));
+      if (!response.headers.get('link')?.includes('rel="next"')) break;
+    }
+
+    return this.addAuthorNames(merges, token);
+  }
+
+  /** Dos commits de uma página, só os merges que não vieram de PR. */
+  private async localMergesOf(
+    commits: RawGithubCommit[],
+    owner: string,
+    repo: string,
+    token: string | undefined,
+  ): Promise<FetchedMerge[]> {
+    const candidates = commits.filter((commit) => commit.parents.length > 1);
+    const local = await Promise.all(
+      candidates.map((commit) => this.toLocalMerge(commit, owner, repo, token)),
+    );
+
+    return local.filter((merge): merge is FetchedMerge => merge !== null);
+  }
+
+  /** Merge com PR associada devolve `null`: ele já aparece como Pull Request. */
+  private async toLocalMerge(
+    commit: RawGithubCommit,
+    owner: string,
+    repo: string,
+    token: string | undefined,
+  ): Promise<FetchedMerge | null> {
+    const associated = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/commits/${commit.sha}/pulls`,
+      { headers: this.headers(token), signal: AbortSignal.timeout(10_000) },
+    );
+    if (!associated.ok) throw new BadGatewayException('Não foi possível identificar os merges sem PR.');
+    const pullRequests = (await associated.json()) as unknown[];
+    if (pullRequests.length) return null;
+
+    return localMergeFromCommit(commit);
+  }
+
+  /** Na sincronização pedida por alguém o erro sobe; na automática, só registra e segue. */
+  private localMergesStatusFallback(
+    status: number,
+    owner: string,
+    repo: string,
+    userId?: string,
+  ): FetchedMerge[] {
+    if (userId) throw this.repositoryAccessError(status, owner, repo, 'Contents: read');
+    this.logger.warn(`GitHub API devolveu status ${status} ao buscar merges de ${owner}/${repo}`);
+    return [];
+  }
+
+  private localMergesErrorFallback(
+    error: unknown,
+    owner: string,
+    repo: string,
+    userId?: string,
+  ): FetchedMerge[] {
+    if (!userId) {
+      this.logger.warn(`Falha na comunicação com o GitHub para merges de ${owner}/${repo}: ${String(error)}`);
+      return [];
+    }
+    if (error instanceof BadGatewayException) throw error;
+    throw new BadGatewayException('Não foi possível sincronizar os merges sem PR. Tente novamente.');
   }
 
   private issueFetchError(
@@ -527,4 +568,25 @@ export class GithubService {
       }
     })();
   }
+}
+
+/** O merge como a tela mostra: autor, título da primeira linha e data do commit. */
+function localMergeFromCommit(commit: RawGithubCommit): FetchedMerge {
+  const login = commit.author?.login ?? commit.commit.author?.name ?? 'github';
+  const title = commit.commit.message.split('\n')[0]?.trim() || `Merge ${commit.sha.slice(0, 7)}`;
+
+  return {
+    externalId: commit.sha.slice(0, 7),
+    title,
+    url: commit.html_url,
+    author: login,
+    authorName: login,
+    status: 'merged' as const,
+    eventDate: commitDate(commit),
+  };
+}
+
+/** A data em que o merge entrou; sem data no commit, vale o momento da sincronização. */
+function commitDate(commit: RawGithubCommit): Date {
+  return new Date(commit.commit.committer?.date ?? commit.commit.author?.date ?? Date.now());
 }

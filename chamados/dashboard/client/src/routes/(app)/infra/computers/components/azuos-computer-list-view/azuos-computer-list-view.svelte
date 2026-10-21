@@ -48,6 +48,8 @@
       total: number;
       summary: ComputerSummary | null;
       filter: ComputerListFilter;
+      /** O dia agendado de cada máquina (`AAAA-MM-DD`), pelo id. */
+      scheduledFor?: Record<number, string>;
     };
     state: {
       isLoading: boolean;
@@ -400,7 +402,7 @@
 
           <div class="mt-3 min-w-0 rounded-box border border-border/60 bg-muted/20 p-3">
             <p class="text-muted-foreground mb-2 text-xs">Manutenção</p>
-            <ComputerMaintenanceStatus data={{ computer }} />
+            <ComputerMaintenanceStatus data={{ computer, scheduledFor: data.scheduledFor?.[computer.id] ?? null }} />
           </div>
 
           <div class="border-border/60 mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
@@ -471,7 +473,7 @@
                 </span>
               </TableCell>
               <TableCell class="max-w-[240px]">
-                <ComputerMaintenanceStatus data={{ computer }} />
+                <ComputerMaintenanceStatus data={{ computer, scheduledFor: data.scheduledFor?.[computer.id] ?? null }} />
               </TableCell>
               <!-- Quantos problemas esta máquina deu no mês corrente. Zero fica cinza e
                    discreto: a coluna existe para as que DÃO trabalho saltarem aos olhos. -->

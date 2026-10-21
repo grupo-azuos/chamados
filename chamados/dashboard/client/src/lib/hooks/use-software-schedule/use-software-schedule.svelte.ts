@@ -120,7 +120,7 @@ export type SoftwareScheduleModel = {
     filters: ScheduleFilterData;
     githubDay: {
       date: string;
-      type?: 'pr' | 'issue' | 'all';
+      type?: 'pr' | 'issue' | 'merge' | 'all';
       items: SoftwareTimelineEvent[];
       total: number;
       page: number;
