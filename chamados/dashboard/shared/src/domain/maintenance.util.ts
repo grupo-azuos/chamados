@@ -131,6 +131,62 @@ export function preventiveStatusOf(
 }
 
 /**
+ * A última vez que a máquina foi aberta, tirada do histórico dela. Só preventiva e corretiva
+ * contam — a mesma regra do servidor (`resetsPreventiveClock`).
+ */
+export function lastPreventiveAtOf(
+  history: readonly { type: MaintenanceType; performedAt: string }[],
+): string | null {
+  let last: string | null = null;
+  for (const entry of history) {
+    if (!resetsPreventiveClock(entry.type)) continue;
+    if (last === null || Date.parse(entry.performedAt) > Date.parse(last)) last = entry.performedAt;
+  }
+
+  return last;
+}
+
+/**
+ * O dia em que a próxima preventiva vence, ou nulo quando não há data de partida.
+ *
+ * Usa o mesmo mês médio de `monthsSince`: se a conta fosse outra, a tela diria "falta 1
+ * dia" para uma máquina que o quadro de preventivas já mostra como vencida.
+ */
+export function nextPreventiveAt(lastDoneAt: string | null | undefined): string | null {
+  if (!lastDoneAt) return null;
+
+  const at = Date.parse(lastDoneAt);
+  if (Number.isNaN(at)) return null;
+
+  return new Date(at + PREVENTIVE_INTERVAL_MONTHS * 30.44 * MILLISECONDS_PER_DAY).toISOString();
+}
+
+/**
+ * Quantos dias faltam para a próxima preventiva. Negativo é atraso: -5 quer dizer "venceu há
+ * cinco dias". Nulo quando nunca houve manutenção — aí não há prazo, há pendência.
+ */
+export function daysUntilPreventive(
+  lastDoneAt: string | null | undefined,
+  now: number = Date.now(),
+): number | null {
+  const next = nextPreventiveAt(lastDoneAt);
+  if (!next) return null;
+
+  /* Arredonda para cima: com 10 horas sobrando, ainda "falta 1 dia", não "vence hoje". */
+  return Math.ceil((Date.parse(next) - now) / MILLISECONDS_PER_DAY);
+}
+
+/** A frase do prazo, igual em toda tela: "faltam 12 dias", "vence hoje", "venceu há 3 dias". */
+export function preventiveCountdownLabel(days: number): string {
+  if (days === 0) return 'vence hoje';
+  if (days === 1) return 'falta 1 dia';
+  if (days > 1) return `faltam ${days} dias`;
+  if (days === -1) return 'venceu há 1 dia';
+
+  return `venceu há ${-days} dias`;
+}
+
+/**
  * A partir de quantas manutenções uma máquina passa a ser candidata a troca.
  *
  * Três é o número do sistema antigo, e ele não é arbitrário: é a terceira vez que alguém

@@ -20,8 +20,12 @@
     type ComputerSample,
   } from '@template/shared/schemas/computer.schema';
   import {
+    daysUntilPreventive,
+    lastPreventiveAtOf,
     maintenanceTypeLabel,
     maintenanceTypeTone,
+    nextPreventiveAt,
+    preventiveCountdownLabel,
   } from '@template/shared/domain/maintenance.util';
   import { type Maintenance } from '@template/shared/schemas/maintenance.schema';
   import { movementTypeLabel, movementTypeTone } from '@template/shared/domain/part-catalog.util';
@@ -287,7 +291,7 @@
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
-  import { formatDateTime } from '$lib/utils/format-date';
+  import { formatDate, formatDateTime } from '$lib/utils/format-date';
   import { formatPercent, formatTimeAgo } from '$lib/utils/format-machine';
 
   /* O prop precisa de outro nome aqui dentro: um binding local chamado `state` faz o
@@ -323,6 +327,10 @@
   /* Máquina descartada é SÓ LEITURA: editar, bloquear ou gerar token nela seria mexer no
      passado — o cadastro precisa continuar contando o que ela era quando saiu. */
   const disposed = $derived(isDisposed(computer));
+  /* O prazo da preventiva sai do próprio histórico da ficha: é ele que a pessoa está vendo
+     logo abaixo, então a conta bate com o que está na tela. */
+  const lastPreventiveAt = $derived(lastPreventiveAtOf(data.maintenances));
+  const preventiveDaysLeft = $derived(daysUntilPreventive(lastPreventiveAt));
 
   function confirmPending(): void {
     if (pending === 'archive') actions.onArchivedChange(true);
@@ -691,6 +699,21 @@
         />
       {/if}
     </div>
+
+    {#if !disposed && !viewState?.isMaintenancesLoading}
+      <p class="text-ink-700 mb-3 text-sm break-words" data-slot="preventive-countdown">
+        {#if preventiveDaysLeft === null}
+          Nenhuma preventiva registrada — esta máquina já aparece como pendente no quadro de
+          preventivas.
+        {:else}
+          Próxima preventiva: <span class="font-medium">{formatDate(nextPreventiveAt(lastPreventiveAt))}</span>
+          ·
+          <span class={preventiveDaysLeft <= 0 ? 'text-destructive font-medium' : ''}>
+            {preventiveCountdownLabel(preventiveDaysLeft)}
+          </span>
+        {/if}
+      </p>
+    {/if}
 
     {#if viewState?.isMaintenancesLoading}
       <p class="text-ink-500 py-6 text-center text-sm">Carregando o histórico…</p>
