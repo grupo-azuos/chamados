@@ -57,3 +57,22 @@ export const agentReleaseItemSchema = agentLtsSchema.extend({ isLts: z.boolean()
 export type AgentReleaseItem = z.infer<typeof agentReleaseItemSchema>;
 export const agentFileLinkSchema = z.object({ version: agentVersionSchema, url: z.string().url() });
 export type AgentFileLink = z.infer<typeof agentFileLinkSchema>;
+
+/**
+ * O pedido do pacote de instalação (.zip). Sem token, o script do pacote pergunta o token na
+ * hora de instalar; com token, ele já vem dentro — e então a API confere que o token é mesmo
+ * da máquina informada, para o pacote não sair com a chave errada.
+ */
+export const agentBundleRequestSchema = z
+  .object({
+    version: agentVersionSchema,
+    serverUrl: z.string().url().max(512),
+    token: z.string().min(1).max(512).optional(),
+    computerId: z.number().int().positive().optional(),
+  })
+  .strict()
+  .refine((request) => (request.token === undefined) === (request.computerId === undefined), {
+    message: 'Informe o token junto com a máquina.',
+    path: ['token'],
+  });
+export type AgentBundleRequest = z.infer<typeof agentBundleRequestSchema>;
