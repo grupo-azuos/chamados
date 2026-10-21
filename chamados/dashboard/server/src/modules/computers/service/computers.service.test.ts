@@ -140,7 +140,7 @@ const query = (overrides: Record<string, unknown> = {}) => computerListQuerySche
 
 describe('ComputersService.list', () => {
   it('filters by live connections before repository pagination and counting', async () => {
-    const list = vi.fn().mockResolvedValue({ rows: [computerRow()], total: 1 });
+    const list = vi.fn().mockResolvedValue({ rows: [{ ...computerRow(), lastPreventiveAt: null, activeAlerts: 0, ticketsThisMonth: 0 }], total: 1 });
     const presence = new AgentPresenceService();
     presence.connect(7, 'RECEPCAO-01');
     const { service } = makeService({ list }, presence);
@@ -165,7 +165,7 @@ describe('ComputersService.list', () => {
   // feliz
   it('returns the page translated into the contract', async () => {
     const { service } = makeService({
-      list: vi.fn().mockResolvedValue({ rows: [computerRow()], total: 1 }),
+      list: vi.fn().mockResolvedValue({ rows: [{ ...computerRow(), lastPreventiveAt: null, activeAlerts: 0, ticketsThisMonth: 0 }], total: 1 }),
     });
 
     const page = await service.list(ana, query());
@@ -182,7 +182,7 @@ describe('ComputersService.list', () => {
       {
         list: vi
           .fn()
-          .mockResolvedValue({ rows: [computerRow(), computerRow({ id: 8 })], total: 2 }),
+          .mockResolvedValue({ rows: [7, 8].map((id) => ({ ...computerRow({ id }), lastPreventiveAt: null, activeAlerts: 0, ticketsThisMonth: 0 })), total: 2 }),
       },
       presence,
     );

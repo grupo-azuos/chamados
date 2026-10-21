@@ -26,8 +26,9 @@ import { DB } from '../../../lib/db/db.token';
 import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
 import { qualified } from '../../../lib/db/sql-column.util';
-import { asTimestamp } from '../../../lib/db/sql-timestamp.util';
+import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
+import { maintenances } from '../../../lib/db/schema/maintenances.schema';
 import {
   computerAlerts,
   type ComputerAlertInsert,
@@ -44,8 +45,12 @@ import {
   type ComputerRow,
 } from '../../../lib/db/schema/computers.schema';
 
-/** A máquina com o número de chamados do mês junto — é o que a lista do inventário mostra. */
-export type ComputerWithTickets = ComputerRow & { ticketsThisMonth: number };
+/** Agregados da lista, na mesma consulta: chamados do mês, última preventiva e alertas ativos. */
+export type ComputerWithTickets = ComputerRow & {
+  ticketsThisMonth: number;
+  lastPreventiveAt: Date | null;
+  activeAlerts: number;
+};
 
 export type ComputerPage = {
   rows: ComputerWithTickets[];
@@ -76,6 +81,17 @@ export type ComputerPage = {
 function computerColumns() {
   return {
     ...getTableColumns(computers),
+    lastPreventiveAt: asDate(sql<Date | null>`(
+      select max(${qualified(maintenances.performedAt)}) from ${maintenances}
+      where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
+        and ${qualified(maintenances.type)} in ('preventive', 'corrective')
+    )`, maintenances.performedAt),
+    activeAlerts: sql<number>`(
+      select count(*)::int from ${computerAlerts}
+      where ${qualified(computerAlerts.computerId)} = ${qualified(computers.id)}
+        and ${qualified(computerAlerts.status)} = 'active'
+        and ${qualified(computerAlerts.recoveredAt)} is null
+    )`,
     ticketsThisMonth: sql<number>`(
       select count(*)::int from ${tickets}
       where ${qualified(tickets.computerId)} = ${qualified(computers.id)}
