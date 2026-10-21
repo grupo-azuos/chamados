@@ -83,6 +83,8 @@
       isTransfersLoading?: boolean;
       isSaving?: boolean;
       actionError?: string | null;
+      isDownloadingInstaller?: boolean;
+      installerError?: string | null;
     };
     actions: {
       onEdit: () => void;
@@ -96,6 +98,12 @@
       onArchivedChange: (isArchived: boolean) => void;
       onBlockedChange: (isBlocked: boolean, reason?: string) => void;
       onRegenerateToken: () => void;
+      /**
+       * Baixa o pacote de instalação (.zip). Sem o token: ele só existe na hora em que é
+       * gerado, então o instalador pergunta na máquina — ou a pessoa gera um novo, que já
+       * vem no pacote. Opcional: sem ela, o menu não oferece o download.
+       */
+      onDownloadInstaller?: () => void;
       onDispose: (input: { type: 'defect' | 'scrap'; reason: string }) => void;
       onRestore: () => void;
       onBack: () => void;
@@ -260,6 +268,7 @@
   import Building2 from '@lucide/svelte/icons/building-2';
   import CircleCheck from '@lucide/svelte/icons/circle-check';
   import Cpu from '@lucide/svelte/icons/cpu';
+  import Download from '@lucide/svelte/icons/download';
   import HardDrive from '@lucide/svelte/icons/hard-drive';
   import LockKeyhole from '@lucide/svelte/icons/lock-keyhole';
   import LockKeyholeOpen from '@lucide/svelte/icons/lock-keyhole-open';
@@ -340,6 +349,15 @@
      logo abaixo, então a conta bate com o que está na tela. */
   const lastPreventiveAt = $derived(lastPreventiveAtOf(data.maintenances));
 
+  /* Baixar não pede confirmação: não muda nada na máquina, só entrega o arquivo. */
+  function selectMenuAction(id: string): void {
+    if (id === 'installer') {
+      if (!viewState?.isDownloadingInstaller) actions.onDownloadInstaller?.();
+      return;
+    }
+    pending = id as typeof pending;
+  }
+
   function confirmPending(): void {
     if (pending === 'archive') actions.onArchivedChange(true);
     if (pending === 'unarchive') actions.onArchivedChange(false);
@@ -390,13 +408,14 @@
         {/if}
         <ActionMenu
           data={{ label: 'Mais ações', items: [
+            ...(actions.onDownloadInstaller ? [{ id: 'installer', label: viewState?.isDownloadingInstaller ? 'Montando o instalador…' : 'Baixar instalador (.zip)', icon: Download }] : []),
             { id: 'token', label: 'Gerar token novo', icon: KeyRound },
             { id: computer.isBlocked ? 'unblock' : 'block', label: computer.isBlocked ? 'Desbloquear' : 'Bloquear', icon: computer.isBlocked ? LockKeyholeOpen : LockKeyhole },
             { id: computer.isArchived ? 'unarchive' : 'archive', label: computer.isArchived ? 'Tirar do arquivo' : 'Arquivar', icon: computer.isArchived ? ArchiveRestore : Archive },
             ...(!computer.isArchived ? [{ id: 'dispose', label: 'Descartar', icon: Trash2, isDestructive: true, separatorBefore: true }] : []),
           ] }}
           state={{ isDisabled: viewState?.isSaving }}
-          actions={{ onSelect: (id) => (pending = id as typeof pending) }}
+          actions={{ onSelect: selectMenuAction }}
         />
       {/if}
     </PageHeader>
@@ -453,6 +472,9 @@
        que falha calada vira "o sistema não salva" (CONTRIBUTING §15). -->
   {#if viewState?.actionError}
     <ErrorState data={{ title: 'Não consegui salvar', message: viewState.actionError }} />
+  {/if}
+  {#if viewState?.installerError}
+    <ErrorState data={{ title: 'Não consegui montar o instalador', message: viewState.installerError }} />
   {/if}
 
   {#if disposed && computer.disposalType}

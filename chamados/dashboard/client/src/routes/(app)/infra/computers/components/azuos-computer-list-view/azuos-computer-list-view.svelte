@@ -351,7 +351,7 @@
         <div
           use:fillFromPointer
           style:--fill-color={fillColorOf(healthStatusTone(computer.healthStatus))}
-          class="hover-fill border-border/70 bg-card min-w-0 rounded-surface border p-4 shadow-xs"
+          class="hover-fill border-border/70 bg-card flex min-w-0 flex-col rounded-surface border p-4 shadow-xs"
         >
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0 flex-1 basis-40">
@@ -400,7 +400,9 @@
             </div>
           </div>
 
-          <div class="mt-3 min-w-0 rounded-box border border-border/60 bg-muted/20 p-3">
+          <!-- A caixa de manutenção cresce até o rodapé: os cartões da mesma linha têm a mesma
+               altura, e sem isso cada um sobrava um vão diferente acima do "Ver ficha". -->
+          <div class="mt-3 min-w-0 flex-1 rounded-box border border-border/60 bg-muted/20 p-3">
             <p class="text-muted-foreground mb-2 text-xs">Manutenção</p>
             <ComputerMaintenanceStatus data={{ computer, scheduledFor: data.scheduledFor?.[computer.id] ?? null }} />
           </div>
