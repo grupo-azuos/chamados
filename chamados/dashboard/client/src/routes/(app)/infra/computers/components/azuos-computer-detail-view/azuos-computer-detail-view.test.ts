@@ -3,6 +3,7 @@ import {
   type ComputerAlert,
   type ComputerSample,
 } from '@template/shared/schemas/computer.schema';
+import { type Maintenance } from '@template/shared/schemas/maintenance.schema';
 import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -148,7 +149,7 @@ const actions = {
 /** As duas listas paginadas: uma página de 25, e o total que o servidor devolveu. */
 const paging = { page: 1, pageSize: 25, total: 1 };
 
-function renderDetail(over: Partial<Computer> = {}) {
+function renderDetail(over: Partial<Computer> = {}, maintenances: Maintenance[] = []) {
   return render(ComputerDetailView, {
     props: {
       data: {
@@ -159,13 +160,35 @@ function renderDetail(over: Partial<Computer> = {}) {
         alerts: [alert()],
         alertPaging: paging,
         ticketPaging: { ...paging, total: 0 },
-        maintenances: [],
+        maintenances,
         partMovements: [],
         transfers: [],
       },
       actions,
     },
   });
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+
+function maintenance(over: Partial<Maintenance> = {}): Maintenance {
+  return {
+    id: 1,
+    computerId: 7,
+    computerName: 'TESTE-01',
+    computerDisplayName: null,
+    computerDepartment: null,
+    otherMachine: null,
+    type: 'preventive',
+    description: 'Limpeza e pasta térmica.',
+    performedBy: null,
+    performedAt: new Date(Date.now() - 10 * DAY).toISOString(),
+    createdAt: new Date(Date.now() - 10 * DAY).toISOString(),
+    createdBy: 'suporte@teste.local',
+    updatedAt: null,
+    updatedBy: null,
+    ...over,
+  };
 }
 
 describe('transferRouteOf', () => {
@@ -415,6 +438,13 @@ describe('AzuosComputerDetailView', () => {
     expect(screen.queryByRole('button', { name: 'Transferir' })).not.toBeInTheDocument();
   });
 
+  it('says when the next preventive is due and how many days are left', () => {
+    renderDetail({}, [maintenance()]);
+
+    expect(screen.getByText(/Próxima preventiva:/)).toBeInTheDocument();
+    expect(screen.getByText('faltam 82 dias')).toBeInTheDocument();
+  });
+
   it('keeps a disposed machine read-only until it is restored', () => {
     renderDetail({ disposedAt: '2026-10-01T12:00:00.000Z', disposalType: 'scrap', disposalReason: 'Equipamento substituído.' });
 
@@ -424,6 +454,20 @@ describe('AzuosComputerDetailView', () => {
   });
 
   // triste
+  /* Troca de peça não abre a máquina para limpar: não pode zerar o relógio da preventiva. */
+  it('does not count a part replacement as a preventive', () => {
+    renderDetail({}, [maintenance({ type: 'part_replacement' })]);
+
+    expect(screen.getByText(/Nenhuma preventiva registrada/)).toBeInTheDocument();
+    expect(screen.queryByText(/Próxima preventiva:/)).not.toBeInTheDocument();
+  });
+
+  it('shows the delay once the preventive has expired', () => {
+    renderDetail({}, [maintenance({ performedAt: new Date(Date.now() - 100 * DAY).toISOString() })]);
+
+    expect(screen.getByText('venceu há 8 dias')).toBeInTheDocument();
+  });
+
   /* Máquina sem medida nenhuma não pode mostrar "0%" como se estivesse parada. */
   it('shows a dash for the current usage of a machine that never reported', () => {
     render(ComputerDetailView, {

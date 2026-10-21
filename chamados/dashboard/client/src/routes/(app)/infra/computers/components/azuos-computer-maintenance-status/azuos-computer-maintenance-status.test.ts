@@ -14,6 +14,14 @@ describe('AzuosComputerMaintenanceStatus', () => {
     expect(screen.getByText(/Última manutenção:/)).toBeInTheDocument();
   });
 
+  it('tells how many days are left when the preventive is up to date', () => {
+    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString();
+    render(ComputerMaintenanceStatus, { props: { data: { computer: { ...computer,
+      preventiveStatus: 'ok', lastPreventiveAt: tenDaysAgo, activeAlerts: 0 } } } });
+    expect(screen.getByText('Preventiva em dia')).toBeInTheDocument();
+    expect(screen.getByText(/Próxima em .* · faltam 82 dias/)).toBeInTheDocument();
+  });
+
   // triste
   it('does not describe missing history as a completed preventive', () => {
     render(ComputerMaintenanceStatus, { props: { data: { computer: { ...computer,

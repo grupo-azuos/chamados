@@ -8,6 +8,9 @@
 </script>
 
 <Story name="UpToDate" args={{ data: { computer: base } }} />
+<!-- Último dia antes de vencer: o contador diz "falta 1 dia" ou "vence hoje", conforme a hora. -->
+<Story name="AboutToExpire" args={{ data: { computer: { ...base,
+  lastPreventiveAt: new Date(Date.now() - 91 * 24 * 60 * 60 * 1000).toISOString() } } }} />
 <Story name="PreventiveDue" args={{ data: { computer: { ...base, preventiveStatus: 'due', lastPreventiveAt: '2026-04-01T12:00:00.000Z' } } }} />
 <Story name="NoMaintenanceRecorded" args={{ data: { computer: { ...base, preventiveStatus: 'never', lastPreventiveAt: null } } }} />
 <Story name="ActiveCriticalAlert" args={{ data: { computer: { ...base, activeAlerts: 1 } } }} />
