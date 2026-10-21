@@ -55,6 +55,7 @@ function makeService(repository: Partial<DashboardRepository> = {}) {
     ticketsOpenedByDay: vi.fn().mockResolvedValue([]),
     ticketsResolvedByDay: vi.fn().mockResolvedValue([]),
     maintenancesByDay: vi.fn().mockResolvedValue([]),
+    scheduledMaintenances: vi.fn().mockResolvedValue([]),
     ...repository,
   };
 
@@ -302,5 +303,31 @@ describe('DashboardService.summary — os blocos do painel', () => {
 
     expect(summary.panels.plannedToday).toEqual([]);
     expect(summary.panels.doneToday).toBe(false);
+  });
+});
+
+describe('DashboardService.summary — agendadas', () => {
+  // feliz
+  it('lists the scheduled maintenances, asking the repository for a short list', async () => {
+    const scheduledMaintenances = vi.fn().mockResolvedValue([
+      { computerId: 1, computerName: 'A', department: 'contabil', scheduledFor: '2026-11-05', note: null },
+    ]);
+    const { service } = makeService({ scheduledMaintenances });
+
+    const summary = await service.summary(ana, query());
+
+    expect(summary.panels.scheduled).toEqual([
+      { computerId: 1, computerName: 'A', department: 'contabil', scheduledFor: '2026-11-05', note: null },
+    ]);
+    expect(scheduledMaintenances).toHaveBeenCalledWith(8);
+  });
+
+  // triste
+  it('answers an empty list, not an error, when nothing is scheduled', async () => {
+    const { service } = makeService();
+
+    const summary = await service.summary(ana, query());
+
+    expect(summary.panels.scheduled).toEqual([]);
   });
 });

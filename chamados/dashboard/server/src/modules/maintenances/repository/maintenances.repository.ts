@@ -1,12 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { type MaintenanceListQuery } from '@template/shared/schemas/maintenance.schema';
-import { and, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
+import {
+  type MaintenanceListQuery,
+  type MaintenanceScheduleListQuery,
+} from '@template/shared/schemas/maintenance.schema';
+import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
 import { asDate } from '../../../lib/db/sql-timestamp.util';
 import { computers } from '../../../lib/db/schema/computers.schema';
+import {
+  maintenanceSchedules,
+  type MaintenanceScheduleRow,
+} from '../../../lib/db/schema/maintenance-schedules.schema';
 import {
   maintenances,
   type MaintenanceInsert,
@@ -27,6 +34,17 @@ export type MaintenanceWithComputer = {
     displayName: string | null;
     department: string | null;
   } | null;
+};
+
+/** O agendamento com a máquina dele — o nome sai do inventário, como no histórico. */
+export type ScheduleWithComputer = {
+  schedule: MaintenanceScheduleRow;
+  computer: {
+    id: number;
+    name: string;
+    displayName: string | null;
+    department: string | null;
+  };
 };
 
 export type MaintenancePage = {
@@ -125,6 +143,75 @@ export class MaintenancesRepository {
     await runQuery(
       this.db.delete(maintenances).where(eq(maintenances.id, id)),
       'excluir manutenção',
+    );
+  }
+
+  /**
+   * Os agendamentos em aberto, do mais próximo para o mais distante.
+   *
+   * Máquina arquivada ou descartada fica de fora: agendamento de máquina que saiu de uso é
+   * compromisso com ninguém.
+   */
+  async listSchedules(query: MaintenanceScheduleListQuery): Promise<ScheduleWithComputer[]> {
+    const filters: SQL[] = [eq(computers.isArchived, false), sql`${computers.disposedAt} is null`];
+    if (query.computerId) filters.push(eq(maintenanceSchedules.computerId, query.computerId));
+
+    return runQuery(
+      this.db
+        .select({ schedule: maintenanceSchedules, computer: computerColumns })
+        .from(maintenanceSchedules)
+        .innerJoin(computers, eq(maintenanceSchedules.computerId, computers.id))
+        .where(and(...filters))
+        .orderBy(asc(maintenanceSchedules.scheduledFor), asc(computers.name)),
+      'listar manutenções agendadas',
+    );
+  }
+
+  /**
+   * Agenda ou remarca — uma linha por máquina, então a segunda vez TROCA a data em vez de
+   * criar outra. Numa consulta só, para duas pessoas agendando ao mesmo tempo não esbarrarem
+   * na regra de unicidade.
+   */
+  async upsertSchedule(
+    computerId: number,
+    values: { scheduledFor: string; note: string | null },
+    actorEmail: string,
+  ): Promise<void> {
+    await runQuery(
+      this.db
+        .insert(maintenanceSchedules)
+        .values({ computerId, ...values, createdBy: actorEmail })
+        .onConflictDoUpdate({
+          target: maintenanceSchedules.computerId,
+          set: { ...values, updatedAt: new Date(), updatedBy: actorEmail },
+        }),
+      'agendar manutenção',
+    );
+  }
+
+  /** Tira o agendamento — cancelado, ou cumprido porque a manutenção foi registrada. */
+  async deleteSchedule(computerId: number): Promise<void> {
+    await runQuery(
+      this.db.delete(maintenanceSchedules).where(eq(maintenanceSchedules.computerId, computerId)),
+      'cancelar manutenção agendada',
+    );
+  }
+
+  /** A máquina existe e está em uso? Agendar exige as duas coisas. */
+  async findActiveComputer(computerId: number): Promise<{ id: number } | null> {
+    return runMaybe(
+      this.db
+        .select({ id: computers.id })
+        .from(computers)
+        .where(
+          and(
+            eq(computers.id, computerId),
+            eq(computers.isArchived, false),
+            sql`${computers.disposedAt} is null`,
+          ),
+        )
+        .limit(1),
+      'ler máquina para agendar',
     );
   }
 

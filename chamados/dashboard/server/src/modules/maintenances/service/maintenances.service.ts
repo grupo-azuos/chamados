@@ -5,7 +5,10 @@ import {
   type CreateMaintenanceInput,
   type Maintenance,
   type MaintenanceListQuery,
+  type MaintenanceSchedule,
+  type MaintenanceScheduleListQuery,
   type PreventiveDue,
+  type SaveMaintenanceScheduleInput,
   type UpdateMaintenanceInput,
 } from '@template/shared/schemas/maintenance.schema';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
@@ -16,7 +19,12 @@ import {
   assertCanModifyRecord,
   assertCanRead,
 } from '../../../lib/policy/policy-assert.util';
-import { toMaintenance, toMaintenanceInsert, toMaintenanceUpdate } from '../mapper/maintenances.mapper';
+import {
+  toMaintenance,
+  toMaintenanceInsert,
+  toMaintenanceSchedule,
+  toMaintenanceUpdate,
+} from '../mapper/maintenances.mapper';
 import {
   MaintenancesRepository,
   type MaintenanceWithComputer,
@@ -24,6 +32,8 @@ import {
 } from '../repository/maintenances.repository';
 
 const NOT_FOUND = 'Manutenção não encontrada. Ela pode ter sido excluída — recarregue a lista.';
+const COMPUTER_NOT_FOUND =
+  'Máquina não encontrada ou fora de uso. Só dá para agendar manutenção de máquina em uso.';
 
 /**
  * O ÚNICO caminho de escrita de manutenção. Controller não fala com repository, e o
@@ -59,6 +69,11 @@ export class MaintenancesService {
     assertCanCreate(user.role, 'manutenções');
 
     const id = await this.repository.insert(toMaintenanceInsert(input, user.email));
+
+    /* Registrar a manutenção CUMPRE o agendamento: deixá-lo de pé faria a ficha continuar
+       cobrando uma visita que já aconteceu. Qualquer tipo conta — quem agendou "trocar a
+       fonte" e registrou "troca de peça" fez o que tinha combinado. */
+    if (input.computerId) await this.repository.deleteSchedule(input.computerId);
 
     /* Relê para devolver a máquina junto: o insert conhece o `computer_id`, mas não o nome
        dela, e a tela precisa do nome para desenhar a linha que acabou de aparecer. */
@@ -104,6 +119,54 @@ export class MaintenancesService {
     const rows = await this.repository.listPreventive();
 
     return rows.map(toPreventiveDue).sort(byUrgency);
+  }
+
+  /** Os agendamentos em aberto — de uma máquina, ou de todas, do mais próximo ao mais distante. */
+  async listSchedules(
+    user: RequestUser,
+    query: MaintenanceScheduleListQuery,
+  ): Promise<MaintenanceSchedule[]> {
+    assertCanRead(user.role, 'as manutenções agendadas');
+
+    const rows = await this.repository.listSchedules(query);
+
+    return rows.map(toMaintenanceSchedule);
+  }
+
+  /**
+   * Agenda ou remarca. Quem pode registrar manutenção pode agendar — é a mesma pessoa que vai
+   * abrir a máquina no dia.
+   */
+  async saveSchedule(
+    user: RequestUser,
+    computerId: number,
+    input: SaveMaintenanceScheduleInput,
+  ): Promise<MaintenanceSchedule> {
+    assertCanCreate(user.role, 'manutenções agendadas');
+    await this.requireActiveComputer(computerId);
+
+    await this.repository.upsertSchedule(
+      computerId,
+      { scheduledFor: input.scheduledFor, note: input.note ?? null },
+      user.email,
+    );
+
+    const [saved] = await this.repository.listSchedules({ computerId });
+    if (!saved) throw new NotFoundException(COMPUTER_NOT_FOUND);
+
+    return toMaintenanceSchedule(saved);
+  }
+
+  /** Cancela. Sem agendamento, não há erro: o resultado pedido — nada marcado — já é o atual. */
+  async cancelSchedule(user: RequestUser, computerId: number): Promise<void> {
+    assertCanCreate(user.role, 'manutenções agendadas');
+
+    await this.repository.deleteSchedule(computerId);
+  }
+
+  private async requireActiveComputer(computerId: number): Promise<void> {
+    const computer = await this.repository.findActiveComputer(computerId);
+    if (!computer) throw new NotFoundException(COMPUTER_NOT_FOUND);
   }
 
   private async requireMaintenance(id: number): Promise<MaintenanceWithComputer> {
