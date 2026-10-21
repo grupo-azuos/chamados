@@ -78,7 +78,10 @@ export function useMaintenanceFormModel({
         return maintenancesApi.create(body);
       },
       onSuccess: async () => {
-        await queryClient.invalidateQueries({ queryKey: MAINTENANCES_QUERY_KEY });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: MAINTENANCES_QUERY_KEY }),
+          queryClient.invalidateQueries({ queryKey: COMPUTERS_QUERY_KEY }),
+        ]);
         onSaved();
       },
     }),

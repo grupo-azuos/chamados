@@ -8,6 +8,7 @@ import { derived, writable } from 'svelte/store';
 
 import { readError } from '$lib/api/http-client';
 import { maintenancesApi } from '$lib/api/maintenances.api';
+import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 
 export const MAINTENANCES_PAGE_SIZE = 15;
@@ -128,7 +129,10 @@ export function useMaintenanceListModel(
       mutationFn: (id: number) => maintenancesApi.remove(id),
       onSuccess: async () => {
         removingStore.set(null);
-        await queryClient.invalidateQueries({ queryKey: MAINTENANCES_QUERY_KEY });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: MAINTENANCES_QUERY_KEY }),
+          queryClient.invalidateQueries({ queryKey: COMPUTERS_QUERY_KEY }),
+        ]);
       },
     }),
   );

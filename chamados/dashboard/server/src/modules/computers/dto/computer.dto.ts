@@ -1,5 +1,6 @@
 import {
   computerAlertListQuerySchema,
+  computerResponsibleSchema,
   computerAlertSchema,
   computerListQuerySchema,
   paginatedComputerAlertSchema,
@@ -61,3 +62,5 @@ export class ComputerListResponseDto extends createZodDto(
     pageSize: z.number().int(),
   }),
 ) {}
+
+export class ComputerResponsibleDto extends createZodDto(computerResponsibleSchema) {}

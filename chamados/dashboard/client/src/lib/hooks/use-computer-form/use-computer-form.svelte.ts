@@ -1,8 +1,9 @@
 import { createForm } from '@tanstack/svelte-form';
-import { createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { type Department } from '@template/shared/domain/department.util';
 import {
   type Computer,
+  type ComputerResponsible,
   type ComputerCreateFormValues,
   computerCreateFormSchema,
 } from '@template/shared/schemas/computer.schema';
@@ -22,8 +23,9 @@ export type ComputerFormModel = {
   data: {
     mode: 'create' | 'edit';
     fields: Record<ComputerFormField, FormFieldState>;
+    responsibles: ComputerResponsible[];
   };
-  state: { isSubmitting: boolean; error: string | null };
+  state: { isSubmitting: boolean; error: string | null; isLoadingResponsibles: boolean; responsiblesError: string | null };
   actions: {
     onChange: (field: ComputerFormField, value: string) => void;
     onBlur: (field: ComputerFormField) => void;
@@ -51,6 +53,12 @@ export function useComputerFormModel({
   onSaved: (created: CreatedAgentToken | null) => void;
 }): ComputerFormModel {
   const queryClient = useQueryClient();
+  const responsibles = mirrorStore(createQuery({
+    queryKey: [...COMPUTERS_QUERY_KEY, 'responsibles'],
+    queryFn: () => computersApi.responsibles(),
+    staleTime: 60_000,
+    retry: false,
+  }));
 
   const save = mirrorStore(
     createMutation({
@@ -95,6 +103,7 @@ export function useComputerFormModel({
 
       return {
         mode: computer ? ('edit' as const) : ('create' as const),
+        responsibles: responsibles.current.data ?? [],
         fields: {
           name: field('name'),
           displayName: field('displayName'),
@@ -104,7 +113,9 @@ export function useComputerFormModel({
       };
     },
     get state() {
-      return { isSubmitting: save.current.isPending, error: readError(save.current.error) };
+      return { isSubmitting: save.current.isPending, error: readError(save.current.error),
+        isLoadingResponsibles: responsibles.current.isPending,
+        responsiblesError: readError(responsibles.current.error) };
     },
     actions: {
       onChange: (field, value) => form.setFieldValue(field, value as never),

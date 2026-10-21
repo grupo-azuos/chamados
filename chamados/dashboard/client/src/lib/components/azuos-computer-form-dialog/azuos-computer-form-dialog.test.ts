@@ -99,3 +99,34 @@ describe('AzuosComputerFormDialog', () => {
     expect(screen.getByDisplayValue('RECEPCAO-01')).toBeInTheDocument();
   });
 });
+
+
+describe('AzuosComputerFormDialog responsible directory', () => {
+  // feliz
+  it('names the display field and selects a directory person by name', async () => {
+    const onChange = vi.fn();
+    render(ComputerFormDialog, { props: {
+      data: { mode: 'create', fields: fields(), responsibles: [
+        { id: 'person-1', name: 'Ana Exemplo', email: 'ana@exemplo.invalid' },
+      ] }, state: { isOpen: true }, actions: { ...actions, onChange },
+    } });
+    expect(screen.getByLabelText('Nome do dispositivo')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Responsável', exact: true }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ana Exemplo · ana@exemplo.invalid' }));
+    expect(onChange).toHaveBeenCalledWith('responsibleName', 'Ana Exemplo');
+  });
+
+  // triste
+  it('allows a free name when the directory is unavailable', async () => {
+    const onChange = vi.fn();
+    render(ComputerFormDialog, { props: {
+      data: { mode: 'create', fields: fields(), responsibles: [] },
+      state: { isOpen: true, responsiblesError: 'Diretório indisponível' }, actions: { ...actions, onChange },
+    } });
+    expect(screen.getByRole('status')).toHaveTextContent('A lista de pessoas não carregou');
+    await userEvent.click(screen.getByRole('button', { name: 'Responsável', exact: true }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Buscar pessoa ou digitar nome…' }), 'Equipe externa');
+    await userEvent.click(screen.getByRole('button', { name: 'Usar “Equipe externa”' }));
+    expect(onChange).toHaveBeenCalledWith('responsibleName', 'Equipe externa');
+  });
+});
