@@ -1,4 +1,15 @@
-import { Controller, Get, Param, Query, Res, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Res,
+  StreamableFile,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -7,6 +18,7 @@ import {
   ApiForbiddenResponse,
   ApiUnauthorizedResponse,
   ApiParam,
+  ApiProduces,
 } from '@nestjs/swagger';
 import { type Response } from 'express';
 import {
@@ -16,8 +28,10 @@ import {
 import { AnyModule } from '../../../lib/auth/module-context.decorator';
 import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { AgentBundleService } from '../service/agent-bundle.service';
 import { AgentDownloadService } from '../service/agent-download.service';
 import {
+  AgentBundleRequestDto,
   AgentDownloadQueryDto,
   AgentLtsDto,
   AgentFileLinkDto,
@@ -30,7 +44,35 @@ import {
 @AnyModule()
 @Controller('agent/downloads')
 export class AgentDownloadController {
-  constructor(private readonly service: AgentDownloadService) {}
+  constructor(
+    private readonly service: AgentDownloadService,
+    private readonly bundles: AgentBundleService,
+  ) {}
+
+  /** POST porque o token pode ir no corpo — num GET ele ficaria no endereço e nos logs. */
+  @Post('bundle')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Monta o pacote de instalação (.zip) com MSI, certificado e scripts',
+    description:
+      'Com `token` e `computerId`, o install-agent.ps1 do pacote já leva o token da máquina; sem eles, o script pergunta na instalação.',
+  })
+  @ApiProduces('application/zip')
+  @ApiOkResponse({ description: 'O pacote de instalação, pronto para baixar.' })
+  async bundle(
+    @CurrentUser() user: RequestUser,
+    @Body() body: AgentBundleRequestDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<StreamableFile> {
+    const bundle = await this.bundles.bundle(user, body);
+    response.set({
+      'Cache-Control': 'no-store',
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="${bundle.fileName}"`,
+    });
+
+    return new StreamableFile(bundle.content);
+  }
 
   @Get('lts')
   @ApiOperation({ summary: 'Consulta a versão LTS disponível para instalação' })
