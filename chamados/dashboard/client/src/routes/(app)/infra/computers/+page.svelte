@@ -1,6 +1,7 @@
 <script lang="ts">
   import ComputerListView from './components/azuos-computer-list-view/azuos-computer-list-view.svelte';
   import ComputerTokenDialog from './components/azuos-computer-token-dialog/azuos-computer-token-dialog.svelte';
+  import { useAgentBundleModel } from '$lib/hooks/use-agent-bundle/use-agent-bundle.svelte';
   import { type CreatedAgentToken } from '$lib/hooks/use-computer-form/use-computer-form.svelte';
   import { useComputerListModel } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
   import ComputerFormSlot from './computer-form-slot.svelte';
@@ -13,6 +14,7 @@
    * formulário, porque é a única vez que ele existe legível.
    */
   const list = useComputerListModel();
+  const bundle = useAgentBundleModel();
 
   let isRegistering = $state(false);
   let created = $state<CreatedAgentToken | null>(null);
@@ -43,6 +45,11 @@
 {#if created}
   <ComputerTokenDialog
     data={{ computerName: created.computerName, token: created.token }}
-    actions={{ onClose: () => (created = null) }}
+    state={{ isDownloadingBundle: bundle.state.isDownloading, bundleError: bundle.state.error }}
+    actions={{
+      onClose: () => (created = null),
+      onDownloadBundle: () =>
+        created && bundle.actions.onDownload({ token: created.token, computerId: created.computerId }),
+    }}
   />
 {/if}

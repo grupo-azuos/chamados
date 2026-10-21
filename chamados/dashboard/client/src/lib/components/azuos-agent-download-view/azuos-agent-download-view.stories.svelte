@@ -22,12 +22,15 @@
     isLoadingReleases: false,
     releasesError: null,
     downloadingVersion: null,
+    isDownloadingBundle: false,
+    bundleError: null,
   };
   const actions = {
     onRetry: fn(),
     onDownload: fn(),
     onDownloadVersion: fn(),
     onDownloadInstallerScript: fn(),
+    onDownloadBundle: fn(),
   };
 </script>
 
@@ -46,6 +49,18 @@
   }}
 />
 <Story name="PreparingDownload" args={{ data, state: { ...state, downloading: 'msi' }, actions }} />
+<Story
+  name="BuildingBundle"
+  args={{ data, state: { ...state, isDownloadingBundle: true }, actions }}
+/>
+<Story
+  name="BundleFailed"
+  args={{
+    data,
+    state: { ...state, bundleError: 'Faltam arquivos desta versão do agente. Avise a Infraestrutura.' },
+    actions,
+  }}
+/>
 <Story
   name="DownloadFailed"
   args={{

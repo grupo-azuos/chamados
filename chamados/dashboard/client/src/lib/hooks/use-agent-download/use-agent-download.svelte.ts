@@ -9,6 +9,7 @@ import { agentDownloadApi } from '$lib/api/agent-download.api';
 import { readError } from '$lib/api/http-client';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { downloadAgentInstallerScript } from '$lib/utils/agent-installer-script.util';
+import { useAgentBundleModel } from '$lib/hooks/use-agent-bundle/use-agent-bundle.svelte';
 
 export type AgentDownloadModel = {
   data: { release: AgentLts | null; releases: AgentReleaseItem[] };
@@ -20,12 +21,15 @@ export type AgentDownloadModel = {
     isLoadingReleases: boolean;
     releasesError: string | null;
     downloadingVersion: { version: string; kind: AgentDownloadKind } | null;
+    isDownloadingBundle: boolean;
+    bundleError: string | null;
   };
   actions: {
     onRetry: () => void;
     onDownload: (kind: AgentDownloadKind) => void;
     onDownloadVersion: (version: string, kind: AgentDownloadKind) => void;
     onDownloadInstallerScript: () => void;
+    onDownloadBundle: () => void;
   };
 };
 
@@ -37,6 +41,7 @@ export function useAgentDownloadModel(): AgentDownloadModel {
   const releases = mirrorStore(
     createQuery({ queryKey: ['agent-releases'], queryFn: agentDownloadApi.releases, staleTime: 30_000 }),
   );
+  const bundle = useAgentBundleModel();
   let downloading = $state<AgentDownloadKind | null>(null);
   let downloadingVersion = $state<{ version: string; kind: AgentDownloadKind } | null>(null);
   let downloadError = $state<string | null>(null);
@@ -84,6 +89,8 @@ export function useAgentDownloadModel(): AgentDownloadModel {
         isLoadingReleases: releases.current.isPending,
         releasesError: readError(releases.current.error),
         downloadingVersion,
+        isDownloadingBundle: bundle.state.isDownloading,
+        bundleError: bundle.state.error,
       };
     },
     actions: {
@@ -98,6 +105,8 @@ export function useAgentDownloadModel(): AgentDownloadModel {
         const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
         downloadAgentInstallerScript({ serverUrl: origin });
       },
+      /* Sem máquina: o script do pacote pergunta o token na hora de instalar. */
+      onDownloadBundle: () => bundle.actions.onDownload(),
     },
   };
 }

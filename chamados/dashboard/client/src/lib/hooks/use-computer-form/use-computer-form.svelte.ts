@@ -17,7 +17,7 @@ import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-l
 import { type FormFieldState } from '$lib/types/form-field.type';
 
 /** O token recém-gerado e a máquina dele — o que a tela precisa mostrar depois do cadastro. */
-export type CreatedAgentToken = { token: string; computerName: string };
+export type CreatedAgentToken = { token: string; computerId: number; computerName: string };
 
 export type ComputerFormModel = {
   data: {
@@ -73,7 +73,11 @@ export function useComputerFormModel({
       },
       onSuccess: async (created) => {
         await queryClient.invalidateQueries({ queryKey: COMPUTERS_QUERY_KEY });
-        onSaved(created ? { token: created.token, computerName: created.computer.name } : null);
+        onSaved(
+          created
+            ? { token: created.token, computerId: created.computer.id, computerName: created.computer.name }
+            : null,
+        );
       },
     }),
   );

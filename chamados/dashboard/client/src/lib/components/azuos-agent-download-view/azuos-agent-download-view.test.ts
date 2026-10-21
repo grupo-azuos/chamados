@@ -13,11 +13,14 @@ const state = {
   isLoadingReleases: false,
   releasesError: null,
   downloadingVersion: null,
+  isDownloadingBundle: false,
+  bundleError: null,
 };
 const actions = () => ({
   onRetry: vi.fn(),
   onDownload: vi.fn(),
   onDownloadInstallerScript: vi.fn(),
+  onDownloadBundle: vi.fn(),
   onDownloadVersion: vi.fn(),
 });
 
@@ -91,5 +94,28 @@ describe('AzuosAgentDownloadView', () => {
     render(AgentDownloadView, { data, state, actions: actions() });
     expect(screen.getByText(/-Scope Process/)).toBeInTheDocument();
     expect(screen.getByText(/só para essa janela/)).toBeInTheDocument();
+  });
+
+  // feliz
+  it('offers the complete install package as a single zip', async () => {
+    const callbacks = actions();
+    render(AgentDownloadView, { data, state, actions: callbacks });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Baixar pacote completo (.zip)' }));
+
+    expect(callbacks.onDownloadBundle).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('explains why the package could not be built and lets the person try again', async () => {
+    const callbacks = actions();
+    render(AgentDownloadView, {
+      data,
+      state: { ...state, bundleError: 'Faltam arquivos desta versão do agente.' },
+      actions: callbacks,
+    });
+
+    expect(screen.getByText('Não consegui montar o pacote')).toBeInTheDocument();
+    expect(screen.getByText('Faltam arquivos desta versão do agente.')).toBeInTheDocument();
   });
 });

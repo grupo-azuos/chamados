@@ -89,7 +89,11 @@ describe('useComputerFormModel', () => {
     model.actions.onSubmit();
 
     await waitFor(() =>
-      expect(onSaved).toHaveBeenCalledWith({ token: 'agt_novo', computerName: 'RECEPCAO-01' }),
+      expect(onSaved).toHaveBeenCalledWith({
+        token: 'agt_novo',
+        computerId: expect.any(Number),
+        computerName: 'RECEPCAO-01',
+      }),
     );
   });
 
