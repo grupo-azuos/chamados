@@ -108,6 +108,7 @@ export async function apiDownload(path: string, options: RequestOptions = {}): P
     method: options.method ?? 'GET',
     signal: options.signal,
     headers: buildHeaders(options),
+    body: toRequestBody(options.body),
   });
 
   if (!response.ok) throw await toApiError(response);

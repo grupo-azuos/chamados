@@ -8,6 +8,7 @@
   import ComputerTokenDialog from '../components/azuos-computer-token-dialog/azuos-computer-token-dialog.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import { useAgentBundleModel } from '$lib/hooks/use-agent-bundle/use-agent-bundle.svelte';
   import { useComputerDetailModel } from '$lib/hooks/use-computer-detail/use-computer-detail.svelte';
   import { useMaintenanceScheduleModel } from '$lib/hooks/use-maintenance-schedule/use-maintenance-schedule.svelte';
   import MaintenanceFormSlot from '../../maintenance/maintenance-form-slot.svelte';
@@ -26,6 +27,7 @@
 
   const detail = useComputerDetailModel(id);
   const schedule = useMaintenanceScheduleModel(id);
+  const bundle = useAgentBundleModel();
 
   /* Qual peça está na frente — não é dado. */
   let isEditing = $state(false);
@@ -141,6 +143,11 @@
 {#if detail.data.newToken && detail.data.computer}
   <ComputerTokenDialog
     data={{ computerName: detail.data.computer.name, token: detail.data.newToken }}
-    actions={{ onClose: detail.actions.onDismissToken }}
+    state={{ isDownloadingBundle: bundle.state.isDownloading, bundleError: bundle.state.error }}
+    actions={{
+      onClose: detail.actions.onDismissToken,
+      onDownloadBundle: () =>
+        detail.data.newToken && bundle.actions.onDownload({ token: detail.data.newToken, computerId: id }),
+    }}
   />
 {/if}

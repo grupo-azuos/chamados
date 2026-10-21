@@ -1,4 +1,5 @@
 import { AgentDownloadController } from './controller/agent-download.controller';
+import { AgentBundleService } from './service/agent-bundle.service';
 import { AgentDownloadService } from './service/agent-download.service';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../../lib/auth/auth.module';
@@ -30,6 +31,7 @@ import { SampleCleanupService } from './service/sample-cleanup.service';
   controllers: [ComputerResponsiblesController, ComputersController, AgentReleaseController, AgentDownloadController],
   providers: [
     ComputerResponsiblesService,
+    AgentBundleService,
     AgentDownloadService,
     AgentReleaseRepository,
     AgentReleaseService,
