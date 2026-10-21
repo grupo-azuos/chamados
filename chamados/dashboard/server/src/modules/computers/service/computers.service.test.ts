@@ -31,6 +31,7 @@ function computerRow(over: Partial<ComputerRow> = {}): ComputerRow {
     displayName: null,
     responsibleName: null,
     department: null,
+    kind: 'desktop',
     tokenHash: hashComputerToken('token-de-verdade'),
     os: null,
     platform: null,
@@ -140,7 +141,7 @@ const query = (overrides: Record<string, unknown> = {}) => computerListQuerySche
 
 describe('ComputersService.list', () => {
   it('filters by live connections before repository pagination and counting', async () => {
-    const list = vi.fn().mockResolvedValue({ rows: [{ ...computerRow(), lastPreventiveAt: null, activeAlerts: 0, ticketsThisMonth: 0 }], total: 1 });
+    const list = vi.fn().mockResolvedValue({ rows: [{ ...computerRow(), lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [], ticketsThisMonth: 0 }], total: 1 });
     const presence = new AgentPresenceService();
     presence.connect(7, 'RECEPCAO-01');
     const { service } = makeService({ list }, presence);
@@ -148,7 +149,7 @@ describe('ComputersService.list', () => {
 
     await service.list(ana, onlyOnline);
 
-    expect(list).toHaveBeenCalledWith(onlyOnline, [7]);
+    expect(list).toHaveBeenCalledWith(onlyOnline, { onlineIds: [7], wantOnline: true });
   });
 
   // triste
@@ -159,13 +160,37 @@ describe('ComputersService.list', () => {
 
     const page = await service.list(ana, onlyOnline);
 
-    expect(list).toHaveBeenCalledWith(onlyOnline, []);
+    expect(list).toHaveBeenCalledWith(onlyOnline, { onlineIds: [], wantOnline: true });
     expect(page.total).toBe(0);
+  });
+
+  // feliz
+  it('asks the repository for the machines OUTSIDE the live connections when offline is wanted', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const presence = new AgentPresenceService();
+    presence.connect(7, 'RECEPCAO-01');
+    const { service } = makeService({ list }, presence);
+    const onlyOffline = query({ onlyOffline: true });
+
+    await service.list(ana, onlyOffline);
+
+    expect(list).toHaveBeenCalledWith(onlyOffline, { onlineIds: [7], wantOnline: false });
+  });
+
+  // triste
+  it('sends no connection filter when the screen did not ask for one', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const { service } = makeService({ list });
+    const all = query();
+
+    await service.list(ana, all);
+
+    expect(list).toHaveBeenCalledWith(all, undefined);
   });
   // feliz
   it('returns the page translated into the contract', async () => {
     const { service } = makeService({
-      list: vi.fn().mockResolvedValue({ rows: [{ ...computerRow(), lastPreventiveAt: null, activeAlerts: 0, ticketsThisMonth: 0 }], total: 1 }),
+      list: vi.fn().mockResolvedValue({ rows: [{ ...computerRow(), lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [], ticketsThisMonth: 0 }], total: 1 }),
     });
 
     const page = await service.list(ana, query());
@@ -182,7 +207,7 @@ describe('ComputersService.list', () => {
       {
         list: vi
           .fn()
-          .mockResolvedValue({ rows: [7, 8].map((id) => ({ ...computerRow({ id }), lastPreventiveAt: null, activeAlerts: 0, ticketsThisMonth: 0 })), total: 2 }),
+          .mockResolvedValue({ rows: [7, 8].map((id) => ({ ...computerRow({ id }), lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [], ticketsThisMonth: 0 })), total: 2 }),
       },
       presence,
     );
@@ -212,7 +237,7 @@ describe('ComputersService.exportList', () => {
 
     await service.exportList(ana, { format: 'pdf', onlyOnline: true });
 
-    expect(listAll).toHaveBeenCalledWith({ format: 'pdf', onlyOnline: true }, [7]);
+    expect(listAll).toHaveBeenCalledWith({ format: 'pdf', onlyOnline: true }, { onlineIds: [7], wantOnline: true });
   });
   // feliz
   it('builds the file from every machine that matched, not only a page', async () => {
@@ -221,7 +246,7 @@ describe('ComputersService.exportList', () => {
 
     const report = await service.exportList(ana, { format: 'pdf', department: 'rh' });
 
-    expect(listAll).toHaveBeenCalledWith({ format: 'pdf', department: 'rh' });
+    expect(listAll).toHaveBeenCalledWith({ format: 'pdf', department: 'rh' }, undefined);
     expect(report.fileName).toBe('inventario.pdf');
     expect(report.buffer.length).toBeGreaterThan(0);
   });
@@ -263,7 +288,7 @@ describe('ComputersService.create', () => {
     const insert = vi.fn().mockResolvedValue(computerRow());
     const { service } = makeService({ insert });
 
-    const created = await service.create(ana, { name: 'RECEPCAO-01' });
+    const created = await service.create(ana, { name: 'RECEPCAO-01', kind: 'desktop' });
 
     expect(created.token).toBeTruthy();
     const stored = insert.mock.calls[0]?.[0].tokenHash;
@@ -275,7 +300,7 @@ describe('ComputersService.create', () => {
   it('reports a freshly registered machine as offline', async () => {
     const { service } = makeService({ insert: vi.fn().mockResolvedValue(computerRow()) });
 
-    expect((await service.create(ana, { name: 'PC-1' })).computer.isOnline).toBe(false);
+    expect((await service.create(ana, { name: 'PC-1', kind: 'desktop' })).computer.isOnline).toBe(false);
   });
 
   // triste
@@ -283,7 +308,7 @@ describe('ComputersService.create', () => {
     const insert = vi.fn();
     const { service } = makeService({ insert });
 
-    await expect(service.create(noRole, { name: 'PC-1' })).rejects.toThrow(ForbiddenException);
+    await expect(service.create(noRole, { name: 'PC-1', kind: 'desktop' })).rejects.toThrow(ForbiddenException);
     expect(insert).not.toHaveBeenCalled();
   });
 });

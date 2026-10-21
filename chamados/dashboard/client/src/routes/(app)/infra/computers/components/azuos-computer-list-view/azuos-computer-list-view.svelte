@@ -6,26 +6,44 @@
     healthStatusTone,
     type HealthStatus,
   } from '@template/shared/domain/computer-health.util';
+  import { ALERT_METRIC_LABELS } from '@template/shared/domain/computer-alert.util';
+  import {
+    COMPUTER_KINDS,
+    COMPUTER_KIND_LABELS,
+    type ComputerKind,
+  } from '@template/shared/domain/computer-kind.util';
   import {
     DEPARTMENTS,
     DEPARTMENT_LABELS,
     departmentLabel,
     type Department,
   } from '@template/shared/domain/department.util';
-  import { type Computer, type ComputerListItem } from '@template/shared/schemas/computer.schema';
+  import {
+    COMPUTER_ALERT_FILTERS,
+    type Computer,
+    type ComputerAlertFilter,
+    type ComputerListItem,
+  } from '@template/shared/schemas/computer.schema';
   import { type ReportFormat } from '@template/shared/schemas/report.schema';
 
   export type ComputerListFilter = {
     search: string;
     department: Department | '';
     healthStatus: HealthStatus | '';
+    kind: ComputerKind | '';
     onlyOnline: boolean;
+    onlyOffline: boolean;
+    alert: ComputerAlertFilter | '';
     includeArchived: boolean;
   };
 
   export type ComputerSummary = {
     total: number;
     online: number;
+    offline: number;
+    withAlerts: number;
+    cpuHigh: number;
+    memoryHigh: number;
     critical: number;
     attention: number;
     neverSeen: number;
@@ -66,7 +84,10 @@
       onSearchChange: (search: string) => void;
       onDepartmentChange: (department: Department | '') => void;
       onHealthStatusChange: (healthStatus: HealthStatus | '') => void;
+      onKindChange: (kind: ComputerKind | '') => void;
       onOnlineChange: (onlyOnline: boolean) => void;
+      onOfflineChange: (onlyOffline: boolean) => void;
+      onAlertChange: (alert: ComputerAlertFilter | '') => void;
       onArchivedChange: (includeArchived: boolean) => void;
       onClearFilters: () => void;
       onRetry: () => void;
@@ -87,9 +108,29 @@
     tone: healthStatusTone(status),
   }));
 
+  const ALERT_FILTER_NAMES: Record<Exclude<ComputerAlertFilter, 'any'>, string> = {
+    cpu: 'CPU',
+    memory: ALERT_METRIC_LABELS.memory,
+    disk: ALERT_METRIC_LABELS.disk,
+  };
+
   /** "Arquivadas": a opção sem valor ("Ocultar") vem do `allLabel` do seletor. */
   const ARCHIVED_OPTIONS = [{ value: 'yes', label: 'Mostrar' }];
-  const CONNECTION_OPTIONS = [{ value: 'online', label: 'Online agora' }];
+  const CONNECTION_OPTIONS = [
+    { value: 'online', label: 'Online agora' },
+    { value: 'offline', label: 'Offline' },
+  ];
+
+  const KIND_FILTER_OPTIONS = COMPUTER_KINDS.map((kind) => ({
+    value: kind,
+    label: COMPUTER_KIND_LABELS[kind],
+  }));
+
+  /** "CPU elevada", "Memória elevada": a máquina com o alerta daquela peça aberto agora. */
+  const ALERT_FILTER_OPTIONS = COMPUTER_ALERT_FILTERS.map((alert) => ({
+    value: alert,
+    label: alert === 'any' ? 'Com alerta ativo' : `${ALERT_FILTER_NAMES[alert]} elevada`,
+  }));
 
   /**
    * O nome que a pessoa reconhece.
@@ -98,6 +139,13 @@
    * computador da recepção" não sabe que ele se chama RECEPCAO-01. O nome técnico continua
    * embaixo, porque é por ele que o agente aparece no log.
    */
+  function connectionOf(filter: ComputerListFilter): '' | 'online' | 'offline' {
+    if (filter.onlyOnline) return 'online';
+    if (filter.onlyOffline) return 'offline';
+
+    return '';
+  }
+
   export function displayNameOf(computer: Computer): string {
     return computer.displayName?.trim() || computer.hardware?.hostname?.trim() || computer.name;
   }
@@ -139,6 +187,7 @@
   let { data, state, actions }: AzuosComputerListViewProps = $props();
 
   const summary = $derived(data.summary);
+  const connectionValue = $derived(connectionOf(data.filter));
   const tableView = useTableViewModel();
 
   const hasActiveFilter = $derived(
@@ -146,7 +195,10 @@
       data.filter.search ||
       data.filter.department ||
       data.filter.healthStatus ||
+      data.filter.kind ||
+      data.filter.alert ||
       data.filter.onlyOnline ||
+      data.filter.onlyOffline ||
       data.filter.includeArchived,
     ),
   );
@@ -164,6 +216,24 @@
   function filterByOnline() {
     actions.onOnlineChange(!data.filter.onlyOnline);
     scrollToFilters();
+  }
+
+  function filterByOffline() {
+    actions.onOfflineChange(!data.filter.onlyOffline);
+    scrollToFilters();
+  }
+
+  function filterByAlert(alert: ComputerAlertFilter) {
+    actions.onAlertChange(data.filter.alert === alert ? '' : alert);
+    scrollToFilters();
+  }
+
+  function changeConnection(value: string) {
+    if (value === 'online') return actions.onOnlineChange(true);
+    if (value === 'offline') return actions.onOfflineChange(true);
+
+    actions.onOnlineChange(false);
+    actions.onOfflineChange(false);
   }
 
   function scrollToFilters() {
@@ -235,6 +305,35 @@
     />
   </StatCardGrid>
 
+  <!-- A segunda fileira: o que está fora do ar e o que está sofrendo AGORA. Cada cartão é
+       atalho do filtro de mesmo nome logo abaixo — clicar liga, clicar de novo desliga. -->
+  <StatCardGrid>
+    <StatCard
+      data={{ label: 'Offline', value: summary?.offline ?? 0 }}
+      ui={{ tone: 'neutral' }}
+      state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.onlyOffline }}
+      actions={{ onClick: filterByOffline }}
+    />
+    <StatCard
+      data={{ label: 'Com alerta ativo', value: summary?.withAlerts ?? 0 }}
+      ui={{ tone: 'danger' }}
+      state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.alert === 'any' }}
+      actions={{ onClick: () => filterByAlert('any') }}
+    />
+    <StatCard
+      data={{ label: 'CPU elevada', value: summary?.cpuHigh ?? 0 }}
+      ui={{ tone: 'warning' }}
+      state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.alert === 'cpu' }}
+      actions={{ onClick: () => filterByAlert('cpu') }}
+    />
+    <StatCard
+      data={{ label: 'Memória elevada', value: summary?.memoryHigh ?? 0 }}
+      ui={{ tone: 'warning' }}
+      state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.alert === 'memory' }}
+      actions={{ onClick: () => filterByAlert('memory') }}
+    />
+  </StatCardGrid>
+
   <!-- Os filtros ficam juntos e acima da lista, para a pessoa ver de uma vez o que está
        limitando o que ela enxerga. -->
   <div bind:this={filtersElement} class="flex scroll-mt-4 flex-col gap-3">
@@ -261,11 +360,27 @@
           }}
         />
       </FilterField>
+      <FilterField data={{ label: 'Tipo' }}>
+        <OptionPicker
+          data={{ value: data.filter.kind, options: KIND_FILTER_OPTIONS }}
+          ui={{ ariaLabel: 'Filtrar por tipo', allLabel: 'Todos os tipos' }}
+          actions={{ onChange: (value: string) => actions.onKindChange(value as ComputerKind | '') }}
+        />
+      </FilterField>
       <FilterField data={{ label: 'Conexão' }}>
         <OptionPicker
-          data={{ value: data.filter.onlyOnline ? 'online' : '', options: CONNECTION_OPTIONS }}
+          data={{ value: connectionValue, options: CONNECTION_OPTIONS }}
           ui={{ ariaLabel: 'Filtrar por conexão', allLabel: 'Todas' }}
-          actions={{ onChange: (value) => actions.onOnlineChange(value === 'online') }}
+          actions={{ onChange: changeConnection }}
+        />
+      </FilterField>
+      <FilterField data={{ label: 'Alertas' }}>
+        <OptionPicker
+          data={{ value: data.filter.alert, options: ALERT_FILTER_OPTIONS }}
+          ui={{ ariaLabel: 'Filtrar por alerta', allLabel: 'Todos' }}
+          actions={{
+            onChange: (value: string) => actions.onAlertChange(value as ComputerAlertFilter | ''),
+          }}
         />
       </FilterField>
       <FilterField data={{ label: 'Saúde' }}>

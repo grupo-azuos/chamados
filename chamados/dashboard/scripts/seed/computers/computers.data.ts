@@ -196,6 +196,8 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
   /* Pouca memória: o aviso mais comum do parque antigo, e o que mais gera chamado de lentidão. */
   {
     ...base(2, 'FINANCEIRO-02'),
+    /* Um notebook entre as máquinas, para o filtro de tipo ter o que mostrar. */
+    kind: 'notebook',
     displayName: 'Financeiro — mesa 2',
     responsibleName: 'Carlos Menezes',
     department: 'financeiro',
@@ -324,6 +326,7 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
   /* BLOQUEADA: token válido, conexão recusada. É o caso do coletor que não devia estar enviando. */
   {
     ...base(6, 'CS-06'),
+    kind: 'notebook',
     displayName: 'CS — máquina de estágio',
     responsibleName: 'Gustavo Alves',
     department: 'cs',

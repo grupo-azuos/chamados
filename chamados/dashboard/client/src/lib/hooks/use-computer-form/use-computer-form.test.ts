@@ -21,6 +21,7 @@ function computer(over: Partial<Computer> = {}): Computer {
     displayName: 'Recepção — balcão',
     responsibleName: 'Bia Costa',
     department: 'recepcao',
+    kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 11 Pro',
       platform: 'windows',
@@ -85,6 +86,7 @@ describe('useComputerFormModel', () => {
     const model = mountModel({ onSaved });
 
     model.actions.onChange('name', 'RECEPCAO-01');
+    model.actions.onChange('kind', 'desktop');
     model.actions.onChange('responsibleName', 'Bia Costa');
     model.actions.onSubmit();
 
@@ -103,11 +105,13 @@ describe('useComputerFormModel', () => {
     const model = mountModel();
 
     model.actions.onChange('name', 'FISCAL-04');
+    model.actions.onChange('kind', 'notebook');
     model.actions.onSubmit();
 
     await waitFor(() =>
       expect(computersApi.create).toHaveBeenCalledWith({
         name: 'FISCAL-04',
+        kind: 'notebook',
         displayName: null,
         responsibleName: null,
         department: null,
@@ -124,6 +128,7 @@ describe('useComputerFormModel', () => {
 
     await waitFor(() =>
       expect(computersApi.update).toHaveBeenCalledWith(1, {
+        kind: 'desktop',
         displayName: 'Recepção — balcão novo',
         responsibleName: 'Bia Costa',
         department: 'recepcao',
@@ -132,6 +137,17 @@ describe('useComputerFormModel', () => {
   });
 
   // triste
+  /* Desktop ou notebook é escolha de quem cadastra: o formulário não presume nenhum dos dois. */
+  it('refuses to register a machine before desktop or notebook is chosen', async () => {
+    const model = mountModel();
+
+    model.actions.onChange('name', 'RECEPCAO-01');
+    model.actions.onSubmit();
+
+    await waitFor(() => expect(model.data.fields.kind.error).toBe('Escolha se é desktop ou notebook'));
+    expect(computersApi.create).not.toHaveBeenCalled();
+  });
+
   it('refuses to register a machine with no name, without calling the API', async () => {
     const model = mountModel();
 
@@ -162,6 +178,7 @@ describe('useComputerFormModel', () => {
     const model = mountModel({ onSaved });
 
     model.actions.onChange('name', 'RECEPCAO-01');
+    model.actions.onChange('kind', 'desktop');
     model.actions.onSubmit();
 
     await waitFor(() => expect(model.state.error).toBe('Já existe uma máquina com esse nome.'));

@@ -1,11 +1,12 @@
 <script lang="ts" module>
+  import { COMPUTER_KINDS, COMPUTER_KIND_LABELS } from '@template/shared/domain/computer-kind.util';
   import { DEPARTMENTS, DEPARTMENT_LABELS } from '@template/shared/domain/department.util';
 
   import type { ComputerResponsible } from '@template/shared/schemas/computer.schema';
 
   import { type FormFieldState } from '$lib/types/form-field.type';
 
-  export type ComputerFormField = 'name' | 'displayName' | 'responsibleName' | 'department';
+  export type ComputerFormField = 'name' | 'kind' | 'displayName' | 'responsibleName' | 'department';
 
   /**
    * O formulário de cadastrar máquina e o de corrigir a identificação dela, num modal.
@@ -35,6 +36,8 @@
       onClose: () => void;
     };
   };
+
+  const KIND_OPTIONS = COMPUTER_KINDS.map((kind) => ({ value: kind, label: COMPUTER_KIND_LABELS[kind] }));
 
   const DEPARTMENT_OPTIONS = [
     { value: '', label: 'Sem departamento' },
@@ -88,7 +91,7 @@
         <DialogDescription class="text-xs text-muted-foreground">
           {isEdit
             ? 'Apelido, responsável e departamento. O resto a própria máquina informa.'
-            : 'Só o nome é obrigatório. Ao salvar, você recebe o token para instalar o agente nela.'}
+            : 'Só o nome e o tipo são obrigatórios. Ao salvar, você recebe o token para instalar o agente nela.'}
         </DialogDescription>
       </DialogHeader>
 
@@ -138,6 +141,22 @@
           actions={{
             onChange: (value: string) => actions.onChange('displayName', value),
             onBlur: () => actions.onBlur('displayName'),
+          }}
+        />
+      </div>
+
+      <!-- Desktop ou notebook: obrigatório no cadastro, e corrigível depois. -->
+      <div class="flex flex-col gap-1.5">
+        <span class="text-ink-700 text-sm font-medium">Tipo</span>
+        <OptionPicker
+          data={{ value: fields.kind.value, options: KIND_OPTIONS }}
+          ui={{ ariaLabel: 'Tipo', fullWidth: true, placeholder: 'Desktop ou notebook' }}
+          state={{ isDisabled: state.isSubmitting, error: fields.kind.error }}
+          actions={{
+            onChange: (value: string) => {
+              actions.onChange('kind', value);
+              actions.onBlur('kind');
+            },
           }}
         />
       </div>

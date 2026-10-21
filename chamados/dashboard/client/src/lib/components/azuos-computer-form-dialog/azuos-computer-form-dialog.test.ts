@@ -17,6 +17,7 @@ function fields(
     displayName: field(),
     responsibleName: field(),
     department: field(),
+    kind: field(),
     ...over,
   };
 }
@@ -54,7 +55,31 @@ describe('AzuosComputerFormDialog', () => {
     expect(actions.onSubmit).toHaveBeenCalled();
   });
 
+  it('asks whether the machine is a desktop or a notebook, and sends the choice', async () => {
+    const user = userEvent.setup();
+    render(ComputerFormDialog, {
+      props: { data: { mode: 'create', fields: fields() }, state: { isOpen: true }, actions },
+    });
+
+    const kind = screen.getByRole('group', { name: 'Tipo' });
+    await user.click(within(kind).getByRole('button', { name: 'Notebook' }));
+
+    expect(actions.onChange).toHaveBeenCalledWith('kind', 'notebook');
+  });
+
   // triste
+  it('says why the form is waiting on the kind', () => {
+    render(ComputerFormDialog, {
+      props: {
+        data: { mode: 'create', fields: fields({ kind: field('', 'Escolha se é desktop ou notebook') }) },
+        state: { isOpen: true },
+        actions,
+      },
+    });
+
+    expect(screen.getByText('Escolha se é desktop ou notebook')).toBeInTheDocument();
+  });
+
   /* Depois de cadastrada, quem informa o nome é a própria máquina: um campo editável aqui
      faria a ficha discordar do que o agente manda na leitura seguinte. */
   it('does not let the machine name be edited after it exists', () => {

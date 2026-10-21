@@ -1,5 +1,6 @@
 import { createForm } from '@tanstack/svelte-form';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
+import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
 import { type Department } from '@template/shared/domain/department.util';
 import {
   type Computer,
@@ -110,6 +111,7 @@ export function useComputerFormModel({
         responsibles: responsibles.current.data ?? [],
         fields: {
           name: field('name'),
+          kind: field('kind'),
           displayName: field('displayName'),
           responsibleName: field('responsibleName'),
           department: field('department'),
@@ -136,11 +138,17 @@ export function useComputerFormModel({
 }
 
 function toFormValues(computer: Computer | null): ComputerCreateFormValues {
+  /* No cadastro o tipo começa VAZIO: a pessoa escolhe, o formulário não presume desktop. */
+  if (!computer) {
+    return { name: '', kind: '', displayName: '', responsibleName: '', department: '' };
+  }
+
   return {
-    name: computer?.name ?? '',
-    displayName: computer?.displayName ?? '',
-    responsibleName: computer?.responsibleName ?? '',
-    department: computer?.department ?? '',
+    name: computer.name,
+    kind: computer.kind,
+    displayName: computer.displayName ?? '',
+    responsibleName: computer.responsibleName ?? '',
+    department: computer.department ?? '',
   };
 }
 
@@ -156,6 +164,8 @@ function toCreateInput(values: ComputerCreateFormValues) {
 
 function toUpdateInput(values: ComputerCreateFormValues) {
   return {
+    /* O schema do formulário já recusou o vazio antes de chegar aqui. */
+    kind: values.kind as ComputerKind,
     displayName: values.displayName.trim() || null,
     responsibleName: values.responsibleName.trim() || null,
     department: (values.department || null) as Department | null,
