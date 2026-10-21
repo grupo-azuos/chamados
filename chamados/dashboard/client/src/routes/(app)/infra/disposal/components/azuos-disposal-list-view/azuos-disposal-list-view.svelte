@@ -267,11 +267,13 @@
             </p>
           </div>
 
-          <div class="border-border/60 mt-3 flex items-center justify-between border-t pt-2">
+          <!-- A data fica numa linha e os botões em outra: lado a lado, o cartão estreito
+               cortava "Voltar ao inventário" no meio da palavra. -->
+          <div class="border-border/60 mt-3 flex flex-col gap-2 border-t pt-2">
             <span class="text-xs text-ink-500">
               Saiu em {formatDate(computer.disposedAt)}
             </span>
-            <div class="flex items-center gap-1">
+            <div class="flex flex-wrap items-center gap-1">
               <ActionButton
                 data={{ label: 'Ver ficha' }}
                 ui={{ variant: 'secondary', size: 'sm' }}
