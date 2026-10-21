@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   computerAlertSchema,
+  computerResponsibleSchema,
   computerListQuerySchema,
   computerReportQuerySchema,
   createComputerSchema,
@@ -195,5 +196,19 @@ describe('computerAlertSchema', () => {
 
   it('refuses a start time that is not a date', () => {
     expect(computerAlertSchema.safeParse({ ...RECOVERED, startedAt: 'ontem' }).success).toBe(false);
+  });
+});
+
+
+describe('computerResponsibleSchema', () => {
+  // feliz
+  it('exposes only the identifier and name for the responsible picker', () => {
+    expect(computerResponsibleSchema.parse({ id: 'person-1', name: 'Ana Exemplo', email: 'ana@example.invalid' }))
+      .toEqual({ id: 'person-1', name: 'Ana Exemplo' });
+  });
+
+  // triste
+  it('rejects a directory entry without a name', () => {
+    expect(computerResponsibleSchema.safeParse({ id: 'person-1' }).success).toBe(false);
   });
 });

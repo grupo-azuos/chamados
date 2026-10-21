@@ -353,6 +353,5 @@ export type PaginatedComputerAlerts = z.infer<typeof paginatedComputerAlertSchem
 export const computerResponsibleSchema = z.object({
   id: z.string(),
   name: z.string(),
-  email: z.string().email(),
 });
 export type ComputerResponsible = z.infer<typeof computerResponsibleSchema>;
