@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { ALERT_METRICS } from '../domain/computer-alert.util';
 import { COMPUTER_KINDS } from '../domain/computer-kind.util';
 import { DISPOSAL_TYPES } from '../domain/disposal.util';
-import { DEPARTMENTS } from '../domain/department.util';
 import { HEALTH_STATUSES } from '../domain/computer-health.util';
 import { PREVENTIVE_STATUSES } from '../domain/maintenance.util';
+import { departmentNameSchema } from './department.schema';
 import { MAX_PAGE_SIZE, paginatedSchema, paginationQuerySchema } from './pagination.schema';
 import { reportFormatSchema } from './report.schema';
 
@@ -42,9 +42,8 @@ export const COMPUTER_ALERT_FILTERS = ['any', ...ALERT_METRICS] as const;
 
 export type ComputerAlertFilter = (typeof COMPUTER_ALERT_FILTERS)[number];
 
-export const departmentSchema = z.enum(DEPARTMENTS, {
-  errorMap: () => ({ message: 'Escolha um departamento da lista' }),
-});
+/** O NOME do departamento, como o RH o escreve — ver `department.schema.ts`. */
+export const departmentSchema = departmentNameSchema('Escolha um departamento da lista');
 
 const computerNameSchema = z
   .string({ required_error: 'Informe o nome da máquina' })

@@ -3,11 +3,7 @@
     healthStatusLabel,
     healthStatusTone,
   } from '@template/shared/domain/computer-health.util';
-  import { departmentLabel, isDepartment } from '@template/shared/domain/department.util';
-  import {
-    ticketDepartmentLabel,
-    type TicketDepartment,
-  } from '@template/shared/domain/ticket-catalog.util';
+  import { departmentLabel } from '@template/shared/domain/department.util';
   import {
     PERIOD_OPTIONS,
     type CountByKey,
@@ -95,7 +91,7 @@
 
   /** O rótulo do departamento, que é o mesmo do chamado e o mesmo da máquina. */
   function departmentChartLabel(key: string): string {
-    return isDepartment(key) ? departmentLabel(key) : ticketDepartmentLabel(key as TicketDepartment);
+    return departmentLabel(key);
   }
 
   export function departmentSlices(rows: readonly CountByKey[]): ChartSlice[] {

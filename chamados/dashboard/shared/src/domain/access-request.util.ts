@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { REQUESTER_NAME_MAX_LENGTH } from '../schemas/ticket.schema';
-import { DEPARTMENT_LABELS, DEPARTMENTS, type Department } from './department.util';
+import { type Department } from './department.util';
 import { type PersonCandidate, personOptionsText, pickPerson } from './person-match.util';
 import { MIN_PHONE_DIGITS } from './phone.util';
 
@@ -118,8 +118,9 @@ function numbered(labels: readonly string[]): string {
   return labels.map((label, index) => `${index + 1}. ${label}`).join('\n');
 }
 
-export function departmentOptionsText(): string {
-  return numbered(DEPARTMENTS.map((department) => DEPARTMENT_LABELS[department]));
+/** Os setores, numerados — a lista que o servidor leu do RH, na ordem do seletor da tela. */
+export function departmentOptionsText(departments: readonly Department[]): string {
+  return numbered(departments);
 }
 
 function normalize(text: string): string {
@@ -136,7 +137,11 @@ function pick<T>(text: string, options: readonly T[], labelOf: (option: T) => st
   return options.find((option) => normalize(labelOf(option)) === wanted) ?? null;
 }
 
-type StepRule = (draft: AccessRequestDraft, text: string) => AccessRequestFill;
+type StepRule = (
+  draft: AccessRequestDraft,
+  text: string,
+  departments: readonly Department[],
+) => AccessRequestFill;
 
 /* Cada passo: lê a resposta e, se entendeu, devolve o rascunho com o campo preenchido; se não,
    o que dizer — já com o jeito certo de responder, para a pessoa acertar na próxima. */
@@ -174,10 +179,12 @@ const STEP_RULES: Record<AccessRequestStep, StepRule> = {
 
     return { ok: true, draft: { ...draft, phone } };
   },
-  department: (draft, text) => {
-    const department = pick(text, DEPARTMENTS, (item) => DEPARTMENT_LABELS[item]);
+  department: (draft, text, departments) => {
+    const department = pick(text, departments, (item) => item);
     if (!department) {
-      return fail(`Não entendi o *setor*. Responda com o número:\n${departmentOptionsText()}`);
+      return fail(
+        `Não entendi o *setor*. Responda com o número:\n${departmentOptionsText(departments)}`,
+      );
     }
 
     return { ok: true, draft: { ...draft, department } };
@@ -202,13 +209,17 @@ function fail(error: string): AccessRequestFill {
   return { ok: false, error };
 }
 
-/** Preenche o campo do passo com a resposta da pessoa. */
+/**
+ * Preenche o campo do passo com a resposta da pessoa. `departments` é a lista de setores que o
+ * servidor leu do RH — a mesma que a pergunta mostrou, para o número escolhido bater.
+ */
 export function fillAccessRequestStep(
   draft: AccessRequestDraft,
   step: AccessRequestStep,
   text: string,
+  departments: readonly Department[],
 ): AccessRequestFill {
-  return STEP_RULES[step](draft, text);
+  return STEP_RULES[step](draft, text, departments);
 }
 
 /**

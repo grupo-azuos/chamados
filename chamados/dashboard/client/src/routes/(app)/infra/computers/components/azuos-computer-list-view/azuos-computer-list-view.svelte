@@ -13,10 +13,9 @@
     type ComputerKind,
   } from '@template/shared/domain/computer-kind.util';
   import {
-    DEPARTMENTS,
-    DEPARTMENT_LABELS,
     departmentLabel,
     type Department,
+    type DepartmentChoice,
   } from '@template/shared/domain/department.util';
   import {
     COMPUTER_ALERT_FILTERS,
@@ -68,6 +67,8 @@
       filter: ComputerListFilter;
       /** O dia agendado de cada máquina (`AAAA-MM-DD`), pelo id. */
       scheduledFor?: Record<number, string>;
+      /** Os departamentos do RH e, depois da linha, os daqui. */
+      departmentOptions?: DepartmentChoice[];
     };
     state: {
       isLoading: boolean;
@@ -96,11 +97,6 @@
       onExportReport: (format: ReportFormat) => void;
     };
   };
-
-  const DEPARTMENT_FILTER_OPTIONS = DEPARTMENTS.map((department) => ({
-    value: department,
-    label: DEPARTMENT_LABELS[department],
-  }));
 
   const HEALTH_FILTER_OPTIONS = HEALTH_STATUSES.map((status) => ({
     value: status,
@@ -353,7 +349,7 @@
     <div class="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4">
       <FilterField data={{ label: 'Departamento' }}>
         <OptionPicker
-          data={{ value: data.filter.department, options: DEPARTMENT_FILTER_OPTIONS }}
+          data={{ value: data.filter.department, options: data.departmentOptions ?? [] }}
           ui={{ ariaLabel: 'Filtrar por departamento', allLabel: 'Todos os departamentos' }}
           actions={{
             onChange: (value: string) => actions.onDepartmentChange(value as Department | ''),

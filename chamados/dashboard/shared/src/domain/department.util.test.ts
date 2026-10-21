@@ -1,97 +1,94 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  DEPARTMENT_LABELS,
-  DEPARTMENTS,
+  LOCAL_DEPARTMENTS,
+  departmentChoices,
   departmentFromText,
   departmentLabel,
-  departmentOptions,
-  isDepartment,
+  departmentNames,
+  withCurrentDepartment,
 } from './department.util';
-import { TICKET_DEPARTMENTS, ticketDepartmentLabel } from './ticket-catalog.util';
 
-describe('DEPARTMENT_LABELS', () => {
-  it('has a screen label for every department', () => {
-    for (const department of DEPARTMENTS) {
-      expect(DEPARTMENT_LABELS[department]).toBeTruthy();
-    }
-  });
-});
+const catalog = { rh: ['Contábil', 'Departamento Pessoal', 'Fiscal'], local: [...LOCAL_DEPARTMENTS] };
 
 describe('departmentLabel', () => {
   // feliz
-  it('gives the name the company actually uses', () => {
-    expect(departmentLabel('contabil')).toBe('CONTÁBIL');
-    expect(departmentLabel('rh')).toBe('RH');
+  it('shows the stored name as it is', () => {
+    expect(departmentLabel('Experiência do Cliente')).toBe('Experiência do Cliente');
+  });
+
+  it('translates a code saved before the list came from HR', () => {
+    expect(departmentLabel('contabil')).toBe('Contábil');
+    expect(departmentLabel('recepcao')).toBe('RECEPÇÃO');
   });
 });
 
-describe('isDepartment', () => {
+describe('departmentChoices', () => {
   // feliz
-  it('accepts a known department', () => {
-    expect(isDepartment('financeiro')).toBe(true);
+  it('lists HR departments first and the local ones after a divider', () => {
+    const choices = departmentChoices(catalog);
+
+    expect(choices.map((choice) => choice.value)).toEqual([
+      'Contábil',
+      'Departamento Pessoal',
+      'Fiscal',
+      'ANALYZE',
+      'CERTIFICADO',
+      'RECEPÇÃO',
+    ]);
+    expect(choices.filter((choice) => choice.separatorBefore).map((choice) => choice.value)).toEqual([
+      'ANALYZE',
+    ]);
   });
 
   // triste
-  it('refuses the screen label, which is not the stored value', () => {
-    expect(isDepartment('FINANCEIRO')).toBe(false);
+  it('drops a local department once HR has it, so it never shows twice', () => {
+    const names = departmentNames({ rh: ['Recepção', 'Fiscal'], local: [...LOCAL_DEPARTMENTS] });
+
+    expect(names).toEqual(['Recepção', 'Fiscal', 'ANALYZE', 'CERTIFICADO']);
   });
 
-  it('refuses a department that does not exist', () => {
-    expect(isDepartment('marketing')).toBe(false);
-  });
+  it('draws no divider when HR has nothing to offer', () => {
+    const choices = departmentChoices({ rh: [], local: ['ANALYZE'] });
 
-  it('refuses anything that is not a string', () => {
-    expect(isDepartment(null)).toBe(false);
-    expect(isDepartment(7)).toBe(false);
-  });
-});
-
-describe('departmentOptions', () => {
-  // feliz
-  it('pairs every value with its label, in list order', () => {
-    const options = departmentOptions();
-
-    expect(options).toHaveLength(DEPARTMENTS.length);
-    expect(options[0]).toEqual({ value: 'analyze', label: 'ANALYZE' });
-  });
-});
-
-/**
- * A razão de a lista ter saído da feature de chamados: chamado e computador precisam do MESMO
- * cadastro. Duas cópias divergiriam na primeira reorganização da empresa, e os indicadores que
- * cruzam as duas somariam departamentos diferentes como se fossem o mesmo.
- */
-describe('departments shared with tickets', () => {
-  // feliz
-  it('is the same list the ticket contract uses', () => {
-    expect(TICKET_DEPARTMENTS).toBe(DEPARTMENTS);
-  });
-
-  it('is the same label, read from either side', () => {
-    expect(ticketDepartmentLabel('recepcao')).toBe(departmentLabel('recepcao'));
+    expect(choices).toEqual([{ value: 'ANALYZE', label: 'ANALYZE', separatorBefore: true }]);
   });
 });
 
 describe('departmentFromText', () => {
+  const names = departmentNames(catalog);
+
   // feliz
   it('finds the department whatever the accent or case the admin-console used', () => {
-    expect(departmentFromText('Contábil')).toBe('contabil');
-    expect(departmentFromText('  RECEPCAO ')).toBe('recepcao');
-    expect(departmentFromText('rh')).toBe('rh');
+    expect(departmentFromText('CONTABIL', names)).toBe('Contábil');
+    expect(departmentFromText('  departamento   pessoal ', names)).toBe('Departamento Pessoal');
   });
 
   it('finds the department named inside a longer text', () => {
-    expect(departmentFromText('Departamento Pessoal')).toBe('pessoal');
-    expect(departmentFromText('Depto. Fiscal')).toBe('fiscal');
+    expect(departmentFromText('Depto. Fiscal', names)).toBe('Fiscal');
   });
 
   // triste
-  /* Chutar colocaria o chamado na estatística errada: sem encontro único, a pessoa escolhe. */
   it('gives nothing when there is no single match', () => {
-    expect(departmentFromText('Diretoria')).toBeNull();
-    expect(departmentFromText('Fiscal e Contábil')).toBeNull();
-    expect(departmentFromText('')).toBeNull();
-    expect(departmentFromText(null)).toBeNull();
+    expect(departmentFromText('Marketing', names)).toBeNull();
+    expect(departmentFromText('', names)).toBeNull();
+    expect(departmentFromText(null, names)).toBeNull();
+  });
+});
+
+describe('withCurrentDepartment', () => {
+  const choices = departmentChoices(catalog);
+
+  // feliz
+  it('keeps the list as it is when the current value is already on it', () => {
+    expect(withCurrentDepartment(choices, 'Fiscal')).toEqual(choices);
+    expect(withCurrentDepartment(choices, null)).toEqual(choices);
+  });
+
+  // triste
+  it('adds a department HR no longer has, so editing does not seem to erase it', () => {
+    const extended = withCurrentDepartment(choices, 'Marketing');
+
+    expect(extended.at(-1)).toEqual({ value: 'Marketing', label: 'Marketing', separatorBefore: true });
   });
 });

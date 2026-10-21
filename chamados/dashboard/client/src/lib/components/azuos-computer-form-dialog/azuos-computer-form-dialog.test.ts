@@ -159,4 +159,17 @@ describe('AzuosComputerFormDialog responsible directory', () => {
     await fireEvent.click(await screen.findByText('Usar “Equipe externa”'));
     expect(onChange).toHaveBeenCalledWith('responsibleName', 'Equipe externa');
   });
+
+  // triste
+  it('explains a short department list when HR did not answer', () => {
+    render(ComputerFormDialog, {
+      props: {
+        data: { mode: 'create', fields: fields(), departmentOptions: [{ value: 'ANALYZE', label: 'ANALYZE' }] },
+        state: { isOpen: true, isRhUnavailable: true },
+        actions,
+      },
+    });
+
+    expect(screen.getByText('A lista do RH não carregou. Aparecem só os departamentos daqui.')).toBeInTheDocument();
+  });
 });

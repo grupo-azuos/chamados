@@ -46,14 +46,14 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     const created = await register('PC-RECEPCAO-01', {
       displayName: 'Recepção',
       responsibleName: 'Marta',
-      department: 'recepcao',
+      department: 'RECEPÇÃO',
     }).expect(201);
 
     expect(created.body.token).toBeTruthy();
     expect(created.body.computer).toMatchObject({
       name: 'PC-RECEPCAO-01',
       displayName: 'Recepção',
-      department: 'recepcao',
+      department: 'RECEPÇÃO',
       isArchived: false,
       isBlocked: false,
       isOnline: false,
@@ -120,9 +120,9 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
   });
 
   it('filters by department and by search, on the query and not on the screen', async () => {
-    await register('PC-RECEPCAO-01', { department: 'recepcao', responsibleName: 'Marta' }).expect(201);
-    await register('PC-FISCAL-01', { department: 'fiscal', responsibleName: 'Joana' }).expect(201);
-    await register('PC-FISCAL-02', { department: 'fiscal', responsibleName: 'Pedro' }).expect(201);
+    await register('PC-RECEPCAO-01', { department: 'RECEPÇÃO', responsibleName: 'Marta' }).expect(201);
+    await register('PC-FISCAL-01', { department: 'Fiscal', responsibleName: 'Joana' }).expect(201);
+    await register('PC-FISCAL-02', { department: 'Fiscal', responsibleName: 'Pedro' }).expect(201);
 
     const fiscal = await request(app.getHttpServer())
       .get('/api/computers?department=fiscal')

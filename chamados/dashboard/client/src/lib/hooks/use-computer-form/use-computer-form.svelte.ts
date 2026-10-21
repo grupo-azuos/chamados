@@ -1,7 +1,7 @@
 import { createForm } from '@tanstack/svelte-form';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
-import { type Department } from '@template/shared/domain/department.util';
+import { type Department, withCurrentDepartment } from '@template/shared/domain/department.util';
 import {
   type Computer,
   type ComputerResponsible,
@@ -15,6 +15,8 @@ import { type ComputerFormField } from '$lib/components/azuos-computer-form-dial
 import { toFieldState } from '$lib/hooks/use-form-projection/use-form-projection.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
+import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
+import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
 import { type FormFieldState } from '$lib/types/form-field.type';
 
 /** O token recém-gerado e a máquina dele — o que a tela precisa mostrar depois do cadastro. */
@@ -25,8 +27,15 @@ export type ComputerFormModel = {
     mode: 'create' | 'edit';
     fields: Record<ComputerFormField, FormFieldState>;
     responsibles: ComputerResponsible[];
+    departmentOptions: OptionPickerOption[];
   };
-  state: { isSubmitting: boolean; error: string | null; isLoadingResponsibles: boolean; responsiblesError: string | null };
+  state: {
+    isSubmitting: boolean;
+    error: string | null;
+    isLoadingResponsibles: boolean;
+    responsiblesError: string | null;
+    isRhUnavailable: boolean;
+  };
   actions: {
     onChange: (field: ComputerFormField, value: string) => void;
     onBlur: (field: ComputerFormField) => void;
@@ -54,6 +63,7 @@ export function useComputerFormModel({
   onSaved: (created: CreatedAgentToken | null) => void;
 }): ComputerFormModel {
   const queryClient = useQueryClient();
+  const departments = useDepartmentOptionsModel();
   const responsibles = mirrorStore(createQuery({
     queryKey: [...COMPUTERS_QUERY_KEY, 'responsibles'],
     queryFn: () => computersApi.responsibles(),
@@ -109,6 +119,8 @@ export function useComputerFormModel({
       return {
         mode: computer ? ('edit' as const) : ('create' as const),
         responsibles: responsibles.current.data ?? [],
+        /* O departamento que a máquina já tem entra na lista mesmo que o RH o tenha tirado. */
+        departmentOptions: withCurrentDepartment(departments.options, computer?.department),
         fields: {
           name: field('name'),
           kind: field('kind'),
@@ -121,7 +133,8 @@ export function useComputerFormModel({
     get state() {
       return { isSubmitting: save.current.isPending, error: readError(save.current.error),
         isLoadingResponsibles: responsibles.current.isPending,
-        responsiblesError: readError(responsibles.current.error) };
+        responsiblesError: readError(responsibles.current.error),
+        isRhUnavailable: !departments.isRhAvailable };
     },
     actions: {
       onChange: (field, value) => form.setFieldValue(field, value as never),

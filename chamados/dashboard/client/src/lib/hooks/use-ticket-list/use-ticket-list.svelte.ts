@@ -1,4 +1,5 @@
 import { createQuery } from '@tanstack/svelte-query';
+import { type DepartmentChoice } from '@template/shared/domain/department.util';
 import {
   type TicketDepartment,
   type TicketProblemType,
@@ -15,6 +16,7 @@ import { derived, writable } from 'svelte/store';
 import { readError } from '$lib/api/http-client';
 import { ticketsApi, type TicketDashboard } from '$lib/api/tickets.api';
 import { type AreaContext } from '$lib/hooks/use-area-context/use-area-context.svelte';
+import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 
@@ -52,6 +54,8 @@ export type TicketListModel = {
       pageSize: number;
       total: number;
     };
+    /** As opções do filtro de departamento: as do RH e, depois da linha, as daqui. */
+    departmentOptions: DepartmentChoice[];
   };
   state: {
     isLoading: boolean;
@@ -166,11 +170,14 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
     ),
   );
 
+  const departments = useDepartmentOptionsModel();
+
   return {
     /* `get` em vez de valor: o objeto é montado uma vez e a tela lê dele a cada mudança. Com
        valores fixos, a lista congelaria no primeiro carregamento. */
     get data() {
       return buildData({
+        departmentOptions: departments.options,
         area,
         page: list.current.data,
         currentPage: page.current,
@@ -247,6 +254,7 @@ type TicketPage = { items: Ticket[]; total: number } | undefined;
  * passava do teto de complexidade sem ter nenhuma decisão de verdade dentro.
  */
 function buildData(input: {
+  departmentOptions: DepartmentChoice[];
   area: AreaContext;
   page: TicketPage;
   currentPage: number;
@@ -266,6 +274,7 @@ function buildData(input: {
       pageSize: TICKETS_PAGE_SIZE,
       total,
     },
+    departmentOptions: input.departmentOptions,
   };
 }
 

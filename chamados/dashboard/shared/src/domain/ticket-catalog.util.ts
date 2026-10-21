@@ -1,11 +1,4 @@
-import {
-  DEPARTMENT_LABELS,
-  DEPARTMENTS,
-  type Department,
-  departmentLabel,
-  departmentOptions,
-  isDepartment,
-} from './department.util';
+import { type Department, departmentLabel } from './department.util';
 import { ROLE_CONTEXT_LABELS, ROLE_CONTEXTS, type RoleContext } from './role-context.util';
 
 /**
@@ -16,8 +9,8 @@ import { ROLE_CONTEXT_LABELS, ROLE_CONTEXTS, type RoleContext } from './role-con
  * ("quais departamentos mais pedem", "qual problema mais aparece"). Com texto livre, "RH",
  * "rh" e "Recursos Humanos" viram três departamentos diferentes e o gráfico mente.
  *
- * Tipo de problema novo entra aqui. Departamento novo entra em `department.util.ts`, que é
- * de onde os daqui vêm.
+ * Tipo de problema novo entra aqui. Departamento novo entra na lista do RH, que é de onde
+ * os daqui vêm.
  */
 
 /**
@@ -45,22 +38,13 @@ export function ticketAreaOptions(): { value: TicketArea; label: string }[] {
 }
 
 /**
- * O departamento de um chamado é o MESMO cadastro de departamentos do sistema — a lista mora
- * em `department.util.ts`, porque computador também pertence a um departamento. Os nomes
- * abaixo existem só para o resto da feature continuar lendo "ticketDepartment…", sem uma
- * segunda lista que possa divergir da primeira.
+ * O departamento de um chamado é o MESMO departamento do resto do sistema: um nome da lista do
+ * RH (ver `department.util.ts`). Os nomes abaixo existem só para a feature continuar lendo
+ * "ticketDepartment…".
  */
-export const TICKET_DEPARTMENTS = DEPARTMENTS;
-
 export type TicketDepartment = Department;
 
-export const TICKET_DEPARTMENT_LABELS = DEPARTMENT_LABELS;
-
 export const ticketDepartmentLabel = departmentLabel;
-
-export const isTicketDepartment = isDepartment;
-
-export const ticketDepartmentOptions = departmentOptions;
 
 /**
  * Tipo de problema — uma lista POR ÁREA, porque "rede caiu" não existe em Manutenção e

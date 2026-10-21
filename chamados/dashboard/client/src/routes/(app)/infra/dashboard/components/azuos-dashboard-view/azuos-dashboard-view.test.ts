@@ -146,7 +146,7 @@ describe('formatAverage', () => {
 describe('departmentSlices', () => {
   // feliz
   it('reads the keys as the words on screen', () => {
-    expect(departmentSlices([{ key: 'financeiro', count: 3 }])[0]?.label).toBe('FINANCEIRO');
+    expect(departmentSlices([{ key: 'financeiro', count: 3 }])[0]?.label).toBe('Financeiro');
   });
 
   // triste

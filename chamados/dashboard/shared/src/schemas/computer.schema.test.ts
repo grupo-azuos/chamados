@@ -43,11 +43,24 @@ describe('createComputerSchema', () => {
     expect(result.error?.issues[0]?.message).toBe('Informe o nome da máquina');
   });
 
-  it('refuses a department that is not on the list, in Portuguese', () => {
-    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', department: 'MARKETING' });
+  /* O nome vem da lista do RH, que muda sem código: o schema recusa só o vazio e o absurdo. */
+  it('refuses a blank department, in Portuguese', () => {
+    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', department: '  ' });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe('Escolha um departamento da lista');
+  });
+
+  it('refuses a department name longer than any real one', () => {
+    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', department: 'x'.repeat(121) });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts a department exactly as HR names it', () => {
+    const parsed = createComputerSchema.parse({ name: 'PC-1', kind: 'desktop', department: 'Experiência do Cliente' });
+
+    expect(parsed.department).toBe('Experiência do Cliente');
   });
 
   /* Hardware é medido, não digitado: aceitá-lo aqui faria a ficha discordar da máquina. */

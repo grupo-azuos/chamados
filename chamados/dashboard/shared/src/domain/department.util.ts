@@ -1,86 +1,117 @@
 /**
- * OS DEPARTAMENTOS DA EMPRESA — uma lista, para o sistema inteiro.
+ * OS DEPARTAMENTOS DA EMPRESA — quem diz quais existem é o RH.
  *
- * Ela mora aqui, e não dentro da feature que a usou primeiro, porque mais de uma precisa dela:
- * um chamado é aberto por um departamento e um computador pertence a um departamento. Com uma
- * cópia em cada feature, a primeira reorganização da empresa deixaria as duas discordando — e
- * os indicadores que cruzam chamado com máquina passariam a somar departamentos diferentes
- * como se fossem o mesmo.
+ * A lista mora no sistema de Gestão de RH (a lista "Departamentos" dos cadastros de apoio), e
+ * o servidor a lê de lá (`modules/departments`). Departamento novo ou renomeado no RH aparece
+ * aqui sozinho, sem código: uma cópia escrita neste arquivo ficaria para trás na primeira
+ * reorganização, e os indicadores que cruzam chamado com máquina passariam a somar nomes que o
+ * resto da empresa já não usa.
  *
- * São nomes próprios da empresa: não se traduzem. A chave é a versão sem acento e em minúscula
- * do próprio nome, para caber em coluna e URL sem escapar nada.
- *
- * Departamento novo? Acrescente aqui e rode `npm run db:generate`: as checagens do banco são
- * geradas desta mesma lista, então formulário e Postgres nunca discordam.
+ * O que se GUARDA é o nome, como o RH o escreve ("Contábil", "Departamento Pessoal"). É o mesmo
+ * jeito do RH guardar o departamento do colaborador: renomear lá não reescreve o que já foi
+ * gravado aqui, e um nome antigo continua legível no chamado de ontem.
  */
-export const DEPARTMENTS = [
-  'analyze',
-  'certificado',
-  'comercial',
-  'contabil',
-  'cs',
-  'financeiro',
-  'fiscal',
-  'paralegal',
-  'pessoal',
-  'recepcao',
-  'rh',
-] as const;
 
-export type Department = (typeof DEPARTMENTS)[number];
+/** O nome mais comprido aceito — folga para qualquer departamento real. */
+export const DEPARTMENT_NAME_MAX_LENGTH = 120;
 
-export const DEPARTMENT_LABELS: Record<Department, string> = {
+export type Department = string;
+
+/**
+ * Os departamentos que existem SÓ AQUI, sem par na lista do RH. Continuam escolhíveis, abaixo
+ * dos do RH e separados por uma linha: quem os usa sabe o que são, mas eles não são da lista
+ * oficial.
+ */
+export const LOCAL_DEPARTMENTS = ['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'] as const;
+
+/**
+ * Os códigos que o sistema guardava antes de a lista vir do RH, e o nome que cada um virou.
+ *
+ * A migration troca os dados gravados por estes nomes; o mapa fica aqui para a tela ainda ler
+ * certo um código antigo que chegue de algum lugar (um relatório velho, um teste) em vez de
+ * mostrar "contabil" cru.
+ */
+export const LEGACY_DEPARTMENT_NAMES: Readonly<Record<string, string>> = {
   analyze: 'ANALYZE',
   certificado: 'CERTIFICADO',
-  comercial: 'COMERCIAL',
-  contabil: 'CONTÁBIL',
-  cs: 'CS',
-  financeiro: 'FINANCEIRO',
-  fiscal: 'FISCAL',
-  paralegal: 'PARALEGAL',
-  pessoal: 'PESSOAL',
+  comercial: 'Comercial',
+  contabil: 'Contábil',
+  cs: 'Experiência do Cliente',
+  financeiro: 'Financeiro',
+  fiscal: 'Fiscal',
+  paralegal: 'Paralegal',
+  pessoal: 'Departamento Pessoal',
   recepcao: 'RECEPÇÃO',
-  rh: 'RH',
+  rh: 'Recursos Humanos',
 };
 
+/** O nome para a tela. Gravado já é o nome; só um código antigo precisa de tradução. */
 export function departmentLabel(department: Department): string {
-  return DEPARTMENT_LABELS[department];
+  return LEGACY_DEPARTMENT_NAMES[department] ?? department;
 }
 
-export function isDepartment(value: unknown): value is Department {
-  return typeof value === 'string' && (DEPARTMENTS as readonly string[]).includes(value);
-}
+/** Os departamentos que se podem escolher: os do RH e, depois, os que existem só aqui. */
+export type DepartmentCatalog = { rh: readonly string[]; local: readonly string[] };
 
-/** As opções na ordem em que aparecem no `select`, já com o rótulo pronto. */
-export function departmentOptions(): { value: Department; label: string }[] {
-  return DEPARTMENTS.map((value) => ({ value, label: DEPARTMENT_LABELS[value] }));
+export type DepartmentChoice = { value: Department; label: string; separatorBefore?: boolean };
+
+/**
+ * As opções do seletor, na ordem em que aparecem: as do RH primeiro e as daqui depois de uma
+ * linha divisória.
+ *
+ * O departamento daqui que o RH passar a ter some do grupo de baixo — a mesma opção duas vezes
+ * faria a pessoa escolher uma e o relatório contar as duas como diferentes.
+ */
+export function departmentChoices(catalog: DepartmentCatalog): DepartmentChoice[] {
+  const official = new Set(catalog.rh.map(normalize));
+  const extra = catalog.local.filter((name) => !official.has(normalize(name)));
+
+  return [
+    ...catalog.rh.map((name) => ({ value: name, label: name })),
+    ...extra.map((name, index) => ({ value: name, label: name, separatorBefore: index === 0 })),
+  ];
 }
 
 /**
- * O departamento da lista a partir do TEXTO que vem do admin-console (lá ele é livre: "Contábil",
- * "Departamento Pessoal", "RH"…).
- *
- * Compara sem acento, sem caixa e sem espaço sobrando, contra o valor e o rótulo de cada um, e
- * aceita o nome do departamento dentro de um texto maior ("Depto. Fiscal"). Sem um encontro
- * único, devolve `null`: escolher um departamento por chute colocaria o chamado na estatística
- * errada — melhor a pessoa escolher.
+ * As opções com o valor ATUAL garantido no fim: uma máquina gravada com um departamento que o RH
+ * já tirou abre a edição mostrando o que ela tem, e não "Selecione" — senão salvar sem tocar no
+ * campo pareceria apagar o departamento.
  */
-export function departmentFromText(text: string | null | undefined): Department | null {
+export function withCurrentDepartment(
+  choices: readonly DepartmentChoice[],
+  current: Department | null | undefined,
+): DepartmentChoice[] {
+  if (!current || choices.some((choice) => choice.value === current)) return [...choices];
+
+  return [...choices, { value: current, label: departmentLabel(current), separatorBefore: true }];
+}
+
+/** Todos os nomes escolhíveis, sem o agrupamento — para quem só precisa comparar. */
+export function departmentNames(catalog: DepartmentCatalog): Department[] {
+  return departmentChoices(catalog).map((choice) => choice.value);
+}
+
+/**
+ * O departamento da lista a partir do TEXTO que vem do admin-console (lá ele é livre:
+ * "Contábil", "Depto. Fiscal", "RH"…).
+ *
+ * Compara sem acento, sem caixa e sem espaço sobrando, e aceita o nome dentro de um texto maior
+ * ("Depto. Fiscal"). Sem um encontro único, devolve `null`: escolher um departamento por chute
+ * colocaria o chamado na estatística errada — melhor a pessoa escolher.
+ */
+export function departmentFromText(
+  text: string | null | undefined,
+  names: readonly Department[],
+): Department | null {
   const wanted = normalize(text);
   if (!wanted) return null;
 
-  const exact = DEPARTMENTS.find((department) => keysOf(department).includes(wanted));
+  const exact = names.find((name) => normalize(name) === wanted);
   if (exact) return exact;
 
-  const inside = DEPARTMENTS.filter((department) =>
-    keysOf(department).some((key) => new RegExp(`\\b${key}\\b`).test(wanted)),
-  );
+  const inside = names.filter((name) => new RegExp(`\\b${escapeRegExp(normalize(name))}\\b`).test(wanted));
 
   return inside.length === 1 ? (inside[0] ?? null) : null;
-}
-
-function keysOf(department: Department): string[] {
-  return [normalize(department), normalize(DEPARTMENT_LABELS[department])];
 }
 
 function normalize(text: string | null | undefined): string {
@@ -90,4 +121,8 @@ function normalize(text: string | null | undefined): string {
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

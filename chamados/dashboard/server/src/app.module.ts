@@ -17,6 +17,7 @@ import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { WhatsappIntakeModule } from './modules/whatsapp-intake/whatsapp-intake.module';
 import { BudgetModule } from './modules/budget/budget.module';
 import { ComputersModule } from './modules/computers/computers.module';
+import { DepartmentsModule } from './modules/departments/departments.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { HistoryModule } from './modules/history/history.module';
 import { HealthModule } from './modules/health/health.module';
@@ -74,6 +75,7 @@ const CLIENT_DIST = join(__dirname, '..', '..', 'client', 'dist');
     WhatsappModule,
     WhatsappIntakeModule,
     HealthModule,
+    DepartmentsModule,
     TicketsModule,
     ComputersModule,
     MaintenancesModule,
