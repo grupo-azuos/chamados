@@ -317,33 +317,40 @@ type ComputerFilter = Pick<
  * trabalhando com o que está em uso hoje.
  */
 function buildWhere(query: ComputerFilter, onlineIds?: number[]): SQL | undefined {
-  const filters: (SQL | undefined)[] = [];
+  const filters: (SQL | undefined)[] = [...lifecycleFilters(query)];
 
   /* Lista vazia significa que ninguém está conectado, não ausência de filtro. */
   if (onlineIds) filters.push(onlineIds.length ? inArray(computers.id, onlineIds) : sql`false`);
+  if (query.department) filters.push(eq(computers.department, query.department));
+  if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
+  if (query.search) filters.push(searchFilter(query.search));
+
+  return filters.length > 0 ? and(...filters) : undefined;
+}
+
+/** Arquivada e descartada: em que ponto da vida a máquina está. Separado para o `buildWhere` caber no limite de complexidade. */
+function lifecycleFilters(query: ComputerFilter): SQL[] {
+  const filters: SQL[] = [];
 
   if (!query.includeArchived) filters.push(eq(computers.isArchived, false));
 
   /* A tela de Descarte pede SÓ as descartadas; todas as outras listas as escondem. Sem este
      par, a máquina que saiu de uso continuaria contando no parque e nos números do painel. */
-  if (query.onlyDisposed) filters.push(isNotNull(computers.disposedAt));
-  if (!query.onlyDisposed) filters.push(isNull(computers.disposedAt));
+  filters.push(query.onlyDisposed ? isNotNull(computers.disposedAt) : isNull(computers.disposedAt));
   if (query.disposalType) filters.push(eq(computers.disposalType, query.disposalType));
-  if (query.department) filters.push(eq(computers.department, query.department));
-  if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
 
-  if (query.search) {
-    const term = `%${query.search}%`;
-    filters.push(
-      or(
-        ilike(computers.name, term),
-        ilike(computers.displayName, term),
-        sql`(${computers.lastSnapshot}->'host'->>'hostname') ilike ${term}`,
-        ilike(computers.responsibleName, term),
-        ilike(computers.cpuModel, term),
-      ),
-    );
-  }
+  return filters;
+}
 
-  return filters.length > 0 ? and(...filters) : undefined;
+/** A busca livre olha nome, apelido, hostname, responsável e processador. */
+function searchFilter(search: string): SQL | undefined {
+  const term = `%${search}%`;
+
+  return or(
+    ilike(computers.name, term),
+    ilike(computers.displayName, term),
+    sql`(${computers.lastSnapshot}->'host'->>'hostname') ilike ${term}`,
+    ilike(computers.responsibleName, term),
+    ilike(computers.cpuModel, term),
+  );
 }
