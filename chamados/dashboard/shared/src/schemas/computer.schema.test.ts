@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   computerAlertSchema,
+  computerCreateFormSchema,
   computerResponsibleSchema,
   computerListQuerySchema,
   computerReportQuerySchema,
@@ -11,15 +12,17 @@ import {
 
 describe('createComputerSchema', () => {
   // feliz
-  it('accepts a machine registered with nothing but its name', () => {
-    const parsed = createComputerSchema.parse({ name: 'RECEPCAO-01' });
+  it('accepts a machine registered with nothing but its name and kind', () => {
+    const parsed = createComputerSchema.parse({ name: 'RECEPCAO-01', kind: 'desktop' });
 
     expect(parsed.name).toBe('RECEPCAO-01');
+    expect(parsed.kind).toBe('desktop');
   });
 
   it('accepts the identification filled in right away', () => {
     const parsed = createComputerSchema.parse({
       name: 'RECEPCAO-01',
+      kind: 'notebook',
       displayName: 'Computador da recepção',
       responsibleName: 'Helena Dias',
       department: 'recepcao',
@@ -29,19 +32,19 @@ describe('createComputerSchema', () => {
   });
 
   it('trims the name before storing it', () => {
-    expect(createComputerSchema.parse({ name: '  RECEPCAO-01  ' }).name).toBe('RECEPCAO-01');
+    expect(createComputerSchema.parse({ name: '  RECEPCAO-01  ', kind: 'desktop' }).name).toBe('RECEPCAO-01');
   });
 
   // triste
   it('refuses a machine with no name, since the agent matches by it', () => {
-    const result = createComputerSchema.safeParse({ name: '   ' });
+    const result = createComputerSchema.safeParse({ name: '   ', kind: 'desktop' });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe('Informe o nome da máquina');
   });
 
   it('refuses a department that is not on the list, in Portuguese', () => {
-    const result = createComputerSchema.safeParse({ name: 'PC-1', department: 'MARKETING' });
+    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', department: 'MARKETING' });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe('Escolha um departamento da lista');
@@ -49,16 +52,28 @@ describe('createComputerSchema', () => {
 
   /* Hardware é medido, não digitado: aceitá-lo aqui faria a ficha discordar da máquina. */
   it('ignores hardware sent at registration, because only the agent measures it', () => {
-    const parsed = createComputerSchema.parse({ name: 'PC-1', totalMemoryBytes: 999 });
+    const parsed = createComputerSchema.parse({ name: 'PC-1', kind: 'desktop', totalMemoryBytes: 999 });
 
     expect(parsed).not.toHaveProperty('totalMemoryBytes');
   });
 
   /* O token é gerado pelo servidor; aceitar um escolhido de fora anularia a proteção. */
   it('ignores a token sent at registration', () => {
-    const parsed = createComputerSchema.parse({ name: 'PC-1', token: 'eu-escolhi' });
+    const parsed = createComputerSchema.parse({ name: 'PC-1', kind: 'desktop', token: 'eu-escolhi' });
 
     expect(parsed).not.toHaveProperty('token');
+  });
+
+  /* Desktop ou notebook é escolha de quem cadastra: o servidor não presume nenhum dos dois. */
+  it('refuses a machine registered without saying whether it is a desktop or a notebook', () => {
+    const result = createComputerSchema.safeParse({ name: 'PC-1' });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe('Escolha se é desktop ou notebook');
+  });
+
+  it('refuses a kind that is not desktop or notebook', () => {
+    expect(createComputerSchema.safeParse({ name: 'PC-1', kind: 'tablet' }).success).toBe(false);
   });
 });
 
@@ -111,6 +126,18 @@ describe('computerListQuerySchema', () => {
     expect(computerListQuerySchema.parse({ onlyOnline: false }).onlyOnline).toBe(false);
     expect(computerListQuerySchema.parse({}).onlyOnline).toBeUndefined();
   });
+  it('parses offline, kind and alert filters', () => {
+    const parsed = computerListQuerySchema.parse({ onlyOffline: 'true', kind: 'notebook', alert: 'memory' });
+
+    expect(parsed.onlyOffline).toBe(true);
+    expect(parsed.kind).toBe('notebook');
+    expect(parsed.alert).toBe('memory');
+  });
+
+  it('refuses an alert filter that is not one of the watched measures', () => {
+    expect(computerListQuerySchema.safeParse({ alert: 'network' }).success).toBe(false);
+  });
+
   // feliz
   it('fills in the default page when the screen sends no filter', () => {
     const parsed = computerListQuerySchema.parse({});
@@ -210,5 +237,22 @@ describe('computerResponsibleSchema', () => {
   // triste
   it('rejects a directory entry without a name', () => {
     expect(computerResponsibleSchema.safeParse({ id: 'person-1' }).success).toBe(false);
+  });
+});
+
+describe('computerCreateFormSchema', () => {
+  const filled = { name: 'PC-1', displayName: '', responsibleName: '', department: '' as const };
+
+  // feliz
+  it('accepts the form once desktop or notebook was chosen', () => {
+    expect(computerCreateFormSchema.safeParse({ ...filled, kind: 'notebook' }).success).toBe(true);
+  });
+
+  // triste
+  it('asks to choose desktop or notebook while the choice is still empty', () => {
+    const result = computerCreateFormSchema.safeParse({ ...filled, kind: '' });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe('Escolha se é desktop ou notebook');
   });
 });

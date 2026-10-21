@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { type AlertMetric } from '@template/shared/domain/computer-alert.util';
 import {
   type ComputerAlertListQuery,
   type ComputerListQuery,
@@ -13,6 +14,7 @@ import {
   getTableColumns,
   gte,
   ilike,
+  exists,
   inArray,
   isNotNull,
   isNull,
@@ -50,7 +52,15 @@ export type ComputerWithTickets = ComputerRow & {
   ticketsThisMonth: number;
   lastPreventiveAt: Date | null;
   activeAlerts: number;
+  activeAlertMetrics: AlertMetric[];
 };
+
+/**
+ * O filtro de conexão. Quem sabe quem está online é o registro de conexões vivas, não o banco:
+ * por isso os ids chegam de fora, e a consulta só diz se quer os que ESTÃO ou os que NÃO estão
+ * entre eles.
+ */
+export type PresenceFilter = { onlineIds: number[]; wantOnline: boolean };
 
 export type ComputerPage = {
   rows: ComputerWithTickets[];
@@ -92,6 +102,15 @@ function computerColumns() {
         and ${qualified(computerAlerts.status)} = 'active'
         and ${qualified(computerAlerts.recoveredAt)} is null
     )`,
+    /* `coalesce` com lista vazia: sem alerta, o Postgres devolveria nulo, e "nenhuma peça em
+       alerta" é uma lista vazia, não "não sei". */
+    activeAlertMetrics: sql<AlertMetric[]>`coalesce((
+      select array_agg(distinct ${qualified(computerAlerts.metric)} order by ${qualified(computerAlerts.metric)})
+      from ${computerAlerts}
+      where ${qualified(computerAlerts.computerId)} = ${qualified(computers.id)}
+        and ${qualified(computerAlerts.status)} = 'active'
+        and ${qualified(computerAlerts.recoveredAt)} is null
+    ), '{}')`,
     ticketsThisMonth: sql<number>`(
       select count(*)::int from ${tickets}
       where ${qualified(tickets.computerId)} = ${qualified(computers.id)}
@@ -104,8 +123,8 @@ function computerColumns() {
 export class ComputersRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(query: ComputerListQuery, onlineIds?: number[]): Promise<ComputerPage> {
-    const where = buildWhere(query, onlineIds);
+  async list(query: ComputerListQuery, presence?: PresenceFilter): Promise<ComputerPage> {
+    const where = buildWhere(query, presence);
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([
@@ -136,12 +155,12 @@ export class ComputersRepository {
    * TODO o parque que casa com o filtro, sem página — é o que o relatório baixa. Os MESMOS
    * filtros da tela, por isso reaproveita `buildWhere`.
    */
-  async listAll(query: ComputerReportQuery, onlineIds?: number[]): Promise<ComputerRow[]> {
+  async listAll(query: ComputerReportQuery, presence?: PresenceFilter): Promise<ComputerRow[]> {
     return runQuery(
       this.db
         .select()
         .from(computers)
-        .where(buildWhere(query, onlineIds))
+        .where(buildWhere(query, presence))
         .orderBy(asc(computers.healthScore), computers.name)
         .limit(REPORT_FETCH_LIMIT),
       'listar computadores para o relatório',
@@ -307,7 +326,14 @@ export class ComputersRepository {
 /** Os filtros que a lista E o relatório têm em comum — nenhum dos dois usa página aqui. */
 type ComputerFilter = Pick<
   ComputerListQuery,
-  'search' | 'department' | 'healthStatus' | 'includeArchived' | 'onlyDisposed' | 'disposalType'
+  | 'search'
+  | 'department'
+  | 'healthStatus'
+  | 'kind'
+  | 'alert'
+  | 'includeArchived'
+  | 'onlyDisposed'
+  | 'disposalType'
 >;
 
 /**
@@ -316,13 +342,14 @@ type ComputerFilter = Pick<
  * A máquina arquivada fica de FORA por padrão: ela saiu de uso, e quem abre o inventário está
  * trabalhando com o que está em uso hoje.
  */
-function buildWhere(query: ComputerFilter, onlineIds?: number[]): SQL | undefined {
+function buildWhere(query: ComputerFilter, presence?: PresenceFilter): SQL | undefined {
   const filters: (SQL | undefined)[] = [...lifecycleFilters(query)];
 
-  /* Lista vazia significa que ninguém está conectado, não ausência de filtro. */
-  if (onlineIds) filters.push(onlineIds.length ? inArray(computers.id, onlineIds) : sql`false`);
+  if (presence) filters.push(presenceFilter(presence));
   if (query.department) filters.push(eq(computers.department, query.department));
   if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
+  if (query.kind) filters.push(eq(computers.kind, query.kind));
+  if (query.alert) filters.push(alertFilter(query.alert));
   if (query.search) filters.push(searchFilter(query.search));
 
   return filters.length > 0 ? and(...filters) : undefined;
@@ -340,6 +367,33 @@ function lifecycleFilters(query: ComputerFilter): SQL[] {
   if (query.disposalType) filters.push(eq(computers.disposalType, query.disposalType));
 
   return filters;
+}
+
+/**
+ * Online ou offline, pelos ids conectados agora.
+ *
+ * Lista vazia significa que ninguém está conectado, não ausência de filtro: "só online" não
+ * traz nada, e "só offline" traz todas.
+ */
+function presenceFilter({ onlineIds, wantOnline }: PresenceFilter): SQL {
+  if (onlineIds.length === 0) return wantOnline ? sql`false` : sql`true`;
+
+  const isOnline = inArray(computers.id, onlineIds);
+  return wantOnline ? isOnline : sql`not ${isOnline}`;
+}
+
+/** A máquina com alerta ABERTO agora — de qualquer peça, ou da peça pedida. */
+function alertFilter(alert: NonNullable<ComputerFilter['alert']>): SQL {
+  /* Colunas com a tabela na frente (`qualified`): sem isso, `id` dentro da subconsulta seria
+     o do alerta, e não o da máquina — ver `sql-column.util`. */
+  const metric = alert === 'any' ? sql`` : sql` and ${qualified(computerAlerts.metric)} = ${alert}`;
+
+  return exists(sql`(
+    select 1 from ${computerAlerts}
+    where ${qualified(computerAlerts.computerId)} = ${qualified(computers.id)}
+      and ${qualified(computerAlerts.status)} = 'active'
+      and ${qualified(computerAlerts.recoveredAt)} is null${metric}
+  )`);
 }
 
 /** A busca livre olha nome, apelido, hostname, responsável e processador. */

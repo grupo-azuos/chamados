@@ -23,11 +23,13 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     preventiveStatus: 'ok',
     lastPreventiveAt: '2026-10-01T12:00:00.000Z',
     activeAlerts: 0,
+    activeAlertMetrics: [],
     id: 9,
     name: 'RECEPCAO-09',
     displayName: 'Recepção — micro antigo do balcão',
     responsibleName: 'Bia Costa',
     department: 'recepcao',
+    kind: 'desktop',
     hardware: {
       os: null,
       platform: null,

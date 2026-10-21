@@ -18,6 +18,7 @@ function computer(over: Partial<Computer> = {}): Computer {
     displayName: 'Recepção — micro antigo do balcão',
     responsibleName: 'Bia Costa',
     department: 'recepcao',
+    kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 10 Pro',
       platform: 'windows',

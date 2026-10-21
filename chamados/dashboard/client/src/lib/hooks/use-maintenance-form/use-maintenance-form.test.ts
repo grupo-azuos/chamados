@@ -26,11 +26,13 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     preventiveStatus: 'ok',
     lastPreventiveAt: '2026-10-01T12:00:00.000Z',
     activeAlerts: 0,
+    activeAlertMetrics: [],
     id: 3,
     name: 'CONTABIL-03',
     displayName: 'Contábil — mesa do fechamento',
     responsibleName: 'Daniela Prado',
     department: 'contabil',
+    kind: 'desktop',
     hardware: {
       os: null,
       platform: null,

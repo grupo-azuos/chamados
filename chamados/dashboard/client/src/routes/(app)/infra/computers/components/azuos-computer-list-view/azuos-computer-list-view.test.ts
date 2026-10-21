@@ -16,10 +16,12 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     preventiveStatus: 'ok',
     lastPreventiveAt: '2026-10-01T12:00:00.000Z',
     activeAlerts: 0,
+    activeAlertMetrics: [],
     name: 'RECEPCAO-01',
     displayName: 'Recepção — balcão',
     responsibleName: 'Bia Costa',
     department: 'recepcao',
+    kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 11 Pro',
       platform: 'windows',
@@ -60,6 +62,10 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
 const summary: ComputerSummary = {
   total: 8,
   online: 3,
+  offline: 5,
+  withAlerts: 2,
+  cpuHigh: 1,
+  memoryHigh: 2,
   critical: 2,
   attention: 1,
   neverSeen: 1,
@@ -69,8 +75,11 @@ const emptyFilter: ComputerListFilter = {
   search: '',
   department: '',
   healthStatus: '',
+  kind: '',
   includeArchived: false,
   onlyOnline: false,
+  onlyOffline: false,
+  alert: '',
 };
 
 const actions = {
@@ -79,6 +88,9 @@ const actions = {
   onHealthStatusChange: vi.fn(),
   onArchivedChange: vi.fn(),
   onOnlineChange: vi.fn(),
+  onOfflineChange: vi.fn(),
+  onKindChange: vi.fn(),
+  onAlertChange: vi.fn(),
   onClearFilters: vi.fn(),
   onRetry: vi.fn(),
   onOpen: vi.fn(),
@@ -184,6 +196,28 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     await userEvent.click(card);
     expect(actions.onOnlineChange).toHaveBeenLastCalledWith(false);
   });
+
+  // feliz
+  it('filters offline machines and the alert shortcuts from the cards', async () => {
+    renderWithFilter();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Offline: filtrar a lista' }));
+    expect(actions.onOfflineChange).toHaveBeenLastCalledWith(true);
+    await userEvent.click(screen.getByRole('button', { name: 'CPU elevada: filtrar a lista' }));
+    expect(actions.onAlertChange).toHaveBeenLastCalledWith('cpu');
+    await userEvent.click(screen.getByRole('button', { name: 'Memória elevada: filtrar a lista' }));
+    expect(actions.onAlertChange).toHaveBeenLastCalledWith('memory');
+    await userEvent.click(screen.getByRole('button', { name: 'Com alerta ativo: filtrar a lista' }));
+    expect(actions.onAlertChange).toHaveBeenLastCalledWith('any');
+  });
+
+  // triste
+  it('turns the alert filter off when its selected card is clicked again', async () => {
+    renderWithFilter({ alert: 'memory' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Memória elevada: tirar o filtro' }));
+    expect(actions.onAlertChange).toHaveBeenLastCalledWith('');
+  });
 });
 
 describe('AzuosComputerListView', () => {
@@ -233,8 +267,10 @@ describe('AzuosComputerListView', () => {
       },
     });
 
-    expect(screen.getAllByText('Bloqueada')[0]).toBeInTheDocument();
-    expect(screen.queryByText('Offline')).not.toBeInTheDocument();
+    /* Só a LINHA da máquina: "Offline" também é o nome do atalho e da opção do filtro. */
+    const cards = document.querySelector<HTMLElement>('[data-slot="computer-cards-mobile"]')!;
+    expect(within(cards).getAllByText('Bloqueada')[0]).toBeInTheDocument();
+    expect(within(cards).queryByText('Offline')).not.toBeInTheDocument();
   });
 
   // triste

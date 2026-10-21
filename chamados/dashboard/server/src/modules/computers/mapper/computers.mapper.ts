@@ -36,6 +36,7 @@ export function toComputerListItem(row: ComputerWithTickets, isOnline: boolean):
     preventiveStatus: row.isArchived || row.disposedAt ? null : preventiveStatusOf(lastPreventiveAt),
     lastPreventiveAt,
     activeAlerts: row.activeAlerts,
+    activeAlertMetrics: row.activeAlertMetrics,
   };
 }
 
@@ -51,6 +52,7 @@ export function toComputer(row: ComputerRow, isOnline: boolean): Computer {
     displayName: row.displayName,
     responsibleName: row.responsibleName,
     department: row.department,
+    kind: row.kind,
 
     hardware: {
       hostname: hostnameFromSnapshot(row.lastSnapshot),
@@ -110,6 +112,7 @@ export function toComputerInsert(
     displayName: normalizeOptional(input.displayName) ?? null,
     responsibleName: normalizeOptional(input.responsibleName) ?? null,
     department: input.department ?? null,
+    kind: input.kind,
     tokenHash,
     createdBy: actorEmail,
   };
@@ -126,6 +129,7 @@ export function toComputerUpdate(
   setIfDefined(update, 'displayName', normalizeOptional(input.displayName));
   setIfDefined(update, 'responsibleName', normalizeOptional(input.responsibleName));
   setIfDefined(update, 'department', input.department);
+  setIfDefined(update, 'kind', input.kind);
   setIfDefined(update, 'isArchived', input.isArchived);
   setIfDefined(update, 'isBlocked', input.isBlocked);
   setIfDefined(update, 'blockReason', normalizeOptional(input.blockReason));

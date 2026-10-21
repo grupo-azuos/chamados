@@ -1,4 +1,5 @@
 import { HEALTH_STATUSES } from '@template/shared/domain/computer-health.util';
+import { COMPUTER_KINDS } from '@template/shared/domain/computer-kind.util';
 import { DEPARTMENTS } from '@template/shared/domain/department.util';
 import { DISPOSAL_TYPES } from '@template/shared/domain/disposal.util';
 import { sql } from 'drizzle-orm';
@@ -48,6 +49,9 @@ export const computers = chamadosSchema.table(
     displayName: text('display_name'),
     responsibleName: text('responsible_name'),
     department: text('department', { enum: DEPARTMENTS }),
+    /* Desktop ou notebook, escolhido no cadastro. O padrão só existe para as máquinas que já
+       estavam cadastradas antes do campo: elas entram como desktop e o TI corrige as que não são. */
+    kind: text('kind', { enum: COMPUTER_KINDS }).notNull().default('desktop'),
 
     /**
      * O HASH do token, nunca o token. Mesmo princípio de senha: um vazamento do banco não
@@ -135,6 +139,7 @@ export const computers = chamadosSchema.table(
       'computers_department_valid',
       sql`${table.department} is null or ${table.department} in (${valuesFor(DEPARTMENTS)})`,
     ),
+    check('computers_kind_valid', sql`${table.kind} in (${valuesFor(COMPUTER_KINDS)})`),
     check('computers_health_score_range', sql`${table.healthScore} between 0 and 100`),
     /* Máquina descartada sem tipo e sem motivo é uma saída que não explica nada — e o mapa
        de "o que saiu de uso e por quê" é justamente para isso que existe. */

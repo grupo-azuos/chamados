@@ -6,6 +6,7 @@ import {
   describeAlert,
 } from '@template/shared/domain/computer-alert.util';
 import { healthStatusLabel, healthStatusTone } from '@template/shared/domain/computer-health.util';
+import { computerKindLabel } from '@template/shared/domain/computer-kind.util';
 import { departmentLabel } from '@template/shared/domain/department.util';
 import { disposalTypeLabel } from '@template/shared/domain/disposal.util';
 import { type AgentSnapshot } from '@template/shared/schemas/agent-snapshot.schema';
@@ -45,7 +46,7 @@ import {
 } from '../mapper/computers.mapper';
 import { AgentPresenceService } from '../presence/agent-presence.service';
 import { LiveWatchService, WATCHED_CADENCE_SECONDS } from '../presence/live-watch.service';
-import { ComputersRepository } from '../repository/computers.repository';
+import { ComputersRepository, type PresenceFilter } from '../repository/computers.repository';
 import { createComputerToken, hashComputerToken } from '../token/computer-token.util';
 
 const BYTES_PER_GB = 1024 ** 3;
@@ -76,9 +77,26 @@ function situationTone(row: ComputerRow): DocumentTone {
   return 'success';
 }
 
+/**
+ * O filtro de conexão que a consulta recebe — ou nenhum, quando a pessoa não pediu.
+ *
+ * "Só online" e "só offline" juntos não fazem sentido, e a tela nunca manda os dois; se
+ * chegarem, ganha o online, que era o único filtro que existia antes.
+ */
+function presenceFilterOf(
+  query: Pick<ComputerListQuery, 'onlyOnline' | 'onlyOffline'>,
+  online: ReadonlySet<number>,
+): PresenceFilter | undefined {
+  if (query.onlyOnline) return { onlineIds: [...online], wantOnline: true };
+  if (query.onlyOffline) return { onlineIds: [...online], wantOnline: false };
+
+  return undefined;
+}
+
 const COMPUTER_REPORT_COLUMNS: ReportColumn<ComputerRow>[] = [
   { header: 'Máquina', value: (row) => row.displayName?.trim() || row.name, isTitle: true },
   { header: 'Nome técnico', value: (row) => row.name },
+  { header: 'Tipo', value: (row) => computerKindLabel(row.kind) },
   {
     header: 'Departamento',
     value: (row) => (row.department ? departmentLabel(row.department) : 'Sem departamento'),
@@ -161,9 +179,7 @@ export class ComputersService {
     /* Os ids online vêm de uma vez: perguntar linha a linha daria o mesmo resultado com mais
        trabalho, e a lista pode ter duzentas máquinas. */
     const online = this.presence.onlineIds();
-    const page = query.onlyOnline
-      ? await this.repository.list(query, [...online])
-      : await this.repository.list(query);
+    const page = await this.repository.list(query, presenceFilterOf(query, online));
 
     return {
       items: page.rows.map((row) => toComputerListItem(row, online.has(row.id))),
@@ -181,9 +197,10 @@ export class ComputersService {
   async exportList(user: RequestUser, query: ComputerReportQuery): Promise<BuiltDocument> {
     assertCanRead(user.role, 'os computadores');
 
-    const matching = query.onlyOnline
-      ? await this.repository.listAll(query, [...this.presence.onlineIds()])
-      : await this.repository.listAll(query);
+    const matching = await this.repository.listAll(
+      query,
+      presenceFilterOf(query, this.presence.onlineIds()),
+    );
     const { rows, isTruncated } = capReportRows(matching);
 
     return buildReport({

@@ -38,6 +38,7 @@ function computer(over: Partial<Computer> = {}): Computer {
     displayName: 'Contábil — mesa do fechamento',
     responsibleName: 'Daniela Prado',
     department: 'contabil',
+    kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 11 Pro',
       platform: 'windows',

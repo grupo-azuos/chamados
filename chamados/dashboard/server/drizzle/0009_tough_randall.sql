@@ -1,0 +1,2 @@
+ALTER TABLE "chamados"."computers" ADD COLUMN "kind" text DEFAULT 'desktop' NOT NULL;--> statement-breakpoint
+ALTER TABLE "chamados"."computers" ADD CONSTRAINT "computers_kind_valid" CHECK ("chamados"."computers"."kind" in ('desktop', 'notebook'));

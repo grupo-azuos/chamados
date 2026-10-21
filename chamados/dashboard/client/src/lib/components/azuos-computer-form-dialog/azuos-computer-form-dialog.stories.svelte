@@ -16,6 +16,7 @@
       displayName: field(),
       responsibleName: field(),
       department: field(),
+      kind: field(),
       ...over,
     };
   }
@@ -50,6 +51,7 @@
         displayName: field('Recepção — balcão'),
         responsibleName: field('Bia Costa'),
         department: field('recepcao'),
+        kind: field('desktop'),
       }),
     },
     state: { isOpen: true },
@@ -96,6 +98,7 @@
         displayName: field('Paralegal — estação compartilhada do corredor (mais de uma pessoa)'),
         responsibleName: field('Isabela Marques de Oliveira e Souza Rodrigues'),
         department: field('paralegal'),
+        kind: field('desktop'),
       }),
     },
     state: { isOpen: true },
