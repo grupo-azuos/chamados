@@ -16,10 +16,12 @@
       preventiveStatus: 'ok',
       lastPreventiveAt: '2026-10-01T12:00:00.000Z',
       activeAlerts: 0,
+      activeAlertMetrics: [],
       name: 'RECEPCAO-01',
       displayName: 'Recepção — balcão',
       responsibleName: 'Bia Costa',
       department: 'recepcao',
+      kind: 'desktop',
       hardware: {
         os: 'Microsoft Windows 11 Pro',
         platform: 'windows',
@@ -114,6 +116,10 @@
   const summary: ComputerSummary = {
     total: 8,
     online: 3,
+    offline: 5,
+    withAlerts: 2,
+    cpuHigh: 1,
+    memoryHigh: 2,
     critical: 2,
     attention: 1,
     neverSeen: 1,
@@ -123,8 +129,11 @@
     search: '',
     department: '',
     healthStatus: '',
+    kind: '',
     includeArchived: false,
     onlyOnline: false,
+    onlyOffline: false,
+    alert: '',
   };
 
   const actions = {
@@ -133,6 +142,9 @@
     onHealthStatusChange: () => {},
     onArchivedChange: () => {},
     onOnlineChange: () => {},
+    onOfflineChange: () => {},
+    onKindChange: () => {},
+    onAlertChange: () => {},
     onClearFilters: () => {},
     onRetry: () => {},
     onOpen: () => {},
@@ -210,6 +222,16 @@
   }}
 />
 
+<!-- O cartão "Memória elevada" ligado: ele aparece marcado e o filtro de alertas, escolhido. -->
+<Story
+  name="MemoryAlertFilter"
+  args={{
+    data: { computers, total: computers.length, summary, filter: { ...emptyFilter, alert: 'memory' } },
+    state: settled,
+    actions,
+  }}
+/>
+
 <!-- Nenhuma máquina ainda: o próximo passo é cadastrar a primeira. -->
 <Story
   name="Empty"
@@ -217,7 +239,7 @@
     data: {
       computers: [],
       total: 0,
-      summary: { total: 0, online: 0, critical: 0, attention: 0, neverSeen: 0 },
+      summary: { total: 0, online: 0, offline: 0, withAlerts: 0, cpuHigh: 0, memoryHigh: 0, critical: 0, attention: 0, neverSeen: 0 },
       filter: emptyFilter,
     },
     state: { ...settled, isEmpty: true },
@@ -299,10 +321,10 @@
           activeAlerts: 2, preventiveStatus: 'due', lastPreventiveAt: '2026-04-01T12:00:00.000Z' }),
         computer({ id: 22, displayName: 'Fiscal — sem preventiva registrada', isOnline: false,
           preventiveStatus: 'never', lastPreventiveAt: null }),
-        computer({ id: 23, displayName: 'Atendimento — alerta em andamento', activeAlerts: 1 }),
+        computer({ id: 23, displayName: 'Atendimento — alerta em andamento', activeAlerts: 1, activeAlertMetrics: ['cpu'] }),
         computer({ id: 24, displayName: 'Financeiro — preventiva em dia' }),
       ],
-      total: 4, summary: { total: 4, online: 3, critical: 0, attention: 0, neverSeen: 0 }, filter: emptyFilter,
+      total: 4, summary: { total: 4, online: 3, offline: 1, withAlerts: 1, cpuHigh: 1, memoryHigh: 0, critical: 0, attention: 0, neverSeen: 0 }, filter: emptyFilter,
     },
     state: settled, actions,
   }}

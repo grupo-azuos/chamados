@@ -1,8 +1,13 @@
 import { goto } from '$app/navigation';
 import { createQuery } from '@tanstack/svelte-query';
 import { type HealthStatus } from '@template/shared/domain/computer-health.util';
+import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
 import { type Department } from '@template/shared/domain/department.util';
-import { type Computer, type ComputerListItem } from '@template/shared/schemas/computer.schema';
+import {
+  type Computer,
+  type ComputerAlertFilter,
+  type ComputerListItem,
+} from '@template/shared/schemas/computer.schema';
 import { type MaintenanceSchedule } from '@template/shared/schemas/maintenance.schema';
 import { MAX_PAGE_SIZE } from '@template/shared/schemas/pagination.schema';
 import { type ReportFormat } from '@template/shared/schemas/report.schema';
@@ -21,15 +26,24 @@ export type ComputerListFilter = {
   search: string;
   department: Department | '';
   healthStatus: HealthStatus | '';
+  kind: ComputerKind | '';
+  /** Online e offline nunca ficam ligados juntos: ligar um desliga o outro. */
   onlyOnline: boolean;
+  onlyOffline: boolean;
+  alert: ComputerAlertFilter | '';
   /** Arquivadas saíram de uso: só aparecem quando alguém pede por elas. */
   includeArchived: boolean;
 };
 
-/** Os quatro números do topo da tela: o estado do parque de relance. */
+/** Os números do topo da tela: o estado do parque de relance. */
 export type ComputerSummary = {
   total: number;
   online: number;
+  offline: number;
+  /** Com algum alerta aberto agora, de qualquer peça. */
+  withAlerts: number;
+  cpuHigh: number;
+  memoryHigh: number;
   critical: number;
   attention: number;
   /** Cadastradas cujo agente nunca conectou — falta instalar o agente nelas. */
@@ -65,7 +79,10 @@ export type ComputerListModel = {
     onSearchChange: (search: string) => void;
     onDepartmentChange: (department: Department | '') => void;
     onHealthStatusChange: (healthStatus: HealthStatus | '') => void;
+    onKindChange: (kind: ComputerKind | '') => void;
     onOnlineChange: (onlyOnline: boolean) => void;
+    onOfflineChange: (onlyOffline: boolean) => void;
+    onAlertChange: (alert: ComputerAlertFilter | '') => void;
     onArchivedChange: (includeArchived: boolean) => void;
     onClearFilters: () => void;
     onRetry: () => void;
@@ -78,7 +95,10 @@ const EMPTY_FILTER: ComputerListFilter = {
   search: '',
   department: '',
   healthStatus: '',
+  kind: '',
   onlyOnline: false,
+  onlyOffline: false,
+  alert: '',
   includeArchived: false,
 };
 
@@ -90,7 +110,10 @@ function scopeOf(filter: ComputerListFilter) {
     search: filter.search.trim() || undefined,
     department: filter.department || undefined,
     healthStatus: filter.healthStatus || undefined,
+    kind: filter.kind || undefined,
     onlyOnline: filter.onlyOnline || undefined,
+    onlyOffline: filter.onlyOffline || undefined,
+    alert: filter.alert || undefined,
     includeArchived: filter.includeArchived || undefined,
   };
 }
@@ -110,10 +133,14 @@ export function scheduledDayByComputer(
   );
 }
 
-export function summarizeComputers(computers: readonly Computer[]): ComputerSummary {
+export function summarizeComputers(computers: readonly ComputerListItem[]): ComputerSummary {
   return {
     total: computers.length,
     online: computers.filter((computer) => computer.isOnline).length,
+    offline: computers.filter((computer) => !computer.isOnline).length,
+    withAlerts: computers.filter((computer) => computer.activeAlerts > 0).length,
+    cpuHigh: computers.filter((computer) => computer.activeAlertMetrics.includes('cpu')).length,
+    memoryHigh: computers.filter((computer) => computer.activeAlertMetrics.includes('memory')).length,
     critical: computers.filter((computer) => computer.healthStatus === 'critical').length,
     attention: computers.filter((computer) => computer.healthStatus === 'attention').length,
     neverSeen: computers.filter((computer) => computer.lastSeenAt === null).length,
@@ -191,7 +218,21 @@ export function useComputerListModel(): ComputerListModel {
         filterStore.update((current) => ({ ...current, department })),
       onHealthStatusChange: (healthStatus) =>
         filterStore.update((current) => ({ ...current, healthStatus })),
-      onOnlineChange: (onlyOnline) => filterStore.update((current) => ({ ...current, onlyOnline })),
+      onKindChange: (kind) => filterStore.update((current) => ({ ...current, kind })),
+      /* Ligar online desliga offline (e o contrário): os dois juntos não trariam máquina nenhuma. */
+      onOnlineChange: (onlyOnline) =>
+        filterStore.update((current) => ({
+          ...current,
+          onlyOnline,
+          onlyOffline: onlyOnline ? false : current.onlyOffline,
+        })),
+      onOfflineChange: (onlyOffline) =>
+        filterStore.update((current) => ({
+          ...current,
+          onlyOffline,
+          onlyOnline: onlyOffline ? false : current.onlyOnline,
+        })),
+      onAlertChange: (alert) => filterStore.update((current) => ({ ...current, alert })),
       onArchivedChange: (includeArchived) =>
         filterStore.update((current) => ({ ...current, includeArchived })),
       onClearFilters: () => filterStore.set({ ...EMPTY_FILTER }),
@@ -235,8 +276,11 @@ function hasAnyFilter(filter: ComputerListFilter): boolean {
   return (
     filter.department !== '' ||
     filter.healthStatus !== '' ||
+    filter.kind !== '' ||
+    filter.alert !== '' ||
     filter.includeArchived ||
-    filter.onlyOnline
+    filter.onlyOnline ||
+    filter.onlyOffline
   );
 }
 

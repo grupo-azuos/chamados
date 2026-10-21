@@ -25,6 +25,7 @@ function computerRow(over: Partial<ComputerRow> = {}): ComputerRow {
     displayName: null,
     responsibleName: null,
     department: null,
+    kind: 'desktop',
     tokenHash: 'hash-secreto',
     os: null,
     platform: null,
@@ -154,20 +155,36 @@ describe('toComputer', () => {
 describe('toComputerInsert', () => {
   // feliz
   it('registers the machine with the hash it was given', () => {
-    const values = toComputerInsert({ name: '  PC-1  ' }, 'hash-abc', ANA);
+    const values = toComputerInsert({ name: '  PC-1  ', kind: 'desktop' }, 'hash-abc', ANA);
 
     expect(values.name).toBe('PC-1');
     expect(values.tokenHash).toBe('hash-abc');
     expect(values.createdBy).toBe(ANA);
   });
 
+  it('keeps the kind chosen at registration', () => {
+    expect(toComputerInsert({ name: 'NOTE-1', kind: 'notebook' }, 'hash-abc', ANA).kind).toBe('notebook');
+  });
+
   // triste
   /* Hardware chega medido, na primeira conexão — nunca digitado no cadastro. */
   it('sets no hardware at registration', () => {
-    const values = toComputerInsert({ name: 'PC-1' }, 'hash-abc', ANA);
+    const values = toComputerInsert({ name: 'PC-1', kind: 'desktop' }, 'hash-abc', ANA);
 
     expect(values).not.toHaveProperty('cpuModel');
     expect(values).not.toHaveProperty('totalMemoryBytes');
+  });
+});
+
+describe('toComputerUpdate kind', () => {
+  // feliz
+  it('changes the kind when the IT team corrects it', () => {
+    expect(toComputerUpdate({ kind: 'notebook' }, ANA, NOW).kind).toBe('notebook');
+  });
+
+  // triste
+  it('leaves the kind alone when the change does not mention it', () => {
+    expect(toComputerUpdate({ responsibleName: 'Helena' }, ANA, NOW)).not.toHaveProperty('kind');
   });
 });
 
@@ -391,7 +408,9 @@ describe('toComputerListItem', () => {
   /* O número existe só na LISTA: é ele que responde "esta máquina dá trabalho?" de relance,
      sem abrir a ficha de cada uma. */
   it('carries how many tickets the machine gave this month', () => {
-    const item = toComputerListItem({ ...computerRow(), lastPreventiveAt: null, activeAlerts: 0, ticketsThisMonth: 4 }, true);
+    const item = toComputerListItem({ ...computerRow(), lastPreventiveAt: null, activeAlerts: 2, activeAlertMetrics: ['cpu', 'memory'], ticketsThisMonth: 4 }, true);
+
+    expect(item.activeAlertMetrics).toEqual(['cpu', 'memory']);
 
     expect(item.ticketsThisMonth).toBe(4);
     expect(item.isOnline).toBe(true);
@@ -400,7 +419,7 @@ describe('toComputerListItem', () => {
   // triste
   it('keeps zero as zero, and not as absence', () => {
     expect(
-      toComputerListItem({ ...computerRow(), lastPreventiveAt: null, activeAlerts: 0, ticketsThisMonth: 0 }, false).ticketsThisMonth,
+      toComputerListItem({ ...computerRow(), lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [], ticketsThisMonth: 0 }, false).ticketsThisMonth,
     ).toBe(0);
   });
 });
@@ -410,7 +429,7 @@ describe('toComputerListItem maintenance signals', () => {
   // feliz
   it('exposes a due preventive and current alerts without changing the resource score', () => {
     const item = toComputerListItem({ ...computerRow(), ticketsThisMonth: 0,
-      lastPreventiveAt: new Date('2020-01-01T12:00:00.000Z'), activeAlerts: 2 }, true);
+      lastPreventiveAt: new Date('2020-01-01T12:00:00.000Z'), activeAlerts: 2, activeAlertMetrics: [] }, true);
     expect(item.preventiveStatus).toBe('due');
     expect(item.lastPreventiveAt).toBe('2020-01-01T12:00:00.000Z');
     expect(item.activeAlerts).toBe(2);
@@ -419,7 +438,7 @@ describe('toComputerListItem maintenance signals', () => {
 
   it('clears a preventive need once maintenance is recorded', () => {
     const item = toComputerListItem({ ...computerRow(), ticketsThisMonth: 0,
-      lastPreventiveAt: new Date(), activeAlerts: 0 }, true);
+      lastPreventiveAt: new Date(), activeAlerts: 0, activeAlertMetrics: [] }, true);
     expect(item.preventiveStatus).toBe('ok');
     expect(item.activeAlerts).toBe(0);
   });
@@ -427,14 +446,14 @@ describe('toComputerListItem maintenance signals', () => {
   // triste
   it('distinguishes no maintenance history from an up-to-date preventive', () => {
     const item = toComputerListItem({ ...computerRow(), ticketsThisMonth: 0,
-      lastPreventiveAt: null, activeAlerts: 0 }, false);
+      lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] }, false);
     expect(item.preventiveStatus).toBe('never');
     expect(item.lastPreventiveAt).toBeNull();
   });
 
   it('does not demand preventive work on archived devices', () => {
     const item = toComputerListItem({ ...computerRow(), isArchived: true, ticketsThisMonth: 0,
-      lastPreventiveAt: null, activeAlerts: 0 }, false);
+      lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] }, false);
     expect(item.preventiveStatus).toBeNull();
   });
 });

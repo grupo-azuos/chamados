@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { ALERT_METRICS } from '../domain/computer-alert.util';
+import { COMPUTER_KINDS } from '../domain/computer-kind.util';
 import { DISPOSAL_TYPES } from '../domain/disposal.util';
 import { DEPARTMENTS } from '../domain/department.util';
 import { HEALTH_STATUSES } from '../domain/computer-health.util';
@@ -27,6 +28,19 @@ export const disposalTypeSchema = z.enum(DISPOSAL_TYPES, {
 export const healthStatusSchema = z.enum(HEALTH_STATUSES, {
   errorMap: () => ({ message: 'Escolha uma situação de saúde da lista' }),
 });
+
+export const computerKindSchema = z.enum(COMPUTER_KINDS, {
+  errorMap: () => ({ message: 'Escolha se é desktop ou notebook' }),
+});
+
+/**
+ * O filtro de alertas da lista: qualquer alerta aberto, ou só o de uma peça. "CPU elevada" é
+ * a máquina com o alerta de processador ABERTO agora — a mesma régua da ficha, para a lista
+ * e a ficha nunca discordarem.
+ */
+export const COMPUTER_ALERT_FILTERS = ['any', ...ALERT_METRICS] as const;
+
+export type ComputerAlertFilter = (typeof COMPUTER_ALERT_FILTERS)[number];
 
 export const departmentSchema = z.enum(DEPARTMENTS, {
   errorMap: () => ({ message: 'Escolha um departamento da lista' }),
@@ -101,6 +115,7 @@ export const computerSchema = z.object({
   displayName: z.string().nullable(),
   responsibleName: z.string().nullable(),
   department: departmentSchema.nullable(),
+  kind: computerKindSchema,
 
   hardware: computerHardwareSchema,
 
@@ -155,6 +170,8 @@ export const computerListItemSchema = computerSchema.extend({
   preventiveStatus: z.enum(PREVENTIVE_STATUSES).nullable(),
   lastPreventiveAt: z.string().datetime().nullable(),
   activeAlerts: z.number().int().nonnegative(),
+  /** De QUAIS peças são os alertas abertos — é o que conta "CPU elevada" no topo da lista. */
+  activeAlertMetrics: z.array(z.enum(ALERT_METRICS)),
 });
 
 export type ComputerListItem = z.infer<typeof computerListItemSchema>;
@@ -168,6 +185,7 @@ export type ComputerListItem = z.infer<typeof computerListItemSchema>;
  */
 export const createComputerSchema = z.object({
   name: computerNameSchema,
+  kind: computerKindSchema,
   displayName: displayNameSchema.optional(),
   responsibleName: responsibleNameSchema.optional(),
   department: departmentSchema.nullable().optional(),
@@ -193,6 +211,7 @@ export type CreatedComputer = z.infer<typeof createdComputerSchema>;
  * mão faria a ficha discordar da máquina de verdade na próxima conexão.
  */
 export const updateComputerSchema = z.object({
+  kind: computerKindSchema.optional(),
   displayName: displayNameSchema.optional(),
   responsibleName: responsibleNameSchema.optional(),
   department: departmentSchema.nullable().optional(),
@@ -210,6 +229,10 @@ export const computerFormSchema = z.object({
     .string()
     .max(RESPONSIBLE_NAME_MAX_LENGTH, `Até ${RESPONSIBLE_NAME_MAX_LENGTH} caracteres`),
   department: z.union([departmentSchema, z.literal('')]),
+  /* Vazio é o cadastro recém-aberto: a pessoa ESCOLHE, o formulário não presume desktop. */
+  kind: z
+    .union([computerKindSchema, z.literal('')])
+    .refine((kind) => kind !== '', 'Escolha se é desktop ou notebook'),
 });
 
 export type ComputerFormValues = z.input<typeof computerFormSchema>;
@@ -227,14 +250,20 @@ export const computerCreateFormSchema = computerFormSchema.extend({
 
 export type ComputerCreateFormValues = z.input<typeof computerCreateFormSchema>;
 
+const queryBooleanSchema = z.union([
+  z.boolean(),
+  z.enum(['true', 'false']).transform((value) => value === 'true'),
+]);
+
 export const computerListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   department: departmentSchema.optional(),
   healthStatus: healthStatusSchema.optional(),
+  kind: computerKindSchema.optional(),
   /** Query strings precisam distinguir "false" de true; Boolean("false") não serve. */
-  onlyOnline: z
-    .union([z.boolean(), z.enum(['true', 'false']).transform((value) => value === 'true')])
-    .optional(),
+  onlyOnline: queryBooleanSchema.optional(),
+  onlyOffline: queryBooleanSchema.optional(),
+  alert: z.enum(COMPUTER_ALERT_FILTERS).optional(),
   /** Por padrão as arquivadas NÃO vêm: elas saíram de uso e só atrapalhariam a lista. */
   includeArchived: z.coerce.boolean().optional(),
   /**

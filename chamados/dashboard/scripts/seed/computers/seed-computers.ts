@@ -32,6 +32,7 @@ export async function seedComputers(db: Database): Promise<number> {
         displayName: sql`excluded.display_name`,
         responsibleName: sql`excluded.responsible_name`,
         department: sql`excluded.department`,
+        kind: sql`excluded.kind`,
         tokenHash: sql`excluded.token_hash`,
         os: sql`excluded.os`,
         platform: sql`excluded.platform`,

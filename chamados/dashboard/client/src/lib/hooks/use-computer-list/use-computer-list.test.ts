@@ -41,11 +41,13 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     preventiveStatus: 'ok',
     lastPreventiveAt: '2026-10-01T12:00:00.000Z',
     activeAlerts: 0,
+    activeAlertMetrics: [],
     id: 1,
     name: 'RECEPCAO-01',
     displayName: 'Recepção — balcão',
     responsibleName: 'Bia Costa',
     department: 'recepcao',
+    kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 11 Pro',
       platform: 'windows',
@@ -109,9 +111,21 @@ describe('summarizeComputers', () => {
       computer(),
       computer({ id: 2, healthStatus: 'critical', isOnline: false }),
       computer({ id: 3, healthStatus: 'attention', isOnline: false, lastSeenAt: null }),
+      computer({ id: 4, activeAlerts: 2, activeAlertMetrics: ['cpu', 'memory'] }),
+      computer({ id: 5, activeAlerts: 1, activeAlertMetrics: ['memory'] }),
     ]);
 
-    expect(summary).toEqual({ total: 3, online: 1, critical: 1, attention: 1, neverSeen: 1 });
+    expect(summary).toEqual({
+      total: 5,
+      online: 3,
+      offline: 2,
+      withAlerts: 2,
+      cpuHigh: 1,
+      memoryHigh: 2,
+      critical: 1,
+      attention: 1,
+      neverSeen: 1,
+    });
   });
 
   // triste
@@ -119,6 +133,10 @@ describe('summarizeComputers', () => {
     expect(summarizeComputers([])).toEqual({
       total: 0,
       online: 0,
+      offline: 0,
+      withAlerts: 0,
+      cpuHigh: 0,
+      memoryHigh: 0,
       critical: 0,
       attention: 0,
       neverSeen: 0,
@@ -160,6 +178,33 @@ describe('useComputerListModel', () => {
     ));
     model.actions.onClearFilters();
     await waitFor(() => expect(model.data.filter.onlyOnline).toBe(false));
+  });
+
+  // feliz
+  it('sends the kind, offline and alert filters to the API', async () => {
+    const model = await mountLoadedModel();
+
+    model.actions.onKindChange('notebook');
+    model.actions.onOfflineChange(true);
+    model.actions.onAlertChange('cpu');
+
+    await waitFor(() =>
+      expect(computersApi.list).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'notebook', onlyOffline: true, alert: 'cpu' }),
+      ),
+    );
+  });
+
+  // triste
+  /* Online e offline juntos não trariam máquina nenhuma: ligar um desliga o outro. */
+  it('never keeps online and offline on at the same time', async () => {
+    const model = await mountLoadedModel();
+
+    model.actions.onOnlineChange(true);
+    model.actions.onOfflineChange(true);
+
+    await waitFor(() => expect(model.data.filter.onlyOffline).toBe(true));
+    expect(model.data.filter.onlyOnline).toBe(false);
   });
 
   /* Arquivada saiu de uso: só entra na consulta quando alguém pede por ela. */
