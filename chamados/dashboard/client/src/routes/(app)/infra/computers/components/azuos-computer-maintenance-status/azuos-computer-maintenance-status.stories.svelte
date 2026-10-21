@@ -14,6 +14,8 @@
 <Story name="PreventiveDue" args={{ data: { computer: { ...base, preventiveStatus: 'due', lastPreventiveAt: '2026-04-01T12:00:00.000Z' } } }} />
 <Story name="NoMaintenanceRecorded" args={{ data: { computer: { ...base, preventiveStatus: 'never', lastPreventiveAt: null } } }} />
 <Story name="ActiveCriticalAlert" args={{ data: { computer: { ...base, activeAlerts: 1 } } }} />
+<Story name="Scheduled" args={{ data: { computer: base, scheduledFor: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) } }} />
+<Story name="ScheduledLate" args={{ data: { computer: { ...base, preventiveStatus: 'due', lastPreventiveAt: '2026-04-01T12:00:00.000Z' }, scheduledFor: '2026-01-10' } }} />
 <Story name="BothNeeds" args={{ data: { computer: { ...base, activeAlerts: 3, preventiveStatus: 'due' } } }} />
 <Story name="Archived" args={{ data: { computer: { ...base, preventiveStatus: null, activeAlerts: 2, isArchived: true } } }} />
 <Story name="NotInformed" args={{ data: { computer: { ...base, preventiveStatus: null } } }} />

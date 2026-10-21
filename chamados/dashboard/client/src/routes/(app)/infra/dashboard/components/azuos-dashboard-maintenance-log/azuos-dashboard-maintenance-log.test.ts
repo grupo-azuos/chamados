@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import DashboardMaintenanceLog, {
   performerOf,
+  shortDayOf,
   summaryOf,
   waitingOf,
 } from './azuos-dashboard-maintenance-log.svelte';
@@ -153,5 +154,39 @@ describe('AzuosDashboardMaintenanceLog', () => {
     expect(
       screen.queryByText('Nenhuma manutenção registrada neste recorte.'),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('scheduled maintenances on the panel', () => {
+  const inThreeDays = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+  const day = `${inThreeDays.getFullYear()}-${String(inThreeDays.getMonth() + 1).padStart(2, '0')}-${String(inThreeDays.getDate()).padStart(2, '0')}`;
+
+  // feliz
+  it('lists each scheduled machine with how many days are left', () => {
+    render(DashboardMaintenanceLog, {
+      props: {
+        data: {
+          log,
+          plannedToday: [],
+          isDoneToday: false,
+          scheduled: [{ computerId: 1, computerName: 'Recepção', department: null, scheduledFor: day, note: 'Trocar fonte' }],
+        },
+      },
+    });
+
+    expect(screen.getByText('Manutenções agendadas')).toBeInTheDocument();
+    expect(screen.getByText('Recepção')).toBeInTheDocument();
+    expect(screen.getByText('faltam 3 dias')).toBeInTheDocument();
+  });
+
+  it('writes the short day without going through a time zone', () => {
+    expect(shortDayOf('2026-11-05')).toBe('05/11');
+  });
+
+  // triste
+  it('shows no scheduled block when nothing is scheduled', () => {
+    renderLog();
+
+    expect(screen.queryByText('Manutenções agendadas')).not.toBeInTheDocument();
   });
 });

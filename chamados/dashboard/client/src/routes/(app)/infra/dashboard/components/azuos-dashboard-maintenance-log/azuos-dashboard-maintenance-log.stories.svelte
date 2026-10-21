@@ -51,6 +51,13 @@
 <Story name="PlanPending" args={{ data: { log, plannedToday: planned, isDoneToday: false } }} />
 
 <!-- E o plano de hoje já cumprido. -->
+<!-- Agendadas: uma com folga, uma hoje, uma atrasada. -->
+<Story name="WithScheduled" args={{ data: { log, plannedToday: [], isDoneToday: false, scheduled: [
+  { computerId: 1, computerName: 'Recepção', department: null, scheduledFor: '2026-01-10', note: null },
+  { computerId: 2, computerName: 'Financeiro — mesa 2', department: 'financeiro', scheduledFor: new Date().toISOString().slice(0, 10), note: 'Trocar fonte' },
+  { computerId: 3, computerName: 'Contábil — fechamento', department: 'contabil', scheduledFor: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), note: 'Limpeza interna e pasta térmica' },
+] } }} />
+
 <Story name="PlanDone" args={{ data: { log, plannedToday: planned, isDoneToday: true } }} />
 
 <Story

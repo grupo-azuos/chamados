@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import PreventiveBoard, { machineLabelOf, pendingOf } from './azuos-preventive-board.svelte';
+import PreventiveBoard, { dayLabelOf, machineLabelOf, pendingOf } from './azuos-preventive-board.svelte';
 
 function row(over: Partial<PreventiveDue> = {}): PreventiveDue {
   return {
@@ -103,5 +103,51 @@ describe('AzuosPreventiveBoard', () => {
     render(PreventiveBoard, { props: { data: { rows: [] }, actions } });
 
     expect(screen.getByText(/Nenhuma máquina no inventário ainda/)).toBeInTheDocument();
+  });
+});
+
+describe('scheduled maintenances on the board', () => {
+  const schedule = {
+    computerId: 2,
+    computerName: 'FINANCEIRO-02',
+    computerDisplayName: 'Financeiro — mesa 2',
+    computerDepartment: 'financeiro' as const,
+    scheduledFor: '2026-11-05',
+    note: 'Trocar fonte',
+    createdAt: '2026-10-21T12:00:00.000Z',
+    createdBy: 'suporte@teste.local',
+    updatedAt: null,
+    updatedBy: null,
+  };
+
+  // feliz
+  it('lists the scheduled machines on top, and registers from there', async () => {
+    const user = userEvent.setup();
+    const onRegisterMachine = vi.fn();
+    render(PreventiveBoard, {
+      props: {
+        data: { rows: [row({ status: 'ok' })], schedules: [schedule] },
+        actions: { onRegister: vi.fn(), onRegisterMachine },
+      },
+    });
+
+    expect(screen.getByText('Agendadas (1)')).toBeInTheDocument();
+    expect(screen.getByText('05/11/2026 · Trocar fonte')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Registrar' }));
+
+    expect(onRegisterMachine).toHaveBeenCalledWith(2);
+  });
+
+  it('writes the day without going through a time zone', () => {
+    expect(dayLabelOf('2026-11-05')).toBe('05/11/2026');
+  });
+
+  // triste
+  it('shows no scheduled section when nothing is scheduled', () => {
+    render(PreventiveBoard, {
+      props: { data: { rows: [row()], schedules: [] }, actions: { onRegister: vi.fn() } },
+    });
+
+    expect(screen.queryByText(/Agendadas/)).not.toBeInTheDocument();
   });
 });

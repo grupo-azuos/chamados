@@ -3,12 +3,17 @@ import { createQuery } from '@tanstack/svelte-query';
 import { type HealthStatus } from '@template/shared/domain/computer-health.util';
 import { type Department } from '@template/shared/domain/department.util';
 import { type Computer, type ComputerListItem } from '@template/shared/schemas/computer.schema';
+import { type MaintenanceSchedule } from '@template/shared/schemas/maintenance.schema';
 import { MAX_PAGE_SIZE } from '@template/shared/schemas/pagination.schema';
 import { type ReportFormat } from '@template/shared/schemas/report.schema';
 import { derived, writable } from 'svelte/store';
 
 import { computersApi } from '$lib/api/computers.api';
 import { readError } from '$lib/api/http-client';
+import {
+  allSchedulesQuery,
+  schedulesByComputer,
+} from '$lib/hooks/use-maintenance-schedule/use-maintenance-schedule.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 
@@ -39,6 +44,8 @@ export type ComputerListModel = {
     /** O resumo do parque INTEIRO, que não acompanha o filtro. */
     summary: ComputerSummary | null;
     filter: ComputerListFilter;
+    /** O dia agendado de cada máquina (`AAAA-MM-DD`), pelo id. Só as que têm agendamento. */
+    scheduledFor: Record<number, string>;
   };
   state: {
     isLoading: boolean;
@@ -94,6 +101,15 @@ function scopeOf(filter: ComputerListFilter) {
  * Exportado e puro para ter teste próprio: é ele que decide o que a pessoa lê como "o estado
  * do parque hoje", e errar uma contagem aqui é dizer que está tudo bem quando não está.
  */
+/** O dia agendado de cada máquina, pelo id — o que a linha da lista precisa saber. */
+export function scheduledDayByComputer(
+  schedules: readonly MaintenanceSchedule[] | undefined,
+): Record<number, string> {
+  return Object.fromEntries(
+    [...schedulesByComputer(schedules)].map(([computerId, schedule]) => [computerId, schedule.scheduledFor]),
+  );
+}
+
 export function summarizeComputers(computers: readonly Computer[]): ComputerSummary {
   return {
     total: computers.length,
@@ -145,6 +161,10 @@ export function useComputerListModel(): ComputerListModel {
     ),
   );
 
+  /* Os agendamentos vêm da Manutenção, numa consulta à parte: o agendamento é dela, e a
+     lista só mostra. Sem filtro pelo mesmo motivo do resumo — são poucos, um por máquina. */
+  const schedules = mirrorStore(allSchedulesQuery());
+
   return {
     /* `get` em vez de valor: o objeto é montado uma vez e a tela lê dele a cada mudança. Com
        valores fixos, a lista congelaria no primeiro carregamento. */
@@ -154,6 +174,7 @@ export function useComputerListModel(): ComputerListModel {
         total: list.current.data?.total ?? 0,
         summary: summary.current.data ? summarizeComputers(summary.current.data.items) : null,
         filter: filter.current,
+        scheduledFor: scheduledDayByComputer(schedules.current.data),
       };
     },
     get state() {

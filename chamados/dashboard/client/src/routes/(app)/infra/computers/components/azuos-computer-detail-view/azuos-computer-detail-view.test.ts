@@ -135,6 +135,8 @@ const samples: ComputerSample[] = [
 const actions = {
   onEdit: vi.fn(),
   onRegisterMaintenance: vi.fn(),
+  onScheduleMaintenance: vi.fn(),
+  onCancelSchedule: vi.fn(),
   onArchivedChange: vi.fn(),
   onBlockedChange: vi.fn(),
   onRegenerateToken: vi.fn(),
