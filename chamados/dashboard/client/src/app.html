@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -29,16 +29,22 @@
     />
     <title>Chamados · Grupo Azuos</title>
     <script>
-      // Aplica o tema salvo ANTES da primeira pintura da tela — sem isso, quem usa o modo
-      // escuro veria um flash branco toda vez que abrisse o sistema, até o JavaScript carregar.
+      // O cookie do grupo vence a preferência antiga, antes da primeira pintura.
       (() => {
-        document.documentElement.setAttribute('data-theme', 'light');
+        let theme = 'dark';
         try {
-          const saved = localStorage.getItem('azuos-theme');
-          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+          const cookie = document.cookie
+            .split(';')
+            .map((part) => part.trim())
+            .find((part) => part.startsWith('azuos-theme='))
+            ?.slice(12);
+          const saved =
+            cookie === 'light' || cookie === 'dark' ? cookie : localStorage.getItem('azuos-theme');
+          if (saved === 'light' || saved === 'dark') theme = saved;
         } catch {
-          // Sem localStorage (modo privado, política do navegador)? Fica no tema claro padrão.
+          /* Sem armazenamento, o tema escuro continua disponível. */
         }
+        document.documentElement.setAttribute('data-theme', theme);
       })();
     </script>
     %sveltekit.head%
