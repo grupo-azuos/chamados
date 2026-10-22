@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { MACHINE_TICKET_AREAS } from '@template/shared/domain/ticket-catalog.util';
-import { and, count, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, isNull, sql, type SQL } from 'drizzle-orm';
 import { type PgColumn, type PgTable } from 'drizzle-orm/pg-core';
 
 import { runQuery } from '../../../lib/db/db-error.util';
@@ -8,6 +7,7 @@ import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
 import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
 import { qualified } from '../../../lib/db/sql-column.util';
+import { ticketInArea } from '../../../lib/db/ticket-area.util';
 import { computerAlerts } from '../../../lib/db/schema/computer-alerts.schema';
 import { computers } from '../../../lib/db/schema/computers.schema';
 import { maintenanceSchedules } from '../../../lib/db/schema/maintenance-schedules.schema';
@@ -132,6 +132,13 @@ export type TicketCounts = {
  * Toda consulta passa por `runQuery`: é o que faz a recusa do banco chegar à tela com status
  * e motivo, em vez de "erro inesperado".
  */
+/**
+ * Este é o painel da INFRAESTRUTURA: todo número de chamado aqui é de chamado de Infra (a área
+ * original, ou Infra somada como participante). Chamado de Sistema tem o painel dele, e contá-lo
+ * aqui fazia "Erro no sistema" aparecer no mapa de problemas do parque.
+ */
+const INFRA_TICKETS = ticketInArea('infra');
+
 @Injectable()
 export class DashboardRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
@@ -182,7 +189,8 @@ export class DashboardRepository {
               filter (where ${tickets.resolvedAt} >= ${asTimestamp(since)})
           `,
         })
-        .from(tickets),
+        .from(tickets)
+        .where(INFRA_TICKETS),
       'contar os chamados do período',
     );
 
@@ -195,7 +203,7 @@ export class DashboardRepository {
       this.db
         .select({ key: tickets.problemType, count: count() })
         .from(tickets)
-        .where(gte(tickets.createdAt, since))
+        .where(and(INFRA_TICKETS, gte(tickets.createdAt, since)))
         .groupBy(tickets.problemType)
         .orderBy(desc(count()))
         .limit(limit),
@@ -209,7 +217,7 @@ export class DashboardRepository {
       this.db
         .select({ key: tickets.department, count: count() })
         .from(tickets)
-        .where(gte(tickets.createdAt, since))
+        .where(and(INFRA_TICKETS, gte(tickets.createdAt, since)))
         .groupBy(tickets.department)
         .orderBy(desc(count()))
         .limit(limit),
@@ -229,7 +237,13 @@ export class DashboardRepository {
    * `daily-activity.util` compara, e assim ele atravessa o JSON sem fuso horário no meio.
    */
   async ticketsOpenedByDay(since: Date): Promise<DayCountRow[]> {
-    return this.countByDay(tickets, tickets.createdAt, since, 'contar os chamados por dia');
+    return this.countByDay(
+      tickets,
+      tickets.createdAt,
+      since,
+      'contar os chamados por dia',
+      INFRA_TICKETS,
+    );
   }
 
   async ticketsResolvedByDay(since: Date): Promise<DayCountRow[]> {
@@ -238,6 +252,7 @@ export class DashboardRepository {
       tickets.resolvedAt,
       since,
       'contar os chamados resolvidos por dia',
+      INFRA_TICKETS,
     );
   }
 
@@ -255,6 +270,7 @@ export class DashboardRepository {
     column: PgColumn,
     since: Date,
     what: string,
+    scope?: SQL,
   ): Promise<DayCountRow[]> {
     const day = sql<string>`to_char(${column}, 'YYYY-MM-DD')`;
 
@@ -262,7 +278,7 @@ export class DashboardRepository {
       this.db
         .select({ day, total: sql<number>`count(*)::int` })
         .from(table)
-        .where(gte(column, since))
+        .where(and(scope, gte(column, since)))
         .groupBy(day)
         .orderBy(day),
       what,
@@ -347,7 +363,7 @@ export class DashboardRepository {
           count: count(),
         })
         .from(tickets)
-        .where(gte(tickets.createdAt, since))
+        .where(and(INFRA_TICKETS, gte(tickets.createdAt, since)))
         .groupBy(tickets.requesterName, tickets.department, tickets.problemType)
         .having(gte(count(), threshold))
         .orderBy(desc(count())),
@@ -367,9 +383,7 @@ export class DashboardRepository {
         })
         .from(tickets)
         .innerJoin(computers, eq(computers.id, tickets.computerId))
-        .where(
-          and(gte(tickets.createdAt, since), inArray(tickets.area, [...MACHINE_TICKET_AREAS])),
-        )
+        .where(and(INFRA_TICKETS, gte(tickets.createdAt, since)))
         .groupBy(computers.id, computers.displayName, computers.name, tickets.problemType)
         .having(gte(count(), threshold))
         .orderBy(desc(count())),

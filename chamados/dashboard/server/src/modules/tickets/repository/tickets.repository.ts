@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { MACHINE_TICKET_AREAS, type TicketArea } from '@template/shared/domain/ticket-catalog.util';
+import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
 import { parseTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { ticketStatusesOfGroup } from '@template/shared/domain/ticket-status.util';
 import {
@@ -403,12 +403,7 @@ function buildWhere(query: TicketFilter): SQL | undefined {
      quem resolve é o `scopedWhere`, que sabe consultar o banco. */
   if (query.department) filters.push(eq(tickets.department, query.department));
   if (query.problemType) filters.push(eq(tickets.problemType, query.problemType));
-  /* Na ficha da máquina, só o que é sobre ela: chamado de Sistema pode trazer o computador de
-     quem abriu, mas o problema é no software. */
-  if (query.computerId) {
-    filters.push(eq(tickets.computerId, query.computerId));
-    filters.push(inArray(tickets.area, [...MACHINE_TICKET_AREAS]));
-  }
+  if (query.computerId) filters.push(eq(tickets.computerId, query.computerId));
   if (query.projectId) filters.push(eq(tickets.projectId, query.projectId));
 
   if (query.search) filters.push(searchFilter(query.search));

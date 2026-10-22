@@ -25,13 +25,6 @@ export type TicketArea = RoleContext;
 
 export const TICKET_AREA_LABELS = ROLE_CONTEXT_LABELS;
 
-/**
- * As áreas cujo chamado é SOBRE A MÁQUINA: Infra e Manutenção. Chamado de Sistema também pode
- * trazer o computador de quem abriu, mas o problema é no software — contá-lo na ficha da
- * máquina faria um computador saudável parecer problemático.
- */
-export const MACHINE_TICKET_AREAS = ['infra', 'manutencao'] as const satisfies readonly TicketArea[];
-
 export function ticketAreaLabel(area: TicketArea): string {
   return TICKET_AREA_LABELS[area];
 }

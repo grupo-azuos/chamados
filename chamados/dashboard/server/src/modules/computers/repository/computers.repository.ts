@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type AlertMetric } from '@template/shared/domain/computer-alert.util';
 import { preventiveDueBefore } from '@template/shared/domain/maintenance.util';
-import { MACHINE_TICKET_AREAS } from '@template/shared/domain/ticket-catalog.util';
 import {
   type ComputerAlertListQuery,
   type ComputerListQuery,
@@ -30,6 +29,7 @@ import { DB } from '../../../lib/db/db.token';
 import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
 import { qualified } from '../../../lib/db/sql-column.util';
+import { ticketInArea } from '../../../lib/db/ticket-area.util';
 import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
 import { maintenances } from '../../../lib/db/schema/maintenances.schema';
@@ -116,7 +116,7 @@ function computerColumns() {
     ticketsThisMonth: sql<number>`(
       select count(*)::int from ${tickets}
       where ${qualified(tickets.computerId)} = ${qualified(computers.id)}
-        and ${isMachineTicket()}
+        and ${ticketInArea('infra')}
         and ${qualified(tickets.createdAt)} >= date_trunc('month', now())
     )`,
   };
@@ -400,14 +400,6 @@ function needsMaintenanceFilter(): SQL {
   )`;
 
   return sql`(${eq(computers.isArchived, false)} and (${lastOpened} is null or ${lastOpened} <= ${asTimestamp(preventiveDueBefore())}))`;
-}
-
-/** Chamado de Infra ou Manutenção — o de Sistema não é sobre a máquina. */
-function isMachineTicket(): SQL {
-  return sql`${qualified(tickets.area)} in (${sql.join(
-    MACHINE_TICKET_AREAS.map((area) => sql`${area}`),
-    sql`, `,
-  )})`;
 }
 
 /** A máquina com alerta ABERTO agora — de qualquer peça, ou da peça pedida. */
