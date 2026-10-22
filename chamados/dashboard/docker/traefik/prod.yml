@@ -1,0 +1,137 @@
+# Traefik do chamados em produção — configuração dinâmica (file provider).
+#
+# Onde vai: https://coolify.grupoazuos.com.br → Servers → <servidor> → Proxy → Dynamic Configurations → `chamados.yaml`.
+# O Traefik relê o arquivo sozinho; não precisa reiniciar o proxy.
+#
+# Este arquivo SUBSTITUI as Container Labels do app. Com os dois ativos, o mesmo Host fica com um
+# router `@docker` e outro `@file`, e o Traefik escolhe um deles sem avisar. Ao aplicar, apague as
+# labels `traefik.*` do app no Coolify.
+#
+# Tudo aqui tem o prefixo `chamados-` e é definido neste arquivo: nada de middleware de outro app ou
+# global (ver `server/configuration/apps/coolify/README.md`, "Labels: cada app com as suas").
+#
+# `chamados:3005` em `services` é o nome do container na rede do proxy e a `API_PORT` com que ele sobe
+# em produção. Se o boot do app mostrar outra porta, é esta linha que muda — porta errada dá `Bad Gateway`.
+http:
+  routers:
+    chamados-http:
+      entryPoints: [http]
+      rule: Host(`chamados.grupoazuos.com.br`)
+      middlewares: [chamados-redirect]
+      service: chamados
+    chamados:
+      entryPoints: [https]
+      rule: Host(`chamados.grupoazuos.com.br`)
+      middlewares: [chamados-headers, chamados-rate, chamados-auth, chamados-strip-cookie, chamados-gzip]
+      service: chamados
+      tls:
+        certResolver: letsencrypt
+
+    # ROTAS SEM O LOGIN DO ADMIN-CONSOLE. Quem chama aqui não é uma pessoa com sessão: é uma
+    # máquina, um webhook ou o retorno do GitHub — cada uma se prova por conta própria, no app
+    # (são `@Public()` no Nest). Passando pelo `chamados-auth`, levariam um redirect para a tela de
+    # login que nenhuma delas sabe seguir.
+    #
+    # `Path`, e não `PathPrefix`: libera a rota exata e nada que venha a nascer embaixo dela.
+    # `priority` alto para ganhar do router `chamados`, cuja regra (só o Host) casa com tudo.
+    #
+    #  - `/api/health` — monitor externo de disponibilidade; não tem login (o healthcheck do
+    #    Docker roda dentro do container e não passa por aqui).
+    #  - `/api/agent/releases/latest` — o agente instalado nas máquinas consulta a versão nova
+    #    com a chave do computador no `Authorization` (`AgentReleaseService`).
+    #  - `/api/network/webhook` — o controlador UniFi manda alertas com `?token=` igual a
+    #    `UNIFI_WEBHOOK_TOKEN`; o app ainda aplica a trava própria de webhook.
+    #  - `/api/integrations/github/callback` — o GitHub devolve o navegador aqui (router próprio,
+    #    abaixo).
+    #
+    # Sem o forwardAuth, ninguém sobrescreve os `x-forwarded-user-*` — um cliente poderia mandá-los
+    # inventados e o app acreditaria. O `chamados-strip-identity` os apaga antes de chegar ao app.
+    # O `chamados-strip-cookie` fica: máquina não manda cookie, e um navegador logado que bata no
+    # health não precisa entregar o token de sessão ao app.
+    chamados-public:
+      entryPoints: [https]
+      rule: Host(`chamados.grupoazuos.com.br`) && (Path(`/api/health`) || Path(`/api/agent/releases/latest`) || Path(`/api/network/webhook`))
+      priority: 1000
+      middlewares: [chamados-headers, chamados-rate, chamados-strip-cookie, chamados-strip-identity, chamados-gzip]
+      service: chamados
+      tls:
+        certResolver: letsencrypt
+    # O retorno do OAuth do GitHub. A prova é o `state` + o cookie `browserSecret` que o próprio app
+    # gravou no `/start` (com `path: /api/integrations/github`). Por isso é a ÚNICA rota sem o
+    # `chamados-strip-cookie`: ele apaga o cabeçalho `Cookie` inteiro, inclusive esse cookie do app,
+    # e toda conexão com o GitHub terminaria em "falhou". O preço: aqui o token de sessão do
+    # admin-console chega ao app junto — numa rota que não o lê nem o registra.
+    chamados-github-callback:
+      entryPoints: [https]
+      rule: Host(`chamados.grupoazuos.com.br`) && Path(`/api/integrations/github/callback`)
+      priority: 1000
+      middlewares: [chamados-headers, chamados-rate, chamados-strip-identity, chamados-gzip]
+      service: chamados
+      tls:
+        certResolver: letsencrypt
+    # O WebSocket do agente (`@WebSocketGateway({ path: '/agent' })`). O agente se identifica na
+    # primeira mensagem (`hello` com o token da máquina), não com cookie. Fica fora do `/api` e é o
+    # único caminho fora dele que não é a tela. Sem gzip: WebSocket não tem corpo HTTP para
+    # comprimir, e o middleware de compressão só atrapalharia o upgrade.
+    chamados-agent:
+      entryPoints: [https]
+      rule: Host(`chamados.grupoazuos.com.br`) && Path(`/agent`)
+      priority: 1000
+      middlewares: [chamados-headers, chamados-rate, chamados-strip-cookie, chamados-strip-identity]
+      service: chamados
+      tls:
+        certResolver: letsencrypt
+
+  middlewares:
+    chamados-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+    chamados-headers:
+      headers:
+        contentTypeNosniff: true
+        frameDeny: true
+        stsIncludeSubdomains: true
+        stsSeconds: 31536000
+    chamados-rate:
+      rateLimit:
+        average: 200
+        burst: 100
+    # A identidade vem do login do admin-console do mesmo servidor; o app só lê os `x-forwarded-user-*`.
+    chamados-auth:
+      forwardAuth:
+        address: http://admin-console:3000/api/auth/verify
+        authResponseHeaders:
+          - x-forwarded-user-id
+          - x-forwarded-user-email
+          - x-forwarded-user-name
+          - x-forwarded-user-role
+        addAuthCookiesToResponse:
+          - azuos_homo_access_token
+          - azuos_homo_refresh_token
+    # O cookie de sessão já cumpriu o papel no forwardAuth; o app não recebe o token.
+    chamados-strip-cookie:
+      headers:
+        customRequestHeaders:
+          Cookie: ""
+    # Só nos routers sem login: o que o forwardAuth faria (trocar os `x-forwarded-user-*` pelos do
+    # admin-console) aqui ninguém faz. Valor vazio em `customRequestHeaders` APAGA o cabeçalho.
+    chamados-strip-identity:
+      headers:
+        customRequestHeaders:
+          x-forwarded-user-id: ""
+          x-forwarded-user-email: ""
+          x-forwarded-user-name: ""
+          x-forwarded-user-role: ""
+    # SSE fica fora: comprimido, o evento só chega ao navegador quando o buffer enche.
+    chamados-gzip:
+      compress:
+        excludedContentTypes:
+          - text/event-stream
+
+  services:
+    chamados:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: http://chamados:3005
