@@ -5,8 +5,10 @@ import { COMPUTER_KINDS, type ComputerKind } from '@template/shared/domain/compu
 import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
 import {
   COMPUTER_ALERT_FILTERS,
+  COMPUTER_PREVENTIVE_FILTERS,
   type Computer,
   type ComputerAlertFilter,
+  type ComputerPreventiveFilter,
   type ComputerListItem,
 } from '@template/shared/schemas/computer.schema';
 import { type MaintenanceSchedule } from '@template/shared/schemas/maintenance.schema';
@@ -43,7 +45,8 @@ export type ComputerListFilter = {
   onlyOffline: boolean;
   alert: ComputerAlertFilter | '';
   /** Só quem precisa de manutenção: preventiva nunca feita ou vencida. */
-  needsMaintenance: boolean;
+  /** A situação da preventiva — ou só quem precisa de manutenção (vencida ou nunca feita). */
+  preventive: ComputerPreventiveFilter | '';
   /** Arquivadas saíram de uso: só aparecem quando alguém pede por elas. */
   includeArchived: boolean;
 };
@@ -98,7 +101,7 @@ export type ComputerListModel = {
     onOnlineChange: (onlyOnline: boolean) => void;
     onOfflineChange: (onlyOffline: boolean) => void;
     onAlertChange: (alert: ComputerAlertFilter | '') => void;
-    onNeedsMaintenanceChange: (needsMaintenance: boolean) => void;
+    onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
     onArchivedChange: (includeArchived: boolean) => void;
     onClearFilters: () => void;
     onRetry: () => void;
@@ -115,7 +118,7 @@ const EMPTY_FILTER: ComputerListFilter = {
   onlyOnline: false,
   onlyOffline: false,
   alert: '',
-  needsMaintenance: false,
+  preventive: '',
   includeArchived: false,
 };
 
@@ -128,7 +131,7 @@ const FILTER_GUARDS: FieldGuards<ComputerListFilter> = {
   onlyOnline: isFlag,
   onlyOffline: isFlag,
   alert: oneOf('', ...COMPUTER_ALERT_FILTERS),
-  needsMaintenance: isFlag,
+  preventive: oneOf('', ...COMPUTER_PREVENTIVE_FILTERS),
   includeArchived: isFlag,
 };
 
@@ -147,7 +150,7 @@ function scopeOf(filter: ComputerListFilter) {
     onlyOnline: filter.onlyOnline || undefined,
     onlyOffline: filter.onlyOffline || undefined,
     alert: filter.alert || undefined,
-    needsMaintenance: filter.needsMaintenance || undefined,
+    preventive: filter.preventive || undefined,
     includeArchived: filter.includeArchived || undefined,
   };
 }
@@ -274,8 +277,8 @@ export function useComputerListModel(): ComputerListModel {
           onlyOnline: onlyOffline ? false : current.onlyOnline,
         })),
       onAlertChange: (alert) => filterStore.update((current) => ({ ...current, alert })),
-      onNeedsMaintenanceChange: (needsMaintenance) =>
-        filterStore.update((current) => ({ ...current, needsMaintenance })),
+      onPreventiveChange: (preventive) =>
+        filterStore.update((current) => ({ ...current, preventive })),
       onArchivedChange: (includeArchived) =>
         filterStore.update((current) => ({ ...current, includeArchived })),
       onClearFilters: () => filterStore.clear(),
@@ -321,7 +324,7 @@ function hasAnyFilter(filter: ComputerListFilter): boolean {
     filter.healthStatus !== '' ||
     filter.kind !== '' ||
     filter.alert !== '' ||
-    filter.needsMaintenance ||
+    filter.preventive !== '' ||
     filter.includeArchived ||
     filter.onlyOnline ||
     filter.onlyOffline

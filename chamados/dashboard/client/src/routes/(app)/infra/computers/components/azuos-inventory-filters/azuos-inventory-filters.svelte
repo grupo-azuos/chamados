@@ -15,6 +15,7 @@
   import {
     COMPUTER_ALERT_FILTERS,
     type ComputerAlertFilter,
+    type ComputerPreventiveFilter,
   } from '@template/shared/schemas/computer.schema';
 
   /** O recorte do inventário — o mesmo do hook `use-computer-list`. */
@@ -26,7 +27,7 @@
     onlyOnline: boolean;
     onlyOffline: boolean;
     alert: ComputerAlertFilter | '';
-    needsMaintenance: boolean;
+    preventive: ComputerPreventiveFilter | '';
     includeArchived: boolean;
   };
 
@@ -59,7 +60,7 @@
       onOnlineChange: (onlyOnline: boolean) => void;
       onOfflineChange: (onlyOffline: boolean) => void;
       onAlertChange: (alert: ComputerAlertFilter | '') => void;
-      onNeedsMaintenanceChange: (needsMaintenance: boolean) => void;
+      onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
       onArchivedChange: (includeArchived: boolean) => void;
       onClearFilters: () => void;
     };
@@ -91,9 +92,22 @@
     label: alert === 'any' ? 'Com alerta ativo' : `${ALERT_FILTER_NAMES[alert]} elevada`,
   }));
 
-  /** "Precisa de manutenção": preventiva nunca feita ou vencida — as duas pedem a mesma visita. */
-  const MAINTENANCE_OPTIONS = [
-    { value: 'needed', label: 'Precisa de manutenção', tone: 'warning' as const },
+  /**
+   * A situação da preventiva, nas cores do selo da lista (vencida em vermelho, nunca feita em
+   * âmbar, em dia em verde). "Precisa de manutenção" junta vencida e nunca feita — as duas pedem
+   * a mesma visita — e vem primeiro, porque é a pergunta do dia a dia.
+   */
+  const PREVENTIVE_LABELS: Record<ComputerPreventiveFilter, string> = {
+    needed: 'Precisa de manutenção',
+    due: 'Vencida',
+    never: 'Nunca feita',
+    ok: 'Em dia',
+  };
+  const PREVENTIVE_OPTIONS = [
+    { value: 'needed', label: PREVENTIVE_LABELS.needed, tone: 'warning' as const },
+    { value: 'due', label: PREVENTIVE_LABELS.due, tone: 'danger' as const },
+    { value: 'never', label: PREVENTIVE_LABELS.never, tone: 'warning' as const },
+    { value: 'ok', label: PREVENTIVE_LABELS.ok, tone: 'success' as const },
   ];
 
   const KIND_OPTIONS = COMPUTER_KINDS.map((kind) => ({
@@ -142,11 +156,11 @@
             onRemove: () => actions.onAlertChange(''),
           }
         : null,
-      filter.needsMaintenance
+      filter.preventive
         ? {
-            key: 'maintenance',
-            label: 'Precisa de manutenção',
-            onRemove: () => actions.onNeedsMaintenanceChange(false),
+            key: 'preventive',
+            label: `Preventiva: ${PREVENTIVE_LABELS[filter.preventive]}`,
+            onRemove: () => actions.onPreventiveChange(''),
           }
         : null,
       filter.kind
@@ -208,6 +222,12 @@
   /* Quem pede "reduzir movimento" no sistema não vê a animação — vira troca seca. */
   const motionMs = (seconds: number) => (prefersReducedMotion() ? 0 : seconds * 1000);
   const panelId = 'inventory-filters-panel';
+
+  /* Cada filtro do painel tem o tamanho das opções dele, e não o da coluna: a trilha esticada
+     deixava um vazio cinza depois da última pastilha. No celular as pastilhas quebram linha. */
+  const FIELD_HUGS = 'items-start';
+  const GROUP_TITLE =
+    'text-ink-500 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase';
 </script>
 
 <section
@@ -294,18 +314,18 @@
       transition:slide={{ duration: motionMs(DURATION.base) }}
       class="border-border/60 border-t"
     >
-      <div
-        class="divide-border/60 grid min-w-0 divide-y lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0"
-      >
-        <fieldset class="flex min-w-0 flex-col gap-3 p-3 sm:p-4">
+      <!-- Situação na largura toda, em cima; Manutenção e Cadastro lado a lado embaixo. Com três
+           colunas, a Preventiva (cinco opções) não cabia e as pastilhas se espremiam. -->
+      <div class="grid min-w-0 lg:grid-cols-2">
+        <fieldset class="flex min-w-0 flex-col items-start gap-3 p-3 sm:p-4 lg:col-span-2">
           <legend class="contents">
-            <span class="text-ink-500 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+            <span class={GROUP_TITLE}>
               <Activity class="size-3.5" aria-hidden="true" />
               Situação agora
             </span>
           </legend>
-          <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-4">
-            <FilterField data={{ label: 'Conexão' }}>
+          <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-6">
+            <FilterField data={{ label: 'Conexão' }} ui={{ className: FIELD_HUGS }}>
               <OptionPicker
                 data={{ value: connectionValue, options: CONNECTION_OPTIONS }}
                 ui={{ ariaLabel: 'Filtrar por conexão', allLabel: 'Todas' }}
@@ -319,7 +339,7 @@
                 }}
               />
             </FilterField>
-            <FilterField data={{ label: 'Saúde' }}>
+            <FilterField data={{ label: 'Saúde' }} ui={{ className: FIELD_HUGS }}>
               <OptionPicker
                 data={{ value: data.filter.healthStatus, options: HEALTH_OPTIONS }}
                 ui={{ ariaLabel: 'Filtrar por saúde', allLabel: 'Toda a saúde' }}
@@ -329,64 +349,70 @@
                 }}
               />
             </FilterField>
+            <FilterField data={{ label: 'Alertas' }} ui={{ className: FIELD_HUGS }}>
+              <OptionPicker
+                data={{ value: data.filter.alert, options: ALERT_OPTIONS }}
+                ui={{ ariaLabel: 'Filtrar por alerta', allLabel: 'Todos' }}
+                actions={{
+                  onChange: (value: string) =>
+                    actions.onAlertChange(value as ComputerAlertFilter | ''),
+                }}
+              />
+            </FilterField>
           </div>
-          <FilterField data={{ label: 'Alertas' }}>
-            <OptionPicker
-              data={{ value: data.filter.alert, options: ALERT_OPTIONS }}
-              ui={{ ariaLabel: 'Filtrar por alerta', allLabel: 'Todos' }}
-              actions={{
-                onChange: (value: string) =>
-                  actions.onAlertChange(value as ComputerAlertFilter | ''),
-              }}
-            />
-          </FilterField>
         </fieldset>
 
-        <fieldset class="flex min-w-0 flex-col gap-3 p-3 sm:p-4">
+        <fieldset
+          class="border-border/60 flex min-w-0 flex-col items-start gap-3 border-t p-3 sm:p-4"
+        >
           <legend class="contents">
-            <span class="text-ink-500 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+            <span class={GROUP_TITLE}>
               <Wrench class="size-3.5" aria-hidden="true" />
               Manutenção
             </span>
           </legend>
-          <FilterField data={{ label: 'Preventiva' }}>
+          <FilterField data={{ label: 'Preventiva' }} ui={{ className: FIELD_HUGS }}>
             <OptionPicker
-              data={{
-                value: data.filter.needsMaintenance ? 'needed' : '',
-                options: MAINTENANCE_OPTIONS,
-              }}
-              ui={{ ariaLabel: 'Filtrar por manutenção', allLabel: 'Todas' }}
+              data={{ value: data.filter.preventive, options: PREVENTIVE_OPTIONS }}
+              ui={{ ariaLabel: 'Filtrar pela preventiva', allLabel: 'Todas' }}
               actions={{
-                onChange: (value: string) => actions.onNeedsMaintenanceChange(value === 'needed'),
+                onChange: (value: string) =>
+                  actions.onPreventiveChange(value as ComputerPreventiveFilter | ''),
               }}
             />
           </FilterField>
-          <p class="text-ink-500 text-xs">Sem preventiva nenhuma, ou com a última vencida.</p>
+          <p class="text-ink-500 text-xs">
+            "Precisa de manutenção" junta as vencidas e as que nunca tiveram preventiva.
+          </p>
         </fieldset>
 
-        <fieldset class="flex min-w-0 flex-col gap-3 p-3 sm:p-4">
+        <fieldset
+          class="border-border/60 flex min-w-0 flex-col items-start gap-3 border-t p-3 sm:p-4 lg:border-l"
+        >
           <legend class="contents">
-            <span class="text-ink-500 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+            <span class={GROUP_TITLE}>
               <Tag class="size-3.5" aria-hidden="true" />
               Cadastro
             </span>
           </legend>
-          <FilterField data={{ label: 'Tipo' }}>
-            <OptionPicker
-              data={{ value: data.filter.kind, options: KIND_OPTIONS }}
-              ui={{ ariaLabel: 'Filtrar por tipo', allLabel: 'Todos os tipos' }}
-              actions={{
-                onChange: (value: string) => actions.onKindChange(value as ComputerKind | ''),
-              }}
-            />
-          </FilterField>
-          <FilterField data={{ label: 'Arquivadas' }}>
-            <OptionPicker
-              data={{ value: data.filter.includeArchived ? 'yes' : '', options: ARCHIVED_OPTIONS }}
-              ui={{ ariaLabel: 'Máquinas arquivadas', allLabel: 'Ocultar' }}
-              actions={{ onChange: (value: string) => actions.onArchivedChange(value === 'yes') }}
-            />
-          </FilterField>
+          <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-6">
+            <FilterField data={{ label: 'Tipo' }} ui={{ className: FIELD_HUGS }}>
+              <OptionPicker
+                data={{ value: data.filter.kind, options: KIND_OPTIONS }}
+                ui={{ ariaLabel: 'Filtrar por tipo', allLabel: 'Todos os tipos' }}
+                actions={{
+                  onChange: (value: string) => actions.onKindChange(value as ComputerKind | ''),
+                }}
+              />
+            </FilterField>
+            <FilterField data={{ label: 'Arquivadas' }} ui={{ className: FIELD_HUGS }}>
+              <OptionPicker
+                data={{ value: data.filter.includeArchived ? 'yes' : '', options: ARCHIVED_OPTIONS }}
+                ui={{ ariaLabel: 'Máquinas arquivadas', allLabel: 'Ocultar' }}
+                actions={{ onChange: (value: string) => actions.onArchivedChange(value === 'yes') }}
+              />
+            </FilterField>
+          </div>
         </fieldset>
       </div>
     </div>

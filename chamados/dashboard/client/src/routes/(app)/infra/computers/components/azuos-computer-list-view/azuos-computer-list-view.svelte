@@ -13,6 +13,7 @@
   import {
     type Computer,
     type ComputerAlertFilter,
+    type ComputerPreventiveFilter,
     type ComputerListItem,
   } from '@template/shared/schemas/computer.schema';
   import { type ReportFormat } from '@template/shared/schemas/report.schema';
@@ -25,7 +26,7 @@
     onlyOnline: boolean;
     onlyOffline: boolean;
     alert: ComputerAlertFilter | '';
-    needsMaintenance: boolean;
+    preventive: ComputerPreventiveFilter | '';
     includeArchived: boolean;
   };
 
@@ -82,7 +83,7 @@
       onOnlineChange: (onlyOnline: boolean) => void;
       onOfflineChange: (onlyOffline: boolean) => void;
       onAlertChange: (alert: ComputerAlertFilter | '') => void;
-      onNeedsMaintenanceChange: (needsMaintenance: boolean) => void;
+      onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
       onArchivedChange: (includeArchived: boolean) => void;
       onClearFilters: () => void;
       onRetry: () => void;

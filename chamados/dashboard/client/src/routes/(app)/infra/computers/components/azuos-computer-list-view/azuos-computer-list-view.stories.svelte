@@ -134,7 +134,7 @@
     onlyOnline: false,
     onlyOffline: false,
     alert: '',
-    needsMaintenance: false,
+    preventive: '',
   };
 
   const actions = {
@@ -146,7 +146,7 @@
     onOfflineChange: () => {},
     onKindChange: () => {},
     onAlertChange: () => {},
-    onNeedsMaintenanceChange: () => {},
+    onPreventiveChange: () => {},
     onClearFilters: () => {},
     onRetry: () => {},
     onOpen: () => {},
@@ -200,7 +200,7 @@
 <Story
   name="NeedsMaintenanceFilter"
   args={{
-    data: { computers, total: computers.length, summary, filter: { ...emptyFilter, needsMaintenance: true } },
+    data: { computers, total: computers.length, summary, filter: { ...emptyFilter, preventive: 'needed' } },
     state: settled,
     actions,
   }}
@@ -210,7 +210,7 @@
   name="NeedsMaintenanceFilterMobile"
   globals={{ viewport: { value: 'celular' } }}
   args={{
-    data: { computers, total: computers.length, summary, filter: { ...emptyFilter, needsMaintenance: true } },
+    data: { computers, total: computers.length, summary, filter: { ...emptyFilter, preventive: 'needed' } },
     state: settled,
     actions,
   }}
