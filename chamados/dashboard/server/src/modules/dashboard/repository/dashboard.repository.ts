@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
+import { MACHINE_TICKET_AREAS } from '@template/shared/domain/ticket-catalog.util';
+import { and, count, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import { type PgColumn, type PgTable } from 'drizzle-orm/pg-core';
 
 import { runQuery } from '../../../lib/db/db-error.util';
@@ -366,7 +367,9 @@ export class DashboardRepository {
         })
         .from(tickets)
         .innerJoin(computers, eq(computers.id, tickets.computerId))
-        .where(gte(tickets.createdAt, since))
+        .where(
+          and(gte(tickets.createdAt, since), inArray(tickets.area, [...MACHINE_TICKET_AREAS])),
+        )
         .groupBy(computers.id, computers.displayName, computers.name, tickets.problemType)
         .having(gte(count(), threshold))
         .orderBy(desc(count())),

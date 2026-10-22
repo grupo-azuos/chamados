@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type AlertMetric } from '@template/shared/domain/computer-alert.util';
+import { MACHINE_TICKET_AREAS } from '@template/shared/domain/ticket-catalog.util';
 import {
   type ComputerAlertListQuery,
   type ComputerListQuery,
@@ -114,6 +115,7 @@ function computerColumns() {
     ticketsThisMonth: sql<number>`(
       select count(*)::int from ${tickets}
       where ${qualified(tickets.computerId)} = ${qualified(computers.id)}
+        and ${isMachineTicket()}
         and ${qualified(tickets.createdAt)} >= date_trunc('month', now())
     )`,
   };
@@ -380,6 +382,14 @@ function presenceFilter({ onlineIds, wantOnline }: PresenceFilter): SQL {
 
   const isOnline = inArray(computers.id, onlineIds);
   return wantOnline ? isOnline : sql`not ${isOnline}`;
+}
+
+/** Chamado de Infra ou Manutenção — o de Sistema não é sobre a máquina. */
+function isMachineTicket(): SQL {
+  return sql`${qualified(tickets.area)} in (${sql.join(
+    MACHINE_TICKET_AREAS.map((area) => sql`${area}`),
+    sql`, `,
+  )})`;
 }
 
 /** A máquina com alerta ABERTO agora — de qualquer peça, ou da peça pedida. */

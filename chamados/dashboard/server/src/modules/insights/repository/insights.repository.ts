@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { MACHINE_TICKET_AREAS } from '@template/shared/domain/ticket-catalog.util';
 import { and, eq, gte, isNull, sql } from 'drizzle-orm';
 
 import { runQuery } from '../../../lib/db/db-error.util';
@@ -141,11 +142,15 @@ export class InsightsRepository {
             where ${qualified(computerAlerts.computerId)} = ${qualified(computers.id)}
               and ${qualified(computerAlerts.startedAt)} >= ${asTimestamp(since)}
           )`,
-          /* Só os chamados COM máquina no chamado: o campo é opcional, e um chamado sem
-             vínculo não pertence a máquina nenhuma. */
+          /* Só os chamados COM máquina no chamado, e de Infra ou Manutenção: o campo é
+             opcional, e chamado de Sistema é sobre o software, não sobre a máquina. */
           ticketCount: sql<number>`(
             select count(*)::int from ${tickets}
             where ${qualified(tickets.computerId)} = ${qualified(computers.id)}
+              and ${qualified(tickets.area)} in (${sql.join(
+                MACHINE_TICKET_AREAS.map((area) => sql`${area}`),
+                sql`, `,
+              )})
               and ${qualified(tickets.createdAt)} >= ${asTimestamp(since)}
           )`,
           lastMaintenanceAt: asDate(
