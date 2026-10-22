@@ -1,24 +1,16 @@
 <script lang="ts" module>
   import {
-    HEALTH_STATUSES,
-    HEALTH_STATUS_LABELS,
     healthStatusLabel,
     healthStatusTone,
     type HealthStatus,
   } from '@template/shared/domain/computer-health.util';
-  import { ALERT_METRIC_LABELS } from '@template/shared/domain/computer-alert.util';
-  import {
-    COMPUTER_KINDS,
-    COMPUTER_KIND_LABELS,
-    type ComputerKind,
-  } from '@template/shared/domain/computer-kind.util';
+  import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
   import {
     departmentLabel,
     type Department,
     type DepartmentChoice,
   } from '@template/shared/domain/department.util';
   import {
-    COMPUTER_ALERT_FILTERS,
     type Computer,
     type ComputerAlertFilter,
     type ComputerListItem,
@@ -100,39 +92,6 @@
     };
   };
 
-  const HEALTH_FILTER_OPTIONS = HEALTH_STATUSES.map((status) => ({
-    value: status,
-    label: HEALTH_STATUS_LABELS[status],
-    tone: healthStatusTone(status),
-  }));
-
-  const ALERT_FILTER_NAMES: Record<Exclude<ComputerAlertFilter, 'any'>, string> = {
-    cpu: 'CPU',
-    memory: ALERT_METRIC_LABELS.memory,
-    disk: ALERT_METRIC_LABELS.disk,
-  };
-
-  /** "Arquivadas": a opção sem valor ("Ocultar") vem do `allLabel` do seletor. */
-  const ARCHIVED_OPTIONS = [{ value: 'yes', label: 'Mostrar' }];
-  const CONNECTION_OPTIONS = [
-    { value: 'online', label: 'Online agora' },
-    { value: 'offline', label: 'Offline' },
-  ];
-
-  /** "Precisa de manutenção": preventiva nunca feita ou vencida — as duas pedem a mesma visita. */
-  const MAINTENANCE_OPTIONS = [{ value: 'needed', label: 'Precisa de manutenção', tone: 'warning' as const }];
-
-  const KIND_FILTER_OPTIONS = COMPUTER_KINDS.map((kind) => ({
-    value: kind,
-    label: COMPUTER_KIND_LABELS[kind],
-  }));
-
-  /** "CPU elevada", "Memória elevada": a máquina com o alerta daquela peça aberto agora. */
-  const ALERT_FILTER_OPTIONS = COMPUTER_ALERT_FILTERS.map((alert) => ({
-    value: alert,
-    label: alert === 'any' ? 'Com alerta ativo' : `${ALERT_FILTER_NAMES[alert]} elevada`,
-  }));
-
   /**
    * O nome que a pessoa reconhece.
    *
@@ -140,61 +99,26 @@
    * computador da recepção" não sabe que ele se chama RECEPCAO-01. O nome técnico continua
    * embaixo, porque é por ele que o agente aparece no log.
    */
-  /**
-   * Quantos filtros estão ligados DENTRO de "Mais filtros" — busca e departamento ficam à
-   * vista e não contam. Com o bloco fechado, é o número no título que avisa que a lista está
-   * filtrada (um cartão do topo liga filtro daqui de dentro).
-   */
-  export function advancedFilterCount(filter: ComputerListFilter): number {
-    return [
-      filter.kind,
-      filter.onlyOnline || filter.onlyOffline,
-      filter.alert,
-      filter.healthStatus,
-      filter.needsMaintenance,
-      filter.includeArchived,
-    ].filter(Boolean).length;
-  }
-
-  function moreFiltersTitle(count: number): string {
-    if (count === 0) return 'Mais filtros';
-    if (count === 1) return 'Mais filtros · 1 ativo';
-
-    return `Mais filtros · ${count} ativos`;
-  }
-
-  function connectionOf(filter: ComputerListFilter): '' | 'online' | 'offline' {
-    if (filter.onlyOnline) return 'online';
-    if (filter.onlyOffline) return 'offline';
-
-    return '';
-  }
-
   export function displayNameOf(computer: Computer): string {
     return computer.displayName?.trim() || computer.hardware?.hostname?.trim() || computer.name;
   }
 </script>
 
 <script lang="ts">
-  import FilterX from '@lucide/svelte/icons/filter-x';
   import HardDrive from '@lucide/svelte/icons/hard-drive';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
 
+  import InventoryFilters from '../azuos-inventory-filters/azuos-inventory-filters.svelte';
   import ComputerMaintenanceStatus from '../azuos-computer-maintenance-status/azuos-computer-maintenance-status.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import Collapsible from '$lib/components/azuos-collapsible/azuos-collapsible.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
-  import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
-  import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import ReportExportActions from '$lib/components/azuos-report-export-actions/azuos-report-export-actions.svelte';
   import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
-  import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import {
     Table,
     TableActions,
@@ -212,23 +136,7 @@
   let { data, state, actions }: AzuosComputerListViewProps = $props();
 
   const summary = $derived(data.summary);
-  const connectionValue = $derived(connectionOf(data.filter));
-  const advancedCount = $derived(advancedFilterCount(data.filter));
   const tableView = useTableViewModel();
-
-  const hasActiveFilter = $derived(
-    Boolean(
-      data.filter.search ||
-      data.filter.department ||
-      data.filter.healthStatus ||
-      data.filter.kind ||
-      data.filter.alert ||
-      data.filter.needsMaintenance ||
-      data.filter.onlyOnline ||
-      data.filter.onlyOffline ||
-      data.filter.includeArchived,
-    ),
-  );
 
   /* Quem clica num cartão do topo precisa VER o resultado: a tela rola até os filtros.
      Variável comum, e não `$state`: este componente recebe uma prop chamada `state`, e com ela
@@ -253,14 +161,6 @@
   function filterByAlert(alert: ComputerAlertFilter) {
     actions.onAlertChange(data.filter.alert === alert ? '' : alert);
     scrollToFilters();
-  }
-
-  function changeConnection(value: string) {
-    if (value === 'online') return actions.onOnlineChange(true);
-    if (value === 'offline') return actions.onOfflineChange(true);
-
-    actions.onOnlineChange(false);
-    actions.onOfflineChange(false);
   }
 
   function scrollToFilters() {
@@ -365,126 +265,13 @@
   </StatCardGrid>
 
   <!-- Os filtros ficam juntos e acima da lista, para a pessoa ver de uma vez o que está
-       limitando o que ela enxerga. À vista só o que se usa toda hora — busca e departamento;
-       o resto mora em "Mais filtros", agrupado pelo que pergunta. Eram seis fileiras de
-       pastilhas soltas, e no celular a lista começava duas telas abaixo. -->
-  <div bind:this={filtersElement} class="flex scroll-mt-4 flex-col gap-3">
-    <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end">
-      <TextField
-        data={{
-          label: 'Buscar',
-          name: 'search',
-          value: data.filter.search,
-          placeholder: 'Nome da máquina, apelido ou responsável',
-        }}
-        ui={{ className: 'sm:flex-1' }}
-        actions={{ onChange: actions.onSearchChange }}
-      />
-      <FilterField data={{ label: 'Departamento' }}>
-        <OptionPicker
-          data={{ value: data.filter.department, options: data.departmentOptions ?? [] }}
-          ui={{ ariaLabel: 'Filtrar por departamento', allLabel: 'Todos os departamentos' }}
-          actions={{
-            onChange: (value: string) => actions.onDepartmentChange(value as Department | ''),
-          }}
-        />
-      </FilterField>
-    </div>
-
-    <!-- Abre já aberto quando a tela nasce filtrada; depois quem manda é o clique. -->
-    <Collapsible data={{ title: moreFiltersTitle(advancedCount) }} state={{ isOpen: advancedCount > 0 }}>
-      <div class="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        <!-- O que a máquina está fazendo AGORA: os mesmos filtros dos cartões do topo. -->
-        <fieldset class="flex min-w-0 flex-col gap-3">
-          <legend class="text-ink-500 mb-3 text-xs font-semibold tracking-wide uppercase">
-            Situação agora
-          </legend>
-          <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-4">
-            <FilterField data={{ label: 'Conexão' }}>
-              <OptionPicker
-                data={{ value: connectionValue, options: CONNECTION_OPTIONS }}
-                ui={{ ariaLabel: 'Filtrar por conexão', allLabel: 'Todas' }}
-                actions={{ onChange: changeConnection }}
-              />
-            </FilterField>
-            <FilterField data={{ label: 'Saúde' }}>
-              <OptionPicker
-                data={{ value: data.filter.healthStatus, options: HEALTH_FILTER_OPTIONS }}
-                ui={{ ariaLabel: 'Filtrar por saúde', allLabel: 'Toda a saúde' }}
-                actions={{
-                  onChange: (value: string) =>
-                    actions.onHealthStatusChange(value as HealthStatus | ''),
-                }}
-              />
-            </FilterField>
-            <FilterField data={{ label: 'Alertas' }}>
-              <OptionPicker
-                data={{ value: data.filter.alert, options: ALERT_FILTER_OPTIONS }}
-                ui={{ ariaLabel: 'Filtrar por alerta', allLabel: 'Todos' }}
-                actions={{
-                  onChange: (value: string) =>
-                    actions.onAlertChange(value as ComputerAlertFilter | ''),
-                }}
-              />
-            </FilterField>
-          </div>
-        </fieldset>
-
-        <fieldset class="flex min-w-0 flex-col gap-3">
-          <legend class="text-ink-500 mb-3 text-xs font-semibold tracking-wide uppercase">
-            Manutenção
-          </legend>
-          <FilterField data={{ label: 'Preventiva' }}>
-            <OptionPicker
-              data={{
-                value: data.filter.needsMaintenance ? 'needed' : '',
-                options: MAINTENANCE_OPTIONS,
-              }}
-              ui={{ ariaLabel: 'Filtrar por manutenção', allLabel: 'Todas' }}
-              actions={{
-                onChange: (value: string) => actions.onNeedsMaintenanceChange(value === 'needed'),
-              }}
-            />
-          </FilterField>
-        </fieldset>
-
-        <fieldset class="flex min-w-0 flex-col gap-3">
-          <legend class="text-ink-500 mb-3 text-xs font-semibold tracking-wide uppercase">
-            Cadastro
-          </legend>
-          <FilterField data={{ label: 'Tipo' }}>
-            <OptionPicker
-              data={{ value: data.filter.kind, options: KIND_FILTER_OPTIONS }}
-              ui={{ ariaLabel: 'Filtrar por tipo', allLabel: 'Todos os tipos' }}
-              actions={{
-                onChange: (value: string) => actions.onKindChange(value as ComputerKind | ''),
-              }}
-            />
-          </FilterField>
-          <FilterField data={{ label: 'Arquivadas' }}>
-            <OptionPicker
-              data={{ value: data.filter.includeArchived ? 'yes' : '', options: ARCHIVED_OPTIONS }}
-              ui={{ ariaLabel: 'Máquinas arquivadas', allLabel: 'Ocultar' }}
-              actions={{ onChange: (value: string) => actions.onArchivedChange(value === 'yes') }}
-            />
-          </FilterField>
-        </fieldset>
-      </div>
-    </Collapsible>
-
-    <!-- O que age sobre a lista logo abaixo: limpar os filtros e trocar entre tabela e cards.
-         "Limpar filtros" só aparece quando há o que limpar; quando o filtro escondeu tudo,
-         quem o oferece é o aviso de lista vazia — dois botões iguais só confundem. -->
-    <div class="flex flex-wrap items-center justify-end gap-2">
-      {#if hasActiveFilter && !state.isFilteredOut}
-        <ActionButton
-          data={{ label: 'Limpar filtros' }}
-          ui={{ variant: 'ghost', size: 'lg', icon: FilterX }}
-          actions={{ onClick: actions.onClearFilters }}
-        />
-      {/if}
-      <TableViewToggle />
-    </div>
+       limitando o que ela enxerga. -->
+  <div bind:this={filtersElement} class="scroll-mt-4">
+    <InventoryFilters
+      data={{ filter: data.filter, departmentOptions: data.departmentOptions ?? [] }}
+      state={{ isFilteredOut: state.isFilteredOut }}
+      {actions}
+    />
   </div>
 
   <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->

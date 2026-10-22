@@ -76,6 +76,7 @@ export const GENERIC_BY_DESIGN = [
   'popover',
   'separator',
   'collapsible',
+  'input-group',
 ];
 
 /** @param {string} folder */

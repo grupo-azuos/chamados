@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import ComputerListView, {
-  advancedFilterCount,
   displayNameOf,
   type ComputerListFilter,
   type ComputerSummary,
@@ -137,9 +136,9 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     });
   }
 
-  /* Os filtros além de busca e departamento moram em "Mais filtros", que nasce fechado. */
+  /* Os filtros além de busca e departamento moram no painel "Filtros", que nasce fechado. */
   async function openMoreFilters() {
-    await userEvent.click(screen.getByRole('button', { name: /Mais filtros/ }));
+    await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
   }
 
   // feliz
@@ -166,10 +165,10 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
   it('offers the archived choice as a named filter, not a loose checkbox', async () => {
     renderWithFilter();
 
+    await openMoreFilters();
     expect(screen.getByText('Arquivadas')).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).toBeNull();
 
-    await openMoreFilters();
     await userEvent.click(screen.getByRole('button', { name: 'Mostrar' }));
     expect(actions.onArchivedChange).toHaveBeenLastCalledWith(true);
   });
@@ -203,7 +202,6 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
   it('filters the machines that need maintenance from the grouped filters', async () => {
     renderWithFilter();
 
-    expect(screen.getByRole('button', { name: 'Mais filtros' })).toBeInTheDocument();
     await openMoreFilters();
     await userEvent.click(screen.getByRole('button', { name: 'Precisa de manutenção' }));
     expect(actions.onNeedsMaintenanceChange).toHaveBeenLastCalledWith(true);
@@ -214,7 +212,8 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
   it('announces and opens the grouped filters when the list arrives filtered', () => {
     renderWithFilter({ needsMaintenance: true, onlyOffline: true });
 
-    expect(screen.getByRole('button', { name: 'Mais filtros · 2 ativos' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('2 ativos')).toBeInTheDocument();
     /* Aberto sem clique: a pastilha ligada já está à vista. */
     expect(screen.getByRole('button', { name: 'Precisa de manutenção' })).toBeVisible();
   });
@@ -382,19 +381,5 @@ describe('AzuosComputerListView maintenance parity', () => {
       expect(within(section).getByText('2 alertas críticos ativos')).toBeInTheDocument();
       expect(within(section).getByText('100/100')).toBeInTheDocument();
     }
-  });
-});
-
-describe('advancedFilterCount', () => {
-  // feliz
-  it('counts each grouped filter that is on, online and offline as one', () => {
-    expect(
-      advancedFilterCount({ ...emptyFilter, onlyOffline: true, needsMaintenance: true, kind: 'notebook' }),
-    ).toBe(3);
-  });
-
-  // triste
-  it('ignores search and department, which stay in sight', () => {
-    expect(advancedFilterCount({ ...emptyFilter, search: 'recepção', department: 'RH' })).toBe(0);
   });
 });
