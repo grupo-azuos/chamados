@@ -80,6 +80,7 @@
 
 <script lang="ts">
   import { untrack } from 'svelte';
+  import ThemeToggle from '$lib/components/azuos-theme-toggle/azuos-theme-toggle.svelte';
   import { MediaQuery } from 'svelte/reactivity';
   import { cn } from '$lib/utils/cn';
   import SidebarControls from '$lib/components/azuos-sidebar-controls/azuos-sidebar-controls.svelte';
@@ -337,6 +338,10 @@
       class="flex min-h-[calc(3rem+env(safe-area-inset-top))] shrink-0 items-center gap-3 pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]"
     >
       <SidebarTrigger />
+      <div role="group" aria-label="Aparência" class="ml-auto flex items-center gap-2">
+        <span class="text-muted-foreground text-xs">Tema</span>
+        <ThemeToggle ui={{ variant: 'surface' }} />
+      </div>
     </header>
 
     <!-- A MARGEM DO CONTEÚDO É DA CASCA, e não de cada tela: quando cada tela definia a sua,
