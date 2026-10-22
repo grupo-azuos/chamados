@@ -263,6 +263,8 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
   onlyOnline: queryBooleanSchema.optional(),
   onlyOffline: queryBooleanSchema.optional(),
   alert: z.enum(COMPUTER_ALERT_FILTERS).optional(),
+  /** Só quem precisa de manutenção: preventiva nunca feita ou vencida. */
+  needsMaintenance: queryBooleanSchema.optional(),
   /** Por padrão as arquivadas NÃO vêm: elas saíram de uso e só atrapalhariam a lista. */
   includeArchived: z.coerce.boolean().optional(),
   /**

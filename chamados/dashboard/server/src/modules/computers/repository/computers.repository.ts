@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type AlertMetric } from '@template/shared/domain/computer-alert.util';
+import { preventiveDueBefore } from '@template/shared/domain/maintenance.util';
 import { MACHINE_TICKET_AREAS } from '@template/shared/domain/ticket-catalog.util';
 import {
   type ComputerAlertListQuery,
@@ -333,6 +334,7 @@ type ComputerFilter = Pick<
   | 'healthStatus'
   | 'kind'
   | 'alert'
+  | 'needsMaintenance'
   | 'includeArchived'
   | 'onlyDisposed'
   | 'disposalType'
@@ -352,6 +354,7 @@ function buildWhere(query: ComputerFilter, presence?: PresenceFilter): SQL | und
   if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
   if (query.kind) filters.push(eq(computers.kind, query.kind));
   if (query.alert) filters.push(alertFilter(query.alert));
+  if (query.needsMaintenance) filters.push(needsMaintenanceFilter());
   if (query.search) filters.push(searchFilter(query.search));
 
   return filters.length > 0 ? and(...filters) : undefined;
@@ -382,6 +385,21 @@ function presenceFilter({ onlineIds, wantOnline }: PresenceFilter): SQL {
 
   const isOnline = inArray(computers.id, onlineIds);
   return wantOnline ? isOnline : sql`not ${isOnline}`;
+}
+
+/**
+ * Quem precisa de manutenção: nunca foi aberta, ou a última preventiva (ou corretiva, que zera
+ * o mesmo relógio) venceu. Arquivada fica de fora mesmo com "Mostrar arquivadas": saiu de uso,
+ * e a lista não pode mandar o técnico abrir máquina parada.
+ */
+function needsMaintenanceFilter(): SQL {
+  const lastOpened = sql`(
+    select max(${qualified(maintenances.performedAt)}) from ${maintenances}
+    where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
+      and ${qualified(maintenances.type)} in ('preventive', 'corrective')
+  )`;
+
+  return sql`(${eq(computers.isArchived, false)} and (${lastOpened} is null or ${lastOpened} <= ${asTimestamp(preventiveDueBefore())}))`;
 }
 
 /** Chamado de Infra ou Manutenção — o de Sistema não é sobre a máquina. */
