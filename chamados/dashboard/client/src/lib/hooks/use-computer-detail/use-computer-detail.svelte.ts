@@ -200,8 +200,11 @@ export function useComputerDetailModel(id: number): ComputerDetailModel {
   const tickets = mirrorStore(
     createQuery(
       derived(ticketPageStore, (page) => ({
-        queryKey: [...TICKETS_QUERY_KEY, 'list', { computerId: id, page }],
-        queryFn: () => ticketsApi.list({ computerId: id, page, pageSize: TICKET_PAGE_SIZE }),
+        /* Só os chamados de Infra: a ficha é do módulo de Infraestrutura, e um chamado de
+           Sistema aberto por quem usa a máquina é sobre o software, não sobre ela. */
+        queryKey: [...TICKETS_QUERY_KEY, 'list', { computerId: id, area: 'infra', page }],
+        queryFn: () =>
+          ticketsApi.list({ computerId: id, area: 'infra', page, pageSize: TICKET_PAGE_SIZE }),
         placeholderData: keepPreviousData,
       })),
     ),
