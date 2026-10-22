@@ -241,7 +241,10 @@
   }
 </script>
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-5">
+<!-- max-w-(--breakpoint-2xl), e não 6xl como as outras listas: a tabela do inventário junta máquina,
+     responsável, saúde, manutenção com a próxima data, chamados, situação e visto por último, e
+     no 6xl a última coluna ficava cortada mesmo em tela cheia. -->
+<div class="mx-auto flex w-full max-w-(--breakpoint-2xl) flex-col gap-5">
   <PageHeader
     data={{
       title: 'Inventário',
