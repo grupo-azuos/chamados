@@ -4,6 +4,10 @@
 
   import AppErrorBoundary from '$lib/components/azuos-app-error-boundary/azuos-app-error-boundary.svelte';
   import '$lib/theme/tokens.css';
+  import { useThemeModel } from '$lib/theme/theme.svelte';
+
+  // O tema vale para a aplicação inteira; só o controle visual fica no perfil.
+  useThemeModel();
 
   /**
    * A WEB NÃO GUARDA SESSÃO, e não manda identidade.
