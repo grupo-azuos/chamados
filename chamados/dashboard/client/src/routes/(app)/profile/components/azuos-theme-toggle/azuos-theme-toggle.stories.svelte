@@ -4,7 +4,7 @@
   import ThemeToggle from './azuos-theme-toggle.svelte';
 
   const { Story } = defineMeta({
-    title: 'Primitives/AzuosThemeToggle',
+    title: 'Features/Profile/AzuosThemeToggle',
     component: ThemeToggle,
   });
 </script>
