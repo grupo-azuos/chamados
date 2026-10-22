@@ -369,7 +369,11 @@ export class GithubService {
     return local.filter((merge): merge is FetchedMerge => merge !== null);
   }
 
-  /** Merge com PR associada devolve `null`: ele já aparece como Pull Request. */
+  /**
+   * O merge que fechou um PR devolve `null`: ele já aparece como Pull Request. Só esse — o
+   * GitHub também associa ao commit qualquer PR que apenas o CONTÉM, como um PR aberto da
+   * develop para a main, e descartar por isso escondia do cronograma o trabalho de dias.
+   */
   private async toLocalMerge(
     commit: RawGithubCommit,
     owner: string,
@@ -381,8 +385,8 @@ export class GithubService {
       { headers: this.headers(token), signal: AbortSignal.timeout(10_000) },
     );
     if (!associated.ok) throw new BadGatewayException('Não foi possível identificar os merges sem PR.');
-    const pullRequests = (await associated.json()) as unknown[];
-    if (pullRequests.length) return null;
+    const pullRequests = (await associated.json()) as Array<{ merge_commit_sha?: string | null }>;
+    if (pullRequests.some((pr) => pr.merge_commit_sha === commit.sha)) return null;
 
     return localMergeFromCommit(commit);
   }

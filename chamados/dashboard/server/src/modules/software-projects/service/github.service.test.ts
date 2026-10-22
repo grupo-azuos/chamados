@@ -139,7 +139,10 @@ describe('GithubService', () => {
     const service = new GithubService({} as Database);
     vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
       if (String(url).endsWith('/pulls'))
-        return new Response(String(url).includes('def123456789') ? '[{"number":4}]' : '[]');
+        return new Response(String(url).includes('def123456789')
+            ? '[{"number":4,"merge_commit_sha":"def123456789"}]'
+            : '[]',
+        );
       if (String(url).includes('/users/')) return new Response(JSON.stringify({ name: 'Dev' }));
       return new Response(
         JSON.stringify([
@@ -171,6 +174,33 @@ describe('GithubService', () => {
       { externalId: 'abc1234', title: 'Merge feature local', author: 'dev', status: 'merged' },
     ]);
     expect(String(vi.mocked(fetch).mock.calls[0]?.[0])).toContain('sha=develop');
+  });
+
+  // triste
+  /* Um PR aberto da develop para a main CONTÉM todos os merges locais; não é o PR deles. Antes,
+     só por estar nele, o merge sumia — e com ele dias inteiros de trabalho no cronograma. */
+  it('keeps a local merge that is only contained in an open pull request', async () => {
+    const service = new GithubService({} as Database);
+    vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+      if (String(url).endsWith('/pulls'))
+        return new Response('[{"number":18,"state":"open","merge_commit_sha":"other-sha"}]');
+      if (String(url).includes('/users/')) return new Response(JSON.stringify({ name: 'Dev' }));
+      return new Response(
+        JSON.stringify([
+          {
+            sha: 'abc123456789',
+            html_url: 'https://github.com/org/repo/commit/abc123456789',
+            commit: { message: 'Merge feature local', committer: { date: '2026-10-20T12:00:00Z' } },
+            author: { login: 'dev' },
+            parents: [{ sha: 'one' }, { sha: 'two' }],
+          },
+        ]),
+      );
+    });
+
+    await expect(service.fetchLocalMerges('org', 'repo')).resolves.toMatchObject([
+      { externalId: 'abc1234', author: 'dev', status: 'merged' },
+    ]);
   });
 
   it('attributes resolved issues to the closer and uses the close date', async () => {
