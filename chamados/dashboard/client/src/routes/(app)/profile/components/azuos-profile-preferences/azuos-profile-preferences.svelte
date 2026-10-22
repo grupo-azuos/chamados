@@ -2,7 +2,7 @@
   import Palette from '@lucide/svelte/icons/palette';
 
   import EffectsToggle from '../azuos-effects-toggle/azuos-effects-toggle.svelte';
-  import ThemeToggle from '../azuos-theme-toggle/azuos-theme-toggle.svelte';
+  import ThemeToggle from '$lib/components/azuos-theme-toggle/azuos-theme-toggle.svelte';
 
   // Reutiliza os controles e o armazenamento existentes; o perfil só reúne as preferências.
 </script>
