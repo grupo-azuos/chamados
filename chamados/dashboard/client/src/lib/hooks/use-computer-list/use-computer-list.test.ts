@@ -228,11 +228,11 @@ describe('useComputerListModel', () => {
   it('asks the API only for machines that need maintenance when the filter is on', async () => {
     const model = await mountLoadedModel();
 
-    model.actions.onNeedsMaintenanceChange(true);
+    model.actions.onPreventiveChange('needed');
 
     await waitFor(() =>
       expect(computersApi.list).toHaveBeenCalledWith(
-        expect.objectContaining({ needsMaintenance: true }),
+        expect.objectContaining({ preventive: 'needed' }),
       ),
     );
   });
@@ -242,7 +242,7 @@ describe('useComputerListModel', () => {
     await mountLoadedModel();
 
     expect(computersApi.list).toHaveBeenCalledWith(
-      expect.objectContaining({ needsMaintenance: undefined }),
+      expect.objectContaining({ preventive: undefined }),
     );
   });
 

@@ -83,7 +83,7 @@ export function useDashboardModel(): DashboardModel {
          recorte do número do cartão, para a lista e o cartão nunca discordarem. */
       onOpenOpenTickets: () => void goto('/infra/tickets?status=open'),
       onOpenCriticalMachines: () => void goto('/infra/computers?healthStatus=critical'),
-      onOpenPreventiveDue: () => void goto('/infra/computers?needsMaintenance=true'),
+      onOpenPreventiveDue: () => void goto('/infra/computers?preventive=needed'),
       onOpenOutOfStock: () => void goto('/infra/parts?outOfStockOnly=true'),
     },
   };

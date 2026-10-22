@@ -16,7 +16,7 @@ const emptyFilter: InventoryFilter = {
   onlyOnline: false,
   onlyOffline: false,
   alert: '',
-  needsMaintenance: false,
+  preventive: '',
   includeArchived: false,
 };
 
@@ -28,7 +28,7 @@ const actions = {
   onOnlineChange: vi.fn(),
   onOfflineChange: vi.fn(),
   onAlertChange: vi.fn(),
-  onNeedsMaintenanceChange: vi.fn(),
+  onPreventiveChange: vi.fn(),
   onArchivedChange: vi.fn(),
   onClearFilters: vi.fn(),
 };
@@ -52,19 +52,31 @@ describe('AzuosInventoryFilters', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
     await userEvent.click(screen.getByRole('button', { name: 'Precisa de manutenção' }));
-    expect(actions.onNeedsMaintenanceChange).toHaveBeenLastCalledWith(true);
+    expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('needed');
+  });
+
+  it('filters the preventive by its situation: overdue, never done or up to date', async () => {
+    renderWith();
+    await userEvent.click(screen.getByRole('button', { name: /Filtros/ }));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Vencida' }));
+    expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('due');
+    await userEvent.click(screen.getByRole('button', { name: 'Nunca feita' }));
+    expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('never');
+    await userEvent.click(screen.getByRole('button', { name: 'Em dia' }));
+    expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('ok');
   });
 
   it('turns each active filter into a chip that switches it off', async () => {
-    renderWith({ onlyOffline: true, needsMaintenance: true });
+    renderWith({ onlyOffline: true, preventive: 'needed' });
 
     await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Offline' }));
     expect(actions.onOfflineChange).toHaveBeenLastCalledWith(false);
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Tirar o filtro Precisa de manutenção' }),
+      screen.getByRole('button', { name: 'Tirar o filtro Preventiva: Precisa de manutenção' }),
     );
-    expect(actions.onNeedsMaintenanceChange).toHaveBeenLastCalledWith(false);
+    expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('');
   });
 
   /* Chegou filtrada lá dentro: o painel nasce aberto e o botão conta. */
@@ -109,13 +121,20 @@ describe('activeFilterChips', () => {
   // feliz
   it('lists the grouped filters in the panel order, online and offline as one', () => {
     const chips = activeFilterChips(
-      { ...emptyFilter, includeArchived: true, onlyOnline: true, healthStatus: 'critical' },
+      {
+        ...emptyFilter,
+        includeArchived: true,
+        onlyOnline: true,
+        healthStatus: 'critical',
+        preventive: 'due',
+      },
       actions,
     );
 
     expect(chips.map((chip) => chip.label)).toEqual([
       'Online agora',
       'Saúde: Crítica',
+      'Preventiva: Vencida',
       'Com arquivadas',
     ]);
   });

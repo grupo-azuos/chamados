@@ -334,7 +334,7 @@ type ComputerFilter = Pick<
   | 'healthStatus'
   | 'kind'
   | 'alert'
-  | 'needsMaintenance'
+  | 'preventive'
   | 'includeArchived'
   | 'onlyDisposed'
   | 'disposalType'
@@ -354,7 +354,7 @@ function buildWhere(query: ComputerFilter, presence?: PresenceFilter): SQL | und
   if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
   if (query.kind) filters.push(eq(computers.kind, query.kind));
   if (query.alert) filters.push(alertFilter(query.alert));
-  if (query.needsMaintenance) filters.push(needsMaintenanceFilter());
+  if (query.preventive) filters.push(preventiveFilter(query.preventive));
   if (query.search) filters.push(searchFilter(query.search));
 
   return filters.length > 0 ? and(...filters) : undefined;
@@ -388,18 +388,27 @@ function presenceFilter({ onlineIds, wantOnline }: PresenceFilter): SQL {
 }
 
 /**
- * Quem precisa de manutenção: nunca foi aberta, ou a última preventiva (ou corretiva, que zera
- * o mesmo relógio) venceu. Arquivada fica de fora mesmo com "Mostrar arquivadas": saiu de uso,
- * e a lista não pode mandar o técnico abrir máquina parada.
+ * A situação da PREVENTIVA, pela mesma régua do selo da tela (`preventiveStatusOf`): a última
+ * preventiva ou corretiva (que zera o mesmo relógio) contra o corte de vencimento.
+ *
+ * Arquivada fica de fora mesmo com "Mostrar arquivadas": saiu de uso, não tem selo de
+ * preventiva, e a lista não pode mandar o técnico abrir máquina parada.
  */
-function needsMaintenanceFilter(): SQL {
+function preventiveFilter(preventive: NonNullable<ComputerFilter['preventive']>): SQL {
   const lastOpened = sql`(
     select max(${qualified(maintenances.performedAt)}) from ${maintenances}
     where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
       and ${qualified(maintenances.type)} in ('preventive', 'corrective')
   )`;
+  const cutoff = asTimestamp(preventiveDueBefore());
+  const byStatus: Record<typeof preventive, SQL> = {
+    needed: sql`(${lastOpened} is null or ${lastOpened} <= ${cutoff})`,
+    due: sql`${lastOpened} <= ${cutoff}`,
+    never: sql`${lastOpened} is null`,
+    ok: sql`${lastOpened} > ${cutoff}`,
+  };
 
-  return sql`(${eq(computers.isArchived, false)} and (${lastOpened} is null or ${lastOpened} <= ${asTimestamp(preventiveDueBefore())}))`;
+  return sql`(${eq(computers.isArchived, false)} and ${byStatus[preventive]})`;
 }
 
 /** A máquina com alerta ABERTO agora — de qualquer peça, ou da peça pedida. */

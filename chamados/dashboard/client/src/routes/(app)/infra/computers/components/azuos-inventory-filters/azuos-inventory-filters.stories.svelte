@@ -11,7 +11,7 @@
     onlyOnline: false,
     onlyOffline: false,
     alert: '',
-    needsMaintenance: false,
+    preventive: '',
     includeArchived: false,
   };
 
@@ -31,7 +31,7 @@
     onOnlineChange: () => {},
     onOfflineChange: () => {},
     onAlertChange: () => {},
-    onNeedsMaintenanceChange: () => {},
+    onPreventiveChange: () => {},
     onArchivedChange: () => {},
     onClearFilters: () => {},
   };
@@ -51,7 +51,7 @@
   name="Filtered"
   args={{
     data: {
-      filter: { ...emptyFilter, needsMaintenance: true, onlyOffline: true, kind: 'notebook' },
+      filter: { ...emptyFilter, preventive: 'needed', onlyOffline: true, kind: 'notebook' },
       departmentOptions,
     },
     actions,
@@ -78,7 +78,7 @@
         onlyOnline: true,
         healthStatus: 'critical',
         alert: 'memory',
-        needsMaintenance: true,
+        preventive: 'needed',
         kind: 'desktop',
         includeArchived: true,
       },

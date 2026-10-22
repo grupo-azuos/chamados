@@ -80,7 +80,7 @@ const emptyFilter: ComputerListFilter = {
   onlyOnline: false,
   onlyOffline: false,
   alert: '',
-  needsMaintenance: false,
+  preventive: '',
 };
 
 const actions = {
@@ -92,7 +92,7 @@ const actions = {
   onOfflineChange: vi.fn(),
   onKindChange: vi.fn(),
   onAlertChange: vi.fn(),
-  onNeedsMaintenanceChange: vi.fn(),
+  onPreventiveChange: vi.fn(),
   onClearFilters: vi.fn(),
   onRetry: vi.fn(),
   onOpen: vi.fn(),
@@ -204,13 +204,13 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
 
     await openMoreFilters();
     await userEvent.click(screen.getByRole('button', { name: 'Precisa de manutenção' }));
-    expect(actions.onNeedsMaintenanceChange).toHaveBeenLastCalledWith(true);
+    expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('needed');
   });
 
   // triste
   /* Filtro ligado lá dentro não pode ficar invisível: o título conta, e o bloco nasce aberto. */
   it('announces and opens the grouped filters when the list arrives filtered', () => {
-    renderWithFilter({ needsMaintenance: true, onlyOffline: true });
+    renderWithFilter({ preventive: 'needed', onlyOffline: true });
 
     expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByLabelText('2 ativos')).toBeInTheDocument();
