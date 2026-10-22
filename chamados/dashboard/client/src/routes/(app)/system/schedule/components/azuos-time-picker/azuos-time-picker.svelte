@@ -21,9 +21,14 @@
 <script lang="ts">
   import Clock from '@lucide/svelte/icons/clock';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
-  import { Button } from '$lib/components/ui/button';
-  import * as Popover from '$lib/components/ui/popover';
-  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ActionButton, {
+    AzuosButtonPrimitive as Button,
+  } from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import {
+    Popover as PopoverRoot,
+    PopoverContent,
+    PopoverTrigger,
+  } from '$lib/components/azuos-popover/azuos-popover';
   import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
   import { cn } from '$lib/utils/cn';
 
@@ -57,8 +62,8 @@
     {#if data.isRequired}<span class="text-destructive" aria-hidden="true">*</span>{/if}
   </label>
   <input type="hidden" name={data.name} value={data.value} disabled={fieldState?.isDisabled} />
-  <Popover.Root open={isOpen} onOpenChange={handleOpenChange}>
-    <Popover.Trigger>
+  <PopoverRoot open={isOpen} onOpenChange={handleOpenChange}>
+    <PopoverTrigger>
       {#snippet child({ props })}
         <Button
           {...props}
@@ -78,8 +83,8 @@
           <ChevronDown class="ml-auto size-3.5 text-muted-foreground" aria-hidden="true" />
         </Button>
       {/snippet}
-    </Popover.Trigger>
-    <Popover.Content
+    </PopoverTrigger>
+    <PopoverContent
       align="start"
       collisionPadding={12}
       aria-label={`Selecionar horário de ${data.label.toLowerCase()}`}
@@ -118,8 +123,8 @@
         state={{ isDisabled: fieldState?.isDisabled }}
         actions={{ onClick: applyTime }}
       />
-    </Popover.Content>
-  </Popover.Root>
+    </PopoverContent>
+  </PopoverRoot>
   {#if fieldState?.error}
     <p id={errorId} role="alert" class="text-xs font-medium text-destructive">{fieldState.error}</p>
   {/if}
