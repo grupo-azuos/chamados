@@ -50,6 +50,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     preview: { port: 5105, strictPort: false },
-    build: { outDir: 'dist', sourcemap: true },
+    /* Sem source map no build: com ele, o código-fonte inteiro da tela ia para produção e
+       ficava legível no DevTools → Sources de qualquer pessoa. Para depurar, `vite dev`. */
+    build: { outDir: 'dist', sourcemap: false },
   };
 });
