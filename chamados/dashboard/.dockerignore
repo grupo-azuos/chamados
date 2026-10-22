@@ -3,8 +3,16 @@ node_modules
 **/dist
 **/coverage
 **/storybook-static
+# Gerados pelo SvelteKit e pelo Playwright. O build regera o `.svelte-kit` sozinho; copiá-lo do
+# disco só faria a camada do `COPY . .` mudar a cada `vite dev` local, sem mudar o resultado.
+**/.svelte-kit
+**/test-results
+**/playwright-report
 .env
 **/.env
+# `.env.local`, `.env.production`... também ficam fora: o Vite lê esses arquivos no build e
+# gravaria no bundle o que estiver numa máquina de dev. O que o build precisa entra por `ARG`.
+**/.env.*
 !**/.env.example
 .git
 **/*.tsbuildinfo
