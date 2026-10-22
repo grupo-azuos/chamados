@@ -33,7 +33,7 @@ function filterGithubEvents(events: SoftwareTimelineEvent[], filters: ScheduleFi
   return events.filter(
     (event) =>
       (!filters.project || String(event.projectId) === filters.project) &&
-      (!filters.author || (event.author ?? '__unknown__') === filters.author) &&
+      (!filters.author || authorKeyOf(event) === filters.author) &&
       (!filters.type || event.type === filters.type),
   );
 }
@@ -64,11 +64,27 @@ function projectFilterOptions(
   ];
 }
 
+/**
+ * A pessoa por trás de uma atividade: o nome, sem acento nem maiúscula, e não o login. A mesma
+ * pessoa chega com identificadores diferentes (login do GitHub, nome do commit, quem abriu o
+ * chamado) e, separada por eles, aparecia duas vezes no filtro e na produtividade.
+ */
+function authorKeyOf(event: Pick<SoftwareTimelineEvent, 'author' | 'authorName'>): string {
+  const name = (event.authorName || event.author || '').trim();
+  if (!name) return '__unknown__';
+
+  return name
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+}
+
 function authorFilterOptions(githubEvents: SoftwareTimelineEvent[], selectedAuthor: string) {
   const authors = new SvelteMap<string, string>();
   for (const event of githubEvents) {
-    const login = event.author ?? '__unknown__';
-    authors.set(login, event.authorName || (login === '__unknown__' ? 'Não informado' : login));
+    const key = authorKeyOf(event);
+    if (authors.has(key)) continue;
+    authors.set(key, event.authorName || event.author || 'Não informado');
   }
   if (selectedAuthor && !authors.has(selectedAuthor)) authors.set(selectedAuthor, selectedAuthor);
   return [
@@ -243,9 +259,9 @@ function summarizeDeveloperActivity(
     const kind = developerActivityKind(event);
     if (!kind) continue;
 
-    const authorKey = event.author ?? 'desconhecido';
+    const authorKey = authorKeyOf(event);
     const summary = activityByDeveloper.get(authorKey) ?? {
-      author: event.authorName || authorKey,
+      author: event.authorName || event.author || 'desconhecido',
       mergedPullRequests: 0,
       resolvedIssues: 0,
     };

@@ -104,6 +104,54 @@ describe('daily GitHub PRs', () => {
       label: 'autor-sem-atividade',
     });
   });
+  // feliz
+  /* A mesma pessoa com dois identificadores (login do GitHub e nome do commit) é uma só no
+     filtro e na produtividade — com ou sem acento no nome. */
+  it('groups the same person under one author even with different logins', async () => {
+    const pr = { ...activity(1), author: 'vinicius-gpl', authorName: 'Vinícius Gabriel' };
+    const merge = {
+      ...activity(2),
+      type: 'merge' as const,
+      author: 'Vinicius Gabriel',
+      authorName: 'Vinicius Gabriel',
+    };
+    const other = { ...activity(3), author: 'gui', authorName: 'Guilherme Siqueira' };
+    vi.mocked(softwareTimelineApi.list).mockResolvedValue({
+      items: [pr, merge, other],
+      total: 3,
+      page: 1,
+      pageSize: 200,
+    });
+    const model = await mount();
+
+    const vinicius = model.data.filters.authorOptions.filter((option) =>
+      option.label.startsWith('Vin'),
+    );
+    expect(vinicius).toHaveLength(1);
+    model.actions.onAuthorFilterChange(vinicius[0]!.value);
+    expect(model.data.githubEvents.map((event) => event.id).sort()).toEqual([1, 2]);
+  });
+
+  // triste
+  it('keeps different people with the same surname apart', async () => {
+    vi.mocked(softwareTimelineApi.list).mockResolvedValue({
+      items: [
+        { ...activity(1), author: 'ana', authorName: 'Ana Lima' },
+        { ...activity(2), author: 'bia', authorName: 'Bia Lima' },
+      ],
+      total: 2,
+      page: 1,
+      pageSize: 200,
+    });
+    const model = await mount();
+
+    expect(model.data.filters.authorOptions.map((option) => option.label)).toEqual([
+      'Todos os autores',
+      'Ana Lima',
+      'Bia Lima',
+    ]);
+  });
+
   it('combines author, type and project filters across counts, days and the daily dialog', async () => {
     const model = await mount();
     const today = new Date().toLocaleDateString('sv-SE');
