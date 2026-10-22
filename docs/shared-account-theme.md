@@ -13,8 +13,9 @@ receber foco, voltar do histórico, ficar visíveis e a cada dois segundos enqua
 visíveis. Cookies ou localStorage bloqueados não impedem alternar o tema na aba.
 
 As cores claras e escuras vêm dos tokens de `chamados`. A tela `/profile` reúne
-identidade e dados da conta. O controle de tema fica no cabeçalho do app shell,
-visível em todas as telas com menu, inclusive no celular ou com a barra recolhida. Os campos de organização só aparecem
+identidade, dados da conta e o cartão **Preferências**, com a linha **Tema**
+e o seletor claro/escuro. O controle fica somente no perfil, como na referência
+do CertMonitor; a preferência continua aplicada à aplicação inteira. Os campos de organização só aparecem
 quando a identidade existente os fornece. O perfil do chamados mantém seu desenho
 e suas funções. O admin-console preserva os formulários de edição, foto e senha,
 e continua aceitando `/account` como endereço anterior.
@@ -44,4 +45,4 @@ Publique o admin-console com essa permissão antes dos demais sistemas.
 
 A API `public-api` não possui interface de usuário; não recebe perfil, botão ou tema.
 
-O seletor de tema também fica no cabeçalho global do app shell. O controle já existente no perfil foi preservado.
+O controle de tema do chamados permanece somente no perfil, preservando seu desenho e suas funções.
