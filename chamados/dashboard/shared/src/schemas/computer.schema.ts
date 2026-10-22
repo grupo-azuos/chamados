@@ -42,6 +42,15 @@ export const COMPUTER_ALERT_FILTERS = ['any', ...ALERT_METRICS] as const;
 
 export type ComputerAlertFilter = (typeof COMPUTER_ALERT_FILTERS)[number];
 
+/**
+ * O filtro da PREVENTIVA: a mesma situação do selo da tela (em dia, vencida, nunca feita), mais
+ * "precisa de manutenção" — vencida OU nunca feita, que pedem a mesma visita e é o atalho do
+ * painel.
+ */
+export const COMPUTER_PREVENTIVE_FILTERS = ['needed', 'due', 'never', 'ok'] as const;
+
+export type ComputerPreventiveFilter = (typeof COMPUTER_PREVENTIVE_FILTERS)[number];
+
 /** O NOME do departamento, como o RH o escreve — ver `department.schema.ts`. */
 export const departmentSchema = departmentNameSchema('Escolha um departamento da lista');
 
@@ -263,8 +272,7 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
   onlyOnline: queryBooleanSchema.optional(),
   onlyOffline: queryBooleanSchema.optional(),
   alert: z.enum(COMPUTER_ALERT_FILTERS).optional(),
-  /** Só quem precisa de manutenção: preventiva nunca feita ou vencida. */
-  needsMaintenance: queryBooleanSchema.optional(),
+  preventive: z.enum(COMPUTER_PREVENTIVE_FILTERS).optional(),
   /** Por padrão as arquivadas NÃO vêm: elas saíram de uso e só atrapalhariam a lista. */
   includeArchived: z.coerce.boolean().optional(),
   /**
