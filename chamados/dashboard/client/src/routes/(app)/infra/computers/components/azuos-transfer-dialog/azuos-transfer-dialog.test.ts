@@ -66,7 +66,7 @@ function renderDialog(props: Record<string, unknown> = {}) {
 describe('currentPlaceOf', () => {
   // feliz
   it('says where the machine is today', () => {
-    expect(currentPlaceOf(computer)).toBe('FINANCEIRO');
+    expect(currentPlaceOf(computer)).toBe('Financeiro');
   });
 
   // triste
@@ -107,7 +107,7 @@ describe('AzuosTransferDialog', () => {
   it('shows where the machine is today', () => {
     renderDialog();
 
-    expect(screen.getByText(/hoje em/)).toHaveTextContent('FINANCEIRO');
+    expect(screen.getByText(/hoje em/)).toHaveTextContent('Financeiro');
   });
 
   it('asks what happens to each peripheral', () => {

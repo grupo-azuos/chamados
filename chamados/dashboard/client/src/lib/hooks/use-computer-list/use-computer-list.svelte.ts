@@ -2,7 +2,7 @@ import { goto } from '$app/navigation';
 import { createQuery } from '@tanstack/svelte-query';
 import { type HealthStatus } from '@template/shared/domain/computer-health.util';
 import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
-import { type Department } from '@template/shared/domain/department.util';
+import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
 import {
   type Computer,
   type ComputerAlertFilter,
@@ -19,6 +19,7 @@ import {
   allSchedulesQuery,
   schedulesByComputer,
 } from '$lib/hooks/use-maintenance-schedule/use-maintenance-schedule.svelte';
+import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 
@@ -60,6 +61,8 @@ export type ComputerListModel = {
     filter: ComputerListFilter;
     /** O dia agendado de cada máquina (`AAAA-MM-DD`), pelo id. Só as que têm agendamento. */
     scheduledFor: Record<number, string>;
+    /** As opções do filtro de departamento: as do RH e, depois da linha, as daqui. */
+    departmentOptions: DepartmentChoice[];
   };
   state: {
     isLoading: boolean;
@@ -191,6 +194,7 @@ export function useComputerListModel(): ComputerListModel {
   /* Os agendamentos vêm da Manutenção, numa consulta à parte: o agendamento é dela, e a
      lista só mostra. Sem filtro pelo mesmo motivo do resumo — são poucos, um por máquina. */
   const schedules = mirrorStore(allSchedulesQuery());
+  const departments = useDepartmentOptionsModel();
 
   return {
     /* `get` em vez de valor: o objeto é montado uma vez e a tela lê dele a cada mudança. Com
@@ -202,6 +206,7 @@ export function useComputerListModel(): ComputerListModel {
         summary: summary.current.data ? summarizeComputers(summary.current.data.items) : null,
         filter: filter.current,
         scheduledFor: scheduledDayByComputer(schedules.current.data),
+        departmentOptions: departments.options,
       };
     },
     get state() {

@@ -1,15 +1,9 @@
-import { DEPARTMENTS } from '@template/shared/domain/department.util';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { chamadosSchema } from './chamados.schema';
 
 import { computers } from './computers.schema';
-
-/** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
-function valuesFor(values: readonly string[]) {
-  return sql.raw(values.map((value) => `'${value}'`).join(', '));
-}
 
 /**
  * CADA MUDANÇA DE DEPARTAMENTO de uma máquina — de onde saiu, para onde foi, quem e quando.
@@ -34,8 +28,8 @@ export const computerTransfers = chamadosSchema.table(
       .references(() => computers.id, { onDelete: 'restrict' }),
 
     /* Nulo dos dois lados é um destino de verdade: "sem departamento" é a prateleira. */
-    fromDepartment: text('from_department', { enum: DEPARTMENTS }),
-    toDepartment: text('to_department', { enum: DEPARTMENTS }),
+    fromDepartment: text('from_department'),
+    toDepartment: text('to_department'),
 
     /* Quem levou a máquina. Texto livre: pode ser alguém sem login no sistema. */
     responsible: text('responsible'),
@@ -52,14 +46,6 @@ export const computerTransfers = chamadosSchema.table(
   (table) => [
     /* "Por onde esta máquina andou" é a consulta da ficha, do mais novo para o mais velho. */
     index('computer_transfers_computer_time_idx').on(table.computerId, table.createdAt.desc()),
-    check(
-      'computer_transfers_from_valid',
-      sql`${table.fromDepartment} is null or ${table.fromDepartment} in (${valuesFor(DEPARTMENTS)})`,
-    ),
-    check(
-      'computer_transfers_to_valid',
-      sql`${table.toDepartment} is null or ${table.toDepartment} in (${valuesFor(DEPARTMENTS)})`,
-    ),
     /* Sair e chegar no mesmo lugar é um evento que não aconteceu. O banco recusa aqui porque
        um histórico com linhas vazias é um histórico que ninguém confere. */
     check(

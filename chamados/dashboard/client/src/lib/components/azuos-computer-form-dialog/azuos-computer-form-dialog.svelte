@@ -1,9 +1,9 @@
 <script lang="ts" module>
   import { COMPUTER_KINDS, COMPUTER_KIND_LABELS } from '@template/shared/domain/computer-kind.util';
-  import { DEPARTMENTS, DEPARTMENT_LABELS } from '@template/shared/domain/department.util';
 
   import type { ComputerResponsible } from '@template/shared/schemas/computer.schema';
 
+  import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import { type FormFieldState } from '$lib/types/form-field.type';
 
   export type ComputerFormField = 'name' | 'kind' | 'displayName' | 'responsibleName' | 'department';
@@ -26,9 +26,19 @@
     data: {
       mode: 'create' | 'edit';
       responsibles?: ComputerResponsible[];
+      /** Os departamentos do RH e, depois da linha, os daqui — ver `use-department-options`. */
+      departmentOptions?: OptionPickerOption[];
       fields: Record<ComputerFormField, FormFieldState>;
     };
-    state: { isOpen: boolean; isSubmitting?: boolean; error?: string | null; isLoadingResponsibles?: boolean; responsiblesError?: string | null };
+    state: {
+      isOpen: boolean;
+      isSubmitting?: boolean;
+      error?: string | null;
+      isLoadingResponsibles?: boolean;
+      responsiblesError?: string | null;
+      /** O RH não respondeu: a lista de departamentos tem só os daqui. */
+      isRhUnavailable?: boolean;
+    };
     actions: {
       onChange: (field: ComputerFormField, value: string) => void;
       onBlur: (field: ComputerFormField) => void;
@@ -39,13 +49,7 @@
 
   const KIND_OPTIONS = COMPUTER_KINDS.map((kind) => ({ value: kind, label: COMPUTER_KIND_LABELS[kind] }));
 
-  const DEPARTMENT_OPTIONS = [
-    { value: '', label: 'Sem departamento' },
-    ...DEPARTMENTS.map((department) => ({
-      value: department,
-      label: DEPARTMENT_LABELS[department],
-    })),
-  ];
+  const NO_DEPARTMENT = { value: '', label: 'Sem departamento' };
 </script>
 
 <script lang="ts">
@@ -192,11 +196,14 @@
         <div class="flex flex-col gap-1.5">
           <span class="text-ink-700 text-sm font-medium">Departamento</span>
           <OptionPicker
-            data={{ value: fields.department.value, options: DEPARTMENT_OPTIONS }}
-            ui={{ ariaLabel: 'Departamento', fullWidth: true }}
+            data={{ value: fields.department.value, options: [NO_DEPARTMENT, ...(data.departmentOptions ?? [])] }}
+            ui={{ ariaLabel: 'Departamento', fullWidth: true, mode: 'combobox' }}
             state={{ isDisabled: state.isSubmitting }}
             actions={{ onChange: (value: string) => actions.onChange('department', value) }}
           />
+          {#if state.isRhUnavailable}
+            <p role="status" class="text-warning text-xs">A lista do RH não carregou. Aparecem só os departamentos daqui.</p>
+          {/if}
         </div>
       </div>
 

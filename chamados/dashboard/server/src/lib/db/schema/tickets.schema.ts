@@ -1,6 +1,5 @@
 import {
   TICKET_AREAS,
-  TICKET_DEPARTMENTS,
   TICKET_PROBLEM_TYPES,
   type TicketProblemType,
 } from '@template/shared/domain/ticket-catalog.util';
@@ -73,7 +72,9 @@ export const tickets = chamadosSchema.table(
      * área nenhuma.
      */
     area: text('area', { enum: TICKET_AREAS }).notNull().default('infra'),
-    department: text('department', { enum: TICKET_DEPARTMENTS }).notNull(),
+    /* O NOME do departamento, como o RH o escreve. Sem lista fechada no banco: a lista é do
+       RH e muda sem migration — ver `department.util.ts`. */
+    department: text('department').notNull(),
     problemType: text('problem_type', {
       enum: TICKET_PROBLEM_TYPES as [TicketProblemType, ...TicketProblemType[]],
     }).notNull(),
@@ -144,10 +145,6 @@ export const tickets = chamadosSchema.table(
     check('tickets_status_valid', sql`${table.status} in (${valuesFor(TICKET_STATUSES)})`),
     check('tickets_priority_valid', sql`${table.priority} in (${valuesFor(TICKET_PRIORITIES)})`),
     check('tickets_area_valid', sql`${table.area} in (${valuesFor(TICKET_AREAS)})`),
-    check(
-      'tickets_department_valid',
-      sql`${table.department} in (${valuesFor(TICKET_DEPARTMENTS)})`,
-    ),
     check(
       'tickets_problem_type_valid',
       sql`${table.problemType} in (${valuesFor(TICKET_PROBLEM_TYPES)})`,

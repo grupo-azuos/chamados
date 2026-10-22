@@ -1,3 +1,4 @@
+import { departmentLabel } from '@template/shared/domain/department.util';
 import { type ComputerAlertInsert } from '../../../server/src/lib/db/schema/computer-alerts.schema';
 import { type ComputerInsert } from '../../../server/src/lib/db/schema/computers.schema';
 import { between, chance, fraction, pick, pickWeighted, timeRuler } from '../volume.util';
@@ -187,7 +188,8 @@ function generate(index: number): Generated {
          e apelido é o que as telas mostram no lugar do nome técnico. */
       displayName: `${PREFIXES[department][0]}${PREFIXES[department].slice(1).toLowerCase()} ${String(10 + index).padStart(2, '0')} — ${person.split(' ')[0]}`,
       responsibleName: person,
-      department,
+      /* O código só organiza o gerador; o que se grava é o nome, como o RH escreve. */
+      department: departmentLabel(department),
       os: model.memoryGb <= 8 ? 'Microsoft Windows 10 Pro' : 'Microsoft Windows 11 Pro',
       platform: 'windows',
       platformVersion: model.memoryGb <= 8 ? '10.0.19045' : '10.0.26100',

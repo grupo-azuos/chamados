@@ -89,6 +89,7 @@ import {
   TicketWhatsappNotifierService,
 } from './ticket-whatsapp-notifier.service';
 import { TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
+import { DepartmentsService } from '../../departments/service/departments.service';
 
 /** Sem repetir — somar a mesma área participante duas vezes não deve duplicar na resposta. */
 function dedupeAreas(areas: readonly TicketArea[]): TicketArea[] {
@@ -166,6 +167,7 @@ export class TicketsService {
     @Optional() private readonly notifier?: TicketWhatsappNotifierService,
     @Optional() @Inject(ENV) private readonly env?: Env,
     @Optional() private readonly profiles?: AdminConsoleProfileProvider,
+    @Optional() private readonly departments?: DepartmentsService,
   ) {}
 
   /** O link para enviar o print ou um anexo do chamado que vai ser aberto. */
@@ -495,7 +497,8 @@ export class TicketsService {
       name: user.name,
       email: user.email,
       phone,
-      department: departmentFromText(profile?.department),
+      /* O texto do admin-console é livre: vira departamento só quando bate com um da lista. */
+      department: departmentFromText(profile?.department, (await this.departments?.names()) ?? []),
       jobTitle: profile?.jobTitle ?? null,
     };
   }

@@ -64,6 +64,27 @@
 
 <Story name="Disabled" args={{ ...baseArgs, state: { isDisabled: true } }} template={inBox} />
 
+<!-- Dois grupos na mesma lista: os departamentos do RH e, depois da linha, os que existem só aqui. -->
+<Story
+  name="GroupedWithDivider"
+  args={{
+    data: {
+      value: '',
+      options: [
+        { value: 'Comercial', label: 'Comercial' },
+        { value: 'Contábil', label: 'Contábil' },
+        { value: 'Fiscal', label: 'Fiscal' },
+        { value: 'ANALYZE', label: 'ANALYZE', separatorBefore: true },
+        { value: 'CERTIFICADO', label: 'CERTIFICADO' },
+        { value: 'RECEPÇÃO', label: 'RECEPÇÃO' },
+      ],
+    },
+    ui: { ariaLabel: 'Departamento', mode: 'combobox' },
+    actions: { onChange: () => {} },
+  }}
+  template={inBox}
+/>
+
 <Story
   name="SelectedNameTooltip"
   args={{

@@ -1,3 +1,4 @@
+import { type DepartmentChoice } from '@template/shared/domain/department.util';
 import { createForm } from '@tanstack/svelte-form';
 import { page } from '$app/state';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
@@ -22,6 +23,7 @@ import {
 import { readError } from '$lib/api/http-client';
 import { ticketsApi } from '$lib/api/tickets.api';
 import { toFieldState } from '$lib/hooks/use-form-projection/use-form-projection.svelte';
+import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { type FormFieldState } from '$lib/types/form-field.type';
 import { writable } from 'svelte/store';
@@ -57,6 +59,8 @@ export type OpenTicketModel = {
     attachments: File[];
     opened: OpenedTicket | null;
     systemProjects: { value: string; label: string }[];
+    /** Os departamentos do RH e, depois da linha, os daqui. */
+    departmentOptions: DepartmentChoice[];
     /** Quem atende a área escolhida — as opções de "com quem você quer falar". */
     assignees: { value: string; label: string }[];
     /**
@@ -118,6 +122,7 @@ const EMPTY_VALUES: TicketFormValues = {
  * é a forma mais certa de ela voltar sem saber o número.
  */
 export function useOpenTicketModel(): OpenTicketModel {
+  const departments = useDepartmentOptionsModel();
   let screenshot = $state<File | null>(null);
   /* Os arquivos só existem enquanto o formulário está aberto: eles viajam junto com o
      chamado, num envio só, e não há onde guardá-los antes de o chamado existir. */
@@ -272,6 +277,7 @@ export function useOpenTicketModel(): OpenTicketModel {
           value: String(project.id),
           label: project.name,
         })),
+        departmentOptions: departments.options,
       };
     },
     get state() {

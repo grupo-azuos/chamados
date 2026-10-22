@@ -1,7 +1,6 @@
 <script lang="ts" module>
+  import { type DepartmentChoice } from '@template/shared/domain/department.util';
   import {
-    TICKET_DEPARTMENTS,
-    TICKET_DEPARTMENT_LABELS,
     ticketAreaLabel,
     ticketDepartmentLabel,
     ticketProblemTypeLabel,
@@ -60,6 +59,8 @@
       total: number;
       dashboard: TicketDashboard | null;
       filter: TicketListFilter;
+      /** Os departamentos do RH e, depois da linha, os daqui. */
+      departmentOptions?: DepartmentChoice[];
       paging?: {
         page: number;
         pageSize: number;
@@ -102,11 +103,6 @@
     value: priority,
     label: TICKET_PRIORITY_LABELS[priority],
     tone: ticketPriorityTone(priority),
-  }));
-
-  const DEPARTMENT_FILTER_OPTIONS = TICKET_DEPARTMENTS.map((department) => ({
-    value: department,
-    label: TICKET_DEPARTMENT_LABELS[department],
   }));
 
   /**
@@ -375,7 +371,7 @@
       <div class="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4">
         <FilterField data={{ label: 'Departamento' }}>
           <OptionPicker
-            data={{ value: data.filter.department, options: DEPARTMENT_FILTER_OPTIONS }}
+            data={{ value: data.filter.department, options: data.departmentOptions ?? [] }}
             ui={{ ariaLabel: 'Filtrar por departamento', allLabel: 'Todos os departamentos' }}
             actions={{
               onChange: (value: string) =>
