@@ -32,6 +32,8 @@ export type ComputerListFilter = {
   onlyOnline: boolean;
   onlyOffline: boolean;
   alert: ComputerAlertFilter | '';
+  /** Só quem precisa de manutenção: preventiva nunca feita ou vencida. */
+  needsMaintenance: boolean;
   /** Arquivadas saíram de uso: só aparecem quando alguém pede por elas. */
   includeArchived: boolean;
 };
@@ -86,6 +88,7 @@ export type ComputerListModel = {
     onOnlineChange: (onlyOnline: boolean) => void;
     onOfflineChange: (onlyOffline: boolean) => void;
     onAlertChange: (alert: ComputerAlertFilter | '') => void;
+    onNeedsMaintenanceChange: (needsMaintenance: boolean) => void;
     onArchivedChange: (includeArchived: boolean) => void;
     onClearFilters: () => void;
     onRetry: () => void;
@@ -102,6 +105,7 @@ const EMPTY_FILTER: ComputerListFilter = {
   onlyOnline: false,
   onlyOffline: false,
   alert: '',
+  needsMaintenance: false,
   includeArchived: false,
 };
 
@@ -117,6 +121,7 @@ function scopeOf(filter: ComputerListFilter) {
     onlyOnline: filter.onlyOnline || undefined,
     onlyOffline: filter.onlyOffline || undefined,
     alert: filter.alert || undefined,
+    needsMaintenance: filter.needsMaintenance || undefined,
     includeArchived: filter.includeArchived || undefined,
   };
 }
@@ -238,6 +243,8 @@ export function useComputerListModel(): ComputerListModel {
           onlyOnline: onlyOffline ? false : current.onlyOnline,
         })),
       onAlertChange: (alert) => filterStore.update((current) => ({ ...current, alert })),
+      onNeedsMaintenanceChange: (needsMaintenance) =>
+        filterStore.update((current) => ({ ...current, needsMaintenance })),
       onArchivedChange: (includeArchived) =>
         filterStore.update((current) => ({ ...current, includeArchived })),
       onClearFilters: () => filterStore.set({ ...EMPTY_FILTER }),
@@ -283,6 +290,7 @@ function hasAnyFilter(filter: ComputerListFilter): boolean {
     filter.healthStatus !== '' ||
     filter.kind !== '' ||
     filter.alert !== '' ||
+    filter.needsMaintenance ||
     filter.includeArchived ||
     filter.onlyOnline ||
     filter.onlyOffline

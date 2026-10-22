@@ -224,6 +224,28 @@ describe('useComputerListModel', () => {
     );
   });
 
+  // feliz
+  it('asks the API only for machines that need maintenance when the filter is on', async () => {
+    const model = await mountLoadedModel();
+
+    model.actions.onNeedsMaintenanceChange(true);
+
+    await waitFor(() =>
+      expect(computersApi.list).toHaveBeenCalledWith(
+        expect.objectContaining({ needsMaintenance: true }),
+      ),
+    );
+  });
+
+  // triste
+  it('does not send the maintenance filter while it is off', async () => {
+    await mountLoadedModel();
+
+    expect(computersApi.list).toHaveBeenCalledWith(
+      expect.objectContaining({ needsMaintenance: undefined }),
+    );
+  });
+
   it('opens the machine record by its own address', async () => {
     const model = await mountLoadedModel();
 
