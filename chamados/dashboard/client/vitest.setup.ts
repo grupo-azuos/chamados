@@ -29,6 +29,28 @@ if (!Element.prototype.scrollIntoView) {
 }
 
 /**
+ * Nem a Web Animations API (`element.animate`), que as transições do Svelte (`slide`, `scale`)
+ * usam. O stub termina a animação na hora — avisando o `onfinish` —, para quem sai da tela sair
+ * de verdade e o teste ver o estado final.
+ */
+if (!Element.prototype.animate) {
+  Element.prototype.animate = function animate() {
+    const animation = {
+      onfinish: null as (() => void) | null,
+      currentTime: 0,
+      finished: Promise.resolve(),
+      cancel: () => {},
+      finish: () => {},
+      pause: () => {},
+      play: () => {},
+    };
+    setTimeout(() => animation.onfinish?.(), 0);
+
+    return animation as unknown as Animation;
+  };
+}
+
+/**
  * O jsdom também não implementa `matchMedia`. O `Sidebar` o consulta na montagem para
  * decidir entre a barra e a gaveta.
  */
