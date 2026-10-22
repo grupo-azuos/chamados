@@ -1,9 +1,10 @@
 import { goto } from '$app/navigation';
 import { createQuery } from '@tanstack/svelte-query';
-import { type HealthStatus } from '@template/shared/domain/computer-health.util';
-import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
+import { HEALTH_STATUSES, type HealthStatus } from '@template/shared/domain/computer-health.util';
+import { COMPUTER_KINDS, type ComputerKind } from '@template/shared/domain/computer-kind.util';
 import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
 import {
+  COMPUTER_ALERT_FILTERS,
   type Computer,
   type ComputerAlertFilter,
   type ComputerListItem,
@@ -21,7 +22,16 @@ import {
 } from '$lib/hooks/use-maintenance-schedule/use-maintenance-schedule.svelte';
 import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
+import {
+  fieldParser,
+  isFlag,
+  isText,
+  oneOf,
+  urlParser,
+  type FieldGuards,
+} from '$lib/utils/filter-fields.util';
 
 export type ComputerListFilter = {
   search: string;
@@ -32,6 +42,8 @@ export type ComputerListFilter = {
   onlyOnline: boolean;
   onlyOffline: boolean;
   alert: ComputerAlertFilter | '';
+  /** Só quem precisa de manutenção: preventiva nunca feita ou vencida. */
+  needsMaintenance: boolean;
   /** Arquivadas saíram de uso: só aparecem quando alguém pede por elas. */
   includeArchived: boolean;
 };
@@ -86,6 +98,7 @@ export type ComputerListModel = {
     onOnlineChange: (onlyOnline: boolean) => void;
     onOfflineChange: (onlyOffline: boolean) => void;
     onAlertChange: (alert: ComputerAlertFilter | '') => void;
+    onNeedsMaintenanceChange: (needsMaintenance: boolean) => void;
     onArchivedChange: (includeArchived: boolean) => void;
     onClearFilters: () => void;
     onRetry: () => void;
@@ -102,8 +115,25 @@ const EMPTY_FILTER: ComputerListFilter = {
   onlyOnline: false,
   onlyOffline: false,
   alert: '',
+  needsMaintenance: false,
   includeArchived: false,
 };
+
+/** Cada campo do filtro conferido sozinho: um campo salvo que não serve volta ao padrão. */
+const FILTER_GUARDS: FieldGuards<ComputerListFilter> = {
+  search: isText,
+  department: isText,
+  healthStatus: oneOf('', ...HEALTH_STATUSES),
+  kind: oneOf('', ...COMPUTER_KINDS),
+  onlyOnline: isFlag,
+  onlyOffline: isFlag,
+  alert: oneOf('', ...COMPUTER_ALERT_FILTERS),
+  needsMaintenance: isFlag,
+  includeArchived: isFlag,
+};
+
+/** O nome desta tela no armazém dos filtros. Estável: renomear faz todo mundo perder o salvo. */
+export const COMPUTER_LIST_FILTER_SCREEN = 'infra-computers';
 
 export const COMPUTERS_QUERY_KEY = ['computers'] as const;
 export const COMPUTER_NAME_REFRESH_MS = 60_000;
@@ -117,6 +147,7 @@ function scopeOf(filter: ComputerListFilter) {
     onlyOnline: filter.onlyOnline || undefined,
     onlyOffline: filter.onlyOffline || undefined,
     alert: filter.alert || undefined,
+    needsMaintenance: filter.needsMaintenance || undefined,
     includeArchived: filter.includeArchived || undefined,
   };
 }
@@ -162,7 +193,12 @@ export function useComputerListModel(): ComputerListModel {
      recebe as opções como store e é ela quem decide quando refazer a busca. Com `$state`,
      duas mudanças seguidas de filtro chegariam à consulta como uma emissão só, com o valor
      do meio — e a API seria chamada sem um dos filtros. */
-  const filterStore = writable<ComputerListFilter>({ ...EMPTY_FILTER });
+  const filterStore = persistedFilterStore<ComputerListFilter>({
+    screen: COMPUTER_LIST_FILTER_SCREEN,
+    defaults: EMPTY_FILTER,
+    parse: fieldParser(EMPTY_FILTER, FILTER_GUARDS),
+    fromUrl: urlParser(EMPTY_FILTER, FILTER_GUARDS),
+  });
   const filter = mirrorStore(filterStore);
 
   let exportingFormat = $state<ReportFormat | null>(null);
@@ -238,9 +274,11 @@ export function useComputerListModel(): ComputerListModel {
           onlyOnline: onlyOffline ? false : current.onlyOnline,
         })),
       onAlertChange: (alert) => filterStore.update((current) => ({ ...current, alert })),
+      onNeedsMaintenanceChange: (needsMaintenance) =>
+        filterStore.update((current) => ({ ...current, needsMaintenance })),
       onArchivedChange: (includeArchived) =>
         filterStore.update((current) => ({ ...current, includeArchived })),
-      onClearFilters: () => filterStore.set({ ...EMPTY_FILTER }),
+      onClearFilters: () => filterStore.clear(),
       onRetry: () => {
         void list.current.refetch();
         void summary.current.refetch();
@@ -283,6 +321,7 @@ function hasAnyFilter(filter: ComputerListFilter): boolean {
     filter.healthStatus !== '' ||
     filter.kind !== '' ||
     filter.alert !== '' ||
+    filter.needsMaintenance ||
     filter.includeArchived ||
     filter.onlyOnline ||
     filter.onlyOffline

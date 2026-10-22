@@ -1,10 +1,14 @@
 import { createQuery } from '@tanstack/svelte-query';
 import { type DepartmentChoice } from '@template/shared/domain/department.util';
 import {
+  TICKET_PROBLEM_TYPES,
   type TicketDepartment,
   type TicketProblemType,
 } from '@template/shared/domain/ticket-catalog.util';
 import {
+  TICKET_PRIORITIES,
+  TICKET_STATUS_GROUPS,
+  TICKET_STATUSES,
   type TicketPriority,
   type TicketStatus,
   type TicketStatusGroup,
@@ -18,7 +22,15 @@ import { ticketsApi, type TicketDashboard } from '$lib/api/tickets.api';
 import { type AreaContext } from '$lib/hooks/use-area-context/use-area-context.svelte';
 import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
+import {
+  fieldParser,
+  isText,
+  oneOf,
+  urlParser,
+  type FieldGuards,
+} from '$lib/utils/filter-fields.util';
 
 export const TICKETS_PAGE_SIZE = 15;
 
@@ -94,6 +106,16 @@ const EMPTY_FILTER: TicketListFilter = {
   problemType: '',
 };
 
+/** Cada campo do filtro conferido sozinho: um campo salvo que não serve volta ao padrão. */
+const FILTER_GUARDS: FieldGuards<TicketListFilter> = {
+  search: isText,
+  status: oneOf('', ...TICKET_STATUSES),
+  statusGroup: oneOf('', ...TICKET_STATUS_GROUPS),
+  priority: oneOf('', ...TICKET_PRIORITIES),
+  department: isText,
+  problemType: oneOf('', ...TICKET_PROBLEM_TYPES),
+};
+
 export const TICKETS_QUERY_KEY = ['tickets'] as const;
 
 /**
@@ -132,7 +154,13 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
      recebe as opções como store e é ela quem decide quando refazer a busca. Com `$state`,
      duas mudanças seguidas de filtro chegariam à consulta como uma emissão só, com o valor
      do meio — e a API seria chamada sem um dos filtros. */
-  const filterStore = writable<TicketListFilter>({ ...EMPTY_FILTER });
+  /* Uma entrada por fila: o recorte de Infra não vaza para a de Sistema. */
+  const filterStore = persistedFilterStore<TicketListFilter>({
+    screen: `${area}-tickets`,
+    defaults: EMPTY_FILTER,
+    parse: fieldParser(EMPTY_FILTER, FILTER_GUARDS),
+    fromUrl: urlParser(EMPTY_FILTER, FILTER_GUARDS),
+  });
   const filter = mirrorStore(filterStore);
   const pageStore = writable<number>(1);
   const page = mirrorStore(pageStore);
@@ -237,7 +265,7 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
       },
       onClearFilters: () => {
         pageStore.set(1);
-        filterStore.set({ ...EMPTY_FILTER });
+        filterStore.clear();
       },
       onRetry: () => {
         void list.current.refetch();

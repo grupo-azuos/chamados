@@ -97,6 +97,10 @@
     onOpenTickets: () => {},
     onOpenMaintenance: () => {},
     onOpenParts: () => {},
+    onOpenOpenTickets: () => {},
+    onOpenCriticalMachines: () => {},
+    onOpenPreventiveDue: () => {},
+    onOpenOutOfStock: () => {},
   };
 
   const settled = { isLoading: false, isEmpty: false, error: null };

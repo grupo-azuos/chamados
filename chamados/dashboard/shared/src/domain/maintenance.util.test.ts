@@ -9,6 +9,7 @@ import {
   monthsSince,
   nextPreventiveAt,
   preventiveCountdownLabel,
+  preventiveDueBefore,
   preventiveStatusOf,
   resetsPreventiveClock,
   scheduleCountdownLabel,
@@ -189,5 +190,24 @@ describe('scheduleCountdownLabel', () => {
     expect(scheduleTone(-2)).toBe('danger');
     expect(scheduleTone(0)).toBe('warning');
     expect(scheduleTone(9)).toBe('info');
+  });
+});
+
+describe('preventiveDueBefore', () => {
+  const now = Date.parse('2026-10-22T12:00:00Z');
+
+  // feliz
+  /* A data do banco e o selo da tela usam a mesma régua: feita no corte, já está vencida. */
+  it('marks as due a preventive done at the cutoff, as the status badge does', () => {
+    const cutoff = preventiveDueBefore(now).toISOString();
+
+    expect(preventiveStatusOf(cutoff, now)).toBe('due');
+  });
+
+  // triste
+  it('keeps a preventive done one day after the cutoff in date', () => {
+    const dayAfter = new Date(preventiveDueBefore(now).getTime() + 24 * 60 * 60 * 1000);
+
+    expect(preventiveStatusOf(dayAfter.toISOString(), now)).toBe('ok');
   });
 });

@@ -1,5 +1,7 @@
 import { createQuery } from '@tanstack/svelte-query';
 import {
+  PART_CATEGORIES,
+  PART_CONDITIONS,
   type PartCategory,
   type PartCondition,
 } from '@template/shared/domain/part-catalog.util';
@@ -10,6 +12,15 @@ import { derived, writable } from 'svelte/store';
 import { readError } from '$lib/api/http-client';
 import { partsApi } from '$lib/api/parts.api';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
+import {
+  fieldParser,
+  isFlag,
+  isText,
+  oneOf,
+  urlParser,
+  type FieldGuards,
+} from '$lib/utils/filter-fields.util';
 
 export type PartListFilter = {
   search: string;
@@ -67,6 +78,15 @@ const EMPTY_FILTER: PartListFilter = {
   outOfStockOnly: false,
 };
 
+/** Cada campo do filtro conferido sozinho: um campo salvo que não serve volta ao padrão. */
+const FILTER_GUARDS: FieldGuards<PartListFilter> = {
+  search: isText,
+  category: oneOf('', ...PART_CATEGORIES),
+  condition: oneOf('', ...PART_CONDITIONS),
+  inStockOnly: isFlag,
+  outOfStockOnly: isFlag,
+};
+
 export const PARTS_QUERY_KEY = ['parts'] as const;
 
 function scopeOf(filter: PartListFilter) {
@@ -115,7 +135,12 @@ export function visiblePartsOf(parts: readonly Part[], filter: PartListFilter): 
 export function usePartListModel(): PartListModel {
   /* O filtro mora numa STORE, e não num `$state`: esta versão do @tanstack/svelte-query
      recebe as opções como store e é ela quem decide quando refazer a busca. */
-  const filterStore = writable<PartListFilter>({ ...EMPTY_FILTER });
+  const filterStore = persistedFilterStore<PartListFilter>({
+    screen: 'infra-parts',
+    defaults: EMPTY_FILTER,
+    parse: fieldParser(EMPTY_FILTER, FILTER_GUARDS),
+    fromUrl: urlParser(EMPTY_FILTER, FILTER_GUARDS),
+  });
   const filter = mirrorStore(filterStore);
 
   const list = mirrorStore(
@@ -178,7 +203,7 @@ export function usePartListModel(): PartListModel {
           outOfStockOnly,
           inStockOnly: outOfStockOnly ? false : current.inStockOnly,
         })),
-      onClearFilters: () => filterStore.set({ ...EMPTY_FILTER }),
+      onClearFilters: () => filterStore.clear(),
       onRetry: () => {
         void list.current.refetch();
         void summary.current.refetch();

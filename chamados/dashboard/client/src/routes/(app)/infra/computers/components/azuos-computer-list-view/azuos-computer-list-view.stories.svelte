@@ -134,6 +134,7 @@
     onlyOnline: false,
     onlyOffline: false,
     alert: '',
+    needsMaintenance: false,
   };
 
   const actions = {
@@ -145,6 +146,7 @@
     onOfflineChange: () => {},
     onKindChange: () => {},
     onAlertChange: () => {},
+    onNeedsMaintenanceChange: () => {},
     onClearFilters: () => {},
     onRetry: () => {},
     onOpen: () => {},
@@ -192,6 +194,27 @@
     actions={onlineActions}
   />
 </Story>
+
+<!-- "Mais filtros" nasce aberto quando a lista chega filtrada: aqui, só quem precisa de
+     manutenção — no computador e no celular, onde os grupos ficam um embaixo do outro. -->
+<Story
+  name="NeedsMaintenanceFilter"
+  args={{
+    data: { computers, total: computers.length, summary, filter: { ...emptyFilter, needsMaintenance: true } },
+    state: settled,
+    actions,
+  }}
+/>
+
+<Story
+  name="NeedsMaintenanceFilterMobile"
+  globals={{ viewport: { value: 'celular' } }}
+  args={{
+    data: { computers, total: computers.length, summary, filter: { ...emptyFilter, needsMaintenance: true } },
+    state: settled,
+    actions,
+  }}
+/>
 
 <Story
   name="Default"

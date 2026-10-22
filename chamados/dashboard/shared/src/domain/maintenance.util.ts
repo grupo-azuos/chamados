@@ -74,6 +74,7 @@ export const PREVENTIVE_INTERVAL_MONTHS = 3;
 
 export const PREVENTIVE_STATUSES = ['ok', 'due', 'never'] as const;
 
+
 export type PreventiveStatus = (typeof PREVENTIVE_STATUSES)[number];
 
 export const PREVENTIVE_STATUS_LABELS: Record<PreventiveStatus, string> = {
@@ -94,6 +95,18 @@ export function preventiveStatusTone(status: PreventiveStatus): 'success' | 'dan
 }
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * O instante a partir do qual a última preventiva já está VENCIDA: feita nele ou antes, a
+ * máquina precisa de manutenção. É a mesma régua do `preventiveStatusOf` (meses de 30,44 dias),
+ * escrita como data para o banco filtrar sem trazer o parque inteiro.
+ */
+export function preventiveDueBefore(now: number = Date.now()): Date {
+  /* `ceil`: a conta dá fração de milissegundo, e a data a corta — sem arredondar para cima, o
+     corte caía um milissegundo depois e a máquina no limite ficava "em dia" no filtro e
+     "vencida" no selo. */
+  return new Date(now - Math.ceil(PREVENTIVE_INTERVAL_MONTHS * 30.44 * MILLISECONDS_PER_DAY));
+}
 
 /** Quantos meses inteiros se passaram desde uma data. Meio mês não conta como mês. */
 export function monthsSince(iso: string, now: number = Date.now()): number | null {

@@ -138,7 +138,7 @@ describe('useComputerDetailModel', () => {
     model.actions.onTicketPageChange(2);
 
     await waitFor(() =>
-      expect(ticketsApi.list).toHaveBeenCalledWith({ computerId: 3, page: 2, pageSize: 25 }),
+      expect(ticketsApi.list).toHaveBeenCalledWith({ computerId: 3, area: 'infra', page: 2, pageSize: 25 }),
     );
     expect(model.data.ticketPaging.page).toBe(2);
   });

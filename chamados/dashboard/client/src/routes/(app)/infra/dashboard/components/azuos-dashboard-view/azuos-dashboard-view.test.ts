@@ -68,6 +68,10 @@ const actions = {
   onOpenTickets: vi.fn(),
   onOpenMaintenance: vi.fn(),
   onOpenParts: vi.fn(),
+  onOpenOpenTickets: vi.fn(),
+  onOpenCriticalMachines: vi.fn(),
+  onOpenPreventiveDue: vi.fn(),
+  onOpenOutOfStock: vi.fn(),
 };
 
 const settled: { isLoading: boolean; isEmpty: boolean; error: string | null } = {
@@ -311,5 +315,29 @@ describe('AzuosDashboardView', () => {
 
     expect(screen.getByText('Montando o painel…')).toBeInTheDocument();
     expect(screen.queryByText('Chamados abertos')).not.toBeInTheDocument();
+  });
+});
+
+describe('top cards as shortcuts', () => {
+  // feliz
+  it('opens each destination screen already filtered by what the card counts', async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    await user.click(screen.getByRole('button', { name: 'Chamados abertos: filtrar a lista' }));
+    expect(actions.onOpenOpenTickets).toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Máquinas críticas: filtrar a lista' }));
+    expect(actions.onOpenCriticalMachines).toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Preventivas vencidas: filtrar a lista' }));
+    expect(actions.onOpenPreventiveDue).toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Peças sem estoque: filtrar a lista' }));
+    expect(actions.onOpenOutOfStock).toHaveBeenCalled();
+  });
+
+  // triste
+  it('offers no shortcut while the dashboard has nothing to show', () => {
+    renderView({ summary: null, state: { isEmpty: true } });
+
+    expect(screen.queryByRole('button', { name: /filtrar a lista/ })).toBeNull();
   });
 });
