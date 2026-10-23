@@ -126,6 +126,10 @@ export type UpdateInventoryItemInput = z.input<typeof updateInventoryItemSchema>
 export const inventoryItemListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   category: inventoryCategorySchema.optional(),
+  /** Só os produtos ainda sem foto — filtrado no SQL, como os outros. */
+  withoutPhotoOnly: z.coerce.boolean().optional(),
+  /** Só os produtos com o depósito zerado. */
+  outOfStockOnly: z.coerce.boolean().optional(),
 });
 
 export type InventoryItemListQuery = z.infer<typeof inventoryItemListQuerySchema>;

@@ -124,6 +124,7 @@ export const ticketsApi = {
         department: query.department,
         problemType: query.problemType,
         projectId: query.projectId,
+        computerId: query.computerId,
       },
     }),
 

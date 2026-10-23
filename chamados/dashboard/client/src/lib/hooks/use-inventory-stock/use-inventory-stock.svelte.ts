@@ -50,19 +50,9 @@ function scopeOf(filter: InventoryStockFilter) {
   };
 }
 
-/**
- * O que a lista mostra depois do filtro de "sem estoque".
- *
- * Aplicado AQUI, e não no servidor: a consulta já traz a lista inteira, então separar o que
- * zerou não precisa de outra ida ao servidor. Exportado e puro para ter teste.
- */
-export function stockItemsOf(
-  items: readonly InventoryItem[],
-  filter: InventoryStockFilter,
-): InventoryItem[] {
-  if (!filter.outOfStockOnly) return [...items];
-
-  return items.filter((item) => item.balance === 0);
+/** A lista leva também o "sem estoque"; o resumo do topo não — ele conta sobre a busca. */
+function listScopeOf(filter: InventoryStockFilter) {
+  return { ...scopeOf(filter), outOfStockOnly: filter.outOfStockOnly || undefined };
 }
 
 /**
@@ -79,7 +69,18 @@ export function useInventoryStockModel(): InventoryStockModel {
   const filterStore = writable<InventoryStockFilter>({ ...EMPTY_FILTER });
   const filter = mirrorStore(filterStore);
 
+  /* "Sem estoque" é filtrado no SQL. O número do topo conta os zerados da busca SEM esse
+     filtro — com ele desligado as duas chaves são iguais, e é uma ida só ao servidor. */
   const list = mirrorStore(
+    createQuery(
+      derived(filterStore, (current) => ({
+        queryKey: [...INVENTORY_QUERY_KEY, 'list', listScopeOf(current)],
+        queryFn: () =>
+          inventoryItemsApi.list({ ...listScopeOf(current), page: 1, pageSize: MAX_PAGE_SIZE }),
+      })),
+    ),
+  );
+  const searched = mirrorStore(
     createQuery(
       derived(filterStore, (current) => ({
         queryKey: [...INVENTORY_QUERY_KEY, 'list', scopeOf(current)],
@@ -92,22 +93,18 @@ export function useInventoryStockModel(): InventoryStockModel {
   return {
     /* `get` em vez de valor: o objeto é montado uma vez e a tela lê dele a cada mudança. */
     get data() {
-      const all = list.current.data?.items ?? [];
-      const items = stockItemsOf(all, filter.current);
-
       return {
-        items,
-        /* Com "sem estoque" ligado, o total é o do que sobrou do filtro, não o do servidor. */
-        total: filter.current.outOfStockOnly ? items.length : (list.current.data?.total ?? 0),
-        outOfStock: all.filter((item) => item.balance === 0).length,
+        items: list.current.data?.items ?? [],
+        total: list.current.data?.total ?? 0,
+        outOfStock: (searched.current.data?.items ?? []).filter((item) => item.balance === 0)
+          .length,
         filter: filter.current,
       };
     },
     get state() {
       const loaded = list.current.data?.items ?? [];
-      const visibleCount = stockItemsOf(loaded, filter.current).length;
       /* Vazio só é vazio DEPOIS que a consulta terminou. */
-      const isSettledEmpty = list.current.isSuccess && visibleCount === 0;
+      const isSettledEmpty = list.current.isSuccess && loaded.length === 0;
       const filtered = hasAnyFilter(filter.current);
 
       return {

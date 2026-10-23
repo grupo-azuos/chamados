@@ -5,8 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-inventory-list-harness.test.svelte';
 import {
-  visibleItemsOf,
-  type InventoryListFilter,
   type InventoryListModel,
 } from './use-inventory-list.svelte';
 
@@ -46,37 +44,12 @@ function mountModel(): InventoryListModel {
   return model;
 }
 
-const emptyFilter: InventoryListFilter = { search: '', category: '', withoutPhotoOnly: false };
 
 beforeEach(() => {
   vi.mocked(inventoryItemsApi.list)
     .mockReset()
     .mockResolvedValue(page([item()]));
   vi.mocked(inventoryItemsApi.remove).mockReset().mockResolvedValue(undefined);
-});
-
-describe('visibleItemsOf', () => {
-  // feliz
-  it('gives every product when the photo filter is off', () => {
-    const items = [item(), item({ id: 2, photoUrl: null })];
-
-    expect(visibleItemsOf(items, emptyFilter)).toHaveLength(2);
-  });
-
-  /* O atalho para terminar o cadastro: ela fotografa o que falta num dia só. */
-  it('keeps only what has no photo when the filter is on', () => {
-    const items = [item(), item({ id: 2, photoUrl: null })];
-
-    const visible = visibleItemsOf(items, { ...emptyFilter, withoutPhotoOnly: true });
-
-    expect(visible).toHaveLength(1);
-    expect(visible[0]?.id).toBe(2);
-  });
-
-  // triste
-  it('gives an empty list when everything already has a photo', () => {
-    expect(visibleItemsOf([item()], { ...emptyFilter, withoutPhotoOnly: true })).toEqual([]);
-  });
 });
 
 describe('useInventoryListModel', () => {
@@ -146,6 +119,20 @@ describe('useInventoryListModel', () => {
 
     expect(model.state.isLoading).toBe(true);
     expect(model.state.isEmpty).toBe(false);
+  });
+
+  /* "Sem foto" é filtrado no SQL: a tela pede ao servidor, não corta o que veio. */
+  it('asks the server for the products without a photo', async () => {
+    const model = mountModel();
+    await waitFor(() => expect(inventoryItemsApi.list).toHaveBeenCalled());
+
+    model.actions.onWithoutPhotoOnlyChange(true);
+
+    await waitFor(() =>
+      expect(inventoryItemsApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ withoutPhotoOnly: true }),
+      ),
+    );
   });
 
   it('separates empty from hidden by a filter', async () => {
