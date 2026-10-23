@@ -29,15 +29,87 @@ export function physicalNameOf(machine: NumberedMachine): string {
 }
 
 /**
- * A ORDEM do inventário: pelo nome físico, com o número em ordem natural (D02 antes de D10).
- * O apelido desempata — duas máquinas com o mesmo nome físico nunca trocam de lugar a cada
- * leitura.
+ * O nome físico NO PADRÃO do parque: o departamento, o tipo (D desktop, N notebook) e o número
+ * — PARALEGAL-D05, ANALYZE-N01. O nome que o Windows inventa (DESKTOP-1IR1609) não está no
+ * padrão, e o número dele não é o da máquina.
+ */
+const PATTERNED_PHYSICAL_NAME = /^[\p{L}0-9]+(?:[-_ ][\p{L}0-9]+)*-[DN](\d+)$/iu;
+
+/**
+ * O NÚMERO da máquina: o do nome físico quando ele está no padrão; senão, o do apelido
+ * ("Computador 01" → 1). Nulo quando nenhum dos dois traz número.
+ */
+export function machineNumberOf(machine: NumberedMachine): number | null {
+  return patternedNumberOf(machine) ?? trailingNumberOf(machine.displayName);
+}
+
+/** O número do nome físico, SÓ quando ele está no padrão do parque. */
+function patternedNumberOf(machine: NumberedMachine): number | null {
+  const physical = physicalNameOf(machine).trim().match(PATTERNED_PHYSICAL_NAME);
+
+  return physical?.[1] ? Number(physical[1]) : null;
+}
+
+/* A palavra do grupo quando o apelido não tem uma: o tipo cadastrado. */
+const KIND_WORD: Record<ComputerKind, string> = { desktop: 'computador', notebook: 'notebook' };
+
+/**
+ * O GRUPO da máquina na ordem — "computador" ou "notebook", como a pessoa a vê: a palavra do
+ * apelido ("Notebook 01"); sem ela, a letra do nome físico no padrão (D ou N); por último, o
+ * tipo cadastrado. Há notebook cadastrado como desktop, e pelo tipo ele cairia no meio dos
+ * computadores.
+ */
+/** A palavra do apelido, sem acento e minúscula: "Notebook 01" e "Notebook" dão "notebook". */
+function nicknameWordOf(displayName: string | null | undefined): string | null {
+  const word =
+    nicknameParts(displayName)?.word ?? displayName?.trim().match(/^(computador|notebook)\b/i)?.[1];
+
+  return word ? word.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase() : null;
+}
+
+function groupOf(machine: NumberedMachine): string {
+  const word = nicknameWordOf(machine.displayName);
+  if (word) return word;
+
+  const letter = physicalNameOf(machine).trim().match(/-([DN])\d+$/i)?.[1]?.toUpperCase();
+  if (letter) return letter === 'N' ? 'notebook' : 'computador';
+
+  return KIND_WORD[machine.kind ?? 'desktop'];
+}
+
+/**
+ * A ORDEM do inventário, PELO NÚMERO da máquina: computadores primeiro, depois notebooks (pelo
+ * grupo que a pessoa vê, `groupOf`), e em cada grupo o 01, o 02, o 03… — de qualquer
+ * departamento, que desempata. Máquina sem número
+ * (nem no nome físico no padrão, nem no apelido) vai para o fim. O apelido e o nome físico
+ * desempatam o resto, para a ordem nunca mudar a cada leitura.
  */
 export function compareMachines(a: NumberedMachine, b: NumberedMachine): number {
-  return (
-    collator.compare(physicalNameOf(a), physicalNameOf(b)) ||
-    collator.compare(a.displayName?.trim() ?? '', b.displayName?.trim() ?? '')
-  );
+  const keysA = sortKeysOf(a);
+  const keysB = sortKeysOf(b);
+  for (let index = 0; index < keysA.length; index++) {
+    const order = compareKey(keysA[index], keysB[index]);
+    if (order !== 0) return order;
+  }
+
+  return 0;
+}
+
+/** As chaves da ordem, da mais forte para a mais fraca: grupo, número, departamento, nomes. */
+function sortKeysOf(machine: NumberedMachine): (number | string)[] {
+  return [
+    groupOf(machine),
+    machineNumberOf(machine) ?? Number.POSITIVE_INFINITY,
+    machine.department?.trim() ?? '',
+    machine.displayName?.trim() ?? '',
+    physicalNameOf(machine),
+  ];
+}
+
+function compareKey(a: number | string | undefined, b: number | string | undefined): number {
+  if (typeof a === 'number' && typeof b === 'number') return a === b ? 0 : a < b ? -1 : 1;
+
+  return collator.compare(String(a ?? ''), String(b ?? ''));
 }
 
 /** O número no FIM do texto: "PARALEGAL-D05" → 5, "Computador 06" → 6. Sem número, nulo. */
@@ -77,9 +149,10 @@ export function suggestNickname(
     .filter((parts) => parts !== null);
   if (named.length === 0) return null;
 
+  /* O nome físico só conta no padrão: o "1609" de DESKTOP-1IR1609 não é número de máquina. */
   const numbers = same.flatMap((machine) => [
     trailingNumberOf(machine.displayName),
-    trailingNumberOf(physicalNameOf(machine)),
+    patternedNumberOf(machine),
   ]);
   const highest = Math.max(...numbers.filter((number) => number !== null));
   /* A palavra e a largura vêm do apelido de número mais alto: é o padrão mais recente. */

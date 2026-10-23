@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   compareMachines,
+  machineNumberOf,
   physicalNameOf,
   suggestNickname,
   trailingNumberOf,
@@ -15,31 +16,63 @@ function machine(over: Partial<NumberedMachine>): NumberedMachine {
 
 describe('compareMachines', () => {
   // feliz
-  it('orders by the physical name, with the number in natural order', () => {
+  /* O caso do print: nomes físicos do Windows (sem padrão) — vale o número do apelido. */
+  it('orders by the number of the nickname when the physical name is not in the pattern', () => {
     const sorted = [
-      machine({ hostname: 'PARALEGAL-D10' }),
-      machine({ hostname: 'ANALYZE-N01' }),
+      machine({ hostname: 'DESKTOP-1IR1609', displayName: 'Notebook 02', kind: 'notebook' }),
+      machine({ hostname: 'DESKTOP-MC8LBDJ', displayName: 'Computador 01' }),
+      machine({ hostname: 'DESKTOP-V37Q5JD', displayName: 'Notebook 01', kind: 'notebook' }),
+    ].sort(compareMachines);
+
+    expect(sorted.map((item) => item.displayName)).toEqual([
+      'Computador 01',
+      'Notebook 01',
+      'Notebook 02',
+    ]);
+  });
+
+  it('prefers the number of a patterned physical name, in natural order', () => {
+    const sorted = [
+      machine({ hostname: 'PARALEGAL-D10', displayName: 'Computador 01' }),
       machine({ hostname: 'PARALEGAL-D02' }),
       machine({ hostname: 'ANALYZE-D01' }),
     ].sort(compareMachines);
 
-    expect(sorted.map(physicalNameOf)).toEqual([
-      'ANALYZE-D01',
-      'ANALYZE-N01',
-      'PARALEGAL-D02',
-      'PARALEGAL-D10',
-    ]);
+    expect(sorted.map(physicalNameOf)).toEqual(['ANALYZE-D01', 'PARALEGAL-D02', 'PARALEGAL-D10']);
+  });
+
+  /* Há notebook cadastrado como desktop: o grupo segue o que a pessoa vê, o apelido. */
+  it('groups by the word people see, even when the registered kind disagrees', () => {
+    const sorted = [
+      machine({ hostname: 'FINANCEIRO-N01', displayName: 'Notebook 01', kind: 'desktop' }),
+      machine({ hostname: 'FINANCEIRO-D02', displayName: 'Computador 02' }),
+      machine({ hostname: 'DESKTOP-0EJLHCT', displayName: 'Notebook', kind: 'desktop' }),
+    ].sort(compareMachines);
+
+    expect(sorted.map((item) => item.displayName)).toEqual(['Computador 02', 'Notebook 01', 'Notebook']);
   });
 
   // triste
-  /* Antes da primeira conexão não há hostname: vale o nome cadastrado. Empate cai no apelido. */
-  it('falls back to the registered name and breaks ties by the nickname', () => {
+  it('sends machines with no number to the end', () => {
     const sorted = [
-      machine({ name: 'RH-D01', displayName: 'Computador 02' }),
-      machine({ name: 'RH-D01', displayName: 'Computador 01' }),
+      machine({ hostname: 'DESKTOP-ABC', displayName: 'Recepção — balcão' }),
+      machine({ hostname: 'DESKTOP-XYZ', displayName: 'Computador 03' }),
     ].sort(compareMachines);
 
-    expect(sorted.map((item) => item.displayName)).toEqual(['Computador 01', 'Computador 02']);
+    expect(sorted.map((item) => item.displayName)).toEqual(['Computador 03', 'Recepção — balcão']);
+  });
+});
+
+describe('machineNumberOf', () => {
+  // feliz
+  it('reads the number of the patterned physical name, or else of the nickname', () => {
+    expect(machineNumberOf(machine({ hostname: 'CERTIFICADO-D02', displayName: 'Computador 09' }))).toBe(2);
+    expect(machineNumberOf(machine({ hostname: 'DESKTOP-1IR1609', displayName: 'Notebook 02' }))).toBe(2);
+  });
+
+  // triste
+  it('never takes the digits of a name the Windows made up', () => {
+    expect(machineNumberOf(machine({ hostname: 'DESKTOP-1IR1609', displayName: null }))).toBeNull();
   });
 });
 
@@ -76,6 +109,12 @@ describe('suggestNickname', () => {
     const withUnnamed = [...park, machine({ name: 'PARALEGAL-D08', displayName: null })];
 
     expect(suggestNickname(withUnnamed, 'Paralegal', 'desktop')).toBe('Computador 09');
+  });
+
+  it('ignores the digits of a physical name the Windows made up', () => {
+    const windows = [machine({ hostname: 'DESKTOP-1IR1609', displayName: 'Computador 02' })];
+
+    expect(suggestNickname(windows, 'Paralegal', 'desktop')).toBe('Computador 03');
   });
 
   // triste
