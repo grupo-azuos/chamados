@@ -45,6 +45,32 @@ export const LEGACY_DEPARTMENT_NAMES: Readonly<Record<string, string>> = {
   rh: 'Recursos Humanos',
 };
 
+/**
+ * Os CÓDIGOS ANTIGOS que querem dizer este departamento: "Departamento Pessoal" → `pessoal`.
+ *
+ * Filtrar só pelo nome deixava de fora a máquina ou o chamado gravado com o código — e há
+ * dados assim no banco mesmo depois da migration. Quem filtra por departamento procura pelo
+ * nome OU por estes códigos.
+ */
+export function legacyCodesOf(name: Department): string[] {
+  const wanted = normalizeDepartment(name);
+
+  return Object.entries(LEGACY_DEPARTMENT_NAMES)
+    .filter(([, label]) => normalizeDepartment(label) === wanted)
+    .map(([code]) => code);
+}
+
+/** Dois jeitos de escrever o mesmo departamento são o mesmo: o nome, o código, com ou sem acento. */
+export function isSameDepartment(stored: string | null | undefined, wanted: Department): boolean {
+  if (!stored) return false;
+
+  return normalizeDepartment(departmentLabel(stored)) === normalizeDepartment(departmentLabel(wanted));
+}
+
+function normalizeDepartment(text: string): string {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase();
+}
+
 /** O nome para a tela. Gravado já é o nome; só um código antigo precisa de tradução. */
 export function departmentLabel(department: Department): string {
   return LEGACY_DEPARTMENT_NAMES[department] ?? department;

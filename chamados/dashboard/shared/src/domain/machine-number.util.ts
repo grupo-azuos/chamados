@@ -1,4 +1,5 @@
 import { type ComputerKind } from './computer-kind.util';
+import { isSameDepartment } from './department.util';
 
 /**
  * O NÚMERO DA MÁQUINA — o "07" de "PARALEGAL-D07" e de "Computador 07".
@@ -53,13 +54,6 @@ function nicknameParts(displayName: string | null | undefined) {
   return match ? { word: match[1] ?? '', digits: match[2] ?? '' } : null;
 }
 
-function sameDepartment(a: string | null | undefined, b: string): boolean {
-  const normalize = (text: string) =>
-    text.normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase();
-
-  return Boolean(a) && normalize(a ?? '') === normalize(b);
-}
-
 /**
  * O APELIDO SUGERIDO para a máquina nova de um departamento e tipo: o mesmo formato que as
  * máquinas dali já usam, com o próximo número. Paralegal com até "Computador 06" → "Computador 07".
@@ -76,7 +70,7 @@ export function suggestNickname(
   kind: ComputerKind,
 ): string | null {
   const same = machines.filter(
-    (machine) => machine.kind === kind && sameDepartment(machine.department, department),
+    (machine) => machine.kind === kind && isSameDepartment(machine.department, department),
   );
   const named = same
     .map((machine) => nicknameParts(machine.displayName))

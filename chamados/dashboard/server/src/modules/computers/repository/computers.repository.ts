@@ -29,6 +29,7 @@ import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
+import { departmentMatches } from '../../../lib/db/department-match.util';
 import { qualified } from '../../../lib/db/sql-column.util';
 import { ticketInArea } from '../../../lib/db/ticket-area.util';
 import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
@@ -356,7 +357,7 @@ function buildWhere(query: ComputerFilter, presence?: PresenceFilter): SQL | und
   const filters: (SQL | undefined)[] = [...lifecycleFilters(query)];
 
   if (presence) filters.push(presenceFilter(presence));
-  if (query.department) filters.push(sameDepartment(query.department));
+  if (query.department) filters.push(departmentMatches(computers.department, query.department));
   if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
   if (query.kind) filters.push(eq(computers.kind, query.kind));
   if (query.alert) filters.push(alertFilter(query.alert));
@@ -364,21 +365,6 @@ function buildWhere(query: ComputerFilter, presence?: PresenceFilter): SQL | und
   if (query.search) filters.push(searchFilter(query.search));
 
   return filters.length > 0 ? and(...filters) : undefined;
-}
-
-/* As letras acentuadas e as sem acento, na mesma ordem — para o `translate` do Postgres. */
-const ACCENTED = 'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ';
-const PLAIN = 'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC';
-
-/**
- * O departamento da máquina é o pedido, IGNORANDO acento, maiúscula e espaço nas pontas: o
- * nome vem do RH ("Contábil") e a máquina pode ter sido gravada antes ("CONTABIL",
- * "contábil "). Comparar exato fazia o filtro voltar vazio com máquina no departamento.
- */
-export function sameDepartment(department: string): SQL {
-  const normalize = (value: SQL) => sql`lower(translate(trim(${value}), ${ACCENTED}, ${PLAIN}))`;
-
-  return sql`${normalize(qualified(computers.department))} = ${normalize(sql`${department}`)}`;
 }
 
 /** Arquivada e descartada: em que ponto da vida a máquina está. Separado para o `buildWhere` caber no limite de complexidade. */
