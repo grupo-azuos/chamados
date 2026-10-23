@@ -189,99 +189,97 @@
 </script>
 
 <script lang="ts">
-  import ChevronDown from '@lucide/svelte/icons/chevron-down';
-  import FilterX from '@lucide/svelte/icons/filter-x';
-  import Search from '@lucide/svelte/icons/search';
-  import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
-  import X from '@lucide/svelte/icons/x';
-  import { untrack } from 'svelte';
-  import { flip } from 'svelte/animate';
-  import { scale, slide } from 'svelte/transition';
-
-  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
-  import InputGroup from '$lib/components/azuos-input-group/azuos-input-group.svelte';
-  import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
-  import { DURATION, prefersReducedMotion } from '$lib/motion/motion';
-  import { cn } from '$lib/utils/cn';
+  import FilterPanel, {
+    type FilterPanelField,
+  } from '$lib/components/azuos-filter-panel/azuos-filter-panel.svelte';
 
   let { data, state: filtersState, actions }: AzuosInventoryFiltersProps = $props();
 
   const chips = $derived(activeFilterChips(data.filter, actions));
-  const canClear = $derived(hasAnyFilter(data.filter, chips));
-  const connectionValue = $derived(connectionOf(data.filter));
-
-  /* Estado VISUAL: o painel aberto. Nasce aberto quando a tela chega filtrada lá dentro (um
-     cartão do painel, um filtro salvo) — senão a pessoa veria a lista recortada sem saber por quê. */
-  let isOpen = $state(untrack(() => activeFilterChips(data.filter, actions).length > 0));
-
-  /* Quem pede "reduzir movimento" no sistema não vê a animação — vira troca seca. */
-  const motionMs = (seconds: number) => (prefersReducedMotion() ? 0 : seconds * 1000);
-  const panelId = 'inventory-filters-panel';
 
   /**
-   * Os filtros do painel, na ordem de leitura: o que a máquina está fazendo agora, a
-   * manutenção e o cadastro. Uma lista só, desenhada por um laço, para todos terem o mesmo
-   * controle e a mesma altura.
+   * Os filtros do painel, intercalando pastilhas (poucas opções) e listas suspensas (muitas):
+   * o que a máquina está fazendo agora, a manutenção e o cadastro.
    */
-  const panelFilters = $derived([
+  const fields: FilterPanelField[] = $derived([
     {
+      key: 'connection',
       label: 'Conexão',
       control: 'pills',
       ariaLabel: 'Filtrar por conexão',
       allLabel: 'Todas',
-      value: connectionValue,
+      value: connectionOf(data.filter),
       options: CONNECTION_OPTIONS,
-      onChange: changeConnection,
     },
     {
+      key: 'health',
       label: 'Saúde',
       control: 'select',
       ariaLabel: 'Filtrar por saúde',
       allLabel: 'Toda a saúde',
       value: data.filter.healthStatus,
       options: HEALTH_OPTIONS,
-      onChange: (value: string) => actions.onHealthStatusChange(value as HealthStatus | ''),
     },
     {
+      key: 'kind',
       label: 'Tipo',
       control: 'pills',
       ariaLabel: 'Filtrar por tipo',
       allLabel: 'Todos',
       value: data.filter.kind,
       options: KIND_OPTIONS,
-      onChange: (value: string) => actions.onKindChange(value as ComputerKind | ''),
     },
     {
+      key: 'alert',
       label: 'Alertas',
       control: 'select',
       ariaLabel: 'Filtrar por alerta',
       allLabel: 'Todos',
       value: data.filter.alert,
       options: ALERT_OPTIONS,
-      onChange: (value: string) => actions.onAlertChange(value as ComputerAlertFilter | ''),
     },
     {
+      key: 'archived',
       label: 'Arquivadas',
       control: 'pills',
       ariaLabel: 'Máquinas arquivadas',
       allLabel: 'Ocultar',
       value: data.filter.includeArchived ? 'yes' : '',
       options: ARCHIVED_OPTIONS,
-      onChange: (value: string) => actions.onArchivedChange(value === 'yes'),
     },
     {
+      key: 'preventive',
       label: 'Preventiva',
       control: 'select',
       ariaLabel: 'Filtrar pela preventiva',
       allLabel: 'Todas',
       value: data.filter.preventive,
       options: PREVENTIVE_OPTIONS,
-      onChange: (value: string) =>
-        actions.onPreventiveChange(value as ComputerPreventiveFilter | ''),
     },
-  ] as const);
+  ]);
+
+  /* Lista suspensa SEMPRE, e não pastilhas: os departamentos vêm do RH e crescem. */
+  const primary: FilterPanelField = $derived({
+    key: 'department',
+    label: 'Departamento',
+    control: 'select',
+    ariaLabel: 'Filtrar por departamento',
+    allLabel: 'Todos os departamentos',
+    value: data.filter.department,
+    options: data.departmentOptions,
+    searchPlaceholder: 'Buscar departamento…',
+  });
+
+  /** Qual ação do inventário cada filtro do painel chama. */
+  const ON_CHANGE: Record<string, (value: string) => void> = {
+    department: (value) => actions.onDepartmentChange(value as Department | ''),
+    connection: (value) => changeConnection(value),
+    health: (value) => actions.onHealthStatusChange(value as HealthStatus | ''),
+    kind: (value) => actions.onKindChange(value as ComputerKind | ''),
+    alert: (value) => actions.onAlertChange(value as ComputerAlertFilter | ''),
+    archived: (value) => actions.onArchivedChange(value === 'yes'),
+    preventive: (value) => actions.onPreventiveChange(value as ComputerPreventiveFilter | ''),
+  };
 
   function changeConnection(value: string) {
     if (value === 'online') return actions.onOnlineChange(true);
@@ -292,149 +290,20 @@
   }
 </script>
 
-<section
-  aria-label="Filtros do inventário"
-  class="border-border/70 bg-card rounded-surface flex min-w-0 flex-col border shadow-xs"
->
-  <!-- A barra: busca ocupa o que sobrar; no celular cada peça ganha a própria linha. -->
-  <div class="flex min-w-0 flex-col gap-3 p-3 sm:p-4 md:flex-row md:items-end">
-    <InputGroup
-      data={{
-        label: 'Buscar',
-        name: 'search',
-        value: data.filter.search,
-        placeholder: 'Nome da máquina, apelido ou responsável',
-      }}
-      ui={{ className: 'md:flex-1' }}
-      actions={{ onChange: actions.onSearchChange }}
-    >
-      {#snippet prefix()}
-        <Search class="text-muted-foreground size-4" aria-hidden="true" />
-      {/snippet}
-    </InputGroup>
-
-    <!-- Lista suspensa SEMPRE, e não pastilhas: os departamentos vêm do RH e crescem. -->
-    <FilterField data={{ label: 'Departamento' }} ui={{ className: 'md:w-60' }}>
-      <OptionPicker
-        data={{ value: data.filter.department, options: data.departmentOptions }}
-        ui={{
-          ariaLabel: 'Filtrar por departamento',
-          allLabel: 'Todos os departamentos',
-          mode: 'combobox',
-          fullWidth: true,
-          searchPlaceholder: 'Buscar departamento…',
-        }}
-        actions={{
-          onChange: (value: string) => actions.onDepartmentChange(value as Department | ''),
-        }}
-      />
-    </FilterField>
-
-    <div class="flex items-center gap-2">
-      <button
-        type="button"
-        aria-expanded={isOpen}
-        aria-controls={panelId}
-        onclick={() => (isOpen = !isOpen)}
-        class={cn(
-          'control-lg rounded-control inline-flex flex-1 items-center justify-center gap-2 border text-sm font-medium transition-colors md:flex-none',
-          'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-          isOpen || chips.length > 0
-            ? 'border-primary/40 bg-primary/10 text-primary'
-            : 'border-border bg-card text-foreground hover:bg-accent/50',
-        )}
-      >
-        <SlidersHorizontal class="size-4" aria-hidden="true" />
-        <span>Filtros</span>
-        {#if chips.length > 0}
-          {#key chips.length}
-            <span
-              in:scale={{ duration: motionMs(DURATION.fast), start: 0.6 }}
-              class="bg-primary text-primary-foreground inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums"
-              aria-label={`${chips.length} ${chips.length === 1 ? 'ativo' : 'ativos'}`}
-            >
-              {chips.length}
-            </span>
-          {/key}
-        {/if}
-        <ChevronDown
-          class={cn(
-            'size-4 transition-transform duration-200 motion-reduce:transition-none',
-            isOpen && 'rotate-180',
-          )}
-          aria-hidden="true"
-        />
-      </button>
-      <TableViewToggle />
-    </div>
-  </div>
-
-  {#if isOpen}
-    <!-- O painel desliza: some e aparece sem empurrar a lista num salto. Dentro, a grade
-         INTERCALA pastilhas (filtro de poucas opções, à vista num clique) e listas suspensas
-         (filtro de muitas): 3 colunas no computador grande, 2 no tablet e 1 no celular, todas
-         com a altura de campo do sistema. -->
-    <div
-      id={panelId}
-      transition:slide={{ duration: motionMs(DURATION.base) }}
-      class="border-border/60 border-t"
-    >
-      <div class="grid min-w-0 gap-x-4 gap-y-3 p-3 sm:grid-cols-2 sm:p-4 xl:grid-cols-3">
-        {#each panelFilters as filter (filter.label)}
-          <FilterField data={{ label: filter.label }} ui={{ className: 'sm:w-full' }}>
-            <OptionPicker
-              data={{ value: filter.value, options: filter.options }}
-              ui={{
-                ariaLabel: filter.ariaLabel,
-                allLabel: filter.allLabel,
-                /* Poucas opções (até três): pastilhas dividindo a largura da célula. Mais que
-                   isso: lista suspensa. No celular as duas viram lista, pelo próprio seletor. */
-                mode: filter.control === 'select' ? 'combobox' : 'auto',
-                fullWidth: true,
-                searchPlaceholder: 'Buscar…',
-              }}
-              actions={{ onChange: filter.onChange }}
-            />
-          </FilterField>
-        {/each}
-      </div>
-    </div>
-  {/if}
-
-  <!-- Uma etiqueta por filtro ligado. Entram e saem encolhendo, e as outras deslizam para o
-       lugar (`flip`) em vez de pularem. -->
-  {#if canClear}
-    <div
-      transition:slide={{ duration: motionMs(DURATION.fast) }}
-      class="border-border/60 flex min-w-0 flex-wrap items-center gap-2 border-t px-3 py-2.5 sm:px-4"
-    >
-      {#if chips.length > 0}
-        <ul class="flex min-w-0 flex-wrap items-center gap-2" aria-label="Filtros ligados">
-          {#each chips as chip (chip.key)}
-            <li
-              animate:flip={{ duration: motionMs(DURATION.fast) }}
-              transition:scale={{ duration: motionMs(DURATION.fast), start: 0.8 }}
-            >
-              <button
-                type="button"
-                onclick={chip.onRemove}
-                aria-label={`Tirar o filtro ${chip.label}`}
-                class="border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 focus-visible:ring-ring inline-flex max-w-full items-center gap-1.5 rounded-full border py-1 pr-2 pl-3 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
-              >
-                <span class="truncate">{chip.label}</span>
-                <X class="size-3.5 shrink-0" aria-hidden="true" />
-              </button>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-      {#if !filtersState?.isFilteredOut}
-        <ActionButton
-          data={{ label: 'Limpar filtros' }}
-          ui={{ variant: 'ghost', size: 'sm', icon: FilterX, className: 'ml-auto' }}
-          actions={{ onClick: actions.onClearFilters }}
-        />
-      {/if}
-    </div>
-  {/if}
-</section>
+<FilterPanel
+  data={{
+    search: { value: data.filter.search, placeholder: 'Nome da máquina, apelido ou responsável' },
+    primary,
+    fields,
+    chips: chips.map(({ key, label }) => ({ key, label })),
+    canClear: hasAnyFilter(data.filter, chips),
+  }}
+  ui={{ ariaLabel: 'Filtros do inventário' }}
+  state={{ isFilteredOut: filtersState?.isFilteredOut }}
+  actions={{
+    onSearchChange: actions.onSearchChange,
+    onFieldChange: (key, value) => ON_CHANGE[key]?.(value),
+    onRemoveChip: (key) => chips.find((chip) => chip.key === key)?.onRemove(),
+    onClearFilters: actions.onClearFilters,
+  }}
+/>
