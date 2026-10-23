@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type Database } from '../../../lib/db/db.type';
-import { GithubService } from './github.service';
+import { coAuthorsOfCommits, coAuthorTrailersOf, GithubService } from './github.service';
 import type { GithubAppService } from '../../github-integration/service/github-app.service';
 
 describe('GithubService', () => {
@@ -65,7 +65,8 @@ describe('GithubService', () => {
     );
 
     expect(result.map((item) => item.externalId)).toEqual(['#2']);
-    expect(fetcher.mock.calls.filter(([url]) => String(url).includes('/pulls'))).toHaveLength(1);
+    /* Só as páginas da LISTA de PRs: a leitura dos commits do PR mergeado (co-autores) é à parte. */
+    expect(fetcher.mock.calls.filter(([url]) => String(url).includes('/pulls?'))).toHaveLength(1);
     expect(String(fetcher.mock.calls[0]?.[0])).toContain('sort=updated&direction=desc');
   });
 
@@ -371,5 +372,49 @@ describe('GithubService', () => {
         'Solicitante',
       );
     }).not.toThrow();
+  });
+});
+
+describe('co-authors', () => {
+  // feliz
+  it('reads Co-authored-by lines and the GitHub login hidden in a noreply e-mail', () => {
+    expect(
+      coAuthorTrailersOf(
+        'feat: tela nova\n\nCo-authored-by: Guilherme Siqueira <123+gui-siqueira659@users.noreply.github.com>\nCo-Authored-By: Ana Lima <ana@empresa.com.br>',
+      ),
+    ).toEqual([
+      { login: 'gui-siqueira659', name: 'Guilherme Siqueira' },
+      { login: null, name: 'Ana Lima' },
+    ]);
+  });
+
+  it('collects who committed in a branch, once each, without the person who merged', () => {
+    const commit = (login: string | null, name: string, message = 'fix') => ({
+      sha: name,
+      html_url: '',
+      commit: { message, author: { name } },
+      author: login ? { login } : null,
+      parents: [{ sha: 'p' }],
+    });
+
+    expect(
+      coAuthorsOfCommits(
+        [
+          commit('gui-siqueira659', 'Guilherme Siqueira'),
+          commit('gui-siqueira659', 'Guilherme Siqueira'),
+          commit('vinicius-gpl', 'Vinicius Gabriel'),
+        ],
+        'vinicius-gpl',
+      ),
+    ).toEqual([{ login: 'gui-siqueira659', name: 'Guilherme Siqueira' }]);
+  });
+
+  // triste
+  it('never counts an AI assistant or a bot as a co-author', () => {
+    expect(
+      coAuthorTrailersOf(
+        'feat\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>',
+      ),
+    ).toEqual([]);
   });
 });
