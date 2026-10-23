@@ -18,8 +18,10 @@
     };
     state: {
       canEdit?: boolean;
-      /** Só Super Administrador vê o "Sincronizar todos". */
+      /** Quem tem o GitHub vinculado vê o "Sincronizar todos". */
       canSyncAll?: boolean;
+      /** Quem tem o GitHub vinculado sincroniza cada sistema — qualquer papel, e só esses. */
+      canSync?: boolean;
       isLoading: boolean;
       isRefetching?: boolean;
       isEmpty: boolean;
@@ -279,13 +281,13 @@
                 type="button"
                 class="flex items-center gap-1 rounded-control border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
                 onclick={() => actions.onViewTimeline(project)}
-                title="Ver histórico de PRs e timeline"
+                title="Abrir o sistema: o que está em andamento e a timeline"
               >
                 <History class="size-3" />
-                Timeline
+                Ver sistema
               </button>
 
-              {#if state.canEdit !== false}
+              {#if state.canSync ?? state.canEdit !== false}
                 <button
                   type="button"
                   class="flex items-center gap-1 rounded-control border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
