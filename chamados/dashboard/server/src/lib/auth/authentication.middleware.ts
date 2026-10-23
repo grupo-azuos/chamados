@@ -6,7 +6,7 @@ import { ENV } from '../config/env.token';
 import {
   hasForwardedHeaders,
   IdentityProvider,
-  MOCK_IDENTITY,
+  mockIdentityOf,
   readForwardedIdentity,
   type ForwardedIdentity,
 } from './identity.provider';
@@ -39,6 +39,7 @@ const WARNING_WINDOW_MS = 60_000;
 export class AuthenticationMiddleware implements NestMiddleware {
   private readonly logger = new Logger(AuthenticationMiddleware.name);
   private readonly isMockEnabled: boolean;
+  private readonly mockIdentity: ForwardedIdentity;
   private lastWarningAt = 0;
 
   constructor(
@@ -46,6 +47,7 @@ export class AuthenticationMiddleware implements NestMiddleware {
     @Inject(ENV) env: Env,
   ) {
     this.isMockEnabled = isUserMockEnabled(env);
+    this.mockIdentity = mockIdentityOf(env);
   }
 
   async use(request: Request, _response: Response, next: NextFunction): Promise<void> {
@@ -68,7 +70,7 @@ export class AuthenticationMiddleware implements NestMiddleware {
       return null;
     }
 
-    return this.isMockEnabled ? MOCK_IDENTITY : null;
+    return this.isMockEnabled ? this.mockIdentity : null;
   }
 
   private warnOnce(): void {
