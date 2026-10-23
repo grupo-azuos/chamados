@@ -7,8 +7,10 @@ import { superAdmins } from '../db/schema/super-admins.schema';
 import {
   hasForwardedHeaders,
   IdentityProvider,
+  MOCK_IDENTITY,
   readForwardedIdentity,
   type ForwardedIdentity,
+  mockIdentityOf,
 } from './identity.provider';
 
 const ANA_ID = '11111111-1111-4111-8111-111111111111';
@@ -160,5 +162,32 @@ describe('IdentityProvider', () => {
 
     expect(user?.role).toBe('user');
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe('mockIdentityOf', () => {
+  // feliz
+  /* Na máquina de quem programa, o mock pode ser a pessoa REAL — com os acessos dela no banco. */
+  it('becomes the real person set in the environment', () => {
+    expect(
+      mockIdentityOf({
+        USER_MOCK_ID: '09f805df-a418-4cd7-a358-98653e672a3b',
+        USER_MOCK_EMAIL: 'Pessoa@Empresa.com.br',
+        USER_MOCK_NAME: 'Pessoa Real',
+      }),
+    ).toEqual({
+      id: '09f805df-a418-4cd7-a358-98653e672a3b',
+      email: 'pessoa@empresa.com.br',
+      name: 'Pessoa Real',
+      role: MOCK_IDENTITY.role,
+    });
+  });
+
+  // triste
+  /* Pela metade não vale: um id sem e-mail seria alguém que o admin-console não reconhece. */
+  it('stays the fixed development person when the id or the e-mail is missing', () => {
+    expect(mockIdentityOf({})).toEqual(MOCK_IDENTITY);
+    expect(mockIdentityOf({ USER_MOCK_ID: '09f805df-a418-4cd7-a358-98653e672a3b' })).toEqual(MOCK_IDENTITY);
+    expect(mockIdentityOf({ USER_MOCK_EMAIL: 'pessoa@empresa.com.br' })).toEqual(MOCK_IDENTITY);
   });
 });

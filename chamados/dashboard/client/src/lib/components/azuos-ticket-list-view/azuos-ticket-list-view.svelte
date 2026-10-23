@@ -111,6 +111,40 @@
    * Nulo NÃO vira "0 h": zero anunciaria atendimento instantâneo num sistema que ainda não
    * resolveu nada. Abaixo de uma hora sai em minutos, porque "0,3 h" ninguém lê.
    */
+  const STATUS_GROUP_LABELS: Record<TicketStatusGroup, string> = {
+    waiting: 'Aguardando',
+    solved: 'Resolvidos',
+  };
+
+  /**
+   * As etiquetas dos filtros ligados no painel — busca e departamento ficam à vista e não
+   * entram. O grupo de situação (dos cartões do topo) também vira etiqueta.
+   */
+  export function ticketFilterChips(
+    filter: TicketListFilter,
+    problemTypeOptions: readonly { value: string; label: string }[],
+  ): { key: string; label: string }[] {
+    const chips: ({ key: string; label: string } | null)[] = [
+      filter.status ? { key: 'status', label: `Situação: ${TICKET_STATUS_LABELS[filter.status]}` } : null,
+      filter.statusGroup
+        ? { key: 'statusGroup', label: `Situação: ${STATUS_GROUP_LABELS[filter.statusGroup]}` }
+        : null,
+      filter.priority
+        ? { key: 'priority', label: `Urgência: ${TICKET_PRIORITY_LABELS[filter.priority]}` }
+        : null,
+      filter.problemType
+        ? {
+            key: 'problemType',
+            label:
+              problemTypeOptions.find((option) => option.value === filter.problemType)?.label ??
+              'Tipo de problema',
+          }
+        : null,
+    ];
+
+    return chips.filter((chip): chip is { key: string; label: string } => chip !== null);
+  }
+
   export function formatAverage(hours: number | null | undefined): string {
     if (hours === null || hours === undefined) return '—';
     if (hours < 1) return `${Math.round(hours * 60)} min`;
@@ -120,7 +154,6 @@
 </script>
 
 <script lang="ts">
-  import FilterX from '@lucide/svelte/icons/filter-x';
   import Inbox from '@lucide/svelte/icons/inbox';
   import SearchX from '@lucide/svelte/icons/search-x';
 
@@ -128,8 +161,9 @@
   import ColumnChart from '$lib/components/azuos-column-chart/azuos-column-chart.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
-  import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
-  import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import FilterPanel, {
+    type FilterPanelField,
+  } from '$lib/components/azuos-filter-panel/azuos-filter-panel.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import PanelCard from '$lib/components/azuos-panel-card/azuos-panel-card.svelte';
@@ -138,7 +172,6 @@
   import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
     TableActions,
@@ -148,7 +181,6 @@
     TableHeader,
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
-  import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
@@ -177,6 +209,59 @@
       value: row.count,
     })),
   );
+
+  /* Departamento à vista, ao lado da busca: os nomes vêm do RH e crescem. */
+  const departmentField: FilterPanelField = $derived({
+    key: 'department',
+    label: 'Departamento',
+    control: 'select',
+    ariaLabel: 'Filtrar por departamento',
+    allLabel: 'Todos os departamentos',
+    value: data.filter.department,
+    options: data.departmentOptions ?? [],
+    searchPlaceholder: 'Buscar departamento…',
+  });
+
+  /* O painel intercala lista suspensa (situação, tipo de problema: muitas opções) e pastilhas
+     (urgência: três). */
+  const filterFields: FilterPanelField[] = $derived([
+    {
+      key: 'status',
+      label: 'Situação',
+      control: 'select',
+      ariaLabel: 'Filtrar por situação',
+      allLabel: 'Todas',
+      value: data.filter.status,
+      options: STATUS_FILTER_OPTIONS,
+    },
+    {
+      key: 'priority',
+      label: 'Urgência',
+      control: 'pills',
+      ariaLabel: 'Filtrar por urgência',
+      allLabel: 'Qualquer',
+      value: data.filter.priority,
+      options: PRIORITY_FILTER_OPTIONS,
+    },
+    {
+      key: 'problemType',
+      label: 'Tipo de problema',
+      control: 'select',
+      ariaLabel: 'Filtrar por tipo de problema',
+      allLabel: 'Todos os tipos',
+      value: data.filter.problemType,
+      options: problemTypeFilterOptions,
+    },
+  ]);
+
+  /** Qual ação da fila cada filtro do painel (e cada etiqueta) chama. */
+  function changeFilter(key: string, value: string) {
+    if (key === 'department') return actions.onDepartmentChange(value as TicketDepartment | '');
+    if (key === 'status') return actions.onStatusChange(value as TicketStatus | '');
+    if (key === 'statusGroup') return actions.onStatusGroupChange?.(value as TicketStatusGroup | '');
+    if (key === 'priority') return actions.onPriorityChange(value as TicketPriority | '');
+    if (key === 'problemType') actions.onProblemTypeChange(value as TicketProblemType | '');
+  }
 
   function formatDate(value: string): string {
     return new Date(value).toLocaleDateString('pt-BR');
@@ -321,96 +406,34 @@
     </PanelCard>
   </div>
 
-  <!-- Busca, filtros e a fila dividem o MESMO cartão — no protótipo que validou este layout,
-       filtro e tabela em fundos separados pareciam duas telas coladas. A fileira de filtros
-       agora é UMA SÓ, que quebra sozinha (`flex-wrap`): no celular e no tablet cada pastilha
-       ou balão cai pra próxima linha por conta própria, sem precisar de rolagem nem de uma
-       segunda fileira fixa. -->
+  <!-- Os filtros no MESMO desenho do Inventário (`azuos-filter-panel`): busca e departamento à
+       vista, o resto no painel "Filtros", com pastilhas e listas intercaladas e uma etiqueta
+       por filtro ligado. A fila vem logo abaixo, no seu próprio cartão. -->
   <!-- `scroll-mt-4`: quando um cartão de indicador rola a tela até aqui, sobra um respiro acima. -->
-  <div
-    bind:this={queueElement}
-    class="flex scroll-mt-4 flex-col rounded-surface border border-border bg-card shadow-xs"
-  >
-    <div class="flex flex-col gap-3 p-4">
-      <TextField
-        data={{
-          label: 'Buscar',
-          name: 'search',
+  <div bind:this={queueElement} class="flex scroll-mt-4 flex-col gap-4">
+    <FilterPanel
+      data={{
+        search: {
           value: data.filter.search,
           placeholder: 'Nome de quem abriu, descrição, responsável ou solução',
-        }}
-        actions={{ onChange: actions.onSearchChange }}
-      />
+        },
+        primary: departmentField,
+        fields: filterFields,
+        chips: ticketFilterChips(data.filter, problemTypeFilterOptions),
+        canClear: hasActiveFilter,
+      }}
+      ui={{ ariaLabel: 'Filtros da fila de chamados' }}
+      state={{ isFilteredOut: state.isFilteredOut }}
+      actions={{
+        onSearchChange: actions.onSearchChange,
+        onFieldChange: changeFilter,
+        onRemoveChip: (key) => changeFilter(key, ''),
+        onClearFilters: actions.onClearFilters,
+      }}
+    />
 
-      <!-- DUAS FILEIRAS, cada filtro com o nome em cima. A de cima tem as escolhas diretas
-           (pastilhas); a de baixo, as listas que abrem, e à direita o que age sobre a fila:
-           limpar os filtros e trocar entre tabela e cards. Cada fileira ainda quebra sozinha
-           no celular (`flex-wrap`). -->
-      <div class="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4">
-        <FilterField data={{ label: 'Situação' }}>
-          <OptionPicker
-            data={{ value: data.filter.status, options: STATUS_FILTER_OPTIONS }}
-            ui={{ ariaLabel: 'Filtrar por situação', allLabel: 'Todas' }}
-            actions={{
-              onChange: (value: string) => actions.onStatusChange(value as TicketStatus | ''),
-            }}
-          />
-        </FilterField>
-
-        <FilterField data={{ label: 'Urgência' }}>
-          <OptionPicker
-            data={{ value: data.filter.priority, options: PRIORITY_FILTER_OPTIONS }}
-            ui={{ ariaLabel: 'Filtrar por urgência', allLabel: 'Qualquer urgência' }}
-            actions={{
-              onChange: (value: string) => actions.onPriorityChange(value as TicketPriority | ''),
-            }}
-          />
-        </FilterField>
-      </div>
-
-      <div class="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4">
-        <FilterField data={{ label: 'Departamento' }}>
-          <OptionPicker
-            data={{ value: data.filter.department, options: data.departmentOptions ?? [] }}
-            ui={{ ariaLabel: 'Filtrar por departamento', allLabel: 'Todos os departamentos' }}
-            actions={{
-              onChange: (value: string) =>
-                actions.onDepartmentChange(value as TicketDepartment | ''),
-            }}
-          />
-        </FilterField>
-
-        <FilterField data={{ label: 'Tipo de problema' }}>
-          <OptionPicker
-            data={{ value: data.filter.problemType, options: problemTypeFilterOptions }}
-            ui={{ ariaLabel: 'Filtrar por tipo de problema', allLabel: 'Todos os tipos' }}
-            actions={{
-              onChange: (value: string) =>
-                actions.onProblemTypeChange(value as TicketProblemType | ''),
-            }}
-          />
-        </FilterField>
-
-        <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
-          <!-- Só aparece quando há o que limpar: botão que nunca faz nada é ruído. Divide a
-               fileira com campos, então tem a altura deles (`lg`). Quando o filtro escondeu
-               tudo, quem oferece a limpeza é o aviso de lista vazia, logo abaixo — dois botões
-               iguais na mesma tela só confundem. -->
-          {#if hasActiveFilter && !state.isFilteredOut}
-            <ActionButton
-              data={{ label: 'Limpar filtros' }}
-              ui={{ variant: 'ghost', size: 'lg', icon: FilterX }}
-              actions={{ onClick: actions.onClearFilters }}
-            />
-          {/if}
-          <!-- Ver em cards/tabela mora NESTE contexto — é sobre o que vem logo abaixo, não
-               sobre a tela inteira (por isso saiu do cabeçalho da página). -->
-          <TableViewToggle />
-        </div>
-      </div>
-    </div>
-
-    <div class="border-t border-border">
+  <div class="flex flex-col rounded-surface border border-border bg-card shadow-xs">
+    <div>
       <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
       {#if state.error}
         <div class="p-4">
@@ -619,6 +642,7 @@
         </div>
       {/if}
     </div>
+  </div>
   </div>
 
   <!-- Paginação da fila de chamados -->

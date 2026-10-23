@@ -29,6 +29,7 @@ import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
+import { departmentMatches } from '../../../lib/db/department-match.util';
 import { qualified } from '../../../lib/db/sql-column.util';
 import { ticketInArea } from '../../../lib/db/ticket-area.util';
 import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
@@ -356,7 +357,7 @@ function buildWhere(query: ComputerFilter, presence?: PresenceFilter): SQL | und
   const filters: (SQL | undefined)[] = [...lifecycleFilters(query)];
 
   if (presence) filters.push(presenceFilter(presence));
-  if (query.department) filters.push(eq(computers.department, query.department));
+  if (query.department) filters.push(departmentMatches(computers.department, query.department));
   if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
   if (query.kind) filters.push(eq(computers.kind, query.kind));
   if (query.alert) filters.push(alertFilter(query.alert));

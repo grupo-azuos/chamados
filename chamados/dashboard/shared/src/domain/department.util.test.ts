@@ -6,6 +6,8 @@ import {
   departmentFromText,
   departmentLabel,
   departmentNames,
+  isSameDepartment,
+  legacyCodesOf,
   withCurrentDepartment,
 } from './department.util';
 
@@ -90,5 +92,23 @@ describe('withCurrentDepartment', () => {
     const extended = withCurrentDepartment(choices, 'Marketing');
 
     expect(extended.at(-1)).toEqual({ value: 'Marketing', label: 'Marketing', separatorBefore: true });
+  });
+});
+
+describe('legacyCodesOf and isSameDepartment', () => {
+  // feliz
+  /* O nome do RH acha o código antigo gravado antes dele: "Departamento Pessoal" é `pessoal`. */
+  it('knows the legacy code behind each name and treats both as the same department', () => {
+    expect(legacyCodesOf('Departamento Pessoal')).toEqual(['pessoal']);
+    expect(legacyCodesOf('contábil')).toEqual(['contabil']);
+    expect(isSameDepartment('contabil', 'Contábil')).toBe(true);
+    expect(isSameDepartment('CONTÁBIL ', 'Contábil')).toBe(true);
+  });
+
+  // triste
+  it('keeps different departments apart and has no code for a brand new one', () => {
+    expect(legacyCodesOf('Marketing')).toEqual([]);
+    expect(isSameDepartment('fiscal', 'Contábil')).toBe(false);
+    expect(isSameDepartment(null, 'Contábil')).toBe(false);
   });
 });

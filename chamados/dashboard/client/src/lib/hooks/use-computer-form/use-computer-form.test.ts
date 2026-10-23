@@ -107,6 +107,16 @@ describe('useComputerFormModel', () => {
     await waitFor(() => expect(model.data.fields.displayName.value).toBe('Computador 07'));
   });
 
+  it('suggests as soon as the department is chosen, before the kind', async () => {
+    const model = mountModel();
+    await waitFor(() => expect(computersApi.list).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    model.actions.onChange('department', 'Paralegal');
+
+    await waitFor(() => expect(model.data.fields.displayName.value).toBe('Computador 07'));
+  });
+
   // triste
   it('keeps what the person typed, and suggests nothing for a department with no machine', async () => {
     const model = mountModel();
