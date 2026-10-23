@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -39,6 +39,15 @@ function renderWith(filter: Partial<InventoryFilter> = {}) {
   });
 }
 
+/** Escolhe uma opção numa lista suspensa do painel. No jsdom o balão existe, mas fica oculto. */
+async function choose(listName: string, option: string) {
+  await userEvent.click(screen.getByRole('button', { name: listName }));
+  const popup = (await screen.findAllByPlaceholderText('Buscar…'))
+    .at(-1)
+    ?.closest('[data-slot="popover-content"]') as HTMLElement;
+  await fireEvent.click(within(popup).getByText(option));
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('AzuosInventoryFilters', () => {
@@ -51,7 +60,7 @@ describe('AzuosInventoryFilters', () => {
     await userEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Precisa de manutenção' }));
+    await choose('Filtrar pela preventiva', 'Precisa de manutenção');
     expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('needed');
   });
 
@@ -59,11 +68,11 @@ describe('AzuosInventoryFilters', () => {
     renderWith();
     await userEvent.click(screen.getByRole('button', { name: /Filtros/ }));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Vencida' }));
+    await choose('Filtrar pela preventiva', 'Vencida');
     expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('due');
-    await userEvent.click(screen.getByRole('button', { name: 'Nunca feita' }));
+    await choose('Filtrar pela preventiva', 'Nunca feita');
     expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('never');
-    await userEvent.click(screen.getByRole('button', { name: 'Em dia' }));
+    await choose('Filtrar pela preventiva', 'Em dia');
     expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('ok');
   });
 

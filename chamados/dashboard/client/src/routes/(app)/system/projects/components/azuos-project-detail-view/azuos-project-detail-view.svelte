@@ -169,9 +169,9 @@
     />
     <StatCard
       data={{
-        label: 'Entregas na semana',
+        label: 'Entregas em 7 dias',
         value: progress.deliveredLastWeek,
-        hint: progress.lastActivityAt ? `última atividade em ${formatDate(progress.lastActivityAt)}` : null,
+        hint: 'PRs mergeados e merges sem PR',
       }}
       ui={{ tone: 'success', icon: PackageCheck }}
     />

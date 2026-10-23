@@ -1,5 +1,5 @@
 import { type ComputerListItem } from '@template/shared/schemas/computer.schema';
-import { render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -125,6 +125,15 @@ describe('displayNameOf', () => {
   });
 });
 
+/** Escolhe uma opção numa lista suspensa do painel. No jsdom o balão existe, mas fica oculto. */
+async function choose(listName: string, option: string) {
+  await userEvent.click(screen.getByRole('button', { name: listName }));
+  const popup = (await screen.findAllByPlaceholderText('Buscar…'))
+    .at(-1)
+    ?.closest('[data-slot="popover-content"]') as HTMLElement;
+  await fireEvent.click(within(popup).getByText(option));
+}
+
 describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
   function renderWithFilter(filter: Partial<ComputerListFilter> = {}) {
     return render(ComputerListView, {
@@ -169,7 +178,7 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     expect(screen.getByText('Arquivadas')).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).toBeNull();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mostrar' }));
+    await choose('Máquinas arquivadas', 'Mostrar');
     expect(actions.onArchivedChange).toHaveBeenLastCalledWith(true);
   });
 
@@ -194,7 +203,7 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Online agora: filtrar a lista' }));
     expect(actions.onOnlineChange).toHaveBeenLastCalledWith(true);
     await openMoreFilters();
-    await userEvent.click(screen.getByRole('button', { name: 'Online agora' }));
+    await choose('Filtrar por conexão', 'Online agora');
     expect(actions.onOnlineChange).toHaveBeenLastCalledWith(true);
   });
 
@@ -203,7 +212,7 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     renderWithFilter();
 
     await openMoreFilters();
-    await userEvent.click(screen.getByRole('button', { name: 'Precisa de manutenção' }));
+    await choose('Filtrar pela preventiva', 'Precisa de manutenção');
     expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('needed');
   });
 
@@ -214,8 +223,10 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
 
     expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByLabelText('2 ativos')).toBeInTheDocument();
-    /* Aberto sem clique: a pastilha ligada já está à vista. */
-    expect(screen.getByRole('button', { name: 'Precisa de manutenção' })).toBeVisible();
+    /* Aberto sem clique: a lista da preventiva já mostra o que está escolhido. */
+    expect(screen.getByRole('button', { name: 'Filtrar pela preventiva' })).toHaveTextContent(
+      'Precisa de manutenção',
+    );
   });
 
   it('marks the online card as selected and lets it clear the filter', async () => {

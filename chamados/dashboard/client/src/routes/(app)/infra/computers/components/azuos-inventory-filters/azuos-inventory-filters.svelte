@@ -189,13 +189,10 @@
 </script>
 
 <script lang="ts">
-  import Activity from '@lucide/svelte/icons/activity';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import FilterX from '@lucide/svelte/icons/filter-x';
   import Search from '@lucide/svelte/icons/search';
   import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
-  import Tag from '@lucide/svelte/icons/tag';
-  import Wrench from '@lucide/svelte/icons/wrench';
   import X from '@lucide/svelte/icons/x';
   import { untrack } from 'svelte';
   import { flip } from 'svelte/animate';
@@ -223,11 +220,70 @@
   const motionMs = (seconds: number) => (prefersReducedMotion() ? 0 : seconds * 1000);
   const panelId = 'inventory-filters-panel';
 
-  /* Cada filtro do painel tem o tamanho das opções dele, e não o da coluna: a trilha esticada
-     deixava um vazio cinza depois da última pastilha. No celular as pastilhas quebram linha. */
-  const FIELD_HUGS = 'items-start';
-  const GROUP_TITLE =
-    'text-ink-500 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase';
+  /**
+   * Os filtros do painel, na ordem de leitura: o que a máquina está fazendo agora, a
+   * manutenção e o cadastro. Uma lista só, desenhada por um laço, para todos terem o mesmo
+   * controle e a mesma altura.
+   */
+  const panelFilters = $derived([
+    {
+      label: 'Conexão',
+      ariaLabel: 'Filtrar por conexão',
+      allLabel: 'Todas',
+      value: connectionValue,
+      options: CONNECTION_OPTIONS,
+      onChange: changeConnection,
+    },
+    {
+      label: 'Saúde',
+      ariaLabel: 'Filtrar por saúde',
+      allLabel: 'Toda a saúde',
+      value: data.filter.healthStatus,
+      options: HEALTH_OPTIONS,
+      onChange: (value: string) => actions.onHealthStatusChange(value as HealthStatus | ''),
+    },
+    {
+      label: 'Alertas',
+      ariaLabel: 'Filtrar por alerta',
+      allLabel: 'Todos',
+      value: data.filter.alert,
+      options: ALERT_OPTIONS,
+      onChange: (value: string) => actions.onAlertChange(value as ComputerAlertFilter | ''),
+    },
+    {
+      label: 'Preventiva',
+      ariaLabel: 'Filtrar pela preventiva',
+      allLabel: 'Todas',
+      value: data.filter.preventive,
+      options: PREVENTIVE_OPTIONS,
+      onChange: (value: string) =>
+        actions.onPreventiveChange(value as ComputerPreventiveFilter | ''),
+    },
+    {
+      label: 'Tipo',
+      ariaLabel: 'Filtrar por tipo',
+      allLabel: 'Todos os tipos',
+      value: data.filter.kind,
+      options: KIND_OPTIONS,
+      onChange: (value: string) => actions.onKindChange(value as ComputerKind | ''),
+    },
+    {
+      label: 'Arquivadas',
+      ariaLabel: 'Máquinas arquivadas',
+      allLabel: 'Ocultar',
+      value: data.filter.includeArchived ? 'yes' : '',
+      options: ARCHIVED_OPTIONS,
+      onChange: (value: string) => actions.onArchivedChange(value === 'yes'),
+    },
+  ]);
+
+  function changeConnection(value: string) {
+    if (value === 'online') return actions.onOnlineChange(true);
+    if (value === 'offline') return actions.onOfflineChange(true);
+
+    actions.onOnlineChange(false);
+    actions.onOfflineChange(false);
+  }
 </script>
 
 <section
@@ -308,112 +364,31 @@
   </div>
 
   {#if isOpen}
-    <!-- O painel desliza: some e aparece sem empurrar a lista num salto. -->
+    <!-- O painel desliza: some e aparece sem empurrar a lista num salto. Dentro, uma LISTA
+         SUSPENSA por filtro, em grade: 3 colunas no computador grande, 2 no tablet e 1 no
+         celular. Cada uma tem a altura de campo do sistema e mostra o valor escolhido — a
+         grade não cresce com o número de opções, como as fileiras de pastilhas cresciam. -->
     <div
       id={panelId}
       transition:slide={{ duration: motionMs(DURATION.base) }}
       class="border-border/60 border-t"
     >
-      <!-- Situação na largura toda, em cima; Manutenção e Cadastro lado a lado embaixo. Com três
-           colunas, a Preventiva (cinco opções) não cabia e as pastilhas se espremiam. -->
-      <div class="grid min-w-0 lg:grid-cols-2">
-        <fieldset class="flex min-w-0 flex-col items-start gap-3 p-3 sm:p-4 lg:col-span-2">
-          <legend class="contents">
-            <span class={GROUP_TITLE}>
-              <Activity class="size-3.5" aria-hidden="true" />
-              Situação agora
-            </span>
-          </legend>
-          <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-6">
-            <FilterField data={{ label: 'Conexão' }} ui={{ className: FIELD_HUGS }}>
-              <OptionPicker
-                data={{ value: connectionValue, options: CONNECTION_OPTIONS }}
-                ui={{ ariaLabel: 'Filtrar por conexão', allLabel: 'Todas' }}
-                actions={{
-                  onChange: (value: string) => {
-                    if (value === 'online') return actions.onOnlineChange(true);
-                    if (value === 'offline') return actions.onOfflineChange(true);
-                    actions.onOnlineChange(false);
-                    actions.onOfflineChange(false);
-                  },
-                }}
-              />
-            </FilterField>
-            <FilterField data={{ label: 'Saúde' }} ui={{ className: FIELD_HUGS }}>
-              <OptionPicker
-                data={{ value: data.filter.healthStatus, options: HEALTH_OPTIONS }}
-                ui={{ ariaLabel: 'Filtrar por saúde', allLabel: 'Toda a saúde' }}
-                actions={{
-                  onChange: (value: string) =>
-                    actions.onHealthStatusChange(value as HealthStatus | ''),
-                }}
-              />
-            </FilterField>
-            <FilterField data={{ label: 'Alertas' }} ui={{ className: FIELD_HUGS }}>
-              <OptionPicker
-                data={{ value: data.filter.alert, options: ALERT_OPTIONS }}
-                ui={{ ariaLabel: 'Filtrar por alerta', allLabel: 'Todos' }}
-                actions={{
-                  onChange: (value: string) =>
-                    actions.onAlertChange(value as ComputerAlertFilter | ''),
-                }}
-              />
-            </FilterField>
-          </div>
-        </fieldset>
-
-        <fieldset
-          class="border-border/60 flex min-w-0 flex-col items-start gap-3 border-t p-3 sm:p-4"
-        >
-          <legend class="contents">
-            <span class={GROUP_TITLE}>
-              <Wrench class="size-3.5" aria-hidden="true" />
-              Manutenção
-            </span>
-          </legend>
-          <FilterField data={{ label: 'Preventiva' }} ui={{ className: FIELD_HUGS }}>
+      <div class="grid min-w-0 gap-x-4 gap-y-3 p-3 sm:grid-cols-2 sm:p-4 xl:grid-cols-3">
+        {#each panelFilters as filter (filter.label)}
+          <FilterField data={{ label: filter.label }} ui={{ className: 'sm:w-full' }}>
             <OptionPicker
-              data={{ value: data.filter.preventive, options: PREVENTIVE_OPTIONS }}
-              ui={{ ariaLabel: 'Filtrar pela preventiva', allLabel: 'Todas' }}
-              actions={{
-                onChange: (value: string) =>
-                  actions.onPreventiveChange(value as ComputerPreventiveFilter | ''),
+              data={{ value: filter.value, options: filter.options }}
+              ui={{
+                ariaLabel: filter.ariaLabel,
+                allLabel: filter.allLabel,
+                mode: 'combobox',
+                fullWidth: true,
+                searchPlaceholder: 'Buscar…',
               }}
+              actions={{ onChange: filter.onChange }}
             />
           </FilterField>
-          <p class="text-ink-500 text-xs">
-            "Precisa de manutenção" junta as vencidas e as que nunca tiveram preventiva.
-          </p>
-        </fieldset>
-
-        <fieldset
-          class="border-border/60 flex min-w-0 flex-col items-start gap-3 border-t p-3 sm:p-4 lg:border-l"
-        >
-          <legend class="contents">
-            <span class={GROUP_TITLE}>
-              <Tag class="size-3.5" aria-hidden="true" />
-              Cadastro
-            </span>
-          </legend>
-          <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-6">
-            <FilterField data={{ label: 'Tipo' }} ui={{ className: FIELD_HUGS }}>
-              <OptionPicker
-                data={{ value: data.filter.kind, options: KIND_OPTIONS }}
-                ui={{ ariaLabel: 'Filtrar por tipo', allLabel: 'Todos os tipos' }}
-                actions={{
-                  onChange: (value: string) => actions.onKindChange(value as ComputerKind | ''),
-                }}
-              />
-            </FilterField>
-            <FilterField data={{ label: 'Arquivadas' }} ui={{ className: FIELD_HUGS }}>
-              <OptionPicker
-                data={{ value: data.filter.includeArchived ? 'yes' : '', options: ARCHIVED_OPTIONS }}
-                ui={{ ariaLabel: 'Máquinas arquivadas', allLabel: 'Ocultar' }}
-                actions={{ onChange: (value: string) => actions.onArchivedChange(value === 'yes') }}
-              />
-            </FilterField>
-          </div>
-        </fieldset>
+        {/each}
       </div>
     </div>
   {/if}
