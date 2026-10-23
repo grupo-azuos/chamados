@@ -98,14 +98,15 @@ export function useComputerFormModel({
     const current = values.displayName.trim();
     if (current !== '' && current !== suggestedNickname) return;
 
-    const suggestion =
-      values.department && values.kind
-        ? suggestNickname(
-            (park.current.data?.items ?? []).map(toNumberedMachine),
-            values.department,
-            values.kind,
-          )
-        : null;
+    /* Sem tipo escolhido ainda, sugere como Desktop — o mais comum no parque. Escolher
+       Notebook depois troca a sugestão, porque ela ainda é a que este formulário pôs. */
+    const suggestion = values.department
+      ? suggestNickname(
+          (park.current.data?.items ?? []).map(toNumberedMachine),
+          values.department,
+          values.kind || 'desktop',
+        )
+      : null;
 
     suggestedNickname = suggestion ?? '';
     form.setFieldValue('displayName', suggestedNickname);
