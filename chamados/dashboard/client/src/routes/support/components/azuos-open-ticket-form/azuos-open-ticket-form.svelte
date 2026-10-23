@@ -445,9 +445,20 @@
                 <span class="text-ink-700 text-sm font-medium">Departamento</span>
                 <OptionPicker
                   data={{ value: fields.department.value, options: data.departmentOptions ?? [] }}
-                  ui={{ ariaLabel: 'Departamento', placeholder: 'Escolha o departamento', fullWidth: true }}
+                  ui={{
+                    ariaLabel: 'Departamento',
+                    placeholder: 'Escolha o departamento',
+                    searchPlaceholder: 'Busque ou digite o departamento',
+                    fullWidth: true,
+                    /* A lista pode faltar o departamento da pessoa (RH fora do ar, setor novo):
+                       ela digita o nome e o chamado guarda o texto como veio. */
+                    allowCustomValue: true,
+                  }}
                   state={{ isDisabled: formState.isSubmitting }}
-                  actions={{ onChange: (value: string) => actions.onChange('department', value) }}
+                  actions={{
+                    onChange: (value: string) => actions.onChange('department', value),
+                    onCustomValue: (value: string) => actions.onChange('department', value),
+                  }}
                 />
               </div>
 
