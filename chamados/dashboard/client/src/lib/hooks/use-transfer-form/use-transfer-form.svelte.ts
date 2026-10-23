@@ -1,6 +1,6 @@
 import { createForm } from '@tanstack/svelte-form';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
-import { type Department, departmentOptions } from '@template/shared/domain/department.util';
+import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
 import { partCategoryLabel } from '@template/shared/domain/part-catalog.util';
 import { type PeripheralDestiny } from '@template/shared/domain/transfer.util';
 import { type Computer } from '@template/shared/schemas/computer.schema';
@@ -16,11 +16,12 @@ import { readError } from '$lib/api/http-client';
 import { transfersApi } from '$lib/api/transfers.api';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
+import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 
 /** O valor do `select` quando a máquina volta para a prateleira. */
 export const NO_DEPARTMENT = '';
 
-export type DepartmentOption = { value: string; label: string };
+export type DepartmentOption = { value: string; label: string; separatorBefore?: boolean };
 
 export type MachineOption = { value: string; label: string };
 
@@ -83,6 +84,7 @@ export function useTransferFormModel({
   onSaved: () => void;
 }): TransferFormModel {
   const queryClient = useQueryClient();
+  const departmentOptions = useDepartmentOptionsModel();
 
   const installed = mirrorStore(
     createQuery(
@@ -147,7 +149,7 @@ export function useTransferFormModel({
         toDepartment: values.current.toDepartment,
         responsible: values.current.responsible,
         note: values.current.note,
-        departments: departmentChoices(),
+        departments: departmentChoices(departmentOptions.options),
         machines: machineChoices(machines.current.data?.items ?? [], computer.id),
         peripherals: peripheralChoices(installed.current.data ?? [], choices),
       };
@@ -183,10 +185,11 @@ function toDepartmentValue(value: string): Department | null {
   return value === NO_DEPARTMENT ? null : (value as Department);
 }
 
-function departmentChoices(): DepartmentOption[] {
+/** Os departamentos do RH e os daqui e, separada no fim, a prateleira. */
+function departmentChoices(options: readonly DepartmentChoice[]): DepartmentOption[] {
   return [
-    ...departmentOptions().map((option) => ({ value: option.value, label: option.label })),
-    { value: NO_DEPARTMENT, label: 'Sem departamento (volta para a prateleira)' },
+    ...options,
+    { value: NO_DEPARTMENT, label: 'Sem departamento (volta para a prateleira)', separatorBefore: true },
   ];
 }
 

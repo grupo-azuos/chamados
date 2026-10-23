@@ -5,7 +5,6 @@ import { contactPhoneSchema } from '../domain/phone.util';
 import {
   isTicketProblemTypeForArea,
   TICKET_AREAS,
-  TICKET_DEPARTMENTS,
   TICKET_PROBLEM_TYPES,
   type TicketProblemType,
 } from '../domain/ticket-catalog.util';
@@ -20,6 +19,7 @@ import { reportFormatSchema } from './report.schema';
 import { ticketAttachmentSchema } from './ticket-attachment.schema';
 import { MAX_STAGED_FILES, stagedFileSchema } from './staged-file.schema';
 import { publicTicketHistorySchema } from './ticket-history.schema';
+import { departmentNameSchema } from './department.schema';
 
 /**
  * O CONTRATO do chamado. Um schema, duas pontas: a API o usa como DTO e Swagger (via
@@ -47,7 +47,7 @@ const chooseFrom = (what: string) => ({ errorMap: () => ({ message: `Escolha ${w
 
 export const ticketStatusSchema = z.enum(TICKET_STATUSES, chooseFrom('uma situação da lista'));
 export const ticketPrioritySchema = z.enum(TICKET_PRIORITIES, chooseFrom('a urgência'));
-export const ticketDepartmentSchema = z.enum(TICKET_DEPARTMENTS, chooseFrom('seu departamento'));
+export const ticketDepartmentSchema = departmentNameSchema('Escolha seu departamento');
 export const ticketAreaSchema = z.enum(TICKET_AREAS, chooseFrom('a área do chamado'));
 export const ticketProblemTypeSchema = z.enum(
   TICKET_PROBLEM_TYPES as [TicketProblemType, ...TicketProblemType[]],

@@ -6,6 +6,7 @@ import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
 import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
 import { qualified } from '../../../lib/db/sql-column.util';
+import { ticketInArea } from '../../../lib/db/ticket-area.util';
 import { computerAlerts } from '../../../lib/db/schema/computer-alerts.schema';
 import { computerSamples } from '../../../lib/db/schema/computer-samples.schema';
 import { computers } from '../../../lib/db/schema/computers.schema';
@@ -141,11 +142,12 @@ export class InsightsRepository {
             where ${qualified(computerAlerts.computerId)} = ${qualified(computers.id)}
               and ${qualified(computerAlerts.startedAt)} >= ${asTimestamp(since)}
           )`,
-          /* Só os chamados COM máquina no chamado: o campo é opcional, e um chamado sem
-             vínculo não pertence a máquina nenhuma. */
+          /* Só os chamados COM máquina no chamado, e de Infraestrutura — a Inteligência é do
+             módulo de Infra, e chamado de Sistema é sobre o software, não sobre a máquina. */
           ticketCount: sql<number>`(
             select count(*)::int from ${tickets}
             where ${qualified(tickets.computerId)} = ${qualified(computers.id)}
+              and ${ticketInArea('infra')}
               and ${qualified(tickets.createdAt)} >= ${asTimestamp(since)}
           )`,
           lastMaintenanceAt: asDate(

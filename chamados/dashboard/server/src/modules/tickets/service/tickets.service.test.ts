@@ -27,6 +27,7 @@ import { signTicketAccess, signTicketInvite } from './ticket-invite.util';
 import { type TicketWhatsappNotifierService } from './ticket-whatsapp-notifier.service';
 import { type GithubService } from '../../software-projects/service/github.service';
 import { type SoftwareProjectsService } from '../../software-projects/service/software-projects.service';
+import { type DepartmentsService } from '../../departments/service/departments.service';
 import { TicketsService } from './tickets.service';
 
 const ana: RequestUser = {
@@ -1238,6 +1239,8 @@ describe('TicketsService — quem pede, logado', () => {
       undefined,
       undefined,
       profiles as AdminConsoleProfileProvider,
+      /* A lista do RH: o texto livre do perfil só vira departamento se bater com um destes. */
+      { names: vi.fn().mockResolvedValue(['Contábil', 'Departamento Pessoal', 'Fiscal']) } as unknown as DepartmentsService,
     );
   }
 
@@ -1293,7 +1296,7 @@ describe('TicketsService — quem pede, logado', () => {
       name: 'Bia Costa',
       email: bia.email,
       phone: '62988887777',
-      department: 'pessoal',
+      department: 'Departamento Pessoal',
       jobTitle: 'Analista',
     });
   });

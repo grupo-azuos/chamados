@@ -8,6 +8,7 @@ import { type HistoryService } from '../../history/service/history.service';
 import { type TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import { type TicketsService } from '../../tickets/service/tickets.service';
 import { type WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
+import { type DepartmentsService } from '../../departments/service/departments.service';
 import { WhatsappAccessRequestService } from './whatsapp-access-request.service';
 import { type InboundMessage } from './whatsapp-intake.service';
 
@@ -65,6 +66,8 @@ function makeService(
     }),
   };
   const history = { record: vi.fn().mockResolvedValue(undefined) };
+  /* Os setores como o RH os teria: a pergunta e a resposta usam a mesma lista. */
+  const departments = { names: vi.fn().mockResolvedValue(['Contábil', 'Fiscal', 'Recursos Humanos']) };
   const service = new WhatsappAccessRequestService(
     env,
     assignees as unknown as TicketAssigneesService,
@@ -73,6 +76,7 @@ function makeService(
     conversations as unknown as WhatsappConversationsRepository,
     directory as unknown as UserDirectoryProvider,
     history as unknown as HistoryService,
+    departments as unknown as DepartmentsService,
   );
 
   /* Uma troca da conversa: a mensagem da pessoa e o que o bot respondeu. */
@@ -98,7 +102,7 @@ describe('WhatsappAccessRequestService — quem está pedindo', () => {
       reply: 'text:access_department',
       isOpen: true,
     });
-    await say('11');
+    await say('3');
 
     expect(directory.searchUsers).toHaveBeenCalledWith('maria');
     expect(tickets.create.mock.calls[0]?.[0]).toMatchObject({ requesterName: 'Maria Clara Souza' });
@@ -114,7 +118,7 @@ describe('WhatsappAccessRequestService — quem está pedindo', () => {
   it('settles a shared name by who already used the phone', async () => {
     const { say, tickets } = makeService({ people: [MARIA, MARIA_LIMA], phoneOwners: ['lima-id'] });
 
-    for (const text of ['/acesso', 'Maria Clara', '11']) await say(text);
+    for (const text of ['/acesso', 'Maria Clara', '3']) await say(text);
 
     expect(tickets.phoneOwnersOf).toHaveBeenCalledWith('5562999990002');
     expect(tickets.create.mock.calls[0]?.[1]).toMatchObject({ requester: { id: 'lima-id' } });
@@ -127,7 +131,7 @@ describe('WhatsappAccessRequestService — quem está pedindo', () => {
     expect(await say('Maria Clara')).toEqual({ reply: 'text:access_who', isOpen: true });
     expect(messaging.reply.mock.calls.at(-1)?.[0].values.opcoes).toContain('2. Maria Clara Lima');
     expect(await say('2')).toEqual({ reply: 'text:access_department', isOpen: true });
-    await say('11');
+    await say('3');
 
     expect(tickets.create.mock.calls[0]?.[1]).toMatchObject({ requester: { id: 'lima-id' } });
   });
@@ -139,7 +143,7 @@ describe('WhatsappAccessRequestService — quem está pedindo', () => {
     await say('/acesso');
     await say('Maria Clara');
     expect(await say('0')).toEqual({ reply: 'text:access_email', isOpen: true });
-    for (const text of ['maria@outra.com', '11']) await say(text);
+    for (const text of ['maria@outra.com', '3']) await say(text);
 
     expect(tickets.create.mock.calls[0]?.[1]).toEqual({
       skipOpeningNotice: true,
@@ -168,7 +172,7 @@ describe('WhatsappAccessRequestService', () => {
       reply: 'text:access_department',
       isOpen: true,
     });
-    expect(await say('11')).toEqual({ reply: 'text:access_created', isOpen: false });
+    expect(await say('3')).toEqual({ reply: 'text:access_created', isOpen: false });
 
     /* Pedido de usuário não é de sistema nenhum: o chamado nasce sem `projectId`. */
     expect(tickets.create.mock.calls[0]?.[0]).not.toHaveProperty('projectId');
@@ -176,7 +180,7 @@ describe('WhatsappAccessRequestService', () => {
       expect.objectContaining({
         requesterName: 'Maria Clara Souza',
         area: 'sistema',
-        department: 'rh',
+        department: 'Recursos Humanos',
         problemType: 'access_request',
         contactPhone: '62999990002',
         notifyWhatsapp: true,

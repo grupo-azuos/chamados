@@ -22,14 +22,8 @@ import { apiRequest } from './http-client';
 export const partsApi = {
   list: (query: Partial<PartListQuery>) =>
     apiRequest<Paginated<Part>>('/parts', {
-      query: {
-        page: query.page,
-        pageSize: query.pageSize,
-        search: query.search,
-        category: query.category,
-        condition: query.condition,
-        inStockOnly: query.inStockOnly,
-      },
+      /* O filtro INTEIRO vai para o servidor, que filtra no SQL. */
+      query: { ...query },
     }),
 
   findById: (id: number) => apiRequest<Part>(`/parts/${id}`),

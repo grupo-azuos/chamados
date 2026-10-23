@@ -1,7 +1,9 @@
 import { createForm } from '@tanstack/svelte-form';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
-import { type Department } from '@template/shared/domain/department.util';
+import { type Department, withCurrentDepartment } from '@template/shared/domain/department.util';
+import { suggestNickname } from '@template/shared/domain/machine-number.util';
+import { MAX_PAGE_SIZE } from '@template/shared/schemas/pagination.schema';
 import {
   type Computer,
   type ComputerResponsible,
@@ -14,7 +16,12 @@ import { readError } from '$lib/api/http-client';
 import { type ComputerFormField } from '$lib/components/azuos-computer-form-dialog/azuos-computer-form-dialog.svelte';
 import { toFieldState } from '$lib/hooks/use-form-projection/use-form-projection.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
-import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
+import {
+  COMPUTERS_QUERY_KEY,
+  toNumberedMachine,
+} from '$lib/hooks/use-computer-list/use-computer-list.svelte';
+import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
+import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
 import { type FormFieldState } from '$lib/types/form-field.type';
 
 /** O token recém-gerado e a máquina dele — o que a tela precisa mostrar depois do cadastro. */
@@ -25,8 +32,15 @@ export type ComputerFormModel = {
     mode: 'create' | 'edit';
     fields: Record<ComputerFormField, FormFieldState>;
     responsibles: ComputerResponsible[];
+    departmentOptions: OptionPickerOption[];
   };
-  state: { isSubmitting: boolean; error: string | null; isLoadingResponsibles: boolean; responsiblesError: string | null };
+  state: {
+    isSubmitting: boolean;
+    error: string | null;
+    isLoadingResponsibles: boolean;
+    responsiblesError: string | null;
+    isRhUnavailable: boolean;
+  };
   actions: {
     onChange: (field: ComputerFormField, value: string) => void;
     onBlur: (field: ComputerFormField) => void;
@@ -54,12 +68,49 @@ export function useComputerFormModel({
   onSaved: (created: CreatedAgentToken | null) => void;
 }): ComputerFormModel {
   const queryClient = useQueryClient();
+  const departments = useDepartmentOptionsModel();
   const responsibles = mirrorStore(createQuery({
     queryKey: [...COMPUTERS_QUERY_KEY, 'responsibles'],
     queryFn: () => computersApi.responsibles(),
     staleTime: 60_000,
     retry: false,
   }));
+
+  /* O parque inteiro, arquivadas inclusive, só no CADASTRO: é de onde sai o próximo número
+     do apelido. Arquivada conta para o número não se repetir no histórico. */
+  const park = mirrorStore(createQuery({
+    queryKey: [...COMPUTERS_QUERY_KEY, 'list', { includeArchived: true, forNumbering: true }],
+    queryFn: () => computersApi.list({ includeArchived: true, page: 1, pageSize: MAX_PAGE_SIZE }),
+    enabled: !computer,
+    staleTime: 60_000,
+  }));
+  /* O último apelido que ESTE formulário sugeriu: só ele pode ser trocado sozinho. O que a
+     pessoa digitou não é sobrescrito. Variável comum: não aparece na tela. */
+  let suggestedNickname = '';
+
+  /**
+   * Departamento ou tipo mudou: sugere o apelido no formato das máquinas dali ("Computador 07").
+   * Departamento sem máquina daquele tipo não tem padrão a copiar — e a sugestão anterior, se
+   * ainda estiver no campo, sai, para não ficar o número de outro departamento.
+   */
+  function suggestNicknameFor(values: ComputerCreateFormValues) {
+    if (computer) return;
+    const current = values.displayName.trim();
+    if (current !== '' && current !== suggestedNickname) return;
+
+    /* Sem tipo escolhido ainda, sugere como Desktop — o mais comum no parque. Escolher
+       Notebook depois troca a sugestão, porque ela ainda é a que este formulário pôs. */
+    const suggestion = values.department
+      ? suggestNickname(
+          (park.current.data?.items ?? []).map(toNumberedMachine),
+          values.department,
+          values.kind || 'desktop',
+        )
+      : null;
+
+    suggestedNickname = suggestion ?? '';
+    form.setFieldValue('displayName', suggestedNickname);
+  }
 
   const save = mirrorStore(
     createMutation({
@@ -109,6 +160,8 @@ export function useComputerFormModel({
       return {
         mode: computer ? ('edit' as const) : ('create' as const),
         responsibles: responsibles.current.data ?? [],
+        /* O departamento que a máquina já tem entra na lista mesmo que o RH o tenha tirado. */
+        departmentOptions: withCurrentDepartment(departments.options, computer?.department),
         fields: {
           name: field('name'),
           kind: field('kind'),
@@ -121,10 +174,14 @@ export function useComputerFormModel({
     get state() {
       return { isSubmitting: save.current.isPending, error: readError(save.current.error),
         isLoadingResponsibles: responsibles.current.isPending,
-        responsiblesError: readError(responsibles.current.error) };
+        responsiblesError: readError(responsibles.current.error),
+        isRhUnavailable: !departments.isRhAvailable };
     },
     actions: {
-      onChange: (field, value) => form.setFieldValue(field, value as never),
+      onChange: (field, value) => {
+        form.setFieldValue(field, value as never);
+        if (field === 'department' || field === 'kind') suggestNicknameFor(form.state.values);
+      },
       /* `validateField` só marca "tocado" quando existe um `form.Field` montado — este hook
          chama `setFieldValue`/`validateField` direto, sem montar um. Sem marcar aqui, o erro
          nunca aparecia ao SAIR do campo (ver `toFieldState`, em form-projection.svelte.ts). */

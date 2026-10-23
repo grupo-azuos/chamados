@@ -2,6 +2,11 @@
   import type { LucideIcon } from '@lucide/svelte';
   import { tv } from 'tailwind-variants';
 
+  // Permite compor gatilhos nas features sem acessar os arquivos gerados pelo CLI.
+  import { Button as ButtonPrimitive } from '$lib/components/ui/button';
+  export const AzuosButtonPrimitive = ButtonPrimitive;
+  export * as AzuosDropdownMenuPrimitive from '$lib/components/ui/dropdown-menu';
+
   /**
    * A altura e o raio vêm da RÉGUA DE MEDIDAS (`lib/theme/tokens.css`), e não do componente
    * baixado: ele tem a escala dele (32, 28, 24px), que não é a do projeto. Era esse

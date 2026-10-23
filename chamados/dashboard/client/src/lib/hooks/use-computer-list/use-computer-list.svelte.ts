@@ -1,11 +1,15 @@
 import { goto } from '$app/navigation';
 import { createQuery } from '@tanstack/svelte-query';
-import { type HealthStatus } from '@template/shared/domain/computer-health.util';
-import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
-import { type Department } from '@template/shared/domain/department.util';
+import { HEALTH_STATUSES, type HealthStatus } from '@template/shared/domain/computer-health.util';
+import { COMPUTER_KINDS, type ComputerKind } from '@template/shared/domain/computer-kind.util';
+import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
+import { compareMachines, type NumberedMachine } from '@template/shared/domain/machine-number.util';
 import {
+  COMPUTER_ALERT_FILTERS,
+  COMPUTER_PREVENTIVE_FILTERS,
   type Computer,
   type ComputerAlertFilter,
+  type ComputerPreventiveFilter,
   type ComputerListItem,
 } from '@template/shared/schemas/computer.schema';
 import { type MaintenanceSchedule } from '@template/shared/schemas/maintenance.schema';
@@ -19,8 +23,18 @@ import {
   allSchedulesQuery,
   schedulesByComputer,
 } from '$lib/hooks/use-maintenance-schedule/use-maintenance-schedule.svelte';
+import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
+import {
+  fieldParser,
+  isFlag,
+  isText,
+  oneOf,
+  urlParser,
+  type FieldGuards,
+} from '$lib/utils/filter-fields.util';
 
 export type ComputerListFilter = {
   search: string;
@@ -31,6 +45,9 @@ export type ComputerListFilter = {
   onlyOnline: boolean;
   onlyOffline: boolean;
   alert: ComputerAlertFilter | '';
+  /** Só quem precisa de manutenção: preventiva nunca feita ou vencida. */
+  /** A situação da preventiva — ou só quem precisa de manutenção (vencida ou nunca feita). */
+  preventive: ComputerPreventiveFilter | '';
   /** Arquivadas saíram de uso: só aparecem quando alguém pede por elas. */
   includeArchived: boolean;
 };
@@ -60,6 +77,8 @@ export type ComputerListModel = {
     filter: ComputerListFilter;
     /** O dia agendado de cada máquina (`AAAA-MM-DD`), pelo id. Só as que têm agendamento. */
     scheduledFor: Record<number, string>;
+    /** As opções do filtro de departamento: as do RH e, depois da linha, as daqui. */
+    departmentOptions: DepartmentChoice[];
   };
   state: {
     isLoading: boolean;
@@ -83,6 +102,7 @@ export type ComputerListModel = {
     onOnlineChange: (onlyOnline: boolean) => void;
     onOfflineChange: (onlyOffline: boolean) => void;
     onAlertChange: (alert: ComputerAlertFilter | '') => void;
+    onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
     onArchivedChange: (includeArchived: boolean) => void;
     onClearFilters: () => void;
     onRetry: () => void;
@@ -99,8 +119,25 @@ const EMPTY_FILTER: ComputerListFilter = {
   onlyOnline: false,
   onlyOffline: false,
   alert: '',
+  preventive: '',
   includeArchived: false,
 };
+
+/** Cada campo do filtro conferido sozinho: um campo salvo que não serve volta ao padrão. */
+const FILTER_GUARDS: FieldGuards<ComputerListFilter> = {
+  search: isText,
+  department: isText,
+  healthStatus: oneOf('', ...HEALTH_STATUSES),
+  kind: oneOf('', ...COMPUTER_KINDS),
+  onlyOnline: isFlag,
+  onlyOffline: isFlag,
+  alert: oneOf('', ...COMPUTER_ALERT_FILTERS),
+  preventive: oneOf('', ...COMPUTER_PREVENTIVE_FILTERS),
+  includeArchived: isFlag,
+};
+
+/** O nome desta tela no armazém dos filtros. Estável: renomear faz todo mundo perder o salvo. */
+export const COMPUTER_LIST_FILTER_SCREEN = 'infra-computers';
 
 export const COMPUTERS_QUERY_KEY = ['computers'] as const;
 export const COMPUTER_NAME_REFRESH_MS = 60_000;
@@ -114,6 +151,7 @@ function scopeOf(filter: ComputerListFilter) {
     onlyOnline: filter.onlyOnline || undefined,
     onlyOffline: filter.onlyOffline || undefined,
     alert: filter.alert || undefined,
+    preventive: filter.preventive || undefined,
     includeArchived: filter.includeArchived || undefined,
   };
 }
@@ -131,6 +169,27 @@ export function scheduledDayByComputer(
   return Object.fromEntries(
     [...schedulesByComputer(schedules)].map(([computerId, schedule]) => [computerId, schedule.scheduledFor]),
   );
+}
+
+/** O que a regra do número lê de uma máquina da lista: nomes, departamento e tipo. */
+export function toNumberedMachine(computer: Computer): NumberedMachine {
+  return {
+    name: computer.name,
+    displayName: computer.displayName,
+    hostname: computer.hardware?.hostname ?? null,
+    department: computer.department,
+    kind: computer.kind,
+  };
+}
+
+/**
+ * A lista na ordem do NÚMERO da máquina, pelo nome físico: ANALYZE-D01, ANALYZE-N01,
+ * CERTIFICADO-D01, CERTIFICADO-D02… É como o TI conta o parque e como acha uma máquina
+ * rolando a tela. Antes ela vinha da pior saúde para a melhor — quem quer as críticas tem o
+ * filtro e o cartão do topo.
+ */
+export function sortByMachineNumber<T extends Computer>(computers: readonly T[]): T[] {
+  return [...computers].sort((a, b) => compareMachines(toNumberedMachine(a), toNumberedMachine(b)));
 }
 
 export function summarizeComputers(computers: readonly ComputerListItem[]): ComputerSummary {
@@ -159,7 +218,12 @@ export function useComputerListModel(): ComputerListModel {
      recebe as opções como store e é ela quem decide quando refazer a busca. Com `$state`,
      duas mudanças seguidas de filtro chegariam à consulta como uma emissão só, com o valor
      do meio — e a API seria chamada sem um dos filtros. */
-  const filterStore = writable<ComputerListFilter>({ ...EMPTY_FILTER });
+  const filterStore = persistedFilterStore<ComputerListFilter>({
+    screen: COMPUTER_LIST_FILTER_SCREEN,
+    defaults: EMPTY_FILTER,
+    parse: fieldParser(EMPTY_FILTER, FILTER_GUARDS),
+    fromUrl: urlParser(EMPTY_FILTER, FILTER_GUARDS),
+  });
   const filter = mirrorStore(filterStore);
 
   let exportingFormat = $state<ReportFormat | null>(null);
@@ -191,17 +255,19 @@ export function useComputerListModel(): ComputerListModel {
   /* Os agendamentos vêm da Manutenção, numa consulta à parte: o agendamento é dela, e a
      lista só mostra. Sem filtro pelo mesmo motivo do resumo — são poucos, um por máquina. */
   const schedules = mirrorStore(allSchedulesQuery());
+  const departments = useDepartmentOptionsModel();
 
   return {
     /* `get` em vez de valor: o objeto é montado uma vez e a tela lê dele a cada mudança. Com
        valores fixos, a lista congelaria no primeiro carregamento. */
     get data() {
       return {
-        computers: list.current.data?.items ?? [],
+        computers: sortByMachineNumber(list.current.data?.items ?? []),
         total: list.current.data?.total ?? 0,
         summary: summary.current.data ? summarizeComputers(summary.current.data.items) : null,
         filter: filter.current,
         scheduledFor: scheduledDayByComputer(schedules.current.data),
+        departmentOptions: departments.options,
       };
     },
     get state() {
@@ -233,9 +299,11 @@ export function useComputerListModel(): ComputerListModel {
           onlyOnline: onlyOffline ? false : current.onlyOnline,
         })),
       onAlertChange: (alert) => filterStore.update((current) => ({ ...current, alert })),
+      onPreventiveChange: (preventive) =>
+        filterStore.update((current) => ({ ...current, preventive })),
       onArchivedChange: (includeArchived) =>
         filterStore.update((current) => ({ ...current, includeArchived })),
-      onClearFilters: () => filterStore.set({ ...EMPTY_FILTER }),
+      onClearFilters: () => filterStore.clear(),
       onRetry: () => {
         void list.current.refetch();
         void summary.current.refetch();
@@ -278,6 +346,7 @@ function hasAnyFilter(filter: ComputerListFilter): boolean {
     filter.healthStatus !== '' ||
     filter.kind !== '' ||
     filter.alert !== '' ||
+    filter.preventive !== '' ||
     filter.includeArchived ||
     filter.onlyOnline ||
     filter.onlyOffline

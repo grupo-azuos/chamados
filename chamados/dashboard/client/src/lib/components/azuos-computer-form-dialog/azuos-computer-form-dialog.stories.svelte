@@ -21,6 +21,17 @@
     };
   }
 
+  /* Os departamentos como chegam do servidor: os do RH e, depois da linha, os daqui. */
+  const departmentOptions = [
+    { value: 'Comercial', label: 'Comercial' },
+    { value: 'Contábil', label: 'Contábil' },
+    { value: 'Departamento Pessoal', label: 'Departamento Pessoal' },
+    { value: 'Fiscal', label: 'Fiscal' },
+    { value: 'ANALYZE', label: 'ANALYZE', separatorBefore: true },
+    { value: 'CERTIFICADO', label: 'CERTIFICADO' },
+    { value: 'RECEPÇÃO', label: 'RECEPÇÃO' },
+  ];
+
   const actions = {
     onChange: () => {},
     onBlur: () => {},
@@ -124,3 +135,19 @@
 
 <Story name="DirectoryUnavailable" args={{ data: { mode: 'create', fields: fields() }, state: { isOpen: true, responsiblesError: 'Diretório indisponível' }, actions }} />
 <Story name="DirectoryLoading" args={{ data: { mode: 'create', fields: fields() }, state: { isOpen: true, isLoadingResponsibles: true }, actions }} />
+
+<!-- Os departamentos vêm do RH; os que existem só aqui aparecem depois de uma linha. -->
+<Story
+  name="RhDepartments"
+  args={{ data: { mode: 'create', fields: fields(), departmentOptions }, state: { isOpen: true }, actions }}
+/>
+
+<!-- O RH não respondeu: só os departamentos daqui, e o aviso explica a lista curta. -->
+<Story
+  name="RhUnavailable"
+  args={{
+    data: { mode: 'create', fields: fields(), departmentOptions: departmentOptions.slice(4) },
+    state: { isOpen: true, isRhUnavailable: true },
+    actions,
+  }}
+/>

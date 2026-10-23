@@ -1,5 +1,5 @@
 import { type ComputerListItem } from '@template/shared/schemas/computer.schema';
-import { render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -80,6 +80,7 @@ const emptyFilter: ComputerListFilter = {
   onlyOnline: false,
   onlyOffline: false,
   alert: '',
+  preventive: '',
 };
 
 const actions = {
@@ -91,6 +92,7 @@ const actions = {
   onOfflineChange: vi.fn(),
   onKindChange: vi.fn(),
   onAlertChange: vi.fn(),
+  onPreventiveChange: vi.fn(),
   onClearFilters: vi.fn(),
   onRetry: vi.fn(),
   onOpen: vi.fn(),
@@ -123,6 +125,15 @@ describe('displayNameOf', () => {
   });
 });
 
+/** Escolhe uma opção numa lista suspensa do painel. No jsdom o balão existe, mas fica oculto. */
+async function choose(listName: string, option: string) {
+  await userEvent.click(screen.getByRole('button', { name: listName }));
+  const popup = (await screen.findAllByPlaceholderText('Buscar…'))
+    .at(-1)
+    ?.closest('[data-slot="popover-content"]') as HTMLElement;
+  await fireEvent.click(within(popup).getByText(option));
+}
+
 describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
   function renderWithFilter(filter: Partial<ComputerListFilter> = {}) {
     return render(ComputerListView, {
@@ -132,6 +143,11 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
         actions,
       },
     });
+  }
+
+  /* Os filtros além de busca e departamento moram no painel "Filtros", que nasce fechado. */
+  async function openMoreFilters() {
+    await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
   }
 
   // feliz
@@ -158,6 +174,7 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
   it('offers the archived choice as a named filter, not a loose checkbox', async () => {
     renderWithFilter();
 
+    await openMoreFilters();
     expect(screen.getByText('Arquivadas')).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).toBeNull();
 
@@ -185,8 +202,31 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     renderWithFilter();
     await userEvent.click(screen.getByRole('button', { name: 'Online agora: filtrar a lista' }));
     expect(actions.onOnlineChange).toHaveBeenLastCalledWith(true);
+    await openMoreFilters();
     await userEvent.click(screen.getByRole('button', { name: 'Online agora' }));
     expect(actions.onOnlineChange).toHaveBeenLastCalledWith(true);
+  });
+
+  // feliz
+  it('filters the machines that need maintenance from the grouped filters', async () => {
+    renderWithFilter();
+
+    await openMoreFilters();
+    await choose('Filtrar pela preventiva', 'Precisa de manutenção');
+    expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('needed');
+  });
+
+  // triste
+  /* Filtro ligado lá dentro não pode ficar invisível: o título conta, e o bloco nasce aberto. */
+  it('announces and opens the grouped filters when the list arrives filtered', () => {
+    renderWithFilter({ preventive: 'needed', onlyOffline: true });
+
+    expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('2 ativos')).toBeInTheDocument();
+    /* Aberto sem clique: a lista da preventiva já mostra o que está escolhido. */
+    expect(screen.getByRole('button', { name: 'Filtrar pela preventiva' })).toHaveTextContent(
+      'Precisa de manutenção',
+    );
   });
 
   it('marks the online card as selected and lets it clear the filter', async () => {

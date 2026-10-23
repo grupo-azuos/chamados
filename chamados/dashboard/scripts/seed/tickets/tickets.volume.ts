@@ -1,3 +1,4 @@
+import { departmentLabel } from '@template/shared/domain/department.util';
 import {
   isClosedTicketStatus,
   isSolvedTicketStatus,
@@ -214,7 +215,7 @@ function generate(index: number): TicketInsert {
     status,
     priority: pickWeighted(['medium', 'low', 'high'] as const, index * 31),
     requesterName,
-    department,
+    department: departmentLabel(department),
     problemType,
     computerId: computerOf(index),
     anydeskId: chance(22, index * 37) ? `${between(100, 999, index)} ${between(100, 999, index + 1)} ${between(100, 999, index + 2)}` : null,
@@ -287,7 +288,7 @@ const RECURRING_TICKETS: TicketInsert[] = RECURRING_PATTERNS.flatMap((pattern, p
       status: 'resolved' as const,
       priority: 'medium' as const,
       requesterName: pattern.requesterName,
-      department: pattern.department,
+      department: departmentLabel(pattern.department),
       problemType: pattern.problemType,
       computerId: pattern.computerId,
       anydeskId: null,

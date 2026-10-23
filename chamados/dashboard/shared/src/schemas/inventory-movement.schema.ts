@@ -79,6 +79,8 @@ export type CreateInventoryMovementInput = z.input<typeof createInventoryMovemen
 export const inventoryMovementListQuerySchema = paginationQuerySchema.extend({
   itemId: z.coerce.number().int().optional(),
   type: stockMovementTypeSchema.optional(),
+  /** O motivo do descarte — filtrado no SQL. */
+  reason: disposalReasonSchema.optional(),
 });
 
 export type InventoryMovementListQuery = z.infer<typeof inventoryMovementListQuerySchema>;

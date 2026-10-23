@@ -36,7 +36,7 @@ const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const PEDIDO = {
   requesterName: 'Marta da Recepção',
   area: 'infra',
-  department: 'recepcao',
+  department: 'RECEPÇÃO',
   problemType: 'printer',
   contactPhone: '62 99999-1234',
   description: 'A impressora da recepção não puxa papel desde ontem.',
@@ -160,7 +160,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
       protocol: 'CH-0001',
       status: 'open',
       requesterName: PEDIDO.requesterName,
-      department: 'recepcao',
+      department: 'RECEPÇÃO',
       problemType: 'printer',
       /* Todo chamado nasce sem responsável e sem solução: são do TI. */
       assignee: null,

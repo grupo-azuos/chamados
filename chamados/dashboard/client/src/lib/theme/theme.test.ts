@@ -12,6 +12,7 @@ async function freshTheme() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  document.cookie = 'azuos-theme=; Path=/; Max-Age=0';
   document.documentElement.removeAttribute('data-theme');
 });
 
@@ -22,18 +23,19 @@ afterEach(() => {
 
 describe('useThemeModel', () => {
   // feliz
-  it('starts in light mode when no preference is saved, even if the OS prefers dark', async () => {
+  it('starts in dark mode when no preference is saved', async () => {
     vi.stubGlobal(
       'matchMedia',
       vi.fn().mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia,
     );
     const { useThemeModel } = await freshTheme();
 
-    expect(useThemeModel().theme).toBe('light');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(useThemeModel().theme).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
   it('alterna entre claro e escuro e guarda a escolha', async () => {
+    localStorage.setItem(STORAGE_KEY, 'light');
     const { useThemeModel } = await freshTheme();
     const theme = useThemeModel();
 
@@ -54,11 +56,11 @@ describe('useThemeModel', () => {
   });
 
   // triste
-  it('ignores an invalid saved value and falls back to light mode', async () => {
+  it('ignores an invalid saved value and falls back to dark mode', async () => {
     window.localStorage.setItem(STORAGE_KEY, 'catppuccin-mocha');
     const { useThemeModel } = await freshTheme();
 
-    expect(useThemeModel().theme).toBe('light');
+    expect(useThemeModel().theme).toBe('dark');
   });
 
   it('keeps the theme usable when browser storage is blocked', async () => {
@@ -71,9 +73,9 @@ describe('useThemeModel', () => {
     const { useThemeModel } = await freshTheme();
     const theme = useThemeModel();
 
-    expect(theme.theme).toBe('light');
-    expect(() => theme.actions.onToggle()).not.toThrow();
     expect(theme.theme).toBe('dark');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(() => theme.actions.onToggle()).not.toThrow();
+    expect(theme.theme).toBe('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 });

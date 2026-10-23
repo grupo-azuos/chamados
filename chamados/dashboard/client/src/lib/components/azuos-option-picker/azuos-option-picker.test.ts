@@ -238,4 +238,43 @@ it('uses a searchable list for few options on mobile', async () => {
   } finally {
     media.mockRestore();
   }
+
+  // feliz
+  it('draws a divider before the option that starts a new group', async () => {
+    const user = userEvent.setup();
+    render(OptionPicker, {
+      props: {
+        data: {
+          value: '',
+          options: [
+            { value: 'Fiscal', label: 'Fiscal' },
+            { value: 'ANALYZE', label: 'ANALYZE', separatorBefore: true },
+          ],
+        },
+        ui: { ariaLabel: 'Departamento', mode: 'combobox' },
+        actions: { onChange: vi.fn() },
+      },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Departamento' }));
+
+    expect(await screen.findByRole('separator')).toBeInTheDocument();
+  });
+
+  // triste
+  it('draws no divider when the grouped option is the first one shown', async () => {
+    const user = userEvent.setup();
+    render(OptionPicker, {
+      props: {
+        data: { value: '', options: [{ value: 'ANALYZE', label: 'ANALYZE', separatorBefore: true }] },
+        ui: { ariaLabel: 'Departamento', mode: 'combobox' },
+        actions: { onChange: vi.fn() },
+      },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Departamento' }));
+    await screen.findByRole('button', { name: 'ANALYZE' });
+
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+  });
 });

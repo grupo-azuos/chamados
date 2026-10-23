@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -20,7 +21,6 @@ import { GithubConnectionsRepository } from '../../github-integration/repository
 import {
   assertCanEditSystem,
   assertCanRead,
-  assertIsSuperAdmin,
 } from '../../../lib/policy/policy-assert.util';
 import { TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import {
@@ -34,11 +34,13 @@ import {
   type SoftwareProjectPage,
 } from '../repository/software-projects.repository';
 import { SoftwareTimelineRepository } from '../repository/software-timeline.repository';
-import { GithubService } from './github.service';
+import { type FetchedCoAuthor, GithubService } from './github.service';
 
 export const PROJECT_NOT_FOUND = 'Sistema não encontrado.';
 /** Quem aparece como autor do que a rodada automática grava. */
 export const SYSTEM_ACTOR = 'sistema@azuos.local';
+export const GITHUB_SYNC_LINK_REQUIRED =
+  'Vincule sua conta do GitHub (no seu perfil) para sincronizar com o GitHub.';
 
 export type GithubSyncAllResult = {
   projects: number;
@@ -200,7 +202,7 @@ export class SoftwareProjectsService {
   }
 
   async syncGithubPrs(user: RequestUser, id: number): Promise<{ synced: number; message: string }> {
-    assertCanEditSystem(user, 'sincronizar PRs com GitHub');
+    await this.assertCanSync(user);
 
     const repoInfo = repositoryOf(await this.findById(user, id));
     if (!repoInfo) {
@@ -217,15 +219,27 @@ export class SoftwareProjectsService {
   }
 
   /**
-   * Sincroniza TODOS os sistemas de uma vez — PRs e issues, histórico inteiro.
+   * Sincroniza TODOS os sistemas de uma vez — PRs, issues e merges, histórico inteiro.
    *
-   * Só Super Administrador: são dezenas de chamadas ao GitHub numa tacada, e o limite da
-   * instalação do App é da organização inteira, não de quem clicou.
+   * A mesma regra do sync de um sistema: quem tem o GitHub vinculado. As chamadas ao GitHub
+   * saem em grupos pequenos (ver `GITHUB_CONCURRENCY`), então um clique não estoura o limite
+   * da instalação.
    */
   async syncAllGithub(user: RequestUser): Promise<GithubSyncAllResult> {
-    assertIsSuperAdmin(user.role, 'Sincronizar todos os sistemas');
+    await this.assertCanSync(user);
 
     return this.syncAllProjects(user.email, user.id);
+  }
+
+  /**
+   * Quem pode disparar o sync: quem enxerga o módulo Sistema E tem a conta do GitHub vinculada
+   * aqui — qualquer papel, e só esses. Sincronizar não muda dado de ninguém (traz do GitHub o
+   * que já existe), mas é feito em nome de uma conta real do GitHub; sem vínculo, não há conta.
+   */
+  private async assertCanSync(user: RequestUser): Promise<void> {
+    assertCanRead(user.role, 'os sistemas');
+    const connection = await this.connections?.find(user.id);
+    if (!connection) throw new ForbiddenException(GITHUB_SYNC_LINK_REQUIRED);
   }
 
   /**
@@ -291,6 +305,8 @@ export class SoftwareProjectsService {
   ): Promise<{ prs: number; issues: number; merges: number }> {
     const { owner, repo } = repoInfo;
     const nameOf = (login: string, fallback: string) => names.get(login.toLowerCase()) ?? fallback;
+    const coAuthorsOf = (people: FetchedCoAuthor[] | undefined, authorName: string) =>
+      coAuthorNames(people ?? [], authorName, nameOf);
     const prs = await this.githubService.fetchPullRequests(owner, repo, userId, since);
     await this.timelineRepository.upsertMany(
       prs.map((pr) => ({
@@ -301,6 +317,7 @@ export class SoftwareProjectsService {
         url: pr.url,
         author: pr.author,
         authorName: nameOf(pr.author, pr.authorName),
+        coAuthors: coAuthorsOf(pr.coAuthors, nameOf(pr.author, pr.authorName)),
         status: pr.status,
         eventDate: pr.eventDate,
         createdBy: actorEmail,
@@ -312,7 +329,7 @@ export class SoftwareProjectsService {
       issues.map((issue) => ({
         projectId,
         type: 'issue' as const,
-        ...issue,
+        ...withoutCoAuthors(issue),
         authorName: nameOf(issue.author, issue.authorName),
         createdBy: actorEmail,
       })),
@@ -323,8 +340,9 @@ export class SoftwareProjectsService {
       merges.map((merge) => ({
         projectId,
         type: 'merge' as const,
-        ...merge,
+        ...withoutCoAuthors(merge),
         authorName: nameOf(merge.author, merge.authorName),
+        coAuthors: coAuthorsOf(merge.coAuthors, nameOf(merge.author, merge.authorName)),
         createdBy: actorEmail,
       })),
     );
@@ -364,6 +382,36 @@ function repositoryOf(project: {
   }
 
   return parseGitHubRepo(project.repositoryUrl);
+}
+
+/**
+ * Os co-autores pelo NOME que a tela mostra: o do admin-console de quem vinculou o GitHub, ou
+ * o do commit. Sem repetir e sem o autor principal — ele já é o dono do evento.
+ */
+export function coAuthorNames(
+  people: readonly FetchedCoAuthor[],
+  authorName: string,
+  nameOf: (login: string, fallback: string) => string,
+): string[] {
+  const normalize = (text: string) =>
+    text.normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase();
+  const seen = new Set([normalize(authorName)]);
+  const names: string[] = [];
+  for (const person of people) {
+    const name = person.login ? nameOf(person.login, person.name) : person.name;
+    if (seen.has(normalize(name))) continue;
+    seen.add(normalize(name));
+    names.push(name);
+  }
+
+  return names;
+}
+
+/** O evento sem a lista bruta do GitHub: no banco vão só os nomes, resolvidos acima. */
+function withoutCoAuthors<T extends { coAuthors?: unknown }>(item: T): Omit<T, 'coAuthors'> {
+  const { coAuthors: _coAuthors, ...rest } = item;
+
+  return rest;
 }
 
 function syncAllMessage(result: GithubSyncAllResult): string {

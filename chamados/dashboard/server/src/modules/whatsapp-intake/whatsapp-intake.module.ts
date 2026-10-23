@@ -9,13 +9,14 @@ import { WhatsappConversationsRepository } from './repository/whatsapp-conversat
 import { WhatsappInboundMessagesRepository } from './repository/whatsapp-inbound-messages.repository';
 import { WhatsappAccessRequestService } from './service/whatsapp-access-request.service';
 import { WhatsappIntakeService } from './service/whatsapp-intake.service';
+import { DepartmentsModule } from '../departments/departments.module';
 
 /**
  * Abrir chamado a partir do WhatsApp. É um módulo à parte porque junta os dois mundos — o WhatsApp e
  * os chamados — sem que um precise conhecer o outro.
  */
 @Module({
-  imports: [AuthModule, TicketsModule, WhatsappModule, HistoryModule],
+  imports: [AuthModule, TicketsModule, WhatsappModule, HistoryModule, DepartmentsModule],
   controllers: [WhatsappIntakeController],
   providers: [
     WhatsappIntakeService,

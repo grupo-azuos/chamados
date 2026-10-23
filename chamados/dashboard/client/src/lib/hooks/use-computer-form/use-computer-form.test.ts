@@ -7,7 +7,12 @@ import Harness from './use-computer-form-harness.test.svelte';
 import { type ComputerFormModel, type CreatedAgentToken } from './use-computer-form.svelte';
 
 vi.mock('$lib/api/computers.api', () => ({
-  computersApi: { create: vi.fn(), update: vi.fn(), responsibles: vi.fn().mockResolvedValue([]) },
+  computersApi: {
+    create: vi.fn(),
+    update: vi.fn(),
+    responsibles: vi.fn().mockResolvedValue([]),
+    list: vi.fn(),
+  },
 }));
 
 const { computersApi } = await import('$lib/api/computers.api');
@@ -78,6 +83,53 @@ describe('useComputerFormModel', () => {
       token: 'agt_novo',
     });
     vi.mocked(computersApi.update).mockResolvedValue(computer());
+    /* O parque de onde sai o próximo número: o Paralegal já vai até o Computador 06. */
+    vi.mocked(computersApi.list).mockResolvedValue({
+      items: [
+        { ...computer({ id: 5, name: 'PARALEGAL-D05', displayName: 'Computador 05', department: 'Paralegal' }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] },
+        { ...computer({ id: 6, name: 'PARALEGAL-D06', displayName: 'Computador 06', department: 'Paralegal' }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] },
+      ],
+      total: 2,
+      page: 1,
+      pageSize: 200,
+    });
+  });
+
+  // feliz
+  it('suggests the next nickname of the department as soon as department and kind are chosen', async () => {
+    const model = mountModel();
+    await waitFor(() => expect(computersApi.list).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    model.actions.onChange('kind', 'desktop');
+    model.actions.onChange('department', 'Paralegal');
+
+    await waitFor(() => expect(model.data.fields.displayName.value).toBe('Computador 07'));
+  });
+
+  it('suggests as soon as the department is chosen, before the kind', async () => {
+    const model = mountModel();
+    await waitFor(() => expect(computersApi.list).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    model.actions.onChange('department', 'Paralegal');
+
+    await waitFor(() => expect(model.data.fields.displayName.value).toBe('Computador 07'));
+  });
+
+  // triste
+  it('keeps what the person typed, and suggests nothing for a department with no machine', async () => {
+    const model = mountModel();
+    await waitFor(() => expect(computersApi.list).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    model.actions.onChange('kind', 'desktop');
+    model.actions.onChange('department', 'Recursos Humanos');
+    expect(model.data.fields.displayName.value).toBe('');
+
+    model.actions.onChange('displayName', 'Máquina da recepção');
+    model.actions.onChange('department', 'Paralegal');
+    expect(model.data.fields.displayName.value).toBe('Máquina da recepção');
   });
 
   // feliz

@@ -1,5 +1,7 @@
 import { createQuery } from '@tanstack/svelte-query';
 import {
+  PART_CATEGORIES,
+  PART_CONDITIONS,
   type PartCategory,
   type PartCondition,
 } from '@template/shared/domain/part-catalog.util';
@@ -10,6 +12,15 @@ import { derived, writable } from 'svelte/store';
 import { readError } from '$lib/api/http-client';
 import { partsApi } from '$lib/api/parts.api';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
+import {
+  fieldParser,
+  isFlag,
+  isText,
+  oneOf,
+  urlParser,
+  type FieldGuards,
+} from '$lib/utils/filter-fields.util';
 
 export type PartListFilter = {
   search: string;
@@ -67,6 +78,15 @@ const EMPTY_FILTER: PartListFilter = {
   outOfStockOnly: false,
 };
 
+/** Cada campo do filtro conferido sozinho: um campo salvo que não serve volta ao padrão. */
+const FILTER_GUARDS: FieldGuards<PartListFilter> = {
+  search: isText,
+  category: oneOf('', ...PART_CATEGORIES),
+  condition: oneOf('', ...PART_CONDITIONS),
+  inStockOnly: isFlag,
+  outOfStockOnly: isFlag,
+};
+
 export const PARTS_QUERY_KEY = ['parts'] as const;
 
 function scopeOf(filter: PartListFilter) {
@@ -75,6 +95,7 @@ function scopeOf(filter: PartListFilter) {
     category: filter.category || undefined,
     condition: filter.condition || undefined,
     inStockOnly: filter.inStockOnly || undefined,
+    outOfStockOnly: filter.outOfStockOnly || undefined,
   };
 }
 
@@ -99,12 +120,6 @@ export function summarizeParts(parts: readonly Part[]): PartSummary {
  * que sai o resumo do topo), então separar o que está com saldo zero não precisa de outra ida
  * ao servidor. Exportado e puro para ter teste próprio.
  */
-export function visiblePartsOf(parts: readonly Part[], filter: PartListFilter): Part[] {
-  if (!filter.outOfStockOnly) return [...parts];
-
-  return parts.filter((part) => part.balance === 0);
-}
-
 /**
  * Estado, consultas e handlers do depósito. ZERO marcação — a view recebe tudo por props e
  * não sabe de onde o dado veio (CONTRIBUTING §3).
@@ -115,7 +130,12 @@ export function visiblePartsOf(parts: readonly Part[], filter: PartListFilter): 
 export function usePartListModel(): PartListModel {
   /* O filtro mora numa STORE, e não num `$state`: esta versão do @tanstack/svelte-query
      recebe as opções como store e é ela quem decide quando refazer a busca. */
-  const filterStore = writable<PartListFilter>({ ...EMPTY_FILTER });
+  const filterStore = persistedFilterStore<PartListFilter>({
+    screen: 'infra-parts',
+    defaults: EMPTY_FILTER,
+    parse: fieldParser(EMPTY_FILTER, FILTER_GUARDS),
+    fromUrl: urlParser(EMPTY_FILTER, FILTER_GUARDS),
+  });
   const filter = mirrorStore(filterStore);
 
   const list = mirrorStore(
@@ -142,21 +162,17 @@ export function usePartListModel(): PartListModel {
   return {
     /* `get` em vez de valor: o objeto é montado uma vez e a tela lê dele a cada mudança. */
     get data() {
-      const parts = visiblePartsOf(list.current.data?.items ?? [], filter.current);
-
       return {
-        parts,
-        /* Com "sem estoque" ligado, o total é o do que sobrou do filtro, não o do servidor. */
-        total: filter.current.outOfStockOnly ? parts.length : (list.current.data?.total ?? 0),
+        /* "Sem estoque" é filtrado no SQL, como os outros: a lista e o total vêm do servidor. */
+        parts: list.current.data?.items ?? [],
+        total: list.current.data?.total ?? 0,
         summary: summary.current.data ? summarizeParts(summary.current.data.items) : null,
         filter: filter.current,
       };
     },
     get state() {
-      const visibleCount = visiblePartsOf(list.current.data?.items ?? [], filter.current).length;
-
       return {
-        ...buildListState(list.current, filter.current, visibleCount),
+        ...buildListState(list.current, filter.current),
         isSummaryLoading: summary.current.isPending,
       };
     },
@@ -178,7 +194,7 @@ export function usePartListModel(): PartListModel {
           outOfStockOnly,
           inStockOnly: outOfStockOnly ? false : current.inStockOnly,
         })),
-      onClearFilters: () => filterStore.set({ ...EMPTY_FILTER }),
+      onClearFilters: () => filterStore.clear(),
       onRetry: () => {
         void list.current.refetch();
         void summary.current.refetch();
@@ -208,13 +224,11 @@ function hasAnyFilter(filter: PartListFilter): boolean {
 function buildListState(
   list: ListQueryLike,
   filter: PartListFilter,
-  visibleCount: number,
 ): Omit<PartListModel['state'], 'isSummaryLoading'> {
   const count = list.data?.items.length ?? 0;
   /* Vazio só é vazio DEPOIS que a consulta terminou. Dizer "nenhuma peça" durante o
-     carregamento faz a pessoa achar que o depósito sumiu — e recarregar. O que conta é o que a
-     tela mostra: com "sem estoque" ligado, a lista pode ficar vazia mesmo tendo vindo peças. */
-  const isSettledEmpty = list.isSuccess && visibleCount === 0;
+     carregamento faz a pessoa achar que o depósito sumiu — e recarregar. */
+  const isSettledEmpty = list.isSuccess && count === 0;
   const filtered = hasAnyFilter(filter);
 
   return {

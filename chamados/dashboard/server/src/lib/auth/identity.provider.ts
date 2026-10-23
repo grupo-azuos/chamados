@@ -9,6 +9,7 @@ import {
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { type Env } from '../config/env.schema';
 import { runQuery } from '../db/db-error.util';
 import { DB } from '../db/db.token';
 import { type Database } from '../db/db.type';
@@ -68,6 +69,24 @@ export const MOCK_IDENTITY: ForwardedIdentity = {
   name: 'Usuário de desenvolvimento',
   role: 'admin',
 };
+
+/**
+ * A pessoa que o mock representa: a REAL do `.env` (`USER_MOCK_ID` e `USER_MOCK_EMAIL`), ou a
+ * fixa quando os dois não vêm juntos. Pela metade não vale: um id sem e-mail (ou o contrário)
+ * criaria alguém que o admin-console não reconhece.
+ */
+export function mockIdentityOf(
+  env: Partial<Pick<Env, 'USER_MOCK_ID' | 'USER_MOCK_EMAIL' | 'USER_MOCK_NAME'>>,
+): ForwardedIdentity {
+  if (!env.USER_MOCK_ID || !env.USER_MOCK_EMAIL) return MOCK_IDENTITY;
+
+  return {
+    id: env.USER_MOCK_ID,
+    email: env.USER_MOCK_EMAIL.toLowerCase(),
+    name: env.USER_MOCK_NAME ?? env.USER_MOCK_EMAIL,
+    role: MOCK_IDENTITY.role,
+  };
+}
 
 export type HeaderBag = Record<string, unknown>;
 

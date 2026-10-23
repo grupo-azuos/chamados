@@ -3,6 +3,7 @@ import { type RoleContext } from '@template/shared/domain/role-context.util';
 
 export const MODULE_CONTEXT = 'template:moduleContext';
 export const ANY_MODULE = 'template:anyModule';
+export const READ_ONLY_ACTION = 'template:readOnlyAction';
 
 /**
  * Diz de QUAL MÓDULO é a rota — Infraestrutura, Sistema ou Manutenção.
@@ -22,3 +23,11 @@ export const ModuleContext = (context: RoleContext) => SetMetadata(MODULE_CONTEX
  * recusada pelo guard, e é assim que rota nova nasce fechada.
  */
 export const AnyModule = () => SetMetadata(ANY_MODULE, true);
+
+/**
+ * Um POST que, para o MÓDULO, conta como leitura: ele não muda dado de ninguém, só traz de
+ * fora o que já existe — ex.: sincronizar com o GitHub, que lê os PRs e atualiza a nossa
+ * cópia. Quem só consulta o módulo passa pela tranca de escrita, e quem decide se pode é o
+ * service (no sync, ter o GitHub vinculado).
+ */
+export const ReadOnlyAction = () => SetMetadata(READ_ONLY_ACTION, true);

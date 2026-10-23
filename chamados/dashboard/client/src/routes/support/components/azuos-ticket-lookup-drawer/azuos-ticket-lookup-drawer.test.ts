@@ -48,7 +48,7 @@ describe('AzuosTicketLookupDrawer', () => {
 
     expect(screen.getByText('CH-0007')).toBeInTheDocument();
     expect(screen.getByText('Em atendimento')).toBeInTheDocument();
-    expect(screen.getByText('FINANCEIRO')).toBeInTheDocument();
+    expect(screen.getByText('Financeiro')).toBeInTheDocument();
     expect(screen.getByText('Impressora')).toBeInTheDocument();
   });
 

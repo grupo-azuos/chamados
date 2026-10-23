@@ -22,6 +22,7 @@ import {
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
+import { departmentMatches } from '../../../lib/db/department-match.util';
 import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
 import { computers } from '../../../lib/db/schema/computers.schema';
@@ -401,7 +402,7 @@ function buildWhere(query: TicketFilter): SQL | undefined {
   if (query.priority) filters.push(eq(tickets.priority, query.priority));
   /* `area` NÃO entra aqui: ela é o contexto, e contexto inclui as áreas participantes —
      quem resolve é o `scopedWhere`, que sabe consultar o banco. */
-  if (query.department) filters.push(eq(tickets.department, query.department));
+  if (query.department) filters.push(departmentMatches(tickets.department, query.department));
   if (query.problemType) filters.push(eq(tickets.problemType, query.problemType));
   if (query.computerId) filters.push(eq(tickets.computerId, query.computerId));
   if (query.projectId) filters.push(eq(tickets.projectId, query.projectId));

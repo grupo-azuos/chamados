@@ -58,7 +58,7 @@ const actions = {
 describe('destinationOf', () => {
   // feliz
   it('reads the machine by the nickname, with the department along', () => {
-    expect(destinationOf(movement())).toBe('Contábil — fechamento · CONTÁBIL');
+    expect(destinationOf(movement())).toBe('Contábil — fechamento · Contábil');
   });
 
   // triste

@@ -32,6 +32,11 @@ export type DashboardModel = {
     onOpenTickets: () => void;
     onOpenMaintenance: () => void;
     onOpenParts: () => void;
+    /** Os cartões do topo: cada um abre a tela de destino já filtrada pelo que ele conta. */
+    onOpenOpenTickets: () => void;
+    onOpenCriticalMachines: () => void;
+    onOpenPreventiveDue: () => void;
+    onOpenOutOfStock: () => void;
   };
 };
 
@@ -74,6 +79,12 @@ export function useDashboardModel(): DashboardModel {
       onOpenTickets: () => void goto('/infra/tickets'),
       onOpenMaintenance: () => void goto('/infra/maintenance'),
       onOpenParts: () => void goto('/infra/parts'),
+      /* O filtro vai no ENDEREÇO: a tela de destino lê dali e passa a lembrar dele. É o mesmo
+         recorte do número do cartão, para a lista e o cartão nunca discordarem. */
+      onOpenOpenTickets: () => void goto('/infra/tickets?status=open'),
+      onOpenCriticalMachines: () => void goto('/infra/computers?healthStatus=critical'),
+      onOpenPreventiveDue: () => void goto('/infra/computers?preventive=needed'),
+      onOpenOutOfStock: () => void goto('/infra/parts?outOfStockOnly=true'),
     },
   };
 }

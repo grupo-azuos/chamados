@@ -9,6 +9,7 @@ import { AuthModule } from './lib/auth/auth.module';
 import { AppConfigModule } from './lib/config/app-config.module';
 import { DbModule } from './lib/db/db.module';
 import { LoggingModule } from './lib/http/logging.module';
+import { staticCacheHeaders } from './lib/http/static-cache.util';
 import { SecurityModule } from './lib/security/security.module';
 import { StorageModule } from './lib/storage/storage.module';
 import { AuthApiModule } from './modules/auth/auth.module';
@@ -17,6 +18,7 @@ import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { WhatsappIntakeModule } from './modules/whatsapp-intake/whatsapp-intake.module';
 import { BudgetModule } from './modules/budget/budget.module';
 import { ComputersModule } from './modules/computers/computers.module';
+import { DepartmentsModule } from './modules/departments/departments.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { HistoryModule } from './modules/history/history.module';
 import { HealthModule } from './modules/health/health.module';
@@ -52,6 +54,9 @@ const CLIENT_DIST = join(__dirname, '..', '..', 'client', 'dist');
     ServeStaticModule.forRoot({
       rootPath: CLIENT_DIST,
       exclude: ['/api/{*path}', '/docs', '/docs-json'],
+      /* Arquivo com hash fica um ano no navegador; o resto (index.html, service worker,
+         favicon) revalida a cada carga. A regra e o porquê estão em `static-cache.util.ts`. */
+      serveStaticOptions: { setHeaders: staticCacheHeaders(CLIENT_DIST) },
     }),
     AppConfigModule,
     /* Logo depois da configuração: o log precisa do `API_LOG_LEVEL` e tem de existir antes de
@@ -74,6 +79,7 @@ const CLIENT_DIST = join(__dirname, '..', '..', 'client', 'dist');
     WhatsappModule,
     WhatsappIntakeModule,
     HealthModule,
+    DepartmentsModule,
     TicketsModule,
     ComputersModule,
     MaintenancesModule,

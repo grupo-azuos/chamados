@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import LaptopIcon from '@lucide/svelte/icons/laptop';
   import ServerIcon from '@lucide/svelte/icons/server';
   import WrenchIcon from '@lucide/svelte/icons/wrench';
@@ -6,8 +7,6 @@
   import { formatPhoneInput } from '@template/shared/domain/phone.util';
   import { screenshotAccept } from '@template/shared/domain/screenshot-catalog.util';
   import {
-    TICKET_DEPARTMENTS,
-    TICKET_DEPARTMENT_LABELS,
     ticketProblemTypeOptionsForArea,
     type TicketArea,
   } from '@template/shared/domain/ticket-catalog.util';
@@ -58,6 +57,8 @@
        */
       opened: { protocol: string; whatsAppLink: string | null; isNoticeSent?: boolean } | null;
       systemProjects?: { value: string; label: string }[];
+      /** Os departamentos do RH e, depois da linha, os daqui. */
+      departmentOptions?: OptionPickerOption[];
       /** Quem atende a área escolhida. Vazio esconde o campo: escolher é opcional. */
       assignees?: { value: string; label: string }[];
       /**
@@ -89,11 +90,6 @@
       onOpenAnother: () => void;
     };
   };
-
-  const DEPARTMENT_OPTIONS = TICKET_DEPARTMENTS.map((department) => ({
-    value: department,
-    label: TICKET_DEPARTMENT_LABELS[department],
-  }));
 
   /**
    * As três áreas, como CARDS — a primeira escolha de quem abre o chamado, antes de qualquer
@@ -448,7 +444,7 @@
               <div class="flex flex-col gap-1.5">
                 <span class="text-ink-700 text-sm font-medium">Departamento</span>
                 <OptionPicker
-                  data={{ value: fields.department.value, options: DEPARTMENT_OPTIONS }}
+                  data={{ value: fields.department.value, options: data.departmentOptions ?? [] }}
                   ui={{ ariaLabel: 'Departamento', placeholder: 'Escolha o departamento', fullWidth: true }}
                   state={{ isDisabled: formState.isSubmitting }}
                   actions={{ onChange: (value: string) => actions.onChange('department', value) }}

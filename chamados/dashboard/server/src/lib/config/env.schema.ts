@@ -220,6 +220,16 @@ export const envSchema = z.object({
    * Sem valor: ligado fora de produção, desligado em produção.
    */
   USER_MOCK: z.enum(['true', 'false']).optional(),
+  /**
+   * QUEM o mock é, na sua máquina: o id (UUID) e o e-mail de uma pessoa REAL do admin-console.
+   * Preenchidos, quem programa entra como ela mesma — com os módulos e o super-admin que já tem
+   * no banco —, em vez da pessoa fixa `dev@chamados.local`, que não existe e não tem acesso a
+   * nada. Vazios, vale a pessoa fixa. Só têm efeito com o mock ligado, e o mock é recusado em
+   * produção — então nunca valem lá.
+   */
+  USER_MOCK_ID: z.string().trim().uuid('USER_MOCK_ID precisa ser o id (UUID) da pessoa no admin-console').optional(),
+  USER_MOCK_EMAIL: z.string().trim().email('USER_MOCK_EMAIL precisa ser um e-mail').optional(),
+  USER_MOCK_NAME: z.string().trim().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

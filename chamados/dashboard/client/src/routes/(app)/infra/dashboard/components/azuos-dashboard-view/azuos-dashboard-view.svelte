@@ -3,11 +3,7 @@
     healthStatusLabel,
     healthStatusTone,
   } from '@template/shared/domain/computer-health.util';
-  import { departmentLabel, isDepartment } from '@template/shared/domain/department.util';
-  import {
-    ticketDepartmentLabel,
-    type TicketDepartment,
-  } from '@template/shared/domain/ticket-catalog.util';
+  import { departmentLabel } from '@template/shared/domain/department.util';
   import {
     PERIOD_OPTIONS,
     type CountByKey,
@@ -53,6 +49,10 @@
       onOpenTickets: () => void;
       onOpenMaintenance: () => void;
       onOpenParts: () => void;
+      onOpenOpenTickets: () => void;
+      onOpenCriticalMachines: () => void;
+      onOpenPreventiveDue: () => void;
+      onOpenOutOfStock: () => void;
     };
   };
 
@@ -95,7 +95,7 @@
 
   /** O rótulo do departamento, que é o mesmo do chamado e o mesmo da máquina. */
   function departmentChartLabel(key: string): string {
-    return isDepartment(key) ? departmentLabel(key) : ticketDepartmentLabel(key as TicketDepartment);
+    return departmentLabel(key);
   }
 
   export function departmentSlices(rows: readonly CountByKey[]): ChartSlice[] {
@@ -229,7 +229,8 @@
       />
     </EmptyState>
   {:else if summary}
-    <!-- 1. O que exige ação hoje. Todo cartão de painel leva ícone, nos três contextos — e o
+    <!-- 1. O que exige ação hoje. Cada cartão é um atalho: abre a tela de destino já filtrada
+         pelo que ele conta. Todo cartão de painel leva ícone, nos três contextos — e o
          mesmo assunto leva o mesmo ícone (chamado é a boia, falta de estoque é a caixa com X). -->
     <StatCardGrid>
       <StatCard
@@ -239,6 +240,7 @@
           hint: summary.tickets.inProgress ? `${summary.tickets.inProgress} em atendimento` : null,
         }}
         ui={{ tone: 'danger', icon: LifeBuoy }}
+        actions={{ onClick: actions.onOpenOpenTickets }}
       />
       <StatCard
         data={{
@@ -247,6 +249,7 @@
           hint: summary.park.attention ? `${summary.park.attention} em atenção` : null,
         }}
         ui={{ tone: 'warning', icon: MonitorX }}
+        actions={{ onClick: actions.onOpenCriticalMachines }}
       />
       <StatCard
         data={{
@@ -255,6 +258,7 @@
           hint: `de ${summary.park.total} máquinas em uso`,
         }}
         ui={{ tone: 'info', icon: CalendarClock }}
+        actions={{ onClick: actions.onOpenPreventiveDue }}
       />
       <StatCard
         data={{
@@ -263,6 +267,7 @@
           hint: `${summary.parts.items} peças na prateleira`,
         }}
         ui={{ tone: 'brand', icon: PackageX }}
+        actions={{ onClick: actions.onOpenOutOfStock }}
       />
     </StatCardGrid>
 

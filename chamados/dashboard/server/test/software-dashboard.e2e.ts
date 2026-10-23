@@ -31,7 +31,7 @@ describe.skipIf(!testDatabaseUrl)('Software dashboard counts (e2e)', () => {
   const ticket = (createdAt: string, overrides: Record<string, unknown> = {}) => ({
     requesterName: 'Pessoa de Teste',
     area: 'sistema' as const,
-    department: 'comercial' as const,
+    department: 'Comercial' as const,
     problemType: 'bug' as const,
     description: 'Tela não abre.',
     createdAt: new Date(createdAt),

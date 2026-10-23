@@ -6,8 +6,6 @@ import { ApiError } from '$lib/api/http-client';
 import Harness from './use-part-list-harness.test.svelte';
 import {
   summarizeParts,
-  visiblePartsOf,
-  type PartListFilter,
   type PartListModel,
 } from './use-part-list.svelte';
 
@@ -73,36 +71,6 @@ describe('summarizeParts', () => {
   });
 });
 
-describe('visiblePartsOf', () => {
-  const filter: PartListFilter = {
-    search: '',
-    category: '',
-    condition: '',
-    inStockOnly: false,
-    outOfStockOnly: false,
-  };
-
-  // feliz
-  it('keeps only the parts with an empty shelf when asked for what is out of stock', () => {
-    const parts = [part({ balance: 0 }), part({ id: 2, balance: 4 }), part({ id: 3, balance: 0 })];
-
-    const visible = visiblePartsOf(parts, { ...filter, outOfStockOnly: true });
-
-    expect(visible.map((item) => item.id)).toEqual([parts[0]?.id, 3]);
-  });
-
-  it('shows everything that came while the out-of-stock filter is off', () => {
-    const parts = [part({ balance: 0 }), part({ id: 2, balance: 4 })];
-
-    expect(visiblePartsOf(parts, filter)).toHaveLength(2);
-  });
-
-  // triste
-  it('returns an empty list when nothing is out of stock', () => {
-    expect(visiblePartsOf([part({ balance: 3 })], { ...filter, outOfStockOnly: true })).toEqual([]);
-  });
-});
-
 describe('usePartListModel', () => {
   beforeEach(() => {
     vi.mocked(partsApi.list).mockResolvedValue(page([part()]));
@@ -123,6 +91,29 @@ describe('usePartListModel', () => {
 
     await waitFor(() =>
       expect(partsApi.list).toHaveBeenCalledWith(expect.objectContaining({ category: 'memory' })),
+    );
+  });
+
+  // feliz
+  /* "Sem estoque" é filtrado no SQL: a tela pede ao servidor, não corta o que veio. */
+  it('asks the server for the empty shelves when the out-of-stock filter is on', async () => {
+    const model = await mountLoadedModel();
+
+    model.actions.onOutOfStockOnlyChange(true);
+
+    await waitFor(() =>
+      expect(partsApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ outOfStockOnly: true, inStockOnly: undefined }),
+      ),
+    );
+  });
+
+  // triste
+  it('does not ask for the empty shelves while the filter is off', async () => {
+    await mountLoadedModel();
+
+    expect(partsApi.list).toHaveBeenCalledWith(
+      expect.objectContaining({ outOfStockOnly: undefined }),
     );
   });
 

@@ -106,8 +106,9 @@ describe('createTicketSchema', () => {
     );
   });
 
-  it('refuses a department that is not on the list, in Portuguese', () => {
-    const result = createTicketSchema.safeParse({ ...validInput, department: 'MARKETING' });
+  /* O nome vem da lista do RH, que muda sem código: o schema só recusa o vazio. */
+  it('refuses a blank department, in Portuguese', () => {
+    const result = createTicketSchema.safeParse({ ...validInput, department: '   ' });
 
     expect(result.success).toBe(false);
     /* O texto padrão do Zod é inglês e enumera as chaves internas; ele chegaria ao rodapé

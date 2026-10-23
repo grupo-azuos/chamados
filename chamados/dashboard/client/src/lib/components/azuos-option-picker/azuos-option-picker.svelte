@@ -21,6 +21,12 @@
     label: string;
     tone?: StatusBadgeTone;
     icon?: LucideIcon;
+    /**
+     * Uma linha divisória ANTES desta opção, na lista que abre: separa um grupo do outro (os
+     * departamentos do RH dos que existem só aqui). Nas pastilhas não aparece — lá as opções
+     * são poucas e lado a lado, e uma linha no meio não diria nada.
+     */
+    separatorBefore?: boolean;
   };
 
   export type AzuosOptionPickerProps = {
@@ -327,8 +333,11 @@
            transforma o outro em `auto` sozinho, e uma opção de nome comprido daria barra de
            rolagem horizontal dentro do balão. -->
       <div class="min-h-0 max-h-96 overflow-x-hidden overscroll-contain overflow-y-auto p-1">
-        {#each filteredOptions as option (option.value || '__all__')}
+        {#each filteredOptions as option, index (option.value || '__all__')}
           {@const isSelected = option.value === data.value}
+          {#if option.separatorBefore && index > 0}
+            <div role="separator" class="bg-border/70 mx-2 my-1 h-px"></div>
+          {/if}
           <button
             type="button"
             onclick={() => select(option.value)}

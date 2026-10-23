@@ -22,7 +22,7 @@
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import DatePicker from '$lib/components/azuos-date-picker/azuos-date-picker.svelte';
-  import TimePicker from '$lib/components/azuos-time-picker/azuos-time-picker.svelte';
+  import TimePicker from '../azuos-time-picker/azuos-time-picker.svelte';
   import { type SoftwareScheduleFormModel } from '$lib/hooks/use-software-schedule-form/use-software-schedule-form.svelte';
 
   let {

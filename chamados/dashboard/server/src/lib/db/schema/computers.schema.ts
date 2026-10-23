@@ -1,6 +1,5 @@
 import { HEALTH_STATUSES } from '@template/shared/domain/computer-health.util';
 import { COMPUTER_KINDS } from '@template/shared/domain/computer-kind.util';
-import { DEPARTMENTS } from '@template/shared/domain/department.util';
 import { DISPOSAL_TYPES } from '@template/shared/domain/disposal.util';
 import { sql } from 'drizzle-orm';
 import {
@@ -48,7 +47,8 @@ export const computers = chamadosSchema.table(
     name: text('name').notNull().unique(),
     displayName: text('display_name'),
     responsibleName: text('responsible_name'),
-    department: text('department', { enum: DEPARTMENTS }),
+    /* O NOME do departamento, como o RH o escreve — ver `department.util.ts`. */
+    department: text('department'),
     /* Desktop ou notebook, escolhido no cadastro. O padrão só existe para as máquinas que já
        estavam cadastradas antes do campo: elas entram como desktop e o TI corrige as que não são. */
     kind: text('kind', { enum: COMPUTER_KINDS }).notNull().default('desktop'),
@@ -134,10 +134,6 @@ export const computers = chamadosSchema.table(
     check(
       'computers_health_status_valid',
       sql`${table.healthStatus} in (${valuesFor(HEALTH_STATUSES)})`,
-    ),
-    check(
-      'computers_department_valid',
-      sql`${table.department} is null or ${table.department} in (${valuesFor(DEPARTMENTS)})`,
     ),
     check('computers_kind_valid', sql`${table.kind} in (${valuesFor(COMPUTER_KINDS)})`),
     check('computers_health_score_range', sql`${table.healthScore} between 0 and 100`),

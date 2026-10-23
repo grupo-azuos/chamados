@@ -198,14 +198,14 @@ function maintenance(over: Partial<Maintenance> = {}): Maintenance {
 describe('transferRouteOf', () => {
   // feliz
   it('reads the move in one line', () => {
-    expect(transferRouteOf(transfer)).toBe('RECEPÇÃO → CONTÁBIL');
+    expect(transferRouteOf(transfer)).toBe('RECEPÇÃO → Contábil');
   });
 
   // triste
   /* "Saiu do nada para o fiscal" não é frase que alguém entenda: a prateleira tem nome. */
   it('gives the shelf a name on both sides', () => {
     expect(transferRouteOf({ ...transfer, fromDepartment: null })).toBe(
-      'Sem departamento → CONTÁBIL',
+      'Sem departamento → Contábil',
     );
     expect(transferRouteOf({ ...transfer, toDepartment: null })).toBe(
       'RECEPÇÃO → Sem departamento',
@@ -234,7 +234,7 @@ describe('o histórico de transferências', () => {
       },
     });
 
-    expect(screen.getByText('RECEPÇÃO → CONTÁBIL')).toBeInTheDocument();
+    expect(screen.getByText('RECEPÇÃO → Contábil')).toBeInTheDocument();
     expect(screen.getByText('2 peça(s) ficaram')).toBeInTheDocument();
   });
 

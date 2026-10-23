@@ -86,7 +86,7 @@ export default tseslint.config(
         {
           paths: [
             {
-              name: 'postgres',
+              name: 'pg',
               message: 'A conexão vem do DbModule, injetada pelo token DB.',
             },
           ],

@@ -27,6 +27,7 @@ import {
 import { departmentFromText } from '@template/shared/domain/department.util';
 import { refuseScreenshot } from '@template/shared/domain/screenshot-catalog.util';
 import {
+  isClosedTicketStatus,
   ticketPriorityLabel,
   ticketPriorityTone,
   ticketStatusLabel,
@@ -89,6 +90,7 @@ import {
   TicketWhatsappNotifierService,
 } from './ticket-whatsapp-notifier.service';
 import { TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
+import { DepartmentsService } from '../../departments/service/departments.service';
 
 /** Sem repetir — somar a mesma área participante duas vezes não deve duplicar na resposta. */
 function dedupeAreas(areas: readonly TicketArea[]): TicketArea[] {
@@ -166,6 +168,7 @@ export class TicketsService {
     @Optional() private readonly notifier?: TicketWhatsappNotifierService,
     @Optional() @Inject(ENV) private readonly env?: Env,
     @Optional() private readonly profiles?: AdminConsoleProfileProvider,
+    @Optional() private readonly departments?: DepartmentsService,
   ) {}
 
   /** O link para enviar o print ou um anexo do chamado que vai ser aberto. */
@@ -495,7 +498,8 @@ export class TicketsService {
       name: user.name,
       email: user.email,
       phone,
-      department: departmentFromText(profile?.department),
+      /* O texto do admin-console é livre: vira departamento só quando bate com um da lista. */
+      department: departmentFromText(profile?.department, (await this.departments?.names()) ?? []),
       jobTitle: profile?.jobTitle ?? null,
     };
   }
@@ -564,6 +568,7 @@ export class TicketsService {
       );
     }
 
+    this.mirrorStatusToIssue(current, row);
     if (row.area === 'sistema' && row.projectId && !row.githubIssueNumber && this.githubService) {
       this.githubService.syncTicketToIssueInBackground(
         row.id,
@@ -577,6 +582,16 @@ export class TicketsService {
     }
 
     return this.toFullTicket(row, reach.participantAreas);
+  }
+
+  /** Encerrar ou reabrir pela edição também chega à issue — o mesmo que lançar um histórico. */
+  private mirrorStatusToIssue(before: TicketRow, after: TicketRow): void {
+    const isClosed = isClosedTicketStatus(after.status);
+    if (isClosedTicketStatus(before.status) === isClosed) return;
+
+    this.githubService?.mirrorTicketToIssueInBackground(after, {
+      state: isClosed ? 'closed' : 'open',
+    });
   }
 
   /**

@@ -31,6 +31,7 @@ import { ticketAccessLink } from '../../tickets/service/ticket-whatsapp-notifier
 import { TicketsService } from '../../tickets/service/tickets.service';
 import { WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
 import { WhatsappConversationsRepository } from '../repository/whatsapp-conversations.repository';
+import { DepartmentsService } from '../../departments/service/departments.service';
 import type { InboundMessage, InboundReply } from './whatsapp-intake.service';
 
 type Conversation = {
@@ -83,6 +84,7 @@ export class WhatsappAccessRequestService {
     private readonly conversations: WhatsappConversationsRepository,
     @Inject(USER_DIRECTORY_PROVIDER) private readonly directory: UserDirectoryProvider,
     private readonly history: HistoryService,
+    private readonly departments: DepartmentsService,
   ) {}
 
   /** Se a mensagem é desta conversa: o próprio comando, ou uma resposta a um pedido em aberto. */
@@ -155,7 +157,9 @@ export class WhatsappAccessRequestService {
     const step = nextAccessRequestStep(conversation.draft);
     if (!step) return SILENCE;
 
-    const filled = fillAccessRequestStep(conversation.draft, step, message.text);
+    /* A MESMA lista que a pergunta mostrou: o número que a pessoa respondeu aponta para ela. */
+    const departments = await this.departments.names();
+    const filled = fillAccessRequestStep(conversation.draft, step, message.text, departments);
     const refreshed = { ...conversation, expiresAt: now + CONVERSATION_TTL_MS };
     if (!filled.ok)
       return this.say(key, refreshed, message, 'access_invalid', { erro: filled.error });
@@ -208,7 +212,7 @@ export class WhatsappAccessRequestService {
     return this.say(key, conversation, message, QUESTION_TEMPLATES[step], {
       responsavel: conversation.attendantName,
       nome: firstName(conversation.draft.requesterName),
-      opcoes: optionsFor(step, conversation.draft),
+      opcoes: optionsFor(step, conversation.draft, await this.departments.names()),
     });
   }
 
@@ -360,9 +364,13 @@ function requesterOf(
 }
 
 /* As opções numeradas que a pergunta mostra: as pessoas do "quem é você?" ou os setores. */
-function optionsFor(step: AccessRequestStep, draft: AccessRequestDraft): string {
+function optionsFor(
+  step: AccessRequestStep,
+  draft: AccessRequestDraft,
+  departments: readonly string[],
+): string {
   if (step === 'who') return personOptionsText(draft.candidates ?? []);
-  if (step === 'department') return departmentOptionsText();
+  if (step === 'department') return departmentOptionsText(departments);
 
   return '';
 }

@@ -4,7 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type TicketDashboard } from '$lib/api/tickets.api';
-import TicketListView, { formatAverage, type TicketListFilter } from './azuos-ticket-list-view.svelte';
+import TicketListView, {
+  formatAverage,
+  ticketFilterChips,
+  type TicketListFilter,
+} from './azuos-ticket-list-view.svelte';
 
 function ticket(over: Partial<Ticket> = {}): Ticket {
   return {
@@ -85,6 +89,10 @@ const settled = {
  * e procurar o rótulo na tela inteira acharia também o da linha da tabela.
  */
 async function openProblemTypeFilter(): Promise<HTMLElement> {
+  /* Os filtros moram no painel "Filtros", que nasce fechado sem filtro ligado. */
+  if (!screen.queryByRole('button', { name: /Filtrar por tipo de problema/ })) {
+    await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
+  }
   const trigger = screen.getByRole('button', { name: /Filtrar por tipo de problema/ });
   await userEvent.click(trigger);
 
@@ -375,5 +383,21 @@ describe('AzuosTicketListView', () => {
 
     await userEvent.click(nextBtn);
     expect(onPageChange).toHaveBeenCalledWith(2);
+  });
+});
+
+describe('ticketFilterChips', () => {
+  // feliz
+  it('names each filter on in the panel, the status group of the cards included', () => {
+    expect(
+      ticketFilterChips({ ...emptyFilter, statusGroup: 'waiting', priority: 'high' }, []).map(
+        (chip) => chip.label,
+      ),
+    ).toEqual(['Situação: Aguardando', 'Urgência: Alta']);
+  });
+
+  // triste
+  it('leaves search and department out, which stay in sight', () => {
+    expect(ticketFilterChips({ ...emptyFilter, search: 'impressora', department: 'TI' }, [])).toEqual([]);
   });
 });

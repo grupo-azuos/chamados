@@ -106,7 +106,7 @@ describe('nextAccessRequestStep', () => {
         requesterName: 'Maria Clara',
         email: 'm@e.com',
         phone: '62999990000',
-        department: 'rh',
+        department: 'Recursos Humanos',
       }),
     ).toBeNull();
   });
@@ -119,25 +119,30 @@ describe('nextAccessRequestStep', () => {
   });
 });
 
+/* Os setores como o servidor os lê do RH, na ordem do seletor. */
+const DEPARTMENTS = ['Contábil', 'Fiscal', 'Recursos Humanos'];
+
 describe('fillAccessRequestStep', () => {
   const draft = emptyAccessRequest(null);
 
   // feliz
   it('fills each field with the answer', () => {
-    const named = fillAccessRequestStep(draft, 'name', 'Maria Clara');
-    const department = fillAccessRequestStep(draft, 'department', '11');
+    const named = fillAccessRequestStep(draft, 'name', 'Maria Clara', DEPARTMENTS);
+    const department = fillAccessRequestStep(draft, 'department', '3', DEPARTMENTS);
+    const byName = fillAccessRequestStep(draft, 'department', 'contabil', DEPARTMENTS);
 
     expect(named).toEqual({ ok: true, draft: { ...draft, requesterName: 'Maria Clara' } });
-    expect(department).toEqual({ ok: true, draft: { ...draft, department: 'rh' } });
+    expect(department).toEqual({ ok: true, draft: { ...draft, department: 'Recursos Humanos' } });
+    expect(byName).toEqual({ ok: true, draft: { ...draft, department: 'Contábil' } });
   });
 
   // triste
   it('explains how to answer when it did not understand, with the list again', () => {
-    const name = fillAccessRequestStep(draft, 'name', 'Maria');
-    const department = fillAccessRequestStep(draft, 'department', '99');
+    const name = fillAccessRequestStep(draft, 'name', 'Maria', DEPARTMENTS);
+    const department = fillAccessRequestStep(draft, 'department', '99', DEPARTMENTS);
 
     expect(name).toMatchObject({ ok: false, error: expect.stringContaining('dois nomes') });
-    expect(department).toMatchObject({ ok: false, error: expect.stringContaining('11. RH') });
+    expect(department).toMatchObject({ ok: false, error: expect.stringContaining('3. Recursos Humanos') });
   });
 });
 
@@ -180,7 +185,7 @@ describe('the "who is who" step', () => {
   it('asks who is who before anything else, and links the request to the one picked', () => {
     expect(nextAccessRequestStep(asking)).toBe('who');
 
-    const picked = fillAccessRequestStep(asking, 'who', '2');
+    const picked = fillAccessRequestStep(asking, 'who', '2', DEPARTMENTS);
 
     expect(picked).toEqual({
       ok: true,
@@ -197,14 +202,14 @@ describe('the "who is who" step', () => {
   });
 
   it('goes on without a link when the person is none of them', () => {
-    const none = fillAccessRequestStep(asking, 'who', '0');
+    const none = fillAccessRequestStep(asking, 'who', '0', DEPARTMENTS);
 
     expect(none.ok && nextAccessRequestStep(none.draft)).toBe('email');
   });
 
   // triste
   it('repeats the list when the answer is not one of the options', () => {
-    expect(fillAccessRequestStep(asking, 'who', '7')).toMatchObject({
+    expect(fillAccessRequestStep(asking, 'who', '7', DEPARTMENTS)).toMatchObject({
       ok: false,
       error: expect.stringContaining('1. Ana Souza'),
     });

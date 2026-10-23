@@ -53,22 +53,8 @@ function scopeOf(filter: InventoryListFilter) {
   return {
     search: filter.search.trim() || undefined,
     category: filter.category || undefined,
+    withoutPhotoOnly: filter.withoutPhotoOnly || undefined,
   };
-}
-
-/**
- * O que a lista mostra depois do filtro de "sem foto".
- *
- * Aplicado AQUI, e não no servidor: a consulta já traz a lista inteira, então separar o que
- * está sem imagem não precisa de outra ida ao servidor. Exportado e puro para ter teste.
- */
-export function visibleItemsOf(
-  items: readonly InventoryItem[],
-  filter: InventoryListFilter,
-): InventoryItem[] {
-  if (!filter.withoutPhotoOnly) return [...items];
-
-  return items.filter((item) => item.photoUrl === null);
 }
 
 /**
@@ -121,21 +107,17 @@ export function useInventoryListModel(): InventoryListModel {
   return {
     /* `get` em vez de valor: o objeto é montado uma vez e a tela lê dele a cada mudança. */
     get data() {
-      const items = visibleItemsOf(list.current.data?.items ?? [], filter.current);
-
       return {
-        items,
-        /* Com "sem foto" ligado, o total é o do que sobrou do filtro, não o do servidor. */
-        total: filter.current.withoutPhotoOnly ? items.length : (list.current.data?.total ?? 0),
+        /* "Sem foto" é filtrado no SQL, como os outros: lista e total vêm do servidor. */
+        items: list.current.data?.items ?? [],
+        total: list.current.data?.total ?? 0,
         filter: filter.current,
         deleting,
       };
     },
     get state() {
-      const visibleCount = visibleItemsOf(list.current.data?.items ?? [], filter.current).length;
-
       return {
-        ...buildListState(list.current, filter.current, visibleCount),
+        ...buildListState(list.current, filter.current),
         isDeleting: remove.current.isPending,
         deleteError,
       };
@@ -188,12 +170,11 @@ function hasAnyFilter(filter: InventoryListFilter): boolean {
 function buildListState(
   list: ListQueryLike,
   filter: InventoryListFilter,
-  visibleCount: number,
 ): Omit<InventoryListModel['state'], 'isDeleting' | 'deleteError'> {
   const count = list.data?.items.length ?? 0;
   /* Vazio só é vazio DEPOIS que a consulta terminou. Dizer "nenhum produto" durante o
      carregamento faz a pessoa achar que o inventário sumiu — e recarregar. */
-  const isSettledEmpty = list.isSuccess && visibleCount === 0;
+  const isSettledEmpty = list.isSuccess && count === 0;
   const filtered = hasAnyFilter(filter);
 
   return {

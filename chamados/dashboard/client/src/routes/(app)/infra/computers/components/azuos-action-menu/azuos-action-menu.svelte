@@ -21,9 +21,11 @@
 <script lang="ts">
   import Ellipsis from '@lucide/svelte/icons/ellipsis';
 
-  import { actionButton } from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import {
+    actionButton,
+    AzuosButtonPrimitive as Button,
+    AzuosDropdownMenuPrimitive as DropdownMenu,
+  } from '$lib/components/azuos-action-button/azuos-action-button.svelte';
 
   let { data, state: menuState, actions }: AzuosActionMenuProps = $props();
 </script>

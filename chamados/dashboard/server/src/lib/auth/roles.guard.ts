@@ -10,7 +10,7 @@ import { canWriteModule, hasModule } from '@template/shared/domain/module-access
 import { roleContextLabel, type RoleContext } from '@template/shared/domain/role-context.util';
 import { USER_ROLE_LABELS, type UserRole } from '@template/shared/schemas/user.schema';
 
-import { ANY_MODULE, MODULE_CONTEXT } from './module-context.decorator';
+import { ANY_MODULE, MODULE_CONTEXT, READ_ONLY_ACTION } from './module-context.decorator';
 import { IS_PUBLIC } from './public.decorator';
 import { type AuthenticatedRequest, type RequestUser } from './request-user.type';
 import { REQUIRED_ROLES } from './roles.decorator';
@@ -46,7 +46,9 @@ export class RolesGuard implements CanActivate {
 
     const moduleContext = this.readMetadata<RoleContext>(MODULE_CONTEXT, context);
     if (moduleContext) {
-      request.user = scopeToModule(user, moduleContext, request.method ?? 'GET');
+      const isReadOnlyAction = Boolean(this.readMetadata<boolean>(READ_ONLY_ACTION, context));
+      const method = isReadOnlyAction ? 'GET' : (request.method ?? 'GET');
+      request.user = scopeToModule(user, moduleContext, method);
     }
 
     return this.checkRoles(request.user ?? user, context, Boolean(moduleContext));
