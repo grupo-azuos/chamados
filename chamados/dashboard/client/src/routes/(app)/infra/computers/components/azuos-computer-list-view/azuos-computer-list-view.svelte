@@ -43,7 +43,7 @@
   };
 
   /**
-   * O INVENTÁRIO: as máquinas da empresa, da pior saúde para a melhor.
+   * O INVENTÁRIO: as máquinas da empresa, na ordem do número (pelo nome físico).
    *
    * Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando,
    * vazia, filtrada sem resultado e em erro — estados que, num componente que busca sozinho,

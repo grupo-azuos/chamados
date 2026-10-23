@@ -3,6 +3,7 @@ import { createQuery } from '@tanstack/svelte-query';
 import { HEALTH_STATUSES, type HealthStatus } from '@template/shared/domain/computer-health.util';
 import { COMPUTER_KINDS, type ComputerKind } from '@template/shared/domain/computer-kind.util';
 import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
+import { compareMachines, type NumberedMachine } from '@template/shared/domain/machine-number.util';
 import {
   COMPUTER_ALERT_FILTERS,
   COMPUTER_PREVENTIVE_FILTERS,
@@ -170,6 +171,27 @@ export function scheduledDayByComputer(
   );
 }
 
+/** O que a regra do número lê de uma máquina da lista: nomes, departamento e tipo. */
+export function toNumberedMachine(computer: Computer): NumberedMachine {
+  return {
+    name: computer.name,
+    displayName: computer.displayName,
+    hostname: computer.hardware?.hostname ?? null,
+    department: computer.department,
+    kind: computer.kind,
+  };
+}
+
+/**
+ * A lista na ordem do NÚMERO da máquina, pelo nome físico: ANALYZE-D01, ANALYZE-N01,
+ * CERTIFICADO-D01, CERTIFICADO-D02… É como o TI conta o parque e como acha uma máquina
+ * rolando a tela. Antes ela vinha da pior saúde para a melhor — quem quer as críticas tem o
+ * filtro e o cartão do topo.
+ */
+export function sortByMachineNumber<T extends Computer>(computers: readonly T[]): T[] {
+  return [...computers].sort((a, b) => compareMachines(toNumberedMachine(a), toNumberedMachine(b)));
+}
+
 export function summarizeComputers(computers: readonly ComputerListItem[]): ComputerSummary {
   return {
     total: computers.length,
@@ -240,7 +262,7 @@ export function useComputerListModel(): ComputerListModel {
        valores fixos, a lista congelaria no primeiro carregamento. */
     get data() {
       return {
-        computers: list.current.data?.items ?? [],
+        computers: sortByMachineNumber(list.current.data?.items ?? []),
         total: list.current.data?.total ?? 0,
         summary: summary.current.data ? summarizeComputers(summary.current.data.items) : null,
         filter: filter.current,
