@@ -9,6 +9,9 @@ import { softwareProjects } from '../../../lib/db/schema/software-projects.schem
 import { softwareTimelineEvents } from '../../../lib/db/schema/software-timeline-events.schema';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
 
+/** Quem mais trabalhou num PR ou merge: o login quando o GitHub o conhece, e o nome. */
+export type FetchedCoAuthor = { login: string | null; name: string };
+
 export type FetchedPr = {
   externalId: string;
   title: string;
@@ -17,6 +20,7 @@ export type FetchedPr = {
   authorName: string;
   status: 'open' | 'merged' | 'closed';
   eventDate: Date;
+  coAuthors?: FetchedCoAuthor[];
 };
 
 export type FetchedMerge = {
@@ -27,6 +31,7 @@ export type FetchedMerge = {
   authorName: string;
   status: 'merged';
   eventDate: Date;
+  coAuthors?: FetchedCoAuthor[];
 };
 
 type RawGithubPr = {
@@ -48,11 +53,85 @@ type RawGithubCommit = {
   commit: {
     message: string;
     committer?: { date?: string; name?: string };
-    author?: { date?: string; name?: string };
+    author?: { date?: string; name?: string; email?: string };
   };
   author?: { login?: string } | null;
   parents: Array<{ sha: string }>;
 };
+
+/* Quantas chamadas ao GitHub saem ao mesmo tempo. Uma por merge, todas juntas, esbarrava no
+   limite secundário do GitHub (403) — e um 403 derrubava o sync do repositório inteiro. */
+const GITHUB_CONCURRENCY = 6;
+/* Até quantos commits de uma branch ou PR são lidos para achar os co-autores. */
+const MAX_COMMITS_FOR_COAUTHORS = 250;
+/* Co-autores de PR só dos mergeados nos últimos 120 dias: o histórico inteiro, num
+   "Sincronizar todos", passaria de mil chamadas e o clique estouraria o tempo. */
+const COAUTHOR_WINDOW_MS = 120 * 24 * 60 * 60 * 1000;
+
+/** Quem não é gente: assistente de IA e robôs não contam como co-autor de ninguém. */
+function isAutomation(login: string | null, name: string, email?: string): boolean {
+  if (login?.endsWith('[bot]')) return true;
+  if (email && /noreply@anthropic\.com|\[bot\]@users\.noreply\.github\.com/i.test(email)) return true;
+
+  return /\[bot\]|^claude\b|github-actions|dependabot/i.test(name.trim());
+}
+
+/** As linhas `Co-authored-by: Nome <email>` de uma mensagem de commit. */
+export function coAuthorTrailersOf(message: string): FetchedCoAuthor[] {
+  return [...message.matchAll(/^co-authored-by:\s*(.+?)\s*<([^>]*)>\s*$/gim)]
+    .map((match) => ({ name: (match[1] ?? '').trim(), email: (match[2] ?? '').trim() }))
+    .filter((person) => person.name !== '' && !isAutomation(null, person.name, person.email))
+    .map((person) => ({ login: loginFromNoreply(person.email), name: person.name }));
+}
+
+/** `123+login@users.noreply.github.com` diz o login; outro e-mail não diz. */
+function loginFromNoreply(email: string): string | null {
+  return email.match(/^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i)?.[1] ?? null;
+}
+
+/**
+ * Os co-autores de uma LISTA de commits: quem fez cada commit e quem aparece nos
+ * `Co-authored-by`, sem repetir e sem o autor principal (`except`).
+ */
+export function coAuthorsOfCommits(
+  commits: readonly RawGithubCommit[],
+  except: string | null,
+): FetchedCoAuthor[] {
+  const people = commits.flatMap((commit) => {
+    const login = commit.author?.login ?? null;
+    const name = commit.commit.author?.name?.trim() ?? login ?? '';
+    const own =
+      name && !isAutomation(login, name, commit.commit.author?.email) ? [{ login, name }] : [];
+
+    return [...own, ...coAuthorTrailersOf(commit.commit.message)];
+  });
+  const seen = new Set<string>();
+  const exceptKey = except?.toLowerCase() ?? null;
+
+  return people.filter((person) => {
+    const key = (person.login ?? person.name).toLowerCase();
+    if (key === exceptKey || seen.has(key)) return false;
+    seen.add(key);
+
+    return true;
+  });
+}
+
+/** Roda `work` em cada item com no máximo `limit` ao mesmo tempo, na ordem original. */
+async function inPool<T, R>(items: readonly T[], limit: number, work: (item: T) => Promise<R>) {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (next < items.length) {
+        const index = next++;
+        results[index] = await work(items[index] as T);
+      }
+    }),
+  );
+
+  return results;
+}
 
 /** Como aparece o que o App da organização faz no GitHub (as issues abertas a partir de chamados). */
 export const CHAMADOS_BOT_NAME = 'GitHub Chamados Bot';
@@ -183,10 +262,87 @@ export class GithubService {
       const list = (await response.json()) as RawGithubPr[];
       await this.fetchSubsequentPrPages(url, token, response, list, since);
       const recent = since ? list.filter((pr) => isUpdatedSince(pr, since)) : list;
-      return this.addAuthorNames(recent.map(mapRawPr), token);
+      const named = await this.addAuthorNames(recent.map(mapRawPr), token);
+
+      const windowStart = Date.now() - COAUTHOR_WINDOW_MS;
+
+      return inPool(named, GITHUB_CONCURRENCY, async (pr) =>
+        pr.status === 'merged' && pr.eventDate.getTime() >= windowStart
+          ? { ...pr, coAuthors: await this.prCoAuthors(owner, repo, pr, token) }
+          : pr,
+      );
     } catch (error) {
       return this.handlePrCatchError(error, owner, repo, userId);
     }
+  }
+
+  /**
+   * Quem mais fez commit no PR. Falha aqui não derruba o sync: o PR entra só com o autor.
+   * `Pull requests: read` basta — é a permissão que o App já tem.
+   */
+  private async prCoAuthors(
+    owner: string,
+    repo: string,
+    pr: FetchedPr,
+    token: string | undefined,
+  ): Promise<FetchedCoAuthor[]> {
+    const number = pr.externalId.replace('#', '');
+    const commits = await this.readCommits(
+      `https://api.github.com/repos/${owner}/${repo}/pulls/${number}/commits?per_page=100`,
+      token,
+    );
+
+    return coAuthorsOfCommits(commits, pr.author);
+  }
+
+  /**
+   * Quem fez os commits da branch que um merge local trouxe: o que está no segundo pai e não
+   * estava no primeiro. Sem isto, a branch do Guilherme juntada por outra pessoa só contava
+   * para quem juntou.
+   */
+  private async branchCoAuthors(
+    owner: string,
+    repo: string,
+    commit: RawGithubCommit,
+    token: string | undefined,
+  ): Promise<FetchedCoAuthor[]> {
+    const [base, head] = commit.parents;
+    if (!base || !head) return [];
+    const compared = await this.readJson<{ commits?: RawGithubCommit[] }>(
+      `https://api.github.com/repos/${owner}/${repo}/compare/${base.sha}...${head.sha}?per_page=100`,
+      token,
+    );
+    const commits = [...(compared?.commits ?? []).slice(0, MAX_COMMITS_FOR_COAUTHORS), commit];
+
+    return coAuthorsOfCommits(commits, commit.author?.login ?? null);
+  }
+
+  /** As páginas de commits de uma rota, até o teto. Erro vira lista vazia, com aviso no log. */
+  private async readCommits(url: string, token: string | undefined): Promise<RawGithubCommit[]> {
+    const commits: RawGithubCommit[] = [];
+    for (let page = 1; commits.length < MAX_COMMITS_FOR_COAUTHORS; page++) {
+      const list = await this.readJson<RawGithubCommit[]>(`${url}&page=${page}`, token);
+      if (!Array.isArray(list) || list.length === 0) break;
+      commits.push(...list);
+      if (list.length < 100) break;
+    }
+
+    return commits;
+  }
+
+  private async readJson<T>(url: string, token: string | undefined): Promise<T | null> {
+    try {
+      const response = await fetch(url, {
+        headers: this.headers(token),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (response.ok) return (await response.json()) as T;
+      this.logger.warn(`GitHub API devolveu status ${response.status} para ${url}`);
+    } catch (error) {
+      this.logger.warn(`Falha ao ler ${url} no GitHub: ${String(error)}`);
+    }
+
+    return null;
   }
 
   private handlePrFetchFailure(
@@ -299,9 +455,14 @@ export class GithubService {
           .map((row) => `#${row.number}`),
       );
       const named = await this.addAuthorNames(pageItems, token);
+      /* Fechada por robô — o nosso App fecha a issue quando o chamado é encerrado — também
+         aparece como o bot, e não como `app-chamados[bot]` resolvendo issue. */
       items.push(
         ...named.map((item) =>
-          ownBotIssues.has(item.externalId) ? { ...item, authorName: CHAMADOS_BOT_NAME } : item,
+          ownBotIssues.has(item.externalId) ||
+          (item.status === 'closed' && item.author.endsWith('[bot]'))
+            ? { ...item, authorName: CHAMADOS_BOT_NAME }
+            : item,
         ),
       );
       if (!response.headers.get('link')?.includes('rel="next"')) return items;
@@ -362,8 +523,8 @@ export class GithubService {
     token: string | undefined,
   ): Promise<FetchedMerge[]> {
     const candidates = commits.filter((commit) => commit.parents.length > 1);
-    const local = await Promise.all(
-      candidates.map((commit) => this.toLocalMerge(commit, owner, repo, token)),
+    const local = await inPool(candidates, GITHUB_CONCURRENCY, (commit) =>
+      this.toLocalMerge(commit, owner, repo, token),
     );
 
     return local.filter((merge): merge is FetchedMerge => merge !== null);
@@ -388,7 +549,10 @@ export class GithubService {
     const pullRequests = (await associated.json()) as Array<{ merge_commit_sha?: string | null }>;
     if (pullRequests.some((pr) => pr.merge_commit_sha === commit.sha)) return null;
 
-    return localMergeFromCommit(commit);
+    return {
+      ...localMergeFromCommit(commit),
+      coAuthors: await this.branchCoAuthors(owner, repo, commit, token),
+    };
   }
 
   /** Na sincronização pedida por alguém o erro sobe; na automática, só registra e segue. */
@@ -491,6 +655,70 @@ export class GithubService {
       this.logger.warn(`Falha ao criar Issue no GitHub: ${String(error)}`);
       return null;
     }
+  }
+
+  /**
+   * O que acontece no CHAMADO chega à ISSUE dele, em segundo plano: o comentário (cada
+   * histórico lançado) e o estado (encerrar o chamado fecha a issue; reabrir reabre).
+   *
+   * Segundo plano porque o GitHub fora do ar não pode impedir ninguém de atender: o histórico
+   * já foi gravado aqui, e a falha vai para o log. Chamado sem issue (de outra área, ou sem
+   * sistema) não faz nada.
+   */
+  mirrorTicketToIssueInBackground(
+    ticket: { id: number; projectId: number | null; githubIssueNumber: number | null },
+    change: { comment?: string; state?: 'open' | 'closed' },
+  ): void {
+    if (!ticket.projectId || !ticket.githubIssueNumber) return;
+    if (!change.comment && !change.state) return;
+    const { projectId, githubIssueNumber } = ticket;
+
+    void (async () => {
+      try {
+        const repoInfo = await this.repositoryOfProject(projectId);
+        if (!repoInfo) return;
+        const token = this.app ? await this.app.accessToken() : this.token;
+        const issueUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/issues/${githubIssueNumber}`;
+        if (change.comment) {
+          await this.sendIssueChange(`${issueUrl}/comments`, 'POST', { body: change.comment }, token);
+        }
+        if (change.state) {
+          const reason = change.state === 'closed' ? 'completed' : 'reopened';
+          await this.sendIssueChange(issueUrl, 'PATCH', { state: change.state, state_reason: reason }, token);
+        }
+      } catch (error) {
+        this.logger.warn(`Não consegui levar o chamado ${ticket.id} para a issue: ${String(error)}`);
+      }
+    })();
+  }
+
+  private async sendIssueChange(
+    url: string,
+    method: 'POST' | 'PATCH',
+    body: Record<string, string>,
+    token: string | undefined,
+  ): Promise<void> {
+    const response = await fetch(url, {
+      method,
+      headers: { ...this.headers(token), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) throw new Error(`GitHub answered ${response.status} for ${method} ${url}`);
+  }
+
+  /** O repositório de um sistema: as colunas já separadas, ou o que der para ler do endereço. */
+  private async repositoryOfProject(projectId: number): Promise<{ owner: string; repo: string } | null> {
+    const [project] = await this.db
+      .select()
+      .from(softwareProjects)
+      .where(eq(softwareProjects.id, projectId))
+      .limit(1);
+    if (!project) return null;
+
+    return project.githubRepoOwner && project.githubRepoName
+      ? { owner: project.githubRepoOwner, repo: project.githubRepoName }
+      : parseGitHubRepo(project.repositoryUrl);
   }
 
   /**

@@ -1,5 +1,9 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
-import { nextTicketStatus, refuseTicketHistory } from '@template/shared/domain/ticket-history.util';
+import { Injectable, Optional, UnprocessableEntityException } from '@nestjs/common';
+import {
+  nextTicketStatus,
+  refuseTicketHistory,
+  ticketHistoryTypeLabel,
+} from '@template/shared/domain/ticket-history.util';
 import { isClosedTicketStatus } from '@template/shared/domain/ticket-status.util';
 import { type StagedFile } from '@template/shared/schemas/staged-file.schema';
 import { type TicketAttachment } from '@template/shared/schemas/ticket-attachment.schema';
@@ -12,6 +16,7 @@ import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type TicketHistoryRow } from '../../../lib/db/schema/ticket-histories.schema';
 import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
 import { assertCanAttendTicket, assertCanRead } from '../../../lib/policy/policy-assert.util';
+import { GithubService } from '../../software-projects/service/github.service';
 import {
   type HistoryEntry,
   toHistoryInsert,
@@ -37,6 +42,7 @@ export class TicketHistoriesService {
     private readonly repository: TicketHistoriesRepository,
     private readonly access: TicketAccessService,
     private readonly attachments: TicketAttachmentsService,
+    @Optional() private readonly github?: GithubService,
   ) {}
 
   /** A linha do tempo inteira, para o painel. */
@@ -100,8 +106,25 @@ export class TicketHistoriesService {
       origin: 'support',
       historyId: row.id,
     });
+    this.mirrorToIssue(reach.ticket, entry, user.name);
 
     return toTicketHistory(row, saved);
+  }
+
+  /**
+   * O histórico vira COMENTÁRIO na issue do chamado, e cruzar o encerramento muda a issue junto:
+   * encerrar fecha, reabrir reabre. Quem acompanha pelo GitHub vê o mesmo andamento que o painel.
+   */
+  private mirrorToIssue(ticket: TicketRow, entry: HistoryEntry, authorName: string): void {
+    const next = nextTicketStatus(ticket.status, entry.type);
+    const wasClosed = isClosedTicketStatus(ticket.status);
+    const isClosed = isClosedTicketStatus(next);
+    const state = wasClosed === isClosed ? undefined : isClosed ? 'closed' : 'open';
+
+    this.github?.mirrorTicketToIssueInBackground(ticket, {
+      comment: issueCommentOf(entry, authorName),
+      state,
+    });
   }
 
   /**
@@ -144,4 +167,12 @@ function withAttachments(
       attachments.filter((attachment) => attachment.historyId === row.id),
     ),
   );
+}
+
+/** O comentário na issue: o que foi lançado, por quem, e o texto como a pessoa escreveu. */
+export function issueCommentOf(entry: HistoryEntry, authorName: string): string {
+  const header = `**${ticketHistoryTypeLabel(entry.type)}** — ${authorName}`;
+  const text = entry.description.trim();
+
+  return text ? `${header}\n\n${text}` : header;
 }

@@ -224,6 +224,7 @@ function buildPartWhere(query: PartListQuery): SQL | undefined {
   if (query.category) filters.push(eq(parts.category, query.category));
   if (query.condition) filters.push(eq(parts.condition, query.condition));
   if (query.inStockOnly) filters.push(gt(parts.balance, 0));
+  if (query.outOfStockOnly) filters.push(eq(parts.balance, 0));
 
   const search = query.search?.trim();
   if (search) filters.push(or(ilike(parts.name, `%${search}%`)));

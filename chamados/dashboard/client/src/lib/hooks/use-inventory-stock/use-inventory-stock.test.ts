@@ -5,8 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-inventory-stock-harness.test.svelte';
 import {
-  stockItemsOf,
-  type InventoryStockFilter,
   type InventoryStockModel,
 } from './use-inventory-stock.svelte';
 
@@ -44,7 +42,6 @@ function mountModel(): InventoryStockModel {
   return model;
 }
 
-const emptyFilter: InventoryStockFilter = { search: '', category: '', outOfStockOnly: false };
 
 const sugar = item({ id: 2, name: 'Açúcar refinado', balance: 0 });
 
@@ -52,25 +49,6 @@ beforeEach(() => {
   vi.mocked(inventoryItemsApi.list)
     .mockReset()
     .mockResolvedValue(page([item(), sugar]));
-});
-
-describe('stockItemsOf', () => {
-  // feliz
-  it('gives every product when the stock filter is off', () => {
-    expect(stockItemsOf([item(), sugar], emptyFilter)).toHaveLength(2);
-  });
-
-  /* A lista de compras da semana: só o que zerou. */
-  it('keeps only what ran out when the filter is on', () => {
-    const visible = stockItemsOf([item(), sugar], { ...emptyFilter, outOfStockOnly: true });
-
-    expect(visible.map((entry) => entry.id)).toEqual([2]);
-  });
-
-  // triste
-  it('gives an empty list when nothing ran out', () => {
-    expect(stockItemsOf([item()], { ...emptyFilter, outOfStockOnly: true })).toEqual([]);
-  });
 });
 
 describe('useInventoryStockModel', () => {
@@ -83,7 +61,11 @@ describe('useInventoryStockModel', () => {
     expect(model.data.outOfStock).toBe(1);
   });
 
-  it('shows only what ran out, with the total of what was left', async () => {
+  /* "Sem estoque" é filtrado no SQL; o número do topo continua contando sobre a busca. */
+  it('asks the server for what ran out, and keeps counting what ran out in the search', async () => {
+    vi.mocked(inventoryItemsApi.list).mockImplementation(async (query) =>
+      page(query.outOfStockOnly ? [sugar] : [item(), sugar]),
+    );
     const model = mountModel();
     await waitFor(() => expect(model.data.items).toHaveLength(2));
 
@@ -91,6 +73,10 @@ describe('useInventoryStockModel', () => {
 
     await waitFor(() => expect(model.data.items).toHaveLength(1));
     expect(model.data.total).toBe(1);
+    expect(model.data.outOfStock).toBe(1);
+    expect(inventoryItemsApi.list).toHaveBeenCalledWith(
+      expect.objectContaining({ outOfStockOnly: true }),
+    );
   });
 
   it('asks the API again with the search and the category', async () => {
@@ -117,7 +103,9 @@ describe('useInventoryStockModel', () => {
   });
 
   it('separates empty from hidden by a filter', async () => {
-    vi.mocked(inventoryItemsApi.list).mockResolvedValue(page([item()]));
+    vi.mocked(inventoryItemsApi.list).mockImplementation(async (query) =>
+      page(query.outOfStockOnly ? [] : [item()]),
+    );
     const model = mountModel();
     await waitFor(() => expect(model.data.items).toHaveLength(1));
 

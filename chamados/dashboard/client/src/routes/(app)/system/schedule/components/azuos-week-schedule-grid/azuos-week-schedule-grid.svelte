@@ -20,6 +20,7 @@
       developerStats?: {
         author: string;
         mergedPullRequests: number;
+        localMerges?: number;
         resolvedIssues: number;
       }[];
       nowTopPx: number | null;
@@ -455,8 +456,8 @@
         <div class="border-b border-border px-4 py-3">
           <h2 class="text-sm font-semibold text-foreground">Produtividade por desenvolvedor</h2>
           <p class="mt-1 text-xs text-muted-foreground">
-            PRs contam na data do merge e ficam com o autor; issues contam na data de fechamento e
-            com quem fechou.
+            PRs e merges contam na data do merge, para o autor e para quem fez commit junto
+            (co-autor); issues contam na data de fechamento e com quem fechou.
           </p>
         </div>
         <div class="divide-y divide-border">
@@ -466,19 +467,23 @@
                 >{#snippet child({ props })}<button
                     {...props}
                     type="button"
-                    class="w-full text-left grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 px-4 py-3 text-xs"
+                    class="w-full text-left grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-4 px-4 py-3 text-xs"
                   >
                     <span class="truncate font-medium text-foreground">{developer.author}</span>
                     <span class="whitespace-nowrap text-muted-foreground"
                       >{developer.mergedPullRequests} PRs</span
                     >
                     <span class="whitespace-nowrap text-muted-foreground"
+                      >{developer.localMerges ?? 0} merges</span
+                    >
+                    <span class="whitespace-nowrap text-muted-foreground"
                       >{developer.resolvedIssues} issues</span
                     >
                   </button>{/snippet}</Tooltip.Trigger
               ><Tooltip.Content class="max-w-sm whitespace-normal"
-                >{developer.author}: {developer.mergedPullRequests} PRs mergeados e {developer.resolvedIssues}
-                issues resolvidas no período.</Tooltip.Content
+                >{developer.author}: {developer.mergedPullRequests} PRs mergeados, {developer.localMerges ?? 0}
+                merges locais e {developer.resolvedIssues} issues resolvidas no período — contando
+                o que fez como co-autor.</Tooltip.Content
               ></Tooltip.Root
             >
           {/each}

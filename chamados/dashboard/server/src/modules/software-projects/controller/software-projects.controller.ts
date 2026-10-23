@@ -35,7 +35,7 @@ import {
 } from '../service/software-projects.service';
 import { UseGuards } from '@nestjs/common';
 import { GithubLinkedGuard } from '../../github-integration/github-linked.guard';
-import { ModuleContext } from '../../../lib/auth/module-context.decorator';
+import { ModuleContext, ReadOnlyAction } from '../../../lib/auth/module-context.decorator';
 
 @ApiTags('Sistemas e Projetos de Software')
 @ModuleContext('sistema')
@@ -98,10 +98,11 @@ export class SoftwareProjectsController {
   }
 
   @Post('sync-github')
+  @ReadOnlyAction()
   @ApiOperation({
     summary: 'Sincroniza PRs e issues de TODOS os sistemas com o GitHub',
     description:
-      'Exclusivo de Super Administrador. Busca o histórico inteiro de cada repositório; um sistema que falhar não impede os outros, e a resposta lista quais ficaram para trás. A mesma sincronização roda sozinha toda meia-noite (Brasília), olhando só as últimas 48 horas.',
+      'Para quem tem a conta do GitHub vinculada, em qualquer papel do módulo Sistema. Busca o histórico inteiro de cada repositório; um sistema que falhar não impede os outros, e a resposta lista quais ficaram para trás. A mesma sincronização roda sozinha toda meia-noite (Brasília), olhando só as últimas 48 horas.',
   })
   @ApiOkResponse()
   async syncAllGithub(@CurrentUser() user: RequestUser): Promise<GithubSyncAllResult> {
@@ -109,7 +110,11 @@ export class SoftwareProjectsController {
   }
 
   @Post(':id/sync-github')
-  @ApiOperation({ summary: 'Sincroniza os Pull Requests do GitHub com a timeline do projeto' })
+  @ReadOnlyAction()
+  @ApiOperation({
+    summary: 'Sincroniza PRs, issues e merges do GitHub com a timeline do projeto',
+    description: 'Para quem tem a conta do GitHub vinculada, em qualquer papel do módulo Sistema.',
+  })
   @ApiOkResponse()
   async syncGithub(
     @CurrentUser() user: RequestUser,

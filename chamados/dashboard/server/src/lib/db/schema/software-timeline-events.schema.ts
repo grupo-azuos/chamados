@@ -3,7 +3,7 @@ import {
   TIMELINE_EVENT_TYPES,
 } from '@template/shared/domain/software-project.util';
 import { sql } from 'drizzle-orm';
-import { check, index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { check, index, integer, jsonb, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 import { chamadosSchema } from './chamados.schema';
 
@@ -30,6 +30,12 @@ export const softwareTimelineEvents = chamadosSchema.table(
     url: text('url'),
     author: text('author'),
     authorName: text('author_name'),
+    /**
+     * Quem MAIS trabalhou no que este evento entregou, pelo nome: os autores dos commits de
+     * uma branch juntada na develop e os `Co-authored-by` das mensagens. Sem isto, quem fez a
+     * branch e deixou outra pessoa juntar não aparecia em lugar nenhum do cronograma.
+     */
+    coAuthors: jsonb('co_authors').$type<string[]>().notNull().default([]),
     status: text('status', { enum: TIMELINE_EVENT_STATUSES }).notNull().default('open'),
     eventDate: timestamp('event_date', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
 

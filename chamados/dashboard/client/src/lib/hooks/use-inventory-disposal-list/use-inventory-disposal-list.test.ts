@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-inventory-disposal-list-harness.test.svelte';
-import { disposalsOf, type InventoryDisposalListModel } from './use-inventory-disposal-list.svelte';
+import { type InventoryDisposalListModel } from './use-inventory-disposal-list.svelte';
 
 vi.mock('$lib/api/inventory-items.api', () => ({ inventoryItemsApi: { movements: vi.fn() } }));
 
@@ -43,23 +43,10 @@ function mountModel(): InventoryDisposalListModel {
 beforeEach(() => {
   vi.mocked(inventoryItemsApi.movements)
     .mockReset()
-    .mockResolvedValue(page([disposal(), expired]));
-});
-
-describe('disposalsOf', () => {
-  // feliz
-  it('gives every disposal when no reason is chosen', () => {
-    expect(disposalsOf([disposal(), expired], { reason: '' })).toHaveLength(2);
-  });
-
-  it('keeps only the disposals of the chosen reason', () => {
-    expect(disposalsOf([disposal(), expired], { reason: 'expired' }).map((d) => d.id)).toEqual([2]);
-  });
-
-  // triste
-  it('gives an empty list when nothing was discarded for that reason', () => {
-    expect(disposalsOf([disposal()], { reason: 'lost' })).toEqual([]);
-  });
+    /* O servidor filtra pelo motivo (SQL); o dublê faz o mesmo. */
+    .mockImplementation(async (query) =>
+      page([disposal(), expired].filter((item) => !query.reason || item.reason === query.reason)),
+    );
 });
 
 describe('useInventoryDisposalListModel', () => {
@@ -81,7 +68,7 @@ describe('useInventoryDisposalListModel', () => {
     expect(model.data.total).toBe(2);
   });
 
-  it('filters by reason without going back to the server', async () => {
+  it('asks the server for the disposals of the chosen reason', async () => {
     const model = mountModel();
     await waitFor(() => expect(model.data.disposals).toHaveLength(2));
 
@@ -90,7 +77,9 @@ describe('useInventoryDisposalListModel', () => {
     await waitFor(() => expect(model.data.disposals).toHaveLength(1));
     expect(model.data.units).toBe(3);
     expect(model.data.total).toBe(1);
-    expect(inventoryItemsApi.movements).toHaveBeenCalledOnce();
+    expect(inventoryItemsApi.movements).toHaveBeenLastCalledWith(
+      expect.objectContaining({ type: 'disposal', reason: 'expired' }),
+    );
   });
 
   // triste

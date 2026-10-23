@@ -27,6 +27,7 @@ import {
 import { departmentFromText } from '@template/shared/domain/department.util';
 import { refuseScreenshot } from '@template/shared/domain/screenshot-catalog.util';
 import {
+  isClosedTicketStatus,
   ticketPriorityLabel,
   ticketPriorityTone,
   ticketStatusLabel,
@@ -567,6 +568,7 @@ export class TicketsService {
       );
     }
 
+    this.mirrorStatusToIssue(current, row);
     if (row.area === 'sistema' && row.projectId && !row.githubIssueNumber && this.githubService) {
       this.githubService.syncTicketToIssueInBackground(
         row.id,
@@ -580,6 +582,16 @@ export class TicketsService {
     }
 
     return this.toFullTicket(row, reach.participantAreas);
+  }
+
+  /** Encerrar ou reabrir pela edição também chega à issue — o mesmo que lançar um histórico. */
+  private mirrorStatusToIssue(before: TicketRow, after: TicketRow): void {
+    const isClosed = isClosedTicketStatus(after.status);
+    if (isClosedTicketStatus(before.status) === isClosed) return;
+
+    this.githubService?.mirrorTicketToIssueInBackground(after, {
+      state: isClosed ? 'closed' : 'open',
+    });
   }
 
   /**

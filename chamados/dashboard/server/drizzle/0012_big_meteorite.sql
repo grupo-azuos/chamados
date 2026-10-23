@@ -1,0 +1,1 @@
+ALTER TABLE "chamados"."software_timeline_events" ADD COLUMN "co_authors" jsonb DEFAULT '[]'::jsonb NOT NULL;

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type InventoryItemListQuery } from '@template/shared/schemas/inventory-item.schema';
 import { type InventoryMovementListQuery } from '@template/shared/schemas/inventory-movement.schema';
-import { and, asc, count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, isNull, or, type SQL } from 'drizzle-orm';
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
@@ -179,6 +179,7 @@ function buildMovementWhere(query: InventoryMovementListQuery): SQL | undefined 
 
   if (query.itemId) filters.push(eq(inventoryMovements.itemId, query.itemId));
   if (query.type) filters.push(eq(inventoryMovements.type, query.type));
+  if (query.reason) filters.push(eq(inventoryMovements.reason, query.reason));
 
   return filters.length > 0 ? and(...filters) : undefined;
 }
@@ -191,6 +192,8 @@ function buildWhere(query: InventoryItemListQuery): SQL | undefined {
   const filters: (SQL | undefined)[] = [];
 
   if (query.category) filters.push(eq(inventoryItems.category, query.category));
+  if (query.withoutPhotoOnly) filters.push(isNull(inventoryItems.photoKey));
+  if (query.outOfStockOnly) filters.push(eq(inventoryItems.balance, 0));
 
   if (query.search) {
     const term = `%${query.search}%`;

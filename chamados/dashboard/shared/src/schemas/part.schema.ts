@@ -207,6 +207,8 @@ export const partListQuerySchema = paginationQuerySchema.extend({
   condition: partConditionSchema.optional(),
   /** Só o que tem peça na prateleira — o que se pergunta antes de sair comprando. */
   inStockOnly: z.coerce.boolean().optional(),
+  /** Só o que está com a prateleira vazia — filtrado no SQL, como os outros. */
+  outOfStockOnly: z.coerce.boolean().optional(),
 });
 
 export type PartListQuery = z.infer<typeof partListQuerySchema>;

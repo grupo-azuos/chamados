@@ -29,38 +29,15 @@ export const computersApi = {
 
   list: (query: Partial<ComputerListQuery>) =>
     apiRequest<Paginated<ComputerListItem>>('/computers', {
-      query: {
-        page: query.page,
-        pageSize: query.pageSize,
-        search: query.search,
-        department: query.department,
-        healthStatus: query.healthStatus,
-        kind: query.kind,
-        onlyOnline: query.onlyOnline,
-        onlyOffline: query.onlyOffline,
-        alert: query.alert,
-        includeArchived: query.includeArchived,
-        onlyDisposed: query.onlyDisposed,
-        disposalType: query.disposalType,
-      },
+      /* O filtro INTEIRO vai para o servidor, que filtra no SQL. Listar campo a campo deixou o
+         da preventiva de fora: a tela mostrava o filtro e a lista vinha sem filtrar. */
+      query: { ...query },
     }),
 
   /** Baixa o relatório com os MESMOS filtros da lista — sem página, é o parque inteiro. */
   exportReport: (query: Partial<ComputerListQuery>, format: ReportFormat): Promise<Downloaded> =>
     apiDownload('/computers/export', {
-      query: {
-        format,
-        search: query.search,
-        department: query.department,
-        healthStatus: query.healthStatus,
-        kind: query.kind,
-        onlyOnline: query.onlyOnline,
-        onlyOffline: query.onlyOffline,
-        alert: query.alert,
-        includeArchived: query.includeArchived,
-        onlyDisposed: query.onlyDisposed,
-        disposalType: query.disposalType,
-      },
+      query: { ...withoutPaging(query), format },
     }),
 
   findById: (id: number) => apiRequest<Computer>(`/computers/${id}`),
@@ -111,3 +88,10 @@ export const computersApi = {
   regenerateToken: (id: number) =>
     apiRequest<CreatedComputer>(`/computers/${id}/token`, { method: 'POST' }),
 };
+
+/** O relatório leva os filtros da lista, sem a página: ele é o parque inteiro que casou. */
+function withoutPaging(query: Partial<ComputerListQuery>): Partial<ComputerListQuery> {
+  const { page: _page, pageSize: _pageSize, ...filters } = query;
+
+  return filters;
+}

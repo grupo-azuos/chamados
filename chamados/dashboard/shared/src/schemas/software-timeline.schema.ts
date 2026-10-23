@@ -17,6 +17,8 @@ export const softwareTimelineEventSchema = z.object({
   url: z.string().nullable(),
   author: z.string().nullable(),
   authorName: z.string().nullable().optional(),
+  /** Quem mais trabalhou no que o evento entregou (autores da branch, `Co-authored-by`). */
+  coAuthors: z.array(z.string()).optional(),
   status: timelineEventStatusSchema,
   eventDate: z.string().datetime(),
   createdAt: z.string().datetime(),

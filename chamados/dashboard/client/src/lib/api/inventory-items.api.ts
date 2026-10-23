@@ -24,12 +24,8 @@ import { apiRequest, uploadFile } from './http-client';
 export const inventoryItemsApi = {
   list: (query: Partial<InventoryItemListQuery>) =>
     apiRequest<Paginated<InventoryItem>>('/inventory-items', {
-      query: {
-        page: query.page,
-        pageSize: query.pageSize,
-        search: query.search,
-        category: query.category,
-      },
+      /* O filtro INTEIRO vai para o servidor, que filtra no SQL. */
+      query: { ...query },
     }),
 
   findById: (id: number) => apiRequest<InventoryItem>(`/inventory-items/${id}`),
@@ -60,12 +56,8 @@ export const inventoryItemsApi = {
   /** O extrato do depósito. `type: 'disposal'` é a tela de Descarte inteira. */
   movements: (query: Partial<InventoryMovementListQuery>) =>
     apiRequest<Paginated<InventoryMovement>>('/inventory-items/movements', {
-      query: {
-        page: query.page,
-        pageSize: query.pageSize,
-        itemId: query.itemId,
-        type: query.type,
-      },
+      /* O filtro INTEIRO vai para o servidor, que filtra no SQL. */
+      query: { ...query },
     }),
 
   /** Entrada, saída ou descarte de um produto. O saldo é movido pelo servidor, junto. */

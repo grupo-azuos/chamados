@@ -13,7 +13,8 @@ import { type TicketHistoriesRepository } from '../repository/ticket-histories.r
 import { type TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
 import { TicketAccessService } from './ticket-access.service';
 import { type TicketAttachmentsService } from './ticket-attachments.service';
-import { TicketHistoriesService } from './ticket-histories.service';
+import { type GithubService } from '../../software-projects/service/github.service';
+import { issueCommentOf, TicketHistoriesService } from './ticket-histories.service';
 
 const ana: RequestUser = { id: '1', email: 'ana@azuos.com.br', name: 'Ana Lima', role: 'user' };
 const noRole = { ...ana, role: undefined } as unknown as RequestUser;
@@ -82,6 +83,7 @@ type Setup = {
   record?: ReturnType<typeof vi.fn>;
   listByTicket?: ReturnType<typeof vi.fn>;
   attachments?: Partial<TicketAttachmentsService>;
+  github?: { mirrorTicketToIssueInBackground: ReturnType<typeof vi.fn> };
 };
 
 function setup({
@@ -90,6 +92,7 @@ function setup({
   record = vi.fn().mockImplementation(async (history) => historyRow(history)),
   listByTicket = vi.fn().mockResolvedValue([]),
   attachments = {},
+  github = { mirrorTicketToIssueInBackground: vi.fn() },
 }: Setup = {}) {
   const tickets = {
     findById: vi.fn().mockResolvedValue(ticket),
@@ -107,6 +110,7 @@ function setup({
     { record, listByTicket } as unknown as TicketHistoriesRepository,
     new TicketAccessService(tickets),
     attachmentsStub as unknown as TicketAttachmentsService,
+    github as unknown as GithubService,
   );
 
   return {
@@ -115,6 +119,7 @@ function setup({
     record,
     listByTicket,
     attachments: attachmentsStub,
+    github,
   };
 }
 
@@ -257,6 +262,64 @@ describe('TicketHistoriesService.create', () => {
 
     await expect(service.create(actor, 7, entry('note'))).rejects.toThrow(BadRequestException);
     expect(record).not.toHaveBeenCalled();
+  });
+});
+
+describe('TicketHistoriesService.create — the GitHub issue', () => {
+  const systemTicket = ticketRow({ area: 'sistema', projectId: 3, githubIssueNumber: 12 });
+
+  // feliz
+  it('comments every history on the issue, and closes it when the ticket closes', async () => {
+    const { actor, service, github } = setup({
+      ticket: systemTicket,
+      roles: { sistema: 'admin' },
+    });
+
+    await service.create(actor, 7, entry('resolution', 'Corrigi a consulta.'));
+
+    expect(github.mirrorTicketToIssueInBackground).toHaveBeenCalledWith(systemTicket, {
+      comment: expect.stringContaining('Corrigi a consulta.'),
+      state: 'closed',
+    });
+  });
+
+  it('only comments when the history does not cross the closing line', async () => {
+    const { actor, service, github } = setup({
+      ticket: systemTicket,
+      roles: { sistema: 'admin' },
+    });
+
+    await service.create(actor, 7, entry('waiting_third_party', 'Aguardando o banco.'));
+
+    expect(github.mirrorTicketToIssueInBackground).toHaveBeenCalledWith(systemTicket, {
+      comment: expect.stringContaining('Ana Lima'),
+      state: undefined,
+    });
+  });
+
+  // triste
+  it('touches no issue when the history is refused', async () => {
+    const { actor, service, github } = setup({
+      ticket: systemTicket,
+      roles: { sistema: 'user' },
+    });
+
+    await expect(service.create(actor, 7, entry('note'))).rejects.toBeInstanceOf(ForbiddenException);
+    expect(github.mirrorTicketToIssueInBackground).not.toHaveBeenCalled();
+  });
+});
+
+describe('issueCommentOf', () => {
+  // feliz
+  it('says what was recorded, by whom, and the text', () => {
+    expect(issueCommentOf(entry('note', 'Testei em produção.'), 'Ana Lima')).toMatch(
+      /^\*\*.+\*\* — Ana Lima\n\nTestei em produção\.$/,
+    );
+  });
+
+  // triste
+  it('keeps only the header when the text is blank', () => {
+    expect(issueCommentOf(entry('note', '   '), 'Ana Lima')).not.toContain('\n');
   });
 });
 

@@ -7,7 +7,7 @@ import { type TicketAssigneesService } from '../../tickets/service/ticket-assign
 import { type SoftwareProjectsRepository } from '../repository/software-projects.repository';
 import { type SoftwareTimelineRepository } from '../repository/software-timeline.repository';
 import { type GithubService } from './github.service';
-import { SoftwareProjectsService } from './software-projects.service';
+import { coAuthorNames, SoftwareProjectsService } from './software-projects.service';
 import { type GithubConnectionsRepository } from '../../github-integration/repository/github-connections.repository';
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 
@@ -90,8 +90,20 @@ function makeService(
     ),
   } as unknown as TicketAssigneesService;
 
+  /* Quem pede o sync tem o GitHub vinculado — a regra para disparar. */
+  const connections = {
+    find: vi.fn().mockResolvedValue({ userId: 'linked', login: 'octocat' }),
+    listLogins: vi.fn().mockResolvedValue([]),
+  } as unknown as GithubConnectionsRepository;
+
   return {
-    service: new SoftwareProjectsService(repository, timelineRepository, githubService, assignees),
+    service: new SoftwareProjectsService(
+      repository,
+      timelineRepository,
+      githubService,
+      assignees,
+      connections,
+    ),
     repository,
     timelineRepository,
     githubService,
@@ -243,11 +255,34 @@ describe('SoftwareProjectsService', () => {
       expect(githubService.fetchIssues).toHaveBeenCalledWith('org', 'ok', superAdmin.id, undefined);
     });
 
-    // triste
-    it('refuses anyone who is not a super administrator, even a Sistema admin', async () => {
+    // feliz
+    /* Quem só consulta Sistema, com o GitHub vinculado, também dispara o sync. */
+    it('lets anyone of the module with a linked GitHub account sync everything', async () => {
       const { service, repository } = makeService({ listAll: vi.fn().mockResolvedValue([]) });
 
-      await expect(service.syncAllGithub(admin)).rejects.toThrow('Super Administrador');
+      await service.syncAllGithub({ ...admin, role: 'user' });
+
+      expect(repository.listAll).toHaveBeenCalled();
+    });
+
+    // triste
+    it('refuses anyone without a linked GitHub account, even a super administrator', async () => {
+      const repository = {
+        listAll: vi.fn().mockResolvedValue([]),
+      } as unknown as SoftwareProjectsRepository;
+      const connections = {
+        find: vi.fn().mockResolvedValue(null),
+      } as unknown as GithubConnectionsRepository;
+      const service = new SoftwareProjectsService(
+        repository,
+        {} as SoftwareTimelineRepository,
+        {} as GithubService,
+        undefined,
+        connections,
+      );
+
+      await expect(service.syncAllGithub(superAdmin)).rejects.toThrow('Vincule sua conta do GitHub');
+      await expect(service.syncGithubPrs(superAdmin, 1)).rejects.toThrow('Vincule sua conta do GitHub');
       expect(repository.listAll).not.toHaveBeenCalled();
     });
   });
@@ -289,6 +324,7 @@ describe('SoftwareProjectsService', () => {
         fetchLocalMerges: vi.fn().mockResolvedValue([]),
       } as unknown as GithubService;
       const connections = {
+        find: vi.fn().mockResolvedValue({ userId: 'u-vini', login: 'vinicius-gpl' }),
         listLogins: vi.fn().mockResolvedValue([{ userId: 'u-vini', login: 'vinicius-gpl' }]),
       } as unknown as GithubConnectionsRepository;
       const directory = { listUsers: vi.fn(listUsers) } as unknown as UserDirectoryProvider;
@@ -426,6 +462,33 @@ describe('SoftwareProjectsService', () => {
       await service.remove(admin, 1);
 
       expect(repository.remove).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('coAuthorNames', () => {
+    const nameOf = (login: string, fallback: string) =>
+      login === 'gui-siqueira659' ? 'Guilherme Siqueira' : fallback;
+
+    // feliz
+    it('names each co-author once, by the name the rest of the system knows', () => {
+      expect(
+        coAuthorNames(
+          [
+            { login: 'gui-siqueira659', name: 'gui-siqueira659' },
+            { login: null, name: 'Guilherme Siqueira' },
+            { login: null, name: 'Ana Lima' },
+          ],
+          'Vinícius Gabriel',
+          nameOf,
+        ),
+      ).toEqual(['Guilherme Siqueira', 'Ana Lima']);
+    });
+
+    // triste
+    it('leaves the main author out of their own co-authors', () => {
+      expect(
+        coAuthorNames([{ login: null, name: 'Vinicius Gabriel' }], 'Vinícius Gabriel', nameOf),
+      ).toEqual([]);
     });
   });
 

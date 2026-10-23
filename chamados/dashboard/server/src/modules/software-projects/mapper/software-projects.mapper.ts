@@ -154,6 +154,7 @@ export function toSoftwareTimelineEvent(
     url: row.url,
     author: row.author,
     authorName: row.authorName,
+    coAuthors: row.coAuthors ?? [],
     status: row.status,
     eventDate: row.eventDate.toISOString(),
     createdAt: row.createdAt.toISOString(),
