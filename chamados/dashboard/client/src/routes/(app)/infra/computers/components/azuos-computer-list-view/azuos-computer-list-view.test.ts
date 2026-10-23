@@ -178,7 +178,7 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     expect(screen.getByText('Arquivadas')).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).toBeNull();
 
-    await choose('Máquinas arquivadas', 'Mostrar');
+    await userEvent.click(screen.getByRole('button', { name: 'Mostrar' }));
     expect(actions.onArchivedChange).toHaveBeenLastCalledWith(true);
   });
 
@@ -203,7 +203,7 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Online agora: filtrar a lista' }));
     expect(actions.onOnlineChange).toHaveBeenLastCalledWith(true);
     await openMoreFilters();
-    await choose('Filtrar por conexão', 'Online agora');
+    await userEvent.click(screen.getByRole('button', { name: 'Online agora' }));
     expect(actions.onOnlineChange).toHaveBeenLastCalledWith(true);
   });
 

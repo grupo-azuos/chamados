@@ -228,6 +228,7 @@
   const panelFilters = $derived([
     {
       label: 'Conexão',
+      control: 'pills',
       ariaLabel: 'Filtrar por conexão',
       allLabel: 'Todas',
       value: connectionValue,
@@ -236,6 +237,7 @@
     },
     {
       label: 'Saúde',
+      control: 'select',
       ariaLabel: 'Filtrar por saúde',
       allLabel: 'Toda a saúde',
       value: data.filter.healthStatus,
@@ -243,7 +245,17 @@
       onChange: (value: string) => actions.onHealthStatusChange(value as HealthStatus | ''),
     },
     {
+      label: 'Tipo',
+      control: 'pills',
+      ariaLabel: 'Filtrar por tipo',
+      allLabel: 'Todos',
+      value: data.filter.kind,
+      options: KIND_OPTIONS,
+      onChange: (value: string) => actions.onKindChange(value as ComputerKind | ''),
+    },
+    {
       label: 'Alertas',
+      control: 'select',
       ariaLabel: 'Filtrar por alerta',
       allLabel: 'Todos',
       value: data.filter.alert,
@@ -251,7 +263,17 @@
       onChange: (value: string) => actions.onAlertChange(value as ComputerAlertFilter | ''),
     },
     {
+      label: 'Arquivadas',
+      control: 'pills',
+      ariaLabel: 'Máquinas arquivadas',
+      allLabel: 'Ocultar',
+      value: data.filter.includeArchived ? 'yes' : '',
+      options: ARCHIVED_OPTIONS,
+      onChange: (value: string) => actions.onArchivedChange(value === 'yes'),
+    },
+    {
       label: 'Preventiva',
+      control: 'select',
       ariaLabel: 'Filtrar pela preventiva',
       allLabel: 'Todas',
       value: data.filter.preventive,
@@ -259,23 +281,7 @@
       onChange: (value: string) =>
         actions.onPreventiveChange(value as ComputerPreventiveFilter | ''),
     },
-    {
-      label: 'Tipo',
-      ariaLabel: 'Filtrar por tipo',
-      allLabel: 'Todos os tipos',
-      value: data.filter.kind,
-      options: KIND_OPTIONS,
-      onChange: (value: string) => actions.onKindChange(value as ComputerKind | ''),
-    },
-    {
-      label: 'Arquivadas',
-      ariaLabel: 'Máquinas arquivadas',
-      allLabel: 'Ocultar',
-      value: data.filter.includeArchived ? 'yes' : '',
-      options: ARCHIVED_OPTIONS,
-      onChange: (value: string) => actions.onArchivedChange(value === 'yes'),
-    },
-  ]);
+  ] as const);
 
   function changeConnection(value: string) {
     if (value === 'online') return actions.onOnlineChange(true);
@@ -364,10 +370,10 @@
   </div>
 
   {#if isOpen}
-    <!-- O painel desliza: some e aparece sem empurrar a lista num salto. Dentro, uma LISTA
-         SUSPENSA por filtro, em grade: 3 colunas no computador grande, 2 no tablet e 1 no
-         celular. Cada uma tem a altura de campo do sistema e mostra o valor escolhido — a
-         grade não cresce com o número de opções, como as fileiras de pastilhas cresciam. -->
+    <!-- O painel desliza: some e aparece sem empurrar a lista num salto. Dentro, a grade
+         INTERCALA pastilhas (filtro de poucas opções, à vista num clique) e listas suspensas
+         (filtro de muitas): 3 colunas no computador grande, 2 no tablet e 1 no celular, todas
+         com a altura de campo do sistema. -->
     <div
       id={panelId}
       transition:slide={{ duration: motionMs(DURATION.base) }}
@@ -381,7 +387,9 @@
               ui={{
                 ariaLabel: filter.ariaLabel,
                 allLabel: filter.allLabel,
-                mode: 'combobox',
+                /* Poucas opções (até três): pastilhas dividindo a largura da célula. Mais que
+                   isso: lista suspensa. No celular as duas viram lista, pelo próprio seletor. */
+                mode: filter.control === 'select' ? 'combobox' : 'auto',
                 fullWidth: true,
                 searchPlaceholder: 'Buscar…',
               }}
