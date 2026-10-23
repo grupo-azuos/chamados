@@ -36,10 +36,9 @@
   <!-- Recolhida, o botão vira um quadrado de 32px e o ícone tem 20: com o padding de 8 que
        vem do componente, ele não cabe e é cortado, parecendo empurrado para a esquerda.
        `p-0` devolve o espaço e `justify-center` o põe no meio do quadrado. -->
-  <!-- O tamanho da fonte vai como `text-[1rem]`, e NÃO como `text-base`: a paleta declara um
-       token de cor chamado `base` (`--color-base` em `tokens.css`), então o Tailwind lê
-       `text-base` como COR, não como tamanho. O resultado era o menu inteiro pintado de
-       #eff1f5 — quase branco sobre a barra clara, ou seja, invisível. -->
+  <!-- O tamanho da fonte vai como `text-[1rem]`: a paleta já declarou um token de cor `base`,
+       e o Tailwind lia `text-base` como COR — o menu saía invisível sobre a barra clara. O
+       token saiu do tema (ver `tokens.css`), e o valor explícito fica para não depender disso. -->
   <SidebarMenuButton
     {isActive}
     tooltipContent={sidebar.state === 'collapsed' && !sidebar.isMobile ? item.label : undefined}

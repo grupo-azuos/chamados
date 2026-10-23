@@ -232,7 +232,9 @@
 
   --color-crust: var(--crust);
   --color-mantle: var(--mantle);
-  --color-base: var(--base);
+  /* `--base` fica SEM `--color-base` de propósito: com ele, o Tailwind passa a ler `text-base`
+     (tamanho de fonte, usado pelo input do shadcn) também como cor, e o texto digitado na
+     busca saía da cor do fundo no tema escuro. Quem precisar do tom usa `var(--base)`. */
   --color-surface: var(--surface);
   --color-subtext: var(--subtext);
 
