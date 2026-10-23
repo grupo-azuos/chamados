@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type AlertMetric } from '@template/shared/domain/computer-alert.util';
+import { compareMachines } from '@template/shared/domain/machine-number.util';
 import { preventiveDueBefore } from '@template/shared/domain/maintenance.util';
 import {
   type ComputerAlertListQuery,
@@ -156,18 +157,23 @@ export class ComputersRepository {
 
   /**
    * TODO o parque que casa com o filtro, sem página — é o que o relatório baixa. Os MESMOS
-   * filtros da tela, por isso reaproveita `buildWhere`.
+   * filtros da tela, por isso reaproveita `buildWhere`, e a MESMA ordem: pelo número da
+   * máquina no nome físico (`name` guarda o hostname mais recente), em ordem natural. O banco
+   * não ordena "D2" antes de "D10" sem uma collation própria; com o limite do relatório, a
+   * ordem em memória sai de graça.
    */
   async listAll(query: ComputerReportQuery, presence?: PresenceFilter): Promise<ComputerRow[]> {
-    return runQuery(
+    const rows = await runQuery(
       this.db
         .select()
         .from(computers)
         .where(buildWhere(query, presence))
-        .orderBy(asc(computers.healthScore), computers.name)
+        .orderBy(computers.name)
         .limit(REPORT_FETCH_LIMIT),
       'listar computadores para o relatório',
     );
+
+    return rows.sort(compareMachines);
   }
 
   async findById(id: number): Promise<ComputerRow | null> {
