@@ -64,6 +64,9 @@ type RawGithubCommit = {
 const GITHUB_CONCURRENCY = 6;
 /* Até quantos commits de uma branch ou PR são lidos para achar os co-autores. */
 const MAX_COMMITS_FOR_COAUTHORS = 250;
+/* Co-autores de PR só dos mergeados nos últimos 120 dias: o histórico inteiro, num
+   "Sincronizar todos", passaria de mil chamadas e o clique estouraria o tempo. */
+const COAUTHOR_WINDOW_MS = 120 * 24 * 60 * 60 * 1000;
 
 /** Quem não é gente: assistente de IA e robôs não contam como co-autor de ninguém. */
 function isAutomation(login: string | null, name: string, email?: string): boolean {
@@ -261,8 +264,10 @@ export class GithubService {
       const recent = since ? list.filter((pr) => isUpdatedSince(pr, since)) : list;
       const named = await this.addAuthorNames(recent.map(mapRawPr), token);
 
+      const windowStart = Date.now() - COAUTHOR_WINDOW_MS;
+
       return inPool(named, GITHUB_CONCURRENCY, async (pr) =>
-        pr.status === 'merged'
+        pr.status === 'merged' && pr.eventDate.getTime() >= windowStart
           ? { ...pr, coAuthors: await this.prCoAuthors(owner, repo, pr, token) }
           : pr,
       );
@@ -450,9 +455,14 @@ export class GithubService {
           .map((row) => `#${row.number}`),
       );
       const named = await this.addAuthorNames(pageItems, token);
+      /* Fechada por robô — o nosso App fecha a issue quando o chamado é encerrado — também
+         aparece como o bot, e não como `app-chamados[bot]` resolvendo issue. */
       items.push(
         ...named.map((item) =>
-          ownBotIssues.has(item.externalId) ? { ...item, authorName: CHAMADOS_BOT_NAME } : item,
+          ownBotIssues.has(item.externalId) ||
+          (item.status === 'closed' && item.author.endsWith('[bot]'))
+            ? { ...item, authorName: CHAMADOS_BOT_NAME }
+            : item,
         ),
       );
       if (!response.headers.get('link')?.includes('rel="next"')) return items;

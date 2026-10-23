@@ -107,6 +107,7 @@ describe('eventStatusOf and peopleLineOf', () => {
     expect(eventStatusOf(event({ status: 'open' })).label).toBe('Em andamento');
     expect(eventStatusOf(event({ type: 'merge' })).label).toBe('Entregue');
     expect(eventStatusOf(event({ type: 'issue', status: 'open' })).label).toBe('Pendente');
+    expect(eventStatusOf(event({ status: 'closed' })).label).toBe('Fechado sem merge');
   });
 
   // triste

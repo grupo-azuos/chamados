@@ -82,7 +82,7 @@ describe('GithubService', () => {
       state,
       created_at: '2026-10-16T12:00:00Z',
       closed_at: state === 'closed' ? '2026-10-17T12:00:00Z' : null,
-      closed_by: state === 'closed' ? { login: 'vinicius-gpl' } : null,
+      closed_by: state === 'closed' ? { login: number === 30 ? 'app-chamados[bot]' : 'vinicius-gpl' } : null,
       performed_via_github_app: appId ? { id: appId } : null,
     });
     vi.spyOn(global, 'fetch').mockImplementation(async (url) =>
@@ -93,6 +93,7 @@ describe('GithubService', () => {
               issue(27, 'app-chamados[bot]', 42),
               issue(28, 'dependabot[bot]', 7),
               issue(29, 'app-chamados[bot]', 42, 'closed'),
+              issue(30, 'vinicius-gpl', null, 'closed'),
             ]),
           ),
     );
@@ -104,6 +105,9 @@ describe('GithubService', () => {
       ['#28', 'dependabot[bot]', 'dependabot[bot]'],
       /* Fechada: o autor é quem fechou, uma pessoa — não o bot que abriu. */
       ['#29', 'vinicius-gpl', 'vinicius-gpl'],
+      /* Fechada pelo nosso App (o chamado foi encerrado): aparece como o bot, nunca como
+         `app-chamados[bot]` resolvendo issue. */
+      ['#30', 'app-chamados[bot]', 'GitHub Chamados Bot'],
     ]);
   });
 

@@ -62,8 +62,10 @@
     if (event.type === 'pr' && event.status === 'open') return { label: 'Em andamento', tone: 'info' };
     if (event.type === 'issue' && event.status === 'open') return { label: 'Pendente', tone: 'warning' };
     if (event.type === 'issue') return { label: 'Resolvida', tone: 'success' };
+    if (event.type === 'pr') return { label: 'Fechado sem merge', tone: 'neutral' };
 
-    return { label: 'Fechado', tone: 'neutral' };
+    /* Release, deploy, manutenção: o próprio tipo diz o que foi. */
+    return { label: TIMELINE_EVENT_TYPE_LABELS[event.type], tone: 'brand' };
   }
 
   /** "Vinícius Gabriel com Guilherme Siqueira": quem fez, e quem fez junto. */

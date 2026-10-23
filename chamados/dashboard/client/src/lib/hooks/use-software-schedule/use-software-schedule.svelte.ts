@@ -278,6 +278,11 @@ function developerActivityKind(event: SoftwareTimelineEvent): 'pr' | 'merge' | '
   return null;
 }
 
+/** Robô não é desenvolvedor: o App que fecha a issue do chamado não entra na produtividade. */
+function isAutomation(person: { key: string; name: string }): boolean {
+  return person.key.endsWith('[bot]') || person.key === 'github chamados bot';
+}
+
 function countActivity(
   activityByDeveloper: Map<string, DeveloperActivitySummary>,
   person: { key: string; name: string },
@@ -305,7 +310,9 @@ function summarizeDeveloperActivity(
 
     /* Conta para o autor E para cada co-autor: quem fez a branch entregou tanto quanto quem
        a juntou. */
-    for (const person of peopleOf(event)) countActivity(activityByDeveloper, person, kind);
+    for (const person of peopleOf(event).filter((who) => !isAutomation(who))) {
+      countActivity(activityByDeveloper, person, kind);
+    }
   }
   const developerStats = [...activityByDeveloper.values()].sort(
     (a, b) =>
