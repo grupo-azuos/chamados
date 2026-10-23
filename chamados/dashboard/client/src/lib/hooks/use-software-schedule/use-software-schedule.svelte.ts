@@ -19,6 +19,8 @@ export const DEFAULT_SCHEDULE_VIEW_MODE: ScheduleViewMode = 'month';
 export type DeveloperActivitySummary = {
   author: string;
   mergedPullRequests: number;
+  /** Branches juntadas direto na develop, sem PR — o jeito de trabalhar de parte do time. */
+  localMerges: number;
   resolvedIssues: number;
 };
 
@@ -33,7 +35,7 @@ function filterGithubEvents(events: SoftwareTimelineEvent[], filters: ScheduleFi
   return events.filter(
     (event) =>
       (!filters.project || String(event.projectId) === filters.project) &&
-      (!filters.author || authorKeyOf(event) === filters.author) &&
+      (!filters.author || peopleKeysOf(event).includes(filters.author)) &&
       (!filters.type || event.type === filters.type),
   );
 }
@@ -73,18 +75,42 @@ function authorKeyOf(event: Pick<SoftwareTimelineEvent, 'author' | 'authorName'>
   const name = (event.authorName || event.author || '').trim();
   if (!name) return '__unknown__';
 
+  return personKeyOf(name);
+}
+
+function personKeyOf(name: string): string {
   return name
+    .trim()
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase();
 }
 
+/**
+ * Todas as pessoas de uma atividade: o autor e os CO-AUTORES (quem fez commit na branch, os
+ * `Co-authored-by`). Filtrar pelo Guilherme mostra também o merge que outra pessoa juntou com
+ * o trabalho dele.
+ */
+function peopleOf(event: SoftwareTimelineEvent): { key: string; name: string }[] {
+  const author = {
+    key: authorKeyOf(event),
+    name: event.authorName || event.author || 'Não informado',
+  };
+  const coAuthors = (event.coAuthors ?? [])
+    .filter((name) => name.trim() !== '')
+    .map((name) => ({ key: personKeyOf(name), name }));
+
+  return [author, ...coAuthors.filter((person) => person.key !== author.key)];
+}
+
+function peopleKeysOf(event: SoftwareTimelineEvent): string[] {
+  return peopleOf(event).map((person) => person.key);
+}
+
 function authorFilterOptions(githubEvents: SoftwareTimelineEvent[], selectedAuthor: string) {
   const authors = new SvelteMap<string, string>();
-  for (const event of githubEvents) {
-    const key = authorKeyOf(event);
-    if (authors.has(key)) continue;
-    authors.set(key, event.authorName || event.author || 'Não informado');
+  for (const person of githubEvents.flatMap(peopleOf)) {
+    if (!authors.has(person.key)) authors.set(person.key, person.name);
   }
   if (selectedAuthor && !authors.has(selectedAuthor)) authors.set(selectedAuthor, selectedAuthor);
   return [
@@ -245,10 +271,28 @@ function countGithubEvents(
   return events.filter((event) => event.type === type && event.status === status).length;
 }
 
-function developerActivityKind(event: SoftwareTimelineEvent): 'pr' | 'issue' | null {
+function developerActivityKind(event: SoftwareTimelineEvent): 'pr' | 'merge' | 'issue' | null {
   if (event.type === 'pr' && event.status === 'merged') return 'pr';
+  if (event.type === 'merge') return 'merge';
   if (event.type === 'issue' && event.status === 'closed') return 'issue';
   return null;
+}
+
+function countActivity(
+  activityByDeveloper: Map<string, DeveloperActivitySummary>,
+  person: { key: string; name: string },
+  kind: 'pr' | 'merge' | 'issue',
+) {
+  const summary = activityByDeveloper.get(person.key) ?? {
+    author: person.name,
+    mergedPullRequests: 0,
+    localMerges: 0,
+    resolvedIssues: 0,
+  };
+  if (kind === 'pr') summary.mergedPullRequests++;
+  else if (kind === 'merge') summary.localMerges++;
+  else summary.resolvedIssues++;
+  activityByDeveloper.set(person.key, summary);
 }
 
 function summarizeDeveloperActivity(
@@ -259,19 +303,14 @@ function summarizeDeveloperActivity(
     const kind = developerActivityKind(event);
     if (!kind) continue;
 
-    const authorKey = authorKeyOf(event);
-    const summary = activityByDeveloper.get(authorKey) ?? {
-      author: event.authorName || event.author || 'desconhecido',
-      mergedPullRequests: 0,
-      resolvedIssues: 0,
-    };
-    if (kind === 'pr') summary.mergedPullRequests++;
-    else summary.resolvedIssues++;
-    activityByDeveloper.set(authorKey, summary);
+    /* Conta para o autor E para cada co-autor: quem fez a branch entregou tanto quanto quem
+       a juntou. */
+    for (const person of peopleOf(event)) countActivity(activityByDeveloper, person, kind);
   }
   const developerStats = [...activityByDeveloper.values()].sort(
     (a, b) =>
-      b.mergedPullRequests + b.resolvedIssues - (a.mergedPullRequests + a.resolvedIssues) ||
+      b.mergedPullRequests + b.localMerges + b.resolvedIssues -
+        (a.mergedPullRequests + a.localMerges + a.resolvedIssues) ||
       a.author.localeCompare(b.author),
   );
 
