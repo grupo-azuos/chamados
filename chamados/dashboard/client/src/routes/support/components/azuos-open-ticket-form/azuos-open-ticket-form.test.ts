@@ -171,6 +171,53 @@ describe('AzuosOpenTicketForm', () => {
     expect(onChange).toHaveBeenCalledWith('projectId', '2');
   });
 
+  /* O departamento da pessoa pode não estar na lista (RH fora do ar, setor novo): ela digita
+     e o chamado guarda o nome como veio. */
+  it('takes a typed department that is not on the list', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    setup({
+      data: {
+        fields: { ...fields, department: field('') },
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        departmentOptions: [{ value: 'ANALYZE', label: 'ANALYZE' }],
+      },
+      actions: { ...actions, onChange },
+    });
+
+    await advanceTo(user, 2);
+    await user.click(screen.getByRole('button', { name: 'Departamento' }));
+    await user.type(screen.getByPlaceholderText('Busque ou digite o departamento'), 'Societário');
+    await user.click(screen.getByText('Usar “Societário”'));
+
+    expect(onChange).toHaveBeenCalledWith('department', 'Societário');
+  });
+
+  // triste
+  it('offers no typed department while the search is blank', async () => {
+    const user = userEvent.setup();
+    setup({
+      data: {
+        fields: { ...fields, department: field('') },
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        departmentOptions: [{ value: 'ANALYZE', label: 'ANALYZE' }],
+      },
+    });
+
+    await advanceTo(user, 2);
+    await user.click(screen.getByRole('button', { name: 'Departamento' }));
+    await user.type(screen.getByPlaceholderText('Busque ou digite o departamento'), '   ');
+
+    expect(screen.queryByText(/^Usar/)).not.toBeInTheDocument();
+  });
+
+  // feliz
   it('moves forward and back between steps without losing what was typed elsewhere', async () => {
     const user = userEvent.setup();
     setup();

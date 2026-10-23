@@ -289,3 +289,24 @@
     actions,
   }}
 />
+
+<!-- Departamento fora da lista: a pessoa digitou o nome, e o campo mostra o texto como veio. -->
+<Story
+  name="TypedDepartment"
+  args={{
+    data: {
+      fields: { ...filledFields, department: field('Societário') },
+      notifyWhatsapp: false,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+      departmentOptions: [
+        { value: 'ANALYZE', label: 'ANALYZE' },
+        { value: 'CERTIFICADO', label: 'CERTIFICADO' },
+        { value: 'RECEPÇÃO', label: 'RECEPÇÃO' },
+      ],
+    },
+    state: {},
+    actions,
+  }}
+/>
