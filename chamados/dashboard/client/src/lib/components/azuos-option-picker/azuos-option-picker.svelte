@@ -125,26 +125,26 @@
         tone: 'neutral',
         class: 'border-foreground bg-foreground text-background',
       },
-      { isSelected: true, tone: 'info', class: 'border-info bg-info text-primary-foreground' },
+      { isSelected: true, tone: 'info', class: 'bg-info text-primary-foreground' },
       {
         isSelected: true,
         tone: 'success',
-        class: 'border-success bg-success text-primary-foreground',
+        class: 'bg-success text-primary-foreground',
       },
       {
         isSelected: true,
         tone: 'warning',
-        class: 'border-warning bg-warning text-primary-foreground',
+        class: 'bg-warning text-primary-foreground',
       },
       {
         isSelected: true,
         tone: 'danger',
-        class: 'border-destructive bg-destructive text-destructive-foreground',
+        class: 'bg-destructive text-destructive-foreground',
       },
       {
         isSelected: true,
         tone: 'brand',
-        class: 'border-primary bg-primary text-primary-foreground',
+        class: 'bg-primary text-primary-foreground',
       },
     ],
     defaultVariants: { layout: 'filter', isSelected: false, tone: 'neutral' },
@@ -325,7 +325,7 @@
           class={cn(
             /* A busca do balão é um controle como os outros: degrau `sm` da régua. */
             ui?.allowCustomValue ? 'control-lg rounded-control' : 'control-sm rounded-control',
-            'w-full border border-border/60 bg-muted/30 pr-2 pl-7 text-xs text-foreground outline-none focus:border-primary',
+            'w-full border border-border/60 bg-muted/30 pr-2 pl-7 text-xs text-foreground outline-none',
           )}
         />
       </div>

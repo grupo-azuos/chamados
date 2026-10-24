@@ -146,7 +146,7 @@
           'control-lg rounded-control inline-flex flex-1 items-center justify-center gap-2 border text-sm font-medium transition-colors md:flex-none',
           'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
           isOpen || data.chips.length > 0
-            ? 'border-primary/40 bg-primary/10 text-primary'
+            ? 'border-transparent bg-primary-soft text-primary'
             : 'border-border bg-card text-foreground hover:bg-accent/50',
         )}
       >
@@ -228,7 +228,7 @@
                 type="button"
                 onclick={() => actions.onRemoveChip(chip.key)}
                 aria-label={`Tirar o filtro ${chip.label}`}
-                class="border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 focus-visible:ring-ring inline-flex max-w-full items-center gap-1.5 rounded-full border py-1 pr-2 pl-3 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                class="bg-primary-soft text-primary hover:bg-primary/15 focus-visible:ring-ring inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pr-2 pl-3 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 <span class="truncate">{chip.label}</span>
                 <X class="size-3.5 shrink-0" aria-hidden="true" />

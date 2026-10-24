@@ -55,7 +55,7 @@
         target="_blank"
         rel="noreferrer"
         aria-label="{kind} {event.externalId ?? ''}: {event.title}"
-        class="block overflow-hidden border border-primary/20 bg-primary-soft text-primary transition hover:border-primary/50 {inTimeGrid
+        class="block overflow-hidden border border-border bg-primary-soft text-primary transition {inTimeGrid
           ? 'h-full rounded-box p-2 text-xs'
           : compact
             ? 'truncate rounded-chip px-1 py-0.5 text-xs'

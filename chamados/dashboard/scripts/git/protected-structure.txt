@@ -19,3 +19,25 @@
 ^chamados/dashboard/server/src/lib/http/http-exception\.filter\.ts$
 ^chamados/dashboard/server/src/lib/config/app-config\.module\.ts$
 ^chamados/dashboard/server/src/app\.setup\.ts$
+
+# CASCA PADRÃO (skill app-shell-standard) — igual nos 13 sistemas do Grupo Azuos; só quem
+# administra altera, e sempre nos 13 de uma vez.
+/client/src/lib/components/azuos-app-shell[^/]*/
+/client/src/lib/components/azuos-zuzu/
+/client/src/lib/components/azuos-brand-mark/
+/client/src/lib/components/azuos-sidebar-controls/
+/client/src/lib/components/ui/(sidebar|sheet|tooltip)(\.tsx$|/)
+/client/src/lib/navigation/app-shell-navigation[^/]*$
+/client/src/lib/view-models/use-app-shell-navigation\.model[^/]*$
+/client/src/lib/view-models/use-account-session\.model[^/]*$
+/client/src/lib/api/account-session\.api[^/]*$
+/client/src/lib/components/azuos-my-profile-view/
+/client/src/lib/components/azuos-(tone-card|stat-card|calendar-dropdown)/
+/client/src/lib/view-models/use-my-profile\.model[^/]*$
+/client/src/lib/api/account-profile\.api[^/]*$
+/client/src/lib/hooks/use-my-profile/
+/client/src/routes/(_shell/)?profile(/index)?\.tsx$
+/client/src/routes/\(app\)/profile/\+(page|layout)\.svelte$
+/client/src/lib/components/azuos-account-view/
+/client/src/lib/hooks/ui/use-mobile\.ts$
+/client/src/lib/motion/(use-)?sliding-indicator[^/]*$

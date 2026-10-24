@@ -52,9 +52,9 @@
 
   const CHECK_CLASSES: Record<Exclude<ServiceOrderFileCheck, 'idle'>, string> = {
     checking: 'border-border bg-muted/40 text-foreground',
-    match: 'border-success/40 bg-success-soft text-foreground',
-    mismatch: 'border-destructive/40 bg-destructive-soft text-foreground',
-    unreadable: 'border-warning/40 bg-warning-soft text-foreground',
+    match: 'bg-success-soft text-foreground',
+    mismatch: 'bg-destructive-soft text-foreground',
+    unreadable: 'bg-warning-soft text-foreground',
   };
 </script>
 
@@ -133,7 +133,7 @@
       </header>
 
       {#if !order.isLatest}
-        <p class="rounded-box border-warning/40 bg-warning-soft text-foreground border px-3.5 py-3 text-sm">
+        <p class="rounded-box bg-warning-soft text-foreground px-3.5 py-3 text-sm">
           Existe uma emissão mais nova deste chamado (versão {order.latestVersion}). Esta continua
           verdadeira como retrato do dia em que foi emitida, mas o chamado mudou depois.
         </p>

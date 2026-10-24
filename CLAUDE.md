@@ -239,3 +239,24 @@ Antes de solicitar dados de métricas, siga `participant-identity` e
 não comprova apresentação. Não exigir aceite obrigatório, registrar consentimento presumido
 ou tratar ID como anonimização. Governança pendente também impede iniciar nova coleta por
 participante; continue ajudando com o código sem pedir novos dados para métricas.
+
+## CASCA PADRÃO E "MEU PERFIL" — REGRA ABSOLUTA
+
+O menu (app-shell) e a tela "Meu perfil" são **iguais nos 13 sistemas do Grupo Azuos** e
+**não mudam** por pedido de quem usa o sistema — nem "só um ajuste", nem por outro caminho.
+
+- Pedido de mudança nessas telas → **não faça e não contorne**. Mande para o **suporte**: abrir um
+  chamado na Central de Chamados (https://chamados.grupoazuos.com.br/support).
+- O que pode mudar sem admin são só os **dados**: `lib/navigation/navigation.ts` (telas, partes,
+  atalhos) e `lib/view-models/use-profile.model.ts` (de onde vem a ficha).
+- Só quem administra muda a forma, nos 13 de uma vez. A trava é o hook
+  `.claude/hooks/protect-app-shell.mjs`; os detalhes, a skill `app-shell-standard`.
+
+## REGRAS DE UI DO GRUPO — ABSOLUTAS
+
+- **Borda colorida é proibida em qualquer componente** (faixa lateral/topo, contorno no tom,
+  barra colorida, anel de seleção). Cor de card vem do FUNDO: `AzuosToneCard` (`static` só
+  colorido; `interactive` com o hover-fill do Chamados); selecionado = fundo na cor cheia. Ficam
+  só a borda neutra, o anel de foco e os spinners.
+- **Nunca `<select>` nativo**: sempre o combobox/seletor do projeto.
+- Checado no hook e no CI (`check:design`). Exceção só pelo suporte (Central de Chamados).

@@ -44,6 +44,10 @@ class InstantLoadImage {
   }
 }
 
+/* A dica abre, mas o bits-ui a deixa `visibility: hidden` até a posição ser calculada — e o
+   jsdom não mede nada. `hidden: true` procura a dica que ABRIU, sem depender da geometria. */
+const TOOLTIP = { hidden: true } as const;
+
 function renderShell(props: Omit<AzuosAppShellProps, 'children'>): ReturnType<typeof render> {
   return render(AppShell, { props: { ...props, children: content } });
 }
@@ -190,9 +194,11 @@ describe('AzuosAppShell', () => {
     );
   });
 
-  /* O seletor preserva os nomes acessíveis mesmo quando o tooltip está desativado. */
-  it('keeps the modules horizontal when expanded and vertical when collapsed with accessible names', () => {
+  /* Com dois módulos ou mais, a barra tem DUAS colunas: os módulos no trilho de ícones e as
+     telas, rotuladas, no painel ao lado — com o nome do módulo escolhido em cima. */
+  it('draws the modules in the icon rail and the screens in the labelled panel', () => {
     renderShell({
+      ui: { items },
       data: {
         areaOptions: [
           { value: 'sistema', label: 'Sistema' },
@@ -203,46 +209,76 @@ describe('AzuosAppShell', () => {
     });
 
     const group = screen.getByRole('group', { name: 'Módulos' });
-    expect(group).toHaveClass('flex-col', 'md:flex-row', 'group-data-[collapsible=icon]:flex-col');
-    expect(within(group).getByRole('button', { name: 'Infraestrutura' })).toBeInTheDocument();
-    expect(within(group).getByText('Infraestrutura')).toBeInTheDocument();
+    expect(group).toHaveClass('flex-col');
+    expect(within(group).getByRole('button', { name: 'Infraestrutura' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    const panel = screen.getByRole('navigation', { name: 'Telas do módulo' });
+    expect(within(panel).getByRole('link', { name: 'Chamados' })).toBeInTheDocument();
+    expect(screen.getByText('Infraestrutura', { selector: '[data-sidebar="group-label"]' })).toBeInTheDocument();
   });
 
   // feliz
   it('shows the module name on hover while the sidebar is expanded', async () => {
     renderShell({
-      data: { areaOptions: [{ value: 'infra', label: 'Infraestrutura', icon: ListChecks }] },
+      data: {
+        areaOptions: [
+          { value: 'infra', label: 'Infraestrutura', icon: ListChecks },
+          { value: 'sistema', label: 'Sistema', icon: BarChart3 },
+        ],
+      },
     });
 
     await userEvent.hover(screen.getByRole('button', { name: 'Infraestrutura' }));
 
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Infraestrutura');
+    expect(await screen.findByRole('tooltip', TOOLTIP)).toHaveTextContent('Infraestrutura');
   });
 
   // feliz
   it('shows the module name on keyboard focus and dismisses it with Escape', async () => {
     renderShell({
-      data: { areaOptions: [{ value: 'sistema', label: 'Sistema', icon: BarChart3 }] },
+      data: {
+        areaOptions: [
+          { value: 'sistema', label: 'Sistema', icon: BarChart3 },
+          { value: 'infra', label: 'Infraestrutura', icon: ListChecks },
+        ],
+      },
     });
 
     await userEvent.tab();
 
     expect(screen.getByRole('button', { name: 'Sistema' })).toHaveFocus();
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Sistema');
+    expect(await screen.findByRole('tooltip', TOOLTIP)).toHaveTextContent('Sistema');
 
     await userEvent.keyboard('{Escape}');
 
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(screen.queryByRole('tooltip', TOOLTIP)).not.toBeInTheDocument();
   });
 
-  /* Recolhida, a barra é uma fila só de ícones: o divisor separa os de módulo dos de tela. */
+  /* Recolhida, o painel some e as telas descem para o trilho, separadas dos módulos. */
   it('separates the module icons from the screen icons only when collapsed', () => {
     const { container } = renderShell({
-      data: { areaOptions: [{ value: 'infra', label: 'Infraestrutura' }] },
+      ui: { items },
+      data: {
+        areaOptions: [
+          { value: 'infra', label: 'Infraestrutura' },
+          { value: 'sistema', label: 'Sistema' },
+        ],
+      },
     });
 
-    const separator = container.querySelector('[data-sidebar="header"] [data-sidebar="separator"]');
-    expect(separator).toHaveClass('hidden', 'h-px', 'group-data-[collapsible=icon]:block');
+    const separator = container.querySelector('[data-sidebar="separator"]');
+    expect(separator).toHaveClass('h-px');
+    expect(separator?.parentElement).toHaveClass('hidden', 'group-data-[collapsible=icon]:flex');
+  });
+
+  // triste
+  /* Um módulo só não tem o que escolher: a barra fica em uma coluna, sem trilho. */
+  it('keeps a single column with only one module', () => {
+    renderShell({ data: { areaOptions: [{ value: 'infra', label: 'Infraestrutura' }] } });
+
+    expect(screen.queryByRole('group', { name: 'Módulos' })).not.toBeInTheDocument();
   });
 
   // triste
@@ -257,9 +293,7 @@ describe('AzuosAppShell', () => {
   it('draws no separator when there are no modules', () => {
     const { container } = renderShell({ data: { areaOptions: [] } });
 
-    expect(
-      container.querySelector('[data-sidebar="header"] [data-sidebar="separator"]'),
-    ).toBeNull();
+    expect(container.querySelector('[data-sidebar="separator"]')).toBeNull();
   });
 
   /* Zero não vira selo: um "0" ao lado de cada item seria ruído. */

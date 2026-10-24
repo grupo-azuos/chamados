@@ -489,7 +489,7 @@
 
   {#if computer.isBlocked && computer.blockReason}
     <p
-      class="text-ink-700 rounded-box border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm"
+      class="text-ink-700 rounded-box bg-destructive/10 px-3 py-2 text-sm"
     >
       <span class="font-semibold">Motivo do bloqueio:</span>
       {computer.blockReason}

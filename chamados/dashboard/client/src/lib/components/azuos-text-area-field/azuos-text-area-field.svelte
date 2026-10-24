@@ -64,7 +64,7 @@
       'rounded-control',
       'bg-card text-foreground w-full resize-y border px-3 py-2.5 text-sm transition-colors',
       'placeholder:text-ink-500 disabled:cursor-not-allowed disabled:opacity-60',
-      error ? 'border-destructive' : 'border-input',
+      error ? 'border-border bg-destructive-soft' : 'border-input',
     )}
   ></textarea>
 

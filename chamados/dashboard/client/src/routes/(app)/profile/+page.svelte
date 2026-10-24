@@ -1,15 +1,23 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import LayoutGrid from '@lucide/svelte/icons/layout-grid';
+  import MessageCircle from '@lucide/svelte/icons/message-circle';
+  import Users from '@lucide/svelte/icons/users';
   import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
   import { ROLE_CONTEXT_LABELS } from '@template/shared/schemas/user.schema';
+  import { type Component, untrack } from 'svelte';
 
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
+  import MyProfileView, {
+    type MyProfileExtraSection,
+  } from '$lib/components/azuos-my-profile-view/azuos-my-profile-view.svelte';
   import RoleListView from '$lib/components/azuos-role-list-view/azuos-role-list-view.svelte';
+  import { useMyProfileModel } from '$lib/hooks/use-my-profile/use-my-profile.svelte';
   import { useRolesModel } from '$lib/hooks/use-roles/use-roles.svelte';
   import { useWhatsappLinkModel } from '$lib/hooks/use-whatsapp-link/use-whatsapp-link.svelte';
   import { useWhatsappTemplatesModel } from '$lib/hooks/use-whatsapp-templates/use-whatsapp-templates.svelte';
   import RoleFormSlot from '../roles/role-form-slot.svelte';
-  import ProfilePreferences from './components/azuos-profile-preferences/azuos-profile-preferences.svelte';
+  import EffectsToggle from './components/azuos-effects-toggle/azuos-effects-toggle.svelte';
+  import ModuleAccessCard from './components/azuos-module-access-card/azuos-module-access-card.svelte';
   import WhatsappLinkCard from './components/azuos-whatsapp-link-card/azuos-whatsapp-link-card.svelte';
   import WhatsappLinkDialog from './components/azuos-whatsapp-link-dialog/azuos-whatsapp-link-dialog.svelte';
   import WhatsappTemplatesDialog from './components/azuos-whatsapp-templates-dialog/azuos-whatsapp-templates-dialog.svelte';
@@ -28,57 +36,79 @@
 
   type FormTarget = { role: InternalRole | null } | null;
   let formTarget = $state<FormTarget>(null);
+
+  /* A ficha padrão dos 13 sistemas; o que é só do Chamados entra depois, como seções a mais. */
+  const profile = useMyProfileModel({ user: untrack(() => data.user) });
+
+  const extraSections = $derived<MyProfileExtraSection[]>([
+    { id: 'profile-modules', label: 'Seus módulos', icon: LayoutGrid as Component, content: modulesSection },
+    ...(whatsapp.state.canLink
+      ? [{ id: 'profile-whatsapp', label: 'WhatsApp', icon: MessageCircle as Component, content: whatsappSection }]
+      : []),
+    ...(isSuperAdmin
+      ? [{ id: 'profile-team', label: 'Equipe', icon: Users as Component, content: teamSection }]
+      : []),
+  ]);
 </script>
 
 <svelte:head>
   <title>Meu perfil</title>
 </svelte:head>
 
-<RoleListView
-  data={{
-    ...list.data,
-    currentUser: data.user
-      ? {
-          name: data.user.name,
-          email: data.user.email,
-          image: data.user.image,
-          role: data.user.role,
-          roles: data.user.roles,
-        }
-      : undefined,
-  }}
-  ui={{ showTeam: isSuperAdmin }}
-  state={list.state}
-  actions={{
-    ...list.actions,
-    onCreate: () => (formTarget = { role: null }),
-  }}
->
-  <!-- Preferências de todos; vínculo de WhatsApp só para quem pode vincular. -->
-  {#snippet afterProfile()}
-    <ProfilePreferences />
-    {#if whatsapp.state.canLink}
-      <WhatsappLinkCard
-        data={{
-          phone: whatsapp.data.phone,
-          sentToday: whatsapp.data.sentToday,
-          dailyLimit: whatsapp.data.dailyLimit,
-        }}
-        state={{
-          isLoading: whatsapp.state.isLoading,
-          isConfigured: whatsapp.state.isConfigured,
-          linkState: whatsapp.state.linkState,
-          error: whatsapp.state.error,
-        }}
-        actions={{
-          onLink: whatsapp.actions.onOpen,
-          onUnlink: whatsapp.actions.onAskUnlink,
-          onEditTemplates: canEditTemplates ? templates.actions.onOpen : undefined,
-        }}
-      />
-    {/if}
-  {/snippet}
-</RoleListView>
+{#snippet modulesSection()}
+  <ModuleAccessCard data={{ role: data.user?.role ?? 'user', roles: data.user?.roles }} />
+{/snippet}
+
+{#snippet whatsappSection()}
+  <WhatsappLinkCard
+    data={{
+      phone: whatsapp.data.phone,
+      sentToday: whatsapp.data.sentToday,
+      dailyLimit: whatsapp.data.dailyLimit,
+    }}
+    state={{
+      isLoading: whatsapp.state.isLoading,
+      isConfigured: whatsapp.state.isConfigured,
+      linkState: whatsapp.state.linkState,
+      error: whatsapp.state.error,
+    }}
+    actions={{
+      onLink: whatsapp.actions.onOpen,
+      onUnlink: whatsapp.actions.onAskUnlink,
+      onEditTemplates: canEditTemplates ? templates.actions.onOpen : undefined,
+    }}
+  />
+{/snippet}
+
+<!-- A lista da equipe é do super-admin: os acessos por módulo, como antes, dentro da ficha. -->
+{#snippet teamSection()}
+  <RoleListView
+    data={list.data}
+    ui={{ showTeam: true }}
+    state={list.state}
+    actions={{
+      ...list.actions,
+      onCreate: () => (formTarget = { role: null }),
+    }}
+  />
+{/snippet}
+
+{#snippet effectsPreference()}
+  <div class="flex items-center justify-between gap-4">
+    <div class="flex min-w-0 flex-col gap-1">
+      <dt class="text-foreground text-sm font-medium">Efeitos</dt>
+      <dd class="text-ink-500 text-xs">Use animações completas ou o modo leve.</dd>
+    </div>
+    <EffectsToggle ui={{ variant: 'surface' }} />
+  </div>
+{/snippet}
+
+<MyProfileView
+  data={profile.data}
+  state={profile.state}
+  actions={profile.actions}
+  slots={{ extraSections, preferencesExtra: effectsPreference }}
+/>
 
 <WhatsappTemplatesDialog data={templates.data} state={templates.state} actions={templates.actions} />
 
