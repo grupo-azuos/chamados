@@ -47,7 +47,7 @@
     </div>
 
     {#if model.state.error}
-      <div class="rounded-box border border-destructive/40 bg-destructive-soft p-3 text-xs text-destructive">
+      <div class="rounded-box bg-destructive-soft p-3 text-xs text-destructive">
         {model.state.error}
       </div>
     {/if}

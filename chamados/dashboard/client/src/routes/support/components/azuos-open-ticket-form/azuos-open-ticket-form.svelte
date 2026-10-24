@@ -352,11 +352,11 @@
            linha de conexão, que só faz sentido quando há uma próxima etapa visível. -->
       <div bind:this={stepContentEl} class="flex flex-col gap-5 sm:gap-6">
       {#if data.invite}
-        <p class="rounded-box border-primary/20 bg-primary/5 text-ink-700 border p-4 text-sm leading-relaxed break-words" role="status">
+        <p class="rounded-box bg-primary/5 text-ink-700 p-4 text-sm leading-relaxed break-words" role="status">
           Você está abrindo um chamado com <strong>{data.invite.assigneeName}</strong>.
         </p>
       {:else if formState.inviteError}
-        <p class="rounded-box border-warning/30 bg-warning/5 text-ink-700 border p-4 text-sm leading-relaxed break-words" role="status">
+        <p class="rounded-box bg-warning/5 text-ink-700 p-4 text-sm leading-relaxed break-words" role="status">
           {formState.inviteError} Você ainda pode abrir o chamado por aqui.
         </p>
       {/if}
@@ -377,7 +377,7 @@
                   class={cn(
                     'flex flex-col items-start gap-2 rounded-box border p-4 text-left transition-colors',
                     isSelected
-                      ? 'border-primary bg-primary/10'
+                      ? 'bg-primary/10'
                       : 'border-border/80 bg-card hover:bg-muted/40',
                   )}
                 >

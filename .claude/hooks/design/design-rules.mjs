@@ -318,6 +318,73 @@ function classViolations(files, rule, pattern, allowed = () => false) {
 }
 
 /** @type {Rule[]} */
+/* ---------------------------------------------------------------- regras do grupo (13 sistemas) */
+
+const GROUP_TONE =
+  '(?:primary|destructive|success|warning|info|accent|brand-[a-z]+-\\d{2,3}|azuos-(?!border\\b)[a-z-]+|tone-[a-z]+-border|(?:red|rose|green|emerald|blue|sky|amber|yellow|orange|lime|teal|cyan|indigo|violet|purple|fuchsia|pink)-\\d{2,3})';
+const COLORED_BORDER = new RegExp(
+  `(?<![\\w-])((?:[\\w\\-\\[\\]=&*>~./]+:)*)!?(border(?:-[xytrblse])?|ring)-(${GROUP_TONE}|ring)(?:\\/\\d+)?(?![\\w-])`,
+  'g',
+);
+const FOCUS_VARIANT = /focus|has-focus|has-\[/;
+const GROUP_SOURCE = /\/client\/src\/.*\.(?:tsx|svelte)$/;
+const GROUP_SKIP = /\.(?:test|stories|spec)\.|\.test\.svelte$|\.stories\.svelte$/;
+const COMMENT_LINE = /^\s*(?:\*|\/\/|\/\*|<!--)/;
+
+/** As linhas de código de um arquivo de tela, sem os comentários de linha inteira. */
+function codeLines(file) {
+  return file.content.split('\n').map((text, index) => ({ text, line: index + 1 }));
+}
+
+
+/** O anel de FOCO fica (acessibilidade); borda de foco, não. */
+function isColoredBorder([, variants, kind, color]) {
+  const isFocus = FOCUS_VARIANT.test(variants);
+  if (kind === 'ring') return !isFocus;
+
+  return color !== 'ring' || isFocus;
+}
+
+/** Só as telas do sistema; teste e story ficam de fora. */
+function isGroupSource(file) {
+  return GROUP_SOURCE.test(`/${file.path}`) && !GROUP_SKIP.test(file.path);
+}
+
+function borderLineViolations(file, { text, line }) {
+  if (COMMENT_LINE.test(text) || text.includes('animate-spin')) return [];
+
+  return [...text.matchAll(COLORED_BORDER)]
+    .filter(isColoredBorder)
+    .map(([whole]) => ({ rule: 'colored-border', file: file.path, detail: whole, line }));
+}
+
+/** @param {ProjectFile[]} files */
+function coloredBorderViolations(files) {
+  return files
+    .filter(isGroupSource)
+    .flatMap((file) => codeLines(file).flatMap((entry) => borderLineViolations(file, entry)));
+}
+
+function selectLineViolations(file, ownDropdown, { text, line }) {
+  if (COMMENT_LINE.test(text)) return [];
+
+  const out = [];
+  if (/<select[\s>]/.test(text)) out.push({ rule: 'native-select', file: file.path, detail: '<select>', line });
+  if (/captionLayout=\{?["'`]dropdown/.test(text) && !ownDropdown)
+    out.push({ rule: 'native-select', file: file.path, detail: 'captionLayout="dropdown" sem lista própria', line });
+
+  return out;
+}
+
+/** @param {ProjectFile[]} files */
+function nativeSelectViolations(files) {
+  return files.filter(isGroupSource).flatMap((file) => {
+    const ownDropdown = /Dropdown\s*:/.test(file.content);
+
+    return codeLines(file).flatMap((entry) => selectLineViolations(file, ownDropdown, entry));
+  });
+}
+
 export const RULES = [
   {
     id: 'component-prefix',
@@ -530,6 +597,23 @@ export const RULES = [
               detail: `'${match[1]}'`,
             })),
         ),
+  },
+  /* REGRA DO GRUPO (13 sistemas): cor de card vem do FUNDO, nunca da borda. Faixa lateral/topo
+     colorida, contorno no tom e anel colorido de seleção são proibidos em QUALQUER componente.
+     Fica só o anel de FOCO (acessibilidade). Card colorido: `AzuosToneCard`. */
+  {
+    id: 'colored-border',
+    description:
+      'Borda colorida é proibida em qualquer componente: a cor vem do fundo (`AzuosToneCard`). Só o anel de foco fica.',
+    check: (files) => coloredBorderViolations(files),
+  },
+  /* REGRA DO GRUPO (13 sistemas): nunca `<select>` nativo — sempre o combobox do projeto. O
+     calendário com `captionLayout="dropdown"` sem a lista própria (`components.Dropdown`) cai no
+     `<select>` do navegador e conta também. */
+  {
+    id: 'native-select',
+    description: 'Nunca `<select>` nativo: sempre o combobox/seletor personalizado do projeto.',
+    check: (files) => nativeSelectViolations(files),
   },
   {
     id: 'doc-file-name',

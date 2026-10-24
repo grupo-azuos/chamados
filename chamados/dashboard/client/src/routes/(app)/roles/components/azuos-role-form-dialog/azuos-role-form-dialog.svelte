@@ -247,7 +247,7 @@
                                 {selectedUser?.name || fields.userEmail.value || fields.userId.value}
                               </span>
                               <span
-                                class="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-chip border border-primary/20 shrink-0"
+                                class="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-chip shrink-0"
                               >
                                 Selecionada
                               </span>
@@ -321,7 +321,7 @@
                           data-1p-ignore="true"
                           data-lpignore="true"
                           data-form-type="other"
-                          class="control-lg rounded-control w-full border border-border/60 bg-muted/30 pr-3 pl-9.5 text-xs text-foreground outline-none focus:border-primary"
+                          class="control-lg rounded-control w-full border border-border/60 bg-muted/30 pr-3 pl-9.5 text-xs text-foreground outline-none"
                           style="width: 100%;"
                         />
                       </div>
@@ -447,7 +447,7 @@
                 class={cn(
                   'flex flex-col items-start gap-1 p-3 rounded-box border text-left transition-colors',
                   isSelected
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                    ? 'bg-primary/5'
                     : 'border-border bg-card hover:bg-muted/40',
                   (isEdit || formState.isSubmitting) && 'opacity-60 cursor-not-allowed',
                 )}

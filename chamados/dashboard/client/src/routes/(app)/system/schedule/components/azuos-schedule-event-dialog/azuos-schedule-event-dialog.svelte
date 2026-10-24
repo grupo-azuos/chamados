@@ -59,13 +59,13 @@
     bgClass: string;
     ringClass: string;
   }[] = [
-    { value: 'blue', label: 'Azul', bgClass: 'bg-info', ringClass: 'ring-info' },
-    { value: 'green', label: 'Verde', bgClass: 'bg-success', ringClass: 'ring-success' },
-    { value: 'amber', label: 'Âmbar', bgClass: 'bg-warning', ringClass: 'ring-warning' },
-    { value: 'purple', label: 'Roxo', bgClass: 'bg-primary', ringClass: 'ring-primary' },
+    { value: 'blue', label: 'Azul', bgClass: 'bg-info', ringClass: '' },
+    { value: 'green', label: 'Verde', bgClass: 'bg-success', ringClass: '' },
+    { value: 'amber', label: 'Âmbar', bgClass: 'bg-warning', ringClass: '' },
+    { value: 'purple', label: 'Roxo', bgClass: 'bg-primary', ringClass: '' },
     { value: 'rose', label: 'Rosa', bgClass: 'bg-accent-hero', ringClass: 'ring-accent-hero' },
-    { value: 'indigo', label: 'Índigo', bgClass: 'bg-primary', ringClass: 'ring-primary' },
-    { value: 'red', label: 'Vermelho', bgClass: 'bg-destructive', ringClass: 'ring-destructive' },
+    { value: 'indigo', label: 'Índigo', bgClass: 'bg-primary', ringClass: '' },
+    { value: 'red', label: 'Vermelho', bgClass: 'bg-destructive', ringClass: '' },
     {
       value: 'neutral',
       label: 'Grafite',
@@ -115,7 +115,7 @@
     {#if deleteError}
       <p
         role="alert"
-        class="rounded-box border border-destructive/40 bg-destructive-soft p-3 text-sm text-destructive"
+        class="rounded-box bg-destructive-soft p-3 text-sm text-destructive"
       >
         {deleteError}
       </p>
