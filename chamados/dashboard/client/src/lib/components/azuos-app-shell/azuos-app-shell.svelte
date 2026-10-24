@@ -176,6 +176,39 @@
   const isMobile = new MediaQuery('(max-width: 767px)');
   let sidebarOpen = $state(untrack(() => initialSidebarOpen));
   let isMenuOpen = $state(false);
+
+  /* A gaveta do celular segue o bottom sheet do Android (Material 3 / Compose): cantos de 28px,
+     a "linguinha" de 32×4 e arrastar para baixo fecha — sem o X. Fecha se desceu o bastante ou
+     foi um puxão rápido (depois de um mínimo: um toque que treme não fecha nada). */
+  const DRAG_CLOSE_DISTANCE = 96;
+  const DRAG_CLOSE_SPEED = 0.6;
+  const DRAG_FLICK_MIN = 24;
+  let dragOffset = $state(0);
+  let dragStart: { y: number; time: number } | null = null;
+
+  function onHandleDown(event: PointerEvent) {
+    dragStart = { y: event.clientY, time: event.timeStamp };
+    (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+  }
+
+  function onHandleMove(event: PointerEvent) {
+    if (dragStart) dragOffset = Math.max(0, event.clientY - dragStart.y);
+  }
+
+  function onHandleUp(event: PointerEvent) {
+    if (!dragStart) return;
+    const distance = event.clientY - dragStart.y;
+    const speed = distance / Math.max(1, event.timeStamp - dragStart.time);
+    dragStart = null;
+    dragOffset = 0;
+    const isFlick = distance > DRAG_FLICK_MIN && speed > DRAG_CLOSE_SPEED;
+    if (distance > DRAG_CLOSE_DISTANCE || isFlick) isMenuOpen = false;
+  }
+
+  function onHandleCancel() {
+    dragStart = null;
+    dragOffset = 0;
+  }
   const canShowTooltip = $derived(!sidebarOpen && !isMobile.current);
 
   /* A troca de tela nasce com um fade sutil. `routeKey` é o caminho da rota: só ele muda a cada
@@ -559,9 +592,23 @@
     <Sheet.Root bind:open={isMenuOpen}>
       <Sheet.Content
         side="bottom"
-        class="bg-sidebar text-sidebar-foreground border-sidebar-border rounded-t-surface max-h-[85svh] gap-0 overflow-y-auto p-0 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden"
+        showCloseButton={false}
+        style={dragOffset > 0 ? `transform: translateY(${dragOffset}px); transition: none` : undefined}
+        class="bg-sidebar text-sidebar-foreground max-h-[85svh] gap-0 overflow-y-auto rounded-t-[28px] border-0 p-0 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden"
       >
-        <Sheet.Header class="flex-row items-center px-4 pt-4 pb-2">
+        <!-- A "linguinha": a área de 36px é o alvo do dedo, a barra é 32×4. -->
+        <div
+          data-slot="sheet-drag-handle"
+          aria-hidden="true"
+          class="flex h-9 shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
+          onpointerdown={onHandleDown}
+          onpointermove={onHandleMove}
+          onpointerup={onHandleUp}
+          onpointercancel={onHandleCancel}
+        >
+          <span class="bg-sidebar-foreground/40 h-1 w-8 rounded-full"></span>
+        </div>
+        <Sheet.Header class="flex-row items-center px-4 pt-0 pb-2">
           <BrandMark ui={{ size: 'sm' }} />
           <Sheet.Title class="sr-only">Menu</Sheet.Title>
           <Sheet.Description class="sr-only">
