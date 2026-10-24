@@ -5,7 +5,7 @@
    * `app-shell.component.svelte` importa isto.
    */
   import { useSidebar } from '$lib/components/ui/sidebar/context.svelte';
-  import { highlightIn, popIn } from '$lib/motion/motion';
+  import { popIn } from '$lib/motion/motion';
   import { SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem } from '$lib/components/ui/sidebar';
   import type { NavItem } from '$lib/navigation/navigation';
 
@@ -18,15 +18,13 @@
   /* `Icon` (bits-ui/lucide) não expõe `ref`; um `<span>` em volta dá ao GSAP um elemento de
      verdade pra animar. */
   let iconEl: HTMLSpanElement | undefined = $state();
-  let linkEl: HTMLAnchorElement | undefined = $state();
 
-  /* Ícone pulsa, fundo nasce com fade — só na TROCA para ativo. A dependência é `isActive`
-     lido aqui dentro: o efeito só reage quando ele muda, nunca em re-render à toa. */
+  /* O ícone pulsa só na TROCA para ativo. O fundo do ativo não é deste item: é o destaque que
+     desliza no menu (`slidingIndicator`, na casca). */
   $effect(() => {
     if (!isActive) return;
 
     popIn(iconEl ?? null);
-    highlightIn(linkEl ?? null);
   });
 </script>
 
@@ -43,10 +41,10 @@
     {isActive}
     tooltipContent={sidebar.state === 'collapsed' && !sidebar.isMobile ? item.label : undefined}
     size="lg"
-    class="text-[1rem] [&_svg]:size-5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!"
+    class="data-[active=true]:bg-transparent! text-[1rem] [&_svg]:size-5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!"
   >
     {#snippet child({ props })}
-      <a bind:this={linkEl} href={item.to} {...props}>
+      <a href={item.to} {...props} aria-current={isActive ? 'page' : undefined}>
         <span bind:this={iconEl} class="contents">
           <Icon aria-hidden="true" />
         </span>

@@ -2,6 +2,7 @@ import { type SessionUser } from '@template/shared/schemas/user.schema';
 import { render, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ApiError } from '$lib/api/http-client';
 import { type AreaContext } from '$lib/hooks/use-area-context/use-area-context.svelte';
 import {
   INFRA_NAV_ITEMS,
@@ -75,7 +76,9 @@ describe('useAppShellModel contexts', () => {
   });
 
   it('stays on the dashboard and exposes an error if logout fails', async () => {
-    vi.mocked(authApi.logout).mockRejectedValueOnce(new Error('Sessão indisponível.'));
+    /* O erro chega como `ApiError`: é a forma que o cliente HTTP entrega, e a única cuja mensagem
+       a tela repete — um erro qualquer vira o aviso genérico de servidor fora do ar. */
+    vi.mocked(authApi.logout).mockRejectedValueOnce(new ApiError(503, 'Sessão indisponível.'));
     const model = mountModel();
     model.actions.onSignOut();
     await waitFor(() => expect(model.state.logoutError).toBe('Sessão indisponível.'));

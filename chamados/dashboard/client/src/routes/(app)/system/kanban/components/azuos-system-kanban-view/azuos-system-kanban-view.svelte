@@ -58,11 +58,11 @@
   ];
 
   const CARD_SURFACE_STYLES: Record<StatusBadgeTone, string> = {
-    brand: 'bg-primary-soft/30 border-primary/40 hover:border-primary/60',
-    info: 'bg-info-soft/35 border-info/40 hover:border-info/60',
-    success: 'bg-success-soft/35 border-success/40 hover:border-success/60',
-    warning: 'bg-warning-soft/35 border-warning/40 hover:border-warning/60',
-    danger: 'bg-destructive-soft/35 border-destructive/40 hover:border-destructive/60',
+    brand: 'bg-primary-soft/30',
+    info: 'bg-info-soft/35',
+    success: 'bg-success-soft/35',
+    warning: 'bg-warning-soft/35',
+    danger: 'bg-destructive-soft/35',
     neutral: 'bg-card border-border hover:border-border/80',
   };
 </script>
@@ -188,7 +188,7 @@
 
   {#if viewState.moveError}
     <div
-      class="flex items-center justify-between gap-3 rounded-box border border-destructive/40 bg-destructive-soft p-3 text-xs text-destructive"
+      class="flex items-center justify-between gap-3 rounded-box bg-destructive-soft p-3 text-xs text-destructive"
       role="alert"
     >
       <div class="flex items-center gap-2">
@@ -236,7 +236,7 @@
         {@const isDropTarget = activeDropColumn === column.id}
         <div
           class="flex flex-col rounded-surface border p-4 transition-colors {isDropTarget
-            ? 'border-primary ring-2 ring-primary/30 bg-primary/5'
+            ? 'bg-primary/5'
             : 'border-border bg-muted/40'}"
           ondragenter={(e) => handleDragEnter(e, column.id)}
           ondragover={(e) => handleDragOver(e, column.id)}
@@ -261,7 +261,7 @@
           <div class="flex flex-1 flex-col gap-3 min-h-32">
             {#if isDropTarget && draggedTicketId !== null}
               <div
-                class="grid h-16 place-items-center rounded-box border border-dashed border-primary bg-primary/10 text-xs font-medium text-primary animate-pulse"
+                class="grid h-16 place-items-center rounded-box border-dashed bg-primary/10 text-xs font-medium text-primary animate-pulse"
               >
                 Solte aqui para mover para {column.title}
               </div>

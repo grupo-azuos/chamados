@@ -159,7 +159,7 @@
             <PersonAvatar
               name={data.currentUser.name}
               avatarUrl={data.currentUser.image}
-              ui={{ size: 'xl', className: 'size-16 ring-4 ring-primary/10 shadow-xs' }}
+              ui={{ size: 'xl', className: 'size-16 shadow-xs' }}
             />
           </div>
           <div class="min-w-0">

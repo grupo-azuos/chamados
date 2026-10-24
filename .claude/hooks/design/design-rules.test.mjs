@@ -453,3 +453,53 @@ describe('violationsTouching', () => {
     assert.deepEqual(violationsTouching([elsewhere], `${DASHBOARD_LIB}/other/other.svelte`), []);
   });
 });
+
+describe('colored-border (regra do grupo)', () => {
+  // triste
+  it('refuses a colored border, a side stripe, a selection ring and a red invalid border', () => {
+    const found = run('colored-border', [
+      file(
+        `${DASHBOARD_LIB}/azuos-x/azuos-x.svelte`,
+        [
+          '<div class="rounded-surface border border-destructive/40 bg-card"></div>',
+          '<div class="border-l-4 border-l-warning"></div>',
+          '<div class="ring-2 ring-primary"></div>',
+          '<input class="aria-invalid:border-destructive" />',
+        ].join('\n'),
+      ),
+    ]).join('\n');
+
+    for (const detail of ['border-destructive/40', 'border-l-warning', 'ring-primary', 'aria-invalid:border-destructive'])
+      assert.ok(found.includes(detail), detail);
+  });
+
+  // feliz
+  it('lets the focus ring, neutral borders, spinners and comments through', () => {
+    assert.deepEqual(
+      run('colored-border', [
+        file(
+          `${DASHBOARD_LIB}/azuos-x/azuos-x.svelte`,
+          [
+            '<button class="border border-border focus-visible:ring-2 focus-visible:ring-ring/50"></button>',
+            '<div class="bg-destructive-soft text-ink-900"></div>',
+            '<span class="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>',
+            '<!-- antes era border-l-4 border-l-warning -->',
+          ].join('\n'),
+        ),
+      ]),
+      [],
+    );
+  });
+});
+
+describe('native-select (regra do grupo)', () => {
+  // triste
+  it('refuses the HTML select', () => {
+    assert.equal(run('native-select', [file(`${DASHBOARD_LIB}/azuos-x/azuos-x.svelte`, '<select {value}><option></option></select>')]).length, 1);
+  });
+
+  // feliz
+  it('lets a comment about select through', () => {
+    assert.deepEqual(run('native-select', [file(`${DASHBOARD_LIB}/azuos-x/azuos-x.svelte`, '<!-- nunca o <select> nativo -->')]), []);
+  });
+});

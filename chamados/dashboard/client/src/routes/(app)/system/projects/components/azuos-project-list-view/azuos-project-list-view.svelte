@@ -114,7 +114,7 @@
 
   {#if state.syncMessage}
     <div
-      class="rounded-box border border-success/40 bg-success-soft p-4 text-xs font-medium text-success"
+      class="rounded-box bg-success-soft p-4 text-xs font-medium text-success"
     >
       {state.syncMessage}
     </div>
@@ -123,7 +123,7 @@
   {#if state.syncError}
     <p
       role="alert"
-      class="rounded-box border border-destructive/40 bg-destructive-soft p-4 text-xs text-destructive"
+      class="rounded-box bg-destructive-soft p-4 text-xs text-destructive"
     >
       {state.syncError}
     </p>
