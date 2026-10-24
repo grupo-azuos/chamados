@@ -14,6 +14,7 @@ import {
 import { untrack } from 'svelte';
 import { writable } from 'svelte/store';
 
+import { accountProfileApi } from '$lib/api/account-profile.api';
 import { authApi } from '$lib/api/auth.api';
 import { readError } from '$lib/api/http-client';
 import { leaveSession } from '$lib/utils/leave-session.util';
@@ -137,6 +138,27 @@ export function useAppShellModel(input: {
     ),
   );
 
+  /* A FOTO vem da conta no Admin Console, a mesma do "Meu perfil" (mesma chave: uma consulta só);
+     a do `/api/auth/me` fica de reserva. */
+  const account = mirrorStore(
+    createQuery(
+      writable({
+        queryKey: ['account', 'me', 'profile'],
+        queryFn: async () => {
+          const found = await queryClient.fetchQuery({
+            queryKey: ['auth', 'config'],
+            queryFn: () => authApi.config(),
+            staleTime: Infinity,
+          });
+          if (!found.accountUrl) throw new Error('Sem endereço da conta.');
+          return accountProfileApi.me(found.accountUrl);
+        },
+        retry: false,
+        staleTime: 5 * 60 * 1000,
+      }),
+    ),
+  );
+
   /* O ÚLTIMO contexto em que a pessoa esteve, guardado no navegador. Ele só responde por duas
      coisas: onde o sistema abre (ver `routes/+page.ts`) e qual menu aparece nas telas que não
      são de contexto nenhum (o perfil, os cargos). Quem está numa tela de módulo não o
@@ -175,7 +197,9 @@ export function useAppShellModel(input: {
         role: USER_ROLE_LABELS[input.user.role],
         roles: input.user.roles,
         /* A foto chega no `/api/auth/me`, lida do admin-console pelo UUID (como no Paralegal). */
-        avatarUrl: input.user.image ?? null,
+        get avatarUrl() {
+          return account.current.data?.profile.avatarUrl ?? input.user.image ?? null;
+        },
       },
       get accountUrl() {
         return config.current.data?.accountUrl ?? null;

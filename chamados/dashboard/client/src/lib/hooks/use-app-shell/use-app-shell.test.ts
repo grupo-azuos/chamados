@@ -22,8 +22,14 @@ vi.mock('$lib/api/auth.api', () => ({
 }));
 
 vi.mock('$lib/utils/leave-session.util', () => ({ leaveSession: vi.fn() }));
+
+/* A conta do Admin Console (foto do rodapé). Por padrão ela não responde: vale a do `/api/auth/me`. */
+vi.mock('$lib/api/account-profile.api', () => ({
+  accountProfileApi: { me: vi.fn().mockRejectedValue(new Error('offline')) },
+}));
 const { leaveSession } = await import('$lib/utils/leave-session.util');
 const { authApi } = await import('$lib/api/auth.api');
+const { accountProfileApi } = await import('$lib/api/account-profile.api');
 const { goto } = await import('$app/navigation');
 const { page } = await import('$app/state');
 
@@ -181,6 +187,30 @@ describe('useAppShellModel', () => {
 
     expect(model.data.user.avatarUrl).toBe(
       'https://admin-console.exemplo.com/api/users/1/avatar?v=2',
+    );
+  });
+
+  // feliz
+  /* A mesma foto do "Meu perfil": a da conta vale mais que a que chegou com a sessão. */
+  it('shows the photo of the Admin Console account, before the one from the session', async () => {
+    vi.mocked(accountProfileApi.me).mockResolvedValueOnce({
+      name: 'Ana',
+      email: 'ana@empresa.com.br',
+      role: 'admin',
+      profile: {
+        avatarUrl: 'https://admin-console.exemplo.com/avatars/ana.png',
+        jobTitle: null,
+        department: null,
+        phone: null,
+        birthDate: null,
+        bio: null,
+      },
+    });
+
+    const model = mountModel({ image: 'https://admin-console.exemplo.com/api/users/1/avatar?v=2' });
+
+    await waitFor(() =>
+      expect(model.data.user.avatarUrl).toBe('https://admin-console.exemplo.com/avatars/ana.png'),
     );
   });
 

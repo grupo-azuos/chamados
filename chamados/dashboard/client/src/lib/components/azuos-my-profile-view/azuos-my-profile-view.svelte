@@ -142,7 +142,7 @@
 {/snippet}
 
 {#if state?.isLoading}
-  <div role="status" aria-busy="true" class="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-10">
+  <div role="status" aria-busy="true" class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-10 sm:px-6">
     <span class="sr-only">Carregando seu perfil…</span>
     <div class="bg-card border-border rounded-surface overflow-hidden border shadow-xs">
       <div class="bg-muted h-20 animate-pulse"></div>
@@ -157,7 +157,7 @@
   {@render errorNotice(state?.error ?? 'Não consegui carregar seu perfil.')}
 {:else}
   {@const person = data.person}
-  <section aria-label="Meu perfil" class="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-10">
+  <section aria-label="Meu perfil" class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-10 sm:px-6">
     <section aria-label="Identidade" class="bg-card border-border rounded-surface overflow-hidden border shadow-xs">
       <div aria-hidden="true" class="from-primary to-primary/70 h-20 bg-gradient-to-r sm:h-24"></div>
       <div class="flex flex-col gap-5 px-4 pb-4 sm:px-6 sm:pb-6">
