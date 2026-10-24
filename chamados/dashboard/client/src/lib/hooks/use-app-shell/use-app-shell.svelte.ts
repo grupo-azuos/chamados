@@ -14,7 +14,7 @@ import {
 import { untrack } from 'svelte';
 import { writable } from 'svelte/store';
 
-import { accountProfileApi } from '$lib/api/account-profile.api';
+import { accountOrigin, accountProfileApi } from '$lib/api/account-profile.api';
 import { authApi } from '$lib/api/auth.api';
 import { readError } from '$lib/api/http-client';
 import { leaveSession } from '$lib/utils/leave-session.util';
@@ -150,8 +150,7 @@ export function useAppShellModel(input: {
             queryFn: () => authApi.config(),
             staleTime: Infinity,
           });
-          if (!found.accountUrl) throw new Error('Sem endereço da conta.');
-          return accountProfileApi.me(found.accountUrl);
+          return accountProfileApi.me(accountOrigin(found.accountUrl));
         },
         retry: false,
         staleTime: 5 * 60 * 1000,

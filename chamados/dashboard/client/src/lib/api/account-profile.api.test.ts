@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { accountProfileApi } from './account-profile.api';
+import { accountOrigin, accountProfileApi } from './account-profile.api';
 
 const fetchMock = vi.fn();
 
@@ -34,5 +34,30 @@ describe('accountProfileApi', () => {
     fetchMock.mockResolvedValue(new Response('{}', { status: 401 }));
 
     await expect(accountProfileApi.me('https://admin-console.test/profile')).rejects.toThrow('admin-console');
+  });
+});
+
+describe('accountOrigin', () => {
+  // feliz
+  it('uses the address the server configured', () => {
+    expect(accountOrigin('https://login.grupoazuos.com.br/entrar', 'chamados.grupoazuos.com.br')).toBe(
+      'https://login.grupoazuos.com.br',
+    );
+  });
+
+  /* O homo não tem `ADMIN_CONSOLE_LOGIN_URL`: sem esta regra a ficha do perfil vinha vazia. */
+  it('finds the account from the domain when the server configured none', () => {
+    expect(accountOrigin(null, 'chamados.homo.grupoazuos.com.br')).toBe(
+      'https://admin-console.homo.grupoazuos.com.br',
+    );
+    expect(accountOrigin(null, 'chamados.grupoazuos.com.br')).toBe(
+      'https://admin-console.grupoazuos.com.br',
+    );
+    expect(accountOrigin(null, 'localhost')).toBe('http://localhost:5000');
+  });
+
+  // triste
+  it('refuses an unknown domain without a configured address', () => {
+    expect(() => accountOrigin(null, 'chamados.outra-empresa.com')).toThrow('Sem endereço da conta.');
   });
 });
