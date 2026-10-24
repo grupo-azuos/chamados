@@ -90,11 +90,11 @@
 
   /** Cartão inteiro tingido, com a borda fina em volta (nunca de um lado só). */
   const EVENT_SURFACE: Record<StatusBadgeTone, string> = {
-    brand: 'border-primary/40 bg-primary-soft hover:border-primary/70',
-    info: 'border-info/40 bg-info-soft hover:border-info/70',
-    success: 'border-success/40 bg-success-soft hover:border-success/70',
-    warning: 'border-warning/40 bg-warning-soft hover:border-warning/70',
-    danger: 'border-destructive/40 bg-destructive-soft hover:border-destructive/70',
+    brand: 'bg-primary-soft',
+    info: 'bg-info-soft',
+    success: 'bg-success-soft',
+    warning: 'bg-warning-soft',
+    danger: 'bg-destructive-soft',
     neutral: 'border-border bg-card hover:border-border/80',
   };
 
@@ -827,7 +827,7 @@
                             <button
                               {...props}
                               type="button"
-                              class="h-full w-full overflow-hidden rounded-box border border-primary/20 bg-primary-soft p-2 text-left text-xs text-primary hover:border-primary/50"
+                              class="h-full w-full overflow-hidden rounded-box bg-primary-soft p-2 text-left text-xs text-primary"
                               aria-label="Ver {group.events
                                 .length} atividades próximas das {new Date(
                                 group.events[0]!.eventDate,
@@ -948,7 +948,7 @@
                           href={event.url ?? undefined}
                           target="_blank"
                           rel="noreferrer"
-                          class="flex min-w-0 items-center gap-3 rounded-box border border-border bg-muted/20 p-3 transition hover:border-primary/40 hover:bg-muted/40"
+                          class="flex min-w-0 items-center gap-3 rounded-box border border-border bg-muted/20 p-3 transition hover:bg-muted/40"
                         >
                           <span
                             class="grid size-8 shrink-0 place-items-center rounded-full bg-primary-soft text-primary"

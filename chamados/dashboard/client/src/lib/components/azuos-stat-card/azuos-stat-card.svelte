@@ -43,6 +43,16 @@
     info: 'bg-info-soft text-ink-900',
   };
 
+  /** Selecionado: o fundo na cor CHEIA do tom, com o texto claro por cima — nunca um contorno. */
+  const TONE_SELECTED: Record<StatCardTone, string> = {
+    brand: 'bg-primary',
+    neutral: 'bg-ink-700',
+    success: 'bg-success',
+    warning: 'bg-warning',
+    danger: 'bg-destructive',
+    info: 'bg-info',
+  };
+
   const TONE_LABEL: Record<StatCardTone, string> = {
     brand: 'text-primary',
     neutral: 'text-ink-500',
@@ -131,11 +141,12 @@
        (`lib/theme/tokens.css`). Vinha com raio de controle e encostava visualmente nos
        botões em volta. */
     'rounded-surface py-4 pr-4 pl-5 transition-all shadow-xs',
-    TONE_CARD[tone],
-    /* Clicável: sobe um pouco no hover, para avisar que responde ao clique. Selecionado: um
-       anel em volta — o fundo já é a cor do tom, então quem marca o estado é o contorno. */
+    cardState?.isSelected
+      ? cn(TONE_SELECTED[tone], 'text-primary-foreground **:text-primary-foreground')
+      : TONE_CARD[tone],
+    /* Clicável: sobe um pouco no hover, para avisar que responde ao clique. Selecionado: o
+       fundo na cor cheia do tom (acima), nunca um contorno. */
     isClickable && 'relative cursor-pointer hover:-translate-y-0.5 hover:shadow-xl',
-    cardState?.isSelected && 'ring-ring ring-offset-background ring-2 ring-offset-2',
     ui?.className,
   )}
 >

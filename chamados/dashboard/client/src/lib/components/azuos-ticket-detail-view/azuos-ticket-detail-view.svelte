@@ -168,7 +168,7 @@
       />
     {:else if data.whatsAppLink}
       <a
-        class="control-md rounded-control border-success/20 bg-success/10 text-success hover:bg-success/20 inline-flex items-center gap-2 border text-sm font-semibold transition-colors"
+        class="control-md rounded-control bg-success/10 text-success hover:bg-success/20 inline-flex items-center gap-2 text-sm font-semibold transition-colors"
         href={data.whatsAppLink}
         target="_blank"
         rel="noopener"

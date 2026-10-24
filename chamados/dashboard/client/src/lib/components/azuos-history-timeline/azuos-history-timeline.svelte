@@ -57,15 +57,6 @@
     brand: 'bg-primary',
   } as const;
 
-  /** O halo em volta do marco: a mesma cor, quase transparente — destaca sem pesar. */
-  const HALO_TONE_CLASSES = {
-    neutral: 'ring-muted-foreground/15',
-    info: 'ring-info/20',
-    success: 'ring-success/20',
-    warning: 'ring-warning/20',
-    danger: 'ring-destructive/20',
-    brand: 'ring-primary/20',
-  } as const;
 
   /** "02/10/2026 às 23:30" — sem os segundos, que ninguém lê numa linha do tempo. */
   export function formatHistoryDateTime(value: string): string {
@@ -113,7 +104,7 @@
         <div class="flex w-3 shrink-0 flex-col items-center" aria-hidden="true">
           <span class={cn('h-0.5 w-px', isFirst ? 'bg-transparent' : 'bg-border')}></span>
           <span
-            class={cn('my-1 size-3 shrink-0 rounded-full ring-4', DOT_TONE_CLASSES[tone], HALO_TONE_CLASSES[tone])}
+            class={cn('my-1 size-3 shrink-0 rounded-full', DOT_TONE_CLASSES[tone])}
           ></span>
           {#if !isLast}
             <span class="bg-border w-px flex-1"></span>

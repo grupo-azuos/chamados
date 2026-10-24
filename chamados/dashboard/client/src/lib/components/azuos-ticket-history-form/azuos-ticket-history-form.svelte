@@ -63,8 +63,8 @@
 
   /** O aviso do que o histórico faz: encerrar chama a atenção; o resto só informa. */
   const EFFECT_CLASSES: Record<TicketHistoryEffect, string> = {
-    closes: 'border-warning/40 bg-warning-soft text-foreground',
-    moves: 'border-info/30 bg-info-soft text-foreground',
+    closes: 'bg-warning-soft text-foreground',
+    moves: 'bg-info-soft text-foreground',
     keeps: 'border-border bg-muted/40 text-muted-foreground',
   };
 </script>
@@ -115,8 +115,8 @@
             'has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
             data.type === option.value &&
               (isClosingGroup
-                ? 'border-warning bg-warning-soft'
-                : 'border-primary bg-primary-soft'),
+                ? 'bg-warning-soft'
+                : 'bg-primary-soft'),
           )}
         >
           <input

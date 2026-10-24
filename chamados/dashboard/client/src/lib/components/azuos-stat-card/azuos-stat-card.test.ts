@@ -199,7 +199,7 @@ describe('AzuosStatCard', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it('selecionado, avisa que o clique tira o filtro e ganha o contorno', () => {
+  it('selecionado, avisa que o clique tira o filtro e ganha o fundo na cor cheia do tom', () => {
     const { container } = render(StatCard, {
       props: {
         data: { label: 'Abertos', value: 5 },
@@ -212,7 +212,8 @@ describe('AzuosStatCard', () => {
       'aria-pressed',
       'true',
     );
-    expect(container.firstElementChild?.className).toContain('ring-2');
+    expect(container.firstElementChild).toHaveClass('bg-ink-700');
+    expect(container.firstElementChild?.className).not.toMatch(/\bring-/);
   });
 
   // triste

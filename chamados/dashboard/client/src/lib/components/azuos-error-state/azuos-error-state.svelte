@@ -33,7 +33,7 @@
 <div
   role="alert"
   class={cn(
-    'flex gap-3 rounded-box border border-destructive/40 bg-destructive/10 text-destructive',
+    'flex gap-3 rounded-box bg-destructive/10 text-destructive',
     isInline ? 'items-center px-3 py-2' : 'items-start p-4',
     ui?.className
   )}
@@ -57,7 +57,7 @@
       type="button"
       onclick={actions.onRetry}
       disabled={isRetrying}
-      class="control-sm inline-flex shrink-0 items-center gap-1.5 rounded-control border border-destructive/40 bg-card text-xs font-semibold text-destructive hover:bg-destructive-soft disabled:opacity-60"
+      class="control-sm inline-flex shrink-0 items-center gap-1.5 rounded-control border border-border bg-card text-xs font-semibold text-destructive hover:bg-destructive-soft disabled:opacity-60"
     >
       <RotateCw class={cn('size-3.5', isRetrying && 'animate-spin')} aria-hidden="true" />
       Tentar de novo
