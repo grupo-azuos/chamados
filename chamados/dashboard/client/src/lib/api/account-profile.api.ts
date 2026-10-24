@@ -27,6 +27,25 @@ export type AccountSystem = {
   access: { role: AccountRole };
 };
 
+/**
+ * ONDE FICA A CONTA (Admin Console). O endereço configurado no servidor (`ADMIN_CONSOLE_LOGIN_URL`)
+ * vale primeiro; sem ele, sai do domínio em que a tela está — a mesma regra dos outros 12
+ * sistemas. Sem isso, num ambiente sem a variável (o homo) a ficha do "Meu perfil" vinha vazia.
+ */
+export function accountOrigin(
+  configured: string | null | undefined,
+  hostname = window.location.hostname,
+): string {
+  if (configured) return new URL(configured).origin;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:5000';
+  if (hostname.endsWith('.homo.grupoazuos.com.br'))
+    return 'https://admin-console.homo.grupoazuos.com.br';
+  if (hostname === 'grupoazuos.com.br' || hostname.endsWith('.grupoazuos.com.br'))
+    return 'https://admin-console.grupoazuos.com.br';
+
+  throw new Error('Sem endereço da conta.');
+}
+
 async function readAccount<T>(accountUrl: string, path: string): Promise<T> {
   const response = await fetch(new URL(path, new URL(accountUrl).origin), {
     credentials: 'include',

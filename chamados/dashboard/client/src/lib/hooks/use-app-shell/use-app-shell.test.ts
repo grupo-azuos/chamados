@@ -25,6 +25,7 @@ vi.mock('$lib/utils/leave-session.util', () => ({ leaveSession: vi.fn() }));
 
 /* A conta do Admin Console (foto do rodapé). Por padrão ela não responde: vale a do `/api/auth/me`. */
 vi.mock('$lib/api/account-profile.api', () => ({
+  accountOrigin: (configured: string | null) => configured ?? 'http://localhost:5000',
   accountProfileApi: { me: vi.fn().mockRejectedValue(new Error('offline')) },
 }));
 const { leaveSession } = await import('$lib/utils/leave-session.util');

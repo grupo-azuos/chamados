@@ -6,6 +6,7 @@ import {
   type AccountProfile,
   type AccountRole,
   type AccountSystem,
+  accountOrigin,
   accountProfileApi,
 } from '$lib/api/account-profile.api';
 import { authApi } from '$lib/api/auth.api';
@@ -34,10 +35,7 @@ export function useMyProfileModel(input: { user: SessionUser | undefined }) {
   const accountUrl = () =>
     queryClient
       .fetchQuery({ queryKey: ['auth', 'config'], queryFn: () => authApi.config(), staleTime: Infinity })
-      .then((config) => {
-        if (!config.accountUrl) throw new Error('Sem endereço da conta.');
-        return config.accountUrl;
-      });
+      .then((config) => accountOrigin(config.accountUrl));
 
   const account = mirrorStore(
     createQuery(
