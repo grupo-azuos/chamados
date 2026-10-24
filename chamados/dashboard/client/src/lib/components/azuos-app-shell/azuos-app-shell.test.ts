@@ -1,9 +1,9 @@
-import { render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import BarChart3 from '@lucide/svelte/icons/chart-column';
 import ListChecks from '@lucide/svelte/icons/list-checks';
 import { createRawSnippet } from 'svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import AppShell, { type AzuosAppShellProps } from './azuos-app-shell.svelte';
 
@@ -345,3 +345,66 @@ describe('AzuosAppShell', () => {
   });
 });
 
+/* No celular a casca troca a barra lateral pela barra de baixo + gaveta: o `MediaQuery` do Svelte
+   lê o `matchMedia`, que aqui diz "tela pequena". */
+describe('AzuosAppShell — celular', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  function renderOnPhone() {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query.includes('max-width'),
+          media: query,
+          onchange: null,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          addListener: () => {},
+          removeListener: () => {},
+          dispatchEvent: () => false,
+        }) as MediaQueryList,
+    );
+    renderShell({ ui: { items } });
+  }
+
+  /* `fireEvent` e não `userEvent`: a gaveta do teste anterior deixa `pointer-events: none` no
+     body (o bits-ui trava a página enquanto o diálogo está aberto), e o userEvent recusa o clique. */
+  async function openSheet() {
+    await fireEvent.click(screen.getByRole('button', { name: 'Abrir o menu' }));
+    return screen.findByRole('dialog');
+  }
+
+  // feliz
+  /* Padrão do Android (Compose): a gaveta tem a "linguinha" e não tem o X de fechar. */
+  it('draws the sheet with the drag handle and without a close button', async () => {
+    renderOnPhone();
+    const sheet = await openSheet();
+
+    expect(sheet.querySelector('[data-slot="sheet-drag-handle"]')).toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
+  });
+
+  it('closes the sheet when the handle is dragged down', async () => {
+    renderOnPhone();
+    const sheet = await openSheet();
+    const handle = sheet.querySelector('[data-slot="sheet-drag-handle"]')!;
+
+    await fireEvent.pointerDown(handle, { clientY: 100, pointerId: 1 });
+    await fireEvent.pointerMove(handle, { clientY: 260, pointerId: 1 });
+    await fireEvent.pointerUp(handle, { clientY: 260, pointerId: 1 });
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  // triste
+  it('keeps the sheet open after a short drag', async () => {
+    renderOnPhone();
+    const sheet = await openSheet();
+    const handle = sheet.querySelector('[data-slot="sheet-drag-handle"]')!;
+
+    await fireEvent.pointerDown(handle, { clientY: 100, pointerId: 1 });
+    await fireEvent.pointerUp(handle, { clientY: 116, pointerId: 1 });
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+});
