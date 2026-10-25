@@ -149,7 +149,7 @@ func (app *App) ShowDashboard() {
 //
 // Esconder a janela nativa não desmonta a tela: sem o passo extra abaixo, a
 // Popup ou o Dashboard continuariam vivos em segundo plano — com todos os
-// gráficos (uPlot) e popovers de processo retendo memória — e o
+// gráficos (ECharts) e popovers de processo retendo memória — e o
 // TrimWorkingSet não teria o que devolver de verdade ao Windows. Por isso a
 // janela some primeiro (resposta instantânea ao clique) e só depois a tela
 // troca pra "idle" (ver svelte/src/views/idle), que desmonta tudo antes do
