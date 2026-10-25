@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
+import { withChartTheme } from '$lib/utils/echarts.util';
+
 import DonutChart, { donutOption, percentOf } from './azuos-donut-chart.svelte';
 
 const slices = [
@@ -35,6 +37,30 @@ describe('donutOption', () => {
     expect(series.label.show).toBe(false);
   });
 });
+
+describe('donutOption — cor no hover', () => {
+  // regressão: com uma fatia só (Insights → "De que os upgrades são feitos"), o anel sumia ao passar
+  // o mouse, porque a cor chegava ao ECharts como `var(--chart-5)` e o tom do hover virava `none`
+  it('reaches ECharts with real colours, never a CSS variable', () => {
+    const option = donutOption([{ label: 'Mais memória', value: 3 }], 'Máquinas', { surface: '#ffffff' });
+    const drawn = withChartTheme(option, { ...THEME_FOR_HOVER });
+
+    expect(JSON.stringify(drawn)).not.toContain('var(');
+  });
+});
+
+const THEME_FOR_HOVER = {
+  foreground: '#111111',
+  muted: '#666666',
+  border: '#dddddd',
+  surface: '#ffffff',
+  track: '#f3f4f6',
+  font: 'Inter',
+  success: '#047857',
+  info: '#1d4ed8',
+  warning: '#b45309',
+  danger: '#dc2626',
+};
 
 describe('AzuosDonutChart', () => {
   // feliz

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatCount,
   resolveColor,
+  resolveCssColors,
   selectionOf,
   shareOf,
   shortenLabel,
@@ -70,6 +71,34 @@ describe('echarts.util', () => {
   // triste
   it('does not divide by zero for the share of an empty total', () => {
     expect(shareOf(5, 0)).toBe(0);
+  });
+
+  // regressão: a fatia da rosca sumia no hover do Insights do chamados — o ECharts clareava
+  // `var(--chart-5)`, não entendia, e pintava `none`
+  it('hands ECharts no CSS variable, however deep the colour is', () => {
+    document.documentElement.style.setProperty('--chart-5', 'rgb(255, 0, 0)');
+    const formatter = () => 'balão';
+    const option = withChartTheme(
+      {
+        tooltip: { trigger: 'item', formatter },
+        series: [{ type: 'pie', data: [{ name: 'Mais memória', value: 3, itemStyle: { color: 'var(--chart-5)' } }] }],
+      },
+      THEME,
+    );
+
+    expect(JSON.stringify(option)).not.toContain('var(');
+    expect(JSON.stringify(option.series)).toContain('rgb(255, 0, 0)');
+    expect((option.tooltip as { formatter: unknown }).formatter).toBe(formatter);
+    document.documentElement.style.removeProperty('--chart-5');
+  });
+
+  it('keeps numbers, arrays and plain colours untouched while resolving', () => {
+    expect(resolveCssColors({ radius: ['62%', '100%'], value: 3, color: '#fff', show: false })).toEqual({
+      radius: ['62%', '100%'],
+      value: 3,
+      color: '#fff',
+      show: false,
+    });
   });
 
   it('draws no tooltip when the chart asked for none', () => {
