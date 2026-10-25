@@ -22,6 +22,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   fakeChart.resize.mockClear();
+  fakeChart.setOption.mockClear();
 });
 
 const OPTION = { series: [{ type: 'bar' as const, data: [1, 2, 3] }] };
@@ -77,6 +78,23 @@ describe('AzuosEchart', () => {
     vi.advanceTimersByTime(RESIZE_SETTLE_MS);
     expect(fakeChart.resize).toHaveBeenCalledOnce();
     expect(fakeChart.resize).toHaveBeenCalledWith(expect.objectContaining({ width: 560 }));
+  });
+
+  /* REGRESSÃO: a tela recria os dados a cada consulta, mesmo iguais. Redesenhar com eles apagava
+     o balão aberto e o gráfico piscava no hover — com dado igual, o desenho não é refeito. */
+  it('does not redraw when the screen hands over the same data again', async () => {
+    const { rerender } = render(Echart, { props: { data: { option: OPTION, description: 'x' } } });
+    await waitFor(() => expect(fakeChart.setOption).toHaveBeenCalledTimes(1));
+
+    await rerender({
+      data: { option: { series: [{ type: 'bar' as const, data: [1, 2, 3] }] }, description: 'x' },
+    });
+    expect(fakeChart.setOption).toHaveBeenCalledTimes(1);
+
+    await rerender({
+      data: { option: { series: [{ type: 'bar' as const, data: [4, 5, 6] }] }, description: 'x' },
+    });
+    expect(fakeChart.setOption).toHaveBeenCalledTimes(2);
   });
 
   // triste

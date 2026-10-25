@@ -143,6 +143,10 @@ export function withChartTheme(option: ChartOption, theme: ChartTheme): ChartOpt
           textStyle: { color: theme.foreground, fontSize: 12, fontFamily: theme.font },
           extraCssText: 'border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);',
           confine: true,
+          /* O balão mora no `body`, FORA do gráfico. Dentro dele, num quadro com rolagem própria, o
+             balão aparecendo mudava a altura a rolar: a barra de rolagem surgia, a largura mudava,
+             o gráfico se redesenhava, o balão sumia — e o ciclo recomeçava, piscando no hover. */
+          appendTo: 'body',
           ...tooltip,
         }
       : undefined,

@@ -41,6 +41,16 @@ describe('echarts.util', () => {
     expect(option.backgroundColor).toBe('transparent');
   });
 
+  /* REGRESSÃO: dentro de um quadro com rolagem, o balão no próprio gráfico fazia a barra de
+     rolagem aparecer e sumir, e o gráfico piscava no hover. O balão mora no `body`. */
+  it('puts the tooltip in the page body, outside any scrolling box', () => {
+    const tooltip = withChartTheme({ tooltip: { trigger: 'item' } }, THEME).tooltip as {
+      appendTo: string;
+    };
+
+    expect(tooltip.appendTo).toBe('body');
+  });
+
   it('reads the clicked item, with row and column on a heatmap cell', () => {
     expect(selectionOf({ name: 'Goiânia', dataType: 'node' })).toEqual({
       name: 'Goiânia',
