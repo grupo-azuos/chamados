@@ -9,6 +9,11 @@ import { afterEach } from 'vitest';
  */
 afterEach(() => {
   cleanup();
+  /* O bits-ui trava a página (`pointer-events: none` no `body`) enquanto um menu ou diálogo está
+     aberto, e destrava no fim da animação de fechar. Desmontado no meio dela pelo `cleanup`, ele
+     deixava a página travada — e o teste SEGUINTE não conseguia clicar em nada, falhando conforme
+     a ordem dos testes. A página volta destravada a cada teste. */
+  document.body.style.removeProperty('pointer-events');
 });
 
 /**
@@ -82,3 +87,27 @@ if (!globalThis.ResizeObserver) {
     disconnect(): void {}
   } as unknown as typeof ResizeObserver;
 }
+
+/**
+ * O jsdom devolve `getClientRects()` SEMPRE vazio — num navegador, todo elemento visível tem ao
+ * menos uma caixa.
+ *
+ * O bits-ui (popover, menu, seletor, balão) só posiciona a camada flutuante quando o gatilho tem
+ * caixa: lista vazia é, para ele, "o gatilho sumiu da tela", e a camada fica escondida
+ * (`visibility: hidden`) para sempre. O conteúdo existia no HTML mas não para o leitor de tela, e
+ * os testes de menu, seletor de horário, data e balão quebravam todos por esse único motivo, que
+ * não existe no navegador. Elemento conectado e não escondido passa a ter a caixa que o jsdom mede.
+ */
+const listClientRects = Element.prototype.getClientRects;
+
+Element.prototype.getClientRects = function getClientRects(this: Element): DOMRectList {
+  const rects = listClientRects.call(this);
+  if (rects.length > 0 || !this.isConnected) return rects;
+  if (this instanceof HTMLElement && this.hidden) return rects;
+
+  const box = this.getBoundingClientRect();
+
+  return Object.assign([box], {
+    item: (index: number) => (index === 0 ? box : null),
+  }) as unknown as DOMRectList;
+};
