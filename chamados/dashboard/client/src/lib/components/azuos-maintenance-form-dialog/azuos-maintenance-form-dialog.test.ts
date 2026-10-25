@@ -50,7 +50,12 @@ describe('AzuosMaintenanceFormDialog', () => {
 
     expect(screen.getByLabelText('Equipamento')).toBeInTheDocument();
     expect(screen.getByLabelText('O que foi feito')).toBeInTheDocument();
-    expect(screen.getByLabelText('Data do serviço')).toHaveValue('2026-09-20');
+    /* A data virou o seletor do projeto (botão + calendário), não um campo de texto: o botão mostra
+       o dia por extenso e o formulário recebe a data ISO no campo escondido. */
+    expect(screen.getByRole('button', { name: 'Data do serviço' })).toHaveTextContent(
+      '20 de set. de 2026',
+    );
+    expect(document.querySelector('input[name="performedAt"]')).toHaveValue('2026-09-20');
   });
 
   /* O campo de texto só existe quando nenhuma máquina foi escolhida: os dois juntos

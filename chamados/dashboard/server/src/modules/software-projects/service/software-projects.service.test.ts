@@ -6,7 +6,7 @@ import { type SoftwareProjectRow } from '../../../lib/db/schema/software-project
 import { type TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import { type SoftwareProjectsRepository } from '../repository/software-projects.repository';
 import { type SoftwareTimelineRepository } from '../repository/software-timeline.repository';
-import { type GithubService } from './github.service';
+import { type FetchedPr, type GithubService } from './github.service';
 import { coAuthorNames, SoftwareProjectsService } from './software-projects.service';
 import { type GithubConnectionsRepository } from '../../github-integration/repository/github-connections.repository';
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
@@ -204,7 +204,12 @@ describe('SoftwareProjectsService', () => {
         undefined,
       );
       expect(timelineRepository.upsertMany).toHaveBeenNthCalledWith(2, [
-        expect.objectContaining({ projectId: 1, type: 'issue', externalId: '#7', status: 'closed' }),
+        expect.objectContaining({
+          projectId: 1,
+          type: 'issue',
+          externalId: '#7',
+          status: 'closed',
+        }),
       ]);
     });
 
@@ -233,10 +238,17 @@ describe('SoftwareProjectsService', () => {
     it('syncs every project and tells which ones failed', async () => {
       const { service, githubService } = makeService(
         {
-          listAll: vi.fn().mockResolvedValue([
-            projectRow({ id: 1, name: 'Chamados', githubRepoOwner: 'org', githubRepoName: 'ok' }),
-            projectRow({ id: 2, name: 'Paralegal', githubRepoOwner: 'org', githubRepoName: 'fora' }),
-          ]),
+          listAll: vi
+            .fn()
+            .mockResolvedValue([
+              projectRow({ id: 1, name: 'Chamados', githubRepoOwner: 'org', githubRepoName: 'ok' }),
+              projectRow({
+                id: 2,
+                name: 'Paralegal',
+                githubRepoOwner: 'org',
+                githubRepoName: 'fora',
+              }),
+            ]),
         },
         {},
         {
@@ -281,8 +293,12 @@ describe('SoftwareProjectsService', () => {
         connections,
       );
 
-      await expect(service.syncAllGithub(superAdmin)).rejects.toThrow('Vincule sua conta do GitHub');
-      await expect(service.syncGithubPrs(superAdmin, 1)).rejects.toThrow('Vincule sua conta do GitHub');
+      await expect(service.syncAllGithub(superAdmin)).rejects.toThrow(
+        'Vincule sua conta do GitHub',
+      );
+      await expect(service.syncGithubPrs(superAdmin, 1)).rejects.toThrow(
+        'Vincule sua conta do GitHub',
+      );
       expect(repository.listAll).not.toHaveBeenCalled();
     });
   });
@@ -290,9 +306,9 @@ describe('SoftwareProjectsService', () => {
   describe('author names', () => {
     function withDirectory(listUsers: () => Promise<unknown>) {
       const repository = {
-        findById: vi.fn().mockResolvedValue(
-          projectRow({ githubRepoOwner: 'org', githubRepoName: 'repo' }),
-        ),
+        findById: vi
+          .fn()
+          .mockResolvedValue(projectRow({ githubRepoOwner: 'org', githubRepoName: 'repo' })),
         countOpenTicketsByProject: vi.fn().mockResolvedValue({}),
         countPullRequestsByProject: vi.fn().mockResolvedValue({}),
       } as unknown as SoftwareProjectsRepository;
@@ -371,9 +387,9 @@ describe('SoftwareProjectsService', () => {
     it('asks GitHub only for what changed since the given date, as the system', async () => {
       const since = new Date('2026-10-16T03:00:00Z');
       const { service, githubService } = makeService({
-        listAll: vi.fn().mockResolvedValue([
-          projectRow({ githubRepoOwner: 'org', githubRepoName: 'repo' }),
-        ]),
+        listAll: vi
+          .fn()
+          .mockResolvedValue([projectRow({ githubRepoOwner: 'org', githubRepoName: 'repo' })]),
       });
 
       await service.syncAllGithubSince(since);
@@ -385,9 +401,11 @@ describe('SoftwareProjectsService', () => {
     // triste
     it('skips projects whose repository address cannot be read', async () => {
       const { service, githubService } = makeService({
-        listAll: vi.fn().mockResolvedValue([
-          projectRow({ githubRepoOwner: null, githubRepoName: null, repositoryUrl: 'sem-repo' }),
-        ]),
+        listAll: vi
+          .fn()
+          .mockResolvedValue([
+            projectRow({ githubRepoOwner: null, githubRepoName: null, repositoryUrl: 'sem-repo' }),
+          ]),
       });
 
       const result = await service.syncAllGithubSince(new Date());
@@ -504,9 +522,13 @@ describe('SoftwareProjectsService', () => {
               title: 'PR teste',
               url: 'https://github.com/pr/12',
               author: 'octocat',
+              /* O nome que o GitHub dá: o serviço real sempre preenche (o login quando falta o
+                 nome). Sem ele o PR falso não era um PR que o GitHub devolve. */
+              authorName: 'The Octocat',
+              coAuthors: [],
               status: 'merged',
               eventDate: new Date('2026-10-01T00:00:00.000Z'),
-            },
+            } satisfies FetchedPr,
           ]),
         },
       );
