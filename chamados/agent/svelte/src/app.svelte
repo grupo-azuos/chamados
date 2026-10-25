@@ -11,7 +11,7 @@
 	// O app nasce escondido na bandeja (StartHidden, ver main.go) — a rota
 	// inicial (antes de qualquer "view:change" do Go) precisa ser a "idle"
 	// vazia, não a Popup: montar a Popup de cara já gastaria memória com
-	// gráficos (uPlot) que ninguém está vendo ainda.
+	// gráficos (ECharts) que ninguém está vendo ainda.
 	const routes = {
 		'/popup': Popup,
 		'/dashboard': Dashboard,
