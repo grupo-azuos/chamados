@@ -40,7 +40,7 @@ describe('AzuosMetricTile', () => {
 				ui: { colorVars: ['--chart-4'], fixedMax: 100 }
 			}
 		});
-		expect(container.querySelector('.u-wrap')).toBeInTheDocument();
+		expect(container.querySelector('svg')).toBeInTheDocument();
 	});
 
 	// feliz
@@ -66,12 +66,12 @@ describe('AzuosMetricTile', () => {
 			}
 		});
 		expect(queryByRole('progressbar')).toBeInTheDocument();
-		expect(container.querySelector('canvas')).not.toBeInTheDocument();
+		expect(container.querySelector('svg, canvas')).not.toBeInTheDocument();
 	});
 
 	// triste
-	it('does not render sparkline canvas when sparkline prop is missing (edge case)', () => {
-		// Sem série histórica, não deve alocar o container de canvas do uPlot
+	it('does not render the sparkline when sparkline prop is missing (edge case)', () => {
+		// Sem série histórica, não deve montar gráfico nenhum
 		const { container } = render(AzuosMetricTile, {
 			props: { data: { label: 'Rede', value: '—' } }
 		});

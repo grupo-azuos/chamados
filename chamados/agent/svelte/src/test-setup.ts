@@ -15,8 +15,8 @@ afterEach(() => cleanup());
 // usar o localStorage nativo aqui.
 vi.stubGlobal('localStorage', new FakeStorage());
 
-// O uPlot (usado por AzuosSparkline) chama matchMedia pra saber a
-// densidade de pixel da tela — o jsdom não implementa isso.
+// O jsdom não implementa matchMedia — a gaveta de processos o consulta pra
+// respeitar "reduzir movimento".
 vi.stubGlobal(
 	'matchMedia',
 	vi.fn().mockImplementation((query: string) => ({
@@ -28,7 +28,7 @@ vi.stubGlobal(
 );
 
 // AzuosSparkline observa o próprio container com ResizeObserver pra
-// redimensionar o uPlot quando a janela nasce escondida (ver comentário em
+// redimensionar o gráfico quando a janela nasce escondida (ver comentário em
 // azuos-sparkline.svelte) — o jsdom não implementa essa classe.
 class StubResizeObserver {
 	observe() {}
@@ -37,27 +37,12 @@ class StubResizeObserver {
 }
 vi.stubGlobal('ResizeObserver', StubResizeObserver);
 
-// O uPlot também usa Path2D pra montar os traçados antes de desenhar — o
-// jsdom não implementa essa classe também.
-class StubPath2D {
-	addPath() {}
-	moveTo() {}
-	lineTo() {}
-	closePath() {}
-	rect() {}
-	arc() {}
-	arcTo() {}
-	ellipse() {}
-	bezierCurveTo() {}
-	quadraticCurveTo() {}
-}
-vi.stubGlobal('Path2D', StubPath2D);
-
 // jsdom não implementa canvas 2D de verdade (isso exigiria o pacote nativo
 // `canvas`, que precisa compilar C++ — frágil demais só pra rodar teste).
-// Um Proxy que aceita qualquer método/propriedade como no-op é suficiente
-// pra o uPlot desenhar "no vazio" sem lançar exceção — os testes de
-// AzuosSparkline verificam que o componente monta, não o desenho em si.
+// O ECharts desenha em SVG, mas mede texto num canvas: um Proxy que aceita
+// qualquer método/propriedade como no-op basta pra ele montar sem lançar
+// exceção — os testes conferem o que foi desenhado pela configuração, não
+// os pixels.
 HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement) {
 	return new Proxy(
 		{ canvas: this },
