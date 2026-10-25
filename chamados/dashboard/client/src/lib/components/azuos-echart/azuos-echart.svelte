@@ -113,12 +113,21 @@
       observer?.disconnect();
       chart?.dispose();
       chart = null;
+      drawnSignature = '';
       isReady = false;
     };
   });
 
+  /* O desenho só é refeito quando a configuração MUDA de fato. A tela recria os dados a cada
+     consulta (mesmo iguais), e refazer o desenho com `notMerge` apaga o balão aberto e reinicia a
+     animação — no hover, isso piscava. A assinatura em texto diz se mudou mesmo. */
+  let drawnSignature = '';
+
   $effect(() => {
     if (!isReady) return;
+    const signature = JSON.stringify(resolved);
+    if (signature === drawnSignature) return;
+    drawnSignature = signature;
     chart?.setOption(resolved, { notMerge: true });
   });
 </script>
