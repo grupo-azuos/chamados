@@ -115,10 +115,20 @@ export function resolveColor(value: string, fallback = FALLBACK_THEME.muted): st
   probe.style.color = value;
   probe.style.display = 'none';
   document.body.appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
+  const computed = getComputedStyle(probe).color;
   probe.remove();
+  /* Nem todo ambiente resolve a variável no elemento de prova (o jsdom devolve o `var(...)` cru):
+     aí ela é lida direto no documento. Sobrando `var(`, vai a reserva — o ECharts nunca a recebe. */
+  const resolved = computed.includes('var(') ? customPropertyOf(value) : computed;
 
-  return resolved && resolved !== '' ? resolved : fallback;
+  return resolved && !resolved.includes('var(') ? resolved : fallback;
+}
+
+/** O valor de `var(--nome)` lido no documento; vazio quando a variável não existe. */
+function customPropertyOf(value: string): string {
+  const name = /var\(\s*(--[\w-]+)/.exec(value)?.[1];
+
+  return name ? getComputedStyle(document.documentElement).getPropertyValue(name).trim() : '';
 }
 
 /**
@@ -128,7 +138,7 @@ export function resolveColor(value: string, fallback = FALLBACK_THEME.muted): st
 export function withChartTheme(option: ChartOption, theme: ChartTheme): ChartOption {
   const tooltip = Array.isArray(option.tooltip) ? option.tooltip[0] : option.tooltip;
 
-  return {
+  return resolveCssColors({
     backgroundColor: 'transparent',
     animationDuration: 500,
     textStyle: { fontFamily: theme.font, color: theme.foreground },
@@ -150,7 +160,32 @@ export function withChartTheme(option: ChartOption, theme: ChartTheme): ChartOpt
           ...tooltip,
         }
       : undefined,
-  };
+  });
+}
+
+/**
+ * Troca toda cor `var(--…)` da configuração pela cor de verdade, em qualquer profundidade.
+ *
+ * O `fill` do SVG aceita `var(...)`, então o desenho parado sai certo — mas o ECharts CALCULA cores
+ * a partir dela (o tom mais claro do hover, o degradê do fluxo). Sem entender `var(...)`, a conta
+ * dá `none` e a fatia some ao passar o mouse. Fica aqui, na moldura, e não em cada gráfico: um
+ * gráfico novo que esqueça de resolver a cor não reabre o defeito.
+ */
+export function resolveCssColors<T>(value: T): T {
+  if (typeof value === 'string') return (value.includes('var(') ? resolveColor(value) : value) as T;
+  if (Array.isArray(value)) return value.map((item: unknown) => resolveCssColors(item)) as T;
+  if (!isPlainObject(value)) return value;
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, resolveCssColors(item)]),
+  ) as T;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) return false;
+  const prototype = Object.getPrototypeOf(value) as unknown;
+
+  return prototype === Object.prototype || prototype === null;
 }
 
 /**
