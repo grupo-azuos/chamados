@@ -3,9 +3,7 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import ProjectListView, {
-  type AzuosProjectListViewProps,
-} from './azuos-project-list-view.svelte';
+import ProjectListView, { type AzuosProjectListViewProps } from './azuos-project-list-view.svelte';
 
 const project: SoftwareProject = {
   id: 1,
@@ -79,7 +77,8 @@ describe('AzuosProjectListView', () => {
     expect(screen.queryByRole('button', { name: /sincronizar/i })).not.toBeInTheDocument();
     expect(screen.queryByTitle('Editar')).not.toBeInTheDocument();
     expect(screen.queryByTitle('Excluir')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /timeline/i }));
+    /* O botão virou "Ver sistema" quando a página de cada sistema nasceu (a timeline mora nela). */
+    await userEvent.click(screen.getByRole('button', { name: /ver sistema/i }));
     expect(actions.onViewTimeline).toHaveBeenCalledWith(project);
   });
   // feliz
