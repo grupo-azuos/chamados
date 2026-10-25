@@ -69,6 +69,6 @@ complexidade de build) sem benefício real aqui:
 
 ## Componente novo, sem equivalente no projeto de referência
 
-`azuos-sparkline` (gráfico de série temporal com uPlot) não existe no leitor — foi criado do
+`azuos-sparkline` (gráfico de série temporal com ECharts) não existe no leitor — foi criado do
 zero pra este projeto, mas segue a mesma convenção de pasta e props (`data`/`ui`) dos demais
 componentes portados, pra não destoar do resto.

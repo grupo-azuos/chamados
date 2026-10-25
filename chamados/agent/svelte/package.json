@@ -18,8 +18,8 @@
 	},
 	"dependencies": {
 		"@lucide/svelte": "^1.7.0",
-		"svelte-spa-router": "^4.0.1",
-		"uplot": "^1.6.32"
+		"echarts": "^6.1.0",
+		"svelte-spa-router": "^4.0.1"
 	},
 	"devDependencies": {
 		"@internationalized/date": "^3.12.4",

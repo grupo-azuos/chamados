@@ -62,16 +62,17 @@ qualquer densidade de tela, só a composição muda.
 `@storybook/addon-vitest` (que rodaria as stories como teste, via Chromium real) ficou de fora —
 baixar o Chromium do Playwright trava por rede neste ambiente (mesmo problema do bootstrap do
 WebView2 — ver "Como o Go fala com o Svelte" acima). `npm run storybook` (revisão visual) e
-`npm test` (Vitest comum, ambiente jsdom) não dependem disso. jsdom não implementa canvas 2D nem
-`Path2D` — `AzuosSparkline` usa `uPlot`, que precisa dos dois — então
-`svelte/src/test-setup.ts` injeta um `getContext` e um `Path2D` que aceitam qualquer
-chamada como no-op, só pra o componente montar sem lançar exceção (os testes verificam que ele
-monta, não o desenho em si).
+`npm test` (Vitest comum, ambiente jsdom) não dependem disso. jsdom não implementa canvas 2D —
+o ECharts desenha o `AzuosSparkline` em SVG, mas mede texto num canvas — então
+`svelte/src/test-setup.ts` injeta um `getContext` que aceita qualquer chamada como no-op, só
+pra o componente montar sem lançar exceção (os testes conferem a configuração desenhada, não os
+pixels).
 
-**Gráficos — `uPlot`.** Escolhido no lugar de Chart.js porque é ordens de grandeza mais leve
-(~45 KB vs. várias centenas de KB) e feito especificamente pra série temporal de alta frequência
-— exatamente o caso de CPU/RAM/rede/disco atualizando a cada segundo. Chart.js é mais genérico
-(barras, pizza, radar…), peso que não se paga aqui.
+**Gráficos — ECharts.** A mesma biblioteca de todos os gráficos do grupo Azuos (os 13 sistemas
+e o template): um padrão só, sem duas bibliotecas pra aprender e manter. Entra só o que o
+agente usa — núcleo, gráfico de linha, grade e desenho em SVG —, não o pacote inteiro. O
+`AzuosSparkline` desenha sem animação (a amostra chega a cada segundo) e só se redimensiona
+quando a largura para de mudar. Antes era `uPlot`, mais leve, trocado pelo padrão único.
 
 **Rasterização de ícone — `github.com/srwiley/oksvg` + `github.com/srwiley/rasterx`.** Sem
 mudança — só usada pela ferramenta `src-go/cmd/icongen`, não pelo agente em produção (ver
