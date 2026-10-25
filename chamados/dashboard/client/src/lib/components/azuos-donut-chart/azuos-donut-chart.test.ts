@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
-import DonutChart, { configOf, percentOf } from './azuos-donut-chart.svelte';
+import DonutChart, { donutOption, percentOf } from './azuos-donut-chart.svelte';
 
 const slices = [
   { label: 'Em andamento', value: 10 },
@@ -21,13 +21,18 @@ describe('percentOf', () => {
   });
 });
 
-describe('configOf', () => {
+describe('donutOption', () => {
   // feliz
-  it('names every slice for the tooltip', () => {
-    expect(configOf(slices)).toEqual({
-      'Em andamento': { label: 'Em andamento' },
-      Concluído: { label: 'Concluído' },
-    });
+  it('names every slice for the tooltip, in a clean ring', () => {
+    const series = (
+      donutOption(slices, 'Status', { surface: '#ffffff' }).series as {
+        data: { name: string }[];
+        label: { show: boolean };
+      }[]
+    )[0]!;
+
+    expect(series.data.map((slice) => slice.name)).toEqual(['Em andamento', 'Concluído']);
+    expect(series.label.show).toBe(false);
   });
 });
 
