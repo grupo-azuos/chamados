@@ -1,6 +1,6 @@
 <script lang="ts" module>
-  import type { ChartConfig } from '$lib/utils/chart-config';
-  import type { TimePoint, TimeSeriesDef } from '$lib/utils/time-series';
+  import { resolveColor, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
+  import { dayLabel, hourLabel, type TimePoint, type TimeRow, type TimeSeriesDef } from '$lib/utils/time-series';
 
   /**
    * ÁREA — o volume de alguma coisa ao longo do tempo.
@@ -33,43 +33,66 @@
     };
   };
 
-  /** O contrato de cores e rótulos que a moldura e o balão leem. */
-  export function configOf(series: readonly TimeSeriesDef[]): ChartConfig {
-    return Object.fromEntries(
-      series.map((item) => [item.key, { label: item.label, color: item.color }]),
-    );
+  /**
+   * As áreas: grade só na horizontal, eixo do tempo com a régua curta (hora ou dia) e cada série
+   * na sua cor. Sobrepostas, deixam ver a de baixo; empilhadas, a cor cheia lê melhor. Em
+   * porcentagem, a escala trava em 0–100 com FOLGA em cima: sem ela, um pico de 100% encosta na
+   * borda e parece cortado.
+   */
+  export function areaOption(
+    rows: readonly TimeRow[],
+    series: readonly TimeSeriesDef[],
+    ui: AzuosAreaChartProps['ui'],
+    theme: Pick<ChartTheme, 'border' | 'muted'>,
+  ): ChartOption {
+    const formatTick = ui?.tick === 'hour' ? hourLabel : dayLabel;
+    const isStacked = ui?.layout === 'stack';
+
+    return {
+      grid: { top: 8, right: 8, bottom: 0, left: 0, containLabel: true },
+      tooltip: { trigger: 'axis' },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: rows.map((row) => formatTick(row.at)),
+        axisTick: { show: false },
+        axisLine: { show: false },
+        axisLabel: { color: theme.muted, hideOverlap: true },
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: { color: theme.muted },
+        splitLine: { lineStyle: { color: theme.border, opacity: 0.5 } },
+        ...(ui?.isPercent ? { min: 0, max: 105, interval: 25 } : {}),
+      },
+      series: series.map((item) => {
+        const color = resolveColor(item.color);
+
+        return {
+          type: 'line' as const,
+          name: item.label,
+          smooth: true,
+          symbol: 'none',
+          stack: isStacked ? 'total' : undefined,
+          lineStyle: { color, width: 2 },
+          itemStyle: { color },
+          areaStyle: { color, opacity: isStacked ? 0.85 : 0.18 },
+          data: rows.map((row) => Number(row[item.key] ?? 0)),
+        };
+      }),
+    };
   }
 </script>
 
 <script lang="ts">
-  import { AreaChart as LayerAreaChart } from 'layerchart';
-
   import ChartLegend from '$lib/components/azuos-chart-legend/azuos-chart-legend.svelte';
-  import ChartFrame from '$lib/components/azuos-chart-frame/azuos-chart-frame.svelte';
-  import ChartTooltip from '$lib/components/azuos-chart-tooltip/azuos-chart-tooltip.svelte';
+  import Echart from '$lib/components/azuos-echart/azuos-echart.svelte';
   import { cn } from '$lib/utils/cn';
-  import { dayLabel, hourLabel, toTimeRows } from '$lib/utils/time-series';
+  import { toTimeRows } from '$lib/utils/time-series';
 
   let { data, state: chartState, ui }: AzuosAreaChartProps = $props();
 
   const rows = $derived(toTimeRows(data.points, data.series));
-  const chartConfig = $derived(configOf(data.series));
-  const formatTick = $derived(ui?.tick === 'hour' ? hourLabel : dayLabel);
-  const keys = $derived(data.series.map((item) => item.key));
-
-  /**
-   * FOLGA EM CIMA, e mais folga ainda quando o dado é porcentagem.
-   *
-   * Numa escala travada em 0–100, uma leitura de 100% cai exatamente na borda de cima do
-   * desenho. Com pouca folga, o traço encosta no limite do quadro e o pico sai ACHATADO
-   * contra a borda: quem olha não distingue "bateu no teto" de "o gráfico foi cortado".
-   */
-  const padding = $derived({
-    bottom: 22,
-    left: 4,
-    right: 4,
-    top: ui?.isPercent ? 18 : 10,
-  });
 </script>
 
 {#if chartState?.isLoading}
@@ -82,34 +105,12 @@
   <div class={cn('flex flex-col gap-2', ui?.className)}>
     <ChartLegend data={{ series: data.series }} />
 
-    <div class={cn('w-full', ui?.heightClass ?? 'h-48')}>
-      <ChartFrame data={{ config: chartConfig }} ui={{ className: 'h-full w-full' }}>
-        <LayerAreaChart
-          data={rows}
-          x="at"
-          y={keys}
-          yDomain={ui?.isPercent ? [0, 100] : undefined}
-          seriesLayout={ui?.layout ?? 'overlap'}
-          series={data.series.map((item) => ({
-            key: item.key,
-            label: item.label,
-            value: item.key,
-            color: item.color,
-          }))}
-          axis="x"
-          rule={false}
-          {padding}
-          props={{
-            area: { fillOpacity: 0.18, line: { class: 'stroke-2' }, motion: 'tween' },
-            grid: { y: true, x: false },
-            xAxis: { format: formatTick, ticks: 4 },
-          }}
-        >
-          {#snippet tooltip()}
-            <ChartTooltip actions={{ onFormatLabel: (value) => formatTick(value as Date) }} />
-          {/snippet}
-        </LayerAreaChart>
-      </ChartFrame>
-    </div>
+    <Echart
+      data={{
+        option: (theme) => areaOption(rows, data.series, ui, theme),
+        description: data.series.map((item) => item.label).join(', '),
+      }}
+      ui={{ heightClass: ui?.heightClass ?? 'h-48' }}
+    />
   </div>
 {/if}

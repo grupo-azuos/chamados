@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
-import ColumnChart, { configOf, shorten } from './azuos-column-chart.svelte';
+import ColumnChart, { columnOption, shorten } from './azuos-column-chart.svelte';
 
 const slices = [
   { label: 'Ana', value: 12 },
@@ -27,10 +27,33 @@ describe('shorten', () => {
   });
 });
 
-describe('configOf', () => {
+const THEME = { foreground: '#111111', muted: '#666666' };
+
+describe('columnOption', () => {
   // feliz
   it('names the series with what the screen called it', () => {
-    expect(configOf('Chamados')).toEqual({ value: { label: 'Chamados' } });
+    const option = columnOption({ slices, seriesLabel: 'Chamados' }, undefined, THEME);
+
+    expect((option.series as { name: string }[])[0]?.name).toBe('Chamados');
+  });
+
+  /* Deitado, o maior fica EM CIMA: é a ordem em que se lê um ranking. */
+  it('puts the categories on the side when lying down, first on top', () => {
+    const option = columnOption(
+      { slices, seriesLabel: 'Chamados' },
+      { orientation: 'horizontal' },
+      THEME,
+    );
+
+    expect(option.yAxis).toMatchObject({ type: 'category', inverse: true, data: ['Ana', 'Bia'] });
+  });
+
+  /* Série no tempo: uma cor só, porque cada barra é a mesma medida. */
+  it('paints every bar with one colour when asked', () => {
+    const option = columnOption({ slices, seriesLabel: 'Chamados' }, { color: '#123456' }, THEME);
+    const bars = (option.series as { data: { itemStyle: { color: string } }[] }[])[0]!.data;
+
+    expect(new Set(bars.map((bar) => bar.itemStyle.color))).toEqual(new Set(['#123456']));
   });
 });
 

@@ -1,12 +1,12 @@
 <script lang="ts" module>
-  import type { ChartConfig } from '$lib/utils/chart-config';
-  import type { ChartSlice } from '$lib/utils/chart-slice';
+  import { colorOfSlice, type ChartSlice } from '$lib/utils/chart-slice';
+  import { formatCount, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
   /**
    * Rosca — para mostrar como um todo se divide (situação, tipo de problema, departamento).
    *
-   * O anel vem do LayerChart (o mesmo gráfico do shadcn-svelte); o resto é o que o projeto exige e a
-   * biblioteca não traz:
+   * O anel vem do ECharts (pela moldura `AzuosEchart`), limpo — sem número escrito em cima da fatia;
+   * o resto é o que o projeto exige e a biblioteca não traz:
    *
    *  1. **Legenda ao lado, com o nome escrito**, o valor e a porcentagem. Cor sozinha não é
    *     informação para quem não distingue cor (ver `chart-slice`).
@@ -26,9 +26,43 @@
     actions?: { onSelect?: (label: string) => void };
   };
 
-  /** O contrato de rótulos que o balão lê — uma entrada por fatia. */
-  export function configOf(slices: readonly ChartSlice[]): ChartConfig {
-    return Object.fromEntries(slices.map((slice) => [slice.label, { label: slice.label }]));
+  /**
+   * O anel: fatias separadas por um fio da cor do cartão (sem ele, dois tons próximos encostam e
+   * viram uma fatia só), sem número escrito em cima — valor e porcentagem estão na legenda e no balão.
+   */
+  export function donutOption(
+    slices: readonly ChartSlice[],
+    seriesLabel: string,
+    theme: Pick<ChartTheme, 'surface'>,
+  ): ChartOption {
+    const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+
+    return {
+      tooltip: {
+        trigger: 'item',
+        formatter: (params: unknown) => {
+          const { name, value } = params as { name: string; value: number };
+
+          return `<b>${name}</b><br/>${seriesLabel}: ${formatCount(value)} (${percentOf(value, total)}%)`;
+        },
+      },
+      series: [
+        {
+          type: 'pie',
+          name: seriesLabel,
+          radius: ['62%', '100%'],
+          padAngle: 1,
+          itemStyle: { borderColor: theme.surface, borderWidth: 2 },
+          label: { show: false },
+          emphasis: { scaleSize: 4 },
+          data: slices.map((slice, index) => ({
+            name: slice.label,
+            value: slice.value,
+            itemStyle: { color: colorOfSlice(slice.label, index) },
+          })),
+        },
+      ],
+    };
   }
 
   /** A porcentagem inteira de uma fatia. Total zero não vira divisão por zero. */
@@ -38,11 +72,7 @@
 </script>
 
 <script lang="ts">
-  import { PieChart } from 'layerchart';
-
-  import ChartFrame from '$lib/components/azuos-chart-frame/azuos-chart-frame.svelte';
-  import ChartTooltip from '$lib/components/azuos-chart-tooltip/azuos-chart-tooltip.svelte';
-  import { colorOfSlice } from '$lib/utils/chart-slice';
+  import Echart from '$lib/components/azuos-echart/azuos-echart.svelte';
   import { cn } from '$lib/utils/cn';
 
   /* O prop precisa de outro nome aqui dentro: um binding local chamado `state` faz o
@@ -51,7 +81,6 @@
 
   const total = $derived(data.slices.reduce((sum, slice) => sum + slice.value, 0));
   const colors = $derived(data.slices.map((slice, index) => colorOfSlice(slice.label, index)));
-  const chartConfig = $derived(configOf(data.slices));
 </script>
 
 {#if chartState?.isLoading}
@@ -67,25 +96,11 @@
     <!-- Quadrado próprio para a rosca: sem ele, a legenda ao lado empurra o centro do anel
          para fora do meio visual do cartão, e o total sobreposto fica desalinhado. -->
     <div class="relative aspect-square h-40 shrink-0 sm:h-full">
-      <div class="h-full w-full" role="img" aria-label={data.seriesLabel}>
-        <ChartFrame data={{ config: chartConfig }} ui={{ className: 'aspect-square h-full w-full' }}>
-          <PieChart
-            data={data.slices}
-            key="label"
-            value="value"
-            cRange={colors}
-            innerRadius={-28}
-            padAngle={0.02}
-            cornerRadius={3}
-            onArcClick={(_event, detail) => actions?.onSelect?.((detail.data as ChartSlice).label)}
-            props={{ arc: { stroke: 'none' } }}
-          >
-            {#snippet tooltip()}
-              <ChartTooltip ui={{ isLabelHidden: true }} />
-            {/snippet}
-          </PieChart>
-        </ChartFrame>
-      </div>
+      <Echart
+        data={{ option: (theme) => donutOption(data.slices, data.seriesLabel, theme), description: data.seriesLabel }}
+        ui={{ heightClass: 'h-full' }}
+        actions={{ onSelect: actions?.onSelect ? (selection) => actions?.onSelect?.(selection.name) : undefined }}
+      />
 
       <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
         <span class="text-foreground text-xl leading-tight font-bold">

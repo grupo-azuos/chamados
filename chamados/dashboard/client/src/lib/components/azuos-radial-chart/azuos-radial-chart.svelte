@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import type { ChartConfig } from '$lib/utils/chart-config';
+  import { resolveColor, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
   /**
    * MEDIDOR RADIAL — um número só, contra o quanto ele poderia ser.
@@ -35,7 +35,6 @@
     };
   };
 
-  const VALUE_KEY = 'value';
 
   /**
    * A fração preenchida, entre 0 e 1.
@@ -48,12 +47,38 @@
 
     return Math.min(1, Math.max(0, value / max));
   }
+
+  /**
+   * O arco: começa no topo e anda no sentido do relógio, com a TRILHA de trás na cor apagada do
+   * tema — é ela que faz o arco ser lido como "quanto de quanto". A escala é fixa em 0–1.
+   */
+  export function radialOption(fraction: number, color: string, theme: Pick<ChartTheme, 'track'>): ChartOption {
+    return {
+      series: [
+        {
+          type: 'gauge',
+          startAngle: 90,
+          endAngle: -270,
+          min: 0,
+          max: 1,
+          radius: '100%',
+          pointer: { show: false },
+          progress: { show: true, roundCap: true, width: 12, itemStyle: { color: resolveColor(color) } },
+          axisLine: { roundCap: true, lineStyle: { width: 12, color: [[1, theme.track]] } },
+          axisTick: { show: false },
+          splitLine: { show: false },
+          axisLabel: { show: false },
+          detail: { show: false },
+          title: { show: false },
+          data: [{ value: fraction }],
+        },
+      ],
+    };
+  }
 </script>
 
 <script lang="ts">
-  import { ArcChart } from 'layerchart';
-
-  import ChartFrame from '$lib/components/azuos-chart-frame/azuos-chart-frame.svelte';
+  import Echart from '$lib/components/azuos-echart/azuos-echart.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, state: chartState, ui }: AzuosRadialChartProps = $props();
@@ -61,7 +86,6 @@
   const max = $derived(data.max ?? 100);
   const color = $derived(ui?.color ?? 'var(--chart-1)');
   const fraction = $derived(fractionOf(data.value, max));
-  const chartConfig = $derived<ChartConfig>({ [VALUE_KEY]: { label: data.label, color } });
 </script>
 
 {#if chartState?.isLoading}
@@ -70,25 +94,14 @@
   ></div>
 {:else}
   <div class={cn('flex w-full flex-col items-center', ui?.className)}>
-    <div
-      class={cn('relative w-full', ui?.heightClass ?? 'h-40')}
-      role="img"
-      aria-label="{data.label}: {data.display ?? data.value} de {max}"
-    >
-      <ChartFrame data={{ config: chartConfig }} ui={{ className: 'h-full w-full' }}>
-        <ArcChart
-          data={[{ key: VALUE_KEY, label: data.label, value: fraction }]}
-          maxValue={1}
-          range={[0, 360]}
-          innerRadius={-16}
-          outerRadius={-2}
-          cornerRadius={8}
-          trackInnerRadius={-16}
-          trackOuterRadius={-2}
-          tooltipContext={false}
-          props={{ arc: { fill: color, track: { class: 'fill-muted' } } }}
-        />
-      </ChartFrame>
+    <div class={cn('relative w-full', ui?.heightClass ?? 'h-40')}>
+      <Echart
+        data={{
+          option: (theme) => radialOption(fraction, color, theme),
+          description: `${data.label}: ${data.display ?? data.value} de ${max}`,
+        }}
+        ui={{ heightClass: 'h-full' }}
+      />
 
       <!-- No MEIO do anel vai só o que cabe no buraco: o número e o que ele mede.
            `px-[20%]` é a folga que impede o rótulo de encostar no arco. -->
