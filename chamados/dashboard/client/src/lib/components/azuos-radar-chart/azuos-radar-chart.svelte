@@ -1,6 +1,6 @@
 <script lang="ts" module>
-  import type { ChartConfig } from '$lib/utils/chart-config';
   import type { ChartSlice } from '$lib/utils/chart-slice';
+  import { formatCount, resolveColor, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
   /**
    * RADAR — o PERFIL de um conjunto de categorias, de uma vez só.
@@ -40,7 +40,6 @@
     actions?: { onSelect?: (label: string) => void };
   };
 
-  const VALUE_KEY = 'value';
 
   /**
    * Quantas categorias o radar comporta antes de os nomes se encavalarem em volta.
@@ -57,17 +56,47 @@
     return `${label.slice(0, max - 1).trimEnd()}…`;
   }
 
-  /** O contrato de cores e rótulos que a moldura e o balão leem. */
-  export function configOf(seriesLabel: string, color: string): ChartConfig {
-    return { [VALUE_KEY]: { label: seriesLabel, color } };
+  /** A teia: grade nos tons do tema, o nome de cada categoria no próprio eixo e a forma preenchida. */
+  export function radarOption(
+    slices: readonly ChartSlice[],
+    seriesLabel: string,
+    color: string,
+    ui: { axisLabelMax: number },
+    theme: Pick<ChartTheme, 'border' | 'muted'>,
+  ): ChartOption {
+    const top = Math.max(...slices.map((slice) => slice.value), 1);
+    const stroke = resolveColor(color);
+
+    return {
+      tooltip: {
+        trigger: 'item',
+        formatter: () => slices.map((slice) => `${slice.label}: ${formatCount(slice.value)}`).join('<br/>'),
+      },
+      radar: {
+        radius: '66%',
+        indicator: slices.map((slice) => ({ name: shortenAxis(slice.label, ui.axisLabelMax), max: top })),
+        axisName: { color: theme.muted, fontSize: 11 },
+        splitLine: { lineStyle: { color: theme.border } },
+        splitArea: { show: false },
+        axisLine: { lineStyle: { color: theme.border } },
+      },
+      series: [
+        {
+          type: 'radar',
+          name: seriesLabel,
+          symbolSize: 6,
+          lineStyle: { color: stroke, width: 2 },
+          itemStyle: { color: stroke },
+          areaStyle: { color: stroke, opacity: 0.32 },
+          data: [{ name: seriesLabel, value: slices.map((slice) => slice.value) }],
+        },
+      ],
+    };
   }
 </script>
 
 <script lang="ts">
-  import { AreaChart } from 'layerchart';
-
-  import ChartFrame from '$lib/components/azuos-chart-frame/azuos-chart-frame.svelte';
-  import ChartTooltip from '$lib/components/azuos-chart-tooltip/azuos-chart-tooltip.svelte';
+  import Echart from '$lib/components/azuos-echart/azuos-echart.svelte';
   import { useMediaQuery, XL_BREAKPOINT } from '$lib/hooks/use-media-query/use-media-query.svelte';
   import { cn } from '$lib/utils/cn';
 
@@ -77,15 +106,8 @@
 
   const isMobile = useMediaQuery(XL_BREAKPOINT);
   const color = $derived(ui?.color ?? 'var(--chart-1)');
-  const chartConfig = $derived(configOf(data.seriesLabel, color));
-
-  /* No celular, os textos dos eixos radiais vazariam a largura estreita do cartão;
-     com mais respiro lateral e nome mais enxuto, a teia cabe inteira sem cortar. */
-  const padding = $derived(
-    isMobile.current
-      ? { top: 32, bottom: 32, left: 44, right: 44 }
-      : { top: 28, bottom: 28, left: 28, right: 28 },
-  );
+  /* No celular, nome mais enxuto em volta da teia: o cartão é estreito e o texto vazaria. */
+  const axisLabelMax = $derived(isMobile.current ? 11 : 16);
 </script>
 
 {#if chartState?.isLoading}
@@ -107,42 +129,15 @@
        (`position: absolute`) e tem botões focáveis. Sem ancestral posicionado, tabular até
        eles rola a página para um lugar sem relação nenhuma com o gráfico. -->
   <div class={cn('relative flex w-full flex-col', ui?.className)}>
-    <!-- `role="img"` some com o conteúdo para o leitor de tela — é o que se quer de um
-         desenho. Por isso a lista abaixo fica FORA desta caixa, e não dentro dela. -->
-    <div
-      class={cn('w-full overflow-hidden', ui?.heightClass ?? 'h-72')}
-      role="img"
-      aria-label={data.seriesLabel}
-    >
-      <ChartFrame data={{ config: chartConfig }} ui={{ className: 'h-full w-full' }}>
-        <AreaChart
-          data={data.slices}
-          x="label"
-          y={VALUE_KEY}
-          radial
-          series={[
-            { key: VALUE_KEY, label: data.seriesLabel, value: VALUE_KEY, color: 'var(--color-value)' },
-          ]}
-          axis="x"
-          rule={false}
-          grid={{ xTicks: data.slices.length, radialY: 'circle' }}
-          points
-          {padding}
-          props={{
-            area: { fillOpacity: 0.32, line: { class: 'stroke-2' }, motion: 'tween' },
-            points: { r: 3 },
-            xAxis: {
-              format: (value: unknown) =>
-                shortenAxis(String(value), isMobile.current ? 11 : 16),
-            },
-          }}
-        >
-          {#snippet tooltip()}
-            <ChartTooltip />
-          {/snippet}
-        </AreaChart>
-      </ChartFrame>
-    </div>
+    <!-- O desenho é `role="img"` (a moldura): some com o conteúdo para o leitor de tela. Por isso
+         a lista abaixo fica FORA dele. -->
+    <Echart
+      data={{
+        option: (theme) => radarOption(data.slices, data.seriesLabel, color, { axisLabelMax }, theme),
+        description: data.seriesLabel,
+      }}
+      ui={{ heightClass: ui?.heightClass ?? 'h-72' }}
+    />
 
     <!-- O MESMO conteúdo do desenho, em texto: num radar ninguém mede o valor exato a olho,
          e quem usa leitor de tela ou só o teclado não tem desenho nenhum para olhar. -->

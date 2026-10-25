@@ -42,7 +42,7 @@ Catálogo genérico (nome-alvo; o backlog de renomeação está em `design-syste
 | `azuos-stat-card` + `azuos-stat-card-grid` | Número grande de painel |
 | `azuos-progress-bar` | Andamento |
 | `azuos-person-avatar` | Iniciais / foto |
-| `azuos-donut-chart` / `azuos-column-chart` / `azuos-area-chart` / `azuos-radar-chart` | Gráficos (clique vira filtro) |
+| `azuos-echart` (a moldura de todos: carregando, vazio, tema, tamanho, rolagem) · `azuos-column-chart` (em pé ou deitada) · `azuos-stacked-bar-chart` · `azuos-donut-chart` · `azuos-area-chart` · `azuos-radar-chart` · `azuos-radial-chart` · `azuos-treemap-chart` · `azuos-heatmap-chart` · `azuos-calendar-chart` · `azuos-sankey-chart` · `azuos-chart-value-list` | Gráficos, todos no ECharts (clique vira filtro) |
 | `azuos-page-header` | Topo de toda tela |
 | `azuos-empty-state` / `azuos-error-state` | Vazio e erro |
 | `azuos-app-shell` | A casca com menu (não mexa sem motivo) |

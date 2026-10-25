@@ -69,7 +69,7 @@ if (!window.matchMedia) {
 }
 
 /**
- * O jsdom não implementa `ResizeObserver`. Os gráficos (`ColumnChart`, `DonutChart`) se medem
+ * O jsdom não implementa `ResizeObserver`. A moldura dos gráficos (`AzuosEchart`) se mede
  * com ele para saber onde desenhar — sem o stub, o teste quebra antes de renderizar qualquer
  * coisa. O observador não dispara: no jsdom todo elemento tem tamanho zero de qualquer forma,
  * e o que os testes conferem é o que foi desenhado e o que é anunciado ao leitor de tela, não

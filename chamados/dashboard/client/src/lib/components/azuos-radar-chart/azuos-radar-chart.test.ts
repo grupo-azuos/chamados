@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import RadarChart, { configOf, RADAR_MAX_SLICES, shortenAxis } from './azuos-radar-chart.svelte';
+import RadarChart, { radarOption, RADAR_MAX_SLICES, shortenAxis } from './azuos-radar-chart.svelte';
 
 const slices = [
   { label: 'Impressora', value: 29 },
@@ -34,12 +34,22 @@ describe('shortenAxis', () => {
   });
 });
 
-describe('configOf', () => {
+describe('radarOption', () => {
   // feliz
   it('carries the name of the series and the colour of the web', () => {
-    expect(configOf('Chamados', 'var(--chart-1)')).toEqual({
-      value: { label: 'Chamados', color: 'var(--chart-1)' },
-    });
+    const option = radarOption(
+      [{ label: 'Rede', value: 3 }],
+      'Chamados',
+      '#123456',
+      { axisLabelMax: 16 },
+      {
+        border: '#dddddd',
+        muted: '#666666',
+      },
+    );
+    const series = (option.series as { name: string; lineStyle: { color: string } }[])[0]!;
+
+    expect(series).toMatchObject({ name: 'Chamados', lineStyle: { color: '#123456' } });
   });
 });
 

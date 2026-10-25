@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 
-import AreaChart, { configOf } from './azuos-area-chart.svelte';
+import { toTimeRows } from '$lib/utils/time-series';
+
+import AreaChart, { areaOption } from './azuos-area-chart.svelte';
 
 const series = [
   { key: 'opened', label: 'Abertos', color: 'var(--chart-1)' },
@@ -13,18 +15,29 @@ const points = [
   { at: '2026-09-23T00:00:00.000Z', values: { opened: 1, resolved: 5 } },
 ];
 
-describe('configOf', () => {
+const THEME = { border: '#dddddd', muted: '#666666' };
+
+describe('areaOption', () => {
   // feliz
-  it('carries the name and the colour of every series', () => {
-    expect(configOf(series)).toEqual({
-      opened: { label: 'Abertos', color: 'var(--chart-1)' },
-      resolved: { label: 'Resolvidos', color: 'var(--chart-4)' },
-    });
+  it('carries the name of every series, in the order given', () => {
+    const option = areaOption(toTimeRows(points, series), series, undefined, THEME);
+
+    expect((option.series as { name: string }[]).map((item) => item.name)).toEqual([
+      'Abertos',
+      'Resolvidos',
+    ]);
+  });
+
+  /* Porcentagem trava em 0–100 com folga: um pico de 100% não pode parecer cortado na borda. */
+  it('locks the scale for a percentage, with room above 100', () => {
+    const option = areaOption(toTimeRows(points, series), series, { isPercent: true }, THEME);
+
+    expect(option.yAxis).toMatchObject({ min: 0, max: 105 });
   });
 
   // triste
-  it('has nothing to carry without series (edge case)', () => {
-    expect(configOf([])).toEqual({});
+  it('has nothing to draw without series (edge case)', () => {
+    expect(areaOption([], [], undefined, THEME).series).toEqual([]);
   });
 });
 
