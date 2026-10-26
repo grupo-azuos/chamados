@@ -67,6 +67,7 @@ describe('daily GitHub PRs', () => {
     const date = new Date().toLocaleDateString('sv-SE');
     const appointment = {
       id: 1,
+      kind: 'appointment' as const,
       title: 'Deploy',
       date,
       startTime: '10:00',

@@ -31,6 +31,7 @@ function renderView(
 
   const mockEvent = {
     id: 1,
+    kind: 'appointment' as const,
     title: 'Deploy da v1.4',
     note: null,
     projectId: null,
@@ -123,6 +124,25 @@ function renderView(
 
   return actions;
 }
+
+/* Um registro: algo feito, só com a hora. */
+const recordEvent = {
+  id: 9,
+  kind: 'record' as const,
+  title: 'Sistema enviado para revisão',
+  note: null,
+  projectId: null,
+  projectName: null,
+  date: '2026-10-06',
+  startTime: '16:00',
+  endTime: null,
+  color: 'rose' as const,
+  category: 'review' as const,
+  createdAt: '2026-10-01T00:00:00Z',
+  createdById: 'u-ana',
+  createdByEmail: 'ana@empresa.com.br',
+  createdByName: 'Ana Lima',
+};
 
 describe('AzuosWeekScheduleGrid', () => {
   it('offers project, author and type filters and a clear action', async () => {
@@ -338,6 +358,7 @@ describe('AzuosWeekScheduleGrid', () => {
   it('keeps every monthly event accessible, including the fourth event', async () => {
     const events = Array.from({ length: 4 }, (_, index) => ({
       id: index + 1,
+      kind: 'appointment' as const,
       title: `Agendamento ${index + 1}`,
       note: null,
       projectId: null,
@@ -375,6 +396,7 @@ describe('AzuosWeekScheduleGrid', () => {
   it('keeps events outside business hours accessible', async () => {
     const event = {
       id: 8,
+      kind: 'appointment' as const,
       title: 'Deploy noturno',
       note: null,
       projectId: null,
@@ -481,5 +503,53 @@ describe('AzuosWeekScheduleGrid', () => {
     const retryButton = screen.getByRole('button', { name: /tentar de novo/i });
     await userEvent.click(retryButton);
     expect(actions.onRetry).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('shows a record as a single moment, with no end time', async () => {
+    const record = recordEvent;
+    const actions = renderView({
+      data: {
+        events: [record],
+        days: [
+          {
+            dateString: '2026-10-06',
+            dayNumber: 6,
+            weekdayShort: 'Ter',
+            isToday: true,
+            isCurrentMonth: true,
+            events: [record],
+          },
+        ],
+      },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /Sistema enviado para revisão/ }));
+    expect(actions.onSelectEvent).toHaveBeenCalledWith(record);
+    expect(screen.queryByText(/16:00 –/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Agendamentos fora do horário da grade')).not.toBeInTheDocument();
+  });
+
+  // triste
+  it('lists a record made after the grid hours outside the grid instead of losing it', () => {
+    const record = { ...recordEvent, id: 10, title: 'Deploy enviado à noite', startTime: '18:00' };
+    renderView({
+      data: {
+        events: [record],
+        days: [
+          {
+            dateString: '2026-10-06',
+            dayNumber: 6,
+            weekdayShort: 'Ter',
+            isToday: true,
+            isCurrentMonth: true,
+            events: [record],
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText('Agendamentos fora do horário da grade')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /18:00 · Deploy enviado à noite/ })).toBeInTheDocument();
   });
 });

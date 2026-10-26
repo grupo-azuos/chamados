@@ -40,6 +40,7 @@ function resolveInitialScheduleValues(
 ): SoftwareScheduleForm {
   if (!event) {
     return {
+      kind: 'appointment',
       title: '',
       category: 'other',
       color: 'blue',
@@ -52,12 +53,14 @@ function resolveInitialScheduleValues(
   }
 
   return {
+    kind: event.kind,
     title: event.title,
     category: event.category,
     color: event.color,
     date: event.date,
     startTime: event.startTime,
-    endTime: event.endTime,
+    /* O registro não tem fim; se a pessoa trocar para compromisso, ele começa com uma hora. */
+    endTime: event.endTime ?? oneHourAfter(event.startTime),
     projectId: event.projectId,
     note: event.note ?? '',
   };
@@ -72,17 +75,23 @@ export function oneHourAfter(time: string): string {
   return `${String(hours + 1).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-function saveScheduleEvent(event: SoftwareScheduleEvent | null, values: SoftwareScheduleForm) {
-  const payload = {
+/** O que vai para a API. O registro marca só o momento: o fim que estava no formulário fica. */
+export function toScheduleEventPayload(values: SoftwareScheduleForm) {
+  return {
+    kind: values.kind,
     title: values.title,
     category: values.category,
     color: values.color,
     date: values.date,
     startTime: values.startTime,
-    endTime: values.endTime,
+    endTime: values.kind === 'record' ? null : values.endTime,
     projectId: values.projectId ? Number(values.projectId) : null,
     note: values.note ? values.note.trim() : null,
   };
+}
+
+function saveScheduleEvent(event: SoftwareScheduleEvent | null, values: SoftwareScheduleForm) {
+  const payload = toScheduleEventPayload(values);
 
   if (event) {
     return softwareScheduleApi.update(event.id, payload);
@@ -137,12 +146,25 @@ export function useSoftwareScheduleFormModel({
       return {
         mode: (isEdit ? 'edit' : 'create') as 'create' | 'edit',
         fields: {
+          kind: toFieldState(values.current.kind, fieldMeta.current.kind, isSubmitted.current),
           title: toFieldState(values.current.title, fieldMeta.current.title, isSubmitted.current),
-          category: toFieldState(values.current.category, fieldMeta.current.category, isSubmitted.current),
+          category: toFieldState(
+            values.current.category,
+            fieldMeta.current.category,
+            isSubmitted.current,
+          ),
           color: toFieldState(values.current.color, fieldMeta.current.color, isSubmitted.current),
           date: toFieldState(values.current.date, fieldMeta.current.date, isSubmitted.current),
-          startTime: toFieldState(values.current.startTime, fieldMeta.current.startTime, isSubmitted.current),
-          endTime: toFieldState(values.current.endTime, fieldMeta.current.endTime, isSubmitted.current),
+          startTime: toFieldState(
+            values.current.startTime,
+            fieldMeta.current.startTime,
+            isSubmitted.current,
+          ),
+          endTime: toFieldState(
+            values.current.endTime,
+            fieldMeta.current.endTime,
+            isSubmitted.current,
+          ),
           projectId: toFieldState(
             values.current.projectId ? String(values.current.projectId) : '',
             fieldMeta.current.projectId,

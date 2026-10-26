@@ -7,6 +7,7 @@
   import { type StatusBadgeTone } from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { type SoftwareScheduleEvent } from '@template/shared/schemas/software-schedule.schema';
   import { type SoftwareTimelineEvent } from '@template/shared/schemas/software-timeline.schema';
+  import { scheduleBlockMinutes } from '$lib/utils/github-calendar-layout.util';
 
   export type AzuosWeekScheduleGridProps = {
     data: {
@@ -52,11 +53,10 @@
 
   /** Calcula a posição em pixels do bloco na grade de 08:00 às 18:00 (56px por hora). */
   function getEventStyle(event: SoftwareScheduleEvent): string {
-    const [startH, startM] = event.startTime.split(':').map(Number);
-    const [endH, endM] = event.endTime.split(':').map(Number);
+    const block = scheduleBlockMinutes(event);
 
-    const startMinutes = Math.max(0, (startH ?? 8) * 60 + (startM ?? 0) - 480);
-    const endMinutes = Math.min(600, (endH ?? 9) * 60 + (endM ?? 0) - 480);
+    const startMinutes = Math.max(0, block.start - 480);
+    const endMinutes = Math.min(600, block.end - 480);
     const durationMinutes = Math.max(5, endMinutes - startMinutes);
 
     const top = Math.round((startMinutes / 60) * 56);
@@ -106,6 +106,7 @@
 <script lang="ts">
   import ChevronLeft from '@lucide/svelte/icons/chevron-left';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import CircleCheckBig from '@lucide/svelte/icons/circle-check-big';
   import GitMerge from '@lucide/svelte/icons/git-merge';
   import GitPullRequest from '@lucide/svelte/icons/git-pull-request';
   import LifeBuoy from '@lucide/svelte/icons/life-buoy';
@@ -118,10 +119,13 @@
   import GithubCalendarEvent from '../azuos-github-calendar-event/azuos-github-calendar-event.svelte';
   import {
     githubHourGroups,
+    isOnScheduleGrid,
+    isOutsideScheduleGrid,
     isWithinScheduleHours,
     overlapsGithubCard,
     GITHUB_HOUR_CARD_HEIGHT,
   } from '$lib/utils/github-calendar-layout.util';
+  import { formatScheduleEventTime } from '@template/shared/domain/software-project.util';
 
   let { data, state: gridState, actions }: AzuosWeekScheduleGridProps = $props();
   let newAppointmentTooltipOpen = $state(false);
@@ -629,6 +633,10 @@
                           ]}"
                           onclick={() => actions.onSelectEvent(event)}
                         >
+                          {#if event.kind === 'record'}<CircleCheckBig
+                              class="inline size-3 align-[-2px]"
+                              aria-label="Registro"
+                            />{/if}
                           {event.startTime}
                           {event.title}
                         </button>
@@ -637,10 +645,10 @@
                       class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
                       ><span class="font-semibold">{event.title}</span>
                       <span
-                        >{event.date.split('-').reverse().join('/')} · {event.startTime} – {event.endTime}</span
+                        >{event.date.split('-').reverse().join('/')} · {formatScheduleEventTime(event)}</span
                       >
                       {#if event.projectName}<span>Projeto: {event.projectName}</span>{/if}
-                      <span>Marcado por {event.createdByName}</span>
+                      <span>{event.kind === 'record' ? 'Registrado' : 'Marcado'} por {event.createdByName}</span>
                       {#if event.note}<span>{event.note}</span>{/if}</Tooltip.Content
                     ></Tooltip.Root
                   >
@@ -742,9 +750,7 @@
 
             {#each data.days as day (day.dateString)}
               {@const prGroups = githubHourGroups(day.githubEvents ?? [])}
-              {@const timedEvents = day.events.filter(
-                (event) => event.startTime < '18:00' && event.endTime > '08:00',
-              )}
+              {@const timedEvents = day.events.filter(isOnScheduleGrid)}
               <div
                 class="relative border-l border-border {day.weekdayShort === 'Sáb' ||
                 day.weekdayShort === 'Dom'
@@ -773,9 +779,10 @@
                         <button
                           {...props}
                           type="button"
-                          class="absolute inset-x-1 overflow-hidden rounded-box border p-2 text-left shadow-xs transition {EVENT_SURFACE[
-                            toneOf(event)
-                          ]}"
+                          class="absolute inset-x-1 overflow-hidden rounded-box border text-left shadow-xs transition {event.kind ===
+                          'record'
+                            ? 'px-2 py-1'
+                            : 'p-2'} {EVENT_SURFACE[toneOf(event)]}"
                           style="{getEventStyle(event)}{prGroups.some((group) =>
                             overlapsGithubCard(event, group.top),
                           )
@@ -783,13 +790,24 @@
                             : ''}"
                           onclick={() => actions.onSelectEvent(event)}
                         >
+                          {#if event.kind === 'record'}
+                            <!-- O registro é um momento: uma linha só, com o horário na frente. -->
+                            <p
+                              class="flex items-center gap-1 truncate text-xs font-semibold text-foreground"
+                            >
+                              <CircleCheckBig class="size-3 shrink-0" aria-label="Registro" />
+                              <span class="font-normal text-muted-foreground">{event.startTime}</span>
+                              <span class="truncate">{event.title}</span>
+                            </p>
+                          {:else}
                           <p class="truncate text-xs font-semibold text-foreground">
                             {event.title}
                           </p>
                           <p class="truncate text-xs text-muted-foreground">
-                            {event.startTime} – {event.endTime}
+                            {formatScheduleEventTime(event)}
                           </p>
-                          {#if event.projectName}
+                          {/if}
+                          {#if event.kind !== 'record' && event.projectName}
                             <p class="truncate text-xs text-muted-foreground opacity-80">
                               {event.projectName}
                             </p>
@@ -800,10 +818,10 @@
                       class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
                       ><span class="font-semibold">{event.title}</span>
                       <span
-                        >{event.date.split('-').reverse().join('/')} · {event.startTime} – {event.endTime}</span
+                        >{event.date.split('-').reverse().join('/')} · {formatScheduleEventTime(event)}</span
                       >
                       {#if event.projectName}<span>Projeto: {event.projectName}</span>{/if}
-                      <span>Marcado por {event.createdByName}</span>
+                      <span>{event.kind === 'record' ? 'Registrado' : 'Marcado'} por {event.createdByName}</span>
                       {#if event.note}<span>{event.note}</span>{/if}</Tooltip.Content
                     ></Tooltip.Root
                   >
@@ -886,10 +904,10 @@
           </div>
         </div>
       </div>
-      {#if data.events.some((event) => event.startTime < '08:00' || event.endTime > '18:00')}
+      {#if data.events.some(isOutsideScheduleGrid)}
         <div class="flex flex-col gap-2 rounded-surface border border-border bg-card p-4">
           <h2 class="text-sm font-semibold">Agendamentos fora do horário da grade</h2>
-          {#each data.events.filter((event) => event.startTime < '08:00' || event.endTime > '18:00') as event (event.id)}
+          {#each data.events.filter(isOutsideScheduleGrid) as event (event.id)}
             <Tooltip.Root
               ><Tooltip.Trigger
                 >{#snippet child({ props })}
@@ -899,7 +917,7 @@
                     class="rounded-control border border-border p-2 text-left text-xs hover:bg-muted"
                     onclick={() => actions.onSelectEvent(event)}
                   >
-                    {event.date.split('-').reverse().join('/')} · {event.startTime} – {event.endTime}
+                    {event.date.split('-').reverse().join('/')} · {formatScheduleEventTime(event)}
                     · {event.title}
                   </button>
                 {/snippet}</Tooltip.Trigger
@@ -907,10 +925,10 @@
                 class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
                 ><span class="font-semibold">{event.title}</span>
                 <span
-                  >{event.date.split('-').reverse().join('/')} · {event.startTime} – {event.endTime}</span
+                  >{event.date.split('-').reverse().join('/')} · {formatScheduleEventTime(event)}</span
                 >
                 {#if event.projectName}<span>Projeto: {event.projectName}</span>{/if}
-                <span>Marcado por {event.createdByName}</span>
+                <span>{event.kind === 'record' ? 'Registrado' : 'Marcado'} por {event.createdByName}</span>
                 {#if event.note}<span>{event.note}</span>{/if}</Tooltip.Content
               ></Tooltip.Root
             >

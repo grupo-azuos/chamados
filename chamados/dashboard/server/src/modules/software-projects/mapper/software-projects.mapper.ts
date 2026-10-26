@@ -169,6 +169,7 @@ export function toSoftwareScheduleEvent(
     id: row.id,
     projectId: row.projectId,
     projectName: projectName ?? null,
+    kind: row.kind,
     title: row.title,
     category: row.category,
     color: row.color,

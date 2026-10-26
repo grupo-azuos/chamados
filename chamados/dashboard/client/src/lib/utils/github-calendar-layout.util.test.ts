@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { SoftwareTimelineEvent } from '@template/shared/schemas/software-timeline.schema';
-import { githubHourGroups, overlapsGithubCard } from './github-calendar-layout.util';
+import {
+  githubHourGroups,
+  isOnScheduleGrid,
+  isOutsideScheduleGrid,
+  overlapsGithubCard,
+  scheduleBlockMinutes,
+} from './github-calendar-layout.util';
 
 function pr(id: number, hour: number, minute: number): SoftwareTimelineEvent {
   const date = new Date(2026, 9, 9, hour, minute);
@@ -50,5 +56,35 @@ describe('GitHub hourly calendar placement', () => {
     expect(githubHourGroups([pullRequest, issue])).toEqual([
       { top: 56, events: [issue, pullRequest] },
     ]);
+  });
+});
+
+describe('schedule records on the grid', () => {
+  // feliz
+  it('gives a record the minimum block height at its moment', () => {
+    expect(scheduleBlockMinutes({ startTime: '16:00', endTime: null })).toEqual({
+      start: 960,
+      end: 990,
+    });
+    expect(scheduleBlockMinutes({ startTime: '16:00', endTime: '17:00' })).toEqual({
+      start: 960,
+      end: 1020,
+    });
+  });
+
+  // feliz
+  it('puts a record inside the hours on the grid only', () => {
+    const record = { startTime: '08:00', endTime: null };
+    expect(isOnScheduleGrid(record)).toBe(true);
+    expect(isOutsideScheduleGrid(record)).toBe(false);
+  });
+
+  // triste
+  /* Às 18:00 em ponto já não cabe na grade: vai para a lista de fora, em vez de sumir. */
+  it('sends a record at or after the end of the grid to the outside list', () => {
+    const record = { startTime: '18:00', endTime: null };
+    expect(isOnScheduleGrid(record)).toBe(false);
+    expect(isOutsideScheduleGrid(record)).toBe(true);
+    expect(isOutsideScheduleGrid({ startTime: '07:30', endTime: null })).toBe(true);
   });
 });
