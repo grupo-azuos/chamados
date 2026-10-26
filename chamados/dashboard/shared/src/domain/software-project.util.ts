@@ -70,6 +70,48 @@ export const SCHEDULE_EVENT_CATEGORY_LABELS: Record<ScheduleEventCategory, strin
   other: 'Geral',
 };
 
+/**
+ * O que um item da agenda é: um compromisso marcado (com início e fim) ou o registro de algo
+ * que já foi feito — "sistema enviado para revisão" —, que só tem o momento em que aconteceu.
+ */
+export const SCHEDULE_EVENT_KINDS = ['appointment', 'record'] as const;
+export type ScheduleEventKind = (typeof SCHEDULE_EVENT_KINDS)[number];
+
+export const SCHEDULE_EVENT_KIND_LABELS: Record<ScheduleEventKind, string> = {
+  appointment: 'Compromisso',
+  record: 'Registro',
+};
+
+export const SCHEDULE_END_TIME_REQUIRED = 'Informe o horário final do compromisso';
+export const SCHEDULE_END_BEFORE_START = 'O fim precisa ser depois do início';
+
+/**
+ * O que está errado com o fim de um item da agenda, ou `null` se está certo. O registro não
+ * tem fim; o compromisso precisa de um, e depois do início — "16:00 às 10:00" não existe.
+ * Uma regra só para o formulário, a criação e a alteração na API.
+ */
+export function scheduleEndTimeError(input: {
+  kind: ScheduleEventKind;
+  startTime: string;
+  endTime?: string | null;
+}): string | null {
+  if (input.kind === 'record') return null;
+  if (!input.endTime) return SCHEDULE_END_TIME_REQUIRED;
+  if (input.endTime <= input.startTime) return SCHEDULE_END_BEFORE_START;
+
+  return null;
+}
+
+/** O horário como a tela mostra: "16:00 – 17:00" no compromisso, "16:00" no registro. */
+export function formatScheduleEventTime(event: {
+  startTime: string;
+  endTime: string | null;
+}): string {
+  if (!event.endTime) return event.startTime;
+
+  return `${event.startTime} – ${event.endTime}`;
+}
+
 /** Extrai owner e repo a partir de URLs do GitHub ou formato owner/repo. */
 export function parseGitHubRepo(input: string): { owner: string; repo: string } | null {
   const clean = input.trim().replace(/\/+$/, '').replace(/\.git$/, '');

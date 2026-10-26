@@ -189,8 +189,9 @@
 
   /* As opções de tipo de problema dependem da ÁREA escolhida — Manutenção não tem "rede
      caiu" na lista, nem Infra tem "ar-condicionado". */
+  /* Sem área (formulário recém-zerado), a lista fica vazia em vez de quebrar a tela. */
   const problemTypeOptions = $derived(
-    ticketProblemTypeOptionsForArea(fields.area.value as TicketArea),
+    fields.area.value ? ticketProblemTypeOptionsForArea(fields.area.value as TicketArea) : [],
   );
 
   function handleAreaChange(value: string): void {
@@ -258,6 +259,15 @@
     stepIndex += 1;
   }
 
+  /* Outro chamado começa da PRIMEIRA etapa: o formulário volta vazio, e ficar na última
+     deixava a pessoa numa etapa sem área escolhida — voltar dali quebrava a tela. */
+  function openAnother(): void {
+    stepIndex = 0;
+    submitAttempt = 0;
+    jumpedAtAttempt = 0;
+    actions.onOpenAnother();
+  }
+
   /* Enter sempre passa por aqui. Nas etapas do meio, ele avança em vez de tentar enviar um
      formulário que ainda não tem botão de enviar. */
   function handleSubmit(event: SubmitEvent): void {
@@ -318,7 +328,7 @@
       <ActionButton
         data={{ label: 'Abrir outro chamado' }}
         ui={{ variant: 'secondary' }}
-        actions={{ onClick: actions.onOpenAnother }}
+        actions={{ onClick: openAnother }}
       />
     </div>
   {:else}

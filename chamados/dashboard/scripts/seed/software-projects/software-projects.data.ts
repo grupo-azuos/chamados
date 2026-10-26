@@ -104,6 +104,16 @@ export function getScheduleSeed() {
       color: 'neutral' as const,
       category: 'maintenance' as const,
     },
+    {
+      kind: 'record' as const,
+      title: 'DEMO · Sistema enviado para revisão',
+      note: 'Exemplo de registro: algo que foi feito, com só a data e a hora.',
+      projectId: 2,
+      startTime: '16:00',
+      endTime: null,
+      color: 'rose' as const,
+      category: 'review' as const,
+    },
   ];
 
   return events.map((event, index) => ({

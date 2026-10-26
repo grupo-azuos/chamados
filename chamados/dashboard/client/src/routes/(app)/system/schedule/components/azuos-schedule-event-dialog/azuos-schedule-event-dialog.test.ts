@@ -12,6 +12,7 @@ function createMockModel(
     data: {
       mode: 'create',
       fields: {
+        kind: { value: 'appointment', error: null },
         title: { value: 'Deploy Portal v2', error: null },
         category: { value: 'deploy', error: null },
         color: { value: 'blue', error: null },
@@ -85,5 +86,40 @@ describe('AzuosScheduleEventDialog', () => {
     const closeBtn = screen.getByRole('button', { name: 'Fechar diálogo' });
     await userEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('asks only for the time and the description when it is a record', () => {
+    const model = createMockModel();
+    model.data.fields.kind = { value: 'record', error: null };
+    render(ScheduleEventDialog, { props: { open: true, model, projects: [], onClose: vi.fn() } });
+
+    expect(screen.getByText('Novo Registro')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hora' })).toHaveTextContent('09:00');
+    expect(screen.queryByRole('button', { name: 'Fim' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Descrição' }).tagName).toBe('TEXTAREA');
+    expect(screen.getByRole('button', { name: 'Salvar registro' })).toBeInTheDocument();
+  });
+
+  // triste
+  it('shows the title error and the save error so the person knows what to fix', () => {
+    const model = createMockModel({
+      state: { isSubmitting: false, error: 'Não foi possível falar com o servidor.' },
+    });
+    model.data.fields.title = { value: '', error: 'Informe o título do compromisso' };
+    render(ScheduleEventDialog, { props: { open: true, model, projects: [], onClose: vi.fn() } });
+
+    expect(screen.getByText('Informe o título do compromisso')).toBeInTheDocument();
+    expect(screen.getByText('Não foi possível falar com o servidor.')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('switches between appointment and record', async () => {
+    const model = createMockModel();
+    render(ScheduleEventDialog, { props: { open: true, model, projects: [], onClose: vi.fn() } });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Registro' }));
+
+    expect(model.actions.onChange).toHaveBeenCalledWith('kind', 'record');
   });
 });

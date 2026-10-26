@@ -1,0 +1,4 @@
+ALTER TABLE "chamados"."software_schedule_events" ALTER COLUMN "end_time" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "chamados"."software_schedule_events" ADD COLUMN "kind" text DEFAULT 'appointment' NOT NULL;--> statement-breakpoint
+ALTER TABLE "chamados"."software_schedule_events" ADD CONSTRAINT "software_schedule_kind_valid" CHECK ("chamados"."software_schedule_events"."kind" in ('appointment', 'record'));--> statement-breakpoint
+ALTER TABLE "chamados"."software_schedule_events" ADD CONSTRAINT "software_schedule_end_time_by_kind" CHECK (("chamados"."software_schedule_events"."kind" = 'record') = ("chamados"."software_schedule_events"."end_time" is null));

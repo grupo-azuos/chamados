@@ -9,6 +9,7 @@
   const mockEvents: SoftwareScheduleEvent[] = [
     {
       id: 1,
+      kind: 'appointment',
       title: 'Deploy da v1.4 em Produção',
       note: 'Publicação do release.',
       projectId: 1,
@@ -22,6 +23,7 @@
     },
     {
       id: 2,
+      kind: 'appointment',
       title: 'Sprint Planning Semanal',
       note: 'Alinhamento dos objetivos.',
       projectId: null,
@@ -31,6 +33,21 @@
       endTime: '16:00',
       color: 'blue',
       category: 'standup',
+      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
+    },
+    /* Registro: algo feito, só com a hora — aparece como um bloco de uma linha. */
+    {
+      id: 3,
+      kind: 'record',
+      title: 'Sistema enviado para revisão',
+      note: 'Enviado para o usuário testar a tela de contratos.',
+      projectId: 2,
+      projectName: 'Paralegal',
+      date: '2026-10-06',
+      startTime: '10:00',
+      endTime: null,
+      color: 'rose',
+      category: 'review',
       createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
     },
   ];
@@ -50,7 +67,7 @@
       weekdayShort: 'Ter',
       isToday: true,
       isCurrentMonth: true,
-      events: [mockEvents[1]!],
+      events: [mockEvents[1]!, mockEvents[2]!],
     },
     {
       dateString: '2026-10-07',

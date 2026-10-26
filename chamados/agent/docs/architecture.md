@@ -28,8 +28,9 @@ HTML/CSS/JS (Svelte) em vez de widgets desenhados em Go.
   `wails doctor` confirmou a versão instalada nesta máquina).
 
 Ficou entre Wails v2 (estável, muito documentado) e v3 (ainda beta, com API diferente — usa
-`application.New()` em vez de `wails.Run()`, sistema de eventos próprio). Fomos de **v2.16.0**
-por ser a versão de produção; v3 fica pra quando amadurecer.
+`application.New()` em vez de `wails.Run()`, sistema de eventos próprio). Fomos de **v2** (hoje na
+v2.17.0, que trouxe correções de segurança) por ser a versão de produção; v3 fica pra quando
+amadurecer.
 
 ## Por que cada peça da stack
 

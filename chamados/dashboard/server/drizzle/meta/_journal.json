@@ -92,6 +92,13 @@
       "when": 1792758892609,
       "tag": "0012_big_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793042719827,
+      "tag": "0013_old_wind_dancer",
+      "breakpoints": true
     }
   ]
 }

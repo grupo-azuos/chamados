@@ -25,6 +25,7 @@ export class SoftwareScheduleRepository {
         .select({
           id: softwareScheduleEvents.id,
           projectId: softwareScheduleEvents.projectId,
+          kind: softwareScheduleEvents.kind,
           title: softwareScheduleEvents.title,
           category: softwareScheduleEvents.category,
           color: softwareScheduleEvents.color,
@@ -59,6 +60,7 @@ export class SoftwareScheduleRepository {
         .select({
           id: softwareScheduleEvents.id,
           projectId: softwareScheduleEvents.projectId,
+          kind: softwareScheduleEvents.kind,
           title: softwareScheduleEvents.title,
           category: softwareScheduleEvents.category,
           color: softwareScheduleEvents.color,
