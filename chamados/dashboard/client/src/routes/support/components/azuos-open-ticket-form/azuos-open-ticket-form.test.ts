@@ -493,6 +493,36 @@ describe('AzuosOpenTicketForm', () => {
     expect(screen.queryByLabelText(/seu nome/i)).not.toBeInTheDocument();
   });
 
+  // feliz
+  /* Outro chamado é um formulário novo: começa da escolha da área, não da última etapa. */
+  it('starts another ticket from the area step, not from the last one', async () => {
+    const user = userEvent.setup();
+    const onOpenAnother = vi.fn();
+    const base = { notifyWhatsapp: false, screenshotName: null, attachments: [] };
+    const { rerender } = setup({ actions: { ...actions, onOpenAnother } });
+    await advanceTo(user, 4);
+
+    await rerender({ data: { ...base, fields, opened: { protocol: 'CH-0013', whatsAppLink: null } } });
+    await user.click(screen.getByRole('button', { name: /abrir outro chamado/i }));
+    await rerender({ data: { ...base, fields: { ...fields, area: field('') }, opened: null } });
+
+    expect(onOpenAnother).toHaveBeenCalledOnce();
+    expect(screen.getByText('Etapa 1 de 5')).toBeInTheDocument();
+  });
+
+  // triste
+  /* O formulário zerado não tem área: a tela não pode quebrar ao montar a etapa do problema. */
+  it('does not break the problem step when the area is cleared', async () => {
+    const user = userEvent.setup();
+    const base = { notifyWhatsapp: false, screenshotName: null, attachments: [], opened: null };
+    const { rerender } = setup();
+    await advanceTo(user, 2);
+
+    await rerender({ data: { ...base, fields: { ...fields, area: field('') } } });
+
+    expect(screen.getByText('Etapa 3 de 5')).toBeInTheDocument();
+  });
+
   /* Sem o link, o botão não aparece: ter o telefone não é autorização para usá-lo. */
   it('hides the WhatsApp button when there is no link to offer', () => {
     setup({
