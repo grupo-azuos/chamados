@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { oneHourAfter, toScheduleEventPayload } from './use-software-schedule-form.svelte';
+import { softwareScheduleFormSchema } from '@template/shared/schemas/software-schedule.schema';
+
+import {
+  oneHourAfter,
+  toScheduleEventPayload,
+  toScheduleFormValue,
+} from './use-software-schedule-form.svelte';
 
 describe('oneHourAfter', () => {
   // feliz
@@ -46,5 +52,33 @@ describe('toScheduleEventPayload', () => {
       endTime: null,
       note: null,
     });
+  });
+});
+
+describe('toScheduleFormValue', () => {
+  const values = {
+    kind: 'record' as const,
+    title: 'Sistema enviado para revisão',
+    category: 'review' as const,
+    color: 'red' as const,
+    date: '2026-10-26',
+    startTime: '16:00',
+    endTime: '17:00',
+    note: '',
+  };
+
+  // feliz
+  /* Escolher um sistema vinculado não pode travar o Salvar. */
+  it('keeps the linked system as a number, so the form can be saved', () => {
+    const projectId = toScheduleFormValue('projectId', '2');
+
+    expect(projectId).toBe(2);
+    expect(softwareScheduleFormSchema.safeParse({ ...values, projectId }).success).toBe(true);
+  });
+
+  // triste
+  it('turns "Nenhum" into no system and leaves the other fields as typed', () => {
+    expect(toScheduleFormValue('projectId', '')).toBeNull();
+    expect(toScheduleFormValue('title', '2')).toBe('2');
   });
 });
