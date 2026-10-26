@@ -53,7 +53,7 @@ jobs:
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
           npm ci --prefix svelte
-          go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.0
           wails build -platform windows/amd64 -ldflags '-s -w'
           npm run lint --prefix svelte
           npm run check --prefix svelte
