@@ -4,6 +4,7 @@ import {
   SCHEDULE_EVENT_CATEGORIES,
   SCHEDULE_EVENT_KINDS,
   SOFTWARE_PROJECT_COLORS,
+  scheduleEndTimeError,
 } from '../domain/software-project.util';
 
 export const scheduleCategorySchema = z.enum(SCHEDULE_EVENT_CATEGORIES);
@@ -23,7 +24,10 @@ export const softwareScheduleEventSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data no formato YYYY-MM-DD'),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Horário no formato HH:mm'),
   /** Nulo no registro: ele marca só o momento em que algo foi feito. */
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Horário no formato HH:mm').nullable(),
+  endTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, 'Horário no formato HH:mm')
+    .nullable(),
   /** A descrição do item (a coluna guarda o nome antigo, de quando era "Observações"). */
   note: z.string().nullable(),
   createdAt: z.string().datetime(),
@@ -46,20 +50,29 @@ const softwareScheduleEventInputSchema = z.object({
   color: scheduleColorSchema.default('blue'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data no formato YYYY-MM-DD'),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Horário inicial no formato HH:mm'),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Horário final no formato HH:mm').optional().nullable(),
+  endTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, 'Horário final no formato HH:mm')
+    .optional()
+    .nullable(),
   note: z.string().trim().optional().nullable(),
 });
 
-export const SCHEDULE_END_TIME_REQUIRED = 'Informe o horário final do compromisso';
+/** Aponta o erro do fim no campo "Fim", onde a pessoa vai corrigir. */
+function refineEndTime(
+  input: { kind: 'appointment' | 'record'; startTime: string; endTime?: string | null },
+  ctx: z.RefinementCtx,
+) {
+  const message = scheduleEndTimeError(input);
+  if (!message) return;
 
-/* O compromisso precisa do fim; o registro não tem fim (o servidor descarta o que vier). */
-export const createSoftwareScheduleEventSchema = softwareScheduleEventInputSchema.superRefine(
-  (input, ctx) => {
-    if (input.kind === 'record' || input.endTime) return;
+  ctx.addIssue({ code: 'custom', path: ['endTime'], message });
+}
 
-    ctx.addIssue({ code: 'custom', path: ['endTime'], message: SCHEDULE_END_TIME_REQUIRED });
-  },
-);
+/* O compromisso precisa do fim, depois do início; o registro não tem fim (o servidor descarta
+   o que vier). */
+export const createSoftwareScheduleEventSchema =
+  softwareScheduleEventInputSchema.superRefine(refineEndTime);
 
 export type CreateSoftwareScheduleEventInput = z.infer<typeof createSoftwareScheduleEventSchema>;
 
@@ -74,18 +87,20 @@ export const softwareScheduleQuerySchema = z.object({
 
 export type SoftwareScheduleQuery = z.infer<typeof softwareScheduleQuerySchema>;
 
-export const softwareScheduleFormSchema = z.object({
-  kind: scheduleKindSchema,
-  projectId: z.number().int().nullable().optional(),
-  title: z.string().trim().min(1, 'Informe o título do compromisso'),
-  category: scheduleCategorySchema,
-  color: scheduleColorSchema,
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data no formato AAAA-MM-DD'),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Início no formato HH:mm'),
-  /* Sempre preenchido no formulário, mesmo no registro: se a pessoa trocar para compromisso,
+export const softwareScheduleFormSchema = z
+  .object({
+    kind: scheduleKindSchema,
+    projectId: z.number().int().nullable().optional(),
+    title: z.string().trim().min(1, 'Informe o título do compromisso'),
+    category: scheduleCategorySchema,
+    color: scheduleColorSchema,
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data no formato AAAA-MM-DD'),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Início no formato HH:mm'),
+    /* Sempre preenchido no formulário, mesmo no registro: se a pessoa trocar para compromisso,
      o fim já está lá. Quem decide se ele vai para a API é o hook. */
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Fim no formato HH:mm'),
-  note: z.string().trim().optional(),
-});
+    endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Fim no formato HH:mm'),
+    note: z.string().trim().optional(),
+  })
+  .superRefine(refineEndTime);
 
 export type SoftwareScheduleForm = z.infer<typeof softwareScheduleFormSchema>;

@@ -159,4 +159,23 @@ describe('SoftwareScheduleService', () => {
     );
     expect(repository.update).not.toHaveBeenCalled();
   });
+
+  // triste
+  it('refuses moving only the start of an appointment to after its end, without writing', async () => {
+    const { service, repository } = makeService();
+
+    await expect(service.update(ana, 1, { startTime: '11:00' })).rejects.toThrow(
+      new BadRequestException('O fim precisa ser depois do início'),
+    );
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  // feliz
+  it('accepts moving start and end together to a valid range', async () => {
+    const { service, repository } = makeService();
+
+    await service.update(ana, 1, { startTime: '15:00', endTime: '16:30' });
+
+    expect(vi.mocked(repository.update).mock.calls[0]?.[1]).toMatchObject({ endTime: '16:30' });
+  });
 });

@@ -4,9 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { scheduleEndTimeError } from '@template/shared/domain/software-project.util';
 import { canChangeScheduleEvent } from '@template/shared/domain/system-access.util';
 import {
-  SCHEDULE_END_TIME_REQUIRED,
   type CreateSoftwareScheduleEventInput,
   type SoftwareScheduleEvent,
   type SoftwareScheduleQuery,
@@ -26,7 +26,8 @@ export const SCHEDULE_EVENT_NOT_YOURS =
 
 /**
  * O fim que fica gravado depois da alteração. O registro nunca tem fim — trocar um compromisso
- * para registro apaga o fim. O compromisso sempre tem: o que veio, ou o que já estava gravado.
+ * para registro apaga o fim. O compromisso sempre tem, depois do início: confere juntando o que
+ * veio com o que já estava gravado (mudar só o início para depois do fim também é recusado).
  */
 function resolveEndTime(
   input: UpdateSoftwareScheduleEventInput,
@@ -35,8 +36,10 @@ function resolveEndTime(
   const kind = input.kind ?? current.kind;
   if (kind === 'record') return null;
 
+  const startTime = input.startTime ?? current.startTime;
   const endTime = input.endTime === undefined ? current.endTime : input.endTime;
-  if (!endTime) throw new BadRequestException(SCHEDULE_END_TIME_REQUIRED);
+  const error = scheduleEndTimeError({ kind, startTime, endTime });
+  if (error) throw new BadRequestException(error);
 
   return endTime;
 }

@@ -82,9 +82,24 @@ export const SCHEDULE_EVENT_KIND_LABELS: Record<ScheduleEventKind, string> = {
   record: 'Registro',
 };
 
-/** Onde o item termina na agenda: o registro não tem fim, então termina onde começa. */
-export function scheduleEventEnd(event: { startTime: string; endTime: string | null }): string {
-  return event.endTime ?? event.startTime;
+export const SCHEDULE_END_TIME_REQUIRED = 'Informe o horário final do compromisso';
+export const SCHEDULE_END_BEFORE_START = 'O fim precisa ser depois do início';
+
+/**
+ * O que está errado com o fim de um item da agenda, ou `null` se está certo. O registro não
+ * tem fim; o compromisso precisa de um, e depois do início — "16:00 às 10:00" não existe.
+ * Uma regra só para o formulário, a criação e a alteração na API.
+ */
+export function scheduleEndTimeError(input: {
+  kind: ScheduleEventKind;
+  startTime: string;
+  endTime?: string | null;
+}): string | null {
+  if (input.kind === 'record') return null;
+  if (!input.endTime) return SCHEDULE_END_TIME_REQUIRED;
+  if (input.endTime <= input.startTime) return SCHEDULE_END_BEFORE_START;
+
+  return null;
 }
 
 /** O horário como a tela mostra: "16:00 – 17:00" no compromisso, "16:00" no registro. */
