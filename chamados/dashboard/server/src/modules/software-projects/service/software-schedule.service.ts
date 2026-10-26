@@ -1,6 +1,12 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { canChangeScheduleEvent } from '@template/shared/domain/system-access.util';
 import {
+  SCHEDULE_END_TIME_REQUIRED,
   type CreateSoftwareScheduleEventInput,
   type SoftwareScheduleEvent,
   type SoftwareScheduleQuery,
@@ -14,26 +20,45 @@ import { assertCanEditSystem, assertCanRead } from '../../../lib/policy/policy-a
 import { toSoftwareScheduleEvent } from '../mapper/software-projects.mapper';
 import { SoftwareScheduleRepository } from '../repository/software-schedule.repository';
 
-export const SCHEDULE_EVENT_NOT_FOUND = 'Compromisso não encontrado.';
+export const SCHEDULE_EVENT_NOT_FOUND = 'Item da agenda não encontrado.';
 export const SCHEDULE_EVENT_NOT_YOURS =
-  'Só quem marcou este compromisso (ou o Super Administrador) pode alterá-lo ou excluí-lo.';
+  'Só quem lançou este item na agenda (ou o Super Administrador) pode alterá-lo ou excluí-lo.';
+
+/**
+ * O fim que fica gravado depois da alteração. O registro nunca tem fim — trocar um compromisso
+ * para registro apaga o fim. O compromisso sempre tem: o que veio, ou o que já estava gravado.
+ */
+function resolveEndTime(
+  input: UpdateSoftwareScheduleEventInput,
+  current: SoftwareScheduleEvent,
+): string | null {
+  const kind = input.kind ?? current.kind;
+  if (kind === 'record') return null;
+
+  const endTime = input.endTime === undefined ? current.endTime : input.endTime;
+  if (!endTime) throw new BadRequestException(SCHEDULE_END_TIME_REQUIRED);
+
+  return endTime;
+}
 
 function buildScheduleEventUpdate(
   input: UpdateSoftwareScheduleEventInput,
+  current: SoftwareScheduleEvent,
   actorEmail: string,
 ): Partial<SoftwareScheduleEventInsert> {
   const update: Partial<SoftwareScheduleEventInsert> = {
     updatedAt: new Date(),
     updatedBy: actorEmail,
+    endTime: resolveEndTime(input, current),
   };
 
+  setIfDefined(update, 'kind', input.kind);
   setIfDefined(update, 'projectId', input.projectId);
   setIfDefined(update, 'title', input.title?.trim());
   setIfDefined(update, 'category', input.category);
   setIfDefined(update, 'color', input.color);
   setIfDefined(update, 'date', input.date);
   setIfDefined(update, 'startTime', input.startTime);
-  setIfDefined(update, 'endTime', input.endTime);
   if (input.note !== undefined) {
     update.note = input.note?.trim() ? input.note.trim() : null;
   }
@@ -68,13 +93,15 @@ export class SoftwareScheduleService {
     assertCanEditSystem(user, 'agendar no cronograma');
 
     const row = await this.repository.insert({
+      kind: input.kind,
       projectId: input.projectId ?? null,
       title: input.title,
       category: input.category,
       color: input.color,
       date: input.date,
       startTime: input.startTime,
-      endTime: input.endTime,
+      /* O registro marca só o momento: um fim que venha junto é descartado. */
+      endTime: input.kind === 'record' ? null : (input.endTime ?? null),
       note: input.note ?? null,
       /* Autoria vem da identidade, nunca do corpo. */
       createdBy: user.email,
@@ -92,9 +119,9 @@ export class SoftwareScheduleService {
   ): Promise<SoftwareScheduleEvent> {
     assertCanEditSystem(user, 'alterar agendamento do cronograma');
 
-    await this.findOwnedOrRefuse(user, id);
+    const current = await this.findOwnedOrRefuse(user, id);
 
-    const updatePayload = buildScheduleEventUpdate(input, user.email);
+    const updatePayload = buildScheduleEventUpdate(input, current, user.email);
     const row = await this.repository.update(id, updatePayload);
 
     return toSoftwareScheduleEvent(row);

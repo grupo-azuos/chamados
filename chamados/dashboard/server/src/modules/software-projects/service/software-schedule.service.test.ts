@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
@@ -21,6 +21,7 @@ function eventRow(overrides: Partial<SoftwareScheduleEventRow> = {}) {
     id: 1,
     projectId: null,
     projectName: null,
+    kind: 'appointment',
     title: 'Deploy do Paralegal',
     category: 'deploy',
     color: 'blue',
@@ -51,6 +52,7 @@ function makeService(row = eventRow()) {
 }
 
 const input = {
+  kind: 'appointment' as const,
   title: 'Revisão',
   category: 'review' as const,
   color: 'green' as const,
@@ -111,5 +113,50 @@ describe('SoftwareScheduleService', () => {
     vi.mocked(repository.findById).mockResolvedValue(null);
 
     await expect(service.remove(bia, 99)).rejects.toThrow(NotFoundException);
+  });
+
+  // feliz
+  it('records something done with only the moment it happened, dropping any end time', async () => {
+    const { service, repository } = makeService();
+
+    await service.create(ana, { ...input, kind: 'record', title: 'Sistema enviado para revisão' });
+
+    expect(vi.mocked(repository.insert).mock.calls[0]?.[0]).toMatchObject({
+      kind: 'record',
+      startTime: '14:00',
+      endTime: null,
+    });
+  });
+
+  // feliz
+  it('clears the end time when an appointment becomes a record', async () => {
+    const { service, repository } = makeService();
+
+    await service.update(ana, 1, { kind: 'record' });
+
+    expect(vi.mocked(repository.update).mock.calls[0]?.[1]).toMatchObject({
+      kind: 'record',
+      endTime: null,
+    });
+  });
+
+  // triste
+  it('refuses turning a record into an appointment without an end time', async () => {
+    const { service, repository } = makeService(eventRow({ kind: 'record', endTime: null }));
+
+    await expect(service.update(ana, 1, { kind: 'appointment' })).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('refuses another person changing a record, the same as an appointment', async () => {
+    const { service, repository } = makeService(eventRow({ kind: 'record', endTime: null }));
+
+    await expect(service.update(bia, 1, { title: 'Meu agora' })).rejects.toThrow(
+      new ForbiddenException(SCHEDULE_EVENT_NOT_YOURS),
+    );
+    expect(repository.update).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatScheduleEventTime,
   parseGitHubRepo,
+  scheduleEventEnd,
   softwareProjectStatusLabel,
 } from './software-project.util';
 
@@ -31,5 +33,15 @@ describe('software-project.util', () => {
     expect(softwareProjectStatusLabel('active')).toBe('Ativo');
     expect(softwareProjectStatusLabel('maintenance')).toBe('Manutenção');
     expect(softwareProjectStatusLabel('deprecated')).toBe('Legado / Descontinuado');
+  });
+
+  it('shows the appointment as a range and the record as a single moment', () => {
+    // feliz
+    expect(formatScheduleEventTime({ startTime: '16:00', endTime: '17:00' })).toBe('16:00 – 17:00');
+    expect(scheduleEventEnd({ startTime: '16:00', endTime: '17:00' })).toBe('17:00');
+
+    // triste
+    expect(formatScheduleEventTime({ startTime: '16:00', endTime: null })).toBe('16:00');
+    expect(scheduleEventEnd({ startTime: '16:00', endTime: null })).toBe('16:00');
   });
 });
