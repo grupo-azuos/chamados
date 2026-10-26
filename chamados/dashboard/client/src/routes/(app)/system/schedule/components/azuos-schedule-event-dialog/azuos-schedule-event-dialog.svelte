@@ -106,7 +106,9 @@
 </script>
 
 <Dialog {open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-  <DialogContent class="max-w-lg">
+  <!-- Mais larga que o padrão para os campos irem lado a lado, e a janela caber na altura da
+       tela sem rolar. -->
+  <DialogContent class="sm:max-w-2xl">
     <DialogHeader class="gap-1.5">
       <div class="flex items-center gap-2.5">
         <span
@@ -138,7 +140,7 @@
         {deleteError}
       </p>
     {/if}
-    <form novalidate onsubmit={handleSubmit} class="flex flex-col gap-4">
+    <form novalidate onsubmit={handleSubmit} class="flex flex-col gap-3.5">
       <div class="flex flex-col gap-1.5">
         <span class="text-xs font-medium text-foreground">Tipo</span>
         <OptionPicker
@@ -211,37 +213,11 @@
         {/if}
       </div>
 
-      <!-- Seletor Elegante de Cor em Swatches -->
-      <div class="flex flex-col gap-2 rounded-box border border-border/80 bg-muted/20 p-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-foreground">Cor do bloco na agenda</span>
-          <span class="text-xs font-medium text-muted-foreground">
-            {SWATCHES.find((s) => s.value === model.data.fields.color.value)?.label ?? 'Azul'}
-          </span>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          {#each SWATCHES as swatch (swatch.value)}
-            {@const isSelected = model.data.fields.color.value === swatch.value}
-            <button
-              type="button"
-              class="group relative flex size-7 items-center justify-center rounded-full transition-transform hover:scale-110 focus:outline-none {isSelected
-                ? 'ring-2 ring-offset-2 ring-offset-card ' + swatch.ringClass
-                : ''}"
-              onclick={() => model.actions.onChange('color', swatch.value)}
-              title={swatch.label}
-              aria-label={swatch.label}
-            >
-              <span class="size-5 rounded-full {swatch.bgClass}"></span>
-              {#if isSelected}
-                <Check class="absolute size-3 text-white drop-shadow-xs" />
-              {/if}
-            </button>
-          {/each}
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div class="col-span-2 flex min-w-0 flex-col gap-1.5">
+      <!-- Data e horário numa linha só: no compromisso, Data · Início · Fim; no registro, que
+           marca só o momento, Data · Hora. Empilhados, eram três linhas e a janela passava da
+           altura da tela. -->
+      <div class="grid grid-cols-1 gap-3 {isRecord ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}">
+        <div class="flex min-w-0 flex-col gap-1.5">
           <label for={dateId} class="text-sm font-medium text-ink-700">
             Data <span class="text-destructive" aria-hidden="true">*</span>
           </label>
@@ -264,8 +240,6 @@
           {/if}
         </div>
 
-        <!-- O registro tem um horário só — o momento em que foi feito —, ocupando a linha toda. -->
-        <div class={isRecord ? 'col-span-2' : ''}>
         <TimePicker
           data={{
             label: isRecord ? 'Hora' : 'Início',
@@ -282,26 +256,54 @@
             onBlur: () => model.actions.onBlur('startTime'),
           }}
         />
-        </div>
 
         {#if !isRecord}
-        <TimePicker
-          data={{
-            label: 'Fim',
-            name: 'endTime',
-            value: model.data.fields.endTime.value,
-            isRequired: true,
-          }}
-          state={{
-            error: model.data.fields.endTime.error,
-            isDisabled: model.state.isSubmitting,
-          }}
-          actions={{
-            onChange: (value) => model.actions.onChange('endTime', value),
-            onBlur: () => model.actions.onBlur('endTime'),
-          }}
-        />
+          <TimePicker
+            data={{
+              label: 'Fim',
+              name: 'endTime',
+              value: model.data.fields.endTime.value,
+              isRequired: true,
+            }}
+            state={{
+              error: model.data.fields.endTime.error,
+              isDisabled: model.state.isSubmitting,
+            }}
+            actions={{
+              onChange: (value) => model.actions.onChange('endTime', value),
+              onBlur: () => model.actions.onBlur('endTime'),
+            }}
+          />
         {/if}
+      </div>
+
+      <!-- A cor numa linha só, sem caixa em volta: é um detalhe visual, não merece um bloco. -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="text-xs font-medium text-foreground">
+          Cor na agenda
+          <span class="font-normal text-muted-foreground">
+            · {SWATCHES.find((s) => s.value === model.data.fields.color.value)?.label ?? 'Azul'}
+          </span>
+        </span>
+        <div class="flex flex-wrap items-center gap-1.5">
+          {#each SWATCHES as swatch (swatch.value)}
+            {@const isSelected = model.data.fields.color.value === swatch.value}
+            <button
+              type="button"
+              class="group relative flex size-7 items-center justify-center rounded-full transition-transform hover:scale-110 focus:outline-none {isSelected
+                ? 'ring-2 ring-offset-2 ring-offset-card ' + swatch.ringClass
+                : ''}"
+              onclick={() => model.actions.onChange('color', swatch.value)}
+              title={swatch.label}
+              aria-label={swatch.label}
+            >
+              <span class="size-5 rounded-full {swatch.bgClass}"></span>
+              {#if isSelected}
+                <Check class="absolute size-3 text-white drop-shadow-xs" />
+              {/if}
+            </button>
+          {/each}
+        </div>
       </div>
 
       <TextAreaField
@@ -313,7 +315,7 @@
             ? 'O que foi feito, para quem foi enviado, link da entrega…'
             : 'Detalhes da janela de manutenção, da reunião ou um link',
         }}
-        ui={{ rows: 4 }}
+        ui={{ rows: 3 }}
         state={{
           error: model.data.fields.note.error,
           isDisabled: model.state.isSubmitting,
@@ -324,7 +326,7 @@
         }}
       />
 
-      <DialogFooter class="mt-2 flex items-center justify-between border-t border-border/60 pt-3">
+      <DialogFooter class="mt-1 flex items-center justify-between border-t border-border/60 pt-3">
         <div>
           {#if isEdit && onDelete}
             <button

@@ -75,6 +75,17 @@ export function oneHourAfter(time: string): string {
   return `${String(hours + 1).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
+/**
+ * O valor como o formulário guarda. O seletor de sistema entrega o id como texto ("2", ou ""
+ * para "Nenhum"), mas o formulário guarda número ou nulo: texto ali reprovava a validação sem
+ * mostrar erro em campo nenhum, e o botão Salvar simplesmente não fazia nada.
+ */
+export function toScheduleFormValue(field: SoftwareScheduleFormField, value: string) {
+  if (field !== 'projectId') return value;
+
+  return value ? Number(value) : null;
+}
+
 /** O que vai para a API. O registro marca só o momento: o fim que estava no formulário fica. */
 export function toScheduleEventPayload(values: SoftwareScheduleForm) {
   return {
@@ -182,7 +193,7 @@ export function useSoftwareScheduleFormModel({
     },
     actions: {
       onChange: (field, value) => {
-        form.setFieldValue(field, value as never);
+        form.setFieldValue(field, toScheduleFormValue(field, value) as never);
         form.setFieldMeta(field, (prev) => ({ ...prev, isTouched: true }));
         void form.validateField(field, 'change');
       },
