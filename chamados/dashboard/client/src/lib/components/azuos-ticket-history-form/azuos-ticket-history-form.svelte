@@ -107,10 +107,13 @@
     <div class="flex flex-wrap gap-2">
       {#each options as option (option.value)}
         <!-- Rádio de verdade por baixo da pastilha: o teclado e o leitor de tela recebem um
-             grupo de opções, e não uma fileira de botões soltos. -->
+             grupo de opções, e não uma fileira de botões soltos. `relative` porque o rádio é
+             `sr-only` (`position: absolute`): sem um ancestral posicionado ele se ancora lá em
+             cima, e ao receber o foco do clique o navegador rola a casca da tela para mostrá-lo
+             — a página "subia" e ficava cortada. -->
         <label
           class={cn(
-            'control-lg rounded-control border-border bg-card text-foreground inline-flex cursor-pointer items-center gap-2 border text-sm font-medium transition-colors',
+            'relative control-lg rounded-control border-border bg-card text-foreground inline-flex cursor-pointer items-center gap-2 border text-sm font-medium transition-colors',
             'hover:bg-muted/60 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
             'has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
             data.type === option.value &&

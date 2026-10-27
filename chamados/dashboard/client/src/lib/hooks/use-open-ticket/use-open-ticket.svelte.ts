@@ -38,6 +38,7 @@ export type OpenTicketField =
   | 'contactPhone'
   | 'description'
   | 'projectId'
+  | 'customSystemName'
   | 'assigneeId';
 
 /** O que a pessoa vê depois de abrir: o protocolo para anotar. */
@@ -111,6 +112,7 @@ const EMPTY_VALUES: TicketFormValues = {
   notifyWhatsapp: false,
   description: '',
   projectId: '',
+  customSystemName: '',
   assigneeId: '',
 };
 
@@ -265,6 +267,7 @@ export function useOpenTicketModel(): OpenTicketModel {
           contactPhone: fieldOf('contactPhone'),
           description: fieldOf('description'),
           projectId: fieldOf('projectId'),
+          customSystemName: fieldOf('customSystemName'),
           assigneeId: fieldOf('assigneeId'),
         },
         notifyWhatsapp: values.current.notifyWhatsapp,

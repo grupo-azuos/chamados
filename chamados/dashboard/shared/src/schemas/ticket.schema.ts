@@ -73,20 +73,16 @@ function checkProblemTypeMatchesArea(
   });
 }
 
-function checkSystemProjectSelected(
-  value: { area: string; projectId?: string | number | null },
-  ctx: z.RefinementCtx,
-): void {
-  if (value.area !== 'sistema') return;
-  if (typeof value.projectId === 'number' && value.projectId > 0) return;
-  if (typeof value.projectId === 'string' && value.projectId.trim() !== '') return;
+/** O nome do sistema que a pessoa DIGITOU por não achá-lo na lista — texto livre, curto. */
+export const CUSTOM_SYSTEM_NAME_MAX_LENGTH = 120;
 
-  ctx.addIssue({
-    code: z.ZodIssueCode.custom,
-    message: 'Selecione o sistema relacionado ao chamado',
-    path: ['projectId'],
-  });
-}
+const customSystemNameSchema = z
+  .string()
+  .trim()
+  .max(
+    CUSTOM_SYSTEM_NAME_MAX_LENGTH,
+    `O nome do sistema pode ter até ${CUSTOM_SYSTEM_NAME_MAX_LENGTH} caracteres`,
+  );
 
 const requesterNameSchema = z
   .string({ required_error: 'Informe seu nome' })
@@ -148,6 +144,11 @@ export const ticketSchema = z.object({
   /** O sistema/projeto vinculado ao chamado (quando aplicável, ex: área de Sistema). */
   projectId: z.number().int().nullable().optional(),
   projectName: z.string().nullable().optional(),
+  /**
+   * O sistema que quem abriu DIGITOU, por não estar na lista. Sem vínculo com o cadastro de
+   * sistemas, e por isso sem Issue no GitHub — só o nome, para quem atende saber do que se trata.
+   */
+  customSystemName: z.string().nullable().optional(),
   githubIssueNumber: z.number().int().nullable().optional(),
   githubIssueUrl: z.string().nullable().optional(),
 
@@ -347,6 +348,14 @@ export const createTicketSchema = z
       )
       .optional(),
     /**
+     * O sistema é OPCIONAL: quem abre pode não saber qual é, ou o sistema não estar na lista.
+     * Neste caso a pessoa digita o nome, e ele vem aqui — vale só quando não há `projectId`.
+     */
+    customSystemName: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      customSystemNameSchema.optional(),
+    ),
+    /**
      * O responsável que quem abre ESCOLHEU, entre os que atendem aquela área. Opcional: sem
      * escolha, o chamado nasce sem responsável, como sempre. O servidor confere se o escolhido
      * de fato atende a área — o id vem de uma tela pública e não é de confiança.
@@ -360,10 +369,7 @@ export const createTicketSchema = z
     /** Os demais anexos, já enviados. O teto de verdade é por formato, e é do domínio. */
     attachments: z.array(stagedFileSchema).max(MAX_STAGED_FILES).default([]),
   })
-  .superRefine((value, ctx) => {
-    checkProblemTypeMatchesArea(value, ctx);
-    checkSystemProjectSelected(value, ctx);
-  });
+  .superRefine(checkProblemTypeMatchesArea);
 
 export type CreateTicketInput = z.input<typeof createTicketSchema>;
 
@@ -386,12 +392,10 @@ export const ticketFormSchema = z
     notifyWhatsapp: z.boolean(),
     description: descriptionSchema,
     projectId: z.string().default(''),
+    customSystemName: customSystemNameSchema.default(''),
     assigneeId: z.string().default(''),
   })
-  .superRefine((value, ctx) => {
-    checkProblemTypeMatchesArea(value, ctx);
-    checkSystemProjectSelected(value, ctx);
-  });
+  .superRefine(checkProblemTypeMatchesArea);
 
 export type TicketFormValues = z.input<typeof ticketFormSchema>;
 
