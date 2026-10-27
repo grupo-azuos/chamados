@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { accountOrigin, accountProfileApi } from './account-profile.api';
+import { accountOrigin, accountProfileApi, accountProfileUrl } from './account-profile.api';
 
 const fetchMock = vi.fn();
 
@@ -59,5 +59,22 @@ describe('accountOrigin', () => {
   // triste
   it('refuses an unknown domain without a configured address', () => {
     expect(() => accountOrigin(null, 'chamados.outra-empresa.com')).toThrow('Sem endereço da conta.');
+  });
+});
+
+describe('accountProfileUrl', () => {
+  // feliz
+  it('points the edit button at the account profile, found from the domain', () => {
+    expect(accountProfileUrl(null, 'chamados.homo.grupoazuos.com.br')).toBe(
+      'https://admin-console.homo.grupoazuos.com.br/profile',
+    );
+    expect(accountProfileUrl('https://conta.example/login', 'chamados.grupoazuos.com.br')).toBe(
+      'https://conta.example/profile',
+    );
+  });
+
+  // triste
+  it('offers no button on an unknown domain', () => {
+    expect(accountProfileUrl(null, 'example.com')).toBeNull();
   });
 });
