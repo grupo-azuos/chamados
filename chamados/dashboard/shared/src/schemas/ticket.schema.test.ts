@@ -27,7 +27,7 @@ describe('createTicketSchema', () => {
     expect(parsed.department).toBe('financeiro');
   });
 
-  it('requires and converts the selected system for a system ticket', () => {
+  it('converts the selected system for a system ticket', () => {
     const parsed = createTicketSchema.parse({
       ...validInput,
       area: 'sistema',
@@ -37,14 +37,35 @@ describe('createTicketSchema', () => {
     expect(parsed.projectId).toBe(3);
   });
 
-  it('refuses a system ticket without a selected repository', () => {
+  it('opens a system ticket without any system linked', () => {
+    const parsed = createTicketSchema.parse({ ...validInput, area: 'sistema', problemType: 'bug' });
+
+    expect(parsed.projectId).toBeUndefined();
+    expect(parsed.customSystemName).toBeUndefined();
+  });
+
+  it('keeps the system name typed by the requester', () => {
+    const parsed = createTicketSchema.parse({
+      ...validInput,
+      area: 'sistema',
+      problemType: 'bug',
+      customSystemName: '  Planilha do financeiro  ',
+    });
+
+    expect(parsed.customSystemName).toBe('Planilha do financeiro');
+  });
+
+  // triste
+  it('refuses a typed system name that is too long', () => {
     const result = createTicketSchema.safeParse({
       ...validInput,
       area: 'sistema',
       problemType: 'bug',
+      customSystemName: 'x'.repeat(121),
     });
+
     expect(result.success).toBe(false);
-    expect(result.error?.issues.some((issue) => issue.path.includes('projectId'))).toBe(true);
+    expect(result.error?.issues[0]?.path).toEqual(['customSystemName']);
   });
 
   it('opens with medium urgency when nobody chose one', () => {

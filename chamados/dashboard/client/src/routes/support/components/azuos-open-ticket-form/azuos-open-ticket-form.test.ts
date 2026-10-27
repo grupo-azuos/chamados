@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type FormFieldState } from '$lib/types/form-field.type';
-import OpenTicketForm, { type OpenTicketField } from './azuos-open-ticket-form.svelte';
+import OpenTicketForm, { pastedImage, type OpenTicketField } from './azuos-open-ticket-form.svelte';
 
 const field = (value: string, error: string | null = null): FormFieldState => ({ value, error });
 
@@ -18,6 +18,7 @@ const fields: Record<OpenTicketField, FormFieldState> = {
   contactPhone: field('62 99999-9999'),
   description: field('A impressora não puxa papel.'),
   projectId: field(''),
+  customSystemName: field(''),
   assigneeId: field(''),
 };
 
@@ -165,10 +166,56 @@ describe('AzuosOpenTicketForm', () => {
 
     await advanceTo(user, 2);
     await user.click(screen.getByRole('button', { name: 'Sistema relacionado' }));
-    await user.type(screen.getByPlaceholderText('Buscar…'), 'paralegal');
+    await user.type(screen.getByPlaceholderText('Busque ou digite o nome do sistema'), 'paralegal');
     await user.click(screen.getByText('paralegal'));
 
     expect(onChange).toHaveBeenCalledWith('projectId', '2');
+  });
+
+  /* O sistema pode não estar na lista: a pessoa digita, e o id da lista é limpo. */
+  it('takes a typed system that is not on the list', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    setup({
+      data: {
+        fields: { ...fields, area: field('sistema') },
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        systemProjects: [{ value: '1', label: 'paralegal' }],
+      },
+      actions: { ...actions, onChange },
+    });
+
+    await advanceTo(user, 2);
+    await user.click(screen.getByRole('button', { name: 'Sistema relacionado' }));
+    await user.type(screen.getByPlaceholderText('Busque ou digite o nome do sistema'), 'Planilha');
+    await user.click(screen.getByRole('button', { name: 'Usar “Planilha”' }));
+
+    expect(onChange).toHaveBeenCalledWith('projectId', '');
+    expect(onChange).toHaveBeenCalledWith('customSystemName', 'Planilha');
+  });
+
+  it('moves past the problem step of a system ticket with no system chosen', async () => {
+    const user = userEvent.setup();
+    const onBlur = vi.fn();
+    setup({
+      data: {
+        fields: { ...fields, area: field('sistema'), problemType: field('bug') },
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        systemProjects: [{ value: '1', label: 'paralegal' }],
+      },
+      actions: { ...actions, onBlur },
+    });
+
+    await advanceTo(user, 3);
+
+    expect(screen.getByText('Descrição do problema')).toBeInTheDocument();
+    expect(onBlur).not.toHaveBeenCalledWith('projectId');
   });
 
   /* O departamento da pessoa pode não estar na lista (RH fora do ar, setor novo): ela digita
@@ -311,6 +358,32 @@ describe('AzuosOpenTicketForm', () => {
     await user.click(screen.getByRole('button', { name: /remover o print/i }));
 
     expect(onScreenshotChange).toHaveBeenCalledWith(null);
+  });
+
+  /* Quem tira print com PrtSc já tem a imagem copiada: Ctrl+V na etapa da descrição anexa. */
+  it('attaches a screenshot pasted with Ctrl+V on the description step', async () => {
+    const user = userEvent.setup();
+    const onScreenshotChange = vi.fn();
+    setup({ actions: { ...actions, onScreenshotChange } });
+
+    await advanceTo(user, 3);
+    window.dispatchEvent(pasteEvent([new File(['x'], 'image.png', { type: 'image/png' })]));
+
+    expect(onScreenshotChange).toHaveBeenCalledWith(expect.any(File));
+    expect(onScreenshotChange.mock.calls[0]?.[0].name).toMatch(/^print-colado-.+\.png$/);
+  });
+
+  // triste
+  it('leaves pasted text alone and ignores a paste outside the description step', async () => {
+    const user = userEvent.setup();
+    const onScreenshotChange = vi.fn();
+    setup({ actions: { ...actions, onScreenshotChange } });
+
+    window.dispatchEvent(pasteEvent([new File(['x'], 'image.png', { type: 'image/png' })]));
+    await advanceTo(user, 3);
+    window.dispatchEvent(pasteEvent([]));
+
+    expect(onScreenshotChange).not.toHaveBeenCalled();
   });
 
   it('asks to submit only from the last step', async () => {
@@ -536,5 +609,32 @@ describe('AzuosOpenTicketForm', () => {
     });
 
     expect(screen.queryByRole('link', { name: /whatsapp/i })).not.toBeInTheDocument();
+  });
+});
+
+function pasteEvent(files: File[]): Event {
+  const event = new Event('paste', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'clipboardData', { value: { files } });
+  return event;
+}
+
+describe('pastedImage', () => {
+  // feliz
+  it('names the pasted image after the time it was pasted', () => {
+    const image = pastedImage(
+      { files: [new File(['x'], 'image.png', { type: 'image/png' })] } as unknown as DataTransfer,
+      new Date(2026, 9, 27, 14, 5, 9),
+    );
+
+    expect(image?.name).toBe('print-colado-14-05-09.png');
+    expect(image?.type).toBe('image/png');
+  });
+
+  // triste
+  it('finds no image in a clipboard with only a document or nothing at all', () => {
+    const pdf = new File(['x'], 'nota.pdf', { type: 'application/pdf' });
+
+    expect(pastedImage({ files: [pdf] } as unknown as DataTransfer)).toBeNull();
+    expect(pastedImage(null)).toBeNull();
   });
 });

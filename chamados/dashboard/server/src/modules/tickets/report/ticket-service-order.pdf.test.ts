@@ -22,6 +22,7 @@ const ticket: TicketWithComputer = {
   department: 'financeiro',
   computerId: 11,
   projectId: null,
+    customSystemName: null,
   githubIssueNumber: null,
   githubIssueUrl: null,
   computerName: 'RECEPCAO-01',

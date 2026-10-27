@@ -27,6 +27,7 @@
     | 'contactPhone'
     | 'description'
     | 'projectId'
+    | 'customSystemName'
     | 'assigneeId';
 
   /**
@@ -115,7 +116,7 @@
   const STEP_FIELDS: Record<StepId, OpenTicketField[]> = {
     area: ['area'],
     who: ['requesterName', 'contactPhone'],
-    problem: ['department', 'problemType', 'priority', 'anydeskId', 'projectId'],
+    problem: ['department', 'problemType', 'priority', 'anydeskId', 'projectId', 'customSystemName'],
     what: ['description'],
     notify: [],
   };
@@ -137,12 +138,25 @@
   function missingRequiredFields(
     step: StepId,
     fields: Record<OpenTicketField, FormFieldState>,
-    area: string,
   ): OpenTicketField[] {
     const required = [...(REQUIRED_FIELDS[step] ?? [])];
-    if (step === 'problem' && area === 'sistema') required.push('projectId');
 
     return required.filter((name) => fields[name].value.trim() === '');
+  }
+
+  /**
+   * A imagem que veio na área de transferência, ou `null`. O print colado chega sem nome
+   * ("image.png" em todo print), então ganha um com a hora — é o que a pessoa vê no campo
+   * para conferir que colou.
+   */
+  export function pastedImage(clipboard: DataTransfer | null, now: Date = new Date()): File | null {
+    const file = Array.from(clipboard?.files ?? []).find((item) => item.type.startsWith('image/'));
+    if (!file) return null;
+
+    const extension = file.type.split('/')[1] ?? 'png';
+    const time = now.toTimeString().slice(0, 8).replaceAll(':', '-');
+
+    return new File([file], `print-colado-${time}.${extension}`, { type: file.type });
   }
 
   /** A primeira etapa com campo em erro — pra onde pular quando um envio falha. */
@@ -196,7 +210,7 @@
 
   function handleAreaChange(value: string): void {
     actions.onChange('area', value);
-    if (value !== 'sistema') actions.onChange('projectId', '');
+    if (value !== 'sistema') clearSystem();
     /* Quem atende muda com a área: o responsável escolhido para a anterior não vale mais. */
     actions.onChange('assigneeId', '');
     /* Trocar de área pode deixar o tipo escolhido fora da lista nova — o primeiro tipo da
@@ -204,6 +218,28 @@
     const firstOfArea = ticketProblemTypeOptionsForArea(value as TicketArea)[0];
     if (firstOfArea) actions.onChange('problemType', firstOfArea.value);
   }
+
+  /* O sistema é UM campo na tela, mas dois no chamado: o da lista (`projectId`) ou o digitado
+     (`customSystemName`). Escolher um sempre limpa o outro — senão iriam os dois, e o nome
+     digitado ficaria escondido atrás do da lista. */
+  function clearSystem(): void {
+    actions.onChange('projectId', '');
+    actions.onChange('customSystemName', '');
+  }
+
+  function chooseSystem(value: string): void {
+    actions.onChange('customSystemName', '');
+    actions.onChange('projectId', value);
+  }
+
+  function typeSystem(value: string): void {
+    actions.onChange('projectId', '');
+    actions.onChange('customSystemName', value);
+  }
+
+  /* O seletor mostra o da lista pelo id e o digitado pelo próprio texto. */
+  const systemValue = $derived(fields.projectId.value || fields.customSystemName.value);
+  const systemError = $derived(fields.projectId.error ?? fields.customSystemName.error);
 
   /* Puramente visual: qual etapa está na tela agora. Não é dado do chamado. */
   let stepIndex = $state(0);
@@ -250,7 +286,7 @@
 
     /* Trava o avanço quando falta campo obrigatório — e força o erro a aparecer (`onBlur`)
        pra pessoa ver O QUÊ falta, não só que não avançou. */
-    const missing = missingRequiredFields(stepId, fields, fields.area.value);
+    const missing = missingRequiredFields(stepId, fields);
     if (missing.length > 0) {
       missing.forEach((name) => actions.onBlur(name));
       return;
@@ -291,6 +327,22 @@
     input.value = '';
   }
 
+  /**
+   * Colar o print com Ctrl+V: quem tira print (PrtSc, Win+Shift+S) já tem a imagem copiada, e
+   * salvar num arquivo só para escolhê-lo de novo é o passo que faz a pessoa desistir do print.
+   * Vale na etapa da descrição, com o foco em qualquer lugar — inclusive no texto. Colar TEXTO
+   * segue normal: só uma imagem na área de transferência é tomada como print.
+   */
+  function handlePaste(event: ClipboardEvent): void {
+    if (data.opened || stepId !== 'what' || formState.isSubmitting) return;
+
+    const image = pastedImage(event.clipboardData);
+    if (!image) return;
+
+    event.preventDefault();
+    actions.onScreenshotChange(image);
+  }
+
   /* O `<input type="file">` não deixa "desmarcar" um arquivo por código sem limpar o próprio
      valor: sem isso, escolher o MESMO arquivo de novo depois de remover não dispara `onchange`
      nenhum, e a pessoa acha que o botão de remover não funcionou. */
@@ -299,6 +351,8 @@
     if (screenshotInput) screenshotInput.value = '';
   }
 </script>
+
+<svelte:window onpaste={handlePaste} />
 
 <section class="bg-card rounded-surface border p-5">
   {#if data.opened}
@@ -474,37 +528,44 @@
 
               {#if fields.area.value === 'sistema'}
                 <div class="flex flex-col gap-1.5">
-                  <span class="text-ink-700 text-sm font-medium">
-                    Sistema relacionado <span class="text-destructive">*</span>
-                  </span>
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-ink-700 text-sm font-medium">Sistema relacionado (opcional)</span>
+                    {#if systemValue}
+                      <button
+                        type="button"
+                        onclick={clearSystem}
+                        disabled={formState.isSubmitting}
+                        class="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline"
+                      >Deixar sem sistema</button>
+                    {/if}
+                  </div>
                   <OptionPicker
-                    data={{ value: fields.projectId.value, options: systemProjects }}
+                    data={{ value: systemValue, options: systemProjects }}
                     ui={{
                       ariaLabel: 'Sistema relacionado',
                       placeholder: formState.systemProjectsLoading
                         ? 'Carregando sistemas…'
-                        : 'Pesquise e selecione o sistema',
+                        : 'Pesquise ou digite o sistema',
+                      searchPlaceholder: 'Busque ou digite o nome do sistema',
                       fullWidth: true,
+                      /* O sistema pode não estar na lista (planilha, site de fora, sistema
+                         novo): a pessoa digita o nome e o chamado guarda o texto como veio. */
+                      allowCustomValue: true,
                     }}
-                    state={{
-                      isDisabled:
-                        formState.isSubmitting ||
-                        formState.systemProjectsLoading ||
-                        systemProjects.length === 0,
-                    }}
-                    actions={{ onChange: (value: string) => actions.onChange('projectId', value) }}
+                    state={{ isDisabled: formState.isSubmitting || formState.systemProjectsLoading }}
+                    actions={{ onChange: chooseSystem, onCustomValue: typeSystem }}
                   />
-                  {#if fields.projectId.error}
-                    <p class="text-destructive text-xs">{fields.projectId.error}</p>
+                  {#if systemError}
+                    <p class="text-destructive text-xs">{systemError}</p>
                   {:else if formState.systemProjectsError}
                     <p class="text-destructive text-xs">{formState.systemProjectsError}</p>
-                  {:else if !formState.systemProjectsLoading && systemProjects.length === 0}
+                  {:else if fields.projectId.value}
                     <p class="text-muted-foreground text-xs">
-                      Nenhum sistema está disponível para abrir este chamado agora.
+                      O chamado será vinculado a uma Issue no repositório selecionado.
                     </p>
                   {:else}
                     <p class="text-muted-foreground text-xs">
-                      O chamado será vinculado a uma Issue no repositório selecionado.
+                      Não achou na lista? Digite o nome. Se não souber, pode deixar em branco.
                     </p>
                   {/if}
                 </div>
@@ -582,7 +643,9 @@
                   class="control-lg flex flex-1 cursor-pointer items-center gap-2 rounded-control border border-dashed border-border/80 bg-muted/20 text-xs text-muted-foreground transition-colors hover:bg-muted/40"
                 >
                   <PaperclipIcon class="size-3.5 shrink-0" aria-hidden="true" />
-                  <span class="truncate">{data.screenshotName ?? 'Escolher um arquivo de imagem'}</span>
+                  <span class="truncate">
+                    {data.screenshotName ?? 'Escolher uma imagem ou colar o print (Ctrl+V)'}
+                  </span>
                 </label>
                 {#if data.screenshotName}
                   <button

@@ -30,6 +30,7 @@ function ticketRow(overrides: Partial<TicketWithComputer> = {}): TicketWithCompu
     department: 'financeiro',
     computerId: null,
     projectId: null,
+    customSystemName: null,
     githubIssueNumber: null,
     githubIssueUrl: null,
     computerName: null,

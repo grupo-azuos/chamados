@@ -101,6 +101,9 @@ export const tickets = chamadosSchema.table(
      * O SISTEMA/PROJETO de software vinculado ao chamado (área de Sistema).
      */
     projectId: integer('project_id').references(() => softwareProjects.id, { onDelete: 'set null' }),
+    /* O sistema que quem abriu DIGITOU, por não achá-lo na lista. Texto solto, sem vínculo:
+       por isso não abre Issue no GitHub. Só existe quando não há `project_id`. */
+    customSystemName: text('custom_system_name'),
     githubIssueNumber: integer('github_issue_number'),
     githubIssueUrl: text('github_issue_url'),
 

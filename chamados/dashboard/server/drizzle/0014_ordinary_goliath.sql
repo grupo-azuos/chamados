@@ -1,0 +1,1 @@
+ALTER TABLE "chamados"."tickets" ADD COLUMN "custom_system_name" text;

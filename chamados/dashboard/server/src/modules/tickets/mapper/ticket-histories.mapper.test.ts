@@ -33,6 +33,7 @@ function ticket(over: Partial<TicketWithComputer> = {}): TicketWithComputer {
     department: 'financeiro',
     computerId: null,
     projectId: null,
+    customSystemName: null,
     githubIssueNumber: null,
     githubIssueUrl: null,
     computerName: null,

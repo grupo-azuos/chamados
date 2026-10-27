@@ -60,6 +60,7 @@ function ticketRow(overrides: Partial<TicketWithComputer> = {}): TicketWithCompu
     department: 'financeiro',
     computerId: null,
     projectId: null,
+    customSystemName: null,
     githubIssueNumber: null,
     githubIssueUrl: null,
     computerName: null,
@@ -310,10 +311,43 @@ describe('TicketsService.create', () => {
     expect(isTicketOption).not.toHaveBeenCalled();
   });
 
+  /* Quem abre pode não achar o sistema na lista: digita o nome, e o chamado sai sem Issue. */
+  it('opens a Sistema ticket with a typed system name and no project', async () => {
+    const insert = vi
+      .fn()
+      .mockResolvedValue(ticketRow({ area: 'sistema', problemType: 'bug', projectId: null }));
+    const isTicketOption = vi.fn();
+    const syncTicketToIssueInBackground = vi.fn();
+    const service = makeService(
+      { insert },
+      storageStub,
+      attachmentsStub,
+      { syncTicketToIssueInBackground },
+      { isTicketOption },
+    );
+
+    await service.create({
+      requesterName: 'Bia Costa',
+      area: 'sistema',
+      department: 'financeiro',
+      problemType: 'bug',
+      contactPhone: '62999999999',
+      description: 'O sistema não carrega.',
+      customSystemName: 'Planilha do financeiro',
+    });
+
+    expect(insert.mock.calls[0]?.[0]).toMatchObject({
+      projectId: null,
+      customSystemName: 'Planilha do financeiro',
+    });
+    expect(isTicketOption).not.toHaveBeenCalled();
+    expect(syncTicketToIssueInBackground).not.toHaveBeenCalled();
+  });
+
   // triste
-  it('still refuses any other Sistema ticket without a project', async () => {
+  it('still refuses a project that does not take tickets', async () => {
     const service = makeService({ insert: vi.fn() }, storageStub, attachmentsStub, undefined, {
-      isTicketOption: vi.fn(),
+      isTicketOption: vi.fn().mockResolvedValue(false),
     });
 
     await expect(
@@ -324,6 +358,7 @@ describe('TicketsService.create', () => {
         problemType: 'bug',
         contactPhone: '62999999999',
         description: 'O sistema não carrega.',
+        projectId: '99',
       }),
     ).rejects.toThrow('Selecione um sistema disponível');
   });
