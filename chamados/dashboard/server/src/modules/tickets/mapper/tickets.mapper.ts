@@ -29,7 +29,10 @@ function toNullableIsoString(date?: Date | null): string | null {
 function resolveTicketProjectMeta(row: TicketWithComputer) {
   return {
     projectId: row.projectId ?? null,
-    projectName: row.projectName ?? null,
+    /* O sistema digitado aparece onde o cadastrado apareceria: quem atende quer saber DO QUE
+       se trata, venha o nome da lista ou da pessoa. */
+    projectName: row.projectName ?? row.customSystemName ?? null,
+    customSystemName: row.customSystemName ?? null,
     githubIssueNumber: row.githubIssueNumber ?? null,
     githubIssueUrl: row.githubIssueUrl ?? null,
   };
@@ -160,6 +163,7 @@ export function toTicketInsert(
     description: input.description.trim(),
     screenshotKey,
     projectId: input.projectId ? Number(input.projectId) : null,
+    customSystemName: resolveCustomSystemName(input),
   };
 }
 
@@ -199,6 +203,14 @@ export function toTicketUpdate(
   setIfDefined(update, 'projectId', input.projectId);
 
   return update;
+}
+
+/* Escolheu da lista? O nome digitado não vale — o cadastro já diz qual é. */
+function resolveCustomSystemName(input: CreateTicketInput): string | null {
+  if (input.projectId) return null;
+  if (typeof input.customSystemName !== 'string') return null;
+
+  return normalizeOptional(input.customSystemName) ?? null;
 }
 
 /** Texto opcional só com espaço vira nulo: "" e nulo significando a mesma coisa confunde a busca. */

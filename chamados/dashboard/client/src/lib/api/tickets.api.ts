@@ -259,6 +259,7 @@ function toTicketBody(
     notifyWhatsapp: values.notifyWhatsapp,
     anydeskId: values.anydeskId || undefined,
     projectId: values.projectId || undefined,
+    customSystemName: values.customSystemName || undefined,
     assigneeId: values.assigneeId || undefined,
     screenshot,
     attachments,

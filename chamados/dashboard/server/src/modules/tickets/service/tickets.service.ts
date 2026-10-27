@@ -461,11 +461,12 @@ export class TicketsService {
     return rows.map(toMyTicket);
   }
 
-  /* Chamado de Sistema é de um sistema. A exceção é o pedido de USUÁRIO pelo WhatsApp (o
-     "0 — Nenhum" do `/acesso`): quem ainda não tem conta não tem sistema para pedir. */
+  /* O sistema é opcional: quem abre pode não saber qual é, ou digitar um que não está na
+     lista. Mas, quando vem um id, ele precisa ser de um sistema que aceita chamado — o id
+     vem de uma tela pública e não é de confiança. */
   private async assertSystemProject(input: CreateTicketInput): Promise<void> {
     if (input.area !== 'sistema') return;
-    if (input.problemType === 'access_request' && input.projectId == null) return;
+    if (input.projectId == null) return;
 
     const projectId = Number(input.projectId);
     const isOption =

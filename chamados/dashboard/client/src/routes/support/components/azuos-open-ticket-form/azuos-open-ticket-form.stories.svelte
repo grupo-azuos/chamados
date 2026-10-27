@@ -17,6 +17,7 @@
     contactPhone: field(''),
     description: field(''),
     projectId: field(''),
+    customSystemName: field(''),
     assigneeId: field(''),
   };
 
@@ -30,6 +31,7 @@
     contactPhone: field('62 99999-9999'),
     description: field('A impressora da sala não puxa papel.'),
     projectId: field(''),
+    customSystemName: field(''),
     assigneeId: field(''),
   };
 
@@ -84,6 +86,31 @@
       screenshotName: null,
       attachments: [],
       opened: null,
+    },
+    state: {},
+    actions,
+  }}
+/>
+
+<!-- Sistema fora da lista: a pessoa digitou o nome, e o print veio colado com Ctrl+V. -->
+<Story
+  name="SystemAreaTypedSystem"
+  args={{
+    data: {
+      fields: {
+        ...filledFields,
+        area: field('sistema'),
+        problemType: field('bug'),
+        customSystemName: field('Planilha do financeiro'),
+      },
+      notifyWhatsapp: false,
+      screenshotName: 'print-colado-14-05-09.png',
+      attachments: [],
+      opened: null,
+      systemProjects: [
+        { value: '1', label: 'Paralegal' },
+        { value: '2', label: 'Gestão RH' },
+      ],
     },
     state: {},
     actions,

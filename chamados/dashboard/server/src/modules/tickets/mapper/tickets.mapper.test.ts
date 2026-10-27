@@ -19,6 +19,7 @@ function row(over: Partial<TicketWithComputer> = {}): TicketWithComputer {
     department: 'financeiro',
     computerId: null,
     projectId: null,
+    customSystemName: null,
     githubIssueNumber: null,
     githubIssueUrl: null,
     computerName: null,
@@ -51,6 +52,12 @@ describe('toTicket', () => {
 
     expect(ticket.createdAt).toBe('2026-03-01T08:00:00.000Z');
     expect(ticket.startedAt).toBe('2026-03-01T10:00:00.000Z');
+  });
+
+  it('shows the typed system name where the linked one would be', () => {
+    const ticket = toTicket(row({ customSystemName: 'Planilha do financeiro' }), null);
+
+    expect(ticket.projectName).toBe('Planilha do financeiro');
   });
 
   it('carries the signed screenshot link it was given', () => {
@@ -135,6 +142,19 @@ describe('toTicketInsert', () => {
 
   it('stores the selected software project on the ticket', () => {
     expect(toTicketInsert({ ...input, projectId: '8' }, null).projectId).toBe(8);
+  });
+
+  it('stores the system name the person typed when none was chosen', () => {
+    const values = toTicketInsert({ ...input, customSystemName: '  Planilha  ' }, null);
+
+    expect(values.customSystemName).toBe('Planilha');
+  });
+
+  // triste
+  it('drops the typed system name when a listed one was chosen', () => {
+    const values = toTicketInsert({ ...input, projectId: '8', customSystemName: 'Outro' }, null);
+
+    expect(values.customSystemName).toBeNull();
   });
 
   it('keeps the storage key given by whoever stored the file', () => {
