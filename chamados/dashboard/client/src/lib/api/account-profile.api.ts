@@ -46,6 +46,22 @@ export function accountOrigin(
   throw new Error('Sem endereço da conta.');
 }
 
+/**
+ * O link do botão "Editar no Admin Console": a tela de perfil da conta, no mesmo endereço de
+ * onde a ficha é lida — igual aos outros sistemas do grupo. Sem a variável no servidor o botão
+ * sumia, embora a ficha viesse (ela já caía no domínio). Fora de um domínio conhecido, sem botão.
+ */
+export function accountProfileUrl(
+  configured: string | null | undefined,
+  hostname = window.location.hostname,
+): string | null {
+  try {
+    return new URL('/profile', accountOrigin(configured, hostname)).href;
+  } catch {
+    return null;
+  }
+}
+
 async function readAccount<T>(accountUrl: string, path: string): Promise<T> {
   const response = await fetch(new URL(path, new URL(accountUrl).origin), {
     credentials: 'include',

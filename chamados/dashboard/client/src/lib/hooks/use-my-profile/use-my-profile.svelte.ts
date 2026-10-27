@@ -7,6 +7,7 @@ import {
   type AccountRole,
   type AccountSystem,
   accountOrigin,
+  accountProfileUrl,
   accountProfileApi,
 } from '$lib/api/account-profile.api';
 import { authApi } from '$lib/api/auth.api';
@@ -67,7 +68,8 @@ export function useMyProfileModel(input: { user: SessionUser | undefined }) {
     get data() {
       return {
         person: mergePerson(input.user, account.current.data, systems.current.data),
-        accountUrl: config.current.data?.accountUrl ?? null,
+        /* Só depois de a configuração chegar: antes disso não se sabe se há endereço próprio. */
+        accountUrl: config.current.data ? accountProfileUrl(config.current.data.accountUrl) : null,
         theme: theme.theme,
       };
     },
