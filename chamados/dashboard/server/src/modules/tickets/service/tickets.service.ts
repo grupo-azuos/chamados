@@ -52,6 +52,12 @@ import {
   type UpdateTicketInput,
 } from '@template/shared/schemas/ticket.schema';
 import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
+import {
+  type TicketPeople,
+  type TicketPerson,
+  type UpdateTicketWatchersInput,
+  updateTicketWatchersSchema,
+} from '@template/shared/schemas/ticket-person.schema';
 
 import { AdminConsoleProfileProvider } from '../../../lib/auth/admin-console-profile.provider';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
@@ -81,6 +87,7 @@ import {
 } from '../mapper/tickets.mapper';
 import { TicketHistoriesRepository } from '../repository/ticket-histories.repository';
 import { TICKET_NOT_FOUND, TicketAccessService } from './ticket-access.service';
+import { TicketPeopleService } from './ticket-people.service';
 import { TicketAttachmentsService } from './ticket-attachments.service';
 import { TicketAssigneesService } from './ticket-assignees.service';
 import { verifyTicketAccess, verifyTicketInvite } from './ticket-invite.util';
@@ -169,6 +176,7 @@ export class TicketsService {
     @Optional() @Inject(ENV) private readonly env?: Env,
     @Optional() private readonly profiles?: AdminConsoleProfileProvider,
     @Optional() private readonly departments?: DepartmentsService,
+    @Optional() private readonly people?: TicketPeopleService,
   ) {}
 
   /** O link para enviar o print ou um anexo do chamado que vai ser aberto. */
@@ -409,6 +417,13 @@ export class TicketsService {
     /* A linha do tempo começa aqui: a abertura é o primeiro histórico, de quem abriu. */
     await this.histories.recordOpening(row);
 
+    /* As pessoas que quem abriu VINCULOU — passam a ver e escrever no chamado. */
+    await this.people?.attachOnOpening(
+      row,
+      input.watcherIds ?? [],
+      options.requester?.email ?? 'whatsapp',
+    );
+
     await this.attachments.attach(row.id, input.attachments ?? [], null, 'requester');
 
     /* Chamado nasce sem área participante — só a original, escolhida por quem abriu. */
@@ -456,9 +471,52 @@ export class TicketsService {
    * lista vazia — não é erro.
    */
   async listMine(user: RequestUser): Promise<MyTicket[]> {
-    const rows = await this.repository.listByRequester(user.id);
+    const watchedIds = (await this.people?.ticketIdsOf(user.id)) ?? [];
+    const rows = await this.repository.listByRequester(user.id, watchedIds);
 
-    return rows.map(toMyTicket);
+    return rows.map((row) => toMyTicket(row, user.id));
+  }
+
+  /** Todas as pessoas ativas do admin-console — quem pode ser vinculado a um chamado. */
+  async listPeopleOptions(): Promise<TicketPerson[]> {
+    return (await this.people?.options()) ?? [];
+  }
+
+  /** As pessoas do chamado, para o painel: os vinculados e quem pode ser avisado. */
+  async listPeople(user: RequestUser, id: number): Promise<TicketPeople> {
+    assertCanRead(user.role, 'os chamados');
+    const { ticket } = await this.access.reach(user, id);
+    if (!this.people) return { watchers: [], notifiable: [] };
+
+    const watchers = await this.people.watchersOf(id);
+
+    return { watchers, notifiable: this.people.notifiableOf(ticket, watchers, user.id) };
+  }
+
+  /**
+   * Troca a lista de vinculados. Pode quem ESCREVE no chamado: quem abriu e os vinculados (pela
+   * Central) e quem atende alguma área dele (pelo painel). A troca fica na linha do tempo.
+   */
+  async updateWatchers(
+    user: RequestUser,
+    id: number,
+    input: UpdateTicketWatchersInput,
+  ): Promise<TicketPerson[]> {
+    const people = this.people;
+    if (!people) return [];
+
+    const row = await this.repository.findById(id);
+    if (!row) throw new NotFoundException(NOT_FOUND);
+
+    const watchers = await people.watchersOf(id);
+    if (!people.canReply(row, watchers, user.id)) {
+      const reach = await this.access.reach(user, id);
+      this.access.assertCanWrite(reach);
+    }
+
+    const { userIds } = updateTicketWatchersSchema.parse(input);
+
+    return people.replace(row, userIds, { name: user.name, email: user.email, id: user.id });
   }
 
   /* O sistema é opcional: quem abre pode não saber qual é, ou digitar um que não está na
@@ -524,12 +582,21 @@ export class TicketsService {
     /* Fora da linha do tempo ficam só os arquivos do PRÓPRIO chamado. Os que entraram junto
        de um histórico saem dentro dele — e os de um histórico escondido não saem. */
     const ownFiles = attachments.filter((attachment) => attachment.historyId === null);
+    const watchers = (await this.people?.watchersOf(row.id)) ?? [];
+    const canReply = this.people?.canReply(row, watchers, user.id) ?? false;
+    const notifiable = this.people?.notifiableOf(row, watchers, user.id) ?? [];
 
-    return toPublicTicket(row, screenshotUrl, ownFiles, histories);
+    return toPublicTicket(row, screenshotUrl, ownFiles, histories, {
+      watchers,
+      notifiable,
+      canReply,
+    });
   }
 
   private async canLookUp(user: RequestUser, row: TicketWithComputer): Promise<boolean> {
     if (row.requesterId && row.requesterId === user.id) return true;
+    /* Vinculado vê como quem abriu: é para isso que foi vinculado. */
+    if ((await this.people?.ticketIdsOf(user.id))?.includes(row.id)) return true;
 
     const [areas, participants] = await Promise.all([
       this.access.accessibleAreas(user),

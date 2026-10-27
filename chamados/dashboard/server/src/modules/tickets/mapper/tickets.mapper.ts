@@ -2,6 +2,7 @@ import { type TicketAttachment } from '@template/shared/schemas/ticket-attachmen
 import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
 import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { type PublicTicketHistory } from '@template/shared/schemas/ticket-history.schema';
+import { type TicketPerson } from '@template/shared/schemas/ticket-person.schema';
 import {
   type CreateTicketInput,
   type MyTicket,
@@ -12,6 +13,7 @@ import {
 
 import { mapDefined, setIfDefined } from '../../../lib/db/partial-update.util';
 import { type TicketInsert, type TicketRow } from '../../../lib/db/schema/tickets.schema';
+import { type TicketWatcherRow } from '../../../lib/db/schema/ticket-watchers.schema';
 import { type TicketWithComputer } from '../repository/tickets.repository';
 
 /**
@@ -85,6 +87,11 @@ export function toPublicTicket(
   screenshotUrl: string | null,
   attachments: TicketAttachment[] = [],
   histories: PublicTicketHistory[] = [],
+  people: { watchers: TicketPerson[]; notifiable: TicketPerson[]; canReply: boolean } = {
+    watchers: [],
+    notifiable: [],
+    canReply: false,
+  },
 ): PublicTicket {
   const ticket = toTicket(row, screenshotUrl);
 
@@ -102,6 +109,9 @@ export function toPublicTicket(
     screenshotUrl: ticket.screenshotUrl,
     attachments,
     histories,
+    watchers: people.watchers,
+    notifiable: people.notifiable,
+    canReply: people.canReply,
     createdAt: ticket.createdAt,
   };
 }
@@ -113,8 +123,11 @@ export function toPublicTicket(
 /** A pessoa do admin-console que abriu o chamado. */
 export type TicketRequester = { id: string; email: string; name: string };
 
-/** Um chamado na lista "Meus chamados" — só o resumo. */
-export function toMyTicket(row: TicketRow): MyTicket {
+/**
+ * Um chamado na lista "Meus chamados" — só o resumo. `viewerId` diz se a pessoa está ali por
+ * ter aberto ou por ter sido vinculada.
+ */
+export function toMyTicket(row: TicketRow, viewerId: string): MyTicket {
   return {
     id: row.id,
     protocol: formatTicketProtocol(row.id),
@@ -124,7 +137,13 @@ export function toMyTicket(row: TicketRow): MyTicket {
     problemType: row.problemType,
     description: row.description,
     createdAt: row.createdAt.toISOString(),
+    isWatching: row.requesterId !== viewerId,
   };
+}
+
+/** A linha de vínculo como o chamado mostra a pessoa. */
+export function toTicketPerson(row: Pick<TicketWatcherRow, 'userId' | 'userName'>): TicketPerson {
+  return { id: row.userId, name: row.userName };
 }
 
 function requesterColumns(input: CreateTicketInput, requester: TicketRequester | null | undefined) {

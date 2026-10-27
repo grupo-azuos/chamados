@@ -1,6 +1,7 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ticketAreaLabel } from '@template/shared/domain/ticket-catalog.util';
 import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
+import { ticketStatusLabel, type TicketStatus } from '@template/shared/domain/ticket-status.util';
 import { toWhatsAppNumber } from '@template/shared/domain/ticket-whatsapp.util';
 import { TICKET_ACCESS_PARAM } from '@template/shared/domain/ticket-invite.util';
 import { type TicketNoticeOutcome } from '@template/shared/schemas/ticket.schema';
@@ -9,6 +10,7 @@ import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.sc
 import { type Env } from '../../../lib/config/env.schema';
 import { ENV } from '../../../lib/config/env.token';
 import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
+import { TicketsRepository } from '../repository/tickets.repository';
 import { TicketAssigneesService } from './ticket-assignees.service';
 import { signTicketAccess } from './ticket-invite.util';
 import { WhatsappMessagingService } from '../../whatsapp/service/whatsapp-messaging.service';
@@ -32,6 +34,7 @@ export class TicketWhatsappNotifierService {
     @Inject(ENV) private readonly env: Env,
     @Optional() private readonly messaging?: WhatsappMessagingService,
     @Optional() private readonly assignees?: TicketAssigneesService,
+    @Optional() private readonly tickets?: TicketsRepository,
   ) {}
 
   /**
@@ -57,6 +60,73 @@ export class TicketWhatsappNotifierService {
   /** "O seu chamado ficou pronto" — quando quem atende clica em avisar. */
   ready(ticket: TicketRow): Promise<TicketNoticeOutcome> {
     return this.notify(ticket, 'ticket_ready', assigneeOf(ticket));
+  }
+
+  /**
+   * "Tem novidade no seu chamado" — o COMUNICAR da OS: sai só para as pessoas que o autor do
+   * andamento escolheu. Sai pelo número de quem escreveu, quando ele atende e tem WhatsApp
+   * vinculado; senão, pelo do responsável (ou de quem atende a área), como o aviso de abertura.
+   *
+   * O telefone de cada pessoa: quem abriu, o do chamado; os demais, o WhatsApp vinculado (quem
+   * atende) ou o do último chamado que abriram. Sem telefone conhecido, a pessoa fica sem aviso
+   * — e o desfecho diz isso, pessoa por pessoa.
+   */
+  async update(
+    ticket: TicketRow,
+    entry: UpdateNotice,
+    recipients: readonly NoticeRecipient[],
+  ): Promise<UpdateNoticeOutcome[]> {
+    if (recipients.length === 0) return [];
+    if (!this.messaging) return recipients.map((person) => ({ ...person, outcome: 'not_configured' }));
+
+    const sender = await this.updateSenderFor(ticket, entry.authorId);
+    const outcomes: UpdateNoticeOutcome[] = [];
+    for (const person of recipients) {
+      outcomes.push({ ...person, outcome: await this.updateOne(ticket, entry, person, sender) });
+    }
+
+    return outcomes;
+  }
+
+  private async updateOne(
+    ticket: TicketRow,
+    entry: UpdateNotice,
+    person: NoticeRecipient,
+    sender: NoticeSender | null,
+  ): Promise<TicketNoticeOutcome> {
+    if (!sender) return 'no_assignee';
+
+    const phone = person.id === ticket.requesterId ? ticket.contactPhone : await this.phoneOf(person.id);
+    const recipient = toWhatsAppNumber(phone);
+    if (!recipient) return 'recipient_not_found';
+
+    return (
+      (await this.messaging?.queue({
+        senderUserId: sender.id,
+        to: recipient,
+        kind: 'ticket_update',
+        ticketId: ticket.id,
+        values: {
+          ...ticketValues(ticket, this.env, sender.name),
+          nome: person.name,
+          autor: entry.authorName,
+          andamento: entry.description,
+          situacao: ticketStatusLabel(entry.statusAfter),
+        },
+      })) ?? 'not_configured'
+    );
+  }
+
+  private async updateSenderFor(ticket: TicketRow, authorId: string): Promise<NoticeSender | null> {
+    if (await this.messaging?.isLinked(authorId)) return { id: authorId, name: null };
+
+    return this.senderFor(ticket);
+  }
+
+  private async phoneOf(userId: string): Promise<string | null> {
+    return (
+      (await this.messaging?.linkedPhone(userId)) ?? (await this.tickets?.lastPhoneOf(userId)) ?? null
+    );
   }
 
   /** Os avisos do chamado na fila de saída: saíram, esperam ou pararam. */
@@ -89,6 +159,19 @@ export class TicketWhatsappNotifierService {
     });
   }
 }
+
+/** O andamento que vira aviso: quem escreveu, o texto e em que situação o chamado ficou. */
+export type UpdateNotice = {
+  authorId: string;
+  authorName: string;
+  description: string;
+  statusAfter: TicketStatus;
+};
+
+/** Uma pessoa a avisar — o id decide o telefone; o nome abre a mensagem. */
+export type NoticeRecipient = { id: string; name: string };
+
+export type UpdateNoticeOutcome = NoticeRecipient & { outcome: TicketNoticeOutcome };
 
 /** De quem é o número que envia, e o nome que assina a mensagem. */
 type NoticeSender = { id: string; name: string | null };

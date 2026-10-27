@@ -7,7 +7,10 @@ import {
   isSystemTicketHistoryType,
   MANUAL_TICKET_HISTORY_TYPES,
   nextTicketStatus,
+  refuseRequesterTicketHistory,
   refuseTicketHistory,
+  REQUESTER_TICKET_HISTORY_TYPES,
+  requesterTicketHistoryType,
   SYSTEM_TICKET_HISTORY_TYPES,
   TICKET_HISTORY_CATALOG,
   TICKET_HISTORY_TYPE_LABELS,
@@ -218,5 +221,45 @@ describe('availableTicketHistoryTypes', () => {
   it('offers only the reopening on a closed ticket', () => {
     expect(availableTicketHistoryTypes('resolved')).toEqual(['reopening']);
     expect(availableTicketHistoryTypes('cancelled')).toEqual(['reopening']);
+  });
+});
+
+describe('what the requester launches from the support page', () => {
+  // feliz
+  it('lists exactly the catalog types launched by the requester', () => {
+    const launchedByRequester = TICKET_HISTORY_TYPES.filter(
+      (type) => TICKET_HISTORY_CATALOG[type].origin === 'requester',
+    );
+
+    expect([...REQUESTER_TICKET_HISTORY_TYPES].sort()).toEqual([...launchedByRequester].sort());
+  });
+
+  // feliz
+  it('puts the ticket back in the queue as "requester reply" when the requester writes', () => {
+    expect(nextTicketStatus('waiting_requester', 'requester_reply')).toBe('requester_reply');
+    expect(nextTicketStatus('resolved', 'requester_reopening')).toBe('requester_reply');
+    expect(isClosedTicketStatus(nextTicketStatus('resolved', 'requester_reopening'))).toBe(false);
+  });
+
+  // feliz
+  it('offers a reply while the ticket runs and a reopening once it is closed', () => {
+    expect(requesterTicketHistoryType('in_progress')).toBe('requester_reply');
+    expect(requesterTicketHistoryType('requester_reply')).toBe('requester_reply');
+    expect(requesterTicketHistoryType('resolved_with_caveats')).toBe('requester_reopening');
+    expect(refuseRequesterTicketHistory('open', 'requester_reply')).toBeNull();
+    expect(refuseRequesterTicketHistory('cancelled', 'requester_reopening')).toBeNull();
+  });
+
+  // triste
+  it('refuses a reply on a closed ticket and a reopening on a running one', () => {
+    expect(refuseRequesterTicketHistory('resolved', 'requester_reply')).toMatch(/encerrado/);
+    expect(refuseRequesterTicketHistory('in_progress', 'requester_reopening')).toMatch(/reabrir/);
+  });
+
+  // triste
+  it('keeps each door to its own types', () => {
+    expect(refuseRequesterTicketHistory('in_progress', 'note')).toMatch(/quem atende/);
+    expect(refuseTicketHistory('in_progress', 'requester_reply')).toMatch(/quem abriu/);
+    expect(availableTicketHistoryTypes('in_progress')).not.toContain('requester_reply');
   });
 });

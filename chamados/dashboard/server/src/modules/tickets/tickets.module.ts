@@ -9,9 +9,11 @@ import { TicketServiceOrdersService } from './service/ticket-service-orders.serv
 import { TicketAttachmentsRepository } from './repository/ticket-attachments.repository';
 import { TicketHistoriesRepository } from './repository/ticket-histories.repository';
 import { TicketsRepository } from './repository/tickets.repository';
+import { TicketWatchersRepository } from './repository/ticket-watchers.repository';
 import { TicketAccessService } from './service/ticket-access.service';
 import { TicketAttachmentsService } from './service/ticket-attachments.service';
 import { TicketHistoriesService } from './service/ticket-histories.service';
+import { TicketPeopleService } from './service/ticket-people.service';
 import { TicketsService } from './service/tickets.service';
 
 import { AuthModule } from '../../lib/auth/auth.module';
@@ -47,6 +49,8 @@ import { DepartmentsModule } from '../departments/departments.module';
     TicketHistoriesRepository,
     TicketAssigneesService,
     TicketWhatsappNotifierService,
+    TicketPeopleService,
+    TicketWatchersRepository,
   ],
   exports: [TicketsService, TicketAssigneesService],
 })

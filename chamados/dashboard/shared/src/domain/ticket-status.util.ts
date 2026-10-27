@@ -20,6 +20,7 @@
  */
 export const TICKET_STATUSES = [
   'open',
+  'requester_reply',
   'in_progress',
   'waiting_requester',
   'waiting_third_party',
@@ -71,6 +72,16 @@ export type TicketStatusDefinition = {
  */
 export const TICKET_STATUS_CATALOG = {
   open: { label: 'Aberto', tone: 'danger', phase: 'queue', isSolved: false },
+  /* Quem pediu (ou alguém vinculado) escreveu — respondeu, mandou arquivo, reabriu. A bola
+     volta para o TI: por isso é fila (`queue`), e não espera, e tem a cor de quem precisa de
+     atenção. Sem este estágio, a resposta do solicitante ficava escondida num chamado que
+     continuava dizendo "aguardando solicitante". */
+  requester_reply: {
+    label: 'Retorno do solicitante',
+    tone: 'danger',
+    phase: 'queue',
+    isSolved: false,
+  },
   in_progress: { label: 'Em atendimento', tone: 'info', phase: 'working', isSolved: false },
   waiting_requester: {
     label: 'Aguardando solicitante',
