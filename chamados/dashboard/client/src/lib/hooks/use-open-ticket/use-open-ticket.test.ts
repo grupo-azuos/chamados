@@ -11,6 +11,10 @@ vi.mock('$lib/api/tickets.api', () => ({
     create: vi.fn(),
     systemProjectOptions: vi.fn(),
     assigneeOptions: vi.fn().mockResolvedValue([]),
+    peopleOptions: vi.fn().mockResolvedValue([
+      { id: 'u-caio', name: 'Caio Reis' },
+      { id: 'u-dani', name: 'Dani Alves' },
+    ]),
     /* Por padrão o perfil não responde: o formulário abre para digitar, como antes. Os testes
        do preenchimento pela conta trocam isto. */
     requesterDefaults: vi.fn().mockRejectedValue(new Error('sem perfil')),
@@ -316,3 +320,36 @@ describe('useOpenTicketModel', () => {
   });
 });
 
+
+describe('useOpenTicketModel — pessoas vinculadas', () => {
+  beforeEach(() => {
+    vi.mocked(ticketsApi.create).mockReset().mockResolvedValue(ticket());
+    vi.mocked(ticketsApi.systemProjectOptions).mockResolvedValue([]);
+  });
+
+  // feliz
+  it('offers the people of the admin-console and sends the chosen ones with the ticket', async () => {
+    const model = mountModel();
+    await waitFor(() => expect(model.data.peopleOptions).toHaveLength(2));
+
+    await fillMinimum(model);
+    model.actions.onWatchersChange(['u-caio']);
+    model.actions.onSubmit();
+
+    await waitFor(() => expect(ticketsApi.create).toHaveBeenCalled());
+    expect(vi.mocked(ticketsApi.create).mock.calls[0]?.[0]).toMatchObject({ watcherIds: ['u-caio'] });
+  });
+
+  // triste
+  it('opens the ticket with nobody linked when the person list cannot be read', async () => {
+    vi.mocked(ticketsApi.peopleOptions).mockRejectedValueOnce(new Error('fora do ar'));
+    const model = mountModel();
+
+    await fillMinimum(model);
+    model.actions.onSubmit();
+
+    await waitFor(() => expect(ticketsApi.create).toHaveBeenCalled());
+    expect(model.data.peopleOptions).toEqual([]);
+    expect(vi.mocked(ticketsApi.create).mock.calls[0]?.[0]).toMatchObject({ watcherIds: [] });
+  });
+});

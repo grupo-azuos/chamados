@@ -264,6 +264,9 @@ describe('publicTicketSchema', () => {
     updatedBy: null,
     attachments: [],
     histories: [],
+    watchers: [],
+    notifiable: [],
+    canReply: true,
   };
 
   // feliz

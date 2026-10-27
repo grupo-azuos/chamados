@@ -11,6 +11,7 @@
     ticketStatusTone,
   } from '@template/shared/domain/ticket-status.util';
   import { type MyTicket, type PublicTicket } from '@template/shared/schemas/ticket.schema';
+  import type { Snippet } from 'svelte';
 
   /**
    * A consulta de um chamado pelo NÚMERO, e a lista "Meus chamados", num drawer que cobre a
@@ -50,7 +51,15 @@
       onClose: () => void;
       /** Abre um dos chamados da lista, pelo número dele. */
       onOpenMine?: (protocol: string) => void;
+      /** Fecha o chamado aberto e volta para a lista "Meus chamados". */
+      onBackToList?: () => void;
     };
+    /**
+     * O que quem pediu FAZ com o chamado aberto (responder, reabrir, vincular) — entra depois
+     * da linha do tempo. É encaixe, e não parte daqui, porque escrever tem estado e envio
+     * próprios, e esta tela só mostra.
+     */
+    slots?: { ticketActions?: Snippet<[PublicTicket]> };
   };
 </script>
 
@@ -62,7 +71,9 @@
   import ImageIcon from '@lucide/svelte/icons/image';
   import Layers from '@lucide/svelte/icons/layers';
   import ListChecks from '@lucide/svelte/icons/list-checks';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import MonitorSmartphone from '@lucide/svelte/icons/monitor-smartphone';
+  import Users from '@lucide/svelte/icons/users';
   import Wrench from '@lucide/svelte/icons/wrench';
   import type { Component } from 'svelte';
 
@@ -82,7 +93,7 @@
   } from '$lib/components/azuos-sheet/azuos-sheet';
   import { cn } from '$lib/utils/cn';
 
-  let { data, state, actions }: AzuosTicketLookupDrawerProps = $props();
+  let { data, state, actions, slots }: AzuosTicketLookupDrawerProps = $props();
 
   const ticket = $derived(data.ticket);
 
@@ -116,6 +127,14 @@
       { label: 'Andamentos', value: String(found.histories.length), icon: ListChecks },
     ];
 
+    if (found.watchers.length > 0) {
+      facts.push({
+        label: 'Vinculados',
+        value: found.watchers.map((watcher) => watcher.name).join(', '),
+        icon: Users,
+      });
+    }
+
     if (found.anydeskId) {
       facts.push({ label: 'AnyDesk', value: found.anydeskId, icon: MonitorSmartphone, isCode: true });
     }
@@ -138,7 +157,9 @@
   >
     <SheetHeader class="border-b border-border/70">
       <SheetTitle class="text-lg">Consultar chamado</SheetTitle>
-      <SheetDescription>Digite o número do chamado, ou escolha um dos que você abriu.</SheetDescription>
+      <SheetDescription>
+        Digite o número do chamado, ou escolha um dos seus. Nele você acompanha, responde e reabre.
+      </SheetDescription>
     </SheetHeader>
 
     <div class="flex flex-col gap-5 p-5 sm:p-6">
@@ -179,6 +200,16 @@
         </p>
       {:else if ticket}
         {@const facts = factsOf(ticket)}
+        {#if actions.onBackToList}
+          <button
+            type="button"
+            class="text-primary inline-flex w-fit cursor-pointer items-center gap-1.5 text-sm font-medium hover:underline"
+            onclick={actions.onBackToList}
+          >
+            <ArrowLeft class="size-4" aria-hidden="true" />
+            Voltar para Meus chamados
+          </button>
+        {/if}
         <div class="flex flex-col gap-4 rounded-surface border border-border/80 bg-muted/20 p-5 shadow-xs">
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="flex flex-col gap-2">
@@ -251,6 +282,8 @@
               ui={{ emptyLabel: 'Ainda não há andamento registrado neste chamado.' }}
             />
           </div>
+
+          {@render slots?.ticketActions?.(ticket)}
         </div>
       {:else}
         <section class="flex flex-col gap-2" aria-label="Meus chamados">
@@ -260,7 +293,9 @@
           {:else if state.isLoadingMine}
             <p class="text-ink-500 text-sm">Carregando os seus chamados…</p>
           {:else if (data.mine ?? []).length === 0}
-            <p class="text-ink-500 bg-muted/40 rounded-box p-3 text-sm">Você ainda não abriu nenhum chamado.</p>
+            <p class="text-ink-500 bg-muted/40 rounded-box p-3 text-sm">
+              Você ainda não abriu nenhum chamado, nem foi vinculado a um.
+            </p>
           {:else}
             <ul class="flex flex-col gap-2">
               {#each data.mine ?? [] as item (item.id)}
@@ -271,7 +306,13 @@
                     onclick={() => actions.onOpenMine?.(item.protocol)}
                   >
                     <span class="flex items-center justify-between gap-2">
-                      <span class="text-foreground text-sm font-semibold">{item.protocol}</span>
+                      <span class="flex items-center gap-2">
+                        <span class="text-foreground text-sm font-semibold">{item.protocol}</span>
+                        <!-- Está aqui por ter sido vinculado, não por ter aberto. -->
+                        {#if item.isWatching}
+                          <StatusBadge data={{ label: 'Vinculado' }} ui={{ tone: 'info', size: 'sm' }} />
+                        {/if}
+                      </span>
                       <StatusBadge
                         data={{ label: ticketStatusLabel(item.status) }}
                         ui={{ tone: ticketStatusTone(item.status), size: 'sm' }}

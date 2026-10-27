@@ -10,6 +10,8 @@
   import { useMyProfileModel } from '$lib/hooks/use-my-profile/use-my-profile.svelte';
   import { useOpenTicketModel } from '$lib/hooks/use-open-ticket/use-open-ticket.svelte';
   import { useTicketLookupModel } from '$lib/hooks/use-ticket-lookup/use-ticket-lookup.svelte';
+  import { useTicketReplyModel } from '$lib/hooks/use-ticket-reply/use-ticket-reply.svelte';
+  import TicketReplyForm from './components/azuos-ticket-reply-form/azuos-ticket-reply-form.svelte';
   import type { PageData } from './$types';
 
   /**
@@ -28,6 +30,11 @@
   /* Só o nome e a foto, para o cartão da pessoa no cabeçalho — a mesma fonte do perfil. */
   const profile = useMyProfileModel({ user: untrack(() => data.user) });
   const lookup = useTicketLookupModel();
+  /* O lado de quem pediu da OS: responder, reabrir, vincular — sobre o chamado da consulta. */
+  const reply = useTicketReplyModel({
+    ticket: () => lookup.data.ticket,
+    onSaved: lookup.actions.onRefresh,
+  });
 
   /* Se o drawer de consulta está aberto é qual peça da tela está na frente, não dado do
      chamado — por isso mora aqui, igual ao `answering` da tela interna de Chamados. */
@@ -76,8 +83,15 @@
   </main>
 </div>
 
+{#snippet ticketActions()}
+  {#if reply.state.canReply}
+    <TicketReplyForm data={reply.data} state={reply.state} actions={reply.actions} />
+  {/if}
+{/snippet}
+
 <TicketLookupDrawer
   data={lookup.data}
   state={{ ...lookup.state, isOpen: isLookupOpen }}
   actions={{ ...lookup.actions, onClose: () => (isLookupOpen = false) }}
+  slots={{ ticketActions }}
 />

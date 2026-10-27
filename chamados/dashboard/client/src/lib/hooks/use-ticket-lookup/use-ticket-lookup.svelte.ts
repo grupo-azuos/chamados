@@ -1,4 +1,4 @@
-import { createMutation, createQuery } from '@tanstack/svelte-query';
+import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { isValidTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { type MyTicket, type PublicTicket } from '@template/shared/schemas/ticket.schema';
 import { writable } from 'svelte/store';
@@ -6,6 +6,8 @@ import { writable } from 'svelte/store';
 import { readError } from '$lib/api/http-client';
 import { ticketsApi } from '$lib/api/tickets.api';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+
+export const MY_TICKETS_QUERY_KEY = ['tickets', 'mine'];
 
 export type TicketLookupModel = {
   data: {
@@ -31,6 +33,10 @@ export type TicketLookupModel = {
     onOpenLink: (token: string) => void;
     /** Abre um dos chamados da lista "Meus chamados", pelo número. */
     onOpenMine: (protocol: string) => void;
+    /** Relê o chamado aberto — depois de a pessoa escrever nele ou mudar os vinculados. */
+    onRefresh: () => void;
+    /** Fecha o chamado aberto e volta para a lista. */
+    onBackToList: () => void;
   };
 };
 
@@ -64,8 +70,9 @@ export function useTicketLookupModel(): TicketLookupModel {
 
   /* "Meus chamados" — uma vez, ao abrir a tela. Falhou? A lista mostra o motivo, e a consulta
      pelo número continua funcionando. */
+  const queryClient = useQueryClient();
   const mine = mirrorStore(
-    createQuery(writable({ queryKey: ['tickets', 'mine'], queryFn: () => ticketsApi.mine() })),
+    createQuery(writable({ queryKey: MY_TICKETS_QUERY_KEY, queryFn: () => ticketsApi.mine() })),
   );
 
   return {
@@ -101,6 +108,17 @@ export function useTicketLookupModel(): TicketLookupModel {
       onOpenMine: (value) => {
         protocol = value;
         search.current.mutate({ protocol: value });
+      },
+      /* A situação na lista também mudou (ex.: "Retorno do solicitante"): relê as duas. */
+      onRefresh: () => {
+        const opened = search.current.data?.protocol;
+        if (!opened) return;
+        search.current.mutate({ protocol: opened });
+        void queryClient.invalidateQueries({ queryKey: MY_TICKETS_QUERY_KEY });
+      },
+      onBackToList: () => {
+        protocol = '';
+        search.current.reset();
       },
     },
   };

@@ -282,6 +282,27 @@
   }}
 />
 
+<!-- Com pessoas para vincular: o campo aparece no último passo, com uma já escolhida. -->
+<Story
+  name="WithPeopleToLink"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: false,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+      watcherIds: ['u-caio'],
+      peopleOptions: [
+        { id: 'u-caio', name: 'Caio Reis' },
+        { id: 'u-dani', name: 'Dani Alves' },
+      ],
+    },
+    state: {},
+    actions: { ...actions, onWatchersChange: () => {} },
+  }}
+/>
+
 <Story
   name="OpenedWithWhatsApp"
   args={{

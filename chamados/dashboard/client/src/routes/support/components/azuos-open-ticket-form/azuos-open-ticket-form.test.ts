@@ -512,6 +512,41 @@ describe('AzuosOpenTicketForm', () => {
     expect(screen.getByText('Sistema')).toBeInTheDocument();
   });
 
+  it('offers to link other people on the last step', async () => {
+    const user = userEvent.setup();
+    const onWatchersChange = vi.fn();
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        watcherIds: ['u-caio'],
+        peopleOptions: [
+          { id: 'u-caio', name: 'Caio Reis' },
+          { id: 'u-dani', name: 'Dani Alves' },
+        ],
+      },
+      actions: { ...actions, onWatchersChange },
+    });
+
+    await advanceTo(user, 4);
+    expect(screen.getByText('Vincular outras pessoas')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Tirar Caio Reis' }));
+
+    expect(onWatchersChange).toHaveBeenCalledWith([]);
+  });
+
+  it('hides the link field when there is nobody to offer', async () => {
+    const user = userEvent.setup();
+    setup();
+
+    await advanceTo(user, 4);
+
+    expect(screen.queryByText('Vincular outras pessoas')).not.toBeInTheDocument();
+  });
+
   /* Escolher com quem falar é opcional: sem opções para a área, o campo nem aparece. */
   it('hides the assignee choice when nobody is offered for the area', async () => {
     const user = userEvent.setup();

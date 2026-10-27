@@ -1,5 +1,5 @@
 import { createForm } from '@tanstack/svelte-form';
-import { createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import {
   isClosingTicketHistoryType,
   ticketHistoryEffect,
@@ -17,7 +17,9 @@ import {
   ticketHistoryFormSchema,
   type TicketHistoryFormValues,
 } from '@template/shared/schemas/ticket-history.schema';
+import { type TicketPerson } from '@template/shared/schemas/ticket-person.schema';
 import { type Ticket } from '@template/shared/schemas/ticket.schema';
+import { writable } from 'svelte/store';
 
 import { readError } from '$lib/api/http-client';
 import { ticketsApi } from '$lib/api/tickets.api';
@@ -49,9 +51,14 @@ export type TicketHistoryFormModel = {
     isVisibleToRequester: boolean;
     /** Os arquivos escolhidos agora, que entram junto com o histórico. */
     chosenFiles: File[];
+    /** Quem vai receber aviso por WhatsApp deste andamento. Vazio: ninguém. */
+    notifyUserIds: string[];
+    /** Quem PODE ser avisado: quem abriu, os vinculados e o responsável (menos quem escreve). */
+    notifiable: TicketPerson[];
   };
   state: {
     isSubmitting: boolean;
+    isLoadingPeople: boolean;
     error: string | null;
     /** A recusa da ESCOLHA de um arquivo (não cabe, formato errado). */
     attachmentError: string | null;
@@ -61,6 +68,7 @@ export type TicketHistoryFormModel = {
     onChange: (field: 'description' | 'minutesSpent', value: string) => void;
     onBlur: (field: 'description' | 'minutesSpent') => void;
     onVisibilityChange: (isVisible: boolean) => void;
+    onNotifyChange: (ids: string[]) => void;
     onChosenFilesChange: (files: File[]) => void;
     onAttachmentError: (message: string | null) => void;
     onSubmit: () => void;
@@ -90,6 +98,17 @@ export function useTicketHistoryFormModel({
   let attachmentError = $state<string | null>(null);
 
   const groups = toOptionGroups(ticket.status);
+
+  /* As pessoas do chamado — a mesma chave que a ficha invalida ao trocar os vinculados, para a
+     lista de quem avisar acompanhar a troca. */
+  const people = mirrorStore(
+    createQuery(
+      writable({
+        queryKey: ticketPeopleQueryKey(ticket.id),
+        queryFn: () => ticketsApi.people(ticket.id),
+      }),
+    ),
+  );
 
   const save = mirrorStore(
     createMutation({
@@ -145,11 +164,14 @@ export function useTicketHistoryFormModel({
         },
         isVisibleToRequester: current.isVisibleToRequester,
         chosenFiles,
+        notifyUserIds: current.notifyUserIds,
+        notifiable: people.current.data?.notifiable ?? [],
       };
     },
     get state() {
       return {
         isSubmitting: save.current.isPending,
+        isLoadingPeople: people.current.isPending,
         error: readError(save.current.error),
         attachmentError,
       };
@@ -168,6 +190,7 @@ export function useTicketHistoryFormModel({
         void form.validateField(field, 'change');
       },
       onVisibilityChange: (isVisible) => form.setFieldValue('isVisibleToRequester', isVisible),
+      onNotifyChange: (ids) => form.setFieldValue('notifyUserIds', ids),
       onChosenFilesChange: (files) => (chosenFiles = files),
       onAttachmentError: (message) => (attachmentError = message),
       onSubmit: () => void form.handleSubmit(),
@@ -212,7 +235,14 @@ export function initialValuesFor(status: TicketStatus): TicketHistoryFormValues 
     /* O padrão é a pessoa acompanhar o que acontece com o pedido dela. */
     isVisibleToRequester: true,
     minutesSpent: '',
+    /* Avisar é sempre uma escolha (o "comunicar" da OS do Tasy): ninguém nasce marcado. */
+    notifyUserIds: [],
   };
+}
+
+/** A chave das pessoas de um chamado — lida aqui e invalidada pela ficha ao trocar vinculados. */
+export function ticketPeopleQueryKey(ticketId: number) {
+  return ['tickets', ticketId, 'people'] as const;
 }
 
 /** Quantos dígitos o campo de tempo guarda — os do maior tempo que o contrato aceita. */
