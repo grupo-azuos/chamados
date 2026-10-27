@@ -143,6 +143,19 @@ export const CLOSED_TICKET_STATUSES: readonly TicketStatus[] = statusesWhere(
   (definition) => definition.phase === 'closed',
 );
 
+/**
+ * Estágios NA FILA — ninguém do TI está com eles agora (aberto, ou a bola voltou do
+ * solicitante). É o que o contador "Abertos" conta.
+ */
+export const QUEUED_TICKET_STATUSES: readonly TicketStatus[] = statusesWhere(
+  (definition) => definition.phase === 'queue',
+);
+
+/** Estágios em ANDAMENTO — tudo o que ainda não foi encerrado. */
+export const RUNNING_TICKET_STATUSES: readonly TicketStatus[] = statusesWhere(
+  (definition) => definition.phase !== 'closed',
+);
+
 export function isClosedTicketStatus(status: TicketStatus): boolean {
   return ticketStatusPhase(status) === 'closed';
 }
