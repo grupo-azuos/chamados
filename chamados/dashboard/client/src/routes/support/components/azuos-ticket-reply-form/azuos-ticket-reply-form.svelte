@@ -137,7 +137,7 @@
       Pessoas vinculadas
     </p>
     <p class="text-ink-500 text-xs">
-      Quem está vinculado vê o chamado em "Meus chamados" e também pode escrever nele.
+      Quem está vinculado vê o chamado em "Consultar chamado" e também pode escrever nele.
     </p>
     <PeoplePicker
       data={{ selectedIds: data.watcherIds, options: data.peopleOptions }}
