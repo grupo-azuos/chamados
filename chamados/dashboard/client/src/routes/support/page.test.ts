@@ -1,35 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { authApi } from '$lib/api/auth.api';
-import { ApiError } from '$lib/api/http-client';
+import { describe, expect, it } from 'vitest';
 
 import { load } from './+page';
 
-vi.mock('$lib/api/auth.api', () => ({ authApi: { me: vi.fn() } }));
+describe('a tela de abrir chamado (/support)', () => {
+  // feliz
+  it('leva o link de consulta antigo para a tela de consultar, com o mesmo token', () => {
+    const run = () => load({ url: new URL('http://localhost/support?ticket=abc.123') });
 
-const me = vi.mocked(authApi.me);
-
-describe('a rota da central de chamados (/support)', () => {
-  beforeEach(() => {
-    me.mockReset();
+    expect(run).toThrow(expect.objectContaining({ status: 307, location: '/support/tickets?ticket=abc.123' }));
   });
 
-  it('entrega o usuário autenticado para a tela', async () => {
-    const user = {
-      id: 'user-1',
-      name: 'Pessoa de Teste',
-      role: 'user',
-      roles: {},
-    } as Awaited<ReturnType<typeof authApi.me>>;
-    me.mockResolvedValue(user);
-
-    await expect(load()).resolves.toEqual({ user });
-  });
-
-  it('exige autenticação e não deixa requisição anônima passar', async () => {
-    const failure = new ApiError(401, 'Unauthorized');
-    me.mockRejectedValue(failure);
-
-    await expect(load()).rejects.toBe(failure);
+  // triste
+  it('fica no formulário quando não há link de consulta', () => {
+    expect(load({ url: new URL('http://localhost/support?invite=xyz') })).toBeUndefined();
   });
 });

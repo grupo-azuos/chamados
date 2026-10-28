@@ -7,7 +7,7 @@ import Harness from './use-ticket-lookup-harness.test.svelte';
 import { type TicketLookupModel } from './use-ticket-lookup.svelte';
 
 vi.mock('$lib/api/tickets.api', () => ({
-  ticketsApi: { findByProtocol: vi.fn() },
+  ticketsApi: { findByProtocol: vi.fn(), mine: vi.fn().mockResolvedValue([]) },
 }));
 
 const { ticketsApi } = await import('$lib/api/tickets.api');
@@ -26,6 +26,9 @@ const ticket: PublicTicket = {
   screenshotUrl: null,
   attachments: [],
   histories: [],
+  watchers: [],
+  notifiable: [],
+  canReply: true,
   createdAt: '2026-09-15T12:10:00.000Z',
 };
 
@@ -127,5 +130,71 @@ describe('useTicketLookupModel', () => {
     model.actions.onProtocolChange('CH-0008');
 
     await waitFor(() => expect(model.data.ticket).toBeNull());
+  });
+});
+
+describe('useTicketLookupModel — voltar e reler', () => {
+  beforeEach(() => {
+    vi.mocked(ticketsApi.findByProtocol).mockReset().mockResolvedValue(ticket);
+  });
+
+  // feliz
+  it('reloads the opened ticket after the person writes in it', async () => {
+    const model = mountModel();
+    model.actions.onOpenMine('CH-0007');
+    await waitFor(() => expect(model.data.ticket?.protocol).toBe('CH-0007'));
+
+    model.actions.onRefresh();
+
+    await waitFor(() => expect(ticketsApi.findByProtocol).toHaveBeenCalledTimes(2));
+  });
+
+  // feliz
+  it('keeps the ticket on screen while it reloads, and swaps it when the new one arrives', async () => {
+    const model = mountModel();
+    model.actions.onOpenMine('CH-0007');
+    await waitFor(() => expect(model.data.ticket?.protocol).toBe('CH-0007'));
+
+    let answer!: (value: PublicTicket) => void;
+    vi.mocked(ticketsApi.findByProtocol).mockReturnValueOnce(
+      new Promise<PublicTicket>((resolve) => (answer = resolve)),
+    );
+    model.actions.onRefresh();
+
+    // Enquanto relê: o chamado continua lá e nada diz "Procurando…".
+    await waitFor(() => expect(ticketsApi.findByProtocol).toHaveBeenCalledTimes(2));
+    expect(model.data.ticket?.protocol).toBe('CH-0007');
+    expect(model.state.isSearching).toBe(false);
+
+    answer({ ...ticket, status: 'requester_reply' });
+    await waitFor(() => expect(model.data.ticket?.status).toBe('requester_reply'));
+  });
+
+  // triste
+  it('keeps the current version when the reload fails', async () => {
+    const model = mountModel();
+    model.actions.onOpenMine('CH-0007');
+    await waitFor(() => expect(model.data.ticket?.protocol).toBe('CH-0007'));
+
+    vi.mocked(ticketsApi.findByProtocol).mockRejectedValueOnce(new Error('offline'));
+    model.actions.onRefresh();
+
+    await waitFor(() => expect(ticketsApi.findByProtocol).toHaveBeenCalledTimes(2));
+    expect(model.data.ticket?.protocol).toBe('CH-0007');
+    expect(model.state.error).toBeNull();
+  });
+
+  // triste
+  it('goes back to the list, and reloads nothing when no ticket is open', async () => {
+    const model = mountModel();
+    model.actions.onOpenMine('CH-0007');
+    await waitFor(() => expect(model.data.ticket).not.toBeNull());
+
+    model.actions.onBackToList();
+    await waitFor(() => expect(model.data.ticket).toBeNull());
+    model.actions.onRefresh();
+
+    expect(model.data.protocol).toBe('');
+    expect(ticketsApi.findByProtocol).toHaveBeenCalledTimes(1);
   });
 });

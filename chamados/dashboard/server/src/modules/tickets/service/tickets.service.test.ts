@@ -1312,7 +1312,7 @@ describe('TicketsService — quem pede, logado', () => {
 
     const mine = await service.listMine(bia);
 
-    expect(listByRequester).toHaveBeenCalledWith(bia.id);
+    expect(listByRequester).toHaveBeenCalledWith(bia.id, []);
     expect(mine).toEqual([expect.objectContaining({ id: 7, protocol: 'CH-0007' })]);
   });
 

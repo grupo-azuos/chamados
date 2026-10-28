@@ -3,7 +3,7 @@ import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-qu
 import { type SoftwareProject } from '@template/shared/schemas/software-project.schema';
 import { type Ticket } from '@template/shared/schemas/ticket.schema';
 import { type ManualTicketHistoryType } from '@template/shared/domain/ticket-history.util';
-import { type TicketStatus } from '@template/shared/domain/ticket-status.util';
+import { ticketStatusPhase, type TicketStatus } from '@template/shared/domain/ticket-status.util';
 import { MAX_PAGE_SIZE } from '@template/shared/schemas/pagination.schema';
 import { derived, writable } from 'svelte/store';
 
@@ -97,7 +97,9 @@ function resolveInProgressTransition(currentStatus: TicketStatus): {
   targetStatus: TicketStatus;
   description: string;
 } {
-  if (currentStatus === 'open') {
+  /* Toda a FILA (aberto e "Retorno do solicitante") começa pelo início do atendimento: é o
+     único tipo que o domínio aceita em quem ninguém pegou ainda. */
+  if (ticketStatusPhase(currentStatus) === 'queue') {
     return {
       historyType: 'start',
       targetStatus: 'in_progress',
@@ -166,7 +168,7 @@ function resolveActiveTransition(
 }
 
 function getTicketColumn(status: TicketStatus): KanbanColumnId {
-  if (status === 'open') return 'todo';
+  if (ticketStatusPhase(status) === 'queue') return 'todo';
   if (status === 'in_progress') return 'in_progress';
   if (status === 'waiting_requester' || status === 'waiting_third_party') return 'waiting';
   return 'done';
@@ -250,6 +252,8 @@ export function useSoftwareKanbanModel(): SoftwareKanbanModel {
             description,
             isVisibleToRequester: true,
             minutesSpent: '0',
+            /* Mover no quadro não avisa ninguém: avisar é escolha de quem escreve o andamento. */
+            notifyUserIds: [],
           },
           [],
         );
@@ -277,7 +281,8 @@ export function useSoftwareKanbanModel(): SoftwareKanbanModel {
         return effectiveStatus === t.status ? t : { ...t, status: effectiveStatus };
       });
 
-      const todoTickets = ticketsWithOptimism.filter((t) => t.status === 'open');
+      /* A fila inteira: "Retorno do solicitante" é trabalho a pegar, como um aberto. */
+      const todoTickets = ticketsWithOptimism.filter((t) => ticketStatusPhase(t.status) === 'queue');
       const inProgressTickets = ticketsWithOptimism.filter((t) => t.status === 'in_progress');
       const waitingTickets = ticketsWithOptimism.filter(
         (t) => t.status === 'waiting_requester' || t.status === 'waiting_third_party',

@@ -111,6 +111,25 @@
   --destructive-soft: #ffe4e6;
   --primary-soft: var(--brand-blue-100);
 
+  /* As cores de MARCAÇÃO que a pessoa escolhe (o compromisso na agenda): sete matizes que
+     não se confundem, cada um com o tom cheio (a bolinha) e o `-soft` (o cartão). Não são
+     os tons de estado (`success`, `warning`…) — esses dizem "deu certo" ou "cuidado", e uma
+     cor de agenda não diz nada além de "é deste grupo". */
+  --tag-blue: #2563eb;
+  --tag-blue-soft: #dbeafe;
+  --tag-green: #059669;
+  --tag-green-soft: #d1fae5;
+  --tag-amber: #ca8a04;
+  --tag-amber-soft: #fef9c3;
+  --tag-purple: #9333ea;
+  --tag-purple-soft: #f3e8ff;
+  --tag-rose: #db2777;
+  --tag-rose-soft: #fce7f3;
+  --tag-indigo: #4f46e5;
+  --tag-indigo-soft: #e0e7ff;
+  --tag-red: #dc2626;
+  --tag-red-soft: #fee2e2;
+
   /* As cores de categoria dos gráficos. Ver utils/chart-slice.ts. */
   --chart-1: var(--brand-blue-800);
   --chart-2: var(--brand-yellow-500);
@@ -196,6 +215,21 @@
   --destructive-soft: #4c0519;
   --primary-soft: #142b69;
 
+  --tag-blue: #60a5fa;
+  --tag-blue-soft: #172554;
+  --tag-green: #34d399;
+  --tag-green-soft: #022c22;
+  --tag-amber: #facc15;
+  --tag-amber-soft: #422006;
+  --tag-purple: #c084fc;
+  --tag-purple-soft: #3b0764;
+  --tag-rose: #f472b6;
+  --tag-rose-soft: #500724;
+  --tag-indigo: #818cf8;
+  --tag-indigo-soft: #1e1b4b;
+  --tag-red: #f87171;
+  --tag-red-soft: #450a0a;
+
   --chart-1: #6e8de0;
   --chart-2: #f7ce3c;
   --chart-3: #96ade9;
@@ -274,6 +308,21 @@
   --color-info-soft: var(--info-soft);
   --color-destructive-soft: var(--destructive-soft);
   --color-primary-soft: var(--primary-soft);
+
+  --color-tag-blue: var(--tag-blue);
+  --color-tag-blue-soft: var(--tag-blue-soft);
+  --color-tag-green: var(--tag-green);
+  --color-tag-green-soft: var(--tag-green-soft);
+  --color-tag-amber: var(--tag-amber);
+  --color-tag-amber-soft: var(--tag-amber-soft);
+  --color-tag-purple: var(--tag-purple);
+  --color-tag-purple-soft: var(--tag-purple-soft);
+  --color-tag-rose: var(--tag-rose);
+  --color-tag-rose-soft: var(--tag-rose-soft);
+  --color-tag-indigo: var(--tag-indigo);
+  --color-tag-indigo-soft: var(--tag-indigo-soft);
+  --color-tag-red: var(--tag-red);
+  --color-tag-red-soft: var(--tag-red-soft);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);

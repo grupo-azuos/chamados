@@ -1,3 +1,39 @@
+<script lang="ts" module>
+  /**
+   * As cores da agenda — as OITO que o compromisso pode guardar, cada uma com o seu próprio
+   * token (`--tag-*`). A bolinha (`dotClass`) e o cartão do calendário (`surfaceClass`) saem
+   * da MESMA linha: o que a pessoa escolhe aqui é o que ela vê na semana.
+   *
+   * Antes o calendário só tinha os seis tons de estado, e "Rosa" saía amarelo no seletor e
+   * vermelho na agenda, e "Roxo" e "Índigo" eram a mesma cor.
+   *
+   * A ordem é a do arco-íris (frias → quentes → neutra): procurar uma cor numa fileira
+   * ordenada é mais rápido que numa embaralhada.
+   */
+  export const SWATCHES = [
+    { value: 'blue', label: 'Azul', dotClass: 'bg-tag-blue', surfaceClass: 'bg-tag-blue-soft' },
+    { value: 'indigo', label: 'Índigo', dotClass: 'bg-tag-indigo', surfaceClass: 'bg-tag-indigo-soft' },
+    { value: 'purple', label: 'Roxo', dotClass: 'bg-tag-purple', surfaceClass: 'bg-tag-purple-soft' },
+    { value: 'rose', label: 'Rosa', dotClass: 'bg-tag-rose', surfaceClass: 'bg-tag-rose-soft' },
+    { value: 'red', label: 'Vermelho', dotClass: 'bg-tag-red', surfaceClass: 'bg-tag-red-soft' },
+    { value: 'amber', label: 'Amarelo', dotClass: 'bg-tag-amber', surfaceClass: 'bg-tag-amber-soft' },
+    { value: 'green', label: 'Verde', dotClass: 'bg-tag-green', surfaceClass: 'bg-tag-green-soft' },
+    {
+      value: 'neutral',
+      label: 'Grafite',
+      dotClass: 'bg-muted-foreground',
+      surfaceClass: 'border-border bg-card hover:border-border/80',
+    },
+  ] as const;
+
+  export type ScheduleSwatch = (typeof SWATCHES)[number];
+
+  /** A cor guardada — Azul quando ela é desconhecida (o padrão de quem não escolheu). */
+  export function swatchOf(color: string): ScheduleSwatch {
+    return SWATCHES.find((swatch) => swatch.value === color) ?? SWATCHES[0];
+  }
+</script>
+
 <script lang="ts">
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import {
@@ -72,27 +108,6 @@
     value: cat,
     label: SCHEDULE_EVENT_CATEGORY_LABELS[cat],
   }));
-
-  const SWATCHES: {
-    value: string;
-    label: string;
-    bgClass: string;
-    ringClass: string;
-  }[] = [
-    { value: 'blue', label: 'Azul', bgClass: 'bg-info', ringClass: '' },
-    { value: 'green', label: 'Verde', bgClass: 'bg-success', ringClass: '' },
-    { value: 'amber', label: 'Âmbar', bgClass: 'bg-warning', ringClass: '' },
-    { value: 'purple', label: 'Roxo', bgClass: 'bg-primary', ringClass: '' },
-    { value: 'rose', label: 'Rosa', bgClass: 'bg-accent-hero', ringClass: 'ring-accent-hero' },
-    { value: 'indigo', label: 'Índigo', bgClass: 'bg-primary', ringClass: '' },
-    { value: 'red', label: 'Vermelho', bgClass: 'bg-destructive', ringClass: '' },
-    {
-      value: 'neutral',
-      label: 'Grafite',
-      bgClass: 'bg-muted-foreground',
-      ringClass: 'ring-muted-foreground',
-    },
-  ];
 
   const projectOptions = $derived([
     { value: '', label: 'Nenhum' },
@@ -282,25 +297,26 @@
         <span class="text-xs font-medium text-foreground">
           Cor na agenda
           <span class="font-normal text-muted-foreground">
-            · {SWATCHES.find((s) => s.value === model.data.fields.color.value)?.label ?? 'Azul'}
+            · {swatchOf(model.data.fields.color.value).label}
           </span>
         </span>
         <div class="flex flex-wrap items-center gap-1.5">
           {#each SWATCHES as swatch (swatch.value)}
-            {@const isSelected = model.data.fields.color.value === swatch.value}
+            {@const isSelected = swatchOf(model.data.fields.color.value).value === swatch.value}
+            <!-- Escolhida = o visto em cima da cor; anel colorido em volta é proibido no grupo. -->
             <button
               type="button"
-              class="group relative flex size-7 items-center justify-center rounded-full transition-transform hover:scale-110 focus:outline-none {isSelected
-                ? 'ring-2 ring-offset-2 ring-offset-card ' + swatch.ringClass
-                : ''}"
+              class="focus-visible:ring-ring flex size-7 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:outline-none"
               onclick={() => model.actions.onChange('color', swatch.value)}
               title={swatch.label}
               aria-label={swatch.label}
+              aria-pressed={isSelected}
             >
-              <span class="size-5 rounded-full {swatch.bgClass}"></span>
-              {#if isSelected}
-                <Check class="absolute size-3 text-white drop-shadow-xs" />
-              {/if}
+              <span class="flex size-6 items-center justify-center rounded-full {swatch.dotClass}">
+                {#if isSelected}
+                  <Check class="text-background size-3.5" strokeWidth={3} aria-hidden="true" />
+                {/if}
+              </span>
             </button>
           {/each}
         </div>

@@ -13,7 +13,12 @@ import {
 
 import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
-import { CreateTicketHistoryDto, TicketHistoryDto } from '../dto/ticket-history.dto';
+import {
+  CreateRequesterHistoryDto,
+  CreateTicketHistoryDto,
+  PublicTicketHistoryDto,
+  TicketHistoryDto,
+} from '../dto/ticket-history.dto';
 import { TicketHistoriesService } from '../service/ticket-histories.service';
 import { AnyModule } from '../../../lib/auth/module-context.decorator';
 
@@ -65,6 +70,26 @@ export class TicketHistoriesController {
     @Param('id', ParseIntPipe) id: number,
     @Body() body: CreateTicketHistoryDto,
   ): Promise<TicketHistoryDto> {
-    return this.service.create(user, id, body, body.attachments);
+    return this.service.create(user, id, body, body.attachments, body.notifyUserIds);
+  }
+
+  @Post('requester-histories')
+  @ApiOperation({
+    summary: 'Quem pediu escreve no chamado (pela Central)',
+    description:
+      'Responder, mandar arquivo ou reabrir — o lado de quem pediu da ordem de serviço. Pode quem abriu e quem está vinculado; mais ninguém (404, como um chamado que não existe). Leva o chamado para "Retorno do solicitante". Os arquivos já foram enviados pelo link de `POST /tickets/upload-url`. `notifyUserIds` escolhe quem recebe aviso por WhatsApp.',
+  })
+  @ApiBody({ type: CreateRequesterHistoryDto })
+  @ApiCreatedResponse({ type: PublicTicketHistoryDto })
+  @ApiUnprocessableEntityResponse({
+    description: 'Responder num chamado encerrado, ou reabrir um que está andando.',
+  })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  async createByRequester(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CreateRequesterHistoryDto,
+  ): Promise<PublicTicketHistoryDto> {
+    return this.service.createByRequester(user, id, body);
   }
 }

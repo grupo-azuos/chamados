@@ -1,13 +1,14 @@
-import { type SessionUser } from '@template/shared/schemas/user.schema';
-
-import { authApi } from '$lib/api/auth.api';
+import { redirect } from '@sveltejs/kit';
+import { TICKET_ACCESS_PARAM } from '@template/shared/domain/ticket-invite.util';
 
 /**
- * A Central de Chamados exige usuário autenticado (user, manager ou admin).
- * Qualquer usuário com conta no sistema acessa aqui para abrir e acompanhar seus chamados.
+ * O link de consulta das mensagens de WhatsApp é `/support?ticket=…` — e já foi enviado para
+ * muita gente. A consulta agora tem tela própria; quem chega pelo link antigo é levado para
+ * ela com o mesmo token, em vez de cair no formulário de abrir chamado.
  */
-export async function load(): Promise<{ user: SessionUser }> {
-  const user = await authApi.me();
+export function load({ url }: { url: URL }): void {
+  const token = url.searchParams.get(TICKET_ACCESS_PARAM);
+  if (!token) return;
 
-  return { user };
+  redirect(307, `/support/tickets?${TICKET_ACCESS_PARAM}=${encodeURIComponent(token)}`);
 }

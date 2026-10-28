@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import TicketLookupDrawer from './azuos-ticket-lookup-drawer.svelte';
+import TicketLookupView, { journeyOf, splitMine } from './azuos-ticket-lookup-view.svelte';
 
 const ticket: PublicTicket = {
   id: 7,
@@ -20,34 +20,40 @@ const ticket: PublicTicket = {
   screenshotUrl: null,
   attachments: [],
   histories: [],
+  watchers: [],
+  notifiable: [],
+  canReply: true,
   createdAt: '2026-09-15T12:10:00.000Z',
 };
 
 const actions = {
   onProtocolChange: vi.fn(),
   onSearch: vi.fn(),
-  onClose: vi.fn(),
   onOpenMine: vi.fn(),
+  onBackToList: vi.fn(),
 };
 
 function setup(props: Record<string, unknown> = {}) {
-  return render(TicketLookupDrawer, {
+  const { data, ...rest } = props as { data?: Record<string, unknown> };
+
+  return render(TicketLookupView, {
     props: {
-      data: { protocol: '', ticket: null },
-      state: { isOpen: true },
+      data: { protocol: '', ticket: null, mine: [], ...data },
+      state: {},
       actions,
-      ...props,
+      ...rest,
     },
   });
 }
 
-describe('AzuosTicketLookupDrawer', () => {
+describe('AzuosTicketLookupView', () => {
   // feliz
   it('shows the ticket it was given, in words the requester understands', () => {
     setup({ data: { protocol: 'CH-0007', ticket } });
 
     expect(screen.getByText('CH-0007')).toBeInTheDocument();
-    expect(screen.getByText('Em atendimento')).toBeInTheDocument();
+    // No selo e na parada atual da trilha — os dois dizem o mesmo.
+    expect(screen.getAllByText('Em atendimento')).toHaveLength(2);
     expect(screen.getByText('Financeiro')).toBeInTheDocument();
     expect(screen.getByText('Impressora')).toBeInTheDocument();
   });
@@ -59,7 +65,7 @@ describe('AzuosTicketLookupDrawer', () => {
     expect(screen.getByText(ticketAreaLabel('infra'))).toBeInTheDocument();
     expect(screen.getByText('Aberto em')).toBeInTheDocument();
     expect(screen.getByText('Última movimentação')).toBeInTheDocument();
-    expect(screen.getByText('Andamentos').nextElementSibling).toHaveTextContent('0');
+    expect(screen.getByText('Andamento · 0')).toBeInTheDocument();
   });
 
   it('lists the files of the ticket itself, and not the ones that came with a history', () => {
@@ -97,7 +103,7 @@ describe('AzuosTicketLookupDrawer', () => {
     const onSearch = vi.fn();
     setup({ data: { protocol: 'CH-0007', ticket: null }, actions: { ...actions, onSearch } });
 
-    await userEvent.click(screen.getByRole('button', { name: /consultar/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Consultar' }));
 
     expect(onSearch).toHaveBeenCalledOnce();
   });
@@ -145,7 +151,7 @@ describe('AzuosTicketLookupDrawer', () => {
       },
     });
 
-    expect(screen.getByText('Andamento')).toBeInTheDocument();
+    expect(screen.getByText('Andamento · 1')).toBeInTheDocument();
     expect(screen.getByText('Peça pedida ao fornecedor.')).toBeInTheDocument();
     expect(screen.getByText('Aguardando terceiro ou peça')).toBeInTheDocument();
   });
@@ -157,43 +163,39 @@ describe('AzuosTicketLookupDrawer', () => {
     expect(screen.getByText(/ainda não há andamento registrado/i)).toBeInTheDocument();
   });
 
-  it('stays closed until asked to open', () => {
-    setup({ state: { isOpen: false } });
-
-    expect(screen.queryByText(/consultar chamado/i)).not.toBeInTheDocument();
-  });
-
   /* "Não encontrado" é resposta, não falha do site: vir em vermelho faria a pessoa achar
      que o sistema quebrou quando ela só digitou um número errado. */
   it('says nothing was found without dressing it up as a failure', () => {
     setup({
       data: { protocol: 'CH-9999', ticket: null },
-      state: { isOpen: true, isNotFound: true },
+      state: { isNotFound: true },
     });
 
-    expect(screen.getByText(/não encontrei nenhum chamado/i)).toBeInTheDocument();
+    expect(screen.getByText(/nenhum chamado seu com o número CH-9999/i)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('explains why the button is off when the protocol cannot be read', () => {
-    setup({ data: { protocol: 'abc', ticket: null }, state: { isOpen: true, isInvalid: true } });
+    setup({ data: { protocol: 'abc', ticket: null }, state: { isInvalid: true } });
 
-    expect(screen.getByText(/digite o número do protocolo/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /consultar/i })).toBeDisabled();
+    expect(screen.getByText(/digite como CH-0001/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Consultar' })).toBeDisabled();
   });
 
   it('shows a server failure as an error, unlike a ticket that does not exist', () => {
     setup({
       data: { protocol: 'CH-0007', ticket: null },
-      state: { isOpen: true, error: 'Não consegui falar com o servidor.' },
+      state: { error: 'Não consegui falar com o servidor.' },
     });
 
     expect(screen.getByText(/não consegui falar com o servidor/i)).toBeInTheDocument();
   });
 
-  it('shows no ticket area at all before anyone searched', () => {
+  it('invites the person to pick a ticket before anyone searched', () => {
     setup();
 
     expect(screen.queryByText(/aberto por/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Escolha um chamado')).toBeInTheDocument();
   });
 
   /* O painel vê telefone, responsável e solução; esta tela não os recebe do servidor. */
@@ -220,6 +222,7 @@ describe('AzuosTicketLookupDrawer', () => {
             problemType: 'printer',
             description: 'A impressora do fiscal não puxa papel.',
             createdAt: '2026-10-14T13:00:00.000Z',
+            isWatching: false,
           },
         ],
       },
@@ -231,10 +234,106 @@ describe('AzuosTicketLookupDrawer', () => {
   });
 
   // triste
-  it('says the person has not opened any ticket yet instead of an empty list', () => {
+  it('says there is nothing running instead of an empty list', () => {
     setup({ data: { protocol: '', ticket: null, mine: [] } });
 
-    expect(screen.getByText('Você ainda não abriu nenhum chamado.')).toBeInTheDocument();
+    expect(screen.getByText(/nenhum chamado andando agora/i)).toBeInTheDocument();
   });
 });
 
+
+describe('AzuosTicketLookupView — pessoas vinculadas', () => {
+  // feliz
+  it('marks the tickets the person is in because someone linked her', () => {
+    setup({
+      data: {
+        protocol: '',
+        ticket: null,
+        mine: [
+          {
+            id: 9,
+            protocol: 'CH-0009',
+            status: 'requester_reply',
+            priority: 'low',
+            area: 'infra',
+            problemType: 'printer',
+            description: 'Impressora.',
+            createdAt: '2026-10-02T09:30:00.000Z',
+            isWatching: true,
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText('Vinculado')).toBeInTheDocument();
+    expect(screen.getByText('Retorno do solicitante')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('lists who is linked and goes back to the list', async () => {
+    const onBackToList = vi.fn();
+    setup({
+      data: { protocol: 'CH-0007', ticket: { ...ticket, watchers: [{ id: 'u-1', name: 'Caio Reis' }] } },
+      actions: { ...actions, onBackToList },
+    });
+
+    expect(screen.getByText('Caio Reis')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Meus chamados' }));
+    expect(onBackToList).toHaveBeenCalled();
+  });
+
+  // triste
+  it('shows no linked-people fact and no back button when there is none', () => {
+    setup();
+
+    expect(screen.queryByText('Vinculados')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Meus chamados' })).toBeNull();
+  });
+});
+
+const mineItem = {
+  id: 1,
+  protocol: 'CH-0001',
+  status: 'open' as const,
+  priority: 'low' as const,
+  area: 'infra' as const,
+  problemType: 'printer' as const,
+  description: 'Impressora.',
+  createdAt: '2026-10-02T09:30:00.000Z',
+  isWatching: false,
+};
+
+describe('AzuosTicketLookupView — abas e trilha', () => {
+  // feliz
+  it('splits the tickets between running and closed and switches tabs', async () => {
+    setup({
+      data: {
+        mine: [mineItem, { ...mineItem, id: 2, protocol: 'CH-0002', status: 'resolved' }],
+      },
+    });
+
+    expect(screen.getByRole('button', { name: /CH-0001/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /CH-0002/ })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: /encerrados/i }));
+
+    expect(screen.getByRole('button', { name: /CH-0002/ })).toBeInTheDocument();
+  });
+
+  // feliz
+  it('fills the journey up to where the ticket is', () => {
+    expect(journeyOf('open').map((step) => step.state)).toEqual(['current', 'next', 'next']);
+    expect(journeyOf('in_progress').map((step) => step.state)).toEqual(['done', 'current', 'next']);
+    expect(journeyOf('resolved').map((step) => step.state)).toEqual(['done', 'done', 'current']);
+  });
+
+  // feliz
+  it('names the current stop with the status, so the track and the badge agree', () => {
+    expect(journeyOf('requester_reply')[0]?.label).toBe('Retorno do solicitante');
+  });
+
+  // triste
+  it('splits an empty list into two empty groups', () => {
+    expect(splitMine([])).toEqual({ running: [], closed: [] });
+  });
+});

@@ -34,9 +34,14 @@
       fields: Record<'description' | 'minutesSpent', FormFieldState>;
       isVisibleToRequester: boolean;
       chosenFiles: File[];
+      /** Quem recebe aviso por WhatsApp. Vazio: ninguém. */
+      notifyUserIds: string[];
+      /** Quem pode ser avisado. Vazio: a seção nem aparece. */
+      notifiable: { id: string; name: string }[];
     };
     state?: {
       isSubmitting?: boolean;
+      isLoadingPeople?: boolean;
       error?: string | null;
       attachmentError?: string | null;
     };
@@ -45,6 +50,7 @@
       onChange: (field: 'description' | 'minutesSpent', value: string) => void;
       onBlur: (field: 'description' | 'minutesSpent') => void;
       onVisibilityChange: (isVisible: boolean) => void;
+      onNotifyChange: (ids: string[]) => void;
       onChosenFilesChange: (files: File[]) => void;
       onAttachmentError: (message: string | null) => void;
       onSubmit: () => void;
@@ -76,6 +82,7 @@
   import StickyNote from '@lucide/svelte/icons/sticky-note';
 
   import AttachmentPicker from '$lib/components/azuos-attachment-picker/azuos-attachment-picker.svelte';
+  import PeoplePicker from '$lib/components/azuos-people-picker/azuos-people-picker.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
@@ -223,6 +230,22 @@
       </p>
     </div>
   </div>
+
+  <!-- O "comunicar" da OS: quem escreve escolhe, a cada andamento, quem fica sabendo. Nada
+       marcado de saída — aviso que ninguém pediu vira barulho, e barulho faz o aviso importante
+       ser ignorado. -->
+  {#if formState?.isLoadingPeople || data.notifiable.length > 0}
+    <div class="flex flex-col gap-1.5">
+      <span class="text-ink-700 text-sm font-medium" id="history-notify-label">Avisar por WhatsApp</span>
+      <PeoplePicker
+        data={{ selectedIds: data.notifyUserIds, options: data.notifiable }}
+        ui={{ ariaLabel: 'Avisar por WhatsApp', placeholder: 'Ninguém será avisado' }}
+        state={{ isDisabled: formState?.isSubmitting, isLoading: formState?.isLoadingPeople }}
+        actions={{ onChange: actions.onNotifyChange }}
+      />
+      <p class="text-muted-foreground text-xs">Só recebe quem você marcar.</p>
+    </div>
+  {/if}
 
   <div class="flex flex-col gap-2">
     <p class="text-muted-foreground text-xs font-medium">

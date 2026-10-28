@@ -1,9 +1,14 @@
 import { z } from 'zod';
 
-import { MANUAL_TICKET_HISTORY_TYPES, TICKET_HISTORY_TYPES } from '../domain/ticket-history.util';
+import {
+  MANUAL_TICKET_HISTORY_TYPES,
+  REQUESTER_TICKET_HISTORY_TYPES,
+  TICKET_HISTORY_TYPES,
+} from '../domain/ticket-history.util';
 import { TICKET_STATUSES } from '../domain/ticket-status.util';
 import { MAX_STAGED_FILES, stagedFileSchema } from './staged-file.schema';
 import { ticketAttachmentSchema } from './ticket-attachment.schema';
+import { notifyUserIdsSchema } from './ticket-person.schema';
 
 /**
  * O CONTRATO do histórico de um chamado — a ordem de serviço. Um schema, duas pontas: a API o
@@ -120,6 +125,12 @@ export const createTicketHistorySchema = z.object({
     )
     .optional(),
   attachments: z.array(stagedFileSchema).max(MAX_STAGED_FILES).default([]),
+  /**
+   * Quem recebe AVISO por WhatsApp deste andamento: quem abriu, vinculados ou o responsável,
+   * escolhidos por quem escreve (o "comunicar" da OS do Tasy). Vazio não avisa ninguém. O
+   * servidor descarta quem não é pessoa do chamado — o id vem de uma tela.
+   */
+  notifyUserIds: notifyUserIdsSchema.default([]),
 });
 
 export type CreateTicketHistoryInput = z.input<typeof createTicketHistorySchema>;
@@ -140,6 +151,32 @@ export const ticketHistoryFormSchema = z.object({
       (value) => value === '' || Number(value) <= HISTORY_MINUTES_MAX,
       'Esse tempo é maior do que um mês inteiro',
     ),
+  notifyUserIds: z.array(z.string()),
 });
 
 export type TicketHistoryFormValues = z.input<typeof ticketHistoryFormSchema>;
+
+/**
+ * O que QUEM PEDIU (ou alguém vinculado) lança pela Central: responder ou reabrir. O tipo
+ * vem do estágio do chamado, mas viaja no corpo para a API recusar com a frase certa quando a
+ * tela ficou para trás (o TI encerrou enquanto a pessoa escrevia).
+ *
+ * Sem visibilidade nem tempo gasto: o que quem pediu escreve é visível sempre, e tempo é
+ * medida de quem atende.
+ */
+export const createRequesterHistorySchema = z.object({
+  type: z.enum(REQUESTER_TICKET_HISTORY_TYPES, chooseFrom('o tipo de histórico')),
+  description: descriptionSchema,
+  attachments: z.array(stagedFileSchema).max(MAX_STAGED_FILES).default([]),
+  notifyUserIds: notifyUserIdsSchema.default([]),
+});
+
+export type CreateRequesterHistoryInput = z.input<typeof createRequesterHistorySchema>;
+
+/** O mesmo contrato, na forma do formulário da Central. */
+export const requesterHistoryFormSchema = z.object({
+  description: descriptionSchema,
+  notifyUserIds: z.array(z.string()),
+});
+
+export type RequesterHistoryFormValues = z.input<typeof requesterHistoryFormSchema>;

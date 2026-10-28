@@ -2,7 +2,7 @@
   import { defineMeta } from '@storybook/addon-svelte-csf';
   import { type PublicTicket } from '@template/shared/schemas/ticket.schema';
 
-  import TicketLookupDrawer from './azuos-ticket-lookup-drawer.svelte';
+  import TicketLookupView from './azuos-ticket-lookup-view.svelte';
 
   const ticket: PublicTicket = {
     id: 7,
@@ -18,26 +18,34 @@
     screenshotUrl: null,
   attachments: [],
   histories: [],
+  watchers: [],
+  notifiable: [],
+  canReply: true,
     createdAt: '2026-09-15T12:10:00.000Z',
   };
 
-  const actions = { onProtocolChange: () => {}, onSearch: () => {}, onClose: () => {} };
+  const actions = {
+    onProtocolChange: () => {},
+    onSearch: () => {},
+    onOpenMine: () => {},
+    onBackToList: () => {},
+  };
 
   const { Story } = defineMeta({
-    title: 'Features/Support/AzuosTicketLookupDrawer',
-    component: TicketLookupDrawer,
+    title: 'Features/Support/AzuosTicketLookupView',
+    component: TicketLookupView,
   });
 </script>
 
-<!-- Ninguém procurou nada ainda: só o campo e o botão. -->
+<!-- Ninguém procurou nada ainda: a busca, as abas vazias e o convite para escolher. -->
 <Story
   name="Default"
-  args={{ data: { protocol: '', ticket: null }, state: { isOpen: true }, actions }}
+  args={{ data: { protocol: '', ticket: null, mine: [] }, state: {}, actions }}
 />
 
 <Story
   name="Found"
-  args={{ data: { protocol: 'CH-0007', ticket }, state: { isOpen: true }, actions }}
+  args={{ data: { protocol: 'CH-0007', ticket, mine: [] }, state: {}, actions }}
 />
 
 <!-- Com a linha do tempo: o andamento que quem abriu o chamado pode ver. -->
@@ -46,6 +54,7 @@
   args={{
     data: {
       protocol: 'CH-0007',
+      mine: [],
       ticket: {
         ...ticket,
         status: 'waiting_third_party',
@@ -80,7 +89,7 @@
         ],
       },
     },
-    state: { isOpen: true },
+    state: {},
     actions,
   }}
 />
@@ -88,8 +97,8 @@
 <Story
   name="Searching"
   args={{
-    data: { protocol: 'CH-0007', ticket: null },
-    state: { isOpen: true, isSearching: true },
+    data: { protocol: 'CH-0007', ticket: null, mine: [] },
+    state: { isSearching: true },
     actions,
   }}
 />
@@ -98,8 +107,8 @@
 <Story
   name="NotFound"
   args={{
-    data: { protocol: 'CH-9999', ticket: null },
-    state: { isOpen: true, isNotFound: true },
+    data: { protocol: 'CH-9999', ticket: null, mine: [] },
+    state: { isNotFound: true },
     actions,
   }}
 />
@@ -108,8 +117,8 @@
 <Story
   name="InvalidProtocol"
   args={{
-    data: { protocol: 'abc', ticket: null },
-    state: { isOpen: true, isInvalid: true },
+    data: { protocol: 'abc', ticket: null, mine: [] },
+    state: { isInvalid: true },
     actions,
   }}
 />
@@ -117,8 +126,8 @@
 <Story
   name="ServerDown"
   args={{
-    data: { protocol: 'CH-0007', ticket: null },
-    state: { isOpen: true, error: 'Não consegui falar com o servidor.' },
+    data: { protocol: 'CH-0007', ticket: null, mine: [] },
+    state: { error: 'Não consegui falar com o servidor.' },
     actions,
   }}
 />
@@ -129,6 +138,7 @@
   args={{
     data: {
       protocol: 'CH-0009',
+      mine: [],
       ticket: {
         ...ticket,
         id: 9,
@@ -143,12 +153,12 @@
           'ícones demoram para aparecer e o antivírus reclama de um arquivo que não consigo ler.',
       },
     },
-    state: { isOpen: true },
+    state: {},
     actions,
   }}
 />
 
-<!-- Ninguém procurou ainda: a gaveta mostra os chamados que a pessoa abriu. -->
+<!-- Ninguém procurou ainda: a lista mostra os chamados da pessoa, um andando e um encerrado. -->
 <Story
   name="MyTickets"
   args={{
@@ -165,6 +175,7 @@
           problemType: 'printer',
           description: 'A impressora do fiscal não puxa papel.',
           createdAt: '2026-10-14T13:00:00.000Z',
+          isWatching: false,
         },
         {
           id: 9,
@@ -175,10 +186,11 @@
           problemType: 'other',
           description: 'A cadeira da recepção está quebrada.',
           createdAt: '2026-10-02T09:30:00.000Z',
+          isWatching: true,
         },
       ],
     },
-    state: { isOpen: true },
+    state: {},
     actions,
   }}
 />
@@ -186,5 +198,5 @@
 <!-- Caso limite: a pessoa nunca abriu chamado. -->
 <Story
   name="NoTicketsYet"
-  args={{ data: { protocol: '', ticket: null, mine: [] }, state: { isOpen: true }, actions }}
+  args={{ data: { protocol: '', ticket: null, mine: [] }, state: {}, actions }}
 />

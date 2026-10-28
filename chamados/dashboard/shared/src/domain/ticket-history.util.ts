@@ -29,6 +29,8 @@ export const TICKET_HISTORY_TYPES = [
   'closure_with_caveats',
   'cancellation',
   'reopening',
+  'requester_reply',
+  'requester_reopening',
 ] as const;
 
 export type TicketHistoryType = (typeof TICKET_HISTORY_TYPES)[number];
@@ -59,9 +61,10 @@ export type TicketHistoryDefinition = {
   /**
    * Quem lança. `system` é registrado pelo próprio sistema (a abertura, a alteração de dados)
    * e nunca aparece no seletor — aceitá-lo do formulário deixaria alguém "abrir" um chamado
-   * pela segunda vez.
+   * pela segunda vez. `person` é quem ATENDE, pelo painel; `requester` é quem PEDIU (ou alguém
+   * vinculado ao chamado), pela Central — as duas portas nunca lançam o tipo uma da outra.
    */
-  origin: 'system' | 'person';
+  origin: 'system' | 'person' | 'requester';
   /** Em quais momentos do chamado ele pode ser lançado (ver `TicketPhase`). */
   allowedIn: readonly TicketPhase[];
   /** O que dizer a quem tentar lançá-lo fora de hora, num chamado em andamento. */
@@ -166,6 +169,27 @@ export const TICKET_HISTORY_CATALOG = {
     tone: 'info',
     leadsTo: 'in_progress',
     origin: 'person',
+    allowedIn: ['closed'],
+    refusal: 'Só dá para reabrir um chamado que já foi encerrado.',
+  },
+  /* A OS do lado de quem pediu: responder, mandar arquivo, dar notícia. Leva o chamado para
+     "Retorno do solicitante" — o TI precisa ver que a bola voltou para ele. */
+  requester_reply: {
+    label: 'Retorno do solicitante',
+    tone: 'warning',
+    leadsTo: 'requester_reply',
+    origin: 'requester',
+    allowedIn: WHILE_RUNNING,
+    refusal: 'Este chamado está encerrado. Reabra-o para escrever de novo.',
+  },
+  /* Reabrir é de quem pediu também, sem prazo: o problema voltou, e quem sabe disso é ele.
+     Volta para a FILA (e não para "em atendimento", como a reabertura do TI): ninguém do TI
+     assumiu ainda esta volta. */
+  requester_reopening: {
+    label: 'Reaberto pelo solicitante',
+    tone: 'info',
+    leadsTo: 'requester_reply',
+    origin: 'requester',
     allowedIn: ['closed'],
     refusal: 'Só dá para reabrir um chamado que já foi encerrado.',
   },
@@ -282,6 +306,7 @@ export function refuseTicketHistory(
 ): string | null {
   const definition = definitionOf(type);
   if (definition.origin === 'system') return definition.refusal;
+  if (definition.origin === 'requester') return 'Este tipo é lançado por quem abriu o chamado.';
 
   const phase = ticketStatusPhase(status);
   if (definition.allowedIn.includes(phase)) return null;
@@ -317,4 +342,37 @@ export function ticketHistoryTypeGroups(status: TicketStatus): {
     continuing: available.filter((type) => !isClosingTicketHistoryType(type)),
     closing: available.filter(isClosingTicketHistoryType),
   };
+}
+
+/**
+ * Os tipos que QUEM PEDIU (ou alguém vinculado) lança pela Central — responder e reabrir. O
+ * teste garante que é exatamente os `origin: 'requester'` do catálogo.
+ */
+export const REQUESTER_TICKET_HISTORY_TYPES = [
+  'requester_reply',
+  'requester_reopening',
+] as const satisfies readonly TicketHistoryType[];
+
+export type RequesterTicketHistoryType = (typeof REQUESTER_TICKET_HISTORY_TYPES)[number];
+
+/**
+ * O que quem pediu pode lançar num chamado neste estágio: responder enquanto ele anda, reabrir
+ * depois de encerrado. É uma escolha só, nunca as duas — por isso devolve o tipo, e não a lista.
+ */
+export function requesterTicketHistoryType(status: TicketStatus): RequesterTicketHistoryType {
+  return ticketStatusPhase(status) === 'closed' ? 'requester_reopening' : 'requester_reply';
+}
+
+/**
+ * Quem pediu pode lançar este tipo agora? Mesma forma de `refuseTicketHistory`: o MOTIVO da
+ * recusa, em português, ou `null`. A API recusa com esta frase; a tela troca o botão por ela.
+ */
+export function refuseRequesterTicketHistory(
+  status: TicketStatus,
+  type: TicketHistoryType,
+): string | null {
+  const definition = definitionOf(type);
+  if (definition.origin !== 'requester') return 'Este tipo é lançado por quem atende o chamado.';
+
+  return definition.allowedIn.includes(ticketStatusPhase(status)) ? null : definition.refusal;
 }

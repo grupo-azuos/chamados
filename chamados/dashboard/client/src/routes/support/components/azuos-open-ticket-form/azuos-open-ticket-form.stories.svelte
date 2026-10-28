@@ -262,7 +262,7 @@
   }}
 />
 
-<!-- Com responsáveis para escolher: o campo aparece no último passo ("Como te avisamos"). -->
+<!-- Com responsáveis para escolher: cartões no último passo ("Quem cuida do chamado"). -->
 <Story
   name="WithAssignees"
   args={{
@@ -279,6 +279,46 @@
     },
     state: {},
     actions,
+  }}
+/>
+
+<!-- Caso limite: mais de quatro responsáveis viram lista com busca, não parede de cartões. -->
+<Story
+  name="ManyAssignees"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: false,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+      assignees: ['Ana Lima', 'Bia Costa', 'Caio Reis', 'Dani Alves', 'Edu Rocha', 'Fabi Nunes'].map(
+        (label, index) => ({ value: `u-${index}`, label }),
+      ),
+    },
+    state: {},
+    actions,
+  }}
+/>
+
+<!-- Com pessoas para vincular: o campo aparece no último passo, com uma já escolhida. -->
+<Story
+  name="WithPeopleToLink"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: false,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+      watcherIds: ['u-caio'],
+      peopleOptions: [
+        { id: 'u-caio', name: 'Caio Reis' },
+        { id: 'u-dani', name: 'Dani Alves' },
+      ],
+    },
+    state: {},
+    actions: { ...actions, onWatchersChange: () => {} },
   }}
 />
 

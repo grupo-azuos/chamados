@@ -29,7 +29,7 @@ export const WHATSAPP_NOTICE_FAILURES = [
 export type WhatsappNoticeFailure = (typeof WHATSAPP_NOTICE_FAILURES)[number];
 
 /** Os avisos que um chamado gera — os textos `ticket_*` do bot. */
-export const WHATSAPP_NOTICE_KINDS = ['ticket_opened', 'ticket_ready'] as const;
+export const WHATSAPP_NOTICE_KINDS = ['ticket_opened', 'ticket_ready', 'ticket_update'] as const;
 export type WhatsappNoticeKind = (typeof WHATSAPP_NOTICE_KINDS)[number];
 
 export const whatsappNoticeSchema = z.object({
@@ -48,6 +48,7 @@ export type WhatsappNotice = z.infer<typeof whatsappNoticeSchema>;
 export const WHATSAPP_NOTICE_KIND_LABELS: Record<WhatsappNoticeKind, string> = {
   ticket_opened: 'Chamado recebido',
   ticket_ready: 'Chamado pronto',
+  ticket_update: 'Andamento',
 };
 
 export const WHATSAPP_NOTICE_STATUS_LABELS: Record<WhatsappNoticeStatus, string> = {

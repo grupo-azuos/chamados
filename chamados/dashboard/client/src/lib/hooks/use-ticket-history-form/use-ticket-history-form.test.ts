@@ -19,7 +19,16 @@ import {
 } from './use-ticket-history-form.svelte';
 
 vi.mock('$lib/api/tickets.api', () => ({
-  ticketsApi: { createHistory: vi.fn() },
+  ticketsApi: {
+    createHistory: vi.fn(),
+    people: vi.fn().mockResolvedValue({
+      watchers: [],
+      notifiable: [
+        { id: 'u-bia', name: 'Bia Costa' },
+        { id: 'u-caio', name: 'Caio Reis' },
+      ],
+    }),
+  },
 }));
 
 const { ticketsApi } = await import('$lib/api/tickets.api');
@@ -135,6 +144,7 @@ describe('initialValuesFor', () => {
       description: '',
       isVisibleToRequester: true,
       minutesSpent: '',
+      notifyUserIds: [],
     });
   });
 });
@@ -210,9 +220,30 @@ describe('useTicketHistoryFormModel', () => {
         description: 'Pedi a fonte ao fornecedor.',
         isVisibleToRequester: false,
         minutesSpent: '20',
+        notifyUserIds: [],
       },
       [file],
     );
+  });
+
+  // feliz
+  it('offers the people of the ticket and sends only the ones marked', async () => {
+    const model = mountModel();
+
+    await waitFor(() => expect(model.data.notifiable).toHaveLength(2));
+    model.actions.onChange('description', 'Peça chegou.');
+    model.actions.onNotifyChange(['u-bia']);
+    model.actions.onSubmit();
+
+    await waitFor(() =>
+      expect(ticketsApi.createHistory).toHaveBeenCalledWith(
+        22,
+        expect.objectContaining({ notifyUserIds: ['u-bia'] }),
+        [],
+      ),
+    );
+    /* Depois de registrar, ninguém fica marcado para o próximo andamento. */
+    await waitFor(() => expect(model.data.notifyUserIds).toEqual([]));
   });
 
   it('clears what was typed after recording, ready for the next history', async () => {

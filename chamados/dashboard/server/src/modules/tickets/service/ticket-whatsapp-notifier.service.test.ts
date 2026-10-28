@@ -177,3 +177,82 @@ describe('TicketWhatsappNotifierService', () => {
     expect(ticketAccessLink(7, env)).toBe('https://chamados.exemplo.com/support');
   });
 });
+
+describe('TicketWhatsappNotifierService.update', () => {
+  const entry = {
+    authorId: 'u-ana',
+    authorName: 'Ana Lima',
+    description: 'Chegou a peça, troco amanhã.',
+    statusAfter: 'in_progress' as const,
+  };
+
+  function makeUpdateNotifier(linked: string[], phones: Record<string, string> = {}) {
+    const messaging = {
+      queue: vi.fn().mockResolvedValue('queued'),
+      isLinked: vi.fn(async (userId: string) => linked.includes(userId)),
+      linkedPhone: vi.fn(async (userId: string) => phones[userId] ?? null),
+    };
+    const tickets = { lastPhoneOf: vi.fn().mockResolvedValue(null) };
+    const notifier = new TicketWhatsappNotifierService(
+      env,
+      messaging as unknown as WhatsappMessagingService,
+      { listForArea: vi.fn().mockResolvedValue(ATTENDANTS) } as unknown as TicketAssigneesService,
+      tickets as never,
+    );
+
+    return { notifier, messaging };
+  }
+
+  // feliz
+  it('sends the update to the requester phone through the author number', async () => {
+    const { notifier, messaging } = makeUpdateNotifier(['u-ana']);
+
+    const outcomes = await notifier.update(
+      ticket({ requesterId: 'u-bia' }),
+      entry,
+      [{ id: 'u-bia', name: 'Bia Costa' }],
+    );
+
+    expect(outcomes).toEqual([{ id: 'u-bia', name: 'Bia Costa', outcome: 'queued' }]);
+    expect(messaging.queue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        senderUserId: 'u-ana',
+        to: '5562999990002',
+        kind: 'ticket_update',
+        values: expect.objectContaining({
+          nome: 'Bia Costa',
+          autor: 'Ana Lima',
+          andamento: 'Chegou a peça, troco amanhã.',
+          situacao: 'Em atendimento',
+        }),
+      }),
+    );
+  });
+
+  // feliz
+  it('reaches a linked attendant by the number they linked', async () => {
+    const { notifier, messaging } = makeUpdateNotifier(['u-ana'], { 'u-caio': '5562988887777' });
+
+    await notifier.update(ticket(), entry, [{ id: 'u-caio', name: 'Caio Reis' }]);
+
+    expect(messaging.queue).toHaveBeenCalledWith(expect.objectContaining({ to: '5562988887777' }));
+  });
+
+  // triste
+  it('tells, person by person, who has no known phone', async () => {
+    const { notifier, messaging } = makeUpdateNotifier(['u-ana']);
+
+    const outcomes = await notifier.update(ticket(), entry, [{ id: 'u-eva', name: 'Eva Souza' }]);
+
+    expect(outcomes).toEqual([{ id: 'u-eva', name: 'Eva Souza', outcome: 'recipient_not_found' }]);
+    expect(messaging.queue).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('sends nothing when nobody was chosen', async () => {
+    const { notifier, messaging } = makeUpdateNotifier(['u-ana']);
+
+    expect(await notifier.update(ticket(), entry, [])).toEqual([]);
+    expect(messaging.isLinked).not.toHaveBeenCalled();
+  });
+});

@@ -1,4 +1,4 @@
-import { createMutation, createQuery } from '@tanstack/svelte-query';
+import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { isValidTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { type MyTicket, type PublicTicket } from '@template/shared/schemas/ticket.schema';
 import { writable } from 'svelte/store';
@@ -6,6 +6,8 @@ import { writable } from 'svelte/store';
 import { readError } from '$lib/api/http-client';
 import { ticketsApi } from '$lib/api/tickets.api';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+
+export const MY_TICKETS_QUERY_KEY = ['tickets', 'mine'];
 
 export type TicketLookupModel = {
   data: {
@@ -31,6 +33,10 @@ export type TicketLookupModel = {
     onOpenLink: (token: string) => void;
     /** Abre um dos chamados da lista "Meus chamados", pelo número. */
     onOpenMine: (protocol: string) => void;
+    /** Relê o chamado aberto — depois de a pessoa escrever nele ou mudar os vinculados. */
+    onRefresh: () => void;
+    /** Fecha o chamado aberto e volta para a lista. */
+    onBackToList: () => void;
   };
 };
 
@@ -47,6 +53,11 @@ export type TicketLookupModel = {
  */
 export function useTicketLookupModel(): TicketLookupModel {
   let protocol = $state('');
+  /* O chamado na tela mora aqui, e não no `data` da busca: uma busca nova zera o `data` dela
+     enquanto espera, e reler depois de responder fazia o chamado sumir e voltar — a página
+     inteira era redesenhada e o scroll pulava. Assim ele só é trocado quando a versão nova
+     chega. */
+  let shown = $state<PublicTicket | null>(null);
 
   const search = mirrorStore(
     createMutation({
@@ -58,19 +69,32 @@ export function useTicketLookupModel(): TicketLookupModel {
       /* Veio pelo link: o campo passa a mostrar o protocolo do chamado que abriu. */
       onSuccess: (ticket: PublicTicket) => {
         protocol = ticket.protocol;
+        shown = ticket;
+      },
+    }),
+  );
+
+  /* Reler o chamado aberto é OUTRO pedido, separado da busca: não acende o "Procurando…" e
+     não esconde o que já está na tela. Se falhar, fica a versão que já estava. */
+  const refresh = mirrorStore(
+    createMutation({
+      mutationFn: (opened: string) => ticketsApi.findByProtocol(opened),
+      onSuccess: (ticket: PublicTicket) => {
+        if (shown?.protocol === ticket.protocol) shown = ticket;
       },
     }),
   );
 
   /* "Meus chamados" — uma vez, ao abrir a tela. Falhou? A lista mostra o motivo, e a consulta
      pelo número continua funcionando. */
+  const queryClient = useQueryClient();
   const mine = mirrorStore(
-    createQuery(writable({ queryKey: ['tickets', 'mine'], queryFn: () => ticketsApi.mine() })),
+    createQuery(writable({ queryKey: MY_TICKETS_QUERY_KEY, queryFn: () => ticketsApi.mine() })),
   );
 
   return {
     get data() {
-      return { protocol, ticket: search.current.data ?? null, mine: mine.current.data ?? [] };
+      return { protocol, ticket: shown, mine: mine.current.data ?? [] };
     },
     get state() {
       const notFoundStatus = 404;
@@ -91,6 +115,7 @@ export function useTicketLookupModel(): TicketLookupModel {
          escreve outro número faria ela ler a situação do chamado errado. */
       onProtocolChange: (value) => {
         protocol = value;
+        shown = null;
         search.current.reset();
       },
       onSearch: () => {
@@ -101,6 +126,18 @@ export function useTicketLookupModel(): TicketLookupModel {
       onOpenMine: (value) => {
         protocol = value;
         search.current.mutate({ protocol: value });
+      },
+      /* A situação na lista também mudou (ex.: "Retorno do solicitante"): relê as duas. */
+      onRefresh: () => {
+        const opened = shown?.protocol;
+        if (!opened) return;
+        refresh.current.mutate(opened);
+        void queryClient.invalidateQueries({ queryKey: MY_TICKETS_QUERY_KEY });
+      },
+      onBackToList: () => {
+        protocol = '';
+        shown = null;
+        search.current.reset();
       },
     },
   };

@@ -19,6 +19,7 @@
     onChange: () => {},
     onBlur: () => {},
     onVisibilityChange: () => {},
+    onNotifyChange: () => {},
     onChosenFilesChange: () => {},
     onAttachmentError: () => {},
     onSubmit: () => {},
@@ -55,6 +56,8 @@
       },
       isVisibleToRequester: true,
       chosenFiles: [],
+      notifyUserIds: [],
+      notifiable: [],
       ...over,
     };
   }
@@ -165,3 +168,18 @@
     <TicketHistoryForm data={dataFor('open', 'note')} {actions} />
   </div>
 </Story>
+
+<!-- Quem escreve escolhe quem recebe aviso: a Bia (quem abriu) foi marcada. -->
+<Story
+  name="WithNotification"
+  args={{
+    data: dataFor('in_progress', 'note', {
+      notifyUserIds: ['u-bia'],
+      notifiable: [
+        { id: 'u-bia', name: 'Bia Costa' },
+        { id: 'u-caio', name: 'Caio Reis' },
+      ],
+    }),
+    actions,
+  }}
+/>
