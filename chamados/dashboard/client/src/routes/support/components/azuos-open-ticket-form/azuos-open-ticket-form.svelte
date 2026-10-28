@@ -728,7 +728,7 @@
                   actions={{ onChange: actions.onWatchersChange }}
                 />
                 <p class="text-muted-foreground text-xs">
-                  Opcional. Quem você vincular acompanha o chamado em "Meus chamados" e também pode
+                  Opcional. Quem você vincular acompanha o chamado em "Consultar chamado" e também pode
                   escrever nele. Dá para mudar depois.
                 </p>
               </div>
