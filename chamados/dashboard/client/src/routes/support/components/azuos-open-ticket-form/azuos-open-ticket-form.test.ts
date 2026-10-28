@@ -92,8 +92,52 @@ describe('AzuosOpenTicketForm', () => {
 
     await advanceTo(user, 4);
 
-    expect(screen.getByText('Com quem você quer falar?')).toBeInTheDocument();
-    expect(screen.getByText(/Opcional\./)).toBeInTheDocument();
+    expect(screen.getByText('Quem vai te atender?')).toBeInTheDocument();
+    // Sem escolha, fica com quem estiver livre — e dá para voltar a isso depois de escolher.
+    expect(screen.getByRole('radio', { name: /quem estiver livre/i })).toHaveAttribute('aria-checked', 'true');
+    await user.click(screen.getByRole('radio', { name: /ana lima/i }));
+    expect(actions.onChange).toHaveBeenCalledWith('assigneeId', 'u-ana');
+  });
+
+  // feliz
+  it('says whose WhatsApp the notice comes from, right next to who attends', async () => {
+    const user = userEvent.setup();
+    setup({
+      data: {
+        fields: { ...fields, assigneeId: { ...fields.assigneeId, value: 'u-ana' } },
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        assignees: [{ value: 'u-ana', label: 'Ana Lima' }],
+      },
+    });
+
+    await advanceTo(user, 4);
+    await user.click(screen.getByRole('switch', { name: /receber avisos no whatsapp/i }));
+
+    expect(screen.getByText(/chegam do WhatsApp de Ana Lima/)).toBeInTheDocument();
+    expect(actions.onNotifyChange).toHaveBeenCalledWith(true);
+  });
+
+  // triste
+  it('turns many attendants into a searchable list instead of a wall of cards', async () => {
+    const user = userEvent.setup();
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        assignees: ['Ana', 'Bia', 'Caio', 'Dani', 'Edu'].map((name) => ({ value: `u-${name}`, label: name })),
+      },
+    });
+
+    await advanceTo(user, 4);
+
+    expect(screen.queryByRole('radio')).toBeNull();
+    expect(screen.getByRole('button', { name: /responsável pelo chamado/i })).toBeInTheDocument();
   });
 
   it('opens on the area step, with the three cards to choose from', () => {
@@ -532,10 +576,34 @@ describe('AzuosOpenTicketForm', () => {
     });
 
     await advanceTo(user, 4);
-    expect(screen.getByText('Vincular outras pessoas')).toBeInTheDocument();
+    // Já tem alguém vinculado: o campo vem aberto, sem precisar pedir.
+    expect(screen.getByText('Quem mais acompanha')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Tirar Caio Reis' }));
 
     expect(onWatchersChange).toHaveBeenCalledWith([]);
+  });
+
+  // feliz
+  it('keeps the link field closed until the person asks for it', async () => {
+    const user = userEvent.setup();
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        watcherIds: [],
+        peopleOptions: [{ id: 'u-caio', name: 'Caio Reis' }],
+      },
+      actions: { ...actions, onWatchersChange: vi.fn() },
+    });
+
+    await advanceTo(user, 4);
+    expect(screen.queryByText('Quem mais acompanha')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Vincular outras pessoas' }));
+
+    expect(screen.getByText('Quem mais acompanha')).toBeInTheDocument();
   });
 
   it('hides the link field when there is nobody to offer', async () => {

@@ -4,7 +4,7 @@
     type ScheduleViewMode,
     type ScheduleFilterData,
   } from '$lib/hooks/use-software-schedule/use-software-schedule.svelte';
-  import { type StatusBadgeTone } from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import { swatchOf } from '../azuos-schedule-event-dialog/azuos-schedule-event-dialog.svelte';
   import { type SoftwareScheduleEvent } from '@template/shared/schemas/software-schedule.schema';
   import { type SoftwareTimelineEvent } from '@template/shared/schemas/software-timeline.schema';
   import { scheduleBlockMinutes } from '$lib/utils/github-calendar-layout.util';
@@ -76,30 +76,9 @@
     return `${String(hours).padStart(2, '0')}:${halfHours % 2 === 0 ? '00' : '30'}`;
   }
 
-  /** A cor escolhida no compromisso vira um dos 6 tons canônicos do sistema. */
-  const COLOR_TONES: Record<string, StatusBadgeTone> = {
-    blue: 'info',
-    green: 'success',
-    amber: 'warning',
-    purple: 'brand',
-    indigo: 'brand',
-    rose: 'danger',
-    red: 'danger',
-    neutral: 'neutral',
-  };
-
-  /** Cartão inteiro tingido, com a borda fina em volta (nunca de um lado só). */
-  const EVENT_SURFACE: Record<StatusBadgeTone, string> = {
-    brand: 'bg-primary-soft',
-    info: 'bg-info-soft',
-    success: 'bg-success-soft',
-    warning: 'bg-warning-soft',
-    danger: 'bg-destructive-soft',
-    neutral: 'border-border bg-card hover:border-border/80',
-  };
-
-  function toneOf(event: SoftwareScheduleEvent): StatusBadgeTone {
-    return COLOR_TONES[event.color] ?? 'neutral';
+  /** O cartão na cor que a pessoa escolheu — a MESMA tabela do seletor de cor. */
+  function surfaceOf(event: SoftwareScheduleEvent): string {
+    return swatchOf(event.color).surfaceClass;
   }
 </script>
 
@@ -628,9 +607,7 @@
                         <button
                           {...props}
                           type="button"
-                          class="truncate rounded-chip border px-1.5 py-0.5 text-left text-xs font-medium text-foreground transition {EVENT_SURFACE[
-                            toneOf(event)
-                          ]}"
+                          class="truncate rounded-chip border px-1.5 py-0.5 text-left text-xs font-medium text-foreground transition {surfaceOf(event)}"
                           onclick={() => actions.onSelectEvent(event)}
                         >
                           {#if event.kind === 'record'}<CircleCheckBig
@@ -782,7 +759,7 @@
                           class="absolute inset-x-1 overflow-hidden rounded-box border text-left shadow-xs transition {event.kind ===
                           'record'
                             ? 'px-2 py-1'
-                            : 'p-2'} {EVENT_SURFACE[toneOf(event)]}"
+                            : 'p-2'} {surfaceOf(event)}"
                           style="{getEventStyle(event)}{prGroups.some((group) =>
                             overlapsGithubCard(event, group.top),
                           )
