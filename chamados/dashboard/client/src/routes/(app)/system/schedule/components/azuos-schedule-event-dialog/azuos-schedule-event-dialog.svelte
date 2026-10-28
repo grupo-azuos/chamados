@@ -1,27 +1,36 @@
 <script lang="ts" module>
   /**
-   * As cores da agenda — UMA bolinha por tom que o calendário realmente pinta, com o MESMO
-   * token. Antes, "Rosa" usava o amarelo da marca (e no calendário saía vermelho), e "Roxo" e
-   * "Índigo" eram a mesma cor: a pessoa escolhia uma coisa e via outra.
+   * As cores da agenda — as OITO que o compromisso pode guardar, cada uma com o seu próprio
+   * token (`--tag-*`). A bolinha (`dotClass`) e o cartão do calendário (`surfaceClass`) saem
+   * da MESMA linha: o que a pessoa escolhe aqui é o que ela vê na semana.
+   *
+   * Antes o calendário só tinha os seis tons de estado, e "Rosa" saía amarelo no seletor e
+   * vermelho na agenda, e "Roxo" e "Índigo" eram a mesma cor.
+   *
+   * A ordem é a do arco-íris (frias → quentes → neutra): procurar uma cor numa fileira
+   * ordenada é mais rápido que numa embaralhada.
    */
   export const SWATCHES = [
-    { value: 'blue', label: 'Azul', bgClass: 'bg-info' },
-    { value: 'purple', label: 'Marinho', bgClass: 'bg-primary' },
-    { value: 'green', label: 'Verde', bgClass: 'bg-success' },
-    { value: 'amber', label: 'Âmbar', bgClass: 'bg-warning' },
-    { value: 'red', label: 'Vermelho', bgClass: 'bg-destructive' },
-    { value: 'neutral', label: 'Grafite', bgClass: 'bg-muted-foreground' },
+    { value: 'blue', label: 'Azul', dotClass: 'bg-tag-blue', surfaceClass: 'bg-tag-blue-soft' },
+    { value: 'indigo', label: 'Índigo', dotClass: 'bg-tag-indigo', surfaceClass: 'bg-tag-indigo-soft' },
+    { value: 'purple', label: 'Roxo', dotClass: 'bg-tag-purple', surfaceClass: 'bg-tag-purple-soft' },
+    { value: 'rose', label: 'Rosa', dotClass: 'bg-tag-rose', surfaceClass: 'bg-tag-rose-soft' },
+    { value: 'red', label: 'Vermelho', dotClass: 'bg-tag-red', surfaceClass: 'bg-tag-red-soft' },
+    { value: 'amber', label: 'Amarelo', dotClass: 'bg-tag-amber', surfaceClass: 'bg-tag-amber-soft' },
+    { value: 'green', label: 'Verde', dotClass: 'bg-tag-green', surfaceClass: 'bg-tag-green-soft' },
+    {
+      value: 'neutral',
+      label: 'Grafite',
+      dotClass: 'bg-muted-foreground',
+      surfaceClass: 'border-border bg-card hover:border-border/80',
+    },
   ] as const;
 
-  /* Registros antigos guardaram "rose" e "indigo", que o calendário já pinta como vermelho e
-     marinho: o seletor marca a bolinha da cor que a pessoa vê, sem regravar nada. */
-  const SAME_AS: Record<string, string> = { rose: 'red', indigo: 'purple' };
+  export type ScheduleSwatch = (typeof SWATCHES)[number];
 
-  /** A bolinha que representa a cor guardada — Azul quando a cor é desconhecida. */
-  export function swatchOf(color: string): (typeof SWATCHES)[number] {
-    const value = SAME_AS[color] ?? color;
-
-    return SWATCHES.find((swatch) => swatch.value === value) ?? SWATCHES[0];
+  /** A cor guardada — Azul quando ela é desconhecida (o padrão de quem não escolheu). */
+  export function swatchOf(color: string): ScheduleSwatch {
+    return SWATCHES.find((swatch) => swatch.value === color) ?? SWATCHES[0];
   }
 </script>
 
@@ -303,7 +312,7 @@
               aria-label={swatch.label}
               aria-pressed={isSelected}
             >
-              <span class="flex size-6 items-center justify-center rounded-full {swatch.bgClass}">
+              <span class="flex size-6 items-center justify-center rounded-full {swatch.dotClass}">
                 {#if isSelected}
                   <Check class="text-background size-3.5" strokeWidth={3} aria-hidden="true" />
                 {/if}

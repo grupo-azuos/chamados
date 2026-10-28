@@ -126,17 +126,18 @@ describe('AzuosScheduleEventDialog', () => {
 
 describe('swatchOf', () => {
   // feliz
-  it('offers one swatch per calendar tone, with no repeated color', () => {
-    const classes = SWATCHES.map((swatch) => swatch.bgClass);
+  it('offers all eight colors, none repeated', () => {
+    const dots = SWATCHES.map((swatch) => swatch.dotClass);
 
-    expect(new Set(classes).size).toBe(classes.length);
-    expect(swatchOf('amber').label).toBe('Âmbar');
+    expect(SWATCHES).toHaveLength(8);
+    expect(new Set(dots).size).toBe(dots.length);
   });
 
   // feliz
-  it('shows old rose and indigo records as the color the calendar paints', () => {
-    expect(swatchOf('rose').value).toBe('red');
-    expect(swatchOf('indigo').value).toBe('purple');
+  it('paints pink as pink and amber as yellow — the colors their names promise', () => {
+    expect(swatchOf('rose')).toMatchObject({ label: 'Rosa', dotClass: 'bg-tag-rose' });
+    expect(swatchOf('amber')).toMatchObject({ label: 'Amarelo', dotClass: 'bg-tag-amber' });
+    expect(swatchOf('indigo').dotClass).not.toBe(swatchOf('purple').dotClass);
   });
 
   // triste
@@ -149,22 +150,27 @@ describe('AzuosScheduleEventDialog color', () => {
   // feliz
   it('marks the chosen swatch and names it next to the label', () => {
     const model = createMockModel();
-    model.data.fields.color.value = 'amber';
+    model.data.fields.color.value = 'rose';
     render(ScheduleEventDialog, {
       props: { open: true, model, projects: [], onClose: vi.fn() },
     });
 
-    expect(screen.getByRole('button', { name: 'Âmbar' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Azul' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByText(/· Âmbar/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rosa' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Amarelo' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText(/· Rosa/)).toBeInTheDocument();
   });
 
   // triste
-  it('does not offer the old pink swatch that rendered yellow', () => {
+  it('marks only one swatch even for a color it does not know', () => {
+    const model = createMockModel();
+    model.data.fields.color.value = 'chartreuse';
     render(ScheduleEventDialog, {
-      props: { open: true, model: createMockModel(), projects: [], onClose: vi.fn() },
+      props: { open: true, model, projects: [], onClose: vi.fn() },
     });
 
-    expect(screen.queryByRole('button', { name: 'Rosa' })).not.toBeInTheDocument();
+    const pressed = screen
+      .getAllByRole('button')
+      .filter((button) => button.getAttribute('aria-pressed') === 'true');
+    expect(pressed.map((button) => button.getAttribute('aria-label'))).toContain('Azul');
   });
 });

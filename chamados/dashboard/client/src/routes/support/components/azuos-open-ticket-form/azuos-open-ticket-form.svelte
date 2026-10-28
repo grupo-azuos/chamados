@@ -174,12 +174,18 @@
       STEP_FIELDS[step].some((name) => Boolean(fields[name].error)),
     );
   }
+
+  /** Acima disso os responsáveis viram lista com busca, em vez de cartões. */
+  export const MAX_ASSIGNEE_CARDS = 4;
 </script>
 
 <script lang="ts">
   import { DESCRIPTION_MAX_LENGTH } from '@template/shared/schemas/ticket.schema';
 
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+  import CheckIcon from '@lucide/svelte/icons/check';
+  import HeadsetIcon from '@lucide/svelte/icons/headset';
+  import PlusIcon from '@lucide/svelte/icons/plus';
   import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
   import MessageCircle from '@lucide/svelte/icons/message-circle';
   import PaperclipIcon from '@lucide/svelte/icons/paperclip';
@@ -188,6 +194,7 @@
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import PeoplePicker from '$lib/components/azuos-people-picker/azuos-people-picker.svelte';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import AttachmentPicker from '$lib/components/azuos-attachment-picker/azuos-attachment-picker.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
@@ -204,6 +211,18 @@
   const fields = $derived(data.fields);
   const systemProjects = $derived(data.systemProjects ?? []);
   const assignees = $derived(data.assignees ?? []);
+  /* Até quatro pessoas cabem como cartões, que se escolhem com um toque; mais que isso vira
+     lista com busca — uma fileira longa de cartões é mais demorada de ler que procurar. */
+  const isFewAssignees = $derived(assignees.length <= MAX_ASSIGNEE_CARDS);
+  const chosenAssignee = $derived(assignees.find((option) => option.value === fields.assigneeId.value));
+  /* Quem atende já está no chamado: oferecê-lo também para "acompanhar" seria repetir. */
+  const watcherOptions = $derived(
+    (data.peopleOptions ?? []).filter((person) => person.id !== fields.assigneeId.value),
+  );
+  /* "Quem mais acompanha" fica fechado até a pessoa pedir — a maioria não vincula ninguém, e
+     um campo a mais aberto é mais uma decisão no caminho de quem só quer enviar. */
+  let isLinkingOpen = $state(false);
+  const isLinkingShown = $derived(isLinkingOpen || (data.watcherIds ?? []).length > 0);
   /* Com convite, só as áreas que aquele responsável atende: escolher outra o tiraria do chamado. */
   const areaCards = $derived(
     data.invite ? AREA_CARDS.filter((card) => data.invite?.areas.includes(card.value)) : AREA_CARDS,
@@ -697,55 +716,106 @@
             </div>
           </TimelineStep>
         {:else}
-          <TimelineStep data={{ title: 'Como te avisamos', icon: MessageCircle }} ui={{ isLast: true, tone: 'success' }}>
-            {#if assignees.length > 0}
-              <div class="mb-3 flex flex-col gap-1.5">
-                <span class="text-ink-700 text-sm font-medium">Com quem você quer falar?</span>
-                <OptionPicker
-                  data={{ value: fields.assigneeId.value, options: assignees }}
-                  ui={{
-                    ariaLabel: 'Responsável pelo chamado',
-                    placeholder: 'Sem preferência',
-                    fullWidth: true,
-                  }}
-                  state={{ isDisabled: formState.isSubmitting }}
-                  actions={{ onChange: (value: string) => actions.onChange('assigneeId', value) }}
-                />
-                <p class="text-muted-foreground text-xs">
-                  Opcional. Quem você escolher fica responsável pelo chamado e, se você marcar o
-                  aviso abaixo, é do WhatsApp dessa pessoa que a mensagem chega.
-                </p>
-              </div>
-            {/if}
+          <TimelineStep data={{ title: 'Quem cuida do chamado', icon: MessageCircle }} ui={{ isLast: true, tone: 'success' }}>
+            <!-- BLOCO 1 — quem atende E o aviso, juntos: o WhatsApp sai do número de quem
+                 atende, então as duas escolhas são uma conversa só. -->
+            <div class="rounded-box border-border/70 flex flex-col gap-3 border p-3 sm:p-4">
+              {#if assignees.length > 0}
+                <fieldset class="flex flex-col gap-2">
+                  <legend class="text-ink-700 mb-2 text-sm font-medium">Quem vai te atender?</legend>
+                  {#if isFewAssignees}
+                    <!-- Cartões grandes (fáceis de acertar); o escolhido ganha FUNDO e o visto. -->
+                    <div class="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Responsável pelo chamado">
+                      {#each [{ value: '', label: 'Quem estiver livre' }, ...assignees] as option (option.value)}
+                        {@const isChosen = fields.assigneeId.value === option.value}
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={isChosen}
+                          disabled={formState.isSubmitting}
+                          onclick={() => actions.onChange('assigneeId', option.value)}
+                          class={cn(
+                            'rounded-control focus-visible:ring-ring flex min-h-12 cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60',
+                            isChosen ? 'bg-primary-soft text-primary font-semibold' : 'bg-muted/40 text-foreground hover:bg-muted',
+                          )}
+                        >
+                          {#if option.value}
+                            <PersonAvatar name={option.label} />
+                          {:else}
+                            <span class="bg-card text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-full">
+                              <HeadsetIcon class="size-3.5" aria-hidden="true" />
+                            </span>
+                          {/if}
+                          <span class="min-w-0 flex-1 truncate">{option.label}</span>
+                          {#if isChosen}
+                            <CheckIcon class="size-4 shrink-0" aria-hidden="true" />
+                          {/if}
+                        </button>
+                      {/each}
+                    </div>
+                  {:else}
+                    <OptionPicker
+                      data={{ value: fields.assigneeId.value, options: [{ value: '', label: 'Quem estiver livre' }, ...assignees] }}
+                      ui={{ ariaLabel: 'Responsável pelo chamado', placeholder: 'Quem estiver livre', fullWidth: true }}
+                      state={{ isDisabled: formState.isSubmitting }}
+                      actions={{ onChange: (value: string) => actions.onChange('assigneeId', value) }}
+                    />
+                  {/if}
+                </fieldset>
+              {/if}
 
-            {#if (data.peopleOptions ?? []).length > 0 && actions.onWatchersChange}
-              <div class="mb-3 flex flex-col gap-1.5">
-                <span class="text-ink-700 text-sm font-medium">Vincular outras pessoas</span>
-                <PeoplePicker
-                  data={{ selectedIds: data.watcherIds ?? [], options: data.peopleOptions ?? [] }}
-                  ui={{ ariaLabel: 'Pessoas vinculadas', placeholder: 'Ninguém além de você' }}
-                  state={{ isDisabled: formState.isSubmitting }}
-                  actions={{ onChange: actions.onWatchersChange }}
-                />
-                <p class="text-muted-foreground text-xs">
-                  Opcional. Quem você vincular acompanha o chamado em "Consultar chamado" e também pode
-                  escrever nele. Dá para mudar depois.
-                </p>
-              </div>
-            {/if}
-
-            <label
-              class="flex cursor-pointer items-start gap-2.5 rounded-box border border-border/80 bg-muted/20 px-3.5 py-3 text-sm text-ink-700 transition-colors hover:bg-muted/40"
-            >
-              <input
-                type="checkbox"
-                class="mt-0.5"
-                checked={data.notifyWhatsapp}
+              <!-- A linha inteira é o botão (alvo grande), e não só a caixinha. -->
+              <button
+                type="button"
+                role="switch"
+                aria-checked={data.notifyWhatsapp}
                 disabled={formState.isSubmitting}
-                onchange={(event) => actions.onNotifyChange(event.currentTarget.checked)}
-              />
-              Quero receber o protocolo e avisos deste chamado no WhatsApp
-            </label>
+                onclick={() => actions.onNotifyChange(!data.notifyWhatsapp)}
+                class="rounded-control hover:bg-muted/60 focus-visible:ring-ring flex min-h-12 w-full cursor-pointer items-center gap-3 px-1 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <MessageCircle class="text-muted-foreground size-5 shrink-0" aria-hidden="true" />
+                <span class="flex min-w-0 flex-1 flex-col">
+                  <span class="text-foreground text-sm font-medium">Receber avisos no WhatsApp</span>
+                  <span class="text-muted-foreground text-xs">
+                    {chosenAssignee
+                      ? `O protocolo e cada andamento chegam do WhatsApp de ${chosenAssignee.label}.`
+                      : 'O protocolo e cada andamento chegam no seu WhatsApp.'}
+                  </span>
+                </span>
+                <span
+                  class={cn(
+                    'flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors',
+                    data.notifyWhatsapp ? 'bg-primary justify-end' : 'bg-muted justify-start',
+                  )}
+                  aria-hidden="true"
+                >
+                  <span class="bg-card size-5 rounded-full shadow-xs"></span>
+                </span>
+              </button>
+            </div>
+
+            <!-- BLOCO 2 — quem mais acompanha: opcional, fechado até a pessoa pedir. -->
+            {#if watcherOptions.length > 0 && actions.onWatchersChange}
+              <div class="mt-3 flex flex-col gap-1.5">
+                {#if isLinkingShown}
+                  <span class="text-ink-700 text-sm font-medium">Quem mais acompanha</span>
+                  <PeoplePicker
+                    data={{ selectedIds: data.watcherIds ?? [], options: watcherOptions }}
+                    ui={{ ariaLabel: 'Pessoas vinculadas', placeholder: 'Escolha as pessoas' }}
+                    state={{ isDisabled: formState.isSubmitting }}
+                    actions={{ onChange: actions.onWatchersChange }}
+                  />
+                  <p class="text-muted-foreground text-xs">Veem o chamado e podem escrever nele.</p>
+                {:else}
+                  <ActionButton
+                    data={{ label: 'Vincular outras pessoas' }}
+                    ui={{ variant: 'ghost', size: 'sm', icon: PlusIcon, className: 'w-fit' }}
+                    state={{ isDisabled: formState.isSubmitting }}
+                    actions={{ onClick: () => (isLinkingOpen = true) }}
+                  />
+                {/if}
+              </div>
+            {/if}
 
             {#if formState.error}
               <div class="mt-3">

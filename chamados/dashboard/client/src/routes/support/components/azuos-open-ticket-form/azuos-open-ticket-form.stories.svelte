@@ -262,7 +262,7 @@
   }}
 />
 
-<!-- Com responsáveis para escolher: o campo aparece no último passo ("Como te avisamos"). -->
+<!-- Com responsáveis para escolher: cartões no último passo ("Quem cuida do chamado"). -->
 <Story
   name="WithAssignees"
   args={{
@@ -276,6 +276,25 @@
         { value: 'u-ana', label: 'Ana Lima' },
         { value: 'u-bia', label: 'Bia Costa' },
       ],
+    },
+    state: {},
+    actions,
+  }}
+/>
+
+<!-- Caso limite: mais de quatro responsáveis viram lista com busca, não parede de cartões. -->
+<Story
+  name="ManyAssignees"
+  args={{
+    data: {
+      fields: emptyFields,
+      notifyWhatsapp: false,
+      screenshotName: null,
+      attachments: [],
+      opened: null,
+      assignees: ['Ana Lima', 'Bia Costa', 'Caio Reis', 'Dani Alves', 'Edu Rocha', 'Fabi Nunes'].map(
+        (label, index) => ({ value: `u-${index}`, label }),
+      ),
     },
     state: {},
     actions,
