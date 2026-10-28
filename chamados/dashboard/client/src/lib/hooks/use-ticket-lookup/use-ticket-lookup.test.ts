@@ -149,6 +149,41 @@ describe('useTicketLookupModel — voltar e reler', () => {
     await waitFor(() => expect(ticketsApi.findByProtocol).toHaveBeenCalledTimes(2));
   });
 
+  // feliz
+  it('keeps the ticket on screen while it reloads, and swaps it when the new one arrives', async () => {
+    const model = mountModel();
+    model.actions.onOpenMine('CH-0007');
+    await waitFor(() => expect(model.data.ticket?.protocol).toBe('CH-0007'));
+
+    let answer!: (value: PublicTicket) => void;
+    vi.mocked(ticketsApi.findByProtocol).mockReturnValueOnce(
+      new Promise<PublicTicket>((resolve) => (answer = resolve)),
+    );
+    model.actions.onRefresh();
+
+    // Enquanto relê: o chamado continua lá e nada diz "Procurando…".
+    await waitFor(() => expect(ticketsApi.findByProtocol).toHaveBeenCalledTimes(2));
+    expect(model.data.ticket?.protocol).toBe('CH-0007');
+    expect(model.state.isSearching).toBe(false);
+
+    answer({ ...ticket, status: 'requester_reply' });
+    await waitFor(() => expect(model.data.ticket?.status).toBe('requester_reply'));
+  });
+
+  // triste
+  it('keeps the current version when the reload fails', async () => {
+    const model = mountModel();
+    model.actions.onOpenMine('CH-0007');
+    await waitFor(() => expect(model.data.ticket?.protocol).toBe('CH-0007'));
+
+    vi.mocked(ticketsApi.findByProtocol).mockRejectedValueOnce(new Error('offline'));
+    model.actions.onRefresh();
+
+    await waitFor(() => expect(ticketsApi.findByProtocol).toHaveBeenCalledTimes(2));
+    expect(model.data.ticket?.protocol).toBe('CH-0007');
+    expect(model.state.error).toBeNull();
+  });
+
   // triste
   it('goes back to the list, and reloads nothing when no ticket is open', async () => {
     const model = mountModel();

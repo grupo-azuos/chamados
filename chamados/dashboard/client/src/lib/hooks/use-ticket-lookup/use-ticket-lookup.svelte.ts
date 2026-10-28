@@ -53,6 +53,11 @@ export type TicketLookupModel = {
  */
 export function useTicketLookupModel(): TicketLookupModel {
   let protocol = $state('');
+  /* O chamado na tela mora aqui, e não no `data` da busca: uma busca nova zera o `data` dela
+     enquanto espera, e reler depois de responder fazia o chamado sumir e voltar — a página
+     inteira era redesenhada e o scroll pulava. Assim ele só é trocado quando a versão nova
+     chega. */
+  let shown = $state<PublicTicket | null>(null);
 
   const search = mirrorStore(
     createMutation({
@@ -64,6 +69,18 @@ export function useTicketLookupModel(): TicketLookupModel {
       /* Veio pelo link: o campo passa a mostrar o protocolo do chamado que abriu. */
       onSuccess: (ticket: PublicTicket) => {
         protocol = ticket.protocol;
+        shown = ticket;
+      },
+    }),
+  );
+
+  /* Reler o chamado aberto é OUTRO pedido, separado da busca: não acende o "Procurando…" e
+     não esconde o que já está na tela. Se falhar, fica a versão que já estava. */
+  const refresh = mirrorStore(
+    createMutation({
+      mutationFn: (opened: string) => ticketsApi.findByProtocol(opened),
+      onSuccess: (ticket: PublicTicket) => {
+        if (shown?.protocol === ticket.protocol) shown = ticket;
       },
     }),
   );
@@ -77,7 +94,7 @@ export function useTicketLookupModel(): TicketLookupModel {
 
   return {
     get data() {
-      return { protocol, ticket: search.current.data ?? null, mine: mine.current.data ?? [] };
+      return { protocol, ticket: shown, mine: mine.current.data ?? [] };
     },
     get state() {
       const notFoundStatus = 404;
@@ -98,6 +115,7 @@ export function useTicketLookupModel(): TicketLookupModel {
          escreve outro número faria ela ler a situação do chamado errado. */
       onProtocolChange: (value) => {
         protocol = value;
+        shown = null;
         search.current.reset();
       },
       onSearch: () => {
@@ -111,13 +129,14 @@ export function useTicketLookupModel(): TicketLookupModel {
       },
       /* A situação na lista também mudou (ex.: "Retorno do solicitante"): relê as duas. */
       onRefresh: () => {
-        const opened = search.current.data?.protocol;
+        const opened = shown?.protocol;
         if (!opened) return;
-        search.current.mutate({ protocol: opened });
+        refresh.current.mutate(opened);
         void queryClient.invalidateQueries({ queryKey: MY_TICKETS_QUERY_KEY });
       },
       onBackToList: () => {
         protocol = '';
+        shown = null;
         search.current.reset();
       },
     },
