@@ -18,6 +18,9 @@
     screenshotUrl: null,
   attachments: [],
   histories: [],
+  watchers: [],
+  notifiable: [],
+  canReply: true,
     createdAt: '2026-09-15T12:10:00.000Z',
   };
 
@@ -165,6 +168,7 @@
           problemType: 'printer',
           description: 'A impressora do fiscal não puxa papel.',
           createdAt: '2026-10-14T13:00:00.000Z',
+          isWatching: false,
         },
         {
           id: 9,
@@ -175,6 +179,7 @@
           problemType: 'other',
           description: 'A cadeira da recepção está quebrada.',
           createdAt: '2026-10-02T09:30:00.000Z',
+          isWatching: true,
         },
       ],
     },

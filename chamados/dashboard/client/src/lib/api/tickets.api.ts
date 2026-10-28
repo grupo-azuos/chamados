@@ -5,10 +5,14 @@ import { type Paginated } from '@template/shared/schemas/pagination.schema';
 import { type StagedFile } from '@template/shared/schemas/staged-file.schema';
 import { type ReportFormat } from '@template/shared/schemas/report.schema';
 import { type PublicServiceOrder } from '@template/shared/schemas/service-order.schema';
+import { type RequesterTicketHistoryType } from '@template/shared/domain/ticket-history.util';
 import {
+  type PublicTicketHistory,
+  type RequesterHistoryFormValues,
   type TicketHistory,
   type TicketHistoryFormValues,
 } from '@template/shared/schemas/ticket-history.schema';
+import { type TicketPeople, type TicketPerson } from '@template/shared/schemas/ticket-person.schema';
 import {
   type MyTicket,
   type OpenedTicket,
@@ -213,6 +217,45 @@ export const ticketsApi = {
         isVisibleToRequester: values.isVisibleToRequester,
         minutesSpent: values.minutesSpent.trim(),
         attachments,
+        notifyUserIds: values.notifyUserIds,
+      },
+    });
+  },
+
+  /** Todas as pessoas ativas do admin-console — quem pode ser vinculado a um chamado. */
+  peopleOptions: () => apiRequest<TicketPerson[]>('/tickets/people-options'),
+
+  /** As pessoas do chamado, no painel: os vinculados e quem pode ser avisado de um andamento. */
+  people: (ticketId: number) => apiRequest<TicketPeople>(`/tickets/${ticketId}/people`),
+
+  /** Troca a lista inteira de vinculados — pelo painel ou pela Central. */
+  updateWatchers: (ticketId: number, userIds: readonly string[]) =>
+    apiRequest<TicketPerson[]>(`/tickets/${ticketId}/watchers`, {
+      method: 'PUT',
+      body: { userIds },
+    }),
+
+  /**
+   * Quem pediu (ou alguém vinculado) escreve no chamado pela Central: responder ou reabrir.
+   * Os arquivos sobem pelo link da ABERTURA — quem pede não tem o link de quem atende.
+   */
+  createRequesterHistory: async (
+    ticketId: number,
+    type: RequesterTicketHistoryType,
+    values: RequesterHistoryFormValues,
+    files: readonly File[] = [],
+  ) => {
+    const attachments = await Promise.all(
+      files.map((file) => uploadFile('/tickets/upload-url', file)),
+    );
+
+    return apiRequest<PublicTicketHistory>(`/tickets/${ticketId}/requester-histories`, {
+      method: 'POST',
+      body: {
+        type,
+        description: values.description,
+        attachments,
+        notifyUserIds: values.notifyUserIds,
       },
     });
   },
@@ -261,6 +304,7 @@ function toTicketBody(
     projectId: values.projectId || undefined,
     customSystemName: values.customSystemName || undefined,
     assigneeId: values.assigneeId || undefined,
+    watcherIds: values.watcherIds ?? [],
     screenshot,
     attachments,
   };

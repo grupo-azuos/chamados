@@ -200,12 +200,20 @@ export class TicketsRepository {
    * Os chamados que UMA PESSOA abriu — "Meus chamados". Mais recentes primeiro, com teto: é
    * uma lista para acompanhar o que está em andamento, não o arquivo da vida inteira.
    */
-  async listByRequester(requesterId: string, limit = 50): Promise<TicketRow[]> {
+  async listByRequester(
+    requesterId: string,
+    /* Os chamados em que a pessoa está VINCULADA entram junto: para ela, são tão "meus" quanto
+       os que abriu. */
+    watchedIds: readonly number[] = [],
+    limit = 50,
+  ): Promise<TicketRow[]> {
+    const isMine = eq(tickets.requesterId, requesterId);
+
     return runQuery(
       this.db
         .select()
         .from(tickets)
-        .where(eq(tickets.requesterId, requesterId))
+        .where(watchedIds.length > 0 ? or(isMine, inArray(tickets.id, [...watchedIds])) : isMine)
         .orderBy(desc(tickets.createdAt), desc(tickets.id))
         .limit(limit),
       'listar os chamados de quem abriu',

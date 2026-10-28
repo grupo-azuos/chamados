@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Res,
   StreamableFile,
@@ -47,8 +48,11 @@ import {
   TicketListQueryDto,
   TicketListResponseDto,
   TicketNoticeDto,
+  TicketPeopleDto,
+  TicketPersonDto,
   TicketReportQueryDto,
   UpdateTicketDto,
+  UpdateTicketWatchersDto,
   WhatsappNoticeDto,
 } from '../dto/ticket.dto';
 import { UploadRequestDto, UploadTicketDto } from '../dto/ticket-attachment.dto';
@@ -158,6 +162,17 @@ export class TicketsController {
     @Query() query: TicketAssigneeOptionsQueryDto,
   ): Promise<TicketAssigneeOptionDto[]> {
     return this.service.listAssigneeOptions(query.area);
+  }
+
+  @Get('people-options')
+  @ApiOperation({
+    summary: 'Lista as pessoas que podem ser vinculadas a um chamado',
+    description:
+      'Todas as pessoas ativas do admin-console, só nome e id. Vinculada, a pessoa vê o chamado em "Meus chamados", responde, anexa e reabre — como quem abriu.',
+  })
+  @ApiOkResponse({ type: [TicketPersonDto] })
+  async listPeopleOptions(): Promise<TicketPersonDto[]> {
+    return this.service.listPeopleOptions();
   }
 
   @Get('access/:token')
@@ -280,6 +295,39 @@ export class TicketsController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<TicketDto> {
     return this.service.findById(user, id);
+  }
+
+  @Get(':id/people')
+  @ApiOperation({
+    summary: 'As pessoas de um chamado, no painel',
+    description:
+      'Os vinculados (a lista que se edita) e quem pode ser avisado de um andamento: quem abriu, os vinculados e o responsável, menos quem pediu.',
+  })
+  @ApiOkResponse({ type: TicketPeopleDto })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  async listPeople(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<TicketPeopleDto> {
+    return this.service.listPeople(user, id);
+  }
+
+  @Put(':id/watchers')
+  @ApiOperation({
+    summary: 'Troca as pessoas vinculadas a um chamado',
+    description:
+      'Manda a lista inteira, como ela deve ficar. Pode quem abriu, quem já está vinculado e quem atende alguma área do chamado. Quem entrou e quem saiu fica na linha do tempo.',
+  })
+  @ApiBody({ type: UpdateTicketWatchersDto })
+  @ApiOkResponse({ type: [TicketPersonDto] })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  @ApiUnprocessableEntityResponse({ description: 'Alguma pessoa não está ativa no admin-console.' })
+  async updateWatchers(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateTicketWatchersDto,
+  ): Promise<TicketPersonDto[]> {
+    return this.service.updateWatchers(user, id, body);
   }
 
   @Patch(':id')

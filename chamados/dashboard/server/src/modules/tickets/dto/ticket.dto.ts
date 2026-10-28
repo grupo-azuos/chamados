@@ -15,6 +15,11 @@ import {
   ticketSchema,
   updateTicketSchema,
 } from '@template/shared/schemas/ticket.schema';
+import {
+  ticketPeopleSchema,
+  ticketPersonSchema,
+  updateTicketWatchersSchema,
+} from '@template/shared/schemas/ticket-person.schema';
 import { whatsappNoticeSchema } from '@template/shared/schemas/whatsapp-notice.schema';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
@@ -37,6 +42,9 @@ export class TicketNoticeDto extends createZodDto(ticketNoticeSchema) {}
 export class WhatsappNoticeDto extends createZodDto(whatsappNoticeSchema) {}
 export class TicketInviteDto extends createZodDto(ticketInviteSchema) {}
 export class OpenedTicketDto extends createZodDto(openedTicketSchema) {}
+export class TicketPersonDto extends createZodDto(ticketPersonSchema) {}
+export class TicketPeopleDto extends createZodDto(ticketPeopleSchema) {}
+export class UpdateTicketWatchersDto extends createZodDto(updateTicketWatchersSchema) {}
 
 /** O que a consulta pública por protocolo devolve — menos campos, de propósito. */
 export class PublicTicketDto extends createZodDto(publicTicketSchema) {}

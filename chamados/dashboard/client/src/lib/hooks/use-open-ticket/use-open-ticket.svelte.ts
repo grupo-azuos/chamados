@@ -11,6 +11,7 @@ import {
 } from '@template/shared/domain/ticket-invite.util';
 import { refuseScreenshot } from '@template/shared/domain/screenshot-catalog.util';
 import { buildWhatsAppLink } from '@template/shared/domain/ticket-whatsapp.util';
+import { type TicketPerson } from '@template/shared/schemas/ticket-person.schema';
 import {
   type OpenedTicket as ApiOpenedTicket,
   type Ticket,
@@ -69,6 +70,9 @@ export type OpenTicketModel = {
      * chamado e em quais áreas. Nulo no caminho normal.
      */
     invite: { assigneeName: string; areas: TicketArea[] } | null;
+    /** As pessoas vinculadas escolhidas, e quem pode ser escolhido. */
+    watcherIds: string[];
+    peopleOptions: TicketPerson[];
   };
   state: {
     isSubmitting: boolean;
@@ -91,6 +95,7 @@ export type OpenTicketModel = {
     onScreenshotChange: (file: File | null) => void;
     onAttachmentsChange: (files: File[]) => void;
     onAttachmentError: (message: string | null) => void;
+    onWatchersChange: (ids: string[]) => void;
     onSubmit: () => void;
     onOpenAnother: () => void;
   };
@@ -114,6 +119,7 @@ const EMPTY_VALUES: TicketFormValues = {
   projectId: '',
   customSystemName: '',
   assigneeId: '',
+  watcherIds: [],
 };
 
 /**
@@ -229,6 +235,20 @@ export function useOpenTicketModel(): OpenTicketModel {
     })
     .catch(() => undefined);
 
+  /* Quem pode ser vinculado: todo mundo ativo do admin-console. Falhou? O campo some — vincular
+     é opcional, e a falta da lista não impede ninguém de pedir socorro. */
+  let peopleOptions = $state<TicketPerson[]>([]);
+  void queryClient
+    .fetchQuery({
+      queryKey: ['tickets', 'people-options'],
+      queryFn: () => ticketsApi.peopleOptions(),
+      staleTime: 5 * 60 * 1000,
+    })
+    .then((options) => {
+      peopleOptions = options;
+    })
+    .catch(() => undefined);
+
   $effect(() => {
     const area = values.current.area;
     assignees = [];
@@ -281,6 +301,10 @@ export function useOpenTicketModel(): OpenTicketModel {
           label: project.name,
         })),
         departmentOptions: departments.options,
+        watcherIds: values.current.watcherIds ?? [],
+        /* Quem abre pode aparecer na lista: o servidor o deixa de fora, porque ele já é do
+           chamado por ter aberto. */
+        peopleOptions,
       };
     },
     get state() {
@@ -313,6 +337,7 @@ export function useOpenTicketModel(): OpenTicketModel {
         void form.validateField(field, 'change');
       },
       onNotifyChange: (notify) => form.setFieldValue('notifyWhatsapp', notify),
+      onWatchersChange: (ids) => form.setFieldValue('watcherIds', ids),
       /**
        * Julga o print NA ESCOLHA, com a MESMA regra que a API aplicaria (#13) — sem isto, um
        * PDF escolhido pelo "Todos os arquivos" do seletor do sistema (o `accept` do campo é

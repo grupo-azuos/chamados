@@ -5,6 +5,9 @@ import {
 import {
   isClosingTicketHistoryType,
   nextTicketStatus,
+  TICKET_HISTORY_CATALOG,
+  type ManualTicketHistoryType,
+  type RequesterTicketHistoryType,
 } from '@template/shared/domain/ticket-history.util';
 import {
   isSolvedTicketStatus,
@@ -34,7 +37,13 @@ export type HistoryAuthor = { name: string; email: string; id?: string };
  * O que a pessoa informou ao lançar — já validado (e normalizado) pelo contrato. Os arquivos
  * ficam de fora: eles chegam ao service à parte, e o histórico em si não os guarda.
  */
-export type HistoryEntry = Omit<z.infer<typeof createTicketHistorySchema>, 'attachments'>;
+export type HistoryEntry = Omit<
+  z.infer<typeof createTicketHistorySchema>,
+  'attachments' | 'notifyUserIds' | 'type'
+> & {
+  /* Os tipos de quem atende e os de quem pediu: as duas portas gravam pela mesma função. */
+  type: ManualTicketHistoryType | RequesterTicketHistoryType;
+};
 
 export function toTicketHistory(
   row: TicketHistoryRow,
@@ -132,8 +141,9 @@ export function toTicketMove(
   const next = nextTicketStatus(ticket.status, entry.type);
 
   /* Quem lança o primeiro histórico num chamado sem responsável vira o responsável: é a
-     resposta para "quem pegou isso?" sem depender de alguém lembrar de preencher o campo. */
-  if (!ticket.assignee) {
+     resposta para "quem pegou isso?" sem depender de alguém lembrar de preencher o campo.
+     Só vale para quem ATENDE: quem pediu respondendo não "pega" o próprio chamado. */
+  if (!ticket.assignee && TICKET_HISTORY_CATALOG[entry.type].origin === 'person') {
     move.assignee = author.name;
     move.assigneeId = author.id ?? null;
   }

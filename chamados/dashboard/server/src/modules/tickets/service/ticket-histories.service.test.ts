@@ -382,3 +382,124 @@ describe('TicketHistoriesService.listPublic', () => {
     expect(history).not.toHaveProperty('minutesSpent');
   });
 });
+
+describe('TicketHistoriesService.createByRequester', () => {
+  const bia: RequestUser = { id: 'bia-id', email: 'bia@azuos.com.br', name: 'Bia Costa', role: 'user' };
+
+  function requesterSetup(options: {
+    ticket?: TicketWithComputer | null;
+    watchers?: { id: string; name: string }[];
+    update?: ReturnType<typeof vi.fn>;
+  } = {}) {
+    const ticket = options.ticket === undefined ? ticketRow({ requesterId: bia.id }) : options.ticket;
+    const tickets = {
+      findById: vi.fn().mockResolvedValue(ticket),
+      listAreasOf: vi.fn().mockResolvedValue([]),
+    } as unknown as TicketsRepository;
+    const record = vi.fn().mockImplementation(async (history) => historyRow(history));
+    const watchers = options.watchers ?? [];
+    const people = {
+      watchersOf: vi.fn().mockResolvedValue(watchers),
+      canReply: (row: TicketWithComputer, list: { id: string }[], userId: string) =>
+        row.requesterId === userId || list.some((watcher) => watcher.id === userId),
+      notifiableOf: () => [
+        { id: 'ana-id', name: 'Ana Lima' },
+        ...watchers.filter((watcher) => watcher.id !== bia.id),
+      ],
+    };
+    const update = options.update ?? vi.fn().mockResolvedValue([]);
+    const attachments = {
+      accept: vi.fn().mockImplementation((files: unknown[]) => Promise.resolve(files)),
+      store: vi.fn().mockResolvedValue([]),
+    };
+
+    const service = new TicketHistoriesService(
+      { record } as unknown as TicketHistoriesRepository,
+      new TicketAccessService(tickets),
+      attachments as unknown as TicketAttachmentsService,
+      undefined,
+      people as never,
+      { update } as never,
+      tickets,
+    );
+
+    return { service, record, update, attachments };
+  }
+
+  // feliz
+  it('records the reply, moves the ticket to "requester reply" and keeps the assignee', async () => {
+    const { service, record } = requesterSetup({ ticket: ticketRow({ requesterId: bia.id, assignee: null }) });
+
+    const saved = await service.createByRequester(bia, 7, {
+      type: 'requester_reply',
+      description: 'Segue o print do erro de novo.',
+    });
+
+    const [history, move] = record.mock.calls[0] ?? [];
+    expect(history).toMatchObject({ type: 'requester_reply', statusAfter: 'requester_reply', authorName: 'Bia Costa' });
+    expect(move).toMatchObject({ status: 'requester_reply' });
+    /* Quem pede respondendo não "pega" o próprio chamado. */
+    expect(move).not.toHaveProperty('assignee');
+    expect(saved).not.toHaveProperty('createdBy');
+  });
+
+  // feliz
+  it('lets a linked person reopen a closed ticket', async () => {
+    const { service, record } = requesterSetup({
+      ticket: ticketRow({ requesterId: 'someone-else', status: 'resolved' }),
+      watchers: [{ id: bia.id, name: 'Bia Costa' }],
+    });
+
+    await service.createByRequester(bia, 7, { type: 'requester_reopening', description: 'Voltou a travar.' });
+
+    expect(record.mock.calls[0]?.[1]).toMatchObject({ status: 'requester_reply', solution: null });
+  });
+
+  // feliz
+  it('notifies only the chosen people who belong to the ticket', async () => {
+    const { service, update } = requesterSetup();
+
+    await service.createByRequester(bia, 7, {
+      type: 'requester_reply',
+      description: 'Já testei de novo.',
+      notifyUserIds: ['ana-id', 'stranger-id'],
+    });
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      expect.objectContaining({ authorId: bia.id, statusAfter: 'requester_reply' }),
+      [{ id: 'ana-id', name: 'Ana Lima' }],
+    );
+  });
+
+  // triste
+  it('answers 404 to someone who neither opened nor is linked', async () => {
+    const { service, record } = requesterSetup({ ticket: ticketRow({ requesterId: 'someone-else' }) });
+
+    await expect(
+      service.createByRequester(bia, 7, { type: 'requester_reply', description: 'Oi' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('refuses a reply on a closed ticket: it has to be reopened', async () => {
+    const { service, record } = requesterSetup({
+      ticket: ticketRow({ requesterId: bia.id, status: 'cancelled' }),
+    });
+
+    await expect(
+      service.createByRequester(bia, 7, { type: 'requester_reply', description: 'Oi' }),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('does not notify anyone when nobody was chosen', async () => {
+    const { service, update } = requesterSetup();
+
+    await service.createByRequester(bia, 7, { type: 'requester_reply', description: 'Oi' });
+
+    expect(update).not.toHaveBeenCalled();
+  });
+});

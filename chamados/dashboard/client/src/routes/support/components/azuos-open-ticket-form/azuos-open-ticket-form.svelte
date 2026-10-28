@@ -67,6 +67,12 @@
        * essa pessoa atende — só essas aparecem para escolher.
        */
       invite?: { assigneeName: string; areas: TicketArea[] } | null;
+      /**
+       * As PESSOAS VINCULADAS escolhidas (a "OS com envolvidos" do Tasy) e quem pode ser
+       * escolhido — qualquer pessoa ativa do admin-console. Sem opções, o campo some.
+       */
+      watcherIds?: string[];
+      peopleOptions?: { id: string; name: string }[];
     };
     state: {
       isSubmitting?: boolean;
@@ -87,6 +93,7 @@
       onScreenshotChange: (file: File | null) => void;
       onAttachmentsChange: (files: File[]) => void;
       onAttachmentError: (message: string | null) => void;
+      onWatchersChange?: (ids: string[]) => void;
       onSubmit: () => void;
       onOpenAnother: () => void;
     };
@@ -180,6 +187,7 @@
   import XIcon from '@lucide/svelte/icons/x';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import PeoplePicker from '$lib/components/azuos-people-picker/azuos-people-picker.svelte';
   import AttachmentPicker from '$lib/components/azuos-attachment-picker/azuos-attachment-picker.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
@@ -706,6 +714,22 @@
                 <p class="text-muted-foreground text-xs">
                   Opcional. Quem você escolher fica responsável pelo chamado e, se você marcar o
                   aviso abaixo, é do WhatsApp dessa pessoa que a mensagem chega.
+                </p>
+              </div>
+            {/if}
+
+            {#if (data.peopleOptions ?? []).length > 0 && actions.onWatchersChange}
+              <div class="mb-3 flex flex-col gap-1.5">
+                <span class="text-ink-700 text-sm font-medium">Vincular outras pessoas</span>
+                <PeoplePicker
+                  data={{ selectedIds: data.watcherIds ?? [], options: data.peopleOptions ?? [] }}
+                  ui={{ ariaLabel: 'Pessoas vinculadas', placeholder: 'Ninguém além de você' }}
+                  state={{ isDisabled: formState.isSubmitting }}
+                  actions={{ onChange: actions.onWatchersChange }}
+                />
+                <p class="text-muted-foreground text-xs">
+                  Opcional. Quem você vincular acompanha o chamado em "Meus chamados" e também pode
+                  escrever nele. Dá para mudar depois.
                 </p>
               </div>
             {/if}

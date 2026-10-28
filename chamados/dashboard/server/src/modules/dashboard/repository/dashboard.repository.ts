@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, gte, isNull, sql, type SQL } from 'drizzle-orm';
+import { QUEUED_TICKET_STATUSES } from '@template/shared/domain/ticket-status.util';
+import { and, count, desc, eq, gte, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { type PgColumn, type PgTable } from 'drizzle-orm/pg-core';
 
 import { runQuery } from '../../../lib/db/db-error.util';
@@ -180,7 +181,8 @@ export class DashboardRepository {
     const [row] = await runQuery(
       this.db
         .select({
-          open: sql<number>`count(*) filter (where ${tickets.status} = 'open')::int`,
+          /* Pela FASE do catálogo, não pelo nome: "Retorno do solicitante" também está na fila. */
+          open: sql<number>`count(*) filter (where ${inArray(tickets.status, [...QUEUED_TICKET_STATUSES])})::int`,
           inProgress: sql<number>`count(*) filter (where ${tickets.status} = 'in_progress')::int`,
           openedInPeriod: sql<number>`count(*) filter (where ${tickets.createdAt} >= ${asTimestamp(since)})::int`,
           resolvedInPeriod: sql<number>`count(*) filter (where ${tickets.resolvedAt} >= ${asTimestamp(since)})::int`,

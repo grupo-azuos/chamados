@@ -20,6 +20,7 @@ import { ticketAttachmentSchema } from './ticket-attachment.schema';
 import { MAX_STAGED_FILES, stagedFileSchema } from './staged-file.schema';
 import { publicTicketHistorySchema } from './ticket-history.schema';
 import { departmentNameSchema } from './department.schema';
+import { ticketPersonSchema, watcherIdsSchema } from './ticket-person.schema';
 
 /**
  * O CONTRATO do chamado. Um schema, duas pontas: a API o usa como DTO e Swagger (via
@@ -206,6 +207,19 @@ export const publicTicketSchema = ticketSchema
      * acompanha o pedido — "aguardando a peça chegar" responde mais do que uma situação.
      */
     histories: z.array(publicTicketHistorySchema),
+    /**
+     * As PESSOAS VINCULADAS ao chamado — gente do admin-console que acompanha e escreve nele
+     * junto de quem abriu (a "OS com envolvidos" do Tasy). Só nome e id: e-mail e telefone
+     * ficam fora da consulta.
+     */
+    watchers: z.array(ticketPersonSchema),
+    /** Quem pode receber aviso de um andamento escrito por quem está olhando. */
+    notifiable: z.array(ticketPersonSchema),
+    /**
+     * Quem está olhando pode ESCREVER aqui pela Central (responder, anexar, reabrir)? Só quem
+     * abriu e quem está vinculado; o TI escreve pelo painel, onde fica o bastidor.
+     */
+    canReply: z.boolean(),
   });
 
 export type PublicTicket = z.infer<typeof publicTicketSchema>;
@@ -223,6 +237,9 @@ export const myTicketSchema = ticketSchema.pick({
   problemType: true,
   description: true,
   createdAt: true,
+}).extend({
+  /** Está na lista porque a pessoa foi VINCULADA (e não porque abriu). */
+  isWatching: z.boolean(),
 });
 
 export type MyTicket = z.infer<typeof myTicketSchema>;
@@ -364,6 +381,12 @@ export const createTicketSchema = z
       (value) => (value === '' ? undefined : value),
       z.string().trim().min(1).max(ASSIGNEE_ID_MAX_LENGTH).optional(),
     ),
+    /**
+     * As pessoas do admin-console VINCULADAS na abertura — acompanham e escrevem no chamado
+     * junto de quem abriu. O servidor confere cada id no diretório: vem de uma tela, não é de
+     * confiança.
+     */
+    watcherIds: watcherIdsSchema.default([]),
     /** O print do erro, já enviado. */
     screenshot: stagedFileSchema.optional(),
     /** Os demais anexos, já enviados. O teto de verdade é por formato, e é do domínio. */
@@ -394,6 +417,7 @@ export const ticketFormSchema = z
     projectId: z.string().default(''),
     customSystemName: customSystemNameSchema.default(''),
     assigneeId: z.string().default(''),
+    watcherIds: watcherIdsSchema.default([]),
   })
   .superRefine(checkProblemTypeMatchesArea);
 

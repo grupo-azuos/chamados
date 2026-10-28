@@ -71,6 +71,11 @@ export class WhatsappMessagingService {
     return (await this.connections.find(userId)) !== null;
   }
 
+  /** O número vinculado desta pessoa — é por ele que quem atende também RECEBE aviso. */
+  async linkedPhone(userId: string): Promise<string | null> {
+    return (await this.connections.find(userId))?.phone ?? null;
+  }
+
   /**
    * Põe na FILA DE SAÍDA uma mensagem pelo número de alguém; quem entrega é o
    * `WhatsappOutboxService`, que tenta de novo enquanto não sai. Devolve `queued`, ou por que

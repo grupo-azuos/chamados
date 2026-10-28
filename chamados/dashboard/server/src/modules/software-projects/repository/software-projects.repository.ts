@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { RUNNING_TICKET_STATUSES } from '@template/shared/domain/ticket-status.util';
 import { type SoftwareProjectListQuery } from '@template/shared/schemas/software-project.schema';
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, or, type SQL } from 'drizzle-orm';
 
@@ -129,12 +130,8 @@ export class SoftwareProjectsRepository {
         .where(
           and(
             inArray(tickets.projectId, projectIds),
-            inArray(tickets.status, [
-              'open',
-              'in_progress',
-              'waiting_requester',
-              'waiting_third_party',
-            ]),
+            /* Do catálogo: um estágio novo em andamento entra sozinho na conta. */
+            inArray(tickets.status, [...RUNNING_TICKET_STATUSES]),
           ),
         )
         .groupBy(tickets.projectId),

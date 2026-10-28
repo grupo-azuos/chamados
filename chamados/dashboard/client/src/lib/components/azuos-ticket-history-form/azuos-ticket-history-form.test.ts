@@ -21,6 +21,7 @@ function actions(): AzuosTicketHistoryFormProps['actions'] {
     onChange: vi.fn(),
     onBlur: vi.fn(),
     onVisibilityChange: vi.fn(),
+    onNotifyChange: vi.fn(),
     onChosenFilesChange: vi.fn(),
     onAttachmentError: vi.fn(),
     onSubmit: vi.fn(),
@@ -56,6 +57,8 @@ function dataFor(
     },
     isVisibleToRequester: true,
     chosenFiles: [],
+    notifyUserIds: [],
+    notifiable: [],
     ...over,
   };
 }
@@ -184,5 +187,44 @@ describe('AzuosTicketHistoryForm', () => {
 
     for (const radio of screen.getAllByRole('radio')) expect(radio).toBeDisabled();
     expect(screen.getByRole('checkbox', { name: /quem abriu o chamado pode ver/i })).toBeDisabled();
+  });
+
+  // feliz
+  it('offers the people of the ticket to be notified, nobody marked', () => {
+    const { actions: given } = setup({
+      data: dataFor('in_progress', 'note', {
+        notifiable: [
+          { id: 'u-bia', name: 'Bia Costa' },
+          { id: 'u-caio', name: 'Caio Reis' },
+        ],
+      }),
+    });
+
+    expect(screen.getByRole('button', { name: 'Avisar por WhatsApp' })).toHaveTextContent(
+      'Ninguém será avisado',
+    );
+    expect(screen.getByText('Só recebe quem você marcar.')).toBeInTheDocument();
+    expect(given.onNotifyChange).not.toHaveBeenCalled();
+  });
+
+  // feliz
+  it('takes a marked person out of the notice', async () => {
+    const { actions: given } = setup({
+      data: dataFor('in_progress', 'note', {
+        notifyUserIds: ['u-bia'],
+        notifiable: [{ id: 'u-bia', name: 'Bia Costa' }],
+      }),
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tirar Bia Costa' }));
+
+    expect(given.onNotifyChange).toHaveBeenCalledWith([]);
+  });
+
+  // triste
+  it('hides the notice when nobody can be notified', () => {
+    setup();
+
+    expect(screen.queryByRole('button', { name: 'Avisar por WhatsApp' })).not.toBeInTheDocument();
   });
 });

@@ -1,11 +1,18 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
+
   import { page } from '$app/state';
   import { TICKET_ACCESS_PARAM } from '@template/shared/domain/ticket-invite.util';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import OpenTicketForm from './components/azuos-open-ticket-form/azuos-open-ticket-form.svelte';
+  import SupportHeader from './components/azuos-support-header/azuos-support-header.svelte';
   import TicketLookupDrawer from './components/azuos-ticket-lookup-drawer/azuos-ticket-lookup-drawer.svelte';
+  import { useMyProfileModel } from '$lib/hooks/use-my-profile/use-my-profile.svelte';
   import { useOpenTicketModel } from '$lib/hooks/use-open-ticket/use-open-ticket.svelte';
   import { useTicketLookupModel } from '$lib/hooks/use-ticket-lookup/use-ticket-lookup.svelte';
+  import { useTicketReplyModel } from '$lib/hooks/use-ticket-reply/use-ticket-reply.svelte';
+  import TicketReplyForm from './components/azuos-ticket-reply-form/azuos-ticket-reply-form.svelte';
+  import type { PageData } from './$types';
 
   /**
    * Central de chamados: abrir e acompanhar chamado por qualquer usuário autenticado
@@ -17,8 +24,17 @@
    *
    * A rota só compõe: chama os dois models e entrega para as views (CONTRIBUTING §3).
    */
+  let { data }: { data: PageData } = $props();
+
   const open = useOpenTicketModel();
+  /* Só o nome e a foto, para o cartão da pessoa no cabeçalho — a mesma fonte do perfil. */
+  const profile = useMyProfileModel({ user: untrack(() => data.user) });
   const lookup = useTicketLookupModel();
+  /* O lado de quem pediu da OS: responder, reabrir, vincular — sobre o chamado da consulta. */
+  const reply = useTicketReplyModel({
+    ticket: () => lookup.data.ticket,
+    onSaved: lookup.actions.onRefresh,
+  });
 
   /* Se o drawer de consulta está aberto é qual peça da tela está na frente, não dado do
      chamado — por isso mora aqui, igual ao `answering` da tela interna de Chamados. */
@@ -33,23 +49,24 @@
   <title>Central de Chamados TI</title>
 </svelte:head>
 
-<div class="bg-background flex min-h-screen flex-col">
-  <header class="border-b">
-    <div class="mx-auto flex w-full max-w-3xl items-start justify-between gap-4 px-4 py-6 sm:px-6">
-      <div>
-        <h1 class="text-ink-900 text-2xl font-bold">Central de Chamados TI</h1>
-        <p class="text-ink-500 mt-1 text-sm">
-          Abra e acompanhe as suas solicitações de suporte técnico.
-        </p>
-      </div>
+{#snippet headerActions()}
+  <ActionButton
+    data={{ label: 'Meus chamados' }}
+    ui={{ variant: 'secondary', className: 'shrink-0' }}
+    actions={{ onClick: () => (isLookupOpen = true) }}
+  />
+{/snippet}
 
-      <ActionButton
-        data={{ label: 'Meus chamados' }}
-        ui={{ variant: 'secondary', className: 'shrink-0' }}
-        actions={{ onClick: () => (isLookupOpen = true) }}
-      />
-    </div>
-  </header>
+<div class="bg-background flex min-h-screen flex-col">
+  <SupportHeader
+    data={{
+      title: 'Central de Chamados TI',
+      subtitle: 'Abra e acompanhe as suas solicitações de suporte técnico.',
+      person: profile.data.person,
+      profileHref: '/support/profile',
+    }}
+    slots={{ actions: headerActions }}
+  />
 
   <!-- `flex-1` + `justify-center`: a etapa do formulário é curta, e sem isso ela nascia
        colada no topo com uma sobra vazia enorme embaixo — o resto da tela sem função
@@ -66,8 +83,15 @@
   </main>
 </div>
 
+{#snippet ticketActions()}
+  {#if reply.state.canReply}
+    <TicketReplyForm data={reply.data} state={reply.state} actions={reply.actions} />
+  {/if}
+{/snippet}
+
 <TicketLookupDrawer
   data={lookup.data}
   state={{ ...lookup.state, isOpen: isLookupOpen }}
   actions={{ ...lookup.actions, onClose: () => (isLookupOpen = false) }}
+  slots={{ ticketActions }}
 />

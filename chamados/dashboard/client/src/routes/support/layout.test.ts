@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { authApi } from '$lib/api/auth.api';
 import { ApiError } from '$lib/api/http-client';
 
-import { load } from './+page';
+import { load } from './+layout';
 
 vi.mock('$lib/api/auth.api', () => ({ authApi: { me: vi.fn() } }));
 
 const me = vi.mocked(authApi.me);
 
-describe('a rota da central de chamados (/support)', () => {
+describe('a rota da central de chamados (/support e /support/profile)', () => {
   beforeEach(() => {
     me.mockReset();
   });

@@ -1,6 +1,12 @@
-import { Injectable, Optional, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Optional,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import {
   nextTicketStatus,
+  refuseRequesterTicketHistory,
   refuseTicketHistory,
   ticketHistoryTypeLabel,
 } from '@template/shared/domain/ticket-history.util';
@@ -8,6 +14,8 @@ import { isClosedTicketStatus } from '@template/shared/domain/ticket-status.util
 import { type StagedFile } from '@template/shared/schemas/staged-file.schema';
 import { type TicketAttachment } from '@template/shared/schemas/ticket-attachment.schema';
 import {
+  type CreateRequesterHistoryInput,
+  createRequesterHistorySchema,
   type PublicTicketHistory,
   type TicketHistory,
 } from '@template/shared/schemas/ticket-history.schema';
@@ -26,8 +34,11 @@ import {
   toTicketMove,
 } from '../mapper/ticket-histories.mapper';
 import { TicketHistoriesRepository } from '../repository/ticket-histories.repository';
-import { TicketAccessService, type TicketInReach } from './ticket-access.service';
+import { TicketsRepository } from '../repository/tickets.repository';
+import { TICKET_NOT_FOUND, TicketAccessService, type TicketInReach } from './ticket-access.service';
 import { TicketAttachmentsService } from './ticket-attachments.service';
+import { TicketPeopleService } from './ticket-people.service';
+import { TicketWhatsappNotifierService } from './ticket-whatsapp-notifier.service';
 
 /**
  * A LINHA DO TEMPO do chamado — a ordem de serviço. É o ÚNICO caminho que muda o estágio de um
@@ -43,6 +54,9 @@ export class TicketHistoriesService {
     private readonly access: TicketAccessService,
     private readonly attachments: TicketAttachmentsService,
     @Optional() private readonly github?: GithubService,
+    @Optional() private readonly people?: TicketPeopleService,
+    @Optional() private readonly notifier?: TicketWhatsappNotifierService,
+    @Optional() private readonly tickets?: TicketsRepository,
   ) {}
 
   /** A linha do tempo inteira, para o painel. */
@@ -86,6 +100,7 @@ export class TicketHistoriesService {
     ticketId: number,
     entry: HistoryEntry,
     files: readonly StagedFile[] = [],
+    notifyUserIds: readonly string[] = [],
   ): Promise<TicketHistory> {
     assertCanAttendTicket(user.role);
 
@@ -107,8 +122,85 @@ export class TicketHistoriesService {
       historyId: row.id,
     });
     this.mirrorToIssue(reach.ticket, entry, user.name);
+    await this.notify(reach.ticket, row, user, notifyUserIds);
 
     return toTicketHistory(row, saved);
+  }
+
+  /**
+   * O andamento de QUEM PEDIU (ou de alguém vinculado), pela Central: responder, mandar
+   * arquivo, reabrir. É a outra porta da mesma OS — grava pela mesma função, com os tipos de
+   * `origin: 'requester'`, e leva o chamado para "Retorno do solicitante".
+   *
+   * Quem chega aqui não precisa de módulo nenhum: basta ter aberto o chamado ou estar
+   * vinculado. Qualquer outra pessoa recebe o 404 de um chamado que não existe.
+   */
+  async createByRequester(
+    user: RequestUser,
+    ticketId: number,
+    input: CreateRequesterHistoryInput,
+  ): Promise<PublicTicketHistory> {
+    const { type, description, attachments: files, notifyUserIds } =
+      createRequesterHistorySchema.parse(input);
+    const ticket = await this.tickets?.findById(ticketId);
+    if (!ticket || !this.people) throw new NotFoundException(TICKET_NOT_FOUND);
+
+    const watchers = await this.people.watchersOf(ticketId);
+    if (!this.people.canReply(ticket, watchers, user.id)) {
+      throw new NotFoundException(TICKET_NOT_FOUND);
+    }
+
+    const refusal = refuseRequesterTicketHistory(ticket.status, type);
+    if (refusal) throw new UnprocessableEntityException(refusal);
+    const accepted = await this.attachments.accept(files, []);
+
+    const entry = { type, description, isVisibleToRequester: true, minutesSpent: null };
+    const author = { name: user.name, email: user.email, id: user.id };
+    const row = await this.repository.record(
+      toHistoryInsert(ticket, entry, author),
+      toTicketMove(ticket, entry, author),
+    );
+
+    /* `requester`: o arquivo é prova de quem pediu, e é dele — o TI vê e baixa, não apaga. */
+    const saved = await this.attachments.store(ticketId, accepted, {
+      author: user.email,
+      origin: 'requester',
+      historyId: row.id,
+    });
+    this.mirrorToIssue(ticket, entry, user.name);
+    await this.notify(ticket, row, user, notifyUserIds);
+
+    return toPublicTicketHistory(toTicketHistory(row, saved));
+  }
+
+  /**
+   * Avisa as pessoas que o autor ESCOLHEU — só as que são do chamado (quem abriu, vinculados,
+   * responsável). Id de fora é descartado calado: veio de uma tela, e avisar um estranho sobre
+   * o chamado alheio é vazamento. Falha de aviso nunca derruba o andamento já gravado.
+   */
+  private async notify(
+    ticket: TicketRow,
+    row: TicketHistoryRow,
+    user: RequestUser,
+    notifyUserIds: readonly string[],
+  ): Promise<void> {
+    if (notifyUserIds.length === 0 || !this.people || !this.notifier) return;
+
+    const watchers = await this.people.watchersOf(ticket.id);
+    const recipients = this.people
+      .notifiableOf(ticket, watchers, user.id)
+      .filter((person) => notifyUserIds.includes(person.id));
+
+    await this.notifier.update(
+      ticket,
+      {
+        authorId: user.id,
+        authorName: user.name,
+        description: row.description,
+        statusAfter: row.statusAfter,
+      },
+      recipients,
+    );
   }
 
   /**

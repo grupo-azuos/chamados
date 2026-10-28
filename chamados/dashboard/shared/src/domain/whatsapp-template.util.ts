@@ -11,6 +11,7 @@
 export const WHATSAPP_TEMPLATE_KEYS = [
   'ticket_opened',
   'ticket_ready',
+  'ticket_update',
   'intake_link',
   'access_name',
   'access_who',
@@ -58,6 +59,15 @@ export const WHATSAPP_TEMPLATES: Record<WhatsappTemplateKey, WhatsappTemplateDef
     variables: ['nome', 'protocolo', 'area', 'responsavel', 'solucao', 'link'],
     defaultBody:
       'Olá, {{nome}}! O seu chamado *{{protocolo}}* foi finalizado.\n\n*Solução:* {{solucao}}\n\nDetalhes: {{link}}',
+  },
+  /* O "comunicar" da OS: só sai para quem o autor do andamento ESCOLHEU avisar. */
+  ticket_update: {
+    label: 'Andamento do chamado',
+    description:
+      'Enviada a quem o autor de um andamento escolheu avisar: quem abriu, vinculados ou o responsável.',
+    variables: ['nome', 'protocolo', 'area', 'autor', 'andamento', 'situacao', 'link'],
+    defaultBody:
+      'Olá, {{nome}}! Tem novidade no chamado *{{protocolo}}* ({{area}}).\n\n*{{autor}}:* {{andamento}}\n\n*Situação:* {{situacao}}\n\nAcompanhe por aqui: {{link}}',
   },
   intake_link: {
     label: 'Link para abrir chamado',

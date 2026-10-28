@@ -20,6 +20,9 @@ const ticket: PublicTicket = {
   screenshotUrl: null,
   attachments: [],
   histories: [],
+  watchers: [],
+  notifiable: [],
+  canReply: true,
   createdAt: '2026-09-15T12:10:00.000Z',
 };
 
@@ -234,7 +237,56 @@ describe('AzuosTicketLookupDrawer', () => {
   it('says the person has not opened any ticket yet instead of an empty list', () => {
     setup({ data: { protocol: '', ticket: null, mine: [] } });
 
-    expect(screen.getByText('Você ainda não abriu nenhum chamado.')).toBeInTheDocument();
+    expect(screen.getByText(/você ainda não abriu nenhum chamado/i)).toBeInTheDocument();
   });
 });
 
+
+describe('AzuosTicketLookupDrawer — pessoas vinculadas', () => {
+  // feliz
+  it('marks the tickets the person is in because someone linked her', () => {
+    setup({
+      data: {
+        protocol: '',
+        ticket: null,
+        mine: [
+          {
+            id: 9,
+            protocol: 'CH-0009',
+            status: 'requester_reply',
+            priority: 'low',
+            area: 'infra',
+            problemType: 'printer',
+            description: 'Impressora.',
+            createdAt: '2026-10-02T09:30:00.000Z',
+            isWatching: true,
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText('Vinculado')).toBeInTheDocument();
+    expect(screen.getByText('Retorno do solicitante')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('lists who is linked and goes back to the list', async () => {
+    const onBackToList = vi.fn();
+    setup({
+      data: { protocol: 'CH-0007', ticket: { ...ticket, watchers: [{ id: 'u-1', name: 'Caio Reis' }] } },
+      actions: { ...actions, onBackToList },
+    });
+
+    expect(screen.getByText('Caio Reis')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /voltar para meus chamados/i }));
+    expect(onBackToList).toHaveBeenCalled();
+  });
+
+  // triste
+  it('shows no linked-people fact and no back button when there is none', () => {
+    setup({ data: { protocol: 'CH-0007', ticket } });
+
+    expect(screen.queryByText('Vinculados')).toBeNull();
+    expect(screen.queryByRole('button', { name: /voltar para meus chamados/i })).toBeNull();
+  });
+});

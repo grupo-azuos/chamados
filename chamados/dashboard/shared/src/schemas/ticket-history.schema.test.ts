@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  createRequesterHistorySchema,
   createTicketHistorySchema,
   HISTORY_DESCRIPTION_MAX_LENGTH,
   HISTORY_MINUTES_MAX,
@@ -89,6 +90,7 @@ describe('ticketHistoryFormSchema', () => {
       description: 'Assumi o chamado.',
       isVisibleToRequester: true,
       minutesSpent: '',
+      notifyUserIds: [],
     });
 
     expect(result.success).toBe(true);
@@ -131,5 +133,24 @@ describe('publicTicketHistorySchema', () => {
     expect(parsed).not.toHaveProperty('minutesSpent');
     expect(parsed).not.toHaveProperty('isVisibleToRequester');
     expect(parsed.authorName).toBe('Suporte TI');
+  });
+});
+
+describe('createRequesterHistorySchema', () => {
+  // feliz
+  it('accepts a reply from the requester, with nobody to notify by default', () => {
+    const parsed = createRequesterHistorySchema.parse({
+      type: 'requester_reply',
+      description: '  Segue o print.  ',
+    });
+
+    expect(parsed).toMatchObject({ description: 'Segue o print.', notifyUserIds: [], attachments: [] });
+  });
+
+  // triste
+  it('refuses a type that only the attendant launches', () => {
+    const result = createRequesterHistorySchema.safeParse({ type: 'resolution', description: 'Feito.' });
+
+    expect(result.success).toBe(false);
   });
 });
