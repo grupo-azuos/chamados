@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import ScheduleEventDialog from './azuos-schedule-event-dialog.svelte';
+import ScheduleEventDialog, { SWATCHES, swatchOf } from './azuos-schedule-event-dialog.svelte';
 import { type SoftwareScheduleFormModel } from '$lib/hooks/use-software-schedule-form/use-software-schedule-form.svelte';
 
 function createMockModel(
@@ -121,5 +121,50 @@ describe('AzuosScheduleEventDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Registro' }));
 
     expect(model.actions.onChange).toHaveBeenCalledWith('kind', 'record');
+  });
+});
+
+describe('swatchOf', () => {
+  // feliz
+  it('offers one swatch per calendar tone, with no repeated color', () => {
+    const classes = SWATCHES.map((swatch) => swatch.bgClass);
+
+    expect(new Set(classes).size).toBe(classes.length);
+    expect(swatchOf('amber').label).toBe('Âmbar');
+  });
+
+  // feliz
+  it('shows old rose and indigo records as the color the calendar paints', () => {
+    expect(swatchOf('rose').value).toBe('red');
+    expect(swatchOf('indigo').value).toBe('purple');
+  });
+
+  // triste
+  it('falls back to blue for an unknown color', () => {
+    expect(swatchOf('chartreuse').label).toBe('Azul');
+  });
+});
+
+describe('AzuosScheduleEventDialog color', () => {
+  // feliz
+  it('marks the chosen swatch and names it next to the label', () => {
+    const model = createMockModel();
+    model.data.fields.color.value = 'amber';
+    render(ScheduleEventDialog, {
+      props: { open: true, model, projects: [], onClose: vi.fn() },
+    });
+
+    expect(screen.getByRole('button', { name: 'Âmbar' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Azul' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText(/· Âmbar/)).toBeInTheDocument();
+  });
+
+  // triste
+  it('does not offer the old pink swatch that rendered yellow', () => {
+    render(ScheduleEventDialog, {
+      props: { open: true, model: createMockModel(), projects: [], onClose: vi.fn() },
+    });
+
+    expect(screen.queryByRole('button', { name: 'Rosa' })).not.toBeInTheDocument();
   });
 });
