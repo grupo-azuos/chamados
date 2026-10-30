@@ -91,6 +91,36 @@
     return 'Abertura, acompanhamento e atendimento de chamados';
   }
 
+  /** Uma pessoa da equipe com todos os módulos que ela tem — uma linha só, não uma por módulo. */
+  export type RolePerson = { userId: string; userEmail: string | null; roles: InternalRole[] };
+
+  /**
+   * Junta os acessos POR PESSOA. Cada módulo liberado é um registro, e listar registro por
+   * registro repetia o mesmo cartão até três vezes. O vínculo é pelo id, sem diferença de
+   * maiúscula, como no servidor; a ordem é a da primeira aparição, e os módulos seguem a ordem
+   * fixa de `ROLE_CONTEXTS`.
+   */
+  export function groupRolesByPerson(roles: readonly InternalRole[]): RolePerson[] {
+    const people: RolePerson[] = [];
+
+    for (const role of roles) {
+      const key = role.userId.toLowerCase();
+      let person = people.find((candidate) => candidate.userId.toLowerCase() === key);
+      if (!person) {
+        person = { userId: role.userId, userEmail: null, roles: [] };
+        people.push(person);
+      }
+      person.userEmail ??= role.userEmail ?? null;
+      person.roles.push(role);
+    }
+
+    for (const person of people) {
+      person.roles.sort((a, b) => ROLE_CONTEXTS.indexOf(a.context) - ROLE_CONTEXTS.indexOf(b.context));
+    }
+
+    return people;
+  }
+
   const CONTEXT_PICKER_OPTIONS: OptionPickerOption[] = ROLE_CONTEXTS.map((ctx) => ({
     value: ctx,
     label: ROLE_CONTEXT_LABELS[ctx],
@@ -103,7 +133,7 @@
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
   import ShieldCheck from '@lucide/svelte/icons/shield-check';
-  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import X from '@lucide/svelte/icons/x';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
@@ -117,7 +147,6 @@
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
-    TableActions,
     TableBody,
     TableCell,
     TableHead,
@@ -144,10 +173,43 @@
 
   /* Pelo UUID, como o servidor: um e-mail antigo que hoje é de outra pessoa mostraria o nome
      e a foto dela numa linha que não é dela. */
-  function resolveUser(item: InternalRole): DirectoryUser | undefined {
+  function resolveUser(item: { userId: string }): DirectoryUser | undefined {
     return data.users?.find((u) => u.id.toLowerCase() === item.userId.toLowerCase());
   }
+
+  const people = $derived(groupRolesByPerson(data.roles));
+
+  /* Quem liberou cada módulo, sem repetir: "a@x" quando foi um só, "a@x, b@y" quando foram dois. */
+  function creatorsOf(person: RolePerson): string {
+    return [...new Set(person.roles.map((role) => role.createdBy).filter(Boolean))].join(', ');
+  }
 </script>
+
+{#snippet moduleBadges(person: RolePerson)}
+  <div class="flex flex-wrap items-center gap-1.5">
+    {#each person.roles as role (role.id)}
+      <span class="inline-flex items-center gap-0.5">
+        <StatusBadge
+          data={{ label: ROLE_CONTEXT_LABELS[role.context] }}
+          ui={{ tone: contextTone(role.context), size: 'sm' }}
+        />
+        {#if canManage}
+          <ActionButton
+            data={{ label: `Tirar o módulo ${ROLE_CONTEXT_LABELS[role.context]}` }}
+            ui={{
+              icon: X,
+              variant: 'ghost',
+              size: 'sm',
+              isIconOnly: true,
+              className: 'size-6 text-muted-foreground hover:text-destructive',
+            }}
+            actions={{ onClick: () => actions.onAskDelete(role) }}
+          />
+        {/if}
+      </span>
+    {/each}
+  </div>
+{/snippet}
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
   <!-- 1. Meu Perfil -->
@@ -340,71 +402,45 @@
       class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
       data-slot="role-cards-mobile"
     >
-      {#each data.roles as item (item.id)}
-        {@const user = resolveUser(item)}
-        {@const displayName = user?.name || item.userEmail || item.userId}
-        <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
+      {#each people as person (person.userId)}
+        {@const user = resolveUser(person)}
+        {@const displayName = user?.name || person.userEmail || person.userId}
+        {@const creators = creatorsOf(person)}
+        <!-- A cor entra por onde o mouse entrou (`hover-fill`, em tokens.css): a do primeiro módulo. -->
         <div
           use:fillFromPointer
-          style:--fill-color={fillColorOf(contextTone(item.context))}
+          style:--fill-color={fillColorOf(contextTone(person.roles[0]?.context ?? 'sistema'))}
           class="hover-fill flex flex-col gap-3 rounded-box border border-border bg-card p-4 shadow-xs"
         >
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex items-center gap-3 min-w-0">
-              <PersonAvatar
-                name={displayName}
-                avatarUrl={user?.image}
-                ui={{ size: 'lg' }}
-              />
-              <div class="min-w-0">
-                <span class="block font-semibold text-foreground text-sm break-words">
-                  {displayName}
+          <div class="flex items-center gap-3 min-w-0">
+            <PersonAvatar name={displayName} avatarUrl={user?.image} ui={{ size: 'lg' }} />
+            <div class="min-w-0">
+              <span class="block font-semibold text-foreground text-sm break-words">
+                {displayName}
+              </span>
+              {#if person.userEmail}
+                <span class="block text-xs text-muted-foreground break-all">
+                  {person.userEmail}
                 </span>
-                {#if item.userEmail}
-                  <span class="block text-xs text-muted-foreground break-all">
-                    {item.userEmail}
-                  </span>
-                {/if}
-                <span class="block text-xs font-mono text-muted-foreground/70 break-all">
-                  ID: {item.userId}
-                </span>
-              </div>
+              {/if}
+              <span class="block text-xs font-mono text-muted-foreground/70 break-all">
+                ID: {person.userId}
+              </span>
             </div>
-
-            {#if canManage}
-              <div class="flex items-center gap-1 shrink-0">
-                <ActionButton
-                  data={{ label: 'Tirar módulo' }}
-                  ui={{
-                    icon: Trash2,
-                    variant: 'ghost',
-                    size: 'sm',
-                    isIconOnly: true,
-                    className: 'text-destructive hover:text-destructive',
-                  }}
-                  actions={{ onClick: () => actions.onAskDelete(item) }}
-                />
-              </div>
-            {/if}
           </div>
 
           <div class="flex flex-col gap-1 pt-2 border-t border-border/60">
             <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Módulo
+              {person.roles.length > 1 ? 'Módulos' : 'Módulo'}
             </span>
-            <div>
-              <StatusBadge
-                data={{ label: ROLE_CONTEXT_LABELS[item.context] }}
-                ui={{ tone: contextTone(item.context), size: 'sm' }}
-              />
-            </div>
+            {@render moduleBadges(person)}
           </div>
 
-          {#if item.createdBy}
+          {#if creators}
             <div
               class="flex items-center justify-between text-xs font-mono text-muted-foreground/80 pt-1 border-t border-border/40"
             >
-              <span>Criado por: {item.createdBy}</span>
+              <span class="break-all">Liberado por: {creators}</span>
             </div>
           {/if}
         </div>
@@ -423,62 +459,34 @@
         <TableHeader>
           <TableRow>
             <TableHead class="min-w-[260px]">Pessoa</TableHead>
-            <TableHead class="min-w-[140px]">Módulo</TableHead>
-            <TableHead class="min-w-[160px]">Criado por</TableHead>
-            {#if canManage}
-              <TableHead class="min-w-[100px] text-right"><span class="sr-only">Ações</span></TableHead>
-            {/if}
+            <TableHead class="min-w-[220px]">Módulos</TableHead>
+            <TableHead class="min-w-[160px]">Liberado por</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {#each data.roles as item (item.id)}
-            {@const user = resolveUser(item)}
-            {@const displayName = user?.name || item.userEmail || item.userId}
+          {#each people as person (person.userId)}
+            {@const user = resolveUser(person)}
+            {@const displayName = user?.name || person.userEmail || person.userId}
             <TableRow>
               <TableCell class="max-w-[280px]">
                 <div class="flex items-center gap-3">
-                  <PersonAvatar
-                    name={displayName}
-                    avatarUrl={user?.image}
-                    ui={{ size: 'md' }}
-                  />
+                  <PersonAvatar name={displayName} avatarUrl={user?.image} ui={{ size: 'md' }} />
                   <div class="min-w-0">
                     <span class="block font-medium text-foreground truncate">
                       {displayName}
                     </span>
-                    {#if item.userEmail && item.userId !== item.userEmail}
+                    {#if person.userEmail && person.userId !== person.userEmail}
                       <span class="block text-xs font-mono text-muted-foreground truncate">
-                        {item.userId}
+                        {person.userId}
                       </span>
                     {/if}
                   </div>
                 </div>
               </TableCell>
-              <TableCell>
-                <StatusBadge
-                  data={{ label: ROLE_CONTEXT_LABELS[item.context] }}
-                  ui={{ tone: contextTone(item.context), size: 'sm' }}
-                />
-              </TableCell>
+              <TableCell>{@render moduleBadges(person)}</TableCell>
               <TableCell class="text-xs text-muted-foreground font-mono">
-                {item.createdBy || '—'}
+                {creatorsOf(person) || '—'}
               </TableCell>
-              {#if canManage}
-                <TableCell class="text-right">
-                  <TableActions>
-                    <ActionButton
-                      data={{ label: 'Tirar módulo' }}
-                      ui={{
-                        icon: Trash2,
-                        variant: 'ghost',
-                        size: 'sm',
-                        className: 'text-destructive hover:text-destructive',
-                      }}
-                      actions={{ onClick: () => actions.onAskDelete(item) }}
-                    />
-                  </TableActions>
-                </TableCell>
-              {/if}
             </TableRow>
           {/each}
         </TableBody>

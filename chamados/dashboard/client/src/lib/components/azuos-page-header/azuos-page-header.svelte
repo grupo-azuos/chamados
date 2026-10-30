@@ -32,7 +32,9 @@
          de botões pequenos ao lado de um botão maior — os de exportar ao lado de "Cadastrar
          computador" — encosta no topo em vez de ficar na mesma linha do meio. Com o
          `flex-wrap`, o mesmo vale para a segunda linha quando a tela é estreita. -->
-    <div class="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+    <!-- `sm:shrink-0`: lado a lado com uma descrição longa, quem encolhe é o texto. Sem ele
+         as ações espremiam até empilhar, e o botão mais largo vazava para fora da tela. -->
+    <div class="flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:shrink-0">
       {@render children()}
     </div>
   {/if}
