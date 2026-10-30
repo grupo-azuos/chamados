@@ -265,10 +265,15 @@ export type RequesterDefaults = z.infer<typeof requesterDefaultsSchema>;
 /** O id que o autenticador entrega é curto; o teto existe só para o campo não aceitar um texto qualquer. */
 const ASSIGNEE_ID_MAX_LENGTH = 128;
 
+/** O valor do filtro de responsável que pede os chamados SEM responsável. */
+export const TICKET_UNASSIGNED_FILTER = 'none';
+
 /** Uma pessoa que pode ser escolhida como responsável: só o que a tela pública precisa mostrar. */
 export const ticketAssigneeOptionSchema = z.object({
   id: z.string(),
   name: z.string(),
+  /** A foto do admin-console — o filtro de responsável mostra quem é pelo rosto. */
+  avatarUrl: z.string().nullable().optional(),
 });
 export type TicketAssigneeOption = z.infer<typeof ticketAssigneeOptionSchema>;
 
@@ -510,6 +515,11 @@ export const ticketListQuerySchema = paginationQuerySchema.extend({
   computerId: z.coerce.number().int().positive().optional(),
   /** Os chamados DESTE sistema de software. */
   projectId: z.coerce.number().int().positive().optional(),
+  /**
+   * Os chamados DESTE responsável, pelo id — ou `TICKET_UNASSIGNED_FILTER` para os que ainda
+   * não têm ninguém, a fila de quem precisa ser pego.
+   */
+  assigneeId: z.string().trim().min(1).max(ASSIGNEE_ID_MAX_LENGTH).optional(),
   status: ticketStatusSchema.optional(),
   /**
    * Um GRUPO de estágios de uma vez — "aguardando" (os dois) ou "resolvidos" (com e sem

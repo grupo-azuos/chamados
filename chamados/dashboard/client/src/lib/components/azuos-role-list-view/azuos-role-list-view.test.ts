@@ -3,7 +3,10 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import RoleListView, { type AzuosRoleListViewProps } from './azuos-role-list-view.svelte';
+import RoleListView, {
+  groupRolesByPerson,
+  type AzuosRoleListViewProps,
+} from './azuos-role-list-view.svelte';
 
 const mockRoles: InternalRole[] = [
   {
@@ -95,12 +98,21 @@ describe('AzuosRoleListView', () => {
     expect(actions.onCreate).toHaveBeenCalledOnce();
   });
 
-  it('triggers onAskDelete when clicking Tirar módulo', async () => {
+  it('takes out only the module whose x was clicked', async () => {
     const actions = renderView();
 
-    const deleteButtons = screen.getAllByRole('button', { name: 'Tirar módulo' });
-    await userEvent.click(deleteButtons[0]!);
-    expect(actions.onAskDelete).toHaveBeenCalledWith(mockRoles[0]);
+    const removeSystem = screen.getAllByRole('button', { name: 'Tirar o módulo Sistema' });
+    await userEvent.click(removeSystem[0]!);
+    expect(actions.onAskDelete).toHaveBeenCalledWith(mockRoles[1]);
+  });
+
+  /* Duas liberações da mesma pessoa viram UM cartão com os dois módulos. */
+  it('shows each person once, with every module they have', () => {
+    renderView();
+
+    const cards = document.querySelector('[data-slot="role-cards-mobile"]') as HTMLElement;
+    expect(cards.querySelectorAll('.hover-fill')).toHaveLength(1);
+    expect(screen.getAllByText('Módulos').length).toBeGreaterThan(0);
   });
 
   it('shows read-only banner and hides manage buttons for non-superadmin users', () => {
@@ -259,5 +271,26 @@ describe('AzuosRoleListView', () => {
     });
 
     expect(screen.queryByText('Outra Pessoa')).not.toBeInTheDocument();
+  });
+});
+
+describe('groupRolesByPerson', () => {
+  // feliz
+  it('joins the modules of the same person, in the fixed module order', () => {
+    const reversed = [mockRoles[1]!, mockRoles[0]!];
+    const [person, ...others] = groupRolesByPerson(reversed);
+
+    expect(others).toHaveLength(0);
+    expect(person?.roles.map((role) => role.context)).toEqual(['infra', 'sistema']);
+    expect(person?.userEmail).toBe('vinicius@empresa.com.br');
+  });
+
+  // triste
+  it('treats the same id in another case as the same person, and keeps different people apart', () => {
+    const other = { ...mockRoles[0]!, id: 3, userId: 'usr_2', userEmail: null };
+    const upper = { ...mockRoles[1]!, userId: 'USR_1' };
+
+    expect(groupRolesByPerson([mockRoles[0]!, upper, other]).map((p) => p.roles.length)).toEqual([2, 1]);
+    expect(groupRolesByPerson([])).toEqual([]);
   });
 });

@@ -22,6 +22,11 @@
     tone?: StatusBadgeTone;
     icon?: LucideIcon;
     /**
+     * A FOTO da pessoa, no lugar do ícone — para escolher gente pelo rosto, não só pelo nome
+     * (o filtro de responsável). Sem `url`, saem as iniciais do `name`.
+     */
+    avatar?: { name: string; url: string | null };
+    /**
      * Uma linha divisória ANTES desta opção, na lista que abre: separa um grupo do outro (os
      * departamentos do RH dos que existem só aqui). Nas pastilhas não aparece — lá as opções
      * são poucas e lado a lado, e uma linha no meio não diria nada.
@@ -188,6 +193,7 @@
   import SearchIcon from '@lucide/svelte/icons/search';
 
   import { Popover, PopoverTrigger } from '$lib/components/ui/popover';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import PopoverContent from '$lib/components/azuos-search-popover-content/azuos-search-popover-content.svelte';
   import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
   import { cn } from '$lib/utils/cn';
@@ -241,7 +247,9 @@
     )}
   >
     <span class="flex min-w-0 items-center gap-2">
-      {#if selectedOption?.icon}
+      {#if selectedOption?.avatar}
+        <PersonAvatar name={selectedOption.avatar.name} avatarUrl={selectedOption.avatar.url} />
+      {:else if selectedOption?.icon}
         <selectedOption.icon class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
       {:else if selectedOption?.tone}
         <span class={optionDot({ tone: selectedOption.tone })} aria-hidden="true"></span>
@@ -349,7 +357,9 @@
                 : 'text-foreground hover:bg-muted/60',
             )}
           >
-            {#if option.icon}
+            {#if option.avatar}
+              <PersonAvatar name={option.avatar.name} avatarUrl={option.avatar.url} />
+            {:else if option.icon}
               <option.icon class="size-3.5 shrink-0" aria-hidden="true" />
             {:else if option.tone}
               <span class={optionDot({ tone: option.tone })} aria-hidden="true"></span>
