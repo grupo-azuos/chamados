@@ -3,6 +3,7 @@ import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
 import { parseTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { ticketStatusesOfGroup } from '@template/shared/domain/ticket-status.util';
 import {
+  TICKET_UNASSIGNED_FILTER,
   type TicketListQuery,
   type TicketReportQuery,
 } from '@template/shared/schemas/ticket.schema';
@@ -15,6 +16,7 @@ import {
   ilike,
   inArray,
   isNotNull,
+  isNull,
   or,
   sql,
   type SQL,
@@ -391,6 +393,7 @@ type TicketFilter = Pick<
   | 'problemType'
   | 'computerId'
   | 'projectId'
+  | 'assigneeId'
 >;
 
 /**
@@ -412,12 +415,24 @@ function buildWhere(query: TicketFilter): SQL | undefined {
      quem resolve é o `scopedWhere`, que sabe consultar o banco. */
   if (query.department) filters.push(departmentMatches(tickets.department, query.department));
   if (query.problemType) filters.push(eq(tickets.problemType, query.problemType));
-  if (query.computerId) filters.push(eq(tickets.computerId, query.computerId));
-  if (query.projectId) filters.push(eq(tickets.projectId, query.projectId));
+  filters.push(...linkFilters(query));
 
   if (query.search) filters.push(searchFilter(query.search));
 
   return filters.length > 0 ? and(...filters) : undefined;
+}
+
+/* O que o chamado está LIGADO a: máquina, sistema e responsável. Saem juntos daqui para o
+   `buildWhere` não passar do teto de complexidade a cada filtro novo. */
+function linkFilters(query: TicketFilter): SQL[] {
+  const filters: SQL[] = [];
+
+  if (query.computerId) filters.push(eq(tickets.computerId, query.computerId));
+  if (query.projectId) filters.push(eq(tickets.projectId, query.projectId));
+  if (query.assigneeId === TICKET_UNASSIGNED_FILTER) filters.push(isNull(tickets.assigneeId));
+  else if (query.assigneeId) filters.push(eq(tickets.assigneeId, query.assigneeId));
+
+  return filters;
 }
 
 /**

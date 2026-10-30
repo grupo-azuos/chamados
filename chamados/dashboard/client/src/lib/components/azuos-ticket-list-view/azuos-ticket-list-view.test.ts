@@ -240,6 +240,38 @@ describe('AzuosTicketListView — stat card shortcuts and filter bar', () => {
     expect(within(panel).queryByText('Impressora')).toBeNull();
   });
 
+  /* O filtro de responsável mostra a pessoa pelo rosto e pede a fila dela. */
+  it('filters by the responsible person picked with photo and search', async () => {
+    const onAssigneeChange = vi.fn();
+    setup({
+      data: {
+        area: 'infra',
+        tickets: [ticket()],
+        total: 1,
+        dashboard,
+        filter: emptyFilter,
+        assigneeOptions: [
+          { value: 'none', label: 'Sem responsável' },
+          { value: 'u-ana', label: 'Ana Lima', avatar: { name: 'Ana Lima', url: null } },
+          { value: 'u-bia', label: 'Bia Costa', avatar: { name: 'Bia Costa', url: null } },
+        ],
+      },
+      actions: { ...actions, onAssigneeChange },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
+    const trigger = screen.getByRole('button', { name: /Filtrar por responsável/ });
+    await userEvent.click(trigger);
+    const panel = document.getElementById(trigger.getAttribute('aria-controls') ?? '') as HTMLElement;
+    await userEvent.type(within(panel).getByPlaceholderText('Buscar pessoa…'), 'ana');
+    expect(within(panel).queryByText('Bia Costa')).toBeNull();
+    /* Sem foto no admin-console, saem as iniciais no lugar do rosto. */
+    expect(within(panel).getByText('AL')).toBeInTheDocument();
+    await userEvent.click(within(panel).getByText('Ana Lima'));
+
+    expect(onAssigneeChange).toHaveBeenCalledWith('u-ana');
+  });
+
   /* O tempo médio é uma LEITURA dos resolvidos, e não uma quinta contagem: mora na dica do
      cartão deles, e não vira um atalho próprio. */
   it('does not turn the average time into a shortcut of its own', () => {
@@ -396,7 +428,25 @@ describe('ticketFilterChips', () => {
     ).toEqual(['Situação: Aguardando', 'Urgência: Alta']);
   });
 
+  it('names who is responsible, or that the ticket has nobody yet', () => {
+    const people = [{ value: 'u-ana', label: 'Ana Lima' }];
+
+    expect(ticketFilterChips({ ...emptyFilter, assigneeId: 'u-ana' }, [], people)).toEqual([
+      { key: 'assigneeId', label: 'Responsável: Ana Lima' },
+    ]);
+    expect(ticketFilterChips({ ...emptyFilter, assigneeId: 'none' }, [], people)[0]?.label).toBe(
+      'Sem responsável',
+    );
+  });
+
   // triste
+  /* Quem deixou de atender a área sai da lista, mas o filtro salvo continua ligado e visível. */
+  it('keeps the chip of someone who is no longer on the list', () => {
+    expect(ticketFilterChips({ ...emptyFilter, assigneeId: 'u-gone' }, [], [])[0]?.label).toBe(
+      'Responsável',
+    );
+  });
+
   it('leaves search and department out, which stay in sight', () => {
     expect(ticketFilterChips({ ...emptyFilter, search: 'impressora', department: 'TI' }, [])).toEqual([]);
   });

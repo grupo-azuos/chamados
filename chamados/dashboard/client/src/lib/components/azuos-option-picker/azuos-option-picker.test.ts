@@ -285,3 +285,27 @@ describe('AzuosOptionPicker — separador de grupo', () => {
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosOptionPicker — people with photo', () => {
+  // feliz
+  it('shows the face of the chosen person, initials when there is no photo', () => {
+    render(OptionPicker, {
+      data: { value: 'u-ana', options: [{ value: 'u-ana', label: 'Ana Lima', avatar: { name: 'Ana Lima', url: null } }] },
+      ui: { ariaLabel: 'Responsável', mode: 'combobox' },
+      actions: { onChange: vi.fn() },
+    });
+
+    expect(within(screen.getByRole('button', { name: 'Responsável' })).getByText('AL')).toBeInTheDocument();
+  });
+
+  // triste
+  it('draws no avatar for an option that is not a person', () => {
+    render(OptionPicker, {
+      data: { value: 'none', options: [{ value: 'none', label: 'Sem responsável' }] },
+      ui: { ariaLabel: 'Responsável', mode: 'combobox' },
+      actions: { onChange: vi.fn() },
+    });
+
+    expect(screen.getByRole('button', { name: 'Responsável' }).querySelector('[data-slot="avatar"]')).toBeNull();
+  });
+});

@@ -103,6 +103,24 @@
   template={inBox}
 />
 
+<!-- Pessoas pelo rosto: a foto (ou as iniciais, sem foto) no lugar do ícone — o filtro de responsável. -->
+<Story
+  name="PeopleWithPhoto"
+  args={{
+    data: {
+      value: 'u-ana',
+      options: [
+        { value: 'none', label: 'Sem responsável' },
+        { value: 'u-ana', label: 'Ana Lima', avatar: { name: 'Ana Lima', url: null }, separatorBefore: true },
+        { value: 'u-bia', label: 'Bia Costa', avatar: { name: 'Bia Costa', url: null } },
+      ],
+    },
+    ui: { ariaLabel: 'Responsável', allLabel: 'Todos os responsáveis', mode: 'combobox', searchPlaceholder: 'Buscar pessoa…' },
+    actions: { onChange: () => {} },
+  }}
+  template={inBox}
+/>
+
 <!-- Num formulário, o combo estica igual ao campo ao lado — nunca fica mais estreito. -->
 <Story
   name="FullWidthInForm"
