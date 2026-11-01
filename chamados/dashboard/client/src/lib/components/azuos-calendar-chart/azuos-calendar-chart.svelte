@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { formatCount, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
+  import { formatCount, resolveColor, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
   /**
    * CALENDÁRIO DE CALOR — quantas coisas caem em cada dia, mês a mês (o "estilo GitHub").
@@ -28,7 +28,7 @@
   const MOBILE_BREAKPOINT = 768;
 
   /** Do mais claro ao mais forte: a escala vai do amarelo ao vermelho. */
-  export const HEAT_COLORS = ['#fde68a', '#fbbf24', '#f97316', '#dc2626'];
+  export const HEAT_COLORS = ['var(--warning-soft)', 'var(--warning)', 'var(--chart-4)', 'var(--destructive)'];
 
   export function firstDayOfMonth(today: Date): string {
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
@@ -60,7 +60,7 @@
           return `<b>${day}/${month}/${year}</b><br/>${formatCount(count)} ${seriesLabel}`;
         },
       },
-      visualMap: { show: false, min: 1, max: top, inRange: { color: HEAT_COLORS }, outOfRange: { color: theme.track } },
+      visualMap: { show: false, min: 1, max: top, inRange: { color: HEAT_COLORS.map((color) => resolveColor(color)) }, outOfRange: { color: theme.track } },
       calendar: {
         range,
         top: 22,

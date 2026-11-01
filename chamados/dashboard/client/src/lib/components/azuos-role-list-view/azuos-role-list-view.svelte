@@ -192,7 +192,7 @@
             {@const role = (
               data.currentUser.role === 'superadmin' ? 'superadmin' : data.currentUser.roles?.[ctx]
             ) as UserRole | undefined}
-            <div class="flex flex-col justify-between rounded-control border border-border bg-muted/20 p-3.5 transition-colors">
+            <div class="flex flex-col justify-between rounded-control border border-border bg-muted p-3.5 transition-colors">
               <div class="flex items-center justify-between gap-2">
                 <span class="text-xs font-semibold text-foreground">
                   {ROLE_CONTEXT_LABELS[ctx]}
@@ -235,7 +235,7 @@
 
   {#if data.currentUser && data.currentUser.role !== 'superadmin'}
     <div
-      class="flex items-center gap-2.5 rounded-box border border-border/80 bg-muted/30 p-3 text-xs text-muted-foreground"
+      class="flex items-center gap-2.5 rounded-box border border-border bg-muted p-3 text-xs text-muted-foreground"
     >
       <Info class="size-4 shrink-0 text-primary" aria-hidden="true" />
       <span>
@@ -365,7 +365,7 @@
                     {item.userEmail}
                   </span>
                 {/if}
-                <span class="block text-xs font-mono text-muted-foreground/70 break-all">
+                <span class="block text-xs font-mono text-muted-foreground break-all">
                   ID: {item.userId}
                 </span>
               </div>
@@ -388,7 +388,7 @@
             {/if}
           </div>
 
-          <div class="flex flex-col gap-1 pt-2 border-t border-border/60">
+          <div class="flex flex-col gap-1 pt-2 border-t border-border">
             <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Módulo
             </span>
@@ -402,7 +402,7 @@
 
           {#if item.createdBy}
             <div
-              class="flex items-center justify-between text-xs font-mono text-muted-foreground/80 pt-1 border-t border-border/40"
+              class="flex items-center justify-between text-xs font-mono text-muted-foreground pt-1 border-t border-border"
             >
               <span>Criado por: {item.createdBy}</span>
             </div>

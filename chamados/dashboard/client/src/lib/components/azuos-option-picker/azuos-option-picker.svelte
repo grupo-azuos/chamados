@@ -79,7 +79,7 @@
    * numa linha só.
    */
   const optionTrack = tv({
-    base: 'items-stretch gap-1 rounded-control border border-border/70 bg-muted/50 p-1 min-h-(--control-lg) max-w-full min-w-0',
+    base: 'items-stretch gap-1 rounded-control border border-border bg-muted p-1 min-h-(--control-lg) max-w-full min-w-0',
     variants: {
       layout: {
         filter: 'inline-flex flex-wrap',
@@ -115,7 +115,7 @@
       },
       isSelected: {
         true: 'shadow-xs font-semibold',
-        false: 'border-transparent text-muted-foreground hover:bg-card/70 hover:text-foreground',
+        false: 'border-transparent text-muted-foreground hover:bg-card hover:text-foreground',
       },
       tone: { neutral: '', info: '', success: '', warning: '', danger: '', brand: '' },
     },
@@ -235,7 +235,7 @@
     aria-describedby={fieldState?.error ? errorId : undefined}
     class={cn(
       'control-lg',
-      'rounded-control inline-flex min-w-0 max-w-full w-full cursor-pointer items-center justify-between gap-2 border border-border/70 bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60',
+      'rounded-control inline-flex min-w-0 max-w-full w-full cursor-pointer items-center justify-between gap-2 border border-border bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60',
       ui?.fullWidth ? 'sm:w-full' : 'sm:w-auto sm:min-w-[180px]',
       ui?.className,
     )}
@@ -312,7 +312,7 @@
       class="min-w-(--bits-popover-anchor-width) w-auto max-w-[min(26rem,calc(100vw-2rem))] p-0"
       align="start"
     >
-      <div class="relative shrink-0 border-b border-border/70 p-2">
+      <div class="relative shrink-0 border-b border-border p-2">
         <SearchIcon
           class="pointer-events-none absolute top-1/2 left-4 size-3.5 -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
@@ -325,7 +325,7 @@
           class={cn(
             /* A busca do balão é um controle como os outros: degrau `sm` da régua. */
             ui?.allowCustomValue ? 'control-lg rounded-control' : 'control-sm rounded-control',
-            'w-full border border-border/60 bg-muted/30 pr-2 pl-7 text-xs text-foreground outline-none',
+            'w-full border border-border bg-muted pr-2 pl-7 text-xs text-foreground outline-none',
           )}
         />
       </div>
@@ -336,7 +336,7 @@
         {#each filteredOptions as option, index (option.value || '__all__')}
           {@const isSelected = option.value === data.value}
           {#if option.separatorBefore && index > 0}
-            <div role="separator" class="bg-border/70 mx-2 my-1 h-px"></div>
+            <div role="separator" class="bg-muted mx-2 my-1 h-px"></div>
           {/if}
           <button
             type="button"
@@ -345,8 +345,8 @@
               /* Item de lista dentro de um balão é MIUDEZA, não controle: raio `chip`. */
               'flex w-full cursor-pointer items-center gap-2 rounded-chip min-h-11 px-3 py-2.5 text-left text-sm transition-colors',
               isSelected
-                ? 'bg-primary/10 font-semibold text-primary'
-                : 'text-foreground hover:bg-muted/60',
+                ? 'bg-muted font-semibold text-primary'
+                : 'text-foreground hover:bg-muted',
             )}
           >
             {#if option.icon}
@@ -366,7 +366,7 @@
           <button
             type="button"
             onclick={() => select(customValue, true)}
-            class="text-primary hover:bg-primary/10 flex min-h-11 w-full cursor-pointer items-center rounded-chip px-3 py-2.5 text-left text-sm font-medium break-words"
+            class="text-primary hover:bg-muted flex min-h-11 w-full cursor-pointer items-center rounded-chip px-3 py-2.5 text-left text-sm font-medium break-words"
           >Usar “{customValue}”</button>
         {:else if ui?.allowCustomValue && filteredOptions.length === 0}
           <p class="px-3 pb-3 text-xs text-muted-foreground">Digite um nome na busca para usá-lo.</p>

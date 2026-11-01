@@ -512,7 +512,7 @@
                 </span>
               </div>
 
-              <div class="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2 pt-2 border-t border-border/60 text-xs">
+              <div class="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2 pt-2 border-t border-border text-xs">
                 <div class="flex flex-col gap-0.5">
                   <span
                     class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
@@ -542,7 +542,7 @@
                 </div>
               </div>
 
-              <div class="flex items-center justify-between pt-2 border-t border-border/60">
+              <div class="flex items-center justify-between pt-2 border-t border-border">
                 <span class="text-xs text-ink-500">
                   Aberto em {formatDate(ticket.createdAt)}
                 </span>

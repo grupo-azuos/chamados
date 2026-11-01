@@ -7,7 +7,7 @@ import { createProtection } from './protection-rules.mjs';
 
 const PROJECT_DIR = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 const LISTS_DIR = join(PROJECT_DIR, 'chamados/dashboard/scripts/git');
-const ADMIN_KEY = 'project.admin';
+const ADMIN_KEY = 'azuos.admin';
 
 function isAdmin(root) {
   try {

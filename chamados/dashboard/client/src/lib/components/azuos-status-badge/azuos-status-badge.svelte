@@ -21,7 +21,7 @@
     success: 'bg-success-soft text-success',
     warning: 'bg-warning-soft text-warning',
     danger: 'bg-destructive-soft text-destructive',
-    brand: 'bg-primary/15 text-primary',
+    brand: 'bg-muted text-primary',
   };
 </script>
 

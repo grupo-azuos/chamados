@@ -100,7 +100,7 @@
 
 <section
   aria-label={ui?.ariaLabel ?? 'Filtros'}
-  class="border-border/70 bg-card rounded-surface flex min-w-0 flex-col border shadow-xs"
+  class="border-border bg-card rounded-surface flex min-w-0 flex-col border shadow-xs"
 >
   <!-- A barra: busca ocupa o que sobrar; no celular cada peça ganha a própria linha. -->
   <div class="flex min-w-0 flex-col gap-3 p-3 sm:p-4 md:flex-row md:items-end">
@@ -147,7 +147,7 @@
           'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
           isOpen || data.chips.length > 0
             ? 'border-transparent bg-primary-soft text-primary'
-            : 'border-border bg-card text-foreground hover:bg-accent/50',
+            : 'border-border bg-card text-foreground hover:bg-muted',
         )}
       >
         <SlidersHorizontal class="size-4" aria-hidden="true" />
@@ -185,7 +185,7 @@
     <div
       id={panelId}
       transition:slide={{ duration: motionMs(DURATION.base) }}
-      class="border-border/60 border-t"
+      class="border-border border-t"
     >
       <div class="grid min-w-0 gap-x-4 gap-y-3 p-3 sm:grid-cols-2 sm:p-4 xl:grid-cols-3">
         {#each data.fields as field (field.key)}
@@ -215,7 +215,7 @@
   {#if data.canClear}
     <div
       transition:slide={{ duration: motionMs(DURATION.fast) }}
-      class="border-border/60 flex min-w-0 flex-wrap items-center gap-2 border-t px-3 py-2.5 sm:px-4"
+      class="border-border flex min-w-0 flex-wrap items-center gap-2 border-t px-3 py-2.5 sm:px-4"
     >
       {#if data.chips.length > 0}
         <ul class="flex min-w-0 flex-wrap items-center gap-2" aria-label="Filtros ligados">
@@ -228,7 +228,7 @@
                 type="button"
                 onclick={() => actions.onRemoveChip(chip.key)}
                 aria-label={`Tirar o filtro ${chip.label}`}
-                class="bg-primary-soft text-primary hover:bg-primary/15 focus-visible:ring-ring inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pr-2 pl-3 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                class="bg-primary-soft text-primary hover:bg-muted focus-visible:ring-ring inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pr-2 pl-3 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 <span class="truncate">{chip.label}</span>
                 <X class="size-3.5 shrink-0" aria-hidden="true" />

@@ -33,7 +33,7 @@
 <div
   role="alert"
   class={cn(
-    'flex gap-3 rounded-box bg-destructive/10 text-destructive',
+    'flex gap-3 rounded-box bg-muted text-destructive',
     isInline ? 'items-center px-3 py-2' : 'items-start p-4',
     ui?.className
   )}

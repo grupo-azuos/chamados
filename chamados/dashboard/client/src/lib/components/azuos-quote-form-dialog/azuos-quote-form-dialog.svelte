@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
   import {
     quoteAttachmentAccept,
     quoteKindOptions,
@@ -109,7 +110,7 @@
       <DialogHeader class="gap-1.5">
         <div class="flex items-center gap-2.5">
           <span
-            class="rounded-chip bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center"
+            class="rounded-chip bg-muted text-primary flex size-7 shrink-0 items-center justify-center"
           >
             <FileText class="size-4" aria-hidden="true" />
           </span>
@@ -216,7 +217,7 @@
       </div>
 
       <!-- O DOCUMENTO que a empresa mandou: PDF, ou a foto do papel tirada com o celular. -->
-      <div class="flex flex-col gap-1.5">
+      <div onpaste={pasteFilesIntoInput} class="flex flex-col gap-1.5">
         <span class="text-ink-700 text-sm font-medium">Documento</span>
         <div class="flex flex-wrap items-center gap-2">
           <ActionButton

@@ -1,505 +1,282 @@
-import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
-
-import { RULES, compareWithBaseline, countByKey, violationsTouching } from './design-rules.mjs';
-
-/** @param {string} ruleId @param {import('./design-rules.mjs').ProjectFile[]} files */
-function run(ruleId, files) {
-  const rule = RULES.find((candidate) => candidate.id === ruleId);
-  assert.ok(rule, `unknown rule ${ruleId}`);
-
-  return rule.check(files).map((violation) => `${violation.file} ${violation.detail}`);
-}
-
-/** @param {string} path @param {string} [content] */
-function file(path, content = '') {
-  return { path, content };
-}
-
-const DASHBOARD_LIB = 'chamados/dashboard/client/src/lib/components';
-const DASHBOARD_HOOKS = 'chamados/dashboard/client/src/lib/hooks';
-const DASHBOARD_ROUTES = 'chamados/dashboard/client/src/routes';
-const AGENT_LIB = 'chamados/agent/svelte/src/lib/components';
-const AGENT_ROUTES = 'chamados/agent/svelte/src/routes';
-
-describe('component-prefix', () => {
-  // feliz
-  it('accepts azuos-* folders in lib and in feature routes, in both apps', () => {
-    const files = [
-      file(`${DASHBOARD_LIB}/azuos-button/azuos-button.svelte`),
-      file(
-        `${DASHBOARD_ROUTES}/(app)/tickets/components/azuos-ticket-card/azuos-ticket-card.svelte`,
-      ),
-      file(`${DASHBOARD_LIB}/ui/button/button.svelte`),
-      file(`${AGENT_LIB}/azuos-badge/azuos-badge.svelte`),
-      file(`${AGENT_LIB}/ui/badge/badge.svelte`),
-    ];
-
-    assert.deepEqual(run('component-prefix', files), []);
-  });
-
-  // triste
-  it('flags folders without the prefix in either app', () => {
-    const files = [
-      file(`${DASHBOARD_LIB}/text-field/text-field.svelte`),
-      file(`${DASHBOARD_ROUTES}/(app)/dashboard/components/maintenance-log/maintenance-log.svelte`),
-      file(`${AGENT_LIB}/badge/badge.svelte`),
-    ];
-
-    assert.equal(run('component-prefix', files).length, 3);
-  });
+/**
+ * Testes das regras de design. Rodam com o test runner do Node, sem dependência:
+ *   node --test ".claude/hooks/design/*.test.mjs"
+ * Cada regra tem um caso feliz (código certo passa) e um triste (o erro comum é pego).
+ */
+/**
+* Testes das regras de design. Rodam com o test runner do Node, sem dependência:
+*   node --test ".claude/hooks/design/*.test.mjs"
+* Cada regra tem um caso feliz (código certo passa) e um triste (o erro comum é pego).
+*/
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { checkSource, formatViolations, isInScope, summarize } from "./design-rules.mjs";
+const config = {
+	brand: "teste",
+	skill: "teste-design",
+	scan: {
+		dirs: ["src"],
+		extensions: [
+			".svelte",
+			".tsx",
+			".html",
+			".css"
+		],
+		tokenFiles: ["tokens.css"],
+		ignore: ["node_modules"]
+	},
+	brandRules: {
+		tokensOnly: true,
+		noPureBlackWhite: true,
+		noArbitraryValues: true
+	},
+	laws: {
+		hick: {
+			enabled: true,
+			maxNavItems: 3,
+			maxSelectOptions: 3
+		},
+		fitts: {
+			enabled: true,
+			minTargetPx: 40
+		},
+		jakob: { enabled: true },
+		miller: {
+			enabled: true,
+			maxUngroupedFields: 3
+		},
+		vonRestorff: {
+			enabled: true,
+			maxPrimaryActions: 1
+		},
+		uniformConnectedness: { enabled: true },
+		tesler: { enabled: true }
+	}
+};
+const rulesFor = (code, path = "src/x.svelte", cfg = config) => checkSource(path, code, cfg).map((v) => v.rule);
+describe("brand/no-pure-black-white", () => {
+	it("passes tokens", () => assert.deepEqual(rulesFor("<div class=\"bg-background text-foreground\"></div>"), []));
+	it("catches #fff, bg-black and color: white", () => {
+		const found = rulesFor("<div class=\"bg-black\"></div>\n<style>.a { color: white; border-color: #fff; }</style>");
+		assert.equal(found.filter((r) => r === "brand/no-pure-black-white").length, 3);
+	});
+	it("applies inside token files too", () => {
+		assert.ok(rulesFor(":root { --background: #000000; }", "src/tokens.css").includes("brand/no-pure-black-white"));
+	});
+});
+describe("brand/tokens-only", () => {
+	it("allows raw colors in token files", () => assert.deepEqual(rulesFor(":root { --primary: #f2b84b; }", "src/tokens.css"), []));
+	it("ignores anchors and html entities", () => assert.deepEqual(rulesFor("<a href=\"#sobre\">Sobre</a> &#123;"), []));
+	it("catches hex, rgb and tailwind palette", () => {
+		const found = rulesFor("<p class=\"text-blue-500\" style=\"color: #f2b84b; background: rgb(1, 2, 3)\">x</p>");
+		assert.equal(found.filter((r) => r === "brand/tokens-only").length, 3);
+	});
+});
+describe("brand/no-arbitrary-values", () => {
+	it("allows var() and the scale", () => assert.deepEqual(rulesFor("<div class=\"rounded-[var(--radius)] text-sm\"></div>"), []));
+	it("catches arbitrary sizes", () => assert.deepEqual(rulesFor("<div class=\"text-[13px]\"></div>"), ["brand/no-arbitrary-values"]));
+});
+describe("hick", () => {
+	it("passes a short nav", () => assert.deepEqual(rulesFor("<nav><a href=\"/\">A</a><a href=\"/b\">B</a></nav>"), []));
+	it("catches a long nav", () => {
+		const nav = `<nav>${"<a href=\"/x\">x</a>".repeat(4)}</nav>`;
+		assert.deepEqual(rulesFor(nav), ["hick/nav-items"]);
+	});
+	it("catches a long select but not a grouped one", () => {
+		const options = "<option>a</option>".repeat(4);
+		assert.deepEqual(rulesFor(`<label>X<select>${options}</select></label>`), ["hick/select-options"]);
+		assert.deepEqual(rulesFor(`<label>X<select><optgroup label="g">${options}</optgroup></select></label>`), []);
+	});
+});
+describe("fitts/target-size", () => {
+	it("passes h-10 and min-h-10", () => {
+		assert.deepEqual(rulesFor("<button type=\"button\" class=\"h-10\">Ok</button>"), []);
+		assert.deepEqual(rulesFor("<button type=\"button\" class=\"h-8 min-h-10\">Ok</button>"), []);
+	});
+	it("catches h-6 buttons and small CSS buttons", () => {
+		assert.deepEqual(rulesFor("<button type=\"button\" class=\"h-6\">Ok</button>"), ["fitts/target-size"]);
+		assert.deepEqual(rulesFor("<style>.btn { height: 28px; }</style>"), ["fitts/target-size"]);
+	});
+	it("ignores checkboxes", () => assert.deepEqual(rulesFor("<label><input type=\"checkbox\" class=\"size-4\" /> Aceito</label>"), []));
+});
+describe("jakob", () => {
+	it("passes button and link", () => assert.deepEqual(rulesFor("<button type=\"button\" onclick={go}>Ir</button><a href=\"/x\">X</a>"), []));
+	it("catches clickable div and anchor without href", () => {
+		assert.deepEqual(rulesFor("<div onclick={go}>Ir</div>"), ["jakob/clickable-non-interactive"]);
+		assert.deepEqual(rulesFor("<a onclick={go}>Ir</a>"), ["jakob/anchor-without-href"]);
+	});
+	it("accepts the svelte {href} shorthand", () => assert.deepEqual(rulesFor("<a {href}>Ir</a>"), []));
+	it("catches placeholder-only inputs but accepts labels", () => {
+		assert.deepEqual(rulesFor("<input placeholder=\"Buscar\" />"), ["jakob/placeholder-as-label"]);
+		assert.deepEqual(rulesFor("<label for=\"q\">Busca</label><input id=\"q\" placeholder=\"ex.: nota\" />"), []);
+		assert.deepEqual(rulesFor("<label>Busca <input placeholder=\"ex.: nota\" /></label>"), []);
+	});
+});
+describe("miller/ungrouped-fields", () => {
+	const field = "<label>c <input aria-label=\"c\" /></label>";
+	it("passes grouped forms", () => assert.deepEqual(rulesFor(`<form><fieldset><legend>a</legend>${field.repeat(5)}</fieldset></form>`), []));
+	it("catches long flat forms", () => assert.deepEqual(rulesFor(`<form>${field.repeat(5)}</form>`), ["miller/ungrouped-fields"]));
+});
+describe("von-restorff/single-primary", () => {
+	it("passes one primary", () => assert.deepEqual(rulesFor("<button type=\"button\" class=\"h-10 bg-primary\">A</button><button type=\"button\" class=\"h-10\">B</button>"), []));
+	it("catches two primaries", () => {
+		const two = "<button type=\"button\" class=\"h-10 bg-primary\">A</button><a href=\"/\" class=\"h-10 bg-primary\">B</a>";
+		assert.deepEqual(rulesFor(two), ["von-restorff/single-primary"]);
+	});
+	it("does not count bg-primary-soft", () => assert.deepEqual(rulesFor("<a href=\"/\" class=\"bg-primary-soft\">A</a><a href=\"/\" class=\"bg-primary\">B</a>"), []));
+});
+describe("uniform-connectedness/choice-group", () => {
+	const radios = "<label><input type=\"radio\" name=\"plano\" /> A</label><label><input type=\"radio\" name=\"plano\" /> B</label>";
+	it("passes inside a fieldset", () => assert.deepEqual(rulesFor(`<fieldset><legend>Plano</legend>${radios}</fieldset>`), []));
+	it("catches loose radios", () => assert.deepEqual(rulesFor(radios), ["uniform-connectedness/choice-group"]));
+});
+describe("tesler", () => {
+	it("passes a complete email field", () => assert.deepEqual(rulesFor("<label>E-mail <input name=\"email\" type=\"email\" autocomplete=\"email\" /></label>"), []));
+	it("catches missing autocomplete and wrong type", () => {
+		assert.deepEqual(rulesFor("<label>E-mail <input name=\"email\" /></label>").sort(), ["tesler/autocomplete", "tesler/input-type"]);
+	});
+});
+describe("ignore comments and config", () => {
+	it("honours design-ignore-next-line", () => {
+		assert.deepEqual(rulesFor("<!-- design-ignore-next-line fitts/target-size: ícone -->\n<button type=\"button\" class=\"h-6\">x</button>"), []);
+	});
+	it("honours design-ignore-file", () => assert.deepEqual(rulesFor("<!-- design-ignore-file -->\n<div class=\"bg-black\"></div>"), []));
+	it("skips disabled laws", () => {
+		const off = {
+			...config,
+			laws: {
+				...config.laws,
+				fitts: {
+					enabled: false,
+					minTargetPx: 40
+				}
+			}
+		};
+		assert.deepEqual(rulesFor("<button type=\"button\" class=\"h-6\">x</button>", "src/x.svelte", off), []);
+	});
+	it("reports the right line", () => {
+		const [v] = checkSource("src/x.svelte", "<p>a</p>\n\n<div class=\"bg-black\"></div>", config);
+		assert.equal(v.line, 3);
+	});
+	it("summarizes the active rules for the agent", () => {
+		const text = summarize(config);
+		assert.match(text, /teste-design/);
+		assert.match(text, /40px/);
+	});
+});
+describe("casos de borda", () => {
+	it("reads heights from inline styles, honoring min-height", () => {
+		assert.deepEqual(rulesFor("<button type=\"button\" style=\"height: 24px\">x</button>"), ["fitts/target-size"]);
+		assert.deepEqual(rulesFor("<button type=\"button\" style=\"height: 24px; min-height: 44px\">x</button>"), []);
+	});
+	it("asks for a numeric keyboard on postal codes", () => {
+		assert.deepEqual(rulesFor("<label>CEP <input name=\"cep\" autocomplete=\"postal-code\" /></label>"), ["tesler/input-type"]);
+		assert.deepEqual(rulesFor("<label>CEP <input name=\"cep\" autocomplete=\"postal-code\" inputmode=\"numeric\" /></label>"), []);
+	});
+	it("respects ignored paths, extensions and the project root as scan dir", () => {
+		assert.equal(isInScope("src/node_modules/x.svelte", config), false);
+		assert.equal(isInScope("src/readme.md", config), false);
+		assert.equal(isInScope("lib/x.svelte", config), false);
+		assert.equal(isInScope("lib/x.svelte", {
+			...config,
+			scan: {
+				...config.scan,
+				dirs: ["."]
+			}
+		}), true);
+	});
+	it("formats errors and warnings with location, rule and hint", () => {
+		const text = formatViolations("src/x.svelte", [{
+			rule: "a/b",
+			law: "Lei",
+			severity: "error",
+			line: 3,
+			message: "Erro.",
+			hint: "Dica."
+		}, {
+			rule: "c/d",
+			law: "Lei",
+			severity: "warning",
+			line: 4,
+			message: "Aviso.",
+			hint: "Dica."
+		}]);
+		assert.equal(text, "✕ src/x.svelte:3  [a/b] Erro.\n    Lei: Dica.\n! src/x.svelte:4  [c/d] Aviso.\n    Lei: Dica.");
+	});
 });
 
-describe('feature-component-in-lib', () => {
-  // triste
-  it('follows the import chain to the single feature that owns it', () => {
-    const files = [
-      file(
-        `${DASHBOARD_LIB}/azuos-dashboard-view/azuos-dashboard-view.svelte`,
-        `import X from '$lib/components/azuos-peaking/azuos-peaking.svelte';`,
-      ),
-      file(`${DASHBOARD_LIB}/azuos-peaking/azuos-peaking.svelte`),
-      file(
-        `${DASHBOARD_ROUTES}/(app)/dashboard/+page.svelte`,
-        `import V from '$lib/components/azuos-dashboard-view/azuos-dashboard-view.svelte';`,
-      ),
-    ];
-
-    assert.deepEqual(run('feature-component-in-lib', files).sort(), [
-      `${DASHBOARD_LIB}/azuos-dashboard-view só usado por routes/dashboard`,
-      `${DASHBOARD_LIB}/azuos-peaking só usado por routes/dashboard`,
-    ]);
-  });
-
-  // feliz
-  it('keeps components used by two features or by the root layout', () => {
-    const files = [
-      file(`${DASHBOARD_LIB}/azuos-button/azuos-button.svelte`),
-      file(`${DASHBOARD_LIB}/azuos-shell/azuos-shell.svelte`),
-      file(
-        `${DASHBOARD_ROUTES}/(app)/tickets/+page.svelte`,
-        `components/azuos-button/azuos-button`,
-      ),
-      file(`${DASHBOARD_ROUTES}/(app)/parts/+page.svelte`, `components/azuos-button/azuos-button`),
-      file(`${DASHBOARD_ROUTES}/+layout.svelte`, `components/azuos-shell/azuos-shell`),
-    ];
-
-    assert.deepEqual(run('feature-component-in-lib', files), []);
-  });
-
-  // feliz
-  /* Chamados é uma tela por contexto: o componente que as três usam é compartilhado. */
-  it('keeps components shared by the same screen of different contexts', () => {
-    const files = [
-      file(`${DASHBOARD_LIB}/azuos-ticket-list-view/azuos-ticket-list-view.svelte`),
-      ...['infra', 'system', 'maintenance'].map((context) =>
-        file(
-          `${DASHBOARD_ROUTES}/(app)/${context}/tickets/+page.svelte`,
-          `components/azuos-ticket-list-view/azuos-ticket-list-view`,
-        ),
-      ),
-    ];
-
-    assert.deepEqual(run('feature-component-in-lib', files), []);
-  });
-
-  // triste
-  /* Dentro de um contexto, a feature é a pasta de DENTRO: duas telas de `infra` são duas
-     features, e uma só continua sendo uma. */
-  it('names the feature by the folder inside the context', () => {
-    const files = [
-      file(`${DASHBOARD_LIB}/azuos-button/azuos-button.svelte`),
-      file(`${DASHBOARD_LIB}/azuos-usage-chart/azuos-usage-chart.svelte`),
-      file(
-        `${DASHBOARD_ROUTES}/(app)/infra/computers/[id]/+page.svelte`,
-        `components/azuos-usage-chart/azuos-usage-chart components/azuos-button/azuos-button`,
-      ),
-      file(
-        `${DASHBOARD_ROUTES}/(app)/infra/parts/+page.svelte`,
-        `components/azuos-button/azuos-button`,
-      ),
-    ];
-
-    assert.deepEqual(run('feature-component-in-lib', files), [
-      `${DASHBOARD_LIB}/azuos-usage-chart só usado por routes/infra/computers`,
-    ]);
-  });
-
-  // triste
-  it('follows the import chain in the agent app, without +page', () => {
-    const files = [
-      file(`${AGENT_LIB}/azuos-metric-tile/azuos-metric-tile.svelte`),
-      file(
-        `${AGENT_ROUTES}/dashboard/dashboard.svelte`,
-        `import M from '$lib/components/azuos-metric-tile/azuos-metric-tile.svelte';`,
-      ),
-    ];
-
-    assert.deepEqual(run('feature-component-in-lib', files), [
-      `${AGENT_LIB}/azuos-metric-tile só usado por routes/dashboard`,
-    ]);
-  });
-
-  // feliz
-  it('never lets a dashboard feature own an agent component with the same name', () => {
-    const files = [
-      file(`${DASHBOARD_LIB}/azuos-button/azuos-button.svelte`),
-      file(`${AGENT_LIB}/azuos-button/azuos-button.svelte`),
-      file(
-        `${DASHBOARD_ROUTES}/(app)/tickets/+page.svelte`,
-        `components/azuos-button/azuos-button`,
-      ),
-      // O agent nunca importa o próprio botão em nenhuma rota: sem dono, então não é "de feature".
-    ];
-
-    assert.deepEqual(run('feature-component-in-lib', files), [
-      `${DASHBOARD_LIB}/azuos-button só usado por routes/tickets`,
-    ]);
-  });
-
-  // feliz
-  it('ignores generic-by-design primitives with a single consumer, prefixed or not', () => {
-    const files = [
-      file(`${DASHBOARD_LIB}/radar-chart/radar-chart.svelte`),
-      file(`${DASHBOARD_LIB}/azuos-chart-legend/azuos-chart-legend.svelte`),
-      file(`${DASHBOARD_LIB}/azuos-dialog/azuos-dialog.ts`),
-      file(
-        `${DASHBOARD_ROUTES}/(app)/tickets/+page.svelte`,
-        `components/radar-chart/radar-chart components/azuos-chart-legend/azuos-chart-legend components/azuos-dialog/azuos-dialog`,
-      ),
-      file(`${AGENT_LIB}/azuos-separator/azuos-separator.svelte`),
-      file(
-        `${AGENT_ROUTES}/dashboard/dashboard.svelte`,
-        `components/azuos-separator/azuos-separator`,
-      ),
-    ];
-
-    assert.deepEqual(run('feature-component-in-lib', files), []);
-  });
-
-  // triste
-  it('still flags a domain component whose name only resembles a generic one', () => {
-    const files = [
-      file(`${DASHBOARD_LIB}/azuos-usage-chart/azuos-usage-chart.svelte`),
-      file(
-        `${DASHBOARD_ROUTES}/(app)/computers/+page.svelte`,
-        `components/azuos-usage-chart/azuos-usage-chart`,
-      ),
-    ];
-
-    assert.deepEqual(run('feature-component-in-lib', files), [
-      `${DASHBOARD_LIB}/azuos-usage-chart só usado por routes/computers`,
-    ]);
-  });
-});
-
-describe('hook-location', () => {
-  // feliz
-  it('accepts use-* folders and the CLI folder', () => {
-    const files = [
-      file(`${DASHBOARD_HOOKS}/use-ticket-list/use-ticket-list.svelte.ts`),
-      file(`${DASHBOARD_HOOKS}/ui/is-mobile.svelte.ts`),
-    ];
-
-    assert.deepEqual(run('hook-location', files), []);
-  });
-
-  // triste
-  it('flags loose files and folders without use-', () => {
-    const files = [
-      file(`${DASHBOARD_HOOKS}/use-mobile.svelte.ts`),
-      file(`${DASHBOARD_HOOKS}/mirror-store/mirror-store.svelte.ts`),
-    ];
-
-    assert.equal(run('hook-location', files).length, 2);
-  });
-
-  // feliz
-  it('has nothing to flag in the agent app, which has no lib/hooks', () => {
-    const files = [file(`${AGENT_LIB}/azuos-button/azuos-button.svelte`)];
-
-    assert.deepEqual(run('hook-location', files), []);
-  });
-});
-
-describe('lib-folder', () => {
-  // feliz
-  it('accepts the mapped folders in both apps', () => {
-    const files = [
-      file(`${DASHBOARD_LIB.replace('/components', '')}/components/x.svelte`),
-      file('chamados/agent/svelte/src/lib/components/x.svelte'),
-      file('chamados/agent/svelte/src/lib/utils/format.ts'),
-    ];
-
-    assert.deepEqual(run('lib-folder', files), []);
-  });
-
-  // triste
-  it('flags the agent debt: metrics and reporting are not in the map', () => {
-    const files = [
-      file('chamados/agent/svelte/src/lib/metrics/store.svelte.ts'),
-      file('chamados/agent/svelte/src/lib/reporting/client.ts'),
-    ];
-
-    assert.deepEqual(run('lib-folder', files).sort(), [
-      'chamados/agent/svelte/src/lib/metrics pasta fora do mapa',
-      'chamados/agent/svelte/src/lib/reporting pasta fora do mapa',
-    ]);
-  });
-});
-
-describe('class rules', () => {
-  const component = (content, lib = DASHBOARD_LIB) =>
-    file(`${lib}/azuos-card/azuos-card.svelte`, `<div class="${content}"></div>`);
-
-  // feliz
-  it('accepts role radius, tokens and the shadow scale', () => {
-    const files = [
-      component('rounded-surface border border-border bg-card text-ink-700 shadow-xs text-xs'),
-    ];
-
-    for (const rule of ['radius-by-role', 'raw-palette', 'arbitrary-font-size', 'shadow-scale']) {
-      assert.deepEqual(run(rule, files), [], rule);
-    }
-  });
-
-  // triste
-  it('flags size radius, raw palette, pixel fonts and off-scale shadows', () => {
-    const files = [component('rounded-lg text-neutral-400 text-[11px] shadow-md')];
-
-    assert.equal(run('radius-by-role', files).length, 1);
-    assert.equal(run('raw-palette', files).length, 1);
-    assert.equal(run('arbitrary-font-size', files).length, 1);
-    assert.equal(run('shadow-scale', files).length, 1);
-  });
-
-  // feliz
-  it('lets the mobile bottom drawer keep its shadow-2xl', () => {
-    const files = [
-      file(
-        `${DASHBOARD_LIB}/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte`,
-        `<div class="rounded-t-3xl shadow-2xl"></div>`,
-      ),
-    ];
-
-    assert.deepEqual(run('shadow-scale', files), []);
-  });
-
-  // triste
-  it('flags shadow-2xl anywhere else', () => {
-    assert.equal(run('shadow-scale', [component('shadow-2xl')]).length, 1);
-  });
-
-  // triste
-  it('flags the same violations in the agent app', () => {
-    const files = [component('rounded-2xl text-neutral-400', AGENT_LIB)];
-
-    assert.equal(run('radius-by-role', files).length, 1);
-    assert.equal(run('raw-palette', files).length, 1);
-  });
-
-  // feliz
-  it('ignores the shadcn CLI folder, in either app', () => {
-    const files = [
-      file(
-        `${DASHBOARD_LIB}/ui/card/card.svelte`,
-        '<div class="rounded-2xl text-neutral-400"></div>',
-      ),
-      file(`${AGENT_LIB}/ui/card/card.svelte`, '<div class="rounded-2xl text-neutral-400"></div>'),
-    ];
-
-    assert.deepEqual(run('radius-by-role', files), []);
-    assert.deepEqual(run('raw-palette', files), []);
-  });
-});
-
-describe('route rules', () => {
-  // triste
-  it('flags raw interactive markup and control height in a dashboard route', () => {
-    const files = [
-      file(`${DASHBOARD_ROUTES}/(app)/tickets/+page.svelte`, '<button class="h-8">x</button>'),
-    ];
-
-    assert.equal(run('route-markup', files).length, 1);
-    assert.equal(run('route-height', files).length, 1);
-  });
-
-  // triste
-  it('flags the same in an agent route, which has no +page', () => {
-    const files = [file(`${AGENT_ROUTES}/dashboard/dashboard.svelte`, '<input class="h-9" />')];
-
-    assert.equal(run('route-markup', files).length, 1);
-    assert.equal(run('route-height', files).length, 1);
-  });
-
-  // feliz
-  it('leaves a component file alone, even inside routes/', () => {
-    const files = [
-      file(
-        `${DASHBOARD_ROUTES}/(app)/tickets/components/azuos-x/azuos-x.svelte`,
-        '<button class="h-8">x</button>',
-      ),
-    ];
-
-    assert.deepEqual(run('route-markup', files), []);
-  });
-
-  // triste
-  it('flags a feature importing another feature component', () => {
-    const files = [
-      file(
-        `${DASHBOARD_ROUTES}/(app)/tickets/+page.svelte`,
-        `import X from '../tickets/components/azuos-x/azuos-x.svelte';`,
-      ),
-    ];
-
-    assert.equal(run('cross-feature-import', files).length, 1);
-  });
-});
-
-describe('storage-folder-language', () => {
-  // triste
-  it('flags pt-BR bucket folders', () => {
-    const files = [
-      file(
-        'chamados/dashboard/server/src/modules/tickets/service/x.service.ts',
-        "const FOLDER = 'chamados-anexos';",
-      ),
-    ];
-
-    assert.equal(run('storage-folder-language', files).length, 1);
-  });
-
-  // feliz
-  it('accepts English folders', () => {
-    const files = [
-      file(
-        'chamados/dashboard/server/src/modules/tickets/service/x.service.ts',
-        "const FOLDER = 'ticket-attachments';",
-      ),
-    ];
-
-    assert.deepEqual(run('storage-folder-language', files), []);
-  });
-});
-
-describe('doc-file-name', () => {
-  // triste
-  it('flags a doc file name outside kebab-case, anywhere under chamados/', () => {
-    const files = [file('chamados/agent/docs/ARQUITETURA.md')];
-
-    assert.equal(run('doc-file-name', files).length, 1);
-  });
-
-  // feliz
-  it('accepts a kebab-case doc file name', () => {
-    const files = [file('chamados/agent/docs/architecture.md')];
-
-    assert.deepEqual(run('doc-file-name', files), []);
-  });
-});
-
-describe('baseline', () => {
-  const violation = { rule: 'raw-palette', file: 'a.svelte', detail: 'text-neutral-400' };
-
-  // feliz
-  it('passes when nothing exceeds the baseline', () => {
-    const result = compareWithBaseline([violation], countByKey([violation]));
-
-    assert.deepEqual(result, { added: [], fixed: [] });
-  });
-
-  // triste
-  it('fails on a new occurrence even of a known key', () => {
-    const result = compareWithBaseline([violation, violation], countByKey([violation]));
-
-    assert.equal(result.added.length, 1);
-  });
-
-  // feliz
-  it('reports debt that was paid', () => {
-    const result = compareWithBaseline([], countByKey([violation]));
-
-    assert.deepEqual(result.fixed, ['raw-palette|a.svelte|text-neutral-400']);
-  });
-});
-
-describe('violationsTouching', () => {
-  const inFolder = { rule: 'component-prefix', file: `${DASHBOARD_LIB}/text-field`, detail: 'x' };
-  const elsewhere = {
-    rule: 'raw-palette',
-    file: `${DASHBOARD_LIB}/azuos-card/azuos-card.svelte`,
-    detail: 'x',
-  };
-
-  // feliz
-  it('matches the violation file itself', () => {
-    assert.deepEqual(
-      violationsTouching([elsewhere], `${DASHBOARD_LIB}/azuos-card/azuos-card.svelte`),
-      [elsewhere],
-    );
-  });
-
-  // feliz
-  it('matches a file inside the violation folder (component-prefix is keyed on the folder)', () => {
-    assert.deepEqual(
-      violationsTouching([inFolder], `${DASHBOARD_LIB}/text-field/text-field.svelte`),
-      [inFolder],
-    );
-  });
-
-  // triste
-  it('ignores violations from unrelated files', () => {
-    assert.deepEqual(violationsTouching([elsewhere], `${DASHBOARD_LIB}/other/other.svelte`), []);
-  });
-});
-
-describe('colored-border (regra do grupo)', () => {
-  // triste
-  it('refuses a colored border, a side stripe, a selection ring and a red invalid border', () => {
-    const found = run('colored-border', [
-      file(
-        `${DASHBOARD_LIB}/azuos-x/azuos-x.svelte`,
-        [
-          '<div class="rounded-surface border border-destructive/40 bg-card"></div>',
-          '<div class="border-l-4 border-l-warning"></div>',
-          '<div class="ring-2 ring-primary"></div>',
-          '<input class="aria-invalid:border-destructive" />',
-        ].join('\n'),
-      ),
-    ]).join('\n');
-
-    for (const detail of ['border-destructive/40', 'border-l-warning', 'ring-primary', 'aria-invalid:border-destructive'])
-      assert.ok(found.includes(detail), detail);
-  });
-
-  // feliz
-  it('lets the focus ring, neutral borders, spinners and comments through', () => {
-    assert.deepEqual(
-      run('colored-border', [
-        file(
-          `${DASHBOARD_LIB}/azuos-x/azuos-x.svelte`,
-          [
-            '<button class="border border-border focus-visible:ring-2 focus-visible:ring-ring/50"></button>',
-            '<div class="bg-destructive-soft text-ink-900"></div>',
-            '<span class="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>',
-            '<!-- antes era border-l-4 border-l-warning -->',
-          ].join('\n'),
-        ),
-      ]),
-      [],
-    );
-  });
-});
-
-describe('native-select (regra do grupo)', () => {
-  // triste
-  it('refuses the HTML select', () => {
-    assert.equal(run('native-select', [file(`${DASHBOARD_LIB}/azuos-x/azuos-x.svelte`, '<select {value}><option></option></select>')]).length, 1);
-  });
-
-  // feliz
-  it('lets a comment about select through', () => {
-    assert.deepEqual(run('native-select', [file(`${DASHBOARD_LIB}/azuos-x/azuos-x.svelte`, '<!-- nunca o <select> nativo -->')]), []);
-  });
+describe("regras de marca estendidas (Azuos 2.0)", () => {
+	it("no-gradients-or-glass: bloqueia gradientes e blur, aprova superfícies sólidas", () => {
+		const bad1 = rulesFor('<div className="bg-gradient-to-r from-primary to-accent" />', "src/x.tsx");
+		assert.ok(bad1.includes("brand/no-gradients-or-glass"));
+
+		const bad2 = rulesFor('<div className="backdrop-blur-md bg-card/80" />', "src/x.tsx");
+		assert.ok(bad2.includes("brand/no-gradients-or-glass"));
+
+		const good = rulesFor('<div className="bg-card text-foreground" />', "src/x.tsx");
+		assert.ok(!good.includes("brand/no-gradients-or-glass"));
+	});
+
+	it("static-zuzu: bloqueia animações no mascote Zuzu", () => {
+		const bad = rulesFor('<img src="/zuzu.png" alt="Zuzu mascote" className="animate-bounce" />', "src/x.tsx");
+		assert.ok(bad.includes("brand/static-zuzu"));
+
+		const good = rulesFor('<img src="/zuzu.png" alt="Zuzu mascote" className="size-8" />', "src/x.tsx");
+		assert.ok(!good.includes("brand/static-zuzu"));
+	});
+
+	it("canonical-back-button: bloqueia botão de voltar manual fora do AzuosBackButton", () => {
+		const bad = rulesFor('<button type="button">Voltar para empresas</button>', "src/x.tsx");
+		assert.ok(bad.includes("brand/canonical-back-button"));
+
+		const good = rulesFor('<button type="button" data-slot="azuos-back-button">Voltar para empresas</button>', "src/x.tsx");
+		assert.ok(!good.includes("brand/canonical-back-button"));
+	});
+
+	it("solid-inputs: bloqueia inputs com bg-transparent", () => {
+		const bad = rulesFor('<input type="text" className="bg-transparent border" />', "src/features/login.tsx");
+		assert.ok(bad.includes("brand/solid-inputs"));
+
+		const good = rulesFor('<input type="text" className="bg-muted border" />', "src/features/login.tsx");
+		assert.ok(!good.includes("brand/solid-inputs"));
+	});
+
+	it("no-card-opacity: bloqueia classes de opacidade e transparência em cards", () => {
+		const bad1 = rulesFor('<div className="bg-card/80 p-4" data-slot="card" />', "src/components/my-card.tsx");
+		assert.ok(bad1.includes("brand/no-card-opacity"));
+
+		const bad2 = rulesFor('<div className="bg-primary opacity-60 p-4" data-slot="azuos-hero-card" />', "src/components/my-card.tsx");
+		assert.ok(bad2.includes("brand/no-card-opacity"));
+
+		const good = rulesFor('<div className="bg-card text-card-foreground p-4" data-slot="card" />', "src/components/my-card.tsx");
+		assert.ok(!good.includes("brand/no-card-opacity"));
+
+		const heroWatermark = rulesFor('<div data-slot="hero-card-icon" className="opacity-15 text-primary-foreground" />', "src/components/azuos-hero-card.component.tsx");
+		assert.ok(!heroWatermark.includes("brand/no-card-opacity"));
+	});
+
+	it("dual-file-actions: exige download e hyperlink em componentes de arquivo", () => {
+		const onlyDownload = rulesFor('<a href="/file" download="doc.pdf">Baixar</a>', "src/lib/components/azuos-file-links.tsx");
+		assert.ok(onlyDownload.includes("brand/dual-file-actions"));
+
+		const complete = rulesFor(
+			'<a href="/file" target="_blank" rel="noopener noreferrer">Abrir</a><a href="/file" download="doc.pdf">Baixar</a>',
+			"src/lib/components/azuos-file-links.tsx"
+		);
+		assert.ok(!complete.includes("brand/dual-file-actions"));
+	});
+
+	it("paste-file-attachment: exige onPaste (Ctrl+V) em campos de upload/anexo", () => {
+		const noPaste = rulesFor('<div className="dropzone"><input type="file" /></div>', "src/lib/components/azuos-attachment-picker.tsx");
+		assert.ok(noPaste.includes("brand/paste-file-attachment"));
+
+		const withPaste = rulesFor('<div className="dropzone" onPaste={handlePaste}><input type="file" /></div>', "src/lib/components/azuos-attachment-picker.tsx");
+		assert.ok(!withPaste.includes("brand/paste-file-attachment"));
+
+		const anyName = rulesFor('<div><button>Anexar</button><input type="file" /></div>', "src/routes/employees/components/azuos-employee-card.component.tsx");
+		assert.ok(anyName.includes("brand/paste-file-attachment"));
+
+		const withUtil = rulesFor('<div onPaste={pasteFilesIntoInput}><input type="file" /></div>', "src/routes/employees/components/azuos-employee-card.component.tsx");
+		assert.ok(!withUtil.includes("brand/paste-file-attachment"));
+	});
 });

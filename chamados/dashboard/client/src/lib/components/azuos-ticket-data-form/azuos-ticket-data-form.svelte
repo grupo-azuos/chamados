@@ -215,7 +215,7 @@
   <!-- ÁREAS PARTICIPANTES (#13) — além da área original, de cima. Ex.: um chamado de Infra que
        também precisa de Manutenção. Mudança própria, fora do envio do formulário: adiciona e
        remove na hora, sem esperar o resto ser salvo. -->
-  <div class="border-border/70 flex flex-col gap-3 border-t pt-4">
+  <div class="border-border flex flex-col gap-3 border-t pt-4">
     <div>
       <p class="text-ink-700 text-sm font-medium">Áreas participantes</p>
       <p class="text-muted-foreground text-xs">Outras áreas que também atendem este chamado.</p>
@@ -223,13 +223,13 @@
 
     <!-- AS QUE JÁ PARTICIPAM: uma pastilha cheia cada, com o X dentro dela. -->
     {#if data.ticket.participantAreas.length === 0}
-      <p class="text-muted-foreground/70 text-xs">Nenhuma área participante ainda.</p>
+      <p class="text-muted-foreground text-xs">Nenhuma área participante ainda.</p>
     {:else}
       <ul class="flex flex-wrap items-center gap-1.5">
         {#each data.ticket.participantAreas as area (area)}
           <li
             class={cn(
-              'bg-primary/15 text-primary inline-flex items-center gap-1 rounded-full py-1 pr-1 pl-3 text-xs font-semibold',
+              'bg-muted text-primary inline-flex items-center gap-1 rounded-full py-1 pr-1 pl-3 text-xs font-semibold',
               formState?.removingAreaArea === area && 'opacity-60',
             )}
           >
@@ -239,7 +239,7 @@
               onclick={() => actions.onRemoveParticipantArea(area)}
               disabled={formState?.removingAreaArea === area}
               aria-label={`Remover ${ticketAreaLabel(area)} do chamado`}
-              class="hover:bg-primary/20 flex size-5 cursor-pointer items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
+              class="hover:bg-muted flex size-5 cursor-pointer items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
             >
               <XIcon class="size-3" aria-hidden="true" />
             </button>

@@ -1,5 +1,5 @@
 ---
-description: Atalho em português para a skill `new-feature`. Constrói uma funcionalidade inteira de ponta a ponta no padrão do projeto — contrato Zod em shared, tabela Drizzle/Postgres e migration, módulo NestJS com policy e Swagger, seed, API client, hook de estado, telas com stories, rota, menu e testes. Use quando a pessoa pede para cadastrar, listar, editar ou acompanhar alguma coisa nova ("quero cadastrar clientes", "preciso de uma tela de pedidos").
+description: Atalho em português para a skill `new-feature`. Constrói uma funcionalidade inteira de ponta a ponta no padrão do projeto — contrato Zod em shared, tabela Drizzle/SQLite e migration, módulo NestJS com policy e Swagger, seed, API client, view-model, telas com stories, rota, menu e testes. Use quando a pessoa pede para cadastrar, listar, editar ou acompanhar alguma coisa nova ("quero cadastrar clientes", "preciso de uma tela de pedidos").
 disable-model-invocation: true
 ---
 

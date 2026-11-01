@@ -135,7 +135,7 @@
           aria-describedby={ariaDescribedBy}
           variant="outline"
           class={cn(
-            "w-full justify-start text-left font-normal h-10 px-3.5 rounded-control border-border bg-card hover:bg-accent/40 shadow-xs transition-colors",
+            "w-full justify-start text-left font-normal h-10 px-3.5 rounded-control border-border bg-card hover:bg-muted shadow-xs transition-colors",
             !internalDate && "text-muted-foreground"
           )}
           {disabled}

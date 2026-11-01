@@ -1,0 +1,70 @@
+{
+  "brand": "Azuos",
+  "skill": "brand-design",
+  "scan": {
+    "dirs": [
+      "chamados/dashboard/client/src"
+    ],
+    "extensions": [
+      ".svelte",
+      ".tsx",
+      ".jsx",
+      ".vue",
+      ".astro",
+      ".html",
+      ".css"
+    ],
+    "tokenFiles": [
+      "tokens.css",
+      "tailwind.css",
+      "theme.css"
+    ],
+    "ignore": [
+      "node_modules",
+      ".svelte-kit",
+      "dist/",
+      "build/",
+      "/components/ui/",
+      ".test.",
+      ".stories."
+    ]
+  },
+  "brandRules": {
+    "tokensOnly": true,
+    "noPureBlackWhite": true,
+    "noArbitraryValues": true,
+    "noGradientsOrGlass": true,
+    "noCardOpacity": true,
+    "staticZuzu": true,
+    "canonicalBackButton": true,
+    "solidInputs": true
+  },
+  "laws": {
+    "hick": {
+      "enabled": true,
+      "maxNavItems": 7,
+      "maxSelectOptions": 15
+    },
+    "fitts": {
+      "enabled": true,
+      "minTargetPx": 40
+    },
+    "jakob": {
+      "enabled": true
+    },
+    "miller": {
+      "enabled": true,
+      "maxUngroupedFields": 7
+    },
+    "vonRestorff": {
+      "enabled": true,
+      "maxPrimaryActions": 1
+    },
+    "uniformConnectedness": {
+      "enabled": true
+    },
+    "tesler": {
+      "enabled": true
+    }
+  }
+}
