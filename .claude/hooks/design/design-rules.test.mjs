@@ -140,7 +140,17 @@ describe("ignore comments and config", () => {
 	it("honours design-ignore-next-line", () => {
 		assert.deepEqual(rulesFor("<!-- design-ignore-next-line fitts/target-size: ícone -->\n<button type=\"button\" class=\"h-6\">x</button>"), []);
 	});
-	it("honours design-ignore-file", () => assert.deepEqual(rulesFor("<!-- design-ignore-file -->\n<div class=\"bg-black\"></div>"), []));
+	it("honours design-ignore-file for everything but colour", () => assert.deepEqual(rulesFor("<!-- design-ignore-file -->\n<button type=\"button\" class=\"h-6\">x</button>"), []));
+	it("does not take a short number reference like '#104' for a colour", () => {
+		assert.deepEqual(rulesFor("const pr = { externalId: '#104', title: 'PR #2026' };"), []);
+		assert.deepEqual(rulesFor("const c = '#1a4';"), ["brand/tokens-only"]);
+	});
+	// triste: cor não se cala — nem por linha, nem por arquivo.
+	it("never silences the colour rules", () => {
+		assert.deepEqual(rulesFor("<!-- design-ignore-file -->\n<div class=\"bg-black\"></div>"), ["brand/no-pure-black-white"]);
+		assert.deepEqual(rulesFor("// design-ignore-next-line brand/tokens-only: gradiente\nconst HEAT = ['#fde68a'];"), ["brand/tokens-only"]);
+		assert.deepEqual(rulesFor("// design-ignore-next-line\nconst c = 'bg-violet-600';"), ["brand/tokens-only"]);
+	});
 	it("skips disabled laws", () => {
 		const off = {
 			...config,

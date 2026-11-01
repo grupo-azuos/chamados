@@ -15,6 +15,9 @@
  *   <!-- design-ignore-next-line fitts/target-size: ícone dentro de um alvo de 40px -->
  *   // design-ignore-next-line
  * Ou `design-ignore-file` em qualquer lugar do arquivo.
+ *
+ * EXCEÇÃO: as regras de COR (`brand/tokens-only`, `brand/no-pure-black-white`) não se silenciam
+ * de jeito nenhum. Toda cor vem do `tokens.css`; cor nova entra lá, e nunca no componente.
  */
 /* ------------------------------------------------------------------ utilitários */
 /** Apaga comentários HTML e de bloco, mantendo as quebras de linha (os números de linha batem). */
@@ -97,6 +100,8 @@ function isColorHex(code, index, hex) {
 		6,
 		8
 	].includes(hex.length)) return false;
+	/* `#104`, `#2026`: número de PR, de protocolo, de chamado — não é cor. Cor curta de verdade tem letra. */
+	if (hex.length <= 4 && /^\d+$/.test(hex)) return false;
 	const before = code.slice(Math.max(0, index - 6), index);
 	if (/[\w&]$/.test(before)) return false;
 	return !/(?:href=["']?|url\(\s*["']?|id=["']?)$/.test(before);
@@ -648,6 +653,8 @@ export function isInScope(path, config) {
 	if (!config.scan.extensions.some((ext) => p.endsWith(ext))) return false;
 	return config.scan.dirs.some((dir) => dir === "." || p === dir || p.startsWith(`${normalize(dir).replace(/\/$/, "")}/`));
 }
+/** As regras que NENHUM `design-ignore` cala: cor é só por token, sem exceção por arquivo. */
+export const UNSILENCEABLE_RULES = new Set(["brand/tokens-only", "brand/no-pure-black-white"]);
 /** Linhas com `design-ignore-next-line [regra…]` silenciam a linha de baixo. */
 function ignoredLines(content) {
 	const ignored = new Map();
@@ -660,14 +667,14 @@ function ignoredLines(content) {
 	return ignored;
 }
 export function checkSource(path, content, config) {
-	if (content.includes("design-ignore-file")) return [];
+	const ignoreFile = content.includes("design-ignore-file");
 	const file = {
 		path: normalize(path),
 		code: stripComments(content),
 		isTokenFile: isTokenFile(path, config)
 	};
 	const ignored = ignoredLines(content);
-	return RULES.filter((rule) => rule.enabled(config)).flatMap((rule) => rule.check(file, config).map((f) => ({
+	return RULES.filter((rule) => rule.enabled(config) && (!ignoreFile || UNSILENCEABLE_RULES.has(rule.id))).flatMap((rule) => rule.check(file, config).map((f) => ({
 		rule: rule.id,
 		law: rule.law,
 		severity: rule.severity,
@@ -675,6 +682,7 @@ export function checkSource(path, content, config) {
 		message: f.message,
 		hint: f.hint ?? rule.hint
 	}))).filter((v) => {
+		if (UNSILENCEABLE_RULES.has(v.rule)) return true;
 		const skip = ignored.get(v.line);
 		return !skip || skip !== "all" && !skip.includes(v.rule);
 	}).sort((a, b) => a.line - b.line);

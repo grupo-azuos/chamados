@@ -6,6 +6,7 @@
       "chamados/dashboard/client/src"
     ],
     "extensions": [
+      ".ts",
       ".svelte",
       ".tsx",
       ".jsx",
@@ -25,8 +26,7 @@
       "dist/",
       "build/",
       "/components/ui/",
-      ".test.",
-      ".stories."
+      ".test."
     ]
   },
   "brandRules": {

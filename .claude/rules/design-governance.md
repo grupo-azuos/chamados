@@ -51,3 +51,10 @@ Todo código gerado ou modificado nos 14 sistemas do Grupo Azuos DEVE seguir est
 ## 12. Upload e Anexo com Suporte Universal a Ctrl+V (Área de Transferência)
 - Todo local ou componente de anexar arquivo (`<AzuosAttachmentPicker>`, campos de upload e dropzones) DEVE obrigatoriamente aceitar colar arquivos via `Ctrl+V` (captura direta de imagens/prints e arquivos do clipboard).
 - Ao colar, os arquivos da área de transferência são adicionados à seleção, respeitando limites de quantidade e tamanho configurados.
+
+## 13. Cor Só do `tokens.css` (Zero Cor Fixa)
+- Toda cor de tela vem de um token do `lib/theme/tokens.css` (`bg-primary`, `text-muted-foreground`, `var(--chart-1)`…). É proibida qualquer cor fixa: paleta padrão do Tailwind (`text-gray-500`, `bg-blue-600`, `bg-emerald-50`…), hex/rgb/hsl escritos no código, e `black`/`white` puros.
+- Vale para TODO arquivo de tela e de lógica de tela (`.tsx`, `.svelte`, `.ts`, `.css`, histórias): mapa de cor de gráfico, paleta sugerida, tema do ECharts e cor "de reserva" leem o `tokens.css` por `theme-color.util` (`themeColor('--chart-1')`), nunca por hex.
+- As regras `brand/tokens-only` e `brand/no-pure-black-white` são erro e NÃO aceitam `design-ignore-next-line` nem `design-ignore-file`. Cor nova entra primeiro no `tokens.css` do `template`, e só depois nos sistemas.
+- Os `text-white`/`bg-black` dos primitivos do shadcn (`lib/components/ui/`, que não se editam) resolvem para os tokens `--white`/`--black` da marca, remapeados no `@theme` do `tokens.css`.
+
