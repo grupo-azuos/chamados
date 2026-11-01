@@ -305,7 +305,9 @@
 
   --color-crust: var(--crust);
   --color-mantle: var(--mantle);
-  --color-base: var(--base);
+  /* `--base` NÃO vira `--color-base` de propósito: com ele, o Tailwind passava a ler `text-base`
+     (o TAMANHO de fonte) como COR — e todo texto `text-base` ficava quase branco no claro e quase
+     preto no escuro. A superfície "base" é `bg-background`. */
   --color-surface: var(--surface);
   --color-subtext: var(--subtext);
 

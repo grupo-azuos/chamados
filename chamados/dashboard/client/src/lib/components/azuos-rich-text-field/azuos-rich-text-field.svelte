@@ -37,7 +37,7 @@
   /** A dica em tom de erro é ÂMBAR, e não vermelha: ela avisa, mas não trava o envio. */
   export const HINT_TONES: Record<AzuosRichTextFieldHint['tone'], string> = {
     neutral: 'text-ink-500',
-    calculated: 'text-brand-blue-800',
+    calculated: 'text-brand-blue-800 dark:text-foreground',
     error: 'text-warning',
   };
 

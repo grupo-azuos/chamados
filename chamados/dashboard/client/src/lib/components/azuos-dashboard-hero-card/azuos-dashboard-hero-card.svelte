@@ -49,12 +49,12 @@
     AzuosDashboardHeroCardStatTone,
     { value: string; icon: string; label: string }
   > = {
-    default: { value: 'text-primary-foreground', icon: 'text-primary-foreground/80', label: 'text-primary-foreground/80' },
-    danger: { value: 'text-primary-foreground', icon: 'text-primary-foreground/80', label: 'text-primary-foreground/80' },
+    default: { value: 'text-on-dark', icon: 'text-on-dark/80', label: 'text-on-dark/80' },
+    danger: { value: 'text-on-dark', icon: 'text-on-dark/80', label: 'text-on-dark/80' },
     warning: { value: 'text-accent-hero', icon: 'text-accent-hero', label: 'text-accent-hero' },
-    info: { value: 'text-primary-foreground', icon: 'text-primary-foreground/80', label: 'text-primary-foreground/80' },
-    success: { value: 'text-primary-foreground', icon: 'text-primary-foreground/80', label: 'text-primary-foreground/80' },
-    brand: { value: 'text-primary-foreground', icon: 'text-primary-foreground/80', label: 'text-primary-foreground' },
+    info: { value: 'text-on-dark', icon: 'text-on-dark/80', label: 'text-on-dark/80' },
+    success: { value: 'text-on-dark', icon: 'text-on-dark/80', label: 'text-on-dark/80' },
+    brand: { value: 'text-on-dark', icon: 'text-on-dark/80', label: 'text-on-dark' },
   };
 </script>
 
@@ -88,7 +88,7 @@
   </div>
   <strong class={cn('mt-2.5 block text-3xl font-bold tabular-nums', styles.value)}>{stat.value}</strong>
   {#if stat.hint}
-    <span class="text-primary-foreground/80 mt-1 block text-xs">{stat.hint}</span>
+    <span class="text-on-dark/80 mt-1 block text-xs">{stat.hint}</span>
   {/if}
 {/snippet}
 
@@ -97,7 +97,7 @@
   aria-label={data.eyebrow ?? data.title}
   data-slot="azuos-dashboard-hero-card"
   class={cn(
-    'rounded-surface shadow-card bg-brand-blue-900 text-primary-foreground relative flex w-full flex-col gap-6 overflow-hidden p-6 sm:p-7',
+    'rounded-surface shadow-card bg-brand-blue-900 text-on-dark relative flex w-full flex-col gap-6 overflow-hidden p-6 sm:p-7',
     ui?.className,
   )}
 >
@@ -107,10 +107,10 @@
         <EyebrowIcon class="text-accent-hero size-[18px] shrink-0" aria-hidden="true" />
       {/if}
       {#if data.eyebrow}
-        <span class="text-primary-foreground">{data.eyebrow}</span>
+        <span class="text-on-dark">{data.eyebrow}</span>
       {/if}
       {#if data.timestamp}
-        <span class="text-primary-foreground/80 font-normal tracking-normal normal-case">— {data.timestamp}</span>
+        <span class="text-on-dark/80 font-normal tracking-normal normal-case">— {data.timestamp}</span>
       {/if}
     </div>
   {/if}
@@ -120,11 +120,11 @@
       <Zuzu data={{ pose: data.zuzu?.pose ?? 'alert' }} ui={{ size: data.zuzu?.size ?? 128 }} />
     </div>
     <div class="flex min-h-[120px] min-w-0 flex-1 flex-col justify-center gap-2 text-center sm:text-left">
-      <h2 class="text-primary-foreground text-xl leading-snug font-bold tracking-tight sm:text-2xl">
+      <h2 class="text-on-dark text-xl leading-snug font-bold tracking-tight sm:text-2xl">
         {data.title}
       </h2>
       {#if data.description}
-        <p class="text-primary-foreground/80 text-sm leading-relaxed font-normal sm:text-base">
+        <p class="text-on-dark/80 text-sm leading-relaxed font-normal sm:text-base">
           {data.description}
         </p>
       {/if}

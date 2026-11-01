@@ -45,12 +45,22 @@
 
   /** Selecionado: o fundo na cor CHEIA do tom, com o texto claro por cima — nunca um contorno. */
   const TONE_SELECTED: Record<StatCardTone, string> = {
-    brand: 'bg-primary',
-    neutral: 'bg-muted-foreground',
-    success: 'bg-success',
-    warning: 'bg-warning',
-    danger: 'bg-destructive',
-    info: 'bg-info',
+    brand: 'bg-primary text-primary-foreground',
+    neutral: 'bg-muted-foreground text-background',
+    success: 'bg-success text-success-foreground',
+    warning: 'bg-warning text-warning-foreground',
+    danger: 'bg-destructive text-destructive-foreground',
+    info: 'bg-info text-info-foreground',
+  };
+
+  /** O chip do ícone no cartão selecionado: o inverso do fundo, com o ícone na cor do tom. */
+  const TONE_ICON_SELECTED: Record<StatCardTone, string> = {
+    brand: 'bg-primary-foreground text-primary',
+    neutral: 'bg-background text-foreground',
+    success: 'bg-success-foreground text-success',
+    warning: 'bg-warning-foreground text-warning',
+    danger: 'bg-destructive-foreground text-destructive',
+    info: 'bg-info-foreground text-info',
   };
 
   const TONE_LABEL: Record<StatCardTone, string> = {
@@ -96,7 +106,7 @@
   const Icon = $derived(ui?.icon);
   const isClickable = $derived(Boolean(actions?.onClick));
   const labelClass = $derived(
-    cn('text-xs font-semibold tracking-wider uppercase', TONE_LABEL[tone]),
+    cn('text-xs font-semibold tracking-wider uppercase', cardState?.isSelected ? 'text-current' : TONE_LABEL[tone]),
   );
   let isTooltipOpen = $state(false);
 </script>
@@ -142,7 +152,7 @@
        botões em volta. */
     'rounded-surface py-4 pr-4 pl-5 transition-all shadow-xs',
     cardState?.isSelected
-      ? cn(TONE_SELECTED[tone], 'text-primary-foreground **:text-primary-foreground')
+      ? TONE_SELECTED[tone]
       : TONE_CARD[tone],
     /* Clicável: sobe um pouco no hover, para avisar que responde ao clique. Selecionado: o
        fundo na cor cheia do tom (acima), nunca um contorno. */
@@ -168,7 +178,10 @@
   {#if Icon}
     <div class="mb-2 flex items-center gap-2.5">
       <span
-        class={cn('flex size-8 shrink-0 items-center justify-center rounded-chip', TONE_ICON[tone])}
+        class={cn(
+          'flex size-8 shrink-0 items-center justify-center rounded-chip',
+          cardState?.isSelected ? TONE_ICON_SELECTED[tone] : TONE_ICON[tone],
+        )}
       >
         <Icon size={15} aria-hidden="true" />
       </span>
@@ -186,14 +199,14 @@
         class={cn(
           'font-bold tabular-nums',
           ui?.size === 'lg' ? 'text-4xl' : 'text-3xl font-semibold tracking-tight',
-          TONE_VALUE[tone],
+          cardState?.isSelected ? 'text-current' : TONE_VALUE[tone],
         )}
       >
         {data.value}
       </p>
 
       {#if data.hint}
-        <p class={cn('text-xs mt-0.5', TONE_LABEL[tone])}>{data.hint}</p>
+        <p class={cn('text-xs mt-0.5', cardState?.isSelected ? 'text-current' : TONE_LABEL[tone])}>{data.hint}</p>
       {/if}
     </div>
   {/if}
