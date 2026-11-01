@@ -49,12 +49,12 @@
     AzuosDashboardHeroCardStatTone,
     { value: string; icon: string; label: string }
   > = {
-    default: { value: 'text-primary-foreground', icon: 'text-primary-soft', label: 'text-primary-soft' },
-    danger: { value: 'text-destructive-soft', icon: 'text-destructive-soft', label: 'text-destructive-soft' },
+    default: { value: 'text-primary-foreground', icon: 'text-primary-foreground/80', label: 'text-primary-foreground/80' },
+    danger: { value: 'text-primary-foreground', icon: 'text-primary-foreground/80', label: 'text-primary-foreground/80' },
     warning: { value: 'text-accent-hero', icon: 'text-accent-hero', label: 'text-accent-hero' },
-    info: { value: 'text-info-soft', icon: 'text-info-soft', label: 'text-info-soft' },
-    success: { value: 'text-success-soft', icon: 'text-success-soft', label: 'text-success-soft' },
-    brand: { value: 'text-primary-foreground', icon: 'text-primary-soft', label: 'text-primary-foreground' },
+    info: { value: 'text-primary-foreground', icon: 'text-primary-foreground/80', label: 'text-primary-foreground/80' },
+    success: { value: 'text-primary-foreground', icon: 'text-primary-foreground/80', label: 'text-primary-foreground/80' },
+    brand: { value: 'text-primary-foreground', icon: 'text-primary-foreground/80', label: 'text-primary-foreground' },
   };
 </script>
 
@@ -88,7 +88,7 @@
   </div>
   <strong class={cn('mt-2.5 block text-3xl font-bold tabular-nums', styles.value)}>{stat.value}</strong>
   {#if stat.hint}
-    <span class="text-primary-soft mt-1 block text-xs">{stat.hint}</span>
+    <span class="text-primary-foreground/80 mt-1 block text-xs">{stat.hint}</span>
   {/if}
 {/snippet}
 
@@ -110,7 +110,7 @@
         <span class="text-primary-foreground">{data.eyebrow}</span>
       {/if}
       {#if data.timestamp}
-        <span class="text-primary-soft font-normal tracking-normal normal-case">— {data.timestamp}</span>
+        <span class="text-primary-foreground/80 font-normal tracking-normal normal-case">— {data.timestamp}</span>
       {/if}
     </div>
   {/if}
@@ -124,7 +124,7 @@
         {data.title}
       </h2>
       {#if data.description}
-        <p class="text-primary-soft text-sm leading-relaxed font-normal sm:text-base">
+        <p class="text-primary-foreground/80 text-sm leading-relaxed font-normal sm:text-base">
           {data.description}
         </p>
       {/if}

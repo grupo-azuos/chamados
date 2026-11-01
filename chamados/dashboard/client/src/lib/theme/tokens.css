@@ -134,6 +134,20 @@
   --ring: var(--brand-blue-600);
   --destructive-foreground: #f8fafc;
 
+  /* Texto sobre cada cor forte. No claro as cores são escuras e o texto é claro; no escuro elas
+     sobem para o tom pastel e o texto desce para escuro — por isso cada tom tem o seu. */
+  --success-foreground: #f8fafc;
+  --warning-foreground: #f8fafc;
+  --info-foreground: #f8fafc;
+
+  /* O "preto" e o "branco" da marca: nunca puros. São o que `bg-black`/`text-white` dos
+     primitivos do shadcn (`lib/components/ui/`, que não se editam) passam a usar, pelo `@theme`
+     lá embaixo. Iguais nos dois temas de propósito: véu de diálogo e fundo de recorte de foto
+     ficam escuros no claro e no escuro. */
+  --black: #111827;
+  --white: #f8fafc;
+  --backdrop: var(--black);
+
   /**
    * ---- O ACENTO DE DESTAQUE ----
    *
@@ -202,22 +216,32 @@
  * existe cor que só valha no escuro — que é como uma tela nasce ilegível em um dos dois.
  */
 :root[data-theme='dark'] {
+  /* A escala `ink` é a cor de TEXTO fixa usada nas telas (`text-ink-900`, `text-ink-500`…). No
+     escuro ela vira do avesso — o 900 é o texto principal, então passa a ser claro —, senão
+     todo texto escrito com ela some no fundo escuro. Por isso os tokens abaixo não usam mais
+     `var(--ink-*)`: escrevem a cor, para não virar junto. */
+  --ink-900: #f3f4f6;
+  --ink-700: #d1d5db;
+  --ink-500: #9ca3af;
+  --ink-300: #374151;
+  --ink-100: #1f2937;
+
   --background: #0b1220;
-  --foreground: var(--ink-100);
+  --foreground: #f3f4f6;
   --card: #111827;
-  --card-foreground: var(--ink-100);
+  --card-foreground: #f3f4f6;
   --popover: #111827;
-  --popover-foreground: var(--ink-100);
+  --popover-foreground: #f3f4f6;
   --primary: var(--brand-blue-500);
   --primary-foreground: #f8fafc;
   --primary-strong: var(--brand-blue-500);
   --primary-soft: #16265c;
   --secondary: #1f2937;
-  --secondary-foreground: var(--ink-100);
+  --secondary-foreground: #f3f4f6;
   --muted: #1f2937;
   --muted-foreground: #9ca3af;
   --accent: #1e293b;
-  --accent-foreground: var(--ink-100);
+  --accent-foreground: #f3f4f6;
   --border: #2b2c3d;
   --input: #2b2c3d;
 
@@ -230,10 +254,13 @@
   /* O vermelho do claro (um tom 600) fica quase preto sobre o fundo escuro. Aqui ele sobe para
      o 400, que é o degrau legível — a mesma troca que `success`, `warning` e `info` fazem. */
   --destructive: #f87171;
-  --destructive-foreground: var(--ink-900);
+  --destructive-foreground: #111827;
+  --success-foreground: #111827;
+  --warning-foreground: #111827;
+  --info-foreground: #111827;
 
   --accent-hero: var(--brand-yellow-400);
-  --accent-hero-foreground: var(--ink-900);
+  --accent-hero-foreground: #111827;
   --accent-strong: var(--brand-yellow-400);
   --tertiary: #a78bfa;
   --tertiary-strong: #a78bfa;
@@ -311,6 +338,12 @@
   --color-tertiary-strong: var(--tertiary-strong);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info-foreground: var(--info-foreground);
+  --color-black: var(--black);
+  --color-white: var(--white);
+  --color-backdrop: var(--backdrop);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

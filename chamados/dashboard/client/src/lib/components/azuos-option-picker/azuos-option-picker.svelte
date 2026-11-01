@@ -125,16 +125,16 @@
         tone: 'neutral',
         class: 'border-foreground bg-foreground text-background',
       },
-      { isSelected: true, tone: 'info', class: 'bg-info text-primary-foreground' },
+      { isSelected: true, tone: 'info', class: 'bg-info text-info-foreground' },
       {
         isSelected: true,
         tone: 'success',
-        class: 'bg-success text-primary-foreground',
+        class: 'bg-success text-success-foreground',
       },
       {
         isSelected: true,
         tone: 'warning',
-        class: 'bg-warning text-primary-foreground',
+        class: 'bg-warning text-warning-foreground',
       },
       {
         isSelected: true,

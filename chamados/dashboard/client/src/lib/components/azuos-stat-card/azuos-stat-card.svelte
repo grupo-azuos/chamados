@@ -46,7 +46,7 @@
   /** Selecionado: o fundo na cor CHEIA do tom, com o texto claro por cima — nunca um contorno. */
   const TONE_SELECTED: Record<StatCardTone, string> = {
     brand: 'bg-primary',
-    neutral: 'bg-ink-700',
+    neutral: 'bg-muted-foreground',
     success: 'bg-success',
     warning: 'bg-warning',
     danger: 'bg-destructive',
@@ -73,11 +73,11 @@
 
   const TONE_ICON: Record<StatCardTone, string> = {
     brand: 'bg-primary text-primary-foreground',
-    neutral: 'bg-ink-700 text-primary-foreground',
-    success: 'bg-success text-primary-foreground',
-    warning: 'bg-warning text-primary-foreground',
+    neutral: 'bg-muted-foreground text-background',
+    success: 'bg-success text-success-foreground',
+    warning: 'bg-warning text-warning-foreground',
     danger: 'bg-destructive text-destructive-foreground',
-    info: 'bg-info text-primary-foreground',
+    info: 'bg-info text-info-foreground',
   };
 </script>
 

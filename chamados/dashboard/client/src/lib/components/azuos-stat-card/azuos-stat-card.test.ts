@@ -212,7 +212,7 @@ describe('AzuosStatCard', () => {
       'aria-pressed',
       'true',
     );
-    expect(container.firstElementChild).toHaveClass('bg-ink-700');
+    expect(container.firstElementChild).toHaveClass('bg-muted-foreground');
     expect(container.firstElementChild?.className).not.toMatch(/\bring-/);
   });
 

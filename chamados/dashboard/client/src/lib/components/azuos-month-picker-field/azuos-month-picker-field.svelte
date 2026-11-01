@@ -165,7 +165,7 @@
         <button
           type="button"
           onclick={() => pick(currentMonth)}
-          class="text-brand-blue-800 min-h-10 text-xs font-semibold hover:underline"
+          class="text-brand-blue-800 dark:text-foreground min-h-10 text-xs font-semibold hover:underline"
         >
           Este mês
         </button>

@@ -1,3 +1,5 @@
+import { themeColor } from './theme-color.util';
+
 /**
  * As cores sugeridas para as tags de empresa — a cor da principal é a que pinta o cartão.
  *
@@ -9,11 +11,11 @@
  * que permite o cartão inteiro ser colorido sem o nome da empresa sumir nele.
  */
 export const COMPANY_COLOR_PALETTE = [
-  '#2563eb',
-  '#047857',
-  '#7c3aed',
-  '#e11d48',
-  '#b45309',
+  themeColor('--brand-blue-600'),
+  themeColor('--success'),
+  themeColor('--tertiary-strong'),
+  themeColor('--destructive'),
+  themeColor('--warning'),
 ] as const;
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;

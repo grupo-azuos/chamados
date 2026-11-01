@@ -22,10 +22,10 @@
 
   export const KANBAN_TONE_HEADER: Record<AzuosKanbanColumnTone, string> = {
     neutral: 'bg-muted text-foreground',
-    info: 'bg-info text-primary-foreground',
-    warning: 'bg-warning text-primary-foreground',
+    info: 'bg-info text-info-foreground',
+    warning: 'bg-warning text-warning-foreground',
     brand: 'bg-primary text-primary-foreground',
-    success: 'bg-success text-primary-foreground',
+    success: 'bg-success text-success-foreground',
     danger: 'bg-destructive text-destructive-foreground',
   };
 </script>

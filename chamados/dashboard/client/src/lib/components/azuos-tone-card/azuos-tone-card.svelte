@@ -30,11 +30,11 @@
 
   const SOLID: Record<AzuosToneCardTone, string> = {
     brand: 'bg-primary text-primary-foreground',
-    neutral: 'bg-ink-700 text-primary-foreground',
-    success: 'bg-success text-primary-foreground',
-    warning: 'bg-warning text-primary-foreground',
+    neutral: 'bg-muted-foreground text-background',
+    success: 'bg-success text-success-foreground',
+    warning: 'bg-warning text-warning-foreground',
     danger: 'bg-destructive text-primary-foreground',
-    info: 'bg-info text-primary-foreground',
+    info: 'bg-info text-info-foreground',
   };
 </script>
 
