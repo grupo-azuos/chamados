@@ -110,7 +110,7 @@
             {#each selected.variables as variable (variable)}
               <button
                 type="button"
-                class="rounded-chip border-border bg-muted/40 text-foreground hover:bg-muted border px-2 py-1 font-mono text-xs transition-colors"
+                class="rounded-chip border-border bg-muted text-foreground hover:bg-muted border px-2 py-1 font-mono text-xs transition-colors"
                 disabled={isBusy}
                 aria-label={`Inserir a variável ${variable}`}
                 onclick={() => insertVariable(variable)}
@@ -125,7 +125,7 @@
           <span class="text-ink-700 text-sm font-medium">Como fica</span>
           <!-- `whitespace-pre-wrap`: as quebras de linha do texto são parte da mensagem. -->
           <p
-            class="rounded-box border-border bg-muted/30 text-foreground border p-3 text-sm whitespace-pre-wrap"
+            class="rounded-box border-border bg-muted text-foreground border p-3 text-sm whitespace-pre-wrap"
             data-testid="whatsapp-template-preview"
           >
             {data.preview}

@@ -437,7 +437,7 @@
       </div>
     </dl>
 
-    <div class="border-border/60 mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
+    <div class="border-border mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
       <StatusBadge
         data={{ label: healthStatusLabel(computer.healthStatus) }}
         ui={{ tone: healthStatusTone(computer.healthStatus) }}
@@ -489,7 +489,7 @@
 
   {#if computer.isBlocked && computer.blockReason}
     <p
-      class="text-ink-700 rounded-box bg-destructive/10 px-3 py-2 text-sm"
+      class="text-ink-700 rounded-box bg-muted px-3 py-2 text-sm"
     >
       <span class="font-semibold">Motivo do bloqueio:</span>
       {computer.blockReason}
@@ -634,7 +634,7 @@
           <div
             use:fillFromPointer
             style:--fill-color={fillColorOf(alert.recoveredAt ? 'neutral' : 'danger')}
-            class="hover-fill border-border/70 bg-card rounded-surface border p-3 shadow-xs"
+            class="hover-fill border-border bg-card rounded-surface border p-3 shadow-xs"
           >
             <div class="flex items-start justify-between gap-2">
               <span class="font-medium text-ink-900 text-sm">
@@ -664,7 +664,7 @@
             </div>
 
             {#if alert.causeProcess}
-              <div class="border-border/60 mt-2 border-t pt-1.5 text-xs">
+              <div class="border-border mt-2 border-t pt-1.5 text-xs">
                 <span class="text-muted-foreground text-xs">Causa provável: </span>
                 <span class="text-ink-700 font-mono text-xs break-words">{alert.causeProcess}</span>
               </div>

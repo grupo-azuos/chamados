@@ -135,8 +135,9 @@ describe('swatchOf', () => {
 
   // feliz
   it('paints pink as pink and amber as yellow — the colors their names promise', () => {
-    expect(swatchOf('rose')).toMatchObject({ label: 'Rosa', dotClass: 'bg-tag-rose' });
-    expect(swatchOf('amber')).toMatchObject({ label: 'Amarelo', dotClass: 'bg-tag-amber' });
+    expect(swatchOf('rose')).toMatchObject({ label: 'Rosa', dotClass: 'bg-chart-4' });
+    expect(swatchOf('rose').dotClass).not.toBe(swatchOf('red').dotClass);
+    expect(swatchOf('amber')).toMatchObject({ label: 'Amarelo', dotClass: 'bg-warning' });
     expect(swatchOf('indigo').dotClass).not.toBe(swatchOf('purple').dotClass);
   });
 

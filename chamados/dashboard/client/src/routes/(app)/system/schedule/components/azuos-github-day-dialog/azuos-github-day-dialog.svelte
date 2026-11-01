@@ -47,7 +47,7 @@
     </DialogHeader>
     <div class="max-h-[60vh] space-y-3 overflow-y-auto">
       {#each data.items as event (event.id)}
-        <article class="rounded-box border border-border bg-muted/20 p-3">
+        <article class="rounded-box border border-border bg-muted p-3">
           <div class="flex items-center justify-between gap-2 text-xs text-muted-foreground">
             <time
               datetime={event.eventDate}

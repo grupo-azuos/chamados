@@ -160,7 +160,7 @@
   {#if state.isLoading}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {#each [0, 1, 2] as idx (idx)}
-        <div class="h-56 animate-pulse rounded-surface border border-border bg-muted/50"></div>
+        <div class="h-56 animate-pulse rounded-surface border border-border bg-muted"></div>
       {/each}
     </div>
   {:else if state.error}
@@ -207,7 +207,7 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {#each data.items as project (project.id)}
         <div
-          class="flex flex-col justify-between rounded-surface border border-border bg-card p-5 shadow-xs transition hover:border-border/80"
+          class="flex flex-col justify-between rounded-surface border border-border bg-card p-5 shadow-xs transition hover:border-border"
         >
           <div>
             <!-- Topo: Nome, Tag e Status -->
@@ -245,7 +245,7 @@
                   : `https://github.com/${project.repositoryUrl}`}
                 target="_blank"
                 rel="noreferrer"
-                class="inline-flex items-center gap-1.5 rounded-control bg-muted px-2.5 py-1 text-xs font-mono text-foreground hover:bg-muted/80"
+                class="inline-flex items-center gap-1.5 rounded-control bg-muted px-2.5 py-1 text-xs font-mono text-foreground hover:bg-muted"
               >
                 <Code2 class="size-3.5 text-muted-foreground" />
                 <span class="truncate max-w-[200px]"
@@ -258,7 +258,7 @@
             </div>
 
             <!-- Métricas: Chamados e PRs -->
-            <div class="mt-4 grid grid-cols-2 gap-2 border-t border-border/60 pt-3 text-xs">
+            <div class="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-3 text-xs">
               <div class="flex items-center gap-2">
                 <LifeBuoy class="size-3.5 text-primary" />
                 <span class="text-muted-foreground">
@@ -275,7 +275,7 @@
           </div>
 
           <!-- Ações do Card -->
-          <div class="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
+          <div class="mt-4 flex items-center justify-between border-t border-border pt-3">
             <div class="flex items-center gap-1">
               <button
                 type="button"

@@ -324,7 +324,7 @@
         <div
           use:fillFromPointer
           style:--fill-color={fillColorOf(healthStatusTone(computer.healthStatus))}
-          class="hover-fill border-border/70 bg-card flex min-w-0 flex-col rounded-surface border p-4 shadow-xs"
+          class="hover-fill border-border bg-card flex min-w-0 flex-col rounded-surface border p-4 shadow-xs"
         >
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0 flex-1 basis-40">
@@ -346,7 +346,7 @@
             </div>
           </div>
 
-          <div class="mt-4 grid grid-cols-1 gap-3 rounded-box bg-muted/40 p-3 text-sm min-[380px]:grid-cols-2">
+          <div class="mt-4 grid grid-cols-1 gap-3 rounded-box bg-muted p-3 text-sm min-[380px]:grid-cols-2">
             <div>
               <span class="text-muted-foreground block text-xs">Responsável</span>
               <span class="font-medium text-ink-700 break-words"
@@ -375,12 +375,12 @@
 
           <!-- A caixa de manutenção cresce até o rodapé: os cartões da mesma linha têm a mesma
                altura, e sem isso cada um sobrava um vão diferente acima do "Ver ficha". -->
-          <div class="mt-3 min-w-0 flex-1 rounded-box border border-border/60 bg-muted/20 p-3">
+          <div class="mt-3 min-w-0 flex-1 rounded-box border border-border bg-muted p-3">
             <p class="text-muted-foreground mb-2 text-xs">Manutenção</p>
             <ComputerMaintenanceStatus data={{ computer, scheduledFor: data.scheduledFor?.[computer.id] ?? null }} />
           </div>
 
-          <div class="border-border/60 mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+          <div class="border-border mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
             <span class="text-xs text-ink-500">
               Chamados no mês: <strong class="text-foreground">{computer.ticketsThisMonth}</strong>
             </span>

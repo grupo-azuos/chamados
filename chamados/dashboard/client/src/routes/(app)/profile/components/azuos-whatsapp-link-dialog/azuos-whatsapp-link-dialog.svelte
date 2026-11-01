@@ -66,7 +66,7 @@
       <DialogHeader class="gap-1.5">
         <div class="flex items-center gap-2.5">
           <span
-            class="bg-primary/10 text-primary rounded-chip flex size-7 shrink-0 items-center justify-center"
+            class="bg-muted text-primary rounded-chip flex size-7 shrink-0 items-center justify-center"
           >
             <QrCode class="size-4" aria-hidden="true" />
           </span>
@@ -84,7 +84,7 @@
           <img
             src={data.qrImage}
             alt="QR code para vincular o WhatsApp"
-            class="rounded-box size-64 bg-white p-2"
+            class="rounded-box size-64 bg-card p-2"
           />
         {:else}
           <p class="text-muted-foreground text-sm" role="status">Gerando o QR code…</p>
@@ -107,7 +107,7 @@
       <DialogHeader class="gap-1.5">
         <div class="flex items-center gap-2.5">
           <span
-            class="bg-destructive/10 text-destructive rounded-chip flex size-7 shrink-0 items-center justify-center"
+            class="bg-muted text-destructive rounded-chip flex size-7 shrink-0 items-center justify-center"
           >
             <AlertTriangle class="size-4" aria-hidden="true" />
           </span>

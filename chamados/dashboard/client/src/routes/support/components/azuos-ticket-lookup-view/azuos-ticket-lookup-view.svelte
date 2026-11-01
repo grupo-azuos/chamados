@@ -207,7 +207,7 @@
     </form>
 
     <!-- A aba escolhida ganha fundo cheio, não traço: barra colorida é proibida no grupo. -->
-    <div class="bg-muted/50 rounded-control grid grid-cols-2 gap-1 p-1">
+    <div class="bg-muted rounded-control grid grid-cols-2 gap-1 p-1">
       {#each [{ key: 'running', label: 'Em andamento', count: groups.running.length }, { key: 'closed', label: 'Encerrados', count: groups.closed.length }] as const as option (option.key)}
         <button
           type="button"
@@ -231,11 +231,11 @@
     {:else if viewState?.isLoadingMine}
       <ul class="flex flex-col gap-2" aria-label="Carregando os seus chamados">
         {#each [1, 2, 3] as item (item)}
-          <li class="bg-muted/50 rounded-box h-20 animate-pulse"></li>
+          <li class="bg-muted rounded-box h-20 animate-pulse"></li>
         {/each}
       </ul>
     {:else if visible.length === 0}
-      <p class="text-muted-foreground bg-muted/40 rounded-box p-4 text-center text-sm">
+      <p class="text-muted-foreground bg-muted rounded-box p-4 text-center text-sm">
         {tab === 'running'
           ? 'Nenhum chamado andando agora.'
           : 'Nenhum chamado encerrado ainda.'}
@@ -251,7 +251,7 @@
               onclick={() => actions.onOpenMine(item.protocol)}
               class={cn(
                 'rounded-box focus-visible:ring-ring flex w-full cursor-pointer flex-col gap-1.5 p-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
-                isOpen ? 'bg-primary-soft' : 'bg-card hover:bg-muted/60 border-border/70 border',
+                isOpen ? 'bg-primary-soft' : 'bg-card hover:bg-muted border-border border',
               )}
             >
               <span class="flex items-center justify-between gap-2">
@@ -269,7 +269,7 @@
                   ui={{ tone: ticketStatusTone(item.status), size: 'sm' }}
                 />
               </span>
-              <span class="text-foreground/80 line-clamp-2 text-xs">{item.description}</span>
+              <span class="text-foreground line-clamp-2 text-xs">{item.description}</span>
               <span class="text-muted-foreground text-[0.6875rem]">
                 {ticketAreaLabel(item.area)} · {ticketProblemTypeLabel(item.problemType)} · {formatHistoryDateTime(item.createdAt)}
               </span>
@@ -304,7 +304,7 @@
     {:else if ticket}
       {@const facts = factsOf(ticket)}
       {@const journey = journeyOf(ticket.status)}
-      <article class="rounded-surface border-border/70 bg-card flex flex-col gap-6 border p-5 shadow-xs sm:p-6">
+      <article class="rounded-surface border-border bg-card flex flex-col gap-6 border p-5 shadow-xs sm:p-6">
         <header class="flex flex-col gap-4">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-foreground font-mono text-2xl font-bold">{ticket.protocol}</h2>
@@ -360,11 +360,11 @@
           {/each}
         </dl>
 
-        <div class="rounded-box bg-muted/40 p-4">
+        <div class="rounded-box bg-muted p-4">
           <p class="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
             Aberto por {ticket.requesterName}
           </p>
-          <p class="text-foreground/90 text-sm leading-relaxed whitespace-pre-line">{ticket.description}</p>
+          <p class="text-foreground text-sm leading-relaxed whitespace-pre-line">{ticket.description}</p>
         </div>
 
         {#if ownFiles.length > 0 || ticket.screenshotUrl}
@@ -388,7 +388,7 @@
         {/if}
 
         <!-- O ANDAMENTO: é o que a pessoa veio buscar. -->
-        <div class="border-border/70 flex flex-col gap-3 border-t pt-5">
+        <div class="border-border flex flex-col gap-3 border-t pt-5">
           <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             Andamento · {ticket.histories.length}
           </p>

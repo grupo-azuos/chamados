@@ -306,7 +306,7 @@
         <div
           use:fillFromPointer
           style:--fill-color={fillColorOf(partConditionTone(part.condition))}
-          class="hover-fill border-border/70 bg-card rounded-surface border p-4 shadow-xs"
+          class="hover-fill border-border bg-card rounded-surface border p-4 shadow-xs"
         >
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0 flex-1">
@@ -340,7 +340,7 @@
             <span class="text-ink-700 font-medium">{partCategoryLabel(part.category)}</span>
           </div>
 
-          <div class="border-border/60 mt-3 flex items-center justify-end gap-2 border-t pt-2">
+          <div class="border-border mt-3 flex items-center justify-end gap-2 border-t pt-2">
             <ActionButton
               data={{ label: 'Entrada' }}
               ui={{ variant: 'secondary', size: 'sm' }}

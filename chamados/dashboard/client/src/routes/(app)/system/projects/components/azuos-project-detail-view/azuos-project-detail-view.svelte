@@ -183,15 +183,15 @@
 
   <!-- 2. O que está acontecendo agora, e os chamados que dependem disso. -->
   <div class="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-    <section class="border-border/70 bg-card rounded-surface min-w-0 border shadow-xs">
-      <header class="border-border/60 border-b px-4 py-3">
+    <section class="border-border bg-card rounded-surface min-w-0 border shadow-xs">
+      <header class="border-border border-b px-4 py-3">
         <h2 class="text-ink-900 text-sm font-semibold">Em andamento agora</h2>
         <p class="text-ink-500 text-xs">PRs abertos e issues pendentes, do mais recente.</p>
       </header>
       {#if inProgress.length === 0}
         <p class="text-ink-500 px-4 py-6 text-center text-sm">Nada em aberto neste sistema.</p>
       {:else}
-        <ul class="divide-border/60 divide-y">
+        <ul class="divide-border divide-y">
           {#each inProgress as event (event.id)}
             {@const Icon = iconOf(event)}
             {@const status = eventStatusOf(event)}
@@ -221,21 +221,21 @@
       {/if}
     </section>
 
-    <section class="border-border/70 bg-card rounded-surface min-w-0 border shadow-xs">
-      <header class="border-border/60 border-b px-4 py-3">
+    <section class="border-border bg-card rounded-surface min-w-0 border shadow-xs">
+      <header class="border-border border-b px-4 py-3">
         <h2 class="text-ink-900 text-sm font-semibold">Chamados abertos</h2>
         <p class="text-ink-500 text-xs">Os pedidos de suporte deste sistema ainda sem solução.</p>
       </header>
       {#if data.openTickets.length === 0}
         <p class="text-ink-500 px-4 py-6 text-center text-sm">Nenhum chamado aberto.</p>
       {:else}
-        <ul class="divide-border/60 divide-y">
+        <ul class="divide-border divide-y">
           {#each data.openTickets as ticket (ticket.id)}
             <li>
               <button
                 type="button"
                 onclick={() => actions.onOpenTicket(ticket)}
-                class="hover:bg-muted/50 flex w-full min-w-0 items-start gap-3 px-4 py-3 text-left transition-colors"
+                class="hover:bg-muted flex w-full min-w-0 items-start gap-3 px-4 py-3 text-left transition-colors"
               >
                 <div class="min-w-0 flex-1">
                   <p class="text-ink-900 text-sm font-medium">
@@ -257,9 +257,9 @@
   </div>
 
   <!-- 3. A timeline, dia a dia. -->
-  <section class="border-border/70 bg-card rounded-surface min-w-0 border shadow-xs">
+  <section class="border-border bg-card rounded-surface min-w-0 border shadow-xs">
     <header
-      class="border-border/60 flex min-w-0 flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-end sm:justify-between"
+      class="border-border flex min-w-0 flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-end sm:justify-between"
     >
       <div>
         <h2 class="text-ink-900 text-sm font-semibold">Timeline</h2>
@@ -292,13 +292,13 @@
               {formatDay(day.day)}
             </h3>
             <!-- A linha vertical liga os eventos do dia; o ícone marca o tipo. -->
-            <ol class="border-border/70 ml-2 flex flex-col gap-4 border-l pl-5">
+            <ol class="border-border ml-2 flex flex-col gap-4 border-l pl-5">
               {#each day.events as event (event.id)}
                 {@const Icon = iconOf(event)}
                 {@const status = eventStatusOf(event)}
                 <li class="relative min-w-0">
                   <span
-                    class="bg-card border-border/70 text-ink-700 absolute top-0.5 -left-[31px] grid size-5 place-items-center rounded-full border"
+                    class="bg-card border-border text-ink-700 absolute top-0.5 -left-[31px] grid size-5 place-items-center rounded-full border"
                     aria-hidden="true"
                   >
                     <Icon class="size-3" />
@@ -326,7 +326,7 @@
         {/each}
       </ol>
       {#if data.isTruncated}
-        <p class="text-ink-500 border-border/60 border-t px-4 py-3 text-xs">
+        <p class="text-ink-500 border-border border-t px-4 py-3 text-xs">
           Mostrando a atividade mais recente. O histórico mais antigo continua no GitHub.
         </p>
       {/if}

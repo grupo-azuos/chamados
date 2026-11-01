@@ -175,7 +175,7 @@
                     icon: Trash2,
                     isIconOnly: true,
                     className:
-                      'text-ink-500 hover:text-destructive hover:bg-destructive/10',
+                      'text-ink-500 hover:text-destructive hover:bg-muted',
                   }}
                   actions={{ onClick: () => actions.onAskRemove(movement) }}
                 />
@@ -185,7 +185,7 @@
               <p class="text-xs text-muted-foreground break-words">{movement.note}</p>
             {/if}
             <div
-              class="flex items-center justify-between text-xs text-muted-foreground border-t border-border/40 pt-1.5"
+              class="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-1.5"
             >
               <span>Máquina: <strong class="text-foreground">{destinationOf(movement)}</strong></span>
               {#if movement.handledBy}
@@ -247,7 +247,7 @@
                         icon: Trash2,
                         isIconOnly: true,
                         className:
-                          'text-ink-500 hover:text-destructive hover:bg-destructive/10',
+                          'text-ink-500 hover:text-destructive hover:bg-muted',
                       }}
                       actions={{ onClick: () => actions.onAskRemove(movement) }}
                     />

@@ -29,7 +29,7 @@
   class="bg-card border-border rounded-surface flex flex-col gap-4 border p-4 shadow-xs sm:p-6"
 >
   <h2 class="text-foreground flex items-center gap-2 text-base font-semibold">
-    <span class="bg-primary/10 text-primary rounded-chip flex size-8 items-center justify-center">
+    <span class="bg-muted text-primary rounded-chip flex size-8 items-center justify-center">
       <LayoutGrid class="size-4" aria-hidden="true" />
     </span>
     Seus módulos
@@ -37,7 +37,7 @@
   <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
     {#each ROLE_CONTEXTS as ctx (ctx)}
       {@const role = (data.role === 'superadmin' ? 'superadmin' : data.roles?.[ctx]) as UserRole | undefined}
-      <div class="rounded-control border-border bg-muted/20 flex flex-col justify-between border p-3.5">
+      <div class="rounded-control border-border bg-muted flex flex-col justify-between border p-3.5">
         <div class="flex items-center justify-between gap-2">
           <span class="text-foreground text-xs font-semibold">{ROLE_CONTEXT_LABELS[ctx]}</span>
           <StatusBadge data={{ label: moduleAccessLabel(role) }} ui={{ tone: moduleAccessTone(role), size: 'sm' }} />

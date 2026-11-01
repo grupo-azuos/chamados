@@ -46,7 +46,7 @@
   const isOnProfile = $derived(data.activeHref === SUPPORT_PROFILE_HREF);
 </script>
 
-<header class="bg-card/90 border-border/70 sticky top-0 z-30 border-b backdrop-blur">
+<header class="bg-card border-border sticky top-0 z-30 border-b">
   <div class="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-4 sm:gap-6 sm:px-6">
     <a href="/support" class="flex shrink-0 items-center gap-2.5" aria-label="Central de Chamados — início">
       <BrandMark ui={{ variant: 'tile', size: 'sm', className: 'rounded-chip' }} />
