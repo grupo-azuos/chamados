@@ -12,7 +12,7 @@
   });
 </script>
 
-<Story name="Default">
+<Story name="Default" asChild>
   <Carousel data={{ items: situations }} ui={{ ariaLabel: 'Resumo por situação', itemClassName: 'basis-1/2 lg:basis-1/4' }}>
     {#snippet item(label, index)}
       <div class="bg-card border-border rounded-surface border p-4">
@@ -24,7 +24,7 @@
 </Story>
 
 <!-- Caso limite: poucos itens, tudo cabe — as setas ficam desligadas. -->
-<Story name="FewItems">
+<Story name="FewItems" asChild>
   <Carousel data={{ items: situations.slice(0, 2) }} ui={{ ariaLabel: 'Resumo', itemClassName: 'basis-1/3' }}>
     {#snippet item(label)}
       <div class="bg-card border-border rounded-surface border p-4">{label}</div>

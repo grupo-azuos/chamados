@@ -17,7 +17,7 @@
 <Story name="Default" args={{ data }} />
 
 <!-- Com os ícones nas pontas. -->
-<Story name="WithIcons">
+<Story name="WithIcons" asChild>
   <SliderField {data}>
     {#snippet startIcon()}<AArrowDown class="text-muted-foreground size-4" aria-hidden="true" />{/snippet}
     {#snippet endIcon()}<AArrowUp class="text-muted-foreground size-4" aria-hidden="true" />{/snippet}

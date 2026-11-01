@@ -18,7 +18,7 @@
 <Story name="Disabled" args={{ data: { destination: 'os chamados' }, state: { isDisabled: true } }} />
 
 <!-- Caso limite: destino comprido num celular. -->
-<Story name="LongDestinationOnPhone">
+<Story name="LongDestinationOnPhone" asChild>
   <div class="w-[320px]">
     <BackButton data={{ destination: 'as manutenções preventivas planejadas do mês', to: '#' }} />
   </div>

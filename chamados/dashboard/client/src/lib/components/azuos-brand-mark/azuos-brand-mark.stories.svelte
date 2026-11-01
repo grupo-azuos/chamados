@@ -11,21 +11,21 @@
 </script>
 
 <!-- A logo branca inteira, sobre a barra azul: é onde ela vive no sistema. -->
-<Story name="Default">
+<Story name="Default" asChild>
   <div class="bg-sidebar rounded-box p-4">
     <BrandMark />
   </div>
 </Story>
 
 <!-- Pequena: é a do topo da barra lateral aberta. -->
-<Story name="Small">
+<Story name="Small" asChild>
   <div class="bg-sidebar rounded-box p-4">
     <BrandMark ui={{ size: 'sm' }} />
   </div>
 </Story>
 
 <!-- Só o símbolo: a barra recolhida. -->
-<Story name="Icon">
+<Story name="Icon" asChild>
   <div class="bg-sidebar rounded-box inline-flex p-2">
     <BrandMark ui={{ variant: 'icon', size: 'sm' }} />
   </div>

@@ -19,7 +19,7 @@
 />
 
 <!-- Todos os tons, lado a lado. -->
-<Story name="Tones">
+<Story name="Tones" asChild>
   <div class="grid max-w-3xl grid-cols-2 gap-4">
     {#each ['brand', 'accent', 'success', 'warning', 'danger', 'info', 'neutral'] as const as tone (tone)}
       <HeroCard data={{ title: `Tom ${tone}`, description: 'Descrição curta', badge: '12', icon: Wrench }} ui={{ tone }} />
@@ -34,7 +34,7 @@
 />
 
 <!-- Caso limite: título e descrição compridos num celular. -->
-<Story name="LongOnPhone">
+<Story name="LongOnPhone" asChild>
   <div class="w-[320px]">
     <HeroCard
       data={{

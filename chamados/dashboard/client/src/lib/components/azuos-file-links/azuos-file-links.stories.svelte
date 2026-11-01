@@ -23,7 +23,7 @@
 <Story name="WithFileName" args={{ data: { ...data, openLabel: data.fileName }, ui: { openIcon: Paperclip } }} />
 
 <!-- Caso limite: nome comprido numa coluna estreita — corta com "…". -->
-<Story name="LongNameNarrow">
+<Story name="LongNameNarrow" asChild>
   <div class="w-48">
     <FileLinks
       data={{ ...data, fileName: 'relatorio-de-manutencao-preventiva-outubro.pdf', openLabel: 'relatorio-de-manutencao-preventiva-outubro.pdf' }}

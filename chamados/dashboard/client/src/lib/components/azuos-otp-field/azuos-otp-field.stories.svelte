@@ -17,7 +17,7 @@
 <Story name="WithError" args={{ data: { label: 'Código recebido', value: '123456', length: 6 }, state: { error: 'Código incorreto' } }} />
 
 <!-- Caso limite: oito dígitos num celular estreito — as caixas dividem a largura. -->
-<Story name="EightDigitsOnPhone">
+<Story name="EightDigitsOnPhone" asChild>
   <div class="w-[300px]">
     <OtpField data={{ label: 'Código recebido', value: '', length: 8 }} />
   </div>

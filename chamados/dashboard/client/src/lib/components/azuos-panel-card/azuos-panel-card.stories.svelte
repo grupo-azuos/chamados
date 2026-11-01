@@ -18,14 +18,14 @@
   });
 </script>
 
-<Story name="Default">
+<Story name="Default" asChild>
   <PanelCard data={{ title: 'Mapa de problemas', hint: 'O que mais apareceu no mês' }}>
     <p class="text-sm">O conteúdo do bloco — normalmente um gráfico ou uma lista.</p>
   </PanelCard>
 </Story>
 
 <!-- Com o controle de recorte no alto, à direita do título. -->
-<Story name="WithControl">
+<Story name="WithControl" asChild>
   <PanelCard data={{ title: 'Manutenções — o que foi feito' }}>
     {#snippet tools()}
       <OptionPicker
@@ -39,21 +39,21 @@
 </Story>
 
 <!-- Sem explicação: o título basta quando o bloco é óbvio. -->
-<Story name="WithoutHint">
+<Story name="WithoutHint" asChild>
   <PanelCard data={{ title: 'Quem mais pediu socorro' }}>
     <p class="text-sm">Contabilidade, RH e Comercial.</p>
   </PanelCard>
 </Story>
 
 <!-- Estado vazio: o bloco continua desenhado, dizendo que não há o que mostrar. -->
-<Story name="Empty">
+<Story name="Empty" asChild>
   <PanelCard data={{ title: 'Picos de 100%', hint: 'Máquinas que bateram no teto' }}>
     <p class="text-muted-foreground text-sm">Nenhuma máquina bateu no teto hoje.</p>
   </PanelCard>
 </Story>
 
 <!-- Caso limite: título e explicação compridos, com controle, na largura de um celular. -->
-<Story name="LongTitleOnPhone">
+<Story name="LongTitleOnPhone" asChild>
   <div class="w-[360px]">
     <PanelCard
       data={{

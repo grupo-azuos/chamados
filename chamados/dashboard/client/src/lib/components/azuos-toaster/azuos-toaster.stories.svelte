@@ -16,7 +16,7 @@
 </script>
 
 <!-- Clique para ver o aviso comum e o de falha. -->
-<Story name="Default">
+<Story name="Default" asChild>
   <Toaster />
   <div class="flex gap-2">
     <ActionButton data={{ label: 'Aviso comum' }} actions={{ onClick: () => notice.show('Chamado aberto.') }} />
@@ -29,7 +29,7 @@
 </Story>
 
 <!-- No alto, centralizado. -->
-<Story name="TopCenter">
+<Story name="TopCenter" asChild>
   <Toaster ui={{ position: 'top-center' }} />
   <ActionButton data={{ label: 'Avisar' }} actions={{ onClick: () => notice.show('Manutenção registrada.') }} />
 </Story>

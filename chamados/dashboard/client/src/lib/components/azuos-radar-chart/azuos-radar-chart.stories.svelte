@@ -97,7 +97,7 @@
 />
 
 <!-- Caso limite: na largura de um celular, com nomes compridos em volta. -->
-<Story name="OnPhone">
+<Story name="OnPhone" asChild>
   <div class="w-[360px]">
     <RadarChart data={{ slices, seriesLabel: 'Chamados' }} />
   </div>

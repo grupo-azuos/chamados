@@ -86,7 +86,7 @@
 />
 
 <!-- Caso limite: na largura de um celular, com o recorte do mês (a lista rola dentro do bloco). -->
-<Story name="OnPhone">
+<Story name="OnPhone" asChild>
   <div class="w-[360px]">
     <DashboardMaintenanceLog data={{ log, plannedToday: planned, isDoneToday: false }} />
   </div>

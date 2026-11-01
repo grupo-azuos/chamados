@@ -10,7 +10,7 @@
   });
 </script>
 
-<Story name="Default">
+<Story name="Default" asChild>
   <KanbanColumn data={{ title: 'Em andamento', count: 2 }} ui={{ tone: 'info' }} actions={{ onAdd: () => {}, onDropItem: () => {} }}>
     <div class="bg-card border-border rounded-box border p-3 text-sm">Trocar fonte da impressora</div>
     <div class="bg-card border-border rounded-box border p-3 text-sm">Instalar o leitor de PDF</div>
@@ -18,7 +18,7 @@
 </Story>
 
 <!-- As etapas lado a lado, cada uma na sua cor. -->
-<Story name="Board">
+<Story name="Board" asChild>
   <div class="flex gap-4 overflow-x-auto">
     {#each [['A fazer', 'neutral'], ['Em andamento', 'info'], ['Aguardando', 'warning'], ['Feito', 'success']] as const as [title, tone] (title)}
       <KanbanColumn data={{ title, count: 0 }} ui={{ tone }} actions={{ onAdd: () => {} }} />
@@ -27,6 +27,6 @@
 </Story>
 
 <!-- Caso limite: coluna vazia, sem botão de adicionar. -->
-<Story name="EmptyReadOnly">
+<Story name="EmptyReadOnly" asChild>
   <KanbanColumn data={{ title: 'Cancelados', count: 0 }} ui={{ tone: 'danger' }} />
 </Story>

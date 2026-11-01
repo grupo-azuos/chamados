@@ -41,7 +41,7 @@
 />
 
 <!-- Caso limite: muitas opções num celular quebram linha dentro do trilho. -->
-<Story name="ManyOnPhone">
+<Story name="ManyOnPhone" asChild>
   <div class="w-[320px]">
     <SegmentedControl
       data={{

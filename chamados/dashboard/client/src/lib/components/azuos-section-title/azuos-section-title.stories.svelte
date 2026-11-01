@@ -30,7 +30,7 @@
 />
 
 <!-- Com a contagem dentro do título. -->
-<Story name="WithAdornment">
+<Story name="WithAdornment" asChild>
   <SectionTitle data={{ title: 'Sistemas' }} ui={{ icon: UserRound }}>
     {#snippet adornment()}
       <span class="bg-muted text-muted-foreground rounded-chip px-2 text-xs">3</span>
@@ -39,7 +39,7 @@
 </Story>
 
 <!-- Caso limite: título e explicação compridos num celular. -->
-<Story name="LongOnPhone">
+<Story name="LongOnPhone" asChild>
   <div class="w-[320px]">
     <SectionTitle
       data={{

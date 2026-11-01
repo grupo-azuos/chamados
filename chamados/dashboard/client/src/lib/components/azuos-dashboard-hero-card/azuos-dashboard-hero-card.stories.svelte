@@ -40,7 +40,7 @@
 />
 
 <!-- Caso limite: título comprido num celular. -->
-<Story name="LongOnPhone">
+<Story name="LongOnPhone" asChild>
   <div class="w-[340px]">
     <DashboardHeroCard
       data={{

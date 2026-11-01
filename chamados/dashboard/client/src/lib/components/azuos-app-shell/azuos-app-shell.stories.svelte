@@ -33,14 +33,14 @@
   });
 </script>
 
-<Story name="Default">
+<Story name="Default" asChild>
   <AppShell data={{ user, accountUrl: 'https://login.exemplo.com.br' }} state={{ activeKey: 'tickets' }} {actions}>
     <div class="text-ink-700 p-8 text-sm">Conteúdo da rota entra aqui.</div>
   </AppShell>
 </Story>
 
 <!-- Vários itens, com contador. Os contadores vêm prontos por `data` — a casca não busca nada. -->
-<Story name="WithBadges">
+<Story name="WithBadges" asChild>
   <AppShell
     ui={{ items: manyItems }}
     data={{ user, badges: { tickets: 3, reports: 12 } }}
@@ -51,7 +51,7 @@
 </Story>
 
 <!-- Recolhida: os rótulos saem e sobra tela para o conteúdo. -->
-<Story name="Collapsed">
+<Story name="Collapsed" asChild>
   <AppShell
     ui={{ items: manyItems }}
     data={{ user, badges: { tickets: 3, reports: 12 } }}
@@ -64,7 +64,7 @@
 <!-- Quem atende mais de uma área: as pastilhas de contexto ficam no cabeçalho, ao lado do
      botão do menu, com a área atual acesa. São os três contextos do sistema — não existe
      "Todas as áreas": cada um tem o seu menu. -->
-<Story name="WithAreaContext">
+<Story name="WithAreaContext" asChild>
   <AppShell
     data={{
       user,
@@ -82,7 +82,7 @@
 </Story>
 
 <!-- No celular, abra o menu para ver uma linha por módulo, com ícone e nome. -->
-<Story name="MobileAreaContext" globals={{ viewport: { value: 'celular', isRotated: false } }}>
+<Story name="MobileAreaContext" globals={{ viewport: { value: 'celular', isRotated: false } }} asChild>
   <AppShell
     data={{
       user,
@@ -100,7 +100,7 @@
 </Story>
 
 <!-- Com a foto do admin-console no rodapé, no lugar das iniciais. -->
-<Story name="WithAvatar">
+<Story name="WithAvatar" asChild>
   <AppShell
     data={{ user: { ...user, avatarUrl: 'https://i.pravatar.cc/96?img=47' } }}
     state={{ activeKey: 'tickets' }}
@@ -111,7 +111,7 @@
 </Story>
 
 <!-- Sem identidade: o rodapé não quebra. -->
-<Story name="WithoutUser">
+<Story name="WithoutUser" asChild>
   <AppShell>
     <div class="text-ink-700 p-8 text-sm">Conteúdo da rota entra aqui.</div>
   </AppShell>
@@ -134,7 +134,7 @@
 </Story>
 
 <!-- Caso limite: conteúdo mais alto que a tela não deve empurrar o menu para fora. -->
-<Story name="TallContent">
+<Story name="TallContent" asChild>
   <AppShell data={{ user }} state={{ activeKey: 'tickets' }}>
     <div class="text-ink-700 space-y-4 p-8 text-sm">
       {#each Array.from({ length: 30 }, (_, index) => index) as index (index)}

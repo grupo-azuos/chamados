@@ -16,7 +16,7 @@
 <Story name="Compact" args={{ data: { label: 'Carregando…' }, ui: { className: 'py-4' } }} />
 
 <!-- Caso limite: legenda comprida na largura de um celular. -->
-<Story name="LongLabelOnPhone">
+<Story name="LongLabelOnPhone" asChild>
   <div class="w-[320px]">
     <LoadingState data={{ label: 'Carregando o histórico completo de manutenções da máquina…' }} />
   </div>

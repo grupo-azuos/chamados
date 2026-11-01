@@ -11,7 +11,7 @@
 </script>
 
 <!-- Passe o mouse: o texto inteiro aparece no balão. -->
-<Story name="Clipped">
+<Story name="Clipped" asChild>
   <div class="w-40">
     <TruncatedText
       data={{ text: 'Troca da fonte da impressora do financeiro' }}
@@ -21,14 +21,14 @@
 </Story>
 
 <!-- Cabe inteiro: nenhum balão. -->
-<Story name="Fits">
+<Story name="Fits" asChild>
   <div class="w-60">
     <TruncatedText data={{ text: 'Aguardando' }} ui={{ className: 'truncate' }} />
   </div>
 </Story>
 
 <!-- Duas linhas e corte. -->
-<Story name="TwoLines">
+<Story name="TwoLines" asChild>
   <div class="w-48">
     <TruncatedText
       data={{

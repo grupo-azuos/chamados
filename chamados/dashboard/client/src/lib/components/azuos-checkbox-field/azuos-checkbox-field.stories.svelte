@@ -20,7 +20,7 @@
 <Story name="Disabled" args={{ data: { label: 'Avisar por e-mail', name: 'email', isChecked: false }, state: { isDisabled: true } }} />
 
 <!-- Caso limite: rótulo comprido num celular quebra linha ao lado da caixa. -->
-<Story name="LongLabelOnPhone">
+<Story name="LongLabelOnPhone" asChild>
   <div class="w-[300px]">
     <CheckboxField data={{ label: 'Avisar todas as pessoas que acompanham o chamado quando ele mudar de situação', name: 'all', isChecked: true }} />
   </div>
