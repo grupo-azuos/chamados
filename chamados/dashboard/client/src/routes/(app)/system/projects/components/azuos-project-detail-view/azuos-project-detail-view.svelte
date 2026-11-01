@@ -11,6 +11,8 @@
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
 
   import { type StatusBadgeTone } from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+
+  import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import {
     type ProjectProgress,
     type ProjectTimelineDay,
@@ -96,7 +98,6 @@
 </script>
 
 <script lang="ts">
-  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
   import CircleDot from '@lucide/svelte/icons/circle-dot';
   import GitMerge from '@lucide/svelte/icons/git-merge';
@@ -126,13 +127,7 @@
 </script>
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-5">
-  <div>
-    <ActionButton
-      data={{ label: 'Projetos' }}
-      ui={{ variant: 'ghost', size: 'sm', icon: ArrowLeft }}
-      actions={{ onClick: actions.onBack }}
-    />
-  </div>
+  <BackButton data={{ destination: 'os projetos' }} actions={{ onClick: actions.onBack }} />
 
   <PageHeader
     data={{

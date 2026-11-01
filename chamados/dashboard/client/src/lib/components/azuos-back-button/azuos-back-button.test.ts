@@ -19,6 +19,16 @@ describe('AzuosBackButton', () => {
     );
   });
 
+  // feliz
+  it('has the paralegal back look: brand blue, small text, no bold, underline on hover', () => {
+    render(BackButton, { props: { data: { destination: 'empresas', to: '/companies' } } });
+
+    const link = screen.getByRole('link', { name: 'Voltar para empresas' });
+    expect(link).toHaveClass('text-brand-blue-700', 'text-sm', 'gap-1', 'hover:underline');
+    expect(link).not.toHaveClass('font-medium');
+    expect(link.querySelector('svg')).toHaveClass('size-3.5');
+  });
+
   it('calls onClick instead of going back when it is given', async () => {
     const onClick = vi.fn();
     const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});

@@ -264,7 +264,6 @@
 <script lang="ts">
   import Archive from '@lucide/svelte/icons/archive';
   import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
-  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Building2 from '@lucide/svelte/icons/building-2';
   import CircleCheck from '@lucide/svelte/icons/circle-check';
   import Cpu from '@lucide/svelte/icons/cpu';
@@ -283,6 +282,8 @@
   import Wrench from '@lucide/svelte/icons/wrench';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+
+  import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import ActionMenu from '../azuos-action-menu/azuos-action-menu.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import ComputerLivePanel from '../azuos-computer-live-panel/azuos-computer-live-panel.svelte';
@@ -370,11 +371,7 @@
 </script>
 
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-5">
-  <ActionButton
-    data={{ label: 'Voltar ao inventário' }}
-    ui={{ variant: 'ghost', size: 'sm', icon: ArrowLeft, className: 'self-start' }}
-    actions={{ onClick: actions.onBack }}
-  />
+  <BackButton data={{ destination: 'o inventário' }} actions={{ onClick: actions.onBack }} />
 
   <section aria-label="Identificação do computador" class="bg-card rounded-surface min-w-0 border p-4 shadow-xs sm:p-5">
     <PageHeader

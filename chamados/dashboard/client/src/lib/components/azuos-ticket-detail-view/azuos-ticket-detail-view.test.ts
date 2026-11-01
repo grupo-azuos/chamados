@@ -136,7 +136,7 @@ describe('AzuosTicketDetailView', () => {
     const actions = setup();
 
     await userEvent.click(screen.getByRole('button', { name: /ordem de serviço/i }));
-    await userEvent.click(screen.getByRole('button', { name: /voltar aos chamados/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar para os chamados' }));
 
     expect(actions.onDownloadServiceOrder).toHaveBeenCalledOnce();
     expect(actions.onBack).toHaveBeenCalledOnce();

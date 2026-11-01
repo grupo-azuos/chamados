@@ -73,7 +73,7 @@ Uma ação principal por tela (azul). As outras são `secondary` ou `ghost`.
 
 ## As Leis Absolutas do Padrão Azuos 2.0 (Blindagem de Design)
 
-1. **Botão de Voltar Canônico (`AzuosBackButton`):** Todo retorno de página é exclusivamente um link limpo `← Voltar para [destino]` em `text-primary`. Proibido botão com moldura, circular com ícone ou texto fora desse padrão.
+1. **Botão de Voltar Canônico (`AzuosBackButton`):** Todo retorno de página é exclusivamente um link limpo `← Voltar para [destino]` no desenho do paralegal (`text-brand-blue-700`, `text-sm`, seta de 14px, sublinhado no hover, sem negrito). Proibido botão com moldura, circular com ícone ou texto fora desse padrão.
 2. **Inputs 100% com Fundo Sólido (`bg-muted`):** Todo input, textarea, select e combobox tem preenchimento sólido `bg-muted text-foreground`. Proibido `bg-transparent` ou misturar campos outline com campos cinzas.
 3. **Cards Sólidos Sem Vidro:** Cards são 100% opacos (`bg-card` ou cor sólida da paleta). Proibido `backdrop-blur`, gradientes (`bg-gradient-*`) e transparências translúcidas.
 4. **Cards de Dashboard com Ícone:** Cards de estatística (`AzuosStatCard`) e destaque (`AzuosHeroCard`) usam prioritariamente ícones Lucide padronizados.

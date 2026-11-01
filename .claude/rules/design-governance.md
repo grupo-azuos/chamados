@@ -4,7 +4,7 @@ Todo código gerado ou modificado nos 14 sistemas do Grupo Azuos DEVE seguir est
 
 ## 1. Botão de Voltar Canônico
 - Em qualquer tela de detalhe, formulário ou entidade, o botão de voltar é EXCLUSIVAMENTE o `<AzuosBackButton data={{ destination: '...' }} />`.
-- Formato visual obrigatório: `← Voltar para [destino]` em `text-primary`, sem moldura, sem fundo, sem caixa cinza, sem formato circular com `<` isolado.
+- Formato visual obrigatório: o do paralegal ("Voltar para empresas") — `← Voltar para [destino]` em `text-brand-blue-700`, `text-sm`, seta de 14px, sublinhado no hover, sem negrito, sem moldura, sem fundo, sem caixa cinza, sem formato circular com `<` isolado.
 - Botões manuais de voltar são terminantemente proibidos e rejeitados pelos hooks de linter.
 
 ## 2. Formulários e Inputs 100% Sólidos

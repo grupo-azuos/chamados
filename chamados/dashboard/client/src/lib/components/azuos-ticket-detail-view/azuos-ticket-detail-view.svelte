@@ -83,7 +83,6 @@
 </script>
 
 <script lang="ts">
-  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import FileDown from '@lucide/svelte/icons/file-down';
   import GitPullRequest from '@lucide/svelte/icons/git-pull-request';
@@ -91,6 +90,8 @@
   import MessageCircle from '@lucide/svelte/icons/message-circle';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+
+  import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import AttachmentList from '$lib/components/azuos-attachment-list/azuos-attachment-list.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import HistoryTimeline, {
@@ -147,11 +148,7 @@
 </script>
 
 <div class="mx-auto flex w-full max-w-7xl flex-col gap-5">
-  <ActionButton
-    data={{ label: 'Voltar aos chamados' }}
-    ui={{ variant: 'ghost', size: 'sm', icon: ArrowLeft, className: 'self-start' }}
-    actions={{ onClick: actions.onBack }}
-  />
+  <BackButton data={{ destination: 'os chamados' }} actions={{ onClick: actions.onBack }} />
 
   <PageHeader
     data={{

@@ -241,7 +241,6 @@ describe('AzuosTicketLookupView', () => {
   });
 });
 
-
 describe('AzuosTicketLookupView — pessoas vinculadas', () => {
   // feliz
   it('marks the tickets the person is in because someone linked her', () => {
@@ -273,12 +272,15 @@ describe('AzuosTicketLookupView — pessoas vinculadas', () => {
   it('lists who is linked and goes back to the list', async () => {
     const onBackToList = vi.fn();
     setup({
-      data: { protocol: 'CH-0007', ticket: { ...ticket, watchers: [{ id: 'u-1', name: 'Caio Reis' }] } },
+      data: {
+        protocol: 'CH-0007',
+        ticket: { ...ticket, watchers: [{ id: 'u-1', name: 'Caio Reis' }] },
+      },
       actions: { ...actions, onBackToList },
     });
 
     expect(screen.getByText('Caio Reis')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Meus chamados' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar para meus chamados' }));
     expect(onBackToList).toHaveBeenCalled();
   });
 
@@ -287,7 +289,7 @@ describe('AzuosTicketLookupView — pessoas vinculadas', () => {
     setup();
 
     expect(screen.queryByText('Vinculados')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Meus chamados' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Voltar para meus chamados' })).toBeNull();
   });
 });
 

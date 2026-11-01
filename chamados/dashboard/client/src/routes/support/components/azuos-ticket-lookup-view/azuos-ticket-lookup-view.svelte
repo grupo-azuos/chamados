@@ -99,7 +99,6 @@
 </script>
 
 <script lang="ts">
-  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Building2 from '@lucide/svelte/icons/building-2';
   import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
   import Clock from '@lucide/svelte/icons/clock';
@@ -114,6 +113,8 @@
   import type { Component } from 'svelte';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+
+  import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import AttachmentList from '$lib/components/azuos-attachment-list/azuos-attachment-list.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
@@ -283,9 +284,9 @@
   <!-- DIREITA: o chamado aberto (ou o convite para abrir um). -->
   <section class={cn('flex min-w-0 flex-col gap-4', !isShowingResult && 'hidden lg:flex')} aria-label="Chamado">
     {#if isShowingResult}
-      <ActionButton
-        data={{ label: 'Meus chamados' }}
-        ui={{ variant: 'ghost', size: 'sm', icon: ArrowLeft, className: 'w-fit lg:hidden' }}
+      <BackButton
+        data={{ destination: 'meus chamados' }}
+        ui={{ className: 'lg:hidden' }}
         actions={{ onClick: actions.onBackToList }}
       />
     {/if}

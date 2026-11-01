@@ -4,8 +4,9 @@
    *
    * Regra absoluta de navegação da casa: todo retorno de página de detalhe/entidade utiliza
    * EXCLUSIVAMENTE este formato (`← Voltar para [destino]`). É um link de texto limpo, sem
-   * moldura, sem caixa cinza, sem sombra e sem fundo, na cor primária da marca (`text-primary`),
-   * com seta fina à esquerda.
+   * moldura, sem caixa cinza, sem sombra e sem fundo: texto azul da marca (`text-brand-blue-700`),
+   * sublinhado no hover, com seta fina de 14px à esquerda. É cópia fiel do voltar do paralegal
+   * ("Voltar para empresas"), que é a referência do grupo — não mude o desenho aqui.
    *
    * É proibido criar botões de voltar com variantes `outline`, circulares com ícone isolado,
    * botões cinzas ou textos arbitrários fora dessa convenção.
@@ -51,11 +52,10 @@
     if (!data.to) window.history.back();
   }
 
-  /* `min-h-10`: o texto continua um link limpo, mas o alvo de clique tem os 40px da régua. */
   const className = $derived(
     cn(
-      'group text-primary rounded-control inline-flex min-h-10 items-center gap-1.5 text-sm font-medium transition-colors',
-      'hover:text-primary/80 focus-visible:ring-ring hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+      'text-brand-blue-700 inline-flex items-center gap-1 self-start text-sm hover:underline',
+      'focus-visible:ring-ring rounded-control focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
       isDisabled && 'pointer-events-none opacity-50',
       ui?.className,
     ),
@@ -63,10 +63,7 @@
 </script>
 
 {#snippet content()}
-  <ArrowLeft
-    class="size-4 shrink-0 transition-transform group-hover:-translate-x-0.5"
-    aria-hidden="true"
-  />
+  <ArrowLeft class="size-3.5 shrink-0" aria-hidden="true" />
   <span>{displayText}</span>
 {/snippet}
 
