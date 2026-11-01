@@ -111,3 +111,23 @@ Element.prototype.getClientRects = function getClientRects(this: Element): DOMRe
     item: (index: number) => (index === 0 ? box : null),
   }) as unknown as DOMRectList;
 };
+
+/**
+ * Nem `IntersectionObserver`. O Embla (por trás do `AzuosCarousel`) e o rodapé de rolagem
+ * infinita o usam para saber o que está à vista — sem o stub, quebram na montagem. Calado basta:
+ * nenhum teste depende de "o que está à vista", e no jsdom nada está.
+ */
+if (!window.IntersectionObserver) {
+  window.IntersectionObserver = class {
+    readonly root = null;
+    readonly rootMargin = '';
+    readonly thresholds: number[] = [];
+
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  } as unknown as typeof IntersectionObserver;
+}
