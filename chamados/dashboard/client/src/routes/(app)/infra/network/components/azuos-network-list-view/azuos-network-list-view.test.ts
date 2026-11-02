@@ -82,7 +82,6 @@ function renderView(
   });
 }
 
-
 /* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
 function hasCardsOnlyTable(): boolean {
   return Array.from(document.querySelectorAll('.overflow-x-auto')).some(
@@ -133,7 +132,9 @@ describe('AzuosNetworkListView — stat card shortcuts and filter bar', () => {
   it('turns "open now" into a shortcut for the only-open filter', async () => {
     renderWithFilter();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Em aberto agora: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Em aberto agora .+: filtrar a lista$/ }),
+    );
 
     expect(actions.onOnlyOpenChange).toHaveBeenLastCalledWith(true);
   });
@@ -141,7 +142,7 @@ describe('AzuosNetworkListView — stat card shortcuts and filter bar', () => {
   it('turns "outages" into a shortcut for the outage type, and clears it on a second click', async () => {
     renderWithFilter({ type: 'wan_down' });
 
-    const card = screen.getByRole('button', { name: 'Quedas no período: tirar o filtro' });
+    const card = screen.getByRole('button', { name: /^Quedas no período .+: tirar o filtro$/ });
     expect(card).toHaveAttribute('aria-pressed', 'true');
 
     await userEvent.click(card);
@@ -241,7 +242,9 @@ describe('AzuosNetworkListView — period, filters, rows and the cut list', () =
       return;
     }
     await user.click(screen.getByRole('button', { name: label }));
-    const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+    const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(
+      -1,
+    ) as HTMLElement;
     await user.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
   }
 
@@ -271,7 +274,10 @@ describe('AzuosNetworkListView — period, filters, rows and the cut list', () =
     const reopen = screen.getAllByRole('button', { name: 'Reabrir' });
     for (const button of reopen) await user.click(button);
     expect(actions.onResolveChange).toHaveBeenCalledTimes(reopen.length);
-    expect(actions.onResolveChange).toHaveBeenLastCalledWith(expect.objectContaining({ id: 1 }), false);
+    expect(actions.onResolveChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 1 }),
+      false,
+    );
   });
 
   // triste
@@ -307,7 +313,12 @@ describe('AzuosNetworkListView — the outage shortcut switched off and the tabl
       vi.mocked(actions.onResolveChange).mockClear();
       render(NetworkListView, {
         props: {
-          data: { events: [event()], total: 1, summary, filter: { ...emptyFilter, type: 'wan_down' } },
+          data: {
+            events: [event()],
+            total: 1,
+            summary,
+            filter: { ...emptyFilter, type: 'wan_down' },
+          },
           state: settled,
           actions,
         },

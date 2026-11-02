@@ -81,6 +81,7 @@ const emptyFilter: ComputerListFilter = {
   onlyOnline: false,
   onlyOffline: false,
   alert: '',
+  resourceCondition: '',
   preventive: '',
 };
 
@@ -93,6 +94,7 @@ const actions = {
   onOfflineChange: vi.fn(),
   onKindChange: vi.fn(),
   onAlertChange: vi.fn(),
+  onResourceConditionChange: vi.fn(),
   onPreventiveChange: vi.fn(),
   onClearFilters: vi.fn(),
   onRetry: vi.fn(),
@@ -155,17 +157,21 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
   it('turns the health cards into shortcuts for the health filter', async () => {
     renderWithFilter();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Saúde crítica: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Saúde crítica .+: filtrar a lista$/ }),
+    );
     expect(actions.onHealthStatusChange).toHaveBeenLastCalledWith('critical');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Em atenção: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Em atenção .+: filtrar a lista$/ }),
+    );
     expect(actions.onHealthStatusChange).toHaveBeenLastCalledWith('attention');
   });
 
   it('marks the card while its filter is on, and clears it on a second click', async () => {
     renderWithFilter({ healthStatus: 'critical' });
 
-    const card = screen.getByRole('button', { name: 'Saúde crítica: tirar o filtro' });
+    const card = screen.getByRole('button', { name: /^Saúde crítica .+: tirar o filtro$/ });
     expect(card).toHaveAttribute('aria-pressed', 'true');
 
     await userEvent.click(card);
@@ -201,7 +207,9 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
 
   it('filters by online status from both the card and the connection selector', async () => {
     renderWithFilter();
-    await userEvent.click(screen.getByRole('button', { name: 'Online agora: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Online agora .+: filtrar a lista$/ }),
+    );
     expect(actions.onOnlineChange).toHaveBeenLastCalledWith(true);
     await openMoreFilters();
     await userEvent.click(screen.getByRole('button', { name: 'Online agora' }));
@@ -222,7 +230,10 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
   it('announces and opens the grouped filters when the list arrives filtered', () => {
     renderWithFilter({ preventive: 'needed', onlyOffline: true });
 
-    expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
     expect(screen.getByLabelText('2 ativos')).toBeInTheDocument();
     /* Aberto sem clique: a lista da preventiva já mostra o que está escolhido. */
     expect(screen.getByRole('button', { name: 'Filtrar pela preventiva' })).toHaveTextContent(
@@ -232,7 +243,7 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
 
   it('marks the online card as selected and lets it clear the filter', async () => {
     renderWithFilter({ onlyOnline: true });
-    const card = screen.getByRole('button', { name: 'Online agora: tirar o filtro' });
+    const card = screen.getByRole('button', { name: /^Online agora .+: tirar o filtro$/ });
     expect(card).toHaveAttribute('aria-pressed', 'true');
     await userEvent.click(card);
     expect(actions.onOnlineChange).toHaveBeenLastCalledWith(false);
@@ -242,13 +253,19 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
   it('filters offline machines and the alert shortcuts from the cards', async () => {
     renderWithFilter();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Offline: filtrar a lista' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Offline .+: filtrar a lista$/ }));
     expect(actions.onOfflineChange).toHaveBeenLastCalledWith(true);
-    await userEvent.click(screen.getByRole('button', { name: 'CPU elevada: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^CPU elevada .+: filtrar a lista$/ }),
+    );
     expect(actions.onAlertChange).toHaveBeenLastCalledWith('cpu');
-    await userEvent.click(screen.getByRole('button', { name: 'Memória elevada: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Memória elevada .+: filtrar a lista$/ }),
+    );
     expect(actions.onAlertChange).toHaveBeenLastCalledWith('memory');
-    await userEvent.click(screen.getByRole('button', { name: 'Com alerta ativo: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Com alerta ativo .+: filtrar a lista$/ }),
+    );
     expect(actions.onAlertChange).toHaveBeenLastCalledWith('any');
   });
 
@@ -256,7 +273,9 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
   it('turns the alert filter off when its selected card is clicked again', async () => {
     renderWithFilter({ alert: 'memory' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Memória elevada: tirar o filtro' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Memória elevada .+: tirar o filtro$/ }),
+    );
     expect(actions.onAlertChange).toHaveBeenLastCalledWith('');
   });
 });
@@ -380,13 +399,26 @@ describe('AzuosComputerListView', () => {
   });
 });
 
-
 describe('AzuosComputerListView maintenance parity', () => {
   it('shows preventive and critical signals in both cards and table, even at 100 points', () => {
-    const { container } = render(ComputerListView, { props: {
-      data: { computers: [computer({ activeAlerts: 2, preventiveStatus: 'due', lastPreventiveAt: '2020-01-01T12:00:00.000Z' })],
-        total: 1, summary, filter: emptyFilter }, state: settled, actions,
-    } });
+    const { container } = render(ComputerListView, {
+      props: {
+        data: {
+          computers: [
+            computer({
+              activeAlerts: 2,
+              preventiveStatus: 'due',
+              lastPreventiveAt: '2020-01-01T12:00:00.000Z',
+            }),
+          ],
+          total: 1,
+          summary,
+          filter: emptyFilter,
+        },
+        state: settled,
+        actions,
+      },
+    });
     for (const slot of ['computer-cards-mobile', 'computer-table-desktop']) {
       const section = container.querySelector(`[data-slot="${slot}"]`) as HTMLElement;
       expect(within(section).getByText('Preventiva vencida')).toBeInTheDocument();
@@ -397,7 +429,13 @@ describe('AzuosComputerListView maintenance parity', () => {
 });
 
 describe('AzuosComputerListView — export, situations and the cut list', () => {
-  function renderList(computers: ComputerListItem[], state: Partial<typeof settled> & { exportError?: string | null; exportingFormat?: 'xlsx' | 'docx' | 'pdf' | null } = {}) {
+  function renderList(
+    computers: ComputerListItem[],
+    state: Partial<typeof settled> & {
+      exportError?: string | null;
+      exportingFormat?: 'xlsx' | 'docx' | 'pdf' | null;
+    } = {},
+  ) {
     return render(ComputerListView, {
       props: {
         data: { computers, total: 40, summary, filter: emptyFilter },
@@ -417,7 +455,10 @@ describe('AzuosComputerListView — export, situations and the cut list', () => 
 
   // triste
   it('shows why the export failed and that the list was cut', () => {
-    renderList([computer()], { exportError: 'Não foi possível gerar o arquivo.', isTruncated: true });
+    renderList([computer()], {
+      exportError: 'Não foi possível gerar o arquivo.',
+      isTruncated: true,
+    });
     expect(screen.getByText('Não foi possível gerar o arquivo.')).toBeInTheDocument();
     expect(screen.getByText(/Mostrando 1 de 40 computadores/)).toBeInTheDocument();
   });
@@ -426,7 +467,13 @@ describe('AzuosComputerListView — export, situations and the cut list', () => 
   it('tells archived and offline machines apart, with or without a responsible', () => {
     renderList([
       computer({ id: 1, isArchived: true, responsibleName: null, department: null }),
-      computer({ id: 2, name: 'FISCAL-02', displayName: null, isOnline: false, ticketsThisMonth: 3 }),
+      computer({
+        id: 2,
+        name: 'FISCAL-02',
+        displayName: null,
+        isOnline: false,
+        ticketsThisMonth: 3,
+      }),
     ]);
     expect(screen.getAllByText('Arquivada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Offline').length).toBeGreaterThan(0);
@@ -472,9 +519,17 @@ describe('AzuosComputerListView — reduced motion', () => {
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
     try {
-      render(ComputerListView, { props: { data: { computers: [computer()], total: 1, summary, filter: emptyFilter }, state: settled, actions } });
+      render(ComputerListView, {
+        props: {
+          data: { computers: [computer()], total: 1, summary, filter: emptyFilter },
+          state: settled,
+          actions,
+        },
+      });
 
-      await userEvent.click(screen.getByRole('button', { name: 'Com alerta ativo: filtrar a lista' }));
+      await userEvent.click(
+        screen.getByRole('button', { name: /^Com alerta ativo .+: filtrar a lista$/ }),
+      );
 
       expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
     } finally {
@@ -490,11 +545,16 @@ describe('AzuosComputerListView — cards only', () => {
     tableView.actions.onToggle();
     try {
       render(ComputerListView, {
-        props: { data: { computers: [computer()], total: 1, summary, filter: emptyFilter }, state: settled, actions },
+        props: {
+          data: { computers: [computer()], total: 1, summary, filter: emptyFilter },
+          state: settled,
+          actions,
+        },
       });
 
       const hidden = Array.from(document.querySelectorAll('.overflow-x-auto')).some(
-        (element) => element.classList.contains('hidden') && !element.classList.contains('xl:block'),
+        (element) =>
+          element.classList.contains('hidden') && !element.classList.contains('xl:block'),
       );
       expect(hidden).toBe(true);
     } finally {

@@ -3,10 +3,7 @@ import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import PartListView, {
-  type PartListFilter,
-  type PartSummary,
-} from './azuos-part-list-view.svelte';
+import PartListView, { type PartListFilter, type PartSummary } from './azuos-part-list-view.svelte';
 import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
 function part(over: Partial<Part> = {}): Part {
@@ -77,7 +74,6 @@ function renderView(over: { parts?: Part[]; state?: Partial<typeof settled> } = 
   });
 }
 
-
 /* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
 function hasCardsOnlyTable(): boolean {
   return Array.from(document.querySelectorAll('.overflow-x-auto')).some(
@@ -101,7 +97,7 @@ describe('AzuosPartListView — stat card shortcuts and filter bar', () => {
     renderWithFilter();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Peças na prateleira: filtrar a lista' }),
+      screen.getByRole('button', { name: /^Peças na prateleira .+: filtrar a lista$/ }),
     );
 
     expect(actions.onInStockOnlyChange).toHaveBeenLastCalledWith(true);
@@ -110,7 +106,9 @@ describe('AzuosPartListView — stat card shortcuts and filter bar', () => {
   it('turns "out of stock" into a shortcut for the out-of-stock filter', async () => {
     renderWithFilter();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Sem estoque: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Sem estoque .+: filtrar a lista$/ }),
+    );
 
     expect(actions.onOutOfStockOnlyChange).toHaveBeenLastCalledWith(true);
   });
@@ -118,7 +116,7 @@ describe('AzuosPartListView — stat card shortcuts and filter bar', () => {
   it('marks the card while the filter is on, and clears both on a second click', async () => {
     renderWithFilter({ inStockOnly: true });
 
-    const card = screen.getByRole('button', { name: 'Peças na prateleira: tirar o filtro' });
+    const card = screen.getByRole('button', { name: /^Peças na prateleira .+: tirar o filtro$/ });
     expect(card).toHaveAttribute('aria-pressed', 'true');
 
     await userEvent.click(card);
@@ -250,7 +248,9 @@ async function chooseSecond(label: string) {
     return;
   }
   await userEvent.click(screen.getByRole('button', { name: label }));
-  const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+  const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(
+    -1,
+  ) as HTMLElement;
   await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
 }
 
@@ -333,7 +333,9 @@ describe('AzuosPartListView — reduced motion', () => {
     try {
       renderView();
 
-      await userEvent.click(screen.getByRole('button', { name: 'Sem estoque: filtrar a lista' }));
+      await userEvent.click(
+        screen.getByRole('button', { name: /^Sem estoque .+: filtrar a lista$/ }),
+      );
 
       expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
     } finally {
@@ -347,12 +349,19 @@ describe('AzuosPartListView — out of stock filter already on', () => {
   it('lights the "out of stock" shortcut when the filter is on', () => {
     render(PartListView, {
       props: {
-        data: { parts: [part()], total: 1, summary, filter: { ...emptyFilter, outOfStockOnly: true } },
+        data: {
+          parts: [part()],
+          total: 1,
+          summary,
+          filter: { ...emptyFilter, outOfStockOnly: true },
+        },
         state: settled,
         actions,
       },
     });
 
-    expect(screen.getByRole('button', { name: 'Sem estoque: tirar o filtro' })).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.getByRole('button', { name: /^Sem estoque .+: tirar o filtro$/ }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 });

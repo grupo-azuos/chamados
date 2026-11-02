@@ -11,6 +11,7 @@
     onlyOnline: false,
     onlyOffline: false,
     alert: '',
+    resourceCondition: '',
     preventive: '',
     includeArchived: false,
   };
@@ -31,6 +32,7 @@
     onOnlineChange: () => {},
     onOfflineChange: () => {},
     onAlertChange: () => {},
+    onResourceConditionChange: () => {},
     onPreventiveChange: () => {},
     onArchivedChange: () => {},
     onClearFilters: () => {},
@@ -78,6 +80,7 @@
         onlyOnline: true,
         healthStatus: 'critical',
         alert: 'memory',
+        resourceCondition: '',
         preventive: 'needed',
         kind: 'desktop',
         includeArchived: true,

@@ -101,7 +101,6 @@ function renderView(
   });
 }
 
-
 /* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
 function hasCardsOnlyTable(): boolean {
   return Array.from(document.querySelectorAll('.overflow-x-auto')).some(
@@ -142,17 +141,19 @@ describe('AzuosDisposalListView — stat card shortcuts and filter bar', () => {
   it('turns the defect and scrap cards into shortcuts for the type filter', async () => {
     renderWithFilter();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Com defeito: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Com defeito .+: filtrar a lista$/ }),
+    );
     expect(actions.onTypeChange).toHaveBeenLastCalledWith('defect');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Lixo: filtrar a lista' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Lixo .+: filtrar a lista$/ }));
     expect(actions.onTypeChange).toHaveBeenLastCalledWith('scrap');
   });
 
   it('marks the card while its filter is on, and clears it on a second click', async () => {
     renderWithFilter({ type: 'scrap' });
 
-    const card = screen.getByRole('button', { name: 'Lixo: tirar o filtro' });
+    const card = screen.getByRole('button', { name: /^Lixo .+: tirar o filtro$/ });
     expect(card).toHaveAttribute('aria-pressed', 'true');
 
     await userEvent.click(card);
@@ -258,7 +259,11 @@ describe('AzuosDisposalListView — search, type filter, rows and the restore di
     const user = userEvent.setup();
     vi.mocked(actions.onOpenMachine).mockClear();
     vi.mocked(actions.onAskRestore).mockClear();
-    renderView({ computers: [computer({ department: null, disposalType: null, disposalReason: null, displayName: null })] });
+    renderView({
+      computers: [
+        computer({ department: null, disposalType: null, disposalReason: null, displayName: null }),
+      ],
+    });
 
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
     const opens = screen.getAllByRole('button', { name: 'Ver ficha' });
@@ -323,7 +328,9 @@ describe('AzuosDisposalListView — reduced motion', () => {
     try {
       renderView();
 
-      await userEvent.click(screen.getByRole('button', { name: 'Com defeito: filtrar a lista' }));
+      await userEvent.click(
+        screen.getByRole('button', { name: /^Com defeito .+: filtrar a lista$/ }),
+      );
 
       expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
     } finally {
