@@ -54,7 +54,7 @@
 
   const className = $derived(
     cn(
-      'text-brand-blue-700 dark:text-foreground inline-flex items-center gap-1 self-start text-sm hover:underline',
+      'text-brand-blue-700 dark:text-foreground inline-flex items-center gap-1 self-start text-sm no-underline hover:underline',
       'focus-visible:ring-ring rounded-control focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
       isDisabled && 'pointer-events-none opacity-50',
       ui?.className,

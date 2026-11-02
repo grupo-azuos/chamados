@@ -199,7 +199,8 @@
       <!-- 2. Visualização Desktop (>= xl) -->
       <div
         class={cn(
-          'overflow-x-auto rounded-box border border-border',
+          /* Sem borda aqui: a tabela do grupo já traz a dela, e duas viravam moldura dupla. */
+          'overflow-x-auto',
           tableView.forceCards ? 'hidden' : 'hidden xl:block',
         )}
         data-slot="part-ledger-table-desktop"
