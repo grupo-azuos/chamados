@@ -114,6 +114,8 @@
 
 <script lang="ts">
   import HardDrive from '@lucide/svelte/icons/hard-drive';
+  import Laptop from '@lucide/svelte/icons/laptop';
+  import Monitor from '@lucide/svelte/icons/monitor';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
 
@@ -343,7 +345,12 @@
         >
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0 flex-1 basis-40">
-              <span class="block font-medium text-ink-900 break-words leading-snug">
+              <span class="text-ink-900 flex items-center gap-1.5 leading-snug font-medium break-words">
+                {#if computer.kind === 'notebook'}
+                  <Laptop class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+                {:else}
+                  <Monitor class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+                {/if}
                 {displayNameOf(computer)}
               </span>
               <span class="block text-xs text-ink-500 break-words leading-tight mt-0.5"
