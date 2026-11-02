@@ -126,7 +126,7 @@ describe('AzuosAgentDownloadView — the failures of the version list and of a d
     const callbacks = actions();
     render(AgentDownloadView, {
       data,
-      state: { ...state, releasesError: 'Não consegui listar.', downloadError: 'Arquivo indisponível.', downloadingVersion: { version: '1.2.3', kind: 'exe' } },
+      state: { ...state, releasesError: 'Não consegui listar.', downloadError: 'Arquivo indisponível.', downloadingVersion: { version: '1.2.3', kind: 'msi' } },
       actions: callbacks,
     });
 

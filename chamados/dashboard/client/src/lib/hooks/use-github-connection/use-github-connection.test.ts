@@ -75,11 +75,11 @@ describe('useGithubConnectionModel', () => {
   it('explains a cancelled or failed authorization that came back in the address', async () => {
     page.url = new URL('http://localhost:5173/system?github_error=cancelled');
     let model = mountModel();
-    expect(model.state.callbackMessage ?? model.state.error).toMatch(/cancelada/);
+    expect(model.state.error).toMatch(/cancelada/);
 
     page.url = new URL('http://localhost:5173/system?github_error=denied');
     model = mountModel();
-    expect(model.state.callbackMessage ?? model.state.error).toMatch(/Não foi possível concluir/);
+    expect(model.state.error).toMatch(/Não foi possível concluir/);
   });
 
   // triste
