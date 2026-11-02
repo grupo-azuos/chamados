@@ -7,7 +7,8 @@
    * escolhem na abertura, na Central e no painel — por isso é genérico. É o par de várias
    * escolhas do `AzuosOptionPicker`: o mesmo gatilho de 40px, o mesmo balão com busca.
    */
-  export type PeoplePickerOption = { id: string; name: string };
+  /** `avatarUrl`: a foto da pessoa; sem ela, as iniciais. */
+  export type PeoplePickerOption = { id: string; name: string; avatarUrl?: string | null };
 
   export type AzuosPeoplePickerProps = {
     data: { selectedIds: string[]; options: PeoplePickerOption[] };
@@ -76,7 +77,7 @@
       aria-label={ui?.ariaLabel}
       aria-invalid={Boolean(fieldState?.error)}
       aria-describedby={fieldState?.error ? errorId : undefined}
-      class="control-lg rounded-control border-border/70 bg-card text-foreground hover:bg-muted/40 inline-flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 border text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+      class="control-lg rounded-control border-border bg-card text-foreground hover:bg-muted inline-flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 border text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60"
     >
       <span class={cn('truncate', selected.length === 0 && 'text-muted-foreground font-normal')}>
         {summaryOf(selected, ui?.placeholder ?? 'Escolha as pessoas')}
@@ -88,7 +89,7 @@
       class="w-auto min-w-(--bits-popover-anchor-width) max-w-[min(26rem,calc(100vw-2rem))] p-0"
       align="start"
     >
-      <div class="border-border/70 relative shrink-0 border-b p-2">
+      <div class="border-border relative shrink-0 border-b p-2">
         <SearchIcon
           class="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-3.5 -translate-y-1/2"
           aria-hidden="true"
@@ -98,7 +99,7 @@
           bind:value={query}
           placeholder="Buscar pelo nome…"
           aria-label="Buscar pessoas"
-          class="control-sm rounded-control border-border/60 bg-muted/30 text-foreground w-full border pr-2 pl-7 text-xs outline-none"
+          class="control-sm rounded-control border-border bg-muted text-foreground w-full border pr-2 pl-7 text-xs outline-none"
         />
       </div>
       <div class="max-h-80 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain p-1" role="listbox" aria-multiselectable="true">
@@ -114,10 +115,10 @@
               onclick={() => toggle(option.id)}
               class={cn(
                 'rounded-chip flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
-                isSelected ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground hover:bg-muted/60',
+                isSelected ? 'bg-muted text-primary font-semibold' : 'text-foreground hover:bg-muted',
               )}
             >
-              <PersonAvatar name={option.name} />
+              <PersonAvatar name={option.name} avatarUrl={option.avatarUrl} />
               <span class="min-w-0 flex-1 break-words">{option.name}</span>
               {#if isSelected}
                 <CheckIcon class="size-3.5 shrink-0" aria-hidden="true" />
@@ -135,7 +136,7 @@
     <ul class="flex flex-wrap gap-1.5" aria-label="Pessoas escolhidas">
       {#each selected as person (person.id)}
         <li class="rounded-chip bg-muted text-foreground flex items-center gap-1.5 py-1 pr-1 pl-1.5 text-xs font-medium">
-          <PersonAvatar name={person.name} />
+          <PersonAvatar name={person.name} avatarUrl={person.avatarUrl} />
           <span class="max-w-48 truncate">{person.name}</span>
           <button
             type="button"

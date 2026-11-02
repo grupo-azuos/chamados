@@ -179,3 +179,118 @@ describe('Github OAuth linking', () => {
     );
   });
 });
+
+describe('Github OAuth: the refusals of the link', () => {
+  beforeEach(() => vi.stubGlobal('fetch', vi.fn()));
+  afterEach(() => vi.unstubAllGlobals());
+
+  const linked = () => ({
+    userId: 'user-1',
+    githubId: '42',
+    login: 'dev',
+    accessToken: encryptGithubToken('token', key),
+    refreshToken: null,
+    expiresAt: null,
+    refreshExpiresAt: null,
+  });
+
+  // feliz
+  it('confirms the link when the account on GitHub is the one stored', async () => {
+    const { service, repository } = setup();
+    repository.find.mockResolvedValue(linked());
+    vi.mocked(fetch).mockResolvedValueOnce(json({ id: 42, login: 'dev' }));
+
+    await expect(service.status('user-1')).resolves.toEqual({
+      isConfigured: true,
+      isLinked: true,
+      login: 'dev',
+    });
+  });
+
+  // triste
+  it('unlinks when the token belongs to another GitHub account', async () => {
+    const { service, repository } = setup();
+    repository.find.mockResolvedValue(linked());
+    vi.mocked(fetch).mockResolvedValueOnce(json({ id: 99, login: 'outra' }));
+
+    await expect(service.status('user-1')).resolves.toMatchObject({ isLinked: false });
+    expect(repository.remove).toHaveBeenCalledWith('user-1');
+  });
+
+  it('does not hide an outage of GitHub behind "not linked"', async () => {
+    const { service, repository } = setup();
+    repository.find.mockResolvedValue(linked());
+    vi.mocked(fetch).mockRejectedValueOnce(new TypeError('fetch failed'));
+    await expect(service.status('user-1')).rejects.toThrow('Não foi possível falar com o GitHub');
+
+    vi.mocked(fetch).mockResolvedValueOnce(json({}, 503));
+    await expect(service.status('user-1')).rejects.toThrow('indisponível');
+
+    vi.mocked(fetch).mockResolvedValueOnce(json({ nada: true }));
+    await expect(service.status('user-1')).rejects.toThrow('confirmar a conta');
+  });
+
+  it('refuses the link when the GitHub account is already of another person', async () => {
+    const { service, repository } = setup();
+    repository.consumeState.mockResolvedValue({
+      userId: 'user-1',
+      codeVerifier: encryptGithubToken('verifier', key),
+    });
+    repository.save.mockRejectedValueOnce(Object.assign(new Error('dup'), { code: '23505' }));
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(json({ access_token: 'token', scope: '' }))
+      .mockResolvedValueOnce(json({ id: 42, login: 'developer' }));
+    await expect(service.complete('code', 'state', 'browser')).rejects.toThrow(
+      'já está vinculada a outro usuário',
+    );
+
+    repository.save.mockRejectedValueOnce(Object.assign(new Error('dup'), { cause: { code: '23505' } }));
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(json({ access_token: 'token', scope: '' }))
+      .mockResolvedValueOnce(json({ id: 42, login: 'developer' }));
+    await expect(service.complete('code', 'state', 'browser')).rejects.toThrow(
+      'já está vinculada a outro usuário',
+    );
+
+    repository.save.mockRejectedValueOnce(new Error('disk full'));
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(json({ access_token: 'token', scope: '' }))
+      .mockResolvedValueOnce(json({ id: 42, login: 'developer' }));
+    await expect(service.complete('code', 'state', 'browser')).rejects.toThrow('disk full');
+  });
+
+  it('refuses an authorization GitHub answered without a token', async () => {
+    const { service, repository } = setup();
+    repository.consumeState.mockResolvedValue({
+      userId: 'user-1',
+      codeVerifier: encryptGithubToken('verifier', key),
+    });
+    vi.mocked(fetch).mockResolvedValueOnce(json({ error: 'bad_verification_code' }));
+
+    await expect(service.complete('code', 'state', 'browser')).rejects.toThrow(
+      'recusou a autorização',
+    );
+  });
+
+  it('drops the link when the access expired and there is no refresh token', async () => {
+    const { service, repository } = setup();
+    repository.find.mockResolvedValue({ ...linked(), expiresAt: new Date(0) });
+
+    await expect(service.accessToken('user-1')).rejects.toThrow('Vincule sua conta');
+    expect(repository.remove).toHaveBeenCalledWith('user-1');
+
+    repository.find.mockResolvedValue({
+      ...linked(),
+      expiresAt: new Date(0),
+      refreshToken: encryptGithubToken('refresh', key),
+      refreshExpiresAt: new Date(0),
+    });
+    await expect(service.accessToken('user-1')).rejects.toThrow('Vincule sua conta');
+  });
+
+  it('needs the dashboard address to send the person back', () => {
+    const { service } = setup({ ...env, GITHUB_OAUTH_FRONTEND_URL: undefined } as Env);
+
+    expect(() => service.frontendRedirect()).toThrow('Configure o endereço do painel');
+  });
+});

@@ -30,7 +30,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/api/computers')
       .set(asCaio())
-      .send({ name })
+      .send({ name, kind: 'desktop' })
       .expect(201);
 
     return created.body.computer.id;

@@ -1,5 +1,5 @@
 import { type SoftwareProject } from '@template/shared/schemas/software-project.schema';
-import { render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -148,5 +148,74 @@ describe('AzuosProjectListView', () => {
     });
 
     expect(screen.getByText(/nenhum sistema cadastrado/i)).toBeInTheDocument();
+  });
+});
+
+describe('AzuosProjectListView — messages, filters, cards and deletion', () => {
+  // feliz
+  it('shows the sync message and the sync failure', () => {
+    renderView({ state: { syncMessage: 'Sincronizado.', syncError: 'GitHub indisponível.' } });
+    expect(screen.getByText('Sincronizado.')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('GitHub indisponível.');
+  });
+
+  // triste
+  it('shows placeholders while loading and offers to clear a filter that hid everything', async () => {
+    renderView({ state: { isLoading: true } });
+    expect(document.querySelectorAll('.animate-pulse')).toHaveLength(3);
+    cleanup();
+    const actions = renderView({ state: { isFilteredOut: true } });
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar Filtros' }));
+    expect(actions.onClearFilters).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('tells a manager to wait for an administrator when there is nothing registered', () => {
+    renderView({ state: { isEmpty: true, canEdit: false } });
+    expect(screen.getByText('Aguarde um administrador cadastrar os sistemas da equipe.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cadastrar Sistema' })).not.toBeInTheDocument();
+  });
+
+  // feliz
+  it('searches and filters by situation', async () => {
+    const actions = renderView();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Buscar' }), 'P');
+    expect(actions.onSearchChange).toHaveBeenCalledWith('P');
+    const status = screen.getByRole('combobox', { name: 'Filtrar por situação' });
+    await fireEvent.pointerDown(status);
+    await fireEvent.click(status);
+    await fireEvent.pointerUp(await screen.findByRole('option', { name: 'Manutenção' }));
+    expect(actions.onStatusChange).toHaveBeenCalledWith('maintenance');
+  });
+
+  // feliz
+  it('opens, edits and asks to delete a project from its card', async () => {
+    const actions = renderView({
+      data: {
+        items: [
+          { ...project, description: null, responsibleName: 'Ana Lima', repositoryUrl: 'https://github.com/example/portal', githubRepoOwner: null, githubRepoName: null, status: 'maintenance' },
+        ],
+      },
+    });
+    expect(screen.getByText('Sem descrição cadastrada.')).toBeInTheDocument();
+    expect(screen.getByText('Ana Lima')).toBeInTheDocument();
+    expect(screen.getByRole('link')).toHaveAttribute('href', 'https://github.com/example/portal');
+    await userEvent.click(screen.getByRole('button', { name: 'Ver sistema' }));
+    expect(actions.onViewTimeline).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    await userEvent.click(screen.getByTitle('Editar'));
+    expect(actions.onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    await userEvent.click(screen.getByTitle('Excluir'));
+    expect(actions.onAskDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+
+  // feliz
+  it('confirms or cancels the deletion in the dialog', async () => {
+    const actions = renderView({ data: { deleting: project } });
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('Tem certeza que deseja excluir "Azuos Ticket"?');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }));
+    expect(actions.onConfirmDelete).toHaveBeenCalledOnce();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(actions.onCancelDelete).toHaveBeenCalledOnce();
   });
 });

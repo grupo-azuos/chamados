@@ -1,56 +1,152 @@
 import { type SoftwareProject } from '@template/shared/schemas/software-project.schema';
-import { describe, expect, it } from 'vitest';
+import { render, waitFor } from '@testing-library/svelte';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { responsibleOptionsFor } from './use-software-project-form.svelte';
+import { ApiError } from '$lib/api/http-client';
+import Harness from './use-software-project-form-harness.test.svelte';
+import {
+  responsibleOptionsFor,
+  type SoftwareProjectFormModel,
+} from './use-software-project-form.svelte';
 
-/* Dado INVENTADO: nenhum nome daqui existe. */
-const attendants = [
-  { id: 'u-ana', name: 'Ana Lima' },
-  { id: 'u-bia', name: 'Bia Costa' },
-];
+vi.mock('$lib/api/software-projects.api', () => ({
+  softwareProjectsApi: { create: vi.fn(), update: vi.fn() },
+}));
 
-function project(over: Partial<SoftwareProject> = {}): SoftwareProject {
+vi.mock('$lib/api/tickets.api', () => ({
+  ticketsApi: { assigneeOptions: vi.fn() },
+}));
+
+const { softwareProjectsApi } = await import('$lib/api/software-projects.api');
+const { ticketsApi } = await import('$lib/api/tickets.api');
+
+function project(overrides: Partial<SoftwareProject> = {}): SoftwareProject {
   return {
     id: 1,
-    name: 'Portal do Cliente',
-    description: null,
-    repositoryUrl: 'org/portal',
+    name: 'Chamados',
+    description: 'O sistema de chamados.',
+    repositoryUrl: 'org/chamados',
     status: 'active',
     color: 'blue',
     githubRepoOwner: 'org',
-    githubRepoName: 'portal',
-    responsibleId: null,
-    responsibleName: null,
+    githubRepoName: 'chamados',
+    responsibleId: 'u-dora',
+    responsibleName: 'Dora',
     openTicketsCount: 0,
     pullRequestsCount: 0,
-    createdAt: '2026-10-01T12:00:00.000Z',
+    createdAt: '2026-09-01T12:00:00.000Z',
     updatedAt: null,
-    ...over,
+    ...overrides,
   };
 }
 
-describe('responsibleOptionsFor', () => {
+function mountModel(
+  props: { project?: SoftwareProject | null; onSaved?: () => void } = {},
+): SoftwareProjectFormModel {
+  let model!: SoftwareProjectFormModel;
+  render(Harness, { props: { ...props, onReady: (ready: SoftwareProjectFormModel) => (model = ready) } });
+
+  return model;
+}
+
+describe('useSoftwareProjectFormModel', () => {
+  beforeEach(() => {
+    vi.mocked(ticketsApi.assigneeOptions).mockResolvedValue([{ id: 'u-dora', name: 'Dora' }]);
+    vi.mocked(softwareProjectsApi.create).mockResolvedValue(project());
+    vi.mocked(softwareProjectsApi.update).mockResolvedValue(project());
+  });
+
   // feliz
-  it('offers who attends Sistema, with "no responsible" first', () => {
-    expect(responsibleOptionsFor(attendants, null)).toEqual([
-      { value: '', label: 'Sem responsável' },
-      { value: 'u-ana', label: 'Ana Lima' },
-      { value: 'u-bia', label: 'Bia Costa' },
-    ]);
+  it('registers the system with the fields trimmed and no responsible as null', async () => {
+    const onSaved = vi.fn();
+    const model = mountModel({ onSaved });
+    expect(model.data.mode).toBe('create');
+    expect(model.data.fields.status.value).toBe('active');
+
+    model.actions.onChange('name', 'Paralegal');
+    model.actions.onChange('description', '  Societário  ');
+    model.actions.onChange('repositoryUrl', 'org/paralegal');
+    model.actions.onChange('color', 'green');
+    model.actions.onSubmit();
+
+    await waitFor(() =>
+      expect(softwareProjectsApi.create).toHaveBeenCalledWith({
+        name: 'Paralegal',
+        description: 'Societário',
+        repositoryUrl: 'org/paralegal',
+        status: 'active',
+        color: 'green',
+        responsibleId: null,
+      }),
+    );
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  });
+
+  it('edits the existing system, starting from what it has', async () => {
+    const model = mountModel({ project: project() });
+    expect(model.data.mode).toBe('edit');
+    expect(model.data.fields.responsibleId.value).toBe('u-dora');
+
+    model.actions.onChange('responsibleId', '');
+    model.actions.onChange('description', '');
+    model.actions.onSubmit();
+
+    await waitFor(() =>
+      expect(softwareProjectsApi.update).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ description: null, responsibleId: null }),
+      ),
+    );
+  });
+
+  it('offers who attends System as responsible, with the current one kept', async () => {
+    const model = mountModel({ project: project({ responsibleId: 'u-saiu', responsibleName: 'Quem saiu' }) });
+
+    await waitFor(() =>
+      expect(model.data.responsibleOptions).toEqual([
+        { value: '', label: 'Sem responsável' },
+        { value: 'u-dora', label: 'Dora' },
+        { value: 'u-saiu', label: 'Quem saiu' },
+      ]),
+    );
   });
 
   // triste
-  /* Quem deixou de atender Sistema continua aparecendo como o responsável atual do projeto. */
-  it('keeps the current responsible even when they no longer attend Sistema', () => {
-    const options = responsibleOptionsFor(
-      attendants,
-      project({ responsibleId: 'u-caio', responsibleName: 'Caio Reis' }),
-    );
+  it('shows the error of a required field after leaving it', async () => {
+    const model = mountModel();
 
-    expect(options.at(-1)).toEqual({ value: 'u-caio', label: 'Caio Reis' });
+    model.actions.onBlur('name');
+
+    await waitFor(() => expect(model.data.fields.name.error).toBe('Informe o nome do sistema'));
   });
 
-  it('offers only "no responsible" while nobody attends Sistema', () => {
-    expect(responsibleOptionsFor([], project())).toEqual([{ value: '', label: 'Sem responsável' }]);
+  it('does not send an invalid form, and shows the error of the server', async () => {
+    vi.mocked(softwareProjectsApi.create).mockRejectedValue(new ApiError(422, 'Repositório inválido.'));
+    const model = mountModel();
+
+    model.actions.onSubmit();
+    await waitFor(() => expect(model.data.fields.repositoryUrl.error).toBeTruthy());
+    expect(softwareProjectsApi.create).not.toHaveBeenCalled();
+
+    model.actions.onChange('name', 'X');
+    model.actions.onChange('repositoryUrl', 'org/x');
+    model.actions.onSubmit();
+    await waitFor(() => expect(model.state.error).toBe('Repositório inválido.'));
+  });
+});
+
+describe('responsibleOptionsFor', () => {
+  // feliz
+  it('puts "no responsible" first and keeps a responsible who left the area', () => {
+    expect(responsibleOptionsFor([{ id: 'a', name: 'Ana' }], null)).toEqual([
+      { value: '', label: 'Sem responsável' },
+      { value: 'a', label: 'Ana' },
+    ]);
+    expect(
+      responsibleOptionsFor([], project({ responsibleId: 'z', responsibleName: null })),
+    ).toEqual([
+      { value: '', label: 'Sem responsável' },
+      { value: 'z', label: 'Responsável atual' },
+    ]);
   });
 });

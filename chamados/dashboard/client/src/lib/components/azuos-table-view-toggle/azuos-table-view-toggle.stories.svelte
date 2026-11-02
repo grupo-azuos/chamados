@@ -12,7 +12,7 @@
 <Story name="Default" />
 
 <!-- Onde ele mora de verdade: ao lado do título de uma lista com modo cards. -->
-<Story name="BesidePageHeader">
+<Story name="BesidePageHeader" asChild>
   <div class="flex w-80 items-center justify-between">
     <span class="text-sm font-semibold">Chamados</span>
     <TableViewToggle />

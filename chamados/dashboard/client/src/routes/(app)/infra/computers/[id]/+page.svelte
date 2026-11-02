@@ -3,7 +3,8 @@
   import { page } from '$app/state';
   import HardDrive from '@lucide/svelte/icons/hard-drive';
 
-  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+
+  import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import ComputerDetailView from '../components/azuos-computer-detail-view/azuos-computer-detail-view.svelte';
   import ComputerTokenDialog from '../components/azuos-computer-token-dialog/azuos-computer-token-dialog.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
@@ -50,10 +51,7 @@
       }}
       ui={{ icon: HardDrive }}
     >
-      <ActionButton
-        data={{ label: 'Voltar ao inventário' }}
-        actions={{ onClick: () => void goto('/infra/computers') }}
-      />
+      <BackButton data={{ destination: 'o inventário', to: '/infra/computers' }} />
     </EmptyState>
   </div>
 {:else if detail.state.error}

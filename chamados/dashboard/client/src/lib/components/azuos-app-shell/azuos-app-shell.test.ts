@@ -408,3 +408,231 @@ describe('AzuosAppShell — celular', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });
+
+describe('AzuosAppShell — celular: o que a gaveta oferece', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const areaOptions = [
+    { value: 'infra', label: 'Infraestrutura', icon: BarChart3 },
+    { value: 'sistema', label: 'Sistema' },
+  ] as const;
+
+  function renderOnPhone(props: Omit<AzuosAppShellProps, 'children'> = { ui: { items } }) {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query.includes('max-width'),
+          media: query,
+          onchange: null,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          addListener: () => {},
+          removeListener: () => {},
+          dispatchEvent: () => false,
+        }) as MediaQueryList,
+    );
+    renderShell(props);
+  }
+
+  async function openSheet() {
+    await fireEvent.click(screen.getByRole('button', { name: 'Abrir o menu' }));
+    return screen.findByRole('dialog');
+  }
+
+  // feliz
+  it('shows the counters on the bar and lights the open screen', () => {
+    renderOnPhone({ ui: { items }, data: { badges: { tickets: 4 } }, state: { activeKey: 'tickets' } });
+    const bar = screen.getByRole('navigation', { name: /Menu/ });
+    expect(within(bar).getByText('4')).toBeInTheDocument();
+    expect(within(bar).getByRole('link', { name: /Chamados/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Abrir o menu' })).toHaveAttribute('data-active', 'false');
+  });
+
+  // feliz
+  it('switches module, opens a screen and closes the sheet', async () => {
+    const onAreaContextChange = vi.fn();
+    renderOnPhone({
+      ui: { items },
+      data: { areaOptions: [...areaOptions], badges: { reports: 2 } },
+      state: { areaContext: 'infra' },
+      actions: { onAreaContextChange },
+    });
+    const sheet = await openSheet();
+    const modules = within(sheet).getByRole('group', { name: 'Módulos' });
+    expect(within(modules).getByRole('button', { name: 'Infraestrutura' })).toHaveAttribute('aria-pressed', 'true');
+    await fireEvent.click(within(modules).getByRole('button', { name: 'Sistema' }));
+    expect(onAreaContextChange).toHaveBeenCalledWith('sistema');
+    expect(within(sheet).getByText('2')).toBeInTheDocument();
+
+    await fireEvent.click(within(sheet).getByRole('link', { name: /Relatórios/ }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  // feliz
+  it('opens the profile and the shortcuts from the sheet', async () => {
+    const onOpenProfile = vi.fn();
+    renderOnPhone({ ui: { items }, data: { accountUrl: 'https://login.exemplo.com.br' }, actions: { onOpenProfile } });
+    let sheet = await openSheet();
+    await fireEvent.click(within(sheet).getByRole('link', { name: /Minha conta/ }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    sheet = await openSheet();
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Abrir perfil do usuário' }));
+    expect(onOpenProfile).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  // triste
+  it('shows the sign out failure inside the sheet and blocks a second attempt', async () => {
+    const onSignOut = vi.fn();
+    renderOnPhone({
+      ui: { items },
+      actions: { onSignOut },
+      state: { isSigningOut: true, logoutError: 'Não consegui encerrar a sessão.' },
+    });
+    const sheet = await openSheet();
+    expect(within(sheet).getByRole('button', { name: /Saindo…/ })).toBeDisabled();
+    expect(within(sheet).getByRole('alert')).toHaveTextContent('Não consegui encerrar a sessão.');
+  });
+
+  // feliz
+  it('signs out from the sheet', async () => {
+    const onSignOut = vi.fn();
+    renderOnPhone({ ui: { items }, actions: { onSignOut } });
+    const sheet = await openSheet();
+    await fireEvent.click(within(sheet).getByRole('button', { name: /^Sair$/ }));
+    expect(onSignOut).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('forgets a drag that the browser cancelled and ignores moves without a start', async () => {
+    renderOnPhone();
+    const sheet = await openSheet();
+    const handle = sheet.querySelector('[data-slot="sheet-drag-handle"]')!;
+
+    await fireEvent.pointerMove(handle, { clientY: 300, pointerId: 1 });
+    await fireEvent.pointerUp(handle, { clientY: 300, pointerId: 1 });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await fireEvent.pointerDown(handle, { clientY: 100, pointerId: 1 });
+    await fireEvent.pointerMove(handle, { clientY: 140, pointerId: 1 });
+    expect(sheet.closest('[data-slot="sheet-content"]') ?? sheet).toHaveStyle({ transition: 'none' });
+    await fireEvent.pointerCancel(handle, { pointerId: 1 });
+    await fireEvent.pointerUp(handle, { clientY: 400, pointerId: 1 });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+});
+
+describe('AzuosAppShell — o rodapé do trilho', () => {
+  const areaOptions = [
+    { value: 'infra', label: 'Infraestrutura', icon: BarChart3 },
+    { value: 'sistema', label: 'Sistema' },
+  ] as const;
+
+  // feliz
+  it('repeats the shortcuts, the profile and the sign out as icons in the rail', async () => {
+    const onSignOut = vi.fn();
+    const onOpenProfile = vi.fn();
+    renderShell({
+      ui: { items },
+      data: { areaOptions: [...areaOptions], accountUrl: 'https://login.exemplo.com.br', user: { name: 'Ana', email: 'ana@empresa.com.br', role: 'Admin' } },
+      state: { areaContext: 'infra', activeKey: 'tickets' },
+      actions: { onSignOut, onOpenProfile },
+    });
+
+    const account = screen.getByRole('link', { name: 'Minha conta' });
+    await userEvent.hover(account);
+    expect((await screen.findAllByRole('tooltip', TOOLTIP)).some((tip) => tip.textContent?.includes('Minha conta'))).toBe(true);
+
+    const profileButton = screen.getByRole('button', { name: 'Abrir perfil do usuário' });
+    await userEvent.hover(profileButton);
+    await waitFor(() =>
+      expect(screen.getAllByRole('tooltip', TOOLTIP).some((tip) => tip.textContent?.includes('Ana'))).toBe(true),
+    );
+    await userEvent.click(profileButton);
+    expect(onOpenProfile).toHaveBeenCalled();
+
+    const signOutButton = screen.getByRole('button', { name: 'Sair' });
+    await userEvent.hover(signOutButton);
+    await waitFor(() =>
+      expect(screen.getAllByRole('tooltip', TOOLTIP).some((tip) => tip.textContent?.includes('Sair'))).toBe(true),
+    );
+    await userEvent.click(signOutButton);
+    expect(onSignOut).toHaveBeenCalled();
+    const rail = screen.getByRole('navigation', { name: 'Menu principal' });
+    expect(within(rail).getByRole('link', { name: 'Chamados' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  // triste
+  it('disables the rail sign out while leaving', () => {
+    renderShell({
+      ui: { items },
+      data: { areaOptions: [...areaOptions] },
+      state: { areaContext: 'infra', isSigningOut: true },
+      actions: { onSignOut: vi.fn() },
+    });
+    expect(screen.getAllByRole('button', { name: 'Saindo…' })[0]).toBeDisabled();
+  });
+
+  // feliz
+  it('names the module by its initials in the rail when it has no icon', async () => {
+    renderShell({
+      ui: { items },
+      data: { areaOptions: [...areaOptions] },
+      state: { areaContext: 'sistema' },
+    });
+    const rail = screen.getByRole('group', { name: 'Módulos' });
+    const system = within(rail).getByRole('button', { name: 'Sistema' });
+    expect(system).toHaveTextContent('Si');
+    await userEvent.hover(system);
+    await waitFor(() =>
+      expect(screen.getAllByRole('tooltip', TOOLTIP).some((tip) => tip.textContent?.includes('Sistema'))).toBe(true),
+    );
+    await userEvent.hover(within(screen.getByRole('navigation', { name: 'Menu principal' })).getByRole('link', { name: 'Chamados' }));
+    await waitFor(() =>
+      expect(screen.getAllByRole('tooltip', TOOLTIP).some((tip) => tip.textContent?.includes('Chamados'))).toBe(true),
+    );
+  });
+});
+
+describe('AzuosAppShell — collapsed rail while signing out', () => {
+  // feliz
+  it('names the sign out on the collapsed rail', () => {
+    renderShell({ initialSidebarOpen: false, actions: { onSignOut: vi.fn() } });
+
+    expect(screen.getAllByText('Sair').length).toBeGreaterThan(0);
+  });
+
+  it('says it is leaving on the rail while it signs out', () => {
+    renderShell({ initialSidebarOpen: false, actions: { onSignOut: vi.fn() }, state: { isSigningOut: true } });
+
+    expect(screen.getAllByText('Saindo…').length).toBeGreaterThan(0);
+  });
+});
+
+describe('AzuosAppShell — celular: a tela aberta na gaveta', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  // feliz
+  it('lights the open screen inside the drawer too', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query.includes('max-width'),
+          media: query,
+          onchange: null,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          addListener: () => {},
+          removeListener: () => {},
+          dispatchEvent: () => false,
+        }) as MediaQueryList,
+    );
+    renderShell({ ui: { items }, state: { activeKey: 'tickets' } });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Abrir o menu' }));
+    const sheet = await screen.findByRole('dialog');
+
+    expect(within(sheet).getByRole('link', { name: /Chamados/ })).toHaveAttribute('aria-current', 'page');
+  });
+});

@@ -86,7 +86,7 @@
           <span>Seus Cargos Internos por Área</span>
         </div>
 
-        <div class="space-y-2.5 divide-y divide-border/60">
+        <div class="space-y-2.5 divide-y divide-border">
           {#each ROLE_CONTEXTS as ctx (ctx)}
             {@const role = getContextRole(ctx)}
             <div class="flex items-center justify-between pt-2 first:pt-0">
@@ -108,7 +108,7 @@
       </div>
 
       <!-- Perfis da Equipe -->
-      <div class="rounded-box border border-border bg-muted/30 p-4 space-y-2.5">
+      <div class="rounded-box border border-border bg-muted p-4 space-y-2.5">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Users class="size-4 text-muted-foreground" />

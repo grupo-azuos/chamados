@@ -18,16 +18,17 @@ não sobe. Peça para instalar o 24 (https://nodejs.org, "LTS") ou `mise install
 
 | Mensagem | O que fazer |
 |---|---|
+| `better-sqlite3` ... `gyp` / `prebuild` | Node fora do 24, ou antivírus bloqueando. Confira `node -v`; apague `node_modules` e reinstale. |
 | `ERESOLVE` / peer dependency | **Não** use `--force`/`--legacy-peer-deps`. Alguém mudou versão no `package.json`: veja `git diff package.json`. |
 | `EPERM` / `EBUSY` (Windows) | Algum processo segura o arquivo: pare o `npm run dev`, feche o Storybook, tente de novo. |
 | `.git can't be found` (husky) | O projeto foi baixado sem git (.zip). As travas e o Git-Flow não funcionam assim: clone o repositório pelo GitHub ou pelo Tower. |
 
-## `address already in use :3005` ou `:5005`
+## `address already in use :3009` ou `:5009`
 
 Já tem uma cópia rodando. Feche o outro terminal. No Windows, para achar e parar:
 
 ```bash
-netstat -ano | findstr :3005
+netstat -ano | findstr :3009
 taskkill /PID <número> /F
 ```
 
@@ -36,14 +37,12 @@ Porta ocupada por outro programa? `API_PORT` no `server/.env` e `VITE_API_PORT` 
 
 ## Tela em branco ou "Não consegui falar com o servidor"
 
-1. O server subiu? No terminal do `npm run dev` precisa aparecer `API em http://localhost:3005/api`.
-2. Erro no terminal do `[server]`? Resolva aquele primeiro — inclusive "Invalid environment":
-   falta uma variável no `server/.env` (confira contra o `server/.env.example`, em especial
-   `DATABASE_URL` e as `S3_*`).
-3. Console do navegador (F12): erro de import → `npm run build -w @template/shared` e recarregar.
-4. Rota nova que dá "Esta tela não existe": o arquivo está em `client/src/routes/<nome>/+page.svelte`?
-   No SvelteKit a rota nasce sozinha a partir da pasta — não existe arquivo gerado para
-   conferir nem comando para regenerar; se a tela não aparece, é caminho de pasta errado.
+1. O server subiu? No terminal do `npm run dev` precisa aparecer `API em http://localhost:3009/api`.
+2. Erro no terminal do `[server]`? Resolva aquele primeiro.
+3. Console do navegador (F12): erro de import → `npm run build -w @chamados/dashboard/shared` e recarregar.
+4. Rota nova que dá "Esta tela não existe": o arquivo está em `client/src/routes/<nome>/index.tsx`
+   e exporta `Route` com o caminho certo? O Vite regenera `routeTree.gen.ts` sozinho; se não,
+   `npm run routes -w client`.
 
 ## Erro de API
 
@@ -61,10 +60,10 @@ Porta ocupada por outro programa? `API_PORT` no `server/.env` e `VITE_API_PORT` 
 
 | Sintoma | O que fazer |
 |---|---|
-| `relation "..." does not exist` / `column "..." does not exist` | Migration não gerada: `database` → gerar. Se foi gerada, reinicie o server (ele aplica sozinho ao subir). |
-| "Invalid environment" citando `DATABASE_URL` | Falta (ou está errada) a connection string do Postgres no `server/.env`. Confira contra `server/.env.example`. |
-| 503 / erro de conexão com o banco | O Postgres do Supabase está fora do alcance (rede/VPN do servidor de homologação), ou a `DATABASE_URL` está errada. |
-| Dados estranhos, quer recomeçar | `npm run db:reset` — **apaga tudo no schema `chamados`, peça confirmação.** |
+| `no such table` / `no such column` | Migration não gerada: `database` → gerar. Se foi gerada, reinicie o server. |
+| `database is locked` / 503 | Outro programa com o banco aberto e gravando (Drizzle Studio, SQLite Viewer, seed). Feche e tente de novo. |
+| Dados estranhos, quer recomeçar | `npm run db:reset` — **apaga tudo, peça confirmação.** Pare o `npm run dev` antes. |
+| `EBUSY` ao apagar o `.db` (Windows) | O server ainda está rodando: pare-o. |
 
 ## O commit foi recusado
 
@@ -83,21 +82,19 @@ Skill `resolve-conflict`.
 ## O Tower mostra algo diferente
 
 O Tower lê a configuração de Git-Flow do `.git/config` (feita no `npm install`). Se ele pedir
-para "inicializar o Git-Flow", rode `cd chamados/dashboard && npm run prepare` e reabra o repositório no
+para "inicializar o Git-Flow", rode `cd template && npm run prepare` e reabra o repositório no
 Tower. As branches devem ser `main` e `develop`, com prefixo `feature/`.
 
 ## Storybook não abre
 
 `npm run storybook` (em `chamados/dashboard/`) e http://localhost:6006. Erro de story específica → a story
-importa algo que precisa de provider (query client, contexto): veja como `app-shell.stories.svelte` faz.
+importa algo que precisa de provider (router, query): veja como `app-shell.stories.tsx` faz.
 
 ## Playwright (`test:e2e` da tela)
 
 Primeira vez: `cd chamados/dashboard/client && npx playwright install chromium` (baixa um navegador —
-avise a pessoa, são ~150 MB). Ele sobe o sistema sozinho, contra um banco de teste — hoje isso
-depende de `TEST_DATABASE_URL` estar configurada no `.env` (o `client/playwright.config.ts`
-ainda referencia a variável antiga do SQLite; se o E2E da tela não subir o banco certo, é caso
-de acionar a skill `support` para atualizar esse arquivo, que é protegido).
+avise a pessoa, são ~150 MB). Ele sobe o sistema sozinho, com um banco separado
+(`server/data/e2e.db`).
 
 ## Bloqueio "território do auth-forward" ou "base e regras do projeto"
 

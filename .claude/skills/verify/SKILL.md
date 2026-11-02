@@ -25,11 +25,11 @@ O que costuma quebrar e como resolver:
 | `complexity ... Maximum allowed is 10` | muitos `??`/`?:` numa função | extraia `resolve*`/`build*` ou um subcomponente |
 | `no-else-return` / `max-depth` | `if/else` alinhado | early return |
 | `useQuery ... é do view-model` | hook de dado em `lib/ui` | mover para o view-model, passar por props |
-| `Componente baixado só é importado de dentro de lib/ui` | import de `vendor` fora de `lib/ui` | usar/criar primitivo |
+| `Componente baixado só é importado de dentro de lib/components` | import de `components/ui` fora de `lib/components` | usar/criar um `azuos-*` |
 | `Barril é proibido` | import de pasta/`index` | importar o arquivo |
 | `Controller fala com o service` | controller importando repository | passar pelo service |
 | Teste de migration falhando (`open-database.util.test`) | migration não gerada ou quebrada | `database` |
-| `Cannot find module '@template/shared/...'` no server | shared não compilado | `npm run build -w @template/shared` |
+| `Cannot find module '@chamados/dashboard/shared/...'` no server | shared não compilado | `npm run build -w @chamados/dashboard/shared` |
 
 **Nunca "resolva" desligando a regra**, com `eslint-disable`, `@ts-ignore`, `any` ou apagando
 teste. Se o erro não é do código da feature (ou só some mexendo em configuração protegida),
@@ -39,9 +39,7 @@ teste. Se o erro não é do código da feature (ou só some mexendo em configura
 
 Revise o `git diff` do trabalho:
 
-- [ ] **Componente novo/alterado (`lib/components/azuos-*` ou `routes/**/components/azuos-*`) tem `.stories.svelte`** com estados e caso limite.
-- [ ] **`npm run check:design` passa** (sem violação nova). Corrigiu dívida? `-- --update` e commite a baseline menor.
-- [ ] **Nenhum componente existente foi reescrito**: `git diff develop --stat` só mostra o que foi pedido.
+- [ ] **Componente novo/alterado em `lib/ui/` tem `.stories.tsx`** com estados e caso limite.
 - [ ] **Lógica nova tem teste feliz e triste**; escalada de privilégio (viewer escrevendo,
       autoria no corpo) testada quando mexeu em permissão.
 - [ ] **Idioma:** nenhum texto em inglês que aparece na tela (rótulo, botão, erro, mensagem de
@@ -49,6 +47,7 @@ Revise o `git diff` do trabalho:
 - [ ] **Endpoint novo** com `@ApiOperation` e tipo de resposta.
 - [ ] **Tabela mudou** → migration gerada e commitada junto; seed atualizado.
 - [ ] **Props** em `data`/`ui`/`state`/`actions`; nada em `lib/components/ui/` editado.
+- [ ] **`npm run check:design` passa** — estrutura, prefixo, régua de altura, raio e cor por token.
 - [ ] **Nenhum segredo** (`.env`, chave, token) e **nenhum dado real** de pessoa/cliente em
       código, seed, story ou teste.
 - [ ] Variável de ambiente nova → `.env.example` atualizado.
@@ -61,7 +60,7 @@ npm run seed:all
 npm run dev      # em segundo plano
 ```
 
-Abra http://localhost:5005 e faça o fluxo principal da mudança, incluindo **um erro** (campo
+Abra http://localhost:5009 e faça o fluxo principal da mudança, incluindo **um erro** (campo
 vazio, ação sem permissão). Confira o console do navegador sem erro.
 
 ## 4. Relatório

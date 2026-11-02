@@ -38,10 +38,11 @@ describe.skipIf(!testDatabaseUrl)('WhatsApp API (e2e)', () => {
 
   // feliz
   /* Quem não pode vincular não recebe erro: recebe "não pode", e a tela não oferece o botão. */
+  /* A Bia só consulta a Infraestrutura; a Ana, que administra, pode vincular. */
   it('tells a regular user that linking is not for them, with the usage of the day', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/integrations/whatsapp/status')
-      .set(asAna())
+      .set(asBia())
       .expect(200);
 
     expect(response.body).toMatchObject({
@@ -97,16 +98,32 @@ describe.skipIf(!testDatabaseUrl)('WhatsApp API (e2e)', () => {
       .expect(401);
   });
 
+  /* Desde que abrir e consultar chamado exige login, os links valem só para quem se identificou. */
   it('answers 404 for a forged invite and a forged access link', async () => {
-    await request(app.getHttpServer()).get('/api/tickets/invites/forjado.assinatura').expect(404);
-    await request(app.getHttpServer()).get('/api/tickets/access/forjado.assinatura').expect(404);
+    await request(app.getHttpServer())
+      .get('/api/tickets/invites/forjado.assinatura')
+      .set(asAna())
+      .expect(404);
+    await request(app.getHttpServer())
+      .get('/api/tickets/access/forjado.assinatura')
+      .set(asAna())
+      .expect(404);
+  });
+
+  // triste
+  it('refuses a forged access link to who is not logged in', async () => {
+    await request(app.getHttpServer()).get('/api/tickets/access/forjado.assinatura').expect(401);
   });
 
   it('refuses an area that does not exist when asking who attends it', async () => {
-    await request(app.getHttpServer())
+    const refused = await request(app.getHttpServer())
       .get('/api/tickets/assignee-options')
+      .set(asAna())
       .query({ area: 'financeiro' })
-      .expect(422);
+      /* Parâmetro fora da lista é erro de campo, como em toda a API: 400 com o campo nomeado. */
+      .expect(400);
+
+    expect(refused.body.details).toEqual([expect.objectContaining({ field: 'area' })]);
   });
 
   it('refuses the ready notice to who is not logged in', async () => {

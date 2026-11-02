@@ -202,3 +202,38 @@ describe('AzuosQuoteListView', () => {
     expect(screen.getByText('R$ 0,00')).toBeInTheDocument();
   });
 });
+
+describe('AzuosQuoteListView — filters, a nameless document and the cut list', () => {
+  async function chooseSecond(label: string) {
+    const group = screen.queryByRole('group', { name: label });
+    if (group) {
+      await userEvent.click(within(group).getAllByRole('button')[1]!);
+      return;
+    }
+    await userEvent.click(screen.getByRole('button', { name: label }));
+    const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+    await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
+  }
+
+  // feliz
+  it('searches and filters by status and kind', async () => {
+    setup();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Buscar' }), 'c');
+    expect(actions.onSearchChange).toHaveBeenCalledWith('c');
+    await chooseSecond('Filtrar por situação');
+    expect(actions.onStatusChange).toHaveBeenCalled();
+    await chooseSecond('Filtrar por tipo');
+    expect(actions.onKindChange).toHaveBeenCalled();
+  });
+
+  // triste
+  it('names a nameless document generically and says the list was cut', () => {
+    setup({
+      data: { quotes: [quote({ attachmentName: null }), quote({ id: 2 })], total: 2, amountCents: 192000, filter: emptyFilter, deleting: null },
+      state: { ...settled, isTruncated: true },
+    });
+    expect(screen.getByText('Abrir documento')).toBeInTheDocument();
+    expect(screen.getByText(/2 orçamentos/)).toBeInTheDocument();
+    expect(screen.getByText(/A lista mostra os orçamentos mais recentes/)).toBeInTheDocument();
+  });
+});

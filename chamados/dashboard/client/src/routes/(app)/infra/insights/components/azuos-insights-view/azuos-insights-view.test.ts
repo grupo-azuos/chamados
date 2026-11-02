@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import InsightsView, {
+  departmentOf,
   machineLabelOf,
   overloadSlices,
   overloadSummaryOf,
@@ -315,5 +316,76 @@ describe('AzuosInsightsView', () => {
 
     expect(screen.getByText('Cruzando os dados do parque…')).toBeInTheDocument();
     expect(screen.queryByText('Máquinas sobrecarregadas')).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosInsightsView — period, pages and the open buttons of every list', () => {
+  function many<T>(count: number, make: (index: number) => T): T[] {
+    return Array.from({ length: count }, (_, index) => make(index));
+  }
+
+  // feliz
+  it('changes the period from the header', async () => {
+    const user = userEvent.setup();
+    renderView();
+    const period = screen.queryByRole('group', { name: 'Período' });
+    if (period) {
+      await user.click(within(period).getAllByRole('button')[0]!);
+    } else {
+      await user.click(screen.getByRole('button', { name: 'Período' }));
+      await user.click((await screen.findAllByRole('option', { hidden: true }))[0]!);
+    }
+    expect(actions.onPeriodChange).toHaveBeenCalledWith(expect.any(Number));
+  });
+
+  // feliz
+  it('pages the upgrades, the troublesome and the spare machines', async () => {
+    const user = userEvent.setup();
+    const base = insights();
+    renderView({
+      insights: insights({
+        upgrades: many(6, (i) => ({ ...base.upgrades[0]!, computerId: 20 + i, computerDisplayName: `Upgrade ${20 + i}` })),
+        troublesome: many(6, (i) => ({ ...base.troublesome[0]!, computerId: 30 + i, computerDisplayName: `Trabalho ${30 + i}`, lastMaintenanceAt: i === 0 ? null : '2026-06-20T12:00:00.000Z' })),
+        spares: many(6, (i) => ({ ...base.spares[0]!, computerId: 40 + i, computerDisplayName: `Reserva ${40 + i}` })),
+        overloaded: [{ ...base.overloaded[0]!, activeAlerts: 0 }],
+      }),
+    });
+
+    for (const [heading, last] of [
+      ['Quem precisa de upgrade', 'Upgrade 25'],
+      ['Máquinas que dão mais trabalho', 'Trabalho 35'],
+      ['Máquinas de reserva', 'Reserva 45'],
+    ] as const) {
+      const section = screen.getByRole('heading', { name: heading }).closest('section')!;
+      expect(within(section).queryByText(last)).not.toBeInTheDocument();
+      await user.click(within(section).getByRole('button', { name: /Próxima/i }));
+      expect(within(section).getByText(last)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('travada agora')).not.toBeInTheDocument();
+  });
+
+  // feliz
+  it('opens a machine from the upgrade, troublesome and spare lists', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onOpenMachine).mockClear();
+    renderView();
+    const buttons = screen.getAllByRole('button', { name: 'Abrir ficha' });
+    for (const button of buttons) await user.click(button);
+    expect(actions.onOpenMachine).toHaveBeenCalledTimes(buttons.length);
+    expect(actions.onOpenMachine).toHaveBeenLastCalledWith(5);
+  });
+});
+
+describe('AzuosInsightsView — missing data', () => {
+  // triste
+  it('names a machine with no department as such', () => {
+    expect(departmentOf({ department: null })).toBe('Sem departamento');
+  });
+
+  it('renders empty sections when the insights did not come', () => {
+    const { container } = renderView({ insights: null });
+
+    expect(container).toBeTruthy();
+    expect(screen.queryByText('Cruzando os dados do parque…')).not.toBeInTheDocument();
   });
 });

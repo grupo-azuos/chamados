@@ -119,3 +119,21 @@ describe('AzuosAgentDownloadView', () => {
     expect(screen.getByText('Faltam arquivos desta versão do agente.')).toBeInTheDocument();
   });
 });
+
+describe('AzuosAgentDownloadView — the failures of the version list and of a download', () => {
+  // triste
+  it('explains when the versions could not be listed and when a download could not be prepared', async () => {
+    const callbacks = actions();
+    render(AgentDownloadView, {
+      data,
+      state: { ...state, releasesError: 'Não consegui listar.', downloadError: 'Arquivo indisponível.', downloadingVersion: { version: '1.2.3', kind: 'msi' } },
+      actions: callbacks,
+    });
+
+    expect(screen.getByText('Não consegui listar.')).toBeInTheDocument();
+    expect(screen.getByText('Arquivo indisponível.')).toBeInTheDocument();
+    const retries = screen.getAllByRole('button', { name: 'Tentar de novo' });
+    for (const button of retries) await fireEvent.click(button);
+    expect(callbacks.onRetry).toHaveBeenCalledTimes(retries.length);
+  });
+});

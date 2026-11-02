@@ -41,3 +41,16 @@ describe('sha256Hex', () => {
     expect(await sha256Hex(bytesOf('abc'))).toBe(ABC);
   });
 });
+
+describe('sha256Hex — without the browser engine', () => {
+  // triste
+  it('falls back to its own arithmetic where the browser has no crypto', async () => {
+    const original = globalThis.crypto;
+    Object.defineProperty(globalThis, 'crypto', { configurable: true, value: undefined });
+    try {
+      await expect(sha256Hex(bytesOf('abc'))).resolves.toBe(ABC);
+    } finally {
+      Object.defineProperty(globalThis, 'crypto', { configurable: true, value: original });
+    }
+  });
+});

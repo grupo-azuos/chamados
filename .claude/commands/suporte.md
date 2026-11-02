@@ -1,5 +1,5 @@
 ---
-description: Atalho em português para a skill `support`. Quando PARAR — erros estruturais grandes (projeto não instala ou não sobe, banco corrompido ou migration quebrada, git em estado confuso, erro que só some mexendo em configuração, regra de lint, trava ou arquivo protegido, mesmo erro depois de duas tentativas). Preserva o trabalho, não tenta remendo e gera um relatório claro pra pessoa investigar com calma. Use também quando um hook bloquear arquivo de estrutura, ou a pessoa pedir "chama o responsável", "isso é grande demais".
+description: Atalho em português para a skill `support`. Quando PARAR e encaminhar ao suporte — erros estruturais grandes (projeto não instala ou não sobe, banco corrompido ou migration quebrada, git em estado confuso, erro que só some mexendo em configuração, regra de lint, trava ou arquivo protegido, mesmo erro depois de duas tentativas). Preserva o trabalho, não tenta remendo e gera um relatório pronto para a pessoa mandar ao suporte. Use também quando um hook bloquear arquivo de estrutura, ou a pessoa pedir "fala com o suporte", "chama o responsável".
 disable-model-invocation: true
 ---
 

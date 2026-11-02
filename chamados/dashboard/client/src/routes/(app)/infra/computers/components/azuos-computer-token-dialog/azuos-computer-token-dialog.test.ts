@@ -120,3 +120,31 @@ describe('AzuosComputerTokenDialog', () => {
     expect(screen.queryByRole('button', { name: 'Copiado' })).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosComputerTokenDialog — copying the code and closing', () => {
+  // feliz
+  it('copies the code and confirms it on the button', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    try {
+      render(ComputerTokenDialog, {
+        props: { data: { computerName: 'RECEPCAO-01', token: TOKEN }, actions: { onClose: vi.fn() } },
+      });
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar código' }));
+      expect(writeText).toHaveBeenCalledWith(TOKEN);
+      expect(await screen.findByRole('button', { name: 'Copiado' })).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  // triste
+  it('closes with Escape as if the person had kept the token', async () => {
+    const onClose = vi.fn();
+    render(ComputerTokenDialog, {
+      props: { data: { computerName: 'RECEPCAO-01', token: TOKEN }, actions: { onClose } },
+    });
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalled();
+  });
+});

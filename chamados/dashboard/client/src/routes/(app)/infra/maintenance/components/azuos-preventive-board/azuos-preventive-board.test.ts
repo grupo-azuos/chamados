@@ -151,3 +151,45 @@ describe('scheduled maintenances on the board', () => {
     expect(screen.queryByText(/Agendadas/)).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosPreventiveBoard — scheduled rows, quiet machines and loading', () => {
+  const schedule = {
+    computerId: 2,
+    computerName: 'FINANCEIRO-02',
+    computerDisplayName: null,
+    computerDepartment: null,
+    scheduledFor: '2026-11-05',
+    note: null,
+    createdAt: '2026-10-21T12:00:00.000Z',
+    createdBy: 'suporte@teste.local',
+    updatedAt: null,
+    updatedBy: null,
+  };
+
+  // feliz
+  it('tells that an overdue machine is already scheduled, by its technical name', () => {
+    render(PreventiveBoard, {
+      props: {
+        data: { rows: [row({ computerDepartment: null, maintenanceCount: 1 })], schedules: [schedule] },
+        actions: { onRegister: vi.fn() },
+      },
+    });
+
+    expect(screen.getAllByText('FINANCEIRO-02').length).toBeGreaterThan(0);
+    expect(screen.getByText('05/11/2026')).toBeInTheDocument();
+    expect(screen.getByText(/agendada para 05\/11\/2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Sem departamento/)).toBeInTheDocument();
+    expect(screen.queryByText(/já foram/)).not.toBeInTheDocument();
+  });
+
+  // triste
+  it('hides the counters and the schedules while checking the machines', () => {
+    render(PreventiveBoard, {
+      props: { data: { rows: [row()], schedules: [schedule] }, state: { isLoading: true }, actions: { onRegister: vi.fn() } },
+    });
+
+    expect(screen.getByText('Conferindo as máquinas…')).toBeInTheDocument();
+    expect(screen.queryByText(/em dia/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Agendadas/)).not.toBeInTheDocument();
+  });
+});

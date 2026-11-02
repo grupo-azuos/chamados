@@ -1,5 +1,5 @@
 import { type Dashboard, type ProblemMachine } from '@template/shared/schemas/dashboard.schema';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -80,9 +80,7 @@ const settled: { isLoading: boolean; isEmpty: boolean; error: string | null } = 
   error: null,
 };
 
-function renderView(
-  over: { summary?: Dashboard | null; state?: Partial<typeof settled> } = {},
-) {
+function renderView(over: { summary?: Dashboard | null; state?: Partial<typeof settled> } = {}) {
   return render(DashboardView, {
     props: {
       data: { summary: over.summary === undefined ? summary() : over.summary, days: 30 },
@@ -162,9 +160,9 @@ describe('departmentSlices', () => {
 describe('heavySlices', () => {
   // feliz
   it('puts the machine name on the bar and the count as its size', () => {
-    expect(heavySlices([{ computerId: 3, computerName: 'CONTABIL-03', maintenanceCount: 4 }])).toEqual(
-      [{ label: 'CONTABIL-03', value: 4 }],
-    );
+    expect(
+      heavySlices([{ computerId: 3, computerName: 'CONTABIL-03', maintenanceCount: 4 }]),
+    ).toEqual([{ label: 'CONTABIL-03', value: 4 }]);
   });
 
   // triste
@@ -182,9 +180,7 @@ describe('toDailyPoints', () => {
    * sairia deslocado um dia inteiro: o pico de segunda apareceria no domingo.
    */
   it('anchors each day at midday so the chart does not slide a day back', () => {
-    const [point] = toDailyPoints([
-      { day: '2026-09-23', opened: 4, resolved: 2, maintenances: 1 },
-    ]);
+    const [point] = toDailyPoints([{ day: '2026-09-23', opened: 4, resolved: 2, maintenances: 1 }]);
 
     expect(point!.at).toBe('2026-09-23T12:00:00.000Z');
     expect(new Date(point!.at).getDate()).toBe(23);
@@ -324,13 +320,21 @@ describe('top cards as shortcuts', () => {
     const user = userEvent.setup();
     renderView();
 
-    await user.click(screen.getByRole('button', { name: 'Chamados abertos: filtrar a lista' }));
+    await user.click(
+      screen.getByRole('button', { name: /^Chamados abertos .+: filtrar a lista$/ }),
+    );
     expect(actions.onOpenOpenTickets).toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Máquinas críticas: filtrar a lista' }));
+    await user.click(
+      screen.getByRole('button', { name: /^Máquinas críticas .+: filtrar a lista$/ }),
+    );
     expect(actions.onOpenCriticalMachines).toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Preventivas vencidas: filtrar a lista' }));
+    await user.click(
+      screen.getByRole('button', { name: /^Preventivas vencidas .+: filtrar a lista$/ }),
+    );
     expect(actions.onOpenPreventiveDue).toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Peças sem estoque: filtrar a lista' }));
+    await user.click(
+      screen.getByRole('button', { name: /^Peças sem estoque .+: filtrar a lista$/ }),
+    );
     expect(actions.onOpenOutOfStock).toHaveBeenCalled();
   });
 
@@ -339,5 +343,48 @@ describe('top cards as shortcuts', () => {
     renderView({ summary: null, state: { isEmpty: true } });
 
     expect(screen.queryByRole('button', { name: /filtrar a lista/ })).toBeNull();
+  });
+});
+
+describe('AzuosDashboardView — the period, quiet counters and machines without department', () => {
+  // feliz
+  it('changes the period from the header', async () => {
+    renderView();
+    const group = screen.queryByRole('group', { name: 'Período do painel' });
+    if (group) {
+      await userEvent.click(within(group).getAllByRole('button')[0]!);
+    } else {
+      await userEvent.click(screen.getByRole('button', { name: 'Período do painel' }));
+      const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(
+        -1,
+      ) as HTMLElement;
+      await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[0]!);
+    }
+    expect(actions.onPeriodChange).toHaveBeenCalledWith(expect.any(Number));
+  });
+
+  // triste
+  it('shows no hint when nothing is in progress or in attention, and names a machine without department', async () => {
+    vi.mocked(actions.onOpenMachine).mockClear();
+    renderView({
+      summary: summary({
+        tickets: {
+          open: 0,
+          inProgress: 0,
+          openedInPeriod: 0,
+          resolvedInPeriod: 0,
+          averageResolutionHours: null,
+        },
+        park: { total: 1, critical: 0, attention: 0, neverSeen: 0 },
+        worstMachines: [machine({ department: null })],
+      }),
+    });
+
+    expect(screen.queryByText(/em atendimento$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/em atenção$/)).not.toBeInTheDocument();
+    expect(screen.getAllByText('Sem departamento').length).toBeGreaterThan(0);
+    const opens = screen.getAllByRole('button', { name: 'Abrir ficha' });
+    for (const button of opens) await userEvent.click(button);
+    expect(actions.onOpenMachine).toHaveBeenCalledTimes(opens.length);
   });
 });

@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
   import {
     inventoryCategoryOptions,
     inventoryUnitOptions,
@@ -103,7 +104,7 @@
       <DialogHeader class="gap-1.5">
         <div class="flex items-center gap-2.5">
           <span
-            class="rounded-chip bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center"
+            class="rounded-chip bg-muted text-primary flex size-7 shrink-0 items-center justify-center"
           >
             <Package class="size-4" aria-hidden="true" />
           </span>
@@ -190,11 +191,11 @@
 
       <!-- A FOTO ao lado da prévia, e não um campo de arquivo solto: quem cadastra precisa ver
            que a imagem que escolheu é a certa antes de salvar. -->
-      <div class="flex flex-col gap-1.5">
+      <div onpaste={pasteFilesIntoInput} class="flex flex-col gap-1.5">
         <span class="text-ink-700 text-sm font-medium">Foto</span>
         <div class="flex items-center gap-3">
           <div
-            class="rounded-control border-border bg-muted/40 flex size-20 shrink-0 items-center justify-center overflow-hidden border"
+            class="rounded-control border-border bg-muted flex size-20 shrink-0 items-center justify-center overflow-hidden border"
           >
             {#if data.photo.previewUrl}
               <img

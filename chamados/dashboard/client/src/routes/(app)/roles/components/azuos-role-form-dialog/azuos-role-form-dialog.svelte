@@ -153,7 +153,7 @@
     <DialogHeader class="gap-1.5">
       <div class="flex items-center gap-2.5">
         <span
-          class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary/10 text-primary"
+          class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-muted text-primary"
         >
           <ShieldCheck class="size-4" aria-hidden="true" />
         </span>
@@ -188,7 +188,7 @@
         >
           {#if isEdit}
             <div
-              class="flex items-center justify-between gap-3 rounded-box border border-border bg-muted/20 p-3.5"
+              class="flex items-center justify-between gap-3 rounded-box border border-border bg-muted p-3.5"
             >
               <div class="flex items-center gap-3 min-w-0">
                 <PersonAvatar
@@ -202,7 +202,7 @@
                       {selectedUser?.name || fields.userEmail.value || fields.userId.value}
                     </span>
                     <span
-                      class="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip border border-border/60"
+                      class="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip border border-border"
                     >
                       Pessoa existente
                     </span>
@@ -212,7 +212,7 @@
                       {fields.userEmail.value}
                     </span>
                   {/if}
-                  <span class="block text-xs font-mono text-muted-foreground/80 truncate">
+                  <span class="block text-xs font-mono text-muted-foreground truncate">
                     ID: {fields.userId.value}
                   </span>
                 </div>
@@ -228,7 +228,7 @@
                       style="width: 100%;"
                       class={cn(
                         'control-lg rounded-control',
-                        'flex w-full cursor-pointer items-center justify-between gap-3 border border-border/70 bg-card text-left transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60',
+                        'flex w-full cursor-pointer items-center justify-between gap-3 border border-border bg-card text-left transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60',
                         'w-full',
                         fields.userId.value ? 'p-2.5 min-h-10 h-auto' : 'px-3 text-muted-foreground',
                       )}
@@ -247,7 +247,7 @@
                                 {selectedUser?.name || fields.userEmail.value || fields.userId.value}
                               </span>
                               <span
-                                class="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-chip shrink-0"
+                                class="text-xs font-medium text-primary bg-muted px-1.5 py-0.5 rounded-chip shrink-0"
                               >
                                 Selecionada
                               </span>
@@ -262,7 +262,7 @@
                         <div class="flex items-center gap-2 shrink-0">
                           {#if selectedUser?.role}
                             <span
-                              class="hidden sm:inline-block text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip border border-border/60"
+                              class="hidden sm:inline-block text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip border border-border"
                             >
                               {USER_ROLE_LABELS[selectedUser.role as UserRole] ?? selectedUser.role}
                             </span>
@@ -303,7 +303,7 @@
                       align="start"
                       sideOffset={4}
                     >
-                      <div class="relative border-b border-border/70 p-2 sm:p-2.5 w-full">
+                      <div class="relative border-b border-border p-2 sm:p-2.5 w-full">
                         <Search
                           class="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
                           aria-hidden="true"
@@ -321,14 +321,14 @@
                           data-1p-ignore="true"
                           data-lpignore="true"
                           data-form-type="other"
-                          class="control-lg rounded-control w-full border border-border/60 bg-muted/30 pr-3 pl-9.5 text-xs text-foreground outline-none"
+                          class="control-lg rounded-control w-full border border-border bg-muted pr-3 pl-9.5 text-xs text-foreground outline-none"
                           style="width: 100%;"
                         />
                       </div>
 
                       <div
                         bind:this={listboxEl}
-                        class="min-h-0 max-h-60 overscroll-contain overflow-x-hidden overflow-y-auto divide-y divide-border/40 p-1 w-full"
+                        class="min-h-0 max-h-60 overscroll-contain overflow-x-hidden overflow-y-auto divide-y divide-border p-1 w-full"
                         role="listbox"
                         aria-label="Lista de colaboradores"
                       >
@@ -357,7 +357,7 @@
                               }}
                               class={cn(
                                 'flex w-full cursor-pointer items-center justify-between gap-3 rounded-control p-2 text-left transition-colors',
-                                isSelected ? 'bg-primary/10' : 'hover:bg-muted/60',
+                                isSelected ? 'bg-muted' : 'hover:bg-muted',
                               )}
                             >
                               <div class="flex items-center gap-2.5 min-w-0">
@@ -387,7 +387,7 @@
                               </div>
                               {#if user.role}
                                 <span
-                                  class="shrink-0 text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip border border-border/60"
+                                  class="shrink-0 text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip border border-border"
                                 >
                                   {USER_ROLE_LABELS[user.role as UserRole] ?? user.role}
                                 </span>
@@ -447,8 +447,8 @@
                 class={cn(
                   'flex flex-col items-start gap-1 p-3 rounded-box border text-left transition-colors',
                   isSelected
-                    ? 'bg-primary/5'
-                    : 'border-border bg-card hover:bg-muted/40',
+                    ? 'bg-muted'
+                    : 'border-border bg-card hover:bg-muted',
                   (isEdit || formState.isSubmitting) && 'opacity-60 cursor-not-allowed',
                 )}
               >
@@ -477,7 +477,7 @@
 
           <!-- O nível NÃO se escolhe aqui: ele vem do papel da pessoa no admin-console. -->
           <div
-            class="flex items-start gap-2.5 rounded-box border border-border/60 bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground"
+            class="flex items-start gap-2.5 rounded-box border border-border bg-muted p-3 text-xs leading-relaxed text-muted-foreground"
           >
             <Info class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
             <span>

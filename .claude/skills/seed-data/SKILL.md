@@ -5,7 +5,7 @@ description: Cria ou altera os dados de teste (seeds) — uma pasta por entidade
 
 # Dados de teste (seeds)
 
-Caminhos relativos a `chamados/dashboard/`. Modelo: `scripts/seed/parts/`.
+Caminhos relativos a `chamados/dashboard/`. Modelo: `scripts/seed/tasks/`.
 
 ## Estrutura
 
@@ -47,7 +47,7 @@ Regras:
 
 ## Gravar — `seed-<entities>.ts`
 
-Copie `seed-parts.ts` e troque tabela/dados. O `onConflictDoUpdate` lista **todas** as colunas
+Copie `seed-tasks.ts` e troque tabela/dados. O `onConflictDoUpdate` lista **todas** as colunas
 editáveis com `sql\`excluded.<coluna_no_banco>\`` e zera `updatedAt/updatedBy`.
 
 ## Registrar — `seed-all.ts`
@@ -59,10 +59,10 @@ report('clientes', await seedCustomers(db));
 report('pedidos', await seedOrders(db));   // pedido aponta para cliente
 ```
 
-E um script individual em `chamados/dashboard/package.json`, no padrão de `seed:parts`:
+E um script individual em `chamados/dashboard/package.json`, no padrão de `seed:tasks`:
 
 ```json
-"seed:customers": "npm run build -w @template/shared && tsx scripts/seed/customers/seed-customers.ts"
+"seed:customers": "npm run build -w @chamados/dashboard/shared && tsx scripts/seed/customers/seed-customers.ts"
 ```
 
 ## Rodar

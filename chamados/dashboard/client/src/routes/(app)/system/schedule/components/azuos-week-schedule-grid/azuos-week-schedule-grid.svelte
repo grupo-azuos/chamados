@@ -207,7 +207,7 @@
                 <button
                   {...props}
                   type="button"
-                  class="grid size-8 place-items-center rounded-control border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  class="grid size-10 place-items-center rounded-control border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
                   onclick={actions.onPrev}
                   aria-label={PERIOD_LABELS[data.viewMode].prev}
                 >
@@ -242,7 +242,7 @@
                 <button
                   {...props}
                   type="button"
-                  class="grid size-8 place-items-center rounded-control border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  class="grid size-10 place-items-center rounded-control border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
                   onclick={actions.onNext}
                   aria-label={PERIOD_LABELS[data.viewMode].next}
                 >
@@ -259,7 +259,7 @@
 
       <div class="flex items-center gap-2">
         <!-- Segmented Day / Week / Month -->
-        <div class="flex rounded-control border border-border bg-muted/40 p-1">
+        <div class="flex rounded-control border border-border bg-muted p-1">
           <Tooltip.Root
             ><Tooltip.Trigger
               >{#snippet child({ props })}
@@ -342,7 +342,7 @@
     </div>
 
     {#if data.filters}
-      <div class="rounded-surface border border-border bg-card/70 p-3 sm:p-4">
+      <div class="rounded-surface border border-border bg-card p-3 sm:p-4">
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {#each [{ key: 'project', label: 'Projeto', hint: 'Filtrar agendamentos, PRs, issues e merges por projeto', value: data.filters.project, options: data.filters.projectOptions, onChange: actions.onProjectFilterChange }, { key: 'author', label: 'Autor', hint: 'Filtrar PRs, issues e merges pelo autor registrado no GitHub', value: data.filters.author, options: data.filters.authorOptions, onChange: actions.onAuthorFilterChange }, { key: 'type', label: 'Tipo', hint: 'Mostrar PRs, issues, merges ou todos na agenda', value: data.filters.type, options: [{ value: '', label: 'Todos' }, { value: 'pr', label: 'PRs' }, { value: 'issue', label: 'Issues' }, { value: 'merge', label: 'Merges locais' }], onChange: actions.onTypeFilterChange }] as filter (filter.key)}
             <div
@@ -527,7 +527,7 @@
               <div
                 class="relative flex min-h-28 flex-col border-border p-1.5 {index % 7 > 0
                   ? 'border-l'
-                  : ''} {index >= 7 ? 'border-t' : ''} {day.isCurrentMonth ? '' : 'bg-muted/30'}"
+                  : ''} {index >= 7 ? 'border-t' : ''} {day.isCurrentMonth ? '' : 'bg-muted'}"
               >
                 <!-- O espaço vazio do dia é um botão: clicar nele abre um agendamento naquela data.
                      O conteúdo fica por cima e deixa o clique passar, menos nos próprios botões. -->
@@ -535,7 +535,7 @@
                   <button
                     type="button"
                     aria-label="Novo agendamento em {day.dateString.split('-').reverse().join('/')}"
-                    class="absolute inset-0 cursor-pointer transition hover:bg-primary/5 focus-visible:bg-primary/5 focus-visible:outline-none"
+                    class="absolute inset-0 cursor-pointer transition hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
                     onclick={() => actions.onNewEventAt?.(day.dateString)}
                   ></button>
                 {/if}
@@ -548,9 +548,9 @@
                       >{#snippet child({ props })}<button
                           {...props}
                           type="button"
-                          class="grid size-6 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground"
+                          class="-m-2 grid size-10 place-items-center rounded-full"
                         >
-                          {day.dayNumber}
+                          <span class="grid size-6 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{day.dayNumber}</span>
                         </button>{/snippet}</Tooltip.Trigger
                     ><Tooltip.Content class="max-w-sm whitespace-normal"
                       >{day.weekdayShort}, {day.dateString.split('-').reverse().join('/')} · {day
@@ -681,7 +681,7 @@
 
           <!-- Atividade do GitHub dentro da data correspondente, acima da grade horária. -->
           <div
-            class="grid border-b border-border bg-muted/10"
+            class="grid border-b border-border bg-muted"
             style="grid-template-columns:56px repeat({columns},1fr)"
           >
             <div
@@ -692,7 +692,7 @@
             {#each data.days as day (day.dateString)}
               <div class="max-h-32 min-h-14 space-y-1 overflow-y-auto border-l border-border p-1.5">
                 {#if !day.githubEvents?.length}
-                  <span class="text-xs text-muted-foreground/60">—</span>
+                  <span class="text-xs text-muted-foreground">—</span>
                 {:else}
                   {#each day.githubEvents
                     .filter((event) => !isWithinScheduleHours(event))
@@ -731,7 +731,7 @@
               <div
                 class="relative border-l border-border {day.weekdayShort === 'Sáb' ||
                 day.weekdayShort === 'Dom'
-                  ? 'bg-muted/30'
+                  ? 'bg-muted'
                   : ''}"
               >
                 <div
@@ -743,7 +743,7 @@
                   <button
                     type="button"
                     aria-label="Novo agendamento em {day.dateString.split('-').reverse().join('/')}"
-                    class="absolute inset-0 cursor-pointer transition hover:bg-primary/5 focus-visible:bg-primary/5 focus-visible:outline-none"
+                    class="absolute inset-0 cursor-pointer transition hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
                     onclick={(event) =>
                       actions.onNewEventAt?.(day.dateString, timeAtOffset(event.offsetY))}
                   ></button>
@@ -871,8 +871,8 @@
                         {...props}
                         type="button"
                         aria-label="Horário atual"
-                        class="pointer-events-auto ml-[52px] size-2 shrink-0 rounded-full bg-destructive"
-                      ></button>{/snippet}</Tooltip.Trigger
+                        class="pointer-events-auto -my-4 ml-9 grid size-10 shrink-0 place-items-center rounded-full"
+                      ><span class="size-2 rounded-full bg-destructive" aria-hidden="true"></span></button>{/snippet}</Tooltip.Trigger
                   ><Tooltip.Content>Horário atual na agenda</Tooltip.Content></Tooltip.Root
                 >
                 <span class="h-px flex-1 bg-destructive"></span>
@@ -922,7 +922,7 @@
         </p>
       </div>
       {#if !data.githubEvents?.length}
-        <p class="rounded-box bg-muted/30 p-4 text-center text-xs text-muted-foreground">
+        <p class="rounded-box bg-muted p-4 text-center text-xs text-muted-foreground">
           {#if data.filters?.isActive}Nenhuma atividade encontrada com os filtros atuais.
           {:else}Nenhuma atividade sincronizada neste período. Sincronize os projetos para carregar
             PRs, issues e merges locais.{/if}
@@ -943,7 +943,7 @@
                           href={event.url ?? undefined}
                           target="_blank"
                           rel="noreferrer"
-                          class="flex min-w-0 items-center gap-3 rounded-box border border-border bg-muted/20 p-3 transition hover:bg-muted/40"
+                          class="flex min-w-0 items-center gap-3 rounded-box border border-border bg-muted p-3 transition hover:bg-muted"
                         >
                           <span
                             class="grid size-8 shrink-0 place-items-center rounded-full bg-primary-soft text-primary"

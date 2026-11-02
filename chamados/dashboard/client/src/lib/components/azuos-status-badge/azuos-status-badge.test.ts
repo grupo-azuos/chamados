@@ -16,13 +16,13 @@ describe('AzuosStatusBadge', () => {
       props: { data: { label: 'Resolvido' }, ui: { tone: 'success' } },
     });
 
-    expect(container.firstElementChild?.className).toContain('success');
+    expect(container.firstElementChild?.className).toContain('hue-green');
   });
 
   it('falls back to neutral when no tone was given, instead of having no color', () => {
     const { container } = render(StatusBadge, { props: { data: { label: 'Aberto' } } });
 
-    expect(container.firstElementChild?.className).toContain('ink');
+    expect(container.firstElementChild?.className).toContain('hue-slate');
   });
 
   // triste
@@ -47,6 +47,6 @@ describe('AzuosStatusBadge', () => {
     });
 
     expect(container.firstElementChild?.className).toContain('ml-4');
-    expect(container.firstElementChild?.className).toContain('success');
+    expect(container.firstElementChild?.className).toContain('hue-green');
   });
 });

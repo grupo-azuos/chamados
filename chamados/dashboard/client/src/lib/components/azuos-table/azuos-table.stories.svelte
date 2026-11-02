@@ -55,12 +55,12 @@
   </TableBody>
 {/snippet}
 
-<Story name="Default">
+<Story name="Default" asChild>
   <Table>{@render rows(parts)}</Table>
 </Story>
 
 <!-- Com o rodapé: fonte do dado à esquerda, contagem à direita. -->
-<Story name="WithFooter">
+<Story name="WithFooter" asChild>
   <Table>
     {@render rows(parts)}
     {#snippet footer()}
@@ -71,7 +71,7 @@
 </Story>
 
 <!-- Dentro de um cartão que já tem borda: a superfície da tabela some. -->
-<Story name="InsideCard">
+<Story name="InsideCard" asChild>
   <div class="border-border bg-card rounded-surface border shadow-xs">
     <Table containerClass="rounded-none border-0 bg-transparent shadow-none">
       {@render rows(parts)}
@@ -80,12 +80,12 @@
 </Story>
 
 <!-- Caso limite: uma linha só — sem divisória sobrando embaixo. -->
-<Story name="SingleRow">
+<Story name="SingleRow" asChild>
   <Table>{@render rows(parts.slice(0, 1))}</Table>
 </Story>
 
 <!-- Caso limite: texto comprido quebra dentro da célula; em tela estreita quem rola é a caixa. -->
-<Story name="LongTextInNarrowColumn">
+<Story name="LongTextInNarrowColumn" asChild>
   <div class="max-w-[360px]">
     <Table class="min-w-[520px]">
       {@render rows([

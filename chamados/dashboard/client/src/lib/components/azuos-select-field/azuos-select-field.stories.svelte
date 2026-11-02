@@ -11,6 +11,13 @@
     { value: 'Bia', label: 'Bia' },
   ];
 
+  /* Pessoas inventadas: uma com foto, as outras com as iniciais. */
+  const people = [
+    { value: 'ana', label: 'Ana Souza', personName: 'Ana Souza', avatarUrl: 'https://i.pravatar.cc/64?img=5' },
+    { value: 'caio', label: 'Caio Ribeiro', personName: 'Caio Ribeiro', avatarUrl: null },
+    { value: 'dani', label: 'Dani Albuquerque', personName: 'Dani Albuquerque' },
+  ];
+
   const baseArgs = {
     data: { value: '', options: owners },
     ui: { ariaLabel: 'Responsável', placeholder: 'Todos os responsáveis' },
@@ -59,3 +66,6 @@
   }}
   template={inBox}
 />
+
+<!-- Seletor de pessoa: a foto (ou as iniciais) vem antes do nome, no gatilho e em cada linha. -->
+<Story name="WithPeople" args={{ ...baseArgs, data: { value: 'caio', options: people } }} template={inBox} />

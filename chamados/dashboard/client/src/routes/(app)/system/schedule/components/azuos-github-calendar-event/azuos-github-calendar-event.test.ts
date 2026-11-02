@@ -44,3 +44,59 @@ describe('AzuosGithubCalendarEvent', () => {
     expect(screen.getByText(/PR #42 · Melhora o calendário/)).toBeInTheDocument();
   });
 });
+
+describe('AzuosGithubCalendarEvent — kinds and statuses', () => {
+  const hover = async (name: RegExp) => {
+    const link = screen.getByRole('link', { name });
+    await userEvent.hover(link);
+    return link;
+  };
+
+  // feliz
+  it.each([
+    [{ type: 'issue', status: 'closed' }, 'Issue #42 · Resolvida', /^Issue #42/],
+    [{ type: 'issue', status: 'open' }, 'Issue #42 · Aberta', /^Issue #42/],
+    [{ type: 'merge', status: 'merged' }, 'Merge local #42 · Mergeado', /^Merge local #42/],
+    [{ type: 'pr', status: 'closed' }, 'Pull Request #42 · Fechado', /^Pull Request #42/],
+    [{ type: 'pr', status: 'open' }, 'Pull Request #42 · Aberto', /^Pull Request #42/],
+  ] as const)('describes %o as "%s" in the tooltip', async (overrides, expected, name) => {
+    render(Harness, { event: { ...event, ...overrides } });
+    await hover(name);
+    expect(await screen.findByText(expected)).toBeInTheDocument();
+  });
+
+  // feliz
+  it('shows the title and the time on two lines inside the hour grid', () => {
+    render(Harness, { event, inTimeGrid: true });
+    const link = screen.getByRole('link', { name: /Melhora o calendário/ });
+    expect(link).toHaveClass('h-full');
+    expect(link).toHaveTextContent('Melhora o calendário');
+    expect(link).toHaveTextContent('PR #42');
+  });
+
+  // feliz
+  it('prefers the display name of the author in the tooltip', async () => {
+    render(Harness, { event: { ...event, authorName: 'Ana Lima' } });
+    await hover(/Melhora o calendário/);
+    expect(await screen.findByText(/por Ana Lima/)).toBeInTheDocument();
+  });
+
+  // triste
+  it('falls back to a generic project and an unknown author', async () => {
+    render(Harness, {
+      event: { ...event, projectName: null, author: null, externalId: null, type: 'merge' },
+    });
+    await hover(/Melhora o calendário/);
+    expect(await screen.findByText(/Projeto · por desconhecido/)).toBeInTheDocument();
+    expect(screen.getByText(/Merge\s*·/)).toBeInTheDocument();
+  });
+});
+
+describe('AzuosGithubCalendarEvent — without an external id', () => {
+  // triste
+  it('still names the event when GitHub gave it no number', () => {
+    render(Harness, { event: { ...event, externalId: null } });
+
+    expect(screen.getByRole('link', { name: 'Pull Request : Melhora o calendário' })).toBeInTheDocument();
+  });
+});

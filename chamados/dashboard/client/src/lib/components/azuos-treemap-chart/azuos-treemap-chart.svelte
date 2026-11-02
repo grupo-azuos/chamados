@@ -1,6 +1,6 @@
 <script lang="ts" module>
   import { colorOfSlice, type ChartSlice } from '$lib/utils/chart-slice';
-  import { formatCount, shareOf, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
+  import { formatCount, shareOf, type ChartOption, type ChartTheme, resolveColor } from '$lib/utils/echarts.util';
 
   /**
    * TREEMAP — muitas categorias de tamanhos muito diferentes, num quadro só.
@@ -67,7 +67,7 @@
           label: {
             show: true,
             fontSize: 11,
-            color: '#ffffff',
+            color: resolveColor('var(--primary-foreground)'),
             overflow: 'truncate',
             formatter: (params: unknown) => {
               const { name, value } = params as { name: string; value: number };

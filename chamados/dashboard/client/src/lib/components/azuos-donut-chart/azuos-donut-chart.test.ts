@@ -121,3 +121,31 @@ describe('AzuosDonutChart', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosDonutChart — the balloon, the empty ring and the clickable ring', () => {
+  // feliz
+  it('names the slice with its count and share in the balloon', () => {
+    const option = withChartTheme(donutOption(slices, 'Chamados', { surface: '#fff' }), { foreground: '#111', muted: '#888', border: '#eee', surface: '#fff', track: '#eee', font: 'x', success: '#0a0', info: '#00a', warning: '#aa0', danger: '#a00' }) as {
+      tooltip: { formatter: (params: unknown) => string };
+    };
+    expect(option.tooltip.formatter({ name: 'Concluído', value: 6 })).toBe('<b>Concluído</b><br/>Chamados: 6 (38%)');
+  });
+
+  // triste
+  it('explains an empty ring with the words it was given, and marks a ring that opens detail', () => {
+    render(DonutChart, { props: { data: { slices: [], seriesLabel: 'Chamados' }, ui: { emptyLabel: 'Nada por aqui' } } });
+    expect(screen.getByText('Nada por aqui')).toBeInTheDocument();
+
+    render(DonutChart, { props: { data: { slices, seriesLabel: 'Chamados' }, actions: { onSelect: vi.fn() } } });
+    expect(document.querySelector('.cursor-pointer')).not.toBeNull();
+  });
+});
+
+describe('AzuosDonutChart — default empty text', () => {
+  // triste
+  it('says there is nothing to show when the screen gave no empty text', () => {
+    render(DonutChart, { props: { data: { slices: [], seriesLabel: 'Chamados' } } });
+
+    expect(screen.getByText('Sem dados para mostrar')).toBeInTheDocument();
+  });
+});

@@ -18,16 +18,16 @@
  * A IDENTIDADE VISUAL DO SISTEMA, EM UM ARQUIVO SÓ.
  *
  * No Tailwind v4 a configuração é o próprio CSS: não existe mais `tailwind.config.ts`. Um
- * token declarado em `@theme` vira classe utilitária sozinho — `--color-surface` dá
- * `bg-surface`, `text-surface`, `border-surface`.
+ * token declarado em `@theme` vira classe utilitária sozinho — `--color-brand-blue-800` dá
+ * `bg-brand-blue-800`, `text-brand-blue-800`, `border-brand-blue-800`.
  *
  * Isso não é só arrumação: no arranjo anterior a cor morava num `.ts` que o Vite não
  * observava, e um token novo só aparecia depois de derrubar o servidor à mão. Foi assim que
  * a barra lateral ficou branca com o azul já definido — a classe `bg-sidebar` nunca chegou
  * a ser gerada, e `background` sem regra é transparente.
  *
- * A paleta é a do Grupo Azuos (azul e amarelo oficiais), a mesma do agente (`chamados/agent`).
- * Trocar a identidade de um MVP é trocar os valores desta seção — e só desta seção.
+ * As cores são as da marca Grupo Azuos (`@azuos/brand`), as mesmas dos outros sistemas da
+ * casa. Trocar a marca de um MVP é trocar os valores de `--brand-*` aqui — e só aqui.
  */
 
 /**
@@ -38,137 +38,215 @@
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 /* ==========================================================================
-   A PALETA — Grupo Azuos, a mesma do agente.
-
-   Os valores vêm da página de marca do Grupo Azuos (`brand/site/style.css`): azul 800
-   (#1b3a8c) como cor principal e amarelo 500 (#f5c518) como destaque, sobre os cinzas
-   `gray` do Tailwind. No escuro, o azul sobe para o 400 para continuar legível. O agente
-   (`chamados/agent/svelte/src/theme/catppuccin.css`) copia os mesmos valores, e copiar
-   (em vez de inventar equivalentes) é o que garante que continuem iguais.
+   Primitivas da marca — os valores oficiais, sem intenção de uso ainda.
    ========================================================================== */
 :root {
-  /* ---- Primitivas da marca — os valores oficiais, os mesmos do paralegal ---- */
   --brand-blue-900: #142b69;
   --brand-blue-800: #1b3a8c; /* AZUL PRINCIPAL OFICIAL (fundo da logo) */
   --brand-blue-700: #22429c;
   --brand-blue-600: #2e52b8;
   --brand-blue-500: #4265d4;
+  /* Os dois tons claros existem para o TEMA ESCURO: lá o azul principal precisa ser claro o
+     bastante para ser texto legível sobre o fundo escuro e sobre o `primary-soft`. */
+  --brand-blue-400: #7a92e8;
+  --brand-blue-300: #a7b7f0;
   --brand-blue-100: #e1e6f5;
 
   --brand-yellow-500: #f5c518; /* AMARELO OFICIAL (o ponto da logo) */
   --brand-yellow-400: #f7ce3c;
   --brand-yellow-300: #fade7a;
 
-  /* Tons de fundo, do mais fundo ao mais alto. `surface` é o que sobe acima do fundo. */
+  --ink-900: #111827;
+  --ink-700: #374151;
+  --ink-500: #6b7280;
+  --ink-300: #d1d5db;
+  --ink-100: #f3f4f6;
+
+  /**
+   * ---- Os TONS DE FUNDO, do mais fundo ao mais alto ----
+   *
+   * `base` é o fundo da página, `mantle` e `crust` são os degraus ABAIXO dele (o trilho de uma
+   * aba, o fundo de um campo embutido) e `surface` é o que SOBE acima dele — um bloco dentro
+   * de um cartão, que já está sobre o branco do cartão e precisa se separar dele.
+   *
+   * Existem como degraus nomeados, e não como `bg-gray-200` escolhido no olho, porque é a
+   * mesma pergunta que aparece em toda tela ("este bloco está acima ou abaixo do fundo?") e
+   * sem nome cada tela responde com um cinza diferente.
+   */
   --crust: #e5e7eb;
-  --mantle: #f3f4f6;
-  --base: #f8fafc;
+  --mantle: var(--ink-100);
+  --base: #f9fafb;
   --surface: #e5e7eb;
 
-  /* O agente não tem um terceiro tom de texto: só `foreground` e `muted-foreground`. Em vez
-     de inventar um degrau que não existe na fonte, `subtext` aponta pro mesmo valor de
-     `muted-foreground` — é a cópia fiel, não uma aproximação. */
-  --subtext: #4b5563;
+  /* O terceiro degrau de texto. Aponta para o mesmo valor de `muted-foreground`: é um apelido
+     por PAPEL ("texto de apoio"), não um tom novo — inventar um degrau intermediário daria
+     três cinzas de texto quase iguais, e ninguém acertaria qual usar. */
+  --subtext: var(--ink-500);
 
   --radius: 0.625rem;
 
+  /* Arredondamento "gordinho" canônico Azuos: controles 14px, botões 14px, cartões 20px, diálogos 16px. */
+  --shape-control: 14px;
+  --shape-button: 14px;
+  --shape-card: 20px;
+  --shape-dialog: 16px;
+  --shape-chip: 9999px;
+  --shape-badge: 9999px;
+  --border-width: 1px;
+  --border-style: solid;
+  --card-border-color: var(--border);
+  --card-background: var(--card);
+  --elevation-card: none;
+  --elevation-button: none;
+  --control-height: 44px;
+  --heading-weight: 700;
+  --heading-tracking: -0.02em;
+  --heading-case: none;
+  --body-size: 1.0625rem;
+  --motion-duration: 350ms;
+  --motion-easing: cubic-bezier(0.32, 0.72, 0, 1);
+  --focus-width: 3px;
+  --focus-color: var(--color-ring);
+  --link-decoration: none;
+
+  --brand-font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --brand-font-heading: 'IBM Plex Sans', system-ui, sans-serif;
+
   /* ---- Semântica da PÁGINA ---- */
   --background: #f8fafc;
-  --foreground: #111827;
-  --card: #ffffff;
-  --card-foreground: #111827;
-  --popover: #ffffff;
-  --popover-foreground: #111827;
+  --foreground: var(--ink-900);
+  --card: #fbfbfd;
+  --card-foreground: var(--ink-900);
+  --popover: #fbfbfd;
+  --popover-foreground: var(--ink-900);
   --primary: var(--brand-blue-800);
-  --primary-foreground: #ffffff;
-  --secondary: #f3f4f6;
-  --secondary-foreground: #111827;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
+  --primary-foreground: #f8fafc;
+  --primary-strong: var(--brand-blue-900);
+  --primary-soft: var(--brand-blue-100);
+  --secondary: var(--ink-100);
+  --secondary-foreground: var(--ink-900);
+  --muted: var(--ink-100);
+  --muted-foreground: var(--ink-500);
   --accent: var(--brand-blue-100);
   --accent-foreground: var(--brand-blue-900);
-  --accent-hero: var(--brand-yellow-500);
-  --accent-hero-foreground: var(--brand-blue-900);
-  --destructive: #e11d48;
-  --destructive-foreground: var(--primary-foreground);
-  --border: #d1d5db;
-  --input: #d1d5db;
+  --accent-strong: #b45309;
+  --tertiary: #8b5cf6;
+  --tertiary-strong: #6d28d9;
+  --destructive: #dc2626;
+  --border: var(--ink-300);
+  --input: var(--ink-300);
   --ring: var(--brand-blue-600);
+  --destructive-foreground: #f8fafc;
 
-  /* Os tons de ESTADO. `danger` é o `destructive` acima; estes três não existem na paleta
-     do agente, então nascem aqui. No claro são os tons 700 (texto pequeno legível sobre
-     branco); no escuro, os 400.
+  /* Texto sobre cada cor forte. No claro as cores são escuras e o texto é claro; no escuro elas
+     sobem para o tom pastel e o texto desce para escuro — por isso cada tom tem o seu. */
+  --success-foreground: #f8fafc;
+  --warning-foreground: #f8fafc;
+  --info-foreground: #f8fafc;
 
-     `-soft` é o fundo SÓLIDO do tom (selo, cartão de indicador): os tons 100 no claro e 950
-     no escuro. Sólido de propósito — com opacidade, o cartão de indicador mudava de cor
-     conforme o que estivesse atrás dele. */
+  /* O "preto" e o "branco" da marca: nunca puros. São o que `bg-black`/`text-white` dos
+     primitivos do shadcn (`lib/components/ui/`, que não se editam) passam a usar, pelo `@theme`
+     lá embaixo. Iguais nos dois temas de propósito: véu de diálogo e fundo de recorte de foto
+     ficam escuros no claro e no escuro. */
+  --black: #111827;
+  --white: #f8fafc;
+  --backdrop: var(--black);
+  /* Texto sobre um fundo que é SEMPRE escuro (`bg-brand-blue-900`, `bg-backdrop`) ou sempre
+     claro, nos dois temas. `foreground`/`primary-foreground` viram no escuro; estes não. */
+  --on-dark: var(--white);
+  --on-light: var(--black);
+
+  /**
+   * ---- O ACENTO DE DESTAQUE ----
+   *
+   * O amarelo da marca (o ponto da logo), reservado para UMA coisa por tela: o número que a
+   * pessoa veio ver, a linha que acabou de mudar. Ele é forte, e usado em dois lugares na
+   * mesma tela deixa de destacar qualquer um dos dois.
+   *
+   * O par de texto é escuro, não branco: branco sobre amarelo não passa em contraste nenhum.
+   */
+  --accent-hero: var(--brand-yellow-500);
+  --accent-hero-foreground: var(--ink-900);
+
+  /**
+   * ---- Os tons de ESTADO ----
+   *
+   * `danger` é o `destructive` acima; estes três nascem aqui. No claro são os tons 700 — texto
+   * pequeno tem de ser legível sobre branco, e o 500 de cada cor não é.
+   *
+   * `-soft` é o fundo SÓLIDO do tom (selo, cartão de indicador, preenchimento no hover): os
+   * tons 100 no claro e os 950 no escuro. Sólido de propósito — com opacidade, o selo mudava
+   * de cor conforme o que estivesse atrás dele, e o mesmo "Concluída" ficava de dois tons na
+   * mesma lista (um sobre o branco do cartão, outro sobre a linha cinza da tabela).
+   */
   --success: #047857;
   --success-soft: #d1fae5;
   --warning: #b45309;
   --warning-soft: #fef3c7;
   --info: #1d4ed8;
   --info-soft: #dbeafe;
-  --destructive-soft: #ffe4e6;
+  --destructive-soft: #fee2e2;
   --primary-soft: var(--brand-blue-100);
 
-  /* As cores de MARCAÇÃO que a pessoa escolhe (o compromisso na agenda): sete matizes que
-     não se confundem, cada um com o tom cheio (a bolinha) e o `-soft` (o cartão). Não são
-     os tons de estado (`success`, `warning`…) — esses dizem "deu certo" ou "cuidado", e uma
-     cor de agenda não diz nada além de "é deste grupo". */
-  --tag-blue: #2563eb;
-  --tag-blue-soft: #dbeafe;
-  --tag-green: #059669;
-  --tag-green-soft: #d1fae5;
-  --tag-amber: #ca8a04;
-  --tag-amber-soft: #fef9c3;
-  --tag-purple: #9333ea;
-  --tag-purple-soft: #f3e8ff;
-  --tag-rose: #db2777;
-  --tag-rose-soft: #fce7f3;
-  --tag-indigo: #4f46e5;
-  --tag-indigo-soft: #e0e7ff;
-  --tag-red: #dc2626;
-  --tag-red-soft: #fee2e2;
+  /*
+   * `-fill` é o PREENCHIMENTO cheio do tom (cartão escolhido, hover de cartão clicável), sempre
+   * com texto `--on-dark` por cima. Os mesmos nos dois temas, e todos ≥ 4,5:1 com o branco: os
+   * tons de texto acima clareiam no escuro, e como fundo eles pediam texto preto.
+   */
+  --destructive-fill: #b91c1c;
+  --warning-fill: #b45309;
+  --info-fill: #1d4ed8;
+  --success-fill: #047857;
 
-  /* As cores de categoria dos gráficos. Ver utils/chart-slice.ts. */
-  --chart-1: var(--brand-blue-800);
-  --chart-2: var(--brand-yellow-500);
-  --chart-3: var(--brand-blue-500);
-  --chart-4: #10b981;
-  --chart-5: #e11d48;
+  /**
+   * ---- Os SOTAQUES de card ----
+   *
+   * Card é sempre a superfície da marca (`--card`); a cor entra só como sotaque: a bolinha do
+   * ícone, o número, a marca d'água e a bolinha do selo. Oito tons sóbrios, que conversam com o
+   * azul-marinho — nada de pastel, cor cheia de fundo ou neon. No escuro cada um clareia para
+   * manter contraste ≥ 5:1 sobre o card. O ícone dentro da bolinha usa `--on-hue`.
+   * Escolhido = `--card-selected` (o azul claro da marca) com texto e ícone brancos.
+   */
+  --hue-blue: #1b3a8c;
+  --hue-red: #a8423a;
+  --hue-amber: #9a6412;
+  --hue-green: #23705f;
+  --hue-steel: #2f6383;
+  --hue-plum: #62468a;
+  --hue-slate: #4c5668;
+  --hue-copper: #8f4f2a;
+  --on-hue: #f8fafc;
+  --card-selected: #2f5fd0;
+  --card-selected-hover: #3a6be0;
+  --on-card-selected: #f8fafc;
+
+  /**
+   * ---- As cores de CATEGORIA dos gráficos ----
+   *
+   * A ordem é fixa e percorrida, nunca sorteada: sorteio faria a mesma fatia mudar de cor a
+   * cada recarga. Quem resolve a cor de uma fatia é `lib/utils/chart-slice.util.ts`.
+   */
+  --chart-1: var(--brand-blue-600);
+  --chart-2: #10b981;
+  --chart-3: var(--brand-yellow-500);
+  --chart-4: #ef4444;
+  --chart-5: #8b5cf6;
 
   /**
    * ---- Semântica da BARRA LATERAL ----
    *
-   * Ela NÃO segue o tema da página, como no paralegal: é azul nos dois temas, porque é ela
-   * que carrega a logo — e a logo oficial é branca, feita para fundo escuro. Sobre branco
-   * ela some. No escuro a barra desce um tom (#16265c): encostar no tom do fundo da página
-   * apagaria a separação entre menu e conteúdo.
+   * Ela NÃO segue o tema da página. O shadcn traz estes tokens quase brancos, pensando numa
+   * barra que acompanha o fundo; aqui ela é azul nos dois temas, porque é ela que carrega a
+   * logo — e a logo oficial é branca, feita para fundo escuro. Sobre branco ela some.
    */
   --sidebar: var(--brand-blue-800);
   --sidebar-foreground: #e2e8f0;
   --sidebar-primary: var(--brand-blue-600);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgb(255 255 255 / 0.08);
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgb(255 255 255 / 0.1);
+  --sidebar-primary-foreground: #f8fafc;
+  --sidebar-accent: rgb(248 250 252 / 0.08);
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: rgb(248 250 252 / 0.1);
   --sidebar-ring: var(--brand-yellow-500);
-
-  /**
-   * ---- Apelidos da paleta antiga ----
-   *
-   * `ink-*` era uma escala de cinzas FIXA, igual nos dois temas. Agora aponta para os
-   * tokens semânticos: as 44 telas que já usam `text-ink-700` ou `border-ink-300`
-   * passaram a acompanhar o tema sem precisar ser reescritas uma a uma.
-   *
-   * A escala `brand-*` existe só para o que é DA MARCA e não muda com o tema — a parte
-   * escolhida do seletor de módulos, em amarelo. Cor de tela continua sendo `primary`.
-   */
-  --ink-900: var(--foreground);
-  --ink-700: var(--subtext);
-  --ink-500: var(--muted-foreground);
-  --ink-300: var(--border);
-  --ink-100: var(--surface);
 
   color-scheme: light;
 }
@@ -178,12 +256,15 @@
  * existe cor que só valha no escuro — que é como uma tela nasce ilegível em um dos dois.
  */
 :root[data-theme='dark'] {
-  --crust: #070c17;
-  --mantle: #0e1626;
-  --base: #111827;
-  --surface: #1f2937;
-
-  --subtext: #9ca3af;
+  /* A escala `ink` é a cor de TEXTO fixa usada nas telas (`text-ink-900`, `text-ink-500`…). No
+     escuro ela vira do avesso — o 900 é o texto principal, então passa a ser claro —, senão
+     todo texto escrito com ela some no fundo escuro. Por isso os tokens abaixo não usam mais
+     `var(--ink-*)`: escrevem a cor, para não virar junto. */
+  --ink-900: #f3f4f6;
+  --ink-700: #d1d5db;
+  --ink-500: #9ca3af;
+  --ink-300: #374151;
+  --ink-100: #1f2937;
 
   --background: #0b1220;
   --foreground: #f3f4f6;
@@ -191,59 +272,71 @@
   --card-foreground: #f3f4f6;
   --popover: #111827;
   --popover-foreground: #f3f4f6;
-  --primary: var(--brand-blue-500);
-  --primary-foreground: #ffffff;
+  /* No escuro o azul principal SOBE para o tom 400: é texto sobre fundo escuro e sobre o
+     `primary-soft` (4,7:1), e fundo de botão com texto escuro por cima. */
+  --primary: var(--brand-blue-400);
+  --primary-foreground: #0b1220;
+  --primary-strong: var(--brand-blue-300);
+  --primary-soft: #16265c;
   --secondary: #1f2937;
   --secondary-foreground: #f3f4f6;
-  --muted: #18202f;
+  --muted: #1f2937;
   --muted-foreground: #9ca3af;
   --accent: #1e293b;
   --accent-foreground: #f3f4f6;
-  --accent-hero: #f7ce3c;
-  --accent-hero-foreground: #45260b;
-  --destructive: #fb7185;
-  --border: rgb(255 255 255 / 0.12);
-  --input: rgb(255 255 255 / 0.12);
-  --ring: var(--brand-blue-500);
+  --border: #2b2c3d;
+  --input: #2b2c3d;
+
+  --crust: #060b14;
+  --mantle: #0b1220;
+  --base: #111827;
+  --surface: #1f2937;
+  --subtext: #9ca3af;
+
+  /* O vermelho do claro (um tom 600) fica quase preto sobre o fundo escuro. Aqui ele sobe para
+     o 400, que é o degrau legível — a mesma troca que `success`, `warning` e `info` fazem. */
+  --destructive: #f87171;
+  --destructive-foreground: #111827;
+  --success-foreground: #111827;
+  --warning-foreground: #111827;
+  --info-foreground: #111827;
+
+  --accent-hero: var(--brand-yellow-400);
+  --accent-hero-foreground: #111827;
+  --accent-strong: var(--brand-yellow-400);
+  --tertiary: #a78bfa;
+  --tertiary-strong: #a78bfa;
 
   --success: #34d399;
-  --success-soft: #022c22;
+  /* No escuro, os `-soft` são fundos escuros só levemente tingidos — e não marrom ou bordô —,
+     legíveis com o texto do tom por cima. */
+  --success-soft: #0f2e2a;
   --warning: #fbbf24;
-  --warning-soft: #451a03;
+  --warning-soft: #2f2a17;
   --info: #60a5fa;
   --info-soft: #172554;
-  --destructive-soft: #4c0519;
-  --primary-soft: #142b69;
+  --destructive-soft: #3b1a22;
+  --primary-soft: #16265c;
 
-  --tag-blue: #60a5fa;
-  --tag-blue-soft: #172554;
-  --tag-green: #34d399;
-  --tag-green-soft: #022c22;
-  --tag-amber: #facc15;
-  --tag-amber-soft: #422006;
-  --tag-purple: #c084fc;
-  --tag-purple-soft: #3b0764;
-  --tag-rose: #f472b6;
-  --tag-rose-soft: #500724;
-  --tag-indigo: #818cf8;
-  --tag-indigo-soft: #1e1b4b;
-  --tag-red: #f87171;
-  --tag-red-soft: #450a0a;
+  --chart-1: var(--brand-blue-500);
+  --chart-2: #34d399;
+  --chart-3: var(--brand-yellow-400);
+  --chart-4: #f87171;
+  --chart-5: #a78bfa;
 
-  --chart-1: #6e8de0;
-  --chart-2: #f7ce3c;
-  --chart-3: #96ade9;
-  --chart-4: #34d399;
-  --chart-5: #fb7185;
-
+  /* A barra continua azul, um tom abaixo: encostar no tom do fundo da página apagaria a
+     separação entre menu e conteúdo. */
   --sidebar: #16265c;
-  --sidebar-foreground: #e2e8f0;
-  --sidebar-primary: var(--brand-blue-600);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgb(255 255 255 / 0.08);
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgb(255 255 255 / 0.1);
-  --sidebar-ring: var(--brand-yellow-500);
+
+  --hue-blue: #6f8fe0;
+  --hue-red: #e8877d;
+  --hue-amber: #e3b061;
+  --hue-green: #6cc3ad;
+  --hue-steel: #86b5d6;
+  --hue-plum: #b09ad6;
+  --hue-slate: #a7b0c2;
+  --hue-copper: #e09b72;
+  --on-hue: #1a2234;
 
   color-scheme: dark;
 }
@@ -258,6 +351,8 @@
   --color-brand-blue-700: var(--brand-blue-700);
   --color-brand-blue-600: var(--brand-blue-600);
   --color-brand-blue-500: var(--brand-blue-500);
+  --color-brand-blue-400: var(--brand-blue-400);
+  --color-brand-blue-300: var(--brand-blue-300);
   --color-brand-blue-100: var(--brand-blue-100);
 
   --color-brand-yellow-500: var(--brand-yellow-500);
@@ -266,9 +361,9 @@
 
   --color-crust: var(--crust);
   --color-mantle: var(--mantle);
-  /* `--base` fica SEM `--color-base` de propósito: com ele, o Tailwind passa a ler `text-base`
-     (tamanho de fonte, usado pelo input do shadcn) também como cor, e o texto digitado na
-     busca saía da cor do fundo no tema escuro. Quem precisar do tom usa `var(--base)`. */
+  /* `--base` NÃO vira `--color-base` de propósito: com ele, o Tailwind passava a ler `text-base`
+     (o TAMANHO de fonte) como COR — e todo texto `text-base` ficava quase branco no claro e quase
+     preto no escuro. A superfície "base" é `bg-background`. */
   --color-surface: var(--surface);
   --color-subtext: var(--subtext);
 
@@ -286,6 +381,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -294,8 +391,19 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-hero: var(--accent-hero);
   --color-accent-hero-foreground: var(--accent-hero-foreground);
+  --color-accent-strong: var(--accent-strong);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-strong: var(--tertiary-strong);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info-foreground: var(--info-foreground);
+  --color-black: var(--black);
+  --color-white: var(--white);
+  --color-backdrop: var(--backdrop);
+  --color-on-dark: var(--on-dark);
+  --color-on-light: var(--on-light);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -308,21 +416,22 @@
   --color-info-soft: var(--info-soft);
   --color-destructive-soft: var(--destructive-soft);
   --color-primary-soft: var(--primary-soft);
-
-  --color-tag-blue: var(--tag-blue);
-  --color-tag-blue-soft: var(--tag-blue-soft);
-  --color-tag-green: var(--tag-green);
-  --color-tag-green-soft: var(--tag-green-soft);
-  --color-tag-amber: var(--tag-amber);
-  --color-tag-amber-soft: var(--tag-amber-soft);
-  --color-tag-purple: var(--tag-purple);
-  --color-tag-purple-soft: var(--tag-purple-soft);
-  --color-tag-rose: var(--tag-rose);
-  --color-tag-rose-soft: var(--tag-rose-soft);
-  --color-tag-indigo: var(--tag-indigo);
-  --color-tag-indigo-soft: var(--tag-indigo-soft);
-  --color-tag-red: var(--tag-red);
-  --color-tag-red-soft: var(--tag-red-soft);
+  --color-destructive-fill: var(--destructive-fill);
+  --color-warning-fill: var(--warning-fill);
+  --color-info-fill: var(--info-fill);
+  --color-success-fill: var(--success-fill);
+  --color-hue-blue: var(--hue-blue);
+  --color-hue-red: var(--hue-red);
+  --color-hue-amber: var(--hue-amber);
+  --color-hue-green: var(--hue-green);
+  --color-hue-steel: var(--hue-steel);
+  --color-hue-plum: var(--hue-plum);
+  --color-hue-slate: var(--hue-slate);
+  --color-hue-copper: var(--hue-copper);
+  --color-on-hue: var(--on-hue);
+  --color-card-selected: var(--card-selected);
+  --color-card-selected-hover: var(--card-selected-hover);
+  --color-on-card-selected: var(--on-card-selected);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -344,57 +453,61 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* ---- O ARREDONDAMENTO POR PAPEL ----
+  /* ---- O ARREDONDAMENTO POR PAPEL (Padrão Cupertino) ---- */
+  --radius-control: var(--shape-control);
+  --radius-button: var(--shape-button);
+  --radius-card: var(--shape-card);
+  --radius-dialog: var(--shape-dialog);
+  --radius-chip: var(--shape-chip);
+  --radius-badge: var(--shape-badge);
+  --radius-surface: var(--shape-card);
+  --radius-box: var(--shape-control);
 
-     Os quatro acima são a escala do Tailwind, por TAMANHO: quem escreve escolhe `lg` ou
-     `xl` no olho, e o mesmo papel acaba com raios diferentes em telas diferentes — o cartão
-     de indicador estava com raio de botão, e o seletor com um raio só dele.
+  --shadow-card: var(--elevation-card);
+  --shadow-button: var(--elevation-button);
+  --ease-brand: var(--motion-easing);
+  --spacing-control: var(--control-height);
 
-     Estes quatro são a escala por PAPEL: `rounded-surface` num cartão, `rounded-control` num
-     campo. O valor de cada um é o que os componentes baixados já usavam (`ui/card`,
-     `ui/dialog` e `ui/table` em 2xl; `ui/popover` em lg) — eles não se editam, então a régua
-     é a deles, e o que estava fora é que veio para cá. */
+  --font-sans: var(--brand-font-sans);
+  --font-heading: var(--brand-font-heading);
 
-  /** O que pousa sobre o fundo: cartão, diálogo, tabela. */
-  --radius-surface: calc(var(--radius) + 6px);
-  /** O que se clica ou se digita: campo, botão, pastilha, combobox. */
-  --radius-control: calc(var(--radius) + 4px);
-  /** Bloco dentro de um cartão, aviso, balão. */
-  --radius-box: var(--radius);
-  /** Miudeza dentro de um bloco: item de lista de balão, quadradinho de ícone. */
-  --radius-chip: calc(var(--radius) - 2px);
+  /* Reflexo que corre no título (estilos Metálico e Holográfico). */
+  --animate-shimmer: shimmer 6s linear infinite;
 
-  /* A mesma do agente: nenhuma fonte baixada, a do sistema. */
-  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  @keyframes shimmer {
+    to {
+      background-position: 200% center;
+    }
+  }
 }
 
 /* ==========================================================================
    A RÉGUA DE ALTURA DOS CONTROLES.
 
-   Três degraus, e cada um com um trabalho. Antes eram cinco alturas soltas — 28, 32, 36 e
-   40px, mais um campo que não tinha altura nenhuma e crescia pelo padding —, e o efeito
-   aparecia no rodapé de todo diálogo: o "Cancelar" 4px mais baixo que o "Salvar" ao lado.
+   Três degraus, e cada um com um trabalho. Sem a régua são cinco alturas soltas — 28, 32, 36 e
+   40px, mais um campo que não tem altura nenhuma e cresce pelo padding —, e o efeito aparece no
+   rodapé de todo diálogo: o "Cancelar" 4px mais baixo que o "Salvar" ao lado.
 
-   | classe       | altura | onde                                                          |
-   |--------------|--------|---------------------------------------------------------------|
-   | `control-sm` | 32px   | dentro de outra coisa: linha de tabela, rodapé de cartão, paginação |
-   | `control-md` | 36px   | a ação da tela: cabeçalho e rodapé de diálogo, botão de enviar |
-   | `control-lg` | 40px   | campo de formulário E de filtro: texto, data, seletor, combobox, trilho de pastilhas |
+   | classe       | altura | onde                                                                |
+   |--------------|--------|---------------------------------------------------------------------|
+   | `control-sm` | 32px   | dentro de outra coisa: linha de tabela, rodapé de cartão, paginação  |
+   | `control-md` | 36px   | a ação da tela: cabeçalho e rodapé de diálogo, botão de enviar       |
+   | `control-lg` | 40px   | campo de formulário E de filtro: texto, data, seletor, combobox      |
 
-   A regra que decide: **o que divide fileira tem que ter a mesma altura**. Um botão ao lado
-   de um campo é `control-lg`; o mesmo botão sozinho num cabeçalho é `control-md`.
+   A regra que decide: **o que divide fileira tem que ter a mesma altura**. Um botão ao lado de
+   um campo é `control-lg`; o mesmo botão sozinho num cabeçalho é `control-md`.
 
-   O `control-icon-*` é o irmão quadrado, para o botão que só tem ícone: a largura acompanha
-   a altura, e não o ícone dentro — senão a lixeira fica mais estreita que o lápis ao lado,
-   numa fileira que deveria ser uma régua só.
+   O `control-icon-*` é o irmão quadrado, para o botão que só tem ícone: a largura acompanha a
+   ALTURA, e não o ícone dentro — senão a lixeira fica mais estreita que o lápis ao lado, numa
+   fileira que deveria ser uma régua só.
 
-   O RAIO NÃO ENTRA aqui, de propósito: ele é `rounded-control`, uma classe à parte. Junto,
-   um controle que precisasse de outro raio (uma pastilha redonda, por exemplo) ficaria com
-   dois arredondamentos na marcação e quem venceria seria a ordem do CSS gerado — o mesmo
-   problema que o `cn` existe para resolver (ver `lib/utils/cn.ts`).
+   O RAIO NÃO ENTRA aqui, de propósito: ele é `rounded-control`, uma classe à parte. Junto, um
+   controle que precisasse de outro raio (uma pastilha redonda) ficaria com dois arredondamentos
+   na marcação e quem venceria seria a ordem do CSS gerado — o mesmo problema que o `cn` existe
+   para resolver (ver `lib/utils/cn.util.ts`).
 
-   As três medidas ficam em `:root` para aparecerem UMA vez: mudar o degrau é mudar aqui, e
-   não caçar `h-9` por trinta arquivos.
+   As três medidas ficam em `:root` para aparecerem UMA vez: mudar o degrau é mudar aqui, e não
+   caçar `h-9` por trinta arquivos.
    ========================================================================== */
 :root {
   --control-sm: 2rem;
@@ -438,25 +551,22 @@
 /* ==========================================================================
    A GRADE DE CARTÕES DAS LISTAS.
 
-   De 1 a 4 cartões por linha, e quem decide quantos é o ESPAÇO QUE A LISTA TEM, não a
-   largura da janela: a área de conteúdo é mais estreita que o monitor (o menu lateral ocupa
-   256px e a página tem largura máxima), e uma lista dentro de um diálogo é mais estreita
-   ainda. Contando pela janela, o diálogo ganharia quatro colunas espremidas.
+   De 1 a 4 cartões por linha, e quem decide quantos é o ESPAÇO QUE A LISTA TEM, não a largura
+   da janela: a área de conteúdo é mais estreita que o monitor (o menu lateral ocupa 256px e a
+   página tem largura máxima), e uma lista dentro de um diálogo é mais estreita ainda. Contando
+   pela janela, o diálogo ganharia quatro colunas espremidas.
 
    Na prática: celular 1, tablet 2 a 3, monitor 3 a 4.
 
    A conta: cada cartão tem no mínimo 15rem (240px); cabem quantos couberem, e o `max(...)`
-   segura o teto em 4 — um quinto cartão só entraria com cada um mais estreito que um quarto
-   da linha, o que o mínimo não deixa. `min-width: 0` nos filhos é o que permite o texto
-   comprido quebrar dentro do cartão em vez de alargar a coluna.
+   segura o teto em 4 — um quinto cartão só entraria com cada um mais estreito que um quarto da
+   linha, o que o mínimo não deixa. `min-width: 0` nos filhos é o que permite o texto comprido
+   quebrar DENTRO do cartão em vez de alargar a coluna.
    ========================================================================== */
 @utility card-grid {
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(min(100%, max(17rem, calc((100% - 3 * 0.75rem) / 4))), 1fr)
-  );
+  grid-template-columns: repeat(auto-fill, minmax(max(15rem, calc((100% - 3 * 0.75rem) / 4)), 1fr));
 
   & > * {
     min-width: 0;
@@ -464,8 +574,8 @@
 
   /* O RODAPÉ DO CARTÃO FICA NO FUNDO. Os cartões de uma mesma fileira têm a altura do maior;
      sem isto, o que tem menos texto termina antes e o rodapé dele sobe, desalinhado dos
-     vizinhos, com um vazio embaixo. O cartão vira uma coluna e o último bloco é empurrado
-     para o fim — a sobra de altura fica entre o conteúdo e o rodapé.
+     vizinhos, com um vazio embaixo. O cartão vira uma coluna e o último bloco é empurrado para
+     o fim — a sobra de altura fica entre o conteúdo e o rodapé.
 
      `.col-span-full` é a legenda da lista, que mora na grade mas não é cartão. */
   & > :not(.col-span-full) {
@@ -488,10 +598,9 @@
 /* ==========================================================================
    O PREENCHIMENTO NO HOVER — a cor do status entra por onde o mouse entrou.
 
-   Um círculo da cor do tom nasce no ponto em que o cursor cruzou a borda e cresce até
-   cobrir o item; ao sair, encolhe em direção ao ponto de saída. Quem informa os dois pontos
-   é a action `fillFromPointer` (`lib/motion/hover-fill.ts`), por `--fill-x`/`--fill-y`; a cor
-   vem em `--fill-color`.
+   Um círculo da cor do tom nasce no ponto em que o cursor cruzou a borda e cresce até cobrir o
+   item; ao sair, encolhe em direção ao ponto de saída. Quem informa os dois pontos é o hook
+   `lib/motion/use-hover-fill.ts`, por `--fill-x`/`--fill-y`; a cor vem em `--fill-color`.
 
    É LEVE DE PROPÓSITO: a única coisa animada é `transform: scale` de uma camada só, que o
    navegador entrega à placa de vídeo sem redesenhar o conteúdo — nada de animar cor de fundo,
@@ -500,6 +609,10 @@
    O círculo tem o tamanho exato para alcançar o canto mais distante a partir do ponto de
    entrada. `isolation` + `z-index: -1` o deixam ACIMA do fundo do item e ABAIXO do texto.
    Quem pediu menos movimento ao sistema vê a cor aparecer e sumir, sem crescer.
+
+   SÓ PARA CARTÃO (e outros blocos que cortam o próprio conteúdo). Em LINHA DE TABELA não: uma
+   `<tr>` ignora `overflow: hidden`, então a camada circular conta como conteúdo da tabela,
+   estica a área de rolagem e a tabela ganha barra para os lados.
    ========================================================================== */
 @utility hover-fill {
   position: relative;
@@ -512,8 +625,8 @@
     z-index: -1;
     top: var(--fill-y, 50%);
     left: var(--fill-x, 50%);
-    /* O dobro da distância até o canto mais longe (a action mede em `--fill-reach`); sem a
-       medida, 3× a largura do item cobre qualquer ponto de entrada. */
+    /* O dobro da distância até o canto mais longe (o hook mede em `--fill-reach`); sem a
+       medida, 3x a largura do item cobre qualquer ponto de entrada. */
     width: calc(var(--fill-reach, 150%) * 2);
     aspect-ratio: 1;
     border-radius: 9999px;
@@ -544,10 +657,6 @@
     }
   }
 }
-
-/* SÓ PARA CARTÃO (e outros blocos que cortam o próprio conteúdo). Em LINHA DE TABELA não:
-   uma `<tr>` ignora `overflow: hidden`, então a camada circular conta como conteúdo da tabela,
-   estica a área de rolagem e a tabela ganha barra para os lados. Foi testado e retirado. */
 
 @layer base {
   * {
@@ -580,8 +689,8 @@
   }
 
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
 
   ::-webkit-scrollbar-track {
@@ -590,57 +699,12 @@
 
   ::-webkit-scrollbar-thumb {
     background-color: var(--border);
-    border-radius: 9999px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--muted-foreground);
+    border-radius: var(--radius-lg);
   }
 
   ::-webkit-scrollbar-button {
     display: none;
     height: 0;
     width: 0;
-  }
-}
-
-/* O tamanho intrínseco de campos e textos não pode alargar as colunas da página.
-   Tabelas e calendários mantêm sua rolagem horizontal no contêiner próprio. */
-@layer base {
-  :where(.app-content, [data-slot="dialog-content"]) .grid > *,
-  form > * {
-    min-width: 0;
-  }
-
-  :where(form, fieldset) {
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  :where(.app-content, [data-slot="dialog-content"]) :where(h1, h2, h3, p, dd, label) {
-    overflow-wrap: anywhere;
-  }
-
-  @media (max-width: 639px) {
-    /* Evita zoom automático ao focar campos no iOS. */
-    :where(input, select, textarea) {
-      font-size: 16px !important;
-    }
-
-    [data-slot="dialog-content"] [data-slot="dialog-footer"] > * {
-      width: 100%;
-    }
-
-    [data-slot="dialog-content"] [data-slot="dialog-header"] {
-      text-align: left;
-      padding-right: 1.75rem;
-    }
-  }
-}
-
-@media (max-width: 767px) {
-  [data-mobile="true"][data-sidebar="sidebar"] {
-    max-width: calc(100vw - 3rem);
-    touch-action: pan-y;
   }
 }

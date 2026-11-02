@@ -21,11 +21,12 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
   let started: E2eApp;
   let app: INestApplication;
 
+  /* O tipo (desktop ou notebook) é obrigatório no cadastro; o teste que quer outro manda em `extra`. */
   const register = (name: string, extra: Record<string, unknown> = {}) =>
     request(app.getHttpServer())
       .post('/api/computers')
       .set(asCaio())
-      .send({ name, ...extra });
+      .send({ name, kind: 'desktop', ...extra });
 
   beforeAll(async () => {
     started = await createE2eApp(testDatabaseUrl!);
@@ -120,7 +121,9 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
   });
 
   it('filters by department and by search, on the query and not on the screen', async () => {
-    await register('PC-RECEPCAO-01', { department: 'RECEPÇÃO', responsibleName: 'Marta' }).expect(201);
+    await register('PC-RECEPCAO-01', { department: 'RECEPÇÃO', responsibleName: 'Marta' }).expect(
+      201,
+    );
     await register('PC-FISCAL-01', { department: 'Fiscal', responsibleName: 'Joana' }).expect(201);
     await register('PC-FISCAL-02', { department: 'Fiscal', responsibleName: 'Pedro' }).expect(201);
 
@@ -158,10 +161,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
 
     /* Bloqueada NÃO sai da lista: ela continua no parque, só com a conexão do agente recusada.
        Esconder seria perder de vista justamente a máquina que alguém precisa destravar. */
-    const list = await request(app.getHttpServer())
-      .get('/api/computers')
-      .set(asCaio())
-      .expect(200);
+    const list = await request(app.getHttpServer()).get('/api/computers').set(asCaio()).expect(200);
 
     expect(list.body.total).toBe(1);
   });

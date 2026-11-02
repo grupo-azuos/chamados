@@ -4,6 +4,7 @@ import { ALERT_METRICS } from '../domain/computer-alert.util';
 import { COMPUTER_KINDS } from '../domain/computer-kind.util';
 import { DISPOSAL_TYPES } from '../domain/disposal.util';
 import { HEALTH_STATUSES } from '../domain/computer-health.util';
+import { RESOURCE_CONDITIONS } from '../domain/computer-resource.util';
 import { PREVENTIVE_STATUSES } from '../domain/maintenance.util';
 import { departmentNameSchema } from './department.schema';
 import { MAX_PAGE_SIZE, paginatedSchema, paginationQuerySchema } from './pagination.schema';
@@ -272,6 +273,8 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
   onlyOnline: queryBooleanSchema.optional(),
   onlyOffline: queryBooleanSchema.optional(),
   alert: z.enum(COMPUTER_ALERT_FILTERS).optional(),
+  /** Qual recurso está pedindo atenção (disco, memória, tempo sem reiniciar) — `computer-resource.util`. */
+  resourceCondition: z.enum(RESOURCE_CONDITIONS).optional(),
   preventive: z.enum(COMPUTER_PREVENTIVE_FILTERS).optional(),
   /** Por padrão as arquivadas NÃO vêm: elas saíram de uso e só atrapalhariam a lista. */
   includeArchived: z.coerce.boolean().optional(),

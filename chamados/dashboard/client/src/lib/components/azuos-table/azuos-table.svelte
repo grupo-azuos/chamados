@@ -48,7 +48,7 @@
 
   {#if footer}
     <div
-      class="border-border/80 bg-muted/40 text-ink-500 flex items-center justify-between border-t px-6 py-3 text-xs"
+      class="border-border bg-muted text-ink-500 flex items-center justify-between border-t px-6 py-3 text-xs"
     >
       {@render footer()}
     </div>

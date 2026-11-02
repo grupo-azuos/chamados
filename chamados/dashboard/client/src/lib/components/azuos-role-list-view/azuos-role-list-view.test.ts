@@ -1,10 +1,11 @@
 import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
-import { render, screen } from '@testing-library/svelte';
+import { cleanup, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import RoleListView, {
   groupRolesByPerson,
+  roleTone,
   type AzuosRoleListViewProps,
 } from './azuos-role-list-view.svelte';
 
@@ -290,7 +291,86 @@ describe('groupRolesByPerson', () => {
     const other = { ...mockRoles[0]!, id: 3, userId: 'usr_2', userEmail: null };
     const upper = { ...mockRoles[1]!, userId: 'USR_1' };
 
-    expect(groupRolesByPerson([mockRoles[0]!, upper, other]).map((p) => p.roles.length)).toEqual([2, 1]);
+    expect(groupRolesByPerson([mockRoles[0]!, upper, other]).map((p) => p.roles.length)).toEqual([
+      2, 1,
+    ]);
     expect(groupRolesByPerson([])).toEqual([]);
+  });
+});
+
+describe('AzuosRoleListView — filters, states and the rows', () => {
+  // feliz
+  it('searches, filters by context and clears the filters', async () => {
+    const actions = renderView({
+      data: { roles: mockRoles, total: 2, filter: { search: 'vini', context: '' } },
+    });
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Buscar na equipe' }), 'c');
+    expect(actions.onSearchChange).toHaveBeenCalledWith(expect.stringContaining('c'));
+    await userEvent.click(screen.getByRole('button', { name: 'Manutenção' }));
+    expect(actions.onContextChange).toHaveBeenCalledWith('manutencao');
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(actions.onClearFilters).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('says it is loading, and offers to clear a filter that hid everything', async () => {
+    renderView({ state: { isLoading: true, isEmpty: false, isFilteredOut: false, error: null } });
+    expect(screen.getByText('Carregando os acessos da equipe…')).toBeInTheDocument();
+
+    cleanup();
+    const actions = renderView({
+      state: { isLoading: false, isEmpty: false, isFilteredOut: true, error: null },
+    });
+    expect(screen.getByText('Nenhum acesso com esses filtros')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(actions.onClearFilters).toHaveBeenCalledOnce();
+  });
+
+  // feliz
+  it('colors each role and shows who created the access, or a dash', () => {
+    renderView({
+      data: {
+        currentUser: { name: 'Gestora', email: 'g@empresa.com.br', role: 'manager' },
+        roles: [
+          { ...mockRoles[0]!, id: 1, createdBy: null },
+          {
+            ...mockRoles[1]!,
+            id: 2,
+            userId: 'ana@empresa.com.br',
+            userEmail: 'ana@empresa.com.br',
+          },
+        ],
+        total: 2,
+        filter: { search: '', context: '' },
+      },
+    });
+    expect(screen.getByText('Gestor')).toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Criado por:')).not.toBeInTheDocument();
+    expect(roleTone('superadmin')).toBe('success');
+    expect(roleTone('Gerente')).toBe('info');
+    expect(roleTone('Gestor')).toBe('info');
+    expect(roleTone('Usuário')).toBe('neutral');
+  });
+});
+
+describe('AzuosRoleListView — unknown roles, people without e-mail and the table actions', () => {
+  // feliz
+  it('shows an unknown role as it came, a person without e-mail by her id, and removes from the table', async () => {
+    const actions = renderView({
+      data: {
+        currentUser: { name: 'Robô', email: 'robo@empresa.com.br', role: 'bot' },
+        roles: [{ ...mockRoles[0]!, userEmail: null }],
+        total: 1,
+        filter: { search: '', context: '' },
+      },
+    });
+
+    expect(screen.getAllByText('bot').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('usr_1').length).toBeGreaterThan(0);
+    const removes = screen.queryAllByRole('button', { name: /^Tirar o módulo / });
+    for (const button of removes) await userEvent.click(button);
+    expect(actions.onAskDelete).toHaveBeenCalledTimes(removes.length);
   });
 });

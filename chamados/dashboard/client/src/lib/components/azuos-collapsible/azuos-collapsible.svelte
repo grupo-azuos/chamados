@@ -51,7 +51,7 @@
     />
   </CollapsibleTrigger>
 
-  <CollapsibleContent class="border-border/60 text-ink-700 border-t px-4 py-3 text-sm">
+  <CollapsibleContent class="border-border text-ink-700 border-t px-4 py-3 text-sm">
     {@render children?.()}
   </CollapsibleContent>
 </Collapsible>

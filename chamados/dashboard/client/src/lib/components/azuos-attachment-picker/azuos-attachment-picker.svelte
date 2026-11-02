@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
   import {
     ATTACHMENT_KINDS,
     ATTACHMENT_RULES,
@@ -161,9 +162,9 @@
   Com `relative` aqui, o campo passa a morar onde o rótulo está. Rolá-lo para dentro da vista
   vira uma operação sem efeito, porque ele já está visível.
 -->
-<div class="relative flex flex-col gap-2">
+<div onpaste={pasteFilesIntoInput} class="relative flex flex-col gap-2">
   <label
-    class="border-input hover:bg-muted/50 control-lg flex cursor-pointer items-center gap-2 rounded-control border border-dashed text-sm"
+    class="border-input hover:bg-muted control-lg flex cursor-pointer items-center gap-2 rounded-control border border-dashed text-sm"
     class:pointer-events-none={isDisabled}
     class:opacity-60={isDisabled}
     for="attachments"

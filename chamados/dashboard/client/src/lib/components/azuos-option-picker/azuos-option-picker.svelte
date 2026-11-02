@@ -21,6 +21,10 @@
     label: string;
     tone?: StatusBadgeTone;
     icon?: LucideIcon;
+    /** A pessoa da opção: quando existe, a foto (ou as iniciais) vem antes do rótulo. */
+    personName?: string;
+    /** A foto da pessoa. Sem ela, ficam as iniciais de `personName`. */
+    avatarUrl?: string | null;
     /**
      * A FOTO da pessoa, no lugar do ícone — para escolher gente pelo rosto, não só pelo nome
      * (o filtro de responsável). Sem `url`, saem as iniciais do `name`.
@@ -84,7 +88,7 @@
    * numa linha só.
    */
   const optionTrack = tv({
-    base: 'items-stretch gap-1 rounded-control border border-border/70 bg-muted/50 p-1 min-h-(--control-lg) max-w-full min-w-0',
+    base: 'items-stretch gap-1 rounded-control border border-border bg-muted p-1 min-h-(--control-lg) max-w-full min-w-0',
     variants: {
       layout: {
         filter: 'inline-flex flex-wrap',
@@ -120,7 +124,7 @@
       },
       isSelected: {
         true: 'shadow-xs font-semibold',
-        false: 'border-transparent text-muted-foreground hover:bg-card/70 hover:text-foreground',
+        false: 'border-transparent text-muted-foreground hover:bg-card hover:text-foreground',
       },
       tone: { neutral: '', info: '', success: '', warning: '', danger: '', brand: '' },
     },
@@ -130,16 +134,16 @@
         tone: 'neutral',
         class: 'border-foreground bg-foreground text-background',
       },
-      { isSelected: true, tone: 'info', class: 'bg-info text-primary-foreground' },
+      { isSelected: true, tone: 'info', class: 'bg-info text-info-foreground' },
       {
         isSelected: true,
         tone: 'success',
-        class: 'bg-success text-primary-foreground',
+        class: 'bg-success text-success-foreground',
       },
       {
         isSelected: true,
         tone: 'warning',
-        class: 'bg-warning text-primary-foreground',
+        class: 'bg-warning text-warning-foreground',
       },
       {
         isSelected: true,
@@ -241,7 +245,7 @@
     aria-describedby={fieldState?.error ? errorId : undefined}
     class={cn(
       'control-lg',
-      'rounded-control inline-flex min-w-0 max-w-full w-full cursor-pointer items-center justify-between gap-2 border border-border/70 bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60',
+      'rounded-control inline-flex min-w-40 max-w-full w-full cursor-pointer items-center justify-between gap-2 border border-border bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60',
       ui?.fullWidth ? 'sm:w-full' : 'sm:w-auto sm:min-w-[180px]',
       ui?.className,
     )}
@@ -249,6 +253,10 @@
     <span class="flex min-w-0 items-center gap-2">
       {#if selectedOption?.avatar}
         <PersonAvatar name={selectedOption.avatar.name} avatarUrl={selectedOption.avatar.url} />
+      {:else if selectedOption?.personName}
+        <span aria-hidden="true" class="flex shrink-0">
+          <PersonAvatar name={selectedOption.personName} avatarUrl={selectedOption.avatarUrl} ui={{ size: 'sm' }} />
+        </span>
       {:else if selectedOption?.icon}
         <selectedOption.icon class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
       {:else if selectedOption?.tone}
@@ -278,7 +286,11 @@
         onclick={() => select(option.value)}
         class={optionPill({ layout, isSelected, tone: option.tone })}
       >
-        {#if option.icon}
+        {#if option.personName}
+          <span aria-hidden="true" class="flex shrink-0">
+            <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
+          </span>
+        {:else if option.icon}
           <option.icon class="size-3.5 shrink-0" aria-hidden="true" />
         {:else if option.tone && !isSelected}
           <span class={optionDot({ tone: option.tone })} aria-hidden="true"></span>
@@ -317,10 +329,10 @@
          daí para baixo ele nunca fica menor que o botão, e o teto impede que uma opção de
          nome comprido estique o balão pela tela — a opção é cortada, não a tela. -->
     <PopoverContent
-      class="min-w-(--bits-popover-anchor-width) w-auto max-w-[min(26rem,calc(100vw-2rem))] p-0"
+      class="min-w-[max(16rem,var(--bits-popover-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))] p-0"
       align="start"
     >
-      <div class="relative shrink-0 border-b border-border/70 p-2">
+      <div class="relative shrink-0 border-b border-border p-2">
         <SearchIcon
           class="pointer-events-none absolute top-1/2 left-4 size-3.5 -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
@@ -333,7 +345,7 @@
           class={cn(
             /* A busca do balão é um controle como os outros: degrau `sm` da régua. */
             ui?.allowCustomValue ? 'control-lg rounded-control' : 'control-sm rounded-control',
-            'w-full border border-border/60 bg-muted/30 pr-2 pl-7 text-xs text-foreground outline-none',
+            'w-full border border-border bg-muted pr-2 pl-7 text-xs text-foreground outline-none',
           )}
         />
       </div>
@@ -344,7 +356,7 @@
         {#each filteredOptions as option, index (option.value || '__all__')}
           {@const isSelected = option.value === data.value}
           {#if option.separatorBefore && index > 0}
-            <div role="separator" class="bg-border/70 mx-2 my-1 h-px"></div>
+            <div role="separator" class="bg-muted mx-2 my-1 h-px"></div>
           {/if}
           <button
             type="button"
@@ -353,12 +365,16 @@
               /* Item de lista dentro de um balão é MIUDEZA, não controle: raio `chip`. */
               'flex w-full cursor-pointer items-center gap-2 rounded-chip min-h-11 px-3 py-2.5 text-left text-sm transition-colors',
               isSelected
-                ? 'bg-primary/10 font-semibold text-primary'
-                : 'text-foreground hover:bg-muted/60',
+                ? 'bg-muted font-semibold text-primary'
+                : 'text-foreground hover:bg-muted',
             )}
           >
             {#if option.avatar}
               <PersonAvatar name={option.avatar.name} avatarUrl={option.avatar.url} />
+            {:else if option.personName}
+              <span aria-hidden="true" class="flex shrink-0">
+                <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
+              </span>
             {:else if option.icon}
               <option.icon class="size-3.5 shrink-0" aria-hidden="true" />
             {:else if option.tone}
@@ -376,7 +392,7 @@
           <button
             type="button"
             onclick={() => select(customValue, true)}
-            class="text-primary hover:bg-primary/10 flex min-h-11 w-full cursor-pointer items-center rounded-chip px-3 py-2.5 text-left text-sm font-medium break-words"
+            class="text-primary hover:bg-muted flex min-h-11 w-full cursor-pointer items-center rounded-chip px-3 py-2.5 text-left text-sm font-medium break-words"
           >Usar “{customValue}”</button>
         {:else if ui?.allowCustomValue && filteredOptions.length === 0}
           <p class="px-3 pb-3 text-xs text-muted-foreground">Digite um nome na busca para usá-lo.</p>

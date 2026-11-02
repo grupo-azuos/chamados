@@ -49,3 +49,30 @@ describe('AzuosMaintenanceScheduleDialog', () => {
     expect(screen.getByText('Máquina fora de uso.')).toBeInTheDocument();
   });
 });
+
+describe('AzuosMaintenanceScheduleDialog — the day, the note and closing', () => {
+  // feliz
+  it('reports the chosen day and the typed note', async () => {
+    const input = props();
+    render(MaintenanceScheduleDialog, { props: input });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Dia da manutenção' }));
+    const day = [...document.querySelectorAll('[data-bits-day]')].find((el) => el.textContent?.trim() === '20') as HTMLElement;
+    await userEvent.click(day);
+    expect(input.actions.onChange).toHaveBeenCalledWith('scheduledFor', expect.stringMatching(/-20$/));
+    expect(input.actions.onBlur).toHaveBeenCalledWith('scheduledFor');
+
+    await userEvent.type(screen.getByRole('textbox', { name: /O que vai ser feito/ }), 'L');
+    await userEvent.tab();
+    expect(input.actions.onChange).toHaveBeenCalledWith('note', 'L');
+    expect(input.actions.onBlur).toHaveBeenCalledWith('note');
+  });
+
+  // triste
+  it('closes with Escape', async () => {
+    const input = props();
+    render(MaintenanceScheduleDialog, { props: input });
+    await userEvent.keyboard('{Escape}');
+    expect(input.actions.onClose).toHaveBeenCalled();
+  });
+});

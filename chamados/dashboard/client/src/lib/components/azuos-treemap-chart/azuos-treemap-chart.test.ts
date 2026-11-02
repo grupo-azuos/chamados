@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import TreemapChart, { OTHERS_ID, withOthers } from './azuos-treemap-chart.svelte';
+import TreemapChart, { OTHERS_ID, treemapOption, withOthers } from './azuos-treemap-chart.svelte';
 
 const SLICES = [
   { label: 'Financeiro', value: 54 },
@@ -41,5 +41,26 @@ describe('AzuosTreemapChart', () => {
     });
 
     expect(screen.getByText('Nada')).toBeInTheDocument();
+  });
+});
+
+describe('treemapOption', () => {
+  // feliz
+  it('writes the name with the count in the block and the share in the balloon, greying "Outros"', () => {
+    const option = treemapOption(withOthers(SLICES, 2), 'Chamados', { surface: '#fff', muted: '#888' }) as {
+      tooltip: { formatter: (params: unknown) => string };
+      series: { label: { formatter: (params: unknown) => string }; data: { itemStyle: { color: string } }[] }[];
+    };
+
+    expect(option.tooltip.formatter({ name: 'Contábil', value: 335 })).toBe('<b>Contábil</b><br/>Chamados: 335 (85%)');
+    expect(option.series[0]!.label.formatter({ name: 'RH', value: 1234 })).toBe('RH\n1.234');
+    expect(option.series[0]!.data.at(-1)!.itemStyle.color).toBe('#888');
+    expect(option.series[0]!.data[0]!.itemStyle.color).not.toBe('#888');
+  });
+
+  // feliz
+  it('marks the chart clickable when a block opens detail', () => {
+    render(TreemapChart, { props: { data: { slices: SLICES, seriesLabel: 'Chamados' }, ui: { maxItems: 2 }, actions: { onSelect: vi.fn() } } });
+    expect(document.querySelector('.cursor-pointer')).not.toBeNull();
   });
 });

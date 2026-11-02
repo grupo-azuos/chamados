@@ -113,7 +113,7 @@
       <DialogHeader class="gap-1.5">
         <div class="flex items-center gap-2.5">
           <span
-            class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary/10 text-primary"
+            class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-muted text-primary"
           >
             <ArrowRightLeft class="size-4" aria-hidden="true" />
           </span>

@@ -6,6 +6,7 @@ import {
   roleInContext,
   sessionUserSchema,
   USER_ROLE_LABELS,
+  userRoleLabel,
   userRoleSchema,
 } from './user.schema';
 
@@ -109,5 +110,12 @@ describe('directoryUserSchema', () => {
 
   it('rejects an invalid email or missing name', () => {
     expect(directoryUserSchema.safeParse({ id: 'usr_1', email: 'invalido' }).success).toBe(false);
+  });
+});
+
+describe('userRoleLabel', () => {
+  // feliz
+  it('labels every role', () => {
+    for (const role of userRoleSchema.options) expect(userRoleLabel(role)).toBe(USER_ROLE_LABELS[role]);
   });
 });

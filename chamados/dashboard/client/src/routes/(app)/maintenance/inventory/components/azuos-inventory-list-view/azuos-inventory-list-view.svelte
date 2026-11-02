@@ -199,7 +199,7 @@
           <li
             class="rounded-surface border-border bg-card flex flex-col overflow-hidden border shadow-xs"
           >
-            <div class="bg-muted/40 flex aspect-[4/3] items-center justify-center overflow-hidden">
+            <div class="bg-muted flex aspect-[4/3] items-center justify-center overflow-hidden">
               {#if item.photoUrl}
                 <img
                   src={item.photoUrl}

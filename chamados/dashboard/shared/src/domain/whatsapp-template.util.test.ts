@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isWhatsappTemplateKey,
   renderWhatsappTemplate,
+  signBotMessage,
   templateVariablesIn,
   unknownTemplateVariables,
   WHATSAPP_TEMPLATE_KEYS,
@@ -87,5 +88,17 @@ describe('isWhatsappTemplateKey', () => {
   it('refuses anything else', () => {
     expect(isWhatsappTemplateKey('ticket_deleted')).toBe(false);
     expect(isWhatsappTemplateKey(undefined)).toBe(false);
+  });
+});
+
+describe('signBotMessage', () => {
+  // feliz
+  it('signs with the name of who attends', () => {
+    expect(signBotMessage(' Ana ', 'Oi')).toBe('*Ana BOT*\n\nOi');
+  });
+
+  // triste
+  it('signs as Azuos when there is no name', () => {
+    expect(signBotMessage('  ', 'Oi')).toBe('*Azuos BOT*\n\nOi');
   });
 });

@@ -190,3 +190,36 @@ describe('scheduled maintenances on the panel', () => {
     expect(screen.queryByText('Manutenções agendadas')).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosDashboardMaintenanceLog — scheduled maintenances', () => {
+  // feliz
+  it('lists what was scheduled, with the note when there is one', () => {
+    render(DashboardMaintenanceLog, {
+      props: {
+        data: {
+          log,
+          plannedToday: [],
+          isDoneToday: false,
+          scheduled: [
+            { computerId: 3, computerName: 'CONTABIL-03', department: 'contabil', scheduledFor: '2026-12-01', note: 'Trocar HD' },
+            { computerId: 4, computerName: 'FISCAL-04', department: null, scheduledFor: '2026-12-02', note: null },
+          ],
+        },
+      },
+    });
+
+    const block = screen.getByText('Manutenções agendadas').closest('[data-slot="dashboard-scheduled"]');
+    expect(block).toHaveTextContent('CONTABIL-03 · 01/12 · Trocar HD');
+    expect(block).toHaveTextContent('FISCAL-04 · 02/12');
+    expect(block).not.toHaveTextContent('FISCAL-04 · 02/12 ·');
+  });
+
+  // triste
+  it('hides the block when nothing is scheduled', () => {
+    render(DashboardMaintenanceLog, {
+      props: { data: { log, plannedToday: [], isDoneToday: false, scheduled: [] } },
+    });
+
+    expect(screen.queryByText('Manutenções agendadas')).not.toBeInTheDocument();
+  });
+});

@@ -33,7 +33,7 @@
     icon: effects.level === 'full' ? Sparkles : Gauge,
     isIconOnly: true,
     /* Amarelo sobre a barra azul; cor primária sobre o cartão do perfil. */
-    className: ui?.variant === 'surface' ? 'text-primary hover:bg-primary/10 hover:text-primary' : SIDEBAR_ICON,
+    className: ui?.variant === 'surface' ? 'text-primary hover:bg-muted hover:text-primary' : SIDEBAR_ICON,
   }}
   actions={{ onClick: effects.actions.onToggle }}
 />

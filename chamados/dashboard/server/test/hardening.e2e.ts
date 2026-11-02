@@ -33,6 +33,9 @@ describe.skipIf(!testDatabaseUrl)('API hardening (e2e)', () => {
   beforeAll(async () => {
     process.env.DATABASE_URL = testDatabaseUrl;
     process.env.API_LOG_LEVEL = 'error';
+    /* Sem usuário fingido, mesmo que o `.env` de quem roda tenha `USER_MOCK=true` para a tela:
+       o que se prova aqui é a porta fechada para quem não se identificou. */
+    process.env.USER_MOCK = 'false';
     process.env.API_RATE_LIMIT = String(RATE_LIMIT);
     process.env.API_WEBHOOK_RATE_LIMIT = String(WEBHOOK_RATE_LIMIT);
     /* UM proxy na frente, como em produção atrás do Traefik. É o que faz `request.ip` ser o
@@ -90,10 +93,7 @@ describe.skipIf(!testDatabaseUrl)('API hardening (e2e)', () => {
      ser reiniciado por excesso de perguntas sobre se ele está vivo. */
   it('never throttles the healthcheck', async () => {
     for (let attempt = 0; attempt < RATE_LIMIT + 4; attempt += 1) {
-      await request(app.getHttpServer())
-        .get('/api/health')
-        .set(from('198.51.100.3'))
-        .expect(200);
+      await request(app.getHttpServer()).get('/api/health').set(from('198.51.100.3')).expect(200);
     }
   });
 

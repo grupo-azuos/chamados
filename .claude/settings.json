@@ -12,11 +12,14 @@
       "Bash(npm run build*)",
       "Bash(npm run dev*)",
       "Bash(npm run storybook*)",
+      "Bash(npm run check:design*)",
       "Bash(npm run seed:*)",
       "Bash(npm run db:generate*)",
       "Bash(npm run db:migrate*)",
       "Bash(npm run routes*)",
       "Bash(npx vitest run*)",
+      "Bash(npx shadcn@latest add*)",
+      "Bash(node --test*)",
       "Bash(npm outdated*)",
       "Bash(npm audit)",
       "Bash(node -v)",
@@ -35,9 +38,10 @@
       "Bash(git pull*)",
       "Bash(git rebase*)",
       "Bash(git tag*)",
-      "Bash(git config project.admin*)",
-      "Bash(git config --local project.admin*)",
-      "Bash(git config --get project.admin*)"
+      "Bash(git config azuos.admin*)",
+      "Bash(git config --local azuos.admin*)",
+      "Bash(git config --get azuos.admin*)",
+      "Bash(git config --unset azuos.admin*)"
     ],
     "ask": [
       "Bash(npm run db:reset*)",
@@ -104,6 +108,10 @@
       {
         "matcher": "startup|resume|clear|compact",
         "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/design/check-design.mjs\" --summary"
+          },
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.github/scripts/project-metrics/validate-metrics.mjs\" --session-hook"

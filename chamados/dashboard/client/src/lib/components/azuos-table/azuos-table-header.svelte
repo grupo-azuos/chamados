@@ -13,7 +13,7 @@
 <TableHeader
   bind:ref
   class={cn(
-    'border-border/80 bg-muted/70 text-ink-500 border-b text-xs font-semibold tracking-widest uppercase',
+    'border-border bg-muted text-ink-500 border-b text-xs font-semibold tracking-widest uppercase',
     className,
   )}
   {...restProps}

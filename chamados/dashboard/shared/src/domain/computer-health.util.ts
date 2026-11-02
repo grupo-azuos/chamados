@@ -59,26 +59,26 @@ export type HealthInput = {
   uptimeSeconds?: number | null;
 };
 
-const BYTES_PER_GB = 1024 ** 3;
-const SECONDS_PER_DAY = 60 * 60 * 24;
+export const BYTES_PER_GB = 1024 ** 3;
+export const SECONDS_PER_DAY = 60 * 60 * 24;
 
 /**
  * Abaixo disto o Windows já começa a usar disco como memória, e a máquina fica lenta para
  * qualquer trabalho de escritório. É a mesma régua do coletor antigo.
  */
-const LOW_MEMORY_GB = 8;
+export const LOW_MEMORY_GB = 8;
 
 /** Menos de 10% livre: o sistema não tem folga para atualizar nem para arquivo temporário. */
-const LOW_DISK_FREE_PERCENT = 10;
+export const LOW_DISK_FREE_PERCENT = 10;
 
 /** Menos de 5%: o Windows passa a recusar gravação, e aí já é problema, não aviso. */
-const CRITICAL_DISK_FREE_PERCENT = 5;
+export const CRITICAL_DISK_FREE_PERCENT = 5;
 
 /**
  * Um mês ligada sem reiniciar normalmente significa atualização pendente esperando reinício.
  * Não é defeito — é a explicação mais comum para "está estranho desde não sei quando".
  */
-const STALE_UPTIME_DAYS = 30;
+export const STALE_UPTIME_DAYS = 30;
 
 /** Quanto cada aviso tira da nota. Crítico pesa o dobro de atenção. */
 const ATTENTION_PENALTY = 12;

@@ -1,7 +1,7 @@
 import { type INestApplication } from '@nestjs/common';
 import { WsAdapter } from '@nestjs/platform-ws';
 import { Test } from '@nestjs/testing';
-import { type SessionUser } from '@template/shared/schemas/user.schema';
+import { type DirectoryUser, type SessionUser } from '@template/shared/schemas/user.schema';
 import { sql } from 'drizzle-orm';
 
 import { AppModule } from '../../src/app.module';
@@ -10,6 +10,8 @@ import { IdentityProvider, type ForwardedIdentity } from '../../src/lib/auth/ide
 import { parseEnv } from '../../src/lib/config/env.schema';
 import { DB } from '../../src/lib/db/db.token';
 import { type Database } from '../../src/lib/db/db.type';
+import { type UserDirectoryProvider } from '../../src/lib/auth/user-directory.type';
+import { USER_DIRECTORY_PROVIDER } from '../../src/lib/auth/user-directory.token';
 import { MemoryStorage } from '../../src/lib/storage/memory-storage';
 import { STORAGE } from '../../src/lib/storage/storage.token';
 
@@ -62,7 +64,34 @@ export const CAIO: SessionUser = {
   roles: { infra: 'admin' },
 };
 
-const PEOPLE: SessionUser[] = [ANA, BIA, CAIO];
+/**
+ * Dora administra Sistema e Manutenção (mexe nos dois); Edu só consulta os dois — é quem prova
+ * que a tranca de escrita do módulo fecha. Olga é a super-admin: a única que abre a tela de
+ * Acessos, e passa por todos os módulos sem linha nenhuma em `internal_roles`.
+ */
+export const DORA: SessionUser = {
+  id: '00000000-0000-4000-8000-00000000000d',
+  email: 'dora@empresa.com.br',
+  name: 'Dora',
+  role: 'admin',
+  roles: { sistema: 'admin', manutencao: 'admin' },
+};
+export const EDU: SessionUser = {
+  id: '00000000-0000-4000-8000-00000000000e',
+  email: 'edu@empresa.com.br',
+  name: 'Edu',
+  role: 'manager',
+  roles: { sistema: 'user', manutencao: 'user' },
+};
+export const OLGA: SessionUser = {
+  id: '00000000-0000-4000-8000-000000000050',
+  email: 'olga@empresa.com.br',
+  name: 'Olga',
+  role: 'superadmin',
+  roles: { infra: 'superadmin', sistema: 'superadmin', manutencao: 'superadmin' },
+};
+
+const PEOPLE: SessionUser[] = [ANA, BIA, CAIO, DORA, EDU, OLGA];
 
 /** Os quatro cabeçalhos que o admin-console injeta pelo proxy, para uma pessoa. */
 export function forwardedAs(person: Pick<SessionUser, 'id' | 'email' | 'name'>, role = 'admin') {
@@ -77,6 +106,11 @@ export function forwardedAs(person: Pick<SessionUser, 'id' | 'email' | 'name'>, 
 export const asAna = () => forwardedAs(ANA, 'admin');
 export const asBia = () => forwardedAs(BIA, 'manager');
 export const asCaio = () => forwardedAs(CAIO, 'admin');
+export const asDora = () => forwardedAs(DORA, 'admin');
+export const asEdu = () => forwardedAs(EDU, 'manager');
+/* O cabeçalho só admite os três papéis do admin-console; o super-admin vem do banco (aqui, do
+   provedor fingido). Por isso Olga chega como `admin` e sai como `superadmin`. */
+export const asOlga = () => forwardedAs(OLGA, 'admin');
 
 /** Alguém que o proxy identificou, mas que este sistema não conhece. */
 export const asStranger = () =>
@@ -87,6 +121,46 @@ class FakeIdentityProvider {
     return Promise.resolve(PEOPLE.find((person) => person.id === forwarded.id) ?? null);
   }
 }
+
+/**
+ * O DIRETÓRIO DE PESSOAS do admin-console, fingido — só quando o arquivo pede (`people`). É a
+ * lista de quem pode ser vinculado a um chamado ou responder por ele; a regra de quem atende
+ * cada área continua sendo a do banco (`internal_roles`), lida de verdade.
+ */
+class FakeUserDirectoryProvider implements UserDirectoryProvider {
+  constructor(private readonly people: DirectoryUser[]) {}
+
+  listUsers(): Promise<DirectoryUser[]> {
+    return Promise.resolve(this.people);
+  }
+
+  listAllUsers(): Promise<DirectoryUser[]> {
+    return Promise.resolve(this.people);
+  }
+
+  getUserById(id: string): Promise<DirectoryUser | null> {
+    return Promise.resolve(this.people.find((person) => person.id === id) ?? null);
+  }
+
+  searchUsers(term: string): Promise<DirectoryUser[]> {
+    const needle = term.toLowerCase();
+
+    return Promise.resolve(
+      this.people.filter((person) => person.name.toLowerCase().includes(needle)),
+    );
+  }
+}
+
+/** A ficha de uma pessoa do teste no diretório, como o admin-console a devolveria. */
+export function directoryEntry(person: SessionUser): DirectoryUser {
+  return { id: person.id, name: person.name, email: person.email, role: person.role, banned: false };
+}
+
+export type E2eAppOptions = {
+  /** As pessoas que o diretório do admin-console conhece. Sem isto, o diretório é o real (e
+      sem endereço configurado, responde "serviço fora"). */
+  people?: DirectoryUser[];
+};
 
 export type E2eApp = {
   app: INestApplication;
@@ -107,7 +181,10 @@ export type E2eApp = {
  * cada execução, e qualquer asserção sobre protocolo (que é derivado do id) só passaria na
  * primeira vez.
  */
-export async function createE2eApp(testDatabaseUrl: string): Promise<E2eApp> {
+export async function createE2eApp(
+  testDatabaseUrl: string,
+  options: E2eAppOptions = {},
+): Promise<E2eApp> {
   process.env.DATABASE_URL = testDatabaseUrl;
   process.env.API_LOG_LEVEL = 'error';
   /* Sem a pessoa de desenvolvimento: requisição sem cabeçalho tem de levar 401, como em produção. */
@@ -115,12 +192,17 @@ export async function createE2eApp(testDatabaseUrl: string): Promise<E2eApp> {
 
   const storage = new MemoryStorage();
 
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+  const builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(IdentityProvider)
     .useClass(FakeIdentityProvider)
     .overrideProvider(STORAGE)
-    .useValue(storage)
-    .compile();
+    .useValue(storage);
+  if (options.people) {
+    builder
+      .overrideProvider(USER_DIRECTORY_PROVIDER)
+      .useValue(new FakeUserDirectoryProvider(options.people));
+  }
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication({ logger: ['error'] });
   setupApp(app, parseEnv(process.env));

@@ -92,3 +92,51 @@ describe('AzuosMaintenanceScheduleCard', () => {
     expect(screen.queryByRole('button', { name: 'Cancelar agendamento' })).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosMaintenanceScheduleCard — states', () => {
+  // feliz
+  it('shows the next preventive date when the machine was serviced and nothing is scheduled', () => {
+    render(MaintenanceScheduleCard, {
+      props: {
+        data: { schedule: null, lastPreventiveAt: new Date(Date.now() - 10 * DAY).toISOString() },
+        actions: actions(),
+      },
+    });
+
+    expect(screen.getByText('Próxima preventiva:')).toBeInTheDocument();
+    expect(screen.queryByText(/já aparece como pendente/)).not.toBeInTheDocument();
+  });
+
+  it('only says it is checking while the schedule loads', () => {
+    render(MaintenanceScheduleCard, {
+      props: {
+        data: { schedule: null, lastPreventiveAt: null },
+        state: { isLoading: true },
+        actions: actions(),
+      },
+    });
+
+    expect(screen.getByText('Conferindo a agenda da máquina…')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  // triste
+  it('locks the actions while cancelling and shows why it failed', () => {
+    render(MaintenanceScheduleCard, {
+      props: {
+        data: { schedule: schedule(), lastPreventiveAt: null },
+        state: { isCancelling: true, error: 'Não consegui cancelar o agendamento.' },
+        actions: actions(),
+      },
+    });
+
+    expect(screen.getByRole('button', { name: 'Cancelando…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Remarcar' })).toBeDisabled();
+    expect(screen.getByText('Não consegui cancelar o agendamento.')).toBeInTheDocument();
+  });
+
+  /* Um dia que não se lê conta como hoje: melhor "é hoje" do que um cartão quebrado. */
+  it('treats an unreadable scheduled day as today', () => {
+    expect(scheduleSummaryOf(schedule({ scheduledFor: 'sem-data' }), null, NOW).countdown).toBe('é hoje');
+  });
+});

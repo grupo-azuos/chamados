@@ -61,7 +61,7 @@
 />
 
 <!-- Caso limite: na largura de um celular, anel e legenda empilham. -->
-<Story name="OnPhone">
+<Story name="OnPhone" asChild>
   <div class="w-[360px]">
     <DashboardProblemMap data={{ byProblemType, byMaintenanceType }} />
   </div>
