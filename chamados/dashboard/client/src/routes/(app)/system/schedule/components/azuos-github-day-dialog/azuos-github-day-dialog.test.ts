@@ -126,3 +126,31 @@ describe('GithubDayDialog — kinds of activity', () => {
     expect(screen.getByText(message)).toBeInTheDocument();
   });
 });
+
+describe('GithubDayDialog — who did it', () => {
+  // feliz
+  it('prefers the display name of the author', () => {
+    render(GithubDayDialog, {
+      data: { date: '2026-10-06', items: [{ ...event, authorName: 'Ana Lima' }], total: 1, page: 1, pageSize: 5 },
+      actions: { onClose: vi.fn(), onPageChange: vi.fn() },
+    });
+
+    expect(screen.getByText('Azuos Ticket · por Ana Lima')).toBeInTheDocument();
+  });
+
+  // triste
+  it('falls back to a generic project and an unknown author', () => {
+    render(GithubDayDialog, {
+      data: {
+        date: '2026-10-06',
+        items: [{ ...event, projectName: null, author: null, authorName: null }],
+        total: 1,
+        page: 1,
+        pageSize: 5,
+      },
+      actions: { onClose: vi.fn(), onPageChange: vi.fn() },
+    });
+
+    expect(screen.getByText('Projeto · por desconhecido')).toBeInTheDocument();
+  });
+});

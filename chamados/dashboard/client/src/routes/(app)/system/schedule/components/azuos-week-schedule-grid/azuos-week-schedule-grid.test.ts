@@ -901,3 +901,97 @@ describe('AzuosWeekScheduleGrid — GitHub activity in the period', () => {
     expect(tooltip).toHaveTextContent('Azuos · por Ana Lima');
   });
 });
+
+describe('AzuosWeekScheduleGrid — what each event tooltip says, in every view', () => {
+  const record = {
+    ...recordEvent,
+    id: 21,
+    title: 'Entrega registrada',
+    projectName: 'Azuos Ticket',
+    date: '2026-10-06',
+    startTime: '09:30',
+    endTime: null,
+  };
+  const appointment = {
+    ...recordEvent,
+    id: 22,
+    kind: 'appointment' as const,
+    title: 'Revisão marcada',
+    projectName: null,
+    note: null,
+    date: '2026-10-06',
+    startTime: '14:00',
+    endTime: '15:00',
+  };
+  const lateRecord = { ...record, id: 23, title: 'Registro noturno', startTime: '21:00', projectName: null };
+
+  // feliz
+  it.each(['week', 'day'] as const)('tells who marked or registered each event in the %s view', async (viewMode) => {
+    renderView({
+      data: {
+        viewMode,
+        events: [record, appointment, lateRecord],
+        days: [dayColumn({ events: [record, appointment, lateRecord] })],
+      },
+    });
+
+    const recordTip = await hoverAndReadTooltip(screen.getAllByRole('button', { name: /Entrega registrada/ })[0]!);
+    expect(recordTip).toHaveTextContent('Projeto: Azuos Ticket');
+    expect(recordTip).toHaveTextContent('Registrado por Ana Lima');
+    const appointmentTip = await hoverAndReadTooltip(screen.getAllByRole('button', { name: /Revisão marcada/ })[0]!);
+    expect(appointmentTip).not.toHaveTextContent('Projeto:');
+    expect(appointmentTip).toHaveTextContent('Marcado por Ana Lima');
+    const lateTip = await hoverAndReadTooltip(screen.getAllByRole('button', { name: /Registro noturno/ })[0]!);
+    expect(lateTip).toHaveTextContent('Registrado por Ana Lima');
+    expect(lateTip).not.toHaveTextContent('Projeto:');
+  });
+
+  it('says the same in the month view, with and without a project', async () => {
+    renderView({
+      data: {
+        viewMode: 'month',
+        events: [record, appointment],
+        days: [
+          dayColumn({ events: [record, appointment], isToday: true, githubEvents: [] }),
+          dayColumn({ dateString: '2026-10-07', dayNumber: 7, weekdayShort: 'Qua' }),
+        ],
+      },
+    });
+
+    const recordTip = await hoverAndReadTooltip(screen.getByRole('button', { name: /Entrega registrada/ }));
+    expect(recordTip).toHaveTextContent('Projeto: Azuos Ticket');
+    const appointmentTip = await hoverAndReadTooltip(screen.getByRole('button', { name: /Revisão marcada/ }));
+    expect(appointmentTip).not.toHaveTextContent('Projeto:');
+    const today = await hoverAndReadTooltip(screen.getByRole('button', { name: '6' }));
+    expect(today).toHaveTextContent('2 agendamentos · 0 atividades do GitHub');
+    const other = await hoverAndReadTooltip(screen.getByRole('button', { name: '7' }));
+    expect(other).toHaveTextContent('0 agendamentos · 0 atividades do GitHub');
+  });
+
+  it('names issues and PRs apart inside a grouped hour card', async () => {
+    const nearby = [
+      githubEvent({ id: 31, externalId: '#31', title: 'Issue do grupo', type: 'issue', status: 'closed', eventDate: '2026-10-06T14:00:00Z' }),
+      githubEvent({ id: 32, externalId: '#32', title: 'PR do grupo', type: 'pr', status: 'merged', eventDate: '2026-10-06T14:10:00Z' }),
+    ];
+    renderView({ data: { githubEvents: nearby, days: [dayColumn({ githubEvents: nearby })] } });
+
+    const group = screen.getByRole('button', { name: /Ver 2 atividades próximas/ });
+    const tooltip = await hoverAndReadTooltip(group);
+    expect(tooltip).toHaveTextContent('Issue #31 · Issue do grupo');
+    expect(tooltip).toHaveTextContent('PR #32 · PR do grupo');
+  });
+
+  it('falls back to a generic project and an unknown author in the activity tooltips', async () => {
+    const events = [
+      githubEvent({ id: 41, externalId: '#41', title: 'Sem projeto nem autor', type: 'pr', status: 'closed', author: null, projectName: null }),
+      githubEvent({ id: 42, externalId: '#42', title: 'Só o login', type: 'issue', status: 'open', authorName: null }),
+    ];
+    renderView({ data: { githubEvents: events, days: [dayColumn({ githubEvents: events })] } });
+    const timeline = screen.getByText('Atividade do GitHub no período').closest('section')!;
+
+    const unknown = await hoverAndReadTooltip(within(timeline).getByRole('link', { name: /Sem projeto nem autor/ }));
+    expect(unknown).toHaveTextContent('Projeto · por desconhecido');
+    const login = await hoverAndReadTooltip(within(timeline).getByRole('link', { name: /Só o login/ }));
+    expect(login).toHaveTextContent('Azuos · por ana');
+  });
+});

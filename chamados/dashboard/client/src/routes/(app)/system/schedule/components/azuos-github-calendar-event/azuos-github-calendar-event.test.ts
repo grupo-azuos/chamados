@@ -91,3 +91,12 @@ describe('AzuosGithubCalendarEvent — kinds and statuses', () => {
     expect(screen.getByText(/Merge\s*·/)).toBeInTheDocument();
   });
 });
+
+describe('AzuosGithubCalendarEvent — without an external id', () => {
+  // triste
+  it('still names the event when GitHub gave it no number', () => {
+    render(Harness, { event: { ...event, externalId: null } });
+
+    expect(screen.getByRole('link', { name: 'Pull Request : Melhora o calendário' })).toBeInTheDocument();
+  });
+});

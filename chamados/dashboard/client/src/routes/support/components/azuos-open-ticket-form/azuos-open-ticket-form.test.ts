@@ -875,3 +875,45 @@ describe('AzuosOpenTicketForm — every field reports to the model', () => {
     expect(actions.onChange).toHaveBeenCalledWith('assigneeId', 'u-Caio');
   });
 });
+
+describe('AzuosOpenTicketForm — the system card, Enter on the last step and the notice toggle', () => {
+  // feliz
+  it('keeps the chosen system when the area picked is Sistema', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    setup({ actions: { ...actions, onChange } });
+
+    await user.click(screen.getByRole('button', { name: /^Sistema/ }));
+
+    expect(onChange).toHaveBeenCalledWith('area', 'sistema');
+    expect(onChange).not.toHaveBeenCalledWith('projectId', '');
+  });
+
+  it('submits with Enter on the last step and shows the notice switched on', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    setup({
+      data: { fields, notifyWhatsapp: true, screenshotName: null, attachments: [], opened: null },
+      actions: { ...actions, onSubmit },
+    });
+
+    await advanceTo(user, 4);
+    const toggle = screen.getByRole('switch');
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await fireEvent.submit(toggle.closest('form')!);
+
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('hands over no screenshot when the file dialog is closed empty', async () => {
+    const user = userEvent.setup();
+    const onScreenshotChange = vi.fn();
+    setup({ actions: { ...actions, onScreenshotChange } });
+
+    await advanceTo(user, 3);
+    await fireEvent.change(document.getElementById('screenshot') as HTMLInputElement);
+
+    expect(onScreenshotChange).toHaveBeenCalledWith(null);
+  });
+});
