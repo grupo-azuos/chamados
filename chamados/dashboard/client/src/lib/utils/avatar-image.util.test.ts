@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   assertIsImageFile,
@@ -7,6 +7,8 @@ import {
   outputEdge,
   readDataUrl,
   rotatedBoundingBox,
+  rotateImageUrl,
+  toCroppedAvatarUpload,
 } from './avatar-image.util';
 
 describe('rotatedBoundingBox', () => {
@@ -84,5 +86,151 @@ describe('assertIsImageFile', () => {
   it('refuses anything else with a message the screen can show', () => {
     expect(() => assertIsImageFile({ type: 'application/pdf' })).toThrow(AvatarImageError);
     expect(() => assertIsImageFile({ type: '' })).toThrow(/arquivo de imagem/);
+  });
+});
+
+/**
+ * O jsdom não desenha: o `<canvas>` e o `createImageBitmap` são fingidos aqui, só com o que
+ * as duas funções de costura tocam. O que se prova é a ORDEM — girar, cortar, medir — e o que
+ * cada falha do navegador vira para a pessoa.
+ */
+function fakeCanvasWorld(options: { dataUrl?: string; blob?: Blob | null; context?: boolean } = {}) {
+  const drawn: unknown[][] = [];
+  const context = {
+    translate: () => {},
+    rotate: () => {},
+    drawImage: (...args: unknown[]) => drawn.push(args),
+  };
+  const canvas = {
+    width: 0,
+    height: 0,
+    getContext: () => (options.context === false ? null : context),
+    toDataURL: () => options.dataUrl ?? 'data:image/webp;base64,AAAA',
+    toBlob: (callback: (blob: Blob | null) => void) =>
+      callback(options.blob === undefined ? new Blob(['x']) : options.blob),
+  };
+  const createElement = document.createElement.bind(document);
+  const spy = vi
+    .spyOn(document, 'createElement')
+    .mockImplementation((tag: string) =>
+      tag === 'canvas' ? (canvas as unknown as HTMLElement) : createElement(tag),
+    );
+  const bitmap = { width: 400, height: 200, close: vi.fn() };
+  vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(bitmap));
+  vi.stubGlobal('URL', { ...URL, createObjectURL: () => 'blob:girada' });
+
+  return { drawn, bitmap, restore: () => (spy.mockRestore(), vi.unstubAllGlobals()) };
+}
+
+describe('toCroppedAvatarUpload', () => {
+  // feliz
+  it('rotates, cuts the chosen area and reads the type the browser produced', async () => {
+    const world = fakeCanvasWorld();
+    try {
+      const upload = await toCroppedAvatarUpload(new File(['x'], 'eu.png', { type: 'image/png' }), {
+        area: { x: 10, y: 20, width: 100, height: 100 },
+        rotation: 90,
+      });
+
+      expect(upload).toEqual({ contentType: 'image/webp', data: 'AAAA' });
+      /* Primeiro a imagem inteira girada; depois o corte, do tamanho que a pessoa escolheu. */
+      expect(world.drawn).toHaveLength(2);
+      expect(world.drawn[1]?.slice(1, 5)).toEqual([10, 20, 100, 100]);
+      expect(world.bitmap.close).toHaveBeenCalled();
+    } finally {
+      world.restore();
+    }
+  });
+
+  // triste
+  it('refuses what is not an image before touching the browser', async () => {
+    const world = fakeCanvasWorld();
+    try {
+      await expect(
+        toCroppedAvatarUpload(new File(['x'], 'nota.pdf', { type: 'application/pdf' }), {
+          area: { x: 0, y: 0, width: 10, height: 10 },
+          rotation: 0,
+        }),
+      ).rejects.toThrow(AvatarImageError);
+      expect(createImageBitmap).not.toHaveBeenCalled();
+    } finally {
+      world.restore();
+    }
+  });
+
+  it('explains when the browser cannot open, draw or shrink the image', async () => {
+    const selection = { area: { x: 0, y: 0, width: 10, height: 10 }, rotation: 0 };
+    const image = () => new File(['x'], 'eu.png', { type: 'image/png' });
+
+    const unreadable = fakeCanvasWorld();
+    vi.mocked(createImageBitmap).mockRejectedValue(new Error('decode'));
+    await expect(toCroppedAvatarUpload(image(), selection)).rejects.toThrow('Não consegui abrir');
+    unreadable.restore();
+
+    const noContext = fakeCanvasWorld({ context: false });
+    await expect(toCroppedAvatarUpload(image(), selection)).rejects.toThrow('não conseguiu preparar');
+    noContext.restore();
+
+    const badType = fakeCanvasWorld({ dataUrl: 'data:image/gif;base64,AAAA' });
+    await expect(toCroppedAvatarUpload(image(), selection)).rejects.toThrow('não conseguiu preparar');
+    badType.restore();
+
+    const tooBig = fakeCanvasWorld({ dataUrl: `data:image/png;base64,${'A'.repeat(1_400_000)}` });
+    await expect(toCroppedAvatarUpload(image(), selection)).rejects.toThrow('maior que 1 MB');
+    tooBig.restore();
+  });
+});
+
+describe('rotateImageUrl', () => {
+  // feliz
+  it('hands back a blob address of the rotated image', async () => {
+    const world = fakeCanvasWorld();
+    const originalImage = globalThis.Image;
+    class FakeImage {
+      width = 10;
+      height = 20;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal('Image', FakeImage);
+    try {
+      await expect(rotateImageUrl('blob:original', 90)).resolves.toBe('blob:girada');
+    } finally {
+      vi.stubGlobal('Image', originalImage);
+      world.restore();
+    }
+  });
+
+  // triste
+  it('explains when the image cannot be loaded or the rotation cannot be saved', async () => {
+    class BrokenImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        queueMicrotask(() => this.onerror?.());
+      }
+    }
+    const originalImage = globalThis.Image;
+    const world = fakeCanvasWorld({ blob: null });
+    vi.stubGlobal('Image', BrokenImage);
+    try {
+      await expect(rotateImageUrl('blob:x', 0)).rejects.toThrow('Não consegui abrir');
+
+      class LoadingImage extends BrokenImage {
+        width = 10;
+        height = 10;
+        override set src(_value: string) {
+          queueMicrotask(() => this.onload?.());
+        }
+      }
+      vi.stubGlobal('Image', LoadingImage);
+      await expect(rotateImageUrl('blob:x', 0)).rejects.toThrow('não conseguiu girar');
+    } finally {
+      vi.stubGlobal('Image', originalImage);
+      world.restore();
+    }
   });
 });
