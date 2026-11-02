@@ -63,6 +63,19 @@ describe('AzuosAppShell', () => {
   });
 
   // feliz
+  /* A moldura e o painel cortam SEM rolar: com `overflow-hidden` uma âncora ou um foco lá embaixo
+     rolava a moldura, e sobrava uma faixa vazia no fim da tela. */
+  it('clips the frame and the panel without letting them scroll', () => {
+    renderShell({ ui: { items } });
+
+    for (const slot of ['sidebar-wrapper', 'sidebar-inset']) {
+      const frame = document.querySelector(`[data-slot="${slot}"]`);
+      expect(frame).toHaveClass('overflow-clip');
+      expect(frame).not.toHaveClass('overflow-hidden');
+    }
+  });
+
+  // feliz
   it('draws the content and the menu items', () => {
     renderShell({ ui: { items } });
 

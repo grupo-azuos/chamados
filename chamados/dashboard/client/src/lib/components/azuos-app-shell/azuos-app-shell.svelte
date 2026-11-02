@@ -276,7 +276,11 @@
   {/if}
 {/snippet}
 
-<SidebarProvider bind:open={sidebarOpen} class="h-svh overflow-hidden" style={isTwoColumn ? TWO_COLUMN_WIDTH : ''}>
+<!-- A moldura CORTA o que passa da borda, mas não pode rolar: com `overflow-hidden` o navegador
+     ainda a rola quando uma ação leva a tela até um ponto (âncora `#…`, foco num campo lá embaixo,
+     lista que cresce) — o conteúdo sobe dentro dela e sobra uma faixa vazia, branca ou escura
+     conforme o tema. `overflow-clip` corta igual e proíbe essa rolagem; quem rola é o `<main>`. -->
+<SidebarProvider bind:open={sidebarOpen} class="h-svh overflow-clip" style={isTwoColumn ? TWO_COLUMN_WIDTH : ''}>
   {#if !isMobile.current && isTwoColumn}
     <!-- O padrão de barras aninhadas do shadcn: a de fora recolhe para a largura de ícone, e
          com isso o painel some e sobra o trilho. -->
@@ -525,7 +529,8 @@
   {/if}
 
   <!-- `min-w-0`: sem isto a área de conteúdo não encolhe abaixo da largura natural da tabela. -->
-  <SidebarInset class="border-sidebar-border bg-background min-w-0 overflow-hidden md:border">
+  <!-- O painel também corta sem rolar: ver o comentário da moldura, no `SidebarProvider`. -->
+  <SidebarInset class="border-sidebar-border bg-background min-w-0 overflow-clip md:border">
     <!-- O gatilho vive no conteúdo: dentro da barra ele sumiria junto com o que colapsa. No
          celular não há barra lateral — o menu é a barra de baixo. -->
     <header
