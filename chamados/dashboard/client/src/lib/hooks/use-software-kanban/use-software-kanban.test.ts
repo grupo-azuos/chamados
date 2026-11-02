@@ -247,3 +247,59 @@ describe('useSoftwareKanbanModel', () => {
     expect(model.data.cardColors).toEqual({});
   });
 });
+
+describe('useSoftwareKanbanModel — closed tickets, busy moves and retry', () => {
+  beforeEach(() => {
+    vi.mocked(softwareProjectsApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 100 });
+    vi.mocked(ticketsApi.list).mockResolvedValue({
+      items: [ticket({ id: 1, status: 'resolved' }), ticket({ id: 2, status: 'open' })],
+      total: 2,
+      page: 1,
+      pageSize: 200,
+    });
+    vi.mocked(ticketsApi.createHistory).mockReset();
+  });
+
+  // triste
+  it('refuses to put a closed ticket on hold and ignores dropping it on "done" again', async () => {
+    const model = await mountLoadedModel();
+
+    await model.actions.onMoveTicket(1, 'waiting');
+    expect(model.state.moveError).toMatch(/Reabra o chamado/);
+    model.actions.onClearMoveError();
+    expect(model.state.moveError).toBeNull();
+
+    await model.actions.onMoveTicket(1, 'done');
+    expect(ticketsApi.createHistory).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('does not start a second move while the first is on the way', async () => {
+    let finish!: () => void;
+    vi.mocked(ticketsApi.createHistory).mockReturnValue(
+      new Promise((resolve) => {
+        finish = () => resolve({} as never);
+      }),
+    );
+    const model = await mountLoadedModel();
+
+    const first = model.actions.onMoveTicket(2, 'in_progress');
+    await waitFor(() => expect(ticketsApi.createHistory).toHaveBeenCalledTimes(1));
+    await model.actions.onMoveTicket(1, 'in_progress');
+    expect(ticketsApi.createHistory).toHaveBeenCalledTimes(1);
+    finish();
+    await first;
+  });
+
+  // feliz
+  it('clears the move error and asks the server again on retry', async () => {
+    const model = await mountLoadedModel();
+    await model.actions.onMoveTicket(1, 'waiting');
+    vi.mocked(ticketsApi.list).mockClear();
+
+    model.actions.onRetry();
+
+    expect(model.state.moveError).toBeNull();
+    await waitFor(() => expect(ticketsApi.list).toHaveBeenCalled());
+  });
+});

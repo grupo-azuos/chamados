@@ -1,7 +1,8 @@
 import { ticketAreaLabel } from '@template/shared/domain/ticket-catalog.util';
 import { type PublicTicket } from '@template/shared/schemas/ticket.schema';
-import { render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { createRawSnippet } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 
 import TicketLookupView, { journeyOf, splitMine } from './azuos-ticket-lookup-view.svelte';
@@ -337,5 +338,42 @@ describe('AzuosTicketLookupView — abas e trilha', () => {
   // triste
   it('splits an empty list into two empty groups', () => {
     expect(splitMine([])).toEqual({ running: [], closed: [] });
+  });
+});
+
+describe('AzuosTicketLookupView — Enter, the list states and the actions slot', () => {
+  // feliz
+  it('searches with Enter and renders the actions a ticket offers', async () => {
+    vi.mocked(actions.onSearch).mockClear();
+    setup({
+      data: { protocol: 'CH-0007', ticket },
+      slots: { ticketActions: createRawSnippet(() => ({ render: () => '<p>ações do chamado</p>' })) },
+    });
+
+    await fireEvent.submit(screen.getByRole('textbox', { name: 'Número do chamado' }).closest('form')!);
+    expect(actions.onSearch).toHaveBeenCalledOnce();
+    expect(screen.getByText('ações do chamado')).toBeInTheDocument();
+  });
+
+  // triste
+  it('shows the failure of the list, then its loading skeleton', () => {
+    setup({ state: { mineError: 'Não consegui ler seus chamados.' } });
+    expect(screen.getByText('Não consegui ler seus chamados.')).toBeInTheDocument();
+
+    cleanup();
+    setup({ state: { isLoadingMine: true, isSearching: true } });
+    expect(screen.getByRole('list', { name: 'Carregando os seus chamados' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Número do chamado' })).toBeDisabled();
+  });
+
+  // triste
+  it('says there is nothing closed yet when the closed tab is empty', async () => {
+    setup({
+      data: {
+        mine: [{ id: 1, protocol: 'CH-0001', status: 'open', priority: 'high', area: 'infra', problemType: 'printer', description: 'x', createdAt: '2026-10-14T13:00:00.000Z', isWatching: false }],
+      },
+    });
+    await userEvent.click(screen.getByRole('button', { name: /encerrados/i }));
+    expect(screen.getByText('Nenhum chamado encerrado ainda.')).toBeInTheDocument();
   });
 });

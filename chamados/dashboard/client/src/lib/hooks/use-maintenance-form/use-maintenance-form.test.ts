@@ -197,3 +197,32 @@ describe('useMaintenanceFormModel', () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 });
+
+describe('useMaintenanceFormModel — blur and the record being corrected', () => {
+  beforeEach(() => {
+    vi.mocked(computersApi.list).mockResolvedValue({ items: [computer()], total: 1, page: 1, pageSize: 100 });
+  });
+
+  // triste
+  it('shows the error of a field as soon as the person leaves it empty', async () => {
+    const model = mountModel();
+
+    model.actions.onChange('performedAt', '');
+    model.actions.onBlur('performedAt');
+
+    await waitFor(() => expect(model.data.fields.performedAt.error).not.toBeNull());
+  });
+
+  // feliz
+  it('opens an equipment outside the inventory with blanks for what was never filled', () => {
+    const model = mountModel({
+      maintenance: maintenance({ computerId: null, otherMachine: 'Impressora', description: null, performedBy: null }),
+    });
+
+    expect(model.data.mode).toBe('edit');
+    expect(model.data.fields.computerId.value).toBe('');
+    expect(model.data.fields.otherMachine.value).toBe('Impressora');
+    expect(model.data.fields.description.value).toBe('');
+    expect(model.data.fields.performedBy.value).toBe('');
+  });
+});

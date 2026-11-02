@@ -1,5 +1,5 @@
 import { type Dashboard, type ProblemMachine } from '@template/shared/schemas/dashboard.schema';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -339,5 +339,40 @@ describe('top cards as shortcuts', () => {
     renderView({ summary: null, state: { isEmpty: true } });
 
     expect(screen.queryByRole('button', { name: /filtrar a lista/ })).toBeNull();
+  });
+});
+
+describe('AzuosDashboardView — the period, quiet counters and machines without department', () => {
+  // feliz
+  it('changes the period from the header', async () => {
+    renderView();
+    const group = screen.queryByRole('group', { name: 'Período do painel' });
+    if (group) {
+      await userEvent.click(within(group).getAllByRole('button')[0]!);
+    } else {
+      await userEvent.click(screen.getByRole('button', { name: 'Período do painel' }));
+      const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+      await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[0]!);
+    }
+    expect(actions.onPeriodChange).toHaveBeenCalledWith(expect.any(Number));
+  });
+
+  // triste
+  it('shows no hint when nothing is in progress or in attention, and names a machine without department', async () => {
+    vi.mocked(actions.onOpenMachine).mockClear();
+    renderView({
+      summary: summary({
+        tickets: { open: 0, inProgress: 0, openedInPeriod: 0, resolvedInPeriod: 0, averageResolutionHours: null },
+        park: { total: 1, critical: 0, attention: 0, neverSeen: 0 },
+        worstMachines: [machine({ department: null })],
+      }),
+    });
+
+    expect(screen.queryByText(/em atendimento$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/em atenção$/)).not.toBeInTheDocument();
+    expect(screen.getAllByText('Sem departamento').length).toBeGreaterThan(0);
+    const opens = screen.getAllByRole('button', { name: 'Abrir ficha' });
+    for (const button of opens) await userEvent.click(button);
+    expect(actions.onOpenMachine).toHaveBeenCalledTimes(opens.length);
   });
 });

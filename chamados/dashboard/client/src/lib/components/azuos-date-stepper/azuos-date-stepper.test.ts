@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -62,5 +62,29 @@ describe('AzuosDateStepper', () => {
     expect(yearsBetween('2020-01-01', '2022-01-01', { year: 2026, month: 0, day: 1 })).toEqual([
       2020, 2021, 2022,
     ]);
+  });
+});
+
+describe('AzuosDateStepper — without limits and with a starting year', () => {
+  // feliz
+  it('opens the list on the asked year and covers a century when the screen gives no limit', async () => {
+    const onChange = vi.fn();
+    render(DateStepper, { props: { data: { value: null }, ui: { startYear: 1990 }, actions: { onChange } } });
+
+    const years = screen.getByRole('group', { name: 'Anos' });
+    expect(within(years).getAllByRole('button').length).toBeGreaterThan(100);
+    await userEvent.click(within(years).getByRole('button', { name: '1990' }));
+    expect(screen.getByRole('button', { name: 'Ano: 1990. Trocar' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Dezembro' }));
+    expect(screen.getByRole('button', { name: 'Mês: Dezembro. Trocar' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '31' }));
+    expect(onChange).toHaveBeenCalledWith('1990-12-31');
+  });
+
+  // triste
+  it('locks a month that is entirely after the limit', () => {
+    expect(isMonthOut(2026, 11, undefined, '2026-11-30')).toBe(true);
+    expect(isMonthOut(2026, 10, undefined, '2026-11-30')).toBe(false);
+    expect(yearsBetween(undefined, undefined, { year: 2026, month: 0, day: 1 })).toHaveLength(131);
   });
 });
