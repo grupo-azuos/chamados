@@ -212,3 +212,21 @@ describe('useEffectsModel — the graphics card and the frame counter', () => {
     expect(effects.level).toBe('full');
   });
 });
+
+describe('useEffectsModel — outside the browser', () => {
+  // triste
+  /* No servidor não há `window`, `navigator` nem `document`: o palpite é `full` e nada é tocado. */
+  it('guesses full effects and touches nothing without a window', async () => {
+    vi.stubGlobal('window', undefined);
+    vi.stubGlobal('navigator', undefined);
+    vi.stubGlobal('document', undefined);
+    try {
+      const { detectLevel, useEffectsModel } = await freshEffects();
+
+      expect(detectLevel()).toBe('full');
+      expect(useEffectsModel().level).toBe('full');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

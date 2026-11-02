@@ -181,3 +181,25 @@ describe('AzuosInventoryMovementDialog — pickers, the note and closing', () =>
     expect(actions.onClose).toHaveBeenCalled();
   });
 });
+
+describe('AzuosInventoryMovementDialog — closing and loading products', () => {
+  // feliz
+  it('closes with Escape, like any dialog', async () => {
+    const onClose = vi.fn();
+    setup({ actions: { ...actions, onClose } });
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('says the products are still loading in the product field', () => {
+    setup({
+      data: { type: 'disposal', product: null, productOptions: [], fields },
+      state: { isOpen: true, isProductsLoading: true },
+    });
+
+    expect(document.body.textContent).toContain('Carregando');
+  });
+});

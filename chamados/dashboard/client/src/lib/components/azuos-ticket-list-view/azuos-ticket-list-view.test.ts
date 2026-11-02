@@ -476,3 +476,42 @@ describe('AzuosTicketListView — filters, chips, export and the table', () => {
     expect(actions.onAnswer).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
 });
+
+/* Quem pediu menos movimento ao sistema recebe a rolagem seca, sem deslizar. */
+function stubReducedMotion() {
+  const original = window.matchMedia;
+  /* Só a consulta de movimento muda: as de largura seguem como estão, para a tela não virar celular. */
+  window.matchMedia = (query: string) =>
+    ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }) as MediaQueryList;
+
+  return () => {
+    window.matchMedia = original;
+  };
+}
+
+describe('AzuosTicketListView — reduced motion', () => {
+  // feliz
+  it('scrolls to the filters without animation when the person prefers less motion', async () => {
+    const restore = stubReducedMotion();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      setup();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Resolvidos: filtrar a lista' }));
+
+      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
+    } finally {
+      restore();
+    }
+  });
+});

@@ -8,6 +8,7 @@ import ComputerListView, {
   type ComputerListFilter,
   type ComputerSummary,
 } from './azuos-computer-list-view.svelte';
+import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
 function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
   return {
@@ -440,5 +441,64 @@ describe('AzuosComputerListView — export, situations and the cut list', () => 
     const buttons = screen.getAllByRole('button', { name: 'Ver ficha' });
     await userEvent.click(buttons.at(-1)!);
     expect(actions.onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+});
+
+/* Quem pediu menos movimento ao sistema recebe a rolagem seca, sem deslizar. */
+function stubReducedMotion() {
+  const original = window.matchMedia;
+  /* Só a consulta de movimento muda: as de largura seguem como estão, para a tela não virar celular. */
+  window.matchMedia = (query: string) =>
+    ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }) as MediaQueryList;
+
+  return () => {
+    window.matchMedia = original;
+  };
+}
+
+describe('AzuosComputerListView — reduced motion', () => {
+  // feliz
+  it('scrolls to the filters without animation when the person prefers less motion', async () => {
+    const restore = stubReducedMotion();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      render(ComputerListView, { props: { data: { computers: [computer()], total: 1, summary, filter: emptyFilter }, state: settled, actions } });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Com alerta ativo: filtrar a lista' }));
+
+      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe('AzuosComputerListView — cards only', () => {
+  // feliz
+  it('hides the table completely when the person asked for cards only', () => {
+    const tableView = useTableViewModel();
+    tableView.actions.onToggle();
+    try {
+      render(ComputerListView, {
+        props: { data: { computers: [computer()], total: 1, summary, filter: emptyFilter }, state: settled, actions },
+      });
+
+      const hidden = Array.from(document.querySelectorAll('.overflow-x-auto')).some(
+        (element) => element.classList.contains('hidden') && !element.classList.contains('xl:block'),
+      );
+      expect(hidden).toBe(true);
+    } finally {
+      tableView.actions.onToggle();
+    }
   });
 });

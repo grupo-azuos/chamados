@@ -160,3 +160,23 @@ describe('shared theme cookie — on the group domain over https', () => {
     }
   });
 });
+
+describe('shared theme cookie — outside the browser', () => {
+  // triste
+  /* No servidor não há `document` nem `window`: cada função devolve o padrão sem tocar em nada. */
+  it('falls back to dark and does nothing without a document or a window', () => {
+    vi.stubGlobal('document', undefined);
+    vi.stubGlobal('window', undefined);
+    try {
+      expect(readThemeCookie()).toBeNull();
+      expect(initialTheme()).toBe('dark');
+      expect(() => saveTheme('light')).not.toThrow();
+      const store = createThemeStore();
+      expect(store.read()).toBe('dark');
+      const unsubscribe = store.subscribe(() => undefined);
+      expect(() => unsubscribe()).not.toThrow();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

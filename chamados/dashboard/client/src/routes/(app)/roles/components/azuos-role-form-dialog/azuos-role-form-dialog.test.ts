@@ -248,3 +248,21 @@ describe('AzuosRoleFormDialog — picking people and the edit mode', () => {
     expect(actions.onClose).toHaveBeenCalledOnce();
   });
 });
+
+describe('AzuosRoleFormDialog — closing and loading people', () => {
+  // feliz
+  it('closes with Escape, like any dialog', async () => {
+    const actions = renderDialog();
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(actions.onClose).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('says the people are still loading', () => {
+    renderDialog({ state: { isOpen: true, isLoadingUsers: true } });
+
+    expect(document.body.textContent).toMatch(/Carregando/);
+  });
+});

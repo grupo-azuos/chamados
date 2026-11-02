@@ -7,6 +7,7 @@ import PartListView, {
   type PartListFilter,
   type PartSummary,
 } from './azuos-part-list-view.svelte';
+import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
 function part(over: Partial<Part> = {}): Part {
   return {
@@ -74,6 +75,14 @@ function renderView(over: { parts?: Part[]; state?: Partial<typeof settled> } = 
       actions,
     },
   });
+}
+
+
+/* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
+function hasCardsOnlyTable(): boolean {
+  return Array.from(document.querySelectorAll('.overflow-x-auto')).some(
+    (element) => element.classList.contains('hidden') && !element.classList.contains('xl:block'),
+  );
 }
 
 describe('AzuosPartListView — stat card shortcuts and filter bar', () => {
@@ -276,5 +285,59 @@ describe('AzuosPartListView — search, filters and the buttons of each row', ()
     const names = screen.getAllByRole('button', { name: 'SSD 240 GB Kingston' });
     for (const button of names) await userEvent.click(button);
     expect(actions.onOpenLedger).toHaveBeenCalledTimes(names.length);
+  });
+});
+
+describe('part-list-view — cards only', () => {
+  // feliz
+  it('hides the table completely when the person asked for cards only', () => {
+    const tableView = useTableViewModel();
+    tableView.actions.onToggle();
+    try {
+      renderView();
+
+      expect(hasCardsOnlyTable()).toBe(true);
+    } finally {
+      tableView.actions.onToggle();
+    }
+  });
+});
+
+/* Quem pediu menos movimento ao sistema recebe a rolagem seca, sem deslizar. */
+function stubReducedMotion() {
+  const original = window.matchMedia;
+  /* Só a consulta de movimento muda: as de largura seguem como estão, para a tela não virar celular. */
+  window.matchMedia = (query: string) =>
+    ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }) as MediaQueryList;
+
+  return () => {
+    window.matchMedia = original;
+  };
+}
+
+describe('AzuosPartListView — reduced motion', () => {
+  // feliz
+  it('scrolls to the filters without animation when the person prefers less motion', async () => {
+    const restore = stubReducedMotion();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      renderView();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Sem estoque: filtrar a lista' }));
+
+      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
+    } finally {
+      restore();
+    }
   });
 });

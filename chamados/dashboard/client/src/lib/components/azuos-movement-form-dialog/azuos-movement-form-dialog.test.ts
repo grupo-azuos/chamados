@@ -217,3 +217,21 @@ describe('AzuosMovementFormDialog — every field reports to the model', () => {
     expect(actions.onClose).toHaveBeenCalled();
   });
 });
+
+describe('AzuosMovementFormDialog — closing', () => {
+  // feliz
+  it('closes with Escape, like any dialog', async () => {
+    const onClose = vi.fn();
+    render(MovementFormDialog, {
+      props: {
+        data: { part: part(), type: 'in', fields: fields(), machines },
+        state: { isOpen: true },
+        actions: { ...actions, onClose },
+      },
+    });
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+});

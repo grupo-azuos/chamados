@@ -219,3 +219,27 @@ describe('AzuosInventoryFormDialog — every field reports to the model', () => 
     expect(actions.onClose).toHaveBeenCalled();
   });
 });
+
+describe('AzuosInventoryFormDialog — closing', () => {
+  // feliz
+  it('closes with Escape, like any dialog', async () => {
+    const onClose = vi.fn();
+    setup({ actions: { ...actions, onClose } });
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+});
+
+describe('AzuosInventoryFormDialog — photo dialog closed empty', () => {
+  // triste
+  it('hands over no photo when the file dialog is closed with nothing chosen', async () => {
+    const onPhotoChange = vi.fn();
+    setup({ actions: { ...actions, onPhotoChange } });
+
+    await fireEvent.change(document.getElementById('photo') as HTMLInputElement);
+
+    expect(onPhotoChange).toHaveBeenCalledWith(null);
+  });
+});

@@ -10,6 +10,7 @@ import MaintenanceListView, {
   machineLabelOf,
   type MaintenanceListFilter,
 } from './azuos-maintenance-list-view.svelte';
+import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
 function maintenance(over: Partial<Maintenance> = {}): Maintenance {
   return {
@@ -92,6 +93,14 @@ function renderView(over: {
       actions,
     },
   });
+}
+
+
+/* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
+function hasCardsOnlyTable(): boolean {
+  return Array.from(document.querySelectorAll('.overflow-x-auto')).some(
+    (element) => element.classList.contains('hidden') && !element.classList.contains('xl:block'),
+  );
 }
 
 describe('machineLabelOf', () => {
@@ -319,5 +328,20 @@ describe('AzuosMaintenanceListView — filters, rows and the cut list', () => {
   it('shows the history as loading', () => {
     renderView({ state: { isLoading: true, isPreventiveLoading: true } as never });
     expect(screen.queryByText('Cooler do processador substituído.')).not.toBeInTheDocument();
+  });
+});
+
+describe('maintenance-list-view — cards only', () => {
+  // feliz
+  it('hides the table completely when the person asked for cards only', () => {
+    const tableView = useTableViewModel();
+    tableView.actions.onToggle();
+    try {
+      renderView();
+
+      expect(hasCardsOnlyTable()).toBe(true);
+    } finally {
+      tableView.actions.onToggle();
+    }
   });
 });

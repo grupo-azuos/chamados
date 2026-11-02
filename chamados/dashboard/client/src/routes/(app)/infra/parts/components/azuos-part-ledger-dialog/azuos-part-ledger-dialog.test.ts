@@ -8,6 +8,7 @@ import PartLedgerDialog, {
   destinationOf,
   signedQuantity,
 } from './azuos-part-ledger-dialog.svelte';
+import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
 function part(over: Partial<Part> = {}): Part {
   return {
@@ -54,6 +55,14 @@ const actions = {
   onRetry: vi.fn(),
   onClose: vi.fn(),
 };
+
+
+/* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
+function hasCardsOnlyTable(): boolean {
+  return Array.from(document.querySelectorAll('.overflow-x-auto')).some(
+    (element) => element.classList.contains('hidden') && !element.classList.contains('xl:block'),
+  );
+}
 
 describe('destinationOf', () => {
   // feliz
@@ -232,5 +241,33 @@ describe('AzuosPartLedgerDialog — the lines, the buttons and the closing', () 
   it('renders nothing while closed', () => {
     renderLedger([movement()], { isOpen: false });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosPartLedgerDialog — closing and cards only', () => {
+  // feliz
+  it('closes with Escape, like any dialog', async () => {
+    const onClose = vi.fn();
+    render(PartLedgerDialog, {
+      props: { data: { part: part(), movements: [movement()], removing: null }, actions: { ...actions, onClose } },
+    });
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('hides the table completely when the person asked for cards only', () => {
+    const tableView = useTableViewModel();
+    tableView.actions.onToggle();
+    try {
+      render(PartLedgerDialog, {
+        props: { data: { part: part(), movements: [movement()], removing: null }, actions },
+      });
+
+      expect(hasCardsOnlyTable()).toBe(true);
+    } finally {
+      tableView.actions.onToggle();
+    }
   });
 });

@@ -11,6 +11,7 @@ import NetworkListView, {
   measuresOf,
   type NetworkFilter,
 } from './azuos-network-list-view.svelte';
+import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
 function event(over: Partial<NetworkEvent> = {}): NetworkEvent {
   return {
@@ -79,6 +80,14 @@ function renderView(
       actions,
     },
   });
+}
+
+
+/* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
+function hasCardsOnlyTable(): boolean {
+  return Array.from(document.querySelectorAll('.overflow-x-auto')).some(
+    (element) => element.classList.contains('hidden') && !element.classList.contains('xl:block'),
+  );
 }
 
 describe('durationLabelOf', () => {
@@ -311,6 +320,21 @@ describe('AzuosNetworkListView — the outage shortcut switched off and the tabl
       expect(actions.onResolveChange).toHaveBeenCalledTimes(resolves.length);
     } finally {
       window.matchMedia = matchMedia;
+    }
+  });
+});
+
+describe('network-list-view — cards only', () => {
+  // feliz
+  it('hides the table completely when the person asked for cards only', () => {
+    const tableView = useTableViewModel();
+    tableView.actions.onToggle();
+    try {
+      renderView();
+
+      expect(hasCardsOnlyTable()).toBe(true);
+    } finally {
+      tableView.actions.onToggle();
     }
   });
 });
