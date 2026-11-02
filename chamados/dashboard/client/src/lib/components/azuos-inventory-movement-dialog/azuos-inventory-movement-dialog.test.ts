@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -142,5 +142,42 @@ describe('AzuosInventoryMovementDialog', () => {
 
     expect(screen.getByLabelText('Quantidade')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
+  });
+});
+
+describe('AzuosInventoryMovementDialog — pickers, the note and closing', () => {
+  // feliz
+  it('picks the product and the reason of a disposal, and types the note', async () => {
+    vi.mocked(actions.onChange).mockClear();
+    setup({ data: { type: 'disposal', product: null, productOptions, fields } } as never);
+
+    expect(screen.queryByText(/hoje há/)).not.toBeInTheDocument();
+    const products = screen.getByRole('combobox', { name: 'Produto' });
+    await fireEvent.pointerDown(products);
+    await fireEvent.click(products);
+    await fireEvent.pointerUp(await screen.findByRole('option', { name: 'Lâmpada LED' }));
+    expect(actions.onChange).toHaveBeenCalledWith('itemId', '9');
+
+    const reasons = screen.queryByRole('group', { name: 'Motivo do descarte' });
+    if (reasons) await userEvent.click(within(reasons).getAllByRole('button')[0]!);
+    else {
+      await userEvent.click(screen.getByRole('button', { name: 'Motivo do descarte' }));
+      const list = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+      await userEvent.click(within(list).getAllByRole('button', { hidden: true })[0]!);
+    }
+    expect(actions.onChange).toHaveBeenCalledWith('reason', expect.any(String));
+
+    await userEvent.type(screen.getByRole('textbox', { name: /Observação/ }), 'x');
+    await userEvent.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('note', 'x');
+    expect(actions.onBlur).toHaveBeenCalledWith('note');
+  });
+
+  // triste
+  it('closes with Escape', async () => {
+    vi.mocked(actions.onClose).mockClear();
+    setup();
+    await userEvent.keyboard('{Escape}');
+    expect(actions.onClose).toHaveBeenCalled();
   });
 });

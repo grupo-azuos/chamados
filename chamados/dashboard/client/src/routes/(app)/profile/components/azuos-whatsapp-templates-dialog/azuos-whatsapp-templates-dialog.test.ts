@@ -1,5 +1,5 @@
 import { type WhatsappTemplate } from '@template/shared/schemas/whatsapp-template.schema';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -122,5 +122,39 @@ describe('AzuosWhatsappTemplatesDialog', () => {
     renderDialog({ isOpen: false });
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosWhatsappTemplatesDialog — choosing, typing, feedback and closing', () => {
+  // feliz
+  it('reports the chosen message and the typed text, and confirms the save', async () => {
+    const other = { ...ready, key: 'ticket_resolved', label: 'Chamado resolvido' };
+    const actions = renderDialog({ isSaved: true, error: 'Não consegui salvar.' }, { templates: [ready, other], draft: 'Olá ' });
+
+    expect(screen.getByRole('status')).toHaveTextContent('Texto salvo.');
+    expect(screen.getByText('Não consegui salvar.')).toBeInTheDocument();
+
+    const group = screen.queryByRole('group', { name: 'Mensagem' });
+    if (group) await userEvent.click(within(group).getByRole('button', { name: 'Chamado resolvido' }));
+    else {
+      await userEvent.click(screen.getByRole('button', { name: 'Mensagem' }));
+      const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+      await userEvent.click(within(popup).getByText('Chamado resolvido'));
+    }
+    expect(actions.onSelect).toHaveBeenCalledWith('ticket_resolved');
+
+    await userEvent.type(screen.getByRole('textbox', { name: /Texto/ }), '!');
+    expect(actions.onDraftChange).toHaveBeenCalled();
+
+    /* O texto já termina com espaço: a variável entra sem outro espaço na frente. */
+    await userEvent.click(screen.getByRole('button', { name: /protocolo/ }));
+    expect(actions.onDraftChange).toHaveBeenLastCalledWith('Olá {{protocolo}}');
+  });
+
+  // triste
+  it('closes with Escape', async () => {
+    const actions = renderDialog();
+    await userEvent.keyboard('{Escape}');
+    expect(actions.onClose).toHaveBeenCalled();
   });
 });
