@@ -2,8 +2,11 @@ import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { eq } from 'drizzle-orm';
+
 import { computerAlerts } from '../src/lib/db/schema/computer-alerts.schema';
 import { computerSamples } from '../src/lib/db/schema/computer-samples.schema';
+import { computers } from '../src/lib/db/schema/computers.schema';
 import { asAna, asBia, asCaio, createE2eApp, type E2eApp } from './support/e2e-app.util';
 
 /**
@@ -192,8 +195,48 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
   });
 
   it('exports the filtered park in Excel, Word and PDF', async () => {
-    await registerComputer('PC-RELATORIO-01');
+    const measured = await registerComputer('PC-RELATORIO-01');
     await registerComputer('PC-RELATORIO-02', { kind: 'notebook' });
+    const archived = await registerComputer('PC-ARQUIVADO');
+    const disposed = await registerComputer('PC-DESCARTADO');
+    /* O agente é quem mede a memória; aqui ela entra direto, só para o relatório formatá-la. */
+    await started.db
+      .update(computers)
+      .set({ totalMemoryBytes: 8 * 1024 ** 3, os: 'Windows 11' })
+      .where(eq(computers.id, measured));
+    await api()
+      .patch(`/api/computers/${archived}`)
+      .set(asCaio())
+      .send({ isArchived: true })
+      .expect(200);
+    await api()
+      .post(`/api/computers/${disposed}/disposal`)
+      .set(asCaio())
+      .send({ type: 'defect', reason: 'Não liga mais.' })
+      .expect(201);
+
+    /* O parque inteiro, com as arquivadas, e só as descartadas: as três situações no papel. */
+    const whole = await api()
+      .get('/api/computers/export?format=xlsx&includeArchived=true')
+      .set(asAna())
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+    expect((whole.body as Buffer).length).toBeGreaterThan(100);
+    await api()
+      .get('/api/computers/export?format=pdf&onlyDisposed=true')
+      .set(asAna())
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
 
     for (const format of ['xlsx', 'docx', 'pdf']) {
       const file = await api()
