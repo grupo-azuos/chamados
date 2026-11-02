@@ -32,3 +32,56 @@ describe('a rota system/projects', () => {
     await expectOutageShown();
   });
 });
+
+const { apiRequest } = await import('$lib/api/http-client');
+const { screen, waitFor, within } = await import('@testing-library/svelte');
+const { default: userEvent } = await import('@testing-library/user-event');
+const { goto } = await import('$app/navigation');
+
+const project = {
+  id: 7,
+  name: 'Azuos Ticket',
+  description: 'Central de chamados',
+  repositoryUrl: 'https://github.com/grupo-azuos/chamados',
+  status: 'active',
+  color: 'blue',
+  githubRepoOwner: 'grupo-azuos',
+  githubRepoName: 'chamados',
+  responsibleId: null,
+  responsibleName: null,
+  openTicketsCount: 2,
+  pullRequestsCount: 1,
+  createdAt: '2026-09-01T12:00:00.000Z',
+  updatedAt: null,
+};
+
+describe('a rota system/projects com sistemas', () => {
+  // feliz
+  it('abre o cadastro e a edição de um sistema, e leva à linha do tempo', async () => {
+    vi.mocked(apiRequest).mockImplementation(async (path: string) => {
+      if (path === '/software-projects') return { items: [project], total: 1, page: 1, pageSize: 25 };
+      if (path === '/integrations/github/status') return { isLinked: false };
+      if (path.includes('assignee-options')) return [];
+      return { items: [], total: 0, page: 1, pageSize: 25 };
+    });
+    visiting({});
+    renderPage(Page as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    await screen.findAllByText('Azuos Ticket');
+    await user.click(screen.getAllByRole('button', { name: 'Novo Sistema' })[0]!);
+    let dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Novo Sistema');
+    await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getAllByRole('button', { name: 'Editar' })[0]!);
+    dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Editar Sistema');
+    await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getAllByRole('button', { name: 'Ver sistema' })[0]!);
+    expect(goto).toHaveBeenCalledWith('/system/projects/7');
+  });
+});

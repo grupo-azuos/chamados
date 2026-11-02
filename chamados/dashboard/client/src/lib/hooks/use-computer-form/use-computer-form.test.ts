@@ -247,3 +247,47 @@ describe('useComputerFormModel', () => {
   });
 
 });
+
+describe('useComputerFormModel — editing and the park still loading', () => {
+  beforeEach(() => {
+    vi.mocked(computersApi.responsibles).mockResolvedValue([]);
+  });
+
+  // feliz
+  it('reads an unnamed machine as blank fields, never as "null"', () => {
+    const model = mountModel({
+      computer: computer({ displayName: null, responsibleName: null, department: null }),
+    });
+
+    expect(model.data.fields.displayName.value).toBe('');
+    expect(model.data.fields.responsibleName.value).toBe('');
+    expect(model.data.fields.department.value).toBe('');
+  });
+
+  // triste
+  /* Na edição o apelido é o que a pessoa deu: trocar o departamento não o reescreve. */
+  it('never suggests a nickname over the name of a machine being edited', async () => {
+    vi.mocked(computersApi.list).mockResolvedValue({
+      items: [{ ...computer({ id: 5, name: 'PARALEGAL-D05', displayName: 'Computador 05', department: 'Paralegal' }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] }],
+      total: 1,
+      page: 1,
+      pageSize: 200,
+    } as never);
+    const model = mountModel({ computer: computer() });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    model.actions.onChange('department', 'Paralegal');
+
+    expect(model.data.fields.displayName.value).toBe('Recepção — balcão');
+  });
+
+  it('suggests nothing while the park has not arrived yet', async () => {
+    vi.mocked(computersApi.list).mockReturnValue(new Promise(() => undefined));
+    const model = mountModel();
+
+    model.actions.onChange('department', 'Paralegal');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(model.data.fields.displayName.value).toBe('');
+  });
+});

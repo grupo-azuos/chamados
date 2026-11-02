@@ -32,3 +32,22 @@ describe('a rota maintenance/disposal', () => {
     await expectOutageShown();
   });
 });
+
+const { screen, waitFor, within } = await import('@testing-library/svelte');
+const { default: userEvent } = await import('@testing-library/user-event');
+
+describe('a rota maintenance/disposal — registrar', () => {
+  // feliz
+  it('abre e fecha o formulário de registrar um descarte', async () => {
+    visiting({});
+    renderPage(Page as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    await user.click((await screen.findAllByRole('button', { name: 'Registrar descarte' }))[0]!);
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+});

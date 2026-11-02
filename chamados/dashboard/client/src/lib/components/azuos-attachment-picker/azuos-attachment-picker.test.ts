@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -199,5 +199,40 @@ describe('AzuosAttachmentPicker', () => {
     /* O bloco do seletor precisa ser o ancestral posicionado do campo escondido. */
     expect(wrapper?.className).toContain('relative');
     expect(wrapper?.contains(input)).toBe(true);
+  });
+});
+
+describe('AzuosAttachmentPicker — cancelled dialog and kinds already sent', () => {
+  // triste
+  it('does nothing when the file dialog is closed with nothing chosen', async () => {
+    const onChange = vi.fn();
+    const onError = vi.fn();
+    render(AttachmentPicker, {
+      props: { data: { files: [] }, actions: { onChange, onError } },
+    });
+
+    await fireEvent.change(screen.getByLabelText('Escolher arquivos'));
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  /* O que já subiu conta na cota: a quinta foto é recusada mesmo com a lista local vazia. */
+  it('counts what the ticket already has against the quota', async () => {
+    const onError = vi.fn();
+    render(AttachmentPicker, {
+      props: {
+        data: { files: [], existingKinds: ['image', 'image', 'image', 'image', 'image'] },
+        actions: { onChange: vi.fn(), onError },
+      },
+    });
+
+    await userEvent.upload(
+      screen.getByLabelText('Escolher arquivos'),
+      fakeFile('tela.png', 'image/png', MEGABYTE),
+    );
+
+    expect(onError).toHaveBeenCalledWith(expect.any(String));
+    expect(onError.mock.calls[0]?.[0]).not.toBeNull();
   });
 });

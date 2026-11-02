@@ -2,6 +2,8 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import Check from '@lucide/svelte/icons/check';
+
 import OptionPicker from './azuos-option-picker.svelte';
 
 it('keeps search available with few options when combobox mode is requested', async () => {
@@ -283,5 +285,75 @@ describe('AzuosOptionPicker — separador de grupo', () => {
     await screen.findByRole('button', { name: 'ANALYZE' });
 
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosOptionPicker — free value', () => {
+  const known = [
+    { value: 'ana', label: 'Ana Souza' },
+    { value: 'bia', label: 'Bia Costa' },
+  ];
+
+  // feliz
+  it('offers to use what was typed when no option matches', async () => {
+    const onCustomValue = vi.fn();
+    render(OptionPicker, {
+      data: { value: '', options: known },
+      ui: { ariaLabel: 'Responsável', allowCustomValue: true },
+      actions: { onChange: vi.fn(), onCustomValue },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Responsável' }));
+    const search = await screen.findByPlaceholderText('Buscar…');
+    await fireEvent.input(search, { target: { value: 'Equipe externa' } });
+    await fireEvent.click(screen.getByText('Usar “Equipe externa”'));
+
+    expect(onCustomValue).toHaveBeenCalledWith('Equipe externa');
+  });
+
+  /* Sem um tratador próprio, o valor livre segue pelo mesmo caminho das opções conhecidas. */
+  it('shows the free value as the chosen one and hands it to onChange without a custom handler', async () => {
+    const onChange = vi.fn();
+    render(OptionPicker, {
+      data: { value: 'Equipe externa', options: known },
+      ui: { ariaLabel: 'Responsável', allowCustomValue: true },
+      actions: { onChange },
+    });
+
+    const trigger = screen.getByRole('button', { name: 'Responsável' });
+    expect(trigger).toHaveTextContent('Equipe externa');
+    await userEvent.click(trigger);
+    await fireEvent.input(await screen.findByPlaceholderText('Buscar…'), { target: { value: 'Outro time' } });
+    await fireEvent.click(screen.getByText('Usar “Outro time”'));
+
+    expect(onChange).toHaveBeenCalledWith('Outro time');
+  });
+
+  // triste
+  it('asks for a name when there is nothing to pick and nothing typed', async () => {
+    render(OptionPicker, {
+      data: { value: '', options: [] },
+      ui: { ariaLabel: 'Responsável', allowCustomValue: true },
+      actions: { onChange: vi.fn() },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Responsável' }));
+
+    expect(await screen.findByText('Digite um nome na busca para usá-lo.')).toBeInTheDocument();
+  });
+
+  it('points the trigger at the error and draws the icon of the chosen option', () => {
+    render(OptionPicker, {
+      data: { value: 'ana', options: [{ value: 'ana', label: 'Ana Souza', icon: Check }, known[1]!] },
+      ui: { ariaLabel: 'Responsável', mode: 'combobox' },
+      state: { error: 'Escolha quem atende' },
+      actions: { onChange: vi.fn() },
+    });
+
+    const trigger = screen.getByRole('button', { name: 'Responsável' });
+    expect(trigger).toHaveAttribute('aria-invalid', 'true');
+    expect(trigger).toHaveAttribute('aria-describedby', screen.getByRole('alert').id);
+    /* O desenho da opção mais a seta do combo. */
+    expect(trigger.querySelectorAll('svg')).toHaveLength(2);
   });
 });

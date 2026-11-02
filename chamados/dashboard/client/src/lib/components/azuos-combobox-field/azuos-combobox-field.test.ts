@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import Check from '@lucide/svelte/icons/check';
+
 import ComboboxField, { canCreateOption } from './azuos-combobox-field.svelte';
 
 const options = [
@@ -65,5 +67,47 @@ describe('AzuosComboboxField', () => {
     });
 
     expect(screen.getByRole('combobox')).toHaveTextContent('Selecione…');
+  });
+});
+
+describe('AzuosComboboxField — icons and the create label', () => {
+  const withIcons = [
+    { value: 'fin', label: 'Financeiro', icon: Check },
+    { value: 'rh', label: 'Recursos Humanos' },
+  ];
+
+  // feliz
+  it('draws the icon of the chosen option and of each option in the list', async () => {
+    render(ComboboxField, {
+      props: {
+        data: { value: 'fin', options: withIcons },
+        ui: { ariaLabel: 'Departamento' },
+        actions: { onChange: vi.fn() },
+      },
+    });
+
+    const trigger = screen.getByRole('combobox', { name: 'Departamento' });
+    /* O desenho da opção mais a seta do campo. */
+    expect(trigger.querySelectorAll('svg')).toHaveLength(2);
+    await userEvent.click(trigger);
+    const option = await screen.findByRole('option', { name: /Financeiro/ });
+
+    expect(option.querySelector('svg.lucide-check')).toBeInTheDocument();
+  });
+
+  // triste
+  it('names the create row the way the screen asked', async () => {
+    render(ComboboxField, {
+      props: {
+        data: { value: '', options: withIcons },
+        ui: { ariaLabel: 'Departamento', createLabel: 'Cadastrar' },
+        actions: { onChange: vi.fn(), onCreate: vi.fn() },
+      },
+    });
+
+    await userEvent.click(screen.getByRole('combobox'));
+    await userEvent.type(await screen.findByPlaceholderText('Pesquisar…'), 'Jurídico');
+
+    expect(await screen.findByRole('option', { name: /Cadastrar “Jurídico”/ })).toBeInTheDocument();
   });
 });
