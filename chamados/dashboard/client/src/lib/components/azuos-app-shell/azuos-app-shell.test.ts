@@ -535,7 +535,7 @@ describe('AzuosAppShell — o rodapé do trilho', () => {
     const onOpenProfile = vi.fn();
     renderShell({
       ui: { items },
-      data: { areaOptions: [...areaOptions], accountUrl: 'https://login.exemplo.com.br', user: { name: 'Ana', role: 'Admin' } },
+      data: { areaOptions: [...areaOptions], accountUrl: 'https://login.exemplo.com.br', user: { name: 'Ana', email: 'ana@empresa.com.br', role: 'Admin' } },
       state: { areaContext: 'infra', activeKey: 'tickets' },
       actions: { onSignOut, onOpenProfile },
     });

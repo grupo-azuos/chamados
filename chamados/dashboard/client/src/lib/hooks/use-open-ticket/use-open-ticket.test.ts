@@ -1,6 +1,6 @@
 import { type OpenedTicket } from '@template/shared/schemas/ticket.schema';
 import { render, waitFor } from '@testing-library/svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-open-ticket-harness.test.svelte';
@@ -18,10 +18,12 @@ vi.mock('$lib/api/tickets.api', () => ({
     /* Por padrão o perfil não responde: o formulário abre para digitar, como antes. Os testes
        do preenchimento pela conta trocam isto. */
     requesterDefaults: vi.fn().mockRejectedValue(new Error('sem perfil')),
+    invite: vi.fn(),
   },
 }));
 
 const { ticketsApi } = await import('$lib/api/tickets.api');
+const { page } = await import('$app/state');
 
 /* O que ABRIR devolve: o chamado, mais o desfecho do aviso de WhatsApp. Por padrão o aviso não
    saiu — é o caso de quem não pediu para ser avisado. */
@@ -351,5 +353,82 @@ describe('useOpenTicketModel — pessoas vinculadas', () => {
     await waitFor(() => expect(ticketsApi.create).toHaveBeenCalled());
     expect(model.data.peopleOptions).toEqual([]);
     expect(vi.mocked(ticketsApi.create).mock.calls[0]?.[0]).toMatchObject({ watcherIds: [] });
+  });
+});
+
+describe('useOpenTicketModel — o convite do WhatsApp e quem atende', () => {
+  const invite = {
+    assignee: { id: 'u-ana', name: 'Ana Lima' },
+    areas: ['manutencao' as const],
+    phone: '5562988887777',
+  };
+
+  beforeEach(() => {
+    vi.mocked(ticketsApi.create).mockReset().mockResolvedValue(ticket());
+    vi.mocked(ticketsApi.systemProjectOptions).mockResolvedValue([]);
+    vi.mocked(ticketsApi.invite).mockReset();
+    page.url = new URL('http://localhost:5173/support?invite=abc.123');
+  });
+
+  afterEach(() => {
+    page.url = new URL('http://localhost:5173/');
+  });
+
+  // feliz
+  it('fills the attendant, the notice, the phone and the only area from the invite', async () => {
+    vi.mocked(ticketsApi.invite).mockResolvedValue(invite);
+    vi.mocked(ticketsApi.assigneeOptions).mockResolvedValueOnce([{ id: 'u-ana', name: 'Ana Lima' }]);
+    const model = mountModel();
+
+    await waitFor(() => expect(model.data.invite?.assigneeName).toBe('Ana Lima'));
+    expect(ticketsApi.invite).toHaveBeenCalledWith('abc.123');
+    expect(model.data.fields.assigneeId.value).toBe('u-ana');
+    expect(model.data.fields.area.value).toBe('manutencao');
+    expect(model.data.notifyWhatsapp).toBe(true);
+    expect(model.data.fields.contactPhone.value).not.toBe('');
+    await waitFor(() => expect(model.data.assignees).toEqual([{ value: 'u-ana', label: 'Ana Lima' }]));
+
+    /* Trocar de área limpa o responsável — menos para quem chegou pelo convite. */
+    model.actions.onChange('assigneeId', '');
+    expect(model.data.fields.assigneeId.value).toBe('u-ana');
+  });
+
+  // feliz
+  it('leaves the area open when the invited attendant covers more than one', async () => {
+    vi.mocked(ticketsApi.invite).mockResolvedValue({ ...invite, areas: ['infra', 'manutencao'], phone: null });
+    const model = mountModel();
+
+    await waitFor(() => expect(model.data.invite?.areas).toEqual(['infra', 'manutencao']));
+    expect(model.data.fields.area.value).toBe('');
+  });
+
+  // triste
+  it('warns that the link is no longer valid and keeps the form usable', async () => {
+    vi.mocked(ticketsApi.invite).mockRejectedValue(new ApiError(404, 'Convite não encontrado.'));
+    const model = mountModel();
+
+    await waitFor(() => expect(model.state.inviteError).toBe('Convite não encontrado.'));
+    expect(model.data.invite).toBeNull();
+    model.actions.onChange('assigneeId', '');
+    expect(model.data.fields.assigneeId.value).toBe('');
+  });
+
+  // triste
+  it('falls back to a generic message when the failure has no text', async () => {
+    vi.mocked(ticketsApi.invite).mockRejectedValue(new Error(''));
+    const model = mountModel();
+
+    await waitFor(() => expect(model.state.inviteError).toBeTruthy());
+  });
+
+  // feliz
+  it('marks a field as touched on blur and toggles the notice', async () => {
+    vi.mocked(ticketsApi.invite).mockResolvedValue(invite);
+    const model = mountModel();
+
+    model.actions.onBlur('requesterName');
+    await waitFor(() => expect(model.data.fields.requesterName.error).not.toBeNull());
+    model.actions.onNotifyChange(false);
+    await waitFor(() => expect(model.data.notifyWhatsapp).toBe(false));
   });
 });
