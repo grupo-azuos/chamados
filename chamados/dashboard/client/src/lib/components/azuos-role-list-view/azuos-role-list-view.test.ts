@@ -1,9 +1,9 @@
 import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
-import { render, screen } from '@testing-library/svelte';
+import { cleanup, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import RoleListView, { type AzuosRoleListViewProps } from './azuos-role-list-view.svelte';
+import RoleListView, { roleTone, type AzuosRoleListViewProps } from './azuos-role-list-view.svelte';
 
 const mockRoles: InternalRole[] = [
   {
@@ -259,5 +259,55 @@ describe('AzuosRoleListView', () => {
     });
 
     expect(screen.queryByText('Outra Pessoa')).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosRoleListView — filters, states and the rows', () => {
+  // feliz
+  it('searches, filters by context and clears the filters', async () => {
+    const actions = renderView({
+      data: { roles: mockRoles, total: 2, filter: { search: 'vini', context: '' } },
+    });
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Buscar na equipe' }), 'c');
+    expect(actions.onSearchChange).toHaveBeenCalledWith(expect.stringContaining('c'));
+    await userEvent.click(screen.getByRole('button', { name: 'Manutenção' }));
+    expect(actions.onContextChange).toHaveBeenCalledWith('manutencao');
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(actions.onClearFilters).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('says it is loading, and offers to clear a filter that hid everything', async () => {
+    renderView({ state: { isLoading: true, isEmpty: false, isFilteredOut: false, error: null } });
+    expect(screen.getByText('Carregando os acessos da equipe…')).toBeInTheDocument();
+
+    cleanup();
+    const actions = renderView({ state: { isLoading: false, isEmpty: false, isFilteredOut: true, error: null } });
+    expect(screen.getByText('Nenhum acesso com esses filtros')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(actions.onClearFilters).toHaveBeenCalledOnce();
+  });
+
+  // feliz
+  it('colors each role and shows who created the access, or a dash', () => {
+    renderView({
+      data: {
+        currentUser: { name: 'Gestora', email: 'g@empresa.com.br', role: 'manager' },
+        roles: [
+          { ...mockRoles[0]!, id: 1, createdBy: null },
+          { ...mockRoles[1]!, id: 2, userId: 'ana@empresa.com.br', userEmail: 'ana@empresa.com.br' },
+        ],
+        total: 2,
+        filter: { search: '', context: '' },
+      },
+    });
+    expect(screen.getByText('Gestor')).toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Criado por:')).not.toBeInTheDocument();
+    expect(roleTone('superadmin')).toBe('success');
+    expect(roleTone('Gerente')).toBe('info');
+    expect(roleTone('Gestor')).toBe('info');
+    expect(roleTone('Usuário')).toBe('neutral');
   });
 });

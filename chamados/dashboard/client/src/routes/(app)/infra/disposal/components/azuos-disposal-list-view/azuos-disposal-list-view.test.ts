@@ -231,3 +231,40 @@ describe('AzuosDisposalListView', () => {
     expect(screen.queryByText('Nenhuma máquina descartada')).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosDisposalListView — search, type filter, rows and the restore dialog', () => {
+  // feliz
+  it('searches and filters by the type of disposal', async () => {
+    const user = userEvent.setup();
+    renderView();
+    await user.type(screen.getByRole('textbox', { name: 'Buscar' }), 'r');
+    expect(actions.onSearchChange).toHaveBeenCalledWith('r');
+    const group = screen.getByRole('group', { name: 'Filtrar por tipo de descarte' });
+    await user.click(within(group).getAllByRole('button')[1]!);
+    expect(actions.onTypeChange).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('opens the record and asks to restore from the cards and from the table', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onOpenMachine).mockClear();
+    vi.mocked(actions.onAskRestore).mockClear();
+    renderView({ computers: [computer({ department: null, disposalType: null, disposalReason: null, displayName: null })] });
+
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    const opens = screen.getAllByRole('button', { name: 'Ver ficha' });
+    const restores = screen.getAllByRole('button', { name: 'Voltar ao inventário' });
+    for (const button of opens) await user.click(button);
+    for (const button of restores) await user.click(button);
+    expect(actions.onOpenMachine).toHaveBeenCalledTimes(opens.length);
+    expect(actions.onAskRestore).toHaveBeenCalledTimes(restores.length);
+  });
+
+  // triste
+  it('cancels the restore from the dialog', async () => {
+    const user = userEvent.setup();
+    renderView({ restoring: computer() });
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
+    expect(actions.onCancelRestore).toHaveBeenCalled();
+  });
+});

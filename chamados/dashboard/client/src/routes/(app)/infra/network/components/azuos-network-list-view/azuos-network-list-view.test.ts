@@ -223,3 +223,57 @@ describe('AzuosNetworkListView', () => {
     expect(screen.queryByText('Nenhum evento no período')).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosNetworkListView — period, filters, rows and the cut list', () => {
+  async function chooseSecond(user: ReturnType<typeof userEvent.setup>, label: string) {
+    const group = screen.queryByRole('group', { name: label });
+    if (group) {
+      await user.click(within(group).getAllByRole('button')[1]!);
+      return;
+    }
+    await user.click(screen.getByRole('button', { name: label }));
+    const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+    await user.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
+  }
+
+  // feliz
+  it('changes the period, the type and the severity', async () => {
+    const user = userEvent.setup();
+    renderView();
+    await chooseSecond(user, 'Período');
+    expect(actions.onPeriodChange).toHaveBeenCalledWith(expect.any(Number));
+    await chooseSecond(user, 'Filtrar por tipo de aviso');
+    expect(actions.onTypeChange).toHaveBeenCalled();
+    await chooseSecond(user, 'Filtrar por gravidade');
+    expect(actions.onSeverityChange).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('reopens from the table and shows an event without link, message or measures', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onResolveChange).mockClear();
+    renderView({
+      events: [event({ resolvedAt: '2026-09-23T12:42:00.000Z', linkName: null, message: null })],
+      state: { isTruncated: true, actionError: 'Sem permissão.' },
+    });
+    expect(screen.getAllByText('—').length).toBeGreaterThan(1);
+    expect(screen.getByText(/Mostrando 1 de 1 eventos/)).toBeInTheDocument();
+    expect(screen.getByText('Sem permissão.')).toBeInTheDocument();
+    const reopen = screen.getAllByRole('button', { name: 'Reabrir' });
+    for (const button of reopen) await user.click(button);
+    expect(actions.onResolveChange).toHaveBeenCalledTimes(reopen.length);
+    expect(actions.onResolveChange).toHaveBeenLastCalledWith(expect.objectContaining({ id: 1 }), false);
+  });
+
+  // triste
+  it('shows dashes while the summary has no numbers', () => {
+    render(NetworkListView, {
+      props: {
+        data: { events: [event()], total: 1, summary: null, filter: emptyFilter },
+        state: { ...settled, isSummaryLoading: true } as never,
+        actions,
+      },
+    });
+    expect(screen.getByText('Pior latência')).toBeInTheDocument();
+  });
+});

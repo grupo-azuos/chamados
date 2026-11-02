@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -50,5 +50,63 @@ describe('AzuosSuggestionTextField', () => {
     });
 
     expect(screen.getByRole('alert')).toHaveTextContent('Informe o fornecedor');
+  });
+});
+
+describe('AzuosSuggestionTextField — the button, the mouse and the keys', () => {
+  // feliz
+  it('opens and closes the list from the arrow button, keeping the focus on the field', async () => {
+    render(SuggestionTextField, { props: { data, actions: { onChange: vi.fn() } } });
+    const button = screen.getByRole('button', { name: 'Ver as opções de Fornecedor' });
+
+    await fireEvent.mouseDown(button);
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Fornecedor' })).toHaveFocus();
+
+    await fireEvent.mouseDown(button);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  // feliz
+  it('picks an option with the mouse and closes with Escape', async () => {
+    const onChange = vi.fn();
+    render(SuggestionTextField, { props: { data, actions: { onChange } } });
+    const input = screen.getByRole('combobox', { name: 'Fornecedor' });
+
+    await userEvent.click(input);
+    await fireEvent.mouseDown(screen.getByRole('option', { name: 'Terabyte' }));
+    expect(onChange).toHaveBeenLastCalledWith('Terabyte');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    await userEvent.click(input);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  // triste
+  it('lets Enter reach the form while nothing is highlighted, and ignores arrows on an empty list', async () => {
+    const onChange = vi.fn();
+    const onBlur = vi.fn();
+    render(SuggestionTextField, {
+      props: { data: { ...data, options: [] }, state: { isRequired: true }, actions: { onChange, onBlur } },
+    });
+    const input = screen.getByRole('combobox', { name: /Fornecedor/ });
+
+    await userEvent.click(input);
+    await userEvent.keyboard('{ArrowDown}{Enter}');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByText('Nada cadastrado ainda.')).toBeInTheDocument();
+    await userEvent.tab();
+    expect(onBlur).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  // triste
+  it('explains a search without matches and keeps what was typed', async () => {
+    const onChange = vi.fn();
+    render(SuggestionTextField, { props: { data, state: { isLoading: false }, actions: { onChange } } });
+    await userEvent.type(screen.getByRole('combobox', { name: 'Fornecedor' }), 'zz');
+    expect(onChange).toHaveBeenLastCalledWith('zz');
+    expect(screen.getByText(/Nenhuma opção com esse texto/)).toBeInTheDocument();
   });
 });

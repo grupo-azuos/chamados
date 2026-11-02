@@ -52,3 +52,45 @@ describe('AzuosOtpField', () => {
     expect(eraseAt(toDigits('1234', 6), 3)).toBe('123');
   });
 });
+
+describe('AzuosOtpField — keys, pasting and states', () => {
+  const box = (index: number) => screen.getByLabelText(`Dígito ${index} de 6`);
+
+  // feliz
+  it('moves between the boxes with the arrows and erases backwards', async () => {
+    render(Harness, { props: { onComplete: vi.fn(), initial: '123' } });
+
+    box(2).focus();
+    await fireEvent.keyDown(box(2), { key: 'ArrowRight' });
+    expect(box(3)).toHaveFocus();
+    await fireEvent.keyDown(box(3), { key: 'ArrowLeft' });
+    expect(box(2)).toHaveFocus();
+
+    /* Caixa cheia: apaga aqui e fica. */
+    await fireEvent.keyDown(box(3), { key: 'Backspace' });
+    expect(screen.getByTestId('valor')).toHaveTextContent('12');
+    /* Caixa vazia: volta uma e apaga lá. */
+    await fireEvent.keyDown(box(4), { key: 'Backspace' });
+    expect(screen.getByTestId('valor')).toHaveTextContent('1');
+  });
+
+  // triste
+  it('does nothing on Backspace in the very first empty box, on other keys or on an empty paste', async () => {
+    render(Harness, { props: { onComplete: vi.fn() } });
+
+    await fireEvent.keyDown(box(1), { key: 'Backspace' });
+    await fireEvent.keyDown(box(1), { key: 'a' });
+    await fireEvent.paste(box(1), { clipboardData: { getData: () => 'abc' } });
+    expect(screen.getByTestId('valor')).toHaveTextContent('');
+  });
+
+  // triste
+  it('announces the error, blocks the boxes and focuses the first one when asked', () => {
+    render(Harness, { props: { onComplete: vi.fn(), error: 'Código inválido.', isDisabled: true, isAutoFocused: true } });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Código inválido.');
+    expect(box(1)).toHaveAttribute('aria-invalid', 'true');
+    expect(box(1)).toBeDisabled();
+    expect(box(1)).toHaveAttribute('autofocus');
+  });
+});
