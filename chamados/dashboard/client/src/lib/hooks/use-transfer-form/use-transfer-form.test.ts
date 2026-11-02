@@ -171,3 +171,42 @@ describe('useTransferFormModel', () => {
     );
   });
 });
+
+describe('useTransferFormModel — the free texts and a machine on the shelf', () => {
+  beforeEach(() => {
+    vi.mocked(transfersApi.installedParts).mockResolvedValue([]);
+    vi.mocked(computersApi.list).mockResolvedValue({
+      items: [computer, { ...other, hardware: { hostname: 'contabil-03.local' } } as ComputerListItem],
+      total: 2,
+      page: 1,
+      pageSize: 100,
+    });
+  });
+
+  // feliz
+  it('keeps who received the machine and the note, and names machines by their hostname', async () => {
+    const model = await mountLoadedModel();
+
+    model.actions.onResponsibleChange('Coordenação');
+    model.actions.onNoteChange('Mesa nova.');
+
+    await waitFor(() => expect(model.data.responsible).toBe('Coordenação'));
+    expect(model.data.note).toBe('Mesa nova.');
+    await waitFor(() => expect(model.data.machines.some((option) => option.label.includes('contabil-03.local'))).toBe(true));
+  });
+
+  // feliz
+  it('opens on the shelf when the machine has no department', async () => {
+    let model!: TransferFormModel;
+    render(Harness, {
+      props: {
+        computer: { ...computer, department: null } as ComputerListItem,
+        onSaved: vi.fn(),
+        onReady: (ready: TransferFormModel) => (model = ready),
+      },
+    });
+
+    await waitFor(() => expect(model.state.isLoadingPeripherals).toBe(false));
+    expect(model.data.toDepartment).toBe('');
+  });
+});
