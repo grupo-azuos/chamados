@@ -32,3 +32,27 @@ describe('a rota infra/computers', () => {
     await expectOutageShown();
   });
 });
+
+const { apiRequest } = await import('$lib/api/http-client');
+const { screen, waitFor, within } = await import('@testing-library/svelte');
+const { default: userEvent } = await import('@testing-library/user-event');
+
+describe('a rota infra/computers com o cadastro', () => {
+  // feliz
+  it('abre o cadastro de computador e o fecha', async () => {
+    vi.mocked(apiRequest).mockImplementation(async (path: string) => {
+      if (path === '/computers') return { items: [], total: 0, page: 1, pageSize: 25 };
+      if (path === '/departments') return { rh: ['Contábil'], local: [], isRhAvailable: true };
+      return [];
+    });
+    visiting({});
+    renderPage(Page as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    await user.click((await screen.findAllByRole('button', { name: 'Cadastrar computador' }))[0]!);
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Cadastrar computador');
+    await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+});

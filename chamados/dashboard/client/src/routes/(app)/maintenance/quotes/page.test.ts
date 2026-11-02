@@ -32,3 +32,46 @@ describe('a rota maintenance/quotes', () => {
     await expectOutageShown();
   });
 });
+
+const { apiRequest } = await import('$lib/api/http-client');
+const { screen, waitFor, within } = await import('@testing-library/svelte');
+const { default: userEvent } = await import('@testing-library/user-event');
+
+const quote = {
+  id: 1,
+  supplier: 'Clima Norte Refrigeração',
+  description: 'Limpeza e recarga de gás',
+  kind: 'service',
+  amountCents: 96000,
+  quotedOn: '2026-10-02',
+  status: 'pending',
+  note: null,
+  attachmentUrl: null,
+  attachmentName: null,
+  createdAt: '2026-10-02T12:00:00.000Z',
+  createdBy: 'suporte@azuos.local',
+  updatedAt: null,
+  updatedBy: null,
+};
+
+describe('a rota maintenance/quotes com orçamentos', () => {
+  // feliz
+  it('abre o formulário para guardar e para corrigir um orçamento', async () => {
+    vi.mocked(apiRequest).mockImplementation(async (path: string) => {
+      if (path === '/maintenance-quotes') return { items: [quote], total: 1, page: 1, pageSize: 25 };
+      return { items: [], total: 0, page: 1, pageSize: 25 };
+    });
+    visiting({});
+    renderPage(Page as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    await screen.findAllByText('Clima Norte Refrigeração');
+    await user.click(screen.getAllByRole('button', { name: 'Guardar orçamento' })[0]!);
+    let dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await user.click(screen.getAllByRole('button', { name: 'Corrigir' })[0]!);
+    dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+  });
+});

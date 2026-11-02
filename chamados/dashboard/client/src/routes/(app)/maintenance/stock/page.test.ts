@@ -32,3 +32,57 @@ describe('a rota maintenance/stock', () => {
     await expectOutageShown();
   });
 });
+
+const { apiRequest } = await import('$lib/api/http-client');
+const { screen, waitFor, within } = await import('@testing-library/svelte');
+const { default: userEvent } = await import('@testing-library/user-event');
+
+const { goto } = await import('$app/navigation');
+
+const item = {
+  id: 1,
+  name: 'Cadeira giratória',
+  category: 'furniture',
+  unit: 'unit',
+  location: 'Copa',
+  code: 'PAT-0101',
+  note: null,
+  photoUrl: null,
+  balance: 2,
+  createdAt: '2026-09-01T12:00:00.000Z',
+  createdBy: 'suporte@azuos.local',
+  updatedAt: null,
+  updatedBy: null,
+};
+
+describe('a rota maintenance/stock com produtos', () => {
+  // feliz
+  it('abre a entrada e a saída de um produto', async () => {
+    vi.mocked(apiRequest).mockImplementation(async (path: string) => {
+      if (path === '/inventory-items') return { items: [item], total: 1, page: 1, pageSize: 25 };
+      return { items: [], total: 0, page: 1, pageSize: 25 };
+    });
+    visiting({});
+    renderPage(Page as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    await screen.findAllByText('Cadeira giratória');
+    await user.click(screen.getAllByRole('button', { name: 'Entrada' })[0]!);
+    let dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await user.click(screen.getAllByRole('button', { name: 'Saída' })[0]!);
+    dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+  });
+
+  // triste
+  it('leva ao inventário quando não há produto', async () => {
+    vi.mocked(apiRequest).mockImplementation(async () => ({ items: [], total: 0, page: 1, pageSize: 25 }));
+    visiting({});
+    renderPage(Page as never);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Abrir o inventário' }));
+    expect(goto).toHaveBeenCalledWith('/maintenance/inventory');
+  });
+});

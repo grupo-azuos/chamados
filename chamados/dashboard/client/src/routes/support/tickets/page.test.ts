@@ -32,3 +32,50 @@ describe('a rota support/tickets', () => {
     await expectOutageShown();
   });
 });
+
+const { apiRequest } = await import('$lib/api/http-client');
+const { screen } = await import('@testing-library/svelte');
+
+const { page } = await import('$app/state');
+
+const publicTicket = {
+  id: 7,
+  protocol: 'CH-0007',
+  status: 'waiting_requester',
+  priority: 'high',
+  requesterName: 'Bia Costa',
+  area: 'infra',
+  department: 'financeiro',
+  problemType: 'printer',
+  anydeskId: null,
+  description: 'A impressora não puxa papel.',
+  screenshotUrl: null,
+  attachments: [],
+  histories: [],
+  watchers: [],
+  notifiable: [],
+  canReply: true,
+  createdAt: '2026-09-15T12:10:00.000Z',
+};
+
+describe('a rota support/tickets com o link de acesso', () => {
+  // feliz
+  it('abre o chamado do link e oferece a resposta', async () => {
+    vi.mocked(apiRequest).mockImplementation(async (path: string) => {
+      if (path.startsWith('/tickets/access/')) return publicTicket;
+      if (path === '/tickets/mine') return [];
+      return [];
+    });
+    page.url = new URL('http://localhost:5173/support/tickets?ticket=abc.123');
+    try {
+      visiting({});
+      renderPage(Page as never);
+
+      expect(await screen.findByText('CH-0007')).toBeInTheDocument();
+      expect(await screen.findByRole('textbox', { name: /Mensagem|Por que reabrir/ })).toBeInTheDocument();
+      expect(apiRequest).toHaveBeenCalledWith('/tickets/access/abc.123');
+    } finally {
+      page.url = new URL('http://localhost:5173/');
+    }
+  });
+});
