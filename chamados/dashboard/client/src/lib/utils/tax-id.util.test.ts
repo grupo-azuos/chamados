@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  formatTaxId,
-  handleTaxIdInput,
-  isValidTaxId,
-  maskTaxId,
-  normalizeTaxId,
-  taxIdCheckDigits,
-} from './tax-id.util';
+import { formatTaxId, handleTaxIdInput, isValidTaxId, maskTaxId, normalizeTaxId, taxIdCheckDigits } from './tax-id.util';
 
 describe('tax-id.util', () => {
   // feliz
@@ -36,5 +29,24 @@ describe('tax-id.util', () => {
     expect(isValidTaxId('11222333')).toBe(false);
     expect(isValidTaxId(null)).toBe(false);
     expect(handleTaxIdInput({ value: '1122' }).isComplete).toBe(false);
+  });
+});
+
+describe('tax-id.util — the odd inputs', () => {
+  // triste
+  it('computes no check digits for a base of the wrong size and refuses repeated or lettered endings', () => {
+    expect(taxIdCheckDigits('123')).toBe('');
+    expect(isValidTaxId('11111111111111')).toBe(false);
+    expect(isValidTaxId('12ABC345000AB1')).toBe(false);
+  });
+
+  // triste
+  it('leaves an incomplete value as it came, and masks only what was typed', () => {
+    expect(formatTaxId('12.345')).toBe('12.345');
+    expect(formatTaxId(null)).toBe('');
+    expect(maskTaxId('12')).toBe('12');
+    expect(maskTaxId('12345')).toBe('12.345');
+    expect(maskTaxId('12345678')).toBe('12.345.678');
+    expect(maskTaxId('123456780001')).toBe('12.345.678/0001');
   });
 });
