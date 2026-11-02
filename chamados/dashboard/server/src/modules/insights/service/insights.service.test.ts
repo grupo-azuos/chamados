@@ -216,3 +216,68 @@ describe('InsightsService.summary', () => {
     expect(repository.usage).not.toHaveBeenCalled();
   });
 });
+
+describe('InsightsService.summary: the edges of each list', () => {
+  // feliz
+  it('recommends disk by the free space, worst first, and skips what has nothing to measure', async () => {
+    const { service } = makeService({
+      hardware: vi.fn().mockResolvedValue([
+        hardwareRow({ computerId: 1, computerName: 'CHEIA-01', freeDiskBytes: 20 * GB }),
+        hardwareRow({ computerId: 2, computerName: 'QUASE-02', freeDiskBytes: 40 * GB }),
+        hardwareRow({ computerId: 3, computerName: 'SEM-MEDIDA', totalMemoryBytes: null, totalDiskBytes: null, freeDiskBytes: null }),
+        hardwareRow({ computerId: 4, computerName: 'SEM-DISCO', totalDiskBytes: 0, freeDiskBytes: 0 }),
+      ]),
+    });
+
+    const upgrades = (await service.summary(ana, query())).upgrades;
+
+    expect(upgrades.map((row) => [row.computerName, row.reason])).toEqual([
+      ['CHEIA-01', 'disk'],
+      ['QUASE-02', 'disk'],
+    ]);
+  });
+
+  it('orders the troublesome machines by the work they gave', async () => {
+    const { service } = makeService({
+      trouble: vi.fn().mockResolvedValue([
+        troubleRow({ computerId: 1, computerName: 'POUCO', maintenanceCount: 3, alertCount: 3, ticketCount: 1 }),
+        troubleRow({
+          computerId: 2,
+          computerName: 'MUITO',
+          maintenanceCount: 6,
+          lastMaintenanceAt: new Date('2026-09-01T12:00:00.000Z'),
+        }),
+      ]),
+    });
+
+    const troublesome = (await service.summary(ana, query())).troublesome;
+
+    expect(troublesome.map((row) => row.computerName)).toEqual(['MUITO', 'POUCO']);
+    expect(troublesome[0]?.lastMaintenanceAt).toBe('2026-09-01T12:00:00.000Z');
+    expect(troublesome[1]?.lastMaintenanceAt).toBeNull();
+  });
+
+  // triste
+  it('shows a spare machine without hardware readings with blanks, not zeros', async () => {
+    const { service } = makeService({
+      hardware: vi.fn().mockResolvedValue([
+        hardwareRow({
+          computerId: 1,
+          computerName: 'RESERVA-VAZIA',
+          department: null,
+          totalMemoryBytes: null,
+          totalDiskBytes: null,
+          lastSeenAt: null,
+        }),
+      ]),
+      usage: vi.fn().mockResolvedValue([
+        usageRow({ averageCpuPercent: null, averageMemoryPercent: 95, activeAlerts: 1 }),
+      ]),
+    });
+
+    const insights = await service.summary(ana, query());
+
+    expect(insights.spares[0]).toMatchObject({ memoryGb: null, diskGb: null, lastSeenAt: null });
+    expect(insights.overloaded[0]?.averageCpuPercent).toBe(0);
+  });
+});
