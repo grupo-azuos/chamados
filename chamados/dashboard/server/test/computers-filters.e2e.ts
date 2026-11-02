@@ -115,6 +115,35 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     ).toEqual([]);
   });
 
+  it('filters by the condition of the resources, the worst one first, with the health limits', async () => {
+    const GB = 1024 ** 3;
+    const DAY = 86_400;
+    const readings: [string, Record<string, number | null>][] = [
+      ['PC-DISCO-CHEIO', { totalDiskBytes: 100 * GB, freeDiskBytes: 2 * GB, totalMemoryBytes: 4 * GB }],
+      ['PC-DISCO-BAIXO', { totalDiskBytes: 100 * GB, freeDiskBytes: 8 * GB, totalMemoryBytes: 16 * GB }],
+      ['PC-POUCA-RAM', { totalDiskBytes: 100 * GB, freeDiskBytes: 60 * GB, totalMemoryBytes: 4 * GB }],
+      ['PC-SEM-REINICIAR', { totalMemoryBytes: 16 * GB, uptimeSeconds: 45 * DAY }],
+      ['PC-EM-DIA', { totalDiskBytes: 100 * GB, freeDiskBytes: 60 * GB, totalMemoryBytes: 16 * GB, uptimeSeconds: 2 * DAY }],
+    ];
+    for (const [name, values] of readings) {
+      const id = await registerComputer(name);
+      await started.db.update(computers).set(values).where(eq(computers.id, id));
+    }
+    await registerComputer('PC-SEM-LEITURA');
+
+    const byCondition = async (condition: string) =>
+      names(await api().get(`/api/computers?resourceCondition=${condition}`).set(asAna()).expect(200));
+
+    expect(await byCondition('disk-critical')).toEqual(['PC-DISCO-CHEIO']);
+    expect(await byCondition('disk-low')).toEqual(['PC-DISCO-BAIXO']);
+    expect(await byCondition('memory-low')).toEqual(['PC-POUCA-RAM']);
+    expect(await byCondition('stale-uptime')).toEqual(['PC-SEM-REINICIAR']);
+    expect(await byCondition('ok')).toEqual(['PC-EM-DIA']);
+    expect(await byCondition('unknown')).toEqual(['PC-SEM-LEITURA']);
+    // triste
+    await api().get('/api/computers?resourceCondition=quebrado').set(asAna()).expect(400);
+  });
+
   it('filters by presence: nobody is online in the test, so offline is everyone', async () => {
     await registerComputer('PC-DESLIGADO');
 
