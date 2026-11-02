@@ -3,6 +3,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { internalRoles } from '../src/lib/db/schema/internal-roles.schema';
+import { TicketsRepository } from '../src/modules/tickets/repository/tickets.repository';
 import {
   ANA,
   asAna,
@@ -269,6 +270,19 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
       .set(asCaio())
       .send({ userIds: [] })
       .expect(404);
+  });
+
+  /* O bot do WhatsApp pergunta ao banco quem já usou um telefone: é o final do número que
+     vale, e um número curto demais não acha ninguém. */
+  it('finds who already used a phone by its ending, and the last phone of a person', async () => {
+    const repository = new TicketsRepository(started.db);
+    await open({}).expect(201);
+
+    expect(await repository.requesterIdsByPhone('1234')).toEqual([]);
+    expect(await repository.requesterIdsByPhone('(62) 99999-1234')).toEqual([ANA.id]);
+    expect(await repository.lastPhoneOf(ANA.id)).toBe('62 99999-1234');
+    expect(await repository.lastPhoneOf(DORA.id)).toBeNull();
+    expect(await repository.list({ page: 1, pageSize: 10 } as never, [])).toEqual({ rows: [], total: 0 });
   });
 
   it('refuses whoever only consults to share the ticket or change its people', async () => {
