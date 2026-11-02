@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { reportFormatLabel, reportFormatOptions, reportFormatSchema } from './report.schema';
+import {
+  isReportFormat,
+  reportFormatLabel,
+  reportFormatOptions,
+  reportFormatSchema,
+} from './report.schema';
 
 describe('reportFormatSchema', () => {
   // feliz
@@ -38,5 +43,18 @@ describe('reportFormatLabel', () => {
     expect(reportFormatLabel('xlsx')).toBe('Excel');
     expect(reportFormatLabel('docx')).toBe('Word');
     expect(reportFormatLabel('pdf')).toBe('PDF');
+  });
+});
+
+describe('isReportFormat', () => {
+  // feliz
+  it('recognizes the three formats', () => {
+    expect(isReportFormat('pdf')).toBe(true);
+  });
+
+  // triste
+  it('refuses anything else', () => {
+    expect(isReportFormat('csv')).toBe(false);
+    expect(isReportFormat(1)).toBe(false);
   });
 });
