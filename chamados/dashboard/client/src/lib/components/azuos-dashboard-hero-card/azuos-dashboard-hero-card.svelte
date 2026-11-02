@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import { type AzuosCardTone } from '$lib/utils/card-tone.util';
   import type { LucideIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
 
@@ -12,13 +13,8 @@
    *
    * O número com `onClick` vira botão (leva à lista daquele número); sem ele, é só leitura.
    */
-  export type AzuosDashboardHeroCardStatTone =
-    | 'default'
-    | 'danger'
-    | 'warning'
-    | 'info'
-    | 'success'
-    | 'brand';
+  /** O nome de estado (`danger`…) ou o sotaque (`plum`…) da paleta de card. */
+  export type AzuosDashboardHeroCardStatTone = AzuosCardTone;
 
   export type AzuosDashboardHeroCardStat = {
     label: string;
@@ -27,6 +23,8 @@
     tone?: AzuosDashboardHeroCardStatTone;
     icon?: LucideIcon;
     onClick?: () => void;
+    /** O cartão escolhido, quando os cartões trocam o que a tela mostra. */
+    isActive?: boolean;
   };
 
   export type AzuosDashboardHeroCardProps = {
@@ -45,52 +43,19 @@
     children?: Snippet;
   };
 
-  export const STAT_TONE_STYLES: Record<
-    AzuosDashboardHeroCardStatTone,
-    { value: string; icon: string; label: string }
-  > = {
-    default: { value: 'text-on-dark', icon: 'text-on-dark/80', label: 'text-on-dark/80' },
-    danger: { value: 'text-on-dark', icon: 'text-on-dark/80', label: 'text-on-dark/80' },
-    warning: { value: 'text-accent-hero', icon: 'text-accent-hero', label: 'text-accent-hero' },
-    info: { value: 'text-on-dark', icon: 'text-on-dark/80', label: 'text-on-dark/80' },
-    success: { value: 'text-on-dark', icon: 'text-on-dark/80', label: 'text-on-dark/80' },
-    brand: { value: 'text-on-dark', icon: 'text-on-dark/80', label: 'text-on-dark' },
-  };
 </script>
 
 <script lang="ts">
+  import AzuosStatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
   import Zuzu from '$lib/components/azuos-zuzu/azuos-zuzu.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, children }: AzuosDashboardHeroCardProps = $props();
 
   const EyebrowIcon = $derived(data.eyebrowIcon);
-  const pillClass = 'rounded-surface bg-brand-blue-800 p-4 text-left transition-colors';
 </script>
 
-{#snippet statContent(stat: AzuosDashboardHeroCardStat)}
-  {@const styles = STAT_TONE_STYLES[stat.tone ?? 'default'] ?? STAT_TONE_STYLES.default}
-  {@const StatIcon = stat.icon}
-  <div class="flex items-center gap-3">
-    {#if StatIcon}
-      <span
-        class={cn(
-          'rounded-chip bg-brand-blue-900 inline-flex size-10 shrink-0 items-center justify-center',
-          styles.icon,
-        )}
-      >
-        <StatIcon class="block size-5.5 shrink-0 stroke-[1.8]" aria-hidden="true" />
-      </span>
-    {/if}
-    <span class={cn('text-xs leading-none font-bold tracking-wider uppercase', styles.label)}>
-      {stat.label}
-    </span>
-  </div>
-  <strong class={cn('mt-2.5 block text-3xl font-bold tabular-nums', styles.value)}>{stat.value}</strong>
-  {#if stat.hint}
-    <span class="text-on-dark/80 mt-1 block text-xs">{stat.hint}</span>
-  {/if}
-{/snippet}
+
 
 <div
   role="region"
@@ -143,17 +108,14 @@
   {#if data.stats?.length}
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {#each data.stats as stat, index (`${stat.label}-${index}`)}
-        {#if stat.onClick}
-          <button
-            type="button"
-            onclick={stat.onClick}
-            class={cn(pillClass, 'hover:bg-brand-blue-700 cursor-pointer')}
-          >
-            {@render statContent(stat)}
-          </button>
-        {:else}
-          <div class={pillClass}>{@render statContent(stat)}</div>
-        {/if}
+        <!-- Cada indicador é o card de painel do grupo: superfície da marca, sotaque na bolinha e
+             no número, escolhido no azul claro da marca. -->
+        <AzuosStatCard
+          data={{ label: stat.label, value: stat.value, hint: stat.hint }}
+          ui={{ tone: stat.tone, icon: stat.icon, className: 'p-4 text-left' }}
+          state={{ isSelected: stat.isActive }}
+          actions={stat.onClick ? { onClick: stat.onClick } : undefined}
+        />
       {/each}
     </div>
   {/if}

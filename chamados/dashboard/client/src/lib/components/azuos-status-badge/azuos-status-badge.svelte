@@ -15,13 +15,14 @@
     ui?: { tone?: StatusBadgeTone; size?: 'sm' | 'md'; className?: string };
   };
 
+  /* O selo segue os cards: fundo neutro, texto no sotaque do tom (`$lib/utils/card-tone.util`). */
   const TONE_CLASSES: Record<StatusBadgeTone, string> = {
-    neutral: 'bg-ink-100 text-ink-700',
-    info: 'bg-info-soft text-info',
-    success: 'bg-success-soft text-success',
-    warning: 'bg-warning-soft text-warning',
-    danger: 'bg-destructive-soft text-destructive',
-    brand: 'bg-muted text-primary',
+    neutral: 'bg-muted text-hue-slate',
+    info: 'bg-muted text-hue-steel',
+    success: 'bg-muted text-hue-green',
+    warning: 'bg-muted text-hue-amber',
+    danger: 'bg-muted text-hue-red',
+    brand: 'bg-muted text-hue-blue',
   };
 </script>
 

@@ -47,6 +47,11 @@
       ariaLabel?: string;
       /** Mostra a troca tabela/cards no fim da barra. */
       showViewToggle?: boolean;
+      /**
+       * Quantos filtros por linha na tela larga (3 é o padrão). Com 7 filtros, 4 por linha os
+       * mantém em DUAS linhas — uma terceira linha empurra a lista para baixo da dobra.
+       */
+      columns?: 3 | 4;
     };
     state?: {
       /** O filtro escondeu tudo: quem oferece "Limpar filtros" é o aviso de lista vazia. */
@@ -187,7 +192,12 @@
       transition:slide={{ duration: motionMs(DURATION.base) }}
       class="border-border border-t"
     >
-      <div class="grid min-w-0 gap-x-4 gap-y-3 p-3 sm:grid-cols-2 sm:p-4 xl:grid-cols-3">
+      <div
+        class={[
+          'grid min-w-0 gap-x-4 gap-y-3 p-3 sm:grid-cols-2 sm:p-4',
+          ui?.columns === 4 ? 'lg:grid-cols-3 xl:grid-cols-4' : 'xl:grid-cols-3',
+        ]}
+      >
         {#each data.fields as field (field.key)}
           <FilterField
             data={{ label: field.label }}

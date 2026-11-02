@@ -30,11 +30,12 @@ describe('AzuosHeroCard', () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
-  it('paints the whole background in the tone, never a coloured border', () => {
+  it('sits on the brand surface with the tone only as accent, never a coloured border', () => {
     render(HeroCard, { props: { data, ui: { tone: 'danger' } } });
 
     const card = screen.getByRole('article');
-    expect(card).toHaveClass('bg-destructive');
+    expect(card).toHaveClass('bg-card');
+    expect(card.querySelector('.text-hue-red')).not.toBeNull();
     expect(card.className).not.toMatch(/border-(destructive|primary|success|warning)/);
   });
 

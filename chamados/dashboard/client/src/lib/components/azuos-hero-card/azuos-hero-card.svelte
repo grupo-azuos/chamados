@@ -44,55 +44,56 @@
     icon: string;
   };
 
+  /* O card fica na superfície da marca; o tom é sotaque: o ícone grande do canto e a pastilha. */
   export const HERO_TONE_STYLES: Record<AzuosHeroCardTone, ToneStyle> = {
     brand: {
-      container: 'bg-primary text-primary-foreground',
-      title: 'text-primary-foreground',
-      description: 'text-primary-foreground/80',
-      badge: 'bg-accent-hero text-accent-hero-foreground',
-      icon: 'text-primary-foreground',
+      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
+      title: '',
+      description: 'text-muted-foreground',
+      badge: 'bg-hue-blue text-on-hue',
+      icon: 'text-hue-blue',
     },
     accent: {
-      container: 'bg-accent-hero text-accent-hero-foreground',
-      title: 'text-accent-hero-foreground',
-      description: 'text-accent-hero-foreground/80',
-      badge: 'bg-foreground text-background',
-      icon: 'text-accent-hero-foreground',
+      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
+      title: '',
+      description: 'text-muted-foreground',
+      badge: 'bg-hue-amber text-on-hue',
+      icon: 'text-hue-amber',
     },
     success: {
-      container: 'bg-success text-success-foreground',
-      title: 'text-success-foreground',
-      description: 'text-success-foreground/80',
-      badge: 'bg-accent-hero text-accent-hero-foreground',
-      icon: 'text-success-foreground',
+      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
+      title: '',
+      description: 'text-muted-foreground',
+      badge: 'bg-hue-green text-on-hue',
+      icon: 'text-hue-green',
     },
     warning: {
-      container: 'bg-warning text-warning-foreground',
-      title: 'text-warning-foreground',
-      description: 'text-warning-foreground/80',
-      badge: 'bg-foreground text-background',
-      icon: 'text-warning-foreground',
+      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
+      title: '',
+      description: 'text-muted-foreground',
+      badge: 'bg-hue-amber text-on-hue',
+      icon: 'text-hue-amber',
     },
     danger: {
-      container: 'bg-destructive text-destructive-foreground',
-      title: 'text-destructive-foreground',
-      description: 'text-destructive-foreground/80',
-      badge: 'bg-accent-hero text-accent-hero-foreground',
-      icon: 'text-destructive-foreground',
+      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
+      title: '',
+      description: 'text-muted-foreground',
+      badge: 'bg-hue-red text-on-hue',
+      icon: 'text-hue-red',
     },
     info: {
-      container: 'bg-info text-info-foreground',
-      title: 'text-info-foreground',
-      description: 'text-info-foreground/80',
-      badge: 'bg-accent-hero text-accent-hero-foreground',
-      icon: 'text-info-foreground',
+      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
+      title: '',
+      description: 'text-muted-foreground',
+      badge: 'bg-hue-steel text-on-hue',
+      icon: 'text-hue-steel',
     },
     neutral: {
-      container: 'bg-card text-card-foreground border border-border',
-      title: 'text-card-foreground',
+      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
+      title: '',
       description: 'text-muted-foreground',
-      badge: 'bg-muted text-foreground',
-      icon: 'text-muted-foreground',
+      badge: 'bg-hue-slate text-on-hue',
+      icon: 'text-hue-slate',
     },
   };
 </script>
@@ -119,7 +120,7 @@
   <div
     data-slot="hero-card-icon"
     class={cn(
-      'pointer-events-none absolute -right-5 -bottom-5 size-36 overflow-hidden opacity-15 transition-transform duration-300 select-none group-hover:scale-105 group-hover:opacity-25',
+      'pointer-events-none absolute -right-5 -bottom-5 size-36 overflow-hidden transition-transform duration-300 select-none group-hover:scale-105',
       styles.icon,
     )}
     aria-hidden="true"

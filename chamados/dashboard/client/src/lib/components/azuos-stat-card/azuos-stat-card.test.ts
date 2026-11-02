@@ -66,14 +66,14 @@ describe('AzuosStatCard', () => {
 
     expect(screen.queryByText('76/100')).not.toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Condição dos recursos: filtrar a lista' }),
+      screen.getByRole('button', { name: /^Condição dos recursos .+: filtrar a lista$/ }),
     ).toHaveAttribute('aria-pressed', 'false');
 
     await rerender({ data, state: { isLoading: false, isSelected: true }, actions });
 
     expect(screen.getByText('76/100')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Condição dos recursos: tirar o filtro' }),
+      screen.getByRole('button', { name: /^Condição dos recursos .+: tirar o filtro$/ }),
     ).toHaveAttribute('aria-pressed', 'true');
     await userEvent.hover(screen.getByText('76/100'));
     expect(await screen.findByRole('tooltip', { hidden: true })).toHaveTextContent(data.tooltip);
@@ -168,22 +168,24 @@ describe('AzuosStatCard', () => {
 
   /* A cor é do CARTÃO inteiro, não de uma borda ou barra fina — é o que faz o olho achar o
      cartão certo sem precisar ler o rótulo primeiro. */
-  it('pinta o fundo do cartão inteiro com a cor da situação, sem opacidade', () => {
-    const { container } = render(StatCard, {
+  it('fica na superfície da marca, com o número no sotaque da situação, sem opacidade', () => {
+    render(StatCard, {
       props: { data: { label: 'Vencidos', value: 3 }, ui: { tone: 'danger' } },
     });
 
-    const card = container.firstElementChild;
-    expect(card?.className).toContain('bg-destructive-soft');
-    expect(card?.className).not.toMatch(/\/\d/);
+    const card = screen.getByRole('group', { name: 'Vencidos' });
+    expect(card).toHaveClass('bg-card');
+    expect(screen.getByText('3')).toHaveClass('text-hue-red');
+    expect(card.className).not.toMatch(/\/\d/);
   });
 
   it('sem tom escolhido, usa o cartão neutro do sistema', () => {
-    const { container } = render(StatCard, {
+    render(StatCard, {
       props: { data: { label: 'Total', value: 3 } },
     });
 
-    expect(container.firstElementChild?.className).toContain('bg-card');
+    expect(screen.getByRole('group', { name: 'Total' })).toHaveClass('bg-card');
+    expect(screen.getByText('3')).toHaveClass('text-hue-slate');
   });
 
   it('com onClick, vira um atalho: um botão que diz o que o clique faz', () => {
@@ -192,15 +194,15 @@ describe('AzuosStatCard', () => {
       props: { data: { label: 'Abertos', value: 5 }, actions: { onClick } },
     });
 
-    const button = screen.getByRole('button', { name: 'Abertos: filtrar a lista' });
+    const button = screen.getByRole('button', { name: /^Abertos .+: filtrar a lista$/ });
     expect(button).toHaveAttribute('aria-pressed', 'false');
 
     button.click();
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it('selecionado, avisa que o clique tira o filtro e ganha o fundo na cor cheia do tom', () => {
-    const { container } = render(StatCard, {
+  it('selecionado, avisa que o clique tira o filtro e fica no azul claro da marca', () => {
+    render(StatCard, {
       props: {
         data: { label: 'Abertos', value: 5 },
         state: { isSelected: true },
@@ -208,12 +210,13 @@ describe('AzuosStatCard', () => {
       },
     });
 
-    expect(screen.getByRole('button', { name: 'Abertos: tirar o filtro' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /^Abertos .+: tirar o filtro$/ })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    expect(container.firstElementChild).toHaveClass('bg-muted-foreground');
-    expect(container.firstElementChild?.className).not.toMatch(/\bring-/);
+    const card = screen.getByRole('group', { name: /^Abertos/ });
+    expect(card).toHaveClass('bg-card-selected');
+    expect(card.className).not.toMatch(/\bring-/);
   });
 
   // triste

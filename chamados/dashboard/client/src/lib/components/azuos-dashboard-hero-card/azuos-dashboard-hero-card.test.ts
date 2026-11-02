@@ -67,7 +67,9 @@ describe('AzuosDashboardHeroCard — icons, hints, description and what goes bel
           title: 'Painel',
           description: 'O que pede atenção hoje.',
           zuzu: { pose: 'alert', size: 96 },
-          stats: [{ label: 'Máquinas', value: 7, hint: 'no parque', icon: Server, tone: 'success' }],
+          stats: [
+            { label: 'Máquinas', value: 7, hint: 'no parque', icon: Server, tone: 'success' },
+          ],
         },
         children: createRawSnippet(() => ({ render: () => '<p>ação do painel</p>' })),
       },
@@ -82,7 +84,9 @@ describe('AzuosDashboardHeroCard — icons, hints, description and what goes bel
   // triste
   it('falls back to the default tone for a tone it does not know', () => {
     render(DashboardHeroCard, {
-      props: { data: { title: 'Painel', stats: [{ label: 'Outro', value: 1, tone: 'neon' as never }] } },
+      props: {
+        data: { title: 'Painel', stats: [{ label: 'Outro', value: 1, tone: 'neon' as never }] },
+      },
     });
     expect(screen.getByText('Outro')).toBeInTheDocument();
   });

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { createRawSnippet } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
@@ -9,44 +9,50 @@ const children = createRawSnippet(() => ({ render: () => '<p>conteúdo</p>' }));
 
 describe('AzuosToneCard (Svelte)', () => {
   // feliz
-  it('paints a static card with the soft tone background, never a colored border', () => {
+  it('sits on the brand surface whatever the tone, never a coloured background', () => {
     render(ToneCard, { props: { data: { label: 'Vencidos' }, ui: { tone: 'danger' }, children } });
 
     const card = screen.getByRole('group', { name: 'Vencidos' });
-    expect(card).toHaveClass('bg-destructive-soft');
-    expect(card.className).not.toMatch(/border-(destructive|primary|success|warning|info)/);
+    expect(card).toHaveClass('bg-card');
+    expect(card.className).not.toMatch(/bg-hue|-soft|-fill/);
   });
 
-  it('fills an interactive card with the tone when the mouse comes in', async () => {
-    render(ToneCard, {
+  it('colours the hover wash with its tone when interactive', () => {
+    const { container } = render(ToneCard, {
       props: { data: { label: 'Em dia' }, ui: { tone: 'success', mode: 'interactive' }, children },
     });
 
-    const card = screen.getByRole('group', { name: 'Em dia' });
-    expect(card).toHaveClass('hover-fill', 'bg-card');
-    expect(card.style.getPropertyValue('--fill-color')).toBe('var(--success-soft)');
-    await fireEvent.pointerEnter(card, { clientX: 4, clientY: 4 });
-    expect(card.style.getPropertyValue('--fill-x')).toBe('4px');
+    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
+    expect(wash.style.backgroundColor).toContain('--hue-green');
   });
 
   it('turns the card into a button when it is clickable', async () => {
     const onClick = vi.fn();
-    render(ToneCard, {
-      props: { data: { label: 'Pendentes' }, ui: { tone: 'warning', mode: 'interactive' }, actions: { onClick }, children },
-    });
+    render(ToneCard, { props: { data: { label: 'Pendentes' }, actions: { onClick }, children } });
 
     await userEvent.click(screen.getByRole('button', { name: 'Pendentes' }));
     expect(onClick).toHaveBeenCalledOnce();
   });
 
-  // triste
-  it('marks the selected card with the full tone color, not a ring', () => {
+  it('marks the selected card in the light blue of the brand', () => {
     render(ToneCard, {
-      props: { data: { label: 'Todos' }, ui: { tone: 'brand', mode: 'interactive' }, state: { isSelected: true }, children },
+      props: {
+        data: { label: 'Todos' },
+        ui: { tone: 'brand' },
+        state: { isSelected: true },
+        children,
+      },
     });
 
-    const card = screen.getByRole('group', { name: 'Todos' });
-    expect(card).toHaveClass('bg-primary');
-    expect(card.className).not.toMatch(/\bring-/);
+    expect(screen.getByRole('group', { name: 'Todos' })).toHaveClass('bg-card-selected');
+  });
+
+  // triste
+  it('keeps a neutral wash on a static card, and is not a button without an action', () => {
+    const { container } = render(ToneCard, { props: { data: { label: 'Neutro' }, children } });
+
+    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
+    expect(wash.style.backgroundColor).toContain('--foreground');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });

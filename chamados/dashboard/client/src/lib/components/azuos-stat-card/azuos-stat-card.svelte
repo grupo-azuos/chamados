@@ -1,15 +1,14 @@
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
 
+  import { type AzuosCardTone } from '$lib/utils/card-tone.util';
+
   /**
-   * O número que se lê de relance, no alto do painel.
-   *
-   * Quando o cartão tem um tom (danger, info, success, brand, warning), ele ganha o fundo
-   * sólido da cor correspondente sem borda (o token `-soft` do tom) no espírito
-   * dos cards de dashboard modernos do VibePrompts. Sem tom escolhido (neutral), ele
-   * permanece neutro com borda padrão.
+   * O CARD DE PAINEL e o FILTRO GRANDE com ícone: o número que se lê de relance. O mesmo desenho
+   * do template — superfície da marca (`AzuosCardSurface`), sotaque na bolinha do ícone e no
+   * número; com `onClick` vira filtro, e o escolhido fica no azul claro da marca com texto branco.
    */
-  export type StatCardTone = 'brand' | 'neutral' | 'success' | 'warning' | 'danger' | 'info';
+  export type StatCardTone = AzuosCardTone;
 
   export type AzuosStatCardProps = {
     data: {
@@ -23,6 +22,8 @@
       size?: 'md' | 'lg';
       className?: string;
       icon?: LucideIcon;
+      /** O hover pinta a mancha no sotaque do card, em vez do véu neutro. */
+      isHoverColored?: boolean;
     };
     state?: {
       isLoading?: boolean;
@@ -32,88 +33,37 @@
     /** Com `onClick` o cartão vira um atalho: clicar nele filtra a lista pelo que ele conta. */
     actions?: { onClick?: () => void };
   };
-
-  /** O fundo do cartão inteiro — quando colorido, não tem borda; quando neutro, usa bg-card com borda */
-  const TONE_CARD: Record<StatCardTone, string> = {
-    brand: 'bg-primary-soft text-ink-900',
-    neutral: 'bg-card border-border border text-card-foreground',
-    success: 'bg-success-soft text-ink-900',
-    warning: 'bg-warning-soft text-ink-900',
-    danger: 'bg-destructive-soft text-ink-900',
-    info: 'bg-info-soft text-ink-900',
-  };
-
-  /** Selecionado: o fundo na cor CHEIA do tom, com o texto claro por cima — nunca um contorno. */
-  const TONE_SELECTED: Record<StatCardTone, string> = {
-    brand: 'bg-primary text-primary-foreground',
-    neutral: 'bg-muted-foreground text-background',
-    success: 'bg-success text-success-foreground',
-    warning: 'bg-warning text-warning-foreground',
-    danger: 'bg-destructive text-destructive-foreground',
-    info: 'bg-info text-info-foreground',
-  };
-
-  /** O chip do ícone no cartão selecionado: o inverso do fundo, com o ícone na cor do tom. */
-  const TONE_ICON_SELECTED: Record<StatCardTone, string> = {
-    brand: 'bg-primary-foreground text-primary',
-    neutral: 'bg-background text-foreground',
-    success: 'bg-success-foreground text-success',
-    warning: 'bg-warning-foreground text-warning',
-    danger: 'bg-destructive-foreground text-destructive',
-    info: 'bg-info-foreground text-info',
-  };
-
-  const TONE_LABEL: Record<StatCardTone, string> = {
-    brand: 'text-primary',
-    neutral: 'text-ink-500',
-    success: 'text-success',
-    warning: 'text-warning',
-    danger: 'text-destructive',
-    info: 'text-info',
-  };
-
-  const TONE_VALUE: Record<StatCardTone, string> = {
-    brand: 'text-ink-900',
-    neutral: 'text-ink-900',
-    success: 'text-ink-900',
-    warning: 'text-ink-900',
-    danger: 'text-ink-900',
-    info: 'text-ink-900',
-  };
-
-  const TONE_ICON: Record<StatCardTone, string> = {
-    brand: 'bg-primary text-primary-foreground',
-    neutral: 'bg-muted-foreground text-background',
-    success: 'bg-success text-success-foreground',
-    warning: 'bg-warning text-warning-foreground',
-    danger: 'bg-destructive text-destructive-foreground',
-    info: 'bg-info text-info-foreground',
-  };
 </script>
 
 <script lang="ts">
   import Info from '@lucide/svelte/icons/info';
 
+  import AzuosCardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
-  import { cn } from '$lib/utils/cn';
   import { Skeleton } from '$lib/components/ui/skeleton';
+  import { cardToneClasses } from '$lib/utils/card-tone.util';
+  import { cn } from '$lib/utils/cn';
 
   // A prop mantém o nome público `state`, mas esse nome local faria `$state` virar
   // inscrição numa store em vez da rune do Svelte usada pelo tooltip.
   let { data, ui, state: cardState, actions }: AzuosStatCardProps = $props();
 
   const tone = $derived(ui?.tone ?? 'neutral');
+  const classes = $derived(cardToneClasses(tone));
   const Icon = $derived(ui?.icon);
-  const isClickable = $derived(Boolean(actions?.onClick));
-  const labelClass = $derived(
-    cn('text-xs font-semibold tracking-wider uppercase', cardState?.isSelected ? 'text-current' : TONE_LABEL[tone]),
+  const isSelected = $derived(Boolean(cardState?.isSelected));
+  /* O nome lido pelo leitor de tela leva o número, e diz o que o próximo clique faz. */
+  const label = $derived(
+    actions?.onClick
+      ? `${data.label} ${data.value}: ${isSelected ? 'tirar o filtro' : 'filtrar a lista'}`
+      : data.label,
   );
   let isTooltipOpen = $state(false);
 </script>
 
 {#snippet labelRow(className: string)}
   <div class={className}>
-    <p class={labelClass}>{data.label}</p>
+    <p class="text-xs leading-none font-semibold tracking-wider uppercase">{data.label}</p>
     {#if data.tooltip}
       <Tooltip.Provider>
         <Tooltip.Root bind:open={isTooltipOpen}>
@@ -123,7 +73,7 @@
                 {...props}
                 type="button"
                 aria-label={`Como calculamos ${data.label.toLocaleLowerCase('pt-BR')}`}
-                class="text-ink-500 hover:text-ink-700 focus-visible:ring-ring relative z-10 inline-flex size-5 shrink-0 cursor-help items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
+                class="text-muted-foreground hover:text-foreground focus-visible:ring-ring relative z-20 inline-flex size-5 shrink-0 cursor-help items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
               >
                 <Info size={14} aria-hidden="true" />
               </button>
@@ -131,7 +81,7 @@
           </Tooltip.Trigger>
           <Tooltip.Content
             role="tooltip"
-            class="max-w-sm flex-col items-start gap-1 whitespace-normal text-left"
+            class="max-w-sm flex-col items-start gap-1 text-left whitespace-normal"
           >
             {data.tooltip}
           </Tooltip.Content>
@@ -142,72 +92,60 @@
 {/snippet}
 
 <div
-  role="group"
-  aria-label={data.label}
+  role="presentation"
   onpointerenter={() => (isTooltipOpen = Boolean(data.tooltip))}
   onpointerleave={() => (isTooltipOpen = false)}
-  class={cn(
-    /* Cartão é SUPERFÍCIE: o mesmo raio do `Card`, do diálogo e da tabela
-       (`lib/theme/tokens.css`). Vinha com raio de controle e encostava visualmente nos
-       botões em volta. */
-    'rounded-surface py-4 pr-4 pl-5 transition-all shadow-xs',
-    cardState?.isSelected
-      ? TONE_SELECTED[tone]
-      : TONE_CARD[tone],
-    /* Clicável: sobe um pouco no hover, para avisar que responde ao clique. Selecionado: o
-       fundo na cor cheia do tom (acima), nunca um contorno. */
-    isClickable && 'relative cursor-pointer hover:-translate-y-0.5 hover:shadow-xl',
-    ui?.className,
-  )}
+  class="contents"
 >
-  <!-- O clique é um BOTÃO de verdade, estendido por cima do cartão inteiro: alcançável pelo
-       teclado e anunciado pelo leitor de tela, sem trocar a marcação do cartão (parágrafo
-       dentro de botão não é HTML válido). -->
-  {#if isClickable}
-    <button
-      type="button"
-      class="rounded-surface absolute inset-0 cursor-pointer"
-      aria-pressed={Boolean(cardState?.isSelected)}
-      aria-label={cardState?.isSelected
-        ? `${data.label}: tirar o filtro`
-        : `${data.label}: filtrar a lista`}
-      onclick={actions?.onClick}
-    ></button>
-  {/if}
+  <AzuosCardSurface
+    data={{ label }}
+    ui={{
+      className: cn('py-4 pr-4 pl-5', ui?.className),
+      isHoverColored: ui?.isHoverColored,
+      hoverTone: tone,
+    }}
+    state={{ isSelected, isDisabled: cardState?.isLoading }}
+    {actions}
+  >
+    {#if Icon}
+      <div class="mb-3 flex items-center gap-2.5">
+        <span
+          class={cn(
+            'rounded-chip flex size-9 shrink-0 items-center justify-center',
+            'group-data-[selected=true]/card:bg-on-card-selected group-data-[selected=true]/card:text-card-selected',
+            classes.dot,
+          )}
+        >
+          <Icon size={18} class="block shrink-0" aria-hidden="true" />
+        </span>
+        {@render labelRow('flex min-w-0 items-center gap-1')}
+      </div>
+    {:else}
+      {@render labelRow('mb-1.5 flex items-center gap-1')}
+    {/if}
 
-  {#if Icon}
-    <div class="mb-2 flex items-center gap-2.5">
-      <span
-        class={cn(
-          'flex size-8 shrink-0 items-center justify-center rounded-chip',
-          cardState?.isSelected ? TONE_ICON_SELECTED[tone] : TONE_ICON[tone],
-        )}
-      >
-        <Icon size={15} aria-hidden="true" />
-      </span>
-      {@render labelRow('flex min-w-0 items-center gap-1')}
-    </div>
-  {:else}
-    {@render labelRow('mb-1 flex items-center gap-1')}
-  {/if}
+    {#if cardState?.isLoading}
+      <Skeleton class="mt-1 h-8 w-20" />
+    {:else}
+      <div class="flex flex-wrap items-baseline gap-x-2">
+        <p
+          class={cn(
+            'group-data-[selected=true]/card:text-on-card-selected font-bold tabular-nums',
+            ui?.size === 'lg' ? 'text-4xl' : 'text-3xl tracking-tight',
+            classes.text,
+          )}
+        >
+          {data.value}
+        </p>
 
-  {#if cardState?.isLoading}
-    <Skeleton class="mt-1 h-8 w-20" />
-  {:else}
-    <div class="flex flex-wrap items-baseline gap-x-2">
-      <p
-        class={cn(
-          'font-bold tabular-nums',
-          ui?.size === 'lg' ? 'text-4xl' : 'text-3xl font-semibold tracking-tight',
-          cardState?.isSelected ? 'text-current' : TONE_VALUE[tone],
-        )}
-      >
-        {data.value}
-      </p>
-
-      {#if data.hint}
-        <p class={cn('text-xs mt-0.5', cardState?.isSelected ? 'text-current' : TONE_LABEL[tone])}>{data.hint}</p>
-      {/if}
-    </div>
-  {/if}
+        {#if data.hint}
+          <p
+            class="text-muted-foreground group-data-[selected=true]/card:text-on-card-selected mt-0.5 text-xs"
+          >
+            {data.hint}
+          </p>
+        {/if}
+      </div>
+    {/if}
+  </AzuosCardSurface>
 </div>
