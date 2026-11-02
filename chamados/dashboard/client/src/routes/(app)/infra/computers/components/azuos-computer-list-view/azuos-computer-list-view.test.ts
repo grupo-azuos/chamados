@@ -394,3 +394,51 @@ describe('AzuosComputerListView maintenance parity', () => {
     }
   });
 });
+
+describe('AzuosComputerListView — export, situations and the cut list', () => {
+  function renderList(computers: ComputerListItem[], state: Partial<typeof settled> & { exportError?: string | null; exportingFormat?: 'xlsx' | 'docx' | 'pdf' | null } = {}) {
+    return render(ComputerListView, {
+      props: {
+        data: { computers, total: 40, summary, filter: emptyFilter },
+        state: { ...settled, ...state },
+        actions,
+      },
+    });
+  }
+
+  // feliz
+  it('exports the inventory in the chosen format', async () => {
+    renderList([computer()]);
+    const exportButtons = screen.getAllByRole('button', { name: /CSV|Excel|PDF/i });
+    await userEvent.click(exportButtons[0]!);
+    expect(actions.onExportReport).toHaveBeenCalled();
+  });
+
+  // triste
+  it('shows why the export failed and that the list was cut', () => {
+    renderList([computer()], { exportError: 'Não foi possível gerar o arquivo.', isTruncated: true });
+    expect(screen.getByText('Não foi possível gerar o arquivo.')).toBeInTheDocument();
+    expect(screen.getByText(/Mostrando 1 de 40 computadores/)).toBeInTheDocument();
+  });
+
+  // feliz
+  it('tells archived and offline machines apart, with or without a responsible', () => {
+    renderList([
+      computer({ id: 1, isArchived: true, responsibleName: null, department: null }),
+      computer({ id: 2, name: 'FISCAL-02', displayName: null, isOnline: false, ticketsThisMonth: 3 }),
+    ]);
+    expect(screen.getAllByText('Arquivada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Offline').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Sem departamento').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('3').length).toBeGreaterThan(0);
+  });
+
+  // feliz
+  it('opens the record from the table as well as from the card', async () => {
+    renderList([computer()]);
+    const buttons = screen.getAllByRole('button', { name: 'Ver ficha' });
+    await userEvent.click(buttons.at(-1)!);
+    expect(actions.onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+});
