@@ -157,3 +157,26 @@ describe('AzuosInventoryDisposalListView', () => {
     expect(screen.queryByText('Base rachou; sem conserto.')).toBeNull();
   });
 });
+
+describe('AzuosInventoryDisposalListView — one line, the reason filter and the cut list', () => {
+  // feliz
+  it('speaks in the singular for one disposal of one unit, filters by reason and says the list was cut', async () => {
+    vi.mocked(actions.onReasonChange).mockClear();
+    setup({
+      data: { disposals: [disposal({ quantity: 1, reason: null })], total: 1, units: 1, filter: noFilter },
+      state: { ...settled, isTruncated: true },
+    });
+
+    expect(screen.getByText(/1 descarte · 1 unidade/)).toBeInTheDocument();
+    expect(screen.getByText(/A lista mostra os descartes mais recentes/)).toBeInTheDocument();
+
+    const group = screen.queryByRole('group', { name: 'Filtrar por motivo' });
+    if (group) await userEvent.click(within(group).getAllByRole('button')[1]!);
+    else {
+      await userEvent.click(screen.getByRole('button', { name: 'Filtrar por motivo' }));
+      const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+      await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
+    }
+    expect(actions.onReasonChange).toHaveBeenCalled();
+  });
+});

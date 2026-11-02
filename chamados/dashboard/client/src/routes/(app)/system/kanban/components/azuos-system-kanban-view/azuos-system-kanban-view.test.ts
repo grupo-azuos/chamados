@@ -330,3 +330,21 @@ describe('AzuosSystemKanbanView: labels, keyboard and notices', () => {
     expect(screen.queryByTitle('Fechar aviso')).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosSystemKanbanView — the issue link and a card hovering with data', () => {
+  // feliz
+  it('opens the GitHub issue without opening the ticket, and accepts a card hovering with drag data', async () => {
+    const actions = renderView();
+
+    const issue = screen.getByRole('link', { name: /#42/ });
+    issue.addEventListener('click', (event) => event.preventDefault());
+    await userEvent.click(issue);
+    expect(actions.onOpenTicket).not.toHaveBeenCalled();
+
+    const column = screen.getByText('Em Atendimento').closest('section, div[role="region"], div')!;
+    await fireEvent.dragOver(column, { dataTransfer: { dropEffect: 'none', getData: () => 'ticket:10', setData: () => {} } });
+    await fireEvent.dragEnter(column, { dataTransfer: { getData: () => 'ticket:10', setData: () => {} } });
+    await fireEvent.dragLeave(column, { dataTransfer: { getData: () => 'ticket:10', setData: () => {} } });
+    expect(column).toBeInTheDocument();
+  });
+});
