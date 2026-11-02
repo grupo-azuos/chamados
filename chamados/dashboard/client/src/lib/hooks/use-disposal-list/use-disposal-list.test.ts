@@ -185,3 +185,33 @@ describe('useDisposalListModel', () => {
     expect(model.state.isEmpty).toBe(false);
   });
 });
+
+describe('useDisposalListModel — the filters, retry and the unanswered question', () => {
+  // feliz
+  it('searches, clears the filters and asks the server again', async () => {
+    let model!: DisposalListModel;
+    render(Harness, { props: { onReady: (ready: DisposalListModel) => (model = ready) } });
+    await waitFor(() => expect(model.state.isLoading).toBe(false));
+
+    model.actions.onSearchChange('recep');
+    await waitFor(() => expect(model.data.filter.search).toBe('recep'));
+    model.actions.onClearFilters();
+    await waitFor(() => expect(model.data.filter.search).toBe(''));
+
+    vi.mocked(computersApi.list).mockClear();
+    model.actions.onRetry();
+    await waitFor(() => expect(computersApi.list).toHaveBeenCalled());
+  });
+
+  // triste
+  it('drops the restore question when the person changes her mind', async () => {
+    let model!: DisposalListModel;
+    render(Harness, { props: { onReady: (ready: DisposalListModel) => (model = ready) } });
+    await waitFor(() => expect(model.state.isLoading).toBe(false));
+
+    model.actions.onAskRestore({ id: 9 } as never);
+    expect(model.data.restoring).not.toBeNull();
+    model.actions.onCancelRestore();
+    expect(model.data.restoring).toBeNull();
+  });
+});
