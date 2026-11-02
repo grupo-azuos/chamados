@@ -115,3 +115,99 @@ describe('eventStatusOf and peopleLineOf', () => {
     expect(peopleLineOf(event({ coAuthors: ['  '] }))).toBe('Ana Lima');
   });
 });
+
+describe('AzuosProjectDetailView — sync feedback, tickets and the timeline filter', () => {
+  const ticket = {
+    id: 7,
+    status: 'open',
+    problemType: 'bug',
+    requesterName: 'Marta',
+  } as never;
+
+  function renderFull(
+    data: Partial<Parameters<typeof ProjectDetailView>[1]['data']> = {},
+    state: Parameters<typeof ProjectDetailView>[1]['state'] = { canSync: true },
+  ) {
+    const events = [event({ id: 1, status: 'open', url: 'https://github.com/example/portal/pull/1' })];
+    return render(ProjectDetailView, {
+      props: {
+        data: {
+          project,
+          progress: projectProgressOf(events, Date.parse('2026-10-23T12:00:00.000Z')),
+          days: timelineDaysOf(events, ''),
+          openTickets: [],
+          filter: '',
+          ...data,
+        },
+        state,
+        actions,
+      },
+    });
+  }
+
+  beforeEach(() => vi.clearAllMocks());
+
+  // triste
+  it('shows the sync failure before any success message', () => {
+    renderFull({ syncMessage: 'Sincronizado agora.' }, { canSync: true, syncError: 'GitHub indisponível.', isSyncing: true });
+    expect(screen.getByText('GitHub indisponível.')).toBeInTheDocument();
+    expect(screen.queryByText('Sincronizado agora.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sincronizando…' })).toBeInTheDocument();
+  });
+
+  // feliz
+  it('tells when the sync finished and that the history was cut', () => {
+    renderFull({ syncMessage: 'Sincronizado agora.', isTruncated: true });
+    expect(screen.getByRole('status')).toHaveTextContent('Sincronizado agora.');
+    expect(screen.getByText(/Mostrando a atividade mais recente/)).toBeInTheDocument();
+  });
+
+  // feliz
+  it('opens a ticket, links to GitHub and filters the timeline', async () => {
+    renderFull({ openTickets: [ticket] });
+    await userEvent.click(screen.getByRole('button', { name: /Marta/ }));
+    expect(actions.onOpenTicket).toHaveBeenCalledWith(ticket);
+    expect(screen.getByRole('link', { name: 'Abrir #1 no GitHub' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'ver no GitHub' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Issues' }));
+    expect(actions.onFilterChange).toHaveBeenCalledWith('issue');
+    await userEvent.click(screen.getByRole('button', { name: /Voltar para os projetos/ }));
+    expect(actions.onBack).toHaveBeenCalled();
+  });
+
+  // triste
+  it('describes a project without description and an event without identifier', () => {
+    const events = [event({ id: 3, externalId: null, url: null, type: 'issue', status: 'open' })];
+    render(ProjectDetailView, {
+      props: {
+        data: {
+          project: { ...project, description: null },
+          progress: projectProgressOf(events, Date.parse('2026-10-23T12:00:00.000Z')),
+          days: timelineDaysOf(events, ''),
+          openTickets: [],
+          filter: '',
+        },
+        state: {},
+        actions,
+      },
+    });
+    expect(screen.getByText('Sem descrição cadastrada.')).toBeInTheDocument();
+    expect(screen.getAllByText('Pendente').length).toBeGreaterThan(0);
+  });
+});
+
+describe('eventStatusOf — every kind', () => {
+  // feliz
+  it('reads merged PRs, resolved issues and releases', () => {
+    expect(eventStatusOf(event({ status: 'merged' }))).toEqual({ label: 'Entregue', tone: 'success' });
+    expect(eventStatusOf(event({ type: 'issue', status: 'closed' }))).toEqual({ label: 'Resolvida', tone: 'success' });
+    expect(eventStatusOf(event({ type: 'release', status: 'closed' })).tone).toBe('brand');
+  });
+
+  // triste
+  it('falls back to the login and then to "not informed" for the author', () => {
+    expect(peopleLineOf(event({ authorName: null }))).toBe('ana');
+    expect(peopleLineOf(event({ authorName: null, author: null }))).toBe('Não informado');
+    expect(peopleLineOf(event({ coAuthors: undefined }))).toBe('Ana Lima');
+  });
+});
