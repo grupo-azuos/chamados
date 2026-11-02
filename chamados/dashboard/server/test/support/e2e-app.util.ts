@@ -62,7 +62,34 @@ export const CAIO: SessionUser = {
   roles: { infra: 'admin' },
 };
 
-const PEOPLE: SessionUser[] = [ANA, BIA, CAIO];
+/**
+ * Dora administra Sistema e Manutenção (mexe nos dois); Edu só consulta os dois — é quem prova
+ * que a tranca de escrita do módulo fecha. Olga é a super-admin: a única que abre a tela de
+ * Acessos, e passa por todos os módulos sem linha nenhuma em `internal_roles`.
+ */
+export const DORA: SessionUser = {
+  id: '00000000-0000-4000-8000-00000000000d',
+  email: 'dora@empresa.com.br',
+  name: 'Dora',
+  role: 'admin',
+  roles: { sistema: 'admin', manutencao: 'admin' },
+};
+export const EDU: SessionUser = {
+  id: '00000000-0000-4000-8000-00000000000e',
+  email: 'edu@empresa.com.br',
+  name: 'Edu',
+  role: 'manager',
+  roles: { sistema: 'user', manutencao: 'user' },
+};
+export const OLGA: SessionUser = {
+  id: '00000000-0000-4000-8000-000000000050',
+  email: 'olga@empresa.com.br',
+  name: 'Olga',
+  role: 'superadmin',
+  roles: { infra: 'superadmin', sistema: 'superadmin', manutencao: 'superadmin' },
+};
+
+const PEOPLE: SessionUser[] = [ANA, BIA, CAIO, DORA, EDU, OLGA];
 
 /** Os quatro cabeçalhos que o admin-console injeta pelo proxy, para uma pessoa. */
 export function forwardedAs(person: Pick<SessionUser, 'id' | 'email' | 'name'>, role = 'admin') {
@@ -77,6 +104,11 @@ export function forwardedAs(person: Pick<SessionUser, 'id' | 'email' | 'name'>, 
 export const asAna = () => forwardedAs(ANA, 'admin');
 export const asBia = () => forwardedAs(BIA, 'manager');
 export const asCaio = () => forwardedAs(CAIO, 'admin');
+export const asDora = () => forwardedAs(DORA, 'admin');
+export const asEdu = () => forwardedAs(EDU, 'manager');
+/* O cabeçalho só admite os três papéis do admin-console; o super-admin vem do banco (aqui, do
+   provedor fingido). Por isso Olga chega como `admin` e sai como `superadmin`. */
+export const asOlga = () => forwardedAs(OLGA, 'admin');
 
 /** Alguém que o proxy identificou, mas que este sistema não conhece. */
 export const asStranger = () =>
