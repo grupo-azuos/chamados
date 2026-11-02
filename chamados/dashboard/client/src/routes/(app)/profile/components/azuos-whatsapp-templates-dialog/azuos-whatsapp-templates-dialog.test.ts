@@ -128,20 +128,20 @@ describe('AzuosWhatsappTemplatesDialog', () => {
 describe('AzuosWhatsappTemplatesDialog — choosing, typing, feedback and closing', () => {
   // feliz
   it('reports the chosen message and the typed text, and confirms the save', async () => {
-    const other = { ...ready, key: 'ticket_resolved', label: 'Chamado resolvido' };
+    const other = { ...ready, key: 'ticket_update' as const, label: 'Chamado atualizado' };
     const actions = renderDialog({ isSaved: true, error: 'Não consegui salvar.' }, { templates: [ready, other], draft: 'Olá ' });
 
     expect(screen.getByRole('status')).toHaveTextContent('Texto salvo.');
     expect(screen.getByText('Não consegui salvar.')).toBeInTheDocument();
 
     const group = screen.queryByRole('group', { name: 'Mensagem' });
-    if (group) await userEvent.click(within(group).getByRole('button', { name: 'Chamado resolvido' }));
+    if (group) await userEvent.click(within(group).getByRole('button', { name: 'Chamado atualizado' }));
     else {
       await userEvent.click(screen.getByRole('button', { name: 'Mensagem' }));
       const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
-      await userEvent.click(within(popup).getByText('Chamado resolvido'));
+      await userEvent.click(within(popup).getByText('Chamado atualizado'));
     }
-    expect(actions.onSelect).toHaveBeenCalledWith('ticket_resolved');
+    expect(actions.onSelect).toHaveBeenCalledWith('ticket_update');
 
     await userEvent.type(screen.getByRole('textbox', { name: /Texto/ }), '!');
     expect(actions.onDraftChange).toHaveBeenCalled();
