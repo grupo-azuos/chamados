@@ -348,3 +348,29 @@ describe('AzuosSystemKanbanView — the issue link and a card hovering with data
     expect(column).toBeInTheDocument();
   });
 });
+
+describe('AzuosSystemKanbanView: drag edges and the picker keys', () => {
+  // triste
+  /* Sem `dataTransfer` (alguns navegadores em arrastos sintéticos) a coluna ainda acende. */
+  it('highlights the column even when the drag carries no dataTransfer', async () => {
+    renderView();
+    const target = screen.getByRole('region', { name: 'Em Atendimento' });
+    await fireEvent.dragStart(screen.getByRole('button', { name: /CH-0010/ }), { dataTransfer: dataTransfer() });
+
+    await fireEvent.dragOver(target);
+    expect(screen.getByText('Solte aqui para mover para Em Atendimento')).toBeInTheDocument();
+
+    /* Sair de uma coluna em que nunca se entrou não deixa contador negativo. */
+    await fireEvent.dragLeave(target);
+    expect(screen.queryByText('Solte aqui para mover para Em Atendimento')).not.toBeInTheDocument();
+  });
+
+  it('keeps the label picker open on any key other than Escape', async () => {
+    renderView();
+    await fireEvent.click(screen.getByTitle('Atribuir etiqueta ao card'));
+
+    await fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Tab' });
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+});

@@ -140,3 +140,12 @@ describe('AzuosDonutChart — the balloon, the empty ring and the clickable ring
     expect(document.querySelector('.cursor-pointer')).not.toBeNull();
   });
 });
+
+describe('AzuosDonutChart — default empty text', () => {
+  // triste
+  it('says there is nothing to show when the screen gave no empty text', () => {
+    render(DonutChart, { props: { data: { slices: [], seriesLabel: 'Chamados' } } });
+
+    expect(screen.getByText('Sem dados para mostrar')).toBeInTheDocument();
+  });
+});

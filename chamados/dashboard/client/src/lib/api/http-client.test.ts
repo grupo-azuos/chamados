@@ -256,3 +256,26 @@ describe('http-client — the odd answers of the server and the storage', () => 
     });
   });
 });
+
+describe('apiRequest — odd answers and empty filters', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // triste
+  /* Um corpo de erro que não é objeto (um `null` literal) não pode virar mensagem: fica o padrão. */
+  it('falls back to the status message when the error body is a bare null', async () => {
+    vi.stubGlobal('fetch', respond(500, null));
+
+    await expect(apiRequest('/tickets')).rejects.toMatchObject({ status: 500 });
+  });
+
+  it('sends no question mark when every filter is empty', async () => {
+    const fetchMock = respond(200, []);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiRequest('/tickets', { query: { search: '', page: undefined, area: null } });
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain('?');
+  });
+});

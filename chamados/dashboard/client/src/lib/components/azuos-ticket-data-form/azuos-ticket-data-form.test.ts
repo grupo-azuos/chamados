@@ -268,3 +268,12 @@ describe('AzuosTicketDataForm — area, type, system and attendant', () => {
     expect(acts.onChange).toHaveBeenCalledWith('assigneeId', 'u-ana');
   });
 });
+
+describe('AzuosTicketDataForm — without a project list', () => {
+  // triste
+  it('still offers "Nenhum" as the project when the list did not come', () => {
+    setup({ data: { ...data(), projects: undefined } });
+
+    expect(document.body.textContent).toContain('Nenhum');
+  });
+});

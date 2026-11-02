@@ -226,3 +226,25 @@ describe('useMaintenanceFormModel — blur and the record being corrected', () =
     expect(model.data.fields.performedBy.value).toBe('');
   });
 });
+
+describe('useMaintenanceFormModel — equipment without a machine', () => {
+  beforeEach(() => {
+    vi.mocked(maintenancesApi.create).mockReset();
+    vi.mocked(maintenancesApi.create).mockResolvedValue(maintenance());
+    vi.mocked(computersApi.list).mockResolvedValue({ items: [computer()], total: 1, page: 1, pageSize: 200 });
+  });
+
+  // feliz
+  it('sends the hand-typed equipment when no machine was chosen', async () => {
+    const model = mountModel();
+
+    model.actions.onChange('otherMachine', '  Impressora da recepção  ');
+    model.actions.onSubmit();
+
+    await waitFor(() =>
+      expect(maintenancesApi.create).toHaveBeenCalledWith(
+        expect.objectContaining({ computerId: null, otherMachine: 'Impressora da recepção' }),
+      ),
+    );
+  });
+});

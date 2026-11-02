@@ -346,3 +346,39 @@ describe('useSoftwareKanbanModel — every move the board accepts', () => {
     expect(model.state.moveError).toMatch(/Não foi possível movimentar/);
   });
 });
+
+describe('useSoftwareKanbanModel — waiting on third parties, and moves before the board loads', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(softwareProjectsApi.list).mockResolvedValue(page([project()]));
+    vi.mocked(ticketsApi.list).mockResolvedValue(page(BOARD));
+    vi.mocked(ticketsApi.createHistory).mockReset().mockResolvedValue({} as never);
+  });
+
+  // feliz
+  it('resumes a ticket that was waiting on a third party', async () => {
+    const model = await mountLoadedModel();
+
+    await model.actions.onMoveTicket(5, 'in_progress');
+
+    expect(ticketsApi.createHistory).toHaveBeenCalledWith(5, expect.objectContaining({ type: 'resume' }), []);
+  });
+
+  // triste
+  it('resolves a ticket dragged from the waiting column to done', async () => {
+    const model = await mountLoadedModel();
+
+    await model.actions.onMoveTicket(3, 'done');
+
+    expect(ticketsApi.createHistory).toHaveBeenCalledWith(3, expect.objectContaining({ type: 'resolution' }), []);
+  });
+
+  it('ignores a move asked before the board arrived', async () => {
+    vi.mocked(ticketsApi.list).mockReturnValue(new Promise(() => undefined));
+    const model = mountModel();
+
+    await model.actions.onMoveTicket(1, 'in_progress');
+
+    expect(ticketsApi.createHistory).not.toHaveBeenCalled();
+  });
+});

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import InsightsView, {
+  departmentOf,
   machineLabelOf,
   overloadSlices,
   overloadSummaryOf,
@@ -372,5 +373,19 @@ describe('AzuosInsightsView — period, pages and the open buttons of every list
     for (const button of buttons) await user.click(button);
     expect(actions.onOpenMachine).toHaveBeenCalledTimes(buttons.length);
     expect(actions.onOpenMachine).toHaveBeenLastCalledWith(5);
+  });
+});
+
+describe('AzuosInsightsView — missing data', () => {
+  // triste
+  it('names a machine with no department as such', () => {
+    expect(departmentOf({ department: null })).toBe('Sem departamento');
+  });
+
+  it('renders empty sections when the insights did not come', () => {
+    const { container } = renderView({ insights: null });
+
+    expect(container).toBeTruthy();
+    expect(screen.queryByText('Cruzando os dados do parque…')).not.toBeInTheDocument();
   });
 });

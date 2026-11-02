@@ -211,3 +211,17 @@ describe('eventStatusOf — every kind', () => {
     expect(peopleLineOf(event({ coAuthors: undefined }))).toBe('Ana Lima');
   });
 });
+
+describe('AzuosProjectDetailView — events without a number, with a link', () => {
+  // feliz
+  it('links the open work to GitHub and copes with events that have no number', () => {
+    renderWith([
+      event({ id: 1, status: 'open', externalId: null, url: 'https://github.com/example/project/pull/1' }),
+      event({ id: 2, status: 'merged', externalId: null, title: 'Merge sem número' }),
+    ]);
+
+    const links = screen.getAllByRole('link').filter((link) => link.getAttribute('href')?.includes('/pull/1'));
+    expect(links.length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Merge sem número').length).toBeGreaterThan(0);
+  });
+});

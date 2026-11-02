@@ -117,3 +117,52 @@ describe('AzuosAvatarCropperDialog — rotating, zooming and closing', () => {
     expect(idle.onCancel).toHaveBeenCalled();
   });
 });
+
+describe('AzuosAvatarCropperDialog — without a photo yet', () => {
+  // triste
+  it('shows no editor while there is no image to crop', () => {
+    render(CropperDialog, {
+      props: { data: { imageUrl: null }, state: { isOpen: true }, actions: { onConfirm: vi.fn(), onCancel: vi.fn() } },
+    });
+
+    expect(screen.queryByRole('button', { name: 'Girar para a direita' })).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosAvatarCropperDialog — rotations that overlap', () => {
+  // triste
+  /* Girou de novo antes da primeira cópia ficar pronta: a cópia atrasada é descartada, e a que
+     ficou é liberada quando o diálogo fecha. */
+  it('frees a rotated copy that arrived late, and the last one on unmount', async () => {
+    const util = await import('$lib/utils/avatar-image.util');
+    let finishFirst!: (url: string) => void;
+    let finishSecond!: (url: string) => void;
+    const spy = vi
+      .spyOn(util, 'rotateImageUrl')
+      .mockImplementationOnce(() => new Promise((resolve) => { finishFirst = resolve; }))
+      .mockImplementationOnce(() => new Promise((resolve) => { finishSecond = resolve; }));
+    const revoke = vi.fn();
+    vi.stubGlobal('URL', Object.assign(URL, { revokeObjectURL: revoke }));
+    try {
+      const { unmount } = render(CropperDialog, {
+        props: { data: { imageUrl: IMAGE }, state: { isOpen: true }, actions: { onConfirm: vi.fn(), onCancel: vi.fn() } },
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Girar para a direita' }));
+      await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+      await userEvent.click(screen.getByRole('button', { name: 'Girar para a direita' }));
+      await waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
+
+      finishFirst('blob:http://localhost/atrasada');
+      await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:http://localhost/atrasada'));
+
+      finishSecond('blob:http://localhost/atual');
+      await waitFor(() => expect(revoke).toHaveBeenCalledTimes(1));
+      unmount();
+      expect(revoke).toHaveBeenCalledWith('blob:http://localhost/atual');
+    } finally {
+      vi.unstubAllGlobals();
+      spy.mockRestore();
+    }
+  });
+});

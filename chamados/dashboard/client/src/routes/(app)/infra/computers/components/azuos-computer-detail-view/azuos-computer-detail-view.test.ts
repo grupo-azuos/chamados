@@ -925,3 +925,35 @@ describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
     expect(screen.getByText(/Nenhum alerta registrado/)).toBeInTheDocument();
   });
 });
+
+describe('AzuosComputerDetailView — cancelled questions', () => {
+  async function askFromMenu(user: ReturnType<typeof userEvent.setup>, item: string): Promise<HTMLElement> {
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    await user.click(screen.getByRole('menuitem', { name: item }));
+
+    return screen.getByRole('dialog');
+  }
+
+  // triste
+  it('does nothing when archiving is cancelled', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onArchivedChange).mockClear();
+    renderDetail();
+
+    const dialog = await askFromMenu(user, 'Arquivar');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    expect(actions.onArchivedChange).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when unblocking is cancelled', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onBlockedChange).mockClear();
+    renderDetail({ isBlocked: true, blockReason: 'Máquina emprestada.' });
+
+    const dialog = await askFromMenu(user, 'Desbloquear');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    expect(actions.onBlockedChange).not.toHaveBeenCalled();
+  });
+});

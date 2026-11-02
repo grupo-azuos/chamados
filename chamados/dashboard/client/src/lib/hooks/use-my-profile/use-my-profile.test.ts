@@ -138,3 +138,28 @@ describe('useMyProfileModel', () => {
     expect(model.data.person).toBeNull();
   });
 });
+
+describe('useMyProfileModel — the role without a session', () => {
+  beforeEach(() => {
+    vi.mocked(authApi.config).mockResolvedValue({ accountUrl: 'https://conta.azuos.test/login' } as never);
+    vi.mocked(accountProfileApi.systems).mockResolvedValue([]);
+  });
+
+  // feliz
+  it('reads the role from the account when there is no session user', async () => {
+    vi.mocked(accountProfileApi.me).mockResolvedValue(account);
+    const model = mountModel(undefined);
+
+    await vi.waitFor(() => expect(model.data.person?.roleLabel).toBeTruthy());
+    expect(model.data.person?.roleLabel).not.toBe('Super Admin');
+  });
+
+  // triste
+  it('has no role to show without a session nor an account', async () => {
+    vi.mocked(accountProfileApi.me).mockRejectedValue(new Error('offline'));
+    const model = mountModel(undefined);
+
+    await vi.waitFor(() => expect(model.state.isLoading).toBe(false));
+    expect(model.data.person).toBeNull();
+  });
+});

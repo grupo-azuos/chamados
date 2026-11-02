@@ -594,3 +594,18 @@ describe('AzuosAppShell — o rodapé do trilho', () => {
     );
   });
 });
+
+describe('AzuosAppShell — collapsed rail while signing out', () => {
+  // feliz
+  it('names the sign out on the collapsed rail', () => {
+    renderShell({ initialSidebarOpen: false, actions: { onSignOut: vi.fn() } });
+
+    expect(screen.getAllByText('Sair').length).toBeGreaterThan(0);
+  });
+
+  it('says it is leaving on the rail while it signs out', () => {
+    renderShell({ initialSidebarOpen: false, actions: { onSignOut: vi.fn() }, state: { isSigningOut: true } });
+
+    expect(screen.getAllByText('Saindo…').length).toBeGreaterThan(0);
+  });
+});

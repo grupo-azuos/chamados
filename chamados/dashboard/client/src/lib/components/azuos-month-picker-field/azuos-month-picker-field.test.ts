@@ -57,3 +57,23 @@ describe('AzuosMonthPickerField', () => {
     expect(screen.queryByRole('button', { name: 'Limpar' })).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosMonthPickerField — label and required mark', () => {
+  // feliz
+  it('marks a required field next to its label', () => {
+    render(MonthPickerField, {
+      props: { data: { label: 'Competência', value: '2025-10' }, state: { isRequired: true }, actions: { onChange: vi.fn() } },
+    });
+
+    expect(screen.getByText('Competência').closest('label')).toHaveTextContent('*');
+  });
+
+  // triste
+  it('renders no label when the screen gave none', () => {
+    render(MonthPickerField, {
+      props: { data: { label: '', value: '2025-10' }, actions: { onChange: vi.fn() } },
+    });
+
+    expect(document.querySelector('label')).toBeNull();
+  });
+});

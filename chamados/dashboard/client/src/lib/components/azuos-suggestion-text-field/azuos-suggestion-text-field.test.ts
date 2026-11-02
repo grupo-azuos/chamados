@@ -110,3 +110,25 @@ describe('AzuosSuggestionTextField — the button, the mouse and the keys', () =
     expect(screen.getByText(/Nenhuma opção com esse texto/)).toBeInTheDocument();
   });
 });
+
+describe('AzuosSuggestionTextField — keyboard edges', () => {
+  // feliz
+  it('walks the list upwards and closes it with Escape', async () => {
+    const onChange = vi.fn();
+    render(SuggestionTextField, { props: { data, actions: { onChange } } });
+    const input = screen.getByRole('combobox', { name: 'Fornecedor' });
+
+    await userEvent.click(input);
+    await userEvent.keyboard('{ArrowUp}');
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+
+    await userEvent.keyboard('{Escape}');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('says the options are loading', () => {
+    expect(emptyMessageOf({ ...data, options: [] }, { isLoading: true })).toBe('Carregando opções…');
+  });
+});

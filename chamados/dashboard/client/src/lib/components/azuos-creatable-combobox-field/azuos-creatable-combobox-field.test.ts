@@ -115,3 +115,19 @@ describe('AzuosCreatableComboboxField — clearing, loading and the keyboard', (
     expect(await screen.findByText('Digite para buscar ou cadastrar')).toBeInTheDocument();
   });
 });
+
+describe('AzuosCreatableComboboxField — closing', () => {
+  // feliz
+  it('closes with Escape without searching again', async () => {
+    const user = userEvent.setup();
+    const actions = setup();
+    const trigger = screen.getByRole('combobox');
+    await user.click(trigger);
+    const searches = vi.mocked(actions.onSearch).mock.calls.length;
+
+    await user.keyboard('{Escape}');
+
+    expect(vi.mocked(actions.onSearch).mock.calls.length).toBe(searches);
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+});

@@ -375,3 +375,39 @@ describe('useTicketDetailModel — notifying by WhatsApp and retrying', () => {
     expect(toNoticeResult({ outcome: 'sent' } as never, null).message).toContain('quem atende');
   });
 });
+
+describe('useTicketDetailModel — without a named attendant', () => {
+  beforeEach(() => {
+    vi.mocked(ticketsApi.findById).mockReset();
+    vi.mocked(ticketsApi.findById).mockResolvedValue(ticket({ assignee: null }));
+    vi.mocked(ticketsApi.histories).mockResolvedValue([]);
+    vi.mocked(ticketsApi.attachments).mockResolvedValue([]);
+    vi.mocked(ticketsApi.whatsappNotices).mockResolvedValue([]);
+    vi.mocked(ticketsApi.notifyReady).mockReset();
+    vi.mocked(ticketsApi.serviceOrder).mockReset();
+  });
+
+  // feliz
+  it('says the notice goes out from whoever attends when nobody is assigned', async () => {
+    vi.mocked(ticketsApi.notifyReady).mockResolvedValue({ outcome: 'queued' });
+    const model = mountModel();
+    await waitFor(() => expect(model.data.ticket?.id).toBe(22));
+
+    model.actions.onNotify();
+
+    await waitFor(() => expect(model.state.notice?.message).toContain('quem atende'));
+    expect(toNoticeResult({ outcome: 'sent' }, null).message).toContain('quem atende');
+  });
+
+  // triste
+  it('says it could not generate the service order when there is no reason', async () => {
+    vi.mocked(ticketsApi.serviceOrder).mockRejectedValue(null);
+    const model = mountModel();
+
+    model.actions.onDownloadServiceOrder();
+
+    await waitFor(() =>
+      expect(model.state.serviceOrderError).toBe('Não consegui gerar a ordem de serviço.'),
+    );
+  });
+});

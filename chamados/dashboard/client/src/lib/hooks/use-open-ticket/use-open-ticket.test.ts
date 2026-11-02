@@ -476,3 +476,34 @@ describe('useOpenTicketModel — the account defaults and the screenshot being d
     expect(model.data.screenshotName).toBeNull();
   });
 });
+
+describe('useOpenTicketModel — failures without a reason', () => {
+  beforeEach(() => {
+    vi.mocked(ticketsApi.create).mockReset().mockResolvedValue(ticket());
+    vi.mocked(ticketsApi.invite).mockReset();
+  });
+
+  afterEach(() => {
+    page.url = new URL('http://localhost:5173/');
+  });
+
+  // triste
+  it('says the invite link no longer works when the server gave no reason', async () => {
+    page.url = new URL('http://localhost:5173/support?invite=abc.123');
+    vi.mocked(ticketsApi.invite).mockRejectedValue(null);
+    vi.mocked(ticketsApi.systemProjectOptions).mockResolvedValue([]);
+    const model = mountModel();
+
+    await waitFor(() =>
+      expect(model.state.inviteError).toBe('Este link não vale mais. Peça outro pelo WhatsApp.'),
+    );
+  });
+
+  it('shows why the list of systems could not be loaded', async () => {
+    vi.mocked(ticketsApi.systemProjectOptions).mockRejectedValue(new ApiError(503, 'Fora do ar.'));
+    const model = mountModel();
+    model.actions.onChange('area', 'sistema');
+
+    await waitFor(() => expect(model.state.systemProjectsError).toBe('Fora do ar.'));
+  });
+});

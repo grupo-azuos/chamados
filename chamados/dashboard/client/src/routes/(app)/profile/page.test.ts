@@ -102,3 +102,15 @@ describe('a rota profile de quem só administra um módulo', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });
+
+describe('a rota profile sem sessão', () => {
+  // triste
+  it('monta a tela mesmo sem usuário na sessão', async () => {
+    visiting({}, undefined);
+
+    const { container } = renderPage(Page as never, { data: { user: undefined } });
+
+    expect(container).toBeTruthy();
+    await vi.waitFor(() => expect(document.title).toContain('Meu perfil'), { timeout: 4_000 });
+  });
+});
