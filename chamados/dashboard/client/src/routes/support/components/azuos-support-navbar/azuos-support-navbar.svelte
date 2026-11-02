@@ -49,7 +49,7 @@
 <header class="bg-card border-border sticky top-0 z-30 border-b">
   <div class="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-4 sm:gap-6 sm:px-6">
     <a href="/support" class="flex shrink-0 items-center gap-2.5" aria-label="Central de Chamados — início">
-      <BrandMark ui={{ variant: 'tile', size: 'sm', className: 'rounded-chip' }} />
+      <BrandMark ui={{ variant: 'tile', size: 'sm', className: 'rounded-box' }} />
       <span class="text-foreground hidden text-sm font-bold md:inline">Central de Chamados</span>
     </a>
 

@@ -182,7 +182,7 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, state, actions }: AzuosTicketListViewProps = $props();
@@ -479,19 +479,18 @@
           data-slot="ticket-cards-mobile"
         >
           {#each data.tickets as ticket (ticket.id)}
-            <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
-            <div
-              use:fillFromPointer
-              style:--fill-color={fillColorOf(ticketStatusTone(ticket.status))}
-              class="hover-fill flex flex-col gap-3 rounded-surface border border-border bg-card p-4 shadow-xs"
+            <!-- O card de conteúdo do grupo: superfície da marca, hover na cor da situação. Os
+                 textos cortam com reticências (o inteiro fica no `title`), para nenhum nome
+                 comprido esticar a altura de toda a linha de cards. -->
+            <ContentCard
+              data={{ label: `${ticket.protocol} — ${ticket.requesterName}` }}
+              ui={{ tone: ticketStatusTone(ticket.status), isHoverColored: true, className: 'min-w-0 gap-3 p-4' }}
             >
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <span
-                  class="font-mono text-xs font-semibold text-ink-900"
-                >
+              <div class="flex min-w-0 items-center justify-between gap-2">
+                <span class="text-ink-900 shrink-0 font-mono text-xs font-semibold">
                   {ticket.protocol}
                 </span>
-                <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                <div class="flex min-w-0 items-center justify-end gap-1.5">
                   <StatusBadge
                     data={{ label: ticketPriorityLabel(ticket.priority) }}
                     ui={{ tone: ticketPriorityTone(ticket.priority), size: 'sm' }}
@@ -503,47 +502,32 @@
                 </div>
               </div>
 
-              <div class="flex flex-col gap-0.5">
-                <span class="font-semibold text-ink-900 text-sm">
+              <div class="flex min-w-0 flex-col gap-0.5">
+                <span class="text-ink-900 truncate text-sm font-semibold" title={ticket.requesterName}>
                   {ticket.requesterName}
                 </span>
-                <span class="text-xs text-ink-500">
+                <span class="text-ink-500 truncate text-xs" title={ticketDepartmentLabel(ticket.department)}>
                   {ticketDepartmentLabel(ticket.department)}
                 </span>
               </div>
 
-              <div class="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2 pt-2 border-t border-border text-xs">
-                <div class="flex flex-col gap-0.5">
-                  <span
-                    class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-                    >Área</span
-                  >
-                  <span class="text-ink-700"
-                    >{ticketAreaLabel(ticket.area)}</span
-                  >
-                </div>
-                <div class="flex flex-col gap-0.5">
-                  <span
-                    class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-                    >Tipo</span
-                  >
-                  <span class="text-ink-700"
-                    >{ticketProblemTypeLabel(ticket.problemType)}</span
-                  >
-                </div>
-                <div class="flex flex-col gap-0.5">
-                  <span
-                    class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-                    >Máquina</span
-                  >
-                  <span class="text-ink-700"
-                    >{ticket.computerName ?? '—'}</span
-                  >
-                </div>
+              <div class="border-border grid min-w-0 grid-cols-1 gap-2 border-t pt-2 text-xs min-[380px]:grid-cols-3">
+                {#each [
+                  { label: 'Área', value: ticketAreaLabel(ticket.area) },
+                  { label: 'Tipo', value: ticketProblemTypeLabel(ticket.problemType) },
+                  { label: 'Máquina', value: ticket.computerName ?? '—' },
+                ] as field (field.label)}
+                  <div class="flex min-w-0 flex-col gap-0.5">
+                    <span class="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                      {field.label}
+                    </span>
+                    <span class="text-ink-700 truncate" title={field.value}>{field.value}</span>
+                  </div>
+                {/each}
               </div>
 
-              <div class="flex items-center justify-between pt-2 border-t border-border">
-                <span class="text-xs text-ink-500">
+              <div class="border-border mt-auto flex items-center justify-between gap-2 border-t pt-2">
+                <span class="text-ink-500 truncate text-xs">
                   Aberto em {formatDate(ticket.createdAt)}
                 </span>
                 <ActionButton
@@ -552,7 +536,7 @@
                   actions={{ onClick: () => actions.onAnswer(ticket) }}
                 />
               </div>
-            </div>
+            </ContentCard>
           {/each}
         </div>
 
