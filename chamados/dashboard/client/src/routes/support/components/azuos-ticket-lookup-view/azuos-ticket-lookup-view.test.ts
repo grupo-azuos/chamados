@@ -377,3 +377,21 @@ describe('AzuosTicketLookupView — Enter, the list states and the actions slot'
     expect(screen.getByText('Nenhum chamado encerrado ainda.')).toBeInTheDocument();
   });
 });
+
+describe('AzuosTicketLookupView — typing the protocol and a box with only closed tickets', () => {
+  // feliz
+  it('reports what is typed and opens on the closed tab when nothing is running', async () => {
+    vi.mocked(actions.onProtocolChange).mockClear();
+    setup({
+      data: {
+        mine: [{ id: 2, protocol: 'CH-0002', status: 'resolved', priority: 'low', area: 'infra', problemType: 'printer', description: 'x', createdAt: '2026-10-14T13:00:00.000Z', isWatching: false }],
+        ticket: { ...ticket, attachments: [{ id: 1, ticketId: 7, historyId: 3, kind: 'pdf', origin: 'requester', fileName: 'nota.pdf', contentType: 'application/pdf', sizeBytes: 10, viewUrl: 'https://r2/abrir', downloadUrl: 'https://r2/baixar', createdAt: '2026-09-15T12:10:00.000Z', createdBy: null }] },
+      },
+    });
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Número do chamado' }), 'C');
+    expect(actions.onProtocolChange).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /CH-0002/ })).toBeInTheDocument();
+    expect(screen.queryByText('Arquivos do chamado')).not.toBeInTheDocument();
+  });
+});

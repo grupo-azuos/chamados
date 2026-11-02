@@ -311,3 +311,23 @@ describe('AzuosRoleListView — filters, states and the rows', () => {
     expect(roleTone('Usuário')).toBe('neutral');
   });
 });
+
+describe('AzuosRoleListView — unknown roles, people without e-mail and the table actions', () => {
+  // feliz
+  it('shows an unknown role as it came, a person without e-mail by her id, and removes from the table', async () => {
+    const actions = renderView({
+      data: {
+        currentUser: { name: 'Robô', email: 'robo@empresa.com.br', role: 'bot' },
+        roles: [{ ...mockRoles[0]!, userEmail: null }],
+        total: 1,
+        filter: { search: '', context: '' },
+      },
+    });
+
+    expect(screen.getAllByText('bot').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('usr_1').length).toBeGreaterThan(0);
+    const removes = screen.queryAllByRole('button', { name: 'Tirar módulo' });
+    for (const button of removes) await userEvent.click(button);
+    expect(actions.onAskDelete).toHaveBeenCalledTimes(removes.length);
+  });
+});

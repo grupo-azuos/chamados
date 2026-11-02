@@ -277,3 +277,40 @@ describe('AzuosNetworkListView — period, filters, rows and the cut list', () =
     expect(screen.getByText('Pior latência')).toBeInTheDocument();
   });
 });
+
+describe('AzuosNetworkListView — the outage shortcut switched off and the table button', () => {
+  // feliz
+  it('turns the outage filter off on a second click, scrolling without motion, and resolves from the table', async () => {
+    const matchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) =>
+      ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      }) as MediaQueryList) as typeof window.matchMedia;
+    try {
+      vi.mocked(actions.onTypeChange).mockClear();
+      vi.mocked(actions.onResolveChange).mockClear();
+      render(NetworkListView, {
+        props: {
+          data: { events: [event()], total: 1, summary, filter: { ...emptyFilter, type: 'wan_down' } },
+          state: settled,
+          actions,
+        },
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /Quedas no período/ }));
+      expect(actions.onTypeChange).toHaveBeenCalledWith('');
+      const resolves = screen.getAllByRole('button', { name: 'Marcar como resolvido' });
+      for (const button of resolves) await userEvent.click(button);
+      expect(actions.onResolveChange).toHaveBeenCalledTimes(resolves.length);
+    } finally {
+      window.matchMedia = matchMedia;
+    }
+  });
+});
