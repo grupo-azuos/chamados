@@ -131,3 +131,32 @@ describe('shared theme cookie — blocked cookies and the subscription life cycl
     expect(vi.getTimerCount()).toBeLessThan(timersWhileListening);
   });
 });
+
+describe('shared theme cookie — on the group domain over https', () => {
+  // feliz
+  it('writes the cookie for the whole group, secured, when served from a group address', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'location');
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, hostname: 'chamados.grupoazuos.com.br', protocol: 'https:' },
+    });
+    const cookies: string[] = [];
+    const cookieDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!;
+    Object.defineProperty(document, 'cookie', {
+      configurable: true,
+      get: () => '',
+      set: (value: string) => {
+        cookies.push(value);
+      },
+    });
+    try {
+      saveTheme('light');
+      expect(cookies[0]).toContain('Max-Age=0');
+      expect(cookies[1]).toContain('Secure');
+      expect(cookies[1]).toContain('Domain=grupoazuos.com.br');
+    } finally {
+      Object.defineProperty(document, 'cookie', cookieDescriptor);
+      if (descriptor) Object.defineProperty(window, 'location', descriptor);
+    }
+  });
+});

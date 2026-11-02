@@ -303,3 +303,46 @@ describe('useSoftwareKanbanModel — closed tickets, busy moves and retry', () =
     await waitFor(() => expect(ticketsApi.list).toHaveBeenCalled());
   });
 });
+
+describe('useSoftwareKanbanModel — every move the board accepts', () => {
+  beforeEach(() => {
+    vi.mocked(softwareProjectsApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 100 });
+    vi.mocked(ticketsApi.list).mockResolvedValue({
+      items: [
+        ticket({ id: 1, status: 'waiting_third_party' }),
+        ticket({ id: 2, status: 'in_progress' }),
+        ticket({ id: 3, status: 'resolved' }),
+      ],
+      total: 3,
+      page: 1,
+      pageSize: 200,
+    });
+    vi.mocked(ticketsApi.createHistory).mockReset().mockResolvedValue({} as never);
+  });
+
+  // feliz
+  it('resumes a ticket waiting on a third party, resolves one in progress and reopens a closed one', async () => {
+    const model = await mountLoadedModel();
+
+    await model.actions.onMoveTicket(1, 'in_progress');
+    expect(vi.mocked(ticketsApi.createHistory).mock.calls.at(-1)?.[1]).toMatchObject({ type: 'resume' });
+    await model.actions.onMoveTicket(2, 'done');
+    expect(vi.mocked(ticketsApi.createHistory).mock.calls.at(-1)?.[1]).toMatchObject({ type: 'resolution' });
+    await model.actions.onMoveTicket(3, 'in_progress');
+    expect(vi.mocked(ticketsApi.createHistory).mock.calls.at(-1)?.[1]).toMatchObject({ type: 'reopening' });
+    /* Soltar na própria coluna não registra nada. */
+    const calls = vi.mocked(ticketsApi.createHistory).mock.calls.length;
+    await model.actions.onMoveTicket(2, 'in_progress');
+    expect(ticketsApi.createHistory).toHaveBeenCalledTimes(calls);
+  });
+
+  // triste
+  it('explains a refused move with a generic message when the server said nothing', async () => {
+    vi.mocked(ticketsApi.createHistory).mockRejectedValueOnce(null as never);
+    const model = await mountLoadedModel();
+
+    await model.actions.onMoveTicket(2, 'done');
+
+    expect(model.state.moveError).toMatch(/Não foi possível movimentar/);
+  });
+});

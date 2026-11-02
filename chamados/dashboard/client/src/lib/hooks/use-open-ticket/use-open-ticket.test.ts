@@ -432,3 +432,47 @@ describe('useOpenTicketModel — o convite do WhatsApp e quem atende', () => {
     await waitFor(() => expect(model.data.notifyWhatsapp).toBe(false));
   });
 });
+
+describe('useOpenTicketModel — the account defaults and the screenshot being dropped', () => {
+  beforeEach(() => {
+    vi.mocked(ticketsApi.create).mockReset().mockResolvedValue(ticket());
+    vi.mocked(ticketsApi.systemProjectOptions).mockResolvedValue([]);
+    vi.mocked(ticketsApi.invite).mockReset();
+    page.url = new URL('http://localhost:5173/support');
+  });
+
+  // feliz
+  it('keeps the phone the person already typed and leaves the department alone when the account has none', async () => {
+    let resolveDefaults!: (value: unknown) => void;
+    vi.mocked(ticketsApi.requesterDefaults).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveDefaults = resolve;
+      }) as never,
+    );
+    const model = mountModel();
+    model.actions.onChange('contactPhone', '62 91111-2222');
+    await waitFor(() => expect(model.data.fields.contactPhone.value).toBe('62 91111-2222'));
+
+    resolveDefaults({ name: 'Bia Costa', email: 'bia@azuos.com.br', phone: '5562988887777', department: null, jobTitle: null });
+
+    await waitFor(() => expect(model.state.isNameLocked).toBe(true));
+    expect(model.data.fields.contactPhone.value).toBe('62 91111-2222');
+    expect(model.data.fields.department.value).not.toBe('');
+
+    /* Abrir outro chamado traz de volta o que veio da conta. */
+    model.actions.onOpenAnother();
+    await waitFor(() => expect(model.data.fields.requesterName.value).toBe('Bia Costa'));
+  });
+
+  // feliz
+  it('forgets the screenshot and its refusal when the person removes it', async () => {
+    const model = mountModel();
+    model.actions.onScreenshotChange(new File(['x'], 'nota.pdf', { type: 'application/pdf' }));
+    await waitFor(() => expect(model.state.screenshotError).not.toBeNull());
+
+    model.actions.onScreenshotChange(null);
+
+    await waitFor(() => expect(model.state.screenshotError).toBeNull());
+    expect(model.data.screenshotName).toBeNull();
+  });
+});

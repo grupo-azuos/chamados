@@ -76,3 +76,29 @@ describe('a rota profile de quem administra tudo', () => {
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 });
+
+const { ADMIN } = await import('../../route-page.test-support');
+
+describe('a rota profile de quem só administra um módulo', () => {
+  // triste
+  it('não oferece os textos do bot nem a equipe, mas mostra os módulos e o WhatsApp', async () => {
+    vi.mocked(apiRequest).mockImplementation(async (path: string) => {
+      if (path === '/integrations/whatsapp/status') return { ...connection, state: 'connected', phone: '5562988887777' };
+      return [];
+    });
+    const admin = { ...ADMIN, role: 'admin' as const };
+    visiting({}, admin as never);
+    renderPage(Page as never, { data: { user: admin } });
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    expect(await screen.findByRole('link', { name: 'WhatsApp' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Equipe' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Textos do bot' })).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: 'Desvincular' }));
+    const question = await screen.findByRole('dialog');
+    expect(question).toHaveTextContent('Desvincular seu WhatsApp?');
+    await user.click(within(question).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+});
