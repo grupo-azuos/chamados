@@ -19,10 +19,10 @@
     base: 'align-middle font-semibold rounded-control shadow-xs transition-all',
     variants: {
       variant: {
-        primary: 'bg-primary hover:bg-muted text-primary-foreground',
+        primary: 'bg-primary hover:bg-primary-strong text-primary-foreground',
         secondary: 'border-border bg-card text-foreground hover:bg-muted border',
         ghost: 'text-foreground hover:bg-accent hover:text-foreground bg-transparent shadow-none border border-transparent',
-        danger: 'bg-destructive text-destructive-foreground hover:bg-muted',
+        danger: 'bg-destructive-fill text-on-dark hover:bg-destructive',
       },
       size: {
         sm: 'control-sm',

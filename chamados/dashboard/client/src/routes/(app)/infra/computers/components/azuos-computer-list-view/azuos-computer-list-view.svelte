@@ -337,6 +337,7 @@
             tone: resourceConditionTone(condition),
             icon: RESOURCE_CONDITION_ICONS[condition],
             isHoverColored: true,
+            markSize: 'lg',
             className: 'min-w-0 gap-0 p-4',
           }}
         >
@@ -394,7 +395,7 @@
             <ComputerMaintenanceStatus data={{ computer, scheduledFor: data.scheduledFor?.[computer.id] ?? null }} />
           </div>
 
-          <div class="border-border mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
             <span class="text-xs text-ink-500">
               Chamados no mês: <strong class="text-foreground">{computer.ticketsThisMonth}</strong>
             </span>

@@ -24,6 +24,8 @@
       hoverTone?: AzuosCardTone;
       mark?: LucideIcon;
       markTone?: AzuosCardTone;
+      /** `lg`: o ícone 30% maior, para card alto (a máquina do inventário). */
+      markSize?: 'md' | 'lg';
     };
     state?: { isSelected?: boolean; isDisabled?: boolean };
     actions?: { onClick?: () => void };
@@ -87,7 +89,8 @@
       aria-hidden="true"
       data-slot="card-mark"
       class={cn(
-        'pointer-events-none absolute -right-5 -bottom-5 -z-10 size-31 transition-transform duration-200 group-hover/card:scale-105 group-data-[selected=true]/card:text-on-card-selected',
+        'pointer-events-none absolute -z-10 transition-transform duration-200 group-hover/card:scale-105 group-data-[selected=true]/card:text-on-card-selected',
+        ui?.markSize === 'lg' ? '-right-6 -bottom-6 size-40' : '-right-5 -bottom-5 size-31',
         cardToneClasses(ui?.markTone).text,
       )}
     >

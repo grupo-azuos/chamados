@@ -10,7 +10,13 @@
    */
   export type AzuosContentCardProps = {
     data?: { label?: string };
-    ui?: { tone?: AzuosCardTone; icon?: LucideIcon; isHoverColored?: boolean; className?: string };
+    ui?: {
+      tone?: AzuosCardTone;
+      icon?: LucideIcon;
+      isHoverColored?: boolean;
+      markSize?: 'md' | 'lg';
+      className?: string;
+    };
     state?: { isSelected?: boolean };
     actions?: { onClick?: () => void };
     children: Snippet;
@@ -29,6 +35,7 @@
   ui={{
     className: cn('flex flex-col gap-2 p-4', ui?.className),
     mark: ui?.icon,
+    markSize: ui?.markSize,
     markTone: ui?.tone,
     isHoverColored: ui?.isHoverColored,
     hoverTone: ui?.tone,
