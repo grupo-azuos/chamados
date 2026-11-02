@@ -182,3 +182,55 @@ describe('AzuosPartLedgerDialog', () => {
     expect(screen.getByText('Carregando o histórico…')).toBeInTheDocument();
   });
 });
+
+describe('AzuosPartLedgerDialog — the lines, the buttons and the closing', () => {
+  function renderLedger(movements: PartMovement[], over: Partial<NonNullable<Parameters<typeof PartLedgerDialog>[1]['state']>> = {}, removing: PartMovement | null = null) {
+    return render(PartLedgerDialog, {
+      props: { data: { part: part(), movements, removing }, state: { isOpen: true, ...over }, actions },
+    });
+  }
+
+  // feliz
+  it('names the destination with what it knows about the machine', () => {
+    expect(destinationOf(movement({ computerDepartment: null }))).toBe('Contábil — fechamento');
+    expect(destinationOf(movement({ computerDisplayName: '  ', computerDepartment: null }))).toBe('CONTABIL-03');
+    expect(destinationOf(movement({ computerDisplayName: null, computerName: null, computerDepartment: null }))).toBe('Máquina');
+    expect(signedQuantity(movement({ type: 'in', quantity: 2 }))).toBe('+2');
+  });
+
+  // feliz
+  it('asks to delete from the cards and from the table, and cancels the question', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onAskRemove).mockClear();
+    renderLedger([movement({ note: null, handledBy: null })], {}, movement());
+
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^Por:/)).not.toBeInTheDocument();
+    const dialog = screen.getAllByRole('dialog').at(-1)!;
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(actions.onCancelRemove).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('deletes a line from either view and closes from the footer', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onAskRemove).mockClear();
+    vi.mocked(actions.onClose).mockClear();
+    renderLedger([movement()]);
+
+    const removes = screen.getAllByRole('button', { name: 'Excluir movimentação' });
+    for (const button of removes) await user.click(button);
+    expect(actions.onAskRemove).toHaveBeenCalledTimes(removes.length);
+
+    await user.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(actions.onClose).toHaveBeenCalledTimes(1);
+    await user.keyboard('{Escape}');
+    expect(actions.onClose).toHaveBeenCalledTimes(2);
+  });
+
+  // triste
+  it('renders nothing while closed', () => {
+    renderLedger([movement()], { isOpen: false });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});

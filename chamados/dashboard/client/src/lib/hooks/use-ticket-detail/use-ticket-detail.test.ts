@@ -24,6 +24,7 @@ vi.mock('$lib/api/tickets.api', () => ({
     serviceOrder: vi.fn(),
     whatsappNotices: vi.fn(),
     retryWhatsappNotice: vi.fn(),
+    notifyReady: vi.fn(),
   },
 }));
 
@@ -308,5 +309,69 @@ describe('useTicketDetailModel', () => {
     await waitFor(() =>
       expect(model.state.attachmentError).toBe('Este arquivo é de quem abriu o chamado.'),
     );
+  });
+});
+
+describe('useTicketDetailModel — notifying by WhatsApp and retrying', () => {
+  beforeEach(() => {
+    vi.mocked(ticketsApi.findById).mockResolvedValue(ticket());
+    vi.mocked(ticketsApi.histories).mockResolvedValue([opening]);
+    vi.mocked(ticketsApi.attachments).mockResolvedValue([]);
+    vi.mocked(ticketsApi.whatsappNotices).mockResolvedValue([]);
+    vi.mocked(ticketsApi.notifyReady).mockReset();
+  });
+
+  // feliz
+  it('sends the notice and tells from whose WhatsApp it went out', async () => {
+    let finish!: (value: { outcome: 'sent' }) => void;
+    vi.mocked(ticketsApi.notifyReady).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve as never;
+      }),
+    );
+    const model = mountModel();
+    await waitFor(() => expect(model.data.ticket?.id).toBe(22));
+
+    model.actions.onNotify();
+    await waitFor(() => expect(model.state.isNotifying).toBe(true));
+    /* Enquanto um aviso sai, um segundo clique não manda outro. */
+    model.actions.onNotify();
+    expect(ticketsApi.notifyReady).toHaveBeenCalledTimes(1);
+
+    finish({ outcome: 'sent' });
+    await waitFor(() => expect(model.state.notice?.isSent).toBe(true));
+    expect(model.state.notice?.message).toContain('Suporte TI');
+  });
+
+  // triste
+  it('falls back to the manual link when the notice fails on the way', async () => {
+    vi.mocked(ticketsApi.notifyReady).mockRejectedValue(new ApiError(503, 'Fora do ar.'));
+    const model = mountModel();
+    await waitFor(() => expect(model.data.ticket?.id).toBe(22));
+
+    model.actions.onNotify();
+
+    await waitFor(() => expect(model.state.notice?.isSent).toBe(false));
+    expect(model.state.notice?.message).toBeTruthy();
+  });
+
+  // feliz
+  it('asks the server for the ticket, the timeline and the files again on retry', async () => {
+    const model = mountModel();
+    await waitFor(() => expect(model.data.ticket?.id).toBe(22));
+    vi.mocked(ticketsApi.findById).mockClear();
+    vi.mocked(ticketsApi.histories).mockClear();
+    vi.mocked(ticketsApi.attachments).mockClear();
+
+    model.actions.onRetry();
+
+    await waitFor(() => expect(ticketsApi.findById).toHaveBeenCalled());
+    await waitFor(() => expect(ticketsApi.histories).toHaveBeenCalled());
+    await waitFor(() => expect(ticketsApi.attachments).toHaveBeenCalled());
+  });
+
+  // feliz
+  it('names who attends generically when the ticket has nobody yet', () => {
+    expect(toNoticeResult({ outcome: 'sent' } as never, null).message).toContain('quem atende');
   });
 });

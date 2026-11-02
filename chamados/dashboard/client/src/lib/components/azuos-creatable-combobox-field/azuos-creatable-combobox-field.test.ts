@@ -65,3 +65,53 @@ describe('AzuosCreatableComboboxField', () => {
     expect(moveHighlight('a', 1, 3)).toBeNull();
   });
 });
+
+describe('AzuosCreatableComboboxField — clearing, loading and the keyboard', () => {
+  // feliz
+  it('offers to clear a chosen value and highlights with the arrows and the mouse', async () => {
+    const actions = { onChange: vi.fn(), onSearch: vi.fn(), onCreate: vi.fn() };
+    render(CreatableComboboxField, {
+      props: {
+        data: { value: 'Goiânia', options: ['Goiânia', 'Anápolis'] },
+        ui: { ariaLabel: 'Cidade', searchPlaceholder: 'Buscar cidade', clearLabel: 'Sem cidade' },
+        actions,
+      },
+    });
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Cidade' }));
+    const clear = await screen.findByRole('option', { name: /Sem cidade/ });
+    await userEvent.hover(screen.getByRole('option', { name: 'Anápolis' }));
+    expect(screen.getByRole('option', { name: 'Anápolis' })).toHaveAttribute('id');
+    await userEvent.keyboard('{ArrowDown}{ArrowUp}{ArrowUp}');
+    await userEvent.click(clear);
+    expect(actions.onChange).toHaveBeenCalledWith('');
+  });
+
+  // triste
+  it('says it is searching, hides the list while loading and spins while creating', async () => {
+    render(CreatableComboboxField, {
+      props: {
+        data: { value: '', options: [] },
+        ui: { ariaLabel: 'Cidade', searchPlaceholder: 'Buscar cidade', placeholder: 'Escolha' },
+        state: { isLoading: true, isCreating: true },
+        actions: { onChange: vi.fn(), onSearch: vi.fn(), onCreate: vi.fn() },
+      },
+    });
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Cidade' }));
+    expect(await screen.findByText('Buscando…')).toBeInTheDocument();
+  });
+
+  // triste
+  it('invites to type when there is nothing to show', async () => {
+    render(CreatableComboboxField, {
+      props: {
+        data: { value: '', options: [] },
+        ui: { ariaLabel: 'Cidade', searchPlaceholder: 'Buscar cidade' },
+        actions: { onChange: vi.fn(), onSearch: vi.fn(), onCreate: vi.fn() },
+      },
+    });
+    await userEvent.click(screen.getByRole('combobox', { name: 'Cidade' }));
+    expect(await screen.findByText('Digite para buscar ou cadastrar')).toBeInTheDocument();
+  });
+});

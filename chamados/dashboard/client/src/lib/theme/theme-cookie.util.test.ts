@@ -79,3 +79,55 @@ describe('shared theme cookie', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 });
+
+describe('shared theme cookie — blocked cookies and the subscription life cycle', () => {
+  // triste
+  it('answers nothing when the cookie jar cannot be read', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!;
+    Object.defineProperty(document, 'cookie', {
+      configurable: true,
+      get: () => {
+        throw new Error('Blocked');
+      },
+      set: () => undefined,
+    });
+    try {
+      expect(readThemeCookie()).toBeNull();
+      expect(() => saveTheme('light')).not.toThrow();
+    } finally {
+      Object.defineProperty(document, 'cookie', descriptor);
+    }
+  });
+
+  // feliz
+  it('starts listening once for many subscribers and stops with the last one', () => {
+    vi.useFakeTimers();
+    const store = createThemeStore();
+    const first = vi.fn();
+    const second = vi.fn();
+    const stopFirst = store.subscribe(first);
+    const stopSecond = store.subscribe(second);
+    const timersWhileListening = vi.getTimerCount();
+
+    /* Sem cookie compartilhado, sincronizar não muda nada; o mesmo valor não acorda ninguém. */
+    document.cookie = 'azuos-theme=; Path=/; Max-Age=0';
+    window.dispatchEvent(new Event('pageshow'));
+    store.write(store.read());
+    expect(first).not.toHaveBeenCalled();
+
+    document.cookie = 'azuos-theme=light; Path=/';
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(store.read()).toBe('dark');
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(store.read()).toBe('light');
+    expect(second).toHaveBeenCalledOnce();
+
+    /* O relógio só para com o último inscrito. */
+    stopFirst();
+    expect(vi.getTimerCount()).toBe(timersWhileListening);
+    stopSecond();
+    expect(vi.getTimerCount()).toBeLessThan(timersWhileListening);
+  });
+});

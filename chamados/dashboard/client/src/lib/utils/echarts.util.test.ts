@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatCount,
+  readChartTheme,
   resolveColor,
   resolveCssColors,
   selectionOf,
@@ -103,5 +104,32 @@ describe('echarts.util', () => {
 
   it('draws no tooltip when the chart asked for none', () => {
     expect(withChartTheme({}, THEME).tooltip).toBeUndefined();
+  });
+});
+
+describe('echarts.util — colours the browser cannot resolve', () => {
+  // triste
+  it('falls back to the light token, or to the reserve colour, for an unresolved variable', () => {
+    document.documentElement.style.setProperty('--primary', 'var(--brand)');
+    document.documentElement.style.setProperty('--nope', 'var(--none)');
+    try {
+      expect(resolveColor('var(--primary)')).not.toContain('var(');
+      expect(resolveColor('var(--nope)', '#abcdef')).toBe('#abcdef');
+    } finally {
+      document.documentElement.style.removeProperty('--primary');
+      document.documentElement.style.removeProperty('--nope');
+    }
+  });
+
+  // feliz
+  it('reads the clicked item by its id and without row or column', () => {
+    expect(selectionOf({ name: 'x', data: { id: 'node:1' }, dataType: 'node' })).toEqual({ name: 'node:1', kind: 'node', row: undefined, column: undefined });
+    expect(selectionOf({})).toEqual({ name: '', kind: undefined, row: undefined, column: undefined });
+  });
+
+  // feliz
+  it('keeps short labels whole and reads the theme from the document', () => {
+    expect(shortenLabel('Curto')).toBe('Curto');
+    expect(readChartTheme().font).toBeTruthy();
   });
 });

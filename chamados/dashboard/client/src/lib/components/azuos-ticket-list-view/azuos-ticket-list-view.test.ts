@@ -401,3 +401,78 @@ describe('ticketFilterChips', () => {
     expect(ticketFilterChips({ ...emptyFilter, search: 'impressora', department: 'TI' }, [])).toEqual([]);
   });
 });
+
+describe('AzuosTicketListView — filters, chips, export and the table', () => {
+  async function openFilters() {
+    if (!screen.queryByRole('group', { name: 'Filtrar por urgência' })) {
+      await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
+    }
+  }
+
+  // feliz
+  it('changes every filter of the panel and searches', async () => {
+    vi.mocked(actions.onStatusChange).mockClear();
+    setup({ data: { area: 'infra', tickets: [ticket()], total: 1, dashboard, filter: emptyFilter, departmentOptions: [{ value: 'fiscal', label: 'Fiscal' }] } });
+
+    await userEvent.type(screen.getAllByRole('textbox')[0]!, 'imp');
+    expect(actions.onSearchChange).toHaveBeenCalled();
+
+    await openFilters();
+    await userEvent.click(within(screen.getByRole('group', { name: 'Filtrar por urgência' })).getAllByRole('button')[1]!);
+    expect(actions.onPriorityChange).toHaveBeenCalled();
+
+    const status = screen.getByRole('button', { name: /Filtrar por situação/ });
+    await userEvent.click(status);
+    const statusPanel = document.getElementById(status.getAttribute('aria-controls') ?? '') as HTMLElement;
+    await userEvent.click(within(statusPanel).getByText('Aberto', { exact: true }));
+    expect(actions.onStatusChange).toHaveBeenCalledWith('open');
+
+    const panel = await openProblemTypeFilter();
+    await userEvent.click(within(panel).getByText('Impressora', { exact: true }));
+    expect(actions.onProblemTypeChange).toHaveBeenCalledWith('printer');
+
+    const department = screen.getByRole('button', { name: /Filtrar por departamento/ });
+    await userEvent.click(department);
+    const departmentPanel = document.getElementById(department.getAttribute('aria-controls') ?? '') as HTMLElement;
+    await userEvent.click(within(departmentPanel).getByText('Fiscal', { exact: true }));
+    expect(actions.onDepartmentChange).toHaveBeenCalledWith('fiscal');
+  });
+
+  // feliz
+  it('switches each filter off through its chip, the status group included', async () => {
+    const onStatusGroupChange = vi.fn();
+    vi.mocked(actions.onProblemTypeChange).mockClear();
+    setup({
+      data: {
+        area: 'infra',
+        tickets: [ticket()],
+        total: 1,
+        dashboard,
+        filter: { ...emptyFilter, statusGroup: 'resolved', priority: 'high', problemType: 'bogus' },
+      },
+      actions: { ...actions, onStatusGroupChange },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /Tirar o filtro Situação:/ }));
+    expect(onStatusGroupChange).toHaveBeenCalledWith('');
+    await userEvent.click(screen.getByRole('button', { name: /Tirar o filtro Urgência:/ }));
+    expect(actions.onPriorityChange).toHaveBeenCalledWith('');
+    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Tipo de problema' }));
+    expect(actions.onProblemTypeChange).toHaveBeenCalledWith('');
+  });
+
+  // feliz
+  it('exports the queue and opens a ticket from the table', async () => {
+    vi.mocked(actions.onAnswer).mockClear();
+    setup({ state: { ...settled, isTruncated: true, exportError: 'Não consegui gerar o arquivo.' } });
+
+    await userEvent.click(screen.getAllByRole('button', { name: /PDF|Excel|Word/i })[0]!);
+    expect(actions.onExportReport).toHaveBeenCalled();
+    expect(screen.getByText('Não consegui gerar o arquivo.')).toBeInTheDocument();
+    expect(screen.getByText(/Mostrando 1 de 1 chamados/)).toBeInTheDocument();
+
+    const opens = screen.getAllByRole('button', { name: 'Abrir' });
+    await userEvent.click(opens.at(-1)!);
+    expect(actions.onAnswer).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+});

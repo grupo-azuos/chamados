@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -73,5 +73,47 @@ describe('normalizeRotation', () => {
     expect(normalizeRotation(360)).toBe(0);
     expect(normalizeRotation(-90)).toBe(270);
     expect(normalizeRotation(450)).toBe(90);
+  });
+});
+
+describe('AzuosAvatarCropperDialog — rotating, zooming and closing', () => {
+  // feliz
+  it('rotates the photo through a rotated copy and frees the previous one', async () => {
+    const util = await import('$lib/utils/avatar-image.util');
+    const spy = vi.spyOn(util, 'rotateImageUrl').mockResolvedValue('blob:http://localhost/girada');
+    const revoke = vi.fn();
+    vi.stubGlobal('URL', Object.assign(URL, { revokeObjectURL: revoke }));
+    try {
+      renderDialog({ isOpen: true });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Girar para a direita' }));
+      await waitFor(() => expect(spy).toHaveBeenCalledWith(IMAGE, 90));
+      await userEvent.click(screen.getByRole('button', { name: 'Girar para a esquerda' }));
+      await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:http://localhost/girada'));
+    } finally {
+      vi.unstubAllGlobals();
+      spy.mockRestore();
+    }
+  });
+
+  // feliz
+  it('changes the zoom from the slider', async () => {
+    renderDialog({ isOpen: true });
+    const slider = screen.getByRole('slider', { name: 'Zoom' });
+    await userEvent.click(slider);
+    await userEvent.keyboard('{ArrowRight}');
+    expect(slider).toHaveAttribute('aria-valuenow');
+  });
+
+  // triste
+  it('does not let Escape close the editor while the photo is being sent', async () => {
+    const actions = renderDialog({ isOpen: true, isSaving: true });
+    await userEvent.keyboard('{Escape}');
+    expect(actions.onCancel).not.toHaveBeenCalled();
+
+    cleanup();
+    const idle = renderDialog({ isOpen: true });
+    await userEvent.keyboard('{Escape}');
+    expect(idle.onCancel).toHaveBeenCalled();
   });
 });

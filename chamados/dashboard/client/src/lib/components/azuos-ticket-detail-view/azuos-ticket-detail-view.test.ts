@@ -308,3 +308,40 @@ describe('AzuosTicketDetailView', () => {
     expect(screen.queryByRole('button', { name: 'Avisar no WhatsApp' })).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosTicketDetailView — other areas, the system, the issue and the print', () => {
+  // feliz
+  it('shows the other areas, the linked system, the GitHub issue and the print', () => {
+    setup({
+      data: {
+        ticket: {
+          ...ticket,
+          participantAreas: ['manutencao'],
+          projectName: 'Portal',
+          githubIssueUrl: 'https://github.com/example/portal/issues/7',
+          githubIssueNumber: null,
+          screenshotUrl: 'https://r2.example/print.png',
+        } as Ticket,
+        histories: [history()],
+        attachments: [],
+        whatsAppLink: null,
+      },
+    });
+
+    expect(screen.getByText('Também: Manutenção')).toBeInTheDocument();
+    expect(screen.getByText('Sistema: Portal')).toBeInTheDocument();
+    expect(screen.getByText('Portal')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Issue #/ })).toHaveAttribute('href', 'https://github.com/example/portal/issues/7');
+    expect(screen.getByRole('link', { name: /Abrir o print enviado/ })).toHaveAttribute('href', 'https://r2.example/print.png');
+  });
+
+  // triste
+  it('points to the manual link when the notice did not go out', () => {
+    setup({
+      data: { ticket, histories: [history()], attachments: [], whatsAppLink: 'https://wa.me/5562999990029' },
+      state: { notice: { isSent: false, message: 'O WhatsApp não está conectado.' } },
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent('Use o botão acima para abrir a conversa e enviar você mesmo.');
+  });
+});
