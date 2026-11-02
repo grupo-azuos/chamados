@@ -135,3 +135,20 @@ describe('phone formatting', () => {
     expect(fieldMaskError('phone', '')).toBeNull();
   });
 });
+
+describe('field masks — empty and incomplete values', () => {
+  // triste
+  it('shows no error for an empty value, nor for a money or integer still being typed', () => {
+    expect(fieldMaskError('money', '')).toBeNull();
+    expect(fieldMaskError('cnpj', '')).toBeNull();
+    expect(fieldMaskError('money', '1')).toBeNull();
+    expect(fieldMaskError('integer', '1')).toBeNull();
+    expect(fieldMaskError('cnpj', '12.345')).toMatch(/CNPJ/);
+  });
+
+  // triste
+  it('formats nothing out of nothing', () => {
+    expect(formatFieldMask('money', '')).toBe('');
+    expect(formatFieldMask('integer', '')).toBe('');
+  });
+});

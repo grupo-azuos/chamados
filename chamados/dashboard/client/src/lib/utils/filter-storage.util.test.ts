@@ -48,3 +48,23 @@ describe('filter storage', () => {
     expect(window.localStorage.length).toBe(0);
   });
 });
+
+describe('filter storage — clearing what is not there and odd saved shapes', () => {
+  // triste
+  it('does nothing when clearing a screen that was never saved', () => {
+    saveScreenFilters(USER, 'tickets', { search: 'x' });
+    clearScreenFilters(USER, 'computers');
+    clearScreenFilters(OTHER_USER, 'tickets');
+    expect(loadScreenFilters(USER, 'tickets')).toEqual({ search: 'x' });
+  });
+
+  // triste
+  it('ignores a saved value that is not an object, has another version or has screens as a list', () => {
+    window.localStorage.setItem(filterStorageKey(USER), JSON.stringify('texto'));
+    expect(loadScreenFilters(USER, 'tickets')).toBeUndefined();
+    window.localStorage.setItem(filterStorageKey(USER), JSON.stringify({ version: 99, screens: {} }));
+    expect(loadScreenFilters(USER, 'tickets')).toBeUndefined();
+    window.localStorage.setItem(filterStorageKey(USER), JSON.stringify({ version: 1, screens: [] }));
+    expect(loadScreenFilters(USER, 'tickets')).toBeUndefined();
+  });
+});
