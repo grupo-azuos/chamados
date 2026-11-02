@@ -111,3 +111,33 @@ describe('AzuosComboboxField — icons and the create label', () => {
     expect(await screen.findByRole('option', { name: /Cadastrar “Jurídico”/ })).toBeInTheDocument();
   });
 });
+
+const people = [
+  { value: 'ana', label: 'Ana Souza', personName: 'Ana Souza', avatarUrl: null },
+  { value: 'caio', label: 'Caio Ribeiro', personName: 'Caio Ribeiro' },
+];
+
+describe('AzuosComboboxField with people', () => {
+  // feliz
+  it('shows the initials next to the name, in the trigger and in each option', async () => {
+    render(ComboboxField, {
+      props: { data: { value: 'ana', options: people }, ui: { ariaLabel: 'Responsável' }, actions: { onChange: vi.fn() } },
+    });
+
+    const trigger = screen.getByRole('combobox', { name: 'Responsável' });
+    expect(trigger).toHaveTextContent('AS');
+    expect(trigger).toHaveClass('min-w-40');
+    await userEvent.click(trigger);
+
+    expect(await screen.findByRole('option', { name: /Caio Ribeiro/ })).toHaveTextContent('CR');
+  });
+
+  // triste
+  it('draws no avatar for an option that is not a person', () => {
+    render(ComboboxField, {
+      props: { data: { value: 'fin', options }, ui: { ariaLabel: 'Departamento' }, actions: { onChange: vi.fn() } },
+    });
+
+    expect(document.querySelector('[data-slot="avatar"]')).toBeNull();
+  });
+});

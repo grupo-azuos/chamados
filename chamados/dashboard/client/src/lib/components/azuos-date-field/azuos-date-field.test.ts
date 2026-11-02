@@ -69,3 +69,24 @@ describe('AzuosDateField — clearing, the calendar and the label', () => {
     expect(screen.getByText('Data da compra')).toHaveClass('sr-only');
   });
 });
+
+describe('AzuosDateField in the dark theme', () => {
+  // feliz
+  /* O `ui/input-group` traz `dark:bg-input/30`, que vencia o fundo sólido no escuro. */
+  it('keeps the solid field fill, also in the dark theme', () => {
+    const { container } = render(DateField, { props: { data, actions: { onChange: vi.fn() } } });
+
+    const group = container.querySelector('[data-slot="input-group"]');
+    expect(group).toHaveClass('bg-muted', 'dark:bg-muted');
+    expect(group).not.toHaveClass('dark:bg-input/30');
+  });
+
+  // triste
+  it('paints the field red in the dark theme too when there is an error', () => {
+    const { container } = render(DateField, {
+      props: { data, state: { error: 'Obrigatório' }, actions: { onChange: vi.fn() } },
+    });
+
+    expect(container.querySelector('[data-slot="input-group"]')).toHaveClass('dark:bg-destructive-soft');
+  });
+});

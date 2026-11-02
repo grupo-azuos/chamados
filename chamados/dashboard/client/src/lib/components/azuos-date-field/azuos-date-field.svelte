@@ -117,7 +117,14 @@
   </label>
   <input type="hidden" name={data.name} value={data.value ?? ''} />
   <!-- `px-0!`: quem dá o respiro lateral aqui é o input de dentro e o botão do calendário. -->
-  <InputGroup class={cn('control-lg rounded-control px-0!', hasError ? 'bg-destructive-soft' : 'bg-muted')}>
+  <!-- O fundo repete na variante `dark:`: o `ui/input-group` traz `dark:bg-input/30`, que vencia o
+       `bg-muted` no tema escuro e deixava a data mais clara que os outros campos. -->
+  <InputGroup
+    class={cn(
+      'control-lg rounded-control px-0!',
+      hasError ? 'bg-destructive-soft dark:bg-destructive-soft' : 'bg-muted dark:bg-muted',
+    )}
+  >
     <InputGroupInput
       id={inputId}
       class="text-foreground"

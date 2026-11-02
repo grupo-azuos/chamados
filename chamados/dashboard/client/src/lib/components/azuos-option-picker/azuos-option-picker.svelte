@@ -21,6 +21,10 @@
     label: string;
     tone?: StatusBadgeTone;
     icon?: LucideIcon;
+    /** A pessoa da opção: quando existe, a foto (ou as iniciais) vem antes do rótulo. */
+    personName?: string;
+    /** A foto da pessoa. Sem ela, ficam as iniciais de `personName`. */
+    avatarUrl?: string | null;
     /**
      * Uma linha divisória ANTES desta opção, na lista que abre: separa um grupo do outro (os
      * departamentos do RH dos que existem só aqui). Nas pastilhas não aparece — lá as opções
@@ -189,6 +193,7 @@
 
   import { Popover, PopoverTrigger } from '$lib/components/ui/popover';
   import PopoverContent from '$lib/components/azuos-search-popover-content/azuos-search-popover-content.svelte';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
   import { cn } from '$lib/utils/cn';
 
@@ -235,13 +240,17 @@
     aria-describedby={fieldState?.error ? errorId : undefined}
     class={cn(
       'control-lg',
-      'rounded-control inline-flex min-w-0 max-w-full w-full cursor-pointer items-center justify-between gap-2 border border-border bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60',
+      'rounded-control inline-flex min-w-40 max-w-full w-full cursor-pointer items-center justify-between gap-2 border border-border bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60',
       ui?.fullWidth ? 'sm:w-full' : 'sm:w-auto sm:min-w-[180px]',
       ui?.className,
     )}
   >
     <span class="flex min-w-0 items-center gap-2">
-      {#if selectedOption?.icon}
+      {#if selectedOption?.personName}
+        <span aria-hidden="true" class="flex shrink-0">
+          <PersonAvatar name={selectedOption.personName} avatarUrl={selectedOption.avatarUrl} ui={{ size: 'sm' }} />
+        </span>
+      {:else if selectedOption?.icon}
         <selectedOption.icon class="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
       {:else if selectedOption?.tone}
         <span class={optionDot({ tone: selectedOption.tone })} aria-hidden="true"></span>
@@ -270,7 +279,11 @@
         onclick={() => select(option.value)}
         class={optionPill({ layout, isSelected, tone: option.tone })}
       >
-        {#if option.icon}
+        {#if option.personName}
+          <span aria-hidden="true" class="flex shrink-0">
+            <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
+          </span>
+        {:else if option.icon}
           <option.icon class="size-3.5 shrink-0" aria-hidden="true" />
         {:else if option.tone && !isSelected}
           <span class={optionDot({ tone: option.tone })} aria-hidden="true"></span>
@@ -309,7 +322,7 @@
          daí para baixo ele nunca fica menor que o botão, e o teto impede que uma opção de
          nome comprido estique o balão pela tela — a opção é cortada, não a tela. -->
     <PopoverContent
-      class="min-w-(--bits-popover-anchor-width) w-auto max-w-[min(26rem,calc(100vw-2rem))] p-0"
+      class="min-w-[max(16rem,var(--bits-popover-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))] p-0"
       align="start"
     >
       <div class="relative shrink-0 border-b border-border p-2">
@@ -349,7 +362,11 @@
                 : 'text-foreground hover:bg-muted',
             )}
           >
-            {#if option.icon}
+            {#if option.personName}
+              <span aria-hidden="true" class="flex shrink-0">
+                <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
+              </span>
+            {:else if option.icon}
               <option.icon class="size-3.5 shrink-0" aria-hidden="true" />
             {:else if option.tone}
               <span class={optionDot({ tone: option.tone })} aria-hidden="true"></span>

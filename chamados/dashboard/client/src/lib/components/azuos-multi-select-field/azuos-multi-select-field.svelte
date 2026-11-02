@@ -12,7 +12,14 @@
    * `onChange` devolve a lista NA ORDEM DAS OPÇÕES, e não na ordem em que foram marcadas: a mesma
    * escolha vira sempre a mesma lista, o que faz a URL e o cache da consulta serem os mesmos.
    */
-  export type AzuosMultiSelectFieldOption = { value: string; label: string };
+  export type AzuosMultiSelectFieldOption = {
+    value: string;
+    label: string;
+    /** A pessoa da opção: quando existe, a foto (ou as iniciais) vem antes do rótulo. */
+    personName?: string;
+    /** A foto da pessoa. Sem ela, ficam as iniciais de `personName`. */
+    avatarUrl?: string | null;
+  };
 
   export type AzuosMultiSelectFieldProps = {
     data: {
@@ -65,6 +72,7 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import CheckboxField from '$lib/components/azuos-checkbox-field/azuos-checkbox-field.svelte';
   import * as Popover from '$lib/components/ui/popover';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state: fieldState, actions }: AzuosMultiSelectFieldProps = $props();
@@ -78,6 +86,13 @@
     return labels.length === 0 ? data.placeholder : labels.join(', ');
   });
   const ariaLabel = $derived(ui?.ariaLabel ?? data.placeholder);
+  /* Os marcados que são PESSOA, para o botão mostrar os rostos — no máximo três, até onde o
+     resumo ainda cabe ao lado. */
+  const selectedPeople = $derived(
+    data.options
+      .filter((option) => option.personName && data.values.includes(option.value))
+      .slice(0, 3),
+  );
 
   function toggle(value: string, isChecked: boolean) {
     const isOn = (item: string) => (item === value ? isChecked : data.values.includes(item));
@@ -102,20 +117,40 @@
     aria-label={`${ariaLabel}: ${fullLabel}`}
     title={fullLabel}
     class={cn(
-      'control-lg rounded-control border-input bg-muted text-foreground flex w-full items-center justify-between gap-2 border px-3 text-sm whitespace-nowrap outline-none',
+      'control-lg rounded-control border-input bg-muted text-foreground flex w-full min-w-40 items-center justify-between gap-2 border px-3 text-sm whitespace-nowrap outline-none',
       'focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
       ui?.className,
     )}
   >
-    <span class="min-w-0 truncate">{summarizeSelection(data)}</span>
+    <span class="flex min-w-0 items-center gap-2">
+      <!-- Os rostos de quem está marcado, sobrepostos — no máximo três. -->
+      {#if selectedPeople.length > 0}
+        <span aria-hidden="true" class="flex shrink-0 -space-x-1.5">
+          {#each selectedPeople as person (person.value)}
+            <PersonAvatar
+              name={person.personName ?? person.label}
+              avatarUrl={person.avatarUrl}
+              ui={{ size: 'sm', className: 'ring-background ring-2' }}
+            />
+          {/each}
+        </span>
+      {/if}
+      <span class="min-w-0 truncate">{summarizeSelection(data)}</span>
+    </span>
     <ChevronDown class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
   </Popover.Trigger>
-  <Popover.Content align="start" class="w-72 gap-0 p-0">
+  <Popover.Content align="start" class="w-72 min-w-64 gap-0 p-0">
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <ul role="group" aria-label={ariaLabel} onkeydown={moveFocusWithArrows} class="max-h-72 overflow-y-auto p-2">
       {#each data.options as option (option.value)}
-        <li class="hover:bg-accent rounded-box px-2">
+        <li class="hover:bg-accent rounded-box flex items-center gap-2 px-2">
+          {#if option.personName}
+            <span aria-hidden="true" class="flex shrink-0">
+              <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
+            </span>
+          {/if}
           <CheckboxField
+            ui={{ className: 'min-w-0 flex-1' }}
             data={{ label: option.label, name: `${fieldId}-${option.value}`, isChecked: data.values.includes(option.value) }}
             actions={{ onChange: (isChecked) => toggle(option.value, isChecked) }}
           />

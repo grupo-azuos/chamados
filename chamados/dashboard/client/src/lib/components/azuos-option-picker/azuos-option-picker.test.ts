@@ -357,3 +357,33 @@ describe('AzuosOptionPicker — free value', () => {
     expect(trigger.querySelectorAll('svg')).toHaveLength(2);
   });
 });
+
+describe('AzuosOptionPicker with people', () => {
+  const people = Array.from({ length: 10 }, (_, index) => ({
+    value: `p${index}`,
+    label: `Pessoa ${index}`,
+    personName: `Pessoa ${index}`,
+  }));
+
+  // feliz
+  it('shows the initials of the chosen person in the button', () => {
+    render(OptionPicker, {
+      props: { data: { value: 'p3', options: people }, ui: { ariaLabel: 'Responsável' }, actions: { onChange: vi.fn() } },
+    });
+
+    expect(screen.getByRole('button', { name: /Responsável/ })).toHaveTextContent('P3');
+  });
+
+  // triste
+  it('draws no avatar when the options are not people', () => {
+    render(OptionPicker, {
+      props: {
+        data: { value: 'a', options: [{ value: 'a', label: 'Alta' }, { value: 'b', label: 'Baixa' }] },
+        ui: { ariaLabel: 'Urgência' },
+        actions: { onChange: vi.fn() },
+      },
+    });
+
+    expect(document.querySelector('[data-slot="avatar"]')).toBeNull();
+  });
+});

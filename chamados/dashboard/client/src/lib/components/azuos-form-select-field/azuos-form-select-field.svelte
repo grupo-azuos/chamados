@@ -40,7 +40,7 @@
   const isLabelHidden = $derived(ui?.isLabelHidden ?? false);
 </script>
 
-<div class={cn('flex min-w-0 flex-col gap-1.5', ui?.className)} title={data.hint}>
+<div class={cn('flex min-w-40 flex-col gap-1.5', ui?.className)} title={data.hint}>
   <span class={cn('text-ink-700 text-sm font-medium', isLabelHidden && 'sr-only')}>
     {data.label}
     <!-- O `*` é desenho: o leitor de tela já ouve "obrigatório" pelo contexto do formulário. -->

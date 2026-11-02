@@ -147,7 +147,7 @@
     aria-controls={listId}
     disabled={fieldState?.isDisabled}
     class={cn(
-      'control-lg rounded-control border-input bg-muted text-foreground flex w-full items-center justify-between gap-2 border px-3 text-left text-sm shadow-xs transition-[color,box-shadow] outline-none',
+      'control-lg rounded-control border-input bg-muted text-foreground flex w-full min-w-40 items-center justify-between gap-2 border px-3 text-left text-sm shadow-xs transition-[color,box-shadow] outline-none',
       'focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
       ui?.className,
     )}
@@ -161,7 +161,7 @@
       <ChevronDown aria-hidden="true" class="size-4 shrink-0 opacity-50" />
     {/if}
   </Popover.Trigger>
-  <Popover.Content align="start" matchAnchorWidth class="min-w-56 gap-0 p-0">
+  <Popover.Content align="start" matchAnchorWidth class="min-w-64 gap-0 p-0">
     <div class="flex items-center gap-2 border-b px-3">
       <Search aria-hidden="true" class="text-muted-foreground size-3.5 shrink-0" />
       <!-- svelte-ignore a11y_autofocus -->

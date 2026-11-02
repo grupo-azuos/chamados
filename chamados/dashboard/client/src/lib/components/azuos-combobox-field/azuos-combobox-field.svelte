@@ -10,7 +10,15 @@
    * essa ação, o que a pessoa digitou e não encontrou vira uma linha "Criar «termo»" no fim da
    * lista; quando não passa, o campo é só busca. O componente continua puro: ele avisa, não cria.
    */
-  export type AzuosComboboxFieldOption = { value: string; label: string; icon?: LucideIcon };
+  export type AzuosComboboxFieldOption = {
+    value: string;
+    label: string;
+    icon?: LucideIcon;
+    /** A pessoa da opção: quando existe, a foto (ou as iniciais) vem antes do rótulo. */
+    personName?: string;
+    /** A foto da pessoa. Sem ela, ficam as iniciais de `personName`. */
+    avatarUrl?: string | null;
+  };
 
   export type AzuosComboboxFieldProps = {
     data: { value: string; options: AzuosComboboxFieldOption[] };
@@ -53,6 +61,7 @@
 
   import * as Command from '$lib/components/ui/command';
   import * as Popover from '$lib/components/ui/popover';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state: fieldState, actions }: AzuosComboboxFieldProps = $props();
@@ -100,14 +109,18 @@
         disabled={fieldState?.isDisabled}
         title={selectedOption?.label}
         class={cn(
-          'control-lg rounded-control border-input bg-muted text-foreground flex w-full max-w-full min-w-0 items-center justify-between gap-2 border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none',
+          'control-lg rounded-control border-input bg-muted text-foreground flex w-full max-w-full min-w-40 items-center justify-between gap-2 border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none',
           'focus-visible:ring-ring/50 focus-visible:ring-[3px]',
           'disabled:cursor-not-allowed disabled:opacity-50',
           ui?.className,
         )}
       >
         <span class={cn('flex min-w-0 items-center gap-2', !selectedOption && 'text-muted-foreground')}>
-          {#if SelectedIcon}
+          {#if selectedOption?.personName}
+            <span aria-hidden="true" class="flex shrink-0">
+              <PersonAvatar name={selectedOption.personName} avatarUrl={selectedOption.avatarUrl} ui={{ size: 'sm' }} />
+            </span>
+          {:else if SelectedIcon}
             <SelectedIcon class="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
           {/if}
           <span class="truncate">{selectedOption?.label || ui?.placeholder || ''}</span>
@@ -116,9 +129,10 @@
       </button>
     {/snippet}
   </Popover.Trigger>
-  <!-- A LARGURA DA LISTA É A DO GATILHO: sem amarrar, ela se estica até o nome mais comprido e
-       nasce mais larga que o diálogo em volta. -->
-  <Popover.Content align="start" matchAnchorWidth class="p-0">
+  <!-- A LARGURA DA LISTA É A DO GATILHO, com piso: sem amarrar, ela se estica até o nome mais
+       comprido e nasce mais larga que o diálogo em volta; sem o piso (`min-w-64`), sob um
+       gatilho estreito cada opção saía cortada. O gatilho tem o piso dele (`min-w-40`). -->
+  <Popover.Content align="start" matchAnchorWidth class="min-w-64 p-0">
     <!-- O filtro é o do próprio Command, por semelhança — "ana s" ainda acha "Ana Souza". -->
     <Command.Root>
       <Command.Input bind:value={term} placeholder={ui?.searchPlaceholder ?? 'Pesquisar…'} />
@@ -132,7 +146,11 @@
                 class={cn('size-4 shrink-0', option.value !== data.value && 'opacity-0')}
                 aria-hidden="true"
               />
-              {#if OptionIcon}
+              {#if option.personName}
+                <span aria-hidden="true" class="flex shrink-0">
+                  <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
+                </span>
+              {:else if OptionIcon}
                 <OptionIcon class="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
               {/if}
               <span class="truncate">{option.label}</span>

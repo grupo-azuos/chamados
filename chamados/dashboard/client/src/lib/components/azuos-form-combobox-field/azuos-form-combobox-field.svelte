@@ -46,7 +46,7 @@
   const message = $derived(error ?? data.hint ?? null);
 </script>
 
-<div class={cn('flex min-w-0 flex-col gap-1.5', ui?.className)}>
+<div class={cn('flex min-w-40 flex-col gap-1.5', ui?.className)}>
   {#if data.label}
     <span class="text-ink-700 text-sm font-medium">
       {data.label}

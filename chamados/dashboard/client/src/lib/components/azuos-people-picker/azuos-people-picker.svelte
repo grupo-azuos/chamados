@@ -7,7 +7,8 @@
    * escolhem na abertura, na Central e no painel — por isso é genérico. É o par de várias
    * escolhas do `AzuosOptionPicker`: o mesmo gatilho de 40px, o mesmo balão com busca.
    */
-  export type PeoplePickerOption = { id: string; name: string };
+  /** `avatarUrl`: a foto da pessoa; sem ela, as iniciais. */
+  export type PeoplePickerOption = { id: string; name: string; avatarUrl?: string | null };
 
   export type AzuosPeoplePickerProps = {
     data: { selectedIds: string[]; options: PeoplePickerOption[] };
@@ -117,7 +118,7 @@
                 isSelected ? 'bg-muted text-primary font-semibold' : 'text-foreground hover:bg-muted',
               )}
             >
-              <PersonAvatar name={option.name} />
+              <PersonAvatar name={option.name} avatarUrl={option.avatarUrl} />
               <span class="min-w-0 flex-1 break-words">{option.name}</span>
               {#if isSelected}
                 <CheckIcon class="size-3.5 shrink-0" aria-hidden="true" />
@@ -135,7 +136,7 @@
     <ul class="flex flex-wrap gap-1.5" aria-label="Pessoas escolhidas">
       {#each selected as person (person.id)}
         <li class="rounded-chip bg-muted text-foreground flex items-center gap-1.5 py-1 pr-1 pl-1.5 text-xs font-medium">
-          <PersonAvatar name={person.name} />
+          <PersonAvatar name={person.name} avatarUrl={person.avatarUrl} />
           <span class="max-w-48 truncate">{person.name}</span>
           <button
             type="button"

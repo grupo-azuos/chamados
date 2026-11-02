@@ -25,6 +25,17 @@
     'RH',
   ].map((label) => ({ value: label.toLowerCase(), label }));
 
+  /* Pessoas inventadas: uma com foto, as outras com as iniciais. */
+  const people = [
+    { value: 'ana', label: 'Ana Souza', personName: 'Ana Souza', avatarUrl: 'https://i.pravatar.cc/64?img=5' },
+    { value: 'caio', label: 'Caio Ribeiro', personName: 'Caio Ribeiro', avatarUrl: null },
+    { value: 'dani', label: 'Dani Albuquerque', personName: 'Dani Albuquerque' },
+  ];
+  const manyPeople = [
+    ...people,
+    ...departments.map((option) => ({ ...option, personName: option.label })),
+  ];
+
   const baseArgs = {
     data: { value: '', options: priorities },
     ui: { ariaLabel: 'Urgência', allLabel: 'Qualquer urgência' },
@@ -127,3 +138,6 @@
     ui: { ariaLabel: 'Responsável', fullWidth: true, allowCustomValue: true, selectedLabel: 'Equipe externa' },
     actions: { onChange: fn(), onCustomValue: fn() } }}
 />
+
+<!-- Seletor de pessoa: a foto (ou as iniciais) vem antes do nome, no botão e em cada linha. -->
+<Story name="WithPeople" args={{ ...baseArgs, data: { value: 'ana', options: manyPeople }, ui: { ariaLabel: 'Responsável' } }} template={inBox} />

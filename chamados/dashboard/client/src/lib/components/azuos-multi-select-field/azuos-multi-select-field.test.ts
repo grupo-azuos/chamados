@@ -88,3 +88,31 @@ describe('AzuosMultiSelectField — walking the boxes with the keyboard and clea
     expect(onChange).toHaveBeenCalledWith([]);
   });
 });
+
+const people = [
+  { value: 'ana', label: 'Ana Souza', personName: 'Ana Souza', avatarUrl: null },
+  { value: 'caio', label: 'Caio Ribeiro', personName: 'Caio Ribeiro' },
+];
+
+describe('AzuosMultiSelectField with people', () => {
+  // feliz
+  it('shows the face of who is marked on the button', () => {
+    render(MultiSelectField, {
+      props: {
+        data: { values: ['ana'], options: people, placeholder: 'Todos', noun: 'pessoas' },
+        actions: { onChange: vi.fn() },
+      },
+    });
+
+    expect(screen.getByRole('button', { name: 'Todos: Ana Souza' })).toHaveTextContent('AS');
+  });
+
+  // triste
+  it('draws no face when the options are not people', () => {
+    render(MultiSelectField, {
+      props: { data: { ...base, values: ['infra'] }, actions: { onChange: vi.fn() } },
+    });
+
+    expect(document.querySelector('[data-slot="avatar"]')).toBeNull();
+  });
+});
