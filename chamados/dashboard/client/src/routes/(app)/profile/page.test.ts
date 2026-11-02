@@ -32,3 +32,47 @@ describe('a rota profile', () => {
     await expectOutageShown();
   });
 });
+
+const { apiRequest } = await import('$lib/api/http-client');
+const { screen, waitFor, within } = await import('@testing-library/svelte');
+const { default: userEvent } = await import('@testing-library/user-event');
+
+const connection = {
+  isConfigured: true,
+  canLink: true,
+  state: 'disconnected',
+  qr: null,
+  phone: null,
+  sentToday: 0,
+  dailyLimit: 100,
+};
+
+describe('a rota profile de quem administra tudo', () => {
+  // feliz
+  it('mostra o WhatsApp e a equipe, e abre o formulário de liberar módulo', async () => {
+    vi.mocked(apiRequest).mockImplementation(async (path: string) => {
+      if (path === '/integrations/whatsapp/status') return connection;
+      if (path === '/integrations/whatsapp/templates') return [];
+      return [];
+    });
+    visiting({});
+    renderPage(Page as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    expect(await screen.findByRole('link', { name: 'WhatsApp' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Equipe' })).toBeInTheDocument();
+    await user.click((await screen.findAllByRole('button', { name: /Liberar o primeiro módulo|Liberar módulo/ }))[0]!);
+    const form = await screen.findByRole('dialog');
+    expect(form).toHaveTextContent('Liberar módulos');
+    await user.click(within(form).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    /* Vincular o WhatsApp abre a janela de avisos; os textos do bot, a dos modelos. */
+    await user.click(screen.getByRole('button', { name: /Vincular/ }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Textos do bot' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+});

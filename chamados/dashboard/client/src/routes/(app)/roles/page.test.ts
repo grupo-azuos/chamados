@@ -32,3 +32,42 @@ describe('a rota roles', () => {
     await expectOutageShown();
   });
 });
+
+const { apiRequest } = await import('$lib/api/http-client');
+const { screen, waitFor, within } = await import('@testing-library/svelte');
+const { default: userEvent } = await import('@testing-library/user-event');
+
+const role = {
+  id: 1,
+  userId: 'usr_1',
+  userEmail: 'bia@empresa.com.br',
+  context: 'infra',
+  createdAt: '2026-10-01T12:00:00.000Z',
+  createdBy: 'ana@empresa.com.br',
+  updatedAt: null,
+  updatedBy: null,
+};
+
+describe('a rota roles com acessos carregados', () => {
+  // feliz
+  it('abre o formulário de liberar módulo e a pergunta de tirar módulo', async () => {
+    vi.mocked(apiRequest).mockImplementation(async (path: string) => (path === '/roles' ? [role] : []));
+    visiting({});
+    renderPage(Page as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    await screen.findAllByText('bia@empresa.com.br');
+    await user.click(screen.getByRole('button', { name: 'Liberar módulo' }));
+    const form = await screen.findByRole('dialog');
+    expect(form).toHaveTextContent('Liberar módulos');
+    await user.click(within(form).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getAllByRole('button', { name: 'Tirar módulo' })[0]!);
+    const question = await screen.findByRole('dialog');
+    expect(question).toHaveTextContent('Tirar este módulo?');
+    expect(question).toHaveTextContent('bia@empresa.com.br');
+    await user.click(within(question).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+});

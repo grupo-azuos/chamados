@@ -32,3 +32,73 @@ describe('a rota system/tickets/detalhe', () => {
     await expectOutageShown();
   });
 });
+
+const { apiRequest } = await import('$lib/api/http-client');
+const { screen, waitFor } = await import('@testing-library/svelte');
+const { default: userEvent } = await import('@testing-library/user-event');
+const { goto } = await import('$app/navigation');
+
+const ticket = {
+  id: 22,
+  protocol: 'CH-0022',
+  status: 'in_progress',
+  priority: 'high',
+  requesterName: 'Ana Souza',
+  area: 'sistema',
+  department: 'contabil',
+  problemType: 'network',
+  participantAreas: [],
+  computerId: null,
+  computerName: null,
+  anydeskId: null,
+  contactPhone: '62999990022',
+  notifyWhatsapp: true,
+  description: 'A internet caiu na minha sala.',
+  screenshotUrl: null,
+  assignee: 'Suporte TI',
+  solution: null,
+  createdAt: '2026-09-23T12:00:00.000Z',
+  startedAt: '2026-09-23T12:30:00.000Z',
+  resolvedAt: null,
+  updatedAt: null,
+  updatedBy: null,
+};
+
+/** A API respondendo de verdade: o chamado existe e as listas estão vazias. */
+function serveTicket() {
+  vi.mocked(apiRequest).mockImplementation(async (path: string) => {
+    if (path === '/tickets/22') return ticket;
+    if (path === '/computers' || path === '/tickets') return { items: [], total: 0, page: 1, pageSize: 25 };
+    return [];
+  });
+}
+
+describe('a rota sistema/tickets/detalhe com o chamado carregado', () => {
+  // feliz
+  it('mostra a ficha, dá o protocolo à aba e volta à fila', async () => {
+    serveTicket();
+    visiting({ id: '22' });
+    renderPage(Page as never);
+
+    await screen.findByText(/A internet caiu na minha sala/);
+    await vi.waitFor(() => expect(document.title).toContain('Chamado CH-0022'));
+    await userEvent.click(screen.getByRole('button', { name: /Voltar para os chamados/ }));
+    expect(goto).toHaveBeenCalledWith('/system/tickets');
+  });
+
+  // triste
+  it('explica quando o chamado não existe e oferece a volta', async () => {
+    const { ApiError } = await import('$lib/api/http-client');
+    vi.mocked(apiRequest).mockImplementation(async (path: string) => {
+      if (path === '/tickets/22') throw new ApiError(404, 'Chamado não encontrado.');
+      return [];
+    });
+    vi.mocked(goto).mockClear();
+    visiting({ id: '22' });
+    renderPage(Page as never);
+
+    expect(await screen.findByText('Não encontrei este chamado')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Voltar para os chamados/ }));
+    await waitFor(() => expect(goto).toHaveBeenCalledWith('/system/tickets'));
+  });
+});

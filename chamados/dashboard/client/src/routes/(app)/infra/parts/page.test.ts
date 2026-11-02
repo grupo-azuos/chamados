@@ -32,3 +32,59 @@ describe('a rota infra/parts', () => {
     await expectOutageShown();
   });
 });
+
+const { apiRequest } = await import('$lib/api/http-client');
+const { screen, waitFor, within } = await import('@testing-library/svelte');
+const { default: userEvent } = await import('@testing-library/user-event');
+
+const part = {
+  id: 1,
+  name: 'SSD 240 GB Kingston',
+  category: 'ssd',
+  condition: 'new',
+  balance: 3,
+  createdAt: '2026-09-01T12:00:00.000Z',
+  createdBy: 'suporte@azuos.local',
+  updatedAt: null,
+  updatedBy: null,
+};
+
+function serveParts() {
+  vi.mocked(apiRequest).mockImplementation(async (path: string) => {
+    if (path === '/parts') return { items: [part], total: 1, page: 1, pageSize: 25 };
+    if (path === '/parts/summary') return { kinds: 1, items: 3, outOfStock: 0 };
+    if (path.startsWith('/parts/movements') || path === '/computers') return { items: [], total: 0, page: 1, pageSize: 25 };
+    return [];
+  });
+}
+
+describe('a rota infra/parts com peças', () => {
+  // feliz
+  it('abre o cadastro, a correção e a movimentação de uma peça', async () => {
+    serveParts();
+    visiting({});
+    renderPage(Page as never);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    await screen.findAllByText('SSD 240 GB Kingston');
+    const closeDialog = async () => {
+      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Fechar diálogo' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    };
+
+    await user.click(screen.getAllByRole('button', { name: 'Cadastrar peça' })[0]!);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    await closeDialog();
+
+    await user.click(screen.getAllByRole('button', { name: 'Corrigir' })[0]!);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    await closeDialog();
+
+    await user.click(screen.getAllByRole('button', { name: 'Entrada' })[0]!);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    await closeDialog();
+
+    await user.click(screen.getAllByRole('button', { name: 'Saída' })[0]!);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+});
