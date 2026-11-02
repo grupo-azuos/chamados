@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import ComputerDetailView, {
+  type AzuosComputerDetailViewProps,
   alertDurationLabel,
   coreCountOf,
   hardwareFacts,
@@ -562,5 +563,125 @@ describe('AzuosComputerDetailView', () => {
     renderDetail({ isBlocked: true, blockReason: 'Máquina devolvida ao fornecedor.' });
 
     expect(screen.getByText('Máquina devolvida ao fornecedor.')).toBeInTheDocument();
+  });
+});
+
+/** As listas de baixo da ficha: chamados, andanças, peças e manutenções, cheias ou carregando. */
+function renderWithHistory(
+  over: Partial<AzuosComputerDetailViewProps['data']> = {},
+  state: AzuosComputerDetailViewProps['state'] = {},
+) {
+  return render(ComputerDetailView, {
+    props: {
+      data: {
+        computer: computer(),
+        samples,
+        live: null,
+        tickets: [],
+        alerts: [alert()],
+        alertPaging: paging,
+        ticketPaging: { ...paging, total: 0 },
+        maintenances: [],
+        partMovements: [],
+        transfers: [],
+        ...over,
+      },
+      state,
+      actions,
+    },
+  });
+}
+
+describe('AzuosComputerDetailView: the histories of the machine', () => {
+  // feliz
+  it('lists the tickets, the transfers and the parts of the machine', () => {
+    renderWithHistory({
+      tickets: [
+        {
+          id: 7,
+          protocol: 'CH-0007',
+          status: 'open',
+          problemType: 'printer',
+          requesterName: 'Marta',
+          createdAt: '2026-09-20T12:00:00.000Z',
+        } as never,
+      ],
+      ticketPaging: { page: 1, pageSize: 25, total: 1 },
+      transfers: [
+        transfer,
+        { ...transfer, id: 2, responsible: null, note: null, peripheralsLeftBehind: 0 },
+      ],
+      partMovements: [
+        {
+          id: 1,
+          partName: 'SSD 240 GB',
+          type: 'out',
+          quantity: 1,
+          handledBy: 'Caio',
+          note: 'Troca do disco.',
+          createdAt: '2026-09-21T12:00:00.000Z',
+        } as never,
+        {
+          id: 2,
+          partName: 'Mouse USB',
+          type: 'in',
+          quantity: 1,
+          handledBy: null,
+          note: null,
+          createdAt: '2026-09-22T12:00:00.000Z',
+        } as never,
+      ],
+      maintenances: [
+        {
+          id: 1,
+          computerId: 3,
+          computerName: 'CONTABIL-03',
+          type: 'cleaning',
+          description: null,
+          performedBy: 'Técnico',
+          performedAt: '2026-09-10T12:00:00.000Z',
+          createdAt: '2026-09-10T12:00:00.000Z',
+          createdBy: 'ana@empresa.com.br',
+          updatedAt: null,
+          updatedBy: null,
+        } as never,
+      ],
+    });
+
+    expect(screen.getByText('CH-0007')).toBeInTheDocument();
+    expect(screen.getByText(/Marta/)).toBeInTheDocument();
+    expect(screen.getByText('2 peça(s) ficaram')).toBeInTheDocument();
+    expect(screen.getByText(/Coordenação contábil/)).toBeInTheDocument();
+    expect(screen.getByText('SSD 240 GB')).toBeInTheDocument();
+    expect(screen.getByText(/Troca do disco/)).toBeInTheDocument();
+    expect(screen.getByText('Saída · 1')).toBeInTheDocument();
+    expect(screen.getByText('Entrada · 1')).toBeInTheDocument();
+    expect(screen.getByText(/Técnico/)).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  // triste
+  it('says it is loading each history while the server answers', () => {
+    renderWithHistory(
+      {},
+      {
+        isTicketsLoading: true,
+        isTransfersLoading: true,
+        isPartsLoading: true,
+        isMaintenancesLoading: true,
+      },
+    );
+
+    expect(screen.getByText('Carregando os chamados…')).toBeInTheDocument();
+    expect(screen.getAllByText('Carregando o histórico…')).toHaveLength(2);
+    expect(screen.getByText('Carregando as peças…')).toBeInTheDocument();
+  });
+
+  it('explains each empty history', () => {
+    renderWithHistory();
+
+    expect(screen.getByText(/Nenhum chamado aponta para esta máquina/)).toBeInTheDocument();
+    expect(screen.getByText(/Nenhuma transferência registrada/)).toBeInTheDocument();
+    expect(screen.getByText(/Nenhuma peça do depósito/)).toBeInTheDocument();
   });
 });
