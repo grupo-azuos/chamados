@@ -57,3 +57,28 @@ describe('AzuosKanbanColumn', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosKanbanColumn — hovering a card over the column', () => {
+  // feliz
+  it('lights up while a card hovers over it and dims when the card leaves', async () => {
+    render(KanbanColumn, {
+      props: { data: { title: 'Em atendimento', count: 1 }, ui: { addLabel: 'Novo' }, actions: { onDropItem: vi.fn(), onAdd: vi.fn() } },
+    });
+    const column = screen.getByRole('region', { name: 'Em atendimento' });
+
+    await fireEvent.dragOver(column, dropWith('ticket:1'));
+    expect(column).toHaveClass('bg-accent');
+    await fireEvent.dragLeave(column);
+    expect(column).not.toHaveClass('bg-accent');
+    expect(screen.getByRole('button', { name: /Novo/ })).toBeInTheDocument();
+  });
+
+  // triste
+  it('does not react to a card when nothing can be dropped on it', async () => {
+    render(KanbanColumn, { props: { data: { title: 'Encerrados', count: 0 } } });
+    const column = screen.getByRole('region', { name: 'Encerrados' });
+
+    await fireEvent.dragOver(column, dropWith('ticket:1'));
+    expect(column).not.toHaveClass('bg-accent');
+  });
+});
