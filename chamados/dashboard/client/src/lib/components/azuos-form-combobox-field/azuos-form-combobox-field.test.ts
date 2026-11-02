@@ -45,3 +45,16 @@ describe('AzuosFormComboboxField', () => {
     expect(screen.getByRole('combobox')).toHaveAttribute('aria-invalid', 'true');
   });
 });
+
+describe('AzuosFormComboboxField — without a visible label or a hint', () => {
+  // feliz
+  it('is named by the aria label and describes nothing when there is no hint', () => {
+    render(FormComboboxField, {
+      props: { data: { value: 'ti', options }, ui: { ariaLabel: 'Setor' }, actions: { onChange: vi.fn() } },
+    });
+
+    const trigger = screen.getByRole('combobox', { name: 'Setor' });
+    expect(trigger).not.toHaveAttribute('aria-describedby');
+    expect(screen.queryByText('Departamento')).not.toBeInTheDocument();
+  });
+});

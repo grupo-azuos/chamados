@@ -44,3 +44,28 @@ describe('AzuosDateField', () => {
     expect(typedProblem('', '2024-01-01')).toBeNull();
   });
 });
+
+describe('AzuosDateField — clearing, the calendar and the label', () => {
+  // feliz
+  it('clears the date when the text is erased and picks a day from the calendar', async () => {
+    const onChange = vi.fn();
+    render(DateField, {
+      props: { data: { ...data, value: '2026-03-10', isRequired: true }, ui: { startYear: 2026 }, actions: { onChange } },
+    });
+
+    await userEvent.clear(screen.getByRole('textbox', { name: /Data da compra/ }));
+    await userEvent.tab();
+    expect(onChange).toHaveBeenLastCalledWith(null);
+
+    /* Com uma data escolhida, o calendário abre direto no dia. */
+    await userEvent.click(screen.getByRole('button', { name: /Escolher Data da compra no calendário/ }));
+    await userEvent.click(await screen.findByRole('button', { name: '15' }));
+    expect(onChange).toHaveBeenLastCalledWith('2026-03-15');
+  });
+
+  // feliz
+  it('can hide its label for the screen while keeping it for readers', () => {
+    render(DateField, { props: { data, ui: { isLabelHidden: true }, actions: { onChange: vi.fn() } } });
+    expect(screen.getByText('Data da compra')).toHaveClass('sr-only');
+  });
+});

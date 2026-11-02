@@ -84,3 +84,22 @@ describe('AzuosUserProfileDialog', () => {
     expect(userBadges.length).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe('AzuosUserProfileDialog — without a person, without the optional actions, and Escape', () => {
+  // triste
+  it('names an unknown person generically and offers neither roles nor sign out without their actions', () => {
+    render(UserProfileDialog, {
+      props: { data: { user: undefined }, state: { isOpen: true }, actions: { onClose: vi.fn() } },
+    });
+
+    expect(screen.getAllByText('Usuário').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /Sair da conta/ })).not.toBeInTheDocument();
+  });
+
+  // feliz
+  it('closes with Escape', async () => {
+    const actions = renderDialog();
+    await userEvent.keyboard('{Escape}');
+    expect(actions.onClose).toHaveBeenCalled();
+  });
+});

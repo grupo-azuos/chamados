@@ -88,3 +88,13 @@ describe('AzuosDateStepper — without limits and with a starting year', () => {
     expect(yearsBetween(undefined, undefined, { year: 2026, month: 0, day: 1 })).toHaveLength(131);
   });
 });
+
+describe('AzuosDateStepper — going back from the day to the month', () => {
+  // feliz
+  it('takes the month answer back to the month question', async () => {
+    render(DateStepper, { props: { data: { value: '2024-02-10' }, actions: { onChange: vi.fn() } } });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mês: Fevereiro. Trocar' }));
+    expect(screen.getByText('Qual é o mês?')).toBeInTheDocument();
+  });
+});
