@@ -172,3 +172,17 @@ describe('echarts.util — edge cases', () => {
     }
   });
 });
+
+describe('resolveColor — a broken variable', () => {
+  // triste
+  it('resolves to nothing when the variable has no name to look up', () => {
+    const spy = vi
+      .spyOn(window, 'getComputedStyle')
+      .mockReturnValue({ color: 'var(--x)', getPropertyValue: () => '' } as unknown as CSSStyleDeclaration);
+    try {
+      expect(resolveColor('var(', '#abcdef')).toBe('');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

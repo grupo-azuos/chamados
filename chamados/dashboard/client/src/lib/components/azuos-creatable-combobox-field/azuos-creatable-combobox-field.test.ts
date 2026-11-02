@@ -131,3 +131,17 @@ describe('AzuosCreatableComboboxField — closing', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
   });
 });
+
+describe('AzuosCreatableComboboxField — Enter with nothing to choose', () => {
+  // triste
+  it('does nothing on Enter when the list is empty and nothing was typed', async () => {
+    const user = userEvent.setup();
+    const actions = setup([]);
+
+    await user.click(screen.getByRole('combobox'));
+    await user.keyboard('{Enter}');
+
+    expect(actions.onChange).not.toHaveBeenCalled();
+    expect(actions.onCreate).not.toHaveBeenCalled();
+  });
+});

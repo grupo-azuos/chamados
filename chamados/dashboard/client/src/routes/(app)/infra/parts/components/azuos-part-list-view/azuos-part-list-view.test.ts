@@ -341,3 +341,18 @@ describe('AzuosPartListView — reduced motion', () => {
     }
   });
 });
+
+describe('AzuosPartListView — out of stock filter already on', () => {
+  // feliz
+  it('lights the "out of stock" shortcut when the filter is on', () => {
+    render(PartListView, {
+      props: {
+        data: { parts: [part()], total: 1, summary, filter: { ...emptyFilter, outOfStockOnly: true } },
+        state: settled,
+        actions,
+      },
+    });
+
+    expect(screen.getByRole('button', { name: 'Sem estoque: tirar o filtro' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});

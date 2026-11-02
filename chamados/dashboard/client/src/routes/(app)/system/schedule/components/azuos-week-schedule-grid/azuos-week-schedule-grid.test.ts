@@ -995,3 +995,31 @@ describe('AzuosWeekScheduleGrid — what each event tooltip says, in every view'
     expect(login).toHaveTextContent('Azuos · por ana');
   });
 });
+
+describe('AzuosWeekScheduleGrid — empty days without a handler for new appointments', () => {
+  const bare = {
+    onPrev: vi.fn(),
+    onNext: vi.fn(),
+    onToday: vi.fn(),
+    onViewModeChange: vi.fn(),
+    onNewEvent: vi.fn(),
+    onSelectEvent: vi.fn(),
+    onRetry: vi.fn(),
+  };
+
+  // triste
+  it.each(['month', 'week'] as const)('survives a click on an empty day in the %s view', async (viewMode) => {
+    render(WeekScheduleGrid, {
+      props: {
+        data: { monthYearTitle: 'Outubro', viewMode, days: [dayColumn()], events: [], nowTopPx: null },
+        state: { isLoading: false, error: null, canEdit: true },
+        actions: bare,
+      },
+    });
+
+    const slots = screen.getAllByRole('button', { name: 'Novo agendamento em 06/10/2026' });
+    await fireEvent.click(slots[0]!);
+
+    expect(slots.length).toBeGreaterThan(0);
+  });
+});

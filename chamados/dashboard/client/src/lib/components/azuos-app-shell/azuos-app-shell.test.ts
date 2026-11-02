@@ -609,3 +609,30 @@ describe('AzuosAppShell — collapsed rail while signing out', () => {
     expect(screen.getAllByText('Saindo…').length).toBeGreaterThan(0);
   });
 });
+
+describe('AzuosAppShell — celular: a tela aberta na gaveta', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  // feliz
+  it('lights the open screen inside the drawer too', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query.includes('max-width'),
+          media: query,
+          onchange: null,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          addListener: () => {},
+          removeListener: () => {},
+          dispatchEvent: () => false,
+        }) as MediaQueryList,
+    );
+    renderShell({ ui: { items }, state: { activeKey: 'tickets' } });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Abrir o menu' }));
+    const sheet = await screen.findByRole('dialog');
+
+    expect(within(sheet).getByRole('link', { name: /Chamados/ })).toHaveAttribute('aria-current', 'page');
+  });
+});

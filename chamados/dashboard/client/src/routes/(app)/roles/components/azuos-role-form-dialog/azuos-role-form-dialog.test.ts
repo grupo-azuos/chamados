@@ -266,3 +266,21 @@ describe('AzuosRoleFormDialog — closing and loading people', () => {
     expect(document.body.textContent).toMatch(/Carregando/);
   });
 });
+
+describe('AzuosRoleFormDialog — a person with an unknown role and no e-mail', () => {
+  // triste
+  it('shows the raw role and no e-mail line when the directory has neither', async () => {
+    renderDialog({
+      data: {
+        mode: 'create',
+        fields: { userId: { value: 'usr_carlos', error: null }, userEmail: { value: '', error: null } },
+        contexts: [],
+        users: [{ id: 'usr_carlos', name: 'Carlos Oliveira', email: 'carlos@empresa.com.br', role: 'guest' }] as never,
+      },
+    });
+
+    expect(screen.getAllByText('guest').length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByRole('button', { name: /Alterar pessoa selecionada/i }));
+    expect(screen.getAllByText('guest').length).toBeGreaterThan(1);
+  });
+});

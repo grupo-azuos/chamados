@@ -345,3 +345,13 @@ describe('maintenance-list-view — cards only', () => {
     }
   });
 });
+
+describe('machineLabelOf — nothing to name the machine by', () => {
+  // triste
+  it('falls back to a generic name when neither nickname nor hostname came', () => {
+    expect(machineLabelOf(maintenance({ computerDisplayName: null, computerName: null } as never))).toBe('Máquina');
+    expect(machineLabelOf(maintenance({ computerId: null, otherMachine: null }))).toBe(
+      'Equipamento não identificado',
+    );
+  });
+});

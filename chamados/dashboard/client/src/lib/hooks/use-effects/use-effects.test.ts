@@ -230,3 +230,17 @@ describe('useEffectsModel — outside the browser', () => {
     }
   });
 });
+
+describe('detectLevel — a browser that hides its cores', () => {
+  // feliz
+  it('assumes a capable machine when the core count is unknown', async () => {
+    vi.stubGlobal('navigator', {});
+    try {
+      const { detectLevel } = await freshEffects();
+
+      expect(detectLevel()).toBe('full');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

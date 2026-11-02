@@ -917,3 +917,27 @@ describe('AzuosOpenTicketForm — the system card, Enter on the last step and th
     expect(onScreenshotChange).toHaveBeenCalledWith(null);
   });
 });
+
+describe('AzuosOpenTicketForm — linking people before anyone was linked', () => {
+  // feliz
+  it('opens the link field with nobody chosen yet', async () => {
+    const user = userEvent.setup();
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        peopleOptions: [{ id: 'u-caio', name: 'Caio Reis' }],
+      },
+      actions: { ...actions, onWatchersChange: vi.fn() },
+    });
+
+    await advanceTo(user, 4);
+    await user.click(screen.getByRole('button', { name: 'Vincular outras pessoas' }));
+
+    expect(screen.getByText('Quem mais acompanha')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Tirar / })).not.toBeInTheDocument();
+  });
+});
