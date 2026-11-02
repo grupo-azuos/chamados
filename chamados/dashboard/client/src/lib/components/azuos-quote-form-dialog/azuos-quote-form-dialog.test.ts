@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -139,5 +139,65 @@ describe('AzuosQuoteFormDialog', () => {
     setup();
 
     expect(screen.queryByRole('button', { name: 'Remover documento' })).toBeNull();
+  });
+});
+
+
+/** Escolhe a segunda opção de um seletor, seja ele de pastilhas ou de lista com busca. */
+async function chooseSecond(label: string) {
+  const group = screen.queryByRole('group', { name: label });
+  if (group) {
+    await userEvent.click(within(group).getAllByRole('button')[1]!);
+    return;
+  }
+  await userEvent.click(screen.getByRole('button', { name: label }));
+  const popup = await waitFor(() => {
+    const open = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1);
+    expect(open).toBeTruthy();
+    return open as HTMLElement;
+  });
+  await fireEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
+}
+
+describe('AzuosQuoteFormDialog — every field reports to the model', () => {
+  // feliz
+  it('types the texts, picks the kind, the status and the date, and attaches a document', async () => {
+    vi.mocked(actions.onChange).mockClear();
+    setup();
+
+    await userEvent.type(screen.getByRole('textbox', { name: /O que foi orçado/ }), '!');
+    await userEvent.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('description', expect.any(String));
+    expect(actions.onBlur).toHaveBeenCalledWith('description');
+    await userEvent.type(screen.getByRole('textbox', { name: /Valor/ }), '1');
+    await userEvent.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('amount', expect.any(String));
+    expect(actions.onBlur).toHaveBeenCalledWith('amount');
+    await userEvent.type(screen.getByRole('textbox', { name: /Observação/ }), 'x');
+    await userEvent.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('note', 'x');
+    expect(actions.onBlur).toHaveBeenCalledWith('note');
+
+    await chooseSecond('Tipo do orçamento');
+    expect(actions.onChange).toHaveBeenCalledWith('kind', expect.any(String));
+    await chooseSecond('Situação do orçamento');
+    expect(actions.onChange).toHaveBeenCalledWith('status', expect.any(String));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Data do orçamento' }));
+    const day = [...document.querySelectorAll('[data-bits-day]')].find((el) => el.textContent?.trim() === '15') as HTMLElement;
+    await userEvent.click(day);
+    expect(actions.onChange).toHaveBeenCalledWith('quotedOn', expect.stringMatching(/^\d{4}-\d{2}-15$/));
+    expect(actions.onBlur).toHaveBeenCalledWith('quotedOn');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Anexar documento' }));
+  });
+
+  // triste
+  it('closes with Escape and shows the date error', async () => {
+    vi.mocked(actions.onClose).mockClear();
+    setup({ data: { mode: 'create', fields: { ...fields, quotedOn: field('', 'Informe a data') }, attachment: { name: null } } } as never);
+    expect(screen.getByText('Informe a data')).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(actions.onClose).toHaveBeenCalled();
   });
 });

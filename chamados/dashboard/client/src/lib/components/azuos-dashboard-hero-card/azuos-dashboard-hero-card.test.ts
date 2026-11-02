@@ -1,5 +1,7 @@
+import Server from '@lucide/svelte/icons/server';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { createRawSnippet } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 
 import DashboardHeroCard from './azuos-dashboard-hero-card.svelte';
@@ -51,5 +53,37 @@ describe('AzuosDashboardHeroCard', () => {
     expect(screen.getByRole('region', { name: 'Bom dia' })).toBeInTheDocument();
     expect(container.querySelector('.grid')).toBeNull();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosDashboardHeroCard — icons, hints, description and what goes below', () => {
+  // feliz
+  it('draws the icon of the eyebrow and of each number, the hint, the description and the children', () => {
+    render(DashboardHeroCard, {
+      props: {
+        data: {
+          eyebrow: 'Infraestrutura',
+          eyebrowIcon: Server,
+          title: 'Painel',
+          description: 'O que pede atenção hoje.',
+          zuzu: { pose: 'alert', size: 96 },
+          stats: [{ label: 'Máquinas', value: 7, hint: 'no parque', icon: Server, tone: 'success' }],
+        },
+        children: createRawSnippet(() => ({ render: () => '<p>ação do painel</p>' })),
+      },
+    });
+
+    expect(screen.getByText('O que pede atenção hoje.')).toBeInTheDocument();
+    expect(screen.getByText('no parque')).toBeInTheDocument();
+    expect(screen.getByText('ação do painel')).toBeInTheDocument();
+    expect(document.querySelectorAll('svg').length).toBeGreaterThanOrEqual(2);
+  });
+
+  // triste
+  it('falls back to the default tone for a tone it does not know', () => {
+    render(DashboardHeroCard, {
+      props: { data: { title: 'Painel', stats: [{ label: 'Outro', value: 1, tone: 'neon' as never }] } },
+    });
+    expect(screen.getByText('Outro')).toBeInTheDocument();
   });
 });

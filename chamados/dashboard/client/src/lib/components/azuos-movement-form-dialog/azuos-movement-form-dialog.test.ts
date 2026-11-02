@@ -1,5 +1,5 @@
 import { type Part } from '@template/shared/schemas/part.schema';
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -159,5 +159,61 @@ describe('AzuosMovementFormDialog', () => {
     });
 
     expect(screen.getByText('Carregando as máquinas do inventário…')).toBeInTheDocument();
+  });
+});
+/** Escolhe uma opção num seletor do projeto: pastilhas quando há poucas opções, lista com busca quando há muitas. */
+async function choose(label: string, option: string) {
+  const group = screen.queryByRole('group', { name: label });
+  if (group) {
+    await userEvent.click(within(group).getByRole('button', { name: option }));
+    return;
+  }
+  await userEvent.click(screen.getByRole('button', { name: label }));
+  const popup = await waitFor(() => {
+    const open = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1);
+    expect(open).toBeTruthy();
+    return open as HTMLElement;
+  });
+  await fireEvent.click(within(popup).getByText(option, { exact: true }));
+}
+
+describe('AzuosMovementFormDialog — every field reports to the model', () => {
+  // feliz
+  it('types the quantity, who handled it and the note, and picks the machine', async () => {
+    vi.mocked(actions.onChange).mockClear();
+    render(MovementFormDialog, {
+      props: {
+        data: { part: part(), type: 'out', fields: fields(), machines },
+        state: { isOpen: true },
+        actions,
+      },
+    });
+
+    await userEvent.type(screen.getByRole('textbox', { name: /Quantidade/ }), '2');
+    await userEvent.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('quantity', expect.any(String));
+    expect(actions.onBlur).toHaveBeenCalledWith('quantity');
+    await userEvent.type(screen.getByRole('textbox', { name: /Observação/ }), 'x');
+    await userEvent.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('note', 'x');
+    expect(actions.onBlur).toHaveBeenCalledWith('note');
+    const handledBy = screen.getAllByRole('textbox').find((box) => box.getAttribute('name') === 'handledBy')!;
+    await userEvent.type(handledBy, 'C');
+    await userEvent.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('handledBy', expect.any(String));
+    expect(actions.onBlur).toHaveBeenCalledWith('handledBy');
+
+    await choose('Para qual máquina', 'Contábil — mesa do fechamento (CONTABIL-03)');
+    expect(actions.onChange).toHaveBeenCalledWith('computerId', '3');
+  });
+
+  // triste
+  it('closes with Escape', async () => {
+    vi.mocked(actions.onClose).mockClear();
+    render(MovementFormDialog, {
+      props: { data: { part: part(), type: 'in', fields: fields(), machines }, state: { isOpen: true }, actions },
+    });
+    await userEvent.keyboard('{Escape}');
+    expect(actions.onClose).toHaveBeenCalled();
   });
 });

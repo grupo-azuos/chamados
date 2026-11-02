@@ -232,3 +232,49 @@ describe('AzuosPartListView', () => {
     expect(screen.getByText(/Mostrando 1 de 240 peças/)).toBeInTheDocument();
   });
 });
+
+/** Escolhe a segunda opção de um seletor, seja ele de pastilhas ou de lista com busca. */
+async function chooseSecond(label: string) {
+  const group = screen.queryByRole('group', { name: label });
+  if (group) {
+    await userEvent.click(within(group).getAllByRole('button')[1]!);
+    return;
+  }
+  await userEvent.click(screen.getByRole('button', { name: label }));
+  const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+  await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
+}
+
+describe('AzuosPartListView — search, filters and the buttons of each row', () => {
+  // feliz
+  it('searches and filters by category and condition', async () => {
+    renderView();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Buscar' }), 's');
+    expect(actions.onSearchChange).toHaveBeenCalledWith('s');
+    await chooseSecond('Filtrar por categoria');
+    expect(actions.onCategoryChange).toHaveBeenCalled();
+    await chooseSecond('Filtrar por condição');
+    expect(actions.onConditionChange).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('moves, corrects and opens the ledger from the cards and from the table', async () => {
+    vi.mocked(actions.onMove).mockClear();
+    vi.mocked(actions.onEdit).mockClear();
+    vi.mocked(actions.onOpenLedger).mockClear();
+    renderView();
+
+    const exits = screen.getAllByRole('button', { name: 'Saída' });
+    const entries = screen.getAllByRole('button', { name: 'Entrada' });
+    const edits = screen.getAllByRole('button', { name: 'Corrigir' });
+    for (const button of [...exits, ...entries]) await userEvent.click(button);
+    for (const button of edits) await userEvent.click(button);
+    expect(actions.onMove).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), 'out');
+    expect(actions.onMove).toHaveBeenCalledTimes(exits.length + entries.length);
+    expect(actions.onEdit).toHaveBeenCalledTimes(edits.length);
+
+    const names = screen.getAllByRole('button', { name: 'SSD 240 GB Kingston' });
+    for (const button of names) await userEvent.click(button);
+    expect(actions.onOpenLedger).toHaveBeenCalledTimes(names.length);
+  });
+});
