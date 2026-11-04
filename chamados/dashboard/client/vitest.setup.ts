@@ -74,6 +74,37 @@ if (!window.matchMedia) {
 }
 
 /**
+ * O jsdom devolve o `transform` calculado como foi escrito (`translateY(4px)`), e não como
+ * `matrix(...)`. O GSAP lê esse valor esperando uma matriz e estoura com "Cannot read
+ * properties of null (reading 'map')" fora do teste, como erro sem dono. Sem layout de verdade
+ * não há matriz para calcular, então o que não é matriz vira `none`.
+ */
+const readComputedStyle = window.getComputedStyle.bind(window);
+
+window.getComputedStyle = (element: Element, pseudoElement?: string | null) => {
+  const style = readComputedStyle(element, pseudoElement);
+
+  return new Proxy(style, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target) as unknown;
+
+      if (property === 'transform' && typeof value === 'string' && !value.startsWith('matrix')) {
+        return 'none';
+      }
+      if (property === 'getPropertyValue') {
+        return (name: string) => {
+          const raw = target.getPropertyValue(name);
+          return name === 'transform' && !raw.startsWith('matrix') ? 'none' : raw;
+        };
+      }
+      return typeof value === 'function'
+        ? (value as (...args: unknown[]) => unknown).bind(target)
+        : value;
+    },
+  });
+};
+
+/**
  * O jsdom não implementa `ResizeObserver`. A moldura dos gráficos (`AzuosEchart`) se mede
  * com ele para saber onde desenhar — sem o stub, o teste quebra antes de renderizar qualquer
  * coisa. O observador não dispara: no jsdom todo elemento tem tamanho zero de qualquer forma,
