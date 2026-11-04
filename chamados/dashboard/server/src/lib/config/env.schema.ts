@@ -16,7 +16,7 @@ export const envSchema = z.object({
     .default('true')
     .transform((value) => value === 'true'),
   DATABASE_SSL_CA: z.string().min(1).optional(),
-  APP_ENV: z.enum(['development', 'test', 'production', 'staging']).default('development'),
+  APP_ENV: z.enum(['dev', 'homo', 'prod']).default('dev'),
   VALKEY_URL: z
     .string()
     .url()
