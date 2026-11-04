@@ -56,7 +56,7 @@ export class GithubIntegrationController {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
-      path: '/api/integrations/github',
+      path: '/api/v1/integrations/github',
       maxAge: 10 * 60_000,
     });
     response.setHeader('Cache-Control', 'no-store');
@@ -74,7 +74,7 @@ export class GithubIntegrationController {
     const name = cookieName(query.state ?? '');
     const browserSecret = readCookie(request, name);
     response.clearCookie(name, {
-      path: '/api/integrations/github',
+      path: '/api/v1/integrations/github',
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',

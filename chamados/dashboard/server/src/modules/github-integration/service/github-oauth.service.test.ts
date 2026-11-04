@@ -8,7 +8,7 @@ const key = 'ab'.repeat(32);
 const env = {
   GITHUB_OAUTH_CLIENT_ID: 'client-id',
   GITHUB_OAUTH_CLIENT_SECRET: 'client-secret',
-  GITHUB_OAUTH_REDIRECT_URI: 'https://azuos.example/api/integrations/github/callback',
+  GITHUB_OAUTH_REDIRECT_URI: 'https://azuos.example/api/v1/integrations/github/callback',
   GITHUB_OAUTH_FRONTEND_URL: 'https://azuos.example',
   GITHUB_OAUTH_ENCRYPTION_KEY: key,
 } as Env;

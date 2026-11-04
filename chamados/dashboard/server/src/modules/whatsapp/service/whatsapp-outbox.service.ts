@@ -1,8 +1,9 @@
+import { backgroundJobsEnabled } from '../../../lib/config/background-jobs.util';
 import {
   Injectable,
   Logger,
   type OnApplicationBootstrap,
-  type OnApplicationShutdown,
+  type BeforeApplicationShutdown,
 } from '@nestjs/common';
 
 import { type WhatsappMessageRow } from '../../../lib/db/schema/whatsapp-connections.schema';
@@ -33,10 +34,12 @@ const LEASE_MS = 2 * 60 * 1000;
  * Roda dentro do servidor, sem fila externa: o banco já é a fila.
  */
 @Injectable()
-export class WhatsappOutboxService implements OnApplicationBootstrap, OnApplicationShutdown {
+export class WhatsappOutboxService implements OnApplicationBootstrap, BeforeApplicationShutdown {
   private readonly logger = new Logger(WhatsappOutboxService.name);
   private timer: NodeJS.Timeout | null = null;
   private isRunning = false;
+  private stopping = false;
+  private currentRound: Promise<void> | undefined;
 
   constructor(
     private readonly bot: BotClientService,
@@ -46,6 +49,7 @@ export class WhatsappOutboxService implements OnApplicationBootstrap, OnApplicat
 
   /* Sem bot configurado nada entra na fila, e não há o que entregar. */
   onApplicationBootstrap(): void {
+    if (!backgroundJobsEnabled()) return;
     if (!this.bot.isConfigured) return;
 
     this.timer = setInterval(() => void this.tick(), TICK_MS);
@@ -53,23 +57,39 @@ export class WhatsappOutboxService implements OnApplicationBootstrap, OnApplicat
     this.timer.unref();
   }
 
-  onApplicationShutdown(): void {
+  async beforeApplicationShutdown(): Promise<void> {
+    this.stopping = true;
     if (this.timer) clearInterval(this.timer);
+    // Terminar a entrega em curso antes de o DbModule fechar o pool.
+    await this.currentRound;
   }
 
   /** Uma volta: pega o que está na vez e entrega. Público para o teste chamar sem relógio. */
   async tick(now: Date = new Date()): Promise<void> {
     /* Uma volta lenta (bot demorando) não pode se sobrepor à seguinte. */
-    if (this.isRunning) return;
+    if (this.stopping || this.isRunning) return;
 
     this.isRunning = true;
+    this.currentRound = this.processRound(now);
+    await this.currentRound;
+  }
+
+  private async processRound(now: Date): Promise<void> {
     try {
       const due = await this.messages.claimDue(now, new Date(now.getTime() + LEASE_MS), BATCH_SIZE);
-      for (const row of due) await this.deliver(row, now);
+      await this.deliverBatch(due, now);
     } catch (error) {
       this.logger.error('whatsapp outbox tick failed', error instanceof Error ? error.stack : '');
     } finally {
       this.isRunning = false;
+    }
+  }
+
+  private async deliverBatch(rows: WhatsappMessageRow[], now: Date): Promise<void> {
+    for (const row of rows) {
+      // As reservas restantes expiram; não iniciar novas chamadas durante o shutdown.
+      if (this.stopping) return;
+      await this.deliver(row, now);
     }
   }
 

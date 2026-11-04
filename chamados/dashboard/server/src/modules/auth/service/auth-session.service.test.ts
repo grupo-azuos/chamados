@@ -9,8 +9,7 @@ const env = {
   ADMIN_CONSOLE_TIMEOUT_MS: 1000,
 } as Env;
 const expired = [
-  'demo_access_token=; Domain=.example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax',
-  'demo_refresh_token=; Domain=.example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax',
+  'demo_session=; Domain=.example.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax',
 ];
 afterEach(() => vi.unstubAllGlobals());
 
@@ -23,16 +22,17 @@ describe('AuthSessionService', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await new AuthSessionService(env).logout(
-      'other_session=private; demo_access_token=access; demo_refresh_token=refresh',
+      'demo_session=access; ignored=other',
       'application/json',
     );
 
     expect(result).toEqual(expired);
-    expect(fetchMock).toHaveBeenCalledWith(new URL('https://login.example.com/api/auth/logout'),
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL('https://login.example.com/api/v1/auth/logout'),
       expect.objectContaining({
         method: 'POST',
         redirect: 'error',
-        headers: expect.objectContaining({ cookie: 'demo_access_token=access; demo_refresh_token=refresh' }),
+        headers: expect.objectContaining({ cookie: 'demo_session=access' }),
       }),
     );
   });
@@ -41,20 +41,23 @@ describe('AuthSessionService', () => {
   it('rejects a cross-site form before contacting the identity server', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    await expect(new AuthSessionService(env).logout('demo_access_token=access', 'text/plain'))
-      .rejects.toBeInstanceOf(UnsupportedMediaTypeException);
+    await expect(
+      new AuthSessionService(env).logout('demo_session=access', 'text/plain'),
+    ).rejects.toBeInstanceOf(UnsupportedMediaTypeException);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('reports failure if upstream does not confirm that both cookies were cleared', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
-    await expect(new AuthSessionService(env).logout('demo_access_token=access', 'application/json'))
-      .rejects.toBeInstanceOf(ServiceUnavailableException);
+    await expect(
+      new AuthSessionService(env).logout('demo_session=access', 'application/json'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
   it('reports a network failure instead of claiming that the session ended', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
-    await expect(new AuthSessionService(env).logout('demo_access_token=access', 'application/json'))
-      .rejects.toBeInstanceOf(ServiceUnavailableException);
+    await expect(
+      new AuthSessionService(env).logout('demo_session=access', 'application/json'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 });

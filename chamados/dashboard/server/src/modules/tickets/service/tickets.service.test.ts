@@ -1275,7 +1275,9 @@ describe('TicketsService — quem pede, logado', () => {
       undefined,
       profiles as AdminConsoleProfileProvider,
       /* A lista do RH: o texto livre do perfil só vira departamento se bater com um destes. */
-      { names: vi.fn().mockResolvedValue(['Contábil', 'Departamento Pessoal', 'Fiscal']) } as unknown as DepartmentsService,
+      {
+        names: vi.fn().mockResolvedValue(['Contábil', 'Departamento Pessoal', 'Fiscal']),
+      } as unknown as DepartmentsService,
     );
   }
 
@@ -1327,7 +1329,7 @@ describe('TicketsService — quem pede, logado', () => {
     });
     const service = withProfiles({}, { fetchMine });
 
-    await expect(service.requesterDefaults(bia, 'azuos_access_token=abc')).resolves.toEqual({
+    await expect(service.requesterDefaults(bia, 'azuos_session=abc')).resolves.toEqual({
       name: 'Bia Costa',
       email: bia.email,
       phone: '62988887777',

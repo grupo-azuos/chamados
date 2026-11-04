@@ -42,19 +42,21 @@ describe('AuthController', () => {
         id: USER.id,
         name: 'Ana',
         email: USER.email,
-        image: 'https://login.example.com/api/users/1/avatar?v=2',
+        image: 'https://login.example.com/api/v1/users/1/avatar?v=2',
       }),
     });
 
     await expect(new AuthController({} as Env, photo, sessions).me(USER)).resolves.toEqual({
       ...USER,
-      image: 'https://login.example.com/api/users/1/avatar?v=2',
+      image: 'https://login.example.com/api/v1/users/1/avatar?v=2',
     });
   });
 
   // triste
   it('offers no account address when the server was not configured', () => {
-    expect(new AuthController({} as Env, directory(), sessions).config()).toEqual({ accountUrl: null });
+    expect(new AuthController({} as Env, directory(), sessions).config()).toEqual({
+      accountUrl: null,
+    });
   });
 
   /* O admin-console fora do ar não pode esconder de alguém quem ele é: só a foto some. */

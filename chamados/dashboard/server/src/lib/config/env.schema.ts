@@ -11,6 +11,30 @@ import { z } from 'zod';
  * na primeira gravação.
  */
 export const envSchema = z.object({
+  BACKGROUND_JOBS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  DATABASE_SSL_CA: z.string().min(1).optional(),
+  APP_ENV: z.enum(['development', 'test', 'production', 'staging']).default('development'),
+  VALKEY_URL: z
+    .string()
+    .url()
+    .refine((value) => /^rediss?:\/\//.test(value))
+    .optional(),
+  VALKEY_KEY_PREFIX: z
+    .string()
+    .regex(/^[a-z0-9:-]+:$/)
+    .max(128)
+    .default('chamados:development:'),
+  VALKEY_TIMEOUT_MS: z.coerce.number().int().min(100).max(5000).default(1000),
+  DATABASE_MIGRATE_ON_START: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  DATABASE_MIGRATION_URL: z.string().url().optional(),
+  DATABASE_POOL_SIZE: z.coerce.number().int().min(1).max(20).default(5),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
   GITHUB_APP_ID: z.string().regex(/^\d+$/).optional(),
   GITHUB_APP_INSTALLATION_ID: z.string().regex(/^\d+$/).optional(),
   GITHUB_APP_PRIVATE_KEY: z.string().min(1).optional(),
@@ -80,7 +104,6 @@ export const envSchema = z.object({
    * Não é para aumentar "por segurança": cada salto a mais é um salto em que o endereço
    * passa a ser o que o cliente DISSE ser, e aí a trava deixa de valer.
    */
-  API_TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
 
   /**
    * A string de conexão do Postgres (o do Supabase da casa), no formato
@@ -183,7 +206,7 @@ export const envSchema = z.object({
    * O token de serviço do sistema, gerado na tela do sistema no admin-console
    * (`um_chamados_…`). Aparece uma vez só lá; perdeu, gera outro. É segredo de servidor.
    */
-  ADMIN_CONSOLE_TOKEN: z.string().trim().default(''),
+  ADMIN_CONSOLE_CLIENT_SECRET: z.string().trim().default(''),
 
   /** Prazo de cada leitura no admin-console: um serviço lento não pode pendurar a tela. */
   ADMIN_CONSOLE_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000).default(4_000),
@@ -199,10 +222,10 @@ export const envSchema = z.object({
     .optional(),
 
   /**
-   * O prefixo dos cookies de sessão do admin-console (`<prefixo>_access_token`). É o
+   * O prefixo dos cookies de sessão do admin-console (`<prefixo>_session`). É o
    * `COOKIE_NAME_PREFIX` de lá — hoje `azuos_homo` em homologação e em produção.
    *
-   * Serve para o servidor ler o perfil de quem está logado (`GET /api/me/profile`, que só
+   * Serve para o servidor ler o perfil de quem está logado (`GET /api/v1/me/profile`, que só
    * aceita a sessão da própria pessoa) e preencher o formulário de chamado. Só o cookie de
    * ACESSO é repassado: o de renovação, reapresentado por outro processo, faria o admin-console
    * tratá-lo como roubo e derrubar a sessão.
@@ -227,7 +250,11 @@ export const envSchema = z.object({
    * nada. Vazios, vale a pessoa fixa. Só têm efeito com o mock ligado, e o mock é recusado em
    * produção — então nunca valem lá.
    */
-  USER_MOCK_ID: z.string().trim().uuid('USER_MOCK_ID precisa ser o id (UUID) da pessoa no admin-console').optional(),
+  USER_MOCK_ID: z
+    .string()
+    .trim()
+    .uuid('USER_MOCK_ID precisa ser o id (UUID) da pessoa no admin-console')
+    .optional(),
   USER_MOCK_EMAIL: z.string().trim().email('USER_MOCK_EMAIL precisa ser um e-mail').optional(),
   USER_MOCK_NAME: z.string().trim().min(1).optional(),
 });

@@ -9,8 +9,8 @@ import { HistoryInterceptor } from './history.interceptor';
 function contextFor(method: string): ExecutionContext {
   const request = {
     method,
-    route: { path: '/api/tickets/:id' },
-    path: '/api/tickets/3',
+    route: { path: '/api/v1/tickets/:id' },
+    path: '/api/v1/tickets/3',
     params: { id: '3' },
     body: { status: 'closed' },
     user: { id: 'ana-id', email: 'ana@empresa.com.br' },

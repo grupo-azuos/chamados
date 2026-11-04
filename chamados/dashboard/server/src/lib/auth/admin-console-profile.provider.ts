@@ -23,7 +23,7 @@ type ProfileResponse = {
 };
 
 /**
- * O PERFIL DE QUEM ESTÁ LOGADO, lido no admin-console (`GET /api/me/profile`).
+ * O PERFIL DE QUEM ESTÁ LOGADO, lido no admin-console (`GET /api/v1/me/profile`).
  *
  * Essa rota só aceita a SESSÃO da própria pessoa — não há token de serviço que a leia, e é de
  * propósito: telefone e data de nascimento não saem na lista de pessoas. Por isso quem chama é
@@ -49,7 +49,7 @@ export class AdminConsoleProfileProvider {
 
     try {
       const response = await fetch(
-        `${this.env.ADMIN_CONSOLE_URL.replace(/\/$/, '')}/api/me/profile`,
+        `${this.env.ADMIN_CONSOLE_URL.replace(/\/$/, '')}/api/v1/me/profile`,
         {
           headers: { accept: 'application/json', cookie: accessCookie },
           signal: AbortSignal.timeout(this.env.ADMIN_CONSOLE_TIMEOUT_MS),
@@ -71,9 +71,9 @@ export class AdminConsoleProfileProvider {
     }
   }
 
-  /** `<prefixo>_access_token=<valor>`, e nada mais do cabeçalho original. */
+  /** `<prefixo>_session=<valor>`, e nada mais do cabeçalho original. */
   private accessCookieOf(cookieHeader: string | undefined): string | null {
-    const name = `${this.env.ADMIN_CONSOLE_COOKIE_PREFIX}_access_token`;
+    const name = `${this.env.ADMIN_CONSOLE_COOKIE_PREFIX}_session`;
     const pair = (cookieHeader ?? '')
       .split(';')
       .map((part) => part.trim())

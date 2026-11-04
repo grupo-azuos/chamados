@@ -1,3 +1,4 @@
+import { backgroundJobsEnabled } from '../../../lib/config/background-jobs.util';
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { msUntilBrasiliaTime } from '@template/shared/domain/daily-schedule.util';
 
@@ -22,6 +23,7 @@ export class SampleCleanupService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly computers: ComputersService) {}
 
   onModuleInit(): void {
+    if (!backgroundJobsEnabled()) return;
     this.scheduleNext();
   }
 
@@ -42,9 +44,12 @@ export class SampleCleanupService implements OnModuleInit, OnModuleDestroy {
   }
 
   private scheduleNext(): void {
-    this.timer = setTimeout(() => {
-      void this.run().finally(() => this.scheduleNext());
-    }, msUntilBrasiliaTime(new Date(), SAMPLE_CLEANUP_HOUR));
+    this.timer = setTimeout(
+      () => {
+        void this.run().finally(() => this.scheduleNext());
+      },
+      msUntilBrasiliaTime(new Date(), SAMPLE_CLEANUP_HOUR),
+    );
     /* O agendamento não pode segurar o processo vivo num desligamento. */
     this.timer.unref();
   }

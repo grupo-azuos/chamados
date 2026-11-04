@@ -1,3 +1,4 @@
+import { applyHttpConventions } from '../../../lib/http/api-version';
 import { type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -32,7 +33,7 @@ describe('dashboard agent download HTTP boundary', () => {
       ],
     }).compile();
     app = module.createNestApplication();
-    app.setGlobalPrefix('api');
+    applyHttpConventions(app);
     app.use((req: { user?: RequestUser }, _res: unknown, next: () => void) => {
       req.user = user;
       next();
@@ -48,7 +49,7 @@ describe('dashboard agent download HTTP boundary', () => {
   it('refuses anonymous access even with a machine Bearer token', async () => {
     user = undefined;
     await request(app.getHttpServer())
-      .get('/api/agent/downloads/lts')
+      .get('/api/v1/agent/downloads/lts')
       .set('Authorization', 'Bearer fixture')
       .expect(401);
   });
@@ -61,7 +62,7 @@ describe('dashboard agent download HTTP boundary', () => {
       roles: { manutencao: 'admin' },
     };
     latest.mockClear();
-    await request(app.getHttpServer()).get('/api/agent/downloads/lts').expect(403);
+    await request(app.getHttpServer()).get('/api/v1/agent/downloads/lts').expect(403);
     expect(latest).not.toHaveBeenCalled();
   });
   // feliz
@@ -73,7 +74,9 @@ describe('dashboard agent download HTTP boundary', () => {
       role: 'user',
       roles: { sistema: 'user' },
     };
-    const response = await request(app.getHttpServer()).get('/api/agent/downloads/lts').expect(204);
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/agent/downloads/lts')
+      .expect(204);
     expect(response.headers['cache-control']).toBe('no-store');
   });
   it('issues a private download link for an authenticated read-only Infra session', async () => {
@@ -95,7 +98,7 @@ describe('dashboard agent download HTTP boundary', () => {
       artifacts: { msi: artifact('agent.msi'), certificate: artifact('publisher.cer') },
     });
     const response = await request(app.getHttpServer())
-      .get('/api/agent/downloads/lts/msi?version=1.2.3')
+      .get('/api/v1/agent/downloads/lts/msi?version=1.2.3')
       .expect(200);
     expect(response.body).toEqual({ version: '1.2.3', url: 'https://storage.example.test/signed' });
     expect(response.headers['cache-control']).toBe('no-store');
@@ -104,9 +107,9 @@ describe('dashboard agent download HTTP boundary', () => {
   // triste
   it('rejects unsupported artifacts and unversioned requests', async () => {
     await request(app.getHttpServer())
-      .get('/api/agent/downloads/lts/pfx?version=1.2.3')
+      .get('/api/v1/agent/downloads/lts/pfx?version=1.2.3')
       .expect(400);
-    await request(app.getHttpServer()).get('/api/agent/downloads/lts/msi').expect(400);
+    await request(app.getHttpServer()).get('/api/v1/agent/downloads/lts/msi').expect(400);
     expect(createDownloadUrl).not.toHaveBeenCalled();
   });
 
@@ -120,19 +123,26 @@ describe('dashboard agent download HTTP boundary', () => {
       roles: { infra: 'admin' },
     };
     const response = await request(app.getHttpServer())
-      .post('/api/agent/downloads/bundle')
-      .send({ version: '1.2.3', serverUrl: 'https://chamados.example.test', token: 'abc', computerId: 7 })
+      .post('/api/v1/agent/downloads/bundle')
+      .send({
+        version: '1.2.3',
+        serverUrl: 'https://chamados.example.test',
+        token: 'abc',
+        computerId: 7,
+      })
       .expect(200);
 
     expect(response.headers['content-type']).toBe('application/zip');
-    expect(response.headers['content-disposition']).toBe('attachment; filename="azuos-agent-1.2.3-x64.zip"');
+    expect(response.headers['content-disposition']).toBe(
+      'attachment; filename="azuos-agent-1.2.3-x64.zip"',
+    );
     expect(response.headers['cache-control']).toBe('no-store');
   });
   // triste
   it('rejects a token sent without the machine it belongs to', async () => {
     bundle.mockClear();
     await request(app.getHttpServer())
-      .post('/api/agent/downloads/bundle')
+      .post('/api/v1/agent/downloads/bundle')
       .send({ version: '1.2.3', serverUrl: 'https://chamados.example.test', token: 'abc' })
       .expect(400);
     expect(bundle).not.toHaveBeenCalled();

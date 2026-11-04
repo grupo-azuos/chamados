@@ -23,9 +23,9 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
 
   const register = (name: string, extra: Record<string, unknown> = {}) =>
     request(app.getHttpServer())
-      .post('/api/computers')
+      .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name, ...extra });
+      .send({ kind: 'desktop', name, ...extra });
 
   beforeAll(async () => {
     started = await createE2eApp(testDatabaseUrl!);
@@ -63,7 +63,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     /* O TOKEN NÃO VOLTA NUNCA MAIS. O banco guarda só o hash, como senha: poder recuperá-lo
        exigiria guardá-lo legível, que é exatamente o que não se quer. */
     const found = await request(app.getHttpServer())
-      .get(`/api/computers/${created.body.computer.id}`)
+      .get(`/api/v1/computers/${created.body.computer.id}`)
       .set(asCaio())
       .expect(200);
 
@@ -75,7 +75,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     const created = await register('PC-FISCAL-01').expect(201);
 
     const again = await request(app.getHttpServer())
-      .post(`/api/computers/${created.body.computer.id}/token`)
+      .post(`/api/v1/computers/${created.body.computer.id}/token`)
       .set(asCaio())
       .expect(201);
 
@@ -96,15 +96,15 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     }
 
     const first = await request(app.getHttpServer())
-      .get('/api/computers?page=1&pageSize=3')
+      .get('/api/v1/computers?page=1&pageSize=3')
       .set(asCaio())
       .expect(200);
     const second = await request(app.getHttpServer())
-      .get('/api/computers?page=2&pageSize=3')
+      .get('/api/v1/computers?page=2&pageSize=3')
       .set(asCaio())
       .expect(200);
     const third = await request(app.getHttpServer())
-      .get('/api/computers?page=3&pageSize=3')
+      .get('/api/v1/computers?page=3&pageSize=3')
       .set(asCaio())
       .expect(200);
 
@@ -120,12 +120,14 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
   });
 
   it('filters by department and by search, on the query and not on the screen', async () => {
-    await register('PC-RECEPCAO-01', { department: 'RECEPÇÃO', responsibleName: 'Marta' }).expect(201);
+    await register('PC-RECEPCAO-01', { department: 'RECEPÇÃO', responsibleName: 'Marta' }).expect(
+      201,
+    );
     await register('PC-FISCAL-01', { department: 'Fiscal', responsibleName: 'Joana' }).expect(201);
     await register('PC-FISCAL-02', { department: 'Fiscal', responsibleName: 'Pedro' }).expect(201);
 
     const fiscal = await request(app.getHttpServer())
-      .get('/api/computers?department=fiscal')
+      .get('/api/v1/computers?department=fiscal')
       .set(asCaio())
       .expect(200);
 
@@ -134,7 +136,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
 
     /* A busca também procura no responsável — é como se acha "a máquina da Marta". */
     const byPerson = await request(app.getHttpServer())
-      .get('/api/computers?search=marta')
+      .get('/api/v1/computers?search=marta')
       .set(asCaio())
       .expect(200);
 
@@ -146,7 +148,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     const created = await register('PC-RH-01').expect(201);
 
     const blocked = await request(app.getHttpServer())
-      .patch(`/api/computers/${created.body.computer.id}`)
+      .patch(`/api/v1/computers/${created.body.computer.id}`)
       .set(asCaio())
       .send({ isBlocked: true, blockReason: 'Máquina emprestada para auditoria externa.' })
       .expect(200);
@@ -159,7 +161,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     /* Bloqueada NÃO sai da lista: ela continua no parque, só com a conexão do agente recusada.
        Esconder seria perder de vista justamente a máquina que alguém precisa destravar. */
     const list = await request(app.getHttpServer())
-      .get('/api/computers')
+      .get('/api/v1/computers')
       .set(asCaio())
       .expect(200);
 
@@ -170,17 +172,17 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     const created = await register('PC-ANTIGO-01').expect(201);
 
     await request(app.getHttpServer())
-      .patch(`/api/computers/${created.body.computer.id}`)
+      .patch(`/api/v1/computers/${created.body.computer.id}`)
       .set(asCaio())
       .send({ isArchived: true })
       .expect(200);
 
     const normal = await request(app.getHttpServer())
-      .get('/api/computers')
+      .get('/api/v1/computers')
       .set(asCaio())
       .expect(200);
     const withArchived = await request(app.getHttpServer())
-      .get('/api/computers?includeArchived=true')
+      .get('/api/v1/computers?includeArchived=true')
       .set(asCaio())
       .expect(200);
 
@@ -189,7 +191,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
 
     /* Nada foi apagado: a ficha continua alcançável pelo id, com o histórico dela. */
     await request(app.getHttpServer())
-      .get(`/api/computers/${created.body.computer.id}`)
+      .get(`/api/v1/computers/${created.body.computer.id}`)
       .set(asCaio())
       .expect(200);
   });
@@ -199,7 +201,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     const id = created.body.computer.id;
 
     const discarded = await request(app.getHttpServer())
-      .post(`/api/computers/${id}/disposal`)
+      .post(`/api/v1/computers/${id}/disposal`)
       .set(asCaio())
       .send({ type: 'defect', reason: 'Placa-mãe queimada; orçamento passou do valor da máquina.' })
       .expect(201);
@@ -213,11 +215,11 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     expect(discarded.body.disposedAt).not.toBeNull();
 
     const parque = await request(app.getHttpServer())
-      .get('/api/computers')
+      .get('/api/v1/computers')
       .set(asCaio())
       .expect(200);
     const descarte = await request(app.getHttpServer())
-      .get('/api/computers?onlyDisposed=true')
+      .get('/api/v1/computers?onlyDisposed=true')
       .set(asCaio())
       .expect(200);
 
@@ -225,7 +227,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     expect(descarte.body.total).toBe(1);
 
     const restored = await request(app.getHttpServer())
-      .delete(`/api/computers/${id}/disposal`)
+      .delete(`/api/v1/computers/${id}/disposal`)
       .set(asCaio())
       .expect(200);
 
@@ -242,13 +244,13 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     const id = created.body.computer.id;
 
     const first = await request(app.getHttpServer())
-      .post(`/api/computers/${id}/disposal`)
+      .post(`/api/v1/computers/${id}/disposal`)
       .set(asCaio())
       .send({ type: 'defect', reason: 'Não liga.' })
       .expect(201);
 
     const second = await request(app.getHttpServer())
-      .post(`/api/computers/${id}/disposal`)
+      .post(`/api/v1/computers/${id}/disposal`)
       .set(asCaio())
       .send({ type: 'scrap', reason: 'Sem conserto possível; virou sucata.' })
       .expect(201);
@@ -259,21 +261,24 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
 
   // triste
   it('keeps the whole inventory closed without a token', async () => {
-    await request(app.getHttpServer()).get('/api/computers').expect(401);
-    await request(app.getHttpServer()).post('/api/computers').send({ name: 'PC-X' }).expect(401);
-    await request(app.getHttpServer()).get('/api/computers/1').expect(401);
-    await request(app.getHttpServer()).post('/api/computers/1/token').expect(401);
+    await request(app.getHttpServer()).get('/api/v1/computers').expect(401);
     await request(app.getHttpServer())
-      .post('/api/computers/1/disposal')
+      .post('/api/v1/computers')
+      .send({ kind: 'desktop', name: 'PC-X' })
+      .expect(401);
+    await request(app.getHttpServer()).get('/api/v1/computers/1').expect(401);
+    await request(app.getHttpServer()).post('/api/v1/computers/1/token').expect(401);
+    await request(app.getHttpServer())
+      .post('/api/v1/computers/1/disposal')
       .send({ type: 'defect', reason: 'qualquer' })
       .expect(401);
   });
 
   it('refuses a machine with no name, naming the field in Portuguese', async () => {
     const response = await request(app.getHttpServer())
-      .post('/api/computers')
+      .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name: '   ' });
+      .send({ kind: 'desktop', name: '   ' });
 
     expect(response.status).toBeGreaterThanOrEqual(400);
     expect(response.status).toBeLessThan(500);
@@ -301,7 +306,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     const created = await register('PC-SEM-MOTIVO-01').expect(201);
 
     const response = await request(app.getHttpServer())
-      .post(`/api/computers/${created.body.computer.id}/disposal`)
+      .post(`/api/v1/computers/${created.body.computer.id}/disposal`)
       .set(asCaio())
       .send({ type: 'defect', reason: '  ' });
 
@@ -316,7 +321,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     const created = await register('PC-TIPO-ERRADO-01').expect(201);
 
     const response = await request(app.getHttpServer())
-      .post(`/api/computers/${created.body.computer.id}/disposal`)
+      .post(`/api/v1/computers/${created.body.computer.id}/disposal`)
       .set(asCaio())
       .send({ type: 'jogado-fora', reason: 'Qualquer motivo.' });
 
@@ -333,7 +338,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     const created = await register('PC-HARDWARE-01').expect(201);
 
     const updated = await request(app.getHttpServer())
-      .patch(`/api/computers/${created.body.computer.id}`)
+      .patch(`/api/v1/computers/${created.body.computer.id}`)
       .set(asCaio())
       .send({ displayName: 'Balcão', cpuModel: 'CPU inventada', healthScore: 3 })
       .expect(200);
@@ -344,13 +349,13 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
   });
 
   it('answers 404 for a machine that does not exist', async () => {
-    await request(app.getHttpServer()).get('/api/computers/999999').set(asCaio()).expect(404);
+    await request(app.getHttpServer()).get('/api/v1/computers/999999').set(asCaio()).expect(404);
     await request(app.getHttpServer())
-      .post('/api/computers/999999/token')
+      .post('/api/v1/computers/999999/token')
       .set(asCaio())
       .expect(404);
     await request(app.getHttpServer())
-      .patch('/api/computers/999999')
+      .patch('/api/v1/computers/999999')
       .set(asCaio())
       .send({ displayName: 'Nada' })
       .expect(404);
@@ -358,7 +363,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
 
   it('refuses a page size above the ceiling, so no query comes back unbounded', async () => {
     const response = await request(app.getHttpServer())
-      .get('/api/computers?pageSize=5000')
+      .get('/api/v1/computers?pageSize=5000')
       .set(asCaio());
 
     expect(response.status).toBeGreaterThanOrEqual(400);
