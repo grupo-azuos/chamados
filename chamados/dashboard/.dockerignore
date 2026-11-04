@@ -16,3 +16,14 @@ node_modules
 !**/.env.example
 .git
 **/*.tsbuildinfo
+
+# O build nunca recebe ambientes exportados nem credenciais de bootstrap
+.env
+.env.*
+**/.env
+**/.env.*
+.komodo
+**/.komodo
+node_modules
+**/node_modules
+.git

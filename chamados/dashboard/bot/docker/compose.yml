@@ -1,0 +1,72 @@
+services:
+  bot:
+    image: ${APP_IMAGE:?}
+    environment:
+    - NODE_ENV=production
+    - BOT_HOST=0.0.0.0
+    - BOT_PORT=4005
+    - BOT_DATA_DIR=/data
+    - APP_ENV
+    - BOT_API_TOKEN
+    - BOT_SESSION_KEY
+    - BOT_LOG_LEVEL
+    - BOT_SERVER_URL
+    - BOT_INBOUND_LIMIT
+    - BOT_INBOUND_WINDOW_MINUTES
+    healthcheck:
+      test:
+      - CMD
+      - node
+      - -e
+      - fetch('http://127.0.0.1:4005/health',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    volumes:
+    - sessions:/data
+    networks:
+    - integrations
+    read_only: true
+    tmpfs:
+    - /tmp:size=32m,mode=1777
+    cap_drop:
+    - ALL
+    stop_grace_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+        - node.id == ${DEPLOY_NODE_ID:?}
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+        monitor: 45s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+        monitor: 45s
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+volumes:
+  sessions:
+    name: chamados-${DEPLOY_ENV:?}-bot-sessions
+networks:
+  integrations:
+    name: chamados-${DEPLOY_ENV:?}-integrations
+    external: true
+version: '3.8'

@@ -54,3 +54,9 @@ chamados/agent/svelte/wailsjs/
 /release/
 *.pfx
 *.p12
+
+# Segredos temporários escritos pelo Komodo
+.komodo/*
+# Config do Komodo é código; bootstrap e exports continuam ignorados
+.komodo/*
+!.komodo/komodo.toml
