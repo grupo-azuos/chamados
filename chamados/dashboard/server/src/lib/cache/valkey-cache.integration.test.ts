@@ -22,22 +22,22 @@ function create(prefix: string): ValkeyCache {
 describe.runIf(Boolean(process.env.TEST_VALKEY_URL))(
   'Valkey integration with isolated namespaces',
   () => {
-    it('shares cache within an environment and separates production from staging', async () => {
+    it('shares cache within an environment and separates prod from homo', async () => {
       const namespace = `hotfix:${randomUUID()}:`;
-      const production = create(`${namespace}production:`);
-      const replica = create(`${namespace}production:`);
-      const staging = create(`${namespace}staging:`);
-      expect(await production.ready()).toBe(true);
+      const prod = create(`${namespace}prod:`);
+      const replica = create(`${namespace}prod:`);
+      const homo = create(`${namespace}homo:`);
+      expect(await prod.ready()).toBe(true);
       expect(await replica.ready()).toBe(true);
-      expect(await staging.ready()).toBe(true);
+      expect(await homo.ready()).toBe(true);
       expect(
-        await production.remember('same-key', 2, async () => ({ source: 'production' })),
-      ).toEqual({ source: 'production' });
+        await prod.remember('same-key', 2, async () => ({ source: 'prod' })),
+      ).toEqual({ source: 'prod' });
       expect(await replica.remember('same-key', 2, async () => ({ source: 'wrong' }))).toEqual({
-        source: 'production',
+        source: 'prod',
       });
-      expect(await staging.remember('same-key', 2, async () => ({ source: 'staging' }))).toEqual({
-        source: 'staging',
+      expect(await homo.remember('same-key', 2, async () => ({ source: 'homo' }))).toEqual({
+        source: 'homo',
       });
     });
 
