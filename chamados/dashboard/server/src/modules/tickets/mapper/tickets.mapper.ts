@@ -220,6 +220,15 @@ export function toTicketUpdate(
   setIfDefined(update, 'computerId', input.computerId);
   /* Nulo aqui DESVINCULA o projeto de software */
   setIfDefined(update, 'projectId', input.projectId);
+  if (input.projectId) {
+    /* Escolheu da lista? O nome digitado é limpo — o cadastro já diz qual é. */
+    update.customSystemName = null;
+  } else if (input.customSystemName !== undefined) {
+    update.customSystemName =
+      typeof input.customSystemName === 'string'
+        ? normalizeOptional(input.customSystemName) ?? null
+        : null;
+  }
 
   return update;
 }

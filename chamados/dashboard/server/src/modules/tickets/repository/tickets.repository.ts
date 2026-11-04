@@ -451,6 +451,7 @@ function searchFilter(search: string): SQL | undefined {
     ilike(tickets.description, term),
     ilike(tickets.solution, term),
     ilike(tickets.assignee, term),
+    ilike(tickets.customSystemName, term),
     ...(protocolId ? [eq(tickets.id, protocolId)] : []),
   );
 }

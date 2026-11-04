@@ -461,6 +461,11 @@ export const updateTicketSchema = z.object({
   computerId: z.number().int().positive().nullable().optional(),
   /** O sistema do chamado. Nulo DESVINCULA. */
   projectId: z.number().int().positive().nullable().optional(),
+  /** O sistema digitado por não estar na lista. Nulo limpa o nome digitado. */
+  customSystemName: z.preprocess(
+    (value) => (value === '' ? null : value),
+    customSystemNameSchema.nullable(),
+  ).optional(),
   /**
    * TROCAR O RESPONSÁVEL — só o super admin. Para os demais o campo é recusado pelo servidor:
    * quem assume um chamado vira responsável ao lançar o primeiro histórico (`toTicketMove`), e
@@ -491,6 +496,8 @@ export const ticketDataFormSchema = z
     computerId: z.string(),
     /** O sistema de software selecionado no select. */
     projectId: z.string().optional(),
+    /** O sistema digitado por não estar na lista. */
+    customSystemName: customSystemNameSchema.default(''),
     /**
      * O responsável escolhido no select — só o super admin vê o campo. Vazio ou igual ao atual
      * quer dizer "não trocar": o view-model só manda o campo quando ele de fato mudou.

@@ -76,8 +76,21 @@ describe('toFormValues', () => {
       problemType: 'network',
       computerId: '11',
       projectId: '5',
+      customSystemName: '',
       assigneeId: '',
     });
+  });
+
+  it('reads customSystemName when ticket is for an unlisted system', () => {
+    const values = toFormValues(ticket({ projectId: null, customSystemName: 'Trilha' }));
+    expect(values.projectId).toBe('');
+    expect(values.customSystemName).toBe('Trilha');
+  });
+
+  it('falls back to projectName when customSystemName is missing for an unlisted system', () => {
+    const values = toFormValues(ticket({ projectId: null, projectName: 'Trilha' }));
+    expect(values.projectId).toBe('');
+    expect(values.customSystemName).toBe('Trilha');
   });
 
   // triste
@@ -86,6 +99,7 @@ describe('toFormValues', () => {
 
     expect(values.computerId).toBe('');
     expect(values.projectId).toBe('');
+    expect(values.customSystemName).toBe('');
     /* O responsável não se troca por este formulário: nem entra nos valores. */
     expect(values).not.toHaveProperty('assignee');
   });
@@ -95,6 +109,26 @@ describe('toUpdateInput', () => {
   // feliz
   it('turns the machine back into a number', () => {
     expect(toUpdateInput({ ...toFormValues(ticket()), computerId: '11' }).computerId).toBe(11);
+  });
+
+  it('sends customSystemName when set, clearing projectId', () => {
+    const input = toUpdateInput({
+      ...toFormValues(ticket()),
+      projectId: '',
+      customSystemName: 'Trilha',
+    });
+    expect(input.projectId).toBeNull();
+    expect(input.customSystemName).toBe('Trilha');
+  });
+
+  it('sends projectId when set, clearing customSystemName', () => {
+    const input = toUpdateInput({
+      ...toFormValues(ticket()),
+      projectId: '7',
+      customSystemName: 'Trilha',
+    });
+    expect(input.projectId).toBe(7);
+    expect(input.customSystemName).toBeNull();
   });
 
   // triste
@@ -198,6 +232,24 @@ describe('useTicketDataFormModel', () => {
       problemType: 'network',
       computerId: 3,
       projectId: null,
+      customSystemName: null,
+    });
+  });
+
+  it('preserves and updates customSystemName on submit', async () => {
+    const model = mountModel(ticket({ area: 'sistema', problemType: 'feature_request', customSystemName: 'Trilha' }));
+
+    model.actions.onChange('priority', 'high');
+    model.actions.onSubmit();
+
+    await waitFor(() => expect(model.state.isSaved).toBe(true));
+    expect(ticketsApi.update).toHaveBeenCalledWith(22, {
+      priority: 'high',
+      area: 'sistema',
+      problemType: 'feature_request',
+      computerId: null,
+      projectId: null,
+      customSystemName: 'Trilha',
     });
   });
 

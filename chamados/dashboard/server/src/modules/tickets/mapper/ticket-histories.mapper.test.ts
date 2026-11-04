@@ -285,6 +285,15 @@ describe('describeTicketChanges', () => {
     expect(describeTicketChanges(linked, ticket())).toBe('Máquina: RECEPCAO-01 → nenhum');
   });
 
+  it('names the system that was linked, changed or unlinked', () => {
+    const custom = ticket({ customSystemName: 'Trilha' });
+    const project = ticket({ projectId: 1, projectName: 'Portal' });
+
+    expect(describeTicketChanges(ticket(), custom)).toBe('Sistema: nenhum → Trilha');
+    expect(describeTicketChanges(custom, project)).toBe('Sistema: Trilha → Portal');
+    expect(describeTicketChanges(project, ticket())).toBe('Sistema: Portal → nenhum');
+  });
+
   // triste
   it('gives nothing when nothing really changed', () => {
     expect(describeTicketChanges(ticket(), ticket({ updatedAt: NOW }))).toBeNull();

@@ -277,3 +277,81 @@ describe('AzuosTicketDataForm — without a project list', () => {
     expect(document.body.textContent).toContain('Nenhum');
   });
 });
+
+describe('AzuosTicketDataForm — custom system (unregistered/external)', () => {
+  // feliz
+  it('displays the custom system name instead of "Nenhum" when the ticket has customSystemName', () => {
+    setup({
+      data: data({
+        projects: [{ value: '1', label: 'Portal' }],
+        ticket: { ...ticket, area: 'sistema', customSystemName: 'Trilha', projectName: 'Trilha' },
+        fields: {
+          priority: { value: 'high', error: null },
+          area: { value: 'sistema', error: null },
+          problemType: { value: 'feature_request', error: null },
+          computerId: { value: '', error: null },
+          projectId: { value: '', error: null },
+          customSystemName: { value: 'Trilha', error: null },
+        },
+      }),
+    });
+
+    expect(screen.getByRole('button', { name: 'Sistema / Software' })).toHaveTextContent('Trilha');
+  });
+
+  it('allows picking a custom system name using the search input', async () => {
+    const acts = actions();
+    setup({
+      data: data({
+        projects: [{ value: '1', label: 'Portal' }],
+        fields: {
+          priority: { value: 'high', error: null },
+          area: { value: 'sistema', error: null },
+          problemType: { value: 'feature_request', error: null },
+          computerId: { value: '', error: null },
+          projectId: { value: '', error: null },
+          customSystemName: { value: '', error: null },
+        },
+      }),
+      actions: acts,
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sistema / Software' }));
+    const search = await screen.findByPlaceholderText('Busque ou digite o nome do sistema');
+    await userEvent.type(search, 'Trilha');
+    const customButton = await screen.findByRole('button', { name: 'Usar “Trilha”' });
+    await userEvent.click(customButton);
+
+    expect(acts.onChange).toHaveBeenCalledWith('projectId', '');
+    expect(acts.onChange).toHaveBeenCalledWith('customSystemName', 'Trilha');
+  });
+
+  it('clears the system when "Nenhum" is selected', async () => {
+    const acts = actions();
+    setup({
+      data: data({
+        projects: [{ value: '1', label: 'Portal' }],
+        fields: {
+          priority: { value: 'high', error: null },
+          area: { value: 'sistema', error: null },
+          problemType: { value: 'feature_request', error: null },
+          computerId: { value: '', error: null },
+          projectId: { value: '1', error: null },
+          customSystemName: { value: '', error: null },
+        },
+      }),
+      actions: acts,
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sistema / Software' }));
+    const popup = await waitFor(() => {
+      const open = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1);
+      expect(open).toBeTruthy();
+      return open as HTMLElement;
+    });
+    await fireEvent.click(within(popup).getByText('Nenhum', { exact: true }));
+
+    expect(acts.onChange).toHaveBeenCalledWith('projectId', '');
+    expect(acts.onChange).toHaveBeenCalledWith('customSystemName', '');
+  });
+});

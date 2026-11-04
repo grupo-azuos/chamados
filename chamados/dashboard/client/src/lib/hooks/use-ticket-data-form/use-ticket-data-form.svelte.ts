@@ -25,7 +25,13 @@ import { type FormFieldState } from '$lib/types/form-field.type';
 const MACHINE_OPTIONS_PAGE_SIZE = 200;
 
 export type TicketDataField =
-  'priority' | 'area' | 'problemType' | 'computerId' | 'projectId' | 'assigneeId';
+  | 'priority'
+  | 'area'
+  | 'problemType'
+  | 'computerId'
+  | 'projectId'
+  | 'customSystemName'
+  | 'assigneeId';
 
 export type TicketDataFormModel = {
   data: {
@@ -201,6 +207,7 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
           problemType: fieldOf('problemType'),
           computerId: fieldOf('computerId'),
           projectId: fieldOf('projectId'),
+          customSystemName: fieldOf('customSystemName'),
           assigneeId: fieldOf('assigneeId'),
         },
         assignees: assignees.map((option) => ({ value: option.id, label: option.name })),
@@ -257,8 +264,26 @@ export function toFormValues(ticket: Ticket): TicketDataFormValues {
     computerId: ticket.computerId === null ? '' : String(ticket.computerId),
     projectId:
       ticket.projectId !== null && ticket.projectId !== undefined ? String(ticket.projectId) : '',
+    customSystemName: ticket.customSystemName ?? (ticket.projectId ? '' : ticket.projectName ?? ''),
     assigneeId: ticket.assigneeId ?? '',
   };
+}
+
+function resolveSystemUpdate(values: TicketDataFormValues) {
+  const hasProject = Boolean(values.projectId && values.projectId !== '');
+  const hasCustom = Boolean(values.customSystemName && values.customSystemName.trim() !== '');
+
+  const projectPart =
+    values.projectId !== undefined
+      ? { projectId: hasProject ? Number(values.projectId) : null }
+      : {};
+
+  const customPart =
+    values.customSystemName !== undefined
+      ? { customSystemName: hasProject ? null : hasCustom ? values.customSystemName.trim() : null }
+      : {};
+
+  return { ...projectPart, ...customPart };
 }
 
 /**
@@ -284,9 +309,7 @@ export function toUpdateInput(
     area: values.area,
     problemType: values.problemType,
     computerId: values.computerId === '' ? null : Number(values.computerId),
-    ...(values.projectId !== undefined
-      ? { projectId: values.projectId === '' ? null : Number(values.projectId) }
-      : {}),
+    ...resolveSystemUpdate(values),
   };
 }
 

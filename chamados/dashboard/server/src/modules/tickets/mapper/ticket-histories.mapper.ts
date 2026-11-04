@@ -239,6 +239,11 @@ export function describeTicketChanges(
     ticketProblemTypeLabel(after.problemType),
   );
   note('Máquina', before.computerName ?? NONE, after.computerName ?? NONE);
+  note(
+    'Sistema',
+    before.projectName ?? before.customSystemName ?? NONE,
+    after.projectName ?? after.customSystemName ?? NONE,
+  );
   note('Responsável', before.assignee ?? NONE, after.assignee ?? NONE);
 
   return changes.length > 0 ? changes.join('\n') : null;
