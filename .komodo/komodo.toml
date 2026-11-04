@@ -2,7 +2,7 @@
 
 [[repo]]
 name = "chamados-prod"
-tags = ["chamados", "core", "prod"]
+tags = ["context:apps", "env:core", "server:core"]
 [repo.config]
 server = "core"
 git_provider = "github.com"
@@ -35,7 +35,7 @@ docker run --rm --security-opt label=disable --network host \
 
 [[repo]]
 name = "chamados-staging"
-tags = ["chamados", "homo", "staging"]
+tags = ["context:apps", "env:homo", "server:homo"]
 [repo.config]
 server = "homo"
 git_provider = "github.com"
@@ -68,7 +68,7 @@ docker run --rm --security-opt label=disable --network host \
 
 [[repo]]
 name = "chamados-bot-prod"
-tags = ["chamados", "core", "prod"]
+tags = ["context:apps", "env:core", "server:core"]
 [repo.config]
 server = "core"
 git_provider = "github.com"
@@ -101,7 +101,7 @@ docker run --rm --security-opt label=disable --network host \
 
 [[repo]]
 name = "chamados-bot-staging"
-tags = ["chamados", "homo", "staging"]
+tags = ["context:apps", "env:homo", "server:homo"]
 [repo.config]
 server = "homo"
 git_provider = "github.com"
