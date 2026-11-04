@@ -1,0 +1,7 @@
+# Gateway privado na porta 8080: remover file capability antes de cap_drop=ALL.
+FROM caddy:2.11-alpine
+RUN setcap -r /usr/bin/caddy
+USER 1000:1000
+EXPOSE 8080
+
+CMD ["caddy", "run", "--config", "/etc/caddy/caddyfile", "--adapter", "caddyfile"]

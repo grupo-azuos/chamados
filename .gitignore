@@ -60,3 +60,4 @@ chamados/agent/svelte/wailsjs/
 # Config do Komodo é código; bootstrap e exports continuam ignorados
 .komodo/*
 !.komodo/komodo.toml
+!.komodo/runtime/

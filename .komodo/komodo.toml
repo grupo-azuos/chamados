@@ -20,6 +20,12 @@ path = "."
 shell_mode = true
 command = '''
 set -eu
+# Auxiliares do deploy, construídas no host uma vez e reaproveitadas. São iguais em todos os apps e
+# no Ansible do server: mudou um dockerfile, sobe a tag aqui, nos outros apps e no Ansible.
+docker image inspect azuos-deploy-tools:1 >/dev/null 2>&1 || \
+  docker build -t azuos-deploy-tools:1 .komodo/runtime/deploy-tools
+docker image inspect azuos-gateway:2.11 >/dev/null 2>&1 || \
+  docker build -t azuos-gateway:2.11 .komodo/runtime/gateway
 chmod 600 .komodo/bootstrap.env
 docker run --rm --security-opt label=disable --network host \
   --env-file .komodo/bootstrap.env \
@@ -53,6 +59,12 @@ path = "."
 shell_mode = true
 command = '''
 set -eu
+# Auxiliares do deploy, construídas no host uma vez e reaproveitadas. São iguais em todos os apps e
+# no Ansible do server: mudou um dockerfile, sobe a tag aqui, nos outros apps e no Ansible.
+docker image inspect azuos-deploy-tools:1 >/dev/null 2>&1 || \
+  docker build -t azuos-deploy-tools:1 .komodo/runtime/deploy-tools
+docker image inspect azuos-gateway:2.11 >/dev/null 2>&1 || \
+  docker build -t azuos-gateway:2.11 .komodo/runtime/gateway
 chmod 600 .komodo/bootstrap.env
 docker run --rm --security-opt label=disable --network host \
   --env-file .komodo/bootstrap.env \
@@ -86,6 +98,12 @@ path = "."
 shell_mode = true
 command = '''
 set -eu
+# Auxiliares do deploy, construídas no host uma vez e reaproveitadas. São iguais em todos os apps e
+# no Ansible do server: mudou um dockerfile, sobe a tag aqui, nos outros apps e no Ansible.
+docker image inspect azuos-deploy-tools:1 >/dev/null 2>&1 || \
+  docker build -t azuos-deploy-tools:1 .komodo/runtime/deploy-tools
+docker image inspect azuos-gateway:2.11 >/dev/null 2>&1 || \
+  docker build -t azuos-gateway:2.11 .komodo/runtime/gateway
 chmod 600 .komodo/bootstrap.env
 docker run --rm --security-opt label=disable --network host \
   --env-file .komodo/bootstrap.env \
@@ -119,6 +137,12 @@ path = "."
 shell_mode = true
 command = '''
 set -eu
+# Auxiliares do deploy, construídas no host uma vez e reaproveitadas. São iguais em todos os apps e
+# no Ansible do server: mudou um dockerfile, sobe a tag aqui, nos outros apps e no Ansible.
+docker image inspect azuos-deploy-tools:1 >/dev/null 2>&1 || \
+  docker build -t azuos-deploy-tools:1 .komodo/runtime/deploy-tools
+docker image inspect azuos-gateway:2.11 >/dev/null 2>&1 || \
+  docker build -t azuos-gateway:2.11 .komodo/runtime/gateway
 chmod 600 .komodo/bootstrap.env
 docker run --rm --security-opt label=disable --network host \
   --env-file .komodo/bootstrap.env \
