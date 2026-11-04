@@ -16,33 +16,39 @@ describe('accountProfileApi', () => {
   it('reads the profile from the admin console with the session cookie', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ data: { user: { name: 'Ana' } } })));
 
-    await expect(accountProfileApi.me('https://admin-console.test/profile')).resolves.toEqual({ name: 'Ana' });
+    await expect(accountProfileApi.me('https://admin-console.test/profile')).resolves.toEqual({
+      name: 'Ana',
+    });
 
     const [url, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
-    expect(url.href).toBe('https://admin-console.test/api/me/profile');
+    expect(url.href).toBe('https://admin-console.test/api/v1/me/profile');
     expect(init.credentials).toBe('include');
   });
 
   it('reads the systems the person opens', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ data: { systems: [] } })));
 
-    await expect(accountProfileApi.systems('https://admin-console.test/profile')).resolves.toEqual([]);
+    await expect(accountProfileApi.systems('https://admin-console.test/profile')).resolves.toEqual(
+      [],
+    );
   });
 
   // triste
   it('fails clearly when the admin console refuses', async () => {
     fetchMock.mockResolvedValue(new Response('{}', { status: 401 }));
 
-    await expect(accountProfileApi.me('https://admin-console.test/profile')).rejects.toThrow('admin-console');
+    await expect(accountProfileApi.me('https://admin-console.test/profile')).rejects.toThrow(
+      'admin-console',
+    );
   });
 });
 
 describe('accountOrigin', () => {
   // feliz
   it('uses the address the server configured', () => {
-    expect(accountOrigin('https://login.grupoazuos.com.br/entrar', 'chamados.grupoazuos.com.br')).toBe(
-      'https://login.grupoazuos.com.br',
-    );
+    expect(
+      accountOrigin('https://login.grupoazuos.com.br/entrar', 'chamados.grupoazuos.com.br'),
+    ).toBe('https://login.grupoazuos.com.br');
   });
 
   /* O homo não tem `ADMIN_CONSOLE_LOGIN_URL`: sem esta regra a ficha do perfil vinha vazia. */
@@ -58,7 +64,9 @@ describe('accountOrigin', () => {
 
   // triste
   it('refuses an unknown domain without a configured address', () => {
-    expect(() => accountOrigin(null, 'chamados.outra-empresa.com')).toThrow('Sem endereço da conta.');
+    expect(() => accountOrigin(null, 'chamados.outra-empresa.com')).toThrow(
+      'Sem endereço da conta.',
+    );
   });
 });
 

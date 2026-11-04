@@ -228,25 +228,27 @@ export type PublicTicket = z.infer<typeof publicTicketSchema>;
  * Um chamado na lista "Meus chamados" — o que a pessoa abriu, logada. Só o resumo: o detalhe
  * (linha do tempo, arquivos) sai pela consulta do número, que devolve o `PublicTicket`.
  */
-export const myTicketSchema = ticketSchema.pick({
-  id: true,
-  protocol: true,
-  status: true,
-  priority: true,
-  area: true,
-  problemType: true,
-  description: true,
-  createdAt: true,
-}).extend({
-  /** Está na lista porque a pessoa foi VINCULADA (e não porque abriu). */
-  isWatching: z.boolean(),
-});
+export const myTicketSchema = ticketSchema
+  .pick({
+    id: true,
+    protocol: true,
+    status: true,
+    priority: true,
+    area: true,
+    problemType: true,
+    description: true,
+    createdAt: true,
+  })
+  .extend({
+    /** Está na lista porque a pessoa foi VINCULADA (e não porque abriu). */
+    isWatching: z.boolean(),
+  });
 
 export type MyTicket = z.infer<typeof myTicketSchema>;
 
 /**
  * O que o formulário de abrir chamado já traz preenchido — os dados da pessoa no
- * admin-console (`GET /api/me/profile`).
+ * admin-console (`GET /api/v1/me/profile`).
  *
  * O NOME é da identidade e não se muda aqui. Telefone e departamento vêm sugeridos e a pessoa
  * corrige; `department` é `null` quando o texto do admin-console não bate com um único

@@ -9,7 +9,7 @@ import { authApi } from '$lib/api/auth.api';
  * A GUARDA de sessão: todo o painel interno mora dentro deste grupo de rota, e ninguém
  * chega em nenhuma tela dele sem sessão válida.
  *
- * `/api/auth/me` é a mesma origem de verdade que o backend usa para tudo o mais — não existe
+ * `/api/v1/auth/me` é a mesma origem de verdade que o backend usa para tudo o mais — não existe
  * um segundo lugar guardando "está logado" que pudesse divergir dele.
  *
  * Quem não tem módulo nenhum (usuário sem permissão de Infra, Sistema ou Manutenção) é

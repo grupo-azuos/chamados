@@ -222,7 +222,7 @@ describe('AzuosRoleListView', () => {
   /* A foto de quem entrou aparece no cartão "Meu perfil", e não só as iniciais. */
   it('shows the photo of the logged person on the profile card', async () => {
     vi.stubGlobal('Image', InstantLoadImage);
-    const image = 'https://admin-console.exemplo.com/api/users/u1/avatar?v=3';
+    const image = 'https://admin-console.exemplo.com/api/v1/users/u1/avatar?v=3';
 
     renderView({
       data: {

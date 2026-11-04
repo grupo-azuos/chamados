@@ -14,7 +14,7 @@ const account = {
   email: 'ana@grupoazuos.com.br',
   role: 'admin' as const,
   profile: {
-    avatarUrl: 'https://admin-console.test/api/users/1/avatar',
+    avatarUrl: 'https://admin-console.test/api/v1/users/1/avatar',
     jobTitle: 'Analista de TI',
     department: 'Tecnologia',
     phone: '11912345678',
@@ -27,7 +27,11 @@ describe('mergePerson', () => {
   // feliz
   it('fills the card from the account and keeps the role of the Chamados', () => {
     const person = mergePerson(user as never, account, [
-      { name: 'Paralegal', presentation: { url: 'https://paralegal.test' }, access: { role: 'user' } },
+      {
+        name: 'Paralegal',
+        presentation: { url: 'https://paralegal.test' },
+        access: { role: 'user' },
+      },
     ]);
 
     expect(person).toMatchObject({

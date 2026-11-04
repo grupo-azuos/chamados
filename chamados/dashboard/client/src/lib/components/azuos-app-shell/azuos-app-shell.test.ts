@@ -88,7 +88,7 @@ describe('AzuosAppShell', () => {
   /* A foto de quem entrou aparece no rodapé, e não só as iniciais. */
   it('shows the photo of who is using the system', async () => {
     vi.stubGlobal('Image', InstantLoadImage);
-    const avatarUrl = 'https://admin-console.exemplo.com/api/users/1/avatar?v=2';
+    const avatarUrl = 'https://admin-console.exemplo.com/api/v1/users/1/avatar?v=2';
 
     const { container } = renderShell({
       data: { user: { name: 'Ana Souza', email: 'a@b.c', role: 'Administrador', avatarUrl } },
@@ -216,7 +216,9 @@ describe('AzuosAppShell', () => {
     );
     const panel = screen.getByRole('navigation', { name: 'Telas do módulo' });
     expect(within(panel).getByRole('link', { name: 'Chamados' })).toBeInTheDocument();
-    expect(screen.getByText('Infraestrutura', { selector: '[data-sidebar="group-label"]' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Infraestrutura', { selector: '[data-sidebar="group-label"]' }),
+    ).toBeInTheDocument();
   });
 
   // feliz

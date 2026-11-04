@@ -23,7 +23,7 @@ vi.mock('$lib/api/auth.api', () => ({
 
 vi.mock('$lib/utils/leave-session.util', () => ({ leaveSession: vi.fn() }));
 
-/* A conta do Admin Console (foto do rodapé). Por padrão ela não responde: vale a do `/api/auth/me`. */
+/* A conta do Admin Console (foto do rodapé). Por padrão ela não responde: vale a do `/api/v1/auth/me`. */
 vi.mock('$lib/api/account-profile.api', () => ({
   accountOrigin: (configured: string | null) => configured ?? 'http://localhost:5000',
   accountProfileApi: { me: vi.fn().mockRejectedValue(new Error('offline')) },
@@ -182,12 +182,14 @@ describe('useAppShellModel', () => {
   });
 
   // feliz
-  /* A foto vem do admin-console pelo `/api/auth/me`: sem repassá-la, o rodapé fica nas iniciais. */
+  /* A foto vem do admin-console pelo `/api/v1/auth/me`: sem repassá-la, o rodapé fica nas iniciais. */
   it('passes the admin-console photo on to the shell', () => {
-    const model = mountModel({ image: 'https://admin-console.exemplo.com/api/users/1/avatar?v=2' });
+    const model = mountModel({
+      image: 'https://admin-console.exemplo.com/api/v1/users/1/avatar?v=2',
+    });
 
     expect(model.data.user.avatarUrl).toBe(
-      'https://admin-console.exemplo.com/api/users/1/avatar?v=2',
+      'https://admin-console.exemplo.com/api/v1/users/1/avatar?v=2',
     );
   });
 
@@ -208,7 +210,9 @@ describe('useAppShellModel', () => {
       },
     });
 
-    const model = mountModel({ image: 'https://admin-console.exemplo.com/api/users/1/avatar?v=2' });
+    const model = mountModel({
+      image: 'https://admin-console.exemplo.com/api/v1/users/1/avatar?v=2',
+    });
 
     await waitFor(() =>
       expect(model.data.user.avatarUrl).toBe('https://admin-console.exemplo.com/avatars/ana.png'),
