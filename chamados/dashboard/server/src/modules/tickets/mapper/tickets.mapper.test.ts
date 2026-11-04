@@ -196,6 +196,17 @@ describe('toTicketUpdate', () => {
     expect(toTicketUpdate({ area: 'manutencao' }, ANA, NOW).area).toBe('manutencao');
   });
 
+  it('updates or clears customSystemName, clearing it when a project is chosen', () => {
+    expect(toTicketUpdate({ customSystemName: '  Trilha  ' }, ANA, NOW).customSystemName).toBe(
+      'Trilha',
+    );
+    expect(toTicketUpdate({ customSystemName: null }, ANA, NOW).customSystemName).toBeNull();
+    expect(toTicketUpdate({ projectId: 5, customSystemName: 'Trilha' }, ANA, NOW)).toMatchObject({
+      projectId: 5,
+      customSystemName: null,
+    });
+  });
+
   // triste
   it('touches nothing but the stamps when the change is empty', () => {
     expect(toTicketUpdate({}, ANA, NOW)).toEqual({ updatedAt: NOW, updatedBy: ANA });

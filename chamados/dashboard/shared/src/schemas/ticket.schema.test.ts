@@ -5,6 +5,7 @@ import {
   createTicketSchema,
   publicTicketSchema,
   ticketFormSchema,
+  ticketDataFormSchema,
   ticketListQuerySchema,
   ticketReportQuerySchema,
   updateTicketSchema,
@@ -374,12 +375,49 @@ describe('updateTicketSchema', () => {
     expect(updateTicketSchema.parse({ area: 'manutencao' })).toEqual({ area: 'manutencao' });
   });
 
+  it('accepts updating or clearing the custom system name', () => {
+    expect(updateTicketSchema.parse({ customSystemName: '  Trilha  ' })).toEqual({
+      customSystemName: 'Trilha',
+    });
+    expect(updateTicketSchema.parse({ customSystemName: '' })).toEqual({
+      customSystemName: null,
+    });
+    expect(updateTicketSchema.parse({ customSystemName: null })).toEqual({
+      customSystemName: null,
+    });
+  });
+
   // triste
   it('refuses an area that is not on the list, in Portuguese', () => {
     const result = updateTicketSchema.safeParse({ area: 'rh' });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe('Escolha a área do chamado');
+  });
+});
+
+describe('ticketDataFormSchema', () => {
+  // feliz
+  it('accepts custom system name and defaults it to empty string', () => {
+    const parsed = ticketDataFormSchema.parse({
+      priority: 'high',
+      area: 'sistema',
+      problemType: 'feature_request',
+      computerId: '',
+      projectId: '',
+      customSystemName: 'Trilha',
+    });
+
+    expect(parsed.customSystemName).toBe('Trilha');
+
+    const defaultParsed = ticketDataFormSchema.parse({
+      priority: 'high',
+      area: 'sistema',
+      problemType: 'feature_request',
+      computerId: '',
+    });
+
+    expect(defaultParsed.customSystemName).toBe('');
   });
 });
 

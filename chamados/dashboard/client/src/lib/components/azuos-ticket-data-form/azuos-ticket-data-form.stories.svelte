@@ -148,6 +148,33 @@
   }}
 />
 
+<!-- Chamado com sistema não cadastrado (externo, ex: Trilha). -->
+<Story
+  name="WithCustomSystem"
+  args={{
+    data: {
+      ...data,
+      ticket: {
+        ...ticket,
+        area: 'sistema',
+        problemType: 'feature_request',
+        projectId: null,
+        customSystemName: 'Trilha',
+        projectName: 'Trilha',
+      },
+      fields: {
+        ...data.fields,
+        area: { value: 'sistema', error: null },
+        problemType: { value: 'feature_request', error: null },
+        projectId: { value: '', error: null },
+        customSystemName: { value: 'Trilha', error: null },
+      },
+      projects: [{ value: '1', label: 'Portal' }],
+    },
+    actions,
+  }}
+/>
+
 <!-- Caso limite: na coluna lateral estreita da ficha, na largura de um celular. -->
 <Story name="OnPhone" asChild>
   <div class="w-full max-w-[360px]">

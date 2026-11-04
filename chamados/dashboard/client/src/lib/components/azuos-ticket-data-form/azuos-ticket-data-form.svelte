@@ -19,6 +19,7 @@
     | 'problemType'
     | 'computerId'
     | 'projectId'
+    | 'customSystemName'
     | 'assigneeId';
 
   /**
@@ -36,8 +37,9 @@
     data: {
       ticket: Ticket;
       /* O responsável é opcional: só existe para quem pode trocá-lo (o super admin). */
-      fields: Record<Exclude<TicketDataField, 'assigneeId'>, FormFieldState> & {
+      fields: Record<Exclude<TicketDataField, 'assigneeId' | 'customSystemName'>, FormFieldState> & {
         assigneeId?: FormFieldState;
+        customSystemName?: FormFieldState;
       };
       /** Quem pode ser o responsável. Vazio (o padrão) esconde o campo. */
       assignees?: { value: string; label: string }[];
@@ -96,7 +98,49 @@
     { value: '', label: 'Nenhuma' },
     ...data.machines.map((machine) => ({ ...machine, icon: LaptopIcon })),
   ]);
-  const projectOptions = $derived([{ value: '', label: 'Nenhum' }, ...(data.projects ?? [])]);
+
+  /* O sistema é UM campo na tela, mas dois no chamado: o da lista (`projectId`) ou o digitado
+     (`customSystemName`). Escolher um sempre limpa o outro — senão iriam os dois, e o nome
+     digitado ficaria escondido atrás do da lista. */
+  function clearSystem(): void {
+    actions.onChange('projectId', '');
+    if (fields.customSystemName) actions.onChange('customSystemName', '');
+  }
+
+  function chooseSystem(value: string): void {
+    if (fields.customSystemName) actions.onChange('customSystemName', '');
+    actions.onChange('projectId', value);
+  }
+
+  function typeSystem(value: string): void {
+    actions.onChange('projectId', '');
+    if (fields.customSystemName) actions.onChange('customSystemName', value);
+  }
+
+  function handleSystemChange(value: string): void {
+    if (!value) {
+      clearSystem();
+      return;
+    }
+    chooseSystem(value);
+  }
+
+  const systemValue = $derived(
+    fields.projectId?.value || fields.customSystemName?.value || '',
+  );
+
+  const customProjectOption = $derived(
+    fields.customSystemName?.value &&
+      !(data.projects ?? []).some((p) => p.value === fields.customSystemName?.value)
+      ? [{ value: fields.customSystemName.value, label: fields.customSystemName.value }]
+      : [],
+  );
+
+  const projectOptions = $derived([
+    { value: '', label: 'Nenhum' },
+    ...customProjectOption,
+    ...(data.projects ?? []),
+  ]);
 
   /* As opções de tipo de problema dependem da ÁREA escolhida — Manutenção não tem
      "ar-condicionado" na lista de Infra, nem Infra tem "rede caiu" na de Manutenção. */
@@ -173,13 +217,19 @@
     />
   </FilterField>
 
-  {#if fields.projectId && (fields.area.value === 'sistema' || (data.projects && data.projects.length > 0))}
+  {#if (fields.projectId || fields.customSystemName) && (fields.area.value === 'sistema' || (data.projects && data.projects.length > 0))}
     <FilterField data={{ label: 'Sistema / Software' }}>
       <OptionPicker
-        data={{ value: fields.projectId.value, options: projectOptions }}
-        ui={{ ariaLabel: 'Sistema / Software', placeholder: 'Nenhum', fullWidth: true }}
+        data={{ value: systemValue, options: projectOptions }}
+        ui={{
+          ariaLabel: 'Sistema / Software',
+          placeholder: 'Nenhum',
+          searchPlaceholder: 'Busque ou digite o nome do sistema',
+          fullWidth: true,
+          allowCustomValue: true,
+        }}
         state={{ isDisabled: formState?.isSubmitting }}
-        actions={{ onChange: (value: string) => actions.onChange('projectId', value) }}
+        actions={{ onChange: handleSystemChange, onCustomValue: typeSystem }}
       />
     </FilterField>
   {/if}
