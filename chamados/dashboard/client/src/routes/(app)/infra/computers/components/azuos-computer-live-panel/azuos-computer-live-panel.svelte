@@ -51,7 +51,7 @@
   />
 {:else}
   <div class="grid gap-3 lg:grid-cols-2 lg:items-start">
-    <section aria-label="Uso do processador" class="bg-muted/30 rounded-box min-w-0 border p-4 lg:row-span-2">
+    <section aria-label="Uso do processador" class="bg-muted rounded-box min-w-0 border p-4 lg:row-span-2">
       <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">
         Processador — {formatPercent(live.cpu.percentTotal)} no total
       </h3>
@@ -67,7 +67,7 @@
       {/if}
     </section>
 
-    <section aria-label="Uso da memória" class="bg-muted/30 rounded-box min-w-0 border p-4">
+    <section aria-label="Uso da memória" class="bg-muted rounded-box min-w-0 border p-4">
       <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">Memória</h3>
       <UsageMeter
         data={{ label: 'Em uso', percentage: live.memory.usedPercent, detail: memoryDetail }}
@@ -88,7 +88,7 @@
       {/if}
     </section>
 
-    <section aria-label="Uso dos volumes" class="bg-muted/30 rounded-box min-w-0 border p-4">
+    <section aria-label="Uso dos volumes" class="bg-muted rounded-box min-w-0 border p-4">
       <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">Volumes</h3>
 
       {#if live.disks.length === 0}
@@ -113,7 +113,7 @@
       </p>
     </section>
 
-    <section aria-label="Tráfego de rede" class="bg-muted/30 rounded-box min-w-0 border p-4 lg:col-span-2">
+    <section aria-label="Tráfego de rede" class="bg-muted rounded-box min-w-0 border p-4 lg:col-span-2">
       <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">Rede</h3>
 
       {#if activeInterfaces.length === 0}

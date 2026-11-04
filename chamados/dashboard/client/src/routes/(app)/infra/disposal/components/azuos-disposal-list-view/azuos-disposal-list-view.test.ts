@@ -8,6 +8,7 @@ import DisposalListView, {
   type DisposalFilter,
   type DisposalSummary,
 } from './azuos-disposal-list-view.svelte';
+import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
 const GB = 1024 ** 3;
 
@@ -100,6 +101,13 @@ function renderView(
   });
 }
 
+/* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
+function hasCardsOnlyTable(): boolean {
+  return Array.from(document.querySelectorAll('.overflow-x-auto')).some(
+    (element) => element.classList.contains('hidden') && !element.classList.contains('xl:block'),
+  );
+}
+
 describe('machineLabelOf', () => {
   // feliz
   it('prefers the nickname the IT team gave', () => {
@@ -133,17 +141,19 @@ describe('AzuosDisposalListView — stat card shortcuts and filter bar', () => {
   it('turns the defect and scrap cards into shortcuts for the type filter', async () => {
     renderWithFilter();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Com defeito: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Com defeito .+: filtrar a lista$/ }),
+    );
     expect(actions.onTypeChange).toHaveBeenLastCalledWith('defect');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Lixo: filtrar a lista' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Lixo .+: filtrar a lista$/ }));
     expect(actions.onTypeChange).toHaveBeenLastCalledWith('scrap');
   });
 
   it('marks the card while its filter is on, and clears it on a second click', async () => {
     renderWithFilter({ type: 'scrap' });
 
-    const card = screen.getByRole('button', { name: 'Lixo: tirar o filtro' });
+    const card = screen.getByRole('button', { name: /^Lixo .+: tirar o filtro$/ });
     expect(card).toHaveAttribute('aria-pressed', 'true');
 
     await userEvent.click(card);
@@ -229,5 +239,102 @@ describe('AzuosDisposalListView', () => {
 
     expect(screen.getByText('Carregando o que saiu de uso…')).toBeInTheDocument();
     expect(screen.queryByText('Nenhuma máquina descartada')).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosDisposalListView — search, type filter, rows and the restore dialog', () => {
+  // feliz
+  it('searches and filters by the type of disposal', async () => {
+    const user = userEvent.setup();
+    renderView();
+    await user.type(screen.getByRole('textbox', { name: 'Buscar' }), 'r');
+    expect(actions.onSearchChange).toHaveBeenCalledWith('r');
+    const group = screen.getByRole('group', { name: 'Filtrar por tipo de descarte' });
+    await user.click(within(group).getAllByRole('button')[1]!);
+    expect(actions.onTypeChange).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('opens the record and asks to restore from the cards and from the table', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onOpenMachine).mockClear();
+    vi.mocked(actions.onAskRestore).mockClear();
+    renderView({
+      computers: [
+        computer({ department: null, disposalType: null, disposalReason: null, displayName: null }),
+      ],
+    });
+
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    const opens = screen.getAllByRole('button', { name: 'Ver ficha' });
+    const restores = screen.getAllByRole('button', { name: 'Voltar ao inventário' });
+    for (const button of opens) await user.click(button);
+    for (const button of restores) await user.click(button);
+    expect(actions.onOpenMachine).toHaveBeenCalledTimes(opens.length);
+    expect(actions.onAskRestore).toHaveBeenCalledTimes(restores.length);
+  });
+
+  // triste
+  it('cancels the restore from the dialog', async () => {
+    const user = userEvent.setup();
+    renderView({ restoring: computer() });
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
+    expect(actions.onCancelRestore).toHaveBeenCalled();
+  });
+});
+
+describe('disposal-list-view — cards only', () => {
+  // feliz
+  it('hides the table completely when the person asked for cards only', () => {
+    const tableView = useTableViewModel();
+    tableView.actions.onToggle();
+    try {
+      renderView();
+
+      expect(hasCardsOnlyTable()).toBe(true);
+    } finally {
+      tableView.actions.onToggle();
+    }
+  });
+});
+
+/* Quem pediu menos movimento ao sistema recebe a rolagem seca, sem deslizar. */
+function stubReducedMotion() {
+  const original = window.matchMedia;
+  /* Só a consulta de movimento muda: as de largura seguem como estão, para a tela não virar celular. */
+  window.matchMedia = (query: string) =>
+    ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }) as MediaQueryList;
+
+  return () => {
+    window.matchMedia = original;
+  };
+}
+
+describe('AzuosDisposalListView — reduced motion', () => {
+  // feliz
+  it('scrolls to the filters without animation when the person prefers less motion', async () => {
+    const restore = stubReducedMotion();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      renderView();
+
+      await userEvent.click(
+        screen.getByRole('button', { name: /^Com defeito .+: filtrar a lista$/ }),
+      );
+
+      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
+    } finally {
+      restore();
+    }
   });
 });

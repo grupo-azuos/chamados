@@ -19,7 +19,7 @@
   let { data, state: cardState, actions }: AzuosTicketWatchersCardProps = $props();
 </script>
 
-<div class="border-border/70 flex flex-col gap-3 border-t pt-4">
+<div class="border-border flex flex-col gap-3 border-t pt-4">
   <div>
     <p class="text-ink-700 text-sm font-medium">Pessoas vinculadas</p>
     <p class="text-muted-foreground text-xs">

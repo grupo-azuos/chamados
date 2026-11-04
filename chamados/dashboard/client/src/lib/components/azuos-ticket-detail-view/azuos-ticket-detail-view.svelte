@@ -83,7 +83,6 @@
 </script>
 
 <script lang="ts">
-  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import FileDown from '@lucide/svelte/icons/file-down';
   import GitPullRequest from '@lucide/svelte/icons/git-pull-request';
@@ -91,6 +90,8 @@
   import MessageCircle from '@lucide/svelte/icons/message-circle';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+
+  import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import AttachmentList from '$lib/components/azuos-attachment-list/azuos-attachment-list.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import HistoryTimeline, {
@@ -147,11 +148,7 @@
 </script>
 
 <div class="mx-auto flex w-full max-w-7xl flex-col gap-5">
-  <ActionButton
-    data={{ label: 'Voltar aos chamados' }}
-    ui={{ variant: 'ghost', size: 'sm', icon: ArrowLeft, className: 'self-start' }}
-    actions={{ onClick: actions.onBack }}
-  />
+  <BackButton data={{ destination: 'os chamados' }} actions={{ onClick: actions.onBack }} />
 
   <PageHeader
     data={{
@@ -168,7 +165,7 @@
       />
     {:else if data.whatsAppLink}
       <a
-        class="control-md rounded-control bg-success/10 text-success hover:bg-success/20 inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+        class="control-md rounded-control bg-muted text-success hover:bg-muted inline-flex items-center gap-2 text-sm font-semibold transition-colors"
         href={data.whatsAppLink}
         target="_blank"
         rel="noopener"
@@ -215,7 +212,7 @@
     {/if}
     {#if ticket.githubIssueUrl}
       <a
-        class="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/80"
+        class="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
         href={ticket.githubIssueUrl}
         target="_blank"
         rel="noopener"
@@ -245,11 +242,11 @@
           {/each}
         </dl>
 
-        <div class="rounded-box border-border/80 bg-muted/20 border p-3.5">
+        <div class="rounded-box border-border bg-muted border p-3.5">
           <p class="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
             Descrição do problema
           </p>
-          <p class="text-foreground/90 text-sm whitespace-pre-line">{ticket.description}</p>
+          <p class="text-foreground text-sm whitespace-pre-line">{ticket.description}</p>
         </div>
 
         {#if ticket.screenshotUrl}

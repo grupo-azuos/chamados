@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -163,5 +163,83 @@ describe('AzuosInventoryFormDialog', () => {
 
     expect(screen.queryByRole('button', { name: 'Remover foto' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Escolher imagem' })).toBeInTheDocument();
+  });
+});
+
+
+/** Escolhe a segunda opção de um seletor, seja ele de pastilhas ou de lista com busca. */
+async function chooseSecond(label: string) {
+  const group = screen.queryByRole('group', { name: label });
+  if (group) {
+    await userEvent.click(within(group).getAllByRole('button')[1]!);
+    return;
+  }
+  await userEvent.click(screen.getByRole('button', { name: label }));
+  const popup = await waitFor(() => {
+    const open = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1);
+    expect(open).toBeTruthy();
+    return open as HTMLElement;
+  });
+  await fireEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
+}
+
+describe('AzuosInventoryFormDialog — every field reports to the model', () => {
+  // feliz
+  it('types where it is, the code and the note, and picks category and unit', async () => {
+    vi.mocked(actions.onChange).mockClear();
+    setup();
+
+    await userEvent.type(screen.getByRole('textbox', { name: /Onde fica/ }), '!');
+    await userEvent.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('location', expect.any(String));
+    expect(actions.onBlur).toHaveBeenCalledWith('location');
+    await userEvent.type(screen.getByRole('textbox', { name: /Código/ }), '1');
+    await userEvent.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('code', expect.any(String));
+    expect(actions.onBlur).toHaveBeenCalledWith('code');
+    await userEvent.type(screen.getByRole('textbox', { name: /Observação/ }), 'x');
+    await userEvent.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('note', 'x');
+    expect(actions.onBlur).toHaveBeenCalledWith('note');
+
+    await chooseSecond('Categoria');
+    expect(actions.onChange).toHaveBeenCalledWith('category', expect.any(String));
+    await chooseSecond('Como é contado');
+    expect(actions.onChange).toHaveBeenCalledWith('unit', expect.any(String));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tirar foto' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Escolher imagem' }));
+  });
+
+  // triste
+  it('closes with Escape', async () => {
+    vi.mocked(actions.onClose).mockClear();
+    setup();
+    await userEvent.keyboard('{Escape}');
+    expect(actions.onClose).toHaveBeenCalled();
+  });
+});
+
+describe('AzuosInventoryFormDialog — closing', () => {
+  // feliz
+  it('closes with Escape, like any dialog', async () => {
+    const onClose = vi.fn();
+    setup({ actions: { ...actions, onClose } });
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+});
+
+describe('AzuosInventoryFormDialog — photo dialog closed empty', () => {
+  // triste
+  it('hands over no photo when the file dialog is closed with nothing chosen', async () => {
+    const onPhotoChange = vi.fn();
+    setup({ actions: { ...actions, onPhotoChange } });
+
+    await fireEvent.change(document.getElementById('photo') as HTMLInputElement);
+
+    expect(onPhotoChange).toHaveBeenCalledWith(null);
   });
 });

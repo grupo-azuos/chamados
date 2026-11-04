@@ -110,7 +110,7 @@
     style={[contentStyle, dragStyle].filter(Boolean).join(';')}
     class={cn(
       /* Celular: nasce de baixo, cantos de cima arredondados — o bottom sheet. */
-      'fixed inset-x-0 bottom-0 z-50 flex max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)] w-full flex-col rounded-t-3xl border-t border-border bg-card px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-2xl outline-none data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom',
+      'fixed inset-x-0 bottom-0 z-50 flex max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)] w-full flex-col rounded-t-3xl border-t border-border bg-card px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-xl outline-none data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom',
       /* Desktop: volta a ser o modal centrado — as mesmas classes do `DialogContent` base. */
       'sm:top-[50%] sm:bottom-auto sm:left-[50%] sm:max-h-[calc(100dvh-3rem)] sm:w-full sm:max-w-[calc(100%-2rem)] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-surface sm:border sm:p-6 sm:duration-200 sm:data-[state=closed]:fade-out-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=open]:slide-in-from-bottom-0 sm:max-w-lg',
       className,
@@ -129,7 +129,7 @@
       onpointerup={onHandlePointerUp}
       onpointercancel={() => { dragging = false; dragY = 0; }}
     >
-      <span class="h-1.5 w-10 rounded-full bg-muted-foreground/30"></span>
+      <span class="h-1.5 w-10 rounded-full bg-muted"></span>
     </div>
 
     <!-- Rola como um bloco só, cabeçalho e rodapé inclusos — igual ao bottom sheet nativo.

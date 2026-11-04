@@ -116,3 +116,25 @@ describe('botSessionId', () => {
     expect(botSessionId('user-1')).not.toBe(botSessionId('user-2'));
   });
 });
+
+describe('BotClientService.sendText', () => {
+  // feliz
+  it('reads the outcome from the status the bot answers', async () => {
+    mockFetch(jsonResponse({}, 202));
+    expect(await new BotClientService(configured).sendText('u-1', '55', 'Oi')).toBe('sent');
+
+    mockFetch(jsonResponse({}, 409));
+    expect(await new BotClientService(configured).sendText('u-1', '55', 'Oi')).toBe('not_connected');
+  });
+
+  // triste
+  it('says it is not configured, failed, or lost the bot', async () => {
+    expect(await new BotClientService({} as Env).sendText('u-1', '55', 'Oi')).toBe('not_configured');
+
+    mockFetch(jsonResponse({}, 500));
+    expect(await new BotClientService(configured).sendText('u-1', '55', 'Oi')).toBe('failed');
+
+    mockFetch(new TypeError('fetch failed'));
+    expect(await new BotClientService(configured).sendText('u-1', '55', 'Oi')).toBe('failed');
+  });
+});

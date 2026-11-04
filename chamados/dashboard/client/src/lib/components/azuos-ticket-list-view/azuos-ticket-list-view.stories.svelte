@@ -179,6 +179,27 @@
 />
 
 <!-- Existem chamados, mas o filtro escondeu todos: o próximo passo é limpar o filtro. -->
+<!-- Filtro por responsável ligado: a etiqueta diz quem, e o campo mostra a foto. -->
+<Story
+  name="FilteredByAssignee"
+  args={{
+    data: {
+      area: 'infra',
+      tickets,
+      total: tickets.length,
+      dashboard,
+      filter: { ...emptyFilter, assigneeId: 'u-ana' },
+      assigneeOptions: [
+        { value: 'none', label: 'Sem responsável' },
+        { value: 'u-ana', label: 'Ana Lima', avatar: { name: 'Ana Lima', url: null }, separatorBefore: true },
+        { value: 'u-bia', label: 'Bia Costa', avatar: { name: 'Bia Costa', url: null } },
+      ],
+    },
+    state: settled,
+    actions,
+  }}
+/>
+
 <Story
   name="FilteredOut"
   args={{

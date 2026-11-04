@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { apiDownload, ApiError, apiRequest, readError, uploadFile } from './http-client';
+import { apiDownload, ApiError, apiRequest, readError, uploadFile, uploadToSignedUrl } from './http-client';
 
 function respond(status: number, body?: unknown) {
   return vi.fn().mockResolvedValue(
@@ -214,5 +214,68 @@ describe('uploadFile', () => {
       'Seu cargo só permite consultar.',
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('http-client — the odd answers of the server and the storage', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // triste
+  it('names a download "relatorio" when the server did not choose a name', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(new Blob(['x']), { status: 200 })));
+
+    const downloaded = await apiDownload('/tickets/export');
+
+    expect(downloaded.fileName).toBe('relatorio');
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe('/api/v1/tickets/export');
+  });
+
+  // triste
+  it('turns a refusal whose body is not JSON, is a list or has no message into the status message', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('não é json', { status: 500 })));
+    await expect(apiRequest('/x')).rejects.toMatchObject({ status: 500 });
+
+    vi.stubGlobal('fetch', respond(502, [1, 2]));
+    await expect(apiRequest('/x')).rejects.toMatchObject({ status: 502 });
+
+    vi.stubGlobal('fetch', respond(503, { error: 'sem mensagem' }));
+    await expect(apiRequest('/x')).rejects.toMatchObject({ status: 503 });
+  });
+
+  // feliz
+  it('sends a file without a known type as a generic binary', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+
+    await uploadToSignedUrl('https://s3.exemplo/put', new File(['x'], 'sem-tipo'));
+
+    expect(vi.mocked(fetch).mock.calls[0]?.[1]).toMatchObject({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/octet-stream' },
+    });
+  });
+});
+
+describe('apiRequest — odd answers and empty filters', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // triste
+  /* Um corpo de erro que não é objeto (um `null` literal) não pode virar mensagem: fica o padrão. */
+  it('falls back to the status message when the error body is a bare null', async () => {
+    vi.stubGlobal('fetch', respond(500, null));
+
+    await expect(apiRequest('/tickets')).rejects.toMatchObject({ status: 500 });
+  });
+
+  it('sends no question mark when every filter is empty', async () => {
+    const fetchMock = respond(200, []);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiRequest('/tickets', { query: { search: '', page: undefined, area: null } });
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain('?');
   });
 });

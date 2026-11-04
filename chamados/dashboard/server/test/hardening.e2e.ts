@@ -34,6 +34,9 @@ describe.skipIf(!testDatabaseUrl)('API hardening (e2e)', () => {
     process.env.DATABASE_URL = testDatabaseUrl;
     process.env.USER_MOCK = 'false';
     process.env.API_LOG_LEVEL = 'error';
+    /* Sem usuário fingido, mesmo que o `.env` de quem roda tenha `USER_MOCK=true` para a tela:
+       o que se prova aqui é a porta fechada para quem não se identificou. */
+    process.env.USER_MOCK = 'false';
     process.env.API_RATE_LIMIT = String(RATE_LIMIT);
     process.env.API_WEBHOOK_RATE_LIMIT = String(WEBHOOK_RATE_LIMIT);
     /* UM proxy na frente, como em produção atrás do Traefik. É o que faz `request.ip` ser o

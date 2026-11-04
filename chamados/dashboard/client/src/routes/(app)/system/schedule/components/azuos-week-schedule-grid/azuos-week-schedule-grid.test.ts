@@ -2,10 +2,15 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/sve
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { type SoftwareTimelineEvent } from '@template/shared/schemas/software-timeline.schema';
+
+import { type DayColumn } from '$lib/hooks/use-software-schedule/use-software-schedule.svelte';
 import WeekScheduleGrid, {
   type AzuosWeekScheduleGridProps,
   timeAtOffset,
 } from './azuos-week-schedule-grid.svelte';
+
+const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 function renderView(
   overrides: {
@@ -551,5 +556,470 @@ describe('AzuosWeekScheduleGrid', () => {
 
     expect(screen.getByText('Agendamentos fora do horário da grade')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /18:00 · Deploy enviado à noite/ })).toBeInTheDocument();
+  });
+});
+
+/* Um evento do GitHub pronto para variar tipo, status, horário e autor. */
+function githubEvent(overrides: Partial<SoftwareTimelineEvent> = {}): SoftwareTimelineEvent {
+  return {
+    id: 100,
+    projectId: 1,
+    projectName: 'Azuos',
+    type: 'pr',
+    externalId: '#100',
+    title: 'PR de exemplo',
+    description: null,
+    url: 'https://github.com/example/project/pull/100',
+    author: 'ana',
+    status: 'merged',
+    /* 14:00 UTC cai dentro da grade tanto em UTC quanto em UTC-3. */
+    eventDate: '2026-10-06T14:00:00Z',
+    createdAt: '2026-10-06T14:00:00Z',
+    ...overrides,
+  };
+}
+
+function dayColumn(overrides: Partial<DayColumn> = {}): DayColumn {
+  return {
+    dateString: '2026-10-06',
+    dayNumber: 6,
+    weekdayShort: 'Ter',
+    isToday: false,
+    isCurrentMonth: true,
+    events: [],
+    ...overrides,
+  };
+}
+
+async function hoverAndReadTooltip(trigger: HTMLElement): Promise<HTMLElement> {
+  await userEvent.hover(trigger);
+  await waitFor(() => expect(trigger).toHaveAttribute('aria-describedby'));
+  return document.getElementById(trigger.getAttribute('aria-describedby')!)!;
+}
+
+describe('AzuosWeekScheduleGrid — toolbar', () => {
+  // feliz
+  it.each(['day', 'week', 'month'] as const)('switches to the %s view', async (mode) => {
+    const labels = { day: 'Dia', week: 'Semana', month: 'Mês' };
+    const actions = renderView();
+    await userEvent.click(screen.getByRole('button', { name: labels[mode] }));
+    expect(actions.onViewModeChange).toHaveBeenCalledWith(mode);
+  });
+
+  // feliz
+  it('goes to today and to the next period', async () => {
+    const actions = renderView({ data: { viewMode: 'day' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Hoje' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo dia' }));
+    expect(actions.onToday).toHaveBeenCalledOnce();
+    expect(actions.onNext).toHaveBeenCalledOnce();
+  });
+
+  // feliz
+  it('hides the new appointment hint when the focus leaves the button', async () => {
+    renderView();
+    const button = screen.getByRole('button', { name: 'Novo agendamento' });
+    button.focus();
+    expect(await screen.findByText('Criar um agendamento na agenda de sistemas')).toBeInTheDocument();
+    await fireEvent.focusOut(button);
+    await waitFor(() =>
+      expect(screen.queryByText('Criar um agendamento na agenda de sistemas')).not.toBeInTheDocument(),
+    );
+  });
+
+  // feliz
+  it('explains each filter when its picker receives focus', async () => {
+    renderView({
+      data: {
+        filters: {
+          project: '',
+          author: '',
+          type: '',
+          isActive: false,
+          projectOptions: [{ value: '', label: 'Todos os projetos' }],
+          authorOptions: [{ value: '', label: 'Todos os autores' }],
+        },
+      },
+    });
+    const picker = screen.getByRole('button', { name: 'Filtrar por projeto' });
+    picker.focus();
+    expect(
+      await screen.findByText('Filtrar agendamentos, PRs, issues e merges por projeto'),
+    ).toBeInTheDocument();
+    await fireEvent.focusOut(picker);
+    await waitFor(() =>
+      expect(
+        screen.queryByText('Filtrar agendamentos, PRs, issues e merges por projeto'),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
+  });
+
+  // feliz
+  it('details the productivity of each developer, counting local merges', async () => {
+    renderView({
+      data: {
+        developerStats: [
+          { author: 'ana', mergedPullRequests: 3, localMerges: 2, resolvedIssues: 1 },
+          { author: 'bia', mergedPullRequests: 0, resolvedIssues: 0 },
+        ],
+      },
+    });
+    expect(screen.getByText('2 merges')).toBeInTheDocument();
+    expect(screen.getByText('0 merges')).toBeInTheDocument();
+    const tooltip = await hoverAndReadTooltip(screen.getByRole('button', { name: /^bia/ }));
+    expect(tooltip).toHaveTextContent('bia: 0 PRs mergeados, 0 merges locais e 0 issues resolvidas');
+  });
+});
+
+describe('AzuosWeekScheduleGrid — month view', () => {
+  const days = [
+    ...Array.from({ length: 7 }, (_, index) =>
+      dayColumn({
+        dateString: `2026-09-${28 + index}`.replace('2026-09-31', '2026-10-01'),
+        dayNumber: index < 3 ? 28 + index : index - 2,
+        weekdayShort: WEEKDAYS[index]!,
+        isCurrentMonth: index >= 3,
+      }),
+    ),
+    dayColumn({ dateString: '2026-10-05', dayNumber: 5, weekdayShort: 'Seg', isToday: true }),
+  ];
+
+  // feliz
+  it('tells the day summary when hovering a day number, today or not', async () => {
+    renderView({ data: { viewMode: 'month', days, githubEvents: [] } });
+    const today = await hoverAndReadTooltip(screen.getByRole('button', { name: '5' }));
+    expect(today).toHaveTextContent('Seg, 05/10/2026 · 0 agendamentos · 0 atividades do GitHub');
+    const other = await hoverAndReadTooltip(screen.getByRole('button', { name: '28' }));
+    expect(other).toHaveTextContent('Seg, 28/09/2026 · 0 agendamentos · 0 atividades do GitHub');
+    expect(screen.getByRole('button', { name: '28' })).toHaveClass('text-muted-foreground');
+  });
+
+  // feliz
+  it('previews two GitHub activities per day and counts the rest', async () => {
+    const events = [1, 2, 3].map((id) =>
+      githubEvent({ id, externalId: `#${id}`, title: `Atividade ${id}`, type: 'issue', status: 'closed' }),
+    );
+    const actions = renderView({
+      data: {
+        viewMode: 'month',
+        githubEvents: events,
+        days: [dayColumn({ events: [], githubEvents: events })],
+      },
+    });
+    const more = screen.getByRole('button', { name: '+1 atividades' });
+    const tooltip = await hoverAndReadTooltip(more);
+    expect(tooltip).toHaveTextContent('Mais 1 atividades');
+    await userEvent.click(screen.getByRole('button', { name: 'Ver 3 issues do dia 06/10/2026' }));
+    expect(actions.onOpenGithubDay).toHaveBeenCalledWith('2026-10-06', 'issue');
+  });
+
+  // feliz
+  it('shows a record with its check and the project and note of an appointment', async () => {
+    const appointment = {
+      ...recordEvent,
+      id: 11,
+      kind: 'appointment' as const,
+      title: 'Reunião de alinhamento',
+      startTime: '10:00',
+      endTime: '11:00',
+      projectName: 'Azuos Ticket',
+      note: 'Levar o relatório',
+    };
+    renderView({
+      data: {
+        viewMode: 'month',
+        events: [recordEvent, appointment],
+        days: [dayColumn({ events: [recordEvent, appointment] })],
+      },
+    });
+    expect(screen.getByLabelText('Registro')).toBeInTheDocument();
+    const tooltip = await hoverAndReadTooltip(
+      screen.getByRole('button', { name: /Reunião de alinhamento/ }),
+    );
+    expect(tooltip).toHaveTextContent('Projeto: Azuos Ticket');
+    expect(tooltip).toHaveTextContent('Levar o relatório');
+    const recordTooltip = await hoverAndReadTooltip(
+      screen.getByRole('button', { name: /Sistema enviado para revisão/ }),
+    );
+    expect(recordTooltip).toHaveTextContent('Registrado por Ana Lima');
+  });
+});
+
+describe('AzuosWeekScheduleGrid — hour grid', () => {
+  // feliz
+  it('describes the day header, the hour and the GitHub activity outside the grid', async () => {
+    const nightly = githubEvent({ id: 7, externalId: '#7', title: 'Merge noturno', type: 'merge', eventDate: '2026-10-06T23:30:00Z' });
+    renderView({
+      data: {
+        githubEvents: [nightly],
+        days: [dayColumn({ githubEvents: [nightly] }), dayColumn({ dateString: '2026-10-07', dayNumber: 7, weekdayShort: 'Qua', isToday: true })],
+      },
+    });
+    const header = await hoverAndReadTooltip(screen.getByRole('button', { name: /^Ter\s*6$/ }));
+    expect(header).toHaveTextContent('Ter, 06/10/2026 · 0 agendamentos · 1 atividades do GitHub');
+    const hour = await hoverAndReadTooltip(screen.getByRole('button', { name: '08:00' }));
+    expect(hour).toHaveTextContent('08:00 · Horário local da agenda');
+    expect(screen.getAllByRole('link', { name: /Merge noturno/ }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Ver 1 merge do dia 06/10/2026' })).toBeInTheDocument();
+  });
+
+  // feliz
+  it('opens the merges of the day in the daily dialog', async () => {
+    const merges = [1, 2].map((id) => githubEvent({ id, externalId: `#${id}`, type: 'merge', eventDate: '2026-10-06T23:30:00Z' }));
+    const actions = renderView({
+      data: { githubEvents: merges, days: [dayColumn({ githubEvents: merges })] },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Ver 2 merges do dia 06/10/2026' }));
+    expect(actions.onOpenGithubDay).toHaveBeenCalledWith('2026-10-06', 'merge');
+  });
+
+  // feliz
+  it('splits the column when an appointment overlaps a GitHub card', async () => {
+    const appointment = {
+      ...recordEvent,
+      id: 12,
+      kind: 'appointment' as const,
+      title: 'Dia inteiro de deploy',
+      startTime: '08:00',
+      endTime: '17:00',
+      projectName: 'Azuos Ticket',
+      note: 'Sem janela de almoço',
+    };
+    const pr = githubEvent();
+    renderView({
+      data: {
+        events: [appointment],
+        githubEvents: [pr],
+        days: [dayColumn({ events: [appointment], githubEvents: [pr] })],
+      },
+    });
+    const block = screen.getByRole('button', { name: /Dia inteiro de deploy/ });
+    expect(block).toHaveStyle({ right: '50%' });
+    expect(block).toHaveTextContent('Azuos Ticket');
+    const card = screen.getAllByRole('link', { name: /PR de exemplo/ })[0]!.closest('[data-slot="github-hour-event"]');
+    expect(card).toHaveStyle({ left: '50%' });
+    const tooltip = await hoverAndReadTooltip(block);
+    expect(tooltip).toHaveTextContent('Projeto: Azuos Ticket');
+    expect(tooltip).toHaveTextContent('Sem janela de almoço');
+  });
+
+  // feliz
+  it('groups nearby GitHub activities in one card that opens the whole day', async () => {
+    const group = [
+      githubEvent({ id: 1, externalId: '#1', title: 'Primeiro PR' }),
+      githubEvent({ id: 2, externalId: '#2', title: 'Issue junto', type: 'issue', status: 'closed', eventDate: '2026-10-06T14:10:00Z' }),
+    ];
+    const actions = renderView({
+      data: { githubEvents: group, days: [dayColumn({ githubEvents: group })] },
+    });
+    const card = screen.getByRole('button', { name: /Ver 2 atividades próximas das/ });
+    expect(card).toHaveTextContent('2 atividades · Primeiro PR');
+    const tooltip = await hoverAndReadTooltip(card);
+    expect(tooltip).toHaveTextContent('PR #1 · Primeiro PR');
+    expect(tooltip).toHaveTextContent('Issue #2 · Issue junto');
+    await userEvent.click(card);
+    expect(actions.onOpenGithubDay).toHaveBeenCalledWith('2026-10-06', 'all');
+  });
+
+  // feliz
+  it('explains the current time marker', async () => {
+    renderView();
+    const marker = await hoverAndReadTooltip(screen.getByRole('button', { name: 'Horário atual' }));
+    expect(marker).toHaveTextContent('Horário atual na agenda');
+  });
+
+  // triste
+  it('hides the current time marker when there is no position for it', () => {
+    renderView({ data: { nowTopPx: null } });
+    expect(screen.queryByRole('button', { name: 'Horário atual' })).not.toBeInTheDocument();
+  });
+
+  // feliz
+  it('details an appointment listed outside the grid hours', async () => {
+    const late = {
+      ...recordEvent,
+      id: 13,
+      kind: 'appointment' as const,
+      title: 'Plantão',
+      startTime: '19:00',
+      endTime: '21:00',
+      projectName: 'Azuos Ticket',
+      note: 'Avisar o time',
+    };
+    renderView({ data: { events: [late], days: [dayColumn({ events: [late] })] } });
+    const tooltip = await hoverAndReadTooltip(screen.getByRole('button', { name: /Plantão/ }));
+    expect(tooltip).toHaveTextContent('Projeto: Azuos Ticket');
+    expect(tooltip).toHaveTextContent('Marcado por Ana Lima');
+    expect(tooltip).toHaveTextContent('Avisar o time');
+  });
+});
+
+describe('AzuosWeekScheduleGrid — GitHub activity in the period', () => {
+  // triste
+  it('explains the empty activity list with and without filters', () => {
+    const filters = {
+      project: '1',
+      author: '',
+      type: '',
+      isActive: true,
+      projectOptions: [{ value: '', label: 'Todos os projetos' }],
+      authorOptions: [{ value: '', label: 'Todos os autores' }],
+    };
+    const { unmount } = render(WeekScheduleGrid, {
+      props: {
+        data: { monthYearTitle: 'Outubro', viewMode: 'week', days: [], events: [], nowTopPx: null, filters, githubEvents: [] },
+        state: { isLoading: false, error: null },
+        actions: { onPrev: vi.fn(), onNext: vi.fn(), onToday: vi.fn(), onViewModeChange: vi.fn(), onNewEvent: vi.fn(), onSelectEvent: vi.fn(), onRetry: vi.fn() },
+      },
+    });
+    expect(screen.getByText('Nenhuma atividade encontrada com os filtros atuais.')).toBeInTheDocument();
+    unmount();
+    renderView();
+    expect(screen.getByText(/Nenhuma atividade sincronizada neste período/)).toBeInTheDocument();
+  });
+
+  // feliz
+  it('names each kind of activity and who did it', async () => {
+    const events = [
+      githubEvent({ id: 1, externalId: '#1', title: 'Merge local feito', type: 'merge', status: 'merged', authorName: 'Ana Lima' }),
+      githubEvent({ id: 2, externalId: '#2', title: 'Issue fechada', type: 'issue', status: 'closed' }),
+      githubEvent({ id: 3, externalId: '#3', title: 'Issue aberta', type: 'issue', status: 'open' }),
+      githubEvent({ id: 4, externalId: '#4', title: 'PR fechado sem merge', type: 'pr', status: 'closed', author: null, projectName: null }),
+      githubEvent({ id: 5, externalId: '#5', title: 'PR aguardando', type: 'pr', status: 'open', url: null }),
+    ];
+    renderView({ data: { githubEvents: events, days: [dayColumn({ githubEvents: events })] } });
+    const timeline = screen.getByText('Atividade do GitHub no período').closest('section')!;
+    expect(timeline).toHaveTextContent('Merge local · por Ana Lima');
+    expect(timeline).toHaveTextContent('Issue resolvida');
+    expect(timeline).toHaveTextContent('Issue aberta · por ana');
+    expect(timeline).toHaveTextContent('Projeto · PR fechado · por desconhecido');
+    expect(timeline).toHaveTextContent('PR aberto');
+    const link = within(timeline).getByRole('link', { name: /Merge local feito/ });
+    const tooltip = await hoverAndReadTooltip(link);
+    expect(tooltip).toHaveTextContent('#1 · Merge local feito');
+    expect(tooltip).toHaveTextContent('Azuos · por Ana Lima');
+  });
+});
+
+describe('AzuosWeekScheduleGrid — what each event tooltip says, in every view', () => {
+  const record = {
+    ...recordEvent,
+    id: 21,
+    title: 'Entrega registrada',
+    projectName: 'Azuos Ticket',
+    date: '2026-10-06',
+    startTime: '09:30',
+    endTime: null,
+  };
+  const appointment = {
+    ...recordEvent,
+    id: 22,
+    kind: 'appointment' as const,
+    title: 'Revisão marcada',
+    projectName: null,
+    note: null,
+    date: '2026-10-06',
+    startTime: '14:00',
+    endTime: '15:00',
+  };
+  const lateRecord = { ...record, id: 23, title: 'Registro noturno', startTime: '21:00', projectName: null };
+
+  // feliz
+  it.each(['week', 'day'] as const)('tells who marked or registered each event in the %s view', async (viewMode) => {
+    renderView({
+      data: {
+        viewMode,
+        events: [record, appointment, lateRecord],
+        days: [dayColumn({ events: [record, appointment, lateRecord] })],
+      },
+    });
+
+    const recordTip = await hoverAndReadTooltip(screen.getAllByRole('button', { name: /Entrega registrada/ })[0]!);
+    expect(recordTip).toHaveTextContent('Projeto: Azuos Ticket');
+    expect(recordTip).toHaveTextContent('Registrado por Ana Lima');
+    const appointmentTip = await hoverAndReadTooltip(screen.getAllByRole('button', { name: /Revisão marcada/ })[0]!);
+    expect(appointmentTip).not.toHaveTextContent('Projeto:');
+    expect(appointmentTip).toHaveTextContent('Marcado por Ana Lima');
+    const lateTip = await hoverAndReadTooltip(screen.getAllByRole('button', { name: /Registro noturno/ })[0]!);
+    expect(lateTip).toHaveTextContent('Registrado por Ana Lima');
+    expect(lateTip).not.toHaveTextContent('Projeto:');
+  });
+
+  it('says the same in the month view, with and without a project', async () => {
+    renderView({
+      data: {
+        viewMode: 'month',
+        events: [record, appointment],
+        days: [
+          dayColumn({ events: [record, appointment], isToday: true, githubEvents: [] }),
+          dayColumn({ dateString: '2026-10-07', dayNumber: 7, weekdayShort: 'Qua' }),
+        ],
+      },
+    });
+
+    const recordTip = await hoverAndReadTooltip(screen.getByRole('button', { name: /Entrega registrada/ }));
+    expect(recordTip).toHaveTextContent('Projeto: Azuos Ticket');
+    const appointmentTip = await hoverAndReadTooltip(screen.getByRole('button', { name: /Revisão marcada/ }));
+    expect(appointmentTip).not.toHaveTextContent('Projeto:');
+    const today = await hoverAndReadTooltip(screen.getByRole('button', { name: '6' }));
+    expect(today).toHaveTextContent('2 agendamentos · 0 atividades do GitHub');
+    const other = await hoverAndReadTooltip(screen.getByRole('button', { name: '7' }));
+    expect(other).toHaveTextContent('0 agendamentos · 0 atividades do GitHub');
+  });
+
+  it('names issues and PRs apart inside a grouped hour card', async () => {
+    const nearby = [
+      githubEvent({ id: 31, externalId: '#31', title: 'Issue do grupo', type: 'issue', status: 'closed', eventDate: '2026-10-06T14:00:00Z' }),
+      githubEvent({ id: 32, externalId: '#32', title: 'PR do grupo', type: 'pr', status: 'merged', eventDate: '2026-10-06T14:10:00Z' }),
+    ];
+    renderView({ data: { githubEvents: nearby, days: [dayColumn({ githubEvents: nearby })] } });
+
+    const group = screen.getByRole('button', { name: /Ver 2 atividades próximas/ });
+    const tooltip = await hoverAndReadTooltip(group);
+    expect(tooltip).toHaveTextContent('Issue #31 · Issue do grupo');
+    expect(tooltip).toHaveTextContent('PR #32 · PR do grupo');
+  });
+
+  it('falls back to a generic project and an unknown author in the activity tooltips', async () => {
+    const events = [
+      githubEvent({ id: 41, externalId: '#41', title: 'Sem projeto nem autor', type: 'pr', status: 'closed', author: null, projectName: null }),
+      githubEvent({ id: 42, externalId: '#42', title: 'Só o login', type: 'issue', status: 'open', authorName: null }),
+    ];
+    renderView({ data: { githubEvents: events, days: [dayColumn({ githubEvents: events })] } });
+    const timeline = screen.getByText('Atividade do GitHub no período').closest('section')!;
+
+    const unknown = await hoverAndReadTooltip(within(timeline).getByRole('link', { name: /Sem projeto nem autor/ }));
+    expect(unknown).toHaveTextContent('Projeto · por desconhecido');
+    const login = await hoverAndReadTooltip(within(timeline).getByRole('link', { name: /Só o login/ }));
+    expect(login).toHaveTextContent('Azuos · por ana');
+  });
+});
+
+describe('AzuosWeekScheduleGrid — empty days without a handler for new appointments', () => {
+  const bare = {
+    onPrev: vi.fn(),
+    onNext: vi.fn(),
+    onToday: vi.fn(),
+    onViewModeChange: vi.fn(),
+    onNewEvent: vi.fn(),
+    onSelectEvent: vi.fn(),
+    onRetry: vi.fn(),
+  };
+
+  // triste
+  it.each(['month', 'week'] as const)('survives a click on an empty day in the %s view', async (viewMode) => {
+    render(WeekScheduleGrid, {
+      props: {
+        data: { monthYearTitle: 'Outubro', viewMode, days: [dayColumn()], events: [], nowTopPx: null },
+        state: { isLoading: false, error: null, canEdit: true },
+        actions: bare,
+      },
+    });
+
+    const slots = screen.getAllByRole('button', { name: 'Novo agendamento em 06/10/2026' });
+    await fireEvent.click(slots[0]!);
+
+    expect(slots.length).toBeGreaterThan(0);
   });
 });

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 
-import CalendarChart, { calendarRange, firstDayOfMonth } from './azuos-calendar-chart.svelte';
+import CalendarChart, { calendarOption, calendarRange, firstDayOfMonth } from './azuos-calendar-chart.svelte';
 
 describe('calendarRange', () => {
   // feliz
@@ -35,5 +35,28 @@ describe('AzuosCalendarChart', () => {
 
     expect(screen.getByText('Nada no período')).toBeInTheDocument();
     expect(screen.queryByText('Menos')).not.toBeInTheDocument();
+  });
+});
+
+describe('calendarOption', () => {
+  // feliz
+  it('writes the day the Brazilian way with the count, and lays every day on the calendar', () => {
+    const option = calendarOption(
+      [{ date: '2026-11-10', count: 3 }],
+      ['2026-11-01', '2026-11-30'],
+      'chamados',
+      { track: '#eee', surface: '#fff', muted: '#888' },
+    ) as { tooltip: { formatter: (params: unknown) => string }; visualMap: { max: number }; series: { data: unknown[] }[] };
+
+    expect(option.tooltip.formatter({ value: ['2026-11-10', 1234] })).toBe('<b>10/11/2026</b><br/>1.234 chamados');
+    expect(option.tooltip.formatter({ value: [] })).toContain('0 chamados');
+    expect(option.visualMap.max).toBe(3);
+    expect(option.series[0]!.data).toEqual([['2026-11-10', 3]]);
+  });
+
+  // triste
+  it('does not divide by zero on an empty period', () => {
+    const option = calendarOption([], ['2026-11-01', '2026-11-30'], 'chamados', { track: '#eee', surface: '#fff', muted: '#888' }) as { visualMap: { max: number } };
+    expect(option.visualMap.max).toBe(1);
   });
 });

@@ -23,6 +23,11 @@ vi.mock('$lib/api/auth.api', () => ({
 
 vi.mock('$lib/utils/leave-session.util', () => ({ leaveSession: vi.fn() }));
 
+/* As áreas que a pessoa atende. Por padrão a API não responde: o seletor não aparece. */
+vi.mock('$lib/api/tickets.api', () => ({
+  ticketsApi: { myAreas: vi.fn().mockRejectedValue(new Error('offline')) },
+}));
+
 /* A conta do Admin Console (foto do rodapé). Por padrão ela não responde: vale a do `/api/v1/auth/me`. */
 vi.mock('$lib/api/account-profile.api', () => ({
   accountOrigin: (configured: string | null) => configured ?? 'http://localhost:5000',
@@ -31,6 +36,7 @@ vi.mock('$lib/api/account-profile.api', () => ({
 const { leaveSession } = await import('$lib/utils/leave-session.util');
 const { authApi } = await import('$lib/api/auth.api');
 const { accountProfileApi } = await import('$lib/api/account-profile.api');
+const { ticketsApi } = await import('$lib/api/tickets.api');
 const { goto } = await import('$app/navigation');
 const { page } = await import('$app/state');
 
@@ -240,5 +246,57 @@ describe('useAppShellModel', () => {
 
     await waitFor(() => expect(authApi.config).toHaveBeenCalled());
     expect(model.data.accountUrl).toBeNull();
+  });
+});
+
+describe('useAppShellModel — the areas of the person', () => {
+  beforeEach(() => {
+    vi.mocked(ticketsApi.myAreas).mockReset().mockRejectedValue(new Error('offline'));
+  });
+
+  // feliz
+  it('offers a selector with an icon per area once there are two or more', async () => {
+    vi.mocked(ticketsApi.myAreas).mockResolvedValue(['infra', 'sistema']);
+    openScreen('/infra/tickets');
+    const model = mountModel();
+
+    await waitFor(() => expect(model.data.areaOptions).toHaveLength(2));
+    expect(model.data.areaOptions.map((option) => option.value)).toEqual(['infra', 'sistema']);
+    expect(model.data.areaOptions.every((option) => option.icon)).toBe(true);
+    expect(goto).not.toHaveBeenCalled();
+  });
+
+  // triste
+  /* Quem só atende Manutenção e abre um link da Infraestrutura é levado para a mesma tela da
+     área dela, trocando o endereço sem deixar rastro no histórico. */
+  it('moves the person to her own area when the open module is not hers', async () => {
+    vi.mocked(ticketsApi.myAreas).mockResolvedValue(['manutencao']);
+    openScreen('/infra/tickets');
+    mountModel();
+
+    await waitFor(() =>
+      expect(goto).toHaveBeenCalledWith('/maintenance/tickets', { replaceState: true }),
+    );
+  });
+
+  // triste
+  it('keeps the person on a screen without a module even when the area is corrected', async () => {
+    vi.mocked(ticketsApi.myAreas).mockResolvedValue(['manutencao']);
+    openScreen('/profile');
+    mountModel();
+
+    await waitFor(() => expect(ticketsApi.myAreas).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(goto).not.toHaveBeenCalled();
+  });
+
+  // feliz
+  it('closes the profile and goes to the roles screen', async () => {
+    const model = mountModel();
+
+    model.actions.onCloseProfile();
+    model.actions.onViewRoles();
+
+    await waitFor(() => expect(goto).toHaveBeenCalledWith('/profile'));
   });
 });

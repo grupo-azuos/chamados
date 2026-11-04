@@ -1364,3 +1364,145 @@ describe('TicketsService — quem pede, logado', () => {
     });
   });
 });
+
+/**
+ * O serviço SEM os módulos opcionais (GitHub, sistemas, responsáveis, WhatsApp, perfil,
+ * departamentos, pessoas) — é assim que ele sobe num ambiente sem essas integrações, e cada
+ * rota precisa responder com o vazio honesto, e não quebrar.
+ */
+function makeBareService(repository: Partial<TicketsRepository> = {}) {
+  const tickets = {
+    ...defaultRepository,
+    findById: vi.fn().mockResolvedValue(ticketRow()),
+    lastPhoneOf: vi.fn().mockResolvedValue('62999990001'),
+    requesterIdsByPhone: vi.fn().mockResolvedValue(['u-1']),
+    listByRequester: vi.fn().mockResolvedValue([ticketRow()]),
+    ...repository,
+  } as unknown as TicketsRepository;
+
+  return new TicketsService(
+    tickets,
+    storageStub as unknown as FileStorage,
+    stagingStub,
+    attachmentsStub as unknown as TicketAttachmentsService,
+    new TicketAccessService(tickets),
+    historiesStub as unknown as TicketHistoriesService,
+    historiesRepositoryStub as unknown as TicketHistoriesRepository,
+  );
+}
+
+describe('TicketsService without the optional integrations', () => {
+  // feliz
+  it('answers the lists with nothing to offer', async () => {
+    const service = makeBareService();
+
+    expect(await service.listAssigneeOptions('infra')).toEqual([]);
+    expect(await service.listSystemProjectOptions()).toEqual([]);
+    expect(await service.listPeopleOptions()).toEqual([]);
+    expect(await service.listPeople(ana, 7)).toEqual({ watchers: [], notifiable: [] });
+    expect(await service.updateWatchers(ana, 7, { userIds: ['x'] })).toEqual([]);
+    expect(await service.whatsappNotices(ana, 7)).toEqual([]);
+    expect(await service.phoneOwnersOf('62 99999-0001')).toEqual(['u-1']);
+  });
+
+  it('fills the requester defaults from the identity and the last phone used', async () => {
+    const service = makeBareService();
+
+    expect(await service.requesterDefaults(ana, undefined)).toEqual({
+      name: 'Ana',
+      email: 'ana@azuos.com.br',
+      phone: '62999990001',
+      department: null,
+      jobTitle: null,
+    });
+  });
+
+  it('lists only what the person opened, without linked tickets', async () => {
+    const service = makeBareService();
+
+    const mine = await service.listMine(ana);
+
+    expect(mine).toHaveLength(1);
+  });
+
+  // triste
+  it('says the WhatsApp notice is not configured, and cannot retry one', async () => {
+    const service = makeBareService();
+
+    expect(await service.notifyReady(ana, 7)).toEqual({ outcome: 'not_configured' });
+    await expect(service.retryWhatsappNotice(ana, 7, 4)).rejects.toBeInstanceOf(ConflictException);
+  });
+});
+
+describe('TicketsService.update mirrors the System ticket to GitHub', () => {
+  function makeGithubService(current: Partial<TicketWithComputer>, saved: Partial<TicketWithComputer>) {
+    const github = {
+      syncTicketToIssueInBackground: vi.fn(),
+      mirrorTicketToIssueInBackground: vi.fn(),
+    };
+    const tickets = {
+      ...defaultRepository,
+      findById: vi.fn().mockResolvedValue(ticketRow(current)),
+      update: vi.fn().mockResolvedValue(ticketRow({ ...current, ...saved })),
+    } as unknown as TicketsRepository;
+    const sistemaAdmin = withRoles(ana, { sistema: 'admin' });
+    const service = new TicketsService(
+      tickets,
+      storageStub as unknown as FileStorage,
+      stagingStub,
+      attachmentsStub as unknown as TicketAttachmentsService,
+      new TicketAccessService(tickets),
+      historiesStub as unknown as TicketHistoriesService,
+      historiesRepositoryStub as unknown as TicketHistoriesRepository,
+      github as unknown as GithubService,
+    );
+
+    return { service, github, sistemaAdmin };
+  }
+
+  // feliz
+  it('creates the issue of a System ticket that still has none when it is updated', async () => {
+    const { service, github, sistemaAdmin } = makeGithubService(
+      { area: 'sistema', projectId: 3, githubIssueNumber: null },
+      { priority: 'high' },
+    );
+
+    await service.update(sistemaAdmin, 7, { priority: 'high' });
+
+    expect(github.syncTicketToIssueInBackground).toHaveBeenCalledWith(
+      7,
+      3,
+      'CH-0007',
+      expect.stringContaining('CH-0007'),
+      'A impressora não puxa papel.',
+      'Bia Costa',
+      '1',
+    );
+    /* A situação não mudou: a issue não é fechada nem reaberta. */
+    expect(github.mirrorTicketToIssueInBackground).not.toHaveBeenCalled();
+  });
+
+  it('closes the issue when the ticket is resolved, and does not recreate it', async () => {
+    const { service, github, sistemaAdmin } = makeGithubService(
+      { area: 'sistema', projectId: 3, githubIssueNumber: 12 },
+      { status: 'resolved' },
+    );
+
+    await service.update(sistemaAdmin, 7, { priority: 'low' });
+
+    expect(github.mirrorTicketToIssueInBackground).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7, githubIssueNumber: 12 }),
+      { state: 'closed' },
+    );
+    expect(github.syncTicketToIssueInBackground).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('leaves GitHub alone for a ticket of another area', async () => {
+    const { service, github } = makeGithubService({ area: 'infra', projectId: null }, { priority: 'high' });
+
+    await service.update(ana, 7, { priority: 'high' });
+
+    expect(github.syncTicketToIssueInBackground).not.toHaveBeenCalled();
+  });
+});

@@ -71,3 +71,27 @@ describe('AzuosTimePicker', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Informe um horário válido.');
   });
 });
+
+describe('AzuosTimePicker — empty and blurred', () => {
+  // triste
+  it('invites to select when there is no valid time yet and starts at 09:00', async () => {
+    const onChange = vi.fn();
+    render(TimePicker, { props: { data: { ...data, value: '', isRequired: true }, actions: { onChange } } });
+
+    const trigger = screen.getByRole('button', { name: 'Início' });
+    expect(trigger).toHaveTextContent('Selecionar');
+    await userEvent.click(trigger);
+    expect(screen.getByText('09:00')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('tells the form the field was left when the closed trigger loses focus', async () => {
+    const onBlur = vi.fn();
+    render(TimePicker, { props: { data, actions: { onChange: vi.fn(), onBlur } } });
+
+    const trigger = screen.getByRole('button', { name: 'Início' });
+    trigger.focus();
+    await fireEvent.blur(trigger);
+    expect(onBlur).toHaveBeenCalledOnce();
+  });
+});

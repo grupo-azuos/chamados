@@ -78,7 +78,7 @@
   >
     <span class="font-semibold">{kind} {event.externalId} · {status}</span>
     <span>{event.title}</span>
-    <span class="text-background/75">
+    <span class="text-background">
       {event.projectName ?? 'Projeto'} · por {event.authorName ?? event.author ?? 'desconhecido'} · {formatDate(
         event.eventDate,
       )}

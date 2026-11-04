@@ -32,11 +32,11 @@
   });
 </script>
 
-<Story name="Default">
+<Story name="Default" asChild>
   <ServiceOrderVerifyView data={{ order, checkedFileName: null }} {actions} />
 </Story>
 
-<Story name="Checking">
+<Story name="Checking" asChild>
   <ServiceOrderVerifyView
     data={{ order, checkedFileName: 'ordem-de-servico-CH-0029.pdf' }}
     state={{ fileCheck: 'checking' }}
@@ -44,7 +44,7 @@
   />
 </Story>
 
-<Story name="FileMatches">
+<Story name="FileMatches" asChild>
   <ServiceOrderVerifyView
     data={{ order, checkedFileName: 'ordem-de-servico-CH-0029.pdf' }}
     state={{ fileCheck: 'match' }}
@@ -52,7 +52,7 @@
   />
 </Story>
 
-<Story name="FileWasChanged">
+<Story name="FileWasChanged" asChild>
   <ServiceOrderVerifyView
     data={{ order, checkedFileName: 'ordem-de-servico-CH-0029 (editado).pdf' }}
     state={{ fileCheck: 'mismatch' }}
@@ -60,7 +60,7 @@
   />
 </Story>
 
-<Story name="FileUnreadable">
+<Story name="FileUnreadable" asChild>
   <ServiceOrderVerifyView
     data={{ order, checkedFileName: 'video-da-reuniao.mp4' }}
     state={{ fileCheck: 'unreadable' }}
@@ -69,7 +69,7 @@
 </Story>
 
 <!-- O chamado mudou depois desta emissão: o registro continua verdadeiro, mas há um mais novo. -->
-<Story name="ReplacedByNewerVersion">
+<Story name="ReplacedByNewerVersion" asChild>
   <ServiceOrderVerifyView
     data={{
       order: { ...order, version: 1, isLatest: false, statusAtIssue: 'in_progress', totalMinutes: null },
@@ -79,15 +79,15 @@
   />
 </Story>
 
-<Story name="Loading">
+<Story name="Loading" asChild>
   <ServiceOrderVerifyView data={{ order: null, checkedFileName: null }} state={{ isLoading: true }} {actions} />
 </Story>
 
-<Story name="NotFound">
+<Story name="NotFound" asChild>
   <ServiceOrderVerifyView data={{ order: null, checkedFileName: null }} state={{ isNotFound: true }} {actions} />
 </Story>
 
-<Story name="Failure">
+<Story name="Failure" asChild>
   <ServiceOrderVerifyView
     data={{ order: null, checkedFileName: null }}
     state={{ error: 'Não consegui falar com o servidor.' }}
@@ -96,7 +96,7 @@
 </Story>
 
 <!-- Caso limite: nome de arquivo comprido não pode empurrar a caixa do resultado. -->
-<Story name="LongFileName">
+<Story name="LongFileName" asChild>
   <ServiceOrderVerifyView
     data={{
       order,

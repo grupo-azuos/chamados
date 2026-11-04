@@ -173,3 +173,35 @@ describe('useWhatsappTemplatesModel', () => {
     expect(model.state.isOpen).toBe(false);
   });
 });
+
+describe('useWhatsappTemplatesModel — nothing selected', () => {
+  beforeEach(() => {
+    vi.mocked(whatsappIntegrationApi.templates).mockReset().mockResolvedValue([template]);
+    vi.mocked(whatsappIntegrationApi.updateTemplate).mockReset();
+    vi.mocked(whatsappIntegrationApi.restoreTemplate).mockReset();
+  });
+
+  // triste
+  it('saves and restores nothing before a message is chosen', async () => {
+    let model!: WhatsappTemplatesModel;
+    render(Harness, { props: { onReady: (ready: WhatsappTemplatesModel) => (model = ready) } });
+
+    model.actions.onSave();
+    model.actions.onRestore();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(whatsappIntegrationApi.updateTemplate).not.toHaveBeenCalled();
+    expect(whatsappIntegrationApi.restoreTemplate).not.toHaveBeenCalled();
+  });
+
+  it('empties the draft when an unknown message is chosen', async () => {
+    let model!: WhatsappTemplatesModel;
+    render(Harness, { props: { onReady: (ready: WhatsappTemplatesModel) => (model = ready) } });
+    model.actions.onOpen();
+    await waitFor(() => expect(model.data.selected).not.toBeNull());
+
+    model.actions.onSelect('nao_existe');
+
+    expect(model.data.draft).toBe('');
+  });
+});

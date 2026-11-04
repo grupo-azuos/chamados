@@ -1,5 +1,5 @@
 ---
-description: Atalho em português para a skill `ui-standards`. O padrão de UI/UX do projeto — tokens de cor, estrutura de toda tela, estados obrigatórios (carregando, erro, vazio, filtrado), texto de tela em português, botões, formulários, confirmação, acessibilidade e movimento. Consulte sempre que for desenhar ou revisar uma tela, escrever texto que aparece para o usuário ou quando a pessoa pedir algo "mais bonito" ou "mais claro".
+description: Atalho em português para a skill `ui-standards`. O padrão de UI/UX do projeto — marca Grupo Azuos, tokens de cor, estrutura de toda tela, estados obrigatórios (carregando, erro, vazio, filtrado), texto de tela em português, botões, formulários, confirmação, acessibilidade e movimento. Consulte sempre que for desenhar ou revisar uma tela, escrever texto que aparece para o usuário ou quando a pessoa pedir algo "mais bonito", "mais claro" ou "igual aos outros sistemas".
 disable-model-invocation: true
 ---
 

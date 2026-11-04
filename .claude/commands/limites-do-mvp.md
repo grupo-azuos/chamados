@@ -1,5 +1,5 @@
 ---
-description: Atalho em português para a skill `mvp-limits`. O que o MVP NÃO faz e como responder com gentileza — dados que não aparecem em outro computador (explicar que são locais, e que dados compartilhados/servidor é decisão de infraestrutura de quem administra o projeto). Use quando a pessoa perguntar por que os dados não aparecem no PC de outra pessoa, como compartilhar dados, ou como colocar o sistema na internet.
+description: Atalho em português para a skill `mvp-limits`. O que o MVP NÃO faz e como responder com gentileza — tela de login, cadastro de usuários, senhas, sessão, permissões por pessoa ou qualquer mudança no auth-forward (recusar e encaminhar ao suporte); e dados que não aparecem em outro computador (explicar que são locais, e encaminhar ao suporte se a pessoa insistir). Use quando a pessoa pedir login, "entrar com senha", "cadastro de usuário", "cada um ver só o seu", "logout", "esqueci a senha", ou perguntar por que os dados não aparecem no PC de outra pessoa, como compartilhar dados, ou como colocar o sistema na internet.
 disable-model-invocation: true
 ---
 

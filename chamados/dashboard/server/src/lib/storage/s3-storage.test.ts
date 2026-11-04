@@ -1,7 +1,7 @@
 import { NoSuchKey, NotFound, S3Client } from '@aws-sdk/client-s3';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { attachmentDisposition, S3Storage, type S3StorageOptions } from './s3-storage';
+import { attachmentDisposition, S3Storage, type S3StorageOptions, signAs } from './s3-storage';
 
 const OPTIONS: S3StorageOptions = {
   bucket: 'chamados',
@@ -140,5 +140,98 @@ describe('attachmentDisposition', () => {
     expect(attachmentDisposition('Licença "nova".pdf')).toBe(
       `attachment; filename="Licenca _nova_.pdf"; filename*=UTF-8''Licen%C3%A7a%20%22nova%22.pdf`,
     );
+  });
+});
+
+describe('S3Storage reads and writes', () => {
+  // feliz
+  it('reads a file with its type, and without a type when the storage did not keep one', async () => {
+    const body = { transformToByteArray: async () => new Uint8Array([1, 2, 3]) };
+    vi.spyOn(S3Client.prototype, 'send')
+      .mockResolvedValueOnce({ Body: body, ContentType: 'application/pdf' } as never)
+      .mockResolvedValueOnce({ Body: body } as never)
+      .mockResolvedValueOnce({} as never);
+    const storage = new S3Storage(OPTIONS);
+
+    expect(await storage.get('tmp/a.pdf')).toEqual({
+      content: Buffer.from([1, 2, 3]),
+      contentType: 'application/pdf',
+    });
+    expect((await storage.get('tmp/b.bin'))?.contentType).toBeNull();
+    /* Resposta sem corpo: para o storage o arquivo não está lá. */
+    expect(await storage.get('tmp/c.bin')).toBeNull();
+  });
+
+  it('saves the file with the type it came with, or without one', async () => {
+    const send = vi.spyOn(S3Client.prototype, 'send').mockResolvedValue({} as never);
+    const storage = new S3Storage(OPTIONS);
+
+    await storage.put('inventory/foto.webp', Buffer.from('x'), 'image/webp');
+    await storage.put('inventory/sem-tipo', Buffer.from('x'), null);
+
+    const inputs = send.mock.calls.map(([command]) => (command as { input: object }).input);
+    expect(inputs[0]).toMatchObject({ Key: 'inventory/foto.webp', ContentType: 'image/webp' });
+    expect(inputs[1]).toMatchObject({ Key: 'inventory/sem-tipo', ContentType: undefined });
+  });
+
+  it('measures a file by its head, with nulls for what the storage did not say', async () => {
+    vi.spyOn(S3Client.prototype, 'send')
+      .mockResolvedValueOnce({ ContentLength: 42, ContentType: 'image/png' } as never)
+      .mockResolvedValueOnce({} as never);
+    const storage = new S3Storage(OPTIONS);
+
+    expect(await storage.head('tmp/a.png')).toEqual({ size: 42, contentType: 'image/png' });
+    expect(await storage.head('tmp/b')).toEqual({ size: null, contentType: null });
+  });
+
+  it('skips listed objects without a key and reads a missing date as null', async () => {
+    vi.spyOn(S3Client.prototype, 'send').mockResolvedValueOnce({
+      Contents: [{ Key: 'tmp/a' }, { LastModified: new Date() }],
+      IsTruncated: false,
+    } as never);
+
+    expect(await new S3Storage(OPTIONS).list('tmp/', 10, () => true)).toEqual([
+      { key: 'tmp/a', lastModified: null },
+    ]);
+  });
+
+  it('removes nothing when there is nothing to remove', async () => {
+    const send = vi.spyOn(S3Client.prototype, 'send').mockResolvedValue({} as never);
+
+    await new S3Storage(OPTIONS).remove([]);
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('does not take a storage outage on HEAD for a missing file', async () => {
+    vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(new TypeError('fetch failed'));
+
+    await expect(new S3Storage(OPTIONS).head('tmp/a.pdf')).rejects.toThrow('fetch failed');
+  });
+
+  it('signs for the configured host only when the request carries headers', async () => {
+    type Middleware = (
+      next: (args: unknown) => Promise<unknown>,
+    ) => (args: unknown) => Promise<unknown>;
+    let captured: Middleware | undefined;
+    const client = {
+      middlewareStack: {
+        add: (middleware: Middleware) => {
+          captured = middleware;
+        },
+      },
+    } as unknown as S3Client;
+
+    signAs(client, 'storage.interno:9000');
+    const handler = captured!(async (args) => args);
+
+    const signed = (await handler({ request: { headers: {} } })) as {
+      request: { headers: Record<string, string> };
+    };
+    expect(signed.request.headers.host).toBe('storage.interno:9000');
+
+    const bare = (await handler({ request: {} })) as { request: { headers?: unknown } };
+    expect(bare.request.headers).toBeUndefined();
   });
 });

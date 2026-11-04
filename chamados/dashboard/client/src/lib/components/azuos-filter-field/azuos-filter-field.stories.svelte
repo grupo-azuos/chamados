@@ -21,7 +21,7 @@
   });
 </script>
 
-<Story name="Default">
+<Story name="Default" asChild>
   <FilterField data={{ label: 'Situação' }}>
     <OptionPicker
       data={{ value: '', options: statuses }}
@@ -32,7 +32,7 @@
 </Story>
 
 <!-- Como aparece numa barra de filtros: vários lado a lado, alinhados pela base. -->
-<Story name="InFilterBar">
+<Story name="InFilterBar" asChild>
   <div class="flex flex-wrap items-end gap-x-4 gap-y-3">
     <FilterField data={{ label: 'Situação' }}>
       <OptionPicker
@@ -60,7 +60,7 @@
 </Story>
 
 <!-- Caso limite: coluna estreita — as pastilhas quebram linha, o nome continua em cima. -->
-<Story name="NarrowColumn">
+<Story name="NarrowColumn" asChild>
   <div class="max-w-[220px]">
     <FilterField data={{ label: 'Situação do chamado nesta fila' }}>
       <OptionPicker

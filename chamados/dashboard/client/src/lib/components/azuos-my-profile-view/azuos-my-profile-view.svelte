@@ -94,7 +94,7 @@
 
 {#snippet fact(label: string, value: string | null | undefined, Icon: Component)}
   <div class="bg-muted rounded-box flex min-w-0 items-center gap-3 p-3">
-    <span class="bg-primary/10 text-primary rounded-chip flex size-9 shrink-0 items-center justify-center">
+    <span class="bg-muted text-primary rounded-chip flex size-9 shrink-0 items-center justify-center">
       <Icon class="size-4" aria-hidden="true" />
     </span>
     <div class="min-w-0">
@@ -112,7 +112,7 @@
     class="bg-card border-border rounded-surface flex flex-col gap-4 border p-4 shadow-xs sm:p-6"
   >
     <h2 class="text-foreground flex items-center gap-2 text-base font-semibold">
-      <span class="bg-primary/10 text-primary rounded-chip flex size-8 items-center justify-center">
+      <span class="bg-muted text-primary rounded-chip flex size-8 items-center justify-center">
         <Icon class="size-4" aria-hidden="true" />
       </span>
       {title}
@@ -122,7 +122,7 @@
 {/snippet}
 
 {#snippet roleBadge(label: string)}
-  <span class="bg-primary/10 text-primary inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
+  <span class="bg-muted text-primary inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
     {label}
   </span>
 {/snippet}
@@ -159,7 +159,7 @@
   {@const person = data.person}
   <section aria-label="Meu perfil" class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-10 sm:px-6">
     <section aria-label="Identidade" class="bg-card border-border rounded-surface overflow-hidden border shadow-xs">
-      <div aria-hidden="true" class="from-primary to-primary/70 h-20 bg-gradient-to-r sm:h-24"></div>
+      <div aria-hidden="true" class="bg-primary h-20 sm:h-24"></div>
       <div class="flex flex-col gap-5 px-4 pb-4 sm:px-6 sm:pb-6">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
           <span
@@ -285,10 +285,16 @@
                   aria-label="Tema escuro"
                   onclick={actions.onToggleTheme}
                   class={cn(
-                    'relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors',
-                    isDark ? 'bg-primary' : 'bg-ink-300',
+                    'group inline-flex h-10 w-14 shrink-0 items-center justify-center rounded-full',
                   )}
                 >
+                  <!-- O trilho é o desenho; o botão em volta tem 40px para o dedo acertar. -->
+                  <span
+                    class={cn(
+                      'relative inline-flex h-7 w-12 items-center rounded-full transition-colors',
+                      isDark ? 'bg-primary' : 'bg-ink-300',
+                    )}
+                  >
                   <span
                     class={cn(
                       'bg-card text-primary flex size-5 items-center justify-center rounded-full shadow-xs transition-transform',
@@ -296,6 +302,7 @@
                     )}
                   >
                     {#if isDark}<Moon class="size-3" aria-hidden="true" />{:else}<Sun class="size-3" aria-hidden="true" />{/if}
+                  </span>
                   </span>
                 </button>
               </div>

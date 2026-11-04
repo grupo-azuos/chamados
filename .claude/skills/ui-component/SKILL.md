@@ -1,122 +1,117 @@
 ---
 name: ui-component
-description: Cria ou altera um componente de tela azuos-* (genérico em lib/components ou de feature em routes/{feature}/components) no padrão do projeto — nunca reescreve o existente, instala do shadcn antes de criar, h-10 em campo de formulário, props em data/ui/state/actions, função pura sem hook de dado, story cobrindo variantes e estados, teste feliz e triste. Use quando for preciso um componente visual novo ("um cartão de cliente", "um seletor de data", "um gráfico"), mudar a aparência de um existente ou adicionar um componente do shadcn.
+description: Cria ou altera um componente de tela (azuos-* genérico ou de feature) no padrão do projeto — props em data/ui/state/actions, função pura sem hook de dado, régua de altura e raio por papel, story cobrindo variantes e estados, teste feliz e triste. Use quando for preciso um componente visual novo ("um cartão de cliente", "um seletor de data", "um gráfico"), mudar a aparência de um existente ou adicionar um componente do shadcn.
 ---
 
 # Componente de UI
 
-Leia antes `design-system` (onde mora, nome, h-10, proibições) e `ui-standards` (visual e
-texto). Esta skill é o **como escrever**.
-
-## 0. Proibido (sem exceção)
-
-- **Reescrever componente existente.** Pediram mudança de cor, espaço ou texto? Mude só isso.
-  Não reorganize markup, não troque implementação, não "aproveite para melhorar".
-- **Recriar à mão o que o shadcn-svelte já tem** (button-group, breadcrumb, collapsible,
-  input-group, navigation-menu…). Instale (§3).
-- **Editar `lib/components/ui/` ou `lib/hooks/ui/`.**
-- **Copiar o markup do shadcn para dentro do `azuos-*` e editar.** Envolva; não clone.
-- **Definir UI/UX de componente dentro de `routes/`** (`+page.svelte`, `*-slot.svelte`). A rota
-  só passa props e classes de cor/espaço/layout.
+Leia também **`design-system`** (onde o arquivo mora e como se chama — manda) e **`ui-standards`**
+(visual e texto).
 
 ## 1. Já existe?
 
-Procure, nesta ordem:
+Antes de criar, procure em `client/src/lib/components/`. O sistema de design já tem:
 
-1. `client/src/lib/components/azuos-*/` (genéricos);
-2. `client/src/routes/**/components/azuos-*/` da mesma feature;
-3. <https://www.shadcn-svelte.com/docs/components>.
-
-Dá para resolver compondo o que existe? Faça isso em vez de criar.
-
-Catálogo genérico (nome-alvo; o backlog de renomeação está em `design-system` §10):
-
-| Componente | Para |
+| Grupo | Componentes |
 |---|---|
-| `azuos-action-button` | Todo botão de ação (primary/secondary/ghost/danger, ícone, carregando) |
-| `azuos-submit-button` | O botão que envia formulário (`h-10`) |
-| `azuos-text-field` / `azuos-text-area-field` / `azuos-select` | Campos com rótulo e erro colados (`h-10`; textarea usa `min-h`) |
-| `azuos-option-picker` | Grupo de pastilhas de escolha (`h-10`, `flex-wrap`) |
-| `azuos-filter-field` | O nome em cima de um filtro da barra de filtros |
-| `azuos-status-badge` | Selo de situação (o tom vem do domínio) |
-| `azuos-stat-card` + `azuos-stat-card-grid` | Número grande de painel |
-| `azuos-progress-bar` | Andamento |
-| `azuos-person-avatar` | Iniciais / foto |
-| `azuos-echart` (a moldura de todos: carregando, vazio, tema, tamanho, rolagem) · `azuos-column-chart` (em pé ou deitada) · `azuos-stacked-bar-chart` · `azuos-donut-chart` · `azuos-area-chart` · `azuos-radar-chart` · `azuos-radial-chart` · `azuos-treemap-chart` · `azuos-heatmap-chart` · `azuos-calendar-chart` · `azuos-sankey-chart` · `azuos-chart-value-list` | Gráficos, todos no ECharts (clique vira filtro) |
-| `azuos-page-header` | Topo de toda tela |
-| `azuos-empty-state` / `azuos-error-state` | Vazio e erro |
-| `azuos-app-shell` | A casca com menu (não mexa sem motivo) |
-| `azuos-confirm-dialog` | Confirmar o que não tem volta |
+| Ação | `AzuosActionButton` (primary/secondary/ghost/danger, ícone, carregando, pressionado) · `AzuosSubmitButton` · `AzuosButtonGroup` · `AzuosReportExportActions` |
+| Campo | `AzuosTextField` · `AzuosTextAreaField` · `AzuosSelectField` · `AzuosInputGroup` · `AzuosDatePicker` · `AzuosOptionPicker` · `AzuosFilterField` |
+| Número | `AzuosStatCard` + `AzuosStatCardGrid` · `AzuosProgressBar` · `AzuosUsageMeter` |
+| Selo e pessoa | `AzuosStatusBadge` · `AzuosPersonAvatar` · `AzuosBrandMark` |
+| Superfície | `AzuosPanelCard` · `AzuosTable` (+ `Header`/`Head`/`Row`/`Cell`/`Footer`/`Actions`) · `AzuosCollapsible` |
+| Gráfico (ECharts) | `AzuosEchart` (a moldura de todos: carregando, vazio, tema, tamanho, rolagem) · `AzuosChartLegend` · `AzuosChartValueList` (valores para leitor de tela) · `AzuosColumnChart` (em pé ou deitada) · `AzuosStackedBarChart` · `AzuosDonutChart` · `AzuosAreaChart` · `AzuosRadarChart` · `AzuosRadialChart` · `AzuosTreemapChart` · `AzuosHeatmapChart` · `AzuosCalendarChart` · `AzuosSankeyChart` |
+| Navegação | `AzuosAppShell` (+ `NavEntry`) · `AzuosNavigationMenu` · `AzuosBreadcrumb` · `AzuosPaginationBar` · `AzuosTableViewToggle` |
+| Diálogo | `AzuosResponsiveDialogContent` (troque o `DialogContent` por ele) · `AzuosConfirmDialog` |
+| Estado | `AzuosEmptyState` · `AzuosErrorState` · `AzuosPendingArea` · `AzuosAppErrorBoundary` |
+| Histórico | `AzuosTimeline` + `AzuosTimelineStep` · `AzuosHistoryTimeline` |
+| Arquivo | `AzuosAttachmentList` · `AzuosAttachmentPicker` |
+| Preferência | `AzuosThemeToggle` · `AzuosEffectsToggle` |
+| Porta de entrada do `ui/` | `azuos-dialog` · `azuos-popover` · `azuos-sheet` · `azuos-skeleton` (só reexportam) |
+
+Dá para resolver compondo os que existem? Faça isso em vez de criar. E **nunca reescreva um
+componente existente** — mude só o trecho pedido.
 
 ## 2. Genérico ou de feature?
 
-| | Genérico | De feature |
-|---|---|---|
-| Onde | `lib/components/azuos-<nome>/` | `routes/(app)/<context>/<feature>/components/azuos-<nome>/` |
-| Conhece entidade do domínio? | Não | Sim |
-| Importa `ui/*`? | Sim (é o único) | **Não** — só `azuos-*` genéricos |
-| Quem importa | Qualquer feature | Só a própria feature |
-| Exemplo | `azuos-text-field` | `azuos-maintenance-log` (dashboard) |
+A árvore de decisão está na skill `design-system` §3.1. Em uma linha:
 
-Na dúvida, é de feature. Sobe para genérico quando a segunda feature precisar — e sobe **sem o
-domínio**.
+- **Genérico** (`lib/components/azuos-<nome>/`): não conhece entidade do domínio, serve a duas ou
+  mais telas.
+- **De feature** (`routes/<feature>/components/azuos-<nome>/`): conhece `Task`, `Customer`, o texto
+  ou o layout de UMA tela.
 
 ## 3. Precisa de componente do shadcn?
 
 ```bash
 cd chamados/dashboard/client
-npx shadcn-svelte@latest add <nome> [<nome>...]
+npx shadcn@latest add <nome>
 ```
 
-Vai para `lib/components/ui/` (e o hook que vier junto para `lib/hooks/ui/`) — **não edite o
-que chegou**. Confira que o `cn` foi importado de `$lib/utils/cn`. Depois crie
-`lib/components/azuos-<nome>/` que o envolve, com variantes em `tv()` (modelo:
-`agent/svelte/src/lib/components/azuos-button/`). Ninguém fora de `lib/components/azuos-*`
-importa `lib/components/ui/` (lint `no-restricted-imports`).
+Vai para `lib/components/ui/` — **não edite o que chegou**, com uma exceção mecânica: o registro
+novo importa `cn` de um pacote npm (`from "cn"`), e o projeto tem o seu. Aponte de volta:
 
-**Campo de formulário (input, select, input-group, date-picker, toggle-group, botão de
-enviar): `h-10` na variante base do `azuos-*`.** Nem mais, nem menos; `ui.size` não muda
-altura de campo. A tela nunca compensa altura.
+```bash
+sed -i 's#from "cn"#from "@/lib/utils/cn.util"#' src/lib/components/ui/*.tsx
+npm uninstall cn
+```
 
-## 4. Escrever — `azuos-<nome>/azuos-<nome>.svelte`
+Depois crie o `azuos-*` que o envolve, aplicando as variantes com `tv()` (modelo:
+`azuos-action-button`). Fora de `lib/components/`, ninguém importa `components/ui`.
 
-- Comentário no topo: **o que é e por que é assim** (a decisão, não a descrição do markup).
-- Bloco `<script lang="ts" module>` para o que é estático (variantes com `tv()`, tipo de props);
-  bloco `<script lang="ts">` para a instância, com `let { data, ui, state, actions }: Azuos<Nome>Props = $props();`
-  (+ `children` na raiz quando compõe, via `Snippet`).
-- `export type Azuos<Nome>Props = { data; ui?; state?; actions? }` no bloco `module`.
-- **Zero** `createQuery`, `createMutation`, navegação imperativa de rota dentro do componente.
-  Permitido: `$state` puramente visual (mostrar/esconder senha), `$derived` para computar a
-  partir das props, `bind:` de DOM.
-- Early return (`{#if}` cedo) para vazio/carregando/erro. Padrões (`??`, `?.`) em funções
-  `resolve*` no bloco `module` se a complexidade passar de 10.
-- Classes com `cn()`; cores por token (`text-ink-700`, `bg-brand-blue-800`, `text-destructive`).
-- Acessibilidade: rótulo ligado ao campo (`for`/`useId` equivalente do Svelte), `aria-invalid` +
-  `aria-describedby` no erro, `role="alert"` em falha, `aria-label` em botão só de ícone,
-  `aria-hidden` em ícone decorativo, `type="button"` em botão que não envia.
+## 4. Escrever — `azuos-<nome>/azuos-<nome>.component.tsx`
 
-## 5. Story — `azuos-<nome>.stories.svelte`
+- Comentário no topo: **o que é e por que é assim** (a decisão, não a descrição do JSX).
+- `export type Azuos<Nome>Props = { data; ui?; state?; actions? }` (+ `children` na raiz quando
+  compõe).
+- `export function Azuos<Nome>(...)` — export nomeado, com o prefixo no nome.
+- **Zero** `useQuery`, `useMutation`, `useNavigate`. Permitido: `useId`, `useRef` de DOM,
+  `useState` puramente visual.
+- Early return para vazio/carregando/erro. Padrões (`??`) em funções `resolve*`, e peças internas
+  como subcomponentes, se a complexidade passar de 10 (o ESLint reprova).
+- Classes com `cn()`. **Cor só por token** (`text-ink-700`, `bg-card`, `text-destructive`,
+  `bg-success-soft`) — nunca a paleta crua do Tailwind.
+- **Altura pela régua** (`control-sm` 32px · `control-md` 36px · `control-lg` 40px) e **raio por
+  papel** (`rounded-surface` cartão · `rounded-control` campo e botão · `rounded-box` bloco ·
+  `rounded-chip` miudeza). Sombra: `shadow-xs` em repouso, `shadow-xl` no que flutua. Detalhes na
+  skill `design-system` §6.
+- **Envolveu um `ui/*`? O canto e a altura dele têm de SAIR do elemento**, não conviver com os
+  nossos: passe as classes pelo `cn()`, vença na mesma variante a altura que ele impõe por variante
+  (`data-[size=default]:h-(--control-lg)` no seletor) e, se for campo, acrescente-o à lista
+  `FIELDS` de `lib/theme/control-ruler.test.tsx`. O porquê e o passo a passo: `design-system` §6.
+- Acessibilidade: rótulo ligado ao campo (`htmlFor`/`useId`), `aria-invalid` + `aria-describedby`
+  no erro, `role="alert"` em falha, `aria-label` em botão só de ícone, `aria-pressed` no que liga e
+  desliga, `aria-hidden` em ícone decorativo, `type="button"` em botão que não envia.
 
-`title: 'Components/Azuos<Nome>'` (genérico) ou `'Features/<Feature>/Azuos<Nome>'` (de feature). No mínimo: `Default`, todas as variantes de `ui`, cada estado
-(carregando, desabilitado, erro, vazio), e um **caso limite** (texto longo em coluna estreita,
-um item só). Callbacks com `fn()` de `storybook/test`. Texto de exemplo inventado, em português.
-Não nomeie story de `Error` (sombra o global) — use `LoadFailed`.
+## 5. Story — `azuos-<nome>.component.stories.tsx`
 
-## 6. Teste — `azuos-<nome>.test.ts`
+`title: 'Primitives/Azuos<Nome>'` (ou `'Composers/…'`, ou `'Features/<Feature>/…'`). No mínimo:
+`Default`, todas as variantes de `ui`, cada estado (carregando, desabilitado, erro, vazio) e um
+**caso limite** (texto longo em coluna estreita, um item só, valor fora da faixa). Callbacks com
+`fn()` de `storybook/test`. Texto de exemplo inventado, em português. Não nomeie story de `Error`
+(sombra o global) — use `LoadFailed`.
+
+## 6. Teste — `azuos-<nome>.component.test.tsx`
+
+O nome é **o arquivo + `.test`**: o sufixo `.component` fica, como fica o `.util` e o `.model` nos
+outros tipos. Uma regra só para todo o projeto.
 
 `describe('Azuos<Nome>')` e `it(...)` em inglês; `// feliz` e `// triste`. Consulte por papel e
-rótulo (`getByRole('button', { name: 'Salvar' })`), como a pessoa enxerga. Teste: o que
-aparece, o callback chamado com o valor certo, o estado travado, o erro anunciado. Quando o
-componente precisa de um contexto Svelte pra montar (provider, slot), use um arquivo auxiliar
-`azuos-<nome>-harness.test.svelte` do lado (veja `app-shell-nav-entry` como modelo).
+rótulo (`getByRole('button', { name: 'Salvar' })`), como a pessoa enxerga. Teste: o que aparece, o
+callback chamado com o valor certo, o estado travado, o erro anunciado.
+
+Select do Radix: use `fireEvent.click` para abrir e escolher (o `userEvent` trava no jsdom).
+Componente que usa `Link` do TanStack precisa de um roteador mínimo em volta (modelo:
+`azuos-app-shell-nav-entry.component.test.tsx`). Preferência de módulo (tema, efeitos, formato da lista) não
+zera entre testes: escreva o teste lendo o estado de ANTES e verificando a mudança.
 
 ## 7. Verificar
 
 ```bash
-cd chamados/dashboard
-npx vitest run --root client src/lib/components/azuos-<nome>   # ou src/routes/(app)/<context>/<feature>/components/azuos-<nome>
+cd template
+npx vitest run --root client src/lib/components/azuos-<nome>
 npm run lint -w client
 npm run typecheck -w client
+npm run check:design
 ```
 
 Para ver: `npm run storybook` → http://localhost:6006.

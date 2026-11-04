@@ -796,3 +796,51 @@ describe('ComputersService.alerts', () => {
     );
   });
 });
+
+describe('ComputersService.ingest: the name of the machine', () => {
+  function ingestWith(over: Partial<ComputersRepository> = {}) {
+    const update = vi.fn().mockResolvedValue(computerRow());
+    const { service } = makeService({
+      update,
+      findByName: vi.fn().mockResolvedValue(null),
+      insertSample: vi.fn().mockResolvedValue(undefined),
+      insertAlert: vi.fn().mockResolvedValue(computerRow()),
+      updateAlert: vi.fn().mockResolvedValue(undefined),
+      findActiveAlert: vi.fn().mockResolvedValue(null),
+      ...over,
+    });
+
+    return { service, update };
+  }
+
+  // feliz
+  it('keeps the new hostname when the same machine already owns it', async () => {
+    const { service, update } = ingestWith({
+      findByName: vi.fn().mockResolvedValue(computerRow({ name: 'RECEPCAO-RENOMEADA' })),
+    });
+
+    await service.ingest(computerRow(), snapshot({ hostname: 'RECEPCAO-RENOMEADA' }), '1.0.0');
+
+    expect(update.mock.calls[0]?.[1].name).toBe('RECEPCAO-RENOMEADA');
+  });
+
+  // triste
+  it('does not steal the hostname of another machine', async () => {
+    const { service, update } = ingestWith({
+      findByName: vi.fn().mockResolvedValue(computerRow({ id: 99, name: 'RECEPCAO-RENOMEADA' })),
+    });
+
+    await service.ingest(computerRow(), snapshot({ hostname: 'RECEPCAO-RENOMEADA' }), '1.0.0');
+
+    expect(update.mock.calls[0]?.[1]).not.toHaveProperty('name');
+  });
+
+  it('opens an alert without a culprit when the agent sent no processes', async () => {
+    const insertAlert = vi.fn().mockResolvedValue(computerRow());
+    const { service } = ingestWith({ insertAlert });
+
+    await service.ingest(computerRow(), { ...snapshot({ cpu: 99 }), processes: [] }, '1.0.0');
+
+    expect(insertAlert.mock.calls[0]?.[0]).toMatchObject({ metric: 'cpu', causeProcess: null });
+  });
+});

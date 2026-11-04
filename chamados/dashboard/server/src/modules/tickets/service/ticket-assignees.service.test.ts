@@ -65,9 +65,20 @@ describe('TicketAssigneesService.listForArea', () => {
   // feliz
   it('lists the admins of the area plus the super admins, by name', async () => {
     expect(await makeService().listForArea('infra')).toEqual([
-      { id: 'u-both', name: 'Ana Duas' },
-      { id: 'u-infra', name: 'Bia Infra' },
-      { id: 'u-super', name: 'Zeca Super' },
+      { id: 'u-both', name: 'Ana Duas', avatarUrl: null },
+      { id: 'u-infra', name: 'Bia Infra', avatarUrl: null },
+      { id: 'u-super', name: 'Zeca Super', avatarUrl: null },
+    ]);
+  });
+
+  it('brings the admin-console photo of who attends, for the filter to show the face', async () => {
+    const withPhoto = [user('u-super', 'Zeca Super', { image: 'https://fotos.example/zeca.png' })];
+    const service = makeService(withPhoto, [], { NODE_ENV: 'test' }, [
+      { userId: 'u-super', userEmail: 'u-super@exemplo.com' },
+    ]);
+
+    expect(await service.listForArea('sistema')).toEqual([
+      { id: 'u-super', name: 'Zeca Super', avatarUrl: 'https://fotos.example/zeca.png' },
     ]);
   });
 
@@ -75,7 +86,7 @@ describe('TicketAssigneesService.listForArea', () => {
   /* O vínculo é pelo UUID: um e-mail antigo que hoje é de outra pessoa não a faz responsável. */
   it('does not give a module through an e-mail that belongs to someone else now', async () => {
     expect(await makeService().listForArea('manutencao')).toEqual([
-      { id: 'u-super', name: 'Zeca Super' },
+      { id: 'u-super', name: 'Zeca Super', avatarUrl: null },
     ]);
   });
 
@@ -87,7 +98,7 @@ describe('TicketAssigneesService.listForArea', () => {
       { userId: 'u-super', userEmail: 'u-super@exemplo.com' },
     ]);
 
-    expect(await service.listForArea('sistema')).toEqual([{ id: 'u-super', name: 'Zeca Super' }]);
+    expect(await service.listForArea('sistema')).toEqual([{ id: 'u-super', name: 'Zeca Super', avatarUrl: null }]);
   });
 
   // triste
@@ -105,7 +116,7 @@ describe('TicketAssigneesService.listForArea', () => {
   /* Admin de Infra não aparece num chamado de Manutenção: só o super admin atende as três. */
   it('leaves out the admin of another area', async () => {
     expect(await makeService().listForArea('manutencao')).toEqual([
-      { id: 'u-super', name: 'Zeca Super' },
+      { id: 'u-super', name: 'Zeca Super', avatarUrl: null },
     ]);
   });
 
@@ -144,6 +155,7 @@ describe('TicketAssigneesService.resolve', () => {
     expect(await makeService().resolve('infra', 'u-infra')).toEqual({
       id: 'u-infra',
       name: 'Bia Infra',
+      avatarUrl: null,
     });
   });
 

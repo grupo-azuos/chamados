@@ -45,7 +45,11 @@
   <!-- `px-0!`: o `control-lg` traz o respiro lateral de um campo sozinho; aqui quem dá o
        respiro é o prefixo, o sufixo e o próprio input de dentro. -->
   <InputGroup
-    class={cn('control-lg rounded-control px-0!', hasError ? 'bg-destructive-soft' : 'bg-card')}
+    class={cn(
+      'control-lg rounded-control px-0!',
+      /* Fundo sólido de campo, repetido no `dark:` para vencer o `dark:bg-input/30` do `ui/`. */
+      hasError ? 'bg-destructive-soft dark:bg-destructive-soft' : 'bg-muted dark:bg-muted',
+    )}
   >
     {#if prefix}
       <InputGroupAddon>{@render prefix()}</InputGroupAddon>

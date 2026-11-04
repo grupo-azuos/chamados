@@ -15,7 +15,7 @@
   });
 </script>
 
-<Story name="Default">
+<Story name="Default" asChild>
   <AppErrorBoundary>
     <div class="text-ink-700 p-8 text-sm">Conteúdo normal, sem erro nenhum.</div>
   </AppErrorBoundary>
@@ -25,7 +25,7 @@
   A tela não fica em branco nem preta quando o render quebra — aparece o motivo e um
   caminho para recarregar. É o pior caso possível sem esta boundary.
 -->
-<Story name="CaughtError">
+<Story name="CaughtError" asChild>
   <AppErrorBoundary>
     {bomb()}
   </AppErrorBoundary>

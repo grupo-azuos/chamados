@@ -99,6 +99,7 @@ export const ticketsApi = {
         department: query.department,
         problemType: query.problemType,
         projectId: query.projectId,
+        assigneeId: query.assigneeId,
         /* Sem isto a ficha da máquina pedia "os chamados DESTA máquina" e recebia os da fila
            inteira — inclusive os de Sistema. */
         computerId: query.computerId,
@@ -128,6 +129,7 @@ export const ticketsApi = {
         department: query.department,
         problemType: query.problemType,
         projectId: query.projectId,
+        assigneeId: query.assigneeId,
         computerId: query.computerId,
       },
     }),

@@ -120,12 +120,12 @@
   <p class="text-muted-foreground text-sm">[ formulário de dados do chamado ]</p>
 {/snippet}
 
-<Story name="Default">
+<Story name="Default" asChild>
   <TicketDetailView {data} {actions} {historyForm} {dataForm} />
 </Story>
 
 <!-- Recém-aberto: só a abertura na linha do tempo, sem responsável e sem aviso de WhatsApp. -->
-<Story name="FreshTicket">
+<Story name="FreshTicket" asChild>
   <TicketDetailView
     data={{
       ticket: { ...ticket, status: 'open', assignee: null, startedAt: null, notifyWhatsapp: false },
@@ -140,7 +140,7 @@
 </Story>
 
 <!-- Encerrado com ressalva: o bloco do formulário vira "Reabrir o chamado". -->
-<Story name="ClosedWithCaveats">
+<Story name="ClosedWithCaveats" asChild>
   <TicketDetailView
     data={{
       ...data,
@@ -173,7 +173,7 @@
   />
 </Story>
 
-<Story name="LoadingTimeline">
+<Story name="LoadingTimeline" asChild>
   <TicketDetailView
     data={{ ...data, histories: [], attachments: [] }}
     state={{ isTimelineLoading: true, isAttachmentsLoading: true }}
@@ -183,7 +183,7 @@
   />
 </Story>
 
-<Story name="GeneratingServiceOrder">
+<Story name="GeneratingServiceOrder" asChild>
   <TicketDetailView
     {data}
     state={{ isDownloadingServiceOrder: true }}
@@ -193,7 +193,7 @@
   />
 </Story>
 
-<Story name="WithFailures">
+<Story name="WithFailures" asChild>
   <TicketDetailView
     data={{ ...data, histories: [] }}
     state={{
@@ -207,7 +207,7 @@
 </Story>
 
 <!-- Caso limite: descrição longa e print, para conferir o desenho do bloco do pedido. -->
-<Story name="LongDescriptionWithScreenshot">
+<Story name="LongDescriptionWithScreenshot" asChild>
   <TicketDetailView
     data={{
       ...data,

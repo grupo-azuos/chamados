@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
   import { shortServiceOrderCode } from '@template/shared/domain/service-order.util';
   import { ticketStatusLabel, ticketStatusTone } from '@template/shared/domain/ticket-status.util';
   import { type PublicServiceOrder } from '@template/shared/schemas/service-order.schema';
@@ -51,7 +52,7 @@
   };
 
   const CHECK_CLASSES: Record<Exclude<ServiceOrderFileCheck, 'idle'>, string> = {
-    checking: 'border-border bg-muted/40 text-foreground',
+    checking: 'border-border bg-muted text-foreground',
     match: 'bg-success-soft text-foreground',
     mismatch: 'bg-destructive-soft text-foreground',
     unreadable: 'bg-warning-soft text-foreground',
@@ -194,10 +195,10 @@
         </p>
       </header>
 
-      <label
+      <label onpaste={pasteFilesIntoInput}
         class={cn(
           'control-lg rounded-control border-input bg-card text-foreground inline-flex w-full cursor-pointer items-center justify-center gap-2 border text-sm font-medium transition-colors sm:w-auto sm:self-start',
-          'hover:bg-muted/60 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
+          'hover:bg-muted has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
           'has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
         )}
       >

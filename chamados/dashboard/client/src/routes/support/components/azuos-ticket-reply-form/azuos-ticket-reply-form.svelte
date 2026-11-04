@@ -80,7 +80,7 @@
   }
 </script>
 
-<div class="border-border/70 flex flex-col gap-5 border-t pt-4">
+<div class="border-border flex flex-col gap-5 border-t pt-4">
   <form novalidate class="flex flex-col gap-3" onsubmit={handleSubmit} aria-label={copy.title}>
     <div class="flex flex-col gap-0.5">
       <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">{copy.title}</p>

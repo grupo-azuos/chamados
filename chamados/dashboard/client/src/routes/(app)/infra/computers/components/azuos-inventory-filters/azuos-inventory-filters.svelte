@@ -7,6 +7,12 @@
   } from '@template/shared/domain/computer-health.util';
   import { ALERT_METRIC_LABELS } from '@template/shared/domain/computer-alert.util';
   import {
+    RESOURCE_CONDITION_LABELS,
+    RESOURCE_CONDITIONS,
+    type ResourceCondition,
+  } from '@template/shared/domain/computer-resource.util';
+  import { RESOURCE_CONDITION_ICONS } from '$lib/utils/resource-condition-icon.util';
+  import {
     COMPUTER_KINDS,
     COMPUTER_KIND_LABELS,
     type ComputerKind,
@@ -27,6 +33,7 @@
     onlyOnline: boolean;
     onlyOffline: boolean;
     alert: ComputerAlertFilter | '';
+    resourceCondition: ResourceCondition | '';
     preventive: ComputerPreventiveFilter | '';
     includeArchived: boolean;
   };
@@ -60,6 +67,7 @@
       onOnlineChange: (onlyOnline: boolean) => void;
       onOfflineChange: (onlyOffline: boolean) => void;
       onAlertChange: (alert: ComputerAlertFilter | '') => void;
+      onResourceConditionChange: (resourceCondition: ResourceCondition | '') => void;
       onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
       onArchivedChange: (includeArchived: boolean) => void;
       onClearFilters: () => void;
@@ -74,6 +82,13 @@
     memory: ALERT_METRIC_LABELS.memory,
     disk: ALERT_METRIC_LABELS.disk,
   };
+
+  /** A condição dos recursos: cada uma com o ícone que o card da máquina mostra no canto. */
+  const RESOURCE_OPTIONS = RESOURCE_CONDITIONS.map((condition) => ({
+    value: condition,
+    label: RESOURCE_CONDITION_LABELS[condition],
+    icon: RESOURCE_CONDITION_ICONS[condition],
+  }));
 
   const HEALTH_OPTIONS = HEALTH_STATUSES.map((status) => ({
     value: status,
@@ -149,6 +164,7 @@
             onRemove: () => actions.onHealthStatusChange(''),
           }
         : null,
+      resourceChip(filter, actions),
       filter.alert
         ? {
             key: 'alert',
@@ -180,6 +196,20 @@
     ];
 
     return chips.filter((chip): chip is ActiveFilterChip => chip !== null);
+  }
+
+  /** A etiqueta do filtro "Recursos", separada para `activeFilterChips` caber no limite de complexidade. */
+  function resourceChip(
+    filter: InventoryFilter,
+    actions: AzuosInventoryFiltersProps['actions'],
+  ): ActiveFilterChip | null {
+    if (!filter.resourceCondition) return null;
+
+    return {
+      key: 'resource',
+      label: `Recursos: ${RESOURCE_CONDITION_LABELS[filter.resourceCondition]}`,
+      onRemove: () => actions.onResourceConditionChange(''),
+    };
   }
 
   /** Há o que limpar — inclusive a busca e o departamento, que não viram etiqueta. */
@@ -219,6 +249,16 @@
       allLabel: 'Toda a saúde',
       value: data.filter.healthStatus,
       options: HEALTH_OPTIONS,
+    },
+    {
+      key: 'resource',
+      label: 'Recursos',
+      control: 'select',
+      ariaLabel: 'Filtrar pela condição dos recursos',
+      allLabel: 'Todos os recursos',
+      value: data.filter.resourceCondition,
+      options: RESOURCE_OPTIONS,
+      searchPlaceholder: 'Buscar condição…',
     },
     {
       key: 'kind',
@@ -275,6 +315,7 @@
     department: (value) => actions.onDepartmentChange(value as Department | ''),
     connection: (value) => changeConnection(value),
     health: (value) => actions.onHealthStatusChange(value as HealthStatus | ''),
+    resource: (value) => actions.onResourceConditionChange(value as ResourceCondition | ''),
     kind: (value) => actions.onKindChange(value as ComputerKind | ''),
     alert: (value) => actions.onAlertChange(value as ComputerAlertFilter | ''),
     archived: (value) => actions.onArchivedChange(value === 'yes'),
@@ -298,7 +339,7 @@
     chips: chips.map(({ key, label }) => ({ key, label })),
     canClear: hasAnyFilter(data.filter, chips),
   }}
-  ui={{ ariaLabel: 'Filtros do inventário' }}
+  ui={{ ariaLabel: 'Filtros do inventário', columns: 4 }}
   state={{ isFilteredOut: filtersState?.isFilteredOut }}
   actions={{
     onSearchChange: actions.onSearchChange,

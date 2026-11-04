@@ -23,9 +23,13 @@
     type TicketStatusGroup,
   } from '@template/shared/domain/ticket-status.util';
   import { type ReportFormat } from '@template/shared/schemas/report.schema';
-  import { type Ticket } from '@template/shared/schemas/ticket.schema';
+  import { TICKET_UNASSIGNED_FILTER, type Ticket } from '@template/shared/schemas/ticket.schema';
 
   import { type TicketDashboard } from '$lib/api/tickets.api';
+  import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+
+  /** Uma pessoa no filtro de responsável: nome, valor e a foto. */
+  export type TicketAssigneeFilterOption = OptionPickerOption;
 
   export type TicketListFilter = {
     search: string;
@@ -38,6 +42,8 @@
     priority: TicketPriority | '';
     department: TicketDepartment | '';
     problemType: TicketProblemType | '';
+    /** O id do responsável, `TICKET_UNASSIGNED_FILTER` para os sem ninguém. Ausente = todos. */
+    assigneeId?: string;
   };
 
   /**
@@ -61,6 +67,8 @@
       filter: TicketListFilter;
       /** Os departamentos do RH e, depois da linha, os daqui. */
       departmentOptions?: DepartmentChoice[];
+      /** "Sem responsável" e quem atende a área, com a foto — o filtro de responsável. */
+      assigneeOptions?: TicketAssigneeFilterOption[];
       paging?: {
         page: number;
         pageSize: number;
@@ -85,6 +93,7 @@
       onPriorityChange: (priority: TicketPriority | '') => void;
       onDepartmentChange: (department: TicketDepartment | '') => void;
       onProblemTypeChange: (problemType: TicketProblemType | '') => void;
+      onAssigneeChange?: (assigneeId: string) => void;
       onClearFilters: () => void;
       onRetry: () => void;
       onAnswer: (ticket: Ticket) => void;
@@ -123,6 +132,7 @@
   export function ticketFilterChips(
     filter: TicketListFilter,
     problemTypeOptions: readonly { value: string; label: string }[],
+    assigneeOptions: readonly { value: string; label: string }[] = [],
   ): { key: string; label: string }[] {
     const chips: ({ key: string; label: string } | null)[] = [
       filter.status ? { key: 'status', label: `Situação: ${TICKET_STATUS_LABELS[filter.status]}` } : null,
@@ -140,9 +150,24 @@
               'Tipo de problema',
           }
         : null,
+      assigneeChip(filter.assigneeId, assigneeOptions),
     ];
 
     return chips.filter((chip): chip is { key: string; label: string } => chip !== null);
+  }
+
+  /* Responsável que saiu da lista (deixou de atender a área) continua filtrável pelo link
+     salvo: a etiqueta diz "Responsável" em vez de sumir com o filtro ligado. */
+  function assigneeChip(
+    assigneeId: string | undefined,
+    options: readonly { value: string; label: string }[],
+  ): { key: string; label: string } | null {
+    if (!assigneeId) return null;
+
+    const name = options.find((option) => option.value === assigneeId)?.label;
+    if (assigneeId === TICKET_UNASSIGNED_FILTER) return { key: 'assigneeId', label: 'Sem responsável' };
+
+    return { key: 'assigneeId', label: name ? `Responsável: ${name}` : 'Responsável' };
   }
 
   export function formatAverage(hours: number | null | undefined): string {
@@ -182,7 +207,7 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, state, actions }: AzuosTicketListViewProps = $props();
@@ -252,6 +277,16 @@
       value: data.filter.problemType,
       options: problemTypeFilterOptions,
     },
+    {
+      key: 'assigneeId',
+      label: 'Responsável',
+      control: 'select',
+      ariaLabel: 'Filtrar por responsável',
+      allLabel: 'Todos os responsáveis',
+      value: data.filter.assigneeId ?? '',
+      options: data.assigneeOptions ?? [],
+      searchPlaceholder: 'Buscar pessoa…',
+    },
   ]);
 
   /** Qual ação da fila cada filtro do painel (e cada etiqueta) chama. */
@@ -260,7 +295,8 @@
     if (key === 'status') return actions.onStatusChange(value as TicketStatus | '');
     if (key === 'statusGroup') return actions.onStatusGroupChange?.(value as TicketStatusGroup | '');
     if (key === 'priority') return actions.onPriorityChange(value as TicketPriority | '');
-    if (key === 'problemType') actions.onProblemTypeChange(value as TicketProblemType | '');
+    if (key === 'problemType') return actions.onProblemTypeChange(value as TicketProblemType | '');
+    if (key === 'assigneeId') actions.onAssigneeChange?.(value);
   }
 
   function formatDate(value: string): string {
@@ -274,7 +310,8 @@
         data.filter.statusGroup ||
         data.filter.priority ||
         data.filter.department ||
-        data.filter.problemType,
+        data.filter.problemType ||
+        data.filter.assigneeId,
     ),
   );
 
@@ -419,7 +456,7 @@
         },
         primary: departmentField,
         fields: filterFields,
-        chips: ticketFilterChips(data.filter, problemTypeFilterOptions),
+        chips: ticketFilterChips(data.filter, problemTypeFilterOptions, data.assigneeOptions),
         canClear: hasActiveFilter,
       }}
       ui={{ ariaLabel: 'Filtros da fila de chamados' }}
@@ -479,19 +516,18 @@
           data-slot="ticket-cards-mobile"
         >
           {#each data.tickets as ticket (ticket.id)}
-            <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
-            <div
-              use:fillFromPointer
-              style:--fill-color={fillColorOf(ticketStatusTone(ticket.status))}
-              class="hover-fill flex flex-col gap-3 rounded-surface border border-border bg-card p-4 shadow-xs"
+            <!-- O card de conteúdo do grupo: superfície da marca, hover na cor da situação. Os
+                 textos cortam com reticências (o inteiro fica no `title`), para nenhum nome
+                 comprido esticar a altura de toda a linha de cards. -->
+            <ContentCard
+              data={{ label: `${ticket.protocol} — ${ticket.requesterName}` }}
+              ui={{ tone: ticketStatusTone(ticket.status), isHoverColored: true, className: 'min-w-0 gap-3 p-4' }}
             >
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <span
-                  class="font-mono text-xs font-semibold text-ink-900"
-                >
+              <div class="flex min-w-0 items-center justify-between gap-2">
+                <span class="text-ink-900 shrink-0 font-mono text-xs font-semibold">
                   {ticket.protocol}
                 </span>
-                <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                <div class="flex min-w-0 items-center justify-end gap-1.5">
                   <StatusBadge
                     data={{ label: ticketPriorityLabel(ticket.priority) }}
                     ui={{ tone: ticketPriorityTone(ticket.priority), size: 'sm' }}
@@ -503,47 +539,32 @@
                 </div>
               </div>
 
-              <div class="flex flex-col gap-0.5">
-                <span class="font-semibold text-ink-900 text-sm">
+              <div class="flex min-w-0 flex-col gap-0.5">
+                <span class="text-ink-900 truncate text-sm font-semibold" title={ticket.requesterName}>
                   {ticket.requesterName}
                 </span>
-                <span class="text-xs text-ink-500">
+                <span class="text-ink-500 truncate text-xs" title={ticketDepartmentLabel(ticket.department)}>
                   {ticketDepartmentLabel(ticket.department)}
                 </span>
               </div>
 
-              <div class="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2 pt-2 border-t border-border/60 text-xs">
-                <div class="flex flex-col gap-0.5">
-                  <span
-                    class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-                    >Área</span
-                  >
-                  <span class="text-ink-700"
-                    >{ticketAreaLabel(ticket.area)}</span
-                  >
-                </div>
-                <div class="flex flex-col gap-0.5">
-                  <span
-                    class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-                    >Tipo</span
-                  >
-                  <span class="text-ink-700"
-                    >{ticketProblemTypeLabel(ticket.problemType)}</span
-                  >
-                </div>
-                <div class="flex flex-col gap-0.5">
-                  <span
-                    class="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-                    >Máquina</span
-                  >
-                  <span class="text-ink-700"
-                    >{ticket.computerName ?? '—'}</span
-                  >
-                </div>
+              <div class="border-border grid min-w-0 grid-cols-1 gap-2 border-t pt-2 text-xs min-[380px]:grid-cols-3">
+                {#each [
+                  { label: 'Área', value: ticketAreaLabel(ticket.area) },
+                  { label: 'Tipo', value: ticketProblemTypeLabel(ticket.problemType) },
+                  { label: 'Máquina', value: ticket.computerName ?? '—' },
+                ] as field (field.label)}
+                  <div class="flex min-w-0 flex-col gap-0.5">
+                    <span class="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                      {field.label}
+                    </span>
+                    <span class="text-ink-700 truncate" title={field.value}>{field.value}</span>
+                  </div>
+                {/each}
               </div>
 
-              <div class="flex items-center justify-between pt-2 border-t border-border/60">
-                <span class="text-xs text-ink-500">
+              <div class="border-border mt-auto flex items-center justify-between gap-2 border-t pt-2">
+                <span class="text-ink-500 truncate text-xs">
                   Aberto em {formatDate(ticket.createdAt)}
                 </span>
                 <ActionButton
@@ -552,7 +573,7 @@
                   actions={{ onClick: () => actions.onAnswer(ticket) }}
                 />
               </div>
-            </div>
+            </ContentCard>
           {/each}
         </div>
 

@@ -37,7 +37,7 @@
         {data.title}
       </h2>
       {#if data.hint}
-        <p class="text-muted-foreground/80 mt-0.5 text-xs">{data.hint}</p>
+        <p class="text-muted-foreground mt-0.5 text-xs">{data.hint}</p>
       {/if}
     </div>
     {#if tools}

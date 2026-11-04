@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  TICKET_UNASSIGNED_FILTER,
   createTicketSchema,
   publicTicketSchema,
   ticketFormSchema,
@@ -394,6 +395,18 @@ describe('ticketListQuerySchema', () => {
   it('accepts a whole group of stages as one filter', () => {
     expect(ticketListQuerySchema.parse({ statusGroup: 'waiting' }).statusGroup).toBe('waiting');
     expect(ticketListQuerySchema.safeParse({ statusGroup: 'fechados' }).success).toBe(false);
+  });
+
+  it('filters by who is responsible, or by the tickets nobody took yet', () => {
+    expect(ticketListQuerySchema.parse({ assigneeId: 'u-ana' }).assigneeId).toBe('u-ana');
+    expect(ticketListQuerySchema.parse({ assigneeId: TICKET_UNASSIGNED_FILTER }).assigneeId).toBe(
+      'none',
+    );
+  });
+
+  // triste
+  it('refuses a blank responsible filter instead of matching nobody', () => {
+    expect(ticketListQuerySchema.safeParse({ assigneeId: '   ' }).success).toBe(false);
   });
 
   it('accepts the panel filters together', () => {

@@ -1,5 +1,5 @@
 import { type InventoryItem } from '@template/shared/schemas/inventory-item.schema';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -189,5 +189,31 @@ describe('AzuosInventoryListView', () => {
     setup({ state: { ...settled, isTruncated: true } });
 
     expect(screen.getByText(/primeiros produtos/)).toBeInTheDocument();
+  });
+});
+
+describe('AzuosInventoryListView — the filters and the note of a product', () => {
+  // feliz
+  it('searches, filters by category and by missing photo, and shows the note', async () => {
+    vi.mocked(actions.onCategoryChange).mockClear();
+    setup({ data: { items: [item({ note: 'Pé quebrado.' })], total: 2, filter: emptyFilter, deleting: null } });
+
+    expect(screen.getByText('Pé quebrado.')).toBeInTheDocument();
+    expect(screen.getByText(/2\s*produtos/)).toBeInTheDocument();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Buscar' }), 'c');
+    expect(actions.onSearchChange).toHaveBeenCalledWith('c');
+
+    const photo = screen.getByRole('group', { name: 'Filtrar por foto' });
+    await userEvent.click(within(photo).getByRole('button', { name: 'Sem foto' }));
+    expect(actions.onWithoutPhotoOnlyChange).toHaveBeenCalledWith(true);
+
+    const category = screen.queryByRole('group', { name: 'Filtrar por categoria' });
+    if (category) await userEvent.click(within(category).getAllByRole('button')[1]!);
+    else {
+      await userEvent.click(screen.getByRole('button', { name: 'Filtrar por categoria' }));
+      const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+      await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
+    }
+    expect(actions.onCategoryChange).toHaveBeenCalled();
   });
 });

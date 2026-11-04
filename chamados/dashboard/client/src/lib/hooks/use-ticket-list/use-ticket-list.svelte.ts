@@ -14,7 +14,11 @@ import {
   type TicketStatusGroup,
 } from '@template/shared/domain/ticket-status.util';
 import { type ReportFormat } from '@template/shared/schemas/report.schema';
-import { type Ticket } from '@template/shared/schemas/ticket.schema';
+import {
+  TICKET_UNASSIGNED_FILTER,
+  type Ticket,
+  type TicketAssigneeOption,
+} from '@template/shared/schemas/ticket.schema';
 import { derived, writable } from 'svelte/store';
 
 import { readError } from '$lib/api/http-client';
@@ -45,6 +49,16 @@ export type TicketListFilter = {
   priority: TicketPriority | '';
   department: TicketDepartment | '';
   problemType: TicketProblemType | '';
+  /** O id do responsável, `TICKET_UNASSIGNED_FILTER` para os sem ninguém, ou '' para todos. */
+  assigneeId: string;
+};
+
+/** Uma pessoa no filtro de responsável — com a foto, para achar pelo rosto. */
+export type TicketAssigneeFilterOption = {
+  value: string;
+  label: string;
+  avatar?: { name: string; url: string | null };
+  separatorBefore?: boolean;
 };
 
 export type TicketListModel = {
@@ -68,6 +82,8 @@ export type TicketListModel = {
     };
     /** As opções do filtro de departamento: as do RH e, depois da linha, as daqui. */
     departmentOptions: DepartmentChoice[];
+    /** "Sem responsável" e, depois da linha, quem atende a área — com foto. */
+    assigneeOptions: TicketAssigneeFilterOption[];
   };
   state: {
     isLoading: boolean;
@@ -90,6 +106,7 @@ export type TicketListModel = {
     onPriorityChange: (priority: TicketPriority | '') => void;
     onDepartmentChange: (department: TicketDepartment | '') => void;
     onProblemTypeChange: (problemType: TicketProblemType | '') => void;
+    onAssigneeChange: (assigneeId: string) => void;
     onPageChange: (page: number) => void;
     onClearFilters: () => void;
     onRetry: () => void;
@@ -104,6 +121,7 @@ const EMPTY_FILTER: TicketListFilter = {
   priority: '',
   department: '',
   problemType: '',
+  assigneeId: '',
 };
 
 /** Cada campo do filtro conferido sozinho: um campo salvo que não serve volta ao padrão. */
@@ -114,6 +132,7 @@ const FILTER_GUARDS: FieldGuards<TicketListFilter> = {
   priority: oneOf('', ...TICKET_PRIORITIES),
   department: isText,
   problemType: oneOf('', ...TICKET_PROBLEM_TYPES),
+  assigneeId: isText,
 };
 
 export const TICKETS_QUERY_KEY = ['tickets'] as const;
@@ -132,7 +151,27 @@ function scopeOf(filter: TicketListFilter, areaContext: AreaContext) {
     area: areaContext,
     department: filter.department || undefined,
     problemType: filter.problemType || undefined,
+    assigneeId: filter.assigneeId || undefined,
   };
+}
+
+/**
+ * As opções do filtro de responsável. "Sem responsável" vem primeiro: é a fila de quem ainda
+ * precisa ser pego, a pergunta mais comum. Depois, quem atende a área, com a foto do
+ * admin-console.
+ */
+export function toAssigneeFilterOptions(
+  people: readonly TicketAssigneeOption[],
+): TicketAssigneeFilterOption[] {
+  return [
+    { value: TICKET_UNASSIGNED_FILTER, label: 'Sem responsável' },
+    ...people.map((person, index) => ({
+      value: person.id,
+      label: person.name,
+      avatar: { name: person.name, url: person.avatarUrl ?? null },
+      separatorBefore: index === 0,
+    })),
+  ];
 }
 
 /**
@@ -200,12 +239,25 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
 
   const departments = useDepartmentOptionsModel();
 
+  /* Quem atende a área muda pouco: a lista vale por 5 minutos, e o filtro funciona mesmo
+     enquanto ela não chega (ou se o admin-console não responder) — só sem as fotos. */
+  const assignees = mirrorStore(
+    createQuery(
+      writable({
+        queryKey: [...TICKETS_QUERY_KEY, 'assignee-options', area],
+        queryFn: () => ticketsApi.assigneeOptions(area),
+        staleTime: 5 * 60 * 1000,
+      }),
+    ),
+  );
+
   return {
     /* `get` em vez de valor: o objeto é montado uma vez e a tela lê dele a cada mudança. Com
        valores fixos, a lista congelaria no primeiro carregamento. */
     get data() {
       return buildData({
         departmentOptions: departments.options,
+        assigneeOptions: toAssigneeFilterOptions(assignees.current.data ?? []),
         area,
         page: list.current.data,
         currentPage: page.current,
@@ -248,6 +300,10 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
         pageStore.set(1);
         filterStore.update((current) => ({ ...current, problemType }));
       },
+      onAssigneeChange: (assigneeId) => {
+        pageStore.set(1);
+        filterStore.update((current) => ({ ...current, assigneeId }));
+      },
       onPageChange: (newPage) => pageStore.set(newPage),
       onExportReport: (format) => {
         exportError = null;
@@ -283,6 +339,7 @@ type TicketPage = { items: Ticket[]; total: number } | undefined;
  */
 function buildData(input: {
   departmentOptions: DepartmentChoice[];
+  assigneeOptions: TicketAssigneeFilterOption[];
   area: AreaContext;
   page: TicketPage;
   currentPage: number;
@@ -303,6 +360,7 @@ function buildData(input: {
       total,
     },
     departmentOptions: input.departmentOptions,
+    assigneeOptions: input.assigneeOptions,
   };
 }
 
@@ -322,7 +380,8 @@ function hasAnyFilter(filter: TicketListFilter): boolean {
     filter.statusGroup !== '' ||
     filter.priority !== '' ||
     filter.department !== '' ||
-    filter.problemType !== ''
+    filter.problemType !== '' ||
+    filter.assigneeId !== ''
   );
 }
 

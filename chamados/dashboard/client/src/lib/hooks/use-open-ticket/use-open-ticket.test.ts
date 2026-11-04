@@ -1,6 +1,6 @@
 import { type OpenedTicket } from '@template/shared/schemas/ticket.schema';
 import { render, waitFor } from '@testing-library/svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-open-ticket-harness.test.svelte';
@@ -18,10 +18,12 @@ vi.mock('$lib/api/tickets.api', () => ({
     /* Por padrão o perfil não responde: o formulário abre para digitar, como antes. Os testes
        do preenchimento pela conta trocam isto. */
     requesterDefaults: vi.fn().mockRejectedValue(new Error('sem perfil')),
+    invite: vi.fn(),
   },
 }));
 
 const { ticketsApi } = await import('$lib/api/tickets.api');
+const { page } = await import('$app/state');
 
 /* O que ABRIR devolve: o chamado, mais o desfecho do aviso de WhatsApp. Por padrão o aviso não
    saiu — é o caso de quem não pediu para ser avisado. */
@@ -351,5 +353,157 @@ describe('useOpenTicketModel — pessoas vinculadas', () => {
     await waitFor(() => expect(ticketsApi.create).toHaveBeenCalled());
     expect(model.data.peopleOptions).toEqual([]);
     expect(vi.mocked(ticketsApi.create).mock.calls[0]?.[0]).toMatchObject({ watcherIds: [] });
+  });
+});
+
+describe('useOpenTicketModel — o convite do WhatsApp e quem atende', () => {
+  const invite = {
+    assignee: { id: 'u-ana', name: 'Ana Lima' },
+    areas: ['manutencao' as const],
+    phone: '5562988887777',
+  };
+
+  beforeEach(() => {
+    vi.mocked(ticketsApi.create).mockReset().mockResolvedValue(ticket());
+    vi.mocked(ticketsApi.systemProjectOptions).mockResolvedValue([]);
+    vi.mocked(ticketsApi.invite).mockReset();
+    page.url = new URL('http://localhost:5173/support?invite=abc.123');
+  });
+
+  afterEach(() => {
+    page.url = new URL('http://localhost:5173/');
+  });
+
+  // feliz
+  it('fills the attendant, the notice, the phone and the only area from the invite', async () => {
+    vi.mocked(ticketsApi.invite).mockResolvedValue(invite);
+    vi.mocked(ticketsApi.assigneeOptions).mockResolvedValueOnce([{ id: 'u-ana', name: 'Ana Lima' }]);
+    const model = mountModel();
+
+    await waitFor(() => expect(model.data.invite?.assigneeName).toBe('Ana Lima'));
+    expect(ticketsApi.invite).toHaveBeenCalledWith('abc.123');
+    expect(model.data.fields.assigneeId.value).toBe('u-ana');
+    expect(model.data.fields.area.value).toBe('manutencao');
+    expect(model.data.notifyWhatsapp).toBe(true);
+    expect(model.data.fields.contactPhone.value).not.toBe('');
+    await waitFor(() => expect(model.data.assignees).toEqual([{ value: 'u-ana', label: 'Ana Lima' }]));
+
+    /* Trocar de área limpa o responsável — menos para quem chegou pelo convite. */
+    model.actions.onChange('assigneeId', '');
+    expect(model.data.fields.assigneeId.value).toBe('u-ana');
+  });
+
+  // feliz
+  it('leaves the area open when the invited attendant covers more than one', async () => {
+    vi.mocked(ticketsApi.invite).mockResolvedValue({ ...invite, areas: ['infra', 'manutencao'], phone: null });
+    const model = mountModel();
+
+    await waitFor(() => expect(model.data.invite?.areas).toEqual(['infra', 'manutencao']));
+    expect(model.data.fields.area.value).toBe('');
+  });
+
+  // triste
+  it('warns that the link is no longer valid and keeps the form usable', async () => {
+    vi.mocked(ticketsApi.invite).mockRejectedValue(new ApiError(404, 'Convite não encontrado.'));
+    const model = mountModel();
+
+    await waitFor(() => expect(model.state.inviteError).toBe('Convite não encontrado.'));
+    expect(model.data.invite).toBeNull();
+    model.actions.onChange('assigneeId', '');
+    expect(model.data.fields.assigneeId.value).toBe('');
+  });
+
+  // triste
+  it('falls back to a generic message when the failure has no text', async () => {
+    vi.mocked(ticketsApi.invite).mockRejectedValue(new Error(''));
+    const model = mountModel();
+
+    await waitFor(() => expect(model.state.inviteError).toBeTruthy());
+  });
+
+  // feliz
+  it('marks a field as touched on blur and toggles the notice', async () => {
+    vi.mocked(ticketsApi.invite).mockResolvedValue(invite);
+    const model = mountModel();
+
+    model.actions.onBlur('requesterName');
+    await waitFor(() => expect(model.data.fields.requesterName.error).not.toBeNull());
+    model.actions.onNotifyChange(false);
+    await waitFor(() => expect(model.data.notifyWhatsapp).toBe(false));
+  });
+});
+
+describe('useOpenTicketModel — the account defaults and the screenshot being dropped', () => {
+  beforeEach(() => {
+    vi.mocked(ticketsApi.create).mockReset().mockResolvedValue(ticket());
+    vi.mocked(ticketsApi.systemProjectOptions).mockResolvedValue([]);
+    vi.mocked(ticketsApi.invite).mockReset();
+    page.url = new URL('http://localhost:5173/support');
+  });
+
+  // feliz
+  it('keeps the phone the person already typed and leaves the department alone when the account has none', async () => {
+    let resolveDefaults!: (value: unknown) => void;
+    vi.mocked(ticketsApi.requesterDefaults).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveDefaults = resolve;
+      }) as never,
+    );
+    const model = mountModel();
+    model.actions.onChange('contactPhone', '62 91111-2222');
+    await waitFor(() => expect(model.data.fields.contactPhone.value).toBe('62 91111-2222'));
+
+    resolveDefaults({ name: 'Bia Costa', email: 'bia@azuos.com.br', phone: '5562988887777', department: null, jobTitle: null });
+
+    await waitFor(() => expect(model.state.isNameLocked).toBe(true));
+    expect(model.data.fields.contactPhone.value).toBe('62 91111-2222');
+    expect(model.data.fields.department.value).not.toBe('');
+
+    /* Abrir outro chamado traz de volta o que veio da conta. */
+    model.actions.onOpenAnother();
+    await waitFor(() => expect(model.data.fields.requesterName.value).toBe('Bia Costa'));
+  });
+
+  // feliz
+  it('forgets the screenshot and its refusal when the person removes it', async () => {
+    const model = mountModel();
+    model.actions.onScreenshotChange(new File(['x'], 'nota.pdf', { type: 'application/pdf' }));
+    await waitFor(() => expect(model.state.screenshotError).not.toBeNull());
+
+    model.actions.onScreenshotChange(null);
+
+    await waitFor(() => expect(model.state.screenshotError).toBeNull());
+    expect(model.data.screenshotName).toBeNull();
+  });
+});
+
+describe('useOpenTicketModel — failures without a reason', () => {
+  beforeEach(() => {
+    vi.mocked(ticketsApi.create).mockReset().mockResolvedValue(ticket());
+    vi.mocked(ticketsApi.invite).mockReset();
+  });
+
+  afterEach(() => {
+    page.url = new URL('http://localhost:5173/');
+  });
+
+  // triste
+  it('says the invite link no longer works when the server gave no reason', async () => {
+    page.url = new URL('http://localhost:5173/support?invite=abc.123');
+    vi.mocked(ticketsApi.invite).mockRejectedValue(null);
+    vi.mocked(ticketsApi.systemProjectOptions).mockResolvedValue([]);
+    const model = mountModel();
+
+    await waitFor(() =>
+      expect(model.state.inviteError).toBe('Este link não vale mais. Peça outro pelo WhatsApp.'),
+    );
+  });
+
+  it('shows why the list of systems could not be loaded', async () => {
+    vi.mocked(ticketsApi.systemProjectOptions).mockRejectedValue(new ApiError(503, 'Fora do ar.'));
+    const model = mountModel();
+    model.actions.onChange('area', 'sistema');
+
+    await waitFor(() => expect(model.state.systemProjectsError).toBe('Fora do ar.'));
   });
 });

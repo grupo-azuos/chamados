@@ -170,3 +170,34 @@ describe('usePartListModel', () => {
     expect(model.state.isTruncated).toBe(true);
   });
 });
+
+describe('usePartListModel — condition, clearing and the two stock filters', () => {
+  // feliz
+  it('filters by condition, turns one stock filter off when the other goes on, and clears everything', async () => {
+    const model = await mountLoadedModel();
+
+    model.actions.onConditionChange('used');
+    await waitFor(() => expect(model.data.filter.condition).toBe('used'));
+    model.actions.onOutOfStockOnlyChange(true);
+    await waitFor(() => expect(model.data.filter.outOfStockOnly).toBe(true));
+    model.actions.onInStockOnlyChange(true);
+    await waitFor(() => expect(model.data.filter.inStockOnly).toBe(true));
+    expect(model.data.filter.outOfStockOnly).toBe(false);
+    model.actions.onOutOfStockOnlyChange(true);
+    await waitFor(() => expect(model.data.filter.inStockOnly).toBe(false));
+
+    model.actions.onClearFilters();
+    await waitFor(() => expect(model.data.filter.condition).toBe(''));
+    expect(model.data.filter.outOfStockOnly).toBe(false);
+  });
+
+  // feliz
+  it('asks the server for the list and the summary again on retry', async () => {
+    const model = await mountLoadedModel();
+    vi.mocked(partsApi.list).mockClear();
+
+    model.actions.onRetry();
+
+    await waitFor(() => expect(partsApi.list).toHaveBeenCalled());
+  });
+});

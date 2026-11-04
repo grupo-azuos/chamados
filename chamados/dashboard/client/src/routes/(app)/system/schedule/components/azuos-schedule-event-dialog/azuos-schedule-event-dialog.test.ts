@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -135,8 +135,9 @@ describe('swatchOf', () => {
 
   // feliz
   it('paints pink as pink and amber as yellow — the colors their names promise', () => {
-    expect(swatchOf('rose')).toMatchObject({ label: 'Rosa', dotClass: 'bg-tag-rose' });
-    expect(swatchOf('amber')).toMatchObject({ label: 'Amarelo', dotClass: 'bg-tag-amber' });
+    expect(swatchOf('rose')).toMatchObject({ label: 'Rosa', dotClass: 'bg-chart-4' });
+    expect(swatchOf('rose').dotClass).not.toBe(swatchOf('red').dotClass);
+    expect(swatchOf('amber')).toMatchObject({ label: 'Amarelo', dotClass: 'bg-warning' });
     expect(swatchOf('indigo').dotClass).not.toBe(swatchOf('purple').dotClass);
   });
 
@@ -172,5 +173,138 @@ describe('AzuosScheduleEventDialog color', () => {
       .getAllByRole('button')
       .filter((button) => button.getAttribute('aria-pressed') === 'true');
     expect(pressed.map((button) => button.getAttribute('aria-label'))).toContain('Azul');
+  });
+});
+
+describe('AzuosScheduleEventDialog — editing the fields', () => {
+  const project = {
+    id: 1,
+    name: 'Azuos Ticket',
+    description: null,
+    repositoryUrl: 'https://github.com/example/ticket',
+    status: 'active' as const,
+    color: 'blue' as const,
+    githubRepoOwner: null,
+    githubRepoName: null,
+    responsibleId: null,
+    responsibleName: null,
+    openTicketsCount: 0,
+    pullRequestsCount: 0,
+    createdAt: '2026-10-01T00:00:00Z',
+    updatedAt: null,
+  };
+
+  const pickFromCombobox = async (trigger: string, placeholder: string, label: string) => {
+    await userEvent.click(screen.getByRole('button', { name: trigger }));
+    const search = await screen.findByPlaceholderText(placeholder);
+    const popup = search.closest('[data-slot="popover-content"]') as HTMLElement;
+    await fireEvent.click(within(popup).getByText(label, { exact: true }));
+  };
+
+  // feliz
+  it('reports every typed field to the model and submits the form', async () => {
+    const model = createMockModel();
+    render(ScheduleEventDialog, { props: { open: true, model, onClose: vi.fn() } });
+
+    const title = screen.getByRole('textbox', { name: /Título do compromisso/ });
+    await userEvent.type(title, '!');
+    await userEvent.tab();
+    expect(model.actions.onChange).toHaveBeenCalledWith('title', 'Deploy Portal v2!');
+    expect(model.actions.onBlur).toHaveBeenCalledWith('title');
+
+    const note = screen.getByRole('textbox', { name: 'Descrição' });
+    await userEvent.type(note, 'Levar o checklist');
+    await userEvent.tab();
+    expect(model.actions.onChange).toHaveBeenCalledWith('note', expect.stringContaining('L'));
+    expect(model.actions.onBlur).toHaveBeenCalledWith('note');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Verde' }));
+    expect(model.actions.onChange).toHaveBeenCalledWith('color', 'green');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar compromisso' }));
+    expect(model.actions.onSubmit).toHaveBeenCalledOnce();
+    /* Sem sistemas cadastrados, o campo de vínculo nem aparece. */
+    expect(screen.queryByRole('button', { name: 'Sistema vinculado' })).not.toBeInTheDocument();
+  });
+
+  // feliz
+  it('links a category and a project through the comboboxes', async () => {
+    const model = createMockModel();
+    model.data.fields.projectId = { value: null as unknown as string, error: null };
+    render(ScheduleEventDialog, {
+      props: { open: true, model, projects: [project], onClose: vi.fn() },
+    });
+
+    await pickFromCombobox('Categoria do compromisso', 'Buscar categoria…', 'Geral');
+    expect(model.actions.onChange).toHaveBeenCalledWith('category', 'other');
+
+    await pickFromCombobox('Sistema vinculado', 'Buscar sistema…', 'Azuos Ticket');
+    expect(model.actions.onChange).toHaveBeenCalledWith('projectId', '1');
+  });
+
+  // feliz
+  it('passes the chosen date and times to the model', async () => {
+    const model = createMockModel();
+    render(ScheduleEventDialog, { props: { open: true, model, projects: [], onClose: vi.fn() } });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Data' }));
+    const day = await screen.findByText('20', { selector: '[data-bits-day]' });
+    await userEvent.click(day);
+    expect(model.actions.onChange).toHaveBeenCalledWith('date', '2026-10-20');
+    expect(model.actions.onBlur).toHaveBeenCalledWith('date');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Início' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aplicar horário' }));
+    expect(model.actions.onChange).toHaveBeenCalledWith('startTime', '09:00');
+    expect(model.actions.onBlur).toHaveBeenCalledWith('startTime');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fim' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aplicar horário' }));
+    expect(model.actions.onChange).toHaveBeenCalledWith('endTime', '10:00');
+    expect(model.actions.onBlur).toHaveBeenCalledWith('endTime');
+  });
+
+  // triste
+  it('announces an invalid date next to the field', () => {
+    const model = createMockModel();
+    model.data.fields.date = { value: '', error: 'Informe a data' };
+    render(ScheduleEventDialog, { props: { open: true, model, projects: [], onClose: vi.fn() } });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Informe a data');
+    expect(screen.getByRole('button', { name: 'Data' })).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  // feliz
+  it('offers to delete an existing appointment', async () => {
+    const onDelete = vi.fn();
+    const model = createMockModel({ data: { mode: 'edit' } as never });
+    render(ScheduleEventDialog, {
+      props: { open: true, model, projects: [], onClose: vi.fn(), onDelete },
+    });
+
+    expect(screen.getByText('Editar Compromisso')).toBeInTheDocument();
+    expect(
+      screen.getByText('Atualize as informações do agendamento técnico no cronograma.'),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir compromisso' }));
+    expect(onDelete).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('blocks the delete button while deleting or saving', () => {
+    const model = createMockModel({ data: { mode: 'edit' } as never, state: { isSubmitting: true, error: null } });
+    render(ScheduleEventDialog, {
+      props: { open: true, model, projects: [], onClose: vi.fn(), onDelete: vi.fn(), isDeleting: true },
+    });
+
+    expect(screen.getByRole('button', { name: 'Excluindo…' })).toBeDisabled();
+  });
+
+  // triste
+  it('does not offer deletion when nobody handles it', () => {
+    const model = createMockModel({ data: { mode: 'edit' } as never });
+    render(ScheduleEventDialog, { props: { open: true, model, projects: [], onClose: vi.fn() } });
+
+    expect(screen.queryByRole('button', { name: /Excluir/ })).not.toBeInTheDocument();
   });
 });

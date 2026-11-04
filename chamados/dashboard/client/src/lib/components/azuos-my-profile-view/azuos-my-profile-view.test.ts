@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { createRawSnippet, type Component } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 
-import MyProfileView, { type AzuosMyProfileViewProps } from './azuos-my-profile-view.svelte';
+import MyProfileView, { initialsOf, type AzuosMyProfileViewProps } from './azuos-my-profile-view.svelte';
 
 const person = {
   name: 'Ana Souza',
@@ -106,5 +106,47 @@ describe('AzuosMyProfileView (Svelte)', () => {
     renderView({ state: { isLoading: true } });
 
     expect(screen.getByRole('status')).toHaveTextContent('Carregando seu perfil');
+  });
+});
+
+describe('AzuosMyProfileView — photo, missing data and the error beside the card', () => {
+  // feliz
+  it('shows the photo instead of the initials, the bio and the dark theme', () => {
+    renderView({
+      data: {
+        person: { ...person, avatarUrl: 'https://cdn.test/ana.png', bio: 'Cuido da rede.', department: 'TI', systems: [] },
+        accountUrl: null,
+        theme: 'dark',
+      },
+      slots: { preferencesExtra: createRawSnippet(() => ({ render: () => '<p>preferência extra</p>' })) },
+    });
+
+    expect(screen.getByRole('img', { name: 'Foto de Ana Souza' })).toHaveAttribute('src', 'https://cdn.test/ana.png');
+    expect(screen.getByText('Cuido da rede.')).toBeInTheDocument();
+    expect(screen.getByText('Você ainda não tem acesso a nenhum sistema.')).toBeInTheDocument();
+    expect(screen.getByText('preferência extra')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Editar no Admin Console' })).not.toBeInTheDocument();
+  });
+
+  // triste
+  it('keeps the card on screen when a later refresh fails, and says when there is no e-mail', () => {
+    renderView({
+      data: { person: { ...person, email: null }, accountUrl: null, theme: 'light' },
+      state: { error: 'Não consegui atualizar.' },
+      actions: { onToggleTheme: vi.fn() },
+    });
+
+    expect(screen.getByText('Sem e-mail')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Não consegui atualizar.');
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument();
+  });
+
+  // triste
+  it('explains a profile that did not load with a generic message, and shows "?" for a blank name', () => {
+    renderView({ data: { person: null, accountUrl: null, theme: 'light' }, actions: { onToggleTheme: vi.fn() } });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Não consegui carregar seu perfil.');
+    expect(initialsOf('   ')).toBe('?');
+    expect(initialsOf('Maria Clara Souza')).toBe('MC');
   });
 });

@@ -397,7 +397,7 @@
         </p>
       {:else if data.opened.whatsAppLink}
         <a
-          class="bg-primary text-primary-foreground hover:bg-primary/90 control-md rounded-control inline-flex items-center text-sm font-semibold"
+          class="bg-primary text-primary-foreground hover:bg-muted control-md rounded-control inline-flex items-center text-sm font-semibold"
           href={data.opened.whatsAppLink}
           target="_blank"
           rel="noopener"
@@ -443,11 +443,11 @@
            linha de conexão, que só faz sentido quando há uma próxima etapa visível. -->
       <div bind:this={stepContentEl} class="flex flex-col gap-5 sm:gap-6">
       {#if data.invite}
-        <p class="rounded-box bg-primary/5 text-ink-700 p-4 text-sm leading-relaxed break-words" role="status">
+        <p class="rounded-box bg-muted text-ink-700 p-4 text-sm leading-relaxed break-words" role="status">
           Você está abrindo um chamado com <strong>{data.invite.assigneeName}</strong>.
         </p>
       {:else if formState.inviteError}
-        <p class="rounded-box bg-warning/5 text-ink-700 p-4 text-sm leading-relaxed break-words" role="status">
+        <p class="rounded-box bg-muted text-ink-700 p-4 text-sm leading-relaxed break-words" role="status">
           {formState.inviteError} Você ainda pode abrir o chamado por aqui.
         </p>
       {/if}
@@ -468,8 +468,8 @@
                   class={cn(
                     'flex flex-col items-start gap-2 rounded-box border p-4 text-left transition-colors',
                     isSelected
-                      ? 'bg-primary/10'
-                      : 'border-border/80 bg-card hover:bg-muted/40',
+                      ? 'bg-muted'
+                      : 'border-border bg-card hover:bg-muted',
                   )}
                 >
                   <card.icon class="text-primary size-5" aria-hidden="true" />
@@ -667,7 +667,7 @@
               <div class="flex items-center gap-2">
                 <label
                   for="screenshot"
-                  class="control-lg flex flex-1 cursor-pointer items-center gap-2 rounded-control border border-dashed border-border/80 bg-muted/20 text-xs text-muted-foreground transition-colors hover:bg-muted/40"
+                  class="control-lg flex flex-1 cursor-pointer items-center gap-2 rounded-control border border-dashed border-border bg-muted text-xs text-muted-foreground transition-colors hover:bg-muted"
                 >
                   <PaperclipIcon class="size-3.5 shrink-0" aria-hidden="true" />
                   <span class="truncate">
@@ -679,7 +679,7 @@
                     type="button"
                     onclick={removeFile}
                     aria-label="Remover o print anexado"
-                    class="text-muted-foreground hover:text-destructive hover:bg-destructive/10 control-icon-lg flex shrink-0 items-center justify-center rounded-control border border-border/80 transition-colors"
+                    class="text-muted-foreground hover:text-destructive hover:bg-muted control-icon-lg flex shrink-0 items-center justify-center rounded-control border border-border transition-colors"
                   >
                     <XIcon class="size-4" aria-hidden="true" />
                   </button>
@@ -719,7 +719,7 @@
           <TimelineStep data={{ title: 'Quem cuida do chamado', icon: MessageCircle }} ui={{ isLast: true, tone: 'success' }}>
             <!-- BLOCO 1 — quem atende E o aviso, juntos: o WhatsApp sai do número de quem
                  atende, então as duas escolhas são uma conversa só. -->
-            <div class="rounded-box border-border/70 flex flex-col gap-3 border p-3 sm:p-4">
+            <div class="rounded-box border-border flex flex-col gap-3 border p-3 sm:p-4">
               {#if assignees.length > 0}
                 <fieldset class="flex flex-col gap-2">
                   <legend class="text-ink-700 mb-2 text-sm font-medium">Quem vai te atender?</legend>
@@ -736,7 +736,7 @@
                           onclick={() => actions.onChange('assigneeId', option.value)}
                           class={cn(
                             'rounded-control focus-visible:ring-ring flex min-h-12 cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60',
-                            isChosen ? 'bg-primary-soft text-primary font-semibold' : 'bg-muted/40 text-foreground hover:bg-muted',
+                            isChosen ? 'bg-primary-soft text-primary font-semibold' : 'bg-muted text-foreground hover:bg-muted',
                           )}
                         >
                           {#if option.value}
@@ -771,7 +771,7 @@
                 aria-checked={data.notifyWhatsapp}
                 disabled={formState.isSubmitting}
                 onclick={() => actions.onNotifyChange(!data.notifyWhatsapp)}
-                class="rounded-control hover:bg-muted/60 focus-visible:ring-ring flex min-h-12 w-full cursor-pointer items-center gap-3 px-1 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                class="rounded-control hover:bg-muted focus-visible:ring-ring flex min-h-12 w-full cursor-pointer items-center gap-3 px-1 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <MessageCircle class="text-muted-foreground size-5 shrink-0" aria-hidden="true" />
                 <span class="flex min-w-0 flex-1 flex-col">
@@ -830,7 +830,7 @@
       <!-- Navegação: Voltar/Avançar são `type="button"` de propósito — só a última etapa tem
            botão de enviar de verdade, senão Enter na primeira etapa já mandaria o formulário
            inteiro com os campos de trás em branco. -->
-      <div class="mt-5 flex items-center justify-between gap-3 border-t border-border/70 pt-4">
+      <div class="mt-5 flex items-center justify-between gap-3 border-t border-border pt-4">
         {#if isFirstStep}
           <span></span>
         {:else}

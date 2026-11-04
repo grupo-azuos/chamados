@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { isScreenshotType, refuseScreenshot, SCREENSHOT_MAX_BYTES } from './screenshot-catalog.util';
+import {
+  isScreenshotType,
+  refuseScreenshot,
+  SCREENSHOT_MAX_BYTES,
+  screenshotAccept,
+} from './screenshot-catalog.util';
 
 describe('isScreenshotType', () => {
   // feliz
@@ -38,5 +43,13 @@ describe('refuseScreenshot', () => {
     });
 
     expect(refusal?.message).toContain('8 MB');
+  });
+});
+
+describe('screenshotAccept', () => {
+  // feliz
+  it('lists the image types the field accepts', () => {
+    expect(screenshotAccept()).toContain('image/png');
+    expect(screenshotAccept()).not.toContain('image/svg');
   });
 });

@@ -276,7 +276,11 @@
   {/if}
 {/snippet}
 
-<SidebarProvider bind:open={sidebarOpen} class="h-svh overflow-hidden" style={isTwoColumn ? TWO_COLUMN_WIDTH : ''}>
+<!-- A moldura CORTA o que passa da borda, mas não pode rolar: com `overflow-hidden` o navegador
+     ainda a rola quando uma ação leva a tela até um ponto (âncora `#…`, foco num campo lá embaixo,
+     lista que cresce) — o conteúdo sobe dentro dela e sobra uma faixa vazia, branca ou escura
+     conforme o tema. `overflow-clip` corta igual e proíbe essa rolagem; quem rola é o `<main>`. -->
+<SidebarProvider bind:open={sidebarOpen} class="h-svh overflow-clip" style={isTwoColumn ? TWO_COLUMN_WIDTH : ''}>
   {#if !isMobile.current && isTwoColumn}
     <!-- O padrão de barras aninhadas do shadcn: a de fora recolhe para a largura de ícone, e
          com isso o painel some e sobra o trilho. -->
@@ -367,7 +371,7 @@
       <Sidebar collapsible="none" class="hidden min-w-0 flex-1 pt-3 pb-2 md:flex">
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel class="text-sidebar-foreground/70 text-xs font-semibold tracking-wider uppercase">
+            <SidebarGroupLabel class="text-sidebar-foreground text-xs font-semibold tracking-wider uppercase">
               {activeArea?.label ?? ''}
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -434,7 +438,7 @@
              um título separando o que é tela do que é atalho. Abre em outra aba? A setinha avisa. -->
         {#if shellActions.length > 0}
           <SidebarGroup class="mt-auto">
-            <SidebarGroupLabel class="text-sidebar-foreground/70 text-xs font-semibold tracking-wider uppercase">
+            <SidebarGroupLabel class="text-sidebar-foreground text-xs font-semibold tracking-wider uppercase">
               Atalhos
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -458,7 +462,7 @@
                           <span class="flex min-w-0 flex-1 items-center gap-1.5 group-data-[collapsible=icon]:hidden">
                             <span class="truncate">{link.label}</span>
                             {#if link.opensInNewTab}
-                              <ArrowUpRight aria-hidden="true" class="text-sidebar-foreground/60 size-3.5! shrink-0" />
+                              <ArrowUpRight aria-hidden="true" class="text-sidebar-foreground size-3.5! shrink-0" />
                             {/if}
                           </span>
                         </a>
@@ -525,7 +529,8 @@
   {/if}
 
   <!-- `min-w-0`: sem isto a área de conteúdo não encolhe abaixo da largura natural da tabela. -->
-  <SidebarInset class="border-sidebar-border bg-background min-w-0 overflow-hidden md:border">
+  <!-- O painel também corta sem rolar: ver o comentário da moldura, no `SidebarProvider`. -->
+  <SidebarInset class="border-sidebar-border bg-background min-w-0 overflow-clip md:border">
     <!-- O gatilho vive no conteúdo: dentro da barra ele sumiria junto com o que colapsa. No
          celular não há barra lateral — o menu é a barra de baixo. -->
     <header
@@ -606,7 +611,7 @@
           onpointerup={onHandleUp}
           onpointercancel={onHandleCancel}
         >
-          <span class="bg-sidebar-foreground/40 h-1 w-8 rounded-full"></span>
+          <span class="bg-muted h-1 w-8 rounded-full"></span>
         </div>
         <Sheet.Header class="flex-row items-center px-4 pt-0 pb-2">
           <BrandMark ui={{ size: 'sm' }} />
@@ -618,7 +623,7 @@
 
         <div class="flex flex-col gap-3 px-3">
           {#if isTwoColumn}
-            <div role="group" aria-label="Módulos" class="rounded-box bg-sidebar-accent/40 flex gap-1 p-1">
+            <div role="group" aria-label="Módulos" class="rounded-box bg-muted flex gap-1 p-1">
               {#each areas as option (option.value)}
                 {@const Icon = option.icon}
                 <button

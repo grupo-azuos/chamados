@@ -62,7 +62,7 @@
 >
   <div class="flex min-w-0 items-start gap-3">
     <span
-      class="bg-primary/10 text-primary rounded-chip flex size-9 shrink-0 items-center justify-center"
+      class="bg-muted text-primary rounded-chip flex size-9 shrink-0 items-center justify-center"
     >
       <MessageCircle class="size-5" aria-hidden="true" />
     </span>

@@ -141,7 +141,7 @@
   <!-- As agendadas também pedem ação, mas com data marcada: vêm depois do plano de hoje e
        antes do histórico. -->
   {#if (data.scheduled ?? []).length > 0}
-    <div class="bg-muted/50 mb-4 rounded-box border p-3" data-slot="dashboard-scheduled">
+    <div class="bg-muted mb-4 rounded-box border p-3" data-slot="dashboard-scheduled">
       <p class="text-foreground flex items-center gap-2 text-xs font-semibold">
         <CalendarClock class="size-4 shrink-0" aria-hidden="true" />
         Manutenções agendadas

@@ -10,6 +10,7 @@ import { ticketHistories } from '../src/lib/db/schema/ticket-histories.schema';
 import { ticketServiceOrders } from '../src/lib/db/schema/ticket-service-orders.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
 import {
+  ANA,
   BIA,
   CAIO,
   asAna,
@@ -159,7 +160,8 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     expect(created.body).toMatchObject({
       protocol: 'CH-0001',
       status: 'open',
-      requesterName: 'Ana',
+      /* Autoria vem da identidade, nunca do corpo: o nome mandado no pedido é ignorado. */
+      requesterName: ANA.name,
       department: 'RECEPÇÃO',
       problemType: 'printer',
       /* Todo chamado nasce sem responsável e sem solução: são do TI. */
@@ -248,7 +250,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
       'resume',
       'closure_with_caveats',
     ]);
-    expect(timeline.body[0]).toMatchObject({ authorName: 'Ana', createdBy: null });
+    expect(timeline.body[0]).toMatchObject({ authorName: ANA.name, createdBy: null });
   });
 
   it('attaches the files sent with a history to that history', async () => {

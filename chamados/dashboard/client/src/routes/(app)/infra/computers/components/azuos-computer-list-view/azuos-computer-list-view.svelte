@@ -1,5 +1,10 @@
 <script lang="ts" module>
   import {
+    resourceConditionOf,
+    resourceConditionTone,
+    type ResourceCondition,
+  } from '@template/shared/domain/computer-resource.util';
+  import {
     healthStatusLabel,
     healthStatusTone,
     type HealthStatus,
@@ -26,6 +31,7 @@
     onlyOnline: boolean;
     onlyOffline: boolean;
     alert: ComputerAlertFilter | '';
+    resourceCondition: ResourceCondition | '';
     preventive: ComputerPreventiveFilter | '';
     includeArchived: boolean;
   };
@@ -83,6 +89,7 @@
       onOnlineChange: (onlyOnline: boolean) => void;
       onOfflineChange: (onlyOffline: boolean) => void;
       onAlertChange: (alert: ComputerAlertFilter | '') => void;
+      onResourceConditionChange: (resourceCondition: ResourceCondition | '') => void;
       onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
       onArchivedChange: (includeArchived: boolean) => void;
       onClearFilters: () => void;
@@ -107,6 +114,8 @@
 
 <script lang="ts">
   import HardDrive from '@lucide/svelte/icons/hard-drive';
+  import Laptop from '@lucide/svelte/icons/laptop';
+  import Monitor from '@lucide/svelte/icons/monitor';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
 
@@ -120,6 +129,8 @@
   import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+  import { RESOURCE_CONDITION_ICONS } from '$lib/utils/resource-condition-icon.util';
   import {
     Table,
     TableActions,
@@ -130,7 +141,6 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
   import { formatTimeAgo } from '$lib/utils/format-machine';
 
@@ -320,15 +330,27 @@
       data-slot="computer-cards-mobile"
     >
       {#each data.computers as computer (computer.id)}
-        <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
-        <div
-          use:fillFromPointer
-          style:--fill-color={fillColorOf(healthStatusTone(computer.healthStatus))}
-          class="hover-fill border-border/70 bg-card flex min-w-0 flex-col rounded-surface border p-4 shadow-xs"
+        <!-- O card de conteúdo do grupo: a condição dos recursos (disco, memória, tempo sem
+             reiniciar) entra como o ícone grande do canto e como a cor do hover. -->
+        {@const condition = resourceConditionOf(computer.hardware ?? {})}
+        <ContentCard
+          data={{ label: displayNameOf(computer) }}
+          ui={{
+            tone: resourceConditionTone(condition),
+            icon: RESOURCE_CONDITION_ICONS[condition],
+            isHoverColored: true,
+            markSize: 'lg',
+            className: 'min-w-0 gap-0 p-4',
+          }}
         >
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0 flex-1 basis-40">
-              <span class="block font-medium text-ink-900 break-words leading-snug">
+              <span class="text-ink-900 flex items-center gap-1.5 leading-snug font-medium break-words">
+                {#if computer.kind === 'notebook'}
+                  <Laptop class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+                {:else}
+                  <Monitor class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+                {/if}
                 {displayNameOf(computer)}
               </span>
               <span class="block text-xs text-ink-500 break-words leading-tight mt-0.5"
@@ -346,7 +368,7 @@
             </div>
           </div>
 
-          <div class="mt-4 grid grid-cols-1 gap-3 rounded-box bg-muted/40 p-3 text-sm min-[380px]:grid-cols-2">
+          <div class="mt-4 grid grid-cols-1 gap-3 rounded-box bg-muted p-3 text-sm min-[380px]:grid-cols-2">
             <div>
               <span class="text-muted-foreground block text-xs">Responsável</span>
               <span class="font-medium text-ink-700 break-words"
@@ -375,12 +397,12 @@
 
           <!-- A caixa de manutenção cresce até o rodapé: os cartões da mesma linha têm a mesma
                altura, e sem isso cada um sobrava um vão diferente acima do "Ver ficha". -->
-          <div class="mt-3 min-w-0 flex-1 rounded-box border border-border/60 bg-muted/20 p-3">
+          <div class="mt-3 min-w-0 flex-1 rounded-box border border-border bg-muted p-3">
             <p class="text-muted-foreground mb-2 text-xs">Manutenção</p>
             <ComputerMaintenanceStatus data={{ computer, scheduledFor: data.scheduledFor?.[computer.id] ?? null }} />
           </div>
 
-          <div class="border-border/60 mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
             <span class="text-xs text-ink-500">
               Chamados no mês: <strong class="text-foreground">{computer.ticketsThisMonth}</strong>
             </span>
@@ -390,7 +412,7 @@
               actions={{ onClick: () => actions.onOpen(computer) }}
             />
           </div>
-        </div>
+        </ContentCard>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex flex-wrap justify-between gap-2 px-1 text-xs">

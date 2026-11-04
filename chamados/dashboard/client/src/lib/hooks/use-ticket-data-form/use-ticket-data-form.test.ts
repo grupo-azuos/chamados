@@ -2,6 +2,7 @@ import { type Ticket } from '@template/shared/schemas/ticket.schema';
 import { render, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { page } from '$app/state';
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-ticket-data-form-harness.test.svelte';
 import {
@@ -13,7 +14,7 @@ import {
 } from './use-ticket-data-form.svelte';
 
 vi.mock('$lib/api/tickets.api', () => ({
-  ticketsApi: { update: vi.fn(), addArea: vi.fn(), removeArea: vi.fn() },
+  ticketsApi: { update: vi.fn(), addArea: vi.fn(), removeArea: vi.fn(), assigneeOptions: vi.fn() },
 }));
 
 vi.mock('$lib/api/computers.api', () => ({
@@ -274,5 +275,82 @@ describe('useTicketDataFormModel', () => {
     model.actions.onAddParticipantArea('sistema');
 
     await waitFor(() => expect(model.state.areaError).toBe('Sem cargo nesta área.'));
+  });
+});
+
+describe('toUpdateInput — project', () => {
+  // feliz
+  it('unlinks the project when the field was cleared', () => {
+    expect(toUpdateInput({ ...toFormValues(ticket()), projectId: '' }).projectId).toBeNull();
+  });
+
+  // triste
+  it('leaves the project alone when the form never had the field', () => {
+    const values: Partial<ReturnType<typeof toFormValues>> = toFormValues(ticket());
+    delete values.projectId;
+
+    expect(toUpdateInput(values as ReturnType<typeof toFormValues>)).not.toHaveProperty('projectId');
+  });
+});
+
+describe('useTicketDataFormModel — assignees and touched fields', () => {
+  const route = page as unknown as { data: Record<string, unknown> };
+
+  beforeEach(() => {
+    vi.mocked(ticketsApi.update).mockResolvedValue(ticket());
+    vi.mocked(ticketsApi.removeArea).mockReset();
+    vi.mocked(ticketsApi.assigneeOptions).mockReset();
+    vi.mocked(computersApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 200 } as never);
+    vi.mocked(softwareProjectsApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 200 } as never);
+    route.data = { user: { id: 'u-ana', role: 'superadmin' } };
+  });
+
+  // feliz
+  it('offers who can take the ticket to the super admin, for the area on the form', async () => {
+    vi.mocked(ticketsApi.assigneeOptions).mockResolvedValue([{ id: 'u-bia', name: 'Bia Costa' }]);
+    const model = mountModel();
+
+    await waitFor(() => expect(model.data.assignees).toEqual([{ value: 'u-bia', label: 'Bia Costa' }]));
+    expect(ticketsApi.assigneeOptions).toHaveBeenCalledWith('infra');
+  });
+
+  it('marks a field as touched when the person leaves it', async () => {
+    const model = mountModel();
+
+    model.actions.onChange('computerId', '');
+    model.actions.onBlur('computerId');
+
+    await waitFor(() => expect(model.data.fields.computerId.error).toBeNull());
+  });
+
+  // triste
+  it('keeps the field hidden when the list of people could not be loaded', async () => {
+    vi.mocked(ticketsApi.assigneeOptions).mockRejectedValue(new ApiError(503, 'Fora do ar.'));
+    const model = mountModel();
+
+    await waitFor(() => expect(ticketsApi.assigneeOptions).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(model.data.assignees).toEqual([]);
+  });
+
+  it('never asks for people when the person is not the super admin', async () => {
+    route.data = { user: { id: 'u-ana', role: 'admin' } };
+    const model = mountModel();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(ticketsApi.assigneeOptions).not.toHaveBeenCalled();
+    expect(model.data.assignees).toEqual([]);
+  });
+
+  it('says it could not remove the area when the server gave no reason', async () => {
+    vi.mocked(ticketsApi.removeArea).mockRejectedValue(null);
+    const model = mountModel(ticket({ participantAreas: ['manutencao'] }));
+
+    model.actions.onRemoveParticipantArea('manutencao');
+
+    await waitFor(() => expect(model.state.areaError).toBe('Não consegui remover a área.'));
+    expect(model.state.removingAreaArea).toBeNull();
   });
 });

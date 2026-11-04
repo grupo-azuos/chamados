@@ -76,7 +76,8 @@
   const inputClass = $derived(
     cn(
       'control-lg rounded-control',
-      'bg-card text-foreground w-full border text-sm transition-colors',
+      /* `bg-muted`: o fundo sólido de todo campo do grupo, o mesmo do template. */
+      'bg-muted text-foreground w-full border text-sm transition-colors',
       'placeholder:text-ink-500 disabled:cursor-not-allowed disabled:opacity-60',
       isPassword && 'pr-11',
       hasError ? 'border-border bg-destructive-soft' : 'border-input',

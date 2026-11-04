@@ -5,10 +5,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '$lib/api/http-client';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 import Harness from './use-ticket-list-harness.test.svelte';
-import { type TicketListModel } from './use-ticket-list.svelte';
+import { toAssigneeFilterOptions, type TicketListModel } from './use-ticket-list.svelte';
 
 vi.mock('$lib/api/tickets.api', () => ({
-  ticketsApi: { list: vi.fn(), dashboard: vi.fn(), update: vi.fn(), exportReport: vi.fn() },
+  ticketsApi: {
+    list: vi.fn(),
+    dashboard: vi.fn(),
+    update: vi.fn(),
+    exportReport: vi.fn(),
+    assigneeOptions: vi.fn(),
+  },
 }));
 
 vi.mock('$lib/utils/download-file.util', () => ({ triggerBrowserDownload: vi.fn() }));
@@ -79,6 +85,9 @@ describe('useTicketListModel', () => {
   beforeEach(() => {
     vi.mocked(ticketsApi.list).mockResolvedValue(page([ticket()]));
     vi.mocked(ticketsApi.dashboard).mockResolvedValue(emptyDashboard);
+    vi.mocked(ticketsApi.assigneeOptions).mockResolvedValue([
+      { id: 'u-ana', name: 'Ana Lima', avatarUrl: 'https://fotos.example/ana.png' },
+    ]);
   });
 
   // feliz
@@ -100,6 +109,18 @@ describe('useTicketListModel', () => {
         expect.objectContaining({ status: 'open', department: 'rh' }),
       );
     });
+  });
+
+  it('asks for the queue of the responsible person picked, with the people of the area', async () => {
+    const model = await mountLoadedModel();
+
+    model.actions.onAssigneeChange('u-ana');
+
+    await waitFor(() => {
+      expect(ticketsApi.list).toHaveBeenCalledWith(expect.objectContaining({ assigneeId: 'u-ana' }));
+    });
+    await waitFor(() => expect(model.data.assigneeOptions).toHaveLength(2));
+    expect(ticketsApi.assigneeOptions).toHaveBeenCalledWith('infra');
   });
 
   /* Estágio e grupo são o MESMO filtro em dois tamanhos: os dois juntos pediriam "aberto E
@@ -254,5 +275,28 @@ describe('useTicketListModel', () => {
         expect(model.state.exportingFormat).toBeNull();
       });
     });
+  });
+});
+
+describe('toAssigneeFilterOptions', () => {
+  // feliz
+  it('puts the tickets nobody took first, then the people of the area with photo', () => {
+    expect(
+      toAssigneeFilterOptions([{ id: 'u-ana', name: 'Ana Lima', avatarUrl: 'https://f/ana.png' }]),
+    ).toEqual([
+      { value: 'none', label: 'Sem responsável' },
+      {
+        value: 'u-ana',
+        label: 'Ana Lima',
+        avatar: { name: 'Ana Lima', url: 'https://f/ana.png' },
+        separatorBefore: true,
+      },
+    ]);
+  });
+
+  // triste
+  it('still offers the unassigned queue when nobody attends the area, or has no photo', () => {
+    expect(toAssigneeFilterOptions([])).toEqual([{ value: 'none', label: 'Sem responsável' }]);
+    expect(toAssigneeFilterOptions([{ id: 'u-bia', name: 'Bia' }])[1]?.avatar?.url).toBeNull();
   });
 });

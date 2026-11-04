@@ -65,7 +65,7 @@
   {#if state.isLoading}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {#each [0, 1, 2, 3] as idx (idx)}
-        <div class="h-32 animate-pulse rounded-surface border border-border bg-muted/50"></div>
+        <div class="h-32 animate-pulse rounded-surface border border-border bg-muted"></div>
       {/each}
     </div>
   {:else if state.error}
@@ -89,7 +89,7 @@
           <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
             >Chamados no Mês</span
           >
-          <div class="grid size-8 place-items-center rounded-control bg-primary/10 text-primary">
+          <div class="grid size-8 place-items-center rounded-control bg-muted text-primary">
             <LifeBuoy class="size-4" />
           </div>
         </div>
@@ -113,7 +113,7 @@
           <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
             >PRs no Mês</span
           >
-          <div class="grid size-8 place-items-center rounded-control bg-primary/10 text-primary">
+          <div class="grid size-8 place-items-center rounded-control bg-muted text-primary">
             <GitPullRequest class="size-4" />
           </div>
         </div>
@@ -137,7 +137,7 @@
           <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
             >Sistemas Ativos</span
           >
-          <div class="grid size-8 place-items-center rounded-control bg-primary/10 text-primary">
+          <div class="grid size-8 place-items-center rounded-control bg-muted text-primary">
             <Code2 class="size-4" />
           </div>
         </div>
@@ -163,7 +163,7 @@
           <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
             >Tempo de Resolução</span
           >
-          <div class="grid size-8 place-items-center rounded-control bg-primary/10 text-primary">
+          <div class="grid size-8 place-items-center rounded-control bg-muted text-primary">
             <CheckCircle2 class="size-4" />
           </div>
         </div>
@@ -223,7 +223,7 @@
         </div>
 
         <div
-          class="mt-6 flex items-center justify-center gap-6 border-t border-border/60 pt-4 text-xs text-muted-foreground"
+          class="mt-6 flex items-center justify-center gap-6 border-t border-border pt-4 text-xs text-muted-foreground"
         >
           <div class="flex items-center gap-2">
             <span class="size-2.5 rounded-full bg-primary"></span>
@@ -300,7 +300,7 @@
           Nenhuma atividade sincronizada com o GitHub ainda.
         </div>
       {:else}
-        <div class="mt-6 divide-y divide-border/60">
+        <div class="mt-6 divide-y divide-border">
           {#each s.recentTimeline as event (event.id)}
             <div class="flex items-center justify-between py-3">
               <div class="flex items-center gap-3">

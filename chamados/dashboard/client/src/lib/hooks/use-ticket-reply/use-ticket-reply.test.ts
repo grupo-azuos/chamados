@@ -130,3 +130,51 @@ describe('useTicketReplyModel', () => {
     await waitFor(() => expect(model.state.error).toMatch(/encerrado/));
   });
 });
+
+describe('useTicketReplyModel — files, errors and the linked people on the way', () => {
+  beforeEach(() => {
+    vi.mocked(ticketsApi.peopleOptions).mockResolvedValue([{ id: 'u-caio', name: 'Caio Reis' }]);
+    vi.mocked(ticketsApi.updateWatchers).mockReset();
+  });
+
+  // feliz
+  it('keeps the chosen files, the file refusal and who to notify', () => {
+    const model = mountModel();
+    const file = new File(['x'], 'nota.pdf', { type: 'application/pdf' });
+
+    model.actions.onChosenFilesChange([file]);
+    model.actions.onAttachmentError('Arquivo grande demais.');
+    model.actions.onNotifyChange(['u-ana']);
+
+    expect(model.data.chosenFiles).toEqual([file]);
+    expect(model.state.attachmentError).toBe('Arquivo grande demais.');
+    expect(model.data.notifyIds).toEqual(['u-ana']);
+  });
+
+  // feliz
+  it('shows the new list of linked people while the server still saves it', async () => {
+    let finish!: () => void;
+    vi.mocked(ticketsApi.updateWatchers).mockReturnValue(
+      new Promise((resolve) => {
+        finish = () => resolve([]);
+      }),
+    );
+    const model = mountModel();
+    expect(model.data.watcherIds).toEqual(['u-caio']);
+
+    model.actions.onWatchersChange(['u-caio', 'u-ana']);
+
+    await waitFor(() => expect(model.state.isSavingWatchers).toBe(true));
+    expect(model.data.watcherIds).toEqual(['u-caio', 'u-ana']);
+    finish();
+    await waitFor(() => expect(model.state.isSavingWatchers).toBe(false));
+  });
+
+  // triste
+  it('does not save linked people without a ticket', () => {
+    const model = mountModel(null);
+    model.actions.onWatchersChange(['u-ana']);
+    expect(ticketsApi.updateWatchers).not.toHaveBeenCalled();
+    expect(model.data.watcherIds).toEqual([]);
+  });
+});

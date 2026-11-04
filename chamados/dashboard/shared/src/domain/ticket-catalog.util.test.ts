@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  isTicketArea,
+  isTicketProblemType,
   isTicketProblemTypeForArea,
   TICKET_PROBLEM_TYPES,
+  ticketAreaLabel,
+  ticketProblemTypeLabel,
+  ticketProblemTypeOptions,
   ticketAreaOptions,
   ticketProblemTypeOptionsForArea,
   ticketProblemTypesForArea,
@@ -70,5 +75,26 @@ describe('ticketProblemTypeOptionsForArea', () => {
     const options = ticketProblemTypeOptionsForArea('manutencao');
 
     expect(options).toContainEqual({ value: 'air_conditioning', label: 'Ar-condicionado' });
+  });
+});
+
+describe('ticket catalog labels and guards', () => {
+  // feliz
+  it('labels every area and every problem type', () => {
+    expect(ticketAreaLabel('infra')).toBe('Infraestrutura');
+    expect(ticketProblemTypeOptions().map((option) => option.value)).toEqual([...TICKET_PROBLEM_TYPES]);
+    for (const option of ticketProblemTypeOptions()) {
+      expect(ticketProblemTypeLabel(option.value)).toBe(option.label);
+    }
+  });
+
+  // triste
+  it('refuses what is not an area or a problem type', () => {
+    expect(isTicketArea('sistema')).toBe(true);
+    expect(isTicketArea('financeiro')).toBe(false);
+    expect(isTicketArea(3)).toBe(false);
+    expect(isTicketProblemType('printer')).toBe(true);
+    expect(isTicketProblemType('tsunami')).toBe(false);
+    expect(isTicketProblemType(null)).toBe(false);
   });
 });
