@@ -1,4 +1,4 @@
-import { Controller, Get, Headers, Res } from '@nestjs/common';
+import { VERSION_NEUTRAL, Controller, Get, Headers, Res } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
@@ -11,11 +11,13 @@ import {
 import { type Response } from 'express';
 
 import { Public } from '../../../lib/auth/public.decorator';
+import { API_MAJOR } from '../../../lib/http/api-version';
 import { AgentReleaseDownloadDto } from '../dto/agent-release.dto';
 import { AgentReleaseService } from '../service/agent-release.service';
 
 @ApiTags('Atualização do agente')
-@Controller('agent/releases')
+// Agentes já instalados consultam `/api/agent/...`, sem versão; o caminho antigo segue respondendo.
+@Controller({ path: 'agent/releases', version: [API_MAJOR, VERSION_NEUTRAL] })
 export class AgentReleaseController {
   constructor(private readonly releases: AgentReleaseService) {}
 

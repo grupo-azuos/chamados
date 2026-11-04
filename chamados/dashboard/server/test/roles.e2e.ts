@@ -23,7 +23,7 @@ describe.skipIf(!testDatabaseUrl)('Roles API (e2e)', () => {
 
   const grant = (body: Record<string, unknown>, who = asOlga()) =>
     api()
-      .post('/api/roles')
+      .post('/api/v1/roles')
       .set(who)
       .send({ userId: BIA.id, userEmail: BIA.email, context: 'sistema', ...body });
 
@@ -54,13 +54,13 @@ describe.skipIf(!testDatabaseUrl)('Roles API (e2e)', () => {
     expect(again.body.id).toBe(first.body.id);
     expect(again.body.updatedBy).toBe('olga@empresa.com.br');
 
-    const all = await api().get('/api/roles').set(asOlga()).expect(200);
+    const all = await api().get('/api/v1/roles').set(asOlga()).expect(200);
     expect(all.body).toHaveLength(1);
   });
 
   it('grants several modules at once and lists them by person, by id or by e-mail', async () => {
     const granted = await api()
-      .post('/api/roles/batch')
+      .post('/api/v1/roles/batch')
       .set(asOlga())
       .send({ userId: CAIO.id, userEmail: CAIO.email, contexts: ['infra', 'manutencao'] })
       .expect(201);
@@ -71,43 +71,43 @@ describe.skipIf(!testDatabaseUrl)('Roles API (e2e)', () => {
 
     await grant({}).expect(201);
 
-    const byId = await api().get(`/api/roles/user/${CAIO.id}`).set(asOlga()).expect(200);
+    const byId = await api().get(`/api/v1/roles/user/${CAIO.id}`).set(asOlga()).expect(200);
     expect(byId.body.map((role: { context: string }) => role.context)).toEqual([
       'infra',
       'manutencao',
     ]);
 
-    const byEmail = await api().get(`/api/roles/user/${BIA.email}`).set(asOlga()).expect(200);
+    const byEmail = await api().get(`/api/v1/roles/user/${BIA.email}`).set(asOlga()).expect(200);
     expect(byEmail.body).toHaveLength(1);
 
     /* Sem admin-console configurado, a lista de pessoas avisa que o serviço está fora. */
-    await api().get('/api/roles/users').set(asOlga()).expect(503);
+    await api().get('/api/v1/roles/users').set(asOlga()).expect(503);
   });
 
   it('takes a module away', async () => {
     const granted = await grant({}).expect(201);
 
-    await api().delete(`/api/roles/${granted.body.id}`).set(asOlga()).expect(204);
+    await api().delete(`/api/v1/roles/${granted.body.id}`).set(asOlga()).expect(204);
 
-    const left = await api().get(`/api/roles/user/${BIA.id}`).set(asOlga()).expect(200);
+    const left = await api().get(`/api/v1/roles/user/${BIA.id}`).set(asOlga()).expect(200);
     expect(left.body).toEqual([]);
   });
 
   // triste
   it('answers 404 when taking away what does not exist, and 400 outside the contract', async () => {
-    await api().delete('/api/roles/999999').set(asOlga()).expect(404);
+    await api().delete('/api/v1/roles/999999').set(asOlga()).expect(404);
     await grant({ context: 'financeiro' }).expect(400);
     await api()
-      .post('/api/roles/batch')
+      .post('/api/v1/roles/batch')
       .set(asOlga())
       .send({ userId: CAIO.id, contexts: ['infra', 'infra'] })
       .expect(400);
   });
 
   it('closes the door to whoever is not the super admin', async () => {
-    await api().get('/api/roles').set(asAna()).expect(403);
+    await api().get('/api/v1/roles').set(asAna()).expect(403);
     await grant({}, asAna()).expect(403);
-    await api().get('/api/roles/users').set(asAna()).expect(403);
-    await api().get('/api/roles').expect(401);
+    await api().get('/api/v1/roles/users').set(asAna()).expect(403);
+    await api().get('/api/v1/roles').expect(401);
   });
 });

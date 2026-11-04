@@ -1,3 +1,6 @@
+vi.mock('../../../lib/auth/oauth-token.client', () => ({
+  serviceAuthorization: vi.fn().mockResolvedValue('Bearer oauth-test-token'),
+}));
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { type Env } from '../../../lib/config/env.schema';
@@ -5,12 +8,14 @@ import { HrDepartmentsRepository } from './hr-departments.repository';
 
 const env = {
   ADMIN_CONSOLE_URL: 'http://admin-console:3000/',
-  ADMIN_CONSOLE_TOKEN: 'um_chamados_segredo-de-teste',
+  ADMIN_CONSOLE_CLIENT_SECRET: 'um_chamados_segredo-de-teste',
   ADMIN_CONSOLE_TIMEOUT_MS: 4_000,
 } as Env;
 
 function answer(body: unknown, status = 200) {
-  return vi.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify(body), { status }));
+  return vi
+    .spyOn(global, 'fetch')
+    .mockResolvedValue(new Response(JSON.stringify(body), { status }));
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -37,16 +42,16 @@ describe('HrDepartmentsRepository', () => {
       'Recursos Humanos',
     ]);
     const [url, init] = fetcher.mock.calls[0] ?? [];
-    expect(String(url)).toBe('http://admin-console:3000/api/systems/me/organization-options');
-    expect((init?.headers as Record<string, string>).authorization).toBe(
-      'Bearer um_chamados_segredo-de-teste',
-    );
+    expect(String(url)).toBe('http://admin-console:3000/api/v1/systems/me/organization-options');
+    expect((init?.headers as Record<string, string>).authorization).toBe('Bearer oauth-test-token');
   });
 
   // triste
   /* RH fora do ar chega como 200 com lista vazia: tratar como vazio apagaria os departamentos. */
   it('fails, instead of answering empty, when the HR lists are unavailable', async () => {
-    answer({ data: { organizationOptions: { isAvailable: false, jobTitles: [], departments: [] } } });
+    answer({
+      data: { organizationOptions: { isAvailable: false, jobTitles: [], departments: [] } },
+    });
 
     await expect(new HrDepartmentsRepository(env).listNames()).rejects.toThrow('unavailable');
   });

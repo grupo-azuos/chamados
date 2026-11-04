@@ -1,0 +1,133 @@
+# Build local e atualização nativa do Swarm. Sem registry ou deploy no GitHub.
+
+[[repo]]
+name = "chamados-prod"
+tags = ["chamados", "core", "prod"]
+[repo.config]
+server = "core"
+git_provider = "github.com"
+git_account = "grupo-azuos"
+repo = "grupo-azuos/chamados"
+branch = "main"
+webhook_enabled = false
+env_file_path = ".komodo/bootstrap.env"
+environment = """
+INFISICAL_TOKEN=[[INFISICAL_PROD_TOKEN]]
+INFISICAL_DOMAIN=[[INFISICAL_API_URL]]
+"""
+[repo.config.on_pull]
+path = "."
+shell_mode = true
+command = '''
+set -eu
+chmod 600 .komodo/bootstrap.env
+docker run --rm --security-opt label=disable --network host \
+  --env-file .komodo/bootstrap.env \
+  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0="$PWD" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /etc/komodo/buildx:/etc/komodo/buildx:z \
+  -v "$PWD:$PWD:ro,z" -w "$PWD/chamados/dashboard" azuos-deploy-tools:1 \
+  infisical --silent run --expand=false --secret-overriding=false \
+  --projectId='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+  --env='[[INFISICAL_PROD_ENV_SLUG]]' --path=/ \
+  -- sh docker/deploy.sh production prod
+'''
+
+[[repo]]
+name = "chamados-staging"
+tags = ["chamados", "homo", "staging"]
+[repo.config]
+server = "homo"
+git_provider = "github.com"
+git_account = "grupo-azuos"
+repo = "grupo-azuos/chamados"
+branch = "develop"
+webhook_enabled = false
+env_file_path = ".komodo/bootstrap.env"
+environment = """
+INFISICAL_TOKEN=[[INFISICAL_STAGING_TOKEN]]
+INFISICAL_DOMAIN=[[INFISICAL_API_URL]]
+"""
+[repo.config.on_pull]
+path = "."
+shell_mode = true
+command = '''
+set -eu
+chmod 600 .komodo/bootstrap.env
+docker run --rm --security-opt label=disable --network host \
+  --env-file .komodo/bootstrap.env \
+  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0="$PWD" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /etc/komodo/buildx:/etc/komodo/buildx:z \
+  -v "$PWD:$PWD:ro,z" -w "$PWD/chamados/dashboard" azuos-deploy-tools:1 \
+  infisical --silent run --expand=false --secret-overriding=false \
+  --projectId='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+  --env='[[INFISICAL_STAGING_ENV_SLUG]]' --path=/ \
+  -- sh docker/deploy.sh staging staging
+'''
+
+[[repo]]
+name = "chamados-bot-prod"
+tags = ["chamados", "core", "prod"]
+[repo.config]
+server = "core"
+git_provider = "github.com"
+git_account = "grupo-azuos"
+repo = "grupo-azuos/chamados"
+branch = "main"
+webhook_enabled = false
+env_file_path = ".komodo/bootstrap.env"
+environment = """
+INFISICAL_TOKEN=[[INFISICAL_PROD_TOKEN]]
+INFISICAL_DOMAIN=[[INFISICAL_API_URL]]
+"""
+[repo.config.on_pull]
+path = "."
+shell_mode = true
+command = '''
+set -eu
+chmod 600 .komodo/bootstrap.env
+docker run --rm --security-opt label=disable --network host \
+  --env-file .komodo/bootstrap.env \
+  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0="$PWD" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /etc/komodo/buildx:/etc/komodo/buildx:z \
+  -v "$PWD:$PWD:ro,z" -w "$PWD/chamados/dashboard/bot" azuos-deploy-tools:1 \
+  infisical --silent run --expand=false --secret-overriding=false \
+  --projectId='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+  --env='[[INFISICAL_PROD_ENV_SLUG]]' --path=/ \
+  -- sh docker/deploy.sh production prod
+'''
+
+[[repo]]
+name = "chamados-bot-staging"
+tags = ["chamados", "homo", "staging"]
+[repo.config]
+server = "homo"
+git_provider = "github.com"
+git_account = "grupo-azuos"
+repo = "grupo-azuos/chamados"
+branch = "develop"
+webhook_enabled = false
+env_file_path = ".komodo/bootstrap.env"
+environment = """
+INFISICAL_TOKEN=[[INFISICAL_STAGING_TOKEN]]
+INFISICAL_DOMAIN=[[INFISICAL_API_URL]]
+"""
+[repo.config.on_pull]
+path = "."
+shell_mode = true
+command = '''
+set -eu
+chmod 600 .komodo/bootstrap.env
+docker run --rm --security-opt label=disable --network host \
+  --env-file .komodo/bootstrap.env \
+  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0="$PWD" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /etc/komodo/buildx:/etc/komodo/buildx:z \
+  -v "$PWD:$PWD:ro,z" -w "$PWD/chamados/dashboard/bot" azuos-deploy-tools:1 \
+  infisical --silent run --expand=false --secret-overriding=false \
+  --projectId='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+  --env='[[INFISICAL_STAGING_ENV_SLUG]]' --path=/ \
+  -- sh docker/deploy.sh staging staging
+'''

@@ -1,3 +1,4 @@
+import { backgroundJobsEnabled } from '../config/background-jobs.util';
 import {
   Inject,
   Injectable,
@@ -49,6 +50,7 @@ export class StagedUploadsService implements OnModuleInit, OnModuleDestroy {
   constructor(@Inject(STORAGE) private readonly storage: FileStorage) {}
 
   onModuleInit(): void {
+    if (!backgroundJobsEnabled()) return;
     this.sweeper = setInterval(() => void this.sweep(new Date()), SWEEP_INTERVAL_MS);
     /* A limpeza não pode segurar o processo vivo num desligamento. */
     this.sweeper.unref();

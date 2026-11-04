@@ -24,13 +24,13 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
 
   const registerPart = (body: Record<string, unknown>, who = asAna()) =>
     api()
-      .post('/api/parts')
+      .post('/api/v1/parts')
       .set(who)
       .send({ name: 'SSD 240 GB', category: 'ssd', condition: 'new', ...body });
 
   const registerComputer = async (name: string): Promise<number> => {
     const created = await api()
-      .post('/api/computers')
+      .post('/api/v1/computers')
       .set(asCaio())
       .send({ name, kind: 'desktop', department: 'RECEPÇÃO' })
       .expect(201);
@@ -39,7 +39,7 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
   };
 
   const move = (partId: number, body: Record<string, unknown>, who = asAna()) =>
-    api().post(`/api/parts/${partId}/movements`).set(who).send(body);
+    api().post(`/api/v1/parts/${partId}/movements`).set(who).send(body);
 
   beforeAll(async () => {
     started = await createE2eApp(testDatabaseUrl!);
@@ -67,7 +67,7 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
     });
 
     const movements = await api()
-      .get(`/api/parts/movements?partId=${created.body.id}`)
+      .get(`/api/v1/parts/movements?partId=${created.body.id}`)
       .set(asAna())
       .expect(200);
 
@@ -87,7 +87,7 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
     expect(created.body.balance).toBe(0);
 
     const movements = await api()
-      .get(`/api/parts/movements?partId=${created.body.id}`)
+      .get(`/api/v1/parts/movements?partId=${created.body.id}`)
       .set(asAna())
       .expect(200);
 
@@ -99,29 +99,29 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
     await registerPart({ name: 'SSD 480 GB', category: 'ssd', condition: 'used' }).expect(201);
     await registerPart({ name: 'SSD 240 GB', category: 'ssd', initialQuantity: 2 }).expect(201);
 
-    const all = await api().get('/api/parts').set(asBia()).expect(200);
+    const all = await api().get('/api/v1/parts').set(asBia()).expect(200);
     expect(all.body.items.map((part: { name: string }) => part.name)).toEqual([
       'Monitor 24"',
       'SSD 240 GB',
       'SSD 480 GB',
     ]);
 
-    const search = await api().get('/api/parts?search=ssd').set(asAna()).expect(200);
+    const search = await api().get('/api/v1/parts?search=ssd').set(asAna()).expect(200);
     expect(search.body.total).toBe(2);
 
-    const used = await api().get('/api/parts?condition=used').set(asAna()).expect(200);
+    const used = await api().get('/api/v1/parts?condition=used').set(asAna()).expect(200);
     expect(used.body.items).toHaveLength(1);
 
     const inStock = await api()
-      .get('/api/parts?category=ssd&inStockOnly=true')
+      .get('/api/v1/parts?category=ssd&inStockOnly=true')
       .set(asAna())
       .expect(200);
     expect(inStock.body.items.map((part: { name: string }) => part.name)).toEqual(['SSD 240 GB']);
 
-    const outOfStock = await api().get('/api/parts?outOfStockOnly=true').set(asAna()).expect(200);
+    const outOfStock = await api().get('/api/v1/parts?outOfStockOnly=true').set(asAna()).expect(200);
     expect(outOfStock.body.items.map((part: { name: string }) => part.name)).toEqual(['SSD 480 GB']);
 
-    const paged = await api().get('/api/parts?page=2&pageSize=2').set(asAna()).expect(200);
+    const paged = await api().get('/api/v1/parts?page=2&pageSize=2').set(asAna()).expect(200);
     expect(paged.body).toMatchObject({ total: 3, page: 2, pageSize: 2 });
     expect(paged.body.items).toHaveLength(1);
   });
@@ -129,12 +129,12 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
   it('opens and corrects a part without touching its balance', async () => {
     const created = await registerPart({ initialQuantity: 4 }).expect(201);
 
-    const found = await api().get(`/api/parts/${created.body.id}`).set(asBia()).expect(200);
+    const found = await api().get(`/api/v1/parts/${created.body.id}`).set(asBia()).expect(200);
     expect(found.body.balance).toBe(4);
 
     /* Caio é administrador: corrige o que Ana cadastrou. */
     const updated = await api()
-      .patch(`/api/parts/${created.body.id}`)
+      .patch(`/api/v1/parts/${created.body.id}`)
       .set(asCaio())
       .send({ name: 'SSD 240 GB Kingston', condition: 'used', balance: 99 })
       .expect(200);
@@ -170,16 +170,16 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
       createdBy: 'ana@empresa.com.br',
     });
 
-    const reloaded = await api().get(`/api/parts/${part.body.id}`).set(asAna()).expect(200);
+    const reloaded = await api().get(`/api/v1/parts/${part.body.id}`).set(asAna()).expect(200);
     expect(reloaded.body.balance).toBe(3);
 
     const byMachine = await api()
-      .get(`/api/parts/movements?computerId=${computerId}&type=out`)
+      .get(`/api/v1/parts/movements?computerId=${computerId}&type=out`)
       .set(asAna())
       .expect(200);
     expect(byMachine.body.total).toBe(1);
 
-    const entries = await api().get('/api/parts/movements?type=in').set(asAna()).expect(200);
+    const entries = await api().get('/api/v1/parts/movements?type=in').set(asAna()).expect(200);
     expect(entries.body.total).toBe(1);
   });
 
@@ -188,7 +188,7 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
     const out = await move(part.body.id, { type: 'out', quantity: 1 }).expect(201);
 
     const updated = await api()
-      .patch(`/api/parts/movements/${out.body.id}`)
+      .patch(`/api/v1/parts/movements/${out.body.id}`)
       .set(asAna())
       .send({ handledBy: 'João', note: 'Levou para a sala 2.' })
       .expect(200);
@@ -207,13 +207,13 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
     const second = await move(part.body.id, { type: 'out', quantity: 3 }).expect(201);
     expect(second.body.balanceAfter).toBe(3);
 
-    await api().delete(`/api/parts/movements/${first.body.id}`).set(asAna()).expect(204);
+    await api().delete(`/api/v1/parts/movements/${first.body.id}`).set(asAna()).expect(204);
 
-    const reloaded = await api().get(`/api/parts/${part.body.id}`).set(asAna()).expect(200);
+    const reloaded = await api().get(`/api/v1/parts/${part.body.id}`).set(asAna()).expect(200);
     expect(reloaded.body.balance).toBe(7);
 
     const statement = await api()
-      .get(`/api/parts/movements?partId=${part.body.id}`)
+      .get(`/api/v1/parts/movements?partId=${part.body.id}`)
       .set(asAna())
       .expect(200);
     const remaining = statement.body.items.find(
@@ -235,15 +235,15 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
   });
 
   it('answers 404 for a part or a movement that does not exist', async () => {
-    await api().get('/api/parts/999999').set(asAna()).expect(404);
-    await api().patch('/api/parts/999999').set(asAna()).send({ name: 'x' }).expect(404);
+    await api().get('/api/v1/parts/999999').set(asAna()).expect(404);
+    await api().patch('/api/v1/parts/999999').set(asAna()).send({ name: 'x' }).expect(404);
     await move(999999, { type: 'in', quantity: 1 }).expect(404);
     await api()
-      .patch('/api/parts/movements/999999')
+      .patch('/api/v1/parts/movements/999999')
       .set(asAna())
       .send({ note: 'x' })
       .expect(404);
-    await api().delete('/api/parts/movements/999999').set(asAna()).expect(404);
+    await api().delete('/api/v1/parts/movements/999999').set(asAna()).expect(404);
   });
 
   it('refuses a body outside the contract', async () => {
@@ -257,16 +257,16 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
   it('lets whoever only consults read, and refuses them to write', async () => {
     const part = await registerPart({ initialQuantity: 1 }).expect(201);
 
-    await api().get('/api/parts').set(asBia()).expect(200);
-    await api().get('/api/parts/movements').set(asBia()).expect(200);
+    await api().get('/api/v1/parts').set(asBia()).expect(200);
+    await api().get('/api/v1/parts/movements').set(asBia()).expect(200);
 
     await registerPart({}, asBia()).expect(403);
     await move(part.body.id, { type: 'in', quantity: 1 }, asBia()).expect(403);
-    await api().patch(`/api/parts/${part.body.id}`).set(asBia()).send({ name: 'x' }).expect(403);
+    await api().patch(`/api/v1/parts/${part.body.id}`).set(asBia()).send({ name: 'x' }).expect(403);
   });
 
   it('requires a session on every route', async () => {
-    await api().get('/api/parts').expect(401);
-    await api().post('/api/parts').send({ name: 'x' }).expect(401);
+    await api().get('/api/v1/parts').expect(401);
+    await api().post('/api/v1/parts').send({ name: 'x' }).expect(401);
   });
 });

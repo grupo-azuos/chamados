@@ -41,7 +41,7 @@ describe('apiRequest', () => {
 
     await apiRequest('/tickets', { query: { search: '', status: 'done', page: 1, owner: null } });
 
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/tickets?status=done&page=1');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/tickets?status=done&page=1');
   });
 
   it('answers undefined for 204, instead of failing to parse an empty body', async () => {
@@ -229,7 +229,7 @@ describe('http-client — the odd answers of the server and the storage', () => 
     const downloaded = await apiDownload('/tickets/export');
 
     expect(downloaded.fileName).toBe('relatorio');
-    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe('/api/tickets/export');
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe('/api/v1/tickets/export');
   });
 
   // triste

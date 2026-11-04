@@ -31,7 +31,7 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
 
   const registerComputer = async (name: string, extra: Record<string, unknown> = {}): Promise<number> => {
     const created = await api()
-      .post('/api/computers')
+      .post('/api/v1/computers')
       .set(asCaio())
       .send({ name, kind: 'desktop', department: 'RECEPÇÃO', ...extra })
       .expect(201);
@@ -41,7 +41,7 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
 
   const registerMaintenance = (computerId: number, type: string, performedAt: Date) =>
     api()
-      .post('/api/maintenances')
+      .post('/api/v1/maintenances')
       .set(asAna())
       .send({ computerId, type, performedAt: performedAt.toISOString() })
       .expect(201);
@@ -84,34 +84,34 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     await registerMaintenance(preventiveOk, 'preventive', NOW);
     await registerMaintenance(preventiveDue, 'corrective', EIGHT_MONTHS_AGO);
 
-    expect(names(await api().get('/api/computers?alert=any').set(asBia()).expect(200))).toEqual([
+    expect(names(await api().get('/api/v1/computers?alert=any').set(asBia()).expect(200))).toEqual([
       'PC-ALERTA',
     ]);
-    expect(names(await api().get('/api/computers?alert=cpu').set(asAna()).expect(200))).toEqual([
+    expect(names(await api().get('/api/v1/computers?alert=cpu').set(asAna()).expect(200))).toEqual([
       'PC-ALERTA',
     ]);
-    expect(names(await api().get('/api/computers?alert=memory').set(asAna()).expect(200))).toEqual(
+    expect(names(await api().get('/api/v1/computers?alert=memory').set(asAna()).expect(200))).toEqual(
       [],
     );
 
-    expect(names(await api().get('/api/computers?preventive=ok').set(asAna()).expect(200))).toEqual(
+    expect(names(await api().get('/api/v1/computers?preventive=ok').set(asAna()).expect(200))).toEqual(
       ['PC-EM-DIA'],
     );
-    expect(names(await api().get('/api/computers?preventive=due').set(asAna()).expect(200))).toEqual(
+    expect(names(await api().get('/api/v1/computers?preventive=due').set(asAna()).expect(200))).toEqual(
       ['PC-VENCIDA'],
     );
     expect(
-      names(await api().get('/api/computers?preventive=never').set(asAna()).expect(200)),
+      names(await api().get('/api/v1/computers?preventive=never').set(asAna()).expect(200)),
     ).toEqual(['PC-ALERTA', 'PC-NUNCA']);
     expect(
-      names(await api().get('/api/computers?preventive=needed').set(asAna()).expect(200)),
+      names(await api().get('/api/v1/computers?preventive=needed').set(asAna()).expect(200)),
     ).toEqual(['PC-ALERTA', 'PC-NUNCA', 'PC-VENCIDA']);
 
-    expect(names(await api().get('/api/computers?kind=notebook').set(asAna()).expect(200))).toEqual(
+    expect(names(await api().get('/api/v1/computers?kind=notebook').set(asAna()).expect(200))).toEqual(
       ['PC-EM-DIA'],
     );
     expect(
-      names(await api().get('/api/computers?healthStatus=critical').set(asAna()).expect(200)),
+      names(await api().get('/api/v1/computers?healthStatus=critical').set(asAna()).expect(200)),
     ).toEqual([]);
   });
 
@@ -132,7 +132,7 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     await registerComputer('PC-SEM-LEITURA');
 
     const byCondition = async (condition: string) =>
-      names(await api().get(`/api/computers?resourceCondition=${condition}`).set(asAna()).expect(200));
+      names(await api().get(`/api/v1/computers?resourceCondition=${condition}`).set(asAna()).expect(200));
 
     expect(await byCondition('disk-critical')).toEqual(['PC-DISCO-CHEIO']);
     expect(await byCondition('disk-low')).toEqual(['PC-DISCO-BAIXO']);
@@ -141,17 +141,17 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     expect(await byCondition('ok')).toEqual(['PC-EM-DIA']);
     expect(await byCondition('unknown')).toEqual(['PC-SEM-LEITURA']);
     // triste
-    await api().get('/api/computers?resourceCondition=quebrado').set(asAna()).expect(400);
+    await api().get('/api/v1/computers?resourceCondition=quebrado').set(asAna()).expect(400);
   });
 
   it('filters by presence: nobody is online in the test, so offline is everyone', async () => {
     await registerComputer('PC-DESLIGADO');
 
-    expect(names(await api().get('/api/computers?onlyOnline=true').set(asAna()).expect(200))).toEqual(
+    expect(names(await api().get('/api/v1/computers?onlyOnline=true').set(asAna()).expect(200))).toEqual(
       [],
     );
     expect(
-      names(await api().get('/api/computers?onlyOffline=true').set(asAna()).expect(200)),
+      names(await api().get('/api/v1/computers?onlyOffline=true').set(asAna()).expect(200)),
     ).toEqual(['PC-DESLIGADO']);
   });
 
@@ -159,16 +159,16 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     const scrapped = await registerComputer('PC-SUCATA');
     await registerComputer('PC-VIVO');
     await api()
-      .post(`/api/computers/${scrapped}/disposal`)
+      .post(`/api/v1/computers/${scrapped}/disposal`)
       .set(asCaio())
       .send({ type: 'scrap', reason: 'Placa-mãe queimada e sem conserto.' })
       .expect(201);
 
-    expect(names(await api().get('/api/computers').set(asAna()).expect(200))).toEqual(['PC-VIVO']);
+    expect(names(await api().get('/api/v1/computers').set(asAna()).expect(200))).toEqual(['PC-VIVO']);
     expect(
       names(
         await api()
-          .get('/api/computers?onlyDisposed=true&disposalType=scrap')
+          .get('/api/v1/computers?onlyDisposed=true&disposalType=scrap')
           .set(asAna())
           .expect(200),
       ),
@@ -176,7 +176,7 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     expect(
       names(
         await api()
-          .get('/api/computers?onlyDisposed=true&disposalType=defect')
+          .get('/api/v1/computers?onlyDisposed=true&disposalType=defect')
           .set(asAna())
           .expect(200),
       ),
@@ -208,18 +208,18 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
       },
     ]);
 
-    const samples = await api().get(`/api/computers/${id}/samples`).set(asBia()).expect(200);
+    const samples = await api().get(`/api/v1/computers/${id}/samples`).set(asBia()).expect(200);
     expect(samples.body).toHaveLength(2);
 
     const alerts = await api()
-      .get(`/api/computers/${id}/alerts?page=1&pageSize=1`)
+      .get(`/api/v1/computers/${id}/alerts?page=1&pageSize=1`)
       .set(asBia())
       .expect(200);
     expect(alerts.body.total).toBe(2);
     expect(alerts.body.items).toHaveLength(1);
     expect(alerts.body.items[0].metric).toBe('cpu');
 
-    const live = await api().get(`/api/computers/${id}/live`).set(asAna()).expect(200);
+    const live = await api().get(`/api/v1/computers/${id}/live`).set(asAna()).expect(200);
     expect(live.body).toBeTruthy();
   });
 
@@ -234,19 +234,19 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
       .set({ totalMemoryBytes: 8 * 1024 ** 3, os: 'Windows 11' })
       .where(eq(computers.id, measured));
     await api()
-      .patch(`/api/computers/${archived}`)
+      .patch(`/api/v1/computers/${archived}`)
       .set(asCaio())
       .send({ isArchived: true })
       .expect(200);
     await api()
-      .post(`/api/computers/${disposed}/disposal`)
+      .post(`/api/v1/computers/${disposed}/disposal`)
       .set(asCaio())
       .send({ type: 'defect', reason: 'Não liga mais.' })
       .expect(201);
 
     /* O parque inteiro, com as arquivadas, e só as descartadas: as três situações no papel. */
     const whole = await api()
-      .get('/api/computers/export?format=xlsx&includeArchived=true')
+      .get('/api/v1/computers/export?format=xlsx&includeArchived=true')
       .set(asAna())
       .buffer(true)
       .parse((response, callback) => {
@@ -257,7 +257,7 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
       .expect(200);
     expect((whole.body as Buffer).length).toBeGreaterThan(100);
     await api()
-      .get('/api/computers/export?format=pdf&onlyDisposed=true')
+      .get('/api/v1/computers/export?format=pdf&onlyDisposed=true')
       .set(asAna())
       .buffer(true)
       .parse((response, callback) => {
@@ -269,7 +269,7 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
 
     for (const format of ['xlsx', 'docx', 'pdf']) {
       const file = await api()
-        .get(`/api/computers/export?format=${format}&kind=notebook&onlyOffline=true`)
+        .get(`/api/v1/computers/export?format=${format}&kind=notebook&onlyOffline=true`)
         .set(asAna())
         .buffer(true)
         .parse((response, callback) => {
@@ -286,10 +286,10 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
 
   // triste
   it('refuses a filter outside the contract and a machine that does not exist', async () => {
-    await api().get('/api/computers?alert=gpu').set(asAna()).expect(400);
-    await api().get('/api/computers?preventive=amanha').set(asAna()).expect(400);
-    await api().get('/api/computers/export?format=txt').set(asAna()).expect(400);
-    await api().get('/api/computers/999999/samples').set(asAna()).expect(404);
-    await api().get('/api/computers/999999/alerts').set(asAna()).expect(404);
+    await api().get('/api/v1/computers?alert=gpu').set(asAna()).expect(400);
+    await api().get('/api/v1/computers?preventive=amanha').set(asAna()).expect(400);
+    await api().get('/api/v1/computers/export?format=txt').set(asAna()).expect(400);
+    await api().get('/api/v1/computers/999999/samples').set(asAna()).expect(404);
+    await api().get('/api/v1/computers/999999/alerts').set(asAna()).expect(404);
   });
 });

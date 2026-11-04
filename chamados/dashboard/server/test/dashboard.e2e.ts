@@ -27,7 +27,7 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
 
   const registerComputer = async (name: string, department = 'RECEPÇÃO'): Promise<number> => {
     const created = await api()
-      .post('/api/computers')
+      .post('/api/v1/computers')
       .set(asCaio())
       .send({ name, kind: 'desktop', department })
       .expect(201);
@@ -37,7 +37,7 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
 
   const registerMaintenance = (computerId: number, type: string, performedAt = NOW) =>
     api()
-      .post('/api/maintenances')
+      .post('/api/v1/maintenances')
       .set(asAna())
       .send({ computerId, type, performedAt: performedAt.toISOString(), description: 'Feito.' })
       .expect(201);
@@ -75,7 +75,7 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
 
   // feliz
   it('answers zeroed with an empty park', async () => {
-    const summary = await api().get('/api/dashboard').set(asBia()).expect(200);
+    const summary = await api().get('/api/v1/dashboard').set(asBia()).expect(200);
 
     expect(summary.body).toMatchObject({
       park: { total: 0, critical: 0, attention: 0, neverSeen: 0 },
@@ -135,17 +135,17 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
     ]);
 
     await api()
-      .post('/api/parts')
+      .post('/api/v1/parts')
       .set(asAna())
       .send({ name: 'SSD', category: 'ssd', condition: 'new', initialQuantity: 3 })
       .expect(201);
     await api()
-      .post('/api/parts')
+      .post('/api/v1/parts')
       .set(asAna())
       .send({ name: 'Mouse', category: 'mouse', condition: 'used' })
       .expect(201);
 
-    const summary = await api().get('/api/dashboard?days=30').set(asAna()).expect(200);
+    const summary = await api().get('/api/v1/dashboard?days=30').set(asAna()).expect(200);
 
     expect(summary.body.days).toBe(30);
     expect(summary.body.park).toMatchObject({ total: 3, neverSeen: 3 });
@@ -195,8 +195,8 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
 
   // triste
   it('refuses a period outside the contract and requires a session', async () => {
-    await api().get('/api/dashboard?days=0').set(asAna()).expect(400);
-    await api().get('/api/dashboard?days=abc').set(asAna()).expect(400);
-    await api().get('/api/dashboard').expect(401);
+    await api().get('/api/v1/dashboard?days=0').set(asAna()).expect(400);
+    await api().get('/api/v1/dashboard?days=abc').set(asAna()).expect(400);
+    await api().get('/api/v1/dashboard').expect(401);
   });
 });

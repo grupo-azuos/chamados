@@ -19,7 +19,7 @@ const config = {
   API_CORS_ORIGIN: 'http://localhost:5001',
   GITHUB_OAUTH_CLIENT_ID: 'test-client',
   GITHUB_OAUTH_CLIENT_SECRET: 'test-secret',
-  GITHUB_OAUTH_REDIRECT_URI: 'http://localhost:5001/api/integrations/github/callback',
+  GITHUB_OAUTH_REDIRECT_URI: 'http://localhost:5001/api/v1/integrations/github/callback',
   GITHUB_OAUTH_FRONTEND_URL: 'http://localhost:5001',
   GITHUB_OAUTH_ENCRYPTION_KEY: key,
 } as Env;
@@ -83,7 +83,7 @@ describe('GitHub OAuth HTTP flow', () => {
 
   async function begin() {
     const response = await request(app.getHttpServer())
-      .post('/api/integrations/github/authorize')
+      .post('/api/v1/integrations/github/authorize')
       .set('Authorization', 'Bearer local-session')
       .expect(201);
     const state = new URL(response.body.url).searchParams.get('state')!;
@@ -92,7 +92,7 @@ describe('GitHub OAuth HTTP flow', () => {
   }
 
   it('requires a local session before linking an account', async () => {
-    await request(app.getHttpServer()).post('/api/integrations/github/authorize').expect(401);
+    await request(app.getHttpServer()).post('/api/v1/integrations/github/authorize').expect(401);
     expect(pending).toBeUndefined();
   });
 
@@ -110,7 +110,7 @@ describe('GitHub OAuth HTTP flow', () => {
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ id: 123, login: 'developer' })));
     const callback = await request(app.getHttpServer())
-      .get('/api/integrations/github/callback')
+      .get('/api/v1/integrations/github/callback')
       .query({ state, code: 'github-code' })
       .set('Cookie', cookie)
       .expect(303);
@@ -118,7 +118,7 @@ describe('GitHub OAuth HTTP flow', () => {
     expect(linked).toMatchObject({ userId: 'local-admin', githubId: '123', login: 'developer' });
     expect(decryptGithubToken(linked!.accessToken as string, key)).toBe('github-token');
     await request(app.getHttpServer())
-      .get('/api/integrations/github/callback')
+      .get('/api/v1/integrations/github/callback')
       .query({ state, code: 'github-code' })
       .set('Cookie', cookie)
       .expect(303)
@@ -129,7 +129,7 @@ describe('GitHub OAuth HTTP flow', () => {
   it('refuses callbacks from a browser without the authorization cookie', async () => {
     const { state } = await begin();
     await request(app.getHttpServer())
-      .get('/api/integrations/github/callback')
+      .get('/api/v1/integrations/github/callback')
       .query({ state, code: 'github-code' })
       .expect(303)
       .expect('Location', 'http://localhost:5001/system/dashboard?github_error=failed');
@@ -140,7 +140,7 @@ describe('GitHub OAuth HTTP flow', () => {
   it('returns cancellation to the dashboard without saving a link', async () => {
     const { state, cookie } = await begin();
     await request(app.getHttpServer())
-      .get('/api/integrations/github/callback')
+      .get('/api/v1/integrations/github/callback')
       .query({ state, error: 'access_denied' })
       .set('Cookie', cookie)
       .expect(303)

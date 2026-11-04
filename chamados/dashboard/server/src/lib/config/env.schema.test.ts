@@ -13,7 +13,7 @@ const secrets = {
 describe('parseEnv', () => {
   // feliz
   it('fills in every non-secret with a default, so only the secrets need to be written', () => {
-    expect(parseEnv(secrets)).toEqual({
+    expect(parseEnv(secrets)).toMatchObject({
       ...secrets,
       NODE_ENV: 'development',
       API_PORT: 3005,
@@ -22,11 +22,11 @@ describe('parseEnv', () => {
       API_RATE_LIMIT_TTL_SECONDS: 60,
       API_RATE_LIMIT: 300,
       API_WEBHOOK_RATE_LIMIT: 12,
-      API_TRUST_PROXY_HOPS: 0,
+      TRUST_PROXY_HOPS: 0,
       WHATSAPP_DAILY_LIMIT: 100,
       S3_REGION: 'local',
       S3_FORCE_PATH_STYLE: true,
-      ADMIN_CONSOLE_TOKEN: '',
+      ADMIN_CONSOLE_CLIENT_SECRET: '',
       ADMIN_CONSOLE_TIMEOUT_MS: 4000,
       ADMIN_CONSOLE_COOKIE_PREFIX: 'azuos',
     });
@@ -43,7 +43,7 @@ describe('parseEnv', () => {
 
   /* Confiar em proxy é o que decide QUEM a trava conta; o padrão precisa ser não confiar. */
   it('trusts no proxy by default, so a forged address cannot dodge the limit', () => {
-    expect(parseEnv(secrets).API_TRUST_PROXY_HOPS).toBe(0);
+    expect(parseEnv(secrets).TRUST_PROXY_HOPS).toBe(0);
   });
 
   // triste

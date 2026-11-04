@@ -90,7 +90,7 @@ try {
         $ServerUrl = ''
         foreach ($candidateUrl in @('https://chamados.homo.grupoazuos.com.br', 'https://chamados.grupoazuos.com.br')) {
             try {
-                $resp = Invoke-WebRequest -Uri "$candidateUrl/api/agent/releases/latest" \`
+                $resp = Invoke-WebRequest -Uri "$candidateUrl/api/v1/agent/releases/latest" \`
                     -Headers @{ Authorization = "Bearer $Token" } \`
                     -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
                 $ServerUrl = $candidateUrl
@@ -134,7 +134,7 @@ try {
     if (-not $targetMsi -or -not (Test-Path -LiteralPath $targetMsi)) {
         if (-not $releaseInfo) {
             try {
-                $releaseInfo = Invoke-RestMethod -Uri "$ServerUrl/api/agent/releases/latest" \`
+                $releaseInfo = Invoke-RestMethod -Uri "$ServerUrl/api/v1/agent/releases/latest" \`
                     -Headers @{ Authorization = "Bearer $Token" } \`
                     -Method Get -TimeoutSec 15 -ErrorAction Stop
             } catch {}

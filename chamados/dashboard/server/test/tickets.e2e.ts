@@ -57,7 +57,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
   /* Abrir chamado exige login: quem abre é a Ana, e o chamado fica ligado a ela. */
   const openTicket = (extra: Record<string, unknown> = {}) =>
     request(app.getHttpServer())
-      .post('/api/tickets')
+      .post('/api/v1/tickets')
       .set(asAna())
       .send({ ...PEDIDO, ...extra });
 
@@ -70,7 +70,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
    */
   const sendFile = async (
     file: { content: Buffer; fileName: string; contentType: string; sentAs?: string },
-    link = { path: '/api/tickets/upload-url', as: asAna() },
+    link = { path: '/api/v1/tickets/upload-url', as: asAna() },
   ) => {
     const ticket = await request(app.getHttpServer())
       .post(link.path)
@@ -98,7 +98,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
   });
   /* O link para juntar arquivo a um chamado aberto é de quem atende: o Caio. */
   const asSupport = (ticketId: number) => ({
-    path: `/api/tickets/${ticketId}/attachments/upload-url`,
+    path: `/api/v1/tickets/${ticketId}/attachments/upload-url`,
     as: asCaio(),
   });
 
@@ -141,7 +141,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
   /* O sistema não tem rota pública: sem login, não se abre chamado. */
   it('refuses to open a ticket without identity', async () => {
     await request(app.getHttpServer())
-      .post('/api/tickets')
+      .post('/api/v1/tickets')
       .send({ description: PEDIDO.description })
       .expect(401);
   });
@@ -181,7 +181,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
   /* O link de envio exige login como todo o resto: sem ele, ninguém ganha espaço no storage. */
   it('gives no upload link without identity', async () => {
     await request(app.getHttpServer())
-      .post('/api/tickets/upload-url')
+      .post('/api/v1/tickets/upload-url')
       .send({ fileName: 'nota.pdf', contentType: PDF, sizeBytes: 10 })
       .expect(401);
   });
@@ -206,7 +206,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const created = await openTicket().expect(201);
     const launch = (type: string, description: string) =>
       request(app.getHttpServer())
-        .post(`/api/tickets/${created.body.id}/histories`)
+        .post(`/api/v1/tickets/${created.body.id}/histories`)
         .set(asCaio())
         .send({ type, description });
 
@@ -224,7 +224,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     );
 
     const ticket = await request(app.getHttpServer())
-      .get(`/api/tickets/${created.body.id}`)
+      .get(`/api/v1/tickets/${created.body.id}`)
       .set(asCaio())
       .expect(200);
 
@@ -238,7 +238,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     expect(ticket.body.resolvedAt).not.toBeNull();
 
     const timeline = await request(app.getHttpServer())
-      .get(`/api/tickets/${created.body.id}/histories`)
+      .get(`/api/v1/tickets/${created.body.id}/histories`)
       .set(asCaio())
       .expect(200);
 
@@ -259,7 +259,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const attachments = [await sendFile(orcamento(), asSupport(created.body.id))];
 
     const history = await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/histories`)
+      .post(`/api/v1/tickets/${created.body.id}/histories`)
       .set(asCaio())
       .send({
         type: 'note',
@@ -284,7 +284,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const created = await openTicket().expect(201);
 
     const report = await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/service-order`)
+      .post(`/api/v1/tickets/${created.body.id}/service-order`)
       .set(asCaio())
       .buffer(true)
       .parse((res, done) => {
@@ -305,7 +305,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     expect(issued).toMatchObject({ version: 1, fileHash, issuedBy: CAIO.email });
 
     const checked = await request(app.getHttpServer())
-      .get(`/api/service-orders/${issued!.code.slice(0, 12)}`)
+      .get(`/api/v1/service-orders/${issued!.code.slice(0, 12)}`)
       .set(asCaio())
       .expect(200);
 
@@ -322,7 +322,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const created = await openTicket().expect(201);
     const issue = () =>
       request(app.getHttpServer())
-        .post(`/api/tickets/${created.body.id}/service-order`)
+        .post(`/api/v1/tickets/${created.body.id}/service-order`)
         .set(asCaio())
         .expect(201);
 
@@ -331,7 +331,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     expect(await started.db.select().from(ticketServiceOrders)).toHaveLength(1);
 
     await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/histories`)
+      .post(`/api/v1/tickets/${created.body.id}/histories`)
       .set(asCaio())
       .send({ type: 'note', description: 'Liguei para o fornecedor.' })
       .expect(201);
@@ -347,7 +347,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
   it('refuses, in the database itself, to rewrite or erase the records of a ticket', async () => {
     const created = await openTicket().expect(201);
     await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/service-order`)
+      .post(`/api/v1/tickets/${created.body.id}/service-order`)
       .set(asCaio())
       .expect(201);
 
@@ -368,24 +368,24 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     expect(history?.description).toBe('Chamado aberto.');
     expect(await db.select().from(ticketServiceOrders)).toHaveLength(1);
     await request(app.getHttpServer())
-      .get(`/api/tickets/${created.body.id}`)
+      .get(`/api/v1/tickets/${created.body.id}`)
       .set(asCaio())
       .expect(200);
   });
 
   it('does not find a service order that was never issued', async () => {
     await request(app.getHttpServer())
-      .get(`/api/service-orders/${'0'.repeat(64)}`)
+      .get(`/api/v1/service-orders/${'0'.repeat(64)}`)
       .set(asCaio())
       .expect(404);
-    await request(app.getHttpServer()).get('/api/service-orders/abc').set(asCaio()).expect(404);
+    await request(app.getHttpServer()).get('/api/v1/service-orders/abc').set(asCaio()).expect(404);
   });
 
   it('lets the IT side correct the ticket data and attach its own files', async () => {
     const created = await openTicket().expect(201);
 
     const answered = await request(app.getHttpServer())
-      .patch(`/api/tickets/${created.body.id}`)
+      .patch(`/api/v1/tickets/${created.body.id}`)
       .set(asCaio())
       .send({ priority: 'high', assignee: 'Outra Pessoa' })
       .expect(200);
@@ -399,14 +399,14 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
 
     /* A correção fica na linha do tempo, sozinha — e escondida de quem abriu. */
     const timeline = await request(app.getHttpServer())
-      .get(`/api/tickets/${created.body.id}/histories`)
+      .get(`/api/v1/tickets/${created.body.id}/histories`)
       .set(asCaio())
       .expect(200);
 
     expect(timeline.body.at(-1)).toMatchObject({ type: 'update', isVisibleToRequester: false });
 
     const attached = await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/attachments`)
+      .post(`/api/v1/tickets/${created.body.id}/attachments`)
       .set(asCaio())
       .send({ attachments: [await sendFile(orcamento(), asSupport(created.body.id))] })
       .expect(201);
@@ -423,7 +423,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const created = await openTicket({ attachments: [await sendFile(nota())] }).expect(201);
 
     await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/histories`)
+      .post(`/api/v1/tickets/${created.body.id}/histories`)
       .set(asCaio())
       .send({
         type: 'note',
@@ -433,19 +433,19 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
       .expect(201);
 
     await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/histories`)
+      .post(`/api/v1/tickets/${created.body.id}/histories`)
       .set(asCaio())
       .send({ type: 'resolution', description: 'Troquei o rolete.' })
       .expect(201);
 
     await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/attachments`)
+      .post(`/api/v1/tickets/${created.body.id}/attachments`)
       .set(asCaio())
       .send({ attachments: [await sendFile(orcamento(), asSupport(created.body.id))] })
       .expect(201);
 
     const found = await request(app.getHttpServer())
-      .get('/api/tickets/protocol/CH-0001')
+      .get('/api/v1/tickets/protocol/CH-0001')
       .set(asCaio())
       .expect(200);
 
@@ -480,7 +480,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const created = await openTicket().expect(201);
     const launch = (type: string) =>
       request(app.getHttpServer())
-        .post(`/api/tickets/${created.body.id}/histories`)
+        .post(`/api/v1/tickets/${created.body.id}/histories`)
         .set(asCaio())
         .send({ type, description: 'Registro de teste.' });
 
@@ -498,7 +498,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const created = await openTicket().expect(201);
 
     const patched = await request(app.getHttpServer())
-      .patch(`/api/tickets/${created.body.id}`)
+      .patch(`/api/v1/tickets/${created.body.id}`)
       .set(asCaio())
       .send({ status: 'resolved', solution: 'Fechei por fora.' })
       .expect(200);
@@ -512,7 +512,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
 
     for (const typed of ['CH-0001', 'ch 1', '0001', '1']) {
       const found = await request(app.getHttpServer())
-        .get(`/api/tickets/protocol/${encodeURIComponent(typed)}`)
+        .get(`/api/v1/tickets/protocol/${encodeURIComponent(typed)}`)
         .set(asCaio())
         .expect(200);
 
@@ -527,7 +527,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
 
     for (const typed of ['CH-0001', 'ch 1', '1']) {
       const found = await request(app.getHttpServer())
-        .get('/api/tickets')
+        .get('/api/v1/tickets')
         .query({ search: typed })
         .set(asCaio())
         .expect(200);
@@ -541,7 +541,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const created = await openTicket().expect(201);
 
     const attached = await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/attachments`)
+      .post(`/api/v1/tickets/${created.body.id}/attachments`)
       .set(asCaio())
       .send({ attachments: [await sendFile(orcamento(), asSupport(created.body.id))] })
       .expect(201);
@@ -549,7 +549,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     expect(started.storage.size).toBe(1);
 
     await request(app.getHttpServer())
-      .delete(`/api/tickets/${created.body.id}/attachments/${attached.body[0].id}`)
+      .delete(`/api/v1/tickets/${created.body.id}/attachments/${attached.body[0].id}`)
       .set(asCaio())
       .expect(204);
 
@@ -558,7 +558,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     expect(started.storage.size).toBe(0);
 
     const left = await request(app.getHttpServer())
-      .get(`/api/tickets/${created.body.id}/attachments`)
+      .get(`/api/v1/tickets/${created.body.id}/attachments`)
       .set(asCaio())
       .expect(200);
 
@@ -576,7 +576,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const created = await openTicket({ attachments: [await sendFile(nota())] }).expect(201);
 
     const files = await request(app.getHttpServer())
-      .get(`/api/tickets/${created.body.id}/attachments`)
+      .get(`/api/v1/tickets/${created.body.id}/attachments`)
       .set(asCaio())
       .expect(200);
 
@@ -585,7 +585,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     );
 
     const refused = await request(app.getHttpServer())
-      .delete(`/api/tickets/${created.body.id}/attachments/${fromRequester.id}`)
+      .delete(`/api/v1/tickets/${created.body.id}/attachments/${fromRequester.id}`)
       .set(asCaio())
       .expect(403);
 
@@ -606,29 +606,29 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const created = await openTicket({ attachments: [await sendFile(nota())] }).expect(201);
 
     const files = await request(app.getHttpServer())
-      .get(`/api/tickets/${created.body.id}/attachments`)
+      .get(`/api/v1/tickets/${created.body.id}/attachments`)
       .set(asCaio())
       .expect(200);
 
     /* Sem identidade: 401 em excluir, em listar e em anexar. */
     await request(app.getHttpServer())
-      .delete(`/api/tickets/${created.body.id}/attachments/${files.body[0].id}`)
+      .delete(`/api/v1/tickets/${created.body.id}/attachments/${files.body[0].id}`)
       .expect(401);
     await request(app.getHttpServer())
-      .get(`/api/tickets/${created.body.id}/attachments`)
+      .get(`/api/v1/tickets/${created.body.id}/attachments`)
       .expect(401);
     await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/attachments/upload-url`)
+      .post(`/api/v1/tickets/${created.body.id}/attachments/upload-url`)
       .send({ fileName: 'qualquer.pdf', contentType: PDF, sizeBytes: 10 })
       .expect(401);
     await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/attachments`)
+      .post(`/api/v1/tickets/${created.body.id}/attachments`)
       .send({ attachments: [] })
       .expect(401);
 
     /* E o arquivo dela continua lá, visível na consulta pública. */
     const found = await request(app.getHttpServer())
-      .get('/api/tickets/protocol/CH-0001')
+      .get('/api/v1/tickets/protocol/CH-0001')
       .set(asCaio())
       .expect(200);
 
@@ -638,7 +638,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
   // triste
   it('gives no upload link for a file that is not in the catalogue', async () => {
     await request(app.getHttpServer())
-      .post('/api/tickets/upload-url')
+      .post('/api/v1/tickets/upload-url')
       .set(asAna())
       .send({ fileName: 'instalador.exe', contentType: 'application/x-msdownload', sizeBytes: 10 })
       .expect(400);
@@ -664,7 +664,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     /* O CHAMADO FICA. Perder o pedido de socorro por causa de um arquivo recusado seria o pior
        dos dois males: quem enviou vê o protocolo e anexa o resto pelo painel. */
     const found = await request(app.getHttpServer())
-      .get('/api/tickets/protocol/CH-0001')
+      .get('/api/v1/tickets/protocol/CH-0001')
       .set(asCaio())
       .expect(200);
 
@@ -706,28 +706,28 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
 
   it('answers 404 for a protocol that does not exist, and for one that is not a number', async () => {
     await request(app.getHttpServer())
-      .get('/api/tickets/protocol/CH-9999')
+      .get('/api/v1/tickets/protocol/CH-9999')
       .set(asCaio())
       .expect(404);
     await request(app.getHttpServer())
-      .get('/api/tickets/protocol/nao-e-protocolo')
+      .get('/api/v1/tickets/protocol/nao-e-protocolo')
       .set(asCaio())
       .expect(404);
   });
 
   /* A porta do PAINEL é fechada: a pública é só abrir e consultar por protocolo. */
   it('keeps the panel closed without a token', async () => {
-    await request(app.getHttpServer()).get('/api/tickets').expect(401);
-    await request(app.getHttpServer()).get('/api/tickets/1').expect(401);
-    await request(app.getHttpServer()).get('/api/tickets/dashboard').expect(401);
+    await request(app.getHttpServer()).get('/api/v1/tickets').expect(401);
+    await request(app.getHttpServer()).get('/api/v1/tickets/1').expect(401);
+    await request(app.getHttpServer()).get('/api/v1/tickets/dashboard').expect(401);
     await request(app.getHttpServer())
-      .patch('/api/tickets/1')
+      .patch('/api/v1/tickets/1')
       .send({ priority: 'high' })
       .expect(401);
-    await request(app.getHttpServer()).get('/api/tickets/1/histories').expect(401);
-    await request(app.getHttpServer()).post('/api/tickets/1/service-order').expect(401);
+    await request(app.getHttpServer()).get('/api/v1/tickets/1/histories').expect(401);
+    await request(app.getHttpServer()).post('/api/v1/tickets/1/service-order').expect(401);
     await request(app.getHttpServer())
-      .post('/api/tickets/1/histories')
+      .post('/api/v1/tickets/1/histories')
       .send({ type: 'resolution', description: 'Fechei sem me identificar.' })
       .expect(401);
   });
@@ -738,13 +738,13 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     const created = await openTicket().expect(201);
 
     await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/histories`)
+      .post(`/api/v1/tickets/${created.body.id}/histories`)
       .set(asCaio())
       .send({ type: 'start', description: 'Assumi o chamado.' })
       .expect(201);
 
     await request(app.getHttpServer())
-      .post(`/api/tickets/${created.body.id}/histories`)
+      .post(`/api/v1/tickets/${created.body.id}/histories`)
       .set(asStranger())
       .send({ type: 'resolution', description: 'Fechei sem me identificar.' })
       .expect(401);

@@ -1,9 +1,9 @@
 {
   "name": "server",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "license": "MIT",
-  "description": "API NestJS do template — um caminho de escrita por dado, SQLite por baixo.",
+  "description": "API NestJS do template \u2014 um caminho de escrita por dado, SQLite por baixo.",
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
@@ -45,6 +45,7 @@
     "drizzle-orm": "^0.45.2",
     "exceljs": "^4.4.0",
     "helmet": "^8.3.0",
+    "iovalkey": "0.4.0",
     "jose": "^6.2.12",
     "nestjs-pino": "^5.3.1",
     "nestjs-zod": "^5.5.0",

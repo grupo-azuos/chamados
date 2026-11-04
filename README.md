@@ -1,3 +1,5 @@
+> Infraestrutura e autenticação de produção: siga [o contrato atual de deploy](docs/production-deployment.md). As instruções antigas de Coolify/Traefik e tokens de vínculo abaixo são do arranjo anterior.
+
 # Azuos Chamados
 
 MVP para validar uma ideia com gente de verdade usando, construído a partir de um template de código com padrão consistente.
@@ -153,18 +155,18 @@ chamados/                             # raiz do repositório git
 
 ## Stack
 
-| Camada                          | Escolha                                                     |
-| ------------------------------- | ----------------------------------------------------------- |
-| **Backend**                     | NestJS 11 + Swagger (`nestjs-zod`)                          |
-| **Banco**                       | **Postgres** do **Supabase** via **Drizzle ORM**             |
-| **Arquivos**                    | Supabase Storage pela API S3                                 |
-| **Frontend**                    | SvelteKit (Svelte 5) + Vite + TypeScript                     |
-| **Dados / Formulários**         | TanStack Query · Form (versões Svelte)                       |
-| **Validação**                   | Zod — o mesmo schema na API e na tela                       |
-| **UI**                          | shadcn-svelte + Tailwind v4 · ícones Lucide · animação GSAP |
-| **Documentação de UI**          | Storybook                                                   |
-| **Testes**                      | Vitest · Testing Library · Supertest · Playwright · Stryker |
-| **Qualidade**                   | ESLint + Prettier · commitlint + husky                      |
+| Camada                  | Escolha                                                     |
+| ----------------------- | ----------------------------------------------------------- |
+| **Backend**             | NestJS 11 + Swagger (`nestjs-zod`)                          |
+| **Banco**               | **Postgres** do **Supabase** via **Drizzle ORM**            |
+| **Arquivos**            | Supabase Storage pela API S3                                |
+| **Frontend**            | SvelteKit (Svelte 5) + Vite + TypeScript                    |
+| **Dados / Formulários** | TanStack Query · Form (versões Svelte)                      |
+| **Validação**           | Zod — o mesmo schema na API e na tela                       |
+| **UI**                  | shadcn-svelte + Tailwind v4 · ícones Lucide · animação GSAP |
+| **Documentação de UI**  | Storybook                                                   |
+| **Testes**              | Vitest · Testing Library · Supertest · Playwright · Stryker |
+| **Qualidade**           | ESLint + Prettier · commitlint + husky                      |
 
 ### O banco é compartilhado com os outros sistemas
 
@@ -197,10 +199,10 @@ antes deste fluxo continuam onde estavam: mesmas chaves, mesmo bucket.
 
 O `S3_ENDPOINT` é sempre o endereço **público** — é ele que vai nos links que o navegador abre:
 
-| Ambiente | `S3_ENDPOINT` | `S3_REGION` | `S3_SIGNING_HOST` |
-|---|---|---|---|
-| Homologação | `https://s3.homo.grupoazuos.com.br/storage/v1/s3` | `local` | `s3.homo.grupoazuos.com.br:8001` |
-| Produção | `https://<projeto>.supabase.co/storage/v1/s3` | região do projeto | vazio |
+| Ambiente    | `S3_ENDPOINT`                                     | `S3_REGION`       | `S3_SIGNING_HOST`                |
+| ----------- | ------------------------------------------------- | ----------------- | -------------------------------- |
+| Homologação | `https://s3.homo.grupoazuos.com.br/storage/v1/s3` | `local`           | `s3.homo.grupoazuos.com.br:8001` |
+| Produção    | `https://<projeto>.supabase.co/storage/v1/s3`     | região do projeto | vazio                            |
 
 Na homologação o `S3_SIGNING_HOST` é obrigatório: o domínio público chega ao Kong do Supabase
 self-hosted pela 8001, e o Storage confere a assinatura com essa porta. Sem ele, toda chamada
@@ -221,7 +223,6 @@ mise exec -- npm run dev
 ```
 
 Depois de instalar uma ferramenta nova, reinicie o servidor para atualizar seu `PATH`.
-
 
 Todos rodam dentro de `chamados/dashboard/`:
 
@@ -245,7 +246,6 @@ Todos rodam dentro de `chamados/dashboard/`:
 A imagem final inclui as fontes e a logo dos documentos, copiadas pelo build do Nest. O
 `dockerfile` ainda traz o executável do Typst, de quando os PDFs eram compilados por ele: o
 sistema não o usa mais, e a remoção é de quem administra o projeto (o arquivo é protegido).
-
 
 ```bash
 cd chamados/dashboard
@@ -282,11 +282,11 @@ São duas peças, de dois lugares:
 - **os módulos** (Infraestrutura · Sistema · Manutenção) são liberados aqui, pelo **super-admin**, no
   perfil dele ("Acessos por módulo").
 
-| Papel no admin-console | Com o módulo | Sem módulo nenhum |
-|---|---|---|
-| Administrador | mexe em tudo daquele módulo (e atende os chamados da área) | só abre chamado, acompanha os seus e valida documento |
-| Gestor | só vê os dados do módulo | só abre chamado, acompanha os seus e valida documento |
-| Usuário | só vê os dados do módulo | só abre chamado, acompanha os seus e valida documento |
+| Papel no admin-console | Com o módulo                                               | Sem módulo nenhum                                     |
+| ---------------------- | ---------------------------------------------------------- | ----------------------------------------------------- |
+| Administrador          | mexe em tudo daquele módulo (e atende os chamados da área) | só abre chamado, acompanha os seus e valida documento |
+| Gestor                 | só vê os dados do módulo                                   | só abre chamado, acompanha os seus e valida documento |
+| Usuário                | só vê os dados do módulo                                   | só abre chamado, acompanha os seus e valida documento |
 
 **O super-admin** vê e altera todas as telas e é o único que libera módulos. Ele não nasce de
 clique nenhum, só do comando, rodado por quem tem o `.env` do servidor:
@@ -353,13 +353,13 @@ As variáveis (`ADMIN_CONSOLE_URL`, `ADMIN_CONSOLE_TOKEN`, `ADMIN_CONSOLE_LOGIN_
 
 ## O que o MVP não faz
 
-* **Isolamento de dados não é automático.** O banco é o Postgres do Supabase — compartilhado por
+- **Isolamento de dados não é automático.** O banco é o Postgres do Supabase — compartilhado por
   natureza. Quem usa a mesma `DATABASE_URL` vê os mesmos dados. Para cada pessoa ter o próprio
   banco de trabalho, cada uma precisa de um Postgres próprio, configurado no `server/.env`.
 
-* **Infraestrutura de produção automaticamente.** O template fornece a aplicação e o suporte à autenticação, mas publicação, domínio, proxy, secrets e demais recursos de produção precisam ser configurados conforme o ambiente.
+- **Infraestrutura de produção automaticamente.** O template fornece a aplicação e o suporte à autenticação, mas publicação, domínio, proxy, secrets e demais recursos de produção precisam ser configurados conforme o ambiente.
 
-* **Consertar a estrutura sem aprovação.** Se algo grande quebrar (não instala, não abre, o banco não carrega), o Claude para, guarda o seu trabalho e prepara um relatório para você investigar com calma.
+- **Consertar a estrutura sem aprovação.** Se algo grande quebrar (não instala, não abre, o banco não carrega), o Claude para, guarda o seu trabalho e prepara um relatório para você investigar com calma.
 
 ### Como a identidade funciona
 
@@ -404,7 +404,7 @@ O fluxo é o **Git-Flow do Tower**. O `npm install` já configura o Git-Flow no 
 
 Se duas pessoas mexeram na mesma parte, o Claude explica o conflito pela tela, por exemplo:
 
-*"na tela Clientes, dia 14/09, a Ana mudou o botão de cadastro; nesta mudança, colocamos o filtro por cidade no mesmo lugar"*.
+_"na tela Clientes, dia 14/09, a Ana mudou o botão de cadastro; nesta mudança, colocamos o filtro por cidade no mesmo lugar"_.
 
 Ele mantém as duas mudanças quando dá, e pergunta quando não dá.
 

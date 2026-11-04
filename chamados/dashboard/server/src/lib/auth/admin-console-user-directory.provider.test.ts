@@ -1,3 +1,6 @@
+vi.mock('./oauth-token.client', () => ({
+  serviceAuthorization: vi.fn().mockResolvedValue('Bearer oauth-test-token'),
+}));
 import { ServiceUnavailableException } from '@nestjs/common';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,7 +9,7 @@ import { AdminConsoleUserDirectoryProvider } from './admin-console-user-director
 
 const ENV = {
   ADMIN_CONSOLE_URL: 'http://admin-console.interno/',
-  ADMIN_CONSOLE_TOKEN: 'um_chamados_segredo-de-teste',
+  ADMIN_CONSOLE_CLIENT_SECRET: 'um_chamados_segredo-de-teste',
   ADMIN_CONSOLE_TIMEOUT_MS: 4000,
 } as Env;
 
@@ -50,9 +53,9 @@ describe('AdminConsoleUserDirectoryProvider', () => {
       ['Bia', 'manager', null],
     ]);
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://admin-console.interno/api/systems/me/access',
+      'http://admin-console.interno/api/v1/systems/me/access',
       expect.objectContaining({
-        headers: expect.objectContaining({ authorization: 'Bearer um_chamados_segredo-de-teste' }),
+        headers: expect.objectContaining({ authorization: 'Bearer oauth-test-token' }),
       }),
     );
   });
@@ -143,30 +146,52 @@ function directoryPage(users: unknown[], totalPages = 1) {
   return { data: { users }, meta: { pagination: { totalPages } } };
 }
 
-const directoryPerson = (id: string, name: string) => ({ id, name, email: `${id}@example.invalid` });
+const directoryPerson = (id: string, name: string) => ({
+  id,
+  name,
+  email: `${id}@example.invalid`,
+});
 
 describe('AdminConsoleUserDirectoryProvider office directory', () => {
   // feliz
   it('loads every page independently from system access and orders names across pages', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => directoryPage([directoryPerson('u-2', 'Bruno')], 2) })
-      .mockResolvedValueOnce({ ok: true, json: async () => directoryPage([directoryPerson('u-1', 'Ana')], 2) });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => directoryPage([directoryPerson('u-2', 'Bruno')], 2),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => directoryPage([directoryPerson('u-1', 'Ana')], 2),
+      });
     vi.stubGlobal('fetch', fetchMock);
     const users = await new AdminConsoleUserDirectoryProvider(ENV).listAllUsers();
     expect(users.map((user) => user.name)).toEqual(['Ana', 'Bruno']);
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      'http://admin-console.interno/api/users?page=1&pageSize=200',
-      'http://admin-console.interno/api/users?page=2&pageSize=200',
+      'http://admin-console.interno/api/v1/users?page=1&pageSize=200',
+      'http://admin-console.interno/api/v1/users?page=2&pageSize=200',
     ]);
-    expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
-      headers: expect.objectContaining({ authorization: 'Bearer um_chamados_segredo-de-teste' }),
-    }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ authorization: 'Bearer oauth-test-token' }),
+      }),
+    );
   });
 
   it('keeps complete and access-scoped caches separate', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { people: [directoryPerson('u-1', 'Ana')] } }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => directoryPage([directoryPerson('u-1', 'Ana'), directoryPerson('u-2', 'Bruno')]) });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { people: [directoryPerson('u-1', 'Ana')] } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          directoryPage([directoryPerson('u-1', 'Ana'), directoryPerson('u-2', 'Bruno')]),
+      });
     vi.stubGlobal('fetch', fetchMock);
     const provider = new AdminConsoleUserDirectoryProvider(ENV);
     expect(await provider.listUsers()).toHaveLength(1);
@@ -186,7 +211,9 @@ describe('AdminConsoleUserDirectoryProvider office directory', () => {
       now.mockReturnValue(160_001);
       await provider.listAllUsers();
       expect(fetchMock).toHaveBeenCalledTimes(2);
-    } finally { now.mockRestore(); }
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it('returns the empty directory when the upstream confirms that there are no users', async () => {
@@ -197,18 +224,30 @@ describe('AdminConsoleUserDirectoryProvider office directory', () => {
   // triste
   it('fails rather than silently truncating a response without pagination', async () => {
     vi.stubGlobal('fetch', answer({ data: { users: [directoryPerson('u-1', 'Ana')] } }));
-    await expect(new AdminConsoleUserDirectoryProvider(ENV).listAllUsers()).rejects.toThrow(ServiceUnavailableException);
+    await expect(new AdminConsoleUserDirectoryProvider(ENV).listAllUsers()).rejects.toThrow(
+      ServiceUnavailableException,
+    );
   });
 
   it('does not cache a partial list when a later page fails', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => directoryPage([directoryPerson('u-1', 'Ana')], 2) })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => directoryPage([directoryPerson('u-1', 'Ana')], 2),
+      })
       .mockResolvedValueOnce({ ok: false, status: 503 })
-      .mockResolvedValueOnce({ ok: true, json: async () => directoryPage([directoryPerson('u-1', 'Ana'), directoryPerson('u-2', 'Bruno')]) });
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          directoryPage([directoryPerson('u-1', 'Ana'), directoryPerson('u-2', 'Bruno')]),
+      });
     vi.stubGlobal('fetch', fetchMock);
     const provider = new AdminConsoleUserDirectoryProvider(ENV);
     await expect(provider.listAllUsers()).rejects.toThrow(ServiceUnavailableException);
     expect(await provider.listAllUsers()).toHaveLength(2);
-    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe('http://admin-console.interno/api/users?page=1&pageSize=200');
+    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(
+      'http://admin-console.interno/api/v1/users?page=1&pageSize=200',
+    );
   });
 });

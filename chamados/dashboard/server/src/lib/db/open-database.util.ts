@@ -1,3 +1,4 @@
+import { connectionOptions } from './connection-options.util';
 import { join, resolve } from 'node:path';
 
 import { drizzle } from 'drizzle-orm/node-postgres';
@@ -49,19 +50,24 @@ export const DATABASE_SCHEMA = 'chamados';
  * do pool. O `pg` também não prepara consulta (o Drizzle não dá nome a elas), que é o que o
  * modo transação exige.
  */
-export function poolOptionsFor(url: string, poolSize = 5): PoolConfig {
+export function poolOptionsFor(url: string, poolSize = 5, ca?: string): PoolConfig {
   return {
-    connectionString: url,
+    ...connectionOptions(url, ca),
     max: poolSize,
     idleTimeoutMillis: 60_000,
     maxLifetimeSeconds: 30 * 60,
-    connectionTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 5_000,
+    statement_timeout: 30_000,
+    query_timeout: 35_000,
+    application_name: 'chamados',
   };
 }
 
 export type OpenDatabaseOptions = {
   url: string;
   poolSize?: number;
+  migrateOnStart?: boolean;
+  ca?: string;
 };
 
 export type OpenDatabase = {
@@ -79,11 +85,11 @@ export async function openDatabase(
 ): Promise<OpenDatabase> {
   const options: OpenDatabaseOptions =
     typeof optionsOrUrl === 'string' ? { url: optionsOrUrl } : optionsOrUrl;
-  const { url, poolSize = 5 } = options;
+  const { url, poolSize = 5, migrateOnStart = true, ca } = options;
 
-  await applyMigrations(url);
+  if (migrateOnStart) await applyMigrations(url);
 
-  const pool = new Pool(poolOptionsFor(url, poolSize));
+  const pool = new Pool(poolOptionsFor(url, poolSize, ca));
   /* Erro numa conexão PARADA (o pooler fechou, a rede caiu) chega como evento do pool. Sem este
      ouvinte, o Node derruba o processo inteiro; com ele, a conexão sai do pool e a próxima
      consulta abre outra. */

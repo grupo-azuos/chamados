@@ -25,7 +25,7 @@ describe.skipIf(!testDatabaseUrl)('Network API (e2e)', () => {
 
   const registerEvent = (body: Record<string, unknown>, who = asAna()) =>
     api()
-      .post('/api/network/events')
+      .post('/api/v1/network/events')
       .set(who)
       .send({ type: 'wan_down', title: 'Internet caiu', ...body });
 
@@ -74,25 +74,25 @@ describe.skipIf(!testDatabaseUrl)('Network API (e2e)', () => {
     await registerEvent({ type: 'wan_up', title: 'Voltou', severity: 'info' }).expect(201);
 
     await api()
-      .patch(`/api/network/events/${latency.body.id}/resolution`)
+      .patch(`/api/v1/network/events/${latency.body.id}/resolution`)
       .set(asAna())
       .send({ isResolved: true })
       .expect(200);
 
-    const all = await api().get('/api/network/events').set(asBia()).expect(200);
+    const all = await api().get('/api/v1/network/events').set(asBia()).expect(200);
     expect(all.body.total).toBe(3);
     expect(all.body.items[0].title).toBe('Voltou');
 
-    const open = await api().get('/api/network/events?onlyOpen=true').set(asAna()).expect(200);
+    const open = await api().get('/api/v1/network/events?onlyOpen=true').set(asAna()).expect(200);
     expect(open.body.total).toBe(2);
 
     const byType = await api()
-      .get('/api/network/events?type=high_latency&severity=attention')
+      .get('/api/v1/network/events?type=high_latency&severity=attention')
       .set(asAna())
       .expect(200);
     expect(byType.body.items).toHaveLength(1);
 
-    const recent = await api().get('/api/network/events?days=7').set(asAna()).expect(200);
+    const recent = await api().get('/api/v1/network/events?days=7').set(asAna()).expect(200);
     expect(recent.body.total).toBe(2);
   });
 
@@ -100,7 +100,7 @@ describe.skipIf(!testDatabaseUrl)('Network API (e2e)', () => {
     const created = await registerEvent({}).expect(201);
 
     const resolved = await api()
-      .patch(`/api/network/events/${created.body.id}/resolution`)
+      .patch(`/api/v1/network/events/${created.body.id}/resolution`)
       .set(asAna())
       .send({ isResolved: true })
       .expect(200);
@@ -108,7 +108,7 @@ describe.skipIf(!testDatabaseUrl)('Network API (e2e)', () => {
     expect(resolved.body.resolvedAt).toEqual(expect.any(String));
 
     const reopened = await api()
-      .patch(`/api/network/events/${created.body.id}/resolution`)
+      .patch(`/api/v1/network/events/${created.body.id}/resolution`)
       .set(asAna())
       .send({ isResolved: false })
       .expect(200);
@@ -118,17 +118,17 @@ describe.skipIf(!testDatabaseUrl)('Network API (e2e)', () => {
   it('summarizes the period: open, outages, time offline and worst numbers', async () => {
     const outage = await registerEvent({}).expect(201);
     await api()
-      .patch(`/api/network/events/${outage.body.id}/resolution`)
+      .patch(`/api/v1/network/events/${outage.body.id}/resolution`)
       .set(asAna())
       .send({ isResolved: true })
       .expect(200);
     await registerEvent({ type: 'packet_loss', title: 'Perda de pacotes' }).expect(201);
     await api()
-      .post(`/api/network/webhook?token=${WEBHOOK_TOKEN}`)
+      .post(`/api/v1/network/webhook?token=${WEBHOOK_TOKEN}`)
       .send({ type: 'high_latency', latencyMs: 250, packetLossPercent: 12.5 })
       .expect(201);
 
-    const summary = await api().get('/api/network/summary?days=30').set(asBia()).expect(200);
+    const summary = await api().get('/api/v1/network/summary?days=30').set(asBia()).expect(200);
     expect(summary.body).toMatchObject({
       days: 30,
       open: 2,
@@ -138,16 +138,16 @@ describe.skipIf(!testDatabaseUrl)('Network API (e2e)', () => {
     });
     expect(summary.body.totalOutageSeconds).toEqual(expect.any(Number));
 
-    const empty = await api().get('/api/network/summary?days=1').set(asAna()).expect(200);
+    const empty = await api().get('/api/v1/network/summary?days=1').set(asAna()).expect(200);
     expect(empty.body.outages).toBe(1);
 
-    const defaulted = await api().get('/api/network/summary').set(asAna()).expect(200);
+    const defaulted = await api().get('/api/v1/network/summary').set(asAna()).expect(200);
     expect(defaulted.body.days).toEqual(expect.any(Number));
   });
 
   it('opens the UniFi door for whoever has the token, classifying the alert', async () => {
     const created = await api()
-      .post(`/api/network/webhook?token=${WEBHOOK_TOKEN}`)
+      .post(`/api/v1/network/webhook?token=${WEBHOOK_TOKEN}`)
       .send({
         alert: 'WAN Down',
         text: 'The WAN link went down.',
@@ -168,7 +168,7 @@ describe.skipIf(!testDatabaseUrl)('Network API (e2e)', () => {
     expect(created.body.type).toEqual(expect.any(String));
 
     const typed = await api()
-      .post(`/api/network/webhook?token=${WEBHOOK_TOKEN}`)
+      .post(`/api/v1/network/webhook?token=${WEBHOOK_TOKEN}`)
       .send({ type: 'failover', severity: 'critical' })
       .expect(201);
     expect(typed.body).toMatchObject({ type: 'failover', title: 'Aviso do UniFi' });
@@ -176,31 +176,31 @@ describe.skipIf(!testDatabaseUrl)('Network API (e2e)', () => {
 
   // triste
   it('keeps the UniFi door closed without the token', async () => {
-    await api().post('/api/network/webhook').send({ alert: 'x' }).expect(401);
-    await api().post('/api/network/webhook?token=errado').send({ alert: 'x' }).expect(401);
+    await api().post('/api/v1/network/webhook').send({ alert: 'x' }).expect(401);
+    await api().post('/api/v1/network/webhook?token=errado').send({ alert: 'x' }).expect(401);
   });
 
   it('answers 404 for a missing event and refuses a body outside the contract', async () => {
     await api()
-      .patch('/api/network/events/999999/resolution')
+      .patch('/api/v1/network/events/999999/resolution')
       .set(asAna())
       .send({ isResolved: true })
       .expect(404);
     await registerEvent({ type: 'tsunami' }).expect(400);
     await registerEvent({ title: '' }).expect(400);
-    await api().get('/api/network/events?days=0').set(asAna()).expect(400);
+    await api().get('/api/v1/network/events?days=0').set(asAna()).expect(400);
   });
 
   it('lets who only consults read, and refuses them to write', async () => {
     const created = await registerEvent({}).expect(201);
 
-    await api().get('/api/network/summary').set(asBia()).expect(200);
+    await api().get('/api/v1/network/summary').set(asBia()).expect(200);
     await registerEvent({}, asBia()).expect(403);
     await api()
-      .patch(`/api/network/events/${created.body.id}/resolution`)
+      .patch(`/api/v1/network/events/${created.body.id}/resolution`)
       .set(asBia())
       .send({ isResolved: true })
       .expect(403);
-    await api().get('/api/network/events').expect(401);
+    await api().get('/api/v1/network/events').expect(401);
   });
 });

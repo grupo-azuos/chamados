@@ -9,8 +9,7 @@ const ENV = {
   ADMIN_CONSOLE_TIMEOUT_MS: 4000,
 } as Env;
 
-const COOKIES =
-  'sidebar=1; azuos_homo_access_token=jwt-de-acesso; azuos_homo_refresh_token=renovacao';
+const COOKIES = 'sidebar=1; azuos_homo_session=jwt-de-acesso; azuos_homo_refresh_token=renovacao';
 
 function answer(body: unknown, status = 200) {
   return vi.fn().mockResolvedValue({ ok: status < 400, status, json: async () => body });
@@ -53,9 +52,9 @@ describe('AdminConsoleProfileProvider', () => {
     await new AdminConsoleProfileProvider(ENV).fetchMine(COOKIES);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://admin-console.interno/api/me/profile',
+      'http://admin-console.interno/api/v1/me/profile',
       expect.objectContaining({
-        headers: expect.objectContaining({ cookie: 'azuos_homo_access_token=jwt-de-acesso' }),
+        headers: expect.objectContaining({ cookie: 'azuos_homo_session=jwt-de-acesso' }),
       }),
     );
   });

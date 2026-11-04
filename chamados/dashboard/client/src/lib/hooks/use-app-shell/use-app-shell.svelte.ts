@@ -139,7 +139,7 @@ export function useAppShellModel(input: {
   );
 
   /* A FOTO vem da conta no Admin Console, a mesma do "Meu perfil" (mesma chave: uma consulta só);
-     a do `/api/auth/me` fica de reserva. */
+     a do `/api/v1/auth/me` fica de reserva. */
   const account = mirrorStore(
     createQuery(
       writable({
@@ -195,7 +195,7 @@ export function useAppShellModel(input: {
         email: input.user.email,
         role: USER_ROLE_LABELS[input.user.role],
         roles: input.user.roles,
-        /* A foto chega no `/api/auth/me`, lida do admin-console pelo UUID (como no Paralegal). */
+        /* A foto chega no `/api/v1/auth/me`, lida do admin-console pelo UUID (como no Paralegal). */
         get avatarUrl() {
           return account.current.data?.profile.avatarUrl ?? input.user.image ?? null;
         },

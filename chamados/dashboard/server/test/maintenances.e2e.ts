@@ -28,7 +28,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
 
   const registerComputer = async (name: string): Promise<number> => {
     const created = await request(app.getHttpServer())
-      .post('/api/computers')
+      .post('/api/v1/computers')
       .set(asCaio())
       .send({ name, kind: 'desktop' })
       .expect(201);
@@ -37,7 +37,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
   };
 
   const registerMaintenance = (body: Record<string, unknown>, who = asAna()) =>
-    request(app.getHttpServer()).post('/api/maintenances').set(who).send(body);
+    request(app.getHttpServer()).post('/api/v1/maintenances').set(who).send(body);
 
   beforeAll(async () => {
     started = await createE2eApp(testDatabaseUrl!);
@@ -107,7 +107,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
     }).expect(201);
 
     const daMaquina = await request(app.getHttpServer())
-      .get(`/api/maintenances?computerId=${computerId}`)
+      .get(`/api/v1/maintenances?computerId=${computerId}`)
       .set(asAna())
       .expect(200);
 
@@ -115,7 +115,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
     expect(daMaquina.body.items).toHaveLength(2);
 
     const todas = await request(app.getHttpServer())
-      .get('/api/maintenances')
+      .get('/api/v1/maintenances')
       .set(asAna())
       .expect(200);
 
@@ -135,13 +135,13 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
     }).expect(201);
 
     await request(app.getHttpServer())
-      .patch(`/api/computers/${computerId}`)
+      .patch(`/api/v1/computers/${computerId}`)
       .set(asCaio())
       .send({ displayName: 'Balcão do Fiscal' })
       .expect(200);
 
     const historico = await request(app.getHttpServer())
-      .get(`/api/maintenances?computerId=${computerId}`)
+      .get(`/api/v1/maintenances?computerId=${computerId}`)
       .set(asAna())
       .expect(200);
 
@@ -172,7 +172,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
     }).expect(201);
 
     const board = await request(app.getHttpServer())
-      .get('/api/maintenances/preventive')
+      .get('/api/v1/maintenances/preventive')
       .set(asAna())
       .expect(200);
 
@@ -198,7 +198,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
     }).expect(201);
 
     const board = await request(app.getHttpServer())
-      .get('/api/maintenances/preventive')
+      .get('/api/v1/maintenances/preventive')
       .set(asAna())
       .expect(200);
 
@@ -213,13 +213,13 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
     const computerId = await registerComputer('PC-ARQUIVADO-01');
 
     await request(app.getHttpServer())
-      .patch(`/api/computers/${computerId}`)
+      .patch(`/api/v1/computers/${computerId}`)
       .set(asCaio())
       .send({ isArchived: true })
       .expect(200);
 
     const board = await request(app.getHttpServer())
-      .get('/api/maintenances/preventive')
+      .get('/api/v1/maintenances/preventive')
       .set(asAna())
       .expect(200);
 
@@ -253,7 +253,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
     }).expect(201);
 
     const updated = await request(app.getHttpServer())
-      .patch(`/api/maintenances/${created.body.id}`)
+      .patch(`/api/v1/maintenances/${created.body.id}`)
       .set(asCaio())
       .send({ description: 'Limpeza e troca da pasta térmica.' })
       .expect(200);
@@ -268,10 +268,10 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
 
   // triste
   it('keeps the maintenance history closed without a token', async () => {
-    await request(app.getHttpServer()).get('/api/maintenances').expect(401);
-    await request(app.getHttpServer()).get('/api/maintenances/preventive').expect(401);
+    await request(app.getHttpServer()).get('/api/v1/maintenances').expect(401);
+    await request(app.getHttpServer()).get('/api/v1/maintenances/preventive').expect(401);
     await request(app.getHttpServer())
-      .post('/api/maintenances')
+      .post('/api/v1/maintenances')
       .send({ otherMachine: 'Qualquer', type: 'cleaning', performedAt: HOJE.toISOString() })
       .expect(401);
   });
@@ -336,7 +336,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
     }).expect(201);
 
     const refused = await request(app.getHttpServer())
-      .patch(`/api/maintenances/${created.body.id}`)
+      .patch(`/api/v1/maintenances/${created.body.id}`)
       .set(asBia())
       .send({ description: 'Mexi no registro da Ana.' })
       .expect(403);
@@ -344,13 +344,13 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
     expect(refused.body.message).toContain('só de consulta');
 
     await request(app.getHttpServer())
-      .delete(`/api/maintenances/${created.body.id}`)
+      .delete(`/api/v1/maintenances/${created.body.id}`)
       .set(asBia())
       .expect(403);
 
     /* E o registro continua lá, com a descrição original. */
     const found = await request(app.getHttpServer())
-      .get(`/api/maintenances/${created.body.id}`)
+      .get(`/api/v1/maintenances/${created.body.id}`)
       .set(asAna())
       .expect(200);
 
@@ -358,13 +358,16 @@ describe.skipIf(!testDatabaseUrl)('Maintenances API (e2e)', () => {
   });
 
   it('answers 404 for a maintenance that does not exist', async () => {
-    await request(app.getHttpServer()).get('/api/maintenances/999999').set(asAna()).expect(404);
+    await request(app.getHttpServer()).get('/api/v1/maintenances/999999').set(asAna()).expect(404);
     await request(app.getHttpServer())
-      .patch('/api/maintenances/999999')
+      .patch('/api/v1/maintenances/999999')
       .set(asAna())
       .send({ description: 'Nada' })
       .expect(404);
-    await request(app.getHttpServer()).delete('/api/maintenances/999999').set(asAna()).expect(404);
+    await request(app.getHttpServer())
+      .delete('/api/v1/maintenances/999999')
+      .set(asAna())
+      .expect(404);
   });
 
   /* Apontar para uma máquina que não existe é recusado pelo BANCO, e chega como 4xx — não como

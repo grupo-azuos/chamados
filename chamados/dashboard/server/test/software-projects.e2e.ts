@@ -81,7 +81,7 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
 
   const registerProject = (body: Record<string, unknown>, who = asDora()) =>
     api()
-      .post('/api/software-projects')
+      .post('/api/v1/software-projects')
       .set(who)
       .send({ name: 'Chamados', repositoryUrl: 'https://github.com/org/chamados', ...body });
 
@@ -98,7 +98,7 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
 
   const registerEvent = (body: Record<string, unknown>, who = asDora()) =>
     api()
-      .post('/api/software-schedule')
+      .post('/api/v1/software-schedule')
       .set(who)
       .send({
         title: 'Deploy do Chamados',
@@ -194,24 +194,24 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
         },
       ]);
 
-      const all = await api().get('/api/software-projects').set(asEdu()).expect(200);
+      const all = await api().get('/api/v1/software-projects').set(asEdu()).expect(200);
       expect(all.body.total).toBe(2);
 
       const active = await api()
-        .get('/api/software-projects?status=active')
+        .get('/api/v1/software-projects?status=active')
         .set(asDora())
         .expect(200);
       expect(active.body.items).toHaveLength(1);
       expect(active.body.items[0].openTicketsCount).toBe(1);
 
       const search = await api()
-        .get('/api/software-projects?search=legado')
+        .get('/api/v1/software-projects?search=legado')
         .set(asDora())
         .expect(200);
       expect(search.body.items[0].name).toBe('Legado');
 
       const found = await api()
-        .get(`/api/software-projects/${chamados.body.id}`)
+        .get(`/api/v1/software-projects/${chamados.body.id}`)
         .set(asEdu())
         .expect(200);
       expect(found.body.openTicketsCount).toBe(1);
@@ -221,7 +221,7 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       const created = await registerProject({}).expect(201);
 
       const updated = await api()
-        .patch(`/api/software-projects/${created.body.id}`)
+        .patch(`/api/v1/software-projects/${created.body.id}`)
         .set(asDora())
         .send({ name: 'Chamados v2', status: 'maintenance', color: 'green' })
         .expect(200);
@@ -231,31 +231,31 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
         color: 'green',
       });
 
-      await api().delete(`/api/software-projects/${created.body.id}`).set(asDora()).expect(204);
-      await api().get(`/api/software-projects/${created.body.id}`).set(asDora()).expect(404);
+      await api().delete(`/api/v1/software-projects/${created.body.id}`).set(asDora()).expect(204);
+      await api().get(`/api/v1/software-projects/${created.body.id}`).set(asDora()).expect(404);
     });
 
     it('synchronizes one system and all of them with the linked GitHub account', async () => {
       const created = await registerProject({}).expect(201);
 
       const one = await api()
-        .post(`/api/software-projects/${created.body.id}/sync-github`)
+        .post(`/api/v1/software-projects/${created.body.id}/sync-github`)
         .set(asDora())
         .expect(201);
       expect(one.body).toMatchObject({ synced: 1 });
       expect(one.body.message).toContain('1 Pull Requests');
 
-      const all = await api().post('/api/software-projects/sync-github').set(asDora()).expect(201);
+      const all = await api().post('/api/v1/software-projects/sync-github').set(asDora()).expect(201);
       expect(all.body).toMatchObject({ projects: 1, prs: 1, issues: 0, merges: 0, failed: [] });
 
       const found = await api()
-        .get(`/api/software-projects/${created.body.id}`)
+        .get(`/api/v1/software-projects/${created.body.id}`)
         .set(asDora())
         .expect(200);
       expect(found.body.pullRequestsCount).toBe(1);
 
       const timeline = await api()
-        .get(`/api/software-timeline?projectId=${created.body.id}&type=pr`)
+        .get(`/api/v1/software-timeline?projectId=${created.body.id}&type=pr`)
         .set(asEdu())
         .expect(200);
       expect(timeline.body.total).toBe(1);
@@ -267,13 +267,13 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
 
       const window = await api()
         .get(
-          '/api/software-timeline?startAt=2026-10-01T00:00:00.000Z&endBefore=2026-10-02T00:00:00.000Z',
+          '/api/v1/software-timeline?startAt=2026-10-01T00:00:00.000Z&endBefore=2026-10-02T00:00:00.000Z',
         )
         .set(asDora())
         .expect(200);
       expect(window.body.total).toBe(1);
 
-      const dashboard = await api().get('/api/software-dashboard').set(asDora()).expect(200);
+      const dashboard = await api().get('/api/v1/software-dashboard').set(asDora()).expect(200);
       expect(dashboard.body).toBeTruthy();
     });
 
@@ -283,15 +283,15 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       await unlinkGithub(DORA.id);
 
       const refused = await api()
-        .post(`/api/software-projects/${created.body.id}/sync-github`)
+        .post(`/api/v1/software-projects/${created.body.id}/sync-github`)
         .set(asDora())
         .expect(403);
       expect(refused.body.message).toContain('Vincule sua conta do GitHub');
 
-      await api().post('/api/software-projects/sync-github').set(asEdu()).expect(403);
+      await api().post('/api/v1/software-projects/sync-github').set(asEdu()).expect(403);
 
       /* Sem o vínculo, o módulo inteiro fecha para quem administra — a leitura inclusive. */
-      const closed = await api().get('/api/software-projects').set(asDora()).expect(403);
+      const closed = await api().get('/api/v1/software-projects').set(asDora()).expect(403);
       expect(closed.body.message).toContain('Vincule sua conta do GitHub');
     });
 
@@ -303,30 +303,30 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
     });
 
     it('answers 404 for a missing system and 400 for a body outside the contract', async () => {
-      await api().get('/api/software-projects/999999').set(asDora()).expect(404);
+      await api().get('/api/v1/software-projects/999999').set(asDora()).expect(404);
       await api()
-        .patch('/api/software-projects/999999')
+        .patch('/api/v1/software-projects/999999')
         .set(asDora())
         .send({ name: 'x' })
         .expect(404);
-      await api().delete('/api/software-projects/999999').set(asDora()).expect(404);
+      await api().delete('/api/v1/software-projects/999999').set(asDora()).expect(404);
       await registerProject({ status: 'inventado' }).expect(400);
     });
 
     it('keeps the role per module: readers consult, Infra admins do not enter', async () => {
       const created = await registerProject({}).expect(201);
 
-      await api().get('/api/software-projects').set(asEdu()).expect(200);
+      await api().get('/api/v1/software-projects').set(asEdu()).expect(200);
       await registerProject({}, asEdu()).expect(403);
       await api()
-        .patch(`/api/software-projects/${created.body.id}`)
+        .patch(`/api/v1/software-projects/${created.body.id}`)
         .set(asEdu())
         .send({ name: 'x' })
         .expect(403);
-      await api().delete(`/api/software-projects/${created.body.id}`).set(asEdu()).expect(403);
+      await api().delete(`/api/v1/software-projects/${created.body.id}`).set(asEdu()).expect(403);
 
-      await api().get('/api/software-projects').set(asAna()).expect(403);
-      await api().get('/api/software-projects').expect(401);
+      await api().get('/api/v1/software-projects').set(asAna()).expect(403);
+      await api().get('/api/v1/software-projects').expect(401);
     });
   });
 
@@ -356,7 +356,7 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       expect(record.body.endTime).toBeNull();
 
       const week = await api()
-        .get('/api/software-schedule?startDate=2026-10-19&endDate=2026-10-25')
+        .get('/api/v1/software-schedule?startDate=2026-10-19&endDate=2026-10-25')
         .set(asEdu())
         .expect(200);
       expect(week.body.map((event: { title: string }) => event.title)).toEqual([
@@ -366,13 +366,13 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       expect(week.body[0].projectName).toBe('Chamados');
 
       const outside = await api()
-        .get('/api/software-schedule?startDate=2026-11-01&endDate=2026-11-07')
+        .get('/api/v1/software-schedule?startDate=2026-11-01&endDate=2026-11-07')
         .set(asDora())
         .expect(200);
       expect(outside.body).toEqual([]);
 
       const found = await api()
-        .get(`/api/software-schedule/${appointment.body.id}`)
+        .get(`/api/v1/software-schedule/${appointment.body.id}`)
         .set(asEdu())
         .expect(200);
       expect(found.body.projectName).toBe('Chamados');
@@ -382,21 +382,21 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       const created = await registerEvent({}).expect(201);
 
       const moved = await api()
-        .patch(`/api/software-schedule/${created.body.id}`)
+        .patch(`/api/v1/software-schedule/${created.body.id}`)
         .set(asDora())
         .send({ startTime: '14:00', endTime: '15:30', note: '' })
         .expect(200);
       expect(moved.body).toMatchObject({ startTime: '14:00', endTime: '15:30', note: null });
 
       const asRecord = await api()
-        .patch(`/api/software-schedule/${created.body.id}`)
+        .patch(`/api/v1/software-schedule/${created.body.id}`)
         .set(asOlga())
         .send({ kind: 'record', title: 'Virou registro' })
         .expect(200);
       expect(asRecord.body).toMatchObject({ kind: 'record', endTime: null });
 
-      await api().delete(`/api/software-schedule/${created.body.id}`).set(asOlga()).expect(204);
-      await api().get(`/api/software-schedule/${created.body.id}`).set(asDora()).expect(404);
+      await api().delete(`/api/v1/software-schedule/${created.body.id}`).set(asOlga()).expect(204);
+      await api().get(`/api/v1/software-schedule/${created.body.id}`).set(asDora()).expect(404);
     });
 
     // triste
@@ -405,7 +405,7 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
 
       const created = await registerEvent({}).expect(201);
       const refused = await api()
-        .patch(`/api/software-schedule/${created.body.id}`)
+        .patch(`/api/v1/software-schedule/${created.body.id}`)
         .set(asDora())
         .send({ endTime: '08:30' })
         .expect(400);
@@ -416,25 +416,25 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       const created = await registerEvent({}, asOlga()).expect(201);
 
       const refused = await api()
-        .patch(`/api/software-schedule/${created.body.id}`)
+        .patch(`/api/v1/software-schedule/${created.body.id}`)
         .set(asDora())
         .send({ title: 'Meu agora' })
         .expect(403);
       expect(refused.body.message).toContain('Só quem lançou');
 
-      await api().delete(`/api/software-schedule/${created.body.id}`).set(asDora()).expect(403);
+      await api().delete(`/api/v1/software-schedule/${created.body.id}`).set(asDora()).expect(403);
     });
 
     it('answers 404 for a missing item and refuses who only consults', async () => {
-      await api().get('/api/software-schedule/999999').set(asDora()).expect(404);
+      await api().get('/api/v1/software-schedule/999999').set(asDora()).expect(404);
       await api()
-        .patch('/api/software-schedule/999999')
+        .patch('/api/v1/software-schedule/999999')
         .set(asDora())
         .send({ title: 'x' })
         .expect(404);
 
       await registerEvent({}, asEdu()).expect(403);
-      await api().get('/api/software-schedule?startDate=2026-10-19&endDate=2026-10-25').expect(401);
+      await api().get('/api/v1/software-schedule?startDate=2026-10-19&endDate=2026-10-25').expect(401);
     });
   });
 });

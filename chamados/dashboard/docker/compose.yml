@@ -1,46 +1,292 @@
-# Este compose sobe só a aplicação — um container só, que responde `/api`, serve o SPA na mesma
-# porta e sobe junto o bot de WhatsApp em `127.0.0.1:4005` quando configurado.
-#
-# O banco (Postgres do Supabase) e os arquivos (storage S3) são remotos: o único volume (`bot-data`)
-# guarda as conexões cifradas dos números de WhatsApp vinculados. O container só precisa das
-# variáveis do `server/.env` (DATABASE_URL, S3_*) pra subir — sem elas, o server recusa iniciar.
-#
-# Em produção fica atrás de um Traefik (ex.: Coolify), que resolve domínio e TLS;
-# localmente é só `-p 3005:3005`.
+version: '3.8'
 services:
   app:
-    build:
-      context: ..
-      dockerfile: docker/dockerfile
-    env_file:
-      - path: ../server/.env
-        required: false
-      - path: ../bot/.env
-        required: false
-    ports:
-      - '3005:3005'
-    volumes:
-      - bot-data:/data
-    # SAÚDE DE VERDADE, não "o processo está de pé".
-    #
-    # `/api/health` só responde 200 depois de conseguir falar com o banco. Sem isto, uma
-    # partida que falhou na conexão parecia uma partida boa: o container ficava no ar
-    # respondendo erro a todo mundo, e o Traefik continuava mandando gente para ele.
-    #
-    # O teste é feito com o `node` que já está na imagem — nada de instalar `curl` só pra isso.
-    # `start_period` dá tempo às migrations, que o server aplica sozinho ao subir.
+    image: ${APP_IMAGE:?}
+    environment:
+    - NODE_ENV=production
+    - API_PORT=3000
+    - APP_ENV
+    - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:?}
+    - VALKEY_URL
+    - VALKEY_KEY_PREFIX
+    - VALKEY_TIMEOUT_MS
+    - DATABASE_POOL_SIZE
+    - GITHUB_APP_ID
+    - GITHUB_APP_INSTALLATION_ID
+    - GITHUB_APP_PRIVATE_KEY
+    - GITHUB_OAUTH_CLIENT_ID
+    - GITHUB_OAUTH_CLIENT_SECRET
+    - GITHUB_OAUTH_REDIRECT_URI
+    - GITHUB_OAUTH_FRONTEND_URL
+    - GITHUB_OAUTH_ENCRYPTION_KEY
+    - BOT_API_URL
+    - BOT_API_TOKEN
+    - WHATSAPP_DAILY_LIMIT
+    - APP_PUBLIC_URL
+    - API_CORS_ORIGIN
+    - API_LOG_LEVEL
+    - API_RATE_LIMIT_TTL_SECONDS
+    - API_RATE_LIMIT
+    - API_WEBHOOK_RATE_LIMIT
+    - DATABASE_URL
+    - S3_ENDPOINT
+    - S3_REGION
+    - S3_BUCKET
+    - S3_ACCESS_KEY_ID
+    - S3_SECRET_ACCESS_KEY
+    - S3_FORCE_PATH_STYLE
+    - S3_SIGNING_HOST
+    - UNIFI_WEBHOOK_TOKEN
+    - ADMIN_CONSOLE_URL
+    - ADMIN_CONSOLE_CLIENT_SECRET
+    - ADMIN_CONSOLE_TIMEOUT_MS
+    - ADMIN_CONSOLE_LOGIN_URL
+    - ADMIN_CONSOLE_COOKIE_PREFIX
+    - USER_MOCK
+    - USER_MOCK_ID
+    - USER_MOCK_EMAIL
+    - USER_MOCK_NAME
+    - DATABASE_SSL_CA
+    - BACKGROUND_JOBS_ENABLED=false
+    read_only: true
+    cap_drop:
+    - ALL
+    tmpfs:
+    - /tmp:size=64m,mode=1777
+    stop_grace_period: 60s
     healthcheck:
       test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "fetch('http://127.0.0.1:' + (process.env.API_PORT || 3005) + '/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
-        ]
-      interval: 30s
-      timeout: 10s
+      - CMD-SHELL
+      - node -e "fetch('http://127.0.0.1:3000/api/health', {signal:AbortSignal.timeout(3000),redirect:'error'}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      start_period: 45s
       retries: 3
-      start_period: 60s
-
-volumes:
-  bot-data:
+    networks:
+    - private
+    - integrations
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+        - node.id == ${DEPLOY_NODE_ID:?}
+      resources:
+        limits:
+          cpus: ${APP_CPU_LIMIT:-1.0}
+          memory: ${APP_MEMORY_LIMIT:-512M}
+        reservations:
+          cpus: ${APP_CPU_RESERVATION:-0.10}
+          memory: ${APP_MEMORY_RESERVATION:-128M}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        monitor: 45s
+        max_failure_ratio: 0
+      rollback_config:
+        parallelism: 1
+        order: start-first
+        monitor: 45s
+      labels:
+        azuos.app: chamados
+        azuos.environment: ${DEPLOY_ENV:?}
+        azuos.revision: ${APP_REVISION:?}
+    extra_hosts: &id001
+    - login.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
+    - shared-api.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
+    - gestao-rh.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
+  worker:
+    image: ${APP_IMAGE:?}
+    environment:
+    - NODE_ENV=production
+    - API_PORT=3000
+    - APP_ENV
+    - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:?}
+    - VALKEY_URL
+    - VALKEY_KEY_PREFIX
+    - VALKEY_TIMEOUT_MS
+    - DATABASE_POOL_SIZE
+    - GITHUB_APP_ID
+    - GITHUB_APP_INSTALLATION_ID
+    - GITHUB_APP_PRIVATE_KEY
+    - GITHUB_OAUTH_CLIENT_ID
+    - GITHUB_OAUTH_CLIENT_SECRET
+    - GITHUB_OAUTH_REDIRECT_URI
+    - GITHUB_OAUTH_FRONTEND_URL
+    - GITHUB_OAUTH_ENCRYPTION_KEY
+    - BOT_API_URL
+    - BOT_API_TOKEN
+    - WHATSAPP_DAILY_LIMIT
+    - APP_PUBLIC_URL
+    - API_CORS_ORIGIN
+    - API_LOG_LEVEL
+    - API_RATE_LIMIT_TTL_SECONDS
+    - API_RATE_LIMIT
+    - API_WEBHOOK_RATE_LIMIT
+    - DATABASE_URL
+    - S3_ENDPOINT
+    - S3_REGION
+    - S3_BUCKET
+    - S3_ACCESS_KEY_ID
+    - S3_SECRET_ACCESS_KEY
+    - S3_FORCE_PATH_STYLE
+    - S3_SIGNING_HOST
+    - UNIFI_WEBHOOK_TOKEN
+    - ADMIN_CONSOLE_URL
+    - ADMIN_CONSOLE_CLIENT_SECRET
+    - ADMIN_CONSOLE_TIMEOUT_MS
+    - ADMIN_CONSOLE_LOGIN_URL
+    - ADMIN_CONSOLE_COOKIE_PREFIX
+    - USER_MOCK
+    - USER_MOCK_ID
+    - USER_MOCK_EMAIL
+    - USER_MOCK_NAME
+    - DATABASE_SSL_CA
+    - BACKGROUND_JOBS_ENABLED=true
+    read_only: true
+    cap_drop:
+    - ALL
+    tmpfs:
+    - /tmp:size=64m,mode=1777
+    stop_grace_period: 60s
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - node -e "fetch('http://127.0.0.1:3000/api/health', {signal:AbortSignal.timeout(3000),redirect:'error'}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      start_period: 45s
+      retries: 3
+    networks:
+    - private
+    - integrations
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+        - node.id == ${DEPLOY_NODE_ID:?}
+      resources:
+        limits:
+          cpus: ${WORKER_CPU_LIMIT:-0.5}
+          memory: ${WORKER_MEMORY_LIMIT:-512M}
+        reservations:
+          cpus: '0.10'
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+        monitor: 45s
+        max_failure_ratio: 0
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+        monitor: 45s
+      labels:
+        azuos.app: chamados
+        azuos.environment: ${DEPLOY_ENV:?}
+        azuos.revision: ${APP_REVISION:?}
+    extra_hosts:
+    - login.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
+    - shared-api.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
+    - gestao-rh.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
+  gateway:
+    image: azuos-gateway:2.11
+    user: 1000:1000
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?}
+      ADMIN_CONSOLE_URL: ${ADMIN_CONSOLE_URL:-http://admin-console:3000}
+    configs:
+    - source: gateway
+      target: /etc/caddy/caddyfile
+    read_only: true
+    cap_drop:
+    - ALL
+    tmpfs:
+    - /tmp:size=16m,mode=1777
+    - /config:size=16m,uid=1000,gid=1000
+    - /data:size=16m,uid=1000,gid=1000
+    stop_grace_period: 60s
+    networks:
+    - private
+    - edge
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - -q
+      - -T
+      - '3'
+      - -O
+      - /dev/null
+      - http://127.0.0.1:8080/__ready
+      interval: 10s
+      timeout: 5s
+      start_period: 45s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+        - node.id == ${DEPLOY_NODE_ID:?}
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+        reservations:
+          cpus: '0.05'
+          memory: 16M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        monitor: 30s
+      rollback_config:
+        parallelism: 1
+        order: start-first
+        monitor: 30s
+    extra_hosts: *id001
+configs:
+  gateway:
+    name: ${APP_NAME:?}-${DEPLOY_ENV:?}-gateway-${APP_REVISION:?}
+    file: ./caddy/caddyfile
+networks:
+  private:
+    driver: overlay
+    driver_opts:
+      encrypted: ''
+  edge:
+    name: azuos-edge
+    external: true
+  integrations:
+    name: chamados-${DEPLOY_ENV:?}-integrations
+    external: true

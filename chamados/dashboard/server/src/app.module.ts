@@ -1,3 +1,4 @@
+import { ValkeyModule } from './lib/cache/valkey.module';
 import { join } from 'node:path';
 
 import { Module } from '@nestjs/common';
@@ -36,7 +37,7 @@ import { TransfersModule } from './modules/transfers/transfers.module';
 
 /**
  * Serve o build do client — sem Nginx, sem container à parte. Atrás do Traefik, esta
- * imagem responde `/` (SPA) e `/api` (Nest) sozinha. Em desenvolvimento a pasta não existe
+ * imagem responde `/` (SPA) e `/api/v1` (Nest) sozinha. Em desenvolvimento a pasta não existe
  * (o Vite serve o client em :5005), e o `express.static` por baixo simplesmente devolve 404
  * em silêncio — não derruba o boot.
  */
@@ -51,9 +52,10 @@ const CLIENT_DIST = join(__dirname, '..', '..', 'client', 'dist');
  */
 @Module({
   imports: [
+    ValkeyModule,
     ServeStaticModule.forRoot({
       rootPath: CLIENT_DIST,
-      exclude: ['/api/{*path}', '/docs', '/docs-json'],
+      exclude: ['/api/{*path}', '/docs', '/docs/{*path}', '/docs-json'],
       /* Arquivo com hash fica um ano no navegador; o resto (index.html, service worker,
          favicon) revalida a cada carga. A regra e o porquê estão em `static-cache.util.ts`. */
       serveStaticOptions: { setHeaders: staticCacheHeaders(CLIENT_DIST) },

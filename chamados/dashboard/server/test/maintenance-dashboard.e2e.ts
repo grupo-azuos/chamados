@@ -20,7 +20,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenance dashboard API (e2e)', () => {
 
   const registerItem = async (name: string): Promise<number> => {
     const created = await api()
-      .post('/api/inventory-items')
+      .post('/api/v1/inventory-items')
       .set(asDora())
       .send({ name, category: 'pantry', unit: 'package' })
       .expect(201);
@@ -30,7 +30,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenance dashboard API (e2e)', () => {
 
   const registerQuote = (status: string, amountCents: number) =>
     api()
-      .post('/api/maintenance-quotes')
+      .post('/api/v1/maintenance-quotes')
       .set(asDora())
       .send({
         supplier: 'Fornecedor',
@@ -57,7 +57,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenance dashboard API (e2e)', () => {
 
   // feliz
   it('answers zeroed when there is nothing yet', async () => {
-    const summary = await api().get('/api/maintenance-dashboard').set(asEdu()).expect(200);
+    const summary = await api().get('/api/v1/maintenance-dashboard').set(asEdu()).expect(200);
 
     expect(summary.body).toMatchObject({
       inventory: { products: 0, outOfStock: 0 },
@@ -71,12 +71,12 @@ describe.skipIf(!testDatabaseUrl)('Maintenance dashboard API (e2e)', () => {
     const coffee = await registerItem('Café');
     await registerItem('Açúcar');
     await api()
-      .post(`/api/inventory-items/${coffee}/movements`)
+      .post(`/api/v1/inventory-items/${coffee}/movements`)
       .set(asDora())
       .send({ type: 'in', quantity: 5 })
       .expect(201);
     await api()
-      .post(`/api/inventory-items/${coffee}/movements`)
+      .post(`/api/v1/inventory-items/${coffee}/movements`)
       .set(asDora())
       .send({ type: 'disposal', quantity: 2, reason: 'expired' })
       .expect(201);
@@ -85,13 +85,13 @@ describe.skipIf(!testDatabaseUrl)('Maintenance dashboard API (e2e)', () => {
     await registerQuote('pending', 5_000);
     const approved = await registerQuote('pending', 70_000);
     await api()
-      .patch(`/api/maintenance-quotes/${approved.body.id}`)
+      .patch(`/api/v1/maintenance-quotes/${approved.body.id}`)
       .set(asDora())
       .send({ status: 'approved' })
       .expect(200);
     await registerQuote('rejected', 1_000);
 
-    const summary = await api().get('/api/maintenance-dashboard').set(asDora()).expect(200);
+    const summary = await api().get('/api/v1/maintenance-dashboard').set(asDora()).expect(200);
 
     expect(summary.body.inventory).toEqual({ products: 2, outOfStock: 1 });
     expect(summary.body.quotes).toMatchObject({
@@ -105,7 +105,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenance dashboard API (e2e)', () => {
 
   // triste
   it('keeps the panel for the Maintenance module only', async () => {
-    await api().get('/api/maintenance-dashboard').set(asAna()).expect(403);
-    await api().get('/api/maintenance-dashboard').expect(401);
+    await api().get('/api/v1/maintenance-dashboard').set(asAna()).expect(403);
+    await api().get('/api/v1/maintenance-dashboard').expect(401);
   });
 });

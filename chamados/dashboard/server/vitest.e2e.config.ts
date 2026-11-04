@@ -17,6 +17,11 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [swc.vite({ module: { type: 'es6' } })],
   test: {
+    env: {
+      S3_ACCESS_KEY_ID: 'e2e',
+      S3_SECRET_ACCESS_KEY: 'e2e',
+      DATABASE_MIGRATE_ON_START: 'true',
+    },
     name: 'server-e2e',
     include: ['test/**/*.e2e.ts'],
     fileParallelism: false,

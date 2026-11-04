@@ -46,11 +46,11 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
   const api = () => request(app.getHttpServer());
 
   const open = (extra: Record<string, unknown> = {}, who = asAna()) =>
-    api().post('/api/tickets').set(who).send({ ...PEDIDO, ...extra });
+    api().post('/api/v1/tickets').set(who).send({ ...PEDIDO, ...extra });
 
   const registerComputer = async (name: string): Promise<number> => {
     const created = await api()
-      .post('/api/computers')
+      .post('/api/v1/computers')
       .set(asCaio())
       .send({ name, kind: 'desktop', department: 'RECEPÇÃO' })
       .expect(201);
@@ -99,38 +99,38 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
     }).expect(201);
     /* A máquina entra pelo painel, por quem atende — quem abre não a escolhe. */
     await api()
-      .patch(`/api/tickets/${first.body.id}`)
+      .patch(`/api/v1/tickets/${first.body.id}`)
       .set(asCaio())
       .send({ priority: 'high', computerId })
       .expect(200);
 
     const byMachine = await api()
-      .get(`/api/tickets?computerId=${computerId}`)
+      .get(`/api/v1/tickets?computerId=${computerId}`)
       .set(asCaio())
       .expect(200);
     expect(byMachine.body.total).toBe(1);
     expect(byMachine.body.items[0].computerName).toBe('PC-RECEPCAO-01');
 
-    const byProtocol = await api().get('/api/tickets?search=CH-0001').set(asCaio()).expect(200);
+    const byProtocol = await api().get('/api/v1/tickets?search=CH-0001').set(asCaio()).expect(200);
     expect(byProtocol.body.total).toBe(1);
 
-    const byText = await api().get('/api/tickets?search=sincroniza').set(asCaio()).expect(200);
+    const byText = await api().get('/api/v1/tickets?search=sincroniza').set(asCaio()).expect(200);
     expect(byText.body.items[0].description).toContain('Joana');
 
     const high = await api()
-      .get('/api/tickets?priority=high&problemType=printer&department=RECEPÇÃO&status=open')
+      .get('/api/v1/tickets?priority=high&problemType=printer&department=RECEPÇÃO&status=open')
       .set(asCaio())
       .expect(200);
     expect(high.body.total).toBe(1);
 
     const waiting = await api()
-      .get('/api/tickets?statusGroup=waiting&area=infra')
+      .get('/api/v1/tickets?statusGroup=waiting&area=infra')
       .set(asCaio())
       .expect(200);
     /* "Esperando" é só quem parou por alguém de fora: aberto não entra. */
     expect(waiting.body.total).toBe(0);
 
-    const solved = await api().get('/api/tickets?statusGroup=solved').set(asBia()).expect(200);
+    const solved = await api().get('/api/v1/tickets?statusGroup=solved').set(asBia()).expect(200);
     expect(solved.body.total).toBe(0);
   });
 
@@ -140,7 +140,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
 
     for (const format of ['xlsx', 'docx', 'pdf']) {
       const file = await api()
-        .get(`/api/tickets/export?format=${format}&search=sincroniza`)
+        .get(`/api/v1/tickets/export?format=${format}&search=sincroniza`)
         .set(asCaio())
         .buffer(true)
         .parse((response, callback) => {
@@ -154,38 +154,38 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
       expect((file.body as Buffer).length).toBeGreaterThan(100);
     }
 
-    await api().get('/api/tickets/export?format=csv').set(asCaio()).expect(400);
+    await api().get('/api/v1/tickets/export?format=csv').set(asCaio()).expect(400);
   });
 
   it('adds and removes a participant area, and the other area starts seeing the ticket', async () => {
     const created = await open({}).expect(201);
 
-    await api().get(`/api/tickets/${created.body.id}`).set(asDora()).expect(403);
+    await api().get(`/api/v1/tickets/${created.body.id}`).set(asDora()).expect(403);
 
     const shared = await api()
-      .post(`/api/tickets/${created.body.id}/areas`)
+      .post(`/api/v1/tickets/${created.body.id}/areas`)
       .set(asCaio())
       .send({ area: 'sistema' })
       .expect(201);
     expect(shared.body.participantAreas).toEqual(['sistema']);
 
-    const seenBySistema = await api().get('/api/tickets?area=sistema').set(asDora()).expect(200);
+    const seenBySistema = await api().get('/api/v1/tickets?area=sistema').set(asDora()).expect(200);
     expect(seenBySistema.body.total).toBe(1);
-    await api().get(`/api/tickets/${created.body.id}`).set(asDora()).expect(200);
+    await api().get(`/api/v1/tickets/${created.body.id}`).set(asDora()).expect(200);
 
     const alone = await api()
-      .delete(`/api/tickets/${created.body.id}/areas/sistema`)
+      .delete(`/api/v1/tickets/${created.body.id}/areas/sistema`)
       .set(asCaio())
       .expect(200);
     expect(alone.body.participantAreas).toEqual([]);
-    await api().get(`/api/tickets/${created.body.id}`).set(asDora()).expect(403);
+    await api().get(`/api/v1/tickets/${created.body.id}`).set(asDora()).expect(403);
   });
 
   it('links people to the ticket and tells who can be notified', async () => {
     const created = await open({ watcherIds: [BIA.id] }).expect(201);
 
     const people = await api()
-      .get(`/api/tickets/${created.body.id}/people`)
+      .get(`/api/v1/tickets/${created.body.id}/people`)
       .set(asCaio())
       .expect(200);
     expect(people.body.watchers).toEqual([{ id: BIA.id, name: 'Bia' }]);
@@ -195,24 +195,24 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
     );
 
     const replaced = await api()
-      .put(`/api/tickets/${created.body.id}/watchers`)
+      .put(`/api/v1/tickets/${created.body.id}/watchers`)
       .set(asCaio())
       .send({ userIds: [DORA.id] })
       .expect(200);
     expect(replaced.body).toEqual([{ id: DORA.id, name: 'Dora' }]);
 
     /* Vinculada, Dora passa a ter o chamado entre "os meus", mesmo sem cargo em Infra. */
-    const mine = await api().get('/api/tickets/mine').set(asDora()).expect(200);
+    const mine = await api().get('/api/v1/tickets/mine').set(asDora()).expect(200);
     expect(mine.body.map((ticket: { id: number }) => ticket.id)).toEqual([created.body.id]);
 
     const unchanged = await api()
-      .put(`/api/tickets/${created.body.id}/watchers`)
+      .put(`/api/v1/tickets/${created.body.id}/watchers`)
       .set(asCaio())
       .send({ userIds: [DORA.id] })
       .expect(200);
     expect(unchanged.body).toHaveLength(1);
 
-    const options = await api().get('/api/tickets/people-options').set(asAna()).expect(200);
+    const options = await api().get('/api/v1/tickets/people-options').set(asAna()).expect(200);
     expect(options.body.map((person: { name: string }) => person.name)).toEqual([
       'Ana',
       'Bia',
@@ -226,29 +226,29 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
     await open({ requesterName: 'Caio' }, asCaio()).expect(201);
     await open({ watcherIds: [ANA.id] }, asCaio()).expect(201);
 
-    const mine = await api().get('/api/tickets/mine').set(asAna()).expect(200);
+    const mine = await api().get('/api/v1/tickets/mine').set(asAna()).expect(200);
     expect(mine.body).toHaveLength(2);
 
-    const defaults = await api().get('/api/tickets/requester-defaults').set(asAna()).expect(200);
+    const defaults = await api().get('/api/v1/tickets/requester-defaults').set(asAna()).expect(200);
     expect(defaults.body).toMatchObject({
       name: 'Ana',
       email: 'ana@empresa.com.br',
       phone: '62 99999-1234',
     });
 
-    const areas = await api().get('/api/tickets/areas/mine').set(asCaio()).expect(200);
+    const areas = await api().get('/api/v1/tickets/areas/mine').set(asCaio()).expect(200);
     expect(areas.body).toEqual(['infra']);
   });
 
   it('offers as responsible only who administers the area', async () => {
     const infra = await api()
-      .get('/api/tickets/assignee-options?area=infra')
+      .get('/api/v1/tickets/assignee-options?area=infra')
       .set(asAna())
       .expect(200);
     expect(infra.body).toEqual([{ id: CAIO.id, name: 'Caio' }]);
 
     const sistema = await api()
-      .get('/api/tickets/assignee-options?area=sistema')
+      .get('/api/v1/tickets/assignee-options?area=sistema')
       .set(asAna())
       .expect(200);
     expect(sistema.body).toEqual([{ id: DORA.id, name: 'Dora' }]);
@@ -259,14 +259,14 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
     const created = await open({}).expect(201);
 
     const refused = await api()
-      .put(`/api/tickets/${created.body.id}/watchers`)
+      .put(`/api/v1/tickets/${created.body.id}/watchers`)
       .set(asCaio())
       .send({ userIds: ['00000000-0000-4000-8000-0000000000ff'] })
       .expect(422);
     expect(refused.body.message).toContain('não está mais ativa');
 
     await api()
-      .put('/api/tickets/999999/watchers')
+      .put('/api/v1/tickets/999999/watchers')
       .set(asCaio())
       .send({ userIds: [] })
       .expect(404);
@@ -289,17 +289,17 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
     const created = await open({}).expect(201);
 
     await api()
-      .post(`/api/tickets/${created.body.id}/areas`)
+      .post(`/api/v1/tickets/${created.body.id}/areas`)
       .set(asBia())
       .send({ area: 'sistema' })
       .expect(403);
     await api()
-      .put(`/api/tickets/${created.body.id}/watchers`)
+      .put(`/api/v1/tickets/${created.body.id}/watchers`)
       .set(asBia())
       .send({ userIds: [DORA.id] })
       .expect(403);
     await api()
-      .post(`/api/tickets/${created.body.id}/areas`)
+      .post(`/api/v1/tickets/${created.body.id}/areas`)
       .set(asCaio())
       .send({ area: 'financeiro' })
       .expect(400);

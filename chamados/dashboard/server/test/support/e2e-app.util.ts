@@ -216,7 +216,11 @@ export async function createE2eApp(
   const truncate = async (...tables: string[]): Promise<void> => {
     if (tables.length === 0) return;
 
-    await db.execute(sql.raw(`truncate table ${tables.join(', ')} restart identity cascade`));
+    await db.execute(
+      sql.raw(
+        `truncate table ${tables.map((table) => `"chamados"."${table.replaceAll('"', '""')}"`).join(', ')} restart identity cascade`,
+      ),
+    );
   };
 
   return { app, storage, db, truncate };

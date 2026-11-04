@@ -110,4 +110,23 @@ describe('WhatsappOutboxService.tick', () => {
 
     expect(messages.claimDue).toHaveBeenCalledTimes(1);
   });
+  it('drains the current delivery before shutdown and leaves the remaining leases for retry', async () => {
+    const { outbox, messages, messaging } = makeOutbox([row(), row({ id: 5 })]);
+    let finish: (value: string) => void = () => undefined;
+    messaging.deliver.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+    const tick = outbox.tick(NOW);
+    await vi.waitFor(() => expect(messaging.deliver).toHaveBeenCalledOnce());
+    let stopped = false;
+    const shutdown = outbox.beforeApplicationShutdown().then(() => {
+      stopped = true;
+    });
+    await Promise.resolve();
+    expect(stopped).toBe(false);
+    finish('sent');
+    await Promise.all([tick, shutdown]);
+    await outbox.tick(NOW);
+    expect(stopped).toBe(true);
+    expect(messaging.deliver).toHaveBeenCalledOnce();
+    expect(messages.claimDue).toHaveBeenCalledOnce();
+  });
 });

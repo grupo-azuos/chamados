@@ -76,8 +76,9 @@ async function readAccount<T>(accountUrl: string, path: string): Promise<T> {
 
 export const accountProfileApi = {
   me: async (accountUrl: string): Promise<AccountProfile> =>
-    (await readAccount<{ data: { user: AccountProfile } }>(accountUrl, '/api/me/profile')).data.user,
+    (await readAccount<{ data: { user: AccountProfile } }>(accountUrl, '/api/v1/me/profile')).data
+      .user,
   systems: async (accountUrl: string): Promise<AccountSystem[]> =>
-    (await readAccount<{ data: { systems: AccountSystem[] } }>(accountUrl, '/api/me/systems')).data
-      .systems,
+    (await readAccount<{ data: { systems: AccountSystem[] } }>(accountUrl, '/api/v1/me/systems'))
+      .data.systems,
 };

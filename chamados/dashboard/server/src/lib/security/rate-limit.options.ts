@@ -17,7 +17,7 @@ export function buildRateLimitOptions(env: Env): ThrottlerModuleOptions {
     /* A mensagem é texto de tela: vai em português, como todo erro que a pessoa lê. */
     errorMessage: 'Muitas requisições em pouco tempo. Espere um instante e tente de novo.',
     /* Quem é contado: o endereço que o Express resolveu, já respeitando quantos proxies
-       existem na frente (ver `API_TRUST_PROXY_HOPS`). O `normalizeIp` junta o IPv6 pelo
+       existem na frente (ver `TRUST_PROXY_HOPS`). O `normalizeIp` junta o IPv6 pelo
        prefixo da rede — sem isso, quem tem uma faixa inteira à disposição troca de endereço
        a cada requisição e a trava nunca fecha. */
     getTracker: (request: Record<string, unknown>) => normalizeIp(readIp(request)),

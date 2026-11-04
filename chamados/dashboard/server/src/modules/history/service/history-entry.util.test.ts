@@ -9,7 +9,7 @@ import {
 
 const UPDATE: MutationRequest = {
   method: 'PATCH',
-  routePath: '/api/tickets/:id',
+  routePath: '/api/v1/tickets/:id',
   handler: 'update',
   params: { id: '42' },
   body: { status: 'closed', priority: undefined },
@@ -40,7 +40,7 @@ describe('historyEntryOf', () => {
       {
         ...UPDATE,
         method: 'POST',
-        routePath: '/api/computers',
+        routePath: '/api/v1/computers',
         handler: 'create',
         params: {},
         fileNames: ['nota.pdf'],
@@ -84,7 +84,7 @@ describe('historyEntryOf', () => {
 
   it('records no fields when the body is not an object', () => {
     expect(
-      historyEntryOf({ ...UPDATE, body: undefined, routePath: '/api/:id' }, 'ok'),
+      historyEntryOf({ ...UPDATE, body: undefined, routePath: '/api/v1/:id' }, 'ok'),
     ).toMatchObject({
       action: 'api.update',
       targetType: null,

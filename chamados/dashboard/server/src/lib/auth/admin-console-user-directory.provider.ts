@@ -1,4 +1,6 @@
-import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { ValkeyCache } from '../cache/valkey-cache';
+import { serviceAuthorization } from './oauth-token.client';
+import { Inject, Injectable, Logger, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 
 import { isUserMockEnabled, type Env } from '../config/env.schema';
@@ -9,16 +11,16 @@ import { type UserDirectoryProvider } from './user-directory.type';
 /**
  * AS PESSOAS DO DIRETÓRIO, lidas no admin-console.
  *
- * Rotas de lá, com o token de serviço do sistema (`ADMIN_CONSOLE_TOKEN`):
+ * Rotas de lá, com o token de serviço do sistema (`ADMIN_CONSOLE_CLIENT_SECRET`):
  *
- *  - `GET /api/systems/me/access` — QUEM PODE ENTRAR AQUI, com o papel de cada um. É a lista
+ *  - `GET /api/v1/systems/me/access` — QUEM PODE ENTRAR AQUI, com o papel de cada um. É a lista
  *    da tela de Acessos e das atribuições que exigem acesso ao sistema.
  *    O `me` é o sistema dono do token; não existe
  *    parâmetro para pedir a lista de outro.
- *  - `GET /api/users?ids=` — uma pessoa só, pelo UUID.
- *  - `GET /api/users?search=` — quem tem o termo no nome ou no e-mail, no escritório inteiro:
+ *  - `GET /api/v1/users?ids=` — uma pessoa só, pelo UUID.
+ *  - `GET /api/v1/users?search=` — quem tem o termo no nome ou no e-mail, no escritório inteiro:
  *    quem pede acesso pelo WhatsApp ainda não está na lista deste sistema.
- *  - `GET /api/users?page=&pageSize=` — o escritório inteiro, incluindo quem não acessa o
+ *  - `GET /api/v1/users?page=&pageSize=` — o escritório inteiro, incluindo quem não acessa o
  *    Chamados. Todas as páginas são lidas para escolher o responsável por um computador.
  *
  * Três decisões:
@@ -79,12 +81,15 @@ export class AdminConsoleUserDirectoryProvider implements UserDirectoryProvider 
   private cached: { users: DirectoryUser[]; at: number } | null = null;
   private cachedAll: { users: DirectoryUser[]; at: number } | null = null;
 
-  constructor(@Inject(ENV) private readonly env: Env) {}
+  constructor(
+    @Inject(ENV) private readonly env: Env,
+    @Optional() private readonly cache?: ValkeyCache,
+  ) {}
 
   async listUsers(): Promise<DirectoryUser[]> {
     if (this.cached && Date.now() - this.cached.at < CACHE_TTL_MS) return this.cached.users;
 
-    const body = await this.read<AccessListResponse>('/api/systems/me/access');
+    const body = await this.read<AccessListResponse>('/api/v1/systems/me/access');
     const users = toDirectoryUsers(body.data?.people, (person) => person.presentation?.avatarUrl);
     this.cached = { users, at: Date.now() };
 
@@ -92,25 +97,36 @@ export class AdminConsoleUserDirectoryProvider implements UserDirectoryProvider 
   }
 
   async listAllUsers(): Promise<DirectoryUser[]> {
-    if (this.cachedAll && Date.now() - this.cachedAll.at < CACHE_TTL_MS) return this.cachedAll.users;
+    if (this.cachedAll && Date.now() - this.cachedAll.at < CACHE_TTL_MS)
+      return this.cachedAll.users;
 
-    const first = await this.read<UsersResponse>(`/api/users?page=1&pageSize=${DIRECTORY_PAGE_SIZE}`);
+    const first = await this.read<UsersResponse>(
+      `/api/v1/users?page=1&pageSize=${DIRECTORY_PAGE_SIZE}`,
+    );
     const pages = directoryPageCount(first);
     const people = toDirectoryUsers(first.data?.users, (user) => user.profile?.avatarUrl);
     for (let page = 2; page <= pages; page += 1) {
-      const body = await this.read<UsersResponse>(`/api/users?page=${page}&pageSize=${DIRECTORY_PAGE_SIZE}`);
+      const body = await this.read<UsersResponse>(
+        `/api/v1/users?page=${page}&pageSize=${DIRECTORY_PAGE_SIZE}`,
+      );
       directoryPageCount(body);
       people.push(...toDirectoryUsers(body.data?.users, (user) => user.profile?.avatarUrl));
     }
 
-    const users = [...new Map(people.map((person) => [person.id, person])).values()]
-      .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+    const users = [...new Map(people.map((person) => [person.id, person])).values()].sort(
+      (left, right) => left.name.localeCompare(right.name, 'pt-BR'),
+    );
     /* O cache só é publicado depois da última página, para não guardar uma lista incompleta. */
     this.cachedAll = { users, at: Date.now() };
     return users;
   }
 
   async getUserById(id: string): Promise<DirectoryUser | null> {
+    const load = () => this.loadUserById(id);
+    return this.cache ? this.cache.remember(`directory-user:${id}`, 30, load) : load();
+  }
+
+  private async loadUserById(id: string): Promise<DirectoryUser | null> {
     /* A pessoa de desenvolvimento não existe no admin-console: sem isto, o que ela vincula na
        máquina local (o WhatsApp, por exemplo) nunca acharia quem atende. */
     if (id === MOCK_IDENTITY.id && isUserMockEnabled(this.env)) return MOCK_DIRECTORY_USER;
@@ -119,7 +135,7 @@ export class AdminConsoleUserDirectoryProvider implements UserDirectoryProvider 
     if (fromList) return fromList;
 
     const body = await this.read<UsersResponse>(
-      `/api/users?ids=${encodeURIComponent(id)}&pageSize=1`,
+      `/api/v1/users?ids=${encodeURIComponent(id)}&pageSize=1`,
     );
 
     return toDirectoryUsers(body.data?.users, (user) => user.profile?.avatarUrl)[0] ?? null;
@@ -127,7 +143,7 @@ export class AdminConsoleUserDirectoryProvider implements UserDirectoryProvider 
 
   async searchUsers(term: string): Promise<DirectoryUser[]> {
     const body = await this.read<UsersResponse>(
-      `/api/users?search=${encodeURIComponent(term)}&pageSize=${SEARCH_PAGE_SIZE}`,
+      `/api/v1/users?search=${encodeURIComponent(term)}&pageSize=${SEARCH_PAGE_SIZE}`,
     );
 
     return toDirectoryUsers(body.data?.users, (user) => user.profile?.avatarUrl);
@@ -143,12 +159,12 @@ export class AdminConsoleUserDirectoryProvider implements UserDirectoryProvider 
 
     try {
       const response = await fetch(url, {
-        headers: this.headers(),
+        headers: await this.headers(),
         signal: AbortSignal.timeout(this.env.ADMIN_CONSOLE_TIMEOUT_MS),
       });
       if (response.ok) return (await response.json()) as T;
 
-      /* 401/403 aqui é quase sempre o token: sem `ADMIN_CONSOLE_TOKEN`, ou um gerado para
+      /* 401/403 aqui é quase sempre o token: sem `ADMIN_CONSOLE_CLIENT_SECRET`, ou um gerado para
          outro sistema. O log diz o código; o token é gerado na tela do sistema, lá. */
       this.logger.warn(`Admin-console answered ${response.status} for ${path}`);
     } catch (error) {
@@ -158,17 +174,22 @@ export class AdminConsoleUserDirectoryProvider implements UserDirectoryProvider 
     throw new ServiceUnavailableException(UNAVAILABLE);
   }
 
-  private headers(): Record<string, string> {
-    if (!this.env.ADMIN_CONSOLE_TOKEN) return { accept: 'application/json' };
+  private async headers(): Promise<Record<string, string>> {
+    if (!this.env.ADMIN_CONSOLE_CLIENT_SECRET) return { accept: 'application/json' };
 
-    return { accept: 'application/json', authorization: `Bearer ${this.env.ADMIN_CONSOLE_TOKEN}` };
+    return { accept: 'application/json', authorization: await serviceAuthorization(this.env) };
   }
 }
 
 /** Resposta sem paginação não prova que o diretório terminou: não truncamos a lista em silêncio. */
 function directoryPageCount(body: UsersResponse): number {
   const pages = body?.meta?.pagination?.totalPages;
-  if (!Array.isArray(body?.data?.users) || typeof pages !== 'number' || !Number.isSafeInteger(pages) || pages < 0) {
+  if (
+    !Array.isArray(body?.data?.users) ||
+    typeof pages !== 'number' ||
+    !Number.isSafeInteger(pages) ||
+    pages < 0
+  ) {
     throw new ServiceUnavailableException(UNAVAILABLE);
   }
   return pages;

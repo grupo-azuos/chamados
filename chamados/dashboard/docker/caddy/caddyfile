@@ -1,0 +1,63 @@
+{
+    auto_https off
+    admin off
+    persist_config off
+    servers {
+        trusted_proxies static private_ranges
+    }
+}
+
+:8080 {
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+    # Sem compressão de SSE: os eventos precisam sair sem buffer.
+    encode zstd gzip {
+        match {
+            header Content-Type text/html*
+header Content-Type text/css*
+header Content-Type text/javascript*
+header Content-Type application/json*
+header Content-Type application/javascript*
+header Content-Type image/svg+xml*
+        }
+    }
+    route {
+        handle /__ready {
+            rewrite * /api/health
+            reverse_proxy app:3000
+        }
+        @wrong_host not host {$PUBLIC_DOMAIN}
+        respond @wrong_host 421
+        request_header -X-Forwarded-User-Id
+        request_header -X-Forwarded-User-Email
+        request_header -X-Forwarded-User-Name
+        request_header -X-Forwarded-User-Role
+        request_header -X-Forwarded-Host
+        request_header -X-Forwarded-Proto
+        @public path /api/health /agent /api/v1/agent/releases/latest /api/v1/network/webhook /api/v1/integrations/github/callback /api/v1/integrations/whatsapp/inbound
+        handle @public {
+            reverse_proxy app:3000
+        }
+        handle {
+            forward_auth {$ADMIN_CONSOLE_URL} {
+                uri /api/auth/verify
+                header_up Host {upstream_hostport}
+                header_up X-Forwarded-Host {host}
+                header_up X-Forwarded-Proto https
+                copy_headers X-Forwarded-User-Id X-Forwarded-User-Email X-Forwarded-User-Name X-Forwarded-User-Role
+                transport http {
+                    dial_timeout 3s
+                    response_header_timeout 5s
+                }
+            }
+            reverse_proxy app:3000 {
+                header_up X-Forwarded-Proto https
+                flush_interval -1
+                stream_close_delay 5m
+            }
+        }
+    }
+}

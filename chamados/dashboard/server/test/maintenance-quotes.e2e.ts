@@ -25,7 +25,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
 
   const sendDocument = async (fileName = 'orcamento.pdf', contentType = 'application/pdf') => {
     const ticket = await api()
-      .post('/api/maintenance-quotes/attachment/upload-url')
+      .post('/api/v1/maintenance-quotes/attachment/upload-url')
       .set(asDora())
       .send({ fileName, contentType, sizeBytes: PDF.length })
       .expect(201);
@@ -36,7 +36,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
 
   const registerQuote = (body: Record<string, unknown>, who = asDora()) =>
     api()
-      .post('/api/maintenance-quotes')
+      .post('/api/v1/maintenance-quotes')
       .set(who)
       .send({
         supplier: 'Refrigeração Silva',
@@ -91,7 +91,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
     await registerQuote({ quotedOn: '2026-10-20', status: 'approved' }).expect(201);
     await registerQuote({ description: 'Pintura da fachada', quotedOn: '2026-10-05' }).expect(201);
 
-    const all = await api().get('/api/maintenance-quotes').set(asEdu()).expect(200);
+    const all = await api().get('/api/v1/maintenance-quotes').set(asEdu()).expect(200);
     expect(all.body.items.map((quote: { quotedOn: string }) => quote.quotedOn)).toEqual([
       '2026-10-20',
       '2026-10-05',
@@ -99,22 +99,22 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
     ]);
 
     const approved = await api()
-      .get('/api/maintenance-quotes?status=approved')
+      .get('/api/v1/maintenance-quotes?status=approved')
       .set(asDora())
       .expect(200);
     expect(approved.body.total).toBe(1);
 
-    const products = await api().get('/api/maintenance-quotes?kind=product').set(asDora()).expect(200);
+    const products = await api().get('/api/v1/maintenance-quotes?kind=product').set(asDora()).expect(200);
     expect(products.body.items[0].supplier).toBe('Elétrica Souza');
 
     const search = await api()
-      .get('/api/maintenance-quotes?search=fachada')
+      .get('/api/v1/maintenance-quotes?search=fachada')
       .set(asDora())
       .expect(200);
     expect(search.body.total).toBe(1);
 
     const paged = await api()
-      .get('/api/maintenance-quotes?page=2&pageSize=2')
+      .get('/api/v1/maintenance-quotes?page=2&pageSize=2')
       .set(asDora())
       .expect(200);
     expect(paged.body.items).toHaveLength(1);
@@ -124,7 +124,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
     const created = await registerQuote({ attachment: await sendDocument('v1.pdf') }).expect(201);
 
     const approved = await api()
-      .patch(`/api/maintenance-quotes/${created.body.id}`)
+      .patch(`/api/v1/maintenance-quotes/${created.body.id}`)
       .set(asDora())
       .send({ status: 'approved', amountCents: 119_900, attachment: await sendDocument('v2.pdf') })
       .expect(200);
@@ -137,7 +137,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
     expect(started.storage.size).toBe(1);
 
     const stripped = await api()
-      .patch(`/api/maintenance-quotes/${created.body.id}`)
+      .patch(`/api/v1/maintenance-quotes/${created.body.id}`)
       .set(asDora())
       .send({ removeAttachment: true })
       .expect(200);
@@ -146,7 +146,7 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
     expect(started.storage.size).toBe(0);
 
     const found = await api()
-      .get(`/api/maintenance-quotes/${created.body.id}`)
+      .get(`/api/v1/maintenance-quotes/${created.body.id}`)
       .set(asEdu())
       .expect(200);
     expect(found.body.status).toBe('approved');
@@ -155,23 +155,23 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
   it('deletes the quote together with its document', async () => {
     const created = await registerQuote({ attachment: await sendDocument() }).expect(201);
 
-    await api().delete(`/api/maintenance-quotes/${created.body.id}`).set(asDora()).expect(204);
+    await api().delete(`/api/v1/maintenance-quotes/${created.body.id}`).set(asDora()).expect(204);
 
     expect(started.storage.size).toBe(0);
-    await api().get(`/api/maintenance-quotes/${created.body.id}`).set(asDora()).expect(404);
+    await api().get(`/api/v1/maintenance-quotes/${created.body.id}`).set(asDora()).expect(404);
   });
 
   // triste
   it('refuses a document that is not a PDF or an image', async () => {
     await api()
-      .post('/api/maintenance-quotes/attachment/upload-url')
+      .post('/api/v1/maintenance-quotes/attachment/upload-url')
       .set(asDora())
       .send({ fileName: 'planilha.xlsx', contentType: 'application/vnd.ms-excel', sizeBytes: 10 })
       .expect(422);
 
     /* O arquivo chegou com outro tipo do que o link prometeu: é o tipo medido que vale. */
     const ticket = await api()
-      .post('/api/maintenance-quotes/attachment/upload-url')
+      .post('/api/v1/maintenance-quotes/attachment/upload-url')
       .set(asDora())
       .send({ fileName: 'orcamento.pdf', contentType: 'application/pdf', sizeBytes: 10 })
       .expect(201);
@@ -186,28 +186,28 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
     await registerQuote({ quotedOn: '20/10/2026' }).expect(400);
     await registerQuote({ amountCents: -1 }).expect(400);
 
-    await api().get('/api/maintenance-quotes/999999').set(asDora()).expect(404);
+    await api().get('/api/v1/maintenance-quotes/999999').set(asDora()).expect(404);
     await api()
-      .patch('/api/maintenance-quotes/999999')
+      .patch('/api/v1/maintenance-quotes/999999')
       .set(asDora())
       .send({ status: 'rejected' })
       .expect(404);
-    await api().delete('/api/maintenance-quotes/999999').set(asDora()).expect(404);
+    await api().delete('/api/v1/maintenance-quotes/999999').set(asDora()).expect(404);
   });
 
   it('keeps the role per area: readers consult, Infra admins do not enter', async () => {
     const created = await registerQuote({}).expect(201);
 
-    await api().get('/api/maintenance-quotes').set(asEdu()).expect(200);
+    await api().get('/api/v1/maintenance-quotes').set(asEdu()).expect(200);
     await registerQuote({}, asEdu()).expect(403);
     await api()
-      .patch(`/api/maintenance-quotes/${created.body.id}`)
+      .patch(`/api/v1/maintenance-quotes/${created.body.id}`)
       .set(asEdu())
       .send({ status: 'approved' })
       .expect(403);
-    await api().delete(`/api/maintenance-quotes/${created.body.id}`).set(asEdu()).expect(403);
+    await api().delete(`/api/v1/maintenance-quotes/${created.body.id}`).set(asEdu()).expect(403);
 
-    await api().get('/api/maintenance-quotes').set(asAna()).expect(403);
-    await api().get('/api/maintenance-quotes').expect(401);
+    await api().get('/api/v1/maintenance-quotes').set(asAna()).expect(403);
+    await api().get('/api/v1/maintenance-quotes').expect(401);
   });
 });

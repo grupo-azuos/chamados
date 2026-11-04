@@ -10,7 +10,7 @@ import { parseEnv } from '../src/lib/config/env.schema';
 
 /**
  * As três travas de produção na aplicação DE VERDADE — a mesma que vai para o ar, com o
- * prefixo `/api`, o filtro de erro global e o banco de verdade atrás.
+ * prefixo `/api/v1`, o filtro de erro global e o banco de verdade atrás.
  *
  * É aqui que se prova o que os testes de unidade não alcançam: que `/api/health` existe no
  * endereço que o Traefik consulta, que ela responde depois de falar com o Postgres, e que a
@@ -32,6 +32,7 @@ describe.skipIf(!testDatabaseUrl)('API hardening (e2e)', () => {
 
   beforeAll(async () => {
     process.env.DATABASE_URL = testDatabaseUrl;
+    process.env.USER_MOCK = 'false';
     process.env.API_LOG_LEVEL = 'error';
     /* Sem usuário fingido, mesmo que o `.env` de quem roda tenha `USER_MOCK=true` para a tela:
        o que se prova aqui é a porta fechada para quem não se identificou. */
@@ -41,7 +42,7 @@ describe.skipIf(!testDatabaseUrl)('API hardening (e2e)', () => {
     /* UM proxy na frente, como em produção atrás do Traefik. É o que faz `request.ip` ser o
        endereço que chega no cabeçalho — e é como cada teste abaixo consegue o próprio balde,
        em vez de herdar a contagem do anterior. */
-    process.env.API_TRUST_PROXY_HOPS = '1';
+    process.env.TRUST_PROXY_HOPS = '1';
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication({ logger: ['error'] });
@@ -77,7 +78,7 @@ describe.skipIf(!testDatabaseUrl)('API hardening (e2e)', () => {
       .set(from('198.51.100.2'))
       .expect(200);
     const protectedRoute = await request(app.getHttpServer())
-      .get('/api/tickets')
+      .get('/api/v1/tickets')
       .set(from('198.51.100.2'))
       .expect(401);
 
@@ -102,15 +103,15 @@ describe.skipIf(!testDatabaseUrl)('API hardening (e2e)', () => {
     const ip = from('198.51.100.4');
 
     for (let attempt = 0; attempt < RATE_LIMIT; attempt += 1) {
-      await request(app.getHttpServer()).get('/api/tickets').set(ip).expect(401);
+      await request(app.getHttpServer()).get('/api/v1/tickets').set(ip).expect(401);
     }
 
-    const blocked = await request(app.getHttpServer()).get('/api/tickets').set(ip).expect(429);
+    const blocked = await request(app.getHttpServer()).get('/api/v1/tickets').set(ip).expect(429);
 
     expect(blocked.body.message).toBe(TOO_MANY);
     /* O 429 chega no MESMO formato de erro do resto da API: a tela lê o motivo sempre no
        mesmo lugar. */
-    expect(blocked.body).toMatchObject({ statusCode: 429, path: '/api/tickets' });
+    expect(blocked.body).toMatchObject({ statusCode: 429, path: '/api/v1/tickets' });
   });
 
   /* A trava vem antes da identidade de propósito: quem está abusando não deve custar uma
@@ -119,11 +120,11 @@ describe.skipIf(!testDatabaseUrl)('API hardening (e2e)', () => {
     const ip = from('198.51.100.5');
 
     for (let attempt = 0; attempt < RATE_LIMIT; attempt += 1) {
-      await request(app.getHttpServer()).get('/api/tickets').set(ip).expect(401);
+      await request(app.getHttpServer()).get('/api/v1/tickets').set(ip).expect(401);
     }
 
     /* Sem token nenhum a resposta seria 401; ela vira 429, então a trava decidiu primeiro. */
-    await request(app.getHttpServer()).get('/api/tickets').set(ip).expect(429);
+    await request(app.getHttpServer()).get('/api/v1/tickets').set(ip).expect(429);
   });
 
   it('closes the UniFi webhook door earlier than the rest of the API', async () => {
@@ -133,14 +134,14 @@ describe.skipIf(!testDatabaseUrl)('API hardening (e2e)', () => {
       /* 401: sem `UNIFI_WEBHOOK_TOKEN` configurado a porta recusa tudo — o que importa aqui
          é que a chamada FOI CONTADA no balde apertado. */
       await request(app.getHttpServer())
-        .post('/api/network/webhook?token=errado')
+        .post('/api/v1/network/webhook?token=errado')
         .set(ip)
         .send({})
         .expect(401);
     }
 
     const blocked = await request(app.getHttpServer())
-      .post('/api/network/webhook?token=errado')
+      .post('/api/v1/network/webhook?token=errado')
       .set(ip)
       .send({})
       .expect(429);
@@ -148,6 +149,6 @@ describe.skipIf(!testDatabaseUrl)('API hardening (e2e)', () => {
     expect(blocked.body.message).toBe(TOO_MANY);
 
     /* E o resto da API continua atendendo o mesmo endereço: são dois baldes, não um. */
-    await request(app.getHttpServer()).get('/api/tickets').set(ip).expect(401);
+    await request(app.getHttpServer()).get('/api/v1/tickets').set(ip).expect(401);
   });
 });

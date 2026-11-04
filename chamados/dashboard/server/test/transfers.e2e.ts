@@ -24,7 +24,7 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
 
   const registerComputer = async (name: string, department: string | null = 'RECEPÇÃO') => {
     const created = await api()
-      .post('/api/computers')
+      .post('/api/v1/computers')
       .set(asCaio())
       .send({ name, kind: 'desktop', department })
       .expect(201);
@@ -34,7 +34,7 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
 
   const registerPart = async (name: string, quantity: number): Promise<number> => {
     const created = await api()
-      .post('/api/parts')
+      .post('/api/v1/parts')
       .set(asAna())
       .send({ name, category: 'keyboard', condition: 'new', initialQuantity: quantity })
       .expect(201);
@@ -44,13 +44,13 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
 
   const handOut = (partId: number, computerId: number, quantity = 1) =>
     api()
-      .post(`/api/parts/${partId}/movements`)
+      .post(`/api/v1/parts/${partId}/movements`)
       .set(asAna())
       .send({ type: 'out', quantity, computerId })
       .expect(201);
 
   const transfer = (computerId: number, body: Record<string, unknown>, who = asAna()) =>
-    api().post(`/api/computers/${computerId}/transfers`).set(who).send(body);
+    api().post(`/api/v1/computers/${computerId}/transfers`).set(who).send(body);
 
   beforeAll(async () => {
     started = await createE2eApp(testDatabaseUrl!);
@@ -85,14 +85,14 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
       createdBy: 'ana@empresa.com.br',
     });
 
-    const computer = await api().get(`/api/computers/${computerId}`).set(asAna()).expect(200);
+    const computer = await api().get(`/api/v1/computers/${computerId}`).set(asAna()).expect(200);
     expect(computer.body.department).toBe('Fiscal');
 
     /* De volta à prateleira: sem departamento. */
     await transfer(computerId, { toDepartment: null }).expect(201);
 
     const history = await api()
-      .get(`/api/computers/${computerId}/transfers`)
+      .get(`/api/v1/computers/${computerId}/transfers`)
       .set(asBia())
       .expect(200);
     expect(history.body.map((item: { toDepartment: string | null }) => item.toDepartment)).toEqual(
@@ -107,13 +107,13 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     await handOut(keyboard, computerId, 2);
     await handOut(mouse, computerId, 1);
     await api()
-      .post(`/api/parts/${mouse}/movements`)
+      .post(`/api/v1/parts/${mouse}/movements`)
       .set(asAna())
       .send({ type: 'in', quantity: 1, computerId })
       .expect(201);
 
     const installed = await api()
-      .get(`/api/computers/${computerId}/transfers/installed-parts`)
+      .get(`/api/v1/computers/${computerId}/transfers/installed-parts`)
       .set(asBia())
       .expect(200);
 
@@ -137,11 +137,11 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     }).expect(201);
     expect(moved.body.peripheralsLeftBehind).toBe(1);
 
-    const part = await api().get(`/api/parts/${keyboard}`).set(asAna()).expect(200);
+    const part = await api().get(`/api/v1/parts/${keyboard}`).set(asAna()).expect(200);
     expect(part.body.balance).toBe(2);
 
     const statement = await api()
-      .get(`/api/parts/movements?partId=${keyboard}`)
+      .get(`/api/v1/parts/movements?partId=${keyboard}`)
       .set(asAna())
       .expect(200);
     expect(statement.body.total).toBe(4);
@@ -150,7 +150,7 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     expect(statement.body.items[1].note).toContain('PC-RECEPCAO-03');
 
     const nowInstalled = await api()
-      .get(`/api/computers/${staying}/transfers/installed-parts`)
+      .get(`/api/v1/computers/${staying}/transfers/installed-parts`)
       .set(asAna())
       .expect(200);
     expect(nowInstalled.body[0]).toMatchObject({ partId: keyboard, quantity: 1 });
@@ -189,7 +189,7 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     }).expect(404);
 
     await api()
-      .post(`/api/computers/${computerId}/disposal`)
+      .post(`/api/v1/computers/${computerId}/disposal`)
       .set(asCaio())
       .send({ type: 'defect', reason: 'Placa-mãe queimada.' })
       .expect(201);
@@ -202,6 +202,6 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
 
     const computerId = await registerComputer('PC-RECEPCAO-07');
     await transfer(computerId, { toDepartment: 'Fiscal' }, asBia()).expect(403);
-    await api().get(`/api/computers/${computerId}/transfers`).expect(401);
+    await api().get(`/api/v1/computers/${computerId}/transfers`).expect(401);
   });
 });

@@ -29,7 +29,7 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
     who = asDora(),
   ) => {
     const ticket = await api()
-      .post('/api/inventory-items/photo/upload-url')
+      .post('/api/v1/inventory-items/photo/upload-url')
       .set(who)
       .send({
         fileName: file.fileName,
@@ -46,12 +46,12 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
 
   const registerItem = (body: Record<string, unknown>, who = asDora()) =>
     api()
-      .post('/api/inventory-items')
+      .post('/api/v1/inventory-items')
       .set(who)
       .send({ name: 'Cadeira giratória', category: 'furniture', unit: 'unit', ...body });
 
   const move = (itemId: number, body: Record<string, unknown>, who = asDora()) =>
-    api().post(`/api/inventory-items/${itemId}/movements`).set(who).send(body);
+    api().post(`/api/v1/inventory-items/${itemId}/movements`).set(who).send(body);
 
   beforeAll(async () => {
     started = await createE2eApp(testDatabaseUrl!);
@@ -101,7 +101,7 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
     await registerItem({ name: 'Café', category: 'pantry', unit: 'package' }).expect(201);
     await registerItem({ name: 'Cadeira', category: 'furniture', code: 'PAT-77' }).expect(201);
 
-    const all = await api().get('/api/inventory-items').set(asEdu()).expect(200);
+    const all = await api().get('/api/v1/inventory-items').set(asEdu()).expect(200);
     expect(all.body.items.map((item: { name: string }) => item.name)).toEqual([
       'Cadeira',
       'Mesa',
@@ -109,22 +109,22 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
     ]);
 
     const furniture = await api()
-      .get('/api/inventory-items?category=furniture')
+      .get('/api/v1/inventory-items?category=furniture')
       .set(asDora())
       .expect(200);
     expect(furniture.body.total).toBe(2);
 
-    const byCode = await api().get('/api/inventory-items?search=pat-77').set(asDora()).expect(200);
+    const byCode = await api().get('/api/v1/inventory-items?search=pat-77').set(asDora()).expect(200);
     expect(byCode.body.items.map((item: { name: string }) => item.name)).toEqual(['Cadeira']);
 
     const withoutPhoto = await api()
-      .get('/api/inventory-items?withoutPhotoOnly=true&outOfStockOnly=true')
+      .get('/api/v1/inventory-items?withoutPhotoOnly=true&outOfStockOnly=true')
       .set(asDora())
       .expect(200);
     expect(withoutPhoto.body.total).toBe(2);
 
     const paged = await api()
-      .get('/api/inventory-items?page=2&pageSize=2')
+      .get('/api/v1/inventory-items?page=2&pageSize=2')
       .set(asDora())
       .expect(200);
     expect(paged.body.items).toHaveLength(1);
@@ -134,7 +134,7 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
     const created = await registerItem({ photo: await sendPhoto(photo()) }).expect(201);
 
     const replaced = await api()
-      .patch(`/api/inventory-items/${created.body.id}`)
+      .patch(`/api/v1/inventory-items/${created.body.id}`)
       .set(asDora())
       .send({ name: 'Cadeira presidente', photo: await sendPhoto(photo()) })
       .expect(200);
@@ -145,7 +145,7 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
     expect(started.storage.size).toBe(1);
 
     const removed = await api()
-      .patch(`/api/inventory-items/${created.body.id}`)
+      .patch(`/api/v1/inventory-items/${created.body.id}`)
       .set(asDora())
       .send({ removePhoto: true })
       .expect(200);
@@ -153,7 +153,7 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
     expect(started.storage.size).toBe(0);
 
     const found = await api()
-      .get(`/api/inventory-items/${created.body.id}`)
+      .get(`/api/v1/inventory-items/${created.body.id}`)
       .set(asEdu())
       .expect(200);
     expect(found.body.photoUrl).toBeNull();
@@ -162,10 +162,10 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
   it('deletes the product together with its photo', async () => {
     const created = await registerItem({ photo: await sendPhoto(photo()) }).expect(201);
 
-    await api().delete(`/api/inventory-items/${created.body.id}`).set(asDora()).expect(204);
+    await api().delete(`/api/v1/inventory-items/${created.body.id}`).set(asDora()).expect(204);
 
     expect(started.storage.size).toBe(0);
-    await api().get(`/api/inventory-items/${created.body.id}`).set(asDora()).expect(404);
+    await api().get(`/api/v1/inventory-items/${created.body.id}`).set(asDora()).expect(404);
   });
 
   it('moves the balance with the statement: entry, exit and disposal', async () => {
@@ -187,18 +187,18 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
     const disposal = await move(id, { type: 'disposal', quantity: 1, reason: 'expired' }).expect(201);
     expect(disposal.body).toMatchObject({ balanceAfter: 2, reason: 'expired', note: null });
 
-    const reloaded = await api().get(`/api/inventory-items/${id}`).set(asDora()).expect(200);
+    const reloaded = await api().get(`/api/v1/inventory-items/${id}`).set(asDora()).expect(200);
     expect(reloaded.body.balance).toBe(2);
 
     const statement = await api()
-      .get(`/api/inventory-items/movements?itemId=${id}`)
+      .get(`/api/v1/inventory-items/movements?itemId=${id}`)
       .set(asEdu())
       .expect(200);
     expect(statement.body.total).toBe(3);
     expect(statement.body.items[0].type).toBe('disposal');
 
     const disposals = await api()
-      .get('/api/inventory-items/movements?type=disposal&reason=expired')
+      .get('/api/v1/inventory-items/movements?type=disposal&reason=expired')
       .set(asDora())
       .expect(200);
     expect(disposals.body.total).toBe(1);
@@ -222,14 +222,14 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
     await move(created.body.id, { type: 'disposal', quantity: 1 }).expect(400);
 
     await api()
-      .post('/api/inventory-items/photo/upload-url')
+      .post('/api/v1/inventory-items/photo/upload-url')
       .set(asDora())
       .send({ fileName: 'nota.pdf', contentType: 'application/pdf', sizeBytes: 10 })
       .expect(422);
 
     /* O arquivo chegou com outro tipo do que o link prometeu: é o tipo medido que vale. */
     const ticket = await api()
-      .post('/api/inventory-items/photo/upload-url')
+      .post('/api/v1/inventory-items/photo/upload-url')
       .set(asDora())
       .send({ fileName: 'foto.png', contentType: 'image/png', sizeBytes: 10 })
       .expect(201);
@@ -240,21 +240,21 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
   });
 
   it('answers 404 for a product that does not exist', async () => {
-    await api().get('/api/inventory-items/999999').set(asDora()).expect(404);
-    await api().patch('/api/inventory-items/999999').set(asDora()).send({ name: 'x' }).expect(404);
-    await api().delete('/api/inventory-items/999999').set(asDora()).expect(404);
+    await api().get('/api/v1/inventory-items/999999').set(asDora()).expect(404);
+    await api().patch('/api/v1/inventory-items/999999').set(asDora()).send({ name: 'x' }).expect(404);
+    await api().delete('/api/v1/inventory-items/999999').set(asDora()).expect(404);
     await move(999999, { type: 'in', quantity: 1 }).expect(404);
   });
 
   it('keeps the role per area: Maintenance readers consult, Infra admins do not enter', async () => {
     const created = await registerItem({}).expect(201);
 
-    await api().get('/api/inventory-items').set(asEdu()).expect(200);
+    await api().get('/api/v1/inventory-items').set(asEdu()).expect(200);
     await registerItem({}, asEdu()).expect(403);
     await move(created.body.id, { type: 'in', quantity: 1 }, asEdu()).expect(403);
-    await api().delete(`/api/inventory-items/${created.body.id}`).set(asEdu()).expect(403);
+    await api().delete(`/api/v1/inventory-items/${created.body.id}`).set(asEdu()).expect(403);
 
-    await api().get('/api/inventory-items').set(asAna()).expect(403);
-    await api().get('/api/inventory-items').expect(401);
+    await api().get('/api/v1/inventory-items').set(asAna()).expect(403);
+    await api().get('/api/v1/inventory-items').expect(401);
   });
 });

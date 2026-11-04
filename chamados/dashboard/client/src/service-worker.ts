@@ -44,7 +44,7 @@ worker.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== worker.location.origin) return;
-  if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return;
+  if (url.pathname === '/api/v1' || url.pathname.startsWith('/api/v1/')) return;
 
   // Só a página estática de indisponibilidade entra no cache. API, HTML autenticado,
   // cookies e redirecionamentos de login continuam sempre sob controle do servidor.
