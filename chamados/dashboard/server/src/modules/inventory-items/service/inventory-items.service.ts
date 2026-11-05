@@ -7,6 +7,10 @@ import {
 import { refuseInventoryPhoto } from '@template/shared/domain/inventory-photo.util';
 import { fitsInInventoryStock, stockAfter } from '@template/shared/domain/inventory-stock.util';
 import {
+  type CreateInventoryItemEventInput,
+  type InventoryItemEvent,
+} from '@template/shared/schemas/inventory-item-event.schema';
+import {
   type CreateInventoryItemInput,
   type InventoryItem,
   type InventoryItemListQuery,
@@ -33,11 +37,13 @@ import { StagedUploadsService } from '../../../lib/storage/staged-uploads.servic
 import { STORAGE } from '../../../lib/storage/storage.token';
 import {
   toInventoryItem,
+  toInventoryItemEvent,
   toInventoryItemInsert,
   toInventoryItemUpdate,
   toInventoryMovement,
   toInventoryMovementInsert,
 } from '../mapper/inventory-items.mapper';
+import { InventoryItemEventsRepository } from '../repository/inventory-item-events.repository';
 import { InventoryItemsRepository } from '../repository/inventory-items.repository';
 import { optimizePhoto } from './inventory-photo.util';
 
@@ -62,6 +68,7 @@ const PHOTO_FOLDER = 'inventory';
 export class InventoryItemsService {
   constructor(
     private readonly repository: InventoryItemsRepository,
+    private readonly eventsRepository: InventoryItemEventsRepository,
     private readonly staging: StagedUploadsService,
     @Inject(STORAGE) private readonly storage: FileStorage,
   ) {}
@@ -194,6 +201,37 @@ export class InventoryItemsService {
 
       return toInventoryMovement({ movement, item });
     });
+  }
+
+  /** A linha do tempo de ocorrências do produto: do mais antigo para o mais novo. */
+  async events(user: RequestUser, itemId: number): Promise<InventoryItemEvent[]> {
+    assertCanRead(user.role, 'as ocorrências do produto');
+    await this.require(itemId);
+
+    const rows = await this.eventsRepository.listByItemId(itemId);
+
+    return rows.map(toInventoryItemEvent);
+  }
+
+  /** Registra uma nova ocorrência (defeito, troca, manutenção, observação) na linha do tempo. */
+  async addEvent(
+    user: RequestUser,
+    itemId: number,
+    input: CreateInventoryItemEventInput,
+  ): Promise<InventoryItemEvent> {
+    assertCanManageInContext(user, 'manutencao', 'registrar ocorrências');
+    await this.require(itemId);
+
+    const authorName = user.name?.trim() || user.email;
+    const row = await this.eventsRepository.add({
+      itemId,
+      type: input.type,
+      description: input.description.trim(),
+      authorName,
+      createdBy: user.email,
+    });
+
+    return toInventoryItemEvent(row);
   }
 
   /** O produto, ou 404 com uma frase que diz o que fazer. */

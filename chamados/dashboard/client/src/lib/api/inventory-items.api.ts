@@ -1,4 +1,8 @@
 import {
+  type CreateInventoryItemEventInput,
+  type InventoryItemEvent,
+} from '@template/shared/schemas/inventory-item-event.schema';
+import {
   type InventoryItem,
   type InventoryItemFormValues,
   type InventoryItemListQuery,
@@ -63,6 +67,17 @@ export const inventoryItemsApi = {
   /** Entrada, saída ou descarte de um produto. O saldo é movido pelo servidor, junto. */
   createMovement: (itemId: number, body: CreateInventoryMovementInput) =>
     apiRequest<InventoryMovement>(`/inventory-items/${itemId}/movements`, {
+      method: 'POST',
+      body,
+    }),
+
+  /** A linha do tempo de ocorrências do produto (defeitos, trocas, manutenções, observações). */
+  events: (itemId: number) =>
+    apiRequest<InventoryItemEvent[]>(`/inventory-items/${itemId}/events`),
+
+  /** Registra uma nova ocorrência na linha do tempo do produto. */
+  addEvent: (itemId: number, body: CreateInventoryItemEventInput) =>
+    apiRequest<InventoryItemEvent>(`/inventory-items/${itemId}/events`, {
       method: 'POST',
       body,
     }),

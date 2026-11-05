@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { StorageModule } from '../../lib/storage/storage.module';
 import { InventoryItemsController } from './controller/inventory-items.controller';
+import { InventoryItemEventsRepository } from './repository/inventory-item-events.repository';
 import { InventoryItemsRepository } from './repository/inventory-items.repository';
 import { InventoryItemsService } from './service/inventory-items.service';
 
@@ -15,7 +16,7 @@ import { InventoryItemsService } from './service/inventory-items.service';
 @Module({
   imports: [StorageModule],
   controllers: [InventoryItemsController],
-  providers: [InventoryItemsService, InventoryItemsRepository],
-  exports: [InventoryItemsService, InventoryItemsRepository],
+  providers: [InventoryItemsService, InventoryItemsRepository, InventoryItemEventsRepository],
+  exports: [InventoryItemsService, InventoryItemsRepository, InventoryItemEventsRepository],
 })
 export class InventoryItemsModule {}

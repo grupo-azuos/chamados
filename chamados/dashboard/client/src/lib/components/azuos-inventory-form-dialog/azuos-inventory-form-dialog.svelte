@@ -7,6 +7,8 @@
   import { inventoryPhotoAccept } from '@template/shared/domain/inventory-photo.util';
 
   import { type FormFieldState } from '$lib/types/form-field.type';
+  import { type InventoryItemEventType } from '@template/shared/domain/inventory-item-event.util';
+  import { type InventoryItemEvent } from '@template/shared/schemas/inventory-item-event.schema';
 
   export type InventoryFormField =
     | 'name'
@@ -36,12 +38,23 @@
       photo: { previewUrl: string | null; fileName: string | null };
       departments?: string[];
       users?: { id: string; name: string }[];
+      timeline?: {
+        events: InventoryItemEvent[];
+        type: InventoryItemEventType;
+        description: string;
+      };
     };
     state: {
       isOpen: boolean;
       isSubmitting?: boolean;
       error?: string | null;
       photoError?: string | null;
+      timelineState?: {
+        isLoading?: boolean;
+        isSubmitting?: boolean;
+        error?: string | null;
+        formError?: string | null;
+      };
     };
     actions: {
       onChange: (field: InventoryFormField, value: string) => void;
@@ -50,6 +63,11 @@
       onPhotoRemove: () => void;
       onSubmit: () => void;
       onClose: () => void;
+      timelineActions?: {
+        onTypeChange: (type: InventoryItemEventType) => void;
+        onDescriptionChange: (description: string) => void;
+        onSubmit: () => void;
+      };
     };
   };
 
@@ -67,10 +85,12 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ComboboxField from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import AzuosInventoryItemTimeline from '$lib/components/azuos-inventory-item-timeline/azuos-inventory-item-timeline.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import { cn } from '$lib/utils/cn';
   import {
     Dialog,
     DialogDescription,
@@ -132,6 +152,7 @@
     actions.onChange('userName', found?.name ?? '');
   }
 
+  let activeTab = $state<'details' | 'timeline'>('details');
   let photoInput = $state<HTMLInputElement | undefined>();
   let cameraInput = $state<HTMLInputElement | undefined>();
 
@@ -160,7 +181,7 @@
   onOpenChange={(isOpen: boolean) => (isOpen ? undefined : actions.onClose())}
 >
   <DialogContent class="sm:max-w-xl">
-    <form novalidate class="flex flex-col gap-4.5 p-1 sm:p-2" onsubmit={handleSubmit}>
+    <div class="flex flex-col gap-4.5 p-1 sm:p-2">
       <DialogHeader class="gap-1.5">
         <div class="flex items-center gap-2.5">
           <span
@@ -178,6 +199,43 @@
             : 'Cadastre o que existe no escritório: mobiliário, mercadinho, limpeza e o resto.'}
         </DialogDescription>
       </DialogHeader>
+
+      {#if isEdit}
+        <div class="border-border flex gap-4 border-b">
+          <button
+            type="button"
+            class={cn(
+              'border-b-2 px-1 pb-2 text-sm font-medium transition-colors cursor-pointer',
+              activeTab === 'details'
+                ? 'border-primary text-primary font-semibold'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+            onclick={() => (activeTab = 'details')}
+          >
+            Dados do produto
+          </button>
+          <button
+            type="button"
+            class={cn(
+              'border-b-2 px-1 pb-2 text-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5',
+              activeTab === 'timeline'
+                ? 'border-primary text-primary font-semibold'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+            onclick={() => (activeTab = 'timeline')}
+          >
+            Linha do tempo
+            {#if data.timeline && data.timeline.events.length > 0}
+              <span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground font-semibold">
+                {data.timeline.events.length}
+              </span>
+            {/if}
+          </button>
+        </div>
+      {/if}
+
+      {#if !isEdit || activeTab === 'details'}
+        <form novalidate class="flex flex-col gap-4.5" onsubmit={handleSubmit}>
 
       <TextField
         data={{
@@ -413,5 +471,25 @@
         />
       </DialogFooter>
     </form>
+  {:else}
+    <div class="flex flex-col gap-4.5">
+      {#if data.timeline}
+        <AzuosInventoryItemTimeline
+          data={data.timeline}
+          state={dialogState.timelineState}
+          actions={actions.timelineActions}
+        />
+      {/if}
+
+      <DialogFooter>
+        <ActionButton
+          data={{ label: 'Fechar' }}
+          ui={{ variant: 'secondary' }}
+          actions={{ onClick: actions.onClose }}
+        />
+      </DialogFooter>
+    </div>
+  {/if}
+  </div>
   </DialogContent>
 </Dialog>

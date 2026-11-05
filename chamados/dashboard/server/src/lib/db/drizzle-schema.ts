@@ -7,6 +7,7 @@ import { history } from './schema/history.schema';
 import { internalRoles } from './schema/internal-roles.schema';
 import { superAdmins } from './schema/super-admins.schema';
 import { inventoryItems } from './schema/inventory-items.schema';
+import { inventoryItemEvents } from './schema/inventory-item-events.schema';
 import { inventoryMovements } from './schema/inventory-movements.schema';
 import { maintenanceQuotes } from './schema/maintenance-quotes.schema';
 import { maintenanceSchedules } from './schema/maintenance-schedules.schema';
@@ -71,6 +72,7 @@ export const drizzleSchema = {
   parts,
   partMovements,
   inventoryItems,
+  inventoryItemEvents,
   inventoryMovements,
   maintenanceQuotes,
   networkEvents,

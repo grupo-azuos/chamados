@@ -1,4 +1,8 @@
 import {
+  createInventoryItemEventSchema,
+  inventoryItemEventSchema,
+} from '@template/shared/schemas/inventory-item-event.schema';
+import {
   createInventoryItemSchema,
   inventoryItemListQuerySchema,
   inventoryItemSchema,
@@ -46,3 +50,7 @@ export class InventoryMovementListResponseDto extends createZodDto(
 /** O pedido do link para enviar a foto, e a resposta com o link (PUT) e a chave temporária. */
 export class PhotoUploadRequestDto extends createZodDto(uploadRequestSchema) {}
 export class PhotoUploadTicketDto extends createZodDto(uploadTicketSchema) {}
+
+/* LINHA DO TEMPO: ocorrências, defeitos, trocas e observações do item. */
+export class InventoryItemEventDto extends createZodDto(inventoryItemEventSchema) {}
+export class CreateInventoryItemEventDto extends createZodDto(createInventoryItemEventSchema) {}

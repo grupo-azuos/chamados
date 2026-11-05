@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { type InventoryItemRow } from '../../../lib/db/schema/inventory-items.schema';
 import {
   toInventoryItem,
+  toInventoryItemEvent,
   toInventoryItemInsert,
   toInventoryItemUpdate,
   toInventoryMovement,
@@ -192,5 +193,29 @@ describe('toInventoryItemUpdate', () => {
     );
 
     expect(values.photoKey).toBeNull();
+  });
+});
+
+describe('toInventoryItemEvent', () => {
+  it('maps an event row to the shared schema', () => {
+    const event = toInventoryItemEvent({
+      id: 5,
+      itemId: 1,
+      type: 'defeito',
+      description: 'Estrutura torta',
+      authorName: 'Ana Silva',
+      createdBy: 'ana@empresa.com.br',
+      createdAt: new Date('2026-10-10T14:30:00.000Z'),
+    });
+
+    expect(event).toEqual({
+      id: 5,
+      itemId: 1,
+      type: 'defeito',
+      description: 'Estrutura torta',
+      authorName: 'Ana Silva',
+      createdBy: 'ana@empresa.com.br',
+      createdAt: '2026-10-10T14:30:00.000Z',
+    });
   });
 });
