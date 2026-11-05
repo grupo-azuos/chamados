@@ -102,7 +102,7 @@ services:
         azuos.environment: ${DEPLOY_ENV:?}
         azuos.revision: ${APP_REVISION:?}
     extra_hosts: &id001
-    - login.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
+    - admin-console.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
     - shared-api.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
     - gestao-rh.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
   worker:
@@ -207,7 +207,7 @@ services:
         azuos.environment: ${DEPLOY_ENV:?}
         azuos.revision: ${APP_REVISION:?}
     extra_hosts:
-    - login.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
+    - admin-console.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
     - shared-api.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
     - gestao-rh.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
   gateway:
@@ -277,7 +277,7 @@ services:
     extra_hosts: *id001
 configs:
   gateway:
-    name: ${APP_NAME:?}-${DEPLOY_ENV:?}-gateway-${APP_REVISION:?}
+    name: ${APP_NAME:?}_${DEPLOY_ENV:?}_gateway_${APP_REVISION:?}
     file: ./caddy/caddyfile
 networks:
   private:

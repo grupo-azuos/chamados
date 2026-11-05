@@ -1,7 +1,7 @@
 # Build local e atualização nativa do Swarm. Sem registry ou deploy no GitHub.
 
 [[repo]]
-name = "chamados-prod"
+name = "chamados_prod"
 tags = ["context:apps", "env:core", "server:core"]
 [repo.config]
 server = "core"
@@ -40,7 +40,7 @@ docker run --rm --security-opt label=disable --network host \
 '''
 
 [[repo]]
-name = "chamados-homo"
+name = "chamados_homo"
 tags = ["context:apps", "env:homo", "server:homo"]
 [repo.config]
 server = "homo"
@@ -79,7 +79,7 @@ docker run --rm --security-opt label=disable --network host \
 '''
 
 [[repo]]
-name = "chamados-bot-prod"
+name = "chamados_bot_prod"
 tags = ["context:apps", "env:core", "server:core"]
 [repo.config]
 server = "core"
@@ -118,7 +118,7 @@ docker run --rm --security-opt label=disable --network host \
 '''
 
 [[repo]]
-name = "chamados-bot-homo"
+name = "chamados_bot_homo"
 tags = ["context:apps", "env:homo", "server:homo"]
 [repo.config]
 server = "homo"

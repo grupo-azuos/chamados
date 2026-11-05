@@ -30,9 +30,13 @@ async function main(): Promise<void> {
   }
 }
 
-void main().catch(() => {
+void main().catch((error: unknown) => {
+  const code =
+    error && typeof error === 'object' && 'code' in error ? String(error.code) : 'UNKNOWN';
+  const raw = error instanceof Error ? error.message : String(error);
+  const reason = raw.replace(/postgres(?:ql)?:\/\/[^\s'"]+/gi, 'postgresql://[REDACTED]');
   new Logger('Migrations').error(
-    'Migration failed; traffic remains on the previous slot. Check PostgreSQL logs.',
+    `Migration failed (${code}: ${reason}); traffic remains on the previous slot.`,
   );
   process.exitCode = 1;
 });
