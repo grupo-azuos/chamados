@@ -84,7 +84,9 @@
 
   /* A linha de baixo do cartão: onde fica e como é contado, sem repetir rótulo nenhum. */
   function detailOf(item: InventoryItem): string {
-    return [item.location, inventoryUnitLabel(item.unit)].filter(Boolean).join(' · ');
+    return [item.department, item.location, inventoryUnitLabel(item.unit)]
+      .filter(Boolean)
+      .join(' · ');
   }
 </script>
 
@@ -196,55 +198,100 @@
       <!-- Grade que se ajusta sozinha: um cartão por linha no celular, até quatro no monitor. -->
       <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {#each data.items as item (item.id)}
-          <li
-            class="rounded-surface border-border bg-card flex flex-col overflow-hidden border shadow-xs"
-          >
-            <div class="bg-muted flex aspect-[4/3] items-center justify-center overflow-hidden">
-              {#if item.photoUrl}
-                <img
-                  src={item.photoUrl}
-                  alt={`Foto de ${item.name}`}
-                  loading="lazy"
-                  class="size-full object-cover"
-                />
-              {:else}
-                <ImageOff class="text-muted-foreground size-6" aria-hidden="true" />
-              {/if}
-            </div>
-
-            <div class="flex flex-1 flex-col gap-1.5 p-3">
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="text-ink-900 min-w-0 text-sm leading-tight font-semibold">
-                  {item.name}
-                </h3>
-                <span
-                  class="rounded-chip bg-muted text-ink-700 shrink-0 px-2 py-0.5 text-xs font-medium"
-                >
-                  {inventoryCategoryLabel(item.category)}
-                </span>
+          <li class="flex">
+            <div
+              class="group rounded-surface border-border bg-card hover:border-border-strong flex flex-1 cursor-pointer flex-row items-stretch overflow-hidden border shadow-xs transition hover:shadow-sm sm:flex-col"
+              role="button"
+              tabindex="0"
+              aria-label={`Editar ${item.name}`}
+              onclick={(e) => {
+                if (e.target instanceof Element && e.target.closest('[data-card-control]')) return;
+                actions.onEdit(item);
+              }}
+              onkeydown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  actions.onEdit(item);
+                }
+              }}
+            >
+              <div
+                class="bg-muted flex w-20 shrink-0 items-center justify-center overflow-hidden sm:h-32 sm:w-full"
+              >
+                {#if item.photoUrl}
+                  <img
+                    src={item.photoUrl}
+                    alt={`Foto de ${item.name}`}
+                    loading="lazy"
+                    class="size-full object-cover"
+                  />
+                {:else}
+                  <ImageOff class="text-muted-foreground size-5 sm:size-6" aria-hidden="true" />
+                {/if}
               </div>
 
-              <p class="text-ink-500 text-xs">{detailOf(item)}</p>
+              <div class="flex min-w-0 flex-1 flex-col justify-between gap-1 p-2.5 sm:gap-1.5 sm:p-3">
+                <div class="flex min-w-0 flex-col gap-1">
+                  <div class="flex items-start justify-between gap-2">
+                    <h3 class="text-ink-900 truncate text-sm leading-tight font-semibold" title={item.name}>
+                      {item.name}
+                    </h3>
+                    <span
+                      class="rounded-chip bg-muted text-ink-700 shrink-0 px-2 py-0.5 text-xs font-medium"
+                    >
+                      {inventoryCategoryLabel(item.category)}
+                    </span>
+                  </div>
 
-              {#if item.code}
-                <p class="text-muted-foreground font-mono text-xs">{item.code}</p>
-              {/if}
+                  {#if detailOf(item)}
+                    <p class="text-ink-500 truncate text-xs" title={detailOf(item)}>{detailOf(item)}</p>
+                  {/if}
 
-              {#if item.note}
-                <p class="text-ink-700 line-clamp-2 text-xs">{item.note}</p>
-              {/if}
+                  {#if item.code || item.userName}
+                    <div class="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+                      {#if item.code}
+                        <span class="shrink-0 font-mono font-medium text-foreground">{item.code}</span>
+                      {/if}
+                      {#if item.code && item.userName}
+                        <span aria-hidden="true">·</span>
+                      {/if}
+                      {#if item.userName}
+                        <span class="text-ink-700 truncate" title={item.userName}>{item.userName}</span>
+                      {/if}
+                    </div>
+                  {/if}
 
-              <div class="mt-auto flex items-center justify-end gap-1 pt-2">
-                <ActionButton
-                  data={{ label: 'Corrigir' }}
-                  ui={{ variant: 'ghost', size: 'sm', icon: Pencil, isIconOnly: true }}
-                  actions={{ onClick: () => actions.onEdit(item) }}
-                />
-                <ActionButton
-                  data={{ label: 'Excluir' }}
-                  ui={{ variant: 'ghost', size: 'sm', icon: Trash2, isIconOnly: true }}
-                  actions={{ onClick: () => actions.onAskDelete(item) }}
-                />
+                  {#if item.note}
+                    <p class="text-ink-700 line-clamp-1 text-xs" title={item.note}>{item.note}</p>
+                  {/if}
+                </div>
+
+                <div
+                  data-card-control
+                  class="flex items-center justify-end gap-1 pt-1 sm:pt-2"
+                >
+                  <ActionButton
+                    data={{ label: 'Corrigir' }}
+                    ui={{ variant: 'ghost', size: 'sm', icon: Pencil, isIconOnly: true }}
+                    actions={{
+                      onClick: (e?: MouseEvent) => {
+                        e?.stopPropagation();
+                        actions.onEdit(item);
+                      },
+                    }}
+                  />
+                  <ActionButton
+                    data={{ label: 'Excluir' }}
+                    ui={{ variant: 'ghost', size: 'sm', icon: Trash2, isIconOnly: true }}
+                    actions={{
+                      onClick: (e?: MouseEvent) => {
+                        e?.stopPropagation();
+                        actions.onAskDelete(item);
+                      },
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </li>

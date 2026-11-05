@@ -17,6 +17,9 @@
     category: field('other'),
     unit: field('unit'),
     location: field(),
+    department: field(),
+    userId: field(),
+    userName: field(),
     code: field(),
     note: field(),
   };
@@ -26,6 +29,9 @@
     category: field('furniture'),
     unit: field('unit'),
     location: field('Sala da contabilidade'),
+    department: field('Contabilidade'),
+    userId: field(''),
+    userName: field(''),
     code: field('PAT-0101'),
     note: field('Pistão trocado em março.'),
   };

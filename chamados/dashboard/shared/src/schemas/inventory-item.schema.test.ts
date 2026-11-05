@@ -18,12 +18,18 @@ describe('createInventoryItemSchema', () => {
     const parsed = createInventoryItemSchema.parse({
       ...validItem(),
       location: 'Sala da contabilidade',
+      department: 'Contabilidade',
+      userId: 'u-123',
+      userName: 'Ana Silva',
       code: 'PAT-0042',
       note: 'Encosto quebrado, trocar o pistão',
     });
 
     expect(parsed.name).toBe('Cadeira de escritório');
     expect(parsed.location).toBe('Sala da contabilidade');
+    expect(parsed.department).toBe('Contabilidade');
+    expect(parsed.userId).toBe('u-123');
+    expect(parsed.userName).toBe('Ana Silva');
   });
 
   /* Quem digita um espaço antes do nome não está dando outro nome ao produto. */

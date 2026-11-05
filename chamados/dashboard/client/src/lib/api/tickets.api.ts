@@ -13,6 +13,7 @@ import {
   type TicketHistoryFormValues,
 } from '@template/shared/schemas/ticket-history.schema';
 import { type TicketPeople, type TicketPerson } from '@template/shared/schemas/ticket-person.schema';
+import { type TicketRelation } from '@template/shared/schemas/ticket-relation.schema';
 import {
   type MyTicket,
   type OpenedTicket,
@@ -235,6 +236,23 @@ export const ticketsApi = {
     apiRequest<TicketPerson[]>(`/tickets/${ticketId}/watchers`, {
       method: 'PUT',
       body: { userIds },
+    }),
+
+  /** Chamados relacionados a este chamado. */
+  relations: (ticketId: number) =>
+    apiRequest<TicketRelation[]>(`/tickets/${ticketId}/relations`),
+
+  /** Vincula outro chamado a este. */
+  addRelation: (ticketId: number, relatedTicketId: number) =>
+    apiRequest<TicketRelation[]>(`/tickets/${ticketId}/relations`, {
+      method: 'POST',
+      body: { relatedTicketId },
+    }),
+
+  /** Remove o vínculo com outro chamado. */
+  removeRelation: (ticketId: number, relatedTicketId: number) =>
+    apiRequest<TicketRelation[]>(`/tickets/${ticketId}/relations/${relatedTicketId}`, {
+      method: 'DELETE',
     }),
 
   /**

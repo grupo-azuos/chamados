@@ -163,6 +163,9 @@ describe('ticketsApi', () => {
       [() => ticketsApi.peopleOptions(), '/tickets/people-options', undefined],
       [() => ticketsApi.people(1), '/tickets/1/people', undefined],
       [() => ticketsApi.updateWatchers(1, ['u']), '/tickets/1/watchers', { method: 'PUT', body: { userIds: ['u'] } }],
+      [() => ticketsApi.relations(1), '/tickets/1/relations', undefined],
+      [() => ticketsApi.addRelation(1, 2), '/tickets/1/relations', { method: 'POST', body: { relatedTicketId: 2 } }],
+      [() => ticketsApi.removeRelation(1, 2), '/tickets/1/relations/2', { method: 'DELETE' }],
       [() => ticketsApi.verifyServiceOrder('ab cd'), '/service-orders/ab%20cd', undefined],
       [() => ticketsApi.findByProtocol('CH-0001'), '/tickets/protocol/CH-0001', undefined],
     ];

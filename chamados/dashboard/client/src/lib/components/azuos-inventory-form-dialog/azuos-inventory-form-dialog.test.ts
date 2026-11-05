@@ -17,7 +17,10 @@ const fields: Record<InventoryFormField, FormFieldState> = {
   category: field('furniture'),
   unit: field('unit'),
   location: field('Copa'),
+  department: field('Financeiro'),
   code: field('PAT-0101'),
+  userId: field(''),
+  userName: field(''),
   note: field(''),
 };
 

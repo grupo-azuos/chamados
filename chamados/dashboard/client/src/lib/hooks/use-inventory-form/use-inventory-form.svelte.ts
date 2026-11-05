@@ -1,6 +1,7 @@
 import { createForm } from '@tanstack/svelte-form';
-import { createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { refuseInventoryPhoto } from '@template/shared/domain/inventory-photo.util';
+import { departmentNames, LOCAL_DEPARTMENTS } from '@template/shared/domain/department.util';
 import {
   type InventoryItem,
   type InventoryItemFormValues,
@@ -8,7 +9,9 @@ import {
 } from '@template/shared/schemas/inventory-item.schema';
 
 import { readError } from '$lib/api/http-client';
+import { departmentsApi } from '$lib/api/departments.api';
 import { inventoryItemsApi } from '$lib/api/inventory-items.api';
+import { ticketsApi } from '$lib/api/tickets.api';
 import { type InventoryFormField } from '$lib/components/azuos-inventory-form-dialog/azuos-inventory-form-dialog.svelte';
 import { toFieldState } from '$lib/hooks/use-form-projection/use-form-projection.svelte';
 import { INVENTORY_QUERY_KEY } from '$lib/hooks/use-inventory-list/use-inventory-list.svelte';
@@ -25,6 +28,8 @@ export type InventoryFormModel = {
       /** O nome do arquivo escolhido — some quando a foto é a que já estava gravada. */
       fileName: string | null;
     };
+    departments: string[];
+    users: { id: string; name: string }[];
   };
   state: { isSubmitting: boolean; error: string | null; photoError: string | null };
   actions: {
@@ -61,6 +66,20 @@ export function useInventoryFormModel({
   let photoError = $state<string | null>(null);
   /* A pessoa pediu para ficar SEM foto: é diferente de "não mexi na foto". */
   let photoRemoved = $state(false);
+
+  const departmentsQuery = mirrorStore(
+    createQuery({
+      queryKey: ['departments', 'catalog'],
+      queryFn: departmentsApi.catalog,
+    }),
+  );
+
+  const usersQuery = mirrorStore(
+    createQuery({
+      queryKey: ['tickets', 'people-options'],
+      queryFn: ticketsApi.peopleOptions,
+    }),
+  );
 
   const save = mirrorStore(
     createMutation({
@@ -106,6 +125,9 @@ export function useInventoryFormModel({
           category: field('category'),
           unit: field('unit'),
           location: field('location'),
+          department: field('department'),
+          userId: field('userId'),
+          userName: field('userName'),
           code: field('code'),
           note: field('note'),
         },
@@ -113,6 +135,18 @@ export function useInventoryFormModel({
           previewUrl: photoPreview ?? (photoRemoved ? null : (item?.photoUrl ?? null)),
           fileName: photoFile?.name ?? null,
         },
+        departments: (() => {
+          const catalog = departmentsQuery.current.data;
+          const isValidCatalog =
+            catalog && Array.isArray(catalog.rh) && Array.isArray(catalog.local);
+          const base = isValidCatalog ? departmentNames(catalog) : [...LOCAL_DEPARTMENTS];
+          const current = values.current.department?.trim();
+          if (current && !base.includes(current)) return [current, ...base];
+          return base;
+        })(),
+        users: (Array.isArray(usersQuery.current.data) ? usersQuery.current.data : []).map(
+          (u) => ({ id: u.id, name: u.name }),
+        ),
       };
     },
     get state() {
@@ -186,7 +220,17 @@ export function useInventoryFormModel({
  */
 function toFormValues(item: InventoryItem | null): InventoryItemFormValues {
   if (!item) {
-    return { name: '', category: 'other', unit: 'unit', location: '', code: '', note: '' };
+    return {
+      name: '',
+      category: 'other',
+      unit: 'unit',
+      location: '',
+      department: '',
+      userId: '',
+      userName: '',
+      code: '',
+      note: '',
+    };
   }
 
   return {
@@ -194,6 +238,9 @@ function toFormValues(item: InventoryItem | null): InventoryItemFormValues {
     category: item.category,
     unit: item.unit,
     location: item.location ?? '',
+    department: item.department ?? '',
+    userId: item.userId ?? '',
+    userName: item.userName ?? '',
     code: item.code ?? '',
     note: item.note ?? '',
   };

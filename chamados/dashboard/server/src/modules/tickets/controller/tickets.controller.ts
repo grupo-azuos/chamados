@@ -35,6 +35,7 @@ import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   AddTicketAreaDto,
+  AddTicketRelationDto,
   CreateTicketDto,
   MyTicketDto,
   OpenedTicketDto,
@@ -50,6 +51,7 @@ import {
   TicketNoticeDto,
   TicketPeopleDto,
   TicketPersonDto,
+  TicketRelationDto,
   TicketReportQueryDto,
   UpdateTicketDto,
   UpdateTicketWatchersDto,
@@ -57,6 +59,7 @@ import {
 } from '../dto/ticket.dto';
 import { UploadRequestDto, UploadTicketDto } from '../dto/ticket-attachment.dto';
 import { SkipHistory } from '../../history/interceptor/skip-history.decorator';
+import { TicketRelationsService } from '../service/ticket-relations.service';
 import { type TicketDashboard, TicketsService } from '../service/tickets.service';
 import { AnyModule } from '../../../lib/auth/module-context.decorator';
 
@@ -78,7 +81,10 @@ import { AnyModule } from '../../../lib/auth/module-context.decorator';
 @AnyModule()
 @Controller('tickets')
 export class TicketsController {
-  constructor(private readonly service: TicketsService) {}
+  constructor(
+    private readonly service: TicketsService,
+    private readonly relationsService: TicketRelationsService,
+  ) {}
 
   @Post('upload-url')
   @SkipHistory()
@@ -328,6 +334,52 @@ export class TicketsController {
     @Body() body: UpdateTicketWatchersDto,
   ): Promise<TicketPersonDto[]> {
     return this.service.updateWatchers(user, id, body);
+  }
+
+  @Get(':id/relations')
+  @ApiOperation({
+    summary: 'Lista os chamados vinculados a este chamado',
+    description: 'Traz todos os chamados relacionados ao chamado informado.',
+  })
+  @ApiOkResponse({ type: [TicketRelationDto] })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  async listRelations(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<TicketRelationDto[]> {
+    return this.relationsService.list(user, id);
+  }
+
+  @Post(':id/relations')
+  @ApiOperation({
+    summary: 'Vincula outro chamado a este',
+    description: 'Relaciona um chamado existente ao chamado atual.',
+  })
+  @ApiBody({ type: AddTicketRelationDto })
+  @ApiOkResponse({ type: [TicketRelationDto] })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  @ApiBadRequestResponse({ description: 'Não é possível vincular um chamado a ele mesmo.' })
+  async addRelation(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: AddTicketRelationDto,
+  ): Promise<TicketRelationDto[]> {
+    return this.relationsService.add(user, id, body.relatedTicketId);
+  }
+
+  @Delete(':id/relations/:relatedTicketId')
+  @ApiOperation({
+    summary: 'Remove o vínculo com outro chamado',
+    description: 'Desfaz a relação entre os dois chamados.',
+  })
+  @ApiOkResponse({ type: [TicketRelationDto] })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  async removeRelation(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('relatedTicketId', ParseIntPipe) relatedTicketId: number,
+  ): Promise<TicketRelationDto[]> {
+    return this.relationsService.remove(user, id, relatedTicketId);
   }
 
   @Patch(':id')

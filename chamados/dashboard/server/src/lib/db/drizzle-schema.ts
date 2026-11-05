@@ -21,6 +21,7 @@ import { ticketAreas } from './schema/ticket-areas.schema';
 import { ticketAttachments } from './schema/ticket-attachments.schema';
 import { ticketHistories } from './schema/ticket-histories.schema';
 import { ticketServiceOrders } from './schema/ticket-service-orders.schema';
+import { ticketRelations } from './schema/ticket-relations.schema';
 import { ticketWatchers } from './schema/ticket-watchers.schema';
 import { tickets } from './schema/tickets.schema';
 import {
@@ -59,6 +60,7 @@ export const drizzleSchema = {
   ticketAttachments,
   ticketHistories,
   ticketServiceOrders,
+  ticketRelations,
   ticketWatchers,
   computers,
   computerSamples,

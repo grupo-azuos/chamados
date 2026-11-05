@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type InventoryItemListQuery } from '@template/shared/schemas/inventory-item.schema';
 import { type InventoryMovementListQuery } from '@template/shared/schemas/inventory-movement.schema';
-import { and, asc, count, desc, eq, ilike, isNull, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
@@ -51,9 +51,13 @@ export class InventoryItemsRepository {
           .select()
           .from(inventoryItems)
           .where(where)
-          /* Por categoria e depois por nome: quem abre o inventário procura "as cadeiras",
-             não o produto cadastrado mais recentemente. */
-          .orderBy(asc(inventoryItems.category), asc(inventoryItems.name))
+          /* Ordenado por departamento e depois pelo número do patrimônio */
+          .orderBy(
+            sql`coalesce(${inventoryItems.department}, '') asc`,
+            sql`nullif(regexp_replace(${inventoryItems.code}, '\\D', '', 'g'), '')::bigint asc nulls last`,
+            asc(inventoryItems.code),
+            asc(inventoryItems.name),
+          )
           .limit(query.pageSize)
           .offset(offset),
         'listar produtos do inventário',
@@ -201,6 +205,8 @@ function buildWhere(query: InventoryItemListQuery): SQL | undefined {
       or(
         ilike(inventoryItems.name, term),
         ilike(inventoryItems.location, term),
+        ilike(inventoryItems.department, term),
+        ilike(inventoryItems.userName, term),
         ilike(inventoryItems.code, term),
       ),
     );

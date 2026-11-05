@@ -10,6 +10,8 @@ import { TicketAttachmentsRepository } from './repository/ticket-attachments.rep
 import { TicketHistoriesRepository } from './repository/ticket-histories.repository';
 import { TicketsRepository } from './repository/tickets.repository';
 import { TicketWatchersRepository } from './repository/ticket-watchers.repository';
+import { TicketRelationsRepository } from './repository/ticket-relations.repository';
+import { TicketRelationsService } from './service/ticket-relations.service';
 import { TicketAccessService } from './service/ticket-access.service';
 import { TicketAttachmentsService } from './service/ticket-attachments.service';
 import { TicketHistoriesService } from './service/ticket-histories.service';
@@ -51,6 +53,8 @@ import { DepartmentsModule } from '../departments/departments.module';
     TicketWhatsappNotifierService,
     TicketPeopleService,
     TicketWatchersRepository,
+    TicketRelationsService,
+    TicketRelationsRepository,
   ],
   exports: [TicketsService, TicketAssigneesService],
 })
