@@ -31,9 +31,9 @@ export const computerLiveSchema = z.object({
    * Separado de `receivedAt` de propósito: máquina com o relógio errado é comum, e é a
    * diferença entre os dois que denuncia isso em vez de fazer a tela mentir sozinha.
    */
-  measuredAt: z.string().datetime({ offset: true }),
+  measuredAt: z.iso.datetime({ offset: true }),
   /** Quando o servidor recebeu. É por este que a tela diz "há quanto tempo". */
-  receivedAt: z.string().datetime(),
+  receivedAt: z.iso.datetime(),
   /** Se a conexão do agente está aberta agora: sem ela, o que está aqui é o último retrato. */
   isOnline: z.boolean(),
 

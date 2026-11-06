@@ -5,7 +5,7 @@ import {
   networkSummarySchema,
   networkWebhookSchema,
 } from '@template/shared/schemas/network-event.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 
 /**

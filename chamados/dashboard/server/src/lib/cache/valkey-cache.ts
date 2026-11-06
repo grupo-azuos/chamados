@@ -15,7 +15,7 @@ export class ValkeyCache implements OnApplicationShutdown {
   constructor(@Inject(ENV) env: Env) {
     if (!env.VALKEY_URL) return;
     this.client = new Valkey(env.VALKEY_URL, {
-      keyPrefix: env.VALKEY_KEY_PREFIX,
+      keyPrefix: `${env.VALKEY_KEY_PREFIX}:`,
       lazyConnect: true,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,

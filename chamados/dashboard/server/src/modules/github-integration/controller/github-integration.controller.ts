@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type Request, type Response } from 'express';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { Public } from '../../../lib/auth/public.decorator';

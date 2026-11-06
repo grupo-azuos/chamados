@@ -23,6 +23,6 @@
     "outDir": "./dist",
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "include": ["src/**/*.ts", "test/**/*.ts", "rspack.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

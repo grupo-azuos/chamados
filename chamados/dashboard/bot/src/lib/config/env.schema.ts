@@ -23,7 +23,7 @@ const envSchema = z.object({
    * O endereço da API do servidor de chamados, com o `/api` — é para onde o bot leva o
    * `/chamado`. Opcional: sem ele o bot vincula e envia, mas não responde a quem escreve.
    */
-  BOT_SERVER_URL: z.string().url().optional(),
+  BOT_SERVER_URL: z.url().optional(),
   /**
    * Quantas mensagens um mesmo número pode mandar ao bot de um responsável dentro da janela
    * (`BOT_INBOUND_WINDOW_MINUTES`). Acima disso o bot não responde. Só conta comando e resposta

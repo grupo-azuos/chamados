@@ -11,7 +11,7 @@ import { DEPARTMENT_NAME_MAX_LENGTH } from '../domain/department.util';
  */
 export function departmentNameSchema(requiredMessage: string) {
   return z
-    .string({ required_error: requiredMessage, invalid_type_error: requiredMessage })
+    .string({ error: requiredMessage })
     .trim()
     .min(1, requiredMessage)
     .max(DEPARTMENT_NAME_MAX_LENGTH, `O departamento pode ter até ${DEPARTMENT_NAME_MAX_LENGTH} caracteres`);

@@ -6,7 +6,7 @@ import { NestFactory } from '@nestjs/core';
 import { WsAdapter } from '@nestjs/platform-ws';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger as PinoLogger } from 'nestjs-pino';
-import { cleanupOpenApiDoc } from 'nestjs-zod';
+import { withZodSchemas } from './lib/http/zod-dto';
 
 import { AppModule } from './app.module';
 import { setupApp } from './app.setup';
@@ -37,7 +37,7 @@ async function bootstrap(): Promise<void> {
 
   /* `cleanupOpenApiDoc` limpa o ruído interno dos schemas Zod do documento gerado. Sem isto
      o contrato publicado sai ilegível — e endpoint sem contrato legível reprova o CI. */
-  const document = cleanupOpenApiDoc(
+  const document = withZodSchemas(
     SwaggerModule.createDocument(
       app,
       new DocumentBuilder()

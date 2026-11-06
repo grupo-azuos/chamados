@@ -29,7 +29,7 @@ const PHONE_CHARACTERS = /^[\d\s()+-]*$/;
  * tivesse dígitos suficientes.
  */
 export const contactPhoneSchema = z
-  .string({ required_error: 'Informe seu WhatsApp com DDD' })
+  .string({ error: 'Informe seu WhatsApp com DDD' })
   .trim()
   .max(CONTACT_PHONE_MAX_LENGTH, 'Esse telefone é longo demais')
   .regex(PHONE_CHARACTERS, 'O WhatsApp só pode ter números, espaço, parênteses e traço')

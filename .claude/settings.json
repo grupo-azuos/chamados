@@ -102,6 +102,15 @@
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/design/check-design.mjs\" --hook"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/infra-contract.mjs\" --hook"
+          }
+        ]
       }
     ],
     "SessionStart": [

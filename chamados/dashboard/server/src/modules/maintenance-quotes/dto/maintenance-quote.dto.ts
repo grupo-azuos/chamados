@@ -9,7 +9,7 @@ import {
   uploadRequestSchema,
   uploadTicketSchema,
 } from '@template/shared/schemas/staged-file.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 
 /**
  * Os DTOs nascem dos MESMOS schemas Zod que a web importa. É o que garante que a validação

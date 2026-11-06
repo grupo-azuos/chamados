@@ -50,7 +50,7 @@ const NAME_MIN_PARTS = 2;
 /* Letras (com acento), espaço, hífen, apóstrofo e ponto: "Maria-Clara D'Ávila Jr." passa. */
 const NAME_CHARACTERS = /^[\p{L}\s'’.-]+$/u;
 const PHONE_MAX_DIGITS = 13;
-const emailSchema = z.string().email();
+const emailSchema = z.email();
 
 export function isAccessRequestCommand(text: string): boolean {
   return text.trim().toLowerCase() === ACCESS_REQUEST_COMMAND;

@@ -19,7 +19,7 @@ import {
   uploadRequestSchema,
   uploadTicketSchema,
 } from '@template/shared/schemas/staged-file.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 
 /**

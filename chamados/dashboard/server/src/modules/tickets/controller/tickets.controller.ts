@@ -24,6 +24,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiProduces,
   ApiTags,
   ApiUnprocessableEntityResponse,
@@ -469,6 +470,9 @@ export class TicketsController {
     summary: 'Tira uma área participante do chamado (#13)',
     description: 'A área original nunca pode ser removida por aqui — só reclassificada (PATCH).',
   })
+  /* `TicketArea` é um tipo, não uma classe: o build (SWC) não deixa o tipo do parâmetro para o
+     Swagger, que sem isto tiraria `area` do contrato. */
+  @ApiParam({ name: 'area', type: String })
   @ApiOkResponse({ type: TicketDto })
   @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
   @ApiForbiddenResponse({ description: 'Só gestor de alguma área do chamado pode remover outra.' })

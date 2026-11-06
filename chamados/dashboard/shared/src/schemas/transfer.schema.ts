@@ -78,7 +78,7 @@ export const transferSchema = z.object({
   note: z.string().nullable(),
   /** Quantos periféricos ficaram para trás nesta mudança. */
   peripheralsLeftBehind: z.number().int(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string(),
 });
 

@@ -25,7 +25,7 @@ import {
   ticketRelationSchema,
 } from '@template/shared/schemas/ticket-relation.schema';
 import { whatsappNoticeSchema } from '@template/shared/schemas/whatsapp-notice.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 
 /**

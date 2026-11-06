@@ -16,11 +16,11 @@ import { paginationQuerySchema } from './pagination.schema';
 export const INVENTORY_MOVEMENT_NOTE_MAX_LENGTH = 300;
 
 export const stockMovementTypeSchema = z.enum(STOCK_MOVEMENT_TYPES, {
-  errorMap: () => ({ message: 'Escolha entrada, saída ou descarte' }),
+  error: 'Escolha entrada, saída ou descarte',
 });
 
 export const disposalReasonSchema = z.enum(DISPOSAL_REASONS, {
-  errorMap: () => ({ message: 'Escolha o motivo do descarte' }),
+  error: 'Escolha o motivo do descarte',
 });
 
 const NOTE_TOO_LONG = `A observação pode ter até ${INVENTORY_MOVEMENT_NOTE_MAX_LENGTH} caracteres`;
@@ -41,7 +41,7 @@ export const inventoryMovementSchema = z.object({
   reason: disposalReasonSchema.nullable(),
   note: z.string().nullable(),
 
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string(),
 });
 
@@ -55,7 +55,7 @@ export const createInventoryMovementSchema = z
   .object({
     type: stockMovementTypeSchema,
     quantity: z.coerce
-      .number({ invalid_type_error: 'A quantidade precisa ser um número' })
+      .number<number>({ error: 'A quantidade precisa ser um número' })
       .int('A quantidade precisa ser um número inteiro')
       .min(1, 'A quantidade precisa ser pelo menos 1'),
     reason: disposalReasonSchema.nullable().optional(),
@@ -77,7 +77,7 @@ export const createInventoryMovementSchema = z
 export type CreateInventoryMovementInput = z.input<typeof createInventoryMovementSchema>;
 
 export const inventoryMovementListQuerySchema = paginationQuerySchema.extend({
-  itemId: z.coerce.number().int().optional(),
+  itemId: z.coerce.number<number>().int().optional(),
   type: stockMovementTypeSchema.optional(),
   /** O motivo do descarte — filtrado no SQL. */
   reason: disposalReasonSchema.optional(),

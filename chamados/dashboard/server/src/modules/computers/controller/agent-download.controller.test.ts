@@ -1,7 +1,7 @@
 import { applyHttpConventions } from '../../../lib/http/api-version';
 import { type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { ZodValidationPipe } from 'nestjs-zod';
+import { ZodValidationPipe } from '../../../lib/http/zod-validation.pipe';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { RolesGuard } from '../../../lib/auth/roles.guard';

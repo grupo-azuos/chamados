@@ -1,7 +1,8 @@
 #!/bin/sh
+# Volta todos os serviços do stack <ambiente>_<app> para a versão anterior (rollback do Swarm).
+# É o mesmo comando da Action <ambiente>_<app>_rollback do Komodo.
 set -eu
 
 deploy_env="${1:?Use prod ou homo}"
-docker service rollback --detach=false "chamados-${deploy_env}_app"
-docker service rollback --detach=false "chamados-${deploy_env}_worker"
-docker service rollback --detach=false "chamados-${deploy_env}_gateway"
+docker service ls -q --filter "label=com.docker.stack.namespace=${deploy_env}_chamados" \
+  | xargs -r -n1 docker service rollback --detach=false

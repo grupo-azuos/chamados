@@ -8,7 +8,7 @@ import {
   updateMovementSchema,
   updatePartSchema,
 } from '@template/shared/schemas/part.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 
 /**

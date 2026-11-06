@@ -3,7 +3,7 @@ import { type INestApplication } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { ZodValidationPipe } from 'nestjs-zod';
+import { ZodValidationPipe } from '../../../lib/http/zod-validation.pipe';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setupApp } from '../../../app.setup';
 import type { Env } from '../../../lib/config/env.schema';

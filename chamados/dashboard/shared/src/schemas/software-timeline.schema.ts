@@ -20,17 +20,17 @@ export const softwareTimelineEventSchema = z.object({
   /** Quem mais trabalhou no que o evento entregou (autores da branch, `Co-authored-by`). */
   coAuthors: z.array(z.string()).optional(),
   status: timelineEventStatusSchema,
-  eventDate: z.string().datetime(),
-  createdAt: z.string().datetime(),
+  eventDate: z.iso.datetime(),
+  createdAt: z.iso.datetime(),
 });
 
 export type SoftwareTimelineEvent = z.infer<typeof softwareTimelineEventSchema>;
 
 export const softwareTimelineListQuerySchema = paginationQuerySchema.extend({
-  projectId: z.coerce.number().int().optional(),
+  projectId: z.coerce.number<number>().int().optional(),
   type: timelineEventTypeSchema.optional(),
-  startAt: z.string().datetime().optional(),
-  endBefore: z.string().datetime().optional(),
+  startAt: z.iso.datetime().optional(),
+  endBefore: z.iso.datetime().optional(),
 });
 
 export type SoftwareTimelineListQuery = z.infer<typeof softwareTimelineListQuerySchema>;

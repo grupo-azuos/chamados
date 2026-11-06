@@ -19,7 +19,7 @@ export const publicServiceOrderSchema = z.object({
   protocol: z.string(),
   /** 1 na primeira emissão do chamado; sobe a cada emissão depois de uma mudança. */
   version: z.number().int().positive(),
-  issuedAt: z.string().datetime(),
+  issuedAt: z.iso.datetime(),
   /** O estágio do chamado NO DIA da emissão — não o de hoje. */
   statusAtIssue: z.enum(TICKET_STATUSES),
   /** Quantos históricos o documento traz. */

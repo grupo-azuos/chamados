@@ -8,7 +8,7 @@ import {
   saveMaintenanceScheduleSchema,
   updateMaintenanceSchema,
 } from '@template/shared/schemas/maintenance.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 
 /**

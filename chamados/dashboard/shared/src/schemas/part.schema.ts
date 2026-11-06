@@ -18,19 +18,19 @@ export const HANDLED_BY_MAX_LENGTH = 200;
 export const MAX_MOVEMENT_QUANTITY = 999;
 
 export const partCategorySchema = z.enum(PART_CATEGORIES, {
-  errorMap: () => ({ message: 'Escolha uma categoria da lista' }),
+  error: 'Escolha uma categoria da lista',
 });
 
 export const partConditionSchema = z.enum(PART_CONDITIONS, {
-  errorMap: () => ({ message: 'Diga se a peça é nova ou usada' }),
+  error: 'Diga se a peça é nova ou usada',
 });
 
 export const movementTypeSchema = z.enum(MOVEMENT_TYPES, {
-  errorMap: () => ({ message: 'A movimentação precisa ser entrada ou saída' }),
+  error: 'A movimentação precisa ser entrada ou saída',
 });
 
 const partNameSchema = z
-  .string({ required_error: 'Informe o que é a peça' })
+  .string({ error: 'Informe o que é a peça' })
   .trim()
   .min(1, 'Informe o que é a peça')
   .max(PART_NAME_MAX_LENGTH, `A descrição pode ter até ${PART_NAME_MAX_LENGTH} caracteres`);
@@ -67,9 +67,9 @@ export const partSchema = z.object({
   condition: partConditionSchema,
   balance: z.number().int(),
 
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string(),
-  updatedAt: z.string().datetime().nullable(),
+  updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
 });
 
@@ -86,7 +86,7 @@ export const createPartSchema = z.object({
   category: partCategorySchema,
   condition: partConditionSchema,
   initialQuantity: z.coerce
-    .number({ invalid_type_error: 'A quantidade precisa ser um número' })
+    .number<number>({ error: 'A quantidade precisa ser um número' })
     .int('A quantidade precisa ser um número inteiro')
     .min(0, 'A quantidade não pode ser negativa')
     .max(MAX_MOVEMENT_QUANTITY, `A quantidade pode ir até ${MAX_MOVEMENT_QUANTITY}`)
@@ -146,9 +146,9 @@ export const partMovementSchema = z.object({
   handledBy: z.string().nullable(),
   note: z.string().nullable(),
 
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string(),
-  updatedAt: z.string().datetime().nullable(),
+  updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
 });
 
@@ -157,7 +157,7 @@ export type PartMovement = z.infer<typeof partMovementSchema>;
 export const createMovementSchema = z.object({
   type: movementTypeSchema,
   quantity: z.coerce
-    .number({ invalid_type_error: 'A quantidade precisa ser um número' })
+    .number<number>({ error: 'A quantidade precisa ser um número' })
     .int('A quantidade precisa ser um número inteiro')
     .min(1, 'A quantidade precisa ser pelo menos 1')
     .max(MAX_MOVEMENT_QUANTITY, `A quantidade pode ir até ${MAX_MOVEMENT_QUANTITY}`),
@@ -206,16 +206,16 @@ export const partListQuerySchema = paginationQuerySchema.extend({
   category: partCategorySchema.optional(),
   condition: partConditionSchema.optional(),
   /** Só o que tem peça na prateleira — o que se pergunta antes de sair comprando. */
-  inStockOnly: z.coerce.boolean().optional(),
+  inStockOnly: z.coerce.boolean<boolean>().optional(),
   /** Só o que está com a prateleira vazia — filtrado no SQL, como os outros. */
-  outOfStockOnly: z.coerce.boolean().optional(),
+  outOfStockOnly: z.coerce.boolean<boolean>().optional(),
 });
 
 export type PartListQuery = z.infer<typeof partListQuerySchema>;
 
 export const movementListQuerySchema = paginationQuerySchema.extend({
-  partId: z.coerce.number().int().optional(),
-  computerId: z.coerce.number().int().optional(),
+  partId: z.coerce.number<number>().int().optional(),
+  computerId: z.coerce.number<number>().int().optional(),
   type: movementTypeSchema.optional(),
 });
 

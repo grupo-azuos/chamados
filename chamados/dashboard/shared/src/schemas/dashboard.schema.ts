@@ -19,7 +19,7 @@ export const PERIOD_OPTIONS = [7, 30, 90] as const;
 
 export const dashboardQuerySchema = z.object({
   days: z.coerce
-    .number({ invalid_type_error: 'O período precisa ser um número de dias' })
+    .number<number>({ error: 'O período precisa ser um número de dias' })
     .int()
     .min(1, 'O período precisa ter pelo menos um dia')
     .max(MAX_PERIOD_DAYS, `O período pode ir até ${MAX_PERIOD_DAYS} dias`)
@@ -166,7 +166,7 @@ export const maintenanceEntrySchema = z.object({
   type: z.string(),
   description: z.string(),
   performedBy: z.string().nullable(),
-  performedAt: z.string().datetime(),
+  performedAt: z.iso.datetime(),
 });
 
 export type MaintenanceEntry = z.infer<typeof maintenanceEntrySchema>;
@@ -193,7 +193,7 @@ export const plannedMaintenanceSchema = z.object({
   computerName: z.string(),
   department: departmentSchema.nullable(),
   /** O dia útil em que ela caiu no plano. */
-  plannedFor: z.string().datetime(),
+  plannedFor: z.iso.datetime(),
   /** Há quantos meses ela não é aberta. Nulo quando nunca foi. */
   monthsSinceLast: z.number().nullable(),
 });

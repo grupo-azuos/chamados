@@ -33,9 +33,11 @@ import {
   type DocumentVerification,
 } from './document.type';
 
+import { serverAsset } from '../config/server-root';
+
 /* As fontes moram ao lado deste arquivo — o build do Nest as copia para o `dist` (ver `assets`
    em nest-cli.json), então o mesmo caminho vale em desenvolvimento e em produção. */
-const FONTS_DIRECTORY = join(__dirname, 'fonts');
+const FONTS_DIRECTORY = serverAsset('lib/report/fonts');
 
 /**
  * As medidas do PAPEL TIMBRADO da casa, as mesmas da Gestão de RH: tiradas do modelo em Word
@@ -79,7 +81,7 @@ pdfMake.setFonts({
 /* O documento nunca busca nada na internet, e do disco só lê o que é dele (fontes e logo):
    um texto vindo de um chamado não consegue fazer o gerador abrir outro arquivo. */
 pdfMake.setUrlAccessPolicy(() => false);
-pdfMake.setLocalAccessPolicy((path) => path.startsWith(__dirname));
+pdfMake.setLocalAccessPolicy((path) => path.startsWith(FONTS_DIRECTORY));
 
 type PageSize = { width: number; height: number };
 type TableBlock = Extract<DocumentBlock, { kind: 'table' }>;

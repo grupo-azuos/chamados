@@ -95,7 +95,7 @@ export function roleInContext(
  */
 export const sessionUserSchema = z.object({
   id: z.string().min(1),
-  email: z.string().email(),
+  email: z.email(),
   name: z.string().min(1),
   image: z.string().nullable().optional(),
   role: userRoleSchema,
@@ -111,11 +111,11 @@ export type SessionUser = z.infer<typeof sessionUserSchema>;
 export const directoryUserSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
-  email: z.string().email(),
+  email: z.email(),
   image: z.string().nullable().optional(),
   role: z.string().nullable().optional(),
   banned: z.boolean().nullable().optional(),
-  createdAt: z.string().datetime().nullable().optional(),
+  createdAt: z.iso.datetime().nullable().optional(),
 });
 
 export type DirectoryUser = z.infer<typeof directoryUserSchema>;
