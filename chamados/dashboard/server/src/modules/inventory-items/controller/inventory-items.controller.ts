@@ -36,6 +36,7 @@ import {
   InventoryMovementDto,
   InventoryMovementListQueryDto,
   InventoryMovementListResponseDto,
+  InventoryResponsibleDto,
   PhotoUploadRequestDto,
   PhotoUploadTicketDto,
   UpdateInventoryItemDto,
@@ -88,6 +89,17 @@ export class InventoryItemsController {
     @Query() query: InventoryMovementListQueryDto,
   ): Promise<InventoryMovementListResponseDto> {
     return this.service.movements(user, query);
+  }
+
+  @Get('responsibles')
+  @ApiOperation({
+    summary: 'Lista todas as pessoas do escritório no admin-console',
+    description:
+      'Diretório completo de pessoas do admin-console para atribuição de responsável pelo patrimônio.',
+  })
+  @ApiOkResponse({ type: [InventoryResponsibleDto] })
+  async listResponsibles(@CurrentUser() user: RequestUser): Promise<InventoryResponsibleDto[]> {
+    return this.service.listResponsibles(user);
   }
 
   @Post(':id/movements')

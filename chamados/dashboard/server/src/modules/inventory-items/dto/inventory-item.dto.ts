@@ -6,6 +6,7 @@ import {
   createInventoryItemSchema,
   inventoryItemListQuerySchema,
   inventoryItemSchema,
+  inventoryResponsibleSchema,
   updateInventoryItemSchema,
 } from '@template/shared/schemas/inventory-item.schema';
 import {
@@ -26,6 +27,7 @@ import { z } from 'zod';
  * em runtime e o contrato publicado no Swagger não possam divergir.
  */
 export class InventoryItemDto extends createZodDto(inventoryItemSchema) {}
+export class InventoryResponsibleDto extends createZodDto(inventoryResponsibleSchema) {}
 export class CreateInventoryItemDto extends createZodDto(createInventoryItemSchema) {}
 export class UpdateInventoryItemDto extends createZodDto(updateInventoryItemSchema) {}
 export class InventoryItemListQueryDto extends createZodDto(inventoryItemListQuerySchema) {}

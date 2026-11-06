@@ -153,10 +153,14 @@ const defaultEventsRepository: Partial<InventoryItemEventsRepository> = {
  * O storage é o de memória, de verdade — com o que o teste quiser trocar por cima (uma falha,
  * um espião). Passar um `MemoryStorage` pronto deixa o teste olhar o que ficou nele.
  */
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
+import { type DirectoryUser } from '@template/shared/schemas/user.schema';
+
 function makeService(
   repository: Partial<InventoryItemsRepository> = {},
   storage: Partial<FileStorage> = {},
   eventsRepository: Partial<InventoryItemEventsRepository> = {},
+  directory?: Partial<UserDirectoryProvider>,
 ) {
   const memory = Object.assign(
     storage instanceof MemoryStorage ? storage : new MemoryStorage(),
@@ -169,6 +173,7 @@ function makeService(
     { ...defaultEventsRepository, ...eventsRepository } as InventoryItemEventsRepository,
     new StagedUploadsService(memory),
     memory,
+    directory as UserDirectoryProvider | undefined,
   );
 }
 
@@ -640,5 +645,55 @@ describe('InventoryItemsService.addEvent', () => {
         description: 'Observação teste',
       }),
     ).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe('InventoryItemsService.listResponsibles', () => {
+  const users: DirectoryUser[] = [
+    {
+      id: 'u-1',
+      name: 'Vinicius Gabriel',
+      email: 'vinicius@empresa.com.br',
+      image: null,
+      role: 'user',
+      banned: false,
+      createdAt: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'u-2',
+      name: 'Ana Silva',
+      email: 'ana@empresa.com.br',
+      image: null,
+      role: 'user',
+      banned: false,
+      createdAt: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'u-3',
+      name: 'Usuário Banido',
+      email: 'banido@empresa.com.br',
+      image: null,
+      role: 'user',
+      banned: true,
+      createdAt: '2026-01-01T00:00:00Z',
+    },
+  ];
+
+  it('lists all active office users from admin-console directory sorted alphabetically', async () => {
+    const listAllUsers = vi.fn().mockResolvedValue(users);
+    const service = makeService({}, {}, {}, { listAllUsers });
+
+    const responsibles = await service.listResponsibles(viewer);
+
+    expect(listAllUsers).toHaveBeenCalledOnce();
+    expect(responsibles).toEqual([
+      { id: 'u-2', name: 'Ana Silva' },
+      { id: 'u-1', name: 'Vinicius Gabriel' },
+    ]);
+  });
+
+  it('returns empty list when directory provider is not configured', async () => {
+    const service = makeService();
+    expect(await service.listResponsibles(viewer)).toEqual([]);
   });
 });

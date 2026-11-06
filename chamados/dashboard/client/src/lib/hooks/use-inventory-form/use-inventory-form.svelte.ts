@@ -11,7 +11,6 @@ import {
 import { readError } from '$lib/api/http-client';
 import { departmentsApi } from '$lib/api/departments.api';
 import { inventoryItemsApi } from '$lib/api/inventory-items.api';
-import { ticketsApi } from '$lib/api/tickets.api';
 import { type InventoryFormField } from '$lib/components/azuos-inventory-form-dialog/azuos-inventory-form-dialog.svelte';
 import { toFieldState } from '$lib/hooks/use-form-projection/use-form-projection.svelte';
 import { INVENTORY_QUERY_KEY } from '$lib/hooks/use-inventory-list/use-inventory-list.svelte';
@@ -76,8 +75,8 @@ export function useInventoryFormModel({
 
   const usersQuery = mirrorStore(
     createQuery({
-      queryKey: ['tickets', 'people-options'],
-      queryFn: ticketsApi.peopleOptions,
+      queryKey: ['inventory-items', 'responsibles'],
+      queryFn: inventoryItemsApi.responsibles,
     }),
   );
 

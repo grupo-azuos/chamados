@@ -2,6 +2,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { refuseInventoryPhoto } from '@template/shared/domain/inventory-photo.util';
@@ -14,6 +15,7 @@ import {
   type CreateInventoryItemInput,
   type InventoryItem,
   type InventoryItemListQuery,
+  type InventoryResponsible,
   type UpdateInventoryItemInput,
 } from '@template/shared/schemas/inventory-item.schema';
 import {
@@ -29,6 +31,8 @@ import {
 } from '@template/shared/schemas/staged-file.schema';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { type InventoryItemRow } from '../../../lib/db/schema/inventory-items.schema';
 import { assertCanManageInContext, assertCanRead } from '../../../lib/policy/policy-assert.util';
 import { DOWNLOAD_URL_TTL_SECONDS, type FileStorage } from '../../../lib/storage/file-storage.type';
@@ -71,7 +75,23 @@ export class InventoryItemsService {
     private readonly eventsRepository: InventoryItemEventsRepository,
     private readonly staging: StagedUploadsService,
     @Inject(STORAGE) private readonly storage: FileStorage,
+    @Optional() @Inject(USER_DIRECTORY_PROVIDER) private readonly directory?: UserDirectoryProvider,
   ) {}
+
+  /**
+   * Lista todas as pessoas ativas do escritório (admin-console) para atribuição de responsável.
+   * Não exige login no Chamados, pois patrimônio pode ser atribuído a qualquer colaborador.
+   */
+  async listResponsibles(user: RequestUser): Promise<InventoryResponsible[]> {
+    assertCanRead(user.role, 'o inventário da Manutenção');
+    if (!this.directory) return [];
+
+    const people = await this.directory.listAllUsers();
+    return people
+      .filter((person) => !person.banned)
+      .map(({ id, name }) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }
 
   /**
    * O link para enviar a foto de um produto. Só quem cadastra no inventário recebe — e a foto

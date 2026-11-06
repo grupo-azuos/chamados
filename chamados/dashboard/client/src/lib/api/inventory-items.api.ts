@@ -6,6 +6,7 @@ import {
   type InventoryItem,
   type InventoryItemFormValues,
   type InventoryItemListQuery,
+  type InventoryResponsible,
 } from '@template/shared/schemas/inventory-item.schema';
 import {
   type CreateInventoryMovementInput,
@@ -33,6 +34,8 @@ export const inventoryItemsApi = {
     }),
 
   findById: (id: number) => apiRequest<InventoryItem>(`/inventory-items/${id}`),
+
+  responsibles: () => apiRequest<InventoryResponsible[]>('/inventory-items/responsibles'),
 
   create: async (values: InventoryItemFormValues, photo: File | null) =>
     apiRequest<InventoryItem>('/inventory-items', {

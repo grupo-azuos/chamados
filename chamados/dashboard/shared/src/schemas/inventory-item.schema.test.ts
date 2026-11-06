@@ -5,6 +5,7 @@ import {
   createInventoryItemSchema,
   inventoryItemFormSchema,
   inventoryItemListQuerySchema,
+  inventoryResponsibleSchema,
   updateInventoryItemSchema,
 } from './inventory-item.schema';
 
@@ -144,3 +145,23 @@ describe('inventoryItemListQuerySchema', () => {
     expect(inventoryItemListQuerySchema.safeParse({ category: 'bebida' }).success).toBe(false);
   });
 });
+
+describe('inventoryResponsibleSchema', () => {
+  // feliz
+  it('accepts an active user with id and name', () => {
+    const parsed = inventoryResponsibleSchema.parse({
+      id: 'user-123',
+      name: 'Gisele Contabilidade',
+    });
+
+    expect(parsed.id).toBe('user-123');
+    expect(parsed.name).toBe('Gisele Contabilidade');
+  });
+
+  // triste
+  it('refuses missing id or name', () => {
+    expect(inventoryResponsibleSchema.safeParse({ id: 'user-123' }).success).toBe(false);
+    expect(inventoryResponsibleSchema.safeParse({ name: 'Gisele' }).success).toBe(false);
+  });
+});
+

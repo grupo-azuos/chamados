@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AuthModule } from '../../lib/auth/auth.module';
 import { StorageModule } from '../../lib/storage/storage.module';
 import { InventoryItemsController } from './controller/inventory-items.controller';
 import { InventoryItemEventsRepository } from './repository/inventory-item-events.repository';
@@ -12,9 +13,10 @@ import { InventoryItemsService } from './service/inventory-items.service';
  * rota dá 404".
  *
  * O `StorageModule` entra porque a foto do produto vive no storage, como o print do chamado.
+ * O `AuthModule` dá o provedor de diretório de usuários do admin-console para atribuição de patrimônio.
  */
 @Module({
-  imports: [StorageModule],
+  imports: [StorageModule, AuthModule],
   controllers: [InventoryItemsController],
   providers: [InventoryItemsService, InventoryItemsRepository, InventoryItemEventsRepository],
   exports: [InventoryItemsService, InventoryItemsRepository, InventoryItemEventsRepository],

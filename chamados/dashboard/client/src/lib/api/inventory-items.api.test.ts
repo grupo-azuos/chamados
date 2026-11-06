@@ -55,6 +55,8 @@ describe('inventoryItemsApi', () => {
 
     await inventoryItemsApi.findById(9);
     expect(apiRequest).toHaveBeenLastCalledWith('/inventory-items/9');
+    await inventoryItemsApi.responsibles();
+    expect(apiRequest).toHaveBeenLastCalledWith('/inventory-items/responsibles');
     await inventoryItemsApi.list({ search: 'cadeira' });
     expect(apiRequest).toHaveBeenLastCalledWith('/inventory-items', { query: { search: 'cadeira' } });
     await inventoryItemsApi.movements({ type: 'disposal' } as never);
