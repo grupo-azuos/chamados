@@ -4,10 +4,7 @@ import { INVENTORY_ITEM_EVENT_TYPES } from '../domain/inventory-item-event.util'
 
 export const INVENTORY_ITEM_EVENT_DESCRIPTION_MAX_LENGTH = 2000;
 
-export const inventoryItemEventTypeSchema = z.enum(INVENTORY_ITEM_EVENT_TYPES, {
-  required_error: 'Informe o tipo da ocorrência.',
-  invalid_type_error: 'Tipo de ocorrência inválido.',
-});
+export const inventoryItemEventTypeSchema = z.enum(INVENTORY_ITEM_EVENT_TYPES, { error: (issue) => (issue.input === undefined ? 'Informe o tipo da ocorrência.' : 'Tipo de ocorrência inválido.') });
 
 export const inventoryItemEventSchema = z.object({
   id: z.number().int().positive(),
@@ -16,7 +13,7 @@ export const inventoryItemEventSchema = z.object({
   description: z.string().trim().min(1).max(INVENTORY_ITEM_EVENT_DESCRIPTION_MAX_LENGTH),
   authorName: z.string().trim().min(1),
   createdBy: z.string().trim(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
 });
 
 export type InventoryItemEvent = z.infer<typeof inventoryItemEventSchema>;
@@ -24,7 +21,7 @@ export type InventoryItemEvent = z.infer<typeof inventoryItemEventSchema>;
 export const createInventoryItemEventSchema = z.object({
   type: inventoryItemEventTypeSchema,
   description: z
-    .string({ required_error: 'Informe a descrição da ocorrência.' })
+    .string({ error: 'Informe a descrição da ocorrência.' })
     .trim()
     .min(1, 'A descrição da ocorrência não pode ficar vazia.')
     .max(

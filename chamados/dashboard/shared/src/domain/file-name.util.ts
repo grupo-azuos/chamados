@@ -57,7 +57,7 @@ export function cleanFileName(value: string): string {
 }
 
 export const fileNameSchema = z
-  .string({ required_error: 'O arquivo precisa ter um nome' })
+  .string({ error: 'O arquivo precisa ter um nome' })
   .transform(cleanFileName)
   .pipe(
     z

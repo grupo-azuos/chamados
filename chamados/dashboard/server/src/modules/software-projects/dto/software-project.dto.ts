@@ -15,7 +15,7 @@ import {
   updateSoftwareScheduleEventSchema,
 } from '@template/shared/schemas/software-schedule.schema';
 import { softwareDashboardSchema } from '@template/shared/schemas/software-dashboard.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 
 export class SoftwareProjectDto extends createZodDto(softwareProjectSchema) {}

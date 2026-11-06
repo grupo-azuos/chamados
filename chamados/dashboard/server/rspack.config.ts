@@ -16,20 +16,32 @@ import { rspack } from '@rspack/core';
    e entra no pacote. */
 const NATIVE_MODULES: string[] = [];
 
-/* Pacotes que o Nest e o `pg` tentam carregar só se estiverem instalados. Sem eles no projeto, o
-   `require` precisa falhar em runtime como antes, e não quebrar o build. */
-const OPTIONAL_MODULES = [
+/* Pacotes que o Nest e o `pg` tentam carregar só se estiverem instalados (com ou sem subcaminho,
+   com ou sem `.js`). Sem eles no projeto, o carregamento precisa falhar em runtime como antes, e não
+   quebrar o build. */
+const OPTIONAL_PACKAGES = [
   '@nestjs/microservices',
-  '@nestjs/microservices/microservices-module',
-  '@nestjs/websockets/socket-module',
+  '@nestjs/websockets',
+  /* O adaptador padrão do WebSocket; quem usa WebSocket aqui escolhe o `@nestjs/platform-ws`. */
+  '@nestjs/platform-socket.io',
+  '@nestjs/platform-node',
   '@fastify/static',
   'class-transformer',
-  'class-transformer/storage',
   'class-validator',
   'pg-native',
   /* ESM puro, carregado pelo Nest só no `FileTypeValidator`, que o projeto não usa. */
   'file-type',
 ];
+/* O que o projeto declara em `dependencies` nunca é opcional: um app com WebSocket usa o
+   `@nestjs/websockets`, e ignorá-lo tiraria os gateways do pacote sem erro nenhum no build. */
+const DEPENDENCIES = Object.keys(
+  JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')).dependencies ?? {},
+);
+const isOptional = (resource: string): boolean =>
+  OPTIONAL_PACKAGES.some(
+    (name) =>
+      !DEPENDENCIES.includes(name) && (resource === name || resource.startsWith(`${name}/`)),
+  );
 
 const MIGRATE_CLI = './src/lib/db/migrate.cli.ts';
 
@@ -98,7 +110,7 @@ export default defineConfig({
         ]
       : []),
     new rspack.IgnorePlugin({
-      checkResource: (resource) => OPTIONAL_MODULES.includes(resource),
+      checkResource: isOptional,
     }),
   ],
   optimization: {

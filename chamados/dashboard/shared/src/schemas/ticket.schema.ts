@@ -24,7 +24,7 @@ import { ticketPersonSchema, watcherIdsSchema } from './ticket-person.schema';
 
 /**
  * O CONTRATO do chamado. Um schema, duas pontas: a API o usa como DTO e Swagger (via
- * `nestjs-zod`) e a web o usa para validar o formulário. É o que garante que a mensagem
+ * `createZodDto`) e a web o usa para validar o formulário. É o que garante que a mensagem
  * embaixo do campo seja a mesma que a API devolveria.
  *
  * As mensagens são TEXTO DE TELA — por isso em português (CONTRIBUTING §1).
@@ -44,7 +44,7 @@ export { ANYDESK_MIN_DIGITS, ANYDESK_MAX_DIGITS } from '../domain/anydesk.util';
  * régua do projeto é clara: o usuário vê, é português (CONTRIBUTING §1). Aqui ele é trocado
  * por uma frase que diz o que fazer — as opções a pessoa já está vendo no próprio `select`.
  */
-const chooseFrom = (what: string) => ({ errorMap: () => ({ message: `Escolha ${what}` }) });
+const chooseFrom = (what: string) => ({ error: () => ({ message: `Escolha ${what}` }) });
 
 export const ticketStatusSchema = z.enum(TICKET_STATUSES, chooseFrom('uma situação da lista'));
 export const ticketPrioritySchema = z.enum(TICKET_PRIORITIES, chooseFrom('a urgência'));
@@ -86,13 +86,13 @@ const customSystemNameSchema = z
   );
 
 const requesterNameSchema = z
-  .string({ required_error: 'Informe seu nome' })
+  .string({ error: 'Informe seu nome' })
   .trim()
   .min(1, 'Informe seu nome')
   .max(REQUESTER_NAME_MAX_LENGTH, `O nome pode ter até ${REQUESTER_NAME_MAX_LENGTH} caracteres`);
 
 const descriptionSchema = z
-  .string({ required_error: 'Descreva o problema' })
+  .string({ error: 'Descreva o problema' })
   .trim()
   .min(1, 'Descreva o problema')
   .max(DESCRIPTION_MAX_LENGTH, `A descrição pode ter até ${DESCRIPTION_MAX_LENGTH} caracteres`);
@@ -161,10 +161,10 @@ export const ticketSchema = z.object({
    */
   assigneeId: z.string().nullable().optional(),
   solution: z.string().nullable(),
-  createdAt: z.string().datetime(),
-  startedAt: z.string().datetime().nullable(),
-  resolvedAt: z.string().datetime().nullable(),
-  updatedAt: z.string().datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  startedAt: z.iso.datetime().nullable(),
+  resolvedAt: z.iso.datetime().nullable(),
+  updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
 });
 
@@ -256,7 +256,7 @@ export type MyTicket = z.infer<typeof myTicketSchema>;
  */
 export const requesterDefaultsSchema = z.object({
   name: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   phone: z.string().nullable(),
   department: ticketDepartmentSchema.nullable(),
   jobTitle: z.string().nullable(),
@@ -368,7 +368,7 @@ export const createTicketSchema = z
     projectId: z
       .preprocess(
         (value) => (value === '' ? null : value),
-        z.coerce.number().int().positive().nullable(),
+        z.coerce.number<number>().int().positive().nullable(),
       )
       .optional(),
     /**
@@ -521,9 +521,9 @@ export type AddTicketAreaInput = z.infer<typeof addTicketAreaSchema>;
 export const ticketListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   /** Os chamados DESTA máquina — é a consulta da ficha do computador. */
-  computerId: z.coerce.number().int().positive().optional(),
+  computerId: z.coerce.number<number>().int().positive().optional(),
   /** Os chamados DESTE sistema de software. */
-  projectId: z.coerce.number().int().positive().optional(),
+  projectId: z.coerce.number<number>().int().positive().optional(),
   /**
    * Os chamados DESTE responsável, pelo id — ou `TICKET_UNASSIGNED_FILTER` para os que ainda
    * não têm ninguém, a fila de quem precisa ser pego.

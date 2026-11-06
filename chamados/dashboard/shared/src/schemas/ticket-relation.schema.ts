@@ -13,7 +13,7 @@ export const relatedTicketSummarySchema = z.object({
   priority: ticketPrioritySchema,
   area: ticketAreaSchema,
   requesterName: z.string(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
 });
 
 export type RelatedTicketSummary = z.infer<typeof relatedTicketSummarySchema>;
@@ -26,7 +26,7 @@ export const ticketRelationSchema = z.object({
   ticketId: z.number().int().positive(),
   relatedTicketId: z.number().int().positive(),
   relatedTicket: relatedTicketSummarySchema,
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string().nullable(),
 });
 
@@ -37,7 +37,7 @@ export type TicketRelation = z.infer<typeof ticketRelationSchema>;
  */
 export const addTicketRelationSchema = z.object({
   relatedTicketId: z
-    .number({ required_error: 'Informe o chamado a vincular' })
+    .number({ error: 'Informe o chamado a vincular' })
     .int()
     .positive('Informe um id de chamado válido'),
 });

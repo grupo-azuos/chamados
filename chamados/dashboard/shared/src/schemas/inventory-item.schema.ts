@@ -21,15 +21,15 @@ export const INVENTORY_CODE_MAX_LENGTH = 40;
 export const INVENTORY_NOTE_MAX_LENGTH = 500;
 
 export const inventoryCategorySchema = z.enum(INVENTORY_CATEGORIES, {
-  errorMap: () => ({ message: 'Escolha uma categoria da lista' }),
+  error: 'Escolha uma categoria da lista',
 });
 
 export const inventoryUnitSchema = z.enum(INVENTORY_UNITS, {
-  errorMap: () => ({ message: 'Escolha como este produto é contado' }),
+  error: 'Escolha como este produto é contado',
 });
 
 const nameSchema = z
-  .string({ required_error: 'Informe o nome do produto' })
+  .string({ error: 'Informe o nome do produto' })
   .trim()
   .min(1, 'Informe o nome do produto')
   .max(INVENTORY_NAME_MAX_LENGTH, `O nome pode ter até ${INVENTORY_NAME_MAX_LENGTH} caracteres`);
@@ -91,9 +91,9 @@ export const inventoryItemSchema = z.object({
    */
   balance: z.number().int(),
 
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string(),
-  updatedAt: z.string().datetime().nullable(),
+  updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
 });
 
@@ -136,7 +136,7 @@ export const updateInventoryItemSchema = z.object({
   /** A foto nova, já enviada — substitui a anterior. */
   photo: stagedFileSchema.optional(),
   /** `true` tira a foto do produto sem pôr outra. */
-  removePhoto: z.coerce.boolean().optional(),
+  removePhoto: z.coerce.boolean<boolean>().optional(),
 });
 
 export type UpdateInventoryItemInput = z.input<typeof updateInventoryItemSchema>;
@@ -145,9 +145,9 @@ export const inventoryItemListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   category: inventoryCategorySchema.optional(),
   /** Só os produtos ainda sem foto — filtrado no SQL, como os outros. */
-  withoutPhotoOnly: z.coerce.boolean().optional(),
+  withoutPhotoOnly: z.coerce.boolean<boolean>().optional(),
   /** Só os produtos com o depósito zerado. */
-  outOfStockOnly: z.coerce.boolean().optional(),
+  outOfStockOnly: z.coerce.boolean<boolean>().optional(),
 });
 
 export type InventoryItemListQuery = z.infer<typeof inventoryItemListQuerySchema>;

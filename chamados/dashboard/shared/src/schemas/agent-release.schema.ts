@@ -17,7 +17,7 @@ const artifactSchema = z
 export const agentReleaseManifestSchema = z
   .object({
     version: agentVersionSchema,
-    publishedAt: z.string().datetime(),
+    publishedAt: z.iso.datetime(),
     artifacts: z.object({ msi: artifactSchema, certificate: artifactSchema }).strict(),
   })
   .strict()
@@ -37,7 +37,7 @@ export const agentReleaseManifestSchema = z
 
 export const agentReleaseDownloadSchema = z.object({
   version: agentVersionSchema,
-  url: z.string().url(),
+  url: z.url(),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
   sizeBytes: z.number().int().positive(),
 });
@@ -49,13 +49,13 @@ export type AgentDownloadKind = z.infer<typeof agentDownloadKindSchema>;
 export const agentDownloadQuerySchema = z.object({ version: agentVersionSchema });
 export const agentLtsSchema = z.object({
   version: agentVersionSchema,
-  publishedAt: z.string().datetime(),
+  publishedAt: z.iso.datetime(),
   sizeBytes: z.number().int().positive(),
 });
 export type AgentLts = z.infer<typeof agentLtsSchema>;
 export const agentReleaseItemSchema = agentLtsSchema.extend({ isLts: z.boolean() });
 export type AgentReleaseItem = z.infer<typeof agentReleaseItemSchema>;
-export const agentFileLinkSchema = z.object({ version: agentVersionSchema, url: z.string().url() });
+export const agentFileLinkSchema = z.object({ version: agentVersionSchema, url: z.url() });
 export type AgentFileLink = z.infer<typeof agentFileLinkSchema>;
 
 /**
@@ -66,7 +66,7 @@ export type AgentFileLink = z.infer<typeof agentFileLinkSchema>;
 export const agentBundleRequestSchema = z
   .object({
     version: agentVersionSchema,
-    serverUrl: z.string().url().max(512),
+    serverUrl: z.url().max(512),
     token: z.string().min(1).max(512).optional(),
     computerId: z.number().int().positive().optional(),
   })

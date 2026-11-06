@@ -63,7 +63,7 @@ export class GithubAppService {
       );
       if (!response.ok) throw new Error('Installation token rejected');
       const data = z
-        .object({ token: z.string().min(1), expires_at: z.string().datetime() })
+        .object({ token: z.string().min(1), expires_at: z.iso.datetime() })
         .parse(await response.json());
       this.cached = { token: data.token, expiresAt: new Date(data.expires_at).getTime() };
       return data.token;

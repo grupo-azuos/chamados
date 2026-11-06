@@ -19,7 +19,7 @@ export const networkSeveritySchema = z.enum(NETWORK_SEVERITIES);
 export const networkEventSchema = z.object({
   id: z.number().int(),
   /** Quando o evento ACONTECEU, segundo o equipamento — não quando chegou aqui. */
-  occurredAt: z.string().datetime(),
+  occurredAt: z.iso.datetime(),
   type: networkEventTypeSchema,
   severity: networkSeveritySchema,
   title: z.string(),
@@ -35,9 +35,9 @@ export const networkEventSchema = z.object({
    * Quando alguém marcou como resolvido. Nulo é problema em aberto — e é essa diferença que
    * a tela mostra em vermelho.
    */
-  resolvedAt: z.string().datetime().nullable(),
+  resolvedAt: z.iso.datetime().nullable(),
   resolvedBy: z.string().nullable(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
 });
 
 export type NetworkEvent = z.infer<typeof networkEventSchema>;
@@ -63,9 +63,9 @@ export const networkWebhookSchema = z
     linkName: z.string().trim().max(LINK_NAME_MAX_LENGTH).optional(),
     wan: z.string().trim().max(LINK_NAME_MAX_LENGTH).optional(),
     provider: z.string().trim().max(LINK_NAME_MAX_LENGTH).optional(),
-    latencyMs: z.coerce.number().nonnegative().optional(),
-    packetLossPercent: z.coerce.number().min(0).max(100).optional(),
-    occurredAt: z.string().datetime().optional(),
+    latencyMs: z.coerce.number<number>().nonnegative().optional(),
+    packetLossPercent: z.coerce.number<number>().min(0).max(100).optional(),
+    occurredAt: z.iso.datetime().optional(),
   })
   /* O UniFi manda campos que este contrato não conhece, e eles são guardados em `raw`. */
   .passthrough();
@@ -77,7 +77,7 @@ export const createNetworkEventSchema = z.object({
   type: networkEventTypeSchema,
   severity: networkSeveritySchema.optional(),
   title: z
-    .string({ required_error: 'Informe o que aconteceu' })
+    .string({ error: 'Informe o que aconteceu' })
     .trim()
     .min(1, 'Informe o que aconteceu')
     .max(TITLE_MAX_LENGTH, `O título pode ter até ${TITLE_MAX_LENGTH} caracteres`),
@@ -95,7 +95,7 @@ export const createNetworkEventSchema = z.object({
     .transform((value) => (value === '' ? null : value))
     .nullable()
     .optional(),
-  occurredAt: z.string().datetime({ message: 'Informe uma data válida' }).optional(),
+  occurredAt: z.iso.datetime({ message: 'Informe uma data válida' }).optional(),
 });
 
 export type CreateNetworkEventInput = z.input<typeof createNetworkEventSchema>;
@@ -118,9 +118,9 @@ export const networkEventListQuerySchema = paginationQuerySchema.extend({
   type: networkEventTypeSchema.optional(),
   severity: networkSeveritySchema.optional(),
   /** Só o que ainda não foi marcado como resolvido. */
-  onlyOpen: z.coerce.boolean().optional(),
+  onlyOpen: z.coerce.boolean<boolean>().optional(),
   /** O recorte de tempo, em dias. */
-  days: z.coerce.number().int().min(1).max(365).optional(),
+  days: z.coerce.number<number>().int().min(1).max(365).optional(),
 });
 
 export type NetworkEventListQuery = z.infer<typeof networkEventListQuerySchema>;

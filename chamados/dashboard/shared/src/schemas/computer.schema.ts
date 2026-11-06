@@ -23,15 +23,15 @@ export const BLOCK_REASON_MAX_LENGTH = 300;
 export const DISPOSAL_REASON_MAX_LENGTH = 300;
 
 export const disposalTypeSchema = z.enum(DISPOSAL_TYPES, {
-  errorMap: () => ({ message: 'Diga se a máquina tem defeito ou virou lixo' }),
+  error: 'Diga se a máquina tem defeito ou virou lixo',
 });
 
 export const healthStatusSchema = z.enum(HEALTH_STATUSES, {
-  errorMap: () => ({ message: 'Escolha uma situação de saúde da lista' }),
+  error: 'Escolha uma situação de saúde da lista',
 });
 
 export const computerKindSchema = z.enum(COMPUTER_KINDS, {
-  errorMap: () => ({ message: 'Escolha se é desktop ou notebook' }),
+  error: 'Escolha se é desktop ou notebook',
 });
 
 /**
@@ -56,7 +56,7 @@ export type ComputerPreventiveFilter = (typeof COMPUTER_PREVENTIVE_FILTERS)[numb
 export const departmentSchema = departmentNameSchema('Escolha um departamento da lista');
 
 const computerNameSchema = z
-  .string({ required_error: 'Informe o nome da máquina' })
+  .string({ error: 'Informe o nome da máquina' })
   .trim()
   .min(1, 'Informe o nome da máquina')
   .max(COMPUTER_NAME_MAX_LENGTH, `O nome pode ter até ${COMPUTER_NAME_MAX_LENGTH} caracteres`);
@@ -113,7 +113,7 @@ export const computerHardwareSchema = z.object({
   totalDiskBytes: z.number().nullable(),
   freeDiskBytes: z.number().nullable(),
   uptimeSeconds: z.number().nullable(),
-  bootTime: z.string().datetime().nullable(),
+  bootTime: z.iso.datetime().nullable(),
 });
 
 export const computerSchema = z.object({
@@ -137,7 +137,7 @@ export const computerSchema = z.object({
    * Como campo salvo, uma máquina ficaria presa em "online" depois de queda de energia.
    */
   isOnline: z.boolean(),
-  lastSeenAt: z.string().datetime().nullable(),
+  lastSeenAt: z.iso.datetime().nullable(),
   agentVersion: z.string().nullable(),
 
   /** Arquivada sai das listas, mas não do banco — nada do histórico é destruído. */
@@ -149,7 +149,7 @@ export const computerSchema = z.object({
    * `disposedAt` nulo é o que diz que a máquina está em uso — não existe um booleano à parte
    * para isso, porque dois campos dizendo a mesma coisa acabam discordando.
    */
-  disposedAt: z.string().datetime().nullable(),
+  disposedAt: z.iso.datetime().nullable(),
   disposalType: disposalTypeSchema.nullable(),
   disposalReason: z.string().nullable(),
 
@@ -157,9 +157,9 @@ export const computerSchema = z.object({
   isBlocked: z.boolean(),
   blockReason: z.string().nullable(),
 
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string(),
-  updatedAt: z.string().datetime().nullable(),
+  updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
 });
 
@@ -177,7 +177,7 @@ export const computerListItemSchema = computerSchema.extend({
   ticketsThisMonth: z.number().int().nonnegative(),
   /** Nulo para máquinas fora de uso; calculado pela mesma régua do quadro de preventivas. */
   preventiveStatus: z.enum(PREVENTIVE_STATUSES).nullable(),
-  lastPreventiveAt: z.string().datetime().nullable(),
+  lastPreventiveAt: z.iso.datetime().nullable(),
   activeAlerts: z.number().int().nonnegative(),
   /** De QUAIS peças são os alertas abertos — é o que conta "CPU elevada" no topo da lista. */
   activeAlertMetrics: z.array(z.enum(ALERT_METRICS)),
@@ -277,12 +277,12 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
   resourceCondition: z.enum(RESOURCE_CONDITIONS).optional(),
   preventive: z.enum(COMPUTER_PREVENTIVE_FILTERS).optional(),
   /** Por padrão as arquivadas NÃO vêm: elas saíram de uso e só atrapalhariam a lista. */
-  includeArchived: z.coerce.boolean().optional(),
+  includeArchived: z.coerce.boolean<boolean>().optional(),
   /**
    * As DESCARTADAS também ficam de fora por padrão, e esta chave as traz SOZINHAS: é a
    * consulta da tela de Descarte, que é uma lista de quem saiu, não do parque.
    */
-  onlyDisposed: z.coerce.boolean().optional(),
+  onlyDisposed: z.coerce.boolean<boolean>().optional(),
   disposalType: disposalTypeSchema.optional(),
 });
 
@@ -296,7 +296,7 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
 export const disposeComputerSchema = z.object({
   type: disposalTypeSchema,
   reason: z
-    .string({ required_error: 'Diga por que a máquina saiu de uso' })
+    .string({ error: 'Diga por que a máquina saiu de uso' })
     .trim()
     .min(1, 'Diga por que a máquina saiu de uso')
     .max(
@@ -333,7 +333,7 @@ export type ComputerReportQuery = z.infer<typeof computerReportQuerySchema>;
 
 /** Uma amostra da série temporal de uso, para o gráfico das últimas horas. */
 export const computerSampleSchema = z.object({
-  sampledAt: z.string().datetime(),
+  sampledAt: z.iso.datetime(),
   cpuPercent: z.number(),
   memoryPercent: z.number(),
   diskPercent: z.number(),
@@ -357,8 +357,8 @@ export const computerAlertSchema = z.object({
   peakValue: z.number(),
   threshold: z.number(),
   status: z.enum(['active', 'recovered']),
-  startedAt: z.string().datetime(),
-  recoveredAt: z.string().datetime().nullable(),
+  startedAt: z.iso.datetime(),
+  recoveredAt: z.iso.datetime().nullable(),
   /** O programa que mais consumia a medida no estouro. Palpite honesto, não acusação. */
   causeProcess: z.string().nullable(),
 });
@@ -375,7 +375,7 @@ export type ComputerAlert = z.infer<typeof computerAlertSchema>;
 export const ALERT_PAGE_SIZE = 25;
 
 export const computerAlertListQuerySchema = paginationQuerySchema.extend({
-  pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(ALERT_PAGE_SIZE),
+  pageSize: z.coerce.number<number>().int().min(1).max(MAX_PAGE_SIZE).default(ALERT_PAGE_SIZE),
 });
 
 export type ComputerAlertListQuery = z.infer<typeof computerAlertListQuerySchema>;

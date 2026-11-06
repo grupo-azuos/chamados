@@ -1,6 +1,6 @@
 import { authConfigSchema } from '@template/shared/schemas/auth.schema';
 import { sessionUserSchema } from '@template/shared/schemas/user.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 
 /**
  * Quem está logado, no formato que a tela espera. Nasce do MESMO schema que a web importa —
