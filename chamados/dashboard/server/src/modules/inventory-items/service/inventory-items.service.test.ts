@@ -9,10 +9,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type InventoryItemRow } from '../../../lib/db/schema/inventory-items.schema';
+import { type InventoryItemEventRow } from '../../../lib/db/schema/inventory-item-events.schema';
 import { type InventoryMovementRow } from '../../../lib/db/schema/inventory-movements.schema';
 import { type FileStorage } from '../../../lib/storage/file-storage.type';
 import { MemoryStorage } from '../../../lib/storage/memory-storage';
 import { StagedUploadsService } from '../../../lib/storage/staged-uploads.service';
+import { type InventoryItemEventsRepository } from '../repository/inventory-item-events.repository';
 import { type InventoryItemsRepository } from '../repository/inventory-items.repository';
 import { optimizePhoto } from './inventory-photo.util';
 import { InventoryItemsService } from './inventory-items.service';
@@ -65,6 +67,9 @@ function row(overrides: Partial<InventoryItemRow> = {}): InventoryItemRow {
     category: 'furniture',
     unit: 'unit',
     location: 'Sala da contabilidade',
+    department: null,
+    userId: null,
+    userName: null,
     code: 'PAT-0042',
     note: null,
     photoKey: null,
@@ -126,13 +131,36 @@ const defaultStorage: Partial<FileStorage> = {
   downloadUrl: vi.fn().mockResolvedValue('https://r2.exemplo/foto?assinatura'),
 };
 
+function eventRow(overrides: Partial<InventoryItemEventRow> = {}): InventoryItemEventRow {
+  return {
+    id: 1,
+    itemId: 1,
+    type: 'defeito',
+    description: 'Pé quebrado',
+    authorName: 'Ana',
+    createdBy: 'ana@empresa.com.br',
+    createdAt: new Date('2026-09-02T12:00:00.000Z'),
+    ...overrides,
+  };
+}
+
+const defaultEventsRepository: Partial<InventoryItemEventsRepository> = {
+  listByItemId: vi.fn().mockResolvedValue([eventRow()]),
+  add: vi.fn().mockImplementation(async (values) => eventRow(values)),
+};
+
 /**
  * O storage é o de memória, de verdade — com o que o teste quiser trocar por cima (uma falha,
  * um espião). Passar um `MemoryStorage` pronto deixa o teste olhar o que ficou nele.
  */
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
+import { type DirectoryUser } from '@template/shared/schemas/user.schema';
+
 function makeService(
   repository: Partial<InventoryItemsRepository> = {},
   storage: Partial<FileStorage> = {},
+  eventsRepository: Partial<InventoryItemEventsRepository> = {},
+  directory?: Partial<UserDirectoryProvider>,
 ) {
   const memory = Object.assign(
     storage instanceof MemoryStorage ? storage : new MemoryStorage(),
@@ -142,8 +170,10 @@ function makeService(
 
   return new InventoryItemsService(
     { ...defaultRepository, ...repository } as InventoryItemsRepository,
+    { ...defaultEventsRepository, ...eventsRepository } as InventoryItemEventsRepository,
     new StagedUploadsService(memory),
     memory,
+    directory as UserDirectoryProvider | undefined,
   );
 }
 
@@ -548,5 +578,122 @@ describe('InventoryItemsService.createMovement', () => {
       service.createMovement(infraManager, 1, { type: 'in', quantity: 1 }),
     ).rejects.toThrow(ForbiddenException);
     expect(transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe('InventoryItemsService.events', () => {
+  it('lists the events of an existing product', async () => {
+    const service = makeService({ findById: vi.fn().mockResolvedValue(row()) });
+    const events = await service.events(viewer, 1);
+
+    expect(events).toHaveLength(1);
+    expect(events[0]?.type).toBe('defeito');
+    expect(events[0]?.description).toBe('Pé quebrado');
+  });
+
+  it('throws 404 when product is not found', async () => {
+    const service = makeService({ findById: vi.fn().mockResolvedValue(null) });
+
+    await expect(service.events(viewer, 99)).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe('InventoryItemsService.addEvent', () => {
+  it('records an event for a manager of maintenance', async () => {
+    const add = vi.fn().mockImplementation(async (values) => eventRow(values));
+    const service = makeService(
+      { findById: vi.fn().mockResolvedValue(row()) },
+      {},
+      { add },
+    );
+
+    const event = await service.addEvent(keeper, 1, {
+      type: 'troca',
+      description: 'Troca de pistão a gás realizada',
+    });
+
+    expect(event.type).toBe('troca');
+    expect(event.description).toBe('Troca de pistão a gás realizada');
+    expect(add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemId: 1,
+        type: 'troca',
+        description: 'Troca de pistão a gás realizada',
+        authorName: 'Ana',
+        createdBy: 'ana@empresa.com.br',
+      }),
+    );
+  });
+
+  it('refuses to record event for a user without manage permissions', async () => {
+    const service = makeService({ findById: vi.fn().mockResolvedValue(row()) });
+
+    await expect(
+      service.addEvent(viewer, 1, {
+        type: 'observacao',
+        description: 'Observação teste',
+      }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('throws 404 when product does not exist', async () => {
+    const service = makeService({ findById: vi.fn().mockResolvedValue(null) });
+
+    await expect(
+      service.addEvent(keeper, 99, {
+        type: 'observacao',
+        description: 'Observação teste',
+      }),
+    ).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe('InventoryItemsService.listResponsibles', () => {
+  const users: DirectoryUser[] = [
+    {
+      id: 'u-1',
+      name: 'Vinicius Gabriel',
+      email: 'vinicius@empresa.com.br',
+      image: null,
+      role: 'user',
+      banned: false,
+      createdAt: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'u-2',
+      name: 'Ana Silva',
+      email: 'ana@empresa.com.br',
+      image: null,
+      role: 'user',
+      banned: false,
+      createdAt: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'u-3',
+      name: 'Usuário Banido',
+      email: 'banido@empresa.com.br',
+      image: null,
+      role: 'user',
+      banned: true,
+      createdAt: '2026-01-01T00:00:00Z',
+    },
+  ];
+
+  it('lists all active office users from admin-console directory sorted alphabetically', async () => {
+    const listAllUsers = vi.fn().mockResolvedValue(users);
+    const service = makeService({}, {}, {}, { listAllUsers });
+
+    const responsibles = await service.listResponsibles(viewer);
+
+    expect(listAllUsers).toHaveBeenCalledOnce();
+    expect(responsibles).toEqual([
+      { id: 'u-2', name: 'Ana Silva' },
+      { id: 'u-1', name: 'Vinicius Gabriel' },
+    ]);
+  });
+
+  it('returns empty list when directory provider is not configured', async () => {
+    const service = makeService();
+    expect(await service.listResponsibles(viewer)).toEqual([]);
   });
 });

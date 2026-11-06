@@ -7,6 +7,7 @@ import { history } from './schema/history.schema';
 import { internalRoles } from './schema/internal-roles.schema';
 import { superAdmins } from './schema/super-admins.schema';
 import { inventoryItems } from './schema/inventory-items.schema';
+import { inventoryItemEvents } from './schema/inventory-item-events.schema';
 import { inventoryMovements } from './schema/inventory-movements.schema';
 import { maintenanceQuotes } from './schema/maintenance-quotes.schema';
 import { maintenanceSchedules } from './schema/maintenance-schedules.schema';
@@ -21,6 +22,7 @@ import { ticketAreas } from './schema/ticket-areas.schema';
 import { ticketAttachments } from './schema/ticket-attachments.schema';
 import { ticketHistories } from './schema/ticket-histories.schema';
 import { ticketServiceOrders } from './schema/ticket-service-orders.schema';
+import { ticketRelations } from './schema/ticket-relations.schema';
 import { ticketWatchers } from './schema/ticket-watchers.schema';
 import { tickets } from './schema/tickets.schema';
 import {
@@ -59,6 +61,7 @@ export const drizzleSchema = {
   ticketAttachments,
   ticketHistories,
   ticketServiceOrders,
+  ticketRelations,
   ticketWatchers,
   computers,
   computerSamples,
@@ -69,6 +72,7 @@ export const drizzleSchema = {
   parts,
   partMovements,
   inventoryItems,
+  inventoryItemEvents,
   inventoryMovements,
   maintenanceQuotes,
   networkEvents,

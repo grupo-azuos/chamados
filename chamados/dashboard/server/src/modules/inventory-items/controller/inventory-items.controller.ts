@@ -27,13 +27,16 @@ import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   CreateInventoryItemDto,
+  CreateInventoryItemEventDto,
   CreateInventoryMovementDto,
   InventoryItemDto,
+  InventoryItemEventDto,
   InventoryItemListQueryDto,
   InventoryItemListResponseDto,
   InventoryMovementDto,
   InventoryMovementListQueryDto,
   InventoryMovementListResponseDto,
+  InventoryResponsibleDto,
   PhotoUploadRequestDto,
   PhotoUploadTicketDto,
   UpdateInventoryItemDto,
@@ -88,6 +91,17 @@ export class InventoryItemsController {
     return this.service.movements(user, query);
   }
 
+  @Get('responsibles')
+  @ApiOperation({
+    summary: 'Lista todas as pessoas do escritório no admin-console',
+    description:
+      'Diretório completo de pessoas do admin-console para atribuição de responsável pelo patrimônio.',
+  })
+  @ApiOkResponse({ type: [InventoryResponsibleDto] })
+  async listResponsibles(@CurrentUser() user: RequestUser): Promise<InventoryResponsibleDto[]> {
+    return this.service.listResponsibles(user);
+  }
+
   @Post(':id/movements')
   @ApiOperation({
     summary: 'Registra uma entrada, uma saída ou um descarte do produto',
@@ -117,6 +131,36 @@ export class InventoryItemsController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<InventoryItemDto> {
     return this.service.findById(user, id);
+  }
+
+  @Get(':id/events')
+  @ApiOperation({
+    summary: 'Lista os eventos e ocorrências da linha do tempo do produto',
+    description: 'Do mais antigo para o mais novo (defeitos, trocas, manutenções, observações).',
+  })
+  @ApiOkResponse({ type: [InventoryItemEventDto] })
+  @ApiNotFoundResponse({ description: 'Produto não encontrado.' })
+  async listEvents(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<InventoryItemEventDto[]> {
+    return this.service.events(user, id);
+  }
+
+  @Post(':id/events')
+  @ApiOperation({
+    summary: 'Registra uma ocorrência na linha do tempo do produto',
+    description: 'Permite registrar defeitos, trocas, manutenções ou observações.',
+  })
+  @ApiCreatedResponse({ type: InventoryItemEventDto })
+  @ApiForbiddenResponse({ description: 'Seu cargo em Manutenção só permite consultar.' })
+  @ApiNotFoundResponse({ description: 'Produto não encontrado.' })
+  async addEvent(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CreateInventoryItemEventDto,
+  ): Promise<InventoryItemEventDto> {
+    return this.service.addEvent(user, id, body);
   }
 
   @Post('photo/upload-url')

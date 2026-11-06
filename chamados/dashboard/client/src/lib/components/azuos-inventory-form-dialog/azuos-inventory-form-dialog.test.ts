@@ -17,7 +17,10 @@ const fields: Record<InventoryFormField, FormFieldState> = {
   category: field('furniture'),
   unit: field('unit'),
   location: field('Copa'),
+  department: field('Financeiro'),
   code: field('PAT-0101'),
+  userId: field(''),
+  userName: field(''),
   note: field(''),
 };
 
@@ -241,5 +244,39 @@ describe('AzuosInventoryFormDialog — photo dialog closed empty', () => {
     await fireEvent.change(document.getElementById('photo') as HTMLInputElement);
 
     expect(onPhotoChange).toHaveBeenCalledWith(null);
+  });
+});
+
+describe('AzuosInventoryFormDialog — timeline tabs in edit mode', () => {
+  it('renders tab buttons in edit mode and allows switching to timeline', async () => {
+    setup({
+      data: {
+        mode: 'edit',
+        fields,
+        photo: { previewUrl: null, fileName: null },
+        timeline: {
+          events: [
+            {
+              id: 1,
+              itemId: 10,
+              type: 'defeito',
+              description: 'Rodízio travado',
+              authorName: 'Ana Silva',
+              createdBy: 'ana@empresa.com.br',
+              createdAt: '2026-11-05T12:00:00.000Z',
+            },
+          ],
+          type: 'observacao',
+          description: '',
+        },
+      },
+    });
+
+    expect(screen.getByRole('button', { name: 'Dados do produto' })).toBeInTheDocument();
+    const timelineTab = screen.getByRole('button', { name: /Linha do tempo/i });
+    expect(timelineTab).toBeInTheDocument();
+
+    await fireEvent.click(timelineTab);
+    expect(screen.getByText('Rodízio travado')).toBeInTheDocument();
   });
 });

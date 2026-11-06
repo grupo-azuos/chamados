@@ -16,6 +16,7 @@ import { stagedFileSchema } from './staged-file.schema';
  */
 export const INVENTORY_NAME_MAX_LENGTH = 120;
 export const INVENTORY_LOCATION_MAX_LENGTH = 120;
+export const INVENTORY_DEPARTMENT_MAX_LENGTH = 120;
 export const INVENTORY_CODE_MAX_LENGTH = 40;
 export const INVENTORY_NOTE_MAX_LENGTH = 500;
 
@@ -47,6 +48,14 @@ const locationSchema = optionalText(
   `O lugar pode ter até ${INVENTORY_LOCATION_MAX_LENGTH} caracteres`,
 );
 
+const departmentSchema = optionalText(
+  INVENTORY_DEPARTMENT_MAX_LENGTH,
+  `O departamento pode ter até ${INVENTORY_DEPARTMENT_MAX_LENGTH} caracteres`,
+);
+
+const userIdSchema = optionalText(120, 'O id do usuário é inválido');
+const userNameSchema = optionalText(120, 'O nome do usuário pode ter até 120 caracteres');
+
 const codeSchema = optionalText(
   INVENTORY_CODE_MAX_LENGTH,
   `O código pode ter até ${INVENTORY_CODE_MAX_LENGTH} caracteres`,
@@ -69,6 +78,9 @@ export const inventoryItemSchema = z.object({
   category: inventoryCategorySchema,
   unit: inventoryUnitSchema,
   location: z.string().nullable(),
+  department: z.string().nullable().default(null),
+  userId: z.string().nullable().default(null),
+  userName: z.string().nullable().default(null),
   /** Patrimônio, etiqueta ou código interno — o que a empresa já usa para achar a coisa. */
   code: z.string().nullable(),
   note: z.string().nullable(),
@@ -97,6 +109,9 @@ export const createInventoryItemSchema = z.object({
   category: inventoryCategorySchema,
   unit: inventoryUnitSchema,
   location: locationSchema.optional(),
+  department: departmentSchema.optional(),
+  userId: userIdSchema.optional(),
+  userName: userNameSchema.optional(),
   code: codeSchema.optional(),
   note: noteSchema.optional(),
   photo: stagedFileSchema.optional(),
@@ -113,6 +128,9 @@ export const updateInventoryItemSchema = z.object({
   category: inventoryCategorySchema.optional(),
   unit: inventoryUnitSchema.optional(),
   location: locationSchema.optional(),
+  department: departmentSchema.optional(),
+  userId: userIdSchema.optional(),
+  userName: userNameSchema.optional(),
   code: codeSchema.optional(),
   note: noteSchema.optional(),
   /** A foto nova, já enviada — substitui a anterior. */
@@ -149,6 +167,16 @@ export const inventoryItemFormSchema = z.object({
       INVENTORY_LOCATION_MAX_LENGTH,
       `O lugar pode ter até ${INVENTORY_LOCATION_MAX_LENGTH} caracteres`,
     ),
+  department: z
+    .string()
+    .trim()
+    .max(
+      INVENTORY_DEPARTMENT_MAX_LENGTH,
+      `O departamento pode ter até ${INVENTORY_DEPARTMENT_MAX_LENGTH} caracteres`,
+    )
+    .default(''),
+  userId: z.string().trim().default(''),
+  userName: z.string().trim().default(''),
   code: z
     .string()
     .trim()
@@ -166,3 +194,10 @@ export const inventoryItemFormSchema = z.object({
 });
 
 export type InventoryItemFormValues = z.input<typeof inventoryItemFormSchema>;
+
+export const inventoryResponsibleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+export type InventoryResponsible = z.infer<typeof inventoryResponsibleSchema>;

@@ -1,3 +1,5 @@
+import { type InventoryItemEventType } from '@template/shared/domain/inventory-item-event.util';
+import { type InventoryItemEvent } from '@template/shared/schemas/inventory-item-event.schema';
 import {
   type CreateInventoryItemInput,
   type InventoryItem,
@@ -13,6 +15,7 @@ import {
   type InventoryItemInsert,
   type InventoryItemRow,
 } from '../../../lib/db/schema/inventory-items.schema';
+import { type InventoryItemEventRow } from '../../../lib/db/schema/inventory-item-events.schema';
 import {
   type InventoryMovementInsert,
   type InventoryMovementRow,
@@ -32,6 +35,9 @@ export function toInventoryItem(row: InventoryItemRow, photoUrl: string | null):
     category: row.category,
     unit: row.unit,
     location: row.location,
+    department: row.department ?? null,
+    userId: row.userId ?? null,
+    userName: row.userName ?? null,
     code: row.code,
     note: row.note,
     photoUrl,
@@ -102,6 +108,9 @@ export function toInventoryItemInsert(
     category: input.category,
     unit: input.unit,
     location: textOrNull(input.location),
+    department: textOrNull(input.department),
+    userId: textOrNull(input.userId),
+    userName: textOrNull(input.userName),
     code: textOrNull(input.code),
     note: textOrNull(input.note),
     photoKey,
@@ -129,6 +138,9 @@ export function toInventoryItemUpdate(
   setIfDefined(values, 'category', input.category);
   setIfDefined(values, 'unit', input.unit);
   setIfDefined(values, 'location', textOrNull(input.location));
+  setIfDefined(values, 'department', textOrNull(input.department));
+  setIfDefined(values, 'userId', textOrNull(input.userId));
+  setIfDefined(values, 'userName', textOrNull(input.userName));
   setIfDefined(values, 'code', textOrNull(input.code));
   setIfDefined(values, 'note', textOrNull(input.note));
 
@@ -146,4 +158,17 @@ function textOrNull(value: string | null | undefined): string | null | undefined
   const trimmed = value.trim();
 
   return trimmed === '' ? null : trimmed;
+}
+
+/** Traduz a linha de evento/ocorrência da timeline para o contrato compartilhado. */
+export function toInventoryItemEvent(row: InventoryItemEventRow): InventoryItemEvent {
+  return {
+    id: row.id,
+    itemId: row.itemId,
+    type: row.type as InventoryItemEventType,
+    description: row.description,
+    authorName: row.authorName,
+    createdBy: row.createdBy,
+    createdAt: row.createdAt.toISOString(),
+  };
 }

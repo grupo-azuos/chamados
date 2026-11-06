@@ -7,7 +7,7 @@ import Harness from './use-inventory-form-harness.test.svelte';
 import { type InventoryFormModel } from './use-inventory-form.svelte';
 
 vi.mock('$lib/api/inventory-items.api', () => ({
-  inventoryItemsApi: { create: vi.fn(), update: vi.fn() },
+  inventoryItemsApi: { create: vi.fn(), update: vi.fn(), responsibles: vi.fn().mockResolvedValue([]) },
 }));
 
 const { inventoryItemsApi } = await import('$lib/api/inventory-items.api');
@@ -19,6 +19,9 @@ function item(over: Partial<InventoryItem> = {}): InventoryItem {
     category: 'furniture',
     unit: 'unit',
     location: 'Sala da contabilidade',
+    department: null,
+    userId: null,
+    userName: null,
     code: 'PAT-0101',
     note: null,
     photoUrl: 'https://r2.exemplo/foto.webp',
@@ -161,5 +164,20 @@ describe('useInventoryFormModel', () => {
 
     model.actions.onPhotoChange(null);
     expect(model.data.photo.previewUrl).toBe('https://r2.exemplo/foto.webp');
+  });
+
+  it('loads responsible users from inventory items responsibles API', async () => {
+    vi.mocked(inventoryItemsApi.responsibles).mockResolvedValue([
+      { id: 'u-1', name: 'Ana Silva' },
+      { id: 'u-2', name: 'Gisele Contabilidade' },
+    ]);
+    const model = mountModel();
+
+    await waitFor(() =>
+      expect(model.data.users).toEqual([
+        { id: 'u-1', name: 'Ana Silva' },
+        { id: 'u-2', name: 'Gisele Contabilidade' },
+      ]),
+    );
   });
 });

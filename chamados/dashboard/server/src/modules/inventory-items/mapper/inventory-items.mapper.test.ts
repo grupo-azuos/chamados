@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { type InventoryItemRow } from '../../../lib/db/schema/inventory-items.schema';
 import {
   toInventoryItem,
+  toInventoryItemEvent,
   toInventoryItemInsert,
   toInventoryItemUpdate,
   toInventoryMovement,
@@ -16,6 +17,9 @@ function row(overrides: Partial<InventoryItemRow> = {}): InventoryItemRow {
     category: 'furniture',
     unit: 'unit',
     location: 'Sala da contabilidade',
+    department: 'Contabilidade',
+    userId: 'u-1',
+    userName: 'Ana Silva',
     code: 'PAT-0042',
     note: null,
     photoKey: 'inventory/abc.webp',
@@ -189,5 +193,29 @@ describe('toInventoryItemUpdate', () => {
     );
 
     expect(values.photoKey).toBeNull();
+  });
+});
+
+describe('toInventoryItemEvent', () => {
+  it('maps an event row to the shared schema', () => {
+    const event = toInventoryItemEvent({
+      id: 5,
+      itemId: 1,
+      type: 'defeito',
+      description: 'Estrutura torta',
+      authorName: 'Ana Silva',
+      createdBy: 'ana@empresa.com.br',
+      createdAt: new Date('2026-10-10T14:30:00.000Z'),
+    });
+
+    expect(event).toEqual({
+      id: 5,
+      itemId: 1,
+      type: 'defeito',
+      description: 'Estrutura torta',
+      authorName: 'Ana Silva',
+      createdBy: 'ana@empresa.com.br',
+      createdAt: '2026-10-10T14:30:00.000Z',
+    });
   });
 });

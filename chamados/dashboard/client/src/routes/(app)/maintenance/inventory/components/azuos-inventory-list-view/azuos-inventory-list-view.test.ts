@@ -14,6 +14,9 @@ function item(overrides: Partial<InventoryItem> = {}): InventoryItem {
     category: 'furniture',
     unit: 'unit',
     location: 'Sala da contabilidade',
+    department: null,
+    userId: null,
+    userName: null,
     code: 'PAT-0101',
     note: null,
     photoUrl: 'https://r2.exemplo/foto.webp',
@@ -104,6 +107,15 @@ describe('AzuosInventoryListView', () => {
 
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     expect(onAskDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+
+  it('opens edit when clicking anywhere on the item card', async () => {
+    const onEdit = vi.fn();
+    setup({ actions: { ...actions, onEdit } });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Editar Cadeira giratória' }));
+
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
 
   /* Excluir é irreversível: a pergunta traz o nome do produto, não um "tem certeza?" solto. */

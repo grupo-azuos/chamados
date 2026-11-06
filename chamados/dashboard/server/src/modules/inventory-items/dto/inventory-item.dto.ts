@@ -1,7 +1,12 @@
 import {
+  createInventoryItemEventSchema,
+  inventoryItemEventSchema,
+} from '@template/shared/schemas/inventory-item-event.schema';
+import {
   createInventoryItemSchema,
   inventoryItemListQuerySchema,
   inventoryItemSchema,
+  inventoryResponsibleSchema,
   updateInventoryItemSchema,
 } from '@template/shared/schemas/inventory-item.schema';
 import {
@@ -22,6 +27,7 @@ import { z } from 'zod';
  * em runtime e o contrato publicado no Swagger não possam divergir.
  */
 export class InventoryItemDto extends createZodDto(inventoryItemSchema) {}
+export class InventoryResponsibleDto extends createZodDto(inventoryResponsibleSchema) {}
 export class CreateInventoryItemDto extends createZodDto(createInventoryItemSchema) {}
 export class UpdateInventoryItemDto extends createZodDto(updateInventoryItemSchema) {}
 export class InventoryItemListQueryDto extends createZodDto(inventoryItemListQuerySchema) {}
@@ -46,3 +52,7 @@ export class InventoryMovementListResponseDto extends createZodDto(
 /** O pedido do link para enviar a foto, e a resposta com o link (PUT) e a chave temporária. */
 export class PhotoUploadRequestDto extends createZodDto(uploadRequestSchema) {}
 export class PhotoUploadTicketDto extends createZodDto(uploadTicketSchema) {}
+
+/* LINHA DO TEMPO: ocorrências, defeitos, trocas e observações do item. */
+export class InventoryItemEventDto extends createZodDto(inventoryItemEventSchema) {}
+export class CreateInventoryItemEventDto extends createZodDto(createInventoryItemEventSchema) {}

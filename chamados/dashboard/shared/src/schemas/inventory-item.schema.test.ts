@@ -5,6 +5,7 @@ import {
   createInventoryItemSchema,
   inventoryItemFormSchema,
   inventoryItemListQuerySchema,
+  inventoryResponsibleSchema,
   updateInventoryItemSchema,
 } from './inventory-item.schema';
 
@@ -18,12 +19,18 @@ describe('createInventoryItemSchema', () => {
     const parsed = createInventoryItemSchema.parse({
       ...validItem(),
       location: 'Sala da contabilidade',
+      department: 'Contabilidade',
+      userId: 'u-123',
+      userName: 'Ana Silva',
       code: 'PAT-0042',
       note: 'Encosto quebrado, trocar o pistão',
     });
 
     expect(parsed.name).toBe('Cadeira de escritório');
     expect(parsed.location).toBe('Sala da contabilidade');
+    expect(parsed.department).toBe('Contabilidade');
+    expect(parsed.userId).toBe('u-123');
+    expect(parsed.userName).toBe('Ana Silva');
   });
 
   /* Quem digita um espaço antes do nome não está dando outro nome ao produto. */
@@ -138,3 +145,23 @@ describe('inventoryItemListQuerySchema', () => {
     expect(inventoryItemListQuerySchema.safeParse({ category: 'bebida' }).success).toBe(false);
   });
 });
+
+describe('inventoryResponsibleSchema', () => {
+  // feliz
+  it('accepts an active user with id and name', () => {
+    const parsed = inventoryResponsibleSchema.parse({
+      id: 'user-123',
+      name: 'Gisele Contabilidade',
+    });
+
+    expect(parsed.id).toBe('user-123');
+    expect(parsed.name).toBe('Gisele Contabilidade');
+  });
+
+  // triste
+  it('refuses missing id or name', () => {
+    expect(inventoryResponsibleSchema.safeParse({ id: 'user-123' }).success).toBe(false);
+    expect(inventoryResponsibleSchema.safeParse({ name: 'Gisele' }).success).toBe(false);
+  });
+});
+

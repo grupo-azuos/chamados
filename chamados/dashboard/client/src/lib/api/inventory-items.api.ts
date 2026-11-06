@@ -1,7 +1,12 @@
 import {
+  type CreateInventoryItemEventInput,
+  type InventoryItemEvent,
+} from '@template/shared/schemas/inventory-item-event.schema';
+import {
   type InventoryItem,
   type InventoryItemFormValues,
   type InventoryItemListQuery,
+  type InventoryResponsible,
 } from '@template/shared/schemas/inventory-item.schema';
 import {
   type CreateInventoryMovementInput,
@@ -29,6 +34,8 @@ export const inventoryItemsApi = {
     }),
 
   findById: (id: number) => apiRequest<InventoryItem>(`/inventory-items/${id}`),
+
+  responsibles: () => apiRequest<InventoryResponsible[]>('/inventory-items/responsibles'),
 
   create: async (values: InventoryItemFormValues, photo: File | null) =>
     apiRequest<InventoryItem>('/inventory-items', {
@@ -66,6 +73,17 @@ export const inventoryItemsApi = {
       method: 'POST',
       body,
     }),
+
+  /** A linha do tempo de ocorrências do produto (defeitos, trocas, manutenções, observações). */
+  events: (itemId: number) =>
+    apiRequest<InventoryItemEvent[]>(`/inventory-items/${itemId}/events`),
+
+  /** Registra uma nova ocorrência na linha do tempo do produto. */
+  addEvent: (itemId: number, body: CreateInventoryItemEventInput) =>
+    apiRequest<InventoryItemEvent>(`/inventory-items/${itemId}/events`, {
+      method: 'POST',
+      body,
+    }),
 };
 
 function uploadPhoto(photo: File | null): Promise<StagedFile | undefined> {
@@ -85,6 +103,9 @@ function toInventoryBody(
     category: values.category,
     unit: values.unit,
     location: values.location,
+    department: values.department,
+    userId: values.userId,
+    userName: values.userName,
     code: values.code,
     note: values.note,
     photo,
