@@ -8,6 +8,9 @@
 #
 # O Komodo passa INFISICAL_TOKEN, INFISICAL_DOMAIN e INFISICAL_PROJECT_ID. A imagem do app vem do
 # Build do Komodo, com a tag `<hash curto do commit>-<ambiente>`.
+#
+# Nomes: o stack é `<ambiente>_<app>` (homo_template) e o Docker completa os serviços com
+# `_<serviço>` (homo_template_app). É o mesmo nome dos recursos no Komodo.
 set -eu
 
 step="${1:?Informe a etapa: pre-deploy, deploy ou post-deploy}"
@@ -26,7 +29,7 @@ esac
 RUNTIME_DIR="$(git rev-parse --show-toplevel)/.komodo/runtime"
 APP_REVISION="$(git rev-parse --short HEAD)"
 APP_IMAGE="azuos/$APP_NAME:$APP_REVISION-$DEPLOY_ENV"
-STACK_NAME="$APP_NAME-$DEPLOY_ENV"
+STACK_NAME="${DEPLOY_ENV}_${APP_NAME}"
 DEPLOY_NODE_ID="$(docker node inspect self --format '{{.ID}}')"
 export APP_NAME DEPLOY_ENV APP_REVISION APP_IMAGE STACK_NAME DEPLOY_NODE_ID
 
@@ -62,8 +65,16 @@ with_secrets() {
     -- "$@"
 }
 
-# Nomes antigos em snake_case (contabil_homo). Sai depois que todos os apps migrarem.
-LEGACY_STACK_NAME="$(printf '%s' "$STACK_NAME" | tr - _)"
+# Nomes anteriores ao padrão <ambiente>_<app>: contabil-homo e contabil_homo. Saem do Caddy e do
+# Swarm só depois que o stack novo subiu (post-deploy). Apagar quando todos os apps migrarem.
+LEGACY_STACK_NAMES="$APP_NAME-$DEPLOY_ENV $(printf '%s' "$APP_NAME" | tr - _)_$DEPLOY_ENV"
+
+remove_legacy_stacks() {
+  for legacy in $LEGACY_STACK_NAMES; do
+    docker exec caddy rm -f "/etc/caddy/conf.d/$legacy.caddy"
+    docker stack rm "$legacy" >/dev/null 2>&1 || true
+  done
+}
 
 case "$step" in
   pre-deploy)
@@ -84,10 +95,9 @@ case "$step" in
 
   post-deploy)
     if [ -f docker/route.sh ]; then
-      docker exec caddy rm -f "/etc/caddy/conf.d/$LEGACY_STACK_NAME.caddy"
       with_secrets sh docker/route.sh
     fi
-    docker stack rm "$LEGACY_STACK_NAME" >/dev/null 2>&1 || true
+    remove_legacy_stacks
     ;;
 
   *)

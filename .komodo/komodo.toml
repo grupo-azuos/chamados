@@ -1,160 +1,36 @@
-# Deploy no Swarm pelo Komodo. Igual em todos os apps; a base é o template.
+# Deploy no Komodo. Igual em todos os apps; a base é o template e a regra está na skill
+# komodo-deploy. Nome de tudo: <ambiente>_<app> (homo_chamados, prod_chamados); o Docker completa
+# os serviços com _<serviço> (homo_chamados_app, homo_chamados_gateway).
 #
-#   Procedure <app>-<ambiente>: Build → Deploy Stack, disparada pelo webhook do GitHub
-#     (/listener/github/procedure/<app>-<ambiente>/<branch>).
-#   Build: docker/dockerfile no builder do servidor, imagem local `azuos/<app>:<hash>-<ambiente>`.
-#   Stack: docker/compose.yml no Swarm. Os segredos do Infisical entram só nas etapas de
-#     docker/komodo.sh (pre-deploy, deploy e post-deploy).
+#   Repo       clone do repositório no servidor do ambiente; Build e Stack leem dele.
+#   Build      docker/dockerfile no builder do ambiente: imagem local azuos/<app>:<hash>-<ambiente>.
+#   Stack      docker/compose.yml no Swarm; o Infisical só entra nas etapas de docker/komodo.sh.
+#   Procedure  Pull → Build → Deploy, disparada pelo webhook do GitHub
+#              (/listener/github/procedure/<ambiente>_<app>/<branch>).
+#   Action     rollback nativo do Swarm para a versão anterior.
 
-[[build]]
-name = "chamados-prod"
-tags = ["context:apps", "env:core", "server:core"]
-[build.config]
-builder = "core"
-git_provider = "github.com"
-git_account = "grupo-azuos"
-repo = "grupo-azuos/chamados"
-branch = "main"
-webhook_enabled = false
-build_path = "chamados/dashboard"
-dockerfile_path = "docker/dockerfile"
-image_name = "azuos/chamados"
-image_tag = "prod"
-include_latest_tag = false
-include_version_tags = false
-include_commit_tag = true
+# ── homo (develop) ─────────────────────────────────────────────────────────────────────────────
 
-[[stack]]
-name = "chamados-prod"
-tags = ["context:apps", "env:core", "server:core"]
-[stack.config]
-swarm = "core-prod"
-project_name = "chamados-prod"
-git_provider = "github.com"
-git_account = "grupo-azuos"
-repo = "grupo-azuos/chamados"
-branch = "main"
-webhook_enabled = false
-run_directory = "chamados/dashboard"
-file_paths = ["docker/compose.yml"]
-extra_args = ["--resolve-image", "never", "--detach=false"]
-pre_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
-sh docker/komodo.sh pre-deploy chamados prod
-'''
-compose_cmd_wrapper_include = ["config", "deploy"]
-compose_cmd_wrapper = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
-sh docker/komodo.sh deploy chamados prod [[COMPOSE_COMMAND]]
-'''
-post_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
-sh docker/komodo.sh post-deploy chamados prod
-'''
-
-[[procedure]]
-name = "chamados-prod"
-tags = ["context:apps", "env:core", "server:core"]
-[procedure.config]
-webhook_enabled = true
-
-[[procedure.config.stage]]
-name = "Build"
-executions = [
-  { execution.type = "RunBuild", execution.params.build = "chamados-prod" },
-]
-
-[[procedure.config.stage]]
-name = "Deploy"
-executions = [
-  { execution.type = "DeployStack", execution.params.stack = "chamados-prod" },
-]
-
-[[build]]
-name = "chamados-bot-prod"
-tags = ["context:apps", "env:core", "server:core"]
-[build.config]
-builder = "core"
-git_provider = "github.com"
-git_account = "grupo-azuos"
-repo = "grupo-azuos/chamados"
-branch = "main"
-webhook_enabled = false
-build_path = "chamados/dashboard/bot"
-dockerfile_path = "docker/dockerfile"
-image_name = "azuos/chamados-bot"
-image_tag = "prod"
-include_latest_tag = false
-include_version_tags = false
-include_commit_tag = true
-
-[[stack]]
-name = "chamados-bot-prod"
-tags = ["context:apps", "env:core", "server:core"]
-[stack.config]
-swarm = "core-prod"
-project_name = "chamados-bot-prod"
-git_provider = "github.com"
-git_account = "grupo-azuos"
-repo = "grupo-azuos/chamados"
-branch = "main"
-webhook_enabled = false
-run_directory = "chamados/dashboard/bot"
-file_paths = ["docker/compose.yml"]
-extra_args = ["--resolve-image", "never", "--detach=false"]
-pre_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
-sh docker/komodo.sh pre-deploy chamados-bot prod
-'''
-compose_cmd_wrapper_include = ["config", "deploy"]
-compose_cmd_wrapper = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
-sh docker/komodo.sh deploy chamados-bot prod [[COMPOSE_COMMAND]]
-'''
-post_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
-sh docker/komodo.sh post-deploy chamados-bot prod
-'''
-
-[[procedure]]
-name = "chamados-bot-prod"
-tags = ["context:apps", "env:core", "server:core"]
-[procedure.config]
-webhook_enabled = true
-
-[[procedure.config.stage]]
-name = "Build"
-executions = [
-  { execution.type = "RunBuild", execution.params.build = "chamados-bot-prod" },
-]
-
-[[procedure.config.stage]]
-name = "Deploy"
-executions = [
-  { execution.type = "DeployStack", execution.params.stack = "chamados-bot-prod" },
-]
-
-[[build]]
-name = "chamados-homo"
+[[repo]]
+name = "homo_chamados"
+description = "Clone da develop do chamados no homo"
 tags = ["context:apps", "env:homo", "server:homo"]
-[build.config]
-builder = "homo"
+[repo.config]
+server = "homo"
 git_provider = "github.com"
 git_account = "grupo-azuos"
 repo = "grupo-azuos/chamados"
 branch = "develop"
+webhook_enabled = false
+links = ["https://github.com/grupo-azuos/chamados/tree/develop"]
+
+[[build]]
+name = "homo_chamados"
+description = "Imagem azuos/chamados de homologação, construída no homo"
+tags = ["context:apps", "env:homo", "server:homo"]
+[build.config]
+builder = "homo"
+linked_repo = "homo_chamados"
 webhook_enabled = false
 build_path = "chamados/dashboard"
 dockerfile_path = "docker/dockerfile"
@@ -163,21 +39,26 @@ image_tag = "homo"
 include_latest_tag = false
 include_version_tags = false
 include_commit_tag = true
+labels = """
+org.opencontainers.image.source=https://github.com/grupo-azuos/chamados
+azuos.app=chamados
+azuos.environment=homo
+"""
+links = ["https://chamados.homo.grupoazuos.com.br"]
 
 [[stack]]
-name = "chamados-homo"
+name = "homo_chamados"
+description = "Serviços do chamados no Swarm do homo"
 tags = ["context:apps", "env:homo", "server:homo"]
 [stack.config]
 swarm = "homo"
-project_name = "chamados-homo"
-git_provider = "github.com"
-git_account = "grupo-azuos"
-repo = "grupo-azuos/chamados"
-branch = "develop"
+project_name = "homo_chamados"
+linked_repo = "homo_chamados"
 webhook_enabled = false
 run_directory = "chamados/dashboard"
 file_paths = ["docker/compose.yml"]
 extra_args = ["--resolve-image", "never", "--detach=false"]
+links = ["https://chamados.homo.grupoazuos.com.br"]
 pre_deploy.command = '''
 INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
 INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
@@ -199,32 +80,57 @@ sh docker/komodo.sh post-deploy chamados homo
 '''
 
 [[procedure]]
-name = "chamados-homo"
+name = "homo_chamados"
+description = "Publica a develop do chamados no homo: Pull, Build e Deploy"
 tags = ["context:apps", "env:homo", "server:homo"]
 [procedure.config]
 webhook_enabled = true
 
 [[procedure.config.stage]]
+name = "Pull"
+executions = [
+  { execution.type = "PullRepo", execution.params.repo = "homo_chamados" },
+]
+
+[[procedure.config.stage]]
 name = "Build"
 executions = [
-  { execution.type = "RunBuild", execution.params.build = "chamados-homo" },
+  { execution.type = "RunBuild", execution.params.build = "homo_chamados" },
 ]
 
 [[procedure.config.stage]]
 name = "Deploy"
 executions = [
-  { execution.type = "DeployStack", execution.params.stack = "chamados-homo" },
+  { execution.type = "DeployStack", execution.params.stack = "homo_chamados" },
 ]
 
+[[action]]
+name = "homo_chamados_rollback"
+description = "Volta os serviços do homo_chamados para a versão anterior (rollback do Swarm)"
+tags = ["context:apps", "env:homo", "server:homo"]
+[action.config]
+webhook_enabled = false
+file_contents = '''
+const stack = 'homo_chamados';
+await komodo.execute_server_terminal(
+  {
+    server: 'homo',
+    command: `docker service ls -q --filter label=com.docker.stack.namespace=${stack} | xargs -r -n1 docker service rollback --detach=false`,
+    init: { command: 'sh' },
+  },
+  { onLine: (line) => console.log(line), onFinish: (code) => console.log(`exit ${code}`) },
+);
+'''
+
+# ── bot do WhatsApp, homo ──────────────────────────────────────────────────────────────────────
+
 [[build]]
-name = "chamados-bot-homo"
+name = "homo_chamados-bot"
+description = "Imagem azuos/chamados-bot de homologação: o bot do WhatsApp"
 tags = ["context:apps", "env:homo", "server:homo"]
 [build.config]
 builder = "homo"
-git_provider = "github.com"
-git_account = "grupo-azuos"
-repo = "grupo-azuos/chamados"
-branch = "develop"
+linked_repo = "homo_chamados"
 webhook_enabled = false
 build_path = "chamados/dashboard/bot"
 dockerfile_path = "docker/dockerfile"
@@ -233,17 +139,20 @@ image_tag = "homo"
 include_latest_tag = false
 include_version_tags = false
 include_commit_tag = true
+labels = """
+org.opencontainers.image.source=https://github.com/grupo-azuos/chamados
+azuos.app=chamados-bot
+azuos.environment=homo
+"""
 
 [[stack]]
-name = "chamados-bot-homo"
+name = "homo_chamados-bot"
+description = "Bot do WhatsApp do chamados no Swarm do homo"
 tags = ["context:apps", "env:homo", "server:homo"]
 [stack.config]
 swarm = "homo"
-project_name = "chamados-bot-homo"
-git_provider = "github.com"
-git_account = "grupo-azuos"
-repo = "grupo-azuos/chamados"
-branch = "develop"
+project_name = "homo_chamados-bot"
+linked_repo = "homo_chamados"
 webhook_enabled = false
 run_directory = "chamados/dashboard/bot"
 file_paths = ["docker/compose.yml"]
@@ -269,19 +178,255 @@ sh docker/komodo.sh post-deploy chamados-bot homo
 '''
 
 [[procedure]]
-name = "chamados-bot-homo"
+name = "homo_chamados-bot"
+description = "Publica o bot do chamados no homo: Pull, Build e Deploy"
 tags = ["context:apps", "env:homo", "server:homo"]
 [procedure.config]
 webhook_enabled = true
 
 [[procedure.config.stage]]
+name = "Pull"
+executions = [
+  { execution.type = "PullRepo", execution.params.repo = "homo_chamados" },
+]
+
+[[procedure.config.stage]]
 name = "Build"
 executions = [
-  { execution.type = "RunBuild", execution.params.build = "chamados-bot-homo" },
+  { execution.type = "RunBuild", execution.params.build = "homo_chamados-bot" },
 ]
 
 [[procedure.config.stage]]
 name = "Deploy"
 executions = [
-  { execution.type = "DeployStack", execution.params.stack = "chamados-bot-homo" },
+  { execution.type = "DeployStack", execution.params.stack = "homo_chamados-bot" },
 ]
+
+[[action]]
+name = "homo_chamados-bot_rollback"
+description = "Volta o homo_chamados-bot para a versão anterior (rollback do Swarm)"
+tags = ["context:apps", "env:homo", "server:homo"]
+[action.config]
+webhook_enabled = false
+file_contents = '''
+const stack = 'homo_chamados-bot';
+await komodo.execute_server_terminal(
+  {
+    server: 'homo',
+    command: `docker service ls -q --filter label=com.docker.stack.namespace=${stack} | xargs -r -n1 docker service rollback --detach=false`,
+    init: { command: 'sh' },
+  },
+  { onLine: (line) => console.log(line), onFinish: (code) => console.log(`exit ${code}`) },
+);
+'''
+
+# ── prod (main) ────────────────────────────────────────────────────────────────────────────────
+
+[[repo]]
+name = "prod_chamados"
+description = "Clone da main do chamados no core"
+tags = ["context:apps", "env:prod", "server:core"]
+[repo.config]
+server = "core"
+git_provider = "github.com"
+git_account = "grupo-azuos"
+repo = "grupo-azuos/chamados"
+branch = "main"
+webhook_enabled = false
+links = ["https://github.com/grupo-azuos/chamados/tree/main"]
+
+[[build]]
+name = "prod_chamados"
+description = "Imagem azuos/chamados de produção, construída no core"
+tags = ["context:apps", "env:prod", "server:core"]
+[build.config]
+builder = "prod"
+linked_repo = "prod_chamados"
+webhook_enabled = false
+build_path = "chamados/dashboard"
+dockerfile_path = "docker/dockerfile"
+image_name = "azuos/chamados"
+image_tag = "prod"
+include_latest_tag = false
+include_version_tags = false
+include_commit_tag = true
+labels = """
+org.opencontainers.image.source=https://github.com/grupo-azuos/chamados
+azuos.app=chamados
+azuos.environment=prod
+"""
+links = ["https://chamados.grupoazuos.com.br"]
+
+[[stack]]
+name = "prod_chamados"
+description = "Serviços do chamados no Swarm de produção"
+tags = ["context:apps", "env:prod", "server:core"]
+[stack.config]
+swarm = "core-prod"
+project_name = "prod_chamados"
+linked_repo = "prod_chamados"
+webhook_enabled = false
+run_directory = "chamados/dashboard"
+file_paths = ["docker/compose.yml"]
+extra_args = ["--resolve-image", "never", "--detach=false"]
+links = ["https://chamados.grupoazuos.com.br"]
+pre_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh pre-deploy chamados prod
+'''
+compose_cmd_wrapper_include = ["config", "deploy"]
+compose_cmd_wrapper = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh deploy chamados prod [[COMPOSE_COMMAND]]
+'''
+post_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh post-deploy chamados prod
+'''
+
+[[procedure]]
+name = "prod_chamados"
+description = "Publica a main do chamados em produção: Pull, Build e Deploy"
+tags = ["context:apps", "env:prod", "server:core"]
+[procedure.config]
+webhook_enabled = true
+
+[[procedure.config.stage]]
+name = "Pull"
+executions = [
+  { execution.type = "PullRepo", execution.params.repo = "prod_chamados" },
+]
+
+[[procedure.config.stage]]
+name = "Build"
+executions = [
+  { execution.type = "RunBuild", execution.params.build = "prod_chamados" },
+]
+
+[[procedure.config.stage]]
+name = "Deploy"
+executions = [
+  { execution.type = "DeployStack", execution.params.stack = "prod_chamados" },
+]
+
+[[action]]
+name = "prod_chamados_rollback"
+description = "Volta os serviços do prod_chamados para a versão anterior (rollback do Swarm)"
+tags = ["context:apps", "env:prod", "server:core"]
+[action.config]
+webhook_enabled = false
+file_contents = '''
+const stack = 'prod_chamados';
+await komodo.execute_server_terminal(
+  {
+    server: 'core',
+    command: `docker service ls -q --filter label=com.docker.stack.namespace=${stack} | xargs -r -n1 docker service rollback --detach=false`,
+    init: { command: 'sh' },
+  },
+  { onLine: (line) => console.log(line), onFinish: (code) => console.log(`exit ${code}`) },
+);
+'''
+
+# ── bot do WhatsApp, prod ──────────────────────────────────────────────────────────────────────
+
+[[build]]
+name = "prod_chamados-bot"
+description = "Imagem azuos/chamados-bot de produção: o bot do WhatsApp"
+tags = ["context:apps", "env:prod", "server:core"]
+[build.config]
+builder = "prod"
+linked_repo = "prod_chamados"
+webhook_enabled = false
+build_path = "chamados/dashboard/bot"
+dockerfile_path = "docker/dockerfile"
+image_name = "azuos/chamados-bot"
+image_tag = "prod"
+include_latest_tag = false
+include_version_tags = false
+include_commit_tag = true
+labels = """
+org.opencontainers.image.source=https://github.com/grupo-azuos/chamados
+azuos.app=chamados-bot
+azuos.environment=prod
+"""
+
+[[stack]]
+name = "prod_chamados-bot"
+description = "Bot do WhatsApp do chamados no Swarm de produção"
+tags = ["context:apps", "env:prod", "server:core"]
+[stack.config]
+swarm = "core-prod"
+project_name = "prod_chamados-bot"
+linked_repo = "prod_chamados"
+webhook_enabled = false
+run_directory = "chamados/dashboard/bot"
+file_paths = ["docker/compose.yml"]
+extra_args = ["--resolve-image", "never", "--detach=false"]
+pre_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh pre-deploy chamados-bot prod
+'''
+compose_cmd_wrapper_include = ["config", "deploy"]
+compose_cmd_wrapper = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh deploy chamados-bot prod [[COMPOSE_COMMAND]]
+'''
+post_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh post-deploy chamados-bot prod
+'''
+
+[[procedure]]
+name = "prod_chamados-bot"
+description = "Publica o bot do chamados em produção: Pull, Build e Deploy"
+tags = ["context:apps", "env:prod", "server:core"]
+[procedure.config]
+webhook_enabled = true
+
+[[procedure.config.stage]]
+name = "Pull"
+executions = [
+  { execution.type = "PullRepo", execution.params.repo = "prod_chamados" },
+]
+
+[[procedure.config.stage]]
+name = "Build"
+executions = [
+  { execution.type = "RunBuild", execution.params.build = "prod_chamados-bot" },
+]
+
+[[procedure.config.stage]]
+name = "Deploy"
+executions = [
+  { execution.type = "DeployStack", execution.params.stack = "prod_chamados-bot" },
+]
+
+[[action]]
+name = "prod_chamados-bot_rollback"
+description = "Volta o prod_chamados-bot para a versão anterior (rollback do Swarm)"
+tags = ["context:apps", "env:prod", "server:core"]
+[action.config]
+webhook_enabled = false
+file_contents = '''
+const stack = 'prod_chamados-bot';
+await komodo.execute_server_terminal(
+  {
+    server: 'core',
+    command: `docker service ls -q --filter label=com.docker.stack.namespace=${stack} | xargs -r -n1 docker service rollback --detach=false`,
+    init: { command: 'sh' },
+  },
+  { onLine: (line) => console.log(line), onFinish: (code) => console.log(`exit ${code}`) },
+);
+'''

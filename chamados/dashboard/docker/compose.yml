@@ -8,7 +8,8 @@ services:
     - APP_ENV
     - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:?}
     - VALKEY_URL
-    - VALKEY_KEY_PREFIX
+    # Namespace do cache: <app>:<ambiente>, montado aqui para não depender de valor no Infisical.
+    - VALKEY_KEY_PREFIX=${APP_NAME:?}:${DEPLOY_ENV:?}
     - VALKEY_TIMEOUT_MS
     - DATABASE_POOL_SIZE
     - GITHUB_APP_ID
@@ -113,7 +114,8 @@ services:
     - APP_ENV
     - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:?}
     - VALKEY_URL
-    - VALKEY_KEY_PREFIX
+    # Namespace do cache: <app>:<ambiente>, montado aqui para não depender de valor no Infisical.
+    - VALKEY_KEY_PREFIX=${APP_NAME:?}:${DEPLOY_ENV:?}
     - VALKEY_TIMEOUT_MS
     - DATABASE_POOL_SIZE
     - GITHUB_APP_ID
