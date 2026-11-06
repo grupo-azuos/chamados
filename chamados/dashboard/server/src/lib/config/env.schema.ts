@@ -22,11 +22,13 @@ export const envSchema = z.object({
     .url()
     .refine((value) => /^rediss?:\/\//.test(value))
     .optional(),
+  /* Namespace do cache: `<app>:<ambiente>` (ex.: `chamados:homo`). O `:` que separa a chave
+     entra no `ValkeyCache`, não no valor. */
   VALKEY_KEY_PREFIX: z
     .string()
-    .regex(/^[a-z0-9:-]+:$/)
+    .regex(/^[a-z0-9-]+:[a-z0-9-]+$/)
     .max(128)
-    .default('chamados:development:'),
+    .default('chamados:development'),
   VALKEY_TIMEOUT_MS: z.coerce.number().int().min(100).max(5000).default(1000),
   DATABASE_MIGRATE_ON_START: z
     .enum(['true', 'false'])
