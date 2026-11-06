@@ -23,6 +23,13 @@ export function partialUpdate<TShape extends z.ZodRawShape>(
   return z.object(shape) as never;
 }
 
+/* A descrição (`.describe()`) que estava no `.default()` acompanha o campo: é ela que o Swagger
+   publica, e sem ela o contrato da edição sairia sem dizer o que o campo é. */
 function withoutDefault(field: z.ZodType): z.ZodType {
-  return field instanceof z.ZodDefault ? (field.unwrap() as z.ZodType) : field;
+  if (!(field instanceof z.ZodDefault)) return field;
+
+  const inner = field.unwrap() as z.ZodType;
+  const meta = field.meta();
+
+  return meta ? inner.meta(meta) : inner;
 }
