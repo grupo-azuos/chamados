@@ -56,6 +56,18 @@ export default defineConfig({
   plugins: [
     new rspack.IgnorePlugin({ checkResource: (resource) => OPTIONAL_MODULES.includes(resource) }),
   ],
-  optimization: { minimize: false },
-  devtool: 'source-map',
+  /* Minifica sem trocar nome de classe nem de função (os logs e os erros continuam legíveis). */
+  optimization: {
+    minimize: true,
+    minimizer: [
+      new rspack.SwcJsMinimizerRspackPlugin({
+        minimizerOptions: {
+          compress: { keep_classnames: true, keep_fnames: true },
+          mangle: { keep_classnames: true, keep_fnames: true },
+        },
+      }),
+    ],
+  },
+  /* Sem source map: o Node só o usa com `--enable-source-maps`, que o container não liga. */
+  devtool: false,
 });
