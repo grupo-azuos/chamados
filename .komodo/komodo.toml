@@ -1,157 +1,287 @@
-# Build local e atualização nativa do Swarm. Sem registry ou deploy no GitHub.
+# Deploy no Swarm pelo Komodo. Igual em todos os apps; a base é o template.
+#
+#   Procedure <app>-<ambiente>: Build → Deploy Stack, disparada pelo webhook do GitHub
+#     (/listener/github/procedure/<app>-<ambiente>/<branch>).
+#   Build: docker/dockerfile no builder do servidor, imagem local `azuos/<app>:<hash>-<ambiente>`.
+#   Stack: docker/compose.yml no Swarm. Os segredos do Infisical entram só nas etapas de
+#     docker/komodo.sh (pre-deploy, deploy e post-deploy).
 
-[[repo]]
-name = "chamados_prod"
+[[build]]
+name = "chamados-prod"
 tags = ["context:apps", "env:core", "server:core"]
-[repo.config]
-server = "core"
+[build.config]
+builder = "core"
 git_provider = "github.com"
 git_account = "grupo-azuos"
 repo = "grupo-azuos/chamados"
 branch = "main"
-webhook_enabled = true
-env_file_path = ".komodo/bootstrap.env"
-environment = """
-INFISICAL_TOKEN=[[INFISICAL_PROD_TOKEN]]
-INFISICAL_DOMAIN=[[INFISICAL_API_URL]]
-"""
-[repo.config.on_pull]
-path = "."
-shell_mode = true
-command = '''
-set -eu
-# Auxiliares do deploy, construídas no host uma vez e reaproveitadas. São iguais em todos os apps e
-# no Ansible do server: mudou um dockerfile, sobe a tag aqui, nos outros apps e no Ansible.
-docker image inspect azuos-deploy-tools:1 >/dev/null 2>&1 || \
-  docker build -t azuos-deploy-tools:1 .komodo/runtime/deploy-tools
-docker image inspect azuos-gateway:2.11 >/dev/null 2>&1 || \
-  docker build -t azuos-gateway:2.11 .komodo/runtime/gateway
-chmod 600 .komodo/bootstrap.env
-docker run --rm --security-opt label=disable --network host \
-  --env-file .komodo/bootstrap.env \
-  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0="$PWD" \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v /etc/komodo/buildx:/etc/komodo/buildx:z \
-  -v "$PWD:$PWD:ro,z" -w "$PWD/chamados/dashboard" azuos-deploy-tools:1 \
-  infisical --silent run --expand=false --secret-overriding=false \
-  --projectId='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
-  --env=prod --path=/ \
-  -- sh docker/deploy.sh prod prod
-'''
+webhook_enabled = false
+build_path = "chamados/dashboard"
+dockerfile_path = "docker/dockerfile"
+image_name = "azuos/chamados"
+image_tag = "prod"
+include_latest_tag = false
+include_version_tags = false
+include_commit_tag = true
 
-[[repo]]
-name = "chamados_homo"
-tags = ["context:apps", "env:homo", "server:homo"]
-[repo.config]
-server = "homo"
-git_provider = "github.com"
-git_account = "grupo-azuos"
-repo = "grupo-azuos/chamados"
-branch = "develop"
-webhook_enabled = true
-env_file_path = ".komodo/bootstrap.env"
-environment = """
-INFISICAL_TOKEN=[[INFISICAL_HOMO_TOKEN]]
-INFISICAL_DOMAIN=[[INFISICAL_API_URL]]
-"""
-[repo.config.on_pull]
-path = "."
-shell_mode = true
-command = '''
-set -eu
-# Auxiliares do deploy, construídas no host uma vez e reaproveitadas. São iguais em todos os apps e
-# no Ansible do server: mudou um dockerfile, sobe a tag aqui, nos outros apps e no Ansible.
-docker image inspect azuos-deploy-tools:1 >/dev/null 2>&1 || \
-  docker build -t azuos-deploy-tools:1 .komodo/runtime/deploy-tools
-docker image inspect azuos-gateway:2.11 >/dev/null 2>&1 || \
-  docker build -t azuos-gateway:2.11 .komodo/runtime/gateway
-chmod 600 .komodo/bootstrap.env
-docker run --rm --security-opt label=disable --network host \
-  --env-file .komodo/bootstrap.env \
-  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0="$PWD" \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v /etc/komodo/buildx:/etc/komodo/buildx:z \
-  -v "$PWD:$PWD:ro,z" -w "$PWD/chamados/dashboard" azuos-deploy-tools:1 \
-  infisical --silent run --expand=false --secret-overriding=false \
-  --projectId='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
-  --env=homo --path=/ \
-  -- sh docker/deploy.sh homo homo
-'''
-
-[[repo]]
-name = "chamados_bot_prod"
+[[stack]]
+name = "chamados-prod"
 tags = ["context:apps", "env:core", "server:core"]
-[repo.config]
-server = "core"
+[stack.config]
+swarm = "core-prod"
+project_name = "chamados-prod"
 git_provider = "github.com"
 git_account = "grupo-azuos"
 repo = "grupo-azuos/chamados"
 branch = "main"
-webhook_enabled = true
-env_file_path = ".komodo/bootstrap.env"
-environment = """
-INFISICAL_TOKEN=[[INFISICAL_PROD_TOKEN]]
-INFISICAL_DOMAIN=[[INFISICAL_API_URL]]
-"""
-[repo.config.on_pull]
-path = "."
-shell_mode = true
-command = '''
-set -eu
-# Auxiliares do deploy, construídas no host uma vez e reaproveitadas. São iguais em todos os apps e
-# no Ansible do server: mudou um dockerfile, sobe a tag aqui, nos outros apps e no Ansible.
-docker image inspect azuos-deploy-tools:1 >/dev/null 2>&1 || \
-  docker build -t azuos-deploy-tools:1 .komodo/runtime/deploy-tools
-docker image inspect azuos-gateway:2.11 >/dev/null 2>&1 || \
-  docker build -t azuos-gateway:2.11 .komodo/runtime/gateway
-chmod 600 .komodo/bootstrap.env
-docker run --rm --security-opt label=disable --network host \
-  --env-file .komodo/bootstrap.env \
-  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0="$PWD" \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v /etc/komodo/buildx:/etc/komodo/buildx:z \
-  -v "$PWD:$PWD:ro,z" -w "$PWD/chamados/dashboard/bot" azuos-deploy-tools:1 \
-  infisical --silent run --expand=false --secret-overriding=false \
-  --projectId='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
-  --env=prod --path=/ \
-  -- sh docker/deploy.sh prod prod
+webhook_enabled = false
+run_directory = "chamados/dashboard"
+file_paths = ["docker/compose.yml"]
+extra_args = ["--resolve-image", "never", "--detach=false"]
+pre_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh pre-deploy chamados prod
+'''
+compose_cmd_wrapper_include = ["config", "deploy"]
+compose_cmd_wrapper = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh deploy chamados prod [[COMPOSE_COMMAND]]
+'''
+post_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh post-deploy chamados prod
 '''
 
-[[repo]]
-name = "chamados_bot_homo"
+[[procedure]]
+name = "chamados-prod"
+tags = ["context:apps", "env:core", "server:core"]
+[procedure.config]
+webhook_enabled = true
+
+[[procedure.config.stage]]
+name = "Build"
+executions = [
+  { execution.type = "RunBuild", execution.params.build = "chamados-prod" },
+]
+
+[[procedure.config.stage]]
+name = "Deploy"
+executions = [
+  { execution.type = "DeployStack", execution.params.stack = "chamados-prod" },
+]
+
+[[build]]
+name = "chamados-bot-prod"
+tags = ["context:apps", "env:core", "server:core"]
+[build.config]
+builder = "core"
+git_provider = "github.com"
+git_account = "grupo-azuos"
+repo = "grupo-azuos/chamados"
+branch = "main"
+webhook_enabled = false
+build_path = "chamados/dashboard/bot"
+dockerfile_path = "docker/dockerfile"
+image_name = "azuos/chamados-bot"
+image_tag = "prod"
+include_latest_tag = false
+include_version_tags = false
+include_commit_tag = true
+
+[[stack]]
+name = "chamados-bot-prod"
+tags = ["context:apps", "env:core", "server:core"]
+[stack.config]
+swarm = "core-prod"
+project_name = "chamados-bot-prod"
+git_provider = "github.com"
+git_account = "grupo-azuos"
+repo = "grupo-azuos/chamados"
+branch = "main"
+webhook_enabled = false
+run_directory = "chamados/dashboard/bot"
+file_paths = ["docker/compose.yml"]
+extra_args = ["--resolve-image", "never", "--detach=false"]
+pre_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh pre-deploy chamados-bot prod
+'''
+compose_cmd_wrapper_include = ["config", "deploy"]
+compose_cmd_wrapper = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh deploy chamados-bot prod [[COMPOSE_COMMAND]]
+'''
+post_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh post-deploy chamados-bot prod
+'''
+
+[[procedure]]
+name = "chamados-bot-prod"
+tags = ["context:apps", "env:core", "server:core"]
+[procedure.config]
+webhook_enabled = true
+
+[[procedure.config.stage]]
+name = "Build"
+executions = [
+  { execution.type = "RunBuild", execution.params.build = "chamados-bot-prod" },
+]
+
+[[procedure.config.stage]]
+name = "Deploy"
+executions = [
+  { execution.type = "DeployStack", execution.params.stack = "chamados-bot-prod" },
+]
+
+[[build]]
+name = "chamados-homo"
 tags = ["context:apps", "env:homo", "server:homo"]
-[repo.config]
-server = "homo"
+[build.config]
+builder = "homo"
 git_provider = "github.com"
 git_account = "grupo-azuos"
 repo = "grupo-azuos/chamados"
 branch = "develop"
-webhook_enabled = true
-env_file_path = ".komodo/bootstrap.env"
-environment = """
-INFISICAL_TOKEN=[[INFISICAL_HOMO_TOKEN]]
-INFISICAL_DOMAIN=[[INFISICAL_API_URL]]
-"""
-[repo.config.on_pull]
-path = "."
-shell_mode = true
-command = '''
-set -eu
-# Auxiliares do deploy, construídas no host uma vez e reaproveitadas. São iguais em todos os apps e
-# no Ansible do server: mudou um dockerfile, sobe a tag aqui, nos outros apps e no Ansible.
-docker image inspect azuos-deploy-tools:1 >/dev/null 2>&1 || \
-  docker build -t azuos-deploy-tools:1 .komodo/runtime/deploy-tools
-docker image inspect azuos-gateway:2.11 >/dev/null 2>&1 || \
-  docker build -t azuos-gateway:2.11 .komodo/runtime/gateway
-chmod 600 .komodo/bootstrap.env
-docker run --rm --security-opt label=disable --network host \
-  --env-file .komodo/bootstrap.env \
-  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0="$PWD" \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v /etc/komodo/buildx:/etc/komodo/buildx:z \
-  -v "$PWD:$PWD:ro,z" -w "$PWD/chamados/dashboard/bot" azuos-deploy-tools:1 \
-  infisical --silent run --expand=false --secret-overriding=false \
-  --projectId='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
-  --env=homo --path=/ \
-  -- sh docker/deploy.sh homo homo
+webhook_enabled = false
+build_path = "chamados/dashboard"
+dockerfile_path = "docker/dockerfile"
+image_name = "azuos/chamados"
+image_tag = "homo"
+include_latest_tag = false
+include_version_tags = false
+include_commit_tag = true
+
+[[stack]]
+name = "chamados-homo"
+tags = ["context:apps", "env:homo", "server:homo"]
+[stack.config]
+swarm = "homo"
+project_name = "chamados-homo"
+git_provider = "github.com"
+git_account = "grupo-azuos"
+repo = "grupo-azuos/chamados"
+branch = "develop"
+webhook_enabled = false
+run_directory = "chamados/dashboard"
+file_paths = ["docker/compose.yml"]
+extra_args = ["--resolve-image", "never", "--detach=false"]
+pre_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh pre-deploy chamados homo
 '''
+compose_cmd_wrapper_include = ["config", "deploy"]
+compose_cmd_wrapper = '''
+INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh deploy chamados homo [[COMPOSE_COMMAND]]
+'''
+post_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh post-deploy chamados homo
+'''
+
+[[procedure]]
+name = "chamados-homo"
+tags = ["context:apps", "env:homo", "server:homo"]
+[procedure.config]
+webhook_enabled = true
+
+[[procedure.config.stage]]
+name = "Build"
+executions = [
+  { execution.type = "RunBuild", execution.params.build = "chamados-homo" },
+]
+
+[[procedure.config.stage]]
+name = "Deploy"
+executions = [
+  { execution.type = "DeployStack", execution.params.stack = "chamados-homo" },
+]
+
+[[build]]
+name = "chamados-bot-homo"
+tags = ["context:apps", "env:homo", "server:homo"]
+[build.config]
+builder = "homo"
+git_provider = "github.com"
+git_account = "grupo-azuos"
+repo = "grupo-azuos/chamados"
+branch = "develop"
+webhook_enabled = false
+build_path = "chamados/dashboard/bot"
+dockerfile_path = "docker/dockerfile"
+image_name = "azuos/chamados-bot"
+image_tag = "homo"
+include_latest_tag = false
+include_version_tags = false
+include_commit_tag = true
+
+[[stack]]
+name = "chamados-bot-homo"
+tags = ["context:apps", "env:homo", "server:homo"]
+[stack.config]
+swarm = "homo"
+project_name = "chamados-bot-homo"
+git_provider = "github.com"
+git_account = "grupo-azuos"
+repo = "grupo-azuos/chamados"
+branch = "develop"
+webhook_enabled = false
+run_directory = "chamados/dashboard/bot"
+file_paths = ["docker/compose.yml"]
+extra_args = ["--resolve-image", "never", "--detach=false"]
+pre_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh pre-deploy chamados-bot homo
+'''
+compose_cmd_wrapper_include = ["config", "deploy"]
+compose_cmd_wrapper = '''
+INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh deploy chamados-bot homo [[COMPOSE_COMMAND]]
+'''
+post_deploy.command = '''
+INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
+INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
+INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+sh docker/komodo.sh post-deploy chamados-bot homo
+'''
+
+[[procedure]]
+name = "chamados-bot-homo"
+tags = ["context:apps", "env:homo", "server:homo"]
+[procedure.config]
+webhook_enabled = true
+
+[[procedure.config.stage]]
+name = "Build"
+executions = [
+  { execution.type = "RunBuild", execution.params.build = "chamados-bot-homo" },
+]
+
+[[procedure.config.stage]]
+name = "Deploy"
+executions = [
+  { execution.type = "DeployStack", execution.params.stack = "chamados-bot-homo" },
+]
