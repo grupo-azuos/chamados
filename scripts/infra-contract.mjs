@@ -100,6 +100,13 @@ function dockerRules(appDir) {
   const compose = read('docker/compose.yml');
   return [
     ...rule(komodo.includes('STACK_NAME="${DEPLOY_ENV}_${APP_NAME}"'), 'docker/komodo.sh must name the stack <ambiente>_<app>'),
+    /* O Komodo lê o compose com `docker stack config --skip-interpolation` (sem segredo na saída):
+       número e tamanho escritos como variável chegam como texto e o deploy para em "must be a
+       integer". */
+    ...rule(
+      !/^\s*(replicas|cpus|memory):\s*['"]?\$\{/m.test(compose),
+      'docker/compose.yml: replicas, cpus and memory are written as values, never as ${VARIABLE}',
+    ),
     ...rule(!/VALKEY_KEY_PREFIX(?!=\$\{APP_NAME:\?\}:\$\{DEPLOY_ENV:\?\})/.test(compose), 'Valkey namespace is <app>:<ambiente>, set in docker/compose.yml as VALKEY_KEY_PREFIX=${APP_NAME:?}:${DEPLOY_ENV:?}'),
     /* `node_modules` inteiro não entra; só o do estágio `externals`, que instala os poucos pacotes
        que não cabem no pacote (worker, dados no disco, ESM carregado por import()). */

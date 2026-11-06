@@ -92,6 +92,17 @@ test('rejects a Valkey namespace typed by hand', (context) => {
   }
 });
 
+test('rejects replicas, cpus or memory written as a variable', () => {
+  const project = fixture();
+  try {
+    const compose = project.read(`${APP_DIR}/docker/compose.yml`);
+    project.write(`${APP_DIR}/docker/compose.yml`, compose.replace(/replicas: 1/, 'replicas: ${APP_REPLICAS:-1}'));
+    assert.ok(failsWith(project, 'never as ${VARIABLE}'));
+  } finally {
+    project.dispose();
+  }
+});
+
 test('accepts the node_modules of the externals stage', () => {
   const project = fixture();
   try {
