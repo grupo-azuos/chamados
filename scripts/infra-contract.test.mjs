@@ -17,7 +17,7 @@ function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'azuos-infra-rule-'));
   cpSync(join(repository, '.komodo'), join(root, '.komodo'), { recursive: true });
   cpSync(join(repository, APP_DIR, 'docker'), join(root, APP_DIR, 'docker'), { recursive: true });
-  for (const workspace of ['server', 'client']) {
+  for (const workspace of ['server', 'client', '.']) {
     try {
       cpSync(join(repository, APP_DIR, workspace, 'package.json'), join(root, APP_DIR, workspace, 'package.json'));
     } catch {
@@ -98,6 +98,38 @@ test('accepts the node_modules of the externals stage', () => {
     const dockerfile = project.read(`${APP_DIR}/docker/dockerfile`);
     project.write(`${APP_DIR}/docker/dockerfile`, `${dockerfile}COPY --from=externals /externals/node_modules node_modules\n`);
     assert.ok(!failsWith(project, 'not node_modules'));
+  } finally {
+    project.dispose();
+  }
+});
+
+test('rejects nestjs-zod, Zod 3 and NestJS 11 in the server', (context) => {
+  const project = fixture();
+  try {
+    const path = ['server/package.json', 'package.json'].map((file) => `${APP_DIR}/${file}`).find((file) => {
+      try {
+        return Boolean(JSON.parse(project.read(file)).dependencies?.['@nestjs/core']);
+      } catch {
+        return false;
+      }
+    });
+    if (!path) return context.skip('app sem servidor Nest');
+    const manifest = JSON.parse(project.read(path));
+    manifest.dependencies = { ...manifest.dependencies, 'nestjs-zod': '^5.5.0', zod: '^3.23.8', '@nestjs/core': '^11.2.5' };
+    project.write(path, JSON.stringify(manifest));
+    assert.ok(failsWith(project, 'never nestjs-zod'));
+    assert.ok(failsWith(project, 'Zod 4'));
+    assert.ok(failsWith(project, 'NestJS 12'));
+  } finally {
+    project.dispose();
+  }
+});
+
+test('rejects schema.partial() for update schemas', () => {
+  const project = fixture();
+  try {
+    project.write(`${APP_DIR}/docker/update.schema.ts`, 'export const updateThingSchema = createThingSchema.partial();\n');
+    assert.ok(failsWith(project, 'partialUpdate(schema)'));
   } finally {
     project.dispose();
   }

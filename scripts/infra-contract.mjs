@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Contrato de infraestrutura (.claude/rules/infra.md): nomes <ambiente>_<app>, recursos do Komodo,
 // namespace do Valkey e imagem sem node_modules. Igual em todos os apps; a base é o template.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -80,7 +80,13 @@ function buildRules(appDir) {
   const clientManifest = manifest('client');
   const sveltekit = Boolean(clientManifest?.devDependencies?.['@sveltejs/kit'] ?? clientManifest?.dependencies?.['@sveltejs/kit']);
   const client = sveltekit ? undefined : clientManifest?.scripts?.build;
+  const serverManifest = single ? root : manifest('server');
+  const dependencies = { ...serverManifest?.dependencies, ...serverManifest?.devDependencies };
+  const major = (name) => Number(/\d+/.exec(dependencies[name] ?? '')?.[0] ?? NaN);
   return [
+    ...rule(!dependencies['nestjs-zod'], 'Validate with Zod directly (createZodDto in lib/http/zod-dto.ts), never nestjs-zod'),
+    ...rule(!dependencies.zod || major('zod') >= 4, 'Use Zod 4 or newer'),
+    ...rule(!dependencies['@nestjs/core'] || major('@nestjs/core') >= 12, 'Use NestJS 12 or newer'),
     ...rule(server === undefined || /rspack build/.test(server), 'Build the server with Rspack (rspack build)'),
     ...rule(client === undefined || /rsbuild build/.test(client), 'Build the client with Rsbuild (rsbuild build)'),
   ];
@@ -104,11 +110,25 @@ function dockerRules(appDir) {
   ];
 }
 
+/* No Zod 4 o `.default()` vale dentro do `.optional()`: o `.partial()` de um schema de criação faria
+   a edição gravar os valores padrão por cima do que está salvo. Edição usa `partialUpdate`. */
+function schemaRules(appDir) {
+  const sources = (directory) =>
+    readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) return ['node_modules', 'dist', '.git'].includes(entry.name) ? [] : sources(path);
+      return /\.ts$/.test(entry.name) && !/\.(test|spec)\.ts$/.test(entry.name) ? [path] : [];
+    });
+  return sources(appDir)
+    .filter((path) => /\b[A-Za-z]+Schema(?:\.omit\([^)]*\))?\.partial\(\)/.test(readFileSync(path, 'utf8')))
+    .map((path) => `Use partialUpdate(schema) instead of schema.partial() for update schemas (Zod 4 applies defaults inside optional): ${path}`);
+}
+
 export function violations(project) {
   const toml = readFileSync(join(project, '.komodo/komodo.toml'), 'utf8');
   const app = /image_name = "azuos\/([a-z0-9-]+)"/.exec(toml)?.[1] ?? '';
   const appDir = join(project, /build_path = "([^"]+)"/.exec(toml)?.[1] ?? '.');
-  return [...new Set([...komodoRules(toml, app), ...dockerRules(appDir), ...buildRules(appDir)])];
+  return [...new Set([...komodoRules(toml, app), ...dockerRules(appDir), ...buildRules(appDir), ...schemaRules(appDir)])];
 }
 
 function main() {
