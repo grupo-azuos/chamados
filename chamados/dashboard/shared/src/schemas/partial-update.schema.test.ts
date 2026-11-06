@@ -29,4 +29,13 @@ describe('partialUpdate', () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe('Informe o título');
   });
+
+  // feliz
+  it('keeps the description the default carried, for the published contract', () => {
+    const schema = partialUpdate(
+      z.object({ status: z.enum(['ATIVO', 'INATIVO']).default('ATIVO').describe('Situação') }),
+    );
+
+    expect(schema.shape.status.unwrap().description).toBe('Situação');
+  });
 });
