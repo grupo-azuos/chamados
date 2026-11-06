@@ -64,7 +64,7 @@ services:
         delay: 10s
 volumes:
   sessions:
-    name: chamados-${DEPLOY_ENV:?}-bot-sessions
+    name: ${DEPLOY_ENV:?}_chamados-bot_sessions
 networks:
   integrations:
     name: chamados-${DEPLOY_ENV:?}-integrations
