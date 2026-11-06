@@ -13,23 +13,18 @@ COPY server/package.json server/package.json
 COPY client/package.json client/package.json
 RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts --no-audit --no-fund
 
+# Rspack empacota o server (shared e bibliotecas dentro); o client é SvelteKit, que só builda no Vite.
 FROM deps AS build
 COPY . .
 ARG VITE_API_URL=/api/v1
 ENV VITE_API_URL=$VITE_API_URL
-RUN npm run build -w @template/shared && npm run build -w server --ignore-scripts && npm run build -w client
+RUN npm run build
 
-FROM deps AS production-deps
-RUN mkdir -p server/node_modules && npm prune --omit=dev --ignore-scripts --workspace server --workspace @template/shared
-
+# Runtime sem node_modules: só o pacote do server, as migrations e o client.
 FROM node:24.21.0-bookworm-slim AS app
 WORKDIR /repo
 ENV NODE_ENV=production API_PORT=3000
 COPY --from=typst /bin/typst /usr/local/bin/typst
-COPY --from=production-deps --chown=node:node /repo/node_modules node_modules
-COPY --from=production-deps --chown=node:node /repo/server/node_modules server/node_modules
-COPY --from=build --chown=node:node /repo/shared/package.json shared/package.json
-COPY --from=build --chown=node:node /repo/shared/dist shared/dist
 COPY --from=build --chown=node:node /repo/server/package.json server/package.json
 COPY --from=build --chown=node:node /repo/server/dist server/dist
 COPY --from=build --chown=node:node /repo/server/drizzle server/drizzle
