@@ -31,7 +31,7 @@ Por ambiente, cinco recursos, todos com `description` e as tags
 1. **Repo** — clone da branch do ambiente no servidor do ambiente.
 2. **Build** — `linked_repo` no Repo, builder do ambiente (`homo` ou `prod`), `image_tag` = ambiente,
    só `include_commit_tag`, labels `azuos.app` e `azuos.environment`.
-3. **Stack** — `linked_repo` no Repo, Swarm do ambiente (`homo` ou `core-prod`), `project_name` igual
+3. **Stack** — `linked_repo` no Repo, Swarm do ambiente (`homo` ou `core`), `project_name` igual
    ao nome, etapas em `docker/komodo.sh`.
 4. **Procedure** — estágios `Pull` (PullRepo) → `Build` (RunBuild) → `Deploy` (DeployStack).
 5. **Action** `<ambiente>_<app>_rollback` — rollback nativo do Swarm.

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const ENVIRONMENTS = {
   homo: { branch: 'develop', builder: 'homo', swarm: 'homo', server: 'homo' },
-  prod: { branch: 'main', builder: 'prod', swarm: 'core-prod', server: 'core' },
+  prod: { branch: 'main', builder: 'prod', swarm: 'core', server: 'core' },
 };
 const RESOURCE = /^\[\[(repo|build|stack|procedure|action)\]\]$/;
 
