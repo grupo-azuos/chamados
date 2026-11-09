@@ -262,7 +262,7 @@ name = "prod_chamados"
 description = "Serviços do chamados no Swarm de produção"
 tags = ["context:apps", "env:prod", "server:core"]
 [stack.config]
-swarm = "core-prod"
+swarm = "core"
 project_name = "prod_chamados"
 linked_repo = "prod_chamados"
 webhook_enabled = false
@@ -361,7 +361,7 @@ name = "prod_chamados-bot"
 description = "Bot do WhatsApp do chamados no Swarm de produção"
 tags = ["context:apps", "env:prod", "server:core"]
 [stack.config]
-swarm = "core-prod"
+swarm = "core"
 project_name = "prod_chamados-bot"
 linked_repo = "prod_chamados"
 webhook_enabled = false

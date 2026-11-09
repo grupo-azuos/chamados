@@ -29,7 +29,7 @@ troque só o que é do app. Se um app precisa de algo diferente, mude o template
 | Branch             | `develop`                                 | `main`                                    |
 | Servidor do Repo   | `homo`                                    | `core`                                    |
 | Builder            | `homo`                                    | `prod`                                    |
-| Swarm              | `homo`                                    | `core-prod`                               |
+| Swarm              | `homo`                                    | `core`                                    |
 | Token do Infisical | `INFISICAL_HOMO_TOKEN`                    | `INFISICAL_PROD_TOKEN`                    |
 | Tags               | `context:apps`, `env:homo`, `server:homo` | `context:apps`, `env:prod`, `server:core` |
 
