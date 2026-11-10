@@ -24,7 +24,6 @@ import {
   summarizeTickets,
   type TicketSummary,
 } from '@template/shared/domain/ticket-metrics.util';
-import { departmentFromText } from '@template/shared/domain/department.util';
 import { refuseScreenshot } from '@template/shared/domain/screenshot-catalog.util';
 import {
   isClosedTicketStatus,
@@ -59,7 +58,6 @@ import {
   updateTicketWatchersSchema,
 } from '@template/shared/schemas/ticket-person.schema';
 
-import { AdminConsoleProfileProvider } from '../../../lib/auth/admin-console-profile.provider';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   assertCanAttendTicket,
@@ -97,7 +95,6 @@ import {
   TicketWhatsappNotifierService,
 } from './ticket-whatsapp-notifier.service';
 import { TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
-import { DepartmentsService } from '../../departments/service/departments.service';
 
 /** Sem repetir — somar a mesma área participante duas vezes não deve duplicar na resposta. */
 function dedupeAreas(areas: readonly TicketArea[]): TicketArea[] {
@@ -174,8 +171,6 @@ export class TicketsService {
     @Optional() private readonly assignees?: TicketAssigneesService,
     @Optional() private readonly notifier?: TicketWhatsappNotifierService,
     @Optional() @Inject(ENV) private readonly env?: Env,
-    @Optional() private readonly profiles?: AdminConsoleProfileProvider,
-    @Optional() private readonly departments?: DepartmentsService,
     @Optional() private readonly people?: TicketPeopleService,
   ) {}
 
@@ -541,25 +536,18 @@ export class TicketsService {
   }
 
   /**
-   * O que o formulário de abrir chamado já traz: o nome e o e-mail da IDENTIDADE (o nome não
-   * se muda), e telefone e departamento do perfil no admin-console — que a pessoa confirma ou
-   * corrige. Sem telefone no perfil, vale o do último chamado dela. O admin-console fora do ar
-   * não impede ninguém de abrir chamado: só vem menos coisa preenchida.
+   * O que o formulário de abrir chamado já traz e só ESTE sistema sabe: o nome e o e-mail da
+   * IDENTIDADE (o nome não se muda) e o telefone do último chamado da pessoa. Telefone,
+   * departamento e cargo do perfil no admin-console a tela lê direto de lá, com a sessão que a
+   * pessoa já tem — o mesmo caminho da tela "Meu perfil".
    */
-  async requesterDefaults(
-    user: RequestUser,
-    cookieHeader: string | undefined,
-  ): Promise<RequesterDefaults> {
-    const profile = (await this.profiles?.fetchMine(cookieHeader)) ?? null;
-    const phone = profile?.phone ?? (await this.repository.lastPhoneOf(user.id));
-
+  async requesterDefaults(user: RequestUser): Promise<RequesterDefaults> {
     return {
       name: user.name,
       email: user.email,
-      phone,
-      /* O texto do admin-console é livre: vira departamento só quando bate com um da lista. */
-      department: departmentFromText(profile?.department, (await this.departments?.names()) ?? []),
-      jobTitle: profile?.jobTitle ?? null,
+      phone: await this.repository.lastPhoneOf(user.id),
+      department: null,
+      jobTitle: null,
     };
   }
 

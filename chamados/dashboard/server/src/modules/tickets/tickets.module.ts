@@ -24,7 +24,6 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { TicketAssigneesService } from './service/ticket-assignees.service';
 import { TicketWhatsappNotifierService } from './service/ticket-whatsapp-notifier.service';
 import { SoftwareProjectsModule } from '../software-projects/software-projects.module';
-import { DepartmentsModule } from '../departments/departments.module';
 
 /**
  * O índice da pasta: é o único arquivo fora das subpastas, e aponta para todo o resto.
@@ -32,7 +31,7 @@ import { DepartmentsModule } from '../departments/departments.module';
  */
 @Module({
   /* `AuthModule` dá o diretório de usuários, de onde sai quem pode ser responsável. */
-  imports: [SoftwareProjectsModule, AuthModule, RolesModule, WhatsappModule, DepartmentsModule],
+  imports: [SoftwareProjectsModule, AuthModule, RolesModule, WhatsappModule],
   controllers: [
     TicketServiceOrdersController,
     TicketsController,

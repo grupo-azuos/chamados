@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -136,14 +135,11 @@ export class TicketsController {
   @ApiOperation({
     summary: 'O que o formulário de abrir chamado já traz preenchido',
     description:
-      'Nome e e-mail da pessoa logada (o nome não se muda), e telefone e departamento do perfil dela no admin-console. Sem perfil, ou com o admin-console fora do ar, volta só o que a identidade sabe.',
+      'Nome e e-mail da pessoa logada (o nome não se muda) e o telefone do último chamado dela. O perfil do admin-console a tela lê direto de lá.',
   })
   @ApiOkResponse({ type: RequesterDefaultsDto })
-  async requesterDefaults(
-    @CurrentUser() user: RequestUser,
-    @Headers('cookie') cookie?: string,
-  ): Promise<RequesterDefaultsDto> {
-    return this.service.requesterDefaults(user, cookie);
+  async requesterDefaults(@CurrentUser() user: RequestUser): Promise<RequesterDefaultsDto> {
+    return this.service.requesterDefaults(user);
   }
 
   @Get('system-project-options')

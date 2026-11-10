@@ -214,7 +214,8 @@ export const envSchema = z.object({
   ADMIN_CONSOLE_TIMEOUT_MS: z.coerce.number<number>().int().min(500).max(30_000).default(4_000),
 
   /**
-   * O endereço PÚBLICO da tela de login do admin-console — para onde "Minha conta" leva.
+   * O endereço PÚBLICO da tela de login do admin-console — para onde "Minha conta" leva, e de
+   * onde a tela lê o perfil e encerra a sessão, direto do navegador.
    * É o que a pessoa vê na barra de endereço (ex.: `https://login.grupoazuos.com.br`).
    */
   ADMIN_CONSOLE_LOGIN_URL: z
@@ -222,17 +223,6 @@ export const envSchema = z.object({
     .trim()
     .url('ADMIN_CONSOLE_LOGIN_URL precisa ser uma URL completa')
     .optional(),
-
-  /**
-   * O prefixo dos cookies de sessão do admin-console (`<prefixo>_session`). É o
-   * `COOKIE_NAME_PREFIX` de lá — hoje `azuos_homo` em homologação e em produção.
-   *
-   * Serve para o servidor ler o perfil de quem está logado (`GET /api/v1/me/profile`, que só
-   * aceita a sessão da própria pessoa) e preencher o formulário de chamado. Só o cookie de
-   * ACESSO é repassado: o de renovação, reapresentado por outro processo, faria o admin-console
-   * tratá-lo como roubo e derrubar a sessão.
-   */
-  ADMIN_CONSOLE_COOKIE_PREFIX: z.string().trim().min(1).default('azuos'),
 
   /**
    * A PESSOA DE DESENVOLVIMENTO — só para a máquina de quem programa.

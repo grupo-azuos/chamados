@@ -74,7 +74,24 @@ async function readAccount<T>(accountUrl: string, path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+/**
+ * Encerra a sessão NO admin-console, direto do navegador — o mesmo caminho dos outros sistemas.
+ * Ele apaga os cookies de sessão na própria resposta; este sistema nunca os toca.
+ */
+async function signOut(accountUrl: string): Promise<void> {
+  const response = await fetch(new URL('/api/v1/auth/logout', new URL(accountUrl).origin), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: '{}',
+    redirect: 'error',
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error('Não consegui encerrar a sessão. Tente novamente.');
+}
+
 export const accountProfileApi = {
+  signOut,
   me: async (accountUrl: string): Promise<AccountProfile> =>
     (await readAccount<{ data: { user: AccountProfile } }>(accountUrl, '/api/v1/me/profile')).data
       .user,
