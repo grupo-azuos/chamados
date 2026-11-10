@@ -1,13 +1,5 @@
-import { Controller, Get, Headers, HttpCode, HttpStatus, Inject, Post, Res } from '@nestjs/common';
-import {
-  ApiNoContentResponse,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-  ApiUnauthorizedResponse,
-} from '@nestjs/swagger';
-import { type Response } from 'express';
-import { AuthSessionService } from '../service/auth-session.service';
+import { Controller, Get, Inject } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 
 import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { AnyModule } from '../../../lib/auth/module-context.decorator';
@@ -31,7 +23,6 @@ export class AuthController {
   constructor(
     @Inject(ENV) private readonly env: Env,
     @Inject(USER_DIRECTORY_PROVIDER) private readonly directory: UserDirectoryProvider,
-    private readonly sessions: AuthSessionService,
   ) {}
 
   @Get('config')
@@ -42,20 +33,6 @@ export class AuthController {
   @ApiOkResponse({ type: AuthConfigDto })
   config(): AuthConfigDto {
     return { accountUrl: this.env.ADMIN_CONSOLE_LOGIN_URL ?? null };
-  }
-
-  @Post('logout')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Encerra a sessão no admin-console e apaga seus cookies' })
-  @ApiNoContentResponse({ description: 'Sessão encerrada.' })
-  async logout(
-    @Headers('cookie') cookie: string | undefined,
-    @Headers('content-type') contentType: string | undefined,
-    @Res({ passthrough: true }) response: Response,
-  ): Promise<void> {
-    const cookies = await this.sessions.logout(cookie, contentType);
-    response.setHeader('Set-Cookie', cookies);
-    response.setHeader('Cache-Control', 'no-store');
   }
 
   @Get('me')

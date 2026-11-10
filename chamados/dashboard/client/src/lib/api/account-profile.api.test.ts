@@ -33,7 +33,26 @@ describe('accountProfileApi', () => {
     );
   });
 
+  /* Sair é no admin-console: ele apaga os cookies na própria resposta. */
+  it('signs out at the admin console with the session cookie', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+
+    await accountProfileApi.signOut('https://admin-console.test/profile');
+
+    const [url, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.href).toBe('https://admin-console.test/api/v1/auth/logout');
+    expect(init).toMatchObject({ method: 'POST', credentials: 'include', body: '{}' });
+  });
+
   // triste
+  it('fails clearly when the admin console does not end the session', async () => {
+    fetchMock.mockResolvedValue(new Response('{}', { status: 503 }));
+
+    await expect(accountProfileApi.signOut('https://admin-console.test')).rejects.toThrow(
+      'encerrar a sessão',
+    );
+  });
+
   it('fails clearly when the admin console refuses', async () => {
     fetchMock.mockResolvedValue(new Response('{}', { status: 401 }));
 

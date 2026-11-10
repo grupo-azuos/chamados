@@ -1,4 +1,8 @@
-import { type DepartmentChoice } from '@template/shared/domain/department.util';
+import {
+  type DepartmentChoice,
+  departmentFromText,
+  departmentNames,
+} from '@template/shared/domain/department.util';
 import { createForm } from '@tanstack/svelte-form';
 import { page } from '$app/state';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
@@ -21,10 +25,20 @@ import {
   type RequesterDefaults,
 } from '@template/shared/schemas/ticket.schema';
 
+import {
+  accountOrigin,
+  accountProfileApi,
+  type AccountProfile,
+} from '$lib/api/account-profile.api';
+import { authApi } from '$lib/api/auth.api';
+import { departmentsApi } from '$lib/api/departments.api';
 import { readError } from '$lib/api/http-client';
 import { ticketsApi } from '$lib/api/tickets.api';
 import { toFieldState } from '$lib/hooks/use-form-projection/use-form-projection.svelte';
-import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
+import {
+  DEPARTMENTS_QUERY_KEY,
+  useDepartmentOptionsModel,
+} from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { type FormFieldState } from '$lib/types/form-field.type';
 import { writable } from 'svelte/store';
@@ -121,6 +135,26 @@ const EMPTY_VALUES: TicketFormValues = {
   assigneeId: '',
   watcherIds: [],
 };
+
+/**
+ * O que o formulário traz, completado pela ficha da pessoa no admin-console: telefone, cargo e
+ * departamento de lá valem primeiro. O departamento de lá é texto livre ("Depto. Fiscal") e só
+ * entra quando bate com um da lista — chute colocaria o chamado na estatística errada.
+ */
+export function withAccountProfile(
+  defaults: RequesterDefaults,
+  account: AccountProfile | null,
+  names: readonly string[],
+): RequesterDefaults {
+  if (!account) return defaults;
+
+  return {
+    ...defaults,
+    phone: account.profile.phone ?? defaults.phone,
+    department: departmentFromText(account.profile.department, names) ?? defaults.department,
+    jobTitle: account.profile.jobTitle ?? defaults.jobTitle,
+  };
+}
 
 /**
  * O formulário de abrir chamado para qualquer usuário autenticado.
@@ -224,14 +258,41 @@ export function useOpenTicketModel(): OpenTicketModel {
   const applyRequester = (defaults: RequesterDefaults) => {
     form.setFieldValue('requesterName', defaults.name);
     const phone = invitePhoneForForm(defaults.phone);
-    if (phone && !values.current.contactPhone) form.setFieldValue('contactPhone', formatPhoneInput(phone));
+    if (phone && !values.current.contactPhone)
+      form.setFieldValue('contactPhone', formatPhoneInput(phone));
     if (defaults.department) form.setFieldValue('department', defaults.department);
   };
-  void ticketsApi
-    .requesterDefaults()
-    .then((defaults) => {
-      requester = defaults;
-      applyRequester(defaults);
+  /* A ficha vem direto do admin-console, com a sessão que a pessoa já tem — as mesmas chaves de
+     cache da tela "Meu perfil". Sem ficha, vale o que a nossa API sabe. */
+  const accountProfile = () =>
+    queryClient
+      .fetchQuery({
+        queryKey: ['auth', 'config'],
+        queryFn: () => authApi.config(),
+        staleTime: Infinity,
+      })
+      .then((config) =>
+        queryClient.fetchQuery({
+          queryKey: ['account', 'me', 'profile'],
+          queryFn: () => accountProfileApi.me(accountOrigin(config.accountUrl)),
+          retry: false,
+          staleTime: 5 * 60 * 1000,
+        }),
+      )
+      .catch(() => null);
+  const knownDepartments = () =>
+    queryClient
+      .fetchQuery({
+        queryKey: DEPARTMENTS_QUERY_KEY,
+        queryFn: () => departmentsApi.catalog(),
+        staleTime: 5 * 60 * 1000,
+      })
+      .then(departmentNames)
+      .catch(() => []);
+  void Promise.all([ticketsApi.requesterDefaults(), accountProfile(), knownDepartments()])
+    .then(([defaults, account, names]) => {
+      requester = withAccountProfile(defaults, account, names);
+      applyRequester(requester);
     })
     .catch(() => undefined);
 

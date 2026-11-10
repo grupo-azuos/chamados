@@ -10,7 +10,6 @@ import {
 } from '@template/shared/schemas/ticket.schema';
 import { describe, expect, it, vi } from 'vitest';
 
-import { type AdminConsoleProfileProvider } from '../../../lib/auth/admin-console-profile.provider';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type Env } from '../../../lib/config/env.schema';
 
@@ -27,7 +26,6 @@ import { signTicketAccess, signTicketInvite } from './ticket-invite.util';
 import { type TicketWhatsappNotifierService } from './ticket-whatsapp-notifier.service';
 import { type GithubService } from '../../software-projects/service/github.service';
 import { type SoftwareProjectsService } from '../../software-projects/service/software-projects.service';
-import { type DepartmentsService } from '../../departments/service/departments.service';
 import { TicketsService } from './tickets.service';
 
 const ana: RequestUser = {
@@ -1254,10 +1252,7 @@ describe('TicketsService — quem pede, logado', () => {
     description: 'A impressora não puxa papel.',
   };
 
-  function withProfiles(
-    repository: Partial<TicketsRepository>,
-    profiles: Partial<AdminConsoleProfileProvider> = {},
-  ): TicketsService {
+  function withProfiles(repository: Partial<TicketsRepository>): TicketsService {
     const tickets = { ...defaultRepository, ...repository } as TicketsRepository;
 
     return new TicketsService(
@@ -1268,16 +1263,6 @@ describe('TicketsService — quem pede, logado', () => {
       new TicketAccessService(tickets),
       historiesStub as unknown as TicketHistoriesService,
       historiesRepositoryStub as unknown as TicketHistoriesRepository,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      profiles as AdminConsoleProfileProvider,
-      /* A lista do RH: o texto livre do perfil só vira departamento se bater com um destes. */
-      {
-        names: vi.fn().mockResolvedValue(['Contábil', 'Departamento Pessoal', 'Fiscal']),
-      } as unknown as DepartmentsService,
     );
   }
 
@@ -1318,23 +1303,16 @@ describe('TicketsService — quem pede, logado', () => {
     expect(mine).toEqual([expect.objectContaining({ id: 7, protocol: 'CH-0007' })]);
   });
 
-  /* O nome é da identidade; telefone e departamento vêm do perfil do admin-console. */
-  it('prefills the form from the admin-console profile', async () => {
-    const fetchMine = vi.fn().mockResolvedValue({
-      name: 'Outro nome no perfil',
-      email: bia.email,
-      phone: '62988887777',
-      department: 'Departamento Pessoal',
-      jobTitle: 'Analista',
-    });
-    const service = withProfiles({}, { fetchMine });
+  /* O nome é da identidade; o telefone, o do último chamado. O perfil a tela lê no admin-console. */
+  it('prefills the form from the identity and the last phone used', async () => {
+    const service = withProfiles({ lastPhoneOf: vi.fn().mockResolvedValue('62977776666') });
 
-    await expect(service.requesterDefaults(bia, 'azuos_session=abc')).resolves.toEqual({
+    await expect(service.requesterDefaults(bia)).resolves.toEqual({
       name: 'Bia Costa',
       email: bia.email,
-      phone: '62988887777',
-      department: 'Departamento Pessoal',
-      jobTitle: 'Analista',
+      phone: '62977776666',
+      department: null,
+      jobTitle: null,
     });
   });
 
@@ -1346,22 +1324,6 @@ describe('TicketsService — quem pede, logado', () => {
     });
 
     await expect(service.findByProtocol(bia, 'CH-0007')).rejects.toThrow(NotFoundException);
-  });
-
-  /* O admin-console fora do ar não impede ninguém de abrir chamado: só vem menos preenchido. */
-  it('still prefills name and the last phone when the admin-console does not answer', async () => {
-    const service = withProfiles(
-      { lastPhoneOf: vi.fn().mockResolvedValue('62977776666') },
-      { fetchMine: vi.fn().mockResolvedValue(null) },
-    );
-
-    await expect(service.requesterDefaults(bia, undefined)).resolves.toEqual({
-      name: 'Bia Costa',
-      email: bia.email,
-      phone: '62977776666',
-      department: null,
-      jobTitle: null,
-    });
   });
 });
 
@@ -1408,7 +1370,7 @@ describe('TicketsService without the optional integrations', () => {
   it('fills the requester defaults from the identity and the last phone used', async () => {
     const service = makeBareService();
 
-    expect(await service.requesterDefaults(ana, undefined)).toEqual({
+    expect(await service.requesterDefaults(ana)).toEqual({
       name: 'Ana',
       email: 'ana@azuos.com.br',
       phone: '62999990001',
@@ -1435,7 +1397,10 @@ describe('TicketsService without the optional integrations', () => {
 });
 
 describe('TicketsService.update mirrors the System ticket to GitHub', () => {
-  function makeGithubService(current: Partial<TicketWithComputer>, saved: Partial<TicketWithComputer>) {
+  function makeGithubService(
+    current: Partial<TicketWithComputer>,
+    saved: Partial<TicketWithComputer>,
+  ) {
     const github = {
       syncTicketToIssueInBackground: vi.fn(),
       mirrorTicketToIssueInBackground: vi.fn(),
@@ -1499,7 +1464,10 @@ describe('TicketsService.update mirrors the System ticket to GitHub', () => {
 
   // triste
   it('leaves GitHub alone for a ticket of another area', async () => {
-    const { service, github } = makeGithubService({ area: 'infra', projectId: null }, { priority: 'high' });
+    const { service, github } = makeGithubService(
+      { area: 'infra', projectId: null },
+      { priority: 'high' },
+    );
 
     await service.update(ana, 7, { priority: 'high' });
 

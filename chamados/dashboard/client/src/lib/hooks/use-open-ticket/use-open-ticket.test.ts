@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-open-ticket-harness.test.svelte';
-import { type OpenTicketModel } from './use-open-ticket.svelte';
+import { type OpenTicketModel, withAccountProfile } from './use-open-ticket.svelte';
 
 vi.mock('$lib/api/tickets.api', () => ({
   ticketsApi: {
@@ -322,7 +322,6 @@ describe('useOpenTicketModel', () => {
   });
 });
 
-
 describe('useOpenTicketModel — pessoas vinculadas', () => {
   beforeEach(() => {
     vi.mocked(ticketsApi.create).mockReset().mockResolvedValue(ticket());
@@ -339,7 +338,9 @@ describe('useOpenTicketModel — pessoas vinculadas', () => {
     model.actions.onSubmit();
 
     await waitFor(() => expect(ticketsApi.create).toHaveBeenCalled());
-    expect(vi.mocked(ticketsApi.create).mock.calls[0]?.[0]).toMatchObject({ watcherIds: ['u-caio'] });
+    expect(vi.mocked(ticketsApi.create).mock.calls[0]?.[0]).toMatchObject({
+      watcherIds: ['u-caio'],
+    });
   });
 
   // triste
@@ -377,7 +378,9 @@ describe('useOpenTicketModel — o convite do WhatsApp e quem atende', () => {
   // feliz
   it('fills the attendant, the notice, the phone and the only area from the invite', async () => {
     vi.mocked(ticketsApi.invite).mockResolvedValue(invite);
-    vi.mocked(ticketsApi.assigneeOptions).mockResolvedValueOnce([{ id: 'u-ana', name: 'Ana Lima' }]);
+    vi.mocked(ticketsApi.assigneeOptions).mockResolvedValueOnce([
+      { id: 'u-ana', name: 'Ana Lima' },
+    ]);
     const model = mountModel();
 
     await waitFor(() => expect(model.data.invite?.assigneeName).toBe('Ana Lima'));
@@ -386,7 +389,9 @@ describe('useOpenTicketModel — o convite do WhatsApp e quem atende', () => {
     expect(model.data.fields.area.value).toBe('manutencao');
     expect(model.data.notifyWhatsapp).toBe(true);
     expect(model.data.fields.contactPhone.value).not.toBe('');
-    await waitFor(() => expect(model.data.assignees).toEqual([{ value: 'u-ana', label: 'Ana Lima' }]));
+    await waitFor(() =>
+      expect(model.data.assignees).toEqual([{ value: 'u-ana', label: 'Ana Lima' }]),
+    );
 
     /* Trocar de área limpa o responsável — menos para quem chegou pelo convite. */
     model.actions.onChange('assigneeId', '');
@@ -395,7 +400,11 @@ describe('useOpenTicketModel — o convite do WhatsApp e quem atende', () => {
 
   // feliz
   it('leaves the area open when the invited attendant covers more than one', async () => {
-    vi.mocked(ticketsApi.invite).mockResolvedValue({ ...invite, areas: ['infra', 'manutencao'], phone: null });
+    vi.mocked(ticketsApi.invite).mockResolvedValue({
+      ...invite,
+      areas: ['infra', 'manutencao'],
+      phone: null,
+    });
     const model = mountModel();
 
     await waitFor(() => expect(model.data.invite?.areas).toEqual(['infra', 'manutencao']));
@@ -453,7 +462,13 @@ describe('useOpenTicketModel — the account defaults and the screenshot being d
     model.actions.onChange('contactPhone', '62 91111-2222');
     await waitFor(() => expect(model.data.fields.contactPhone.value).toBe('62 91111-2222'));
 
-    resolveDefaults({ name: 'Bia Costa', email: 'bia@azuos.com.br', phone: '5562988887777', department: null, jobTitle: null });
+    resolveDefaults({
+      name: 'Bia Costa',
+      email: 'bia@azuos.com.br',
+      phone: '5562988887777',
+      department: null,
+      jobTitle: null,
+    });
 
     await waitFor(() => expect(model.state.isNameLocked).toBe(true));
     expect(model.data.fields.contactPhone.value).toBe('62 91111-2222');
@@ -505,5 +520,54 @@ describe('useOpenTicketModel — failures without a reason', () => {
     model.actions.onChange('area', 'sistema');
 
     await waitFor(() => expect(model.state.systemProjectsError).toBe('Fora do ar.'));
+  });
+});
+
+describe('withAccountProfile', () => {
+  const defaults = {
+    name: 'Bia Costa',
+    email: 'bia@azuos.com.br',
+    phone: '62977776666',
+    department: null,
+    jobTitle: null,
+  };
+  const account = (profile: {
+    phone?: string | null;
+    department?: string | null;
+    jobTitle?: string | null;
+  }) =>
+    ({
+      name: 'Outro nome',
+      email: 'bia@azuos.com.br',
+      role: 'user',
+      profile: {
+        avatarUrl: null,
+        birthDate: null,
+        bio: null,
+        phone: null,
+        department: null,
+        jobTitle: null,
+        ...profile,
+      },
+    }) as const;
+
+  // feliz
+  /* O nome segue da identidade; telefone, cargo e departamento vêm da ficha do admin-console. */
+  it('takes phone, job title and department from the account, keeping the name', () => {
+    expect(
+      withAccountProfile(
+        defaults,
+        account({ phone: '62988887777', department: 'Depto. Fiscal', jobTitle: 'Analista' }),
+        ['Contábil', 'Fiscal'],
+      ),
+    ).toEqual({ ...defaults, phone: '62988887777', department: 'Fiscal', jobTitle: 'Analista' });
+  });
+
+  // triste
+  it('keeps what this system knows when the account is missing or does not match', () => {
+    expect(withAccountProfile(defaults, null, ['Fiscal'])).toEqual(defaults);
+    expect(withAccountProfile(defaults, account({ department: 'Marketing' }), ['Fiscal'])).toEqual(
+      defaults,
+    );
   });
 });
