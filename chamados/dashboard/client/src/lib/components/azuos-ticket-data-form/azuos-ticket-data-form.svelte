@@ -92,6 +92,14 @@
 
   const AREA_OPTIONS = ticketAreaOptions();
 
+  /** O texto do botão das máquinas: as escolhidas, ou o convite para vincular. */
+  export function machinesLabel(computers: readonly { name: string }[]): string {
+    const [first, ...others] = computers;
+    if (!first) return 'Vincular máquinas';
+
+    return others.length > 0 ? `${first.name}, +${others.length}` : first.name;
+  }
+
   const PRIORITY_OPTIONS = TICKET_PRIORITIES.map((priority) => ({
     value: priority,
     label: TICKET_PRIORITY_LABELS[priority],
@@ -105,6 +113,7 @@
   import LaptopIcon from '@lucide/svelte/icons/laptop';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import Collapsible from '$lib/components/azuos-collapsible/azuos-collapsible.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
@@ -156,9 +165,24 @@
   }
 </script>
 
-<!-- Duas colunas em tela larga: a ficha passou a ocupar a largura toda, e os campos um embaixo
-     do outro deixavam metade da tela vazia. -->
-<form novalidate class="grid grid-cols-1 gap-4 lg:grid-cols-2" onsubmit={handleSubmit}>
+<form novalidate class="flex flex-col gap-4" onsubmit={handleSubmit}>
+  <!-- O SALVAR em cima, junto do título: as seções abaixo abrem e fecham, e o botão no fim
+       ficava longe de quem acabou de mexer nos campos. -->
+  <div class="flex items-center justify-end gap-3">
+    {#if formState?.isSaved}
+      <!-- `role="status"`: quem usa leitor de tela também fica sabendo que salvou. -->
+      <span class="text-success text-xs font-medium" role="status">Dados salvos.</span>
+    {/if}
+    <SubmitButton
+      data={{ label: 'Salvar dados', loadingLabel: 'Salvando…' }}
+      ui={{ className: 'sm:w-auto' }}
+      state={{ isLoading: formState?.isSubmitting }}
+    />
+  </div>
+
+  <!-- Três colunas em tela larga: com a ficha na largura toda, duas colunas esticavam cada
+       campo além do que ele precisa. Seis campos em duas linhas. -->
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
   <FilterField data={{ label: 'Urgência' }}>
     <OptionPicker
       data={{ value: fields.priority.value, options: PRIORITY_OPTIONS }}
@@ -179,6 +203,24 @@
       actions={{ onChange: handleAreaChange }}
     />
   </FilterField>
+
+  <!-- Trocar o responsável é do super admin: para os demais as opções não chegam e o campo some. -->
+  {#if fields.assigneeId && data.assignees && data.assignees.length > 0}
+    <FilterField data={{ label: 'Responsável' }}>
+      <OptionPicker
+        data={{ value: fields.assigneeId.value, options: data.assignees }}
+        ui={{
+          ariaLabel: 'Responsável',
+          placeholder: 'Sem responsável',
+          fullWidth: true,
+          mode: 'combobox',
+          searchPlaceholder: 'Buscar pessoa…',
+        }}
+        state={{ isDisabled: formState?.isSubmitting }}
+        actions={{ onChange: (value: string) => actions.onChange('assigneeId', value) }}
+      />
+    </FilterField>
+  {/if}
 
   <!-- Quem abre o chamado escolhe o tipo pelo que parece; quem atende descobre o que era. Sem
        esta correção, o mapa de "o que mais dá problema" soma o palpite de quem pediu socorro,
@@ -207,58 +249,6 @@
     />
   </FilterField>
 
-  <!-- A máquina é preenchida AQUI, e não no formulário público: quem pede socorro não sabe por
-       qual nome o sistema conhece o computador dele. É este vínculo que faz a ficha da máquina
-       saber quantos problemas ela já deu. A busca fica disponível mesmo com poucas máquinas,
-       para que nomes longos nunca virem pastilhas altas na coluna lateral. -->
-{#if actions.onOpenComputers}
-    <!-- As MÁQUINAS: um chamado pode passar por várias. A escolha é num diálogo grande, com a
-         busca do Inventário — num campo estreito, escolher várias não cabia. -->
-    <FilterField data={{ label: 'Máquinas' }}>
-      <div class="flex flex-col gap-2">
-        <ActionButton
-          data={{
-            label:
-              (data.linkedComputers ?? []).length > 0 ? 'Trocar máquinas' : 'Vincular máquinas',
-          }}
-          ui={{ variant: 'secondary', size: 'lg', icon: LaptopIcon, className: 'w-full' }}
-          state={{ isDisabled: formState?.isSubmitting }}
-          actions={{ onClick: actions.onOpenComputers }}
-        />
-        {#if (data.linkedComputers ?? []).length === 0}
-          <p class="text-muted-foreground text-xs">Nenhuma máquina vinculada.</p>
-        {:else}
-          <ul class="flex flex-wrap gap-1.5" aria-label="Máquinas do chamado">
-            {#each data.linkedComputers ?? [] as computer (computer.id)}
-              <li
-                class="bg-muted text-foreground inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
-              >
-                <LaptopIcon class="size-3" aria-hidden="true" />
-                {computer.name}
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      </div>
-    </FilterField>
-  {:else}
-    <FilterField data={{ label: 'Máquina' }}>
-    <OptionPicker
-      data={{ value: fields.computerId.value, options: machineOptions }}
-      ui={{
-        ariaLabel: 'Máquina',
-        placeholder: 'Nenhuma',
-        fullWidth: true,
-        mode: 'combobox',
-        searchPlaceholder: 'Buscar máquina…',
-        showSelectedTooltip: true,
-      }}
-      state={{ isDisabled: formState?.isSubmitting }}
-      actions={{ onChange: (value: string) => actions.onChange('computerId', value) }}
-    />
-  </FilterField>
-  {/if}
-
   {#if fields.projectId && showsSystem}
     <!-- Sistema fora do cadastro (o "trilha" que quem abriu digitou) aparece pelo nome, e se
          escreve pela mesma busca: digita e usa. -->
@@ -283,44 +273,61 @@
     </FilterField>
   {/if}
 
-  <!-- Trocar o responsável é do super admin: para os demais as opções não chegam e o campo some. -->
-  {#if fields.assigneeId && data.assignees && data.assignees.length > 0}
-    <FilterField data={{ label: 'Responsável' }}>
-      <OptionPicker
-        data={{ value: fields.assigneeId.value, options: data.assignees }}
-        ui={{ ariaLabel: 'Responsável', placeholder: 'Sem responsável', fullWidth: true }}
+  <!-- A máquina é preenchida AQUI, e não no formulário público: quem pede socorro não sabe por
+       qual nome o sistema conhece o computador dele. É este vínculo que faz a ficha da máquina
+       saber quantos problemas ela já deu. A busca fica disponível mesmo com poucas máquinas,
+       para que nomes longos nunca virem pastilhas altas na coluna lateral. -->
+  {#if actions.onOpenComputers}
+    <!-- As MÁQUINAS: um chamado pode passar por várias. A escolha é num diálogo grande, com a
+         busca do Inventário — num campo estreito, escolher várias não cabia. -->
+    <FilterField data={{ label: 'Máquinas' }}>
+      <!-- As escolhidas aparecem no próprio botão: a fileira de pastilhas embaixo dele
+           desalinhava a linha de campos. -->
+      <ActionButton
+        data={{ label: machinesLabel(data.linkedComputers ?? []) }}
+        ui={{ variant: 'secondary', size: 'lg', icon: LaptopIcon, className: 'w-full' }}
         state={{ isDisabled: formState?.isSubmitting }}
-        actions={{ onChange: (value: string) => actions.onChange('assigneeId', value) }}
+        actions={{ onClick: actions.onOpenComputers }}
       />
     </FilterField>
+  {:else}
+    <FilterField data={{ label: 'Máquina' }}>
+    <OptionPicker
+      data={{ value: fields.computerId.value, options: machineOptions }}
+      ui={{
+        ariaLabel: 'Máquina',
+        placeholder: 'Nenhuma',
+        fullWidth: true,
+        mode: 'combobox',
+        searchPlaceholder: 'Buscar máquina…',
+        showSelectedTooltip: true,
+      }}
+      state={{ isDisabled: formState?.isSubmitting }}
+      actions={{ onChange: (value: string) => actions.onChange('computerId', value) }}
+    />
+  </FilterField>
   {/if}
+
+  </div>
 
   {#if formState?.error}
-    <div class="lg:col-span-2">
-      <ErrorState data={{ message: formState.error }} ui={{ variant: 'inline' }} />
-    </div>
+    <ErrorState data={{ message: formState.error }} ui={{ variant: 'inline' }} />
   {/if}
 
-  <div class="flex items-center justify-end gap-3 lg:col-span-2">
-    {#if formState?.isSaved}
-      <!-- `role="status"`: quem usa leitor de tela também fica sabendo que salvou. -->
-      <span class="text-success text-xs font-medium" role="status">Dados salvos.</span>
-    {/if}
-    <SubmitButton
-      data={{ label: 'Salvar dados', loadingLabel: 'Salvando…' }}
-      ui={{ className: 'sm:w-auto' }}
-      state={{ isLoading: formState?.isSubmitting }}
-    />
-  </div>
+
+
+
+
 
   <!-- ÁREAS PARTICIPANTES (#13) — além da área original, de cima. Ex.: um chamado de Infra que
        também precisa de Manutenção. Mudança própria, fora do envio do formulário: adiciona e
        remove na hora, sem esperar o resto ser salvo. -->
-  <div class="border-border/70 flex flex-col gap-3 border-t pt-4 lg:col-span-2">
-    <div>
-      <p class="text-ink-700 text-sm font-medium">Áreas participantes</p>
-      <p class="text-muted-foreground text-xs">Outras áreas que também atendem este chamado.</p>
-    </div>
+  <Collapsible
+    data={{ title: `Áreas participantes (${data.ticket.participantAreas.length})` }}
+    state={{ isOpen: data.ticket.participantAreas.length > 0 }}
+  >
+    <div class="flex flex-col gap-3">
+    <p class="text-muted-foreground text-xs">Outras áreas que também atendem este chamado.</p>
 
     <!-- AS QUE JÁ PARTICIPAM: uma pastilha cheia cada, com o X dentro dela. -->
     {#if data.ticket.participantAreas.length === 0}
@@ -376,5 +383,6 @@
     {#if formState?.areaError}
       <p class="text-destructive text-xs">{formState.areaError}</p>
     {/if}
-  </div>
+    </div>
+  </Collapsible>
 </form>

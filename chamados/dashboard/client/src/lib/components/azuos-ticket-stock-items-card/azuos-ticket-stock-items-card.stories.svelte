@@ -95,3 +95,9 @@
     actions,
   }}
 />
+
+<!-- Dentro de uma seção que já tem o nome: o cartão sem o próprio título. -->
+<Story
+  name="Without header"
+  args={{ data: { items, options, values }, ui: { isHeaderHidden: true }, actions }}
+/>

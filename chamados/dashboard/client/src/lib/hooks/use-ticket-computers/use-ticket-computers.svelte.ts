@@ -9,6 +9,7 @@ import { readError } from '$lib/api/http-client';
 import { ticketsApi } from '$lib/api/tickets.api';
 import { type TicketComputerChoice } from '$lib/components/azuos-ticket-computers-dialog/azuos-ticket-computers-dialog.svelte';
 import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
+import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { TICKETS_QUERY_KEY } from '$lib/hooks/use-ticket-list/use-ticket-list.svelte';
 
@@ -23,7 +24,7 @@ export type TicketComputersModel = {
     selectedIds: number[];
     search: string;
     department: string;
-    departments: { value: string; label: string }[];
+    departments: { value: string; label: string; separatorBefore?: boolean }[];
   };
   state: { isOpen: boolean; isLoading: boolean; isSaving: boolean; error: string | null };
   actions: {
@@ -56,6 +57,9 @@ export function useTicketComputersModel(ticket: Ticket): TicketComputersModel {
     ),
   );
 
+  /* A MESMA lista de departamentos do Inventário: as do RH e, depois da linha, as daqui. */
+  const departments = useDepartmentOptionsModel();
+
   let linked = $state(linkedOf(ticket));
   let isOpen = $state(false);
   let selectedIds = $state<number[]>([]);
@@ -83,7 +87,7 @@ export function useTicketComputersModel(ticket: Ticket): TicketComputersModel {
         selectedIds,
         search,
         department,
-        departments: departmentsOf(all),
+        departments: departments.options,
       };
     },
     get state() {
@@ -141,6 +145,7 @@ export function toChoice(computer: ComputerListItem): TicketComputerChoice {
     hostname: computer.name,
     responsibleName: computer.responsibleName,
     department: computer.department ? departmentLabel(computer.department) : null,
+    departmentKey: computer.department,
     isOnline: computer.isOnline,
   };
 }
@@ -154,31 +159,11 @@ export function filterChoices(
   const wanted = search.trim().toLocaleLowerCase('pt-BR');
 
   return choices.filter((choice) => {
-    if (department && choice.department !== department) return false;
+    if (department && (choice.departmentKey ?? choice.department) !== department) return false;
     if (!wanted) return true;
 
     return [choice.label, choice.hostname, choice.responsibleName ?? ''].some((text) =>
       text.toLocaleLowerCase('pt-BR').includes(wanted),
     );
   });
-}
-
-/** Os departamentos que existem no parque, em ordem alfabética — as opções do filtro. */
-export function departmentsOf(
-  choices: readonly TicketComputerChoice[],
-): { value: string; label: string }[] {
-  /* Uma lista, e não um `Set`: a regra do Svelte recusa as coleções nativas aqui, e são
-     poucos departamentos. */
-  const names = choices
-    .map((choice) => choice.department)
-    .filter(isText)
-    .filter((name, index, all) => all.indexOf(name) === index);
-
-  return names
-    .sort((a, b) => a.localeCompare(b, 'pt-BR'))
-    .map((name) => ({ value: name, label: name }));
-}
-
-function isText(value: string | null): value is string {
-  return value !== null && value !== '';
 }
