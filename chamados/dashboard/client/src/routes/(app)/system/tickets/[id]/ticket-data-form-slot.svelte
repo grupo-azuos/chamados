@@ -10,6 +10,7 @@
 
 <script lang="ts">
   import TicketComputersDialog from '$lib/components/azuos-ticket-computers-dialog/azuos-ticket-computers-dialog.svelte';
+  import Collapsible from '$lib/components/azuos-collapsible/azuos-collapsible.svelte';
   import TicketDataForm from '$lib/components/azuos-ticket-data-form/azuos-ticket-data-form.svelte';
   import TicketWatchersCard from '$lib/components/azuos-ticket-watchers-card/azuos-ticket-watchers-card.svelte';
   import { useTicketComputersModel } from '$lib/hooks/use-ticket-computers/use-ticket-computers.svelte';
@@ -30,13 +31,25 @@
   const computers = useTicketComputersModel(ticket);
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-3">
   <TicketDataForm
     data={{ ...form.data, linkedComputers: computers.data.linked }}
     state={form.state}
     actions={{ ...form.actions, onOpenComputers: computers.actions.onOpen }}
   />
-  <TicketWatchersCard data={watchers.data} state={watchers.state} actions={watchers.actions} />
+  {#key watchers.data.selectedIds.length > 0}
+    <Collapsible
+      data={{ title: `Pessoas vinculadas (${watchers.data.selectedIds.length})` }}
+      state={{ isOpen: watchers.data.selectedIds.length > 0 }}
+    >
+      <TicketWatchersCard
+        data={watchers.data}
+        ui={{ isHeaderHidden: true }}
+        state={watchers.state}
+        actions={watchers.actions}
+      />
+    </Collapsible>
+  {/key}
 </div>
 
 {#if computers.state.isOpen}

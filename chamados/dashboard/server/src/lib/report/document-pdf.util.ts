@@ -55,8 +55,6 @@ const TITLE_SIZE = 15;
 const TEXT_SIZE = 12;
 const SMALL_SIZE = 10;
 const TINY_SIZE = 8;
-/** O espaço de dentro da célula do modelo: 0,19 cm de cada lado, quase nada em cima e embaixo. */
-const CELL_PADDING = { side: 5.4, vertical: 1 };
 const LINE_WIDTH = 0.5;
 const QR_CODE_SIZE = 56;
 const FIELDS_PER_ROW = 2;
@@ -66,7 +64,15 @@ const COLOR = {
   ink: pdfColor(DOCUMENT_PALETTE.foreground),
   subtext: pdfColor(DOCUMENT_PALETTE.subtext),
   white: pdfColor(DOCUMENT_PALETTE.primaryForeground),
+  line: pdfColor(DOCUMENT_PALETTE.border),
+  zebra: pdfColor(DOCUMENT_PALETTE.surfaceAlt),
 } as const;
+
+/** O corpo do cabeçalho de tabela e da seção, no padrão dos relatórios do CertMonitor. */
+const HEADER_SIZE = 9;
+const HEADING_SIZE = 13;
+/** O respiro da célula das tabelas listradas — mais folgado que o da grade preta antiga. */
+const STRIPED_PADDING = { side: 6, vertical: 4 };
 
 pdfMake.setFonts({
   [PDF_FONT]: {
@@ -126,6 +132,7 @@ function drawTitle(definition: DocumentDefinition): Content[] {
     text: definition.title.toLocaleUpperCase('pt-BR'),
     fontSize: TITLE_SIZE,
     bold: true,
+    color: COLOR.primary,
     alignment: 'center',
     margin: [0, 0, 0, 4],
   };
@@ -197,7 +204,14 @@ function drawBlock(block: DocumentBlock, frame: number): Content {
 
 /* O título da seção anda junto com o que vem embaixo: sozinho no pé de uma página, fica órfão. */
 function drawHeading(text: string): Content {
-  return { text, bold: true, margin: [0, 10, 0, 4], headlineLevel: 1 };
+  return {
+    text,
+    bold: true,
+    fontSize: HEADING_SIZE,
+    color: COLOR.primary,
+    margin: [0, 12, 0, 6],
+    headlineLevel: 1,
+  };
 }
 
 /** A etiqueta isolada: um retângulo do tamanho do texto, com o fundo suave da situação. */
@@ -239,13 +253,14 @@ function drawFields(fields: DocumentField[]): Content {
 
   return {
     margin: [0, 0, 0, 6],
+    fontSize: SMALL_SIZE,
     table: { widths: ['auto', '*', 'auto', '*'], body: rows, dontBreakRows: true },
-    layout: MODEL_TABLE,
+    layout: stripedLayout(0),
   };
 }
 
 function drawField(field: DocumentField): TableCell[] {
-  return [{ text: field.label, bold: true }, { text: field.value }];
+  return [{ text: field.label, bold: true, color: COLOR.subtext }, { text: field.value }];
 }
 
 function drawEntries(entries: DocumentEntry[], emptyText: string): Content {
@@ -292,17 +307,25 @@ function drawEntry(entry: DocumentEntry): Content {
   };
 }
 
-/** A tabela do modelo: todas as linhas em fio preto fino, sem fundo. */
-const MODEL_TABLE: CustomTableLayout = {
-  hLineWidth: () => LINE_WIDTH,
-  vLineWidth: () => LINE_WIDTH,
-  hLineColor: () => COLOR.ink,
-  vLineColor: () => COLOR.ink,
-  paddingLeft: () => CELL_PADDING.side,
-  paddingRight: () => CELL_PADDING.side,
-  paddingTop: () => CELL_PADDING.vertical,
-  paddingBottom: () => CELL_PADDING.vertical,
-};
+/**
+ * A tabela no padrão dos relatórios do CertMonitor: só fios horizontais finos, em azul claro, e
+ * listras alternadas. A grade preta em toda célula pesava a página e escondia os valores.
+ *
+ * `headerRows` diz quantas linhas de cima são cabeçalho (fundo azul próprio): a listra começa
+ * depois delas.
+ */
+function stripedLayout(headerRows: number): CustomTableLayout {
+  return {
+    hLineWidth: () => LINE_WIDTH,
+    vLineWidth: () => 0,
+    hLineColor: () => COLOR.line,
+    fillColor: (index) => (index >= headerRows && (index - headerRows) % 2 === 1 ? COLOR.zebra : null),
+    paddingLeft: () => STRIPED_PADDING.side,
+    paddingRight: () => STRIPED_PADDING.side,
+    paddingTop: () => STRIPED_PADDING.vertical,
+    paddingBottom: () => STRIPED_PADDING.vertical,
+  };
+}
 
 function drawTable(block: TableBlock, frame: number): Content {
   const { headers, rows, emptyText } = block;
@@ -316,11 +339,22 @@ function drawTable(block: TableBlock, frame: number): Content {
       keepWithHeaderRows: 1,
       widths: columnWidths(headers, rows, frame),
       body: [
-        headers.map((header): TableCell => ({ text: header, bold: true })),
+        /* O cabeçalho em azul cheio, letra branca e caixa alta, como nos relatórios. */
+        headers.map(
+          (header, index): TableCell => ({
+            text: header.toLocaleUpperCase('pt-BR'),
+            /* O cabeçalho da coluna de número vai à direita, junto do valor. */
+            alignment: rows.length > 0 && isNumericColumn(rows, index) ? 'right' : 'left',
+            bold: true,
+            fontSize: HEADER_SIZE,
+            color: COLOR.white,
+            fillColor: COLOR.primary,
+          }),
+        ),
         ...bodyRows(headers.length, rows, emptyText),
       ],
     },
-    layout: MODEL_TABLE,
+    layout: stripedLayout(1),
   };
 }
 
@@ -359,6 +393,8 @@ const WEIGHT = { min: 5, textCap: 22 };
  * negrito do cabeçalho. É a medida que garante a maior palavra de cada coluna inteira.
  */
 const CHARACTER_WIDTH = 0.5;
+/** A mesma medida para a letra MAIÚSCULA em negrito do cabeçalho — bem mais larga. */
+const HEADER_CHARACTER_WIDTH = 0.66;
 
 /**
  * Cada coluna recebe PRIMEIRO o espaço da maior palavra dela — coluna mais estreita que uma
@@ -369,22 +405,26 @@ const CHARACTER_WIDTH = 0.5;
 function columnWidths(headers: string[], rows: DocumentCell[][], frame: number): number[] {
   const fontSize = tableFontSize(headers.length);
   const measures = headers.map((header, index) => {
-    const texts = [header, ...rows.map((row) => row[index]?.text ?? '')];
-    const longestText = Math.max(...texts.map((text) => text.length));
+    const texts = rows.map((row) => row[index]?.text ?? '');
+    const longestText = Math.max(header.length, ...texts.map((text) => text.length));
     const longestWord = Math.max(
       WEIGHT.min,
       ...texts.flatMap((text) => text.split(/\s+/)).map((word) => word.length),
     );
+    /* O cabeçalho vai em caixa alta e negrito: a letra maiúscula ocupa mais que a do corpo, e
+       medir pela mesma régua quebrava "MOVIMENTO" em duas linhas. */
+    const headerWord = Math.max(...header.split(/\s+/).map((word) => word.length));
+    const width = Math.max(
+      longestWord * fontSize * CHARACTER_WIDTH,
+      headerWord * HEADER_SIZE * HEADER_CHARACTER_WIDTH,
+    );
 
-    return {
-      word: longestWord,
-      extra: Math.max(0, Math.min(longestText, WEIGHT.textCap) - longestWord),
-    };
+    return { width, extra: Math.max(0, Math.min(longestText, WEIGHT.textCap) - longestWord) };
   });
-  /* O que sobra para o texto, descontados o respiro e os fios de cada coluna. */
+  /* O que sobra para o texto, descontado o respiro de cada coluna. */
   const columns = headers.length;
-  const available = frame - columns * CELL_PADDING.side * 2 - (columns + 1) * LINE_WIDTH;
-  const words = measures.map((measure) => measure.word * fontSize * CHARACTER_WIDTH);
+  const available = frame - columns * STRIPED_PADDING.side * 2;
+  const words = measures.map((measure) => measure.width);
   const wordsTotal = words.reduce((sum, width) => sum + width, 0);
   /* Nem as palavras cabem: divide a folha na proporção delas, o melhor que dá. */
   if (wordsTotal >= available) return words.map((width) => (available * width) / wordsTotal);
@@ -400,13 +440,13 @@ function columnWidths(headers: string[], rows: DocumentCell[][], frame: number):
 }
 
 /**
- * O modelo usa corpo 12. Tabela com muitas colunas não cabe entre as margens de 3 cm nesse
- * tamanho, então a letra desce — só dentro dela; título e texto continuam em 12.
+ * Tabela em corpo 10, como nos relatórios do CertMonitor. Com muitas colunas, a letra desce mais
+ * — só dentro dela; título e texto continuam em 12.
  */
 function tableFontSize(columns: number): number {
-  if (columns <= 5) return TEXT_SIZE;
+  if (columns <= 5) return SMALL_SIZE;
 
-  return columns <= 8 ? SMALL_SIZE : TINY_SIZE;
+  return columns <= 8 ? HEADER_SIZE : TINY_SIZE;
 }
 
 function drawEmptyState(text: string): Content {
@@ -447,7 +487,7 @@ function drawVerification(verification: DocumentVerification): Content {
     layout: {
       hLineWidth: (index) => (index === 0 ? LINE_WIDTH : 0),
       vLineWidth: () => 0,
-      hLineColor: () => COLOR.ink,
+      hLineColor: () => COLOR.line,
       paddingLeft: () => 0,
       paddingTop: () => 8,
     },

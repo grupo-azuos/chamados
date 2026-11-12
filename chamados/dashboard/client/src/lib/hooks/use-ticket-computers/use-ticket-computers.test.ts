@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-ticket-computers-harness.test.svelte';
 import {
-  departmentsOf,
   filterChoices,
   linkedOf,
   toggle,
@@ -14,6 +13,9 @@ import {
 
 vi.mock('$lib/api/tickets.api', () => ({ ticketsApi: { updateComputers: vi.fn() } }));
 vi.mock('$lib/api/computers.api', () => ({ computersApi: { list: vi.fn() } }));
+vi.mock('$lib/api/departments.api', () => ({
+  departmentsApi: { catalog: vi.fn().mockResolvedValue({ rh: [], local: [], isRhAvailable: true }) },
+}));
 
 const { ticketsApi } = await import('$lib/api/tickets.api');
 const { computersApi } = await import('$lib/api/computers.api');
@@ -114,6 +116,13 @@ describe('filterChoices', () => {
     expect(filterChoices([six, eleven], '', 'Fiscal')).toEqual([eleven]);
   });
 
+  /* O filtro compara pelo valor da lista do RH, e não pelo nome que a tela mostra. */
+  it('compares the department by its key when there is one', () => {
+    const keyed = { ...eleven, department: 'Fiscal e Tributário', departmentKey: 'fiscal' };
+
+    expect(filterChoices([six, keyed], '', 'fiscal')).toEqual([keyed]);
+  });
+
   // triste
   it('finds nothing for a name that does not exist', () => {
     expect(filterChoices([six, eleven], 'impressora', '')).toEqual([]);
@@ -132,15 +141,7 @@ describe('toggle', () => {
   });
 });
 
-describe('departmentsOf and linkedOf', () => {
-  // feliz
-  it('lists each department once, in order', () => {
-    expect(departmentsOf([eleven, six, six])).toEqual([
-      { value: 'Comercial', label: 'Comercial' },
-      { value: 'Fiscal', label: 'Fiscal' },
-    ]);
-  });
-
+describe('linkedOf', () => {
   // triste
   it('reads an old ticket, without the list, by its single machine', () => {
     expect(

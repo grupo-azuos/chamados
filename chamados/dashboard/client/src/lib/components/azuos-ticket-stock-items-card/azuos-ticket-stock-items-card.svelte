@@ -37,6 +37,8 @@
     ui?: {
       /** O nome do depósito na tela — "Depósito da TI", "Depósito da Manutenção". */
       shelfLabel?: string;
+      /** Sem o título: quando o cartão mora dentro de uma seção que já tem o nome dele. */
+      isHeaderHidden?: boolean;
     };
     state?: {
       isClosed?: boolean;
@@ -101,9 +103,11 @@
   }
 </script>
 
-<div class="border-border/70 flex flex-col gap-3 border-t pt-4">
+<div class={ui?.isHeaderHidden ? 'flex flex-col gap-3' : 'border-border/70 flex flex-col gap-3 border-t pt-4'}>
   <div>
-    <p class="text-ink-700 text-sm font-medium">Itens do estoque</p>
+    {#if !ui?.isHeaderHidden}
+      <p class="text-ink-700 text-sm font-medium">Itens do estoque</p>
+    {/if}
     <p class="text-muted-foreground text-xs">
       O que sai ou volta para o {ui?.shelfLabel ?? 'depósito'}. O saldo só muda quando o chamado
       for encerrado.

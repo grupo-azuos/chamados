@@ -4,7 +4,7 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import TicketDataForm, { type AzuosTicketDataFormProps } from './azuos-ticket-data-form.svelte';
+import TicketDataForm, { type AzuosTicketDataFormProps, machinesLabel } from './azuos-ticket-data-form.svelte';
 
 const ticket: Ticket = {
   id: 28,
@@ -124,6 +124,8 @@ describe('AzuosTicketDataForm', () => {
   it('adds a participant area with a single click on it', async () => {
     const { actions: given } = setup();
 
+    /* Sem área participante, a seção nasce fechada: abre-se e adiciona. */
+    await userEvent.click(screen.getByRole('button', { name: /Áreas participantes/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar Sistema ao chamado' }));
 
     expect(given.onAddParticipantArea).toHaveBeenCalledWith('sistema');
@@ -141,8 +143,9 @@ describe('AzuosTicketDataForm', () => {
 
   /* Dois cliques seguidos não podem virar dois pedidos: enquanto uma área entra, as outras
      esperam. */
-  it('locks the areas that can still be added while one is being added', () => {
+  it('locks the areas that can still be added while one is being added', async () => {
     setup({ state: { isAddingArea: true } });
+    await userEvent.click(screen.getByRole('button', { name: /Áreas participantes/ }));
 
     for (const button of screen.getAllByRole('button', { name: /adicionar .* ao chamado/i }))
       expect(button).toBeDisabled();
@@ -212,5 +215,20 @@ describe('AzuosTicketDataForm', () => {
     setup();
 
     expect(screen.queryByText('Responsável')).not.toBeInTheDocument();
+  });
+});
+
+describe('machinesLabel', () => {
+  // feliz
+  it('names the machine, and counts the others', () => {
+    expect(machinesLabel([{ name: 'COMPUTADOR - 06' }])).toBe('COMPUTADOR - 06');
+    expect(machinesLabel([{ name: 'COMPUTADOR - 06' }, { name: 'COMPUTADOR - 07' }])).toBe(
+      'COMPUTADOR - 06, +1',
+    );
+  });
+
+  // triste
+  it('invites to link when there is no machine', () => {
+    expect(machinesLabel([])).toBe('Vincular máquinas');
   });
 });

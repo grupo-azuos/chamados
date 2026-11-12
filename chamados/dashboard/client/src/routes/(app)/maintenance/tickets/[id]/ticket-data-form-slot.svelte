@@ -11,6 +11,7 @@
 
 <script lang="ts">
   import TicketComputersDialog from '$lib/components/azuos-ticket-computers-dialog/azuos-ticket-computers-dialog.svelte';
+  import Collapsible from '$lib/components/azuos-collapsible/azuos-collapsible.svelte';
   import TicketDataForm from '$lib/components/azuos-ticket-data-form/azuos-ticket-data-form.svelte';
   import TicketStockItemsCard from '$lib/components/azuos-ticket-stock-items-card/azuos-ticket-stock-items-card.svelte';
   import TicketWatchersCard from '$lib/components/azuos-ticket-watchers-card/azuos-ticket-watchers-card.svelte';
@@ -36,28 +37,46 @@
   const computers = useTicketComputersModel(ticket);
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-3">
   <TicketDataForm
     data={{ ...form.data, linkedComputers: computers.data.linked }}
     state={form.state}
     actions={{ ...form.actions, onOpenComputers: computers.actions.onOpen }}
   />
-  <!-- Lado a lado em tela larga: a ficha ocupa a largura toda agora. -->
-  <div class="grid grid-cols-1 gap-x-6 lg:grid-cols-2">
-    <TicketWatchersCard data={watchers.data} state={watchers.state} actions={watchers.actions} />
-    <TicketStockItemsCard
-      data={{
-        ...stock.data,
-        machines: computers.data.linked.map((computer) => ({
-          value: String(computer.id),
-          label: computer.name,
-        })),
-      }}
-      ui={{ shelfLabel: 'Depósito da Manutenção' }}
-      state={{ ...stock.state, isClosed: isClosedTicketStatus(ticket.status) }}
-      actions={stock.actions}
-    />
-  </div>
+  <!-- `{#key}` pela existência: os itens chegam depois de a seção nascer, e seção com
+       conteúdo começa aberta. -->
+  {#key stock.data.items.length > 0}
+    <Collapsible
+      data={{ title: `Itens do estoque (${stock.data.items.length})` }}
+      state={{ isOpen: stock.data.items.length > 0 }}
+    >
+      <TicketStockItemsCard
+        data={{
+          ...stock.data,
+          machines: computers.data.linked.map((computer) => ({
+            value: String(computer.id),
+            label: computer.name,
+          })),
+        }}
+        ui={{ shelfLabel: 'Depósito da Manutenção', isHeaderHidden: true }}
+        state={{ ...stock.state, isClosed: isClosedTicketStatus(ticket.status) }}
+        actions={stock.actions}
+      />
+    </Collapsible>
+  {/key}
+  {#key watchers.data.selectedIds.length > 0}
+    <Collapsible
+      data={{ title: `Pessoas vinculadas (${watchers.data.selectedIds.length})` }}
+      state={{ isOpen: watchers.data.selectedIds.length > 0 }}
+    >
+      <TicketWatchersCard
+        data={watchers.data}
+        ui={{ isHeaderHidden: true }}
+        state={watchers.state}
+        actions={watchers.actions}
+      />
+    </Collapsible>
+  {/key}
 </div>
 
 {#if computers.state.isOpen}
