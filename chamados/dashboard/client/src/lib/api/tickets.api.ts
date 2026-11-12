@@ -77,6 +77,13 @@ export const ticketsApi = {
   problemTypeOptions: (area: TicketArea) =>
     apiRequest<TicketProblemTypeOption[]>('/tickets/problem-type-options', { query: { area } }),
 
+  /** Cadastra na hora o tipo digitado na busca; devolve a opção, já na lista de todos. */
+  registerProblemType: (area: TicketArea, name: string) =>
+    apiRequest<TicketProblemTypeOption>('/tickets/problem-types', {
+      method: 'POST',
+      body: { area, name },
+    }),
+
   /** Os itens de um depósito que podem entrar num chamado, com a sobra de cada um. */
   stockOptions: (source: TicketStockSource) =>
     apiRequest<TicketStockOption[]>('/tickets/stock-options', { query: { source } }),
