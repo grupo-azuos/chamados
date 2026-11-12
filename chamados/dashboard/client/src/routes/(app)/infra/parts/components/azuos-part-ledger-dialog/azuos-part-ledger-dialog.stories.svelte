@@ -116,3 +116,26 @@
     actions,
   }}
 />
+
+<!-- Movimento de chamado: leva ao chamado e não tem lixeira — desfaz-se pelo chamado. -->
+<Story
+  name="Ticket movement"
+  args={{
+    data: {
+      part,
+      movements: [
+        {
+          ...(movements[0] as PartMovement),
+          id: 99,
+          type: 'out',
+          quantity: 4,
+          ticketId: 50,
+          note: 'Chamado CH-0050',
+        },
+        ...movements,
+      ],
+      removing: null,
+    },
+    actions,
+  }}
+/>

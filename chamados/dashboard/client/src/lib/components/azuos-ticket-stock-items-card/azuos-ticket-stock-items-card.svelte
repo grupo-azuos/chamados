@@ -28,6 +28,11 @@
       options: TicketStockOption[];
       values: TicketStockItemFormValues;
       errors?: Partial<Record<TicketStockField, string>>;
+      /**
+       * As máquinas do chamado. Com MAIS DE UMA, quem vincula escolhe para qual vai o item;
+       * com uma (ou nenhuma), o campo nem aparece.
+       */
+      machines?: { value: string; label: string }[];
     };
     ui?: {
       /** O nome do depósito na tela — "Depósito da TI", "Depósito da Manutenção". */
@@ -124,6 +129,9 @@
               <span class="text-muted-foreground">
                 · {item.settledAt ? 'baixado no depósito' : 'reservado'}
               </span>
+              {#if item.computerName}
+                <span class="text-muted-foreground">· {item.computerName}</span>
+              {/if}
             </div>
           </div>
 
@@ -173,6 +181,23 @@
           actions={{ onChange: (value: string) => actions.onChange('itemId', value) }}
         />
       </FilterField>
+
+      {#if (data.machines ?? []).length > 1}
+        <FilterField data={{ label: 'Máquina' }}>
+          <OptionPicker
+            data={{ value: data.values.computerId ?? '', options: data.machines ?? [] }}
+            ui={{
+              ariaLabel: 'Máquina do item',
+              placeholder: 'Para qual máquina vai',
+              fullWidth: true,
+              mode: 'combobox',
+              searchPlaceholder: 'Buscar máquina…',
+            }}
+            state={{ isDisabled: isBusy, error: data.errors?.computerId }}
+            actions={{ onChange: (value: string) => actions.onChange('computerId', value) }}
+          />
+        </FilterField>
+      {/if}
 
       <div class="flex items-end gap-2">
         <TextField

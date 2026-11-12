@@ -151,6 +151,11 @@ export const partMovementSchema = z.object({
 
   handledBy: z.string().nullable(),
   note: z.string().nullable(),
+  /**
+   * O chamado que gerou o movimento (o encerramento baixa os itens dele). Movimento de chamado
+   * não se corrige nem se apaga pelo Depósito: tira-se o item pelo chamado, reaberto.
+   */
+  ticketId: z.number().int().nullable().optional(),
 
   createdAt: z.iso.datetime(),
   createdBy: z.string(),

@@ -20,6 +20,7 @@ import { softwareTimelineEvents } from './schema/software-timeline-events.schema
 import { softwareScheduleEvents } from './schema/software-schedule-events.schema';
 import { ticketAreas } from './schema/ticket-areas.schema';
 import { ticketAttachments } from './schema/ticket-attachments.schema';
+import { ticketComputers } from './schema/ticket-computers.schema';
 import { ticketHistories } from './schema/ticket-histories.schema';
 import { ticketProblemTypes } from './schema/ticket-problem-types.schema';
 import { ticketServiceOrders } from './schema/ticket-service-orders.schema';
@@ -61,6 +62,7 @@ export const drizzleSchema = {
   tickets,
   ticketAreas,
   ticketAttachments,
+  ticketComputers,
   ticketHistories,
   ticketProblemTypes,
   ticketServiceOrders,

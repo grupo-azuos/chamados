@@ -40,7 +40,7 @@ import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
 import { departmentMatches } from '../../../lib/db/department-match.util';
 import { qualified } from '../../../lib/db/sql-column.util';
-import { ticketInArea } from '../../../lib/db/ticket-area.util';
+import { ticketInArea, ticketOnComputer } from '../../../lib/db/ticket-area.util';
 import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
 import { maintenances } from '../../../lib/db/schema/maintenances.schema';
@@ -126,7 +126,7 @@ function computerColumns() {
     ), '{}')`,
     ticketsThisMonth: sql<number>`(
       select count(*)::int from ${tickets}
-      where ${qualified(tickets.computerId)} = ${qualified(computers.id)}
+      where ${ticketOnComputer(qualified(computers.id))}
         and ${ticketInArea('infra')}
         and ${qualified(tickets.createdAt)} >= date_trunc('month', now())
     )`,

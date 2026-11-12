@@ -134,6 +134,13 @@
       "when": 1794490839253,
       "tag": "0018_ticket_stock_items",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794495238770,
+      "tag": "0019_ticket_computers",
+      "breakpoints": true
     }
   ]
 }

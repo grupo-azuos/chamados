@@ -144,6 +144,13 @@ describe('toUpdateInput', () => {
     expect(toUpdateInput(toFormValues(ticket())).computerId).toBeNull();
   });
 
+  /* As máquinas se trocam pelo diálogo: o salvar dos dados não pode desfazer a lista. */
+  it('leaves the machine out when the form did not change it', () => {
+    const values = toFormValues(ticket({ computerId: 11 }));
+
+    expect(toUpdateInput(values, null, values.computerId)).not.toHaveProperty('computerId');
+  });
+
   it('sends the external system name, unlinking the registered one', () => {
     const input = toUpdateInput({ ...toFormValues(ticket()), customSystemName: ' trilha ' });
 
@@ -275,7 +282,6 @@ describe('useTicketDataFormModel', () => {
       priority: 'high',
       area: 'sistema',
       problemType: 'feature_request',
-      computerId: null,
       projectId: null,
       customSystemName: 'Trilha',
     });

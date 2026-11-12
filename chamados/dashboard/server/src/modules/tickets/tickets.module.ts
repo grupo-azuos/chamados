@@ -15,6 +15,7 @@ import { TicketRelationsRepository } from './repository/ticket-relations.reposit
 import { TicketRelationsService } from './service/ticket-relations.service';
 import { TicketProblemTypesRepository } from './repository/ticket-problem-types.repository';
 import { TicketStockItemsRepository } from './repository/ticket-stock-items.repository';
+import { TicketComputersRepository } from './repository/ticket-computers.repository';
 import { TicketAccessService } from './service/ticket-access.service';
 import { TicketAttachmentsService } from './service/ticket-attachments.service';
 import { TicketHistoriesService } from './service/ticket-histories.service';
@@ -64,6 +65,7 @@ import { SoftwareProjectsModule } from '../software-projects/software-projects.m
     TicketProblemTypesRepository,
     TicketStockItemsService,
     TicketStockItemsRepository,
+    TicketComputersRepository,
   ],
   exports: [TicketsService, TicketAssigneesService],
 })

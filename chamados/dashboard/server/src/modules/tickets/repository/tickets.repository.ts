@@ -30,6 +30,7 @@ import { type Database } from '../../../lib/db/db.type';
 import { computers } from '../../../lib/db/schema/computers.schema';
 import { softwareProjects } from '../../../lib/db/schema/software-projects.schema';
 import { ticketAreas, type TicketAreaInsert } from '../../../lib/db/schema/ticket-areas.schema';
+import { ticketComputers } from '../../../lib/db/schema/ticket-computers.schema';
 import { tickets, type TicketInsert, type TicketRow } from '../../../lib/db/schema/tickets.schema';
 
 /**
@@ -427,7 +428,15 @@ function buildWhere(query: TicketFilter): SQL | undefined {
 function linkFilters(query: TicketFilter): SQL[] {
   const filters: SQL[] = [];
 
-  if (query.computerId) filters.push(eq(tickets.computerId, query.computerId));
+  /* Os chamados DESTA máquina: a primeira do chamado ou qualquer outra das vinculadas. */
+  if (query.computerId) {
+    filters.push(
+      or(
+        eq(tickets.computerId, query.computerId),
+        sql`exists (select 1 from ${ticketComputers} where ${ticketComputers.ticketId} = ${tickets.id} and ${ticketComputers.computerId} = ${query.computerId})`,
+      ) as SQL,
+    );
+  }
   if (query.projectId) filters.push(eq(tickets.projectId, query.projectId));
   if (query.assigneeId === TICKET_UNASSIGNED_FILTER) filters.push(isNull(tickets.assigneeId));
   else if (query.assigneeId) filters.push(eq(tickets.assigneeId, query.assigneeId));

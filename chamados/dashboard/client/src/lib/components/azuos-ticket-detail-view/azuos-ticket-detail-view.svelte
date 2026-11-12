@@ -134,13 +134,21 @@
     { label: 'Aberto em', value: formatDateTime(ticket.createdAt) },
     { label: 'Atendimento iniciado em', value: formatDateTime(ticket.startedAt) },
     { label: 'Resolvido em', value: formatDateTime(ticket.resolvedAt) },
-    { label: 'Máquina', value: ticket.computerName ?? '—' },
+    { label: ticket.computers && ticket.computers.length > 1 ? 'Máquinas' : 'Máquina', value: machinesOf(ticket) },
     { label: 'Responsável', value: ticket.assignee ?? '—' },
     {
       label: 'Tempo registrado',
       value: totalMinutes === null ? '—' : formatMinutesSpent(totalMinutes),
     },
   ]);
+
+  /* Todas as máquinas do chamado, numa linha; o chamado antigo, sem a lista, tem uma só. */
+  function machinesOf(current: typeof ticket): string {
+    const names = current.computers?.map((computer) => computer.name) ?? [];
+    if (names.length > 0) return names.join(', ');
+
+    return current.computerName ?? '—';
+  }
 
   function formatDateTime(value: string | null): string {
     return value ? new Date(value).toLocaleString('pt-BR') : '—';
@@ -228,105 +236,107 @@
     <ErrorState data={{ message: viewState.serviceOrderError }} ui={{ variant: 'inline' }} />
   {/if}
 
-  <div class="grid gap-5 lg:grid-cols-3">
-    <div class="flex min-w-0 flex-col gap-5 lg:col-span-2">
-      <!-- O PEDIDO, como a pessoa escreveu — só de leitura. Quem atende precisa ler o pedido
-           enquanto responde, mas corrigir o texto de outra pessoa apagaria o que ela disse. -->
-      <PanelCard data={{ title: 'O pedido' }} ui={{ bodyClassName: 'flex flex-col gap-4' }}>
-        <dl class="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-          {#each requestFacts as fact (fact.label)}
-            <div class="min-w-0">
-              <dt class="text-muted-foreground text-xs">{fact.label}</dt>
-              <dd class="text-foreground text-sm font-medium break-words">{fact.value}</dd>
-            </div>
-          {/each}
-        </dl>
+  <!-- UMA COLUNA SÓ, na largura toda: o pedido e o atendimento, os dados, a linha do tempo e o
+       novo histórico, um embaixo do outro. A coluna estreita do lado deixava os campos
+       apertados e as caixas empilhadas sem ordem de leitura. -->
+  <div class="flex min-w-0 flex-col gap-5">
+    <!-- O PEDIDO, como a pessoa escreveu — só de leitura —, com os carimbos do atendimento. Quem
+         atende precisa ler o pedido enquanto responde, mas corrigir o texto de outra pessoa
+         apagaria o que ela disse. -->
+    <PanelCard data={{ title: 'O pedido' }} ui={{ bodyClassName: 'flex flex-col gap-4' }}>
+      <dl class="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
+        {#each requestFacts as fact (fact.label)}
+          <div class="min-w-0">
+            <dt class="text-muted-foreground text-xs">{fact.label}</dt>
+            <dd class="text-foreground text-sm font-medium break-words">{fact.value}</dd>
+          </div>
+        {/each}
+      </dl>
 
-        <div class="rounded-box border-border bg-muted border p-3.5">
-          <p class="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
-            Descrição do problema
-          </p>
-          <p class="text-foreground text-sm whitespace-pre-line">{ticket.description}</p>
-        </div>
+      <div class="rounded-box border-border bg-muted border p-3.5">
+        <p class="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
+          Descrição do problema
+        </p>
+        <p class="text-foreground text-sm whitespace-pre-line">{ticket.description}</p>
+      </div>
 
-        {#if ticket.screenshotUrl}
-          <a
-            class="control-sm rounded-control border-border bg-card text-primary hover:bg-ink-100 inline-flex w-fit items-center gap-1.5 border text-xs font-semibold shadow-xs transition-colors"
-            href={ticket.screenshotUrl}
-            target="_blank"
-            rel="noopener"
-          >
-            <ImageIcon class="size-3.5" aria-hidden="true" />
-            Abrir o print enviado
-          </a>
-        {/if}
+      {#if ticket.screenshotUrl}
+        <a
+          class="control-sm rounded-control border-border bg-card text-primary hover:bg-ink-100 inline-flex w-fit items-center gap-1.5 border text-xs font-semibold shadow-xs transition-colors"
+          href={ticket.screenshotUrl}
+          target="_blank"
+          rel="noopener"
+        >
+          <ImageIcon class="size-3.5" aria-hidden="true" />
+          Abrir o print enviado
+        </a>
+      {/if}
 
-        <!-- OS ARQUIVOS DO CHAMADO. O que a pessoa mandou não tem botão de excluir, e não é
-             esquecimento: é a prova de quem pediu socorro (ver `attachment-ownership.util`).
-             Os arquivos de cada histórico aparecem dentro dele, na linha do tempo. -->
-        <div class="flex flex-col gap-2">
-          <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-            Arquivos do chamado
-          </p>
-          <AttachmentList
-            data={{ attachments: data.attachments }}
-            ui={{ emptyLabel: 'Nenhum arquivo foi enviado com o chamado.', actor: 'support' }}
-            state={{
-              isLoading: viewState?.isAttachmentsLoading,
-              removingId: viewState?.removingAttachmentId,
-              error: viewState?.attachmentError,
-            }}
-            actions={{ onRemove: actions.onRemoveAttachment }}
-          />
-        </div>
-      </PanelCard>
-
-      <PanelCard
-        data={{
-          title: 'Linha do tempo',
-          hint: 'Tudo o que aconteceu com este chamado, do mais antigo para o mais novo.',
-        }}
-      >
-        <HistoryTimeline
-          data={{ histories: data.histories }}
-          state={{ isLoading: viewState?.isTimelineLoading, error: viewState?.timelineError }}
+      <!-- OS ARQUIVOS DO CHAMADO. O que a pessoa mandou não tem botão de excluir, e não é
+           esquecimento: é a prova de quem pediu socorro (ver `attachment-ownership.util`).
+           Os arquivos de cada histórico aparecem dentro dele, na linha do tempo. -->
+      <div class="flex flex-col gap-2">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+          Arquivos do chamado
+        </p>
+        <AttachmentList
+          data={{ attachments: data.attachments }}
+          ui={{ emptyLabel: 'Nenhum arquivo foi enviado com o chamado.', actor: 'support' }}
+          state={{
+            isLoading: viewState?.isAttachmentsLoading,
+            removingId: viewState?.removingAttachmentId,
+            error: viewState?.attachmentError,
+          }}
+          actions={{ onRemove: actions.onRemoveAttachment }}
         />
-      </PanelCard>
+      </div>
 
-      <PanelCard
-        data={{
-          title: isClosed ? 'Reabrir o chamado' : 'Novo histórico',
-          hint: isClosed
-            ? 'Este chamado está encerrado. Para registrar algo novo, reabra-o.'
-            : 'É o histórico que muda o estágio do chamado.',
-        }}
-      >
-        {@render historyForm()}
-      </PanelCard>
-    </div>
-
-    <div class="flex min-w-0 flex-col gap-5">
-      <PanelCard data={{ title: 'Atendimento' }}>
-        <dl class="flex flex-col gap-3">
+      <!-- O ATENDIMENTO: os carimbos saem da linha do tempo, nenhum é digitado. -->
+      <div class="border-border/70 flex flex-col gap-2 border-t pt-4">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+          Atendimento
+        </p>
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
           {#each stamps as stamp (stamp.label)}
-            <div class="flex items-baseline justify-between gap-3">
+            <div class="min-w-0">
               <dt class="text-muted-foreground text-xs">{stamp.label}</dt>
-              <dd class="text-foreground text-right text-sm font-medium break-words">
-                {stamp.value}
-              </dd>
+              <dd class="text-foreground text-sm font-medium break-words">{stamp.value}</dd>
             </div>
           {/each}
         </dl>
-      </PanelCard>
+      </div>
+    </PanelCard>
 
-      <PanelCard
-        data={{
-          title: 'Dados do chamado',
-          hint: 'O estágio não muda aqui — muda lançando um histórico.',
-        }}
-      >
-        {@render dataForm()}
-      </PanelCard>
-    </div>
+    <PanelCard
+      data={{
+        title: 'Dados do chamado',
+        hint: 'O estágio não muda aqui — muda lançando um histórico.',
+      }}
+    >
+      {@render dataForm()}
+    </PanelCard>
+
+    <PanelCard
+      data={{
+        title: 'Linha do tempo',
+        hint: 'Tudo o que aconteceu com este chamado, do mais antigo para o mais novo.',
+      }}
+    >
+      <HistoryTimeline
+        data={{ histories: data.histories }}
+        state={{ isLoading: viewState?.isTimelineLoading, error: viewState?.timelineError }}
+      />
+    </PanelCard>
+
+    <PanelCard
+      data={{
+        title: isClosed ? 'Reabrir o chamado' : 'Novo histórico',
+        hint: isClosed
+          ? 'Este chamado está encerrado. Para registrar algo novo, reabra-o.'
+          : 'É o histórico que muda o estágio do chamado.',
+      }}
+    >
+      {@render historyForm()}
+    </PanelCard>
   </div>
 </div>

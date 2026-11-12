@@ -46,6 +46,11 @@
       assignees?: { value: string; label: string }[];
       /** As máquinas do inventário, para vincular o chamado a uma delas. */
       machines: { value: string; label: string }[];
+      /**
+       * As máquinas que o chamado TEM. Com `actions.onOpenComputers`, o campo vira um botão
+       * que abre o diálogo de escolha (várias de uma vez) e a lista aparece embaixo dele.
+       */
+      linkedComputers?: { id: number; name: string }[];
       /** Os projetos/sistemas para vincular o chamado. */
       projects?: { value: string; label: string }[];
       /**
@@ -71,6 +76,8 @@
       onSubmit: () => void;
       onAddParticipantArea: (area: TicketArea) => void;
       onRemoveParticipantArea: (area: TicketArea) => void;
+      /** Abre o diálogo das máquinas. Ausente, o campo é a escolha de uma máquina só. */
+      onOpenComputers?: () => void;
       /**
        * "Cadastrar" da busca do tipo: grava o tipo na hora. Ausente, o nome só vai para o
        * campo e o tipo nasce ao salvar.
@@ -93,6 +100,7 @@
   import XIcon from '@lucide/svelte/icons/x';
   import LaptopIcon from '@lucide/svelte/icons/laptop';
 
+  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
@@ -176,7 +184,9 @@
   }
 </script>
 
-<form novalidate class="flex flex-col gap-4" onsubmit={handleSubmit}>
+<!-- Duas colunas em tela larga: a ficha passou a ocupar a largura toda, e os campos um embaixo
+     do outro deixavam metade da tela vazia. -->
+<form novalidate class="grid grid-cols-1 gap-4 lg:grid-cols-2" onsubmit={handleSubmit}>
   <FilterField data={{ label: 'Urgência' }}>
     <OptionPicker
       data={{ value: fields.priority.value, options: PRIORITY_OPTIONS }}
@@ -229,7 +239,38 @@
        qual nome o sistema conhece o computador dele. É este vínculo que faz a ficha da máquina
        saber quantos problemas ela já deu. A busca fica disponível mesmo com poucas máquinas,
        para que nomes longos nunca virem pastilhas altas na coluna lateral. -->
-  <FilterField data={{ label: 'Máquina' }}>
+{#if actions.onOpenComputers}
+    <!-- As MÁQUINAS: um chamado pode passar por várias. A escolha é num diálogo grande, com a
+         busca do Inventário — num campo estreito, escolher várias não cabia. -->
+    <FilterField data={{ label: 'Máquinas' }}>
+      <div class="flex flex-col gap-2">
+        <ActionButton
+          data={{
+            label:
+              (data.linkedComputers ?? []).length > 0 ? 'Trocar máquinas' : 'Vincular máquinas',
+          }}
+          ui={{ variant: 'secondary', size: 'lg', icon: LaptopIcon, className: 'w-full' }}
+          state={{ isDisabled: formState?.isSubmitting }}
+          actions={{ onClick: actions.onOpenComputers }}
+        />
+        {#if (data.linkedComputers ?? []).length === 0}
+          <p class="text-muted-foreground text-xs">Nenhuma máquina vinculada.</p>
+        {:else}
+          <ul class="flex flex-wrap gap-1.5" aria-label="Máquinas do chamado">
+            {#each data.linkedComputers ?? [] as computer (computer.id)}
+              <li
+                class="bg-muted text-foreground inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+              >
+                <LaptopIcon class="size-3" aria-hidden="true" />
+                {computer.name}
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+    </FilterField>
+  {:else}
+    <FilterField data={{ label: 'Máquina' }}>
     <OptionPicker
       data={{ value: fields.computerId.value, options: machineOptions }}
       ui={{
@@ -244,6 +285,7 @@
       actions={{ onChange: (value: string) => actions.onChange('computerId', value) }}
     />
   </FilterField>
+  {/if}
 
   {#if (fields.projectId || fields.customSystemName) && (fields.area.value === 'sistema' || (data.projects && data.projects.length > 0))}
     <FilterField data={{ label: 'Sistema / Software' }}>
@@ -275,10 +317,12 @@
   {/if}
 
   {#if formState?.error}
-    <ErrorState data={{ message: formState.error }} ui={{ variant: 'inline' }} />
+    <div class="lg:col-span-2">
+      <ErrorState data={{ message: formState.error }} ui={{ variant: 'inline' }} />
+    </div>
   {/if}
 
-  <div class="flex items-center justify-end gap-3">
+  <div class="flex items-center justify-end gap-3 lg:col-span-2">
     {#if formState?.isSaved}
       <!-- `role="status"`: quem usa leitor de tela também fica sabendo que salvou. -->
       <span class="text-success text-xs font-medium" role="status">Dados salvos.</span>
@@ -293,7 +337,7 @@
   <!-- ÁREAS PARTICIPANTES (#13) — além da área original, de cima. Ex.: um chamado de Infra que
        também precisa de Manutenção. Mudança própria, fora do envio do formulário: adiciona e
        remove na hora, sem esperar o resto ser salvo. -->
-  <div class="border-border flex flex-col gap-3 border-t pt-4">
+  <div class="border-border flex flex-col gap-3 border-t pt-4 lg:col-span-2">
     <div>
       <p class="text-ink-700 text-sm font-medium">Áreas participantes</p>
       <p class="text-muted-foreground text-xs">Outras áreas que também atendem este chamado.</p>

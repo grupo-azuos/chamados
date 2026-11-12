@@ -30,6 +30,9 @@ export const ticketStockItemSchema = z.object({
   name: z.string(),
   direction: ticketStockDirectionSchema,
   quantity: z.number().int(),
+  /** A máquina para onde o item foi (ou de onde veio), quando o chamado tem máquina. */
+  computerId: z.number().int().nullable().optional(),
+  computerName: z.string().nullable().optional(),
   /**
    * Quando o item virou movimento no depósito — o encerramento do chamado. Nulo é o item ainda
    * reservado, com o chamado aberto.
@@ -54,6 +57,11 @@ export const createTicketStockItemSchema = z.object({
     .int('A quantidade é um número inteiro')
     .min(1, 'A quantidade mínima é 1')
     .max(MAX_TICKET_STOCK_QUANTITY, `A quantidade máxima é ${MAX_TICKET_STOCK_QUANTITY}`),
+  /**
+   * A máquina do item. Com UMA máquina no chamado, é ela (não precisa vir); com várias, quem
+   * vincula escolhe — o servidor confere que ela é do chamado.
+   */
+  computerId: z.number().int().positive().nullable().optional(),
 });
 
 export type CreateTicketStockItemInput = z.input<typeof createTicketStockItemSchema>;
@@ -61,6 +69,8 @@ export type CreateTicketStockItemInput = z.input<typeof createTicketStockItemSch
 /** A forma do formulário: na tela todo campo é texto. */
 export const ticketStockItemFormSchema = z.object({
   itemId: z.string().min(1, 'Escolha o item'),
+  /** A máquina, quando o chamado tem mais de uma. Vazio quando tem uma ou nenhuma. */
+  computerId: z.string().default(''),
   direction: ticketStockDirectionSchema,
   quantity: z
     .string()

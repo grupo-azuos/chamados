@@ -41,7 +41,12 @@ export type TicketStockItemsModel = {
   };
 };
 
-const EMPTY: TicketStockItemFormValues = { itemId: '', direction: 'out', quantity: '1' };
+const EMPTY: TicketStockItemFormValues = {
+  itemId: '',
+  direction: 'out',
+  quantity: '1',
+  computerId: '',
+};
 
 /** A chave dos itens de estoque de um chamado — o Depósito e a ficha leem a mesma. */
 export function ticketStockItemsQueryKey(ticketId: number) {
@@ -96,9 +101,11 @@ export function useTicketStockItemsModel(
           itemId: Number(input.itemId),
           direction: input.direction,
           quantity: Number(input.quantity),
+          /* Vazio: o chamado tem uma máquina (ou nenhuma), e o servidor sabe qual. */
+          ...(input.computerId ? { computerId: Number(input.computerId) } : {}),
         }),
       onSuccess: async () => {
-        values = { ...EMPTY, direction: values.direction };
+        values = { ...EMPTY, direction: values.direction, computerId: values.computerId };
         await refresh();
       },
     }),

@@ -12,6 +12,7 @@ function rowOf(overrides: Partial<TicketStockItemRow> = {}): TicketStockItemRow 
     partId: 7,
     inventoryItemId: null,
     itemName: 'Mouse USB',
+    computerId: null,
     direction: 'out',
     quantity: 2,
     settledAt: null,
@@ -33,6 +34,8 @@ describe('toTicketStockItem', () => {
       name: 'Mouse USB',
       direction: 'out',
       quantity: 2,
+      computerId: null,
+      computerName: null,
       settledAt: null,
       createdAt: CREATED_AT.toISOString(),
       createdByName: 'Pessoa do TI',
@@ -47,6 +50,12 @@ describe('toTicketStockItem', () => {
     expect(item.source).toBe('inventory');
     expect(item.itemId).toBe(3);
     expect(item.settledAt).toBe(CREATED_AT.toISOString());
+  });
+
+  it('names the machine the item went to', () => {
+    const item = toTicketStockItem(rowOf({ computerId: 7 }), new Map([[7, 'COMPUTADOR - 07']]));
+
+    expect(item.computerName).toBe('COMPUTADOR - 07');
   });
 
   // triste

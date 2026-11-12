@@ -15,7 +15,11 @@ import {
 } from '../repository/ticket-stock-items.repository';
 import { type TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
 import { TicketAccessService } from './ticket-access.service';
-import { CLOSED_TICKET_STOCK, TicketStockItemsService } from './ticket-stock-items.service';
+import {
+  CLOSED_TICKET_STOCK,
+  pickMachine,
+  TicketStockItemsService,
+} from './ticket-stock-items.service';
 
 const ana: RequestUser = { id: '1', email: 'ana@azuos.com.br', name: 'Ana Lima', role: 'user' };
 const CREATED_AT = new Date('2026-11-12T12:00:00.000Z');
@@ -62,6 +66,7 @@ function lineRow(overrides: Partial<TicketStockItemRow> = {}): TicketStockItemRo
     partId: 7,
     inventoryItemId: null,
     itemName: 'Monitor 24"',
+    computerId: null,
     direction: 'out',
     quantity: 1,
     settledAt: null,
@@ -259,7 +264,12 @@ describe('TicketStockItemsService.settle', () => {
     expect(repository.moveShelf).toHaveBeenCalledTimes(1);
     expect(repository.moveShelf).toHaveBeenCalledWith(
       expect.objectContaining({ id: 7 }),
-      expect.objectContaining({ direction: 'out', note: 'Chamado CH-0049', computerId: 3 }),
+      expect.objectContaining({
+        direction: 'out',
+        note: 'Chamado CH-0049',
+        computerId: 3,
+        ticketId: 49,
+      }),
       TX,
     );
     expect(repository.markSettled).toHaveBeenCalledWith([5], expect.any(Date), TX);
@@ -282,5 +292,44 @@ describe('TicketStockItemsService.settle', () => {
 
     await expect(service.settle(ticket, ana, TX)).rejects.toThrow('O depósito tem 0');
     expect(repository.markSettled).not.toHaveBeenCalled();
+  });
+});
+
+describe('pickMachine', () => {
+  // feliz
+  it('takes the only machine of the ticket without asking', () => {
+    expect(pickMachine([{ id: 3 }], null)).toBe(3);
+  });
+
+  it('takes the chosen machine among many', () => {
+    expect(pickMachine([{ id: 3 }, { id: 7 }], 7)).toBe(7);
+  });
+
+  it('leaves the item without machine when the ticket has none', () => {
+    expect(pickMachine([], null)).toBeNull();
+  });
+
+  // triste
+  it('asks which machine when the ticket has many', () => {
+    expect(() => pickMachine([{ id: 3 }, { id: 7 }], null)).toThrow('escolha para qual');
+  });
+
+  it('refuses a machine that is not in the ticket', () => {
+    expect(() => pickMachine([{ id: 3 }], 9)).toThrow('não está vinculada');
+  });
+});
+
+describe('TicketStockItemsService.settle — machine of the item', () => {
+  // feliz
+  it('sends the item to its own machine, not the first of the ticket', async () => {
+    const { service, repository, ticket } = setup({ lines: [lineRow({ computerId: 7 })] });
+
+    await service.settle(ticket, ana, TX);
+
+    expect(repository.moveShelf).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ computerId: 7 }),
+      TX,
+    );
   });
 });

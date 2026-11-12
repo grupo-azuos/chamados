@@ -143,7 +143,10 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
   const save = mirrorStore(
     createMutation({
       mutationFn: (values: TicketDataFormValues) =>
-        ticketsApi.update(ticket.id, toUpdateInput(values, ticket.assigneeId)),
+        ticketsApi.update(
+          ticket.id,
+          toUpdateInput(values, ticket.assigneeId, toFormValues(ticket).computerId),
+        ),
       onSuccess: async () => {
         isSaved = true;
         await queryClient.invalidateQueries({ queryKey: TICKETS_QUERY_KEY });
@@ -357,6 +360,9 @@ function resolveSystemUpdate(values: TicketDataFormValues) {
 export function toUpdateInput(
   values: TicketDataFormValues,
   currentAssigneeId: string | null | undefined = null,
+  /* A máquina com que o formulário nasceu. Sem mudança, o campo não vai: as máquinas se
+     trocam pelo diálogo, e mandar a de antes desfaria a lista escolhida lá. */
+  initialComputerId?: string,
 ) {
   /* O responsável só vai quando MUDOU: mandar o mesmo de sempre faria o servidor exigir super
      admin de quem só corrigiu a prioridade. Vazio também não vai — não existe "sem responsável". */
@@ -370,7 +376,9 @@ export function toUpdateInput(
     priority: values.priority,
     area: values.area,
     problemType: values.problemType,
-    computerId: values.computerId === '' ? null : Number(values.computerId),
+    ...(values.computerId !== initialComputerId
+      ? { computerId: values.computerId === '' ? null : Number(values.computerId) }
+      : {}),
     ...resolveSystemUpdate(values),
   };
 }

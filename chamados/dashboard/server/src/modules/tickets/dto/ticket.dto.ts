@@ -16,6 +16,7 @@ import {
   ticketProblemTypeOptionSchema,
   ticketProblemTypeOptionsQuerySchema,
   ticketSchema,
+  updateTicketComputersSchema,
   updateTicketSchema,
 } from '@template/shared/schemas/ticket.schema';
 import {
@@ -41,6 +42,7 @@ export class TicketDashboardQueryDto extends createZodDto(ticketDashboardQuerySc
 export class TicketReportQueryDto extends createZodDto(ticketReportQuerySchema) {}
 export class CreateTicketDto extends createZodDto(createTicketSchema) {}
 export class UpdateTicketDto extends createZodDto(updateTicketSchema) {}
+export class UpdateTicketComputersDto extends createZodDto(updateTicketComputersSchema) {}
 export class AddTicketAreaDto extends createZodDto(addTicketAreaSchema) {}
 export class TicketDto extends createZodDto(ticketSchema) {}
 export class TicketAssigneeOptionDto extends createZodDto(ticketAssigneeOptionSchema) {}

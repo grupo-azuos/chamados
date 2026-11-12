@@ -6,7 +6,7 @@ import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
 import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
 import { qualified } from '../../../lib/db/sql-column.util';
-import { ticketInArea } from '../../../lib/db/ticket-area.util';
+import { ticketInArea, ticketOnComputer } from '../../../lib/db/ticket-area.util';
 import { computerAlerts } from '../../../lib/db/schema/computer-alerts.schema';
 import { computerSamples } from '../../../lib/db/schema/computer-samples.schema';
 import { computers } from '../../../lib/db/schema/computers.schema';
@@ -146,7 +146,7 @@ export class InsightsRepository {
              módulo de Infra, e chamado de Sistema é sobre o software, não sobre a máquina. */
           ticketCount: sql<number>`(
             select count(*)::int from ${tickets}
-            where ${qualified(tickets.computerId)} = ${qualified(computers.id)}
+            where ${ticketOnComputer(qualified(computers.id))}
               and ${ticketInArea('infra')}
               and ${qualified(tickets.createdAt)} >= ${asTimestamp(since)}
           )`,

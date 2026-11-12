@@ -308,9 +308,12 @@
         <ContentCard
           data={{ label: part.name }}
           ui={{ tone: partConditionTone(part.condition), isHoverColored: true, className: 'min-w-0 gap-0 p-4' }}
+          actions={{ onClick: () => actions.onOpenLedger(part) }}
         >
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0 flex-1">
+              <!-- O card inteiro abre o histórico (o clique do próprio card). O que tem ação própria
+                   (nome, chamados, Entrada, Saída) fica por cima dele, `z-20`. -->
               <button
                 type="button"
                 class="text-ink-900 relative z-20 line-clamp-2 text-left font-medium hover:underline"
@@ -320,9 +323,11 @@
                 {part.name}
               </button>
               <span class="text-ink-500 block text-xs">Ver o histórico</span>
-              <TicketStockLinks
-                data={{ links: part.ticketLinks, balance: part.balance, ticketsPath: '/infra/tickets' }}
-              />
+              <div class="relative z-20">
+                <TicketStockLinks
+                  data={{ links: part.ticketLinks, balance: part.balance, ticketsPath: '/infra/tickets' }}
+                />
+              </div>
             </div>
             <div class="flex flex-col items-end gap-1 shrink-0">
               <StatusBadge
@@ -345,7 +350,7 @@
             <span class="text-ink-700 font-medium">{partCategoryLabel(part.category)}</span>
           </div>
 
-          <div class="border-border mt-3 flex items-center justify-end gap-2 border-t pt-2">
+          <div class="border-border relative z-20 mt-3 flex items-center justify-end gap-2 border-t pt-2">
             <ActionButton
               data={{ label: 'Entrada' }}
               ui={{ variant: 'secondary', size: 'sm' }}

@@ -56,6 +56,7 @@ import {
   TicketProblemTypeOptionDto,
   TicketProblemTypeOptionsQueryDto,
   TicketReportQueryDto,
+  UpdateTicketComputersDto,
   UpdateTicketDto,
   UpdateTicketWatchersDto,
   WhatsappNoticeDto,
@@ -424,6 +425,24 @@ export class TicketsController {
     @Param('relatedTicketId', ParseIntPipe) relatedTicketId: number,
   ): Promise<TicketRelationDto[]> {
     return this.relationsService.remove(user, id, relatedTicketId);
+  }
+
+  @Put(':id/computers')
+  @ApiOperation({
+    summary: 'Troca as máquinas vinculadas a um chamado',
+    description:
+      'Manda a lista inteira, como ela deve ficar (lista vazia desvincula todas). A primeira vira a `computerId` do chamado. Quem saiu e quem entrou fica na linha do tempo.',
+  })
+  @ApiBody({ type: UpdateTicketComputersDto })
+  @ApiOkResponse({ type: TicketDto })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  @ApiUnprocessableEntityResponse({ description: 'Alguma máquina não existe no inventário.' })
+  async updateComputers(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateTicketComputersDto,
+  ): Promise<TicketDto> {
+    return this.service.updateComputers(user, id, body);
   }
 
   @Patch(':id')
