@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import { isClosedTicketStatus } from '@template/shared/domain/ticket-status.util';
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
 
   /**
@@ -10,8 +11,10 @@
 
 <script lang="ts">
   import TicketDataForm from '$lib/components/azuos-ticket-data-form/azuos-ticket-data-form.svelte';
+  import TicketStockItemsCard from '$lib/components/azuos-ticket-stock-items-card/azuos-ticket-stock-items-card.svelte';
   import TicketWatchersCard from '$lib/components/azuos-ticket-watchers-card/azuos-ticket-watchers-card.svelte';
   import { useTicketDataFormModel } from '$lib/hooks/use-ticket-data-form/use-ticket-data-form.svelte';
+  import { useTicketStockItemsModel } from '$lib/hooks/use-ticket-stock-items/use-ticket-stock-items.svelte';
   import { useTicketWatchersModel } from '$lib/hooks/use-ticket-watchers/use-ticket-watchers.svelte';
 
   let { ticket }: TicketDataFormSlotProps = $props();
@@ -23,9 +26,18 @@
   /* As pessoas vinculadas moram junto dos dados: são do chamado, e se salvam na hora. */
   // svelte-ignore state_referenced_locally
   const watchers = useTicketWatchersModel(ticket.id);
+  /* Os itens do estoque saem do depósito DESTA área — Depósito da TI. */
+  // svelte-ignore state_referenced_locally
+  const stock = useTicketStockItemsModel(ticket.id, 'parts');
 </script>
 
 <div class="flex flex-col gap-4">
   <TicketDataForm data={form.data} state={form.state} actions={form.actions} />
   <TicketWatchersCard data={watchers.data} state={watchers.state} actions={watchers.actions} />
+  <TicketStockItemsCard
+    data={stock.data}
+    ui={{ shelfLabel: 'Depósito da TI' }}
+    state={{ ...stock.state, isClosed: isClosedTicketStatus(ticket.status) }}
+    actions={stock.actions}
+  />
 </div>

@@ -61,6 +61,8 @@ export type OpenTicketModel = {
     attachments: File[];
     opened: OpenedTicket | null;
     systemProjects: { value: string; label: string }[];
+    /** Os tipos de problema da área escolhida, com os cadastrados na hora. */
+    problemTypes: { value: string; label: string }[];
     /** Os departamentos do RH e, depois da linha, os daqui. */
     departmentOptions: DepartmentChoice[];
     /** Quem atende a área escolhida — as opções de "com quem você quer falar". */
@@ -249,6 +251,31 @@ export function useOpenTicketModel(): OpenTicketModel {
     })
     .catch(() => undefined);
 
+  /* Os tipos de problema também dependem da área, e pelo mesmo motivo têm busca própria.
+     Falhou? Fica a lista fixa da área, que a tela já conhece. */
+  let problemTypes = $state<{ value: string; label: string }[]>([]);
+  $effect(() => {
+    const area = values.current.area;
+    problemTypes = [];
+    if (!area) return;
+
+    let isCurrent = true;
+    void queryClient
+      .fetchQuery({
+        queryKey: ['tickets', 'problem-type-options', area],
+        queryFn: () => ticketsApi.problemTypeOptions(area),
+        staleTime: 60_000,
+      })
+      .then((options) => {
+        if (isCurrent) problemTypes = options;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isCurrent = false;
+    };
+  });
+
   $effect(() => {
     const area = values.current.area;
     assignees = [];
@@ -296,6 +323,7 @@ export function useOpenTicketModel(): OpenTicketModel {
         opened,
         invite: invite ? { assigneeName: invite.assignee.name, areas: invite.areas } : null,
         assignees: assignees.map((option) => ({ value: option.id, label: option.name })),
+        problemTypes,
         systemProjects: (projects.current.data ?? []).map((project) => ({
           value: String(project.id),
           label: project.name,

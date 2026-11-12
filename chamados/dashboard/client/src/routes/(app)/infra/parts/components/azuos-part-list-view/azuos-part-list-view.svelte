@@ -103,6 +103,7 @@
   import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
@@ -318,6 +319,7 @@
                 {part.name}
               </button>
               <span class="text-ink-500 block text-xs">Ver o histórico</span>
+              <TicketStockLinks data={{ links: part.ticketLinks, ticketsPath: '/infra/tickets' }} />
             </div>
             <div class="flex flex-col items-end gap-1 shrink-0">
               <StatusBadge
@@ -398,6 +400,7 @@
                   {part.name}
                 </button>
                 <span class="text-ink-500 block text-xs">Ver o histórico desta peça</span>
+                <TicketStockLinks data={{ links: part.ticketLinks, ticketsPath: '/infra/tickets' }} />
               </TableCell>
               <TableCell class="text-ink-700">{partCategoryLabel(part.category)}</TableCell>
               <TableCell>

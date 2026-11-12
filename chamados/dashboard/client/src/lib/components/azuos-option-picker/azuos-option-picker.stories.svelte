@@ -121,6 +121,14 @@
   template={inBox}
 />
 
+<!-- O texto da busca vira OPÇÃO NOVA da lista: o botão diz "Cadastrar", não "Usar". -->
+<Story
+  name="RegisterCustomValue"
+  args={{ data: { value: 'printer', options: [{ value: 'printer', label: 'Impressora' }, { value: 'other', label: 'Outro' }] },
+    ui: { ariaLabel: 'Tipo do problema', fullWidth: true, mode: 'combobox', allowCustomValue: true, customValueAction: 'Cadastrar' },
+    actions: { onChange: fn(), onCustomValue: fn() } }}
+/>
+
 <Story
   name="AllowCustomValue"
   args={{ data: { value: 'Equipe externa', options: [{ value: 'p-1', label: 'Ana Exemplo · ana@exemplo.invalid' }] },

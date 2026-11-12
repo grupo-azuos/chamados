@@ -7,6 +7,7 @@
   import { formatPhoneInput } from '@template/shared/domain/phone.util';
   import { screenshotAccept } from '@template/shared/domain/screenshot-catalog.util';
   import {
+    ticketProblemTypeLabel,
     ticketProblemTypeOptionsForArea,
     type TicketArea,
   } from '@template/shared/domain/ticket-catalog.util';
@@ -58,6 +59,11 @@
        */
       opened: { protocol: string; whatsAppLink: string | null; isNoticeSent?: boolean } | null;
       systemProjects?: { value: string; label: string }[];
+      /**
+       * Os tipos de problema da área escolhida, com os cadastrados na hora. Ausente, vale a
+       * lista fixa da área.
+       */
+      problemTypes?: { value: string; label: string }[];
       /** Os departamentos do RH e, depois da linha, os daqui. */
       departmentOptions?: OptionPickerOption[];
       /** Quem atende a área escolhida. Vazio esconde o campo: escolher é opcional. */
@@ -232,7 +238,11 @@
      caiu" na lista, nem Infra tem "ar-condicionado". */
   /* Sem área (formulário recém-zerado), a lista fica vazia em vez de quebrar a tela. */
   const problemTypeOptions = $derived(
-    fields.area.value ? ticketProblemTypeOptionsForArea(fields.area.value as TicketArea) : [],
+    data.problemTypes && data.problemTypes.length > 0
+      ? data.problemTypes
+      : fields.area.value
+        ? ticketProblemTypeOptionsForArea(fields.area.value as TicketArea)
+        : [],
   );
 
   function handleAreaChange(value: string): void {
@@ -600,11 +610,27 @@
 
               <div class="flex flex-col gap-1.5">
                 <span class="text-ink-700 text-sm font-medium">Tipo de problema</span>
+                <!-- Não achou o tipo? Digita na busca e cadastra: ele nasce na área junto com o
+                     chamado. -->
                 <OptionPicker
                   data={{ value: fields.problemType.value, options: problemTypeOptions }}
-                  ui={{ ariaLabel: 'Tipo de problema', placeholder: 'Escolha o tipo', fullWidth: true }}
+                  ui={{
+                    ariaLabel: 'Tipo de problema',
+                    placeholder: 'Escolha o tipo',
+                    fullWidth: true,
+                    mode: 'combobox',
+                    searchPlaceholder: 'Buscar ou cadastrar tipo…',
+                    allowCustomValue: true,
+                    customValueAction: 'Cadastrar',
+                    selectedLabel: fields.problemType.value
+                      ? ticketProblemTypeLabel(fields.problemType.value)
+                      : undefined,
+                  }}
                   state={{ isDisabled: formState.isSubmitting }}
-                  actions={{ onChange: (value: string) => actions.onChange('problemType', value) }}
+                  actions={{
+                    onChange: (value: string) => actions.onChange('problemType', value),
+                    onCustomValue: (value: string) => actions.onChange('problemType', value),
+                  }}
                 />
               </div>
 
@@ -705,8 +731,11 @@
               <!-- O print continua sendo um campo só, de imagem: ele nasceu antes e é o que a
                    maioria manda. Aqui entra o resto — a nota da peça, a planilha, o vídeo do
                    defeito que não dá para descrever por escrito. -->
+              <!-- O Ctrl+V desta etapa já é do print, logo acima: com as duas escutas ligadas, o
+                   mesmo print entraria duas vezes. -->
               <AttachmentPicker
                 data={{ files: data.attachments }}
+                ui={{ isPasteDisabled: true }}
                 state={{ isDisabled: formState.isSubmitting, error: formState.attachmentError }}
                 actions={{
                   onChange: actions.onAttachmentsChange,

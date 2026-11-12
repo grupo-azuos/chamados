@@ -1,5 +1,6 @@
 import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
 import { type TicketInvite } from '@template/shared/domain/ticket-invite.util';
+import { type TicketStockSource } from '@template/shared/domain/ticket-stock.util';
 import { type TicketAttachment } from '@template/shared/schemas/ticket-attachment.schema';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
 import { type StagedFile } from '@template/shared/schemas/staged-file.schema';
@@ -22,9 +23,15 @@ import {
   type TicketAssigneeOption,
   type TicketNotice,
   type TicketFormValues,
+  type TicketProblemTypeOption,
   type TicketListQuery,
   type UpdateTicketInput,
 } from '@template/shared/schemas/ticket.schema';
+import {
+  type CreateTicketStockItemInput,
+  type TicketStockItem,
+  type TicketStockOption,
+} from '@template/shared/schemas/ticket-stock-item.schema';
 import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
 
 import { apiDownload, apiRequest, type Downloaded, uploadFile } from './http-client';
@@ -66,6 +73,25 @@ export const ticketsApi = {
     apiRequest<TicketInvite>(`/tickets/invites/${encodeURIComponent(token)}`),
 
   /** Quem pode ser o responsável por um chamado desta área — público, para o formulário. */
+  /** Os tipos de problema da área: a lista fixa mais os cadastrados na hora. */
+  problemTypeOptions: (area: TicketArea) =>
+    apiRequest<TicketProblemTypeOption[]>('/tickets/problem-type-options', { query: { area } }),
+
+  /** Os itens de um depósito que podem entrar num chamado, com a sobra de cada um. */
+  stockOptions: (source: TicketStockSource) =>
+    apiRequest<TicketStockOption[]>('/tickets/stock-options', { query: { source } }),
+
+  /** Os itens de estoque do chamado, das duas prateleiras. */
+  stockItems: (id: number) => apiRequest<TicketStockItem[]>(`/tickets/${id}/stock-items`),
+
+  /** Vincula um item do depósito ao chamado — reservado até o encerramento. */
+  addStockItem: (id: number, input: CreateTicketStockItemInput) =>
+    apiRequest<TicketStockItem>(`/tickets/${id}/stock-items`, { method: 'POST', body: input }),
+
+  /** Tira o item do chamado (só com o chamado aberto). */
+  removeStockItem: (id: number, itemId: number) =>
+    apiRequest<void>(`/tickets/${id}/stock-items/${itemId}`, { method: 'DELETE' }),
+
   assigneeOptions: (area: TicketArea) =>
     apiRequest<TicketAssigneeOption[]>('/tickets/assignee-options', { query: { area } }),
 
