@@ -7,6 +7,7 @@ import PartLedgerDialog, {
   currentBalanceOf,
   destinationOf,
   signedQuantity,
+  ticketHrefOf,
 } from './azuos-part-ledger-dialog.svelte';
 
 function part(over: Partial<Part> = {}): Part {
@@ -130,6 +131,29 @@ describe('AzuosPartLedgerDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Excluir e devolver o saldo' }));
 
     expect(actions.onConfirmRemove).toHaveBeenCalled();
+  });
+
+  /* Movimento de chamado leva ao chamado, e não se apaga por aqui. */
+  it('links a ticket movement to the ticket, without the trash button', () => {
+    render(PartLedgerDialog, {
+      props: {
+        data: {
+          part: part(),
+          movements: [movement({ id: 1, ticketId: 49, note: 'Chamado CH-0049' })],
+          removing: null,
+        },
+        actions,
+      },
+    });
+
+    const links = screen.getAllByRole('link', { name: /Chamado CH-0049/ });
+    expect(links[0]).toHaveAttribute('href', '/infra/tickets/49');
+    expect(screen.queryByRole('button', { name: 'Excluir movimentação' })).toBeNull();
+  });
+
+  it('builds the ticket address only for ticket movements', () => {
+    expect(ticketHrefOf(movement({ ticketId: 7 }))).toBe('/infra/tickets/7');
+    expect(ticketHrefOf(movement({ ticketId: null }))).toBeNull();
   });
 
   // triste

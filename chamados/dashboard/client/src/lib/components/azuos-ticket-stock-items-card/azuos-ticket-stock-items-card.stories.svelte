@@ -78,3 +78,20 @@
   name="Adding"
   args={{ data: { items, options, values: { itemId: '1', direction: 'out', quantity: '2' } }, state: { isAdding: true }, actions }}
 />
+
+<!-- Chamado com duas máquinas: quem vincula escolhe para qual vai o item. -->
+<Story
+  name="Ticket with many machines"
+  args={{
+    data: {
+      items: items.map((item) => ({ ...item, computerId: 6, computerName: 'COMPUTADOR - 06' })),
+      options,
+      values,
+      machines: [
+        { value: '6', label: 'COMPUTADOR - 06' },
+        { value: '7', label: 'COMPUTADOR - 07' },
+      ],
+    },
+    actions,
+  }}
+/>

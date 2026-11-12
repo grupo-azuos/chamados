@@ -307,21 +307,25 @@
         <div
           use:fillFromPointer
           style:--fill-color={fillColorOf(partConditionTone(part.condition))}
-          class="hover-fill border-border/70 bg-card rounded-surface border p-4 shadow-xs"
+          class="hover-fill border-border/70 bg-card rounded-surface relative cursor-pointer border p-4 shadow-xs"
         >
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0 flex-1">
+              <!-- O card inteiro abre o histórico: o `after:` estica o botão do nome por cima
+                   dele. O que tem ação própria (chamados, Entrada, Saída) fica acima, `z-10`. -->
               <button
                 type="button"
-                class="font-medium text-ink-900 text-left break-words hover:underline"
+                class="font-medium text-ink-900 text-left break-words after:absolute after:inset-0 after:rounded-surface hover:underline"
                 onclick={() => actions.onOpenLedger(part)}
               >
                 {part.name}
               </button>
               <span class="text-ink-500 block text-xs">Ver o histórico</span>
-              <TicketStockLinks
-                data={{ links: part.ticketLinks, balance: part.balance, ticketsPath: '/infra/tickets' }}
-              />
+              <div class="relative z-10">
+                <TicketStockLinks
+                  data={{ links: part.ticketLinks, balance: part.balance, ticketsPath: '/infra/tickets' }}
+                />
+              </div>
             </div>
             <div class="flex flex-col items-end gap-1 shrink-0">
               <StatusBadge
@@ -344,7 +348,7 @@
             <span class="text-ink-700 font-medium">{partCategoryLabel(part.category)}</span>
           </div>
 
-          <div class="border-border/60 mt-3 flex items-center justify-end gap-2 border-t pt-2">
+          <div class="border-border/60 relative z-10 mt-3 flex items-center justify-end gap-2 border-t pt-2">
             <ActionButton
               data={{ label: 'Entrada' }}
               ui={{ variant: 'secondary', size: 'sm' }}
