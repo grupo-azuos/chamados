@@ -53,7 +53,9 @@ import {
   type TicketListQuery,
   type TicketProblemTypeOption,
   type TicketReportQuery,
+  type UpdateTicketComputersInput,
   type UpdateTicketInput,
+  updateTicketComputersSchema,
 } from '@template/shared/schemas/ticket.schema';
 import { type TicketStockOption } from '@template/shared/schemas/ticket-stock-item.schema';
 import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
@@ -99,6 +101,7 @@ import { verifyTicketAccess, verifyTicketInvite } from './ticket-invite.util';
 import { TicketHistoriesService } from './ticket-histories.service';
 import { TicketProblemTypesService } from './ticket-problem-types.service';
 import { TicketStockItemsService } from './ticket-stock-items.service';
+import { TicketComputersRepository } from '../repository/ticket-computers.repository';
 import {
   type TicketNoticeOutcome,
   TicketWhatsappNotifierService,
@@ -186,7 +189,45 @@ export class TicketsService {
     @Optional() private readonly people?: TicketPeopleService,
     @Optional() private readonly problemTypes?: TicketProblemTypesService,
     @Optional() private readonly stockItems?: TicketStockItemsService,
+    @Optional() private readonly computers?: TicketComputersRepository,
   ) {}
+
+  /**
+   * As MÁQUINAS do chamado, de uma vez: a lista escolhida no diálogo troca a que existia. Vira
+   * um histórico de "Alteração de dados" com o antes e o depois, como as outras correções.
+   */
+  async updateComputers(
+    user: RequestUser,
+    id: number,
+    input: UpdateTicketComputersInput,
+  ): Promise<Ticket> {
+    assertCanAttendTicket(user.role);
+    const { computerIds } = updateTicketComputersSchema.parse(input);
+
+    const reach = await this.access.reach(user, id);
+    this.access.assertCanWrite(reach);
+    if (!this.computers) throw new UnprocessableEntityException('Máquinas indisponíveis.');
+
+    const existing = await this.computers.existingIds(computerIds);
+    if (existing.length !== computerIds.length) {
+      throw new UnprocessableEntityException('Alguma máquina escolhida não existe mais no inventário.');
+    }
+
+    const before = (await this.computers.listFor([id])).get(id) ?? [];
+    await this.computers.replace(id, computerIds, user.email);
+    const row = await this.repository.findById(id);
+    if (!row) throw new NotFoundException(TICKET_NOT_FOUND);
+    const after = (await this.computers.listFor([id])).get(id) ?? [];
+
+    const change = describeComputerChange(before, after);
+    if (change) {
+      await this.historiesRepository.record(
+        toUpdateHistory(row, change, { name: user.name, email: user.email }),
+      );
+    }
+
+    return toTicket(row, await this.screenshotUrl(row), reach.participantAreas, after);
+  }
 
   /** Os itens de um depósito que podem entrar num chamado, com a sobra de cada um. */
   async listStockOptions(user: RequestUser, source: TicketStockSource): Promise<TicketStockOption[]> {
@@ -208,6 +249,31 @@ export class TicketsService {
     }
 
     return this.problemTypes.register(input.area, input.name.trim(), user.email);
+  }
+
+  /** O tipo da correção, já resolvido (e cadastrado, se novo). Ausente, não mexe. */
+  private async resolveUpdatedProblemType(
+    current: TicketRow,
+    input: UpdateTicketInput,
+    user: RequestUser,
+  ): Promise<string | undefined> {
+    if (input.problemType === undefined) return undefined;
+
+    return this.resolveProblemType(input.area ?? current.area, input.problemType, user);
+  }
+
+  /**
+   * A máquina escolhida no campo de UMA máquina vira a lista inteira do chamado — senão a
+   * ficha das outras máquinas continuaria contando um chamado que já não é delas.
+   */
+  private async syncSingleComputer(
+    id: number,
+    computerId: number | null | undefined,
+    email: string,
+  ): Promise<void> {
+    if (computerId === undefined || !this.computers) return;
+
+    await this.computers.replace(id, computerId ? [computerId] : [], email);
   }
 
   /**
@@ -672,14 +738,13 @@ export class TicketsService {
     }
 
     const assignee = await this.resolveReassignment(user, current.area, input);
-    const problemType =
-      input.problemType === undefined
-        ? undefined
-        : await this.resolveProblemType(input.area ?? current.area, input.problemType, user);
+    const problemType = await this.resolveUpdatedProblemType(current, input, user);
     const row = await this.repository.update(
       id,
       toTicketUpdate({ ...input, problemType }, user.email, new Date(), assignee),
     );
+
+    await this.syncSingleComputer(id, input.computerId, user.email);
 
     /* O que mudou vai para a linha do tempo, com quem mudou. Salvar sem mudar nada não deixa
        rastro: uma linha do tempo cheia de "alteração" vazia esconde as que importam. */
@@ -754,16 +819,31 @@ export class TicketsService {
 
   /** As áreas participantes de VÁRIOS chamados de uma vez, mais o print — para a fila. */
   private async withAreasAndScreenshots(rows: TicketWithComputer[]): Promise<Ticket[]> {
-    const areasByTicket = await this.repository.listAreasFor(rows.map((row) => row.id));
+    const ids = rows.map((row) => row.id);
+    const [areasByTicket, computersByTicket] = await Promise.all([
+      this.repository.listAreasFor(ids),
+      this.computers?.listFor(ids),
+    ]);
 
-    return Promise.all(rows.map((row) => this.toFullTicket(row, areasByTicket.get(row.id) ?? [])));
+    return Promise.all(
+      rows.map(async (row) =>
+        toTicket(
+          row,
+          await this.screenshotUrl(row),
+          areasByTicket.get(row.id) ?? [],
+          computersByTicket?.get(row.id) ?? (computersByTicket ? [] : undefined),
+        ),
+      ),
+    );
   }
 
   private async toFullTicket(
     row: TicketWithComputer,
     participantAreas: readonly TicketArea[],
   ): Promise<Ticket> {
-    return toTicket(row, await this.screenshotUrl(row), participantAreas);
+    const computers = (await this.computers?.listFor([row.id]))?.get(row.id);
+
+    return toTicket(row, await this.screenshotUrl(row), participantAreas, computers);
   }
 
   /** Link assinado e temporário. Sem print, nulo — a tela usa isso para não mostrar nada. */
@@ -789,4 +869,18 @@ export class TicketsService {
 
     return this.staging.promote(screenshot, SCREENSHOT_FOLDER);
   }
+}
+
+/** "Máquinas: A → A, B" — o que a linha do tempo conta. `null` quando nada mudou. */
+export function describeComputerChange(
+  before: readonly { id: number; name: string }[],
+  after: readonly { id: number; name: string }[],
+): string | null {
+  const names = (list: readonly { name: string }[]) =>
+    list.length > 0 ? list.map((computer) => computer.name).join(', ') : 'nenhuma';
+  const sameSet =
+    before.length === after.length && before.every((computer) => after.some((other) => other.id === computer.id));
+  if (sameSet) return null;
+
+  return `Máquinas: ${names(before)} → ${names(after)}`;
 }

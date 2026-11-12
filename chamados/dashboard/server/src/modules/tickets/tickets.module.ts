@@ -13,6 +13,7 @@ import { TicketsRepository } from './repository/tickets.repository';
 import { TicketWatchersRepository } from './repository/ticket-watchers.repository';
 import { TicketProblemTypesRepository } from './repository/ticket-problem-types.repository';
 import { TicketStockItemsRepository } from './repository/ticket-stock-items.repository';
+import { TicketComputersRepository } from './repository/ticket-computers.repository';
 import { TicketAccessService } from './service/ticket-access.service';
 import { TicketAttachmentsService } from './service/ticket-attachments.service';
 import { TicketHistoriesService } from './service/ticket-histories.service';
@@ -61,6 +62,7 @@ import { DepartmentsModule } from '../departments/departments.module';
     TicketProblemTypesRepository,
     TicketStockItemsService,
     TicketStockItemsRepository,
+    TicketComputersRepository,
   ],
   exports: [TicketsService, TicketAssigneesService],
 })

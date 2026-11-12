@@ -44,6 +44,8 @@ export function toTicket(
   row: TicketWithComputer,
   screenshotUrl: string | null,
   participantAreas: readonly TicketArea[] = [],
+  /* Todas as máquinas do chamado. Sem a lista, vale a primeira, que vem na própria linha. */
+  computerList?: readonly { id: number; name: string }[],
 ): Ticket {
   const projectMeta = resolveTicketProjectMeta(row);
 
@@ -64,6 +66,11 @@ export function toTicket(
     screenshotUrl,
     computerId: row.computerId,
     computerName: row.computerName,
+    computers: computerList
+      ? [...computerList]
+      : row.computerId !== null
+        ? [{ id: row.computerId, name: row.computerName ?? '' }]
+        : [],
     ...projectMeta,
     assignee: row.assignee,
     assigneeId: row.assigneeId,

@@ -8,7 +8,7 @@ import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
 import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
 import { qualified } from '../../../lib/db/sql-column.util';
-import { ticketInArea } from '../../../lib/db/ticket-area.util';
+import { ticketInArea, ticketOnComputer } from '../../../lib/db/ticket-area.util';
 import { computerAlerts } from '../../../lib/db/schema/computer-alerts.schema';
 import { computers } from '../../../lib/db/schema/computers.schema';
 import { maintenanceSchedules } from '../../../lib/db/schema/maintenance-schedules.schema';
@@ -384,7 +384,7 @@ export class DashboardRepository {
           count: count(),
         })
         .from(tickets)
-        .innerJoin(computers, eq(computers.id, tickets.computerId))
+        .innerJoin(computers, ticketOnComputer(computers.id))
         .where(and(INFRA_TICKETS, gte(tickets.createdAt, since)))
         .groupBy(computers.id, computers.displayName, computers.name, tickets.problemType)
         .having(gte(count(), threshold))

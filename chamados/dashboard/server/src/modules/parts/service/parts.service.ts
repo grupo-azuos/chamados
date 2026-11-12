@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { balanceAfter, fitsInStock } from '@template/shared/domain/part-catalog.util';
+import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
 import {
   type CreateMovementInput,
@@ -215,6 +216,11 @@ export class PartsService {
       current.movement.createdBy,
       'Esta movimentação',
     );
+    /* Movimento de chamado se desfaz pelo chamado: apagá-lo aqui deixaria o chamado dizendo
+       que a peça saiu e o depósito dizendo que não. */
+    if (current.movement.ticketId !== null) {
+      throw new UnprocessableEntityException(ticketMovementMessage(current.movement.ticketId));
+    }
 
     const partId = current.movement.partId;
 
@@ -271,4 +277,9 @@ function stockMessage(part: PartRow, quantity: number): string {
   }
 
   return `Só há ${part.balance} de ${part.name} no depósito, e a saída é de ${quantity}. Confira a prateleira e registre a entrada que faltou.`;
+}
+
+/** Por que um movimento de chamado não se apaga pelo Depósito, e onde desfazê-lo. */
+export function ticketMovementMessage(ticketId: number): string {
+  return `Este movimento é do chamado ${formatTicketProtocol(ticketId)}. Para desfazê-lo, reabra o chamado e tire o item por lá.`;
 }

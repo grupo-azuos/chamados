@@ -8,7 +8,11 @@ export function sourceOf(row: TicketStockItemRow): TicketStockSource {
   return row.partId !== null ? 'parts' : 'inventory';
 }
 
-export function toTicketStockItem(row: TicketStockItemRow): TicketStockItem {
+export function toTicketStockItem(
+  row: TicketStockItemRow,
+  /* Os nomes das máquinas do chamado, para a ficha dizer para onde o item foi. */
+  computerNames: ReadonlyMap<number, string> = new Map(),
+): TicketStockItem {
   return {
     id: row.id,
     ticketId: row.ticketId,
@@ -17,6 +21,8 @@ export function toTicketStockItem(row: TicketStockItemRow): TicketStockItem {
     name: row.itemName,
     direction: row.direction,
     quantity: row.quantity,
+    computerId: row.computerId,
+    computerName: row.computerId !== null ? (computerNames.get(row.computerId) ?? null) : null,
     settledAt: row.settledAt ? row.settledAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     createdByName: row.createdByName,
