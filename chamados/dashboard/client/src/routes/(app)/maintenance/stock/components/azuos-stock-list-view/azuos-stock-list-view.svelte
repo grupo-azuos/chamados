@@ -66,6 +66,7 @@
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
 
   let { data, state: listState, actions }: AzuosStockListViewProps = $props();
 
@@ -187,6 +188,9 @@
               <div class="min-w-0">
                 <h3 class="text-ink-900 text-sm leading-tight font-semibold">{item.name}</h3>
                 <p class="text-ink-500 mt-1 text-xs">{detailOf(item)}</p>
+                <TicketStockLinks
+                  data={{ links: item.ticketLinks, ticketsPath: '/maintenance/tickets' }}
+                />
               </div>
 
               <div class="shrink-0 text-right">

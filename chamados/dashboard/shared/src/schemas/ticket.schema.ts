@@ -3,10 +3,9 @@ import { z } from 'zod';
 import { anydeskFormSchema, anydeskSchema } from '../domain/anydesk.util';
 import { contactPhoneSchema } from '../domain/phone.util';
 import {
-  isTicketProblemTypeForArea,
+  problemTypeFitsArea,
   TICKET_AREAS,
-  TICKET_PROBLEM_TYPES,
-  type TicketProblemType,
+  TICKET_PROBLEM_TYPE_NAME_MAX_LENGTH,
 } from '../domain/ticket-catalog.util';
 import {
   DEFAULT_TICKET_PRIORITY,
@@ -50,10 +49,19 @@ export const ticketStatusSchema = z.enum(TICKET_STATUSES, chooseFrom('uma situa�
 export const ticketPrioritySchema = z.enum(TICKET_PRIORITIES, chooseFrom('a urgência'));
 export const ticketDepartmentSchema = departmentNameSchema('Escolha seu departamento');
 export const ticketAreaSchema = z.enum(TICKET_AREAS, chooseFrom('a área do chamado'));
-export const ticketProblemTypeSchema = z.enum(
-  TICKET_PROBLEM_TYPES as [TicketProblemType, ...TicketProblemType[]],
-  chooseFrom('o tipo de problema'),
-);
+/**
+ * O tipo de problema é a CHAVE da lista fixa (`printer`) ou o NOME de um tipo cadastrado na
+ * hora ("Leitor de código de barras"). Por isso é texto, e não `enum`: a lista cresce sem
+ * migration. Quem garante que o valor existe na área é o servidor.
+ */
+export const ticketProblemTypeSchema = z
+  .string({ required_error: 'Escolha o tipo de problema' })
+  .trim()
+  .min(1, 'Escolha o tipo de problema')
+  .max(
+    TICKET_PROBLEM_TYPE_NAME_MAX_LENGTH,
+    `O tipo de problema pode ter até ${TICKET_PROBLEM_TYPE_NAME_MAX_LENGTH} caracteres`,
+  );
 
 /**
  * O tipo de problema precisa COMBINAR com a área: "ar-condicionado" não existe em Infra, e
@@ -65,7 +73,7 @@ function checkProblemTypeMatchesArea(
   value: { area: string; problemType: string },
   ctx: z.RefinementCtx,
 ): void {
-  if (isTicketProblemTypeForArea(value.area as never, value.problemType)) return;
+  if (problemTypeFitsArea(value.area as never, value.problemType)) return;
 
   ctx.addIssue({
     code: z.ZodIssueCode.custom,
@@ -279,6 +287,16 @@ export const ticketInviteSchema = z.object({
   phone: z.string().nullable(),
 });
 
+/** Uma opção de tipo de problema: a chave (ou o nome, no cadastrado) e o rótulo. */
+export const ticketProblemTypeOptionSchema = z.object({
+  value: z.string(),
+  label: z.string(),
+});
+export type TicketProblemTypeOption = z.infer<typeof ticketProblemTypeOptionSchema>;
+
+/** De qual área são os tipos de problema pedidos. */
+export const ticketProblemTypeOptionsQuerySchema = z.object({ area: ticketAreaSchema });
+
 /** De qual área são os responsáveis pedidos. */
 export const ticketAssigneeOptionsQuerySchema = z.object({ area: ticketAreaSchema });
 
@@ -455,6 +473,15 @@ export const updateTicketSchema = z.object({
   /** O sistema do chamado. Nulo DESVINCULA. */
   projectId: z.number().int().positive().nullable().optional(),
   /**
+   * O sistema EXTERNO, fora do cadastro — o "trilha" que quem abriu digitou. Vale só sem
+   * `projectId`: escolher um sistema cadastrado apaga este nome, e escrever este nome
+   * desvincula o cadastrado. Nulo ou vazio limpa.
+   */
+  customSystemName: z.preprocess(
+    (value) => (value === '' ? null : value),
+    customSystemNameSchema.nullable().optional(),
+  ),
+  /**
    * TROCAR O RESPONSÁVEL — só o super admin. Para os demais o campo é recusado pelo servidor:
    * quem assume um chamado vira responsável ao lançar o primeiro histórico (`toTicketMove`), e
    * não escolhendo o próprio nome. O NOME (`assignee`) nunca vem do corpo: sai do cadastro de
@@ -484,6 +511,8 @@ export const ticketDataFormSchema = z
     computerId: z.string(),
     /** O sistema de software selecionado no select. */
     projectId: z.string().optional(),
+    /** O sistema EXTERNO, digitado na busca do campo de sistema. Vazio é "nenhum". */
+    customSystemName: customSystemNameSchema.optional(),
     /**
      * O responsável escolhido no select — só o super admin vê o campo. Vazio ou igual ao atual
      * quer dizer "não trocar": o view-model só manda o campo quando ele de fato mudou.

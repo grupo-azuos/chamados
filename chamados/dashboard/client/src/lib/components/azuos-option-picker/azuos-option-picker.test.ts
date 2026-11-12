@@ -285,3 +285,37 @@ describe('AzuosOptionPicker — separador de grupo', () => {
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   });
 });
+
+describe('custom value', () => {
+  async function typeInSearch(ui: Record<string, unknown>) {
+    const onChange = vi.fn();
+    const onCustomValue = vi.fn();
+    render(OptionPicker, {
+      data: { value: 'printer', options: [{ value: 'printer', label: 'Impressora' }] },
+      ui: { ariaLabel: 'Tipo', mode: 'combobox', allowCustomValue: true, ...ui },
+      actions: { onChange, onCustomValue },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Tipo' }));
+    const search = await screen.findByPlaceholderText('Buscar…');
+    await fireEvent.input(search, { target: { value: 'Nobreak' } });
+
+    return { onChange, onCustomValue };
+  }
+
+  // feliz
+  it('registers the typed name when the action says so', async () => {
+    const { onCustomValue } = await typeInSearch({ customValueAction: 'Cadastrar' });
+
+    await fireEvent.click(screen.getByText('Cadastrar “Nobreak”'));
+
+    expect(onCustomValue).toHaveBeenCalledWith('Nobreak');
+  });
+
+  // triste
+  it('keeps "Usar" when no action is given', async () => {
+    await typeInSearch({});
+
+    expect(screen.getByText('Usar “Nobreak”')).toBeInTheDocument();
+    expect(screen.queryByText(/Cadastrar/)).toBeNull();
+  });
+});

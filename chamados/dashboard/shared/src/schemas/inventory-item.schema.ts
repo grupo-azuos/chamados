@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { INVENTORY_CATEGORIES, INVENTORY_UNITS } from '../domain/inventory-catalog.util';
 import { paginationQuerySchema } from './pagination.schema';
 import { stagedFileSchema } from './staged-file.schema';
+import { ticketStockLinkSchema } from './ticket-stock-item.schema';
 
 /**
  * O CONTRATO do inventário da Manutenção. Um schema, duas pontas: a API o usa como DTO e
@@ -78,6 +79,11 @@ export const inventoryItemSchema = z.object({
    * uma entrada, uma saída ou um descarte — nunca editando o cadastro.
    */
   balance: z.number().int(),
+  /**
+   * Os chamados ABERTOS que prendem este item (reservado para sair ou para voltar). O saldo
+   * só anda quando o chamado encerra; até lá, a tela mostra o chamado com o link para ele.
+   */
+  ticketLinks: z.array(ticketStockLinkSchema).optional(),
 
   createdAt: z.string().datetime(),
   createdBy: z.string(),

@@ -196,6 +196,22 @@ describe('toTicketUpdate', () => {
     expect(toTicketUpdate({ area: 'manutencao' }, ANA, NOW).area).toBe('manutencao');
   });
 
+  /* O sistema EXTERNO (fora do cadastro) é o "trilha" digitado: escrevê-lo desvincula o
+     cadastrado, e escolher um cadastrado apaga o nome. */
+  it('keeps an external system name and unlinks the registered one', () => {
+    const update = toTicketUpdate({ customSystemName: '  trilha ', projectId: null }, ANA, NOW);
+
+    expect(update.customSystemName).toBe('trilha');
+    expect(update.projectId).toBeNull();
+  });
+
+  it('drops the external name when a registered system is chosen', () => {
+    const update = toTicketUpdate({ customSystemName: null, projectId: 8 }, ANA, NOW);
+
+    expect(update.projectId).toBe(8);
+    expect(update.customSystemName).toBeNull();
+  });
+
   // triste
   it('touches nothing but the stamps when the change is empty', () => {
     expect(toTicketUpdate({}, ANA, NOW)).toEqual({ updatedAt: NOW, updatedBy: ANA });
@@ -203,6 +219,10 @@ describe('toTicketUpdate', () => {
 
   it('leaves the area alone when it was not sent', () => {
     expect(toTicketUpdate({ priority: 'low' }, ANA, NOW)).not.toHaveProperty('area');
+  });
+
+  it('leaves the system alone when it was not sent', () => {
+    expect(toTicketUpdate({ priority: 'low' }, ANA, NOW)).not.toHaveProperty('customSystemName');
   });
 
   /* O estágio e os carimbos dele só mudam por um histórico lançado (`toTicketMove`): corrigir

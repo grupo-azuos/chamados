@@ -147,6 +147,45 @@ describe('buildServiceOrderPdf', () => {
     expect(fingerprint(second)).toBe(fingerprint(first));
   });
 
+  /* Os itens de estoque entram no documento: o que saiu e o que voltou ao depósito. */
+  it('lists the stock items of the ticket', async () => {
+    const without = await buildServiceOrderPdf({ ticket, protocol: 'CH-0007', histories: [] }, issue);
+    const withItems = await buildServiceOrderPdf(
+      {
+        ticket,
+        protocol: 'CH-0007',
+        histories: [],
+        stockItems: [
+          {
+            id: 1,
+            ticketId: 7,
+            source: 'parts',
+            itemId: 3,
+            name: 'Mouse USB',
+            direction: 'out',
+            quantity: 2,
+            settledAt: null,
+            createdAt: '2026-03-02T10:00:00.000Z',
+            createdByName: 'Ana Lima',
+          },
+        ],
+      },
+      issue,
+    );
+
+    expect(withItems.length).toBeGreaterThan(without.length);
+  });
+
+  /* Sem item, nada muda no desenho: as ordens já emitidas continuam conferindo. */
+  it('draws the same file with no stock items as before they existed', async () => {
+    const order = { ticket, protocol: 'CH-0007', histories: [] };
+
+    const before = await buildServiceOrderPdf(order, issue);
+    const after = await buildServiceOrderPdf({ ...order, stockItems: [] }, issue);
+
+    expect(fingerprint(after)).toBe(fingerprint(before));
+  });
+
   /* O link de conferência vai dentro do arquivo, com o código INTEIRO da emissão. */
   it('carries the link to the page that checks it', async () => {
     const buffer = await buildServiceOrderPdf(

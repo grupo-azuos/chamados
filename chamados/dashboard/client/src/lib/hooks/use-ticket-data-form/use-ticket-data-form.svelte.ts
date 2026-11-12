@@ -25,7 +25,13 @@ import { type FormFieldState } from '$lib/types/form-field.type';
 const MACHINE_OPTIONS_PAGE_SIZE = 200;
 
 export type TicketDataField =
-  'priority' | 'area' | 'problemType' | 'computerId' | 'projectId' | 'assigneeId';
+  | 'priority'
+  | 'area'
+  | 'problemType'
+  | 'computerId'
+  | 'projectId'
+  | 'customSystemName'
+  | 'assigneeId';
 
 export type TicketDataFormModel = {
   data: {
@@ -35,6 +41,8 @@ export type TicketDataFormModel = {
     machines: { value: string; label: string }[];
     /** Os sistemas/projetos para vincular o chamado a um deles. */
     projects: { value: string; label: string }[];
+    /** Os tipos de problema da área do formulário: os fixos e os cadastrados na hora. */
+    problemTypes: { value: string; label: string }[];
     /** As áreas que ainda PODEM entrar como participante — todas, menos as que já estão. */
     availableParticipantAreas: { value: TicketArea; label: string }[];
     /**
@@ -95,6 +103,10 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
       }),
     ),
   );
+
+  /* Os tipos de problema acompanham a ÁREA do formulário: reclassificar troca a lista. O
+     cadastrado na hora entra na lista no próximo carregamento — a busca do campo é que o cria. */
+  let problemTypes = $state<{ value: string; label: string }[]>([]);
 
   /* Trocar o responsável é do super admin: só ele recebe as opções, e sem opções o campo nem
      aparece. As opções são as da área que está no formulário — reclassificar muda quem atende. */
@@ -171,6 +183,26 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
 
   $effect(() => {
     const area = values.current.area;
+
+    let isCurrent = true;
+    void queryClient
+      .fetchQuery({
+        queryKey: [...TICKETS_QUERY_KEY, 'problem-type-options', area],
+        queryFn: () => ticketsApi.problemTypeOptions(area),
+        staleTime: 60_000,
+      })
+      .then((options) => {
+        if (isCurrent) problemTypes = options;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isCurrent = false;
+    };
+  });
+
+  $effect(() => {
+    const area = values.current.area;
     if (!canReassign) return;
 
     let isCurrent = true;
@@ -201,8 +233,10 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
           problemType: fieldOf('problemType'),
           computerId: fieldOf('computerId'),
           projectId: fieldOf('projectId'),
+          customSystemName: fieldOf('customSystemName'),
           assigneeId: fieldOf('assigneeId'),
         },
+        problemTypes,
         assignees: assignees.map((option) => ({ value: option.id, label: option.name })),
         machines: toMachineOptions(machines.current.data?.items ?? []),
         projects: toProjectOptions(projects.current.data?.items ?? []),
@@ -224,6 +258,10 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
         /* Mexeu de novo: o "salvo" de antes já não descreve o que está na tela. */
         isSaved = false;
         form.setFieldValue(field, value as never);
+        /* Sistema cadastrado e sistema externo são o MESMO campo na tela: escolher um apaga o
+           outro, como o servidor faz ao gravar. */
+        if (field === 'projectId') form.setFieldValue('customSystemName', '');
+        if (field === 'customSystemName' && value) form.setFieldValue('projectId', '');
       },
       onBlur: (field) => {
         form.setFieldMeta(field, (prev) => ({ ...prev, isTouched: true }));
@@ -257,6 +295,8 @@ export function toFormValues(ticket: Ticket): TicketDataFormValues {
     computerId: ticket.computerId === null ? '' : String(ticket.computerId),
     projectId:
       ticket.projectId !== null && ticket.projectId !== undefined ? String(ticket.projectId) : '',
+    /* O sistema externo, o "trilha" que quem abriu digitou — só vale sem sistema cadastrado. */
+    customSystemName: ticket.projectId ? '' : (ticket.customSystemName ?? ''),
     assigneeId: ticket.assigneeId ?? '',
   };
 }
@@ -284,10 +324,18 @@ export function toUpdateInput(
     area: values.area,
     problemType: values.problemType,
     computerId: values.computerId === '' ? null : Number(values.computerId),
-    ...(values.projectId !== undefined
-      ? { projectId: values.projectId === '' ? null : Number(values.projectId) }
-      : {}),
+    ...(values.projectId !== undefined ? toSystemInput(values) : {}),
   };
+}
+
+/**
+ * O sistema do chamado: o cadastrado (número) ou o externo (nome). Sem cadastrado, vai o nome
+ * — ou nulo, que limpa os dois.
+ */
+function toSystemInput(values: TicketDataFormValues) {
+  if (values.projectId) return { projectId: Number(values.projectId), customSystemName: null };
+
+  return { projectId: null, customSystemName: values.customSystemName?.trim() || null };
 }
 
 /** As máquinas do inventário, no formato do campo de escolha. */

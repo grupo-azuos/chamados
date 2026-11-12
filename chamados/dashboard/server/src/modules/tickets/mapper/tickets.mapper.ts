@@ -218,8 +218,19 @@ export function toTicketUpdate(
   setIfDefined(update, 'problemType', input.problemType);
   /* Nulo aqui DESVINCULA a máquina — é como se desfaz um vínculo errado. */
   setIfDefined(update, 'computerId', input.computerId);
-  /* Nulo aqui DESVINCULA o projeto de software */
+  /* O sistema EXTERNO (fora do cadastro): escrever um nome desvincula o cadastrado, e nulo o
+     limpa. Vem antes do `projectId` de propósito — escolher um sistema cadastrado ganha. */
+  if (input.customSystemName !== undefined) {
+    const name =
+      typeof input.customSystemName === 'string'
+        ? (normalizeOptional(input.customSystemName) ?? null)
+        : null;
+    update.customSystemName = name;
+    if (name) update.projectId = null;
+  }
+  /* Nulo aqui DESVINCULA o projeto de software; um projeto escolhido apaga o nome digitado. */
   setIfDefined(update, 'projectId', input.projectId);
+  if (input.projectId) update.customSystemName = null;
 
   return update;
 }

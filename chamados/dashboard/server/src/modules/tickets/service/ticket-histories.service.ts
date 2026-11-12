@@ -22,6 +22,7 @@ import {
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type TicketHistoryRow } from '../../../lib/db/schema/ticket-histories.schema';
+import { type DatabaseExecutor } from '../../../lib/db/db.type';
 import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
 import { assertCanAttendTicket, assertCanRead } from '../../../lib/policy/policy-assert.util';
 import { GithubService } from '../../software-projects/service/github.service';
@@ -38,6 +39,7 @@ import { TicketsRepository } from '../repository/tickets.repository';
 import { TICKET_NOT_FOUND, TicketAccessService, type TicketInReach } from './ticket-access.service';
 import { TicketAttachmentsService } from './ticket-attachments.service';
 import { TicketPeopleService } from './ticket-people.service';
+import { TicketStockItemsService } from './ticket-stock-items.service';
 import { TicketWhatsappNotifierService } from './ticket-whatsapp-notifier.service';
 
 /**
@@ -57,6 +59,7 @@ export class TicketHistoriesService {
     @Optional() private readonly people?: TicketPeopleService,
     @Optional() private readonly notifier?: TicketWhatsappNotifierService,
     @Optional() private readonly tickets?: TicketsRepository,
+    @Optional() private readonly stockItems?: TicketStockItemsService,
   ) {}
 
   /** A linha do tempo inteira, para o painel. */
@@ -114,6 +117,7 @@ export class TicketHistoriesService {
     const row = await this.repository.record(
       toHistoryInsert(reach.ticket, entry, author),
       toTicketMove(reach.ticket, entry, author),
+      this.settlementOf(reach.ticket, entry, author),
     );
 
     const saved = await this.attachments.store(ticketId, accepted, {
@@ -201,6 +205,25 @@ export class TicketHistoriesService {
       },
       recipients,
     );
+  }
+
+  /**
+   * ENCERRAR baixa os itens de estoque do chamado: o que estava reservado vira movimento no
+   * depósito, na mesma transação do histórico que encerra. Qualquer outro histórico não mexe
+   * no depósito.
+   */
+  private settlementOf(
+    ticket: TicketRow,
+    entry: HistoryEntry,
+    author: { name: string; email: string },
+  ): ((executor: DatabaseExecutor) => Promise<void>) | undefined {
+    const closes =
+      !isClosedTicketStatus(ticket.status) &&
+      isClosedTicketStatus(nextTicketStatus(ticket.status, entry.type));
+    const stockItems = this.stockItems;
+    if (!closes || !stockItems) return undefined;
+
+    return (executor) => stockItems.settle(ticket, author, executor);
   }
 
   /**

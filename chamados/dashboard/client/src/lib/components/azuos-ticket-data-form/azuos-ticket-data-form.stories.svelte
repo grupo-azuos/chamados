@@ -122,6 +122,30 @@
   }}
 />
 
+<!-- Sistema fora do cadastro (o "trilha" que quem abriu digitou) e um tipo de problema
+     cadastrado na hora: os dois aparecem pelo nome. -->
+<Story
+  name="ExternalSystemAndRegisteredType"
+  args={{
+    data: {
+      ...data,
+      fields: {
+        ...data.fields,
+        area: { value: 'sistema', error: null },
+        problemType: { value: 'Integração com o banco', error: null },
+        customSystemName: { value: 'trilha', error: null },
+      },
+      problemTypes: [
+        { value: 'bug', label: 'Erro no sistema' },
+        { value: 'Integração com o banco', label: 'Integração com o banco' },
+        { value: 'other', label: 'Outro' },
+      ],
+      projects: [{ value: '1', label: 'Central de Chamados' }],
+    },
+    actions,
+  }}
+/>
+
 <Story name="Saving" args={{ data, state: { isSubmitting: true }, actions }} />
 
 <!-- Acabou de salvar: a confirmação aparece ao lado do botão. -->

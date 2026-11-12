@@ -2,6 +2,7 @@
   import {
     ticketAreaLabel,
     ticketAreaOptions,
+    ticketProblemTypeLabel,
     ticketProblemTypeOptionsForArea,
     type TicketArea,
   } from '@template/shared/domain/ticket-catalog.util';
@@ -19,6 +20,7 @@
     | 'problemType'
     | 'computerId'
     | 'projectId'
+    | 'customSystemName'
     | 'assigneeId';
 
   /**
@@ -36,8 +38,13 @@
     data: {
       ticket: Ticket;
       /* O responsável é opcional: só existe para quem pode trocá-lo (o super admin). */
-      fields: Record<Exclude<TicketDataField, 'assigneeId'>, FormFieldState> & {
+      fields: Record<
+        Exclude<TicketDataField, 'assigneeId' | 'customSystemName'>,
+        FormFieldState
+      > & {
         assigneeId?: FormFieldState;
+        /** O sistema EXTERNO, digitado na busca do campo de sistema. */
+        customSystemName?: FormFieldState;
       };
       /** Quem pode ser o responsável. Vazio (o padrão) esconde o campo. */
       assignees?: { value: string; label: string }[];
@@ -45,6 +52,11 @@
       machines: { value: string; label: string }[];
       /** Os projetos/sistemas para vincular o chamado. */
       projects?: { value: string; label: string }[];
+      /**
+       * Os tipos de problema da área, com os cadastrados na hora. Ausente, vale a lista fixa
+       * da área.
+       */
+      problemTypes?: { value: string; label: string }[];
       /** As áreas que ainda podem entrar como participante — todas, menos as que já são. */
       availableParticipantAreas: { value: TicketArea; label: string }[];
     };
@@ -82,7 +94,6 @@
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
-  import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import { cn } from '$lib/utils/cn';
 
@@ -101,7 +112,19 @@
   /* As opções de tipo de problema dependem da ÁREA escolhida — Manutenção não tem
      "ar-condicionado" na lista de Infra, nem Infra tem "rede caiu" na de Manutenção. */
   const problemTypeOptions = $derived(
-    ticketProblemTypeOptionsForArea(fields.area.value as TicketArea),
+    data.problemTypes && data.problemTypes.length > 0
+      ? data.problemTypes
+      : ticketProblemTypeOptionsForArea(fields.area.value as TicketArea),
+  );
+
+  /* O sistema externo (fora do cadastro) não é opção da lista: é o nome que aparece no campo
+     quando nenhum sistema cadastrado está escolhido. */
+  const customSystemName = $derived(fields.customSystemName?.value ?? '');
+  const showsSystem = $derived(
+    Boolean(fields.projectId) &&
+      (fields.area.value === 'sistema' ||
+        (data.projects?.length ?? 0) > 0 ||
+        customSystemName !== ''),
   );
 
   function handleSubmit(event: SubmitEvent): void {
@@ -145,11 +168,23 @@
        esta correção, o mapa de "o que mais dá problema" soma o palpite de quem pediu socorro,
        e não o diagnóstico. -->
   <FilterField data={{ label: 'Tipo do problema' }}>
-    <SelectField
+    <!-- Não achou o tipo na busca? Digita e cadastra: o tipo novo nasce na área ao salvar. -->
+    <OptionPicker
       data={{ value: fields.problemType.value, options: problemTypeOptions }}
-      ui={{ ariaLabel: 'Tipo do problema' }}
+      ui={{
+        ariaLabel: 'Tipo do problema',
+        fullWidth: true,
+        mode: 'combobox',
+        searchPlaceholder: 'Buscar ou cadastrar tipo…',
+        allowCustomValue: true,
+        customValueAction: 'Cadastrar',
+        selectedLabel: ticketProblemTypeLabel(fields.problemType.value),
+      }}
       state={{ isDisabled: formState?.isSubmitting }}
-      actions={{ onChange: (value: string) => actions.onChange('problemType', value) }}
+      actions={{
+        onChange: (value: string) => actions.onChange('problemType', value),
+        onCustomValue: (value: string) => actions.onChange('problemType', value),
+      }}
     />
   </FilterField>
 
@@ -173,13 +208,26 @@
     />
   </FilterField>
 
-  {#if fields.projectId && (fields.area.value === 'sistema' || (data.projects && data.projects.length > 0))}
+  {#if fields.projectId && showsSystem}
+    <!-- Sistema fora do cadastro (o "trilha" que quem abriu digitou) aparece pelo nome, e se
+         escreve pela mesma busca: digita e usa. -->
     <FilterField data={{ label: 'Sistema / Software' }}>
       <OptionPicker
         data={{ value: fields.projectId.value, options: projectOptions }}
-        ui={{ ariaLabel: 'Sistema / Software', placeholder: 'Nenhum', fullWidth: true }}
+        ui={{
+          ariaLabel: 'Sistema / Software',
+          placeholder: 'Nenhum',
+          fullWidth: true,
+          mode: 'combobox',
+          searchPlaceholder: 'Buscar ou digitar sistema…',
+          allowCustomValue: true,
+          selectedLabel: !fields.projectId.value && customSystemName ? customSystemName : undefined,
+        }}
         state={{ isDisabled: formState?.isSubmitting }}
-        actions={{ onChange: (value: string) => actions.onChange('projectId', value) }}
+        actions={{
+          onChange: (value: string) => actions.onChange('projectId', value),
+          onCustomValue: (value: string) => actions.onChange('customSystemName', value),
+        }}
       />
     </FilterField>
   {/if}
