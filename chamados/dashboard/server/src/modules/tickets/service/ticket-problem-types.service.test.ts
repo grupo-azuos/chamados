@@ -84,3 +84,27 @@ describe('TicketProblemTypesService.resolve', () => {
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
 });
+
+describe('TicketProblemTypesService.register', () => {
+  // feliz
+  it('registers the typed name right away and hands back its option', async () => {
+    const { service, repository } = serviceWith();
+
+    await expect(service.register('infra', 'Monitor', 'ti@example.com')).resolves.toEqual({
+      value: 'Monitor',
+      label: 'Monitor',
+    });
+    expect(repository.insert).toHaveBeenCalledWith('infra', 'Monitor', 'ti@example.com');
+  });
+
+  // triste
+  it('does not duplicate a fixed type typed by its label', async () => {
+    const { service, repository } = serviceWith();
+
+    await expect(service.register('infra', 'impressora', 'ti@example.com')).resolves.toEqual({
+      value: 'printer',
+      label: 'Impressora',
+    });
+    expect(repository.insert).not.toHaveBeenCalled();
+  });
+});

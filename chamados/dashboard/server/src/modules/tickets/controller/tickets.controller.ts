@@ -36,6 +36,7 @@ import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   AddTicketAreaDto,
   CreateTicketDto,
+  CreateTicketProblemTypeDto,
   MyTicketDto,
   OpenedTicketDto,
   PublicTicketDto,
@@ -165,6 +166,22 @@ export class TicketsController {
     @Query() query: TicketProblemTypeOptionsQueryDto,
   ): Promise<TicketProblemTypeOptionDto[]> {
     return this.service.listProblemTypeOptions(query.area);
+  }
+
+  @Post('problem-types')
+  @ApiOperation({
+    summary: 'Cadastra um tipo de problema na hora',
+    description:
+      'Pela busca do campo de tipo, quando o que a pessoa procura não está na lista. Grava na hora e devolve a opção, que passa a aparecer para todos daquela área. Nome que já existe (fixo ou cadastrado, sem diferença de maiúscula) não duplica: volta a opção existente.',
+  })
+  @ApiBody({ type: CreateTicketProblemTypeDto })
+  @ApiCreatedResponse({ type: TicketProblemTypeOptionDto })
+  @ApiUnprocessableEntityResponse({ description: 'Nome vazio, longo demais ou de outra área.' })
+  async registerProblemType(
+    @CurrentUser() user: RequestUser,
+    @Body() body: CreateTicketProblemTypeDto,
+  ): Promise<TicketProblemTypeOptionDto> {
+    return this.service.registerProblemType(user, body);
   }
 
   @Get('stock-options')

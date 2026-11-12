@@ -197,3 +197,19 @@ export function isTicketProblemTypeForArea(area: TicketArea, value: unknown): bo
     (TICKET_PROBLEM_TYPES_BY_AREA[area] as readonly string[]).includes(value)
   );
 }
+
+/**
+ * A lista de tipos com um tipo recém-cadastrado — antes do "Outro", como os cadastrados que vêm
+ * do servidor. Se já estiver na lista, ela volta como está.
+ */
+export function withRegisteredProblemType(
+  options: readonly { value: string; label: string }[],
+  option: { value: string; label: string },
+): { value: string; label: string }[] {
+  if (options.some((known) => known.value === option.value)) return [...options];
+
+  const other = options.filter((known) => known.value === 'other');
+  const rest = options.filter((known) => known.value !== 'other');
+
+  return [...rest, option, ...other];
+}

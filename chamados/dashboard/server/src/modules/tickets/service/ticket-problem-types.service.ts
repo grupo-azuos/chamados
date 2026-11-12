@@ -5,6 +5,7 @@ import {
   isTicketProblemTypeForArea,
   type TicketArea,
   ticketAreaLabel,
+  ticketProblemTypeLabel,
   ticketProblemTypeOptionsForArea,
 } from '@template/shared/domain/ticket-catalog.util';
 import { type TicketProblemTypeOption } from '@template/shared/schemas/ticket.schema';
@@ -33,6 +34,17 @@ export class TicketProblemTypesService {
     const fixed = builtIn.filter((option) => option.value !== 'other');
 
     return [...fixed, ...custom, ...other];
+  }
+
+  /**
+   * CADASTRA na hora o tipo digitado na busca e devolve a opção dele — já escolhível, e já na
+   * lista de todos daquela área. Nome de um tipo que já existe (fixo ou cadastrado) não
+   * duplica: volta a opção que existe.
+   */
+  async register(area: TicketArea, name: string, createdBy: string): Promise<TicketProblemTypeOption> {
+    const value = await this.resolve(area, name, createdBy);
+
+    return { value, label: ticketProblemTypeLabel(value) };
   }
 
   /**

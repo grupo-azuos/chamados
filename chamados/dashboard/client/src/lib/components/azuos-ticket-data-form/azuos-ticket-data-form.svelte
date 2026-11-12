@@ -65,6 +65,7 @@
       isSaved?: boolean;
       error?: string | null;
       isAddingArea?: boolean;
+      isRegisteringType?: boolean;
       removingAreaArea?: TicketArea | null;
       areaError?: string | null;
     };
@@ -74,6 +75,11 @@
       onSubmit: () => void;
       onAddParticipantArea: (area: TicketArea) => void;
       onRemoveParticipantArea: (area: TicketArea) => void;
+      /**
+       * "Cadastrar" da busca do tipo: grava o tipo na hora. Ausente, o nome só vai para o
+       * campo e o tipo nasce ao salvar.
+       */
+      onRegisterProblemType?: (name: string) => void;
     };
   };
 
@@ -180,10 +186,13 @@
         customValueAction: 'Cadastrar',
         selectedLabel: ticketProblemTypeLabel(fields.problemType.value),
       }}
-      state={{ isDisabled: formState?.isSubmitting }}
+      state={{ isDisabled: formState?.isSubmitting || formState?.isRegisteringType }}
       actions={{
         onChange: (value: string) => actions.onChange('problemType', value),
-        onCustomValue: (value: string) => actions.onChange('problemType', value),
+        onCustomValue: (value: string) =>
+          actions.onRegisterProblemType
+            ? actions.onRegisterProblemType(value)
+            : actions.onChange('problemType', value),
       }}
     />
   </FilterField>

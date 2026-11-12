@@ -4,6 +4,7 @@ import {
   builtInProblemTypeByLabel,
   isTicketProblemTypeForArea,
   problemTypeFitsArea,
+  withRegisteredProblemType,
   TICKET_PROBLEM_TYPES,
   ticketAreaOptions,
   ticketProblemTypeLabel,
@@ -98,5 +99,26 @@ describe('registered problem types', () => {
 
   it('finds nothing for a label that is not fixed', () => {
     expect(builtInProblemTypeByLabel('infra', 'Nobreak')).toBeNull();
+  });
+});
+
+describe('withRegisteredProblemType', () => {
+  const options = [
+    { value: 'printer', label: 'Impressora' },
+    { value: 'other', label: 'Outro' },
+  ];
+
+  // feliz
+  it('puts the new type before "Outro"', () => {
+    expect(
+      withRegisteredProblemType(options, { value: 'Monitor', label: 'Monitor' }).map((o) => o.value),
+    ).toEqual(['printer', 'Monitor', 'other']);
+  });
+
+  // triste
+  it('does not repeat a type already on the list', () => {
+    expect(withRegisteredProblemType(options, { value: 'printer', label: 'Impressora' })).toEqual(
+      options,
+    );
   });
 });

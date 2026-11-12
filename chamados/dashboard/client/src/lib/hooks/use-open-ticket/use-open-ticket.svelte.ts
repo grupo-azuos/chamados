@@ -3,7 +3,10 @@ import { createForm } from '@tanstack/svelte-form';
 import { page } from '$app/state';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { formatPhoneInput } from '@template/shared/domain/phone.util';
-import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
+import {
+  type TicketArea,
+  withRegisteredProblemType,
+} from '@template/shared/domain/ticket-catalog.util';
 import {
   invitePhoneForForm,
   TICKET_INVITE_PARAM,
@@ -98,6 +101,8 @@ export type OpenTicketModel = {
     onAttachmentsChange: (files: File[]) => void;
     onAttachmentError: (message: string | null) => void;
     onWatchersChange: (ids: string[]) => void;
+    /** "Cadastrar" da busca do tipo: grava o tipo na hora e já o escolhe. */
+    onRegisterProblemType: (name: string) => void;
     onSubmit: () => void;
     onOpenAnother: () => void;
   };
@@ -254,8 +259,13 @@ export function useOpenTicketModel(): OpenTicketModel {
   /* Os tipos de problema também dependem da área, e pelo mesmo motivo têm busca própria.
      Falhou? Fica a lista fixa da área, que a tela já conhece. */
   let problemTypes = $state<{ value: string; label: string }[]>([]);
+  /* A lista recarrega só quando a ÁREA muda — e não a cada tecla do formulário: recarregar
+     depois de cadastrar um tipo trazia a cópia antiga e o tipo novo sumia da lista. */
+  const problemTypeArea = $derived(values.current.area);
+  /* Os tipos cadastrados por esta tela — não é estado de tela, só memória para a lista. */
+  const registeredTypes: { area: string; option: { value: string; label: string } }[] = [];
   $effect(() => {
-    const area = values.current.area;
+    const area = problemTypeArea;
     problemTypes = [];
     if (!area) return;
 
@@ -267,7 +277,10 @@ export function useOpenTicketModel(): OpenTicketModel {
         staleTime: 60_000,
       })
       .then((options) => {
-        if (isCurrent) problemTypes = options;
+        /* Os cadastrados nesta tela entram de novo: a lista pode chegar DEPOIS do cadastro. */
+        if (isCurrent) problemTypes = registeredTypes
+          .filter((registered) => registered.area === area)
+          .reduce((list, registered) => withRegisteredProblemType(list, registered.option), options);
       })
       .catch(() => undefined);
 
@@ -275,6 +288,24 @@ export function useOpenTicketModel(): OpenTicketModel {
       isCurrent = false;
     };
   });
+
+  /* CADASTRAR o tipo na hora: entra na lista de todos daquela área no clique, e já fica
+     escolhido aqui. Falhou? O nome fica no campo e o tipo nasce ao abrir o chamado. */
+  const registerProblemType = (name: string) => {
+    const area = values.current.area;
+    form.setFieldValue('problemType', name);
+    if (!area) return;
+
+    void ticketsApi
+      .registerProblemType(area, name)
+      .then(async (option) => {
+        registeredTypes.push({ area, option });
+        problemTypes = withRegisteredProblemType(problemTypes, option);
+        form.setFieldValue('problemType', option.value);
+        await queryClient.invalidateQueries({ queryKey: ['tickets', 'problem-type-options'] });
+      })
+      .catch(() => undefined);
+  };
 
   $effect(() => {
     const area = values.current.area;
@@ -360,6 +391,7 @@ export function useOpenTicketModel(): OpenTicketModel {
          — e esses hooks nunca montam um, só chamam `setFieldValue`/`validateField` direto.
          Sem marcar aqui, o erro nunca aparecia ao SAIR do campo, só depois de um envio (ver
          `toFieldState`, em form-projection.svelte.ts). */
+      onRegisterProblemType: registerProblemType,
       onBlur: (field) => {
         form.setFieldMeta(field, (prev) => ({ ...prev, isTouched: true }));
         void form.validateField(field, 'change');

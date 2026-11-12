@@ -18,6 +18,7 @@ vi.mock('$lib/api/tickets.api', () => ({
     addArea: vi.fn(),
     removeArea: vi.fn(),
     problemTypeOptions: vi.fn(),
+    registerProblemType: vi.fn(),
   },
 }));
 
@@ -250,6 +251,30 @@ describe('useTicketDataFormModel', () => {
 
     model.actions.onChange('projectId', '5');
     expect(model.data.fields.customSystemName.value).toBe('');
+  });
+
+  /* "Cadastrar" grava na hora: o tipo entra na lista e já fica escolhido, sem esperar o salvar. */
+  it('registers a typed problem type right away and picks it', async () => {
+    vi.mocked(ticketsApi.registerProblemType).mockResolvedValue({ value: 'Monitor', label: 'Monitor' });
+    const model = mountModel();
+
+    model.actions.onRegisterProblemType('Monitor');
+
+    await waitFor(() => expect(model.data.fields.problemType.value).toBe('Monitor'));
+    expect(ticketsApi.registerProblemType).toHaveBeenCalledWith('infra', 'Monitor');
+    expect(model.data.problemTypes.map((option) => option.value)).toContain('Monitor');
+    expect(ticketsApi.update).not.toHaveBeenCalled();
+  });
+
+  it('shows the refusal when the type could not be registered', async () => {
+    vi.mocked(ticketsApi.registerProblemType).mockRejectedValue(
+      new ApiError(422, 'O tipo de problema pode ter até 80 caracteres'),
+    );
+    const model = mountModel();
+
+    model.actions.onRegisterProblemType('x'.repeat(81));
+
+    await waitFor(() => expect(model.state.error).toMatch(/até 80 caracteres/));
   });
 
   it('offers the machines of the inventory to link the ticket to', async () => {
