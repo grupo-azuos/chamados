@@ -57,10 +57,29 @@ describe('AzuosTicketStockItemsCard', () => {
     render(TicketStockItemsCard, { data: { items: [item()], options, values }, actions: handlers });
 
     expect(screen.getByText('Mouse USB')).toBeInTheDocument();
-    expect(screen.getByText('· reservado')).toBeInTheDocument();
+    expect(screen.getByText('Reservado')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Tirar Mouse USB do chamado' }));
 
     expect(handlers.onRemove).toHaveBeenCalledWith(10);
+  });
+
+  /* Um card por item, lado a lado: três itens são três cards, cada um com a máquina dele. */
+  it('shows each item as its own card, with its machine', () => {
+    render(TicketStockItemsCard, {
+      data: {
+        items: [
+          item(),
+          item({ id: 11, name: 'Teclado ABNT2', direction: 'in', computerName: 'Computador 06' }),
+          item({ id: 12, name: 'Cabo HDMI' }),
+        ],
+        options,
+        values,
+      },
+      actions: actions(),
+    });
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getByText('Computador 06')).toBeInTheDocument();
   });
 
   it('adds the item with its button', async () => {
@@ -81,7 +100,7 @@ describe('AzuosTicketStockItemsCard', () => {
     });
 
     expect(screen.getByText(/reabra o chamado/)).toBeInTheDocument();
-    expect(screen.getByText('· baixado no depósito')).toBeInTheDocument();
+    expect(screen.getByText('Baixado no depósito')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Adicionar item' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Tirar/ })).toBeNull();
   });

@@ -119,37 +119,42 @@
   {:else if data.items.length === 0}
     <p class="text-muted-foreground/70 text-xs">Nenhum item do estoque neste chamado.</p>
   {:else}
-    <ul class="divide-border/70 flex flex-col divide-y rounded-box border">
+    <!-- Um card pequeno por item, lado a lado: com três, dez ou vinte itens a grade só quebra
+         linha, e nenhum item estica na largura toda da ficha. -->
+    <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {#each data.items as item (item.id)}
-        <li class="flex items-center gap-2 p-2">
-          <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-            <p class="text-ink-900 truncate text-sm" title={item.name}>{item.name}</p>
-            <div class="flex flex-wrap items-center gap-1.5 text-xs">
-              <StatusBadge
-                data={{ label: ticketStockDirectionLabel(item.direction) }}
-                ui={{ tone: item.direction === 'out' ? 'warning' : 'success', size: 'sm' }}
+        <li class="bg-card border-border rounded-box flex flex-col gap-2 border p-3 shadow-xs">
+          <div class="flex items-start justify-between gap-2">
+            <p class="text-ink-900 line-clamp-2 min-w-0 text-sm font-medium" title={item.name}>
+              {item.name}
+            </p>
+            {#if !cardState?.isClosed}
+              <ActionButton
+                data={{ label: `Tirar ${item.name} do chamado` }}
+                ui={{ variant: 'ghost', size: 'sm', icon: XIcon, isIconOnly: true, className: '-mt-1 -mr-1' }}
+                state={{
+                  isDisabled: cardState?.removingId === item.id,
+                  isLoading: cardState?.removingId === item.id,
+                }}
+                actions={{ onClick: () => actions.onRemove(item.id) }}
               />
-              <span class="text-ink-700 font-medium">{item.quantity} un.</span>
-              <span class="text-muted-foreground">
-                · {item.settledAt ? 'baixado no depósito' : 'reservado'}
-              </span>
-              {#if item.computerName}
-                <span class="text-muted-foreground">· {item.computerName}</span>
-              {/if}
-            </div>
+            {/if}
           </div>
-
-          {#if !cardState?.isClosed}
-            <ActionButton
-              data={{ label: `Tirar ${item.name} do chamado` }}
-              ui={{ variant: 'ghost', size: 'sm', icon: XIcon, isIconOnly: true }}
-              state={{
-                isDisabled: cardState?.removingId === item.id,
-                isLoading: cardState?.removingId === item.id,
-              }}
-              actions={{ onClick: () => actions.onRemove(item.id) }}
+          <div class="flex items-center justify-between gap-2">
+            <StatusBadge
+              data={{ label: ticketStockDirectionLabel(item.direction) }}
+              ui={{ tone: item.direction === 'out' ? 'warning' : 'success', size: 'sm' }}
             />
-          {/if}
+            <span class="text-ink-900 text-lg leading-none font-semibold tabular-nums">
+              {item.quantity} <span class="text-muted-foreground text-xs font-normal">un.</span>
+            </span>
+          </div>
+          <div class="text-muted-foreground border-border flex flex-col gap-0.5 border-t pt-2 text-xs">
+            <span class="truncate" title={item.computerName ?? undefined}>
+              Máquina: <span class="text-ink-700">{item.computerName ?? '—'}</span>
+            </span>
+            <span>{item.settledAt ? 'Baixado no depósito' : 'Reservado'}</span>
+          </div>
         </li>
       {/each}
     </ul>
@@ -160,7 +165,10 @@
       Chamado encerrado: para tirar ou colocar itens, reabra o chamado.
     </p>
   {:else}
-    <form novalidate class="flex flex-col gap-3" onsubmit={handleSubmit}>
+    <!-- O ADICIONAR numa linha só: movimento, item, máquina (só com várias), quantidade e o botão.
+         Empilhado, ele ocupava mais altura do que os próprios itens. -->
+    <form novalidate class="flex flex-wrap items-start gap-3" onsubmit={handleSubmit}>
+      <div class="w-full sm:w-56">
       <FilterField data={{ label: 'Movimento' }}>
         <OptionPicker
           data={{ value: direction, options: DIRECTION_OPTIONS }}
@@ -169,7 +177,9 @@
           actions={{ onChange: (value: string) => actions.onChange('direction', value) }}
         />
       </FilterField>
+      </div>
 
+      <div class="min-w-56 flex-1">
       <FilterField data={{ label: 'Item' }}>
         <OptionPicker
           data={{ value: data.values.itemId, options: itemOptions }}
@@ -185,8 +195,10 @@
           actions={{ onChange: (value: string) => actions.onChange('itemId', value) }}
         />
       </FilterField>
+      </div>
 
       {#if (data.machines ?? []).length > 1}
+        <div class="w-full sm:w-56">
         <FilterField data={{ label: 'Máquina' }}>
           <OptionPicker
             data={{ value: data.values.computerId ?? '', options: data.machines ?? [] }}
@@ -201,18 +213,19 @@
             actions={{ onChange: (value: string) => actions.onChange('computerId', value) }}
           />
         </FilterField>
+        </div>
       {/if}
 
       <div class="flex items-end gap-2">
         <TextField
           data={{ label: 'Quantidade', name: 'stockQuantity', value: data.values.quantity }}
-          ui={{ inputMode: 'numeric', className: 'w-28' }}
+          ui={{ inputMode: 'numeric', className: 'w-24' }}
           state={{ error: data.errors?.quantity, isDisabled: isBusy }}
           actions={{ onChange: (value: string) => actions.onChange('quantity', value) }}
         />
         <ActionButton
           data={{ label: 'Adicionar item', loadingLabel: 'Adicionando…' }}
-          ui={{ variant: 'secondary', size: 'lg', className: 'ml-auto' }}
+          ui={{ variant: 'secondary', size: 'lg' }}
           state={{ isLoading: isBusy }}
           actions={{ onClick: actions.onSubmit }}
         />
