@@ -181,3 +181,18 @@
     />
   </div>
 </Story>
+
+<!-- As máquinas viram um botão que abre o diálogo de escolha, com as vinculadas embaixo. -->
+<Story
+  name="MachinesDialogButton"
+  args={{
+    data: {
+      ...data,
+      linkedComputers: [
+        { id: 6, name: 'COMPUTADOR - 06' },
+        { id: 7, name: 'COMPUTADOR - 07' },
+      ],
+    },
+    actions: { ...actions, onOpenComputers: () => {} },
+  }}
+/>

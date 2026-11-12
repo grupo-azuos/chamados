@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Optional,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -30,6 +31,7 @@ import { type TicketStockItemRow } from '../../../lib/db/schema/ticket-stock-ite
 import { assertCanAttendTicket, assertCanRead } from '../../../lib/policy/policy-assert.util';
 import { toUpdateHistory } from '../mapper/ticket-histories.mapper';
 import { sourceOf, toTicketStockItem } from '../mapper/ticket-stock-items.mapper';
+import { TicketComputersRepository } from '../repository/ticket-computers.repository';
 import { TicketHistoriesRepository } from '../repository/ticket-histories.repository';
 import { TicketStockItemsRepository } from '../repository/ticket-stock-items.repository';
 import { TicketAccessService, type TicketInReach } from './ticket-access.service';
@@ -61,6 +63,7 @@ export class TicketStockItemsService {
     private readonly repository: TicketStockItemsRepository,
     private readonly access: TicketAccessService,
     private readonly histories: TicketHistoriesRepository,
+    @Optional() private readonly computers?: TicketComputersRepository,
   ) {}
 
   /** Os itens do chamado, das duas prateleiras — cada tela mostra a da própria área. */
@@ -68,9 +71,12 @@ export class TicketStockItemsService {
     assertCanRead(user.role, 'os chamados');
     await this.access.reach(user, ticketId);
 
-    const rows = await this.repository.listByTicket(ticketId);
+    const [rows, names] = await Promise.all([
+      this.repository.listByTicket(ticketId),
+      this.computerNamesOf(ticketId),
+    ]);
 
-    return rows.map(toTicketStockItem);
+    return rows.map((row) => toTicketStockItem(row, names));
   }
 
   /**
@@ -98,12 +104,15 @@ export class TicketStockItemsService {
     input: CreateTicketStockItemInput,
   ): Promise<TicketStockItem> {
     assertCanAttendTicket(user.role);
-    const { source, itemId, direction, quantity } = createTicketStockItemSchema.parse(input);
+    const { source, itemId, direction, quantity, computerId } =
+      createTicketStockItemSchema.parse(input);
 
     const reach = await this.access.reach(user, ticketId);
     this.assertCanUseShelf(reach, source);
     assertOpen(reach.ticket);
 
+    const machines = (await this.computers?.listFor([ticketId]))?.get(ticketId) ?? [];
+    const machineId = pickMachine(machines, computerId ?? null);
     const item = await this.repository.findShelfItem(source, itemId);
     if (!item) throw new NotFoundException(SHELF_ITEM_NOT_FOUND);
 
@@ -119,6 +128,7 @@ export class TicketStockItemsService {
       itemName: item.name,
       direction,
       quantity,
+      computerId: machineId,
       createdBy: user.email,
       createdByName: user.name,
     });
@@ -127,7 +137,7 @@ export class TicketStockItemsService {
       toUpdateHistory(reach.ticket, `Item do estoque: ${describe(row)}.`, user),
     );
 
-    return toTicketStockItem(row);
+    return toTicketStockItem(row, new Map(machines.map((machine) => [machine.id, machine.name])));
   }
 
   /**
@@ -188,7 +198,8 @@ export class TicketStockItemsService {
           direction: row.direction,
           quantity: row.quantity,
           note: `Chamado ${formatTicketProtocol(ticket.id)}`,
-          computerId: ticket.computerId,
+          computerId: row.computerId ?? ticket.computerId,
+          ticketId: ticket.id,
           createdBy: author.email,
         },
         executor,
@@ -204,9 +215,18 @@ export class TicketStockItemsService {
 
   /** Os itens do chamado para a ordem de serviço — sem policy: quem emite já passou por ela. */
   async listForServiceOrder(ticketId: number): Promise<TicketStockItem[]> {
-    const rows = await this.repository.listByTicket(ticketId);
+    const [rows, names] = await Promise.all([
+      this.repository.listByTicket(ticketId),
+      this.computerNamesOf(ticketId),
+    ]);
 
-    return rows.map(toTicketStockItem);
+    return rows.map((row) => toTicketStockItem(row, names));
+  }
+
+  private async computerNamesOf(ticketId: number): Promise<Map<number, string>> {
+    const machines = (await this.computers?.listFor([ticketId]))?.get(ticketId) ?? [];
+
+    return new Map(machines.map((machine) => [machine.id, machine.name]));
   }
 
   private async undoMove(
@@ -235,7 +255,8 @@ export class TicketStockItemsService {
         direction,
         quantity: row.quantity,
         note: `Desfeito no chamado ${formatTicketProtocol(ticket.id)}`,
-        computerId: ticket.computerId,
+        computerId: row.computerId ?? ticket.computerId,
+        ticketId: ticket.id,
         createdBy: email,
       },
       executor,
@@ -263,6 +284,23 @@ export class TicketStockItemsService {
       `Só quem administra ${ticketAreaLabel(area)} mexe no depósito dessa área.`,
     );
   }
+}
+
+/**
+ * A máquina do item. Uma máquina no chamado: é ela. Várias: quem vincula escolhe, e a escolha
+ * precisa ser uma delas. Nenhuma: o item fica sem máquina.
+ */
+export function pickMachine(
+  machines: readonly { id: number }[],
+  chosen: number | null,
+): number | null {
+  if (chosen !== null) {
+    if (machines.some((machine) => machine.id === chosen)) return chosen;
+    throw new UnprocessableEntityException('Esta máquina não está vinculada ao chamado.');
+  }
+  if (machines.length <= 1) return machines[0]?.id ?? null;
+
+  throw new UnprocessableEntityException('O chamado tem mais de uma máquina: escolha para qual vai o item.');
 }
 
 function assertOpen(ticket: TicketRow): void {

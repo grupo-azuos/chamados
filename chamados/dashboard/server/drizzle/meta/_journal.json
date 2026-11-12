@@ -120,6 +120,13 @@
       "when": 1793500000000,
       "tag": "0016_ticket_stock_items",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793600000000,
+      "tag": "0017_ticket_computers",
+      "breakpoints": true
     }
   ]
 }

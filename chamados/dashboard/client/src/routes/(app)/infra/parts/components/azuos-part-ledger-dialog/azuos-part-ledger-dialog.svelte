@@ -5,6 +5,7 @@
     movementTypeTone,
     partConditionLabel,
   } from '@template/shared/domain/part-catalog.util';
+  import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
   import { type Part, type PartMovement } from '@template/shared/schemas/part.schema';
 
   /**
@@ -15,6 +16,9 @@
    * consultar.
    *
    * Função pura de props: não busca nada e não apaga nada — avisa quem pediu.
+   *
+   * Movimento que veio de um CHAMADO (o encerramento baixou o item) é um link para ele, e não
+   * tem lixeira: desfaz-se pelo chamado, reaberto, senão o chamado e o depósito discordam.
    */
   export type AzuosPartLedgerDialogProps = {
     data: {
@@ -49,6 +53,11 @@
     return `${name} · ${departmentLabel(movement.computerDepartment)}`;
   }
 
+  /** O endereço do chamado que gerou o movimento, ou `null` se ele foi lançado no Depósito. */
+  export function ticketHrefOf(movement: PartMovement, ticketsPath = '/infra/tickets'): string | null {
+    return movement.ticketId ? `${ticketsPath}/${movement.ticketId}` : null;
+  }
+
   /** O sinal na frente da quantidade: é o que se lê de relance na coluna. */
   export function signedQuantity(movement: PartMovement): string {
     return movement.type === 'in' ? `+${movement.quantity}` : `−${movement.quantity}`;
@@ -70,6 +79,7 @@
 
 <script lang="ts">
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
   import {
@@ -108,7 +118,7 @@
   open={dialogState?.isOpen ?? true}
   onOpenChange={(isOpen: boolean) => (isOpen ? undefined : actions.onClose())}
 >
-  <DialogContent class="sm:max-w-3xl">
+  <DialogContent class="sm:max-w-4xl">
     <DialogHeader>
       <DialogTitle>{data.part.name}</DialogTitle>
       <DialogDescription>
@@ -151,7 +161,10 @@
           <div
             use:fillFromPointer
             style:--fill-color={fillColorOf(movementTypeTone(movement.type))}
-            class="hover-fill flex flex-col gap-2 rounded-box border border-border bg-card p-3 shadow-xs"
+            class={cn(
+              'hover-fill relative flex flex-col gap-2 rounded-box border border-border bg-card p-3 shadow-xs',
+              movement.ticketId && 'cursor-pointer',
+            )}
           >
             <div class="flex items-start justify-between gap-2">
               <div class="flex flex-col gap-1 min-w-0">
@@ -167,21 +180,32 @@
                 <span class="text-xs font-semibold tabular-nums text-foreground">
                   Saldo: {movement.balanceAfter}
                 </span>
-                <ActionButton
-                  data={{ label: 'Excluir movimentação' }}
-                  ui={{
-                    variant: 'ghost',
-                    size: 'sm',
-                    icon: Trash2,
-                    isIconOnly: true,
-                    className:
-                      'text-ink-500 hover:text-destructive hover:bg-destructive/10',
-                  }}
-                  actions={{ onClick: () => actions.onAskRemove(movement) }}
-                />
+                {#if !movement.ticketId}
+                  <ActionButton
+                    data={{ label: 'Excluir movimentação' }}
+                    ui={{
+                      variant: 'ghost',
+                      size: 'sm',
+                      icon: Trash2,
+                      isIconOnly: true,
+                      className:
+                        'text-ink-500 hover:text-destructive hover:bg-destructive/10',
+                    }}
+                    actions={{ onClick: () => actions.onAskRemove(movement) }}
+                  />
+                {/if}
               </div>
             </div>
-            {#if movement.note}
+            {#if movement.ticketId}
+              <!-- O card inteiro leva ao chamado: o `after:` estica o link por cima dele. -->
+              <a
+                href={ticketHrefOf(movement)}
+                class="text-primary inline-flex w-fit items-center gap-1 text-xs font-medium after:absolute after:inset-0 hover:underline"
+              >
+                {movement.note ?? `Chamado ${formatTicketProtocol(movement.ticketId)}`}
+                <ArrowRight class="size-3" aria-hidden="true" />
+              </a>
+            {:else if movement.note}
               <p class="text-xs text-muted-foreground break-words">{movement.note}</p>
             {/if}
             <div
@@ -198,13 +222,12 @@
 
       <!-- 2. Visualização Desktop (>= xl) -->
       <div
-        class={cn(
-          'overflow-x-auto rounded-box border border-border',
-          tableView.forceCards ? 'hidden' : 'hidden xl:block',
-        )}
+        class={cn(tableView.forceCards ? 'hidden' : 'hidden xl:block')}
         data-slot="part-ledger-table-desktop"
       >
-        <Table class="min-w-[620px]">
+        <!-- Sem moldura própria e sem largura mínima: a tabela já tem fundo e borda, e uma
+             segunda moldura em volta dava o fundo dobrado e a rolagem para o lado. -->
+        <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Quando</TableHead>
@@ -217,7 +240,7 @@
           </TableHeader>
           <TableBody>
             {#each data.movements as movement (movement.id)}
-              <TableRow class="align-top">
+              <TableRow class={cn('relative align-top', movement.ticketId && 'cursor-pointer')}>
                 <TableCell class="text-ink-500 whitespace-nowrap text-xs">
                   {formatDateTime(movement.createdAt)}
                 </TableCell>
@@ -226,7 +249,16 @@
                     data={{ label: `${movementTypeLabel(movement.type)} ${signedQuantity(movement)}` }}
                     ui={{ tone: movementTypeTone(movement.type), size: 'sm' }}
                   />
-                  {#if movement.note}
+                  {#if movement.ticketId}
+                    <!-- A linha inteira leva ao chamado: o `after:` estica o link por cima dela. -->
+                    <a
+                      href={ticketHrefOf(movement)}
+                      class="text-primary mt-1 flex items-center gap-1 text-xs font-medium after:absolute after:inset-0 hover:underline"
+                    >
+                      {movement.note ?? `Chamado ${formatTicketProtocol(movement.ticketId)}`}
+                      <ArrowRight class="size-3 shrink-0" aria-hidden="true" />
+                    </a>
+                  {:else if movement.note}
                     <span class="text-ink-500 block text-xs break-words">{movement.note}</span>
                   {/if}
                 </TableCell>
@@ -238,20 +270,22 @@
                   {movement.balanceAfter}
                 </TableCell>
                 <TableCell class="text-right whitespace-nowrap">
-                  <TableActions>
-                    <ActionButton
-                      data={{ label: 'Excluir movimentação' }}
-                      ui={{
-                        variant: 'ghost',
-                        size: 'sm',
-                        icon: Trash2,
-                        isIconOnly: true,
-                        className:
-                          'text-ink-500 hover:text-destructive hover:bg-destructive/10',
-                      }}
-                      actions={{ onClick: () => actions.onAskRemove(movement) }}
-                    />
-                  </TableActions>
+                  {#if !movement.ticketId}
+                    <TableActions>
+                      <ActionButton
+                        data={{ label: 'Excluir movimentação' }}
+                        ui={{
+                          variant: 'ghost',
+                          size: 'sm',
+                          icon: Trash2,
+                          isIconOnly: true,
+                          className:
+                            'text-ink-500 hover:text-destructive hover:bg-destructive/10',
+                        }}
+                        actions={{ onClick: () => actions.onAskRemove(movement) }}
+                      />
+                    </TableActions>
+                  {/if}
                 </TableCell>
               </TableRow>
             {/each}

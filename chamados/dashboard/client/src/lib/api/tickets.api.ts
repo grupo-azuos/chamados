@@ -84,6 +84,10 @@ export const ticketsApi = {
       body: { area, name },
     }),
 
+  /** Troca as máquinas do chamado pela lista escolhida (vazia desvincula todas). */
+  updateComputers: (id: number, computerIds: number[]) =>
+    apiRequest<Ticket>(`/tickets/${id}/computers`, { method: 'PUT', body: { computerIds } }),
+
   /** Os itens de um depósito que podem entrar num chamado, com a sobra de cada um. */
   stockOptions: (source: TicketStockSource) =>
     apiRequest<TicketStockOption[]>('/tickets/stock-options', { query: { source } }),

@@ -31,6 +31,8 @@ export type ShelfMove = {
   /** O que o extrato do depósito diz sobre a linha — "Chamado CH-0049". */
   note: string;
   computerId: number | null;
+  /** O chamado que gera o movimento — o Depósito leva até ele e não o apaga por fora. */
+  ticketId: number;
   createdBy: string;
 };
 
@@ -185,6 +187,7 @@ export class TicketStockItemsRepository {
           quantity: move.quantity,
           balanceAfter: balance,
           computerId: move.computerId,
+          ticketId: move.ticketId,
           note: move.note,
           createdBy: move.createdBy,
         }),

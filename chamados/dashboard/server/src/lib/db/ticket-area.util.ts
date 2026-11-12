@@ -1,8 +1,9 @@
 import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
-import { sql, type SQL } from 'drizzle-orm';
+import { type AnyColumn, sql, type SQL } from 'drizzle-orm';
 
 import { qualified } from './sql-column.util';
 import { ticketAreas } from './schema/ticket-areas.schema';
+import { ticketComputers } from './schema/ticket-computers.schema';
 import { tickets } from './schema/tickets.schema';
 
 /**
@@ -21,5 +22,18 @@ export function ticketInArea(area: TicketArea): SQL {
     select 1 from ${ticketAreas}
     where ${qualified(ticketAreas.ticketId)} = ${qualified(tickets.id)}
       and ${qualified(ticketAreas.area)} = ${area}
+  ))`;
+}
+
+/**
+ * "O chamado é desta máquina": a primeira máquina dele (`tickets.computer_id`) ou qualquer
+ * outra das vinculadas (`ticket_computers`). Escrita como uma condição só, como a de cima,
+ * para caber nas contagens por máquina da ficha, da Inteligência e do painel.
+ */
+export function ticketOnComputer(computerId: SQL | AnyColumn): SQL {
+  return sql`(${qualified(tickets.computerId)} = ${computerId} or exists (
+    select 1 from ${ticketComputers}
+    where ${qualified(ticketComputers.ticketId)} = ${qualified(tickets.id)}
+      and ${qualified(ticketComputers.computerId)} = ${computerId}
   ))`;
 }

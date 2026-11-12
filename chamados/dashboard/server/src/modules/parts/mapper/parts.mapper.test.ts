@@ -31,6 +31,7 @@ function movementRow(overrides: Partial<PartMovementRow> = {}): PartMovementRow 
     balanceAfter: 3,
     computerId: 3,
     handledBy: 'Suporte TI',
+    ticketId: null,
     note: null,
     createdAt: new Date('2026-09-20T12:00:00.000Z'),
     createdBy: ANA,

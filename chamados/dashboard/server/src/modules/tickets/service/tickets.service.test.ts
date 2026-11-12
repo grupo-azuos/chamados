@@ -28,7 +28,7 @@ import { type TicketWhatsappNotifierService } from './ticket-whatsapp-notifier.s
 import { type GithubService } from '../../software-projects/service/github.service';
 import { type SoftwareProjectsService } from '../../software-projects/service/software-projects.service';
 import { type DepartmentsService } from '../../departments/service/departments.service';
-import { TicketsService } from './tickets.service';
+import { describeComputerChange, TicketsService } from './tickets.service';
 
 const ana: RequestUser = {
   id: '1',
@@ -1360,5 +1360,26 @@ describe('TicketsService — quem pede, logado', () => {
       department: null,
       jobTitle: null,
     });
+  });
+});
+
+describe('describeComputerChange', () => {
+  const six = { id: 6, name: 'COMPUTADOR - 06' };
+  const seven = { id: 7, name: 'COMPUTADOR - 07' };
+
+  // feliz
+  it('tells the timeline which machines came in', () => {
+    expect(describeComputerChange([six], [six, seven])).toBe(
+      'Máquinas: COMPUTADOR - 06 → COMPUTADOR - 06, COMPUTADOR - 07',
+    );
+  });
+
+  it('says "nenhuma" when all were unlinked', () => {
+    expect(describeComputerChange([six], [])).toBe('Máquinas: COMPUTADOR - 06 → nenhuma');
+  });
+
+  // triste
+  it('leaves no trace when the same machines were saved again', () => {
+    expect(describeComputerChange([six, seven], [seven, six])).toBeNull();
   });
 });

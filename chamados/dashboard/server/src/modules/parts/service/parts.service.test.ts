@@ -48,6 +48,7 @@ function movementRow(overrides: Partial<PartMovementRow> = {}): PartMovementRow 
     balanceAfter: 3,
     computerId: 3,
     handledBy: 'Suporte TI',
+    ticketId: null,
     note: null,
     createdAt: new Date('2026-09-20T12:00:00.000Z'),
     createdBy: 'ana@empresa.com.br',
@@ -390,6 +391,18 @@ describe('PartsService.removeMovement', () => {
     });
 
     await expect(service.removeMovement(otherUser, 10)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(deleteMovement).not.toHaveBeenCalled();
+  });
+
+  /* Movimento de chamado se desfaz pelo chamado, senão os dois passam a discordar. */
+  it('refuses to delete a movement that came from a ticket, pointing to it', async () => {
+    const deleteMovement = vi.fn();
+    const service = makeService({
+      findMovementById: vi.fn().mockResolvedValue(movementWithRefs({ ticketId: 49 })),
+      deleteMovement,
+    });
+
+    await expect(service.removeMovement(owner, 10)).rejects.toThrow('chamado CH-0049');
     expect(deleteMovement).not.toHaveBeenCalled();
   });
 

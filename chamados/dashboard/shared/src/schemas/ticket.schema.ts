@@ -149,6 +149,11 @@ export const ticketSchema = z.object({
    */
   computerId: z.number().int().nullable(),
   computerName: z.string().nullable(),
+  /**
+   * TODAS as máquinas do chamado — um atendimento pode passar por várias (o monitor trocado
+   * em duas mesas). `computerId` acima é a primeira delas, mantida para quem lê uma só.
+   */
+  computers: z.array(z.object({ id: z.number().int(), name: z.string() })).optional(),
 
   /** O sistema/projeto vinculado ao chamado (quando aplicável, ex: área de Sistema). */
   projectId: z.number().int().nullable().optional(),
@@ -532,6 +537,21 @@ export const ticketDataFormSchema = z
   .superRefine(checkProblemTypeMatchesArea);
 
 export type TicketDataFormValues = z.input<typeof ticketDataFormSchema>;
+
+/** Até quantas máquinas um chamado vincula — mais que isso é inventário, não atendimento. */
+export const MAX_TICKET_COMPUTERS = 50;
+
+/**
+ * As MÁQUINAS do chamado, de uma vez: a lista inteira escolhida no diálogo. Lista vazia
+ * desvincula todas. A repetição some, não vira erro.
+ */
+export const updateTicketComputersSchema = z.object({
+  computerIds: z
+    .array(z.number().int().positive())
+    .max(MAX_TICKET_COMPUTERS, `Escolha até ${MAX_TICKET_COMPUTERS} máquinas`)
+    .transform((ids) => [...new Set(ids)]),
+});
+export type UpdateTicketComputersInput = z.input<typeof updateTicketComputersSchema>;
 
 /**
  * Somar uma área PARTICIPANTE a um chamado já aberto (#13) — ex.: um chamado de Infra que

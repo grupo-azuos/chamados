@@ -87,6 +87,7 @@ export function toMovement(row: MovementWithRefs): PartMovement {
 
     handledBy: movement.handledBy,
     note: movement.note,
+    ticketId: movement.ticketId,
 
     createdAt: movement.createdAt.toISOString(),
     createdBy: movement.createdBy,
