@@ -101,3 +101,25 @@
   name="Without header"
   args={{ data: { items, options, values }, ui: { isHeaderHidden: true }, actions }}
 />
+
+<!-- Vários itens: os cards quebram linha, nenhum estica na largura toda. -->
+<Story
+  name="Many items"
+  args={{
+    data: {
+      items: ['Monitor 24P 75hz', 'Mouse USB', 'Cabo HDMI 2 m', 'Teclado ABNT2', 'Fonte 500 W', 'Memória 8 GB'].map(
+        (name, index) => ({
+          ...(items[0] as (typeof items)[number]),
+          id: 100 + index,
+          name,
+          direction: index % 3 === 1 ? ('in' as const) : ('out' as const),
+          quantity: index + 1,
+          computerName: index % 2 === 0 ? 'Computador 04' : 'Computador 06',
+        }),
+      ),
+      options,
+      values,
+    },
+    actions,
+  }}
+/>
