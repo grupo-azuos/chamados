@@ -1,8 +1,4 @@
-import {
-  TICKET_AREAS,
-  TICKET_PROBLEM_TYPES,
-  type TicketProblemType,
-} from '@template/shared/domain/ticket-catalog.util';
+import { TICKET_AREAS } from '@template/shared/domain/ticket-catalog.util';
 import {
   DEFAULT_TICKET_PRIORITY,
   INITIAL_TICKET_STATUS,
@@ -75,9 +71,10 @@ export const tickets = chamadosSchema.table(
     /* O NOME do departamento, como o RH o escreve. Sem lista fechada no banco: a lista é do
        RH e muda sem migration — ver `department.util.ts`. */
     department: text('department').notNull(),
-    problemType: text('problem_type', {
-      enum: TICKET_PROBLEM_TYPES as [TicketProblemType, ...TicketProblemType[]],
-    }).notNull(),
+    /* A chave da lista fixa (`printer`) ou o NOME de um tipo cadastrado na hora
+       (`ticket_problem_types`). Sem checagem de lista no banco: a lista cresce sem migration, e
+       quem confere que o valor existe na área é o service. */
+    problemType: text('problem_type').notNull(),
     anydeskId: text('anydesk_id'),
     contactPhone: text('contact_phone'),
     /* Só avisa quem pediu para ser avisado. Ter o telefone não autoriza usá-lo. */
@@ -148,10 +145,6 @@ export const tickets = chamadosSchema.table(
     check('tickets_status_valid', sql`${table.status} in (${valuesFor(TICKET_STATUSES)})`),
     check('tickets_priority_valid', sql`${table.priority} in (${valuesFor(TICKET_PRIORITIES)})`),
     check('tickets_area_valid', sql`${table.area} in (${valuesFor(TICKET_AREAS)})`),
-    check(
-      'tickets_problem_type_valid',
-      sql`${table.problemType} in (${valuesFor(TICKET_PROBLEM_TYPES)})`,
-    ),
   ],
 );
 
