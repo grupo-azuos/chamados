@@ -12,9 +12,11 @@ import {
   ticketAreaLabel,
   ticketDepartmentLabel,
   ticketProblemTypeLabel,
+  ticketProblemTypeOptionsForArea,
   type TicketArea,
 } from '@template/shared/domain/ticket-catalog.util';
 import { type TicketInvite } from '@template/shared/domain/ticket-invite.util';
+import { type TicketStockSource } from '@template/shared/domain/ticket-stock.util';
 import {
   parseTicketProtocol,
   formatTicketProtocol,
@@ -47,9 +49,11 @@ import {
   type Ticket,
   type TicketAssigneeOption,
   type TicketListQuery,
+  type TicketProblemTypeOption,
   type TicketReportQuery,
   type UpdateTicketInput,
 } from '@template/shared/schemas/ticket.schema';
+import { type TicketStockOption } from '@template/shared/schemas/ticket-stock-item.schema';
 import { type WhatsappNotice } from '@template/shared/schemas/whatsapp-notice.schema';
 import {
   type TicketPeople,
@@ -90,6 +94,8 @@ import { TicketAttachmentsService } from './ticket-attachments.service';
 import { TicketAssigneesService } from './ticket-assignees.service';
 import { verifyTicketAccess, verifyTicketInvite } from './ticket-invite.util';
 import { TicketHistoriesService } from './ticket-histories.service';
+import { TicketProblemTypesService } from './ticket-problem-types.service';
+import { TicketStockItemsService } from './ticket-stock-items.service';
 import {
   type TicketNoticeOutcome,
   TicketWhatsappNotifierService,
@@ -172,7 +178,33 @@ export class TicketsService {
     @Optional() private readonly notifier?: TicketWhatsappNotifierService,
     @Optional() @Inject(ENV) private readonly env?: Env,
     @Optional() private readonly people?: TicketPeopleService,
+    @Optional() private readonly problemTypes?: TicketProblemTypesService,
+    @Optional() private readonly stockItems?: TicketStockItemsService,
   ) {}
+
+  /** Os itens de um depósito que podem entrar num chamado, com a sobra de cada um. */
+  async listStockOptions(user: RequestUser, source: TicketStockSource): Promise<TicketStockOption[]> {
+    return (await this.stockItems?.options(user, source)) ?? [];
+  }
+
+  /** Os tipos de problema da área: a lista fixa mais os cadastrados na hora. */
+  async listProblemTypeOptions(area: TicketArea): Promise<TicketProblemTypeOption[]> {
+    return (await this.problemTypes?.options(area)) ?? ticketProblemTypeOptionsForArea(area);
+  }
+
+  /**
+   * O tipo que o chamado grava — o cadastrado na hora nasce aqui (ver
+   * `TicketProblemTypesService.resolve`). Sem o serviço (testes), o valor passa como veio.
+   */
+  private async resolveProblemType(
+    area: TicketArea,
+    value: string,
+    /* Sem quem pediu é o chamado aberto pela conversa do WhatsApp — o mesmo carimbo das
+       pessoas vinculadas na abertura. */
+    requester?: { email: string },
+  ): Promise<string> {
+    return (await this.problemTypes?.resolve(area, value, requester?.email ?? 'whatsapp')) ?? value;
+  }
 
   /** O link para enviar o print ou um anexo do chamado que vai ser aberto. */
   createUploadTicket(input: UploadRequest): Promise<UploadTicket> {
@@ -395,10 +427,15 @@ export class TicketsService {
   ): Promise<OpenedTicket> {
     await this.assertSystemProject(input);
 
+    const problemType = await this.resolveProblemType(
+      input.area,
+      input.problemType,
+      options.requester,
+    );
     const assignee = await this.resolveAssignee(input.area, input.assigneeId);
     const screenshotKey = await this.storeScreenshot(input.screenshot);
     const row = await this.repository.insert(
-      toTicketInsert(input, screenshotKey, assignee, options.requester),
+      toTicketInsert({ ...input, problemType }, screenshotKey, assignee, options.requester),
     );
 
     const openingNotice = await this.announceOpening(row, options.skipOpeningNotice);
@@ -610,9 +647,13 @@ export class TicketsService {
     }
 
     const assignee = await this.resolveReassignment(user, current.area, input);
+    const problemType =
+      input.problemType === undefined
+        ? undefined
+        : await this.resolveProblemType(input.area ?? current.area, input.problemType, user);
     const row = await this.repository.update(
       id,
-      toTicketUpdate(input, user.email, new Date(), assignee),
+      toTicketUpdate({ ...input, problemType }, user.email, new Date(), assignee),
     );
 
     /* O que mudou vai para a linha do tempo, com quem mudou. Salvar sem mudar nada não deixa

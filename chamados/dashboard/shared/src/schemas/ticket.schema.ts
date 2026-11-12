@@ -3,10 +3,9 @@ import { z } from 'zod';
 import { anydeskFormSchema, anydeskSchema } from '../domain/anydesk.util';
 import { contactPhoneSchema } from '../domain/phone.util';
 import {
-  isTicketProblemTypeForArea,
+  problemTypeFitsArea,
   TICKET_AREAS,
-  TICKET_PROBLEM_TYPES,
-  type TicketProblemType,
+  TICKET_PROBLEM_TYPE_NAME_MAX_LENGTH,
 } from '../domain/ticket-catalog.util';
 import {
   DEFAULT_TICKET_PRIORITY,
@@ -50,10 +49,19 @@ export const ticketStatusSchema = z.enum(TICKET_STATUSES, chooseFrom('uma situa�
 export const ticketPrioritySchema = z.enum(TICKET_PRIORITIES, chooseFrom('a urgência'));
 export const ticketDepartmentSchema = departmentNameSchema('Escolha seu departamento');
 export const ticketAreaSchema = z.enum(TICKET_AREAS, chooseFrom('a área do chamado'));
-export const ticketProblemTypeSchema = z.enum(
-  TICKET_PROBLEM_TYPES as [TicketProblemType, ...TicketProblemType[]],
-  chooseFrom('o tipo de problema'),
-);
+/**
+ * O tipo de problema é a CHAVE da lista fixa (`printer`) ou o NOME de um tipo cadastrado na
+ * hora ("Leitor de código de barras"). Por isso é texto, e não `enum`: a lista cresce sem
+ * migration. Quem garante que o valor existe na área é o servidor.
+ */
+export const ticketProblemTypeSchema = z
+  .string({ error: 'Escolha o tipo de problema' })
+  .trim()
+  .min(1, 'Escolha o tipo de problema')
+  .max(
+    TICKET_PROBLEM_TYPE_NAME_MAX_LENGTH,
+    `O tipo de problema pode ter até ${TICKET_PROBLEM_TYPE_NAME_MAX_LENGTH} caracteres`,
+  );
 
 /**
  * O tipo de problema precisa COMBINAR com a área: "ar-condicionado" não existe em Infra, e
@@ -65,7 +73,7 @@ function checkProblemTypeMatchesArea(
   value: { area: string; problemType: string },
   ctx: z.RefinementCtx,
 ): void {
-  if (isTicketProblemTypeForArea(value.area as never, value.problemType)) return;
+  if (problemTypeFitsArea(value.area as never, value.problemType)) return;
 
   ctx.addIssue({
     code: z.ZodIssueCode.custom,
@@ -285,6 +293,16 @@ export const ticketInviteSchema = z.object({
   areas: z.array(ticketAreaSchema),
   phone: z.string().nullable(),
 });
+
+/** Uma opção de tipo de problema: a chave (ou o nome, no cadastrado) e o rótulo. */
+export const ticketProblemTypeOptionSchema = z.object({
+  value: z.string(),
+  label: z.string(),
+});
+export type TicketProblemTypeOption = z.infer<typeof ticketProblemTypeOptionSchema>;
+
+/** De qual área são os tipos de problema pedidos. */
+export const ticketProblemTypeOptionsQuerySchema = z.object({ area: ticketAreaSchema });
 
 /** De qual área são os responsáveis pedidos. */
 export const ticketAssigneeOptionsQuerySchema = z.object({ area: ticketAreaSchema });

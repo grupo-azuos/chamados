@@ -2,6 +2,7 @@
   import {
     ticketAreaLabel,
     ticketAreaOptions,
+    ticketProblemTypeLabel,
     ticketProblemTypeOptionsForArea,
     type TicketArea,
   } from '@template/shared/domain/ticket-catalog.util';
@@ -47,6 +48,11 @@
       machines: { value: string; label: string }[];
       /** Os projetos/sistemas para vincular o chamado. */
       projects?: { value: string; label: string }[];
+      /**
+       * Os tipos de problema da área, com os cadastrados na hora. Ausente, vale a lista fixa
+       * da área.
+       */
+      problemTypes?: { value: string; label: string }[];
       /** As áreas que ainda podem entrar como participante — todas, menos as que já são. */
       availableParticipantAreas: { value: TicketArea; label: string }[];
     };
@@ -84,7 +90,6 @@
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
-  import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import { cn } from '$lib/utils/cn';
 
@@ -145,7 +150,9 @@
   /* As opções de tipo de problema dependem da ÁREA escolhida — Manutenção não tem
      "ar-condicionado" na lista de Infra, nem Infra tem "rede caiu" na de Manutenção. */
   const problemTypeOptions = $derived(
-    ticketProblemTypeOptionsForArea(fields.area.value as TicketArea),
+    data.problemTypes && data.problemTypes.length > 0
+      ? data.problemTypes
+      : ticketProblemTypeOptionsForArea(fields.area.value as TicketArea),
   );
 
   function handleSubmit(event: SubmitEvent): void {
@@ -189,11 +196,23 @@
        esta correção, o mapa de "o que mais dá problema" soma o palpite de quem pediu socorro,
        e não o diagnóstico. -->
   <FilterField data={{ label: 'Tipo do problema' }}>
-    <SelectField
+    <!-- Não achou o tipo na busca? Digita e cadastra: o tipo novo nasce na área ao salvar. -->
+    <OptionPicker
       data={{ value: fields.problemType.value, options: problemTypeOptions }}
-      ui={{ ariaLabel: 'Tipo do problema' }}
+      ui={{
+        ariaLabel: 'Tipo do problema',
+        fullWidth: true,
+        mode: 'combobox',
+        searchPlaceholder: 'Buscar ou cadastrar tipo…',
+        allowCustomValue: true,
+        customValueAction: 'Cadastrar',
+        selectedLabel: ticketProblemTypeLabel(fields.problemType.value),
+      }}
       state={{ isDisabled: formState?.isSubmitting }}
-      actions={{ onChange: (value: string) => actions.onChange('problemType', value) }}
+      actions={{
+        onChange: (value: string) => actions.onChange('problemType', value),
+        onCustomValue: (value: string) => actions.onChange('problemType', value),
+      }}
     />
   </FilterField>
 

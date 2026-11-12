@@ -18,7 +18,12 @@ import {
   serviceOrderVerifyPath,
   shortServiceOrderCode,
 } from '@template/shared/domain/service-order.util';
+import {
+  ticketStockDirectionLabel,
+  type TicketStockSource,
+} from '@template/shared/domain/ticket-stock.util';
 import { type TicketHistory } from '@template/shared/schemas/ticket-history.schema';
+import { type TicketStockItem } from '@template/shared/schemas/ticket-stock-item.schema';
 
 import { renderPdfDocument } from '../../../lib/report/document-pdf.util';
 import {
@@ -34,6 +39,8 @@ export type ServiceOrder = {
   ticket: TicketWithComputer;
   protocol: string;
   histories: readonly TicketHistory[];
+  /** Os itens de estoque do chamado. Opcional: a ordem sem itens sai como sempre saiu. */
+  stockItems?: readonly TicketStockItem[];
 };
 
 /**
@@ -94,6 +101,7 @@ function serviceOrderDocument(order: ServiceOrder, issue: ServiceOrderIssue): Do
       { kind: 'heading', text: 'Descrição do problema' },
       { kind: 'paragraph', text: ticket.description },
       ...solutionBlocksOf(ticket),
+      ...stockBlocksOf(order.stockItems ?? []),
       { kind: 'heading', text: 'Linha do tempo' },
       {
         kind: 'entries',
@@ -122,6 +130,48 @@ function solutionBlocksOf(ticket: TicketWithComputer): DocumentBlock[] {
     { kind: 'heading', text: 'Solução' },
     { kind: 'paragraph', text: ticket.solution },
   ];
+}
+
+/**
+ * Os ITENS DE ESTOQUE do chamado — o que saiu do depósito e o que voltou a ele.
+ *
+ * Só aparece quando há item: um chamado sem item continua saindo byte a byte igual ao que
+ * sempre saiu, e as ordens já emitidas continuam conferindo.
+ */
+function stockBlocksOf(items: readonly TicketStockItem[]): DocumentBlock[] {
+  if (items.length === 0) return [];
+
+  return [
+    { kind: 'heading', text: 'Itens do estoque' },
+    {
+      kind: 'table',
+      headers: ['Item', 'Depósito', 'Movimento', 'Quantidade', 'Situação'],
+      rows: items.map((item) => [
+        { text: item.name },
+        { text: STOCK_SOURCE_LABELS[item.source] },
+        {
+          text: ticketStockDirectionLabel(item.direction),
+          tone: item.direction === 'out' ? 'warning' : 'success',
+        },
+        { text: String(item.quantity) },
+        { text: stockSituationOf(item) },
+      ]),
+      titleColumnIndex: 0,
+      emptyText: 'Nenhum item do estoque neste chamado.',
+    },
+  ];
+}
+
+const STOCK_SOURCE_LABELS: Record<TicketStockSource, string> = {
+  parts: 'Depósito da TI',
+  inventory: 'Depósito da Manutenção',
+};
+
+/** Reservado enquanto o chamado está aberto; baixado quando o encerramento o moveu. */
+function stockSituationOf(item: TicketStockItem): string {
+  if (!item.settledAt) return 'Reservado';
+
+  return `Baixado em ${formatReportDate(new Date(item.settledAt))}`;
 }
 
 function entryOf(history: TicketHistory): DocumentEntry {

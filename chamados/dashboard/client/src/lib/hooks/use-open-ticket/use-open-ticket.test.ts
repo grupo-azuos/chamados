@@ -11,6 +11,11 @@ vi.mock('$lib/api/tickets.api', () => ({
     create: vi.fn(),
     systemProjectOptions: vi.fn(),
     assigneeOptions: vi.fn().mockResolvedValue([]),
+    problemTypeOptions: vi.fn().mockResolvedValue([
+      { value: 'network', label: 'Internet / Rede' },
+      { value: 'Nobreak', label: 'Nobreak' },
+      { value: 'other', label: 'Outro' },
+    ]),
     peopleOptions: vi.fn().mockResolvedValue([
       { id: 'u-caio', name: 'Caio Reis' },
       { id: 'u-dani', name: 'Dani Alves' },
@@ -91,6 +96,17 @@ describe('useOpenTicketModel', () => {
    * O protocolo é o ÚNICO dado que a pessoa precisa guardar, e por isso a tela troca de
    * assunto depois de abrir, em vez de mostrar um aviso que some em três segundos.
    */
+  /* Os tipos cadastrados na hora aparecem para quem abre, junto com os fixos da área. */
+  it('offers the problem types of the chosen area, the registered ones included', async () => {
+    const model = mountModel();
+
+    model.actions.onChange('area', 'infra');
+
+    await waitFor(() =>
+      expect(model.data.problemTypes.map((option) => option.value)).toContain('Nobreak'),
+    );
+  });
+
   it('shows the protocol after the ticket was opened', async () => {
     const model = mountModel();
 

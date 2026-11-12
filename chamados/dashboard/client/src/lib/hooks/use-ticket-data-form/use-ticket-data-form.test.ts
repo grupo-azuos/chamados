@@ -14,7 +14,13 @@ import {
 } from './use-ticket-data-form.svelte';
 
 vi.mock('$lib/api/tickets.api', () => ({
-  ticketsApi: { update: vi.fn(), addArea: vi.fn(), removeArea: vi.fn(), assigneeOptions: vi.fn() },
+  ticketsApi: {
+    update: vi.fn(),
+    addArea: vi.fn(),
+    removeArea: vi.fn(),
+    assigneeOptions: vi.fn(),
+    problemTypeOptions: vi.fn(),
+  },
 }));
 
 vi.mock('$lib/api/computers.api', () => ({
@@ -137,6 +143,22 @@ describe('toUpdateInput', () => {
     expect(toUpdateInput(toFormValues(ticket())).computerId).toBeNull();
   });
 
+  it('sends the external system name, unlinking the registered one', () => {
+    const input = toUpdateInput({ ...toFormValues(ticket()), customSystemName: ' trilha ' });
+
+    expect(input).toMatchObject({ projectId: null, customSystemName: 'trilha' });
+  });
+
+  it('drops the external name when a registered system is chosen', () => {
+    const input = toUpdateInput({
+      ...toFormValues(ticket()),
+      projectId: '5',
+      customSystemName: 'trilha',
+    });
+
+    expect(input).toMatchObject({ projectId: 5, customSystemName: null });
+  });
+
   /* O estágio só muda por um histórico: ele não pode sair deste formulário nem por descuido. */
   it('never sends the stage nor the solution', () => {
     const input = toUpdateInput(toFormValues(ticket()));
@@ -203,6 +225,11 @@ describe('useTicketDataFormModel', () => {
     vi.mocked(ticketsApi.update).mockResolvedValue(ticket());
     vi.mocked(ticketsApi.addArea).mockReset();
     vi.mocked(ticketsApi.removeArea).mockReset();
+    vi.mocked(ticketsApi.problemTypeOptions).mockResolvedValue([
+      { value: 'network', label: 'Internet / Rede' },
+      { value: 'Nobreak', label: 'Nobreak' },
+      { value: 'other', label: 'Outro' },
+    ]);
     vi.mocked(computersApi.list).mockResolvedValue({
       items: [{ id: 3, name: 'RECEPCAO-01', displayName: null }],
       total: 1,
@@ -251,6 +278,15 @@ describe('useTicketDataFormModel', () => {
       projectId: null,
       customSystemName: 'Trilha',
     });
+  });
+
+  /* Os tipos cadastrados na hora vêm do servidor, junto com os fixos da área. */
+  it('offers the problem types of the area, the registered ones included', async () => {
+    const model = mountModel();
+
+    await waitFor(() =>
+      expect(model.data.problemTypes.map((option) => option.value)).toContain('Nobreak'),
+    );
   });
 
   it('offers the machines of the inventory to link the ticket to', async () => {

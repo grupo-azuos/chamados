@@ -58,6 +58,11 @@
       showSelectedTooltip?: boolean;
       /** Permite confirmar o texto da busca como valor livre, além das opções conhecidas. */
       allowCustomValue?: boolean;
+      /**
+       * O verbo do botão do valor livre — "Usar" (o padrão) quando o texto vale só para este
+       * registro, "Cadastrar" quando ele vira opção nova da lista.
+       */
+      customValueAction?: string;
       selectedLabel?: string;
     };
     state?: { isDisabled?: boolean; error?: string | null };
@@ -393,7 +398,7 @@
             type="button"
             onclick={() => select(customValue, true)}
             class="text-primary hover:bg-muted flex min-h-11 w-full cursor-pointer items-center rounded-chip px-3 py-2.5 text-left text-sm font-medium break-words"
-          >Usar “{customValue}”</button>
+          >{ui?.customValueAction ?? 'Usar'} “{customValue}”</button>
         {:else if ui?.allowCustomValue && filteredOptions.length === 0}
           <p class="px-3 pb-3 text-xs text-muted-foreground">Digite um nome na busca para usá-lo.</p>
         {/if}

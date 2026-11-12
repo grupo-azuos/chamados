@@ -43,6 +43,9 @@
   }}
 />
 
+<!-- A tela que já usa o Ctrl+V para outra coisa desliga o colar daqui. -->
+<Story name="Paste turned off" args={{ data: { files: [] }, ui: { isPasteDisabled: true }, actions }} />
+
 <Story name="Disabled while sending" args={{ data: { files: chosen }, state: { isDisabled: true }, actions }} />
 
 <!-- Caso limite: nome longo demais para a largura do campo. -->

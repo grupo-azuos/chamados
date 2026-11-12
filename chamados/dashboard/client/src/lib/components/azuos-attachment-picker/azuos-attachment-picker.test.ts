@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import AttachmentPicker, { limitsSummary, reviewChoice } from './azuos-attachment-picker.svelte';
+import AttachmentPicker, { limitsSummary, pastedFiles, reviewChoice } from './azuos-attachment-picker.svelte';
 
 const MEGABYTE = 1024 * 1024;
 
@@ -234,5 +234,75 @@ describe('AzuosAttachmentPicker — cancelled dialog and kinds already sent', ()
 
     expect(onError).toHaveBeenCalledWith(expect.any(String));
     expect(onError.mock.calls[0]?.[0]).not.toBeNull();
+  });
+});
+
+describe('pastedFiles', () => {
+  const NOW = new Date(2026, 10, 12, 9, 44, 22);
+
+  /** A área de transferência de mentira — o `DataTransfer` do jsdom não guarda arquivos. */
+  function clipboardWith(files: File[]): DataTransfer {
+    return { files } as unknown as DataTransfer;
+  }
+
+  // feliz
+  it('names a pasted print by the time, keeping real file names', () => {
+    const print = new File(['x'], 'image.png', { type: 'image/png' });
+    const note = new File(['x'], 'nota.pdf', { type: 'application/pdf' });
+
+    const names = pastedFiles(clipboardWith([print, note]), NOW).map((file) => file.name);
+
+    expect(names).toEqual(['print-colado-09-44-22.png', 'nota.pdf']);
+  });
+
+  it('gives two pasted prints different names', () => {
+    const prints = [
+      new File(['a'], 'image.png', { type: 'image/png' }),
+      new File(['b'], 'image.png', { type: 'image/png' }),
+    ];
+
+    const names = pastedFiles(clipboardWith(prints), NOW).map((file) => file.name);
+
+    expect(new Set(names).size).toBe(2);
+  });
+
+  // triste
+  it('returns nothing when only text was copied', () => {
+    expect(pastedFiles(clipboardWith([]), NOW)).toEqual([]);
+    expect(pastedFiles(null, NOW)).toEqual([]);
+  });
+});
+
+describe('AttachmentPicker paste', () => {
+  function pasteEvent(files: File[]): Event {
+    const event = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', { value: { files } });
+
+    return event;
+  }
+
+  // feliz
+  it('adds a pasted print to the chosen files', () => {
+    const onChange = vi.fn();
+    render(AttachmentPicker, { data: { files: [] }, actions: { onChange, onError: vi.fn() } });
+
+    window.dispatchEvent(pasteEvent([new File(['x'], 'image.png', { type: 'image/png' })]));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0]?.[0][0].name).toMatch(/^print-colado-/);
+  });
+
+  // triste
+  it('ignores the paste when it is turned off', () => {
+    const onChange = vi.fn();
+    render(AttachmentPicker, {
+      data: { files: [] },
+      ui: { isPasteDisabled: true },
+      actions: { onChange, onError: vi.fn() },
+    });
+
+    window.dispatchEvent(pasteEvent([new File(['x'], 'image.png', { type: 'image/png' })]));
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

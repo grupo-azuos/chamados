@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   isTicketArea,
   isTicketProblemType,
+  builtInProblemTypeByLabel,
   isTicketProblemTypeForArea,
+  problemTypeFitsArea,
   TICKET_PROBLEM_TYPES,
   ticketAreaLabel,
   ticketProblemTypeLabel,
@@ -96,5 +98,30 @@ describe('ticket catalog labels and guards', () => {
     expect(isTicketProblemType('printer')).toBe(true);
     expect(isTicketProblemType('tsunami')).toBe(false);
     expect(isTicketProblemType(null)).toBe(false);
+  });
+});
+
+describe('registered problem types', () => {
+  // feliz
+  it('labels a registered type by its own name', () => {
+    expect(ticketProblemTypeLabel('printer')).toBe('Impressora');
+    expect(ticketProblemTypeLabel('Nobreak')).toBe('Nobreak');
+  });
+
+  it('lets a registered name through, leaving the check to the server', () => {
+    expect(problemTypeFitsArea('infra', 'Nobreak')).toBe(true);
+  });
+
+  it('finds the fixed type behind a typed label', () => {
+    expect(builtInProblemTypeByLabel('infra', ' impressora ')).toBe('printer');
+  });
+
+  // triste
+  it('refuses a fixed type of another area', () => {
+    expect(problemTypeFitsArea('infra', 'air_conditioning')).toBe(false);
+  });
+
+  it('finds nothing for a label that is not fixed', () => {
+    expect(builtInProblemTypeByLabel('infra', 'Nobreak')).toBeNull();
   });
 });

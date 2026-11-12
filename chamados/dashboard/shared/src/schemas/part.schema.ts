@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { MOVEMENT_TYPES, PART_CATEGORIES, PART_CONDITIONS } from '../domain/part-catalog.util';
 import { departmentSchema } from './computer.schema';
 import { paginationQuerySchema } from './pagination.schema';
+import { ticketStockLinkSchema } from './ticket-stock-item.schema';
 
 /**
  * O CONTRATO do depósito. Um schema, duas pontas: a API o usa como DTO e Swagger e a web o
@@ -66,6 +67,11 @@ export const partSchema = z.object({
   category: partCategorySchema,
   condition: partConditionSchema,
   balance: z.number().int(),
+  /**
+   * Os chamados ABERTOS que prendem este item (reservado para sair ou para voltar). O saldo
+   * só anda quando o chamado encerra; até lá, a tela mostra o chamado com o link para ele.
+   */
+  ticketLinks: z.array(ticketStockLinkSchema).optional(),
 
   createdAt: z.iso.datetime(),
   createdBy: z.string(),

@@ -41,6 +41,8 @@ export type TicketDataFormModel = {
     machines: { value: string; label: string }[];
     /** Os sistemas/projetos para vincular o chamado a um deles. */
     projects: { value: string; label: string }[];
+    /** Os tipos de problema da área do formulário: os fixos e os cadastrados na hora. */
+    problemTypes: { value: string; label: string }[];
     /** As áreas que ainda PODEM entrar como participante — todas, menos as que já estão. */
     availableParticipantAreas: { value: TicketArea; label: string }[];
     /**
@@ -101,6 +103,10 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
       }),
     ),
   );
+
+  /* Os tipos de problema acompanham a ÁREA do formulário: reclassificar troca a lista. O
+     cadastrado na hora entra na lista no próximo carregamento — a busca do campo é que o cria. */
+  let problemTypes = $state<{ value: string; label: string }[]>([]);
 
   /* Trocar o responsável é do super admin: só ele recebe as opções, e sem opções o campo nem
      aparece. As opções são as da área que está no formulário — reclassificar muda quem atende. */
@@ -177,6 +183,26 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
 
   $effect(() => {
     const area = values.current.area;
+
+    let isCurrent = true;
+    void queryClient
+      .fetchQuery({
+        queryKey: [...TICKETS_QUERY_KEY, 'problem-type-options', area],
+        queryFn: () => ticketsApi.problemTypeOptions(area),
+        staleTime: 60_000,
+      })
+      .then((options) => {
+        if (isCurrent) problemTypes = options;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isCurrent = false;
+    };
+  });
+
+  $effect(() => {
+    const area = values.current.area;
     if (!canReassign) return;
 
     let isCurrent = true;
@@ -210,6 +236,7 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
           customSystemName: fieldOf('customSystemName'),
           assigneeId: fieldOf('assigneeId'),
         },
+        problemTypes,
         assignees: assignees.map((option) => ({ value: option.id, label: option.name })),
         machines: toMachineOptions(machines.current.data?.items ?? []),
         projects: toProjectOptions(projects.current.data?.items ?? []),

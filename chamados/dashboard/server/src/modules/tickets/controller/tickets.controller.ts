@@ -52,12 +52,15 @@ import {
   TicketPeopleDto,
   TicketPersonDto,
   TicketRelationDto,
+  TicketProblemTypeOptionDto,
+  TicketProblemTypeOptionsQueryDto,
   TicketReportQueryDto,
   UpdateTicketDto,
   UpdateTicketWatchersDto,
   WhatsappNoticeDto,
 } from '../dto/ticket.dto';
 import { UploadRequestDto, UploadTicketDto } from '../dto/ticket-attachment.dto';
+import { TicketStockOptionDto, TicketStockOptionsQueryDto } from '../dto/ticket-stock-item.dto';
 import { SkipHistory } from '../../history/interceptor/skip-history.decorator';
 import { TicketRelationsService } from '../service/ticket-relations.service';
 import { type TicketDashboard, TicketsService } from '../service/tickets.service';
@@ -152,6 +155,33 @@ export class TicketsController {
   })
   async listSystemProjectOptions(): Promise<{ id: number; name: string }[]> {
     return this.service.listSystemProjectOptions();
+  }
+
+  @Get('problem-type-options')
+  @ApiOperation({
+    summary: 'Lista os tipos de problema de uma área',
+    description:
+      'A lista fixa da área mais os tipos cadastrados na hora. Tipo novo não tem rota própria: nasce quando um chamado é salvo com um nome que não está na lista (abrindo ou corrigindo os dados).',
+  })
+  @ApiOkResponse({ type: [TicketProblemTypeOptionDto] })
+  async listProblemTypeOptions(
+    @Query() query: TicketProblemTypeOptionsQueryDto,
+  ): Promise<TicketProblemTypeOptionDto[]> {
+    return this.service.listProblemTypeOptions(query.area);
+  }
+
+  @Get('stock-options')
+  @ApiOperation({
+    summary: 'Lista os itens de um depósito que podem entrar num chamado',
+    description:
+      'Peças da TI (`parts`) ou produtos da Manutenção (`inventory`), com quanto ainda sobra para sair — o saldo menos o que outros chamados abertos já reservaram.',
+  })
+  @ApiOkResponse({ type: [TicketStockOptionDto] })
+  async listStockOptions(
+    @CurrentUser() user: RequestUser,
+    @Query() query: TicketStockOptionsQueryDto,
+  ): Promise<TicketStockOptionDto[]> {
+    return this.service.listStockOptions(user, query.source);
   }
 
   @Get('assignee-options')

@@ -9,7 +9,8 @@ import { ROLE_CONTEXT_LABELS, ROLE_CONTEXTS, type RoleContext } from './role-con
  * ("quais departamentos mais pedem", "qual problema mais aparece"). Com texto livre, "RH",
  * "rh" e "Recursos Humanos" viram três departamentos diferentes e o gráfico mente.
  *
- * Tipo de problema novo entra aqui. Departamento novo entra na lista do RH, que é de onde
+ * Tipo de problema novo entra aqui — ou é cadastrado na hora, pela busca do campo, e aí mora
+ * na tabela `ticket_problem_types`. Departamento novo entra na lista do RH, que é de onde
  * os daqui vêm.
  */
 
@@ -127,8 +128,45 @@ export const TICKET_PROBLEM_TYPE_LABELS: Record<TicketProblemType, string> = {
   other: 'Outro',
 };
 
-export function ticketProblemTypeLabel(type: TicketProblemType): string {
-  return TICKET_PROBLEM_TYPE_LABELS[type];
+/**
+ * O rótulo do tipo de problema. Tipo da lista fixa tem rótulo próprio; tipo CADASTRADO na hora
+ * (ver `ticket-problem-types.schema` no server) já é guardado pelo nome que a pessoa escreveu,
+ * e o nome é o rótulo.
+ */
+export function ticketProblemTypeLabel(type: string): string {
+  return isTicketProblemType(type) ? TICKET_PROBLEM_TYPE_LABELS[type] : type;
+}
+
+/** O tamanho máximo do nome de um tipo de problema cadastrado na hora. */
+export const TICKET_PROBLEM_TYPE_NAME_MAX_LENGTH = 80;
+
+/**
+ * O tipo de problema CABE na área?
+ *
+ * Tipo da lista fixa precisa ser da lista da área ("ar-condicionado" não existe em Infra).
+ * Tipo cadastrado na hora passa aqui: quem confere que ele existe na área (ou o cadastra) é o
+ * servidor, que é quem enxerga a tabela.
+ */
+export function problemTypeFitsArea(area: TicketArea, value: string): boolean {
+  if (!isTicketProblemType(value)) return true;
+
+  return isTicketProblemTypeForArea(area, value);
+}
+
+/**
+ * O tipo da lista fixa que tem ESTE rótulo na área — para quem digita "Impressora" na busca
+ * não cadastrar um segundo "Impressora" ao lado do que já existe.
+ */
+export function builtInProblemTypeByLabel(
+  area: TicketArea,
+  label: string,
+): TicketProblemType | null {
+  const wanted = label.trim().toLocaleLowerCase('pt-BR');
+  const found = TICKET_PROBLEM_TYPES_BY_AREA[area].find(
+    (type) => TICKET_PROBLEM_TYPE_LABELS[type].toLocaleLowerCase('pt-BR') === wanted,
+  );
+
+  return found ?? null;
 }
 
 export function isTicketProblemType(value: unknown): value is TicketProblemType {

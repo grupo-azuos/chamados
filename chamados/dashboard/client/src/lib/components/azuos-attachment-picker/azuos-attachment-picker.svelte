@@ -20,6 +20,13 @@
        */
       existingKinds?: AttachmentKind[];
     };
+    ui?: {
+      /**
+       * Desliga o Ctrl+V. Só para a tela que já usa o colar para outra coisa (o print da
+       * abertura do chamado): duas escutas no mesmo colar anexariam o print duas vezes.
+       */
+      isPasteDisabled?: boolean;
+    };
     state?: {
       isDisabled?: boolean;
       /** A recusa da última escolha, em português, vinda do domínio. */
@@ -110,6 +117,33 @@
     return `${file.name}::${file.size}::${file.lastModified}`;
   }
 
+  /**
+   * Os arquivos que vieram na área de transferência. O print colado chega sempre como
+   * "image.png", e dois prints seguidos virariam o mesmo nome na lista — por isso a imagem sem
+   * nome de verdade ganha um com a hora e a posição.
+   */
+  export function pastedFiles(clipboard: DataTransfer | null, now: Date = new Date()): File[] {
+    const time = now.toTimeString().slice(0, 8).replaceAll(':', '-');
+
+    return Array.from(clipboard?.files ?? []).map((file, index) => {
+      if (!isGenericClipboardName(file.name)) return file;
+
+      const extension = file.type.split('/')[1] ?? 'png';
+      const suffix = index > 0 ? `-${index + 1}` : '';
+
+      return new File([file], `print-colado-${time}${suffix}.${extension}`, {
+        type: file.type,
+        lastModified: now.getTime(),
+      });
+    });
+  }
+
+  /* O nome que o navegador dá a uma imagem que não veio de arquivo nenhum (print, cópia de
+     imagem da web). Arquivo copiado do explorador mantém o nome original. */
+  function isGenericClipboardName(name: string): boolean {
+    return name === '' || /^image\.[a-z]+$/i.test(name);
+  }
+
   function isKind(value: AttachmentKind | null): value is AttachmentKind {
     return value !== null;
   }
@@ -121,7 +155,7 @@
   import Paperclip from '@lucide/svelte/icons/paperclip';
   import X from '@lucide/svelte/icons/x';
 
-  let { data, state: pickerState, actions }: AzuosAttachmentPickerProps = $props();
+  let { data, ui, state: pickerState, actions }: AzuosAttachmentPickerProps = $props();
 
   /* Puramente visual: o `<input type="file">` não deixa tirar um arquivo da seleção por
      código sem limpar o campo inteiro, então ele é zerado a cada escolha e quem guarda a
@@ -133,6 +167,26 @@
   function choose(event: Event) {
     const chosen = Array.from((event.currentTarget as HTMLInputElement).files ?? []);
     if (input) input.value = '';
+    accept(chosen);
+  }
+
+  /**
+   * Colar com Ctrl+V: o print (PrtSc, Win+Shift+S) e o arquivo copiado do explorador entram
+   * na lista como se tivessem sido escolhidos. Vale com o foco em qualquer lugar da tela —
+   * inclusive no texto do histórico. Colar TEXTO segue normal: sem arquivo na área de
+   * transferência, o colar não é tocado.
+   */
+  function handlePaste(event: ClipboardEvent) {
+    if (ui?.isPasteDisabled || isDisabled || event.defaultPrevented) return;
+
+    const pasted = pastedFiles(event.clipboardData);
+    if (pasted.length === 0) return;
+
+    event.preventDefault();
+    accept(pasted);
+  }
+
+  function accept(chosen: File[]) {
     if (chosen.length === 0) return;
 
     const review = reviewChoice(chosen, data.files, data.existingKinds ?? []);
@@ -146,6 +200,8 @@
     actions.onChange(data.files.filter((chosen) => chosen !== file));
   }
 </script>
+
+<svelte:window onpaste={handlePaste} />
 
 <!--
   `relative` NÃO É ENFEITE, e foi um defeito de verdade.
@@ -185,6 +241,9 @@
   />
 
   <p class="text-ink-500 text-xs">{limitsSummary()}</p>
+  {#if !ui?.isPasteDisabled}
+    <p class="text-ink-500 text-xs">Também dá para colar um print ou arquivo com Ctrl+V.</p>
+  {/if}
 
   {#if pickerState?.error}
     <p class="text-destructive text-xs" role="alert">{pickerState.error}</p>

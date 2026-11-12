@@ -9,6 +9,7 @@ import {
   type CreateInventoryMovementInput,
   type InventoryMovement,
 } from '@template/shared/schemas/inventory-movement.schema';
+import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
 
 import { setIfDefined } from '../../../lib/db/partial-update.util';
 import {
@@ -28,7 +29,12 @@ import {
  * expira, então ele não pode ser calculado aqui dentro — o mapper é síncrono e puro, e é o
  * que torna ele testável sem subir nada.
  */
-export function toInventoryItem(row: InventoryItemRow, photoUrl: string | null): InventoryItem {
+export function toInventoryItem(
+  row: InventoryItemRow,
+  photoUrl: string | null,
+  /* Os chamados abertos que prendem o produto — chegam prontos, como a foto. */
+  ticketLinks: TicketStockLink[] = [],
+): InventoryItem {
   return {
     id: row.id,
     name: row.name,
@@ -42,6 +48,7 @@ export function toInventoryItem(row: InventoryItemRow, photoUrl: string | null):
     note: row.note,
     photoUrl,
     balance: row.balance,
+    ticketLinks,
 
     createdAt: row.createdAt.toISOString(),
     createdBy: row.createdBy,

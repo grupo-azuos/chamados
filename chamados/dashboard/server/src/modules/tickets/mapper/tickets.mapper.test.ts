@@ -216,6 +216,10 @@ describe('toTicketUpdate', () => {
     expect(toTicketUpdate({ priority: 'low' }, ANA, NOW)).not.toHaveProperty('area');
   });
 
+  it('leaves the system alone when it was not sent', () => {
+    expect(toTicketUpdate({ priority: 'low' }, ANA, NOW)).not.toHaveProperty('customSystemName');
+  });
+
   /* O estágio e os carimbos dele só mudam por um histórico lançado (`toTicketMove`): corrigir
      um dado não pode mover o chamado de estágio nem mexer no tempo de atendimento. */
   it('never moves the stage nor its stamps, whatever comes in the body', () => {

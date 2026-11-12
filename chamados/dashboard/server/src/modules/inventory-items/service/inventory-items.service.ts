@@ -29,6 +29,7 @@ import {
   type UploadRequest,
   type UploadTicket,
 } from '@template/shared/schemas/staged-file.schema';
+import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
@@ -110,7 +111,8 @@ export class InventoryItemsService {
     assertCanRead(user.role, 'o inventário da Manutenção');
 
     const page = await this.repository.list(query);
-    const items = await Promise.all(page.rows.map((row) => this.toItem(row)));
+    const links = await this.repository.ticketLinksOf(page.rows.map((row) => row.id));
+    const items = await Promise.all(page.rows.map((row) => this.toItem(row, links.get(row.id))));
 
     return { items, total: page.total, page: query.page, pageSize: query.pageSize };
   }
@@ -118,7 +120,9 @@ export class InventoryItemsService {
   async findById(user: RequestUser, id: number): Promise<InventoryItem> {
     assertCanRead(user.role, 'o inventário da Manutenção');
 
-    return this.toItem(await this.require(id));
+    const links = await this.repository.ticketLinksOf([id]);
+
+    return this.toItem(await this.require(id), links.get(id));
   }
 
   async create(user: RequestUser, input: CreateInventoryItemInput): Promise<InventoryItem> {
@@ -263,8 +267,8 @@ export class InventoryItemsService {
   }
 
   /** A linha do banco com o link temporário da foto, do jeito que a tela precisa. */
-  private async toItem(row: InventoryItemRow): Promise<InventoryItem> {
-    return toInventoryItem(row, await this.photoUrl(row.photoKey));
+  private async toItem(row: InventoryItemRow, ticketLinks?: TicketStockLink[]): Promise<InventoryItem> {
+    return toInventoryItem(row, await this.photoUrl(row.photoKey), ticketLinks);
   }
 
   /**

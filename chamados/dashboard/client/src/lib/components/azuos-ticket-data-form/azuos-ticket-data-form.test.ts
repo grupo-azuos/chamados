@@ -256,10 +256,8 @@ describe('AzuosTicketDataForm — area, type, system and attendant', () => {
     expect(acts.onChange).toHaveBeenCalledWith('area', 'manutencao');
     expect(acts.onChange).toHaveBeenCalledWith('problemType', expect.any(String));
 
-    const type = screen.getByRole('combobox', { name: 'Tipo do problema' });
-    await fireEvent.pointerDown(type);
-    await fireEvent.click(type);
-    await fireEvent.pointerUp(await screen.findByRole('option', { name: 'Impressora' }));
+    /* O tipo agora é a busca com cadastro: escolher da lista continua igual. */
+    await choose('Tipo do problema', 'Impressora');
     expect(acts.onChange).toHaveBeenCalledWith('problemType', 'printer');
 
     await choose('Sistema / Software', 'Portal');

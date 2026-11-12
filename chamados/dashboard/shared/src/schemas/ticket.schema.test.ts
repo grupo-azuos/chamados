@@ -139,8 +139,16 @@ describe('createTicketSchema', () => {
     expect(result.error?.issues[0]?.message).toBe('Escolha seu departamento');
   });
 
-  it('refuses a problem type that is not on the list, in Portuguese', () => {
-    const result = createTicketSchema.safeParse({ ...validInput, problemType: 'ovni' });
+  /* Tipo fora da lista não é mais recusado aqui: é um tipo NOVO, que o servidor cadastra na
+     área ao salvar. Vazio continua sem valer. */
+  it('accepts a new problem type name, to be registered by the server', () => {
+    expect(createTicketSchema.safeParse({ ...validInput, problemType: 'Nobreak' }).success).toBe(
+      true,
+    );
+  });
+
+  it('refuses an empty problem type, in Portuguese', () => {
+    const result = createTicketSchema.safeParse({ ...validInput, problemType: '  ' });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe('Escolha o tipo de problema');
