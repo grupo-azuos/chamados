@@ -1,10 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type InventoryItemListQuery } from '@template/shared/schemas/inventory-item.schema';
 import { type InventoryMovementListQuery } from '@template/shared/schemas/inventory-movement.schema';
+import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
 import { and, asc, count, desc, eq, ilike, isNull, or, type SQL } from 'drizzle-orm';
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
+import { ticketStockLinksOf } from '../../../lib/db/ticket-stock-link.util';
 import { type Database, type DatabaseExecutor } from '../../../lib/db/db.type';
 import {
   inventoryItems,
@@ -169,6 +171,11 @@ export class InventoryItemsRepository {
   }
 
   /** Abre a transação. Movimento e saldo entram juntos, ou não entram. */
+  /** Os chamados abertos que prendem estes itens — o selo "no chamado CH-…" da tela. */
+  async ticketLinksOf(ids: readonly number[]): Promise<Map<number, TicketStockLink[]>> {
+    return ticketStockLinksOf(this.db, 'inventory', ids);
+  }
+
   async transaction<T>(run: (executor: DatabaseExecutor) => Promise<T>): Promise<T> {
     return this.db.transaction(async (tx) => run(tx));
   }

@@ -1,5 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { type TicketHistory } from '@template/shared/schemas/ticket-history.schema';
+import { type TicketStockItem } from '@template/shared/schemas/ticket-stock-item.schema';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
@@ -11,6 +12,7 @@ import { type TicketServiceOrdersRepository } from '../repository/ticket-service
 import { type TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
 import { TicketAccessService } from './ticket-access.service';
 import { type TicketHistoriesService } from './ticket-histories.service';
+import { type TicketStockItemsService } from './ticket-stock-items.service';
 import { fingerprintOf, TicketServiceOrdersService } from './ticket-service-orders.service';
 
 const ana: RequestUser = { id: '1', email: 'ana@azuos.com.br', name: 'Ana Lima', role: 'user' };
@@ -93,6 +95,8 @@ type Setup = {
   histories?: TicketHistory[];
   /** O que já foi emitido, do mais antigo para o mais novo. */
   issued?: TicketServiceOrderRow[];
+  /** Os itens de estoque do chamado. */
+  stockLines?: TicketStockItem[];
 };
 
 /** Um repositório de mentira que GUARDA o que foi emitido — para emitir duas vezes seguidas. */
@@ -101,6 +105,7 @@ function setup({
   roles = { manutencao: 'user' },
   histories = [history()],
   issued = [],
+  stockLines = [],
 }: Setup = {}) {
   const rows = [...issued];
 
@@ -123,11 +128,13 @@ function setup({
   } as unknown as TicketsRepository;
 
   const timeline = { list: vi.fn(async () => histories) };
+  const stockItems = { listForServiceOrder: vi.fn(async () => stockLines) };
 
   const service = new TicketServiceOrdersService(
     repository as unknown as TicketServiceOrdersRepository,
     new TicketAccessService(tickets),
     timeline as unknown as TicketHistoriesService,
+    stockItems as unknown as TicketStockItemsService,
     { API_CORS_ORIGIN: 'http://localhost:5005/, http://localhost:6006' },
   );
 

@@ -13,6 +13,7 @@ import { type TicketHistoriesRepository } from '../repository/ticket-histories.r
 import { type TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
 import { TicketAccessService } from './ticket-access.service';
 import { type TicketAttachmentsService } from './ticket-attachments.service';
+import { type TicketStockItemsService } from './ticket-stock-items.service';
 import { type GithubService } from '../../software-projects/service/github.service';
 import { issueCommentOf, TicketHistoriesService } from './ticket-histories.service';
 
@@ -123,6 +124,62 @@ function setup({
     github,
   };
 }
+
+describe('TicketHistoriesService.create — stock items', () => {
+  function withStock(ticket: TicketWithComputer) {
+    const tickets = {
+      findById: vi.fn().mockResolvedValue(ticket),
+      listAreasOf: vi.fn().mockResolvedValue([]),
+    } as unknown as TicketsRepository;
+    const record = vi.fn().mockImplementation(async (history) => historyRow(history));
+    const stockItems = { settle: vi.fn().mockResolvedValue(undefined) };
+    const service = new TicketHistoriesService(
+      { record, listByTicket: vi.fn() } as unknown as TicketHistoriesRepository,
+      new TicketAccessService(tickets),
+      {
+        accept: vi.fn().mockResolvedValue([]),
+        store: vi.fn().mockResolvedValue([]),
+      } as unknown as TicketAttachmentsService,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      stockItems as unknown as TicketStockItemsService,
+    );
+
+    return { service, record, stockItems, actor: { ...ana, roles: { infra: 'admin' } } as RequestUser };
+  }
+
+  // feliz
+  /* Encerrar baixa o estoque JUNTO com o histórico: a baixa vai como terceiro passo da mesma
+     gravação, e roda dentro da transação dela. */
+  it('settles the stock items in the same write that closes the ticket', async () => {
+    const { service, record, stockItems, actor } = withStock(ticketRow());
+
+    await service.create(actor, 7, entry('resolution', 'Troquei o mouse.'));
+    const alongside = record.mock.calls[0]?.[2] as (executor: unknown) => Promise<void>;
+    await alongside('tx');
+
+    expect(stockItems.settle).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      expect.objectContaining({ email: ana.email }),
+      'tx',
+    );
+  });
+
+  // triste
+  it('does not touch the stock for a history that does not close', async () => {
+    const { service, record } = withStock(ticketRow());
+
+    await service.create(actor(), 7, entry('note'));
+
+    expect(record.mock.calls[0]?.[2]).toBeUndefined();
+  });
+
+  function actor() {
+    return { ...ana, roles: { infra: 'admin' } } as RequestUser;
+  }
+});
 
 describe('TicketHistoriesService.create', () => {
   // feliz

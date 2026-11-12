@@ -12,6 +12,8 @@ import {
   openedTicketSchema,
   ticketInviteSchema,
   ticketNoticeSchema,
+  ticketProblemTypeOptionSchema,
+  ticketProblemTypeOptionsQuerySchema,
   ticketSchema,
   updateTicketSchema,
 } from '@template/shared/schemas/ticket.schema';
@@ -38,6 +40,10 @@ export class AddTicketAreaDto extends createZodDto(addTicketAreaSchema) {}
 export class TicketDto extends createZodDto(ticketSchema) {}
 export class TicketAssigneeOptionDto extends createZodDto(ticketAssigneeOptionSchema) {}
 export class TicketAssigneeOptionsQueryDto extends createZodDto(ticketAssigneeOptionsQuerySchema) {}
+export class TicketProblemTypeOptionDto extends createZodDto(ticketProblemTypeOptionSchema) {}
+export class TicketProblemTypeOptionsQueryDto extends createZodDto(
+  ticketProblemTypeOptionsQuerySchema,
+) {}
 export class TicketNoticeDto extends createZodDto(ticketNoticeSchema) {}
 export class WhatsappNoticeDto extends createZodDto(whatsappNoticeSchema) {}
 export class TicketInviteDto extends createZodDto(ticketInviteSchema) {}

@@ -53,9 +53,10 @@ export class PartsService {
     assertCanRead(user.role, 'o depósito');
 
     const page = await this.repository.list(query);
+    const links = await this.repository.ticketLinksOf(page.rows.map((row) => row.id));
 
     return {
-      items: page.rows.map(toPart),
+      items: page.rows.map((row) => toPart(row, links.get(row.id))),
       total: page.total,
       page: query.page,
       pageSize: query.pageSize,
@@ -65,7 +66,9 @@ export class PartsService {
   async findById(user: RequestUser, id: number): Promise<Part> {
     assertCanRead(user.role, 'o depósito');
 
-    return toPart(await this.requirePart(id));
+    const links = await this.repository.ticketLinksOf([id]);
+
+    return toPart(await this.requirePart(id), links.get(id));
   }
 
   /**

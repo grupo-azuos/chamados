@@ -21,6 +21,7 @@ import { buildServiceOrderPdf, type ServiceOrder } from '../report/ticket-servic
 import { TicketServiceOrdersRepository } from '../repository/ticket-service-orders.repository';
 import { TicketAccessService } from './ticket-access.service';
 import { TicketHistoriesService } from './ticket-histories.service';
+import { TicketStockItemsService } from './ticket-stock-items.service';
 
 /** 32 bytes aleatórios: o código da emissão, que ninguém adivinha. */
 const CODE_BYTES = 32;
@@ -42,6 +43,7 @@ export class TicketServiceOrdersService {
     private readonly repository: TicketServiceOrdersRepository,
     private readonly access: TicketAccessService,
     private readonly histories: TicketHistoriesService,
+    private readonly stockItems: TicketStockItemsService,
     @Inject(ENV) private readonly env: Pick<Env, 'API_CORS_ORIGIN'>,
   ) {}
 
@@ -63,6 +65,7 @@ export class TicketServiceOrdersService {
       ticket: reach.ticket,
       protocol: formatTicketProtocol(ticketId),
       histories: await this.histories.list(user, ticketId),
+      stockItems: await this.stockItems.listForServiceOrder(ticketId),
     };
 
     const latest = await this.repository.latestOf(ticketId);

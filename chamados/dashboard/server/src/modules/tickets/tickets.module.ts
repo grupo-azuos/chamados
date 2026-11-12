@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { TicketAttachmentsController } from './controller/ticket-attachments.controller';
 import { TicketHistoriesController } from './controller/ticket-histories.controller';
 import { TicketServiceOrdersController } from './controller/ticket-service-orders.controller';
+import { TicketStockItemsController } from './controller/ticket-stock-items.controller';
 import { TicketsController } from './controller/tickets.controller';
 import { TicketServiceOrdersRepository } from './repository/ticket-service-orders.repository';
 import { TicketServiceOrdersService } from './service/ticket-service-orders.service';
@@ -10,11 +11,15 @@ import { TicketAttachmentsRepository } from './repository/ticket-attachments.rep
 import { TicketHistoriesRepository } from './repository/ticket-histories.repository';
 import { TicketsRepository } from './repository/tickets.repository';
 import { TicketWatchersRepository } from './repository/ticket-watchers.repository';
+import { TicketProblemTypesRepository } from './repository/ticket-problem-types.repository';
+import { TicketStockItemsRepository } from './repository/ticket-stock-items.repository';
 import { TicketAccessService } from './service/ticket-access.service';
 import { TicketAttachmentsService } from './service/ticket-attachments.service';
 import { TicketHistoriesService } from './service/ticket-histories.service';
 import { TicketPeopleService } from './service/ticket-people.service';
 import { TicketsService } from './service/tickets.service';
+import { TicketProblemTypesService } from './service/ticket-problem-types.service';
+import { TicketStockItemsService } from './service/ticket-stock-items.service';
 
 import { AuthModule } from '../../lib/auth/auth.module';
 import { RolesModule } from '../roles/roles.module';
@@ -36,6 +41,7 @@ import { DepartmentsModule } from '../departments/departments.module';
     TicketsController,
     TicketAttachmentsController,
     TicketHistoriesController,
+    TicketStockItemsController,
   ],
   providers: [
     TicketServiceOrdersService,
@@ -51,6 +57,10 @@ import { DepartmentsModule } from '../departments/departments.module';
     TicketWhatsappNotifierService,
     TicketPeopleService,
     TicketWatchersRepository,
+    TicketProblemTypesService,
+    TicketProblemTypesRepository,
+    TicketStockItemsService,
+    TicketStockItemsRepository,
   ],
   exports: [TicketsService, TicketAssigneesService],
 })

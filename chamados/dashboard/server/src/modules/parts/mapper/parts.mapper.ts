@@ -7,20 +7,25 @@ import {
   type UpdateMovementInput,
   type UpdatePartInput,
 } from '@template/shared/schemas/part.schema';
+import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
 
 import { setIfDefined } from '../../../lib/db/partial-update.util';
 import { type PartMovementInsert } from '../../../lib/db/schema/part-movements.schema';
 import { type PartInsert, type PartRow } from '../../../lib/db/schema/parts.schema';
 import { type MovementWithRefs } from '../repository/parts.repository';
 
-/** A tradução entre a linha do banco e o contrato. */
-export function toPart(row: PartRow): Part {
+/**
+ * A tradução entre a linha do banco e o contrato. `ticketLinks` são os chamados abertos que
+ * prendem a peça — chegam prontos de quem chamou, que é quem consulta os chamados.
+ */
+export function toPart(row: PartRow, ticketLinks: TicketStockLink[] = []): Part {
   return {
     id: row.id,
     name: row.name,
     category: row.category,
     condition: row.condition,
     balance: row.balance,
+    ticketLinks,
 
     createdAt: row.createdAt.toISOString(),
     createdBy: row.createdBy,

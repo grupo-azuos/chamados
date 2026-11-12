@@ -74,6 +74,8 @@ function makeService(repository: Partial<PartsRepository>) {
     transaction: vi.fn(async (run: (executor: DatabaseExecutor) => Promise<unknown>) =>
       run({} as DatabaseExecutor),
     ),
+    /* Nenhum chamado prende peça, a não ser que o teste diga o contrário. */
+    ticketLinksOf: vi.fn().mockResolvedValue(new Map()),
     ...repository,
   };
 
@@ -93,6 +95,18 @@ describe('PartsService.list', () => {
 
     expect(page.total).toBe(7);
     expect(page.items[0]?.balance).toBe(4);
+  });
+
+  it('shows the open ticket that holds a part', async () => {
+    const link = { ticketId: 49, protocol: 'CH-0049', direction: 'out' as const, quantity: 2 };
+    const service = makeService({
+      list: vi.fn().mockResolvedValue({ rows: [partRow()], total: 1 }),
+      ticketLinksOf: vi.fn().mockResolvedValue(new Map([[partRow().id, [link]]])),
+    });
+
+    const page = await service.list(owner, query());
+
+    expect(page.items[0]?.ticketLinks).toEqual([link]);
   });
 
   // triste

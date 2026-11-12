@@ -3,7 +3,7 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
-import { type Database } from '../../../lib/db/db.type';
+import { type Database, type DatabaseExecutor } from '../../../lib/db/db.type';
 import {
   ticketHistories,
   type TicketHistoryInsert,
@@ -51,8 +51,13 @@ export class TicketHistoriesRepository {
   async record(
     history: TicketHistoryInsert,
     ticketChange: Partial<TicketInsert> | null = null,
+    /* O que mais precisa entrar JUNTO — a baixa dos itens de estoque ao encerrar. Se falhar,
+       o histórico e o estágio também não entram. */
+    alongside?: (executor: DatabaseExecutor) => Promise<void>,
   ): Promise<TicketHistoryRow> {
     return this.db.transaction(async (tx) => {
+      if (alongside) await alongside(tx);
+
       const [row] = await runQuery(
         tx.insert(ticketHistories).values(history).returning(),
         'registrar o histórico do chamado',

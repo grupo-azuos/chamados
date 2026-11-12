@@ -3,10 +3,12 @@ import {
   type MovementListQuery,
   type PartListQuery,
 } from '@template/shared/schemas/part.schema';
+import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
 import { and, asc, count, desc, eq, gt, ilike, or, type SQL } from 'drizzle-orm';
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
+import { ticketStockLinksOf } from '../../../lib/db/ticket-stock-link.util';
 import { type Database, type DatabaseExecutor } from '../../../lib/db/db.type';
 import { computers } from '../../../lib/db/schema/computers.schema';
 import {
@@ -207,6 +209,11 @@ export class PartsRepository {
   }
 
   /** Abre a transação. Movimentação e saldo entram juntos, ou não entram. */
+  /** Os chamados abertos que prendem estes itens — o selo "no chamado CH-…" da tela. */
+  async ticketLinksOf(ids: readonly number[]): Promise<Map<number, TicketStockLink[]>> {
+    return ticketStockLinksOf(this.db, 'parts', ids);
+  }
+
   async transaction<T>(run: (executor: DatabaseExecutor) => Promise<T>): Promise<T> {
     return this.db.transaction(async (tx) => run(tx));
   }

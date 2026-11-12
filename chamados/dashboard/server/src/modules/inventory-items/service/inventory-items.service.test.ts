@@ -120,6 +120,8 @@ const defaultRepository: Partial<InventoryItemsRepository> = {
   /* A transação de mentira só roda o que recebeu: o que importa aqui é a ORDEM das decisões
      do service, não o banco. */
   transaction: vi.fn().mockImplementation(async (run) => run({})),
+  /* Nenhum chamado prende produto, a não ser que o teste diga o contrário. */
+  ticketLinksOf: vi.fn().mockResolvedValue(new Map()),
 };
 
 const defaultStorage: Partial<FileStorage> = {
@@ -160,6 +162,17 @@ describe('InventoryItemsService.list', () => {
 
     expect(page.total).toBe(1);
     expect(page.items[0]?.photoUrl).toBe('https://r2.exemplo/foto?assinatura');
+  });
+
+  it('shows the open ticket that holds a product', async () => {
+    const link = { ticketId: 12, protocol: 'CH-0012', direction: 'in' as const, quantity: 1 };
+    const service = makeService({
+      ticketLinksOf: vi.fn().mockResolvedValue(new Map([[row().id, [link]]])),
+    });
+
+    const page = await service.list(viewer, query);
+
+    expect(page.items[0]?.ticketLinks).toEqual([link]);
   });
 
   /* Falha no storage não pode derrubar a lista: o produto aparece sem imagem. */
