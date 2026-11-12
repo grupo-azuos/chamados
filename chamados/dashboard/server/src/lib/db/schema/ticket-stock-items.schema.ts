@@ -4,6 +4,7 @@ import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-c
 
 import { chamadosSchema } from './chamados.schema';
 
+import { computers } from './computers.schema';
 import { inventoryItems } from './inventory-items.schema';
 import { parts } from './parts.schema';
 import { tickets } from './tickets.schema';
@@ -43,6 +44,9 @@ export const ticketStockItems = chamadosSchema.table(
        porque alguém renomeou a peça depois. */
     itemName: text('item_name').notNull(),
     direction: text('direction', { enum: TICKET_STOCK_DIRECTIONS }).notNull(),
+    /* A máquina para onde o item foi, quando o chamado tem mais de uma. Nula, vale a máquina
+       do chamado. `set null`: o item continua contando que saiu, mesmo sem o computador. */
+    computerId: integer('computer_id').references(() => computers.id, { onDelete: 'set null' }),
     quantity: integer('quantity').notNull(),
     settledAt: timestamp('settled_at', { withTimezone: true, mode: 'date' }),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),

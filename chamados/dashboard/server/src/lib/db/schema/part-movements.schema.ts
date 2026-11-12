@@ -6,6 +6,7 @@ import { chamadosSchema } from './chamados.schema';
 
 import { computers } from './computers.schema';
 import { parts } from './parts.schema';
+import { tickets } from './tickets.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
 function valuesFor(values: readonly string[]) {
@@ -42,6 +43,11 @@ export const partMovements = chamadosSchema.table(
     /* Para qual máquina a peça foi. `set null`, e não `cascade`: se um dia um computador for
        apagado, a movimentação continua contando que uma peça saiu do depósito. */
     computerId: integer('computer_id').references(() => computers.id, { onDelete: 'set null' }),
+
+    /* O chamado que gerou o movimento — o encerramento baixa os itens dele. Movimento de
+       chamado não se corrige pelo Depósito: tira-se o item pelo chamado. `set null` por
+       garantia; chamado não se apaga. */
+    ticketId: integer('ticket_id').references(() => tickets.id, { onDelete: 'set null' }),
 
     /* Texto livre: quem pegou a peça pode não ter login no sistema. */
     handledBy: text('handled_by'),
