@@ -7,7 +7,10 @@
     /** O nome do Windows — o que vem na etiqueta da máquina. */
     hostname: string;
     responsibleName: string | null;
+    /** O departamento como a tela o escreve. */
     department: string | null;
+    /** O departamento como o filtro o compara (o valor da lista do RH). */
+    departmentKey?: string | null;
     isOnline: boolean;
   };
 
@@ -26,7 +29,8 @@
       selectedIds: number[];
       search: string;
       department: string;
-      departments: { value: string; label: string }[];
+      /** Os do RH e, depois da linha divisória, os daqui — a mesma lista do Inventário. */
+      departments: { value: string; label: string; separatorBefore?: boolean }[];
     };
     state?: {
       isOpen?: boolean;
@@ -172,12 +176,15 @@
                   {computer.responsibleName ?? 'Sem responsável'}
                   {#if computer.department}· {computer.department}{/if}
                 </span>
-                {#if !isSelected}
-                  <StatusBadge
-                    data={{ label: computer.isOnline ? 'Online' : 'Offline' }}
-                    ui={{ tone: computer.isOnline ? 'success' : 'neutral', size: 'sm' }}
-                  />
-                {/if}
+                <!-- O selo fica também no escolhido: sem ele o card encolhia e a grade pulava. -->
+                <StatusBadge
+                  data={{ label: computer.isOnline ? 'Online' : 'Offline' }}
+                  ui={{
+                    tone: computer.isOnline ? 'success' : 'neutral',
+                    size: 'sm',
+                    className: isSelected ? 'bg-primary-foreground text-primary' : undefined,
+                  }}
+                />
               </span>
             </button>
           </li>

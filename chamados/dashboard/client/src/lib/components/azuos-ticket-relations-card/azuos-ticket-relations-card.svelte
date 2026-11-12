@@ -17,6 +17,8 @@
       searchResults?: RelatedTicketSummary[];
       currentTicketId?: number;
     };
+    /** Sem o título: quando o cartão mora dentro de uma seção que já tem o nome dele. */
+    ui?: { isHeaderHidden?: boolean };
     state?: {
       isLoading?: boolean;
       isSearching?: boolean;
@@ -48,7 +50,7 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
 
-  let { data, state: cardState, actions }: AzuosTicketRelationsCardProps = $props();
+  let { data, ui, state: cardState, actions }: AzuosTicketRelationsCardProps = $props();
 
   // svelte-ignore state_referenced_locally
   let inputValue = $state(data.searchTerm ?? '');
@@ -81,16 +83,20 @@
   }
 </script>
 
-<div class="border-border flex flex-col gap-3 border-t pt-4">
-  <div class="flex items-center gap-2">
-    <Link2 class="text-primary size-4" aria-hidden="true" />
-    <div>
-      <p class="text-ink-700 text-sm font-medium">Chamados vinculados</p>
-      <p class="text-muted-foreground text-xs">
-        Relacione chamados entre si para acompanhamento conjunto.
-      </p>
+<div class={ui?.isHeaderHidden ? 'flex flex-col gap-3' : 'border-border flex flex-col gap-3 border-t pt-4'}>
+  {#if ui?.isHeaderHidden}
+    <p class="text-muted-foreground text-xs">Relacione chamados entre si para acompanhamento conjunto.</p>
+  {:else}
+    <div class="flex items-center gap-2">
+      <Link2 class="text-primary size-4" aria-hidden="true" />
+      <div>
+        <p class="text-ink-700 text-sm font-medium">Chamados vinculados</p>
+        <p class="text-muted-foreground text-xs">
+          Relacione chamados entre si para acompanhamento conjunto.
+        </p>
+      </div>
     </div>
-  </div>
+  {/if}
 
   <!-- Campo de busca de chamados para vincular -->
   <div class="flex flex-col gap-2">

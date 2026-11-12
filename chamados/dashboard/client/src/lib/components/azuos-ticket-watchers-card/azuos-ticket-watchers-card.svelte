@@ -8,6 +8,8 @@
    */
   export type AzuosTicketWatchersCardProps = {
     data: { selectedIds: string[]; options: { id: string; name: string }[] };
+    /** Sem o título: quando o cartão mora dentro de uma seção que já tem o nome dele. */
+    ui?: { isHeaderHidden?: boolean };
     state?: { isLoading?: boolean; isSaving?: boolean; error?: string | null };
     actions: { onChange: (ids: string[]) => void };
   };
@@ -16,16 +18,20 @@
 <script lang="ts">
   import PeoplePicker from '$lib/components/azuos-people-picker/azuos-people-picker.svelte';
 
-  let { data, state: cardState, actions }: AzuosTicketWatchersCardProps = $props();
+  let { data, ui, state: cardState, actions }: AzuosTicketWatchersCardProps = $props();
 </script>
 
-<div class="border-border flex flex-col gap-3 border-t pt-4">
-  <div>
-    <p class="text-ink-700 text-sm font-medium">Pessoas vinculadas</p>
-    <p class="text-muted-foreground text-xs">
-      Acompanham e escrevem no chamado junto de quem abriu.
-    </p>
-  </div>
+<div class={ui?.isHeaderHidden ? 'flex flex-col gap-3' : 'border-border flex flex-col gap-3 border-t pt-4'}>
+  {#if ui?.isHeaderHidden}
+    <p class="text-muted-foreground text-xs">Acompanham e escrevem no chamado junto de quem abriu.</p>
+  {:else}
+    <div>
+      <p class="text-ink-700 text-sm font-medium">Pessoas vinculadas</p>
+      <p class="text-muted-foreground text-xs">
+        Acompanham e escrevem no chamado junto de quem abriu.
+      </p>
+    </div>
+  {/if}
 
   <PeoplePicker
     data={data}

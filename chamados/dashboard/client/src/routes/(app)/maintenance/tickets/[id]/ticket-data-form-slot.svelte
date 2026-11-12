@@ -11,6 +11,7 @@
 
 <script lang="ts">
   import TicketComputersDialog from '$lib/components/azuos-ticket-computers-dialog/azuos-ticket-computers-dialog.svelte';
+  import Collapsible from '$lib/components/azuos-collapsible/azuos-collapsible.svelte';
   import TicketDataForm from '$lib/components/azuos-ticket-data-form/azuos-ticket-data-form.svelte';
   import TicketRelationsCard from '$lib/components/azuos-ticket-relations-card/azuos-ticket-relations-card.svelte';
   import TicketWatchersCard from '$lib/components/azuos-ticket-watchers-card/azuos-ticket-watchers-card.svelte';
@@ -41,17 +42,19 @@
   const computers = useTicketComputersModel(ticket);
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-3">
   <TicketDataForm
     data={{ ...form.data, linkedComputers: computers.data.linked }}
     state={form.state}
     actions={{ ...form.actions, onOpenComputers: computers.actions.onOpen }}
   />
-  <!-- Lado a lado em tela larga: a ficha ocupa a largura toda agora. -->
-  <div class="grid grid-cols-1 gap-x-6 lg:grid-cols-2">
-    <TicketWatchersCard data={watchers.data} state={watchers.state} actions={watchers.actions} />
-    <TicketRelationsCard data={relations.data} state={relations.state} actions={relations.actions} />
-    <div class="lg:col-span-2">
+  <!-- `{#key}` pela existência: os itens chegam depois de a seção nascer, e seção com
+       conteúdo começa aberta. -->
+  {#key stock.data.items.length > 0}
+    <Collapsible
+      data={{ title: `Itens do estoque (${stock.data.items.length})` }}
+      state={{ isOpen: stock.data.items.length > 0 }}
+    >
       <TicketStockItemsCard
         data={{
           ...stock.data,
@@ -60,12 +63,38 @@
             label: computer.name,
           })),
         }}
-        ui={{ shelfLabel: 'Depósito da Manutenção' }}
+        ui={{ shelfLabel: 'Depósito da Manutenção', isHeaderHidden: true }}
         state={{ ...stock.state, isClosed: isClosedTicketStatus(ticket.status) }}
         actions={stock.actions}
       />
-    </div>
-  </div>
+    </Collapsible>
+  {/key}
+  {#key watchers.data.selectedIds.length > 0}
+    <Collapsible
+      data={{ title: `Pessoas vinculadas (${watchers.data.selectedIds.length})` }}
+      state={{ isOpen: watchers.data.selectedIds.length > 0 }}
+    >
+      <TicketWatchersCard
+        data={watchers.data}
+        ui={{ isHeaderHidden: true }}
+        state={watchers.state}
+        actions={watchers.actions}
+      />
+    </Collapsible>
+  {/key}
+  {#key relations.data.relations.length > 0}
+    <Collapsible
+      data={{ title: `Chamados vinculados (${relations.data.relations.length})` }}
+      state={{ isOpen: relations.data.relations.length > 0 }}
+    >
+      <TicketRelationsCard
+        data={relations.data}
+        ui={{ isHeaderHidden: true }}
+        state={relations.state}
+        actions={relations.actions}
+      />
+    </Collapsible>
+  {/key}
 </div>
 
 {#if computers.state.isOpen}
