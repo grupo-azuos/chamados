@@ -297,6 +297,16 @@ export type TicketProblemTypeOption = z.infer<typeof ticketProblemTypeOptionSche
 /** De qual área são os tipos de problema pedidos. */
 export const ticketProblemTypeOptionsQuerySchema = z.object({ area: ticketAreaSchema });
 
+/**
+ * CADASTRAR um tipo de problema na hora — pela busca do campo, quando o que a pessoa procura
+ * não está na lista. Grava na hora, e o tipo passa a aparecer para todos daquela área.
+ */
+export const createTicketProblemTypeSchema = z.object({
+  area: ticketAreaSchema,
+  name: ticketProblemTypeSchema,
+});
+export type CreateTicketProblemTypeInput = z.infer<typeof createTicketProblemTypeSchema>;
+
 /** De qual área são os responsáveis pedidos. */
 export const ticketAssigneeOptionsQuerySchema = z.object({ area: ticketAreaSchema });
 
