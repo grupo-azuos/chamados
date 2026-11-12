@@ -320,7 +320,9 @@
                 {part.name}
               </button>
               <span class="text-ink-500 block text-xs">Ver o histórico</span>
-              <TicketStockLinks data={{ links: part.ticketLinks, ticketsPath: '/infra/tickets' }} />
+              <TicketStockLinks
+                data={{ links: part.ticketLinks, balance: part.balance, ticketsPath: '/infra/tickets' }}
+              />
             </div>
             <div class="flex flex-col items-end gap-1 shrink-0">
               <StatusBadge
@@ -401,7 +403,9 @@
                   {part.name}
                 </button>
                 <span class="text-ink-500 block text-xs">Ver o histórico desta peça</span>
-                <TicketStockLinks data={{ links: part.ticketLinks, ticketsPath: '/infra/tickets' }} />
+                <TicketStockLinks
+                  data={{ links: part.ticketLinks, balance: part.balance, ticketsPath: '/infra/tickets' }}
+                />
               </TableCell>
               <TableCell class="text-ink-700">{partCategoryLabel(part.category)}</TableCell>
               <TableCell>

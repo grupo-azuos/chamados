@@ -16,6 +16,7 @@ vi.mock('$lib/api/tickets.api', () => ({
       { value: 'Nobreak', label: 'Nobreak' },
       { value: 'other', label: 'Outro' },
     ]),
+    registerProblemType: vi.fn().mockResolvedValue({ value: 'Monitor', label: 'Monitor' }),
     peopleOptions: vi.fn().mockResolvedValue([
       { id: 'u-caio', name: 'Caio Reis' },
       { id: 'u-dani', name: 'Dani Alves' },
@@ -105,6 +106,31 @@ describe('useOpenTicketModel', () => {
     await waitFor(() =>
       expect(model.data.problemTypes.map((option) => option.value)).toContain('Nobreak'),
     );
+  });
+
+  it('registers a typed problem type right away and picks it', async () => {
+    const model = mountModel();
+    model.actions.onChange('area', 'infra');
+
+    model.actions.onRegisterProblemType('Monitor');
+
+    await waitFor(() =>
+      expect(model.data.problemTypes.map((option) => option.value)).toContain('Monitor'),
+    );
+    expect(model.data.fields.problemType.value).toBe('Monitor');
+    expect(ticketsApi.registerProblemType).toHaveBeenCalledWith('infra', 'Monitor');
+  });
+
+  // triste
+  it('keeps the typed name in the field when the registration fails', async () => {
+    vi.mocked(ticketsApi.registerProblemType).mockRejectedValueOnce(new Error('fora do ar'));
+    const model = mountModel();
+    model.actions.onChange('area', 'infra');
+
+    model.actions.onRegisterProblemType('Nobreak');
+
+    await waitFor(() => expect(ticketsApi.registerProblemType).toHaveBeenCalled());
+    expect(model.data.fields.problemType.value).toBe('Nobreak');
   });
 
   it('shows the protocol after the ticket was opened', async () => {

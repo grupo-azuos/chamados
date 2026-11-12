@@ -42,6 +42,7 @@ import {
 } from '@template/shared/schemas/staged-file.schema';
 import {
   type CreateTicketInput,
+  type CreateTicketProblemTypeInput,
   type MyTicket,
   type PublicTicket,
   type OpenedTicket,
@@ -190,6 +191,18 @@ export class TicketsService {
   /** Os tipos de problema da área: a lista fixa mais os cadastrados na hora. */
   async listProblemTypeOptions(area: TicketArea): Promise<TicketProblemTypeOption[]> {
     return (await this.problemTypes?.options(area)) ?? ticketProblemTypeOptionsForArea(area);
+  }
+
+  /** Cadastra na hora um tipo de problema digitado na busca — quem cadastra é quem está logado. */
+  async registerProblemType(
+    user: RequestUser,
+    input: CreateTicketProblemTypeInput,
+  ): Promise<TicketProblemTypeOption> {
+    if (!this.problemTypes) {
+      return { value: input.name, label: input.name };
+    }
+
+    return this.problemTypes.register(input.area, input.name.trim(), user.email);
   }
 
   /**

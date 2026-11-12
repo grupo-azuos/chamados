@@ -100,6 +100,8 @@
       onAttachmentsChange: (files: File[]) => void;
       onAttachmentError: (message: string | null) => void;
       onWatchersChange?: (ids: string[]) => void;
+      /** "Cadastrar" da busca do tipo: grava o tipo na hora. Ausente, o nome só vai ao campo. */
+      onRegisterProblemType?: (name: string) => void;
       onSubmit: () => void;
       onOpenAnother: () => void;
     };
@@ -629,7 +631,10 @@
                   state={{ isDisabled: formState.isSubmitting }}
                   actions={{
                     onChange: (value: string) => actions.onChange('problemType', value),
-                    onCustomValue: (value: string) => actions.onChange('problemType', value),
+                    onCustomValue: (value: string) =>
+                      actions.onRegisterProblemType
+                        ? actions.onRegisterProblemType(value)
+                        : actions.onChange('problemType', value),
                   }}
                 />
               </div>

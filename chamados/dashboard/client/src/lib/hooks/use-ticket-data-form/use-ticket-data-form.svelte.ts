@@ -1,6 +1,10 @@
 import { createForm } from '@tanstack/svelte-form';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
-import { ticketAreaOptions, type TicketArea } from '@template/shared/domain/ticket-catalog.util';
+import {
+  ticketAreaOptions,
+  type TicketArea,
+  withRegisteredProblemType,
+} from '@template/shared/domain/ticket-catalog.util';
 import {
   type Ticket,
   ticketDataFormSchema,
@@ -57,6 +61,8 @@ export type TicketDataFormModel = {
     isSaved: boolean;
     error: string | null;
     isAddingArea: boolean;
+    /** O tipo digitado na busca está sendo cadastrado. */
+    isRegisteringType: boolean;
     /** Qual área participante está sendo removida — trava o chip dela, não a lista toda. */
     removingAreaArea: TicketArea | null;
     areaError: string | null;
@@ -67,6 +73,8 @@ export type TicketDataFormModel = {
     onSubmit: () => void;
     onAddParticipantArea: (area: TicketArea) => void;
     onRemoveParticipantArea: (area: TicketArea) => void;
+    /** "Cadastrar" da busca do tipo: grava o tipo na hora e já o escolhe. */
+    onRegisterProblemType: (name: string) => void;
   };
 };
 
@@ -107,6 +115,23 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
   /* Os tipos de problema acompanham a ÁREA do formulário: reclassificar troca a lista. O
      cadastrado na hora entra na lista no próximo carregamento — a busca do campo é que o cria. */
   let problemTypes = $state<{ value: string; label: string }[]>([]);
+
+  /* CADASTRAR o tipo na hora, e não só ao salvar: o tipo novo entra na lista de todos daquela
+     área no clique, e já fica escolhido aqui. */
+  const registerType = mirrorStore(
+    createMutation({
+      mutationFn: (name: string) => ticketsApi.registerProblemType(values.current.area, name),
+      onSuccess: async (option) => {
+        registeredTypes.push({ area: values.current.area, option });
+        problemTypes = withRegisteredProblemType(problemTypes, option);
+        isSaved = false;
+        form.setFieldValue('problemType', option.value);
+        await queryClient.invalidateQueries({
+          queryKey: [...TICKETS_QUERY_KEY, 'problem-type-options'],
+        });
+      },
+    }),
+  );
 
   /* Trocar o responsável é do super admin: só ele recebe as opções, e sem opções o campo nem
      aparece. As opções são as da área que está no formulário — reclassificar muda quem atende. */
@@ -181,8 +206,13 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
   const fieldOf = (field: TicketDataField): FormFieldState =>
     toFieldState(values.current[field], fieldMeta.current[field], isSubmitted.current);
 
+  /* A lista recarrega só quando a ÁREA muda — e não a cada tecla do formulário: recarregar
+     depois de cadastrar um tipo trazia a cópia antiga e o tipo novo sumia da lista. */
+  const problemTypeArea = $derived(values.current.area);
+  /* Os tipos cadastrados por esta tela — não é estado de tela, só memória para a lista. */
+  const registeredTypes: { area: string; option: { value: string; label: string } }[] = [];
   $effect(() => {
-    const area = values.current.area;
+    const area = problemTypeArea;
 
     let isCurrent = true;
     void queryClient
@@ -192,7 +222,10 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
         staleTime: 60_000,
       })
       .then((options) => {
-        if (isCurrent) problemTypes = options;
+        /* Os cadastrados nesta tela entram de novo: a lista pode chegar DEPOIS do cadastro. */
+        if (isCurrent) problemTypes = registeredTypes
+          .filter((registered) => registered.area === area)
+          .reduce((list, registered) => withRegisteredProblemType(list, registered.option), options);
       })
       .catch(() => undefined);
 
@@ -247,8 +280,9 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
       return {
         isSubmitting: save.current.isPending,
         isSaved,
-        error: readError(save.current.error),
+        error: readError(save.current.error) ?? readError(registerType.current.error),
         isAddingArea: addArea.current.isPending,
+        isRegisteringType: registerType.current.isPending,
         removingAreaArea,
         areaError,
       };
@@ -265,6 +299,7 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
       },
       onSubmit: () => void form.handleSubmit(),
       onAddParticipantArea: (area) => addArea.current.mutate(area),
+      onRegisterProblemType: (name) => registerType.current.mutate(name),
       onRemoveParticipantArea: (area) => {
         removingAreaArea = area;
         removeArea.current.mutate(area);

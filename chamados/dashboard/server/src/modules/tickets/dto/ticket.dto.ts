@@ -1,5 +1,6 @@
 import {
   addTicketAreaSchema,
+  createTicketProblemTypeSchema,
   createTicketSchema,
   myTicketSchema,
   publicTicketSchema,
@@ -44,6 +45,7 @@ export class AddTicketAreaDto extends createZodDto(addTicketAreaSchema) {}
 export class TicketDto extends createZodDto(ticketSchema) {}
 export class TicketAssigneeOptionDto extends createZodDto(ticketAssigneeOptionSchema) {}
 export class TicketAssigneeOptionsQueryDto extends createZodDto(ticketAssigneeOptionsQuerySchema) {}
+export class CreateTicketProblemTypeDto extends createZodDto(createTicketProblemTypeSchema) {}
 export class TicketProblemTypeOptionDto extends createZodDto(ticketProblemTypeOptionSchema) {}
 export class TicketProblemTypeOptionsQueryDto extends createZodDto(
   ticketProblemTypeOptionsQuerySchema,

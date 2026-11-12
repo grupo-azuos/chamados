@@ -189,7 +189,11 @@
                 <h3 class="text-ink-900 text-sm leading-tight font-semibold">{item.name}</h3>
                 <p class="text-ink-500 mt-1 text-xs">{detailOf(item)}</p>
                 <TicketStockLinks
-                  data={{ links: item.ticketLinks, ticketsPath: '/maintenance/tickets' }}
+                  data={{
+                    links: item.ticketLinks,
+                    balance: item.balance,
+                    ticketsPath: '/maintenance/tickets',
+                  }}
                 />
               </div>
 
