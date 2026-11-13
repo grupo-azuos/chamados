@@ -46,12 +46,23 @@
   >
     <span class="break-words">{data.title}</span>
     <ChevronDown
-      class={cn('text-ink-500 size-4 shrink-0 transition-transform', isOpen && 'rotate-180')}
+      class={cn(
+        'text-ink-500 size-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none',
+        isOpen && 'rotate-180',
+      )}
       aria-hidden="true"
     />
   </CollapsibleTrigger>
 
-  <CollapsibleContent class="border-border text-ink-700 border-t px-4 py-3 text-sm">
-    {@render children?.()}
+  <!-- O conteúdo DESLIZA ao abrir e ao fechar (a altura vai de zero à do conteúdo, medida pelo
+       próprio componente). O respiro mora no `div` de dentro: com ele aqui fora, a seção
+       fechando ainda mostrava a faixa do padding no último quadro. Quem pediu ao sistema menos
+       movimento vê abrir e fechar na hora. -->
+  <CollapsibleContent
+    class="border-border text-ink-700 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden border-t text-sm motion-reduce:animate-none"
+  >
+    <div class="px-4 py-3">
+      {@render children?.()}
+    </div>
   </CollapsibleContent>
 </Collapsible>
