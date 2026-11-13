@@ -98,6 +98,26 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ ...secrets, API_PORT: '99999' })).toThrow(/API_PORT/);
   });
 
+  // feliz
+  it('treats an empty variable as unset, as the Swarm delivers the ones missing in Infisical', () => {
+    const env = parseEnv({
+      ...secrets,
+      DATABASE_SSL_CA: '',
+      UNIFI_WEBHOOK_TOKEN: '',
+      USER_MOCK: '',
+      USER_MOCK_ID: '',
+      USER_MOCK_EMAIL: '',
+      USER_MOCK_NAME: '',
+    });
+    expect(env.DATABASE_SSL_CA).toBeUndefined();
+    expect(env.USER_MOCK).toBeUndefined();
+  });
+
+  // triste
+  it('still refuses an empty required variable', () => {
+    expect(() => parseEnv({ ...secrets, DATABASE_URL: '' })).toThrow(/DATABASE_URL/);
+  });
+
   /* O host da assinatura vai num cabeçalho: URL inteira ali é erro de quem preencheu. */
   it('takes the signing host as host:port, and refuses a full URL', () => {
     expect(

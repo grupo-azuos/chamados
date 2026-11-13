@@ -254,7 +254,10 @@ export const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function parseEnv(source: NodeJS.ProcessEnv): Env {
-  const result = envSchema.safeParse(source);
+  /* O `docker stack deploy` entrega como texto vazio a variável listada no compose que não existe
+     no Infisical. Vazio vale o mesmo que ausente: cai no padrão ou no opcional do schema. */
+  const filled = Object.fromEntries(Object.entries(source).filter(([, value]) => value !== ''));
+  const result = envSchema.safeParse(filled);
   if (result.success) return assertNoMockInProduction(result.data);
 
   const details = result.error.issues
