@@ -1,4 +1,3 @@
-import { connectionOptions } from './connection-options.util';
 import { Logger } from '@nestjs/common';
 import { join } from 'node:path';
 
@@ -6,12 +5,20 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Client } from 'pg';
 
+import { connectionOptions } from './connection-options.util';
+import { ensureDatabase } from './ensure-database.util';
+
 async function main(): Promise<void> {
   const url = process.env.DATABASE_MIGRATION_URL;
   if (!url || !/^postgres(ql)?:\/\//.test(url))
     throw new Error('DATABASE_MIGRATION_URL must be the direct PostgreSQL connection');
+
+  // Database novo nasce aqui, como no paralegal, no shared-api e no admin-console.
+  const ca = process.env.DATABASE_SSL_CA;
+  await ensureDatabase(url, ca);
+
   const client = new Client({
-    ...connectionOptions(url, process.env.DATABASE_SSL_CA),
+    ...connectionOptions(url, ca),
     connectionTimeoutMillis: 5000,
     statement_timeout: 120000,
     application_name: 'chamados-migrations',
