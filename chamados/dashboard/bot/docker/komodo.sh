@@ -79,6 +79,10 @@ remove_legacy_stacks() {
 case "$step" in
   pre-deploy)
     build_runtime_images
+    # Rede externa que o app divide com outro stack: o próprio deploy cria se faltar.
+    if [ -f docker/networks.sh ]; then
+      sh docker/networks.sh
+    fi
     with_secrets sh docker/check-env.sh
     if [ -f docker/migrate.sh ]; then
       with_secrets sh docker/migrate.sh
