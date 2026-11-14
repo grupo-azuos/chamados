@@ -1,7 +1,6 @@
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
-  import CircleUser from '@lucide/svelte/icons/circle-user';
   import FileCheck from '@lucide/svelte/icons/file-check';
   import LifeBuoy from '@lucide/svelte/icons/life-buoy';
   import type { Snippet } from 'svelte';
@@ -44,8 +43,6 @@
       };
       /** Os módulos que a pessoa atende. Dois ou mais desenham o formato de duas colunas. */
       areaOptions?: { value: AreaContext; label: string; icon?: LucideIcon }[];
-      /** A conta no admin-console. Sem endereço, o atalho não aparece. */
-      accountUrl?: string | null;
     };
     ui?: { items?: readonly NavItem[] };
     state?: {
@@ -163,12 +160,7 @@
   const areas = $derived(data?.areaOptions ?? []);
   const isTwoColumn = $derived(areas.length >= 2);
   const activeArea = $derived(areas.find((area) => area.value === shellState?.areaContext));
-  const shellActions = $derived<ShellAction[]>([
-    ...PUBLIC_LINKS,
-    ...(data?.accountUrl
-      ? [{ href: data.accountUrl, label: 'Minha conta', icon: CircleUser, opensInNewTab: false }]
-      : []),
-  ]);
+  const shellActions = PUBLIC_LINKS;
   const barItems = $derived(items.slice(0, MOBILE_BAR_ITEMS));
   const isMenuActive = $derived(!barItems.some((item) => item.key === shellState?.activeKey));
 
