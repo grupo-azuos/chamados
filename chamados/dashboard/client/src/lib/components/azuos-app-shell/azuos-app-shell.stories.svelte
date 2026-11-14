@@ -34,7 +34,7 @@
 </script>
 
 <Story name="Default" asChild>
-  <AppShell data={{ user, accountUrl: 'https://login.exemplo.com.br' }} state={{ activeKey: 'tickets' }} {actions}>
+  <AppShell data={{ user }} state={{ activeKey: 'tickets' }} {actions}>
     <div class="text-ink-700 p-8 text-sm">Conteúdo da rota entra aqui.</div>
   </AppShell>
 </Story>

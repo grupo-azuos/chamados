@@ -325,14 +325,10 @@ describe('AzuosAppShell', () => {
     expect(screen.getByText('Visitante')).toBeInTheDocument();
   });
 
-  /* Sem callback de encerramento, só oferece o atalho de conta que recebeu. */
-  it('links to the account when no sign-out action was supplied', () => {
-    renderShell({ data: { accountUrl: 'https://login.exemplo.com.br' } });
+  /* Sem callback de encerramento, não há botão de sair. */
+  it('hides sign out when no sign-out action was supplied', () => {
+    renderShell({});
 
-    expect(screen.getByRole('link', { name: 'Minha conta' })).toHaveAttribute(
-      'href',
-      'https://login.exemplo.com.br',
-    );
     expect(screen.queryByRole('button', { name: 'Sair' })).not.toBeInTheDocument();
   });
 
@@ -353,7 +349,7 @@ describe('AzuosAppShell', () => {
   });
 
   // triste
-  it('offers no account link when the address is unknown', () => {
+  it('never offers the account shortcut', () => {
     renderShell({});
 
     expect(screen.queryByRole('link', { name: 'Minha conta' })).not.toBeInTheDocument();
@@ -486,12 +482,9 @@ describe('AzuosAppShell — celular: o que a gaveta oferece', () => {
   // feliz
   it('opens the profile and the shortcuts from the sheet', async () => {
     const onOpenProfile = vi.fn();
-    renderOnPhone({ ui: { items }, data: { accountUrl: 'https://login.exemplo.com.br' }, actions: { onOpenProfile } });
-    let sheet = await openSheet();
-    await fireEvent.click(within(sheet).getByRole('link', { name: /Minha conta/ }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-
-    sheet = await openSheet();
+    renderOnPhone({ ui: { items }, actions: { onOpenProfile } });
+    const sheet = await openSheet();
+    expect(within(sheet).queryByRole('link', { name: /Minha conta/ })).not.toBeInTheDocument();
     await fireEvent.click(within(sheet).getByRole('button', { name: 'Abrir perfil do usuário' }));
     expect(onOpenProfile).toHaveBeenCalledOnce();
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -550,14 +543,12 @@ describe('AzuosAppShell — o rodapé do trilho', () => {
     const onOpenProfile = vi.fn();
     renderShell({
       ui: { items },
-      data: { areaOptions: [...areaOptions], accountUrl: 'https://login.exemplo.com.br', user: { name: 'Ana', email: 'ana@empresa.com.br', role: 'Admin' } },
+      data: { areaOptions: [...areaOptions], user: { name: 'Ana', email: 'ana@empresa.com.br', role: 'Admin' } },
       state: { areaContext: 'infra', activeKey: 'tickets' },
       actions: { onSignOut, onOpenProfile },
     });
 
-    const account = screen.getByRole('link', { name: 'Minha conta' });
-    await userEvent.hover(account);
-    expect((await screen.findAllByRole('tooltip', TOOLTIP)).some((tip) => tip.textContent?.includes('Minha conta'))).toBe(true);
+    expect(screen.queryByRole('link', { name: 'Minha conta' })).not.toBeInTheDocument();
 
     const profileButton = screen.getByRole('button', { name: 'Abrir perfil do usuário' });
     await userEvent.hover(profileButton);
