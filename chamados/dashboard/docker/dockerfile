@@ -11,7 +11,7 @@ COPY package.json package-lock.json ./
 COPY shared/package.json shared/package.json
 COPY server/package.json server/package.json
 COPY client/package.json client/package.json
-RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts --no-audit --no-fund
+RUN --mount=type=cache,target=/root/.npm npm ci --include=dev --ignore-scripts --no-audit --no-fund
 
 # Rspack empacota o server (shared e bibliotecas dentro); o client é SvelteKit, que só builda no Vite.
 FROM deps AS build
