@@ -67,6 +67,58 @@ describe('ensureDatabase', () => {
     expect(adminEnd).toHaveBeenCalledTimes(1);
   });
 
+  // feliz
+  it('falls back to /defaultdb when /postgres does not exist (DigitalOcean)', async () => {
+    const probe = {
+      connect: vi.fn().mockRejectedValue({ code: DATABASE_MISSING }),
+      query: vi.fn(),
+      end: vi.fn().mockResolvedValue(undefined),
+    };
+    const postgres = {
+      connect: vi.fn().mockRejectedValue({ code: DATABASE_MISSING }),
+      query: vi.fn(),
+      end: vi.fn().mockResolvedValue(undefined),
+    };
+    const defaultdb = {
+      connect: vi.fn().mockResolvedValue(undefined),
+      query: vi.fn().mockResolvedValue({}),
+      end: vi.fn().mockResolvedValue(undefined),
+    };
+    const clients = [probe, postgres, defaultdb];
+    vi.mocked(Client).mockImplementation(function () {
+      return clients.shift() as unknown as Client;
+    });
+
+    const result = await ensureDatabase('postgresql://user:pass@localhost:5432/chamados');
+
+    expect(result).toBe(true);
+    expect(vi.mocked(Client).mock.calls[1]?.[0]).toMatchObject({
+      connectionString: expect.stringContaining('/postgres'),
+    });
+    expect(vi.mocked(Client).mock.calls[2]?.[0]).toMatchObject({
+      connectionString: expect.stringContaining('/defaultdb'),
+    });
+    expect(postgres.query).not.toHaveBeenCalled();
+    expect(defaultdb.query).toHaveBeenCalledWith('CREATE DATABASE "chamados"');
+    expect(defaultdb.end).toHaveBeenCalledTimes(1);
+  });
+
+  // triste
+  it('rethrows when neither /postgres nor /defaultdb exists', async () => {
+    vi.mocked(Client).mockImplementation(function () {
+      return {
+        connect: vi.fn().mockRejectedValue({ code: DATABASE_MISSING }),
+        query: vi.fn(),
+        end: vi.fn().mockResolvedValue(undefined),
+      } as unknown as Client;
+    });
+
+    await expect(
+      ensureDatabase('postgresql://user:pass@localhost:5432/chamados'),
+    ).rejects.toMatchObject({ code: DATABASE_MISSING });
+    expect(Client).toHaveBeenCalledTimes(3);
+  });
+
   // triste
   it('rethrows when the connection error is not 3D000', async () => {
     const probeConnect = vi
