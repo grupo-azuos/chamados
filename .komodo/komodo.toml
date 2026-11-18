@@ -225,7 +225,7 @@ await komodo.execute_server_terminal(
 [[repo]]
 name = "prod_chamados"
 description = "Clone da main do chamados no core"
-tags = ["context:apps", "env:prod", "server:core"]
+tags = ["context:apps", "env:core", "server:core"]
 [repo.config]
 server = "core"
 git_provider = "github.com"
@@ -238,7 +238,7 @@ links = ["https://github.com/grupo-azuos/chamados/tree/main"]
 [[build]]
 name = "prod_chamados"
 description = "Imagem azuos/chamados de produção, construída no core"
-tags = ["context:apps", "env:prod", "server:core"]
+tags = ["context:apps", "env:core", "server:core"]
 [build.config]
 builder = "prod"
 linked_repo = "prod_chamados"
@@ -260,7 +260,7 @@ links = ["https://chamados.grupoazuos.com.br"]
 [[stack]]
 name = "prod_chamados"
 description = "Serviços do chamados no Swarm de produção"
-tags = ["context:apps", "env:prod", "server:core"]
+tags = ["context:apps", "env:core", "server:core"]
 [stack.config]
 swarm = "core"
 project_name = "prod_chamados"
@@ -293,7 +293,7 @@ sh docker/komodo.sh post-deploy chamados prod
 [[procedure]]
 name = "prod_chamados"
 description = "Publica a main do chamados em produção: Pull, Build e Deploy"
-tags = ["context:apps", "env:prod", "server:core"]
+tags = ["context:apps", "env:core", "server:core"]
 [procedure.config]
 webhook_enabled = true
 
@@ -318,7 +318,7 @@ executions = [
 [[action]]
 name = "prod_chamados_rollback"
 description = "Volta os serviços do prod_chamados para a versão anterior (rollback do Swarm)"
-tags = ["context:apps", "env:prod", "server:core"]
+tags = ["context:apps", "env:core", "server:core"]
 [action.config]
 webhook_enabled = false
 file_contents = '''
@@ -338,7 +338,7 @@ await komodo.execute_server_terminal(
 [[build]]
 name = "prod_chamados-bot"
 description = "Imagem azuos/chamados-bot de produção: o bot do WhatsApp"
-tags = ["context:apps", "env:prod", "server:core"]
+tags = ["context:apps", "env:core", "server:core"]
 [build.config]
 builder = "prod"
 linked_repo = "prod_chamados"
@@ -359,7 +359,7 @@ azuos.environment=prod
 [[stack]]
 name = "prod_chamados-bot"
 description = "Bot do WhatsApp do chamados no Swarm de produção"
-tags = ["context:apps", "env:prod", "server:core"]
+tags = ["context:apps", "env:core", "server:core"]
 [stack.config]
 swarm = "core"
 project_name = "prod_chamados-bot"
@@ -391,7 +391,7 @@ sh docker/komodo.sh post-deploy chamados-bot prod
 [[procedure]]
 name = "prod_chamados-bot"
 description = "Publica o bot do chamados em produção: Pull, Build e Deploy"
-tags = ["context:apps", "env:prod", "server:core"]
+tags = ["context:apps", "env:core", "server:core"]
 [procedure.config]
 webhook_enabled = true
 
@@ -416,7 +416,7 @@ executions = [
 [[action]]
 name = "prod_chamados-bot_rollback"
 description = "Volta o prod_chamados-bot para a versão anterior (rollback do Swarm)"
-tags = ["context:apps", "env:prod", "server:core"]
+tags = ["context:apps", "env:core", "server:core"]
 [action.config]
 webhook_enabled = false
 file_contents = '''

@@ -27,7 +27,7 @@ header Content-Type image/svg+xml*
     route {
         handle /__ready {
             rewrite * /api/health
-            reverse_proxy app:3000
+            reverse_proxy app:{$API_PORT}
         }
         @wrong_host not host {$PUBLIC_DOMAIN}
         respond @wrong_host 421
@@ -39,7 +39,7 @@ header Content-Type image/svg+xml*
         request_header -X-Forwarded-Proto
         @public path /api/health /agent /api/v1/agent/releases/latest /api/v1/network/webhook /api/v1/integrations/github/callback /api/v1/integrations/whatsapp/inbound
         handle @public {
-            reverse_proxy app:3000
+            reverse_proxy app:{$API_PORT}
         }
         handle {
             forward_auth {$ADMIN_CONSOLE_URL} {
@@ -53,7 +53,7 @@ header Content-Type image/svg+xml*
                     response_header_timeout 5s
                 }
             }
-            reverse_proxy app:3000 {
+            reverse_proxy app:{$API_PORT} {
                 header_up X-Forwarded-Proto https
                 flush_interval -1
                 stream_close_delay 5m

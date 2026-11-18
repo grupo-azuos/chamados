@@ -37,7 +37,7 @@ function resourceRules(resource, app) {
     return [`Komodo ${label}: name must be <ambiente>_<app> (homo_${app} or prod_${app})`];
   }
   const own = name === `${env}_${app}`;
-  const tags = `["context:apps", "env:${env}", "server:${target.server}"]`;
+  const tags = `["context:apps", "env:${target.server}", "server:${target.server}"]`;
   return [
     ...rule(Boolean(quoted(resource.field('description'))), `Komodo ${label}: describe what the resource does`),
     ...rule(resource.field('tags') === tags, `Komodo ${label}: tags must be ${tags}`),

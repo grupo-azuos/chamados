@@ -3,8 +3,9 @@ services:
   app:
     image: ${APP_IMAGE:?}
     environment:
-    - NODE_ENV=production
-    - API_PORT=3000
+    - NODE_ENV=${NODE_ENV:?}
+    - API_PORT=${API_PORT:?}
+    - DATABASE_MIGRATE_ON_START=${DATABASE_MIGRATE_ON_START:-false}
     - APP_ENV
     - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:?}
     - VALKEY_URL
@@ -57,7 +58,7 @@ services:
     healthcheck:
       test:
       - CMD-SHELL
-      - node -e "fetch('http://127.0.0.1:3000/api/health', {signal:AbortSignal.timeout(3000),redirect:'error'}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      - node -e "fetch('http://127.0.0.1:'+process.env.API_PORT+'/api/health', {signal:AbortSignal.timeout(3000),redirect:'error'}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
       interval: 10s
       timeout: 5s
       start_period: 45s
@@ -108,8 +109,9 @@ services:
   worker:
     image: ${APP_IMAGE:?}
     environment:
-    - NODE_ENV=production
-    - API_PORT=3000
+    - NODE_ENV=${NODE_ENV:?}
+    - API_PORT=${API_PORT:?}
+    - DATABASE_MIGRATE_ON_START=${DATABASE_MIGRATE_ON_START:-false}
     - APP_ENV
     - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:?}
     - VALKEY_URL
@@ -162,7 +164,7 @@ services:
     healthcheck:
       test:
       - CMD-SHELL
-      - node -e "fetch('http://127.0.0.1:3000/api/health', {signal:AbortSignal.timeout(3000),redirect:'error'}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      - node -e "fetch('http://127.0.0.1:'+process.env.API_PORT+'/api/health', {signal:AbortSignal.timeout(3000),redirect:'error'}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
       interval: 10s
       timeout: 5s
       start_period: 45s
@@ -215,6 +217,7 @@ services:
     user: 1000:1000
     environment:
       PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?}
+      API_PORT: ${API_PORT:?}
       ADMIN_CONSOLE_URL: ${ADMIN_CONSOLE_URL:-http://admin-console:3000}
     configs:
     - source: gateway
@@ -277,7 +280,7 @@ services:
     extra_hosts: *id001
 configs:
   gateway:
-    name: ${APP_NAME:?}_${DEPLOY_ENV:?}_gateway_${APP_REVISION:?}
+    name: ${DEPLOY_ENV:?}_${APP_NAME:?}_gateway_${APP_REVISION:?}
     file: ./caddy/caddyfile
 networks:
   private:
