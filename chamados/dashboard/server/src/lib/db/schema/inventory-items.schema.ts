@@ -10,7 +10,6 @@ import {
   serial,
   text,
   timestamp,
-  unique,
 } from 'drizzle-orm/pg-core';
 
 import { chamadosSchema } from './chamados.schema';
@@ -43,6 +42,9 @@ export const inventoryItems = chamadosSchema.table(
     unit: text('unit', { enum: INVENTORY_UNITS }).notNull().default('unit'),
 
     location: text('location'),
+    department: text('department'),
+    userId: text('user_id'),
+    userName: text('user_name'),
     code: text('code'),
     note: text('note'),
     photoKey: text('photo_key'),
@@ -60,12 +62,8 @@ export const inventoryItems = chamadosSchema.table(
   (table) => [
     index('inventory_items_category_idx').on(table.category),
     index('inventory_items_name_idx').on(table.name),
-    /* A REGRA DE UNICIDADE MORA NO BANCO (CONTRIBUTING §15). Vale só para o código de
-       patrimônio, que é etiqueta colada na coisa: duas linhas com a mesma etiqueta fariam o
-       inventário discordar da parede. O NOME repete à vontade — há cinco cadeiras iguais em
-       salas diferentes, e cada uma é um registro. Produto sem etiqueta (`null`) não entra na
-       regra: o Postgres não compara nulos entre si, e é exatamente o que se quer aqui. */
-    unique('inventory_items_code_unique').on(table.code),
+    index('inventory_items_department_idx').on(table.department),
+    index('inventory_items_user_id_idx').on(table.userId),
     check('inventory_items_category_valid', sql`${table.category} in (${valuesFor(INVENTORY_CATEGORIES)})`),
     check('inventory_items_unit_valid', sql`${table.unit} in (${valuesFor(INVENTORY_UNITS)})`),
     /* Saldo negativo é entrada esquecida. A API já recusa a saída que não cabe; esta é a

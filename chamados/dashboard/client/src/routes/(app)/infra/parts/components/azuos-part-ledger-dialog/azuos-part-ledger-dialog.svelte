@@ -189,7 +189,7 @@
                       icon: Trash2,
                       isIconOnly: true,
                       className:
-                        'text-ink-500 hover:text-destructive hover:bg-destructive/10',
+                        'text-ink-500 hover:text-destructive hover:bg-muted',
                     }}
                     actions={{ onClick: () => actions.onAskRemove(movement) }}
                   />
@@ -209,7 +209,7 @@
               <p class="text-xs text-muted-foreground break-words">{movement.note}</p>
             {/if}
             <div
-              class="flex items-center justify-between text-xs text-muted-foreground border-t border-border/40 pt-1.5"
+              class="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-1.5"
             >
               <span>Máquina: <strong class="text-foreground">{destinationOf(movement)}</strong></span>
               {#if movement.handledBy}
@@ -222,7 +222,11 @@
 
       <!-- 2. Visualização Desktop (>= xl) -->
       <div
-        class={cn(tableView.forceCards ? 'hidden' : 'hidden xl:block')}
+        class={cn(
+          /* Sem borda aqui: a tabela do grupo já traz a dela, e duas viravam moldura dupla. */
+          'overflow-x-auto',
+          tableView.forceCards ? 'hidden' : 'hidden xl:block',
+        )}
         data-slot="part-ledger-table-desktop"
       >
         <!-- Sem moldura própria e sem largura mínima: a tabela já tem fundo e borda, e uma
@@ -280,7 +284,7 @@
                           icon: Trash2,
                           isIconOnly: true,
                           className:
-                            'text-ink-500 hover:text-destructive hover:bg-destructive/10',
+                            'text-ink-500 hover:text-destructive hover:bg-muted',
                         }}
                         actions={{ onClick: () => actions.onAskRemove(movement) }}
                       />

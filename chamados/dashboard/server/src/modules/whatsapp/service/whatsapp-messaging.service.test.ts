@@ -300,3 +300,19 @@ describe('WhatsappMessagingService — assinatura do bot', () => {
     expect(await service.reply(reply)).toBe('*Azuos BOT*\n\ntext:intake_link');
   });
 });
+
+describe('WhatsappMessagingService.linkedPhone', () => {
+  // feliz
+  it('answers the linked number of the person', async () => {
+    const { service } = makeService();
+
+    await expect(service.linkedPhone('u-ana')).resolves.toBe('5562999990001');
+  });
+
+  // triste
+  it('answers null for whoever has not linked a number', async () => {
+    const { service } = makeService({ linked: false });
+
+    await expect(service.linkedPhone('u-bia')).resolves.toBeNull();
+  });
+});

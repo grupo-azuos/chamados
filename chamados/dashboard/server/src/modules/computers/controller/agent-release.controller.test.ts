@@ -1,3 +1,4 @@
+import { applyHttpConventions } from '../../../lib/http/api-version';
 import { type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -28,7 +29,7 @@ describe('agent release HTTP boundary', () => {
       ],
     }).compile();
     app = module.createNestApplication();
-    app.setGlobalPrefix('api');
+    applyHttpConventions(app);
     app.useGlobalGuards(app.get(RolesGuard, { strict: false }));
     await app.init();
   });
@@ -37,12 +38,12 @@ describe('agent release HTTP boundary', () => {
   });
   // triste
   it('refuses a request without machine credentials even though no human session is required', async () => {
-    await request(app.getHttpServer()).get('/api/agent/releases/latest').expect(401);
+    await request(app.getHttpServer()).get('/api/v1/agent/releases/latest').expect(401);
   });
   it('refuses blocked machine identity', async () => {
     authenticateAgent.mockResolvedValue({ ok: false, reason: 'blocked' });
     await request(app.getHttpServer())
-      .get('/api/agent/releases/latest')
+      .get('/api/v1/agent/releases/latest')
       .set('Authorization', 'Bearer fixture')
       .expect(403);
   });
@@ -51,9 +52,17 @@ describe('agent release HTTP boundary', () => {
     authenticateAgent.mockResolvedValue({ ok: true, computer: { id: 1 } });
     latest.mockResolvedValue(null);
     const response = await request(app.getHttpServer())
-      .get('/api/agent/releases/latest')
+      .get('/api/v1/agent/releases/latest')
       .set('Authorization', 'Bearer fixture')
       .expect(204);
     expect(response.headers['cache-control']).toBe('no-store');
+  });
+  it('keeps answering the unversioned path used by agents already installed', async () => {
+    authenticateAgent.mockResolvedValue({ ok: true, computer: { id: 1 } });
+    latest.mockResolvedValue(null);
+    await request(app.getHttpServer())
+      .get('/api/agent/releases/latest')
+      .set('Authorization', 'Bearer fixture')
+      .expect(204);
   });
 });

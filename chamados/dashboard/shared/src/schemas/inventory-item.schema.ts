@@ -17,19 +17,20 @@ import { ticketStockLinkSchema } from './ticket-stock-item.schema';
  */
 export const INVENTORY_NAME_MAX_LENGTH = 120;
 export const INVENTORY_LOCATION_MAX_LENGTH = 120;
+export const INVENTORY_DEPARTMENT_MAX_LENGTH = 120;
 export const INVENTORY_CODE_MAX_LENGTH = 40;
 export const INVENTORY_NOTE_MAX_LENGTH = 500;
 
 export const inventoryCategorySchema = z.enum(INVENTORY_CATEGORIES, {
-  errorMap: () => ({ message: 'Escolha uma categoria da lista' }),
+  error: 'Escolha uma categoria da lista',
 });
 
 export const inventoryUnitSchema = z.enum(INVENTORY_UNITS, {
-  errorMap: () => ({ message: 'Escolha como este produto é contado' }),
+  error: 'Escolha como este produto é contado',
 });
 
 const nameSchema = z
-  .string({ required_error: 'Informe o nome do produto' })
+  .string({ error: 'Informe o nome do produto' })
   .trim()
   .min(1, 'Informe o nome do produto')
   .max(INVENTORY_NAME_MAX_LENGTH, `O nome pode ter até ${INVENTORY_NAME_MAX_LENGTH} caracteres`);
@@ -47,6 +48,14 @@ const locationSchema = optionalText(
   INVENTORY_LOCATION_MAX_LENGTH,
   `O lugar pode ter até ${INVENTORY_LOCATION_MAX_LENGTH} caracteres`,
 );
+
+const departmentSchema = optionalText(
+  INVENTORY_DEPARTMENT_MAX_LENGTH,
+  `O departamento pode ter até ${INVENTORY_DEPARTMENT_MAX_LENGTH} caracteres`,
+);
+
+const userIdSchema = optionalText(120, 'O id do usuário é inválido');
+const userNameSchema = optionalText(120, 'O nome do usuário pode ter até 120 caracteres');
 
 const codeSchema = optionalText(
   INVENTORY_CODE_MAX_LENGTH,
@@ -70,6 +79,9 @@ export const inventoryItemSchema = z.object({
   category: inventoryCategorySchema,
   unit: inventoryUnitSchema,
   location: z.string().nullable(),
+  department: z.string().nullable().default(null),
+  userId: z.string().nullable().default(null),
+  userName: z.string().nullable().default(null),
   /** Patrimônio, etiqueta ou código interno — o que a empresa já usa para achar a coisa. */
   code: z.string().nullable(),
   note: z.string().nullable(),
@@ -85,9 +97,9 @@ export const inventoryItemSchema = z.object({
    */
   ticketLinks: z.array(ticketStockLinkSchema).optional(),
 
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string(),
-  updatedAt: z.string().datetime().nullable(),
+  updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
 });
 
@@ -103,6 +115,9 @@ export const createInventoryItemSchema = z.object({
   category: inventoryCategorySchema,
   unit: inventoryUnitSchema,
   location: locationSchema.optional(),
+  department: departmentSchema.optional(),
+  userId: userIdSchema.optional(),
+  userName: userNameSchema.optional(),
   code: codeSchema.optional(),
   note: noteSchema.optional(),
   photo: stagedFileSchema.optional(),
@@ -119,12 +134,15 @@ export const updateInventoryItemSchema = z.object({
   category: inventoryCategorySchema.optional(),
   unit: inventoryUnitSchema.optional(),
   location: locationSchema.optional(),
+  department: departmentSchema.optional(),
+  userId: userIdSchema.optional(),
+  userName: userNameSchema.optional(),
   code: codeSchema.optional(),
   note: noteSchema.optional(),
   /** A foto nova, já enviada — substitui a anterior. */
   photo: stagedFileSchema.optional(),
   /** `true` tira a foto do produto sem pôr outra. */
-  removePhoto: z.coerce.boolean().optional(),
+  removePhoto: z.coerce.boolean<boolean>().optional(),
 });
 
 export type UpdateInventoryItemInput = z.input<typeof updateInventoryItemSchema>;
@@ -133,9 +151,9 @@ export const inventoryItemListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   category: inventoryCategorySchema.optional(),
   /** Só os produtos ainda sem foto — filtrado no SQL, como os outros. */
-  withoutPhotoOnly: z.coerce.boolean().optional(),
+  withoutPhotoOnly: z.coerce.boolean<boolean>().optional(),
   /** Só os produtos com o depósito zerado. */
-  outOfStockOnly: z.coerce.boolean().optional(),
+  outOfStockOnly: z.coerce.boolean<boolean>().optional(),
 });
 
 export type InventoryItemListQuery = z.infer<typeof inventoryItemListQuerySchema>;
@@ -155,6 +173,16 @@ export const inventoryItemFormSchema = z.object({
       INVENTORY_LOCATION_MAX_LENGTH,
       `O lugar pode ter até ${INVENTORY_LOCATION_MAX_LENGTH} caracteres`,
     ),
+  department: z
+    .string()
+    .trim()
+    .max(
+      INVENTORY_DEPARTMENT_MAX_LENGTH,
+      `O departamento pode ter até ${INVENTORY_DEPARTMENT_MAX_LENGTH} caracteres`,
+    )
+    .default(''),
+  userId: z.string().trim().default(''),
+  userName: z.string().trim().default(''),
   code: z
     .string()
     .trim()
@@ -172,3 +200,10 @@ export const inventoryItemFormSchema = z.object({
 });
 
 export type InventoryItemFormValues = z.input<typeof inventoryItemFormSchema>;
+
+export const inventoryResponsibleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+export type InventoryResponsible = z.infer<typeof inventoryResponsibleSchema>;

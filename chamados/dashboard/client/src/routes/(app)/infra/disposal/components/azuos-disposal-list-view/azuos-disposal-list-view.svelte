@@ -238,7 +238,7 @@
           style:--fill-color={fillColorOf(
             computer.disposalType ? disposalTypeTone(computer.disposalType) : 'neutral',
           )}
-          class="hover-fill border-border/70 bg-card rounded-surface border p-4 shadow-xs"
+          class="hover-fill border-border bg-card rounded-surface border p-4 shadow-xs"
         >
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0 flex-1">
@@ -269,7 +269,7 @@
 
           <!-- A data fica numa linha e os botões em outra: lado a lado, o cartão estreito
                cortava "Voltar ao inventário" no meio da palavra. -->
-          <div class="border-border/60 mt-3 flex flex-col gap-2 border-t pt-2">
+          <div class="border-border mt-3 flex flex-col gap-2 border-t pt-2">
             <span class="text-xs text-ink-500">
               Saiu em {formatDate(computer.disposedAt)}
             </span>

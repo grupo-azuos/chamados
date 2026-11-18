@@ -1,9 +1,12 @@
+import { docsAccess } from './lib/http/docs-access.middleware';
+import { setupOpenApiDocs } from './lib/http/openapi-document';
+import { packageVersion } from './lib/http/api-version';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { WsAdapter } from '@nestjs/platform-ws';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger as PinoLogger } from 'nestjs-pino';
-import { cleanupOpenApiDoc } from 'nestjs-zod';
+import { withZodSchemas } from './lib/http/zod-dto';
 
 import { AppModule } from './app.module';
 import { setupApp } from './app.setup';
@@ -22,6 +25,7 @@ async function bootstrap(): Promise<void> {
   app.useLogger(app.get(PinoLogger));
   /* Fecha o banco com Ctrl+C: é o que grava o WAL de volta no arquivo principal. */
   app.enableShutdownHooks();
+  app.getHttpAdapter().getInstance().set('trust proxy', env.TRUST_PROXY_HOPS);
 
   setupApp(app, env);
 
@@ -33,7 +37,7 @@ async function bootstrap(): Promise<void> {
 
   /* `cleanupOpenApiDoc` limpa o ruído interno dos schemas Zod do documento gerado. Sem isto
      o contrato publicado sai ilegível — e endpoint sem contrato legível reprova o CI. */
-  const document = cleanupOpenApiDoc(
+  const document = withZodSchemas(
     SwaggerModule.createDocument(
       app,
       new DocumentBuilder()
@@ -58,15 +62,13 @@ async function bootstrap(): Promise<void> {
             'Sem identidade: 401.',
           ].join('\n'),
         )
-        .setVersion('0.1.0')
+        .setVersion(packageVersion())
         .build(),
     ),
   );
 
-  SwaggerModule.setup('docs', app, document, {
-    jsonDocumentUrl: 'docs-json',
-    swaggerOptions: { persistAuthorization: true },
-  });
+  app.use(['/docs', '/docs-json'], docsAccess(env.NODE_ENV));
+  setupOpenApiDocs(app, document, 'Chamados');
 
   /* Porta ocupada não derruba a partida: o server procura a próxima livre. Ver listen.util. */
   const port = await listenOnFirstFreePort((candidate) => app.listen(candidate), env.API_PORT);
@@ -75,7 +77,7 @@ async function bootstrap(): Promise<void> {
   logger.log(`API em http://localhost:${port}/api`);
   logger.log(`Swagger em http://localhost:${port}/docs`);
 
-  /* O aviso é alto de propósito: o Vite encaminha `/api` para a porta que ESPERA encontrar
+  /* O aviso é alto de propósito: o Vite encaminha `/api/v1` para a porta que ESPERA encontrar
      (3333, ou VITE_API_PORT). Se a API mudou de porta e ninguém avisar o client, a tela abre
      e toda requisição falha como "erro de rede" — o sintoma menos informativo que existe. */
   if (port !== env.API_PORT) {

@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
   import {
     inventoryCategoryOptions,
     inventoryUnitOptions,
@@ -6,8 +7,19 @@
   import { inventoryPhotoAccept } from '@template/shared/domain/inventory-photo.util';
 
   import { type FormFieldState } from '$lib/types/form-field.type';
+  import { type InventoryItemEventType } from '@template/shared/domain/inventory-item-event.util';
+  import { type InventoryItemEvent } from '@template/shared/schemas/inventory-item-event.schema';
 
-  export type InventoryFormField = 'name' | 'category' | 'unit' | 'location' | 'code' | 'note';
+  export type InventoryFormField =
+    | 'name'
+    | 'category'
+    | 'unit'
+    | 'location'
+    | 'department'
+    | 'userId'
+    | 'userName'
+    | 'code'
+    | 'note';
 
   /**
    * O formulário de cadastrar produto do inventário e o de corrigir o cadastro dele, num modal.
@@ -24,12 +36,25 @@
       mode: 'create' | 'edit';
       fields: Record<InventoryFormField, FormFieldState>;
       photo: { previewUrl: string | null; fileName: string | null };
+      departments?: string[];
+      users?: { id: string; name: string }[];
+      timeline?: {
+        events: InventoryItemEvent[];
+        type: InventoryItemEventType;
+        description: string;
+      };
     };
     state: {
       isOpen: boolean;
       isSubmitting?: boolean;
       error?: string | null;
       photoError?: string | null;
+      timelineState?: {
+        isLoading?: boolean;
+        isSubmitting?: boolean;
+        error?: string | null;
+        formError?: string | null;
+      };
     };
     actions: {
       onChange: (field: InventoryFormField, value: string) => void;
@@ -38,6 +63,11 @@
       onPhotoRemove: () => void;
       onSubmit: () => void;
       onClose: () => void;
+      timelineActions?: {
+        onTypeChange: (type: InventoryItemEventType) => void;
+        onDescriptionChange: (description: string) => void;
+        onSubmit: () => void;
+      };
     };
   };
 
@@ -53,11 +83,14 @@
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ComboboxField from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import AzuosInventoryItemTimeline from '$lib/components/azuos-inventory-item-timeline/azuos-inventory-item-timeline.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import { cn } from '$lib/utils/cn';
   import {
     Dialog,
     DialogDescription,
@@ -71,6 +104,55 @@
   const isEdit = $derived(data.mode === 'edit');
   const fields = $derived(data.fields);
 
+  function buildDepartmentOptions(departments: string[] | undefined, current: string) {
+    const list = departments ?? [];
+    const options = [
+      { value: '', label: 'Nenhum' },
+      ...list.map((dep) => ({ value: dep, label: dep })),
+    ];
+    if (current && !list.includes(current)) {
+      options.splice(1, 0, { value: current, label: current });
+    }
+    return options;
+  }
+
+  function buildUserOptions(
+    users: { id: string; name: string }[] | undefined,
+    currentId: string,
+    currentName: string,
+  ) {
+    const list = users ?? [];
+    const options = [
+      { value: '', label: 'Nenhum' },
+      ...list.map((u) => ({ value: u.id, label: u.name, personName: u.name })),
+    ];
+    if (!currentId) return options;
+    if (list.some((u) => u.id === currentId)) return options;
+
+    const display = currentName || currentId;
+    options.splice(1, 0, { value: currentId, label: display, personName: display });
+    return options;
+  }
+
+  const departmentOptions = $derived(
+    buildDepartmentOptions(data.departments, fields.department?.value?.trim() ?? ''),
+  );
+
+  const userOptions = $derived(
+    buildUserOptions(
+      data.users,
+      fields.userId?.value?.trim() ?? '',
+      fields.userName?.value?.trim() ?? '',
+    ),
+  );
+
+  function handleUserChange(userId: string): void {
+    actions.onChange('userId', userId);
+    const found = data.users?.find((u) => u.id === userId);
+    actions.onChange('userName', found?.name ?? '');
+  }
+
+  let activeTab = $state<'details' | 'timeline'>('details');
   let photoInput = $state<HTMLInputElement | undefined>();
   let cameraInput = $state<HTMLInputElement | undefined>();
 
@@ -98,12 +180,12 @@
   open={dialogState.isOpen}
   onOpenChange={(isOpen: boolean) => (isOpen ? undefined : actions.onClose())}
 >
-  <DialogContent>
-    <form novalidate class="flex flex-col gap-4.5" onsubmit={handleSubmit}>
+  <DialogContent class="sm:max-w-xl">
+    <div class="flex flex-col gap-4.5 p-1 sm:p-2">
       <DialogHeader class="gap-1.5">
         <div class="flex items-center gap-2.5">
           <span
-            class="rounded-chip bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center"
+            class="rounded-chip bg-muted text-primary flex size-7 shrink-0 items-center justify-center"
           >
             <Package class="size-4" aria-hidden="true" />
           </span>
@@ -117,6 +199,43 @@
             : 'Cadastre o que existe no escritório: mobiliário, mercadinho, limpeza e o resto.'}
         </DialogDescription>
       </DialogHeader>
+
+      {#if isEdit}
+        <div class="border-border flex gap-4 border-b">
+          <button
+            type="button"
+            class={cn(
+              'border-b-2 px-1 pb-2 text-sm font-medium transition-colors cursor-pointer',
+              activeTab === 'details'
+                ? 'border-primary text-primary font-semibold'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+            onclick={() => (activeTab = 'details')}
+          >
+            Dados do produto
+          </button>
+          <button
+            type="button"
+            class={cn(
+              'border-b-2 px-1 pb-2 text-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5',
+              activeTab === 'timeline'
+                ? 'border-primary text-primary font-semibold'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+            onclick={() => (activeTab = 'timeline')}
+          >
+            Linha do tempo
+            {#if data.timeline && data.timeline.events.length > 0}
+              <span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground font-semibold">
+                {data.timeline.events.length}
+              </span>
+            {/if}
+          </button>
+        </div>
+      {/if}
+
+      {#if !isEdit || activeTab === 'details'}
+        <form novalidate class="flex flex-col gap-4.5" onsubmit={handleSubmit}>
 
       <TextField
         data={{
@@ -173,6 +292,32 @@
           }}
         />
 
+        <div class="flex flex-col gap-1.5">
+          <span class="text-ink-700 text-sm font-medium">Departamento</span>
+          <ComboboxField
+            data={{
+              value: fields.department?.value ?? '',
+              options: departmentOptions,
+            }}
+            ui={{
+              placeholder: 'Selecione ou digite um departamento',
+              searchPlaceholder: 'Buscar ou digitar departamento…',
+              createLabel: 'Usar',
+              ariaLabel: 'Departamento',
+            }}
+            state={{ isDisabled: dialogState.isSubmitting }}
+            actions={{
+              onChange: (value: string) => actions.onChange('department', value),
+              onCreate: (value: string) => actions.onChange('department', value),
+            }}
+          />
+          {#if fields.department?.error}
+            <p class="text-destructive text-xs">{fields.department.error}</p>
+          {/if}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
         <TextField
           data={{
             label: 'Código ou patrimônio',
@@ -186,15 +331,38 @@
             onBlur: () => actions.onBlur('code'),
           }}
         />
+
+        <div class="flex flex-col gap-1.5">
+          <span class="text-ink-700 text-sm font-medium">Usuário / Responsável</span>
+          <ComboboxField
+            data={{
+              value: fields.userId?.value ?? '',
+              options: userOptions,
+            }}
+            ui={{
+              placeholder: 'Vincular a um usuário (opcional)',
+              searchPlaceholder: 'Buscar usuário no admin-console…',
+              emptyLabel: 'Nenhum usuário encontrado.',
+              ariaLabel: 'Usuário',
+            }}
+            state={{ isDisabled: dialogState.isSubmitting }}
+            actions={{
+              onChange: handleUserChange,
+            }}
+          />
+          {#if fields.userId?.error}
+            <p class="text-destructive text-xs">{fields.userId.error}</p>
+          {/if}
+        </div>
       </div>
 
       <!-- A FOTO ao lado da prévia, e não um campo de arquivo solto: quem cadastra precisa ver
            que a imagem que escolheu é a certa antes de salvar. -->
-      <div class="flex flex-col gap-1.5">
+      <div onpaste={pasteFilesIntoInput} class="flex flex-col gap-1.5">
         <span class="text-ink-700 text-sm font-medium">Foto</span>
         <div class="flex items-center gap-3">
           <div
-            class="rounded-control border-border bg-muted/40 flex size-20 shrink-0 items-center justify-center overflow-hidden border"
+            class="rounded-control border-border bg-muted flex size-20 shrink-0 items-center justify-center overflow-hidden border"
           >
             {#if data.photo.previewUrl}
               <img
@@ -303,5 +471,25 @@
         />
       </DialogFooter>
     </form>
+  {:else}
+    <div class="flex flex-col gap-4.5">
+      {#if data.timeline}
+        <AzuosInventoryItemTimeline
+          data={data.timeline}
+          state={dialogState.timelineState}
+          actions={actions.timelineActions}
+        />
+      {/if}
+
+      <DialogFooter>
+        <ActionButton
+          data={{ label: 'Fechar' }}
+          ui={{ variant: 'secondary' }}
+          actions={{ onClick: actions.onClose }}
+        />
+      </DialogFooter>
+    </div>
+  {/if}
+  </div>
   </DialogContent>
 </Dialog>

@@ -64,3 +64,14 @@ describe('AzuosTextAreaField', () => {
     expect(screen.getByLabelText('Descrição')).not.toBeRequired();
   });
 });
+
+describe('AzuosTextAreaField — over the limit', () => {
+  // triste
+  it('turns the counter red once the text passes the limit', () => {
+    render(TextAreaField, {
+      props: { data: { ...data, value: 'a'.repeat(101), maxLength: 100 } },
+    });
+
+    expect(screen.getByText('101/100')).toHaveClass('text-destructive');
+  });
+});

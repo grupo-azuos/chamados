@@ -38,12 +38,8 @@
     data: {
       ticket: Ticket;
       /* O responsável é opcional: só existe para quem pode trocá-lo (o super admin). */
-      fields: Record<
-        Exclude<TicketDataField, 'assigneeId' | 'customSystemName'>,
-        FormFieldState
-      > & {
+      fields: Record<Exclude<TicketDataField, 'assigneeId' | 'customSystemName'>, FormFieldState> & {
         assigneeId?: FormFieldState;
-        /** O sistema EXTERNO, digitado na busca do campo de sistema. */
         customSystemName?: FormFieldState;
       };
       /** Quem pode ser o responsável. Vazio (o padrão) esconde o campo. */
@@ -130,7 +126,49 @@
     { value: '', label: 'Nenhuma' },
     ...data.machines.map((machine) => ({ ...machine, icon: LaptopIcon })),
   ]);
-  const projectOptions = $derived([{ value: '', label: 'Nenhum' }, ...(data.projects ?? [])]);
+
+  /* O sistema é UM campo na tela, mas dois no chamado: o da lista (`projectId`) ou o digitado
+     (`customSystemName`). Escolher um sempre limpa o outro — senão iriam os dois, e o nome
+     digitado ficaria escondido atrás do da lista. */
+  function clearSystem(): void {
+    actions.onChange('projectId', '');
+    if (fields.customSystemName) actions.onChange('customSystemName', '');
+  }
+
+  function chooseSystem(value: string): void {
+    if (fields.customSystemName) actions.onChange('customSystemName', '');
+    actions.onChange('projectId', value);
+  }
+
+  function typeSystem(value: string): void {
+    actions.onChange('projectId', '');
+    if (fields.customSystemName) actions.onChange('customSystemName', value);
+  }
+
+  function handleSystemChange(value: string): void {
+    if (!value) {
+      clearSystem();
+      return;
+    }
+    chooseSystem(value);
+  }
+
+  const systemValue = $derived(
+    fields.projectId?.value || fields.customSystemName?.value || '',
+  );
+
+  const customProjectOption = $derived(
+    fields.customSystemName?.value &&
+      !(data.projects ?? []).some((p) => p.value === fields.customSystemName?.value)
+      ? [{ value: fields.customSystemName.value, label: fields.customSystemName.value }]
+      : [],
+  );
+
+  const projectOptions = $derived([
+    { value: '', label: 'Nenhum' },
+    ...customProjectOption,
+    ...(data.projects ?? []),
+  ]);
 
   /* As opções de tipo de problema dependem da ÁREA escolhida — Manutenção não tem
      "ar-condicionado" na lista de Infra, nem Infra tem "rede caiu" na de Manutenção. */
@@ -138,16 +176,6 @@
     data.problemTypes && data.problemTypes.length > 0
       ? data.problemTypes
       : ticketProblemTypeOptionsForArea(fields.area.value as TicketArea),
-  );
-
-  /* O sistema externo (fora do cadastro) não é opção da lista: é o nome que aparece no campo
-     quando nenhum sistema cadastrado está escolhido. */
-  const customSystemName = $derived(fields.customSystemName?.value ?? '');
-  const showsSystem = $derived(
-    Boolean(fields.projectId) &&
-      (fields.area.value === 'sistema' ||
-        (data.projects?.length ?? 0) > 0 ||
-        customSystemName !== ''),
   );
 
   function handleSubmit(event: SubmitEvent): void {
@@ -209,13 +237,7 @@
     <FilterField data={{ label: 'Responsável' }}>
       <OptionPicker
         data={{ value: fields.assigneeId.value, options: data.assignees }}
-        ui={{
-          ariaLabel: 'Responsável',
-          placeholder: 'Sem responsável',
-          fullWidth: true,
-          mode: 'combobox',
-          searchPlaceholder: 'Buscar pessoa…',
-        }}
+        ui={{ ariaLabel: 'Responsável', placeholder: 'Sem responsável', fullWidth: true, mode: 'combobox', searchPlaceholder: 'Buscar pessoa…' }}
         state={{ isDisabled: formState?.isSubmitting }}
         actions={{ onChange: (value: string) => actions.onChange('assigneeId', value) }}
       />
@@ -249,26 +271,19 @@
     />
   </FilterField>
 
-  {#if fields.projectId && showsSystem}
-    <!-- Sistema fora do cadastro (o "trilha" que quem abriu digitou) aparece pelo nome, e se
-         escreve pela mesma busca: digita e usa. -->
+  {#if (fields.projectId || fields.customSystemName) && (fields.area.value === 'sistema' || (data.projects && data.projects.length > 0))}
     <FilterField data={{ label: 'Sistema / Software' }}>
       <OptionPicker
-        data={{ value: fields.projectId.value, options: projectOptions }}
+        data={{ value: systemValue, options: projectOptions }}
         ui={{
           ariaLabel: 'Sistema / Software',
           placeholder: 'Nenhum',
+          searchPlaceholder: 'Busque ou digite o nome do sistema',
           fullWidth: true,
-          mode: 'combobox',
-          searchPlaceholder: 'Buscar ou digitar sistema…',
           allowCustomValue: true,
-          selectedLabel: !fields.projectId.value && customSystemName ? customSystemName : undefined,
         }}
         state={{ isDisabled: formState?.isSubmitting }}
-        actions={{
-          onChange: (value: string) => actions.onChange('projectId', value),
-          onCustomValue: (value: string) => actions.onChange('customSystemName', value),
-        }}
+        actions={{ onChange: handleSystemChange, onCustomValue: typeSystem }}
       />
     </FilterField>
   {/if}
@@ -331,13 +346,13 @@
 
     <!-- AS QUE JÁ PARTICIPAM: uma pastilha cheia cada, com o X dentro dela. -->
     {#if data.ticket.participantAreas.length === 0}
-      <p class="text-muted-foreground/70 text-xs">Nenhuma área participante ainda.</p>
+      <p class="text-muted-foreground text-xs">Nenhuma área participante ainda.</p>
     {:else}
       <ul class="flex flex-wrap items-center gap-1.5">
         {#each data.ticket.participantAreas as area (area)}
           <li
             class={cn(
-              'bg-primary/15 text-primary inline-flex items-center gap-1 rounded-full py-1 pr-1 pl-3 text-xs font-semibold',
+              'bg-muted text-primary inline-flex items-center gap-1 rounded-full py-1 pr-1 pl-3 text-xs font-semibold',
               formState?.removingAreaArea === area && 'opacity-60',
             )}
           >
@@ -347,7 +362,7 @@
               onclick={() => actions.onRemoveParticipantArea(area)}
               disabled={formState?.removingAreaArea === area}
               aria-label={`Remover ${ticketAreaLabel(area)} do chamado`}
-              class="hover:bg-primary/20 flex size-5 cursor-pointer items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
+              class="hover:bg-muted flex size-5 cursor-pointer items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
             >
               <XIcon class="size-3" aria-hidden="true" />
             </button>

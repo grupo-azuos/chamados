@@ -18,11 +18,11 @@ export const QUOTE_NOTE_MAX_LENGTH = 500;
 export const QUOTE_AMOUNT_MAX_CENTS = 9_999_999_999;
 
 export const quoteKindSchema = z.enum(QUOTE_KINDS, {
-  errorMap: () => ({ message: 'Escolha se é produto, serviço ou outro' }),
+  error: 'Escolha se é produto, serviço ou outro',
 });
 
 export const quoteStatusSchema = z.enum(QUOTE_STATUSES, {
-  errorMap: () => ({ message: 'Escolha a situação do orçamento' }),
+  error: 'Escolha a situação do orçamento',
 });
 
 const SUPPLIER_REQUIRED = 'Informe a empresa que fez o orçamento';
@@ -33,13 +33,13 @@ const DATE_INVALID = 'Informe a data do orçamento';
 const NOTE_TOO_LONG = `A observação pode ter até ${QUOTE_NOTE_MAX_LENGTH} caracteres`;
 
 const supplierSchema = z
-  .string({ required_error: SUPPLIER_REQUIRED })
+  .string({ error: SUPPLIER_REQUIRED })
   .trim()
   .min(1, SUPPLIER_REQUIRED)
   .max(QUOTE_SUPPLIER_MAX_LENGTH, `A empresa pode ter até ${QUOTE_SUPPLIER_MAX_LENGTH} caracteres`);
 
 const descriptionSchema = z
-  .string({ required_error: DESCRIPTION_REQUIRED })
+  .string({ error: DESCRIPTION_REQUIRED })
   .trim()
   .min(1, DESCRIPTION_REQUIRED)
   .max(
@@ -48,15 +48,13 @@ const descriptionSchema = z
   );
 
 const amountCentsSchema = z.coerce
-  .number({ invalid_type_error: AMOUNT_INVALID })
+  .number<number>({ error: AMOUNT_INVALID })
   .int(AMOUNT_INVALID)
   .min(0, AMOUNT_INVALID)
   .max(QUOTE_AMOUNT_MAX_CENTS, AMOUNT_TOO_HIGH);
 
 /** O dia do orçamento, sem hora: `2026-10-05`. É o que está escrito no documento. */
-const quotedOnSchema = z
-  .string({ required_error: DATE_INVALID })
-  .regex(/^\d{4}-\d{2}-\d{2}$/, DATE_INVALID);
+const quotedOnSchema = z.string({ error: DATE_INVALID }).regex(/^\d{4}-\d{2}-\d{2}$/, DATE_INVALID);
 
 const noteSchema = z
   .string()
@@ -83,9 +81,9 @@ export const maintenanceQuoteSchema = z.object({
   attachmentUrl: z.string().nullable(),
   attachmentName: z.string().nullable(),
 
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string(),
-  updatedAt: z.string().datetime().nullable(),
+  updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
 });
 
@@ -121,7 +119,7 @@ export const updateMaintenanceQuoteSchema = z.object({
   /** O documento novo, já enviado — substitui o anterior. */
   attachment: stagedFileSchema.optional(),
   /** `true` tira o documento sem pôr outro. */
-  removeAttachment: z.coerce.boolean().optional(),
+  removeAttachment: z.coerce.boolean<boolean>().optional(),
 });
 
 export type UpdateMaintenanceQuoteInput = z.input<typeof updateMaintenanceQuoteSchema>;

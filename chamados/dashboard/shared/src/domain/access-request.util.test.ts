@@ -215,3 +215,25 @@ describe('the "who is who" step', () => {
     });
   });
 });
+
+describe('fillAccessRequestStep: e-mail and phone', () => {
+  // feliz
+  it('accepts a valid e-mail and a phone with area code', () => {
+    const draft = emptyAccessRequest(null);
+    expect(fillAccessRequestStep(draft, 'email', 'maria.silva@empresa.com.br', [])).toMatchObject({
+      ok: true,
+      draft: { email: 'maria.silva@empresa.com.br' },
+    });
+    expect(fillAccessRequestStep(draft, 'phone', '62 99999-0000', [])).toMatchObject({
+      ok: true,
+      draft: { phone: '62999990000' },
+    });
+  });
+
+  // triste
+  it('asks again for an e-mail or a phone it cannot read', () => {
+    const draft = emptyAccessRequest(null);
+    expect(fillAccessRequestStep(draft, 'email', 'maria arroba', [])).toMatchObject({ ok: false });
+    expect(fillAccessRequestStep(draft, 'phone', '123', [])).toMatchObject({ ok: false });
+  });
+});

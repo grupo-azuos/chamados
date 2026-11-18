@@ -11,6 +11,7 @@ import NetworkListView, {
   measuresOf,
   type NetworkFilter,
 } from './azuos-network-list-view.svelte';
+import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
 function event(over: Partial<NetworkEvent> = {}): NetworkEvent {
   return {
@@ -81,6 +82,13 @@ function renderView(
   });
 }
 
+/* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
+function hasCardsOnlyTable(): boolean {
+  return Array.from(document.querySelectorAll('.overflow-x-auto')).some(
+    (element) => element.classList.contains('hidden') && !element.classList.contains('xl:block'),
+  );
+}
+
 describe('durationLabelOf', () => {
   // feliz
   it('says how long the internet was out', () => {
@@ -124,7 +132,9 @@ describe('AzuosNetworkListView — stat card shortcuts and filter bar', () => {
   it('turns "open now" into a shortcut for the only-open filter', async () => {
     renderWithFilter();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Em aberto agora: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Em aberto agora .+: filtrar a lista$/ }),
+    );
 
     expect(actions.onOnlyOpenChange).toHaveBeenLastCalledWith(true);
   });
@@ -132,7 +142,7 @@ describe('AzuosNetworkListView — stat card shortcuts and filter bar', () => {
   it('turns "outages" into a shortcut for the outage type, and clears it on a second click', async () => {
     renderWithFilter({ type: 'wan_down' });
 
-    const card = screen.getByRole('button', { name: 'Quedas no período: tirar o filtro' });
+    const card = screen.getByRole('button', { name: /^Quedas no período .+: tirar o filtro$/ });
     expect(card).toHaveAttribute('aria-pressed', 'true');
 
     await userEvent.click(card);
@@ -221,5 +231,121 @@ describe('AzuosNetworkListView', () => {
 
     expect(screen.getByText('Carregando os eventos…')).toBeInTheDocument();
     expect(screen.queryByText('Nenhum evento no período')).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosNetworkListView — period, filters, rows and the cut list', () => {
+  async function chooseSecond(user: ReturnType<typeof userEvent.setup>, label: string) {
+    const group = screen.queryByRole('group', { name: label });
+    if (group) {
+      await user.click(within(group).getAllByRole('button')[1]!);
+      return;
+    }
+    await user.click(screen.getByRole('button', { name: label }));
+    const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(
+      -1,
+    ) as HTMLElement;
+    await user.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
+  }
+
+  // feliz
+  it('changes the period, the type and the severity', async () => {
+    const user = userEvent.setup();
+    renderView();
+    await chooseSecond(user, 'Período');
+    expect(actions.onPeriodChange).toHaveBeenCalledWith(expect.any(Number));
+    await chooseSecond(user, 'Filtrar por tipo de aviso');
+    expect(actions.onTypeChange).toHaveBeenCalled();
+    await chooseSecond(user, 'Filtrar por gravidade');
+    expect(actions.onSeverityChange).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('reopens from the table and shows an event without link, message or measures', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onResolveChange).mockClear();
+    renderView({
+      events: [event({ resolvedAt: '2026-09-23T12:42:00.000Z', linkName: null, message: null })],
+      state: { isTruncated: true, actionError: 'Sem permissão.' },
+    });
+    expect(screen.getAllByText('—').length).toBeGreaterThan(1);
+    expect(screen.getByText(/Mostrando 1 de 1 eventos/)).toBeInTheDocument();
+    expect(screen.getByText('Sem permissão.')).toBeInTheDocument();
+    const reopen = screen.getAllByRole('button', { name: 'Reabrir' });
+    for (const button of reopen) await user.click(button);
+    expect(actions.onResolveChange).toHaveBeenCalledTimes(reopen.length);
+    expect(actions.onResolveChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 1 }),
+      false,
+    );
+  });
+
+  // triste
+  it('shows dashes while the summary has no numbers', () => {
+    render(NetworkListView, {
+      props: {
+        data: { events: [event()], total: 1, summary: null, filter: emptyFilter },
+        state: { ...settled, isSummaryLoading: true } as never,
+        actions,
+      },
+    });
+    expect(screen.getByText('Pior latência')).toBeInTheDocument();
+  });
+});
+
+describe('AzuosNetworkListView — the outage shortcut switched off and the table button', () => {
+  // feliz
+  it('turns the outage filter off on a second click, scrolling without motion, and resolves from the table', async () => {
+    const matchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) =>
+      ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      }) as MediaQueryList) as typeof window.matchMedia;
+    try {
+      vi.mocked(actions.onTypeChange).mockClear();
+      vi.mocked(actions.onResolveChange).mockClear();
+      render(NetworkListView, {
+        props: {
+          data: {
+            events: [event()],
+            total: 1,
+            summary,
+            filter: { ...emptyFilter, type: 'wan_down' },
+          },
+          state: settled,
+          actions,
+        },
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /Quedas no período/ }));
+      expect(actions.onTypeChange).toHaveBeenCalledWith('');
+      const resolves = screen.getAllByRole('button', { name: 'Marcar como resolvido' });
+      for (const button of resolves) await userEvent.click(button);
+      expect(actions.onResolveChange).toHaveBeenCalledTimes(resolves.length);
+    } finally {
+      window.matchMedia = matchMedia;
+    }
+  });
+});
+
+describe('network-list-view — cards only', () => {
+  // feliz
+  it('hides the table completely when the person asked for cards only', () => {
+    const tableView = useTableViewModel();
+    tableView.actions.onToggle();
+    try {
+      renderView();
+
+      expect(hasCardsOnlyTable()).toBe(true);
+    } finally {
+      tableView.actions.onToggle();
+    }
   });
 });

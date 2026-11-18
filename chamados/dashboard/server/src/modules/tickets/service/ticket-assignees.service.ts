@@ -38,7 +38,7 @@ export class TicketAssigneesService {
 
     return users
       .filter((user) => !user.banned && areasOf(user, grants).includes(area))
-      .map((user) => ({ id: user.id, name: displayName(user) }))
+      .map((user) => ({ id: user.id, name: displayName(user), avatarUrl: user.image ?? null }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }
 

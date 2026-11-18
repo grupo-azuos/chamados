@@ -100,7 +100,7 @@ precisam olhar o cabeçalho `X-Forwarded-For`, e não o endereço da conexão:
       - traefik.http.middlewares.azuos-internal.ipallowlist.ipstrategy.depth=1
 ```
 
-## Caddy (Caddyfile)
+## Caddy (caddyfile)
 
 O Caddy cuida do HTTPS e do WebSocket sozinho. **O limite de requisições não vem nele**: precisa
 do módulo [`caddy-ratelimit`](https://github.com/mholt/caddy-ratelimit), incluído ao montar o

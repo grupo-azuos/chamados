@@ -3,7 +3,7 @@ import {
   installedPartSchema,
   transferSchema,
 } from '@template/shared/schemas/transfer.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 
 /**

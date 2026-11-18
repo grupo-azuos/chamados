@@ -46,8 +46,8 @@ export const FORWARDED_IDENTITY_HEADERS = {
  * identidade inválida, e não promoção.
  */
 const forwardedIdentitySchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
+  id: z.guid(),
+  email: z.email(),
   name: z.string().min(1),
   role: z.enum(['admin', 'manager', 'user']),
 });

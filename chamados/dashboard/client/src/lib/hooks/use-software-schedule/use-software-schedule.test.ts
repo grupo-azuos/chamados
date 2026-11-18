@@ -316,3 +316,202 @@ describe('daily GitHub PRs', () => {
     expect(model.data.githubEvents.every((event) => event.type === 'issue')).toBe(true);
   });
 });
+
+describe('navigation between periods', () => {
+  // feliz
+  it.each([
+    ['day', 1],
+    ['week', 7],
+  ] as const)('moves one %s back and forth', async (mode, amount) => {
+    const model = await mount();
+    model.actions.onViewModeChange(mode);
+    await waitFor(() => expect(model.data.viewMode).toBe(mode));
+    const start = model.data.currentDate.getTime();
+
+    model.actions.onNext();
+    await waitFor(() => expect(model.data.currentDate.getTime()).toBe(start + amount * 86_400_000));
+    model.actions.onPrev();
+    await waitFor(() => expect(model.data.currentDate.getTime()).toBe(start));
+  });
+
+  // feliz
+  it('moves whole months without overflowing the day and returns to today', async () => {
+    const model = await mount();
+    const start = new Date(model.data.currentDate);
+
+    model.actions.onNext();
+    await waitFor(() =>
+      expect(model.data.currentDate.getMonth()).toBe((start.getMonth() + 1) % 12),
+    );
+    expect(model.data.currentDate.getDate()).toBeLessThanOrEqual(start.getDate());
+    model.actions.onPrev();
+    model.actions.onPrev();
+    await waitFor(() =>
+      expect(model.data.currentDate.getMonth()).toBe((start.getMonth() + 11) % 12),
+    );
+    expect(model.data.monthYearTitle).not.toBe('');
+    model.actions.onToday();
+    await waitFor(() => expect(model.data.currentDate.getMonth()).toBe(start.getMonth()));
+    model.actions.onViewModeChange('day');
+    await waitFor(() => expect(model.data.monthYearTitle).toMatch(/^\d{1,2} de /));
+  });
+
+  // feliz
+  it('fetches the three sources again on retry', async () => {
+    const model = await mount();
+    vi.mocked(softwareScheduleApi.list).mockClear();
+    vi.mocked(softwareTimelineApi.list).mockClear();
+    vi.mocked(softwareProjectsApi.list).mockClear();
+
+    model.actions.onRetry();
+
+    await waitFor(() => expect(softwareScheduleApi.list).toHaveBeenCalled());
+    await waitFor(() => expect(softwareTimelineApi.list).toHaveBeenCalled());
+    await waitFor(() => expect(softwareProjectsApi.list).toHaveBeenCalled());
+  });
+
+  // triste
+  it('ignores an unknown activity type in the filter', async () => {
+    const model = await mount();
+    model.actions.onTypeFilterChange('issue');
+    model.actions.onTypeFilterChange('bogus');
+    expect(model.data.filters.type).toBe('');
+    expect(model.data.filters.isActive).toBe(false);
+  });
+
+  // triste
+  it('shows an empty day dialog for a date outside the calendar', async () => {
+    const model = await mount();
+    model.actions.onOpenGithubDay('1999-01-01', 'all');
+    expect(model.data.githubDay).toMatchObject({ total: 0, items: [], page: 1 });
+  });
+});
+
+describe('deleting an event', () => {
+  // feliz
+  it('confirms the deletion and refreshes the calendar', async () => {
+    vi.mocked(softwareScheduleApi.remove).mockResolvedValue(undefined as never);
+    const model = await mount();
+
+    await expect(model.actions.onDeleteEvent(1)).resolves.toBe(true);
+    expect(softwareScheduleApi.remove).toHaveBeenCalledWith(1);
+    await waitFor(() => expect(model.state.isDeleting).toBe(false));
+  });
+
+  // triste
+  it('reports the failure instead of throwing', async () => {
+    vi.mocked(softwareScheduleApi.remove).mockRejectedValue(new Error('Serviço fora do ar.'));
+    const model = await mount();
+
+    await expect(model.actions.onDeleteEvent(1)).resolves.toBe(false);
+    await waitFor(() => expect(model.state.deleteError).toBeTruthy());
+  });
+
+  // triste
+  it('does not start a second deletion while one is pending', async () => {
+    let finish!: () => void;
+    vi.mocked(softwareScheduleApi.remove).mockReturnValue(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }) as never,
+    );
+    const model = await mount();
+
+    const first = model.actions.onDeleteEvent(1);
+    await waitFor(() => expect(model.state.isDeleting).toBe(true));
+    await expect(model.actions.onDeleteEvent(2)).resolves.toBe(false);
+    finish();
+    await expect(first).resolves.toBe(true);
+    expect(softwareScheduleApi.remove).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('projects, people and the current time', () => {
+  const project = {
+    id: 7,
+    name: 'Portal',
+    description: null,
+    repositoryUrl: 'https://github.com/example/portal',
+    status: 'active' as const,
+    color: 'blue' as const,
+    githubRepoOwner: null,
+    githubRepoName: null,
+    responsibleId: null,
+    responsibleName: null,
+    openTicketsCount: 0,
+    pullRequestsCount: 0,
+    createdAt: '2026-10-01T00:00:00Z',
+    updatedAt: null,
+  };
+
+  // feliz
+  it('lists registered projects and names unknown ones by their id', async () => {
+    vi.mocked(softwareProjectsApi.list).mockResolvedValue({ items: [project], total: 1, page: 1, pageSize: 100 });
+    const items = [
+      { ...activity(1), projectId: 7, projectName: null },
+      { ...activity(2), projectId: 9, projectName: null },
+      { ...activity(3), projectId: 9, projectName: null, author: null, authorName: null, type: 'merge' as const },
+      { ...activity(4), projectId: 7, projectName: null, type: 'issue' as const, status: 'closed' as const, author: 'bia', coAuthors: ['bot[bot]'] },
+      { ...activity(5), type: 'issue' as const, status: 'open' as const },
+    ];
+    vi.mocked(softwareTimelineApi.list).mockResolvedValue({ items, total: items.length, page: 1, pageSize: 200 });
+    const model = await mount();
+
+    await waitFor(() => expect(model.data.projects).toHaveLength(1));
+    expect(model.data.filters.projectOptions.map((option) => option.label)).toEqual([
+      'Todos os projetos',
+      'Azuos',
+      'Portal',
+      'Projeto 9',
+    ]);
+    expect(model.data.filters.authorOptions.map((option) => option.label)).toEqual([
+      'Todos os autores',
+      'ana',
+      'bia',
+      'bot[bot]',
+      'Não informado',
+    ]);
+    expect(model.data.developerStats).toEqual([
+      { author: 'ana', mergedPullRequests: 2, localMerges: 0, resolvedIssues: 0 },
+      { author: 'bia', mergedPullRequests: 0, localMerges: 0, resolvedIssues: 1 },
+      { author: 'Não informado', mergedPullRequests: 0, localMerges: 1, resolvedIssues: 0 },
+    ]);
+  });
+
+  // feliz
+  it('loads every page of the timeline when the period has more than one', async () => {
+    vi.mocked(softwareTimelineApi.list).mockImplementation(async (query) => {
+      const page = query?.page ?? 1;
+      return { items: [activity(page === 1 ? 1 : 2)], total: 201, page, pageSize: 200 };
+    });
+    const model = await mount();
+
+    await waitFor(() => expect(model.data.githubEvents).toHaveLength(2));
+    expect(softwareTimelineApi.list).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+  });
+
+  // feliz
+  /* O `SvelteDate` guarda o `Date` original na importação, então o relógio falso do vitest não
+     chega até ele; o que ele consulta é o protótipo, e é lá que a hora é fixada. */
+  it('positions the current time line inside business hours', async () => {
+    vi.spyOn(Date.prototype, 'getHours').mockReturnValue(10);
+    vi.spyOn(Date.prototype, 'getMinutes').mockReturnValue(30);
+    try {
+      const model = await mount();
+      expect(model.data.nowTopPx).toBe(140);
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  // triste
+  it('hides the current time line outside business hours', async () => {
+    vi.spyOn(Date.prototype, 'getHours').mockReturnValue(22);
+    try {
+      const model = await mount();
+      expect(model.data.nowTopPx).toBeNull();
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+});

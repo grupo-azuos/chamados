@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   INVENTORY_MOVEMENT_NOTE_MAX_LENGTH,
   createInventoryMovementSchema,
+  disposalReasonSchema,
+  stockMovementTypeSchema,
   inventoryMovementFormSchema,
   inventoryMovementListQuerySchema,
 } from './inventory-movement.schema';
@@ -114,5 +116,19 @@ describe('inventoryMovementListQuerySchema', () => {
   // triste
   it('refuses a kind of movement that does not exist', () => {
     expect(inventoryMovementListQuerySchema.safeParse({ type: 'loan' }).success).toBe(false);
+  });
+});
+
+describe('inventory movement messages', () => {
+  // triste
+  it('explains the type and the reason in Portuguese', () => {
+    const type = stockMovementTypeSchema.safeParse('venda');
+    expect(type.success ? '' : type.error.issues[0]?.message).toBe('Escolha entrada, saída ou descarte');
+    const reason = disposalReasonSchema.safeParse('sumiu');
+    expect(reason.success ? '' : reason.error.issues[0]?.message).toBe('Escolha o motivo do descarte');
+    expect(
+      inventoryMovementFormSchema.safeParse({ itemId: '1', type: 'disposal', quantity: '1', reason: 'broken', note: '' })
+        .success,
+    ).toBe(true);
   });
 });

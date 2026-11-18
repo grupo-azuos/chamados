@@ -6,7 +6,7 @@
   /** Mesmo apoio dos demais view-models: o model precisa de um componente para existir. */
   let { onReady }: { onReady: (model: OpenTicketModel) => void } = $props();
 
-  setQueryClientContext(new QueryClient({ defaultOptions: { mutations: { retry: false } } }));
+  setQueryClientContext(new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }));
 
   onReady(useOpenTicketModel());
 </script>

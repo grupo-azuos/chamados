@@ -61,7 +61,7 @@ describe('logger options', () => {
 
   // triste
   it('drops the query string so secrets in the URL never reach the log', () => {
-    expect(stripQuery('/api/webhooks/monitor?token=s3cret')).toBe('/api/webhooks/monitor');
+    expect(stripQuery('/api/v1/webhooks/monitor?token=s3cret')).toBe('/api/v1/webhooks/monitor');
     expect(stripQuery(undefined)).toBe('');
   });
 

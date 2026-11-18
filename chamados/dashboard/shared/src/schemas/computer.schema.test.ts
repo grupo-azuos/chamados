@@ -7,6 +7,8 @@ import {
   computerListQuerySchema,
   computerReportQuerySchema,
   createComputerSchema,
+  disposalTypeSchema,
+  healthStatusSchema,
   updateComputerSchema,
 } from './computer.schema';
 
@@ -267,5 +269,15 @@ describe('computerCreateFormSchema', () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe('Escolha se é desktop ou notebook');
+  });
+});
+
+describe('computer messages', () => {
+  // triste
+  it('explains the disposal type and the health status in Portuguese', () => {
+    const disposal = disposalTypeSchema.safeParse('doacao');
+    expect(disposal.success ? '' : disposal.error.issues[0]?.message).toBe('Diga se a máquina tem defeito ou virou lixo');
+    const health = healthStatusSchema.safeParse('otima');
+    expect(health.success ? '' : health.error.issues[0]?.message).toBe('Escolha uma situação de saúde da lista');
   });
 });

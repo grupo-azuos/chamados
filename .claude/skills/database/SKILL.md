@@ -1,18 +1,15 @@
 ---
 name: database
-description: Cria ou muda tabelas do Postgres (Supabase, schema chamados) com Drizzle — arquivo de schema, registro, geração e revisão da migration, mensagens de erro do banco, recriar o banco e olhar os dados. Use quando a pessoa pede um campo novo, uma tabela nova, relação entre cadastros, "apaga o banco", "zera os dados", "quero ver o que está no banco", ou aparece erro de tabela/coluna inexistente.
+description: Cria ou muda tabelas do SQLite com Drizzle — arquivo de schema, registro, geração e revisão da migration, mensagens de erro do banco, recriar o banco e olhar os dados. Use quando a pessoa pede um campo novo, uma tabela nova, relação entre cadastros, "apaga o banco", "zera os dados", "quero ver o que está no banco", ou aparece erro de tabela/coluna inexistente.
 ---
 
-# Banco de dados (Postgres + Drizzle)
+# Banco de dados (SQLite + Drizzle)
 
 Caminhos relativos a `chamados/dashboard/`.
 
 ## Como funciona (explique assim para a pessoa, se ela perguntar)
 
-- O banco é o **Postgres do Supabase**, compartilhado com os outros sistemas da casa: toda tabela
-  deste nasce com `chamadosSchema.table(...)` (schema `chamados`), nunca `pgTable`. A conexão
-  fica em `DATABASE_URL`, no `server/.env` (nunca
-  vai para o git) — sem ela o server recusa subir e diz qual variável falta.
+- O banco é **um arquivo**: `server/data/app.db`. Não vai para o git.
 - As **tabelas são escritas em TypeScript** (`server/src/lib/db/schema/`).
 - Cada mudança de tabela gera uma **migration** (`server/drizzle/`) — um arquivo SQL que leva o
   banco de uma versão para a próxima. Essa vai para o git, e é aplicada **sozinha** quando o
@@ -25,16 +22,14 @@ Usuários, sessões, contas, senhas, tokens, logins: identidade é do auth-forwa
 
 ## Criar tabela
 
-1. `server/src/lib/db/schema/<entities>.schema.ts` (modelo: `parts.schema.ts`):
-   - `pgTable('<entities>', {...}, (table) => [índices, checks])`
-   - `id: serial('id').primaryKey()`
-   - colunas em **snake_case** no banco, camelCase no TS: `createdAt: timestamp('created_at', ...)`
-   - datas: `timestamp('x', { withTimezone: true, mode: 'date' })`; default de agora: `.defaultNow()`
-     — o Postgres guarda o instante em UTC e converte na leitura, então a mesma linha lida de
-     fusos diferentes continua sendo o mesmo momento (o SQLite não tinha isso: lá a data era um
-     inteiro em milissegundos, por falta de tipo)
-   - booleano: `boolean('x')`
-   - dinheiro: `integer` em **centavos** (nunca `real`/`numeric` de ponto flutuante)
+1. `server/src/lib/db/schema/<entities>.schema.ts` (modelo: `tasks.schema.ts`):
+   - `sqliteTable('<entities>', {...}, (table) => [índices, checks])`
+   - `id: integer('id').primaryKey({ autoIncrement: true })`
+   - colunas em **snake_case** no banco, camelCase no TS: `createdAt: integer('created_at', ...)`
+   - datas: `integer('x', { mode: 'timestamp_ms' })`; default de agora:
+     ``.default(sql`(cast(unixepoch('subsec') * 1000 as integer))`)``
+   - booleano: `integer('x', { mode: 'boolean' })`
+   - dinheiro: `integer` em **centavos** (nunca `real`)
    - lista fixa: `text('status', { enum: LISTA })` **+** `check('<tabela>_<coluna>_valid', ...)`
    - não pode repetir: `.unique()` ou `uniqueIndex('<tabela>_<colunas>_unique').on(...)`
    - relação: `integer('customer_id').notNull().references(() => customers.id, { onDelete: 'restrict' })`
@@ -46,7 +41,7 @@ Usuários, sessões, contas, senhas, tokens, logins: identidade é do auth-forwa
 
 ## Mudar tabela
 
-Edite o arquivo de schema e gere a migration. Cuidados que o Postgres impõe:
+Edite o arquivo de schema e gere a migration. Cuidados que o SQLite impõe:
 
 - **Coluna nova `notNull` em tabela com dados** precisa de `.default(...)` — senão a migration
   falha nas máquinas que já têm dados.
@@ -57,7 +52,7 @@ Edite o arquivo de schema e gere a migration. Cuidados que o Postgres impõe:
 ## Gerar
 
 ```bash
-npm run build -w @template/shared   # o schema lê listas do shared
+npm run build -w @chamados/dashboard/shared   # o schema lê listas do shared
 npm run db:generate
 ```
 
@@ -84,13 +79,13 @@ Com teste em `db-error.util.test.ts` se a tradução tiver lógica nova.
 
 - Com o server rodando em modo `dev`, ele reinicia e aplica sozinho.
 - Sem server: `npm run db:migrate`, ou `npm run seed:all` (que também aplica).
-- Olhar os dados: `npm run db:studio` (abre o Drizzle Studio no navegador) ou o Studio do
-  Supabase (Table Editor, schema `chamados`).
+- Olhar os dados: `npm run db:studio` (abre no navegador) ou a extensão SQLite Viewer do VS Code
+  em `server/data/app.db`.
 
 ## Banco com erro grave
 
-Migration commitada que não aplica, histórico de migrations em conflito sem saída, ou o Postgres
-do Supabase fora do ar: **não tente consertar direto no Studio do Supabase** → skill `support`.
+`database disk image is malformed`, migration commitada que não aplica, histórico de migrations
+em conflito sem saída: **não tente consertar o arquivo do banco** → skill `support`.
 
 ## Recriar do zero — PEÇA CONFIRMAÇÃO ANTES
 
@@ -98,8 +93,8 @@ do Supabase fora do ar: **não tente consertar direto no Studio do Supabase** �
 npm run db:reset
 ```
 
-**Apaga todos os dados** do schema `chamados` (o mesmo banco que todo mundo do projeto usa) e recria com os
-seeds. Diga isso com essas palavras e só rode com um "sim" explícito.
+**Apaga todos os dados** da máquina e recria com os seeds. Diga isso com essas palavras e só
+rode com um "sim" explícito. Pare o `npm run dev` antes (no Windows, o arquivo aberto não apaga).
 
 ## Verificar
 
@@ -108,9 +103,8 @@ npm test -w server
 npm run test:e2e -w server
 ```
 
-O `test:e2e -w server` sobe contra o banco de `TEST_DATABASE_URL` (um Postgres só para
-teste) e aplica todas as migrations nele — se uma migration estiver quebrada, é ele que acusa.
-Sem essa variável no `.env`, os testes E2E são pulados (não falham).
+O `open-database.util.test.ts` aplica todas as migrations num banco em memória — se uma
+migration estiver quebrada, é ele que acusa.
 
 ## Commit
 

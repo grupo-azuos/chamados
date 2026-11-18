@@ -34,7 +34,7 @@
     'control-md rounded-control',
     'inline-flex w-full sm:w-auto items-center justify-center gap-2',
     'bg-primary text-primary-foreground text-sm font-semibold transition-colors shadow-xs',
-    'hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60',
+    'hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60',
     ui?.className,
   )}
 >

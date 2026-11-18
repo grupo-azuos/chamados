@@ -18,13 +18,15 @@
     "Unlicense",
     "Zlib",
     "Python-2.0",
+    "PSF-2.0",
     "MPL-2.0",
     "CC-BY-4.0"
   ],
   "allowNotes": {
     "MPL-2.0": "Copyleft por ARQUIVO: só obriga a publicar mudanças feitas nos arquivos da própria dependência. Usamos sem modificar (lightningcss e axe-core, ferramentas de build e de teste).",
     "CC-BY-4.0": "Licença de DADOS, não de código: é a tabela de compatibilidade de navegadores (caniuse-lite), usada só na hora do build.",
-    "Python-2.0": "Permissiva. É o argparse, portado do Python."
+    "Python-2.0": "Permissiva. É o argparse, portado do Python.",
+    "PSF-2.0": "A mesma licença do Python com o identificador SPDX novo: é o argparse 3, que o js-yaml 5 do @nestjs/swagger 12 usa."
   },
   "exceptions": [
     {

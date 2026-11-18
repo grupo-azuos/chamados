@@ -169,7 +169,7 @@ export function useTicketStockItemsModel(
 
 /** A primeira mensagem de cada campo — é a que a tela mostra embaixo dele. */
 function toErrors(
-  issues: readonly { path: (string | number)[]; message: string }[],
+  issues: readonly { path: readonly PropertyKey[]; message: string }[],
 ): Partial<Record<TicketStockField, string>> {
   const found: Partial<Record<TicketStockField, string>> = {};
   for (const issue of issues) {

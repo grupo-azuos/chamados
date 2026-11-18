@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { canChangeScheduleEvent } from './system-access.util';
+import {
+  canChangeScheduleEvent,
+  canEditSystem,
+  requiresSystemGithub,
+  systemRole,
+} from './system-access.util';
 
 const ana = { id: 'u-ana', email: 'ana@empresa.com.br', role: 'admin' as const };
 
@@ -43,5 +48,22 @@ describe('canChangeScheduleEvent', () => {
     expect(
       canChangeScheduleEvent(ana, { createdById: 'u-outro', createdByEmail: 'ana@empresa.com.br' }),
     ).toBe(false);
+  });
+});
+
+describe('systemRole', () => {
+  // feliz
+  it('reads the role in the System module, and the super admin above all', () => {
+    expect(systemRole({ role: 'superadmin', roles: {} })).toBe('superadmin');
+    expect(systemRole({ role: 'admin', roles: { sistema: 'admin' } })).toBe('admin');
+    expect(canEditSystem({ role: 'admin', roles: { sistema: 'admin' } })).toBe(true);
+    expect(requiresSystemGithub({ role: 'superadmin' })).toBe(true);
+  });
+
+  // triste
+  it('leaves whoever has no module as a reader', () => {
+    expect(systemRole({ role: 'admin' })).toBe('user');
+    expect(canEditSystem({ role: 'manager', roles: { sistema: 'user' } })).toBe(false);
+    expect(requiresSystemGithub({ role: 'admin', roles: { infra: 'admin' } })).toBe(false);
   });
 });

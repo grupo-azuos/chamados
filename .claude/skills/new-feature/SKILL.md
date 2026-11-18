@@ -1,26 +1,22 @@
 ---
 name: new-feature
-description: Constrói uma funcionalidade inteira de ponta a ponta no padrão do projeto — contrato Zod em shared, tabela Drizzle/Postgres e migration, módulo NestJS com policy e Swagger, seed, API client, hook de estado, telas com stories, rota, menu e testes. Use quando a pessoa pede para cadastrar, listar, editar ou acompanhar alguma coisa nova ("quero cadastrar clientes", "preciso de uma tela de pedidos").
+description: Constrói uma funcionalidade inteira de ponta a ponta no padrão do projeto — contrato Zod em shared, tabela Drizzle/SQLite e migration, módulo NestJS com policy e Swagger, seed, API client, view-model, telas com stories, rota, menu e testes. Use quando a pessoa pede para cadastrar, listar, editar ou acompanhar alguma coisa nova ("quero cadastrar clientes", "preciso de uma tela de pedidos").
 ---
 
 # Nova feature
 
-**O molde é a feature de Peças.** Para cada passo, abra o arquivo equivalente de `part`/`parts`
-e siga a mesma forma: nomes, comentários (o porquê, em português), estados, testes. Na dúvida,
-o CONTRIBUTING manda.
+**O molde é a feature de Tarefas.** Para cada passo, abra o arquivo equivalente de `task`/`tasks`
+e siga a mesma forma: nomes, comentários (o porquê, em português), estados, testes. Se o exemplo
+já foi removido, siga o CONTRIBUTING.
 
 Nos caminhos abaixo, `<entity>` é o nome em inglês, singular, kebab-case (`customer`), e
 `<entities>` o plural (`customers`). Tudo relativo a `chamados/dashboard/`.
 
 ## 0. Entender e confirmar (antes de qualquer código)
 
-**O pedido envolve banco compartilhado, servidor ou publicar o sistema na internet?** Essa
-parte é infraestrutura, não uma feature → skill `mvp-limits`. Siga com o resto do pedido,
-se houver.
-
-**O pedido envolve login, usuários, senha ou "cada um vê só o seu"?** Isso faz parte do sistema
-quando pedido (CONTRIBUTING §8, seção Login) — construa como qualquer outra feature, seguindo o
-mecanismo de autenticação que já existe no projeto. Não recuse.
+**O pedido envolve login, usuários, senha, "cada um vê só o seu" ou dados compartilhados entre
+computadores?** Essa parte não é feita aqui → skill `mvp-limits`. Siga com o resto do
+pedido, se houver.
 
 Traduza o pedido e confirme com a pessoa em 3 a 5 linhas:
 
@@ -49,12 +45,12 @@ para ela. Depois do OK do entendimento, **crie a branch antes de qualquer códig
 
 ## 2. Banco — siga a skill `database`
 
-- `server/src/lib/db/schema/<entities>.schema.ts`: `id: serial('id').primaryKey()`, colunas em
-  snake_case, datas `timestamp('…', { withTimezone: true, mode: 'date' })`,
-  `createdAt/createdBy/updatedAt/updatedBy`, índices do que é filtrado, `check` para listas
-  fixas, `unique` para o que não pode repetir, `references(..., { onDelete })` para relação.
+- `server/src/lib/db/schema/<entities>.schema.ts`: `id` autoincremento, colunas em snake_case,
+  datas `integer({ mode: 'timestamp_ms' })`, `createdAt/createdBy/updatedAt/updatedBy`,
+  índices do que é filtrado, `check` para listas fixas, `unique` para o que não pode repetir,
+  `references(..., { onDelete })` para relação.
 - Registrar em `server/src/lib/db/drizzle-schema.ts`.
-- `npm run build -w @template/shared && npm run db:generate` e **ler o SQL gerado**.
+- `npm run build -w @chamados/dashboard/shared && npm run db:generate` e **ler o SQL gerado**.
 - Mensagens de conflito/check novas em `server/src/lib/db/db-error.util.ts`.
 
 ## 3. API — `server/src/modules/<entities>/`
@@ -80,23 +76,19 @@ banco (unique, check, relação).
 ## 5. Tela — `client/src/`
 
 - `lib/api/<entities>.api.ts` — uma função por endpoint.
-- `lib/hooks/use-<entity>-list/use-<entity>-list.svelte.ts` (+ `.test.ts`) — query, filtros,
-  mutations simples, exclusão com confirmação. `data`/`state` em funções `build*` se passar da
+- `lib/view-models/use-<entity>-list.model.ts` (+ `.test.tsx`) — query, filtros, mutations
+  simples, exclusão com confirmação. `data`/`state` em funções `build*` se passar da
   complexidade. Estados obrigatórios: `isLoading`, `isEmpty`, `isFilteredOut`, `isTruncated`,
   `error`.
-- `lib/hooks/use-<entity>-form/use-<entity>-form.svelte.ts` (+ `.test.ts`) — TanStack Form
-  (versão Svelte) com `validators: { onChange: <entity>FormSchema }` (**só `onChange`**: com
-  `onSubmit` o erro fica preso) e `mutate` (não `await mutateAsync`).
-- `routes/(app)/<context>/<entities>/components/azuos-<entity>-list-view/azuos-<entity>-list-view.svelte`,
-  `routes/(app)/<context>/<entities>/components/azuos-<entity>-form-dialog/azuos-<entity>-form-dialog.svelte`
-  — componentes **da feature**: moram na rota, não em `lib/`. Cada um com `.stories.svelte`
-  (`Features/<Entities>/…`) e `.test.ts`. Só importam `azuos-*` genéricos de `lib/components/`
-  (`azuos-page-header`, `azuos-empty-state`, `azuos-error-state`, `azuos-confirm-dialog`,
-  `azuos-action-button`, `azuos-text-field`…), nunca `ui/*`. Siga `design-system`,
-  `ui-component` e `ui-standards`. Faltou um genérico? Instale do shadcn e envolva — não recrie.
-- `routes/(app)/<context>/<entities>/+page.svelte` — só composição: hook + componente + classes de
-  cor/espaço/layout (modelo: `routes/(app)/infra/parts/+page.svelte`). Formulário em diálogo ligado ao
-  hook vai em `<entity>-form-slot.svelte` ao lado.
+- `lib/view-models/use-<entity>-form.model.ts` (+ `.test.tsx`) — TanStack Form com
+  `validators: { onChange: <entity>FormSchema }` (**só `onChange`**: com `onSubmit` o erro fica
+  preso) e `mutate` (não `await mutateAsync`).
+- `routes/<feature>/components/azuos-<entity>-list-view/`, `azuos-<entity>-form-dialog/` —
+  componentes DA FEATURE (conhecem a entidade). Genérico vai em `lib/components/azuos-<nome>/`. Antes
+  de criar, consulte a skill `design-system` §3 —
+  cada um com `.stories.tsx` e `.test.tsx`. Siga `ui-standards` e `ui-component`: `PageHeader`,
+  `EmptyState`, `ErrorState`, `ConfirmDialog`, `ActionButton`, `TextField`…
+- `routes/<entities>/index.tsx` — só composição (modelo: `routes/tasks/index.tsx`).
 - `lib/navigation/navigation.ts` — uma linha no menu, ícone Lucide.
 
 ## 6. Commits — skill `git-commit`

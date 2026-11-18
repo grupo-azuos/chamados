@@ -1,6 +1,10 @@
 import { goto } from '$app/navigation';
 import { createQuery } from '@tanstack/svelte-query';
 import { HEALTH_STATUSES, type HealthStatus } from '@template/shared/domain/computer-health.util';
+import {
+  RESOURCE_CONDITIONS,
+  type ResourceCondition,
+} from '@template/shared/domain/computer-resource.util';
 import { COMPUTER_KINDS, type ComputerKind } from '@template/shared/domain/computer-kind.util';
 import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
 import { compareMachines, type NumberedMachine } from '@template/shared/domain/machine-number.util';
@@ -45,6 +49,8 @@ export type ComputerListFilter = {
   onlyOnline: boolean;
   onlyOffline: boolean;
   alert: ComputerAlertFilter | '';
+  /** Qual recurso está pedindo atenção: disco, memória, tempo sem reiniciar. */
+  resourceCondition: ResourceCondition | '';
   /** Só quem precisa de manutenção: preventiva nunca feita ou vencida. */
   /** A situação da preventiva — ou só quem precisa de manutenção (vencida ou nunca feita). */
   preventive: ComputerPreventiveFilter | '';
@@ -102,6 +108,7 @@ export type ComputerListModel = {
     onOnlineChange: (onlyOnline: boolean) => void;
     onOfflineChange: (onlyOffline: boolean) => void;
     onAlertChange: (alert: ComputerAlertFilter | '') => void;
+    onResourceConditionChange: (resourceCondition: ResourceCondition | '') => void;
     onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
     onArchivedChange: (includeArchived: boolean) => void;
     onClearFilters: () => void;
@@ -119,6 +126,7 @@ const EMPTY_FILTER: ComputerListFilter = {
   onlyOnline: false,
   onlyOffline: false,
   alert: '',
+  resourceCondition: '',
   preventive: '',
   includeArchived: false,
 };
@@ -132,6 +140,7 @@ const FILTER_GUARDS: FieldGuards<ComputerListFilter> = {
   onlyOnline: isFlag,
   onlyOffline: isFlag,
   alert: oneOf('', ...COMPUTER_ALERT_FILTERS),
+  resourceCondition: oneOf('', ...RESOURCE_CONDITIONS),
   preventive: oneOf('', ...COMPUTER_PREVENTIVE_FILTERS),
   includeArchived: isFlag,
 };
@@ -148,11 +157,19 @@ function scopeOf(filter: ComputerListFilter) {
     department: filter.department || undefined,
     healthStatus: filter.healthStatus || undefined,
     kind: filter.kind || undefined,
-    onlyOnline: filter.onlyOnline || undefined,
-    onlyOffline: filter.onlyOffline || undefined,
+    ...presenceOf(filter),
     alert: filter.alert || undefined,
+    resourceCondition: filter.resourceCondition || undefined,
     preventive: filter.preventive || undefined,
     includeArchived: filter.includeArchived || undefined,
+  };
+}
+
+/** Online e offline, separados para o `scopeOf` caber no limite de complexidade. */
+function presenceOf(filter: ComputerListFilter) {
+  return {
+    onlyOnline: filter.onlyOnline || undefined,
+    onlyOffline: filter.onlyOffline || undefined,
   };
 }
 
@@ -167,7 +184,10 @@ export function scheduledDayByComputer(
   schedules: readonly MaintenanceSchedule[] | undefined,
 ): Record<number, string> {
   return Object.fromEntries(
-    [...schedulesByComputer(schedules)].map(([computerId, schedule]) => [computerId, schedule.scheduledFor]),
+    [...schedulesByComputer(schedules)].map(([computerId, schedule]) => [
+      computerId,
+      schedule.scheduledFor,
+    ]),
   );
 }
 
@@ -199,7 +219,8 @@ export function summarizeComputers(computers: readonly ComputerListItem[]): Comp
     offline: computers.filter((computer) => !computer.isOnline).length,
     withAlerts: computers.filter((computer) => computer.activeAlerts > 0).length,
     cpuHigh: computers.filter((computer) => computer.activeAlertMetrics.includes('cpu')).length,
-    memoryHigh: computers.filter((computer) => computer.activeAlertMetrics.includes('memory')).length,
+    memoryHigh: computers.filter((computer) => computer.activeAlertMetrics.includes('memory'))
+      .length,
     critical: computers.filter((computer) => computer.healthStatus === 'critical').length,
     attention: computers.filter((computer) => computer.healthStatus === 'attention').length,
     neverSeen: computers.filter((computer) => computer.lastSeenAt === null).length,
@@ -299,6 +320,8 @@ export function useComputerListModel(): ComputerListModel {
           onlyOnline: onlyOffline ? false : current.onlyOnline,
         })),
       onAlertChange: (alert) => filterStore.update((current) => ({ ...current, alert })),
+      onResourceConditionChange: (resourceCondition) =>
+        filterStore.update((current) => ({ ...current, resourceCondition })),
       onPreventiveChange: (preventive) =>
         filterStore.update((current) => ({ ...current, preventive })),
       onArchivedChange: (includeArchived) =>
@@ -346,6 +369,7 @@ function hasAnyFilter(filter: ComputerListFilter): boolean {
     filter.healthStatus !== '' ||
     filter.kind !== '' ||
     filter.alert !== '' ||
+    filter.resourceCondition !== '' ||
     filter.preventive !== '' ||
     filter.includeArchived ||
     filter.onlyOnline ||

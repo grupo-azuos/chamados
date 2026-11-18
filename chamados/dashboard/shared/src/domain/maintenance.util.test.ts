@@ -5,7 +5,12 @@ import {
   daysUntilPreventive,
   isFrequentlyServiced,
   lastPreventiveAtOf,
+  MAINTENANCE_TYPES,
   maintenanceTypeLabel,
+  maintenanceTypeTone,
+  PREVENTIVE_STATUSES,
+  preventiveStatusLabel,
+  preventiveStatusTone,
   monthsSince,
   nextPreventiveAt,
   preventiveCountdownLabel,
@@ -209,5 +214,20 @@ describe('preventiveDueBefore', () => {
     const dayAfter = new Date(preventiveDueBefore(now).getTime() + 24 * 60 * 60 * 1000);
 
     expect(preventiveStatusOf(dayAfter.toISOString(), now)).toBe('ok');
+  });
+});
+
+describe('maintenance tones and labels', () => {
+  // feliz
+  it('gives every type a tone and every preventive status a label', () => {
+    for (const type of MAINTENANCE_TYPES) expect(maintenanceTypeTone(type)).toBeTruthy();
+    for (const status of PREVENTIVE_STATUSES) expect(preventiveStatusLabel(status)).toBeTruthy();
+  });
+
+  // triste
+  it('paints the overdue preventive in red and the never done in amber', () => {
+    expect(preventiveStatusTone('ok')).toBe('success');
+    expect(preventiveStatusTone('due')).toBe('danger');
+    expect(preventiveStatusTone('never')).toBe('warning');
   });
 });

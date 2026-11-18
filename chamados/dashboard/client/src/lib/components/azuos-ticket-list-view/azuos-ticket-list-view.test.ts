@@ -137,10 +137,12 @@ describe('AzuosTicketListView — stat card shortcuts and filter bar', () => {
     const onStatusChange = vi.fn();
     setup({ actions: { ...actions, onStatusChange } });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Abertos: filtrar a lista' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Abertos .+: filtrar a lista$/ }));
     expect(onStatusChange).toHaveBeenLastCalledWith('open');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Em atendimento: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Em atendimento .+: filtrar a lista$/ }),
+    );
     expect(onStatusChange).toHaveBeenLastCalledWith('in_progress');
 
     expect(onStatusChange).toHaveBeenCalledTimes(2);
@@ -153,10 +155,10 @@ describe('AzuosTicketListView — stat card shortcuts and filter bar', () => {
     const onStatusChange = vi.fn();
     setup({ actions: { ...actions, onStatusChange, onStatusGroupChange } });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Aguardando: filtrar a lista' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Aguardando .+: filtrar a lista$/ }));
     expect(onStatusGroupChange).toHaveBeenLastCalledWith('waiting');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Resolvidos: filtrar a lista' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Resolvidos .+: filtrar a lista$/ }));
     expect(onStatusGroupChange).toHaveBeenLastCalledWith('solved');
     expect(onStatusChange).not.toHaveBeenCalled();
   });
@@ -174,7 +176,7 @@ describe('AzuosTicketListView — stat card shortcuts and filter bar', () => {
       actions: { ...actions, onStatusGroupChange },
     });
 
-    const card = screen.getByRole('button', { name: 'Aguardando: tirar o filtro' });
+    const card = screen.getByRole('button', { name: /^Aguardando .+: tirar o filtro$/ });
     expect(card).toHaveAttribute('aria-pressed', 'true');
 
     await userEvent.click(card);
@@ -184,11 +186,17 @@ describe('AzuosTicketListView — stat card shortcuts and filter bar', () => {
   it('marks the card whose filter is on, and clicking it again clears the filter', async () => {
     const onStatusChange = vi.fn();
     setup({
-      data: { area: 'infra', tickets: [ticket()], total: 1, dashboard, filter: { ...emptyFilter, status: 'open' } },
+      data: {
+        area: 'infra',
+        tickets: [ticket()],
+        total: 1,
+        dashboard,
+        filter: { ...emptyFilter, status: 'open' },
+      },
       actions: { ...actions, onStatusChange },
     });
 
-    const card = screen.getByRole('button', { name: 'Abertos: tirar o filtro' });
+    const card = screen.getByRole('button', { name: /^Abertos .+: tirar o filtro$/ });
     expect(card).toHaveAttribute('aria-pressed', 'true');
 
     await userEvent.click(card);
@@ -238,6 +246,38 @@ describe('AzuosTicketListView — stat card shortcuts and filter bar', () => {
 
     expect(within(panel).getByText('Ar-condicionado')).toBeInTheDocument();
     expect(within(panel).queryByText('Impressora')).toBeNull();
+  });
+
+  /* O filtro de responsável mostra a pessoa pelo rosto e pede a fila dela. */
+  it('filters by the responsible person picked with photo and search', async () => {
+    const onAssigneeChange = vi.fn();
+    setup({
+      data: {
+        area: 'infra',
+        tickets: [ticket()],
+        total: 1,
+        dashboard,
+        filter: emptyFilter,
+        assigneeOptions: [
+          { value: 'none', label: 'Sem responsável' },
+          { value: 'u-ana', label: 'Ana Lima', avatar: { name: 'Ana Lima', url: null } },
+          { value: 'u-bia', label: 'Bia Costa', avatar: { name: 'Bia Costa', url: null } },
+        ],
+      },
+      actions: { ...actions, onAssigneeChange },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
+    const trigger = screen.getByRole('button', { name: /Filtrar por responsável/ });
+    await userEvent.click(trigger);
+    const panel = document.getElementById(trigger.getAttribute('aria-controls') ?? '') as HTMLElement;
+    await userEvent.type(within(panel).getByPlaceholderText('Buscar pessoa…'), 'ana');
+    expect(within(panel).queryByText('Bia Costa')).toBeNull();
+    /* Sem foto no admin-console, saem as iniciais no lugar do rosto. */
+    expect(within(panel).getByText('AL')).toBeInTheDocument();
+    await userEvent.click(within(panel).getByText('Ana Lima'));
+
+    expect(onAssigneeChange).toHaveBeenCalledWith('u-ana');
   });
 
   /* O tempo médio é uma LEITURA dos resolvidos, e não uma quinta contagem: mora na dica do
@@ -310,7 +350,13 @@ describe('AzuosTicketListView', () => {
   it('offers to clear the filters when they hid everything', async () => {
     const onClearFilters = vi.fn();
     setup({
-      data: { area: 'infra', tickets: [], total: 0, dashboard, filter: { ...emptyFilter, status: 'resolved' } },
+      data: {
+        area: 'infra',
+        tickets: [],
+        total: 0,
+        dashboard,
+        filter: { ...emptyFilter, status: 'resolved' },
+      },
       state: { ...settled, isFilteredOut: true },
       actions: { ...actions, onClearFilters },
     });
@@ -396,8 +442,163 @@ describe('ticketFilterChips', () => {
     ).toEqual(['Situação: Aguardando', 'Urgência: Alta']);
   });
 
+  it('names who is responsible, or that the ticket has nobody yet', () => {
+    const people = [{ value: 'u-ana', label: 'Ana Lima' }];
+
+    expect(ticketFilterChips({ ...emptyFilter, assigneeId: 'u-ana' }, [], people)).toEqual([
+      { key: 'assigneeId', label: 'Responsável: Ana Lima' },
+    ]);
+    expect(ticketFilterChips({ ...emptyFilter, assigneeId: 'none' }, [], people)[0]?.label).toBe(
+      'Sem responsável',
+    );
+  });
+
   // triste
+  /* Quem deixou de atender a área sai da lista, mas o filtro salvo continua ligado e visível. */
+  it('keeps the chip of someone who is no longer on the list', () => {
+    expect(ticketFilterChips({ ...emptyFilter, assigneeId: 'u-gone' }, [], [])[0]?.label).toBe(
+      'Responsável',
+    );
+  });
+
   it('leaves search and department out, which stay in sight', () => {
-    expect(ticketFilterChips({ ...emptyFilter, search: 'impressora', department: 'TI' }, [])).toEqual([]);
+    expect(
+      ticketFilterChips({ ...emptyFilter, search: 'impressora', department: 'TI' }, []),
+    ).toEqual([]);
+  });
+});
+
+describe('AzuosTicketListView — filters, chips, export and the table', () => {
+  async function openFilters() {
+    if (!screen.queryByRole('group', { name: 'Filtrar por urgência' })) {
+      await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
+    }
+  }
+
+  // feliz
+  it('changes every filter of the panel and searches', async () => {
+    vi.mocked(actions.onStatusChange).mockClear();
+    setup({
+      data: {
+        area: 'infra',
+        tickets: [ticket()],
+        total: 1,
+        dashboard,
+        filter: emptyFilter,
+        departmentOptions: [{ value: 'fiscal', label: 'Fiscal' }],
+      },
+    });
+
+    await userEvent.type(screen.getAllByRole('textbox')[0]!, 'imp');
+    expect(actions.onSearchChange).toHaveBeenCalled();
+
+    await openFilters();
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Filtrar por urgência' })).getAllByRole(
+        'button',
+      )[1]!,
+    );
+    expect(actions.onPriorityChange).toHaveBeenCalled();
+
+    const status = screen.getByRole('button', { name: /Filtrar por situação/ });
+    await userEvent.click(status);
+    const statusPanel = document.getElementById(
+      status.getAttribute('aria-controls') ?? '',
+    ) as HTMLElement;
+    await userEvent.click(within(statusPanel).getByText('Aberto', { exact: true }));
+    expect(actions.onStatusChange).toHaveBeenCalledWith('open');
+
+    const panel = await openProblemTypeFilter();
+    await userEvent.click(within(panel).getByText('Impressora', { exact: true }));
+    expect(actions.onProblemTypeChange).toHaveBeenCalledWith('printer');
+
+    const department = screen.getByRole('button', { name: /Filtrar por departamento/ });
+    await userEvent.click(department);
+    const departmentPanel = document.getElementById(
+      department.getAttribute('aria-controls') ?? '',
+    ) as HTMLElement;
+    await userEvent.click(within(departmentPanel).getByText('Fiscal', { exact: true }));
+    expect(actions.onDepartmentChange).toHaveBeenCalledWith('fiscal');
+  });
+
+  // feliz
+  it('switches each filter off through its chip, the status group included', async () => {
+    const onStatusGroupChange = vi.fn();
+    vi.mocked(actions.onProblemTypeChange).mockClear();
+    setup({
+      data: {
+        area: 'infra',
+        tickets: [ticket()],
+        total: 1,
+        dashboard,
+        filter: { ...emptyFilter, statusGroup: 'resolved', priority: 'high', problemType: 'bogus' },
+      },
+      actions: { ...actions, onStatusGroupChange },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /Tirar o filtro Situação:/ }));
+    expect(onStatusGroupChange).toHaveBeenCalledWith('');
+    await userEvent.click(screen.getByRole('button', { name: /Tirar o filtro Urgência:/ }));
+    expect(actions.onPriorityChange).toHaveBeenCalledWith('');
+    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Tipo de problema' }));
+    expect(actions.onProblemTypeChange).toHaveBeenCalledWith('');
+  });
+
+  // feliz
+  it('exports the queue and opens a ticket from the table', async () => {
+    vi.mocked(actions.onAnswer).mockClear();
+    setup({
+      state: { ...settled, isTruncated: true, exportError: 'Não consegui gerar o arquivo.' },
+    });
+
+    await userEvent.click(screen.getAllByRole('button', { name: /PDF|Excel|Word/i })[0]!);
+    expect(actions.onExportReport).toHaveBeenCalled();
+    expect(screen.getByText('Não consegui gerar o arquivo.')).toBeInTheDocument();
+    expect(screen.getByText(/Mostrando 1 de 1 chamados/)).toBeInTheDocument();
+
+    const opens = screen.getAllByRole('button', { name: 'Abrir' });
+    await userEvent.click(opens.at(-1)!);
+    expect(actions.onAnswer).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+});
+
+/* Quem pediu menos movimento ao sistema recebe a rolagem seca, sem deslizar. */
+function stubReducedMotion() {
+  const original = window.matchMedia;
+  /* Só a consulta de movimento muda: as de largura seguem como estão, para a tela não virar celular. */
+  window.matchMedia = (query: string) =>
+    ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }) as MediaQueryList;
+
+  return () => {
+    window.matchMedia = original;
+  };
+}
+
+describe('AzuosTicketListView — reduced motion', () => {
+  // feliz
+  it('scrolls to the filters without animation when the person prefers less motion', async () => {
+    const restore = stubReducedMotion();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      setup();
+
+      await userEvent.click(
+        screen.getByRole('button', { name: /^Resolvidos .+: filtrar a lista$/ }),
+      );
+
+      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
+    } finally {
+      restore();
+    }
   });
 });

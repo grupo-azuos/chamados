@@ -21,6 +21,9 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,js}'],
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
+    /* Por padrão o vitest devolve vazio para todo `.css` importado — inclusive o `?raw` que o
+       `theme-color.util` usa para ler o `tokens.css` como texto. Ligado, o CSS passa inteiro. */
+    css: true,
     /* `@lucide/svelte`, `bits-ui` e as libs que ele usa por baixo (`runed`, `svelte-toolbelt`)
        distribuem `.svelte`/`.svelte.js` cru, para o bundler do consumidor compilar. Sem isto,
        o Vitest trata o pacote como externo: além do erro de extensão desconhecida, uma

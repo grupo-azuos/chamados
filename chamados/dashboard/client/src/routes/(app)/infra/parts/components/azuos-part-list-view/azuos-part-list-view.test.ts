@@ -3,10 +3,8 @@ import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import PartListView, {
-  type PartListFilter,
-  type PartSummary,
-} from './azuos-part-list-view.svelte';
+import PartListView, { type PartListFilter, type PartSummary } from './azuos-part-list-view.svelte';
+import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
 function part(over: Partial<Part> = {}): Part {
   return {
@@ -76,6 +74,13 @@ function renderView(over: { parts?: Part[]; state?: Partial<typeof settled> } = 
   });
 }
 
+/* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
+function hasCardsOnlyTable(): boolean {
+  return Array.from(document.querySelectorAll('.overflow-x-auto')).some(
+    (element) => element.classList.contains('hidden') && !element.classList.contains('xl:block'),
+  );
+}
+
 describe('AzuosPartListView — stat card shortcuts and filter bar', () => {
   function renderWithFilter(filter: Partial<PartListFilter> = {}) {
     return render(PartListView, {
@@ -92,7 +97,7 @@ describe('AzuosPartListView — stat card shortcuts and filter bar', () => {
     renderWithFilter();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Peças na prateleira: filtrar a lista' }),
+      screen.getByRole('button', { name: /^Peças na prateleira .+: filtrar a lista$/ }),
     );
 
     expect(actions.onInStockOnlyChange).toHaveBeenLastCalledWith(true);
@@ -101,7 +106,9 @@ describe('AzuosPartListView — stat card shortcuts and filter bar', () => {
   it('turns "out of stock" into a shortcut for the out-of-stock filter', async () => {
     renderWithFilter();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Sem estoque: filtrar a lista' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Sem estoque .+: filtrar a lista$/ }),
+    );
 
     expect(actions.onOutOfStockOnlyChange).toHaveBeenLastCalledWith(true);
   });
@@ -109,7 +116,7 @@ describe('AzuosPartListView — stat card shortcuts and filter bar', () => {
   it('marks the card while the filter is on, and clears both on a second click', async () => {
     renderWithFilter({ inStockOnly: true });
 
-    const card = screen.getByRole('button', { name: 'Peças na prateleira: tirar o filtro' });
+    const card = screen.getByRole('button', { name: /^Peças na prateleira .+: tirar o filtro$/ });
     expect(card).toHaveAttribute('aria-pressed', 'true');
 
     await userEvent.click(card);
@@ -230,5 +237,131 @@ describe('AzuosPartListView', () => {
     });
 
     expect(screen.getByText(/Mostrando 1 de 240 peças/)).toBeInTheDocument();
+  });
+});
+
+/** Escolhe a segunda opção de um seletor, seja ele de pastilhas ou de lista com busca. */
+async function chooseSecond(label: string) {
+  const group = screen.queryByRole('group', { name: label });
+  if (group) {
+    await userEvent.click(within(group).getAllByRole('button')[1]!);
+    return;
+  }
+  await userEvent.click(screen.getByRole('button', { name: label }));
+  const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(
+    -1,
+  ) as HTMLElement;
+  await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
+}
+
+describe('AzuosPartListView — search, filters and the buttons of each row', () => {
+  // feliz
+  it('searches and filters by category and condition', async () => {
+    renderView();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Buscar' }), 's');
+    expect(actions.onSearchChange).toHaveBeenCalledWith('s');
+    await chooseSecond('Filtrar por categoria');
+    expect(actions.onCategoryChange).toHaveBeenCalled();
+    await chooseSecond('Filtrar por condição');
+    expect(actions.onConditionChange).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('moves, corrects and opens the ledger from the cards and from the table', async () => {
+    vi.mocked(actions.onMove).mockClear();
+    vi.mocked(actions.onEdit).mockClear();
+    vi.mocked(actions.onOpenLedger).mockClear();
+    renderView();
+
+    const exits = screen.getAllByRole('button', { name: 'Saída' });
+    const entries = screen.getAllByRole('button', { name: 'Entrada' });
+    const edits = screen.getAllByRole('button', { name: 'Corrigir' });
+    for (const button of [...exits, ...entries]) await userEvent.click(button);
+    for (const button of edits) await userEvent.click(button);
+    expect(actions.onMove).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), 'out');
+    expect(actions.onMove).toHaveBeenCalledTimes(exits.length + entries.length);
+    expect(actions.onEdit).toHaveBeenCalledTimes(edits.length);
+
+    const names = screen.getAllByRole('button', { name: 'SSD 240 GB Kingston' });
+    for (const button of names) await userEvent.click(button);
+    expect(actions.onOpenLedger).toHaveBeenCalledTimes(names.length);
+  });
+});
+
+describe('part-list-view — cards only', () => {
+  // feliz
+  it('hides the table completely when the person asked for cards only', () => {
+    const tableView = useTableViewModel();
+    tableView.actions.onToggle();
+    try {
+      renderView();
+
+      expect(hasCardsOnlyTable()).toBe(true);
+    } finally {
+      tableView.actions.onToggle();
+    }
+  });
+});
+
+/* Quem pediu menos movimento ao sistema recebe a rolagem seca, sem deslizar. */
+function stubReducedMotion() {
+  const original = window.matchMedia;
+  /* Só a consulta de movimento muda: as de largura seguem como estão, para a tela não virar celular. */
+  window.matchMedia = (query: string) =>
+    ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }) as MediaQueryList;
+
+  return () => {
+    window.matchMedia = original;
+  };
+}
+
+describe('AzuosPartListView — reduced motion', () => {
+  // feliz
+  it('scrolls to the filters without animation when the person prefers less motion', async () => {
+    const restore = stubReducedMotion();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      renderView();
+
+      await userEvent.click(
+        screen.getByRole('button', { name: /^Sem estoque .+: filtrar a lista$/ }),
+      );
+
+      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe('AzuosPartListView — out of stock filter already on', () => {
+  // feliz
+  it('lights the "out of stock" shortcut when the filter is on', () => {
+    render(PartListView, {
+      props: {
+        data: {
+          parts: [part()],
+          total: 1,
+          summary,
+          filter: { ...emptyFilter, outOfStockOnly: true },
+        },
+        state: settled,
+        actions,
+      },
+    });
+
+    expect(
+      screen.getByRole('button', { name: /^Sem estoque .+: tirar o filtro$/ }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 });

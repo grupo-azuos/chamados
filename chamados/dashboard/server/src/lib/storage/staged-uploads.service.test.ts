@@ -105,3 +105,74 @@ describe('StagedUploadsService', () => {
     await expect(staging.sweep(new Date())).resolves.toBe(0);
   });
 });
+
+describe('StagedUploadsService: the edges', () => {
+  // feliz
+  it('fills what the storage could not measure with the unknown type and zero bytes', async () => {
+    const storage = {
+      head: vi.fn().mockResolvedValue({ size: null, contentType: '' }),
+    };
+    const staging = new StagedUploadsService(storage as never);
+
+    await expect(staging.inspect(STAGED)).resolves.toMatchObject({
+      contentType: 'application/octet-stream',
+      sizeBytes: 0,
+    });
+  });
+
+  it('keeps sweeping while a round comes back full, and stops at the cap', async () => {
+    const full = Array.from({ length: 500 }, (_, index) => ({
+      key: `tmp/${index}`,
+      lastModified: new Date(0),
+    }));
+    const storage = {
+      list: vi.fn().mockResolvedValue(full),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+    const staging = new StagedUploadsService(storage as never);
+
+    const removed = await staging.sweep(new Date());
+
+    expect(removed).toBe(500 * 20);
+    expect(storage.remove).toHaveBeenCalledTimes(20);
+  });
+
+  it('schedules the sweep on start and stops it on shutdown', () => {
+    vi.useFakeTimers();
+    try {
+      const storage = { list: vi.fn().mockResolvedValue([]), remove: vi.fn() };
+      const staging = new StagedUploadsService(storage as never);
+
+      staging.onModuleInit();
+      vi.advanceTimersByTime(60 * 60 * 1000);
+      expect(storage.list).toHaveBeenCalledTimes(1);
+
+      staging.onModuleDestroy();
+      vi.advanceTimersByTime(60 * 60 * 1000);
+      expect(storage.list).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // triste
+  it('does nothing when asked to discard nothing', async () => {
+    const storage = { remove: vi.fn() };
+    const staging = new StagedUploadsService(storage as never);
+
+    await staging.discard([]);
+
+    expect(storage.remove).not.toHaveBeenCalled();
+  });
+
+  it('logs a failure that is not an Error, on discard and on sweep', async () => {
+    const storage = {
+      remove: vi.fn().mockRejectedValue('caiu'),
+      list: vi.fn().mockRejectedValue('caiu'),
+    };
+    const staging = new StagedUploadsService(storage as never);
+
+    await expect(staging.discard(['tmp/a'])).resolves.toBeUndefined();
+    await expect(staging.sweep(new Date())).resolves.toBe(0);
+  });
+});

@@ -132,3 +132,32 @@ describe('AzuosSelectField', () => {
     expect(screen.queryByRole('option')).not.toBeInTheDocument();
   });
 });
+
+const people = [
+  { value: 'ana', label: 'Ana Souza', personName: 'Ana Souza', avatarUrl: null },
+  { value: 'caio', label: 'Caio Ribeiro', personName: 'Caio Ribeiro' },
+];
+
+describe('AzuosSelectField with people and in the dark theme', () => {
+  // feliz
+  it('shows the initials of the chosen person, on the solid field fill', () => {
+    render(SelectField, {
+      props: { data: { value: 'ana', options: people }, ui: { ariaLabel: 'Responsável' }, actions: { onChange: vi.fn() } },
+    });
+
+    const trigger = screen.getByRole('combobox', { name: 'Responsável' });
+    expect(trigger).toHaveTextContent('AS');
+    /* O `ui/select` traz `dark:bg-input/30`; o campo repete o fundo sólido no escuro. */
+    expect(trigger).toHaveClass('bg-muted', 'dark:bg-muted', 'min-w-40');
+    expect(trigger).not.toHaveClass('dark:bg-input/30');
+  });
+
+  // triste
+  it('draws no avatar for an option that is not a person', () => {
+    render(SelectField, {
+      props: { data: { value: 'Ana', options: owners }, ui: { ariaLabel: 'Responsável' }, actions: { onChange: vi.fn() } },
+    });
+
+    expect(document.querySelector('[data-slot="avatar"]')).toBeNull();
+  });
+});

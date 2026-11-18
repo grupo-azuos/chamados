@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import ComputerDetailView, {
+  type AzuosComputerDetailViewProps,
   alertDurationLabel,
   coreCountOf,
   hardwareFacts,
@@ -562,5 +563,397 @@ describe('AzuosComputerDetailView', () => {
     renderDetail({ isBlocked: true, blockReason: 'Máquina devolvida ao fornecedor.' });
 
     expect(screen.getByText('Máquina devolvida ao fornecedor.')).toBeInTheDocument();
+  });
+});
+
+/** As listas de baixo da ficha: chamados, andanças, peças e manutenções, cheias ou carregando. */
+function renderWithHistory(
+  over: Partial<AzuosComputerDetailViewProps['data']> = {},
+  state: AzuosComputerDetailViewProps['state'] = {},
+) {
+  return render(ComputerDetailView, {
+    props: {
+      data: {
+        computer: computer(),
+        samples,
+        live: null,
+        tickets: [],
+        alerts: [alert()],
+        alertPaging: paging,
+        ticketPaging: { ...paging, total: 0 },
+        maintenances: [],
+        partMovements: [],
+        transfers: [],
+        ...over,
+      },
+      state,
+      actions,
+    },
+  });
+}
+
+describe('AzuosComputerDetailView: the histories of the machine', () => {
+  // feliz
+  it('lists the tickets, the transfers and the parts of the machine', () => {
+    renderWithHistory({
+      tickets: [
+        {
+          id: 7,
+          protocol: 'CH-0007',
+          status: 'open',
+          problemType: 'printer',
+          requesterName: 'Marta',
+          createdAt: '2026-09-20T12:00:00.000Z',
+        } as never,
+      ],
+      ticketPaging: { page: 1, pageSize: 25, total: 1 },
+      transfers: [
+        transfer,
+        { ...transfer, id: 2, responsible: null, note: null, peripheralsLeftBehind: 0 },
+      ],
+      partMovements: [
+        {
+          id: 1,
+          partName: 'SSD 240 GB',
+          type: 'out',
+          quantity: 1,
+          handledBy: 'Caio',
+          note: 'Troca do disco.',
+          createdAt: '2026-09-21T12:00:00.000Z',
+        } as never,
+        {
+          id: 2,
+          partName: 'Mouse USB',
+          type: 'in',
+          quantity: 1,
+          handledBy: null,
+          note: null,
+          createdAt: '2026-09-22T12:00:00.000Z',
+        } as never,
+      ],
+      maintenances: [
+        {
+          id: 1,
+          computerId: 3,
+          computerName: 'CONTABIL-03',
+          type: 'cleaning',
+          description: null,
+          performedBy: 'Técnico',
+          performedAt: '2026-09-10T12:00:00.000Z',
+          createdAt: '2026-09-10T12:00:00.000Z',
+          createdBy: 'ana@empresa.com.br',
+          updatedAt: null,
+          updatedBy: null,
+        } as never,
+      ],
+    });
+
+    expect(screen.getByText('CH-0007')).toBeInTheDocument();
+    expect(screen.getByText(/Marta/)).toBeInTheDocument();
+    expect(screen.getByText('2 peça(s) ficaram')).toBeInTheDocument();
+    expect(screen.getByText(/Coordenação contábil/)).toBeInTheDocument();
+    expect(screen.getByText('SSD 240 GB')).toBeInTheDocument();
+    expect(screen.getByText(/Troca do disco/)).toBeInTheDocument();
+    expect(screen.getByText('Saída · 1')).toBeInTheDocument();
+    expect(screen.getByText('Entrada · 1')).toBeInTheDocument();
+    expect(screen.getByText(/Técnico/)).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  // triste
+  it('says it is loading each history while the server answers', () => {
+    renderWithHistory(
+      {},
+      {
+        isTicketsLoading: true,
+        isTransfersLoading: true,
+        isPartsLoading: true,
+        isMaintenancesLoading: true,
+      },
+    );
+
+    expect(screen.getByText('Carregando os chamados…')).toBeInTheDocument();
+    expect(screen.getAllByText('Carregando o histórico…')).toHaveLength(2);
+    expect(screen.getByText('Carregando as peças…')).toBeInTheDocument();
+  });
+
+  it('explains each empty history', () => {
+    renderWithHistory();
+
+    expect(screen.getByText(/Nenhum chamado aponta para esta máquina/)).toBeInTheDocument();
+    expect(screen.getByText(/Nenhuma transferência registrada/)).toBeInTheDocument();
+    expect(screen.getByText(/Nenhuma peça do depósito/)).toBeInTheDocument();
+  });
+});
+
+const liveReading = {
+  computerId: 3,
+  measuredAt: '2026-09-29T14:11:00.000-03:00',
+  receivedAt: new Date().toISOString(),
+  isOnline: true,
+  cpu: { percentTotal: 37, percentPerCore: [] },
+  memory: {
+    totalBytes: 16 * GB,
+    usedBytes: 13 * GB,
+    freeBytes: 3 * GB,
+    usedPercent: 85,
+    swapTotalBytes: 0,
+    swapUsedBytes: 0,
+    swapUsedPercent: 0,
+  },
+  disks: [
+    { mountpoint: 'C:', fstype: 'NTFS', totalBytes: 100, usedBytes: 70, freeBytes: 30, usedPercent: 70 },
+  ],
+  diskIo: { readBytesPerSec: 0, writeBytesPerSec: 0 },
+  network: [],
+  processes: [],
+};
+
+describe('AzuosComputerDetailView: the questions behind each action', () => {
+  const openMenu = async (user: ReturnType<typeof userEvent.setup>, item: string) => {
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    await user.click(screen.getByRole('menuitem', { name: item }));
+    return screen.getByRole('dialog');
+  };
+
+  // feliz
+  it('goes back to the inventory', async () => {
+    renderDetail();
+    await userEvent.click(screen.getByRole('button', { name: /Voltar para o inventário/ }));
+    expect(actions.onBack).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('takes the machine out of the archive after confirming', async () => {
+    const user = userEvent.setup();
+    renderDetail({ isArchived: true });
+    const dialog = await openMenu(user, 'Tirar do arquivo');
+    await user.click(within(dialog).getByRole('button', { name: 'Tirar do arquivo' }));
+    expect(actions.onArchivedChange).toHaveBeenCalledWith(false);
+  });
+
+  // triste
+  it('does nothing when the question is cancelled', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onArchivedChange).mockClear();
+    renderDetail({ isArchived: true });
+    const dialog = await openMenu(user, 'Tirar do arquivo');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(actions.onArchivedChange).not.toHaveBeenCalled();
+  });
+
+  // feliz
+  it('unblocks a blocked machine after confirming', async () => {
+    const user = userEvent.setup();
+    renderDetail({ isBlocked: true, blockReason: 'Máquina emprestada.' });
+    const dialog = await openMenu(user, 'Desbloquear');
+    await user.click(within(dialog).getByRole('button', { name: 'Desbloquear' }));
+    expect(actions.onBlockedChange).toHaveBeenCalledWith(false);
+  });
+
+  // feliz
+  it('asks the reason before blocking', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onBlockedChange).mockClear();
+    renderDetail();
+    const dialog = await openMenu(user, 'Bloquear');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Motivo' }), 'Saiu da empresa');
+    await user.click(within(dialog).getByRole('button', { name: 'Bloquear' }));
+    expect(actions.onBlockedChange).toHaveBeenCalledWith(true, 'Saiu da empresa');
+  });
+
+  // triste
+  it('keeps the machine unblocked when the reason dialog is cancelled', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onBlockedChange).mockClear();
+    renderDetail();
+    const dialog = await openMenu(user, 'Bloquear');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(actions.onBlockedChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  // feliz
+  it('generates a new token after confirming, and cancels when asked to', async () => {
+    /* A pergunta fechada ainda trava o ponteiro na página até acabar a animação. */
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderDetail();
+    let dialog = await openMenu(user, 'Gerar token novo');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(actions.onRegenerateToken).not.toHaveBeenCalled();
+    dialog = await openMenu(user, 'Gerar token novo');
+    await user.click(within(dialog).getByRole('button', { name: 'Gerar token novo' }));
+    expect(actions.onRegenerateToken).toHaveBeenCalledTimes(1);
+  });
+
+  // feliz
+  it('disposes of the machine with a type and a reason', async () => {
+    const user = userEvent.setup();
+    renderDetail();
+    const dialog = await openMenu(user, 'Descartar');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Motivo' }), 'Placa-mãe queimada');
+    await user.click(within(dialog).getByRole('button', { name: 'Descartar máquina' }));
+    expect(actions.onDispose).toHaveBeenCalledWith({ type: 'defect', reason: 'Placa-mãe queimada' });
+  });
+
+  // triste
+  it('keeps the machine when the disposal is cancelled', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onDispose).mockClear();
+    renderDetail();
+    const dialog = await openMenu(user, 'Descartar');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(actions.onDispose).not.toHaveBeenCalled();
+  });
+
+  // feliz
+  it('restores a disposed machine after confirming', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderDetail({ disposedAt: '2026-10-01T12:00:00.000Z', disposalType: 'defect', disposalReason: 'Sem conserto.' });
+    expect(screen.getByText(/Fora de uso \(Com defeito\)/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Voltar ao inventário' }));
+    let dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(actions.onRestore).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Voltar ao inventário' }));
+    dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Voltar ao inventário' }));
+    expect(actions.onRestore).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Registrar manutenção' })).not.toBeInTheDocument();
+  });
+
+  // triste
+  it('does not download twice while the installer is being built', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onDownloadInstaller).mockClear();
+    renderWithHistory({}, { isDownloadingInstaller: true });
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Montando o instalador…' }));
+    expect(actions.onDownloadInstaller).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('does not offer the installer when nobody can build it', async () => {
+    const user = userEvent.setup();
+    render(ComputerDetailView, {
+      props: {
+        data: {
+          computer: computer(),
+          samples,
+          live: null,
+          tickets: [],
+          alerts: [],
+          alertPaging: paging,
+          ticketPaging: { ...paging, total: 0 },
+          maintenances: [],
+          partMovements: [],
+          transfers: [],
+        },
+        actions: { ...actions, onDownloadInstaller: undefined },
+      },
+    });
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    expect(screen.queryByRole('menuitem', { name: /instalador/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
+  // feliz
+  it('reads the live numbers and says when they were read', () => {
+    renderWithHistory({ live: liveReading });
+    expect(screen.getByText(/^Lido /)).toBeInTheDocument();
+    expect(screen.getByText('Processador agora')).toBeInTheDocument();
+    expect(screen.getAllByText('13,0 GB de 16,0 GB').length).toBeGreaterThan(0);
+  });
+
+  // feliz
+  it('shows finished alerts with their duration, and lets the person page and switch the view', async () => {
+    const user = userEvent.setup();
+    renderWithHistory({
+      alerts: [
+        alert(),
+        alert({ id: 2, recoveredAt: '2026-09-22T17:30:00.000Z', causeProcess: null, status: 'recovered' }),
+      ],
+      alertPaging: { page: 1, pageSize: 1, total: 2 },
+    });
+    expect(screen.getAllByText('1 h').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Acontecendo agora').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: 'Próxima' }));
+    expect(actions.onAlertPageChange).toHaveBeenCalledWith(2);
+    await user.click(screen.getByRole('button', { name: 'Ver em cards' }));
+    expect(document.querySelector('[data-slot="alert-table-desktop"]')).toHaveClass('hidden');
+  });
+
+  // feliz
+  it('pages the tickets of the machine', async () => {
+    const user = userEvent.setup();
+    renderWithHistory({
+      tickets: [
+        { id: 7, protocol: 'CH-0007', status: 'open', problemType: 'printer', requesterName: 'Marta', createdAt: '2026-09-20T12:00:00.000Z' } as never,
+      ],
+      ticketPaging: { page: 1, pageSize: 1, total: 3 },
+    });
+    await user.click(screen.getByRole('button', { name: 'Próxima' }));
+    expect(actions.onTicketPageChange).toHaveBeenCalledWith(2);
+  });
+
+  // triste
+  it('says it is loading the alerts and the samples', () => {
+    renderWithHistory({}, { isAlertsLoading: true, isSamplesLoading: true, isScheduleLoading: true, isLiveLoading: true });
+    expect(screen.getByText('Carregando os alertas…')).toBeInTheDocument();
+  });
+
+  // triste
+  it('names a machine by its hostname when it has no display name, offline and never seen', () => {
+    renderWithHistory({
+      computer: computer({
+        displayName: null,
+        isOnline: false,
+        lastSeenAt: null,
+        responsibleName: null,
+        department: null,
+        warnings: [{ severity: 'attention', message: 'Memória abaixo de 8 GB' }],
+        hardware: { ...computer().hardware, hostname: 'contabil-03.local' } as never,
+      }),
+      alerts: [],
+    });
+    expect(screen.getByRole('heading', { name: 'contabil-03.local' })).toBeInTheDocument();
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(screen.getByText('Sem departamento')).toBeInTheDocument();
+    expect(screen.getByText('Sem responsável')).toBeInTheDocument();
+    expect(screen.getByText('Atenção')).toBeInTheDocument();
+    expect(screen.getByText(/Nenhum alerta registrado/)).toBeInTheDocument();
+  });
+});
+
+describe('AzuosComputerDetailView — cancelled questions', () => {
+  async function askFromMenu(user: ReturnType<typeof userEvent.setup>, item: string): Promise<HTMLElement> {
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    await user.click(screen.getByRole('menuitem', { name: item }));
+
+    return screen.getByRole('dialog');
+  }
+
+  // triste
+  it('does nothing when archiving is cancelled', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onArchivedChange).mockClear();
+    renderDetail();
+
+    const dialog = await askFromMenu(user, 'Arquivar');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    expect(actions.onArchivedChange).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when unblocking is cancelled', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onBlockedChange).mockClear();
+    renderDetail({ isBlocked: true, blockReason: 'Máquina emprestada.' });
+
+    const dialog = await askFromMenu(user, 'Desbloquear');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    expect(actions.onBlockedChange).not.toHaveBeenCalled();
   });
 });

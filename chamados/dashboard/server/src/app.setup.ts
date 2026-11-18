@@ -1,3 +1,4 @@
+import { applyHttpConventions } from './lib/http/api-version';
 import { type INestApplication } from '@nestjs/common';
 
 import { type Env } from './lib/config/env.schema';
@@ -11,7 +12,7 @@ import { HttpExceptionFilter } from './lib/http/http-exception.filter';
  * duas que o defeito passa.
  */
 export function setupApp(app: INestApplication, env: Env): void {
-  app.setGlobalPrefix('api');
+  applyHttpConventions(app);
   app.enableCors({
     origin: env.API_CORS_ORIGIN.split(',').map((origin) => origin.trim()),
     credentials: true,

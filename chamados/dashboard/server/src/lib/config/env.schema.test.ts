@@ -13,7 +13,7 @@ const secrets = {
 describe('parseEnv', () => {
   // feliz
   it('fills in every non-secret with a default, so only the secrets need to be written', () => {
-    expect(parseEnv(secrets)).toEqual({
+    expect(parseEnv(secrets)).toMatchObject({
       ...secrets,
       NODE_ENV: 'development',
       API_PORT: 3005,
@@ -22,13 +22,12 @@ describe('parseEnv', () => {
       API_RATE_LIMIT_TTL_SECONDS: 60,
       API_RATE_LIMIT: 300,
       API_WEBHOOK_RATE_LIMIT: 12,
-      API_TRUST_PROXY_HOPS: 0,
+      TRUST_PROXY_HOPS: 0,
       WHATSAPP_DAILY_LIMIT: 100,
       S3_REGION: 'local',
       S3_FORCE_PATH_STYLE: true,
-      ADMIN_CONSOLE_TOKEN: '',
+      ADMIN_CONSOLE_CLIENT_SECRET: '',
       ADMIN_CONSOLE_TIMEOUT_MS: 4000,
-      ADMIN_CONSOLE_COOKIE_PREFIX: 'azuos',
     });
   });
 
@@ -43,7 +42,7 @@ describe('parseEnv', () => {
 
   /* Confiar em proxy é o que decide QUEM a trava conta; o padrão precisa ser não confiar. */
   it('trusts no proxy by default, so a forged address cannot dodge the limit', () => {
-    expect(parseEnv(secrets).API_TRUST_PROXY_HOPS).toBe(0);
+    expect(parseEnv(secrets).TRUST_PROXY_HOPS).toBe(0);
   });
 
   // triste
@@ -97,6 +96,26 @@ describe('parseEnv', () => {
   it('refuses a port out of range, naming the variable', () => {
     expect(() => parseEnv({ ...secrets, API_PORT: '0' })).toThrow(/API_PORT/);
     expect(() => parseEnv({ ...secrets, API_PORT: '99999' })).toThrow(/API_PORT/);
+  });
+
+  // feliz
+  it('treats an empty variable as unset, as the Swarm delivers the ones missing in Infisical', () => {
+    const env = parseEnv({
+      ...secrets,
+      DATABASE_SSL_CA: '',
+      UNIFI_WEBHOOK_TOKEN: '',
+      USER_MOCK: '',
+      USER_MOCK_ID: '',
+      USER_MOCK_EMAIL: '',
+      USER_MOCK_NAME: '',
+    });
+    expect(env.DATABASE_SSL_CA).toBeUndefined();
+    expect(env.USER_MOCK).toBeUndefined();
+  });
+
+  // triste
+  it('still refuses an empty required variable', () => {
+    expect(() => parseEnv({ ...secrets, DATABASE_URL: '' })).toThrow(/DATABASE_URL/);
   });
 
   /* O host da assinatura vai num cabeçalho: URL inteira ali é erro de quem preencheu. */

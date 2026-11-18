@@ -82,6 +82,18 @@ test("updates all owned version files and lock entries without changing dependen
         ),
       ),
     });
+    write(dashboard + "bot/package.json", { version: "0.1.0" });
+    write(dashboard + "bot/package-lock.json", {
+      version: "0.1.0",
+      packages: {
+        "": { version: "0.1.0" },
+        "node_modules/fixture": { version: "1.0.0" },
+      },
+    });
+    write(
+      ".komodo/komodo.toml",
+      '[[build]]\nname = "homo_chamados"\n[build.config]\nbuilder = "homo"\n\n[[build]]\nname = "homo_chamados-bot"\n[build.config]\nversion = "0.0.7"\nauto_increment_version = true\nbuilder = "homo"\n',
+    );
     // feliz: cada release altera somente o componente dono, incluindo seus lockfiles.
     bumpVersion(root, "agent/v1.2.3");
     assert.equal(read(agent + "wails.json").info.productVersion, "1.2.3");
@@ -110,6 +122,15 @@ test("updates all owned version files and lock entries without changing dependen
         .version,
       "0.1.0",
     );
+    assert.equal(read(dashboard + "bot/package.json").version, "2.0.0");
+    assert.equal(
+      read(dashboard + "bot/package-lock.json").packages[""].version,
+      "2.0.0",
+    );
+    const komodo = readFileSync(join(root, ".komodo/komodo.toml"), "utf8");
+    assert.equal(komodo.match(/^version = "2\.0\.0"$/gm)?.length, 2);
+    assert.equal(komodo.match(/^auto_increment_version = false$/gm)?.length, 2);
+    assert.doesNotMatch(komodo, /0\.0\.7|auto_increment_version = true/);
     assert.equal(read(agent + "wails.json").info.productVersion, "1.2.3");
     // triste: uma tag antiga nunca diminui a versão já publicada.
     assert.throws(() => bumpVersion(root, "agent/v1.0.0"), /downgrade/);

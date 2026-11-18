@@ -162,7 +162,7 @@
 />
 
 <!-- Caso limite: texto longo com quebras de linha, na largura de um celular. -->
-<Story name="LongTextOnPhone">
+<Story name="LongTextOnPhone" asChild>
   <div class="w-[360px]">
     <HistoryTimeline
       data={{

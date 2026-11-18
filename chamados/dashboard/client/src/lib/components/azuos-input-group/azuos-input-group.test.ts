@@ -45,3 +45,24 @@ describe('AzuosInputGroup', () => {
     expect(screen.getByLabelText('Valor da peça')).toBeDisabled();
   });
 });
+
+describe('AzuosInputGroup fill', () => {
+  // feliz
+  it('uses the solid field fill, also in the dark theme', () => {
+    const { container } = render(AzuosInputGroup, { props: { data } });
+
+    const group = container.querySelector('[data-slot="input-group"]');
+    expect(group).toHaveClass('bg-muted', 'dark:bg-muted');
+    expect(group).not.toHaveClass('dark:bg-input/30');
+  });
+
+  // triste
+  it('paints the field red, also in the dark theme, when there is an error', () => {
+    const { container } = render(AzuosInputGroup, { props: { data, state: { error: 'Obrigatório' } } });
+
+    expect(container.querySelector('[data-slot="input-group"]')).toHaveClass(
+      'bg-destructive-soft',
+      'dark:bg-destructive-soft',
+    );
+  });
+});

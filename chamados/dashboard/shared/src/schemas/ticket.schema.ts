@@ -23,7 +23,7 @@ import { ticketPersonSchema, watcherIdsSchema } from './ticket-person.schema';
 
 /**
  * O CONTRATO do chamado. Um schema, duas pontas: a API o usa como DTO e Swagger (via
- * `nestjs-zod`) e a web o usa para validar o formulário. É o que garante que a mensagem
+ * `createZodDto`) e a web o usa para validar o formulário. É o que garante que a mensagem
  * embaixo do campo seja a mesma que a API devolveria.
  *
  * As mensagens são TEXTO DE TELA — por isso em português (CONTRIBUTING §1).
@@ -43,7 +43,7 @@ export { ANYDESK_MIN_DIGITS, ANYDESK_MAX_DIGITS } from '../domain/anydesk.util';
  * régua do projeto é clara: o usuário vê, é português (CONTRIBUTING §1). Aqui ele é trocado
  * por uma frase que diz o que fazer — as opções a pessoa já está vendo no próprio `select`.
  */
-const chooseFrom = (what: string) => ({ errorMap: () => ({ message: `Escolha ${what}` }) });
+const chooseFrom = (what: string) => ({ error: () => ({ message: `Escolha ${what}` }) });
 
 export const ticketStatusSchema = z.enum(TICKET_STATUSES, chooseFrom('uma situação da lista'));
 export const ticketPrioritySchema = z.enum(TICKET_PRIORITIES, chooseFrom('a urgência'));
@@ -55,7 +55,7 @@ export const ticketAreaSchema = z.enum(TICKET_AREAS, chooseFrom('a área do cham
  * migration. Quem garante que o valor existe na área é o servidor.
  */
 export const ticketProblemTypeSchema = z
-  .string({ required_error: 'Escolha o tipo de problema' })
+  .string({ error: 'Escolha o tipo de problema' })
   .trim()
   .min(1, 'Escolha o tipo de problema')
   .max(
@@ -94,13 +94,13 @@ const customSystemNameSchema = z
   );
 
 const requesterNameSchema = z
-  .string({ required_error: 'Informe seu nome' })
+  .string({ error: 'Informe seu nome' })
   .trim()
   .min(1, 'Informe seu nome')
   .max(REQUESTER_NAME_MAX_LENGTH, `O nome pode ter até ${REQUESTER_NAME_MAX_LENGTH} caracteres`);
 
 const descriptionSchema = z
-  .string({ required_error: 'Descreva o problema' })
+  .string({ error: 'Descreva o problema' })
   .trim()
   .min(1, 'Descreva o problema')
   .max(DESCRIPTION_MAX_LENGTH, `A descrição pode ter até ${DESCRIPTION_MAX_LENGTH} caracteres`);
@@ -174,10 +174,10 @@ export const ticketSchema = z.object({
    */
   assigneeId: z.string().nullable().optional(),
   solution: z.string().nullable(),
-  createdAt: z.string().datetime(),
-  startedAt: z.string().datetime().nullable(),
-  resolvedAt: z.string().datetime().nullable(),
-  updatedAt: z.string().datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  startedAt: z.iso.datetime().nullable(),
+  resolvedAt: z.iso.datetime().nullable(),
+  updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
 });
 
@@ -241,25 +241,27 @@ export type PublicTicket = z.infer<typeof publicTicketSchema>;
  * Um chamado na lista "Meus chamados" — o que a pessoa abriu, logada. Só o resumo: o detalhe
  * (linha do tempo, arquivos) sai pela consulta do número, que devolve o `PublicTicket`.
  */
-export const myTicketSchema = ticketSchema.pick({
-  id: true,
-  protocol: true,
-  status: true,
-  priority: true,
-  area: true,
-  problemType: true,
-  description: true,
-  createdAt: true,
-}).extend({
-  /** Está na lista porque a pessoa foi VINCULADA (e não porque abriu). */
-  isWatching: z.boolean(),
-});
+export const myTicketSchema = ticketSchema
+  .pick({
+    id: true,
+    protocol: true,
+    status: true,
+    priority: true,
+    area: true,
+    problemType: true,
+    description: true,
+    createdAt: true,
+  })
+  .extend({
+    /** Está na lista porque a pessoa foi VINCULADA (e não porque abriu). */
+    isWatching: z.boolean(),
+  });
 
 export type MyTicket = z.infer<typeof myTicketSchema>;
 
 /**
  * O que o formulário de abrir chamado já traz preenchido — os dados da pessoa no
- * admin-console (`GET /api/me/profile`).
+ * admin-console (`GET /api/v1/me/profile`).
  *
  * O NOME é da identidade e não se muda aqui. Telefone e departamento vêm sugeridos e a pessoa
  * corrige; `department` é `null` quando o texto do admin-console não bate com um único
@@ -267,7 +269,7 @@ export type MyTicket = z.infer<typeof myTicketSchema>;
  */
 export const requesterDefaultsSchema = z.object({
   name: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   phone: z.string().nullable(),
   department: ticketDepartmentSchema.nullable(),
   jobTitle: z.string().nullable(),
@@ -278,10 +280,15 @@ export type RequesterDefaults = z.infer<typeof requesterDefaultsSchema>;
 /** O id que o autenticador entrega é curto; o teto existe só para o campo não aceitar um texto qualquer. */
 const ASSIGNEE_ID_MAX_LENGTH = 128;
 
+/** O valor do filtro de responsável que pede os chamados SEM responsável. */
+export const TICKET_UNASSIGNED_FILTER = 'none';
+
 /** Uma pessoa que pode ser escolhida como responsável: só o que a tela pública precisa mostrar. */
 export const ticketAssigneeOptionSchema = z.object({
   id: z.string(),
   name: z.string(),
+  /** A foto do admin-console — o filtro de responsável mostra quem é pelo rosto. */
+  avatarUrl: z.string().nullable().optional(),
 });
 export type TicketAssigneeOption = z.infer<typeof ticketAssigneeOptionSchema>;
 
@@ -394,7 +401,7 @@ export const createTicketSchema = z
     projectId: z
       .preprocess(
         (value) => (value === '' ? null : value),
-        z.coerce.number().int().positive().nullable(),
+        z.coerce.number<number>().int().positive().nullable(),
       )
       .optional(),
     /**
@@ -487,15 +494,11 @@ export const updateTicketSchema = z.object({
   computerId: z.number().int().positive().nullable().optional(),
   /** O sistema do chamado. Nulo DESVINCULA. */
   projectId: z.number().int().positive().nullable().optional(),
-  /**
-   * O sistema EXTERNO, fora do cadastro — o "trilha" que quem abriu digitou. Vale só sem
-   * `projectId`: escolher um sistema cadastrado apaga este nome, e escrever este nome
-   * desvincula o cadastrado. Nulo ou vazio limpa.
-   */
+  /** O sistema digitado por não estar na lista. Nulo limpa o nome digitado. */
   customSystemName: z.preprocess(
     (value) => (value === '' ? null : value),
-    customSystemNameSchema.nullable().optional(),
-  ),
+    customSystemNameSchema.nullable(),
+  ).optional(),
   /**
    * TROCAR O RESPONSÁVEL — só o super admin. Para os demais o campo é recusado pelo servidor:
    * quem assume um chamado vira responsável ao lançar o primeiro histórico (`toTicketMove`), e
@@ -526,8 +529,8 @@ export const ticketDataFormSchema = z
     computerId: z.string(),
     /** O sistema de software selecionado no select. */
     projectId: z.string().optional(),
-    /** O sistema EXTERNO, digitado na busca do campo de sistema. Vazio é "nenhum". */
-    customSystemName: customSystemNameSchema.optional(),
+    /** O sistema digitado por não estar na lista. */
+    customSystemName: customSystemNameSchema.default(''),
     /**
      * O responsável escolhido no select — só o super admin vê o campo. Vazio ou igual ao atual
      * quer dizer "não trocar": o view-model só manda o campo quando ele de fato mudou.
@@ -566,9 +569,14 @@ export type AddTicketAreaInput = z.infer<typeof addTicketAreaSchema>;
 export const ticketListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   /** Os chamados DESTA máquina — é a consulta da ficha do computador. */
-  computerId: z.coerce.number().int().positive().optional(),
+  computerId: z.coerce.number<number>().int().positive().optional(),
   /** Os chamados DESTE sistema de software. */
-  projectId: z.coerce.number().int().positive().optional(),
+  projectId: z.coerce.number<number>().int().positive().optional(),
+  /**
+   * Os chamados DESTE responsável, pelo id — ou `TICKET_UNASSIGNED_FILTER` para os que ainda
+   * não têm ninguém, a fila de quem precisa ser pego.
+   */
+  assigneeId: z.string().trim().min(1).max(ASSIGNEE_ID_MAX_LENGTH).optional(),
   status: ticketStatusSchema.optional(),
   /**
    * Um GRUPO de estágios de uma vez — "aguardando" (os dois) ou "resolvidos" (com e sem

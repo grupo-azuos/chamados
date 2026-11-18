@@ -21,7 +21,7 @@
   let { data, ui, state: cardState, actions }: AzuosTicketWatchersCardProps = $props();
 </script>
 
-<div class={ui?.isHeaderHidden ? 'flex flex-col gap-3' : 'border-border/70 flex flex-col gap-3 border-t pt-4'}>
+<div class={ui?.isHeaderHidden ? 'flex flex-col gap-3' : 'border-border flex flex-col gap-3 border-t pt-4'}>
   {#if ui?.isHeaderHidden}
     <p class="text-muted-foreground text-xs">Acompanham e escrevem no chamado junto de quem abriu.</p>
   {:else}

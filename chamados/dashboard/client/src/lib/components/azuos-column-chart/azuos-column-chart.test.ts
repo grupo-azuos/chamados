@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
 import ColumnChart, { columnOption, shorten } from './azuos-column-chart.svelte';
@@ -119,5 +119,33 @@ describe('AzuosColumnChart', () => {
 
     expect(screen.queryByText('Sem dados para mostrar')).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosColumnChart — balloon, states and the single colour', () => {
+  // feliz
+  it('names the series and the count in the balloon and paints with the asked colour', () => {
+    const option = columnOption({ slices, seriesLabel: 'Chamados' }, { color: '#123456' }, { foreground: '#111', muted: '#888' }) as {
+      tooltip: { formatter: (params: unknown) => string };
+      series: { label: { formatter: (params: { value: unknown }) => string }; data: { itemStyle: { color: string } }[] }[];
+    };
+
+    expect(option.tooltip.formatter({ name: 'Ana', value: 1234 })).toBe('<b>Ana</b><br/>Chamados: 1.234');
+    expect(option.series[0]!.label.formatter({ value: 12 })).toBe('12');
+    expect(option.series[0]!.data.every((item) => item.itemStyle.color === '#123456')).toBe(true);
+  });
+
+  // triste
+  it('shows the placeholder while loading and explains an empty chart', () => {
+    render(ColumnChart, { props: { data: { slices: [], seriesLabel: 'Chamados' }, state: { isLoading: true } } });
+    expect(document.querySelector('.animate-pulse')).not.toBeNull();
+
+    cleanup();
+    render(ColumnChart, { props: { data: { slices: [], seriesLabel: 'Chamados' } } });
+    expect(screen.getByText('Sem dados para mostrar')).toBeInTheDocument();
+
+    cleanup();
+    render(ColumnChart, { props: { data: { slices: [], seriesLabel: 'Chamados' }, ui: { emptyLabel: 'Nada por aqui' } } });
+    expect(screen.getByText('Nada por aqui')).toBeInTheDocument();
   });
 });

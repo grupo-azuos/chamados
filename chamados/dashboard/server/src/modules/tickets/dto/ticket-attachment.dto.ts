@@ -6,7 +6,7 @@ import {
   attachFilesSchema,
   ticketAttachmentSchema,
 } from '@template/shared/schemas/ticket-attachment.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 
 /**
  * O DTO nasce do MESMO schema Zod que a web importa — é o que garante que o Swagger e a

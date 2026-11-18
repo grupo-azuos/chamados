@@ -75,7 +75,7 @@
     <DialogHeader class="gap-1.5">
       <div class="flex items-center gap-2.5">
         <span
-          class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary/10 text-primary"
+          class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-muted text-primary"
         >
           <KeyRound class="size-4" aria-hidden="true" />
         </span>
@@ -90,14 +90,14 @@
     </DialogHeader>
 
     <div
-      class="min-w-0 rounded-box border border-border/80 bg-foreground p-4 font-mono text-xs text-background break-all select-all flex items-center gap-3"
+      class="min-w-0 rounded-box border border-border bg-foreground p-4 font-mono text-xs text-background break-all select-all flex items-center gap-3"
       data-testid="agent-token"
     >
       <span class="min-w-0 break-all tracking-wider">{data.token}</span>
     </div>
 
     <div
-      class="rounded-box border border-border bg-muted/40 p-3 text-xs text-muted-foreground flex flex-col gap-2"
+      class="rounded-box border border-border bg-muted p-3 text-xs text-muted-foreground flex flex-col gap-2"
     >
       <div class="flex items-center justify-between gap-2">
         <span class="font-medium text-foreground">Comando no PowerShell:</span>

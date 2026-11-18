@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  TICKET_UNASSIGNED_FILTER,
   createTicketSchema,
   publicTicketSchema,
   ticketFormSchema,
+  ticketDataFormSchema,
   ticketListQuerySchema,
   ticketReportQuerySchema,
   updateTicketSchema,
@@ -381,12 +383,49 @@ describe('updateTicketSchema', () => {
     expect(updateTicketSchema.parse({ area: 'manutencao' })).toEqual({ area: 'manutencao' });
   });
 
+  it('accepts updating or clearing the custom system name', () => {
+    expect(updateTicketSchema.parse({ customSystemName: '  Trilha  ' })).toEqual({
+      customSystemName: 'Trilha',
+    });
+    expect(updateTicketSchema.parse({ customSystemName: '' })).toEqual({
+      customSystemName: null,
+    });
+    expect(updateTicketSchema.parse({ customSystemName: null })).toEqual({
+      customSystemName: null,
+    });
+  });
+
   // triste
   it('refuses an area that is not on the list, in Portuguese', () => {
     const result = updateTicketSchema.safeParse({ area: 'rh' });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe('Escolha a área do chamado');
+  });
+});
+
+describe('ticketDataFormSchema', () => {
+  // feliz
+  it('accepts custom system name and defaults it to empty string', () => {
+    const parsed = ticketDataFormSchema.parse({
+      priority: 'high',
+      area: 'sistema',
+      problemType: 'feature_request',
+      computerId: '',
+      projectId: '',
+      customSystemName: 'Trilha',
+    });
+
+    expect(parsed.customSystemName).toBe('Trilha');
+
+    const defaultParsed = ticketDataFormSchema.parse({
+      priority: 'high',
+      area: 'sistema',
+      problemType: 'feature_request',
+      computerId: '',
+    });
+
+    expect(defaultParsed.customSystemName).toBe('');
   });
 });
 
@@ -402,6 +441,18 @@ describe('ticketListQuerySchema', () => {
   it('accepts a whole group of stages as one filter', () => {
     expect(ticketListQuerySchema.parse({ statusGroup: 'waiting' }).statusGroup).toBe('waiting');
     expect(ticketListQuerySchema.safeParse({ statusGroup: 'fechados' }).success).toBe(false);
+  });
+
+  it('filters by who is responsible, or by the tickets nobody took yet', () => {
+    expect(ticketListQuerySchema.parse({ assigneeId: 'u-ana' }).assigneeId).toBe('u-ana');
+    expect(ticketListQuerySchema.parse({ assigneeId: TICKET_UNASSIGNED_FILTER }).assigneeId).toBe(
+      'none',
+    );
+  });
+
+  // triste
+  it('refuses a blank responsible filter instead of matching nobody', () => {
+    expect(ticketListQuerySchema.safeParse({ assigneeId: '   ' }).success).toBe(false);
   });
 
   it('accepts the panel filters together', () => {

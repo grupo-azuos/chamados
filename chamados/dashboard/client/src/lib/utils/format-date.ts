@@ -54,3 +54,20 @@ function parse(iso: string | null | undefined): Date | null {
 
   return Number.isNaN(date.getTime()) ? null : date;
 }
+
+const MONTH_YEAR = new Intl.DateTimeFormat('pt-BR', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+/** Um MÊS de calendário (`2026-10`) → "outubro de 2026". Texto que não é mês vira traço. */
+export function formatCalendarMonth(value: string | null | undefined): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(value ?? '');
+  if (!match) return '—';
+
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return '—';
+
+  return MONTH_YEAR.format(new Date(Date.UTC(Number(match[1]), month - 1, 1)));
+}

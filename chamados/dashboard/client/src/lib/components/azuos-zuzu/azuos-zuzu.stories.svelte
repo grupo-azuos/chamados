@@ -14,7 +14,7 @@
 <Story name="Default" args={{}} />
 
 <!-- Todas as poses lado a lado, para conferir que nenhum arquivo se perdeu. -->
-<Story name="AllPoses">
+<Story name="AllPoses" asChild>
   <div class="flex flex-wrap items-end gap-4">
     {#each ['alert', 'pointing', 'leaning', 'sleeping', 'celebrating', 'idea', 'thumbsup', 'magnifier', 'clock'] as const as pose (pose)}
       <Zuzu data={{ pose }} ui={{ size: 80 }} />
@@ -26,7 +26,7 @@
 <Story name="Floating" args={{ data: { pose: 'idea', anim: 'float' } }} />
 
 <!-- Caso limite: sobre a barra azul, debruçado na beirada — como aparece acima do usuário. -->
-<Story name="OnSidebarEdge">
+<Story name="OnSidebarEdge" asChild>
   <div class="bg-sidebar rounded-box w-64 p-4">
     <div class="border-sidebar-border flex justify-center border-b">
       <Zuzu ui={{ size: 86, className: '-mb-1.5' }} />

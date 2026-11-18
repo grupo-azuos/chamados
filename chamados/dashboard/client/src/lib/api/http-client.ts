@@ -3,13 +3,13 @@ import { type StagedFile, type UploadTicket } from '@template/shared/schemas/sta
 import { type ApiErrorBody } from './api-error.type';
 
 /**
- * Em desenvolvimento a base é `/api`, no mesmo host: o Vite encaminha para o Nest. Em
+ * Em desenvolvimento a base é `/api/v1`, no mesmo host: o Vite encaminha para o Nest. Em
  * produção `VITE_API_URL` aponta para a API publicada — vazio quando é a mesma imagem.
  *
  * Preferir o caminho relativo em desenvolvimento evita que toda falha de CORS chegue à tela
  * como "erro de rede" — a mesma mensagem de quando a API está fora do ar.
  */
-const BASE_URL = import.meta.env.PROD ? `${import.meta.env.VITE_API_URL ?? ''}/api` : '/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export class ApiError extends Error {
   readonly status: number;

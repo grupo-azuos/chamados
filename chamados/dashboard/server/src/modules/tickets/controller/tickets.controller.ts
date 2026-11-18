@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -24,6 +23,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiProduces,
   ApiTags,
   ApiUnprocessableEntityResponse,
@@ -35,6 +35,7 @@ import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   AddTicketAreaDto,
+  AddTicketRelationDto,
   CreateTicketDto,
   CreateTicketProblemTypeDto,
   MyTicketDto,
@@ -51,6 +52,7 @@ import {
   TicketNoticeDto,
   TicketPeopleDto,
   TicketPersonDto,
+  TicketRelationDto,
   TicketProblemTypeOptionDto,
   TicketProblemTypeOptionsQueryDto,
   TicketReportQueryDto,
@@ -62,6 +64,7 @@ import {
 import { UploadRequestDto, UploadTicketDto } from '../dto/ticket-attachment.dto';
 import { TicketStockOptionDto, TicketStockOptionsQueryDto } from '../dto/ticket-stock-item.dto';
 import { SkipHistory } from '../../history/interceptor/skip-history.decorator';
+import { TicketRelationsService } from '../service/ticket-relations.service';
 import { type TicketDashboard, TicketsService } from '../service/tickets.service';
 import { AnyModule } from '../../../lib/auth/module-context.decorator';
 
@@ -83,7 +86,10 @@ import { AnyModule } from '../../../lib/auth/module-context.decorator';
 @AnyModule()
 @Controller('tickets')
 export class TicketsController {
-  constructor(private readonly service: TicketsService) {}
+  constructor(
+    private readonly service: TicketsService,
+    private readonly relationsService: TicketRelationsService,
+  ) {}
 
   @Post('upload-url')
   @SkipHistory()
@@ -134,14 +140,11 @@ export class TicketsController {
   @ApiOperation({
     summary: 'O que o formulário de abrir chamado já traz preenchido',
     description:
-      'Nome e e-mail da pessoa logada (o nome não se muda), e telefone e departamento do perfil dela no admin-console. Sem perfil, ou com o admin-console fora do ar, volta só o que a identidade sabe.',
+      'Nome e e-mail da pessoa logada (o nome não se muda) e o telefone do último chamado dela. O perfil do admin-console a tela lê direto de lá.',
   })
   @ApiOkResponse({ type: RequesterDefaultsDto })
-  async requesterDefaults(
-    @CurrentUser() user: RequestUser,
-    @Headers('cookie') cookie?: string,
-  ): Promise<RequesterDefaultsDto> {
-    return this.service.requesterDefaults(user, cookie);
+  async requesterDefaults(@CurrentUser() user: RequestUser): Promise<RequesterDefaultsDto> {
+    return this.service.requesterDefaults(user);
   }
 
   @Get('system-project-options')
@@ -378,6 +381,52 @@ export class TicketsController {
     return this.service.updateWatchers(user, id, body);
   }
 
+  @Get(':id/relations')
+  @ApiOperation({
+    summary: 'Lista os chamados vinculados a este chamado',
+    description: 'Traz todos os chamados relacionados ao chamado informado.',
+  })
+  @ApiOkResponse({ type: [TicketRelationDto] })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  async listRelations(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<TicketRelationDto[]> {
+    return this.relationsService.list(user, id);
+  }
+
+  @Post(':id/relations')
+  @ApiOperation({
+    summary: 'Vincula outro chamado a este',
+    description: 'Relaciona um chamado existente ao chamado atual.',
+  })
+  @ApiBody({ type: AddTicketRelationDto })
+  @ApiOkResponse({ type: [TicketRelationDto] })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  @ApiBadRequestResponse({ description: 'Não é possível vincular um chamado a ele mesmo.' })
+  async addRelation(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: AddTicketRelationDto,
+  ): Promise<TicketRelationDto[]> {
+    return this.relationsService.add(user, id, body.relatedTicketId);
+  }
+
+  @Delete(':id/relations/:relatedTicketId')
+  @ApiOperation({
+    summary: 'Remove o vínculo com outro chamado',
+    description: 'Desfaz a relação entre os dois chamados.',
+  })
+  @ApiOkResponse({ type: [TicketRelationDto] })
+  @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
+  async removeRelation(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('relatedTicketId', ParseIntPipe) relatedTicketId: number,
+  ): Promise<TicketRelationDto[]> {
+    return this.relationsService.remove(user, id, relatedTicketId);
+  }
+
   @Put(':id/computers')
   @ApiOperation({
     summary: 'Troca as máquinas vinculadas a um chamado',
@@ -483,6 +532,9 @@ export class TicketsController {
     summary: 'Tira uma área participante do chamado (#13)',
     description: 'A área original nunca pode ser removida por aqui — só reclassificada (PATCH).',
   })
+  /* `TicketArea` é um tipo, não uma classe: o build (SWC) não deixa o tipo do parâmetro para o
+     Swagger, que sem isto tiraria `area` do contrato. */
+  @ApiParam({ name: 'area', type: String })
   @ApiOkResponse({ type: TicketDto })
   @ApiNotFoundResponse({ description: 'Chamado não encontrado.' })
   @ApiForbiddenResponse({ description: 'Só gestor de alguma área do chamado pode remover outra.' })

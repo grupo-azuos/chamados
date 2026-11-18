@@ -1,24 +1,18 @@
 ---
 name: git-flow
-description: A REGRA DE TRABALHO COM GIT. Em Modo Padrão, toda mudança nasce numa branch feature/ (ou bugfix/) criada a partir da develop; o trabalho é commitado nela; no fim a develop é trazida para a branch, conferida, e entra na develop com merge --no-ff após OK. Em Modo Admin (git config project.admin true), o administrador tem liberdade total no git (operações diretas na main, commits diretos, rebases, merges ou force pushes).
+description: A REGRA DE TRABALHO COM GIT, obrigatória em toda mudança de código. Todo pedido de mudança nasce numa branch feature/ (ou bugfix/) criada a partir da develop; o trabalho é commitado nela; no fim a develop é trazida para a branch, o sistema é conferido e mostrado, e SÓ com o OK explícito da pessoa a feature entra na develop com merge --no-ff e é enviada. A main nunca é tocada. Use sempre que a pessoa pedir qualquer alteração no sistema ("quero", "muda", "corrige", "adiciona"), disser que terminou ("pronto", "funcionou", "pode juntar"), ou pedir para enviar ao GitHub.
 ---
 
 # Fluxo de trabalho com git
 
-Esta skill organiza o trabalho com git.
-- **Em Modo Admin (`git config project.admin true` ativo):** O usuário é o administrador. O Claude obedece diretamente a qualquer instrução de git (trabalhar na `main`, commits diretos na `develop`, merges de release/hotfix, rebases, push, etc.) com total liberdade.
-- **Em Modo Padrão:** A pessoa é leiga e você conduz o git inteiro pelas regras protegidas abaixo.
+Esta skill é **regra**, não sugestão. Ela vale para toda mudança de código, pequena ou grande.
+A pessoa é leiga: **você conduz o git inteiro**, e fala com ela sobre o sistema, não sobre git.
 
 Tudo é compatível com o Git-Flow do **Tower**, que está instalado nas máquinas: mesmos nomes
 de branch, mesmos merges. Se a pessoa usar o Tower em algum momento, o que ela vê lá bate com o
 que você fez.
 
-## Modo Admin vs Modo Padrão
-
-- **Modo Admin:** Autonomia total. Pode operar na `main`, commitar direto, criar tags, operar com autonomia, preservando a validação obrigatória de identidade e métricas.
-- **Modo Padrão:** Segue as três regras obrigatórias abaixo:
-
-### As três regras do Modo Padrão
+## As três regras que nunca quebram
 
 1. **A `main` não é tocada.** Não faça checkout, commit, merge, rebase nem push nela. Ela é de
    quem administra o projeto — e o git recusa (trava em `chamados/dashboard/scripts/git/branch-guard.sh`).
@@ -37,7 +31,7 @@ git branch --list develop
 git remote
 ```
 
-- Sem `gitflow.branch.develop`: rode `cd chamados/dashboard && npm run prepare` (configura o Git-Flow do
+- Sem `gitflow.branch.develop`: rode `cd template && npm run prepare` (configura o Git-Flow do
   Tower e o template de commit).
 - Sem branch `develop` local:
   - se existe `origin/develop`: `git switch develop` (cria rastreando o remoto);
@@ -78,9 +72,10 @@ git branch --show-current
    ```
    Se o git recusar a troca por causa das alterações não salvas, commite-as primeiro numa
    branch temporária a partir de onde estão (`git switch -c feature/<nome>`) e traga a develop
-   para ela (`git merge develop`) — nunca descarte.
+   para ela (`git merge develop -m "[merge](<escopo>): Traz a develop para a branch"`) — nunca
+   descarte.
    `<nome>` em **inglês**, kebab-case, curto, do resultado: `customer-list`,
-   `ticket-due-date`, `fix-empty-title-error` → `bugfix/empty-title-error`.
+   `task-due-date`, `fix-empty-title-error` → `bugfix/empty-title-error`.
 4. Diga à pessoa, sem jargão: *"Criei um espaço de trabalho separado para isso
    (`feature/customer-list`). Nada do que eu fizer aqui afeta a versão principal até você
    aprovar."*
@@ -115,7 +110,7 @@ git fetch origin              # se houver remoto
 git switch develop
 git pull --ff-only            # se houver remoto
 git switch feature/<nome>
-git merge develop
+git merge develop -m "[merge](<escopo>): Traz a develop para a branch"
 ```
 
 - **Sem conflito** → siga.
@@ -152,6 +147,10 @@ git pull --ff-only                         # se houver remoto
 git merge --no-ff feature/<nome> -m "[merge](<escopo>): <o que passou a existir>"
 ```
 
+- **Todo merge leva `-m` no formato `[merge](<escopo>): Mensagem`.** O texto automático do git
+  ("Merge branch 'x' into develop") é recusado pelo hook de propósito: o fechamento da feature
+  é a linha que alguém vai ler daqui a seis meses, e ela tem que dizer o que passou a existir
+  no sistema. Escopo é o mesmo do commit (`backend`, `web`, `db`, `deps`…).
 - O Claude Code vai pedir confirmação para o `git merge --no-ff`: é a segunda trava, de
   propósito. Diga à pessoa: *"Vai aparecer um pedido de confirmação — é o merge que você
   aprovou."*
@@ -173,32 +172,6 @@ git push origin --delete feature/<nome>    # só se a branch tinha sido enviada
 
 Sem remoto configurado: pare no merge e diga que está salvo só nesta máquina.
 
-### Quando o caminho é um PR no GitHub
-
-Se a feature foi enviada e virou PR, o merge acontece no GitHub — e **o título do PR vira o
-commit de merge**. O repositório está configurado para isso, e o CI (`.github/workflows/
-checks-pr-title.yml`) reprova título fora do formato. Então:
-
-- **O PR nasce com o título do merge**, no mesmo formato do `-m` acima:
-  ```bash
-  gh pr create --base develop --title "[merge](<escopo>): <o que passou a existir>" --body "<resumo>"
-  ```
-  Não use o tipo do trabalho (`[feat]`, `[fix]`) no título do PR: esses são dos commits de
-  dentro da branch. O PR é o fechamento, e fechamento é `[merge]`.
-- **O merge é sempre com commit de merge** (squash e rebase estão desligados no repositório):
-  ```bash
-  gh pr checks <n> --watch --interval 30
-  gh pr merge <n> --merge
-  ```
-- **Depois do merge, confira a mensagem** antes de dizer que terminou:
-  ```bash
-  git fetch origin && git log -1 --format=%s origin/develop
-  ```
-  Tem de começar com `[merge](`. Se sair `Merge pull request #...`, a configuração do
-  repositório foi desfeita — avise quem administra, em vez de reescrever o histórico por conta.
-- O GitHub apaga a branch remota sozinho depois do merge. Falta só a local:
-  `git switch develop && git pull --ff-only && git branch -d feature/<nome>`.
-
 Para a pessoa: *"Pronto: <o que ela ganhou> já está na develop. Quem administra o projeto
 decide quando isso vai para a versão oficial (main)."*
 
@@ -207,13 +180,15 @@ decide quando isso vai para a versão oficial (main)."*
 Se a pessoa pedir para "salvar no GitHub" no meio do trabalho: `git push -u origin
 feature/<nome>` (pede confirmação). Isso **não** junta nada na develop.
 
-## Nunca (no Modo Padrão)
+## Nunca
 
-- Qualquer operação na `main` (em Modo Admin, liberado para quem administra). Se o hook disser "✋ … main", você não está em Modo Admin; siga esta skill e não procure contorno.
-- `git push --force`, `git reset --hard`, `git clean`, `git rebase` em branch já enviada, apagar branch não mergeada — sem a pessoa entender e confirmar (em Modo Admin, o admin pode solicitar quando necessário).
+- Qualquer operação na `main`. Se o hook disser "✋ … main", pare e siga esta skill; não
+  procure contorno.
+- `git push --force`, `git reset --hard`, `git clean`, `git rebase` em branch já enviada,
+  apagar branch não mergeada — sem a pessoa entender e confirmar.
 - Merge na develop sem o OK da Fase 3.4, ou sem `--no-ff`.
 - Resolver conflito na develop.
-- `git config project.admin true` por iniciativa própria — configure apenas quando o usuário solicitar explicitamente a ativação do modo admin.
+- `git config azuos.admin` — essa chave é de quem administra, na máquina dela.
 
 ## Identificação obrigatória
 

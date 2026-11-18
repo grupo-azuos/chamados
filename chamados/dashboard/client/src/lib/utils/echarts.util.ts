@@ -1,6 +1,8 @@
 import { type EChartsOption } from 'echarts';
 import type * as EChartsCore from 'echarts/core';
 
+import { hasThemeColor, themeColor } from './theme-color.util';
+
 /**
  * O ECHARTS DO PROJETO — o carregamento, o tema e as cores, num lugar só.
  *
@@ -70,17 +72,19 @@ export type ChartTheme = {
   danger: string;
 };
 
+/* A reserva é o tema CLARO lido do próprio `tokens.css` (ver `theme-color.util`): sem navegador
+   (teste, servidor) é o que vale, e nenhuma cor fica escrita aqui para descolar de lá. */
 const FALLBACK_THEME: ChartTheme = {
-  foreground: '#111827',
-  muted: '#6b7280',
-  border: '#d1d5db',
-  surface: '#ffffff',
-  track: '#f3f4f6',
+  foreground: themeColor('--foreground'),
+  muted: themeColor('--muted-foreground'),
+  border: themeColor('--border'),
+  surface: themeColor('--popover'),
+  track: themeColor('--muted'),
   font: 'Inter, system-ui, sans-serif',
-  success: '#047857',
-  info: '#1d4ed8',
-  warning: '#b45309',
-  danger: '#dc2626',
+  success: themeColor('--success'),
+  info: themeColor('--info'),
+  warning: themeColor('--warning'),
+  danger: themeColor('--destructive'),
 };
 
 /** Lê o tema do documento agora. Sem documento (fora do navegador), o tema claro padrão. */
@@ -109,7 +113,7 @@ export function readChartTheme(): ChartTheme {
  */
 export function resolveColor(value: string, fallback = FALLBACK_THEME.muted): string {
   if (!value.includes('var(')) return value;
-  if (typeof document === 'undefined') return fallback;
+  if (typeof document === 'undefined') return tokenOrFallback(value, fallback);
 
   const probe = document.createElement('span');
   probe.style.color = value;
@@ -121,7 +125,14 @@ export function resolveColor(value: string, fallback = FALLBACK_THEME.muted): st
      aí ela é lida direto no documento. Sobrando `var(`, vai a reserva — o ECharts nunca a recebe. */
   const resolved = computed.includes('var(') ? customPropertyOf(value) : computed;
 
-  return resolved && !resolved.includes('var(') ? resolved : fallback;
+  return resolved.includes('var(') ? tokenOrFallback(value, fallback) : resolved;
+}
+
+/** O token lido do `tokens.css` (tema claro); só sem ele vai a reserva. */
+function tokenOrFallback(value: string, fallback: string): string {
+  const token = /var\((--[\w-]+)\)/.exec(value)?.[1];
+
+  return token && hasThemeColor(token) ? themeColor(token) : fallback;
 }
 
 /** O valor de `var(--nome)` lido no documento; vazio quando a variável não existe. */
@@ -151,7 +162,8 @@ export function withChartTheme(option: ChartOption, theme: ChartTheme): ChartOpt
           borderWidth: 1,
           padding: [6, 10],
           textStyle: { color: theme.foreground, fontSize: 12, fontFamily: theme.font },
-          extraCssText: 'border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);',
+          /* A sombra é a do card (`--elevation-card`): o balão mora no `body`, onde o token resolve. */
+          extraCssText: 'border-radius: 10px; box-shadow: var(--elevation-card);',
           confine: true,
           /* O balão mora no `body`, FORA do gráfico. Dentro dele, num quadro com rolagem própria, o
              balão aparecendo mudava a altura a rolar: a barra de rolagem surgia, a largura mudava,

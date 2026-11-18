@@ -1,7 +1,7 @@
 import { render, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('$lib/api/agent-download.api', () => ({
-  agentDownloadApi: { lts: vi.fn(), download: vi.fn(), releases: vi.fn(), downloadVersion: vi.fn() },
+  agentDownloadApi: { lts: vi.fn(), download: vi.fn(), releases: vi.fn(), downloadVersion: vi.fn(), bundle: vi.fn() },
 }));
 vi.mock('$lib/utils/download-file.util', () => ({ triggerUrlDownload: vi.fn() }));
 vi.mock('$lib/utils/agent-installer-script.util', () => ({ downloadAgentInstallerScript: vi.fn() }));
@@ -86,5 +86,53 @@ describe('useAgentDownloadModel', () => {
     await waitFor(() => expect(triggerUrlDownload).toHaveBeenCalledWith('https://storage.example.test/older'));
     expect(agentDownloadApi.downloadVersion).toHaveBeenCalledWith('msi', '1.0.2');
     expect(model.state.downloadingVersion).toBeNull();
+  });
+});
+
+describe('useAgentDownloadModel — the package, a busy download and a missing list', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(agentDownloadApi.lts).mockResolvedValue({ version: '1.2.3', publishedAt: '2026-10-16T12:00:00.000Z', sizeBytes: 123 });
+    vi.mocked(agentDownloadApi.releases).mockRejectedValue(new ApiError(503, 'Fora do ar.'));
+    vi.mocked(agentDownloadApi.bundle).mockRejectedValue(new ApiError(503, 'Sem pacote.'));
+  });
+
+  // triste
+  it('lists no older version when the list failed, and says why', async () => {
+    const model = await mount();
+
+    await waitFor(() => expect(model.state.releasesError).toBe('Fora do ar.'));
+    expect(model.data.releases).toEqual([]);
+  });
+
+  // triste
+  it('does not start a second download while one is on the way, and reports a refused one', async () => {
+    let finish!: () => void;
+    vi.mocked(agentDownloadApi.downloadVersion).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = () => resolve({ version: '1.0.2', url: 'https://storage.example.test/older' });
+      }),
+    );
+    const model = await mount();
+
+    model.actions.onDownloadVersion('1.0.2', 'msi');
+    model.actions.onDownloadVersion('1.0.1', 'msi');
+    await waitFor(() => expect(agentDownloadApi.downloadVersion).toHaveBeenCalledTimes(1));
+    finish();
+    await waitFor(() => expect(triggerUrlDownload).toHaveBeenCalledWith('https://storage.example.test/older'));
+
+    vi.mocked(agentDownloadApi.downloadVersion).mockRejectedValueOnce(new ApiError(404, 'Versão não encontrada.'));
+    model.actions.onDownloadVersion('0.9.0', 'msi');
+    await waitFor(() => expect(model.state.downloadError).toBe('Versão não encontrada.'));
+  });
+
+  // triste
+  it('asks for the install package without a machine and keeps the refusal', async () => {
+    const model = await mount();
+
+    model.actions.onDownloadBundle();
+
+    await waitFor(() => expect(agentDownloadApi.bundle).toHaveBeenCalled());
+    await waitFor(() => expect(model.state.bundleError).toBeTruthy());
   });
 });

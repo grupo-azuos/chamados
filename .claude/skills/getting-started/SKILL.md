@@ -1,6 +1,6 @@
 ---
 name: getting-started
-description: Primeiro uso do projeto — confere Node/Git, instala dependências, ajuda a configurar as credenciais do Postgres e do storage S3 do Supabase, cria os dados de teste, sobe o sistema e apresenta a estrutura para quem nunca programou. Use quando a pessoa acabou de clonar, pergunta "como rodo isso?", "por onde começo?" ou o sistema nunca foi instalado nesta máquina.
+description: Primeiro uso do projeto — confere Node/Git, instala dependências, cria o banco com os dados de teste, sobe o sistema e apresenta a estrutura para quem nunca programou. Use quando a pessoa acabou de clonar, pergunta "como rodo isso?", "por onde começo?" ou o sistema nunca foi instalado nesta máquina.
 ---
 
 # Começar
@@ -26,75 +26,56 @@ git --version
 ## 2. Instalar
 
 ```bash
-cd chamados/dashboard
+cd template
 npm install
 ```
 
-Demora alguns minutos na primeira vez. Avise antes. Avisos `deprecated` são normais.
+Demora alguns minutos na primeira vez. Avise antes. Avisos `deprecated` são normais; erro de
+`better-sqlite3` → skill `troubleshoot`.
 
 O `npm install` também prepara o git desta máquina: liga as travas de branch e configura o
 Git-Flow do **Tower** (main, develop, `feature/`…). Se o repositório não tem git (`git status`
 falha na raiz — projeto baixado em .zip), avise a pessoa: o fluxo de trabalho depende de clonar
 pelo GitHub ou pelo Tower. Não crie a `main` por conta própria.
 
-## 3. Banco e arquivos (Supabase: Postgres e storage S3)
-
-O banco é o **Postgres do Supabase** da casa (compartilhado com os outros sistemas; as tabelas
-deste ficam no schema `chamados`) e os arquivos vão para o **Storage** dele pela API S3 — os dois
-exigem credencial, e o server recusa subir sem ela.
-
-```bash
-cp server/.env.example server/.env
-```
-
-Ajude a pessoa a preencher, no `server/.env` que acabou de criar:
-- `DATABASE_URL` — a connection string do Postgres do Supabase (em homologação, a mesma do
-  `server/.env` do Paralegal).
-- `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (e `S3_BUCKET=chamados`) — o
-  endereço `/storage/v1/s3` e as chaves S3 do Supabase (as mesmas da Gestão de RH).
-
-Se ela não tem essas credenciais, quem fornece é quem administra o servidor — avise que é um
-passo de infraestrutura, não do Claude.
-
-## 4. Dados de teste
+## 3. Banco e dados de teste
 
 ```bash
 npm run seed:all
 ```
 
-Grava os dados de exemplo (chamados, computadores, peças…) no banco.
+Cria `server/data/app.db`, as tabelas e as tarefas de exemplo.
 
-## 5. Subir
+## 4. Subir
 
 Rode `npm run dev` **em segundo plano** (ele não termina). Espere aparecer
-`API em http://localhost:3005/api` e o Vite em `:5005`.
+`API em http://localhost:3009/api` e o Vite em `:5009`.
 
 Diga à pessoa:
-- **O sistema:** http://localhost:5005
-- **A documentação da API (Swagger):** http://localhost:3005/docs
+- **O sistema:** http://localhost:5009
+- **A documentação da API (Swagger):** http://localhost:3009/docs
 - Para parar: `Ctrl+C` no terminal onde está rodando.
 
-Se puder, abra no navegador e confira que a lista de chamados aparece.
+Se puder, abra no navegador e confira que a lista de tarefas aparece.
 
-## 6. Apresentar o projeto (curto)
+## 5. Apresentar o projeto (curto)
 
 Explique em até 10 linhas, em português simples:
 
 - O sistema tem **três partes**: `shared` (as regras e os formatos dos dados, usados pelas
   outras duas), `server` (a API, que guarda no banco) e `client` (as telas).
-- O banco é o **Postgres do Supabase** — remoto, não um arquivo na máquina. As credenciais ficam no
-  `server/.env`, que não vai para o git; os **dados de teste** vão, em `scripts/seed/`.
-- **Peças** é a feature mais simples e completa, e serve de molde para as novas.
-- Não tem login por padrão: todo mundo entra como "Usuário de desenvolvimento". Se a ideia
-  precisar de login, é só pedir.
-- Quem usar a mesma `DATABASE_URL` vê os mesmos dados — não é automático que cada máquina
-  tenha os seus.
-- Algo grande der errado (projeto não sobe, banco quebrado), a skill `support` entra em ação:
-  ela para, guarda o trabalho e prepara um relatório do problema pra você investigar com calma.
+- O banco é um **arquivo** (SQLite) em `server/data/app.db`. Não vai para o git; os **dados de
+  teste** vão, em `scripts/seed/`.
+- **Tarefas** é um exemplo completo, para servir de molde. Dá para remover depois
+  (`remove-example`).
+- Não tem login, e não vai ter aqui: o acesso é feito pelo auth-forward, gerenciado pelo
+  suporte. Todo mundo entra como "Usuário de desenvolvimento".
+- Os dados ficam **só neste computador**.
+- Algo grande deu errado? O contato do suporte está em `SUPORTE.md`.
 - Ela pode pedir coisas em linguagem normal. Dê 2 exemplos de pedido, usando a ideia do MVP
   dela se você souber qual é.
 
-## 7. Próximo passo
+## 6. Próximo passo
 
 Sugira, nesta ordem:
 1. `rename-project` — colocar o nome do MVP no título das telas.

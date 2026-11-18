@@ -88,7 +88,7 @@
   <!-- As agendadas ficam fora da cadeia de estados: com tudo em dia, ainda pode haver visita
        marcada, e ela não pode sumir atrás do "todas em dia". -->
   {#if !boardState?.isLoading && schedules.length > 0}
-    <div class="bg-muted/50 rounded-box mb-4 border p-3" data-slot="scheduled-maintenances">
+    <div class="bg-muted rounded-box mb-4 border p-3" data-slot="scheduled-maintenances">
       <h3 class="text-ink-900 mb-2 text-xs font-semibold">Agendadas ({schedules.length})</h3>
       <ul class="flex flex-col gap-2">
         {#each schedules as schedule (schedule.computerId)}

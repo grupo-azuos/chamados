@@ -17,6 +17,7 @@
 <script lang="ts">
   import InventoryFormDialog from '$lib/components/azuos-inventory-form-dialog/azuos-inventory-form-dialog.svelte';
   import { useInventoryFormModel } from '$lib/hooks/use-inventory-form/use-inventory-form.svelte';
+  import { useInventoryItemTimelineModel } from '$lib/hooks/use-inventory-item-timeline/use-inventory-item-timeline.svelte';
 
   let { item, onClose }: InventoryFormSlotProps = $props();
 
@@ -24,13 +25,23 @@
      fotografa o produto na montagem. Quem troca de produto é o `{#key}` da rota. */
   // svelte-ignore state_referenced_locally
   const form = useInventoryFormModel({ item, onSaved: onClose });
+  // svelte-ignore state_referenced_locally
+  const timeline = useInventoryItemTimelineModel(item?.id ?? null);
 </script>
 
 <InventoryFormDialog
-  data={form.data}
-  state={{ ...form.state, isOpen: true }}
+  data={{
+    ...form.data,
+    timeline: item ? timeline.data : undefined,
+  }}
+  state={{
+    ...form.state,
+    isOpen: true,
+    timelineState: item ? timeline.state : undefined,
+  }}
   actions={{
     ...form.actions,
     onClose: () => (form.state.isSubmitting ? undefined : onClose()),
+    timelineActions: item ? timeline.actions : undefined,
   }}
 />

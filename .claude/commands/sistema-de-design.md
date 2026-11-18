@@ -1,5 +1,5 @@
 ---
-description: Atalho em português para a skill `design-system`. A regra de organização do projeto inteiro — onde cada arquivo mora (client, server, shared, agent, docs), prefixo azuos-* em componente e use-* em hook, componente genérico em lib e componente de feature em routes/{feature}/components, h-10 em todo campo de formulário, nunca reescrever componente, idioma de infra (bucket, pasta, arquivo, env) em inglês, onde ficam testes, stories e docs. Consulte ANTES de criar, mover ou renomear qualquer arquivo, e ao revisar se algo está no lugar certo.
+description: Atalho em português para a skill `design-system`. A regra de organização do projeto inteiro — onde cada arquivo mora (client, server, shared, scripts, docs), prefixo azuos-* em componente e use-* em view-model, componente genérico em lib/components e componente de feature em routes/{feature}/components, a régua de altura dos controles (control-sm/md/lg) em todo campo e botão, nunca reescrever componente, idioma de infra (pasta, arquivo, variável de ambiente) em inglês, onde ficam testes e stories. Consulte ANTES de criar, mover ou renomear qualquer arquivo, e ao revisar se algo está no lugar certo.
 disable-model-invocation: true
 ---
 

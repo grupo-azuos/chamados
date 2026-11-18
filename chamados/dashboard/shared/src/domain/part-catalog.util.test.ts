@@ -4,6 +4,8 @@ import {
   balanceAfter,
   fitsInStock,
   movementTypeLabel,
+  movementTypeTone,
+  partConditionTone,
   partCategoryLabel,
   partConditionLabel,
 } from './part-catalog.util';
@@ -68,5 +70,19 @@ describe('fitsInStock', () => {
   it('refuses to take out more than what is on the shelf', () => {
     expect(fitsInStock(2, 'out', 5)).toBe(false);
     expect(fitsInStock(0, 'out', 1)).toBe(false);
+  });
+});
+
+describe('part tones', () => {
+  // feliz
+  it('paints a new part and an entry green', () => {
+    expect(partConditionTone('new')).toBe('success');
+    expect(movementTypeTone('in')).toBe('success');
+  });
+
+  // triste
+  it('leaves a used part neutral and an exit in amber', () => {
+    expect(partConditionTone('used')).toBe('neutral');
+    expect(movementTypeTone('out')).toBe('warning');
   });
 });

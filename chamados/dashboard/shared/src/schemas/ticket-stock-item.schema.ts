@@ -12,11 +12,11 @@ import {
  * mesmas peças.
  */
 export const ticketStockSourceSchema = z.enum(TICKET_STOCK_SOURCES, {
-  errorMap: () => ({ message: 'Escolha de qual depósito é o item' }),
+  error: () => ({ message: 'Escolha de qual depósito é o item' }),
 });
 
 export const ticketStockDirectionSchema = z.enum(TICKET_STOCK_DIRECTIONS, {
-  errorMap: () => ({ message: 'Escolha se o item sai ou entra no depósito' }),
+  error: () => ({ message: 'Escolha se o item sai ou entra no depósito' }),
 });
 
 /** Um item no chamado, como a ficha e a ordem de serviço o mostram. */
@@ -48,12 +48,12 @@ export type TicketStockItem = z.infer<typeof ticketStockItemSchema>;
 export const createTicketStockItemSchema = z.object({
   source: ticketStockSourceSchema,
   itemId: z.coerce
-    .number({ invalid_type_error: 'Escolha o item' })
+    .number<number>({ error: 'Escolha o item' })
     .int('Escolha o item')
     .positive('Escolha o item'),
   direction: ticketStockDirectionSchema,
   quantity: z.coerce
-    .number({ invalid_type_error: 'Informe a quantidade' })
+    .number<number>({ error: 'Informe a quantidade' })
     .int('A quantidade é um número inteiro')
     .min(1, 'A quantidade mínima é 1')
     .max(MAX_TICKET_STOCK_QUANTITY, `A quantidade máxima é ${MAX_TICKET_STOCK_QUANTITY}`),

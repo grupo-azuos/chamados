@@ -45,7 +45,7 @@ export function cn(...values: ClassValue[]): string {
 }
 
 /**
- * Tipos auxiliares do shadcn-svelte — todo componente vendorizado em `components/ui/` os
+ * Tipos auxiliares do shadcn-svelte — todo componente baixado do shadcn-svelte os
  * importa deste mesmo arquivo (é o alias `utils` do `components.json`). Sem eles aqui, o
  * `svelte-check` recusa TODOS esses componentes de uma vez.
  */

@@ -14,19 +14,19 @@
   const actions = { onChange: fn(), onBlur: fn() };
 </script>
 
-<Story name="Default">
+<Story name="Default" asChild>
   <InputGroup data={{ label: 'Valor da peça', name: 'price', value: '120,00' }} {actions}>
     {#snippet prefix()}R${/snippet}
   </InputGroup>
 </Story>
 
-<Story name="WithSuffix">
+<Story name="WithSuffix" asChild>
   <InputGroup data={{ label: 'Peso', name: 'weight', value: '2,5' }} {actions}>
     {#snippet suffix()}kg{/snippet}
   </InputGroup>
 </Story>
 
-<Story name="WithIcon">
+<Story name="WithIcon" asChild>
   <InputGroup
     data={{ label: 'Buscar', name: 'search', value: '', placeholder: 'Nome ou patrimônio' }}
     {actions}
@@ -35,7 +35,7 @@
   </InputGroup>
 </Story>
 
-<Story name="WithError">
+<Story name="WithError" asChild>
   <InputGroup
     data={{ label: 'Valor da peça', name: 'price', value: '' }}
     state={{ error: 'Informe o valor' }}
@@ -45,7 +45,7 @@
   </InputGroup>
 </Story>
 
-<Story name="Disabled">
+<Story name="Disabled" asChild>
   <InputGroup
     data={{ label: 'Valor da peça', name: 'price', value: '120,00' }}
     state={{ isDisabled: true }}
@@ -56,7 +56,7 @@
 </Story>
 
 <!-- Caso limite: coluna estreita com valor comprido — o texto rola dentro do campo. -->
-<Story name="NarrowColumn">
+<Story name="NarrowColumn" asChild>
   <InputGroup
     data={{ label: 'Endereço do painel', name: 'url', value: 'painel.exemplo.local/um/caminho/bem/longo' }}
     ui={{ className: 'max-w-[220px]' }}

@@ -5,6 +5,7 @@ import {
   diskFreePercent,
   HEALTH_STATUS_LABELS,
   HEALTH_STATUSES,
+  healthStatusLabel,
   healthStatusTone,
   healthWarnings,
   memoryGb,
@@ -204,5 +205,12 @@ describe('computeHealth', () => {
 
     expect(report.warnings).toEqual([]);
     expect(report.status).toBe('good');
+  });
+});
+
+describe('healthStatusLabel', () => {
+  // feliz
+  it('labels every status', () => {
+    for (const status of HEALTH_STATUSES) expect(healthStatusLabel(status)).toBe(HEALTH_STATUS_LABELS[status]);
   });
 });

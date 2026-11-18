@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  agentBundleRequestSchema,
   agentDownloadKindSchema,
   agentDownloadQuerySchema,
   agentReleaseManifestSchema,
@@ -56,5 +57,23 @@ describe('agent dashboard download contract', () => {
       expect(agentDownloadKindSchema.safeParse(kind).success).toBe(false);
     for (const version of [undefined, 'latest', '1.2', '01.2.3'])
       expect(agentDownloadQuerySchema.safeParse({ version }).success).toBe(false);
+  });
+});
+
+describe('agentBundleRequestSchema', () => {
+  // feliz
+  it('accepts a bundle without a machine, or with token and machine together', () => {
+    expect(agentBundleRequestSchema.safeParse({ version: '1.0.0', serverUrl: 'https://api.test' }).success).toBe(true);
+    expect(
+      agentBundleRequestSchema.safeParse({ version: '1.0.0', serverUrl: 'https://api.test', token: 't', computerId: 1 })
+        .success,
+    ).toBe(true);
+  });
+
+  // triste
+  it('refuses the token without the machine', () => {
+    const refused = agentBundleRequestSchema.safeParse({ version: '1.0.0', serverUrl: 'https://api.test', token: 't' });
+    expect(refused.success).toBe(false);
+    expect(refused.success ? '' : refused.error.issues[0]?.message).toBe('Informe o token junto com a máquina.');
   });
 });

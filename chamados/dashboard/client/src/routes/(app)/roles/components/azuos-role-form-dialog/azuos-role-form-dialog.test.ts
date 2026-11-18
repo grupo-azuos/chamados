@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -144,5 +144,143 @@ describe('AzuosRoleFormDialog', () => {
     await userEvent.click(changeBtn);
     expect(actions.onChange).toHaveBeenCalledWith('userId', '');
     expect(actions.onChange).toHaveBeenCalledWith('userEmail', '');
+  });
+});
+
+describe('AzuosRoleFormDialog — picking people and the edit mode', () => {
+  const users = [
+    { id: 'usr_carlos', name: 'Carlos Oliveira', email: 'carlos@empresa.com.br', role: 'manager' },
+    { id: 'usr_mariana', name: 'Mariana Silva', email: 'mariana@empresa.com.br' },
+  ];
+  const chosen = {
+    userId: { value: 'usr_carlos', error: null },
+    userEmail: { value: 'carlos@empresa.com.br', error: null },
+  };
+
+  // feliz
+  it('hands the picked and the cleared person to the dedicated callbacks', async () => {
+    const onSelectUser = vi.fn();
+    const onClearUser = vi.fn();
+    const actions = { onContextsChange: vi.fn(), onChange: vi.fn(), onBlur: vi.fn(), onSubmit: vi.fn(), onClose: vi.fn(), onSelectUser, onClearUser };
+    render(RoleFormDialog, {
+      props: { data: { mode: 'create', users, fields, contexts: [] }, state: { isOpen: true }, actions },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /Selecionar pessoa da lista/i }));
+    await userEvent.click(screen.getByText('Mariana Silva'));
+    expect(onSelectUser).toHaveBeenCalledWith(expect.objectContaining({ id: 'usr_mariana' }));
+    expect(actions.onChange).not.toHaveBeenCalled();
+
+    cleanup();
+    render(RoleFormDialog, {
+      props: { data: { mode: 'create', users, fields: chosen, contexts: [] }, state: { isOpen: true }, actions },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Trocar pessoa' }));
+    expect(onClearUser).toHaveBeenCalledOnce();
+  });
+
+  // feliz
+  it('marks the already chosen person in the list and shows her role', async () => {
+    renderDialog({ data: { mode: 'create', users, fields: chosen, contexts: [] } });
+
+    expect(screen.getByText('Gestor')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Alterar pessoa selecionada/i }));
+    const list = screen.getByRole('listbox', { name: 'Lista de colaboradores' });
+    const options = within(list).getAllByRole('option');
+    expect(options[0]).toHaveAttribute('aria-selected', 'true');
+    expect(within(list).getAllByText('Gestor').length).toBeGreaterThan(0);
+  });
+
+  // triste
+  it('explains an empty list, a search without results and the loading of people', async () => {
+    renderDialog({ data: { mode: 'create', users: [], fields, contexts: [] } });
+    await userEvent.click(screen.getByRole('button', { name: /Selecionar pessoa da lista/i }));
+    expect(screen.getByText('Nenhuma pessoa disponível no diretório.')).toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText(/Buscar colaborador/i), 'zzz');
+    expect(screen.getByText('Nenhuma pessoa encontrada com esse termo.')).toBeInTheDocument();
+
+    cleanup();
+    renderDialog({ data: { mode: 'create', users, fields, contexts: [] }, state: { isOpen: true, isLoadingUsers: true } });
+    expect(screen.getByRole('button', { name: /Selecionar pessoa da lista/i })).toBeDisabled();
+    expect(screen.getByText('Carregando lista de pessoas…')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('finds a person by id and keeps the typed e-mail when the directory has no name', async () => {
+    renderDialog({
+      data: {
+        mode: 'create',
+        users,
+        fields: { userId: { value: 'usr_x', error: 'Escolha uma pessoa' }, userEmail: { value: 'x@empresa.com.br', error: null } },
+        contexts: ['infra', 'sistema', 'manutencao'],
+        contextsError: 'Escolha ao menos um módulo',
+      },
+    });
+    expect(screen.getAllByText('x@empresa.com.br').length).toBeGreaterThan(0);
+    expect(screen.getByText('Escolha uma pessoa')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Escolha ao menos um módulo');
+    expect(screen.getByRole('button', { name: 'Liberar 3 módulos' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Alterar pessoa selecionada/i }));
+    await userEvent.type(screen.getByPlaceholderText(/Buscar colaborador/i), 'usr_mar');
+    expect(screen.getByText('Mariana Silva')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('shows the existing person in edit mode and counts a single module', () => {
+    renderDialog({
+      data: { mode: 'edit', users, fields: chosen, contexts: ['infra'] },
+      state: { isOpen: true, error: 'Sem permissão.' },
+    });
+    expect(screen.getByText('Pessoa existente')).toBeInTheDocument();
+    expect(screen.getByText('carlos@empresa.com.br')).toBeInTheDocument();
+    expect(screen.getByText('ID: usr_carlos')).toBeInTheDocument();
+    expect(screen.getByText('1 módulo selecionado.')).toBeInTheDocument();
+    expect(screen.getByText('Sem permissão.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Infraestrutura/i })).toBeDisabled();
+  });
+
+  // feliz
+  it('submits with Enter and closes on Cancelar', async () => {
+    const actions = renderDialog();
+    await fireEvent.submit(screen.getByRole('button', { name: 'Cancelar' }).closest('form')!);
+    expect(actions.onSubmit).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(actions.onClose).toHaveBeenCalledOnce();
+  });
+});
+
+describe('AzuosRoleFormDialog — closing and loading people', () => {
+  // feliz
+  it('closes with Escape, like any dialog', async () => {
+    const actions = renderDialog();
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(actions.onClose).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('says the people are still loading', () => {
+    renderDialog({ state: { isOpen: true, isLoadingUsers: true } });
+
+    expect(document.body.textContent).toMatch(/Carregando/);
+  });
+});
+
+describe('AzuosRoleFormDialog — a person with an unknown role and no e-mail', () => {
+  // triste
+  it('shows the raw role and no e-mail line when the directory has neither', async () => {
+    renderDialog({
+      data: {
+        mode: 'create',
+        fields: { userId: { value: 'usr_carlos', error: null }, userEmail: { value: '', error: null } },
+        contexts: [],
+        users: [{ id: 'usr_carlos', name: 'Carlos Oliveira', email: 'carlos@empresa.com.br', role: 'guest' }] as never,
+      },
+    });
+
+    expect(screen.getAllByText('guest').length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByRole('button', { name: /Alterar pessoa selecionada/i }));
+    expect(screen.getAllByText('guest').length).toBeGreaterThan(1);
   });
 });

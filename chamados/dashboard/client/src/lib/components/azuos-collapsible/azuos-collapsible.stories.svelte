@@ -10,26 +10,26 @@
   });
 </script>
 
-<Story name="Default">
+<Story name="Default" asChild>
   <Collapsible data={{ title: 'Filtros avançados' }}>
     <p>Setor, responsável e período da última manutenção.</p>
   </Collapsible>
 </Story>
 
-<Story name="Open">
+<Story name="Open" asChild>
   <Collapsible data={{ title: 'Filtros avançados' }} state={{ isOpen: true }}>
     <p>Setor, responsável e período da última manutenção.</p>
   </Collapsible>
 </Story>
 
-<Story name="Disabled">
+<Story name="Disabled" asChild>
   <Collapsible data={{ title: 'Filtros avançados' }} state={{ isDisabled: true }}>
     <p>Setor, responsável e período da última manutenção.</p>
   </Collapsible>
 </Story>
 
 <!-- Caso limite: título comprido em coluna estreita — quebra linha e a seta não é empurrada. -->
-<Story name="LongTitleInNarrowColumn">
+<Story name="LongTitleInNarrowColumn" asChild>
   <Collapsible
     data={{ title: 'Por que esta máquina aparece como travada mesmo estando ligada na tomada' }}
     ui={{ className: 'max-w-[260px]' }}

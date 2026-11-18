@@ -163,7 +163,7 @@
 />
 
 <!-- Caso limite: todas as opções na largura de um celular. -->
-<Story name="OnPhone">
+<Story name="OnPhone" asChild>
   <div class="w-[360px]">
     <TicketHistoryForm data={dataFor('open', 'note')} {actions} />
   </div>

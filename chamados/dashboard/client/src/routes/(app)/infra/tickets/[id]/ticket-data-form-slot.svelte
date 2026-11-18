@@ -13,10 +13,12 @@
   import TicketComputersDialog from '$lib/components/azuos-ticket-computers-dialog/azuos-ticket-computers-dialog.svelte';
   import Collapsible from '$lib/components/azuos-collapsible/azuos-collapsible.svelte';
   import TicketDataForm from '$lib/components/azuos-ticket-data-form/azuos-ticket-data-form.svelte';
-  import TicketStockItemsCard from '$lib/components/azuos-ticket-stock-items-card/azuos-ticket-stock-items-card.svelte';
+  import TicketRelationsCard from '$lib/components/azuos-ticket-relations-card/azuos-ticket-relations-card.svelte';
   import TicketWatchersCard from '$lib/components/azuos-ticket-watchers-card/azuos-ticket-watchers-card.svelte';
   import { useTicketComputersModel } from '$lib/hooks/use-ticket-computers/use-ticket-computers.svelte';
   import { useTicketDataFormModel } from '$lib/hooks/use-ticket-data-form/use-ticket-data-form.svelte';
+  import { useTicketRelationsModel } from '$lib/hooks/use-ticket-relations/use-ticket-relations.svelte';
+  import TicketStockItemsCard from '$lib/components/azuos-ticket-stock-items-card/azuos-ticket-stock-items-card.svelte';
   import { useTicketStockItemsModel } from '$lib/hooks/use-ticket-stock-items/use-ticket-stock-items.svelte';
   import { useTicketWatchersModel } from '$lib/hooks/use-ticket-watchers/use-ticket-watchers.svelte';
 
@@ -29,6 +31,9 @@
   /* As pessoas vinculadas moram junto dos dados: são do chamado, e se salvam na hora. */
   // svelte-ignore state_referenced_locally
   const watchers = useTicketWatchersModel(ticket.id);
+  /* Os chamados vinculados também moram aqui: relacionam chamados entre si na hora. */
+  // svelte-ignore state_referenced_locally
+  const relations = useTicketRelationsModel(ticket.id);
   /* Os itens do estoque saem do depósito DESTA área — Depósito da TI. */
   // svelte-ignore state_referenced_locally
   const stock = useTicketStockItemsModel(ticket.id, 'parts');
@@ -74,6 +79,19 @@
         ui={{ isHeaderHidden: true }}
         state={watchers.state}
         actions={watchers.actions}
+      />
+    </Collapsible>
+  {/key}
+  {#key relations.data.relations.length > 0}
+    <Collapsible
+      data={{ title: `Chamados vinculados (${relations.data.relations.length})` }}
+      state={{ isOpen: relations.data.relations.length > 0 }}
+    >
+      <TicketRelationsCard
+        data={relations.data}
+        ui={{ isHeaderHidden: true }}
+        state={relations.state}
+        actions={relations.actions}
       />
     </Collapsible>
   {/key}

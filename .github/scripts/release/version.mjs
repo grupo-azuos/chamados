@@ -1,6 +1,11 @@
 // As tags são a fonte da versão; nenhum instalador recebe uma versão digitada à parte.
 import { execFileSync } from "node:child_process";
-import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -42,12 +47,37 @@ export function versionFiles(component) {
       "chamados/agent/svelte/package-lock.json",
     ];
   return [
-    "package.json",
-    "package-lock.json",
-    "shared/package.json",
-    "server/package.json",
-    "client/package.json",
-  ].map((file) => `chamados/dashboard/${file}`);
+    ...[
+      "package.json",
+      "package-lock.json",
+      "shared/package.json",
+      "server/package.json",
+      "client/package.json",
+      "bot/package.json",
+      "bot/package-lock.json",
+    ].map((file) => `chamados/dashboard/${file}`),
+    KOMODO_FILE,
+  ];
+}
+
+/* Os Builds do Komodo (dashboard e bot) levam a versão da tag do dashboard. */
+const KOMODO_FILE = ".komodo/komodo.toml";
+
+/**
+ * Em cada `[build.config]`: `version` igual à tag e `auto_increment_version = false` (sem isso o
+ * Komodo soma 1 no patch a cada build e a versão dele descola da tag).
+ */
+export function setKomodoVersion(toml, version) {
+  return toml.replace(
+    /^\[build\.config\]\n((?:(?!\[).*\n?)*)/gm,
+    (_block, body) => {
+      const rest = body
+        .split("\n")
+        .filter((line) => !/^(version|auto_increment_version)\s*=/.test(line))
+        .join("\n");
+      return `[build.config]\nversion = "${version}"\nauto_increment_version = false\n${rest}`;
+    },
+  );
 }
 
 function updateJson(root, file, change) {
@@ -97,9 +127,7 @@ export function bumpVersion(root, tag) {
     });
     return;
   }
-  for (const file of files.filter(
-    (file) => !file.endsWith("package-lock.json"),
-  )) {
+  for (const file of files.filter((file) => file.endsWith("/package.json"))) {
     updateJson(root, file, (data) => {
       data.version = version;
     });
@@ -109,6 +137,16 @@ export function bumpVersion(root, tag) {
     for (const key of ["", "shared", "server", "client"])
       data.packages[key].version = version;
   });
+  updateJson(root, files[6], (data) => {
+    data.version = version;
+    data.packages[""].version = version;
+  });
+  const komodo = resolve(root, KOMODO_FILE);
+  if (existsSync(komodo))
+    writeFileSync(
+      komodo,
+      setKomodoVersion(readFileSync(komodo, "utf8"), version),
+    );
 }
 
 export function validateTag(root, tag) {

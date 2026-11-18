@@ -11,7 +11,7 @@ tranquilizar, explicar o que aconteceu **na tela**, resolver o que dá para reso
 
 Conflito se resolve **na branch de feature**, nunca na `develop` (ver `git-flow`). Se você
 está na develop no meio de um merge com conflito: `git merge --abort`, vá para a feature,
-`git merge develop`, e resolva lá.
+`git merge develop -m "[merge](<escopo>): Traz a develop para a branch"`, e resolva lá.
 
 ## 1. Primeira mensagem (antes de investigar)
 
@@ -53,11 +53,11 @@ Nunca diga o caminho do arquivo para a pessoa. Diga **a tela ou a parte** que el
 
 | Arquivo (em `chamados/dashboard/`) | Como falar |
 |---|---|
-| `client/src/routes/<rota>/+page.svelte` | "a tela **<título>**" — o título está no `PageHeader` da view que a rota usa |
-| `client/src/routes/(app)/<context>/<feature>/components/azuos-<x>-view/…` | "a tela **<título do PageHeader>**" |
-| `client/src/routes/(app)/<context>/<feature>/components/azuos-<x>-form-dialog/…` | "o formulário de **<x>**" (título do `DialogTitle`) |
-| `client/src/lib/hooks/use-<x>/use-<x>.svelte.ts` | "o funcionamento da tela **<x>**" (filtros, botões, o que carrega) |
-| `client/src/lib/components/azuos-<x>/azuos-<x>.svelte` | "o componente **<x>**, usado nas telas A, B…" (descubra com `Grep` quem importa) |
+| `client/src/routes/<rota>/...` | "a tela **<título>**" — o título está no `PageHeader` da view que a rota usa |
+| `client/src/routes/<feature>/components/azuos-<x>-view/…` | "a tela **<título do AzuosPageHeader>**" |
+| `…/components/azuos-<x>-form-dialog/…` | "o formulário de **<x>**" (título do `DialogTitle`) |
+| `client/src/lib/view-models/use-<x>.model.ts` | "o funcionamento da tela **<x>**" (filtros, botões, o que carrega) |
+| `client/src/lib/components/azuos-<x>/…` | "o componente **<x>**, usado nas telas A, B…" (descubra com `Grep` quem importa) |
 | `client/src/lib/navigation/navigation.ts` | "o **menu lateral**" |
 | `client/src/lib/theme/tokens.css` | "as **cores** do sistema" |
 | `shared/src/schemas/<x>.schema.ts` | "as **regras do cadastro de <x>**" (campos obrigatórios, limites, mensagens de erro) |
@@ -67,7 +67,7 @@ Nunca diga o caminho do arquivo para a pessoa. Diga **a tela ou a parte** que el
 | `server/drizzle/**` | "o **histórico de mudanças do banco**" — ver §5 |
 | `scripts/seed/<x>/...` | "os **dados de teste de <x>**" |
 | `package.json`, `package-lock.json` | "a **lista de bibliotecas** do projeto" — ver §5 |
-| `*.test.ts`, `*.stories.svelte` | "os **testes**" / "o **catálogo visual**" da parte correspondente |
+| `*.test.ts(x)`, `*.stories.tsx` | "os **testes**" / "o **catálogo visual**" da parte correspondente |
 | `README.md`, `CONTRIBUTING.md`, `.claude/**` | "a **documentação**" |
 
 ## 4. Explicar e decidir
@@ -110,18 +110,17 @@ mudar uma regra que ela criou), sugira **conversar com ela** antes, e mostre o n
   ```bash
   git checkout --theirs -- chamados/dashboard/package-lock.json   # "theirs" = develop, neste merge
   ```
-  Resolva o `package.json` à mão (as duas listas somadas) e rode `cd chamados/dashboard && npm install`.
+  Resolva o `package.json` à mão (as duas listas somadas) e rode `cd template && npm install`.
 - **`server/drizzle/`** (migrations): **nunca** junte SQL à mão.
   1. Fique com **todas** as migrations e o `meta/` da develop (`git checkout --theirs --
      chamados/dashboard/server/drizzle`).
   2. Resolva os arquivos de **schema** (`server/src/lib/db/schema/`) mantendo as duas mudanças.
   3. Apague do disco as migrations que eram **só desta branch** (as que não estão na develop).
-  4. `npm run build -w @template/shared && npm run db:generate` — gera uma migration nova com a
+  4. `npm run build -w @chamados/dashboard/shared && npm run db:generate` — gera uma migration nova com a
      sua mudança, em cima das da develop.
   5. Avise a pessoa que o banco local dela precisa ser recriado (`db:reset`, **com
      confirmação**) se a migration antiga já tinha sido aplicada.
-- **`routeTree.gen.ts`**: não é versionado e é um arquivo morto (sobra de antes da migração
-  para SvelteKit) — se aparecer em conflito, ignore-o; ele não faz mais parte do sistema.
+- **`routeTree.gen.ts`**: não é versionado; se aparecer, `npm run routes -w client`.
 - **Dados de teste** (`*.data.ts`): some os registros dos dois lados; se dois usarem o mesmo
   `id`, renumere os desta branch para o próximo livre.
 
@@ -136,11 +135,11 @@ Rode a skill **`verify`** inteira — conflito resolvido que não compila é pio
 Depois:
 
 ```bash
-git commit --no-edit
+git commit -m "[merge](<escopo>): Traz a develop para a branch"
 ```
 
-(A mensagem "Merge branch 'develop' into feature/…" é gerada pelo git e aceita pelo
-commitlint.)
+(`--no-edit` **não** serve: ele usa o texto automático do git, que o commitlint recusa. Todo
+merge leva mensagem no formato `[merge](<escopo>): Mensagem`.)
 
 Volte ao ponto do `git-flow` de onde veio (normalmente a Fase 3.3). Se o que chegou da develop
 mudou algo que a pessoa já tinha testado, diga isso quando pedir o OK.

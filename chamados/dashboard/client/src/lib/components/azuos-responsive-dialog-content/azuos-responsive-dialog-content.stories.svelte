@@ -20,7 +20,7 @@
 
 <!-- Estreite a viewport do Storybook para ver a alça e o bottom sheet; acima de `sm` é o
      mesmo modal centrado de sempre. -->
-<Story name="Default">
+<Story name="Default" asChild>
   <Dialog open={true}>
     <ResponsiveDialogContent>
       <DialogHeader>
@@ -35,7 +35,7 @@
   </Dialog>
 </Story>
 
-<Story name="WithoutCloseButton">
+<Story name="WithoutCloseButton" asChild>
   <Dialog open={true}>
     <ResponsiveDialogContent showCloseButton={false}>
       <DialogHeader>
@@ -53,7 +53,7 @@
 </Story>
 
 <!-- Conteúdo alto o bastante para precisar rolar dentro do bottom sheet no celular. -->
-<Story name="TallContent">
+<Story name="TallContent" asChild>
   <Dialog open={true}>
     <ResponsiveDialogContent>
       <DialogHeader>

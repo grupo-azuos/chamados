@@ -5,7 +5,7 @@ import { type HistoryChange, type HistoryInsert } from '../../../lib/db/schema/h
 /** O que a requisição que mudou dado deixa para o histórico, já sem nada do Express. */
 export type MutationRequest = {
   method: string;
-  /** O caminho da rota com os parâmetros, como `/api/tickets/:id/areas`. */
+  /** O caminho da rota com os parâmetros, como `/api/v1/tickets/:id/areas`. */
   routePath: string;
   handler: string;
   params: Record<string, string | undefined>;
@@ -55,9 +55,11 @@ export function historyEntryOf(request: MutationRequest, result: unknown): Histo
   };
 }
 
-/* O primeiro pedaço do caminho depois de `/api`: `/api/tickets/:id` → `tickets`. */
+/* O primeiro pedaço do caminho depois de `/api/v1`: `/api/v1/tickets/:id` → `tickets`. */
 function targetTypeOf(routePath: string): string | null {
-  const segments = routePath.split('/').filter((segment) => segment !== '' && segment !== 'api');
+  const segments = routePath.split('/').filter(Boolean);
+  if (segments[0] === 'api') segments.shift();
+  if (/^v\d+$/.test(segments[0] ?? '')) segments.shift();
   const first = segments[0];
 
   return first && !first.startsWith(':') ? first : null;

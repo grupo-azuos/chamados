@@ -59,7 +59,7 @@
        fechando ainda mostrava a faixa do padding no último quadro. Quem pediu ao sistema menos
        movimento vê abrir e fechar na hora. -->
   <CollapsibleContent
-    class="border-border/60 text-ink-700 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden border-t text-sm motion-reduce:animate-none"
+    class="border-border text-ink-700 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden border-t text-sm motion-reduce:animate-none"
   >
     <div class="px-4 py-3">
       {@render children?.()}

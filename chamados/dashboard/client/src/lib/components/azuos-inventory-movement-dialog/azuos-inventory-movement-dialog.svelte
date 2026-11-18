@@ -56,9 +56,9 @@
   };
 
   const TONE: Record<StockMovementType, string> = {
-    in: 'bg-success/10 text-success',
-    out: 'bg-warning/10 text-warning',
-    disposal: 'bg-destructive/10 text-destructive',
+    in: 'bg-muted text-success',
+    out: 'bg-muted text-warning',
+    disposal: 'bg-muted text-destructive',
   };
 </script>
 

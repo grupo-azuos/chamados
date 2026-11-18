@@ -158,3 +158,45 @@ describe('useDashboardModel', () => {
     expect(model.state.isEmpty).toBe(false);
   });
 });
+
+describe('useDashboardModel — where each card leads', () => {
+  beforeEach(() => {
+    vi.mocked(dashboardApi.summary).mockResolvedValue(summary());
+    vi.mocked(goto).mockClear();
+  });
+
+  // feliz
+  it('opens each screen, with the filter of the card in the address', async () => {
+    const model = await mountLoadedModel();
+
+    model.actions.onOpenComputers();
+    model.actions.onOpenTickets();
+    model.actions.onOpenMaintenance();
+    model.actions.onOpenParts();
+    model.actions.onOpenOpenTickets();
+    model.actions.onOpenCriticalMachines();
+    model.actions.onOpenPreventiveDue();
+    model.actions.onOpenOutOfStock();
+
+    expect(vi.mocked(goto).mock.calls.map(([path]) => path)).toEqual([
+      '/infra/computers',
+      '/infra/tickets',
+      '/infra/maintenance',
+      '/infra/parts',
+      '/infra/tickets?status=open',
+      '/infra/computers?healthStatus=critical',
+      '/infra/computers?preventive=needed',
+      '/infra/parts?outOfStockOnly=true',
+    ]);
+  });
+
+  // feliz
+  it('asks the server again on retry', async () => {
+    const model = await mountLoadedModel();
+    vi.mocked(dashboardApi.summary).mockClear();
+
+    model.actions.onRetry();
+
+    await waitFor(() => expect(dashboardApi.summary).toHaveBeenCalled());
+  });
+});

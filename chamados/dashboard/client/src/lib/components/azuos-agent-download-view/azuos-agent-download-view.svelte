@@ -105,7 +105,7 @@
           <li>
             Se o Windows bloquear o script por não ter assinatura digital, abra o PowerShell como
             Administrador na pasta dos arquivos e execute:
-            <code class="mt-2 block break-all rounded-box border border-border bg-muted/40 p-3 font-mono text-xs text-foreground select-all">
+            <code class="mt-2 block break-all rounded-box border border-border bg-muted p-3 font-mono text-xs text-foreground select-all">
               Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force; &amp; ".\install-agent.ps1"
             </code>
             A liberação vale só para essa janela do PowerShell. O script também pode solicitar
@@ -175,7 +175,7 @@
         />
       </div>
     {:else if data.releases.length === 0}
-      <p class="text-muted-foreground bg-muted/40 rounded-box mt-4 p-3 text-sm">
+      <p class="text-muted-foreground bg-muted rounded-box mt-4 p-3 text-sm">
         Nenhuma versão do agente foi publicada ainda.
       </p>
     {:else}

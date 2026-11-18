@@ -64,3 +64,18 @@ describe('AzuosConfirmDialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosConfirmDialog — Escape and the gentle tone', () => {
+  // triste
+  it('cancels with Escape', async () => {
+    const actions = renderDialog();
+    await userEvent.keyboard('{Escape}');
+    expect(actions.onCancel).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('asks gently, with a question mark, when the action is not destructive', () => {
+    renderDialog({ ui: { tone: 'primary' } });
+    expect(screen.getByRole('button', { name: 'Excluir chamado' })).toHaveClass('bg-primary');
+  });
+});

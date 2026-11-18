@@ -228,3 +228,20 @@ describe('AzuosTicketHistoryForm', () => {
     expect(screen.queryByRole('button', { name: 'Avisar por WhatsApp' })).not.toBeInTheDocument();
   });
 });
+
+describe('AzuosTicketHistoryForm — only closing options, and the internal note', () => {
+  // feliz
+  it('explains that an unchecked history stays internal', () => {
+    setup({ data: { ...dataFor('open', 'note'), isVisibleToRequester: false } });
+
+    expect(screen.getByText('Anotação interna: só o time vê.')).toBeInTheDocument();
+  });
+
+  // triste
+  it('offers no continuing group when there is nothing to continue with', () => {
+    const base = dataFor('open', 'note');
+    setup({ data: { ...base, groups: { continuing: [], closing: base.groups.closing } } });
+
+    expect(screen.queryByText('Dar andamento')).not.toBeInTheDocument();
+  });
+});

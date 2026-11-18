@@ -8,7 +8,7 @@ import { z } from 'zod';
  * configurado com `ADMIN_CONSOLE_LOGIN_URL` — e aí a tela não oferece o atalho.
  */
 export const authConfigSchema = z.object({
-  accountUrl: z.string().url().nullable(),
+  accountUrl: z.url().nullable(),
 });
 
 export type AuthConfig = z.infer<typeof authConfigSchema>;

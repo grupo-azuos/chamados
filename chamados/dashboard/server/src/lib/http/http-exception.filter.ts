@@ -91,7 +91,7 @@ function describeHttpException(exception: HttpException): {
   const record = payload as { message?: unknown; errors?: unknown };
   const details = readValidationDetails(record.errors);
 
-  /* O `nestjs-zod` responde "Validation failed" — em inglês, e é texto que a tela mostra.
+  /* O `createZodDto` responde "Validation failed" — em inglês, e é texto que a tela mostra.
      Quando há detalhe por campo, a mensagem geral é nossa; o motivo de cada campo vem em
      `details`, com o texto em português do schema. */
   if (details?.length) {
@@ -105,7 +105,7 @@ function describeHttpException(exception: HttpException): {
   return { statusCode, message };
 }
 
-/** `nestjs-zod` entrega os erros de validação aqui; o resto da API ignora o campo. */
+/** `createZodDto` entrega os erros de validação aqui; o resto da API ignora o campo. */
 function readValidationDetails(errors: unknown): { field: string; message: string }[] | undefined {
   if (!Array.isArray(errors)) return undefined;
 

@@ -159,3 +159,21 @@ describe('fileSizeOf', () => {
     expect(fileSizeOf(10)).toBe('1 KB');
   });
 });
+
+describe('AzuosAttachmentList — empty list', () => {
+  // feliz
+  it('says there is nothing in the words of the screen', () => {
+    render(AttachmentList, {
+      props: { data: { attachments: [] }, ui: { emptyLabel: 'Nenhuma foto enviada.' } },
+    });
+
+    expect(screen.getByText('Nenhuma foto enviada.')).toBeInTheDocument();
+  });
+
+  // triste
+  it('falls back to the default empty text', () => {
+    render(AttachmentList, { props: { data: { attachments: [] } } });
+
+    expect(screen.getByText('Nenhum arquivo anexado.')).toBeInTheDocument();
+  });
+});

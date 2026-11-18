@@ -11,13 +11,39 @@ import { z } from 'zod';
  * na primeira gravação.
  */
 export const envSchema = z.object({
+  BACKGROUND_JOBS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  DATABASE_SSL_CA: z.string().min(1).optional(),
+  APP_ENV: z.enum(['dev', 'homo', 'prod']).default('dev'),
+  VALKEY_URL: z
+    .string()
+    .url()
+    .refine((value) => /^rediss?:\/\//.test(value))
+    .optional(),
+  /* Namespace do cache: `<app>:<ambiente>` (ex.: `chamados:homo`). O `:` que separa a chave
+     entra no `ValkeyCache`, não no valor. */
+  VALKEY_KEY_PREFIX: z
+    .string()
+    .regex(/^[a-z0-9-]+:[a-z0-9-]+$/)
+    .max(128)
+    .default('chamados:development'),
+  VALKEY_TIMEOUT_MS: z.coerce.number<number>().int().min(100).max(5000).default(1000),
+  DATABASE_MIGRATE_ON_START: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  DATABASE_MIGRATION_URL: z.url().optional(),
+  DATABASE_POOL_SIZE: z.coerce.number<number>().int().min(1).max(20).default(5),
+  TRUST_PROXY_HOPS: z.coerce.number<number>().int().min(0).max(5).default(0),
   GITHUB_APP_ID: z.string().regex(/^\d+$/).optional(),
   GITHUB_APP_INSTALLATION_ID: z.string().regex(/^\d+$/).optional(),
   GITHUB_APP_PRIVATE_KEY: z.string().min(1).optional(),
   GITHUB_OAUTH_CLIENT_ID: z.string().trim().min(1).optional(),
   GITHUB_OAUTH_CLIENT_SECRET: z.string().trim().min(1).optional(),
-  GITHUB_OAUTH_REDIRECT_URI: z.string().url().optional(),
-  GITHUB_OAUTH_FRONTEND_URL: z.string().url().optional(),
+  GITHUB_OAUTH_REDIRECT_URI: z.url().optional(),
+  GITHUB_OAUTH_FRONTEND_URL: z.url().optional(),
   GITHUB_OAUTH_ENCRYPTION_KEY: z
     .string()
     .regex(/^[a-fA-F0-9]{64}$/)
@@ -30,7 +56,7 @@ export const envSchema = z.object({
    * O token é o MESMO `BOT_API_TOKEN` do bot. Quem o tem manda mensagem pelo WhatsApp de
    * qualquer pessoa vinculada: é segredo de servidor, nunca de tela.
    */
-  BOT_API_URL: z.string().url().optional(),
+  BOT_API_URL: z.url().optional(),
   BOT_API_TOKEN: z.string().min(32).optional(),
   /**
    * Quantas mensagens automáticas podem sair por dia pelo número de UMA pessoa. Passou disso, o
@@ -38,15 +64,15 @@ export const envSchema = z.object({
    * bloquear o número. O aviso sai em 70% do teto. Não existe número "seguro" publicado pelo
    * WhatsApp: o padrão é uma estimativa conservadora.
    */
-  WHATSAPP_DAILY_LIMIT: z.coerce.number().int().min(1).max(1000).default(100),
+  WHATSAPP_DAILY_LIMIT: z.coerce.number<number>().int().min(1).max(1000).default(100),
   /**
    * O endereço PÚBLICO da tela, usado nos links que vão nas mensagens ("acompanhe por aqui").
    * Sem ele, vale a primeira origem de `API_CORS_ORIGIN`.
    */
-  APP_PUBLIC_URL: z.string().url().optional(),
+  APP_PUBLIC_URL: z.url().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
-  API_PORT: z.coerce.number().int().min(1).max(65535).default(3005),
+  API_PORT: z.coerce.number<number>().int().min(1).max(65535).default(3005),
   API_CORS_ORIGIN: z.string().min(1).default('http://localhost:5005'),
   API_LOG_LEVEL: z.enum(['debug', 'log', 'warn', 'error']).default('log'),
 
@@ -57,8 +83,8 @@ export const envSchema = z.object({
    * contadores), e um limite apertado transformaria uso normal em erro. Quem estiver sob
    * ataque aperta pela variável, sem mexer no código.
    */
-  API_RATE_LIMIT_TTL_SECONDS: z.coerce.number().int().min(1).max(3600).default(60),
-  API_RATE_LIMIT: z.coerce.number().int().min(1).max(100_000).default(300),
+  API_RATE_LIMIT_TTL_SECONDS: z.coerce.number<number>().int().min(1).max(3600).default(60),
+  API_RATE_LIMIT: z.coerce.number<number>().int().min(1).max(100_000).default(300),
 
   /**
    * O limite do webhook do UniFi, bem mais apertado que o resto.
@@ -67,7 +93,7 @@ export const envSchema = z.object({
    * é o endereço mais interessante da API para quem quiser enchê-la de lixo. Um controlador
    * de verdade manda um alerta por queda, não trezentos por minuto.
    */
-  API_WEBHOOK_RATE_LIMIT: z.coerce.number().int().min(1).max(10_000).default(12),
+  API_WEBHOOK_RATE_LIMIT: z.coerce.number<number>().int().min(1).max(10_000).default(12),
 
   /**
    * Quantos proxies existem entre a internet e este processo.
@@ -80,7 +106,6 @@ export const envSchema = z.object({
    * Não é para aumentar "por segurança": cada salto a mais é um salto em que o endereço
    * passa a ser o que o cliente DISSE ser, e aí a trava deixa de valer.
    */
-  API_TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
 
   /**
    * A string de conexão do Postgres (o do Supabase da casa), no formato
@@ -183,13 +208,14 @@ export const envSchema = z.object({
    * O token de serviço do sistema, gerado na tela do sistema no admin-console
    * (`um_chamados_…`). Aparece uma vez só lá; perdeu, gera outro. É segredo de servidor.
    */
-  ADMIN_CONSOLE_TOKEN: z.string().trim().default(''),
+  ADMIN_CONSOLE_CLIENT_SECRET: z.string().trim().default(''),
 
   /** Prazo de cada leitura no admin-console: um serviço lento não pode pendurar a tela. */
-  ADMIN_CONSOLE_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000).default(4_000),
+  ADMIN_CONSOLE_TIMEOUT_MS: z.coerce.number<number>().int().min(500).max(30_000).default(4_000),
 
   /**
-   * O endereço PÚBLICO da tela de login do admin-console — para onde "Minha conta" leva.
+   * O endereço PÚBLICO da tela de login do admin-console — para onde "Minha conta" leva, e de
+   * onde a tela lê o perfil e encerra a sessão, direto do navegador.
    * É o que a pessoa vê na barra de endereço (ex.: `https://login.grupoazuos.com.br`).
    */
   ADMIN_CONSOLE_LOGIN_URL: z
@@ -197,17 +223,6 @@ export const envSchema = z.object({
     .trim()
     .url('ADMIN_CONSOLE_LOGIN_URL precisa ser uma URL completa')
     .optional(),
-
-  /**
-   * O prefixo dos cookies de sessão do admin-console (`<prefixo>_access_token`). É o
-   * `COOKIE_NAME_PREFIX` de lá — hoje `azuos_homo` em homologação e em produção.
-   *
-   * Serve para o servidor ler o perfil de quem está logado (`GET /api/me/profile`, que só
-   * aceita a sessão da própria pessoa) e preencher o formulário de chamado. Só o cookie de
-   * ACESSO é repassado: o de renovação, reapresentado por outro processo, faria o admin-console
-   * tratá-lo como roubo e derrubar a sessão.
-   */
-  ADMIN_CONSOLE_COOKIE_PREFIX: z.string().trim().min(1).default('azuos'),
 
   /**
    * A PESSOA DE DESENVOLVIMENTO — só para a máquina de quem programa.
@@ -227,7 +242,11 @@ export const envSchema = z.object({
    * nada. Vazios, vale a pessoa fixa. Só têm efeito com o mock ligado, e o mock é recusado em
    * produção — então nunca valem lá.
    */
-  USER_MOCK_ID: z.string().trim().uuid('USER_MOCK_ID precisa ser o id (UUID) da pessoa no admin-console').optional(),
+  USER_MOCK_ID: z
+    .string()
+    .trim()
+    .uuid('USER_MOCK_ID precisa ser o id (UUID) da pessoa no admin-console')
+    .optional(),
   USER_MOCK_EMAIL: z.string().trim().email('USER_MOCK_EMAIL precisa ser um e-mail').optional(),
   USER_MOCK_NAME: z.string().trim().min(1).optional(),
 });
@@ -235,7 +254,10 @@ export const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function parseEnv(source: NodeJS.ProcessEnv): Env {
-  const result = envSchema.safeParse(source);
+  /* O `docker stack deploy` entrega como texto vazio a variável listada no compose que não existe
+     no Infisical. Vazio vale o mesmo que ausente: cai no padrão ou no opcional do schema. */
+  const filled = Object.fromEntries(Object.entries(source).filter(([, value]) => value !== ''));
+  const result = envSchema.safeParse(filled);
   if (result.success) return assertNoMockInProduction(result.data);
 
   const details = result.error.issues

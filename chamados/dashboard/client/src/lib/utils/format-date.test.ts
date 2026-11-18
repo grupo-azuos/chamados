@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatDate, formatDateTime, formatDay, todayAsDay } from './format-date';
+import {
+  formatCalendarMonth,
+  formatDate,
+  formatDateTime,
+  formatDay,
+  todayAsDay,
+} from './format-date';
 
 describe('todayAsDay', () => {
   // feliz
@@ -58,5 +64,18 @@ describe('formatDateTime', () => {
   // triste
   it('shows a dash for text that is not a date', () => {
     expect(formatDateTime('amanhã')).toBe('—');
+  });
+});
+
+describe('formatCalendarMonth', () => {
+  // feliz
+  it('writes the month and the year in Portuguese', () => {
+    expect(formatCalendarMonth('2026-10')).toBe('outubro de 2026');
+  });
+
+  // triste
+  it('shows a dash for a month that does not exist', () => {
+    expect(formatCalendarMonth('2026-13')).toBe('—');
+    expect(formatCalendarMonth(null)).toBe('—');
   });
 });

@@ -1,177 +1,214 @@
-#!/usr/bin/env node
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { collectDocumentation, collectTextFiles, readEditedPaths } from './project-files.mjs';
+/**
+ * Verificador unificado de Design, Arquitetura e Leis de UX.
+ *
+ * Três modos:
+ *   node .claude/hooks/design/check-design.mjs            varre o projeto (CI, pre-push)
+ *   node .claude/hooks/design/check-design.mjs --hook     hook PostToolUse do Claude Code
+ *   node .claude/hooks/design/check-design.mjs --summary  hook SessionStart: regras no contexto
+ *   node .claude/hooks/design/check-design.mjs --update   atualiza a baseline de arquitetura
+ *
+ * Coexiste duas camadas complementares:
+ * 1. Arquitetura do Template: componentes irmãos (.stories, .test), boundaries, rotas, convenções de pasta.
+ * 2. Marca e Leis de UX: tokens sem cor crua, sem preto/branco puro, padrão Cupertino, Fitts, Hick, Jakob, etc.
+ *
+ * Sem dependências externas. JavaScript puro (.mjs) para Node 22+.
+ */
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { checkSource, formatViolations, isInScope, summarize } from "./design-rules.mjs";
+import { RULES as ARCH_RULES, compareWithBaseline, countByKey } from "./architecture-rules.mjs";
+import { collectDocumentation, collectTextFiles } from "./project-files.mjs";
 
-import {
-  APPS,
-  RULES,
-  compareWithBaseline,
-  countByKey,
-  violationsTouching,
-} from './design-rules.mjs';
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(HERE, "..", "..", "..");
+const BASELINE_FILE = join(HERE, "design-baseline.json");
+const EXIT_BLOCK = 2;
+
+const result = (code, stdout = "", stderr = "") => ({
+	code,
+	stdout,
+	stderr
+});
+
+/** Lê a config: `--config <arquivo>` ou o `design.config.json` ao lado deste script. */
+export function loadConfig(argv = process.argv) {
+	const flag = argv.indexOf("--config");
+	const path = flag > -1 ? resolve(argv[flag + 1]) : join(HERE, "design.config.json");
+	return JSON.parse(readFileSync(path, "utf8"));
+}
+
+function* walk(dir) {
+	let entries;
+	try {
+		entries = readdirSync(dir);
+	} catch {
+		return;
+	}
+	for (const name of entries) {
+		if (name === "node_modules" || name.startsWith(".")) continue;
+		const full = join(dir, name);
+		if (statSync(full).isDirectory()) {
+			yield* walk(full);
+			continue;
+		}
+		yield full;
+	}
+}
 
 /**
- * Confere o projeto contra as skills `design-system` e `ui-standards`.
- *
- *   npm run check:design              → reprova se houver violação NOVA (fora da baseline)
- *   node check-design.mjs --all       → lista tudo, inclusive a dívida já conhecida
- *   node check-design.mjs --update    → regrava a baseline (depois de corrigir dívida)
- *   node check-design.mjs --hook      → modo hook do Claude Code (lê o evento no stdin)
- *
- * POR QUE BASELINE: o projeto já nasceu com dívida (componente sem prefixo, cor crua…). Reprovar
- * tudo de uma vez travaria todo PR até a migração inteira acabar; aceitar tudo deixaria a dívida
- * crescer. A baseline congela o que existe: o que já está lá passa, o que é novo reprova, e
- * cada correção encolhe o arquivo.
- *
- * `.mjs` puro, sem `tsx` e sem dependência: roda no CI, no `pre-push` E no hook `PostToolUse`
- * do Claude Code a cada edição — por isso precisa iniciar rápido.
+ * Modo hook (PostToolUse): confere só o arquivo que a ferramenta acabou de editar.
  */
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-/** A raiz do repositório: `.claude/hooks/design` → `.claude/hooks` → `.claude` → raiz. */
-const REPO_ROOT = join(__dirname, '..', '..', '..');
-const BASELINE_FILE = join(__dirname, 'design-baseline.json');
-
-/** O que entra na varredura, relativo à raiz do repositório. */
-const SCAN_ROOTS = [...APPS.map((app) => app.src), 'chamados/dashboard/server/src'];
-const TEXT_FILE = /\.(svelte|ts|md)$/;
-
-function acceptsFile(path) {
-  return TEXT_FILE.test(path);
+export function runHook(payload, config, root) {
+	const target = payload.tool_input?.file_path ?? payload.tool_input?.path;
+	if (!target) return result(0);
+	const path = relative(root, resolve(root, target));
+	if (path.startsWith("..") || !isInScope(path, config)) return result(0);
+	let content;
+	try {
+		content = readFileSync(resolve(root, path), "utf8");
+	} catch {
+		return result(0);
+	}
+	const violations = checkSource(path, content, config);
+	const errors = violations.filter((v) => v.severity === "error");
+	const warnings = violations.filter((v) => v.severity === "warning");
+	if (errors.length) {
+		return result(EXIT_BLOCK, "", `O arquivo editado viola o design de "${config.brand}". Corrija antes de seguir:\n\n${formatViolations(path, violations)}\n`);
+	}
+	if (warnings.length) {
+		const additionalContext = `Avisos de design em ${path} (corrija se fizer sentido):\n${formatViolations(path, warnings)}`;
+		return result(0, JSON.stringify({ hookSpecificOutput: {
+			hookEventName: "PostToolUse",
+			additionalContext
+		} }));
+	}
+	return result(0);
 }
 
-function loadFiles() {
-  const covered = new Set(SCAN_ROOTS.map((path) => join(REPO_ROOT, path)));
-  const appRoot = APPS[0].src.split('/')[0];
-  const sourceFiles = [...covered].flatMap((path) => collectTextFiles(path, acceptsFile));
-  const docs = collectDocumentation(join(REPO_ROOT, appRoot), covered, acceptsFile);
-  const rootDocs = collectTextFiles(join(REPO_ROOT, 'docs'), acceptsFile);
+/** Executa a verificação arquitetural do repositório (com baseline). */
+export function runArchitectureScan(root, updateBaseline = false) {
+	const baseline = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")) : {};
+	const scanRoots = ["chamados/dashboard/client/src"];
+	const textFile = /\.(tsx|ts|md)$/;
+	const generated = /routeTree\.gen\.ts$/;
+	const accepts = (p) => textFile.test(p) && !generated.test(p);
 
-  return [...new Set([...sourceFiles, ...docs, ...rootDocs])].map((full) => ({
-    path: relative(REPO_ROOT, full).split(sep).join('/'),
-    content: readFileSync(full, 'utf8'),
-  }));
+	const covered = new Set(scanRoots.map((p) => join(root, p)));
+	const sourceFiles = [...covered].flatMap((p) => collectTextFiles(p, accepts));
+	const docs = collectDocumentation(join(root, "template"), covered, accepts);
+	const rootDocs = collectTextFiles(join(root, "docs"), accepts);
+
+	const files = [...new Set([...sourceFiles, ...docs, ...rootDocs])].map((full) => ({
+		path: relative(root, full).split("\\").join("/"),
+		content: readFileSync(full, "utf8")
+	}));
+
+	const violations = ARCH_RULES.flatMap((rule) => rule.check(files));
+	const { added, fixed } = compareWithBaseline(violations, baseline);
+
+	if (updateBaseline) {
+		if (added.length > 0) {
+			throw new Error("Não é permitido aumentar a baseline; corrija as novas violações primeiro.");
+		}
+		const counts = countByKey(violations);
+		const sorted = Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
+		writeFileSync(BASELINE_FILE, `${JSON.stringify(sorted, null, 2)}\n`);
+	}
+
+	return {
+		violations,
+		added,
+		fixed,
+		totalFiles: files.length,
+		baselineCount: Object.keys(baseline).length
+	};
 }
 
-function loadBaseline() {
-  if (!existsSync(BASELINE_FILE)) return {};
-
-  return JSON.parse(readFileSync(BASELINE_FILE, 'utf8'));
+function scanOneDirectory(dir, config, root) {
+	const report = [];
+	for (const full of walk(resolve(root, dir))) {
+		const path = relative(root, full);
+		if (!isInScope(path, config)) continue;
+		const violations = checkSource(path, readFileSync(full, "utf8"), config);
+		if (violations.length) report.push({ path, violations });
+	}
+	return report;
 }
 
-function saveBaseline(violations) {
-  const { added } = compareWithBaseline(violations, loadBaseline());
-  if (added.length > 0)
-    throw new Error('Cannot increase the design baseline; fix new violations first');
-  const counts = countByKey(violations);
-  const sorted = Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
-  writeFileSync(BASELINE_FILE, `${JSON.stringify(sorted, null, 2)}\n`);
+function scanDirectories(dirs, config, root) {
+	return dirs.flatMap((dir) => scanOneDirectory(dir, config, root));
 }
 
-function report(write, title, violations) {
-  write(`\n${title}\n`);
-  for (const rule of RULES) {
-    const mine = violations.filter((violation) => violation.rule === rule.id);
-    if (mine.length === 0) continue;
-
-    write(`\n  ✗ ${rule.id} (${mine.length}) — ${rule.description}\n`);
-    for (const violation of mine) {
-      const where = violation.line ? `${violation.file}:${violation.line}` : violation.file;
-      write(`      ${where}  ${violation.detail}\n`);
-    }
-  }
+function formatArchText(archReport) {
+	if (!archReport) return "";
+	if (archReport.added.length === 0) {
+		const base = `✓ Arquitetura: nenhuma violação nova (${archReport.baselineCount} conhecida(s) na baseline).\n`;
+		const fixed = archReport.fixed.length > 0
+			? `  Dívida resolvida em ${archReport.fixed.length} item(ns). Rode com --update para atualizar a baseline.\n`
+			: "";
+		return base + fixed;
+	}
+	const lines = archReport.added.map((v) => {
+		const where = v.line ? `${v.file}:${v.line}` : v.file;
+		return `    ${where}  ${v.detail} [${v.rule}]`;
+	});
+	return `\n✗ Arquitetura: ${archReport.added.length} violação(ões) nova(s):\n${lines.join("\n")}\n`;
 }
 
-/** Caminho (relativo à raiz) entra na varredura e tem extensão que alguma regra olha? */
-function inScope(relPath) {
-  if (!TEXT_FILE.test(relPath)) return false;
-  if (SCAN_ROOTS.some((root) => relPath === root || relPath.startsWith(`${root}/`))) return true;
+/** Modo varredura (CI, pre-push): varre pastas da config + checagem arquitetural. */
+export function runScan(config, root, json = false, updateBaseline = false) {
+	const report = scanDirectories(config.scan.dirs, config, root);
+	const all = report.flatMap((r) => r.violations);
+	const uxErrors = all.filter((v) => v.severity === "error").length;
 
-  if (/^docs\/[^/]+\.md$/.test(relPath)) return true;
+	let archReport = null;
+	const isTemplateWorkspace = existsSync(join(root, "chamados/dashboard/client/src"));
+	if (isTemplateWorkspace) {
+		try {
+			archReport = runArchitectureScan(root, updateBaseline);
+		} catch (err) {
+			return result(1, "", err.message + "\n");
+		}
+	}
 
-  return (
-    relPath.startsWith(`${APPS[0].src.split('/')[0]}/`) && /(^|\/)docs\/[^/]+\.md$/.test(relPath)
-  );
+	const details = json
+		? JSON.stringify(report, null, 2) + "\n"
+		: report.map(({ path, violations }) => formatViolations(path, violations) + "\n\n").join("");
+
+	const total = `Design & Leis de UX: ${uxErrors} erro(s), ${all.length - uxErrors} aviso(s) em ${report.length} arquivo(s).\n`;
+	const archText = formatArchText(archReport);
+	const hasError = uxErrors > 0 || (archReport && archReport.added.length > 0);
+	return result(hasError ? 1 : 0, details + total + archText);
 }
 
-/** Só varre o projeto quando algum arquivo editado pertence ao escopo de design. */
-function runHook() {
-  const paths = readEditedPaths(REPO_ROOT, readFileSync(0, 'utf8'))
-    .map((path) => relative(REPO_ROOT, path).split(sep).join('/'))
-    .filter(inScope);
-  if (paths.length === 0) return;
-  const files = loadFiles();
-  const violations = RULES.flatMap((rule) => rule.check(files));
-  const { added } = compareWithBaseline(violations, loadBaseline());
-  const touching = [...new Set(paths.flatMap((path) => violationsTouching(added, path)))];
-  if (touching.length === 0) return;
-  report(
-    (text) => process.stderr.write(text),
-    `Design: ${touching.length} violação(ões) nova(s):`,
-    touching,
-  );
-  process.stderr.write('Corrija agora — skill design-system / ui-standards.\n');
-  process.exitCode = 2;
+/** Escolhe o modo pelos argumentos. `stdin` só é lido no modo hook. */
+export async function run(argv, readStdin, root) {
+	const config = loadConfig(argv);
+	if (argv.includes("--summary")) return result(0, summarize(config) + "\n");
+	if (argv.includes("--hook")) {
+		const payload = JSON.parse(await readStdin() || "{}");
+		return runHook(payload, config, process.env.CLAUDE_PROJECT_DIR ?? payload.cwd ?? root);
+	}
+	const update = argv.includes("--update");
+	return runScan(config, process.env.CLAUDE_PROJECT_DIR ?? root, argv.includes("--json"), update);
 }
 
-function main() {
-  const args = new Set(process.argv.slice(2));
-
-  if (args.has('--hook')) {
-    runHook();
-
-    return;
-  }
-
-  const files = loadFiles();
-  const violations = RULES.flatMap((rule) => rule.check(files));
-
-  if (args.has('--update')) {
-    saveBaseline(violations);
-    writeLine(`Baseline regravada: ${violations.length} violações conhecidas.`);
-
-    return;
-  }
-
-  if (args.has('--all'))
-    report(
-      (text) => process.stdout.write(text),
-      `Todas as violações (${violations.length}):`,
-      violations,
-    );
-
-  const { added, fixed } = compareWithBaseline(violations, loadBaseline());
-
-  if (fixed.length > 0) {
-    writeLine(
-      `\n✓ ${fixed.length} item(ns) da baseline foram corrigidos. Rode "npm run check:design -- --update" e commite a baseline menor.`,
-    );
-  }
-
-  if (added.length === 0) {
-    writeLine(`\n✓ Design: nenhuma violação nova (${violations.length} conhecidas na baseline).`);
-
-    return;
-  }
-
-  report(
-    (text) => process.stdout.write(text),
-    `Design: ${added.length} violação(ões) NOVA(S) — corrija antes de commitar:`,
-    added,
-  );
-  writeLine('\nRegras: skills design-system e ui-standards (.claude/skills).');
-  process.exitCode = 1;
+function readProcessStdin() {
+	return new Promise((done) => {
+		let data = "";
+		process.stdin.setEncoding("utf8");
+		process.stdin.on("data", (chunk) => data += chunk);
+		process.stdin.on("end", () => done(data));
+	});
 }
 
-function writeLine(text) {
-  process.stdout.write(`${text}\n`);
-}
-
-try {
-  main();
-} catch (error) {
-  process.stderr.write(`Design: ${error.message}\n`);
-  process.exitCode = process.argv.includes('--hook') ? 2 : 1;
+/* Executado direto (`node check-design.mjs`), não importado por um teste. */
+const isEntryPoint = process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isEntryPoint) {
+	const defaultRoot = process.env.CLAUDE_PROJECT_DIR ?? REPO_ROOT;
+	const { code, stdout, stderr } = await run(process.argv, readProcessStdin, defaultRoot);
+	process.stdout.write(stdout);
+	process.stderr.write(stderr);
+	process.exitCode = code;
 }

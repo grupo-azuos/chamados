@@ -4,7 +4,7 @@ import {
   internalRoleSchema,
 } from '@template/shared/schemas/internal-role.schema';
 import { directoryUserSchema } from '@template/shared/schemas/user.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 
 /**

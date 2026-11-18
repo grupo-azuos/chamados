@@ -44,7 +44,7 @@
   {/if}
   <AvatarFallback
     class={cn(
-      'flex size-full items-center justify-center rounded-full aspect-square bg-gradient-to-br from-success to-info font-bold text-primary-foreground select-none',
+      'flex size-full items-center justify-center rounded-full aspect-square bg-primary font-bold text-primary-foreground select-none',
       SIZE_CLASS[size]
     )}
   >

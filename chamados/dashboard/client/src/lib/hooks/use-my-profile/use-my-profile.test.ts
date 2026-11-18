@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { mergePerson, toBirthDateLabel } from './use-my-profile.svelte';
+import { mergePerson, toBirthDateLabel, type useMyProfileModel } from './use-my-profile.svelte';
 
 const user = {
   id: 'u-1',
@@ -14,7 +14,7 @@ const account = {
   email: 'ana@grupoazuos.com.br',
   role: 'admin' as const,
   profile: {
-    avatarUrl: 'https://admin-console.test/api/users/1/avatar',
+    avatarUrl: 'https://admin-console.test/api/v1/users/1/avatar',
     jobTitle: 'Analista de TI',
     department: 'Tecnologia',
     phone: '11912345678',
@@ -27,7 +27,11 @@ describe('mergePerson', () => {
   // feliz
   it('fills the card from the account and keeps the role of the Chamados', () => {
     const person = mergePerson(user as never, account, [
-      { name: 'Paralegal', presentation: { url: 'https://paralegal.test' }, access: { role: 'user' } },
+      {
+        name: 'Paralegal',
+        presentation: { url: 'https://paralegal.test' },
+        access: { role: 'user' },
+      },
     ]);
 
     expect(person).toMatchObject({
@@ -57,5 +61,109 @@ describe('toBirthDateLabel', () => {
   it('writes the day the Brazilian way and ignores a malformed one', () => {
     expect(toBirthDateLabel('1990-03-25')).toBe('25/03/1990');
     expect(toBirthDateLabel('25/03/1990')).toBeNull();
+  });
+});
+
+vi.mock('$lib/api/auth.api', () => ({
+  authApi: { config: vi.fn() },
+}));
+
+/* Só as chamadas são fingidas: `accountOrigin` e `accountProfileUrl` são regra, e ficam reais. */
+vi.mock('$lib/api/account-profile.api', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  accountProfileApi: { me: vi.fn(), systems: vi.fn() },
+}));
+
+const { authApi } = await import('$lib/api/auth.api');
+const { accountProfileApi } = await import('$lib/api/account-profile.api');
+const { default: Harness } = await import('./use-my-profile-harness.test.svelte');
+const { render } = await import('@testing-library/svelte');
+
+type ProfileModel = ReturnType<typeof useMyProfileModel>;
+
+function mountModel(sessionUser: typeof user | undefined): ProfileModel {
+  let model!: ProfileModel;
+  render(Harness, {
+    props: { user: sessionUser as never, onReady: (ready: ProfileModel) => (model = ready) },
+  });
+
+  return model;
+}
+
+describe('useMyProfileModel', () => {
+  beforeEach(() => {
+    vi.mocked(authApi.config).mockResolvedValue({ accountUrl: 'https://conta.azuos.test/login' } as never);
+    vi.mocked(accountProfileApi.me).mockResolvedValue(account);
+    vi.mocked(accountProfileApi.systems).mockResolvedValue([
+      { name: 'Paralegal', presentation: { url: 'https://paralegal.test' }, access: { role: 'user' } },
+    ]);
+  });
+
+  // feliz
+  it('reads the card from the account, at the address the API configured', async () => {
+    const model = mountModel(user);
+    expect(model.state.isLoading).toBe(false);
+
+    await vi.waitFor(() => expect(model.data.person?.name).toBe('Ana Souza'), { timeout: 4_000 });
+    expect(accountProfileApi.me).toHaveBeenCalledWith('https://conta.azuos.test');
+    expect(model.data.person?.systems).toHaveLength(1);
+    await vi.waitFor(() => expect(model.data.accountUrl).toContain('conta.azuos.test'));
+  });
+
+  it('toggles the theme and asks the account again on retry', async () => {
+    const model = mountModel(user);
+    const before = model.data.theme;
+
+    model.actions.onToggleTheme();
+    expect(model.data.theme).not.toBe(before);
+    model.actions.onToggleTheme();
+
+    await vi.waitFor(() => expect(model.data.person?.name).toBe('Ana Souza'), { timeout: 4_000 });
+    model.actions.onRetry();
+    await vi.waitFor(() => expect(accountProfileApi.me).toHaveBeenCalledTimes(2));
+  });
+
+  // triste
+  it('falls back to the session while the account does not answer', async () => {
+    vi.mocked(accountProfileApi.me).mockRejectedValue(new Error('fora'));
+    vi.mocked(accountProfileApi.systems).mockRejectedValue(new Error('fora'));
+    const model = mountModel(user);
+
+    await vi.waitFor(() => expect(model.data.person?.name).toBe('Ana (sessão)'), { timeout: 4_000 });
+    expect(model.data.person?.systems).toBeUndefined();
+    expect(model.state.error).toBeNull();
+  });
+
+  it('is loading only without a session and before the account answers', async () => {
+    vi.mocked(accountProfileApi.me).mockReturnValue(new Promise(() => {}));
+    const model = mountModel(undefined);
+
+    expect(model.state.isLoading).toBe(true);
+    expect(model.data.person).toBeNull();
+  });
+});
+
+describe('useMyProfileModel — the role without a session', () => {
+  beforeEach(() => {
+    vi.mocked(authApi.config).mockResolvedValue({ accountUrl: 'https://conta.azuos.test/login' } as never);
+    vi.mocked(accountProfileApi.systems).mockResolvedValue([]);
+  });
+
+  // feliz
+  it('reads the role from the account when there is no session user', async () => {
+    vi.mocked(accountProfileApi.me).mockResolvedValue(account);
+    const model = mountModel(undefined);
+
+    await vi.waitFor(() => expect(model.data.person?.roleLabel).toBeTruthy());
+    expect(model.data.person?.roleLabel).not.toBe('Super Admin');
+  });
+
+  // triste
+  it('has no role to show without a session nor an account', async () => {
+    vi.mocked(accountProfileApi.me).mockRejectedValue(new Error('offline'));
+    const model = mountModel(undefined);
+
+    await vi.waitFor(() => expect(model.state.isLoading).toBe(false));
+    expect(model.data.person).toBeNull();
   });
 });

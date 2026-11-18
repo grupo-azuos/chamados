@@ -21,8 +21,8 @@
 
   const ICON_TONE_CLASSES: Record<NonNullable<AzuosTimelineStepProps['ui']>['tone'] & string, string> = {
     neutral: 'border-border bg-card text-foreground',
-    brand: 'bg-primary/10 text-primary',
-    success: 'bg-success/10 text-success',
+    brand: 'bg-muted text-primary',
+    success: 'bg-muted text-success',
   };
 </script>
 

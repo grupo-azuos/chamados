@@ -295,10 +295,6 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
         /* Mexeu de novo: o "salvo" de antes já não descreve o que está na tela. */
         isSaved = false;
         form.setFieldValue(field, value as never);
-        /* Sistema cadastrado e sistema externo são o MESMO campo na tela: escolher um apaga o
-           outro, como o servidor faz ao gravar. */
-        if (field === 'projectId') form.setFieldValue('customSystemName', '');
-        if (field === 'customSystemName' && value) form.setFieldValue('projectId', '');
       },
       onBlur: (field) => {
         form.setFieldMeta(field, (prev) => ({ ...prev, isTouched: true }));
@@ -333,10 +329,26 @@ export function toFormValues(ticket: Ticket): TicketDataFormValues {
     computerId: ticket.computerId === null ? '' : String(ticket.computerId),
     projectId:
       ticket.projectId !== null && ticket.projectId !== undefined ? String(ticket.projectId) : '',
-    /* O sistema externo, o "trilha" que quem abriu digitou — só vale sem sistema cadastrado. */
-    customSystemName: ticket.projectId ? '' : (ticket.customSystemName ?? ''),
+    customSystemName: ticket.customSystemName ?? (ticket.projectId ? '' : ticket.projectName ?? ''),
     assigneeId: ticket.assigneeId ?? '',
   };
+}
+
+function resolveSystemUpdate(values: TicketDataFormValues) {
+  const hasProject = Boolean(values.projectId && values.projectId !== '');
+  const hasCustom = Boolean(values.customSystemName && values.customSystemName.trim() !== '');
+
+  const projectPart =
+    values.projectId !== undefined
+      ? { projectId: hasProject ? Number(values.projectId) : null }
+      : {};
+
+  const customPart =
+    values.customSystemName !== undefined
+      ? { customSystemName: hasProject ? null : hasCustom ? values.customSystemName.trim() : null }
+      : {};
+
+  return { ...projectPart, ...customPart };
 }
 
 /**
@@ -367,18 +379,8 @@ export function toUpdateInput(
     ...(values.computerId !== initialComputerId
       ? { computerId: values.computerId === '' ? null : Number(values.computerId) }
       : {}),
-    ...(values.projectId !== undefined ? toSystemInput(values) : {}),
+    ...resolveSystemUpdate(values),
   };
-}
-
-/**
- * O sistema do chamado: o cadastrado (número) ou o externo (nome). Sem cadastrado, vai o nome
- * — ou nulo, que limpa os dois.
- */
-function toSystemInput(values: TicketDataFormValues) {
-  if (values.projectId) return { projectId: Number(values.projectId), customSystemName: null };
-
-  return { projectId: null, customSystemName: values.customSystemName?.trim() || null };
 }
 
 /** As máquinas do inventário, no formato do campo de escolha. */

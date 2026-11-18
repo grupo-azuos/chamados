@@ -16,7 +16,7 @@ export const REPORT_FORMAT_LABELS: Record<ReportFormat, string> = {
 };
 
 export const reportFormatSchema = z.enum(REPORT_FORMATS, {
-  errorMap: () => ({ message: 'Escolha um formato de arquivo' }),
+  error: 'Escolha um formato de arquivo',
 });
 
 export function reportFormatLabel(format: ReportFormat): string {

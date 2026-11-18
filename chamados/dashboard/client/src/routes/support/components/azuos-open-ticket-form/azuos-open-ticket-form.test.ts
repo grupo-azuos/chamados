@@ -1,5 +1,5 @@
 import { formatPhoneInput } from '@template/shared/domain/phone.util';
-import { render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -739,5 +739,205 @@ describe('pastedImage', () => {
 
     expect(pastedImage({ files: [pdf] } as unknown as DataTransfer)).toBeNull();
     expect(pastedImage(null)).toBeNull();
+  });
+});
+
+describe('AzuosOpenTicketForm — every field reports to the model', () => {
+  /* No jsdom o balão existe mas fica oculto: a lista aberta é a última com campo de busca. */
+  const pickOption = async (trigger: RegExp | string, label: string) => {
+    await userEvent.click(screen.getByRole('button', { name: trigger }));
+    const popup = await waitFor(() => {
+      const open = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1);
+      expect(open).toBeTruthy();
+      return open as HTMLElement;
+    });
+    await fireEvent.click(within(popup).getByText(label, { exact: true }));
+  };
+
+  // feliz
+  it('types the name, the phone and the AnyDesk id, and picks type and urgency', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onChange).mockClear();
+    vi.mocked(actions.onBlur).mockClear();
+    setup({ data: { fields, notifyWhatsapp: false, screenshotName: null, attachments: [], opened: null, departmentOptions: [{ value: 'financeiro', label: 'Financeiro' }] } });
+
+    await advanceTo(user, 1);
+    await user.type(screen.getByRole('textbox', { name: /Seu nome/ }), '!');
+    await user.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('requesterName', expect.any(String));
+    expect(actions.onBlur).toHaveBeenCalledWith('requesterName');
+    await user.type(screen.getByRole('textbox', { name: /Seu WhatsApp/ }), '1');
+    await user.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('contactPhone', expect.stringContaining('62 99999-9999'));
+    expect(actions.onBlur).toHaveBeenCalledWith('contactPhone');
+
+    await advanceTo(user, 1);
+    await user.click(screen.getByRole('button', { name: 'Alta' }));
+    expect(actions.onChange).toHaveBeenCalledWith('priority', 'high');
+    await pickOption('Tipo de problema', 'Internet / Rede');
+    expect(actions.onChange).toHaveBeenCalledWith('problemType', expect.any(String));
+    await pickOption('Departamento', 'Financeiro');
+    expect(actions.onChange).toHaveBeenCalledWith('department', 'financeiro');
+    await user.type(screen.getByRole('textbox', { name: /AnyDesk/ }), '1');
+    await user.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('anydeskId', '1');
+    expect(actions.onBlur).toHaveBeenCalledWith('anydeskId');
+  });
+
+  // feliz
+  it('types the description and chooses the screenshot through the file field', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onChange).mockClear();
+    vi.mocked(actions.onScreenshotChange).mockClear();
+    setup({ state: { screenshotError: 'A imagem é grande demais.' } });
+
+    await advanceTo(user, 3);
+    await user.type(screen.getByRole('textbox', { name: /Descrição do problema/ }), '!');
+    await user.tab();
+    expect(actions.onChange).toHaveBeenCalledWith('description', 'A impressora não puxa papel.!');
+    expect(actions.onBlur).toHaveBeenCalledWith('description');
+    expect(screen.getByRole('alert')).toHaveTextContent('A imagem é grande demais.');
+
+    const input = document.getElementById('screenshot') as HTMLInputElement;
+    const file = new File(['x'], 'erro.png', { type: 'image/png' });
+    await user.upload(input, file);
+    expect(actions.onScreenshotChange).toHaveBeenCalledWith(file);
+    expect(input.value).toBe('');
+  });
+
+  // feliz
+  it('clears the chosen system and explains the link to the issue', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onChange).mockClear();
+    setup({
+      data: {
+        fields: { ...fields, area: field('sistema'), projectId: field('1') },
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        systemProjects: [{ value: '1', label: 'Portal' }],
+      },
+    });
+
+    await advanceTo(user, 2);
+    expect(screen.getByText(/será vinculado a uma Issue/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Deixar sem sistema' }));
+    expect(actions.onChange).toHaveBeenCalledWith('projectId', '');
+    expect(actions.onChange).toHaveBeenCalledWith('customSystemName', '');
+  });
+
+  // triste
+  it('shows the system error, then the loading failure of the list', async () => {
+    const user = userEvent.setup();
+    setup({
+      data: {
+        fields: { ...fields, area: field('sistema'), customSystemName: field('Planilha', 'Nome grande demais') },
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+      },
+      state: { systemProjectsError: 'Não consegui carregar os sistemas.' },
+    });
+    await advanceTo(user, 2);
+    expect(screen.getByText('Nome grande demais')).toBeInTheDocument();
+    expect(screen.queryByText('Não consegui carregar os sistemas.')).not.toBeInTheDocument();
+
+    cleanup();
+    setup({
+      data: { fields: { ...fields, area: field('sistema') }, notifyWhatsapp: false, screenshotName: null, attachments: [], opened: null },
+      state: { systemProjectsError: 'Não consegui carregar os sistemas.', systemProjectsLoading: true },
+    });
+    await advanceTo(user, 2);
+    expect(screen.getByText('Não consegui carregar os sistemas.')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('keeps the name locked when it came from the account and picks an attendant from the list', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onChange).mockClear();
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        assignees: ['Ana', 'Bia', 'Caio', 'Dani', 'Edu'].map((name) => ({ value: `u-${name}`, label: name })),
+      },
+      state: { isNameLocked: true },
+    });
+    await advanceTo(user, 1);
+    expect(screen.getByRole('textbox', { name: /Seu nome/ })).toBeDisabled();
+    await advanceTo(user, 3);
+    await pickOption(/responsável pelo chamado/i, 'Caio');
+    expect(actions.onChange).toHaveBeenCalledWith('assigneeId', 'u-Caio');
+  });
+});
+
+describe('AzuosOpenTicketForm — the system card, Enter on the last step and the notice toggle', () => {
+  // feliz
+  it('keeps the chosen system when the area picked is Sistema', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    setup({ actions: { ...actions, onChange } });
+
+    await user.click(screen.getByRole('button', { name: /^Sistema/ }));
+
+    expect(onChange).toHaveBeenCalledWith('area', 'sistema');
+    expect(onChange).not.toHaveBeenCalledWith('projectId', '');
+  });
+
+  it('submits with Enter on the last step and shows the notice switched on', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    setup({
+      data: { fields, notifyWhatsapp: true, screenshotName: null, attachments: [], opened: null },
+      actions: { ...actions, onSubmit },
+    });
+
+    await advanceTo(user, 4);
+    const toggle = screen.getByRole('switch');
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await fireEvent.submit(toggle.closest('form')!);
+
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('hands over no screenshot when the file dialog is closed empty', async () => {
+    const user = userEvent.setup();
+    const onScreenshotChange = vi.fn();
+    setup({ actions: { ...actions, onScreenshotChange } });
+
+    await advanceTo(user, 3);
+    await fireEvent.change(document.getElementById('screenshot') as HTMLInputElement);
+
+    expect(onScreenshotChange).toHaveBeenCalledWith(null);
+  });
+});
+
+describe('AzuosOpenTicketForm — linking people before anyone was linked', () => {
+  // feliz
+  it('opens the link field with nobody chosen yet', async () => {
+    const user = userEvent.setup();
+    setup({
+      data: {
+        fields,
+        notifyWhatsapp: false,
+        screenshotName: null,
+        attachments: [],
+        opened: null,
+        peopleOptions: [{ id: 'u-caio', name: 'Caio Reis' }],
+      },
+      actions: { ...actions, onWatchersChange: vi.fn() },
+    });
+
+    await advanceTo(user, 4);
+    await user.click(screen.getByRole('button', { name: 'Vincular outras pessoas' }));
+
+    expect(screen.getByText('Quem mais acompanha')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Tirar / })).not.toBeInTheDocument();
   });
 });

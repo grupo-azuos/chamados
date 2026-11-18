@@ -58,12 +58,12 @@
   ];
 
   const CARD_SURFACE_STYLES: Record<StatusBadgeTone, string> = {
-    brand: 'bg-primary-soft/30',
-    info: 'bg-info-soft/35',
-    success: 'bg-success-soft/35',
-    warning: 'bg-warning-soft/35',
-    danger: 'bg-destructive-soft/35',
-    neutral: 'bg-card border-border hover:border-border/80',
+    brand: 'bg-muted',
+    info: 'bg-muted',
+    success: 'bg-muted',
+    warning: 'bg-muted',
+    danger: 'bg-muted',
+    neutral: 'bg-card border-border hover:border-border',
   };
 </script>
 
@@ -198,7 +198,7 @@
       {#if actions.onClearMoveError}
         <button
           type="button"
-          class="rounded-chip px-2 py-0.5 text-xs font-semibold text-destructive hover:bg-destructive/10"
+          class="rounded-chip px-2 py-0.5 text-xs font-semibold text-destructive hover:bg-muted"
           onclick={actions.onClearMoveError}
           title="Fechar aviso"
         >
@@ -211,7 +211,7 @@
   {#if viewState.isLoading}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {#each [0, 1, 2, 3] as idx (idx)}
-        <div class="h-96 animate-pulse rounded-surface border border-border bg-muted/50"></div>
+        <div class="h-96 animate-pulse rounded-surface border border-border bg-muted"></div>
       {/each}
     </div>
   {:else if viewState.error}
@@ -236,8 +236,8 @@
         {@const isDropTarget = activeDropColumn === column.id}
         <div
           class="flex flex-col rounded-surface border p-4 transition-colors {isDropTarget
-            ? 'bg-primary/5'
-            : 'border-border bg-muted/40'}"
+            ? 'bg-muted'
+            : 'border-border bg-muted'}"
           ondragenter={(e) => handleDragEnter(e, column.id)}
           ondragover={(e) => handleDragOver(e, column.id)}
           ondragleave={(e) => handleDragLeave(e, column.id)}
@@ -261,7 +261,7 @@
           <div class="flex flex-1 flex-col gap-3 min-h-32">
             {#if isDropTarget && draggedTicketId !== null}
               <div
-                class="grid h-16 place-items-center rounded-box border-dashed bg-primary/10 text-xs font-medium text-primary animate-pulse"
+                class="grid h-16 place-items-center rounded-box border-dashed bg-muted text-xs font-medium text-primary animate-pulse"
               >
                 Solte aqui para mover para {column.title}
               </div>
@@ -408,7 +408,7 @@
                   </div>
                   <!-- Tags: Sistema e GitHub Issue -->
                   <div
-                    class="mt-1 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-2 text-xs"
+                    class="mt-1 flex flex-wrap items-center gap-1.5 border-t border-border pt-2 text-xs"
                   >
                     {#if ticket.projectName}
                       <StatusBadge

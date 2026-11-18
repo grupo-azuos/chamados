@@ -10,6 +10,7 @@ import {
   TICKET_STATUS_GROUPS,
   ticketStatusesOfGroup,
   TICKET_PRIORITY_LABELS,
+  ticketPriorityLabel,
   TICKET_STATUS_LABELS,
   TICKET_STATUSES,
   ticketPriorityTone,
@@ -153,5 +154,14 @@ describe('isClosedTicketStatus', () => {
 
   it('never closes every status, otherwise the queue would always look empty', () => {
     expect(CLOSED_TICKET_STATUSES.length).toBeLessThan(TICKET_STATUSES.length);
+  });
+});
+
+describe('ticketPriorityLabel', () => {
+  // feliz
+  it('labels every priority', () => {
+    for (const priority of TICKET_PRIORITIES) {
+      expect(ticketPriorityLabel(priority)).toBe(TICKET_PRIORITY_LABELS[priority]);
+    }
   });
 });

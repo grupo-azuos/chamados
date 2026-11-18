@@ -7,7 +7,7 @@ import Harness from './use-roles-harness.test.svelte';
 import { type RolesModel } from './use-roles.svelte';
 
 vi.mock('$lib/api/roles.api', () => ({
-  rolesApi: { list: vi.fn(), assign: vi.fn(), remove: vi.fn() },
+  rolesApi: { list: vi.fn(), listUsers: vi.fn(), assign: vi.fn(), remove: vi.fn() },
 }));
 
 const { rolesApi } = await import('$lib/api/roles.api');
@@ -120,5 +120,60 @@ describe('useRolesModel', () => {
     mountModel(false);
 
     expect(rolesApi.list).not.toHaveBeenCalled();
+  });
+});
+
+describe('useRolesModel — clearing, retrying and the delete question', () => {
+  beforeEach(() => {
+    vi.mocked(rolesApi.list).mockReset().mockResolvedValue([roleItem({ id: 1 }), roleItem({ id: 2, userId: 'user_2', userEmail: null })]);
+    vi.mocked(rolesApi.listUsers).mockReset().mockResolvedValue([{ id: 'user_2', email: 'bia@empresa.com.br', name: 'Bia Costa' }] as never);
+    vi.mocked(rolesApi.remove).mockReset();
+  });
+
+  // feliz
+  it('finds a person by the name in the directory and clears the filters', async () => {
+    const model = await mountLoadedModel();
+    await waitFor(() => expect(model.data.users).toHaveLength(1));
+
+    model.actions.onSearchChange('bia');
+    await waitFor(() => expect(model.data.roles.map((role) => role.id)).toEqual([2]));
+    model.actions.onSearchChange('ninguém');
+    await waitFor(() => expect(model.data.roles).toHaveLength(0));
+    model.actions.onClearFilters();
+    await waitFor(() => expect(model.data.roles).toHaveLength(2));
+  });
+
+  // feliz
+  it('asks the server again on retry', async () => {
+    const model = await mountLoadedModel();
+    vi.mocked(rolesApi.list).mockClear();
+
+    model.actions.onRetry();
+
+    await waitFor(() => expect(rolesApi.list).toHaveBeenCalled());
+  });
+
+  // triste
+  it('does not drop the question while the removal is on the way, and confirms nothing without one', async () => {
+    let finish!: () => void;
+    vi.mocked(rolesApi.remove).mockReturnValue(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const model = await mountLoadedModel();
+
+    model.actions.onConfirmDelete();
+    expect(rolesApi.remove).not.toHaveBeenCalled();
+
+    model.actions.onAskDelete(model.data.roles[0]!);
+    model.actions.onConfirmDelete();
+    await waitFor(() => expect(model.state.isDeleting).toBe(true));
+    model.actions.onCancelDelete();
+    expect(model.data.pendingDelete).not.toBeNull();
+    finish();
+    await waitFor(() => expect(model.state.isDeleting).toBe(false));
+    model.actions.onCancelDelete();
+    expect(model.data.pendingDelete).toBeNull();
   });
 });

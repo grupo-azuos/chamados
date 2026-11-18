@@ -103,6 +103,7 @@
   import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
@@ -116,7 +117,6 @@
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
 
   let { data, state: viewState, actions }: AzuosPartListViewProps = $props();
@@ -303,25 +303,27 @@
       data-slot="part-cards-mobile"
     >
       {#each data.parts as part (part.id)}
-        <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
-        <div
-          use:fillFromPointer
-          style:--fill-color={fillColorOf(partConditionTone(part.condition))}
-          class="hover-fill border-border/70 bg-card rounded-surface relative cursor-pointer border p-4 shadow-xs"
+        <!-- O card de conteúdo do grupo, hover na cor da condição. O nome corta em duas linhas
+             (o inteiro fica na dica), para um nome comprido não esticar a linha de cards. -->
+        <ContentCard
+          data={{ label: part.name }}
+          ui={{ tone: partConditionTone(part.condition), isHoverColored: true, className: 'min-w-0 gap-0 p-4' }}
+          actions={{ onClick: () => actions.onOpenLedger(part) }}
         >
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0 flex-1">
-              <!-- O card inteiro abre o histórico: o `after:` estica o botão do nome por cima
-                   dele. O que tem ação própria (chamados, Entrada, Saída) fica acima, `z-10`. -->
+              <!-- O card inteiro abre o histórico (o clique do próprio card). O que tem ação própria
+                   (nome, chamados, Entrada, Saída) fica por cima dele, `z-20`. -->
               <button
                 type="button"
-                class="font-medium text-ink-900 text-left break-words after:absolute after:inset-0 after:rounded-surface hover:underline"
+                class="text-ink-900 relative z-20 line-clamp-2 text-left font-medium hover:underline"
+                title={part.name}
                 onclick={() => actions.onOpenLedger(part)}
               >
                 {part.name}
               </button>
               <span class="text-ink-500 block text-xs">Ver o histórico</span>
-              <div class="relative z-10">
+              <div class="relative z-20">
                 <TicketStockLinks
                   data={{ links: part.ticketLinks, balance: part.balance, ticketsPath: '/infra/tickets' }}
                 />
@@ -343,12 +345,12 @@
             </div>
           </div>
 
-          <div class="mt-2 text-xs">
+          <div class="mt-2 truncate text-xs" title={partCategoryLabel(part.category)}>
             <span class="text-muted-foreground">Categoria: </span>
             <span class="text-ink-700 font-medium">{partCategoryLabel(part.category)}</span>
           </div>
 
-          <div class="border-border/60 relative z-10 mt-3 flex items-center justify-end gap-2 border-t pt-2">
+          <div class="border-border relative z-20 mt-3 flex items-center justify-end gap-2 border-t pt-2">
             <ActionButton
               data={{ label: 'Entrada' }}
               ui={{ variant: 'secondary', size: 'sm' }}
@@ -366,7 +368,7 @@
               actions={{ onClick: () => actions.onEdit(part) }}
             />
           </div>
-        </div>
+        </ContentCard>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">

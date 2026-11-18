@@ -62,7 +62,7 @@ export const ticketAttachmentSchema = z.object({
   viewUrl: z.string(),
   /** BAIXAR: o mesmo arquivo, com o nome original, entregue como download. */
   downloadUrl: z.string(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   /**
    * Quem anexou, quando foi o TI. Nulo quando veio junto com a abertura do chamado — ali não
    * existe identidade, e inventar uma diria que alguém do TI anexou o que a pessoa mandou.

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import SankeyChart, { flowTotalOf, sankeyOption } from './azuos-sankey-chart.svelte';
 
@@ -52,5 +52,32 @@ describe('AzuosSankeyChart', () => {
     });
 
     expect(screen.getByText('Sem fluxo')).toBeInTheDocument();
+  });
+});
+
+describe('sankeyOption — what the balloon and the labels say', () => {
+  const option = sankeyOption(DATA, { foreground: '#111' }) as {
+    tooltip: { formatter: (params: unknown) => string };
+    series: { label: { formatter: (params: unknown) => string } }[];
+  };
+
+  // feliz
+  it('names both ends of a band and the count of a node', () => {
+    expect(option.tooltip.formatter({ dataType: 'edge', value: 5, data: { source: 'type:Rede', target: 'owner:N/A' } })).toContain('Rede → N/A');
+    expect(option.tooltip.formatter({ dataType: 'node', name: 'stage:Aberto', value: 5, data: {} })).toContain('<b>Aberto</b>');
+    expect(option.series[0]!.label.formatter({ name: 'type:Rede' })).toBe('Rede');
+  });
+
+  // triste
+  it('does not break on a band or node it does not know', () => {
+    expect(option.tooltip.formatter({ dataType: 'edge', value: 1, data: {} })).toContain(' → ');
+    expect(option.tooltip.formatter({ dataType: 'node', name: 'x', value: 1, data: {} })).toContain('<b>x</b>');
+    expect(option.series[0]!.label.formatter({ name: 'nope' })).toBe('');
+  });
+
+  // feliz
+  it('marks the chart as clickable when a node opens detail', () => {
+    render(SankeyChart, { props: { data: DATA, actions: { onSelect: vi.fn() } } });
+    expect(document.querySelector('.cursor-pointer')).not.toBeNull();
   });
 });

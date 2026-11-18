@@ -13,6 +13,8 @@ vi.mock('$lib/api/computers.api', () => ({
     alerts: vi.fn(),
     update: vi.fn(),
     regenerateToken: vi.fn(),
+    dispose: vi.fn(),
+    restore: vi.fn(),
   },
 }));
 
@@ -211,5 +213,64 @@ describe('useComputerDetailModel', () => {
     );
     expect(model.data.computer?.name).toBe('CONTABIL-03');
     expect(model.state.error).toBeNull();
+  });
+});
+
+describe('useComputerDetailModel: disposal, restore and retry', () => {
+  beforeEach(() => {
+    vi.mocked(computersApi.findById).mockResolvedValue(computer());
+    vi.mocked(computersApi.samples).mockResolvedValue([]);
+    vi.mocked(ticketsApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 25 });
+    vi.mocked(computersApi.alerts).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 25 });
+    vi.mocked(computersApi.dispose).mockResolvedValue(computer({ disposedAt: '2026-10-01T12:00:00.000Z' }));
+    vi.mocked(computersApi.restore).mockResolvedValue(computer());
+  });
+
+  // feliz
+  it('disposes of the machine and brings it back to the inventory', async () => {
+    const model = await mountLoadedModel();
+
+    model.actions.onDispose({ type: 'scrap', reason: 'Sucata.' });
+    await waitFor(() =>
+      expect(computersApi.dispose).toHaveBeenCalledWith(3, { type: 'scrap', reason: 'Sucata.' }),
+    );
+    await waitFor(() => expect(model.state.isSaving).toBe(false));
+
+    model.actions.onRestore();
+    await waitFor(() => expect(computersApi.restore).toHaveBeenCalledWith(3));
+  });
+
+  // feliz
+  it('asks the server for everything again on retry', async () => {
+    const model = await mountLoadedModel();
+    vi.mocked(computersApi.findById).mockClear();
+    vi.mocked(computersApi.samples).mockClear();
+
+    model.actions.onRetry();
+
+    await waitFor(() => expect(computersApi.findById).toHaveBeenCalled());
+    await waitFor(() => expect(computersApi.samples).toHaveBeenCalled());
+  });
+
+  // triste
+  it('treats a failure without an HTTP status as a server error, not a missing machine', async () => {
+    vi.mocked(computersApi.findById).mockRejectedValue(new Error('A rede caiu.'));
+
+    const model = mountModel();
+
+    await waitFor(() => expect(model.state.error).toBeTruthy());
+    expect(model.state.isMissing).toBe(false);
+  });
+
+  // triste
+  it('ignores a status that is not a number', async () => {
+    vi.mocked(computersApi.findById).mockRejectedValue(
+      Object.assign(new Error('Resposta estranha.'), { status: 'quatrocentos e quatro' }),
+    );
+
+    const model = mountModel();
+
+    await waitFor(() => expect(model.state.error).toBeTruthy());
+    expect(model.state.isMissing).toBe(false);
   });
 });

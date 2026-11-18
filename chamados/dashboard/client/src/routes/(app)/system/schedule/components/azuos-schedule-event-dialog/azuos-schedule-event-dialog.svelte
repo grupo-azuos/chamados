@@ -11,18 +11,18 @@
    * ordenada é mais rápido que numa embaralhada.
    */
   export const SWATCHES = [
-    { value: 'blue', label: 'Azul', dotClass: 'bg-tag-blue', surfaceClass: 'bg-tag-blue-soft' },
-    { value: 'indigo', label: 'Índigo', dotClass: 'bg-tag-indigo', surfaceClass: 'bg-tag-indigo-soft' },
-    { value: 'purple', label: 'Roxo', dotClass: 'bg-tag-purple', surfaceClass: 'bg-tag-purple-soft' },
-    { value: 'rose', label: 'Rosa', dotClass: 'bg-tag-rose', surfaceClass: 'bg-tag-rose-soft' },
-    { value: 'red', label: 'Vermelho', dotClass: 'bg-tag-red', surfaceClass: 'bg-tag-red-soft' },
-    { value: 'amber', label: 'Amarelo', dotClass: 'bg-tag-amber', surfaceClass: 'bg-tag-amber-soft' },
-    { value: 'green', label: 'Verde', dotClass: 'bg-tag-green', surfaceClass: 'bg-tag-green-soft' },
+    { value: 'blue', label: 'Azul', dotClass: 'bg-info', surfaceClass: 'bg-info-soft' },
+    { value: 'indigo', label: 'Índigo', dotClass: 'bg-primary', surfaceClass: 'bg-primary-soft' },
+    { value: 'purple', label: 'Roxo', dotClass: 'bg-chart-5', surfaceClass: 'bg-muted' },
+    { value: 'rose', label: 'Rosa', dotClass: 'bg-chart-4', surfaceClass: 'bg-destructive-soft' },
+    { value: 'red', label: 'Vermelho', dotClass: 'bg-destructive', surfaceClass: 'bg-destructive-soft' },
+    { value: 'amber', label: 'Amarelo', dotClass: 'bg-warning', surfaceClass: 'bg-warning-soft' },
+    { value: 'green', label: 'Verde', dotClass: 'bg-success', surfaceClass: 'bg-success-soft' },
     {
       value: 'neutral',
       label: 'Grafite',
       dotClass: 'bg-muted-foreground',
-      surfaceClass: 'border-border bg-card hover:border-border/80',
+      surfaceClass: 'border-border bg-card hover:border-border',
     },
   ] as const;
 
@@ -127,7 +127,7 @@
     <DialogHeader class="gap-1.5">
       <div class="flex items-center gap-2.5">
         <span
-          class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary/10 text-primary"
+          class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-muted text-primary"
         >
           {#if isRecord}
             <CircleCheckBig class="size-4" aria-hidden="true" />
@@ -300,13 +300,13 @@
             · {swatchOf(model.data.fields.color.value).label}
           </span>
         </span>
-        <div class="flex flex-wrap items-center gap-1.5">
+        <div class="flex flex-wrap items-center gap-0.5">
           {#each SWATCHES as swatch (swatch.value)}
             {@const isSelected = swatchOf(model.data.fields.color.value).value === swatch.value}
             <!-- Escolhida = o visto em cima da cor; anel colorido em volta é proibido no grupo. -->
             <button
               type="button"
-              class="focus-visible:ring-ring flex size-7 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:outline-none"
+              class="focus-visible:ring-ring flex size-10 cursor-pointer items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
               onclick={() => model.actions.onChange('color', swatch.value)}
               title={swatch.label}
               aria-label={swatch.label}
@@ -342,7 +342,7 @@
         }}
       />
 
-      <DialogFooter class="mt-1 flex items-center justify-between border-t border-border/60 pt-3">
+      <DialogFooter class="mt-1 flex items-center justify-between border-t border-border pt-3">
         <div>
           {#if isEdit && onDelete}
             <button

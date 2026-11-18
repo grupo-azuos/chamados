@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import XIcon from '@lucide/svelte/icons/x';
 
+	import AzuosBackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
 	import AzuosButton from '$lib/components/azuos-button/azuos-button.svelte';
 	import AzuosReportingCard from '$lib/components/azuos-reporting-card/azuos-reporting-card.svelte';
 	import { useReporting } from '$lib/hooks/use-reporting/use-reporting.svelte';
@@ -23,14 +23,12 @@
 </script>
 
 <div class="bg-background rounded-surface flex h-full w-full flex-col overflow-hidden">
-	<header class="border-border/70 flex items-center justify-between gap-2 border-b px-3 py-2.5">
-		<div class="flex min-w-0 items-center gap-2">
-			<AzuosButton
-				ui={{ variant: 'ghost', size: 'icon', title: 'Voltar ao Dashboard' }}
-				events={{ onClick: () => void ShowDashboard() }}
-			>
-				<ArrowLeftIcon size={16} />
-			</AzuosButton>
+	<header class="border-border/70 flex items-start justify-between gap-2 border-b px-3 py-2.5">
+		<div class="flex min-w-0 flex-col gap-1">
+			<AzuosBackButton
+				data={{ destination: 'o painel' }}
+				actions={{ onClick: () => void ShowDashboard() }}
+			/>
 
 			<div class="min-w-0">
 				<h1 class="text-foreground truncate text-sm font-semibold tracking-tight">

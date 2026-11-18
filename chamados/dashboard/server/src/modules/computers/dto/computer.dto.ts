@@ -14,7 +14,7 @@ import {
   updateComputerSchema,
 } from '@template/shared/schemas/computer.schema';
 import { computerLiveResponseSchema } from '@template/shared/schemas/computer-live.schema';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 
 /**

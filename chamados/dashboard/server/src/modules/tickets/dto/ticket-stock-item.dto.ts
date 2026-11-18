@@ -4,7 +4,8 @@ import {
   ticketStockOptionSchema,
   ticketStockOptionsQuerySchema,
 } from '@template/shared/schemas/ticket-stock-item.schema';
-import { createZodDto } from 'nestjs-zod';
+
+import { createZodDto } from '../../../lib/http/zod-dto';
 
 /** Os DTOs nascem dos MESMOS schemas Zod que a web importa (ver `ticket.dto.ts`). */
 export class TicketStockItemDto extends createZodDto(ticketStockItemSchema) {}

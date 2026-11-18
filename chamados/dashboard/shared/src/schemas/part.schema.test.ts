@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createMovementSchema,
+  movementTypeSchema,
+  partCategorySchema,
+  partConditionSchema,
   createPartSchema,
   movementFormSchema,
   partFormSchema,
@@ -184,5 +187,24 @@ describe('partListQuerySchema', () => {
   // triste
   it('refuses a page size above the ceiling', () => {
     expect(partListQuerySchema.safeParse({ pageSize: 5000 }).success).toBe(false);
+  });
+});
+
+describe('part messages', () => {
+  // triste
+  it('explains the category, the condition and the type in Portuguese', () => {
+    const category = partCategorySchema.safeParse('cadeira');
+    expect(category.success ? '' : category.error.issues[0]?.message).toBe('Escolha uma categoria da lista');
+    const condition = partConditionSchema.safeParse('velha');
+    expect(condition.success ? '' : condition.error.issues[0]?.message).toBe('Diga se a peça é nova ou usada');
+    const type = movementTypeSchema.safeParse('venda');
+    expect(type.success ? '' : type.error.issues[0]?.message).toBe('A movimentação precisa ser entrada ou saída');
+  });
+
+  it('turns a blank note into null', () => {
+    expect(createMovementSchema.parse({ type: 'in', quantity: 1, note: '', handledBy: '' })).toMatchObject({
+      note: null,
+      handledBy: null,
+    });
   });
 });

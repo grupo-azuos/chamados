@@ -36,7 +36,7 @@ export const agentInventorySchema = z.object({
   totalDiskBytes: bytes,
   freeDiskBytes: bytes,
   uptimeSeconds: z.number().nonnegative(),
-  bootTime: z.string().datetime({ offset: true }),
+  bootTime: z.iso.datetime({ offset: true }),
 });
 
 export type AgentInventory = z.infer<typeof agentInventorySchema>;
@@ -101,7 +101,7 @@ export const agentProcessSchema = z.object({
 });
 
 export const agentSnapshotSchema = z.object({
-  timestamp: z.string().datetime({ offset: true }),
+  timestamp: z.iso.datetime({ offset: true }),
   host: agentInventorySchema,
   cpu: agentCpuSchema,
   memory: agentMemorySchema,

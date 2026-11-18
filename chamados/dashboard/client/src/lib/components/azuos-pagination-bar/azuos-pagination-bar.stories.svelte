@@ -58,7 +58,7 @@
 />
 
 <!-- Caso limite: na largura de um celular, os blocos empilham. -->
-<Story name="OnPhone">
+<Story name="OnPhone" asChild>
   <div class="w-[360px]">
     <PaginationBar
       data={{ page: 2, pageSize: 25, total: 312, noun }}

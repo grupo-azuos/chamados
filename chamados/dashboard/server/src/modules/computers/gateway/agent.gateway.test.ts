@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { type ComputerRow } from '../../../lib/db/schema/computers.schema';
 import { AgentPresenceService } from '../presence/agent-presence.service';
-import { LiveWatchService } from '../presence/live-watch.service';
+import { LiveWatchService, WATCHED_CADENCE_SECONDS } from '../presence/live-watch.service';
 import { type ComputersService } from '../service/computers.service';
 import { AgentGateway } from './agent.gateway';
 
@@ -157,5 +157,188 @@ describe('AgentGateway', () => {
     client.emit('isto não é json');
 
     await vi.waitFor(() => expect(client.closed).toHaveLength(1));
+  });
+});
+
+describe('AgentGateway: session, cadence and heartbeat', () => {
+  // feliz
+  it('asks the agent for the fast cadence when the machine reconnects while watched', async () => {
+    const service = {
+      authenticateAgent: vi.fn().mockResolvedValue({ ok: true, computer }),
+      ingest: vi.fn().mockResolvedValue(undefined),
+    };
+    const watch = new LiveWatchService();
+    const presence = new AgentPresenceService();
+    const gateway = new AgentGateway(service as unknown as ComputersService, presence, watch);
+    const client = fakeSocket();
+    watch.touch(computer.id, 5);
+
+    gateway.handleConnection(client.socket as never);
+    client.emit(hello);
+
+    await vi.waitFor(() => expect(client.sent).toHaveLength(2));
+    expect(JSON.parse(client.sent[0]!)).toEqual({ type: 'cadence', seconds: WATCHED_CADENCE_SECONDS });
+    expect(JSON.parse(client.sent[1]!)).toMatchObject({ type: 'welcome' });
+    expect(presence.isOnline(computer.id)).toBe(true);
+
+    /* Quem está olhando parou de olhar: zero é "volte ao seu ritmo". */
+    watch.onCadenceChange((computerId, seconds) =>
+      (gateway as unknown as { sendCadence: (id: number, s: number) => void }).sendCadence(
+        computerId,
+        seconds,
+      ),
+    );
+    (gateway as unknown as { sendCadence: (id: number, s: number) => void }).sendCadence(
+      computer.id,
+      0,
+    );
+    expect(JSON.parse(client.sent[2]!)).toEqual({ type: 'cadence', seconds: 0 });
+
+    /* Máquina desligada não tem socket, e isso não é erro. */
+    (gateway as unknown as { sendCadence: (id: number, s: number) => void }).sendCadence(99, 5);
+    expect(client.sent).toHaveLength(3);
+
+    gateway.handleDisconnect(client.socket as never);
+    expect(presence.isOnline(computer.id)).toBe(false);
+    /* Desconectar de novo (ou alguém que nunca se apresentou) não derruba nada. */
+    gateway.handleDisconnect(client.socket as never);
+    watch.onModuleDestroy();
+  });
+
+  it('keeps the newest socket of a machine when an older one drops', async () => {
+    const { gateway } = makeGateway();
+    const first = fakeSocket();
+    const second = fakeSocket();
+
+    gateway.handleConnection(first.socket as never);
+    first.emit(hello);
+    await vi.waitFor(() => expect(first.sent).toHaveLength(1));
+    gateway.handleConnection(second.socket as never);
+    second.emit(hello);
+    await vi.waitFor(() => expect(second.sent).toHaveLength(1));
+
+    gateway.handleDisconnect(first.socket as never);
+
+    (gateway as unknown as { sendCadence: (id: number, s: number) => void }).sendCadence(
+      computer.id,
+      5,
+    );
+    expect(second.sent).toHaveLength(2);
+    expect(first.sent).toHaveLength(1);
+  });
+
+  it('pings the agent and drops the connection that stops answering', async () => {
+    vi.useFakeTimers();
+    try {
+      const { gateway } = makeGateway();
+      const client = fakeSocket();
+      const pings: number[] = [];
+      client.socket.ping = () => pings.push(Date.now());
+      const listeners = new Map<string, (payload: never) => void>();
+      const original = client.socket.on;
+      client.socket.on = (event, listener) => {
+        original(event, listener);
+
+        return listeners.set(event, listener);
+      };
+
+      gateway.handleConnection(client.socket as never);
+      /* Apresentado a tempo: o que resta medir é só o batimento. */
+      client.emit(hello);
+      await vi.advanceTimersByTimeAsync(0);
+
+      vi.advanceTimersByTime(15_000);
+      expect(pings).toHaveLength(1);
+      /* O agente respondeu: a contagem de silêncio volta a zero. */
+      listeners.get('pong')?.(undefined as never);
+      vi.advanceTimersByTime(15_000 * 2);
+      expect(pings).toHaveLength(3);
+      expect(client.closed).toEqual([]);
+
+      /* Dois tiques sem resposta: a conexão cai, e o relógio para. */
+      vi.advanceTimersByTime(15_000);
+      expect(client.closed).toEqual([{ reason: 'terminate' }]);
+      vi.advanceTimersByTime(15_000 * 3);
+      expect(pings).toHaveLength(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // triste
+  it('drops the connection that never introduces itself within ten seconds', () => {
+    vi.useFakeTimers();
+    try {
+      const { gateway } = makeGateway();
+      const client = fakeSocket();
+
+      gateway.handleConnection(client.socket as never);
+      vi.advanceTimersByTime(10_000);
+
+      expect(client.closed).toEqual([{ code: 4009, reason: 'hello timeout' }]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not drop a connection that introduced itself in time', async () => {
+    vi.useFakeTimers();
+    try {
+      const { gateway } = makeGateway();
+      const client = fakeSocket();
+
+      gateway.handleConnection(client.socket as never);
+      client.emit(hello);
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(client.closed).toEqual([]);
+      expect(client.sent).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('refuses a blocked machine and an unknown token with different codes', async () => {
+    const blocked = {
+      authenticateAgent: vi.fn().mockResolvedValue({ ok: false, reason: 'blocked' }),
+      ingest: vi.fn(),
+    };
+    const gateway = new AgentGateway(
+      blocked as unknown as ComputersService,
+      new AgentPresenceService(),
+      new LiveWatchService(),
+    );
+    const client = fakeSocket();
+    gateway.handleConnection(client.socket as never);
+    client.emit(hello);
+    await vi.waitFor(() => expect(client.closed).toEqual([{ code: 4003, reason: 'blocked' }]));
+
+    const unknown = {
+      authenticateAgent: vi.fn().mockResolvedValue({ ok: false, reason: 'invalid token' }),
+      ingest: vi.fn(),
+    };
+    const other = new AgentGateway(
+      unknown as unknown as ComputersService,
+      new AgentPresenceService(),
+      new LiveWatchService(),
+    );
+    const socket = fakeSocket();
+    other.handleConnection(socket.socket as never);
+    socket.emit(hello);
+    await vi.waitFor(() =>
+      expect(socket.closed).toEqual([{ code: 4001, reason: 'invalid token' }]),
+    );
+  });
+
+  it('logs a socket error without dropping anything', () => {
+    const { gateway } = makeGateway();
+    const client = fakeSocket();
+    const listeners = new Map<string, (payload: never) => void>();
+    client.socket.on = (event, listener) => listeners.set(event, listener);
+
+    gateway.handleConnection(client.socket as never);
+    listeners.get('error')?.(new Error('reset') as never);
+
+    expect(client.closed).toEqual([]);
   });
 });

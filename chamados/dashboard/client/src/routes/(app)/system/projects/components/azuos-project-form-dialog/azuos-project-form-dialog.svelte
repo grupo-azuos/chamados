@@ -156,7 +156,7 @@
         }}
       />
 
-      <div class="mt-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 border-t border-border/60 pt-4">
+      <div class="mt-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 border-t border-border pt-4">
         <ActionButton
           data={{ label: 'Cancelar' }}
           ui={{ variant: 'secondary' }}

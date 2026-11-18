@@ -196,20 +196,15 @@ describe('toTicketUpdate', () => {
     expect(toTicketUpdate({ area: 'manutencao' }, ANA, NOW).area).toBe('manutencao');
   });
 
-  /* O sistema EXTERNO (fora do cadastro) é o "trilha" digitado: escrevê-lo desvincula o
-     cadastrado, e escolher um cadastrado apaga o nome. */
-  it('keeps an external system name and unlinks the registered one', () => {
-    const update = toTicketUpdate({ customSystemName: '  trilha ', projectId: null }, ANA, NOW);
-
-    expect(update.customSystemName).toBe('trilha');
-    expect(update.projectId).toBeNull();
-  });
-
-  it('drops the external name when a registered system is chosen', () => {
-    const update = toTicketUpdate({ customSystemName: null, projectId: 8 }, ANA, NOW);
-
-    expect(update.projectId).toBe(8);
-    expect(update.customSystemName).toBeNull();
+  it('updates or clears customSystemName, clearing it when a project is chosen', () => {
+    expect(toTicketUpdate({ customSystemName: '  Trilha  ' }, ANA, NOW).customSystemName).toBe(
+      'Trilha',
+    );
+    expect(toTicketUpdate({ customSystemName: null }, ANA, NOW).customSystemName).toBeNull();
+    expect(toTicketUpdate({ projectId: 5, customSystemName: 'Trilha' }, ANA, NOW)).toMatchObject({
+      projectId: 5,
+      customSystemName: null,
+    });
   });
 
   // triste

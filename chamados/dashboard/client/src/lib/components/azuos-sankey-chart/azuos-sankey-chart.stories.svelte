@@ -11,12 +11,12 @@
 
   const DATA = {
     nodes: [
-      { id: 'type:Rede', label: 'Rede', color: '#3b82f6' },
-      { id: 'type:Impressora', label: 'Impressora', color: '#8b5cf6' },
-      { id: 'owner:Ana', label: 'Ana', color: '#10b981' },
-      { id: 'owner:Caio', label: 'Caio', color: '#06b6d4' },
-      { id: 'stage:Resolvido', label: 'Resolvido', color: '#047857' },
-      { id: 'stage:Aberto', label: 'Aberto', color: '#b45309' },
+      { id: 'type:Rede', label: 'Rede', color: 'var(--chart-1)' },
+      { id: 'type:Impressora', label: 'Impressora', color: 'var(--chart-5)' },
+      { id: 'owner:Ana', label: 'Ana', color: 'var(--chart-2)' },
+      { id: 'owner:Caio', label: 'Caio', color: 'var(--info)' },
+      { id: 'stage:Resolvido', label: 'Resolvido', color: 'var(--success)' },
+      { id: 'stage:Aberto', label: 'Aberto', color: 'var(--warning)' },
     ],
     links: [
       { from: 'type:Rede', to: 'owner:Ana', value: 12 },

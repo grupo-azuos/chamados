@@ -1,3 +1,12 @@
+import {
+  BYTES_PER_GB,
+  CRITICAL_DISK_FREE_PERCENT,
+  LOW_DISK_FREE_PERCENT,
+  LOW_MEMORY_GB,
+  SECONDS_PER_DAY,
+  STALE_UPTIME_DAYS,
+} from '@template/shared/domain/computer-health.util';
+import { type ResourceCondition } from '@template/shared/domain/computer-resource.util';
 import { Inject, Injectable } from '@nestjs/common';
 import { type AlertMetric } from '@template/shared/domain/computer-alert.util';
 import { compareMachines } from '@template/shared/domain/machine-number.util';
@@ -341,6 +350,7 @@ type ComputerFilter = Pick<
   | 'healthStatus'
   | 'kind'
   | 'alert'
+  | 'resourceCondition'
   | 'preventive'
   | 'includeArchived'
   | 'onlyDisposed'
@@ -361,6 +371,7 @@ function buildWhere(query: ComputerFilter, presence?: PresenceFilter): SQL | und
   if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
   if (query.kind) filters.push(eq(computers.kind, query.kind));
   if (query.alert) filters.push(alertFilter(query.alert));
+  if (query.resourceCondition) filters.push(resourceConditionFilter(query.resourceCondition));
   if (query.preventive) filters.push(preventiveFilter(query.preventive));
   if (query.search) filters.push(searchFilter(query.search));
 
@@ -430,6 +441,31 @@ function alertFilter(alert: NonNullable<ComputerFilter['alert']>): SQL {
       and ${qualified(computerAlerts.status)} = 'active'
       and ${qualified(computerAlerts.recoveredAt)} is null${metric}
   )`);
+}
+
+/**
+ * A condição dos recursos em SQL, com os MESMOS limites e a MESMA ordem de
+ * `resourceConditionOf` (`shared/src/domain/computer-resource.util.ts`): cada condição exclui as
+ * mais graves antes dela, para a máquina cair em um filtro só.
+ */
+function resourceConditionFilter(condition: ResourceCondition): SQL {
+  const freePercent = sql`(${computers.freeDiskBytes} * 100.0 / nullif(${computers.totalDiskBytes}, 0))`;
+  const diskCritical = sql`coalesce(${freePercent} < ${CRITICAL_DISK_FREE_PERCENT}, false)`;
+  const diskLow = sql`coalesce(${freePercent} < ${LOW_DISK_FREE_PERCENT}, false)`;
+  const memoryLow = sql`coalesce(${computers.totalMemoryBytes} > 0 and ${computers.totalMemoryBytes} < ${LOW_MEMORY_GB * BYTES_PER_GB}, false)`;
+  const staleUptime = sql`coalesce(${computers.uptimeSeconds} > ${STALE_UPTIME_DAYS * SECONDS_PER_DAY}, false)`;
+  const noReadings = sql`(${computers.totalDiskBytes} is null and ${computers.totalMemoryBytes} is null and ${computers.uptimeSeconds} is null)`;
+
+  const byCondition: Record<ResourceCondition, SQL> = {
+    'disk-critical': diskCritical,
+    'disk-low': sql`${diskLow} and not ${diskCritical}`,
+    'memory-low': sql`${memoryLow} and not ${diskLow}`,
+    'stale-uptime': sql`${staleUptime} and not ${memoryLow} and not ${diskLow}`,
+    ok: sql`not ${noReadings} and not ${diskLow} and not ${memoryLow} and not ${staleUptime}`,
+    unknown: noReadings,
+  };
+
+  return sql`(${byCondition[condition]})`;
 }
 
 /** A busca livre olha nome, apelido, hostname, responsável e processador. */

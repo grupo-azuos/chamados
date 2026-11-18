@@ -1,6 +1,6 @@
 import { type Ticket } from '@template/shared/schemas/ticket.schema';
 import { TICKET_PRIORITY_LABELS } from '@template/shared/domain/ticket-status.util';
-import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -217,6 +217,146 @@ describe('AzuosTicketDataForm', () => {
     expect(screen.queryByText('Responsável')).not.toBeInTheDocument();
   });
 });
+/** Escolhe uma opção num seletor do projeto: pastilhas quando há poucas opções, lista com busca quando há muitas. */
+async function choose(label: string, option: string) {
+  const group = screen.queryByRole('group', { name: label });
+  if (group) {
+    await userEvent.click(within(group).getByRole('button', { name: option }));
+    return;
+  }
+  await userEvent.click(screen.getByRole('button', { name: label }));
+  const popup = await waitFor(() => {
+    const open = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1);
+    expect(open).toBeTruthy();
+    return open as HTMLElement;
+  });
+  await fireEvent.click(within(popup).getByText(option, { exact: true }));
+}
+
+describe('AzuosTicketDataForm — area, type, system and attendant', () => {
+  // feliz
+  it('changes the area and resets the type, picks a type, a system and an attendant', async () => {
+    const acts = actions();
+    render(TicketDataForm, {
+      props: {
+        data: data({
+          projects: [{ value: '1', label: 'Portal' }],
+          assignees: [{ value: 'u-ana', label: 'Ana Lima' }],
+          fields: {
+            priority: { value: 'high', error: null },
+            area: { value: 'infra', error: null },
+            problemType: { value: 'other', error: null },
+            computerId: { value: '', error: null },
+            projectId: { value: '', error: null },
+            assigneeId: { value: '', error: null },
+          },
+        }),
+        actions: acts,
+      },
+    });
+
+    await choose('Área', 'Manutenção');
+    expect(acts.onChange).toHaveBeenCalledWith('area', 'manutencao');
+    expect(acts.onChange).toHaveBeenCalledWith('problemType', expect.any(String));
+
+    /* O tipo agora é a busca com cadastro: escolher da lista continua igual. */
+    await choose('Tipo do problema', 'Impressora');
+    expect(acts.onChange).toHaveBeenCalledWith('problemType', 'printer');
+
+    await choose('Sistema / Software', 'Portal');
+    expect(acts.onChange).toHaveBeenCalledWith('projectId', '1');
+    await choose('Responsável', 'Ana Lima');
+    expect(acts.onChange).toHaveBeenCalledWith('assigneeId', 'u-ana');
+  });
+});
+
+describe('AzuosTicketDataForm — without a project list', () => {
+  // triste
+  it('still offers "Nenhum" as the project when the list did not come', () => {
+    setup({ data: { ...data(), projects: undefined } });
+
+    expect(document.body.textContent).toContain('Nenhum');
+  });
+});
+
+describe('AzuosTicketDataForm — custom system (unregistered/external)', () => {
+  // feliz
+  it('displays the custom system name instead of "Nenhum" when the ticket has customSystemName', () => {
+    setup({
+      data: data({
+        projects: [{ value: '1', label: 'Portal' }],
+        ticket: { ...ticket, area: 'sistema', customSystemName: 'Trilha', projectName: 'Trilha' },
+        fields: {
+          priority: { value: 'high', error: null },
+          area: { value: 'sistema', error: null },
+          problemType: { value: 'feature_request', error: null },
+          computerId: { value: '', error: null },
+          projectId: { value: '', error: null },
+          customSystemName: { value: 'Trilha', error: null },
+        },
+      }),
+    });
+
+    expect(screen.getByRole('button', { name: 'Sistema / Software' })).toHaveTextContent('Trilha');
+  });
+
+  it('allows picking a custom system name using the search input', async () => {
+    const acts = actions();
+    setup({
+      data: data({
+        projects: [{ value: '1', label: 'Portal' }],
+        fields: {
+          priority: { value: 'high', error: null },
+          area: { value: 'sistema', error: null },
+          problemType: { value: 'feature_request', error: null },
+          computerId: { value: '', error: null },
+          projectId: { value: '', error: null },
+          customSystemName: { value: '', error: null },
+        },
+      }),
+      actions: acts,
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sistema / Software' }));
+    const search = await screen.findByPlaceholderText('Busque ou digite o nome do sistema');
+    await userEvent.type(search, 'Trilha');
+    const customButton = await screen.findByRole('button', { name: 'Usar “Trilha”' });
+    await userEvent.click(customButton);
+
+    expect(acts.onChange).toHaveBeenCalledWith('projectId', '');
+    expect(acts.onChange).toHaveBeenCalledWith('customSystemName', 'Trilha');
+  });
+
+  it('clears the system when "Nenhum" is selected', async () => {
+    const acts = actions();
+    setup({
+      data: data({
+        projects: [{ value: '1', label: 'Portal' }],
+        fields: {
+          priority: { value: 'high', error: null },
+          area: { value: 'sistema', error: null },
+          problemType: { value: 'feature_request', error: null },
+          computerId: { value: '', error: null },
+          projectId: { value: '1', error: null },
+          customSystemName: { value: '', error: null },
+        },
+      }),
+      actions: acts,
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sistema / Software' }));
+    const popup = await waitFor(() => {
+      const open = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1);
+      expect(open).toBeTruthy();
+      return open as HTMLElement;
+    });
+    await fireEvent.click(within(popup).getByText('Nenhum', { exact: true }));
+
+    expect(acts.onChange).toHaveBeenCalledWith('projectId', '');
+    expect(acts.onChange).toHaveBeenCalledWith('customSystemName', '');
+  });
+});
+
 
 describe('machinesLabel', () => {
   // feliz

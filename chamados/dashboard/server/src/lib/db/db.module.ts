@@ -23,7 +23,12 @@ let close: (() => Promise<void>) | null = null;
       provide: DB,
       inject: [ENV],
       useFactory: async (env: Env): Promise<Database> => {
-        const opened = await openDatabase(env.DATABASE_URL);
+        const opened = await openDatabase({
+          url: env.DATABASE_URL,
+          poolSize: env.DATABASE_POOL_SIZE,
+          ca: env.DATABASE_SSL_CA,
+          migrateOnStart: env.DATABASE_MIGRATE_ON_START,
+        });
         close = opened.close;
 
         new Logger(DbModule.name).log(`Postgres em ${describeDatabaseUrl(env.DATABASE_URL)}`);

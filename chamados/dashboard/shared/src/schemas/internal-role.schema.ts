@@ -15,11 +15,11 @@ import { ROLE_CONTEXTS, roleContextSchema } from './user.schema';
 export const internalRoleSchema = z.object({
   id: z.number().int().positive(),
   userId: z.string().min(1),
-  userEmail: z.string().email().nullable().optional(),
+  userEmail: z.email().nullable().optional(),
   context: roleContextSchema,
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string().nullable().optional(),
-  updatedAt: z.string().datetime().nullable().optional(),
+  updatedAt: z.iso.datetime().nullable().optional(),
   updatedBy: z.string().nullable().optional(),
 });
 
@@ -28,7 +28,7 @@ export type InternalRole = z.infer<typeof internalRoleSchema>;
 /** Liberar um módulo para uma pessoa. Só o super-admin faz isso. */
 export const assignRoleSchema = z.object({
   userId: z.string().min(1, 'Escolha a pessoa'),
-  userEmail: z.string().email('E-mail inválido').optional().nullable(),
+  userEmail: z.email('E-mail inválido').optional().nullable(),
   context: roleContextSchema,
 });
 

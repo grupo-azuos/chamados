@@ -88,3 +88,20 @@ it('scrolls a focused field into the padded sheet viewport', async () => {
   expect(container.scrollTop).toBe(0);
   frame.mockRestore();
 });
+
+describe('AzuosResponsiveDialogContent — gestures that are not a drag', () => {
+  // triste
+  it('ignores a right button press and a move that never started', async () => {
+    const onOpenChange = vi.fn();
+    render(ResponsiveDialogContentHarness, { props: { onOpenChange } });
+
+    const handle = screen.getByTestId('drag-handle');
+    await fireEvent.pointerMove(handle, { clientY: 400 });
+    await fireEvent.pointerUp(handle);
+    await fireEvent.pointerDown(handle, { clientY: 0, button: 2 });
+    await fireEvent.pointerMove(handle, { clientY: 400 });
+    await fireEvent.pointerUp(handle);
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+});

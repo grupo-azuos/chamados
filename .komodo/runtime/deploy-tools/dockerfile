@@ -1,0 +1,6 @@
+# Ferramentas do Komodo. Nenhuma aplicação usa esta imagem.
+FROM infisical/cli:0.44.5
+USER root
+RUN apk add --no-cache docker-cli docker-cli-compose docker-cli-buildx git jq
+ENTRYPOINT []
+CMD ["infisical", "--help"]

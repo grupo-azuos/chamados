@@ -2,7 +2,7 @@ import {
   type Maintenance,
   type PreventiveDue,
 } from '@template/shared/schemas/maintenance.schema';
-import { render, screen, within } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -10,6 +10,7 @@ import MaintenanceListView, {
   machineLabelOf,
   type MaintenanceListFilter,
 } from './azuos-maintenance-list-view.svelte';
+import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
 function maintenance(over: Partial<Maintenance> = {}): Maintenance {
   return {
@@ -92,6 +93,14 @@ function renderView(over: {
       actions,
     },
   });
+}
+
+
+/* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
+function hasCardsOnlyTable(): boolean {
+  return Array.from(document.querySelectorAll('.overflow-x-auto')).some(
+    (element) => element.classList.contains('hidden') && !element.classList.contains('xl:block'),
+  );
 }
 
 describe('machineLabelOf', () => {
@@ -211,5 +220,138 @@ describe('AzuosMaintenanceListView', () => {
     expect(nextButton).toBeInTheDocument();
     await user.click(nextButton);
     expect(onPageChange).toHaveBeenCalledWith(2);
+  });
+});
+
+describe('AzuosMaintenanceListView — filters, rows and the cut list', () => {
+  const schedule = {
+    computerId: 5,
+    computerName: 'RH-05',
+    computerDisplayName: 'RH — recepção',
+    computerDepartment: 'rh' as const,
+    scheduledFor: new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10),
+    note: null,
+    createdAt: '2026-09-01T12:00:00.000Z',
+    createdBy: 'suporte@azuos.local',
+    updatedAt: null,
+    updatedBy: null,
+  };
+
+  // feliz
+  it('registers from the header and from the scheduled machine', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onRegister).mockClear();
+    render(MaintenanceListView, {
+      props: {
+        data: { maintenances: [maintenance()], total: 1, preventive, schedules: [schedule], filter: emptyFilter, removing: null },
+        state: settled,
+        actions,
+      },
+    });
+
+    await user.click(screen.getAllByRole('button', { name: 'Registrar manutenção' })[0]!);
+    expect(actions.onRegister).toHaveBeenCalledWith();
+    await user.click(screen.getAllByRole('button', { name: 'Registrar' })[0]!);
+    expect(actions.onRegister).toHaveBeenLastCalledWith(expect.any(Number));
+  });
+
+  // feliz
+  it('searches, filters by type and clears the filters', async () => {
+    const user = userEvent.setup();
+    render(MaintenanceListView, {
+      props: {
+        data: { maintenances: [maintenance()], total: 1, preventive, filter: { ...emptyFilter, search: 'cooler' }, removing: null },
+        state: settled,
+        actions,
+      },
+    });
+
+    await user.type(screen.getByRole('textbox', { name: 'Buscar' }), '!');
+    expect(actions.onSearchChange).toHaveBeenCalledWith('cooler!');
+    await user.click(screen.getByRole('button', { name: 'Filtrar por tipo' }));
+    const search = await screen.findByPlaceholderText('Buscar…');
+    const popup = search.closest('[data-slot="popover-content"]') as HTMLElement;
+    await fireEvent.click(within(popup).getByText('Limpeza'));
+    expect(actions.onTypeChange).toHaveBeenCalledWith('cleaning');
+    await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(actions.onClearFilters).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('describes equipment outside the inventory and a machine without department', () => {
+    renderView({
+      maintenances: [
+        maintenance({ id: 1, computerId: null, computerName: null, computerDisplayName: null, computerDepartment: null, otherMachine: 'Impressora da recepção', performedBy: null, description: null }),
+        maintenance({ id: 2, computerDepartment: null, computerDisplayName: '  ' }),
+      ],
+      state: { isTruncated: true },
+    });
+    expect(screen.getAllByText('Impressora da recepção').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Fora do inventário').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('CONTABIL-03').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Mostrando 2 de 2 manutenções/)).toBeInTheDocument();
+  });
+
+  // feliz
+  it('corrects and asks to delete from the cards and from the table', async () => {
+    const user = userEvent.setup();
+    vi.mocked(actions.onEdit).mockClear();
+    vi.mocked(actions.onAskRemove).mockClear();
+    renderView();
+
+    const edits = screen.getAllByRole('button', { name: 'Corrigir' });
+    const removes = screen.getAllByRole('button', { name: 'Excluir' });
+    for (const button of [...edits]) await user.click(button);
+    for (const button of [...removes]) await user.click(button);
+    expect(actions.onEdit).toHaveBeenCalledTimes(edits.length);
+    expect(actions.onAskRemove).toHaveBeenCalledTimes(removes.length);
+  });
+
+  // triste
+  it('cancels the deletion and keeps the empty state button working', async () => {
+    /* A pergunta fechada ainda trava o ponteiro na página até acabar a animação. */
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    vi.mocked(actions.onRegister).mockClear();
+    renderView({ removing: maintenance(), state: { actionError: 'Sem permissão.' } });
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Sem permissão.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(actions.onCancelRemove).toHaveBeenCalled();
+
+    cleanup();
+    renderView({ maintenances: [], state: { isEmpty: true } });
+    await user.click(screen.getAllByRole('button', { name: 'Registrar manutenção' }).at(-1)!);
+    expect(actions.onRegister).toHaveBeenCalledWith();
+  });
+
+  // triste
+  it('shows the history as loading', () => {
+    renderView({ state: { isLoading: true, isPreventiveLoading: true } as never });
+    expect(screen.queryByText('Cooler do processador substituído.')).not.toBeInTheDocument();
+  });
+});
+
+describe('maintenance-list-view — cards only', () => {
+  // feliz
+  it('hides the table completely when the person asked for cards only', () => {
+    const tableView = useTableViewModel();
+    tableView.actions.onToggle();
+    try {
+      renderView();
+
+      expect(hasCardsOnlyTable()).toBe(true);
+    } finally {
+      tableView.actions.onToggle();
+    }
+  });
+});
+
+describe('machineLabelOf — nothing to name the machine by', () => {
+  // triste
+  it('falls back to a generic name when neither nickname nor hostname came', () => {
+    expect(machineLabelOf(maintenance({ computerDisplayName: null, computerName: null } as never))).toBe('Máquina');
+    expect(machineLabelOf(maintenance({ computerId: null, otherMachine: null }))).toBe(
+      'Equipamento não identificado',
+    );
   });
 });

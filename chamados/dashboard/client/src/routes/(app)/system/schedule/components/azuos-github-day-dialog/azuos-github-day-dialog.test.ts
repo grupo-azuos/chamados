@@ -77,3 +77,80 @@ describe('GithubDayDialog', () => {
     expect(screen.getByText('Nenhum PR sincronizado neste dia.')).toBeInTheDocument();
   });
 });
+
+describe('GithubDayDialog — kinds of activity', () => {
+  const renderDialog = (
+    type: 'issue' | 'merge' | 'all' | undefined,
+    items: SoftwareTimelineEvent[],
+  ) =>
+    render(GithubDayDialog, {
+      data: { date: '2026-10-06', type, items, total: items.length, page: 1, pageSize: 5 },
+      actions: { onClose: vi.fn(), onPageChange: vi.fn() },
+    });
+
+  // feliz
+  it('lists merges with their own title, noun and status', () => {
+    renderDialog('merge', [{ ...event, type: 'merge', url: null }]);
+    expect(screen.getByText('Merges locais do dia 06/10/2026')).toBeInTheDocument();
+    expect(screen.getByText('Merge local')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByText('#42 · Corrige o calendário')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('prefixes every kind when showing all activities of the day', () => {
+    renderDialog('all', [
+      { ...event, id: 1, type: 'issue', status: 'open', title: 'Issue aberta' },
+      { ...event, id: 2, type: 'merge', status: 'merged', title: 'Merge feito' },
+      { ...event, id: 3, type: 'pr', status: 'closed', title: 'PR fechado', authorName: 'Ana Lima' },
+      { ...event, id: 4, type: 'pr', status: 'open', title: 'PR aberto', projectName: null, author: null },
+    ]);
+    expect(screen.getByText('Atividades do GitHub do dia 06/10/2026')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Issue #42 · Issue aberta' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Merge #42 · Merge feito' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'PR #42 · PR fechado' })).toBeInTheDocument();
+    expect(screen.getByText('Aberta')).toBeInTheDocument();
+    expect(screen.getByText('Fechado')).toBeInTheDocument();
+    expect(screen.getByText('Aberto')).toBeInTheDocument();
+    expect(screen.getByText('Azuos Ticket · por Ana Lima')).toBeInTheDocument();
+    expect(screen.getByText('Projeto · por desconhecido')).toBeInTheDocument();
+  });
+
+  // triste
+  it.each([
+    ['issue', 'Nenhuma issue sincronizada neste dia.'],
+    ['merge', 'Nenhum merge local sincronizado neste dia.'],
+    ['all', 'Nenhuma atividade sincronizada neste dia.'],
+  ] as const)('explains an empty %s day', (type, message) => {
+    renderDialog(type, []);
+    expect(screen.getByText(message)).toBeInTheDocument();
+  });
+});
+
+describe('GithubDayDialog — who did it', () => {
+  // feliz
+  it('prefers the display name of the author', () => {
+    render(GithubDayDialog, {
+      data: { date: '2026-10-06', items: [{ ...event, authorName: 'Ana Lima' }], total: 1, page: 1, pageSize: 5 },
+      actions: { onClose: vi.fn(), onPageChange: vi.fn() },
+    });
+
+    expect(screen.getByText('Azuos Ticket · por Ana Lima')).toBeInTheDocument();
+  });
+
+  // triste
+  it('falls back to a generic project and an unknown author', () => {
+    render(GithubDayDialog, {
+      data: {
+        date: '2026-10-06',
+        items: [{ ...event, projectName: null, author: null, authorName: null }],
+        total: 1,
+        page: 1,
+        pageSize: 5,
+      },
+      actions: { onClose: vi.fn(), onPageChange: vi.fn() },
+    });
+
+    expect(screen.getByText('Projeto · por desconhecido')).toBeInTheDocument();
+  });
+});

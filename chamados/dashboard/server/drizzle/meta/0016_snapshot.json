@@ -1,5 +1,5 @@
 {
-  "id": "d055a7c3-84a4-47e8-8ce1-2e5d4a8a59de",
+  "id": "f43261d5-515a-4900-a402-d26826c5c4f0",
   "prevId": "5bdfc914-69db-44cc-8e77-40e2bbc71a2d",
   "version": "7",
   "dialect": "postgresql",
@@ -1141,6 +1141,24 @@
           "primaryKey": false,
           "notNull": false
         },
+        "department": {
+          "name": "department",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_name": {
+          "name": "user_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "code": {
           "name": "code",
           "type": "text",
@@ -1222,19 +1240,41 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "inventory_items_department_idx": {
+          "name": "inventory_items_department_idx",
+          "columns": [
+            {
+              "expression": "department",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "inventory_items_user_id_idx": {
+          "name": "inventory_items_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "inventory_items_code_unique": {
-          "name": "inventory_items_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
         "inventory_items_category_valid": {
@@ -3185,8 +3225,8 @@
       },
       "isRLSEnabled": false
     },
-    "chamados.ticket_problem_types": {
-      "name": "ticket_problem_types",
+    "chamados.ticket_relations": {
+      "name": "ticket_relations",
       "schema": "chamados",
       "columns": {
         "id": {
@@ -3195,15 +3235,15 @@
           "primaryKey": true,
           "notNull": true
         },
-        "area": {
-          "name": "area",
-          "type": "text",
+        "ticket_id": {
+          "name": "ticket_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "name": {
-          "name": "name",
-          "type": "text",
+        "related_ticket_id": {
+          "name": "related_ticket_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -3218,23 +3258,23 @@
           "name": "created_by",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         }
       },
       "indexes": {
-        "ticket_problem_types_area_name_idx": {
-          "name": "ticket_problem_types_area_name_idx",
+        "ticket_relations_pair_idx": {
+          "name": "ticket_relations_pair_idx",
           "columns": [
             {
-              "expression": "area",
+              "expression": "ticket_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "lower(\"name\")",
+              "expression": "related_ticket_id",
+              "isExpression": false,
               "asc": true,
-              "isExpression": true,
               "nulls": "last"
             }
           ],
@@ -3243,11 +3283,26 @@
           "method": "btree",
           "with": {}
         },
-        "ticket_problem_types_area_idx": {
-          "name": "ticket_problem_types_area_idx",
+        "ticket_relations_ticket_idx": {
+          "name": "ticket_relations_ticket_idx",
           "columns": [
             {
-              "expression": "area",
+              "expression": "ticket_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ticket_relations_related_ticket_idx": {
+          "name": "ticket_relations_related_ticket_idx",
+          "columns": [
+            {
+              "expression": "related_ticket_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3259,14 +3314,43 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "ticket_relations_ticket_id_tickets_id_fk": {
+          "name": "ticket_relations_ticket_id_tickets_id_fk",
+          "tableFrom": "ticket_relations",
+          "tableTo": "tickets",
+          "schemaTo": "chamados",
+          "columnsFrom": [
+            "ticket_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ticket_relations_related_ticket_id_tickets_id_fk": {
+          "name": "ticket_relations_related_ticket_id_tickets_id_fk",
+          "tableFrom": "ticket_relations",
+          "tableTo": "tickets",
+          "schemaTo": "chamados",
+          "columnsFrom": [
+            "related_ticket_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "ticket_problem_types_area_valid": {
-          "name": "ticket_problem_types_area_valid",
-          "value": "\"chamados\".\"ticket_problem_types\".\"area\" in ('infra', 'sistema', 'manutencao')"
+        "ticket_relations_different": {
+          "name": "ticket_relations_different",
+          "value": "\"chamados\".\"ticket_relations\".\"ticket_id\" <> \"chamados\".\"ticket_relations\".\"related_ticket_id\""
         }
       },
       "isRLSEnabled": false
@@ -3423,188 +3507,6 @@
         "ticket_service_orders_status_valid": {
           "name": "ticket_service_orders_status_valid",
           "value": "\"chamados\".\"ticket_service_orders\".\"status_at_issue\" in ('open', 'requester_reply', 'in_progress', 'waiting_requester', 'waiting_third_party', 'resolved', 'resolved_with_caveats', 'cancelled')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "chamados.ticket_stock_items": {
-      "name": "ticket_stock_items",
-      "schema": "chamados",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "ticket_id": {
-          "name": "ticket_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "part_id": {
-          "name": "part_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "inventory_item_id": {
-          "name": "inventory_item_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "item_name": {
-          "name": "item_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "direction": {
-          "name": "direction",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "quantity": {
-          "name": "quantity",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "settled_at": {
-          "name": "settled_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by_name": {
-          "name": "created_by_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "ticket_stock_items_ticket_idx": {
-          "name": "ticket_stock_items_ticket_idx",
-          "columns": [
-            {
-              "expression": "ticket_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "ticket_stock_items_part_idx": {
-          "name": "ticket_stock_items_part_idx",
-          "columns": [
-            {
-              "expression": "part_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "ticket_stock_items_inventory_item_idx": {
-          "name": "ticket_stock_items_inventory_item_idx",
-          "columns": [
-            {
-              "expression": "inventory_item_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "ticket_stock_items_ticket_id_tickets_id_fk": {
-          "name": "ticket_stock_items_ticket_id_tickets_id_fk",
-          "tableFrom": "ticket_stock_items",
-          "tableTo": "tickets",
-          "schemaTo": "chamados",
-          "columnsFrom": [
-            "ticket_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "ticket_stock_items_part_id_parts_id_fk": {
-          "name": "ticket_stock_items_part_id_parts_id_fk",
-          "tableFrom": "ticket_stock_items",
-          "tableTo": "parts",
-          "schemaTo": "chamados",
-          "columnsFrom": [
-            "part_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "ticket_stock_items_inventory_item_id_inventory_items_id_fk": {
-          "name": "ticket_stock_items_inventory_item_id_inventory_items_id_fk",
-          "tableFrom": "ticket_stock_items",
-          "tableTo": "inventory_items",
-          "schemaTo": "chamados",
-          "columnsFrom": [
-            "inventory_item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "ticket_stock_items_one_source": {
-          "name": "ticket_stock_items_one_source",
-          "value": "(\"chamados\".\"ticket_stock_items\".\"part_id\" is null) <> (\"chamados\".\"ticket_stock_items\".\"inventory_item_id\" is null)"
-        },
-        "ticket_stock_items_direction_valid": {
-          "name": "ticket_stock_items_direction_valid",
-          "value": "\"chamados\".\"ticket_stock_items\".\"direction\" in ('out', 'in')"
-        },
-        "ticket_stock_items_quantity_positive": {
-          "name": "ticket_stock_items_quantity_positive",
-          "value": "\"chamados\".\"ticket_stock_items\".\"quantity\" > 0"
         }
       },
       "isRLSEnabled": false
@@ -4065,6 +3967,10 @@
         "tickets_area_valid": {
           "name": "tickets_area_valid",
           "value": "\"chamados\".\"tickets\".\"area\" in ('infra', 'sistema', 'manutencao')"
+        },
+        "tickets_problem_type_valid": {
+          "name": "tickets_problem_type_valid",
+          "value": "\"chamados\".\"tickets\".\"problem_type\" in ('network', 'slow_computer', 'printer', 'email', 'internal_system', 'digital_certificate', 'software_install', 'remote_access', 'other', 'bug', 'feature_request', 'access_request', 'data_correction', 'air_conditioning', 'furniture', 'lighting', 'cleaning', 'structural')"
         }
       },
       "isRLSEnabled": false

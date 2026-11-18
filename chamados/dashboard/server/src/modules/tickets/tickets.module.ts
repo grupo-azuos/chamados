@@ -11,6 +11,8 @@ import { TicketAttachmentsRepository } from './repository/ticket-attachments.rep
 import { TicketHistoriesRepository } from './repository/ticket-histories.repository';
 import { TicketsRepository } from './repository/tickets.repository';
 import { TicketWatchersRepository } from './repository/ticket-watchers.repository';
+import { TicketRelationsRepository } from './repository/ticket-relations.repository';
+import { TicketRelationsService } from './service/ticket-relations.service';
 import { TicketProblemTypesRepository } from './repository/ticket-problem-types.repository';
 import { TicketStockItemsRepository } from './repository/ticket-stock-items.repository';
 import { TicketComputersRepository } from './repository/ticket-computers.repository';
@@ -28,7 +30,6 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { TicketAssigneesService } from './service/ticket-assignees.service';
 import { TicketWhatsappNotifierService } from './service/ticket-whatsapp-notifier.service';
 import { SoftwareProjectsModule } from '../software-projects/software-projects.module';
-import { DepartmentsModule } from '../departments/departments.module';
 
 /**
  * O índice da pasta: é o único arquivo fora das subpastas, e aponta para todo o resto.
@@ -36,7 +37,7 @@ import { DepartmentsModule } from '../departments/departments.module';
  */
 @Module({
   /* `AuthModule` dá o diretório de usuários, de onde sai quem pode ser responsável. */
-  imports: [SoftwareProjectsModule, AuthModule, RolesModule, WhatsappModule, DepartmentsModule],
+  imports: [SoftwareProjectsModule, AuthModule, RolesModule, WhatsappModule],
   controllers: [
     TicketServiceOrdersController,
     TicketsController,
@@ -58,6 +59,8 @@ import { DepartmentsModule } from '../departments/departments.module';
     TicketWhatsappNotifierService,
     TicketPeopleService,
     TicketWatchersRepository,
+    TicketRelationsService,
+    TicketRelationsRepository,
     TicketProblemTypesService,
     TicketProblemTypesRepository,
     TicketStockItemsService,

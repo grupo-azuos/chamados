@@ -356,7 +356,7 @@
           emptyLabel: 'Nada aconteceu no período escolhido.',
         }}
       />
-      <div class="border-border/60 mt-4 flex flex-wrap gap-2 border-t pt-3">
+      <div class="border-border mt-4 flex flex-wrap gap-2 border-t pt-3">
         <ActionButton
           data={{ label: 'Ver chamados' }}
           ui={{ variant: 'secondary', size: 'sm' }}
@@ -477,7 +477,7 @@
             <div
               use:fillFromPointer
               style:--fill-color={fillColorOf(healthStatusTone(machine.healthStatus))}
-              class="hover-fill border-border/70 bg-card rounded-surface border p-4 shadow-xs"
+              class="hover-fill border-border bg-card rounded-surface border p-4 shadow-xs"
             >
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0 flex-1">
@@ -498,7 +498,7 @@
                 {problemSummaryOf(machine)}
               </p>
 
-              <div class="border-border/60 mt-3 flex items-center justify-end border-t pt-2">
+              <div class="border-border mt-3 flex items-center justify-end border-t pt-2">
                 <ActionButton
                   data={{ label: 'Abrir ficha' }}
                   ui={{ variant: 'secondary', size: 'sm' }}

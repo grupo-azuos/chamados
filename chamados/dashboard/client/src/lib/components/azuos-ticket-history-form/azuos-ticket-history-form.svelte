@@ -71,7 +71,7 @@
   const EFFECT_CLASSES: Record<TicketHistoryEffect, string> = {
     closes: 'bg-warning-soft text-foreground',
     moves: 'bg-info-soft text-foreground',
-    keeps: 'border-border bg-muted/40 text-muted-foreground',
+    keeps: 'border-border bg-muted text-muted-foreground',
   };
 </script>
 
@@ -121,7 +121,7 @@
         <label
           class={cn(
             'relative control-lg rounded-control border-border bg-card text-foreground inline-flex cursor-pointer items-center gap-2 border text-sm font-medium transition-colors',
-            'hover:bg-muted/60 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
+            'hover:bg-muted has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
             'has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
             data.type === option.value &&
               (isClosingGroup
@@ -152,7 +152,7 @@
     {/if}
 
     {#if data.groups.closing.length > 0}
-      <div class="border-border/70 border-t pt-4">
+      <div class="border-border border-t pt-4">
         {@render typeGroup('Encerrar o chamado', data.groups.closing, true)}
       </div>
     {/if}
@@ -210,7 +210,7 @@
       <label
         class={cn(
           'control-lg rounded-control border-input bg-card text-foreground flex cursor-pointer items-center gap-2.5 border text-sm transition-colors',
-          'hover:bg-muted/40 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
+          'hover:bg-muted has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
         )}
       >
         <input
@@ -250,7 +250,7 @@
   <div class="flex flex-col gap-2">
     <p class="text-muted-foreground text-xs font-medium">
       Arquivos deste histórico
-      <span class="text-muted-foreground/70 font-normal">— entram junto, ao registrar</span>
+      <span class="text-muted-foreground font-normal">— entram junto, ao registrar</span>
     </p>
     <AttachmentPicker
       data={{ files: data.chosenFiles }}

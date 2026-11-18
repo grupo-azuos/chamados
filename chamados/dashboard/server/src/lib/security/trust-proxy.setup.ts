@@ -27,10 +27,10 @@ export class TrustProxySetup implements OnApplicationBootstrap {
     const instance = this.adapterHost.httpAdapter?.getInstance<ExpressLike>();
     if (typeof instance?.set !== 'function') return;
 
-    instance.set('trust proxy', this.env.API_TRUST_PROXY_HOPS);
+    instance.set('trust proxy', this.env.TRUST_PROXY_HOPS);
 
-    if (this.env.API_TRUST_PROXY_HOPS > 0) {
-      this.logger.log(`Trusting ${this.env.API_TRUST_PROXY_HOPS} proxy hop(s) for the client IP.`);
+    if (this.env.TRUST_PROXY_HOPS > 0) {
+      this.logger.log(`Trusting ${this.env.TRUST_PROXY_HOPS} proxy hop(s) for the client IP.`);
     }
   }
 }

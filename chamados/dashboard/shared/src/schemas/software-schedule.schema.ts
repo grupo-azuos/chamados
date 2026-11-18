@@ -6,6 +6,7 @@ import {
   SOFTWARE_PROJECT_COLORS,
   scheduleEndTimeError,
 } from '../domain/software-project.util';
+import { partialUpdate } from './partial-update.schema';
 
 export const scheduleCategorySchema = z.enum(SCHEDULE_EVENT_CATEGORIES);
 export const scheduleKindSchema = z.enum(SCHEDULE_EVENT_KINDS);
@@ -30,7 +31,7 @@ export const softwareScheduleEventSchema = z.object({
     .nullable(),
   /** A descrição do item (a coluna guarda o nome antigo, de quando era "Observações"). */
   note: z.string().nullable(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   /** Quem marcou — para a tela mostrar e decidir se oferece alterar e excluir. */
   createdById: z.string().nullable(),
   createdByEmail: z.string(),
@@ -43,7 +44,7 @@ const softwareScheduleEventInputSchema = z.object({
   kind: scheduleKindSchema.default('appointment'),
   projectId: z.number().int().optional().nullable(),
   title: z
-    .string({ required_error: 'Informe o título do compromisso' })
+    .string({ error: 'Informe o título do compromisso' })
     .trim()
     .min(1, 'Informe o título do compromisso'),
   category: scheduleCategorySchema.default('other'),
@@ -77,7 +78,7 @@ export const createSoftwareScheduleEventSchema =
 export type CreateSoftwareScheduleEventInput = z.infer<typeof createSoftwareScheduleEventSchema>;
 
 /* Na alteração, o fim só é cobrado depois de juntar com o que já está gravado — no serviço. */
-export const updateSoftwareScheduleEventSchema = softwareScheduleEventInputSchema.partial();
+export const updateSoftwareScheduleEventSchema = partialUpdate(softwareScheduleEventInputSchema);
 export type UpdateSoftwareScheduleEventInput = z.infer<typeof updateSoftwareScheduleEventSchema>;
 
 export const softwareScheduleQuerySchema = z.object({

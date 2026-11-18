@@ -1,7 +1,8 @@
 import { ticketAreaLabel } from '@template/shared/domain/ticket-catalog.util';
 import { type PublicTicket } from '@template/shared/schemas/ticket.schema';
-import { render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { createRawSnippet } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 
 import TicketLookupView, { journeyOf, splitMine } from './azuos-ticket-lookup-view.svelte';
@@ -241,7 +242,6 @@ describe('AzuosTicketLookupView', () => {
   });
 });
 
-
 describe('AzuosTicketLookupView — pessoas vinculadas', () => {
   // feliz
   it('marks the tickets the person is in because someone linked her', () => {
@@ -273,12 +273,15 @@ describe('AzuosTicketLookupView — pessoas vinculadas', () => {
   it('lists who is linked and goes back to the list', async () => {
     const onBackToList = vi.fn();
     setup({
-      data: { protocol: 'CH-0007', ticket: { ...ticket, watchers: [{ id: 'u-1', name: 'Caio Reis' }] } },
+      data: {
+        protocol: 'CH-0007',
+        ticket: { ...ticket, watchers: [{ id: 'u-1', name: 'Caio Reis' }] },
+      },
       actions: { ...actions, onBackToList },
     });
 
     expect(screen.getByText('Caio Reis')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Meus chamados' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar para meus chamados' }));
     expect(onBackToList).toHaveBeenCalled();
   });
 
@@ -287,7 +290,7 @@ describe('AzuosTicketLookupView — pessoas vinculadas', () => {
     setup();
 
     expect(screen.queryByText('Vinculados')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Meus chamados' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Voltar para meus chamados' })).toBeNull();
   });
 });
 
@@ -335,5 +338,60 @@ describe('AzuosTicketLookupView — abas e trilha', () => {
   // triste
   it('splits an empty list into two empty groups', () => {
     expect(splitMine([])).toEqual({ running: [], closed: [] });
+  });
+});
+
+describe('AzuosTicketLookupView — Enter, the list states and the actions slot', () => {
+  // feliz
+  it('searches with Enter and renders the actions a ticket offers', async () => {
+    vi.mocked(actions.onSearch).mockClear();
+    setup({
+      data: { protocol: 'CH-0007', ticket },
+      slots: { ticketActions: createRawSnippet(() => ({ render: () => '<p>ações do chamado</p>' })) },
+    });
+
+    await fireEvent.submit(screen.getByRole('textbox', { name: 'Número do chamado' }).closest('form')!);
+    expect(actions.onSearch).toHaveBeenCalledOnce();
+    expect(screen.getByText('ações do chamado')).toBeInTheDocument();
+  });
+
+  // triste
+  it('shows the failure of the list, then its loading skeleton', () => {
+    setup({ state: { mineError: 'Não consegui ler seus chamados.' } });
+    expect(screen.getByText('Não consegui ler seus chamados.')).toBeInTheDocument();
+
+    cleanup();
+    setup({ state: { isLoadingMine: true, isSearching: true } });
+    expect(screen.getByRole('list', { name: 'Carregando os seus chamados' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Número do chamado' })).toBeDisabled();
+  });
+
+  // triste
+  it('says there is nothing closed yet when the closed tab is empty', async () => {
+    setup({
+      data: {
+        mine: [{ id: 1, protocol: 'CH-0001', status: 'open', priority: 'high', area: 'infra', problemType: 'printer', description: 'x', createdAt: '2026-10-14T13:00:00.000Z', isWatching: false }],
+      },
+    });
+    await userEvent.click(screen.getByRole('button', { name: /encerrados/i }));
+    expect(screen.getByText('Nenhum chamado encerrado ainda.')).toBeInTheDocument();
+  });
+});
+
+describe('AzuosTicketLookupView — typing the protocol and a box with only closed tickets', () => {
+  // feliz
+  it('reports what is typed and opens on the closed tab when nothing is running', async () => {
+    vi.mocked(actions.onProtocolChange).mockClear();
+    setup({
+      data: {
+        mine: [{ id: 2, protocol: 'CH-0002', status: 'resolved', priority: 'low', area: 'infra', problemType: 'printer', description: 'x', createdAt: '2026-10-14T13:00:00.000Z', isWatching: false }],
+        ticket: { ...ticket, attachments: [{ id: 1, ticketId: 7, historyId: 3, kind: 'pdf', origin: 'requester', fileName: 'nota.pdf', contentType: 'application/pdf', sizeBytes: 10, viewUrl: 'https://r2/abrir', downloadUrl: 'https://r2/baixar', createdAt: '2026-09-15T12:10:00.000Z', createdBy: null }] },
+      },
+    });
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Número do chamado' }), 'C');
+    expect(actions.onProtocolChange).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /CH-0002/ })).toBeInTheDocument();
+    expect(screen.queryByText('Arquivos do chamado')).not.toBeInTheDocument();
   });
 });

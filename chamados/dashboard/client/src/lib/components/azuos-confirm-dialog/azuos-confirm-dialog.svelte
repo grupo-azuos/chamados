@@ -52,7 +52,7 @@
       <div class="flex items-center gap-2.5">
         <span class={cn(
           "flex size-7 shrink-0 items-center justify-center rounded-chip",
-          isDanger ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+          isDanger ? "bg-muted text-destructive" : "bg-muted text-primary"
         )}>
           {#if isDanger}
             <AlertTriangle class="size-4" aria-hidden="true" />

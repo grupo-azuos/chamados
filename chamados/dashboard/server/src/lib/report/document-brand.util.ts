@@ -3,6 +3,8 @@ import { join } from 'node:path';
 
 import { type DocumentDefinition } from './document.type';
 
+import { serverAsset } from '../config/server-root';
+
 /**
  * A MARCA nos documentos: o nome, as logos, a fonte e a linha "Gerado em". É o mesmo padrão da
  * Gestão de RH (`gestao-rh/server/src/modules/report-files`) — o papel timbrado da casa —, para
@@ -11,7 +13,7 @@ import { type DocumentDefinition } from './document.type';
 export const BRAND_NAME = 'Grupo Azuos · Chamados';
 
 /** A pasta dos arquivos da marca — a ÚNICA de onde o gerador de PDF pode ler. */
-export const DOCUMENT_ASSETS = join(__dirname, 'assets');
+export const DOCUMENT_ASSETS = serverAsset('lib/report/assets');
 
 /**
  * A logo oficial em três versões, tiradas do vetor do repositório de marca: a azul vai sobre o

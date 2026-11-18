@@ -74,7 +74,7 @@
           aria-describedby={fieldState?.error ? errorId : undefined}
           disabled={fieldState?.isDisabled}
           onblur={() => !isOpen && actions.onBlur?.()}
-          class="h-10 w-full min-w-0 justify-start gap-2 rounded-control border-border bg-card px-3.5 font-normal shadow-xs hover:bg-accent/40"
+          class="h-10 w-full min-w-0 justify-start gap-2 rounded-control border-border bg-card px-3.5 font-normal shadow-xs hover:bg-muted"
         >
           <Clock class="size-4 text-muted-foreground" aria-hidden="true" />
           <span class={cn('tabular-nums', !hasValue && 'text-muted-foreground')}>

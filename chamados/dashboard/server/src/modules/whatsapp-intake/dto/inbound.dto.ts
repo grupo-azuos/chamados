@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 
 /* Uma mensagem de WhatsApp tem teto bem maior; um formulário preenchido cabe com folga aqui. */

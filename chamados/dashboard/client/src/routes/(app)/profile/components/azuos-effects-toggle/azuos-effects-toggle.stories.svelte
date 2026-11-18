@@ -16,7 +16,7 @@
 <Story name="Default" />
 
 <!-- Variante de contraste para superfícies azuis. -->
-<Story name="InSidebarRow">
+<Story name="InSidebarRow" asChild>
   <div class="flex w-56 items-center justify-between">
     <span class="text-xs font-medium">Efeitos</span>
     <EffectsToggle />
@@ -24,7 +24,7 @@
 </Story>
 
 <!-- Com um item que usa o efeito: passe o mouse no cartão antes e depois de clicar no botão. -->
-<Story name="WithHoverFillSample">
+<Story name="WithHoverFillSample" asChild>
   <div class="flex w-72 flex-col gap-3">
     <div class="flex items-center justify-between">
       <span class="text-xs font-medium">Efeitos</span>

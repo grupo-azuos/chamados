@@ -82,9 +82,9 @@
   }
 
   const TONE_CLASSES: Record<ScheduleSummary['tone'], string> = {
-    danger: 'bg-destructive/10',
+    danger: 'bg-muted',
     warning: 'bg-warning-soft',
-    info: 'bg-primary/5',
+    info: 'bg-muted',
     neutral: 'bg-card',
   };
 </script>

@@ -5,6 +5,7 @@ import {
   defaultSeverityOf,
   networkEventTypeLabel,
   networkSeverityLabel,
+  networkSeverityTone,
   outageDurationSeconds,
 } from './network-event.util';
 
@@ -82,5 +83,18 @@ describe('outageDurationSeconds', () => {
     expect(
       outageDurationSeconds('2026-09-23T12:00:00.000Z', '2026-09-23T11:00:00.000Z'),
     ).toBeNull();
+  });
+});
+
+describe('networkSeverityTone', () => {
+  // feliz
+  it('paints by severity', () => {
+    expect(networkSeverityTone('critical')).toBe('danger');
+    expect(networkSeverityTone('attention')).toBe('warning');
+  });
+
+  // triste
+  it('leaves information neutral', () => {
+    expect(networkSeverityTone('info')).toBe('neutral');
   });
 });

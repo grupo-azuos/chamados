@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import { VERSION_NEUTRAL, Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import {
   ApiOkResponse,
@@ -20,7 +20,7 @@ import { HealthService } from '../service/health.service';
  * ser reiniciado por excesso de perguntas sobre se ele está vivo.
  */
 @ApiTags('Saúde')
-@Controller('health')
+@Controller({ path: 'health', version: VERSION_NEUTRAL })
 @Public()
 @SkipThrottle()
 export class HealthController {
@@ -45,9 +45,7 @@ export class HealthController {
   ): Promise<HealthStatusDto> {
     const status = await this.service.check();
 
-    response.status(
-      status.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE,
-    );
+    response.status(status.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE);
 
     return status;
   }

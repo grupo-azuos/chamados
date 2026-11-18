@@ -134,6 +134,7 @@
     onlyOnline: false,
     onlyOffline: false,
     alert: '',
+    resourceCondition: '',
     preventive: '',
   };
 
@@ -146,6 +147,7 @@
     onOfflineChange: () => {},
     onKindChange: () => {},
     onAlertChange: () => {},
+    onResourceConditionChange: () => {},
     onPreventiveChange: () => {},
     onClearFilters: () => {},
     onRetry: () => {},

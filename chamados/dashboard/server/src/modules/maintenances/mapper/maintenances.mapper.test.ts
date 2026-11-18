@@ -120,3 +120,39 @@ describe('toMaintenanceUpdate', () => {
     expect(toMaintenanceUpdate({}, ANA)).not.toHaveProperty('description');
   });
 });
+
+describe('maintenances mapper: machines from outside the inventory', () => {
+  // feliz
+  it('keeps the typed machine only when there is no inventory link', () => {
+    const outside = toMaintenanceInsert(
+      { type: 'cleaning', performedAt: AT, otherMachine: 'Impressora da recepção' },
+      ANA,
+    );
+    expect(outside).toMatchObject({ computerId: null, otherMachine: 'Impressora da recepção' });
+
+    const linked = toMaintenanceInsert(
+      { computerId: 3, type: 'cleaning', performedAt: AT, otherMachine: 'Ignorado' },
+      ANA,
+    );
+    expect(linked).toMatchObject({ computerId: 3, otherMachine: null });
+  });
+
+  it('swaps the sides when the machine changes on an update', () => {
+    const toInventory = toMaintenanceUpdate({ computerId: 5, otherMachine: 'Velha' }, ANA);
+    expect(toInventory).toMatchObject({ computerId: 5, otherMachine: null });
+
+    const toOutside = toMaintenanceUpdate({ computerId: null, otherMachine: 'Roteador' }, ANA);
+    expect(toOutside).toMatchObject({ computerId: null, otherMachine: 'Roteador' });
+
+    const cleared = toMaintenanceUpdate({ otherMachine: null, performedAt: AT }, ANA);
+    expect(cleared).toMatchObject({ otherMachine: null, performedAt: new Date(AT) });
+  });
+
+  // triste
+  it('changes nothing about the machine when the body does not mention it', () => {
+    const update = toMaintenanceUpdate({ description: 'Só a descrição' }, ANA);
+
+    expect(update).not.toHaveProperty('computerId');
+    expect(update).not.toHaveProperty('otherMachine');
+  });
+});

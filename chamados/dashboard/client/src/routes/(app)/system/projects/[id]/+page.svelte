@@ -3,7 +3,8 @@
   import { page } from '$app/state';
   import FolderCode from '@lucide/svelte/icons/folder-code';
 
-  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+
+  import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import { useSoftwareProjectDetailModel } from '$lib/hooks/use-software-project-detail/use-software-project-detail.svelte';
@@ -29,11 +30,7 @@
       data={{ title: 'Sistema não encontrado', description: 'Ele pode ter sido excluído.' }}
       ui={{ icon: FolderCode }}
     >
-      <ActionButton
-        data={{ label: 'Voltar para os projetos' }}
-        ui={{ variant: 'secondary' }}
-        actions={{ onClick: () => goto('/system/projects') }}
-      />
+      <BackButton data={{ destination: 'os projetos', to: '/system/projects' }} />
     </EmptyState>
   </div>
 {:else if detail.state.error}

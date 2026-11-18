@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   formatCount,
+  readChartTheme,
   resolveColor,
   resolveCssColors,
   selectionOf,
@@ -103,5 +104,85 @@ describe('echarts.util', () => {
 
   it('draws no tooltip when the chart asked for none', () => {
     expect(withChartTheme({}, THEME).tooltip).toBeUndefined();
+  });
+});
+
+describe('echarts.util — colours the browser cannot resolve', () => {
+  // triste
+  it('falls back to the light token, or to the reserve colour, for an unresolved variable', () => {
+    document.documentElement.style.setProperty('--primary', 'var(--brand)');
+    document.documentElement.style.setProperty('--nope', 'var(--none)');
+    try {
+      expect(resolveColor('var(--primary)')).not.toContain('var(');
+      expect(resolveColor('var(--nope)', '#abcdef')).toBe('#abcdef');
+    } finally {
+      document.documentElement.style.removeProperty('--primary');
+      document.documentElement.style.removeProperty('--nope');
+    }
+  });
+
+  // feliz
+  it('reads the clicked item by its id and without row or column', () => {
+    expect(selectionOf({ name: 'x', data: { id: 'node:1' }, dataType: 'node' })).toEqual({ name: 'node:1', kind: 'node', row: undefined, column: undefined });
+    expect(selectionOf({})).toEqual({ name: '', kind: undefined, row: undefined, column: undefined });
+  });
+
+  // feliz
+  it('keeps short labels whole and reads the theme from the document', () => {
+    expect(shortenLabel('Curto')).toBe('Curto');
+    expect(readChartTheme().font).toBeTruthy();
+  });
+});
+
+describe('echarts.util — edge cases', () => {
+  // feliz
+  it('keeps a resolved color when the probe element resolves the variable', () => {
+    const spy = vi
+      .spyOn(window, 'getComputedStyle')
+      .mockReturnValue({ color: 'rgb(1, 2, 3)', getPropertyValue: () => '' } as unknown as CSSStyleDeclaration);
+    try {
+      expect(resolveColor('var(--foreground)')).toBe('rgb(1, 2, 3)');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('themes the first tooltip when the option carries a list of them', () => {
+    const themed = withChartTheme({ tooltip: [{ trigger: 'item' }] }, THEME);
+
+    expect(themed.tooltip).toMatchObject({ trigger: 'item', backgroundColor: THEME.surface });
+  });
+
+  it('walks objects without a prototype like plain ones', () => {
+    const bare = Object.assign(Object.create(null) as Record<string, unknown>, { color: '#123456' });
+
+    expect(resolveCssColors(bare)).toEqual({ color: '#123456' });
+  });
+
+  // triste
+  /* Sem `document` (servidor), o tema é o de reserva e a cor vem do token conhecido ou da reserva. */
+  it('uses the fallback theme and token colors without a document', () => {
+    vi.stubGlobal('document', undefined);
+    try {
+      expect(readChartTheme()).toEqual(readChartTheme());
+      expect(resolveColor('var(--success)')).toMatch(/^#|^rgb|^oklch/);
+      expect(resolveColor('var(--nope)', '#abcdef')).toBe('#abcdef');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe('resolveColor — a broken variable', () => {
+  // triste
+  it('resolves to nothing when the variable has no name to look up', () => {
+    const spy = vi
+      .spyOn(window, 'getComputedStyle')
+      .mockReturnValue({ color: 'var(--x)', getPropertyValue: () => '' } as unknown as CSSStyleDeclaration);
+    try {
+      expect(resolveColor('var(', '#abcdef')).toBe('');
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

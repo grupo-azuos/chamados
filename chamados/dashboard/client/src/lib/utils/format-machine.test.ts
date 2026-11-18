@@ -87,3 +87,18 @@ describe('formatTimeAgo', () => {
     expect(formatTimeAgo('2026-09-23T12:00:30.000Z', NOW)).toBe('agora mesmo');
   });
 });
+
+describe('format-machine — short durations and how long ago', () => {
+  // feliz
+  it('reads seconds and minutes, and says how long ago in minutes, hours and days', () => {
+    expect(formatDuration(42)).toBe('42 s');
+    expect(formatDuration(600)).toBe('10 min');
+    const now = Date.parse('2026-09-23T12:00:00.000Z');
+    expect(formatTimeAgo('2026-09-23T11:59:00.000Z', now)).toBe('há 1 minuto');
+    expect(formatTimeAgo('2026-09-23T11:30:00.000Z', now)).toBe('há 30 minutos');
+    expect(formatTimeAgo('2026-09-23T11:00:00.000Z', now)).toBe('há 1 hora');
+    expect(formatTimeAgo('2026-09-23T09:00:00.000Z', now)).toBe('há 3 horas');
+    expect(formatTimeAgo('2026-09-22T12:00:00.000Z', now)).toBe('há 1 dia');
+    expect(formatTimeAgo('2026-09-20T12:00:00.000Z', now)).toBe('há 3 dias');
+  });
+});

@@ -129,11 +129,11 @@ cd chamados/dashboard
 docker compose -f docker/compose.yml up --build
 ```
 
-O bot sobe dentro do mesmo container (`docker/dockerfile`) quando `BOT_API_TOKEN` e
-`BOT_SESSION_KEY` estão definidos, escutando em `127.0.0.1:4005`. O volume (`bot-data`, em `/data`)
-guarda as conexões cifradas dos números vinculados. Perder o volume não perde dado de chamado — só
-obriga cada pessoa a ler o QR code de novo. O sistema roda com **uma instância só** do bot: a
-conexão com o WhatsApp fica viva dentro dele.
+Em produção o bot é uma stack à parte (`<ambiente>_chamados-bot`, de `bot/docker/compose.yml`),
+escutando na porta 4005 da rede de integrações. O volume `<ambiente>_chamados-bot_sessions`, em
+`/data`, guarda as conexões cifradas dos números vinculados. Perder o volume não perde dado de
+chamado — só obriga cada pessoa a ler o QR code de novo. O sistema roda com **uma instância só**
+do bot: a conexão com o WhatsApp fica viva dentro dele.
 
 ## A API
 

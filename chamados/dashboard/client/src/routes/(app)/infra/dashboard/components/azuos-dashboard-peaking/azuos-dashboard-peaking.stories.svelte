@@ -48,7 +48,7 @@
 />
 
 <!-- Caso limite: na largura de um celular. -->
-<Story name="OnPhone">
+<Story name="OnPhone" asChild>
   <div class="w-[360px]">
     <DashboardPeaking data={{ machines }} />
   </div>

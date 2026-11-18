@@ -14,7 +14,7 @@ import { departmentSchema } from './computer.schema';
 export const DEFAULT_INSIGHT_DAYS = 30;
 
 export const insightQuerySchema = z.object({
-  days: z.coerce.number().int().min(1).max(365).default(DEFAULT_INSIGHT_DAYS),
+  days: z.coerce.number<number>().int().min(1).max(365).default(DEFAULT_INSIGHT_DAYS),
 });
 
 export type InsightQuery = z.infer<typeof insightQuerySchema>;
@@ -87,7 +87,7 @@ export const troublesomeMachineSchema = z.object({
   alertCount: z.number().int(),
   /** Chamados abertos NO PERÍODO com esta máquina no chamado. */
   ticketCount: z.number().int(),
-  lastMaintenanceAt: z.string().datetime().nullable(),
+  lastMaintenanceAt: z.iso.datetime().nullable(),
 });
 
 export type TroublesomeMachine = z.infer<typeof troublesomeMachineSchema>;
@@ -106,7 +106,7 @@ export const spareMachineSchema = z.object({
   memoryGb: z.number().nullable(),
   diskGb: z.number().nullable(),
   cpuModel: z.string().nullable(),
-  lastSeenAt: z.string().datetime().nullable(),
+  lastSeenAt: z.iso.datetime().nullable(),
 });
 
 export type SpareMachine = z.infer<typeof spareMachineSchema>;

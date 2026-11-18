@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { cleanup, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -139,5 +139,29 @@ describe('AzuosRadarChart', () => {
 
     expect(screen.queryByText(/Sem dados/)).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+});
+
+describe('AzuosRadarChart — balloon and states', () => {
+  // feliz
+  it('lists every category with its count in the balloon', () => {
+    const option = radarOption(slices, 'Chamados', '#123456', { axisLabelMax: 16 }, { border: '#eee', muted: '#888' }) as {
+      tooltip: { formatter: () => string };
+    };
+    expect(option.tooltip.formatter()).toBe('Impressora: 29<br/>Computador lento: 30<br/>Internet / Rede: 15');
+  });
+
+  // triste
+  it('shows the placeholder while loading and explains an empty web', () => {
+    render(RadarChart, { props: { data: { slices: [], seriesLabel: 'Chamados' }, state: { isLoading: true }, ui: { heightClass: 'h-40', className: 'extra' } } });
+    expect(document.querySelector('.animate-pulse.h-40.extra')).not.toBeNull();
+
+    cleanup();
+    render(RadarChart, { props: { data: { slices: [], seriesLabel: 'Chamados' } } });
+    expect(screen.getByText('Sem dados para mostrar')).toBeInTheDocument();
+
+    cleanup();
+    render(RadarChart, { props: { data: { slices: [], seriesLabel: 'Chamados' }, ui: { emptyLabel: 'Nada por aqui' } } });
+    expect(screen.getByText('Nada por aqui')).toBeInTheDocument();
   });
 });

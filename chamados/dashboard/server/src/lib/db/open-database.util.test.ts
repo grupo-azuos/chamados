@@ -2,7 +2,12 @@ import { isAbsolute, join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { describeDatabaseUrl, MIGRATIONS_FOLDER, poolOptionsFor, SERVER_ROOT } from './open-database.util';
+import {
+  describeDatabaseUrl,
+  MIGRATIONS_FOLDER,
+  poolOptionsFor,
+  SERVER_ROOT,
+} from './open-database.util';
 
 /**
  * `openDatabase` não é testada aqui: ela conecta num Postgres de verdade e aplica migrations.
@@ -17,7 +22,7 @@ describe('poolOptionsFor', () => {
     expect(options.max).toBe(10);
     expect(options.idleTimeoutMillis).toBe(60_000);
     expect(options.maxLifetimeSeconds).toBe(1800);
-    expect(options.connectionTimeoutMillis).toBe(10_000);
+    expect(options.connectionTimeoutMillis).toBe(5_000);
   });
 });
 

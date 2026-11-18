@@ -3,7 +3,8 @@
   import { page } from '$app/state';
   import Ticket from '@lucide/svelte/icons/ticket';
 
-  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+
+  import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import { useTicketDetailModel } from '$lib/hooks/use-ticket-detail/use-ticket-detail.svelte';
@@ -39,7 +40,7 @@
       }}
       ui={{ icon: Ticket }}
     >
-      <ActionButton data={{ label: 'Voltar aos chamados' }} actions={{ onClick: backToQueue }} />
+      <BackButton data={{ destination: 'os chamados' }} actions={{ onClick: backToQueue }} />
     </EmptyState>
   </div>
 {:else if detail.state.error}

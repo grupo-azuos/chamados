@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type Request, type Response } from 'express';
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { Public } from '../../../lib/auth/public.decorator';
@@ -56,7 +56,7 @@ export class GithubIntegrationController {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
-      path: '/api/integrations/github',
+      path: '/api/v1/integrations/github',
       maxAge: 10 * 60_000,
     });
     response.setHeader('Cache-Control', 'no-store');
@@ -74,7 +74,7 @@ export class GithubIntegrationController {
     const name = cookieName(query.state ?? '');
     const browserSecret = readCookie(request, name);
     response.clearCookie(name, {
-      path: '/api/integrations/github',
+      path: '/api/v1/integrations/github',
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',

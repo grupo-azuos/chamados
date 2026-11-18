@@ -135,7 +135,8 @@
           aria-describedby={ariaDescribedBy}
           variant="outline"
           class={cn(
-            "w-full justify-start text-left font-normal h-10 px-3.5 rounded-control border-border bg-card hover:bg-accent/40 shadow-xs transition-colors",
+            /* Fundo sólido de campo também no escuro: a variante `outline` traz `dark:bg-input/30`. */
+            "w-full justify-start text-left font-normal h-10 px-3.5 rounded-control border-input bg-muted dark:bg-muted hover:bg-accent dark:hover:bg-accent text-foreground shadow-xs transition-colors",
             !internalDate && "text-muted-foreground"
           )}
           {disabled}

@@ -15,7 +15,7 @@ export const PERFORMED_BY_MAX_LENGTH = 200;
 export const OTHER_MACHINE_MAX_LENGTH = 200;
 
 export const maintenanceTypeSchema = z.enum(MAINTENANCE_TYPES, {
-  errorMap: () => ({ message: 'Escolha um tipo de manutenção da lista' }),
+  error: 'Escolha um tipo de manutenção da lista',
 });
 
 const optionalText = (max: number, tooLong: string) =>
@@ -64,11 +64,11 @@ export const maintenanceSchema = z.object({
   description: z.string().nullable(),
   /** Quem fez o serviço. Texto livre: pode ser alguém de fora da empresa. */
   performedBy: z.string().nullable(),
-  performedAt: z.string().datetime(),
+  performedAt: z.iso.datetime(),
 
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string(),
-  updatedAt: z.string().datetime().nullable(),
+  updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
 });
 
@@ -81,9 +81,9 @@ export type Maintenance = z.infer<typeof maintenanceSchema>;
  * serve para nada: um histórico que não diz de quem é não responde "esta máquina dá trabalho
  * demais?", que é a pergunta que ele existe para responder.
  */
-function requireMachine<T extends { computerId?: number | null; otherMachine?: string | null }>(
-  schema: z.ZodType<T>,
-) {
+function requireMachine<
+  TSchema extends z.ZodType<{ computerId?: number | null; otherMachine?: string | null }>,
+>(schema: TSchema): TSchema {
   return schema.superRefine((value, context) => {
     if (value.computerId || value.otherMachine) return;
 
@@ -102,7 +102,7 @@ const maintenanceInputShape = {
   description: descriptionSchema.optional(),
   performedBy: performedBySchema.optional(),
   /** Quando o serviço foi feito — não é a data em que alguém digitou. */
-  performedAt: z.string().datetime({ message: 'Informe uma data válida' }),
+  performedAt: z.iso.datetime({ message: 'Informe uma data válida' }),
 };
 
 export const createMaintenanceSchema = requireMachine(z.object(maintenanceInputShape));
@@ -112,7 +112,7 @@ export type CreateMaintenanceInput = z.input<typeof createMaintenanceSchema>;
 export const updateMaintenanceSchema = z.object({
   ...maintenanceInputShape,
   type: maintenanceTypeSchema.optional(),
-  performedAt: z.string().datetime({ message: 'Informe uma data válida' }).optional(),
+  performedAt: z.iso.datetime({ message: 'Informe uma data válida' }).optional(),
 });
 
 export type UpdateMaintenanceInput = z.input<typeof updateMaintenanceSchema>;
@@ -150,7 +150,7 @@ export type MaintenanceFormValues = z.input<typeof maintenanceFormSchema>;
 
 export const maintenanceListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
-  computerId: z.coerce.number().int().optional(),
+  computerId: z.coerce.number<number>().int().optional(),
   type: maintenanceTypeSchema.optional(),
 });
 
@@ -169,7 +169,7 @@ export const preventiveDueSchema = z.object({
   computerName: z.string(),
   computerDisplayName: z.string().nullable(),
   computerDepartment: departmentSchema.nullable(),
-  lastDoneAt: z.string().datetime().nullable(),
+  lastDoneAt: z.iso.datetime().nullable(),
   status: z.enum(PREVENTIVE_STATUSES),
   /** Quantas manutenções esta máquina já teve — três ou mais já é candidata a troca. */
   maintenanceCount: z.number().int(),
@@ -181,7 +181,7 @@ export const SCHEDULE_NOTE_MAX_LENGTH = 300;
 
 /** Um DIA sem hora, como o campo de data do navegador entrega: `AAAA-MM-DD`. */
 const scheduleDaySchema = z
-  .string({ required_error: 'Informe a data' })
+  .string({ error: 'Informe a data' })
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe uma data válida')
   .refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00`)), 'Informe uma data válida');
 
@@ -204,9 +204,9 @@ export const maintenanceScheduleSchema = z.object({
   computerDepartment: departmentSchema.nullable(),
   scheduledFor: z.string(),
   note: z.string().nullable(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   createdBy: z.string(),
-  updatedAt: z.string().datetime().nullable(),
+  updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
 });
 
@@ -240,7 +240,7 @@ export function maintenanceScheduleFormSchema(today: string) {
 export type MaintenanceScheduleFormValues = { scheduledFor: string; note: string };
 
 export const maintenanceScheduleListQuerySchema = z.object({
-  computerId: z.coerce.number().int().optional(),
+  computerId: z.coerce.number<number>().int().optional(),
 });
 
 export type MaintenanceScheduleListQuery = z.infer<typeof maintenanceScheduleListQuerySchema>;

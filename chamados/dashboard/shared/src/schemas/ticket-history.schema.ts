@@ -21,7 +21,7 @@ export const HISTORY_DESCRIPTION_MAX_LENGTH = 5000;
 /** Um mês inteiro de trabalho, em minutos: acima disso é erro de digitação, não esforço. */
 export const HISTORY_MINUTES_MAX = 60 * 24 * 31;
 
-const chooseFrom = (what: string) => ({ errorMap: () => ({ message: `Escolha ${what}` }) });
+const chooseFrom = (what: string) => ({ error: () => ({ message: `Escolha ${what}` }) });
 
 export const ticketHistoryTypeSchema = z.enum(
   TICKET_HISTORY_TYPES,
@@ -35,7 +35,7 @@ export const manualTicketHistoryTypeSchema = z.enum(
 );
 
 const descriptionSchema = z
-  .string({ required_error: 'Descreva o que aconteceu' })
+  .string({ error: 'Descreva o que aconteceu' })
   .trim()
   .min(1, 'Descreva o que aconteceu')
   .max(
@@ -67,7 +67,7 @@ export const ticketHistorySchema = z.object({
   minutesSpent: z.number().int().nullable(),
   authorName: z.string(),
   createdBy: z.string().nullable(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   /** Os arquivos anexados JUNTO com este histórico. */
   attachments: z.array(ticketAttachmentSchema),
 });
@@ -117,7 +117,7 @@ export const createTicketHistorySchema = z.object({
     .preprocess(
       (value) => (value === '' || value === undefined || value === null ? null : Number(value)),
       z
-        .number({ invalid_type_error: 'Informe o tempo em minutos' })
+        .number({ error: 'Informe o tempo em minutos' })
         .int('Informe o tempo em minutos inteiros')
         .min(0, 'O tempo não pode ser negativo')
         .max(HISTORY_MINUTES_MAX, 'Esse tempo é maior do que um mês inteiro')

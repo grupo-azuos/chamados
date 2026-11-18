@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
+import { createZodDto } from '../../../lib/http/zod-dto';
 import {
   agentBundleRequestSchema,
   agentDownloadQuerySchema,
