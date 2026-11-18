@@ -14,26 +14,67 @@ function extractDatabaseName(url: string): string {
   return dbName;
 }
 
-async function createDatabaseViaMaintenance(
+/**
+ * Bases de manutenção, em ordem: o Postgres comum (homo) tem `postgres`; o gerenciado da
+ * DigitalOcean (prod) não tem `postgres`, só `defaultdb`.
+ */
+const MAINTENANCE_DATABASES = ['postgres', 'defaultdb'] as const;
+
+function errorCode(error: unknown): string | undefined {
+  if (error && typeof error === 'object' && 'code' in error) {
+    return String((error as { code: unknown }).code);
+  }
+  return undefined;
+}
+
+/** Conecta na base de manutenção; `null` quando ela não existe neste servidor. */
+async function connectMaintenance(
   url: string,
-  dbName: string,
+  maintenanceDb: string,
   sslCa?: string,
-): Promise<void> {
+): Promise<Client | null> {
   const maintenance = new URL(url);
-  maintenance.pathname = '/postgres';
+  maintenance.pathname = `/${maintenanceDb}`;
 
   const admin = new Client({
     ...connectionOptions(maintenance.toString(), sslCa),
     connectionTimeoutMillis: 5000,
   });
 
-  await admin.connect();
   try {
-    await admin.query(`CREATE DATABASE "${dbName.replace(/"/g, '""')}"`);
-    new Logger('DatabaseBootstrap').log(`Created database "${dbName}" via /postgres.`);
-  } finally {
-    await admin.end();
+    await admin.connect();
+    return admin;
+  } catch (error: unknown) {
+    await admin.end().catch(() => undefined);
+    if (errorCode(error) === DATABASE_MISSING) return null;
+    throw error;
   }
+}
+
+async function createDatabaseViaMaintenance(
+  url: string,
+  dbName: string,
+  sslCa?: string,
+): Promise<void> {
+  for (const maintenanceDb of MAINTENANCE_DATABASES) {
+    const admin = await connectMaintenance(url, maintenanceDb, sslCa);
+    if (!admin) continue;
+
+    try {
+      await admin.query(`CREATE DATABASE "${dbName.replace(/"/g, '""')}"`);
+      new Logger('DatabaseBootstrap').log(`Created database "${dbName}" via /${maintenanceDb}.`);
+      return;
+    } finally {
+      await admin.end();
+    }
+  }
+
+  throw Object.assign(
+    new Error(
+      `No maintenance database (${MAINTENANCE_DATABASES.join(', ')}) to create "${dbName}"`,
+    ),
+    { code: DATABASE_MISSING },
+  );
 }
 
 async function probeDatabase(url: string, sslCa?: string): Promise<string | null> {
@@ -64,7 +105,8 @@ async function probeDatabase(url: string, sslCa?: string): Promise<string | null
  * Cria o database da URL se ele não existir (erro 3D000) — o mesmo do `shared-api` e do
  * `admin-console`: cada app da casa tem o PRÓPRIO database, e não um `apps` dividido.
  *
- * Conecta temporariamente na base de manutenção /postgres para executar o CREATE DATABASE.
+ * Conecta temporariamente na base de manutenção (/postgres, ou /defaultdb na DigitalOcean)
+ * para executar o CREATE DATABASE.
  * Num banco que já existe, a primeira conexão dá certo e nada mais acontece: a migration de
  * todo dia não precisa de permissão de `CREATE DATABASE`.
  */
