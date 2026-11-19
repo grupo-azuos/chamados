@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { slidingIndicator } from './sliding-indicator';
+import { slidingIndicator, targetOf } from './sliding-indicator';
 
 function menu(active: number) {
   const nav = document.createElement('nav');
@@ -58,5 +58,52 @@ describe('slidingIndicator — sliding to the next active item', () => {
       window.matchMedia = matchMedia;
       nav.remove();
     }
+  });
+});
+
+describe('targetOf', () => {
+  function box(rect: Partial<DOMRect>): DOMRect {
+    return { left: 0, top: 0, width: 0, height: 0, ...rect } as DOMRect;
+  }
+
+  // feliz
+  it('reads the layout box when the container is the positioned parent, ignoring the zoom', () => {
+    const node = document.createElement('div');
+    const active = document.createElement('button');
+    Object.defineProperties(active, {
+      offsetParent: { value: node },
+      offsetLeft: { value: 40 },
+      offsetTop: { value: 4 },
+      offsetWidth: { value: 120 },
+      offsetHeight: { value: 36 },
+    });
+    /* No meio do zoom a caixa da tela vem encolhida: ela não pode ser a medida. */
+    active.getBoundingClientRect = () => box({ left: 999, width: 60 });
+
+    expect(targetOf(node, active)).toEqual({ opacity: 1, x: 40, y: 4, width: 120, height: 36 });
+  });
+
+  // triste
+  it('takes the container border out of the screen box, so the highlight does not sit 1px off', () => {
+    const node = document.createElement('div');
+    const active = document.createElement('a');
+    Object.defineProperties(node, { clientLeft: { value: 1 }, clientTop: { value: 1 } });
+    node.getBoundingClientRect = () => box({ left: 10, top: 20 });
+    active.getBoundingClientRect = () => box({ left: 31, top: 61, width: 50, height: 40 });
+
+    expect(targetOf(node, active)).toEqual({ opacity: 1, x: 20, y: 40, width: 50, height: 40 });
+  });
+});
+
+describe('slidingIndicator — no active item', () => {
+  // triste
+  it('shrinks the hidden highlight to the top, so it cannot stretch a short menu', () => {
+    const nav = menu(-1);
+    slidingIndicator(nav, options);
+
+    const indicator = nav.querySelector<HTMLElement>('[data-slot="sliding-indicator"]')!;
+    expect(indicator.style.width).toBe('0px');
+    expect(indicator.style.height).toBe('0px');
+    nav.remove();
   });
 });
