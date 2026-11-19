@@ -8,6 +8,10 @@ const cards = createRawSnippet(() => ({
   render: () => '<div><span>Clientes</span><span>Concluídas</span></div>',
 }));
 
+const label = createRawSnippet((text: () => unknown) => ({
+  render: () => `<span>${String(text())}</span>`,
+}));
+
 describe('AzuosStatCardGrid', () => {
   // feliz
   it('draws what it is given', () => {
@@ -37,7 +41,31 @@ describe('AzuosStatCardGrid', () => {
     expect(grid).toHaveClass('grid');
   });
 
+  it('keeps up to four listed cards in the grid', () => {
+    render(StatCardGrid, {
+      props: { data: { items: ['A', 'B', 'C', 'D'] }, ui: { ariaLabel: 'Pendências' }, card: label },
+    });
+
+    expect(screen.queryByRole('region', { name: 'Pendências' })).toBeNull();
+    expect(screen.getByText('D')).toBeInTheDocument();
+  });
+
   // triste
+  /* Passou de quatro, a fileira não quebra em várias linhas: vira uma faixa que desliza. */
+  it('turns into a sliding strip, with arrows, above four cards', () => {
+    render(StatCardGrid, {
+      props: {
+        data: { items: ['A', 'B', 'C', 'D', 'E'] },
+        ui: { ariaLabel: 'Pendências' },
+        card: label,
+      },
+    });
+
+    expect(screen.getByRole('region', { name: 'Pendências' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver anteriores' })).toBeInTheDocument();
+    expect(screen.getByText('E')).toBeInTheDocument();
+  });
+
   /* Sem cartão nenhum a grade não pode desenhar uma caixa vazia com espaçamento. */
   it('renders nothing inside when there is no card (edge case)', () => {
     const { container } = render(StatCardGrid, { props: {} });
