@@ -49,7 +49,7 @@
 
   const KIND_OPTIONS = COMPUTER_KINDS.map((kind) => ({ value: kind, label: COMPUTER_KIND_LABELS[kind] }));
 
-  const NO_DEPARTMENT = { value: '', label: 'Sem departamento' };
+  const NO_DEPARTMENT = { value: '', label: '(Sem departamento)' };
 </script>
 
 <script lang="ts">
@@ -172,7 +172,7 @@
           <OptionPicker
             data={{ value: fields.responsibleName.value,
               options: [
-                { value: '', label: 'Sem responsável' },
+                { value: '', label: '(Sem responsável)' },
                 ...(data.responsibles ?? []).map((person) => ({ value: person.id, label: person.name })),
               ] }}
             ui={{ ariaLabel: 'Responsável', mode: 'combobox', fullWidth: true,

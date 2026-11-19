@@ -104,7 +104,7 @@ describe('useSoftwareProjectFormModel', () => {
 
     await waitFor(() =>
       expect(model.data.responsibleOptions).toEqual([
-        { value: '', label: 'Sem responsável' },
+        { value: '', label: '(Sem responsável)' },
         { value: 'u-dora', label: 'Dora' },
         { value: 'u-saiu', label: 'Quem saiu' },
       ]),
@@ -139,13 +139,13 @@ describe('responsibleOptionsFor', () => {
   // feliz
   it('puts "no responsible" first and keeps a responsible who left the area', () => {
     expect(responsibleOptionsFor([{ id: 'a', name: 'Ana' }], null)).toEqual([
-      { value: '', label: 'Sem responsável' },
+      { value: '', label: '(Sem responsável)' },
       { value: 'a', label: 'Ana' },
     ]);
     expect(
       responsibleOptionsFor([], project({ responsibleId: 'z', responsibleName: null })),
     ).toEqual([
-      { value: '', label: 'Sem responsável' },
+      { value: '', label: '(Sem responsável)' },
       { value: 'z', label: 'Responsável atual' },
     ]);
   });

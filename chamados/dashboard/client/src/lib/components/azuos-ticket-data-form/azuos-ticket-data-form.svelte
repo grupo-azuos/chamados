@@ -123,7 +123,7 @@
   /* "Nenhuma" precisa ser uma opção de verdade: é assim que se desfaz um vínculo errado. O
      valor vazio é o que o view-model traduz de volta para nulo ao salvar. */
   const machineOptions = $derived([
-    { value: '', label: 'Nenhuma' },
+    { value: '', label: '(Nenhuma)' },
     ...data.machines.map((machine) => ({ ...machine, icon: LaptopIcon })),
   ]);
 
@@ -165,7 +165,7 @@
   );
 
   const projectOptions = $derived([
-    { value: '', label: 'Nenhum' },
+    { value: '', label: '(Nenhum)' },
     ...customProjectOption,
     ...(data.projects ?? []),
   ]);
@@ -277,7 +277,7 @@
         data={{ value: systemValue, options: projectOptions }}
         ui={{
           ariaLabel: 'Sistema / Software',
-          placeholder: 'Nenhum',
+          placeholder: '(Nenhum)',
           searchPlaceholder: 'Busque ou digite o nome do sistema',
           fullWidth: true,
           allowCustomValue: true,
@@ -311,7 +311,7 @@
       data={{ value: fields.computerId.value, options: machineOptions }}
       ui={{
         ariaLabel: 'Máquina',
-        placeholder: 'Nenhuma',
+        placeholder: '(Nenhuma)',
         fullWidth: true,
         mode: 'combobox',
         searchPlaceholder: 'Buscar máquina…',

@@ -284,7 +284,7 @@ describe('toAssigneeFilterOptions', () => {
     expect(
       toAssigneeFilterOptions([{ id: 'u-ana', name: 'Ana Lima', avatarUrl: 'https://f/ana.png' }]),
     ).toEqual([
-      { value: 'none', label: 'Sem responsável' },
+      { value: 'none', label: '(Sem responsável)' },
       {
         value: 'u-ana',
         label: 'Ana Lima',
@@ -296,7 +296,7 @@ describe('toAssigneeFilterOptions', () => {
 
   // triste
   it('still offers the unassigned queue when nobody attends the area, or has no photo', () => {
-    expect(toAssigneeFilterOptions([])).toEqual([{ value: 'none', label: 'Sem responsável' }]);
+    expect(toAssigneeFilterOptions([])).toEqual([{ value: 'none', label: '(Sem responsável)' }]);
     expect(toAssigneeFilterOptions([{ id: 'u-bia', name: 'Bia' }])[1]?.avatar?.url).toBeNull();
   });
 });

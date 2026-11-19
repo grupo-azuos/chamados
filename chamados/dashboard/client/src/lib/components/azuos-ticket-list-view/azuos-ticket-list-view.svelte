@@ -165,7 +165,7 @@
     if (!assigneeId) return null;
 
     const name = options.find((option) => option.value === assigneeId)?.label;
-    if (assigneeId === TICKET_UNASSIGNED_FILTER) return { key: 'assigneeId', label: 'Sem responsável' };
+    if (assigneeId === TICKET_UNASSIGNED_FILTER) return { key: 'assigneeId', label: '(Sem responsável)' };
 
     return { key: 'assigneeId', label: name ? `Responsável: ${name}` : 'Responsável' };
   }

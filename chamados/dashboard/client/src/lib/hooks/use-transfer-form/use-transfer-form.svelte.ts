@@ -189,7 +189,7 @@ function toDepartmentValue(value: string): Department | null {
 function departmentChoices(options: readonly DepartmentChoice[]): DepartmentOption[] {
   return [
     ...options,
-    { value: NO_DEPARTMENT, label: 'Sem departamento (volta para a prateleira)', separatorBefore: true },
+    { value: NO_DEPARTMENT, label: '(Sem departamento) — volta para a prateleira', separatorBefore: true },
   ];
 }
 

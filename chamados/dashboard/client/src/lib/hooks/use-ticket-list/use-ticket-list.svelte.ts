@@ -164,7 +164,7 @@ export function toAssigneeFilterOptions(
   people: readonly TicketAssigneeOption[],
 ): TicketAssigneeFilterOption[] {
   return [
-    { value: TICKET_UNASSIGNED_FILTER, label: 'Sem responsável' },
+    { value: TICKET_UNASSIGNED_FILTER, label: '(Sem responsável)' },
     ...people.map((person, index) => ({
       value: person.id,
       label: person.name,

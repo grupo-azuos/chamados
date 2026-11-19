@@ -44,7 +44,7 @@
   };
 
   /** A opção vazia: movimentação que não tem máquina — compra, devolução ao depósito. */
-  export const NO_MACHINE_OPTION = { value: '', label: 'Nenhuma máquina' };
+  export const NO_MACHINE_OPTION = { value: '', label: '(Nenhuma máquina)' };
 </script>
 
 <script lang="ts">
