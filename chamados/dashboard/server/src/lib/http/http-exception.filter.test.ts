@@ -1,4 +1,9 @@
-import { type ArgumentsHost, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  type ArgumentsHost,
+  BadRequestException,
+  HttpException,
+  NotFoundException,
+} from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
@@ -46,8 +51,22 @@ describe('HttpExceptionFilter', () => {
     });
     expect(bodyOf(new BadRequestException(['a', 'b'])).body.message).toBe('a; b');
     expect(bodyOf(new BadRequestException({ message: 'Texto' })).body.message).toBe('Texto');
-    /* Sem mensagem no corpo: vale a da exceção. */
-    expect(bodyOf(new BadRequestException({})).body.message).toBe('Bad Request Exception');
+    /* Sem mensagem no corpo: vale a da exceção — a do framework, trocada pelo motivo em português. */
+    expect(bodyOf(new BadRequestException({})).body.message).toBe(
+      'O pedido chegou incompleto ou mal formado. Tente de novo.',
+    );
+  });
+
+  it('translates the framework refusals the screen would show in English', () => {
+    expect(bodyOf(new NotFoundException('Cannot GET /api/v1/nothing')).body.message).toBe(
+      'Não encontrei o que foi pedido.',
+    );
+    expect(bodyOf(new HttpException('request entity too large', 413)).body.message).toBe(
+      'O pedido ficou grande demais para enviar. Diminua o recorte e tente de novo.',
+    );
+    expect(bodyOf(new HttpException('Not Implemented', 501)).body.message).toBe(
+      'Não consegui concluir. O erro foi registrado — tente de novo em instantes.',
+    );
   });
 
   it('reads the per-field details the zod pipe sends, ignoring what is not an issue', () => {
