@@ -160,4 +160,22 @@ describe('AzuosSelectField with people and in the dark theme', () => {
 
     expect(document.querySelector('[data-slot="avatar"]')).toBeNull();
   });
+
+  // triste
+  it('says there is nothing to pick instead of opening an empty list', async () => {
+    render(SelectField, {
+      props: {
+        data: { value: '', options: [] },
+        ui: { ariaLabel: 'Responsável' },
+        actions: { onChange: vi.fn() },
+      },
+    });
+
+    const trigger = screen.getByRole('combobox', { name: 'Responsável' });
+    await fireEvent.pointerDown(trigger);
+    await fireEvent.click(trigger);
+
+    expect(await screen.findByText('Nenhuma opção disponível')).toBeInTheDocument();
+    expect(screen.queryByRole('option')).toBeNull();
+  });
 });

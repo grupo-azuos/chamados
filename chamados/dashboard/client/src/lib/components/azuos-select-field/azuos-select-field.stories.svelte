@@ -46,6 +46,8 @@
   template={inBox}
 />
 
+<Story name="NoOptions" args={{ ...baseArgs, data: { value: '', options: [] } }} template={inBox} />
+
 <Story name="Disabled" args={{ ...baseArgs, state: { isDisabled: true } }} template={inBox} />
 
 <!-- Caso limite: lista de opções longa o bastante para rolar dentro do menu. -->

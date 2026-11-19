@@ -334,7 +334,7 @@
          daí para baixo ele nunca fica menor que o botão, e o teto impede que uma opção de
          nome comprido estique o balão pela tela — a opção é cortada, não a tela. -->
     <PopoverContent
-      class="min-w-[max(16rem,var(--bits-popover-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))] p-0"
+      class="min-w-[max(16rem,var(--bits-popover-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-surface border-border bg-card shadow-xl"
       align="start"
     >
       <div class="relative shrink-0 border-b border-border p-2">

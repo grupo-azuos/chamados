@@ -161,7 +161,7 @@
       <ChevronDown aria-hidden="true" class="size-4 shrink-0 opacity-50" />
     {/if}
   </Popover.Trigger>
-  <Popover.Content align="start" matchAnchorWidth class="min-w-64 gap-0 p-0">
+  <Popover.Content align="start" matchAnchorWidth class="min-w-64 gap-0 overflow-hidden p-0 rounded-surface border-border bg-card shadow-xl">
     <div class="flex items-center gap-2 border-b px-3">
       <Search aria-hidden="true" class="text-muted-foreground size-3.5 shrink-0" />
       <!-- svelte-ignore a11y_autofocus -->

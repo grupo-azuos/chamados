@@ -23,12 +23,19 @@
 
   export type AzuosSelectFieldProps = {
     data: { value: string; options: SelectFieldOption[] };
-    ui?: { placeholder?: string; ariaLabel?: string; className?: string };
+    ui?: {
+      placeholder?: string;
+      ariaLabel?: string;
+      className?: string;
+      /** A frase da lista sem opções (padrão: "Nenhuma opção disponível"). */
+      noOptionsLabel?: string;
+    };
     state?: { isDisabled?: boolean };
     actions: { onChange: (value: string) => void };
   };
 
   const EMPTY_VALUE = '__empty__';
+  const NO_OPTIONS_LABEL = 'Nenhuma opção disponível';
 </script>
 
 <script lang="ts">
@@ -103,10 +110,15 @@
        larga do que o diálogo inteiro e vazava pelos dois lados. `--bits-select-anchor-width`
        é a largura do gatilho, medida pelo próprio componente. -->
   <SelectContent
-    class="min-w-[max(16rem,var(--bits-select-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))]"
+    class="min-w-[max(16rem,var(--bits-select-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))] rounded-surface border-border bg-card shadow-xl"
   >
+    <!-- A lista vazia diz por quê, em texto solto — não é uma opção, não dá para escolher. Sem
+         isso o balão abria em branco e parecia travado. -->
+    {#if data.options.length === 0}
+      <p class="text-muted-foreground px-2 py-1.5 text-sm">{ui?.noOptionsLabel ?? NO_OPTIONS_LABEL}</p>
+    {/if}
     {#each data.options as option (option.value || EMPTY_VALUE)}
-      <SelectItem value={option.value || EMPTY_VALUE} label={option.label}>
+      <SelectItem value={option.value || EMPTY_VALUE} label={option.label} class="rounded-chip">
         {#if option.personName}
           <span aria-hidden="true" class="flex shrink-0">
             <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
