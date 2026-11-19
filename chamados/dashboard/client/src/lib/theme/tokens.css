@@ -127,6 +127,10 @@
   --secondary-foreground: var(--ink-900);
   --muted: var(--ink-100);
   --muted-foreground: var(--ink-500);
+  /* O VÉU DO HOVER: o texto do tema a 6%, por cima do que estiver embaixo. É o hover do card e o
+     da linha de lista ou tabela — o mesmo tom nos dois, e nos dois temas, porque segue o
+     `--foreground` (escurece no claro, clareia no escuro). */
+  --hover-veil: color-mix(in srgb, var(--foreground) 6%, transparent);
   --accent: var(--brand-blue-100);
   --accent-foreground: var(--brand-blue-900);
   --accent-strong: #b45309;
@@ -386,6 +390,7 @@
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
+  --color-hover-veil: var(--hover-veil);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
