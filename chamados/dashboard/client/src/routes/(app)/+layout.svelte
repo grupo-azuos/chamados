@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
+  import { useNavigationStackRecorder } from '$lib/hooks/use-navigation-stack/use-navigation-stack.svelte';
+
   /**
    * AQUI NÃO SE DESENHA CASCA NENHUMA — de propósito.
    *
@@ -18,6 +20,9 @@
    * tirá-la.
    */
   let { children }: { children: Snippet } = $props();
+
+  /* A pilha do "voltar" é gravada aqui, uma vez, para as telas logadas dos três módulos. */
+  useNavigationStackRecorder();
 </script>
 
 {@render children()}

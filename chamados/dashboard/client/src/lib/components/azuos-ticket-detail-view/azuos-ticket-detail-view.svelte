@@ -33,6 +33,8 @@
    */
   export type AzuosTicketDetailViewProps = {
     data: {
+      /** O nome da tela para onde o "voltar" leva — a anterior do caminho da pessoa. */
+      backDestination?: string;
       ticket: Ticket;
       /** A linha do tempo, do mais antigo para o mais novo. */
       histories: TicketHistory[];
@@ -156,7 +158,7 @@
 </script>
 
 <div class="flex w-full flex-col gap-5">
-  <BackButton data={{ destination: 'os chamados' }} actions={{ onClick: actions.onBack }} />
+  <BackButton data={{ destination: data.backDestination ?? 'os chamados' }} actions={{ onClick: actions.onBack }} />
 
   <PageHeader
     data={{

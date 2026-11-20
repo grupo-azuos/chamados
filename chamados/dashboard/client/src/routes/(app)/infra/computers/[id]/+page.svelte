@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import HardDrive from '@lucide/svelte/icons/hard-drive';
 
@@ -10,6 +9,7 @@
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import { useAgentBundleModel } from '$lib/hooks/use-agent-bundle/use-agent-bundle.svelte';
+  import { useBackTarget } from '$lib/hooks/use-navigation-stack/use-navigation-stack.svelte';
   import { useComputerDetailModel } from '$lib/hooks/use-computer-detail/use-computer-detail.svelte';
   import { useMaintenanceScheduleModel } from '$lib/hooks/use-maintenance-schedule/use-maintenance-schedule.svelte';
   import MaintenanceFormSlot from '../../maintenance/maintenance-form-slot.svelte';
@@ -29,6 +29,8 @@
   const detail = useComputerDetailModel(id);
   const schedule = useMaintenanceScheduleModel(id);
   const bundle = useAgentBundleModel();
+  /* O voltar leva à tela de onde a pessoa veio (o chamado, o painel), e sem caminho ao inventário. */
+  const back = useBackTarget({ to: '/infra/computers', destination: 'o inventário' });
 
   /* Qual peça está na frente — não é dado. */
   let isEditing = $state(false);
@@ -51,7 +53,7 @@
       }}
       ui={{ icon: HardDrive }}
     >
-      <BackButton data={{ destination: 'o inventário', to: '/infra/computers' }} />
+      <BackButton data={{ destination: back.destination }} actions={{ onClick: back.onBack }} />
     </EmptyState>
   </div>
 {:else if detail.state.error}
@@ -77,6 +79,7 @@
       schedule: schedule.data.schedule,
       partMovements: detail.data.partMovements,
       transfers: detail.data.transfers,
+      backDestination: back.destination,
     }}
     state={{
       ...detail.state,
@@ -94,7 +97,7 @@
       onRegisterMaintenance: () => (isRegisteringMaintenance = true),
       onTransfer: () => (isTransferring = true),
       onDownloadInstaller: () => void bundle.actions.onDownload(),
-      onBack: () => void goto('/infra/computers'),
+      onBack: back.onBack,
     }}
   />
 {/if}

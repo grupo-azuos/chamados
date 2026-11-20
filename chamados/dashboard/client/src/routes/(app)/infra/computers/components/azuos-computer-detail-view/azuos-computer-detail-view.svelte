@@ -46,6 +46,8 @@
    */
   export type AzuosComputerDetailViewProps = {
     data: {
+      /** O nome da tela para onde o "voltar" leva — a anterior do caminho da pessoa. */
+      backDestination?: string;
       computer: Computer;
       samples: ComputerSample[];
       alerts: ComputerAlert[];
@@ -371,7 +373,7 @@
 </script>
 
 <div class="flex w-full flex-col gap-5">
-  <BackButton data={{ destination: 'o inventário' }} actions={{ onClick: actions.onBack }} />
+  <BackButton data={{ destination: data.backDestination ?? 'o inventário' }} actions={{ onClick: actions.onBack }} />
 
   <section aria-label="Identificação do computador" class="bg-card rounded-surface min-w-0 border p-4 shadow-xs sm:p-5">
     <PageHeader

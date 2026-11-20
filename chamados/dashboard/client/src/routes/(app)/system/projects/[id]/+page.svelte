@@ -7,6 +7,7 @@
   import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import { useBackTarget } from '$lib/hooks/use-navigation-stack/use-navigation-stack.svelte';
   import { useSoftwareProjectDetailModel } from '$lib/hooks/use-software-project-detail/use-software-project-detail.svelte';
   import ProjectDetailView from '../components/azuos-project-detail-view/azuos-project-detail-view.svelte';
 
@@ -17,6 +18,8 @@
    * ("olha como está o Portal"), e um modal não tem endereço.
    */
   const detail = useSoftwareProjectDetailModel(Number(page.params.id));
+  /* O voltar leva à tela de onde a pessoa veio, e sem caminho à lista de projetos. */
+  const back = useBackTarget({ to: '/system/projects', destination: 'os projetos' });
 </script>
 
 <svelte:head>
@@ -30,7 +33,7 @@
       data={{ title: 'Sistema não encontrado', description: 'Ele pode ter sido excluído.' }}
       ui={{ icon: FolderCode }}
     >
-      <BackButton data={{ destination: 'os projetos', to: '/system/projects' }} />
+      <BackButton data={{ destination: back.destination }} actions={{ onClick: back.onBack }} />
     </EmptyState>
   </div>
 {:else if detail.state.error}
@@ -44,12 +47,12 @@
   <p class="text-ink-500 py-10 text-center text-sm">Carregando o sistema…</p>
 {:else}
   <ProjectDetailView
-    data={{ ...detail.data, project: detail.data.project }}
+    data={{ ...detail.data, project: detail.data.project, backDestination: back.destination }}
     state={detail.state}
     actions={{
       onFilterChange: detail.actions.onFilterChange,
       onSync: detail.actions.onSync,
-      onBack: () => goto('/system/projects'),
+      onBack: back.onBack,
       onOpenTicket: (ticket) => goto(`/system/tickets/${ticket.id}`),
     }}
   />
