@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
+  import { useArchivedPartMovementsModel } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import { type MovementType } from '@template/shared/domain/part-catalog.util';
   import { type Part } from '@template/shared/schemas/part.schema';
 
@@ -15,6 +17,7 @@
    * movimentação (com o tipo que o botão escolheu) ou o extrato.
    */
   const list = usePartListModel();
+  const reversed = useArchivedPartMovementsModel();
 
   /* Uma peça de cada vez na frente da tela: os três diálogos são exclusivos. */
   let editing = $state<{ part: Part | null } | null>(null);
@@ -36,6 +39,14 @@
     onMove: (part: Part, type: MovementType) => (moving = { part, type }),
     onOpenLedger: (part: Part) => (ledgerOf = part),
   }}
+/>
+
+<!-- A movimentação estornada sai do extrato e do saldo, e volta daqui com o "Desfazer". -->
+<ArchivedList
+  data={{ ...reversed.data, title: 'Movimentações estornadas' }}
+  ui={{ className: 'mt-6' }}
+  state={reversed.state}
+  actions={reversed.actions}
 />
 
 <!-- `{#key}` pela peça: trocar de peça monta um formulário NOVO, com os valores dela. -->

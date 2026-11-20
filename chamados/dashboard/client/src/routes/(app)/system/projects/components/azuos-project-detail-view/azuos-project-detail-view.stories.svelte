@@ -27,6 +27,7 @@
     pullRequestsCount: 3,
     createdAt: '2026-01-10T08:00:00.000Z',
     updatedAt: null,
+    archive: null,
   };
 
   function event(over: Partial<SoftwareTimelineEvent>): SoftwareTimelineEvent {
@@ -79,6 +80,7 @@
     resolvedAt: null,
     updatedAt: null,
     updatedBy: null,
+    archive: null,
   } as Ticket;
 
   const now = Date.parse('2026-10-23T12:00:00.000Z');

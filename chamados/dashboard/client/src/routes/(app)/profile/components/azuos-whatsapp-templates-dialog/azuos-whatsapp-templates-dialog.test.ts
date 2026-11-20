@@ -15,6 +15,7 @@ const ready: WhatsappTemplate = {
   body: 'Olá, {{nome}}!',
   defaultBody: 'Olá, {{nome}}!',
   isCustomized: false,
+  archivedEdit: null,
 };
 
 function renderDialog(
@@ -26,6 +27,7 @@ function renderDialog(
     onDraftChange: vi.fn(),
     onSave: vi.fn(),
     onRestore: vi.fn(),
+    onRestoreEdit: vi.fn(),
     onClose: vi.fn(),
   };
 
@@ -156,5 +158,27 @@ describe('AzuosWhatsappTemplatesDialog — choosing, typing, feedback and closin
     const actions = renderDialog();
     await userEvent.keyboard('{Escape}');
     expect(actions.onClose).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('offers to bring back the edited text kept after restoring the original', async () => {
+    const kept = {
+      ...ready,
+      archivedEdit: { body: 'Pronto, {{nome}}!', archivedAt: '2026-11-20T12:00:00.000Z' },
+    };
+    const actions = renderDialog({}, { templates: [kept], selected: kept });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Desfazer' }));
+
+    expect(screen.getByText(/O texto editado foi guardado em/)).toBeInTheDocument();
+    expect(actions.onRestoreEdit).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('does not offer the undo while the edited text is the one in use', () => {
+    const inUse = { ...ready, isCustomized: true, archivedEdit: null };
+    renderDialog({}, { templates: [inUse], selected: inUse });
+
+    expect(screen.queryByRole('button', { name: 'Desfazer' })).not.toBeInTheDocument();
   });
 });

@@ -10,6 +10,7 @@
   const actions = { onSchedule: fn(), onCancel: fn(), onRegister: fn() };
   const dayFromNow = (days: number) => localDayOf(new Date(Date.now() + days * DAY));
   const schedule = {
+    id: 3,
     computerId: 3,
     computerName: 'CONTABIL-03',
     computerDisplayName: 'Contábil — fechamento',
@@ -20,6 +21,7 @@
     createdBy: 'suporte@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
   };
   const recent = new Date(Date.now() - 20 * DAY).toISOString();
 

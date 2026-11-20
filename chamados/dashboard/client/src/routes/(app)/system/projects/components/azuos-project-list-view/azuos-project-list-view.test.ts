@@ -20,6 +20,7 @@ const project: SoftwareProject = {
   pullRequestsCount: 7,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: null,
+  archive: null,
 };
 
 function renderView(
@@ -212,7 +213,7 @@ describe('AzuosProjectListView — messages, filters, cards and deletion', () =>
   it('confirms or cancels the deletion in the dialog', async () => {
     const actions = renderView({ data: { deleting: project } });
     const dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveTextContent('Tem certeza que deseja excluir "Azuos Ticket"?');
+    expect(dialog).toHaveTextContent('"Azuos Ticket" sai da lista, com a linha do tempo e os chamados guardados.');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }));
     expect(actions.onConfirmDelete).toHaveBeenCalledOnce();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));

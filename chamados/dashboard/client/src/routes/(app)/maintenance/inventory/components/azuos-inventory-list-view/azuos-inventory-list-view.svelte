@@ -307,12 +307,12 @@
   {/if}
 </div>
 
-<!-- Excluir é irreversível: pergunta antes, com o nome do produto na frase. -->
+<!-- Excluir arquiva, mas some da tela: pergunta antes, com o nome do produto na frase. -->
 <ConfirmDialog
   data={{
     title: 'Excluir produto',
     description: data.deleting
-      ? `"${data.deleting.name}" sai do inventário. A foto dele também é apagada.`
+      ? `"${data.deleting.name}" sai do inventário, com a foto e o extrato guardados. Ele fica em "Removidos", onde dá para desfazer.`
       : '',
     confirmLabel: 'Excluir',
     confirmingLabel: 'Excluindo…',

@@ -108,6 +108,7 @@ describe('AzuosPreventiveBoard', () => {
 
 describe('scheduled maintenances on the board', () => {
   const schedule = {
+    id: 2,
     computerId: 2,
     computerName: 'FINANCEIRO-02',
     computerDisplayName: 'Financeiro — mesa 2',
@@ -118,6 +119,7 @@ describe('scheduled maintenances on the board', () => {
     createdBy: 'suporte@teste.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
   };
 
   // feliz
@@ -154,6 +156,7 @@ describe('scheduled maintenances on the board', () => {
 
 describe('AzuosPreventiveBoard — scheduled rows, quiet machines and loading', () => {
   const schedule = {
+    id: 2,
     computerId: 2,
     computerName: 'FINANCEIRO-02',
     computerDisplayName: null,
@@ -164,6 +167,7 @@ describe('AzuosPreventiveBoard — scheduled rows, quiet machines and loading', 
     createdBy: 'suporte@teste.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
   };
 
   // feliz

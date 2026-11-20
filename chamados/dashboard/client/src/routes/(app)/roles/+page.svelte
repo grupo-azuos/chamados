@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
+  import { useArchivedRolesModel } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
   import { ROLE_CONTEXT_LABELS } from '@template/shared/schemas/user.schema';
 
@@ -12,6 +14,7 @@
   let { data }: { data: PageData } = $props();
 
   const list = useRolesModel();
+  const archived = useArchivedRolesModel();
 
   type FormTarget = { role: InternalRole | null; person?: RoleFormPerson } | null;
 
@@ -47,6 +50,14 @@
   }}
 />
 
+<!-- O módulo tirado de alguém aparece aqui, fechado, com o "Desfazer" que devolve o acesso. -->
+<ArchivedList
+  data={{ ...archived.data, title: 'Módulos tirados' }}
+  ui={{ className: 'mt-6' }}
+  state={archived.state}
+  actions={archived.actions}
+/>
+
 {#if formTarget}
   {#key formTarget.role?.id ?? formTarget.person?.userId ?? 'new'}
     <RoleFormSlot role={formTarget.role} person={formTarget.person} onClose={() => (formTarget = null)} />
@@ -56,7 +67,7 @@
 <ConfirmDialog
   data={{
     title: 'Tirar este módulo?',
-    description: `"${list.data.pendingDelete?.userEmail || list.data.pendingDelete?.userId || ''}" deixa de ver ${list.data.pendingDelete ? ROLE_CONTEXT_LABELS[list.data.pendingDelete.context] : ''}. Abrir chamado e validar documento continuam disponíveis.`,
+    description: `"${list.data.pendingDelete?.userEmail || list.data.pendingDelete?.userId || ''}" deixa de ver ${list.data.pendingDelete ? ROLE_CONTEXT_LABELS[list.data.pendingDelete.context] : ''}. Abrir chamado e validar documento continuam disponíveis. Dá para devolver em "Módulos tirados".`,
     confirmLabel: 'Tirar módulo',
     confirmingLabel: 'Tirando…',
   }}

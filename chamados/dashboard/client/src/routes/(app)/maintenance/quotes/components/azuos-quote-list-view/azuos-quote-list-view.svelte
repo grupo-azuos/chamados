@@ -262,12 +262,12 @@
   {/if}
 </div>
 
-<!-- Excluir é irreversível: pergunta antes, com a empresa na frase. -->
+<!-- Excluir arquiva, mas some da tela: pergunta antes, com a empresa na frase. -->
 <ConfirmDialog
   data={{
     title: 'Excluir orçamento',
     description: data.deleting
-      ? `O orçamento de "${data.deleting.supplier}" sai da lista. O documento dele também é apagado.`
+      ? `O orçamento de "${data.deleting.supplier}" sai da lista, com o documento guardado. Ele fica em "Removidos", onde dá para desfazer.`
       : '',
     confirmLabel: 'Excluir',
     confirmingLabel: 'Excluindo…',

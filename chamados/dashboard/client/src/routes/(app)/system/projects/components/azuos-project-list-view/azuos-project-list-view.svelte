@@ -332,7 +332,7 @@
     <ConfirmDialog
       data={{
         title: 'Excluir sistema',
-        description: `Tem certeza que deseja excluir "${data.deleting.name}"? Todos os eventos da timeline serão excluídos.`,
+        description: `"${data.deleting.name}" sai da lista, com a linha do tempo e os chamados guardados. Ele fica em "Removidos", onde dá para desfazer.`,
         confirmLabel: 'Excluir',
       }}
       ui={{ tone: 'danger' }}

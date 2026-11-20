@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
+  import { useTicketRemovedModel } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import { page } from '$app/state';
   import Ticket from '@lucide/svelte/icons/ticket';
 
@@ -22,6 +24,7 @@
   const id = Number(page.params.id);
 
   const detail = useTicketDetailModel(id);
+  const removed = useTicketRemovedModel(id);
 
   /* O voltar leva à tela de onde a pessoa veio (a ficha da máquina, o painel), e sem caminho
      à fila do módulo. */
@@ -94,4 +97,12 @@
       />
     {/snippet}
   </TicketDetailView>
+
+  <!-- O que saiu do chamado (anexo, máquina, pessoa, item, vínculo, área) fica aqui, com o "Desfazer". -->
+  <ArchivedList
+    data={removed.data}
+    ui={{ className: 'mt-6' }}
+    state={removed.state}
+    actions={removed.actions}
+  />
 {/if}

@@ -335,6 +335,7 @@ describe('useComputerListModel', () => {
 
 describe('scheduledDayByComputer', () => {
   const schedule = {
+    id: 7,
     computerId: 7,
     computerName: 'PC-7',
     computerDisplayName: null,
@@ -345,6 +346,7 @@ describe('scheduledDayByComputer', () => {
     createdBy: 'suporte@teste.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
   };
 
   // feliz

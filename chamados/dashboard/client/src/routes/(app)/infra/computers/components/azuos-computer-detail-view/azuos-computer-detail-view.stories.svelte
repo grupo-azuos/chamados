@@ -154,6 +154,7 @@
       createdBy: 'suporte@azuos.local',
       updatedAt: null,
       updatedBy: null,
+      archive: null,
     },
   ];
 
@@ -226,10 +227,10 @@
 <!-- Com manutenção agendada: o cartão do alto troca o prazo automático pelo dia combinado. -->
 <Story name="WithSchedule" args={{ data: { computer: computer(), samples, live: null,
         tickets: [], alerts, alertPaging: paging, ticketPaging: noPaging, maintenances, partMovements: [], transfers,
-        schedule: { computerId: 3, computerName: 'CONTABIL-03', computerDisplayName: 'Contábil — mesa do fechamento',
+        schedule: { id: 1, computerId: 3, computerName: 'CONTABIL-03', computerDisplayName: 'Contábil — mesa do fechamento',
           computerDepartment: 'contabil', scheduledFor: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
           note: 'Trocar pasta térmica', createdAt: new Date().toISOString(), createdBy: 'suporte@azuos.local',
-          updatedAt: null, updatedBy: null } }, actions }} />
+          updatedAt: null, updatedBy: null, archive: null } }, actions }} />
 
 <!-- A MESMA tela em 400px: a tabela sai de cena e entra o cartão empilhado (skill `ui-standards`). -->
 <Story name="Celular" globals={{ viewport: { value: 'celular' } }} args={{ data: { computer: computer(), samples, live: null,

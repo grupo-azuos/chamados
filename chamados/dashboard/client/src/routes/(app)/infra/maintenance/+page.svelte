@@ -1,4 +1,9 @@
 <script lang="ts">
+  import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
+  import {
+    useArchivedMaintenancesModel,
+    useArchivedSchedulesModel,
+  } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import { type Maintenance } from '@template/shared/schemas/maintenance.schema';
 
   import MaintenanceListView from './components/azuos-maintenance-list-view/azuos-maintenance-list-view.svelte';
@@ -13,6 +18,8 @@
    * preventiva).
    */
   const list = useMaintenanceListModel();
+  const archived = useArchivedMaintenancesModel();
+  const closedSchedules = useArchivedSchedulesModel();
 
   type FormTarget = { maintenance: Maintenance | null; computerId: number | null };
 
@@ -32,6 +39,22 @@
       (form = { maintenance: null, computerId: computerId ?? null }),
     onEdit: (maintenance: Maintenance) => (form = { maintenance, computerId: null }),
   }}
+/>
+
+<!-- O que foi excluído some da lista e aparece aqui, fechado, com o "Desfazer". -->
+<ArchivedList
+  data={archived.data}
+  ui={{ className: 'mt-6' }}
+  state={archived.state}
+  actions={archived.actions}
+/>
+
+<!-- O agendamento cumprido ou cancelado sai da agenda; o cancelado por engano volta daqui. -->
+<ArchivedList
+  data={{ ...closedSchedules.data, title: 'Agendamentos encerrados' }}
+  ui={{ className: 'mt-3' }}
+  state={closedSchedules.state}
+  actions={closedSchedules.actions}
 />
 
 <!-- `{#key}` pelo registro: trocar de manutenção monta um formulário NOVO, com os valores

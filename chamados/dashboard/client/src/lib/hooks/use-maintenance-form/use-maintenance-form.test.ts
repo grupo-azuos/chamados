@@ -86,6 +86,7 @@ function maintenance(over: Partial<Maintenance> = {}): Maintenance {
     createdBy: 'suporte@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...over,
   };
 }

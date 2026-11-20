@@ -34,6 +34,7 @@ function event(overrides: Partial<SoftwareScheduleEvent> = {}): SoftwareSchedule
     createdById: 'u-dora',
     createdByEmail: 'dora@empresa.com.br',
     createdByName: 'Dora',
+    archive: null,
     ...overrides,
   };
 }

@@ -28,6 +28,7 @@
       createdBy: 'suporte@azuos.local',
       updatedAt: null,
       updatedBy: null,
+      archive: null,
       ...over,
     };
   }

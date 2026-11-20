@@ -44,6 +44,7 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
     resolvedAt: null,
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...overrides,
   } as Ticket;
 }
@@ -64,6 +65,7 @@ function project(overrides: Partial<SoftwareProject> = {}): SoftwareProject {
     pullRequestsCount: 0,
     createdAt: '2026-09-01T12:00:00.000Z',
     updatedAt: null,
+    archive: null,
     ...overrides,
   };
 }

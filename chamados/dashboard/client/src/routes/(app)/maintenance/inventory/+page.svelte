@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
+  import { useArchivedInventoryModel } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import { type InventoryItem } from '@template/shared/schemas/inventory-item.schema';
 
   import InventoryListView from './components/azuos-inventory-list-view/azuos-inventory-list-view.svelte';
@@ -13,6 +15,7 @@
    * produto que espera confirmação vive no model dela.
    */
   const list = useInventoryListModel();
+  const archived = useArchivedInventoryModel();
 
   let editing = $state<{ item: InventoryItem | null } | null>(null);
 </script>
@@ -29,6 +32,14 @@
     onRegister: () => (editing = { item: null }),
     onEdit: (item: InventoryItem) => (editing = { item }),
   }}
+/>
+
+<!-- O que foi excluído some da lista e aparece aqui, fechado, com o "Desfazer". -->
+<ArchivedList
+  data={archived.data}
+  ui={{ className: 'mt-6' }}
+  state={archived.state}
+  actions={archived.actions}
 />
 
 <!-- `{#key}` pelo produto: trocar de produto monta um formulário NOVO, com os valores dele. -->

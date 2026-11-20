@@ -192,6 +192,7 @@ function maintenance(over: Partial<Maintenance> = {}): Maintenance {
     createdBy: 'suporte@teste.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...over,
   };
 }
@@ -644,6 +645,7 @@ describe('AzuosComputerDetailView: the histories of the machine', () => {
           createdBy: 'ana@empresa.com.br',
           updatedAt: null,
           updatedBy: null,
+          archive: null,
         } as never,
       ],
     });
