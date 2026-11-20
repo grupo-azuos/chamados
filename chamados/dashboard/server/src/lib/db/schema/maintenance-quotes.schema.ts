@@ -2,6 +2,7 @@ import { QUOTE_KINDS, QUOTE_STATUSES } from '@template/shared/domain/maintenance
 import { sql } from 'drizzle-orm';
 import { check, date, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
@@ -45,6 +46,8 @@ export const maintenanceQuotes = chamadosSchema.table(
     createdBy: text('created_by').notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
+    /* Excluir ARQUIVA: o orçamento e o documento ficam, e voltam pelo "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
     index('maintenance_quotes_status_idx').on(table.status),

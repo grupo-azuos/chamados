@@ -1,5 +1,7 @@
+import { isNull } from 'drizzle-orm';
 import { index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 import { computers } from './computers.schema';
@@ -29,10 +31,14 @@ export const ticketComputers = chamadosSchema.table(
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     /** O e-mail de quem vinculou — vem sempre da sessão. Nulo nos vínculos vindos de antes. */
     createdBy: text('created_by'),
+    /* Tirar a máquina ARQUIVA: ela some do chamado e volta pelo "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
-    /* A mesma máquina não entra duas vezes no mesmo chamado. */
-    uniqueIndex('ticket_computers_ticket_computer_idx').on(table.ticketId, table.computerId),
+    /* A mesma máquina não entra duas vezes no mesmo chamado (as tiradas não contam). */
+    uniqueIndex('ticket_computers_ticket_computer_idx')
+      .on(table.ticketId, table.computerId)
+      .where(isNull(table.archivedAt)),
     /* "Os chamados desta máquina" é a consulta da ficha do computador. */
     index('ticket_computers_computer_idx').on(table.computerId),
   ],

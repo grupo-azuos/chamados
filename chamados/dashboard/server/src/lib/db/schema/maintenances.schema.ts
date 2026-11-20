@@ -2,6 +2,7 @@ import { MAINTENANCE_TYPES } from '@template/shared/domain/maintenance.util';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 import { computers } from './computers.schema';
@@ -49,6 +50,8 @@ export const maintenances = chamadosSchema.table(
     createdBy: text('created_by').notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
+    /* Excluir ARQUIVA: a linha fica, some da lista e volta pelo "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
     /* "O que já fizeram nesta máquina" é a consulta da ficha do computador. */

@@ -1,5 +1,7 @@
+import { isNull } from 'drizzle-orm';
 import { index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 import { tickets } from './tickets.schema';
@@ -32,10 +34,14 @@ export const ticketWatchers = chamadosSchema.table(
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     /** O e-mail de quem vinculou — vem sempre da sessão. */
     createdBy: text('created_by'),
+    /* Desvincular ARQUIVA: a pessoa deixa de ver o chamado na hora e volta pelo "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
-    /* A mesma pessoa não se vincula duas vezes ao mesmo chamado. */
-    uniqueIndex('ticket_watchers_ticket_user_idx').on(table.ticketId, table.userId),
+    /* A mesma pessoa não se vincula duas vezes ao mesmo chamado (as desvinculadas não contam). */
+    uniqueIndex('ticket_watchers_ticket_user_idx')
+      .on(table.ticketId, table.userId)
+      .where(isNull(table.archivedAt)),
     /* "Meus chamados" de quem foi vinculado. */
     index('ticket_watchers_user_idx').on(table.userId),
   ],

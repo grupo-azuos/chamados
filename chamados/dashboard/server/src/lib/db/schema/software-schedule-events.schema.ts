@@ -13,6 +13,7 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 import { softwareProjects } from './software-projects.schema';
@@ -58,6 +59,8 @@ export const softwareScheduleEvents = chamadosSchema.table(
     createdByName: text('created_by_name'),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
+    /* Excluir ARQUIVA: o item sai da Agenda e volta pelo "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
     index('software_schedule_project_idx').on(table.projectId),

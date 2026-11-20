@@ -12,6 +12,7 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
@@ -58,6 +59,8 @@ export const inventoryItems = chamadosSchema.table(
     createdBy: text('created_by').notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
+    /* Excluir ARQUIVA: o produto some do inventário com o extrato e a foto guardados. */
+    ...archiveColumns(),
   },
   (table) => [
     index('inventory_items_category_idx').on(table.category),

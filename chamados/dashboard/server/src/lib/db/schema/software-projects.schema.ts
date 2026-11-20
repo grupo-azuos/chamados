@@ -11,6 +11,7 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 function valuesFor(values: readonly string[]) {
@@ -47,6 +48,8 @@ export const softwareProjects = chamadosSchema.table(
     createdBy: text('created_by').notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
+    /* Excluir ARQUIVA: o sistema sai das listas, com o histórico e os chamados guardados. */
+    ...archiveColumns(),
   },
   (table) => [
     index('software_projects_status_idx').on(table.status),

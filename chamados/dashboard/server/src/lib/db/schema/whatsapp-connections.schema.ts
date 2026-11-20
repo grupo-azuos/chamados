@@ -5,6 +5,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 /**
@@ -28,19 +29,26 @@ export const whatsappConnections = chamadosSchema.table('whatsapp_connections', 
   operatorName: text('operator_name'),
   linkedAt: timestamp('linked_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  /* Desvincular ARQUIVA a linha (o bot apaga as chaves dele): o sistema guarda que o número
+     já foi vinculado, e quem desvinculou e quando. Vincular de novo reaproveita a linha. */
+  ...archiveColumns(),
 });
 
 export type WhatsappConnectionRow = typeof whatsappConnections.$inferSelect;
 
 /**
  * Os textos do bot que o super admin trocou. Só entra aqui o que foi EDITADO: mensagem sem
- * linha usa o texto original, que mora no código (`whatsapp-template.util`, em shared).
+ * linha (ou com a linha arquivada) usa o texto original, que mora no código
+ * (`whatsapp-template.util`, em shared).
  */
 export const whatsappTemplates = chamadosSchema.table('whatsapp_templates', {
   key: text('key').primaryKey(),
   body: text('body').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedBy: text('updated_by'),
+  /* Voltar ao texto original ARQUIVA a edição: ela some (vale o original) e volta pelo
+     "Desfazer". Editar de novo reaproveita a linha. */
+  ...archiveColumns(),
 });
 
 export type WhatsappTemplateRow = typeof whatsappTemplates.$inferSelect;
