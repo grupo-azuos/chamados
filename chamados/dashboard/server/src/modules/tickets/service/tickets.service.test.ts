@@ -666,7 +666,7 @@ describe('TicketsService.dashboard', () => {
  * (#11) tem em outros lugares: sem linha em `internal_roles`, não existe cargo — nunca
  * `'user'` por omissão. Cada teste aqui é uma tentativa de escalação (CONTRIBUTING §7).
  */
-describe('TicketsService — acesso por área', () => {
+describe('TicketsService — access by area', () => {
   const manutencao: RequestUser = { ...ana, id: '2', email: 'carlos@azuos.com.br' };
   /* SUPER administrador: 100%, ponta a ponta, sem fronteira — o único papel com bypass. */
   const superadmin: RequestUser = {
@@ -1235,7 +1235,7 @@ describe('TicketsService WhatsApp notices', () => {
   });
 });
 
-describe('TicketsService — quem pede, logado', () => {
+describe('TicketsService — the signed-in requester', () => {
   const bia: RequestUser = {
     id: '22222222-2222-4222-8222-222222222222',
     email: 'bia@azuos.com.br',

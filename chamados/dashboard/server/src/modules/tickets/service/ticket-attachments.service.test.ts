@@ -329,7 +329,7 @@ describe('TicketAttachmentsService.remove', () => {
   });
 });
 
-describe('a cota de arquivos é por lado', () => {
+describe('the file quota is per side', () => {
   // feliz
   /**
    * Com cota COMPARTILHADA, quem abrisse o chamado com cinco PDFs deixaria o TI sem poder
