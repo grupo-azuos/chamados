@@ -54,6 +54,8 @@ function movementRow(overrides: Partial<PartMovementRow> = {}): PartMovementRow 
     createdBy: 'ana@empresa.com.br',
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }
@@ -331,7 +333,7 @@ describe('PartsService.removeMovement', () => {
     const service = makeService({
       findMovementById: vi.fn().mockResolvedValue(movementWithRefs()),
       findByIdForUpdate: vi.fn().mockResolvedValue(partRow()),
-      deleteMovement: vi.fn(),
+      setMovementArchived: vi.fn(),
       /* O que sobrou depois da exclusão: uma entrada de 4 e uma saída de 1, com o
          `balanceAfter` ainda contando com a linha que saiu. */
       listMovementsOfPart: vi.fn().mockResolvedValue([
@@ -350,12 +352,12 @@ describe('PartsService.removeMovement', () => {
     expect(update).toHaveBeenCalledWith(1, { balance: 3 }, expect.anything());
   });
 
-  it('empties the balance when the only movement is deleted', async () => {
+  it('empties the balance when the only movement is reversed', async () => {
     const update = vi.fn();
     const service = makeService({
       findMovementById: vi.fn().mockResolvedValue(movementWithRefs()),
       findByIdForUpdate: vi.fn().mockResolvedValue(partRow()),
-      deleteMovement: vi.fn(),
+      setMovementArchived: vi.fn(),
       listMovementsOfPart: vi.fn().mockResolvedValue([]),
       update,
       updateMovement: vi.fn(),
@@ -366,12 +368,12 @@ describe('PartsService.removeMovement', () => {
     expect(update).toHaveBeenCalledWith(1, { balance: 0 }, expect.anything());
   });
 
-  it('lets a manager delete a movement registered by someone else', async () => {
-    const deleteMovement = vi.fn();
+  it('lets a manager reverse a movement registered by someone else', async () => {
+    const setMovementArchived = vi.fn();
     const service = makeService({
       findMovementById: vi.fn().mockResolvedValue(movementWithRefs()),
       findByIdForUpdate: vi.fn().mockResolvedValue(partRow()),
-      deleteMovement,
+      setMovementArchived,
       listMovementsOfPart: vi.fn().mockResolvedValue([]),
       update: vi.fn(),
       updateMovement: vi.fn(),
@@ -379,36 +381,92 @@ describe('PartsService.removeMovement', () => {
 
     await service.removeMovement(manager, 10);
 
-    expect(deleteMovement).toHaveBeenCalledWith(10, expect.anything());
+    expect(setMovementArchived).toHaveBeenCalledWith(10, true, manager.id, expect.anything());
   });
 
   // triste
-  it('refuses to delete another person movement', async () => {
-    const deleteMovement = vi.fn();
+  it('refuses to reverse another person movement', async () => {
+    const setMovementArchived = vi.fn();
     const service = makeService({
       findMovementById: vi.fn().mockResolvedValue(movementWithRefs()),
-      deleteMovement,
+      setMovementArchived,
     });
 
     await expect(service.removeMovement(otherUser, 10)).rejects.toBeInstanceOf(ForbiddenException);
-    expect(deleteMovement).not.toHaveBeenCalled();
+    expect(setMovementArchived).not.toHaveBeenCalled();
   });
 
   /* Movimento de chamado se desfaz pelo chamado, senão os dois passam a discordar. */
-  it('refuses to delete a movement that came from a ticket, pointing to it', async () => {
-    const deleteMovement = vi.fn();
+  it('refuses to reverse a movement that came from a ticket, pointing to it', async () => {
+    const setMovementArchived = vi.fn();
     const service = makeService({
       findMovementById: vi.fn().mockResolvedValue(movementWithRefs({ ticketId: 49 })),
-      deleteMovement,
+      setMovementArchived,
     });
 
     await expect(service.removeMovement(owner, 10)).rejects.toThrow('chamado CH-0049');
-    expect(deleteMovement).not.toHaveBeenCalled();
+    expect(setMovementArchived).not.toHaveBeenCalled();
   });
 
   it('answers not found when the movement is already gone', async () => {
     const service = makeService({ findMovementById: vi.fn().mockResolvedValue(null) });
 
     await expect(service.removeMovement(owner, 99)).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('PartsService.restoreMovement', () => {
+  // feliz
+  it('puts the reversed movement back and rebuilds the ledger', async () => {
+    const setMovementArchived = vi.fn();
+    const update = vi.fn();
+    const service = makeService({
+      findMovementById: vi.fn().mockResolvedValue(movementWithRefs()),
+      findByIdForUpdate: vi.fn().mockResolvedValue(partRow()),
+      setMovementArchived,
+      listMovementsOfPart: vi.fn().mockResolvedValue([
+        movementRow({ id: 1, type: 'in', quantity: 4, balanceAfter: 4 }),
+        movementRow({ id: 10, type: 'out', quantity: 1, balanceAfter: 3 }),
+      ]),
+      update,
+      updateMovement: vi.fn(),
+    });
+
+    await service.restoreMovement(owner, 10);
+
+    expect(setMovementArchived).toHaveBeenCalledWith(10, false, null, expect.anything());
+    expect(update).toHaveBeenCalledWith(1, { balance: 3 }, expect.anything());
+  });
+
+  // triste
+  it('refuses when bringing the movement back would leave the balance negative', async () => {
+    const update = vi.fn();
+    const service = makeService({
+      findMovementById: vi.fn().mockResolvedValue(movementWithRefs()),
+      findByIdForUpdate: vi.fn().mockResolvedValue(partRow()),
+      setMovementArchived: vi.fn(),
+      listMovementsOfPart: vi
+        .fn()
+        .mockResolvedValue([movementRow({ id: 10, type: 'out', quantity: 1, balanceAfter: 3 })]),
+      update,
+      updateMovement: vi.fn(),
+    });
+
+    await expect(service.restoreMovement(owner, 10)).rejects.toThrow('saldo da peça negativo');
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('refuses to restore another person movement', async () => {
+    const setMovementArchived = vi.fn();
+    const service = makeService({
+      findMovementById: vi.fn().mockResolvedValue(movementWithRefs()),
+      setMovementArchived,
+    });
+
+    await expect(service.restoreMovement(otherUser, 10)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(setMovementArchived).not.toHaveBeenCalled();
   });
 });

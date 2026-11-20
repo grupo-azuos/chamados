@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
+  import { useArchivedScheduleEventsModel } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import { page } from '$app/state';
   import {
     canChangeScheduleEvent,
@@ -12,6 +14,7 @@
   import ScheduleEventFormSlot from './schedule-event-form-slot.svelte';
 
   const schedule = useSoftwareScheduleModel();
+  const archived = useArchivedScheduleEventsModel();
 
   let selectedEvent = $state<SoftwareScheduleEvent | null>(null);
   /* O novo agendamento: aberto pelo botão (dia em tela, 09:00) ou por um clique no calendário,
@@ -41,6 +44,14 @@
         selectedEvent = event;
     },
   }}
+/>
+
+<!-- O item excluído sai da Agenda e aparece aqui, fechado, com o "Desfazer". -->
+<ArchivedList
+  data={archived.data}
+  ui={{ className: 'mt-6' }}
+  state={archived.state}
+  actions={archived.actions}
 />
 
 {#if schedule.data.githubDay}

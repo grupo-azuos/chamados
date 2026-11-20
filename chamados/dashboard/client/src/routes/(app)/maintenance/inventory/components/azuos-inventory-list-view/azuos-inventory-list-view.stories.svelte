@@ -32,6 +32,7 @@
       createdBy: 'manutencao@azuos.local',
       updatedAt: null,
       updatedBy: null,
+      archive: null,
       ...overrides,
     };
   }

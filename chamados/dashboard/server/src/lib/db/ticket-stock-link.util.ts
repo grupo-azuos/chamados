@@ -33,7 +33,14 @@ export async function ticketStockLinksOf(
         quantity: ticketStockItems.quantity,
       })
       .from(ticketStockItems)
-      .where(and(inArray(column, [...itemIds]), isNull(ticketStockItems.settledAt)))
+      .where(
+        and(
+          inArray(column, [...itemIds]),
+          isNull(ticketStockItems.settledAt),
+          /* O item tirado do chamado (arquivado) não prende mais nada. */
+          isNull(ticketStockItems.archivedAt),
+        ),
+      )
       .orderBy(asc(ticketStockItems.ticketId), asc(ticketStockItems.id)),
     'listar os chamados que prendem os itens do depósito',
   );

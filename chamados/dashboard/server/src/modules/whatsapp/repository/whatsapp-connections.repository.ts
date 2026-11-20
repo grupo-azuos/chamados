@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
+import { archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
@@ -18,18 +19,22 @@ export class WhatsappConnectionsRepository {
       this.db
         .select()
         .from(whatsappConnections)
-        .where(eq(whatsappConnections.userId, userId))
+        .where(and(eq(whatsappConnections.userId, userId), isNull(whatsappConnections.archivedAt)))
         .limit(1),
       'ler vínculo de WhatsApp',
     );
   }
 
-  /** Todos os vínculos — são poucos: um por pessoa que administra. */
+  /** Todos os vínculos valendo — são poucos: um por pessoa que administra. */
   async list(): Promise<WhatsappConnectionRow[]> {
-    return runQuery(this.db.select().from(whatsappConnections), 'listar vínculos de WhatsApp');
+    return runQuery(
+      this.db.select().from(whatsappConnections).where(isNull(whatsappConnections.archivedAt)),
+      'listar vínculos de WhatsApp',
+    );
   }
 
-  /** Grava o número vinculado. Trocar de número mantém a linha e renova a data do vínculo. */
+  /** Grava o número vinculado. Trocar de número (ou vincular de novo depois de desvincular)
+   *  mantém a linha e renova a data do vínculo. */
   async save(userId: string, phone: string, operatorName: string | null = null): Promise<void> {
     const now = new Date();
 
@@ -39,15 +44,19 @@ export class WhatsappConnectionsRepository {
         .values({ userId, phone, operatorName, linkedAt: now, updatedAt: now })
         .onConflictDoUpdate({
           target: whatsappConnections.userId,
-          set: { phone, operatorName, linkedAt: now, updatedAt: now },
+          set: { phone, operatorName, linkedAt: now, updatedAt: now, ...archiveValues(false, null) },
         }),
       'gravar vínculo de WhatsApp',
     );
   }
 
-  async remove(userId: string): Promise<void> {
+  /** Desvincula: arquiva a linha, com quem desvinculou e quando. */
+  async archive(userId: string, actorId: string | null): Promise<void> {
     await runQuery(
-      this.db.delete(whatsappConnections).where(eq(whatsappConnections.userId, userId)),
+      this.db
+        .update(whatsappConnections)
+        .set(archiveValues(true, actorId))
+        .where(eq(whatsappConnections.userId, userId)),
       'remover vínculo de WhatsApp',
     );
   }

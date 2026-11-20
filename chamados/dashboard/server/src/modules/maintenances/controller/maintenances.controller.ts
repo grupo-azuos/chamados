@@ -13,6 +13,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
@@ -81,7 +82,7 @@ export class MaintenancesController {
   @ApiOperation({
     summary: 'Lista as manutenções agendadas',
     description:
-      'Do dia mais próximo para o mais distante. `computerId` recorta a de uma máquina — é o que a ficha usa. Máquina fora de uso fica de fora.',
+      'Do dia mais próximo para o mais distante. `computerId` recorta a de uma máquina — é o que a ficha usa. Máquina fora de uso fica de fora. Os encerrados (cumpridos ou cancelados) ficam arquivados: `?archived=only` traz só eles.',
   })
   @ApiOkResponse({ type: [MaintenanceScheduleDto] })
   async listSchedules(
@@ -95,7 +96,7 @@ export class MaintenancesController {
   @ApiOperation({
     summary: 'Agenda ou remarca a manutenção de uma máquina',
     description:
-      'Uma por máquina: chamar de novo troca a data. Registrar uma manutenção nessa máquina cumpre o agendamento, e ele some sozinho.',
+      'Uma por máquina: chamar de novo troca a data. Registrar uma manutenção nessa máquina cumpre o agendamento, e ele é arquivado sozinho.',
   })
   @ApiOkResponse({ type: MaintenanceScheduleDto })
   @ApiNotFoundResponse({ description: 'Máquina não encontrada ou fora de uso.' })
@@ -110,13 +111,33 @@ export class MaintenancesController {
 
   @Delete('schedules/:computerId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Cancela a manutenção agendada de uma máquina' })
+  @ApiOperation({
+    summary: 'Cancela (arquiva) a manutenção agendada de uma máquina',
+    description:
+      'O agendamento sai da agenda e fica guardado, com quem cancelou e quando. `POST schedules/:id/restore` o traz de volta.',
+  })
   @ApiNoContentResponse({ description: 'Agendamento cancelado (ou não havia nenhum).' })
   async cancelSchedule(
     @CurrentUser() user: RequestUser,
     @Param('computerId', ParseIntPipe) computerId: number,
   ): Promise<void> {
     return this.service.cancelSchedule(user, computerId);
+  }
+
+  @Post('schedules/:id/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Desfaz o cancelamento de uma manutenção agendada',
+    description: 'O id é o do agendamento (não o da máquina), que vem na lista de arquivados.',
+  })
+  @ApiOkResponse({ type: MaintenanceScheduleDto })
+  @ApiNotFoundResponse({ description: 'Agendamento não encontrado, ou máquina fora de uso.' })
+  @ApiConflictResponse({ description: 'A máquina já tem outra manutenção agendada.' })
+  async restoreSchedule(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<MaintenanceScheduleDto> {
+    return this.service.restoreSchedule(user, id);
   }
 
   @Get(':id')
@@ -163,11 +184,11 @@ export class MaintenancesController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Exclui uma manutenção',
+    summary: 'Exclui (arquiva) uma manutenção',
     description:
-      'Não tem volta. É para o registro lançado errado — cada pessoa exclui o que criou; gerente e administrador excluem qualquer um.',
+      'Para o registro lançado errado — cada pessoa exclui o que criou; gerente e administrador excluem qualquer um. A linha fica guardada, com quem excluiu e quando, e `POST :id/restore` a traz de volta.',
   })
-  @ApiNoContentResponse({ description: 'Manutenção excluída.' })
+  @ApiNoContentResponse({ description: 'Manutenção arquivada.' })
   @ApiNotFoundResponse({ description: 'Manutenção não encontrada.' })
   @ApiForbiddenResponse({
     description: 'O registro é de outra pessoa e quem pediu não é gerente nem administrador.',
@@ -177,5 +198,20 @@ export class MaintenancesController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
     return this.service.remove(user, id);
+  }
+
+  @Post(':id/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desfaz a exclusão de uma manutenção' })
+  @ApiOkResponse({ type: MaintenanceDto })
+  @ApiNotFoundResponse({ description: 'Manutenção não encontrada.' })
+  @ApiForbiddenResponse({
+    description: 'O registro é de outra pessoa e quem pediu não é gerente nem administrador.',
+  })
+  async restore(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<MaintenanceDto> {
+    return this.service.restore(user, id);
   }
 }

@@ -209,7 +209,7 @@ export class TicketsService {
     }
 
     const before = (await this.computers.listFor([id])).get(id) ?? [];
-    await this.computers.replace(id, computerIds, user.email);
+    await this.computers.replace(id, computerIds, user.email, user.id);
     const row = await this.repository.findById(id);
     if (!row) throw new NotFoundException(TICKET_NOT_FOUND);
     const after = (await this.computers.listFor([id])).get(id) ?? [];
@@ -264,11 +264,11 @@ export class TicketsService {
   private async syncSingleComputer(
     id: number,
     computerId: number | null | undefined,
-    email: string,
+    user: RequestUser,
   ): Promise<void> {
     if (computerId === undefined || !this.computers) return;
 
-    await this.computers.replace(id, computerId ? [computerId] : [], email);
+    await this.computers.replace(id, computerId ? [computerId] : [], user.email, user.id);
   }
 
   /**
@@ -732,7 +732,7 @@ export class TicketsService {
       toTicketUpdate({ ...input, problemType }, user.email, new Date(), assignee),
     );
 
-    await this.syncSingleComputer(id, input.computerId, user.email);
+    await this.syncSingleComputer(id, input.computerId, user);
 
     /* O que mudou vai para a linha do tempo, com quem mudou. Salvar sem mudar nada não deixa
        rastro: uma linha do tempo cheia de "alteração" vazia esconde as que importam. */
@@ -797,7 +797,7 @@ export class TicketsService {
     const reach = await this.access.reach(user, id);
     this.access.assertCanManageArea(reach, 'remover uma área de');
 
-    await this.repository.removeArea(id, area);
+    await this.repository.removeArea(id, area, user.id);
 
     return this.toFullTicket(
       reach.ticket,

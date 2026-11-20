@@ -417,7 +417,7 @@
   data={{
     title: 'Excluir esta manutenção?',
     description: data.removing
-      ? `O registro de ${formatDate(data.removing.performedAt)} em ${machineLabelOf(data.removing)} sai do histórico. Não dá para desfazer.`
+      ? `O registro de ${formatDate(data.removing.performedAt)} em ${machineLabelOf(data.removing)} sai do histórico. Ele fica em "Removidos", onde dá para desfazer.`
       : '',
     confirmLabel: 'Excluir manutenção',
     confirmingLabel: 'Excluindo…',

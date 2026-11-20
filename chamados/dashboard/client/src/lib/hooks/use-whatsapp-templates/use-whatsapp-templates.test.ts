@@ -17,7 +17,12 @@ import {
 type WhatsappTemplatesModel = ReturnType<typeof useWhatsappTemplatesModel>;
 
 vi.mock('$lib/api/whatsapp-integration.api', () => ({
-  whatsappIntegrationApi: { templates: vi.fn(), updateTemplate: vi.fn(), restoreTemplate: vi.fn() },
+  whatsappIntegrationApi: {
+    templates: vi.fn(),
+    updateTemplate: vi.fn(),
+    restoreTemplate: vi.fn(),
+    restoreTemplateEdit: vi.fn(),
+  },
 }));
 
 const { whatsappIntegrationApi } = await import('$lib/api/whatsapp-integration.api');
@@ -30,6 +35,7 @@ const template: WhatsappTemplate = {
   body: WHATSAPP_TEMPLATES.ticket_ready.defaultBody,
   defaultBody: WHATSAPP_TEMPLATES.ticket_ready.defaultBody,
   isCustomized: false,
+  archivedEdit: null,
 };
 
 describe('draftProblemOf', () => {
@@ -76,6 +82,7 @@ describe('useWhatsappTemplatesModel', () => {
     body: 'Recebi o chamado {{protocolo}}.',
     defaultBody: WHATSAPP_TEMPLATES.ticket_opened.defaultBody,
     isCustomized: true,
+    archivedEdit: null,
   };
 
   async function mountOpenModel(): Promise<WhatsappTemplatesModel> {
@@ -139,6 +146,17 @@ describe('useWhatsappTemplatesModel', () => {
     expect(whatsappIntegrationApi.restoreTemplate).toHaveBeenCalledWith('ticket_opened');
   });
 
+  it('brings back the edited text kept after restoring the original', async () => {
+    const edited = { ...opened, body: 'Pronto, {{nome}}!', isCustomized: true, archivedEdit: null };
+    vi.mocked(whatsappIntegrationApi.restoreTemplateEdit).mockResolvedValue(edited);
+    const model = await mountOpenModel();
+
+    model.actions.onRestoreEdit();
+
+    await waitFor(() => expect(model.data.draft).toBe('Pronto, {{nome}}!'));
+    expect(whatsappIntegrationApi.restoreTemplateEdit).toHaveBeenCalledWith('ticket_opened');
+  });
+
   // triste
   /* Variável que não existe para a mensagem: salvar fica travado, com o motivo. */
   it('locks saving and says why when the draft uses an unknown variable', async () => {
@@ -188,10 +206,12 @@ describe('useWhatsappTemplatesModel — nothing selected', () => {
 
     model.actions.onSave();
     model.actions.onRestore();
+    model.actions.onRestoreEdit();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(whatsappIntegrationApi.updateTemplate).not.toHaveBeenCalled();
     expect(whatsappIntegrationApi.restoreTemplate).not.toHaveBeenCalled();
+    expect(whatsappIntegrationApi.restoreTemplateEdit).not.toHaveBeenCalled();
   });
 
   it('empties the draft when an unknown message is chosen', async () => {

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
+  import { useArchivedRolesModel } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import LayoutGrid from '@lucide/svelte/icons/layout-grid';
   import MessageCircle from '@lucide/svelte/icons/message-circle';
   import Users from '@lucide/svelte/icons/users';
@@ -29,6 +31,7 @@
   /* A lista da equipe é do super-admin: para os demais, o perfil é só o cartão deles. */
   const isSuperAdmin = untrack(() => data.user?.role === 'superadmin');
   const list = useRolesModel({ isEnabled: isSuperAdmin });
+  const archivedRoles = useArchivedRolesModel();
   /* `untrack`: o id de quem está logado não muda enquanto a tela está aberta. */
   const whatsapp = useWhatsappLinkModel(untrack(() => data.user?.id ?? ''));
   /* Os textos do bot são do super admin: para os demais o botão nem aparece. */
@@ -97,6 +100,14 @@
         }),
     }}
   />
+
+  <!-- O módulo tirado de alguém aparece aqui, fechado, com o "Desfazer" que devolve o acesso. -->
+  <ArchivedList
+    data={{ ...archivedRoles.data, title: 'Módulos tirados' }}
+    ui={{ className: 'mt-6' }}
+    state={archivedRoles.state}
+    actions={archivedRoles.actions}
+  />
 {/snippet}
 
 {#snippet effectsPreference()}
@@ -156,7 +167,7 @@
 <ConfirmDialog
   data={{
     title: 'Tirar este módulo?',
-    description: `"${list.data.pendingDelete?.userEmail || list.data.pendingDelete?.userId || ''}" deixa de ver ${list.data.pendingDelete ? ROLE_CONTEXT_LABELS[list.data.pendingDelete.context] : ''}. Abrir chamado e validar documento continuam disponíveis.`,
+    description: `"${list.data.pendingDelete?.userEmail || list.data.pendingDelete?.userId || ''}" deixa de ver ${list.data.pendingDelete ? ROLE_CONTEXT_LABELS[list.data.pendingDelete.context] : ''}. Abrir chamado e validar documento continuam disponíveis. Dá para devolver em "Módulos tirados".`,
     confirmLabel: 'Tirar módulo',
     confirmingLabel: 'Tirando…',
   }}

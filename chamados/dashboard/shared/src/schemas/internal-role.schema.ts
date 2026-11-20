@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { archiveSchema } from './archive.schema';
 import { ROLE_CONTEXTS, roleContextSchema } from './user.schema';
 
 /**
@@ -21,6 +22,8 @@ export const internalRoleSchema = z.object({
   createdBy: z.string().nullable().optional(),
   updatedAt: z.iso.datetime().nullable().optional(),
   updatedBy: z.string().nullable().optional(),
+  /** Nulo enquanto o módulo vale; tirar o módulo arquiva, e o "Desfazer" devolve. */
+  archive: archiveSchema.optional(),
 });
 
 export type InternalRole = z.infer<typeof internalRoleSchema>;

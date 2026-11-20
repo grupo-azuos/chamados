@@ -9,6 +9,7 @@ import {
 } from '@template/shared/schemas/part.schema';
 import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
 
+import { toArchive } from '../../../lib/db/archive.util';
 import { setIfDefined } from '../../../lib/db/partial-update.util';
 import { type PartMovementInsert } from '../../../lib/db/schema/part-movements.schema';
 import { type PartInsert, type PartRow } from '../../../lib/db/schema/parts.schema';
@@ -93,6 +94,7 @@ export function toMovement(row: MovementWithRefs): PartMovement {
     createdBy: movement.createdBy,
     updatedAt: movement.updatedAt?.toISOString() ?? null,
     updatedBy: movement.updatedBy,
+    archive: toArchive(movement),
   };
 }
 

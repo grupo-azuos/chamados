@@ -1,7 +1,8 @@
 import { TICKET_AREAS } from '@template/shared/domain/ticket-catalog.util';
-import { sql } from 'drizzle-orm';
+import { isNull, sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 import { tickets } from './tickets.schema';
@@ -33,10 +34,14 @@ export const ticketAreas = chamadosSchema.table(
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     /** O e-mail de quem somou a área — sempre alguém do painel, nunca quem abriu o chamado. */
     createdBy: text('created_by'),
+    /* Tirar a área ARQUIVA: ela deixa de atender o chamado na hora e volta pelo "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
-    /* A mesma área não pode ser somada duas vezes ao mesmo chamado. */
-    uniqueIndex('ticket_areas_ticket_area_idx').on(table.ticketId, table.area),
+    /* A mesma área não pode ser somada duas vezes ao mesmo chamado (as tiradas não contam). */
+    uniqueIndex('ticket_areas_ticket_area_idx')
+      .on(table.ticketId, table.area)
+      .where(isNull(table.archivedAt)),
     index('ticket_areas_ticket_idx').on(table.ticketId),
     check('ticket_areas_area_valid', sql`${table.area} in (${valuesFor(TICKET_AREAS)})`),
   ],

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
+  import { useArchivedProjectsModel } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { canEditSystem } from '@template/shared/domain/system-access.util';
@@ -10,6 +12,7 @@
   import ProjectFormSlot from './project-form-slot.svelte';
 
   const listModel = useSoftwareProjectListModel();
+  const archived = useArchivedProjectsModel();
   /* Sincronizar é de quem tem o GitHub vinculado — qualquer papel, e só esses. */
   const github = useGithubConnectionModel(page.data.user?.id ?? '', Boolean(page.data.user?.id));
 
@@ -50,6 +53,14 @@
     onEdit: handleEdit,
     onViewTimeline: (project) => goto(`/system/projects/${project.id}`),
   }}
+/>
+
+<!-- O que foi excluído some da lista e aparece aqui, fechado, com o "Desfazer". -->
+<ArchivedList
+  data={archived.data}
+  ui={{ className: 'mt-6' }}
+  state={archived.state}
+  actions={archived.actions}
 />
 
 {#if isFormOpen}

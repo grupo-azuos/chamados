@@ -157,12 +157,50 @@ export class TicketStockItemsService {
 
     await this.repository.transaction(async (executor) => {
       if (row.settledAt) await this.undoMove(row, reach.ticket, user.email, executor);
-      await this.repository.delete(row.id, executor);
+      await this.repository.archive(row.id, user.id, executor);
     });
 
     await this.histories.record(
       toUpdateHistory(reach.ticket, `Tirou o item do estoque: ${describe(row)}.`, user),
     );
+  }
+
+  /**
+   * Desfaz o "tirar": o item volta ao chamado como RESERVA. Valem as mesmas regras de vincular
+   * — chamado aberto, a prateleira da área e, na saída, o que ainda sobra no depósito.
+   */
+  async restore(user: RequestUser, ticketId: number, id: number): Promise<TicketStockItem> {
+    assertCanAttendTicket(user.role);
+
+    const reach = await this.access.reach(user, ticketId);
+    const row = await this.repository.findById(id);
+    if (!row || row.ticketId !== ticketId || !row.archivedAt) {
+      throw new NotFoundException(TICKET_STOCK_ITEM_NOT_FOUND);
+    }
+
+    const source = sourceOf(row);
+    this.assertCanUseShelf(reach, source);
+    assertOpen(reach.ticket);
+
+    const item = await this.repository.findShelfItem(source, shelfIdOf(row));
+    if (!item) throw new NotFoundException(SHELF_ITEM_NOT_FOUND);
+
+    const reserved = await this.repository.reservedOut(source);
+    const available = availableForTicket(item.balance, reserved.get(item.id) ?? 0);
+    const refusal = refuseTicketStockItem({
+      name: item.name,
+      direction: row.direction,
+      quantity: row.quantity,
+      available,
+    });
+    if (refusal) throw new UnprocessableEntityException(refusal);
+
+    await this.repository.restore(row.id);
+    await this.histories.record(
+      toUpdateHistory(reach.ticket, `Desfez a retirada do item do estoque: ${describe(row)}.`, user),
+    );
+
+    return toTicketStockItem({ ...row, archivedAt: null, archivedBy: null, settledAt: null }, await this.computerNamesOf(ticketId));
   }
 
   /**

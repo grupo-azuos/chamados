@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, desc, eq, or, sql } from 'drizzle-orm';
+import { type ArchivedFilter } from '@template/shared/schemas/archive.schema';
+import { and, asc, desc, eq, isNull, or, sql } from 'drizzle-orm';
 
+import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
@@ -19,11 +21,13 @@ import { superAdmins } from '../../../lib/db/schema/super-admins.schema';
 export class RolesRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(): Promise<InternalRoleRow[]> {
+  /** Os acessos valendo; `only` traz os tirados (arquivados) — o bloco "Removidos". */
+  async list(archived: ArchivedFilter = 'hide'): Promise<InternalRoleRow[]> {
     return runQuery(
       this.db
         .select()
         .from(internalRoles)
+        .where(archivedCondition(internalRoles.archivedAt, archived))
         .orderBy(desc(internalRoles.createdAt), desc(internalRoles.id)),
       'listar cargos internos',
     );
@@ -51,7 +55,12 @@ export class RolesRepository {
       this.db
         .select()
         .from(internalRoles)
-        .where(or(eq(internalRoles.userId, identifier), eq(internalRoles.userEmail, identifier)))
+        .where(
+          and(
+            or(eq(internalRoles.userId, identifier), eq(internalRoles.userEmail, identifier)),
+            isNull(internalRoles.archivedAt),
+          ),
+        )
         .orderBy(asc(internalRoles.context)),
       'listar cargos da pessoa',
     );
@@ -63,7 +72,10 @@ export class RolesRepository {
         .insert(internalRoles)
         .values(values)
         .onConflictDoUpdate({
+          /* O índice único é só dos acessos valendo: o tirado não conflita, e liberar de novo
+             cria a linha nova. */
           target: [internalRoles.userId, internalRoles.context],
+          targetWhere: isNull(internalRoles.archivedAt),
           set: {
             userEmail: values.userEmail,
             updatedAt: new Date(),
@@ -85,6 +97,7 @@ export class RolesRepository {
         .values(values)
         .onConflictDoUpdate({
           target: [internalRoles.userId, internalRoles.context],
+          targetWhere: isNull(internalRoles.archivedAt),
           set: {
             userEmail: sql`excluded.user_email`,
             updatedAt: new Date(),
@@ -96,10 +109,32 @@ export class RolesRepository {
     );
   }
 
-  async delete(id: number): Promise<void> {
+  /** Tira o módulo (arquiva) ou devolve (desarquiva). A linha nunca sai do banco. */
+  async setArchived(id: number, archived: boolean, actorId: string | null): Promise<void> {
     await runQuery(
-      this.db.delete(internalRoles).where(eq(internalRoles.id, id)),
-      'excluir cargo interno',
+      this.db
+        .update(internalRoles)
+        .set(archiveValues(archived, actorId))
+        .where(eq(internalRoles.id, id)),
+      archived ? 'tirar módulo' : 'devolver módulo',
+    );
+  }
+
+  /** O acesso valendo da pessoa naquele módulo, se houver. */
+  async findActive(userId: string, context: string): Promise<InternalRoleRow | null> {
+    return runMaybe(
+      this.db
+        .select()
+        .from(internalRoles)
+        .where(
+          and(
+            eq(internalRoles.userId, userId),
+            eq(internalRoles.context, context),
+            isNull(internalRoles.archivedAt),
+          ),
+        )
+        .limit(1),
+      'ler acesso valendo',
     );
   }
 }

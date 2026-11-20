@@ -30,6 +30,7 @@ function item(over: Partial<InventoryItem> = {}): InventoryItem {
     createdBy: 'manutencao@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...over,
   };
 }

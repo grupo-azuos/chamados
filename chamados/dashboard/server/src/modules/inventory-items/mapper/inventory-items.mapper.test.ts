@@ -28,6 +28,8 @@ function row(overrides: Partial<InventoryItemRow> = {}): InventoryItemRow {
     createdBy: 'ana@empresa.com.br',
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }

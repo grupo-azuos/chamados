@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { INVENTORY_CATEGORIES, INVENTORY_UNITS } from '../domain/inventory-catalog.util';
+import { archivedFilterSchema, archiveSchema } from './archive.schema';
 import { paginationQuerySchema } from './pagination.schema';
 import { stagedFileSchema } from './staged-file.schema';
 import { ticketStockLinkSchema } from './ticket-stock-item.schema';
@@ -101,6 +102,8 @@ export const inventoryItemSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
+  /** Nulo em uso; excluir arquiva (com a foto guardada), e o "Desfazer" devolve. */
+  archive: archiveSchema,
 });
 
 export type InventoryItem = z.infer<typeof inventoryItemSchema>;
@@ -154,6 +157,7 @@ export const inventoryItemListQuerySchema = paginationQuerySchema.extend({
   withoutPhotoOnly: z.coerce.boolean<boolean>().optional(),
   /** Só os produtos com o depósito zerado. */
   outOfStockOnly: z.coerce.boolean<boolean>().optional(),
+  archived: archivedFilterSchema,
 });
 
 export type InventoryItemListQuery = z.infer<typeof inventoryItemListQuerySchema>;

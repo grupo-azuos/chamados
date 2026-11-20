@@ -28,6 +28,7 @@ function quote(over: Partial<MaintenanceQuote> = {}): MaintenanceQuote {
     createdBy: 'manutencao@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...over,
   };
 }

@@ -16,6 +16,7 @@ export const softwareProjectsApi = {
         pageSize: query.pageSize,
         search: query.search,
         status: query.status,
+        archived: query.archived,
       },
     }),
 
@@ -33,10 +34,14 @@ export const softwareProjectsApi = {
       body: input,
     }),
 
+  /** Exclui ARQUIVANDO: o sistema e o que é dele ficam, e `restore` o devolve. */
   remove: (id: number) =>
     apiRequest<void>(`/software-projects/${id}`, {
       method: 'DELETE',
     }),
+
+  restore: (id: number) =>
+    apiRequest<SoftwareProject>(`/software-projects/${id}/restore`, { method: 'POST' }),
 
   syncGithub: (id: number) =>
     apiRequest<{ synced: number; message: string }>(`/software-projects/${id}/sync-github`, {

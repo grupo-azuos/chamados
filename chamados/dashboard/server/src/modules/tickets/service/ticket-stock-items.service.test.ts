@@ -73,6 +73,8 @@ function lineRow(overrides: Partial<TicketStockItemRow> = {}): TicketStockItemRo
     createdAt: CREATED_AT,
     createdBy: ana.email,
     createdByName: ana.name,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }
@@ -105,7 +107,8 @@ function setup({
     insert: vi.fn(async (values: Partial<TicketStockItemRow>) =>
       lineRow({ ...values, id: 9, createdAt: CREATED_AT }),
     ),
-    delete: vi.fn().mockResolvedValue(undefined),
+    archive: vi.fn().mockResolvedValue(undefined),
+    restore: vi.fn().mockResolvedValue(undefined),
     markSettled: vi.fn().mockResolvedValue(undefined),
     findShelfItem: vi.fn().mockResolvedValue(shelf),
     findShelfItemForUpdate: vi.fn().mockResolvedValue(shelf),
@@ -202,12 +205,12 @@ describe('TicketStockItemsService.add', () => {
 
 describe('TicketStockItemsService.remove', () => {
   // feliz
-  it('just drops a reserved item', async () => {
+  it('just archives a reserved item', async () => {
     const { service, repository, actor } = setup({ lines: [lineRow()] });
 
     await service.remove(actor, 49, 5);
 
-    expect(repository.delete).toHaveBeenCalledWith(5, TX);
+    expect(repository.archive).toHaveBeenCalledWith(5, ana.id, TX);
     expect(repository.moveShelf).not.toHaveBeenCalled();
   });
 
@@ -233,7 +236,7 @@ describe('TicketStockItemsService.remove', () => {
     });
 
     await expect(service.remove(actor, 49, 5)).rejects.toBeInstanceOf(UnprocessableEntityException);
-    expect(repository.delete).not.toHaveBeenCalled();
+    expect(repository.archive).not.toHaveBeenCalled();
   });
 
   it('refuses an item of another ticket', async () => {
@@ -331,5 +334,41 @@ describe('TicketStockItemsService.settle — machine of the item', () => {
       expect.objectContaining({ computerId: 7 }),
       TX,
     );
+  });
+});
+
+describe('TicketStockItemsService.restore', () => {
+  // feliz
+  it('brings a removed item back as a reservation and writes it on the timeline', async () => {
+    const { service, repository, histories, actor } = setup({
+      lines: [lineRow({ archivedAt: CREATED_AT, archivedBy: ana.id, settledAt: CREATED_AT })],
+    });
+
+    const restored = await service.restore(actor, 49, 5);
+
+    expect(repository.restore).toHaveBeenCalledWith(5);
+    expect(restored.settledAt).toBeNull();
+    expect(histories.record).toHaveBeenCalledWith(
+      expect.objectContaining({ description: expect.stringContaining('Desfez a retirada') }),
+    );
+  });
+
+  // triste
+  it('refuses when the shelf no longer has what the item takes out', async () => {
+    const { service, repository, actor } = setup({
+      shelf: { id: 7, name: 'Monitor 24"', balance: 0 },
+      lines: [lineRow({ archivedAt: CREATED_AT, quantity: 1 })],
+    });
+
+    await expect(service.restore(actor, 49, 5)).rejects.toBeInstanceOf(UnprocessableEntityException);
+    expect(repository.restore).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('answers not found for an item that was never removed', async () => {
+    const { service, repository, actor } = setup({ lines: [lineRow()] });
+
+    await expect(service.restore(actor, 49, 5)).rejects.toBeInstanceOf(NotFoundException);
+    expect(repository.restore).not.toHaveBeenCalled();
   });
 });

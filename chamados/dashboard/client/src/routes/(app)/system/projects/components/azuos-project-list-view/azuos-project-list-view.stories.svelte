@@ -21,6 +21,7 @@
     pullRequestsCount: 12,
     createdAt: '2026-01-10T08:00:00.000Z',
     updatedAt: null,
+    archive: null,
   };
 
   const projects: SoftwareProject[] = [

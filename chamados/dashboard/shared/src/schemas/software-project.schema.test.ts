@@ -25,6 +25,7 @@ describe('software-project.schema', () => {
       pullRequestsCount: 12,
       createdAt: new Date().toISOString(),
       updatedAt: null,
+      archive: null,
     };
 
     expect(softwareProjectSchema.parse(valid)).toMatchObject({

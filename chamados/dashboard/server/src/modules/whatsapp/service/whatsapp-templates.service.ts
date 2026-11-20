@@ -12,6 +12,7 @@ import {
 } from '@template/shared/schemas/whatsapp-template.schema';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type WhatsappTemplateRow } from '../../../lib/db/schema/whatsapp-connections.schema';
 import { assertIsSuperAdmin } from '../../../lib/policy/policy-assert.util';
 import { WhatsappTemplatesRepository } from '../repository/whatsapp-templates.repository';
 
@@ -28,9 +29,16 @@ export class WhatsappTemplatesService {
   async list(user: RequestUser): Promise<WhatsappTemplate[]> {
     assertIsSuperAdmin(user.role, WHAT);
 
-    const customized = new Map((await this.repository.list()).map((row) => [row.key, row.body]));
+    const [active, archived] = await Promise.all([
+      this.repository.list(),
+      this.repository.listArchived(),
+    ]);
+    const customized = new Map(active.map((row) => [row.key, row.body]));
+    const kept = new Map(archived.map((row) => [row.key, row]));
 
-    return WHATSAPP_TEMPLATE_KEYS.map((key) => toTemplate(key, customized.get(key)));
+    return WHATSAPP_TEMPLATE_KEYS.map((key) =>
+      toTemplate(key, customized.get(key), archivedEditOf(kept.get(key))),
+    );
   }
 
   async update(user: RequestUser, key: string, input: unknown): Promise<WhatsappTemplate> {
@@ -55,9 +63,26 @@ export class WhatsappTemplatesService {
     assertIsSuperAdmin(user.role, WHAT);
     const templateKey = assertKnownKey(key);
 
-    await this.repository.remove(templateKey);
+    /* Voltar ao original ARQUIVA a edição: ela fica guardada para o "Desfazer". */
+    const current = await this.repository.find(templateKey);
+    if (current) await this.repository.setArchived(templateKey, true, user.id);
 
-    return toTemplate(templateKey, undefined);
+    const archived = await this.repository.findArchived(templateKey);
+
+    return toTemplate(templateKey, undefined, archivedEditOf(archived));
+  }
+
+  /** Desfaz a volta ao original: a edição guardada passa a valer de novo. */
+  async restoreEdit(user: RequestUser, key: string): Promise<WhatsappTemplate> {
+    assertIsSuperAdmin(user.role, WHAT);
+    const templateKey = assertKnownKey(key);
+
+    const archived = await this.repository.findArchived(templateKey);
+    if (!archived) throw new NotFoundException('Não há edição guardada desta mensagem.');
+
+    await this.repository.setArchived(templateKey, false, null);
+
+    return toTemplate(templateKey, archived.body);
   }
 
   /** O texto final de uma mensagem, com as variáveis preenchidas. Sem permissão: é uso interno. */
@@ -77,7 +102,17 @@ function assertKnownKey(key: string): WhatsappTemplateKey {
   return key;
 }
 
-function toTemplate(key: WhatsappTemplateKey, customBody: string | undefined): WhatsappTemplate {
+function archivedEditOf(row: WhatsappTemplateRow | null | undefined): WhatsappTemplate['archivedEdit'] {
+  if (!row?.archivedAt) return null;
+
+  return { body: row.body, archivedAt: row.archivedAt.toISOString() };
+}
+
+function toTemplate(
+  key: WhatsappTemplateKey,
+  customBody: string | undefined,
+  archivedEdit: WhatsappTemplate['archivedEdit'] = null,
+): WhatsappTemplate {
   const definition = WHATSAPP_TEMPLATES[key];
 
   return {
@@ -88,5 +123,6 @@ function toTemplate(key: WhatsappTemplateKey, customBody: string | undefined): W
     body: customBody ?? definition.defaultBody,
     defaultBody: definition.defaultBody,
     isCustomized: customBody !== undefined,
+    archivedEdit,
   };
 }

@@ -2,6 +2,7 @@ import { TICKET_STOCK_DIRECTIONS } from '@template/shared/domain/ticket-stock.ut
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 import { computers } from './computers.schema';
@@ -52,6 +53,8 @@ export const ticketStockItems = chamadosSchema.table(
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     createdBy: text('created_by').notNull(),
     createdByName: text('created_by_name').notNull(),
+    /* Tirar o item ARQUIVA: ele sai da reserva do chamado e volta pelo "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
     index('ticket_stock_items_ticket_idx').on(table.ticketId),

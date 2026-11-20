@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { maintenanceListQuerySchema } from '@template/shared/schemas/maintenance.schema';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -38,6 +38,8 @@ function maintenanceRow(overrides: Partial<MaintenanceRow> = {}): MaintenanceRow
     createdBy: 'ana@empresa.com.br',
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }
@@ -108,7 +110,7 @@ describe('MaintenancesService.create', () => {
     const insert = vi.fn().mockResolvedValue(1);
     const service = makeService({
       insert,
-      deleteSchedule: vi.fn(),
+      archiveOpenSchedule: vi.fn(),
       findById: vi.fn().mockResolvedValue(row()),
     });
 
@@ -121,25 +123,25 @@ describe('MaintenancesService.create', () => {
 
   /* A visita combinada aconteceu: a ficha não pode continuar cobrando. */
   it('fulfils the machine schedule when the maintenance is registered', async () => {
-    const deleteSchedule = vi.fn();
+    const archiveOpenSchedule = vi.fn();
     const service = makeService({
       insert: vi.fn().mockResolvedValue(1),
-      deleteSchedule,
+      archiveOpenSchedule,
       findById: vi.fn().mockResolvedValue(row()),
     });
 
     await service.create(owner, { computerId: 3, type: 'part_replacement', performedAt: NOW });
 
-    expect(deleteSchedule).toHaveBeenCalledWith(3);
+    expect(archiveOpenSchedule).toHaveBeenCalledWith(3, '1');
   });
 
   /* Equipamento de fora do inventário: o notebook velho da recepção. */
   it('accepts equipment named by hand, with no machine linked', async () => {
     const insert = vi.fn().mockResolvedValue(2);
-    const deleteSchedule = vi.fn();
+    const archiveOpenSchedule = vi.fn();
     const service = makeService({
       insert,
-      deleteSchedule,
+      archiveOpenSchedule,
       findById: vi.fn().mockResolvedValue({
         maintenance: maintenanceRow({ id: 2, computerId: null, otherMachine: 'Impressora' }),
         computer: null,
@@ -155,7 +157,7 @@ describe('MaintenancesService.create', () => {
     expect(created.otherMachine).toBe('Impressora');
     expect(created.computerName).toBeNull();
     /* Equipamento de fora não tem agenda no inventário. */
-    expect(deleteSchedule).not.toHaveBeenCalled();
+    expect(archiveOpenSchedule).not.toHaveBeenCalled();
   });
 
   // triste
@@ -216,22 +218,48 @@ describe('MaintenancesService.update', () => {
 
 describe('MaintenancesService.remove', () => {
   // feliz
-  it('deletes the record of whoever registered it', async () => {
-    const remove = vi.fn();
-    const service = makeService({ findById: vi.fn().mockResolvedValue(row()), delete: remove });
+  it('archives the record of whoever registered it, stamping who archived', async () => {
+    const setArchived = vi.fn();
+    const service = makeService({ findById: vi.fn().mockResolvedValue(row()), setArchived });
 
     await service.remove(owner, 1);
 
-    expect(remove).toHaveBeenCalledWith(1);
+    expect(setArchived).toHaveBeenCalledWith(1, true, '1');
   });
 
   // triste
-  it('refuses to delete another person record', async () => {
-    const remove = vi.fn();
-    const service = makeService({ findById: vi.fn().mockResolvedValue(row()), delete: remove });
+  it('refuses to archive another person record', async () => {
+    const setArchived = vi.fn();
+    const service = makeService({ findById: vi.fn().mockResolvedValue(row()), setArchived });
 
     await expect(service.remove(otherUser, 1)).rejects.toBeInstanceOf(ForbiddenException);
-    expect(remove).not.toHaveBeenCalled();
+    expect(setArchived).not.toHaveBeenCalled();
+  });
+});
+
+describe('MaintenancesService.restore', () => {
+  // feliz
+  it('brings the archived record back to the list', async () => {
+    const setArchived = vi.fn();
+    const findById = vi
+      .fn()
+      .mockResolvedValueOnce(row({ archivedAt: new Date(NOW), archivedBy: '1' }))
+      .mockResolvedValueOnce(row());
+    const service = makeService({ findById, setArchived });
+
+    const restored = await service.restore(manager, 1);
+
+    expect(setArchived).toHaveBeenCalledWith(1, false, null);
+    expect(restored.archive).toBeNull();
+  });
+
+  // triste
+  it('refuses to restore another person record', async () => {
+    const setArchived = vi.fn();
+    const service = makeService({ findById: vi.fn().mockResolvedValue(row()), setArchived });
+
+    await expect(service.restore(otherUser, 1)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(setArchived).not.toHaveBeenCalled();
   });
 });
 
@@ -302,6 +330,8 @@ function scheduleRow(overrides: Partial<MaintenanceScheduleRow> = {}): ScheduleW
       createdBy: 'ana@empresa.com.br',
       updatedAt: null,
       updatedBy: null,
+      archivedAt: null,
+      archivedBy: null,
       ...overrides,
     },
     computer: { id: 3, name: 'CONTABIL-03', displayName: 'Contábil — fechamento', department: 'contabil' },
@@ -361,26 +391,66 @@ describe('MaintenancesService.listSchedules / cancelSchedule', () => {
   it('lists the schedules translated into the contract', async () => {
     const service = makeService({ listSchedules: vi.fn().mockResolvedValue([scheduleRow()]) });
 
-    const [first] = await service.listSchedules(owner, { computerId: 3 });
+    const [first] = await service.listSchedules(owner, { computerId: 3, archived: 'hide' });
 
     expect(first).toMatchObject({ computerId: 3, note: 'Trocar pasta térmica', updatedAt: null });
   });
 
   it('cancels the schedule of a machine', async () => {
-    const deleteSchedule = vi.fn();
-    const service = makeService({ deleteSchedule });
+    const archiveOpenSchedule = vi.fn();
+    const service = makeService({ archiveOpenSchedule });
 
     await service.cancelSchedule(owner, 3);
 
-    expect(deleteSchedule).toHaveBeenCalledWith(3);
+    expect(archiveOpenSchedule).toHaveBeenCalledWith(3, '1');
   });
 
   // triste
   it('refuses to cancel for a profile that cannot create', async () => {
-    const deleteSchedule = vi.fn();
-    const service = makeService({ deleteSchedule });
+    const archiveOpenSchedule = vi.fn();
+    const service = makeService({ archiveOpenSchedule });
 
     await expect(service.cancelSchedule(noRole, 3)).rejects.toBeInstanceOf(ForbiddenException);
-    expect(deleteSchedule).not.toHaveBeenCalled();
+    expect(archiveOpenSchedule).not.toHaveBeenCalled();
+  });
+});
+
+describe('MaintenancesService.restoreSchedule', () => {
+  // feliz
+  it('brings the cancelled schedule back when the machine has no other one', async () => {
+    const restoreSchedule = vi.fn();
+    const listSchedules = vi.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([scheduleRow()]);
+    const service = makeService({
+      findSchedule: vi.fn().mockResolvedValue(scheduleRow().schedule),
+      findActiveComputer: vi.fn().mockResolvedValue({ id: 3 }),
+      listSchedules,
+      restoreSchedule,
+    });
+
+    const restored = await service.restoreSchedule(owner, 1);
+
+    expect(restoreSchedule).toHaveBeenCalledWith(1);
+    expect(restored).toMatchObject({ id: 1, computerId: 3, archive: null });
+  });
+
+  // triste
+  it('refuses when the machine already has another open schedule', async () => {
+    const restoreSchedule = vi.fn();
+    const service = makeService({
+      findSchedule: vi.fn().mockResolvedValue(scheduleRow().schedule),
+      findActiveComputer: vi.fn().mockResolvedValue({ id: 3 }),
+      listSchedules: vi.fn().mockResolvedValue([scheduleRow({ id: 2 })]),
+      restoreSchedule,
+    });
+
+    await expect(service.restoreSchedule(owner, 1)).rejects.toBeInstanceOf(ConflictException);
+    expect(restoreSchedule).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('refuses a schedule that does not exist', async () => {
+    const service = makeService({ findSchedule: vi.fn().mockResolvedValue(null) });
+
+    await expect(service.restoreSchedule(owner, 99)).rejects.toBeInstanceOf(NotFoundException);
   });
 });

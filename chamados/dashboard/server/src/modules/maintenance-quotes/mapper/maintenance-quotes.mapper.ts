@@ -5,6 +5,7 @@ import {
   type UpdateMaintenanceQuoteInput,
 } from '@template/shared/schemas/maintenance-quote.schema';
 
+import { toArchive } from '../../../lib/db/archive.util';
 import { setIfDefined } from '../../../lib/db/partial-update.util';
 import {
   type MaintenanceQuoteInsert,
@@ -42,6 +43,7 @@ export function toMaintenanceQuote(
     createdBy: row.createdBy,
     updatedAt: row.updatedAt?.toISOString() ?? null,
     updatedBy: row.updatedBy,
+    archive: toArchive(row),
   };
 }
 

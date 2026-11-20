@@ -316,7 +316,7 @@
   data={{
     title: 'Excluir esta movimentação?',
     description: data.removing
-      ? `A peça volta para o saldo como se esta linha nunca tivesse existido: ${movementTypeLabel(data.removing.type)} de ${data.removing.quantity}. Não dá para desfazer.`
+      ? `A peça volta para o saldo como se esta linha nunca tivesse existido: ${movementTypeLabel(data.removing.type)} de ${data.removing.quantity}. A linha fica em "Movimentações estornadas", onde dá para desfazer.`
       : '',
     confirmLabel: 'Excluir e devolver o saldo',
     confirmingLabel: 'Excluindo…',

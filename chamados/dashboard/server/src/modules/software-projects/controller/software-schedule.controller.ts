@@ -84,12 +84,28 @@ export class SoftwareScheduleController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Exclui um compromisso do cronograma' })
-  @ApiNoContentResponse({ description: 'Compromisso excluído.' })
+  @ApiOperation({
+    summary: 'Exclui (arquiva) um compromisso do cronograma',
+    description:
+      'O item sai da Agenda e fica guardado, com quem excluiu e quando. `?archived=only` na lista traz os excluídos do período; `POST :id/restore` devolve.',
+  })
+  @ApiNoContentResponse({ description: 'Compromisso arquivado.' })
   async remove(
     @CurrentUser() user: RequestUser,
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
     return this.service.remove(user, id);
+  }
+
+  @Post(':id/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desfaz a exclusão de um compromisso do cronograma' })
+  @ApiOkResponse({ type: SoftwareScheduleEventDto })
+  @ApiNotFoundResponse({ description: 'Compromisso não encontrado.' })
+  async restore(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<SoftwareScheduleEventDto> {
+    return this.service.restore(user, id);
   }
 }

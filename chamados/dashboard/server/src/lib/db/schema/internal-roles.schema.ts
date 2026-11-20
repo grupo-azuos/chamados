@@ -1,7 +1,8 @@
 import { ROLE_CONTEXTS } from '@template/shared/schemas/user.schema';
-import { sql } from 'drizzle-orm';
+import { isNull, sql } from 'drizzle-orm';
 import { check, index, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 /**
@@ -37,9 +38,15 @@ export const internalRoles = chamadosSchema.table(
     createdBy: text('created_by'),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
+    /* Tirar o módulo ARQUIVA: a linha deixa de dar acesso na hora (a identidade só lê as
+       não arquivadas) e fica guardada, com quem tirou e quando, para o "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
-    uniqueIndex('internal_roles_user_context_idx').on(table.userId, table.context),
+    /* Um acesso VALENDO por pessoa e módulo; os tirados (arquivados) não contam. */
+    uniqueIndex('internal_roles_user_context_idx')
+      .on(table.userId, table.context)
+      .where(isNull(table.archivedAt)),
     index('internal_roles_user_id_idx').on(table.userId),
     index('internal_roles_user_email_idx').on(table.userEmail),
     index('internal_roles_context_idx').on(table.context),

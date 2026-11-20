@@ -883,7 +883,7 @@ describe('TicketsService — access by area', () => {
 
     const ticket = await service.removeArea(withRoles(ana, roles), 7, 'manutencao');
 
-    expect(removeArea).toHaveBeenCalledWith(7, 'manutencao');
+    expect(removeArea).toHaveBeenCalledWith(7, 'manutencao', ana.id);
     expect(ticket.participantAreas).toEqual([]);
   });
 });

@@ -46,7 +46,7 @@ function renderView(
     endTime: '11:00',
     color: 'green' as const,
     category: 'deploy' as const,
-    createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
+    createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima', archive: null,
   };
 
   const mockDays = [
@@ -147,6 +147,7 @@ const recordEvent = {
   createdById: 'u-ana',
   createdByEmail: 'ana@empresa.com.br',
   createdByName: 'Ana Lima',
+  archive: null,
 };
 
 describe('AzuosWeekScheduleGrid', () => {
@@ -377,6 +378,7 @@ describe('AzuosWeekScheduleGrid', () => {
       createdById: 'u-ana',
       createdByEmail: 'ana@empresa.com.br',
       createdByName: 'Ana Lima',
+      archive: null,
     }));
     const actions = renderView({
       data: {
@@ -411,7 +413,7 @@ describe('AzuosWeekScheduleGrid', () => {
       endTime: '21:00',
       color: 'green' as const,
       category: 'deploy' as const,
-      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
+      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima', archive: null,
     };
     const actions = renderView({
       data: {

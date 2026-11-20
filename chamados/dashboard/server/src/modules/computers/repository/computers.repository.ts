@@ -108,6 +108,7 @@ function computerColumns() {
       select max(${qualified(maintenances.performedAt)}) from ${maintenances}
       where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
         and ${qualified(maintenances.type)} in ('preventive', 'corrective')
+        and ${qualified(maintenances.archivedAt)} is null
     )`, maintenances.performedAt),
     activeAlerts: sql<number>`(
       select count(*)::int from ${computerAlerts}
@@ -417,6 +418,7 @@ function preventiveFilter(preventive: NonNullable<ComputerFilter['preventive']>)
     select max(${qualified(maintenances.performedAt)}) from ${maintenances}
     where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
       and ${qualified(maintenances.type)} in ('preventive', 'corrective')
+      and ${qualified(maintenances.archivedAt)} is null
   )`;
   const cutoff = asTimestamp(preventiveDueBefore());
   const byStatus: Record<typeof preventive, SQL> = {

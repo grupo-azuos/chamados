@@ -28,6 +28,7 @@ function maintenance(over: Partial<Maintenance> = {}): Maintenance {
     createdBy: 'suporte@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...over,
   };
 }
@@ -225,6 +226,7 @@ describe('AzuosMaintenanceListView', () => {
 
 describe('AzuosMaintenanceListView — filters, rows and the cut list', () => {
   const schedule = {
+    id: 5,
     computerId: 5,
     computerName: 'RH-05',
     computerDisplayName: 'RH — recepção',
@@ -235,6 +237,7 @@ describe('AzuosMaintenanceListView — filters, rows and the cut list', () => {
     createdBy: 'suporte@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
   };
 
   // feliz

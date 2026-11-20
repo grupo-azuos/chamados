@@ -192,6 +192,7 @@ describe('AzuosScheduleEventDialog — editing the fields', () => {
     pullRequestsCount: 0,
     createdAt: '2026-10-01T00:00:00Z',
     updatedAt: null,
+    archive: null,
   };
 
   const pickFromCombobox = async (trigger: string, placeholder: string, label: string) => {

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { type Department } from '@template/shared/domain/department.util';
 import { preventiveStatusOf } from '@template/shared/domain/maintenance.util';
 import {
@@ -31,7 +31,10 @@ import {
   type PreventiveRow,
 } from '../repository/maintenances.repository';
 
-const NOT_FOUND = 'Manutenção não encontrada. Ela pode ter sido excluída — recarregue a lista.';
+const NOT_FOUND = 'Manutenção não encontrada. Recarregue a lista.';
+const SCHEDULE_NOT_FOUND = 'Agendamento não encontrado. Recarregue a lista.';
+const SCHEDULE_TAKEN =
+  'Esta máquina já tem outra manutenção agendada. Cancele aquela antes de desfazer esta.';
 const COMPUTER_NOT_FOUND =
   'Máquina não encontrada ou fora de uso. Só dá para agendar manutenção de máquina em uso.';
 
@@ -73,7 +76,7 @@ export class MaintenancesService {
     /* Registrar a manutenção CUMPRE o agendamento: deixá-lo de pé faria a ficha continuar
        cobrando uma visita que já aconteceu. Qualquer tipo conta — quem agendou "trocar a
        fonte" e registrou "troca de peça" fez o que tinha combinado. */
-    if (input.computerId) await this.repository.deleteSchedule(input.computerId);
+    if (input.computerId) await this.repository.archiveOpenSchedule(input.computerId, user.id);
 
     /* Relê para devolver a máquina junto: o insert conhece o `computer_id`, mas não o nome
        dela, e a tela precisa do nome para desenhar a linha que acabou de aparecer. */
@@ -100,7 +103,20 @@ export class MaintenancesService {
     const current = await this.requireMaintenance(id);
     assertCanModifyRecord(user.role, user.email, current.maintenance.createdBy, 'Esta manutenção');
 
-    await this.repository.delete(id);
+    /* Excluir ARQUIVA: some da lista e das contas, e volta pelo "Desfazer". */
+    await this.repository.setArchived(id, true, user.id);
+  }
+
+  /** Desfaz a exclusão. Quem podia excluir é quem pode desfazer. */
+  async restore(user: RequestUser, id: number): Promise<Maintenance> {
+    assertCanRead(user.role, 'as manutenções');
+
+    const current = await this.requireMaintenance(id);
+    assertCanModifyRecord(user.role, user.email, current.maintenance.createdBy, 'Esta manutenção');
+
+    await this.repository.setArchived(id, false, null);
+
+    return toMaintenance(await this.requireMaintenance(id));
   }
 
   /**
@@ -151,7 +167,7 @@ export class MaintenancesService {
       user.email,
     );
 
-    const [saved] = await this.repository.listSchedules({ computerId });
+    const [saved] = await this.repository.listSchedules({ computerId, archived: 'hide' });
     if (!saved) throw new NotFoundException(COMPUTER_NOT_FOUND);
 
     return toMaintenanceSchedule(saved);
@@ -161,7 +177,34 @@ export class MaintenancesService {
   async cancelSchedule(user: RequestUser, computerId: number): Promise<void> {
     assertCanCreate(user.role, 'manutenções agendadas');
 
-    await this.repository.deleteSchedule(computerId);
+    await this.repository.archiveOpenSchedule(computerId, user.id);
+  }
+
+  /**
+   * Desfaz o cancelamento. Se a máquina já ganhou outro agendamento, recusa: são dois
+   * compromissos para a mesma máquina, e a pessoa decide qual fica.
+   */
+  async restoreSchedule(user: RequestUser, id: number): Promise<MaintenanceSchedule> {
+    assertCanCreate(user.role, 'manutenções agendadas');
+
+    const schedule = await this.repository.findSchedule(id);
+    if (!schedule) throw new NotFoundException(SCHEDULE_NOT_FOUND);
+    await this.requireActiveComputer(schedule.computerId);
+
+    const [open] = await this.repository.listSchedules({
+      computerId: schedule.computerId,
+      archived: 'hide',
+    });
+    if (open && open.schedule.id !== id) throw new ConflictException(SCHEDULE_TAKEN);
+
+    await this.repository.restoreSchedule(id);
+    const [restored] = await this.repository.listSchedules({
+      computerId: schedule.computerId,
+      archived: 'hide',
+    });
+    if (!restored) throw new NotFoundException(SCHEDULE_NOT_FOUND);
+
+    return toMaintenanceSchedule(restored);
   }
 
   private async requireActiveComputer(computerId: number): Promise<void> {

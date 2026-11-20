@@ -11,6 +11,7 @@ import {
 } from '@template/shared/schemas/inventory-movement.schema';
 import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
 
+import { toArchive } from '../../../lib/db/archive.util';
 import { setIfDefined } from '../../../lib/db/partial-update.util';
 import {
   type InventoryItemInsert,
@@ -54,6 +55,7 @@ export function toInventoryItem(
     createdBy: row.createdBy,
     updatedAt: row.updatedAt?.toISOString() ?? null,
     updatedBy: row.updatedBy,
+    archive: toArchive(row),
   };
 }
 

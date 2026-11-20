@@ -5,6 +5,7 @@ import { schedulesByComputer } from './use-maintenance-schedule.svelte';
 
 function schedule(computerId: number): MaintenanceSchedule {
   return {
+    id: 1,
     computerId,
     computerName: `PC-${computerId}`,
     computerDisplayName: null,
@@ -15,6 +16,7 @@ function schedule(computerId: number): MaintenanceSchedule {
     createdBy: 'suporte@teste.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
   };
 }
 

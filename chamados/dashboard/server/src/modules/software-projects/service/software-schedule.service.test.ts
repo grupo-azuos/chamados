@@ -35,6 +35,8 @@ function eventRow(overrides: Partial<SoftwareScheduleEventRow> = {}) {
     createdByName: 'Ana Lima',
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   } as SoftwareScheduleEventRow & { projectName: string | null };
 }
@@ -44,7 +46,7 @@ function makeService(row = eventRow()) {
     findById: vi.fn().mockResolvedValue(row),
     insert: vi.fn().mockImplementation(async (values) => ({ ...eventRow(), ...values })),
     update: vi.fn().mockResolvedValue(row),
-    remove: vi.fn().mockResolvedValue(undefined),
+    setArchived: vi.fn().mockResolvedValue(undefined),
     listBetween: vi.fn().mockResolvedValue([row]),
   } as unknown as SoftwareScheduleRepository;
 
@@ -79,7 +81,7 @@ describe('SoftwareScheduleService', () => {
   it('shows who marked it, with the e-mail for events from before the name existed', async () => {
     const { service } = makeService(eventRow({ createdById: null, createdByName: null }));
 
-    const [event] = await service.list(ana, { startDate: '2026-10-01', endDate: '2026-10-31' });
+    const [event] = await service.list(ana, { startDate: '2026-10-01', endDate: '2026-10-31', archived: 'hide' });
 
     expect(event).toMatchObject({ createdByName: 'ana@empresa.com.br', createdById: null });
   });
@@ -92,7 +94,7 @@ describe('SoftwareScheduleService', () => {
     await service.remove(root, 1);
 
     expect(repository.update).toHaveBeenCalledOnce();
-    expect(repository.remove).toHaveBeenCalledWith(1);
+    expect(repository.setArchived).toHaveBeenCalledWith(1, true, root.id);
   });
 
   // triste
@@ -104,7 +106,24 @@ describe('SoftwareScheduleService', () => {
     );
     await expect(service.remove(bia, 1)).rejects.toThrow(ForbiddenException);
     expect(repository.update).not.toHaveBeenCalled();
-    expect(repository.remove).not.toHaveBeenCalled();
+    expect(repository.setArchived).not.toHaveBeenCalled();
+  });
+
+  // feliz
+  it('lets whoever marked it bring a deleted event back', async () => {
+    const { service, repository } = makeService(eventRow({ archivedAt: new Date(), archivedBy: 'u-ana' }));
+
+    await service.restore(ana, 1);
+
+    expect(repository.setArchived).toHaveBeenCalledWith(1, false, null);
+  });
+
+  // triste
+  it('refuses another Sistema admin bringing it back', async () => {
+    const { service, repository } = makeService();
+
+    await expect(service.restore(bia, 1)).rejects.toThrow(ForbiddenException);
+    expect(repository.setArchived).not.toHaveBeenCalled();
   });
 
   // triste

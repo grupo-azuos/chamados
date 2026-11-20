@@ -24,6 +24,8 @@
       isLoading?: boolean;
       isSaving?: boolean;
       isRestoring?: boolean;
+      /** Desfazendo a volta ao original (trazendo a edição guardada). */
+      isRestoringEdit?: boolean;
       /** Acabou de salvar ou restaurar — some na próxima tecla. */
       isSaved?: boolean;
       canSave?: boolean;
@@ -36,12 +38,16 @@
       onDraftChange: (text: string) => void;
       onSave: () => void;
       onRestore: () => void;
+      /** O "Desfazer" do restaurar: só aparece quando há uma edição guardada. */
+      onRestoreEdit?: () => void;
       onClose: () => void;
     };
   };
 </script>
 
 <script lang="ts">
+  import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
+
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import {
@@ -54,13 +60,14 @@
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
+  import { formatDateTime } from '$lib/utils/format-date';
 
   let { data, state, actions }: AzuosWhatsappTemplatesDialogProps = $props();
 
   const options = $derived(
     data.templates.map((template) => ({ value: template.key, label: template.label })),
   );
-  const isBusy = $derived(Boolean(state.isSaving || state.isRestoring));
+  const isBusy = $derived(Boolean(state.isSaving || state.isRestoring || state.isRestoringEdit));
 
   function insertVariable(name: string): void {
     const separator = data.draft.length === 0 || data.draft.endsWith(' ') ? '' : ' ';
@@ -132,6 +139,21 @@
           </p>
           <p class="text-muted-foreground text-xs">Prévia com um chamado de exemplo.</p>
         </div>
+
+        <!-- Restaurar o original não apaga a edição: ela fica guardada e volta daqui. -->
+        {#if !selected.isCustomized && selected.archivedEdit && actions.onRestoreEdit}
+          <div class="rounded-box border-border bg-muted flex flex-wrap items-center justify-between gap-3 border p-3">
+            <p class="text-ink-700 text-sm">
+              O texto editado foi guardado em {formatDateTime(selected.archivedEdit.archivedAt)}.
+            </p>
+            <ActionButton
+              data={{ label: 'Desfazer', loadingLabel: 'Desfazendo…' }}
+              ui={{ variant: 'secondary', size: 'sm', icon: ArchiveRestore }}
+              state={{ isLoading: state.isRestoringEdit, isDisabled: isBusy }}
+              actions={{ onClick: actions.onRestoreEdit }}
+            />
+          </div>
+        {/if}
 
         {#if state.error}
           <ErrorState data={{ message: state.error }} ui={{ variant: 'inline' }} />

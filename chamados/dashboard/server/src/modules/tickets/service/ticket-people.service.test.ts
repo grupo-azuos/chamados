@@ -70,7 +70,7 @@ describe('TicketPeopleService', () => {
     await service.replace(ticket, ['dani'], author);
 
     expect(watchers.add).toHaveBeenCalledWith(7, [{ userId: 'dani', userName: 'Dani Alves' }], author.email);
-    expect(watchers.remove).toHaveBeenCalledWith(7, ['caio']);
+    expect(watchers.remove).toHaveBeenCalledWith(7, ['caio'], author.id);
     expect(histories.record).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'update',

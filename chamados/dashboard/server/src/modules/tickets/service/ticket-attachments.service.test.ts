@@ -57,7 +57,7 @@ function makeService(repository: Partial<TicketAttachmentsRepository> = {}, tick
     listByTicket: vi.fn().mockResolvedValue([]),
     insert: vi.fn().mockImplementation((input) => Promise.resolve(row(input))),
     findInTicket: vi.fn().mockResolvedValue(row()),
-    remove: vi.fn().mockResolvedValue(undefined),
+    setArchived: vi.fn().mockResolvedValue(undefined),
     ...repository,
   };
 
@@ -274,14 +274,14 @@ describe('TicketAttachmentsService.remove', () => {
   const supportFile = { findInTicket: vi.fn().mockResolvedValue(row({ origin: 'support' })) };
 
   // feliz
-  it('takes the file the support side attached out of the ticket and out of the bucket', async () => {
+  it('archives the file the support side attached, keeping it in the bucket', async () => {
     const { service, repository, storage } = makeService(supportFile);
     await storage.put('ticket-attachments/abc.pdf', Buffer.from('pdf'), 'application/pdf');
 
     await service.remove(ana, 7, 1);
 
-    expect(repository.remove).toHaveBeenCalledWith(1);
-    expect(await storage.head('ticket-attachments/abc.pdf')).toBeNull();
+    expect(repository.setArchived).toHaveBeenCalledWith(1, true, ana.id);
+    expect(await storage.head('ticket-attachments/abc.pdf')).not.toBeNull();
   });
 
   // triste
@@ -300,7 +300,7 @@ describe('TicketAttachmentsService.remove', () => {
     await storage.put('ticket-attachments/abc.pdf', Buffer.from('pdf'), 'application/pdf');
 
     await expect(service.remove(ana, 7, 1)).rejects.toThrow(ForbiddenException);
-    expect(repository.remove).not.toHaveBeenCalled();
+    expect(repository.setArchived).not.toHaveBeenCalled();
     /* Nem do banco, nem do bucket: um arquivo que some do storage e fica na lista é pior ainda. */
     expect(await storage.head('ticket-attachments/abc.pdf')).not.toBeNull();
   });
@@ -319,7 +319,7 @@ describe('TicketAttachmentsService.remove', () => {
     const { service, repository } = makeService({ findInTicket: vi.fn().mockResolvedValue(null) });
 
     await expect(service.remove(ana, 7, 999)).rejects.toThrow(NotFoundException);
-    expect(repository.remove).not.toHaveBeenCalled();
+    expect(repository.setArchived).not.toHaveBeenCalled();
   });
 
   it('refuses an unidentified request', async () => {

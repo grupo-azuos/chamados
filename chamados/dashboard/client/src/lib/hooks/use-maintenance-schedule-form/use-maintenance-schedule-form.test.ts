@@ -21,6 +21,7 @@ const NEXT_YEAR = `${new Date().getFullYear() + 1}-03-10`;
 
 function schedule(overrides: Partial<MaintenanceSchedule> = {}): MaintenanceSchedule {
   return {
+    id: 3,
     computerId: 3,
     computerName: 'PC-RECEPCAO-01',
     computerDisplayName: null,
@@ -31,6 +32,7 @@ function schedule(overrides: Partial<MaintenanceSchedule> = {}): MaintenanceSche
     createdBy: 'ana@empresa.com.br',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...overrides,
   };
 }

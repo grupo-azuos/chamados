@@ -264,6 +264,8 @@ export class DashboardRepository {
       maintenances.performedAt,
       since,
       'contar as manutenções por dia',
+      /* A manutenção arquivada (removida da lista) não conta: ela saiu do histórico de quem usa. */
+      isNull(maintenances.archivedAt),
     );
   }
 
@@ -292,7 +294,7 @@ export class DashboardRepository {
       this.db
         .select({ total: count() })
         .from(maintenances)
-        .where(gte(maintenances.performedAt, since)),
+        .where(and(gte(maintenances.performedAt, since), isNull(maintenances.archivedAt))),
       'contar as manutenções do período',
     );
 
@@ -340,6 +342,7 @@ export class DashboardRepository {
           maintenanceCount: sql<number>`(
             select count(*)::int from ${maintenances}
             where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
+              and ${qualified(maintenances.archivedAt)} is null
           )`,
         })
         .from(computers)
@@ -404,6 +407,7 @@ export class DashboardRepository {
         })
         .from(maintenances)
         .innerJoin(computers, eq(computers.id, maintenances.computerId))
+        .where(isNull(maintenances.archivedAt))
         .groupBy(computers.id, computers.displayName, computers.name)
         .having(gte(count(), threshold))
         .orderBy(desc(count())),
@@ -460,7 +464,7 @@ export class DashboardRepository {
         })
         .from(maintenances)
         .leftJoin(computers, eq(computers.id, maintenances.computerId))
-        .where(gte(maintenances.performedAt, since))
+        .where(and(gte(maintenances.performedAt, since), isNull(maintenances.archivedAt)))
         .orderBy(desc(maintenances.performedAt)),
       'listar as manutenções do período',
     );
@@ -482,7 +486,10 @@ export class DashboardRepository {
           ),
         })
         .from(computers)
-        .leftJoin(maintenances, eq(maintenances.computerId, computers.id))
+        .leftJoin(
+          maintenances,
+          and(eq(maintenances.computerId, computers.id), isNull(maintenances.archivedAt)),
+        )
         .where(and(eq(computers.isArchived, false), isNull(computers.disposedAt)))
         .groupBy(computers.id, computers.displayName, computers.name, computers.department),
       'montar o plano de preventiva',
@@ -514,7 +521,13 @@ export class DashboardRepository {
         })
         .from(maintenanceSchedules)
         .innerJoin(computers, eq(maintenanceSchedules.computerId, computers.id))
-        .where(and(eq(computers.isArchived, false), isNull(computers.disposedAt)))
+        .where(
+          and(
+            eq(computers.isArchived, false),
+            isNull(computers.disposedAt),
+            isNull(maintenanceSchedules.archivedAt),
+          ),
+        )
         .orderBy(maintenanceSchedules.scheduledFor, computers.name)
         .limit(limit),
       'ler as manutenções agendadas',
@@ -531,7 +544,10 @@ export class DashboardRepository {
           ),
         })
         .from(computers)
-        .leftJoin(maintenances, eq(maintenances.computerId, computers.id))
+        .leftJoin(
+          maintenances,
+          and(eq(maintenances.computerId, computers.id), isNull(maintenances.archivedAt)),
+        )
         .where(eq(computers.isArchived, false))
         .groupBy(computers.id),
       'conferir as preventivas',

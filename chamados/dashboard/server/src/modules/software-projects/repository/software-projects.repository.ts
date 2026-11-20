@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { RUNNING_TICKET_STATUSES } from '@template/shared/domain/ticket-status.util';
 import { type SoftwareProjectListQuery } from '@template/shared/schemas/software-project.schema';
-import { and, asc, count, desc, eq, ilike, inArray, isNotNull, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, type SQL } from 'drizzle-orm';
 
+import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runOne, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
@@ -49,7 +50,11 @@ export class SoftwareProjectsRepository {
 
   async listAll(): Promise<SoftwareProjectRow[]> {
     return runQuery(
-      this.db.select().from(softwareProjects).orderBy(desc(softwareProjects.createdAt)),
+      this.db
+        .select()
+        .from(softwareProjects)
+        .where(isNull(softwareProjects.archivedAt))
+        .orderBy(desc(softwareProjects.createdAt)),
       'listar todos os sistemas',
     );
   }
@@ -65,6 +70,7 @@ export class SoftwareProjectsRepository {
             inArray(softwareProjects.status, ['active', 'maintenance']),
             isNotNull(softwareProjects.githubRepoOwner),
             isNotNull(softwareProjects.githubRepoName),
+            isNull(softwareProjects.archivedAt),
           ),
         )
         .orderBy(asc(softwareProjects.name)),
@@ -83,6 +89,7 @@ export class SoftwareProjectsRepository {
             inArray(softwareProjects.status, ['active', 'maintenance']),
             isNotNull(softwareProjects.githubRepoOwner),
             isNotNull(softwareProjects.githubRepoName),
+            isNull(softwareProjects.archivedAt),
           ),
         )
         .limit(1),
@@ -110,10 +117,15 @@ export class SoftwareProjectsRepository {
     );
   }
 
-  async remove(id: number): Promise<void> {
+  /** Arquiva (excluir) ou desarquiva (desfazer). O sistema, a linha do tempo e os chamados
+   *  ficam. */
+  async setArchived(id: number, archived: boolean, actorId: string | null): Promise<void> {
     await runQuery(
-      this.db.delete(softwareProjects).where(eq(softwareProjects.id, id)),
-      'excluir sistema',
+      this.db
+        .update(softwareProjects)
+        .set(archiveValues(archived, actorId))
+        .where(eq(softwareProjects.id, id)),
+      archived ? 'arquivar sistema' : 'desarquivar sistema',
     );
   }
 
@@ -175,7 +187,9 @@ export class SoftwareProjectsRepository {
   }
 
   private buildWhere(query: SoftwareProjectListQuery): SQL | undefined {
-    const filters: (SQL | undefined)[] = [];
+    const filters: (SQL | undefined)[] = [
+      archivedCondition(softwareProjects.archivedAt, query.archived),
+    ];
 
     if (query.status) {
       filters.push(eq(softwareProjects.status, query.status));

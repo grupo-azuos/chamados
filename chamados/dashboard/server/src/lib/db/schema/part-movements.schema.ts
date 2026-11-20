@@ -2,6 +2,7 @@ import { MOVEMENT_TYPES } from '@template/shared/domain/part-catalog.util';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 import { computers } from './computers.schema';
@@ -57,6 +58,8 @@ export const partMovements = chamadosSchema.table(
     createdBy: text('created_by').notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
+    /* O estorno ARQUIVA: a linha sai do extrato e do saldo, e volta pelo "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
     /* "O que já aconteceu com esta peça" é a consulta do extrato. */

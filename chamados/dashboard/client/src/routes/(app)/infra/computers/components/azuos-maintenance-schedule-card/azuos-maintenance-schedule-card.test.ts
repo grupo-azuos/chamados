@@ -10,6 +10,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 function schedule(over: Partial<MaintenanceSchedule> = {}): MaintenanceSchedule {
   return {
+    id: 3,
     computerId: 3,
     computerName: 'CONTABIL-03',
     computerDisplayName: null,
@@ -20,6 +21,7 @@ function schedule(over: Partial<MaintenanceSchedule> = {}): MaintenanceSchedule 
     createdBy: 'suporte@teste.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...over,
   };
 }

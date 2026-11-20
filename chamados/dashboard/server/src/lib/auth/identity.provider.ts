@@ -186,7 +186,8 @@ export class IdentityProvider {
       this.db
         .select({ context: internalRoles.context })
         .from(internalRoles)
-        .where(eq(internalRoles.userId, forwarded.id)),
+        /* O módulo tirado (arquivado) não vale mais: só as linhas em uso dão acesso. */
+        .where(and(eq(internalRoles.userId, forwarded.id), isNull(internalRoles.archivedAt))),
       'consultar os módulos da pessoa',
     );
 

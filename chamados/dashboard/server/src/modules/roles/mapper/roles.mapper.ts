@@ -4,6 +4,7 @@ import {
 } from '@template/shared/schemas/internal-role.schema';
 import { type RoleContext } from '@template/shared/schemas/user.schema';
 
+import { toArchive } from '../../../lib/db/archive.util';
 import {
   type InternalRoleInsert,
   type InternalRoleRow,
@@ -22,6 +23,7 @@ export function toInternalRole(row: InternalRoleRow): InternalRole {
     createdBy: row.createdBy ?? null,
     updatedAt: row.updatedAt?.toISOString() ?? null,
     updatedBy: row.updatedBy ?? null,
+    archive: toArchive(row),
   };
 }
 

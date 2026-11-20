@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { MAINTENANCE_TYPES, PREVENTIVE_STATUSES } from '../domain/maintenance.util';
+import { archivedFilterSchema, archiveSchema } from './archive.schema';
 import { departmentSchema } from './computer.schema';
 import { paginationQuerySchema } from './pagination.schema';
 
@@ -70,6 +71,8 @@ export const maintenanceSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
+  /** Nulo em uso; excluir arquiva, e o "Desfazer" devolve. */
+  archive: archiveSchema,
 });
 
 export type Maintenance = z.infer<typeof maintenanceSchema>;
@@ -152,6 +155,7 @@ export const maintenanceListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   computerId: z.coerce.number<number>().int().optional(),
   type: maintenanceTypeSchema.optional(),
+  archived: archivedFilterSchema,
 });
 
 export type MaintenanceListQuery = z.infer<typeof maintenanceListQuerySchema>;
@@ -198,6 +202,7 @@ const scheduleNoteSchema = optionalText(
  * viraria a véspera em outro.
  */
 export const maintenanceScheduleSchema = z.object({
+  id: z.number().int(),
   computerId: z.number().int(),
   computerName: z.string(),
   computerDisplayName: z.string().nullable(),
@@ -208,6 +213,8 @@ export const maintenanceScheduleSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
+  /** Nulo em aberto; cumprido ou cancelado, o agendamento é arquivado. */
+  archive: archiveSchema,
 });
 
 export type MaintenanceSchedule = z.infer<typeof maintenanceScheduleSchema>;
@@ -241,6 +248,7 @@ export type MaintenanceScheduleFormValues = { scheduledFor: string; note: string
 
 export const maintenanceScheduleListQuerySchema = z.object({
   computerId: z.coerce.number<number>().int().optional(),
+  archived: archivedFilterSchema,
 });
 
 export type MaintenanceScheduleListQuery = z.infer<typeof maintenanceScheduleListQuerySchema>;

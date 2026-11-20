@@ -76,7 +76,7 @@ export class SoftwareScheduleService {
   async list(user: RequestUser, query: SoftwareScheduleQuery): Promise<SoftwareScheduleEvent[]> {
     assertCanRead(user.role, 'o cronograma de sistemas');
 
-    const rows = await this.repository.listBetween(query.startDate, query.endDate);
+    const rows = await this.repository.listBetween(query);
     return rows.map((row) => toSoftwareScheduleEvent(row, row.projectName ?? undefined));
   }
 
@@ -134,7 +134,18 @@ export class SoftwareScheduleService {
     assertCanEditSystem(user, 'excluir agendamento do cronograma');
 
     await this.findOwnedOrRefuse(user, id);
-    await this.repository.remove(id);
+    /* Excluir ARQUIVA: o item sai da Agenda e volta pelo "Desfazer". */
+    await this.repository.setArchived(id, true, user.id);
+  }
+
+  /** Desfaz a exclusão. Quem pode excluir (quem marcou ou Super Admin) é quem pode desfazer. */
+  async restore(user: RequestUser, id: number): Promise<SoftwareScheduleEvent> {
+    assertCanEditSystem(user, 'excluir agendamento do cronograma');
+
+    await this.findOwnedOrRefuse(user, id);
+    await this.repository.setArchived(id, false, null);
+
+    return this.findById(user, id);
   }
 
   /** O agendamento, se existe e se esta pessoa pode mexer nele (quem marcou ou Super Admin). */

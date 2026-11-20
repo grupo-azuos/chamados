@@ -45,6 +45,7 @@ function movement(over: Partial<PartMovement> = {}): PartMovement {
     createdBy: 'suporte@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...over,
   };
 }

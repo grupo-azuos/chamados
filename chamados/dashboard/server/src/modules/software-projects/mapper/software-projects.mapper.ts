@@ -7,6 +7,7 @@ import {
 import { type SoftwareScheduleEvent } from '@template/shared/schemas/software-schedule.schema';
 import { type SoftwareTimelineEvent } from '@template/shared/schemas/software-timeline.schema';
 
+import { toArchive } from '../../../lib/db/archive.util';
 import { setIfDefined } from '../../../lib/db/partial-update.util';
 import {
   type SoftwareProjectInsert,
@@ -54,6 +55,7 @@ export function toSoftwareProject(
     pullRequestsCount,
     createdAt: row.createdAt.toISOString(),
     updatedAt: toNullableIsoString(row.updatedAt),
+    archive: toArchive(row),
   };
 }
 
@@ -182,5 +184,6 @@ export function toSoftwareScheduleEvent(
     createdByEmail: row.createdBy,
     /* Agendamento antigo não tem o nome: mostra o e-mail, que identifica do mesmo jeito. */
     createdByName: row.createdByName ?? row.createdBy,
+    archive: toArchive(row),
   };
 }
