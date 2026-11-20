@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { describe, expect, it } from 'vitest';
 
+import Ticket from '@lucide/svelte/icons/ticket';
+
 import PageHeader from './azuos-page-header.svelte';
 
 describe('AzuosPageHeader', () => {
@@ -40,5 +42,14 @@ describe('AzuosPageHeader', () => {
     });
 
     expect(container.querySelector('p')).toBeNull();
+  });
+
+  it('puts the menu icon beside a bigger title on a work screen', () => {
+    const { container } = render(PageHeader, {
+      props: { data: { title: 'Chamados' }, ui: { icon: Ticket } },
+    });
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Chamados' })).toHaveClass('text-2xl');
+    expect(container.querySelector('h1 svg')).toHaveAttribute('aria-hidden', 'true');
   });
 });

@@ -3,6 +3,7 @@
   import type { ComponentProps } from 'svelte';
   import Download from '@lucide/svelte/icons/download';
   import Plus from '@lucide/svelte/icons/plus';
+  import Ticket from '@lucide/svelte/icons/ticket';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import PageHeader from './azuos-page-header.svelte';
@@ -39,6 +40,9 @@
 />
 
 <Story name="TitleOnly" args={{ data: { title: 'Configurações' } }} />
+
+<!-- O cabeçalho das telas de trabalho: o ícone do menu ao lado do título maior. -->
+<Story name="WithMenuIcon" args={{ data: { title: 'Chamados', description: 'Fila do módulo' }, ui: { icon: Ticket } }} />
 
 <!-- Caso limite: título e descrição longos numa tela estreita — as ações descem. -->
 <Story

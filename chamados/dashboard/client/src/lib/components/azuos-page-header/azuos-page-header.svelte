@@ -1,9 +1,14 @@
 <script lang="ts" module>
+  import type { LucideIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
 
   export type AzuosPageHeaderProps = {
     data: { title: string; description?: string };
-    ui?: { className?: string };
+    /**
+     * `icon`: o ícone do item do menu, ao lado do título — o cabeçalho das telas de trabalho.
+     * Com ele, o título sobe para o tamanho dessas telas.
+     */
+    ui?: { className?: string; icon?: LucideIcon };
     /** As ações da tela, já montadas (normalmente `ActionButton`). Ficam à direita. */
     children?: Snippet;
   };
@@ -13,6 +18,8 @@
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, children }: AzuosPageHeaderProps = $props();
+
+  const Icon = $derived(ui?.icon);
 </script>
 
 <header
@@ -22,7 +29,14 @@
   )}
 >
   <div class="min-w-0">
-    <h1 class="text-ink-900 text-xl font-bold break-words">{data.title}</h1>
+    <h1
+      class={cn('text-ink-900 font-bold break-words', Icon ? 'flex items-center gap-2 text-2xl' : 'text-xl')}
+    >
+      {#if Icon}
+        <Icon class="text-brand-blue-700 dark:text-foreground size-6 shrink-0" aria-hidden="true" />
+      {/if}
+      {data.title}
+    </h1>
     {#if data.description}
       <p class="text-ink-500 mt-0.5 text-sm break-words">{data.description}</p>
     {/if}
