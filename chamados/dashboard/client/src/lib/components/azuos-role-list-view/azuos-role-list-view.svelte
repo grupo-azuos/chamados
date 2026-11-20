@@ -46,6 +46,8 @@
     };
     actions: {
       onCreate: () => void;
+      /** Abre o "Liberar módulo" já com esta pessoa escolhida. */
+      onGrantTo?: (person: RolePerson) => void;
       onAskDelete: (role: InternalRole) => void;
       onSearchChange: (search: string) => void;
       onContextChange: (context: RoleContext | '') => void;
@@ -208,6 +210,15 @@
         {/if}
       </span>
     {/each}
+    <!-- Dar módulo direto na pessoa, sem procurá-la de novo na lista do formulário. Some quando
+         ela já tem os três. -->
+    {#if canManage && actions.onGrantTo && person.roles.length < ROLE_CONTEXTS.length}
+      <ActionButton
+        data={{ label: 'Adicionar módulo' }}
+        ui={{ icon: Plus, variant: 'ghost', size: 'sm' }}
+        actions={{ onClick: () => actions.onGrantTo?.(person) }}
+      />
+    {/if}
   </div>
 {/snippet}
 

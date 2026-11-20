@@ -40,6 +40,7 @@
 
   const baseActions = {
     onCreate: fn(),
+    onGrantTo: fn(),
     onAskDelete: fn(),
     onSearchChange: fn(),
     onContextChange: fn(),

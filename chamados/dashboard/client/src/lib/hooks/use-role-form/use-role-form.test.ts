@@ -131,4 +131,32 @@ describe('useRoleFormModel', () => {
       expect(rolesApi.assignMany).not.toHaveBeenCalled();
     });
   });
+
+  // feliz
+  /* Aberto pelo botão no card da pessoa: ela já vem escolhida, com os módulos que já tem. */
+  it('opens with the person of the card chosen and her modules ticked', async () => {
+    let model!: RoleFormModel;
+    render(Harness, {
+      props: {
+        role: null,
+        person: { userId: 'usr_9', userEmail: 'ana@empresa.com.br', contexts: ['infra'] },
+        onSaved: vi.fn(),
+        onReady: (ready: RoleFormModel) => (model = ready),
+      },
+    });
+
+    expect(model.data.mode).toBe('create');
+    expect(model.data.fields.userId.value).toBe('usr_9');
+    expect(model.data.contexts).toEqual(['infra']);
+
+    model.actions.onContextsChange(['infra', 'manutencao']);
+    model.actions.onSubmit();
+    await vi.waitFor(() =>
+      expect(rolesApi.assignMany).toHaveBeenCalledWith({
+        userId: 'usr_9',
+        userEmail: 'ana@empresa.com.br',
+        contexts: ['infra', 'manutencao'],
+      }),
+    );
+  });
 });
