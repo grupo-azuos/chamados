@@ -155,6 +155,13 @@
       "when": 1795214010435,
       "tag": "0021_archive_instead_of_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795218082876,
+      "tag": "0022_module_dashboard_boards",
+      "breakpoints": true
     }
   ]
 }

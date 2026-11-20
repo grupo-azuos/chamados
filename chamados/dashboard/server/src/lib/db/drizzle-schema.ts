@@ -3,6 +3,7 @@ import { computerAlerts } from './schema/computer-alerts.schema';
 import { computerSamples } from './schema/computer-samples.schema';
 import { computerTransfers } from './schema/computer-transfers.schema';
 import { computers } from './schema/computers.schema';
+import { dashboardBoards, savedFilters } from './schema/dashboard-boards.schema';
 import { history } from './schema/history.schema';
 import { internalRoles } from './schema/internal-roles.schema';
 import { superAdmins } from './schema/super-admins.schema';
@@ -49,6 +50,8 @@ import {
  * Tabela nova entra aqui, na mesma mudança em que o arquivo `<nome>.schema.ts` é criado.
  */
 export const drizzleSchema = {
+  dashboardBoards,
+  savedFilters,
   githubConnections,
   githubOauthStates,
   whatsappConnections,
