@@ -54,6 +54,15 @@ const config = {
 	}
 };
 const rulesFor = (code, path = "src/x.svelte", cfg = config) => checkSource(path, code, cfg).map((v) => v.rule);
+describe("brand/readable-yellow-text", () => {
+	// feliz: o amarelo de fundo, o texto sobre ele e o `-ink` passam.
+	it("passes yellow fills and the ink tokens", () => assert.deepEqual(rulesFor("<p class=\"bg-warning text-warning-foreground\"><b class=\"text-warning-ink\">1</b><i class=\"text-hue-yellow-ink bg-hue-yellow\"></i></p>"), []));
+	// triste: amarelo do grupo como texto, nem com ignore.
+	it("catches yellow text classes, even with an ignore", () => {
+		const found = rulesFor("// design-ignore-next-line\n<p class=\"text-warning\"><b class=\"dark:text-hue-yellow placeholder-warning\">1</b></p>");
+		assert.equal(found.filter((r) => r === "brand/readable-yellow-text").length, 3);
+	});
+});
 describe("brand/no-pure-black-white", () => {
 	it("passes tokens", () => assert.deepEqual(rulesFor("<div class=\"bg-background text-foreground\"></div>"), []));
 	it("catches #fff, bg-black and color: white", () => {
