@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { QUOTE_KINDS, QUOTE_STATUSES, parseAmountToCents } from '../domain/maintenance-quote.util';
+import { archivedFilterSchema, archiveSchema } from './archive.schema';
 import { paginationQuerySchema } from './pagination.schema';
 import { stagedFileSchema } from './staged-file.schema';
 
@@ -85,6 +86,8 @@ export const maintenanceQuoteSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
+  /** Nulo em uso; excluir arquiva (com o documento guardado), e o "Desfazer" devolve. */
+  archive: archiveSchema,
 });
 
 export type MaintenanceQuote = z.infer<typeof maintenanceQuoteSchema>;
@@ -128,6 +131,7 @@ export const maintenanceQuoteListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   status: quoteStatusSchema.optional(),
   kind: quoteKindSchema.optional(),
+  archived: archivedFilterSchema,
 });
 
 export type MaintenanceQuoteListQuery = z.infer<typeof maintenanceQuoteListQuerySchema>;

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { MOVEMENT_TYPES, PART_CATEGORIES, PART_CONDITIONS } from '../domain/part-catalog.util';
 import { departmentSchema } from './computer.schema';
+import { archivedFilterSchema, archiveSchema } from './archive.schema';
 import { paginationQuerySchema } from './pagination.schema';
 import { ticketStockLinkSchema } from './ticket-stock-item.schema';
 
@@ -161,6 +162,8 @@ export const partMovementSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
+  /** Nulo em uso; o estorno arquiva a linha (ela sai do saldo), e o "Desfazer" devolve. */
+  archive: archiveSchema,
 });
 
 export type PartMovement = z.infer<typeof partMovementSchema>;
@@ -228,6 +231,7 @@ export const movementListQuerySchema = paginationQuerySchema.extend({
   partId: z.coerce.number<number>().int().optional(),
   computerId: z.coerce.number<number>().int().optional(),
   type: movementTypeSchema.optional(),
+  archived: archivedFilterSchema,
 });
 
 export type MovementListQuery = z.infer<typeof movementListQuerySchema>;
