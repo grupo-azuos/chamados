@@ -30,6 +30,8 @@
    */
   export type AzuosProjectDetailViewProps = {
     data: {
+      /** O nome da tela para onde o "voltar" leva — a anterior do caminho da pessoa. */
+      backDestination?: string;
       project: SoftwareProject;
       progress: ProjectProgress;
       days: ProjectTimelineDay[];
@@ -127,7 +129,7 @@
 </script>
 
 <div class="flex w-full flex-col gap-5">
-  <BackButton data={{ destination: 'os projetos' }} actions={{ onClick: actions.onBack }} />
+  <BackButton data={{ destination: data.backDestination ?? 'os projetos' }} actions={{ onClick: actions.onBack }} />
 
   <PageHeader
     data={{
