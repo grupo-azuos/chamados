@@ -12,7 +12,7 @@ const owners = [
 
 describe('AzuosSelectField', () => {
   // feliz
-  it('mostra o rótulo da opção selecionada', () => {
+  it('shows the label of the selected option', () => {
     render(SelectField, {
       props: {
         data: { value: 'Ana', options: owners },
@@ -27,7 +27,7 @@ describe('AzuosSelectField', () => {
   /* O teste acima usa uma opção cujo valor e rótulo são iguais ("Ana"), então ele passaria
      mesmo se o campo mostrasse o valor cru. Este aqui separa os dois de propósito. */
   // feliz
-  it('mostra o rótulo, não o valor guardado, antes de a lista ser aberta', () => {
+  it('shows the label, not the stored value, before the list is opened', () => {
     render(SelectField, {
       props: {
         data: {
@@ -48,7 +48,7 @@ describe('AzuosSelectField', () => {
   });
 
   // triste
-  it('mostra o placeholder quando nada foi escolhido', () => {
+  it('shows the placeholder when nothing was chosen', () => {
     render(SelectField, {
       props: {
         data: { value: '', options: [{ value: 'network', label: 'Internet / Rede' }] },
@@ -70,7 +70,7 @@ describe('AzuosSelectField', () => {
      usamos `fireEvent.pointerUp` no item, não `fireEvent.click`. */
 
   // feliz
-  it('escolher uma opção chama onChange com o valor dela', async () => {
+  it('picking an option calls onChange with its value', async () => {
     const onChange = vi.fn();
 
     render(SelectField, {
@@ -91,7 +91,7 @@ describe('AzuosSelectField', () => {
   });
 
   // triste
-  it('escolher a opção vazia devolve string vazia, não o sentinel interno', async () => {
+  it('picking the empty option returns an empty string, not the internal sentinel', async () => {
     const onChange = vi.fn();
 
     render(SelectField, {
@@ -112,7 +112,7 @@ describe('AzuosSelectField', () => {
   });
 
   // triste
-  it('desabilitado não abre o menu', async () => {
+  it('does not open the menu when disabled', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
 
@@ -159,5 +159,23 @@ describe('AzuosSelectField with people and in the dark theme', () => {
     });
 
     expect(document.querySelector('[data-slot="avatar"]')).toBeNull();
+  });
+
+  // triste
+  it('says there is nothing to pick instead of opening an empty list', async () => {
+    render(SelectField, {
+      props: {
+        data: { value: '', options: [] },
+        ui: { ariaLabel: 'Responsável' },
+        actions: { onChange: vi.fn() },
+      },
+    });
+
+    const trigger = screen.getByRole('combobox', { name: 'Responsável' });
+    await fireEvent.pointerDown(trigger);
+    await fireEvent.click(trigger);
+
+    expect(await screen.findByText('Nenhuma opção disponível')).toBeInTheDocument();
+    expect(screen.queryByRole('option')).toBeNull();
   });
 });

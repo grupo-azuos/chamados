@@ -138,6 +138,23 @@ const tokensOnly = {
 		return found;
 	}
 };
+const YELLOW_TOKEN = "(?:warning|hue-yellow|yellow)";
+const readableYellowText = {
+	id: "brand/readable-yellow-text",
+	law: "Marca",
+	severity: "error",
+	description: "Amarelo do grupo como cor de texto ou ícone: no tema claro ele não se lê.",
+	hint: "Texto e ícone amarelos usam `text-warning-ink` ou `text-hue-yellow-ink` (`var(--warning-ink)`). O amarelo puro fica para fundo (`bg-warning` com `text-warning-foreground`), traço e gráfico.",
+	enabled: (c) => c.brandRules?.readableYellowText ?? true,
+	check: (file) => {
+		if (file.isTokenFile) return [];
+		const pattern = new RegExp(`(?<![\\w-])(?:text|placeholder|decoration|caret)-${YELLOW_TOKEN}(?![\\w-])`, "g");
+		return [...matches(file.code, pattern)].map((m) => ({
+			index: m.index,
+			message: `Amarelo como texto: \`${m[0]}\`.`
+		}));
+	}
+};
 const noArbitraryValues = {
 	id: "brand/no-arbitrary-values",
 	law: "Marca",
@@ -621,6 +638,7 @@ const teslerInputType = {
 export const RULES = [
 	noPureBlackWhite,
 	tokensOnly,
+	readableYellowText,
 	noArbitraryValues,
 	noGradientsOrGlass,
 	noCardOpacity,
@@ -654,7 +672,7 @@ export function isInScope(path, config) {
 	return config.scan.dirs.some((dir) => dir === "." || p === dir || p.startsWith(`${normalize(dir).replace(/\/$/, "")}/`));
 }
 /** As regras que NENHUM `design-ignore` cala: cor é só por token, sem exceção por arquivo. */
-export const UNSILENCEABLE_RULES = new Set(["brand/tokens-only", "brand/no-pure-black-white"]);
+export const UNSILENCEABLE_RULES = new Set(["brand/tokens-only", "brand/no-pure-black-white", "brand/readable-yellow-text"]);
 /** Linhas com `design-ignore-next-line [regra…]` silenciam a linha de baixo. */
 function ignoredLines(content) {
 	const ignored = new Map();

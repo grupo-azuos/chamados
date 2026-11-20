@@ -12,9 +12,9 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
 });
 
-describe('a rota verify/código', () => {
+describe('the verify/code route', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({code: 'OS-ABC123'});
 
     const { container } = renderPage(Page as never);
@@ -24,7 +24,7 @@ describe('a rota verify/código', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({code: 'OS-ABC123'});
 
     renderPage(Page as never);

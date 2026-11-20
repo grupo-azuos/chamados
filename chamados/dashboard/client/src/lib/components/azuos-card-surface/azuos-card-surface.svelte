@@ -10,8 +10,10 @@
    *
    * - Fundo: sempre a superfície da marca (`bg-card`), com a borda neutra. Cor entra só como
    *   sotaque (`$lib/utils/card-tone.util`).
-   * - Hover: a mancha do GSAP (`$lib/motion/card-wash`). Neutra por padrão; colorida só com
-   *   `ui.isHoverColored` + `ui.hoverTone`.
+   * - Cor: card com tom (`ui.isHoverColored` + `ui.hoverTone`) fica TINGIDO o tempo todo — o tom
+   *   a 16%, a mesma cor que a antiga mancha animada deixava no fim. Card sem tom fica na
+   *   superfície e ganha só o véu neutro (`--hover-veil`) no hover, sem crescer de onde o mouse
+   *   entrou.
    * - Marca d'água: `ui.mark` desenha o ícone grande no canto, no sotaque de `ui.markTone`.
    * - Escolhido: o azul claro da marca (`bg-card-selected`) com texto branco.
    * - Clicável: um botão de verdade cobre o card inteiro.
@@ -20,6 +22,7 @@
     data?: { label?: string };
     ui?: {
       className?: string;
+      /** O card fica tingido, o tempo todo, na cor de `hoverTone`. Sem a flag, só o véu neutro no hover. */
       isHoverColored?: boolean;
       hoverTone?: AzuosCardTone;
       mark?: LucideIcon;
@@ -34,8 +37,7 @@
 </script>
 
 <script lang="ts">
-  import { cardWash, WASH_SIZE } from '$lib/motion/card-wash';
-  import { cardToneClasses } from '$lib/utils/card-tone.util';
+  import { cardToneClasses, cardToneStyle, cardToneVeilOf } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state: cardState, actions, children }: AzuosCardSurfaceProps = $props();
@@ -45,12 +47,10 @@
   const isClickable = $derived(Boolean(actions?.onClick) && !isDisabled);
   const Mark = $derived(ui?.mark);
 
-  /* A cor da mancha: o sotaque com transparência, ou um véu neutro do texto do tema. */
-  const washColor = $derived(
-    ui?.isHoverColored && ui.hoverTone
-      ? `color-mix(in srgb, ${cardToneClasses(ui.hoverTone).color} 16%, transparent)`
-      : 'color-mix(in srgb, var(--foreground) 6%, transparent)',
-  );
+  /* O véu: o sotaque a 16% (card com tom, sempre à vista) ou o véu neutro do tema, o mesmo das
+     linhas de lista (só no hover). */
+  const isTinted = $derived(Boolean(ui?.isHoverColored && ui.hoverTone));
+  const veilColor = $derived(isTinted ? cardToneVeilOf(ui?.hoverTone) : 'var(--hover-veil)');
 </script>
 
 <div
@@ -58,7 +58,6 @@
   aria-label={data?.label}
   data-slot="azuos-card-surface"
   data-selected={isSelected ? 'true' : undefined}
-  use:cardWash
   class={cn(
     'group/card rounded-surface shadow-card relative isolate overflow-hidden transition-[box-shadow,transform,background-color] duration-150',
     /* A borda NEUTRA separa o card do fundo da página, que no claro é quase do mesmo branco. */
@@ -70,18 +69,16 @@
     ui?.className,
   )}
 >
-  <!-- A mancha começa encolhida pelo `transform`, o mesmo que o GSAP anima: a classe `scale-0`
-       usaria a propriedade `scale`, que se multiplica ao `transform` e a prenderia em zero. -->
+  <!-- O véu cobre o card inteiro: no hover, ou sempre no card tingido — sem crescer de onde o
+       mouse entrou. -->
   <span
     aria-hidden="true"
     data-slot="card-wash"
-    class="pointer-events-none absolute top-0 left-0 -z-10 rounded-full"
-    style:width="{WASH_SIZE}px"
-    style:height="{WASH_SIZE}px"
-    style:margin-left="{-WASH_SIZE / 2}px"
-    style:margin-top="{-WASH_SIZE / 2}px"
-    style:background-color={washColor}
-    style:transform="scale(0)"
+    class={cn(
+      'pointer-events-none absolute inset-0 -z-10 transition-colors duration-150',
+      isTinted ? 'bg-(--card-veil)' : 'group-hover/card:bg-(--card-veil)',
+    )}
+    style:--card-veil={veilColor}
   ></span>
 
   {#if Mark}
@@ -93,6 +90,7 @@
         ui?.markSize === 'lg' ? '-right-6 -bottom-6 size-40' : '-right-5 -bottom-5 size-31',
         cardToneClasses(ui?.markTone).text,
       )}
+      style={cardToneStyle(ui?.markTone).text}
     >
       <Mark class="block size-full stroke-1" />
     </span>

@@ -44,8 +44,9 @@ export function colorOfSlice(label: string, index: number): string {
 /**
  * Contagem por chave, do maior para o menor.
  *
- * Valor ausente vira "N/A" em vez de desaparecer: fatia que não existe esconde que há
- * registro sem o campo preenchido, e é justamente isso que alguém precisa ver para corrigir.
+ * Valor ausente vira "(Vazio)" — a opção especial do projeto, entre parênteses — em vez de
+ * desaparecer: fatia que não existe esconde que há registro sem o campo preenchido, e é
+ * justamente isso que alguém precisa ver para corrigir.
  */
 export function countBy<TRow>(
   rows: readonly TRow[],
@@ -54,7 +55,7 @@ export function countBy<TRow>(
   const counts = new Map<string, number>();
 
   for (const row of rows) {
-    const label = read(row) ?? 'N/A';
+    const label = read(row) ?? '(Vazio)';
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
 

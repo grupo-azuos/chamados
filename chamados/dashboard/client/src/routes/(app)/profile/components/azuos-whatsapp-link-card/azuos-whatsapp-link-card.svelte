@@ -87,7 +87,7 @@
           dos chamados em que você é o responsável.
         </p>
         {#if dailyLimit > 0}
-          <p class={cn('mt-1 text-xs', isNearLimit ? 'text-warning font-medium' : 'text-muted-foreground')}>
+          <p class={cn('mt-1 text-xs', isNearLimit ? 'text-warning-ink font-medium' : 'text-muted-foreground')}>
             {sentToday} de {dailyLimit} mensagens automáticas hoje.
             {#if hasReachedLimit}
               Limite atingido: o sistema volta a enviar por você amanhã.

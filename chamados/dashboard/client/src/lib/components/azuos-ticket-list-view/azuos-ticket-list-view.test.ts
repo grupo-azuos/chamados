@@ -259,7 +259,7 @@ describe('AzuosTicketListView — stat card shortcuts and filter bar', () => {
         dashboard,
         filter: emptyFilter,
         assigneeOptions: [
-          { value: 'none', label: 'Sem responsável' },
+          { value: 'none', label: '(Sem responsável)' },
           { value: 'u-ana', label: 'Ana Lima', avatar: { name: 'Ana Lima', url: null } },
           { value: 'u-bia', label: 'Bia Costa', avatar: { name: 'Bia Costa', url: null } },
         ],
@@ -449,7 +449,7 @@ describe('ticketFilterChips', () => {
       { key: 'assigneeId', label: 'Responsável: Ana Lima' },
     ]);
     expect(ticketFilterChips({ ...emptyFilter, assigneeId: 'none' }, [], people)[0]?.label).toBe(
-      'Sem responsável',
+      '(Sem responsável)',
     );
   });
 

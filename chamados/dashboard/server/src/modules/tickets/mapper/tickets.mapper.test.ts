@@ -233,7 +233,7 @@ describe('toTicketUpdate', () => {
   });
 });
 
-describe('toTicket com máquina', () => {
+describe('toTicket with a machine', () => {
   // feliz
   it('carries the machine the ticket was linked to, with the name the screen shows', () => {
     const ticket = toTicket(
@@ -262,7 +262,7 @@ describe('toTicket com máquina', () => {
   });
 });
 
-describe('toTicketUpdate com máquina e tipo', () => {
+describe('toTicketUpdate with a machine and a type', () => {
   // feliz
   it('links the machine and corrects the problem type', () => {
     const update = toTicketUpdate({ computerId: 11, problemType: 'slow_computer' }, ANA, NOW);

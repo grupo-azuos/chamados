@@ -174,8 +174,9 @@ repete nas duas de propósito: uma casca só para ambas exigiria uma pasta agrup
 juntaria as duas telas numa única "feature" para a checagem de design e passaria a acusar o
 componente que as duas compartilham.
 
-**A margem do conteúdo é da casca** (`azuos-app-shell`): a tela define só a largura máxima
-(`mx-auto w-full max-w-6xl`), nunca `px-*`/`pt-*`/`pb-*` no elemento raiz.
+**A margem e a largura do conteúdo são da casca** (`azuos-app-shell`): toda tela cabe na moldura
+`page-frame` — inteira até Full HD, centralizada acima disso. A tela não define largura máxima
+(`max-w-*`) nem `px-*`/`pt-*`/`pb-*` no elemento raiz: só `flex w-full flex-col`.
 
 ## Comandos
 

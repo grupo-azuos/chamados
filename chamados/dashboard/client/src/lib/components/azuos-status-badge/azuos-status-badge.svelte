@@ -20,7 +20,9 @@
     neutral: 'bg-muted text-hue-slate',
     info: 'bg-muted text-hue-steel',
     success: 'bg-muted text-hue-green',
-    warning: 'bg-muted text-hue-amber',
+    /* O amarelo é a exceção: letra pequena amarela no cinza não se lê. O selo fica no amarelo do
+       grupo, cheio, com a letra escura por cima. */
+    warning: 'bg-warning text-warning-foreground',
     danger: 'bg-muted text-hue-red',
     brand: 'bg-muted text-hue-blue',
   };

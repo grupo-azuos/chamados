@@ -107,7 +107,7 @@
   function buildDepartmentOptions(departments: string[] | undefined, current: string) {
     const list = departments ?? [];
     const options = [
-      { value: '', label: 'Nenhum' },
+      { value: '', label: '(Nenhum)' },
       ...list.map((dep) => ({ value: dep, label: dep })),
     ];
     if (current && !list.includes(current)) {
@@ -123,7 +123,7 @@
   ) {
     const list = users ?? [];
     const options = [
-      { value: '', label: 'Nenhum' },
+      { value: '', label: '(Nenhum)' },
       ...list.map((u) => ({ value: u.id, label: u.name, personName: u.name })),
     ];
     if (!currentId) return options;

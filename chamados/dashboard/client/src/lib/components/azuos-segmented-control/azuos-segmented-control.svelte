@@ -24,6 +24,7 @@
 </script>
 
 <script lang="ts">
+  import { slidingIndicator } from '$lib/motion/sliding-indicator';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state, actions }: AzuosSegmentedControlProps = $props();
@@ -36,9 +37,15 @@
   }
 </script>
 
+<!-- O escolhido não pinta o próprio fundo: um destaque só DESLIZA até ele, como no menu. -->
 <div
   role="group"
   aria-label={ui.ariaLabel}
+  use:slidingIndicator={{
+    selector: '[aria-pressed="true"]',
+    indicatorClass: isProminent ? 'rounded-control bg-primary' : 'rounded-control bg-card shadow-xs',
+    attributes: ['aria-pressed'],
+  }}
   class={cn(
     'bg-mantle rounded-surface flex flex-wrap gap-1 p-1',
     isProminent && 'w-full gap-2 bg-transparent p-0 sm:w-auto',
@@ -55,13 +62,13 @@
       class={cn(
         'rounded-control min-h-10 px-3 text-sm transition-[color,background-color,box-shadow] duration-200 disabled:cursor-not-allowed disabled:opacity-60',
         isActive
-          ? 'text-primary bg-card font-bold shadow-xs'
+          ? 'text-primary font-bold'
           : 'text-muted-foreground hover:text-foreground hover:bg-card font-semibold',
         isProminent &&
           'control-lg focus-visible:outline-primary flex-auto px-5 text-base whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 sm:flex-none',
         isProminent &&
           (isActive
-            ? 'bg-primary text-primary-foreground shadow-none'
+            ? 'text-primary-foreground shadow-none'
             : 'bg-primary-soft text-ink-900 hover:bg-primary-soft hover:text-ink-900 shadow-none'),
       )}
     >

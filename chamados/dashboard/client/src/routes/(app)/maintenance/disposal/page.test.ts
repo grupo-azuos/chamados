@@ -14,7 +14,7 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
 
 describe('a rota maintenance/disposal', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
@@ -24,7 +24,7 @@ describe('a rota maintenance/disposal', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -38,7 +38,7 @@ const { default: userEvent } = await import('@testing-library/user-event');
 
 describe('a rota maintenance/disposal — registrar', () => {
   // feliz
-  it('abre e fecha o formulário de registrar um descarte', async () => {
+  it('opens and closes the disposal form', async () => {
     visiting({});
     renderPage(Page as never);
     const user = userEvent.setup({ pointerEventsCheck: 0 });

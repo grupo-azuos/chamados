@@ -44,7 +44,7 @@
   };
 
   /** A opção vazia: movimentação que não tem máquina — compra, devolução ao depósito. */
-  export const NO_MACHINE_OPTION = { value: '', label: 'Nenhuma máquina' };
+  export const NO_MACHINE_OPTION = { value: '', label: '(Nenhuma máquina)' };
 </script>
 
 <script lang="ts">
@@ -88,7 +88,7 @@
         <div class="flex items-center gap-2.5">
           <span class={cn(
             "flex size-7 shrink-0 items-center justify-center rounded-chip",
-            isOut ? "bg-muted text-warning" : "bg-muted text-success"
+            isOut ? "bg-muted text-warning-ink" : "bg-muted text-success"
           )}>
             {#if isOut}
               <ArrowUpRight class="size-4" aria-hidden="true" />

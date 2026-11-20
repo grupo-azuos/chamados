@@ -15,14 +15,14 @@ beforeEach(() => {
 
 describe('useTableViewModel', () => {
   // feliz
-  it('começa automático quando nada foi salvo ainda', async () => {
+  it('starts on automatic when nothing was saved yet', async () => {
     const { useTableViewModel } = await freshTableView();
 
     expect(useTableViewModel().view).toBe('auto');
     expect(useTableViewModel().forceCards).toBe(false);
   });
 
-  it('liga "sempre em cards" e guarda a escolha', async () => {
+  it('turns on "always cards" and keeps the choice', async () => {
     const { useTableViewModel } = await freshTableView();
     const tableView = useTableViewModel();
 
@@ -33,7 +33,7 @@ describe('useTableViewModel', () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe('cards');
   });
 
-  it('alternar de novo volta para automático', async () => {
+  it('toggling again goes back to automatic', async () => {
     const { useTableViewModel } = await freshTableView();
     const tableView = useTableViewModel();
 
@@ -44,7 +44,7 @@ describe('useTableViewModel', () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe('auto');
   });
 
-  it('a escolha é compartilhada entre quem chamar o hook — não é cópia por tela', async () => {
+  it('shares the choice among every caller of the hook — not one copy per screen', async () => {
     const { useTableViewModel } = await freshTableView();
 
     useTableViewModel().actions.onToggle();
@@ -53,7 +53,7 @@ describe('useTableViewModel', () => {
   });
 
   // triste
-  it('ignora um valor salvo inválido e cai em automático', async () => {
+  it('ignores an invalid saved value and falls back to automatic', async () => {
     window.localStorage.setItem(STORAGE_KEY, 'tabela-mesmo-sempre');
     const { useTableViewModel } = await freshTableView();
 

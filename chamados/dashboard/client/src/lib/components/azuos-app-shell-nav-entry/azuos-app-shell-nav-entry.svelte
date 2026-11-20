@@ -8,6 +8,7 @@
   import { popIn } from '$lib/motion/motion';
   import { SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem } from '$lib/components/ui/sidebar';
   import type { NavItem } from '$lib/navigation/navigation';
+  import { cn } from '$lib/utils/cn';
 
   let { item, badge, isActive }: { item: NavItem; badge: number | undefined; isActive: boolean } =
     $props();
@@ -52,7 +53,8 @@
              truncado em "T…" dentro dos 32px do botão, espremendo o ícone junto — a barra
              perde a leitura de relance e não ganha espaço nenhum. Quem diz o nome ali é o
              `tooltipContent` do SidebarMenuButton, logo acima. -->
-        <span class="group-data-[collapsible=icon]:hidden">{item.label}</span>
+        <!-- Com selo, o rótulo para antes dele (e corta com "…"), em vez de passar por baixo. -->
+        <span class={cn('truncate group-data-[collapsible=icon]:hidden', badge && 'pr-10')}>{item.label}</span>
       </a>
     {/snippet}
   </SidebarMenuButton>

@@ -6,43 +6,43 @@ describe('companyNameKey', () => {
   /* O caso medido: "MASTER FORT - TELHAS" com dois espaços, ou virando "MASTER FORT
      - TELHAS LTDA.", deixava de casar e a empresa DESAPARECIA da tela de todo mundo.
      Corrigir o nome na planilha apagava a empresa. */
-  it('casa o mesmo nome com espaço interno sobrando', () => {
+  it('matches the same name with extra inner spaces', () => {
     expect(companyNameKey('MASTER FORT  -  TELHAS')).toBe(companyNameKey('MASTER FORT - TELHAS'));
   });
 
-  it('casa com hífen escrito com e sem espaço em volta', () => {
+  it('matches a hyphen written with and without spaces around it', () => {
     expect(companyNameKey('MASTER FORT-TELHAS')).toBe(companyNameKey('MASTER FORT - TELHAS'));
   });
 
-  it('casa ignorando acento, caixa e pontuação', () => {
+  it('matches ignoring accents, case and punctuation', () => {
     expect(companyNameKey('São João Comércio Ltda.')).toBe(
       companyNameKey('SAO JOAO COMERCIO LTDA'),
     );
   });
 
-  it('devolve vazio para nulo, sem estourar', () => {
+  it('returns empty for null without throwing', () => {
     expect(companyNameKey(null)).toBe('');
     expect(companyNameKey('  ')).toBe('');
   });
 
-  it('não junta empresas que são de fato diferentes', () => {
+  it('does not merge companies that are really different', () => {
     expect(companyNameKey('MASTER FORT TELHAS')).not.toBe(companyNameKey('MASTER FORTE TELHAS'));
   });
 });
 
 describe('digitsOnly', () => {
-  it('tira a formatação do CNPJ', () => {
+  it('strips the CNPJ formatting', () => {
     expect(digitsOnly('12.345.678/0001-99')).toBe('12345678000199');
   });
 
-  it('devolve vazio quando não há dígito nenhum', () => {
+  it('returns empty when there is no digit', () => {
     expect(digitsOnly('NÃO POSSUI')).toBe('');
     expect(digitsOnly(null)).toBe('');
   });
 });
 
 describe('searchKey', () => {
-  it('normaliza acento e caixa nos dois lados da comparação', () => {
+  it('normalises accents and case on both sides of the comparison', () => {
     expect(searchKey('São João')).toBe('sao joao');
   });
 });
@@ -57,7 +57,7 @@ describe('companyMatchesSearch', () => {
     municipalRegistration: '98765432',
   };
 
-  it('termo vazio mostra tudo', () => {
+  it('an empty term shows everything', () => {
     expect(companyMatchesSearch(company, '')).toBe(true);
     expect(companyMatchesSearch(company, null)).toBe(true);
   });
@@ -69,18 +69,18 @@ describe('companyMatchesSearch', () => {
   });
 
   // O campo `grupo` não era pesquisado, embora 522 empresas tenham um.
-  it('pesquisa também o grupo e o responsável', () => {
+  it('also searches the group and the person in charge', () => {
     expect(companyMatchesSearch(company, 'grupo alfa')).toBe(true);
     expect(companyMatchesSearch(company, 'luanna')).toBe(true);
   });
 
   // 574 dos 1043 CNPJs estão guardados COM pontuação: colar os 14 dígitos precisa achar.
-  it('acha pelo CNPJ colado sem pontuação', () => {
+  it('finds by a CNPJ pasted without punctuation', () => {
     expect(companyMatchesSearch(company, '12345678000199')).toBe(true);
     expect(companyMatchesSearch(company, '12.345.678/0001-99')).toBe(true);
   });
 
-  it('acha pela inscrição municipal', () => {
+  it('finds by the municipal registration', () => {
     expect(companyMatchesSearch(company, '98765432')).toBe(true);
   });
 
@@ -88,31 +88,31 @@ describe('companyMatchesSearch', () => {
      fazia "sala 001" trazer 542 das 1.044 empresas — 52% do cadastro — porque todo
      CNPJ de matriz contém 0001. Isso é pior que não achar: quem vê zero recarrega,
      quem vê 542 desiste. */
-  it('não transforma termo com palavra e número em busca por pedaço de CNPJ', () => {
+  it('does not turn a term with a word and a number into a CNPJ fragment search', () => {
     expect(companyMatchesSearch(company, 'sala 0001')).toBe(false);
     expect(companyMatchesSearch(company, 'loja 100')).toBe(false);
   });
 
   // Três dígitos casam com qualquer coisa; quem procura por número digita o CNPJ.
-  it('ignora termo numérico curto demais para identificar alguém', () => {
+  it('ignores a numeric term too short to identify anyone', () => {
     expect(companyMatchesSearch(company, '001')).toBe(false);
     expect(companyMatchesSearch(company, '12345')).toBe(false);
   });
 
-  it('aceita pedaço longo o bastante do CNPJ', () => {
+  it('accepts a long enough CNPJ fragment', () => {
     expect(companyMatchesSearch(company, '123456')).toBe(true);
   });
 
-  it('não acha o que não está na empresa', () => {
+  it('does not find what is not in the company', () => {
     expect(companyMatchesSearch(company, 'petrolina')).toBe(false);
     expect(companyMatchesSearch(company, '99999999999999')).toBe(false);
   });
 
-  it('empresa nula não casa com termo preenchido', () => {
+  it('a null company does not match a filled term', () => {
     expect(companyMatchesSearch(null, 'sao joao')).toBe(false);
   });
 
-  it('não estoura quando os campos da empresa estão vazios', () => {
+  it('does not throw when the company fields are empty', () => {
     expect(companyMatchesSearch({}, 'sao joao')).toBe(false);
     expect(companyMatchesSearch({ name: null, taxId: null }, '123456')).toBe(false);
   });

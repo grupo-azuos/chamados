@@ -81,6 +81,13 @@
   /* Trilho (ícone + a folga do `inset`, que ele ocupa por inteiro) + painel de 16rem. */
   const TWO_COLUMN_WIDTH = '--sidebar-width: calc(var(--sidebar-width-icon) + 1rem + 2px + 16rem);';
 
+  /**
+   * A rolagem da lista de itens: só na vertical (a de lado aparecia por um selo que passava da
+   * borda), fina, e contida — chegar ao fim não rola a página por trás.
+   */
+  const NAV_SCROLL =
+    'overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:var(--sidebar-border)_transparent]';
+
   const RAIL_BUTTON =
     'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground rounded-box flex size-9 shrink-0 items-center justify-center outline-hidden transition-colors focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-5';
 
@@ -288,7 +295,10 @@
           </div>
         </SidebarHeader>
 
-        <SidebarContent class="items-center gap-1 px-0 py-2">
+        <!-- O trilho não rola inteiro: os módulos ficam parados em cima, e só os itens do módulo
+             (recolhido) rolam no meio, entre dois divisores — o perfil e o Sair ficam sempre à
+             vista embaixo. -->
+        <SidebarContent class="items-center gap-1 overflow-hidden px-0 py-2">
           <div role="group" aria-label="Módulos" use:slidingIndicator={RAIL_INDICATOR} class="flex flex-col items-center gap-1">
             {#each areas as option (option.value)}
               {@const Icon = option.icon}
@@ -309,9 +319,9 @@
           </div>
 
           <!-- Recolhida, o painel some: os itens do módulo descem para o trilho. -->
-          <div class="hidden flex-col items-center gap-1 group-data-[collapsible=icon]:flex">
-            <SidebarSeparator class="my-1 h-px w-6" />
-            <nav aria-label="Menu principal" class="flex flex-col items-center gap-1">
+          <div class="hidden min-h-0 w-full flex-1 flex-col items-center group-data-[collapsible=icon]:flex">
+            <SidebarSeparator class="my-1 h-px w-6 shrink-0" />
+            <nav aria-label="Menu principal" class={cn('flex min-h-0 w-full flex-1 flex-col items-center gap-1', NAV_SCROLL)}>
               {#each items as item (item.key)}
                 {@const ItemIcon = item.icon}
                 {#snippet itemLink(props: Record<string, unknown>)}
@@ -332,6 +342,7 @@
           </div>
         </SidebarContent>
 
+        <SidebarSeparator class="mx-auto my-1 h-px w-6" />
         <SidebarFooter class="items-center gap-1 px-0 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           {#each shellActions as link (link.href)}
             {@const LinkIcon = link.icon}
@@ -361,7 +372,9 @@
       <!-- Sem logo no painel: a marca já está no trilho (o "S" no ladrilho), e o painel começa
            direto no nome do módulo. -->
       <Sidebar collapsible="none" class="hidden min-w-0 flex-1 pt-3 pb-2 md:flex">
-        <SidebarContent>
+        <!-- Só a lista de telas rola, e só na vertical; o Zuzu e o nome ficam presos embaixo,
+             depois de um divisor. -->
+        <SidebarContent class={NAV_SCROLL}>
           <SidebarGroup>
             <SidebarGroupLabel class="text-sidebar-foreground text-xs font-semibold tracking-wider uppercase">
               {activeArea?.label ?? ''}
@@ -382,6 +395,7 @@
           </SidebarGroup>
         </SidebarContent>
 
+        <SidebarSeparator class="mx-2 w-auto" />
         <SidebarFooter class="pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           {@render zuzuLedge()}
           <div class="grid px-2 pb-1 leading-tight">
@@ -537,7 +551,8 @@
       bind:this={contentEl}
       class="app-content min-h-0 min-w-0 w-full flex-1 overflow-y-auto overscroll-contain pt-3 pr-[max(0.75rem,env(safe-area-inset-right))] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] sm:pt-4 sm:pr-[max(1.5rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] md:pb-[max(2.5rem,env(safe-area-inset-bottom))]"
     >
-      {@render children()}
+      <!-- Toda tela cabe nesta moldura: inteira até Full HD, centralizada acima disso. -->
+      <div class="page-frame">{@render children()}</div>
     </div>
   </SidebarInset>
 

@@ -7,7 +7,7 @@ import AppErrorBoundary from './azuos-app-error-boundary.svelte';
 describe('AzuosAppErrorBoundary', () => {
   // feliz
   // feliz
-  it('desenha o conteúdo normalmente quando nada quebra', () => {
+  it('draws the content as usual when nothing breaks', () => {
     const children = createRawSnippet(() => ({
       render: () => '<div>Conteúdo normal</div>',
     }));
@@ -21,7 +21,7 @@ describe('AzuosAppErrorBoundary', () => {
      mensagem, sem o que relatar. É o pior resultado possível, e é o que este teste prova
      que não acontece mais. */
   // triste
-  it('captura o erro de render e mostra o motivo, em vez de esvaziar a tela', () => {
+  it('catches the render error and shows the reason instead of blanking the screen', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     const children = createRawSnippet(() => ({
       render: (): string => {

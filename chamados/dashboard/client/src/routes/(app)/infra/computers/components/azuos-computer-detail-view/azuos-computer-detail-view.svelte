@@ -370,7 +370,7 @@
   }
 </script>
 
-<div class="mx-auto flex w-full max-w-5xl flex-col gap-5">
+<div class="flex w-full flex-col gap-5">
   <BackButton data={{ destination: 'o inventário' }} actions={{ onClick: actions.onBack }} />
 
   <section aria-label="Identificação do computador" class="bg-card rounded-surface min-w-0 border p-4 shadow-xs sm:p-5">

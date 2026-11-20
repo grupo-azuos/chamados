@@ -14,7 +14,7 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
 
 describe('a rota infra/computers/detalhe', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({ id: '3' });
 
     const { container } = renderPage(Page as never);
@@ -24,7 +24,7 @@ describe('a rota infra/computers/detalhe', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({ id: '3' });
 
     renderPage(Page as never);
@@ -95,9 +95,9 @@ function serveMachine() {
   });
 }
 
-describe('a rota infra/computers/detalhe com a máquina carregada', () => {
+describe('the infra/computers detail route with the machine loaded', () => {
   // feliz
-  it('abre cada formulário da ficha e volta ao inventário', async () => {
+  it('opens each form of the record and goes back to the inventory', async () => {
     serveMachine();
     visiting({ id: '3' });
     renderPage(Page as never);
@@ -125,7 +125,7 @@ describe('a rota infra/computers/detalhe com a máquina carregada', () => {
   });
 
   // feliz
-  it('mostra o token novo uma vez e tenta montar o pacote de instalação', async () => {
+  it('shows the new token once and tries to build the install package', async () => {
     serveMachine();
     visiting({ id: '3' });
     renderPage(Page as never);
@@ -144,7 +144,7 @@ describe('a rota infra/computers/detalhe com a máquina carregada', () => {
   });
 
   // triste
-  it('avisa quando o instalador não pôde ser montado', async () => {
+  it('warns when the installer could not be built', async () => {
     serveMachine();
     visiting({ id: '3' });
     renderPage(Page as never);
@@ -157,7 +157,7 @@ describe('a rota infra/computers/detalhe com a máquina carregada', () => {
   });
 
   // triste
-  it('explica quando a máquina saiu do inventário', async () => {
+  it('explains when the machine left the inventory', async () => {
     const { ApiError } = await import('$lib/api/http-client');
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
       if (path === '/computers/3') throw new ApiError(404, 'Computador não encontrado.');

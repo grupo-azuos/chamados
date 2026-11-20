@@ -4,6 +4,8 @@
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
+  import { slidingIndicator } from '$lib/motion/sliding-indicator';
+  import { cn } from '$lib/utils/cn';
 
   /**
    * Tabela ou cards — ao lado de cada lista que tem os dois formatos. Cuida da própria
@@ -20,6 +22,9 @@
    */
   const tableView = useTableViewModel();
 
+  /** O escolhido: o fundo é o destaque que desliza; aqui só o texto claro sobre ele. */
+  const ACTIVE = 'text-primary-foreground hover:bg-transparent hover:text-primary-foreground';
+
   function choose(wantsCards: boolean) {
     if (tableView.forceCards === wantsCards) return;
 
@@ -27,20 +32,26 @@
   }
 </script>
 
+<!-- O preenchimento do formato escolhido desliza até o outro na troca. -->
 <div
   role="group"
   aria-label="Formato da lista"
+  use:slidingIndicator={{
+    selector: '[aria-pressed="true"]',
+    indicatorClass: 'rounded-box bg-primary',
+    attributes: ['aria-pressed'],
+  }}
   class="border-border bg-card rounded-control hidden items-center gap-0.5 border p-0.5 shadow-xs xl:inline-flex"
 >
   <ActionButton
     data={{ label: 'Ver em tabela' }}
     ui={{
-      variant: tableView.forceCards ? 'ghost' : 'primary',
+      variant: 'ghost',
       size: 'sm',
       icon: Table,
       isIconOnly: true,
       /* Filho de uma moldura `rounded-control`: o raio de dentro é menor que o de fora. */
-      className: 'rounded-box shadow-none',
+      className: cn('rounded-box shadow-none', !tableView.forceCards && ACTIVE),
     }}
     state={{ isPressed: !tableView.forceCards }}
     actions={{ onClick: () => choose(false) }}
@@ -48,11 +59,11 @@
   <ActionButton
     data={{ label: 'Ver em cards' }}
     ui={{
-      variant: tableView.forceCards ? 'primary' : 'ghost',
+      variant: 'ghost',
       size: 'sm',
       icon: LayoutGrid,
       isIconOnly: true,
-      className: 'rounded-box shadow-none',
+      className: cn('rounded-box shadow-none', tableView.forceCards && ACTIVE),
     }}
     state={{ isPressed: tableView.forceCards }}
     actions={{ onClick: () => choose(true) }}

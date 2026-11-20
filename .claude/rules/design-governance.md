@@ -59,10 +59,11 @@ Todo código gerado ou modificado nos 14 sistemas do Grupo Azuos DEVE seguir est
 - Os `text-white`/`bg-black` dos primitivos do shadcn (`lib/components/ui/`, que não se editam) resolvem para os tokens `--white`/`--black` da marca, remapeados no `@theme` do `tokens.css`.
 
 ## 14. Cards: Quatro Formatos sobre Uma Superfície
-- Todo card é feito sobre `AzuosCardSurface` (`azuos-card-surface.svelte`): fundo da marca (`bg-card`) com a borda neutra, hover com a mancha do GSAP que entra a partir do mouse, escolhido no azul claro da marca (`bg-card-selected`) com texto e ícone brancos.
+- Todo card é feito sobre `AzuosCardSurface` (`azuos-card-surface.svelte`): fundo da marca (`bg-card`) com a borda neutra, hover com o véu parado do tema (`--hover-veil`), sem animação, escolhido no azul claro da marca (`bg-card-selected`) com texto e ícone brancos.
 - Os quatro formatos: card de painel e filtro grande com ícone (`<AzuosStatCard>`), filtro pequeno (`<AzuosMiniStatCard>`), card de conteúdo com o ícone do assunto grande no canto (`<AzuosContentCard>`) e o hero com Zuzu (`<AzuosDashboardHeroCard>`, que usa o card de painel por dentro). Card novo usa um deles; não se monta card à mão.
-- Cor de card é SÓ sotaque, dos oito tons sóbrios de `lib/theme/tokens.css` (`--hue-blue|red|amber|green|steel|plum|slate|copper`), pelas classes de `$lib/utils/card-tone.util.ts`: bolinha do ícone, número, ícone grande do canto, bolinha do selo. Nunca fundo pastel, fundo cheio no tom, neon ou borda colorida.
-- O hover é neutro por padrão. Colorido só com a flag `ui.isHoverColored` + o tom do card; aí a mancha usa o sotaque com transparência — a única transparência permitida em card.
-- Cor escolhida pela pessoa vira o sotaque mais próximo (`cardHueFromHex`).
+- Cor de card é SÓ sotaque, dos oito tons sóbrios de `lib/theme/tokens.css` (`--hue-blue|red|yellow|green|steel|plum|slate|copper`), pelas classes de `$lib/utils/card-tone.util.ts`: bolinha do ícone, número, ícone grande do canto, bolinha do selo. Nunca fundo pastel, fundo cheio no tom, neon ou borda colorida.
+- O hover é neutro por padrão (o véu do tema, só no hover). Card com a flag `ui.isHoverColored` + o tom fica tingido o tempo todo, com o sotaque a 16% — a única transparência permitida em card.
+- Cor escolhida pela pessoa (tag, status) pinta EXATA, como foi escolhida — nunca o sotaque mais próximo (`cardToneFromColor` + `cardToneStyle`).
+- O amarelo é o do grupo (`--yellow`, rgb(255, 220, 0)), sem âmbar: é fundo, traço, bolinha e gráfico. Texto e ícone amarelos usam `text-warning-ink` ou `text-hue-yellow-ink`; nunca `text-warning`.
 - Texto que pode cruzar o ícone grande do canto ganha margem à direita (ou uma faixa sólida por cima), para nunca passar por cima do desenho.
 

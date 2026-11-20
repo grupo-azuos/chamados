@@ -14,7 +14,7 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
 
 describe('a rota roles', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
@@ -24,7 +24,7 @@ describe('a rota roles', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -48,9 +48,9 @@ const role = {
   updatedBy: null,
 };
 
-describe('a rota roles com acessos carregados', () => {
+describe('the roles route with the access loaded', () => {
   // feliz
-  it('abre o formulário de liberar módulo e a pergunta de tirar módulo', async () => {
+  it('opens the grant-module form and the remove-module question', async () => {
     vi.mocked(apiRequest).mockImplementation(async (path: string) => (path === '/roles' ? [role] : []));
     visiting({});
     renderPage(Page as never);

@@ -214,7 +214,7 @@ describe('transferRouteOf', () => {
   });
 });
 
-describe('o histórico de transferências', () => {
+describe('the transfer history', () => {
   // feliz
   it('shows where the machine came from and what stayed behind', () => {
     render(ComputerDetailView, {

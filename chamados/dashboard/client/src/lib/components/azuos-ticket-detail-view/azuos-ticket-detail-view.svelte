@@ -155,7 +155,7 @@
   }
 </script>
 
-<div class="mx-auto flex w-full max-w-7xl flex-col gap-5">
+<div class="flex w-full flex-col gap-5">
   <BackButton data={{ destination: 'os chamados' }} actions={{ onClick: actions.onBack }} />
 
   <PageHeader
@@ -191,7 +191,7 @@
   </PageHeader>
 
   {#if viewState?.notice}
-    <p role="status" class={viewState.notice.isSent ? 'text-success text-sm' : 'text-warning text-sm'}>
+    <p role="status" class={viewState.notice.isSent ? 'text-success text-sm' : 'text-warning-ink text-sm'}>
       {viewState.notice.message}
       {#if !viewState.notice.isSent && data.whatsAppLink}
         Use o botão acima para abrir a conversa e enviar você mesmo.

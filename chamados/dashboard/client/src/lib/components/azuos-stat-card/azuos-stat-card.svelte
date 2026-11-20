@@ -41,7 +41,7 @@
   import AzuosCardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
   import { Skeleton } from '$lib/components/ui/skeleton';
-  import { cardToneClasses } from '$lib/utils/card-tone.util';
+  import { cardToneClasses, cardToneStyle } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
 
   // A prop mantém o nome público `state`, mas esse nome local faria `$state` virar
@@ -52,6 +52,8 @@
   const classes = $derived(cardToneClasses(tone));
   const Icon = $derived(ui?.icon);
   const isSelected = $derived(Boolean(cardState?.isSelected));
+  /* A cor escolhida pela pessoa (`#rrggbb`) pinta exata, pelo `style`; os sotaques vêm nas classes. */
+  const toneStyle = $derived(isSelected ? {} : cardToneStyle(tone));
   /* O nome lido pelo leitor de tela leva o número, e diz o que o próximo clique faz. */
   const label = $derived(
     actions?.onClick
@@ -115,6 +117,7 @@
             'group-data-[selected=true]/card:bg-on-card-selected group-data-[selected=true]/card:text-card-selected',
             classes.dot,
           )}
+          style={toneStyle.dot}
         >
           <Icon size={18} class="block shrink-0" aria-hidden="true" />
         </span>
@@ -134,6 +137,7 @@
             ui?.size === 'lg' ? 'text-4xl' : 'text-3xl tracking-tight',
             classes.text,
           )}
+          style={toneStyle.text}
         >
           {data.value}
         </p>

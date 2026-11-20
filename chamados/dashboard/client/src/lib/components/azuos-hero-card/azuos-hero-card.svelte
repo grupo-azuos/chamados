@@ -57,8 +57,8 @@
       container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
       title: '',
       description: 'text-muted-foreground',
-      badge: 'bg-hue-amber text-on-hue',
-      icon: 'text-hue-amber',
+      badge: 'bg-hue-yellow text-on-yellow',
+      icon: 'text-hue-yellow-ink',
     },
     success: {
       container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
@@ -71,8 +71,8 @@
       container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
       title: '',
       description: 'text-muted-foreground',
-      badge: 'bg-hue-amber text-on-hue',
-      icon: 'text-hue-amber',
+      badge: 'bg-hue-yellow text-on-yellow',
+      icon: 'text-hue-yellow-ink',
     },
     danger: {
       container: 'bg-card text-card-foreground border border-border hover:shadow-xl',

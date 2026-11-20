@@ -5,7 +5,7 @@
 
   /**
    * O card de uso geral com tom — o par Svelte do `AzuosToneCard` do template, sobre a
-   * `AzuosCardSurface`: superfície da marca, hover com a mancha do GSAP (no tom quando
+   * `AzuosCardSurface`: superfície da marca, véu no hover (tingido no tom, o tempo todo, quando
    * `mode="interactive"`) e escolhido no azul claro da marca. Card novo usa um dos quatro
    * formatos (`AzuosStatCard`, `AzuosMiniStatCard`, `AzuosContentCard`, hero).
    */

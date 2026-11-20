@@ -132,7 +132,7 @@
   const hasActiveFilter = $derived(Boolean(data.filter.search || data.filter.type));
 </script>
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-5">
+<div class="flex w-full flex-col gap-5">
   <PageHeader
     data={{
       title: 'Manutenção',

@@ -110,7 +110,7 @@
   }));
 
   const projectOptions = $derived([
-    { value: '', label: 'Nenhum' },
+    { value: '', label: '(Nenhum)' },
     ...projects.map((p) => ({ value: String(p.id), label: p.name })),
   ]);
 

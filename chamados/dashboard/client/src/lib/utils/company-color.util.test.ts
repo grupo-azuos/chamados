@@ -28,8 +28,11 @@ describe('normalizeHexColor', () => {
 });
 
 describe('isLightColor', () => {
-  it('keeps white text on every palette color', () => {
-    for (const color of COMPANY_COLOR_PALETTE) expect(isLightColor(color)).toBe(false);
+  /* O amarelo do grupo é o único claro da paleta: nele o texto vira escuro. */
+  it('keeps white text on every dark palette color and dark text on the group yellow', () => {
+    const light = COMPANY_COLOR_PALETTE.filter((color) => isLightColor(color));
+
+    expect(light).toEqual([COMPANY_COLOR_PALETTE[4]]);
   });
 
   it('asks for dark text on a light color', () => {

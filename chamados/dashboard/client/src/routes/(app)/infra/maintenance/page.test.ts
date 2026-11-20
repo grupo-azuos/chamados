@@ -14,7 +14,7 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
 
 describe('a rota infra/maintenance', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
@@ -24,7 +24,7 @@ describe('a rota infra/maintenance', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -54,9 +54,9 @@ const maintenance = {
   updatedBy: null,
 };
 
-describe('a rota infra/maintenance com histórico', () => {
+describe('the infra/maintenance route with history', () => {
   // feliz
-  it('abre o formulário para registrar e para corrigir uma manutenção', async () => {
+  it('opens the form to log and to fix a maintenance', async () => {
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
       if (path === '/maintenances') return { items: [maintenance], total: 1, page: 1, pageSize: 25 };
       if (path === '/computers') return { items: [], total: 0, page: 1, pageSize: 100 };

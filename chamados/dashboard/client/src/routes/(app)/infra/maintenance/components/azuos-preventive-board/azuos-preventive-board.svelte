@@ -152,7 +152,7 @@
                 · <span class="text-primary font-medium">agendada para {dayLabelOf(scheduled.scheduledFor)}</span>
               {/if}
               {#if isFrequentlyServiced(row.maintenanceCount)}
-                · <span class="text-warning font-medium">
+                · <span class="text-warning-ink font-medium">
                   já foram {row.maintenanceCount} manutenções nesta máquina
                 </span>
               {/if}

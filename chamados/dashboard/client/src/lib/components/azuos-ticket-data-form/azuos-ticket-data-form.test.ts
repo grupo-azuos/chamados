@@ -99,7 +99,7 @@ describe('AzuosTicketDataForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Máquina' }));
     const search = await screen.findByPlaceholderText('Buscar máquina…');
     const popup = search.closest('[data-slot="popover-content"]') as HTMLElement;
-    await fireEvent.click(within(popup).getByText('Nenhuma'));
+    await fireEvent.click(within(popup).getByText('(Nenhuma)'));
 
     expect(given.onChange).toHaveBeenCalledWith('computerId', '');
   });
@@ -350,7 +350,7 @@ describe('AzuosTicketDataForm — custom system (unregistered/external)', () => 
       expect(open).toBeTruthy();
       return open as HTMLElement;
     });
-    await fireEvent.click(within(popup).getByText('Nenhum', { exact: true }));
+    await fireEvent.click(within(popup).getByText('(Nenhum)', { exact: true }));
 
     expect(acts.onChange).toHaveBeenCalledWith('projectId', '');
     expect(acts.onChange).toHaveBeenCalledWith('customSystemName', '');

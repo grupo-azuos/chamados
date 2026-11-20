@@ -119,7 +119,7 @@
         </button>
       {/snippet}
     </Popover.Trigger>
-    <Popover.Content class="w-auto gap-0 p-3" align="start">
+    <Popover.Content class="w-auto gap-0 p-3 rounded-surface border-border bg-card shadow-xl" align="start">
       <div class="mb-2 flex items-center justify-between gap-2">
         <button
           type="button"

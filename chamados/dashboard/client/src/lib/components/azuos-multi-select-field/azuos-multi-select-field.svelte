@@ -139,7 +139,7 @@
     </span>
     <ChevronDown class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
   </Popover.Trigger>
-  <Popover.Content align="start" class="w-72 min-w-64 gap-0 p-0">
+  <Popover.Content align="start" class="w-72 min-w-64 gap-0 overflow-hidden p-0 rounded-surface border-border bg-card shadow-xl">
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <ul role="group" aria-label={ariaLabel} onkeydown={moveFocusWithArrows} class="max-h-72 overflow-y-auto p-2">
       {#each data.options as option (option.value)}

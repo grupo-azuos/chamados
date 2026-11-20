@@ -167,7 +167,7 @@ describe('DashboardService.summary', () => {
   });
 });
 
-describe('DashboardService.summary — os blocos do painel', () => {
+describe('DashboardService.summary — the dashboard blocks', () => {
   const ana: RequestUser = { id: '1', email: 'ana@azuos.com.br', name: 'Ana', role: 'user' };
   const query = { days: 30 };
 

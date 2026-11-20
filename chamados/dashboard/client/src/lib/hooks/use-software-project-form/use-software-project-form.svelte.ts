@@ -75,7 +75,7 @@ export function responsibleOptionsFor(
     ? [...options, { value: current, label: project?.responsibleName ?? 'Responsável atual' }]
     : options;
 
-  return [{ value: '', label: 'Sem responsável' }, ...withCurrent];
+  return [{ value: '', label: '(Sem responsável)' }, ...withCurrent];
 }
 
 function saveProject(project: SoftwareProject | null, values: SoftwareProjectForm) {

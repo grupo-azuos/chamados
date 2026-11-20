@@ -132,16 +132,16 @@
   <!-- A LARGURA DA LISTA É A DO GATILHO, com piso: sem amarrar, ela se estica até o nome mais
        comprido e nasce mais larga que o diálogo em volta; sem o piso (`min-w-64`), sob um
        gatilho estreito cada opção saía cortada. O gatilho tem o piso dele (`min-w-40`). -->
-  <Popover.Content align="start" matchAnchorWidth class="min-w-64 p-0">
+  <Popover.Content align="start" matchAnchorWidth class="min-w-64 overflow-hidden p-0 rounded-surface border-border bg-card shadow-xl">
     <!-- O filtro é o do próprio Command, por semelhança — "ana s" ainda acha "Ana Souza". -->
-    <Command.Root>
+    <Command.Root class="rounded-surface bg-card">
       <Command.Input bind:value={term} placeholder={ui?.searchPlaceholder ?? 'Pesquisar…'} />
       <Command.List>
         <Command.Empty>{ui?.emptyLabel ?? 'Nada encontrado.'}</Command.Empty>
         <Command.Group>
           {#each data.options as option (option.value)}
             {@const OptionIcon = option.icon}
-            <Command.Item value={option.label} onSelect={() => choose(option.value)}>
+            <Command.Item value={option.label} onSelect={() => choose(option.value)} class="rounded-chip">
               <Check
                 class={cn('size-4 shrink-0', option.value !== data.value && 'opacity-0')}
                 aria-hidden="true"
@@ -159,7 +159,7 @@
           <!-- O `value` é o próprio termo para que o filtro nunca esconda a linha de criar: ela é
                justamente a saída de quem não achou o que procurava. -->
           {#if canCreate}
-            <Command.Item value={typed} onSelect={create}>
+            <Command.Item value={typed} onSelect={create} class="rounded-chip">
               <Plus class="size-4 shrink-0" aria-hidden="true" />
               <span class="truncate">{ui?.createLabel ?? 'Criar'} “{typed}”</span>
             </Command.Item>

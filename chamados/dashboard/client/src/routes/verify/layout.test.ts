@@ -9,12 +9,12 @@ vi.mock('$lib/api/auth.api', () => ({ authApi: { me: vi.fn() } }));
 
 const me = vi.mocked(authApi.me);
 
-describe('o layout de verificação de documentos (/verify)', () => {
+describe('the document verification layout (/verify)', () => {
   beforeEach(() => {
     me.mockReset();
   });
 
-  it('entrega o usuário autenticado para as telas de verificação', async () => {
+  it('hands the signed-in user to the verification screens', async () => {
     const user = {
       id: 'user-1',
       name: 'Pessoa de Teste',
@@ -26,7 +26,7 @@ describe('o layout de verificação de documentos (/verify)', () => {
     await expect(load()).resolves.toEqual({ user });
   });
 
-  it('exige autenticação e não deixa requisição anônima passar', async () => {
+  it('requires sign-in and lets no anonymous request through', async () => {
     const failure = new ApiError(401, 'Unauthorized');
     me.mockRejectedValue(failure);
 

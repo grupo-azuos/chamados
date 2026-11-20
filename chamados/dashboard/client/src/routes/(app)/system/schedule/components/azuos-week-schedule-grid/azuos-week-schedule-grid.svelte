@@ -193,7 +193,7 @@
 {/snippet}
 
 <Tooltip.Provider>
-  <section class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+  <section class="flex w-full flex-col gap-6">
     <!-- Toolbar: Mês/Ano, Navegação, Segmented Control e Botão Novo Evento -->
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-4">

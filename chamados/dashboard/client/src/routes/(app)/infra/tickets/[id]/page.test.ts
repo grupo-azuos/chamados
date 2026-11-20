@@ -14,7 +14,7 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
 
 describe('a rota infra/tickets/detalhe', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({ id: '7' });
 
     const { container } = renderPage(Page as never);
@@ -24,7 +24,7 @@ describe('a rota infra/tickets/detalhe', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({ id: '7' });
 
     renderPage(Page as never);
@@ -73,9 +73,9 @@ function serveTicket() {
   });
 }
 
-describe('a rota infra/tickets/detalhe com o chamado carregado', () => {
+describe('the infra/tickets detail route with the ticket loaded', () => {
   // feliz
-  it('mostra a ficha, dá o protocolo à aba e volta à fila', async () => {
+  it('shows the record, titles the tab with the protocol and goes back to the queue', async () => {
     serveTicket();
     visiting({ id: '22' });
     renderPage(Page as never);
@@ -87,7 +87,7 @@ describe('a rota infra/tickets/detalhe com o chamado carregado', () => {
   });
 
   // triste
-  it('explica quando o chamado não existe e oferece a volta', async () => {
+  it('explains when the ticket does not exist and offers the way back', async () => {
     const { ApiError } = await import('$lib/api/http-client');
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
       if (path === '/tickets/22') throw new ApiError(404, 'Chamado não encontrado.');
