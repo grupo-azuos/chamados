@@ -61,6 +61,8 @@ function row(overrides: Partial<MaintenanceQuoteRow> = {}): MaintenanceQuoteRow 
     createdBy: 'ana@empresa.com.br',
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }
@@ -93,7 +95,7 @@ const defaultRepository: Partial<MaintenanceQuotesRepository> = {
   findById: vi.fn().mockResolvedValue(row()),
   insert: vi.fn().mockResolvedValue(row()),
   update: vi.fn().mockResolvedValue(row()),
-  remove: vi.fn().mockResolvedValue(undefined),
+  setArchived: vi.fn().mockResolvedValue(undefined),
 };
 
 const defaultStorage: Partial<FileStorage> = {
@@ -364,38 +366,66 @@ describe('MaintenanceQuotesService.update', () => {
 
 describe('MaintenanceQuotesService.remove', () => {
   // feliz
-  it('deletes the quote and its document', async () => {
-    const remove = vi.fn().mockResolvedValue(undefined);
+  it('archives the quote and keeps its document in the bucket', async () => {
+    const setArchived = vi.fn().mockResolvedValue(undefined);
     const storage = new MemoryStorage();
     await storage.put('maintenance-quotes/a.pdf', Buffer.from('a'), 'application/pdf');
     const service = makeService(
       {
         findById: vi.fn().mockResolvedValue(row({ attachmentKey: 'maintenance-quotes/a.pdf' })),
-        remove,
+        setArchived,
       },
       storage,
     );
 
     await service.remove(keeper, 1);
 
-    expect(remove).toHaveBeenCalledWith(1);
-    expect(await storage.head('maintenance-quotes/a.pdf')).toBeNull();
+    expect(setArchived).toHaveBeenCalledWith(1, true, keeper.id);
+    expect(await storage.head('maintenance-quotes/a.pdf')).not.toBeNull();
   });
 
   // triste
   it('refuses the deletion for someone who only queries the area', async () => {
-    const remove = vi.fn();
-    const service = makeService({ remove });
+    const setArchived = vi.fn();
+    const service = makeService({ setArchived });
 
     await expect(service.remove(viewer, 1)).rejects.toThrow(ForbiddenException);
-    expect(remove).not.toHaveBeenCalled();
+    expect(setArchived).not.toHaveBeenCalled();
   });
 
-  it('answers 404 for a quote that does not exist, without deleting', async () => {
-    const remove = vi.fn();
-    const service = makeService({ findById: vi.fn().mockResolvedValue(null), remove });
+  it('answers 404 for a quote that does not exist, without archiving', async () => {
+    const setArchived = vi.fn();
+    const service = makeService({ findById: vi.fn().mockResolvedValue(null), setArchived });
 
     await expect(service.remove(keeper, 99)).rejects.toThrow(NotFoundException);
-    expect(remove).not.toHaveBeenCalled();
+    expect(setArchived).not.toHaveBeenCalled();
+  });
+});
+
+describe('MaintenanceQuotesService.restore', () => {
+  // feliz
+  it('brings the archived quote back', async () => {
+    const setArchived = vi.fn().mockResolvedValue(undefined);
+    const service = makeService({
+      findById: vi
+        .fn()
+        .mockResolvedValueOnce(row({ archivedAt: new Date('2026-11-20T12:00:00.000Z') }))
+        .mockResolvedValueOnce(row()),
+      setArchived,
+    });
+
+    const restored = await service.restore(keeper, 1);
+
+    expect(setArchived).toHaveBeenCalledWith(1, false, null);
+    expect(restored.archive).toBeNull();
+  });
+
+  // triste
+  it('refuses the undo for someone who only queries the area', async () => {
+    const setArchived = vi.fn();
+    const service = makeService({ setArchived });
+
+    await expect(service.restore(viewer, 1)).rejects.toThrow(ForbiddenException);
+    expect(setArchived).not.toHaveBeenCalled();
   });
 });

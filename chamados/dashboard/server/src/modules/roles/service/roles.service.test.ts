@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
@@ -44,6 +44,8 @@ const ROW: InternalRoleRow = {
   createdBy: 'super@empresa.com.br',
   updatedAt: null,
   updatedBy: null,
+  archivedAt: null,
+  archivedBy: null,
 };
 
 describe('RolesService', () => {
@@ -58,7 +60,8 @@ describe('RolesService', () => {
       findByUserIdOrEmail: vi.fn().mockResolvedValue([ROW]),
       upsert: vi.fn().mockResolvedValue(ROW),
       upsertMany: vi.fn().mockResolvedValue([ROW]),
-      delete: vi.fn().mockResolvedValue(undefined),
+      setArchived: vi.fn().mockResolvedValue(undefined),
+      findActive: vi.fn().mockResolvedValue(null),
     } as unknown as RolesRepository;
 
     userDirectory = {
@@ -175,7 +178,7 @@ describe('RolesService', () => {
         createdBy: SUPERADMIN.email, updatedBy: SUPERADMIN.email,
       })));
       expect(result.map((role) => role.context)).toEqual(['infra', 'sistema']);
-      expect(repository.delete).not.toHaveBeenCalled();
+      expect(repository.setArchived).not.toHaveBeenCalled();
     });
 
     // triste
@@ -195,9 +198,9 @@ describe('RolesService', () => {
 
   describe('delete', () => {
     // feliz
-    it('allows superadmin to delete an internal role', async () => {
+    it('lets the super-admin take a module away, archiving it with who did it', async () => {
       await expect(service.delete(SUPERADMIN, 1)).resolves.toBeUndefined();
-      expect(repository.delete).toHaveBeenCalledWith(1);
+      expect(repository.setArchived).toHaveBeenCalledWith(1, true, SUPERADMIN.id);
     });
 
     // triste
@@ -214,6 +217,30 @@ describe('RolesService', () => {
       vi.mocked(repository.findById).mockResolvedValue(null);
 
       await expect(service.delete(SUPERADMIN, 999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('restore', () => {
+    // feliz
+    it('lets the super-admin give a module back', async () => {
+      const restored = await service.restore(SUPERADMIN, 1);
+
+      expect(repository.setArchived).toHaveBeenCalledWith(1, false, null);
+      expect(restored.context).toBe('manutencao');
+    });
+
+    // triste
+    it('refuses when the person already has the module again', async () => {
+      vi.mocked(repository.findActive).mockResolvedValue({ ...ROW, id: 2 });
+
+      await expect(service.restore(SUPERADMIN, 1)).rejects.toThrow(ConflictException);
+      expect(repository.setArchived).not.toHaveBeenCalled();
+    });
+
+    // triste
+    it('refuses anyone but the super-admin', async () => {
+      await expect(service.restore(ADMIN, 1)).rejects.toThrow(ForbiddenException);
+      expect(repository.setArchived).not.toHaveBeenCalled();
     });
   });
 

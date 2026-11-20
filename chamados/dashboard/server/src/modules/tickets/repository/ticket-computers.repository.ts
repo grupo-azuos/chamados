@@ -1,12 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, notExists, notInArray, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
-import { runQuery } from '../../../lib/db/db-error.util';
+import { archiveValues } from '../../../lib/db/archive.util';
+import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { computers } from '../../../lib/db/schema/computers.schema';
 import { ticketComputers } from '../../../lib/db/schema/ticket-computers.schema';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
+
+/** A mesma tabela, de novo: para perguntar "esta máquina já voltou ao chamado?". */
+const activeComputers = alias(ticketComputers, 'active_ticket_computers');
 
 /** Uma máquina como o chamado a mostra: o id e o nome de tela. */
 export type TicketComputer = { id: number; name: string };
@@ -33,7 +38,7 @@ export class TicketComputersRepository {
         })
         .from(ticketComputers)
         .innerJoin(computers, eq(computers.id, ticketComputers.computerId))
-        .where(inArray(ticketComputers.ticketId, [...ticketIds]))
+        .where(and(inArray(ticketComputers.ticketId, [...ticketIds]), isNull(ticketComputers.archivedAt)))
         .orderBy(asc(ticketComputers.createdAt), asc(ticketComputers.id)),
       'listar as máquinas dos chamados',
     );
@@ -60,21 +65,24 @@ export class TicketComputersRepository {
   }
 
   /**
-   * TROCA a lista de máquinas do chamado pela escolhida: tira as que saíram, soma as novas, e
-   * a primeira da lista vira a `computer_id` do chamado. Tudo junto, ou nada.
+   * TROCA a lista de máquinas do chamado pela escolhida: tira as que saíram (ARQUIVA, com quem
+   * tirou), soma as novas, e a primeira da lista vira a `computer_id` do chamado. Tudo junto, ou
+   * nada.
    */
-  async replace(ticketId: number, ids: readonly number[], createdBy: string): Promise<void> {
+  async replace(
+    ticketId: number,
+    ids: readonly number[],
+    createdBy: string,
+    actorId: string | null = null,
+  ): Promise<void> {
     await this.db.transaction(async (tx) => {
+      const ofTicket = and(eq(ticketComputers.ticketId, ticketId), isNull(ticketComputers.archivedAt));
       await runQuery(
         tx
-          .delete(ticketComputers)
+          .update(ticketComputers)
+          .set(archiveValues(true, actorId))
           .where(
-            ids.length > 0
-              ? and(
-                  eq(ticketComputers.ticketId, ticketId),
-                  notInArray(ticketComputers.computerId, [...ids]),
-                )
-              : eq(ticketComputers.ticketId, ticketId),
+            ids.length > 0 ? and(ofTicket, notInArray(ticketComputers.computerId, [...ids])) : ofTicket,
           ),
         'desvincular máquinas do chamado',
       );
@@ -94,6 +102,72 @@ export class TicketComputersRepository {
           .update(tickets)
           .set({ computerId: ids[0] ?? null, updatedAt: new Date(), updatedBy: createdBy })
           .where(eq(tickets.id, ticketId)),
+        'guardar a primeira máquina do chamado',
+      );
+    });
+  }
+
+  /** As máquinas tiradas do chamado que não voltaram por outro caminho — o bloco "Removidos". */
+  async listArchived(ticketId: number): Promise<{ id: number; computerId: number; name: string; archivedAt: Date | null }[]> {
+    return runQuery(
+      this.db
+        .select({
+          id: ticketComputers.id,
+          computerId: ticketComputers.computerId,
+          name: sql<string>`coalesce(${computers.displayName}, ${computers.name})`,
+          archivedAt: ticketComputers.archivedAt,
+        })
+        .from(ticketComputers)
+        .innerJoin(computers, eq(computers.id, ticketComputers.computerId))
+        .where(
+          and(
+            eq(ticketComputers.ticketId, ticketId),
+            isNotNull(ticketComputers.archivedAt),
+            notExists(
+              this.db
+                .select({ id: activeComputers.id })
+                .from(activeComputers)
+                .where(
+                  and(
+                    eq(activeComputers.ticketId, ticketComputers.ticketId),
+                    eq(activeComputers.computerId, ticketComputers.computerId),
+                    isNull(activeComputers.archivedAt),
+                  ),
+                ),
+            ),
+          ),
+        )
+        .orderBy(desc(ticketComputers.archivedAt)),
+      'listar máquinas tiradas do chamado',
+    );
+  }
+
+  async findInTicket(ticketId: number, id: number): Promise<{ id: number; computerId: number } | null> {
+    return runMaybe(
+      this.db
+        .select({ id: ticketComputers.id, computerId: ticketComputers.computerId })
+        .from(ticketComputers)
+        .where(and(eq(ticketComputers.ticketId, ticketId), eq(ticketComputers.id, id)))
+        .limit(1),
+      'ler máquina do chamado',
+    );
+  }
+
+  /**
+   * Devolve a máquina tirada ao chamado. Se ele ficou sem máquina nenhuma, ela volta a ser a
+   * primeira (`computer_id`). Se ela já voltou por outro caminho, o índice único recusa (409).
+   */
+  async restore(ticketId: number, id: number, computerId: number, actorEmail: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      await runQuery(
+        tx.update(ticketComputers).set(archiveValues(false, null)).where(eq(ticketComputers.id, id)),
+        'devolver máquina ao chamado',
+      );
+      await runQuery(
+        tx
+          .update(tickets)
+          .set({ computerId, updatedAt: new Date(), updatedBy: actorEmail })
+          .where(and(eq(tickets.id, ticketId), isNull(tickets.computerId))),
         'guardar a primeira máquina do chamado',
       );
     });

@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { type MaintenanceQuoteListQuery } from '@template/shared/schemas/maintenance-quote.schema';
 import { and, count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
 
+import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
@@ -76,17 +77,23 @@ export class MaintenanceQuotesRepository {
     return row ?? null;
   }
 
-  async remove(id: number): Promise<void> {
+  /** Arquiva (excluir) ou desarquiva (desfazer). O orçamento e o documento ficam. */
+  async setArchived(id: number, archived: boolean, actorId: string | null): Promise<void> {
     await runQuery(
-      this.db.delete(maintenanceQuotes).where(eq(maintenanceQuotes.id, id)),
-      'excluir orçamento da Manutenção',
+      this.db
+        .update(maintenanceQuotes)
+        .set(archiveValues(archived, actorId))
+        .where(eq(maintenanceQuotes.id, id)),
+      archived ? 'arquivar orçamento da Manutenção' : 'desarquivar orçamento da Manutenção',
     );
   }
 }
 
 /** A busca procura na empresa e na descrição: é por uma das duas que alguém lembra dele. */
 function buildWhere(query: MaintenanceQuoteListQuery): SQL | undefined {
-  const filters: (SQL | undefined)[] = [];
+  const filters: (SQL | undefined)[] = [
+    archivedCondition(maintenanceQuotes.archivedAt, query.archived),
+  ];
 
   if (query.status) filters.push(eq(maintenanceQuotes.status, query.status));
   if (query.kind) filters.push(eq(maintenanceQuotes.kind, query.kind));

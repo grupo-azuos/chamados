@@ -37,6 +37,8 @@ function movementRow(overrides: Partial<PartMovementRow> = {}): PartMovementRow 
     createdBy: ANA,
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }

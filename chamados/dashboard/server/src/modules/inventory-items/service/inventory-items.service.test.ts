@@ -78,6 +78,8 @@ function row(overrides: Partial<InventoryItemRow> = {}): InventoryItemRow {
     createdBy: 'ana@empresa.com.br',
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }
@@ -114,7 +116,7 @@ const defaultRepository: Partial<InventoryItemsRepository> = {
   findById: vi.fn().mockResolvedValue(row()),
   insert: vi.fn().mockResolvedValue(row()),
   update: vi.fn().mockResolvedValue(row()),
-  remove: vi.fn().mockResolvedValue(undefined),
+  setArchived: vi.fn().mockResolvedValue(undefined),
   findByIdForUpdate: vi.fn().mockResolvedValue(row()),
   updateBalance: vi.fn().mockResolvedValue(undefined),
   insertMovement: vi.fn().mockImplementation(async (values) => movementRow(values)),
@@ -438,36 +440,64 @@ describe('InventoryItemsService.update', () => {
 
 describe('InventoryItemsService.remove', () => {
   // feliz
-  it('deletes the product and its photo', async () => {
-    const remove = vi.fn().mockResolvedValue(undefined);
+  it('archives the product and keeps its photo in the bucket', async () => {
+    const setArchived = vi.fn().mockResolvedValue(undefined);
     const storage = new MemoryStorage();
     await storage.put('inventory/a.webp', Buffer.from('a'), 'image/webp');
     const service = makeService(
-      { findById: vi.fn().mockResolvedValue(row({ photoKey: 'inventory/a.webp' })), remove },
+      { findById: vi.fn().mockResolvedValue(row({ photoKey: 'inventory/a.webp' })), setArchived },
       storage,
     );
 
     await service.remove(keeper, 1);
 
-    expect(remove).toHaveBeenCalledWith(1);
-    expect(await storage.head('inventory/a.webp')).toBeNull();
+    expect(setArchived).toHaveBeenCalledWith(1, true, keeper.id);
+    expect(await storage.head('inventory/a.webp')).not.toBeNull();
   });
 
   // triste
   it('refuses the deletion for someone who only queries the area', async () => {
-    const remove = vi.fn();
-    const service = makeService({ remove });
+    const setArchived = vi.fn();
+    const service = makeService({ setArchived });
 
     await expect(service.remove(viewer, 1)).rejects.toThrow(ForbiddenException);
-    expect(remove).not.toHaveBeenCalled();
+    expect(setArchived).not.toHaveBeenCalled();
   });
 
-  it('answers 404 for a product that does not exist, without deleting', async () => {
-    const remove = vi.fn();
-    const service = makeService({ findById: vi.fn().mockResolvedValue(null), remove });
+  it('answers 404 for a product that does not exist, without archiving', async () => {
+    const setArchived = vi.fn();
+    const service = makeService({ findById: vi.fn().mockResolvedValue(null), setArchived });
 
     await expect(service.remove(keeper, 99)).rejects.toThrow(NotFoundException);
-    expect(remove).not.toHaveBeenCalled();
+    expect(setArchived).not.toHaveBeenCalled();
+  });
+});
+
+describe('InventoryItemsService.restore', () => {
+  // feliz
+  it('brings the archived product back', async () => {
+    const setArchived = vi.fn().mockResolvedValue(undefined);
+    const service = makeService({
+      findById: vi
+        .fn()
+        .mockResolvedValueOnce(row({ archivedAt: new Date('2026-11-20T12:00:00.000Z') }))
+        .mockResolvedValueOnce(row()),
+      setArchived,
+    });
+
+    const restored = await service.restore(keeper, 1);
+
+    expect(setArchived).toHaveBeenCalledWith(1, false, null);
+    expect(restored.archive).toBeNull();
+  });
+
+  // triste
+  it('refuses the undo for someone who only queries the area', async () => {
+    const setArchived = vi.fn();
+    const service = makeService({ setArchived });
+
+    await expect(service.restore(viewer, 1)).rejects.toThrow(ForbiddenException);
+    expect(setArchived).not.toHaveBeenCalled();
   });
 });
 
@@ -496,6 +526,22 @@ describe('InventoryItemsService.movements', () => {
 });
 
 describe('InventoryItemsService.createMovement', () => {
+  // triste
+  it('refuses to move an archived product, without touching the balance', async () => {
+    const insertMovement = vi.fn();
+    const service = makeService({
+      findByIdForUpdate: vi
+        .fn()
+        .mockResolvedValue(row({ archivedAt: new Date('2026-11-20T12:00:00.000Z') })),
+      insertMovement,
+    });
+
+    await expect(
+      service.createMovement(keeper, 1, { type: 'in', quantity: 1 }),
+    ).rejects.toThrow(UnprocessableEntityException);
+    expect(insertMovement).not.toHaveBeenCalled();
+  });
+
   // feliz
   it('registers an entry and moves the balance with it', async () => {
     const insertMovement = vi.fn().mockImplementation(async (values) => movementRow(values));

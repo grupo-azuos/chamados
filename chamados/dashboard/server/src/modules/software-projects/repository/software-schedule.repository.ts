@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { type SoftwareScheduleQuery } from '@template/shared/schemas/software-schedule.schema';
 import { and, asc, eq, gte, lte } from 'drizzle-orm';
 
+import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runOne, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
@@ -19,7 +21,7 @@ export type ScheduleEventWithProject = SoftwareScheduleEventRow & {
 export class SoftwareScheduleRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async listBetween(startDate: string, endDate: string): Promise<ScheduleEventWithProject[]> {
+  async listBetween(query: SoftwareScheduleQuery): Promise<ScheduleEventWithProject[]> {
     return runQuery(
       this.db
         .select({
@@ -39,14 +41,17 @@ export class SoftwareScheduleRepository {
           createdByName: softwareScheduleEvents.createdByName,
           updatedAt: softwareScheduleEvents.updatedAt,
           updatedBy: softwareScheduleEvents.updatedBy,
+          archivedAt: softwareScheduleEvents.archivedAt,
+          archivedBy: softwareScheduleEvents.archivedBy,
           projectName: softwareProjects.name,
         })
         .from(softwareScheduleEvents)
         .leftJoin(softwareProjects, eq(softwareProjects.id, softwareScheduleEvents.projectId))
         .where(
           and(
-            gte(softwareScheduleEvents.date, startDate),
-            lte(softwareScheduleEvents.date, endDate),
+            gte(softwareScheduleEvents.date, query.startDate),
+            lte(softwareScheduleEvents.date, query.endDate),
+            archivedCondition(softwareScheduleEvents.archivedAt, query.archived),
           ),
         )
         .orderBy(asc(softwareScheduleEvents.date), asc(softwareScheduleEvents.startTime)),
@@ -74,6 +79,8 @@ export class SoftwareScheduleRepository {
           createdByName: softwareScheduleEvents.createdByName,
           updatedAt: softwareScheduleEvents.updatedAt,
           updatedBy: softwareScheduleEvents.updatedBy,
+          archivedAt: softwareScheduleEvents.archivedAt,
+          archivedBy: softwareScheduleEvents.archivedBy,
           projectName: softwareProjects.name,
         })
         .from(softwareScheduleEvents)
@@ -102,10 +109,14 @@ export class SoftwareScheduleRepository {
     );
   }
 
-  async remove(id: number): Promise<void> {
+  /** Arquiva (excluir) ou desarquiva (desfazer). O item nunca sai do banco. */
+  async setArchived(id: number, archived: boolean, actorId: string | null): Promise<void> {
     await runQuery(
-      this.db.delete(softwareScheduleEvents).where(eq(softwareScheduleEvents.id, id)),
-      'excluir compromisso do cronograma',
+      this.db
+        .update(softwareScheduleEvents)
+        .set(archiveValues(archived, actorId))
+        .where(eq(softwareScheduleEvents.id, id)),
+      archived ? 'arquivar compromisso do cronograma' : 'desarquivar compromisso do cronograma',
     );
   }
 }

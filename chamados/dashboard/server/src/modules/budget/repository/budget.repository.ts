@@ -56,6 +56,7 @@ export class BudgetRepository {
           maintenanceCount: sql<number>`(
             select count(*)::int from ${maintenances}
             where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
+              and ${qualified(maintenances.archivedAt)} is null
           )`,
         })
         .from(computers)

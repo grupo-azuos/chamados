@@ -221,8 +221,12 @@ export class InventoryItemsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Exclui um produto do inventário' })
-  @ApiNoContentResponse({ description: 'Produto excluído.' })
+  @ApiOperation({
+    summary: 'Exclui (arquiva) um produto do inventário',
+    description:
+      'O produto sai da lista com o extrato e a foto guardados, e com quem excluiu e quando. `?archived=only` na lista traz os excluídos; `POST :id/restore` devolve.',
+  })
+  @ApiNoContentResponse({ description: 'Produto arquivado.' })
   @ApiForbiddenResponse({ description: 'Seu cargo em Manutenção só permite consultar.' })
   @ApiNotFoundResponse({ description: 'Produto não encontrado.' })
   async remove(
@@ -230,5 +234,18 @@ export class InventoryItemsController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
     return this.service.remove(user, id);
+  }
+
+  @Post(':id/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desfaz a exclusão de um produto do inventário' })
+  @ApiOkResponse({ type: InventoryItemDto })
+  @ApiForbiddenResponse({ description: 'Seu cargo em Manutenção só permite consultar.' })
+  @ApiNotFoundResponse({ description: 'Produto não encontrado.' })
+  async restore(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<InventoryItemDto> {
+    return this.service.restore(user, id);
   }
 }

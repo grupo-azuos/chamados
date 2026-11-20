@@ -19,6 +19,8 @@ function rowOf(overrides: Partial<TicketStockItemRow> = {}): TicketStockItemRow 
     createdAt: CREATED_AT,
     createdBy: 'ti@example.com',
     createdByName: 'Pessoa do TI',
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }

@@ -52,7 +52,9 @@ import { InventoryItemEventsRepository } from '../repository/inventory-item-even
 import { InventoryItemsRepository } from '../repository/inventory-items.repository';
 import { optimizePhoto } from './inventory-photo.util';
 
-const ITEM_NOT_FOUND = 'Produto não encontrado. Ele pode ter sido excluído — recarregue a lista.';
+const ITEM_NOT_FOUND = 'Produto não encontrado. Recarregue a lista.';
+const ITEM_ARCHIVED =
+  'Este produto foi excluído. Desfaça a exclusão em "Removidos" para movimentá-lo de novo.';
 
 /** A pasta do bucket. Nome em inglês: é infraestrutura, o usuário não vê (CONTRIBUTING §1). */
 const PHOTO_FOLDER = 'inventory';
@@ -165,10 +167,21 @@ export class InventoryItemsService {
   async remove(user: RequestUser, id: number): Promise<void> {
     assertCanManageInContext(user, 'manutencao', 'excluir produtos');
 
-    const current = await this.require(id);
+    await this.require(id);
 
-    await this.repository.remove(id);
-    await this.discardReplacedPhoto(current.photoKey, null);
+    /* Excluir ARQUIVA: o produto sai do inventário, e a foto e o extrato ficam guardados para
+       o "Desfazer" devolvê-lo como estava. */
+    await this.repository.setArchived(id, true, user.id);
+  }
+
+  /** Desfaz a exclusão. Quem pode excluir é quem pode desfazer. */
+  async restore(user: RequestUser, id: number): Promise<InventoryItem> {
+    assertCanManageInContext(user, 'manutencao', 'excluir produtos');
+
+    await this.require(id);
+    await this.repository.setArchived(id, false, null);
+
+    return this.toItem(await this.require(id));
   }
 
   /** O extrato do depósito: do movimento mais novo para o mais velho. */
@@ -210,6 +223,7 @@ export class InventoryItemsService {
     return this.repository.transaction(async (executor) => {
       const item = await this.repository.findByIdForUpdate(itemId, executor);
       if (!item) throw new NotFoundException(ITEM_NOT_FOUND);
+      if (item.archivedAt) throw new UnprocessableEntityException(ITEM_ARCHIVED);
 
       if (!fitsInInventoryStock(item.balance, input.type, quantity)) {
         throw new UnprocessableEntityException(stockMessage(item, quantity));

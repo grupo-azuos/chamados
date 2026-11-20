@@ -57,7 +57,7 @@ function makeService(
         : null,
     ),
     save: vi.fn().mockResolvedValue(undefined),
-    remove: vi.fn().mockResolvedValue(undefined),
+    archive: vi.fn().mockResolvedValue(undefined),
   };
   const messaging = { usage: vi.fn().mockResolvedValue(USAGE) };
   const service = new WhatsappLinkService(
@@ -88,7 +88,7 @@ describe('WhatsappLinkService.status', () => {
 
     expect(await service.status(admin)).toMatchObject({ state: 'pairing', qr: 'qr-content' });
     expect(repository.save).not.toHaveBeenCalled();
-    expect(repository.remove).not.toHaveBeenCalled();
+    expect(repository.archive).not.toHaveBeenCalled();
   });
 
   it('does not write again when the recorded number is already the linked one', async () => {
@@ -118,7 +118,8 @@ describe('WhatsappLinkService.status', () => {
 
     await service.status(admin);
 
-    expect(repository.remove).toHaveBeenCalledWith('u-admin');
+    /* Arquiva, sem pessoa: quem desfez o vínculo foi o celular, visto pelo sistema. */
+    expect(repository.archive).toHaveBeenCalledWith('u-admin', null);
   });
 
   // triste
@@ -183,7 +184,7 @@ describe('WhatsappLinkService.unlink', () => {
     await service.unlink(admin);
 
     expect(bot.unlink).toHaveBeenCalledWith('u-admin');
-    expect(repository.remove).toHaveBeenCalledWith('u-admin');
+    expect(repository.archive).toHaveBeenCalledWith('u-admin', 'u-admin');
   });
 
   // triste
@@ -192,7 +193,7 @@ describe('WhatsappLinkService.unlink', () => {
 
     await expect(service.unlink(regular)).rejects.toThrow(ForbiddenException);
     expect(bot.unlink).not.toHaveBeenCalled();
-    expect(repository.remove).not.toHaveBeenCalled();
+    expect(repository.archive).not.toHaveBeenCalled();
   });
 
   /* Se o bot falhar, o registro fica: apagar aqui diria "desvinculado" com o número ainda conectado. */
@@ -201,6 +202,6 @@ describe('WhatsappLinkService.unlink', () => {
     bot.unlink.mockRejectedValue(new Error('bot down'));
 
     await expect(service.unlink(admin)).rejects.toThrow('bot down');
-    expect(repository.remove).not.toHaveBeenCalled();
+    expect(repository.archive).not.toHaveBeenCalled();
   });
 });

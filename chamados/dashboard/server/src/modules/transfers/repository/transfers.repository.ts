@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
@@ -88,7 +88,7 @@ export class TransfersRepository {
         })
         .from(partMovements)
         .innerJoin(parts, eq(parts.id, partMovements.partId))
-        .where(eq(partMovements.computerId, computerId))
+        .where(and(eq(partMovements.computerId, computerId), isNull(partMovements.archivedAt)))
         .groupBy(parts.id, parts.name, parts.category)
         .having(sql`${installed} > 0`),
       'ler as peças instaladas na máquina',

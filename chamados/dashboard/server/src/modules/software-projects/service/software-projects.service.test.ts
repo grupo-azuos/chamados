@@ -49,6 +49,8 @@ function projectRow(overrides: Partial<SoftwareProjectRow> = {}): SoftwareProjec
     createdBy: 'gestor@empresa.com.br',
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }
@@ -63,7 +65,7 @@ function makeService(
     findById: vi.fn().mockResolvedValue(projectRow()),
     insert: vi.fn().mockResolvedValue(projectRow()),
     update: vi.fn().mockResolvedValue(projectRow()),
-    remove: vi.fn().mockResolvedValue(undefined),
+    setArchived: vi.fn().mockResolvedValue(undefined),
     countOpenTicketsByProject: vi.fn().mockResolvedValue({ 1: 3 }),
     countPullRequestsByProject: vi.fn().mockResolvedValue({ 1: 5 }),
     ...repoOverrides,
@@ -127,7 +129,7 @@ describe('SoftwareProjectsService', () => {
     it('returns projects mapped with counts of open tickets and PRs', async () => {
       const { service } = makeService();
 
-      const result = await service.list(user, { page: 1, pageSize: 10 });
+      const result = await service.list(user, { page: 1, pageSize: 10, archived: 'hide' });
 
       expect(result.total).toBe(1);
       expect(result.items[0]).toMatchObject({
@@ -474,12 +476,41 @@ describe('SoftwareProjectsService', () => {
   });
 
   describe('remove', () => {
-    it('removes project when caller has permission', async () => {
+    // feliz
+    it('archives the project when caller has permission, stamping who did it', async () => {
       const { service, repository } = makeService();
 
       await service.remove(admin, 1);
 
-      expect(repository.remove).toHaveBeenCalledWith(1);
+      expect(repository.setArchived).toHaveBeenCalledWith(1, true, admin.id);
+    });
+
+    // triste
+    it('refuses a plain user, without archiving', async () => {
+      const { service, repository } = makeService();
+
+      await expect(service.remove(user, 1)).rejects.toThrow();
+      expect(repository.setArchived).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restore', () => {
+    // feliz
+    it('brings the archived project back', async () => {
+      const { service, repository } = makeService();
+
+      const restored = await service.restore(admin, 1);
+
+      expect(repository.setArchived).toHaveBeenCalledWith(1, false, null);
+      expect(restored.archive).toBeNull();
+    });
+
+    // triste
+    it('refuses a plain user, without restoring', async () => {
+      const { service, repository } = makeService();
+
+      await expect(service.restore(user, 1)).rejects.toThrow();
+      expect(repository.setArchived).not.toHaveBeenCalled();
     });
   });
 

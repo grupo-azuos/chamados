@@ -4,7 +4,7 @@ import {
   CLOSED_TICKET_STATUSES,
   SOLVED_TICKET_STATUSES,
 } from '@template/shared/domain/ticket-status.util';
-import { and, count, eq, gte, inArray, lt, sql, type SQL } from 'drizzle-orm';
+import { and, count, eq, gte, inArray, isNull, lt, sql, type SQL } from 'drizzle-orm';
 import { type AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { runQuery } from '../../../lib/db/db-error.util';
@@ -68,6 +68,7 @@ export class SoftwareDashboardRepository {
       this.db
         .select({ key: softwareProjects.status, count: count() })
         .from(softwareProjects)
+        .where(isNull(softwareProjects.archivedAt))
         .groupBy(softwareProjects.status),
       'contar sistemas por situação',
     );

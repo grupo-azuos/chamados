@@ -88,13 +88,29 @@ export class SoftwareProjectsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Exclui um sistema de software' })
-  @ApiNoContentResponse({ description: 'Sistema excluído.' })
+  @ApiOperation({
+    summary: 'Exclui (arquiva) um sistema de software',
+    description:
+      'O sistema sai das listas, com a linha do tempo, a Agenda e os chamados guardados. `?archived=only` na lista traz os excluídos; `POST :id/restore` devolve.',
+  })
+  @ApiNoContentResponse({ description: 'Sistema arquivado.' })
   async remove(
     @CurrentUser() user: RequestUser,
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
     return this.service.remove(user, id);
+  }
+
+  @Post(':id/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desfaz a exclusão de um sistema de software' })
+  @ApiOkResponse({ type: SoftwareProjectDto })
+  @ApiNotFoundResponse({ description: 'Sistema não encontrado.' })
+  async restore(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<SoftwareProjectDto> {
+    return this.service.restore(user, id);
   }
 
   @Post('sync-github')

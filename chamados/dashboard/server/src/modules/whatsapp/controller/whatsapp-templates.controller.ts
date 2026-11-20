@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import {
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -56,7 +56,8 @@ export class WhatsappTemplatesController {
   @Delete(':key')
   @ApiOperation({
     summary: 'Restaura o texto original de uma mensagem do bot',
-    description: 'Devolve a mensagem já com o texto original.',
+    description:
+      'Devolve a mensagem já com o texto original. A edição não se apaga: fica guardada (`archivedEdit`), e `POST :key/restore-edit` a traz de volta.',
   })
   @ApiOkResponse({ type: WhatsappTemplateDto })
   @ApiForbiddenResponse({ description: 'Só o super admin vê e edita os textos.' })
@@ -66,5 +67,21 @@ export class WhatsappTemplatesController {
     @Param('key') key: string,
   ): Promise<WhatsappTemplateDto> {
     return this.service.restore(user, key);
+  }
+
+  @Post(':key/restore-edit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Desfaz a volta ao texto original',
+    description: 'A edição guardada passa a valer de novo.',
+  })
+  @ApiOkResponse({ type: WhatsappTemplateDto })
+  @ApiForbiddenResponse({ description: 'Só o super admin vê e edita os textos.' })
+  @ApiNotFoundResponse({ description: 'Mensagem não encontrada, ou sem edição guardada.' })
+  restoreEdit(
+    @CurrentUser() user: RequestUser,
+    @Param('key') key: string,
+  ): Promise<WhatsappTemplateDto> {
+    return this.service.restoreEdit(user, key);
   }
 }

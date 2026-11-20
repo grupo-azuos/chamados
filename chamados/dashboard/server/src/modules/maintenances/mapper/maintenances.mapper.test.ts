@@ -24,6 +24,8 @@ function maintenanceRow(overrides: Partial<MaintenanceRow> = {}): MaintenanceRow
     createdBy: ANA,
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }

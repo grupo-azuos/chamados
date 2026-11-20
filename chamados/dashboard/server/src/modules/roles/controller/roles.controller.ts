@@ -9,8 +9,10 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
+  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -30,6 +32,7 @@ import {
   DirectoryUserListDto,
   InternalRoleDto,
   InternalRoleListDto,
+  InternalRoleListQueryDto,
 } from '../dto/roles.dto';
 import { RolesService } from '../service/roles.service';
 
@@ -46,13 +49,16 @@ export class RolesController {
   @ApiOperation({
     summary: 'Listar os módulos liberados',
     description:
-      'Cada linha é uma pessoa com acesso a um módulo (Infraestrutura, Sistema, Manutenção).',
+      'Cada linha é uma pessoa com acesso a um módulo (Infraestrutura, Sistema, Manutenção). Os módulos tirados ficam arquivados: `?archived=only` traz só eles.',
   })
   @ApiOkResponse({ type: InternalRoleListDto })
   @ApiUnauthorizedResponse({ description: 'Sem identidade.' })
   @ApiForbiddenResponse({ description: 'Esta ação é do Super Admin.' })
-  async list(@CurrentUser() user: RequestUser): Promise<InternalRoleDto[]> {
-    return this.service.list(user);
+  async list(
+    @CurrentUser() user: RequestUser,
+    @Query() query: InternalRoleListQueryDto,
+  ): Promise<InternalRoleDto[]> {
+    return this.service.list(user, query.archived);
   }
 
   @Get('users')
@@ -119,9 +125,9 @@ export class RolesController {
   @ApiOperation({
     summary: 'Tirar um módulo',
     description:
-      'A pessoa deixa de ver aquele módulo. Abrir chamado e validar documento continuam.',
+      'A pessoa deixa de ver aquele módulo na hora. Abrir chamado e validar documento continuam. A linha fica arquivada, com quem tirou e quando; `POST :id/restore` devolve.',
   })
-  @ApiNoContentResponse({ description: 'Módulo retirado.' })
+  @ApiNoContentResponse({ description: 'Módulo retirado (arquivado).' })
   @ApiNotFoundResponse({ description: 'Acesso não encontrado.' })
   @ApiUnauthorizedResponse({ description: 'Sem identidade.' })
   @ApiForbiddenResponse({ description: 'Esta ação é do Super Admin.' })
@@ -130,5 +136,23 @@ export class RolesController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
     await this.service.delete(user, id);
+  }
+
+  @Post(':id/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Devolver um módulo tirado',
+    description: 'Desfaz o "Tirar módulo": a pessoa volta a ver aquele módulo.',
+  })
+  @ApiOkResponse({ type: InternalRoleDto })
+  @ApiNotFoundResponse({ description: 'Acesso não encontrado.' })
+  @ApiConflictResponse({ description: 'A pessoa já tem este módulo de novo.' })
+  @ApiUnauthorizedResponse({ description: 'Sem identidade.' })
+  @ApiForbiddenResponse({ description: 'Esta ação é do Super Admin.' })
+  async restore(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<InternalRoleDto> {
+    return this.service.restore(user, id);
   }
 }

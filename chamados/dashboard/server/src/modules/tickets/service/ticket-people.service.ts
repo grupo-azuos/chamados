@@ -114,6 +114,7 @@ export class TicketPeopleService {
     await this.watchers.remove(
       ticket.id,
       removed.map((watcher) => watcher.id),
+      author.id ?? null,
     );
     /* Visível para quem pediu, ao contrário das outras alterações de dados: quem entrou e quem
        saiu do chamado é assunto de todos os envolvidos. */

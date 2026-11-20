@@ -17,11 +17,14 @@ import {
   inArray,
   isNotNull,
   isNull,
+  notExists,
   or,
   sql,
   type SQL,
 } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
+import { archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { departmentMatches } from '../../../lib/db/department-match.util';
@@ -29,7 +32,11 @@ import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
 import { computers } from '../../../lib/db/schema/computers.schema';
 import { softwareProjects } from '../../../lib/db/schema/software-projects.schema';
-import { ticketAreas, type TicketAreaInsert } from '../../../lib/db/schema/ticket-areas.schema';
+import {
+  ticketAreas,
+  type TicketAreaInsert,
+  type TicketAreaRow,
+} from '../../../lib/db/schema/ticket-areas.schema';
 import { ticketComputers } from '../../../lib/db/schema/ticket-computers.schema';
 import { tickets, type TicketInsert, type TicketRow } from '../../../lib/db/schema/tickets.schema';
 
@@ -40,6 +47,9 @@ import { tickets, type TicketInsert, type TicketRow } from '../../../lib/db/sche
  * ao banco por chamado na lista. `left`, e não `inner`, porque a maioria dos chamados não tem
  * máquina ou projeto — e um `inner` os faria sumir da tela.
  */
+/** A mesma tabela de áreas, de novo: para perguntar "esta área já voltou ao chamado?". */
+const activeAreas = alias(ticketAreas, 'active_ticket_areas');
+
 export type TicketWithComputer = TicketRow & {
   computerName: string | null;
   projectName?: string | null;
@@ -179,7 +189,7 @@ export class TicketsRepository {
       this.db
         .selectDistinct({ ticketId: ticketAreas.ticketId })
         .from(ticketAreas)
-        .where(inArray(ticketAreas.area, areas)),
+        .where(and(inArray(ticketAreas.area, areas), isNull(ticketAreas.archivedAt))),
       'listar chamados por área participante',
     );
 
@@ -331,7 +341,7 @@ export class TicketsRepository {
       this.db
         .select({ area: ticketAreas.area })
         .from(ticketAreas)
-        .where(eq(ticketAreas.ticketId, ticketId)),
+        .where(and(eq(ticketAreas.ticketId, ticketId), isNull(ticketAreas.archivedAt))),
       'listar áreas participantes do chamado',
     );
 
@@ -347,7 +357,7 @@ export class TicketsRepository {
       this.db
         .select({ ticketId: ticketAreas.ticketId, area: ticketAreas.area })
         .from(ticketAreas)
-        .where(inArray(ticketAreas.ticketId, ticketIds)),
+        .where(and(inArray(ticketAreas.ticketId, ticketIds), isNull(ticketAreas.archivedAt))),
       'listar áreas participantes dos chamados',
     );
 
@@ -372,12 +382,68 @@ export class TicketsRepository {
     );
   }
 
-  async removeArea(ticketId: number, area: TicketArea): Promise<void> {
+  /** Tira a área participante: ARQUIVA a linha, que deixa de dar alcance na hora. */
+  async removeArea(ticketId: number, area: TicketArea, actorId: string | null): Promise<void> {
     await runQuery(
       this.db
-        .delete(ticketAreas)
-        .where(and(eq(ticketAreas.ticketId, ticketId), eq(ticketAreas.area, area))),
+        .update(ticketAreas)
+        .set(archiveValues(true, actorId))
+        .where(
+          and(
+            eq(ticketAreas.ticketId, ticketId),
+            eq(ticketAreas.area, area),
+            isNull(ticketAreas.archivedAt),
+          ),
+        ),
       'remover área do chamado',
+    );
+  }
+
+  /** As áreas tiradas do chamado que não voltaram por outro caminho — o bloco "Removidos". */
+  async listArchivedAreas(ticketId: number): Promise<TicketAreaRow[]> {
+    return runQuery(
+      this.db
+        .select()
+        .from(ticketAreas)
+        .where(
+          and(
+            eq(ticketAreas.ticketId, ticketId),
+            isNotNull(ticketAreas.archivedAt),
+            notExists(
+              this.db
+                .select({ id: activeAreas.id })
+                .from(activeAreas)
+                .where(
+                  and(
+                    eq(activeAreas.ticketId, ticketAreas.ticketId),
+                    eq(activeAreas.area, ticketAreas.area),
+                    isNull(activeAreas.archivedAt),
+                  ),
+                ),
+            ),
+          ),
+        )
+        .orderBy(desc(ticketAreas.archivedAt)),
+      'listar áreas tiradas do chamado',
+    );
+  }
+
+  async findArea(ticketId: number, id: number): Promise<TicketAreaRow | null> {
+    return runMaybe(
+      this.db
+        .select()
+        .from(ticketAreas)
+        .where(and(eq(ticketAreas.ticketId, ticketId), eq(ticketAreas.id, id)))
+        .limit(1),
+      'ler área do chamado',
+    );
+  }
+
+  /** Devolve a área tirada. Se ela voltou por outro caminho, o índice único recusa (409). */
+  async restoreArea(id: number): Promise<void> {
+    await runQuery(
+      this.db.update(ticketAreas).set(archiveValues(false, null)).where(eq(ticketAreas.id, id)),
+      'devolver área ao chamado',
     );
   }
 }

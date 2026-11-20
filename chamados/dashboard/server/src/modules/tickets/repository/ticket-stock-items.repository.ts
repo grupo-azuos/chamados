@@ -4,10 +4,11 @@ import {
   type TicketStockDirection,
   type TicketStockSource,
 } from '@template/shared/domain/ticket-stock.util';
-import { and, asc, eq, inArray, isNotNull, isNull, sum } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sum } from 'drizzle-orm';
 
 import { DB } from '../../../lib/db/db.token';
 import { type Database, type DatabaseExecutor } from '../../../lib/db/db.type';
+import { archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { inventoryItems } from '../../../lib/db/schema/inventory-items.schema';
 import { inventoryMovements } from '../../../lib/db/schema/inventory-movements.schema';
@@ -57,7 +58,7 @@ export class TicketStockItemsRepository {
       executor
         .select()
         .from(ticketStockItems)
-        .where(eq(ticketStockItems.ticketId, ticketId))
+        .where(and(eq(ticketStockItems.ticketId, ticketId), isNull(ticketStockItems.archivedAt)))
         .orderBy(asc(ticketStockItems.createdAt), asc(ticketStockItems.id)),
       'listar os itens de estoque do chamado',
     );
@@ -80,10 +81,40 @@ export class TicketStockItemsRepository {
     return row;
   }
 
-  async delete(id: number, executor: DatabaseExecutor = this.db): Promise<void> {
+  /** Tira o item do chamado: ARQUIVA a linha, com quem tirou. */
+  async archive(id: number, actorId: string | null, executor: DatabaseExecutor = this.db): Promise<void> {
     await runQuery(
-      executor.delete(ticketStockItems).where(eq(ticketStockItems.id, id)),
+      executor
+        .update(ticketStockItems)
+        .set(archiveValues(true, actorId))
+        .where(eq(ticketStockItems.id, id)),
       'tirar o item de estoque do chamado',
+    );
+  }
+
+  /** Os itens tirados do chamado — o bloco "Removidos". */
+  async listArchived(ticketId: number): Promise<TicketStockItemRow[]> {
+    return runQuery(
+      this.db
+        .select()
+        .from(ticketStockItems)
+        .where(and(eq(ticketStockItems.ticketId, ticketId), isNotNull(ticketStockItems.archivedAt)))
+        .orderBy(desc(ticketStockItems.archivedAt)),
+      'listar os itens tirados do chamado',
+    );
+  }
+
+  /**
+   * Devolve o item tirado como RESERVA de novo (`settled_at` nulo): se ele já tinha virado
+   * movimento, o "tirar" desfez o movimento no depósito, e o próximo encerramento o refaz.
+   */
+  async restore(id: number): Promise<void> {
+    await runQuery(
+      this.db
+        .update(ticketStockItems)
+        .set({ ...archiveValues(false, null), settledAt: null })
+        .where(eq(ticketStockItems.id, id)),
+      'devolver o item de estoque ao chamado',
     );
   }
 
@@ -125,7 +156,7 @@ export class TicketStockItemsRepository {
       this.db
         .select({ id: table.id, name: table.name, balance: table.balance })
         .from(table)
-        .where(eq(table.id, itemId))
+        .where(and(eq(table.id, itemId), activeShelfItem(source)))
         .limit(1),
       'buscar o item do depósito',
     );
@@ -139,6 +170,7 @@ export class TicketStockItemsRepository {
       this.db
         .select({ id: table.id, name: table.name, balance: table.balance })
         .from(table)
+        .where(activeShelfItem(source))
         .orderBy(asc(table.name), asc(table.id)),
       'listar os itens do depósito',
     );
@@ -158,6 +190,7 @@ export class TicketStockItemsRepository {
           and(
             isNotNull(column),
             isNull(ticketStockItems.settledAt),
+            isNull(ticketStockItems.archivedAt),
             eq(ticketStockItems.direction, 'out'),
           ),
         )
@@ -226,4 +259,10 @@ export class TicketStockItemsRepository {
   async transaction<T>(run: (executor: DatabaseExecutor) => Promise<T>): Promise<T> {
     return this.db.transaction(async (tx) => run(tx));
   }
+}
+
+/** O produto excluído (arquivado) do inventário não se vincula a chamado novo. As peças da TI
+ *  não se excluem: a prateleira delas não tem filtro. */
+function activeShelfItem(source: TicketStockSource) {
+  return source === 'inventory' ? isNull(inventoryItems.archivedAt) : undefined;
 }

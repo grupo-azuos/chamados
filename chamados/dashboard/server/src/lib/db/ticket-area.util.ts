@@ -14,6 +14,8 @@ import { tickets } from './schema/tickets.schema';
  * dele: o painel de Infraestrutura não pode mostrar chamado de Sistema, e a ficha da máquina
  * não pode somar o "erro no sistema" de quem a usa.
  *
+ * A área ou a máquina tirada do chamado (arquivada) não conta.
+ *
  * Colunas com a tabela na frente (`qualified`): esta condição entra em subconsultas
  * correlacionadas, e sem o nome da tabela `id` seria o da área, não o do chamado.
  */
@@ -22,6 +24,7 @@ export function ticketInArea(area: TicketArea): SQL {
     select 1 from ${ticketAreas}
     where ${qualified(ticketAreas.ticketId)} = ${qualified(tickets.id)}
       and ${qualified(ticketAreas.area)} = ${area}
+      and ${qualified(ticketAreas.archivedAt)} is null
   ))`;
 }
 
@@ -35,5 +38,6 @@ export function ticketOnComputer(computerId: SQL | AnyColumn): SQL {
     select 1 from ${ticketComputers}
     where ${qualified(ticketComputers.ticketId)} = ${qualified(tickets.id)}
       and ${qualified(ticketComputers.computerId)} = ${computerId}
+      and ${qualified(ticketComputers.archivedAt)} is null
   ))`;
 }

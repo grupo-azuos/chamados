@@ -116,14 +116,19 @@ describe.skipIf(!testDatabaseUrl)('Integration repositories (e2e)', () => {
       expect(await repository.find('u1')).toMatchObject({ phone: '5511999991111', operatorName: null });
       expect(await repository.list()).toHaveLength(2);
 
-      await repository.remove('u1');
+      /* Desvincular arquiva: some da busca e da lista, e vincular de novo reaproveita a linha. */
+      await repository.archive('u1', 'u1');
       expect(await repository.find('u1')).toBeNull();
+      expect(await repository.list()).toHaveLength(1);
+
+      await repository.save('u1', '5511999993333', 'Ana');
+      expect(await repository.find('u1')).toMatchObject({ phone: '5511999993333', archivedAt: null });
     });
   });
 
   describe('WhatsappTemplatesRepository', () => {
     // feliz
-    it('saves a text per key, lists and restores the default by removing it', async () => {
+    it('saves a text per key, lists and restores the default by archiving the edit', async () => {
       const repository = new WhatsappTemplatesRepository(started.db);
 
       await repository.save('ticket_ready', 'Seu chamado está pronto.', 'olga@empresa.com.br');
@@ -132,8 +137,13 @@ describe.skipIf(!testDatabaseUrl)('Integration repositories (e2e)', () => {
       expect(await repository.find('ticket_ready')).toMatchObject({ body: 'Pronto!' });
       expect(await repository.list()).toHaveLength(1);
 
-      await repository.remove('ticket_ready');
+      await repository.setArchived('ticket_ready', true, 'olga');
       expect(await repository.find('ticket_ready')).toBeNull();
+      expect(await repository.findArchived('ticket_ready')).toMatchObject({ body: 'Pronto!' });
+
+      /* O "Desfazer" traz a edição de volta. */
+      await repository.setArchived('ticket_ready', false, null);
+      expect(await repository.find('ticket_ready')).toMatchObject({ body: 'Pronto!' });
     });
   });
 

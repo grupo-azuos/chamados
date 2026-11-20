@@ -6,6 +6,7 @@ import {
   type UpdateMaintenanceInput,
 } from '@template/shared/schemas/maintenance.schema';
 
+import { toArchive } from '../../../lib/db/archive.util';
 import { setIfDefined } from '../../../lib/db/partial-update.util';
 import { type MaintenanceInsert } from '../../../lib/db/schema/maintenances.schema';
 import {
@@ -40,6 +41,7 @@ export function toMaintenance(row: MaintenanceWithComputer): Maintenance {
     createdBy: maintenance.createdBy,
     updatedAt: maintenance.updatedAt?.toISOString() ?? null,
     updatedBy: maintenance.updatedBy,
+    archive: toArchive(maintenance),
   };
 }
 
@@ -107,6 +109,7 @@ export function toMaintenanceSchedule(row: ScheduleWithComputer): MaintenanceSch
   const { schedule, computer } = row;
 
   return {
+    id: schedule.id,
     computerId: schedule.computerId,
     computerName: computer.name,
     computerDisplayName: computer.displayName,
@@ -117,5 +120,6 @@ export function toMaintenanceSchedule(row: ScheduleWithComputer): MaintenanceSch
     createdBy: schedule.createdBy,
     updatedAt: schedule.updatedAt?.toISOString() ?? null,
     updatedBy: schedule.updatedBy,
+    archive: toArchive(schedule),
   };
 }

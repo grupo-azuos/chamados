@@ -198,7 +198,19 @@ export class SoftwareProjectsService {
     assertCanEditSystem(user, 'excluir sistema');
 
     await this.findById(user, id);
-    await this.repository.remove(id);
+    /* Excluir ARQUIVA: o sistema sai das listas, e a linha do tempo, a Agenda e os chamados
+       ligados a ele ficam como estavam para o "Desfazer". */
+    await this.repository.setArchived(id, true, user.id);
+  }
+
+  /** Desfaz a exclusão. Quem pode excluir é quem pode desfazer. */
+  async restore(user: RequestUser, id: number): Promise<SoftwareProject> {
+    assertCanEditSystem(user, 'excluir sistema');
+
+    await this.findById(user, id);
+    await this.repository.setArchived(id, false, null);
+
+    return this.findById(user, id);
   }
 
   async syncGithubPrs(user: RequestUser, id: number): Promise<{ synced: number; message: string }> {

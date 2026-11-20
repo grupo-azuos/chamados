@@ -4,6 +4,7 @@ import { type InventoryMovementListQuery } from '@template/shared/schemas/invent
 import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
 import { and, asc, count, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
 
+import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { ticketStockLinksOf } from '../../../lib/db/ticket-stock-link.util';
@@ -106,10 +107,14 @@ export class InventoryItemsRepository {
     return row ?? null;
   }
 
-  async remove(id: number): Promise<void> {
+  /** Arquiva (excluir) ou desarquiva (desfazer). O produto, o extrato e a foto ficam. */
+  async setArchived(id: number, archived: boolean, actorId: string | null): Promise<void> {
     await runQuery(
-      this.db.delete(inventoryItems).where(eq(inventoryItems.id, id)),
-      'excluir produto do inventário',
+      this.db
+        .update(inventoryItems)
+        .set(archiveValues(archived, actorId))
+        .where(eq(inventoryItems.id, id)),
+      archived ? 'arquivar produto do inventário' : 'desarquivar produto do inventário',
     );
   }
 
@@ -200,7 +205,7 @@ function buildMovementWhere(query: InventoryMovementListQuery): SQL | undefined 
  * produto — "cadeira", "sala da fiscal" ou a etiqueta que está colada nele.
  */
 function buildWhere(query: InventoryItemListQuery): SQL | undefined {
-  const filters: (SQL | undefined)[] = [];
+  const filters: (SQL | undefined)[] = [archivedCondition(inventoryItems.archivedAt, query.archived)];
 
   if (query.category) filters.push(eq(inventoryItems.category, query.category));
   if (query.withoutPhotoOnly) filters.push(isNull(inventoryItems.photoKey));

@@ -131,10 +131,21 @@ export class MaintenanceQuotesService {
   async remove(user: RequestUser, id: number): Promise<void> {
     assertCanManageInContext(user, 'manutencao', 'excluir orçamentos');
 
-    const current = await this.require(id);
+    await this.require(id);
 
-    await this.repository.remove(id);
-    await this.discardReplacedAttachment(current.attachmentKey, null);
+    /* Excluir ARQUIVA: o orçamento sai da lista, e o documento continua no bucket para o
+       "Desfazer" devolvê-lo como estava. */
+    await this.repository.setArchived(id, true, user.id);
+  }
+
+  /** Desfaz a exclusão. Quem pode excluir é quem pode desfazer. */
+  async restore(user: RequestUser, id: number): Promise<MaintenanceQuote> {
+    assertCanManageInContext(user, 'manutencao', 'excluir orçamentos');
+
+    await this.require(id);
+    await this.repository.setArchived(id, false, null);
+
+    return this.toQuote(await this.require(id));
   }
 
   /** O orçamento, ou 404 com uma frase que diz o que fazer. */

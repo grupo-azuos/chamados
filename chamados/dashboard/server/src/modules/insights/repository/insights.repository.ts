@@ -136,6 +136,7 @@ export class InsightsRepository {
           maintenanceCount: sql<number>`(
             select count(*)::int from ${maintenances}
             where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
+              and ${qualified(maintenances.archivedAt)} is null
           )`,
           alertCount: sql<number>`(
             select count(*)::int from ${computerAlerts}
@@ -154,6 +155,7 @@ export class InsightsRepository {
             sql<Date | null>`(
               select max(${qualified(maintenances.performedAt)}) from ${maintenances}
               where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
+                and ${qualified(maintenances.archivedAt)} is null
             )`,
             maintenances.performedAt,
           ),
