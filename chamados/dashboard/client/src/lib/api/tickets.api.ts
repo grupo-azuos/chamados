@@ -16,6 +16,10 @@ import {
 import { type TicketPeople, type TicketPerson } from '@template/shared/schemas/ticket-person.schema';
 import { type TicketRelation } from '@template/shared/schemas/ticket-relation.schema';
 import {
+  type TicketRemovedItem,
+  type TicketRemovedKind,
+} from '@template/shared/schemas/ticket-removed.schema';
+import {
   type MyTicket,
   type OpenedTicket,
   type PublicTicket,
@@ -291,6 +295,13 @@ export const ticketsApi = {
     apiRequest<TicketRelation[]>(`/tickets/${ticketId}/relations/${relatedTicketId}`, {
       method: 'DELETE',
     }),
+
+  /** O que foi tirado do chamado — anexos, máquinas, pessoas, itens, vínculos e áreas. */
+  removed: (ticketId: number) => apiRequest<TicketRemovedItem[]>(`/tickets/${ticketId}/removed`),
+
+  /** Desfaz a remoção de um deles. */
+  restoreRemoved: (ticketId: number, kind: TicketRemovedKind, itemId: number) =>
+    apiRequest<void>(`/tickets/${ticketId}/removed/${kind}/${itemId}/restore`, { method: 'POST' }),
 
   /**
    * Quem pediu (ou alguém vinculado) escreve no chamado pela Central: responder ou reabrir.

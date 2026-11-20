@@ -58,7 +58,11 @@ export const inventoryItemsApi = {
       body: toInventoryBody(values, await uploadPhoto(photo), removePhoto),
     }),
 
+  /** Exclui ARQUIVANDO: o produto, o extrato e a foto ficam, e `restore` o devolve. */
   remove: (id: number) => apiRequest<void>(`/inventory-items/${id}`, { method: 'DELETE' }),
+
+  restore: (id: number) =>
+    apiRequest<InventoryItem>(`/inventory-items/${id}/restore`, { method: 'POST' }),
 
   /** O extrato do depósito. `type: 'disposal'` é a tela de Descarte inteira. */
   movements: (query: Partial<InventoryMovementListQuery>) =>
