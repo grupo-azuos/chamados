@@ -1,6 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import gsap from 'gsap';
 import HardDrive from '@lucide/svelte/icons/hard-drive';
 import { createRawSnippet } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -19,17 +18,30 @@ describe('AzuosCardSurface (Svelte)', () => {
     expect(screen.getByRole('group', { name: 'Máquina' })).toHaveClass('bg-card', 'border-border');
   });
 
-  it('grows the wash from the pointer with GSAP, and shrinks it on leave', async () => {
-    const fromTo = vi.spyOn(gsap, 'fromTo');
-    const to = vi.spyOn(gsap, 'to');
-    render(CardSurface, { props: { data: { label: 'Máquina' }, children } });
-    const card = screen.getByRole('group', { name: 'Máquina' });
+  /* Sem a mancha animada: o card neutro ganha o véu do tema, parado, só no hover. */
+  it('covers a neutral card with the still theme veil, only on hover', () => {
+    const { container } = render(CardSurface, { props: { data: { label: 'Máquina' }, children } });
 
-    await fireEvent.pointerEnter(card, { clientX: 5, clientY: 5 });
-    await fireEvent.pointerLeave(card, { clientX: 5, clientY: 5 });
+    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
+    expect(wash).toHaveClass('inset-0', 'group-hover/card:bg-(--card-veil)');
+    expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
+  });
 
-    expect(fromTo).toHaveBeenCalledOnce();
-    expect(to).toHaveBeenCalledOnce();
+  it('keeps a toned card tinted all the time, and paints a chosen colour exactly', () => {
+    const { container } = render(CardSurface, {
+      props: {
+        data: { label: 'Projeto' },
+        ui: { mark: HardDrive, markTone: '#ea580c', isHoverColored: true, hoverTone: '#ea580c' },
+        children,
+      },
+    });
+
+    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
+    expect(wash).toHaveClass('bg-(--card-veil)');
+    expect(wash.style.getPropertyValue('--card-veil')).toContain('#ea580c');
+    expect((container.querySelector('[data-slot="card-mark"]') as HTMLElement).style.color).toBe(
+      'rgb(234, 88, 12)',
+    );
   });
 
   it('draws the mark in the accent, and turns into a real button when clickable', async () => {
@@ -45,7 +57,7 @@ describe('AzuosCardSurface (Svelte)', () => {
 
     expect(container.querySelector('[data-slot="card-mark"]')).toHaveClass('text-hue-red');
     const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
-    expect(wash.style.backgroundColor).toContain('--hue-red');
+    expect(wash.style.getPropertyValue('--card-veil')).toContain('--hue-red');
     await userEvent.click(screen.getByRole('button', { name: 'Abrir' }));
     expect(onClick).toHaveBeenCalledOnce();
   });
@@ -59,23 +71,19 @@ describe('AzuosCardSurface (Svelte)', () => {
   });
 
   // triste
-  it('skips the growth when motion is reduced, and disables the button while loading', async () => {
-    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
-    const fromTo = vi.spyOn(gsap, 'fromTo');
-    render(CardSurface, {
+  it('disables the button while loading, and a toned card without the flag stays neutral', () => {
+    const { container } = render(CardSurface, {
       props: {
         data: { label: 'Carregando' },
+        ui: { hoverTone: 'red' },
         state: { isDisabled: true },
         actions: { onClick: vi.fn() },
         children,
       },
     });
-    const card = screen.getByRole('group', { name: 'Carregando' });
 
-    await fireEvent.pointerEnter(card, { clientX: 1, clientY: 1 });
-    await fireEvent.pointerLeave(card, { clientX: 1, clientY: 1 });
-
-    expect(fromTo).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Carregando' })).toBeDisabled();
+    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
+    expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
   });
 });

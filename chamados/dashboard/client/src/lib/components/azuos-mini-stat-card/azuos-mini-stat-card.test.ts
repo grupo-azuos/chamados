@@ -35,4 +35,15 @@ describe('AzuosMiniStatCard (Svelte)', () => {
 
     expect(screen.getByText('0')).toHaveClass('text-hue-slate');
   });
+
+  /* A cor que a pessoa escolheu pinta exata no número, e some quando o card está escolhido. */
+  it('paints the number in the exact colour the person chose, but not when selected', () => {
+    const { rerender } = render(MiniStatCard, {
+      props: { data: { label: 'Projeto', value: 7 }, ui: { tone: '#1d4ed8' } },
+    });
+
+    expect(screen.getByText('7')).toHaveStyle({ color: 'rgb(29, 78, 216)' });
+    rerender({ data: { label: 'Projeto', value: 7 }, ui: { tone: '#1d4ed8' }, state: { isSelected: true } });
+    expect(screen.getByText('7').getAttribute('style') ?? '').toBe('');
+  });
 });

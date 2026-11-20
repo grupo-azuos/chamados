@@ -225,4 +225,15 @@ describe('AzuosStatCard', () => {
 
     expect(screen.queryByRole('button')).toBeNull();
   });
+
+  /* A cor que a pessoa escolheu pinta exata no número, e some quando o card está escolhido. */
+  it('paints the number in the exact colour the person chose, but not when selected', () => {
+    const { rerender } = render(StatCard, {
+      props: { data: { label: 'Projeto', value: 7 }, ui: { tone: '#1d4ed8' } },
+    });
+
+    expect(screen.getByText('7')).toHaveStyle({ color: 'rgb(29, 78, 216)' });
+    rerender({ data: { label: 'Projeto', value: 7 }, ui: { tone: '#1d4ed8' }, state: { isSelected: true } });
+    expect(screen.getByText('7').getAttribute('style') ?? '').toBe('');
+  });
 });

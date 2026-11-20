@@ -9,10 +9,11 @@
     $props();
 </script>
 
+<!-- O hover é o véu do card (`--hover-veil`): linha e card respondem ao mouse no mesmo tom. -->
 <TableRow
   bind:ref
   class={cn(
-    'border-border hover:bg-muted last:border-b-0',
+    'border-border hover:bg-hover-veil last:border-b-0',
     className,
   )}
   {...restProps}
