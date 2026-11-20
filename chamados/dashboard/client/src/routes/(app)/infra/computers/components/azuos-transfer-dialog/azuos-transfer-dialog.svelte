@@ -215,7 +215,7 @@
       {/if}
 
       {#if dialogState.isIncomplete}
-        <p class="text-xs text-warning">
+        <p class="text-xs text-warning-ink">
           Falta dizer qual máquina assume a peça que fica na estação.
         </p>
       {/if}

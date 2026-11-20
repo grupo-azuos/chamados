@@ -133,10 +133,13 @@
   --hover-veil: color-mix(in srgb, var(--foreground) 6%, transparent);
   --accent: var(--brand-blue-100);
   --accent-foreground: var(--brand-blue-900);
-  --accent-strong: #b45309;
+  --accent-strong: var(--yellow);
   --tertiary: #8b5cf6;
   --tertiary-strong: #6d28d9;
-  --destructive: #dc2626;
+  /* O vermelho do sistema é o das tags, igual nos dois temas: um vermelho só, em vez de quatro
+     tons parecidos espalhados. */
+  --red: #e11d48;
+  --destructive: var(--red);
   --border: var(--ink-300);
   --input: var(--ink-300);
   --ring: var(--brand-blue-600);
@@ -145,7 +148,7 @@
   /* Texto sobre cada cor forte. No claro as cores são escuras e o texto é claro; no escuro elas
      sobem para o tom pastel e o texto desce para escuro — por isso cada tom tem o seu. */
   --success-foreground: #f8fafc;
-  --warning-foreground: #f8fafc;
+  --warning-foreground: #111827;
   --info-foreground: #f8fafc;
 
   /* O "preto" e o "branco" da marca: nunca puros. São o que `bg-black`/`text-white` dos
@@ -185,8 +188,13 @@
    */
   --success: #047857;
   --success-soft: #d1fae5;
-  --warning: #b45309;
-  --warning-soft: #fef3c7;
+  /* O aviso é o amarelo do grupo, rgb(255, 220, 0) — nada de âmbar nem de laranja-marrom, nem
+     amarelo escurecido (que vira âmbar). Ele é FUNDO, traço, bolinha e gráfico. Como TEXTO ou
+     ícone solto o amarelo some no claro, e aí o `--warning-ink` é o texto escuro da marca: a cor
+     fica na bolinha ao lado, nunca na letra. No escuro o `-ink` volta a ser o amarelo do grupo. */
+  --warning: var(--yellow);
+  --warning-ink: var(--ink-900);
+  --warning-soft: #fff6bf;
   --info: #1d4ed8;
   --info-soft: #dbeafe;
   --destructive-soft: #fee2e2;
@@ -197,8 +205,8 @@
    * com texto `--on-dark` por cima. Os mesmos nos dois temas, e todos ≥ 4,5:1 com o branco: os
    * tons de texto acima clareiam no escuro, e como fundo eles pediam texto preto.
    */
-  --destructive-fill: #b91c1c;
-  --warning-fill: #b45309;
+  --destructive-fill: var(--red);
+  --warning-fill: var(--yellow);
   --info-fill: #1d4ed8;
   --success-fill: #047857;
 
@@ -212,8 +220,15 @@
    * Escolhido = `--card-selected` (o azul claro da marca) com texto e ícone brancos.
    */
   --hue-blue: #1b3a8c;
-  --hue-red: #a8423a;
-  --hue-amber: #9a6412;
+  --hue-red: var(--red);
+  /* O amarelo do grupo, rgb(255, 220, 0), igual nos dois temas. O ícone dentro da bolinha
+     amarela é escuro (`--on-yellow`): o `--on-hue` claro sumiria nele. */
+  --yellow: #ffdc00;
+  --on-yellow: #111827;
+  --hue-yellow: var(--yellow);
+  /* O SOTAQUE amarelo do card (o número grande, o ícone do canto) é o amarelo do grupo, puro, nos
+     dois temas. Letra pequena em amarelo (selo, aviso) não usa este: usa o `--warning-ink`. */
+  --hue-yellow-ink: var(--yellow);
   --hue-green: #23705f;
   --hue-steel: #2f6383;
   --hue-plum: #62468a;
@@ -233,7 +248,7 @@
   --chart-1: var(--brand-blue-600);
   --chart-2: #10b981;
   --chart-3: var(--brand-yellow-500);
-  --chart-4: #ef4444;
+  --chart-4: var(--red);
   --chart-5: #8b5cf6;
 
   /**
@@ -299,7 +314,7 @@
 
   /* O vermelho do claro (um tom 600) fica quase preto sobre o fundo escuro. Aqui ele sobe para
      o 400, que é o degrau legível — a mesma troca que `success`, `warning` e `info` fazem. */
-  --destructive: #f87171;
+  --destructive: #fb7185;
   --destructive-foreground: #111827;
   --success-foreground: #111827;
   --warning-foreground: #111827;
@@ -315,7 +330,8 @@
   /* No escuro, os `-soft` são fundos escuros só levemente tingidos — e não marrom ou bordô —,
      legíveis com o texto do tom por cima. */
   --success-soft: #0f2e2a;
-  --warning: #fbbf24;
+  --warning: var(--yellow);
+  --warning-ink: var(--yellow);
   --warning-soft: #2f2a17;
   --info: #60a5fa;
   --info-soft: #172554;
@@ -325,7 +341,7 @@
   --chart-1: var(--brand-blue-500);
   --chart-2: #34d399;
   --chart-3: var(--brand-yellow-400);
-  --chart-4: #f87171;
+  --chart-4: var(--red);
   --chart-5: #a78bfa;
 
   /* A barra continua azul, um tom abaixo: encostar no tom do fundo da página apagaria a
@@ -333,8 +349,9 @@
   --sidebar: #16265c;
 
   --hue-blue: #6f8fe0;
-  --hue-red: #e8877d;
-  --hue-amber: #e3b061;
+  --hue-red: #fb7185;
+  --hue-yellow: var(--yellow);
+  --hue-yellow-ink: var(--yellow);
   --hue-green: #6cc3ad;
   --hue-steel: #86b5d6;
   --hue-plum: #b09ad6;
@@ -416,6 +433,7 @@
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
+  --color-warning-ink: var(--warning-ink);
   --color-warning-soft: var(--warning-soft);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
@@ -427,7 +445,9 @@
   --color-success-fill: var(--success-fill);
   --color-hue-blue: var(--hue-blue);
   --color-hue-red: var(--hue-red);
-  --color-hue-amber: var(--hue-amber);
+  --color-hue-yellow: var(--hue-yellow);
+  --color-hue-yellow-ink: var(--hue-yellow-ink);
+  --color-on-yellow: var(--on-yellow);
   --color-hue-green: var(--hue-green);
   --color-hue-steel: var(--hue-steel);
   --color-hue-plum: var(--hue-plum);

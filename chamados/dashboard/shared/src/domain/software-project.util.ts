@@ -30,7 +30,7 @@ export type SoftwareProjectColor = (typeof SOFTWARE_PROJECT_COLORS)[number];
 export const SOFTWARE_PROJECT_COLOR_LABELS: Record<SoftwareProjectColor, string> = {
   blue: 'Azul',
   green: 'Verde',
-  amber: 'Âmbar',
+  amber: 'Amarelo',
   purple: 'Roxo',
   rose: 'Rosa',
   indigo: 'Índigo',

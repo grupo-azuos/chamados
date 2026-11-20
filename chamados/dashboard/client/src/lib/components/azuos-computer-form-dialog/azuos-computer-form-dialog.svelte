@@ -187,7 +187,7 @@
           {#if state.isLoadingResponsibles}
             <p class="text-ink-500 text-xs">Carregando pessoas… Você também pode digitar um nome.</p>
           {:else if state.responsiblesError}
-            <p role="status" class="text-warning text-xs">A lista de pessoas não carregou. Digite o nome do responsável na busca.</p>
+            <p role="status" class="text-warning-ink text-xs">A lista de pessoas não carregou. Digite o nome do responsável na busca.</p>
           {:else}
             <p class="text-ink-500 text-xs">Não encontrou a pessoa? Digite o nome e escolha “Usar”.</p>
           {/if}
@@ -202,7 +202,7 @@
             actions={{ onChange: (value: string) => actions.onChange('department', value) }}
           />
           {#if state.isRhUnavailable}
-            <p role="status" class="text-warning text-xs">A lista do RH não carregou. Aparecem só os departamentos daqui.</p>
+            <p role="status" class="text-warning-ink text-xs">A lista do RH não carregou. Aparecem só os departamentos daqui.</p>
           {/if}
         </div>
       </div>

@@ -191,7 +191,7 @@
   </PageHeader>
 
   {#if viewState?.notice}
-    <p role="status" class={viewState.notice.isSent ? 'text-success text-sm' : 'text-warning text-sm'}>
+    <p role="status" class={viewState.notice.isSent ? 'text-success text-sm' : 'text-warning-ink text-sm'}>
       {viewState.notice.message}
       {#if !viewState.notice.isSent && data.whatsAppLink}
         Use o botão acima para abrir a conversa e enviar você mesmo.

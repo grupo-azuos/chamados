@@ -14,14 +14,14 @@ describe('AzuosContentCard (Svelte)', () => {
     const { container } = render(ContentCard, {
       props: {
         data: { label: 'Computador 01' },
-        ui: { tone: 'amber', icon: MemoryStick },
+        ui: { tone: 'yellow', icon: MemoryStick },
         children,
       },
     });
 
     expect(screen.getByRole('heading', { name: 'Computador 01' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Computador 01' })).toHaveClass('bg-card');
-    expect(container.querySelector('[data-slot="card-mark"]')).toHaveClass('text-hue-amber');
+    expect(container.querySelector('[data-slot="card-mark"]')).toHaveClass('text-hue-yellow-ink');
   });
 
   it('opens when clicked', async () => {

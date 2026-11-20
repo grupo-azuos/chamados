@@ -7,8 +7,8 @@ import { themeColor } from './theme-color.util';
  * cartão na grade — com vinte tons, dois vizinhos quase iguais deixam de ser distinguíveis e
  * a cor para de ajudar. Outra cor continua possível pelo seletor livre.
  *
- * Os cinco tons são escuros o bastante para texto branco por cima (contraste ≥ 4,5:1). É o
- * que permite o cartão inteiro ser colorido sem o nome da empresa sumir nele.
+ * Quatro tons são escuros o bastante para texto branco por cima (contraste ≥ 4,5:1); o quinto é o
+ * amarelo do grupo, claro, e nele o texto vira escuro sozinho (`isLightColor`).
  */
 export const COMPANY_COLOR_PALETTE = [
   themeColor('--brand-blue-600'),
