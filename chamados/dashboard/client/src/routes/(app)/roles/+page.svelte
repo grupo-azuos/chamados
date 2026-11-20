@@ -3,6 +3,7 @@
   import { ROLE_CONTEXT_LABELS } from '@template/shared/schemas/user.schema';
 
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
+  import { type RoleFormPerson } from '$lib/hooks/use-role-form/use-role-form.svelte';
   import RoleListView from '$lib/components/azuos-role-list-view/azuos-role-list-view.svelte';
   import { useRolesModel } from '$lib/hooks/use-roles/use-roles.svelte';
   import RoleFormSlot from './role-form-slot.svelte';
@@ -12,7 +13,7 @@
 
   const list = useRolesModel();
 
-  type FormTarget = { role: InternalRole | null } | null;
+  type FormTarget = { role: InternalRole | null; person?: RoleFormPerson } | null;
 
   let formTarget = $state<FormTarget>(null);
 </script>
@@ -38,12 +39,17 @@
   actions={{
     ...list.actions,
     onCreate: () => (formTarget = { role: null }),
+    onGrantTo: (person) =>
+      (formTarget = {
+        role: null,
+        person: { userId: person.userId, userEmail: person.userEmail, contexts: person.roles.map((r) => r.context) },
+      }),
   }}
 />
 
 {#if formTarget}
-  {#key formTarget.role?.id ?? 'new'}
-    <RoleFormSlot role={formTarget.role} onClose={() => (formTarget = null)} />
+  {#key formTarget.role?.id ?? formTarget.person?.userId ?? 'new'}
+    <RoleFormSlot role={formTarget.role} person={formTarget.person} onClose={() => (formTarget = null)} />
   {/key}
 {/if}
 

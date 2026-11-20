@@ -35,11 +35,16 @@ export type RoleFormModel = {
   };
 };
 
+/** A pessoa que já vem escolhida no "Liberar módulo", com os módulos que ela já tem marcados. */
+export type RoleFormPerson = { userId: string; userEmail: string | null; contexts: RoleContext[] };
+
 export function useRoleFormModel({
   role,
+  person,
   onSaved,
 }: {
   role?: InternalRole | null;
+  person?: RoleFormPerson | null;
   onSaved: () => void;
 }): RoleFormModel {
   const queryClient = useQueryClient();
@@ -62,7 +67,7 @@ export function useRoleFormModel({
   );
 
   const form = createForm(() => ({
-    defaultValues: toFormValues(role ?? null),
+    defaultValues: toFormValues(role ?? null, person ?? null),
     validators: { onChange: assignRolesSchema },
     onSubmit: ({ value }: { value: AssignRolesInput }) => {
       save.current.mutate(value);
@@ -131,7 +136,12 @@ export function useRoleFormModel({
   };
 }
 
-function toFormValues(role: InternalRole | null): AssignRolesInput {
+function toFormValues(role: InternalRole | null, person: RoleFormPerson | null): AssignRolesInput {
+  /* Os módulos que a pessoa já tem vêm marcados: liberar de novo é inofensivo (o servidor grava
+     por cima), e a pessoa vê de relance o que falta. */
+  if (person) {
+    return { userId: person.userId, userEmail: person.userEmail, contexts: [...person.contexts] };
+  }
   if (!role) {
     return {
       userId: '',

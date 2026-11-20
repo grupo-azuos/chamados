@@ -46,8 +46,8 @@ class InstantLoadImage {
   }
 }
 
-function renderView(overrides: Partial<AzuosRoleListViewProps> = {}) {
-  const actions = {
+function baseActions() {
+  return {
     onCreate: vi.fn(),
     onAskDelete: vi.fn(),
     onSearchChange: vi.fn(),
@@ -55,6 +55,10 @@ function renderView(overrides: Partial<AzuosRoleListViewProps> = {}) {
     onClearFilters: vi.fn(),
     onRetry: vi.fn(),
   };
+}
+
+function renderView(overrides: Partial<AzuosRoleListViewProps> = {}) {
+  const actions = baseActions();
 
   render(RoleListView, {
     props: {
@@ -97,6 +101,29 @@ describe('AzuosRoleListView', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Liberar módulo' }));
     expect(actions.onCreate).toHaveBeenCalledOnce();
+  });
+
+  it('gives a module straight from the person card', async () => {
+    const onGrantTo = vi.fn();
+    renderView({ actions: { ...baseActions(), onGrantTo } });
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Adicionar módulo' })[0]!);
+    expect(onGrantTo).toHaveBeenCalledWith(expect.objectContaining({ userId: 'usr_1' }));
+  });
+
+  // triste
+  it('offers no add button to someone who is not super admin', () => {
+    renderView({
+      data: {
+        currentUser: { name: 'Operador', email: 'op@empresa.com.br', role: 'admin' },
+        roles: mockRoles,
+        total: 2,
+        filter: { search: '', context: '' },
+      },
+      actions: { ...baseActions(), onGrantTo: vi.fn() },
+    });
+
+    expect(screen.queryByRole('button', { name: 'Adicionar módulo' })).not.toBeInTheDocument();
   });
 
   it('takes out only the module whose x was clicked', async () => {

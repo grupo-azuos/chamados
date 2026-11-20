@@ -10,6 +10,7 @@
   import MyProfileView, {
     type MyProfileExtraSection,
   } from '$lib/components/azuos-my-profile-view/azuos-my-profile-view.svelte';
+  import { type RoleFormPerson } from '$lib/hooks/use-role-form/use-role-form.svelte';
   import RoleListView from '$lib/components/azuos-role-list-view/azuos-role-list-view.svelte';
   import { useMyProfileModel } from '$lib/hooks/use-my-profile/use-my-profile.svelte';
   import { useRolesModel } from '$lib/hooks/use-roles/use-roles.svelte';
@@ -34,7 +35,7 @@
   const templates = useWhatsappTemplatesModel();
   const canEditTemplates = $derived(data.user?.role === 'superadmin');
 
-  type FormTarget = { role: InternalRole | null } | null;
+  type FormTarget = { role: InternalRole | null; person?: RoleFormPerson } | null;
   let formTarget = $state<FormTarget>(null);
 
   /* A ficha padrão dos 13 sistemas; o que é só do Chamados entra depois, como seções a mais. */
@@ -89,6 +90,11 @@
     actions={{
       ...list.actions,
       onCreate: () => (formTarget = { role: null }),
+      onGrantTo: (person) =>
+        (formTarget = {
+          role: null,
+          person: { userId: person.userId, userEmail: person.userEmail, contexts: person.roles.map((r) => r.context) },
+        }),
     }}
   />
 {/snippet}
@@ -142,8 +148,8 @@
 />
 
 {#if formTarget}
-  {#key formTarget.role?.id ?? 'new'}
-    <RoleFormSlot role={formTarget.role} onClose={() => (formTarget = null)} />
+  {#key formTarget.role?.id ?? formTarget.person?.userId ?? 'new'}
+    <RoleFormSlot role={formTarget.role} person={formTarget.person} onClose={() => (formTarget = null)} />
   {/key}
 {/if}
 
