@@ -211,7 +211,7 @@
   </div>
 {/snippet}
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+<div class="flex w-full flex-col gap-6">
   <!-- 1. Meu Perfil -->
   {#if data.currentUser}
     <div class="rounded-box border border-border bg-card p-6 shadow-xs">

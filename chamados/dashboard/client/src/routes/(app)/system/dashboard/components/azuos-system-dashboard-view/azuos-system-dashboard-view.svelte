@@ -35,7 +35,7 @@
   let { data, state, actions }: AzuosSystemDashboardViewProps = $props();
 </script>
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Painel de Desenvolvimento e Sistemas',

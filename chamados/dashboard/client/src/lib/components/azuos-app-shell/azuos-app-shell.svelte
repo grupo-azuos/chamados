@@ -537,7 +537,8 @@
       bind:this={contentEl}
       class="app-content min-h-0 min-w-0 w-full flex-1 overflow-y-auto overscroll-contain pt-3 pr-[max(0.75rem,env(safe-area-inset-right))] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] sm:pt-4 sm:pr-[max(1.5rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] md:pb-[max(2.5rem,env(safe-area-inset-bottom))]"
     >
-      {@render children()}
+      <!-- Toda tela cabe nesta moldura: inteira até Full HD, centralizada acima disso. -->
+      <div class="page-frame">{@render children()}</div>
     </div>
   </SidebarInset>
 

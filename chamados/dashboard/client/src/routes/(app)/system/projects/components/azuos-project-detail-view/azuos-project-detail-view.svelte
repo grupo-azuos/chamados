@@ -126,7 +126,7 @@
     ICONS[event.type as keyof typeof ICONS] ?? History;
 </script>
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-5">
+<div class="flex w-full flex-col gap-5">
   <BackButton data={{ destination: 'os projetos' }} actions={{ onClick: actions.onBack }} />
 
   <PageHeader

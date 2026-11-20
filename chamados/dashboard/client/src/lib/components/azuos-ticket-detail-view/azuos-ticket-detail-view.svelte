@@ -155,7 +155,7 @@
   }
 </script>
 
-<div class="mx-auto flex w-full max-w-7xl flex-col gap-5">
+<div class="flex w-full flex-col gap-5">
   <BackButton data={{ destination: 'os chamados' }} actions={{ onClick: actions.onBack }} />
 
   <PageHeader
