@@ -40,9 +40,9 @@ describe('formatStoredFieldMask', () => {
   });
 });
 
-describe('handleFieldMask — formata ao digitar e ao colar', () => {
+describe('handleFieldMask — formats on typing and on pasting', () => {
   // feliz
-  it('cada tipo sai com a sua pontuação, venha como vier', () => {
+  it('gives each kind its punctuation, whatever comes in', () => {
     expect(formatFieldMask('cpf', ' 529 982 247 25 ')).toBe('529.982.247-25');
     expect(formatFieldMask('cep', '74000000')).toBe('74000-000');
     expect(formatFieldMask('cnae', '4712100')).toBe('4712-1/00');
@@ -52,7 +52,7 @@ describe('handleFieldMask — formata ao digitar e ao colar', () => {
   });
 
   // feliz
-  it('dinheiro se digita da direita para a esquerda, e o cursor fica no fim', () => {
+  it('types money from right to left, with the cursor kept at the end', () => {
     const result = handleFieldMask('money', { value: '1.234,567', selectionStart: 9 });
 
     expect(result.value).toBe('12.345,67');
@@ -60,7 +60,7 @@ describe('handleFieldMask — formata ao digitar e ao colar', () => {
   });
 
   // feliz
-  it('o primeiro dígito vira centavo e o cursor vai para depois dele, não para antes da vírgula', () => {
+  it('turns the first digit into cents and puts the cursor after it, not before the comma', () => {
     const first = handleFieldMask('money', { value: '5', selectionStart: 1 });
     expect(first.value).toBe('0,05');
     expect(first.selectionStart).toBe(4);
@@ -71,7 +71,7 @@ describe('handleFieldMask — formata ao digitar e ao colar', () => {
   });
 
   // feliz
-  it('corrigir um dígito no meio do valor mantém o cursor ao lado dele', () => {
+  it('keeps the cursor beside a digit fixed in the middle of the value', () => {
     const result = handleFieldMask('money', { value: '1.2934,56', selectionStart: 4 });
 
     expect(result.value).toBe('12.934,56');
@@ -79,7 +79,7 @@ describe('handleFieldMask — formata ao digitar e ao colar', () => {
   });
 
   // triste
-  it('apagar o último dígito devolve o cursor ao fim, sem pular para o começo', () => {
+  it('puts the cursor back at the end when the last digit is erased, not at the start', () => {
     const result = handleFieldMask('money', { value: '0,0', selectionStart: 3 });
 
     expect(result.value).toBe('0,00');
@@ -87,7 +87,7 @@ describe('handleFieldMask — formata ao digitar e ao colar', () => {
   });
 
   // feliz
-  it('corrigir no meio não joga o cursor para o fim', () => {
+  it('does not throw the cursor to the end when fixing the middle', () => {
     const result = handleFieldMask('cpf', { value: '529.9182.247-25', selectionStart: 6 });
 
     expect(result.value).toBe('529.918.224-72');
@@ -95,7 +95,7 @@ describe('handleFieldMask — formata ao digitar e ao colar', () => {
   });
 
   // triste
-  it('letra não entra em campo de número, e o excesso é cortado', () => {
+  it('keeps letters out of a number field and cuts the excess', () => {
     expect(formatFieldMask('cep', 'ab74.000-0001234')).toBe('74000-000');
     expect(formatFieldMask('cpf', '1234567890123')).toBe('123.456.789-01');
   });
@@ -103,7 +103,7 @@ describe('handleFieldMask — formata ao digitar e ao colar', () => {
 
 describe('fieldMaskError', () => {
   // triste
-  it('aponta o formato errado ou incompleto', () => {
+  it('points out a wrong or incomplete format', () => {
     expect(fieldMaskError('cpf', '529.982.247-24')).toBe('CPF inválido — confira os números');
     expect(fieldMaskError('cpf', '529.982')).toBe('O CPF tem 11 números');
     expect(fieldMaskError('cep', '7400')).toBe('O CEP tem 8 números');
@@ -111,7 +111,7 @@ describe('fieldMaskError', () => {
   });
 
   // feliz
-  it('vazio, ou completo e certo, não é erro', () => {
+  it('is not an error when empty, or complete and right', () => {
     expect(fieldMaskError('cpf', '')).toBeNull();
     expect(fieldMaskError('cpf', '529.982.247-25')).toBeNull();
     expect(fieldMaskError('money', '1')).toBeNull();

@@ -10,7 +10,7 @@ vi.mock('$lib/api/auth.api', () => ({ authApi: { me: vi.fn() } }));
 
 const me = vi.mocked(authApi.me);
 
-describe('o endereço que não existe', () => {
+describe('the address that does not exist', () => {
   beforeEach(() => {
     me.mockReset();
   });

@@ -244,7 +244,7 @@ it('uses a searchable list for few options on mobile', async () => {
 
 /* Os dois testes do separador ficaram, num merge, DENTRO do teste do celular — e o Vitest recusa
    teste dentro de teste, derrubando os três. Cada um volta a ser um teste de verdade. */
-describe('AzuosOptionPicker — separador de grupo', () => {
+describe('AzuosOptionPicker — group separator', () => {
   // feliz
   it('draws a divider before the option that starts a new group', async () => {
     const user = userEvent.setup();

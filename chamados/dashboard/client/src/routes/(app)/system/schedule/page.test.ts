@@ -14,7 +14,7 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
 
 describe('a rota system/schedule', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
@@ -24,7 +24,7 @@ describe('a rota system/schedule', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -81,9 +81,9 @@ function serveSchedule() {
   });
 }
 
-describe('a rota system/schedule com dados', () => {
+describe('the system/schedule route with data', () => {
   // feliz
-  it('abre o formulário de novo agendamento pelo botão e pelo dia clicado', async () => {
+  it('opens the new-event form from the button and from the clicked day', async () => {
     serveSchedule();
     visiting({});
     renderPage(Page as never);
@@ -101,7 +101,7 @@ describe('a rota system/schedule com dados', () => {
   });
 
   // feliz
-  it('abre o agendamento de quem marcou e o exclui', async () => {
+  it('opens the event of whoever booked it and deletes it', async () => {
     serveSchedule();
     visiting({});
     renderPage(Page as never);
@@ -114,7 +114,7 @@ describe('a rota system/schedule com dados', () => {
   });
 
   // feliz
-  it('abre e fecha a janela dos PRs do dia', async () => {
+  it('opens and closes the window with the PRs of the day', async () => {
     serveSchedule();
     visiting({});
     renderPage(Page as never);
@@ -127,7 +127,7 @@ describe('a rota system/schedule com dados', () => {
   });
 
   // triste
-  it('não abre formulário para quem só consulta o sistema', async () => {
+  it('opens no form for someone who only views the system', async () => {
     serveSchedule();
     const viewer = { ...ADMIN, id: 'u-bia', role: 'user' as const, roles: { ...ADMIN.roles, sistema: 'user' as const } };
     visiting({}, viewer as never);

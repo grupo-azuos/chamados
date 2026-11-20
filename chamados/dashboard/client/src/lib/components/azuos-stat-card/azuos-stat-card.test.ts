@@ -8,7 +8,7 @@ import StatCard from './azuos-stat-card.svelte';
 
 describe('AzuosStatCard', () => {
   // feliz
-  it('mostra o rótulo e o número', () => {
+  it('shows the label and the number', () => {
     render(StatCard, { props: { data: { label: 'Clientes', value: 560 } } });
 
     expect(screen.getByText('Clientes')).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe('AzuosStatCard', () => {
 
   /* Um número que exclui algo precisa dizer o que excluiu, ou dois painéis passam a
      discordar sobre a mesma base sem que ninguém saiba qual está certo. */
-  it('mostra a ressalva quando o número exclui alguma coisa', () => {
+  it('shows the caveat when the number leaves something out', () => {
     render(StatCard, {
       props: { data: { label: 'Ativos', value: 641, hint: 'Exclui 1.067 arquivados' } },
     });
@@ -119,7 +119,7 @@ describe('AzuosStatCard', () => {
   });
 
   // triste
-  it('sem ressalva, não desenha linha vazia', () => {
+  it('draws no empty line without a caveat', () => {
     const { container } = render(StatCard, {
       props: { data: { label: 'Equipe', value: 22 } },
     });
@@ -129,13 +129,13 @@ describe('AzuosStatCard', () => {
 
   /* ZERO É RESPOSTA. Trocá-lo por traço ou esconder o cartão faria "nenhum cliente
      inativo" parecer "não sei quantas" — e as duas coisas pedem ações diferentes. */
-  it('zero aparece como zero, e não como vazio', () => {
+  it('shows zero as zero, not as empty', () => {
     render(StatCard, { props: { data: { label: 'Inativas', value: 0 } } });
 
     expect(screen.getByText('0')).toBeInTheDocument();
   });
 
-  it('carregando esconde o número em vez de mostrar um valor errado', () => {
+  it('hides the number while loading instead of showing a wrong value', () => {
     render(StatCard, {
       props: { data: { label: 'Clientes', value: 560 }, state: { isLoading: true } },
     });
@@ -144,13 +144,13 @@ describe('AzuosStatCard', () => {
     expect(screen.getByText('Clientes')).toBeInTheDocument();
   });
 
-  it('aceita texto no lugar de número, para razões como "13/13"', () => {
+  it('accepts text instead of a number, for ratios like "13/13"', () => {
     render(StatCard, { props: { data: { label: 'Cadastrados', value: '13/13' } } });
 
     expect(screen.getByText('13/13')).toBeInTheDocument();
   });
 
-  it('com ícone, desenha o quadrado colorido', () => {
+  it('draws the coloured square when there is an icon', () => {
     const { container } = render(StatCard, {
       props: { data: { label: 'Clientes', value: 7 }, ui: { icon: Building2 } },
     });
@@ -158,7 +158,7 @@ describe('AzuosStatCard', () => {
     expect(container.querySelector('svg')).toBeInTheDocument();
   });
 
-  it('sem ícone, não desenha quadrado nenhum', () => {
+  it('draws no square without an icon', () => {
     const { container } = render(StatCard, {
       props: { data: { label: 'Clientes', value: 7 } },
     });
@@ -168,7 +168,7 @@ describe('AzuosStatCard', () => {
 
   /* A cor é do CARTÃO inteiro, não de uma borda ou barra fina — é o que faz o olho achar o
      cartão certo sem precisar ler o rótulo primeiro. */
-  it('fica na superfície da marca, com o número no sotaque da situação, sem opacidade', () => {
+  it('sits on the brand surface with the number in the status accent, without opacity', () => {
     render(StatCard, {
       props: { data: { label: 'Vencidos', value: 3 }, ui: { tone: 'danger' } },
     });
@@ -179,7 +179,7 @@ describe('AzuosStatCard', () => {
     expect(card.className).not.toMatch(/\/\d/);
   });
 
-  it('sem tom escolhido, usa o cartão neutro do sistema', () => {
+  it('uses the neutral system card without a chosen tone', () => {
     render(StatCard, {
       props: { data: { label: 'Total', value: 3 } },
     });
@@ -188,7 +188,7 @@ describe('AzuosStatCard', () => {
     expect(screen.getByText('3')).toHaveClass('text-hue-slate');
   });
 
-  it('com onClick, vira um atalho: um botão que diz o que o clique faz', () => {
+  it('becomes a shortcut with onClick: a button that says what the click does', () => {
     const onClick = vi.fn();
     render(StatCard, {
       props: { data: { label: 'Abertos', value: 5 }, actions: { onClick } },
@@ -201,7 +201,7 @@ describe('AzuosStatCard', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it('selecionado, avisa que o clique tira o filtro e fica no azul claro da marca', () => {
+  it('when selected, says the click removes the filter and turns light brand blue', () => {
     render(StatCard, {
       props: {
         data: { label: 'Abertos', value: 5 },
@@ -220,7 +220,7 @@ describe('AzuosStatCard', () => {
   });
 
   // triste
-  it('sem onClick, continua sendo só um número: nenhum botão', () => {
+  it('stays just a number without onClick: no button', () => {
     render(StatCard, { props: { data: { label: 'Clientes', value: 560 } } });
 
     expect(screen.queryByRole('button')).toBeNull();

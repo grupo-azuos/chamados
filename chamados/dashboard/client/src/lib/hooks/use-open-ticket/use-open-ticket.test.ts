@@ -399,7 +399,7 @@ describe('useOpenTicketModel — pessoas vinculadas', () => {
   });
 });
 
-describe('useOpenTicketModel — o convite do WhatsApp e quem atende', () => {
+describe('useOpenTicketModel — the WhatsApp invite and who attends', () => {
   const invite = {
     assignee: { id: 'u-ana', name: 'Ana Lima' },
     areas: ['manutencao' as const],

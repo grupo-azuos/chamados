@@ -14,7 +14,7 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
 
 describe('a rota infra/parts', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
@@ -24,7 +24,7 @@ describe('a rota infra/parts', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -58,9 +58,9 @@ function serveParts() {
   });
 }
 
-describe('a rota infra/parts com peças', () => {
+describe('the infra/parts route with parts', () => {
   // feliz
-  it('abre o cadastro, a correção e a movimentação de uma peça', async () => {
+  it('opens the registration, the fix and the movement of a part', async () => {
     serveParts();
     visiting({});
     renderPage(Page as never);

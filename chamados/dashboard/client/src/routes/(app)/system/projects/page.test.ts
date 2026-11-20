@@ -14,7 +14,7 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
 
 describe('a rota system/projects', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
@@ -24,7 +24,7 @@ describe('a rota system/projects', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -55,9 +55,9 @@ const project = {
   updatedAt: null,
 };
 
-describe('a rota system/projects com sistemas', () => {
+describe('the system/projects route with systems', () => {
   // feliz
-  it('abre o cadastro e a edição de um sistema, e leva à linha do tempo', async () => {
+  it('opens the registration and the edit of a system, and leads to the timeline', async () => {
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
       if (path === '/software-projects') return { items: [project], total: 1, page: 1, pageSize: 25 };
       if (path === '/integrations/github/status') return { isLinked: false };

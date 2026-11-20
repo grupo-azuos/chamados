@@ -420,7 +420,7 @@ describe('AzuosAppShell — celular', () => {
   });
 });
 
-describe('AzuosAppShell — celular: o que a gaveta oferece', () => {
+describe('AzuosAppShell — phone: what the drawer offers', () => {
   afterEach(() => vi.restoreAllMocks());
 
   const areaOptions = [
@@ -531,7 +531,7 @@ describe('AzuosAppShell — celular: o que a gaveta oferece', () => {
   });
 });
 
-describe('AzuosAppShell — o rodapé do trilho', () => {
+describe('AzuosAppShell — the rail footer', () => {
   const areaOptions = [
     { value: 'infra', label: 'Infraestrutura', icon: BarChart3 },
     { value: 'sistema', label: 'Sistema' },
@@ -616,7 +616,7 @@ describe('AzuosAppShell — collapsed rail while signing out', () => {
   });
 });
 
-describe('AzuosAppShell — celular: a tela aberta na gaveta', () => {
+describe('AzuosAppShell — phone: the open screen in the drawer', () => {
   afterEach(() => vi.restoreAllMocks());
 
   // feliz

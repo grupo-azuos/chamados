@@ -14,7 +14,7 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
 
 describe('a rota system/projects/detalhe', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({ id: '2' });
 
     const { container } = renderPage(Page as never);
@@ -24,7 +24,7 @@ describe('a rota system/projects/detalhe', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({ id: '2' });
 
     renderPage(Page as never);
@@ -81,9 +81,9 @@ const ticket = {
   updatedBy: null,
 };
 
-describe('a rota system/projects/detalhe com o sistema carregado', () => {
+describe('the system/projects detail route with the system loaded', () => {
   // feliz
-  it('mostra o sistema, abre um chamado dele e volta à lista', async () => {
+  it('shows the system, opens one of its tickets and goes back to the list', async () => {
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
       if (path === '/software-projects/1') return project;
       if (path === '/tickets') return { items: [ticket], total: 1, page: 1, pageSize: 200 };
@@ -101,7 +101,7 @@ describe('a rota system/projects/detalhe com o sistema carregado', () => {
   });
 
   // triste
-  it('explica quando o sistema não existe mais', async () => {
+  it('explains when the system no longer exists', async () => {
     const { ApiError } = await import('$lib/api/http-client');
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
       if (path === '/software-projects/1') throw new ApiError(404, 'Sistema não encontrado.');

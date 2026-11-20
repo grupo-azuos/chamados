@@ -11,9 +11,9 @@ afterEach(() => {
   route.error = null;
 });
 
-describe('a tela de erro', () => {
+describe('the error screen', () => {
   // triste
-  it('diz que a tela não existe quando o endereço não leva a nada', () => {
+  it('says the screen does not exist when the address leads nowhere', () => {
     route.status = 404;
     render(ErrorPage);
 
@@ -22,7 +22,7 @@ describe('a tela de erro', () => {
   });
 
   // triste
-  it('mostra o que deu errado, ou um aviso genérico, nas outras falhas', () => {
+  it('shows what went wrong, or a generic notice, on other failures', () => {
     route.status = 500;
     route.error = { message: 'O servidor tropeçou.' };
     const { unmount } = render(ErrorPage);

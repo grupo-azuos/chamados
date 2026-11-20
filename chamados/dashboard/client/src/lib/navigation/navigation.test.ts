@@ -166,7 +166,7 @@ describe('fallbackContextOf', () => {
   });
 });
 
-describe('os menus dos módulos', () => {
+describe('the module menus', () => {
   // feliz
   it('carries every entry with a label and an icon', () => {
     for (const entry of allItems) {

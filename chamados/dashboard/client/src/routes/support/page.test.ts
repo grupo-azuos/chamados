@@ -2,16 +2,16 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { load } from './+page';
 
-describe('a tela de abrir chamado (/support)', () => {
+describe('the open-ticket screen (/support)', () => {
   // feliz
-  it('leva o link de consulta antigo para a tela de consultar, com o mesmo token', () => {
+  it('sends the old lookup link to the lookup screen, with the same token', () => {
     const run = () => load({ url: new URL('http://localhost/support?ticket=abc.123') });
 
     expect(run).toThrow(expect.objectContaining({ status: 307, location: '/support/tickets?ticket=abc.123' }));
   });
 
   // triste
-  it('fica no formulário quando não há link de consulta', () => {
+  it('stays on the form when there is no lookup link', () => {
     expect(load({ url: new URL('http://localhost/support?invite=xyz') })).toBeUndefined();
   });
 });
@@ -31,7 +31,7 @@ const { screen } = await import('@testing-library/svelte');
 
 describe('a rota /support', () => {
   // feliz
-  it('monta o formulário de abrir chamado e dá título à aba', async () => {
+  it('mounts the open-ticket form and titles the tab', async () => {
     visiting({});
 
     renderPage(Page as never);
