@@ -1291,12 +1291,28 @@ export const boardFilterPlaceSchema = z
 
 export type BoardFilterPlace = z.infer<typeof boardFilterPlaceSchema>;
 
+/**
+ * A LARGURA do filtro na barra: `auto`, uma peça da grade, como as outras; `full`, a linha
+ * inteira, sozinho — para as etiquetas à vista com muitas opções, que numa peça só ficam
+ * espremidas e rolando de lado.
+ */
+export const BOARD_FILTER_WIDTHS = ['auto', 'full'] as const;
+
+export type BoardFilterWidth = (typeof BOARD_FILTER_WIDTHS)[number];
+
+export const BOARD_FILTER_WIDTH_LABELS: Record<BoardFilterWidth, string> = {
+  auto: 'Normal',
+  full: 'Linha inteira',
+};
+
 export const boardFilterSchema = z.object({
   id: z.string().min(1).max(40),
   kind: boardFilterKindSchema,
   label: z.string().trim().min(1, 'Dê um nome ao filtro').max(40),
   /* Os painéis gravados antes da escolha não têm o campo: ficam no desenho padrão. */
   display: boardFilterDisplaySchema.optional(),
+  /* Os painéis gravados antes da escolha não têm o campo (nem um valor que se perdeu): normal. */
+  width: z.enum(BOARD_FILTER_WIDTHS).optional().catch(undefined),
   /* Os painéis gravados antes da grade não têm o campo: os filtros se arrumam sozinhos
      (`placedBoardFilters`), na ordem em que foram postos. Um lugar da grade antiga, de 12
      colunas, não cabe na de 4: em vez de recusar o painel inteiro, ele é esquecido e o filtro

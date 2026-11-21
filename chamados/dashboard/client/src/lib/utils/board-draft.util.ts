@@ -7,6 +7,7 @@ import {
   BOARD_FILTER_KIND_LABELS,
   type BoardFilterPlace,
   type BoardFilterValues,
+  type BoardFilterWidth,
   boardMatches,
   type BoardModule,
   COMPACT_WIDGET_KINDS,
@@ -100,6 +101,14 @@ export function setBoardFilterDisplay(current: BoardDraft, id: string, display: 
   return {
     ...current,
     filters: current.filters.map((filter) => (filter.id === id ? { ...filter, display } : filter)),
+  };
+}
+
+/** A largura nova do filtro na barra — normal ou a linha inteira. */
+export function setBoardFilterWidth(current: BoardDraft, id: string, width: BoardFilterWidth): BoardDraft {
+  return {
+    ...current,
+    filters: current.filters.map((filter) => (filter.id === id ? { ...filter, width } : filter)),
   };
 }
 

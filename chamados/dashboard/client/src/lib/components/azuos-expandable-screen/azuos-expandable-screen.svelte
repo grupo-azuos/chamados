@@ -52,6 +52,12 @@
 
   let { data, state: screenState, actions, footer, children }: AzuosExpandableScreenProps = $props();
 
+  /* SÓ O SIM/NÃO, e não o objeto `state`: quem usa a tela passa um objeto novo a cada atualização
+     dela (`state={{ isOpen }}`), e os efeitos abaixo, presos ao objeto, rodavam de novo a cada vez —
+     a abertura animava outra vez (a tela piscava) e o foco voltava para ela, fechando o diálogo
+     que acabara de abrir por cima. Com o valor derivado, eles só rodam quando abre ou fecha. */
+  const isOpen = $derived(screenState.isOpen);
+
   /* FECHAR ANIMADO: quando `isOpen` vira falso, a tela continua montada o tempo de encolher de
      volta (o contrário da abertura) e só então sai. Quem pediu menos movimento vê fechar na hora. */
   let isMounted = $state(false);
@@ -60,7 +66,7 @@
   const CLOSED_CLIP = 'inset(18% 22% 18% 22% round 24px)';
 
   $effect(() => {
-    if (screenState.isOpen) {
+    if (isOpen) {
       isMounted = true;
       return;
     }
@@ -83,7 +89,7 @@
   /* Abrir: cresce do centro até a tela inteira; o foco vai para a tela, e o Esc passa a ser dela. */
   $effect(() => {
     const element = panel;
-    if (!screenState.isOpen || !element) return;
+    if (!isOpen || !element) return;
     if (!prefersReducedMotion()) {
       gsap.fromTo(
         element,

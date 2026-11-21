@@ -4,6 +4,7 @@
     type BoardFilterDisplay,
     type BoardFilterKind,
     type BoardFilterValues,
+    type BoardFilterWidth,
   } from '@template/shared/schemas/dashboard-board.schema';
 
   import { type FilterCounts } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
@@ -36,6 +37,8 @@
       onRemove?: (id: string) => void;
       /** Montando: troca o desenho do filtro. */
       onDisplayChange?: (id: string, display: BoardFilterDisplay) => void;
+      /** Montando: o filtro numa peça ou na linha inteira. */
+      onWidthChange?: (id: string, width: BoardFilterWidth) => void;
       /** Montando: a ordem nova dos filtros na barra. */
       onPlaceChange?: (places: readonly BoardFilterPlaceChange[]) => void;
     };
@@ -53,6 +56,7 @@
   import AzuosActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import AzuosCardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import AzuosClearFiltersButton from '$lib/components/azuos-clear-filters-button/azuos-clear-filters-button.svelte';
+  import { cn } from '$lib/utils/cn';
   import { activeSummary, readingOrder, toolbarDisplayOf } from '$lib/utils/board-filter.util';
 
   import FilterControl from './azuos-board-filter-control.svelte';
@@ -82,7 +86,10 @@
        tela larga, todas lado a lado, sem sobra torta no fim. O período vem por último. -->
   <AzuosCardSurface ui={{ className: 'flex flex-col gap-2 p-3 sm:flex-row sm:items-start' }}>
     <div class="grid min-w-0 flex-1 grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2">
-      {#each [...fields, ...periods] as filter (filter.id)}{@render control(filter)}{/each}
+      {#each [...fields, ...periods] as filter (filter.id)}
+        <!-- "Linha inteira": a peça ocupa a linha toda, sozinha, abaixo das anteriores. -->
+        <div class={cn('min-w-0', filter.width === 'full' && 'col-span-full')}>{@render control(filter)}</div>
+      {/each}
     </div>
     {#if actions.onClear && !isEditing && active.length > 0}
       <div class="flex shrink-0 items-center justify-end sm:h-10">
@@ -101,7 +108,7 @@
       </div>
       <FilterListEditor
         data={{ filters: ordered }}
-        actions={{ onPlaceChange: actions.onPlaceChange, onDisplayChange: actions.onDisplayChange, onRemove: actions.onRemove }}
+        actions={{ onPlaceChange: actions.onPlaceChange, onDisplayChange: actions.onDisplayChange, onWidthChange: actions.onWidthChange, onRemove: actions.onRemove }}
       />
     {/if}
     {#if actions.onAdd && missing.length > 0}

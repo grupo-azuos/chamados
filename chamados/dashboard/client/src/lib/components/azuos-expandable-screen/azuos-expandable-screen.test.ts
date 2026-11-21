@@ -38,4 +38,15 @@ describe('AzuosExpandableScreen', () => {
     expect(isOwnEscape(new KeyboardEvent('keydown', { key: 'Enter' }), element)).toBe(false);
     expect(isOwnEscape(new KeyboardEvent('keydown', { key: 'Escape' }), element)).toBe(false);
   });
+
+  // triste
+  it('keeps the focus where it is when the screen updates while open', async () => {
+    const { rerender } = render(Harness, { props: { isOpen: true, onClose: vi.fn(), tick: 0 } });
+    const field = screen.getByRole('textbox', { name: 'Campo da tela' });
+    field.focus();
+
+    await rerender({ isOpen: true, onClose: vi.fn(), tick: 1 });
+
+    expect(document.activeElement).toBe(field);
+  });
 });

@@ -3,6 +3,7 @@
     type BoardFilter,
     type BoardFilterDisplay,
     type BoardFilterPlace,
+    type BoardFilterWidth,
   } from '@template/shared/schemas/dashboard-board.schema';
 
   import { type BoardFilterPlaceChange } from '$lib/utils/board-draft.util';
@@ -17,6 +18,7 @@
     actions: {
       onPlaceChange?: (places: readonly BoardFilterPlaceChange[]) => void;
       onDisplayChange?: (id: string, display: BoardFilterDisplay) => void;
+      onWidthChange?: (id: string, width: BoardFilterWidth) => void;
       onRemove?: (id: string) => void;
     };
   };
@@ -30,6 +32,8 @@
   import {
     BOARD_FILTER_DISPLAY_LABELS,
     BOARD_FILTER_KIND_LABELS,
+    BOARD_FILTER_WIDTH_LABELS,
+    BOARD_FILTER_WIDTHS,
     FILTER_GRID_COLUMNS,
   } from '@template/shared/schemas/dashboard-board.schema';
 
@@ -58,6 +62,8 @@
     dragged = null;
     over = null;
   }
+
+  const WIDTH_OPTIONS = BOARD_FILTER_WIDTHS.map((width) => ({ value: width, label: BOARD_FILTER_WIDTH_LABELS[width] }));
 
   function displayOptionsOf(filter: BoardFilter) {
     return toolbarDisplaysOf(filter.kind).map((display) => ({ value: display, label: BOARD_FILTER_DISPLAY_LABELS[display] }));
@@ -101,6 +107,13 @@
           data={{ value: toolbarDisplayOf(filter), options: displayOptionsOf(filter) }}
           ui={{ ariaLabel: `Mostrar ${filter.label} como`, className: 'w-40' }}
           actions={{ onChange: (display) => actions.onDisplayChange?.(filter.id, display as BoardFilterDisplay) }}
+        />
+      {/if}
+      {#if actions.onWidthChange}
+        <AzuosSelectField
+          data={{ value: filter.width ?? 'auto', options: WIDTH_OPTIONS }}
+          ui={{ ariaLabel: `Largura de ${filter.label}`, className: 'w-40' }}
+          actions={{ onChange: (width) => actions.onWidthChange?.(filter.id, width as BoardFilterWidth) }}
         />
       {/if}
       <AzuosActionButton
