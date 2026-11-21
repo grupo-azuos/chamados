@@ -6,6 +6,8 @@ import {
   Optional,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
+import { type SQL } from 'drizzle-orm';
 import { parseGitHubRepo } from '@template/shared/domain/software-project.util';
 import {
   type CreateSoftwareProjectInput,
@@ -14,6 +16,7 @@ import {
   type UpdateSoftwareProjectInput,
 } from '@template/shared/schemas/software-project.schema';
 
+import { BOARD_DRILL, type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
@@ -35,6 +38,9 @@ import {
 } from '../repository/software-projects.repository';
 import { SoftwareTimelineRepository } from '../repository/software-timeline.repository';
 import { type FetchedCoAuthor, GithubService } from './github.service';
+
+/** A fonte do painel que esta lista sabe recortar: a tabela dela, os sistemas. */
+const PROJECT_DRILL_SOURCES: readonly DataSourceKey[] = ['softwareProjects'];
 
 export const PROJECT_NOT_FOUND = 'Sistema não encontrado.';
 /** Quem aparece como autor do que a rodada automática grava. */
@@ -64,6 +70,7 @@ export class SoftwareProjectsService {
     @Optional()
     @Inject(USER_DIRECTORY_PROVIDER)
     private readonly directory?: UserDirectoryProvider,
+    @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
   ) {}
 
   /**
@@ -120,7 +127,7 @@ export class SoftwareProjectsService {
   ): Promise<{ items: SoftwareProject[]; total: number; page: number; pageSize: number }> {
     assertCanRead(user.role, 'os sistemas');
 
-    const page: SoftwareProjectPage = await this.repository.list(query);
+    const page: SoftwareProjectPage = await this.repository.list(query, await this.drillOf(user, query));
     const ids = page.rows.map((row) => row.id);
 
     const [openTicketsMap, prsMap] = await Promise.all([
@@ -138,6 +145,13 @@ export class SoftwareProjectsService {
       page: query.page,
       pageSize: query.pageSize,
     };
+  }
+
+  /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
+  private async drillOf(user: RequestUser, query: Pick<SoftwareProjectListQuery, 'drill'>): Promise<SQL | undefined> {
+    if (!query.drill || !this.drills) return undefined;
+
+    return this.drills.drillCondition(user, query.drill, PROJECT_DRILL_SOURCES);
   }
 
   async findById(user: RequestUser, id: number): Promise<SoftwareProject> {

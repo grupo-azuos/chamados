@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { type Department } from '@template/shared/domain/department.util';
 import { preventiveStatusOf } from '@template/shared/domain/maintenance.util';
 import {
@@ -11,7 +11,9 @@ import {
   type SaveMaintenanceScheduleInput,
   type UpdateMaintenanceInput,
 } from '@template/shared/schemas/maintenance.schema';
+import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
+import { type SQL } from 'drizzle-orm';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
@@ -19,6 +21,7 @@ import {
   assertCanModifyRecord,
   assertCanRead,
 } from '../../../lib/policy/policy-assert.util';
+import { BOARD_DRILL, type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import {
   toMaintenance,
   toMaintenanceInsert,
@@ -30,6 +33,9 @@ import {
   type MaintenanceWithComputer,
   type PreventiveRow,
 } from '../repository/maintenances.repository';
+
+/** O histórico só sabe filtrar a tabela das manutenções: só o recorte dela vale aqui. */
+const MAINTENANCE_DRILL_SOURCES: readonly DataSourceKey[] = ['maintenances'];
 
 const NOT_FOUND = 'Manutenção não encontrada. Recarregue a lista.';
 const SCHEDULE_NOT_FOUND = 'Agendamento não encontrado. Recarregue a lista.';
@@ -47,12 +53,15 @@ const COMPUTER_NOT_FOUND =
  */
 @Injectable()
 export class MaintenancesService {
-  constructor(private readonly repository: MaintenancesRepository) {}
+  constructor(
+    private readonly repository: MaintenancesRepository,
+    @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
+  ) {}
 
   async list(user: RequestUser, query: MaintenanceListQuery): Promise<Paginated<Maintenance>> {
     assertCanRead(user.role, 'as manutenções');
 
-    const page = await this.repository.list(query);
+    const page = await this.repository.list(query, await this.drillOf(user, query));
 
     return {
       items: page.rows.map(toMaintenance),
@@ -60,6 +69,16 @@ export class MaintenancesService {
       page: query.page,
       pageSize: query.pageSize,
     };
+  }
+
+  /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
+  private async drillOf(
+    user: RequestUser,
+    query: Pick<MaintenanceListQuery, 'drill'>,
+  ): Promise<SQL | undefined> {
+    if (!query.drill || !this.drills) return undefined;
+
+    return this.drills.drillCondition(user, query.drill, MAINTENANCE_DRILL_SOURCES);
   }
 
   async findById(user: RequestUser, id: number): Promise<Maintenance> {

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { MAINTENANCE_TYPES, PREVENTIVE_STATUSES } from '../domain/maintenance.util';
 import { archivedFilterSchema, archiveSchema } from './archive.schema';
+import { boardDrillParamSchema } from './board-drill.schema';
 import { departmentSchema } from './computer.schema';
 import { paginationQuerySchema } from './pagination.schema';
 
@@ -156,6 +157,8 @@ export const maintenanceListQuerySchema = paginationQuerySchema.extend({
   computerId: z.coerce.number<number>().int().optional(),
   type: maintenanceTypeSchema.optional(),
   archived: archivedFilterSchema,
+  /** O recorte de um clique no painel (`board-drill.schema`): estreita a lista ao item clicado. */
+  drill: boardDrillParamSchema.optional(),
 });
 
 export type MaintenanceListQuery = z.infer<typeof maintenanceListQuerySchema>;

@@ -24,8 +24,9 @@ export type SoftwareProjectPage = {
 export class SoftwareProjectsRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(query: SoftwareProjectListQuery): Promise<SoftwareProjectPage> {
-    const where = this.buildWhere(query);
+  /** `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro. */
+  async list(query: SoftwareProjectListQuery, drill?: SQL): Promise<SoftwareProjectPage> {
+    const where = and(this.buildWhere(query), drill);
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([

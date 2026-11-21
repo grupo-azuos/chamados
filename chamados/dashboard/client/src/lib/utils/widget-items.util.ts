@@ -56,3 +56,14 @@ export function sankeyItemOf(cells: Cells, nodeId: string): BoardItem | null {
 export function statItemOf(isGrouped: boolean, series: Series, label: string): BoardItem {
   return isGrouped ? itemOfLabel(series, label) : { key: null };
 }
+
+/**
+ * O ponto do tempo clicado (o instante que o gráfico de área desenhou) de volta ao grupo: o dia
+ * (`2026-11-20`) ou o mês (`2026-11`, desenhado no dia 1º). Fora da série, nada.
+ */
+export function timeItemOf(series: Series, at: string): BoardItem | null {
+  const day = at.slice(0, 10);
+  const found = series.find((item) => item.key === day || `${item.key}-01` === day);
+
+  return found ? { key: found.key, label: found.label } : null;
+}

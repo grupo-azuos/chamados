@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { QUOTE_KINDS, QUOTE_STATUSES, parseAmountToCents } from '../domain/maintenance-quote.util';
 import { archivedFilterSchema, archiveSchema } from './archive.schema';
+import { boardDrillParamSchema } from './board-drill.schema';
 import { paginationQuerySchema } from './pagination.schema';
 import { stagedFileSchema } from './staged-file.schema';
 
@@ -132,6 +133,8 @@ export const maintenanceQuoteListQuerySchema = paginationQuerySchema.extend({
   status: quoteStatusSchema.optional(),
   kind: quoteKindSchema.optional(),
   archived: archivedFilterSchema,
+  /** O recorte de um clique no painel (`board-drill.schema`): estreita a lista ao item clicado. */
+  drill: boardDrillParamSchema.optional(),
 });
 
 export type MaintenanceQuoteListQuery = z.infer<typeof maintenanceQuoteListQuerySchema>;

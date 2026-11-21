@@ -173,7 +173,10 @@
     <Echart
       data={{ option: (theme) => columnOption(data, ui, theme), description: data.seriesLabel }}
       ui={{
-        heightClass: isHorizontal ? 'w-full' : 'min-h-0 flex-1',
+        /* Deitado, a caixa de rolagem ocupa a altura que sobra: com altura dada por quem chama (o
+           bloco do painel), as barras que não cabem ROLAM dentro dele, em vez de vazar para fora.
+           Sem altura dada (`h-auto`), `flex-1` vale o tamanho do conteúdo e o cartão cresce. */
+        heightClass: 'min-h-0 w-full flex-1',
         scrollHeight: isHorizontal ? horizontalHeightOf(data.slices.length) : undefined,
       }}
       actions={{ onSelect: actions?.onSelect ? (selection) => actions?.onSelect?.(selection.name) : undefined }}

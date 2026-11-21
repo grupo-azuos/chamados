@@ -9,6 +9,10 @@ import {
   presetOf,
   readingOrder,
   windowOfPreset,
+  moveInList,
+  placesInOrder,
+  toolbarDisplayOf,
+  toolbarDisplaysOf,
 } from './board-filter.util';
 
 const COUNTS = { total: 3, series: [{ key: 'TI', label: 'TI', value: 2 }, { key: '(Sem departamento)', label: '(Sem departamento)', value: 1 }] };
@@ -60,5 +64,42 @@ describe('board filter rules', () => {
     const three = { id: 'c', place: { x: 0, y: 0, w: 1, h: 1 } };
 
     expect(readingOrder([one, two, three]).map((filter) => filter.id)).toEqual(['c', 'a', 'b']);
+  });
+});
+
+describe('the Grafana-like filter toolbar', () => {
+  // feliz
+  it('keeps a compact display and offers only compact ones', () => {
+    expect(toolbarDisplayOf({ kind: 'ticketStatus', display: 'chips' })).toBe('chips');
+    expect(toolbarDisplaysOf('ticketStatus')).toEqual(['select', 'search', 'chips']);
+    expect(toolbarDisplaysOf('person')).toEqual(['search', 'chips']);
+  });
+
+  // triste
+  it('falls back to a compact display for boards saved with the big ones', () => {
+    expect(toolbarDisplayOf({ kind: 'ticketStatus', display: 'cards' })).toBe('select');
+    expect(toolbarDisplayOf({ kind: 'person', display: 'avatars' })).toBe('search');
+  });
+
+  // feliz
+  it('saves the toolbar order as reading order on the grid', () => {
+    expect(placesInOrder(['a', 'b', 'c', 'd', 'e'], 4)).toEqual([
+      { id: 'a', place: { x: 0, y: 0, w: 1, h: 1 } },
+      { id: 'b', place: { x: 1, y: 0, w: 1, h: 1 } },
+      { id: 'c', place: { x: 2, y: 0, w: 1, h: 1 } },
+      { id: 'd', place: { x: 3, y: 0, w: 1, h: 1 } },
+      { id: 'e', place: { x: 0, y: 1, w: 1, h: 1 } },
+    ]);
+  });
+
+  // feliz
+  it('moves an item to a new position', () => {
+    expect(moveInList(['a', 'b', 'c'], 0, 2)).toEqual(['b', 'c', 'a']);
+  });
+
+  // triste
+  it('keeps the list when the move goes out of bounds', () => {
+    expect(moveInList(['a', 'b'], 0, 5)).toEqual(['a', 'b']);
+    expect(moveInList(['a', 'b'], -1, 0)).toEqual(['a', 'b']);
   });
 });

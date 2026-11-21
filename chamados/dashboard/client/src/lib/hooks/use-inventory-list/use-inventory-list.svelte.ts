@@ -1,12 +1,15 @@
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { type InventoryCategory } from '@template/shared/domain/inventory-catalog.util';
+import { type BoardDrill } from '@template/shared/schemas/board-drill.schema';
 import { type InventoryItem } from '@template/shared/schemas/inventory-item.schema';
 import { MAX_PAGE_SIZE } from '@template/shared/schemas/pagination.schema';
 import { derived, writable } from 'svelte/store';
 
 import { readError } from '$lib/api/http-client';
 import { inventoryItemsApi } from '$lib/api/inventory-items.api';
+import { type BoardDrillBanner, useBoardDrillModel } from '$lib/hooks/use-board-drill/use-board-drill.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { contextPath } from '$lib/navigation/navigation';
 
 export type InventoryListFilter = {
   search: string;
@@ -22,6 +25,8 @@ export type InventoryListModel = {
     filter: InventoryListFilter;
     /** O produto que está esperando confirmação de exclusão — nulo quando não há. */
     deleting: InventoryItem | null;
+    /** A faixa do recorte do Painel, quando a lista veio de um clique num bloco. */
+    drillBanner: BoardDrillBanner | null;
   };
   state: {
     isLoading: boolean;
@@ -38,6 +43,8 @@ export type InventoryListModel = {
     onCategoryChange: (category: InventoryCategory | '') => void;
     onWithoutPhotoOnlyChange: (withoutPhotoOnly: boolean) => void;
     onClearFilters: () => void;
+    onClearDrill: () => void;
+    onBackToBoard: () => void;
     onRetry: () => void;
     onAskDelete: (item: InventoryItem) => void;
     onCancelDelete: () => void;
@@ -49,8 +56,9 @@ const EMPTY_FILTER: InventoryListFilter = { search: '', category: '', withoutPho
 
 export const INVENTORY_QUERY_KEY = ['inventory-items'] as const;
 
-function scopeOf(filter: InventoryListFilter) {
+function scopeOf(filter: InventoryListFilter, drill: BoardDrill | null = null) {
   return {
+    drill: drill ?? undefined,
     search: filter.search.trim() || undefined,
     category: filter.category || undefined,
     withoutPhotoOnly: filter.withoutPhotoOnly || undefined,
@@ -73,15 +81,22 @@ export function useInventoryListModel(): InventoryListModel {
   const filterStore = writable<InventoryListFilter>({ ...EMPTY_FILTER });
   const filter = mirrorStore(filterStore);
 
+  /* O recorte de um clique no Painel (`?drill=`): soma ao filtro da lista. */
+  const drill = useBoardDrillModel({ module: 'manutencao', path: contextPath('manutencao', '/inventory') });
+
   let deleting = $state<InventoryItem | null>(null);
   let deleteError = $state<string | null>(null);
 
   const list = mirrorStore(
     createQuery(
-      derived(filterStore, (current) => ({
-        queryKey: [...INVENTORY_QUERY_KEY, 'list', scopeOf(current)],
+      derived([filterStore, drill.store], ([current, currentDrill]) => ({
+        queryKey: [...INVENTORY_QUERY_KEY, 'list', scopeOf(current, currentDrill)],
         queryFn: () =>
-          inventoryItemsApi.list({ ...scopeOf(current), page: 1, pageSize: MAX_PAGE_SIZE }),
+          inventoryItemsApi.list({
+            ...scopeOf(current, currentDrill),
+            page: 1,
+            pageSize: MAX_PAGE_SIZE,
+          }),
       })),
     ),
   );
@@ -113,11 +128,12 @@ export function useInventoryListModel(): InventoryListModel {
         total: list.current.data?.total ?? 0,
         filter: filter.current,
         deleting,
+        drillBanner: drill.banner,
       };
     },
     get state() {
       return {
-        ...buildListState(list.current, filter.current),
+        ...buildListState(list.current, filter.current, drill.drill !== null),
         isDeleting: remove.current.isPending,
         deleteError,
       };
@@ -128,6 +144,8 @@ export function useInventoryListModel(): InventoryListModel {
       onWithoutPhotoOnlyChange: (withoutPhotoOnly) =>
         filterStore.update((current) => ({ ...current, withoutPhotoOnly })),
       onClearFilters: () => filterStore.set({ ...EMPTY_FILTER }),
+      onClearDrill: drill.onClear,
+      onBackToBoard: drill.onBack,
       onRetry: () => {
         void list.current.refetch();
       },
@@ -170,12 +188,14 @@ function hasAnyFilter(filter: InventoryListFilter): boolean {
 function buildListState(
   list: ListQueryLike,
   filter: InventoryListFilter,
+  /** Com recorte do Painel, a lista vazia é "nada casou", e não "não há produtos". */
+  hasDrill = false,
 ): Omit<InventoryListModel['state'], 'isDeleting' | 'deleteError'> {
   const count = list.data?.items.length ?? 0;
   /* Vazio só é vazio DEPOIS que a consulta terminou. Dizer "nenhum produto" durante o
      carregamento faz a pessoa achar que o inventário sumiu — e recarregar. */
   const isSettledEmpty = list.isSuccess && count === 0;
-  const filtered = hasAnyFilter(filter);
+  const filtered = hasDrill || hasAnyFilter(filter);
 
   return {
     isLoading: list.isPending,

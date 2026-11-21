@@ -1,3 +1,4 @@
+import { drillParam } from '@template/shared/schemas/board-drill.schema';
 import { parseAmountToCents } from '@template/shared/domain/maintenance-quote.util';
 import {
   type MaintenanceQuote,
@@ -20,6 +21,7 @@ export const maintenanceQuotesApi = {
   list: (query: Partial<MaintenanceQuoteListQuery>) =>
     apiRequest<Paginated<MaintenanceQuote>>('/maintenance-quotes', {
       query: {
+        drill: query.drill ? drillParam(query.drill) : undefined,
         page: query.page,
         pageSize: query.pageSize,
         search: query.search,

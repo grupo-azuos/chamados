@@ -45,7 +45,8 @@
     toSankey,
     toStacked,
   } from '$lib/utils/widget-chart.util';
-  import { cellItemOf, itemOfLabel, sankeyItemOf, statItemOf } from '$lib/utils/widget-items.util';
+  import { hasDrillTarget } from '$lib/utils/board-drill.util';
+  import { cellItemOf, itemOfLabel, sankeyItemOf, statItemOf, timeItemOf } from '$lib/utils/widget-items.util';
   import { calendarDaysOf, timePointsOf } from '$lib/utils/widget-view.util';
 
   let { data, actions }: AzuosBoardWidgetBodyProps = $props();
@@ -65,12 +66,12 @@
   const grandTotal = $derived(result.data?.grandTotal ?? 0);
 
   /**
-   * O clique num item, quando o bloco o promete: os itens escolhidos como clicáveis (o padrão) e
-   * alguém para abrir a lista. Montando o painel, ou com os itens não clicáveis, o bloco fica de
-   * leitura — sem mãozinha.
+   * O clique num item, quando o bloco o promete: os itens escolhidos como clicáveis (o padrão),
+   * uma lista da fonte para abrir e alguém para abri-la. Montando o painel, ou com os itens não
+   * clicáveis, o bloco fica de leitura — sem mãozinha.
    */
   const onItem = $derived(
-    actions.onOpenItem && widgetIsClickable(widget)
+    actions.onOpenItem && widgetIsClickable(widget) && hasDrillTarget(widget.source)
       ? (item: BoardItem) => actions.onOpenItem?.(widget, item)
       : undefined,
   );
@@ -83,10 +84,17 @@
 </script>
 
 {#snippet statRow(cards: { label: string; value: number }[], className: string, cardClassName: string)}
-  <!-- A linha mede o espaço DELA (`@container`), e não a tela: no painel largo, quatro lado a
-       lado; na pré-visualização do editor, dois por linha. -->
-  <div class={cn('@container', className)}>
-    <div class="grid h-full grid-cols-2 gap-3 @3xl:grid-cols-4">
+  <!-- A linha mede o espaço DELA (`@container`), e não a tela: no painel largo, todos lado a
+       lado; na pré-visualização do editor, dois por linha. As colunas são as dos cards que há
+       (até quatro): com quatro colunas fixas, dois cards num bloco largo deixavam um buraco. -->
+  <div
+    class={cn('@container', className)}
+    style:--stat-columns={Math.max(1, Math.min(cards.length, 4))}
+    style:--stat-columns-narrow={Math.max(1, Math.min(cards.length, 2))}
+  >
+    <div
+      class="grid h-full grid-cols-[repeat(var(--stat-columns-narrow),minmax(0,1fr))] gap-3 @3xl:grid-cols-[repeat(var(--stat-columns),minmax(0,1fr))]"
+    >
       {#each cards as card, index (card.label)}
         <StatCard
           data={{ label: card.label, value: card.value.toLocaleString('pt-BR') }}
@@ -215,12 +223,20 @@
     }}
     state={{ isLoading }}
     ui={{ heightClass: 'h-full min-h-40' }}
+    actions={{
+      onSelect: onItem
+        ? (at) => {
+            const item = timeItemOf(series, at);
+            if (item) onItem(item);
+          }
+        : undefined,
+    }}
   />
 {:else if widget.kind === 'column' || widget.kind === 'bar'}
   <ColumnChart
     data={{ slices, seriesLabel: noun }}
     state={{ isLoading }}
-    ui={{ orientation: widget.kind === 'bar' ? 'horizontal' : 'vertical' }}
+    ui={{ orientation: widget.kind === 'bar' ? 'horizontal' : 'vertical', className: 'h-full min-h-40' }}
     actions={{ onSelect: selectByLabel }}
   />
 {:else if widget.kind === 'radar'}

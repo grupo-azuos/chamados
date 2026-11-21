@@ -1,7 +1,11 @@
 import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { softwareProjectListQuerySchema } from '@template/shared/schemas/software-project.schema';
 import { describe, expect, it, vi } from 'vitest';
 
+import { sql } from 'drizzle-orm';
+
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { type SoftwareProjectRow } from '../../../lib/db/schema/software-projects.schema';
 import { type TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import { type SoftwareProjectsRepository } from '../repository/software-projects.repository';
@@ -59,6 +63,7 @@ function makeService(
   repoOverrides: Partial<SoftwareProjectsRepository> = {},
   timelineOverrides: Partial<SoftwareTimelineRepository> = {},
   githubOverrides: Partial<GithubService> = {},
+  drills?: BoardDrillResolver,
 ) {
   const repository = {
     list: vi.fn().mockResolvedValue({ rows: [projectRow()], total: 1 }),
@@ -105,6 +110,8 @@ function makeService(
       githubService,
       assignees,
       connections,
+      undefined,
+      drills,
     ),
     repository,
     timelineRepository,
@@ -138,6 +145,32 @@ describe('SoftwareProjectsService', () => {
         openTicketsCount: 3,
         pullRequestsCount: 5,
       });
+    });
+
+    // feliz
+    it('narrows the systems to the board block that was clicked', async () => {
+      const cut = sql`true`;
+      const drillCondition = vi.fn().mockResolvedValue(cut);
+      const { service, repository } = makeService({}, {}, {}, { drillCondition });
+      const drill = softwareProjectListQuerySchema.shape.drill.parse(
+        JSON.stringify({ source: 'softwareProjects', groupBy: 'status', filterId: null, key: 'active' }),
+      );
+
+      await service.list(user, { page: 1, pageSize: 10, archived: 'hide', drill });
+
+      expect(drillCondition).toHaveBeenCalledWith(user, expect.objectContaining({ key: 'active' }), ['softwareProjects']);
+      expect(repository.list).toHaveBeenCalledWith(expect.anything(), cut);
+    });
+
+    // triste
+    it('lists without a cut when no block was clicked', async () => {
+      const drillCondition = vi.fn();
+      const { service, repository } = makeService({}, {}, {}, { drillCondition });
+
+      await service.list(user, { page: 1, pageSize: 10, archived: 'hide' });
+
+      expect(drillCondition).not.toHaveBeenCalled();
+      expect(repository.list).toHaveBeenCalledWith(expect.anything(), undefined);
     });
   });
 

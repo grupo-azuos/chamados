@@ -1,4 +1,5 @@
 import { page } from '$app/state';
+import { DRILL_PARAM } from '@template/shared/schemas/board-drill.schema';
 import { writable, type Readable } from 'svelte/store';
 
 import {
@@ -79,6 +80,10 @@ export function restore<TFilters>(
   options: PersistedFiltersOptions<TFilters>,
   params: URLSearchParams,
 ): TFilters {
+  /* Com o recorte de um clique no painel, a lista abre LIMPA: o recorte é o filtro, e um filtro
+     esquecido do último uso faria a lista discordar do número clicado. O salvo não se apaga —
+     volta no "Limpar recorte". */
+  if (params.has(DRILL_PARAM)) return { ...options.defaults };
   const fromUrl = options.fromUrl?.(params);
   if (fromUrl) {
     const requested = { ...options.defaults, ...fromUrl };

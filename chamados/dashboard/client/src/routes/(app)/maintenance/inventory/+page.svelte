@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BoardDrillBanner from '$lib/components/azuos-board-drill-banner/azuos-board-drill-banner.svelte';
   import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
   import { useArchivedInventoryModel } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import { type InventoryItem } from '@template/shared/schemas/inventory-item.schema';
@@ -24,15 +25,24 @@
   <title>Inventário</title>
 </svelte:head>
 
-<InventoryListView
-  data={list.data}
-  state={list.state}
-  actions={{
-    ...list.actions,
-    onRegister: () => (editing = { item: null }),
-    onEdit: (item: InventoryItem) => (editing = { item }),
-  }}
-/>
+<!-- Vinda de um clique no Painel, a lista mostra no alto o recorte que a trouxe. -->
+<div class="flex w-full flex-col">
+  {#if list.data.drillBanner}
+    <BoardDrillBanner
+      data={list.data.drillBanner}
+      actions={{ onClear: list.actions.onClearDrill, onBack: list.actions.onBackToBoard }}
+    />
+  {/if}
+  <InventoryListView
+    data={list.data}
+    state={list.state}
+    actions={{
+      ...list.actions,
+      onRegister: () => (editing = { item: null }),
+      onEdit: (item: InventoryItem) => (editing = { item }),
+    }}
+  />
+</div>
 
 <!-- O que foi excluído some da lista e aparece aqui, fechado, com o "Desfazer". -->
 <ArchivedList

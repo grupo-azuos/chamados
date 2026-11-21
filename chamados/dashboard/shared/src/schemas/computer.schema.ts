@@ -6,6 +6,7 @@ import { DISPOSAL_TYPES } from '../domain/disposal.util';
 import { HEALTH_STATUSES } from '../domain/computer-health.util';
 import { RESOURCE_CONDITIONS } from '../domain/computer-resource.util';
 import { PREVENTIVE_STATUSES } from '../domain/maintenance.util';
+import { boardDrillParamSchema } from './board-drill.schema';
 import { departmentNameSchema } from './department.schema';
 import { MAX_PAGE_SIZE, paginatedSchema, paginationQuerySchema } from './pagination.schema';
 import { reportFormatSchema } from './report.schema';
@@ -284,6 +285,8 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
    */
   onlyDisposed: z.coerce.boolean<boolean>().optional(),
   disposalType: disposalTypeSchema.optional(),
+  /** O recorte de um clique no painel (`board-drill.schema`): estreita a lista ao item clicado. */
+  drill: boardDrillParamSchema.optional(),
 });
 
 /**

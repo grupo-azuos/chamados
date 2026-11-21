@@ -6,7 +6,10 @@ import {
 import { maintenanceQuoteListQuerySchema } from '@template/shared/schemas/maintenance-quote.schema';
 import { describe, expect, it, vi } from 'vitest';
 
+import { sql } from 'drizzle-orm';
+
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { type MaintenanceQuoteRow } from '../../../lib/db/schema/maintenance-quotes.schema';
 import { type FileStorage } from '../../../lib/storage/file-storage.type';
 import { MemoryStorage } from '../../../lib/storage/memory-storage';
@@ -109,6 +112,7 @@ const defaultStorage: Partial<FileStorage> = {
 function makeService(
   repository: Partial<MaintenanceQuotesRepository> = {},
   storage: Partial<FileStorage> = {},
+  drills?: BoardDrillResolver,
 ) {
   const memory = Object.assign(
     storage instanceof MemoryStorage ? storage : new MemoryStorage(),
@@ -120,6 +124,7 @@ function makeService(
     { ...defaultRepository, ...repository } as MaintenanceQuotesRepository,
     new StagedUploadsService(memory),
     memory,
+    drills,
   );
 }
 
@@ -427,5 +432,34 @@ describe('MaintenanceQuotesService.restore', () => {
 
     await expect(service.restore(viewer, 1)).rejects.toThrow(ForbiddenException);
     expect(setArchived).not.toHaveBeenCalled();
+  });
+});
+
+describe('MaintenanceQuotesService.list with a board cut', () => {
+  // feliz
+  it('narrows the quotes to the board block that was clicked', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const cut = sql`true`;
+    const drillCondition = vi.fn().mockResolvedValue(cut);
+    const drill = JSON.stringify({ source: 'quotes', groupBy: 'status', filterId: null, key: 'pending' });
+
+    await makeService({ list }, {}, { drillCondition }).list(
+      viewer,
+      maintenanceQuoteListQuerySchema.parse({ drill }),
+    );
+
+    expect(drillCondition).toHaveBeenCalledWith(viewer, expect.objectContaining({ key: 'pending' }), ['quotes']);
+    expect(list).toHaveBeenCalledWith(expect.anything(), cut);
+  });
+
+  // triste
+  it('lists without a cut when no block was clicked', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const drillCondition = vi.fn();
+
+    await makeService({ list }, {}, { drillCondition }).list(viewer, query);
+
+    expect(drillCondition).not.toHaveBeenCalled();
+    expect(list).toHaveBeenCalledWith(expect.anything(), undefined);
   });
 });

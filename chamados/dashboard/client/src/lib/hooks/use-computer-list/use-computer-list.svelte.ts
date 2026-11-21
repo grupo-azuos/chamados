@@ -8,6 +8,7 @@ import {
 import { COMPUTER_KINDS, type ComputerKind } from '@template/shared/domain/computer-kind.util';
 import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
 import { compareMachines, type NumberedMachine } from '@template/shared/domain/machine-number.util';
+import { type BoardDrill } from '@template/shared/schemas/board-drill.schema';
 import {
   COMPUTER_ALERT_FILTERS,
   COMPUTER_PREVENTIVE_FILTERS,
@@ -23,6 +24,7 @@ import { derived, writable } from 'svelte/store';
 
 import { computersApi } from '$lib/api/computers.api';
 import { readError } from '$lib/api/http-client';
+import { type BoardDrillBanner, useBoardDrillModel } from '$lib/hooks/use-board-drill/use-board-drill.svelte';
 import {
   allSchedulesQuery,
   schedulesByComputer,
@@ -30,6 +32,7 @@ import {
 import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
+import { contextPath } from '$lib/navigation/navigation';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 import {
   fieldParser,
@@ -85,6 +88,8 @@ export type ComputerListModel = {
     scheduledFor: Record<number, string>;
     /** As opções do filtro de departamento: as do RH e, depois da linha, as daqui. */
     departmentOptions: DepartmentChoice[];
+    /** A faixa do recorte do Painel, quando a lista veio de um clique num bloco. */
+    drillBanner: BoardDrillBanner | null;
   };
   state: {
     isLoading: boolean;
@@ -115,6 +120,8 @@ export type ComputerListModel = {
     onRetry: () => void;
     onOpen: (computer: Computer) => void;
     onExportReport: (format: ReportFormat) => void;
+    onClearDrill: () => void;
+    onBackToBoard: () => void;
   };
 };
 
@@ -151,7 +158,13 @@ export const COMPUTER_LIST_FILTER_SCREEN = 'infra-computers';
 export const COMPUTERS_QUERY_KEY = ['computers'] as const;
 export const COMPUTER_NAME_REFRESH_MS = 60_000;
 
-function scopeOf(filter: ComputerListFilter) {
+/** O recorte de um clique no Painel SOMA ao filtro da lista, não o substitui. */
+function scopeOf(filter: ComputerListFilter, drill: BoardDrill | null = null) {
+  return { drill: drill ?? undefined, ...filterScopeOf(filter) };
+}
+
+/** Os campos do filtro, separados do recorte para o `scopeOf` caber no limite de complexidade. */
+function filterScopeOf(filter: ComputerListFilter) {
   return {
     search: filter.search.trim() || undefined,
     department: filter.department || undefined,
@@ -246,15 +259,18 @@ export function useComputerListModel(): ComputerListModel {
     fromUrl: urlParser(EMPTY_FILTER, FILTER_GUARDS),
   });
   const filter = mirrorStore(filterStore);
+  /* O recorte de um clique no Painel (`?drill=`): soma ao filtro do inventário. */
+  const drill = useBoardDrillModel({ module: 'infra', path: contextPath('infra', '/computers') });
 
   let exportingFormat = $state<ReportFormat | null>(null);
   let exportError = $state<string | null>(null);
 
   const list = mirrorStore(
     createQuery(
-      derived(filterStore, (current) => ({
-        queryKey: [...COMPUTERS_QUERY_KEY, 'list', scopeOf(current)],
-        queryFn: () => computersApi.list({ ...scopeOf(current), page: 1, pageSize: MAX_PAGE_SIZE }),
+      derived([filterStore, drill.store], ([current, currentDrill]) => ({
+        queryKey: [...COMPUTERS_QUERY_KEY, 'list', scopeOf(current, currentDrill)],
+        queryFn: () =>
+          computersApi.list({ ...scopeOf(current, currentDrill), page: 1, pageSize: MAX_PAGE_SIZE }),
         refetchInterval: COMPUTER_NAME_REFRESH_MS,
       })),
     ),
@@ -289,11 +305,12 @@ export function useComputerListModel(): ComputerListModel {
         filter: filter.current,
         scheduledFor: scheduledDayByComputer(schedules.current.data),
         departmentOptions: departments.options,
+        drillBanner: drill.banner,
       };
     },
     get state() {
       return {
-        ...buildListState(list.current, filter.current),
+        ...buildListState(list.current, filter.current, drill.drill !== null),
         isSummaryLoading: summary.current.isPending,
         exportingFormat,
         exportError,
@@ -338,7 +355,7 @@ export function useComputerListModel(): ComputerListModel {
         exportingFormat = format;
 
         computersApi
-          .exportReport(scopeOf(filter.current), format)
+          .exportReport(scopeOf(filter.current, drill.drill), format)
           .then(({ blob, fileName }) => triggerBrowserDownload(blob, fileName))
           .catch((error: unknown) => {
             exportError = readError(error) ?? 'Não consegui gerar o relatório.';
@@ -347,6 +364,8 @@ export function useComputerListModel(): ComputerListModel {
             exportingFormat = null;
           });
       },
+      onClearDrill: drill.onClear,
+      onBackToBoard: drill.onBack,
     },
   };
 }
@@ -380,12 +399,14 @@ function hasAnyFilter(filter: ComputerListFilter): boolean {
 function buildListState(
   list: ListQueryLike,
   filter: ComputerListFilter,
+  hasDrill = false,
 ): Omit<ComputerListModel['state'], 'isSummaryLoading' | 'exportingFormat' | 'exportError'> {
   const count = list.data?.items.length ?? 0;
   /* Vazio só é vazio DEPOIS que a consulta terminou. Mostrar "nenhuma máquina" durante o
      carregamento faz a pessoa achar que o inventário sumiu — e recarregar. */
   const isSettledEmpty = list.isSuccess && count === 0;
-  const filtered = hasAnyFilter(filter);
+  /* O recorte do Painel também é filtro: vazio com ele é "o recorte escondeu tudo". */
+  const filtered = hasDrill || hasAnyFilter(filter);
 
   return {
     isLoading: list.isPending,

@@ -13,6 +13,7 @@ import {
   TICKET_STATUS_GROUPS,
   TICKET_STATUSES,
 } from '../domain/ticket-status.util';
+import { boardDrillParamSchema } from './board-drill.schema';
 import { paginationQuerySchema } from './pagination.schema';
 import { reportFormatSchema } from './report.schema';
 import { ticketAttachmentSchema } from './ticket-attachment.schema';
@@ -587,6 +588,8 @@ export const ticketListQuerySchema = paginationQuerySchema.extend({
   area: ticketAreaSchema.optional(),
   department: ticketDepartmentSchema.optional(),
   problemType: ticketProblemTypeSchema.optional(),
+  /** O recorte de um clique no painel (`board-drill.schema`): estreita a lista ao item clicado. */
+  drill: boardDrillParamSchema.optional(),
 });
 
 export type TicketListQuery = z.infer<typeof ticketListQuerySchema>;

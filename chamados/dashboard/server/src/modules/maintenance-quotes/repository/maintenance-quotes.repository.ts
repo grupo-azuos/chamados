@@ -22,8 +22,9 @@ export type MaintenanceQuotePage = { rows: MaintenanceQuoteRow[]; total: number 
 export class MaintenanceQuotesRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(query: MaintenanceQuoteListQuery): Promise<MaintenanceQuotePage> {
-    const where = buildWhere(query);
+  /** `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro. */
+  async list(query: MaintenanceQuoteListQuery, drill?: SQL): Promise<MaintenanceQuotePage> {
+    const where = and(buildWhere(query), drill);
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([

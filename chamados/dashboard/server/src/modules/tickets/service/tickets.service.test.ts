@@ -8,9 +8,11 @@ import {
   type CreateTicketInput,
   ticketListQuerySchema,
 } from '@template/shared/schemas/ticket.schema';
+import { sql } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { type Env } from '../../../lib/config/env.schema';
 
 import { type FileStorage } from '../../../lib/storage/file-storage.type';
@@ -559,7 +561,7 @@ describe('TicketsService.exportList', () => {
 
     const report = await service.exportList(ana, { format: 'xlsx', status: 'open' });
 
-    expect(listAll).toHaveBeenCalledWith({ format: 'xlsx', status: 'open' }, ['infra']);
+    expect(listAll).toHaveBeenCalledWith({ format: 'xlsx', status: 'open' }, ['infra'], undefined);
     expect(report.fileName).toBe('chamados.xlsx');
     expect(report.buffer.length).toBeGreaterThan(0);
   });
@@ -686,7 +688,60 @@ describe('TicketsService — access by area', () => {
 
     await service.list(ana, query());
 
-    expect(list).toHaveBeenCalledWith(expect.anything(), ['infra']);
+    expect(list).toHaveBeenCalledWith(expect.anything(), ['infra'], undefined);
+  });
+
+  /** O serviço com o recorte do painel: o resolvedor é o último argumento, opcional. */
+  function withDrills(list: ReturnType<typeof vi.fn>, drillCondition: BoardDrillResolver['drillCondition']) {
+    const tickets = { ...defaultRepository, list } as unknown as TicketsRepository;
+    const none = undefined;
+
+    return new TicketsService(
+      tickets,
+      storageStub as unknown as FileStorage,
+      stagingStub,
+      attachmentsStub as unknown as TicketAttachmentsService,
+      new TicketAccessService(tickets),
+      historiesStub as unknown as TicketHistoriesService,
+      historiesRepositoryStub as unknown as TicketHistoriesRepository,
+      none,
+      none,
+      none,
+      none,
+      none,
+      none,
+      none,
+      none,
+      none,
+      { drillCondition },
+    );
+  }
+
+  // feliz
+  it('narrows the queue to the board block that was clicked', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const cut = sql`true`;
+    const drillCondition = vi.fn<BoardDrillResolver['drillCondition']>().mockResolvedValue(cut);
+    const drill = JSON.stringify({ source: 'infraTickets', groupBy: 'status', filterId: null, key: 'aberto' });
+
+    await withDrills(list, drillCondition).list(ana, query({ drill }));
+
+    expect(drillCondition).toHaveBeenCalledWith(
+      ana,
+      expect.objectContaining({ key: 'aberto' }),
+      ['infraTickets', 'systemTickets', 'maintenanceTickets'],
+    );
+    expect(list).toHaveBeenCalledWith(expect.anything(), ['infra'], cut);
+  });
+
+  // triste
+  it('lists without a cut when no block was clicked', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const drillCondition = vi.fn<BoardDrillResolver['drillCondition']>();
+
+    await withDrills(list, drillCondition).list(ana, query());
+
+    expect(drillCondition).not.toHaveBeenCalled();
   });
 
   it('lets a superadmin see every area without even reading internal_roles', async () => {
@@ -709,7 +764,7 @@ describe('TicketsService — access by area', () => {
     const service = makeService({ list });
 
     await service.list(withRoles(globalAdmin, roles), query());
-    expect(list).toHaveBeenCalledWith(expect.anything(), []);
+    expect(list).toHaveBeenCalledWith(expect.anything(), [], undefined);
   });
 
   it('scopes the queue to nothing when the person has no role anywhere', async () => {
@@ -719,7 +774,7 @@ describe('TicketsService — access by area', () => {
 
     await service.list(withRoles(ana, roles), query());
 
-    expect(list).toHaveBeenCalledWith(expect.anything(), []);
+    expect(list).toHaveBeenCalledWith(expect.anything(), [], undefined);
   });
 
   it('refuses to open a ticket from an area the person has no role in', async () => {

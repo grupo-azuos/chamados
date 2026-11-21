@@ -81,8 +81,9 @@ const computerColumns = {
 export class MaintenancesRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(query: MaintenanceListQuery): Promise<MaintenancePage> {
-    const where = buildWhere(query);
+  /** `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro. */
+  async list(query: MaintenanceListQuery, drill?: SQL): Promise<MaintenancePage> {
+    const where = and(buildWhere(query), drill);
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([

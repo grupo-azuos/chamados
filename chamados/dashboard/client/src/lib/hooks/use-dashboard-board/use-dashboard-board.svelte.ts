@@ -1,3 +1,4 @@
+import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import {
   createMutation,
@@ -45,7 +46,9 @@ import {
   upsertWidget,
   visibleScopes,
 } from '$lib/utils/board-draft.util';
+import { drillHref, drillOf } from '$lib/utils/board-drill.util';
 import { newWidget } from '$lib/utils/widget-editor.util';
+import { type BoardItem } from '$lib/utils/widget-items.util';
 
 /**
  * O PAINEL MONTADO DE UM MÓDULO — Equipe, Gestor e Pessoal. Zero marcação.
@@ -266,6 +269,11 @@ export function useDashboardBoardModel(module: BoardModule) {
         previewWidget = null;
       },
       onRemoveWidget: (id: string) => edit((current) => removeWidget(current, id)),
+      /* O clique num item de um bloco: a lista da fonte, com o recorte do bloco e do item. */
+      onOpenItem: (widget: Widget, item: BoardItem) => {
+        const href = drillHref(drillOf(widget, filterValues, item));
+        if (href) void goto(href);
+      },
       onPreviewChange: (widget: Widget) => {
         previewWidget = widget;
       },

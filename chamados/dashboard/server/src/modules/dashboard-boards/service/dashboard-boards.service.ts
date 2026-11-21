@@ -5,6 +5,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { type ArchivedFilter } from '@template/shared/schemas/archive.schema';
+import { type BoardDrill } from '@template/shared/schemas/board-drill.schema';
 import {
   ageBandLabel,
   type Board,
@@ -16,6 +17,7 @@ import {
   type DataDimension,
   type DataSourceKey,
   DEFAULT_AGE_BANDS,
+  DATA_SOURCES,
   dimensionsOf,
   type FilterGroup,
   hasPersonField,
@@ -156,6 +158,37 @@ export class DashboardBoardsService {
           value: cell.value,
         })),
       };
+    });
+  }
+
+  /**
+   * O RECORTE DE UM CLIQUE NUM BLOCO, para a lista da fonte: a mesma condição que contou o bloco
+   * (`data`), mais o item clicado — o valor do agrupamento e o da divisão. O número clicado é o
+   * total da lista por construção.
+   */
+  async drillCondition(user: RequestUser, drill: BoardDrill, expected: readonly DataSourceKey[]): Promise<SQL> {
+    if (!expected.includes(drill.source)) {
+      throw new UnprocessableEntityException('Este recorte do painel é de outra lista.');
+    }
+    const module = DATA_SOURCES[drill.source].module;
+    assertCanView(user, module, 'team');
+
+    return this.translating(async () => {
+      const scope = await this.scopeOf(user, module, drill);
+      const source = SOURCE_TABLES[drill.source];
+      const dimension = drill.groupBy ? dimensionOf(drill.source, drill.groupBy, drill.ageBands) : null;
+      const split = drill.splitBy ? dimensionOf(drill.source, drill.splitBy, drill.ageBands) : null;
+
+      return this.repository.conditionOf(source, {
+        tree: scope.tree,
+        extra: and(
+          blockConditions(source, drill, scope),
+          dimension?.scope,
+          split?.scope,
+          itemCondition(dimension, drill.key),
+          itemCondition(split, drill.key2),
+        ),
+      });
     });
   }
 
@@ -337,6 +370,13 @@ type BlockScope = {
 /** O filtro "Pessoa" do painel: o nome escolhido, ou o de quem vê ("eu"). */
 function personOf(user: RequestUser, person: string): string {
   return person === ME_VALUE ? user.name : person;
+}
+
+/** O item clicado: a expressão do agrupamento igual à chave. Sem agrupamento ou sem chave, nada. */
+function itemCondition(dimension: CountDimension | null, key: string | null): SQL | undefined {
+  if (!dimension || key === null) return undefined;
+
+  return sql`${dimension.expression} = ${key}`;
 }
 
 /** As condições do bloco além da árvore: "só os meus", a pessoa, o período e a janela. */

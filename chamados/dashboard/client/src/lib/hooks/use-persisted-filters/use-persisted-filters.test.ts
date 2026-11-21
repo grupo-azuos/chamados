@@ -21,6 +21,14 @@ afterEach(() => window.localStorage.clear());
 
 describe('restore', () => {
   // feliz
+  it('opens clean, keeping the saved filter, when the list comes from a board click', () => {
+    saveScreenFilters(USER, 'infra-parts', { search: 'teclado', outOfStockOnly: false });
+
+    expect(restore(USER, OPTIONS, new URLSearchParams('drill=%7B%7D&outOfStockOnly=true'))).toEqual(DEFAULTS);
+    expect(loadScreenFilters(USER, 'infra-parts')).toEqual({ search: 'teclado', outOfStockOnly: false });
+  });
+
+  // feliz
   it('opens with what the person left saved', () => {
     saveScreenFilters(USER, 'infra-parts', { search: 'teclado', outOfStockOnly: false });
 

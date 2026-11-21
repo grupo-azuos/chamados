@@ -1,3 +1,4 @@
+import { drillParam } from '@template/shared/schemas/board-drill.schema';
 import { type ComputerLiveResponse } from '@template/shared/schemas/computer-live.schema';
 import {
   type Computer,
@@ -31,13 +32,13 @@ export const computersApi = {
     apiRequest<Paginated<ComputerListItem>>('/computers', {
       /* O filtro INTEIRO vai para o servidor, que filtra no SQL. Listar campo a campo deixou o
          da preventiva de fora: a tela mostrava o filtro e a lista vinha sem filtrar. */
-      query: { ...query },
+      query: withDrillParam(query),
     }),
 
   /** Baixa o relatório com os MESMOS filtros da lista — sem página, é o parque inteiro. */
   exportReport: (query: Partial<ComputerListQuery>, format: ReportFormat): Promise<Downloaded> =>
     apiDownload('/computers/export', {
-      query: { ...withoutPaging(query), format },
+      query: { ...withDrillParam(withoutPaging(query)), format },
     }),
 
   findById: (id: number) => apiRequest<Computer>(`/computers/${id}`),
@@ -88,6 +89,16 @@ export const computersApi = {
   regenerateToken: (id: number) =>
     apiRequest<CreatedComputer>(`/computers/${id}/token`, { method: 'POST' }),
 };
+
+/**
+ * O filtro como a URL o leva: o recorte do painel vai como JSON numa string, que é como o
+ * servidor o lê (`boardDrillParamSchema`); o resto segue campo a campo.
+ */
+function withDrillParam(query: Partial<ComputerListQuery>) {
+  const { drill, ...filters } = query;
+
+  return { ...filters, drill: drill ? drillParam(drill) : undefined };
+}
 
 /** O relatório leva os filtros da lista, sem a página: ele é o parque inteiro que casou. */
 function withoutPaging(query: Partial<ComputerListQuery>): Partial<ComputerListQuery> {

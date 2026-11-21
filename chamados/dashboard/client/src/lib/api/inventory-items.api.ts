@@ -1,3 +1,4 @@
+import { drillParam } from '@template/shared/schemas/board-drill.schema';
 import {
   type CreateInventoryItemEventInput,
   type InventoryItemEvent,
@@ -29,8 +30,9 @@ import { apiRequest, uploadFile } from './http-client';
 export const inventoryItemsApi = {
   list: (query: Partial<InventoryItemListQuery>) =>
     apiRequest<Paginated<InventoryItem>>('/inventory-items', {
-      /* O filtro INTEIRO vai para o servidor, que filtra no SQL. */
-      query: { ...query },
+      /* O filtro INTEIRO vai para o servidor, que filtra no SQL. O recorte do painel vai em
+         JSON, numa string: na URL, um objeto viraria "[object Object]". */
+      query: { ...query, drill: query.drill ? drillParam(query.drill) : undefined },
     }),
 
   findById: (id: number) => apiRequest<InventoryItem>(`/inventory-items/${id}`),

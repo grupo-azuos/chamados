@@ -102,10 +102,11 @@ export class TicketsRepository {
    * sem cargo em área nenhuma, lista vazia, e a consulta nem toca o banco: devolve página
    * vazia direto, sem gastar uma viagem para aprender o que já se sabia de antemão.
    */
-  async list(query: TicketListQuery, areas: readonly TicketArea[]): Promise<TicketPage> {
+  /** `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro. */
+  async list(query: TicketListQuery, areas: readonly TicketArea[], drill?: SQL): Promise<TicketPage> {
     if (areas.length === 0) return { rows: [], total: 0 };
 
-    const where = await this.scopedWhere(query, areas);
+    const where = and(await this.scopedWhere(query, areas), drill);
 
     const offset = (query.page - 1) * query.pageSize;
 
@@ -136,6 +137,7 @@ export class TicketsRepository {
   async listAll(
     query: TicketReportQuery,
     areas: readonly TicketArea[],
+    drill?: SQL,
   ): Promise<TicketWithComputer[]> {
     if (areas.length === 0) return [];
 
@@ -145,7 +147,7 @@ export class TicketsRepository {
         .from(tickets)
         .leftJoin(computers, eq(computers.id, tickets.computerId))
         .leftJoin(softwareProjects, eq(softwareProjects.id, tickets.projectId))
-        .where(await this.scopedWhere(query, areas))
+        .where(and(await this.scopedWhere(query, areas), drill))
         .orderBy(desc(tickets.createdAt), desc(tickets.id))
         .limit(REPORT_FETCH_LIMIT),
       'listar chamados para o relatório',
