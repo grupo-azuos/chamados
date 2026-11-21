@@ -88,7 +88,7 @@
       align="start"
       collisionPadding={12}
       aria-label={`Selecionar horário de ${data.label.toLowerCase()}`}
-      class="w-64 max-w-[calc(100vw-2rem)] gap-4 rounded-surface border border-border bg-card p-4 shadow-xl"
+      class="w-64 max-w-[calc(100vw-2rem)] gap-4 rounded-box bg-popover p-4 shadow-xl border-0 ring-1 ring-foreground/8"
     >
       <div class="flex items-center justify-between gap-3">
         <div>

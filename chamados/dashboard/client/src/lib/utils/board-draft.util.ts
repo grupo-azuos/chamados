@@ -5,6 +5,7 @@ import {
   type BoardFilterDisplay,
   type BoardFilterKind,
   BOARD_FILTER_KIND_LABELS,
+  type BoardFilterPlace,
   type BoardFilterValues,
   boardMatches,
   type BoardModule,
@@ -99,6 +100,25 @@ export function setBoardFilterDisplay(current: BoardDraft, id: string, display: 
   return {
     ...current,
     filters: current.filters.map((filter) => (filter.id === id ? { ...filter, display } : filter)),
+  };
+}
+
+export type BoardFilterPlaceChange = { id: string; place: BoardFilterPlace };
+
+/**
+ * O lugar novo de cada filtro, como a grade devolveu. Só muda o lugar: o resto do filtro (nome,
+ * desenho) fica como estava, e um id que o painel não tem é ignorado.
+ */
+export function setBoardFilterPlaces(current: BoardDraft, places: readonly BoardFilterPlaceChange[]): BoardDraft {
+  const byId = new Map(places.map((change) => [change.id, change.place]));
+
+  return {
+    ...current,
+    filters: current.filters.map((filter) => {
+      const place = byId.get(filter.id);
+
+      return place ? { ...filter, place } : filter;
+    }),
   };
 }
 

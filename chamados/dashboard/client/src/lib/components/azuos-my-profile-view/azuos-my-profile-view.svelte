@@ -109,7 +109,7 @@
 {#snippet card(title: string, Icon: Component, body: Snippet)}
   <section
     aria-label={title}
-    class="bg-card border-border rounded-surface flex flex-col gap-4 border p-4 shadow-xs sm:p-6"
+    class="bg-card rounded-surface flex flex-col gap-4 p-4 sm:p-6 shadow-card"
   >
     <h2 class="text-foreground flex items-center gap-2 text-base font-semibold">
       <span class="bg-muted text-primary rounded-chip flex size-8 items-center justify-center">
@@ -144,7 +144,7 @@
 {#if state?.isLoading}
   <div role="status" aria-busy="true" class="flex w-full flex-col gap-6 px-4 pb-10 sm:px-6">
     <span class="sr-only">Carregando seu perfil…</span>
-    <div class="bg-card border-border rounded-surface overflow-hidden border shadow-xs">
+    <div class="bg-card rounded-surface overflow-hidden shadow-card">
       <div class="bg-muted h-20 animate-pulse"></div>
       <div class="flex flex-col gap-4 p-4 sm:p-6">
         <div class="bg-muted -mt-16 size-24 animate-pulse rounded-full"></div>
@@ -158,7 +158,7 @@
 {:else}
   {@const person = data.person}
   <section aria-label="Meu perfil" class="flex w-full flex-col gap-6 px-4 pb-10 sm:px-6">
-    <section aria-label="Identidade" class="bg-card border-border rounded-surface overflow-hidden border shadow-xs">
+    <section aria-label="Identidade" class="bg-card rounded-surface overflow-hidden shadow-card">
       <div aria-hidden="true" class="bg-primary h-20 sm:h-24"></div>
       <div class="flex flex-col gap-5 px-4 pb-4 sm:px-6 sm:pb-6">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start">

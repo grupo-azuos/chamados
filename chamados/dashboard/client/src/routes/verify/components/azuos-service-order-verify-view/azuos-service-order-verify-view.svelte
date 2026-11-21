@@ -122,7 +122,7 @@
   <p class="text-muted-foreground py-16 text-center text-sm">Procurando o registro…</p>
 {:else}
   <div class="flex flex-col gap-5">
-    <section class="rounded-surface border-border bg-card flex flex-col gap-4 border p-5">
+    <section class="rounded-surface bg-card flex flex-col gap-4 p-5 shadow-card">
       <header class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 class="text-foreground text-lg font-bold">Ordem de serviço {order.protocol}</h2>
@@ -185,7 +185,7 @@
       </details>
     </section>
 
-    <section class="rounded-surface border-border bg-card flex flex-col gap-4 border p-5">
+    <section class="rounded-surface bg-card flex flex-col gap-4 p-5 shadow-card">
       <header>
         <h2 class="text-foreground text-lg font-bold">Conferir o arquivo</h2>
         <p class="text-muted-foreground text-sm">
@@ -197,7 +197,7 @@
 
       <label onpaste={pasteFilesIntoInput}
         class={cn(
-          'control-lg rounded-control border-input bg-card text-foreground inline-flex w-full cursor-pointer items-center justify-center gap-2 border text-sm font-medium transition-colors sm:w-auto sm:self-start',
+          'control-lg rounded-control bg-muted text-foreground inline-flex w-full cursor-pointer items-center justify-center gap-2 border text-sm font-medium transition-colors sm:w-auto sm:self-start border-transparent',
           'hover:bg-muted has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
           'has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
         )}

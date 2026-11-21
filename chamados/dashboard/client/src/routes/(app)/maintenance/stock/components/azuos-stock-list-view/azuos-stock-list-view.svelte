@@ -93,7 +93,7 @@
     }}
   />
 
-  <div class="rounded-surface border-border bg-card flex flex-col gap-3 border p-4 shadow-xs">
+  <div class="rounded-surface bg-card flex flex-col gap-3 p-4 shadow-card">
     <TextField
       data={{
         label: 'Buscar',
@@ -183,7 +183,7 @@
       <!-- Uma coluna no celular, duas no tablet, três no monitor: o número precisa de espaço. -->
       <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {#each data.items as item (item.id)}
-          <li class="rounded-surface border-border bg-card flex flex-col gap-3 border p-4 shadow-xs">
+          <li class="rounded-surface bg-card flex flex-col gap-3 p-4 shadow-card">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <h3 class="text-ink-900 text-sm leading-tight font-semibold">{item.name}</h3>

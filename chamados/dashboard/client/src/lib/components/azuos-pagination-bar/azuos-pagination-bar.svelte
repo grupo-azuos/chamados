@@ -84,7 +84,7 @@
         type="button"
         disabled={isFirst || barState?.isLoading}
         onclick={() => actions.onPageChange(data.page - 1)}
-        class="border-border bg-card hover:bg-muted text-foreground inline-flex cursor-pointer items-center gap-1 rounded-control control-sm border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        class="bg-muted hover:bg-accent text-foreground inline-flex cursor-pointer items-center gap-1 rounded-control control-sm border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 border-transparent"
       >
         <ChevronLeft class="size-3.5" aria-hidden="true" />
         Anterior
@@ -96,7 +96,7 @@
         type="button"
         disabled={isLast || barState?.isLoading}
         onclick={() => actions.onPageChange(data.page + 1)}
-        class="border-border bg-card hover:bg-muted text-foreground inline-flex cursor-pointer items-center gap-1 rounded-control control-sm border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        class="bg-muted hover:bg-accent text-foreground inline-flex cursor-pointer items-center gap-1 rounded-control control-sm border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 border-transparent"
       >
         Próxima
         <ChevronRight class="size-3.5" aria-hidden="true" />

@@ -8,8 +8,8 @@
    * A SUPERFÍCIE de todo card do grupo — o andar de baixo dos quatro formatos (card de painel,
    * filtro pequeno, filtro grande com ícone e card de conteúdo). O mesmo desenho do template.
    *
-   * - Fundo: sempre a superfície da marca (`bg-card`), com a borda neutra. Cor entra só como
-   *   sotaque (`$lib/utils/card-tone.util`).
+   * - Fundo: a superfície (`bg-card`) SEM borda, com o fio de 1px e a sombra difusa do padrão
+   *   Apple. A cor entra no ícone cheio do assunto (`$lib/utils/card-tone.util`), nunca no fundo.
    * - Cor: card com tom (`ui.isHoverColored` + `ui.hoverTone`) fica TINGIDO o tempo todo — o tom
    *   a 16%, a mesma cor que a antiga mancha animada deixava no fim. Card sem tom fica na
    *   superfície e ganha só o véu neutro (`--hover-veil`) no hover, sem crescer de onde o mouse
@@ -60,11 +60,10 @@
   data-selected={isSelected ? 'true' : undefined}
   class={cn(
     'group/card rounded-surface shadow-card relative isolate overflow-hidden transition-[box-shadow,transform,background-color] duration-150',
-    /* A borda NEUTRA separa o card do fundo da página, que no claro é quase do mesmo branco. */
-    isSelected
-      ? 'bg-card-selected text-on-card-selected border border-transparent'
-      : 'bg-card text-card-foreground border-border border',
-    isClickable && 'cursor-pointer hover:-translate-y-0.5 hover:shadow-xl',
+    /* Padrão Apple: card SEM borda. O que separa o card do fundo cinza da página é o fio de 1px
+       e a sombra difusa do `--elevation-card` (`shadow-card`). */
+    isSelected ? 'bg-card-selected text-on-card-selected' : 'bg-card text-card-foreground',
+    isClickable && 'hover:shadow-card-hover cursor-pointer motion-safe:hover:-translate-y-0.5',
     isSelected && isClickable && 'hover:bg-card-selected-hover',
     ui?.className,
   )}

@@ -12,8 +12,8 @@
 
 <Story name="Default" asChild>
   <KanbanColumn data={{ title: 'Em andamento', count: 2 }} ui={{ tone: 'info' }} actions={{ onAdd: () => {}, onDropItem: () => {} }}>
-    <div class="bg-card border-border rounded-box border p-3 text-sm">Trocar fonte da impressora</div>
-    <div class="bg-card border-border rounded-box border p-3 text-sm">Instalar o leitor de PDF</div>
+    <div class="bg-card rounded-box p-3 text-sm shadow-card">Trocar fonte da impressora</div>
+    <div class="bg-card rounded-box p-3 text-sm shadow-card">Instalar o leitor de PDF</div>
   </KanbanColumn>
 </Story>
 

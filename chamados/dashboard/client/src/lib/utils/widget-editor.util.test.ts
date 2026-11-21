@@ -9,6 +9,9 @@ import {
   newWidget,
   parseAgeBands,
   usesAgeBands,
+  previewHeightClass,
+  windowForMode,
+  withUnit,
 } from './widget-editor.util';
 
 const COLUMN: Widget = {
@@ -104,5 +107,28 @@ describe('newWidget', () => {
     expect(widget.source).not.toBe('quotes');
     expect(widget.groupBy).toBe('createdDay');
     expect(widget.window).not.toBeNull();
+  });
+});
+
+describe('the window of the agenda', () => {
+  // feliz
+  it('keeps what it can when the mode changes, and exact dates are born on the window of now', () => {
+    const month = { mode: 'relative' as const, unit: 'month' as const, count: 1, direction: 'next' as const };
+
+    expect(windowForMode('last', month, '2026-11-21')).toEqual({ ...month, direction: 'last' });
+    expect(windowForMode('custom', month, '2026-11-21')).toMatchObject({ mode: 'custom' });
+    expect(withUnit({ ...month, unit: 'day', count: 30 }, 'week')).toMatchObject({ unit: 'week', count: 1 });
+  });
+
+  // triste
+  it('falls back to a month ahead when leaving exact dates, and keeps the ring card one row tall', () => {
+    expect(windowForMode('next', { mode: 'custom', from: '2026-11-01', to: '2026-11-10' }, '2026-11-21')).toEqual({
+      mode: 'relative',
+      unit: 'month',
+      count: 1,
+      direction: 'next',
+    });
+    expect(previewHeightClass('ringCard', true)).toBe('h-36');
+    expect(previewHeightClass('column', true)).toBe('h-[62vh]');
   });
 });

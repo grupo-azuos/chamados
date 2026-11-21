@@ -148,7 +148,7 @@
       {/snippet}
     </Popover.Trigger>
     <Popover.Content
-      class="w-auto max-w-[calc(100vw-2rem)] max-h-[var(--bits-popover-content-available-height)] overflow-y-auto p-0 rounded-surface border-border bg-card shadow-xl"
+      class="w-auto max-w-[calc(100vw-2rem)] max-h-[var(--bits-popover-content-available-height)] overflow-y-auto p-0 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8"
       align="start"
       collisionPadding={12}
       aria-label={ariaLabel ? `Selecionar ${ariaLabel.toLowerCase()}` : 'Selecionar data'}

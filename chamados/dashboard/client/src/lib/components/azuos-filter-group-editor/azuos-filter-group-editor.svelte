@@ -57,7 +57,7 @@
   }
 </script>
 
-<div class="border-border bg-card rounded-box flex flex-col gap-3 border p-3" role="group" aria-label="Grupo de condições">
+<div class="bg-card rounded-box flex flex-col gap-3 p-3 shadow-card" role="group" aria-label="Grupo de condições">
   <div class="flex flex-wrap items-center justify-between gap-2">
     <SelectField
       data={{

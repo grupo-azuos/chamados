@@ -21,7 +21,7 @@
   class="flex min-h-svh w-full items-center justify-center bg-background p-6"
 >
   <div
-    class="flex w-full max-w-md flex-col items-center gap-5 rounded-surface border border-border bg-card p-8 text-center shadow-xs"
+    class="flex w-full max-w-md flex-col items-center gap-5 rounded-surface bg-card p-8 text-center shadow-card"
   >
     <GitBranch class="size-10 text-primary" aria-hidden="true" />
     <h1 class="text-xl font-semibold text-foreground">Vincule seu GitHub para acessar Sistema</h1>

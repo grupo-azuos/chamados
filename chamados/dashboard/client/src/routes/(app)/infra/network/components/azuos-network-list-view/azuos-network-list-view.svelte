@@ -311,7 +311,7 @@
         <div
           use:fillFromPointer
           style:--fill-color={fillColorOf(networkSeverityTone(event.severity))}
-          class="hover-fill border-border bg-card rounded-surface border p-4 shadow-xs"
+          class="hover-fill bg-card rounded-surface p-4 shadow-card"
         >
           <div class="flex flex-wrap items-start justify-between gap-2">
             <div class="flex flex-wrap items-center gap-2">

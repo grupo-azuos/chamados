@@ -33,6 +33,7 @@ import {
   activeValues,
   addBoardFilter,
   type BoardDraft,
+  type BoardFilterPlaceChange,
   compactIdsOf,
   filterCountQuery,
   normalizeLayout,
@@ -40,6 +41,7 @@ import {
   removeWidget,
   saveErrorOf,
   setBoardFilterDisplay,
+  setBoardFilterPlaces,
   upsertWidget,
   visibleScopes,
 } from '$lib/utils/board-draft.util';
@@ -277,6 +279,9 @@ export function useDashboardBoardModel(module: BoardModule) {
       onRemoveBoardFilter: (id: string) => edit((current) => removeBoardFilter(current, id)),
       onBoardFilterDisplayChange: (id: string, display: BoardFilterDisplay) =>
         edit((current) => setBoardFilterDisplay(current, id, display)),
+      /** Montando: os filtros foram arrastados ou redimensionados na grade deles. */
+      onBoardFilterPlaceChange: (places: readonly BoardFilterPlaceChange[]) =>
+        edit((current) => setBoardFilterPlaces(current, places)),
     },
   };
 }

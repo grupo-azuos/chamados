@@ -43,11 +43,13 @@
   aria-label={ui.ariaLabel}
   use:slidingIndicator={{
     selector: '[aria-pressed="true"]',
-    indicatorClass: isProminent ? 'rounded-control bg-primary' : 'rounded-control bg-card shadow-xs',
+    indicatorClass: isProminent ? 'rounded-full bg-primary' : 'rounded-full bg-segment-selected shadow-xs',
     attributes: ['aria-pressed'],
   }}
   class={cn(
-    'bg-mantle rounded-surface flex flex-wrap gap-1 p-1',
+    /* O trilho tem o tamanho das opções (padrão Apple), e não a largura da tela: uma pílula
+       esticada com metade vazia parecia um campo. Quando não cabe (celular), rola de lado. */
+    'bg-muted inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-full p-1',
     isProminent && 'w-full gap-2 bg-transparent p-0 sm:w-auto',
     ui.className,
   )}
@@ -60,16 +62,16 @@
       disabled={state?.isDisabled}
       onclick={() => choose(option.value)}
       class={cn(
-        'rounded-control min-h-10 px-3 text-sm transition-[color,background-color,box-shadow] duration-200 disabled:cursor-not-allowed disabled:opacity-60',
+        'shrink-0 rounded-full px-3 py-1.5 text-sm whitespace-nowrap transition-[color,background-color,box-shadow] duration-200 disabled:cursor-not-allowed disabled:opacity-60',
         isActive
-          ? 'text-primary font-bold'
-          : 'text-muted-foreground hover:text-foreground hover:bg-card font-semibold',
+          ? 'text-foreground font-semibold'
+          : 'text-muted-foreground hover:bg-hover-veil hover:text-foreground font-medium',
         isProminent &&
           'control-lg focus-visible:outline-primary flex-auto px-5 text-base whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 sm:flex-none',
         isProminent &&
           (isActive
             ? 'text-primary-foreground shadow-none'
-            : 'bg-primary-soft text-ink-900 hover:bg-primary-soft hover:text-ink-900 shadow-none'),
+            : 'bg-primary-soft text-ink-900 hover:bg-accent hover:text-ink-900 shadow-none'),
       )}
     >
       {option.label}

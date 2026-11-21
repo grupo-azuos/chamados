@@ -69,8 +69,8 @@ describe("brand/no-pure-black-white", () => {
 		const found = rulesFor("<div class=\"bg-black\"></div>\n<style>.a { color: white; border-color: #fff; }</style>");
 		assert.equal(found.filter((r) => r === "brand/no-pure-black-white").length, 3);
 	});
-	it("applies inside token files too", () => {
-		assert.ok(rulesFor(":root { --background: #000000; }", "src/tokens.css").includes("brand/no-pure-black-white"));
+	it("allows black and white only as token values, inside token files", () => {
+		assert.ok(!rulesFor(":root { --card: #ffffff; }", "src/tokens.css").includes("brand/no-pure-black-white"));
 	});
 });
 describe("brand/tokens-only", () => {

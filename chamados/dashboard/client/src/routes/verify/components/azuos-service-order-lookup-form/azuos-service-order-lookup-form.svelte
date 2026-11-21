@@ -25,7 +25,7 @@
 </script>
 
 <form
-  class="bg-card rounded-surface flex flex-col gap-4 border p-5"
+  class="bg-card rounded-surface flex flex-col gap-4 p-5 shadow-card"
   onsubmit={(event) => {
     event.preventDefault();
     actions.onSubmit();

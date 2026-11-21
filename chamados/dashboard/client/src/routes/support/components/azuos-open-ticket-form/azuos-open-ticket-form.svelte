@@ -393,7 +393,7 @@
 
 <svelte:window onpaste={handlePaste} />
 
-<section class="bg-card rounded-surface border p-5">
+<section class="bg-card rounded-surface p-5 shadow-card">
   {#if data.opened}
     <!-- O protocolo ocupa a tela inteira: é o que a pessoa precisa levar daqui. -->
     <div class="flex flex-col items-center gap-3 py-6 text-center">

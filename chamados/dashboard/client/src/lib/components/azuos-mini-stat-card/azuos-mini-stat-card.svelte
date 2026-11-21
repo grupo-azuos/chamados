@@ -36,7 +36,7 @@
   {actions}
 >
   <div
-    class="flex min-w-0 items-center gap-2 text-xs leading-tight font-semibold tracking-wide uppercase"
+    class="text-muted-foreground group-data-[selected=true]/card:text-on-card-selected flex min-w-0 items-center gap-2 text-sm leading-tight font-medium"
   >
     <span
       aria-hidden="true"
@@ -50,10 +50,8 @@
   </div>
   <div
     class={cn(
-      'group-data-[selected=true]/card:text-on-card-selected mt-1 text-xl leading-tight font-bold tabular-nums',
-      tone.text,
+      'text-foreground group-data-[selected=true]/card:text-on-card-selected mt-1 text-xl leading-tight font-bold tabular-nums',
     )}
-    style={toneStyle.text}
   >
     {data.value}
   </div>

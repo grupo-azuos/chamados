@@ -41,8 +41,11 @@ export function useSavedFiltersModel(module: BoardModule) {
         input.id
           ? dashboardBoardsApi.updateFilter(module, input.id, input.body)
           : dashboardBoardsApi.createFilter(module, input.body),
+      /* Salvo, o montador fecha e o painel volta à frente — o editor de bloco que esperava atrás
+         já encontra o filtro novo na lista. */
       onSuccess: async () => {
         editing = null;
+        isOpen = false;
         await refresh();
       },
     }),

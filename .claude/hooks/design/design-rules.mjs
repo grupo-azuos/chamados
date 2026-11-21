@@ -77,10 +77,13 @@ const noPureBlackWhite = {
 	id: "brand/no-pure-black-white",
 	law: "Marca",
 	severity: "error",
-	description: "Preto puro e branco puro são proibidos pela marca.",
-	hint: "Use os tokens: `foreground`/`background` (ou `primary-foreground`) já são os tons quase-preto e quase-branco da marca.",
+	description: "Preto e branco escritos na tela são proibidos: eles moram no `tokens.css`.",
+	hint: "Use os tokens: `bg-card` (branco no claro), `text-foreground`, `text-on-hue`, `text-primary-foreground`. O branco puro do padrão Apple só existe como VALOR de token.",
 	enabled: (c) => c.brandRules.noPureBlackWhite,
 	check: (file) => {
+		/* Padrão Apple: o card claro É branco. Branco e preto só podem ser escritos no próprio
+		   `tokens.css`, como valor de token; a tela sempre usa o nome do token. */
+		if (file.isTokenFile) return [];
 		const patterns = [
 			/#(?:000|fff|000000|ffffff)(?:f|ff)?\b/gi,
 			/\brgba?\(\s*(?:0\s*,\s*0\s*,\s*0|255\s*,\s*255\s*,\s*255)\b/gi,
@@ -689,6 +692,7 @@ export function checkSource(path, content, config) {
 	const file = {
 		path: normalize(path),
 		code: stripComments(content),
+		isTokenFile: isTokenFile(path, config),
 		isTokenFile: isTokenFile(path, config)
 	};
 	const ignored = ignoredLines(content);

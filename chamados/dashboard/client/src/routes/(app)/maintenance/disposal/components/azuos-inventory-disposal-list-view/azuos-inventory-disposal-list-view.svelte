@@ -80,7 +80,7 @@
     />
   </PageHeader>
 
-  <div class="rounded-surface border-border bg-card flex flex-wrap items-end gap-x-4 gap-y-3 border p-4 shadow-xs">
+  <div class="rounded-surface bg-card flex flex-wrap items-end gap-x-4 gap-y-3 p-4 shadow-card">
     <FilterField data={{ label: 'Motivo' }}>
       <OptionPicker
         data={{ value: data.filter.reason, options: REASON_FILTER_OPTIONS }}
@@ -143,7 +143,7 @@
 
       <ul class="flex flex-col gap-3">
         {#each data.disposals as disposal (disposal.id)}
-          <li class="rounded-surface border-border bg-card flex flex-col gap-2 border p-4 shadow-xs">
+          <li class="rounded-surface bg-card flex flex-col gap-2 p-4 shadow-card">
             <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
               <h3 class="text-ink-900 min-w-0 text-sm leading-tight font-semibold">
                 {disposal.itemName}

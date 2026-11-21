@@ -1,0 +1,123 @@
+import {
+  TICKET_PRIORITIES,
+  TICKET_STATUS_LABELS,
+  TICKET_STATUSES,
+  ticketPriorityLabel,
+} from '@template/shared/domain/ticket-status.util';
+import {
+  type BoardFieldFilterKind,
+  type BoardFilter,
+  type BoardFilterKind,
+  type BoardFilterPlace,
+  type BoardFilterValues,
+  MAX_WINDOW_DAYS,
+  ME_VALUE,
+  type WidgetWindow,
+  windowLabel,
+  windowRange,
+} from '@template/shared/schemas/dashboard-board.schema';
+
+/**
+ * AS REGRAS DOS FILTROS DO PAINEL — as opções de cada filtro, os períodos prontos, o resumo do
+ * que está valendo e a ordem de leitura da grade. Funções puras: a barra só desenha.
+ */
+export type FilterCountsLike = { total: number; series: { key: string; label: string; value: number }[] };
+
+export type BoardFilterOption = { value: string; label: string; personName?: string; avatarUrl?: string | null };
+
+/** Até aqui, um seletor; daqui para cima, a lista ganha busca (regra dos 15 itens). */
+export const SEARCH_FROM = 15;
+
+const relative = (direction: 'next' | 'last', count: number, unit: 'day' | 'week' | 'month'): WidgetWindow => ({
+  mode: 'relative',
+  direction,
+  count,
+  unit,
+});
+
+/** Os períodos prontos — o que mais se pergunta, sem abrir calendário. */
+export const PERIOD_PRESETS: { value: string; label: string; window: WidgetWindow | null }[] = [
+  { value: 'each', label: 'O de cada bloco', window: null },
+  { value: 'last-7-day', label: 'Últimos 7 dias', window: relative('last', 7, 'day') },
+  { value: 'last-30-day', label: 'Últimos 30 dias', window: relative('last', 30, 'day') },
+  { value: 'last-90-day', label: 'Últimos 90 dias', window: relative('last', 90, 'day') },
+  { value: 'last-1-month', label: 'Este mês', window: relative('last', 1, 'month') },
+  { value: 'next-30-day', label: 'Próximos 30 dias', window: relative('next', 30, 'day') },
+  { value: 'custom', label: 'Datas exatas', window: null },
+];
+
+/** Qual opção pronta é a janela escolhida — `custom` para datas exatas. */
+export function presetOf(window: WidgetWindow | null): string {
+  if (!window) return 'each';
+  if (window.mode === 'custom') return 'custom';
+
+  return `${window.direction}-${window.count}-${window.unit}`;
+}
+
+/** A janela de uma opção pronta. "Datas exatas" nasce nos últimos 30 dias, para ajustar. */
+export function windowOfPreset(value: string, today: string): WidgetWindow | null {
+  if (value === 'custom') return { mode: 'custom', ...windowRange(relative('last', 30, 'day'), today) };
+
+  return PERIOD_PRESETS.find((preset) => preset.value === value)?.window ?? null;
+}
+
+/**
+ * Datas exatas nunca passam de 90 dias: a data final escolhida longe demais é puxada para o
+ * 90º dia — melhor que recusar sem dizer o que fazer.
+ */
+export function clampRange(from: string, to: string): { from: string; to: string } {
+  const [start, end] = from <= to ? [from, to] : [to, from];
+  const limit = new Date(`${start}T00:00:00.000Z`);
+  limit.setUTCDate(limit.getUTCDate() + MAX_WINDOW_DAYS - 1);
+  const last = limit.toISOString().slice(0, 10);
+
+  return { from: start, to: end > last ? last : end };
+}
+
+/** As opções de um filtro de campo: as fixas do contrato, ou as que a conta do módulo trouxe. */
+export function fieldFilterOptions(kind: BoardFieldFilterKind, counts: FilterCountsLike | null | undefined): BoardFilterOption[] {
+  if (kind === 'ticketStatus') return TICKET_STATUSES.map((status) => ({ value: status, label: TICKET_STATUS_LABELS[status] }));
+  if (kind === 'ticketPriority') return TICKET_PRIORITIES.map((priority) => ({ value: priority, label: ticketPriorityLabel(priority) }));
+
+  return countedOptions(counts);
+}
+
+/** As pessoas do módulo, cada uma com o rosto (sem foto, o avatar cai nas iniciais). */
+export function personOptions(counts: FilterCountsLike | null | undefined): BoardFilterOption[] {
+  return countedOptions(counts).map((option) => ({ ...option, personName: option.label, avatarUrl: null }));
+}
+
+/** O que a conta trouxe, sem os grupos de "sem valor" (`(Sem responsável)`). */
+function countedOptions(counts: FilterCountsLike | null | undefined): BoardFilterOption[] {
+  return (counts?.series ?? [])
+    .filter((item) => !item.key.startsWith('('))
+    .map((item) => ({ value: item.key, label: item.label }));
+}
+
+/** Os filtros com valor escolhido, com o valor escrito como a pessoa o leu na tela. */
+export function activeSummary(
+  filters: readonly BoardFilter[],
+  values: BoardFilterValues,
+  counts: Record<string, FilterCountsLike>,
+): { label: string; value: string }[] {
+  return filters.flatMap((filter) => {
+    const value = valueLabel(filter, values, counts[filter.id]);
+
+    return value ? [{ label: filter.label, value }] : [];
+  });
+}
+
+function valueLabel(filter: BoardFilter, values: BoardFilterValues, counts: FilterCountsLike | undefined): string | null {
+  const kind: BoardFilterKind = filter.kind;
+  if (kind === 'period') return values.period ? windowLabel(values.period) : null;
+  const value = values[kind];
+  if (!value) return null;
+  if (kind === 'person') return value === ME_VALUE ? 'Eu' : (personOptions(counts).find((option) => option.value === value)?.label ?? value);
+
+  return fieldFilterOptions(kind, counts).find((option) => option.value === value)?.label ?? value;
+}
+
+/** De cima para baixo e da esquerda para a direita: a ordem em que a coluna única empilha. */
+export function readingOrder<T extends { place: BoardFilterPlace }>(filters: readonly T[]): T[] {
+  return [...filters].sort((one, other) => one.place.y - other.place.y || one.place.x - other.place.x);
+}

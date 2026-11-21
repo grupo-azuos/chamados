@@ -342,7 +342,7 @@
     </div>
 
     {#if data.filters}
-      <div class="rounded-surface border border-border bg-card p-3 sm:p-4">
+      <div class="rounded-surface bg-card p-3 sm:p-4 shadow-card">
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {#each [{ key: 'project', label: 'Projeto', hint: 'Filtrar agendamentos, PRs, issues e merges por projeto', value: data.filters.project, options: data.filters.projectOptions, onChange: actions.onProjectFilterChange }, { key: 'author', label: 'Autor', hint: 'Filtrar PRs, issues e merges pelo autor registrado no GitHub', value: data.filters.author, options: data.filters.authorOptions, onChange: actions.onAuthorFilterChange }, { key: 'type', label: 'Tipo', hint: 'Mostrar PRs, issues, merges ou todos na agenda', value: data.filters.type, options: [{ value: '', label: 'Todos' }, { value: 'pr', label: 'PRs' }, { value: 'issue', label: 'Issues' }, { value: 'merge', label: 'Merges locais' }], onChange: actions.onTypeFilterChange }] as filter (filter.key)}
             <div
@@ -408,7 +408,7 @@
           >{#snippet child({ props })}<button
               {...props}
               type="button"
-              class="w-full text-left rounded-surface border border-border bg-card px-4 py-3"
+              class="w-full text-left rounded-surface bg-card px-4 py-3 shadow-card"
             >
               <p class="text-xl font-semibold text-foreground">{data.mergedPullRequests ?? 0}</p>
               <p class="text-xs text-muted-foreground">PRs mergeados no período</p>
@@ -422,7 +422,7 @@
           >{#snippet child({ props })}<button
               {...props}
               type="button"
-              class="w-full text-left rounded-surface border border-border bg-card px-4 py-3"
+              class="w-full text-left rounded-surface bg-card px-4 py-3 shadow-card"
             >
               <p class="text-xl font-semibold text-foreground">{data.resolvedIssues ?? 0}</p>
               <p class="text-xs text-muted-foreground">Issues resolvidas no período</p>
@@ -435,7 +435,7 @@
     </div>
 
     {#if data.developerStats?.length}
-      <div class="overflow-hidden rounded-surface border border-border bg-card shadow-xs">
+      <div class="overflow-hidden rounded-surface bg-card shadow-card">
         <div class="border-b border-border px-4 py-3">
           <h2 class="text-sm font-semibold text-foreground">Produtividade por desenvolvedor</h2>
           <p class="mt-1 text-xs text-muted-foreground">
@@ -491,7 +491,7 @@
       />
     {:else if data.viewMode === 'month'}
       <!-- Mês: calendário de 7 colunas, uma célula por dia, eventos empilhados -->
-      <div class="overflow-x-auto rounded-surface border border-border bg-card shadow-xs">
+      <div class="overflow-x-auto rounded-surface bg-card shadow-card">
         <div class="min-w-[840px]">
           <div class="grid grid-cols-7 border-b border-border">
             {#each WEEKDAY_HEADERS as weekday, index (weekday)}
@@ -640,7 +640,7 @@
     {:else}
       <!-- Dia e Semana: grade de horas com 1 ou 7 colunas -->
       {@const columns = data.days.length}
-      <div class="overflow-x-auto rounded-surface border border-border bg-card shadow-xs">
+      <div class="overflow-x-auto rounded-surface bg-card shadow-card">
         <div style="min-width:{columns === 1 ? 360 : 840}px">
           <!-- Header dos dias -->
           <div
@@ -882,7 +882,7 @@
         </div>
       </div>
       {#if data.events.some(isOutsideScheduleGrid)}
-        <div class="flex flex-col gap-2 rounded-surface border border-border bg-card p-4">
+        <div class="flex flex-col gap-2 rounded-surface bg-card p-4 shadow-card">
           <h2 class="text-sm font-semibold">Agendamentos fora do horário da grade</h2>
           {#each data.events.filter(isOutsideScheduleGrid) as event (event.id)}
             <Tooltip.Root
@@ -914,7 +914,7 @@
       {/if}
     {/if}
 
-    <section class="rounded-surface border border-border bg-card p-4 shadow-xs">
+    <section class="rounded-surface bg-card p-4 shadow-card">
       <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 class="text-sm font-semibold text-foreground">Atividade do GitHub no período</h2>
         <p class="text-xs text-muted-foreground">

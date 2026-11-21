@@ -1,75 +1,87 @@
-import { EMPTY_BOARD_FILTER_VALUES } from '@template/shared/schemas/dashboard-board.schema';
+import { EMPTY_BOARD_FILTER_VALUES, ME_VALUE } from '@template/shared/schemas/dashboard-board.schema';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
-import BoardFilterBar, { chosenOf, optionsOf, patchOf, PERIOD_CHOICES } from './azuos-board-filter-bar.svelte';
+import BoardFilterBar from './azuos-board-filter-bar.svelte';
 
-const PERSON = { id: 'person', kind: 'person', label: 'Pessoa', display: 'chips' } as const;
+const PERSON = { id: 'person', kind: 'person' as const, label: 'Pessoa', display: 'chips' as const };
+const STATUS = { id: 'ticketStatus', kind: 'ticketStatus' as const, label: 'Situação', display: 'cards' as const };
+const COUNTS = {
+  person: { total: 9, isLoading: false, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 5 }] },
+  ticketStatus: { total: 9, isLoading: false, series: [{ key: 'open', label: 'Aberto', value: 6 }] },
+};
 
-describe('board filter options', () => {
-  // feliz
-  it('offers "me" and the people counted in the module', () => {
-    const options = optionsOf(PERSON, {
-      total: 5,
-      isLoading: false,
-      series: [
-        { key: 'Ana Lima', label: 'Ana Lima', value: 3 },
-        { key: '(Sem responsável)', label: '(Sem responsável)', value: 2 },
-      ],
-    });
-
-    expect(options.map((option) => option.label)).toEqual(['Eu', 'Ana Lima']);
+function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_FILTER_VALUES; isOpen?: boolean; filters?: (typeof PERSON | typeof STATUS)[] } = {}) {
+  const actions = {
+    onChange: vi.fn(),
+    onClear: vi.fn(),
+    onAdd: vi.fn(),
+    onRemove: vi.fn(),
+    onDisplayChange: vi.fn(),
+    onPlaceChange: vi.fn(),
+  };
+  render(BoardFilterBar, {
+    props: {
+      data: { filters: options.filters ?? [PERSON, STATUS], values: options.values ?? EMPTY_BOARD_FILTER_VALUES, counts: COUNTS },
+      ui: { isInitiallyOpen: options.isOpen ?? true },
+      state: { isEditing: options.isEditing ?? false },
+      actions,
+    },
   });
 
-  // feliz
-  it('turns a chosen period into the window, and reads it back', () => {
-    const period = { id: 'periodo', kind: 'period', label: 'Período' } as const;
-    const patch = patchOf(period, 'last-30');
-
-    expect(patch).toEqual({ period: PERIOD_CHOICES[1]!.window });
-    expect(chosenOf(period, { ...EMPTY_BOARD_FILTER_VALUES, ...patch })).toBe('last-30');
-  });
-
-  // triste
-  it('clears the filter with the empty choice', () => {
-    expect(patchOf(PERSON, '')).toEqual({ person: null });
-    expect(chosenOf(PERSON, EMPTY_BOARD_FILTER_VALUES)).toBe('');
-  });
-});
+  return actions;
+}
 
 describe('AzuosBoardFilterBar', () => {
   // feliz
-  it('chooses a person with one click', async () => {
-    const onChange = vi.fn();
-    render(BoardFilterBar, {
-      props: {
-        data: {
-          filters: [PERSON],
-          values: EMPTY_BOARD_FILTER_VALUES,
-          counts: { person: { total: 3, isLoading: false, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 3 }] } },
-        },
-        actions: { onChange, onClear: vi.fn() },
-      },
-    });
+  it('chooses "me" or a person with one click on the chips', async () => {
+    const actions = renderBar();
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Ana Lima' }));
+    await fireEvent.click(screen.getByRole('radio', { name: 'Eu' }));
+    expect(actions.onChange).toHaveBeenCalledWith({ person: ME_VALUE });
+  });
 
-    expect(onChange).toHaveBeenCalledWith({ person: 'Ana Lima' });
+  // feliz
+  it('filters the whole board by a card, and lets go of it with a second click', async () => {
+    const actions = renderBar({ values: { ...EMPTY_BOARD_FILTER_VALUES, ticketStatus: 'open' } });
+
+    await fireEvent.click(screen.getByRole('button', { name: /^Aberto: 6/ }));
+    expect(actions.onChange).toHaveBeenCalledWith({ ticketStatus: null });
+  });
+
+  // feliz
+  it('collapsed, says in one line what is filtering the board, and offers to clear it', async () => {
+    const actions = renderBar({ isOpen: false, values: { ...EMPTY_BOARD_FILTER_VALUES, person: ME_VALUE } });
+
+    expect(screen.getByRole('button', { name: /Filtros/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('list', { name: 'Filtros escolhidos' })).toHaveTextContent('Pessoa: Eu');
+    await fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(actions.onClear).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('while building, drags, re-draws and takes off each filter, and offers the missing ones', async () => {
+    const actions = renderBar({ isEditing: true, filters: [PERSON] });
+
+    expect(screen.getByRole('button', { name: 'Arrastar o filtro Pessoa' })).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Pessoa' }));
+    expect(actions.onRemove).toHaveBeenCalledWith('person');
+    await fireEvent.click(screen.getByRole('button', { name: 'Período' }));
+    expect(actions.onAdd).toHaveBeenCalledWith('period');
   });
 
   // triste
-  it('offers to take a filter off only while building', async () => {
-    const onRemove = vi.fn();
-    const props = {
-      data: { filters: [PERSON], values: EMPTY_BOARD_FILTER_VALUES, counts: {} },
-      actions: { onChange: vi.fn(), onClear: vi.fn(), onRemove },
-    };
-    const { rerender } = render(BoardFilterBar, { props });
-    expect(screen.queryByRole('button', { name: 'Tirar o filtro Pessoa' })).not.toBeInTheDocument();
+  it('says nothing is chosen when collapsed without a value, and hides the clear button', () => {
+    renderBar({ isOpen: false });
 
-    await rerender({ ...props, state: { isEditing: true } });
-    await fireEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Pessoa' }));
+    expect(screen.getByText('Nenhum filtro escolhido')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Limpar filtros' })).toBeNull();
+  });
 
-    expect(onRemove).toHaveBeenCalledWith('person');
+  // triste
+  it('does not show the bar to whoever only views a board without filters', () => {
+    renderBar({ filters: [] });
+
+    expect(screen.queryByRole('region', { name: 'Filtros do painel' })).toBeNull();
   });
 });

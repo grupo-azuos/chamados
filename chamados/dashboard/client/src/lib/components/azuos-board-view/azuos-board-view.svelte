@@ -18,11 +18,12 @@
     type FilterCounts,
     type WidgetState,
   } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
+  import { type BoardFilterPlaceChange } from '$lib/utils/board-draft.util';
 
   /**
-   * O PAINEL DE UM MÓDULO — as abas (Equipe, Gestor, Pessoal), os filtros, a grade dos blocos e
-   * os editores. Quem não pode editar só vê e atualiza; quem pode clica em "Editar painel" e monta
-   * num RASCUNHO, que só "Salvar painel" grava.
+   * O PAINEL DE UM MÓDULO — as abas dos três painéis (Equipe, Gestor, Pessoal) e o painel. Quem
+   * não pode editar só vê e atualiza; quem pode clica em "Editar painel" e a montagem abre em TELA
+   * CHEIA, por cima do menu do sistema (`AzuosBoardStudio`), num rascunho que só "Guardar" grava.
    *
    * Genérico de propósito: os três módulos usam este mesmo painel, cada um com os dados dele.
    */
@@ -65,7 +66,7 @@
       onCancelEdit: () => void;
       onSave: () => void;
       onLayoutChange: (layout: LayoutItem[]) => void;
-      onNewWidget: (kind?: WidgetKind) => void;
+      onNewWidget: (kind?: WidgetKind, place?: Omit<LayoutItem, 'i'>) => void;
       onEditWidget: (id: string) => void;
       onCloseEditor: () => void;
       onSubmitWidget: (widget: Widget) => void;
@@ -76,6 +77,7 @@
       onAddBoardFilter: (kind: BoardFilterKind) => void;
       onRemoveBoardFilter: (id: string) => void;
       onBoardFilterDisplayChange: (id: string, display: BoardFilterDisplay) => void;
+      onBoardFilterPlaceChange: (places: readonly BoardFilterPlaceChange[]) => void;
       onOpenFilters: () => void;
       onCloseFilters: () => void;
       onNewFilter: () => void;
@@ -89,62 +91,51 @@
 
   /** "Montado em 20/11/2026" — ou o padrão do módulo, enquanto ninguém salvou. */
   export function updatedLabel(updatedAt: string | null): string {
-    if (!updatedAt) return 'O painel padrão do módulo — monte o seu em "Editar painel".';
-    const day = new Date(updatedAt).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    if (!updatedAt) return 'O painel padrão do módulo. Os números se renovam a cada 5 minutos.';
+    const when = new Date(updatedAt).toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: 'America/Sao_Paulo',
+    });
 
-    return `Montado em ${day}. Os números se renovam sozinhos a cada 5 minutos.`;
+    return `Montado em ${when}. Os números se renovam a cada 5 minutos.`;
   }
 </script>
 
 <script lang="ts">
-  import Filter from '@lucide/svelte/icons/filter';
   import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
   import Pencil from '@lucide/svelte/icons/pencil';
-  import Plus from '@lucide/svelte/icons/plus';
   import RefreshCw from '@lucide/svelte/icons/refresh-cw';
-  import {
-    BOARD_PERIOD_NOTES,
-    boardPeriodNote,
-    MAX_BOARD_WEIGHT,
-    sourcesOf,
-  } from '@template/shared/schemas/dashboard-board.schema';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import BoardCanvas from '$lib/components/azuos-board-canvas/azuos-board-canvas.svelte';
   import BoardFilterBar from '$lib/components/azuos-board-filter-bar/azuos-board-filter-bar.svelte';
-  import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
+  import BoardStudio from '$lib/components/azuos-board-studio/azuos-board-studio.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
-  import FilterBuilderDialog from '$lib/components/azuos-filter-builder-dialog/azuos-filter-builder-dialog.svelte';
+  import FilterBuilderScreen from '$lib/components/azuos-filter-builder-screen/azuos-filter-builder-screen.svelte';
   import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import WidgetEditorDialog from '$lib/components/azuos-widget-editor-dialog/azuos-widget-editor-dialog.svelte';
+  import { fitGroup, followTitle } from '$lib/utils/widget-editor.util';
 
   let { data, state: viewState, actions }: AzuosBoardViewProps = $props();
 
   const filterNames = $derived(Object.fromEntries(data.savedFilters.map((filter) => [filter.id, filter.name])));
-  const periodNotes = $derived(
-    Object.fromEntries(
-      sourcesOf(data.module)
-        .filter((source) => BOARD_PERIOD_NOTES[source])
-        .map((source) => [source, boardPeriodNote(source, data.filterValues.period)]),
-    ),
-  );
+  const scopeLabel = $derived(data.scopes.find((option) => option.value === data.scope)?.label ?? '');
+
+  /* Trocar o tipo pelo próprio bloco acerta o agrupamento, como no editor. */
+  function changeKind(id: string, kind: WidgetKind) {
+    const widget = data.widgets.find((item) => item.id === id);
+    if (widget) actions.onSubmitWidget(followTitle(widget, fitGroup({ ...widget, kind })));
+  }
 </script>
 
 <div class="flex w-full flex-col gap-5">
-  <PageHeader data={{ title: 'Painel', description: updatedLabel(data.updatedAt) }} ui={{ icon: LayoutDashboard }}>
-    <ActionButton
-      data={{ label: 'Atualizar', loadingLabel: 'Atualizando…' }}
-      ui={{ variant: 'secondary', icon: RefreshCw }}
-      state={{ isLoading: viewState.isRefreshing }}
-      actions={{ onClick: actions.onRefresh }}
-    />
-    {#if viewState.canEdit && !viewState.isEditing}
-      <ActionButton data={{ label: 'Editar painel' }} ui={{ icon: Pencil }} actions={{ onClick: actions.onStartEdit }} />
-    {/if}
-  </PageHeader>
+  <PageHeader data={{ title: 'Painel', description: updatedLabel(data.updatedAt) }} ui={{ icon: LayoutDashboard }} />
 
+  <!-- Uma linha só: à esquerda, qual painel se vê (as abas no tamanho delas, não esticadas na
+       largura toda); à direita, o que se faz com ele. -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     {#if data.scopes.length > 1}
       <SegmentedControl
@@ -153,28 +144,23 @@
         state={{ isDisabled: viewState.isEditing }}
         actions={{ onChange: actions.onScopeChange }}
       />
+    {:else}
+      <span></span>
     {/if}
-    {#if viewState.isEditing}
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="text-ink-500 text-sm" aria-live="polite">{data.weight} de {MAX_BOARD_WEIGHT} pontos</span>
-        <ActionButton data={{ label: 'Filtros salvos' }} ui={{ variant: 'secondary', icon: Filter }} actions={{ onClick: actions.onOpenFilters }} />
-        <ActionButton
-          data={{ label: 'Novo bloco' }}
-          ui={{ variant: 'secondary', icon: Plus }}
-          state={{ isDisabled: !viewState.canAdd }}
-          actions={{ onClick: () => actions.onNewWidget() }}
-        />
-        <ActionButton data={{ label: 'Cancelar' }} ui={{ variant: 'ghost' }} actions={{ onClick: actions.onCancelEdit }} />
-        <ActionButton
-          data={{ label: 'Salvar painel', loadingLabel: 'Salvando…' }}
-          state={{ isLoading: viewState.isSaving }}
-          actions={{ onClick: actions.onSave }}
-        />
-      </div>
-    {/if}
+    <div class="flex flex-wrap gap-2">
+      <ActionButton
+        data={{ label: 'Atualizar', loadingLabel: 'Atualizando…' }}
+        ui={{ variant: 'secondary', icon: RefreshCw }}
+        state={{ isLoading: viewState.isRefreshing }}
+        actions={{ onClick: actions.onRefresh }}
+      />
+      {#if viewState.canEdit}
+        <ActionButton data={{ label: 'Editar painel' }} ui={{ icon: Pencil }} actions={{ onClick: actions.onStartEdit }} />
+      {/if}
+    </div>
   </div>
 
-  {#if viewState.error}
+  {#if viewState.error && !viewState.isEditing}
     <ErrorState data={{ message: viewState.error }} ui={{ variant: 'inline' }} />
   {/if}
 
@@ -183,47 +169,64 @@
   {:else}
     <BoardFilterBar
       data={{ filters: data.boardFilters, values: data.filterValues, counts: data.filterCounts }}
-      state={{ isEditing: viewState.isEditing }}
-      actions={{
-        onChange: actions.onFilterValueChange,
-        onClear: actions.onClearFilterValues,
-        onAdd: actions.onAddBoardFilter,
-        onRemove: actions.onRemoveBoardFilter,
-        onDisplayChange: actions.onBoardFilterDisplayChange,
-      }}
+      actions={{ onChange: actions.onFilterValueChange, onClear: actions.onClearFilterValues }}
     />
-
-    {#if data.widgets.length === 0}
-      <EmptyState
-        data={{
-          title: 'Este painel está vazio',
-          description: viewState.canEdit
-            ? 'Ponha os blocos que a equipe precisa ver: chamados, máquinas, orçamentos.'
-            : 'Quem monta este painel ainda não pôs nenhum bloco.',
-        }}
-        ui={{ icon: LayoutDashboard }}
-      >
-        {#if viewState.isEditing}
-          <ActionButton data={{ label: 'Novo bloco' }} ui={{ icon: Plus }} actions={{ onClick: () => actions.onNewWidget() }} />
-        {:else if viewState.canEdit}
-          <ActionButton data={{ label: 'Editar painel' }} ui={{ icon: Pencil }} actions={{ onClick: actions.onStartEdit }} />
-        {/if}
-      </EmptyState>
-    {:else}
-      <BoardCanvas
-        data={{ widgets: data.widgets, layout: data.layout, results: data.results, filterNames, periodNotes }}
-        state={{ isEditing: viewState.isEditing }}
-        actions={{ onLayoutChange: actions.onLayoutChange, onEditWidget: actions.onEditWidget, onRemoveWidget: actions.onRemoveWidget }}
-      />
-    {/if}
+    <BoardCanvas
+      data={{
+        widgets: data.widgets,
+        layout: data.layout,
+        results: data.results,
+        filterNames,
+        boardPeriod: data.filterValues.period,
+      }}
+      state={{ isEditing: false }}
+      actions={{ onLayoutChange: actions.onLayoutChange, onEditWidget: actions.onEditWidget, onRemoveWidget: actions.onRemoveWidget }}
+    />
   {/if}
+
+  <BoardStudio
+    data={{
+      scopeLabel,
+      widgets: data.widgets,
+      layout: data.layout,
+      results: data.results,
+      filterNames,
+      boardFilters: data.boardFilters,
+      filterValues: data.filterValues,
+      filterCounts: data.filterCounts,
+      weight: data.weight,
+    }}
+    state={{ isOpen: viewState.isEditing, isSaving: viewState.isSaving, canAdd: viewState.canAdd, error: viewState.error }}
+    actions={{
+      onFilterValueChange: actions.onFilterValueChange,
+      onAddBoardFilter: actions.onAddBoardFilter,
+      onRemoveBoardFilter: actions.onRemoveBoardFilter,
+      onBoardFilterDisplayChange: actions.onBoardFilterDisplayChange,
+      onBoardFilterPlaceChange: actions.onBoardFilterPlaceChange,
+      onClearFilterValues: actions.onClearFilterValues,
+      onLayoutChange: actions.onLayoutChange,
+      onNewWidget: actions.onNewWidget,
+      onEditWidget: actions.onEditWidget,
+      onRemoveWidget: actions.onRemoveWidget,
+      onChangeKind: changeKind,
+      onOpenFilters: actions.onOpenFilters,
+      onCancel: actions.onCancelEdit,
+      onSave: actions.onSave,
+    }}
+  />
 
   <WidgetEditorDialog
     data={{ editing: data.editing, filters: data.savedFilters, preview: data.preview }}
-    actions={{ onClose: actions.onCloseEditor, onSubmit: actions.onSubmitWidget, onPreviewChange: actions.onPreviewChange }}
+    state={{ isHidden: viewState.isFilterDialogOpen }}
+    actions={{
+      onClose: actions.onCloseEditor,
+      onSubmit: actions.onSubmitWidget,
+      onOpenFilters: actions.onOpenFilters,
+      onPreviewChange: actions.onPreviewChange,
+    }}
   />
 
-  <FilterBuilderDialog
+  <FilterBuilderScreen
     data={{ module: data.module, filters: data.savedFilters, archived: data.archivedFilters, editing: data.editingFilter }}
     state={{
       isOpen: viewState.isFilterDialogOpen,

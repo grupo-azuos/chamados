@@ -54,11 +54,13 @@ describe('useSavedFiltersModel', () => {
     const model = mount();
     await waitFor(() => expect(model.data.filters).toHaveLength(1));
 
+    model.actions.onOpen();
     model.actions.onNew();
     model.actions.onSave(null, BODY);
 
     await waitFor(() => expect(dashboardBoardsApi.createFilter).toHaveBeenCalledWith('infra', BODY));
     await waitFor(() => expect(model.data.editing).toBeNull());
+    expect(model.state.isOpen).toBe(false);
   });
 
   // feliz

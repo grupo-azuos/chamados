@@ -25,7 +25,9 @@ const twMerge = extendTailwindMerge<'control'>({
       control: [{ control: ['sm', 'md', 'lg'] }, { 'control-icon': ['sm', 'md', 'lg'] }],
       /* Os raios por papel entram no grupo que já existe: `rounded-control` e `rounded-full`
          são o mesmo conflito, e sem isto os dois ficavam na marcação. */
-      rounded: [{ rounded: ['surface', 'control', 'box', 'chip'] }],
+      rounded: [
+        { rounded: ['surface', 'control', 'box', 'chip', 'button', 'card', 'dialog', 'badge', 'icon'] },
+      ],
     },
     conflictingClassGroups: {
       control: ['h', 'w', 'px', 'size'],

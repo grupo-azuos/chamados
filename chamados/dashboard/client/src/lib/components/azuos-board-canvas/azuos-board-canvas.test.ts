@@ -2,7 +2,7 @@ import { type Widget } from '@template/shared/schemas/dashboard-board.schema';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
-import BoardCanvas, { hintOf } from './azuos-board-canvas.svelte';
+import BoardCanvas, { KIND_DRAG_TYPE, kindDragTypeOf, kindOf } from './azuos-board-canvas.svelte';
 
 const WIDGET: Widget = {
   id: 'a',
@@ -17,52 +17,95 @@ const WIDGET: Widget = {
   window: null,
 };
 
-function renderCanvas(isEditing: boolean) {
-  const actions = { onLayoutChange: vi.fn(), onEditWidget: vi.fn(), onRemoveWidget: vi.fn() };
-  render(BoardCanvas, {
+function renderCanvas(isEditing: boolean, widgets: Widget[] = [WIDGET]) {
+  const actions = {
+    onLayoutChange: vi.fn(),
+    onEditWidget: vi.fn(),
+    onRemoveWidget: vi.fn(),
+    onChangeKind: vi.fn(),
+    onDropKind: vi.fn(),
+  };
+  const { container } = render(BoardCanvas, {
     props: {
-      data: { widgets: [WIDGET], layout: [{ i: 'a', x: 0, y: 0, w: 2, h: 2 }], results: {} },
-      state: { isEditing },
+      data: {
+        widgets,
+        layout: widgets.map((widget) => ({ i: widget.id, x: 0, y: 0, w: 2, h: 2 })),
+        results: {},
+        filterNames: {},
+      },
+      state: { isEditing, canDrop: true },
       actions,
     },
   });
 
-  return actions;
+  return { actions, container };
 }
 
-describe('hintOf', () => {
+/** Um `dataTransfer` de mentira: o jsdom não tem o do navegador. */
+function transferOf(kind: Widget['kind'] | null) {
+  const types = kind ? [KIND_DRAG_TYPE, kindDragTypeOf(kind)] : ['Files'];
+
+  return { types, getData: (type: string) => (kind && type === KIND_DRAG_TYPE ? kind : ''), dropEffect: 'none' };
+}
+
+describe('kindOf', () => {
   // feliz
-  it('says the period, the saved filter, "only mine" and, while building, the weight', () => {
-    expect(hintOf({ ...WIDGET, filterId: 'f1', onlyMine: true }, { f1: 'Urgentes' }, null, true)).toBe(
-      'Últimos 30 dias · Urgentes · Só os meus · 2 pontos',
-    );
+  it('reads the dragged block kind from the data, or from the format name while passing over', () => {
+    expect(kindOf({ dataTransfer: transferOf('donut') as unknown as DataTransfer })).toBe('donut');
+    const passing = { types: [kindDragTypeOf('list')], getData: () => '' };
+    expect(kindOf({ dataTransfer: passing as unknown as DataTransfer })).toBe('list');
   });
 
   // triste
-  it('says nothing for a block of the whole period, without filter', () => {
-    expect(hintOf({ ...WIDGET, period: 'all' })).toBeNull();
+  it('ignores a file or a text dragged over the board', () => {
+    expect(kindOf({ dataTransfer: transferOf(null) as unknown as DataTransfer })).toBeNull();
+    expect(kindOf({ dataTransfer: null })).toBeNull();
   });
 });
 
 describe('AzuosBoardCanvas', () => {
   // feliz
-  it('lets whoever builds edit, remove and move a block with the keyboard', async () => {
-    const actions = renderCanvas(true);
+  it('shows the slots of the grid and the eight handles of each block while building', () => {
+    const { container } = renderCanvas(true);
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Editar o bloco Chamados por situação' }));
-    await fireEvent.click(screen.getByRole('button', { name: 'Tirar o bloco Chamados por situação' }));
-    await fireEvent.keyDown(screen.getByRole('button', { name: /Mover o bloco/ }), { key: 'ArrowRight' });
+    expect(screen.getByTestId('board-slots')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-resize-handle]')).toHaveLength(8);
+  });
 
-    expect(actions.onEditWidget).toHaveBeenCalledWith('a');
-    expect(actions.onRemoveWidget).toHaveBeenCalledWith('a');
+  // feliz
+  it('moves a block one cell with the arrows of its drag handle', async () => {
+    const { actions } = renderCanvas(true);
+
+    await fireEvent.keyDown(screen.getByRole('button', { name: 'Arrastar Chamados por situação' }), {
+      key: 'ArrowRight',
+    });
     expect(actions.onLayoutChange).toHaveBeenCalledWith([{ i: 'a', x: 1, y: 0, w: 2, h: 2 }]);
   });
 
-  // triste
-  it('only shows the blocks to whoever is just looking', () => {
-    renderCanvas(false);
+  // feliz
+  it('creates the block where a kind from the side panel is dropped', async () => {
+    const { actions } = renderCanvas(true);
+    const canvas = screen.getByTestId('board-canvas');
 
-    expect(screen.getByText('Chamados por situação')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Editar o bloco/ })).not.toBeInTheDocument();
+    await fireEvent.dragOver(canvas, { dataTransfer: transferOf('list'), clientX: 5, clientY: 5 });
+    expect(screen.getByTestId('board-placeholder')).toBeInTheDocument();
+    await fireEvent.drop(canvas, { dataTransfer: transferOf('list'), clientX: 5, clientY: 5 });
+    expect(actions.onDropKind).toHaveBeenCalledWith('list', expect.objectContaining({ w: 1, h: 2 }));
+  });
+
+  // triste
+  it('does not move anything, nor show slots, for whoever only views', () => {
+    const { container } = renderCanvas(false);
+
+    expect(screen.queryByTestId('board-slots')).toBeNull();
+    expect(container.querySelectorAll('[data-resize-handle]')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /^Arrastar/ })).toBeNull();
+  });
+
+  // triste
+  it('says the board has no blocks yet when there is nothing to show', () => {
+    renderCanvas(false, []);
+
+    expect(screen.getByText('Este painel ainda não tem blocos.')).toBeInTheDocument();
   });
 });

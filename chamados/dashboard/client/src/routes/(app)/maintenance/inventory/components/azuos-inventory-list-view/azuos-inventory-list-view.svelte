@@ -104,7 +104,7 @@
     />
   </PageHeader>
 
-  <div class="rounded-surface border-border bg-card flex flex-col gap-3 border p-4 shadow-xs">
+  <div class="rounded-surface bg-card flex flex-col gap-3 p-4 shadow-card">
     <TextField
       data={{
         label: 'Buscar',
@@ -200,7 +200,7 @@
         {#each data.items as item (item.id)}
           <li class="flex">
             <div
-              class="group rounded-surface border-border bg-card hover:border-border-strong flex flex-1 cursor-pointer flex-row items-stretch overflow-hidden border shadow-xs transition hover:shadow-sm sm:flex-col"
+              class="group rounded-surface bg-card flex flex-1 cursor-pointer flex-row items-stretch overflow-hidden transition hover:shadow-sm sm:flex-col shadow-card"
               role="button"
               tabindex="0"
               aria-label={`Editar ${item.name}`}

@@ -62,7 +62,7 @@
     />
   {:else}
     <section
-      class="rounded-surface border border-border bg-card p-6 shadow-xs"
+      class="rounded-surface bg-card p-6 shadow-card"
       aria-label="Versão do agente"
     >
       <div class="flex flex-wrap items-start justify-between gap-4">
@@ -156,7 +156,7 @@
   {/if}
 
   <section
-    class="rounded-surface border border-border bg-card p-6 shadow-xs"
+    class="rounded-surface bg-card p-6 shadow-card"
     aria-label="Todas as versões"
   >
     <h2 class="text-foreground font-semibold">Todas as versões</h2>

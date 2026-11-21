@@ -86,28 +86,29 @@ describe('AzuosBoardView', () => {
   });
 
   // feliz
-  it('counts the points and saves while building', async () => {
+  it('opens the building in full screen, with the points counted, and saves with "Guardar"', async () => {
     const view = props({ state: { isEditing: true } });
     render(BoardView, { props: view });
 
+    expect(screen.getByRole('dialog', { name: 'Montar o painel Equipe' })).toBeInTheDocument();
     expect(screen.getByText('2 de 24 pontos')).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole('button', { name: 'Salvar painel' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(view.actions.onSave).toHaveBeenCalled();
   });
 
   // triste
-  it('does not offer to build to who only looks, and says the board is empty', () => {
+  it('does not offer to build to who only looks, and says the board has no blocks', () => {
     render(BoardView, { props: props({ data: { widgets: [], layout: [] }, state: { canEdit: false } }) });
 
     expect(screen.queryByRole('button', { name: 'Editar painel' })).not.toBeInTheDocument();
-    expect(screen.getByText('Este painel está vazio')).toBeInTheDocument();
+    expect(screen.getByText('Este painel ainda não tem blocos.')).toBeInTheDocument();
   });
 
   // triste
-  it('shows the refusal of the save in red', () => {
+  it('shows the refusal of the save in red, inside the building screen', () => {
     render(BoardView, { props: props({ state: { isEditing: true, error: 'Não salvei o painel: passa da cota.' } }) });
 
-    expect(screen.getByText('Não salvei o painel: passa da cota.')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Não salvei o painel: passa da cota.');
   });
 });

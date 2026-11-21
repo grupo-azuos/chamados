@@ -110,7 +110,7 @@
     />
   </PageHeader>
 
-  <div class="rounded-surface border-border bg-card flex flex-col gap-3 border p-4 shadow-xs">
+  <div class="rounded-surface bg-card flex flex-col gap-3 p-4 shadow-card">
     <TextField
       data={{
         label: 'Buscar',
@@ -193,7 +193,7 @@
 
       <ul class="flex flex-col gap-3">
         {#each data.quotes as quote (quote.id)}
-          <li class="rounded-surface border-border bg-card flex flex-col gap-2.5 border p-4 shadow-xs">
+          <li class="rounded-surface bg-card flex flex-col gap-2.5 p-4 shadow-card">
             <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
               <div class="min-w-0">
                 <h3 class="text-ink-900 text-sm leading-tight font-semibold">{quote.supplier}</h3>

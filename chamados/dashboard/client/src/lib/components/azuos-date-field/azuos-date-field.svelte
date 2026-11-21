@@ -155,7 +155,7 @@
             </InputGroupButton>
           {/snippet}
         </Popover.Trigger>
-        <Popover.Content align="end" class="rounded-surface border-border bg-card w-auto p-0 shadow-xl">
+        <Popover.Content align="end" class="rounded-box bg-popover w-auto p-0 shadow-xl border-0 ring-1 ring-foreground/8">
           <DateStepper
             data={{ value: data.value, min: data.min, max: data.max }}
             ui={{ startYear: ui?.startYear }}

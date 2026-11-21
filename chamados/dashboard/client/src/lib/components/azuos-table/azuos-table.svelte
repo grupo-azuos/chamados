@@ -37,7 +37,7 @@
 <div
   data-slot="table-surface"
   class={cn(
-    'border-border bg-card rounded-surface w-full overflow-hidden border shadow-xs',
+    'bg-card rounded-surface w-full overflow-hidden shadow-card',
     containerClass,
   )}
 >

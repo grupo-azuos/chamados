@@ -110,9 +110,9 @@
     style={[contentStyle, dragStyle].filter(Boolean).join(';')}
     class={cn(
       /* Celular: nasce de baixo, cantos de cima arredondados — o bottom sheet. */
-      'fixed inset-x-0 bottom-0 z-50 flex max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)] w-full flex-col rounded-t-3xl border-t border-border bg-card px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-xl outline-none data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom',
+      'fixed inset-x-0 bottom-0 z-50 flex max-h-[calc(var(--visual-viewport-height,100dvh)-1rem)] w-full flex-col rounded-t-dialog bg-card ring-1 ring-foreground/8 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-xl outline-none data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom',
       /* Desktop: volta a ser o modal centrado — as mesmas classes do `DialogContent` base. */
-      'sm:top-[50%] sm:bottom-auto sm:left-[50%] sm:max-h-[calc(100dvh-3rem)] sm:w-full sm:max-w-[calc(100%-2rem)] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-surface sm:border sm:p-6 sm:duration-200 sm:data-[state=closed]:fade-out-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=open]:slide-in-from-bottom-0 sm:max-w-lg',
+      'sm:top-[50%] sm:bottom-auto sm:left-[50%] sm:max-h-[calc(100dvh-3rem)] sm:w-full sm:max-w-[calc(100%-2rem)] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-dialog sm:shadow-2xl sm:p-6 sm:duration-200 sm:data-[state=closed]:fade-out-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=open]:slide-in-from-bottom-0 sm:max-w-lg',
       className,
       'max-sm:inset-x-0 max-sm:top-auto max-sm:bottom-[var(--visual-viewport-bottom,0px)] max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:overflow-hidden',
     )}
@@ -156,7 +156,7 @@
       tabindex={showCloseButton ? 0 : -1}
       aria-hidden={showCloseButton ? undefined : true}
       class={showCloseButton
-        ? 'absolute top-4 right-4 rounded-chip opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=\'size-\'])]:size-4 cursor-pointer'
+        ? 'absolute top-4 right-4 flex size-7 items-center justify-center rounded-full bg-muted opacity-80 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=\'size-\'])]:size-4 cursor-pointer'
         : 'sr-only'}
     >
       {#if showCloseButton}

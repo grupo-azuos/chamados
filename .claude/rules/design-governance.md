@@ -1,69 +1,142 @@
-# Regras Inegociáveis de Design e Governança Visual (Grupo Azuos)
+# Regras de Design do Grupo Azuos — Padrão Apple
 
-Todo código gerado ou modificado nos 14 sistemas do Grupo Azuos DEVE seguir estritamente estas diretrizes. Não há exceções.
+Todo código gerado ou modificado nos sistemas do Grupo Azuos segue estas regras. O padrão visual é
+um só, o **padrão Apple**: superfícies limpas, sem borda, cantos grandes, sombra difusa, botões em
+pílula, fonte do sistema, e a cor de cada assunto num ícone cheio. Ele não muda de tema por tela
+nem por pessoa — só entre claro e escuro.
 
-## 1. Botão de Voltar Canônico
-- Em qualquer tela de detalhe, formulário ou entidade, o botão de voltar é EXCLUSIVAMENTE o `<AzuosBackButton data={{ destination: '...' }} />`.
-- Formato visual obrigatório: o do paralegal ("Voltar para empresas") — `← Voltar para [destino]` em `text-brand-blue-700`, `text-sm`, seta de 14px, sublinhado no hover, sem negrito, sem moldura, sem fundo, sem caixa cinza, sem formato circular com `<` isolado.
-- Botões manuais de voltar são terminantemente proibidos e rejeitados pelos hooks de linter.
+A fonte da verdade visual é o `lib/theme/tokens.css` do `template`; a vitrine é o app **brand**
+(Marca), com o link do Storybook do template. O `check:design` confere o que dá para conferir no
+código (hook do Claude e CI); o resto está aqui e no Storybook.
 
-## 2. Formulários e Inputs 100% Sólidos
-- Todos os campos (`<Input>`, `<Textarea>`, `<SelectTrigger>`, `<AzuosTextField>`, `<AzuosComboboxField>`) devem ter fundo sólido `bg-muted` e texto `text-foreground`.
-- Proibido o uso de `bg-transparent` ou inputs vazados apenas com contorno.
-- Foco padronizado via anel suave: `focus-visible:ring-[3px] focus-visible:ring-ring/50`. Proibido contorno colorido de borda (`colored-border`).
+## 1. Os tokens mandam
 
-## 3. Superfícies e Cards Sólidos
-- Cards e painéis (`<Card>`, `<AzuosStatCard>`, `<AzuosToneCard>`, `<AzuosHeroCard>`) devem ter preenchimento 100% sólido e opaco (`bg-card` ou cores sólidas da marca).
-- Proibido qualquer efeito de `backdrop-blur-*`, `glass`, transparências com opacidade solta (`/50`, etc.) e gradientes (`bg-gradient-*`).
+- Toda cor, canto, sombra e fonte vem de um token do `tokens.css`. Valor escrito na tela (hex,
+  rgb, paleta do Tailwind, `black`/`white`) é recusado (`brand/tokens-only`,
+  `brand/no-pure-black-white`, sem exceção).
+- Branco e preto puros só existem como **valor de token** dentro do `tokens.css` (o card claro do
+  padrão Apple é branco). A tela usa o nome: `bg-card`, `text-foreground`, `text-on-hue`.
+- Cor nova entra primeiro no `tokens.css` do `template`, depois nos sistemas.
 
-## 4. Cards de Dashboard com Ícones
-- Indicadores e cards de dashboard devem priorizar a presença de um ícone Lucide temático para padronização e identificação visual rápida.
+## 2. Forma
 
-## 5. Mascote Zuzu 100% Estático
-- O mascote corporativo Zuzu não pode ter animações (`animate-*`), giros (`rotate-*`) ou transições de escala. Ele é fixo e estático em todas as telas.
+| Papel | Token | Valor | Classe |
+| --- | --- | --- | --- |
+| Campo (input, select, combobox) | `--shape-control` | 10px | `rounded-control` |
+| Botão | `--shape-button` | pílula | `rounded-button` |
+| Card e painel | `--shape-card` | 20px | `rounded-surface` / `rounded-card` |
+| Diálogo e folha | `--shape-dialog` | 22px | `rounded-dialog` |
+| Chip, selo, badge | `--shape-chip` | pílula | `rounded-chip` / `rounded-badge` |
+| Ícone de assunto | `--shape-icon` | 28% ("squircle") | `rounded-icon` |
 
-## 6. Listas e Tabelas: Cards Pagina, Tabela Rola
-- Visualização em grade de cards (`card-grid`): SEMPRE usa paginação com `<AzuosPaginationBar>`.
-- Visualização em tabela (`<AzuosTable>`): SEMPRE usa scroll contínuo virtualizado com esqueletos (skeletons) milimetricamente alinhados à altura real da linha, evitando linhas vazias ou saltos.
-- Alternância padronizada entre os dois modos via `<AzuosTableViewToggle>`.
-- Proibido empilhar botões em linhas de tabelas. Usar menu discreto de 3 pontinhos (`DropdownMenu`).
+- Canto escolhido no olho (`rounded-lg`, `rounded-[14px]`) não entra: o canto vem do **papel**.
+- Todo controle usa a régua de altura (`control-sm` 32px, `control-md` 36px, `control-lg` 40px),
+  definida no componente `azuos-*`, nunca na tela.
 
-## 7. Select vs Combobox (Regra dos 15 itens)
-- Listas de seleção com 15 ou mais opções exigem obrigatoriamente Combobox com campo de pesquisa.
-- Caso o usuário pesquise e não encontre o item desejado, o componente deve oferecer a opção de cadastrar diretamente.
-- Seleção de usuário interno utiliza componente centralizado integrado ao `admin-console`.
+## 3. Superfícies: card sem borda, sobre o fundo
 
-## 8. Proibição de Telas de Criar Empresa/Grupo
-- Exceto nos sistemas `crm`, `public-api` e provisoriamente `paralegal`, NENHUM outro sistema pode conter tela ou modal de cadastrar empresa/grupo econômico (`/empresas/novo`, etc.). Devem consumir os dados centralizados/mockados.
+- O fundo da página é o cinza do sistema (`bg-background`); o card é a superfície (`bg-card`)
+  **sem borda**. O que separa os dois é o fio de 1px e a sombra difusa do `--elevation-card`
+  (`shadow-card`). Card com borda em volta é recusado (`apple/card-without-border`).
+- **Card nunca vai dentro de card da mesma cor.** Os cards de uma tela ficam sobre o fundo da
+  página; um painel que agrupa cards não tem fundo próprio.
+- Borda só existe como **divisória** (`border-b`, `divide-y`) e como **tracejado** de "solte aqui"
+  (`border-2 border-dashed`).
+- Menus flutuantes (select, combobox, popover, data): `bg-popover`, sem borda, com o anel de 1px
+  (`ring-1 ring-foreground/8`) e sombra grande. Todo menu abre **centralizado embaixo do botão**
+  que o abriu (`align="center"`), com a **largura do conteúdo** (`w-max`), nunca mais estreito que
+  o botão e no máximo `26rem`. Menu com busca começa em `14rem`, para caber o campo.
+- Proibido: gradiente, vidro (`backdrop-blur`), transparência solta em card
+  (`brand/no-gradients-or-glass`, `brand/no-card-opacity`).
+- Todo card é feito sobre `<AzuosCardSurface>` (ou um dos formatos que o usam): `AzuosStatCard`,
+  `AzuosMiniStatCard`, `AzuosContentCard`, `AzuosPanelCard` e o hero com Zuzu
+  (`AzuosDashboardHeroCard`). Card montado à mão não entra.
 
-## 9. Exclusividade do Repositório Template
-- A criação de novos componentes canônicos e a instalação de novas dependências visuais/UI só é permitida no repositório `template`. Os outros 13 sistemas apenas consomem os componentes homologados.
+## 4. Cor: no ícone, no status e no gráfico — nunca no fundo
 
-## 10. Cobertura de Testes Obrigatória (Mínimo de 90%)
-- Todo novo componente ou modificação deve conter cobertura de testes com Vitest, cumprindo os thresholds estritos de 90% em linhas, funções, branches e statements.
+- Cada assunto ou área tem um tom (`--hue-blue|red|yellow|green|steel|plum|slate|copper`), lido
+  pelas classes de `lib/utils/card-tone.util.ts`. No padrão Apple os tons são as cores do sistema:
+  azul, vermelho, amarelo, verde, ciano, roxo, cinza e índigo.
+- **Onde a cor entra:** o ícone cheio do card (quadrado de canto redondo, `rounded-icon`, com o
+  desenho branco — escuro no amarelo), a bolinha de status, o chip de status (fundo do tom bem
+  claro + texto do tom), o gráfico, o selo de notificação.
+- **Onde a cor NÃO entra:** fundo de card, fundo de faixa ou cabeçalho, borda, número grande.
+  O número do card fica na cor do texto (`text-foreground`): a cor do assunto mora no ícone.
+- Amarelo como texto some no claro: texto e ícone soltos amarelos usam o `-ink`
+  (`brand/readable-yellow-text`).
+- Cor escolhida pela pessoa vira o tom mais próximo (`cardHueFromHex`).
 
-## 11. Ações Duplas em Arquivos (Download + Abrir via Hyperlink)
-- Sempre que houver função ou visualização de arquivo, o sistema DEVE obrigatoriamente fornecer DUAS funções:
-  1. **Download**: Baixar o arquivo com seu nome original (`download={fileName}`).
-  2. **Abrir via Hyperlink**: Abrir diretamente em nova aba do navegador (`target="_blank" rel="noopener noreferrer"`).
-- Componentes canônicos: `<AzuosFileLinks />` e `<AzuosAttachmentList />`.
+## 5. Tipografia
 
-## 12. Upload e Anexo com Suporte Universal a Ctrl+V (Área de Transferência)
-- Todo local ou componente de anexar arquivo (`<AzuosAttachmentPicker>`, campos de upload e dropzones) DEVE obrigatoriamente aceitar colar arquivos via `Ctrl+V` (captura direta de imagens/prints e arquivos do clipboard).
-- Ao colar, os arquivos da área de transferência são adicionados à seleção, respeitando limites de quantidade e tamanho configurados.
+- Fonte do sistema (`-apple-system`, SF Pro, Segoe UI, Roboto), pelos tokens `--brand-font-*`.
+- Rótulo e título escritos **como frase** ("Alvarás vencidos"), em cinza de apoio
+  (`text-sm font-medium text-muted-foreground`). Caixa alta espaçada é do visual antigo
+  (`apple/sentence-case-labels`, aviso).
+- Número de painel grande e em negrito, com `tabular-nums`.
 
-## 13. Cor Só do `tokens.css` (Zero Cor Fixa)
-- Toda cor de tela vem de um token do `lib/theme/tokens.css` (`bg-primary`, `text-muted-foreground`, `var(--chart-1)`…). É proibida qualquer cor fixa: paleta padrão do Tailwind (`text-gray-500`, `bg-blue-600`, `bg-emerald-50`…), hex/rgb/hsl escritos no código, e `black`/`white` puros.
-- Vale para TODO arquivo de tela e de lógica de tela (`.tsx`, `.svelte`, `.ts`, `.css`, histórias): mapa de cor de gráfico, paleta sugerida, tema do ECharts e cor "de reserva" leem o `tokens.css` por `theme-color.util` (`themeColor('--chart-1')`), nunca por hex.
-- As regras `brand/tokens-only` e `brand/no-pure-black-white` são erro e NÃO aceitam `design-ignore-next-line` nem `design-ignore-file`. Cor nova entra primeiro no `tokens.css` do `template`, e só depois nos sistemas.
-- Os `text-white`/`bg-black` dos primitivos do shadcn (`lib/components/ui/`, que não se editam) resolvem para os tokens `--white`/`--black` da marca, remapeados no `@theme` do `tokens.css`.
+## 6. Hover, foco e movimento
 
-## 14. Cards: Quatro Formatos sobre Uma Superfície
-- Todo card é feito sobre `AzuosCardSurface` (`azuos-card-surface.svelte`): fundo da marca (`bg-card`) com a borda neutra, hover com o véu parado do tema (`--hover-veil`), sem animação, escolhido no azul claro da marca (`bg-card-selected`) com texto e ícone brancos.
-- Os quatro formatos: card de painel e filtro grande com ícone (`<AzuosStatCard>`), filtro pequeno (`<AzuosMiniStatCard>`), card de conteúdo com o ícone do assunto grande no canto (`<AzuosContentCard>`) e o hero com Zuzu (`<AzuosDashboardHeroCard>`, que usa o card de painel por dentro). Card novo usa um deles; não se monta card à mão.
-- Cor de card é SÓ sotaque, dos oito tons sóbrios de `lib/theme/tokens.css` (`--hue-blue|red|yellow|green|steel|plum|slate|copper`), pelas classes de `$lib/utils/card-tone.util.ts`: bolinha do ícone, número, ícone grande do canto, bolinha do selo. Nunca fundo pastel, fundo cheio no tom, neon ou borda colorida.
-- O hover é neutro por padrão (o véu do tema, só no hover). Card com a flag `ui.isHoverColored` + o tom fica tingido o tempo todo, com o sotaque a 16% — a única transparência permitida em card.
-- Cor escolhida pela pessoa (tag, status) pinta EXATA, como foi escolhida — nunca o sotaque mais próximo (`cardToneFromColor` + `cardToneStyle`).
-- O amarelo é o do grupo (`--yellow`, rgb(255, 220, 0)), sem âmbar: é fundo, traço, bolinha e gráfico. Texto e ícone amarelos usam `text-warning-ink` ou `text-hue-yellow-ink`; nunca `text-warning`.
-- Texto que pode cruzar o ícone grande do canto ganha margem à direita (ou uma faixa sólida por cima), para nunca passar por cima do desenho.
+- O hover **destaca, nunca esconde**. Card clicável sobe 2px e a sombra cresce
+  (`hover:shadow-card-hover motion-safe:hover:-translate-y-0.5`, já no `AzuosCardSurface`). Painel
+  que desliza por cima do conteúdo é recusado (`apple/hover-never-covers`).
+- Linha de lista ou tabela: véu neutro (`hover:bg-hover-veil`) com **respiro** — a linha tem
+  padding lateral e canto (`rounded-control`), o véu nunca cola no texto.
+- Hover é neutro. Cor no hover só com `ui.isHoverColored` do card, e só o véu leve no tom.
+- Foco: o anel suave (`focus-visible:ring-[3px] focus-visible:ring-ring/50`), nunca borda colorida.
+- **Tudo que abre e fecha anima** — bloco que expande, menu, diálogo, folha: a caixa desliza na
+  altura do conteúdo (`animate-collapsible-down/up`, `animate-in`/`animate-out`), a seta gira e o
+  conteúdo entra aparecendo. Nada surge ou some de uma vez.
+- Todo movimento respeita `motion-safe:`/`prefers-reduced-motion`.
 
+## 7. Campos e botões
+
+- Campo é **cinza cheio sem contorno** (`bg-muted`, `border-transparent`); o foco é o anel. Campo
+  com erro: fundo vermelho claro (`bg-destructive-soft`). Proibido campo vazado
+  (`brand/solid-inputs`).
+- Botão principal: pílula azul (`bg-primary`). Secundário: pílula cinza (`bg-muted`). Uma ação
+  principal por área (`von-restorff/single-primary`).
+- Grupo de opções e alternância (grade/lista, Meus/Equipe): pílula cinza com a opção escolhida
+  em branco por cima (`AzuosSegmentedControl`, `AzuosTableViewToggle`).
+- Nunca `<select>` nativo: sempre o seletor do projeto. Com 15 opções ou mais, combobox com busca
+  e "Cadastrar «termo»" quando der (skill `select-standard`). Pessoa é sempre
+  `AzuosPersonPickerField`.
+
+## 8. Listas e tabelas
+
+- Grade de cards (`card-grid`): sempre paginada com `<AzuosPaginationBar>`.
+- Tabela (`<AzuosTable>`): rola sem fim, virtualizada, com esqueletos da altura real da linha.
+  Cabeçalho em frase, cinza, sem faixa de fundo.
+- Alternância entre os dois modos pelo `<AzuosTableViewToggle>`.
+- Ação em linha: menu de 3 pontinhos, nunca botões empilhados.
+- Notificação ou pendência num card: selo vermelho no canto, que pulsa só com `motion-safe:`.
+
+## 9. Voltar, arquivos e anexos
+
+- Voltar é sempre o `<AzuosBackButton data={{ destination: '...' }} />`: `← Voltar para
+  [destino]`, texto na cor principal, sem moldura (`brand/canonical-back-button`).
+- Arquivo tem sempre as duas ações: baixar (`download={fileName}`) e abrir em nova aba
+  (`target="_blank" rel="noopener noreferrer"`) — `<AzuosFileLinks />`, `<AzuosAttachmentList />`
+  (`brand/dual-file-actions`).
+- Todo lugar de anexar aceita colar com `Ctrl+V` (`brand/paste-file-attachment`).
+
+## 10. Zuzu
+
+- O mascote é **estático**: sem animação, giro ou escala (`brand/static-zuzu`).
+- Ele fala em três lugares: o alerta do dia (hero), a lista vazia ("nada aqui") e a pendência
+  ("falta isto"). Não vira enfeite de canto.
+
+## 11. Organização das telas
+
+- Toda tela segue um molde, nesta ordem: cabeçalho (título + ação principal) → resumo (cards de
+  número) → barra de ferramentas (busca → filtros → ordenar → modo de ver) → conteúdo →
+  paginação.
+- Espaço entre blocos `gap-6`; dentro de card `p-4`/`p-5`; grade de cards `gap-3`/`gap-4`.
+
+## 12. Componentes, testes e documentação
+
+- Componente canônico novo e dependência visual nova só no repositório `template`; os sistemas
+  consomem. Todo componente `azuos-*` tem `.stories.svelte` e página de documentação no Storybook
+  (texto: para que serve, quando usar, quando não usar, variações).
+- Cobertura mínima de 90% (linhas, funções, branches, statements) no que mudar.
+- Empresa e grupo econômico só se cadastram no `crm`, na `public-api` e, por enquanto, no
+  `paralegal`.

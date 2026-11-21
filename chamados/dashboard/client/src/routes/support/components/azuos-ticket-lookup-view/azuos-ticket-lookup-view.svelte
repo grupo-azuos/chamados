@@ -305,7 +305,7 @@
     {:else if ticket}
       {@const facts = factsOf(ticket)}
       {@const journey = journeyOf(ticket.status)}
-      <article class="rounded-surface border-border bg-card flex flex-col gap-6 border p-5 shadow-xs sm:p-6">
+      <article class="rounded-surface bg-card flex flex-col gap-6 p-5 sm:p-6 shadow-card">
         <header class="flex flex-col gap-4">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-foreground font-mono text-2xl font-bold">{ticket.protocol}</h2>
@@ -376,7 +376,7 @@
             {/if}
             {#if ticket.screenshotUrl}
               <a
-                class="control-sm rounded-control border-border bg-card text-primary hover:bg-muted inline-flex w-fit items-center gap-1.5 border text-xs font-semibold shadow-xs transition-colors"
+                class="control-sm rounded-control bg-muted text-primary hover:bg-accent inline-flex w-fit items-center gap-1.5 border text-xs font-semibold transition-colors border-transparent"
                 href={ticket.screenshotUrl}
                 target="_blank"
                 rel="noopener"

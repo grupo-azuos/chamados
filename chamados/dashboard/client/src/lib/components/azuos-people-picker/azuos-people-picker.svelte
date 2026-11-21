@@ -77,7 +77,7 @@
       aria-label={ui?.ariaLabel}
       aria-invalid={Boolean(fieldState?.error)}
       aria-describedby={fieldState?.error ? errorId : undefined}
-      class="control-lg rounded-control border-border bg-card text-foreground hover:bg-muted inline-flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 border text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+      class="control-lg rounded-control bg-muted text-foreground hover:bg-accent inline-flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 border text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 border-transparent"
     >
       <span class={cn('truncate', selected.length === 0 && 'text-muted-foreground font-normal')}>
         {summaryOf(selected, ui?.placeholder ?? 'Escolha as pessoas')}
@@ -86,7 +86,7 @@
     </PopoverTrigger>
 
     <PopoverContent
-      class="w-auto min-w-(--bits-popover-anchor-width) max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-surface border-border bg-card shadow-xl"
+      class="w-auto min-w-(--bits-popover-anchor-width) max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8"
       align="start"
     >
       <div class="border-border relative shrink-0 border-b p-2">

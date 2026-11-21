@@ -17,6 +17,10 @@ import {
   TIME_WIDGETS,
   type Widget,
   type WidgetKind,
+  type WidgetWindow,
+  WINDOW_COUNTS,
+  type WindowUnit,
+  windowRange,
 } from '@template/shared/schemas/dashboard-board.schema';
 
 /**
@@ -231,4 +235,35 @@ function fitSplit(widget: Widget): string | null {
   if (options.some((option) => option.value === widget.splitBy)) return widget.splitBy;
 
   return options[0]?.value ?? null;
+}
+
+/** Trocar o modo da janela guarda o que dá para guardar: datas exatas nascem na janela de agora. */
+export function windowForMode(mode: string, current: WidgetWindow, today: string): WidgetWindow {
+  if (mode === 'custom') {
+    if (current.mode === 'custom') return current;
+
+    return { mode: 'custom', ...windowRange(current, today) };
+  }
+  const direction = mode === 'last' ? 'last' : 'next';
+  if (current.mode === 'relative') return { ...current, direction };
+
+  return { mode: 'relative', unit: 'month', count: 1, direction };
+}
+
+/** Trocar a unidade mantém a quantidade se ela existe na nova; senão, a menor. */
+export function withUnit(window: Extract<WidgetWindow, { mode: 'relative' }>, unit: WindowUnit): WidgetWindow {
+  const counts = WINDOW_COUNTS[unit];
+  const count = counts.includes(window.count) ? window.count : (counts[0] ?? 1);
+
+  return { ...window, unit, count };
+}
+
+/**
+ * A altura da pré-visualização. O card com anel é um card só: esticado na caixa dos gráficos ele
+ * ficava gordo, com o anel solto no meio — aqui ele tem a altura de uma linha do painel.
+ */
+export function previewHeightClass(kind: WidgetKind, isWide: boolean): string {
+  if (kind === 'ringCard') return 'h-36';
+
+  return isWide ? 'h-[62vh]' : 'h-96';
 }
