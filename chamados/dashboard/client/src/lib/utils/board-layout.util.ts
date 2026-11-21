@@ -45,10 +45,13 @@ export function overlaps(one: LayoutItem, other: LayoutItem): boolean {
   );
 }
 
+/** O bloco mais alto que a grade aceita, em andares. A grade dos filtros usa menos. */
+export const MAX_ROWS_PER_WIDGET = 8;
+
 /** O bloco dentro da grade: largura de 1 a 4, sem passar da borda, sem subir acima do topo. */
-export function clampItem(item: LayoutItem): LayoutItem {
+export function clampItem(item: LayoutItem, maxH = MAX_ROWS_PER_WIDGET): LayoutItem {
   const w = Math.min(Math.max(1, Math.round(item.w)), GRID_COLUMNS);
-  const h = Math.min(Math.max(1, Math.round(item.h)), 8);
+  const h = Math.min(Math.max(1, Math.round(item.h)), maxH);
   const x = Math.min(Math.max(0, Math.round(item.x)), GRID_COLUMNS - w);
   const y = Math.min(Math.max(0, Math.round(item.y)), MAX_GRID_ROWS);
 
@@ -116,10 +119,11 @@ export function resizeItem(
   w: number,
   h: number,
   isCompact = false,
+  maxH = MAX_ROWS_PER_WIDGET,
 ): LayoutItem[] {
   const item = layout.find((candidate) => candidate.i === id);
   if (!item) return [...layout];
-  let resized = clampItem({ ...item, w, h });
+  let resized = clampItem({ ...item, w, h }, maxH);
   if (!isCompact && resized.w < 2 && resized.h < 2) resized = { ...resized, h: 2 };
 
   return compactAround(pushDown([...layout], resized), resized);
@@ -149,4 +153,72 @@ export function cellAt(
     x: Math.max(0, Math.min(GRID_COLUMNS - 1, Math.floor(point.x / (cell.width + cell.gap)))),
     y: Math.max(0, Math.floor(point.y / (cell.height + cell.gap))),
   };
+}
+
+/** Os oito puxadores do bloco montando: os quatro cantos e o meio de cada lado. */
+export const RESIZE_HANDLES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;
+
+export type ResizeHandle = (typeof RESIZE_HANDLES)[number];
+
+/**
+ * O bloco puxado por um dos oito puxadores até a casa `cell`: o lado puxado vai até ela, e o lado
+ * oposto fica parado. Puxar o lado de cima mexe no `y` e na altura juntos; puxar a esquerda, no
+ * `x` e na largura. Nunca menor que uma casa, nem virado do avesso.
+ */
+export function resizeFromHandle(
+  item: Pick<LayoutItem, 'x' | 'y' | 'w' | 'h'>,
+  handle: ResizeHandle,
+  cell: { x: number; y: number },
+): Pick<LayoutItem, 'x' | 'y' | 'w' | 'h'> {
+  const right = item.x + item.w;
+  const bottom = item.y + item.h;
+  let { x, y, w, h } = item;
+  if (handle.includes('e')) w = Math.max(1, cell.x - item.x + 1);
+  if (handle.includes('s')) h = Math.max(1, cell.y - item.y + 1);
+  if (handle.includes('w')) {
+    x = Math.min(cell.x, right - 1);
+    w = right - x;
+  }
+  if (handle.includes('n')) {
+    y = Math.min(cell.y, bottom - 1);
+    h = bottom - y;
+  }
+
+  return { x, y, w, h };
+}
+
+/**
+ * A casa em que o bloco cai ao soltar: o canto de cima do bloco arrastado, arredondado para a casa
+ * mais próxima — e não a casa sob o ponteiro, que fazia o bloco pular quando pego pelo meio.
+ */
+export function dropCellOf(
+  topLeft: { x: number; y: number },
+  cell: { width: number; height: number; gap: number },
+  w: number,
+): { x: number; y: number } {
+  const x = Math.round(topLeft.x / (cell.width + cell.gap));
+  const y = Math.round(topLeft.y / (cell.height + cell.gap));
+
+  return { x: Math.max(0, Math.min(GRID_COLUMNS - w, x)), y: Math.max(0, y) };
+}
+
+/** O retângulo em pixels de um bloco na grade — onde o canvas o desenha. */
+export function pixelsOf(
+  item: Pick<LayoutItem, 'x' | 'y' | 'w' | 'h'>,
+  cell: { width: number; height: number; gap: number },
+): { left: number; top: number; width: number; height: number } {
+  return {
+    left: item.x * (cell.width + cell.gap),
+    top: item.y * (cell.height + cell.gap),
+    width: item.w * cell.width + (item.w - 1) * cell.gap,
+    height: item.h * cell.height + (item.h - 1) * cell.gap,
+  };
+}
+
+/** Andares vazios abaixo do último bloco: espaço visível para onde arrastar o próximo. */
+const SPARE_ROWS = 2;
+
+/** Quantos andares de casas desenhar montando: até o fim do último bloco, mais dois livres. */
+export function slotRows(layout: readonly Pick<LayoutItem, 'y' | 'h'>[]): number {
+  return Math.max(4, rowsOf(layout)) + SPARE_ROWS;
 }

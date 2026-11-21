@@ -308,3 +308,32 @@ export function toSankey(cells: readonly Cell[]) {
     })),
   };
 }
+
+/**
+ * O ANEL DO CARD COM ANEL — duas fatias: a contagem no sotaque e o que falta na trilha do tema. A
+ * contagem nunca passa do total (um dado fora do esperado não "estoura" o anel), e sem total o
+ * anel é só a trilha.
+ */
+export function countRingOption(
+  data: { count: number; total: number; hue: string },
+  theme: Pick<ChartTheme, 'track'>,
+): ChartOption {
+  const total = Math.max(data.total, 0);
+  const done = Math.min(Math.max(data.count, 0), total);
+
+  return {
+    series: [
+      {
+        type: 'pie',
+        radius: ['72%', '100%'],
+        silent: true,
+        label: { show: false },
+        emphasis: { disabled: true },
+        data: [
+          { name: 'Contagem', value: done, itemStyle: { color: data.hue } },
+          { name: 'Restante', value: total > 0 ? total - done : 1, itemStyle: { color: theme.track } },
+        ],
+      },
+    ],
+  };
+}

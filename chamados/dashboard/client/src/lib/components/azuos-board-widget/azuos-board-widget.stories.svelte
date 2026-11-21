@@ -54,25 +54,54 @@
   };
 
   const ok = (data: WidgetData) => ({ data, isLoading: false, error: null });
+  const actions = { onEdit: () => {}, onRemove: () => {}, onChangeKind: () => {}, onOpenItem: () => {} };
+  const view = (widget: Widget, data: WidgetData) => ({
+    data: { widget, result: ok(data), filterName: null },
+    state: { isEditing: false },
+    actions,
+  });
 </script>
 
-<Story name="Default" args={{ data: { widget: base, result: ok(categories), noun: 'chamados' }, ui: { className: 'h-80' } }} />
+<Story name="Default" args={view(base, categories)}>
+  {#snippet template(args)}<div class="h-80"><BoardWidget {...args} /></div>{/snippet}
+</Story>
 
-<Story name="Stats" args={{ data: { widget: { ...base, kind: 'stats', title: 'Chamados' }, result: ok(categories), noun: 'chamados' } }} />
+<Story name="Stats" args={view({ ...base, kind: 'stats', title: 'Chamados' }, categories)}>
+  {#snippet template(args)}<div class="h-80"><BoardWidget {...args} /></div>{/snippet}
+</Story>
 
-<Story name="Donut" args={{ data: { widget: { ...base, kind: 'donut' }, result: ok(categories), noun: 'chamados' }, ui: { className: 'h-80' } }} />
+<Story name="Donut" args={view({ ...base, kind: 'donut' }, categories)}>
+  {#snippet template(args)}<div class="h-80"><BoardWidget {...args} /></div>{/snippet}
+</Story>
 
-<Story name="AreaInTime" args={{ data: { widget: { ...base, kind: 'area', groupBy: 'createdDay', title: 'Abertos por dia' }, result: ok(days), noun: 'chamados', hint: 'Últimos 7 dias' }, ui: { className: 'h-80' } }} />
+<Story name="AreaInTime" args={view({ ...base, kind: 'area', groupBy: 'createdDay', title: 'Abertos por dia' }, days)}>
+  {#snippet template(args)}<div class="h-80"><BoardWidget {...args} /></div>{/snippet}
+</Story>
 
-<Story name="Stacked" args={{ data: { widget: { ...base, kind: 'stacked', groupBy: 'assignee', splitBy: 'open', title: 'Por responsável' }, result: ok(cells), noun: 'chamados' }, ui: { className: 'h-80' } }} />
+<Story name="Empty" args={view({ ...base, kind: 'list' }, { total: 0, grandTotal: 0, series: [], cells: [] })}>
+  {#snippet template(args)}<div class="h-80"><BoardWidget {...args} /></div>{/snippet}
+</Story>
 
-<Story name="Radial" args={{ data: { widget: { ...base, kind: 'radial', groupBy: null, title: 'Em aberto' }, result: ok(categories), noun: 'chamados' }, ui: { className: 'h-80' } }} />
+<Story name="Stacked" args={view({ ...base, kind: 'stacked', groupBy: 'assignee', splitBy: 'open', title: 'Por responsável' }, cells)}>
+  {#snippet template(args)}<div class="h-80"><BoardWidget {...args} /></div>{/snippet}
+</Story>
 
-<Story name="Loading" args={{ data: { widget: base, result: { data: null, isLoading: true, error: null }, noun: 'chamados' }, ui: { className: 'h-80' } }} />
+<Story name="Radial" args={view({ ...base, kind: 'radial', groupBy: null, title: 'Em aberto' }, categories)}>
+  {#snippet template(args)}<div class="h-80"><BoardWidget {...args} /></div>{/snippet}
+</Story>
 
-<Story name="Error" args={{ data: { widget: base, result: { data: null, isLoading: false, error: 'O filtro "Urgentes" está arquivado.' }, noun: 'chamados' }, ui: { className: 'h-80' } }} />
+<Story name="LongTitleNarrow" args={view({ ...base, title: 'Chamados da Infraestrutura abertos pelo financeiro nos últimos trinta dias' }, categories)}>
+  {#snippet template(args)}<div class="h-80 max-w-[280px]"><BoardWidget {...args} /></div>{/snippet}
+</Story>
 
-<Story name="Empty" args={{ data: { widget: base, result: ok({ total: 0, grandTotal: 0, series: [], cells: [] }), noun: 'chamados' }, ui: { className: 'h-80' } }} />
+<Story name="Montando" args={{ ...view(base, categories), state: { isEditing: true } }}>
+  {#snippet template(args)}<div class="h-80"><BoardWidget {...args} /></div>{/snippet}
+</Story>
 
-<!-- Caso limite: título comprido num bloco estreito. -->
-<Story name="LongTitleNarrow" args={{ data: { widget: { ...base, title: 'Chamados da Infraestrutura abertos pelo financeiro nos últimos trinta dias' }, result: ok(categories), noun: 'chamados' }, ui: { className: 'h-80 max-w-[280px]' } }} />
+<Story name="Carregando" args={{ data: { widget: base, result: { data: null, isLoading: true, error: null }, filterName: null }, state: { isEditing: false }, actions }}>
+  {#snippet template(args)}<div class="h-80"><BoardWidget {...args} /></div>{/snippet}
+</Story>
+
+<Story name="Erro" args={{ data: { widget: base, result: { data: null, isLoading: false, error: 'O filtro salvo está arquivado.' }, filterName: 'Só os urgentes' }, state: { isEditing: false }, actions }}>
+  {#snippet template(args)}<div class="h-80"><BoardWidget {...args} /></div>{/snippet}
+</Story>

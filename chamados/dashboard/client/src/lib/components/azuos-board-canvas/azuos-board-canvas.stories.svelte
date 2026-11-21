@@ -40,14 +40,17 @@
   const results = Object.fromEntries(
     widgets.map((item) => [item.id, { data: { total: 13, grandTotal: 20, series, cells: [] }, isLoading: false, error: null }]),
   );
-  const actions = { onLayoutChange: () => {}, onEditWidget: () => {}, onRemoveWidget: () => {} };
+  const actions = { onLayoutChange: () => {}, onEditWidget: () => {}, onRemoveWidget: () => {}, onChangeKind: () => {}, onDropKind: () => {} };
 </script>
 
-<Story name="Default" args={{ data: { widgets, layout, results }, state: { isEditing: false }, actions }} />
+<Story name="Default" args={{ data: { widgets, layout, results, filterNames: {} }, state: { isEditing: false }, actions }} />
 
-<Story name="Editing" args={{ data: { widgets, layout, results }, state: { isEditing: true }, actions }} />
+<Story name="Editing" args={{ data: { widgets, layout, results, filterNames: {} }, state: { isEditing: true, canDrop: true }, actions }} />
 
-<Story name="Loading" args={{ data: { widgets, layout, results: {} }, state: { isEditing: false }, actions }} />
+<Story name="Loading" args={{ data: { widgets, layout, results: {}, filterNames: {} }, state: { isEditing: false }, actions }} />
 
 <!-- Caso limite: um bloco só, ocupando a grade inteira. -->
-<Story name="SingleBlock" args={{ data: { widgets: [widgets[1]!], layout: [{ i: 'b', x: 0, y: 0, w: 4, h: 3 }], results }, state: { isEditing: false }, actions }} />
+<Story name="SingleBlock" args={{ data: { widgets: [widgets[1]!], layout: [{ i: 'b', x: 0, y: 0, w: 4, h: 3 }], results, filterNames: {} }, state: { isEditing: false }, actions }} />
+
+<!-- Caso limite: montando um painel vazio — só as casas da grade, à espera do primeiro bloco. -->
+<Story name="EmptyEditing" args={{ data: { widgets: [], layout: [], results: {}, filterNames: {} }, state: { isEditing: true, canDrop: true }, actions }} />

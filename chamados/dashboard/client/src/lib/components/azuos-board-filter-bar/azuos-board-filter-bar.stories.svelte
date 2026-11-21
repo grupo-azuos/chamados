@@ -18,14 +18,16 @@
     pessoa: { total: 9, isLoading: false, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 5 }, { key: 'Caio Reis', label: 'Caio Reis', value: 4 }] },
     ticketStatus: { total: 9, isLoading: false, series: [{ key: 'open', label: 'Aberto', value: 6 }, { key: 'in_progress', label: 'Em atendimento', value: 3 }] },
   };
-  const actions = { onChange: () => {}, onClear: () => {}, onAdd: () => {}, onRemove: () => {}, onDisplayChange: () => {} };
+  const actions = { onChange: () => {}, onClear: () => {}, onAdd: () => {}, onRemove: () => {}, onDisplayChange: () => {}, onPlaceChange: () => {} };
 </script>
 
-<Story name="Default" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />
+<Story name="Default" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, ui: { isInitiallyOpen: true }, actions }} />
 
-<Story name="Chips" args={{ data: { filters: [{ ...filters[0]!, display: 'chips' }], values: { ...EMPTY_BOARD_FILTER_VALUES, person: 'Ana Lima' }, counts }, actions }} />
+<Story name="Recolhida com filtro" args={{ data: { filters, values: { ...EMPTY_BOARD_FILTER_VALUES, person: 'Ana Lima' }, counts }, actions }} />
 
-<Story name="Cards" args={{ data: { filters: [{ id: 'ticketStatus', kind: 'ticketStatus', label: 'Situação', display: 'cards' }], values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />
+<Story name="Chips" args={{ data: { filters: [{ ...filters[0]!, display: 'chips' }], values: { ...EMPTY_BOARD_FILTER_VALUES, person: 'Ana Lima' }, counts }, ui: { isInitiallyOpen: true }, actions }} />
+
+<Story name="Cards" args={{ data: { filters: [{ id: 'ticketStatus', kind: 'ticketStatus', label: 'Situação', display: 'cards' }], values: EMPTY_BOARD_FILTER_VALUES, counts }, ui: { isInitiallyOpen: true }, actions }} />
 
 <Story name="Editing" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, state: { isEditing: true }, actions }} />
 

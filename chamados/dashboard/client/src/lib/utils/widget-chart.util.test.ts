@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  countRingOption,
   cumulativeOption,
   groupedOption,
   paretoOption,
@@ -130,5 +131,21 @@ describe('the crossing of two categories', () => {
   it('draws nothing from no cells', () => {
     expect(toStacked([])).toEqual({ series: [], categories: [] });
     expect(toSankey([]).nodes).toEqual([]);
+  });
+});
+
+describe('countRingOption', () => {
+  const ringData = (option: ReturnType<typeof countRingOption>) =>
+    ((option.series as { data: { value: number }[] }[])[0]?.data ?? []).map((slice) => slice.value);
+
+  // feliz
+  it('splits the ring into the count and what is left of the total', () => {
+    expect(ringData(countRingOption({ count: 14, total: 136, hue: 'blue' }, { track: 'gray' }))).toEqual([14, 122]);
+  });
+
+  // triste
+  it('never overflows the ring, and is only the track without a total', () => {
+    expect(ringData(countRingOption({ count: 99, total: 10, hue: 'blue' }, { track: 'gray' }))).toEqual([10, 0]);
+    expect(ringData(countRingOption({ count: 3, total: 0, hue: 'blue' }, { track: 'gray' }))).toEqual([0, 1]);
   });
 });

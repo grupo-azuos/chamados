@@ -12,6 +12,7 @@ import {
   removeWidget,
   saveErrorOf,
   setBoardFilterDisplay,
+  setBoardFilterPlaces,
   upsertWidget,
   visibleScopes,
 } from './board-draft.util';
@@ -132,5 +133,25 @@ describe('saveErrorOf', () => {
   it('says the plain reason when the server points nowhere, and nothing without an error', () => {
     expect(saveErrorOf(new ApiError(500, 'Banco fora do ar'), [], [])).toBe('Não salvei o painel: Banco fora do ar');
     expect(saveErrorOf(null, [], [])).toBeNull();
+  });
+});
+
+describe('setBoardFilterPlaces', () => {
+  const draft = {
+    widgets: [],
+    layout: [],
+    filters: [{ id: 'person', kind: 'person' as const, label: 'Pessoa' }],
+  };
+
+  // feliz
+  it('moves a filter to the place the grid gave back, keeping its name', () => {
+    const next = setBoardFilterPlaces(draft, [{ id: 'person', place: { x: 1, y: 0, w: 2, h: 1 } }]);
+
+    expect(next.filters[0]).toEqual({ id: 'person', kind: 'person', label: 'Pessoa', place: { x: 1, y: 0, w: 2, h: 1 } });
+  });
+
+  // triste
+  it('ignores a place for a filter the board does not have', () => {
+    expect(setBoardFilterPlaces(draft, [{ id: 'ghost', place: { x: 0, y: 0, w: 1, h: 1 } }]).filters).toEqual(draft.filters);
   });
 });

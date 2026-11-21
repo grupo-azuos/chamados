@@ -1,164 +1,199 @@
 <script lang="ts" module>
-  import { type Widget } from '@template/shared/schemas/dashboard-board.schema';
-  import { type Snippet } from 'svelte';
+  import {
+    DATA_SOURCES,
+    type Widget,
+    WIDGET_PERIOD_LABELS,
+    windowLabel,
+  } from '@template/shared/schemas/dashboard-board.schema';
 
   import { type WidgetState } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
+  import { type BoardItem } from '$lib/utils/widget-items.util';
 
   /**
-   * UM BLOCO DO PAINEL — o título, a nota do recorte e o gráfico do tipo escolhido, com os
-   * estados de sempre: carregando, erro (em vermelho, com o motivo) e vazio (só depois de contar).
+   * UM BLOCO DO PAINEL — a fonte contada, desenhada no formato escolhido. O mesmo bloco serve a
+   * ver e a montar: montando, ganha a alça de arrastar, o peso, o "trocar o gráfico", o
+   * "configurar" e o "remover". Vendo, ganha o "expandir", que abre o gráfico em tela cheia.
    *
    * Função pura de props: os números chegam prontos (`data.result`), e o bloco só desenha.
-   * Os controles de montar (mover, editar, tirar) são do canvas, que põe por cima (`tools`).
    */
   export type AzuosBoardWidgetProps = {
     data: {
       widget: Widget;
-      result: WidgetState | null;
-      /** O que a fonte conta, no plural: "chamados". */
-      noun: string;
-      /** A linha pequena embaixo do título: o período, o filtro salvo, "só os meus". */
-      hint?: string | null;
+      result: WidgetState;
+      /** O nome do filtro salvo do bloco — um selo do recorte. */
+      filterName: string | null;
+      /** A nota da data que o "Período" do painel recorta nesta fonte. @default nenhuma */
+      periodNote?: string | null;
     };
-    ui?: { className?: string };
-    tools?: Snippet;
+    /**
+     * `isPreview`: o bloco desenhado dentro do editor. Ali não expande — uma tela cheia aberta de
+     * dentro do diálogo brigava com ele e com a tela de montar o painel.
+     */
+    state: { isEditing: boolean; isPreview?: boolean };
+    actions: {
+      onEdit: (id: string) => void;
+      onRemove: (id: string) => void;
+      /** Trocar o gráfico direto no bloco, sem abrir o editor (só montando o painel). */
+      onChangeKind?: (id: string, kind: Widget['kind']) => void;
+      /**
+       * Clicou num item (barra, fatia, linha, card): a tela leva à lista do que ele conta. Sem
+       * ela — montando, ou com os itens não clicáveis — o bloco fica de leitura.
+       */
+      onOpenItem?: (widget: Widget, item: BoardItem) => void;
+    };
   };
+
+  /**
+   * A classe da alça de arrastar — o canvas só arrasta por ela, para o gráfico seguir clicável.
+   * Nos gráficos, é o cabeçalho inteiro (alvo grande); nos cards e no destaque, a alça da barra.
+   */
+  export const DRAG_HANDLE = 'board-drag-handle';
+
+  /** O que, dentro da alça, é clique e não começo de arrasto: os botões do cabeçalho. */
+  export const NO_DRAG = 'board-no-drag';
+
+  /** "Contagem de chamados por situação" — o que o bloco conta, e como agrupa. */
+  export function measureOf(widget: Widget): string {
+    const source = DATA_SOURCES[widget.source];
+    const dimensions = source.dimensions as Record<string, { label: string }>;
+    const group = widget.groupBy ? dimensions[widget.groupBy]?.label : null;
+    const split = widget.splitBy ? dimensions[widget.splitBy]?.label : null;
+    const parts = [`Contagem de ${source.noun}`];
+    if (group) parts.push(`por ${group.toLowerCase()}`);
+    if (split) parts.push(`e ${split.toLowerCase()}`);
+
+    return parts.join(' ');
+  }
+
+  /** O recorte em selos: o total, o período, "só os meus" e o filtro — o que mudou o número. */
+  export function scopeChipsOf(data: AzuosBoardWidgetProps['data']): string[] {
+    const { widget, result } = data;
+
+    return [
+      result.data ? `${result.data.total.toLocaleString('pt-BR')} ${DATA_SOURCES[widget.source].noun}` : null,
+      widget.period !== 'all' ? WIDGET_PERIOD_LABELS[widget.period] : null,
+      widget.window ? windowLabel(widget.window) : null,
+      widget.onlyMine ? 'Só os meus' : null,
+      data.filterName,
+      data.periodNote ?? null,
+    ].filter((chip): chip is string => Boolean(chip));
+  }
 </script>
 
 <script lang="ts">
-  import AreaChart from '$lib/components/azuos-area-chart/azuos-area-chart.svelte';
-  import CalendarChart from '$lib/components/azuos-calendar-chart/azuos-calendar-chart.svelte';
-  import ChartValueList from '$lib/components/azuos-chart-value-list/azuos-chart-value-list.svelte';
-  import ColumnChart from '$lib/components/azuos-column-chart/azuos-column-chart.svelte';
-  import DashboardHeroCard from '$lib/components/azuos-dashboard-hero-card/azuos-dashboard-hero-card.svelte';
-  import DonutChart from '$lib/components/azuos-donut-chart/azuos-donut-chart.svelte';
-  import Echart from '$lib/components/azuos-echart/azuos-echart.svelte';
-  import HeatmapChart from '$lib/components/azuos-heatmap-chart/azuos-heatmap-chart.svelte';
-  import PanelCard from '$lib/components/azuos-panel-card/azuos-panel-card.svelte';
-  import RadarChart from '$lib/components/azuos-radar-chart/azuos-radar-chart.svelte';
-  import RadialChart from '$lib/components/azuos-radial-chart/azuos-radial-chart.svelte';
-  import SankeyChart from '$lib/components/azuos-sankey-chart/azuos-sankey-chart.svelte';
-  import StackedBarChart from '$lib/components/azuos-stacked-bar-chart/azuos-stacked-bar-chart.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
-  import TreemapChart from '$lib/components/azuos-treemap-chart/azuos-treemap-chart.svelte';
-  import { themeColor } from '$lib/utils/theme-color.util';
-  import {
-    cumulativeOption,
-    groupedOption,
-    paretoOption,
-    pieOption,
-    toHeatmap,
-    toSankey,
-    toStacked,
-  } from '$lib/utils/widget-chart.util';
-  import {
-    calendarDaysOf,
-    gaugeOf,
-    isEmptyResult,
-    slicesOf,
-    statItemsOf,
-    timePointsOf,
-  } from '$lib/utils/widget-view.util';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
+  import Maximize2 from '@lucide/svelte/icons/maximize-2';
 
-  let { data, ui, tools }: AzuosBoardWidgetProps = $props();
+  import AzuosActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import AzuosExpandableScreen from '$lib/components/azuos-expandable-screen/azuos-expandable-screen.svelte';
+  import { cn } from '$lib/utils/cn';
+  import { WIDGET_KIND_LOOK } from '$lib/utils/widget-kind.util';
 
+  import WidgetBody from './azuos-board-widget-body.svelte';
+  import WidgetEditTools from './azuos-board-widget-edit-tools.svelte';
+
+  let { data, state: widgetState, actions }: AzuosBoardWidgetProps = $props();
+
+  let isExpanded = $state(false);
   const widget = $derived(data.widget);
-  const result = $derived(data.result?.data ?? null);
-  const isLoading = $derived(Boolean(data.result?.isLoading) && result === null);
-  const error = $derived(data.result?.error ?? null);
-  const slices = $derived(slicesOf(result));
-  const seriesLabel = $derived(data.noun.charAt(0).toUpperCase() + data.noun.slice(1));
-  const emptyLabel = 'Nada para contar aqui';
-  const isCards = $derived(widget.kind === 'stats' || widget.kind === 'ringCard');
+  /* Os cards e o destaque já são superfícies; os gráficos ganham a moldura do bloco. */
+  const isCard = $derived(widget.kind === 'stats' || widget.kind === 'hero' || widget.kind === 'ringCard');
+  const Icon = $derived(WIDGET_KIND_LOOK[widget.kind].icon);
+  const chips = $derived(scopeChipsOf(data));
 </script>
 
-{#snippet body()}
-  {#if error}
-    <p role="alert" class="text-destructive text-sm font-medium">{error}</p>
-  {:else if isLoading}
-    <p class="text-ink-500 text-sm">Contando…</p>
-  {:else if isEmptyResult(result) && !isCards}
-    <p class="text-ink-500 text-sm">{emptyLabel}</p>
-  {:else if widget.kind === 'stats'}
-    {@const items = statItemsOf(result, data.noun, widget.groupBy !== null)}
-    <div class="grid h-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {#each items as item (item.key)}
-        <StatCard data={{ label: item.label, value: item.value }} ui={{ tone: item.tone }} />
-      {/each}
-    </div>
-  {:else if widget.kind === 'hero'}
-    {@const items = statItemsOf(result, data.noun, widget.groupBy !== null)}
-    <DashboardHeroCard
-      data={{
-        title: widget.title,
-        description: `${result?.total ?? 0} ${data.noun} no recorte`,
-        stats: items.map((item) => ({ label: item.label, value: item.value, tone: item.tone })),
-      }}
-    />
-  {:else if widget.kind === 'radial' || widget.kind === 'ringCard'}
-    {@const gauge = gaugeOf(result)}
-    <RadialChart
-      data={{ value: gauge.value, max: gauge.max, label: widget.title, hint: `de ${gauge.max} ${data.noun}` }}
-      ui={{ heightClass: widget.kind === 'ringCard' ? 'h-24' : 'h-40' }}
-    />
-  {:else if widget.kind === 'column' || widget.kind === 'bar'}
-    <ColumnChart
-      data={{ slices, seriesLabel }}
-      ui={{ emptyLabel, orientation: widget.kind === 'bar' ? 'horizontal' : 'vertical' }}
-    />
-  {:else if widget.kind === 'donut'}
-    <DonutChart data={{ slices, seriesLabel }} ui={{ emptyLabel }} />
-  {:else if widget.kind === 'list'}
-    <ChartValueList data={{ slices }} />
-  {:else if widget.kind === 'radar'}
-    <RadarChart data={{ slices, seriesLabel }} ui={{ emptyLabel }} />
-  {:else if widget.kind === 'treemap'}
-    <TreemapChart data={{ slices, seriesLabel }} ui={{ emptyLabel }} />
-  {:else if widget.kind === 'area'}
-    <AreaChart
-      data={{ points: timePointsOf(result), series: [{ key: 'total', label: seriesLabel, color: themeColor('--chart-1') }] }}
-      ui={{ emptyLabel }}
-    />
-  {:else if widget.kind === 'calendar' || widget.kind === 'agenda'}
-    <CalendarChart data={{ days: calendarDaysOf(result), seriesLabel: data.noun }} ui={{ emptyLabel }} />
-  {:else if widget.kind === 'stacked'}
-    {@const stacked = toStacked(result?.cells ?? [])}
-    <StackedBarChart data={{ ...stacked, seriesLabel }} ui={{ emptyLabel }} />
-  {:else if widget.kind === 'heatmap'}
-    <HeatmapChart data={{ ...toHeatmap(result?.cells ?? []), seriesLabel }} ui={{ emptyLabel }} />
-  {:else if widget.kind === 'sankey'}
-    <SankeyChart data={{ ...toSankey(result?.cells ?? []), seriesLabel }} ui={{ emptyLabel }} />
-  {:else if widget.kind === 'pie' || widget.kind === 'rose' || widget.kind === 'halfDonut'}
-    {@const shape = widget.kind}
-    <Echart
-      data={{ option: (theme) => pieOption(slices, seriesLabel, shape, theme), description: widget.title }}
-      ui={{ emptyLabel }}
-      state={{ isEmpty: slices.length === 0 }}
-    />
-  {:else if widget.kind === 'pareto'}
-    <Echart
-      data={{ option: (theme) => paretoOption(slices, seriesLabel, theme), description: widget.title }}
-      ui={{ emptyLabel }}
-      state={{ isEmpty: slices.length === 0 }}
-    />
-  {:else if widget.kind === 'cumulative'}
-    <Echart
-      data={{
-        option: (theme) => cumulativeOption(result?.series ?? [], seriesLabel, theme),
-        description: widget.title,
-      }}
-      ui={{ emptyLabel }}
-      state={{ isEmpty: (result?.series ?? []).length === 0 }}
-    />
-  {:else if widget.kind === 'grouped'}
-    <Echart
-      data={{ option: (theme) => groupedOption(toStacked(result?.cells ?? []), theme), description: widget.title }}
-      ui={{ emptyLabel }}
-      state={{ isEmpty: (result?.cells ?? []).length === 0 }}
-    />
-  {/if}
+{#snippet dragHandle()}
+  <!-- A alça de arrastar: um botão de verdade, de 40px, no lugar do ícone do bloco. -->
+  <button
+    type="button"
+    aria-label={`Arrastar ${widget.title}`}
+    class={cn(
+      DRAG_HANDLE,
+      'rounded-box bg-primary-soft text-primary flex size-10 shrink-0 cursor-grab items-center justify-center active:cursor-grabbing',
+      'focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none',
+    )}
+  >
+    <GripVertical class="size-5" aria-hidden="true" />
+  </button>
 {/snippet}
 
-<PanelCard data={{ title: widget.title, hint: data.hint ?? null }} ui={{ className: ui?.className, bodyClassName: 'min-h-0 flex-1' }} {tools}>
-  {@render body()}
-</PanelCard>
+{#if isCard}
+  <!-- Sem a faixa de selos, a nota do período do painel vai num selo acima dos cards. -->
+  <div class="relative flex h-full flex-col gap-1">
+    {#if data.periodNote}
+      <span class="rounded-chip bg-muted text-ink-700 self-start px-2 py-0.5 text-xs font-semibold">
+        {data.periodNote}
+      </span>
+    {/if}
+    <div class="min-h-0 flex-1">
+      <WidgetBody data={{ widget, result: data.result }} {actions} />
+    </div>
+    {#if widgetState.isEditing}
+      <div class="rounded-box bg-card absolute top-2 right-2 z-10 flex items-center gap-1 p-1 shadow-xs">
+        {@render dragHandle()}
+        <WidgetEditTools data={{ widget }} {actions} />
+      </div>
+    {/if}
+  </div>
+{:else}
+  <!-- O cartão: a faixa do cabeçalho (ícone, título, o que conta, o recorte em selos) e as
+       ferramentas dentro dela — nada solto embaixo (conectividade uniforme). Montando, quem
+       desenha a seleção é o canvas (o contorno tracejado e os puxadores). -->
+  <section aria-label={widget.title} class="rounded-surface bg-card shadow-card flex h-full min-h-0 flex-col">
+    <header
+      class={cn(
+        'border-border flex items-start gap-3 border-b px-4 pt-3.5 pb-3',
+        widgetState.isEditing && cn(DRAG_HANDLE, 'cursor-grab active:cursor-grabbing'),
+      )}
+    >
+      {#if widgetState.isEditing}
+        {@render dragHandle()}
+      {:else}
+        <span class="rounded-box bg-primary-soft text-primary flex size-10 shrink-0 items-center justify-center">
+          <Icon class="size-5" aria-hidden="true" />
+        </span>
+      {/if}
+      <span class="min-w-0 flex-1">
+        <h3 class="text-ink-900 truncate text-sm font-bold tracking-tight">{widget.title}</h3>
+        <span class="text-ink-500 block truncate text-xs">{measureOf(widget)}</span>
+        {#if chips.length > 0}
+          <span class="mt-1.5 flex flex-wrap gap-1">
+            {#each chips as chip, index (chip)}
+              <span
+                class={cn(
+                  'rounded-chip px-2 py-0.5 text-xs font-semibold',
+                  index === 0 ? 'bg-primary-soft text-primary' : 'bg-muted text-ink-700',
+                )}
+              >
+                {chip}
+              </span>
+            {/each}
+          </span>
+        {/if}
+      </span>
+      <span class={cn('flex shrink-0 items-center gap-1', NO_DRAG)}>
+        {#if widgetState.isEditing}
+          <WidgetEditTools data={{ widget }} {actions} />
+        {:else if !widgetState.isPreview}
+          <AzuosActionButton
+            data={{ label: `Expandir ${widget.title}` }}
+            ui={{ variant: 'ghost', icon: Maximize2, isIconOnly: true }}
+            actions={{ onClick: () => (isExpanded = true) }}
+          />
+        {/if}
+      </span>
+    </header>
+    <div class="min-h-0 flex-1 p-4">
+      <WidgetBody data={{ widget, result: data.result }} {actions} />
+    </div>
+    <AzuosExpandableScreen
+      data={{ title: widget.title, description: measureOf(widget) }}
+      state={{ isOpen: isExpanded }}
+      actions={{ onClose: () => (isExpanded = false) }}
+    >
+      <div class="h-[70vh] p-6">
+        <WidgetBody data={{ widget, result: data.result }} {actions} />
+      </div>
+    </AzuosExpandableScreen>
+  </section>
+{/if}

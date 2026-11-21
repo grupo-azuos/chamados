@@ -17,10 +17,10 @@ const WIDGET: Widget = {
   window: null,
 };
 
-function renderEditor(widget: Widget = WIDGET) {
-  const actions = { onClose: vi.fn(), onSubmit: vi.fn(), onPreviewChange: vi.fn() };
+function renderEditor(widget: Widget = WIDGET, isNew = false) {
+  const actions = { onClose: vi.fn(), onSubmit: vi.fn(), onPreviewChange: vi.fn(), onOpenFilters: vi.fn() };
   render(WidgetEditorDialog, {
-    props: { data: { editing: { widget, isNew: false }, filters: [], preview: null }, actions },
+    props: { data: { editing: { widget, isNew }, filters: [], preview: null }, actions },
   });
 
   return actions;
@@ -32,7 +32,7 @@ describe('AzuosWidgetEditorDialog', () => {
     const actions = renderEditor();
 
     await fireEvent.input(screen.getByLabelText(/Título/), { target: { value: 'Situação dos chamados' } });
-    await fireEvent.click(screen.getByRole('button', { name: 'Salvar bloco' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
 
     expect(actions.onPreviewChange).toHaveBeenCalledWith(expect.objectContaining({ title: 'Situação dos chamados' }));
     expect(actions.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ title: 'Situação dos chamados', source: 'infraTickets' }));
@@ -46,13 +46,33 @@ describe('AzuosWidgetEditorDialog', () => {
   });
 
   // triste
-  it('refuses a block without a title, saying why', async () => {
+  it('does not get stuck on an erased title: the block takes the name it suggests', async () => {
     const actions = renderEditor({ ...WIDGET, title: '' });
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Salvar bloco' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Dê um título ao bloco');
-    expect(actions.onSubmit).not.toHaveBeenCalled();
+    expect(actions.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ title: expect.stringMatching(/^Chamados/) }));
+  });
+
+  // feliz
+  it('changes the chart by the kind grid, and adds a new block with "Adicionar bloco"', async () => {
+    const actions = renderEditor(WIDGET, true);
+
+    await fireEvent.click(screen.getByRole('radio', { name: /Rosca/ }));
+    expect(actions.onPreviewChange).toHaveBeenCalledWith(expect.objectContaining({ kind: 'donut' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Adicionar bloco' }));
+    expect(actions.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'donut' }));
+  });
+
+  // feliz
+  it('opens the saved filters from the editor and widens the live preview', async () => {
+    const actions = renderEditor();
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Montar filtro' }));
+    expect(actions.onOpenFilters).toHaveBeenCalled();
+    await fireEvent.click(screen.getByRole('button', { name: 'Ampliar pré-visualização' }));
+    expect(screen.getByRole('button', { name: 'Voltar ao formulário' })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Título/)).not.toBeInTheDocument();
   });
 
   // triste

@@ -1,102 +1,154 @@
 <script lang="ts" module>
   import {
-    DATA_SOURCES,
     type LayoutItem,
     type Widget,
-    WIDGET_PERIOD_LABELS,
-    weightLabel,
-    widgetWeight,
+    WIDGET_KINDS,
+    type WidgetWindow,
   } from '@template/shared/schemas/dashboard-board.schema';
 
   import { type WidgetState } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
+  import { type BoardItem } from '$lib/utils/widget-items.util';
 
   /**
-   * O CANVAS DO PAINEL — a grade de 4 colunas com os blocos. Vendo, só mostra. Montando, cada
-   * bloco ganha a alça de mover (arrastar, ou as setas do teclado), o canto de redimensionar e os
-   * botões de editar e tirar. Quem decide onde cada bloco fica são as regras puras
-   * (`board-layout.util`); o canvas só mede o ponteiro e avisa a tela no fim do gesto.
+   * O CANVAS DO PAINEL — a grade de 4 colunas onde os blocos se encaixam. Vendo, nada se mexe;
+   * montando, cada bloco arrasta pela alça, redimensiona pelos oito puxadores (cantos e meio de
+   * cada lado), e as casas vazias da grade aparecem atrás, como um tabuleiro. Um tipo de bloco
+   * arrastado da lateral cai na casa onde for solto. O mesmo desenho do paralegal.
    *
-   * No celular os blocos se empilham, um embaixo do outro, na ordem da grade.
+   * Quem decide onde cada bloco fica são as regras puras (`board-layout.util`); o canvas só mede
+   * o ponteiro e avisa a tela no fim do gesto.
    */
   export type AzuosBoardCanvasProps = {
     data: {
       widgets: Widget[];
       layout: LayoutItem[];
       results: Record<string, WidgetState>;
-      /** O nome de cada filtro salvo, pelo id — a linha pequena do bloco. */
-      filterNames?: Record<string, string>;
-      /** A nota do "Período" do painel, por fonte ("Recorte pela abertura"). */
-      periodNotes?: Record<string, string | null>;
+      /** O nome do filtro salvo de cada bloco, pelo id do filtro. */
+      filterNames: Record<string, string>;
+      /** O "Período" escolhido no painel — nulo é "O de cada bloco". @default nenhum */
+      boardPeriod?: WidgetWindow | null;
     };
-    state: { isEditing: boolean };
+    /** `canDrop`: aceita um tipo de bloco arrastado da lateral (montando, e com vaga). */
+    state: { isEditing: boolean; canDrop?: boolean };
     actions: {
       onLayoutChange: (layout: LayoutItem[]) => void;
       onEditWidget: (id: string) => void;
       onRemoveWidget: (id: string) => void;
+      onChangeKind?: (id: string, kind: Widget['kind']) => void;
+      /** Clicou num item de um bloco (barra, fatia, linha, card): abre a lista do que ele conta. */
+      onOpenItem?: (widget: Widget, item: BoardItem) => void;
+      /** Um tipo solto numa casa da grade: o bloco novo nasce ali, naquele tamanho. */
+      onDropKind?: (kind: Widget['kind'], place: Omit<LayoutItem, 'i'>) => void;
     };
   };
 
-  /** A altura de um andar da grade e o espaço entre as casas, em pixels. */
-  export const ROW_HEIGHT = 160;
-  export const GRID_GAP = 16;
-  /** A largura do canvas a partir da qual os blocos ficam na grade de 4 colunas. */
-  export const WIDE_CANVAS = 720;
+  /** O formato do que a lateral arrasta: o tipo de bloco, no `dataTransfer`. */
+  export const KIND_DRAG_TYPE = 'application/x-azuos-widget-kind';
 
-  /** A linha pequena embaixo do título: o período, o filtro, "só os meus" e o peso (montando). */
-  export function hintOf(
-    widget: Widget,
-    filterNames: Record<string, string> = {},
-    periodNote: string | null = null,
-    isEditing = false,
-  ): string | null {
-    const parts = [
-      periodNote ?? periodLabelOf(widget),
-      filterLabelOf(widget, filterNames),
-      widget.onlyMine ? 'Só os meus' : null,
-      isEditing ? weightLabel(widgetWeight(widget)) : null,
-    ].filter((part): part is string => Boolean(part));
-
-    return parts.length > 0 ? parts.join(' · ') : null;
+  /**
+   * O tipo de bloco escrito no NOME do formato. Durante o arrastar, o navegador não deixa ler o
+   * conteúdo (`getData` volta vazio até soltar) — só a lista de formatos. Sem isto, a grade não
+   * saberia o tamanho do bloco enquanto ele passa.
+   */
+  export function kindDragTypeOf(kind: Widget['kind']): string {
+    return `${KIND_DRAG_TYPE}+${kind}`;
   }
 
-  function periodLabelOf(widget: Widget): string | null {
-    return widget.period === 'all' ? null : WIDGET_PERIOD_LABELS[widget.period];
+  /**
+   * O tipo de bloco que vem sendo arrastado da lateral — `null` para qualquer outra coisa (um
+   * arquivo, um texto). Ao soltar, lê o conteúdo; passando por cima, lê o nome do formato.
+   */
+  export function kindOf(event: Pick<DragEvent, 'dataTransfer'>): Widget['kind'] | null {
+    const transfer = event.dataTransfer;
+    if (!transfer) return null;
+    const fromData = transfer.getData(KIND_DRAG_TYPE);
+    if (isKind(fromData)) return fromData;
+    const prefix = `${KIND_DRAG_TYPE}+`;
+    const fromType = Array.from(transfer.types ?? [])
+      .find((type) => type.startsWith(prefix))
+      ?.slice(prefix.length);
+
+    return isKind(fromType) ? fromType : null;
   }
 
-  function filterLabelOf(widget: Widget, filterNames: Record<string, string>): string | null {
-    if (!widget.filterId) return null;
-
-    return filterNames[widget.filterId] ?? 'Filtro salvo';
+  function isKind(value: string | undefined): value is Widget['kind'] {
+    return (WIDGET_KINDS as readonly string[]).includes(value ?? '');
   }
+
+  /** A altura de uma casa da grade: dois andares cabem um gráfico inteiro. */
+  export const BOARD_ROW_HEIGHT_PX = 140;
+  const GAP = 16;
+  /**
+   * Montando, os blocos se afastam: o contorno tracejado fica 4px fora do bloco e os puxadores
+   * 11px — com o vão de quem só vê, os puxadores de um bloco cairiam em cima do vizinho.
+   */
+  export const BOARD_EDITING_GAP_PX = 32;
+  /** Abaixo desta largura do canvas, vendo, os blocos se empilham numa coluna só. */
+  const WIDE_CANVAS = 720;
 </script>
 
 <script lang="ts">
-  import GripVertical from '@lucide/svelte/icons/grip-vertical';
-  import MoveDiagonal2 from '@lucide/svelte/icons/move-diagonal-2';
-  import Pencil from '@lucide/svelte/icons/pencil';
-  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import gsap from 'gsap';
+  import { untrack } from 'svelte';
 
-  import BoardWidget from '$lib/components/azuos-board-widget/azuos-board-widget.svelte';
-  import { cellAt, isCompactKind, moveItem, resizeItem, rowsOf } from '$lib/utils/board-layout.util';
+  import BoardWidget, { DRAG_HANDLE, NO_DRAG } from '$lib/components/azuos-board-widget/azuos-board-widget.svelte';
+  import { prefersReducedMotion } from '$lib/motion/motion';
+  import {
+    cellAt,
+    defaultSizeOf,
+    dropCellOf,
+    isCompactKind,
+    moveItem,
+    pixelsOf,
+    RESIZE_HANDLES,
+    type ResizeHandle,
+    resizeFromHandle,
+    resizeItem,
+    rowsOf,
+    slotRows,
+  } from '$lib/utils/board-layout.util';
+  import { cn } from '$lib/utils/cn';
+  import { boardPeriodNote } from '@template/shared/schemas/dashboard-board.schema';
 
   let { data, state: canvasState, actions }: AzuosBoardCanvasProps = $props();
 
+  const EMPTY_RESULT: WidgetState = { data: null, isLoading: true, error: null };
+  const DROPPING_ID = '__dropping__';
+
   let width = $state(0);
   let container = $state<HTMLElement | null>(null);
-  /* O gesto em andamento: a grade como ela fica se a pessoa soltar agora. Visual, e só. */
-  let gesture = $state<{ id: string; kind: 'move' | 'resize'; layout: LayoutItem[] } | null>(null);
 
-  const layout = $derived(gesture?.layout ?? data.layout);
-  const cellWidth = $derived(Math.max(1, (width - GRID_GAP * 3) / 4));
-  /* A grade de 4 colunas só a partir de uma largura em que cada casa ainda lê um gráfico; antes
-     disso, os blocos se empilham. É a largura do PRÓPRIO canvas, e não da janela. */
-  const isWide = $derived(width >= WIDE_CANVAS);
+  /**
+   * O gesto em andamento: a grade como ela fica se a pessoa soltar agora (`layout`), e — movendo
+   * — onde o bloco levantado está desenhado, seguindo a mão (`lifted`).
+   */
+  type Gesture = {
+    id: string;
+    layout: LayoutItem[];
+    lifted: { left: number; top: number } | null;
+    offset: { x: number; y: number };
+    handle: ResizeHandle | null;
+  };
+  let gesture = $state<Gesture | null>(null);
+  /** O tipo arrastado da lateral passando por cima: a grade com a casa provisória dele. */
+  let dropping = $state<{ kind: Widget['kind']; layout: LayoutItem[] } | null>(null);
+
+  const gap = $derived(canvasState.isEditing ? BOARD_EDITING_GAP_PX : GAP);
+  const cell = $derived({ width: Math.max(1, (width - gap * 3) / 4), height: BOARD_ROW_HEIGHT_PX, gap });
+  const layout = $derived(dropping?.layout ?? gesture?.layout ?? data.layout);
+  const isStacked = $derived(!canvasState.isEditing && width > 0 && width < WIDE_CANVAS);
+  const rows = $derived(canvasState.isEditing ? Math.max(slotRows(data.layout), rowsOf(layout)) : rowsOf(layout));
+  const height = $derived(Math.max(0, rows * (BOARD_ROW_HEIGHT_PX + gap) - gap));
+  const placeholder = $derived(placeholderOf());
+  /* Os blocos que já estavam quando o canvas abriu: só os outros pousam com animação. */
+  const firstIds = untrack(() => data.widgets.map((widget) => widget.id));
+  /* De cima para baixo e da esquerda para a direita: a ordem em que a coluna única empilha. */
   const ordered = $derived(
     [...data.widgets].sort((a, b) => {
-      const one = layout.find((item) => item.i === a.id);
-      const other = layout.find((item) => item.i === b.id);
+      const one = placeOf(a.id);
+      const other = placeOf(b.id);
 
-      return (one?.y ?? 0) - (other?.y ?? 0) || (one?.x ?? 0) - (other?.x ?? 0);
+      return one.y - other.y || one.x - other.x;
     }),
   );
 
@@ -104,38 +156,75 @@
     return layout.find((item) => item.i === id) ?? { i: id, x: 0, y: rowsOf(layout), w: 2, h: 2 };
   }
 
-  function pointerIn(event: PointerEvent): { x: number; y: number } {
+  /** A sombra de onde o bloco vai cair: a casa do gesto, ou a do tipo vindo da lateral. */
+  function placeholderOf(): LayoutItem | null {
+    if (dropping) return dropping.layout.find((item) => item.i === DROPPING_ID) ?? null;
+    if (!gesture) return null;
+
+    return gesture.layout.find((item) => item.i === gesture?.id) ?? null;
+  }
+
+  function pointerIn(event: { clientX: number; clientY: number }): { x: number; y: number } {
     const rect = container?.getBoundingClientRect();
 
     return { x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0) };
   }
 
-  function startGesture(event: PointerEvent, widget: Widget, kind: 'move' | 'resize') {
+  /* ---------------------------------------------------------------- mover e redimensionar */
+
+  function onPointerDown(event: PointerEvent) {
+    if (!canvasState.isEditing || event.button !== 0) return;
+    const target = event.target as HTMLElement;
+    const handle = target.closest<HTMLElement>('[data-resize-handle]');
+    const item = target.closest<HTMLElement>('[data-widget-id]');
+    if (!item) return;
+    const id = item.dataset.widgetId!;
+    if (!handle && (!target.closest(`.${DRAG_HANDLE}`) || target.closest(`.${NO_DRAG}`))) return;
     event.preventDefault();
-    (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
-    gesture = { id: widget.id, kind, layout: data.layout };
+    const point = pointerIn(event);
+    const rect = pixelsOf(placeOf(id), cell);
+    gesture = {
+      id,
+      layout: data.layout,
+      lifted: handle ? null : { left: rect.left, top: rect.top },
+      offset: { x: point.x - rect.left, y: point.y - rect.top },
+      handle: (handle?.dataset.resizeHandle as ResizeHandle | undefined) ?? null,
+    };
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp, { once: true });
   }
 
-  function followGesture(event: PointerEvent, widget: Widget) {
-    if (!gesture || gesture.id !== widget.id) return;
+  function onPointerMove(event: PointerEvent) {
+    if (!gesture) return;
     const point = pointerIn(event);
-    const cell = { width: cellWidth, height: ROW_HEIGHT, gap: GRID_GAP };
-    if (gesture.kind === 'move') {
-      const target = cellAt(point, cell);
-      gesture = { ...gesture, layout: moveItem(data.layout, widget.id, target.x, target.y) };
+    const widget = data.widgets.find((item) => item.id === gesture?.id);
+    const start = data.layout.find((item) => item.i === gesture?.id);
+    if (!widget || !start) return;
+    if (gesture.handle) {
+      const next = resizeFromHandle(start, gesture.handle, cellAt(point, cell));
+      const moved = moveItem(data.layout, widget.id, next.x, next.y);
+      gesture = { ...gesture, layout: resizeItem(moved, widget.id, next.w, next.h, isCompactKind(widget.kind)) };
       return;
     }
-    const item = placeOf(widget.id);
-    const w = Math.ceil((point.x - item.x * (cellWidth + GRID_GAP)) / (cellWidth + GRID_GAP));
-    const h = Math.ceil((point.y - item.y * (ROW_HEIGHT + GRID_GAP)) / (ROW_HEIGHT + GRID_GAP));
-    gesture = { ...gesture, layout: resizeItem(data.layout, widget.id, w, h, isCompactKind(widget.kind)) };
+    const topLeft = { x: point.x - gesture.offset.x, y: point.y - gesture.offset.y };
+    const target = dropCellOf(topLeft, cell, start.w);
+    gesture = { ...gesture, lifted: { left: topLeft.x, top: topLeft.y }, layout: moveItem(data.layout, widget.id, target.x, target.y) };
+    followScroll(event);
   }
 
-  function endGesture(widget: Widget) {
-    if (!gesture || gesture.id !== widget.id) return;
+  function onPointerUp() {
+    window.removeEventListener('pointermove', onPointerMove);
+    if (!gesture) return;
     const next = gesture.layout;
     gesture = null;
     actions.onLayoutChange(next);
+  }
+
+  /** Arrastando perto da borda da janela, a página rola junto — o painel é mais alto que a tela. */
+  function followScroll(event: PointerEvent) {
+    const edge = 60;
+    if (event.clientY > window.innerHeight - edge) window.scrollBy(0, 12);
+    if (event.clientY < edge) window.scrollBy(0, -12);
   }
 
   /* Sem mouse: as setas movem o bloco uma casa; com Shift, mudam o tamanho. */
@@ -146,9 +235,12 @@
     ArrowDown: [0, 1],
   };
 
-  function onHandleKey(event: KeyboardEvent, widget: Widget) {
+  function onKeyDown(event: KeyboardEvent) {
     const step = STEPS[event.key];
-    if (!step) return;
+    const target = event.target as HTMLElement;
+    const id = target.closest<HTMLElement>('[data-widget-id]')?.dataset.widgetId;
+    const widget = data.widgets.find((item) => item.id === id);
+    if (!step || !widget || !target.closest(`.${DRAG_HANDLE}`) || target.closest(`.${NO_DRAG}`)) return;
     event.preventDefault();
     const item = placeOf(widget.id);
     actions.onLayoutChange(
@@ -157,78 +249,168 @@
         : moveItem(data.layout, widget.id, item.x + step[0], item.y + step[1]),
     );
   }
+
+  /* ---------------------------------------------------------------- soltar um tipo da lateral */
+
+  function onDragOver(event: DragEvent) {
+    const kind = canvasState.isEditing && canvasState.canDrop ? kindOf(event) : null;
+    if (!kind) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    const size = defaultSizeOf(kind);
+    const point = pointerIn(event);
+    const target = cellAt(point, cell);
+    const x = Math.min(target.x, 4 - size.w);
+    const withSlot = [...data.layout, { i: DROPPING_ID, x, y: target.y, ...size }];
+    dropping = { kind, layout: moveItem(withSlot, DROPPING_ID, x, target.y) };
+  }
+
+  function onDragLeave(event: DragEvent) {
+    if (container?.contains(event.relatedTarget as Node | null)) return;
+    dropping = null;
+  }
+
+  function onDrop(event: DragEvent) {
+    const kind = kindOf(event) ?? dropping?.kind;
+    const slot = dropping?.layout.find((item) => item.i === DROPPING_ID);
+    dropping = null;
+    if (!kind || !slot) return;
+    event.preventDefault();
+    actions.onDropKind?.(kind, { x: slot.x, y: slot.y, w: slot.w, h: slot.h });
+  }
+
+  /**
+   * O POUSO: o bloco que acabou de entrar no painel (solto da lateral ou posto com um clique)
+   * cresce a partir de 92% e acende — o olho acha onde ele caiu. Os blocos do primeiro desenho não
+   * se mexem; quem pede menos movimento não vê animação.
+   */
+  function landing(node: HTMLElement, isNew: boolean) {
+    if (!isNew || prefersReducedMotion()) return;
+    gsap.fromTo(
+      node,
+      { scale: 0.92, opacity: 0 },
+      { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(1.6)', clearProps: 'all' },
+    );
+  }
+
+  function styleOf(item: LayoutItem, lifted: { left: number; top: number } | null): string {
+    const rect = pixelsOf(item, cell);
+    const left = lifted?.left ?? rect.left;
+    const top = lifted?.top ?? rect.top;
+
+    return `left:${left}px;top:${top}px;width:${rect.width}px;height:${rect.height}px`;
+  }
 </script>
 
-<div
-  bind:this={container}
-  bind:clientWidth={width}
-  class={isWide ? 'grid grid-cols-4 gap-4' : 'grid grid-cols-1 gap-4'}
-  style:grid-auto-rows={`${ROW_HEIGHT}px`}
-  data-testid="board-canvas"
->
-  {#each ordered as widget (widget.id)}
-    {@const place = placeOf(widget.id)}
-    <div
-      class="relative min-w-0"
-      style:grid-column={isWide ? `${place.x + 1} / span ${place.w}` : undefined}
-      style:grid-row={isWide ? `${place.y + 1} / span ${place.h}` : `span ${place.h}`}
-      data-widget-id={widget.id}
-    >
-      <BoardWidget
-        data={{
-          widget,
-          result: data.results[widget.id] ?? null,
-          noun: DATA_SOURCES[widget.source].noun,
-          hint: hintOf(widget, data.filterNames, data.periodNotes?.[widget.source] ?? null, canvasState.isEditing),
-        }}
-        ui={{ className: 'h-full' }}
+{#snippet widgetOf(widget: Widget)}
+  <BoardWidget
+    data={{
+      widget,
+      result: data.results[widget.id] ?? EMPTY_RESULT,
+      filterName: widget.filterId ? (data.filterNames[widget.filterId] ?? null) : null,
+      periodNote: boardPeriodNote(widget.source, data.boardPeriod ?? null),
+    }}
+    state={{ isEditing: canvasState.isEditing }}
+    actions={{
+      onEdit: actions.onEditWidget,
+      onRemove: actions.onRemoveWidget,
+      onChangeKind: actions.onChangeKind,
+      /* Montando, o clique é para arrumar o bloco, não para sair da tela. */
+      onOpenItem: canvasState.isEditing ? undefined : actions.onOpenItem,
+    }}
+  />
+{/snippet}
+
+{#if data.widgets.length === 0 && !canvasState.isEditing}
+  <p class="rounded-surface bg-card text-ink-500 shadow-card p-8 text-center text-sm">
+    Este painel ainda não tem blocos.
+  </p>
+{:else if isStacked}
+  <!-- Estreito, vendo: um bloco embaixo do outro, na ordem da grade, cada um da altura dele. -->
+  <div bind:clientWidth={width} class="grid grid-cols-1 gap-4" data-testid="board-canvas">
+    {#each ordered as widget (widget.id)}
+      <div class="min-w-0" style:height={`${placeOf(widget.id).h * BOARD_ROW_HEIGHT_PX + (placeOf(widget.id).h - 1) * GAP}px`} data-widget-id={widget.id}>
+        {@render widgetOf(widget)}
+      </div>
+    {/each}
+  </div>
+{:else}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    bind:this={container}
+    bind:clientWidth={width}
+    class="relative w-full"
+    style:height={`${height}px`}
+    data-testid="board-canvas"
+    onpointerdown={onPointerDown}
+    onkeydown={onKeyDown}
+    ondragover={onDragOver}
+    ondragleave={onDragLeave}
+    ondrop={onDrop}
+  >
+    {#if canvasState.isEditing}
+      <!-- AS CASAS DA GRADE, atrás dos blocos: a pessoa vê onde um bloco pode cair. -->
+      <div aria-hidden="true" data-testid="board-slots" class="pointer-events-none absolute inset-0">
+        {#each { length: rows * 4 } as _, index (index)}
+          <span
+            class="rounded-surface border-border bg-mantle absolute border border-dashed"
+            style={styleOf({ i: 'slot', x: index % 4, y: Math.floor(index / 4), w: 1, h: 1 }, null)}
+          ></span>
+        {/each}
+      </div>
+    {/if}
+
+    {#if placeholder}
+      <!-- A sombra de onde o bloco vai cair: a casa, arredondada, num azul da marca bem claro.
+           Ela desliza entre as casas. -->
+      <div
+        aria-hidden="true"
+        data-testid="board-placeholder"
+        class="rounded-surface border-ink-500 bg-primary/20 pointer-events-none absolute border-2 border-dashed transition-all duration-200 ease-out"
+        style={styleOf(placeholder, null)}
+      ></div>
+    {/if}
+
+    {#each data.widgets as widget (widget.id)}
+      {@const isLifted = gesture?.id === widget.id && gesture.lifted !== null}
+      <div
+        data-widget-id={widget.id}
+        use:landing={!firstIds.includes(widget.id)}
+        class={cn(
+          'absolute',
+          /* Os outros blocos abrem caminho deslizando, sem pular. */
+          !isLifted && 'transition-[left,top,width,height] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]',
+          /* A SELEÇÃO DO PAINT: contorno tracejado grosso, afastado da borda, no neutro escuro
+             (borda colorida é proibida no grupo); o hover escurece o daquele bloco. */
+          canvasState.isEditing && 'outline-ink-500 hover:outline-ink-900 outline-2 outline-offset-4 outline-dashed',
+          /* O bloco arrastado "levanta" e segue a mão: por cima, um pouco maior, inclinado. */
+          isLifted && 'shadow-card z-20 scale-[1.03] rotate-1 cursor-grabbing',
+        )}
+        style={styleOf(placeOf(widget.id), isLifted ? (gesture?.lifted ?? null) : null)}
       >
-        {#snippet tools()}
-          {#if canvasState.isEditing}
-            <div class="flex items-center gap-1">
-              <button
-                type="button"
-                class="text-ink-500 hover:bg-muted rounded-control control-icon-sm flex cursor-grab touch-none items-center justify-center"
-                aria-label={`Mover o bloco ${widget.title} (setas do teclado; com Shift, muda o tamanho)`}
-                onpointerdown={(event) => startGesture(event, widget, 'move')}
-                onpointermove={(event) => followGesture(event, widget)}
-                onpointerup={() => endGesture(widget)}
-                onkeydown={(event) => onHandleKey(event, widget)}
-              >
-                <GripVertical class="size-4" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                class="text-ink-500 hover:bg-muted rounded-control control-icon-sm flex items-center justify-center"
-                aria-label={`Editar o bloco ${widget.title}`}
-                onclick={() => actions.onEditWidget(widget.id)}
-              >
-                <Pencil class="size-4" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                class="text-destructive hover:bg-muted rounded-control control-icon-sm flex items-center justify-center"
-                aria-label={`Tirar o bloco ${widget.title}`}
-                onclick={() => actions.onRemoveWidget(widget.id)}
-              >
-                <Trash2 class="size-4" aria-hidden="true" />
-              </button>
-            </div>
-          {/if}
-        {/snippet}
-      </BoardWidget>
-      {#if canvasState.isEditing && isWide}
-        <button
-          type="button"
-          class="text-ink-500 bg-muted rounded-control absolute right-1 bottom-1 flex size-6 cursor-se-resize touch-none items-center justify-center border border-transparent"
-          aria-label={`Redimensionar o bloco ${widget.title}`}
-          onpointerdown={(event) => startGesture(event, widget, 'resize')}
-          onpointermove={(event) => followGesture(event, widget)}
-          onpointerup={() => endGesture(widget)}
-        >
-          <MoveDiagonal2 class="size-3.5" aria-hidden="true" />
-        </button>
-      {/if}
-    </div>
-  {/each}
-</div>
+        {@render widgetOf(widget)}
+        {#if canvasState.isEditing}
+          {#each RESIZE_HANDLES as handle (handle)}
+            <button
+              type="button"
+              tabindex="-1"
+              aria-label={`Redimensionar ${widget.title} pelo puxador ${handle}`}
+              data-resize-handle={handle}
+              class={cn(
+                'rounded-chip border-ink-900 bg-card absolute z-10 size-3.5 touch-none border-2',
+                handle === 'n' && '-top-[11px] left-[calc(50%-7px)] cursor-ns-resize',
+                handle === 's' && '-bottom-[11px] left-[calc(50%-7px)] cursor-ns-resize',
+                handle === 'e' && 'top-[calc(50%-7px)] -right-[11px] cursor-ew-resize',
+                handle === 'w' && 'top-[calc(50%-7px)] -left-[11px] cursor-ew-resize',
+                handle === 'ne' && '-top-[11px] -right-[11px] cursor-nesw-resize',
+                handle === 'sw' && '-bottom-[11px] -left-[11px] cursor-nesw-resize',
+                handle === 'nw' && '-top-[11px] -left-[11px] cursor-nwse-resize',
+                handle === 'se' && '-right-[11px] -bottom-[11px] cursor-nwse-resize',
+              )}
+            ></button>
+          {/each}
+        {/if}
+      </div>
+    {/each}
+  </div>
+{/if}
