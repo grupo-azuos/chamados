@@ -158,3 +158,37 @@ describe('DashboardBoardsService.data', () => {
     ).rejects.toThrow(UnprocessableEntityException);
   });
 });
+
+describe('drillCondition', () => {
+  const DRILL = { ...QUERY(), key: 'high', key2: null, label: 'Alta', label2: null, title: null };
+
+  // feliz
+  it('builds the block condition with the clicked item for the destination list', async () => {
+    const condition = { sql: 'cut' };
+    const { service, repository } = makeService({ conditionOf: vi.fn().mockReturnValue(condition) } as never);
+
+    await expect(service.drillCondition(viewer, DRILL, ['infraTickets'])).resolves.toBe(condition);
+    expect(repository.conditionOf).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ tree: null, extra: expect.anything() }),
+    );
+  });
+
+  // triste
+  it('refuses a drill from a source the list does not show', async () => {
+    const { service } = makeService();
+
+    await expect(service.drillCondition(viewer, DRILL, ['systemTickets'])).rejects.toBeInstanceOf(
+      UnprocessableEntityException,
+    );
+  });
+
+  // triste
+  it('refuses a person without access to the source module', async () => {
+    const { service } = makeService();
+
+    await expect(service.drillCondition(outsider, DRILL, ['infraTickets'])).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+});

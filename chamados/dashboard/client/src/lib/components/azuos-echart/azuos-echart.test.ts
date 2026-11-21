@@ -6,12 +6,25 @@ import type * as EchartsUtil from '$lib/utils/echarts.util';
 import Echart, { RESIZE_SETTLE_MS } from './azuos-echart.svelte';
 
 /* Um ECharts de mentira: o teste do redimensionamento só quer contar quantas vezes ele redesenha. */
-const fakeChart = vi.hoisted(() => ({
-  on: vi.fn(),
-  setOption: vi.fn(),
-  resize: vi.fn(),
-  dispose: vi.fn(),
-}));
+const fakeChart = vi.hoisted(() => {
+  /* A superfície de desenho: guarda o clique registrado, para o teste disparar um clique na área. */
+  const surface = { click: null as ((event: { offsetX: number; offsetY: number }) => void) | null };
+
+  return {
+    surface,
+    on: vi.fn(),
+    setOption: vi.fn(),
+    resize: vi.fn(),
+    dispose: vi.fn(),
+    getZr: () => ({
+      on: (_name: string, handler: (event: { offsetX: number; offsetY: number }) => void) => {
+        surface.click = handler;
+      },
+    }),
+    containPixel: vi.fn(() => true),
+    convertFromPixel: vi.fn(() => [2.4, 0]),
+  };
+});
 
 vi.mock('$lib/utils/echarts.util', async (importOriginal) => ({
   ...(await importOriginal<typeof EchartsUtil>()),
@@ -28,6 +41,28 @@ afterEach(() => {
 const OPTION = { series: [{ type: 'bar' as const, data: [1, 2, 3] }] };
 
 describe('AzuosEchart', () => {
+  // feliz
+  /* O gráfico de área não tem símbolo para clicar: o clique na área vira a posição no eixo. */
+  it('turns a click anywhere in the plot into the nearest axis position', async () => {
+    const onAxisSelect = vi.fn();
+    render(Echart, { props: { data: { option: OPTION, description: 'x' }, actions: { onAxisSelect } } });
+
+    await waitFor(() => expect(fakeChart.surface.click).not.toBeNull());
+    fakeChart.surface.click?.({ offsetX: 10, offsetY: 10 });
+    expect(onAxisSelect).toHaveBeenCalledWith(2);
+  });
+
+  // triste
+  it('ignores a click outside the plot', async () => {
+    const onAxisSelect = vi.fn();
+    fakeChart.containPixel.mockReturnValueOnce(false);
+    render(Echart, { props: { data: { option: OPTION, description: 'x' }, actions: { onAxisSelect } } });
+
+    await waitFor(() => expect(fakeChart.surface.click).not.toBeNull());
+    fakeChart.surface.click?.({ offsetX: 900, offsetY: 900 });
+    expect(onAxisSelect).not.toHaveBeenCalled();
+  });
+
   // feliz
   /* O desenho é uma imagem com descrição: quem usa leitor de tela ouve o que o gráfico mostra. */
   it('draws the chart as an image with a description', () => {

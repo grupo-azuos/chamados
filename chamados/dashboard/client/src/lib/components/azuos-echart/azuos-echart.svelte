@@ -40,7 +40,14 @@
       scrollHeight?: number;
     };
     state?: { isLoading?: boolean; isEmpty?: boolean };
-    actions?: { onSelect?: (selection: ChartSelection) => void };
+    actions?: {
+      onSelect?: (selection: ChartSelection) => void;
+      /**
+       * O clique em QUALQUER ponto da área do gráfico, como a posição no eixo das categorias — o
+       * gráfico de área não tem símbolo para clicar, e a pessoa clica no dia, não na linha.
+       */
+      onAxisSelect?: (index: number) => void;
+    };
   };
 
   /** Quanto o tamanho precisa ficar parado para o gráfico se redesenhar — um pouco mais que a animação do menu. */
@@ -92,6 +99,15 @@
         height: element.clientHeight || 300,
       });
       instance.on('click', (params) => actions?.onSelect?.(selectionOf(params)));
+      /* Só quem pede o clique no eixo ouve a área inteira: nos outros gráficos, um clique fora
+         das barras não é nada. */
+      if (actions?.onAxisSelect) instance.getZr().on('click', (event) => {
+        if (!actions?.onAxisSelect) return;
+        const point = [event.offsetX, event.offsetY];
+        if (!instance.containPixel({ gridIndex: 0 }, point)) return;
+        const [index] = instance.convertFromPixel({ gridIndex: 0 }, point) as number[];
+        if (index !== undefined && Number.isFinite(index)) actions.onAxisSelect(Math.round(index));
+      });
       chart = instance;
 
       observer = new ResizeObserver(([entry]) => {
@@ -145,7 +161,7 @@
       role="img"
       aria-label={data.description}
       data-slot="chart"
-      class={cn('w-full', actions?.onSelect && 'cursor-pointer')}
+      class={cn('w-full', (actions?.onSelect || actions?.onAxisSelect) && 'cursor-pointer')}
       style="height: {ui.scrollHeight}px"
     ></div>
   </div>
@@ -155,6 +171,6 @@
     role="img"
     aria-label={data.description}
     data-slot="chart"
-    class={cn('w-full', heightClass, ui?.className, actions?.onSelect && 'cursor-pointer')}
+    class={cn('w-full', heightClass, ui?.className, (actions?.onSelect || actions?.onAxisSelect) && 'cursor-pointer')}
   ></div>
 {/if}

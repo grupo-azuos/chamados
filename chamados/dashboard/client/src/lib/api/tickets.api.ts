@@ -1,3 +1,4 @@
+import { drillParam } from '@template/shared/schemas/board-drill.schema';
 import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
 import { type TicketInvite } from '@template/shared/domain/ticket-invite.util';
 import { type TicketStockSource } from '@template/shared/domain/ticket-stock.util';
@@ -131,6 +132,7 @@ export const ticketsApi = {
   list: (query: Partial<TicketListQuery>) =>
     apiRequest<Paginated<Ticket>>('/tickets', {
       query: {
+        drill: query.drill ? drillParam(query.drill) : undefined,
         page: query.page,
         pageSize: query.pageSize,
         search: query.search,
@@ -163,6 +165,7 @@ export const ticketsApi = {
     apiDownload('/tickets/export', {
       query: {
         format,
+        drill: query.drill ? drillParam(query.drill) : undefined,
         search: query.search,
         status: query.status,
         statusGroup: query.statusGroup,

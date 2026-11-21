@@ -8,6 +8,9 @@ import {
 } from '@nestjs/common';
 import { GithubService } from '../../software-projects/service/github.service';
 import { SoftwareProjectsService } from '../../software-projects/service/software-projects.service';
+import { BOARD_DRILL, type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
+import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
+import { type SQL } from 'drizzle-orm';
 import {
   ticketAreaLabel,
   ticketDepartmentLabel,
@@ -139,6 +142,9 @@ const TICKET_REPORT_COLUMNS: ReportColumn<TicketRow>[] = [
 
 const NOT_FOUND = TICKET_NOT_FOUND;
 
+/** As fontes do painel que a fila de chamados sabe recortar: os chamados de cada módulo. */
+const TICKET_DRILL_SOURCES: readonly DataSourceKey[] = ['infraTickets', 'systemTickets', 'maintenanceTickets'];
+
 /** A pasta do print dentro do bucket. */
 const SCREENSHOT_FOLDER = 'tickets';
 
@@ -185,6 +191,7 @@ export class TicketsService {
     @Optional() private readonly problemTypes?: TicketProblemTypesService,
     @Optional() private readonly stockItems?: TicketStockItemsService,
     @Optional() private readonly computers?: TicketComputersRepository,
+    @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
   ) {}
 
   /**
@@ -415,10 +422,17 @@ export class TicketsService {
     assertCanRead(user.role, 'os chamados');
 
     const areas = await this.access.accessibleAreas(user);
-    const page = await this.repository.list(query, areas);
+    const page = await this.repository.list(query, areas, await this.drillOf(user, query));
     const items = await this.withAreasAndScreenshots(page.rows);
 
     return { items, total: page.total, page: query.page, pageSize: query.pageSize };
+  }
+
+  /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
+  private async drillOf(user: RequestUser, query: Pick<TicketListQuery, 'drill'>): Promise<SQL | undefined> {
+    if (!query.drill || !this.drills) return undefined;
+
+    return this.drills.drillCondition(user, query.drill, TICKET_DRILL_SOURCES);
   }
 
   async findById(user: RequestUser, id: number): Promise<Ticket> {
@@ -438,7 +452,9 @@ export class TicketsService {
     assertCanRead(user.role, 'os chamados');
 
     const areas = await this.access.accessibleAreas(user);
-    const { rows, isTruncated } = capReportRows(await this.repository.listAll(query, areas));
+    const { rows, isTruncated } = capReportRows(
+      await this.repository.listAll(query, areas, await this.drillOf(user, query)),
+    );
 
     return buildReport({
       format: query.format,

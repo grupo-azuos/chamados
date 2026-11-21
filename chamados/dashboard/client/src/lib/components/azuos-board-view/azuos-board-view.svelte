@@ -19,6 +19,7 @@
     type WidgetState,
   } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
   import { type BoardFilterPlaceChange } from '$lib/utils/board-draft.util';
+  import { type BoardItem } from '$lib/utils/widget-items.util';
 
   /**
    * O PAINEL DE UM MÓDULO — as abas dos três painéis (Equipe, Gestor, Pessoal) e o painel. Quem
@@ -71,6 +72,8 @@
       onCloseEditor: () => void;
       onSubmitWidget: (widget: Widget) => void;
       onRemoveWidget: (id: string) => void;
+      /** O clique num item de um bloco: abre a lista da fonte com o recorte. */
+      onOpenItem?: (widget: Widget, item: BoardItem) => void;
       onPreviewChange: (widget: Widget) => void;
       onFilterValueChange: (patch: Partial<BoardFilterValues>) => void;
       onClearFilterValues: () => void;
@@ -180,7 +183,12 @@
         boardPeriod: data.filterValues.period,
       }}
       state={{ isEditing: false }}
-      actions={{ onLayoutChange: actions.onLayoutChange, onEditWidget: actions.onEditWidget, onRemoveWidget: actions.onRemoveWidget }}
+      actions={{
+        onLayoutChange: actions.onLayoutChange,
+        onEditWidget: actions.onEditWidget,
+        onRemoveWidget: actions.onRemoveWidget,
+        onOpenItem: actions.onOpenItem,
+      }}
     />
   {/if}
 

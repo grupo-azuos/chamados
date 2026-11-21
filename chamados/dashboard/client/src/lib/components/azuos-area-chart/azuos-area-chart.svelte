@@ -19,6 +19,8 @@
   export type AzuosAreaChartProps = {
     data: { points: readonly TimePoint[]; series: readonly TimeSeriesDef[] };
     state?: { isLoading?: boolean };
+    /** `onSelect`: o clique num ponto do tempo, com o instante dele (`TimePoint.at`). */
+    actions?: { onSelect?: (at: string) => void };
     ui?: {
       emptyLabel?: string;
       className?: string;
@@ -90,7 +92,7 @@
   import { cn } from '$lib/utils/cn';
   import { toTimeRows } from '$lib/utils/time-series';
 
-  let { data, state: chartState, ui }: AzuosAreaChartProps = $props();
+  let { data, state: chartState, ui, actions }: AzuosAreaChartProps = $props();
 
   const rows = $derived(toTimeRows(data.points, data.series));
 </script>
@@ -111,6 +113,14 @@
         description: data.series.map((item) => item.label).join(', '),
       }}
       ui={{ heightClass: ui?.heightClass ?? 'h-48' }}
+      actions={{
+        onAxisSelect: actions?.onSelect
+          ? (index) => {
+              const row = rows[index];
+              if (row) actions.onSelect?.(row.at.toISOString());
+            }
+          : undefined,
+      }}
     />
   </div>
 {/if}

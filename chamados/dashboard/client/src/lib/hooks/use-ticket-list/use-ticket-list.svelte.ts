@@ -13,6 +13,7 @@ import {
   type TicketStatus,
   type TicketStatusGroup,
 } from '@template/shared/domain/ticket-status.util';
+import { type BoardDrill } from '@template/shared/schemas/board-drill.schema';
 import { type ReportFormat } from '@template/shared/schemas/report.schema';
 import {
   TICKET_UNASSIGNED_FILTER,
@@ -24,9 +25,11 @@ import { derived, writable } from 'svelte/store';
 import { readError } from '$lib/api/http-client';
 import { ticketsApi, type TicketDashboard } from '$lib/api/tickets.api';
 import { type AreaContext } from '$lib/hooks/use-area-context/use-area-context.svelte';
+import { type BoardDrillBanner, useBoardDrillModel } from '$lib/hooks/use-board-drill/use-board-drill.svelte';
 import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
+import { contextPath } from '$lib/navigation/navigation';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 import {
   fieldParser,
@@ -82,6 +85,8 @@ export type TicketListModel = {
     };
     /** As opções do filtro de departamento: as do RH e, depois da linha, as daqui. */
     departmentOptions: DepartmentChoice[];
+    /** A faixa do recorte de um clique no Painel — nula quando a fila não veio de lá. */
+    drillBanner: BoardDrillBanner | null;
     /** "Sem responsável" e, depois da linha, quem atende a área — com foto. */
     assigneeOptions: TicketAssigneeFilterOption[];
   };
@@ -111,6 +116,9 @@ export type TicketListModel = {
     onClearFilters: () => void;
     onRetry: () => void;
     onExportReport: (format: ReportFormat) => void;
+    /** "Limpar recorte": a fila volta aos filtros dela. */
+    onClearDrill: () => void;
+    onBackToBoard: () => void;
   };
 };
 
@@ -142,8 +150,9 @@ export const TICKETS_QUERY_KEY = ['tickets'] as const;
  * A fila é SEMPRE dessa área: não existe mais um "Todas" misturando chamado de computador com
  * chamado de ar-condicionado na mesma lista. Ele SOMA ao filtro, não o substitui.
  */
-function scopeOf(filter: TicketListFilter, areaContext: AreaContext) {
+function scopeOf(filter: TicketListFilter, areaContext: AreaContext, drill: BoardDrill | null = null) {
   return {
+    drill: drill ?? undefined,
     search: filter.search.trim() || undefined,
     status: filter.status || undefined,
     statusGroup: filter.statusGroup || undefined,
@@ -203,17 +212,19 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
   const filter = mirrorStore(filterStore);
   const pageStore = writable<number>(1);
   const page = mirrorStore(pageStore);
+  /* O recorte de um clique no Painel (`?drill=`): soma ao filtro da fila. */
+  const drill = useBoardDrillModel({ module: area, path: contextPath(area, '/tickets') });
 
   let exportingFormat = $state<ReportFormat | null>(null);
   let exportError = $state<string | null>(null);
 
   const list = mirrorStore(
     createQuery(
-      derived([filterStore, pageStore], ([currentFilter, currentPage]) => ({
-        queryKey: [...TICKETS_QUERY_KEY, 'list', scopeOf(currentFilter, area), currentPage],
+      derived([filterStore, pageStore, drill.store], ([currentFilter, currentPage, currentDrill]) => ({
+        queryKey: [...TICKETS_QUERY_KEY, 'list', scopeOf(currentFilter, area, currentDrill), currentPage],
         queryFn: () =>
           ticketsApi.list({
-            ...scopeOf(currentFilter, area),
+            ...scopeOf(currentFilter, area, currentDrill),
             page: currentPage,
             pageSize: TICKETS_PAGE_SIZE,
           }),
@@ -263,11 +274,12 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
         currentPage: page.current,
         dashboard: dashboard.current.data ?? null,
         filter: filter.current,
+        drillBanner: drill.banner,
       });
     },
     get state() {
       return {
-        ...buildListState(list.current, filter.current),
+        ...buildListState(list.current, filter.current, drill.drill !== null),
         isDashboardLoading: dashboard.current.isPending,
         exportingFormat,
         exportError,
@@ -310,7 +322,7 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
         exportingFormat = format;
 
         ticketsApi
-          .exportReport(scopeOf(filter.current, area), format)
+          .exportReport(scopeOf(filter.current, area, drill.drill), format)
           .then(({ blob, fileName }) => triggerBrowserDownload(blob, fileName))
           .catch((error: unknown) => {
             exportError = readError(error) ?? 'Não consegui gerar o relatório.';
@@ -323,6 +335,11 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
         pageStore.set(1);
         filterStore.clear();
       },
+      onClearDrill: () => {
+        pageStore.set(1);
+        drill.onClear();
+      },
+      onBackToBoard: drill.onBack,
       onRetry: () => {
         void list.current.refetch();
         void dashboard.current.refetch();
@@ -345,6 +362,7 @@ function buildData(input: {
   currentPage: number;
   dashboard: TicketDashboard | null;
   filter: TicketListFilter;
+  drillBanner: BoardDrillBanner | null;
 }): TicketListModel['data'] {
   const total = input.page?.total ?? 0;
 
@@ -361,6 +379,7 @@ function buildData(input: {
     },
     departmentOptions: input.departmentOptions,
     assigneeOptions: input.assigneeOptions,
+    drillBanner: input.drillBanner,
   };
 }
 
@@ -388,12 +407,14 @@ function hasAnyFilter(filter: TicketListFilter): boolean {
 function buildListState(
   list: ListQueryLike,
   filter: TicketListFilter,
+  hasDrill = false,
 ): Omit<TicketListModel['state'], 'isDashboardLoading' | 'exportingFormat' | 'exportError'> {
   const count = list.data?.items.length ?? 0;
   /* Vazio só é vazio DEPOIS que a consulta terminou. Mostrar "nenhum chamado" durante o
      carregamento faz a pessoa achar que os dados sumiram — e recarregar. */
   const isSettledEmpty = list.isSuccess && count === 0;
-  const filtered = hasAnyFilter(filter);
+  /* O recorte do Painel também é filtro: vazio com ele é "o recorte escondeu tudo". */
+  const filtered = hasDrill || hasAnyFilter(filter);
 
   return {
     isLoading: list.isPending,
