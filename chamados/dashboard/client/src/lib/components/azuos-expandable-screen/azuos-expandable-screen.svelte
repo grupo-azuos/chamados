@@ -120,6 +120,11 @@
 </script>
 
 {#if isMounted}
+  <!-- A CAMADA logo abaixo da dos menus e diálogos (`z-50`): o que abre de dentro da tela — a
+       lista de um seletor, o menu de trocar o gráfico, o diálogo de configurar o bloco — vai
+       para o fim da página e precisa ficar POR CIMA dela. Na mesma camada, o desempate é a ordem
+       na página, e a tela entrava depois: os menus abriam escondidos atrás dela. Fica acima da
+       barra de baixo do celular (`z-40`). -->
   <div
     use:portal
     bind:this={panel}
@@ -127,7 +132,7 @@
     aria-modal="true"
     aria-label={data.title}
     tabindex="-1"
-    class="bg-background fixed inset-0 z-50 flex flex-col outline-none"
+    class="bg-background fixed inset-0 z-[45] flex flex-col outline-none"
   >
     <header class="border-border flex items-start justify-between gap-4 border-b px-6 py-4">
       <div class="min-w-0">
