@@ -7,6 +7,9 @@ import {
 import {
   type BoardFieldFilterKind,
   type BoardFilter,
+  type BoardFilterDisplay,
+  boardFilterDisplay,
+  boardFilterDisplaysOf,
   type BoardFilterKind,
   type BoardFilterPlace,
   type BoardFilterValues,
@@ -120,4 +123,46 @@ function valueLabel(filter: BoardFilter, values: BoardFilterValues, counts: Filt
 /** De cima para baixo e da esquerda para a direita: a ordem em que a coluna única empilha. */
 export function readingOrder<T extends { place: BoardFilterPlace }>(filters: readonly T[]): T[] {
   return [...filters].sort((one, other) => one.place.y - other.place.y || one.place.x - other.place.x);
+}
+
+/**
+ * OS DESENHOS DA BARRA DE FILTROS — no estilo do Grafana, cada filtro é UMA peça compacta numa
+ * linha só, acima dos blocos: a lista suspensa, a busca, ou as etiquetas à vista (para poucas
+ * opções). Os desenhos grandes (cards, lista aberta, fotos) ocupavam uma casa inteira da grade e
+ * empurravam o painel para baixo; um painel gravado com eles cai no desenho compacto mais perto.
+ */
+export const TOOLBAR_DISPLAYS: readonly BoardFilterDisplay[] = ['select', 'search', 'chips'];
+
+/** Os desenhos que quem monta pode escolher para o filtro, na barra. */
+export function toolbarDisplaysOf(kind: BoardFilterKind): BoardFilterDisplay[] {
+  return boardFilterDisplaysOf(kind).filter((display) => TOOLBAR_DISPLAYS.includes(display));
+}
+
+/** O desenho do filtro na barra: o escolhido, se for compacto; senão, a lista com busca (pessoa) ou a suspensa. */
+export function toolbarDisplayOf(filter: Pick<BoardFilter, 'kind' | 'display'>): BoardFilterDisplay {
+  const display = boardFilterDisplay(filter);
+  if (toolbarDisplaysOf(filter.kind).includes(display)) return display;
+
+  return filter.kind === 'person' ? 'search' : 'select';
+}
+
+/**
+ * A ORDEM da barra gravada no lugar de cada filtro: a barra lê da esquerda para a direita, e a
+ * grade guarda a ordem de leitura (linha, depois coluna). Cada filtro numa casa 1×1, em sequência.
+ */
+export function placesInOrder(ids: readonly string[], columns: number): { id: string; place: BoardFilterPlace }[] {
+  return ids.map((id, index) => ({
+    id,
+    place: { x: index % columns, y: Math.floor(index / columns), w: 1, h: 1 },
+  }));
+}
+
+/** A lista com o item `from` levado para a posição `to` — o arrastar e as setas da ordem. */
+export function moveInList<T>(items: readonly T[], from: number, to: number): T[] {
+  if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) return [...items];
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved as T);
+
+  return next;
 }

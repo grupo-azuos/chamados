@@ -44,8 +44,9 @@ const movementItemColumns = { name: inventoryItems.name, unit: inventoryItems.un
 export class InventoryItemsRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(query: InventoryItemListQuery): Promise<InventoryItemPage> {
-    const where = buildWhere(query);
+  /** `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro. */
+  async list(query: InventoryItemListQuery, drill?: SQL): Promise<InventoryItemPage> {
+    const where = and(buildWhere(query), drill);
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([

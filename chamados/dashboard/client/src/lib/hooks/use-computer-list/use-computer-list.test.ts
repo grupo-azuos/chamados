@@ -1,6 +1,7 @@
+import { boardDrillSchema, drillParam } from '@template/shared/schemas/board-drill.schema';
 import { type ComputerListItem } from '@template/shared/schemas/computer.schema';
 import { render, waitFor } from '@testing-library/svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
@@ -32,6 +33,7 @@ vi.mock('$lib/api/maintenances.api', () => ({
 
 const { computersApi } = await import('$lib/api/computers.api');
 const { goto } = await import('$app/navigation');
+const { page: appPage } = await import('$app/state');
 
 const GB = 1024 ** 3;
 
@@ -357,5 +359,52 @@ describe('scheduledDayByComputer', () => {
   // triste
   it('gives nothing while the schedules have not arrived', () => {
     expect(scheduledDayByComputer(undefined)).toEqual({});
+  });
+});
+
+/* O recorte de um clique no Painel chega pela URL (`?drill=`) e soma ao filtro da lista. */
+describe('useComputerListModel with a board cut', () => {
+  const DRILL = boardDrillSchema.parse({
+    source: 'computers',
+    groupBy: 'kind',
+    filterId: null,
+    key: 'notebook',
+    label: 'Notebook',
+    title: 'Máquinas por tipo',
+  });
+
+  beforeEach(() => {
+    vi.mocked(computersApi.list).mockResolvedValue(page([]));
+  });
+
+  afterEach(() => {
+    appPage.url = new URL('http://localhost:5173/infra/computers');
+  });
+
+  // feliz
+  it('asks the API for the clicked block and says so on the banner', async () => {
+    appPage.url = new URL(`http://localhost:5173/infra/computers?drill=${encodeURIComponent(drillParam(DRILL))}`);
+
+    const model = await mountLoadedModel();
+
+    expect(computersApi.list).toHaveBeenCalledWith(
+      expect.objectContaining({ drill: expect.objectContaining({ key: 'notebook' }) }),
+    );
+    expect(model.data.drillBanner?.summary).toContain('Máquinas por tipo');
+    /* Vazio com recorte é "o recorte escondeu tudo", não "o inventário está vazio". */
+    expect(model.state.isFilteredOut).toBe(true);
+    expect(model.state.isEmpty).toBe(false);
+  });
+
+  // triste
+  it('opens without the cut, and warns, when the address cannot be read', async () => {
+    appPage.url = new URL('http://localhost:5173/infra/computers?drill=%7Boops');
+
+    const model = await mountLoadedModel();
+
+    /* Nenhuma busca levou o recorte quebrado: nem a da lista, nem a do resumo. */
+    expect(vi.mocked(computersApi.list).mock.calls.every(([query]) => query.drill === undefined)).toBe(true);
+    expect(model.data.drillBanner?.notice).not.toBeNull();
+    expect(model.state.isEmpty).toBe(true);
   });
 });

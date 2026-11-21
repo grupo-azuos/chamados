@@ -1,5 +1,6 @@
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { type MaintenanceType } from '@template/shared/domain/maintenance.util';
+import { type BoardDrill } from '@template/shared/schemas/board-drill.schema';
 import {
   type Maintenance,
   type MaintenanceSchedule,
@@ -9,9 +10,11 @@ import { derived, writable } from 'svelte/store';
 
 import { readError } from '$lib/api/http-client';
 import { maintenancesApi } from '$lib/api/maintenances.api';
+import { type BoardDrillBanner, useBoardDrillModel } from '$lib/hooks/use-board-drill/use-board-drill.svelte';
 import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
 import { allSchedulesQuery } from '$lib/hooks/use-maintenance-schedule/use-maintenance-schedule.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { contextPath } from '$lib/navigation/navigation';
 
 export const MAINTENANCES_PAGE_SIZE = 15;
 
@@ -38,6 +41,8 @@ export type MaintenanceListModel = {
       pageSize: number;
       total: number;
     };
+    /** A faixa do recorte do Painel, quando o histórico veio de um clique num bloco. */
+    drillBanner: BoardDrillBanner | null;
   };
   state: {
     isLoading: boolean;
@@ -61,6 +66,8 @@ export type MaintenanceListModel = {
     onAskRemove: (maintenance: Maintenance) => void;
     onCancelRemove: () => void;
     onConfirmRemove: () => void;
+    onClearDrill: () => void;
+    onBackToBoard: () => void;
   };
 };
 
@@ -68,8 +75,10 @@ const EMPTY_FILTER: MaintenanceListFilter = { search: '', type: '', computerId: 
 
 export const MAINTENANCES_QUERY_KEY = ['maintenances'] as const;
 
-function scopeOf(filter: MaintenanceListFilter) {
+/** O recorte de um clique no Painel SOMA ao filtro do histórico, não o substitui. */
+function scopeOf(filter: MaintenanceListFilter, drill: BoardDrill | null = null) {
   return {
+    drill: drill ?? undefined,
     search: filter.search.trim() || undefined,
     type: filter.type || undefined,
     computerId: filter.computerId ?? undefined,
@@ -97,14 +106,16 @@ export function useMaintenanceListModel(
   const filter = mirrorStore(filterStore);
   const pageStore = writable<number>(1);
   const page = mirrorStore(pageStore);
+  /* O recorte de um clique no Painel (`?drill=`): soma ao filtro do histórico. */
+  const drill = useBoardDrillModel({ module: 'infra', path: contextPath('infra', '/maintenance') });
 
   const list = mirrorStore(
     createQuery(
-      derived([filterStore, pageStore], ([currentFilter, currentPage]) => ({
-        queryKey: [...MAINTENANCES_QUERY_KEY, 'list', scopeOf(currentFilter), currentPage],
+      derived([filterStore, pageStore, drill.store], ([currentFilter, currentPage, currentDrill]) => ({
+        queryKey: [...MAINTENANCES_QUERY_KEY, 'list', scopeOf(currentFilter, currentDrill), currentPage],
         queryFn: () =>
           maintenancesApi.list({
-            ...scopeOf(currentFilter),
+            ...scopeOf(currentFilter, currentDrill),
             page: currentPage,
             pageSize: MAINTENANCES_PAGE_SIZE,
           }),
@@ -159,11 +170,12 @@ export function useMaintenanceListModel(
           pageSize: MAINTENANCES_PAGE_SIZE,
           total: list.current.data?.total ?? 0,
         },
+        drillBanner: drill.banner,
       };
     },
     get state() {
       return {
-        ...buildListState(list.current, filter.current),
+        ...buildListState(list.current, filter.current, drill.drill !== null),
         isPreventiveLoading: preventive.current.isPending,
         isRemoving: remove.current.isPending,
         actionError: readError(remove.current.error),
@@ -200,6 +212,11 @@ export function useMaintenanceListModel(
 
         remove.current.mutate(target.id);
       },
+      onClearDrill: () => {
+        pageStore.set(1);
+        drill.onClear();
+      },
+      onBackToBoard: drill.onBack,
     },
   };
 }
@@ -223,6 +240,7 @@ function hasAnyFilter(filter: MaintenanceListFilter): boolean {
 function buildListState(
   list: ListQueryLike,
   filter: MaintenanceListFilter,
+  hasDrill = false,
 ): Omit<
   MaintenanceListModel['state'],
   'isPreventiveLoading' | 'isRemoving' | 'actionError'
@@ -231,7 +249,8 @@ function buildListState(
   /* Vazio só é vazio DEPOIS que a consulta terminou. Dizer "nenhuma manutenção" durante o
      carregamento faz a pessoa achar que o histórico sumiu — e recarregar. */
   const isSettledEmpty = list.isSuccess && count === 0;
-  const filtered = hasAnyFilter(filter);
+  /* O recorte do Painel também é filtro: vazio com ele é "o recorte escondeu tudo". */
+  const filtered = hasDrill || hasAnyFilter(filter);
 
   return {
     isLoading: list.isPending,

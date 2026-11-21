@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import {
   type AlertMetric,
   ALERT_THRESHOLDS,
@@ -24,7 +24,9 @@ import {
   type CreatedComputer,
   type UpdateComputerInput,
 } from '@template/shared/schemas/computer.schema';
+import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
+import { type SQL } from 'drizzle-orm';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { assertCanCreate, assertCanRead } from '../../../lib/policy/policy-assert.util';
@@ -44,6 +46,7 @@ import {
   toSample,
   toSnapshotUpdate,
 } from '../mapper/computers.mapper';
+import { BOARD_DRILL, type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { AgentPresenceService } from '../presence/agent-presence.service';
 import { LiveWatchService, WATCHED_CADENCE_SECONDS } from '../presence/live-watch.service';
 import { ComputersRepository, type PresenceFilter } from '../repository/computers.repository';
@@ -119,6 +122,9 @@ const COMPUTER_REPORT_COLUMNS: ReportColumn<ComputerRow>[] = [
   { header: 'Cadastrado em', value: (row) => formatReportDate(row.createdAt) },
 ];
 
+/** A lista do inventário só sabe filtrar a tabela das máquinas: só o recorte dela vale aqui. */
+const COMPUTER_DRILL_SOURCES: readonly DataSourceKey[] = ['computers'];
+
 const NOT_FOUND = 'Computador não encontrado. Ele pode ter sido arquivado — recarregue a lista.';
 
 /** O recorte padrão do gráfico de uso: as últimas 24 horas, como no sistema antigo. */
@@ -171,6 +177,7 @@ export class ComputersService {
     private readonly repository: ComputersRepository,
     private readonly presence: AgentPresenceService,
     private readonly watch: LiveWatchService,
+    @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
   ) {}
 
   async list(user: RequestUser, query: ComputerListQuery): Promise<Paginated<ComputerListItem>> {
@@ -179,7 +186,11 @@ export class ComputersService {
     /* Os ids online vêm de uma vez: perguntar linha a linha daria o mesmo resultado com mais
        trabalho, e a lista pode ter duzentas máquinas. */
     const online = this.presence.onlineIds();
-    const page = await this.repository.list(query, presenceFilterOf(query, online));
+    const page = await this.repository.list(
+      query,
+      presenceFilterOf(query, online),
+      await this.drillOf(user, query),
+    );
 
     return {
       items: page.rows.map((row) => toComputerListItem(row, online.has(row.id))),
@@ -200,6 +211,7 @@ export class ComputersService {
     const matching = await this.repository.listAll(
       query,
       presenceFilterOf(query, this.presence.onlineIds()),
+      await this.drillOf(user, query),
     );
     const { rows, isTruncated } = capReportRows(matching);
 
@@ -211,6 +223,16 @@ export class ComputersService {
       columns: COMPUTER_REPORT_COLUMNS,
       rows,
     });
+  }
+
+  /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
+  private async drillOf(
+    user: RequestUser,
+    query: Pick<ComputerListQuery, 'drill'>,
+  ): Promise<SQL | undefined> {
+    if (!query.drill || !this.drills) return undefined;
+
+    return this.drills.drillCondition(user, query.drill, COMPUTER_DRILL_SOURCES);
   }
 
   async findById(user: RequestUser, id: number): Promise<Computer> {

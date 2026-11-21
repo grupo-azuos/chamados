@@ -12,6 +12,8 @@
 
   const filters: BoardFilter[] = [
     { id: 'pessoa', kind: 'person', label: 'Pessoa' },
+    { id: 'ticketStatus', kind: 'ticketStatus', label: 'Situação' },
+    { id: 'ticketPriority', kind: 'ticketPriority', label: 'Prioridade', display: 'chips' },
     { id: 'periodo', kind: 'period', label: 'Período' },
   ];
   const counts = {
@@ -21,15 +23,14 @@
   const actions = { onChange: () => {}, onClear: () => {}, onAdd: () => {}, onRemove: () => {}, onDisplayChange: () => {}, onPlaceChange: () => {} };
 </script>
 
-<Story name="Default" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, ui: { isInitiallyOpen: true }, actions }} />
+<Story name="Default" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />
 
-<Story name="Recolhida com filtro" args={{ data: { filters, values: { ...EMPTY_BOARD_FILTER_VALUES, person: 'Ana Lima' }, counts }, actions }} />
+<Story name="Com filtro escolhido" args={{ data: { filters, values: { ...EMPTY_BOARD_FILTER_VALUES, person: 'Ana Lima' }, counts }, actions }} />
 
-<Story name="Chips" args={{ data: { filters: [{ ...filters[0]!, display: 'chips' }], values: { ...EMPTY_BOARD_FILTER_VALUES, person: 'Ana Lima' }, counts }, ui: { isInitiallyOpen: true }, actions }} />
+<!-- Caso limite: um painel gravado com o desenho grande (cards) cai na lista suspensa. -->
+<Story name="Desenho antigo" args={{ data: { filters: [{ id: 'ticketStatus', kind: 'ticketStatus', label: 'Situação', display: 'cards' }], values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />
 
-<Story name="Cards" args={{ data: { filters: [{ id: 'ticketStatus', kind: 'ticketStatus', label: 'Situação', display: 'cards' }], values: EMPTY_BOARD_FILTER_VALUES, counts }, ui: { isInitiallyOpen: true }, actions }} />
+<Story name="Montando" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, state: { isEditing: true }, actions }} />
 
-<Story name="Editing" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, state: { isEditing: true }, actions }} />
-
-<!-- Caso limite: nenhum filtro, montando — só o "Pôr um filtro". -->
-<Story name="EditingEmpty" args={{ data: { filters: [], values: EMPTY_BOARD_FILTER_VALUES, counts: {} }, state: { isEditing: true }, actions }} />
+<!-- Caso limite: nenhum filtro, montando — só os botões de pôr. -->
+<Story name="Montando sem filtro" args={{ data: { filters: [], values: EMPTY_BOARD_FILTER_VALUES, counts: {} }, state: { isEditing: true }, actions }} />

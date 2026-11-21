@@ -5,6 +5,8 @@ import {
   Optional,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
+import { type SQL } from 'drizzle-orm';
 import { refuseInventoryPhoto } from '@template/shared/domain/inventory-photo.util';
 import { fitsInInventoryStock, stockAfter } from '@template/shared/domain/inventory-stock.util';
 import {
@@ -31,6 +33,7 @@ import {
 } from '@template/shared/schemas/staged-file.schema';
 import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
 
+import { BOARD_DRILL, type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
@@ -51,6 +54,9 @@ import {
 import { InventoryItemEventsRepository } from '../repository/inventory-item-events.repository';
 import { InventoryItemsRepository } from '../repository/inventory-items.repository';
 import { optimizePhoto } from './inventory-photo.util';
+
+/** A fonte do painel que esta lista sabe recortar: a tabela dela, os produtos do inventário. */
+const INVENTORY_DRILL_SOURCES: readonly DataSourceKey[] = ['inventoryItems'];
 
 const ITEM_NOT_FOUND = 'Produto não encontrado. Recarregue a lista.';
 const ITEM_ARCHIVED =
@@ -79,6 +85,7 @@ export class InventoryItemsService {
     private readonly staging: StagedUploadsService,
     @Inject(STORAGE) private readonly storage: FileStorage,
     @Optional() @Inject(USER_DIRECTORY_PROVIDER) private readonly directory?: UserDirectoryProvider,
+    @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
   ) {}
 
   /**
@@ -112,11 +119,18 @@ export class InventoryItemsService {
   async list(user: RequestUser, query: InventoryItemListQuery): Promise<Paginated<InventoryItem>> {
     assertCanRead(user.role, 'o inventário da Manutenção');
 
-    const page = await this.repository.list(query);
+    const page = await this.repository.list(query, await this.drillOf(user, query));
     const links = await this.repository.ticketLinksOf(page.rows.map((row) => row.id));
     const items = await Promise.all(page.rows.map((row) => this.toItem(row, links.get(row.id))));
 
     return { items, total: page.total, page: query.page, pageSize: query.pageSize };
+  }
+
+  /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
+  private async drillOf(user: RequestUser, query: Pick<InventoryItemListQuery, 'drill'>): Promise<SQL | undefined> {
+    if (!query.drill || !this.drills) return undefined;
+
+    return this.drills.drillCondition(user, query.drill, INVENTORY_DRILL_SOURCES);
   }
 
   async findById(user: RequestUser, id: number): Promise<InventoryItem> {

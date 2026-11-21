@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BoardDrillBanner from '$lib/components/azuos-board-drill-banner/azuos-board-drill-banner.svelte';
   import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
   import { useArchivedProjectsModel } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import { goto } from '$app/navigation';
@@ -39,21 +40,30 @@
   <title>Sistemas e Projetos</title>
 </svelte:head>
 
-<ProjectListView
-  data={listModel.data}
-  state={{
-    ...listModel.state,
-    canEdit: canEditSystem(page.data.user),
-    canSync: github.state.isLinked,
-    canSyncAll: github.state.isLinked,
-  }}
-  actions={{
-    ...listModel.actions,
-    onRegister: handleRegister,
-    onEdit: handleEdit,
-    onViewTimeline: (project) => goto(`/system/projects/${project.id}`),
-  }}
-/>
+<!-- Vinda de um clique no Painel, a lista mostra no alto o recorte que a trouxe. -->
+<div class="flex w-full flex-col">
+  {#if listModel.data.drillBanner}
+    <BoardDrillBanner
+      data={listModel.data.drillBanner}
+      actions={{ onClear: listModel.actions.onClearDrill, onBack: listModel.actions.onBackToBoard }}
+    />
+  {/if}
+  <ProjectListView
+    data={listModel.data}
+    state={{
+      ...listModel.state,
+      canEdit: canEditSystem(page.data.user),
+      canSync: github.state.isLinked,
+      canSyncAll: github.state.isLinked,
+    }}
+    actions={{
+      ...listModel.actions,
+      onRegister: handleRegister,
+      onEdit: handleEdit,
+      onViewTimeline: (project) => goto(`/system/projects/${project.id}`),
+    }}
+  />
+</div>
 
 <!-- O que foi excluído some da lista e aparece aqui, fechado, com o "Desfazer". -->
 <ArchivedList

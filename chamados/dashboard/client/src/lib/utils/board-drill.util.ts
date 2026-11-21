@@ -20,19 +20,19 @@ import { type BoardItem } from '$lib/utils/widget-items.util';
  */
 export const DRILL_TARGETS: Record<DataSourceKey, string | null> = {
   infraTickets: contextPath('infra', '/tickets'),
-  computers: null,
-  maintenances: null,
+  computers: contextPath('infra', '/computers'),
+  maintenances: contextPath('infra', '/maintenance'),
   maintenanceSchedules: null,
   partMovements: null,
   computerAlerts: null,
   systemTickets: contextPath('sistema', '/tickets'),
-  softwareProjects: null,
+  softwareProjects: contextPath('sistema', '/projects'),
   softwareActivity: null,
   scheduleEvents: null,
   maintenanceTickets: contextPath('manutencao', '/tickets'),
-  inventoryItems: null,
+  inventoryItems: contextPath('manutencao', '/inventory'),
   inventoryMovements: null,
-  quotes: null,
+  quotes: contextPath('manutencao', '/quotes'),
 };
 
 /** A fonte tem uma lista para abrir? */

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BoardDrillBanner from '$lib/components/azuos-board-drill-banner/azuos-board-drill-banner.svelte';
   import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
   import {
     useArchivedMaintenancesModel,
@@ -30,16 +31,25 @@
   <title>Manutenção</title>
 </svelte:head>
 
-<MaintenanceListView
-  data={list.data}
-  state={list.state}
-  actions={{
-    ...list.actions,
-    onRegister: (computerId?: number) =>
-      (form = { maintenance: null, computerId: computerId ?? null }),
-    onEdit: (maintenance: Maintenance) => (form = { maintenance, computerId: null }),
-  }}
-/>
+<!-- Vindo de um clique no Painel, o histórico mostra no alto o recorte que o trouxe. -->
+<div class="flex w-full flex-col">
+  {#if list.data.drillBanner}
+    <BoardDrillBanner
+      data={list.data.drillBanner}
+      actions={{ onClear: list.actions.onClearDrill, onBack: list.actions.onBackToBoard }}
+    />
+  {/if}
+  <MaintenanceListView
+    data={list.data}
+    state={list.state}
+    actions={{
+      ...list.actions,
+      onRegister: (computerId?: number) =>
+        (form = { maintenance: null, computerId: computerId ?? null }),
+      onEdit: (maintenance: Maintenance) => (form = { maintenance, computerId: null }),
+    }}
+  />
+</div>
 
 <!-- O que foi excluído some da lista e aparece aqui, fechado, com o "Desfazer". -->
 <ArchivedList

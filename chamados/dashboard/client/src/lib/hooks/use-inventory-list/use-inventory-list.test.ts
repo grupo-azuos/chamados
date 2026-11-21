@@ -1,3 +1,4 @@
+import { boardDrillSchema, drillParam } from '@template/shared/schemas/board-drill.schema';
 import { type InventoryItem } from '@template/shared/schemas/inventory-item.schema';
 import { render, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,6 +14,22 @@ vi.mock('$lib/api/inventory-items.api', () => ({
 }));
 
 const { inventoryItemsApi } = await import('$lib/api/inventory-items.api');
+
+/* O endereço da tela: com `?drill=`, a lista veio de um clique no Painel. */
+const address = vi.hoisted(() => ({ search: '' }));
+vi.mock('$app/state', () => ({
+  page: {
+    get url() {
+      return new URL(`http://localhost/maintenance/inventory${address.search}`);
+    },
+  },
+}));
+
+const DRILL = boardDrillSchema.parse({ source: 'inventoryItems', groupBy: 'category', filterId: null, key: 'chair', label: 'Cadeira', title: 'Produtos por categoria' });
+
+function openFromBoard() {
+  address.search = `?drill=${encodeURIComponent(drillParam(DRILL))}`;
+}
 
 function item(over: Partial<InventoryItem> = {}): InventoryItem {
   return {
@@ -182,5 +199,43 @@ describe('useInventoryListModel', () => {
     model.actions.onConfirmDelete();
 
     expect(inventoryItemsApi.remove).not.toHaveBeenCalled();
+  });
+});
+
+describe('with a board cut', () => {
+  beforeEach(() => {
+    address.search = '';
+  });
+
+  // feliz
+  it('sends the board cut to the server and shows what it narrowed', async () => {
+    openFromBoard();
+    const model = mountModel();
+
+    await waitFor(() =>
+      expect(inventoryItemsApi.list).toHaveBeenCalledWith(
+        expect.objectContaining({ drill: expect.objectContaining({ key: 'chair' }) }),
+      ),
+    );
+    expect(model.data.drillBanner?.summary[0]).toBe(DRILL.title);
+  });
+
+  // triste
+  it('calls an empty cut a filtered-out list, not an empty one', async () => {
+    openFromBoard();
+    vi.mocked(inventoryItemsApi.list).mockResolvedValue(page([]));
+    const model = mountModel();
+
+    await waitFor(() => expect(model.state.isFilteredOut).toBe(true));
+    expect(model.state.isEmpty).toBe(false);
+  });
+
+  // triste
+  it('opens without a cut or a banner when the address has none', async () => {
+    const model = mountModel();
+
+    await waitFor(() => expect(inventoryItemsApi.list).toHaveBeenCalled());
+    expect(vi.mocked(inventoryItemsApi.list).mock.calls[0]?.[0]).toMatchObject({ drill: undefined });
+    expect(model.data.drillBanner).toBeNull();
   });
 });

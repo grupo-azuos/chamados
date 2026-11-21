@@ -1,17 +1,20 @@
 import { EMPTY_BOARD_FILTER_VALUES, ME_VALUE } from '@template/shared/schemas/dashboard-board.schema';
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
 import BoardFilterBar from './azuos-board-filter-bar.svelte';
 
-const PERSON = { id: 'person', kind: 'person' as const, label: 'Pessoa', display: 'chips' as const };
-const STATUS = { id: 'ticketStatus', kind: 'ticketStatus' as const, label: 'Situação', display: 'cards' as const };
+const PERSON = { id: 'person', kind: 'person' as const, label: 'Pessoa', display: 'chips' as const, place: { x: 0, y: 0, w: 1, h: 1 } };
+const STATUS = { id: 'ticketStatus', kind: 'ticketStatus' as const, label: 'Situação', display: 'cards' as const, place: { x: 1, y: 0, w: 1, h: 1 } };
+const PERIOD = { id: 'period', kind: 'period' as const, label: 'Período', place: { x: 2, y: 0, w: 1, h: 1 } };
 const COUNTS = {
   person: { total: 9, isLoading: false, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 5 }] },
   ticketStatus: { total: 9, isLoading: false, series: [{ key: 'open', label: 'Aberto', value: 6 }] },
 };
 
-function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_FILTER_VALUES; isOpen?: boolean; filters?: (typeof PERSON | typeof STATUS)[] } = {}) {
+type AnyFilter = typeof PERSON | typeof STATUS | typeof PERIOD;
+
+function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_FILTER_VALUES; filters?: AnyFilter[] } = {}) {
   const actions = {
     onChange: vi.fn(),
     onClear: vi.fn(),
@@ -22,8 +25,7 @@ function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_F
   };
   render(BoardFilterBar, {
     props: {
-      data: { filters: options.filters ?? [PERSON, STATUS], values: options.values ?? EMPTY_BOARD_FILTER_VALUES, counts: COUNTS },
-      ui: { isInitiallyOpen: options.isOpen ?? true },
+      data: { filters: options.filters ?? [PERSON, STATUS, PERIOD], values: options.values ?? EMPTY_BOARD_FILTER_VALUES, counts: COUNTS },
       state: { isEditing: options.isEditing ?? false },
       actions,
     },
@@ -34,7 +36,17 @@ function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_F
 
 describe('AzuosBoardFilterBar', () => {
   // feliz
-  it('chooses "me" or a person with one click on the chips', async () => {
+  it('shows every filter as one compact piece, with its name next to its value', () => {
+    renderBar();
+
+    const bar = screen.getByRole('region', { name: 'Filtros do painel' });
+    expect(within(bar).getByRole('group', { name: 'Pessoa' })).toBeInTheDocument();
+    expect(within(bar).getByRole('group', { name: 'Situação' })).toBeInTheDocument();
+    expect(within(bar).getByRole('group', { name: 'Período' })).toBeInTheDocument();
+  });
+
+  // feliz
+  it('chooses "me" with one click on the chips', async () => {
     const actions = renderBar();
 
     await fireEvent.click(screen.getByRole('radio', { name: 'Eu' }));
@@ -42,28 +54,29 @@ describe('AzuosBoardFilterBar', () => {
   });
 
   // feliz
-  it('filters the whole board by a card, and lets go of it with a second click', async () => {
-    const actions = renderBar({ values: { ...EMPTY_BOARD_FILTER_VALUES, ticketStatus: 'open' } });
+  it('offers to clear the filters once one is chosen', async () => {
+    const actions = renderBar({ values: { ...EMPTY_BOARD_FILTER_VALUES, person: ME_VALUE } });
 
-    await fireEvent.click(screen.getByRole('button', { name: /^Aberto: 6/ }));
-    expect(actions.onChange).toHaveBeenCalledWith({ ticketStatus: null });
-  });
-
-  // feliz
-  it('collapsed, says in one line what is filtering the board, and offers to clear it', async () => {
-    const actions = renderBar({ isOpen: false, values: { ...EMPTY_BOARD_FILTER_VALUES, person: ME_VALUE } });
-
-    expect(screen.getByRole('button', { name: /Filtros/ })).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByRole('list', { name: 'Filtros escolhidos' })).toHaveTextContent('Pessoa: Eu');
     await fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
     expect(actions.onClear).toHaveBeenCalled();
   });
 
-  // feliz
-  it('while building, drags, re-draws and takes off each filter, and offers the missing ones', async () => {
-    const actions = renderBar({ isEditing: true, filters: [PERSON] });
+  // triste
+  it('hides the clear button while nothing is chosen', () => {
+    renderBar();
 
-    expect(screen.getByRole('button', { name: 'Arrastar o filtro Pessoa' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Limpar filtros' })).toBeNull();
+  });
+
+  // feliz
+  it('while building, lists the filters in toolbar order to reorder, re-draw and take off', async () => {
+    const actions = renderBar({ isEditing: true, filters: [PERSON, STATUS] });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Descer o filtro Pessoa' }));
+    expect(actions.onPlaceChange).toHaveBeenCalledWith([
+      { id: 'ticketStatus', place: { x: 0, y: 0, w: 1, h: 1 } },
+      { id: 'person', place: { x: 1, y: 0, w: 1, h: 1 } },
+    ]);
     await fireEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Pessoa' }));
     expect(actions.onRemove).toHaveBeenCalledWith('person');
     await fireEvent.click(screen.getByRole('button', { name: 'Período' }));
@@ -71,11 +84,10 @@ describe('AzuosBoardFilterBar', () => {
   });
 
   // triste
-  it('says nothing is chosen when collapsed without a value, and hides the clear button', () => {
-    renderBar({ isOpen: false });
+  it('does not move the first filter further up', () => {
+    renderBar({ isEditing: true, filters: [PERSON, STATUS] });
 
-    expect(screen.getByText('Nenhum filtro escolhido')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Limpar filtros' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Subir o filtro Pessoa' })).toBeDisabled();
   });
 
   // triste

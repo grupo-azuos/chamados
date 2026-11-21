@@ -1,3 +1,4 @@
+import { drillParam } from '@template/shared/schemas/board-drill.schema';
 import {
   type CreateMaintenanceInput,
   type Maintenance,
@@ -19,6 +20,8 @@ export const maintenancesApi = {
   list: (query: Partial<MaintenanceListQuery>) =>
     apiRequest<Paginated<Maintenance>>('/maintenances', {
       query: {
+        /* O recorte vai como JSON numa string: é assim que o servidor o lê (`boardDrillParamSchema`). */
+        drill: query.drill ? drillParam(query.drill) : undefined,
         page: query.page,
         pageSize: query.pageSize,
         search: query.search,

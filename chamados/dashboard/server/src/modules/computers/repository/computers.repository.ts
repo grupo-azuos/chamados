@@ -138,8 +138,13 @@ function computerColumns() {
 export class ComputersRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(query: ComputerListQuery, presence?: PresenceFilter): Promise<ComputerPage> {
-    const where = buildWhere(query, presence);
+  /** `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro. */
+  async list(
+    query: ComputerListQuery,
+    presence?: PresenceFilter,
+    drill?: SQL,
+  ): Promise<ComputerPage> {
+    const where = and(buildWhere(query, presence), drill);
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([
@@ -173,12 +178,16 @@ export class ComputersRepository {
    * não ordena "D2" antes de "D10" sem uma collation própria; com o limite do relatório, a
    * ordem em memória sai de graça.
    */
-  async listAll(query: ComputerReportQuery, presence?: PresenceFilter): Promise<ComputerRow[]> {
+  async listAll(
+    query: ComputerReportQuery,
+    presence?: PresenceFilter,
+    drill?: SQL,
+  ): Promise<ComputerRow[]> {
     const rows = await runQuery(
       this.db
         .select()
         .from(computers)
-        .where(buildWhere(query, presence))
+        .where(and(buildWhere(query, presence), drill))
         .orderBy(computers.name)
         .limit(REPORT_FETCH_LIMIT),
       'listar computadores para o relatório',

@@ -6,7 +6,9 @@ import { derived, writable } from 'svelte/store';
 
 import { readError } from '$lib/api/http-client';
 import { softwareProjectsApi } from '$lib/api/software-projects.api';
+import { type BoardDrillBanner, useBoardDrillModel } from '$lib/hooks/use-board-drill/use-board-drill.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { contextPath } from '$lib/navigation/navigation';
 
 export type SoftwareProjectListFilter = {
   search: string;
@@ -19,6 +21,8 @@ export type SoftwareProjectListModel = {
     total: number;
     filter: SoftwareProjectListFilter;
     deleting: SoftwareProject | null;
+    /** A faixa do recorte do Painel, quando a lista veio de um clique num bloco. */
+    drillBanner: BoardDrillBanner | null;
   };
   state: {
     isLoading: boolean;
@@ -37,6 +41,8 @@ export type SoftwareProjectListModel = {
     onSearchChange: (search: string) => void;
     onStatusChange: (status: SoftwareProjectStatus | '') => void;
     onClearFilters: () => void;
+    onClearDrill: () => void;
+    onBackToBoard: () => void;
     onRetry: () => void;
     onAskDelete: (item: SoftwareProject) => void;
     onCancelDelete: () => void;
@@ -54,7 +60,11 @@ export function useSoftwareProjectListModel(): SoftwareProjectListModel {
   const deleting = writable<SoftwareProject | null>(null);
   const syncMessage = writable<string | null>(null);
 
-  const queryParams = derived(filter, ($filter) => ({
+  /* O recorte de um clique no Painel (`?drill=`): soma ao filtro da lista. */
+  const drill = useBoardDrillModel({ module: 'sistema', path: contextPath('sistema', '/projects') });
+
+  const queryParams = derived([filter, drill.store], ([$filter, $drill]) => ({
+    drill: $drill ?? undefined,
     page: 1,
     pageSize: MAX_PAGE_SIZE,
     search: $filter.search.trim() || undefined,
@@ -120,11 +130,14 @@ export function useSoftwareProjectListModel(): SoftwareProjectListModel {
         total,
         filter: filterStore.current,
         deleting: deletingStore.current,
+        drillBanner: drill.banner,
       };
     },
     get state() {
       const total = query.current.data?.total ?? 0;
-      const isFiltered = Boolean(filterStore.current.search || filterStore.current.status);
+      /* Com recorte do Painel, a lista vazia é "nada casou", e não "não há sistemas". */
+      const isFiltered =
+        drill.drill !== null || Boolean(filterStore.current.search || filterStore.current.status);
 
       return {
         isLoading: query.current.isPending,
@@ -144,6 +157,8 @@ export function useSoftwareProjectListModel(): SoftwareProjectListModel {
       onSearchChange: (search) => filter.update((f) => ({ ...f, search })),
       onStatusChange: (status) => filter.update((f) => ({ ...f, status })),
       onClearFilters: () => filter.set({ search: '', status: '' }),
+      onClearDrill: drill.onClear,
+      onBackToBoard: drill.onBack,
       onRetry: () => void query.current.refetch(),
       onAskDelete: (item) => {
         deleteMutation.current.reset();

@@ -12,6 +12,7 @@ import { sql } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { type Env } from '../../../lib/config/env.schema';
 
 import { type FileStorage } from '../../../lib/storage/file-storage.type';
@@ -691,15 +692,15 @@ describe('TicketsService — access by area', () => {
   });
 
   /** O serviço com o recorte do painel: o resolvedor é o último argumento, opcional. */
-  function withDrills(list: ReturnType<typeof vi.fn>, drillCondition: ReturnType<typeof vi.fn>) {
+  function withDrills(list: ReturnType<typeof vi.fn>, drillCondition: BoardDrillResolver['drillCondition']) {
     const tickets = { ...defaultRepository, list } as unknown as TicketsRepository;
     const none = undefined;
 
     return new TicketsService(
       tickets,
-      storageStub as FileStorage,
+      storageStub as unknown as FileStorage,
       stagingStub,
-      attachmentsStub as TicketAttachmentsService,
+      attachmentsStub as unknown as TicketAttachmentsService,
       new TicketAccessService(tickets),
       historiesStub as unknown as TicketHistoriesService,
       historiesRepositoryStub as unknown as TicketHistoriesRepository,
@@ -720,7 +721,7 @@ describe('TicketsService — access by area', () => {
   it('narrows the queue to the board block that was clicked', async () => {
     const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
     const cut = sql`true`;
-    const drillCondition = vi.fn().mockResolvedValue(cut);
+    const drillCondition = vi.fn<BoardDrillResolver['drillCondition']>().mockResolvedValue(cut);
     const drill = JSON.stringify({ source: 'infraTickets', groupBy: 'status', filterId: null, key: 'aberto' });
 
     await withDrills(list, drillCondition).list(ana, query({ drill }));
@@ -736,7 +737,7 @@ describe('TicketsService — access by area', () => {
   // triste
   it('lists without a cut when no block was clicked', async () => {
     const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
-    const drillCondition = vi.fn();
+    const drillCondition = vi.fn<BoardDrillResolver['drillCondition']>();
 
     await withDrills(list, drillCondition).list(ana, query());
 

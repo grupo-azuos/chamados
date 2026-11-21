@@ -1,10 +1,12 @@
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { maintenanceListQuerySchema } from '@template/shared/schemas/maintenance.schema';
+import { sql } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type MaintenanceRow } from '../../../lib/db/schema/maintenances.schema';
 import { type MaintenanceScheduleRow } from '../../../lib/db/schema/maintenance-schedules.schema';
+import { type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import {
   type MaintenancesRepository,
   type MaintenanceWithComputer,
@@ -51,8 +53,8 @@ function row(overrides: Partial<MaintenanceRow> = {}): MaintenanceWithComputer {
   };
 }
 
-function makeService(repository: Partial<MaintenancesRepository>) {
-  return new MaintenancesService(repository as MaintenancesRepository);
+function makeService(repository: Partial<MaintenancesRepository>, drills?: BoardDrillResolver) {
+  return new MaintenancesService(repository as MaintenancesRepository, drills);
 }
 
 const query = (overrides: Record<string, unknown> = {}) =>
@@ -73,6 +75,39 @@ function preventiveRow(overrides: Partial<PreventiveRow> = {}): PreventiveRow {
 }
 
 describe('MaintenancesService.list', () => {
+  // feliz
+  it('narrows the history to the board block that was clicked', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const cut = sql`true`;
+    const drillCondition = vi.fn().mockResolvedValue(cut);
+    const drill = JSON.stringify({ source: 'maintenances', groupBy: 'type', filterId: null, key: 'preventive' });
+
+    await makeService({ list }, { drillCondition }).list(owner, query({ drill }));
+
+    expect(drillCondition).toHaveBeenCalledWith(
+      owner,
+      expect.objectContaining({ key: 'preventive' }),
+      ['maintenances'],
+    );
+    expect(list).toHaveBeenCalledWith(expect.anything(), cut);
+  });
+
+  // triste
+  it('lists without a cut when no block was clicked', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const drillCondition = vi.fn();
+
+    await makeService({ list }, { drillCondition }).list(owner, query());
+
+    expect(drillCondition).not.toHaveBeenCalled();
+    expect(list).toHaveBeenCalledWith(expect.anything(), undefined);
+  });
+
+  // triste
+  it('turns down a cut that is not valid JSON before reaching the database', () => {
+    expect(maintenanceListQuerySchema.safeParse({ drill: '{oops' }).success).toBe(false);
+  });
+
   // feliz
   it('returns the page translated into the contract, with the machine name from the inventory', async () => {
     const service = makeService({

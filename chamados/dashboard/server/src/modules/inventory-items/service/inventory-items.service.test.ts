@@ -7,7 +7,10 @@ import { inventoryItemListQuerySchema } from '@template/shared/schemas/inventory
 import { inventoryMovementListQuerySchema } from '@template/shared/schemas/inventory-movement.schema';
 import { describe, expect, it, vi } from 'vitest';
 
+import { sql } from 'drizzle-orm';
+
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { type InventoryItemRow } from '../../../lib/db/schema/inventory-items.schema';
 import { type InventoryItemEventRow } from '../../../lib/db/schema/inventory-item-events.schema';
 import { type InventoryMovementRow } from '../../../lib/db/schema/inventory-movements.schema';
@@ -165,6 +168,7 @@ function makeService(
   storage: Partial<FileStorage> = {},
   eventsRepository: Partial<InventoryItemEventsRepository> = {},
   directory?: Partial<UserDirectoryProvider>,
+  drills?: BoardDrillResolver,
 ) {
   const memory = Object.assign(
     storage instanceof MemoryStorage ? storage : new MemoryStorage(),
@@ -178,6 +182,7 @@ function makeService(
     new StagedUploadsService(memory),
     memory,
     directory as UserDirectoryProvider | undefined,
+    drills,
   );
 }
 
@@ -754,5 +759,34 @@ describe('InventoryItemsService.listResponsibles', () => {
   it('returns empty list when directory provider is not configured', async () => {
     const service = makeService();
     expect(await service.listResponsibles(viewer)).toEqual([]);
+  });
+});
+
+describe('InventoryItemsService.list with a board cut', () => {
+  // feliz
+  it('narrows the inventory to the board block that was clicked', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const cut = sql`true`;
+    const drillCondition = vi.fn().mockResolvedValue(cut);
+    const drill = JSON.stringify({ source: 'inventoryItems', groupBy: 'category', filterId: null, key: 'chair' });
+
+    await makeService({ list }, {}, {}, undefined, { drillCondition }).list(
+      viewer,
+      inventoryItemListQuerySchema.parse({ drill }),
+    );
+
+    expect(drillCondition).toHaveBeenCalledWith(viewer, expect.objectContaining({ key: 'chair' }), ['inventoryItems']);
+    expect(list).toHaveBeenCalledWith(expect.anything(), cut);
+  });
+
+  // triste
+  it('lists without a cut when no block was clicked', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const drillCondition = vi.fn();
+
+    await makeService({ list }, {}, {}, undefined, { drillCondition }).list(viewer, query);
+
+    expect(drillCondition).not.toHaveBeenCalled();
+    expect(list).toHaveBeenCalledWith(expect.anything(), undefined);
   });
 });

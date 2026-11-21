@@ -5,6 +5,7 @@ import {
   SOFTWARE_PROJECT_STATUSES,
 } from '../domain/software-project.util';
 import { archivedFilterSchema, archiveSchema } from './archive.schema';
+import { boardDrillParamSchema } from './board-drill.schema';
 import { paginationQuerySchema } from './pagination.schema';
 import { partialUpdate } from './partial-update.schema';
 
@@ -81,6 +82,8 @@ export const softwareProjectListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   status: softwareProjectStatusSchema.optional(),
   archived: archivedFilterSchema,
+  /** O recorte de um clique no painel (`board-drill.schema`): estreita a lista ao item clicado. */
+  drill: boardDrillParamSchema.optional(),
 });
 
 export type SoftwareProjectListQuery = z.infer<typeof softwareProjectListQuerySchema>;

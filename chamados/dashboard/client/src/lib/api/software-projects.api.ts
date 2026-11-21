@@ -1,3 +1,4 @@
+import { drillParam } from '@template/shared/schemas/board-drill.schema';
 import {
   type CreateSoftwareProjectInput,
   type SoftwareProject,
@@ -12,6 +13,7 @@ export const softwareProjectsApi = {
   list: (query: Partial<SoftwareProjectListQuery> = {}) =>
     apiRequest<Paginated<SoftwareProject>>('/software-projects', {
       query: {
+        drill: query.drill ? drillParam(query.drill) : undefined,
         page: query.page,
         pageSize: query.pageSize,
         search: query.search,
