@@ -13,14 +13,14 @@
   const filters: BoardFilter[] = [
     { id: 'pessoa', kind: 'person', label: 'Pessoa' },
     { id: 'ticketStatus', kind: 'ticketStatus', label: 'Situação' },
-    { id: 'ticketPriority', kind: 'ticketPriority', label: 'Prioridade', display: 'chips' },
+    { id: 'ticketPriority', kind: 'ticketPriority', label: 'Prioridade', display: 'chips', width: 'full' },
     { id: 'periodo', kind: 'period', label: 'Período' },
   ];
   const counts = {
     pessoa: { total: 9, isLoading: false, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 5 }, { key: 'Caio Reis', label: 'Caio Reis', value: 4 }] },
     ticketStatus: { total: 9, isLoading: false, series: [{ key: 'open', label: 'Aberto', value: 6 }, { key: 'in_progress', label: 'Em atendimento', value: 3 }] },
   };
-  const actions = { onChange: () => {}, onClear: () => {}, onAdd: () => {}, onRemove: () => {}, onDisplayChange: () => {}, onPlaceChange: () => {} };
+  const actions = { onChange: () => {}, onClear: () => {}, onAdd: () => {}, onRemove: () => {}, onDisplayChange: () => {}, onWidthChange: () => {}, onPlaceChange: () => {} };
 </script>
 
 <Story name="Default" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />

@@ -39,6 +39,7 @@
     onAddBoardFilter: noop,
     onRemoveBoardFilter: noop,
     onBoardFilterDisplayChange: noop,
+    onBoardFilterWidthChange: noop,
     onBoardFilterPlaceChange: noop,
     onClearFilterValues: noop,
     onLayoutChange: noop,

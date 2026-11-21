@@ -2,6 +2,7 @@
   import {
     type BoardFilter,
     type BoardFilterDisplay,
+    type BoardFilterWidth,
     type BoardFilterKind,
     type BoardFilterValues,
     type LayoutItem,
@@ -38,6 +39,7 @@
       onAddBoardFilter: (kind: BoardFilterKind) => void;
       onRemoveBoardFilter: (id: string) => void;
       onBoardFilterDisplayChange: (id: string, display: BoardFilterDisplay) => void;
+      onBoardFilterWidthChange: (id: string, width: BoardFilterWidth) => void;
       onBoardFilterPlaceChange: (places: readonly BoardFilterPlaceChange[]) => void;
       onClearFilterValues: () => void;
       onLayoutChange: (layout: LayoutItem[]) => void;
@@ -199,6 +201,7 @@
             onAdd: actions.onAddBoardFilter,
             onRemove: actions.onRemoveBoardFilter,
             onDisplayChange: actions.onBoardFilterDisplayChange,
+            onWidthChange: actions.onBoardFilterWidthChange,
             onPlaceChange: actions.onBoardFilterPlaceChange,
             onClear: actions.onClearFilterValues,
           }}

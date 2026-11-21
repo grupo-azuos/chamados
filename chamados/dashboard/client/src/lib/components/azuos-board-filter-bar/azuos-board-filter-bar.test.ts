@@ -12,7 +12,7 @@ const COUNTS = {
   ticketStatus: { total: 9, isLoading: false, series: [{ key: 'open', label: 'Aberto', value: 6 }] },
 };
 
-type AnyFilter = typeof PERSON | typeof STATUS | typeof PERIOD;
+type AnyFilter = (typeof PERSON | typeof STATUS | typeof PERIOD) & { width?: 'auto' | 'full' };
 
 function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_FILTER_VALUES; filters?: AnyFilter[] } = {}) {
   const actions = {
@@ -21,6 +21,7 @@ function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_F
     onAdd: vi.fn(),
     onRemove: vi.fn(),
     onDisplayChange: vi.fn(),
+    onWidthChange: vi.fn(),
     onPlaceChange: vi.fn(),
   };
   render(BoardFilterBar, {
@@ -95,5 +96,21 @@ describe('AzuosBoardFilterBar', () => {
     renderBar({ filters: [] });
 
     expect(screen.queryByRole('region', { name: 'Filtros do painel' })).toBeNull();
+  });
+
+  // feliz
+  it('puts a filter on the whole line when it is set so', () => {
+    renderBar({ filters: [PERSON, { ...STATUS, width: 'full' }] });
+
+    expect(screen.getByRole('group', { name: 'Situação' }).parentElement?.parentElement).toHaveClass('col-span-full');
+    expect(screen.getByRole('group', { name: 'Pessoa' }).parentElement?.parentElement).not.toHaveClass('col-span-full');
+  });
+
+  // feliz
+  it('while building, chooses the width of each filter', async () => {
+    const actions = renderBar({ isEditing: true, filters: [PERSON, STATUS] });
+
+    expect(screen.getByRole('combobox', { name: 'Largura de Pessoa' })).toHaveTextContent('Normal');
+    expect(actions.onWidthChange).not.toHaveBeenCalled();
   });
 });

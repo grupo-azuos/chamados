@@ -13,6 +13,7 @@ import {
   saveErrorOf,
   setBoardFilterDisplay,
   setBoardFilterPlaces,
+  setBoardFilterWidth,
   upsertWidget,
   visibleScopes,
 } from './board-draft.util';
@@ -84,6 +85,8 @@ describe('the draft of a board', () => {
     expect(addBoardFilter(withPerson, 'person').filters).toHaveLength(1);
 
     expect(setBoardFilterDisplay(withPerson, 'person', 'cards').filters[0]?.display).toBe('cards');
+    expect(setBoardFilterWidth(withPerson, 'person', 'full').filters[0]?.width).toBe('full');
+    expect(setBoardFilterWidth(withPerson, 'outro', 'full').filters[0]?.width).toBeUndefined();
     expect(removeBoardFilter(withPerson, 'person').filters).toEqual([]);
   });
 

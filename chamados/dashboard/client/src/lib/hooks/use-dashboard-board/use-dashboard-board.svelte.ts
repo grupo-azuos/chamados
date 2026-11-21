@@ -12,6 +12,7 @@ import {
   type BoardFilterDisplay,
   type BoardFilterKind,
   type BoardFilterValues,
+  type BoardFilterWidth,
   type BoardModule,
   boardWeight,
   type DashboardScope,
@@ -43,6 +44,7 @@ import {
   removeWidget,
   saveErrorOf,
   setBoardFilterDisplay,
+  setBoardFilterWidth,
   setBoardFilterPlaces,
   upsertWidget,
   visibleScopes,
@@ -303,6 +305,8 @@ export function useDashboardBoardModel(module: BoardModule) {
       onRemoveBoardFilter: (id: string) => edit((current) => removeBoardFilter(current, id)),
       onBoardFilterDisplayChange: (id: string, display: BoardFilterDisplay) =>
         edit((current) => setBoardFilterDisplay(current, id, display)),
+      onBoardFilterWidthChange: (id: string, width: BoardFilterWidth) =>
+        edit((current) => setBoardFilterWidth(current, id, width)),
       /** Montando: os filtros foram arrastados ou redimensionados na grade deles. */
       onBoardFilterPlaceChange: (places: readonly BoardFilterPlaceChange[]) =>
         edit((current) => setBoardFilterPlaces(current, places)),
