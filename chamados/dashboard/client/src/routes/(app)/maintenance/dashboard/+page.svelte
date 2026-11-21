@@ -1,22 +1,46 @@
 <script lang="ts">
-  import MaintenanceDashboardView from './components/azuos-maintenance-dashboard-view/azuos-maintenance-dashboard-view.svelte';
-  import { useMaintenanceDashboardModel } from '$lib/hooks/use-maintenance-dashboard/use-maintenance-dashboard.svelte';
+  import BoardView from '$lib/components/azuos-board-view/azuos-board-view.svelte';
+  import { useDashboardBoardModel } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
+  import { useSavedFiltersModel } from '$lib/hooks/use-saved-filters/use-saved-filters.svelte';
 
   /**
-   * A rota só compõe: chama o model e entrega para a view (CONTRIBUTING §3).
+   * A rota só compõe: chama os models e entrega para a view (CONTRIBUTING §3).
    *
-   * É o painel DA MANUTENÇÃO, uma tela própria do contexto — o de Infraestrutura
-   * (`/infra/dashboard`) resume máquinas, e aqui não há máquina para resumir.
+   * O painel é DESTE módulo: a página passa o módulo aos models, e tudo o que eles buscam e
+   * gravam é dele — as fontes, os blocos, os filtros salvos. O mesmo painel nos três módulos,
+   * cada um com os seus dados.
    */
-  const dashboard = useMaintenanceDashboardModel();
+  const board = useDashboardBoardModel('manutencao');
+  const filters = useSavedFiltersModel('manutencao');
 </script>
 
 <svelte:head>
   <title>Painel da Manutenção</title>
 </svelte:head>
 
-<MaintenanceDashboardView
-  data={dashboard.data}
-  state={dashboard.state}
-  actions={dashboard.actions}
+<BoardView
+  data={{
+    ...board.data,
+    savedFilters: filters.data.filters,
+    archivedFilters: filters.data.archived,
+    editingFilter: filters.data.editing,
+  }}
+  state={{
+    ...board.state,
+    isFilterDialogOpen: filters.state.isOpen,
+    isFilterSaving: filters.state.isSaving,
+    isFilterArchiving: filters.state.isArchiving,
+    filterError: filters.state.error,
+  }}
+  actions={{
+    ...board.actions,
+    onOpenFilters: filters.actions.onOpen,
+    onCloseFilters: filters.actions.onClose,
+    onNewFilter: filters.actions.onNew,
+    onEditFilter: filters.actions.onEdit,
+    onCancelEditFilter: filters.actions.onCancelEdit,
+    onSaveFilter: filters.actions.onSave,
+    onArchiveFilter: filters.actions.onArchive,
+    onRestoreFilter: filters.actions.onRestore,
+  }}
 />
