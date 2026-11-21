@@ -236,7 +236,7 @@
   <ColumnChart
     data={{ slices, seriesLabel: noun }}
     state={{ isLoading }}
-    ui={{ orientation: widget.kind === 'bar' ? 'horizontal' : 'vertical' }}
+    ui={{ orientation: widget.kind === 'bar' ? 'horizontal' : 'vertical', className: 'h-full min-h-40' }}
     actions={{ onSelect: selectByLabel }}
   />
 {:else if widget.kind === 'radar'}
