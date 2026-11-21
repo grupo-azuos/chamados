@@ -162,7 +162,7 @@
             use:fillFromPointer
             style:--fill-color={fillColorOf(movementTypeTone(movement.type))}
             class={cn(
-              'hover-fill relative flex flex-col gap-2 rounded-box border border-border bg-card p-3 shadow-xs',
+              'hover-fill relative flex flex-col gap-2 rounded-box bg-card p-3 shadow-card',
               movement.ticketId && 'cursor-pointer',
             )}
           >

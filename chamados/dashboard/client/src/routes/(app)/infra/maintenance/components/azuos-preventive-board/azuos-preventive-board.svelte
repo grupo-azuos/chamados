@@ -71,7 +71,7 @@
   const upToDate = $derived(data.rows.length - pending.length);
 </script>
 
-<section class="bg-card rounded-surface border p-4">
+<section class="bg-card rounded-surface p-4 shadow-card">
   <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
     <div>
       <h2 class="text-ink-900 text-sm font-semibold">Manutenção preventiva</h2>

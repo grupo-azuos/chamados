@@ -180,7 +180,7 @@
       <div
         id={listId}
         role="listbox"
-        class="border-border bg-card rounded-box absolute inset-x-0 top-full z-30 mt-1 max-h-56 overflow-y-auto border p-1 shadow-xl"
+        class="bg-card rounded-box absolute inset-x-0 top-full z-30 mt-1 max-h-56 overflow-y-auto p-1 shadow-xl"
       >
         {#if visible.length === 0}
           <p class="text-ink-500 px-2 py-2 text-sm">{emptyMessageOf(data, fieldState)}</p>

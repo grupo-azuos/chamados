@@ -6,12 +6,16 @@ import MiniStatCard from './azuos-mini-stat-card.svelte';
 
 describe('AzuosMiniStatCard (Svelte)', () => {
   // feliz
-  it('shows the label and the number in the accent of its status', () => {
-    render(MiniStatCard, {
+  /* Padrão Apple: o número fica na cor do texto; o tom do status mora na bolinha. */
+  it('shows the number in the text colour and the status accent in the dot', () => {
+    const { container } = render(MiniStatCard, {
       props: { data: { label: 'Concluído', value: 9 }, ui: { tone: 'green' } },
     });
 
-    expect(screen.getByText('9')).toHaveClass('text-hue-green');
+    expect(screen.getByText('9')).toHaveClass('text-foreground');
+    expect(container.querySelector('span[aria-hidden="true"].rounded-full')?.className).toContain(
+      'bg-hue-green',
+    );
   });
 
   it('filters when clicked and turns light blue when selected', async () => {
@@ -30,20 +34,23 @@ describe('AzuosMiniStatCard (Svelte)', () => {
   });
 
   // triste
-  it('falls back to the slate accent without a tone', () => {
-    render(MiniStatCard, { props: { data: { label: 'Sem status', value: 0 } } });
+  it('falls back to the slate dot without a tone', () => {
+    const { container } = render(MiniStatCard, { props: { data: { label: 'Sem status', value: 0 } } });
 
-    expect(screen.getByText('0')).toHaveClass('text-hue-slate');
+    expect(container.querySelector('span[aria-hidden="true"].rounded-full')?.className).toContain(
+      'bg-hue-slate',
+    );
   });
 
-  /* A cor que a pessoa escolheu pinta exata no número, e some quando o card está escolhido. */
-  it('paints the number in the exact colour the person chose, but not when selected', () => {
-    const { rerender } = render(MiniStatCard, {
+  /* A cor que a pessoa escolheu pinta exata na bolinha, e some quando o card está escolhido. */
+  it('paints the dot in the exact colour the person chose, but not when selected', () => {
+    const { container, rerender } = render(MiniStatCard, {
       props: { data: { label: 'Projeto', value: 7 }, ui: { tone: '#1d4ed8' } },
     });
+    const dot = () => container.querySelector('span[aria-hidden="true"].rounded-full') as HTMLElement;
 
-    expect(screen.getByText('7')).toHaveStyle({ color: 'rgb(29, 78, 216)' });
+    expect(dot()).toHaveStyle({ backgroundColor: 'rgb(29, 78, 216)' });
     rerender({ data: { label: 'Projeto', value: 7 }, ui: { tone: '#1d4ed8' }, state: { isSelected: true } });
-    expect(screen.getByText('7').getAttribute('style') ?? '').toBe('');
+    expect(dot().getAttribute('style') ?? '').toBe('');
   });
 });

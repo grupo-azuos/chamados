@@ -323,7 +323,7 @@
                       <div class="relative">
                         <button
                           type="button"
-                          class="grid size-6 place-items-center rounded-control border border-border bg-card text-muted-foreground transition hover:text-foreground"
+                          class="grid size-6 place-items-center rounded-control border bg-muted text-muted-foreground transition hover:text-foreground border-transparent"
                           title="Atribuir etiqueta ao card"
                           onclick={(e) => {
                             e.stopPropagation();

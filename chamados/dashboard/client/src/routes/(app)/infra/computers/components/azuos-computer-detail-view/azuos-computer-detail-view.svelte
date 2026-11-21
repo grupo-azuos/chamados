@@ -375,7 +375,7 @@
 <div class="flex w-full flex-col gap-5">
   <BackButton data={{ destination: data.backDestination ?? 'o inventário' }} actions={{ onClick: actions.onBack }} />
 
-  <section aria-label="Identificação do computador" class="bg-card rounded-surface min-w-0 border p-4 shadow-xs sm:p-5">
+  <section aria-label="Identificação do computador" class="bg-card rounded-surface min-w-0 p-4 sm:p-5 shadow-card">
     <PageHeader
       data={{
         title: computer.displayName?.trim() || computer.hardware?.hostname?.trim() || computer.name,
@@ -545,7 +545,7 @@
   </StatCardGrid>
 
   <!-- O que baixou a nota vem antes de tudo: é a razão de alguém abrir esta tela. -->
-  <section class="bg-card rounded-surface border p-4">
+  <section class="bg-card rounded-surface p-4 shadow-card">
     <h2 class="text-ink-900 mb-2 text-sm font-semibold">O que precisa de atenção</h2>
     {#if computer.warnings.length === 0}
       <div class="flex items-start gap-3">
@@ -569,7 +569,7 @@
     {/if}
   </section>
 
-  <section class="bg-card rounded-surface border p-4">
+  <section class="bg-card rounded-surface p-4 shadow-card">
     <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
       <h2 class="text-ink-900 text-sm font-semibold">O que está acontecendo agora</h2>
       {#if live}
@@ -579,7 +579,7 @@
     <ComputerLivePanel data={{ live }} state={{ isLoading: viewState?.isLiveLoading }} />
   </section>
 
-  <section class="bg-card rounded-surface border p-4">
+  <section class="bg-card rounded-surface p-4 shadow-card">
     <h2 class="text-ink-900 mb-3 text-sm font-semibold">Aplicativos que mais pesam</h2>
     <ComputerProcessTable
       data={{ processes: live?.processes ?? [] }}
@@ -587,7 +587,7 @@
     />
   </section>
 
-  <section class="bg-card rounded-surface border p-4">
+  <section class="bg-card rounded-surface p-4 shadow-card">
     <h2 class="text-ink-900 mb-3 text-sm font-semibold">Uso das últimas 24 horas</h2>
     <UsageChart
       data={{ points }}
@@ -596,7 +596,7 @@
     />
   </section>
 
-  <section class="bg-card rounded-surface border p-4">
+  <section class="bg-card rounded-surface p-4 shadow-card">
     <h2 class="text-ink-900 mb-3 text-sm font-semibold">O que tem dentro</h2>
     <dl class="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
       {#each facts as fact (fact.label)}
@@ -608,7 +608,7 @@
     </dl>
   </section>
 
-  <section class="bg-card rounded-surface border p-4">
+  <section class="bg-card rounded-surface p-4 shadow-card">
     <div class="mb-3 flex items-center justify-between">
       <h2 class="text-ink-900 text-sm font-semibold">Alertas</h2>
       {#if data.alerts.length > 0}
@@ -633,7 +633,7 @@
           <div
             use:fillFromPointer
             style:--fill-color={fillColorOf(alert.recoveredAt ? 'neutral' : 'danger')}
-            class="hover-fill border-border bg-card rounded-surface border p-3 shadow-xs"
+            class="hover-fill bg-card rounded-surface p-3 shadow-card"
           >
             <div class="flex items-start justify-between gap-2">
               <span class="font-medium text-ink-900 text-sm">
@@ -735,7 +735,7 @@
     {/if}
   </section>
 
-  <section class="bg-card rounded-surface border p-4">
+  <section class="bg-card rounded-surface p-4 shadow-card">
     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
       <h2 class="text-ink-900 text-sm font-semibold">Manutenções desta máquina</h2>
       {#if !disposed}
@@ -781,7 +781,7 @@
     {/if}
   </section>
 
-  <section class="bg-card rounded-surface border p-4">
+  <section class="bg-card rounded-surface p-4 shadow-card">
     <h2 class="text-ink-900 mb-3 text-sm font-semibold">Chamados desta máquina</h2>
 
     {#if viewState?.isTicketsLoading}
@@ -828,7 +828,7 @@
     {/if}
   </section>
 
-  <section class="bg-card rounded-surface border p-4">
+  <section class="bg-card rounded-surface p-4 shadow-card">
     <h2 class="text-ink-900 mb-3 text-sm font-semibold">Por onde esta máquina andou</h2>
 
     {#if viewState?.isTransfersLoading}
@@ -870,7 +870,7 @@
     {/if}
   </section>
 
-  <section class="bg-card rounded-surface border p-4">
+  <section class="bg-card rounded-surface p-4 shadow-card">
     <h2 class="text-ink-900 mb-3 text-sm font-semibold">Peças que esta máquina recebeu</h2>
 
     {#if viewState?.isPartsLoading}

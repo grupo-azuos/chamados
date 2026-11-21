@@ -225,7 +225,7 @@
 <div class="flex w-full flex-col gap-6">
   <!-- 1. Meu Perfil -->
   {#if data.currentUser}
-    <div class="rounded-box border border-border bg-card p-6 shadow-xs">
+    <div class="rounded-box bg-card p-6 shadow-card">
       <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div class="flex items-center gap-4">
           <div class="relative shrink-0">
@@ -421,7 +421,7 @@
         <div
           use:fillFromPointer
           style:--fill-color={fillColorOf(contextTone(person.roles[0]?.context ?? 'sistema'))}
-          class="hover-fill flex flex-col gap-3 rounded-box border border-border bg-card p-4 shadow-xs"
+          class="hover-fill flex flex-col gap-3 rounded-box bg-card p-4 shadow-card"
         >
           <div class="flex items-center gap-3 min-w-0">
             <PersonAvatar name={displayName} avatarUrl={user?.image} ui={{ size: 'lg' }} />

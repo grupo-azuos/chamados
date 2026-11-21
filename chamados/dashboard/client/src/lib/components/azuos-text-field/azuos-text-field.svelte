@@ -80,7 +80,7 @@
       'bg-muted text-foreground w-full border text-sm transition-colors',
       'placeholder:text-ink-500 disabled:cursor-not-allowed disabled:opacity-60',
       isPassword && 'pr-11',
-      hasError ? 'border-border bg-destructive-soft' : 'border-input',
+      hasError ? 'bg-destructive-soft border-transparent' : 'border-transparent',
     ),
   );
 </script>

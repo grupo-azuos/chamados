@@ -180,7 +180,7 @@
 
   <!-- 2. O que está acontecendo agora, e os chamados que dependem disso. -->
   <div class="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-    <section class="border-border bg-card rounded-surface min-w-0 border shadow-xs">
+    <section class="bg-card rounded-surface min-w-0 shadow-card">
       <header class="border-border border-b px-4 py-3">
         <h2 class="text-ink-900 text-sm font-semibold">Em andamento agora</h2>
         <p class="text-ink-500 text-xs">PRs abertos e issues pendentes, do mais recente.</p>
@@ -218,7 +218,7 @@
       {/if}
     </section>
 
-    <section class="border-border bg-card rounded-surface min-w-0 border shadow-xs">
+    <section class="bg-card rounded-surface min-w-0 shadow-card">
       <header class="border-border border-b px-4 py-3">
         <h2 class="text-ink-900 text-sm font-semibold">Chamados abertos</h2>
         <p class="text-ink-500 text-xs">Os pedidos de suporte deste sistema ainda sem solução.</p>
@@ -254,7 +254,7 @@
   </div>
 
   <!-- 3. A timeline, dia a dia. -->
-  <section class="border-border bg-card rounded-surface min-w-0 border shadow-xs">
+  <section class="bg-card rounded-surface min-w-0 shadow-card">
     <header
       class="border-border flex min-w-0 flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-end sm:justify-between"
     >

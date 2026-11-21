@@ -220,7 +220,7 @@
       {#if canvasState.isEditing && isWide}
         <button
           type="button"
-          class="text-ink-500 bg-card border-border rounded-control absolute right-1 bottom-1 flex size-6 cursor-se-resize touch-none items-center justify-center border"
+          class="text-ink-500 bg-muted rounded-control absolute right-1 bottom-1 flex size-6 cursor-se-resize touch-none items-center justify-center border border-transparent"
           aria-label={`Redimensionar o bloco ${widget.title}`}
           onpointerdown={(event) => startGesture(event, widget, 'resize')}
           onpointermove={(event) => followGesture(event, widget)}

@@ -469,7 +469,7 @@
       }}
     />
 
-  <div class="flex flex-col rounded-surface border border-border bg-card shadow-xs">
+  <div class="flex flex-col rounded-surface bg-card shadow-card">
     <div>
       <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
       {#if state.error}

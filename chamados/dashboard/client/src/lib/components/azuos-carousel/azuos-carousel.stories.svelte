@@ -15,7 +15,7 @@
 <Story name="Default" asChild>
   <Carousel data={{ items: situations }} ui={{ ariaLabel: 'Resumo por situação', itemClassName: 'basis-1/2 lg:basis-1/4' }}>
     {#snippet item(label, index)}
-      <div class="bg-card border-border rounded-surface border p-4">
+      <div class="bg-card rounded-surface p-4 shadow-card">
         <p class="text-muted-foreground text-xs">{label}</p>
         <p class="text-2xl font-bold">{index * 3 + 2}</p>
       </div>
@@ -27,7 +27,7 @@
 <Story name="FewItems" asChild>
   <Carousel data={{ items: situations.slice(0, 2) }} ui={{ ariaLabel: 'Resumo', itemClassName: 'basis-1/3' }}>
     {#snippet item(label)}
-      <div class="bg-card border-border rounded-surface border p-4">{label}</div>
+      <div class="bg-card rounded-surface p-4 shadow-card">{label}</div>
     {/snippet}
   </Carousel>
 </Story>

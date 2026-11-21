@@ -41,7 +41,7 @@
     indicatorClass: 'rounded-box bg-primary',
     attributes: ['aria-pressed'],
   }}
-  class="border-border bg-card rounded-control hidden items-center gap-0.5 border p-0.5 shadow-xs xl:inline-flex"
+  class="bg-muted rounded-control hidden items-center gap-0.5 border p-0.5 xl:inline-flex border-transparent"
 >
   <ActionButton
     data={{ label: 'Ver em tabela' }}

@@ -16,11 +16,11 @@
    * pelo espaço entre ícone e texto. A altura é nossa.
    */
   export const actionButton = tv({
-    base: 'align-middle font-semibold rounded-control shadow-xs transition-all',
+    base: 'rounded-button align-middle font-semibold shadow-xs transition-all',
     variants: {
       variant: {
         primary: 'bg-primary hover:bg-primary-strong text-primary-foreground',
-        secondary: 'border-border bg-card text-foreground hover:bg-muted border',
+        secondary: 'bg-muted text-foreground hover:bg-accent border border-transparent',
         ghost: 'text-foreground hover:bg-accent hover:text-foreground bg-transparent shadow-none border border-transparent',
         danger: 'bg-destructive-fill text-on-dark hover:bg-destructive',
       },

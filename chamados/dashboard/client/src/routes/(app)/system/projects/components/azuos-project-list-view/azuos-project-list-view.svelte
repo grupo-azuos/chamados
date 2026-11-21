@@ -207,7 +207,7 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {#each data.items as project (project.id)}
         <div
-          class="flex flex-col justify-between rounded-surface border border-border bg-card p-5 shadow-xs transition hover:border-border"
+          class="flex flex-col justify-between rounded-surface bg-card p-5 transition hover:border-border shadow-card"
         >
           <div>
             <!-- Topo: Nome, Tag e Status -->

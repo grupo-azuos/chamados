@@ -39,7 +39,7 @@
   bind:open={isOpen}
   disabled={blockState?.isDisabled}
   onOpenChange={(next) => actions?.onOpenChange?.(next)}
-  class={cn('border-border bg-card rounded-box border', ui?.className)}
+  class={cn('bg-card rounded-box shadow-card', ui?.className)}
 >
   <CollapsibleTrigger
     class="text-ink-900 flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"

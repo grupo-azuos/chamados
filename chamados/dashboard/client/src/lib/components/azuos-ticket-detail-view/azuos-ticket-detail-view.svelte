@@ -264,7 +264,7 @@
 
       {#if ticket.screenshotUrl}
         <a
-          class="control-sm rounded-control border-border bg-card text-primary hover:bg-ink-100 inline-flex w-fit items-center gap-1.5 border text-xs font-semibold shadow-xs transition-colors"
+          class="control-sm rounded-control bg-muted text-primary hover:bg-accent inline-flex w-fit items-center gap-1.5 border text-xs font-semibold transition-colors border-transparent"
           href={ticket.screenshotUrl}
           target="_blank"
           rel="noopener"

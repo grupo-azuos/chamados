@@ -26,7 +26,7 @@
 
 <section
   aria-label="Seus módulos"
-  class="bg-card border-border rounded-surface flex flex-col gap-4 border p-4 shadow-xs sm:p-6"
+  class="bg-card rounded-surface flex flex-col gap-4 p-4 sm:p-6 shadow-card"
 >
   <h2 class="text-foreground flex items-center gap-2 text-base font-semibold">
     <span class="bg-muted text-primary rounded-chip flex size-8 items-center justify-center">

@@ -105,7 +105,7 @@
 
 <section
   aria-label={ui?.ariaLabel ?? 'Filtros'}
-  class="border-border bg-card rounded-surface flex min-w-0 flex-col border shadow-xs"
+  class="bg-card rounded-surface flex min-w-0 flex-col shadow-card"
 >
   <!-- A barra: busca ocupa o que sobrar; no celular cada peça ganha a própria linha. -->
   <div class="flex min-w-0 flex-col gap-3 p-3 sm:p-4 md:flex-row md:items-end">

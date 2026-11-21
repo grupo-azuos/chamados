@@ -123,7 +123,7 @@
          linha, e nenhum item estica na largura toda da ficha. -->
     <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {#each data.items as item (item.id)}
-        <li class="bg-card border-border rounded-box flex flex-col gap-2 border p-3 shadow-xs">
+        <li class="bg-card rounded-box flex flex-col gap-2 p-3 shadow-card">
           <div class="flex items-start justify-between gap-2">
             <p class="text-ink-900 line-clamp-2 min-w-0 text-sm font-medium" title={item.name}>
               {item.name}

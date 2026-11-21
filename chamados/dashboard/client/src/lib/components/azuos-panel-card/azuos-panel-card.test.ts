@@ -31,13 +31,13 @@ describe('AzuosPanelCard', () => {
    * A borda é fina e EM VOLTA, nunca colorida de um lado só — é a regra visual do projeto:
    * ou o cartão é colorido inteiro, ou a borda é fina em volta, ou não há borda.
    */
-  it('draws a thin border all around, never on one side alone', () => {
+  it('has no border at all: the Apple shadow separates it from the page', () => {
     const { container } = render(Harness, { props: { title: 'Mapa de problemas' } });
 
     const card = container.querySelector('section');
 
-    expect(card?.className).toContain('border-border');
-    expect(card?.className).not.toMatch(/border-[lrtb]-\d/);
+    expect(card?.className).toContain('shadow-card');
+    expect(card?.className).not.toMatch(/\bborder\b|border-[lrtb]-\d/);
   });
 
   // triste

@@ -168,14 +168,14 @@ describe('AzuosStatCard', () => {
 
   /* A cor é do CARTÃO inteiro, não de uma borda ou barra fina — é o que faz o olho achar o
      cartão certo sem precisar ler o rótulo primeiro. */
-  it('sits on the brand surface with the number in the status accent, without opacity', () => {
+  it('sits on the brand surface with the number in the text colour, without opacity', () => {
     render(StatCard, {
       props: { data: { label: 'Vencidos', value: 3 }, ui: { tone: 'danger' } },
     });
 
     const card = screen.getByRole('group', { name: 'Vencidos' });
     expect(card).toHaveClass('bg-card');
-    expect(screen.getByText('3')).toHaveClass('text-hue-red');
+    expect(screen.getByText('3')).toHaveClass('text-foreground');
     expect(card.className).not.toMatch(/\/\d/);
   });
 
@@ -185,7 +185,7 @@ describe('AzuosStatCard', () => {
     });
 
     expect(screen.getByRole('group', { name: 'Total' })).toHaveClass('bg-card');
-    expect(screen.getByText('3')).toHaveClass('text-hue-slate');
+    expect(screen.getByText('3')).toHaveClass('text-foreground');
   });
 
   it('becomes a shortcut with onClick: a button that says what the click does', () => {
@@ -226,14 +226,13 @@ describe('AzuosStatCard', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  /* A cor que a pessoa escolheu pinta exata no número, e some quando o card está escolhido. */
-  it('paints the number in the exact colour the person chose, but not when selected', () => {
-    const { rerender } = render(StatCard, {
+  /* Padrão Apple: nem a cor escolhida pela pessoa pinta o número — ele fica na cor do texto. */
+  it('keeps the number in the text colour even with a colour the person chose', () => {
+    render(StatCard, {
       props: { data: { label: 'Projeto', value: 7 }, ui: { tone: '#1d4ed8' } },
     });
 
-    expect(screen.getByText('7')).toHaveStyle({ color: 'rgb(29, 78, 216)' });
-    rerender({ data: { label: 'Projeto', value: 7 }, ui: { tone: '#1d4ed8' }, state: { isSelected: true } });
+    expect(screen.getByText('7')).toHaveClass('text-foreground');
     expect(screen.getByText('7').getAttribute('style') ?? '').toBe('');
   });
 });

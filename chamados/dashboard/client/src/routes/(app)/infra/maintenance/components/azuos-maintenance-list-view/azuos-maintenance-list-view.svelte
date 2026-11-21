@@ -248,7 +248,7 @@
         <div
           use:fillFromPointer
           style:--fill-color={fillColorOf(maintenanceTypeTone(maintenance.type))}
-          class="hover-fill border-border bg-card rounded-surface border p-4 shadow-xs"
+          class="hover-fill bg-card rounded-surface p-4 shadow-card"
         >
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0 flex-1">

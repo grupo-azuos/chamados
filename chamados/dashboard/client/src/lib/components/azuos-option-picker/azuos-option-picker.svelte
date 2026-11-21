@@ -250,7 +250,7 @@
     aria-describedby={fieldState?.error ? errorId : undefined}
     class={cn(
       'control-lg',
-      'rounded-control inline-flex min-w-40 max-w-full w-full cursor-pointer items-center justify-between gap-2 border border-border bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60',
+      'rounded-control inline-flex min-w-40 max-w-full w-full cursor-pointer items-center justify-between gap-2 border bg-muted text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 border-transparent',
       ui?.fullWidth ? 'sm:w-full' : 'sm:w-auto sm:min-w-[180px]',
       ui?.className,
     )}
@@ -334,7 +334,7 @@
          daí para baixo ele nunca fica menor que o botão, e o teto impede que uma opção de
          nome comprido estique o balão pela tela — a opção é cortada, não a tela. -->
     <PopoverContent
-      class="min-w-[max(16rem,var(--bits-popover-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-surface border-border bg-card shadow-xl"
+      class="min-w-[max(16rem,var(--bits-popover-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8"
       align="start"
     >
       <div class="relative shrink-0 border-b border-border p-2">

@@ -29,11 +29,11 @@
   let { data, ui, tools, children }: AzuosPanelCardProps = $props();
 </script>
 
-<section class={cn('bg-card border-border min-w-0 rounded-surface border p-4 sm:p-5 shadow-xs', ui?.className)}>
+<section class={cn('bg-card shadow-card rounded-surface min-w-0 p-4 sm:p-5', ui?.className)}>
   <!-- Empilhado no celular: título e controle lado a lado a 360 px espremem os dois. -->
   <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
     <div class="min-w-0">
-      <h2 class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+      <h2 class="text-muted-foreground text-sm font-medium">
         {data.title}
       </h2>
       {#if data.hint}

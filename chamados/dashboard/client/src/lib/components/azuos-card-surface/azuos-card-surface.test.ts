@@ -12,10 +12,12 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('AzuosCardSurface (Svelte)', () => {
   // feliz
-  it('sits on the brand surface with the neutral border', () => {
+  it('sits on the brand surface without a border, separated by the Apple shadow', () => {
     render(CardSurface, { props: { data: { label: 'Máquina' }, children } });
 
-    expect(screen.getByRole('group', { name: 'Máquina' })).toHaveClass('bg-card', 'border-border');
+    const card = screen.getByRole('group', { name: 'Máquina' });
+    expect(card).toHaveClass('bg-card', 'shadow-card');
+    expect(card).not.toHaveClass('border');
   });
 
   /* Sem a mancha animada: o card neutro ganha o véu do tema, parado, só no hover. */

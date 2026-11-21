@@ -109,7 +109,7 @@
         placeholder="Buscar chamado por ID, protocolo ou assunto…"
         aria-label="Buscar chamado para vincular"
         disabled={cardState?.isAdding}
-        class="border-border bg-card text-foreground placeholder:text-muted-foreground focus:ring-primary h-10 w-full rounded-control border pr-3 pl-9 text-xs shadow-xs focus:ring-1 focus:outline-none disabled:bg-muted disabled:text-muted-foreground"
+        class="bg-muted text-foreground placeholder:text-muted-foreground focus:ring-primary h-10 w-full rounded-control border pr-3 pl-9 text-xs focus:ring-1 focus:outline-none disabled:bg-muted disabled:text-muted-foreground border-transparent"
       />
     </div>
 
@@ -118,7 +118,7 @@
       <p class="text-muted-foreground py-1 text-center text-xs">Buscando chamados…</p>
     {:else if data.searchResults && data.searchResults.length > 0}
       <ul
-        class="border-border bg-card rounded-box flex max-h-48 flex-col gap-1 overflow-y-auto border p-1 shadow-sm"
+        class="bg-card rounded-box flex max-h-48 flex-col gap-1 overflow-y-auto p-1 shadow-card"
         aria-label="Resultados da busca de chamados"
       >
         {#each data.searchResults as item (item.id)}
@@ -172,7 +172,7 @@
       {#each data.relations as relation (relation.id)}
         {@const target = relation.relatedTicket}
         <li
-          class="border-border bg-card rounded-control flex items-center justify-between gap-2 border p-2 shadow-xs"
+          class="bg-muted rounded-control flex items-center justify-between gap-2 border p-2 border-transparent"
         >
           <a
             href={ticketHref(target)}

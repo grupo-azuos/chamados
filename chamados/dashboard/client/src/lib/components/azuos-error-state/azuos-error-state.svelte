@@ -57,7 +57,7 @@
       type="button"
       onclick={actions.onRetry}
       disabled={isRetrying}
-      class="control-sm inline-flex shrink-0 items-center gap-1.5 rounded-control border border-border bg-card text-xs font-semibold text-destructive hover:bg-destructive-soft disabled:opacity-60"
+      class="control-sm inline-flex shrink-0 items-center gap-1.5 rounded-control border bg-muted text-xs font-semibold text-destructive hover:bg-destructive-soft disabled:opacity-60 border-transparent"
     >
       <RotateCw class={cn('size-3.5', isRetrying && 'animate-spin')} aria-hidden="true" />
       Tentar de novo

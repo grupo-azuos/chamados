@@ -1,6 +1,6 @@
 ---
 name: brand-design
-description: Identidade visual de Azuos — padrão Cupertino, paleta Oficial Azuos, tipografia IBM Plex Sans + Plex Mono, tokens de cor e o que é proibido (cor crua, preto e branco puros). Use ANTES de criar ou mudar qualquer tela, componente, cor, espaçamento ou estilo, e ao revisar se uma tela segue a marca.
+description: Identidade visual de Azuos — padrão Apple, cores do sistema por assunto, fonte do sistema + Plex Mono, tokens de cor e o que é proibido (cor crua, preto e branco puros). Use ANTES de criar ou mudar qualquer tela, componente, cor, espaçamento ou estilo, e ao revisar se uma tela segue a marca.
 ---
 
 # Design de Azuos
@@ -90,33 +90,35 @@ Inspirado em **Apple Human Interface Guidelines** (https://developer.apple.com/d
 oficial: sem logo, sem fonte proprietária e com as regras desta marca por cima (alvo mínimo de
 40px e sombra sem preto puro).
 
-- Cantos grandes e contínuos (squircle onde o navegador suporta): 12px em botões, 20px em cartões.
-- Grupos em fundo levemente cinza, sem borda; separação por espaço.
-- Barra de navegação translúcida com desfoque.
-- Alvos de toque de 44px (o mínimo do HIG). Fonte IBM Plex Sans no lugar da SF Pro.
+- Cantos grandes: botões e chips em pílula, cartões 20px, ícone de assunto em "squircle" (28%).
+- Cartões brancos (no escuro, grafite) sobre o fundo cinza do sistema, **sem borda**: o fio de
+  1px e a sombra difusa separam. Card nunca dentro de card da mesma cor.
+- A cor de cada assunto num ícone cheio, com o desenho branco; número na cor do texto.
+- Alvos de toque de 44px (o mínimo do HIG). Fonte do sistema (SF Pro no Apple, Segoe no Windows).
 
 Forma por papel (tokens `--shape-*`, no Tailwind `rounded-<papel>`):
 
 | Papel | Raio | Classe |
 |---|---|---|
 | Campos | `10px` | `rounded-control` |
-| Botões | `12px` | `rounded-button` |
+| Botões | pílula | `rounded-button` |
 | Cartões | `20px` | `rounded-card` |
-| Diálogos | `14px` | `rounded-dialog` |
+| Diálogos | `22px` | `rounded-dialog` |
+| Ícone de assunto | `28%` | `rounded-icon` |
 | Chips e tags | `9999px` | `rounded-chip` |
 | Selos | `9999px` | `rounded-badge` |
 
 - Controles com `44px` de altura (`h-control`, token `--control-height`).
-- Campos de texto: em caixa, com borda.
-- Sombra de cartão: `shadow-card` (`none`).
+- Campos de texto: cinza cheio (`bg-muted`), sem contorno; o foco é o anel.
+- Sombra de cartão: `shadow-card` (fio de 1px + sombra difusa); no hover, `shadow-card-hover`.
 - Movimento: `350ms cubic-bezier(0.32, 0.72, 0, 1)` (`ease-brand`, `--motion-duration`).
 - Nunca raio, sombra ou altura arbitrários (`rounded-[13px]`): use o papel certo.
 - Referência de implementação: `design/reference.css` (classes `.pv-*` da prévia).
 
 ## 4. Tipografia
 
-- Texto: `'IBM Plex Sans', system-ui, sans-serif`
-- Títulos: `'IBM Plex Sans', system-ui, sans-serif`
+- Texto e títulos: a fonte do sistema (`-apple-system, 'SF Pro Text', 'Segoe UI', Roboto, system-ui`).
+- Rótulos escritos como frase, em cinza de apoio; nada de caixa alta espaçada.
 - Escala do Tailwind (`text-sm`, `text-base`, `text-xl`…); nunca tamanho arbitrário em px.
 - Corpo de texto com no mínimo 16px em formulário no celular (evita zoom automático).
 
@@ -124,7 +126,7 @@ Forma por papel (tokens `--shape-*`, no Tailwind `rounded-<papel>`):
 
 | Proibido                                                       | Por quê                                     | No lugar                                   |
 | -------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------ |
-| `#000`, `#fff`, `black`, `white`, `bg-black`, `text-white`     | Regra da marca: nunca preto ou branco puros | `foreground`, `background`, `*-foreground` |
+| `#000`, `#fff`, `black`, `white`, `bg-black`, `text-white` na tela | Branco e preto só como valor de token | `bg-card`, `foreground`, `text-on-hue` |
 | Hex, `rgb()`, `hsl()`, `oklch()` fora do tokens.css            | A cor sai da marca e não acompanha o tema   | Token                                      |
 | Paleta padrão do Tailwind (`bg-blue-500`, `text-gray-600`)     | Mesma coisa                                 | Token                                      |
 | Valor arbitrário de cor, raio, sombra ou fonte (`text-[13px]`) | Foge da escala                              | Classe da escala ou token novo             |

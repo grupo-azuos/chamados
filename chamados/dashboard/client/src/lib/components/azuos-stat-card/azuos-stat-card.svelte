@@ -65,7 +65,11 @@
 
 {#snippet labelRow(className: string)}
   <div class={className}>
-    <p class="text-xs leading-none font-semibold tracking-wider uppercase">{data.label}</p>
+    <p
+      class="text-muted-foreground group-data-[selected=true]/card:text-on-card-selected text-sm leading-tight font-medium"
+    >
+      {data.label}
+    </p>
     {#if data.tooltip}
       <Tooltip.Provider>
         <Tooltip.Root bind:open={isTooltipOpen}>
@@ -113,7 +117,7 @@
       <div class="mb-3 flex items-center gap-2.5">
         <span
           class={cn(
-            'rounded-chip flex size-9 shrink-0 items-center justify-center',
+            'rounded-icon flex size-10 shrink-0 items-center justify-center shadow-xs',
             'group-data-[selected=true]/card:bg-on-card-selected group-data-[selected=true]/card:text-card-selected',
             classes.dot,
           )}
@@ -133,11 +137,10 @@
       <div class="flex flex-wrap items-baseline gap-x-2">
         <p
           class={cn(
-            'group-data-[selected=true]/card:text-on-card-selected font-bold tabular-nums',
+            /* Padrão Apple: o número fica na cor do texto; a cor do assunto mora no ícone. */
+            'text-foreground group-data-[selected=true]/card:text-on-card-selected font-bold tabular-nums',
             ui?.size === 'lg' ? 'text-4xl' : 'text-3xl tracking-tight',
-            classes.text,
           )}
-          style={toneStyle.text}
         >
           {data.value}
         </p>

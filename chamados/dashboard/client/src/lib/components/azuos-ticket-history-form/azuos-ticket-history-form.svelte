@@ -120,7 +120,7 @@
              — a página "subia" e ficava cortada. -->
         <label
           class={cn(
-            'relative control-lg rounded-control border-border bg-card text-foreground inline-flex cursor-pointer items-center gap-2 border text-sm font-medium transition-colors',
+            'relative control-lg rounded-control bg-muted text-foreground inline-flex cursor-pointer items-center gap-2 border text-sm font-medium transition-colors border-transparent',
             'hover:bg-muted has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
             'has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
             data.type === option.value &&
@@ -209,7 +209,7 @@
       <span class="text-ink-700 text-sm font-medium" aria-hidden="true">Visibilidade</span>
       <label
         class={cn(
-          'control-lg rounded-control border-input bg-card text-foreground flex cursor-pointer items-center gap-2.5 border text-sm transition-colors',
+          'control-lg rounded-control bg-muted text-foreground flex cursor-pointer items-center gap-2.5 border text-sm transition-colors border-transparent',
           'hover:bg-muted has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
         )}
       >

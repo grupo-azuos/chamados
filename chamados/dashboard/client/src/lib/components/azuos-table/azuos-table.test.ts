@@ -20,7 +20,7 @@ describe('AzuosTable', () => {
 
     const surface = container.querySelector('[data-slot="table-surface"]');
     expect(surface?.className).toContain('rounded-surface');
-    expect(surface?.className).toContain('shadow-xs');
+    expect(surface?.className).toContain('shadow-card');
   });
 
   it('shows the footer with the source and the count', () => {
