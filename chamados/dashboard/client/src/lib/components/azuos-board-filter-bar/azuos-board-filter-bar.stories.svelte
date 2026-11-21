@@ -28,6 +28,12 @@
 <Story name="Com filtro escolhido" args={{ data: { filters, values: { ...EMPTY_BOARD_FILTER_VALUES, person: 'Ana Lima' }, counts }, actions }} />
 
 <!-- Caso limite: um painel gravado com o desenho grande (cards) cai na lista suspensa. -->
+<!-- As pessoas com foto: quem não tem foto fica com as iniciais. -->
+<Story name="Pessoas com foto" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts: { ...counts, pessoa: { ...counts.pessoa, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 5, avatarUrl: '/icon-192.png' }, { key: 'Caio Reis', label: 'Caio Reis', value: 4, avatarUrl: null }] } } }, actions }} />
+
+<!-- Caso limite: tela estreita — as peças descem uma por linha. -->
+<Story name="Tela estreita" parameters={{ viewport: { defaultViewport: 'mobile1' } }} args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />
+
 <Story name="Desenho antigo" args={{ data: { filters: [{ id: 'ticketStatus', kind: 'ticketStatus', label: 'Situação', display: 'cards' }], values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />
 
 <Story name="Montando" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, state: { isEditing: true }, actions }} />

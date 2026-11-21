@@ -129,10 +129,14 @@
       </button>
     {/snippet}
   </Popover.Trigger>
-  <!-- A LARGURA DA LISTA É A DO GATILHO, com piso: sem amarrar, ela se estica até o nome mais
-       comprido e nasce mais larga que o diálogo em volta; sem o piso (`min-w-64`), sob um
-       gatilho estreito cada opção saía cortada. O gatilho tem o piso dele (`min-w-40`). -->
-  <Popover.Content align="start" matchAnchorWidth class="min-w-64 overflow-hidden p-0 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8">
+  <!-- A LARGURA DA LISTA É A DO CONTEÚDO, entre um piso e um teto (o padrão dos menus): nunca
+       mais estreita que o gatilho nem que 14rem (cabe o campo de busca), e no máximo 26rem. Presa
+       à largura do gatilho, sob um gatilho estreito cada nome saía cortado ("Vinícius…"). Abre
+       centralizada embaixo do gatilho. -->
+  <Popover.Content
+    align="center"
+    class="w-max min-w-[max(14rem,var(--bits-popover-anchor-width))] max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8"
+  >
     <!-- O filtro é o do próprio Command, por semelhança — "ana s" ainda acha "Ana Souza". -->
     <Command.Root class="rounded-surface bg-card">
       <Command.Input bind:value={term} placeholder={ui?.searchPlaceholder ?? 'Pesquisar…'} />

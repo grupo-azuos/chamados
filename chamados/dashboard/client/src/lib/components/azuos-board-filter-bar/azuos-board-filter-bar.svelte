@@ -12,8 +12,8 @@
   /**
    * OS FILTROS DO PAINEL, no estilo do Grafana — uma BARRA compacta acima dos blocos, que recorta
    * TODOS de uma vez: "Pessoa", "Situação", "Prioridade", "Departamento" à esquerda, na ordem que
-   * quem montou escolheu, e o "Período" na ponta direita, como o seletor de tempo do Grafana. Cada
-   * filtro é uma peça só ("Situação | Todos ▾"), e a barra inteira cabe numa linha.
+   * quem montou escolheu, e o "Período" por último, como o seletor de tempo do Grafana. Cada
+   * filtro é uma peça só ("Situação | Todos ▾"), num cartão, em grade que se ajusta à largura.
    *
    * O valor escolhido é de quem está vendo, e não se grava.
    *
@@ -51,6 +51,7 @@
   } from '@template/shared/schemas/dashboard-board.schema';
 
   import AzuosActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import AzuosCardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import AzuosClearFiltersButton from '$lib/components/azuos-clear-filters-button/azuos-clear-filters-button.svelte';
   import { activeSummary, readingOrder, toolbarDisplayOf } from '$lib/utils/board-filter.util';
 
@@ -62,7 +63,7 @@
   const isEditing = $derived(Boolean(barState?.isEditing));
   const active = $derived(activeSummary(data.filters, data.values, data.counts));
   const ordered = $derived(readingOrder(placedBoardFilters(data.filters)));
-  /* O período vai para a ponta direita, como o seletor de tempo do Grafana; o resto, na ordem. */
+  /* O período vai por último, como o seletor de tempo do Grafana; o resto, na ordem. */
   const fields = $derived(ordered.filter((filter) => filter.kind !== 'period'));
   const periods = $derived(ordered.filter((filter) => filter.kind === 'period'));
   const missing = $derived(BOARD_FILTER_KINDS.filter((kind) => !data.filters.some((filter) => filter.kind === kind)));
@@ -76,15 +77,19 @@
 {/snippet}
 
 {#snippet toolbar()}
-  <div class="flex flex-wrap items-end gap-2">
-    {#each fields as filter (filter.id)}{@render control(filter)}{/each}
-    <div class="ml-auto flex flex-wrap items-end gap-2">
-      {#if actions.onClear && !isEditing}
-        <AzuosClearFiltersButton state={{ hasFilter: active.length > 0 }} actions={{ onClear: actions.onClear }} />
-      {/if}
-      {#each periods as filter (filter.id)}{@render control(filter)}{/each}
+  <!-- O cartão que junta os filtros numa faixa só. Dentro, uma GRADE que se ajusta à largura: cada
+       peça tem no mínimo 18rem e as colunas se dividem por igual — no celular, uma por linha; numa
+       tela larga, todas lado a lado, sem sobra torta no fim. O período vem por último. -->
+  <AzuosCardSurface ui={{ className: 'flex flex-col gap-2 p-3 sm:flex-row sm:items-start' }}>
+    <div class="grid min-w-0 flex-1 grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2">
+      {#each [...fields, ...periods] as filter (filter.id)}{@render control(filter)}{/each}
     </div>
-  </div>
+    {#if actions.onClear && !isEditing && active.length > 0}
+      <div class="flex shrink-0 items-center justify-end sm:h-10">
+        <AzuosClearFiltersButton state={{ hasFilter: true }} actions={{ onClear: actions.onClear }} />
+      </div>
+    {/if}
+  </AzuosCardSurface>
 {/snippet}
 
 {#if isEditing}

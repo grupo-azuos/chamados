@@ -13,6 +13,7 @@ import {
   placesInOrder,
   toolbarDisplayOf,
   toolbarDisplaysOf,
+  withPersonPhotos,
 } from './board-filter.util';
 
 const COUNTS = { total: 3, series: [{ key: 'TI', label: 'TI', value: 2 }, { key: '(Sem departamento)', label: '(Sem departamento)', value: 1 }] };
@@ -101,5 +102,27 @@ describe('the Grafana-like filter toolbar', () => {
   it('keeps the list when the move goes out of bounds', () => {
     expect(moveInList(['a', 'b'], 0, 5)).toEqual(['a', 'b']);
     expect(moveInList(['a', 'b'], -1, 0)).toEqual(['a', 'b']);
+  });
+
+  // feliz
+  it('puts the photo of each person on the person filter counts, found by name', () => {
+    const filters = [
+      { id: 'pessoa', kind: 'person' as const },
+      { id: 'dep', kind: 'department' as const },
+    ];
+    const people = { total: 1, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 1 }] };
+    const counts = withPersonPhotos(filters, { pessoa: people, dep: COUNTS }, [{ name: 'Ana Lima', avatarUrl: 'https://x/ana.png' }]);
+
+    expect(personOptions(counts.pessoa)[0]).toMatchObject({ personName: 'Ana Lima', avatarUrl: 'https://x/ana.png' });
+    expect(counts.dep).toBe(COUNTS);
+  });
+
+  // triste
+  it('keeps the initials when the person is not in the list or the count is missing', () => {
+    const people = { total: 1, series: [{ key: 'Caio Reis', label: 'Caio Reis', value: 1 }] };
+    const counts = withPersonPhotos([{ id: 'pessoa', kind: 'person' as const }, { id: 'outra', kind: 'person' as const }], { pessoa: people }, []);
+
+    expect(personOptions(counts.pessoa)[0]?.avatarUrl).toBeNull();
+    expect(counts.outra).toBeUndefined();
   });
 });

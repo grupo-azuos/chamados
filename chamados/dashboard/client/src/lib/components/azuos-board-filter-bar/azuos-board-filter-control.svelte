@@ -58,6 +58,10 @@
 
   let { data, actions }: AzuosBoardFilterControlProps = $props();
 
+  /* O valor ocupa o resto da peça, sem moldura própria: o fundo é o da peça inteira. */
+  const VALUE_CLASS =
+    'h-10 w-full min-w-0 flex-1 rounded-none border-0 bg-transparent shadow-none hover:bg-hover-veil dark:bg-transparent dark:hover:bg-hover-veil';
+
   /* O ícone de cada filtro, ao lado do nome — acha-se o filtro pelo desenho, sem ler. */
   const ICONS: Record<BoardFilterKind, Component> = {
     person: UserRound,
@@ -102,21 +106,22 @@
   }
 </script>
 
-<div class="flex max-w-full flex-wrap items-end gap-2">
-  <!-- A peça: o nome num lado, o valor no outro, numa moldura só. -->
-  <div
-    role="group"
-    aria-label={label}
-    class="rounded-control bg-card shadow-card flex h-10 max-w-full min-w-0 items-stretch overflow-hidden"
-  >
-    <span class="text-muted-foreground flex shrink-0 items-center gap-1.5 px-3 text-sm font-medium">
-      <Icon class="size-4" aria-hidden="true" />
-      {label}
+<!-- Uma célula da grade da barra: a peça e, no período "entre datas", as datas logo abaixo. -->
+<div class="flex min-w-0 flex-col gap-2">
+  <!-- A peça: o nome num lado, o valor no outro, numa moldura cinza só — os três desenhos com o
+       mesmo fundo, a mesma altura e o mesmo fio entre o nome e o valor. -->
+  <div role="group" aria-label={label} class="rounded-control bg-muted flex h-10 min-w-0 items-stretch overflow-hidden">
+    <span
+      class="text-muted-foreground border-border flex max-w-[55%] shrink-0 items-center gap-1.5 border-r px-3 text-sm font-medium"
+      title={label}
+    >
+      <Icon class="size-4 shrink-0" aria-hidden="true" />
+      <span class="truncate">{label}</span>
     </span>
     {#if display === 'chips'}
-      <!-- As etiquetas como abas de uma peça só: cada uma com a altura inteira (40px, alvo de
-           clique confortável), e a escolhida acesa no fundo do card. -->
-      <div role="radiogroup" aria-label={label} class="bg-muted flex min-w-0 items-stretch overflow-x-auto">
+      <!-- As etiquetas como abas da peça: cada uma com a altura inteira (40px, alvo de clique
+           confortável); a escolhida no azul claro. Sem espaço, rolam de lado. -->
+      <div role="radiogroup" aria-label={label} class="flex min-w-0 flex-1 items-stretch overflow-x-auto">
         {#each options as option (option.value)}
           {@const isChecked = option.value === value}
           <button
@@ -126,7 +131,7 @@
             onclick={() => choose(option.value)}
             class={cn(
               'focus-visible:ring-ring/50 h-10 shrink-0 px-3 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:outline-none focus-visible:ring-inset',
-              isChecked ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+              isChecked ? 'bg-primary-soft text-primary font-semibold' : 'text-muted-foreground hover:bg-hover-veil hover:text-foreground',
             )}
           >
             {option.label}
@@ -140,22 +145,18 @@
           ariaLabel: label,
           placeholder: options[0]?.label ?? 'Todos',
           searchPlaceholder: 'Buscar...',
-          className: 'w-44 rounded-none',
+          className: VALUE_CLASS,
         }}
         actions={{ onChange: choose }}
       />
     {:else}
-      <AzuosSelectField
-        data={{ value, options }}
-        ui={{ ariaLabel: label, className: 'w-44 rounded-none' }}
-        actions={{ onChange: choose }}
-      />
+      <AzuosSelectField data={{ value, options }} ui={{ ariaLabel: label, className: VALUE_CLASS }} actions={{ onChange: choose }} />
     {/if}
   </div>
   {#if kind === 'period' && period?.mode === 'custom'}
     <AzuosDateRangeField
       data={{ label: `Entre (até ${MAX_WINDOW_DAYS} dias)`, name: 'boardPeriod', value: { from: period.from, to: period.to } }}
-      ui={{ className: 'w-72' }}
+      ui={{ className: 'w-full' }}
       actions={{ onChange: onRange }}
     />
   {/if}
