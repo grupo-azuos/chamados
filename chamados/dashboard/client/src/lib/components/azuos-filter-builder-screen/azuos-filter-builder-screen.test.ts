@@ -2,7 +2,7 @@ import { type SavedFilter } from '@template/shared/schemas/dashboard-board.schem
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
-import FilterBuilderDialog from './azuos-filter-builder-dialog.svelte';
+import FilterBuilderScreen, { problemsOf } from './azuos-filter-builder-screen.svelte';
 
 const FILTER: SavedFilter = {
   id: '00000000-0000-4000-8000-000000000001',
@@ -28,20 +28,20 @@ function renderDialog(editing: SavedFilter | 'new' | null = null) {
     onArchive: vi.fn(),
     onRestore: vi.fn(),
   };
-  render(FilterBuilderDialog, {
+  render(FilterBuilderScreen, {
     props: { data: { module: 'infra', filters: [FILTER], archived: [], editing }, state: { isOpen: true }, actions },
   });
 
   return actions;
 }
 
-describe('AzuosFilterBuilderDialog', () => {
+describe('AzuosFilterBuilderScreen', () => {
   // feliz
-  it('lists the saved filters of the module, and archives one', async () => {
+  it('lists the saved filters of the module on the side, and archives one', async () => {
     const actions = renderDialog();
 
-    expect(screen.getByText('Urgentes')).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole('button', { name: 'Arquivar' }));
+    expect(screen.getByRole('complementary', { name: 'Filtros salvos' })).toHaveTextContent('Urgentes');
+    await fireEvent.click(screen.getByRole('button', { name: 'Arquivar Urgentes' }));
 
     expect(actions.onArchive).toHaveBeenCalledWith(FILTER.id);
   });
@@ -50,18 +50,20 @@ describe('AzuosFilterBuilderDialog', () => {
   it('saves an edited filter by its id', async () => {
     const actions = renderDialog(FILTER);
 
+    expect(screen.getByRole('dialog', { name: 'Editar filtro' })).toBeInTheDocument();
     await fireEvent.click(screen.getByRole('button', { name: 'Salvar filtro' }));
 
     expect(actions.onSave).toHaveBeenCalledWith(FILTER.id, expect.objectContaining({ name: 'Urgentes', source: 'infraTickets' }));
   });
 
   // triste
-  it('refuses a new filter without a name, saying why', async () => {
-    const actions = renderDialog('new');
+  it('opens straight on a new filter and says, as a reminder, what is missing to save', () => {
+    const actions = renderDialog(null);
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Salvar filtro' }));
-
-    expect(screen.getByRole('alert')).toHaveTextContent('Dê um nome ao filtro');
+    expect(screen.getByRole('dialog', { name: 'Montar filtro' })).toBeInTheDocument();
+    expect(screen.getByText('Para salvar:')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Salvar filtro' })).toBeDisabled();
     expect(actions.onSave).not.toHaveBeenCalled();
+    expect(problemsOf({})).not.toEqual([]);
   });
 });

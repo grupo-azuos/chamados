@@ -2,11 +2,11 @@
   import { defineMeta } from '@storybook/addon-svelte-csf';
   import { type SavedFilter } from '@template/shared/schemas/dashboard-board.schema';
 
-  import FilterBuilderDialog from './azuos-filter-builder-dialog.svelte';
+  import FilterBuilderScreen from './azuos-filter-builder-screen.svelte';
 
   const { Story } = defineMeta({
-    title: 'Components/AzuosFilterBuilderDialog',
-    component: FilterBuilderDialog,
+    title: 'Components/AzuosFilterBuilderScreen',
+    component: FilterBuilderScreen,
   });
 
   const filter: SavedFilter = {

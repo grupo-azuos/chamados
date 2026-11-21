@@ -112,7 +112,7 @@
   import BoardFilterBar from '$lib/components/azuos-board-filter-bar/azuos-board-filter-bar.svelte';
   import BoardStudio from '$lib/components/azuos-board-studio/azuos-board-studio.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
-  import FilterBuilderDialog from '$lib/components/azuos-filter-builder-dialog/azuos-filter-builder-dialog.svelte';
+  import FilterBuilderScreen from '$lib/components/azuos-filter-builder-screen/azuos-filter-builder-screen.svelte';
   import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
@@ -226,7 +226,7 @@
     }}
   />
 
-  <FilterBuilderDialog
+  <FilterBuilderScreen
     data={{ module: data.module, filters: data.savedFilters, archived: data.archivedFilters, editing: data.editingFilter }}
     state={{
       isOpen: viewState.isFilterDialogOpen,
