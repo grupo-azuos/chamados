@@ -21,6 +21,7 @@ import { BudgetModule } from './modules/budget/budget.module';
 import { ComputersModule } from './modules/computers/computers.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { DashboardBoardsModule } from './modules/dashboard-boards/dashboard-boards.module';
 import { HistoryModule } from './modules/history/history.module';
 import { HealthModule } from './modules/health/health.module';
 import { MaintenancesModule } from './modules/maintenances/maintenances.module';
@@ -90,6 +91,7 @@ const CLIENT_DIST = join(__dirname, '..', '..', 'client', 'dist');
     MaintenanceQuotesModule,
     MaintenanceDashboardModule,
     DashboardModule,
+    DashboardBoardsModule,
     NetworkModule,
     InsightsModule,
     BudgetModule,
