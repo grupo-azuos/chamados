@@ -24,7 +24,10 @@ import {
  * AS REGRAS DOS FILTROS DO PAINEL — as opções de cada filtro, os períodos prontos, o resumo do
  * que está valendo e a ordem de leitura da grade. Funções puras: a barra só desenha.
  */
-export type FilterCountsLike = { total: number; series: { key: string; label: string; value: number }[] };
+export type FilterCountsLike = {
+  total: number;
+  series: { key: string; label: string; value: number; avatarUrl?: string | null }[];
+};
 
 export type BoardFilterOption = { value: string; label: string; personName?: string; avatarUrl?: string | null };
 
@@ -87,7 +90,34 @@ export function fieldFilterOptions(kind: BoardFieldFilterKind, counts: FilterCou
 
 /** As pessoas do módulo, cada uma com o rosto (sem foto, o avatar cai nas iniciais). */
 export function personOptions(counts: FilterCountsLike | null | undefined): BoardFilterOption[] {
-  return countedOptions(counts).map((option) => ({ ...option, personName: option.label, avatarUrl: null }));
+  const photos = new Map((counts?.series ?? []).map((item) => [item.key, item.avatarUrl ?? null]));
+
+  return countedOptions(counts).map((option) => ({
+    ...option,
+    personName: option.label,
+    avatarUrl: photos.get(option.value) ?? null,
+  }));
+}
+
+/**
+ * A foto de cada pessoa na conta do filtro "Pessoa". A conta agrupa pelo NOME do responsável (é o
+ * que o bloco mostra); a foto vem da lista de responsáveis do módulo, achada pelo mesmo nome.
+ * Quem não está na lista fica com as iniciais.
+ */
+export function withPersonPhotos<T extends FilterCountsLike>(
+  filters: readonly Pick<BoardFilter, 'id' | 'kind'>[],
+  counts: Record<string, T>,
+  people: readonly { name: string; avatarUrl?: string | null }[],
+): Record<string, T> {
+  const photos = new Map(people.map((person) => [person.name, person.avatarUrl ?? null]));
+  const next = { ...counts };
+  for (const filter of filters) {
+    const count = next[filter.id];
+    if (filter.kind !== 'person' || !count) continue;
+    next[filter.id] = { ...count, series: count.series.map((item) => ({ ...item, avatarUrl: photos.get(item.key) ?? null })) };
+  }
+
+  return next;
 }
 
 /** O que a conta trouxe, sem os grupos de "sem valor" (`(Sem responsável)`). */

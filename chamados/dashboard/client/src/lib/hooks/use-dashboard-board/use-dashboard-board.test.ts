@@ -11,6 +11,10 @@ vi.mock('$lib/api/dashboard-boards.api', () => ({
   dashboardBoardsApi: { board: vi.fn(), saveBoard: vi.fn(), data: vi.fn() },
 }));
 
+vi.mock('$lib/api/tickets.api', () => ({
+  ticketsApi: { assigneeOptions: vi.fn().mockResolvedValue([]) },
+}));
+
 const { dashboardBoardsApi } = await import('$lib/api/dashboard-boards.api');
 
 const WIDGET: Widget = {

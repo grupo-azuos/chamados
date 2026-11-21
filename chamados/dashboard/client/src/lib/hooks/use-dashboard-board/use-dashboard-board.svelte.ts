@@ -27,6 +27,7 @@ import {
 import { derived, writable } from 'svelte/store';
 
 import { dashboardBoardsApi } from '$lib/api/dashboard-boards.api';
+import { ticketsApi } from '$lib/api/tickets.api';
 import { readError } from '$lib/api/http-client';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
@@ -46,6 +47,7 @@ import {
   upsertWidget,
   visibleScopes,
 } from '$lib/utils/board-draft.util';
+import { withPersonPhotos } from '$lib/utils/board-filter.util';
 import { drillHref, drillOf } from '$lib/utils/board-drill.util';
 import { newWidget } from '$lib/utils/widget-editor.util';
 import { type BoardItem } from '$lib/utils/widget-items.util';
@@ -61,7 +63,12 @@ import { type BoardItem } from '$lib/utils/widget-items.util';
  */
 export type WidgetState = { data: WidgetData | null; isLoading: boolean; error: string | null };
 
-export type FilterCounts = { total: number; series: { key: string; label: string; value: number }[]; isLoading: boolean };
+export type FilterCounts = {
+  total: number;
+  /** `avatarUrl`: a foto da pessoa, só no filtro "Pessoa". */
+  series: { key: string; label: string; value: number; avatarUrl?: string | null }[];
+  isLoading: boolean;
+};
 
 export type BoardEditing = { widget: Widget; isNew: boolean; place?: Omit<LayoutItem, 'i'> };
 
@@ -161,6 +168,15 @@ export function useDashboardBoardModel(module: BoardModule) {
     ),
   );
 
+  /* Os responsáveis do módulo, só pela FOTO no filtro "Pessoa". Falhou, ficam as iniciais. */
+  const people = mirrorStore(
+    createQuery({
+      queryKey: ['tickets', 'assignee-options', module],
+      queryFn: () => ticketsApi.assigneeOptions(module),
+      staleTime: 60_000,
+    }),
+  );
+
   const save = mirrorStore(
     createMutation({
       mutationFn: (content: BoardDraft) => dashboardBoardsApi.saveBoard(module, chosenScope.current.scope, content),
@@ -212,7 +228,7 @@ export function useDashboardBoardModel(module: BoardModule) {
         updatedAt: saved?.updatedAt ?? null,
         boardFilters: shown.filters,
         filterValues,
-        filterCounts: counts.current.data ?? {},
+        filterCounts: withPersonPhotos(shown.filters, counts.current.data ?? {}, people.current.data ?? []),
         weight: boardWeight(shown.widgets),
       };
     },
