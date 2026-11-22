@@ -293,13 +293,18 @@
    * O POUSO: o bloco que acabou de entrar no painel (solto da lateral ou posto com um clique)
    * cresce a partir de 92% e acende — o olho acha onde ele caiu. Os blocos do primeiro desenho não
    * se mexem; quem pede menos movimento não vê animação.
+   *
+   * Só MONTANDO: trocar de aba (Equipe → Gestor) traz blocos de outro painel, que não "pousaram" —
+   * aparecem. E no fim a animação limpa SÓ o que ela pôs (a escala e a opacidade): limpar tudo
+   * (`clearProps: 'all'`) apagava junto a posição do bloco na grade, e ele caía no canto de cima,
+   * por cima dos outros.
    */
   function landing(node: HTMLElement, isNew: boolean) {
     if (!isNew || prefersReducedMotion()) return;
     gsap.fromTo(
       node,
       { scale: 0.92, opacity: 0 },
-      { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(1.6)', clearProps: 'all' },
+      { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(1.6)', clearProps: 'scale,opacity' },
     );
   }
 
@@ -387,7 +392,7 @@
       {@const isLifted = gesture?.id === widget.id && gesture.lifted !== null}
       <div
         data-widget-id={widget.id}
-        use:landing={!firstIds.includes(widget.id)}
+        use:landing={canvasState.isEditing && !firstIds.includes(widget.id)}
         class={cn(
           'absolute',
           /* Os outros blocos abrem caminho deslizando, sem pular. */
