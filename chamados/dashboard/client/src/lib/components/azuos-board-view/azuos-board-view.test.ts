@@ -86,13 +86,15 @@ describe('AzuosBoardView', () => {
   });
 
   // feliz
-  it('opens the building in full screen, with the points counted, and saves with "Guardar"', async () => {
+  it('builds on the board itself, like Grafana: a toolbar with the points counted, and saves with "Salvar painel"', async () => {
     const view = props({ state: { isEditing: true } });
     render(BoardView, { props: view });
 
-    expect(screen.getByRole('dialog', { name: 'Montar o painel Equipe' })).toBeInTheDocument();
-    expect(screen.getByText('2 de 24 pontos')).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    const toolbar = screen.getByRole('toolbar', { name: 'Montando o painel' });
+    expect(toolbar).toHaveTextContent('Editando o painel Equipe');
+    expect(toolbar).toHaveTextContent('2 de 24 pontos');
+    expect(screen.queryByRole('button', { name: 'Editar painel' })).not.toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('button', { name: 'Salvar painel' }));
 
     expect(view.actions.onSave).toHaveBeenCalled();
   });
@@ -106,7 +108,7 @@ describe('AzuosBoardView', () => {
   });
 
   // triste
-  it('shows the refusal of the save in red, inside the building screen', () => {
+  it('shows the refusal of the save in red, while building', () => {
     render(BoardView, { props: props({ state: { isEditing: true, error: 'Não salvei o painel: passa da cota.' } }) });
 
     expect(screen.getByRole('alert')).toHaveTextContent('Não salvei o painel: passa da cota.');

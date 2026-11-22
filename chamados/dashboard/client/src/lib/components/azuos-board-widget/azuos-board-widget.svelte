@@ -29,12 +29,15 @@
      * `isPreview`: o bloco desenhado dentro do editor. Ali não expande — uma tela cheia aberta de
      * dentro do diálogo brigava com ele e com a tela de montar o painel.
      */
-    state: { isEditing: boolean; isPreview?: boolean };
+    /** `canEdit`: quem vê pode montar — o menu do bloco oferece editar, duplicar e remover. */
+    state: { isEditing: boolean; isPreview?: boolean; canEdit?: boolean };
     actions: {
       onEdit: (id: string) => void;
       onRemove: (id: string) => void;
       /** Trocar o gráfico direto no bloco, sem abrir o editor (só montando o painel). */
       onChangeKind?: (id: string, kind: Widget['kind']) => void;
+      /** O "Duplicar" do menu do bloco: uma cópia no fim do painel. */
+      onDuplicate?: (id: string) => void;
       /**
        * Clicou num item (barra, fatia, linha, card): a tela leva à lista do que ele conta. Sem
        * ela — montando, ou com os itens não clicáveis — o bloco fica de leitura.
@@ -82,9 +85,8 @@
 
 <script lang="ts">
   import GripVertical from '@lucide/svelte/icons/grip-vertical';
-  import Maximize2 from '@lucide/svelte/icons/maximize-2';
 
-  import AzuosActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import AzuosBoardPanelMenu from '$lib/components/azuos-board-panel-menu/azuos-board-panel-menu.svelte';
   import AzuosExpandableScreen from '$lib/components/azuos-expandable-screen/azuos-expandable-screen.svelte';
   import { cn } from '$lib/utils/cn';
   import { WIDGET_KIND_LOOK } from '$lib/utils/widget-kind.util';
@@ -181,10 +183,16 @@
       </span>
       <span class={cn('flex shrink-0 items-center gap-1', NO_DRAG)}>
         {#if !widgetState.isEditing && !widgetState.isPreview}
-          <AzuosActionButton
-            data={{ label: `Expandir ${widget.title}` }}
-            ui={{ variant: 'ghost', icon: Maximize2, isIconOnly: true }}
-            actions={{ onClick: () => (isExpanded = true) }}
+          <!-- O menu do título, como no Grafana: Ver, e — para quem monta — Editar, Duplicar e Remover. -->
+          <AzuosBoardPanelMenu
+            data={{ title: widget.title }}
+            state={{ canEdit: widgetState.canEdit }}
+            actions={{
+              onView: () => (isExpanded = true),
+              onEdit: () => actions.onEdit(widget.id),
+              onDuplicate: actions.onDuplicate ? () => actions.onDuplicate?.(widget.id) : undefined,
+              onRemove: () => actions.onRemove(widget.id),
+            }}
           />
         {/if}
       </span>

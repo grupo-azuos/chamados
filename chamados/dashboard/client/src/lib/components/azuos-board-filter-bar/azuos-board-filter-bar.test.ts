@@ -191,5 +191,32 @@ describe('AzuosBoardFilterBar', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Situação' })).toBeNull();
     expect(screen.getByRole('combobox', { name: 'Situação' })).toBeInTheDocument();
   });
+
+  // feliz
+  it('draws only the period as the time picker, and only the other filters in the strip', () => {
+    const counts = COUNTS;
+    const { unmount } = render(BoardFilterBar, {
+      props: { data: { filters: [PERSON, PERIOD], values: EMPTY_BOARD_FILTER_VALUES, counts }, ui: { part: 'period' }, actions: { onChange: vi.fn() } },
+    });
+
+    expect(screen.getByRole('group', { name: 'Período do painel' })).toContainElement(screen.getByRole('group', { name: 'Período' }));
+    expect(screen.queryByRole('group', { name: 'Pessoa' })).toBeNull();
+    unmount();
+
+    render(BoardFilterBar, {
+      props: { data: { filters: [PERSON, PERIOD], values: EMPTY_BOARD_FILTER_VALUES, counts }, ui: { part: 'fields' }, actions: { onChange: vi.fn() } },
+    });
+    expect(screen.getByRole('group', { name: 'Pessoa' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Período' })).toBeNull();
+  });
+
+  // triste
+  it('draws nothing in the time picker when the board has no period', () => {
+    render(BoardFilterBar, {
+      props: { data: { filters: [PERSON], values: EMPTY_BOARD_FILTER_VALUES, counts: COUNTS }, ui: { part: 'period' }, actions: { onChange: vi.fn() } },
+    });
+
+    expect(screen.queryByRole('group', { name: 'Período do painel' })).toBeNull();
+  });
 });
 

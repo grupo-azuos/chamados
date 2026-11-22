@@ -65,14 +65,14 @@ describe('AzuosWidgetEditorDialog', () => {
   });
 
   // feliz
-  it('opens the saved filters from the editor and widens the live preview', async () => {
+  it('opens the saved filters, with the preview on top, the query below and the chart options aside', async () => {
     const actions = renderEditor();
 
     await fireEvent.click(screen.getByRole('button', { name: 'Montar filtro' }));
     expect(actions.onOpenFilters).toHaveBeenCalled();
-    await fireEvent.click(screen.getByRole('button', { name: 'Ampliar pré-visualização' }));
-    expect(screen.getByRole('button', { name: 'Voltar ao formulário' })).toBeInTheDocument();
-    expect(screen.queryByLabelText(/Título/)).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Pré-visualização em tempo real' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Consulta' })).toContainElement(screen.getByRole('combobox', { name: 'Fonte dos dados' }));
+    expect(screen.getByRole('complementary', { name: 'Opções do gráfico' })).toContainElement(screen.getByLabelText(/Título/));
   });
 
   // triste

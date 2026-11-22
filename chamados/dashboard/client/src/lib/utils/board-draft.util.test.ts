@@ -6,6 +6,7 @@ import {
   activeValues,
   addBoardFilter,
   type BoardDraft,
+  duplicateWidget,
   filterCountQuery,
   normalizeLayout,
   removeBoardFilter,
@@ -158,3 +159,19 @@ describe('setBoardFilterPlaces', () => {
     expect(setBoardFilterPlaces(draft, [{ id: 'ghost', place: { x: 0, y: 0, w: 1, h: 1 } }]).filters).toEqual(draft.filters);
   });
 });
+
+describe('duplicateWidget', () => {
+  // feliz
+  it('copies the block, same size, at the end of the board, with "(cópia)" in the title', () => {
+    const next = duplicateWidget(DRAFT, 'a', 'b');
+
+    expect(next.widgets[1]).toMatchObject({ id: 'b', title: 'Chamados por situação (cópia)', groupBy: 'status' });
+    expect(next.layout.find((item) => item.i === 'b')).toMatchObject({ w: 2, h: 2, y: 2 });
+  });
+
+  // triste
+  it('leaves the board as it is when the block does not exist', () => {
+    expect(duplicateWidget(DRAFT, 'nope', 'b')).toBe(DRAFT);
+  });
+});
+

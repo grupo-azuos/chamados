@@ -40,6 +40,7 @@ import {
   type BoardDraft,
   type BoardFilterPlaceChange,
   compactIdsOf,
+  duplicateWidget,
   filterCountQuery,
   normalizeLayout,
   removeBoardFilter,
@@ -53,7 +54,7 @@ import {
 } from '$lib/utils/board-draft.util';
 import { withDepartmentCatalog, withPeople } from '$lib/utils/board-filter.util';
 import { drillHref, drillOf } from '$lib/utils/board-drill.util';
-import { newWidget } from '$lib/utils/widget-editor.util';
+import { newWidget, newWidgetId } from '$lib/utils/widget-editor.util';
 import { type BoardItem } from '$lib/utils/widget-items.util';
 
 /**
@@ -78,6 +79,24 @@ export type BoardEditing = { widget: Widget; isNew: boolean; place?: Omit<Layout
 
 /** De quanto em quanto os números se renovam sozinhos. */
 export const REFRESH_MS = 5 * 60 * 1000;
+
+/**
+ * O "ATUALIZAR A CADA" do Grafana: quem vê escolhe de quanto em quanto o painel se renova sozinho
+ * — ou desliga. O valor é de quem vê, e não se grava no painel.
+ */
+export const REFRESH_OPTIONS = [
+  { value: 'off', label: 'Desligado' },
+  { value: '60000', label: '1 minuto' },
+  { value: String(REFRESH_MS), label: '5 minutos' },
+  { value: '900000', label: '15 minutos' },
+] as const;
+
+/** O intervalo em milissegundos de uma opção — `false` desliga a renovação sozinha. */
+export function refreshIntervalOf(value: string): number | false {
+  const ms = Number(value);
+
+  return Number.isFinite(ms) && ms > 0 ? ms : false;
+}
 
 export const BOARD_QUERY_KEY = ['dashboard-board'] as const;
 
@@ -111,6 +130,8 @@ export function useDashboardBoardModel(module: BoardModule) {
   let editing = $state<BoardEditing | null>(null);
   let previewWidget = $state<Widget | null>(null);
   let chosen = $state<BoardFilterValues>(EMPTY_BOARD_FILTER_VALUES);
+  const refreshEvery = writable<string>(String(REFRESH_MS));
+  const chosenRefresh = mirrorStore(refreshEvery);
 
   const board = mirrorStore(
     createQuery(
@@ -138,11 +159,11 @@ export function useDashboardBoardModel(module: BoardModule) {
 
   const results = mirrorStore(
     createQuery(
-      derived(asked, (input) => ({
+      derived([asked, refreshEvery], ([input, every]) => ({
         queryKey: [...BOARD_QUERY_KEY, module, 'results', input.widgets.map((widget) => [widget.id, widgetQueryOf(widget, input.values)])],
         queryFn: () => answerAll(queryClient, module, input.widgets, input.values),
         enabled: input.widgets.length > 0,
-        refetchInterval: REFRESH_MS,
+        refetchInterval: refreshIntervalOf(every),
         placeholderData: (previous: Answers | undefined) => previous,
       })),
     ),
@@ -161,14 +182,14 @@ export function useDashboardBoardModel(module: BoardModule) {
 
   const counts = mirrorStore(
     createQuery(
-      derived(asked, () => {
+      derived([asked, refreshEvery], ([, every]) => {
         const filters = shown.filters.filter((filter) => filterCountQuery(filter, module, filterValues));
 
         return {
           queryKey: [...BOARD_QUERY_KEY, module, 'filter-counts', filters.map((filter) => filterCountQuery(filter, module, filterValues))],
           queryFn: () => countAll(queryClient, module, filters, filterValues),
           enabled: filters.length > 0,
-          refetchInterval: REFRESH_MS,
+          refetchInterval: refreshIntervalOf(every),
           placeholderData: (previous: Record<string, FilterCounts> | undefined) => previous,
         };
       }),
@@ -260,6 +281,7 @@ export function useDashboardBoardModel(module: BoardModule) {
           NO_COUNT,
         ),
         weight: boardWeight(shown.widgets),
+        refreshEvery: chosenRefresh.current,
       };
     },
     get state() {
@@ -315,6 +337,11 @@ export function useDashboardBoardModel(module: BoardModule) {
         previewWidget = null;
       },
       onRemoveWidget: (id: string) => edit((current) => removeWidget(current, id)),
+      onDuplicateWidget: (id: string) => {
+        if (boardWeight(shown.widgets) >= MAX_BOARD_WEIGHT) return;
+        edit((current) => duplicateWidget(current, id, newWidgetId()));
+      },
+      onRefreshEveryChange: (value: string) => refreshEvery.set(value),
       /* O clique num item de um bloco: a lista da fonte, com o recorte do bloco e do item. */
       onOpenItem: (widget: Widget, item: BoardItem) => {
         const href = drillHref(drillOf(widget, filterValues, item));

@@ -60,6 +60,20 @@ export function upsertWidget(
   };
 }
 
+/**
+ * Uma CÓPIA do bloco, no mesmo tamanho, no fim do painel — o "Duplicar" do menu do bloco. O título
+ * ganha "(cópia)", para as duas não se confundirem.
+ */
+export function duplicateWidget(current: BoardDraft, id: string, copyId: string): BoardDraft {
+  const widget = current.widgets.find((item) => item.id === id);
+  if (!widget) return current;
+  const size = current.layout.find((item) => item.i === id);
+  const spot = bottomPlace(current.layout, widget.kind);
+  const copy = { ...widget, id: copyId, title: `${widget.title} (cópia)`.slice(0, 60) };
+
+  return upsertWidget(current, copy, size ? { ...spot, w: size.w, h: size.h } : spot);
+}
+
 /** Tira o bloco do rascunho — e o lugar dele; o resto sobe para não deixar buraco. */
 export function removeWidget(current: BoardDraft, id: string): BoardDraft {
   return {
