@@ -1,0 +1,59 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Fundamentos/Forma e sombra" />
+
+export const Shape = ({ radius, label, token, w = 120, h = 64 }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
+    <span
+      style={{
+        width: w,
+        height: h,
+        borderRadius: `var(${radius})`,
+        background: 'var(--card)',
+        boxShadow: 'var(--elevation-card)',
+      }}
+    />
+    <strong>{label}</strong>
+    <code>{token}</code>
+  </div>
+);
+
+# Forma e sombra
+
+O canto vem do **papel** do elemento, nunca do olho. Cada papel tem um token e uma classe.
+
+<div
+  style={{
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 32,
+    padding: 24,
+    background: 'var(--background)',
+    borderRadius: 'var(--shape-card)',
+  }}
+>
+  <Shape radius="--shape-control" label="Campo · 10px" token="rounded-control" w={160} h={40} />
+  <Shape radius="--shape-button" label="Botão · pílula" token="rounded-button" w={140} h={40} />
+  <Shape radius="--shape-card" label="Card · 20px" token="rounded-surface" w={180} h={110} />
+  <Shape radius="--shape-dialog" label="Diálogo · 22px" token="rounded-dialog" w={180} h={110} />
+  <Shape radius="--shape-chip" label="Chip · pílula" token="rounded-chip" w={90} h={28} />
+  <Shape radius="--shape-icon" label="Ícone · squircle" token="rounded-icon" w={44} h={44} />
+</div>
+
+## Sombra
+
+- **`shadow-card`** — o fio de 1px e a sombra difusa. É o que separa o card do fundo, no lugar da
+  borda. No escuro o fio fica um pouco mais forte, porque a sombra quase não aparece.
+- **`shadow-card-hover`** — a sombra maior do card clicável no hover (ele também sobe 2px).
+- Menus flutuantes usam o anel de 1px (`ring-1 ring-foreground/8`) com sombra grande.
+
+## Altura dos controles
+
+Todo controle usa a régua: `control-sm` (32px), `control-md` (36px), `control-lg` (40px). Ela é
+definida dentro do componente `azuos-*`, nunca na tela.
+
+## Espaço
+
+- Entre blocos da tela: `gap-6`.
+- Dentro de um card: `p-4` ou `p-5`.
+- Entre cards de uma grade: `gap-3` ou `gap-4`.

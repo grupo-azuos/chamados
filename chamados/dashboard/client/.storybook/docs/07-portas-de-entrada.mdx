@@ -1,0 +1,133 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Fundamentos/Portas de entrada do shadcn" />
+
+# Portas de entrada do shadcn
+
+Os componentes de `lib/components/ui/` vêm do CLI do shadcn-svelte e são a base do sistema. As telas e
+os componentes de feature **não os importam direto**: usam a "porta de entrada" `azuos-*`, que
+reexporta o primitivo e é o único lugar onde uma variante própria pode entrar. Elas não têm
+story própria porque o visual delas aparece nos componentes que as usam.
+
+<table>
+  <thead>
+    <tr>
+      <th>Porta</th>
+      <th>O que é</th>
+      <th>Quando usar</th>
+      <th>Prefira, quando der</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <code>azuos-badge</code>
+      </td>
+      <td>Selo pequeno</td>
+      <td>Marcador sem significado de status</td>
+      <td>
+        <code>AzuosStatusBadge</code> para situação
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>azuos-button</code>
+      </td>
+      <td>O botão do shadcn (pílula)</td>
+      <td>
+        Gatilho de menu ou popover, que recebe as props do gatilho (o <code>child</code> do bits-ui)
+      </td>
+      <td>
+        <code>AzuosActionButton</code> e <code>AzuosSubmitButton</code>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>azuos-card</code>
+      </td>
+      <td>Card cru do shadcn</td>
+      <td>Quase nunca</td>
+      <td>
+        <code>AzuosPanelCard</code> e os formatos de Cards
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>azuos-checkbox</code>
+      </td>
+      <td>Caixa de marcar sem rótulo</td>
+      <td>Seleção em linha de tabela</td>
+      <td>
+        <code>AzuosCheckboxField</code>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>azuos-dialog</code>
+      </td>
+      <td>Diálogo</td>
+      <td>Montar um diálogo de feature</td>
+      <td>
+        <code>AzuosResponsiveDialogContent</code>, <code>AzuosConfirmDialog</code>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>azuos-input</code>
+      </td>
+      <td>Campo cru</td>
+      <td>Dentro de componentes compostos</td>
+      <td>
+        <code>AzuosTextField</code>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>azuos-label</code>
+      </td>
+      <td>Rótulo</td>
+      <td>
+        Acompanhar o <code>azuos-input</code>
+      </td>
+      <td>
+        Os campos <code>Azuos*Field</code>, que já trazem
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>azuos-popover</code>
+      </td>
+      <td>Balão flutuante</td>
+      <td>Conteúdo que abre ao clicar</td>
+      <td>
+        <code>AzuosTooltip</code> para dica
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>azuos-sheet</code>
+      </td>
+      <td>Painel lateral</td>
+      <td>Detalhe que abre ao lado da lista</td>
+      <td>
+        <code>AzuosExpandableScreen</code> para editor grande
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>azuos-skeleton</code>
+      </td>
+      <td>Esqueleto de carregamento</td>
+      <td>Lugar de dado que ainda vem</td>
+      <td>
+        <code>AzuosLoadingState</code> quando não há forma
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+## A regra
+
+Precisa mudar um primitivo? A mudança entra **na porta de entrada** ou num componente `azuos-*`
+— e, quando é do padrão visual da casa (como o botão em pílula e o menu sem borda), no
+próprio `ui/` do template, por quem administra.

@@ -2,24 +2,32 @@ import { type Decorator, type Preview } from '@storybook/svelte';
 
 import '../src/lib/theme/tokens.css';
 import './preview.css';
+import './docs.css';
+import { AzuosDocsPage, type ThemeName, ThemedDocsContainer, themeOf } from './docs-page';
 
-type ThemeName = 'light' | 'dark';
-
-/** O tema escolhido na barra, lido dos globals do Storybook. */
-function themeOf(globals: Record<string, unknown> | undefined): ThemeName {
-  return globals?.theme === 'dark' ? 'dark' : 'light';
+/**
+ * A história que roda num iframe DENTRO da página Docs não recebe o tema da barra: ela herda o
+ * da página em volta, que é a mesma origem.
+ */
+function parentDocsTheme(): ThemeName | null {
+  if (window.parent === window) return null;
+  try {
+    const theme = window.parent.document.documentElement.dataset.theme;
+    return theme === 'dark' || theme === 'light' ? theme : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Claro ou escuro, pelo botão da barra do Storybook — o mesmo `data-theme` que o app usa. */
 const withTheme: Decorator = (Story, context) => {
-  document.documentElement.dataset.theme = themeOf(context.globals);
+  document.documentElement.dataset.theme = parentDocsTheme() ?? themeOf(context.globals);
   return Story();
 };
 
 const preview: Preview = {
-  /* Gera a página "Docs" pra todo componente automaticamente — puxa o comentário que já
-     existe em cima de cada `export function` como descrição, mais a tabela de props. Sem
-     isto, a única forma de saber o que um compositor faz é abrir o `.tsx` e ler o código. */
+  /* Gera a página "Docs" de todo componente, no molde de `docs-page.tsx`: o texto de escolha, o
+     exemplo, as props, o comentário técnico e as variações. */
   tags: ['autodocs'],
   decorators: [withTheme],
   globalTypes: {
@@ -39,6 +47,11 @@ const preview: Preview = {
   initialGlobals: { theme: 'light' },
   parameters: {
     controls: { expanded: true },
+    docs: {
+      page: AzuosDocsPage,
+      container: ThemedDocsContainer,
+      toc: { headingSelector: 'h2, h3' },
+    },
     /* A régua pede que TUDO funcione em 400px de largura (skill `ui-standards`, §Responsivo).
        Estes dois tamanhos são o que as stories usam para mostrar a mesma tela nas duas
        formas: cartão empilhado no celular e tabela no computador. */
@@ -59,12 +72,25 @@ const preview: Preview = {
     /* Sem fundo fixo: o fundo da história vem do token `--background` (ver `preview.css`), e
        troca com o tema. Um hex aqui deixaria o escuro com o fundo do claro. */
     backgrounds: { disable: true },
-    /* A ordem do menu: primeiro o texto, depois os componentes, as telas das features e o
-       resto; dentro de cada grupo, em ordem alfabética. */
+    /* A ordem do menu: primeiro o texto (Introdução e Fundamentos, na ordem de leitura), depois
+       os componentes genéricos e os das features; dentro de cada grupo, em ordem alfabética. */
     options: {
       storySort: {
         method: 'alphabetical',
-        order: ['Introdução', 'Fundamentos', 'Components', 'Features'],
+        order: [
+          'Introdução',
+          'Fundamentos',
+          [
+            'Padrão Apple',
+            'Cores',
+            'Forma e sombra',
+            'Tipografia',
+            'Organização das telas',
+            'Portas de entrada do shadcn',
+          ],
+          'Components',
+          'Features',
+        ],
       },
     },
     // A equipe opera o sistema no teclado o dia inteiro; contraste e foco são requisito.
