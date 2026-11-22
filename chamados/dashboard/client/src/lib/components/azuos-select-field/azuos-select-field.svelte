@@ -113,7 +113,7 @@
        larga do que o diálogo inteiro e vazava pelos dois lados. `--bits-select-anchor-width`
        é a largura do gatilho, medida pelo próprio componente. -->
   <SelectContent
-    class="min-w-[max(16rem,var(--bits-select-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))] rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8"
+    class="min-w-[max(16rem,var(--bits-select-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))] rounded-surface border-transparent bg-popover shadow-xl ring-1 ring-foreground/8"
   >
     <!-- A lista vazia diz por quê, em texto solto — não é uma opção, não dá para escolher. Sem
          isso o balão abria em branco e parecia travado. -->

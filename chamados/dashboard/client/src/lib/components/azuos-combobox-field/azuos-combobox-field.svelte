@@ -135,7 +135,7 @@
        centralizada embaixo do gatilho. -->
   <Popover.Content
     align="center"
-    class="w-max min-w-[max(14rem,var(--bits-popover-anchor-width))] max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8"
+    class="w-max min-w-[max(14rem,var(--bits-popover-anchor-width))] max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-surface border-transparent bg-popover shadow-xl ring-1 ring-foreground/8"
   >
     <!-- O filtro é o do próprio Command, por semelhança — "ana s" ainda acha "Ana Souza". -->
     <Command.Root class="rounded-surface bg-card">

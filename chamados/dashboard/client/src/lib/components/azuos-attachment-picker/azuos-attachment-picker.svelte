@@ -153,6 +153,8 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import { fileSizeOf } from '$lib/components/azuos-attachment-list/azuos-attachment-list.svelte';
   import Paperclip from '@lucide/svelte/icons/paperclip';
+
+  import { cn } from '$lib/utils/cn';
   import X from '@lucide/svelte/icons/x';
 
   let { data, ui, state: pickerState, actions }: AzuosAttachmentPickerProps = $props();
@@ -163,6 +165,27 @@
   let input: HTMLInputElement | undefined = $state();
 
   const isDisabled = $derived(pickerState?.isDisabled === true);
+  /* Puramente visual: um arquivo arrastado por cima do campo. */
+  let isDragOver = $state(false);
+
+  function handleDragOver(event: DragEvent) {
+    if (isDisabled) return;
+    event.preventDefault();
+    isDragOver = true;
+  }
+
+  function handleDrop(event: DragEvent) {
+    if (isDisabled) return;
+    event.preventDefault();
+    isDragOver = false;
+    accept(Array.from(event.dataTransfer?.files ?? []));
+  }
+
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    input?.click();
+  }
 
   function choose(event: Event) {
     const chosen = Array.from((event.currentTarget as HTMLInputElement).files ?? []);
@@ -219,14 +242,28 @@
   vira uma operação sem efeito, porque ele já está visível.
 -->
 <div onpaste={pasteFilesIntoInput} class="relative flex flex-col gap-2">
+  <!-- O tracejado é o "solte aqui": arrastar, clicar ou colar entram pelo mesmo campo. -->
   <label
-    class="border-input hover:bg-muted control-lg flex cursor-pointer items-center gap-2 rounded-control border border-dashed text-sm"
-    class:pointer-events-none={isDisabled}
-    class:opacity-60={isDisabled}
     for="attachments"
+    aria-label="Escolher arquivos"
+    tabindex={isDisabled ? -1 : 0}
+    onkeydown={handleKeyDown}
+    ondragover={handleDragOver}
+    ondragleave={() => (isDragOver = false)}
+    ondrop={handleDrop}
+    class={cn(
+      'control-lg rounded-control border-input hover:bg-muted focus-visible:ring-ring flex cursor-pointer items-center justify-between border border-dashed px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none',
+      isDragOver && 'border-ring bg-muted',
+      isDisabled && 'pointer-events-none opacity-60',
+    )}
   >
-    <Paperclip class="text-ink-500 size-4 shrink-0" />
-    <span class="text-ink-700">Escolher arquivos</span>
+    <span class="flex items-center gap-2">
+      <Paperclip class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+      <span class="text-foreground font-medium">Escolher arquivos</span>
+    </span>
+    {#if !ui?.isPasteDisabled}
+      <span class="text-muted-foreground text-xs">ou cole com Ctrl+V</span>
+    {/if}
   </label>
 
   <input
@@ -240,29 +277,26 @@
     onchange={choose}
   />
 
-  <p class="text-ink-500 text-xs">{limitsSummary()}</p>
-  {#if !ui?.isPasteDisabled}
-    <p class="text-ink-500 text-xs">Também dá para colar um print ou arquivo com Ctrl+V.</p>
-  {/if}
+  <p class="text-muted-foreground text-xs">{limitsSummary()}</p>
 
   {#if pickerState?.error}
     <p class="text-destructive text-xs" role="alert">{pickerState.error}</p>
   {/if}
 
   {#if data.files.length > 0}
-    <ul class="divide-y rounded-box border">
+    <ul class="divide-border rounded-box bg-card shadow-card divide-y overflow-hidden">
       <!-- A chave leva a POSIÇÃO junto com a identidade do arquivo. A recusa acima já barra o
            mesmo arquivo duas vezes, mas chave repetida num `each` derruba a tela inteira — e
            nenhuma lista de anexos vale uma tela em branco. Cinto e suspensório, de propósito. -->
       {#each data.files as file, index (`${identityOf(file)}-${index}`)}
         <li class="flex items-center justify-between gap-2 p-2">
           <div class="min-w-0">
-            <p class="text-ink-900 truncate text-sm">{file.name}</p>
-            <p class="text-ink-500 text-xs">{fileSizeOf(file.size)}</p>
+            <p class="text-foreground truncate text-sm font-medium">{file.name}</p>
+            <p class="text-muted-foreground text-xs">{fileSizeOf(file.size)}</p>
           </div>
 
           <ActionButton
-            data={{ label: 'Tirar' }}
+            data={{ label: `Tirar ${file.name}` }}
             ui={{ variant: 'ghost', size: 'sm', icon: X, isIconOnly: true }}
             state={{ isDisabled }}
             actions={{ onClick: () => drop(file) }}

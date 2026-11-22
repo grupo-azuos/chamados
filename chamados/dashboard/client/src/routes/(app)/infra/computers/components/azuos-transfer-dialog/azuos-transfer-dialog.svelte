@@ -199,7 +199,7 @@
                 <OptionPicker
                   data={{
                     value: peripheral.destinationComputerId,
-                    options: [{ value: '', label: '— máquina que assume —' }, ...data.machines],
+                    options: [{ value: '', label: '(Máquina que assume)' }, ...data.machines],
                   }}
                   ui={{ ariaLabel: `Máquina que assume ${peripheral.label}`, fullWidth: true }}
                   state={{ isDisabled: dialogState.isSubmitting }}

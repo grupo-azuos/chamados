@@ -46,7 +46,7 @@
     <SliderPrimitive.Thumb
       index={0}
       aria-label={data.label}
-      class="border-border bg-card focus-visible:ring-ring block size-4 shrink-0 rounded-full border shadow-xs transition-[color,box-shadow] after:absolute after:-inset-3 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none"
+      class="bg-card ring-foreground/10 block size-5 shrink-0 rounded-full shadow-xs ring-1 transition-[color,box-shadow] after:absolute after:-inset-3 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none"
     />
   </SliderPrimitive.Root>
   {@render endIcon?.()}

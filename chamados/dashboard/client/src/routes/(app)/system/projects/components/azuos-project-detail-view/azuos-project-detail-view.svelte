@@ -295,7 +295,7 @@
                 {@const status = eventStatusOf(event)}
                 <li class="relative min-w-0">
                   <span
-                    class="bg-card border-border text-ink-700 absolute top-0.5 -left-[31px] grid size-5 place-items-center rounded-full border"
+                    class="bg-card ring-border text-ink-700 absolute top-0.5 -left-[31px] grid size-5 place-items-center rounded-full ring-1"
                     aria-hidden="true"
                   >
                     <Icon class="size-3" />

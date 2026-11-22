@@ -84,13 +84,16 @@
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ComboboxField from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
+  import PersonPickerField, {
+    type AzuosPersonPickerPerson,
+  } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import AzuosInventoryItemTimeline from '$lib/components/azuos-inventory-item-timeline/azuos-inventory-item-timeline.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import { cn } from '$lib/utils/cn';
   import {
     Dialog,
     DialogDescription,
@@ -116,30 +119,28 @@
     return options;
   }
 
-  function buildUserOptions(
+  /**
+   * As pessoas do campo "Usuário / Responsável": as do admin-console e, se a ficha aponta para
+   * alguém que não está mais lá, essa pessoa também — o campo não pode esvaziar sozinho.
+   */
+  function peopleOf(
     users: { id: string; name: string }[] | undefined,
     currentId: string,
     currentName: string,
-  ) {
-    const list = users ?? [];
-    const options = [
-      { value: '', label: '(Nenhum)' },
-      ...list.map((u) => ({ value: u.id, label: u.name, personName: u.name })),
-    ];
-    if (!currentId) return options;
-    if (list.some((u) => u.id === currentId)) return options;
+  ): AzuosPersonPickerPerson[] {
+    const people = (users ?? []).map((user) => ({ id: user.id, name: user.name, photo: null }));
+    if (!currentId || people.some((person) => person.id === currentId)) return people;
 
-    const display = currentName || currentId;
-    options.splice(1, 0, { value: currentId, label: display, personName: display });
-    return options;
+    return [{ id: currentId, name: currentName || currentId, photo: null }, ...people];
   }
+
 
   const departmentOptions = $derived(
     buildDepartmentOptions(data.departments, fields.department?.value?.trim() ?? ''),
   );
 
-  const userOptions = $derived(
-    buildUserOptions(
+  const userPeople = $derived(
+    peopleOf(
       data.users,
       fields.userId?.value?.trim() ?? '',
       fields.userName?.value?.trim() ?? '',
@@ -201,37 +202,23 @@
       </DialogHeader>
 
       {#if isEdit}
-        <div class="border-border flex gap-4 border-b">
-          <button
-            type="button"
-            class={cn(
-              'border-b-2 px-1 pb-2 text-sm font-medium transition-colors cursor-pointer',
-              activeTab === 'details'
-                ? 'border-primary text-primary font-semibold'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
-            )}
-            onclick={() => (activeTab = 'details')}
-          >
-            Dados do produto
-          </button>
-          <button
-            type="button"
-            class={cn(
-              'border-b-2 px-1 pb-2 text-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5',
-              activeTab === 'timeline'
-                ? 'border-primary text-primary font-semibold'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
-            )}
-            onclick={() => (activeTab = 'timeline')}
-          >
-            Linha do tempo
-            {#if data.timeline && data.timeline.events.length > 0}
-              <span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground font-semibold">
-                {data.timeline.events.length}
-              </span>
-            {/if}
-          </button>
-        </div>
+        <!-- Duas vistas do mesmo produto: o controle segmentado, com a escolhida em branco. -->
+        <SegmentedControl
+          data={{
+            value: activeTab,
+            options: [
+              { value: 'details', label: 'Dados do produto' },
+              {
+                value: 'timeline',
+                label: data.timeline?.events.length
+                  ? `Linha do tempo (${data.timeline.events.length})`
+                  : 'Linha do tempo',
+              },
+            ],
+          }}
+          ui={{ ariaLabel: 'Vista do produto', className: 'w-fit' }}
+          actions={{ onChange: (value) => (activeTab = value as 'details' | 'timeline') }}
+        />
       {/if}
 
       {#if !isEdit || activeTab === 'details'}
@@ -334,21 +321,15 @@
 
         <div class="flex flex-col gap-1.5">
           <span class="text-ink-700 text-sm font-medium">Usuário / Responsável</span>
-          <ComboboxField
+          <PersonPickerField
             data={{
               value: fields.userId?.value ?? '',
-              options: userOptions,
+              people: userPeople,
+              leading: [{ value: '', label: '(Nenhum)' }],
             }}
-            ui={{
-              placeholder: 'Vincular a um usuário (opcional)',
-              searchPlaceholder: 'Buscar usuário no admin-console…',
-              emptyLabel: 'Nenhum usuário encontrado.',
-              ariaLabel: 'Usuário',
-            }}
+            ui={{ ariaLabel: 'Usuário', placeholder: 'Vincular a um usuário (opcional)' }}
             state={{ isDisabled: dialogState.isSubmitting }}
-            actions={{
-              onChange: handleUserChange,
-            }}
+            actions={{ onChange: handleUserChange }}
           />
           {#if fields.userId?.error}
             <p class="text-destructive text-xs">{fields.userId.error}</p>

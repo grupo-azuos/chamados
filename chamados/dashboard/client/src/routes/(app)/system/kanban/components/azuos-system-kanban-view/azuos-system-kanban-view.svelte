@@ -336,7 +336,7 @@
 
                         {#if activeColorPickerTicketId === ticket.id}
                           <div
-                            class="absolute right-0 top-7 z-30 flex flex-col gap-1 rounded-surface border border-border bg-popover p-2 shadow-xl w-36"
+                            class="absolute right-0 top-7 z-30 flex w-36 flex-col gap-1 rounded-surface border-transparent bg-popover p-2 shadow-xl ring-1 ring-foreground/8"
                             onclick={(e) => e.stopPropagation()}
                             onkeydown={(e) => {
                               if (e.key === 'Escape') activeColorPickerTicketId = null;

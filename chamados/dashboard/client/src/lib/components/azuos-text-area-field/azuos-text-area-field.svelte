@@ -62,7 +62,7 @@
       /* O raio de CONTROLE da régua de medidas (`lib/theme/tokens.css`), o mesmo do
          `TextField` e do `ActionButton`. A altura não entra: aqui ela é o número de linhas. */
       'rounded-control',
-      'bg-card text-foreground w-full resize-y border px-3 py-2.5 text-sm transition-colors',
+      'bg-muted text-foreground w-full resize-y border px-3 py-2.5 text-sm transition-colors',
       'placeholder:text-ink-500 disabled:cursor-not-allowed disabled:opacity-60',
       error ? 'bg-destructive-soft border-transparent' : 'border-transparent',
     )}

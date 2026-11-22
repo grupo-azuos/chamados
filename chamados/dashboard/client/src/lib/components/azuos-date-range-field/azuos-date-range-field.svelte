@@ -159,7 +159,7 @@
     </Popover.Trigger>
     <Popover.Content
       align="start"
-      class="rounded-box bg-popover w-auto max-w-[calc(100vw-2rem)] overflow-x-auto p-0 shadow-xl border-0 ring-1 ring-foreground/8"
+      class="rounded-surface border-transparent bg-popover w-auto max-w-[calc(100vw-2rem)] overflow-x-auto p-0 shadow-xl ring-1 ring-foreground/8"
     >
       <div class="flex flex-col gap-3 p-3">
         <div class="grid grid-cols-2 gap-3">

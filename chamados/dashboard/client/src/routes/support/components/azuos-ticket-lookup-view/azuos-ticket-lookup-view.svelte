@@ -252,7 +252,7 @@
               onclick={() => actions.onOpenMine(item.protocol)}
               class={cn(
                 'rounded-box focus-visible:ring-ring flex w-full cursor-pointer flex-col gap-1.5 p-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
-                isOpen ? 'bg-primary-soft' : 'bg-card hover:bg-muted border-border border',
+                isOpen ? 'bg-primary-soft' : 'bg-card shadow-card hover:bg-hover-veil',
               )}
             >
               <span class="flex items-center justify-between gap-2">

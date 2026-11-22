@@ -229,7 +229,7 @@ describe('AzuosStatCard', () => {
   /* Padrão Apple: nem a cor escolhida pela pessoa pinta o número — ele fica na cor do texto. */
   it('keeps the number in the text colour even with a colour the person chose', () => {
     render(StatCard, {
-      props: { data: { label: 'Projeto', value: 7 }, ui: { tone: '#1d4ed8' } },
+      props: { data: { label: 'Projeto', value: 7 }, ui: { color: '#1d4ed8' } },
     });
 
     expect(screen.getByText('7')).toHaveClass('text-foreground');

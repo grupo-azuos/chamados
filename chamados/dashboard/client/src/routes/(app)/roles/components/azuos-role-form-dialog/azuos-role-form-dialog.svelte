@@ -228,7 +228,7 @@
                       style="width: 100%;"
                       class={cn(
                         'control-lg rounded-control',
-                        'flex w-full cursor-pointer items-center justify-between gap-3 border border-border bg-card text-left transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60',
+                        'flex w-full cursor-pointer items-center justify-between gap-3 border border-transparent bg-muted text-left transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60',
                         'w-full',
                         fields.userId.value ? 'p-2.5 min-h-10 h-auto' : 'px-3 text-muted-foreground',
                       )}
