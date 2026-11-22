@@ -25,7 +25,7 @@ describe('the session guard', () => {
     } as Awaited<ReturnType<typeof authApi.me>>;
     me.mockResolvedValue(user);
 
-    await expect(load()).resolves.toEqual({ user });
+    await expect(load()).resolves.toEqual({ user, sidebarOpen: true });
   });
 
   // triste
