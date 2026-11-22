@@ -21,6 +21,8 @@ export const MAX_TICKET_WATCHERS = 20;
 export const ticketPersonSchema = z.object({
   id: z.string(),
   name: z.string(),
+  /** A foto do admin-console — quem escolhe uma pessoa a reconhece pelo rosto. */
+  avatarUrl: z.string().nullable().optional(),
 });
 
 export type TicketPerson = z.infer<typeof ticketPersonSchema>;

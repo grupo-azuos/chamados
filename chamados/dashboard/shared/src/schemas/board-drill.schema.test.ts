@@ -71,7 +71,7 @@ describe('drillSummary', () => {
       'Situação: Aberto',
       'Últimos 30 dias',
       'Só os meus',
-      'Pessoa: Eu',
+      'Responsável: Eu',
       expect.stringMatching(/^Prioridade: /),
       'Com o filtro salvo do bloco',
     ]);

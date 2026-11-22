@@ -15,10 +15,13 @@ import {
   toolbarDisplayOf,
   toolbarDisplaysOf,
   withDepartmentCatalog,
-  withPersonPhotos,
+  withPeople,
 } from './board-filter.util';
 
 const COUNTS = { total: 3, series: [{ key: 'TI', label: 'TI', value: 2 }, { key: '(Sem departamento)', label: '(Sem departamento)', value: 1 }] };
+
+/* A conta vazia: o módulo sem chamado nenhum. */
+const EMPTY = { total: 0, series: [] };
 
 describe('board filter rules', () => {
   // feliz
@@ -108,25 +111,43 @@ describe('the Grafana-like filter toolbar', () => {
   });
 
   // feliz
-  it('puts the photo of each person on the person filter counts, found by name', () => {
+  it('lists the whole team on the person filter, with the faces, and the faces of who opened', () => {
     const filters = [
       { id: 'pessoa', kind: 'person' as const },
+      { id: 'abriu', kind: 'requester' as const },
       { id: 'dep', kind: 'department' as const },
     ];
     const people = { total: 1, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 1 }] };
-    const counts = withPersonPhotos(filters, { pessoa: people, dep: COUNTS }, [{ name: 'Ana Lima', avatarUrl: 'https://x/ana.png' }]);
+    const opened = { total: 2, series: [{ key: 'Bia Souza', label: 'Bia Souza', value: 2 }] };
+    const counts = withPeople(
+      filters,
+      { pessoa: people, abriu: opened, dep: COUNTS },
+      {
+        team: [{ name: 'Ana Lima', avatarUrl: 'https://x/ana.png' }, { name: 'Caio Reis', avatarUrl: null }],
+        directory: [{ name: 'Bia Souza', avatarUrl: 'https://x/bia.png' }],
+      },
+      EMPTY,
+    );
 
-    expect(personOptions(counts.pessoa)[0]).toMatchObject({ personName: 'Ana Lima', avatarUrl: 'https://x/ana.png' });
+    expect(personOptions(counts.pessoa).map((option) => [option.label, option.avatarUrl])).toEqual([
+      ['Ana Lima', 'https://x/ana.png'],
+      ['Caio Reis', null],
+    ]);
+    expect(personOptions(counts.abriu)).toEqual([{ value: 'Bia Souza', label: 'Bia Souza', personName: 'Bia Souza', avatarUrl: 'https://x/bia.png' }]);
     expect(counts.dep).toBe(COUNTS);
   });
 
   // triste
-  it('keeps the initials when the person is not in the list or the count is missing', () => {
-    const people = { total: 1, series: [{ key: 'Caio Reis', label: 'Caio Reis', value: 1 }] };
-    const counts = withPersonPhotos([{ id: 'pessoa', kind: 'person' as const }, { id: 'outra', kind: 'person' as const }], { pessoa: people }, []);
+  it('shows the team even in a module without tickets, and keeps the initials of who is not in the directory', () => {
+    const counts = withPeople(
+      [{ id: 'pessoa', kind: 'person' as const }, { id: 'abriu', kind: 'requester' as const }],
+      { abriu: { total: 1, series: [{ key: 'Caio Reis', label: 'Caio Reis', value: 1 }] } },
+      { team: [{ name: 'Ana Lima' }], directory: [] },
+      EMPTY,
+    );
 
-    expect(personOptions(counts.pessoa)[0]?.avatarUrl).toBeNull();
-    expect(counts.outra).toBeUndefined();
+    expect(personOptions(counts.pessoa).map((option) => option.label)).toEqual(['Ana Lima']);
+    expect(personOptions(counts.abriu)[0]?.avatarUrl).toBeNull();
   });
 });
 
@@ -142,7 +163,7 @@ describe('withDepartmentCatalog', () => {
 
   // feliz
   it('lists every department of the catalog, the ones still at zero included, and keeps the old names at the end', () => {
-    const next = withDepartmentCatalog(FILTERS, COUNTS, ['Contábil', 'Tecnologia']);
+    const next = withDepartmentCatalog(FILTERS, COUNTS, ['Contábil', 'Tecnologia'], EMPTY);
 
     expect(next.dep?.series.map((item) => [item.key, item.value])).toEqual([
       ['Contábil', 0],
@@ -153,9 +174,9 @@ describe('withDepartmentCatalog', () => {
   });
 
   // triste
-  it('keeps what the count brought while the catalog has not arrived', () => {
-    expect(withDepartmentCatalog(FILTERS, COUNTS, [])).toBe(COUNTS);
-    expect(withDepartmentCatalog(FILTERS, { who: COUNTS.who }, ['Contábil'])).toEqual({ who: COUNTS.who });
+  it('keeps what the count brought while the catalog has not arrived, and lists it in a module without tickets', () => {
+    expect(withDepartmentCatalog(FILTERS, COUNTS, [], EMPTY)).toBe(COUNTS);
+    expect(withDepartmentCatalog(FILTERS, { who: COUNTS.who }, ['Contábil'], EMPTY).dep?.series).toEqual([{ key: 'Contábil', label: 'Contábil', value: 0 }]);
   });
 });
 

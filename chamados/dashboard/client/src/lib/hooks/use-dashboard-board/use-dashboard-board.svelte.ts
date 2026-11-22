@@ -51,7 +51,7 @@ import {
   upsertWidget,
   visibleScopes,
 } from '$lib/utils/board-draft.util';
-import { withDepartmentCatalog, withPersonPhotos } from '$lib/utils/board-filter.util';
+import { withDepartmentCatalog, withPeople } from '$lib/utils/board-filter.util';
 import { drillHref, drillOf } from '$lib/utils/board-drill.util';
 import { newWidget } from '$lib/utils/widget-editor.util';
 import { type BoardItem } from '$lib/utils/widget-items.util';
@@ -84,6 +84,9 @@ export const BOARD_QUERY_KEY = ['dashboard-board'] as const;
 const EMPTY_DRAFT: BoardDraft = { widgets: [], layout: [], filters: [] };
 
 type Answers = Record<string, { data: WidgetData | null; error: string | null }>;
+
+/* A conta de um filtro que ainda não tem nenhuma: o módulo sem chamado, ou a conta que falhou. */
+const NO_COUNT: FilterCounts = { total: 0, series: [], isLoading: false };
 
 export function useDashboardBoardModel(module: BoardModule) {
   const queryClient = useQueryClient();
@@ -172,12 +175,21 @@ export function useDashboardBoardModel(module: BoardModule) {
     ),
   );
 
-  /* Os responsáveis do módulo, só pela FOTO no filtro "Pessoa". Falhou, ficam as iniciais. */
-  const people = mirrorStore(
+  /* A equipe do módulo: o filtro "Responsável" lista todos, com o rosto, mesmo os em zero. */
+  const team = mirrorStore(
     createQuery({
       queryKey: ['tickets', 'assignee-options', module],
       queryFn: () => ticketsApi.assigneeOptions(module),
       staleTime: 60_000,
+    }),
+  );
+
+  /* Todas as pessoas, só pela FOTO de quem abriu chamado. Falhou, ficam as iniciais. */
+  const directory = mirrorStore(
+    createQuery({
+      queryKey: ['tickets', 'people-options'],
+      queryFn: () => ticketsApi.peopleOptions(),
+      staleTime: 5 * 60_000,
     }),
   );
 
@@ -238,8 +250,14 @@ export function useDashboardBoardModel(module: BoardModule) {
         filterValues,
         filterCounts: withDepartmentCatalog(
           shown.filters,
-          withPersonPhotos(shown.filters, counts.current.data ?? {}, people.current.data ?? []),
+          withPeople(
+            shown.filters,
+            counts.current.data ?? {},
+            { team: team.current.data ?? [], directory: directory.current.data ?? [] },
+            NO_COUNT,
+          ),
           departments.options.map((option) => option.value),
+          NO_COUNT,
         ),
         weight: boardWeight(shown.widgets),
       };

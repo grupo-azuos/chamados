@@ -37,8 +37,9 @@ export async function seedDashboardBoards(db: DatabaseExecutor): Promise<number>
       .values({ module: seed.module, scope: seed.scope, ownerId: null, ...content })
       .onConflictDoUpdate({ target: [dashboardBoards.module, dashboardBoards.scope, dashboardBoards.ownerId], set: content });
   }
+  /* Com o schema escrito: a conexão de migrations não procura no `chamados` sozinha. */
   await db.execute(
-    sql`select setval(pg_get_serial_sequence('dashboard_boards', 'id'), coalesce((select max(id) from dashboard_boards), 0) + 1, false)`,
+    sql`select setval(pg_get_serial_sequence('chamados.dashboard_boards', 'id'), coalesce((select max(id) from chamados.dashboard_boards), 0) + 1, false)`,
   );
 
   return BOARDS_SEED.length;

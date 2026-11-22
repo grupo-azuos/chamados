@@ -1163,7 +1163,8 @@ export const boardFilterKindSchema = z.enum(BOARD_FILTER_KINDS);
 export type BoardFilterKind = z.infer<typeof boardFilterKindSchema>;
 
 export const BOARD_FILTER_KIND_LABELS: Record<BoardFilterKind, string> = {
-  person: 'Pessoa',
+  /* "Responsável", e não "Pessoa": o filtro recorta por quem atende (ou por quem fez). */
+  person: 'Responsável',
   period: 'Período',
   ticketStatus: 'Situação do chamado',
   ticketPriority: 'Prioridade do chamado',

@@ -15,7 +15,7 @@ vi.mock('$lib/api/departments.api', () => ({
   departmentsApi: { catalog: vi.fn().mockResolvedValue({ rh: [], local: [], isRhAvailable: false }) },
 }));
 vi.mock('$lib/api/tickets.api', () => ({
-  ticketsApi: { assigneeOptions: vi.fn().mockResolvedValue([]) },
+  ticketsApi: { assigneeOptions: vi.fn().mockResolvedValue([]), peopleOptions: vi.fn().mockResolvedValue([]) },
 }));
 
 const { dashboardBoardsApi } = await import('$lib/api/dashboard-boards.api');

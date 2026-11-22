@@ -99,22 +99,33 @@ export function personOptions(counts: FilterCountsLike | null | undefined): Boar
   }));
 }
 
+type PersonLike = { name: string; avatarUrl?: string | null };
+
 /**
- * A foto de cada pessoa na conta do filtro "Pessoa". A conta agrupa pelo NOME do responsável (é o
- * que o bloco mostra); a foto vem da lista de responsáveis do módulo, achada pelo mesmo nome.
- * Quem não está na lista fica com as iniciais.
+ * AS PESSOAS DOS FILTROS, com o rosto. A conta agrupa pelo NOME (é o que o bloco mostra), e a foto
+ * vem do diretório de pessoas, achada pelo mesmo nome; quem não tem foto fica com as iniciais.
+ *
+ * "Responsável" lista a EQUIPE do módulo inteira, e não só quem já tem chamado: quem filtra procura
+ * a pessoa do time mesmo que ela esteja em zero. "Quem abriu" lista só quem abriu chamado — é o
+ * que existe para recortar —, também com o rosto.
  */
-export function withPersonPhotos<T extends FilterCountsLike>(
+export function withPeople<T extends FilterCountsLike>(
   filters: readonly Pick<BoardFilter, 'id' | 'kind'>[],
   counts: Record<string, T>,
-  people: readonly { name: string; avatarUrl?: string | null }[],
+  people: { team: readonly PersonLike[]; directory: readonly PersonLike[] },
+  empty: T,
 ): Record<string, T> {
-  const photos = new Map(people.map((person) => [person.name, person.avatarUrl ?? null]));
+  const photos = new Map([...people.directory, ...people.team].map((person) => [person.name, person.avatarUrl ?? null]));
+  const photoOf = (name: string) => photos.get(name) ?? null;
   const next = { ...counts };
   for (const filter of filters) {
-    const count = next[filter.id];
-    if (filter.kind !== 'person' || !count) continue;
-    next[filter.id] = { ...count, series: count.series.map((item) => ({ ...item, avatarUrl: photos.get(item.key) ?? null })) };
+    if (filter.kind !== 'person' && filter.kind !== 'requester') continue;
+    const count = next[filter.id] ?? empty;
+    const counted = count.series.map((item) => ({ ...item, avatarUrl: photoOf(item.key) }));
+    const known = new Set(count.series.map((item) => item.key));
+    const team = filter.kind === 'person' ? people.team.filter((person) => !known.has(person.name)) : [];
+    const idle = team.map((person) => ({ key: person.name, label: person.name, value: 0, avatarUrl: photoOf(person.name) }));
+    next[filter.id] = { ...count, series: [...counted, ...idle] };
   }
 
   return next;
@@ -123,20 +134,20 @@ export function withPersonPhotos<T extends FilterCountsLike>(
 /**
  * O filtro "Departamento" com TODOS os departamentos da lista (os do RH e os daqui), e não só os
  * que já têm chamado: quem filtra procura o departamento pelo nome oficial, mesmo que ainda esteja
- * em zero. Os nomes que só a conta trouxe (um antigo, gravado num chamado de antes) continuam, no
- * fim. A lista ou a conta ainda não chegaram (ou falharam): fica o que há.
+ * em zero — e num módulo ainda sem chamado nenhum. Os nomes que só a conta trouxe (um antigo,
+ * gravado num chamado de antes) continuam, no fim. A lista ainda não chegou: fica o que há.
  */
 export function withDepartmentCatalog<T extends FilterCountsLike>(
   filters: readonly Pick<BoardFilter, 'id' | 'kind'>[],
   counts: Record<string, T>,
   names: readonly string[],
+  empty: T,
 ): Record<string, T> {
   if (names.length === 0) return counts;
   const next = { ...counts };
   for (const filter of filters) {
     if (filter.kind !== 'department') continue;
-    const count = next[filter.id];
-    if (!count) continue;
+    const count = next[filter.id] ?? empty;
     const counted = new Map(count.series.map((item) => [item.key, item]));
     const listed = names.map((name) => counted.get(name) ?? { key: name, label: name, value: 0 });
     const extra = count.series.filter((item) => !names.includes(item.key));
