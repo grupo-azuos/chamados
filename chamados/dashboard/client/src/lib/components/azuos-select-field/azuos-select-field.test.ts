@@ -178,4 +178,16 @@ describe('AzuosSelectField with people and in the dark theme', () => {
     expect(await screen.findByText('Nenhuma opção disponível')).toBeInTheDocument();
     expect(screen.queryByRole('option')).toBeNull();
   });
+
+  // triste
+  it('keeps the 40px of the fields, over the 36px of the downloaded select', () => {
+    render(SelectField, {
+      props: { data: { value: 'Ana', options: owners }, ui: { ariaLabel: 'Responsável' }, actions: { onChange: vi.fn() } },
+    });
+
+    const trigger = screen.getByRole('combobox', { name: 'Responsável' });
+    expect(trigger).toHaveAttribute('data-size', 'default');
+    expect(trigger).toHaveClass('data-[size=default]:h-(--control-lg)');
+  });
 });
+
