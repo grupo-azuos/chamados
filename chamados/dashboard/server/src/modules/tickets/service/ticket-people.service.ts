@@ -35,7 +35,7 @@ export class TicketPeopleService {
 
     return users
       .filter((user) => !user.banned)
-      .map((user) => ({ id: user.id, name: displayName(user) }))
+      .map((user) => ({ id: user.id, name: displayName(user), avatarUrl: user.image ?? null }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }
 

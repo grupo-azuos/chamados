@@ -92,12 +92,14 @@
   const isSearch = $derived(display === 'search' || options.length > SEARCH_FROM);
   const amounts = $derived(optionCounts(data.counts));
 
-  /* "Pessoa": todas, eu, ou alguém da lista. "Eu" serve a todo mundo, cada um vê o seu. */
+  /* "Responsável": todos, eu, ou alguém da lista. "Eu" serve a todo mundo, cada um vê o seu. */
   function optionsOf(current: BoardFilterKind): BoardFilterOption[] {
     if (current === 'period') return PERIOD_PRESETS.map((preset) => ({ value: preset.value, label: preset.label }));
     if (current === 'person') {
-      return [{ value: '', label: 'Todas' }, { value: ME_VALUE, label: 'Eu' }, ...personOptions(data.counts)];
+      return [{ value: '', label: 'Todos' }, { value: ME_VALUE, label: 'Eu' }, ...personOptions(data.counts)];
     }
+    /* "Quem abriu" também é gente: cada um com o rosto, como no "Responsável". */
+    if (current === 'requester') return [{ value: '', label: 'Todos' }, ...personOptions(data.counts)];
     if (isFieldFilterKind(current)) return [{ value: '', label: 'Todos' }, ...fieldFilterOptions(current, data.counts)];
 
     return [];

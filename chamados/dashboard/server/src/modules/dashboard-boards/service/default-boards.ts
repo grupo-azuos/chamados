@@ -44,7 +44,7 @@ function boardOf(seeds: readonly Seed[], filters: BoardFilter[] = PERSON_AND_PER
 }
 
 const PERSON_AND_PERIOD: BoardFilter[] = [
-  { id: 'pessoa', kind: 'person', label: 'Pessoa' },
+  { id: 'pessoa', kind: 'person', label: 'Responsável' },
   { id: 'periodo', kind: 'period', label: 'Período' },
 ];
 

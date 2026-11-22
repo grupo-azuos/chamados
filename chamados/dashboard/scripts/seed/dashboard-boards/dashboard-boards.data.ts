@@ -120,7 +120,7 @@ const filter = (kind: BoardFilter['kind'], label: string, display?: BoardFilter[
 });
 
 const PERIOD = filter('period', 'Período', 'select');
-const PERSON = filter('person', 'Pessoa', 'search');
+const PERSON = filter('person', 'Responsável', 'search');
 const PROBLEM = filter('problemType', 'Tipo de problema', 'search');
 const REQUESTER = filter('requester', 'Quem abriu', 'search');
 const STATUS = filter('ticketStatus', 'Situação', 'select');
