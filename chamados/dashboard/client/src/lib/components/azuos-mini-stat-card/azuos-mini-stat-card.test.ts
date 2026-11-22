@@ -35,22 +35,23 @@ describe('AzuosMiniStatCard (Svelte)', () => {
 
   // triste
   it('falls back to the slate dot without a tone', () => {
-    const { container } = render(MiniStatCard, { props: { data: { label: 'Sem status', value: 0 } } });
+    const { container } = render(MiniStatCard, {
+      props: { data: { label: 'Sem status', value: 0 } },
+    });
 
     expect(container.querySelector('span[aria-hidden="true"].rounded-full')?.className).toContain(
       'bg-hue-slate',
     );
   });
 
-  /* A cor que a pessoa escolheu pinta exata na bolinha, e some quando o card está escolhido. */
-  it('paints the dot in the exact colour the person chose, but not when selected', () => {
-    const { container, rerender } = render(MiniStatCard, {
-      props: { data: { label: 'Projeto', value: 7 }, ui: { tone: '#1d4ed8' } },
+  /* A bolinha leva o tom do assunto; nenhuma cor solta, pelo `style`. */
+  it('paints the dot in the tone of the subject', () => {
+    const { container } = render(MiniStatCard, {
+      props: { data: { label: 'Projeto', value: 7 }, ui: { tone: 'blue' } },
     });
-    const dot = () => container.querySelector('span[aria-hidden="true"].rounded-full') as HTMLElement;
+    const dot = container.querySelector('span[aria-hidden="true"].rounded-full') as HTMLElement;
 
-    expect(dot()).toHaveStyle({ backgroundColor: 'rgb(29, 78, 216)' });
-    rerender({ data: { label: 'Projeto', value: 7 }, ui: { tone: '#1d4ed8' }, state: { isSelected: true } });
-    expect(dot().getAttribute('style') ?? '').toBe('');
+    expect(dot.className).toContain('bg-hue-blue');
+    expect(dot.getAttribute('style') ?? '').toBe('');
   });
 });

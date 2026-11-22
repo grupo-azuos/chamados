@@ -27,13 +27,20 @@
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, tools, children }: AzuosPanelCardProps = $props();
+
+  /* O título dá nome à seção: o leitor de tela anuncia "região, Receitas por mês" e dá para
+     pular de painel em painel pelos marcos da página. */
+  const titleId = $props.id();
 </script>
 
-<section class={cn('bg-card shadow-card rounded-surface min-w-0 p-4 sm:p-5', ui?.className)}>
+<section
+  aria-labelledby={titleId}
+  class={cn('rounded-surface bg-card shadow-card min-w-0 p-5', ui?.className)}
+>
   <!-- Empilhado no celular: título e controle lado a lado a 360 px espremem os dois. -->
   <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
     <div class="min-w-0">
-      <h2 class="text-muted-foreground text-sm font-medium">
+      <h2 id={titleId} class="text-muted-foreground text-sm font-medium">
         {data.title}
       </h2>
       {#if data.hint}

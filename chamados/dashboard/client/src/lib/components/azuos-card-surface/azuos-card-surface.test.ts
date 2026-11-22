@@ -29,21 +29,19 @@ describe('AzuosCardSurface (Svelte)', () => {
     expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
   });
 
-  it('keeps a toned card tinted all the time, and paints a chosen colour exactly', () => {
+  it('shows the veil in the tone of the card only on hover', () => {
     const { container } = render(CardSurface, {
       props: {
         data: { label: 'Projeto' },
-        ui: { mark: HardDrive, markTone: '#ea580c', isHoverColored: true, hoverTone: '#ea580c' },
+        ui: { isHoverColored: true, hoverTone: 'red' },
         children,
       },
     });
 
     const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
-    expect(wash).toHaveClass('bg-(--card-veil)');
-    expect(wash.style.getPropertyValue('--card-veil')).toContain('#ea580c');
-    expect((container.querySelector('[data-slot="card-mark"]') as HTMLElement).style.color).toBe(
-      'rgb(234, 88, 12)',
-    );
+    expect(wash).toHaveClass('group-hover/card:bg-(--card-veil)');
+    expect(wash).not.toHaveClass('bg-(--card-veil)');
+    expect(wash.style.getPropertyValue('--card-veil')).toContain('--hue-red');
   });
 
   it('draws the mark in the accent, and turns into a real button when clickable', async () => {
