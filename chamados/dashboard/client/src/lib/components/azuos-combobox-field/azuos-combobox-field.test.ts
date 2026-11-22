@@ -141,3 +141,35 @@ describe('AzuosComboboxField with people', () => {
     expect(document.querySelector('[data-slot="avatar"]')).toBeNull();
   });
 });
+
+describe('AzuosComboboxField search row', () => {
+  // feliz
+  it('opens the flat search of the template, not the pill of ui/command', async () => {
+    render(ComboboxField, {
+      props: { data: { value: '', options }, ui: { ariaLabel: 'Departamento' }, actions: { onChange: vi.fn() } },
+    });
+
+    await userEvent.click(screen.getByRole('combobox'));
+    const input = await screen.findByPlaceholderText('Pesquisar…');
+
+    expect(input.closest('[data-slot="command-input-wrapper"]')).toHaveClass('h-9', 'border-b');
+    expect(document.querySelector('[data-slot="input-group"]')).toBeNull();
+    expect(document.querySelector('[data-slot="command"]')).toHaveClass('rounded-surface', 'bg-card');
+  });
+
+  // triste
+  it('shows the empty label when the search finds nothing', async () => {
+    render(ComboboxField, {
+      props: {
+        data: { value: '', options },
+        ui: { ariaLabel: 'Departamento', emptyLabel: 'Nenhum departamento' },
+        actions: { onChange: vi.fn() },
+      },
+    });
+
+    await userEvent.click(screen.getByRole('combobox'));
+    await userEvent.type(await screen.findByPlaceholderText('Pesquisar…'), 'zzz');
+
+    expect(await screen.findByText('Nenhum departamento')).toBeInTheDocument();
+  });
+});
