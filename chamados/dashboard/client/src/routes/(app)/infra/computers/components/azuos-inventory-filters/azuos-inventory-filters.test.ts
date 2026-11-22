@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import InventoryFilters, {
+  ALERT_FILTER_LABELS,
   activeFilterChips,
   hasAnyFilter,
   type InventoryFilter,
@@ -249,3 +250,24 @@ describe('AzuosInventoryFilters — every grouped filter and its chip', () => {
     expect(actions.onDepartmentChange).toHaveBeenLastCalledWith('fiscal');
   });
 });
+
+describe('ALERT_FILTER_LABELS', () => {
+  // feliz
+  it('names each alert filter in proper Portuguese, the disk included', () => {
+    expect(ALERT_FILTER_LABELS).toEqual({
+      any: 'Com alerta ativo',
+      cpu: 'CPU elevada',
+      memory: 'Memória elevada',
+      disk: 'Disco quase cheio',
+    });
+  });
+
+  // triste
+  /* Montado como "<peça> elevada", o chip do disco saía "Disco elevada". */
+  it('never shows the misgendered disk chip', () => {
+    const chips = activeFilterChips({ ...emptyFilter, alert: 'disk' }, actions);
+
+    expect(chips.map((chip) => chip.label)).toEqual(['Disco quase cheio']);
+  });
+});
+

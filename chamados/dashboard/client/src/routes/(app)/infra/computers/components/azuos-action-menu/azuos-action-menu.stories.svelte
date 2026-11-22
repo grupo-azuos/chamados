@@ -20,5 +20,6 @@
 </script>
 
 <Story name="Default" args={{ data, actions }} />
+<Story name="Icon only" args={{ data, actions, ui: { isIconOnly: true } }} />
 <Story name="Disabled" args={{ data, actions, state: { isDisabled: true } }} />
 <Story name="Long option" args={{ data: { ...data, items: [{ id: 'long', label: 'Consultar o histórico completo de movimentações deste equipamento' }] }, actions }} />

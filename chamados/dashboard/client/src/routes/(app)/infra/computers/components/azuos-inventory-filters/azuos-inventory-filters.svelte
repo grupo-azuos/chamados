@@ -94,10 +94,12 @@
   /** Uma etiqueta de filtro ligado: o que ela diz e como desligá-la. */
   export type ActiveFilterChip = { key: string; label: string; onRemove: () => void };
 
-  const ALERT_FILTER_NAMES: Record<Exclude<ComputerAlertFilter, 'any'>, string> = {
-    cpu: 'CPU',
-    memory: ALERT_METRIC_LABELS.memory,
-    disk: ALERT_METRIC_LABELS.disk,
+  /* O rótulo inteiro por peça, e não "<peça> elevada": montado, o disco saía "Disco elevada". */
+  export const ALERT_FILTER_LABELS: Record<ComputerAlertFilter, string> = {
+    any: 'Com alerta ativo',
+    cpu: 'CPU elevada',
+    memory: `${ALERT_METRIC_LABELS.memory} elevada`,
+    disk: `${ALERT_METRIC_LABELS.disk} quase cheio`,
   };
 
   /** A condição dos recursos: cada uma com o ícone que o card da máquina mostra no canto. */
@@ -121,7 +123,7 @@
   /** "CPU elevada", "Memória elevada": a máquina com o alerta daquela peça aberto agora. */
   const ALERT_OPTIONS = COMPUTER_ALERT_FILTERS.map((alert) => ({
     value: alert,
-    label: alert === 'any' ? 'Com alerta ativo' : `${ALERT_FILTER_NAMES[alert]} elevada`,
+    label: ALERT_FILTER_LABELS[alert],
   }));
 
   /**

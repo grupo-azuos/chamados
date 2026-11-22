@@ -7,6 +7,8 @@
   item só avisa a tela pelo `id`: a confirmação, quando a ação pede uma, fica a cargo de quem usa.
 
   - `data.label` e `data.items`: o texto do botão e as ações.
+  - `ui.isIconOnly`: só os três pontinhos, sem o rótulo à vista (o rótulo vira o nome acessível)
+    — é o menu da linha de tabela, onde a ação não pode ocupar uma coluna inteira.
   - `state.isDisabled`: trava o botão.
   - `actions.onSelect(id)`: a ação escolhida.
 -->
@@ -25,6 +27,8 @@
         separatorBefore?: boolean;
       }[];
     };
+    /** `isIconOnly`: só os três pontinhos — o menu da linha de tabela. */
+    ui?: { isIconOnly?: boolean };
     state?: { isDisabled?: boolean };
     actions: { onSelect: (id: string) => void };
   };
@@ -39,16 +43,27 @@
     AzuosDropdownMenuPrimitive as DropdownMenu,
   } from '$lib/components/azuos-action-button/azuos-action-button.svelte';
 
-  let { data, state: menuState, actions }: AzuosActionMenuProps = $props();
+  let { data, ui, state: menuState, actions }: AzuosActionMenuProps = $props();
 </script>
 
 <DropdownMenu.Root>
   <DropdownMenu.Trigger disabled={menuState?.isDisabled}>
     {#snippet child({ props })}
-      <Button {...props} type="button" class={actionButton({ variant: 'secondary' })}>
-        <Ellipsis aria-hidden="true" />
-        {data.label}
-      </Button>
+      {#if ui?.isIconOnly}
+        <Button
+          {...props}
+          type="button"
+          aria-label={data.label}
+          class={actionButton({ variant: 'ghost', size: 'sm', isIconOnly: true })}
+        >
+          <Ellipsis aria-hidden="true" />
+        </Button>
+      {:else}
+        <Button {...props} type="button" class={actionButton({ variant: 'secondary' })}>
+          <Ellipsis aria-hidden="true" />
+          {data.label}
+        </Button>
+      {/if}
     {/snippet}
   </DropdownMenu.Trigger>
   <DropdownMenu.Content align="end" class="rounded-surface w-56 max-w-[calc(100vw-2rem)] p-1.5 shadow-xl">

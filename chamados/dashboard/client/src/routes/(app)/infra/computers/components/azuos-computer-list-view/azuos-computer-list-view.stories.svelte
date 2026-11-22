@@ -150,6 +150,9 @@
     onResourceConditionChange: () => {},
     onPreventiveChange: () => {},
     onClearFilters: () => {},
+    onClearShortcuts: () => {},
+    onSortChange: () => {},
+    onPageChange: () => {},
     onRetry: () => {},
     onOpen: () => {},
     onRegister: () => {},
@@ -354,3 +357,25 @@
     state: settled, actions,
   }}
 />
+
+<!-- Muitas máquinas no modo cards: a grade pagina (página 2 de 2) e a tabela rola. -->
+<Story
+  name="Paged cards"
+  globals={{ viewport: { value: 'celular' } }}
+  args={{
+    data: {
+      computers: Array.from({ length: 30 }, (_, index) =>
+        computer({ id: 100 + index, name: `MAQ-D${String(index + 1).padStart(2, '0')}`, displayName: null,
+          activeAlerts: index % 7 === 0 ? 1 : 0 }),
+      ),
+      total: 30,
+      summary,
+      filter: emptyFilter,
+      paging: { page: 2, pageSize: 24, total: 30 },
+      sort: { field: 'number', direction: 'asc' },
+    },
+    state: settled,
+    actions,
+  }}
+/>
+
