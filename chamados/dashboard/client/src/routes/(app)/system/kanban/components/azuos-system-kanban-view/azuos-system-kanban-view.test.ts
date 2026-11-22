@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -128,8 +128,8 @@ describe('AzuosSystemKanbanView', () => {
   it('triggers onOpenTicket when ticket card is clicked', async () => {
     const actions = renderView();
 
-    const card = screen.getByText('CH-0010');
-    await userEvent.click(card);
+    /* No jsdom não há layout: o clique vai direto ao botão que a superfície estende sobre o card. */
+    await userEvent.click(screen.getByRole('button', { name: /CH-0010/ }));
 
     expect(actions.onOpenTicket).toHaveBeenCalledWith(10);
   });
@@ -236,12 +236,12 @@ describe('AzuosSystemKanbanView: labels, keyboard and notices', () => {
     const actions = renderView({ data: { cardColors: { 10: 'warning' } } });
     expect(screen.getByText('Atenção')).toBeInTheDocument();
 
-    await fireEvent.click(screen.getByTitle('Atribuir etiqueta ao card'));
+    await userEvent.click(screen.getByTitle('Atribuir etiqueta ao card'));
     const picker = screen.getByRole('dialog');
-    await fireEvent.click(within(picker).getByRole('button', { name: /Urgente/ }));
+    await userEvent.click(within(picker).getByRole('button', { name: /Urgente/ }));
 
     expect(actions.onSetCardColor).toHaveBeenCalledWith(10, 'danger');
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(actions.onOpenTicket).not.toHaveBeenCalled();
   });
 
@@ -249,24 +249,25 @@ describe('AzuosSystemKanbanView: labels, keyboard and notices', () => {
     renderView();
     const tag = screen.getByTitle('Atribuir etiqueta ao card');
 
-    await fireEvent.click(tag);
-    await fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await userEvent.click(tag);
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    await fireEvent.click(tag);
-    await fireEvent.click(screen.getByRole('dialog'));
+    await userEvent.click(tag);
+    await userEvent.click(screen.getByRole('dialog'));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    await fireEvent.click(tag);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await userEvent.click(tag);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('opens the ticket with Enter or Space on the card', async () => {
     const actions = renderView();
-    const card = screen.getByRole('button', { name: /CH-0010/ });
+    /* O card é a superfície padrão: quem recebe o foco é o botão de verdade que a cobre. */
+    screen.getByRole('button', { name: /CH-0010/ }).focus();
 
-    await fireEvent.keyDown(card, { key: 'Enter' });
-    await fireEvent.keyDown(card, { key: ' ' });
-    await fireEvent.keyDown(card, { key: 'a' });
+    await userEvent.keyboard('{Enter}');
+    await userEvent.keyboard(' ');
+    await userEvent.keyboard('a');
 
     expect(actions.onOpenTicket).toHaveBeenCalledTimes(2);
   });
@@ -368,7 +369,7 @@ describe('AzuosSystemKanbanView: drag edges and the picker keys', () => {
 
   it('keeps the label picker open on any key other than Escape', async () => {
     renderView();
-    await fireEvent.click(screen.getByTitle('Atribuir etiqueta ao card'));
+    await userEvent.click(screen.getByTitle('Atribuir etiqueta ao card'));
 
     await fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Tab' });
 
