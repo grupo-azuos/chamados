@@ -685,3 +685,15 @@ test('person-field: lets the person pickers themselves and comments through', ()
 
   assert.deepEqual(run('person-field', files), []);
 });
+
+test('colored-border: leaves the shadcn ui files alone, they are not edited by hand', () => {
+  const files = project({
+    [`${SRC}/lib/components/ui/range-calendar/range-calendar-day.svelte`]: '<div class="focus:border-ring"></div>',
+    [`${SRC}/lib/components/azuos-x/azuos-x.svelte`]: '<div class="focus:border-ring"></div>',
+  });
+
+  assert.deepEqual(
+    run('colored-border', files).map((violation) => violation.file),
+    [`${SRC}/lib/components/azuos-x/azuos-x.svelte`],
+  );
+});

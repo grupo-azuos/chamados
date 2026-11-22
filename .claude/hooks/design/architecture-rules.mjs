@@ -372,9 +372,12 @@ function isColoredBorder([, variants, kind, color]) {
   return color !== 'ring' || isFocus;
 }
 
-/** Só as telas do sistema; teste e story ficam de fora. */
+/**
+ * Só as telas do sistema; teste e story ficam de fora — e o `ui/` do shadcn também: é código do
+ * CLI, que não se edita (a regra vale para o `azuos-*` que o envolve).
+ */
 function isGroupSource(file) {
-  return GROUP_SOURCE.test(`/${file.path}`) && !GROUP_SKIP.test(file.path);
+  return GROUP_SOURCE.test(`/${file.path}`) && !GROUP_SKIP.test(file.path) && !isUi(file.path);
 }
 
 function borderLineViolations(file, { text, line }) {
