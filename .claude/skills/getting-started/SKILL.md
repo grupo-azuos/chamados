@@ -26,7 +26,7 @@ git --version
 ## 2. Instalar
 
 ```bash
-cd template
+cd chamados/dashboard
 npm install
 ```
 
@@ -49,7 +49,7 @@ Cria `server/data/app.db`, as tabelas e as tarefas de exemplo.
 ## 4. Subir
 
 Rode `npm run dev` **em segundo plano** (ele não termina). Espere aparecer
-`API em http://localhost:3009/api` e o Vite em `:5009`.
+`API em http://localhost:3009/api` e o Rsbuild em `:5009`.
 
 Diga à pessoa:
 - **O sistema:** http://localhost:5009

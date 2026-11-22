@@ -50,7 +50,7 @@ para ela. Depois do OK do entendimento, **crie a branch antes de qualquer códig
   índices do que é filtrado, `check` para listas fixas, `unique` para o que não pode repetir,
   `references(..., { onDelete })` para relação.
 - Registrar em `server/src/lib/db/drizzle-schema.ts`.
-- `npm run build -w @chamados/dashboard/shared && npm run db:generate` e **ler o SQL gerado**.
+- `npm run build -w @template/shared && npm run db:generate` e **ler o SQL gerado**.
 - Mensagens de conflito/check novas em `server/src/lib/db/db-error.util.ts`.
 
 ## 3. API — `server/src/modules/<entities>/`

@@ -107,7 +107,7 @@ zera entre testes: escreva o teste lendo o estado de ANTES e verificando a mudan
 ## 7. Verificar
 
 ```bash
-cd template
+cd chamados/dashboard
 npx vitest run --root client src/lib/components/azuos-<nome>
 npm run lint -w client
 npm run typecheck -w client

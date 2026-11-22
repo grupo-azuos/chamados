@@ -62,7 +62,7 @@ report('pedidos', await seedOrders(db));   // pedido aponta para cliente
 E um script individual em `chamados/dashboard/package.json`, no padrão de `seed:tasks`:
 
 ```json
-"seed:customers": "npm run build -w @chamados/dashboard/shared && tsx scripts/seed/customers/seed-customers.ts"
+"seed:customers": "npm run build -w @template/shared && tsx scripts/seed/customers/seed-customers.ts"
 ```
 
 ## Rodar

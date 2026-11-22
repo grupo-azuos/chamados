@@ -45,7 +45,7 @@ CLAUDE.md  CONTRIBUTING.md  README.md  SUPORTE.md   regras e entrada (MAIÚSCULO
 .claude/hooks/                                      protect-paths.mjs e o check de design (§11)
 .github/                                            CI e template de PR
 
-chamados/dashboard/
+template/
 ├── shared/src/
 │   ├── domain/<nome>.util.ts (+ .test.ts)           regra pura, sem I/O
 │   └── schemas/<entity>.schema.ts (+ .test.ts)      contrato Zod (API e formulário)
@@ -349,7 +349,7 @@ As regras moram em `.claude/hooks/design/design-rules.mjs` (testadas em `design-
 `.mjs` puro, sem dependência, porque o mesmo módulo roda em três lugares:
 
 ```bash
-cd template
+cd chamados/dashboard
 npm run check:design              # reprova só violação NOVA (fora da baseline)
 npm run check:design -- --all     # lista tudo, inclusive a dívida conhecida
 npm run check:design -- --update  # depois de corrigir dívida: regrava a baseline menor

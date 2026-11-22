@@ -61,7 +61,7 @@ Depois de apagá-los, a baseline do check de design fica com uma linha a menos: 
 Gere a migration que remove a tabela:
 
 ```bash
-npm run build -w @chamados/dashboard/shared
+npm run build -w @template/shared
 npm run db:generate
 ```
 
