@@ -36,8 +36,8 @@ describe('AzuosCollapsible', () => {
     const content = screen.getByTestId('conteudo').closest('[data-state]');
 
     expect(content).toHaveAttribute('data-state', 'open');
-    expect(content?.className).toContain('data-[state=open]:animate-collapsible-down');
-    expect(content?.className).toContain('motion-reduce:animate-none');
+    expect(content?.className).toContain('data-[state=open]:motion-safe:animate-collapsible-down');
+    expect(content?.className).not.toContain('data-[state=open]:animate-collapsible-down');
   });
 
   it('is born open when the screen asks for it', () => {

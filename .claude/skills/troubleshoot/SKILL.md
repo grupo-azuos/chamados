@@ -39,9 +39,9 @@ Porta ocupada por outro programa? `API_PORT` no `server/.env` e `VITE_API_PORT` 
 
 1. O server subiu? No terminal do `npm run dev` precisa aparecer `API em http://localhost:3009/api`.
 2. Erro no terminal do `[server]`? Resolva aquele primeiro.
-3. Console do navegador (F12): erro de import → `npm run build -w @chamados/dashboard/shared` e recarregar.
+3. Console do navegador (F12): erro de import → `npm run build -w @template/shared` e recarregar.
 4. Rota nova que dá "Esta tela não existe": o arquivo está em `client/src/routes/<nome>/index.tsx`
-   e exporta `Route` com o caminho certo? O Vite regenera `routeTree.gen.ts` sozinho; se não,
+   e exporta `Route` com o caminho certo? O Rsbuild regenera `routeTree.gen.ts` sozinho; se não,
    `npm run routes -w client`.
 
 ## Erro de API

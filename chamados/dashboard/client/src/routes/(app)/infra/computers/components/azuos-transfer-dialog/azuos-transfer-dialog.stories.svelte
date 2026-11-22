@@ -15,7 +15,7 @@
     { value: 'financeiro', label: 'Financeiro' },
     { value: 'fiscal', label: 'Fiscal' },
     { value: 'contabil', label: 'Contábil' },
-    { value: '', label: 'Sem departamento (volta para a prateleira)' },
+    { value: '', label: '(Sem departamento, volta para a prateleira)' },
   ];
 
   const machines = [

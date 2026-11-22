@@ -135,9 +135,13 @@
           aria-describedby={ariaDescribedBy}
           variant="outline"
           class={cn(
-            /* Fundo sólido de campo também no escuro: a variante `outline` traz `dark:bg-input/30`. */
-            "w-full justify-start text-left font-normal h-10 px-3.5 rounded-control border-input bg-muted dark:bg-muted hover:bg-accent dark:hover:bg-accent text-foreground shadow-xs transition-colors",
-            !internalDate && "text-muted-foreground"
+            /* O degrau `lg` da régua de medidas: este campo fica ao lado de um `AzuosTextField`
+               num formulário, e tem de ter a altura dele. */
+            'control-lg rounded-control',
+            /* Fundo sólido de campo, também no escuro: a variante `outline` do `ui/button` traz
+               `dark:bg-input/30`, e só a mesma variante (`dark:`) a derruba. */
+            'border-input bg-muted text-foreground hover:bg-accent/40 dark:bg-muted dark:hover:bg-accent/40 w-full justify-start text-left font-normal shadow-xs transition-colors',
+            !internalDate && 'text-muted-foreground',
           )}
           {disabled}
           onblur={() => !isOpen && onBlur?.()}
@@ -147,9 +151,13 @@
         </Button>
       {/snippet}
     </Popover.Trigger>
+    <!-- Centralizado embaixo do campo, como todo menu. O teto de largura e de altura (com a
+         rolagem) é do chamados: em tela baixa, os seletores de mês e ano empurravam o calendário
+         para fora da janela. -->
     <Popover.Content
-      class="w-auto max-w-[calc(100vw-2rem)] max-h-[var(--bits-popover-content-available-height)] overflow-y-auto p-0 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8"
-      align="start"
+      sideOffset={6}
+      class="rounded-surface bg-popover ring-foreground/8 max-h-(--bits-popover-content-available-height) w-auto max-w-[calc(100vw-2rem)] overflow-y-auto border-transparent p-0 shadow-xl ring-1"
+      align="center"
       collisionPadding={12}
       aria-label={ariaLabel ? `Selecionar ${ariaLabel.toLowerCase()}` : 'Selecionar data'}
     >

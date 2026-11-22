@@ -27,29 +27,38 @@
   const isDisabled = $derived(state?.isDisabled === true);
 </script>
 
-<div class={cn('flex min-h-10 items-start gap-2 py-2', ui?.className)}>
-  <Checkbox
-    id={inputId}
-    name={data.name}
-    checked={data.isChecked}
-    disabled={isDisabled}
-    aria-describedby={data.description ? descriptionId : undefined}
-    onCheckedChange={(checked) => actions?.onChange?.(checked === true)}
-    class="bg-muted mt-0.5"
-  />
-  <div class="min-w-0">
+<!-- A caixinha e o rótulo numa linha só, CENTRADOS um no outro; a descrição embaixo, alinhada
+     ao rótulo (e não à caixinha). A régua de altura (`control-md`) vale para o campo sozinho; com
+     descrição, ele cresce o que precisa. -->
+<div
+  class={cn(
+    'flex flex-col justify-center gap-0.5',
+    data.description ? 'py-2' : 'control-md',
+    ui?.className,
+  )}
+>
+  <div class="flex min-h-5 items-center gap-2">
+    <Checkbox
+      id={inputId}
+      name={data.name}
+      checked={data.isChecked}
+      disabled={isDisabled}
+      aria-describedby={data.description ? descriptionId : undefined}
+      onCheckedChange={(checked) => actions?.onChange?.(checked === true)}
+      class="bg-muted shrink-0"
+    />
     <label
       for={inputId}
       class={cn(
-        'text-foreground cursor-pointer text-sm break-words',
+        'text-foreground min-w-0 cursor-pointer text-sm leading-5 break-words',
         ui?.isLabelHidden && 'sr-only',
         isDisabled && 'text-muted-foreground cursor-not-allowed',
       )}
     >
       {data.label}
     </label>
-    {#if data.description}
-      <p id={descriptionId} class="text-muted-foreground text-xs">{data.description}</p>
-    {/if}
   </div>
+  {#if data.description}
+    <p id={descriptionId} class="text-muted-foreground pl-6 text-xs">{data.description}</p>
+  {/if}
 </div>

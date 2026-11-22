@@ -68,7 +68,7 @@ Aviso de falha de ação (AzuosErrorState inline), quando houver
 Corpo
 ```
 
-Largura: a da moldura da casca (`page-frame`, inteira até Full HD); a tela não define `max-w-*`. Espaço entre blocos: `gap-5`.
+Largura: `mx-auto w-full max-w-5xl px-4 sm:px-6`. Espaço entre blocos: `gap-5`.
 Uma ação principal por tela (azul). As outras são `secondary` ou `ghost`.
 
 ## As Leis Absolutas do Padrão Azuos 2.0 (Blindagem de Design)

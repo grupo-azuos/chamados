@@ -94,6 +94,7 @@
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import {
     Table,
     TableActions,
@@ -104,7 +105,6 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
   import { formatDateTime } from '$lib/utils/format-date';
 
@@ -157,15 +157,8 @@
         data-slot="part-ledger-cards-mobile"
       >
         {#each data.movements as movement (movement.id)}
-          <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
-          <div
-            use:fillFromPointer
-            style:--fill-color={fillColorOf(movementTypeTone(movement.type))}
-            class={cn(
-              'hover-fill relative flex flex-col gap-2 rounded-box bg-card p-3 shadow-card',
-              movement.ticketId && 'cursor-pointer',
-            )}
-          >
+          <!-- A situação está no selo: o hover do card é só o véu neutro (padrão Apple). -->
+          <CardSurface ui={{ className: cn('flex flex-col gap-2 p-3', movement.ticketId && 'cursor-pointer') }}>
             <div class="flex items-start justify-between gap-2">
               <div class="flex flex-col gap-1 min-w-0">
                 <span class="text-xs text-muted-foreground">{formatDateTime(movement.createdAt)}</span>
@@ -216,7 +209,7 @@
                 <span>Por: {movement.handledBy}</span>
               {/if}
             </div>
-          </div>
+          </CardSurface>
         {/each}
       </div>
 

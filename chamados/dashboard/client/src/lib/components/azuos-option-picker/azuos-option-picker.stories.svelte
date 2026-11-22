@@ -121,7 +121,7 @@
     data: {
       value: 'u-ana',
       options: [
-        { value: 'none', label: 'Sem responsável' },
+        { value: 'none', label: '(Sem responsável)' },
         { value: 'u-ana', label: 'Ana Lima', avatar: { name: 'Ana Lima', url: null }, separatorBefore: true },
         { value: 'u-bia', label: 'Bia Costa', avatar: { name: 'Bia Costa', url: null } },
       ],

@@ -134,8 +134,9 @@
        à largura do gatilho, sob um gatilho estreito cada nome saía cortado ("Vinícius…"). Abre
        centralizada embaixo do gatilho. -->
   <Popover.Content
+    sideOffset={6}
     align="center"
-    class="w-max min-w-[max(14rem,var(--bits-popover-anchor-width))] max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8"
+    class="rounded-surface bg-popover ring-foreground/8 w-max max-w-[min(26rem,calc(100vw-2rem))] min-w-[max(14rem,var(--bits-popover-anchor-width))] overflow-hidden border-transparent p-0 shadow-xl ring-1"
   >
     <!-- O filtro é o do próprio Command, por semelhança — "ana s" ainda acha "Ana Souza". -->
     <Command.Root class="rounded-surface bg-card">

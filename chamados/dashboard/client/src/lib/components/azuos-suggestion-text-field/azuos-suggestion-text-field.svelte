@@ -161,9 +161,10 @@
       onkeydown={handleKeyDown}
       class={cn(
         FIELD_CONTROL_CLASS,
-        'pr-10',
+        /* Espaço à direita para a seta que abre a lista não cair sobre o texto. */
+        'pr-9',
         'placeholder:text-ink-500 disabled:cursor-not-allowed disabled:opacity-60',
-        error ? 'border-border bg-destructive-soft' : 'border-input',
+        error ? 'bg-destructive-soft border-transparent' : 'border-transparent',
       )}
     />
     <button
@@ -172,7 +173,7 @@
       aria-label={`Ver as opções de ${data.label}`}
       disabled={fieldState?.isDisabled}
       onmousedown={toggleFromButton}
-      class="text-ink-500 hover:text-ink-700 absolute inset-y-0 right-0 flex w-10 items-center justify-center"
+      class="text-ink-500 hover:text-ink-700 absolute inset-y-0 right-0 flex w-9 items-center justify-center"
     >
       <ChevronDown class="size-4" aria-hidden="true" />
     </button>
@@ -180,7 +181,7 @@
       <div
         id={listId}
         role="listbox"
-        class="bg-card rounded-box absolute inset-x-0 top-full z-30 mt-1 max-h-56 overflow-y-auto p-1 shadow-xl"
+        class="rounded-box bg-popover ring-foreground/8 absolute inset-x-0 top-full z-30 mt-1 max-h-56 overflow-y-auto p-1 shadow-xl ring-1"
       >
         {#if visible.length === 0}
           <p class="text-ink-500 px-2 py-2 text-sm">{emptyMessageOf(data, fieldState)}</p>
@@ -198,7 +199,7 @@
                 pick(option);
               }}
               class={cn(
-                'text-ink-900 rounded-chip flex min-h-10 cursor-pointer items-center px-2 text-sm break-words',
+                'rounded-chip text-ink-900 cursor-pointer px-2 py-1.5 text-sm break-words',
                 index === activeIndex && 'bg-accent',
                 comparable(option) === selectedKey && 'font-semibold',
               )}

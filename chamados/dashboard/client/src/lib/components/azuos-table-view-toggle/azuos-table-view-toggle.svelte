@@ -38,10 +38,10 @@
   aria-label="Formato da lista"
   use:slidingIndicator={{
     selector: '[aria-pressed="true"]',
-    indicatorClass: 'rounded-box bg-primary',
+    indicatorClass: 'rounded-full bg-primary',
     attributes: ['aria-pressed'],
   }}
-  class="bg-muted rounded-control hidden items-center gap-0.5 border p-0.5 xl:inline-flex border-transparent"
+  class="bg-muted hidden w-fit items-center gap-0.5 rounded-full p-0.5 xl:inline-flex"
 >
   <ActionButton
     data={{ label: 'Ver em tabela' }}
@@ -50,8 +50,8 @@
       size: 'sm',
       icon: Table,
       isIconOnly: true,
-      /* Filho de uma moldura `rounded-control`: o raio de dentro é menor que o de fora. */
-      className: cn('rounded-box shadow-none', !tableView.forceCards && ACTIVE),
+      /* Pílula dentro da pílula: a moldura e o destaque têm a mesma forma. */
+      className: cn('rounded-full shadow-none', !tableView.forceCards && ACTIVE),
     }}
     state={{ isPressed: !tableView.forceCards }}
     actions={{ onClick: () => choose(false) }}
@@ -63,7 +63,7 @@
       size: 'sm',
       icon: LayoutGrid,
       isIconOnly: true,
-      className: cn('rounded-box shadow-none', tableView.forceCards && ACTIVE),
+      className: cn('rounded-full shadow-none', tableView.forceCards && ACTIVE),
     }}
     state={{ isPressed: tableView.forceCards }}
     actions={{ onClick: () => choose(true) }}

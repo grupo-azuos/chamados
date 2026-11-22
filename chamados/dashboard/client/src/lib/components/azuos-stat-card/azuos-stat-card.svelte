@@ -22,6 +22,8 @@
       size?: 'md' | 'lg';
       className?: string;
       icon?: LucideIcon;
+      /** Uma cor escolhida pela pessoa (`#rrggbb`): vira o tom mais próximo da paleta. */
+      color?: string | null;
       /** O hover pinta a mancha no sotaque do card, em vez do véu neutro. */
       isHoverColored?: boolean;
     };
@@ -41,19 +43,17 @@
   import AzuosCardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
   import { Skeleton } from '$lib/components/ui/skeleton';
-  import { cardToneClasses, cardToneStyle } from '$lib/utils/card-tone.util';
+  import { cardHueFromHex, cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
 
   // A prop mantém o nome público `state`, mas esse nome local faria `$state` virar
   // inscrição numa store em vez da rune do Svelte usada pelo tooltip.
   let { data, ui, state: cardState, actions }: AzuosStatCardProps = $props();
 
-  const tone = $derived(ui?.tone ?? 'neutral');
+  const tone = $derived(ui?.color ? cardHueFromHex(ui.color) : (ui?.tone ?? 'neutral'));
   const classes = $derived(cardToneClasses(tone));
   const Icon = $derived(ui?.icon);
   const isSelected = $derived(Boolean(cardState?.isSelected));
-  /* A cor escolhida pela pessoa (`#rrggbb`) pinta exata, pelo `style`; os sotaques vêm nas classes. */
-  const toneStyle = $derived(isSelected ? {} : cardToneStyle(tone));
   /* O nome lido pelo leitor de tela leva o número, e diz o que o próximo clique faz. */
   const label = $derived(
     actions?.onClick
@@ -106,7 +106,7 @@
   <AzuosCardSurface
     data={{ label }}
     ui={{
-      className: cn('py-4 pr-4 pl-5', ui?.className),
+      className: cn('p-5', ui?.className),
       isHoverColored: ui?.isHoverColored,
       hoverTone: tone,
     }}
@@ -117,13 +117,12 @@
       <div class="mb-3 flex items-center gap-2.5">
         <span
           class={cn(
-            'rounded-icon flex size-10 shrink-0 items-center justify-center shadow-xs',
+            'rounded-icon inline-flex size-10 shrink-0 items-center justify-center shadow-xs',
             'group-data-[selected=true]/card:bg-on-card-selected group-data-[selected=true]/card:text-card-selected',
             classes.dot,
           )}
-          style={toneStyle.dot}
         >
-          <Icon size={18} class="block shrink-0" aria-hidden="true" />
+          <Icon size={18} class="block size-4.5 shrink-0 stroke-[1.8]" aria-hidden="true" />
         </span>
         {@render labelRow('flex min-w-0 items-center gap-1')}
       </div>

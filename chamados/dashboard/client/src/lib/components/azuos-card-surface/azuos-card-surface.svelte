@@ -37,7 +37,7 @@
 </script>
 
 <script lang="ts">
-  import { cardToneClasses, cardToneStyle, cardToneVeilOf } from '$lib/utils/card-tone.util';
+  import { cardToneClasses, cardToneVeilOf } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state: cardState, actions, children }: AzuosCardSurfaceProps = $props();
@@ -47,10 +47,11 @@
   const isClickable = $derived(Boolean(actions?.onClick) && !isDisabled);
   const Mark = $derived(ui?.mark);
 
-  /* O véu: o sotaque a 16% (card com tom, sempre à vista) ou o véu neutro do tema, o mesmo das
-     linhas de lista (só no hover). */
-  const isTinted = $derived(Boolean(ui?.isHoverColored && ui.hoverTone));
-  const veilColor = $derived(isTinted ? cardToneVeilOf(ui?.hoverTone) : 'var(--hover-veil)');
+  /* O véu do hover: o sotaque a 16% (card com tom, `ui.isHoverColored`) ou o véu neutro do tema,
+     o mesmo das linhas de lista. */
+  const veilColor = $derived(
+    ui?.isHoverColored && ui.hoverTone ? cardToneVeilOf(ui.hoverTone) : 'var(--hover-veil)',
+  );
 </script>
 
 <div
@@ -59,24 +60,21 @@
   data-slot="azuos-card-surface"
   data-selected={isSelected ? 'true' : undefined}
   class={cn(
-    'group/card rounded-surface shadow-card relative isolate overflow-hidden transition-[box-shadow,transform,background-color] duration-150',
+    'group/card rounded-surface shadow-card relative isolate overflow-hidden',
     /* Padrão Apple: card SEM borda. O que separa o card do fundo cinza da página é o fio de 1px
        e a sombra difusa do `--elevation-card` (`shadow-card`). */
     isSelected ? 'bg-card-selected text-on-card-selected' : 'bg-card text-card-foreground',
-    isClickable && 'hover:shadow-card-hover cursor-pointer motion-safe:hover:-translate-y-0.5',
+    isClickable &&
+      'hover:shadow-card-hover cursor-pointer transition-[transform,box-shadow] duration-200 motion-safe:hover:-translate-y-0.5',
     isSelected && isClickable && 'hover:bg-card-selected-hover',
     ui?.className,
   )}
 >
-  <!-- O véu cobre o card inteiro: no hover, ou sempre no card tingido — sem crescer de onde o
-       mouse entrou. -->
+  <!-- O véu cobre o card inteiro no hover — sem crescer de onde o mouse entrou. -->
   <span
     aria-hidden="true"
     data-slot="card-wash"
-    class={cn(
-      'pointer-events-none absolute inset-0 -z-10 transition-colors duration-150',
-      isTinted ? 'bg-(--card-veil)' : 'group-hover/card:bg-(--card-veil)',
-    )}
+    class="pointer-events-none absolute inset-0 -z-10 group-hover/card:bg-(--card-veil)"
     style:--card-veil={veilColor}
   ></span>
 
@@ -85,11 +83,10 @@
       aria-hidden="true"
       data-slot="card-mark"
       class={cn(
-        'pointer-events-none absolute -z-10 transition-transform duration-200 group-hover/card:scale-105 group-data-[selected=true]/card:text-on-card-selected',
+        'group-data-[selected=true]/card:text-on-card-selected pointer-events-none absolute -z-10',
         ui?.markSize === 'lg' ? '-right-6 -bottom-6 size-40' : '-right-5 -bottom-5 size-31',
         cardToneClasses(ui?.markTone).text,
       )}
-      style={cardToneStyle(ui?.markTone).text}
     >
       <Mark class="block size-full stroke-1" />
     </span>

@@ -2,6 +2,8 @@
   import type { LucideIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
 
+  import { type AzuosCardTone, cardToneClasses } from '$lib/utils/card-tone.util';
+
   export type AzuosHeroCardTone =
     | 'brand'
     | 'accent'
@@ -36,66 +38,31 @@
     children?: Snippet;
   };
 
-  type ToneStyle = {
-    container: string;
-    title: string;
-    description: string;
-    badge: string;
-    icon: string;
+  const TONE_HUE: Record<AzuosHeroCardTone, AzuosCardTone> = {
+    brand: 'brand',
+    accent: 'yellow',
+    success: 'success',
+    warning: 'warning',
+    danger: 'danger',
+    info: 'info',
+    neutral: 'neutral',
   };
 
-  /* O card fica na superfície da marca; o tom é sotaque: o ícone grande do canto e a pastilha. */
-  export const HERO_TONE_STYLES: Record<AzuosHeroCardTone, ToneStyle> = {
-    brand: {
-      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
+  /*
+   * Padrão Apple: o card fica na superfície SEM borda (fio de 1px e sombra difusa do
+   * `shadow-card`); o tom é sotaque — o ícone grande do canto e a pastilha cheia.
+   */
+  export function heroToneStyles(tone: AzuosHeroCardTone) {
+    const classes = cardToneClasses(TONE_HUE[tone] ?? 'brand');
+
+    return {
+      container: 'bg-card text-card-foreground hover:shadow-xl',
       title: '',
       description: 'text-muted-foreground',
-      badge: 'bg-hue-blue text-on-hue',
-      icon: 'text-hue-blue',
-    },
-    accent: {
-      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
-      title: '',
-      description: 'text-muted-foreground',
-      badge: 'bg-hue-yellow text-on-yellow',
-      icon: 'text-hue-yellow-ink',
-    },
-    success: {
-      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
-      title: '',
-      description: 'text-muted-foreground',
-      badge: 'bg-hue-green text-on-hue',
-      icon: 'text-hue-green',
-    },
-    warning: {
-      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
-      title: '',
-      description: 'text-muted-foreground',
-      badge: 'bg-hue-yellow text-on-yellow',
-      icon: 'text-hue-yellow-ink',
-    },
-    danger: {
-      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
-      title: '',
-      description: 'text-muted-foreground',
-      badge: 'bg-hue-red text-on-hue',
-      icon: 'text-hue-red',
-    },
-    info: {
-      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
-      title: '',
-      description: 'text-muted-foreground',
-      badge: 'bg-hue-steel text-on-hue',
-      icon: 'text-hue-steel',
-    },
-    neutral: {
-      container: 'bg-card text-card-foreground border border-border hover:shadow-xl',
-      title: '',
-      description: 'text-muted-foreground',
-      badge: 'bg-hue-slate text-on-hue',
-      icon: 'text-hue-slate',
-    },
-  };
+      badge: classes.dot,
+      icon: classes.text,
+    };
+  }
 </script>
 
 <script lang="ts">
@@ -103,11 +70,11 @@
 
   let { data, ui, actions, children }: AzuosHeroCardProps = $props();
 
-  const styles = $derived(HERO_TONE_STYLES[ui?.tone ?? 'brand'] ?? HERO_TONE_STYLES.brand);
+  const styles = $derived(heroToneStyles(ui?.tone ?? 'brand'));
   const Icon = $derived(data.icon);
   const containerClass = $derived(
     cn(
-      'rounded-surface shadow-card relative flex min-h-[148px] w-full flex-col justify-between overflow-hidden p-5 transition-transform hover:-translate-y-0.5',
+      'rounded-surface shadow-card relative flex min-h-[148px] w-full flex-col justify-between overflow-hidden p-5 transition-all hover:-translate-y-0.5 hover:shadow-xl',
       styles.container,
       ui?.className,
     ),

@@ -2,7 +2,11 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import AttachmentPicker, { limitsSummary, pastedFiles, reviewChoice } from './azuos-attachment-picker.svelte';
+import AttachmentPicker, {
+  limitsSummary,
+  pastedFiles,
+  reviewChoice,
+} from './azuos-attachment-picker.svelte';
 
 const MEGABYTE = 1024 * 1024;
 
@@ -131,7 +135,7 @@ describe('AzuosAttachmentPicker', () => {
       props: { data: { files: [chosen] }, actions: { onChange, onError: vi.fn() } },
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Tirar/ }));
 
     expect(onChange).toHaveBeenCalledWith([]);
   });

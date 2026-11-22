@@ -86,7 +86,7 @@
     </PopoverTrigger>
 
     <PopoverContent
-      class="w-auto min-w-(--bits-popover-anchor-width) max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8"
+      class="w-auto min-w-(--bits-popover-anchor-width) max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-surface border-transparent bg-popover shadow-xl ring-1 ring-foreground/8"
       align="start"
     >
       <div class="border-border relative shrink-0 border-b p-2">

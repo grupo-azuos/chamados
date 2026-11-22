@@ -15,14 +15,12 @@
 
 <script lang="ts">
   import AzuosCardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
-  import { cardToneClasses, cardToneStyle } from '$lib/utils/card-tone.util';
+  import { cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state: cardState, actions }: AzuosMiniStatCardProps = $props();
 
   const tone = $derived(cardToneClasses(ui?.tone));
-  /* A cor escolhida pela pessoa (`#rrggbb`) pinta exata, pelo `style`; escolhido, vale o branco. */
-  const toneStyle = $derived(cardState?.isSelected ? {} : cardToneStyle(ui?.tone));
 </script>
 
 <AzuosCardSurface
@@ -36,7 +34,7 @@
   {actions}
 >
   <div
-    class="text-muted-foreground group-data-[selected=true]/card:text-on-card-selected flex min-w-0 items-center gap-2 text-sm leading-tight font-medium"
+    class="text-muted-foreground flex min-w-0 items-center gap-2 text-sm leading-tight font-medium"
   >
     <span
       aria-hidden="true"
@@ -44,7 +42,6 @@
         'group-data-[selected=true]/card:bg-on-card-selected size-2.5 shrink-0 rounded-full',
         tone.swatch,
       )}
-      style={toneStyle.swatch}
     ></span>
     <span class="truncate" title={data.label}>{data.label}</span>
   </div>

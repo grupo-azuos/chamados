@@ -603,7 +603,8 @@ describe('AzuosWeekScheduleGrid — toolbar', () => {
   // feliz
   it.each(['day', 'week', 'month'] as const)('switches to the %s view', async (mode) => {
     const labels = { day: 'Dia', week: 'Semana', month: 'Mês' };
-    const actions = renderView();
+    // Parte de outro período: o segmentado não avisa quando se clica no que já está escolhido.
+    const actions = renderView({ data: { viewMode: mode === 'day' ? 'month' : 'day' } });
     await userEvent.click(screen.getByRole('button', { name: labels[mode] }));
     expect(actions.onViewModeChange).toHaveBeenCalledWith(mode);
   });

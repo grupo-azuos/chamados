@@ -121,7 +121,7 @@
     <!-- A alça: só no celular, e por onde se arrasta para fechar — a "língua" visual do
          Material para um bottom sheet. -->
     <div
-      class="-mt-1 mb-1 flex shrink-0 cursor-grab active:cursor-grabbing touch-none justify-center py-3 sm:hidden"
+      class="-mt-1 mb-1 flex shrink-0 cursor-grab active:cursor-grabbing touch-none justify-center py-2 sm:hidden"
       data-testid="drag-handle"
       aria-hidden="true"
       onpointerdown={onHandlePointerDown}
@@ -129,7 +129,7 @@
       onpointerup={onHandlePointerUp}
       onpointercancel={() => { dragging = false; dragY = 0; }}
     >
-      <span class="h-1.5 w-10 rounded-full bg-muted"></span>
+      <span class="h-1.5 w-10 rounded-full bg-muted-foreground/30"></span>
     </div>
 
     <!-- Rola como um bloco só, cabeçalho e rodapé inclusos — igual ao bottom sheet nativo.
@@ -156,11 +156,11 @@
       tabindex={showCloseButton ? 0 : -1}
       aria-hidden={showCloseButton ? undefined : true}
       class={showCloseButton
-        ? 'absolute top-4 right-4 flex size-7 items-center justify-center rounded-full bg-muted opacity-80 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=\'size-\'])]:size-4 cursor-pointer'
+        ? 'absolute top-4 right-4 cursor-pointer rounded-chip opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0'
         : 'sr-only'}
     >
       {#if showCloseButton}
-        <XIcon />
+        <XIcon class="size-4" aria-hidden="true" />
       {/if}
       <span class="sr-only">Fechar</span>
     </DialogPrimitive.Close>

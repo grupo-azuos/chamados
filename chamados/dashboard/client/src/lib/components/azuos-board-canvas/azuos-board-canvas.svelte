@@ -414,7 +414,7 @@
               aria-label={`Redimensionar ${widget.title} pelo puxador ${handle}`}
               data-resize-handle={handle}
               class={cn(
-                'rounded-chip border-ink-900 bg-card absolute z-10 size-3.5 touch-none border-2',
+                'rounded-chip ring-ink-900 bg-card absolute z-10 size-3.5 touch-none ring-2',
                 handle === 'n' && '-top-[11px] left-[calc(50%-7px)] cursor-ns-resize',
                 handle === 's' && '-bottom-[11px] left-[calc(50%-7px)] cursor-ns-resize',
                 handle === 'e' && 'top-[calc(50%-7px)] -right-[11px] cursor-ew-resize',

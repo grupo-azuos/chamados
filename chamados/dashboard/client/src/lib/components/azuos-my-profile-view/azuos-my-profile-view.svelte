@@ -94,7 +94,7 @@
 
 {#snippet fact(label: string, value: string | null | undefined, Icon: Component)}
   <div class="bg-muted rounded-box flex min-w-0 items-center gap-3 p-3">
-    <span class="bg-muted text-primary rounded-chip flex size-9 shrink-0 items-center justify-center">
+    <span class="rounded-chip bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center">
       <Icon class="size-4" aria-hidden="true" />
     </span>
     <div class="min-w-0">
@@ -112,7 +112,7 @@
     class="bg-card rounded-surface flex flex-col gap-4 p-4 sm:p-6 shadow-card"
   >
     <h2 class="text-foreground flex items-center gap-2 text-base font-semibold">
-      <span class="bg-muted text-primary rounded-chip flex size-8 items-center justify-center">
+      <span class="rounded-chip bg-primary/10 text-primary flex size-8 items-center justify-center">
         <Icon class="size-4" aria-hidden="true" />
       </span>
       {title}
@@ -122,7 +122,7 @@
 {/snippet}
 
 {#snippet roleBadge(label: string)}
-  <span class="bg-muted text-primary inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
+  <span class="bg-primary/10 text-primary inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
     {label}
   </span>
 {/snippet}
@@ -149,6 +149,11 @@
       <div class="flex flex-col gap-4 p-4 sm:p-6">
         <div class="bg-muted -mt-16 size-24 animate-pulse rounded-full"></div>
         <div class="bg-muted rounded-box h-6 w-56 animate-pulse"></div>
+        <div class="grid gap-3 sm:grid-cols-3">
+          {#each [0, 1, 2] as item (item)}
+            <div class="rounded-box bg-muted h-16 animate-pulse"></div>
+          {/each}
+        </div>
       </div>
     </div>
     <div class="bg-muted rounded-surface h-40 animate-pulse"></div>
@@ -183,7 +188,7 @@
           {#if data.accountUrl}
             <a
               href={data.accountUrl}
-              class="border-border text-foreground hover:bg-muted rounded-control inline-flex shrink-0 items-center gap-2 self-start border px-3 py-2 text-sm font-medium transition-colors sm:mt-3"
+              class="rounded-button bg-muted text-foreground hover:bg-muted inline-flex shrink-0 items-center gap-2 self-start px-3 py-2 text-sm font-medium transition-colors sm:mt-3"
             >
               <ExternalLink class="size-4" aria-hidden="true" />
               Editar no Admin Console
@@ -272,11 +277,13 @@
 
         <div id="profile-preferences" class="scroll-mt-6">
           {#snippet preferencesBody()}
-            <dl class="flex flex-col gap-4">
-              <div class="flex items-center justify-between gap-4">
+            <!-- `*:sm:col-span-2`: a preferência a mais do sistema (`preferencesExtra`) ocupa a
+                 linha inteira, como o tema; sem isso ela cairia só na primeira coluna. -->
+            <dl class="grid gap-4 sm:grid-cols-2 *:sm:col-span-2">
+              <div class="flex items-center justify-between gap-4 sm:col-span-2">
                 <div class="flex min-w-0 flex-col gap-1">
                   <dt class="text-foreground text-sm font-medium">Tema escuro</dt>
-                  <dd class="text-ink-500 text-xs">Vale para este navegador.</dd>
+                  <dd class="text-ink-500 text-xs">Vale para todos os sistemas do grupo neste navegador.</dd>
                 </div>
                 <button
                   type="button"

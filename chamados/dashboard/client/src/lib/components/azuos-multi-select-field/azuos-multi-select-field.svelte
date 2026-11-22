@@ -1,4 +1,6 @@
 <script lang="ts" module>
+  import { searchKey } from '$lib/utils/company-search.util';
+
   /**
    * Um select em que dá para marcar MAIS DE UMA opção — o filtro "Infraestrutura e Sistemas".
    *
@@ -8,6 +10,10 @@
    * O rótulo do botão resume a escolha: nada marcado mostra o `placeholder`, um ou dois mostram os
    * nomes e três ou mais viram contagem ("3 áreas"). O leitor de tela recebe a lista inteira no
    * `aria-label`, seja qual for o resumo.
+   *
+   * O painel abre com a BUSCA no topo, já com o cursor nela: em lista de pessoas ou de catálogo,
+   * digitar "ana" é mais rápido que rolar. A busca ignora acento e maiúscula ("joao" acha "João"),
+   * filtra só a lista — o que já foi marcado continua marcado — e volta vazia ao fechar.
    *
    * `onChange` devolve a lista NA ORDEM DAS OPÇÕES, e não na ordem em que foram marcadas: a mesma
    * escolha vira sempre a mesma lista, o que faz a URL e o cache da consulta serem os mesmos.
@@ -50,6 +56,17 @@
     return `${labels.length} ${input.noun}`;
   }
 
+  /** As opções que batem com a busca, sem acento nem maiúscula. Busca vazia mostra todas. */
+  export function filterOptions(
+    options: AzuosMultiSelectFieldOption[],
+    query: string,
+  ): AzuosMultiSelectFieldOption[] {
+    const needle = searchKey(query);
+    if (!needle) return options;
+
+    return options.filter((option) => searchKey(option.label).includes(needle));
+  }
+
   export function targetIndex(step: 1 | -1 | 'first' | 'last', current: number, count: number): number {
     if (step === 'first') return 0;
     if (step === 'last') return count - 1;
@@ -68,6 +85,7 @@
 
 <script lang="ts">
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import Search from '@lucide/svelte/icons/search';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import CheckboxField from '$lib/components/azuos-checkbox-field/azuos-checkbox-field.svelte';
@@ -79,6 +97,24 @@
 
   const fieldId = `multi-${Math.random().toString(36).slice(2, 9)}`;
   let isOpen = $state(false);
+  let query = $state('');
+  const visible = $derived(filterOptions(data.options, query));
+
+  /* Fechar limpa a busca: reabrir com o termo antigo ainda filtrando esconderia opções. */
+  function changeOpen(open: boolean) {
+    isOpen = open;
+    if (!open) query = '';
+  }
+
+  /** Seta para baixo na busca leva o foco para a primeira caixa da lista. */
+  function focusListOnArrowDown(event: KeyboardEvent & { currentTarget: HTMLInputElement }) {
+    if (event.key !== 'ArrowDown') return;
+    const panel = event.currentTarget.closest('[data-slot="popover-content"], [role="dialog"]');
+    const first = panel?.querySelector<HTMLElement>('ul [role="checkbox"], ul button');
+    if (!first) return;
+    event.preventDefault();
+    first.focus();
+  }
 
   const fullLabel = $derived.by(() => {
     const labels = selectedLabels(data.values, data.options);
@@ -110,7 +146,7 @@
   }
 </script>
 
-<Popover.Root bind:open={isOpen}>
+<Popover.Root bind:open={() => isOpen, changeOpen}>
   <Popover.Trigger
     type="button"
     disabled={fieldState?.isDisabled}
@@ -125,12 +161,12 @@
     <span class="flex min-w-0 items-center gap-2">
       <!-- Os rostos de quem está marcado, sobrepostos — no máximo três. -->
       {#if selectedPeople.length > 0}
-        <span aria-hidden="true" class="flex shrink-0 -space-x-1.5">
+        <span aria-hidden="true" class="flex shrink-0 -space-x-1">
           {#each selectedPeople as person (person.value)}
             <PersonAvatar
               name={person.personName ?? person.label}
               avatarUrl={person.avatarUrl}
-              ui={{ size: 'sm', className: 'ring-background ring-2' }}
+              ui={{ size: 'sm', className: 'ring-muted ring-2' }}
             />
           {/each}
         </span>
@@ -139,11 +175,45 @@
     </span>
     <ChevronDown class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
   </Popover.Trigger>
-  <Popover.Content align="start" class="w-72 min-w-64 gap-0 overflow-hidden p-0 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8">
+  <!-- O padrão dos menus: centralizado embaixo do gatilho, com a largura do conteúdo — nunca
+       mais estreito que o gatilho nem que 14rem (cabe a busca), e no máximo 26rem. `gap-0` desfaz
+       o espaçamento do `ui/popover`, que separaria a busca, a lista e o rodapé. -->
+  <Popover.Content
+    sideOffset={6}
+    align="center"
+    class="rounded-surface bg-popover ring-foreground/8 w-max max-w-[min(26rem,calc(100vw-2rem))] min-w-[max(14rem,var(--bits-popover-anchor-width))] gap-0 overflow-hidden border-transparent p-0 shadow-xl ring-1"
+  >
+    <!-- A busca no topo do painel: abre com o cursor nela, e a seta para baixo leva à lista. -->
+    <div class="border-border relative border-b p-2">
+      <Search
+        class="text-muted-foreground pointer-events-none absolute top-1/2 left-4.5 size-4 -translate-y-1/2"
+        aria-hidden="true"
+      />
+      <!-- svelte-ignore a11y_autofocus -->
+      <input
+        type="search"
+        autofocus
+        bind:value={query}
+        onkeydown={focusListOnArrowDown}
+        placeholder="Pesquisar…"
+        aria-label={`Pesquisar em ${ariaLabel}`}
+        class="control-md rounded-control bg-muted text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/50 w-full pr-3 pl-8 text-sm outline-none focus-visible:ring-[3px]"
+      />
+    </div>
+    {#if visible.length === 0}
+      <p class="text-muted-foreground px-4 py-6 text-center text-sm">
+        Nada encontrado para «{query.trim()}».
+      </p>
+    {/if}
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-    <ul role="group" aria-label={ariaLabel} onkeydown={moveFocusWithArrows} class="max-h-72 overflow-y-auto p-2">
-      {#each data.options as option (option.value)}
-        <li class="hover:bg-accent rounded-box flex items-center gap-2 px-2">
+    <ul
+      role="group"
+      aria-label={ariaLabel}
+      onkeydown={moveFocusWithArrows}
+      class={cn('max-h-72 overflow-y-auto p-2', visible.length === 0 && 'hidden')}
+    >
+      {#each visible as option (option.value)}
+        <li class="rounded-box hover:bg-accent flex items-center gap-2 px-2">
           {#if option.personName}
             <span aria-hidden="true" class="flex shrink-0">
               <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
@@ -160,7 +230,7 @@
     <div class="border-border flex justify-end border-t px-2 py-1.5">
       <ActionButton
         data={{ label: 'Limpar' }}
-        ui={{ variant: 'ghost', size: 'lg' }}
+        ui={{ variant: 'ghost', size: 'sm' }}
         state={{ isDisabled: data.values.length === 0 }}
         actions={{ onClick: () => actions.onChange([]) }}
       />

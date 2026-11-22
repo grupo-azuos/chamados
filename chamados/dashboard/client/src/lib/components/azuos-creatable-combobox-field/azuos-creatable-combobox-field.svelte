@@ -161,7 +161,14 @@
       <ChevronDown aria-hidden="true" class="size-4 shrink-0 opacity-50" />
     {/if}
   </Popover.Trigger>
-  <Popover.Content align="start" matchAnchorWidth class="min-w-64 gap-0 overflow-hidden p-0 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8">
+  <!-- O padrão dos menus: centralizado embaixo do gatilho, com a largura do conteúdo — nunca
+       mais estreito que o gatilho nem que 14rem (cabe a busca), e no máximo 26rem. `gap-0` desfaz
+       o espaçamento do `ui/popover`, que separaria a busca da lista. -->
+  <Popover.Content
+    sideOffset={6}
+    align="center"
+    class="rounded-surface bg-popover ring-foreground/8 w-max max-w-[min(26rem,calc(100vw-2rem))] min-w-[max(14rem,var(--bits-popover-anchor-width))] gap-0 overflow-hidden border-transparent p-0 shadow-xl ring-1"
+  >
     <div class="flex items-center gap-2 border-b px-3">
       <Search aria-hidden="true" class="text-muted-foreground size-3.5 shrink-0" />
       <!-- svelte-ignore a11y_autofocus -->
@@ -196,9 +203,9 @@
             onmousemove={() => (activeIndex = index)}
             onclick={() => choose(item)}
             class={cn(
-              'rounded-chip flex min-h-10 cursor-default items-center gap-2 px-2 text-sm select-none',
+              'rounded-chip flex cursor-default items-center gap-2 px-2 py-1.5 text-sm select-none',
               index === activeIndex && 'bg-accent text-accent-foreground',
-              item.kind === 'create' && 'text-brand-blue-800 mt-1 border-t font-medium',
+              item.kind === 'create' && 'text-brand-blue-800 mt-1 border-t pt-2 font-medium',
               item.kind === 'clear' && 'text-muted-foreground italic',
             )}
           >

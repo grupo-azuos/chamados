@@ -148,7 +148,7 @@
           class={cn(
             'control-lg rounded-control bg-muted hover:bg-accent flex w-full cursor-pointer items-center gap-2.5 border text-left text-sm transition-colors outline-none',
             'focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-60',
-            error ? 'border-border bg-destructive-soft' : 'border-input',
+            error ? 'bg-destructive-soft border-transparent' : 'border-transparent',
             label ? 'text-foreground' : 'text-muted-foreground',
           )}
         >
@@ -158,8 +158,9 @@
       {/snippet}
     </Popover.Trigger>
     <Popover.Content
-      align="start"
-      class="rounded-box bg-popover w-auto max-w-[calc(100vw-2rem)] overflow-x-auto p-0 shadow-xl border-0 ring-1 ring-foreground/8"
+      sideOffset={6}
+      align="center"
+      class="rounded-surface bg-popover ring-foreground/8 w-auto max-w-[calc(100vw-2rem)] overflow-x-auto border-transparent p-0 shadow-xl ring-1"
     >
       <div class="flex flex-col gap-3 p-3">
         <div class="grid grid-cols-2 gap-3">

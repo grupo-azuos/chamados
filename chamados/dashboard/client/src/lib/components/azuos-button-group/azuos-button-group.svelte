@@ -34,6 +34,10 @@
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state: groupState, actions }: AzuosButtonGroupProps = $props();
+
+  /* Deitado, é a pílula do padrão Apple. Em pé, a pílula vira um losango esticado: o trilho
+     ganha o canto de campo e as opções ocupam a largura toda, alinhadas à esquerda. */
+  const isVertical = $derived(ui.orientation === 'vertical');
 </script>
 
 <div
@@ -41,12 +45,12 @@
   aria-label={ui.ariaLabel}
   use:slidingIndicator={{
     selector: '[aria-pressed="true"]',
-    indicatorClass: 'rounded-control bg-primary shadow-xs',
+    indicatorClass: cn(isVertical ? 'rounded-control' : 'rounded-full', 'bg-primary shadow-xs'),
     attributes: ['aria-pressed'],
   }}
   class={cn(
-    'rounded-control border-border bg-muted inline-flex w-fit gap-1 border p-1',
-    ui.orientation === 'vertical' && 'flex-col',
+    'bg-muted inline-flex w-fit gap-1 p-1',
+    isVertical ? 'rounded-box min-w-40 flex-col' : 'rounded-full',
     ui.className,
   )}
 >
@@ -58,7 +62,8 @@
       aria-pressed={isSelected}
       disabled={groupState?.isDisabled}
       class={cn(
-        'control-sm rounded-control px-3 text-sm font-medium whitespace-nowrap transition-colors duration-200',
+        'control-sm px-3 text-sm font-medium whitespace-nowrap transition-colors duration-200',
+        isVertical ? 'rounded-control w-full text-left' : 'rounded-full',
         'focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none',
         'disabled:cursor-not-allowed disabled:opacity-60',
         isSelected ? 'text-primary-foreground' : 'text-foreground hover:bg-hover-veil hover:text-foreground',

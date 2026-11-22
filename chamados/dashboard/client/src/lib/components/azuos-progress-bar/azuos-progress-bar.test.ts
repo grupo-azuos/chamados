@@ -33,10 +33,10 @@ describe('AzuosProgressBar', () => {
     const { container, rerender } = render(ProgressBar, {
       props: { data: { percentage: 100, done: 13, total: 13 } },
     });
-    expect(container.innerHTML).toContain('chart-4');
+    expect(container.innerHTML).toContain('bg-chart-2');
 
     await rerender({ data: { percentage: 10, done: 1, total: 13 } });
-    expect(container.innerHTML).toContain('chart-1');
+    expect(container.innerHTML).toContain('bg-chart-4');
   });
 
   // triste

@@ -74,7 +74,7 @@
           aria-describedby={fieldState?.error ? errorId : undefined}
           disabled={fieldState?.isDisabled}
           onblur={() => !isOpen && actions.onBlur?.()}
-          class="h-10 w-full min-w-0 justify-start gap-2 rounded-control border-border bg-card px-3.5 font-normal shadow-xs hover:bg-muted"
+          class="control-lg w-full min-w-0 justify-start gap-2 rounded-control border-transparent bg-muted px-3.5 font-normal shadow-none hover:bg-muted aria-invalid:bg-destructive-soft"
         >
           <Clock class="size-4 text-muted-foreground" aria-hidden="true" />
           <span class={cn('tabular-nums', !hasValue && 'text-muted-foreground')}>
@@ -88,7 +88,7 @@
       align="start"
       collisionPadding={12}
       aria-label={`Selecionar horário de ${data.label.toLowerCase()}`}
-      class="w-64 max-w-[calc(100vw-2rem)] gap-4 rounded-box bg-popover p-4 shadow-xl border-0 ring-1 ring-foreground/8"
+      class="w-64 max-w-[calc(100vw-2rem)] gap-4 rounded-surface border-transparent bg-popover p-4 shadow-xl ring-1 ring-foreground/8"
     >
       <div class="flex items-center justify-between gap-3">
         <div>

@@ -43,11 +43,11 @@
 <div class="flex w-full flex-col gap-5">
   <PageHeader data={{ title: data.title, description: data.summary }} />
 
-  <section class="border-ink-300 bg-card rounded-surface border border-dashed p-6">
+  <section class="rounded-surface border-border bg-card border-2 border-dashed p-6">
     <div class="flex items-start gap-3">
       <Icon class="text-ink-500 mt-0.5 size-5 shrink-0" aria-hidden="true" />
       <div class="min-w-0">
-        <h2 class="text-ink-900 text-[1rem] font-semibold">Esta área ainda não foi construída</h2>
+        <h2 class="text-ink-900 text-base font-semibold">Esta área ainda não foi construída</h2>
         <p class="text-ink-700 mt-1 text-sm">
           O que está previsto para ela, vindo do sistema antigo:
         </p>

@@ -13,7 +13,7 @@
 <TableFooter
   bind:ref
   class={cn(
-    'border-border bg-muted text-ink-500 px-6 py-3 text-xs font-normal',
+    'border-border text-muted-foreground px-6 py-3 text-xs font-normal',
     className,
   )}
   {...restProps}

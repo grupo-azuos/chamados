@@ -29,7 +29,7 @@ O que costuma quebrar e como resolver:
 | `Barril é proibido` | import de pasta/`index` | importar o arquivo |
 | `Controller fala com o service` | controller importando repository | passar pelo service |
 | Teste de migration falhando (`open-database.util.test`) | migration não gerada ou quebrada | `database` |
-| `Cannot find module '@chamados/dashboard/shared/...'` no server | shared não compilado | `npm run build -w @chamados/dashboard/shared` |
+| `Cannot find module '@template/shared/...'` no server | shared não compilado | `npm run build -w @template/shared` |
 
 **Nunca "resolva" desligando a regra**, com `eslint-disable`, `@ts-ignore`, `any` ou apagando
 teste. Se o erro não é do código da feature (ou só some mexendo em configuração protegida),

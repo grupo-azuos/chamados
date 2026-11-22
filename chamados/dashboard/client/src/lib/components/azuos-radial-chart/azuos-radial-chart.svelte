@@ -108,8 +108,10 @@
       <div
         class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-[20%] text-center"
       >
-        <span class="text-foreground text-2xl leading-tight font-bold tabular-nums">
-          {data.display ?? data.value}
+        <!-- Menor no celular: três medidores lado a lado numa tela de 360px não comportam o
+             número grande sem ele encostar no arco. -->
+        <span class="text-foreground text-lg leading-tight font-bold tabular-nums sm:text-2xl">
+          {data.display ?? data.value.toLocaleString('pt-BR')}
         </span>
         <span class="text-muted-foreground text-xs leading-tight tracking-wide uppercase">
           {data.label}

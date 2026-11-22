@@ -61,6 +61,7 @@
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import { formatDate } from '$lib/utils/format-date';
 
   let { data, state: boardState, actions }: AzuosPreventiveBoardProps = $props();
@@ -71,7 +72,7 @@
   const upToDate = $derived(data.rows.length - pending.length);
 </script>
 
-<section class="bg-card rounded-surface p-4 shadow-card">
+<CardSurface ui={{ className: 'p-4' }}>
   <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
     <div>
       <h2 class="text-ink-900 text-sm font-semibold">Manutenção preventiva</h2>
@@ -88,7 +89,7 @@
   <!-- As agendadas ficam fora da cadeia de estados: com tudo em dia, ainda pode haver visita
        marcada, e ela não pode sumir atrás do "todas em dia". -->
   {#if !boardState?.isLoading && schedules.length > 0}
-    <div class="bg-muted rounded-box mb-4 border p-3" data-slot="scheduled-maintenances">
+    <div class="bg-muted rounded-box mb-4 p-3" data-slot="scheduled-maintenances">
       <h3 class="text-ink-900 mb-2 text-xs font-semibold">Agendadas ({schedules.length})</h3>
       <ul class="flex flex-col gap-2">
         {#each schedules as schedule (schedule.computerId)}
@@ -173,4 +174,4 @@
       {/each}
     </ul>
   {/if}
-</section>
+</CardSurface>

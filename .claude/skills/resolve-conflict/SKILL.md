@@ -116,7 +116,7 @@ mudar uma regra que ela criou), sugira **conversar com ela** antes, e mostre o n
      chamados/dashboard/server/drizzle`).
   2. Resolva os arquivos de **schema** (`server/src/lib/db/schema/`) mantendo as duas mudanças.
   3. Apague do disco as migrations que eram **só desta branch** (as que não estão na develop).
-  4. `npm run build -w @chamados/dashboard/shared && npm run db:generate` — gera uma migration nova com a
+  4. `npm run build -w @template/shared && npm run db:generate` — gera uma migration nova com a
      sua mudança, em cima das da develop.
   5. Avise a pessoa que o banco local dela precisa ser recriado (`db:reset`, **com
      confirmação**) se a migration antiga já tinha sido aplicada.

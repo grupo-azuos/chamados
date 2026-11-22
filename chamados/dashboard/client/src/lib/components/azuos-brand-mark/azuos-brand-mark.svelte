@@ -9,7 +9,7 @@
    * - `tile`: o ícone de app oficial (símbolo sobre o quadrado azul). É o que vai nas telas de
    *   fundo claro — entrar, recuperar senha —, onde as duas versões brancas sumiriam.
    *
-   * Os arquivos vêm do pacote de marca (`brand/logo`); nenhum é redesenhado à mão.
+   * Os arquivos vêm da CDN da marca, publicados pelo app brand; nenhum é redesenhado à mão.
    */
   export type AzuosBrandMarkProps = {
     ui?: {
@@ -28,14 +28,16 @@
 </script>
 
 <script lang="ts">
+  import { brandAssetUrl } from '$lib/utils/brand-asset.util';
   import { cn } from '$lib/utils/cn';
-  import appIcon from './assets/azuos-app-icon.png';
-  import icon from './assets/azuos-icon.svg';
-  import logoWhite from './assets/azuos-logo-oficial-white.png';
 
   let { ui }: AzuosBrandMarkProps = $props();
 
-  const SOURCES = { full: logoWhite, icon, tile: appIcon } as const;
+  const SOURCES = {
+    full: brandAssetUrl('logo/png/azuos-logo-oficial-white.png'),
+    icon: brandAssetUrl('logo/svg/icon.svg'),
+    tile: brandAssetUrl('logo/web/icon-512.png'),
+  } as const;
 
   const variant = $derived(ui?.variant ?? 'full');
   const width = $derived(BRAND_WIDTHS[variant][ui?.size ?? 'md']);

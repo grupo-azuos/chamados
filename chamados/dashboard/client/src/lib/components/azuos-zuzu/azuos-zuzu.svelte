@@ -1,19 +1,12 @@
 <script lang="ts" module>
   import gsap from 'gsap';
-  import zuzuAlerta from './assets/zuzu-alerta.png';
-  import zuzuApontando from './assets/zuzu-apontando.png';
-  import zuzuDebrucado from './assets/zuzu-debrucado.png';
-  import zuzuDormindo from './assets/zuzu-dormindo.png';
-  import zuzuFestejando from './assets/zuzu-festejando.png';
-  import zuzuIdeia from './assets/zuzu-ideia.png';
-  import zuzuJoinha from './assets/zuzu-joinha.png';
-  import zuzuLupa from './assets/zuzu-lupa.png';
-  import zuzuRelogio from './assets/zuzu-relogio.png';
+
+  import { brandAssetUrl } from '$lib/utils/brand-asset.util';
 
   /**
    * AzuosZuzu, a arara — o mascote do Grupo Azuos, o mesmo do paralegal.
    *
-   * As poses são os arquivos oficiais do pacote de marca (`brand/zuzu`), e os movimentos
+   * As poses são os arquivos oficiais da marca, na CDN do app brand (`zuzu/zuzu-<pose>.png`), e os movimentos
    * repetem os tempos do paralegal — `sway` em 3,2s, `float` em 3s, `pulse` em 1,6s. Um mascote
    * parado num canto da tela o dia inteiro, mexendo rápido demais, vira distração; esses
    * valores já passaram por esse teste lá.
@@ -38,15 +31,15 @@
   };
 
   export const ZUZU_POSES: Record<AzuosZuzuPose, string> = {
-    alert: zuzuAlerta,
-    pointing: zuzuApontando,
-    leaning: zuzuDebrucado,
-    sleeping: zuzuDormindo,
-    celebrating: zuzuFestejando,
-    idea: zuzuIdeia,
-    thumbsup: zuzuJoinha,
-    magnifier: zuzuLupa,
-    clock: zuzuRelogio,
+    alert: brandAssetUrl('zuzu/zuzu-alerta.png'),
+    pointing: brandAssetUrl('zuzu/zuzu-apontando.png'),
+    leaning: brandAssetUrl('zuzu/zuzu-debrucado.png'),
+    sleeping: brandAssetUrl('zuzu/zuzu-dormindo.png'),
+    celebrating: brandAssetUrl('zuzu/zuzu-festejando.png'),
+    idea: brandAssetUrl('zuzu/zuzu-ideia.png'),
+    thumbsup: brandAssetUrl('zuzu/zuzu-joinha.png'),
+    magnifier: brandAssetUrl('zuzu/zuzu-lupa.png'),
+    clock: brandAssetUrl('zuzu/zuzu-relogio.png'),
   };
 
   type Tween = (target: HTMLImageElement) => gsap.core.Tween;

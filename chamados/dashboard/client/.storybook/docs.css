@@ -1,0 +1,56 @@
+/* O bloco "quando usar / quando não usar" no topo da página Docs, no padrão Apple: card sem
+   borda, cantos grandes, fonte do sistema. Usa os tokens do tokens.css. */
+.azuos-doc-guide {
+  margin: 16px 0 32px;
+  padding: 20px 24px;
+  border-radius: var(--shape-card);
+  background: var(--card);
+  box-shadow: var(--elevation-card);
+  font-family: var(--brand-font-sans);
+}
+
+.azuos-doc-summary {
+  margin: 0 0 16px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--foreground);
+}
+
+.azuos-doc-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.azuos-doc-columns h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.azuos-doc-columns ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--foreground);
+}
+
+/* O texto do bloco segue os tokens, por cima da tipografia da página Docs (que pinta parágrafo e
+   lista com a cor dela). */
+.sbdocs .azuos-doc-guide p,
+.sbdocs .azuos-doc-guide li {
+  color: var(--foreground);
+}
+
+.sbdocs .azuos-doc-guide h3 {
+  color: var(--muted-foreground);
+}
+
+.sbdocs .azuos-doc-guide code {
+  border: 0;
+  border-radius: 6px;
+  background: var(--muted);
+  color: var(--foreground);
+}

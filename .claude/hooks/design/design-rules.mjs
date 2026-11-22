@@ -141,6 +141,14 @@ const tokensOnly = {
 		return found;
 	}
 };
+/**
+* O AMARELO DO GRUPO COMO TEXTO some no tema claro (1,3:1 sobre o branco). Ele é fundo, traço e
+* gráfico; texto e ícone amarelos usam o `-ink` (`text-warning-ink`, `text-hue-yellow-ink`): o
+* texto escuro da marca no claro e o amarelo puro no escuro, definido no tokens.css. Amarelo
+* escurecido não existe — vira âmbar, que a marca não usa.
+* O `brand-yellow-*` e o `accent-hero` ficam de fora: vivem sobre o azul da marca (menu, hero),
+* onde o amarelo se lê. O `color` de dado (fatia de gráfico, evento) também: lá ele é fundo.
+*/
 const YELLOW_TOKEN = "(?:warning|hue-yellow|yellow)";
 const readableYellowText = {
 	id: "brand/readable-yellow-text",
@@ -365,6 +373,54 @@ const hickSelectOptions = {
 			message: `Select com ${count} opções (máximo ${max}).`
 		}] : [];
 	})
+};
+/**
+* UF E MUNICÍPIO SEMPRE COM BUSCA. São 27 UFs e milhares de municípios, e quem procura "GO" ou
+* "Goiânia" digita em vez de rolar — mesmo quando o recorte deixa poucos. Um seletor sem busca
+* (`AzuosSelectField`, `AzuosFormSelectField`, o `Select` do shadcn) com rótulo de lugar é recusado.
+*/
+const PLACE_NAME = /^(?:UF|Estado|Munic[ií]pio|Cidade)\b/i;
+const LABEL_TEXT = /\b(?:ariaLabel|label|aria-label)\s*[:=]\s*\{?\s*[`'"]([^`'"]+)/g;
+const PLAIN_SELECT = /<(AzuosSelectField|AzuosFormSelectField|Select)\b[\s\S]*?(?:\/>|>\s*\n)/g;
+/** O rótulo do seletor: o dele mesmo, ou o ÚLTIMO antes dele (o do campo que o envolve). */
+function selectLabelOf(code, index, tagText) {
+	const own = [...matches(tagText, LABEL_TEXT)].at(-1);
+	if (own) return own[1];
+	const before = [...matches(code.slice(Math.max(0, index - 200), index), LABEL_TEXT)].at(-1);
+	return before?.[1] ?? "";
+}
+const searchablePlaceSelect = {
+	id: "ux/searchable-place-select",
+	law: "Lei de Hick",
+	severity: "error",
+	description: "UF ou município num seletor sem busca.",
+	hint: "Use `AzuosComboboxField` com `searchPlaceholder` (ou `AzuosCityPickerField`/`AzuosStateField`): UF e município sempre têm busca.",
+	enabled: (c) => c.brandRules?.searchablePlaceSelect ?? true,
+	check: (file) => [...matches(file.code, PLAIN_SELECT)].flatMap((m) => {
+		return PLACE_NAME.test(selectLabelOf(file.code, m.index, m[0]).trim()) ? [{
+			index: m.index,
+			message: `\`<${m[1]}>\` de UF ou município sem busca.`
+		}] : [];
+	})
+};
+/**
+* AS OPÇÕES ESPECIAIS DE UMA LISTA têm UMA forma no grupo: entre parênteses, com a primeira letra
+* maiúscula — "(Sem responsável)", "(Empresa nova)", "(Sem status)" — e logo depois do "Todos".
+* Travessão, sublinhado e parêntese minúsculo valem para qualquer opção. "Sem …" e "Nenhum …"
+* soltos, só na opção SEM VALOR (vazia ou sentinela): "Sem obrigatoriedade" é um status de verdade.
+*/
+const SPECIAL_OPTION = new RegExp([String.raw`\{\s*value:[^{}]*?\blabel:\s*['"\x60]((?:—|–|-|_)\s*\S[^'"\x60]*|\((?:sem|nenhum|nenhuma|vazio)\b[^'"\x60]*)['"\x60]`, String.raw`\{\s*value:\s*(?:''|""|'none'|[A-Z][A-Z0-9_]*)\s*,\s*label:\s*['"\x60]((?:Sem|Nenhum|Nenhuma)\s[^'"\x60]*)['"\x60]`].join("|"), "g");
+const specialOptionFormat = {
+	id: "ux/special-option-format",
+	law: "Lei de Jakob",
+	severity: "error",
+	description: "Opção especial de lista fora do padrão do grupo.",
+	hint: "Escreva entre parênteses, com maiúscula: `(Sem responsável)`, `(Sem status)`, `(Empresa nova)` — e ponha logo depois do \"Todos\".",
+	enabled: (c) => c.brandRules?.specialOptionFormat ?? true,
+	check: (file) => [...matches(file.code, SPECIAL_OPTION)].map((m) => ({
+		index: m.index,
+		message: `Opção especial fora do padrão: \`${m[1] ?? m[2]}\`.`
+	}))
 };
 /* ------------------------------------------------------------------ Lei de Fitts */
 const TAILWIND_SPACING_PX = 4;
@@ -638,7 +694,77 @@ const teslerInputType = {
 	})
 };
 /* ------------------------------------------------------------------ motor */
+
+/* ------------------------------------------------------------------ padrão Apple */
+/**
+ * CARD SEM BORDA. No padrão Apple o que separa o card do fundo é o fio de 1px e a sombra difusa
+ * do `--elevation-card` (`shadow-card`), nunca uma borda desenhada. Borda fica para divisória
+ * (`border-b`, `divide-y`) e para o tracejado de "solte aqui".
+ */
+const appleCardWithoutBorder = {
+	id: "apple/card-without-border",
+	law: "Marca",
+	severity: "error",
+	description: "Card ou painel com borda em volta: no padrão Apple o card não tem borda.",
+	hint: "Troque `border border-border bg-card` por `bg-card shadow-card` (ou use `AzuosCardSurface`/`AzuosPanelCard`). Divisória interna (`border-b`, `divide-y`) pode.",
+	enabled: (c) => c.brandRules?.appleCardWithoutBorder ?? true,
+	check: (file) => {
+		if (file.isTokenFile) return [];
+		const found = [];
+		for (const m of matches(file.code, /(["'`])([^"'`]*)\1/g)) {
+			const classes = m[2];
+			if (!/\bbg-(?:card|popover)\b/.test(classes)) continue;
+			if (!/(?:^|\s)border(?:-[0-9])?(?=\s|$)/.test(classes)) continue;
+			if (/\bborder-(?:dashed|transparent)\b/.test(classes)) continue;
+			found.push({ index: m.index, message: "Card com borda em volta: use `shadow-card` no lugar da borda." });
+		}
+		return found;
+	}
+};
+/**
+ * RÓTULO EM CAIXA NORMAL. O padrão Apple escreve rótulo e título como frase ("Alvarás vencidos"),
+ * em cinza de apoio; CAIXA ALTA espaçada é do visual antigo. Aviso, não erro: sigla e selo curto
+ * em maiúsculas ainda aparecem.
+ */
+const appleSentenceCase = {
+	id: "apple/sentence-case-labels",
+	law: "Marca",
+	severity: "warning",
+	description: "Rótulo em CAIXA ALTA espaçada: no padrão Apple o rótulo é escrito como frase.",
+	hint: "Troque `uppercase tracking-wider text-xs font-semibold` por `text-sm font-medium text-muted-foreground`.",
+	enabled: (c) => c.brandRules?.appleSentenceCase ?? true,
+	check: (file) => {
+		if (file.isTokenFile) return [];
+		return [...matches(file.code, /(["'`])([^"'`]*\buppercase\b[^"'`]*\btracking-(?:wide|wider|widest)\b[^"'`]*|[^"'`]*\btracking-(?:wide|wider|widest)\b[^"'`]*\buppercase\b[^"'`]*)\1/g)].map((m) => ({
+			index: m.index,
+			message: "Rótulo em caixa alta espaçada."
+		}));
+	}
+};
+/**
+ * HOVER QUE COBRE CONTEÚDO. No padrão Apple o hover destaca (sobe, sombra, véu neutro), nunca
+ * esconde: nada pode deslizar por cima do card (`translate-y-full` que vira `translate-y-0`).
+ */
+const appleHoverNeverCovers = {
+	id: "apple/hover-never-covers",
+	law: "Marca",
+	severity: "error",
+	description: "Painel que desliza por cima do conteúdo no hover: o hover não pode esconder informação.",
+	hint: "Mostre a ação num lugar reservado (uma seta no rodapé, um botão que já existe) ou use o menu de 3 pontinhos.",
+	enabled: (c) => c.brandRules?.appleHoverNeverCovers ?? true,
+	check: (file) => {
+		if (file.isTokenFile) return [];
+		return [...matches(file.code, /\btranslate-y-full\b[^"'`]*\bgroup-hover(?:\/[a-z]+)?:translate-y-0\b/g)].map((m) => ({
+			index: m.index,
+			message: "O hover desliza por cima do conteúdo."
+		}));
+	}
+};
+
 export const RULES = [
+	appleCardWithoutBorder,
+	appleSentenceCase,
+	appleHoverNeverCovers,
 	noPureBlackWhite,
 	tokensOnly,
 	readableYellowText,
@@ -652,6 +778,8 @@ export const RULES = [
 	pasteFileAttachment,
 	hickNavItems,
 	hickSelectOptions,
+	searchablePlaceSelect,
+	specialOptionFormat,
 	fittsTargetSize,
 	jakobClickable,
 	jakobAnchorHref,
@@ -692,7 +820,6 @@ export function checkSource(path, content, config) {
 	const file = {
 		path: normalize(path),
 		code: stripComments(content),
-		isTokenFile: isTokenFile(path, config),
 		isTokenFile: isTokenFile(path, config)
 	};
 	const ignored = ignoredLines(content);

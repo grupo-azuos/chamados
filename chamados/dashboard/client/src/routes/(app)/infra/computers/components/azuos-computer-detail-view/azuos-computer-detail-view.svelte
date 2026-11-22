@@ -309,7 +309,8 @@
   import ComputerBlockDialog from '../azuos-computer-block-dialog/azuos-computer-block-dialog.svelte';
   import ComputerDisposalDialog from '../azuos-computer-disposal-dialog/azuos-computer-disposal-dialog.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import PanelCard from '$lib/components/azuos-panel-card/azuos-panel-card.svelte';
   import { cn } from '$lib/utils/cn';
   import { formatDateTime } from '$lib/utils/format-date';
   import MaintenanceScheduleCard from '../azuos-maintenance-schedule-card/azuos-maintenance-schedule-card.svelte';
@@ -372,10 +373,10 @@
   }
 </script>
 
-<div class="flex w-full flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <BackButton data={{ destination: data.backDestination ?? 'o inventário' }} actions={{ onClick: actions.onBack }} />
 
-  <section aria-label="Identificação do computador" class="bg-card rounded-surface min-w-0 p-4 sm:p-5 shadow-card">
+  <CardSurface data={{ label: 'Identificação do computador' }} ui={{ className: 'min-w-0 p-4 sm:p-5' }}>
     <PageHeader
       data={{
         title: computer.displayName?.trim() || computer.hardware?.hostname?.trim() || computer.name,
@@ -465,7 +466,7 @@
         {/if}
       </span>
     </div>
-  </section>
+  </CardSurface>
 
   <!-- A falha de uma AÇÃO aparece aqui em cima, em vermelho, e fica até resolver: gravação
        que falha calada vira "o sistema não salva" (CONTRIBUTING §15). -->
@@ -477,7 +478,7 @@
   {/if}
 
   {#if disposed && computer.disposalType}
-    <p class="text-ink-700 bg-muted rounded-box border px-3 py-2 text-sm">
+    <p class="text-ink-700 bg-muted rounded-box px-3 py-2 text-sm">
       <span class="font-semibold">
         Fora de uso ({disposalTypeLabel(computer.disposalType)}) desde
         {formatDateTime(computer.disposedAt)}:
@@ -545,8 +546,7 @@
   </StatCardGrid>
 
   <!-- O que baixou a nota vem antes de tudo: é a razão de alguém abrir esta tela. -->
-  <section class="bg-card rounded-surface p-4 shadow-card">
-    <h2 class="text-ink-900 mb-2 text-sm font-semibold">O que precisa de atenção</h2>
+  <PanelCard data={{ title: 'O que precisa de atenção' }}>
     {#if computer.warnings.length === 0}
       <div class="flex items-start gap-3">
         <CircleCheck class="text-success mt-0.5 size-5 shrink-0" aria-hidden="true" />
@@ -567,37 +567,33 @@
         {/each}
       </ul>
     {/if}
-  </section>
+  </PanelCard>
 
-  <section class="bg-card rounded-surface p-4 shadow-card">
-    <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-      <h2 class="text-ink-900 text-sm font-semibold">O que está acontecendo agora</h2>
-      {#if live}
-        <span class="text-ink-500 shrink-0 text-xs">Lido {formatTimeAgo(live.receivedAt)}</span>
-      {/if}
-    </div>
+  <PanelCard
+    data={{
+      title: 'O que está acontecendo agora',
+      hint: live ? `Lido ${formatTimeAgo(live.receivedAt)}` : null,
+    }}
+  >
     <ComputerLivePanel data={{ live }} state={{ isLoading: viewState?.isLiveLoading }} />
-  </section>
+  </PanelCard>
 
-  <section class="bg-card rounded-surface p-4 shadow-card">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">Aplicativos que mais pesam</h2>
+  <PanelCard data={{ title: 'Aplicativos que mais pesam' }}>
     <ComputerProcessTable
       data={{ processes: live?.processes ?? [] }}
       state={{ isLoading: viewState?.isLiveLoading }}
     />
-  </section>
+  </PanelCard>
 
-  <section class="bg-card rounded-surface p-4 shadow-card">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">Uso das últimas 24 horas</h2>
+  <PanelCard data={{ title: 'Uso das últimas 24 horas' }}>
     <UsageChart
       data={{ points }}
       state={{ isLoading: viewState?.isSamplesLoading }}
       ui={{ emptyLabel: 'Esta máquina ainda não enviou nenhuma leitura.' }}
     />
-  </section>
+  </PanelCard>
 
-  <section class="bg-card rounded-surface p-4 shadow-card">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">O que tem dentro</h2>
+  <PanelCard data={{ title: 'O que tem dentro' }}>
     <dl class="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
       {#each facts as fact (fact.label)}
         <div class="min-w-0">
@@ -606,15 +602,14 @@
         </div>
       {/each}
     </dl>
-  </section>
+  </PanelCard>
 
-  <section class="bg-card rounded-surface p-4 shadow-card">
-    <div class="mb-3 flex items-center justify-between">
-      <h2 class="text-ink-900 text-sm font-semibold">Alertas</h2>
+  <PanelCard data={{ title: 'Alertas' }}>
+    {#snippet tools()}
       {#if data.alerts.length > 0}
         <TableViewToggle />
       {/if}
-    </div>
+    {/snippet}
     {#if viewState?.isAlertsLoading}
       <p class="text-ink-500 py-6 text-center text-sm">Carregando os alertas…</p>
     {:else if data.alerts.length === 0}
@@ -629,12 +624,8 @@
         data-slot="alert-cards-mobile"
       >
         {#each data.alerts as alert (alert.id)}
-          <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
-          <div
-            use:fillFromPointer
-            style:--fill-color={fillColorOf(alert.recoveredAt ? 'neutral' : 'danger')}
-            class="hover-fill bg-card rounded-surface p-3 shadow-card"
-          >
+          <!-- A situação está no selo: o hover do card é só o véu neutro (padrão Apple). -->
+          <CardSurface ui={{ className: 'p-3' }}>
             <div class="flex items-start justify-between gap-2">
               <span class="font-medium text-ink-900 text-sm">
                 {metricLabel(alert.metric)}
@@ -668,7 +659,7 @@
                 <span class="text-ink-700 font-mono text-xs break-words">{alert.causeProcess}</span>
               </div>
             {/if}
-          </div>
+          </CardSurface>
         {/each}
       </div>
 
@@ -733,11 +724,10 @@
         actions={{ onPageChange: actions.onAlertPageChange }}
       />
     {/if}
-  </section>
+  </PanelCard>
 
-  <section class="bg-card rounded-surface p-4 shadow-card">
-    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-      <h2 class="text-ink-900 text-sm font-semibold">Manutenções desta máquina</h2>
+  <PanelCard data={{ title: 'Manutenções desta máquina' }}>
+    {#snippet tools()}
       {#if !disposed}
         <ActionButton
           data={{ label: 'Registrar manutenção' }}
@@ -745,7 +735,7 @@
           actions={{ onClick: actions.onRegisterMaintenance }}
         />
       {/if}
-    </div>
+    {/snippet}
 
     {#if viewState?.isMaintenancesLoading}
       <p class="text-ink-500 py-6 text-center text-sm">Carregando o histórico…</p>
@@ -779,10 +769,9 @@
         {/each}
       </ul>
     {/if}
-  </section>
+  </PanelCard>
 
-  <section class="bg-card rounded-surface p-4 shadow-card">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">Chamados desta máquina</h2>
+  <PanelCard data={{ title: 'Chamados desta máquina' }}>
 
     {#if viewState?.isTicketsLoading}
       <p class="text-ink-500 text-sm">Carregando os chamados…</p>
@@ -826,10 +815,9 @@
         actions={{ onPageChange: actions.onTicketPageChange }}
       />
     {/if}
-  </section>
+  </PanelCard>
 
-  <section class="bg-card rounded-surface p-4 shadow-card">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">Por onde esta máquina andou</h2>
+  <PanelCard data={{ title: 'Por onde esta máquina andou' }}>
 
     {#if viewState?.isTransfersLoading}
       <p class="text-ink-500 py-6 text-center text-sm">Carregando o histórico…</p>
@@ -868,10 +856,9 @@
         {/each}
       </ul>
     {/if}
-  </section>
+  </PanelCard>
 
-  <section class="bg-card rounded-surface p-4 shadow-card">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">Peças que esta máquina recebeu</h2>
+  <PanelCard data={{ title: 'Peças que esta máquina recebeu' }}>
 
     {#if viewState?.isPartsLoading}
       <p class="text-ink-500 py-6 text-center text-sm">Carregando as peças…</p>
@@ -906,7 +893,7 @@
         {/each}
       </ul>
     {/if}
-  </section>
+  </PanelCard>
 </div>
 
 <ConfirmDialog

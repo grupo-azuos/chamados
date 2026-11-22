@@ -61,9 +61,11 @@
 
   <!-- Zero não vira selo: um "0" ao lado de cada item é ruído. O `SidebarMenuBadge` some
        sozinho quando a barra está recolhida. -->
+  <!-- Centrado na altura do item: o `top` fixo do shadcn é medido para o botão dele, mais baixo
+       que o nosso, e o selo ficava colado em cima. -->
   {#if badge}
     <SidebarMenuBadge
-      class="bg-destructive font-bold text-destructive-foreground shadow-xs shadow-destructive/40"
+      class="rounded-chip bg-destructive text-destructive-foreground top-1/2! -translate-y-1/2 px-1.5 leading-none font-bold shadow-xs"
     >
       {badge}
     </SidebarMenuBadge>

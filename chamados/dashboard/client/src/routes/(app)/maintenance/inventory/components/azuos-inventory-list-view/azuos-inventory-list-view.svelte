@@ -73,6 +73,7 @@
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
 
   let { data, state: listState, actions }: AzuosInventoryListViewProps = $props();
 
@@ -90,7 +91,7 @@
   }
 </script>
 
-<div class="flex flex-col gap-5">
+<div class="flex flex-col gap-6">
   <PageHeader
     data={{
       title: 'Inventário',
@@ -104,7 +105,7 @@
     />
   </PageHeader>
 
-  <div class="rounded-surface bg-card flex flex-col gap-3 p-4 shadow-card">
+  <CardSurface ui={{ className: 'flex flex-col gap-3 p-4' }}>
     <TextField
       data={{
         label: 'Buscar',
@@ -148,7 +149,7 @@
         />
       {/if}
     </div>
-  </div>
+  </CardSurface>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2): a lista só é
        desenhada quando sobrou lista para desenhar. -->
@@ -200,7 +201,7 @@
         {#each data.items as item (item.id)}
           <li class="flex">
             <div
-              class="group rounded-surface bg-card flex flex-1 cursor-pointer flex-row items-stretch overflow-hidden transition hover:shadow-sm sm:flex-col shadow-card"
+              class="group rounded-surface bg-card shadow-card hover:shadow-card-hover flex flex-1 cursor-pointer flex-row items-stretch overflow-hidden transition-[transform,box-shadow] duration-200 motion-safe:hover:-translate-y-0.5 sm:flex-col"
               role="button"
               tabindex="0"
               aria-label={`Editar ${item.name}`}

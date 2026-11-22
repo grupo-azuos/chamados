@@ -71,7 +71,7 @@
         isProminent &&
           (isActive
             ? 'text-primary-foreground shadow-none'
-            : 'bg-primary-soft text-ink-900 hover:bg-accent hover:text-ink-900 shadow-none'),
+            : 'bg-primary/10 text-ink-900 hover:bg-primary/20 hover:text-ink-900 shadow-none'),
       )}
     >
       {option.label}

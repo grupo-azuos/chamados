@@ -36,7 +36,7 @@ describe('AzuosTimelineStep', () => {
       props: { title: 'Pronto', tone: 'success' },
     });
 
-    expect(container.innerHTML).toContain('success');
+    expect(container.innerHTML).toContain('bg-hue-green');
   });
 
   // triste
@@ -52,7 +52,7 @@ describe('AzuosTimelineStep', () => {
   it('falls back to the neutral tone and keeps the line (edge case)', () => {
     const { container } = render(TimelineStepHarness, { props: { title: 'Primeira' } });
 
-    expect(container.innerHTML).not.toContain('success');
+    expect(container.innerHTML).not.toContain('bg-hue-');
     expect(container.querySelector('[aria-hidden="true"].w-px')).not.toBeNull();
   });
 });

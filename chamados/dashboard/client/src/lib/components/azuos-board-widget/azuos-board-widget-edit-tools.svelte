@@ -97,7 +97,7 @@
     </PopoverTrigger>
     <PopoverContent
       align="end"
-      class="rounded-box bg-popover ring-foreground/8 w-64 border-0 p-2 shadow-xl ring-1"
+      class="rounded-surface border-transparent bg-popover ring-foreground/8 w-64 p-2 shadow-xl ring-1"
     >
       {@render kindGroup('Mais usados', MAIN_KINDS)}
       {@render kindGroup('Outros', OTHER_KINDS)}

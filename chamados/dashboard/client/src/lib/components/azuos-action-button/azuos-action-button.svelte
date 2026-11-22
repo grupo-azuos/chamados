@@ -16,13 +16,17 @@
    * pelo espaço entre ícone e texto. A altura é nossa.
    */
   export const actionButton = tv({
-    base: 'rounded-button align-middle font-semibold shadow-xs transition-all',
+    base: 'rounded-button max-w-full min-w-0 align-middle font-semibold shadow-xs transition-all',
     variants: {
       variant: {
-        primary: 'bg-primary hover:bg-primary-strong text-primary-foreground',
-        secondary: 'bg-muted text-foreground hover:bg-accent border border-transparent',
-        ghost: 'text-foreground hover:bg-accent hover:text-foreground bg-transparent shadow-none border border-transparent',
-        danger: 'bg-destructive-fill text-on-dark hover:bg-destructive',
+        primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        secondary: 'bg-muted text-foreground hover:bg-accent',
+        ghost:
+          'text-foreground/80 hover:bg-accent hover:text-foreground border border-transparent bg-transparent shadow-none',
+        danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        /* O perigo discreto, para a lixeira de uma linha: vermelho claro parado, cheio no hover. */
+        'danger-soft':
+          'bg-destructive-soft text-destructive hover:bg-destructive hover:text-destructive-foreground shadow-none',
       },
       size: {
         sm: 'control-sm',
@@ -40,7 +44,7 @@
     defaultVariants: { variant: 'primary', size: 'md', isIconOnly: false },
   });
 
-  export type ActionButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+  export type ActionButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-soft';
 
   export type ActionButtonSize = 'sm' | 'md' | 'lg';
 
@@ -137,5 +141,8 @@
   {#if Icon}
     <Icon class={cn(isBusy && 'animate-spin')} aria-hidden="true" />
   {/if}
-  {label}
+  <!-- Rótulo longo numa coluna estreita: corta com "…" em vez de estourar a coluna. -->
+  {#if label}
+    <span class="min-w-0 truncate">{label}</span>
+  {/if}
 </Button>

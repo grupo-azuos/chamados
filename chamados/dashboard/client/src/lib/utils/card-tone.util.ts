@@ -1,7 +1,5 @@
-import { isLightColor } from '$lib/utils/company-color.util';
-
 /**
- * Os SOTAQUES de card do grupo — e a cor que a pessoa escolhe, que pinta exata.
+ * Os SOTAQUES de card do grupo — a única fonte de cor de card.
  *
  * Card é sempre a superfície da marca; a cor entra só como sotaque: a bolinha do ícone, o número,
  * a marca d'água e a bolinha do selo. São oito tons sóbrios (`--hue-*` no `lib/theme/tokens.css`),
@@ -15,10 +13,7 @@ export type AzuosCardHue =
 export type AzuosCardSemanticTone =
   'danger' | 'warning' | 'info' | 'success' | 'brand' | 'neutral' | 'default';
 
-/** Uma cor escolhida pela pessoa, como foi gravada (`#rrggbb`). */
-export type AzuosCustomColor = `#${string}`;
-
-export type AzuosCardTone = AzuosCardHue | AzuosCardSemanticTone | AzuosCustomColor;
+export type AzuosCardTone = AzuosCardHue | AzuosCardSemanticTone;
 
 export type AzuosCardToneClasses = {
   /** A bolinha do ícone: o sotaque cheio, com o ícone em `on-hue`. */
@@ -105,53 +100,66 @@ export function cardHueOf(tone: AzuosCardTone | null | undefined): AzuosCardHue 
   return CARD_HUES.includes(tone as AzuosCardHue) ? (tone as AzuosCardHue) : 'slate';
 }
 
-/**
- * As classes do sotaque de um tom. A cor escolhida não tem classe: os papéis vêm vazios (o
- * `style` de `cardToneStyle` pinta), e `color` é a própria cor, para a marca d'água e o hover.
- */
+/** As classes do sotaque de um tom. */
 export function cardToneClasses(tone: AzuosCardTone | null | undefined): AzuosCardToneClasses {
-  if (isCustomColor(tone)) return { dot: '', text: '', swatch: '', color: tone };
-
   return HUE_CLASSES[cardHueOf(tone)];
 }
 
 /**
- * A COR QUE A PESSOA ESCOLHEU (`#rrggbb`) pinta EXATAMENTE como foi escolhida, sem virar o sotaque
- * mais próximo: escolher laranja e ver amarelo tirava o sentido do seletor de cor. Ela não cabe
- * numa classe do Tailwind (é dado, não token), e por isso vem como `style`, ao lado das classes,
- * em `cardToneStyle`.
- */
-export function isCustomColor(tone: unknown): tone is AzuosCustomColor {
-  return typeof tone === 'string' && /^#[0-9a-f]{6}$/i.test(tone);
-}
-
-/**
- * O VÉU NO TOM: o sotaque a 16%, por cima do fundo. É o fundo do card colorido — transparente de
- * propósito, para o texto por cima seguir no tom do tema em vez de brigar com um fundo cheio.
+ * O VÉU NO TOM: o sotaque a 16%, por cima do fundo. É o hover do card colorido e o fundo da pill
+ * de nível da notificação — transparente de propósito, para o texto por cima seguir no tom do tema
+ * (escuro no claro, claro no escuro) em vez de brigar com um fundo cheio.
  */
 export function cardToneVeilOf(tone: AzuosCardTone | null | undefined): string {
   return `color-mix(in srgb, ${cardToneClasses(tone).color} 16%, transparent)`;
 }
 
-/** O tom de uma cor escolhida: a própria cor, quando é válida; sem ela, o neutro. */
-export function cardToneFromColor(color: string | null | undefined): AzuosCardTone {
-  return isCustomColor(color) ? color : 'neutral';
-}
-
-export type AzuosCardToneStyle = { dot?: string; text?: string; swatch?: string };
+/** O ângulo de cada sotaque no círculo de cores, para casar uma cor livre com o mais próximo. */
+const HUE_ANGLE: [AzuosCardHue, number][] = [
+  ['red', 0],
+  ['copper', 22],
+  ['yellow', 40],
+  ['green', 160],
+  ['steel', 200],
+  ['blue', 228],
+  ['plum', 268],
+  ['red', 345],
+];
 
 /**
- * O `style` da cor escolhida em cada papel — vazio para os sotaques da marca, que já vêm nas
- * classes. Na bolinha cheia o ícone fica escuro sobre cor clara e claro sobre cor escura.
+ * Uma cor que a PESSOA escolheu (`#rrggbb`) vira o sotaque mais próximo. Cor quase sem
+ * saturação vira ardósia. Assim a escolha dela é respeitada e o card continua no padrão.
  */
-export function cardToneStyle(tone: AzuosCardTone | null | undefined): AzuosCardToneStyle {
-  if (!isCustomColor(tone)) return {};
+export function cardHueFromHex(hex: string | null | undefined): AzuosCardHue {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex ?? '');
+  if (!match?.[1]) return 'slate';
 
-  const onColor = isLightColor(tone) ? 'var(--ink-900)' : 'var(--white)';
+  const value = Number.parseInt(match[1], 16);
+  const [r, g, b] = [(value >> 16) & 255, (value >> 8) & 255, value & 255].map((c) => c / 255) as [
+    number,
+    number,
+    number,
+  ];
+  const max = Math.max(r, g, b);
+  const delta = max - Math.min(r, g, b);
+  if (delta < 0.12) return 'slate';
 
-  return {
-    dot: `background-color: ${tone}; color: ${onColor};`,
-    text: `color: ${tone};`,
-    swatch: `background-color: ${tone};`,
-  };
+  return nearestHue(hueAngle(r, g, b, max, delta));
+}
+
+function hueAngle(r: number, g: number, b: number, max: number, delta: number): number {
+  if (max === r) return (60 * ((g - b) / delta) + 360) % 360;
+  if (max === g) return 60 * ((b - r) / delta) + 120;
+
+  return 60 * ((r - g) / delta) + 240;
+}
+
+function nearestHue(angle: number): AzuosCardHue {
+  let best: [AzuosCardHue, number] = ['red', 360];
+  for (const [hue, at] of HUE_ANGLE) {
+    const distance = Math.abs(angle - at);
+    if (distance < best[1]) best = [hue, distance];
+  }
+
+  return best[0];
 }

@@ -108,9 +108,9 @@
           class={cn(
             FIELD_CONTROL_CLASS,
             'flex items-center gap-2 text-left',
-            'hover:bg-accent focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]',
+            'hover:bg-accent/40 focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]',
             'disabled:cursor-not-allowed disabled:opacity-60',
-            error ? 'border-border bg-destructive-soft' : 'border-input',
+            error ? 'bg-destructive-soft border-transparent' : 'border-transparent',
             data.value ? 'text-foreground' : 'text-ink-500',
           )}
         >
@@ -119,13 +119,19 @@
         </button>
       {/snippet}
     </Popover.Trigger>
-    <Popover.Content class="w-auto gap-0 p-3 rounded-box bg-popover shadow-xl border-0 ring-1 ring-foreground/8" align="start">
+    <!-- `gap-0` desfaz o espaçamento do `ui/popover`: o respiro entre o ano, a grade e o rodapé
+         vem das margens de cada bloco. -->
+    <Popover.Content
+      sideOffset={6}
+      class="rounded-surface bg-popover ring-foreground/8 w-auto gap-0 border-transparent p-3 shadow-xl ring-1"
+      align="center"
+    >
       <div class="mb-2 flex items-center justify-between gap-2">
         <button
           type="button"
           onclick={() => (year = shiftYear(year, -1))}
           aria-label="Ano anterior"
-          class="text-ink-500 hover:bg-accent hover:text-ink-900 rounded-control grid size-10 place-items-center transition-colors"
+          class="rounded-control text-ink-500 hover:bg-accent hover:text-ink-900 p-1.5 transition-colors"
         >
           <ChevronLeft class="size-4" aria-hidden="true" />
         </button>
@@ -135,7 +141,7 @@
           type="button"
           onclick={() => (year = shiftYear(year, 1))}
           aria-label="Próximo ano"
-          class="text-ink-500 hover:bg-accent hover:text-ink-900 rounded-control grid size-10 place-items-center transition-colors"
+          class="rounded-control text-ink-500 hover:bg-accent hover:text-ink-900 p-1.5 transition-colors"
         >
           <ChevronRight class="size-4" aria-hidden="true" />
         </button>
@@ -149,7 +155,7 @@
             aria-pressed={isSelected}
             onclick={() => pick(monthIso)}
             class={cn(
-              'hover:bg-accent focus-visible:ring-ring rounded-control min-h-10 px-2 text-sm capitalize transition-colors',
+              'rounded-control hover:bg-accent focus-visible:ring-ring px-2 py-2 text-sm capitalize transition-colors',
               'focus-visible:ring-2 focus-visible:outline-none',
               monthIso === currentMonth && !isSelected && 'text-brand-blue-800 font-bold',
               isSelected && 'bg-primary text-primary-foreground hover:bg-primary font-bold',
@@ -165,7 +171,7 @@
         <button
           type="button"
           onclick={() => pick(currentMonth)}
-          class="text-brand-blue-800 dark:text-foreground min-h-10 text-xs font-semibold hover:underline"
+          class="text-brand-blue-800 dark:text-foreground text-xs font-semibold hover:underline"
         >
           Este mês
         </button>
@@ -173,7 +179,7 @@
           <button
             type="button"
             onclick={() => pick('')}
-            class="text-ink-500 hover:text-ink-900 min-h-10 text-xs font-medium hover:underline"
+            class="text-ink-500 hover:text-ink-900 text-xs font-medium hover:underline"
           >
             Limpar
           </button>

@@ -52,7 +52,7 @@
     data={{ value: data.value, options: data.options }}
     ui={{
       ariaLabel: data.label,
-      className: cn('w-full', error !== null && 'border-border bg-destructive-soft'),
+      className: cn('w-full', error !== null && 'bg-destructive-soft border-transparent'),
     }}
     state={{ isDisabled: state?.isDisabled ?? false }}
     actions={{ onChange: (value) => actions?.onChange?.(value) }}

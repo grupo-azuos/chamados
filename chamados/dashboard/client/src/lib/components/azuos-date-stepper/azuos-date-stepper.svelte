@@ -118,7 +118,7 @@
     return cn(
       'rounded-control text-foreground hover:bg-accent cursor-pointer border border-transparent text-sm transition-colors outline-none',
       'focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-      'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-inherit',
+      'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
       cell.isToday && 'bg-primary-soft text-primary font-semibold',
       cell.isSelected && 'bg-primary text-primary-foreground hover:bg-primary font-semibold',
       extra,
@@ -235,7 +235,7 @@
     type="button"
     onclick={onClick}
     aria-label={`${label}: ${value}. Trocar`}
-    class="control-sm rounded-control border-border bg-muted text-ink-700 hover:bg-accent focus-visible:ring-ring/50 inline-flex cursor-pointer items-center gap-1 border text-xs transition-colors outline-none focus-visible:ring-[3px]"
+    class="control-sm bg-muted text-ink-700 hover:bg-accent focus-visible:ring-ring/50 inline-flex cursor-pointer items-center gap-1 rounded-full text-xs transition-colors outline-none focus-visible:ring-[3px]"
   >
     <span class="text-ink-500">{label}:</span>
     <span class="text-ink-900 font-semibold">{value}</span>

@@ -76,7 +76,7 @@ const six = Array.from({ length: 6 }, (_value, index) => ({
 describe('AzuosOptionPicker — in a form', () => {
   // feliz
   /* Num campo de formulário, pastilha só serve enquanto cabe em uma linha. */
-  it('keeps up to three options as pills, one column each', () => {
+  it('keeps up to three options as pills side by side', () => {
     const three = six.slice(0, 3);
     render(OptionPicker, {
       props: {
@@ -88,7 +88,7 @@ describe('AzuosOptionPicker — in a form', () => {
 
     for (const option of three)
       expect(screen.getByRole('button', { name: option.label })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Tipo' }).className).toContain('grid-cols-3');
+    expect(screen.getByRole('group', { name: 'Tipo' }).className).toContain('flex w-full');
   });
 
   /* Com mais de três, vira a lista que abre: as opções não ficam espalhadas pelo diálogo. */

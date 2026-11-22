@@ -186,7 +186,7 @@
 <!-- max-w-(--breakpoint-2xl), e não 6xl como as outras listas: a tabela do inventário junta máquina,
      responsável, saúde, manutenção com a próxima data, chamados, situação e visto por último, e
      no 6xl a última coluna ficava cortada mesmo em tela cheia. -->
-<div class="mx-auto flex w-full max-w-(--breakpoint-2xl) flex-col gap-5">
+<div class="mx-auto flex w-full max-w-(--breakpoint-2xl) flex-col gap-6">
   <PageHeader
     data={{
       title: 'Inventário',
@@ -397,7 +397,7 @@
 
           <!-- A caixa de manutenção cresce até o rodapé: os cartões da mesma linha têm a mesma
                altura, e sem isso cada um sobrava um vão diferente acima do "Ver ficha". -->
-          <div class="mt-3 min-w-0 flex-1 rounded-box border border-border bg-muted p-3">
+          <div class="mt-3 min-w-0 flex-1 rounded-box bg-muted p-3">
             <p class="text-muted-foreground mb-2 text-xs">Manutenção</p>
             <ComputerMaintenanceStatus data={{ computer, scheduledFor: data.scheduledFor?.[computer.id] ?? null }} />
           </div>

@@ -120,8 +120,8 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
   import { formatDate } from '$lib/utils/format-date';
 
@@ -132,7 +132,7 @@
   const hasActiveFilter = $derived(Boolean(data.filter.search || data.filter.type));
 </script>
 
-<div class="flex w-full flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Manutenção',
@@ -244,12 +244,8 @@
       data-slot="maintenance-cards-mobile"
     >
       {#each data.maintenances as maintenance (maintenance.id)}
-        <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
-        <div
-          use:fillFromPointer
-          style:--fill-color={fillColorOf(maintenanceTypeTone(maintenance.type))}
-          class="hover-fill bg-card rounded-surface p-4 shadow-card"
-        >
+        <!-- A situação está no selo: o hover do card é só o véu neutro (padrão Apple). -->
+        <CardSurface ui={{ className: 'p-4' }}>
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0 flex-1">
               <span class="block font-medium text-ink-900 break-words leading-snug">
@@ -301,7 +297,7 @@
               actions={{ onClick: () => actions.onAskRemove(maintenance) }}
             />
           </div>
-        </div>
+        </CardSurface>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">

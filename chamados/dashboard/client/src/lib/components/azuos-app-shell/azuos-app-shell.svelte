@@ -88,6 +88,13 @@
   const NAV_SCROLL =
     'overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:var(--sidebar-border)_transparent]';
 
+  /**
+   * A rolagem do trilho recolhido: rola, mas sem a barra. O trilho tem a largura de um ícone, e a
+   * barra comia o lado direito — os ícones saíam do centro e ficavam tortos.
+   */
+  const RAIL_SCROLL =
+    'overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+
   const RAIL_BUTTON =
     'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground rounded-box flex size-9 shrink-0 items-center justify-center outline-hidden transition-colors focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-5';
 
@@ -287,7 +294,7 @@
          lado) deixava os ícones fora do centro. O trilho é mais escuro que o painel: primeiro
          nível (o módulo) e segundo (a tela), separados pela cor, sem linha divisória. -->
     <Sidebar collapsible="icon" variant="inset" class="overflow-hidden p-0! *:data-[sidebar=sidebar]:flex-row">
-      <Sidebar collapsible="none" class="w-[calc(var(--sidebar-width-icon)+1rem+2px)]! bg-brand-blue-900!">
+      <Sidebar collapsible="none" class="w-[calc(var(--sidebar-width-icon)+1rem+2px)]! bg-sidebar-rail!">
         <SidebarHeader class="items-center px-0 pt-3">
           <!-- A logo como ícone de app: um ladrilho de canto arredondado no azul do painel. -->
           <div class="bg-sidebar rounded-box flex size-10 items-center justify-center">
@@ -321,7 +328,7 @@
           <!-- Recolhida, o painel some: os itens do módulo descem para o trilho. -->
           <div class="hidden min-h-0 w-full flex-1 flex-col items-center group-data-[collapsible=icon]:flex">
             <SidebarSeparator class="my-1 h-px w-6 shrink-0" />
-            <nav aria-label="Menu principal" class={cn('flex min-h-0 w-full flex-1 flex-col items-center gap-1', NAV_SCROLL)}>
+            <nav aria-label="Menu principal" class={cn('flex min-h-0 w-full flex-1 flex-col items-center gap-1', RAIL_SCROLL)}>
               {#each items as item (item.key)}
                 {@const ItemIcon = item.icon}
                 {#snippet itemLink(props: Record<string, unknown>)}
@@ -373,10 +380,10 @@
            direto no nome do módulo. -->
       <Sidebar collapsible="none" class="hidden min-w-0 flex-1 pt-3 pb-2 md:flex">
         <!-- Só a lista de telas rola, e só na vertical; o Zuzu e o nome ficam presos embaixo,
-             depois de um divisor. -->
+             sem divisor — o divisor é o do trilho. -->
         <SidebarContent class={NAV_SCROLL}>
           <SidebarGroup>
-            <SidebarGroupLabel class="text-sidebar-foreground text-xs font-semibold tracking-wider uppercase">
+            <SidebarGroupLabel class="text-sidebar-foreground/70 text-xs font-semibold tracking-wider uppercase">
               {activeArea?.label ?? ''}
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -395,7 +402,6 @@
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarSeparator class="mx-2 w-auto" />
         <SidebarFooter class="pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           {@render zuzuLedge()}
           <div class="grid px-2 pb-1 leading-tight">
@@ -444,7 +450,7 @@
              um título separando o que é tela do que é atalho. Abre em outra aba? A setinha avisa. -->
         {#if shellActions.length > 0}
           <SidebarGroup class="mt-auto">
-            <SidebarGroupLabel class="text-sidebar-foreground text-xs font-semibold tracking-wider uppercase">
+            <SidebarGroupLabel class="text-sidebar-foreground/70 text-xs font-semibold tracking-wider uppercase">
               Atalhos
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -468,7 +474,7 @@
                           <span class="flex min-w-0 flex-1 items-center gap-1.5 group-data-[collapsible=icon]:hidden">
                             <span class="truncate">{link.label}</span>
                             {#if link.opensInNewTab}
-                              <ArrowUpRight aria-hidden="true" class="text-sidebar-foreground size-3.5! shrink-0" />
+                              <ArrowUpRight aria-hidden="true" class="text-sidebar-foreground/60 size-3.5! shrink-0" />
                             {/if}
                           </span>
                         </a>
@@ -630,7 +636,7 @@
 
         <div class="flex flex-col gap-3 px-3">
           {#if isTwoColumn}
-            <div role="group" aria-label="Módulos" class="rounded-box bg-muted flex gap-1 p-1">
+            <div role="group" aria-label="Módulos" class="rounded-box bg-sidebar-accent/40 flex gap-1 p-1">
               {#each areas as option (option.value)}
                 {@const Icon = option.icon}
                 <button

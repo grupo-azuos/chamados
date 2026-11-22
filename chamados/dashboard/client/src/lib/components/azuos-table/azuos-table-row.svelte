@@ -13,7 +13,7 @@
 <TableRow
   bind:ref
   class={cn(
-    'border-border hover:bg-hover-veil last:border-b-0',
+    'border-border/60 hover:bg-hover-veil last:border-b-0',
     className,
   )}
   {...restProps}
