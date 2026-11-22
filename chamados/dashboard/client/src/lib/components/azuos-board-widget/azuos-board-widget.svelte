@@ -120,11 +120,12 @@
 {/snippet}
 
 {#snippet editBar()}
-  <!-- A BARRA DO BLOCO, montando: flutua ACIMA do bloco, no vão entre os andares, como a etiqueta
+  <!-- A BARRA DO BLOCO, montando, com o mesmo canto da alça de arrastar de dentro (em pílula, a
+       alça quadrada ficava torta na ponta): flutua ACIMA do bloco, no vão entre os andares, como a etiqueta
        de um quadro num editor de design. O bloco embaixo fica igual ao do painel — nada por cima do
        título, do número ou do gráfico. -->
   <div
-    class="rounded-button bg-card shadow-card ring-foreground/8 absolute bottom-full left-0 z-10 mb-4 flex max-w-full items-center gap-1 p-1 ring-1"
+    class="rounded-box bg-card shadow-card ring-foreground/8 absolute bottom-full left-0 z-10 mb-4 flex max-w-full items-center gap-1 p-1 ring-1"
   >
     {@render dragHandle()}
     <WidgetEditTools data={{ widget }} {actions} />
