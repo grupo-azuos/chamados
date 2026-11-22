@@ -14,6 +14,9 @@ describe('AzuosBoardDrillBanner', () => {
 
     expect(screen.getByRole('region', { name: 'Recorte do painel' })).toBeTruthy();
     expect(screen.getByText('Situação: Aberto')).toBeTruthy();
+    /* O "Voltar" no meio da linha, alinhado com o ícone e os selos — e não preso ao topo. */
+    expect(screen.getByRole('button', { name: 'Voltar para o Painel' })).toHaveClass('self-center');
+    expect(screen.getByRole('button', { name: 'Voltar para o Painel' })).not.toHaveClass('self-start');
     await fireEvent.click(screen.getByRole('button', { name: 'Limpar recorte' }));
     await fireEvent.click(screen.getByRole('button', { name: 'Voltar para o Painel' }));
     expect(onClear).toHaveBeenCalled();
