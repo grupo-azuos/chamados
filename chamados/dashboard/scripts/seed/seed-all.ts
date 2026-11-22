@@ -1,4 +1,5 @@
 import { seedComputers } from './computers/seed-computers';
+import { seedDashboardBoards } from './dashboard-boards/seed-dashboard-boards';
 import { seedInventoryItems } from './inventory-items/seed-inventory-items';
 import { seedInventoryMovements } from './inventory-movements/seed-inventory-movements';
 import { seedMaintenanceQuotes } from './maintenance-quotes/seed-maintenance-quotes';
@@ -48,6 +49,8 @@ async function main(): Promise<void> {
     report('orçamentos da Manutenção', await seedMaintenanceQuotes(db));
     /* A rede não depende de ninguém: é o link de internet, não uma máquina. */
     report('eventos de rede', await seedNetwork(db));
+    /* Por último: os painéis só apontam para os filtros salvos que o próprio seed grava. */
+    report('painéis prontos', await seedDashboardBoards(db));
   } finally {
     await close();
   }

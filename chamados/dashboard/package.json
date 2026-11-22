@@ -36,6 +36,7 @@
     "db:reset-system-demo": "npm run build -w @template/shared && tsx scripts/seed/system-demo/seed-system-demo.ts",
     "seed:all": "npm run build -w @template/shared && tsx scripts/seed/seed-all.ts",
     "seed:software-projects": "npm run build -w @template/shared && tsx scripts/seed/software-projects/seed-software-projects.ts",
+    "seed:dashboard-boards": "npm run build -w @template/shared && tsx scripts/seed/dashboard-boards/seed-dashboard-boards.ts",
     "seed:tickets": "npm run build -w @template/shared && tsx scripts/seed/tickets/seed-tickets.ts",
     "seed:computers": "npm run build -w @template/shared && tsx scripts/seed/computers/seed-computers.ts",
     "seed:maintenances": "npm run build -w @template/shared && tsx scripts/seed/maintenances/seed-maintenances.ts",
