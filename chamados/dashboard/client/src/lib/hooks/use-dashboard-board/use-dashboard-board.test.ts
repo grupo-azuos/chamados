@@ -11,6 +11,9 @@ vi.mock('$lib/api/dashboard-boards.api', () => ({
   dashboardBoardsApi: { board: vi.fn(), saveBoard: vi.fn(), data: vi.fn() },
 }));
 
+vi.mock('$lib/api/departments.api', () => ({
+  departmentsApi: { catalog: vi.fn().mockResolvedValue({ rh: [], local: [], isRhAvailable: false }) },
+}));
 vi.mock('$lib/api/tickets.api', () => ({
   ticketsApi: { assigneeOptions: vi.fn().mockResolvedValue([]) },
 }));

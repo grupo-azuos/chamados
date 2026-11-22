@@ -120,6 +120,32 @@ export function withPersonPhotos<T extends FilterCountsLike>(
   return next;
 }
 
+/**
+ * O filtro "Departamento" com TODOS os departamentos da lista (os do RH e os daqui), e não só os
+ * que já têm chamado: quem filtra procura o departamento pelo nome oficial, mesmo que ainda esteja
+ * em zero. Os nomes que só a conta trouxe (um antigo, gravado num chamado de antes) continuam, no
+ * fim. A lista ou a conta ainda não chegaram (ou falharam): fica o que há.
+ */
+export function withDepartmentCatalog<T extends FilterCountsLike>(
+  filters: readonly Pick<BoardFilter, 'id' | 'kind'>[],
+  counts: Record<string, T>,
+  names: readonly string[],
+): Record<string, T> {
+  if (names.length === 0) return counts;
+  const next = { ...counts };
+  for (const filter of filters) {
+    if (filter.kind !== 'department') continue;
+    const count = next[filter.id];
+    if (!count) continue;
+    const counted = new Map(count.series.map((item) => [item.key, item]));
+    const listed = names.map((name) => counted.get(name) ?? { key: name, label: name, value: 0 });
+    const extra = count.series.filter((item) => !names.includes(item.key));
+    next[filter.id] = { ...count, series: [...listed, ...extra] };
+  }
+
+  return next;
+}
+
 /** O que a conta trouxe, sem os grupos de "sem valor" (`(Sem responsável)`). */
 function countedOptions(counts: FilterCountsLike | null | undefined): BoardFilterOption[] {
   return (counts?.series ?? [])

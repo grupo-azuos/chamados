@@ -35,6 +35,11 @@ function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_F
   return actions;
 }
 
+/* Montando, a lista dos filtros nasce fechada: abre pelo título. */
+async function openList() {
+  await fireEvent.click(screen.getByRole('button', { name: /Ajustar os filtros/ }));
+}
+
 describe('AzuosBoardFilterBar', () => {
   // feliz
   it('shows every filter as one compact piece, with its name next to its value', () => {
@@ -72,6 +77,7 @@ describe('AzuosBoardFilterBar', () => {
   // feliz
   it('while building, lists the filters in toolbar order to reorder, re-draw and take off', async () => {
     const actions = renderBar({ isEditing: true, filters: [PERSON, STATUS] });
+    await openList();
 
     await fireEvent.click(screen.getByRole('button', { name: 'Descer o filtro Pessoa' }));
     expect(actions.onPlaceChange).toHaveBeenCalledWith([
@@ -85,8 +91,9 @@ describe('AzuosBoardFilterBar', () => {
   });
 
   // triste
-  it('does not move the first filter further up', () => {
+  it('does not move the first filter further up', async () => {
     renderBar({ isEditing: true, filters: [PERSON, STATUS] });
+    await openList();
 
     expect(screen.getByRole('button', { name: 'Subir o filtro Pessoa' })).toBeDisabled();
   });
@@ -109,8 +116,25 @@ describe('AzuosBoardFilterBar', () => {
   // feliz
   it('while building, chooses the width of each filter', async () => {
     const actions = renderBar({ isEditing: true, filters: [PERSON, STATUS] });
+    await openList();
 
     expect(screen.getByRole('combobox', { name: 'Largura de Pessoa' })).toHaveTextContent('Normal');
     expect(actions.onWidthChange).not.toHaveBeenCalled();
+  });
+
+  // feliz
+  it('keeps the order chosen in the list, period included', () => {
+    renderBar({ filters: [{ ...PERIOD, place: { x: 0, y: 0, w: 1, h: 1 } }, { ...PERSON, place: { x: 1, y: 0, w: 1, h: 1 } }] });
+
+    const names = screen.getAllByRole('group').map((group) => group.getAttribute('aria-label'));
+    expect(names.indexOf('Período')).toBeLessThan(names.indexOf('Pessoa'));
+  });
+
+  // triste
+  it('while building, keeps the filter list closed until it is asked for', () => {
+    renderBar({ isEditing: true, filters: [PERSON, STATUS] });
+
+    expect(screen.getByRole('button', { name: 'Ajustar os filtros (2)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Descer o filtro Pessoa' })).toBeNull();
   });
 });

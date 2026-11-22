@@ -13,6 +13,7 @@ import {
   placesInOrder,
   toolbarDisplayOf,
   toolbarDisplaysOf,
+  withDepartmentCatalog,
   withPersonPhotos,
 } from './board-filter.util';
 
@@ -126,3 +127,33 @@ describe('the Grafana-like filter toolbar', () => {
     expect(counts.outra).toBeUndefined();
   });
 });
+
+describe('withDepartmentCatalog', () => {
+  const FILTERS = [
+    { id: 'dep', kind: 'department' as const },
+    { id: 'who', kind: 'person' as const },
+  ];
+  const COUNTS = {
+    dep: { total: 3, series: [{ key: 'Tecnologia', label: 'Tecnologia', value: 2 }, { key: 'Antigo', label: 'Antigo', value: 1 }] },
+    who: { total: 3, series: [{ key: 'Ana', label: 'Ana', value: 3 }] },
+  };
+
+  // feliz
+  it('lists every department of the catalog, the ones still at zero included, and keeps the old names at the end', () => {
+    const next = withDepartmentCatalog(FILTERS, COUNTS, ['Contábil', 'Tecnologia']);
+
+    expect(next.dep?.series.map((item) => [item.key, item.value])).toEqual([
+      ['Contábil', 0],
+      ['Tecnologia', 2],
+      ['Antigo', 1],
+    ]);
+    expect(next.who).toBe(COUNTS.who);
+  });
+
+  // triste
+  it('keeps what the count brought while the catalog has not arrived', () => {
+    expect(withDepartmentCatalog(FILTERS, COUNTS, [])).toBe(COUNTS);
+    expect(withDepartmentCatalog(FILTERS, { who: COUNTS.who }, ['Contábil'])).toEqual({ who: COUNTS.who });
+  });
+});
+
