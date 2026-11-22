@@ -108,4 +108,23 @@ describe('AzuosBoardCanvas', () => {
 
     expect(screen.getByText('Este painel ainda não tem blocos.')).toBeInTheDocument();
   });
+
+  // triste
+  it('keeps each block in its place when the board is swapped for another one (Equipe → Gestor)', async () => {
+    const other = { ...WIDGET, id: 'b', title: 'Chamados por departamento' };
+    const props = (widgets: Widget[], x: number) => ({
+      data: { widgets, layout: widgets.map((widget) => ({ i: widget.id, x, y: 1, w: 2, h: 2 })), results: {}, filterNames: {} },
+      state: { isEditing: false },
+      actions: { onLayoutChange: vi.fn(), onEditWidget: vi.fn(), onRemoveWidget: vi.fn() },
+    });
+    const { container, rerender } = render(BoardCanvas, { props: props([WIDGET], 0) });
+
+    await rerender(props([other], 2));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    const block = container.querySelector<HTMLElement>('[data-widget-id="b"]');
+    expect(block?.style.left).not.toBe('');
+    expect(block?.style.top).not.toBe('');
+  });
 });
+
