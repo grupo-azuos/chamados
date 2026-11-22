@@ -67,6 +67,9 @@
   const pageCount = $derived(pageCountOf(data.total, data.pageSize));
   const isFirst = $derived(data.page <= 1);
   const isLast = $derived(data.page >= pageCount);
+
+  const STEP_CLASS =
+    'bg-muted hover:bg-accent text-foreground rounded-button control-sm inline-flex cursor-pointer items-center gap-1 border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50';
 </script>
 
 <!-- Empilha no celular: os três blocos lado a lado a 360 px espremem o texto do meio. -->
@@ -84,7 +87,7 @@
         type="button"
         disabled={isFirst || barState?.isLoading}
         onclick={() => actions.onPageChange(data.page - 1)}
-        class="bg-muted hover:bg-accent text-foreground inline-flex cursor-pointer items-center gap-1 rounded-control control-sm border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 border-transparent"
+        class={STEP_CLASS}
       >
         <ChevronLeft class="size-3.5" aria-hidden="true" />
         Anterior
@@ -96,7 +99,7 @@
         type="button"
         disabled={isLast || barState?.isLoading}
         onclick={() => actions.onPageChange(data.page + 1)}
-        class="bg-muted hover:bg-accent text-foreground inline-flex cursor-pointer items-center gap-1 rounded-control control-sm border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 border-transparent"
+        class={STEP_CLASS}
       >
         Próxima
         <ChevronRight class="size-3.5" aria-hidden="true" />

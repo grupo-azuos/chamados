@@ -1,6 +1,8 @@
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
+  import { cardToneClasses } from '$lib/utils/card-tone.util';
+
   /**
    * UMA COLUNA DE QUADRO (kanban): título com contagem, os cartões e o "Adicionar" no fim.
    *
@@ -20,13 +22,14 @@
     children?: Snippet;
   };
 
+  /** A faixa colorida do cabeçalho — a cor da etapa, a mesma do ícone cheio do assunto. */
   export const KANBAN_TONE_HEADER: Record<AzuosKanbanColumnTone, string> = {
-    neutral: 'bg-muted text-foreground',
-    info: 'bg-info text-info-foreground',
-    warning: 'bg-warning text-warning-foreground',
-    brand: 'bg-primary text-primary-foreground',
-    success: 'bg-success text-success-foreground',
-    danger: 'bg-destructive text-destructive-foreground',
+    neutral: cardToneClasses('neutral').dot,
+    info: cardToneClasses('info').dot,
+    warning: cardToneClasses('warning').dot,
+    brand: cardToneClasses('brand').dot,
+    success: cardToneClasses('success').dot,
+    danger: cardToneClasses('danger').dot,
   };
 </script>
 
@@ -82,7 +85,7 @@
       <button
         type="button"
         onclick={actions.onAdd}
-        class="border-input text-ink-500 hover:bg-accent hover:text-foreground rounded-control control-lg flex items-center justify-center gap-1.5 border-2 border-dashed text-sm font-medium transition-colors"
+        class="border-input text-ink-500 hover:bg-accent hover:text-foreground rounded-control control-md flex items-center justify-center gap-1.5 border-2 border-dashed text-sm font-medium transition-colors"
       >
         <Plus aria-hidden="true" class="size-4" />
         {ui?.addLabel ?? 'Adicionar'}

@@ -153,7 +153,7 @@
           </div>
 
           <p
-            class="rounded-box border-border bg-muted text-foreground border px-3.5 py-2.5 text-sm whitespace-pre-line"
+            class="rounded-box bg-muted text-foreground px-3.5 py-2.5 text-sm whitespace-pre-line"
           >
             {history.description}
           </p>

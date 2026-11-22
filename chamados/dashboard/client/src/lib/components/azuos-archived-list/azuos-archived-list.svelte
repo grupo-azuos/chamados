@@ -50,13 +50,13 @@
   actions={{ onOpenChange: actions.onOpenChange }}
 >
   {#if listState.error}
-    <p role="alert" class="text-destructive text-sm font-medium">{listState.error}</p>
+    <p role="alert" class="text-hue-red text-sm font-medium">{listState.error}</p>
   {:else if listState.isLoading}
     <p class="text-ink-500 text-sm">Carregando os removidos…</p>
   {:else if data.items.length === 0}
     <p class="text-ink-500 text-sm">Nada foi removido.</p>
   {:else}
-    <ul class="divide-border divide-y">
+    <ul class="divide-border/60 divide-y">
       {#each data.items as item (item.key)}
         <li class="flex items-center justify-between gap-3 py-2">
           <span class="min-w-0">

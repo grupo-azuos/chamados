@@ -33,13 +33,13 @@
 <div
   role="alert"
   class={cn(
-    'flex gap-3 rounded-box bg-muted text-destructive',
+    'rounded-box bg-card shadow-card text-destructive flex gap-3',
     isInline ? 'items-center px-3 py-2' : 'items-start p-4',
     ui?.className
   )}
 >
   <AlertTriangle
-    class={cn('shrink-0 text-destructive', isInline ? 'size-4' : 'mt-0.5 size-5')}
+    class={cn('shrink-0', isInline ? 'size-4' : 'mt-0.5 size-5')}
     aria-hidden="true"
   />
 
@@ -52,12 +52,14 @@
     </div>
   {/if}
 
+  <!-- O botão não passa pelo `azuos-action-button` de propósito: é vermelho sobre fundo vermelho
+       claro, uma combinação que nenhuma variante do botão tem. -->
   {#if actions?.onRetry}
     <button
       type="button"
       onclick={actions.onRetry}
       disabled={isRetrying}
-      class="control-sm inline-flex shrink-0 items-center gap-1.5 rounded-control border bg-muted text-xs font-semibold text-destructive hover:bg-destructive-soft disabled:opacity-60 border-transparent"
+      class="control-sm rounded-button bg-destructive-soft text-destructive hover:bg-destructive-soft inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold disabled:opacity-60"
     >
       <RotateCw class={cn('size-3.5', isRetrying && 'animate-spin')} aria-hidden="true" />
       Tentar de novo

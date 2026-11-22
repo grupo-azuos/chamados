@@ -51,7 +51,7 @@
       <span class="font-semibold">Recorte do painel:</span>
       <ul class="flex flex-1 flex-wrap gap-1" aria-label="O recorte">
         {#each data.summary as part (part)}
-          <li class="rounded-chip bg-card text-foreground px-2 py-0.5 text-xs font-semibold">{part}</li>
+          <li class="rounded-chip bg-card text-ink-700 px-2 py-0.5 text-xs font-semibold">{part}</li>
         {/each}
       </ul>
       <ActionButton

@@ -11,22 +11,24 @@
     };
   };
 
-  type ProgressTone = 'emerald' | 'yellow' | 'orange' | 'red';
+  type ProgressTone = 'done' | 'close' | 'halfway' | 'behind';
 
+  /* As cores de categoria dos gráficos (`lib/theme/tokens.css`), e não um verde fixo da paleta
+     crua: assim a barra acompanha a troca de tema e combina com o gráfico ao lado dela no painel. */
   const TONE_CLASSES: Record<ProgressTone, string> = {
-    emerald: 'bg-chart-4',
-    yellow: 'bg-chart-3',
-    orange: 'bg-chart-2',
-    red: 'bg-chart-1',
+    done: 'bg-chart-2',
+    close: 'bg-chart-3',
+    halfway: 'bg-chart-5',
+    behind: 'bg-chart-4',
   };
 
   /** Cada faixa tem um tom, e é por ele que a lista é lida de relance. */
   function progressTone(percentage: number): ProgressTone {
-    if (percentage >= 100) return 'emerald';
-    if (percentage >= 70) return 'yellow';
-    if (percentage >= 40) return 'orange';
+    if (percentage >= 100) return 'done';
+    if (percentage >= 70) return 'close';
+    if (percentage >= 40) return 'halfway';
 
-    return 'red';
+    return 'behind';
   }
 </script>
 

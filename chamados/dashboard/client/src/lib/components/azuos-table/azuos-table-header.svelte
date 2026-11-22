@@ -4,8 +4,8 @@
   import { TableHeader } from '$lib/components/ui/table';
   import { cn } from '$lib/utils/cn';
 
-  /* O cabeçalho da tabela: faixa de fundo suave, letra pequena em caixa alta. O `ui/table` vem
-     sem nada disso; a aparência da casa mora aqui. */
+  /* O cabeçalho da tabela: sem faixa de fundo (padrão Apple), só a divisória e a letra pequena
+     em cinza de apoio. A aparência da casa mora aqui, e não no `ui/table`. */
   let { ref = $bindable(null), class: className, ...restProps }: ComponentProps<typeof TableHeader> =
     $props();
 </script>
@@ -13,7 +13,7 @@
 <TableHeader
   bind:ref
   class={cn(
-    'border-border bg-muted text-ink-500 border-b text-xs font-semibold tracking-widest uppercase',
+    'border-border text-muted-foreground border-b text-xs font-semibold',
     className,
   )}
   {...restProps}

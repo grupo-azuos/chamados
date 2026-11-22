@@ -68,7 +68,7 @@ describe('AzuosDonutChart', () => {
   it('names every slice in the legend, with value and percentage', () => {
     render(DonutChart, { props: { data: { slices, seriesLabel: 'Status' } } });
 
-    expect(screen.getByRole('img', { name: 'Status' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /^Status: .+ no total$/ })).toBeInTheDocument();
     expect(screen.getByText('Em andamento')).toBeInTheDocument();
     expect(screen.getByText('63%')).toBeInTheDocument();
   });

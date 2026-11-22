@@ -39,29 +39,31 @@
   bind:open={isOpen}
   disabled={blockState?.isDisabled}
   onOpenChange={(next) => actions?.onOpenChange?.(next)}
-  class={cn('bg-card rounded-box shadow-card', ui?.className)}
+  class={cn('rounded-box bg-card shadow-card', ui?.className)}
 >
   <CollapsibleTrigger
-    class="text-ink-900 flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+    class="text-foreground rounded-box hover:bg-hover-veil flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60"
   >
     <span class="break-words">{data.title}</span>
     <ChevronDown
       class={cn(
-        'text-ink-500 size-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none',
+        'text-muted-foreground size-4 shrink-0 transition-transform duration-300 ease-out',
         isOpen && 'rotate-180',
       )}
       aria-hidden="true"
     />
   </CollapsibleTrigger>
 
-  <!-- O conteúdo DESLIZA ao abrir e ao fechar (a altura vai de zero à do conteúdo, medida pelo
-       próprio componente). O respiro mora no `div` de dentro: com ele aqui fora, a seção
-       fechando ainda mostrava a faixa do padding no último quadro. Quem pediu ao sistema menos
-       movimento vê abrir e fechar na hora. -->
+  <!-- ABRIR E FECHAR ANIMADOS: a caixa desliza na altura do conteúdo (a altura vem do bits-ui,
+       medida pelo próprio componente) e o texto entra subindo e aparecendo. O respiro mora no
+       filho, porque padding na caixa que anima a altura dá um tranco no fim. Quem pediu menos
+       movimento vê abrir na hora (`motion-safe`). -->
   <CollapsibleContent
-    class="border-border text-ink-700 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden border-t text-sm motion-reduce:animate-none"
+    class="data-[state=open]:motion-safe:animate-collapsible-down data-[state=closed]:motion-safe:animate-collapsible-up overflow-hidden"
   >
-    <div class="px-4 py-3">
+    <div
+      class="border-border text-foreground/85 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 border-t px-4 py-3 text-sm motion-safe:duration-300"
+    >
       {@render children?.()}
     </div>
   </CollapsibleContent>

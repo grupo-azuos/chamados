@@ -34,7 +34,7 @@
   {actions}
 >
   <div
-    class="text-muted-foreground group-data-[selected=true]/card:text-on-card-selected flex min-w-0 items-center gap-2 text-sm leading-tight font-medium"
+    class="text-muted-foreground flex min-w-0 items-center gap-2 text-sm leading-tight font-medium"
   >
     <span
       aria-hidden="true"
