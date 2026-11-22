@@ -27,14 +27,20 @@
 
 <Story name="Com filtro escolhido" args={{ data: { filters, values: { ...EMPTY_BOARD_FILTER_VALUES, person: 'Ana Lima' }, counts }, actions }} />
 
-<!-- Caso limite: um painel gravado com o desenho grande (cards) cai na lista suspensa. -->
 <!-- As pessoas com foto: quem não tem foto fica com as iniciais. -->
 <Story name="Pessoas com foto" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts: { ...counts, pessoa: { ...counts.pessoa, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 5, avatarUrl: '/icon-192.png' }, { key: 'Caio Reis', label: 'Caio Reis', value: 4, avatarUrl: null }] } } }, actions }} />
 
 <!-- Caso limite: tela estreita — as peças descem uma por linha. -->
 <Story name="Tela estreita" parameters={{ viewport: { defaultViewport: 'mobile1' } }} args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />
 
-<Story name="Desenho antigo" args={{ data: { filters: [{ id: 'ticketStatus', kind: 'ticketStatus', label: 'Situação', display: 'cards' }], values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />
+<!-- Os cards: uma faixa da largura da barra, cada opção com quantos há nela. -->
+<Story name="Cards" args={{ data: { filters: [{ id: 'ticketStatus', kind: 'ticketStatus', label: 'Situação', display: 'cards' }, { id: 'periodo', kind: 'period', label: 'Período' }], values: { ...EMPTY_BOARD_FILTER_VALUES, ticketStatus: 'open' }, counts }, actions }} />
+
+<!-- Caso limite: um painel gravado com um desenho que a barra não tem (lista aberta) cai na lista suspensa. -->
+<Story name="Desenho antigo" args={{ data: { filters: [{ id: 'ticketStatus', kind: 'ticketStatus', label: 'Situação', display: 'list' }], values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />
+
+<!-- Montando na Infraestrutura: só os filtros que valem no módulo, para pôr. -->
+<Story name="Montando na Infraestrutura" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts, kinds: ['person', 'period', 'ticketStatus', 'ticketPriority', 'department', 'problemType', 'requester', 'computerHealth'] }, state: { isEditing: true }, actions }} />
 
 <Story name="Montando" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, state: { isEditing: true }, actions }} />
 

@@ -153,6 +153,14 @@ function countedOptions(counts: FilterCountsLike | null | undefined): BoardFilte
     .map((item) => ({ value: item.key, label: item.label }));
 }
 
+/** Quantos há em cada opção, pela conta do filtro; "Todos" (valor vazio) é o total. */
+export function optionCounts(counts: FilterCountsLike | null | undefined): Map<string, number> {
+  const byKey = new Map((counts?.series ?? []).map((item) => [item.key, item.value]));
+  byKey.set('', counts?.total ?? 0);
+
+  return byKey;
+}
+
 /** Os filtros com valor escolhido, com o valor escrito como a pessoa o leu na tela. */
 export function activeSummary(
   filters: readonly BoardFilter[],
@@ -184,10 +192,11 @@ export function readingOrder<T extends { place: BoardFilterPlace }>(filters: rea
 /**
  * OS DESENHOS DA BARRA DE FILTROS — no estilo do Grafana, cada filtro é UMA peça compacta numa
  * linha só, acima dos blocos: a lista suspensa, a busca, ou as etiquetas à vista (para poucas
- * opções). Os desenhos grandes (cards, lista aberta, fotos) ocupavam uma casa inteira da grade e
- * empurravam o painel para baixo; um painel gravado com eles cai no desenho compacto mais perto.
+ * opções) — e os CARDS, numa faixa da largura da barra, cada opção com quantos há nela. A lista
+ * aberta e as fotos ocupavam uma casa inteira da grade e empurravam o painel para baixo; um
+ * painel gravado com elas cai no desenho compacto mais perto.
  */
-export const TOOLBAR_DISPLAYS: readonly BoardFilterDisplay[] = ['select', 'search', 'chips'];
+export const TOOLBAR_DISPLAYS: readonly BoardFilterDisplay[] = ['select', 'search', 'chips', 'cards'];
 
 /** Os desenhos que quem monta pode escolher para o filtro, na barra. */
 export function toolbarDisplaysOf(kind: BoardFilterKind): BoardFilterDisplay[] {

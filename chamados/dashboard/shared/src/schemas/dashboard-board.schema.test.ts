@@ -42,6 +42,7 @@ import {
   windowLabel,
   windowRange,
   boardFilterCardSource,
+  boardFilterKindsOf,
   isSourceOf,
   sourcesOf,
 } from './dashboard-board.schema';
@@ -595,3 +596,36 @@ describe('boardFilterCardSource', () => {
     expect(boardFilterCardSource('period', 'infra')).toBeNull();
   });
 });
+
+describe('boardFilterKindsOf', () => {
+  // feliz
+  it('offers each module only the filters some of its sources have', () => {
+    expect(boardFilterKindsOf('sistema')).toContain('project');
+    expect(boardFilterKindsOf('infra')).toContain('computerHealth');
+    expect(boardFilterKindsOf('manutencao')).toContain('inventoryCategory');
+    expect(boardFilterKindsOf('infra')).toEqual(expect.arrayContaining(['person', 'period', 'problemType', 'requester']));
+  });
+
+  // triste
+  it('leaves out the filters of another module', () => {
+    expect(boardFilterKindsOf('infra')).not.toContain('project');
+    expect(boardFilterKindsOf('manutencao')).not.toContain('computerHealth');
+    expect(boardFilterKindsOf('sistema')).not.toContain('inventoryCategory');
+  });
+});
+
+describe('the new field filters', () => {
+  // feliz
+  it('count in their own source and cut the blocks that have the field', () => {
+    expect(boardFilterCardSource('computerHealth', 'infra')).toEqual({ source: 'computers', groupBy: 'healthStatus' });
+    expect(boardFilterCardSource('problemType', 'manutencao')).toEqual({ source: 'maintenanceTickets', groupBy: 'problemType' });
+    expect(boardMatches({ ...EMPTY_BOARD_FILTER_VALUES, project: 'Paralegal' }, 'softwareActivity')).toEqual([{ field: 'project', value: 'Paralegal' }]);
+  });
+
+  // triste
+  it('have no count outside their module and leave other sources alone', () => {
+    expect(boardFilterCardSource('project', 'infra')).toBeNull();
+    expect(boardMatches({ ...EMPTY_BOARD_FILTER_VALUES, computerHealth: 'critical' }, 'infraTickets')).toEqual([]);
+  });
+});
+

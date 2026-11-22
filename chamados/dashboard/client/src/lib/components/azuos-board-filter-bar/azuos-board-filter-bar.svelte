@@ -27,6 +27,8 @@
       values: BoardFilterValues;
       /** A conta de cada opção, pelo id do filtro — as pessoas e os departamentos. */
       counts: Record<string, FilterCounts>;
+      /** Os filtros que o módulo aceita, para pôr. Sem a lista, todos. */
+      kinds?: readonly BoardFilterKind[];
     };
     state?: { isEditing?: boolean };
     actions: {
@@ -68,7 +70,7 @@
   const isEditing = $derived(Boolean(barState?.isEditing));
   const active = $derived(activeSummary(data.filters, data.values, data.counts));
   const ordered = $derived(readingOrder(placedBoardFilters(data.filters)));
-  const missing = $derived(BOARD_FILTER_KINDS.filter((kind) => !data.filters.some((filter) => filter.kind === kind)));
+  const missing = $derived((data.kinds ?? BOARD_FILTER_KINDS).filter((kind) => !data.filters.some((filter) => filter.kind === kind)));
 </script>
 
 {#snippet control(filter: BoardFilter)}
@@ -85,8 +87,8 @@
   <AzuosCardSurface ui={{ className: 'flex flex-col gap-2 p-3 sm:flex-row sm:items-start' }}>
     <div class="grid min-w-0 flex-1 grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2">
       {#each ordered as filter (filter.id)}
-        <!-- "Linha inteira": a peça ocupa a linha toda, sozinha, abaixo das anteriores. -->
-        <div class={cn('min-w-0', filter.width === 'full' && 'col-span-full')}>{@render control(filter)}</div>
+        <!-- "Linha inteira" (e os cards, que são uma faixa): a peça ocupa a linha toda, sozinha. -->
+        <div class={cn('min-w-0', (filter.width === 'full' || toolbarDisplayOf(filter) === 'cards') && 'col-span-full')}>{@render control(filter)}</div>
       {/each}
     </div>
     {#if actions.onClear && !isEditing && active.length > 0}
