@@ -93,6 +93,10 @@ describe('AzuosBoardWidget', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Configurar Chamados' }));
     expect(actions.onEdit).toHaveBeenCalledWith('w1');
     expect(screen.queryByRole('button', { name: 'Expandir Chamados' })).toBeNull();
+    /* O bloco aparece como no painel: a barra flutua acima, fora do cabeçalho. */
+    expect(screen.getByRole('heading', { name: 'Chamados' }).closest('header')).not.toContainElement(
+      screen.getByRole('button', { name: 'Configurar Chamados' }),
+    );
   });
 
   // triste

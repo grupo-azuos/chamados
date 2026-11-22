@@ -109,4 +109,18 @@ describe('board layout', () => {
     // triste
     expect(slotRows([])).toBe(6);
   });
+
+  // feliz
+  it('spaces the rows apart by the row gap while building, for the bar above each block', () => {
+    const cell = { width: 200, height: 140, gap: 32, rowGap: 72 };
+
+    expect(pixelsOf({ x: 1, y: 1, w: 1, h: 2 }, cell)).toEqual({ left: 232, top: 212, width: 200, height: 352 });
+    expect(cellAt({ x: 240, y: 220 }, cell)).toEqual({ x: 1, y: 1 });
+  });
+
+  // triste
+  it('falls back to the column gap when there is no row gap', () => {
+    expect(cellAt({ x: 0, y: 150 }, { width: 200, height: 140, gap: 16 })).toEqual({ x: 0, y: 0 });
+  });
 });
+
