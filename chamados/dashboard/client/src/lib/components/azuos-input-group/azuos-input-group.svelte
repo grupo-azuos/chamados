@@ -1,14 +1,20 @@
+<!--
+  @component
+  Um campo de texto com algo colado nele: um ícone ou um prefixo na frente (`R$`, uma lupa), uma
+  unidade ou um botão atrás (`kg`, "copiar"). Envolve o `ui/input-group` do shadcn.
+
+  A altura é a de todo campo de formulário (`control-lg`, 40px) e o raio é o de controle — definidos
+  AQUI, e não no `ui/`, que o CLI sobrescreve, nem na tela, que não decide altura.
+
+  Sem prefixo nem sufixo, use o `azuos-text-field`: é o mesmo campo, sem o grupo em volta.
+
+  Props: `data` traz o rótulo, o `name`, o valor e o texto de exemplo; `state` traz o erro e o
+  desabilitado; `actions` recebe `onChange` e `onBlur`; `prefix` e `suffix` são o que fica colado na
+  frente e atrás.
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
-  /**
-   * Um campo de texto com algo colado nele: um ícone ou um prefixo na frente (`R$`, uma lupa),
-   * uma unidade ou um botão atrás (`kg`, "copiar"). Envolve o `ui/input-group` do shadcn.
-   *
-   * A altura é a de todo campo de formulário (`control-lg`, 40px) e o raio é o de controle —
-   * definidos AQUI, e não no `ui/`, que o CLI sobrescreve, nem na tela, que não decide altura.
-   * Sem prefixo nem sufixo, use o `azuos-text-field`: é o mesmo campo, sem o grupo em volta.
-   */
   export type AzuosInputGroupProps = {
     data: {
       label: string;

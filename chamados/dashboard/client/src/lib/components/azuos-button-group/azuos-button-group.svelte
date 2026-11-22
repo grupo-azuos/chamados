@@ -1,19 +1,25 @@
+<!--
+  @component
+  Botões que são UMA escolha só, lado a lado (Dia · Semana · Mês).
+
+  O DESENHO É O SEGMENTADO: um trilho com borda e um respiro por dentro, e o escolhido como uma
+  pastilha azul que DESLIZA até o novo. A pastilha mora dentro do trilho — tem a mesma forma na
+  ponta e no meio, e nunca cobre a borda. (Era o `ui/button-group` do shadcn, com bordas coladas
+  e só as pontas arredondadas: a pastilha redonda por cima ficava com um canto redondo encostado
+  num reto, e saía da borda do grupo.)
+
+  Para muitas opções ou espaço estreito, use o `azuos-option-picker` (quebra linha e vira
+  seletor); este aqui é para duas a quatro opções curtas que cabem numa fileira.
+
+  `aria-pressed` em cada botão, e não só a cor: quem usa leitor de tela precisa saber qual está
+  valendo, e "preenchido de azul" não é informação que ele leia.
+
+  - `data`: as opções e o valor escolhido.
+  - `ui`: `ariaLabel` (obrigatório), orientação e classe extra.
+  - `state`: desligado.
+  - `actions`: `onChange`.
+-->
 <script lang="ts" module>
-  /**
-   * Botões que são UMA escolha só, lado a lado (Dia · Semana · Mês).
-   *
-   * O DESENHO É O SEGMENTADO: um trilho com borda e um respiro por dentro, e o escolhido como uma
-   * pastilha azul que DESLIZA até o novo. A pastilha mora dentro do trilho — tem a mesma forma na
-   * ponta e no meio, e nunca cobre a borda. (Era o `ui/button-group` do shadcn, com bordas coladas
-   * e só as pontas arredondadas: a pastilha redonda por cima ficava com um canto redondo encostado
-   * num reto, e saía da borda do grupo.)
-   *
-   * Para muitas opções ou espaço estreito, use o `azuos-option-picker` (quebra linha e vira
-   * seletor); este aqui é para duas a quatro opções curtas que cabem numa fileira.
-   *
-   * `aria-pressed` em cada botão, e não só a cor: quem usa leitor de tela precisa saber qual está
-   * valendo, e "preenchido de azul" não é informação que ele leia.
-   */
   export type ButtonGroupOption = { value: string; label: string };
 
   export type AzuosButtonGroupProps = {

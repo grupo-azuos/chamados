@@ -1,3 +1,12 @@
+<!--
+  @component
+  MONTANDO OS FILTROS, como as variáveis do Grafana: uma lista, na ordem em que aparecem na
+  barra. Cada linha arrasta (ou sobe e desce pelas setas, no teclado), escolhe o desenho e sai.
+  A ordem volta em `onPlaceChange`, gravada como a ordem de leitura da grade; o "Guardar" grava.
+
+  - `data`: os filtros, cada um com o lugar dele na barra.
+  - `actions`: a ordem nova (`onPlaceChange`), trocar o desenho, a largura e tirar.
+-->
 <script lang="ts" module>
   import {
     type BoardFilter,
@@ -8,11 +17,6 @@
 
   import { type BoardFilterPlaceChange } from '$lib/utils/board-draft.util';
 
-  /**
-   * MONTANDO OS FILTROS, como as variáveis do Grafana: uma lista, na ordem em que aparecem na
-   * barra. Cada linha arrasta (ou sobe e desce pelas setas, no teclado), escolhe o desenho e sai.
-   * A ordem volta em `onPlaceChange`, gravada como a ordem de leitura da grade; o "Guardar" grava.
-   */
   export type AzuosBoardFilterListEditorProps = {
     data: { filters: (BoardFilter & { place: BoardFilterPlace })[] };
     actions: {

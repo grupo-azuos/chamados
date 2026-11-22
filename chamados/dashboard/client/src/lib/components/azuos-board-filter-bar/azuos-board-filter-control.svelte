@@ -1,3 +1,12 @@
+<!--
+  @component
+  UM FILTRO NA BARRA, no estilo do Grafana: uma peça só, com o nome à esquerda e o valor ao
+  lado ("Situação | Todos ▾"). Três desenhos — a lista suspensa, a busca e as etiquetas à vista
+  —, todos na altura de um campo, para a barra inteira caber numa linha acima dos blocos.
+
+  - `data`: o filtro, o desenho escolhido, os valores e a conta de cada opção.
+  - `actions`: `onChange`, com o pedaço dos valores que mudou.
+-->
 <script lang="ts" module>
   import {
     type BoardFilter,
@@ -7,11 +16,6 @@
 
   import { type FilterCounts } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
 
-  /**
-   * UM FILTRO NA BARRA, no estilo do Grafana: uma peça só, com o nome à esquerda e o valor ao
-   * lado ("Situação | Todos ▾"). Três desenhos — a lista suspensa, a busca e as etiquetas à vista
-   * —, todos na altura de um campo, para a barra inteira caber numa linha acima dos blocos.
-   */
   export type AzuosBoardFilterControlProps = {
     data: {
       filter: BoardFilter;

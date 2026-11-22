@@ -1,3 +1,16 @@
+<!--
+  @component
+  MONTAR O PAINEL — a tela cheia que abre por cima de tudo (sem o menu do sistema). À esquerda o
+  tabuleiro, com as casas da grade à mostra; à direita os tipos de bloco, para ARRASTAR até a
+  casa onde ele deve nascer (ou pôr embaixo com um clique). "Guardar" é a única ação principal;
+  "Restaurar" desiste. O mesmo desenho do paralegal.
+
+  - `data`: o nome do painel, os blocos e as posições, os resultados, os filtros do painel (e os
+    valores e contas) e o peso já gasto da cota.
+  - `state`: aberto, salvando, `canAdd` (ainda cabe bloco) e o erro.
+  - `actions`: mexer nos filtros (e abrir "Montar filtros"), a posição nova, o bloco novo numa
+    casa, editar, remover, trocar o gráfico, `onSave` ("Guardar") e `onCancel` ("Restaurar").
+-->
 <script lang="ts" module>
   import {
     type BoardFilter,
@@ -14,12 +27,6 @@
   import { type FilterCounts, type WidgetState } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
   import { type BoardFilterPlaceChange } from '$lib/utils/board-draft.util';
 
-  /**
-   * MONTAR O PAINEL — a tela cheia que abre por cima de tudo (sem o menu do sistema). À esquerda o
-   * tabuleiro, com as casas da grade à mostra; à direita os tipos de bloco, para ARRASTAR até a
-   * casa onde ele deve nascer (ou pôr embaixo com um clique). "Guardar" é a única ação principal;
-   * "Restaurar" desiste. O mesmo desenho do paralegal.
-   */
   export type AzuosBoardStudioProps = {
     data: {
       scopeLabel: string;

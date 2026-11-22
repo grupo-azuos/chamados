@@ -1,20 +1,25 @@
+<!--
+  @component
+  O EDITOR DA FOTO DE PERFIL — cortar, aproximar e girar antes de enviar. Trazido do
+  admin-console (`AzuosAvatarCropperDialog`), com o mesmo visual, textos e limites.
+
+  O recorte em si é do `svelte-easy-crop` (arrastar, pinça no celular, roda do mouse); o modal
+  é do shadcn-svelte e o zoom, o `AzuosSliderField`. Este componente só os junta e devolve a
+  escolha: a área em pixels e a rotação. Quem transforma isso em imagem é o model — a tela não
+  lê arquivo.
+
+  Uma diferença do React: o `svelte-easy-crop` não gira. A imagem girada é preparada à parte
+  (`rotateImageUrl`) e é ELA que vai para o recorte — a área medida fica no referencial da
+  imagem girada, igual ao `react-easy-crop`.
+
+  Posição, zoom e rotação são estado PURAMENTE visual enquanto a pessoa ajusta. Só o "Usar esta
+  foto" os entrega para fora.
+
+  - `data`: o endereço da imagem escolhida.
+  - `state`: aberto, salvando e o erro.
+  - `actions`: `onConfirm` (a área e a rotação) e `onCancel`.
+-->
 <script lang="ts" module>
-  /**
-   * O EDITOR DA FOTO DE PERFIL — cortar, aproximar e girar antes de enviar. Trazido do
-   * admin-console (`AzuosAvatarCropperDialog`), com o mesmo visual, textos e limites.
-   *
-   * O recorte em si é do `svelte-easy-crop` (arrastar, pinça no celular, roda do mouse); o modal
-   * é do shadcn-svelte e o zoom, o `AzuosSliderField`. Este componente só os junta e devolve a
-   * escolha: a área em pixels e a rotação. Quem transforma isso em imagem é o model — a tela não
-   * lê arquivo.
-   *
-   * Uma diferença do React: o `svelte-easy-crop` não gira. A imagem girada é preparada à parte
-   * (`rotateImageUrl`) e é ELA que vai para o recorte — a área medida fica no referencial da
-   * imagem girada, igual ao `react-easy-crop`.
-   *
-   * Posição, zoom e rotação são estado PURAMENTE visual enquanto a pessoa ajusta. Só o "Usar esta
-   * foto" os entrega para fora.
-   */
   export type AvatarCropSelection = {
     area: { x: number; y: number; width: number; height: number };
     rotation: number;

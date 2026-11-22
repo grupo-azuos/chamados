@@ -1,3 +1,14 @@
+<!--
+  @component
+  A pessoa, em duas letras — ou na foto, quando houver.
+
+  As iniciais não são enfeite: numa lista de trinta linhas, o olho acha "MR" antes de ler "Mariana
+  Ribeiro". Duas letras bastam — nome comprido no avatar vira borrão ilegível.
+
+  - `name`: o nome de onde saem as iniciais.
+  - `avatarUrl`: a foto; sem ela, ficam as iniciais.
+  - `ui`: o tamanho (`sm`, `md`, `lg`, `xl`) e classes extras.
+-->
 <script lang="ts" module>
   export type AzuosPersonAvatarProps = {
     name: string;

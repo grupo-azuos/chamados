@@ -1,3 +1,17 @@
+<!--
+  @component
+  OS ITENS DE ESTOQUE na ficha do chamado — além da máquina, o que o atendimento tira do depósito
+  (saída) ou devolve a ele (entrada), quantos forem.
+
+  O item fica RESERVADO enquanto o chamado está aberto: o saldo do depósito só anda no encerramento.
+  Com o chamado encerrado, a lista vira só leitura — para mexer, reabre-se.
+
+  Função pura de props: os itens, as opções e o que está sendo digitado chegam prontos do view-model
+  (`use-ticket-stock-items`). Na saída só se oferece o que ainda sobra, com a sobra no nome. `data`
+  leva itens, opções, valores, erros e as máquinas do chamado (com mais de uma, escolhe-se para qual
+  vai o item); `ui`, o nome do depósito e `isHeaderHidden`; `state`, encerrado, carregamento,
+  inclusão, remoção e erro; `actions`, mudar campo, incluir e tirar.
+-->
 <script lang="ts" module>
   import {
     TICKET_STOCK_DIRECTIONS,
@@ -12,16 +26,6 @@
 
   export type TicketStockField = keyof TicketStockItemFormValues;
 
-  /**
-   * OS ITENS DE ESTOQUE na ficha do chamado — além da máquina, o que o atendimento tira do
-   * depósito (saída) ou devolve a ele (entrada), quantos forem.
-   *
-   * O item fica RESERVADO enquanto o chamado está aberto: o saldo do depósito só anda no
-   * encerramento. Com o chamado encerrado, a lista vira só leitura — para mexer, reabre-se.
-   *
-   * Função pura de props: os itens, as opções e o que está sendo digitado chegam prontos do
-   * view-model (`use-ticket-stock-items`).
-   */
   export type AzuosTicketStockItemsCardProps = {
     data: {
       items: TicketStockItem[];

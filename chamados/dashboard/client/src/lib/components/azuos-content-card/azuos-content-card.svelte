@@ -1,13 +1,20 @@
+<!--
+  @component
+  O CARD DE CONTEÚDO: uma máquina, um projeto, qualquer coisa com título e detalhes.
+
+  Superfície da marca (`AzuosCardSurface`) com o ícone do assunto grande no canto, no sotaque dele —
+  é por ali que a cor do assunto aparece sem pintar o card. O conteúdo é livre (`children`). O hover
+  é o véu da superfície; no tom com `ui.isHoverColored`.
+
+  Props: `data.label` é o nome acessível; `ui` traz o tom, o ícone, o tamanho da marca e o hover
+  colorido; `state.isSelected` marca o escolhido; com `actions.onClick` o card vira clicável.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
 
   import { type AzuosCardTone } from '$lib/utils/card-tone.util';
 
-  /**
-   * O CARD DE CONTEÚDO: uma máquina, um projeto, qualquer coisa com título e detalhes. Superfície
-   * da marca com o ícone do assunto grande no canto, no sotaque dele. O mesmo desenho do template.
-   */
   export type AzuosContentCardProps = {
     data?: { label?: string };
     ui?: {

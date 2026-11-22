@@ -1,3 +1,16 @@
+<!--
+  @component
+  VINCULAR MÁQUINAS a um chamado — um diálogo grande, com a busca do Inventário, onde se marcam
+  quantas máquinas forem antes de aplicar. Um atendimento pode passar por várias (o monitor trocado
+  em duas mesas), e escolher uma por vez num campo estreito não dava.
+
+  Nada é gravado ao marcar: a escolha é um rascunho, e só "Aplicar" a envia. Cancelar desfaz.
+
+  Função pura de props: a lista já chega filtrada, e a escolha vive no view-model. `data` leva as
+  máquinas, os ids marcados, a busca, o departamento e a lista de departamentos; `state`, `isOpen`,
+  `isLoading`, `isSaving` e `error`; `actions`, buscar, filtrar por departamento, marcar, limpar a
+  escolha, aplicar e fechar.
+-->
 <script lang="ts" module>
   /** Uma máquina como o diálogo a mostra — o bastante para reconhecê-la de relance. */
   export type TicketComputerChoice = {
@@ -14,15 +27,6 @@
     isOnline: boolean;
   };
 
-  /**
-   * VINCULAR MÁQUINAS a um chamado — um diálogo grande, com a busca do Inventário, onde se
-   * marcam quantas máquinas forem antes de aplicar. Um atendimento pode passar por várias (o
-   * monitor trocado em duas mesas), e escolher uma por vez num campo estreito não dava.
-   *
-   * Nada é gravado ao marcar: a escolha é um rascunho, e só "Aplicar" a envia. Cancelar desfaz.
-   *
-   * Função pura de props: a lista já chega filtrada, e a escolha vive no view-model.
-   */
   export type AzuosTicketComputersDialogProps = {
     data: {
       computers: TicketComputerChoice[];

@@ -1,15 +1,19 @@
+<!--
+  @component
+  UM FILTRO COM AS OPÇÕES À VISTA — o outro jeito de escolher "um entre vários", quando a lista
+  suspensa esconderia o que importa. Três desenhos, escolhidos por quem monta o painel:
+
+  - **Etiquetas** — as opções lado a lado; a escolhida, na cor cheia da marca.
+  - **Lista aberta** — uma opção por linha, com o visto na escolhida; lê de cima a baixo.
+  - **Fotos** — só os rostos (o nome aparece ao passar o mouse); para o filtro de pessoa.
+
+  Clicar na escolhida de novo NÃO desmarca: "Todos" é uma opção como as outras, e é ela que limpa.
+  Assim um clique a mais nunca some com o filtro sem a pessoa ver.
+
+  Props: `data` traz o rótulo, o valor e as opções; `ui.display` escolhe o desenho (`chips`, `list`
+  ou `avatars`); `actions.onChange` recebe a opção escolhida.
+-->
 <script lang="ts" module>
-  /**
-   * UM FILTRO COM AS OPÇÕES À VISTA — o outro jeito de escolher "um entre vários", quando a lista
-   * suspensa esconderia o que importa. Três desenhos, escolhidos por quem monta o painel:
-   *
-   * - **Etiquetas** — as opções lado a lado; a escolhida, na cor cheia da marca.
-   * - **Lista aberta** — uma opção por linha, com o visto na escolhida; lê de cima a baixo.
-   * - **Fotos** — só os rostos (o nome aparece ao passar o mouse); para o filtro de pessoa.
-   *
-   * Clicar na escolhida de novo NÃO desmarca: "Todos" é uma opção como as outras, e é ela que
-   * limpa. Assim um clique a mais nunca some com o filtro sem a pessoa ver.
-   */
   export type AzuosFilterChoiceOption = {
     value: string;
     label: string;

@@ -1,3 +1,16 @@
+<!--
+  @component
+  O `PopoverContent` dos balões COM BUSCA (seletores e combobox), no lugar do de `ui/popover`.
+
+  O balão fica preso à tela (`strategy="fixed"`), reposiciona sempre que a página se mexe e respeita
+  a altura disponível: o campo de busca no alto fica fixo e só a lista embaixo rola.
+
+  No celular, abrir as opções NÃO abre o teclado: o foco vai para o próprio balão, sem rolar a
+  página, e o teclado só sobe quando a pessoa toca na busca. No desktop o foco vai direto para a
+  busca, como sempre.
+
+  Props: as mesmas do `PopoverContent` (`class`, `ref`, `onOpenAutoFocus`…).
+-->
 <script lang="ts">
   import { MediaQuery } from 'svelte/reactivity';
   import type { ComponentProps } from 'svelte';

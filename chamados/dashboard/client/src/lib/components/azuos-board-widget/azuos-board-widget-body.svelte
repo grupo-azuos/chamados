@@ -1,13 +1,17 @@
+<!--
+  @component
+  O DESENHO DE UM BLOCO — um por tipo; trocar o gráfico é trocar o ramo daqui. Com
+  `actions.onOpenItem`, o item clicado (barra, fatia, linha, card) vira o recorte da lista.
+
+  - `data`: o bloco e o resultado dele.
+  - `actions`: `onOpenItem`.
+-->
 <script lang="ts" module>
   import { type Widget } from '@template/shared/schemas/dashboard-board.schema';
 
   import { type WidgetState } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
   import { type BoardItem } from '$lib/utils/widget-items.util';
 
-  /**
-   * O DESENHO DE UM BLOCO — um por tipo; trocar o gráfico é trocar o ramo daqui. Com
-   * `actions.onOpenItem`, o item clicado (barra, fatia, linha, card) vira o recorte da lista.
-   */
   export type AzuosBoardWidgetBodyProps = {
     data: { widget: Widget; result: WidgetState };
     actions: { onOpenItem?: (widget: Widget, item: BoardItem) => void };

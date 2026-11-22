@@ -1,3 +1,18 @@
+<!--
+  @component
+  O SELO DE SITUAÇÃO — "Aberto", "Em atendimento", "Resolvido". Uma palavra curta, num tom que diz
+  de relance se está tudo bem.
+
+  O TOM É PASSADO, NÃO ESCOLHIDO AQUI. Quem sabe que "Resolvido" é verde é o domínio (em
+  `shared/src/domain`) — deixar cada tela escolher a cor é como a mesma situação aparece verde numa
+  lista e cinza em outra. As cores vêm dos tokens de estado: fundo claro do tom com o texto no tom,
+  o mesmo par em todos, inclusive no amarelo (pelo `-ink`).
+
+  `data.label` é o texto; vazio, o selo dá lugar a um "Não preenchido" em cinza, porque situação
+  vazia não é uma situação. `ui` leva o `tone`, a `color` escolhida pela pessoa (`#rrggbb`, que vira
+  o tom mais próximo da paleta), um `icon` antes do texto, o `size` (`sm`/`md`) e `className`. Numa
+  coluna estreita o selo encolhe e corta o texto com reticências.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
 
@@ -6,10 +21,6 @@
 
   export type StatusBadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'brand';
 
-  /**
-   * O SELO DE SITUAÇÃO — "Aberto", "Em atendimento", "Resolvido". Uma palavra curta, num tom que
-   * diz de relance se está tudo bem.
-   */
   export type AzuosStatusBadgeProps = {
     data: { label: string | null | undefined };
     ui?: {

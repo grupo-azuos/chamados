@@ -1,17 +1,23 @@
+<!--
+  @component
+  Escolha de cor: "aleatória", as cinco da paleta, e qualquer outra pelo seletor do navegador.
+
+  A paleta vem primeiro porque é o caminho curto e o seguro — as cinco aguentam texto branco
+  por cima. O seletor livre existe para quem quer outra cor; se ela for clara, quem pinta o
+  cartão troca o texto para escuro sozinho (`isLightColor`).
+
+  `value` vazio é "aleatória", e o botão diz isso por escrito: um quadrado sem cor nenhuma
+  marcado não comunica "o sistema escolhe para você". Onde a cor é obrigatória,
+  `ui.allowRandom: false` tira o botão.
+
+  A cor vai por `style`: é uma cor que a PESSOA escolhe, e não há token para ela.
+
+  - `data`: a cor escolhida (vazia é "aleatória").
+  - `ui`: `allowRandom` e `ariaLabel`.
+  - `state`: desligado.
+  - `actions`: `onChange`.
+-->
 <script lang="ts" module>
-  /**
-   * Escolha de cor: "aleatória", as cinco da paleta, e qualquer outra pelo seletor do navegador.
-   *
-   * A paleta vem primeiro porque é o caminho curto e o seguro — as cinco aguentam texto branco
-   * por cima. O seletor livre existe para quem quer outra cor; se ela for clara, quem pinta o
-   * cartão troca o texto para escuro sozinho (`isLightColor`).
-   *
-   * `value` vazio é "aleatória", e o botão diz isso por escrito: um quadrado sem cor nenhuma
-   * marcado não comunica "o sistema escolhe para você". Onde a cor é obrigatória,
-   * `ui.allowRandom: false` tira o botão.
-   *
-   * A cor vai por `style`: é uma cor que a PESSOA escolhe, e não há token para ela.
-   */
   export type AzuosColorSwatchFieldProps = {
     data: { value: string };
     ui?: { allowRandom?: boolean; ariaLabel?: string };

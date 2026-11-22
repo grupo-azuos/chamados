@@ -1,21 +1,26 @@
+<!--
+  @component
+  A tela de uma área do sistema que ainda não foi construída.
+
+  Ela existe porque a migração do sistema antigo é feita por partes, e sem ela o menu mentiria de
+  duas formas: escondendo áreas que já foram combinadas (dando a impressão de que o sistema é menor
+  do que vai ser) ou mostrando um item que abre uma tela em branco (dando a impressão de que
+  quebrou).
+
+  Por isso ela NÃO é um "em breve" vazio: lista o que aquela área vai fazer, lido dos requisitos do
+  sistema antigo. Assim a tela informa mesmo antes de funcionar, e quem abre consegue conferir se o
+  que está previsto é o que precisa.
+
+  - `data`: o título, a linha do para que serve, o que ela vai permitir fazer e o que precisa
+    existir antes dela (`dependsOn`).
+  - `ui`: o ícone da área.
+
+  Quando a área for construída, esta tela é substituída pela de verdade — este componente não deve
+  sobreviver ao fim da migração.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
 
-  /**
-   * A tela de uma área do sistema que ainda não foi construída.
-   *
-   * Ela existe porque a migração do sistema antigo é feita por partes, e sem ela o menu
-   * mentiria de duas formas: escondendo áreas que já foram combinadas (dando a impressão de
-   * que o sistema é menor do que vai ser) ou mostrando um item que abre uma tela em branco
-   * (dando a impressão de que quebrou).
-   *
-   * Por isso ela NÃO é um "em breve" vazio: lista o que aquela área vai fazer, lido dos
-   * requisitos do sistema antigo. Assim a tela informa mesmo antes de funcionar, e quem abre
-   * consegue conferir se o que está previsto é o que precisa.
-   *
-   * Quando a área for construída, esta tela é substituída pela de verdade — este componente
-   * não deve sobreviver ao fim da migração.
-   */
   export type AzuosPendingAreaProps = {
     data: {
       title: string;

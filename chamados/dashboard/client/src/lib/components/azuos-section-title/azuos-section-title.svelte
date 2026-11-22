@@ -1,16 +1,20 @@
+<!--
+  @component
+  O TÍTULO DE UMA SEÇÃO de cartão: quadradinho com ícone, título e uma linha de explicação.
+
+  Existe para as seções de perfil e de detalhe terem o mesmo cabeçalho em todas as telas que as
+  mostram. Copiado em cada seção, o ícone sai de um tamanho diferente em cada lugar.
+
+  O tom `danger` é só para a zona de perigo: o vermelho no título avisa antes do botão.
+
+  - `data`: o título e a linha de explicação.
+  - `ui`: o ícone, o tom (`brand` ou `danger`) e classes extras.
+  - `adornment`: entra DENTRO do título, ao lado do texto — a contagem de uma lista, por exemplo.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
 
-  /**
-   * O TÍTULO DE UMA SEÇÃO de cartão: quadradinho com ícone, título e uma linha de explicação.
-   *
-   * Existe para as seções de perfil e de detalhe terem o mesmo cabeçalho em todas as telas que as
-   * mostram. Copiado em cada seção, o ícone sai de um tamanho diferente em cada lugar.
-   *
-   * O tom `danger` é só para a zona de perigo: o vermelho no título avisa antes do botão.
-   * O `adornment` entra DENTRO do título, ao lado do texto — a contagem de uma lista, por exemplo.
-   */
   export type AzuosSectionTitleProps = {
     data: { title: string; description?: string | null };
     ui: { icon: LucideIcon; tone?: 'brand' | 'danger'; className?: string };

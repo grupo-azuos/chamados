@@ -1,20 +1,22 @@
+<!--
+  @component
+  O CAMPO COM MÁSCARA — CPF, CIN, CNPJ, CEP, CNAE, dinheiro, quantidade, CNH, telefone. O mesmo
+  rótulo, a mesma régua e o mesmo erro colado do `AzuosTextField`; muda o que acontece a cada tecla.
+
+  - A pontuação entra sozinha enquanto se digita ou cola ("12345678909" → "123.456.789-09").
+  - Letra não entra em campo de número, e o que passa do tamanho é cortado.
+  - O cursor não pula para o fim quando se corrige um dígito no meio.
+  - O ERRO DE FORMATO aparece quando a pessoa SAI do campo, ou quando ele fica completo e não fecha
+    (CPF com o dígito verificador errado). Incompleto não é errado, é alguém no meio do trabalho.
+
+  `state.error` é o erro de QUEM USA o campo (obrigatório, por exemplo) e ganha do de formato.
+
+  Props: `data` traz o rótulo, o `name`, o valor, o texto de exemplo e o obrigatório; `ui.mask`
+  escolhe a máscara; `state` traz o erro e o desabilitado; `actions` recebe `onChange` e `onBlur`.
+-->
 <script lang="ts" module>
   import type { FieldMask } from '$lib/utils/field-mask.util';
 
-  /**
-   * O CAMPO COM MÁSCARA — CPF, CIN, CNPJ, CEP, CNAE, dinheiro, quantidade, CNH, telefone. O mesmo
-   * rótulo, a mesma régua e o mesmo erro colado do `AzuosTextField`; muda o que acontece a cada
-   * tecla.
-   *
-   * - A pontuação entra sozinha enquanto se digita ou cola ("12345678909" → "123.456.789-09").
-   * - Letra não entra em campo de número, e o que passa do tamanho é cortado.
-   * - O cursor não pula para o fim quando se corrige um dígito no meio.
-   * - O ERRO DE FORMATO aparece quando a pessoa SAI do campo, ou quando ele fica completo e não
-   *   fecha (CPF com o dígito verificador errado). Incompleto não é errado, é alguém no meio do
-   *   trabalho.
-   *
-   * `state.error` é o erro de QUEM USA o campo (obrigatório, por exemplo) e ganha do de formato.
-   */
   export type AzuosMaskedTextFieldProps = {
     data: { label: string; name: string; value: string; placeholder?: string; isRequired?: boolean };
     ui: { mask: FieldMask; className?: string; ariaLabel?: string };

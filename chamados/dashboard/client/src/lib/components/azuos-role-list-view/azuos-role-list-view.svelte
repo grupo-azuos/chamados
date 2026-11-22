@@ -1,3 +1,19 @@
+<!--
+  @component
+  A tela de ACESSOS POR MÓDULO: quem é de Infraestrutura, de Sistema e de Manutenção.
+
+  Em cima, o cartão da pessoa que está usando, com os papéis dela; logo abaixo entra o que a tela
+  passar em `afterProfile` (hoje, o vínculo de WhatsApp). Com `ui.showTeam`, vem a parte da equipe:
+  cabeçalho com "Liberar módulo", os cards de contagem por módulo, a busca e o filtro de módulo, e a
+  lista de pessoas com os módulos de cada uma — com os estados de carregando, erro, vazio e
+  filtrado. Só o Super Admin libera e tira módulos; para os outros a tela avisa que é só consulta.
+
+  - `data`: a pessoa atual, os acessos (`roles`), as pessoas do diretório, o total e o filtro.
+  - `ui`: `showTeam` (sem ele, só o cartão da pessoa — a lista da equipe é do super-admin).
+  - `state`: carregando, recarregando, vazio, filtrado, erro e o andamento da remoção.
+  - `actions`: liberar (`onCreate`, `onGrantTo`), pedir remoção (`onAskDelete`), busca, filtro de
+    módulo, limpar filtros e tentar de novo.
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
   import { type InternalRole } from '@template/shared/schemas/internal-role.schema';

@@ -1,6 +1,20 @@
+<!--
+  @component
+  A TELA DO AGENTE WINDOWS — onde se baixa o agente Azuos para instalar nos computadores.
+
+  A mesma tela nos dois módulos: só apresenta dados e devolve as intenções de download.
+
+  Mostra a versão LTS com o instalador, o pacote completo (.zip), o script de instalação, o
+  certificado e o script do certificado; embaixo, todas as versões, cada uma com os arquivos
+  dela. Cada botão de download mostra o próprio "Preparando…" e, enquanto um baixa, os outros
+  ficam travados. Sem versão LTS, a lista vazia diz isso; cada falha (consultar, listar, preparar,
+  montar o pacote) aparece no próprio aviso, com o "Tentar de novo".
+
+  As props são o próprio model (`AgentDownloadModel`): `data` (as versões), `state` (carregando,
+  o que está baixando e os erros) e `actions` (baixar cada arquivo, o pacote e tentar de novo).
+-->
 <script lang="ts" module>
   import type { AgentDownloadModel } from '$lib/hooks/use-agent-download/use-agent-download.svelte';
-  /** A mesma tela nos dois módulos: só apresenta dados e devolve as intenções de download. */
   export type AzuosAgentDownloadViewProps = AgentDownloadModel;
 </script>
 

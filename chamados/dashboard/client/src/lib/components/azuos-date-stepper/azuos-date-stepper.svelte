@@ -1,17 +1,21 @@
+<!--
+  @component
+  A escolha de uma data EM TRÊS PERGUNTAS: o ano, depois o mês, depois o dia.
+
+  Um calendário comum abre no mês de hoje, e quem vai informar a data de compra de uma máquina
+  antiga escolhe o dia e não percebe que o ano continua sendo o atual. Aqui a ordem é a da resposta
+  mais larga para a mais estreita, e cada tela faz UMA pergunta. O que já foi respondido fica no
+  topo, como botão: tocar nele volta àquela pergunta.
+
+  É só o painel — não abre nem fecha nada. Quem o põe dentro de um balão é o `AzuosDateField`.
+
+  O valor entra e sai como texto ISO (`1990-03-25`): é o formato do contrato, e montar o texto pelos
+  números escolhidos não tem fuso para errar.
+
+  Props: `data` traz o valor e os limites (`min`, `max`); `ui.startYear` é o ano em que a lista abre
+  vazia; `actions.onChange` recebe a data completa.
+-->
 <script lang="ts" module>
-  /**
-   * A escolha de uma data EM TRÊS PERGUNTAS: o ano, depois o mês, depois o dia.
-   *
-   * Um calendário comum abre no mês de hoje, e quem vai informar a data de compra de uma máquina
-   * antiga escolhe o dia e não percebe que o ano continua sendo o atual. Aqui a ordem é a da
-   * resposta mais larga para a mais estreita, e cada tela faz UMA pergunta. O que já foi
-   * respondido fica no topo, como botão: tocar nele volta àquela pergunta.
-   *
-   * É só o painel — não abre nem fecha nada. Quem o põe dentro de um balão é o `AzuosDateField`.
-   *
-   * O valor entra e sai como texto ISO (`1990-03-25`): é o formato do contrato, e montar o texto
-   * pelos números escolhidos não tem fuso para errar.
-   */
   export type AzuosDateStepperProps = {
     data: {
       /** A data em ISO (`1990-03-25`), ou vazio quando ninguém escolheu. */

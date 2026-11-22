@@ -1,9 +1,15 @@
+<!--
+  @component
+  Um item do menu com ícone + rótulo — da casca padrão (skill `app-shell-standard`).
+
+  Extraído do `AzuosAppShell` só porque a animação de "virou ativo" precisa do próprio ciclo de
+  vida do componente (`$effect` por item). Não é peça pública: fora do teste, só o
+  `azuos-app-shell.svelte` importa isto.
+
+  Recebe o `item` (`NavItem` de `lib/navigation/navigation.ts`), o `badge` (o contador ao lado)
+  e `isActive`. O ícone pulsa só na TROCA para ativo; recolhida a barra, o rótulo vira dica.
+-->
 <script lang="ts">
-  /**
-   * Um item do menu — extraído do `AppShell` só porque a animação de "virou ativo" precisa do
-   * próprio ciclo de vida do componente (`$effect` por item). Não é peça pública: nada fora de
-   * `app-shell.component.svelte` importa isto.
-   */
   import { useSidebar } from '$lib/components/ui/sidebar/context.svelte';
   import { popIn } from '$lib/motion/motion';
   import { SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem } from '$lib/components/ui/sidebar';

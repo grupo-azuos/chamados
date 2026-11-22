@@ -1,3 +1,18 @@
+<!--
+  @component
+  A lista de arquivos de um chamado, com abrir, baixar e (quando permitido) excluir.
+
+  Cada arquivo é uma linha do `AzuosFileLinks` (formato `card`): o tipo, o tamanho e de quem é
+  ("enviado por quem abriu" ou "anexado pelo TI") vão escritos, ao lado das ações de abrir e
+  baixar. A lixeira só aparece quando há `actions.onRemove` E o lado de quem olha (`ui.actor`)
+  pode apagar aquele arquivo (`canRemoveAttachment`): o TI vê e baixa o que a pessoa mandou, e
+  não apaga. Esconder o botão é CONVENIÊNCIA; a recusa do servidor é a que vale.
+
+  - `data`: os anexos.
+  - `ui`: o texto de vazio e o `actor` (o padrão é `support`).
+  - `state`: carregando, o anexo que está sendo excluído (trava só a linha dele) e o erro.
+  - `actions`: `onRemove` — ausente onde ninguém apaga, como na consulta pública.
+-->
 <script lang="ts" module>
   import { ATTACHMENT_RULES } from '@template/shared/domain/attachment-catalog.util';
   import { canRemoveAttachment } from '@template/shared/domain/attachment-ownership.util';

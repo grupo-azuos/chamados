@@ -1,11 +1,15 @@
+<!--
+  @component
+  A trilha de onde a pessoa está: "Computadores › Estação 12 › Histórico". Envolve o
+  `ui/breadcrumb` do shadcn.
+
+  O ÚLTIMO item é sempre a página atual, e por isso nunca é link — clicar nele não levaria a
+  lugar nenhum. Os de antes são link quando têm `href`; sem `href`, viram texto.
+
+  - `data`: os itens, cada um com o rótulo e o `href`.
+  - `ui`: classe extra.
+-->
 <script lang="ts" module>
-  /**
-   * A trilha de onde a pessoa está: "Computadores › Estação 12 › Histórico". Envolve o
-   * `ui/breadcrumb` do shadcn.
-   *
-   * O ÚLTIMO item é sempre a página atual, e por isso nunca é link — clicar nele não levaria a
-   * lugar nenhum. Os de antes são link quando têm `href`; sem `href`, viram texto.
-   */
   export type BreadcrumbEntry = { label: string; href?: string };
 
   export type AzuosBreadcrumbProps = {

@@ -1,19 +1,19 @@
+<!--
+  @component
+  O que os CHAMADOS ABERTOS fazem com um item do depósito — embaixo do saldo, na tela do Depósito.
+
+  O saldo da prateleira só anda quando o chamado encerra. Até lá, quem olha "1 na prateleira"
+  precisa saber que aquela uma já está prometida: por isso a linha diz quanto está reservado e
+  quanto ainda está disponível. Os chamados não se empilham no cartão — com dez chamados ele ficaria
+  maior que a tela. Um botão diz em quantos, e a lista abre num balão, com o link de cada um.
+
+  Sem chamado, não desenha nada. Só tem `data`: os vínculos, o saldo da prateleira e o endereço da
+  fila de chamados do módulo.
+-->
 <script lang="ts" module>
   import { availableForTicket, ticketStockDirectionLabel } from '@template/shared/domain/ticket-stock.util';
   import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
 
-  /**
-   * O que os CHAMADOS ABERTOS fazem com um item do depósito — embaixo do saldo, na tela do
-   * Depósito.
-   *
-   * O saldo da prateleira só anda quando o chamado encerra. Até lá, quem olha "1 na prateleira"
-   * precisa saber que aquela uma já está prometida: por isso a linha diz quanto está reservado
-   * e quanto ainda está disponível. Os chamados não se empilham no cartão — com dez chamados ele
-   * ficaria maior que a tela. Um botão diz em quantos, e a lista abre num balão, com o link de
-   * cada um.
-   *
-   * Sem chamado, não desenha nada.
-   */
   export type AzuosTicketStockLinksProps = {
     data: {
       links?: TicketStockLink[];

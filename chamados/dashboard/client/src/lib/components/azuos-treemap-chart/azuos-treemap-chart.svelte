@@ -1,14 +1,19 @@
+<!--
+  @component
+  TREEMAP — muitas categorias de tamanhos muito diferentes, num quadro só.
+
+  É o gráfico da CAUDA LONGA: uma categoria com milhares e oitenta com duas ou três. Em barras, as
+  oitenta viram riscos ilegíveis; aqui cada uma é um bloco do tamanho do que pesa. Passando de
+  `ui.maxItems` (30 por padrão), o resto vira um bloco "Outros" — que não abre detalhamento, porque
+  não é categoria.
+
+  `data` leva as fatias e o nome da série; `state.isLoading`; `ui`, o texto de vazio, a altura e
+  `maxItems`; `actions.onSelect` recebe a categoria do bloco clicado.
+-->
 <script lang="ts" module>
   import { colorOfSlice, type ChartSlice } from '$lib/utils/chart-slice';
   import { formatCount, shareOf, type ChartOption, type ChartTheme, resolveColor } from '$lib/utils/echarts.util';
 
-  /**
-   * TREEMAP — muitas categorias de tamanhos muito diferentes, num quadro só.
-   *
-   * É o gráfico da CAUDA LONGA: uma categoria com milhares e oitenta com duas ou três. Em barras,
-   * as oitenta viram riscos ilegíveis; aqui cada uma é um bloco do tamanho do que pesa. Passando de
-   * `maxItems`, o resto vira um bloco "Outros" — que não abre detalhamento, porque não é categoria.
-   */
   export type AzuosTreemapChartProps = {
     data: { slices: ChartSlice[]; seriesLabel: string };
     state?: { isLoading?: boolean };

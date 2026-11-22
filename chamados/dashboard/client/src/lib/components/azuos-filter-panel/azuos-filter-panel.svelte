@@ -1,3 +1,19 @@
+<!--
+  @component
+  A BARRA DE FILTROS de uma lista — o mesmo desenho no Inventário e nas filas de chamados.
+
+  Em cima, o que se usa toda hora: a busca, um filtro principal em lista suspensa (o departamento) e
+  o botão "Filtros", que conta quantos estão ligados. O resto mora num painel que desliza, numa
+  grade que INTERCALA pastilhas (`pills`, poucas opções) e listas suspensas (`select`, muitas): 3
+  colunas no computador grande, 2 no tablet e 1 no celular. Embaixo, uma etiqueta por filtro ligado,
+  com o X que o desliga, e "Limpar filtros".
+
+  Função pura de props. O único estado próprio é visual — o painel aberto ou fechado.
+
+  Props: `data` traz a busca, o filtro principal, os filtros, as etiquetas e se há o que limpar;
+  `ui` traz o nome da região, a troca tabela/cards e as colunas; `state.isFilteredOut` avisa que o
+  filtro escondeu tudo; `actions` recebe a busca, a troca de filtro, a etiqueta removida e o limpar.
+-->
 <script lang="ts" module>
   import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
 
@@ -21,17 +37,6 @@
   /** Uma etiqueta de filtro ligado: o que ela diz. Tirar é `actions.onRemoveChip(key)`. */
   export type FilterPanelChip = { key: string; label: string };
 
-  /**
-   * A BARRA DE FILTROS de uma lista — o mesmo desenho no Inventário e nas filas de chamados.
-   *
-   * Em cima, o que se usa toda hora: a busca, um filtro principal em lista suspensa (o
-   * departamento) e o botão "Filtros", que conta quantos estão ligados. O resto mora num painel
-   * que desliza, numa grade que INTERCALA pastilhas e listas suspensas: 3 colunas no computador
-   * grande, 2 no tablet e 1 no celular. Embaixo, uma etiqueta por filtro ligado, com o X que o
-   * desliga, e "Limpar filtros".
-   *
-   * Função pura de props. O único estado próprio é visual — o painel aberto ou fechado.
-   */
   export type AzuosFilterPanelProps = {
     data: {
       search: { value: string; placeholder: string };

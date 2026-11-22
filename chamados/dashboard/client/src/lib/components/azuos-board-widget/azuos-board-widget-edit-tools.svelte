@@ -1,10 +1,14 @@
+<!--
+  @component
+  As ferramentas do bloco em edição: o peso na cota, trocar o gráfico, configurar e — separado,
+  e pedindo confirmação — remover. A lixeira fica longe das ações frequentes (Fitts).
+
+  - `data`: o bloco.
+  - `actions`: `onEdit`, `onRemove` e `onChangeKind`.
+-->
 <script lang="ts" module>
   import { type Widget } from '@template/shared/schemas/dashboard-board.schema';
 
-  /**
-   * As ferramentas do bloco em edição: o peso na cota, trocar o gráfico, configurar e — separado,
-   * e pedindo confirmação — remover. A lixeira fica longe das ações frequentes (Fitts).
-   */
   export type AzuosBoardWidgetEditToolsProps = {
     data: { widget: Widget };
     actions: {

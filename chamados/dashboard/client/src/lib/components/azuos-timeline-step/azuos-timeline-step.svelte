@@ -1,16 +1,21 @@
+<!--
+  @component
+  Uma etapa dentro de `AzuosTimeline`.
+
+  `ui.isLast` é passado por QUEM CHAMA, e não descoberto sozinho, porque o número de etapas de um
+  formulário é fixo e conhecido no próprio arquivo — descobrir isso por CSS exigiria selecionar o
+  último irmão de dentro de um componente que não é o pai da lista. Sem a linha, a última etapa não
+  tem "para onde ir depois", que é o efeito certo.
+
+  `data` leva título, descrição e ícone; `ui`, `isLast`, o `tone` (`neutral`, `brand`, `success`, ou
+  `danger` para o passo que NÃO aconteceu) e `className`; o conteúdo da etapa vem em `children`. A
+  cor do passo mora no ícone cheio.
+-->
 <script lang="ts" module>
   import type { Component, Snippet } from 'svelte';
 
   import { cardToneClasses } from '$lib/utils/card-tone.util';
 
-  /**
-   * Uma etapa dentro de `Timeline`.
-   *
-   * `ui.isLast` é passado por quem chama (não descoberto sozinho) porque o número de etapas de
-   * um formulário é sempre fixo e conhecido no próprio arquivo — descobrir isso por CSS
-   * exigiria selecionar o último irmão de dentro de um componente que não é o pai da lista.
-   * Sem a linha, a última etapa não tem "para onde ir depois", que é o efeito certo.
-   */
   export type AzuosTimelineStepProps = {
     data: {
       title: string;

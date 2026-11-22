@@ -1,3 +1,19 @@
+<!--
+  @component
+  O CANVAS DO PAINEL — a grade de 4 colunas onde os blocos se encaixam. Vendo, nada se mexe;
+  montando, cada bloco arrasta pela alça, redimensiona pelos oito puxadores (cantos e meio de
+  cada lado), e as casas vazias da grade aparecem atrás, como um tabuleiro. Um tipo de bloco
+  arrastado da lateral cai na casa onde for solto. O mesmo desenho do paralegal.
+
+  Quem decide onde cada bloco fica são as regras puras (`board-layout.util`); o canvas só mede
+  o ponteiro e avisa a tela no fim do gesto.
+
+  - `data`: os blocos, a posição de cada um, os resultados, os nomes dos filtros salvos e o
+    "Período" do painel.
+  - `state`: montando, `canDrop` (aceita um tipo arrastado da lateral) e `canEdit`.
+  - `actions`: a posição nova no fim do gesto, editar, remover, trocar o gráfico, duplicar,
+    abrir o item clicado e soltar um tipo numa casa.
+-->
 <script lang="ts" module>
   import {
     type LayoutItem,
@@ -9,15 +25,6 @@
   import { type WidgetState } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
   import { type BoardItem } from '$lib/utils/widget-items.util';
 
-  /**
-   * O CANVAS DO PAINEL — a grade de 4 colunas onde os blocos se encaixam. Vendo, nada se mexe;
-   * montando, cada bloco arrasta pela alça, redimensiona pelos oito puxadores (cantos e meio de
-   * cada lado), e as casas vazias da grade aparecem atrás, como um tabuleiro. Um tipo de bloco
-   * arrastado da lateral cai na casa onde for solto. O mesmo desenho do paralegal.
-   *
-   * Quem decide onde cada bloco fica são as regras puras (`board-layout.util`); o canvas só mede
-   * o ponteiro e avisa a tela no fim do gesto.
-   */
   export type AzuosBoardCanvasProps = {
     data: {
       widgets: Widget[];

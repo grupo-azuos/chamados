@@ -1,13 +1,17 @@
+<!--
+  @component
+  O botão que envia o formulário.
+
+  Ele se desabilita enquanto envia, e isso não é enfeite: sem a trava, dois cliques viram dois
+  registros — e o segundo volta como "já existe uma conta com esse e-mail", num formulário que
+  acabou de dar certo.
+
+  `data` leva o `label` e o `loadingLabel` (o texto enquanto envia); `state` leva `isLoading` e
+  `isDisabled`; `ui`, só `className`.
+-->
 <script lang="ts" module>
   import { cn } from '$lib/utils/cn';
 
-  /**
-   * O botão que envia o formulário.
-   *
-   * Ele se desabilita enquanto envia, e isso não é enfeite: sem a trava, dois cliques viram
-   * dois registros — e o segundo volta como "já existe uma conta com esse e-mail", num
-   * formulário que acabou de dar certo.
-   */
   export type AzuosSubmitButtonProps = {
     data: { label: string; loadingLabel?: string };
     ui?: { className?: string };

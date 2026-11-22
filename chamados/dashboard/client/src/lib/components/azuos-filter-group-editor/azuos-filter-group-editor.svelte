@@ -1,11 +1,16 @@
+<!--
+  @component
+  UM GRUPO "E/OU" DO FILTRO — as condições dele e, dentro, outros grupos (até o teto de níveis do
+  contrato). Recursivo: o grupo de dentro é este mesmo componente.
+
+  Função pura de props: a árvore inteira sobe a cada mudança (`onChange`).
+
+  Props: `data` traz a fonte de dados, o grupo e a profundidade; `actions` recebe o grupo alterado
+  (`onChange`) e, num grupo de dentro, o remover (`onRemove`).
+-->
 <script lang="ts" module>
   import { type DataSourceKey, type FilterGroup } from '@template/shared/schemas/dashboard-board.schema';
 
-  /**
-   * UM GRUPO "E/OU" DO FILTRO — as condições dele e, dentro, outros grupos (até o teto de níveis
-   * do contrato). Recursivo: o grupo de dentro é este mesmo componente. Função pura de props: a
-   * árvore inteira sobe a cada mudança (`onChange`).
-   */
   export type AzuosFilterGroupEditorProps = {
     data: { source: DataSourceKey; group: FilterGroup; depth?: number };
     actions: { onChange: (group: FilterGroup) => void; onRemove?: () => void };

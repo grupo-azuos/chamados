@@ -1,3 +1,15 @@
+<!--
+  @component
+  O diálogo do PERFIL DA PESSOA: foto, nome e e-mail no topo, e os cargos dela em cada área do
+  sistema (Sistema, Infra e Manutenção), cada um num selo, com uma frase do que aquela área dá
+  acesso. Área sem cargo informado aparece como o cargo comum.
+
+  Embaixo, o atalho para ver os cargos da equipe e, no rodapé, o botão de sair — cada um só aparece
+  quando a ação correspondente chega.
+
+  `data.user` leva nome, e-mail, cargo e os cargos por área; `state.isOpen` abre o diálogo;
+  `actions` leva `onClose`, `onViewRoles` e `onLogout`.
+-->
 <script lang="ts" module>
   import {
     ROLE_CONTEXT_LABELS,

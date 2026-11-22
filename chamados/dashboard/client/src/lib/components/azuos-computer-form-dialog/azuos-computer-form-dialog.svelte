@@ -1,3 +1,22 @@
+<!--
+  @component
+  O formulário de cadastrar máquina e o de corrigir a identificação dela, num modal.
+
+  Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e por isso
+  o modal abre no Storybook preenchido, com erro ou enviando — sem servidor e sem biblioteca de
+  formulário no meio.
+
+  **O nome da máquina só é editável no cadastro.** Depois, quem o informa é a própria máquina, a
+  cada leitura do agente: digitá-lo aqui faria a ficha discordar do que o agente manda, e a pessoa
+  procuraria no inventário um nome que não existe em lugar nenhum.
+
+  A recusa do servidor aparece DENTRO do modal, e ele continua aberto: fechar jogaria fora o que foi
+  digitado.
+
+  Props: `data` traz o modo (`create`/`edit`), os campos, os responsáveis e os departamentos;
+  `state` diz se está aberto, enviando, com erro, carregando os responsáveis ou sem o RH; `actions`
+  recebe a digitação (`onChange`, `onBlur`), o envio e o fechar.
+-->
 <script lang="ts" module>
   import { COMPUTER_KINDS, COMPUTER_KIND_LABELS } from '@template/shared/domain/computer-kind.util';
 
@@ -8,20 +27,6 @@
 
   export type ComputerFormField = 'name' | 'kind' | 'displayName' | 'responsibleName' | 'department';
 
-  /**
-   * O formulário de cadastrar máquina e o de corrigir a identificação dela, num modal.
-   *
-   * Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e
-   * por isso o modal abre no Storybook preenchido, com erro ou enviando — sem servidor e sem
-   * biblioteca de formulário no meio.
-   *
-   * **O nome da máquina só é editável no cadastro.** Depois, quem o informa é a própria
-   * máquina, a cada leitura do agente: digitá-lo aqui faria a ficha discordar do que o agente
-   * manda, e a pessoa procuraria no inventário um nome que não existe em lugar nenhum.
-   *
-   * A recusa do servidor aparece DENTRO do modal, e ele continua aberto: fechar jogaria fora
-   * o que foi digitado.
-   */
   export type AzuosComputerFormDialogProps = {
     data: {
       mode: 'create' | 'edit';

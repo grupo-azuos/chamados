@@ -1,11 +1,18 @@
+<!--
+  @component
+  A TELA QUE SE EXPANDE — para o trabalho que não cabe num diálogo nem num combobox (montar o
+  painel, montar um filtro em árvore, ver um gráfico grande). Abre por cima de tudo, crescendo a
+  partir do centro, e ocupa a tela inteira; Esc e o X fecham. O mesmo desenho do paralegal.
+
+  A tela vai para o fim do `body`, por cima do menu do sistema. Uma tela cheia pode abrir sobre
+  outra, e o Esc é só da de cima: se todas ouvissem o mesmo Esc, fechariam juntas.
+
+  Props: `data` traz o título e a descrição; `state.isOpen` abre e fecha; `actions.onClose` recebe o
+  fechar; `footer` é o rodapé fixo (normalmente "Cancelar" e "Salvar") e `children` o conteúdo.
+-->
 <script lang="ts" module>
   import { type Snippet } from 'svelte';
 
-  /**
-   * A TELA QUE SE EXPANDE — para o trabalho que não cabe num diálogo nem num combobox (montar o
-   * painel, montar um filtro em árvore, ver um gráfico grande). Abre por cima de tudo, crescendo
-   * a partir do centro, e ocupa a tela inteira; Esc e o X fecham. O mesmo desenho do paralegal.
-   */
   export type AzuosExpandableScreenProps = {
     data: { title: string; description?: string };
     state: { isOpen: boolean };

@@ -1,3 +1,21 @@
+<!--
+  @component
+  O botão do sistema. Toda ação que não é "enviar formulário" passa por aqui.
+
+  O `Button` baixado do shadcn-svelte NÃO é editado nem importado pelas telas. Este componente o
+  envolve e aplica as NOSSAS variantes com `tv()` (`primary`, `secondary`, `ghost`, `danger`,
+  `danger-soft`) — o dia em que o CLI sobrescrever o vendor, nenhuma tela muda. A altura e o raio
+  vêm da RÉGUA DE MEDIDAS (`lib/theme/tokens.css`): `sm`, `md` (o padrão) e `lg`.
+
+  Carregando (`state.isLoading`), ele trava e troca o ícone pelo giro, com `data.loadingLabel` no
+  lugar do rótulo: dois cliques em "Excluir" seriam duas requisições, e a segunda voltaria como
+  "não encontrado" de algo que acabou de dar certo.
+
+  - `data`: o rótulo e o rótulo de carregando.
+  - `ui`: variante, tamanho, ícone e `isIconOnly` (o rótulo vira `aria-label` e dica).
+  - `state`: carregando, desligado e `isPressed` (anuncia o botão que liga/desliga).
+  - `actions`: `onClick`.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import { tv } from 'tailwind-variants';

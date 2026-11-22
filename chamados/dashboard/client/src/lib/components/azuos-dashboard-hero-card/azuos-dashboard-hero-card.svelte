@@ -1,3 +1,16 @@
+<!--
+  @component
+  O CARTÃO DE ABERTURA DO PAINEL: o Zuzu, uma frase sobre o momento e os números do dia.
+
+  Fundo azul-escuro sólido, e cada número numa pastilha de fundo — cartão colorido nunca usa borda
+  no padrão Azuos: a cor vem do fundo. O Zuzu é estático.
+
+  O número com `onClick` vira botão (leva à lista daquele número); sem ele, é só leitura.
+
+  Props: `data` traz o título, a descrição, o sobretítulo (com ícone), a hora, o selo, a pose do
+  Zuzu e os números (`stats`); `ui.className` ajusta a caixa; `children` é o que vai embaixo dos
+  números.
+-->
 <script lang="ts" module>
   import { type AzuosCardTone } from '$lib/utils/card-tone.util';
   import type { LucideIcon } from '@lucide/svelte';
@@ -5,14 +18,6 @@
 
   import type { AzuosZuzuPose } from '$lib/components/azuos-zuzu/azuos-zuzu.svelte';
 
-  /**
-   * O CARTÃO DE ABERTURA DO PAINEL: o Zuzu, uma frase sobre o momento e os números do dia.
-   *
-   * Fundo azul-escuro sólido, e cada número numa pastilha de fundo — cartão colorido nunca usa
-   * borda no padrão Azuos: a cor vem do fundo. O Zuzu é estático.
-   *
-   * O número com `onClick` vira botão (leva à lista daquele número); sem ele, é só leitura.
-   */
   /** O nome de estado (`danger`…) ou o sotaque (`plum`…) da paleta de card. */
   export type AzuosDashboardHeroCardStatTone = AzuosCardTone;
 

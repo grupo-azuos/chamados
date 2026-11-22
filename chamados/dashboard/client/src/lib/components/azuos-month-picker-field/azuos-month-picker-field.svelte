@@ -1,17 +1,23 @@
+<!--
+  @component
+  CAMPO DE MÊS — rótulo, botão com os doze meses e erro, no formato "AAAA-MM".
+
+  O campo de mês nativo do navegador herda o seletor do sistema operacional, que muda de navegador
+  para navegador e não combina com os campos ao lado.
+
+  O ano é a navegação, e os doze meses aparecem de uma vez: filtro de mês quase sempre é "este
+  ano" ou "o ano passado", e folhear mês a mês seria doze cliques para voltar um ano.
+
+  O valor continua sendo "AAAA-MM", igual ao campo nativo — quem usa não sabe que trocou.
+
+  - `data`: o valor, o rótulo (com ele vira campo de formulário; sem, é filtro de lista) e o `name`.
+  - `ui`: o texto de convite, o nome para leitor de tela e classes extras.
+  - `state`: erro, desabilitado e obrigatório.
+  - `actions`: `onChange`, com o novo "AAAA-MM".
+-->
 <script lang="ts" module>
   import { formatCalendarMonth } from '$lib/utils/format-date';
 
-  /**
-   * CAMPO DE MÊS — rótulo, botão com os doze meses e erro, no formato "AAAA-MM".
-   *
-   * O `<input type="month">` nativo herda o seletor do sistema operacional, que muda de navegador
-   * para navegador e não combina com os campos ao lado.
-   *
-   * O ano é a navegação, e os doze meses aparecem de uma vez: filtro de mês quase sempre é "este
-   * ano" ou "o ano passado", e folhear mês a mês seria doze cliques para voltar um ano.
-   *
-   * O valor continua sendo "AAAA-MM", igual ao campo nativo — quem usa não sabe que trocou.
-   */
   export type AzuosMonthPickerFieldProps = {
     data: {
       value: string;

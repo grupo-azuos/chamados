@@ -1,3 +1,22 @@
+<!--
+  @component
+  O formulário de cadastrar produto do inventário e o de corrigir o cadastro dele, num modal.
+
+  Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e a foto
+  chega como um endereço para mostrar. Por isso o modal abre no Storybook preenchido, com foto, com
+  erro ou enviando — sem servidor e sem biblioteca de formulário no meio.
+
+  A FOTO é um campo à parte, com erro próprio: recusar a imagem não pode apagar o que a pessoa já
+  digitou, e o motivo da recusa precisa aparecer ao lado dela, não no rodapé.
+
+  Na edição, um controle segmentado alterna entre "Dados do produto" e a "Linha do tempo" do produto
+  (`AzuosInventoryItemTimeline`).
+
+  Props: `data` traz o modo, os campos, a foto, os departamentos, as pessoas e a linha do tempo;
+  `state` diz se está aberto, enviando, com erro (do formulário e da foto) e o estado da linha do
+  tempo; `actions` recebe a digitação, a foto escolhida ou removida, o envio, o fechar e as ações da
+  linha do tempo.
+-->
 <script lang="ts" module>
   import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
   import {
@@ -21,16 +40,6 @@
     | 'code'
     | 'note';
 
-  /**
-   * O formulário de cadastrar produto do inventário e o de corrigir o cadastro dele, num modal.
-   *
-   * Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e
-   * a foto chega como um endereço para mostrar. Por isso o modal abre no Storybook preenchido,
-   * com foto, com erro ou enviando — sem servidor e sem biblioteca de formulário no meio.
-   *
-   * A FOTO é um campo à parte, com erro próprio: recusar a imagem não pode apagar o que a
-   * pessoa já digitou, e o motivo da recusa precisa aparecer ao lado dela, não no rodapé.
-   */
   export type AzuosInventoryFormDialogProps = {
     data: {
       mode: 'create' | 'edit';

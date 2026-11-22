@@ -1,20 +1,25 @@
+<!--
+  @component
+  Rosca — para mostrar como um todo se divide (situação, tipo de problema, departamento).
+
+  O anel vem do ECharts (pela moldura `AzuosEchart`), limpo — sem número escrito em cima da fatia:
+  valor e porcentagem aparecem na legenda e, ao passar o mouse, no balão. O resto é o que o projeto
+  exige e a biblioteca não traz:
+
+  1. **Legenda ao lado, com o nome escrito**, o valor e a porcentagem. Cor sozinha não é informação
+     para quem não distingue cor (ver `chart-slice`).
+  2. **O total no MEIO do anel**, que poupa a soma de cabeça.
+  3. **Clique abre o detalhamento** (`actions.onSelect`) — tanto na fatia quanto na legenda. O
+     gráfico é o caminho para a lista, não um enfeite: é assim que alguém sai de "42 em andamento"
+     para "quais 42".
+
+  Props: `data` traz as fatias e o nome da série; `state.isLoading` mostra o carregando; `ui` traz o
+  texto do vazio; `actions.onSelect` recebe o nome da fatia clicada.
+-->
 <script lang="ts" module>
   import { colorOfSlice, type ChartSlice } from '$lib/utils/chart-slice';
   import { formatCount, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * Rosca — para mostrar como um todo se divide (situação, tipo de problema, departamento).
-   *
-   * O anel vem do ECharts (pela moldura `AzuosEchart`), limpo — sem número escrito em cima da fatia;
-   * o resto é o que o projeto exige e a biblioteca não traz:
-   *
-   *  1. **Legenda ao lado, com o nome escrito**, o valor e a porcentagem. Cor sozinha não é
-   *     informação para quem não distingue cor (ver `chart-slice`).
-   *  2. **O total no MEIO do anel**, que poupa a soma de cabeça.
-   *  3. **Clique abre o detalhamento** (`actions.onSelect`) — tanto na fatia quanto na
-   *     legenda. O gráfico é o caminho para a lista, não um enfeite: é assim que alguém sai
-   *     de "42 em andamento" para "quais 42".
-   */
   export type AzuosDonutChartProps = {
     data: {
       slices: ChartSlice[];

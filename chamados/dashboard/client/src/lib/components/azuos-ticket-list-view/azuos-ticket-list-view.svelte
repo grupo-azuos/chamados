@@ -1,3 +1,20 @@
+<!--
+  @component
+  A fila de chamados do painel do TI.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro — estados que, num componente que busca sozinho, só apareceriam
+  desligando o servidor.
+
+  Não há botão de excluir, e a ausência é a regra do sistema: chamado sai da fila mudando de
+  estágio, nunca sumindo. E o estágio muda na FICHA do chamado, lançando um histórico — daqui só se
+  abre a ficha.
+
+  `data` leva a área, os chamados, o total, os números do painel, o filtro, as opções de
+  departamento e de responsável e a paginação; `state`, carregamento, vazio, filtrado, truncado,
+  erro e exportação; `actions`, um para cada filtro, limpar, tentar de novo, abrir a ficha, exportar
+  e trocar de página.
+-->
 <script lang="ts" module>
   import { type DepartmentChoice } from '@template/shared/domain/department.util';
   import {
@@ -46,17 +63,6 @@
     assigneeId?: string;
   };
 
-  /**
-   * A fila de chamados do painel do TI.
-   *
-   * Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando,
-   * vazia, filtrada sem resultado e em erro — estados que, num componente que busca sozinho,
-   * só apareceriam desligando o servidor.
-   *
-   * Não há botão de excluir, e a ausência é a regra do sistema: chamado sai da fila mudando
-   * de estágio, nunca sumindo. E o estágio muda na FICHA do chamado, lançando um histórico —
-   * daqui só se abre a ficha.
-   */
   export type AzuosTicketListViewProps = {
     data: {
       /** A área da fila: é ela que diz quais tipos de problema o filtro oferece. */

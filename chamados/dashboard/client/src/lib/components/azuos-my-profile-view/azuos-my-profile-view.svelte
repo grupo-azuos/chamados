@@ -1,16 +1,22 @@
+<!--
+  @component
+  MEU PERFIL — a mesma ficha dos 13 sistemas, no par Svelte da casca padrão.
+
+  Igual ao `AzuosMyProfileView` dos sistemas em React: cartão com a faixa da marca, a foto, os
+  fatos de relance, as seções com índice ao lado e nenhum campo de texto — quem edita a conta é o
+  admin-console. O que é só do Chamados (módulos, WhatsApp, equipe, efeitos) entra pelos encaixes,
+  sempre DEPOIS das seções padrão.
+
+  - `data`: a pessoa, o endereço da conta no admin-console e o tema atual.
+  - `state`: carregando e erro.
+  - `actions`: `onToggleTheme` e `onRetry`.
+  - `slots`: as seções a mais (`extraSections`) e a preferência a mais (`preferencesExtra`).
+
+  Travada pelo hook `protect-app-shell.mjs`. Pedido de mudança vai para o suporte.
+-->
 <script lang="ts" module>
   import type { Component, Snippet } from 'svelte';
 
-  /**
-   * MEU PERFIL — a mesma ficha dos 13 sistemas, no par Svelte da casca padrão.
-   *
-   * Igual ao `AzuosMyProfileView` dos sistemas em React: cartão com a faixa da marca, a foto,
-   * os fatos de relance, as seções com índice ao lado e nenhum campo de texto — quem edita a
-   * conta é o admin-console. O que é só do Chamados (módulos, WhatsApp, equipe, efeitos) entra
-   * pelos encaixes, sempre DEPOIS das seções padrão.
-   *
-   * Travada pelo hook `protect-app-shell.mjs`. Pedido de mudança vai para o suporte.
-   */
   export type MyProfileSystem = { name: string; url: string; roleLabel: string };
 
   export type MyProfilePerson = {

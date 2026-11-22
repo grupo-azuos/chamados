@@ -1,13 +1,16 @@
+<!--
+  @component
+  Casca de uma lista de etapas (usar com `AzuosTimelineStep`).
+
+  Troca "um monte de campo solto" por uma narrativa: cada etapa aparece na ordem em que acontece,
+  com um ícone e uma linha ligando à próxima — como o histórico de um chamado, não como um
+  formulário de cadastro.
+
+  Recebe só `ui.className` e as etapas em `children`.
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
-  /**
-   * Casca de uma lista de etapas (usar com `TimelineStep`).
-   *
-   * Troca "um monte de campo solto" por uma narrativa: cada etapa aparece na ordem em que
-   * acontece, com um ícone e uma linha ligando à próxima — como o histórico de um chamado, não
-   * como um formulário de cadastro.
-   */
   export type AzuosTimelineProps = {
     ui?: { className?: string };
     children: Snippet;

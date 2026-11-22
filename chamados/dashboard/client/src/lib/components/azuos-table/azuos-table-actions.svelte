@@ -1,3 +1,8 @@
+<!--
+  @component
+  A célula de AÇÕES da `AzuosTable`: alinha à direita, numa linha, os botões de uma linha da tabela.
+  Recebe os atributos de uma `div` e o conteúdo em `children`.
+-->
 <script lang="ts">
   import { cn } from '$lib/utils/cn';
   import type { HTMLAttributes } from 'svelte/elements';

@@ -1,17 +1,22 @@
+<!--
+  @component
+  Um campo de texto com a lista de opções cadastradas embaixo — Departamento, Cargo, Fornecedor.
+
+  Por que não a lista de sugestões nativa (`datalist`): a lista nativa só aparece DEPOIS de digitar,
+  e a pessoa nunca via o que já estava cadastrado. Aqui a lista inteira abre ao focar o campo e vai
+  filtrando conforme se digita.
+
+  O campo aceita um valor que NÃO está na lista, de propósito: travar obrigaria a pessoa a sair do
+  formulário para cadastrar o item e voltar, perdendo o que já tinha preenchido.
+
+  Teclado: seta para baixo/cima percorre, Enter escolhe, Esc fecha. O estado de aberto e de opção
+  ativa é puramente visual.
+
+  `data` leva rótulo, nome, valor, as `options` e o `emptyMessage` (o que dizer quando não há nada
+  cadastrado); `state` leva `error`, `isRequired`, `isDisabled` e `isLoading`; `actions`, `onChange`
+  e `onBlur`.
+-->
 <script lang="ts" module>
-  /**
-   * Um campo de texto com a lista de opções cadastradas embaixo — Departamento, Cargo, Fornecedor.
-   *
-   * Por que não `<datalist>`: a lista nativa só aparece DEPOIS de digitar, e a pessoa nunca via o
-   * que já estava cadastrado. Aqui a lista inteira abre ao focar o campo e vai filtrando conforme
-   * se digita.
-   *
-   * O campo aceita um valor que NÃO está na lista, de propósito: travar obrigaria a pessoa a sair
-   * do formulário para cadastrar o item e voltar, perdendo o que já tinha preenchido.
-   *
-   * Teclado: seta para baixo/cima percorre, Enter escolhe, Esc fecha. O estado de aberto e de
-   * opção ativa é puramente visual.
-   */
   export type AzuosSuggestionTextFieldProps = {
     data: {
       label: string;

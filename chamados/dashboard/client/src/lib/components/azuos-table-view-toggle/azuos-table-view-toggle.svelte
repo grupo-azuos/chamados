@@ -1,3 +1,17 @@
+<!--
+  @component
+  Tabela ou cards — ao lado de cada lista que tem os dois formatos. Cuida da própria preferência
+  (`lib/hooks/use-table-view`), do mesmo jeito que o `AzuosThemeToggle` cuida do próprio tema: a
+  tela não guarda nenhum estado, só coloca o controle. Por isso não recebe props.
+
+  São DOIS botões lado a lado, e não um ícone que troca: com um ícone só, a pessoa via o formato
+  para onde iria, apagado no canto, e não o formato em que estava. Aqui os dois aparecem sempre,
+  dentro de uma moldura, e o que está valendo fica preenchido com a cor principal — dá para ler o
+  estado sem clicar.
+
+  Some abaixo de `xl`: no celular e no tablet a lista é sempre em cards (skill `ui-standards` §6.1),
+  então não há o que escolher — e um "Tabela" marcado ali seria mentira.
+-->
 <script lang="ts">
   import LayoutGrid from '@lucide/svelte/icons/layout-grid';
   import Table from '@lucide/svelte/icons/table';
@@ -7,19 +21,6 @@
   import { slidingIndicator } from '$lib/motion/sliding-indicator';
   import { cn } from '$lib/utils/cn';
 
-  /**
-   * Tabela ou cards — ao lado de cada lista que tem os dois formatos. Cuida da própria
-   * preferência (`lib/hooks/use-table-view`), do mesmo jeito que o `ThemeToggle` cuida do próprio
-   * tema: a tela não guarda nenhum estado, só coloca o controle.
-   *
-   * São DOIS botões lado a lado, e não um ícone que troca: com um ícone só, a pessoa via o
-   * formato para onde iria, apagado no canto, e não o formato em que estava. Aqui os dois
-   * aparecem sempre, dentro de uma moldura, e o que está valendo fica preenchido com a cor
-   * principal — dá para ler o estado sem clicar.
-   *
-   * Some abaixo de `xl`: no celular e no tablet a lista é sempre em cards (skill `ui-standards`
-   * §6.1), então não há o que escolher — e um "Tabela" marcado ali seria mentira.
-   */
   const tableView = useTableViewModel();
 
   /** O escolhido: o fundo é o destaque que desliza; aqui só o texto claro sobre ele. */

@@ -1,3 +1,16 @@
+<!--
+  @component
+  O MONTADOR DE FILTRO — a tela que se expande. À esquerda, os filtros salvos do módulo (os seus e
+  os da equipe), para abrir, arquivar ou trazer de volta; à direita, o canvas: nome, para quem é, de
+  qual fonte, e a árvore de grupos E/OU, um dentro do outro. O mesmo desenho do paralegal.
+
+  O que falta aparece antes de salvar, em frase — o mesmo que o servidor recusaria
+  (`saveFilterSchema`).
+
+  Props: `data` traz o módulo, os filtros, os arquivados e o filtro em edição; `state` diz se está
+  aberto, salvando, arquivando ou com erro; `actions` recebe fechar, novo, editar, cancelar, salvar,
+  arquivar e restaurar.
+-->
 <script lang="ts" module>
   import {
     type BoardModule,
@@ -7,13 +20,6 @@
   } from '@template/shared/schemas/dashboard-board.schema';
   import { type Snippet } from 'svelte';
 
-  /**
-   * O MONTADOR DE FILTRO — a tela que se expande. À esquerda, os filtros salvos do módulo (os seus
-   * e os da equipe), para abrir, arquivar ou trazer de volta; à direita, o canvas: nome, para quem
-   * é, de qual fonte, e a árvore de grupos E/OU, um dentro do outro. O mesmo desenho do paralegal.
-   *
-   * O que falta aparece antes de salvar, em frase — o mesmo que o servidor recusaria.
-   */
   export type AzuosFilterBuilderScreenProps = {
     data: {
       module: BoardModule;

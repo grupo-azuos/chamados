@@ -1,20 +1,28 @@
+<!--
+  @component
+  Seletor dinâmico — substitui o select nativo em filtro e formulário.
+
+  Com POUCAS opções vira uma fileira de pastilhas (pílula cinza com a escolhida em branco por
+  cima): a pessoa compara e troca com um clique, sem abrir nada. O limite é de 6 em filtro e de 3
+  em formulário, onde a pastilha só serve enquanto cabe numa linha. Com MUITAS (departamento, tipo
+  de problema...) vira um botão que abre um balão com busca. `ui.mode: 'combobox'` mantém a busca
+  mesmo com poucas opções.
+
+  O tom (verde, vermelho...) é decidido por QUEM CHAMA — o mesmo cuidado do `StatusBadge`, para a
+  cor de uma situação nunca variar de tela para tela. A opção pode levar ícone ou a foto da pessoa.
+
+  - `data`: o valor escolhido e as opções.
+  - `ui`: o "Todos os X" de filtro (`allLabel`), textos, largura cheia, modo, tooltip do escolhido
+    e o valor livre (`allowCustomValue`, com o verbo em `customValueAction`).
+  - `state`: desabilitado e erro.
+  - `actions`: `onChange` e, com valor livre, `onCustomValue`.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import { tv } from 'tailwind-variants';
 
   import type { StatusBadgeTone } from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
 
-  /**
-   * Seletor dinâmico — substitui o `<select>` nativo em filtro e formulário.
-   *
-   * Com POUCAS opções (até 6, contando "Todos"), vira uma fileira de pastilhas: a pessoa
-   * compara e troca com um clique, sem abrir nada. Com MUITAS (departamento, tipo de
-   * problema...), pastilha lado a lado viraria uma parede de botões — vira um botão que abre
-   * um balão com busca, como o filtro de processos do agente.
-   *
-   * O tom (verde, vermelho...) é decidido por QUEM CHAMA — o mesmo cuidado do `StatusBadge`,
-   * para a cor de uma situação nunca variar de tela pra tela.
-   */
   /** `icon` é opcional: um desenho na frente do texto, para a opção não ser só uma palavra. */
   export type OptionPickerOption = {
     value: string;

@@ -1,14 +1,21 @@
+<!--
+  @component
+  Um bloco que abre e fecha: o título fica sempre à vista, o conteúdo aparece quando a pessoa
+  pede. Envolve o `ui/collapsible` do shadcn. Serve para o que é detalhe — filtros avançados,
+  explicação longa —, nunca para esconder o que a pessoa precisa ver para decidir.
+
+  `state.isOpen` é só como o bloco NASCE. Depois quem manda é o clique; a tela é avisada por
+  `actions.onOpenChange` se quiser lembrar a escolha.
+
+  - `data`: o título.
+  - `ui`: classe extra.
+  - `state`: `isOpen` (como nasce) e desligado.
+  - `actions`: `onOpenChange`.
+  - `children`: o conteúdo.
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
-  /**
-   * Um bloco que abre e fecha: o título fica sempre à vista, o conteúdo aparece quando a pessoa
-   * pede. Envolve o `ui/collapsible` do shadcn. Serve para o que é detalhe — filtros avançados,
-   * explicação longa —, nunca para esconder o que a pessoa precisa ver para decidir.
-   *
-   * `state.isOpen` é só como o bloco NASCE. Depois quem manda é o clique; a tela é avisada por
-   * `actions.onOpenChange` se quiser lembrar a escolha.
-   */
   export type AzuosCollapsibleProps = {
     data: { title: string };
     ui?: { className?: string };

@@ -1,15 +1,20 @@
+<!--
+  @component
+  OS CHAMADOS VINCULADOS na ficha do chamado.
+
+  Permite relacionar chamados entre si (relação N:N). Exibe a lista dos chamados já vinculados com
+  link direto e permite buscar por id, protocolo ou assunto para vincular novos.
+
+  `data` leva as relações, o termo e os resultados da busca e o chamado atual; `ui.isHeaderHidden`
+  tira o título quando o cartão mora numa seção que já tem o nome dele; `state`, carregamento,
+  busca, inclusão, remoção e erro; `actions`, buscar, vincular e desvincular.
+-->
 <script lang="ts" module>
   import {
     type RelatedTicketSummary,
     type TicketRelation,
   } from '@template/shared/schemas/ticket-relation.schema';
 
-  /**
-   * OS CHAMADOS VINCULADOS na ficha do chamado.
-   *
-   * Permite relacionar chamados entre si (relação N:N). Exibe a lista dos chamados
-   * já vinculados com link direto e permite buscar por id/protocolo ou texto para vincular novos.
-   */
   export type AzuosTicketRelationsCardProps = {
     data: {
       relations: TicketRelation[];

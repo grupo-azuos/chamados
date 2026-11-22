@@ -1,16 +1,22 @@
+<!--
+  @component
+  AzuosZuzu, a arara — o mascote do Grupo Azuos, o mesmo do paralegal.
+
+  As poses são os arquivos oficiais da marca, na CDN do app brand (`zuzu/zuzu-{pose}.png`), e os
+  movimentos repetem os tempos do paralegal — `sway` em 3,2s, `float` em 3s, `pulse` em 1,6s. Um
+  mascote parado num canto da tela o dia inteiro, mexendo rápido demais, vira distração; esses
+  valores já passaram por esse teste lá.
+
+  O padrão é parado (`anim: 'none'`), e com movimento reduzido no sistema ele fica sempre parado. A
+  imagem é decorativa (`alt` vazio): o texto ao lado já diz o que ele diz.
+
+  `data` leva a `pose` e o `anim`; `ui`, o `size` em pixels (96 por padrão) e `className`.
+-->
 <script lang="ts" module>
   import gsap from 'gsap';
 
   import { brandAssetUrl } from '$lib/utils/brand-asset.util';
 
-  /**
-   * AzuosZuzu, a arara — o mascote do Grupo Azuos, o mesmo do paralegal.
-   *
-   * As poses são os arquivos oficiais da marca, na CDN do app brand (`zuzu/zuzu-<pose>.png`), e os movimentos
-   * repetem os tempos do paralegal — `sway` em 3,2s, `float` em 3s, `pulse` em 1,6s. Um mascote
-   * parado num canto da tela o dia inteiro, mexendo rápido demais, vira distração; esses
-   * valores já passaram por esse teste lá.
-   */
   export type AzuosZuzuPose =
     | 'alert'
     | 'pointing'
