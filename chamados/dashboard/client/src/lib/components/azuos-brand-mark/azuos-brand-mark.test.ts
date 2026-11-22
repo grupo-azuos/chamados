@@ -25,8 +25,9 @@ describe('AzuosBrandMark', () => {
   it('uses the official symbol when the sidebar is collapsed', () => {
     render(BrandMark, { props: { ui: { variant: 'icon', size: 'sm' } } });
 
-    /* O Vite embute o SVG pequeno como `data:` — o arquivo é o oficial, só o endereço muda. */
-    expect(screen.getByRole('img').getAttribute('src')).toMatch(/azuos-icon|^data:image\/svg/);
+    expect(screen.getByRole('img').getAttribute('src')).toBe(
+      'https://cdn.grupoazuos.com.br/logo/svg/icon.svg',
+    );
     expect(screen.getByRole('img')).toHaveAttribute('width', '28');
   });
 
@@ -35,7 +36,7 @@ describe('AzuosBrandMark', () => {
 
     expect(screen.getByRole('img')).toHaveAttribute(
       'src',
-      expect.stringContaining('azuos-app-icon'),
+      'https://cdn.grupoazuos.com.br/logo/web/icon-512.png',
     );
     expect(screen.getByRole('img')).toHaveAttribute('width', '80');
   });
