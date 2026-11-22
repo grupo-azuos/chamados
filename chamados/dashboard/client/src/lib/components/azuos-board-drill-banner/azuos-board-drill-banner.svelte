@@ -30,11 +30,13 @@
   let { data, actions }: AzuosBoardDrillBannerProps = $props();
 </script>
 
-<!-- O fundo da página por trás: a lista que rola não aparece na fresta acima da faixa. -->
+<!-- O fundo da página por trás: a lista que rola não aparece na fresta acima da faixa. O "Voltar"
+     vem preso ao topo (`self-start`, o certo acima de um título); aqui ele fica no meio da linha,
+     alinhado com o ícone e os selos. -->
 <div class="bg-background sticky top-0 z-20 pb-4">
   {#if data.notice}
     <div role="status" class="rounded-box bg-warning-soft text-foreground flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm">
-      <BackButton data={{ destination: 'o Painel' }} actions={{ onClick: actions.onBack }} />
+      <BackButton data={{ destination: 'o Painel' }} ui={{ className: 'self-center' }} actions={{ onClick: actions.onBack }} />
       <TriangleAlert class="size-4 shrink-0" aria-hidden="true" />
       <span class="flex-1">{data.notice}</span>
       <ActionButton data={{ label: 'Entendi' }} ui={{ variant: 'ghost', size: 'sm', icon: X }} actions={{ onClick: actions.onClear }} />
@@ -44,7 +46,7 @@
       aria-label="Recorte do painel"
       class="rounded-box bg-info-soft text-foreground flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm"
     >
-      <BackButton data={{ destination: 'o Painel' }} actions={{ onClick: actions.onBack }} />
+      <BackButton data={{ destination: 'o Painel' }} ui={{ className: 'self-center' }} actions={{ onClick: actions.onBack }} />
       <LayoutDashboard class="size-4 shrink-0" aria-hidden="true" />
       <span class="font-semibold">Recorte do painel:</span>
       <ul class="flex flex-1 flex-wrap gap-1" aria-label="O recorte">
