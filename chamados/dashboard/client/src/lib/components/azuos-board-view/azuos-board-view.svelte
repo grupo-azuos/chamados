@@ -313,7 +313,9 @@
   <!-- AS CONFIGURAÇÕES DO PAINEL, na lateral: os filtros (as variáveis do Grafana) — a ordem, o
        desenho e a largura de cada um, e os que faltam para pôr. -->
   <Sheet bind:open={isSettingsOpen}>
-    <SheetContent side="right" class="w-full overflow-y-auto sm:max-w-3xl">
+    <!-- Largo: a lista dos filtros cabe numa linha por filtro (nome, desenho, largura, setas), sem
+         quebrar. A largura vem pela variante do lado — a do `ui/sheet` (`sm:max-w-sm`) ganharia. -->
+    <SheetContent side="right" class="overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-[min(64rem,90vw)]">
       <SheetHeader>
         <SheetTitle>Configurações do painel</SheetTitle>
         <SheetDescription>Os filtros do painel: a ordem na barra, o desenho e a largura de cada um.</SheetDescription>
