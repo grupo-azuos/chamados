@@ -1,3 +1,20 @@
+<!--
+  @component
+  O CARTÃO DE WHATSAPP do perfil: mostra se há um número vinculado e oferece vincular ou
+  desvincular.
+
+  Conectado, mostra o número e o contador de mensagens automáticas do dia — em tom de aviso perto
+  do teto e avisando quando ele foi atingido. Sem a integração configurada, explica e não oferece
+  botão. Um vínculo começado e não terminado vira "Continuar vínculo". O botão "Textos do bot" só
+  aparece quando `onEditTemplates` é passada (super admin).
+
+  Só aparece para quem pode vincular — quem decide é a tela, que nem monta o cartão para os demais.
+  Aqui dentro não há regra de permissão.
+
+  - `data`: `phone` (já formatado), `sentToday` e `dailyLimit`.
+  - `state`: `isLoading`, `isConfigured`, `linkState` e `error`.
+  - `actions`: `onLink`, `onUnlink` e `onEditTemplates` (opcional).
+-->
 <script lang="ts" module>
   import {
     isNearWhatsappLimit,

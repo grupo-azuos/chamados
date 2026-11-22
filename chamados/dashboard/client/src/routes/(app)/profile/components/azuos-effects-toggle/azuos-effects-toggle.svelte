@@ -1,3 +1,16 @@
+<!--
+  @component
+  O botão de efeitos visuais: completos ou leves. Irmão do botão de tema e do mesmo jeito — cuida
+  da própria preferência (`lib/hooks/use-effects`); a tela só o coloca no lugar.
+
+  O sistema já escolhe sozinho pelo que a máquina aguenta; este botão é para quem quer mandar:
+  forçar o modo leve num PC que a detecção achou bom, ou o completo num que ela achou fraco. Como
+  no tema, o ícone mostra o modo DE AGORA (brilho = completo, velocímetro = leve), não para onde o
+  clique leva.
+
+  - `ui.variant`: `sidebar` (o padrão, amarelo sobre a barra azul) ou `surface` (cor primária
+    sobre o cartão do perfil).
+-->
 <script lang="ts">
   import Gauge from '@lucide/svelte/icons/gauge';
   import Sparkles from '@lucide/svelte/icons/sparkles';

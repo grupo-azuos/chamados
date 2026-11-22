@@ -1,3 +1,17 @@
+<!--
+  @component
+  O USO DA MÁQUINA AO LONGO DO TEMPO — processador, memória e disco na mesma escala.
+
+  É o `AreaChart` com as três séries fixas (`USAGE_SERIES`) e a escala travada em 0–100%. Existe
+  como componente próprio porque a ficha da máquina e o painel ao vivo precisam mostrar EXATAMENTE
+  as mesmas três séries, com as mesmas cores e os mesmos nomes. Sobrepostas e não empilhadas: as
+  três são porcentagem, e empilhá-las daria 240% de nada.
+
+  - `data.points`: as leituras do agente (convertidas por `toPoints`).
+  - `ui`: `emptyLabel`, `className` e `heightClass` (alto por padrão, `h-72`, para a forma da
+    curva não virar mancha).
+  - `state.isLoading`: as leituras ainda não chegaram.
+-->
 <script lang="ts" module>
   import type { TimePoint, TimeSeriesDef } from '$lib/utils/time-series';
 

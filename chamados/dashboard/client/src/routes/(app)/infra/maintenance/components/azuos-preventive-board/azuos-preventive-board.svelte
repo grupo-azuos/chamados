@@ -1,3 +1,21 @@
+<!--
+  @component
+  O LEMBRETE que não depende de ninguém lembrar: quais máquinas passaram do prazo de manutenção
+  preventiva.
+
+  **As máquinas em dia não entram na lista**: quem abre esta seção quer saber o que está pendente.
+  O total em dia aparece como uma linha de texto. **As AGENDADAS vêm no alto**, num bloco próprio,
+  antes das vencidas: são compromissos com dia marcado (e ficam fora da cadeia de estados, para não
+  sumir atrás do "todas em dia"). Cada pendente mostra o departamento, a última manutenção, se está
+  agendada, o aviso de máquina que já teve muitas manutenções, o selo da situação e "Registrar".
+
+  Função pura de props: a situação já vem calculada pela API (o cruzamento do inventário com o
+  histórico). O componente só ordena a leitura e oferece a ação.
+
+  - `data`: `rows` (a situação de cada máquina) e `schedules` (as agendadas).
+  - `state.isLoading`: conferindo as máquinas.
+  - `actions`: `onRegister(row)` para a pendente e `onRegisterMachine(computerId)` para a agendada.
+-->
 <script lang="ts" module>
   import {
     PREVENTIVE_INTERVAL_MONTHS,

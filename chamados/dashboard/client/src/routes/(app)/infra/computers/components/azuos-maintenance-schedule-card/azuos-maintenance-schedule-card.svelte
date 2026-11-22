@@ -1,3 +1,17 @@
+<!--
+  @component
+  O PRÓXIMO COMPROMISSO de manutenção da máquina, no alto da ficha.
+
+  Agendamento ganha da preventiva automática: quem marcou um dia já decidiu quando abrir a máquina,
+  e mostrar os dois deixaria a pessoa sem saber qual vale. Sem agendamento, o cartão mostra o prazo
+  dos três meses (ou avisa que não há preventiva registrada) — e é dali que se agenda. A regra de
+  qual prazo vale mora em `scheduleSummaryOf`; a urgência fica no ícone cheio, no tom do assunto,
+  nunca no fundo do card. Com agendamento, as ações são registrar, remarcar e cancelar.
+
+  - `data`: `schedule` (ou nulo) e `lastPreventiveAt` (de onde sai o prazo automático).
+  - `state`: `isLoading`, `isCancelling` e `error`.
+  - `actions`: `onSchedule` (agendar ou remarcar), `onCancel` e `onRegister`.
+-->
 <script lang="ts" module>
   import {
     daysUntilDay,

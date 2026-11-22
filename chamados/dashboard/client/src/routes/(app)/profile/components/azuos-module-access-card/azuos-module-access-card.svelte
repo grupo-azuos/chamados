@@ -1,3 +1,14 @@
+<!--
+  @component
+  OS MÓDULOS DA PESSOA no Chamados — uma seção a mais da ficha padrão do perfil, só deste sistema.
+
+  Mostra um bloco por módulo (`ROLE_CONTEXTS`), com o nome, a descrição e o selo do nível de
+  acesso. O nível é o do papel no admin-console; módulo ausente é "sem acesso", e o super admin
+  aparece com o mesmo nível em todos. Só leitura: não tem estado nem ação.
+
+  - `data.role`: o papel geral da pessoa (`superadmin` vale para todos os módulos).
+  - `data.roles`: o papel em cada módulo.
+-->
 <script lang="ts" module>
   import { type ContextRoles, type UserRole } from '@template/shared/schemas/user.schema';
 

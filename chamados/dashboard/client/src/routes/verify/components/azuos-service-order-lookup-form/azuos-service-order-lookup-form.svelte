@@ -1,3 +1,15 @@
+<!--
+  @component
+  A ENTRADA da conferência de ordem de serviço: um campo para o código do rodapé do documento e um
+  botão "Conferir documento".
+
+  Para quem tem o papel na mão e não o link (nem o QR code). Enviar o formulário (Enter ou botão)
+  chama `onSubmit`. Função pura de props: quem leva para a conferência é o hook.
+
+  - `data.code`: o código digitado.
+  - `state.error`: a mensagem de erro mostrada no campo.
+  - `actions.onChange` (a cada tecla) e `actions.onSubmit` (ao conferir).
+-->
 <script lang="ts" module>
   /**
    * A ENTRADA da conferência: um campo para o código do rodapé do documento e um botão.

@@ -1,3 +1,27 @@
+<!--
+  @component
+  A AGENDA DO MÓDULO SISTEMA: o calendário dos compromissos e registros da equipe, junto da
+  atividade do GitHub.
+
+  Em cima, a barra: o mês e o ano, voltar/hoje/avançar, Dia/Semana/Mês e "Novo agendamento" (só
+  para quem edita), e os filtros de projeto, autor e tipo. Depois, o resumo por pessoa (PRs, merges
+  e issues no período, contando o que fez como co-autor). No mês, uma célula por dia com os itens
+  empilhados; no dia e na semana, a grade de horas das 08:00 às 18:00, com a atividade do GitHub no
+  alto de cada dia e a linha da hora atual. Clicar num espaço vazio abre um agendamento naquele dia
+  (e horário); clicar num item abre a edição. Os cartões saem na cor escolhida (a mesma tabela do
+  seletor de cor); agendamentos fora do horário da grade aparecem numa lista à parte. Embaixo, a
+  atividade do GitHub no período, dia a dia.
+
+  Função pura de props: os dias, os itens e a posição da linha de agora chegam prontos do view-model
+  da agenda (`use-software-schedule`).
+
+  - `data`: `monthYearTitle`, `viewMode`, `days`, `events`, `githubEvents`, os totais
+    (`mergedPullRequests`, `resolvedIssues`, `developerStats`), `nowTopPx` e `filters`.
+  - `state`: `canEdit`, `isLoading`, `isRefetching` e `error`.
+  - `actions`: navegação (`onPrev`, `onNext`, `onToday`, `onViewModeChange`), criação (`onNewEvent`,
+    `onNewEventAt`), `onSelectEvent`, `onRetry`, `onOpenGithubDay` e os filtros
+    (`onProjectFilterChange`, `onAuthorFilterChange`, `onTypeFilterChange`, `onClearFilters`).
+-->
 <script lang="ts" module>
   import {
     type DayColumn,

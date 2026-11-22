@@ -1,3 +1,24 @@
+<!--
+  @component
+  CONSULTAR CHAMADO — a tela de acompanhar, separada da de abrir.
+
+  Duas colunas, como uma caixa de entrada: à esquerda a busca pelo número e os chamados da pessoa
+  (os que ela abriu e os em que foi vinculada), divididos entre "Em andamento" e "Encerrados"; à
+  direita o chamado aberto, com a TRILHA (recebido → em atendimento → encerrado, `journeyOf`), a
+  situação e a urgência, os dados, os arquivos (abrir e baixar), a linha do tempo e o que ela pode
+  fazer nele. No celular é uma coluna só: abrir um chamado troca a lista por ele, e "Meus chamados"
+  volta. "Não encontrado" é resposta, não falha — por isso não vem em vermelho.
+
+  Função pura de props: não busca nada. O chamado que chega já vem podado pelo servidor — sem
+  telefone e sem responsável, e só com os históricos visíveis para quem abriu.
+
+  - `data`: `protocol` (o número digitado), `ticket` (o aberto, ou nulo) e `mine`.
+  - `state`: a busca (`isSearching`, `isInvalid`, `isNotFound`, `error`) e a lista (`isLoadingMine`,
+    `mineError`).
+  - `actions`: `onProtocolChange`, `onSearch`, `onOpenMine(protocol)` e `onBackToList`.
+  - `slots.ticketActions`: o que quem pediu faz com o chamado (responder, reabrir, vincular), depois
+    da linha do tempo.
+-->
 <script lang="ts" module>
   import {
     ticketAreaLabel,

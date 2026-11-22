@@ -1,3 +1,24 @@
+<!--
+  @component
+  OS ORÇAMENTOS DA MANUTENÇÃO: o que foi cotado com empresas de fora, guardado num lugar só.
+
+  Não é uma sugestão de valores: é a gaveta dos orçamentos que já existem — o conserto, o móvel, o
+  serviço — com o documento que a empresa mandou e o que foi decidido. A tela inteira: cabeçalho com
+  "Guardar orçamento", busca e filtros (situação e tipo), o resumo de quantos são e quanto somam, e
+  um cartão por orçamento (empresa, tipo, data, valor, situação, descrição, documento com abrir e
+  baixar, corrigir e excluir). Cartão em lista, e não tabela: a descrição é uma frase. Excluir
+  pergunta antes; o orçamento vai para "Removidos", onde dá para desfazer.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro.
+
+  - `data`: `quotes`, `total`, `amountCents`, `filter` e `deleting` (o que espera confirmação).
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated`, `isDeleting`,
+    `error` e `deleteError`.
+  - `actions`: os filtros (`onSearchChange`, `onStatusChange`, `onKindChange`, `onClearFilters`),
+    `onRetry`, `onRegister`, `onEdit` e a exclusão (`onAskDelete`, `onCancelDelete`,
+    `onConfirmDelete`).
+-->
 <script lang="ts" module>
   import {
     formatCents,

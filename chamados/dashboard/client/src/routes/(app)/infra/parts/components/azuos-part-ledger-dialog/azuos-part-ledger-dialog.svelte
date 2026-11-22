@@ -1,3 +1,23 @@
+<!--
+  @component
+  O EXTRATO de uma peça: cada entrada, cada saída e o saldo depois de cada uma.
+
+  É esta tela que responde "como chegamos em 3?". Sem ela, o saldo é uma afirmação sem prova. Abre
+  num diálogo largo, com o estado da peça e o saldo atual no alto (tirado da linha mais recente do
+  extrato, para nunca desmentir a lista); a lista vem em cards no celular e em tabela no monitor,
+  com a alternância entre os dois. Cada linha mostra quando, o movimento com sinal, a máquina,
+  quem fez e o saldo depois.
+
+  Movimento que veio de um CHAMADO é um link para ele, e não tem lixeira: desfaz-se pelo chamado,
+  reaberto, senão o chamado e o depósito discordam. Os demais podem ser excluídos, com confirmação;
+  a linha vai para "Movimentações estornadas", onde dá para desfazer.
+
+  Função pura de props: não busca nada e não apaga nada — avisa quem pediu.
+
+  - `data`: `part`, `movements` (do mais recente ao mais antigo) e `removing`.
+  - `state`: `isOpen`, `isLoading`, `isEmpty`, `isRemoving`, `error` e `actionError`.
+  - `actions`: `onAskRemove`, `onCancelRemove`, `onConfirmRemove`, `onRetry` e `onClose`.
+-->
 <script lang="ts" module>
   import { departmentLabel } from '@template/shared/domain/department.util';
   import {

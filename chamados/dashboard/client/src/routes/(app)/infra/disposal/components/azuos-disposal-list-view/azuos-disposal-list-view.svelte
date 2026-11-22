@@ -1,3 +1,25 @@
+<!--
+  @component
+  O DESCARTE: as máquinas que saíram de uso, e o motivo de cada uma.
+
+  No alto, os números: o total fora de uso e os atalhos "Com defeito" e "Lixo", que ligam (e
+  desligam) o mesmo filtro de tipo e rolam a tela até a lista. Depois, busca, tipo de descarte e a
+  alternância entre cards (celular) e tabela (monitor). Cada máquina mostra o nome, o departamento,
+  o tipo, o motivo, a data em que saiu, "Ver ficha" e "Voltar ao inventário" — que pergunta antes e
+  apaga só o motivo do descarte, com o histórico inteiro.
+
+  Aqui não se descarta nada — isso acontece na FICHA da máquina, que é onde a pessoa está olhando
+  quando decide. Esta tela é o histórico, e a única escrita dela é desfazer.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro.
+
+  - `data`: `computers`, `total`, `summary`, `filter` e `restoring` (a que espera confirmação).
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isRestoring`, `error` e
+    `actionError`.
+  - `actions`: filtros (`onSearchChange`, `onTypeChange`, `onClearFilters`), `onRetry`,
+    `onOpenMachine` e a devolução (`onAskRestore`, `onCancelRestore`, `onConfirmRestore`).
+-->
 <script lang="ts" module>
   import { departmentLabel } from '@template/shared/domain/department.util';
   import {

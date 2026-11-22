@@ -1,3 +1,24 @@
+<!--
+  @component
+  OS SISTEMAS E PROJETOS da empresa: a tela de lista do módulo Sistema.
+
+  Cabeçalho com "Sincronizar todos" (só com `canSyncAll`) e "Novo Sistema" (só para quem edita),
+  busca por nome ou repositório e filtro de situação. Cada sistema é um card: nome, situação,
+  descrição, responsável (ou "Sem responsável"), link do repositório no GitHub, chamados e PRs
+  abertos, "Ver sistema", "Sincronizar" (com `canSync`) e, para quem edita, corrigir e excluir.
+  Excluir pergunta antes; o sistema vai para "Removidos", onde dá para desfazer. Tem os estados de
+  carregando (esqueletos), erro, vazio e filtrado sem resultado, e os avisos da sincronização.
+
+  Função pura de props: não busca nada e não navega.
+
+  - `data`: `items`, `total`, `filter` e `deleting` (o que espera confirmação).
+  - `state`: permissões (`canEdit`, `canSync`, `canSyncAll`), lista (`isLoading`, `isRefetching`,
+    `isEmpty`, `isFilteredOut`, `error`), exclusão (`isDeleting`, `deleteError`) e sincronização
+    (`isSyncing`, `isSyncingAll`, `syncMessage`, `syncError`).
+  - `actions`: filtros (`onSearchChange`, `onStatusChange`, `onClearFilters`), `onRetry`,
+    `onRegister`, `onEdit`, `onViewTimeline`, exclusão (`onAskDelete`, `onCancelDelete`,
+    `onConfirmDelete`), `onSyncGithub(id)` e `onSyncAllGithub`.
+-->
 <script lang="ts" module>
   import {
     softwareProjectStatusLabel,

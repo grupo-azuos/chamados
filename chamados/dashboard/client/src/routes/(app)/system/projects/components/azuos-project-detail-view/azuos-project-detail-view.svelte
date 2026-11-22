@@ -1,3 +1,21 @@
+<!--
+  @component
+  A PÁGINA DE UM SISTEMA: em que etapa ele está e tudo o que aconteceu nele.
+
+  Em cima, o andamento de relance — o que está sendo feito agora (PRs abertos), o que está pedido
+  (issues abertas), quanto foi entregue na semana e os chamados em aberto. No meio, a lista do que
+  está em andamento e os chamados abertos (clicáveis). Embaixo, a timeline dia a dia: PRs, merges e
+  issues, com quem fez e quem fez junto, filtrável por tipo. A situação de cada evento é dita para
+  quem não lê GitHub ("Entregue", "Em andamento", "Pendente" — `eventStatusOf`). O botão de
+  sincronizar com o GitHub só aparece com `canSync`.
+
+  Função pura de props: não busca nada e não navega.
+
+  - `data`: `backDestination`, `project`, `progress`, `days`, `openTickets`, `filter`,
+    `isTruncated` e `syncMessage`.
+  - `state`: `isSyncing`, `syncError` e `canSync`.
+  - `actions`: `onFilterChange`, `onSync`, `onBack` e `onOpenTicket(ticket)`.
+-->
 <script lang="ts" module>
   import {
     TIMELINE_EVENT_TYPE_LABELS,

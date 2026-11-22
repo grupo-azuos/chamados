@@ -1,3 +1,22 @@
+<!--
+  @component
+  O DEPÓSITO DA MANUTENÇÃO: quanto há de cada produto, e os dois botões que mudam o número.
+
+  São os mesmos produtos do Inventário, lidos de outro jeito: lá importa O QUE é o produto (foto,
+  lugar, etiqueta), aqui importa QUANTO há. Por isso o número é a maior coisa do cartão, e a foto
+  nem aparece. Tem a busca, o filtro de categoria e o atalho "Sem estoque" (com quantos zeraram);
+  cada cartão mostra o nome, a categoria e o lugar, os chamados ligados, o saldo com a unidade,
+  "Entrada" e "Saída" — que fica apagada sem estoque, em vez de abrir um diálogo que o servidor
+  recusaria. Depósito vazio é inventário vazio: o aviso leva ao Inventário.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro.
+
+  - `data`: `items`, `total`, `outOfStock` e `filter`.
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated` e `error`.
+  - `actions`: filtros (`onSearchChange`, `onCategoryChange`, `onOutOfStockOnlyChange`,
+    `onClearFilters`), `onRetry`, `onEntry(item)`, `onExit(item)` e `onOpenInventory`.
+-->
 <script lang="ts" module>
   import {
     inventoryCategoryLabel,

@@ -1,3 +1,31 @@
+<!--
+  @component
+  A FICHA DE UM COMPUTADOR: quem é, como está e o que já aconteceu com ele.
+
+  A ordem da tela é a ordem da pergunta que se faz: primeiro o que está errado (os avisos de
+  saúde), depois o que a máquina é (hardware), depois como ela vem se comportando (gráfico) e por
+  último o histórico (alertas). Quem abre a ficha está atrás de problema. No alto, a identificação
+  com os selos (online, offline, bloqueada, arquivada), editar, transferir e "Mais ações" (baixar
+  instalador, token novo, bloquear, arquivar, descartar); depois o próximo compromisso de
+  manutenção, os números de agora, a leitura ao vivo, os aplicativos que mais pesam, o uso das
+  últimas 24 horas, o hardware, os alertas, as manutenções, os chamados, as transferências e as
+  peças recebidas. As ações que mudam a máquina pedem confirmação.
+
+  Os números do alto seguem a leitura AO VIVO quando ela existe; sem ela, sobra a última amostra, e
+  o rótulo deixa de dizer "agora" (`nowReadingOf`). Alertas e chamados são paginados no servidor.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook com a máquina
+  saudável, em estado crítico, bloqueada, arquivada e sem o agente instalado.
+
+  - `data`: `computer`, `samples`, `alerts`, `live`, `maintenances`, `schedule`, `tickets`,
+    `partMovements`, `transfers`, a paginação (`alertPaging`, `ticketPaging`) e `backDestination`.
+  - `state`: um `is…Loading` por bloco, `isSaving`, `actionError`, `isCancellingSchedule`,
+    `scheduleError`, `isDownloadingInstaller` e `installerError`.
+  - `actions`: `onEdit`, `onRegisterMaintenance`, `onScheduleMaintenance`, `onCancelSchedule`,
+    `onTransfer`, `onArchivedChange`, `onBlockedChange`, `onRegenerateToken`,
+    `onDownloadInstaller`, `onDispose`, `onRestore`, `onBack`, `onAlertPageChange` e
+    `onTicketPageChange`.
+-->
 <script lang="ts" module>
   import {
     alertDurationSeconds,

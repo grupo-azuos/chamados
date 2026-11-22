@@ -1,3 +1,18 @@
+<!--
+  @component
+  A BARRA DE CIMA da Central de Chamados — marca, as duas telas (abrir e consultar), o tema, a
+  pessoa logada e a saída. Uma linha só, sem título nem descrição.
+
+  A Central fica fora da casca dos módulos (não tem menu lateral); com as telas na barra, quem está
+  em qualquer uma chega às outras com um clique. A tela atual ganha fundo (nunca traço embaixo), e
+  no celular os links usam o rótulo curto. A foto da pessoa leva a "Meu perfil".
+
+  A tela atual vem por `activeHref` (quem compõe lê o endereço): a barra não navega sozinha.
+
+  - `data`: `activeHref`, `person` (nome e foto, ou nulo) e `theme`.
+  - `state.isSigningOut`: o botão de sair em "Saindo…".
+  - `actions`: `onToggleTheme` e `onSignOut`.
+-->
 <script lang="ts" module>
   /**
    * A BARRA DE CIMA da Central de Chamados — marca, as duas telas (abrir e consultar), o tema,
