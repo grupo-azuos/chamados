@@ -43,6 +43,7 @@
   } from '@template/shared/schemas/dashboard-board.schema';
   import { type Component } from 'svelte';
 
+  import AzuosCarousel from '$lib/components/azuos-carousel/azuos-carousel.svelte';
   import AzuosComboboxField from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
   import AzuosDateRangeField from '$lib/components/azuos-date-range-field/azuos-date-range-field.svelte';
   import AzuosSelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
@@ -86,8 +87,8 @@
   const options = $derived<BoardFilterOption[]>(optionsOf(kind));
   const value = $derived(kind === 'period' ? presetOf(data.values.period) : (data.values[kind] ?? ''));
   const period = $derived(data.values.period);
-  /* O desenho é o que quem montou escolheu, com quantas opções houver: etiquetas a mais rolam de
-     lado. Trocar sozinho para a busca desfazia a escolha assim que a lista crescia. */
+  /* O desenho é o que quem montou escolheu, com quantas opções houver: cards a mais deslizam no
+     carrossel. Trocar sozinho para a busca desfazia a escolha assim que a lista crescia. */
   const display = $derived(data.display);
   const isSearch = $derived(display === 'search' || options.length > SEARCH_FROM);
   const amounts = $derived(optionCounts(data.counts));
@@ -131,8 +132,11 @@
         <Icon class="size-4 shrink-0" aria-hidden="true" />
         {label}
       </span>
-      <div class="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2">
-        {#each options as option (option.value)}
+      <!-- Num CARROSSEL, e não numa grade que quebra em linhas: com os 17 departamentos a grade
+           virava três linhas e empurrava os blocos para baixo. A faixa tem sempre a altura de um
+           quadro; o resto fica a um arraste (ou a uma seta) de distância. -->
+      <AzuosCarousel data={{ items: options }} ui={{ ariaLabel: `Opções de ${label}`, itemClassName: 'basis-40' }}>
+        {#snippet item(option: BoardFilterOption)}
           {@const isChecked = option.value === value}
           <button
             type="button"
@@ -140,22 +144,23 @@
             aria-checked={isChecked}
             onclick={() => choose(option.value)}
             class={cn(
-              'rounded-control focus-visible:ring-ring/50 flex min-h-16 min-w-0 flex-col items-start justify-center gap-0.5 px-3 py-2 text-left transition-colors focus-visible:ring-[3px] focus-visible:outline-none',
+              'rounded-control focus-visible:ring-ring/50 flex min-h-16 w-full min-w-0 flex-col items-start justify-center gap-0.5 px-3 py-2 text-left transition-colors focus-visible:ring-[3px] focus-visible:outline-none',
               isChecked ? 'bg-primary-soft text-primary' : 'bg-muted text-foreground hover:bg-hover-veil',
             )}
           >
-            <span class={cn('w-full truncate text-sm font-medium', !isChecked && 'text-muted-foreground')}>{option.label}</span>
+            <span class={cn('w-full truncate text-sm font-medium', !isChecked && 'text-muted-foreground')} title={option.label}>{option.label}</span>
             <!-- "Eu" não tem conta própria: cada um que vê é um "eu" diferente. -->
             {#if option.value !== ME_VALUE}
               <span class="text-xl font-bold tabular-nums">{amounts.get(option.value) ?? 0}</span>
             {/if}
           </button>
-        {/each}
-      </div>
+        {/snippet}
+      </AzuosCarousel>
     </div>
   {:else}
     <!-- A peça: o nome num lado, o valor no outro, numa moldura cinza só — os três desenhos com o
-         mesmo fundo, a mesma altura e o mesmo fio entre o nome e o valor. -->
+         mesmo fundo, a mesma altura e o mesmo fio entre o nome e o valor. As etiquetas saíram: numa
+         peça só elas rolavam de lado e cortavam as opções; quem quer tudo à vista usa os cards. -->
     <div role="group" aria-label={label} class="rounded-control bg-muted flex h-10 min-w-0 items-stretch overflow-hidden">
       <span
         class="text-muted-foreground border-border flex max-w-[55%] shrink-0 items-center gap-1.5 border-r px-3 text-sm font-medium"
@@ -164,27 +169,7 @@
         <Icon class="size-4 shrink-0" aria-hidden="true" />
         <span class="truncate">{label}</span>
       </span>
-      {#if display === 'chips'}
-        <!-- As etiquetas como abas da peça: cada uma com a altura inteira (40px, alvo de clique
-             confortável); a escolhida no azul claro. Sem espaço, rolam de lado. -->
-        <div role="radiogroup" aria-label={label} class="flex min-w-0 flex-1 items-stretch overflow-x-auto">
-          {#each options as option (option.value)}
-            {@const isChecked = option.value === value}
-            <button
-              type="button"
-              role="radio"
-              aria-checked={isChecked}
-              onclick={() => choose(option.value)}
-              class={cn(
-                'focus-visible:ring-ring/50 h-10 shrink-0 px-3 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:outline-none focus-visible:ring-inset',
-                isChecked ? 'bg-primary-soft text-primary font-semibold' : 'text-muted-foreground hover:bg-hover-veil hover:text-foreground',
-              )}
-            >
-              {option.label}
-            </button>
-          {/each}
-        </div>
-      {:else if isSearch}
+      {#if isSearch}
         <AzuosComboboxField
           data={{ value, options }}
           ui={{

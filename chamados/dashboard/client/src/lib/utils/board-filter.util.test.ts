@@ -76,15 +76,15 @@ describe('board filter rules', () => {
 describe('the Grafana-like filter toolbar', () => {
   // feliz
   it('keeps a toolbar display and offers the compact ones and the cards', () => {
-    expect(toolbarDisplayOf({ kind: 'ticketStatus', display: 'chips' })).toBe('chips');
     expect(toolbarDisplayOf({ kind: 'ticketStatus', display: 'cards' })).toBe('cards');
-    expect(toolbarDisplaysOf('ticketStatus')).toEqual(['select', 'search', 'chips', 'cards']);
-    expect(toolbarDisplaysOf('person')).toEqual(['search', 'chips', 'cards']);
+    expect(toolbarDisplaysOf('ticketStatus')).toEqual(['select', 'search', 'cards']);
+    expect(toolbarDisplaysOf('person')).toEqual(['search', 'cards']);
   });
 
   // triste
   it('falls back to a compact display for boards saved with the big ones', () => {
     expect(toolbarDisplayOf({ kind: 'ticketStatus', display: 'list' })).toBe('select');
+    expect(toolbarDisplayOf({ kind: 'ticketStatus', display: 'chips' })).toBe('select');
     expect(toolbarDisplayOf({ kind: 'person', display: 'avatars' })).toBe('search');
   });
 

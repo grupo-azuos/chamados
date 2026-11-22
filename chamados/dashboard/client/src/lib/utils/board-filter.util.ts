@@ -202,12 +202,12 @@ export function readingOrder<T extends { place: BoardFilterPlace }>(filters: rea
 
 /**
  * OS DESENHOS DA BARRA DE FILTROS — no estilo do Grafana, cada filtro é UMA peça compacta numa
- * linha só, acima dos blocos: a lista suspensa, a busca, ou as etiquetas à vista (para poucas
- * opções) — e os CARDS, numa faixa da largura da barra, cada opção com quantos há nela. A lista
- * aberta e as fotos ocupavam uma casa inteira da grade e empurravam o painel para baixo; um
- * painel gravado com elas cai no desenho compacto mais perto.
+ * linha só, acima dos blocos: a lista suspensa ou a busca — e os CARDS, num carrossel da largura
+ * da barra, cada opção com quantos há nela. As etiquetas, a lista aberta e as fotos saíram (as
+ * etiquetas rolavam de lado dentro da peça e cortavam as opções); um painel gravado com elas cai
+ * na lista suspensa, ou na busca para pessoa.
  */
-export const TOOLBAR_DISPLAYS: readonly BoardFilterDisplay[] = ['select', 'search', 'chips', 'cards'];
+export const TOOLBAR_DISPLAYS: readonly BoardFilterDisplay[] = ['select', 'search', 'cards'];
 
 /** Os desenhos que quem monta pode escolher para o filtro, na barra. */
 export function toolbarDisplaysOf(kind: BoardFilterKind): BoardFilterDisplay[] {

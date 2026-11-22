@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import BoardFilterBar from './azuos-board-filter-bar.svelte';
 
-const PERSON = { id: 'person', kind: 'person' as const, label: 'Pessoa', display: 'chips' as const, place: { x: 0, y: 0, w: 1, h: 1 } };
+const PERSON = { id: 'person', kind: 'person' as const, label: 'Pessoa', display: 'search' as const, place: { x: 0, y: 0, w: 1, h: 1 } };
 const STATUS = { id: 'ticketStatus', kind: 'ticketStatus' as const, label: 'Situação', display: 'select' as const, place: { x: 1, y: 0, w: 1, h: 1 } };
 const PERIOD = { id: 'period', kind: 'period' as const, label: 'Período', place: { x: 2, y: 0, w: 1, h: 1 } };
 const COUNTS = {
@@ -12,7 +12,7 @@ const COUNTS = {
   ticketStatus: { total: 9, isLoading: false, series: [{ key: 'open', label: 'Aberto', value: 6 }] },
 };
 
-type AnyFilter = Omit<typeof PERSON | typeof STATUS | typeof PERIOD, 'display'> & { display?: 'select' | 'search' | 'chips' | 'cards'; width?: 'auto' | 'full' };
+type AnyFilter = Omit<typeof PERSON | typeof STATUS | typeof PERIOD, 'display'> & { display?: 'select' | 'search' | 'cards'; width?: 'auto' | 'full' };
 
 function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_FILTER_VALUES; filters?: AnyFilter[] } = {}) {
   const actions = {
@@ -52,8 +52,8 @@ describe('AzuosBoardFilterBar', () => {
   });
 
   // feliz
-  it('chooses "me" with one click on the chips', async () => {
-    const actions = renderBar();
+  it('chooses "me" with one click on the cards', async () => {
+    const actions = renderBar({ filters: [{ ...PERSON, display: 'cards' }] });
 
     await fireEvent.click(screen.getByRole('radio', { name: 'Eu' }));
     expect(actions.onChange).toHaveBeenCalledWith({ person: ME_VALUE });
@@ -139,12 +139,12 @@ describe('AzuosBoardFilterBar', () => {
   });
 
   // triste
-  it('keeps the chips with many options, instead of turning them into a search', () => {
+  it('keeps the cards with many options in the carousel, instead of turning them into a search', () => {
     const names = ['Contábil', 'Fiscal', 'Paralegal', 'Tecnologia', 'Recursos Humanos', 'ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'];
     render(BoardFilterBar, {
       props: {
         data: {
-          filters: [{ id: 'dep', kind: 'department' as const, label: 'Departamento', display: 'chips' as const, place: { x: 0, y: 0, w: 1, h: 1 } }],
+          filters: [{ id: 'dep', kind: 'department' as const, label: 'Departamento', display: 'cards' as const, place: { x: 0, y: 0, w: 1, h: 1 } }],
           values: EMPTY_BOARD_FILTER_VALUES,
           counts: { dep: { total: 0, isLoading: false, series: names.map((name) => ({ key: name, label: name, value: 0 })) } },
         },
@@ -153,7 +153,7 @@ describe('AzuosBoardFilterBar', () => {
     });
 
     expect(screen.getByRole('radiogroup', { name: 'Departamento' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'RECEPÇÃO' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /RECEPÇÃO/ })).toBeInTheDocument();
   });
 
   // feliz
@@ -182,6 +182,14 @@ describe('AzuosBoardFilterBar', () => {
 
     expect(screen.getByRole('button', { name: 'Saúde da máquina' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sistema' })).toBeNull();
+  });
+
+  // triste
+  it('shows a board saved with chips as a dropdown', () => {
+    renderBar({ filters: [{ ...STATUS, display: 'chips' as never }] });
+
+    expect(screen.queryByRole('radiogroup', { name: 'Situação' })).toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Situação' })).toBeInTheDocument();
   });
 });
 
