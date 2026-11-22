@@ -41,6 +41,8 @@
       preview: WidgetState | null;
       updatedAt: string | null;
       boardFilters: BoardFilter[];
+      /** Os filtros que o módulo aceita, para pôr. */
+      boardFilterKinds?: readonly BoardFilterKind[];
       filterValues: BoardFilterValues;
       filterCounts: Record<string, FilterCounts>;
       weight: number;
@@ -202,6 +204,7 @@
       results: data.results,
       filterNames,
       boardFilters: data.boardFilters,
+      boardFilterKinds: data.boardFilterKinds,
       filterValues: data.filterValues,
       filterCounts: data.filterCounts,
       weight: data.weight,

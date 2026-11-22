@@ -5,14 +5,14 @@ import { describe, expect, it, vi } from 'vitest';
 import BoardFilterBar from './azuos-board-filter-bar.svelte';
 
 const PERSON = { id: 'person', kind: 'person' as const, label: 'Pessoa', display: 'chips' as const, place: { x: 0, y: 0, w: 1, h: 1 } };
-const STATUS = { id: 'ticketStatus', kind: 'ticketStatus' as const, label: 'Situação', display: 'cards' as const, place: { x: 1, y: 0, w: 1, h: 1 } };
+const STATUS = { id: 'ticketStatus', kind: 'ticketStatus' as const, label: 'Situação', display: 'select' as const, place: { x: 1, y: 0, w: 1, h: 1 } };
 const PERIOD = { id: 'period', kind: 'period' as const, label: 'Período', place: { x: 2, y: 0, w: 1, h: 1 } };
 const COUNTS = {
   person: { total: 9, isLoading: false, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 5 }] },
   ticketStatus: { total: 9, isLoading: false, series: [{ key: 'open', label: 'Aberto', value: 6 }] },
 };
 
-type AnyFilter = (typeof PERSON | typeof STATUS | typeof PERIOD) & { width?: 'auto' | 'full' };
+type AnyFilter = Omit<typeof PERSON | typeof STATUS | typeof PERIOD, 'display'> & { display?: 'select' | 'search' | 'chips' | 'cards'; width?: 'auto' | 'full' };
 
 function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_FILTER_VALUES; filters?: AnyFilter[] } = {}) {
   const actions = {
@@ -154,6 +154,34 @@ describe('AzuosBoardFilterBar', () => {
 
     expect(screen.getByRole('radiogroup', { name: 'Departamento' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'RECEPÇÃO' })).toBeInTheDocument();
+  });
+
+  // feliz
+  it('shows the cards as a strip, each option with its count, and chooses one with a click', async () => {
+    const actions = renderBar({ filters: [{ ...STATUS, display: 'cards' as const }] });
+
+    const open = screen.getByRole('radio', { name: /Aberto/ });
+    expect(open).toHaveTextContent('6');
+    expect(screen.getByRole('radio', { name: /Todos/ })).toHaveTextContent('9');
+    expect(screen.getByRole('radio', { name: /Resolvido/ })).toHaveTextContent('0');
+    expect(screen.getByRole('radiogroup', { name: 'Situação' }).parentElement?.parentElement).toHaveClass('col-span-full');
+    await fireEvent.click(open);
+    expect(actions.onChange).toHaveBeenCalledWith({ ticketStatus: 'open' });
+  });
+
+  // triste
+  it('while building, offers only the filters of the module', async () => {
+    render(BoardFilterBar, {
+      props: {
+        data: { filters: [PERSON], values: EMPTY_BOARD_FILTER_VALUES, counts: COUNTS, kinds: ['person', 'period', 'computerHealth'] },
+        state: { isEditing: true },
+        actions: { onChange: vi.fn(), onAdd: vi.fn() },
+      },
+    });
+    await openList();
+
+    expect(screen.getByRole('button', { name: 'Saúde da máquina' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sistema' })).toBeNull();
   });
 });
 

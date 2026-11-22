@@ -13,6 +13,7 @@ import {
   type BoardFilterKind,
   type BoardFilterValues,
   type BoardFilterWidth,
+  boardFilterKindsOf,
   type BoardModule,
   boardWeight,
   type DashboardScope,
@@ -233,6 +234,7 @@ export function useDashboardBoardModel(module: BoardModule) {
         preview: previewState(),
         updatedAt: saved?.updatedAt ?? null,
         boardFilters: shown.filters,
+        boardFilterKinds: boardFilterKindsOf(module),
         filterValues,
         filterCounts: withDepartmentCatalog(
           shown.filters,

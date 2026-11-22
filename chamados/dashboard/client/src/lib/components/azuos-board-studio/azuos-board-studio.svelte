@@ -28,6 +28,8 @@
       results: Record<string, WidgetState>;
       filterNames: Record<string, string>;
       boardFilters: BoardFilter[];
+      /** Os filtros que o módulo aceita, para pôr. */
+      boardFilterKinds?: readonly BoardFilterKind[];
       filterValues: BoardFilterValues;
       filterCounts: Record<string, FilterCounts>;
       /** Os pontos que o painel já gasta, da cota de `MAX_BOARD_WEIGHT`. */
@@ -194,7 +196,7 @@
       <!-- Os filtros do painel montam aqui mesmo, no alto: é onde quem vê vai encontrá-los. -->
       <div class="mb-6">
         <AzuosBoardFilterBar
-          data={{ filters: data.boardFilters, values: data.filterValues, counts: data.filterCounts }}
+          data={{ filters: data.boardFilters, values: data.filterValues, counts: data.filterCounts, kinds: data.boardFilterKinds }}
           state={{ isEditing: true }}
           actions={{
             onChange: actions.onFilterValueChange,

@@ -1153,6 +1153,11 @@ export const BOARD_FILTER_KINDS = [
   'ticketStatus',
   'ticketPriority',
   'department',
+  'problemType',
+  'requester',
+  'project',
+  'computerHealth',
+  'inventoryCategory',
 ] as const;
 export const boardFilterKindSchema = z.enum(BOARD_FILTER_KINDS);
 export type BoardFilterKind = z.infer<typeof boardFilterKindSchema>;
@@ -1163,6 +1168,11 @@ export const BOARD_FILTER_KIND_LABELS: Record<BoardFilterKind, string> = {
   ticketStatus: 'Situação do chamado',
   ticketPriority: 'Prioridade do chamado',
   department: 'Departamento',
+  problemType: 'Tipo de problema',
+  requester: 'Quem abriu',
+  project: 'Sistema',
+  computerHealth: 'Saúde da máquina',
+  inventoryCategory: 'Categoria do produto',
 };
 
 /**
@@ -1186,6 +1196,12 @@ export const BOARD_FILTER_FIELDS: Record<
   ticketPriority: onTickets('priority'),
   /* O departamento vale para o chamado, a máquina e o produto: todos guardam o nome dele. */
   department: { ...onTickets('department'), computers: 'department', inventoryItems: 'department' },
+  problemType: onTickets('problemType'),
+  requester: onTickets('requester'),
+  /* O sistema vale para o chamado de Sistema, a atividade do GitHub e a agenda: os três o têm. */
+  project: { systemTickets: 'project', softwareActivity: 'project', scheduleEvents: 'project' },
+  computerHealth: { computers: 'healthStatus' },
+  inventoryCategory: { inventoryItems: 'category' },
 };
 
 export const BOARD_FIELD_FILTER_KINDS = Object.keys(BOARD_FILTER_FIELDS) as BoardFieldFilterKind[];
@@ -1236,15 +1252,42 @@ const CARD_GROUPS: Partial<Record<BoardFilterKind, string>> = {
   ticketStatus: 'status',
   ticketPriority: 'priority',
   department: 'department',
+  problemType: 'problemType',
+  requester: 'requester',
+};
+
+/**
+ * Os filtros que não são de chamado contam na fonte DELES: a saúde, nas máquinas; a categoria, no
+ * inventário; o sistema, nos chamados de Sistema (o campo que mais se recorta por ele).
+ */
+const OWN_CARD_SOURCES: Partial<Record<BoardFilterKind, { source: DataSourceKey; groupBy: string }>> = {
+  project: { source: 'systemTickets', groupBy: 'project' },
+  computerHealth: { source: 'computers', groupBy: 'healthStatus' },
+  inventoryCategory: { source: 'inventoryItems', groupBy: 'category' },
 };
 
 export function boardFilterCardSource(
   kind: BoardFilterKind,
   module: BoardModule,
 ): { source: DataSourceKey; groupBy: string } | null {
+  const own = OWN_CARD_SOURCES[kind];
+  if (own) return isSourceOf(module, own.source) ? own : null;
   const groupBy = CARD_GROUPS[kind];
 
   return groupBy ? { source: MODULE_TICKETS[module], groupBy } : null;
+}
+
+/**
+ * Os filtros que valem no painel do módulo: Pessoa e Período sempre; os de campo, só quando
+ * alguma fonte do módulo tem o campo. "Sistema" não aparece na Infraestrutura, nem "Saúde da
+ * máquina" na Manutenção.
+ */
+export function boardFilterKindsOf(module: BoardModule): BoardFilterKind[] {
+  return BOARD_FILTER_KINDS.filter((kind) => {
+    if (!isFieldFilterKind(kind)) return true;
+
+    return Object.keys(BOARD_FILTER_FIELDS[kind]).some((source) => isSourceOf(module, source as DataSourceKey));
+  });
 }
 
 /** Os desenhos que cada filtro aceita — o primeiro é o padrão. */
@@ -1406,6 +1449,11 @@ export const EMPTY_BOARD_FILTER_VALUES: BoardFilterValues = {
   ticketStatus: null,
   ticketPriority: null,
   department: null,
+  problemType: null,
+  requester: null,
+  project: null,
+  computerHealth: null,
+  inventoryCategory: null,
 };
 
 /**

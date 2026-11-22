@@ -11,6 +11,7 @@ import {
   windowOfPreset,
   moveInList,
   placesInOrder,
+  optionCounts,
   toolbarDisplayOf,
   toolbarDisplaysOf,
   withDepartmentCatalog,
@@ -71,15 +72,16 @@ describe('board filter rules', () => {
 
 describe('the Grafana-like filter toolbar', () => {
   // feliz
-  it('keeps a compact display and offers only compact ones', () => {
+  it('keeps a toolbar display and offers the compact ones and the cards', () => {
     expect(toolbarDisplayOf({ kind: 'ticketStatus', display: 'chips' })).toBe('chips');
-    expect(toolbarDisplaysOf('ticketStatus')).toEqual(['select', 'search', 'chips']);
-    expect(toolbarDisplaysOf('person')).toEqual(['search', 'chips']);
+    expect(toolbarDisplayOf({ kind: 'ticketStatus', display: 'cards' })).toBe('cards');
+    expect(toolbarDisplaysOf('ticketStatus')).toEqual(['select', 'search', 'chips', 'cards']);
+    expect(toolbarDisplaysOf('person')).toEqual(['search', 'chips', 'cards']);
   });
 
   // triste
   it('falls back to a compact display for boards saved with the big ones', () => {
-    expect(toolbarDisplayOf({ kind: 'ticketStatus', display: 'cards' })).toBe('select');
+    expect(toolbarDisplayOf({ kind: 'ticketStatus', display: 'list' })).toBe('select');
     expect(toolbarDisplayOf({ kind: 'person', display: 'avatars' })).toBe('search');
   });
 
@@ -154,6 +156,24 @@ describe('withDepartmentCatalog', () => {
   it('keeps what the count brought while the catalog has not arrived', () => {
     expect(withDepartmentCatalog(FILTERS, COUNTS, [])).toBe(COUNTS);
     expect(withDepartmentCatalog(FILTERS, { who: COUNTS.who }, ['Contábil'])).toEqual({ who: COUNTS.who });
+  });
+});
+
+describe('optionCounts', () => {
+  // feliz
+  it('gives each option its count and "all" the total', () => {
+    const counts = optionCounts({ total: 9, series: [{ key: 'open', label: 'Aberto', value: 6 }] });
+
+    expect(counts.get('open')).toBe(6);
+    expect(counts.get('')).toBe(9);
+  });
+
+  // triste
+  it('counts zero for "all" while nothing arrived, and has no count for an unknown option', () => {
+    const counts = optionCounts(null);
+
+    expect(counts.get('')).toBe(0);
+    expect(counts.has('@me')).toBe(false);
   });
 });
 
