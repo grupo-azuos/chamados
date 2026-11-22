@@ -55,8 +55,11 @@
       <InputGroupAddon>{@render prefix()}</InputGroupAddon>
     {/if}
 
+    <!-- `text-foreground`: o `Input` do vendor herdava uma cor quase branca dentro do grupo, e
+         o valor digitado sumia no fundo do cartão. -->
     <InputGroupInput
       id={inputId}
+      class="text-foreground"
       name={data.name}
       placeholder={data.placeholder}
       disabled={fieldState?.isDisabled}

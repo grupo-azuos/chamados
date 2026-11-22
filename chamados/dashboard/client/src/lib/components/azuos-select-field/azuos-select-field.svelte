@@ -111,9 +111,12 @@
        Sem isso ela se estica até o nome mais comprido da lista: com apelidos como
        "Paralegal — estação compartilhada do corredor (PARALEGAL-08-…)", a lista nascia mais
        larga do que o diálogo inteiro e vazava pelos dois lados. `--bits-select-anchor-width`
-       é a largura do gatilho, medida pelo próprio componente. -->
+       é a largura do gatilho, medida pelo próprio componente: a lista tem a largura do
+       conteúdo (`w-max`), nunca mais estreita que o gatilho, e abre centralizada embaixo dele. -->
   <SelectContent
-    class="min-w-[max(16rem,var(--bits-select-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))] rounded-surface border-transparent bg-popover shadow-xl ring-1 ring-foreground/8"
+    align="center"
+    sideOffset={6}
+    class="rounded-surface bg-popover ring-foreground/8 w-max max-w-[min(26rem,calc(100vw-2rem))] min-w-(--bits-select-anchor-width) border-transparent shadow-xl ring-1"
   >
     <!-- A lista vazia diz por quê, em texto solto — não é uma opção, não dá para escolher. Sem
          isso o balão abria em branco e parecia travado. -->

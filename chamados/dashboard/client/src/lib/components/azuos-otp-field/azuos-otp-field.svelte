@@ -140,9 +140,11 @@
         onfocus={(event) => event.currentTarget.select()}
         class={cn(
           'rounded-control aspect-square w-full max-w-12 min-w-0 flex-1 border text-center text-lg font-semibold transition-colors',
-          'focus-visible:ring-ring/50 focus:ring-[3px] focus:outline-none',
+          'focus:ring-brand-blue-800/20 focus:ring-2 focus:outline-none',
           'disabled:cursor-not-allowed disabled:opacity-60',
-          hasError ? 'border-border bg-destructive-soft text-destructive' : 'border-input bg-muted text-foreground',
+          hasError
+            ? 'bg-destructive-soft text-destructive border-transparent'
+            : 'bg-muted text-foreground border-transparent',
         )}
       />
     {/each}

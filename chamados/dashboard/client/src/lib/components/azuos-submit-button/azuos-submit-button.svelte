@@ -31,10 +31,10 @@
     /* O degrau `md` da régua de medidas (`lib/theme/tokens.css`) — o mesmo do `ActionButton`,
        que é quem fica ao lado dele no rodapé do diálogo. Antes a altura vinha só do padding,
        e dava 4px a mais que o "Cancelar" ao lado. */
-    'control-md rounded-control',
+    'control-md rounded-button',
     'inline-flex w-full sm:w-auto items-center justify-center gap-2',
     'bg-primary text-primary-foreground text-sm font-semibold transition-colors shadow-xs',
-    'hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60',
+    'hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60',
     ui?.className,
   )}
 >

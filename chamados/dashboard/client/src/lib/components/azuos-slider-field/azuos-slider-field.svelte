@@ -28,7 +28,7 @@
   let { data, ui, state, actions, startIcon, endIcon }: AzuosSliderFieldProps = $props();
 </script>
 
-<div class={cn('flex min-h-10 items-center gap-3', ui?.className)}>
+<div class={cn('flex items-center gap-3', ui?.className)}>
   {@render startIcon?.()}
   <SliderPrimitive.Root
     type="single"

@@ -27,8 +27,8 @@
    * grade do formulário, e caixa diferente é o que faz a fileira parecer torta. */
   export const FIELD_CONTROL_CLASS =
     'control-lg rounded-control bg-muted text-foreground w-full border text-sm transition-colors';
-  /** O recusado: fundo vermelho claro, borda neutra — borda colorida é proibida no grupo. */
-  export const CHOICE_ERROR_CLASS = 'border-border bg-destructive-soft';
+  /** O recusado: fundo vermelho claro, sem borda — borda colorida é proibida no grupo. */
+  export const CHOICE_ERROR_CLASS = 'border-transparent bg-destructive-soft';
 
   export type AzuosRichTextFieldType = 'text' | 'email' | 'password' | 'date' | 'month' | 'tel';
 
@@ -124,7 +124,7 @@
         onclick={actions.onSubmit}
         class={cn(
           iconPlace,
-          'hover:text-ink-700 focus-visible:ring-ring rounded-chip cursor-pointer after:absolute after:-inset-3 focus-visible:ring-2 focus-visible:outline-none',
+          'rounded-chip hover:text-ink-700 focus-visible:ring-brand-blue-700 cursor-pointer after:absolute after:-inset-3 focus-visible:ring-2 focus-visible:outline-none',
         )}
       >
         <Icon aria-hidden="true" class="size-4" />
@@ -155,7 +155,7 @@
         'placeholder:text-ink-500 disabled:cursor-not-allowed disabled:opacity-60',
         isPassword && 'pr-11',
         Icon && 'pl-9',
-        hasError ? 'border-border bg-destructive-soft' : 'border-input',
+        hasError ? 'bg-destructive-soft border-transparent' : 'border-transparent',
       )}
     />
     <!-- `tabindex="-1"`: no teclado, a tecla seguinte à senha precisa ser o botão de entrar. -->

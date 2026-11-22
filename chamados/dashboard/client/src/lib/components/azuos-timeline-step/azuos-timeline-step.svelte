@@ -1,6 +1,8 @@
 <script lang="ts" module>
   import type { Component, Snippet } from 'svelte';
 
+  import { cardToneClasses } from '$lib/utils/card-tone.util';
+
   /**
    * Uma etapa dentro de `Timeline`.
    *
@@ -15,14 +17,22 @@
       description?: string;
       icon: Component<{ class?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
     };
-    ui?: { isLast?: boolean; tone?: 'neutral' | 'brand' | 'success'; className?: string };
+    ui?: {
+      isLast?: boolean;
+      /** `danger`: o passo que NÃO aconteceu (uma consulta recusada, por exemplo). */
+      tone?: 'neutral' | 'brand' | 'success' | 'danger';
+      className?: string;
+    };
     children: Snippet;
   };
 
+  /* A cor do passo mora no ícone cheio (o padrão Apple): o neutro é o cinza de campo, e os
+     outros tons usam a bolinha cheia do `card-tone`, a mesma dos cards. */
   const ICON_TONE_CLASSES: Record<NonNullable<AzuosTimelineStepProps['ui']>['tone'] & string, string> = {
-    neutral: 'border-border bg-card text-foreground',
-    brand: 'bg-muted text-primary',
-    success: 'bg-muted text-success',
+    neutral: 'border-transparent bg-muted text-foreground',
+    brand: cardToneClasses('brand').dot,
+    success: cardToneClasses('success').dot,
+    danger: cardToneClasses('danger').dot,
   };
 </script>
 
