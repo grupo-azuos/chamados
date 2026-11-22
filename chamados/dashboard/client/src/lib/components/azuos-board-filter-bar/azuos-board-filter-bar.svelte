@@ -12,14 +12,14 @@
 
   /**
    * OS FILTROS DO PAINEL, no estilo do Grafana — uma BARRA compacta acima dos blocos, que recorta
-   * TODOS de uma vez: "Pessoa", "Situação", "Prioridade", "Departamento" à esquerda, na ordem que
-   * quem montou escolheu, e o "Período" por último, como o seletor de tempo do Grafana. Cada
+   * TODOS de uma vez, na ordem que quem montou escolheu — o Período inclusive. Cada
    * filtro é uma peça só ("Situação | Todos ▾"), num cartão, em grade que se ajusta à largura.
    *
    * O valor escolhido é de quem está vendo, e não se grava.
    *
    * Montando, a barra aparece como fica e, embaixo, a lista dos filtros (como as variáveis do
-   * Grafana): arrastar para ordenar, escolher o desenho, tirar; e os que faltam, para pôr.
+   * Grafana): arrastar para ordenar, escolher o desenho, tirar; e os que faltam, para pôr. A
+   * lista nasce FECHADA: aberta, uma linha por filtro empurrava a grade dos blocos para baixo.
    */
   export type AzuosBoardFilterBarProps = {
     data: {
@@ -55,6 +55,7 @@
 
   import AzuosActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import AzuosCardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import AzuosCollapsible from '$lib/components/azuos-collapsible/azuos-collapsible.svelte';
   import AzuosClearFiltersButton from '$lib/components/azuos-clear-filters-button/azuos-clear-filters-button.svelte';
   import { cn } from '$lib/utils/cn';
   import { activeSummary, readingOrder, toolbarDisplayOf } from '$lib/utils/board-filter.util';
@@ -67,9 +68,6 @@
   const isEditing = $derived(Boolean(barState?.isEditing));
   const active = $derived(activeSummary(data.filters, data.values, data.counts));
   const ordered = $derived(readingOrder(placedBoardFilters(data.filters)));
-  /* O período vai por último, como o seletor de tempo do Grafana; o resto, na ordem. */
-  const fields = $derived(ordered.filter((filter) => filter.kind !== 'period'));
-  const periods = $derived(ordered.filter((filter) => filter.kind === 'period'));
   const missing = $derived(BOARD_FILTER_KINDS.filter((kind) => !data.filters.some((filter) => filter.kind === kind)));
 </script>
 
@@ -83,10 +81,10 @@
 {#snippet toolbar()}
   <!-- O cartão que junta os filtros numa faixa só. Dentro, uma GRADE que se ajusta à largura: cada
        peça tem no mínimo 18rem e as colunas se dividem por igual — no celular, uma por linha; numa
-       tela larga, todas lado a lado, sem sobra torta no fim. O período vem por último. -->
+       tela larga, todas lado a lado, sem sobra torta no fim. A ordem é a da lista de quem montou. -->
   <AzuosCardSurface ui={{ className: 'flex flex-col gap-2 p-3 sm:flex-row sm:items-start' }}>
     <div class="grid min-w-0 flex-1 grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2">
-      {#each [...fields, ...periods] as filter (filter.id)}
+      {#each ordered as filter (filter.id)}
         <!-- "Linha inteira": a peça ocupa a linha toda, sozinha, abaixo das anteriores. -->
         <div class={cn('min-w-0', filter.width === 'full' && 'col-span-full')}>{@render control(filter)}</div>
       {/each}
@@ -106,21 +104,29 @@
         <span class="text-muted-foreground text-sm font-medium">Como a barra aparece</span>
         {@render toolbar()}
       </div>
-      <FilterListEditor
-        data={{ filters: ordered }}
-        actions={{ onPlaceChange: actions.onPlaceChange, onDisplayChange: actions.onDisplayChange, onWidthChange: actions.onWidthChange, onRemove: actions.onRemove }}
-      />
     {/if}
-    {#if actions.onAdd && missing.length > 0}
-      <div class="flex flex-wrap items-center gap-2">
-        {#each missing as kind (kind)}
-          <AzuosActionButton
-            data={{ label: BOARD_FILTER_KIND_LABELS[kind] }}
-            ui={{ variant: 'secondary', icon: Plus }}
-            actions={{ onClick: () => actions.onAdd?.(kind) }}
-          />
-        {/each}
-      </div>
+    {#if ordered.length > 0 || (actions.onAdd && missing.length > 0)}
+      <AzuosCollapsible data={{ title: `Ajustar os filtros (${ordered.length})` }}>
+        <div class="flex flex-col gap-3">
+          {#if ordered.length > 0}
+            <FilterListEditor
+              data={{ filters: ordered }}
+              actions={{ onPlaceChange: actions.onPlaceChange, onDisplayChange: actions.onDisplayChange, onWidthChange: actions.onWidthChange, onRemove: actions.onRemove }}
+            />
+          {/if}
+          {#if actions.onAdd && missing.length > 0}
+            <div class="flex flex-wrap items-center gap-2">
+              {#each missing as kind (kind)}
+                <AzuosActionButton
+                  data={{ label: BOARD_FILTER_KIND_LABELS[kind] }}
+                  ui={{ variant: 'secondary', icon: Plus }}
+                  actions={{ onClick: () => actions.onAdd?.(kind) }}
+                />
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </AzuosCollapsible>
     {/if}
     {#if data.filters.length === 0}
       <p class="text-muted-foreground text-sm">Ponha um filtro para quem vê recortar todos os blocos de uma vez.</p>

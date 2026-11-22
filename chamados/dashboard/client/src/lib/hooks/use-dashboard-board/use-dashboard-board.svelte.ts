@@ -31,6 +31,7 @@ import { dashboardBoardsApi } from '$lib/api/dashboard-boards.api';
 import { ticketsApi } from '$lib/api/tickets.api';
 import { readError } from '$lib/api/http-client';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
 import {
   activeValues,
@@ -49,7 +50,7 @@ import {
   upsertWidget,
   visibleScopes,
 } from '$lib/utils/board-draft.util';
-import { withPersonPhotos } from '$lib/utils/board-filter.util';
+import { withDepartmentCatalog, withPersonPhotos } from '$lib/utils/board-filter.util';
 import { drillHref, drillOf } from '$lib/utils/board-drill.util';
 import { newWidget } from '$lib/utils/widget-editor.util';
 import { type BoardItem } from '$lib/utils/widget-items.util';
@@ -179,6 +180,9 @@ export function useDashboardBoardModel(module: BoardModule) {
     }),
   );
 
+  /* A lista de departamentos (RH e os daqui), para o filtro mostrar também os que estão em zero. */
+  const departments = useDepartmentOptionsModel();
+
   const save = mirrorStore(
     createMutation({
       mutationFn: (content: BoardDraft) => dashboardBoardsApi.saveBoard(module, chosenScope.current.scope, content),
@@ -230,7 +234,11 @@ export function useDashboardBoardModel(module: BoardModule) {
         updatedAt: saved?.updatedAt ?? null,
         boardFilters: shown.filters,
         filterValues,
-        filterCounts: withPersonPhotos(shown.filters, counts.current.data ?? {}, people.current.data ?? []),
+        filterCounts: withDepartmentCatalog(
+          shown.filters,
+          withPersonPhotos(shown.filters, counts.current.data ?? {}, people.current.data ?? []),
+          departments.options.map((option) => option.value),
+        ),
         weight: boardWeight(shown.widgets),
       };
     },

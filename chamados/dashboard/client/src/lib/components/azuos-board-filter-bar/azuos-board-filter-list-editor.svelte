@@ -70,7 +70,7 @@
   }
 </script>
 
-<ol class="flex flex-col gap-2" aria-label="Os filtros do painel, na ordem da barra">
+<ol class="divide-border flex flex-col divide-y" aria-label="Os filtros do painel, na ordem da barra">
   {#each data.filters as filter, index (filter.id)}
     <li
       draggable="true"
@@ -92,7 +92,7 @@
         over = null;
       }}
       class={cn(
-        'rounded-control bg-card shadow-card flex flex-wrap items-center gap-2 p-2 transition-opacity',
+        'rounded-control hover:bg-hover-veil flex flex-wrap items-center gap-2 px-2 py-1 transition-opacity',
         dragged === index && 'opacity-50',
         over === index && dragged !== index && 'bg-accent',
       )}
