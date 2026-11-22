@@ -30,7 +30,13 @@
       /** Os filtros que o módulo aceita, para pôr. Sem a lista, todos. */
       kinds?: readonly BoardFilterKind[];
     };
-    state?: { isEditing?: boolean };
+    /**
+     * `part`: qual pedaço da barra desenhar. `period` é o seletor de tempo do Grafana, no canto de
+     * cima do painel; `fields` são os outros filtros, na faixa acima dos blocos. Sem ele, todos.
+     */
+    ui?: { part?: 'fields' | 'period' };
+    /** `isListOpen`: montando, a lista dos filtros já nasce aberta (nas configurações do painel). */
+    state?: { isEditing?: boolean; isListOpen?: boolean };
     actions: {
       onChange: (patch: Partial<BoardFilterValues>) => void;
       /** "Limpar filtros": todos voltam a "todos". Sem ela, o botão não aparece. */
@@ -65,11 +71,18 @@
   import FilterControl from './azuos-board-filter-control.svelte';
   import FilterListEditor from './azuos-board-filter-list-editor.svelte';
 
-  let { data, state: barState, actions }: AzuosBoardFilterBarProps = $props();
+  let { data, ui, state: barState, actions }: AzuosBoardFilterBarProps = $props();
 
   const isEditing = $derived(Boolean(barState?.isEditing));
   const active = $derived(activeSummary(data.filters, data.values, data.counts));
-  const ordered = $derived(readingOrder(placedBoardFilters(data.filters)));
+  const ordered = $derived(
+    readingOrder(placedBoardFilters(data.filters)).filter((filter) => {
+      if (ui?.part === 'period') return filter.kind === 'period';
+      if (ui?.part === 'fields') return filter.kind !== 'period';
+
+      return true;
+    }),
+  );
   const missing = $derived((data.kinds ?? BOARD_FILTER_KINDS).filter((kind) => !data.filters.some((filter) => filter.kind === kind)));
 </script>
 
@@ -108,7 +121,7 @@
       </div>
     {/if}
     {#if ordered.length > 0 || (actions.onAdd && missing.length > 0)}
-      <AzuosCollapsible data={{ title: `Ajustar os filtros (${ordered.length})` }}>
+      <AzuosCollapsible data={{ title: `Ajustar os filtros (${ordered.length})` }} state={{ isOpen: barState?.isListOpen }}>
         <div class="flex flex-col gap-3">
           {#if ordered.length > 0}
             <FilterListEditor
@@ -134,6 +147,14 @@
       <p class="text-muted-foreground text-sm">Ponha um filtro para quem vê recortar todos os blocos de uma vez.</p>
     {/if}
   </section>
+{:else if ui?.part === 'period' && ordered.length > 0}
+  <!-- O SELETOR DE TEMPO, no canto de cima, ao lado do "Atualizar" — sem cartão: é um controle da
+       barra de cima, como no Grafana. -->
+  <div role="group" aria-label="Período do painel" class="flex flex-wrap items-start gap-2">
+    {#each ordered as filter (filter.id)}
+      <div class="w-72 max-w-full">{@render control(filter)}</div>
+    {/each}
+  </div>
 {:else if ordered.length > 0}
   <section aria-label="Filtros do painel">
     {@render toolbar()}

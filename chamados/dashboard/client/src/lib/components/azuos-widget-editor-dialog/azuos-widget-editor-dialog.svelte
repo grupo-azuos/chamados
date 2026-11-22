@@ -5,9 +5,10 @@
   import { type WidgetState } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
 
   /**
-   * O BLOCO ABERTO PARA EDITAR — no formato do estúdio: à esquerda o título, a grade com os tipos
-   * de gráfico e os campos (fonte, agrupar, dividir, período, filtro); à direita a
-   * PRÉ-VISUALIZAÇÃO EM TEMPO REAL, com os números de verdade do bloco como ele está agora.
+   * O BLOCO ABERTO PARA EDITAR — no formato do editor de painel do Grafana, numa tela cheia: em
+   * cima a PRÉ-VISUALIZAÇÃO EM TEMPO REAL, com os números de verdade do bloco como ele está agora;
+   * embaixo a consulta (fonte, agrupar, dividir, período, filtro); na lateral o tipo de gráfico e o
+   * título.
    * Trocar o gráfico ou a fonte acerta o resto sozinho (`fitGroup`), para o formulário nunca
    * ficar numa combinação que o servidor recusa. O mesmo desenho do paralegal.
    *
@@ -37,9 +38,6 @@
 <script lang="ts">
   import Check from '@lucide/svelte/icons/check';
   import ListFilter from '@lucide/svelte/icons/list-filter';
-  import Maximize2 from '@lucide/svelte/icons/maximize-2';
-  import Minimize2 from '@lucide/svelte/icons/minimize-2';
-  import Sparkles from '@lucide/svelte/icons/sparkles';
   import {
     CALENDAR_VIEW_LABELS,
     CALENDAR_VIEWS,
@@ -73,9 +71,8 @@
   import AzuosBoardWidget from '$lib/components/azuos-board-widget/azuos-board-widget.svelte';
   import AzuosCheckboxField from '$lib/components/azuos-checkbox-field/azuos-checkbox-field.svelte';
   import AzuosDateRangeField from '$lib/components/azuos-date-range-field/azuos-date-range-field.svelte';
-  import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '$lib/components/azuos-dialog/azuos-dialog';
+  import AzuosExpandableScreen from '$lib/components/azuos-expandable-screen/azuos-expandable-screen.svelte';
   import AzuosFilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
-  import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import AzuosSegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import AzuosSelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
   import AzuosSubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
@@ -122,7 +119,6 @@
      preenchido. Só recomeça quando OUTRO bloco abre. */
   let widget = $state<Widget | null>(untrack(() => startOf(data.editing)));
   let problem = $state<string | null>(null);
-  let isPreviewWide = $state(false);
   let bandsText = $state(untrack(() => ageBandsText(data.editing?.widget.ageBands ?? DEFAULT_AGE_BANDS)));
   let openedId = $state<string | null>(untrack(() => data.editing?.widget.id ?? null));
 
@@ -133,7 +129,6 @@
     widget = startOf(next);
     bandsText = ageBandsText(next?.widget.ageBands ?? DEFAULT_AGE_BANDS);
     problem = null;
-    isPreviewWide = false;
   });
 
   const isOpen = $derived(data.editing !== null && !dialogState?.isHidden);
@@ -209,7 +204,7 @@
 {#snippet kindRow(title: string, kinds: readonly WidgetKind[], value: WidgetKind)}
   <div>
     <p class="text-ink-500 mb-1.5 text-xs font-semibold">{title}</p>
-    <div class="grid grid-cols-3 gap-2 sm:grid-cols-6">
+    <div class="grid grid-cols-3 gap-2">
       {#each kinds as kind (kind)}
         {@const look = WIDGET_KIND_LOOK[kind]}
         {@const isChosen = kind === value}
@@ -239,258 +234,235 @@
   </div>
 {/snippet}
 
-<Dialog open={isOpen} onOpenChange={(open: boolean) => (open ? undefined : actions.onClose())}>
-  <!-- Só a LARGURA cresce: a pré-visualização ganha espaço para o gráfico respirar. O corpo rola
-       sozinho; cabeçalho e rodapé ficam presos (o "Adicionar" sempre à vista). -->
-  <DialogContent showCloseButton={false} class="flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(96vw,84rem)] sm:p-0">
-    <DialogHeader class="border-border flex-row items-center gap-3 border-b px-6 py-4 text-left">
-      <span class="rounded-icon bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center">
-        <Sparkles class="size-5" aria-hidden="true" />
-      </span>
-      <span class="min-w-0">
-        <DialogTitle>{isNew ? 'Novo bloco' : 'Editar bloco'}</DialogTitle>
-        <DialogDescription>
-          Escolha o gráfico, de onde vêm os números e o recorte — e veja o resultado ao lado.
-        </DialogDescription>
-      </span>
-    </DialogHeader>
-
-    {#if widget}
-      {@const current = widget}
-      <form class="flex min-h-0 flex-1 flex-col" onsubmit={submit}>
-        <div
-          class={cn(
-            'grid min-h-0 flex-1 overflow-y-auto',
-            !isPreviewWide && 'lg:grid-cols-[minmax(0,1fr)_minmax(24rem,34rem)]',
-          )}
-        >
-          <!-- Ampliada, a pré-visualização toma o diálogo inteiro; o formulário só sai da frente —
-               o rascunho mora no diálogo, então nada do preenchido se perde. -->
-          {#if !isPreviewWide}
-            <div class="bg-mantle flex flex-col gap-5 px-6 py-5">
-              {#snippet chartGroup()}
-                <AzuosTextField
-                  data={{ label: 'Título', name: 'widgetTitle', value: current.title, placeholder: autoTitle(current) }}
-                  actions={{ onChange: (title) => change({ title }) }}
-                />
-                <!-- Os seis mais usados à frente, os outros num segundo grupo (Lei de Hick). -->
-                <div role="radiogroup" aria-label="Tipo de gráfico" class="flex flex-col gap-3">
-                  {@render kindRow('Mais usados', MAIN_KINDS, current.kind)}
-                  {@render kindRow('Mais tipos', OTHER_KINDS, current.kind)}
-                </div>
-              {/snippet}
-              {@render formGroup('O gráfico', 'Como os números aparecem.', chartGroup)}
-
-              {#snippet dataGroup()}
-                <div class="grid gap-4 sm:grid-cols-3">
-                  <AzuosFilterField data={{ label: 'Fonte dos dados' }}>
-                    <AzuosSelectField
-                      data={{ value: current.source, options: sourceOptions }}
-                      ui={{ ariaLabel: 'Fonte dos dados', className: 'w-full' }}
-                      actions={{ onChange: (source) => change({ source: source as DataSourceKey, groupBy: null, filterId: null }) }}
-                    />
-                    {#if sourceDescription(current.source)}
-                      <p class="text-ink-500 text-xs">{sourceDescription(current.source)}</p>
-                    {/if}
-                  </AzuosFilterField>
-                  {#if usesGroup(current.kind)}
-                    <AzuosFilterField data={{ label: 'Agrupar por' }}>
-                      <AzuosSelectField
-                        data={{ value: current.groupBy ?? NO_GROUP, options: groupOptions(current) }}
-                        ui={{ ariaLabel: 'Agrupar por', className: 'w-full' }}
-                        actions={{ onChange: (groupBy) => change({ groupBy: groupBy || null }) }}
-                      />
-                    </AzuosFilterField>
-                  {/if}
-                  {#if isPair(current.kind)}
-                    <AzuosFilterField data={{ label: 'Dividir por' }}>
-                      <AzuosSelectField
-                        data={{ value: current.splitBy ?? NO_GROUP, options: splitOptions(current) }}
-                        ui={{ ariaLabel: 'Dividir por', className: 'w-full' }}
-                        actions={{ onChange: (splitBy) => change({ splitBy: splitBy || null }) }}
-                      />
-                    </AzuosFilterField>
-                  {/if}
-                  {#if usesAgeBands(current)}
-                    <!-- As faixas de idade, como a pessoa escreve: o texto fica como foi digitado
-                         — reescrevê-lo a cada tecla comeria a vírgula do meio da digitação. -->
-                    <div class="flex flex-col gap-1 sm:col-span-full">
-                      <AzuosTextField
-                        data={{
-                          label: 'Faixas de idade (limites em dias)',
-                          name: 'widgetAgeBands',
-                          value: bandsText,
-                          placeholder: ageBandsText(DEFAULT_AGE_BANDS),
-                        }}
-                        actions={{
-                          onChange: (next) => {
-                            bandsText = next;
-                            change({ ageBands: parseAgeBands(next) });
-                          },
-                        }}
-                      />
-                      <p class="text-ink-500 text-xs">
-                        Os limites de cada faixa, do menor para o maior: "{ageBandsText(DEFAULT_AGE_BANDS)}" são 0 a 2,
-                        3 a 7, 8 a 15, 16 a 30 e 31 dias ou mais.
-                      </p>
-                    </div>
-                  {/if}
-                </div>
-              {/snippet}
-              {@render formGroup('Os dados', 'De onde vêm e como se agrupam.', dataGroup)}
-
-              {#snippet scopeGroup()}
-                <div class="grid gap-4 sm:grid-cols-3">
-                  {#if current.kind === 'agenda'}
-                    {@const window = current.window ?? DEFAULT_WINDOW}
-                    <!-- A JANELA DA AGENDA — o quanto ela puxa do banco, sempre dentro dos 90 dias. -->
-                    <div class="flex flex-col gap-3 sm:col-span-full">
-                      <AzuosFilterField data={{ label: 'Janela da agenda' }}>
-                        <AzuosSegmentedControl
-                          data={{ value: window.mode === 'custom' ? 'custom' : window.direction, options: windowModeOptions }}
-                          ui={{ ariaLabel: 'Janela da agenda' }}
-                          actions={{ onChange: (mode) => changeWindow(windowForMode(mode, window, todayIso())) }}
-                        />
-                      </AzuosFilterField>
-                      {#if window.mode === 'relative'}
-                        <div class="grid gap-3 sm:grid-cols-2">
-                          <AzuosFilterField data={{ label: 'Contar em' }}>
-                            <AzuosSelectField
-                              data={{ value: window.unit, options: unitOptions }}
-                              ui={{ ariaLabel: 'Contar em', className: 'w-full' }}
-                              actions={{ onChange: (unit) => changeWindow(withUnit(window, unit as WindowUnit)) }}
-                            />
-                          </AzuosFilterField>
-                          <AzuosFilterField data={{ label: 'Quantos' }}>
-                            <AzuosSelectField
-                              data={{
-                                value: String(window.count),
-                                options: WINDOW_COUNTS[window.unit].map((count) => ({
-                                  value: String(count),
-                                  label: `${count} ${WINDOW_UNIT_LABELS[window.unit][count === 1 ? 0 : 1]}`,
-                                })),
-                              }}
-                              ui={{ ariaLabel: 'Quantos', className: 'w-full' }}
-                              actions={{ onChange: (count) => changeWindow({ ...window, count: Number(count) }) }}
-                            />
-                          </AzuosFilterField>
-                        </div>
-                      {:else}
-                        <AzuosDateRangeField
-                          data={{
-                            label: `Entre as datas (no máximo ${MAX_WINDOW_DAYS} dias)`,
-                            name: 'agendaRange',
-                            value: { from: window.from, to: window.to },
-                          }}
-                          actions={{
-                            onChange: (range) =>
-                              changeWindow({ mode: 'custom', from: range.from ?? window.from, to: range.to ?? window.to }),
-                          }}
-                        />
-                      {/if}
-                      <p class="text-ink-500 text-xs">{windowLabel(window)} · só esses dias saem do banco.</p>
-                    </div>
-                  {:else}
-                    <AzuosFilterField data={{ label: 'Período' }}>
-                      <AzuosSelectField
-                        data={{ value: current.period, options: periodOptions }}
-                        ui={{ ariaLabel: 'Período', className: 'w-full' }}
-                        actions={{ onChange: (period) => change({ period: period as WidgetPeriod }) }}
-                      />
-                    </AzuosFilterField>
-                  {/if}
-                  <!-- Período e filtro lado a lado (o filtro com o botão de montar um novo, mais
-                       largo); na agenda, a janela já ocupou a linha e o filtro desce. -->
-                  <div class={current.kind === 'agenda' ? 'sm:col-span-full' : 'sm:col-span-2'}>
-                    <AzuosFilterField data={{ label: 'Filtro' }}>
-                      <div class="flex gap-2">
-                        <AzuosSelectField
-                          data={{ value: current.filterId ?? NO_FILTER, options: filterOptions(data.filters, current.source) }}
-                          ui={{ ariaLabel: 'Filtro', className: 'min-w-0 flex-1' }}
-                          actions={{ onChange: (filterId) => change({ filterId: filterId || null }) }}
-                        />
-                        {#if actions.onOpenFilters}
-                          <AzuosActionButton
-                            data={{ label: 'Montar filtro' }}
-                            ui={{ variant: 'secondary', size: 'lg', icon: ListFilter }}
-                            actions={{ onClick: actions.onOpenFilters }}
-                          />
-                        {/if}
-                      </div>
-                    </AzuosFilterField>
-                  </div>
-                  {#if hasPersonField(current.source)}
-                    <div class="border-border border-t pt-4 sm:col-span-full">
-                      <AzuosCheckboxField
-                        data={{
-                          label: 'Só os meus',
-                          name: 'widgetOnlyMine',
-                          description: 'Cada pessoa vê o que é dela — vale também no painel da equipe.',
-                          isChecked: current.onlyMine,
-                        }}
-                        actions={{ onChange: (onlyMine) => change({ onlyMine }) }}
-                      />
-                    </div>
-                  {/if}
-                </div>
-              {/snippet}
-              {@render formGroup('O recorte', 'Quais entram na conta.', scopeGroup)}
-
-              {#if DAY_WIDGETS.includes(current.kind)}
-                {#snippet calendarGroup()}
-                  <AzuosFilterField data={{ label: 'Abre em' }}>
-                    <AzuosSegmentedControl
-                      data={{
-                        value: widgetCalendarView(current),
-                        options: CALENDAR_VIEWS.map((value) => ({ value, label: CALENDAR_VIEW_LABELS[value] })),
-                      }}
-                      ui={{ ariaLabel: 'Visão em que o calendário abre' }}
-                      actions={{ onChange: (view) => change({ calendarView: view as CalendarView }) }}
-                    />
-                  </AzuosFilterField>
-                {/snippet}
-                {@render formGroup('O calendário', 'Como ele abre.', calendarGroup)}
-              {/if}
-            </div>
-          {/if}
-
-          <!-- O bloco desenhado como vai ficar no painel, com os números de agora. "Ampliar"
-               alarga a pré-visualização DENTRO do diálogo, e não numa tela cheia por cima. -->
-          <aside
-            aria-label="Pré-visualização em tempo real"
-            class={cn('bg-mantle flex flex-col gap-3 p-5', !isPreviewWide && 'border-border border-t lg:border-t-0 lg:border-l')}
-          >
+<!-- O EDITOR DO BLOCO no formato do Grafana: uma tela cheia com o bloco GRANDE em cima, com os
+     números de agora; embaixo, a CONSULTA (de onde vêm os números e o recorte); na lateral, as
+     OPÇÕES do gráfico (o tipo, o título, o calendário). Tudo que muda aparece na hora em cima. -->
+<AzuosExpandableScreen
+  data={{
+    title: isNew ? 'Novo bloco' : 'Editar bloco',
+    description: 'O bloco em cima, a consulta embaixo e o tipo de gráfico ao lado — o resultado muda na hora.',
+  }}
+  state={{ isOpen }}
+  actions={{ onClose: actions.onClose }}
+>
+  {#if widget}
+    {@const current = widget}
+    <form class="flex h-full min-h-0 flex-col" onsubmit={submit}>
+      <div class="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <div class="flex min-h-0 flex-col lg:overflow-y-auto">
+          <!-- O bloco desenhado como vai ficar no painel, com os números de agora. -->
+          <section aria-label="Pré-visualização em tempo real" class="bg-mantle flex flex-col gap-3 p-5">
             <div class="flex items-center justify-between gap-2">
               <p class="text-ink-500 text-xs font-semibold">Pré-visualização em tempo real</p>
-              <span class="flex items-center gap-2">
-                <span class="rounded-chip bg-card text-ink-700 px-2 py-0.5 text-xs font-semibold">
-                  {preview.data ? `${preview.data.total} ${DATA_SOURCES[current.source].noun}` : '…'}
-                </span>
-                <AzuosActionButton
-                  data={{ label: isPreviewWide ? 'Voltar ao formulário' : 'Ampliar pré-visualização' }}
-                  ui={{ variant: 'ghost', size: 'sm', icon: isPreviewWide ? Minimize2 : Maximize2, isIconOnly: true }}
-                  actions={{ onClick: () => (isPreviewWide = !isPreviewWide) }}
-                />
+              <span class="rounded-chip bg-card text-ink-700 px-2 py-0.5 text-xs font-semibold">
+                {preview.data ? `${preview.data.total} ${DATA_SOURCES[current.source].noun}` : '…'}
               </span>
             </div>
-            <div class={previewHeightClass(current.kind, isPreviewWide)}>
+            <div class={previewHeightClass(current.kind, false)}>
               <AzuosBoardWidget
                 data={{ widget: { ...current, title: current.title || 'Sem título' }, result: preview, filterName: previewFilterName }}
                 state={{ isEditing: false, isPreview: true }}
                 actions={{ onEdit: () => undefined, onRemove: () => undefined }}
               />
             </div>
-          </aside>
-        </div>
+          </section>
+          <!-- A CONSULTA: de onde vêm os números, como se agrupam e quais entram na conta. -->
+          <section aria-label="Consulta" class="border-border flex flex-col gap-5 border-t p-5">
+            {#snippet dataGroup()}
+              <div class="grid gap-4 sm:grid-cols-3">
+                <AzuosFilterField data={{ label: 'Fonte dos dados' }}>
+                  <AzuosSelectField
+                    data={{ value: current.source, options: sourceOptions }}
+                    ui={{ ariaLabel: 'Fonte dos dados', className: 'w-full' }}
+                    actions={{ onChange: (source) => change({ source: source as DataSourceKey, groupBy: null, filterId: null }) }}
+                  />
+                  {#if sourceDescription(current.source)}
+                    <p class="text-ink-500 text-xs">{sourceDescription(current.source)}</p>
+                  {/if}
+                </AzuosFilterField>
+                {#if usesGroup(current.kind)}
+                  <AzuosFilterField data={{ label: 'Agrupar por' }}>
+                    <AzuosSelectField
+                      data={{ value: current.groupBy ?? NO_GROUP, options: groupOptions(current) }}
+                      ui={{ ariaLabel: 'Agrupar por', className: 'w-full' }}
+                      actions={{ onChange: (groupBy) => change({ groupBy: groupBy || null }) }}
+                    />
+                  </AzuosFilterField>
+                {/if}
+                {#if isPair(current.kind)}
+                  <AzuosFilterField data={{ label: 'Dividir por' }}>
+                    <AzuosSelectField
+                      data={{ value: current.splitBy ?? NO_GROUP, options: splitOptions(current) }}
+                      ui={{ ariaLabel: 'Dividir por', className: 'w-full' }}
+                      actions={{ onChange: (splitBy) => change({ splitBy: splitBy || null }) }}
+                    />
+                  </AzuosFilterField>
+                {/if}
+                {#if usesAgeBands(current)}
+                  <!-- As faixas de idade, como a pessoa escreve: o texto fica como foi digitado
+                       — reescrevê-lo a cada tecla comeria a vírgula do meio da digitação. -->
+                  <div class="flex flex-col gap-1 sm:col-span-full">
+                    <AzuosTextField
+                      data={{
+                        label: 'Faixas de idade (limites em dias)',
+                        name: 'widgetAgeBands',
+                        value: bandsText,
+                        placeholder: ageBandsText(DEFAULT_AGE_BANDS),
+                      }}
+                      actions={{
+                        onChange: (next) => {
+                          bandsText = next;
+                          change({ ageBands: parseAgeBands(next) });
+                        },
+                      }}
+                    />
+                    <p class="text-ink-500 text-xs">
+                      Os limites de cada faixa, do menor para o maior: "{ageBandsText(DEFAULT_AGE_BANDS)}" são 0 a 2,
+                      3 a 7, 8 a 15, 16 a 30 e 31 dias ou mais.
+                    </p>
+                  </div>
+                {/if}
+              </div>
+            {/snippet}
+            {@render formGroup('Os dados', 'De onde vêm e como se agrupam.', dataGroup)}
 
-        <DialogFooter class="border-border items-center border-t px-6 py-4">
-          {#if problem}
-            <p role="alert" class="text-destructive mr-auto text-sm">{problem}</p>
+            {#snippet scopeGroup()}
+              <div class="grid gap-4 sm:grid-cols-3">
+                {#if current.kind === 'agenda'}
+                  {@const window = current.window ?? DEFAULT_WINDOW}
+                  <!-- A JANELA DA AGENDA — o quanto ela puxa do banco, sempre dentro dos 90 dias. -->
+                  <div class="flex flex-col gap-3 sm:col-span-full">
+                    <AzuosFilterField data={{ label: 'Janela da agenda' }}>
+                      <AzuosSegmentedControl
+                        data={{ value: window.mode === 'custom' ? 'custom' : window.direction, options: windowModeOptions }}
+                        ui={{ ariaLabel: 'Janela da agenda' }}
+                        actions={{ onChange: (mode) => changeWindow(windowForMode(mode, window, todayIso())) }}
+                      />
+                    </AzuosFilterField>
+                    {#if window.mode === 'relative'}
+                      <div class="grid gap-3 sm:grid-cols-2">
+                        <AzuosFilterField data={{ label: 'Contar em' }}>
+                          <AzuosSelectField
+                            data={{ value: window.unit, options: unitOptions }}
+                            ui={{ ariaLabel: 'Contar em', className: 'w-full' }}
+                            actions={{ onChange: (unit) => changeWindow(withUnit(window, unit as WindowUnit)) }}
+                          />
+                        </AzuosFilterField>
+                        <AzuosFilterField data={{ label: 'Quantos' }}>
+                          <AzuosSelectField
+                            data={{
+                              value: String(window.count),
+                              options: WINDOW_COUNTS[window.unit].map((count) => ({
+                                value: String(count),
+                                label: `${count} ${WINDOW_UNIT_LABELS[window.unit][count === 1 ? 0 : 1]}`,
+                              })),
+                            }}
+                            ui={{ ariaLabel: 'Quantos', className: 'w-full' }}
+                            actions={{ onChange: (count) => changeWindow({ ...window, count: Number(count) }) }}
+                          />
+                        </AzuosFilterField>
+                      </div>
+                    {:else}
+                      <AzuosDateRangeField
+                        data={{
+                          label: `Entre as datas (no máximo ${MAX_WINDOW_DAYS} dias)`,
+                          name: 'agendaRange',
+                          value: { from: window.from, to: window.to },
+                        }}
+                        actions={{
+                          onChange: (range) =>
+                            changeWindow({ mode: 'custom', from: range.from ?? window.from, to: range.to ?? window.to }),
+                        }}
+                      />
+                    {/if}
+                    <p class="text-ink-500 text-xs">{windowLabel(window)} · só esses dias saem do banco.</p>
+                  </div>
+                {:else}
+                  <AzuosFilterField data={{ label: 'Período' }}>
+                    <AzuosSelectField
+                      data={{ value: current.period, options: periodOptions }}
+                      ui={{ ariaLabel: 'Período', className: 'w-full' }}
+                      actions={{ onChange: (period) => change({ period: period as WidgetPeriod }) }}
+                    />
+                  </AzuosFilterField>
+                {/if}
+                <!-- Período e filtro lado a lado (o filtro com o botão de montar um novo, mais
+                     largo); na agenda, a janela já ocupou a linha e o filtro desce. -->
+                <div class={current.kind === 'agenda' ? 'sm:col-span-full' : 'sm:col-span-2'}>
+                  <AzuosFilterField data={{ label: 'Filtro' }}>
+                    <div class="flex gap-2">
+                      <AzuosSelectField
+                        data={{ value: current.filterId ?? NO_FILTER, options: filterOptions(data.filters, current.source) }}
+                        ui={{ ariaLabel: 'Filtro', className: 'min-w-0 flex-1' }}
+                        actions={{ onChange: (filterId) => change({ filterId: filterId || null }) }}
+                      />
+                      {#if actions.onOpenFilters}
+                        <AzuosActionButton
+                          data={{ label: 'Montar filtro' }}
+                          ui={{ variant: 'secondary', size: 'lg', icon: ListFilter }}
+                          actions={{ onClick: actions.onOpenFilters }}
+                        />
+                      {/if}
+                    </div>
+                  </AzuosFilterField>
+                </div>
+                {#if hasPersonField(current.source)}
+                  <div class="border-border border-t pt-4 sm:col-span-full">
+                    <AzuosCheckboxField
+                      data={{
+                        label: 'Só os meus',
+                        name: 'widgetOnlyMine',
+                        description: 'Cada pessoa vê o que é dela — vale também no painel da equipe.',
+                        isChecked: current.onlyMine,
+                      }}
+                      actions={{ onChange: (onlyMine) => change({ onlyMine }) }}
+                    />
+                  </div>
+                {/if}
+              </div>
+            {/snippet}
+            {@render formGroup('O recorte', 'Quais entram na conta.', scopeGroup)}
+          </section>
+        </div>
+        <!-- AS OPÇÕES do gráfico, na lateral, como no Grafana: o tipo primeiro, depois o resto. -->
+        <aside aria-label="Opções do gráfico" class="border-border bg-mantle flex flex-col gap-5 border-t p-5 lg:overflow-y-auto lg:border-t-0 lg:border-l">
+          {#snippet chartGroup()}
+            <AzuosTextField
+              data={{ label: 'Título', name: 'widgetTitle', value: current.title, placeholder: autoTitle(current) }}
+              actions={{ onChange: (title) => change({ title }) }}
+            />
+            <!-- Os seis mais usados à frente, os outros num segundo grupo (Lei de Hick). -->
+            <div role="radiogroup" aria-label="Tipo de gráfico" class="flex flex-col gap-3">
+              {@render kindRow('Mais usados', MAIN_KINDS, current.kind)}
+              {@render kindRow('Mais tipos', OTHER_KINDS, current.kind)}
+            </div>
+          {/snippet}
+          {@render formGroup('O gráfico', 'Como os números aparecem.', chartGroup)}
+
+          {#if DAY_WIDGETS.includes(current.kind)}
+            {#snippet calendarGroup()}
+              <AzuosFilterField data={{ label: 'Abre em' }}>
+                <AzuosSegmentedControl
+                  data={{
+                    value: widgetCalendarView(current),
+                    options: CALENDAR_VIEWS.map((value) => ({ value, label: CALENDAR_VIEW_LABELS[value] })),
+                  }}
+                  ui={{ ariaLabel: 'Visão em que o calendário abre' }}
+                  actions={{ onChange: (view) => change({ calendarView: view as CalendarView }) }}
+                />
+              </AzuosFilterField>
+            {/snippet}
+            {@render formGroup('O calendário', 'Como ele abre.', calendarGroup)}
           {/if}
-          <AzuosActionButton data={{ label: 'Cancelar' }} ui={{ variant: 'ghost' }} actions={{ onClick: actions.onClose }} />
-          <AzuosSubmitButton data={{ label: isNew ? 'Adicionar bloco' : 'Aplicar' }} />
-        </DialogFooter>
-      </form>
-    {/if}
-  </DialogContent>
-</Dialog>
+        </aside>
+      </div>
+      <footer class="border-border bg-card flex items-center justify-end gap-2 border-t px-6 py-3">
+        {#if problem}
+          <p role="alert" class="text-destructive mr-auto text-sm">{problem}</p>
+        {/if}
+        <AzuosActionButton data={{ label: 'Descartar' }} ui={{ variant: 'ghost' }} actions={{ onClick: actions.onClose }} />
+        <AzuosSubmitButton data={{ label: isNew ? 'Adicionar bloco' : 'Aplicar' }} />
+      </footer>
+    </form>
+  {/if}
+</AzuosExpandableScreen>

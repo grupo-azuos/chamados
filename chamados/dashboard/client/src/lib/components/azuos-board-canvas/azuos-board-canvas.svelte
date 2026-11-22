@@ -29,12 +29,14 @@
       boardPeriod?: WidgetWindow | null;
     };
     /** `canDrop`: aceita um tipo de bloco arrastado da lateral (montando, e com vaga). */
-    state: { isEditing: boolean; canDrop?: boolean };
+    /** `canEdit`: quem vê pode montar — o menu de cada bloco oferece editar, duplicar e remover. */
+    state: { isEditing: boolean; canDrop?: boolean; canEdit?: boolean };
     actions: {
       onLayoutChange: (layout: LayoutItem[]) => void;
       onEditWidget: (id: string) => void;
       onRemoveWidget: (id: string) => void;
       onChangeKind?: (id: string, kind: Widget['kind']) => void;
+      onDuplicateWidget?: (id: string) => void;
       /** Clicou num item de um bloco (barra, fatia, linha, card): abre a lista do que ele conta. */
       onOpenItem?: (widget: Widget, item: BoardItem) => void;
       /** Um tipo solto numa casa da grade: o bloco novo nasce ali, naquele tamanho. */
@@ -318,11 +320,12 @@
       filterName: widget.filterId ? (data.filterNames[widget.filterId] ?? null) : null,
       periodNote: boardPeriodNote(widget.source, data.boardPeriod ?? null),
     }}
-    state={{ isEditing: canvasState.isEditing }}
+    state={{ isEditing: canvasState.isEditing, canEdit: canvasState.canEdit }}
     actions={{
       onEdit: actions.onEditWidget,
       onRemove: actions.onRemoveWidget,
       onChangeKind: actions.onChangeKind,
+      onDuplicate: actions.onDuplicateWidget,
       /* Montando, o clique é para arrumar o bloco, não para sair da tela. */
       onOpenItem: canvasState.isEditing ? undefined : actions.onOpenItem,
     }}

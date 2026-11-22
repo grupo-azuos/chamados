@@ -77,7 +77,7 @@ describe('AzuosBoardWidget', () => {
     expect(screen.getByText('9 chamados')).toBeInTheDocument();
     expect(screen.getByText('Só os meus')).toBeInTheDocument();
     expect(screen.getByText('Só os urgentes')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Expandir Chamados' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Menu de Chamados' })).toBeInTheDocument();
   });
 
   // feliz
@@ -92,7 +92,7 @@ describe('AzuosBoardWidget', () => {
     expect(screen.getByLabelText(/^Peso:/)).toBeInTheDocument();
     await fireEvent.click(screen.getByRole('button', { name: 'Configurar Chamados' }));
     expect(actions.onEdit).toHaveBeenCalledWith('w1');
-    expect(screen.queryByRole('button', { name: 'Expandir Chamados' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Menu de Chamados' })).toBeNull();
     /* O bloco aparece como no painel: a barra flutua acima, fora do cabeçalho. */
     expect(screen.getByRole('heading', { name: 'Chamados' }).closest('header')).not.toContainElement(
       screen.getByRole('button', { name: 'Configurar Chamados' }),
