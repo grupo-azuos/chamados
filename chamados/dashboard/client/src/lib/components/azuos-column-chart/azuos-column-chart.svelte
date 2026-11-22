@@ -1,21 +1,27 @@
+<!--
+  @component
+  Barra — para comparar quantidades entre categorias (por tipo, por pessoa, por máquina).
+
+  O desenho vem do ECharts (pela moldura `AzuosEchart`): é ele que dá eixo que se ajusta ao dado,
+  barra que cresce animada e balão de valor. O que este componente acrescenta é o que o projeto
+  exige e a biblioteca não tem:
+
+   1. **Cor por categoria** (`chart-slice`), a mesma em todo gráfico do sistema.
+   2. **O valor escrito em cada barra**, no lugar de obrigar a estimar pela altura.
+   3. **Uma lista só para leitor de tela e teclado** — o desenho é SVG, e SVG não se
+      tabula nem se lê. É por ela que a pessoa que não usa o mouse chega ao detalhamento.
+   4. **Deitado** (`orientation: 'horizontal'`) quando o rótulo é nome de gente ou de
+      máquina: em pé, nome longo vira leque ilegível — mais ainda na tela do celular.
+
+  - `data`: as fatias e o nome da série no balão.
+  - `ui`: orientação, uma cor só para todas as barras, o texto de vazio e classe extra.
+  - `state`: carregando.
+  - `actions`: `onSelect`, com o rótulo da barra clicada.
+-->
 <script lang="ts" module>
   import { colorOfSlice, type ChartSlice } from '$lib/utils/chart-slice';
   import { formatCount, resolveColor, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * Barra — para comparar quantidades entre categorias (por tipo, por pessoa, por máquina).
-   *
-   * O desenho vem do ECharts (pela moldura `AzuosEchart`): é ele que dá eixo que se ajusta ao dado,
-   * barra que cresce animada e balão de valor. O que este componente acrescenta é o que o projeto
-   * exige e a biblioteca não tem:
-   *
-   *  1. **Cor por categoria** (`chart-slice`), a mesma em todo gráfico do sistema.
-   *  2. **O valor escrito em cada barra**, no lugar de obrigar a estimar pela altura.
-   *  3. **Uma lista só para leitor de tela e teclado** — o desenho é SVG, e SVG não se
-   *     tabula nem se lê. É por ela que a pessoa que não usa o mouse chega ao detalhamento.
-   *  4. **Deitado** (`orientation: 'horizontal'`) quando o rótulo é nome de gente ou de
-   *     máquina: em pé, nome longo vira leque ilegível — mais ainda na tela do celular.
-   */
   export type AzuosColumnChartProps = {
     data: {
       slices: ChartSlice[];

@@ -1,3 +1,21 @@
+<!--
+  @component
+  A CONFERÊNCIA PÚBLICA de uma ordem de serviço emitida.
+
+  A tela separa DOIS níveis, e diz qual é qual: o registro (esta emissão existe, e foi isto que o
+  sistema emitiu — protocolo, versão, data, estágio, históricos, tempo, código e impressão digital)
+  e o arquivo (o PDF que você tem é exatamente o emitido). Sem a separação, quem abrisse o link de
+  um PDF adulterado leria "ordem de serviço válida" e pararia ali. Avisa quando existe uma versão
+  mais nova. O PDF é escolhido (ou colado com Ctrl+V) e o resultado — confere, não confere, ilegível
+  — é dito com palavras e ícone, não só cor.
+
+  Função pura de props: não busca nada nem calcula impressão digital — recebe o registro e o
+  resultado prontos, e por isso abre no Storybook em qualquer estado.
+
+  - `data`: `order` (ou nulo) e `checkedFileName`.
+  - `state`: `isLoading`, `isNotFound`, `error` e `fileCheck`.
+  - `actions`: `onRetry` e `onFileChosen(file)`.
+-->
 <script lang="ts" module>
   import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
   import { shortServiceOrderCode } from '@template/shared/domain/service-order.util';

@@ -1,3 +1,20 @@
+<!--
+  @component
+  O ORÇAMENTO: o que comprar, já descontando o que o depósito tem.
+
+  Um card por necessidade do parque (memória, disco…), com o selo "Comprar N" ou "Nada a comprar".
+  Cada necessidade mostra a CONTA INTEIRA — quantas precisam, quanto o depósito tem, quanto falta
+  — para quem lê conferir de onde o número veio (e, por extenso, para o leitor de tela). Embaixo,
+  a estimativa de preço (faixa de referência, não cotação), as máquinas que precisam (paginadas de
+  5 em 5, com "Abrir ficha") e as lojas onde procurar. Quando o depósito cobre tudo, avisa no alto.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, com
+  compra pendente, com o depósito cobrindo tudo e com o parque vazio.
+
+  - `data.budget`: o cruzamento do parque com o depósito, ou nulo.
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isCovered` e `error`.
+  - `actions`: `onRetry`, `onOpenMachine(computerId)`, `onOpenComputers` e `onOpenParts`.
+-->
 <script lang="ts" module>
   import {
     budgetNeedHint,

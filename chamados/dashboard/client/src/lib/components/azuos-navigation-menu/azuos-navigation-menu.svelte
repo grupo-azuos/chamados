@@ -1,12 +1,16 @@
+<!--
+  @component
+  Uma fileira de links de seção (Visão geral · Histórico · Peças) para navegar DENTRO de uma tela.
+  Envolve o `ui/navigation-menu` do shadcn. O menu do sistema inteiro é a barra lateral
+  (`azuos-app-shell`); este aqui é para as abas de uma página.
+
+  São links de verdade (`href`), e não botões: a pessoa pode abrir numa aba nova e o endereço diz
+  onde ela está. Quem sabe qual é o item atual é a tela, que marca `isActive`.
+
+  - `data`: os itens (`label`, `href`, `isActive`).
+  - `ui`: o `ariaLabel` (o que este menu navega, para quem usa leitor de tela) e classes extras.
+-->
 <script lang="ts" module>
-  /**
-   * Uma fileira de links de seção (Visão geral · Histórico · Peças) para navegar DENTRO de uma
-   * tela. Envolve o `ui/navigation-menu` do shadcn. O menu do sistema inteiro é a barra
-   * lateral (`azuos-app-shell`); este aqui é para as abas de uma página.
-   *
-   * São links de verdade (`href`), e não botões: a pessoa pode abrir numa aba nova e o endereço
-   * diz onde ela está. Quem sabe qual é o item atual é a tela, que marca `isActive`.
-   */
   export type NavigationMenuEntry = { label: string; href: string; isActive?: boolean };
 
   export type AzuosNavigationMenuProps = {

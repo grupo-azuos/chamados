@@ -1,3 +1,21 @@
+<!--
+  @component
+  O MESMO `DialogContent` de sempre, só que no celular ele nasce de baixo, com cantos de cima
+  arredondados e uma alça para arrastar — o bottom sheet que o Material Design usa. Arrastar pouco e
+  soltar volta ao lugar; arrastar além do limite fecha.
+
+  É um componente PRÓPRIO, e não uma edição do `ui/dialog` (CONTRIBUTING §5): todo diálogo do
+  sistema troca o `DialogContent` por este aqui, sem mudar mais nada — `Dialog`, `DialogHeader`,
+  `DialogTitle` continuam vindo de `ui/dialog`. Só a área interna rola, e o campo em foco é trazido
+  para dentro da área visível quando o teclado do celular sobe.
+
+  No desktop (`sm:` e acima) o modal continua centrado e limitado à altura disponível. A alça só
+  existe visualmente abaixo de `sm`, e é por isso que o gesto de arrastar nunca entra em conflito
+  com a centralização do desktop — não há ponteiro para apertar numa alça de tamanho zero.
+
+  Props: as mesmas do `DialogContent` (`class`, `style`, `ref`, `children`…), mais `showCloseButton`
+  (o "x" do canto, ligado por padrão).
+-->
 <script lang="ts">
   import { observeVisualViewport } from '$lib/utils/observe-visual-viewport.util';
   import { cn } from '$lib/utils/cn';
@@ -7,18 +25,6 @@
   import DialogOverlay from '$lib/components/ui/dialog/dialog-overlay.svelte';
   import type { Snippet } from 'svelte';
 
-  /**
-   * O MESMO `DialogContent` de sempre, só que no celular ele nasce de baixo, com cantos de
-   * cima arredondados e uma alça para arrastar — o bottom sheet que o Material Design usa.
-   *
-   * É um componente PRÓPRIO, e não uma edição do `ui/dialog` (CONTRIBUTING §5): todo diálogo
-   * do sistema troca o `DialogContent` por este aqui, sem mudar mais nada — `Dialog`,
-   * `DialogHeader`, `DialogTitle` continuam vindo de `ui/dialog`.
-   *
-   * No desktop (`sm:` e acima) o modal continua centrado e limitado à altura disponível. A alça só existe
-   * visualmente abaixo de `sm`, e é por isso que o gesto de arrastar nunca entra em conflito
-   * com a centralização do desktop — não há ponteiro para apertar numa alça de tamanho zero.
-   */
   let {
     class: className,
     style: contentStyle,

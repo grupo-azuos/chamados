@@ -1,18 +1,24 @@
+<!--
+  @component
+  MEDIDOR RADIAL — um número só, contra o quanto ele poderia ser.
+
+  É o gráfico certo para "quanto de 100", e o errado para comparar categorias: um arco não se
+  compara com outro arco de outro cartão. Serve para "84 das 96 máquinas estão de pé" e não serve
+  para "qual departamento abriu mais chamados" — isso é barra.
+
+  O arco de trás (a trilha) é o que faz o gráfico ser lido: sem ele, um arco de 20% e um de 80%
+  parecem só dois riscos de tamanhos diferentes, sem escala nenhuma.
+
+  O número no meio vem sempre escrito. O arco é o reforço, nunca a única informação.
+
+  - `data`: o valor, o teto (`max`, 100 por padrão), o que é medido, o número grande (`display`) e
+    a linha pequena embaixo dele (`hint`).
+  - `state`: `isLoading`.
+  - `ui`: a cor do arco, a altura e classes extras.
+-->
 <script lang="ts" module>
   import { resolveColor, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * MEDIDOR RADIAL — um número só, contra o quanto ele poderia ser.
-   *
-   * É o gráfico certo para "quanto de 100", e o errado para comparar categorias: um arco não
-   * se compara com outro arco de outro cartão. Serve para "84 das 96 máquinas estão de pé" e
-   * não serve para "qual departamento abriu mais chamados" — isso é barra.
-   *
-   * O arco de trás (a trilha) é o que faz o gráfico ser lido: sem ele, um arco de 20% e um de
-   * 80% parecem só dois riscos de tamanhos diferentes, sem escala nenhuma.
-   *
-   * O número no meio vem sempre escrito. O arco é o reforço, nunca a única informação.
-   */
   export type AzuosRadialChartProps = {
     data: {
       value: number;

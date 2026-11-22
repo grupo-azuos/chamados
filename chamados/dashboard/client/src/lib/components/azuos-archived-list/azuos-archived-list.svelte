@@ -1,14 +1,19 @@
+<!--
+  @component
+  O QUE FOI REMOVIDO — e pode voltar.
+
+  Nada se apaga no sistema: excluir, tirar e desvincular ARQUIVAM. O arquivado some da tela, e
+  é aqui que ele aparece de novo, só quando a pessoa pede (o bloco nasce fechado). Cada linha
+  diz o que era e quando saiu, e tem o "Desfazer" — que só aparece para quem pode desfazer.
+
+  Genérico de propósito: manutenções, inventário, orçamentos, peças, sistemas, a Agenda, a
+  equipe e a ficha do chamado mostram os removidos do mesmo jeito.
+
+  - `data`: os itens arquivados e o título (o padrão é "Removidos").
+  - `state`: carregando, a linha que está sendo desfeita e o erro.
+  - `actions`: `onOpenChange` (o bloco abriu: é a hora de buscar) e `onRestore`.
+-->
 <script lang="ts" module>
-  /**
-   * O QUE FOI REMOVIDO — e pode voltar.
-   *
-   * Nada se apaga no sistema: excluir, tirar e desvincular ARQUIVAM. O arquivado some da tela, e
-   * é aqui que ele aparece de novo, só quando a pessoa pede (o bloco nasce fechado). Cada linha
-   * diz o que era e quando saiu, e tem o "Desfazer" — que só aparece para quem pode desfazer.
-   *
-   * Genérico de propósito: manutenções, inventário, orçamentos, peças, sistemas, a Agenda, a
-   * equipe e a ficha do chamado mostram os removidos do mesmo jeito.
-   */
   export type AzuosArchivedItem = {
     /** Único na lista, mesmo misturando tipos (`attachment:9`, `area:3`). */
     key: string;

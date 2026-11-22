@@ -1,14 +1,19 @@
+<!--
+  @component
+  Nenhum erro derruba a tela em silêncio.
+
+  Sem isto, um erro durante a montagem esvazia o corpo da página e o navegador mostra uma
+  página em branco — ou preta, quando o sistema está em tema escuro. É o pior resultado
+  possível: não há mensagem, não há o que relatar, e quem abriu não sabe nem se o sistema
+  carregou.
+
+  É uma boundary do Svelte (`svelte:boundary`) em volta de `children`: se o render quebra, no lugar
+  da tela aparece "A tela não carregou", com a mensagem do erro e o botão de recarregar, e o erro
+  vai para o console. Sem erro, mostra o conteúdo como ele é. Só recebe `children`.
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
-  /**
-   * Nenhum erro derruba a tela em silêncio.
-   *
-   * Sem isto, um erro durante a montagem esvazia o corpo da página e o navegador mostra uma
-   * página em branco — ou preta, quando o sistema está em tema escuro. É o pior resultado
-   * possível: não há mensagem, não há o que relatar, e quem abriu não sabe nem se o sistema
-   * carregou.
-   */
   export type AzuosAppErrorBoundaryProps = {
     children: Snippet;
   };

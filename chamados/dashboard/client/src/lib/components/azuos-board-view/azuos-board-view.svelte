@@ -1,3 +1,23 @@
+<!--
+  @component
+  O PAINEL DE UM MÓDULO, no formato do Grafana — as abas dos três painéis (Equipe, Gestor,
+  Pessoal), o seletor de tempo e o "atualizar a cada" no canto de cima, os filtros (as variáveis)
+  numa faixa e os blocos embaixo, cada um com o menu dele (Ver, Editar, Duplicar, Remover).
+
+  Quem pode editar clica em "Editar painel" e o PRÓPRIO painel entra em montagem — sem tela por
+  cima: uma barra no alto com Adicionar, Configurações (os filtros), Descartar e Salvar; os blocos
+  se arrastam e se redimensionam ali mesmo, e cada um abre no editor de tela cheia. Tudo num
+  rascunho que só "Salvar painel" grava.
+
+  Genérico de propósito: os três módulos usam este mesmo painel, cada um com os dados dele.
+
+  - `data`: o módulo, o painel escolhido e as opções, os blocos e as posições, os resultados, o
+    rascunho em edição, os filtros do painel, o peso, o "atualizar a cada" e os filtros salvos.
+  - `state`: carregando, montando, salvando, atualizando, `canEdit`, `canAdd`, o erro e o diálogo
+    dos filtros salvos (aberto, salvando, arquivando, erro).
+  - `actions`: trocar de painel, atualizar, entrar e sair da montagem, salvar, mexer nos blocos e
+    no editor, mexer nos filtros do painel e criar, editar, arquivar e restaurar filtros salvos.
+-->
 <script lang="ts" module>
   import {
     type BoardFilter,
@@ -22,18 +42,6 @@
   import { type BoardFilterPlaceChange } from '$lib/utils/board-draft.util';
   import { type BoardItem } from '$lib/utils/widget-items.util';
 
-  /**
-   * O PAINEL DE UM MÓDULO, no formato do Grafana — as abas dos três painéis (Equipe, Gestor,
-   * Pessoal), o seletor de tempo e o "atualizar a cada" no canto de cima, os filtros (as variáveis)
-   * numa faixa e os blocos embaixo, cada um com o menu dele (Ver, Editar, Duplicar, Remover).
-   *
-   * Quem pode editar clica em "Editar painel" e o PRÓPRIO painel entra em montagem — sem tela por
-   * cima: uma barra no alto com Adicionar, Configurações (os filtros), Descartar e Salvar; os blocos
-   * se arrastam e se redimensionam ali mesmo, e cada um abre no editor de tela cheia. Tudo num
-   * rascunho que só "Salvar painel" grava.
-   *
-   * Genérico de propósito: os três módulos usam este mesmo painel, cada um com os dados dele.
-   */
   export type AzuosBoardViewProps = {
     data: {
       module: BoardModule;

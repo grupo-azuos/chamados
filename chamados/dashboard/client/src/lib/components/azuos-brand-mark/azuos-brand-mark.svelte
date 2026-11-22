@@ -1,16 +1,19 @@
+<!--
+  @component
+  A marca, a partir dos ARQUIVOS OFICIAIS do Grupo Azuos — o mesmo formato do paralegal.
+
+  - `full`: a logo branca inteira. Feita para fundo escuro, por isso só existe sobre a barra
+    azul (ou outro fundo da marca), nunca sobre o branco do conteúdo.
+  - `icon`: o símbolo oficial em SVG, também branco. É o que identifica a marca com a barra
+    recolhida, sem espremer o nome inteiro em poucos pixels.
+  - `tile`: o ícone de app oficial (símbolo sobre o quadrado azul). É o que vai nas telas de
+    fundo claro — entrar, recuperar senha —, onde as duas versões brancas sumiriam.
+
+  Os arquivos vêm da CDN da marca, publicados pelo app brand; nenhum é redesenhado à mão.
+
+  `ui`: `variant` (`full`, `icon` ou `tile`), `size` (`sm`, `md`, `lg`) e classe extra.
+-->
 <script lang="ts" module>
-  /**
-   * A marca, a partir dos ARQUIVOS OFICIAIS do Grupo Azuos — o mesmo formato do paralegal.
-   *
-   * - `full`: a logo branca inteira. Feita para fundo escuro, por isso só existe sobre a barra
-   *   azul (ou outro fundo da marca), nunca sobre o branco do conteúdo.
-   * - `icon`: o símbolo oficial em SVG, também branco. É o que identifica a marca com a barra
-   *   recolhida, sem espremer o nome inteiro em poucos pixels.
-   * - `tile`: o ícone de app oficial (símbolo sobre o quadrado azul). É o que vai nas telas de
-   *   fundo claro — entrar, recuperar senha —, onde as duas versões brancas sumiriam.
-   *
-   * Os arquivos vêm da CDN da marca, publicados pelo app brand; nenhum é redesenhado à mão.
-   */
   export type AzuosBrandMarkProps = {
     ui?: {
       size?: 'sm' | 'md' | 'lg';

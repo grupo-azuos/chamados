@@ -42,3 +42,14 @@
 <Story name="WithFieldError" args={{ data: { ...emptyData, fields: { ...emptyFields, userId: { value: '', error: 'Escolha a pessoa' } }, contextsError: 'Selecione pelo menos um módulo' }, state: { isOpen: true }, actions: baseActions }} />
 <Story name="Submitting" args={{ data: selectedPerson, state: { isOpen: true, isSubmitting: true }, actions: baseActions }} />
 <Story name="WithServerError" args={{ data: selectedPerson, state: { isOpen: true, error: 'Não foi possível liberar os módulos. Tente novamente.' }, actions: baseActions }} />
+<!-- Enquanto o diretório carrega, o campo de pessoa fica desabilitado e diz que está carregando. -->
+<Story name="LoadingPeople" args={{ data: emptyData, state: { isOpen: true, isLoadingUsers: true }, actions: baseActions }} />
+<!-- Caso limite: a pessoa escolhida não está no diretório — o campo mostra o e-mail dela. -->
+<Story
+  name="PersonOutsideDirectory"
+  args={{
+    data: { ...emptyData, users: [], fields: { userId: { value: 'usr_9', error: null }, userEmail: { value: 'fulana@empresa-exemplo.com.br', error: null } } },
+    state: { isOpen: true },
+    actions: baseActions,
+  }}
+/>

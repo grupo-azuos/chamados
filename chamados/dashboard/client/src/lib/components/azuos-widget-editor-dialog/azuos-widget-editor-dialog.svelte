@@ -1,20 +1,24 @@
+<!--
+  @component
+  O BLOCO ABERTO PARA EDITAR — no formato do editor de painel do Grafana, numa tela cheia: em cima a
+  PRÉ-VISUALIZAÇÃO EM TEMPO REAL, com os números de verdade do bloco como ele está agora; embaixo a
+  consulta (fonte, agrupar, dividir, período, filtro); na lateral o tipo de gráfico e o título.
+  Trocar o gráfico ou a fonte acerta o resto sozinho (`fitGroup`), para o formulário nunca ficar
+  numa combinação que o servidor recusa. O mesmo desenho do paralegal.
+
+  O rascunho do bloco é estado de formulário deste diálogo; quem guarda no rascunho do painel é o
+  hook.
+
+  `data` leva o bloco em edição, os filtros salvos e a pré-visualização; `state.isHidden` tira o
+  diálogo da frente sem perder o preenchido; `actions`, fechar, salvar, abrir os filtros salvos e
+  avisar cada mudança para a pré-visualização.
+-->
 <script lang="ts" module>
   import { type SavedFilter, type Widget } from '@template/shared/schemas/dashboard-board.schema';
   import { type Snippet } from 'svelte';
 
   import { type WidgetState } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
 
-  /**
-   * O BLOCO ABERTO PARA EDITAR — no formato do editor de painel do Grafana, numa tela cheia: em
-   * cima a PRÉ-VISUALIZAÇÃO EM TEMPO REAL, com os números de verdade do bloco como ele está agora;
-   * embaixo a consulta (fonte, agrupar, dividir, período, filtro); na lateral o tipo de gráfico e o
-   * título.
-   * Trocar o gráfico ou a fonte acerta o resto sozinho (`fitGroup`), para o formulário nunca
-   * ficar numa combinação que o servidor recusa. O mesmo desenho do paralegal.
-   *
-   * O rascunho do bloco é estado de formulário deste diálogo; quem guarda no rascunho do painel
-   * é o hook.
-   */
   export type AzuosWidgetEditorDialogProps = {
     data: {
       editing: { widget: Widget; isNew: boolean } | null;

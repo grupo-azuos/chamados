@@ -1,3 +1,16 @@
+<!--
+  @component
+  A LINHA DO TEMPO de um produto do inventário: as ocorrências registradas (defeito, troca de peça,
+  manutenção, anotação), cada uma com a bolinha e o selo na cor do tipo.
+
+  Em cima, o formulário de registrar uma ocorrência nova — o tipo e a descrição. Ele só aparece
+  quando há `actions` e o componente não é só leitura (`ui.readOnly`). Embaixo, a lista; com erro,
+  carregando ou vazia, diz isso em frase.
+
+  Props: `data` traz as ocorrências e o tipo e a descrição do formulário; `state` traz o carregando,
+  o enviando, o erro da lista e o do formulário; `actions` recebe a troca de tipo, a descrição e o
+  envio; `ui` traz a classe e o só leitura.
+-->
 <script lang="ts" module>
   import {
     inventoryItemEventTypeLabel,

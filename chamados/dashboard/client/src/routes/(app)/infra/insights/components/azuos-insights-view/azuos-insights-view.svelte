@@ -1,3 +1,23 @@
+<!--
+  @component
+  A INTELIGÊNCIA: o que os dados juntos dizem, e que nenhuma tela sozinha mostra.
+
+  Com o período escolhido (últimos N dias), mostra primeiro o retrato em gráficos — as máquinas
+  sobrecarregadas em colunas, pela MÉDIA de processador, e uma rosca de que os upgrades são feitos
+  — e depois as quatro listas: sobrecarregadas, quem precisa de upgrade, as que dão mais trabalho
+  (manutenções, alertas e chamados lado a lado, nunca somados) e as de reserva. Cada máquina tem
+  "Abrir ficha", e as listas são paginadas.
+
+  Cada lista diz a RÉGUA que usou, no cabeçalho. Uma recomendação sem a régua ao lado é uma
+  opinião: quem lê precisa poder discordar dela com conhecimento de causa.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, com o
+  parque em ordem e com recomendação em todas as quatro listas.
+
+  - `data`: `insights` (ou nulo) e `days`.
+  - `state`: `isLoading`, `isRefetching`, `isEmpty` e `error`.
+  - `actions`: `onPeriodChange(days)`, `onRetry`, `onOpenMachine(computerId)` e `onOpenComputers`.
+-->
 <script lang="ts" module>
   import {
     healthStatusLabel,

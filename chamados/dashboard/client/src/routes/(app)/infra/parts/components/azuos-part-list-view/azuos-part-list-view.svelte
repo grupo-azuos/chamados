@@ -1,3 +1,26 @@
+<!--
+  @component
+  O DEPÓSITO: as peças de reposição que a TI tem em mãos.
+
+  Cabeçalho com "Cadastrar peça"; no alto, os números (tipos de peça, peças na prateleira e sem
+  estoque — os dois últimos são atalhos do filtro de estoque, e clicar de novo desliga). Depois,
+  busca, categoria, condição, estoque e a alternância entre cards (celular) e tabela (monitor).
+  Clicar na peça abre o extrato dela; cada uma tem "Entrada", "Saída" e "Corrigir".
+
+  Peça com saldo zero NÃO some da lista: é por ela que alguém descobre o que precisa comprar. Ela
+  aparece com o saldo em vermelho, e o filtro "só com estoque" é quem a esconde — quando a pergunta
+  for outra. Lista cortada avisa, em vez de esconder o tamanho do depósito.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro.
+
+  - `data`: `parts`, `total`, `summary` e `filter`.
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated`,
+    `isSummaryLoading` e `error`.
+  - `actions`: filtros (`onSearchChange`, `onCategoryChange`, `onConditionChange`,
+    `onInStockOnlyChange`, `onOutOfStockOnlyChange`, `onClearFilters`), `onRetry`, `onRegister`,
+    `onEdit`, `onMove(part, 'in' | 'out')` e `onOpenLedger`.
+-->
 <script lang="ts" module>
   import {
     PART_CATEGORIES,

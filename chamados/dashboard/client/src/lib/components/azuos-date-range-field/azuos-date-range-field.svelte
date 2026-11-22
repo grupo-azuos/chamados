@@ -1,22 +1,26 @@
+<!--
+  @component
+  O campo de PERÍODO: de uma data até outra, para filtro e para comparar intervalos.
+
+  Dois calendários lado a lado, porque um período quase sempre atravessa dois meses e num calendário
+  só a pessoa perde de vista onde começou. O mês e o ano trocam pelo seletor do projeto em cima dos
+  calendários — sem ele, voltar um ano são doze toques na seta.
+
+  Em cima ficam os campos "De" e "Até", digitáveis (`dd/mm/aaaa`): quem sabe as datas de cor não
+  precisa procurar o dia, e digitar uma data leva o calendário até ela.
+
+  NADA É ENTREGUE ANTES DO "APLICAR". Escolher um período são dois toques, e entregar o primeiro
+  faria a tela de trás recarregar com meio período. "Limpar" esvazia e entrega na hora.
+
+  O valor entra e sai como dois textos ISO (`{ from: '2026-03-01', to: '2026-03-31' }`). Os dois
+  campos escondidos levam `{name}From` e `{name}To` para o formulário nativo.
+
+  Props: `data` traz o rótulo, o `name`, o período e os limites; `ui` traz o texto do campo vazio;
+  `state` traz o erro e o desabilitado; `actions.onChange` recebe o período aplicado.
+-->
 <script lang="ts" module>
   import { displayFromIso } from '$lib/utils/date-input.util';
 
-  /**
-   * O campo de PERÍODO: de uma data até outra, para filtro e para comparar intervalos.
-   *
-   * Dois calendários lado a lado, porque um período quase sempre atravessa dois meses e num
-   * calendário só a pessoa perde de vista onde começou. O mês e o ano trocam pelo seletor do
-   * projeto em cima dos calendários — sem ele, voltar um ano são doze toques na seta.
-   *
-   * Em cima ficam os campos "De" e "Até", digitáveis (`dd/mm/aaaa`): quem sabe as datas de cor não
-   * precisa procurar o dia, e digitar uma data leva o calendário até ela.
-   *
-   * NADA É ENTREGUE ANTES DO "APLICAR". Escolher um período são dois toques, e entregar o primeiro
-   * faria a tela de trás recarregar com meio período. "Limpar" esvazia e entrega na hora.
-   *
-   * O valor entra e sai como dois textos ISO (`{ from: '2026-03-01', to: '2026-03-31' }`). Os dois
-   * campos escondidos levam `<name>From` e `<name>To` para o formulário nativo.
-   */
   export type AzuosDateRange = { from: string | null; to: string | null };
 
   export type AzuosDateRangeFieldProps = {

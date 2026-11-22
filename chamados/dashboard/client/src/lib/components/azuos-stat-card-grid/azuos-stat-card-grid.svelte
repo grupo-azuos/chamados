@@ -1,3 +1,20 @@
+<!--
+  @component
+  A fileira de cartões do topo do painel.
+
+  Existe como componente, e não como uma `class` repetida em cada tela, porque o número de colunas é
+  uma decisão de leitura, não de layout: quatro cartões por linha é o limite do que se compara de
+  relance, e acima disso a fileira vira uma lista que ninguém varre. Repetida à mão, essa decisão se
+  perde na primeira tela nova.
+
+  Por isso, PASSOU DE QUATRO, a fileira vira faixa que desliza (`AzuosCarousel`): continua uma linha
+  só, com o resto a um arraste ou a uma seta — e não três linhas de cartões empurrando a lista para
+  baixo da dobra. No Svelte não dá para contar os filhos de um snippet: a faixa só existe quando os
+  cartões vêm como lista (`data.items` + o snippet `card`). Cartões fixos, escritos na tela como
+  `children`, ficam sempre na grade.
+
+  `ui` leva `className` e o `ariaLabel` da faixa para o leitor de tela.
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
@@ -16,19 +33,6 @@
 </script>
 
 <script lang="ts" generics="T">
-  /**
-   * A fileira de cartões do topo do painel.
-   *
-   * Existe como componente, e não como uma `class` repetida em cada tela, porque o número de
-   * colunas é uma decisão de leitura, não de layout: quatro cartões por linha é o limite do
-   * que se compara de relance, e abaixo disso a fileira vira uma lista que ninguém varre.
-   * Repetida à mão, essa decisão se perde na primeira tela nova.
-   *
-   * Por isso, PASSOU DE QUATRO, a fileira vira faixa que desliza (`AzuosCarousel`): continua uma
-   * linha só, com o resto a um arraste ou a uma seta — e não três linhas de cartões empurrando a
-   * lista para baixo da dobra. No Svelte não dá para contar os filhos de um snippet: a faixa só
-   * existe quando os cartões vêm como lista (`data.items` + `card`).
-   */
   import Carousel from '$lib/components/azuos-carousel/azuos-carousel.svelte';
   import { cn } from '$lib/utils/cn';
 

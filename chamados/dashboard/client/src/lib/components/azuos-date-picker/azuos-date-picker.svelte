@@ -1,3 +1,19 @@
+<!--
+  @component
+  A escolha de uma data, num calendário em português que abre num balão a partir de um botão.
+
+  O VALOR ENTRA E SAI COMO TEXTO ISO (`2026-10-20`), e não como `Date`: é o formato do contrato
+  (schema Zod, coluna do banco, corpo da API). Por dentro o calendário trabalha com a data do
+  `@internationalized/date`, que não carrega fuso; escolher um dia entrega o texto ISO, fecha o
+  balão e chama `onBlur`.
+
+  Com `showMonthYearSelects`, o mês e o ano trocam pelo seletor do projeto em cima do calendário. O
+  campo escondido existe para o formulário nativo enxergar o valor: sem ele, um `FormData` do
+  formulário em volta não traria a data.
+
+  Props soltas (não nos quatro grupos): `value` (bindable), `placeholder`, `disabled`, `name`, `id`,
+  os `aria-*` e os retornos `onValueChange` e `onBlur`.
+-->
 <script lang="ts">
   import {
     DateFormatter,

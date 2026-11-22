@@ -1,3 +1,27 @@
+<!--
+  @component
+  O INVENTÁRIO: as máquinas da empresa, na ordem do número (pelo nome físico).
+
+  Cabeçalho com a exportação do relatório e "Cadastrar computador". No alto, duas fileiras de
+  números — máquinas, online, saúde crítica, em atenção, offline, com alerta, CPU e memória
+  elevadas —, e os que filtram são atalhos: clicar liga o filtro (e rola até ele), clicar de novo
+  desliga. Depois, a barra de filtros (`AzuosInventoryFilters`), a alternância entre cards
+  (celular) e tabela (monitor) e a lista: o nome que a pessoa reconhece (o apelido ganha do nome
+  técnico, que fica embaixo), responsável, saúde, situação de manutenção, chamados, selos de
+  arquivada, bloqueada, online ou offline, e "Ver ficha".
+
+  Não há botão de excluir, e a ausência é a regra do sistema: máquina que saiu de uso é ARQUIVADA,
+  porque é o histórico dela que sustenta a decisão de compra.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro.
+
+  - `data`: `computers`, `total`, `summary`, `filter`, `scheduledFor` e `departmentOptions`.
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated`,
+    `isSummaryLoading`, `error`, `exportingFormat` e `exportError`.
+  - `actions`: um `on…Change` por filtro, `onClearFilters`, `onRetry`, `onOpen(computer)`,
+    `onRegister` e `onExportReport(format)`.
+-->
 <script lang="ts" module>
   import {
     resourceConditionOf,

@@ -1,3 +1,25 @@
+<!--
+  @component
+  A REDE: quedas e instabilidade do link de internet, como o UniFi avisou.
+
+  No alto, os números: em aberto agora e quedas no período (atalhos que ligam o filtro), o tempo
+  fora do ar e a pior latência. Depois, os filtros (tipo de aviso, gravidade, andamento e período de
+  7, 30 ou 90 dias) e a alternância entre cards (celular) e tabela (monitor). Cada evento mostra a
+  gravidade, o tipo, quando foi, quanto durou (ou "Em aberto"), as medidas que vieram e o botão de
+  marcar como resolvido ou reabrir.
+
+  **O silêncio não é notícia boa.** O que não chegou aqui não aconteceu para esta tela. Por isso o
+  estado vazio diz de onde vêm os eventos, em vez de afirmar que a rede está bem.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  com a internet fora agora e com o mês inteiro em ordem.
+
+  - `data`: `events`, `total`, `summary` e `filter`.
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated`,
+    `isSummaryLoading`, `isSaving`, `error` e `actionError`.
+  - `actions`: filtros (`onTypeChange`, `onSeverityChange`, `onOnlyOpenChange`, `onPeriodChange`,
+    `onClearFilters`), `onRetry` e `onResolveChange(event, isResolved)`.
+-->
 <script lang="ts" module>
   import {
     NETWORK_EVENT_TYPES,

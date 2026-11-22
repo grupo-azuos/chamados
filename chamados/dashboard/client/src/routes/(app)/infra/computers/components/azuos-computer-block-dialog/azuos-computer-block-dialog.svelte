@@ -1,3 +1,18 @@
+<!--
+  @component
+  BLOQUEAR UMA MÁQUINA — a pergunta, com o motivo junto.
+
+  Tem diálogo próprio, em vez do `ConfirmDialog`, por causa do motivo: bloqueio sem motivo escrito
+  vira, meses depois, uma máquina calada que ninguém sabe por que foi desligada. Explica o efeito
+  (o agente passa a ser recusado, a máquina continua no inventário com o histórico) e pede o
+  motivo. Fechar o diálogo é cancelar.
+
+  Função pura de props: o motivo digitado sai no `onConfirm`. O componente não grava nada.
+
+  - `data.computerName`: a máquina da pergunta.
+  - `state`: `isOpen`, `isConfirming` (trava o campo e mostra "Bloqueando…") e `error`.
+  - `actions`: `onConfirm(reason)` e `onCancel`.
+-->
 <script lang="ts" module>
   /**
    * BLOQUEAR UMA MÁQUINA — a pergunta, com o motivo junto.

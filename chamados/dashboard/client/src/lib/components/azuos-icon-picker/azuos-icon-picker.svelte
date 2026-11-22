@@ -1,14 +1,18 @@
+<!--
+  @component
+  Escolher um ícone numa grade de prontos. Botões que ligam e desligam (`aria-pressed`), e não um
+  select nativo: ícone se escolhe vendo, e uma lista de nomes ("shield-check") não diz nada a
+  ninguém.
+
+  Cada ícone tem um nome em português no `aria-label` e no `title` — é ele que o leitor de tela
+  anuncia e que aparece ao passar o mouse.
+
+  Props: `data` traz o valor e as opções; `ui.label` é o nome do grupo; `state.isDisabled` trava a
+  grade; `actions.onChange` recebe o ícone escolhido.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
 
-  /**
-   * Escolher um ícone numa grade de prontos. Botões que ligam e desligam (`aria-pressed`), e não
-   * um `<select>`: ícone se escolhe vendo, e uma lista de nomes ("shield-check") não diz nada a
-   * ninguém.
-   *
-   * Cada ícone tem um nome em português no `aria-label` e no `title` — é ele que o leitor de tela
-   * anuncia e que aparece ao passar o mouse.
-   */
   export type AzuosIconPickerOption = { value: string; label: string; icon: LucideIcon };
 
   export type AzuosIconPickerProps = {

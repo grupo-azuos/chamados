@@ -1,3 +1,18 @@
+<!--
+  @component
+  A LINHA DO TEMPO de um chamado: cada histórico com quem, quando, o quê e de que tipo.
+
+  Função pura de props. É genérica porque duas telas a usam: a ficha do chamado no painel e a
+  consulta pública por protocolo — a mesma história, lida por dois públicos. O painel manda o
+  histórico inteiro (com o tempo gasto e a marca de interno); a consulta pública, a versão podada. A
+  linha do tempo mostra o que vier, e não inventa o que não veio.
+
+  O histórico que ENCERRA é dito com palavras ("Encerrou o chamado"), e não só com a cor do selo:
+  cor sozinha some para quem não distingue as cores e some na impressão.
+
+  Props: `data.histories` traz os históricos; `ui` traz o texto do vazio; `state` traz o carregando
+  e o erro.
+-->
 <script lang="ts" module>
   import {
     isClosingTicketHistoryType,
@@ -20,15 +35,6 @@
   export type HistoryTimelineEntry = PublicTicketHistory &
     Partial<Pick<TicketHistory, 'minutesSpent' | 'isVisibleToRequester'>>;
 
-  /**
-   * A LINHA DO TEMPO de um chamado: cada histórico com quem, quando, o quê e de que tipo.
-   *
-   * Função pura de props. É genérica porque duas telas a usam: a ficha do chamado no painel e
-   * a consulta pública por protocolo — a mesma história, lida por dois públicos.
-   *
-   * O histórico que ENCERRA é dito com palavras ("Encerrou o chamado"), e não só com a cor do
-   * selo: cor sozinha some para quem não distingue as cores e some na impressão.
-   */
   export type AzuosHistoryTimelineProps = {
     data: { histories: HistoryTimelineEntry[] };
     ui?: { emptyLabel?: string; className?: string };

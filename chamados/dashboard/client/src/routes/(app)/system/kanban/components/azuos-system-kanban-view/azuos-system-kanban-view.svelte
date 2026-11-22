@@ -1,3 +1,11 @@
+<!--
+  @component
+  A tela do KANBAN DE SISTEMA: os chamados de software em quatro colunas por etapa. As colunas são
+  a `AzuosKanbanColumn` e cada chamado é a superfície padrão (`AzuosCardSurface`), arrastável entre
+  as colunas; clicar no card abre o chamado, e a etiqueta, o seletor de etapa e o link da issue
+  ficam por cima dele. Use na rota do Kanban; ela não busca nada, só desenha o que o view-model
+  entrega e avisa as ações.
+-->
 <script lang="ts" module>
   import {
     type KanbanColumn,
@@ -6,6 +14,7 @@
   import StatusBadge, {
     type StatusBadgeTone,
   } from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import { type AzuosKanbanColumnTone } from '$lib/components/azuos-kanban-column/azuos-kanban-column.svelte';
   import { type SoftwareProject } from '@template/shared/schemas/software-project.schema';
 
   export type AzuosSystemKanbanViewProps = {
@@ -57,6 +66,15 @@
     { tone: 'neutral', label: 'Padrão' },
   ];
 
+  /* A cor de cada etapa no cabeçalho da coluna: aberto é neutro, em atendimento é informação,
+     esperando terceiros pede atenção e resolvido é sucesso. */
+  const COLUMN_TONES: Record<KanbanColumnId, AzuosKanbanColumnTone> = {
+    todo: 'neutral',
+    in_progress: 'info',
+    waiting: 'warning',
+    done: 'success',
+  };
+
 </script>
 
 <script lang="ts">
@@ -69,6 +87,10 @@
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import StageColumn from '$lib/components/azuos-kanban-column/azuos-kanban-column.svelte';
+  import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/azuos-popover/azuos-popover';
+  import { cn } from '$lib/utils/cn';
 
   let { data, state: viewState, actions }: AzuosSystemKanbanViewProps = $props();
 
@@ -222,33 +244,28 @@
       }}
     />
   {:else}
-    <!-- 4 Colunas do Kanban com Drag & Drop -->
+    <!-- 4 Colunas do Kanban com Drag & Drop. A coluna é a padrão (`AzuosKanbanColumn`); o
+         arrasto continua sendo da tela, num invólucro em volta dela, porque a tela precisa saber
+         em qual coluna o card está para mostrar o "Solte aqui" e lembrar o card arrastado quando
+         o navegador não manda os dados no soltar. -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {#each data.columns as column (column.id)}
         {@const isDropTarget = activeDropColumn === column.id}
         <div
-          class="flex flex-col rounded-surface bg-muted p-4"
+          role="presentation"
+          class="contents"
           ondragenter={(e) => handleDragEnter(e, column.id)}
           ondragover={(e) => handleDragOver(e, column.id)}
           ondragleave={(e) => handleDragLeave(e, column.id)}
           ondrop={(e) => handleDrop(e, column.id)}
-          role="region"
-          aria-label={column.title}
         >
-          <!-- Cabeçalho da Coluna -->
-          <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-sm font-medium text-muted-foreground">
-              {column.title}
-            </h2>
-            <span
-              class="grid size-6 place-items-center rounded-full bg-card text-xs font-medium text-muted-foreground tabular-nums"
-            >
-              {column.tickets.length}
-            </span>
-          </div>
-
-          <!-- Cards dos Chamados -->
-          <div class="flex flex-1 flex-col gap-3 min-h-32">
+          <StageColumn
+            data={{ title: column.title, count: column.tickets.length }}
+            ui={{
+              tone: COLUMN_TONES[column.id],
+              className: cn('w-auto sm:w-auto', isDropTarget && 'bg-accent'),
+            }}
+          >
             {#if isDropTarget && draggedTicketId !== null}
               <div
                 class="grid h-16 place-items-center rounded-box border-2 border-dashed border-border text-xs font-medium text-primary motion-safe:animate-pulse"
@@ -269,72 +286,64 @@
                   (data.cardColors[ticket.id] as StatusBadgeTone | undefined) ?? 'neutral'}
                 {@const isBeingDragged = draggedTicketId === ticket.id}
 
+                <!-- Quem arrasta é este invólucro; o card em si é a superfície padrão, cujo botão
+                     por cima do card inteiro abre o chamado (clique, Enter ou Espaço). -->
                 <div
-                  role="button"
-                  tabindex="0"
+                  role="presentation"
                   draggable={!viewState.isMoving}
                   ondragstart={(e) => handleDragStart(e, ticket.id)}
                   ondragend={handleDragEnd}
-                  class="group relative flex flex-col gap-2 rounded-box bg-card p-3.5 text-left shadow-card transition {isBeingDragged
-                    ? 'opacity-40 cursor-grabbing'
-                    : 'cursor-grab active:cursor-grabbing'}"
-                  onclick={(e) => {
-                    if (e.target instanceof Element && e.target.closest('[data-card-control]'))
-                      return;
-                    if (justDragged) return;
-                    actions.onOpenTicket(ticket.id);
-                  }}
-                  onkeydown={(e) => {
-                    if (e.target !== e.currentTarget) return;
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      actions.onOpenTicket(ticket.id);
-                    }
-                  }}
+                  class={isBeingDragged ? 'cursor-grabbing opacity-40' : 'cursor-grab active:cursor-grabbing'}
                 >
-                  <!-- Barra Superior: Drag handle, Protocolo, Selo do Card e Prioridade -->
-                  <div class="flex items-center justify-between gap-1 text-xs">
-                    <div class="flex items-center gap-1.5">
-                      <span
-                        class="text-muted-foreground opacity-60 group-hover:opacity-100 transition-opacity"
-                        title="Arraste para mover"
-                      >
-                        <GripVertical class="size-3.5" />
-                      </span>
-                      <span class="font-mono text-xs font-medium text-muted-foreground">
-                        {ticket.protocol}
-                      </span>
-                    </div>
-
-                    <div class="flex items-center gap-1.5">
-                      <!-- Seletor de Selo/Tom do Card -->
-                      <div class="relative">
-                        <button
-                          type="button"
-                          class="grid size-6 place-items-center rounded-control border bg-muted text-muted-foreground transition hover:text-foreground border-transparent"
-                          title="Atribuir etiqueta ao card"
-                          onclick={(e) => {
-                            e.stopPropagation();
-                            activeColorPickerTicketId =
-                              activeColorPickerTicketId === ticket.id ? null : ticket.id;
-                          }}
+                  <CardSurface
+                    data={{ label: `${ticket.protocol} — ${ticket.description}` }}
+                    ui={{ className: 'flex flex-col gap-2 p-3.5 text-left' }}
+                    actions={{
+                      onClick: () => {
+                        /* O clique que o navegador dispara logo depois de soltar não abre o chamado. */
+                        if (justDragged) return;
+                        actions.onOpenTicket(ticket.id);
+                      },
+                    }}
+                  >
+                    <!-- Barra Superior: Drag handle, Protocolo, Selo do Card e Prioridade -->
+                    <div class="flex items-center justify-between gap-1 text-xs">
+                      <div class="flex items-center gap-1.5">
+                        <span
+                          class="text-muted-foreground opacity-60 transition-opacity group-hover/card:opacity-100"
+                          title="Arraste para mover"
                         >
-                          <Tag class="size-3" />
-                        </button>
+                          <GripVertical class="size-3.5" />
+                        </span>
+                        <span class="font-mono text-xs font-medium text-muted-foreground">
+                          {ticket.protocol}
+                        </span>
+                      </div>
 
-                        {#if activeColorPickerTicketId === ticket.id}
-                          <div
-                            class="absolute right-0 top-7 z-30 flex w-36 flex-col gap-1 rounded-surface bg-popover p-2 shadow-xl ring-1 ring-foreground/8 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95"
-                            onclick={(e) => e.stopPropagation()}
-                            onkeydown={(e) => {
-                              if (e.key === 'Escape') activeColorPickerTicketId = null;
-                            }}
-                            role="dialog"
-                            tabindex="-1"
+                      <!-- Os controles sobem acima do botão que cobre o card: sem isso o clique
+                           neles abriria o chamado. -->
+                      <div class="relative z-20 flex items-center gap-1.5">
+                        <!-- Seletor de Selo/Tom do Card. O menu sai do card pelo portal do
+                             popover: a superfície padrão corta o que passa da borda dela. -->
+                        <Popover
+                          bind:open={
+                            () => activeColorPickerTicketId === ticket.id,
+                            (isOpen) => (activeColorPickerTicketId = isOpen ? ticket.id : null)
+                          }
+                        >
+                          <PopoverTrigger
+                            class="grid size-6 place-items-center rounded-control border border-transparent bg-muted text-muted-foreground transition hover:text-foreground"
+                            title="Atribuir etiqueta ao card"
                           >
-                            <span
-                              class="px-2 py-1 text-xs font-medium text-muted-foreground"
-                            >
+                            <Tag class="size-3" />
+                          </PopoverTrigger>
+                          <PopoverContent
+                            role="dialog"
+                            aria-label="Etiqueta"
+                            align="center"
+                            class="flex w-36 flex-col gap-1 rounded-surface p-2 shadow-xl ring-foreground/8"
+                          >
+                            <span class="px-2 py-1 text-xs font-medium text-muted-foreground">
                               Etiqueta
                             </span>
                             {#each CARD_TONE_OPTIONS as opt (opt.tone)}
@@ -353,79 +362,78 @@
                                 />
                               </button>
                             {/each}
-                          </div>
-                        {/if}
-                      </div>
+                          </PopoverContent>
+                        </Popover>
 
-                      {#if ticketTone !== 'neutral'}
+                        {#if ticketTone !== 'neutral'}
+                          <StatusBadge
+                            data={{
+                              label: CARD_TONE_OPTIONS.find((o) => o.tone === ticketTone)?.label,
+                            }}
+                            ui={{ tone: ticketTone, size: 'sm' }}
+                          />
+                        {/if}
+
                         <StatusBadge
-                          data={{
-                            label: CARD_TONE_OPTIONS.find((o) => o.tone === ticketTone)?.label,
-                          }}
-                          ui={{ tone: ticketTone, size: 'sm' }}
+                          data={{ label: PRIORITY_LABELS[ticket.priority] ?? ticket.priority }}
+                          ui={{ tone: PRIORITY_TONES[ticket.priority] ?? 'neutral', size: 'sm' }}
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Descrição resumida -->
+                    <p class="line-clamp-2 text-xs font-medium text-foreground leading-snug">
+                      {ticket.description}
+                    </p>
+
+                    <div class="relative z-20" role="group" aria-label="Movimentação do chamado">
+                      <SelectField
+                        data={{
+                          value: column.id,
+                          options: data.columns
+                            .filter((target) => target.id === column.id || target.id !== 'todo')
+                            .map((target) => ({ value: target.id, label: target.title })),
+                        }}
+                        ui={{ ariaLabel: `Mover ${ticket.protocol} para` }}
+                        state={{ isDisabled: viewState.isMoving }}
+                        actions={{
+                          onChange: (value) =>
+                            void actions.onMoveTicket(ticket.id, value as KanbanColumnId),
+                        }}
+                      />
+                    </div>
+                    <!-- Tags: Sistema e GitHub Issue -->
+                    <div
+                      class="mt-1 flex flex-wrap items-center gap-1.5 border-t border-border pt-2 text-xs"
+                    >
+                      {#if ticket.projectName}
+                        <StatusBadge
+                          data={{ label: ticket.projectName }}
+                          ui={{ tone: 'brand', size: 'sm' }}
                         />
                       {/if}
 
-                      <StatusBadge
-                        data={{ label: PRIORITY_LABELS[ticket.priority] ?? ticket.priority }}
-                        ui={{ tone: PRIORITY_TONES[ticket.priority] ?? 'neutral', size: 'sm' }}
-                      />
+                      {#if ticket.githubIssueUrl && ticket.githubIssueNumber}
+                        <a
+                          href={ticket.githubIssueUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          class="relative z-20 inline-flex items-center gap-0.5 rounded-chip bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground hover:text-foreground hover:underline"
+                        >
+                          #{ticket.githubIssueNumber}
+                          <ArrowUpRight class="size-3" />
+                        </a>
+                      {/if}
+
+                      <span class="ml-auto text-xs text-muted-foreground">
+                        {ticket.requesterName}
+                      </span>
                     </div>
-                  </div>
-
-                  <!-- Descrição resumida -->
-                  <p class="line-clamp-2 text-xs font-medium text-foreground leading-snug">
-                    {ticket.description}
-                  </p>
-
-                  <div data-card-control role="group" aria-label="Movimentação do chamado">
-                    <SelectField
-                      data={{
-                        value: column.id,
-                        options: data.columns
-                          .filter((target) => target.id === column.id || target.id !== 'todo')
-                          .map((target) => ({ value: target.id, label: target.title })),
-                      }}
-                      ui={{ ariaLabel: `Mover ${ticket.protocol} para` }}
-                      state={{ isDisabled: viewState.isMoving }}
-                      actions={{
-                        onChange: (value) =>
-                          void actions.onMoveTicket(ticket.id, value as KanbanColumnId),
-                      }}
-                    />
-                  </div>
-                  <!-- Tags: Sistema e GitHub Issue -->
-                  <div
-                    class="mt-1 flex flex-wrap items-center gap-1.5 border-t border-border pt-2 text-xs"
-                  >
-                    {#if ticket.projectName}
-                      <StatusBadge
-                        data={{ label: ticket.projectName }}
-                        ui={{ tone: 'brand', size: 'sm' }}
-                      />
-                    {/if}
-
-                    {#if ticket.githubIssueUrl && ticket.githubIssueNumber}
-                      <a
-                        href={ticket.githubIssueUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        class="inline-flex items-center gap-0.5 rounded-chip bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground hover:text-foreground hover:underline"
-                        onclick={(e) => e.stopPropagation()}
-                      >
-                        #{ticket.githubIssueNumber}
-                        <ArrowUpRight class="size-3" />
-                      </a>
-                    {/if}
-
-                    <span class="ml-auto text-xs text-muted-foreground">
-                      {ticket.requesterName}
-                    </span>
-                  </div>
+                  </CardSurface>
                 </div>
               {/each}
             {/if}
-          </div>
+          </StageColumn>
         </div>
       {/each}
     </div>

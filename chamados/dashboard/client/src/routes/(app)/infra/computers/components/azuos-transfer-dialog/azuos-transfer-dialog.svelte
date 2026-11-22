@@ -1,3 +1,22 @@
+<!--
+  @component
+  TRANSFERIR a máquina de departamento, num modal.
+
+  Mostra onde a máquina está hoje e pede para onde vai, quem levou e uma observação. Sem
+  departamento, ela volta a ser reserva (perde o responsável), e o modal avisa. A pergunta dos
+  periféricos é o coração desta tela, e não um detalhe: na prática quem troca de computador deixa
+  teclado, mouse e monitor na mesa. Para cada peça na máquina, a pessoa escolhe o destino e, se ela
+  fica na estação, qual máquina a assume — faltando isso, o envio trava com o aviso.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook com peças, sem
+  peças, carregando e com o destino em falta.
+
+  - `data`: `computer`, `toDepartment`, `responsible`, `note`, `departments`, `machines` e
+    `peripherals`.
+  - `state`: `isOpen`, `isSubmitting`, `isLoadingPeripherals`, `isIncomplete` e `error`.
+  - `actions`: `onDepartmentChange`, `onResponsibleChange`, `onNoteChange`, `onDestinyChange`,
+    `onDestinationChange`, `onSubmit` e `onClose`.
+-->
 <script lang="ts" module>
   import { departmentLabel } from '@template/shared/domain/department.util';
   import {

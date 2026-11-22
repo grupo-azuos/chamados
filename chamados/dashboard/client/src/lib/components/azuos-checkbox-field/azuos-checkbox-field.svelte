@@ -1,12 +1,18 @@
+<!--
+  @component
+  Uma caixa de marcar com o rótulo ao lado — a escolha de "sim ou não" que não precisa de
+  "não sei" (para isso, use um `AzuosSelectField` com a opção vazia).
+
+  É o `Checkbox` do shadcn-svelte (bits-ui): teclado (espaço marca), foco e leitor de tela vêm
+  prontos. O rótulo inteiro é clicável, porque acertar um quadrado de 16px o dia todo cansa — e a
+  linha tem a altura da régua, para o alvo do toque não ser só a caixa.
+
+  - `data`: o rótulo, o nome, se está marcada e a descrição.
+  - `ui`: `isLabelHidden` (o rótulo fica só para o leitor de tela) e classe extra.
+  - `state`: desligado.
+  - `actions`: `onChange`.
+-->
 <script lang="ts" module>
-  /**
-   * Uma caixa de marcar com o rótulo ao lado — a escolha de "sim ou não" que não precisa de
-   * "não sei" (para isso, use um `AzuosSelectField` com a opção vazia).
-   *
-   * É o `Checkbox` do shadcn-svelte (bits-ui): teclado (espaço marca), foco e leitor de tela vêm
-   * prontos. O rótulo inteiro é clicável, porque acertar um quadrado de 16px o dia todo cansa — e a
-   * linha tem a altura da régua, para o alvo do toque não ser só a caixa.
-   */
   export type AzuosCheckboxFieldProps = {
     data: { label: string; name: string; isChecked: boolean; description?: string };
     /** `isLabelHidden`: numa linha de tabela o contexto já diz o que é; o rótulo fica só para o leitor de tela. */

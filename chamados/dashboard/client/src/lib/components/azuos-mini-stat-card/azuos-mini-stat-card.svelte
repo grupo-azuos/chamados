@@ -1,10 +1,19 @@
+<!--
+  @component
+  O FILTRO PEQUENO: uma contagem por status, clicável — o painel tem uma fileira delas.
+
+  Fica sobre o `AzuosCardSurface`: a bolinha leva o tom do status e o número fica na cor do texto,
+  grande e com `tabular-nums`. O escolhido usa o destaque de seleção da superfície. O hover é o véu
+  neutro da superfície; no tom, só com `ui.isHoverColored`.
+
+  - `data`: o rótulo e o número.
+  - `ui`: o tom (`tone`), o hover colorido e classes extras.
+  - `state`: `isSelected`, quando o filtro deste cartão já está valendo.
+  - `actions`: `onClick`, que liga ou desliga o filtro.
+-->
 <script lang="ts" module>
   import { type AzuosCardTone } from '$lib/utils/card-tone.util';
 
-  /**
-   * O FILTRO PEQUENO: uma contagem por status, clicável. Superfície da marca, bolinha e número no
-   * sotaque do status, escolhido no azul claro da marca. O mesmo desenho do template.
-   */
   export type AzuosMiniStatCardProps = {
     data: { label: string; value: number | string };
     ui?: { tone?: AzuosCardTone; isHoverColored?: boolean; className?: string };

@@ -1,13 +1,17 @@
+<!--
+  @component
+  O andamento GERAL num anel, com o percentual no meio — é o número que a pessoa procura primeiro ao
+  bater o olho num card ("quanto já chegou?"). As barras ficam para o detalhe.
+
+  As cores seguem as faixas da `AzuosProgressBar` (vermelho, laranja, amarelo, verde), para o mesmo
+  percentual ter a mesma cor nos dois lugares. Concluído é verde cheio.
+
+  Nada a cumprir não é 0% vermelho: o anel fica cinza e diz "—".
+
+  - `data`: o feito (`done`) e o total.
+  - `ui`: o tamanho (`md` ou `lg`) e classes extras.
+-->
 <script lang="ts" module>
-  /**
-   * O andamento GERAL num anel, com o percentual no meio — é o número que a pessoa procura
-   * primeiro ao bater o olho num card ("quanto já chegou?"). As barras ficam para o detalhe.
-   *
-   * As cores seguem as faixas da `AzuosProgressBar` (vermelho, laranja, amarelo, verde), para o
-   * mesmo percentual ter a mesma cor nos dois lugares. Concluído é verde cheio.
-   *
-   * Nada a cumprir não é 0% vermelho: o anel fica cinza e diz "—".
-   */
   export type AzuosProgressRingProps = {
     data: { done: number; total: number };
     ui?: { size?: 'md' | 'lg'; className?: string };

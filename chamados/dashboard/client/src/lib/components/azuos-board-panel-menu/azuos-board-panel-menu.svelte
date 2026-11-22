@@ -1,9 +1,14 @@
+<!--
+  @component
+  O MENU DO BLOCO, como o do título de um painel do Grafana: Ver (o bloco na tela cheia), Editar,
+  Duplicar e Remover. Quem só vê o painel tem só o "Ver"; editar, duplicar e remover aparecem
+  para quem pode montar — e mexer num bloco já abre a montagem do painel.
+
+  - `data`: o título do bloco (dá nome ao botão para o leitor de tela).
+  - `state`: `canEdit`.
+  - `actions`: `onView`, `onEdit`, `onDuplicate` e `onRemove`.
+-->
 <script lang="ts" module>
-  /**
-   * O MENU DO BLOCO, como o do título de um painel do Grafana: Ver (o bloco na tela cheia), Editar,
-   * Duplicar e Remover. Quem só vê o painel tem só o "Ver"; editar, duplicar e remover aparecem
-   * para quem pode montar — e mexer num bloco já abre a montagem do painel.
-   */
   export type AzuosBoardPanelMenuProps = {
     data: { title: string };
     state?: { canEdit?: boolean };

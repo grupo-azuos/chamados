@@ -1,16 +1,21 @@
+<!--
+  @component
+  A falha, com o motivo escrito — nunca um silêncio nem um "algo deu errado".
+
+  Duas formas, e a escolha não é estética: `block` ocupa o lugar do conteúdo que não carregou (a
+  lista inteira falhou); `inline` é uma linha dentro de um formulário ou modal, onde o resto da tela
+  continua válido e um bloco vermelho gigante assustaria mais do que informa.
+
+  `onRetry` só aparece quando tentar de novo pode de fato resolver. Um botão que reexecuta uma
+  recusa de permissão só ensina a pessoa a clicar duas vezes antes de pedir ajuda.
+
+  `role="alert"` é o que faz o leitor de tela anunciar a falha na hora em que ela aparece.
+
+  Props: `data` traz a mensagem e o título; `ui.variant` escolhe `block` ou `inline`;
+  `state.isRetrying` mostra a nova tentativa em andamento; `actions.onRetry` liga o "Tentar de
+  novo".
+-->
 <script lang="ts" module>
-  /**
-   * A falha, com o motivo escrito — nunca um silêncio nem um "algo deu errado".
-   *
-   * Duas formas, e a escolha não é estética: `block` ocupa o lugar do conteúdo que não
-   * carregou (a lista inteira falhou); `inline` é uma linha dentro de um formulário ou
-   * modal, onde o resto da tela continua válido e um bloco vermelho gigante assustaria mais
-   * do que informa.
-   *
-   * `onRetry` só aparece quando tentar de novo pode de fato resolver. Um botão que reexecuta
-   * uma recusa de permissão só ensina a pessoa a clicar duas vezes antes de pedir ajuda.
-   * `role="alert"` é o que faz o leitor de tela anunciar a falha na hora em que ela aparece.
-   */
   export type AzuosErrorStateProps = {
     data: { message: string; title?: string };
     ui?: { variant?: 'block' | 'inline'; className?: string };

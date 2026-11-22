@@ -1,3 +1,16 @@
+<!--
+  @component
+  A MÁQUINA AGORA: o painel da última leitura ao vivo do agente — processador, memória, volumes e
+  rede.
+
+  O processador mostra o total e um medidor por núcleo; a memória, o uso e a memória virtual (só
+  quando existe); os volumes, o espaço livre de cada um e a velocidade de leitura e escrita; a rede,
+  só as interfaces com tráfego no instante. Sem nenhuma leitura, explica que o agente ainda não foi
+  instalado. Só leitura.
+
+  - `data.live`: a leitura, ou nulo quando a máquina nunca enviou nada.
+  - `state.isLoading`: a leitura ainda não chegou.
+-->
 <script lang="ts" module>
   import { type ComputerLive } from '@template/shared/schemas/computer-live.schema';
 

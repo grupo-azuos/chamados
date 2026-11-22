@@ -1,3 +1,14 @@
+<!--
+  @component
+  A lista vazia, com o que fazer a respeito.
+
+  Vazio não é erro, e a tela não pode parecer quebrada: borda tracejada (não cheia), ícone neutro e,
+  quando faz sentido, o botão que resolve. Tela que some sem explicação é como alguém conclui que o
+  sistema perdeu os dados.
+
+  Props: `data` traz o título e a descrição; `ui` traz o ícone (a caixa de entrada, se nenhum vier)
+  e a classe; `children` é a ação sugerida, já montada (normalmente um `ActionButton`).
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';

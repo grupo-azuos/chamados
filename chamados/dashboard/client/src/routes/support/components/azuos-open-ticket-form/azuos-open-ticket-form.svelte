@@ -1,3 +1,29 @@
+<!--
+  @component
+  O FORMULÁRIO PÚBLICO DE ABRIR CHAMADO — em ETAPAS, uma por vez, tipo onboarding.
+
+  As etapas: a área (Infraestrutura, Sistema ou Manutenção, em cards — a primeira escolha, que nasce
+  vazia de propósito), quem é você, sobre o problema (departamento, tipo com "Cadastrar" na busca,
+  urgência e, conforme a área, AnyDesk ou o sistema), o que aconteceu (descrição, print colado com
+  Ctrl+V e anexos) e quem cuida do chamado (responsável, aviso por WhatsApp e pessoas vinculadas).
+  A barra de progresso mostra onde a pessoa está; "Avançar" só trava nos campos obrigatórios que
+  podem chegar vazios, e um envio com erro pula para a primeira etapa com campo em erro.
+
+  Depois de abrir, o formulário SAI DA TELA e dá lugar ao protocolo: é o único dado que a pessoa
+  precisa guardar.
+
+  Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e por
+  isso a tela abre no Storybook preenchida, com erro, enviando e já com o protocolo. Qual etapa está
+  na frente é `$state` puramente visual.
+
+  - `data`: `fields`, `notifyWhatsapp`, `screenshotName`, `attachments`, `opened` e as opções
+    (`systemProjects`, `problemTypes`, `departmentOptions`, `assignees`, `invite`, `watcherIds`,
+    `peopleOptions`).
+  - `state`: `isSubmitting`, `error`, `screenshotError`, `attachmentError`, `systemProjectsLoading`,
+    `systemProjectsError`, `inviteError` e `isNameLocked`.
+  - `actions`: `onChange`, `onBlur`, `onNotifyChange`, `onScreenshotChange`, `onAttachmentsChange`,
+    `onAttachmentError`, `onWatchersChange`, `onRegisterProblemType`, `onSubmit` e `onOpenAnother`.
+-->
 <script lang="ts" module>
   import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import LaptopIcon from '@lucide/svelte/icons/laptop';

@@ -1,13 +1,21 @@
+<!--
+  @component
+  Os três botões de "baixar relatório" — Excel, Word e PDF — na mesma forma em qualquer tela que
+  precisar deles.
+
+  Função pura de props: quem baixa o arquivo e mostra o navegador salvando é o view-model que chama
+  `onExport`, não este componente.
+
+  Enquanto um formato baixa, ele mostra "Baixando…" e os OUTROS ficam desligados: dois downloads
+  simultâneos do mesmo relatório montam o arquivo duas vezes no servidor.
+
+  - `ui`: classes extras.
+  - `state`: `exportingFormat`, o formato que está baixando agora (ou nenhum).
+  - `actions`: `onExport`, com o formato escolhido.
+-->
 <script lang="ts" module>
   import { reportFormatOptions, type ReportFormat } from '@template/shared/schemas/report.schema';
 
-  /**
-   * Os três botões de "baixar relatório" — Excel, Word e PDF — na mesma forma em qualquer
-   * tela que precisar deles.
-   *
-   * Função pura de props: quem baixa o arquivo e mostra o navegador salvando é o view-model
-   * que chama `onExport`, não este componente.
-   */
   export type AzuosReportExportActionsProps = {
     ui?: { className?: string };
     state: { exportingFormat: ReportFormat | null };

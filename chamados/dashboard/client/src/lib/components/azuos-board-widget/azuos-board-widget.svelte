@@ -1,3 +1,15 @@
+<!--
+  @component
+  UM BLOCO DO PAINEL — a fonte contada, desenhada no formato escolhido. O mesmo bloco serve a
+  ver e a montar: montando, ganha a alça de arrastar, o peso, o "trocar o gráfico", o
+  "configurar" e o "remover". Vendo, ganha o "expandir", que abre o gráfico em tela cheia.
+
+  Função pura de props: os números chegam prontos (`data.result`), e o bloco só desenha.
+
+  - `data`: o bloco, o resultado, o nome do filtro salvo e a nota do Período do painel.
+  - `state`: montando, `isPreview` (dentro do editor, não expande) e `canEdit`.
+  - `actions`: editar, remover, trocar o gráfico, duplicar e `onOpenItem`.
+-->
 <script lang="ts" module>
   import {
     DATA_SOURCES,
@@ -9,13 +21,6 @@
   import { type WidgetState } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
   import { type BoardItem } from '$lib/utils/widget-items.util';
 
-  /**
-   * UM BLOCO DO PAINEL — a fonte contada, desenhada no formato escolhido. O mesmo bloco serve a
-   * ver e a montar: montando, ganha a alça de arrastar, o peso, o "trocar o gráfico", o
-   * "configurar" e o "remover". Vendo, ganha o "expandir", que abre o gráfico em tela cheia.
-   *
-   * Função pura de props: os números chegam prontos (`data.result`), e o bloco só desenha.
-   */
   export type AzuosBoardWidgetProps = {
     data: {
       widget: Widget;

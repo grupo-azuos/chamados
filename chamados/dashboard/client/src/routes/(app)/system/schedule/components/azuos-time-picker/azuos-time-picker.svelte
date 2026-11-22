@@ -1,3 +1,17 @@
+<!--
+  @component
+  O CAMPO DE HORÁRIO da agenda: horário em 24 horas, sem depender do seletor do navegador nem
+  arredondar minutos.
+
+  O botão cinza mostra o horário escolhido (ou "Selecionar"); ao abrir, um painel com um seletor de
+  hora e outro de minuto, a prévia em destaque e "Aplicar horário". Abre no valor atual (ou 09:00,
+  se ainda não há um). O valor vai num campo escondido, para o formulário enviar.
+
+  - `data`: `label`, `name`, `value` (`HH:MM`) e `isRequired`.
+  - `ui.className`: o espaço em volta.
+  - `state`: `error` (fundo vermelho claro e a mensagem embaixo) e `isDisabled`.
+  - `actions`: `onChange(value)` ao aplicar e `onBlur` ao fechar o painel.
+-->
 <script lang="ts" module>
   /** Horário em 24 horas, sem depender do seletor do navegador nem arredondar minutos. */
   export type AzuosTimePickerProps = {

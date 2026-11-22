@@ -1,19 +1,25 @@
+<!--
+  @component
+  O campo de texto com RECURSOS A MAIS que o `AzuosTextField` não tem: dica embaixo (`data.hint`),
+  ícone de lupa com Enter (`ui.icon` + `actions.onSubmit`), limite de caracteres, `inputMode` e o
+  tipo `month`. Sem nenhum desses, use o `AzuosTextField`.
+
+  Este arquivo também é o KIT DE CAMPO: `FIELD_CONTROL_CLASS`, `HINT_TONES` e as folgas são o que o
+  campo de sugestões e os de data usam para ficar na mesma família visual.
+
+  O erro fica COLADO no campo, e não num resumo no topo. A dica é a linha miúda que explica de onde
+  o valor veio ("Calculado: 45 dias a partir do início."); ela sai quando há erro — duas mensagens
+  embaixo do mesmo campo competem, e a que importa é a do erro. A dica em tom de erro é âmbar, e não
+  vermelha: ela avisa, mas não trava o envio.
+
+  - `data`: rótulo, nome, valor, convite, `autoComplete`, dica, limite e `inputMode`.
+  - `ui`: o tipo do campo, o ícone de dentro e classes extras.
+  - `state`: erro, desabilitado e obrigatório (o asterisco no rótulo).
+  - `actions`: `onChange`, `onBlur` e `onSubmit`, que faz o Enter e a lupa enviarem.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import type { HTMLInputAttributes } from 'svelte/elements';
-
-  /**
-   * O campo de texto com RECURSOS A MAIS que o `AzuosTextField` não tem: dica embaixo
-   * (`data.hint`), ícone de lupa com Enter (`ui.icon` + `actions.onSubmit`), limite de caracteres,
-   * `inputMode` e o tipo `month`. Sem nenhum desses, use o `AzuosTextField`.
-   *
-   * Este arquivo também é o KIT DE CAMPO: `FIELD_CONTROL_CLASS`, `HINT_TONES` e as folgas são o
-   * que o campo de sugestões e os de data usam para ficar na mesma família visual.
-   *
-   * O erro fica COLADO no campo, e não num resumo no topo. A dica é a linha miúda que explica de
-   * onde o valor veio ("Calculado: 45 dias a partir do início."); ela sai quando há erro — duas
-   * mensagens embaixo do mesmo campo competem, e a que importa é a do erro.
-   */
 
   /** A altura do rótulo mais o vão até o campo — para encostar um controle SEM rótulo na mesma
    * linha de um COM rótulo. 20px do `text-sm` mais 6px do `gap-1.5`. */

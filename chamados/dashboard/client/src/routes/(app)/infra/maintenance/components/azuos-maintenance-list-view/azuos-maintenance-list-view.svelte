@@ -1,3 +1,26 @@
+<!--
+  @component
+  O HISTÓRICO DE MANUTENÇÃO: o que já foi feito em cada equipamento, do mais recente para o mais
+  antigo.
+
+  O quadro de preventivas (`AzuosPreventiveBoard`) fica ACIMA da lista de propósito: ele responde
+  "o que falta fazer", e a lista responde "o que já foi feito". Quem abre a tela de manhã está atrás
+  da primeira pergunta. Depois vêm a busca, o filtro de tipo, a alternância entre cards (celular) e
+  tabela (monitor) e a paginação. Cada registro mostra a máquina (pelo apelido) ou o equipamento de
+  fora, o tipo, a data, quem fez, "Corrigir" e "Excluir" — que pergunta antes; o registro vai para
+  "Removidos", onde dá para desfazer. Lista cortada avisa, em vez de esconder o tamanho do
+  histórico.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro.
+
+  - `data`: `maintenances`, `total`, `preventive`, `schedules`, `filter`, `removing` e `paging`.
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated`,
+    `isPreventiveLoading`, `isRemoving`, `error` e `actionError`.
+  - `actions`: filtros (`onSearchChange`, `onTypeChange`, `onClearFilters`), `onPageChange`,
+    `onRetry`, `onRegister(computerId?)`, `onEdit` e a exclusão (`onAskRemove`, `onCancelRemove`,
+    `onConfirmRemove`).
+-->
 <script lang="ts" module>
   import { departmentLabel } from '@template/shared/domain/department.util';
   import {

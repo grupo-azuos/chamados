@@ -1,13 +1,26 @@
+<!--
+  @component
+  O CARD DE PAINEL e o FILTRO GRANDE com ícone: o número que se lê de relance.
+
+  Fica na superfície da marca (`AzuosCardSurface`). O tom mora no ícone cheio (`rounded-icon`); o
+  número fica na cor do texto, grande, em negrito e com `tabular-nums`. Com `onClick` vira filtro, e
+  o escolhido usa o destaque de seleção da superfície. O tom aceita o nome de estado (`danger`…) ou
+  o sotaque (`plum`…); a cor que a PESSOA escolheu (`ui.color`) vira o tom mais próximo.
+
+  `hint` existe para o número que EXCLUI algo — "exclui 1.067 arquivados", escrito miúdo ao lado do
+  total. Um número que exclui algo precisa dizer o que excluiu. `tooltip` põe o "i" ao lado do
+  rótulo, com a explicação de como o número é calculado.
+
+  - `data`: rótulo, valor, `hint` e `tooltip`.
+  - `ui`: tom, tamanho (`md` ou `lg`), ícone, cor da pessoa, hover colorido e classes extras.
+  - `state`: carregando e `isSelected`, quando o filtro deste cartão já está valendo.
+  - `actions`: `onClick`, que faz o cartão filtrar a lista pelo que ele conta.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
 
   import { type AzuosCardTone } from '$lib/utils/card-tone.util';
 
-  /**
-   * O CARD DE PAINEL e o FILTRO GRANDE com ícone: o número que se lê de relance. O mesmo desenho
-   * do template — superfície da marca (`AzuosCardSurface`), sotaque na bolinha do ícone e no
-   * número; com `onClick` vira filtro, e o escolhido fica no azul claro da marca com texto branco.
-   */
   export type StatCardTone = AzuosCardTone;
 
   export type AzuosStatCardProps = {

@@ -1,3 +1,20 @@
+<!--
+  @component
+  O DESCARTE DA MANUTENÇÃO: o que saiu de uso, quando, quanto e por quê.
+
+  É um REGISTRO, não um cadastro: descarte não se edita nem se apaga, porque é a prova de para onde
+  foi o que não está mais na prateleira. Por isso a tela só tem um botão — "Registrar descarte".
+  Tem o filtro por motivo, o resumo (descartes e unidades, que são números diferentes) e um cartão
+  por descarte: o produto, a quantidade, o motivo, a observação, a data, quem registrou e quanto
+  ficou no depósito. Lista cortada avisa que os mais antigos continuam guardados.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro.
+
+  - `data`: `disposals`, `total`, `units` e `filter` (o motivo).
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated` e `error`.
+  - `actions`: `onReasonChange`, `onClearFilters`, `onRetry` e `onRegister`.
+-->
 <script lang="ts" module>
   import { inventoryUnitShortLabel } from '@template/shared/domain/inventory-catalog.util';
   import {

@@ -1,3 +1,23 @@
+<!--
+  @component
+  A FICHA DE UM CHAMADO — a ordem de serviço: o pedido, a linha do tempo e os dados.
+
+  Função pura de props: não busca nada e não navega. Os dois formulários (lançar histórico e
+  corrigir dados) entram por snippet (`historyForm`, `dataForm`, e os avisos de WhatsApp em
+  `notices`): cada um tem o próprio view-model, que nasce e morre com o chamado, e a ficha só
+  reserva o lugar deles na tela.
+
+  É uma PÁGINA, e não um diálogo sobre a fila, porque o chamado tem endereço próprio: dá para colar
+  `/tickets/7` numa conversa e dizer "é deste que estou falando" — e porque uma linha do tempo que
+  cresce não cabe numa janela que tem de caber na tela.
+
+  A ordem da tela é a de quem atende: primeiro o que foi pedido, depois o que já aconteceu, e por
+  último o que vai acontecer agora (o novo histórico, no fim da linha do tempo).
+
+  `data` leva o chamado, os históricos, os anexos e o link do WhatsApp; `state`, o carregamento e o
+  erro de cada parte e o resultado do último aviso; `actions`, voltar, baixar a ordem de serviço,
+  tirar um anexo e avisar pelo WhatsApp.
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
@@ -17,20 +37,6 @@
   import { type TicketHistory } from '@template/shared/schemas/ticket-history.schema';
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
 
-  /**
-   * A FICHA DE UM CHAMADO — a ordem de serviço: o pedido, a linha do tempo e os dados.
-   *
-   * Função pura de props: não busca nada e não navega. Os dois formulários (lançar histórico e
-   * corrigir dados) entram por `snippet`: cada um tem o próprio view-model, que nasce e morre
-   * com o chamado, e a ficha só reserva o lugar deles na tela.
-   *
-   * É uma PÁGINA, e não um diálogo sobre a fila, porque o chamado tem endereço próprio: dá para
-   * colar `/tickets/7` numa conversa e dizer "é deste que estou falando" — e porque uma linha
-   * do tempo que cresce não cabe numa janela que tem de caber na tela.
-   *
-   * A ordem da tela é a de quem atende: primeiro o que foi pedido, depois o que já aconteceu,
-   * e por último o que vai acontecer agora (o novo histórico, no fim da linha do tempo).
-   */
   export type AzuosTicketDetailViewProps = {
     data: {
       /** O nome da tela para onde o "voltar" leva — a anterior do caminho da pessoa. */

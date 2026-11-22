@@ -1,3 +1,20 @@
+<!--
+  @component
+  A BARRA DE FILTROS do inventário de máquinas — o mesmo recorte do hook `use-computer-list`.
+
+  Em cima, o que se usa toda hora: busca (nome, apelido ou responsável), departamento e o botão
+  "Filtros". O resto mora num painel que desliza ao abrir (`AzuosFilterPanel`), agrupado pelo que
+  pergunta — conexão, saúde, recursos, tipo, alertas, arquivadas e preventiva. Embaixo, uma etiqueta
+  por filtro ligado, com o X que o desliga: com o painel fechado, é ela que mostra o que está
+  limitando a lista. Online e offline são um filtro só (a conexão).
+
+  Função pura de props. O único estado próprio é visual — o painel aberto ou fechado.
+
+  - `data`: `filter` e `departmentOptions` (os do RH e, depois da linha, os daqui).
+  - `state.isFilteredOut`: o filtro escondeu tudo — aí quem oferece "Limpar filtros" é o aviso de
+    lista vazia.
+  - `actions`: um `on…Change` por filtro e `onClearFilters`.
+-->
 <script lang="ts" module>
   import {
     HEALTH_STATUSES,

@@ -1,15 +1,24 @@
+<!--
+  @component
+  Campo de seleção — o mesmo em filtro e em formulário, sobre o `ui/select` do shadcn.
+
+  O `EMPTY_VALUE` resolve um conflito entre duas regras: para o sistema, "nenhum filtro" é a string
+  vazia; para o componente baixado, valor vazio significa "nada selecionado", e ele então mostra o
+  placeholder em vez da opção "Todos". Traduzir a string vazia para uma sentinela na entrada e de
+  volta na saída mantém a opção visível sem contaminar o contrato de quem usa o campo, que continua
+  recebendo `''`.
+
+  O rótulo do escolhido é procurado na própria lista de opções, para o texto em português aparecer
+  já na primeira pintura, e não o valor cru. A opção pode levar ícone ou a foto da pessoa.
+
+  - `data`: o valor e as opções.
+  - `ui`: o convite, o `ariaLabel`, classes extras e a frase da lista sem opções.
+  - `state`: `isDisabled`.
+  - `actions`: `onChange`.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
 
-  /**
-   * Campo de seleção — o mesmo em filtro e em formulário.
-   *
-   * O `EMPTY_VALUE` abaixo resolve um conflito entre duas regras: para o sistema, "nenhum
-   * filtro" é a string vazia; para o componente baixado, valor vazio significa "nada
-   * selecionado", e ele então mostra o placeholder em vez da opção "Todos". Traduzir a
-   * string vazia para uma sentinela na entrada e de volta na saída mantém a opção visível
-   * sem contaminar o contrato de quem usa o campo, que continua recebendo `''`.
-   */
   /** `icon` é opcional: um desenho na frente do texto, no gatilho e em cada linha da lista. */
   export type SelectFieldOption = {
     value: string;

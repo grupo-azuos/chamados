@@ -1,19 +1,26 @@
+<!--
+  @component
+  A BARRA DE PÁGINA de uma lista longa.
+
+  Ela diz TRÊS coisas, e as três importam:
+
+  1. **Quantos itens existem ao todo** — "26–50 de 312". Sem isso a lista é cortada em silêncio, e
+     quem lê não sabe que há mais (CONTRIBUTING §15).
+  2. **Onde a pessoa está** — página 2 de 13.
+  3. **Como andar** — anterior e próxima, desligadas nas pontas em vez de escondidas: um botão que
+     some faz a barra pular de lugar a cada clique.
+
+  Não tem lista de números de página, de propósito: com trezentas páginas ela viraria uma régua, e
+  a pergunta que se faz numa lista ordenada por data é "mais um pouco para trás", não "me leve à
+  página 47".
+
+  - `data`: a página, o tamanho dela, o total de itens (não só os desta página) e o nome do que é
+    contado, no singular e no plural.
+  - `state`: `isLoading`, que desliga os dois botões enquanto a página carrega.
+  - `ui`: classes extras.
+  - `actions`: `onPageChange`, com a página nova.
+-->
 <script lang="ts" module>
-  /**
-   * A BARRA DE PÁGINA de uma lista longa.
-   *
-   * Ela diz TRÊS coisas, e as três importam:
-   *
-   *  1. **Quantos itens existem ao todo** — "26–50 de 312". Sem isso a lista é cortada em
-   *     silêncio, e quem lê não sabe que há mais (CONTRIBUTING §15).
-   *  2. **Onde a pessoa está** — página 2 de 13.
-   *  3. **Como andar** — anterior e próxima, desligadas nas pontas em vez de escondidas: um
-   *     botão que some faz a barra pular de lugar a cada clique.
-   *
-   * Não tem lista de números de página, de propósito: com trezentas páginas ela viraria uma
-   * régua, e a pergunta que se faz numa lista ordenada por data é "mais um pouco para trás",
-   * não "me leve à página 47".
-   */
   export type AzuosPaginationBarProps = {
     data: {
       page: number;

@@ -1,3 +1,15 @@
+<!--
+  @component
+  O menu de ações secundárias: um botão cinza com os três pontinhos e o rótulo, que abre a lista
+  de ações alinhada à direita, com navegação por teclado.
+
+  Cada item pode ter ícone, ser destrutivo (em vermelho) e ter um separador antes. Escolher um
+  item só avisa a tela pelo `id`: a confirmação, quando a ação pede uma, fica a cargo de quem usa.
+
+  - `data.label` e `data.items`: o texto do botão e as ações.
+  - `state.isDisabled`: trava o botão.
+  - `actions.onSelect(id)`: a ação escolhida.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
 

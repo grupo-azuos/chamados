@@ -1,26 +1,31 @@
+<!--
+  @component
+  A MOLDURA DE TODO GRÁFICO — onde o ECharts é montado.
+
+  Todo gráfico do projeto passa por aqui, e é aqui que mora o que não pode variar de um para outro:
+
+  1. **A altura como decisão de quem chama** (`heightClass`): dois quadros lado a lado só alinham se
+     tiverem a mesma caixa.
+  2. **Carregando e vazio iguais em todos**: o bloco pulsando com a altura do gráfico e o vazio como
+     FRASE (um quadro em branco se lê como defeito).
+  3. **O tema claro/escuro acompanhando a troca na hora**: a moldura observa a classe/atributo de
+     tema do documento e entrega ao gráfico as cores novas.
+  4. **O tamanho acompanhando o quadro — uma vez só**: abrir ou fechar o menu anima a largura, e o
+     gráfico só se redesenha quando o tamanho PARA de mudar (`RESIZE_SETTLE_MS`), sem animação.
+     Redesenhar a cada quadro derrubava o FPS da tela inteira.
+  5. **Uma descrição em texto** (`description`) para leitor de tela: um desenho não se lê em voz
+     alta.
+
+  `option` pode ser uma FUNÇÃO do tema, para o gráfico que precisa das cores do tema no próprio
+  desenho (a trilha do medidor, o texto do rótulo).
+
+  Props: `data` traz a `option` e a descrição; `ui` traz a altura, o texto do vazio e a altura de
+  rolagem (`scrollHeight`); `state` traz o carregando e o vazio; `actions` recebe o clique num item
+  (`onSelect`) e num ponto do eixo (`onAxisSelect`).
+-->
 <script lang="ts" module>
   import type { ChartOption, ChartSelection, ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * A MOLDURA DE TODO GRÁFICO — onde o ECharts é montado.
-   *
-   * Todo gráfico do projeto passa por aqui, e é aqui que mora o que não pode variar de um para
-   * outro:
-   *
-   *  1. **A altura como decisão de quem chama** (`heightClass`): dois quadros lado a lado só
-   *     alinham se tiverem a mesma caixa.
-   *  2. **Carregando e vazio iguais em todos**: o bloco pulsando com a altura do gráfico e o
-   *     vazio como FRASE (um quadro em branco se lê como defeito).
-   *  3. **O tema claro/escuro acompanhando a troca na hora**: a moldura observa a classe/atributo
-   *     de tema do documento e entrega ao gráfico as cores novas.
-   *  4. **O tamanho acompanhando o quadro — uma vez só**: abrir ou fechar o menu anima a largura,
-   *     e o gráfico só se redesenha quando o tamanho PARA de mudar (`RESIZE_SETTLE_MS`), sem
-   *     animação. Redesenhar a cada quadro derrubava o FPS da tela inteira.
-   *  5. **Uma descrição em texto** (`description`) para leitor de tela.
-   *
-   * `option` pode ser uma FUNÇÃO do tema, para o gráfico que precisa das cores do tema no
-   * próprio desenho (a trilha do medidor, o texto do rótulo).
-   */
   export type AzuosEchartProps = {
     data: {
       option: ChartOption | ((theme: ChartTheme) => ChartOption);

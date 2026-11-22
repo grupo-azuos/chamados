@@ -1,15 +1,18 @@
+<!--
+  @component
+  UM TEXTO QUE PODE NÃO CABER NA COLUNA: cortado com "…", e o texto inteiro num balão ao passar o
+  mouse.
+
+  O balão só abre quando o corte aconteceu de verdade — "Aguardando" inteiro na tela não precisa
+  repetir "Aguardando" em cima. Quem corta é a classe passada em `ui.className` (`truncate`,
+  `line-clamp-2`) ou o filho (o selo do status corta a si mesmo): os dois são medidos.
+
+  `data.text` é o texto do balão; `children`, o que aparece na célula (sem filho, é o próprio
+  texto).
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
-  /**
-   * UM TEXTO QUE PODE NÃO CABER NA COLUNA: cortado com "…", e o texto inteiro num balão ao
-   * passar o mouse.
-   *
-   * O balão só abre quando o corte aconteceu de verdade — "Aguardando" inteiro na tela não
-   * precisa repetir "Aguardando" em cima. Quem corta é a classe passada em `ui.className`
-   * (`truncate`, `line-clamp-2`) ou o filho (o selo do status corta a si mesmo): os dois são
-   * medidos.
-   */
   export type AzuosTruncatedTextProps = {
     data: { text: string };
     ui?: { className?: string };

@@ -1,12 +1,17 @@
+<!--
+  @component
+  A célula de dado da `AzuosTable`. O shadcn não deixa o texto quebrar (`whitespace-nowrap`); aqui
+  ele quebra, porque nome e descrição compridos não podem alargar a tabela. Só a célula de ações (a
+  que tem botão) fica numa linha só.
+
+  Recebe as mesmas props do `TableCell` do `ui/table`.
+-->
 <script lang="ts">
   import type { ComponentProps } from 'svelte';
 
   import { TableCell } from '$lib/components/ui/table';
   import { cn } from '$lib/utils/cn';
 
-  /* A célula de dado. O shadcn não deixa o texto quebrar (`whitespace-nowrap`); aqui ele quebra,
-     porque nome e descrição compridos não podem alargar a tabela. Só a célula de ações (a que
-     tem botão) fica numa linha só. */
   let { ref = $bindable(null), class: className, ...restProps }: ComponentProps<typeof TableCell> =
     $props();
 </script>

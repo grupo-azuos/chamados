@@ -1,18 +1,23 @@
+<!--
+  @component
+  O campo com pesquisa (`AzuosComboboxField`) com rótulo, dica e mensagem de erro — o mesmo que o
+  `AzuosFormSelectField` faz pelo select, para formulário.
+
+  Existe para listas longas como departamento: rolar até achar não é viável. Por baixo só compõe o
+  `AzuosComboboxField` — altura, raio e lista vêm dele; aqui entram só o rótulo e a mensagem.
+
+  O `onBlur` é chamado ao escolher, e não ao sair do gatilho: num campo de lista a escolha É o fim
+  da edição, e validar ao perder o foco validaria o valor antigo enquanto a lista abre.
+
+  Props: `data` traz o rótulo, o valor, as opções e a dica; `ui` traz os textos do campo, da busca e
+  do vazio e o `ariaLabel`; `state` traz o desabilitado, o erro e o obrigatório; `actions` recebe
+  `onChange` e `onBlur`.
+-->
 <script lang="ts" module>
   import type { AzuosComboboxFieldOption } from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
 
   export type AzuosFormComboboxFieldOption = AzuosComboboxFieldOption;
 
-  /**
-   * O campo com pesquisa (`AzuosComboboxField`) com rótulo, dica e mensagem de erro — o mesmo que
-   * o `AzuosFormSelectField` faz pelo select, para formulário.
-   *
-   * Existe para listas longas como departamento: rolar até achar não é viável. Por baixo só compõe
-   * o `AzuosComboboxField`; aqui entram só o rótulo e a mensagem.
-   *
-   * O `onBlur` é chamado ao escolher, e não ao sair do gatilho: num campo de lista a escolha É o
-   * fim da edição.
-   */
   export type AzuosFormComboboxFieldProps = {
     data: {
       /** Sem rótulo visível (o campo ao lado já diz o que é), o nome vai em `ui.ariaLabel`. */

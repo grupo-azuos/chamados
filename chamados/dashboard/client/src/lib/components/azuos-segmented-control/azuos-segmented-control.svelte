@@ -1,18 +1,24 @@
+<!--
+  @component
+  Um grupo de botões em que só um fica ligado — para trocar o RECORTE de uma tela ("Abertos",
+  "Resolvidos").
+
+  Botões lado a lado, e não um select: o recorte é a primeira pergunta da tela, e as opções precisam
+  estar à vista para a pessoa saber que existem.
+
+  O desenho é o do padrão Apple: um trilho em pílula cinza do tamanho das opções, e a opção ligada
+  em branco por cima, com sombra. O destaque não é pintado em cada botão: ele DESLIZA até a opção
+  escolhida. A variante `prominent` tira o trilho e pinta a ligada no azul principal.
+
+  `aria-pressed` diz ao leitor de tela qual está ligado. Quando as opções não cabem (celular), o
+  trilho rola de lado, em vez de empurrar a página.
+
+  - `data`: o valor ligado e as opções.
+  - `ui`: o `ariaLabel`, a variante e classes extras.
+  - `state`: `isDisabled`.
+  - `actions`: `onChange`, só quando a opção muda.
+-->
 <script lang="ts" module>
-  /**
-   * Um grupo de botões em que só um fica ligado — para trocar o RECORTE de uma tela ("Abertos",
-   * "Resolvidos").
-   *
-   * Botões lado a lado, e não um select: o recorte é a primeira pergunta da tela, e as opções
-   * precisam estar à vista para a pessoa saber que existem.
-   *
-   * O desenho é o segmentado da Trilha Azuos: um trilho no azul-claro do fundo, e a opção ligada
-   * como uma "pastilha" com sombra, em azul e negrito — ligada se lê pelo relevo e pelo peso, não
-   * só pela cor.
-   *
-   * `aria-pressed` diz ao leitor de tela qual está ligado. Em tela estreita os botões quebram
-   * linha dentro do trilho, em vez de empurrar a página para o lado.
-   */
   export type AzuosSegmentedControlOption = { value: string; label: string };
 
   export type AzuosSegmentedControlProps = {

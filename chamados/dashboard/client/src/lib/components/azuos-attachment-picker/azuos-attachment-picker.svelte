@@ -1,3 +1,18 @@
+<!--
+  @component
+  A escolha dos arquivos que serão enviados — antes do envio.
+
+  Escolher pelo botão, arrastar para o campo ou colar com Ctrl+V (o print e o arquivo copiado do
+  explorador entram na lista; colar texto segue normal). Cada escolha é julgada pela MESMA regra
+  que a API usa para recusar (`refuseAttachment`), somando o que o chamado já tem: a tela não
+  aceita o que o envio devolveria. O mesmo arquivo de novo é recusado, e a recusa para no
+  primeiro problema. Os escolhidos aparecem numa lista, cada um com o "x" para tirar.
+
+  - `data`: os arquivos escolhidos e os tipos que o chamado já tem.
+  - `ui`: `isPasteDisabled`, para a tela que já usa o colar para outra coisa.
+  - `state`: desligado e a recusa da última escolha.
+  - `actions`: `onChange` (a lista nova) e `onError` (a recusa, ou nula).
+-->
 <script lang="ts" module>
   import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
   import {

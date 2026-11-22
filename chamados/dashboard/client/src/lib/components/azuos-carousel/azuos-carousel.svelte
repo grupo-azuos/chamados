@@ -1,20 +1,25 @@
+<!--
+  @component
+  Uma faixa que desliza para o lado — arrastando com o mouse ou o dedo, ou pelas setas nas
+  pontas.
+
+  Existe para a fileira que não cabe numa linha: com doze cartões, a grade virava três linhas e
+  empurrava a lista (que é o que a pessoa veio ver) para baixo da dobra. Na faixa, o que sobra
+  fica a um arraste de distância, e a altura é sempre a de UM cartão.
+
+  As setas saem da posição do shadcn (penduradas FORA da caixa) e entram na própria linha:
+  penduradas, elas caíam em cima do menu lateral. O rótulo é em português.
+
+  No Svelte os itens vêm em `data.items` e cada um é desenhado pelo snippet `item` — é o jeito
+  de embrulhar cada filho num item da faixa, que no React era `Children.map`.
+
+  - `data`: os itens.
+  - `ui`: `ariaLabel` (obrigatório), a largura de cada item e classe extra.
+  - `item`: o snippet que desenha cada item.
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
-  /**
-   * Uma faixa que desliza para o lado — arrastando com o mouse ou o dedo, ou pelas setas nas
-   * pontas.
-   *
-   * Existe para a fileira que não cabe numa linha: com doze cartões, a grade virava três linhas e
-   * empurrava a lista (que é o que a pessoa veio ver) para baixo da dobra. Na faixa, o que sobra
-   * fica a um arraste de distância, e a altura é sempre a de UM cartão.
-   *
-   * As setas saem da posição do shadcn (penduradas FORA da caixa) e entram na própria linha:
-   * penduradas, elas caíam em cima do menu lateral. O rótulo é em português.
-   *
-   * No Svelte os itens vêm em `data.items` e cada um é desenhado pelo snippet `item` — é o jeito
-   * de embrulhar cada filho num item da faixa, que no React era `Children.map`.
-   */
   export type AzuosCarouselProps<T> = {
     data: { items: T[] };
     ui: {

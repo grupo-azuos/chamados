@@ -1,3 +1,15 @@
+<!--
+  @component
+  O título da tela e as ações dela, numa fileira só.
+
+  O título principal (`h1`) é de verdade: é por ele que um leitor de tela sabe em que tela a pessoa
+  está, e é o primeiro ponto de parada ao navegar por cabeçalhos.
+
+  - `data`: o título e a descrição.
+  - `ui`: o ícone do item do menu ao lado do título (com ele, o título sobe para o tamanho das
+    telas de trabalho) e classes extras.
+  - `children`: as ações da tela, já montadas (normalmente `ActionButton`), à direita.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';

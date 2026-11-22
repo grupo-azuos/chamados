@@ -1,3 +1,18 @@
+<!--
+  @component
+  O formulário de registrar (e corrigir) uma manutenção, num modal.
+
+  Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e a lista
+  de máquinas vem de fora. Por isso o modal abre no Storybook preenchido, com erro ou enviando — sem
+  servidor e sem biblioteca de formulário no meio.
+
+  **O campo de equipamento à mão só aparece quando nenhuma máquina foi escolhida.** Os dois juntos
+  deixariam o registro dizendo duas coisas diferentes sobre o mesmo serviço.
+
+  Props: `data` traz o modo, os campos e as máquinas; `state` diz se está aberto, enviando,
+  carregando as máquinas ou com erro; `actions` recebe a digitação (`onChange`, `onBlur`), o envio e
+  o fechar.
+-->
 <script lang="ts" module>
   import {
     MAINTENANCE_TYPES,
@@ -18,16 +33,6 @@
 
   export type MachineOption = { value: string; label: string };
 
-  /**
-   * O formulário de registrar (e corrigir) uma manutenção, num modal.
-   *
-   * Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e
-   * a lista de máquinas vem de fora. Por isso o modal abre no Storybook preenchido, com erro
-   * ou enviando — sem servidor e sem biblioteca de formulário no meio.
-   *
-   * **O campo de equipamento à mão só aparece quando nenhuma máquina foi escolhida.** Os dois
-   * juntos deixariam o registro dizendo duas coisas diferentes sobre o mesmo serviço.
-   */
   export type AzuosMaintenanceFormDialogProps = {
     data: {
       mode: 'create' | 'edit';

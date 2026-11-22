@@ -1,11 +1,15 @@
+<!--
+  @component
+  AS PESSOAS VINCULADAS na ficha do chamado — a "OS com envolvidos" do Tasy.
+
+  Quem está aqui vê o chamado em "Meus chamados", responde, anexa e reabre pela Central, e pode ser
+  avisado de um andamento. Marcar ou tirar salva na hora, como as áreas participantes logo acima:
+  não espera o "Salvar" dos dados.
+
+  `data` leva os ids marcados e as pessoas que podem entrar; `ui.isHeaderHidden` tira o título;
+  `state`, carregamento, gravação e erro; `actions.onChange` recebe a lista nova.
+-->
 <script lang="ts" module>
-  /**
-   * AS PESSOAS VINCULADAS na ficha do chamado — a "OS com envolvidos" do Tasy.
-   *
-   * Quem está aqui vê o chamado em "Meus chamados", responde, anexa e reabre pela Central, e
-   * pode ser avisado de um andamento. Marcar ou tirar salva na hora, como as áreas
-   * participantes logo acima: não espera o "Salvar" dos dados.
-   */
   export type AzuosTicketWatchersCardProps = {
     data: { selectedIds: string[]; options: { id: string; name: string }[] };
     /** Sem o título: quando o cartão mora dentro de uma seção que já tem o nome dele. */

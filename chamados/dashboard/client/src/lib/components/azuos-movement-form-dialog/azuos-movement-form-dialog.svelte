@@ -1,3 +1,19 @@
+<!--
+  @component
+  ENTRADA ou SAÍDA de uma peça, num modal.
+
+  O tipo NÃO é um campo: ele vem do botão que abriu o diálogo e aparece no título. Quem clicou em
+  "Saída" já disse o que queria, e um seletor aqui dentro só criaria a chance de registrar o
+  contrário.
+
+  O saldo atual fica visível o tempo todo: é o número que decide se a saída cabe, e obrigar a
+  pessoa a fechar o modal para conferi-lo é como ela erra a quantidade.
+
+  - `data`: a peça, o tipo, os campos (quantidade, máquina, quem cuidou, observação) e as máquinas
+    que podem ser escolhidas.
+  - `state`: aberto, enviando, máquinas carregando e o erro do envio.
+  - `actions`: `onChange` e `onBlur` por campo, `onSubmit` e `onClose`.
+-->
 <script lang="ts" module>
   import {
     movementTypeLabel,
@@ -12,16 +28,6 @@
 
   export type MachineOption = { value: string; label: string };
 
-  /**
-   * ENTRADA ou SAÍDA de uma peça, num modal.
-   *
-   * O tipo NÃO é um campo: ele vem do botão que abriu o diálogo e aparece no título. Quem
-   * clicou em "Saída" já disse o que queria, e um seletor aqui dentro só criaria a chance de
-   * registrar o contrário.
-   *
-   * O saldo atual fica visível o tempo todo: é o número que decide se a saída cabe, e
-   * obrigar a pessoa a fechar o modal para conferi-lo é como ela erra a quantidade.
-   */
   export type AzuosMovementFormDialogProps = {
     data: {
       part: Part;

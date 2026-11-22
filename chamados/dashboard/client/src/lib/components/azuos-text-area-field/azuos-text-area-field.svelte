@@ -1,15 +1,19 @@
+<!--
+  @component
+  Um campo de texto longo: rótulo, área e erro. Mesmo contrato do `AzuosTextField`.
+
+  O erro fica COLADO no campo, e não num resumo no topo: resumo obriga a pessoa a procurar qual dos
+  campos ele descreve.
+
+  O contador aparece só perto do limite (80%). Contador o tempo todo é ruído; contador nenhum é
+  descobrir o limite quando o servidor recusa.
+
+  `data` leva rótulo, nome, valor, `placeholder`, `maxLength` e `isRequired`; `ui`, `rows` e
+  `className`; `state`, `error` e `isDisabled`; `actions`, `onChange` e `onBlur`.
+-->
 <script lang="ts" module>
   import { cn } from '$lib/utils/cn';
 
-  /**
-   * Um campo de texto longo: rótulo, área e erro. Mesmo contrato do `TextField`.
-   *
-   * O erro fica COLADO no campo, e não num resumo no topo: resumo obriga a pessoa a procurar
-   * qual dos campos ele descreve.
-   *
-   * O contador aparece só perto do limite (80%). Contador o tempo todo é ruído; contador
-   * nenhum é descobrir o limite quando o servidor recusa.
-   */
   export type AzuosTextAreaFieldProps = {
     data: {
       label: string;

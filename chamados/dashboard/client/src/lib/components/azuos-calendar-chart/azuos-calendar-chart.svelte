@@ -1,13 +1,18 @@
+<!--
+  @component
+  CALENDÁRIO DE CALOR — quantas coisas caem em cada dia, mês a mês (o "estilo GitHub").
+
+  É o gráfico do PICO: uma semana carregada salta aos olhos como uma mancha escura. Cada
+  quadradinho é um dia; dia sem nada fica na cor da trilha, não some. **Um ano no computador,
+  quatro meses no celular**: doze meses numa tela de 360px dariam quadradinhos de 5px.
+
+  - `data`: os dias com a conta, o nome do que se conta e o primeiro dia mostrado.
+  - `ui`: o texto de vazio e a altura da caixa inteira (`heightClass`).
+  - `state`: carregando.
+-->
 <script lang="ts" module>
   import { formatCount, resolveColor, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * CALENDÁRIO DE CALOR — quantas coisas caem em cada dia, mês a mês (o "estilo GitHub").
-   *
-   * É o gráfico do PICO: uma semana carregada salta aos olhos como uma mancha escura. Cada
-   * quadradinho é um dia; dia sem nada fica na cor da trilha, não some. **Um ano no computador,
-   * quatro meses no celular**: doze meses numa tela de 360px dariam quadradinhos de 5px.
-   */
   export type CalendarDay = { date: string; count: number };
 
   export type AzuosCalendarChartProps = {

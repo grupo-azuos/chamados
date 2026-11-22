@@ -1,3 +1,27 @@
+<!--
+  @component
+  A CASCA PADRÃO DO GRUPO AZUOS — a mesma dos outros 12 sistemas, em Svelte.
+
+  Skill `app-shell-standard`. Este arquivo é TRAVADO pelo hook `protect-app-shell.mjs`: só
+  quem administra (`git config azuos.admin true`) muda. Ele é o par, tela por tela, do
+  `azuos-app-shell.component.tsx` dos sistemas em React:
+
+  COMPUTADOR — barra azul à esquerda (`variant="inset"`, `collapsible="icon"`):
+   - menos de dois módulos → UMA coluna: logo, itens com ícone + rótulo, e no rodapé os
+     atalhos, o Zuzu debruçado, o perfil e o Sair. Recolhida, tudo vira ícone com dica.
+   - dois módulos ou mais → DUAS colunas: o trilho de ícones (logo, módulos, e no rodapé
+     atalhos, foto e Sair) e o painel com os itens do módulo, rotulados, com o Zuzu no pé.
+     Recolhida, sobra só o trilho — com os itens do módulo em ícone.
+
+  CELULAR — sem barra lateral: uma barra fixa embaixo com 3 itens + ☰, e o ☰ abre o menu
+  inteiro numa gaveta de baixo.
+
+  Os itens vêm da lista do módulo dono, em `lib/navigation/navigation.ts`, e entram por
+  `ui.items`. Tela nova no menu é uma linha lá, não aqui.
+
+  A tela vem em `children`. `data` traz os contadores do menu, quem está usando e os módulos
+  que a pessoa atende; `ui.items` traz o menu.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
@@ -8,26 +32,6 @@
   import type { NavItem } from '$lib/navigation/navigation';
   import type { ContextRoles } from '@template/shared/schemas/user.schema';
 
-  /**
-   * A CASCA PADRÃO DO GRUPO AZUOS — a mesma dos outros 12 sistemas, em Svelte.
-   *
-   * Skill `app-shell-standard`. Este arquivo é TRAVADO pelo hook `protect-app-shell.mjs`: só
-   * quem administra (`git config azuos.admin true`) muda. Ele é o par, tela por tela, do
-   * `azuos-app-shell.component.tsx` dos sistemas em React:
-   *
-   * COMPUTADOR — barra azul à esquerda (`variant="inset"`, `collapsible="icon"`):
-   *  - menos de dois módulos → UMA coluna: logo, itens com ícone + rótulo, e no rodapé os
-   *    atalhos, o Zuzu debruçado, o perfil e o Sair. Recolhida, tudo vira ícone com dica.
-   *  - dois módulos ou mais → DUAS colunas: o trilho de ícones (logo, módulos, e no rodapé
-   *    atalhos, foto e Sair) e o painel com os itens do módulo, rotulados, com o Zuzu no pé.
-   *    Recolhida, sobra só o trilho — com os itens do módulo em ícone.
-   *
-   * CELULAR — sem barra lateral: uma barra fixa embaixo com 3 itens + ☰, e o ☰ abre o menu
-   * inteiro numa gaveta de baixo.
-   *
-   * Os itens vêm da lista do módulo dono, em `lib/navigation/navigation.ts`, e entram por
-   * `ui.items`. Tela nova no menu é uma linha lá, não aqui.
-   */
   export type AzuosAppShellProps = {
     children: Snippet;
     data?: {

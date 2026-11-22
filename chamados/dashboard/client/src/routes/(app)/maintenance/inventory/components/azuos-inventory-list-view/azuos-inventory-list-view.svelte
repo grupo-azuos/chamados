@@ -1,3 +1,10 @@
+<!--
+  @component
+  A tela do INVENTÁRIO da Manutenção: busca, filtros e a grade de cartões com foto de tudo o que
+  existe no escritório. Cada cartão é a superfície padrão (`AzuosCardSurface`) — clicar nele abre a
+  correção, e os botões de corrigir e excluir ficam por cima. Use na rota do inventário; ela não
+  busca nada, só desenha o que o view-model entrega.
+-->
 <script lang="ts" module>
   import {
     inventoryCategoryLabel,
@@ -200,22 +207,12 @@
       <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {#each data.items as item (item.id)}
           <li class="flex">
-            <div
-              class="group rounded-surface bg-card shadow-card hover:shadow-card-hover flex flex-1 cursor-pointer flex-row items-stretch overflow-hidden transition-[transform,box-shadow] duration-200 motion-safe:hover:-translate-y-0.5 sm:flex-col"
-              role="button"
-              tabindex="0"
-              aria-label={`Editar ${item.name}`}
-              onclick={(e) => {
-                if (e.target instanceof Element && e.target.closest('[data-card-control]')) return;
-                actions.onEdit(item);
-              }}
-              onkeydown={(e) => {
-                if (e.target !== e.currentTarget) return;
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  actions.onEdit(item);
-                }
-              }}
+            <!-- O cartão é a superfície padrão: o clique em qualquer ponto é o botão de verdade que
+                 ela estende por cima do cartão inteiro (teclado incluso), e o hover vem dela. -->
+            <CardSurface
+              data={{ label: `Editar ${item.name}` }}
+              ui={{ className: 'flex flex-1 flex-row items-stretch sm:flex-col' }}
+              actions={{ onClick: () => actions.onEdit(item) }}
             >
               <div
                 class="bg-muted flex w-20 shrink-0 items-center justify-center overflow-hidden sm:h-32 sm:w-full"
@@ -268,33 +265,26 @@
                   {/if}
                 </div>
 
-                <div
-                  data-card-control
-                  class="flex items-center justify-end gap-1 pt-1 sm:pt-2"
-                >
+                <!-- Os botões sobem acima do botão que cobre o cartão: sem isso o clique em "Excluir"
+                     cairia no "Editar" do cartão. -->
+                <div class="relative z-20 flex items-center justify-end gap-1 pt-1 sm:pt-2">
                   <ActionButton
                     data={{ label: 'Corrigir' }}
                     ui={{ variant: 'ghost', size: 'sm', icon: Pencil, isIconOnly: true }}
                     actions={{
-                      onClick: (e?: MouseEvent) => {
-                        e?.stopPropagation();
-                        actions.onEdit(item);
-                      },
+                      onClick: () => actions.onEdit(item),
                     }}
                   />
                   <ActionButton
                     data={{ label: 'Excluir' }}
                     ui={{ variant: 'ghost', size: 'sm', icon: Trash2, isIconOnly: true }}
                     actions={{
-                      onClick: (e?: MouseEvent) => {
-                        e?.stopPropagation();
-                        actions.onAskDelete(item);
-                      },
+                      onClick: () => actions.onAskDelete(item),
                     }}
                   />
                 </div>
               </div>
-            </div>
+            </CardSurface>
           </li>
         {/each}
       </ul>

@@ -1,13 +1,19 @@
+<!--
+  @component
+  MAPA DE CALOR — o cruzamento de duas dimensões, de uma vez.
+
+  É o gráfico do GARGALO: "quem está com mais coisa parada" é a célula mais escura da coluna
+  "Parado", e se lê sem somar nada. O número vem ESCRITO na célula; a cor só reforça. A combinação
+  que não veio aparece como zero. Passou da altura do quadro, as linhas ROLAM dentro dele. Clicar
+  numa célula entrega a linha e a coluna.
+
+  Props: `data` traz as linhas, as colunas, as células e o nome da série; `state.isLoading` mostra o
+  carregando; `ui` traz o texto do vazio, a altura e a cor da célula mais cheia; `actions.onSelect`
+  recebe a célula clicada.
+-->
 <script lang="ts" module>
   import { formatCount, resolveColor, shortenLabel, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * MAPA DE CALOR — o cruzamento de duas dimensões, de uma vez.
-   *
-   * É o gráfico do GARGALO: "quem está com mais coisa parada" é a célula mais escura da coluna
-   * "Parado", e se lê sem somar nada. O número vem ESCRITO na célula; a cor só reforça. Passou da
-   * altura do quadro, as linhas ROLAM dentro dele. Clicar numa célula entrega a linha e a coluna.
-   */
   export type HeatmapCell = { row: string; column: string; value: number };
 
   export type AzuosHeatmapChartProps = {

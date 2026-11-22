@@ -1,3 +1,20 @@
+<!--
+  @component
+  O TOKEN DO AGENTE, mostrado uma única vez.
+
+  Esta tela existe porque o token não pode ser pedido de novo: o banco guarda só o hash dele, como
+  senha. Se a pessoa fechar sem copiar, o caminho é gerar outro — e é isso que o texto diz. Mostra o
+  token, o comando pronto do PowerShell (com "Copiar comando"), "Copiar código", o botão de baixar o
+  pacote de instalação (só quando `onDownloadBundle` é passada) e "Já guardei". Sem área de
+  transferência, nada quebra: o token continua escrito para copiar à mão.
+
+  Função pura de props: recebe o token e avisa quando foi fechada. Não busca nada, não guarda nada
+  e não copia sozinha.
+
+  - `data`: `computerName` e `token`.
+  - `state`: `isOpen`, `isDownloadingBundle` e `bundleError`.
+  - `actions`: `onClose` e `onDownloadBundle` (opcional).
+-->
 <script lang="ts" module>
   /**
    * O TOKEN DO AGENTE, mostrado uma única vez.

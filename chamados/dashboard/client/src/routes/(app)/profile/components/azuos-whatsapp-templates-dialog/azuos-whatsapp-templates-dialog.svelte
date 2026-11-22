@@ -1,3 +1,20 @@
+<!--
+  @component
+  A EDIÇÃO DOS TEXTOS DO BOT DE WHATSAPP — só o super admin chega aqui.
+
+  Cada mensagem é um modelo com variáveis entre chaves duplas. A pessoa escolhe a mensagem, mexe no
+  texto e vê, embaixo, como ela fica com um chamado de exemplo. As variáveis que valem para aquela
+  mensagem ficam à vista: clicar numa a acrescenta ao fim do texto. Texto editado pode voltar ao
+  original ("Restaurar o original"); a edição fica guardada e volta pelo "Desfazer".
+
+  Função pura de props: a prévia, o erro do rascunho e o "pode salvar" chegam prontos.
+
+  - `data`: `templates`, `selected`, `draft` (ainda não salvo) e `preview`.
+  - `state`: `isOpen`, `isLoading`, `isSaving`, `isRestoring`, `isRestoringEdit`, `isSaved`,
+    `canSave`, `draftError` e `error`.
+  - `actions`: `onSelect`, `onDraftChange`, `onSave`, `onRestore`, `onRestoreEdit` (opcional) e
+    `onClose`.
+-->
 <script lang="ts" module>
   import type { WhatsappTemplate } from '@template/shared/schemas/whatsapp-template.schema';
 

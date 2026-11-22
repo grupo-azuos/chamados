@@ -1,3 +1,22 @@
+<!--
+  @component
+  OS FILTROS DO PAINEL, no estilo do Grafana — uma BARRA compacta acima dos blocos, que recorta
+  TODOS de uma vez, na ordem que quem montou escolheu — o Período inclusive. Cada
+  filtro é uma peça só ("Situação | Todos ▾"), num cartão, em grade que se ajusta à largura.
+
+  O valor escolhido é de quem está vendo, e não se grava.
+
+  Montando, a barra aparece como fica e, embaixo, a lista dos filtros (como as variáveis do
+  Grafana): arrastar para ordenar, escolher o desenho, tirar; e os que faltam, para pôr. A
+  lista nasce FECHADA: aberta, uma linha por filtro empurrava a grade dos blocos para baixo.
+
+  - `data`: os filtros, os valores escolhidos, a conta de cada opção e os filtros que o módulo
+    aceita.
+  - `ui`: `part` — só o Período (`period`), só os outros (`fields`) ou todos.
+  - `state`: montando e `isListOpen` (a lista dos filtros já nasce aberta).
+  - `actions`: mudar o valor, limpar e, montando, pôr, tirar, trocar o desenho, a largura e a
+    ordem.
+-->
 <script lang="ts" module>
   import {
     type BoardFilter,
@@ -10,17 +29,6 @@
   import { type FilterCounts } from '$lib/hooks/use-dashboard-board/use-dashboard-board.svelte';
   import { type BoardFilterPlaceChange } from '$lib/utils/board-draft.util';
 
-  /**
-   * OS FILTROS DO PAINEL, no estilo do Grafana — uma BARRA compacta acima dos blocos, que recorta
-   * TODOS de uma vez, na ordem que quem montou escolheu — o Período inclusive. Cada
-   * filtro é uma peça só ("Situação | Todos ▾"), num cartão, em grade que se ajusta à largura.
-   *
-   * O valor escolhido é de quem está vendo, e não se grava.
-   *
-   * Montando, a barra aparece como fica e, embaixo, a lista dos filtros (como as variáveis do
-   * Grafana): arrastar para ordenar, escolher o desenho, tirar; e os que faltam, para pôr. A
-   * lista nasce FECHADA: aberta, uma linha por filtro empurrava a grade dos blocos para baixo.
-   */
   export type AzuosBoardFilterBarProps = {
     data: {
       filters: BoardFilter[];

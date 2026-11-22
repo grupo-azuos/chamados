@@ -1,13 +1,17 @@
+<!--
+  @component
+  A FAIXA DO RECORTE DO PAINEL — no alto da tela aberta por um clique num item do Painel. Diz
+  de onde a lista veio ("Chamados por situação · Situação: Aberto · Últimos 30 dias"), leva de
+  volta ao Painel e oferece o "Limpar recorte", que devolve a tela aos filtros dela.
+
+  Fica PRESA no alto (`sticky`) enquanto o recorte vale: a lista rola por baixo, e quem rolou
+  não esquece que está vendo um pedaço. Com `notice`, é o aviso de que o recorte não valeu — a
+  tela abriu sem ele.
+
+  - `data`: o recorte em partes (`summary`) e o aviso (`notice`).
+  - `actions`: `onClear` ("Limpar recorte", ou "Entendi" no aviso) e `onBack` (voltar ao Painel).
+-->
 <script lang="ts" module>
-  /**
-   * A FAIXA DO RECORTE DO PAINEL — no alto da tela aberta por um clique num item do Painel. Diz
-   * de onde a lista veio ("Chamados por situação · Situação: Aberto · Últimos 30 dias"), leva de
-   * volta ao Painel e oferece o "Limpar recorte", que devolve a tela aos filtros dela.
-   *
-   * Fica PRESA no alto (`sticky`) enquanto o recorte vale: a lista rola por baixo, e quem rolou
-   * não esquece que está vendo um pedaço. Com `notice`, é o aviso de que o recorte não valeu — a
-   * tela abriu sem ele.
-   */
   export type AzuosBoardDrillBannerProps = {
     data: {
       /** O recorte em partes: o bloco, o item clicado, o período e o resto. */

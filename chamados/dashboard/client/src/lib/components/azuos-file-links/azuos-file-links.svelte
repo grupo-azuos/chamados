@@ -1,3 +1,23 @@
+<!--
+  @component
+  Os dois caminhos para um arquivo anexado: ABRIR mostra numa aba nova (quem está conferindo quer
+  olhar o print sem encher a pasta de downloads) e BAIXAR salva com o nome original (quem vai mandar
+  para o fornecedor precisa do arquivo).
+
+  No padrão Apple os dois são PÍLULAS CINZA iguais, cada uma com o seu ícone e o seu verbo — nada de
+  um link azul solto ao lado de um ícone sem nome. Duas formas:
+
+  - `inline` (padrão): só as duas pílulas, para a linha de tabela e de lista.
+  - `card`: a linha do arquivo inteira — o ícone do tipo (PDF vermelho, planilha verde, imagem
+    roxa), o nome e o tipo embaixo, e as duas pílulas à direita. Com `actions.onRemove`, ganha a
+    lixeira no fim, em vermelho (perigo). É a linha do `AzuosAttachmentList`.
+
+  `rel="noopener noreferrer"` porque o endereço assinado não deve viajar como referência.
+
+  Props: `data` traz o nome do arquivo, os endereços de abrir e baixar, o texto do abrir, o tamanho
+  e o detalhe; `ui` traz a forma (`layout`) e o ícone do abrir; `state.isRemoving` mostra a remoção
+  em andamento; `actions.onRemove` liga a lixeira.
+-->
 <script lang="ts" module>
   import Download from '@lucide/svelte/icons/download';
   import ExternalLink from '@lucide/svelte/icons/external-link';
@@ -11,21 +31,6 @@
   import { type AzuosCardTone, cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
 
-  /**
-   * Os dois caminhos para um arquivo anexado: ABRIR mostra numa aba nova (quem está conferindo
-   * quer olhar o print sem encher a pasta de downloads) e BAIXAR salva com o nome original (quem
-   * vai mandar para o fornecedor precisa do arquivo).
-   *
-   * No padrão Apple os dois são PÍLULAS CINZA iguais, cada uma com o seu ícone e o seu verbo —
-   * nada de um link azul solto ao lado de um ícone sem nome. Duas formas:
-   *
-   * - `inline` (padrão): só as duas pílulas, para a linha de tabela e de lista.
-   * - `card`: a linha do arquivo inteira — o ícone do tipo (PDF vermelho, planilha verde, imagem
-   *   roxa), o nome e o tipo embaixo, e as duas pílulas à direita. Com `actions.onRemove`, ganha a
-   *   lixeira no fim, em vermelho (perigo). É a linha do `AzuosAttachmentList`.
-   *
-   * `rel="noopener noreferrer"` porque o endereço assinado não deve viajar como referência.
-   */
   export type AzuosFileLinksProps = {
     data: {
       /** O nome do arquivo: vai no nome acessível dos dois links, no arquivo salvo e no `card`. */

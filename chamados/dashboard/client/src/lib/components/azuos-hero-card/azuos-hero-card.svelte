@@ -1,3 +1,16 @@
+<!--
+  @component
+  CARTÃO DE DESTAQUE (HERO CARD) DO GRUPO AZUOS.
+
+  Padrão Apple: o card fica na superfície SEM borda (fio de 1px e sombra difusa do `shadow-card`),
+  com canto de superfície (`rounded-surface`); o tom é sotaque — o ícone grande no fundo à direita,
+  como marca d'água temática, e o selo cheio embaixo, com o indicador ou o benefício.
+
+  Com `to` vira link; com `onClick`, botão; sem nenhum dos dois, é só um artigo.
+
+  Props: `data` traz o título, a descrição, o selo, o ícone e o destino (`to`); `ui.tone` escolhe o
+  tom; `actions.onClick` torna o card um botão; `children` é o que vai ao lado do selo.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
@@ -13,17 +26,6 @@
     | 'info'
     | 'neutral';
 
-  /**
-   * CARTÃO DE DESTAQUE SÓLIDO (HERO CARD) DO GRUPO AZUOS.
-   *
-   * - Fundo de cor 100% sólida via tokens semânticos da casa (sem vidro ou gradientes).
-   * - Canto de superfície (`rounded-surface`).
-   * - Ícone grande no fundo à direita, como marca d'água temática.
-   * - Título e descrição com contraste nos modos claro e escuro.
-   * - Selo inferior de indicador ou benefício em contraste nítido.
-   *
-   * Com `to` vira link; com `onClick`, botão; sem nenhum dos dois, é só um artigo.
-   */
   export type AzuosHeroCardProps = {
     data: {
       title: string;

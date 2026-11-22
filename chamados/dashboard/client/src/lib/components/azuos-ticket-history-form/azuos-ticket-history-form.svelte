@@ -1,3 +1,19 @@
+<!--
+  @component
+  LANÇAR UM HISTÓRICO na ordem de serviço.
+
+  Função pura de props: quais tipos cabem, o que cada um faz e o texto do aviso chegam prontos, e
+  por isso o formulário abre no Storybook em qualquer estágio do chamado.
+
+  A decisão de desenho que importa: os tipos vêm em DOIS GRUPOS com título — os que dão andamento e
+  os que encerram. E o que o tipo escolhido faz é dito três vezes, de três jeitos: no grupo em que
+  ele está, na frase embaixo e no texto do botão. Encerrar um chamado por engano é o erro que este
+  formulário existe para não deixar acontecer.
+
+  `data` leva o tipo, os grupos, o efeito e a frase, os campos (descrição e tempo), se a pessoa que
+  abriu vê, os arquivos e quem é avisado por WhatsApp; `state`, envio, carregamento das pessoas e
+  erros; `actions`, uma para cada campo e o `onSubmit`.
+-->
 <script lang="ts" module>
   import {
     type ManualTicketHistoryType,
@@ -12,17 +28,6 @@
     tone: TicketHistoryTone;
   };
 
-  /**
-   * LANÇAR UM HISTÓRICO na ordem de serviço.
-   *
-   * Função pura de props: quais tipos cabem, o que cada um faz e o texto do aviso chegam
-   * prontos, e por isso o formulário abre no Storybook em qualquer estágio do chamado.
-   *
-   * A decisão de desenho que importa: os tipos vêm em DOIS GRUPOS com título — os que dão
-   * andamento e os que encerram. E o que o tipo escolhido faz é dito três vezes, de três
-   * jeitos: no grupo em que ele está, na frase embaixo e no texto do botão. Encerrar um
-   * chamado por engano é o erro que este formulário existe para não deixar acontecer.
-   */
   export type AzuosTicketHistoryFormProps = {
     data: {
       type: ManualTicketHistoryType;

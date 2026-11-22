@@ -1,11 +1,16 @@
+<!--
+  @component
+  O diálogo de liberar módulos para uma pessoa: escolher quem (pelo campo de pessoa do grupo, com
+  foto e busca no diretório do admin-console) e marcar um ou mais módulos. Use na tela de
+  Permissões, aberto por "Liberar módulos" ou pelo card da pessoa na equipe; no modo de edição a
+  pessoa fica fixa e só os módulos aparecem.
+-->
 <script lang="ts" module>
   import {
     ROLE_CONTEXT_LABELS,
     ROLE_CONTEXTS,
-    USER_ROLE_LABELS,
     type DirectoryUser,
     type RoleContext,
-    type UserRole,
   } from '@template/shared/schemas/user.schema';
   import { type FormFieldState } from '$lib/types/form-field.type';
   import { type RoleFormField } from '$lib/hooks/use-role-form/use-role-form.svelte';
@@ -53,11 +58,11 @@
 </script>
 
 <script lang="ts">
-  import PopoverContent from '$lib/components/azuos-search-popover-content/azuos-search-popover-content.svelte';
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
+  import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import Timeline from '$lib/components/azuos-timeline/azuos-timeline.svelte';
   import TimelineStep from '$lib/components/azuos-timeline-step/azuos-timeline-step.svelte';
@@ -68,39 +73,19 @@
     DialogHeader,
     DialogTitle,
   } from '$lib/components/azuos-dialog/azuos-dialog';
-  import {
-    Popover,
-    PopoverTrigger,
-  } from '$lib/components/azuos-popover/azuos-popover';
   import { cn } from '$lib/utils/cn';
 
   import Check from '@lucide/svelte/icons/check';
-  import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import Info from '@lucide/svelte/icons/info';
   import Layers from '@lucide/svelte/icons/layers';
-  import Search from '@lucide/svelte/icons/search';
   import ShieldCheck from '@lucide/svelte/icons/shield-check';
   import User from '@lucide/svelte/icons/user';
-  import { staggerIn } from '$lib/motion/motion';
 
   let { data, state: formState, actions }: AzuosRoleFormDialogProps = $props();
 
   const isEdit = $derived(data.mode === 'edit');
   const fields = $derived(data.fields);
   const users = $derived(data.users ?? []);
-
-  let userSearch = $state('');
-  let isComboboxOpen = $state(false);
-  let listboxEl = $state<HTMLElement | null>(null);
-
-  $effect(() => {
-    if (isComboboxOpen && listboxEl) {
-      const items = listboxEl.querySelectorAll('[role="option"]');
-      if (items.length > 0) {
-        staggerIn(items);
-      }
-    }
-  });
 
   const selectedUser = $derived(
     users.find(
@@ -110,34 +95,26 @@
     ) ?? null,
   );
 
-  const filteredUsers = $derived(
-    userSearch.trim()
-      ? users.filter(
-          (u) =>
-            u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-            u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
-            u.id.toLowerCase().includes(userSearch.toLowerCase()),
-        )
-      : users,
-  );
+  /* O diretório no formato do campo de pessoa: o id, o nome e a foto. A pessoa já escolhida que
+     não está no diretório (veio do card da equipe, ou saiu do admin-console) entra também, com o
+     e-mail no lugar do nome, para o campo mostrar quem é em vez de ficar vazio. */
+  const people = $derived.by(() => {
+    const listed = users.map((u) => ({ id: u.id, name: u.name, photo: u.image ?? null }));
+    const id = fields.userId.value;
+    if (!id || users.some((u) => u.id === id)) return listed;
 
-  function handleSelect(user: DirectoryUser): void {
+    return [{ id, name: fields.userEmail.value || id, photo: null }, ...listed];
+  });
+
+  function handlePick(id: string): void {
+    const user = users.find((u) => u.id === id);
+    if (!user) return;
     if (actions.onSelectUser) {
       actions.onSelectUser(user);
-    } else {
-      actions.onChange('userId', user.id);
-      actions.onChange('userEmail', user.email);
+      return;
     }
-  }
-
-  function handleClear(): void {
-    if (actions.onClearUser) {
-      actions.onClearUser();
-    } else {
-      actions.onChange('userId', '');
-      actions.onChange('userEmail', '');
-    }
-    userSearch = '';
+    actions.onChange('userId', user.id);
+    actions.onChange('userEmail', user.email);
   }
 
   function handleSubmit(event: SubmitEvent): void {
@@ -147,8 +124,8 @@
 </script>
 
 <Dialog open={formState.isOpen} onOpenChange={(open) => !open && actions.onClose()}>
-  <!-- 2xl, e não xl: com a pessoa escolhida, o cartão dela + "Trocar pessoa" e os três cartões
-       de módulo não cabem em 576px e vazavam pela borda direita. -->
+  <!-- 2xl, e não xl: os três cartões de módulo, lado a lado, não cabem em 576px e vazavam pela
+       borda direita. -->
   <DialogContent class="max-w-lg sm:max-w-2xl">
     <DialogHeader class="gap-1.5">
       <div class="flex items-center gap-2.5">
@@ -219,199 +196,22 @@
               </div>
             </div>
           {:else}
-            <div class="flex flex-col gap-2 w-full">
-              <div class="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                <div class="flex-1 min-w-0 relative w-full">
-                  <Popover bind:open={isComboboxOpen}>
-                    <PopoverTrigger
-                      disabled={formState.isLoadingUsers || formState.isSubmitting}
-                      style="width: 100%;"
-                      class={cn(
-                        'control-lg rounded-control',
-                        'flex w-full cursor-pointer items-center justify-between gap-3 border border-transparent bg-muted text-left transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60',
-                        'w-full',
-                        fields.userId.value ? 'p-2.5 min-h-10 h-auto' : 'px-3 text-muted-foreground',
-                      )}
-                      aria-label={fields.userId.value ? 'Alterar pessoa selecionada' : 'Selecionar pessoa da lista'}
-                    >
-                      {#if selectedUser || fields.userId.value}
-                        <div class="flex items-center gap-2.5 min-w-0">
-                          <PersonAvatar
-                            name={selectedUser?.name || fields.userEmail.value || fields.userId.value}
-                            avatarUrl={selectedUser?.image}
-                            ui={{ size: 'md' }}
-                          />
-                          <div class="min-w-0">
-                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <span class="block text-xs font-semibold text-foreground truncate">
-                                {selectedUser?.name || fields.userEmail.value || fields.userId.value}
-                              </span>
-                              <span
-                                class="text-xs font-medium text-primary bg-muted px-1.5 py-0.5 rounded-chip shrink-0"
-                              >
-                                Selecionada
-                              </span>
-                            </div>
-                            {#if fields.userEmail.value}
-                              <span class="block text-xs text-muted-foreground truncate">
-                                {fields.userEmail.value}
-                              </span>
-                            {/if}
-                          </div>
-                        </div>
-                        <div class="flex items-center gap-2 shrink-0">
-                          {#if selectedUser?.role}
-                            <span
-                              class="hidden sm:inline-block text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip"
-                            >
-                              {USER_ROLE_LABELS[selectedUser.role as UserRole] ?? selectedUser.role}
-                            </span>
-                          {/if}
-                          <ChevronDown
-                            class={cn(
-                              'size-4 text-muted-foreground transition-transform duration-200',
-                              isComboboxOpen && 'rotate-180 text-primary',
-                            )}
-                            aria-hidden="true"
-                          />
-                        </div>
-                      {:else}
-                        <div class="flex items-center gap-2 truncate">
-                          <User class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                          <span class="text-sm">
-                            {formState.isLoadingUsers
-                              ? 'Carregando lista de pessoas…'
-                              : 'Selecione uma pessoa da lista…'}
-                          </span>
-                        </div>
-                        <ChevronDown
-                          class={cn(
-                            'size-4 shrink-0 text-muted-foreground transition-transform duration-200',
-                            isComboboxOpen && 'rotate-180 text-primary',
-                          )}
-                          aria-hidden="true"
-                        />
-                      {/if}
-                    </PopoverTrigger>
-
-                    <!-- A LARGURA DO BALÃO É AMARRADA À DO GATILHO, entre um piso e um teto.
-                         --bits-popover-anchor-width é a largura do campo de entrada medido pelo
-                         componente: o combobox mantém largura igual à do input. -->
-                    <PopoverContent
-                      matchAnchorWidth
-                      class="min-w-(--bits-popover-anchor-width) max-w-(--bits-popover-anchor-width) w-(--bits-popover-anchor-width) p-0"
-                      align="start"
-                      sideOffset={4}
-                    >
-                      <div class="relative border-b border-border p-2 sm:p-2.5 w-full">
-                        <Search
-                          class="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
-                          aria-hidden="true"
-                        />
-                        <input
-                          type="search"
-                          name="directory_user_search_filter"
-                          bind:value={userSearch}
-                          placeholder="Buscar colaborador por nome ou e-mail…"
-                          autocomplete="off"
-                          autocorrect="off"
-                          autocapitalize="off"
-                          spellcheck={false}
-                          data-bwignore="true"
-                          data-1p-ignore="true"
-                          data-lpignore="true"
-                          data-form-type="other"
-                          class="control-lg rounded-control w-full border border-transparent bg-muted pr-3 pl-9.5 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                          style="width: 100%;"
-                        />
-                      </div>
-
-                      <div
-                        bind:this={listboxEl}
-                        class="min-h-0 max-h-60 overscroll-contain overflow-x-hidden overflow-y-auto divide-y divide-border p-1 w-full"
-                        role="listbox"
-                        aria-label="Lista de colaboradores"
-                      >
-                        {#if formState.isLoadingUsers}
-                          <p class="py-4 text-center text-xs text-muted-foreground">
-                            Carregando lista de pessoas…
-                          </p>
-                        {:else if filteredUsers.length === 0}
-                          <div class="p-4 text-center">
-                            <p class="text-xs text-muted-foreground">
-                              {userSearch.trim()
-                                ? 'Nenhuma pessoa encontrada com esse termo.'
-                                : 'Nenhuma pessoa disponível no diretório.'}
-                            </p>
-                          </div>
-                        {:else}
-                          {#each filteredUsers as user (user.id)}
-                            {@const isSelected = fields.userId.value === user.id}
-                            <button
-                              type="button"
-                              role="option"
-                              aria-selected={isSelected}
-                              onclick={() => {
-                                handleSelect(user);
-                                isComboboxOpen = false;
-                              }}
-                              class={cn(
-                                'flex w-full cursor-pointer items-center justify-between gap-3 rounded-control p-2 text-left transition-colors',
-                                isSelected ? 'bg-muted' : 'hover:bg-muted',
-                              )}
-                            >
-                              <div class="flex items-center gap-2.5 min-w-0">
-                                <PersonAvatar
-                                  name={user.name}
-                                  avatarUrl={user.image}
-                                  ui={{ size: 'md' }}
-                                />
-                                <div class="min-w-0">
-                                  <div class="flex items-center gap-1.5">
-                                    <span
-                                      class={cn(
-                                        'block text-xs font-semibold truncate',
-                                        isSelected ? 'text-primary' : 'text-foreground',
-                                      )}
-                                    >
-                                      {user.name}
-                                    </span>
-                                    {#if isSelected}
-                                      <Check class="size-3 text-primary shrink-0" aria-hidden="true" />
-                                    {/if}
-                                  </div>
-                                  <span class="block text-xs text-muted-foreground truncate">
-                                    {user.email}
-                                  </span>
-                                </div>
-                              </div>
-                              {#if user.role}
-                                <span
-                                  class="shrink-0 text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip"
-                                >
-                                  {USER_ROLE_LABELS[user.role as UserRole] ?? user.role}
-                                </span>
-                              {/if}
-                            </button>
-                          {/each}
-                        {/if}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {#if fields.userId.value}
-                  <div class="shrink-0 self-start sm:self-auto">
-                    <ActionButton
-                      data={{ label: 'Trocar pessoa' }}
-                      ui={{ variant: 'ghost', size: 'lg' }}
-                      state={{ isDisabled: formState.isSubmitting }}
-                      actions={{ onClick: handleClear }}
-                    />
-                  </div>
-                {/if}
-              </div>
-
+            <!-- O CAMPO DE PESSOA DO GRUPO (regra `select-standard`): a lista de quem tem acesso,
+                 com foto e busca, e o valor é o id — o mesmo `AzuosPersonPickerField` do template.
+                 Trocar de pessoa é só escolher outra na lista. -->
+            <div class="flex w-full min-w-0 flex-col gap-2">
+              <PersonPickerField
+                data={{ value: fields.userId.value, people }}
+                ui={{
+                  ariaLabel: 'Pessoa',
+                  placeholder: formState.isLoadingUsers ? 'Carregando lista de pessoas…' : 'Selecione uma pessoa da lista…',
+                }}
+                state={{
+                  isDisabled: formState.isLoadingUsers || formState.isSubmitting,
+                  isInvalid: Boolean(fields.userId.error),
+                }}
+                actions={{ onChange: handlePick }}
+              />
               {#if fields.userId.error}
                 <p class="text-xs text-destructive">{fields.userId.error}</p>
               {/if}

@@ -1,3 +1,15 @@
+<!--
+  @component
+  A PORTA do módulo Sistema: a tela cheia que pede para a pessoa vincular o GitHub antes de entrar.
+
+  Um card centralizado com o pedido e três saídas: "Vincular GitHub" (abre a autorização),
+  "Verificar novamente" (para quem já autorizou em outra aba) e "Ir para meu perfil". Enquanto
+  confere a vinculação mostra só o aviso de espera; se a integração ainda não foi configurada pelo
+  administrador, avisa e trava o botão de vincular.
+
+  - `state`: `isLoading` (conferindo), `isConfigured`, `isConnecting` (abrindo o GitHub) e `error`.
+  - `actions`: `onConnect`, `onRetry` e `onLeave`.
+-->
 <script lang="ts" module>
   export type AzuosGithubLinkGateProps = {
     state: {
