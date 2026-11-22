@@ -188,7 +188,7 @@
         >
           {#if isEdit}
             <div
-              class="flex items-center justify-between gap-3 rounded-box border border-border bg-muted p-3.5"
+              class="flex items-center justify-between gap-3 rounded-box bg-muted p-3.5"
             >
               <div class="flex items-center gap-3 min-w-0">
                 <PersonAvatar
@@ -202,7 +202,7 @@
                       {selectedUser?.name || fields.userEmail.value || fields.userId.value}
                     </span>
                     <span
-                      class="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip border border-border"
+                      class="text-xs font-medium text-muted-foreground bg-card px-1.5 py-0.5 rounded-chip"
                     >
                       Pessoa existente
                     </span>
@@ -262,7 +262,7 @@
                         <div class="flex items-center gap-2 shrink-0">
                           {#if selectedUser?.role}
                             <span
-                              class="hidden sm:inline-block text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip border border-border"
+                              class="hidden sm:inline-block text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip"
                             >
                               {USER_ROLE_LABELS[selectedUser.role as UserRole] ?? selectedUser.role}
                             </span>
@@ -321,7 +321,7 @@
                           data-1p-ignore="true"
                           data-lpignore="true"
                           data-form-type="other"
-                          class="control-lg rounded-control w-full border border-border bg-muted pr-3 pl-9.5 text-xs text-foreground outline-none"
+                          class="control-lg rounded-control w-full border border-transparent bg-muted pr-3 pl-9.5 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                           style="width: 100%;"
                         />
                       </div>
@@ -387,7 +387,7 @@
                               </div>
                               {#if user.role}
                                 <span
-                                  class="shrink-0 text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip border border-border"
+                                  class="shrink-0 text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-chip"
                                 >
                                   {USER_ROLE_LABELS[user.role as UserRole] ?? user.role}
                                 </span>
@@ -445,10 +445,9 @@
                   isSelected ? data.contexts.filter((context) => context !== ctx) : [...data.contexts, ctx],
                 )}
                 class={cn(
-                  'flex flex-col items-start gap-1 p-3 rounded-box border text-left transition-colors',
-                  isSelected
-                    ? 'bg-muted'
-                    : 'border-border bg-card hover:bg-muted',
+                  'flex flex-col items-start gap-1 p-3 rounded-box text-left transition-colors',
+                  /* Sem borda (padrão Apple): o escolhido ganha o fundo claro da marca. */
+                  isSelected ? 'bg-primary-soft' : 'bg-muted hover:bg-hover-veil',
                   (isEdit || formState.isSubmitting) && 'opacity-60 cursor-not-allowed',
                 )}
               >
@@ -477,14 +476,14 @@
 
           <!-- O nível NÃO se escolhe aqui: ele vem do papel da pessoa no admin-console. -->
           <div
-            class="flex items-start gap-2.5 rounded-box border border-border bg-muted p-3 text-xs leading-relaxed text-muted-foreground"
+            class="flex items-start gap-2.5 rounded-box bg-muted p-3 text-xs leading-relaxed text-muted-foreground"
           >
             <Info class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
             <span>
               O que a pessoa pode no módulo vem do papel dela no <strong>admin-console</strong>:
               Administrador mexe em tudo, Gestor e Usuário só consultam. O <strong>Super Admin</strong>
               só é criado por comando no servidor (<code
-                class="font-mono text-xs bg-background px-1 py-0.5 rounded-chip border border-border"
+                class="font-mono text-xs bg-background px-1 py-0.5 rounded-chip"
                 >npm run superadmin:promote</code
               >).
             </span>

@@ -22,7 +22,7 @@
       value: 'neutral',
       label: 'Grafite',
       dotClass: 'bg-muted-foreground',
-      surfaceClass: 'border-border bg-card hover:border-border',
+      surfaceClass: 'bg-muted',
     },
   ] as const;
 

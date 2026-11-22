@@ -57,14 +57,6 @@
     { tone: 'neutral', label: 'Padrão' },
   ];
 
-  const CARD_SURFACE_STYLES: Record<StatusBadgeTone, string> = {
-    brand: 'bg-muted',
-    info: 'bg-muted',
-    success: 'bg-muted',
-    warning: 'bg-muted',
-    danger: 'bg-muted',
-    neutral: 'bg-card border-border hover:border-border',
-  };
 </script>
 
 <script lang="ts">
@@ -211,7 +203,7 @@
   {#if viewState.isLoading}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {#each [0, 1, 2, 3] as idx (idx)}
-        <div class="h-96 animate-pulse rounded-surface border border-border bg-muted"></div>
+        <div class="h-96 animate-pulse rounded-surface bg-muted"></div>
       {/each}
     </div>
   {:else if viewState.error}
@@ -235,9 +227,7 @@
       {#each data.columns as column (column.id)}
         {@const isDropTarget = activeDropColumn === column.id}
         <div
-          class="flex flex-col rounded-surface border p-4 transition-colors {isDropTarget
-            ? 'bg-muted'
-            : 'border-border bg-muted'}"
+          class="flex flex-col rounded-surface bg-muted p-4"
           ondragenter={(e) => handleDragEnter(e, column.id)}
           ondragover={(e) => handleDragOver(e, column.id)}
           ondragleave={(e) => handleDragLeave(e, column.id)}
@@ -247,11 +237,11 @@
         >
           <!-- Cabeçalho da Coluna -->
           <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 class="text-sm font-medium text-muted-foreground">
               {column.title}
             </h2>
             <span
-              class="grid size-6 place-items-center rounded-full bg-muted text-xs font-medium text-muted-foreground tabular-nums"
+              class="grid size-6 place-items-center rounded-full bg-card text-xs font-medium text-muted-foreground tabular-nums"
             >
               {column.tickets.length}
             </span>
@@ -261,7 +251,7 @@
           <div class="flex flex-1 flex-col gap-3 min-h-32">
             {#if isDropTarget && draggedTicketId !== null}
               <div
-                class="grid h-16 place-items-center rounded-box border-dashed bg-muted text-xs font-medium text-primary animate-pulse"
+                class="grid h-16 place-items-center rounded-box border-2 border-dashed border-border text-xs font-medium text-primary motion-safe:animate-pulse"
               >
                 Solte aqui para mover para {column.title}
               </div>
@@ -269,7 +259,7 @@
 
             {#if column.tickets.length === 0 && !isDropTarget}
               <div
-                class="grid h-28 place-items-center rounded-box border border-dashed border-border text-xs text-muted-foreground"
+                class="grid h-28 place-items-center rounded-box border-2 border-dashed border-border text-xs text-muted-foreground"
               >
                 Arraste um card para cá
               </div>
@@ -285,9 +275,7 @@
                   draggable={!viewState.isMoving}
                   ondragstart={(e) => handleDragStart(e, ticket.id)}
                   ondragend={handleDragEnd}
-                  class="group relative flex flex-col gap-2 rounded-box border p-3.5 text-left shadow-xs transition {CARD_SURFACE_STYLES[
-                    ticketTone
-                  ] ?? CARD_SURFACE_STYLES.neutral} {isBeingDragged
+                  class="group relative flex flex-col gap-2 rounded-box bg-card p-3.5 text-left shadow-card transition {isBeingDragged
                     ? 'opacity-40 cursor-grabbing'
                     : 'cursor-grab active:cursor-grabbing'}"
                   onclick={(e) => {
@@ -336,7 +324,7 @@
 
                         {#if activeColorPickerTicketId === ticket.id}
                           <div
-                            class="absolute right-0 top-7 z-30 flex w-36 flex-col gap-1 rounded-surface border-transparent bg-popover p-2 shadow-xl ring-1 ring-foreground/8"
+                            class="absolute right-0 top-7 z-30 flex w-36 flex-col gap-1 rounded-surface bg-popover p-2 shadow-xl ring-1 ring-foreground/8 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95"
                             onclick={(e) => e.stopPropagation()}
                             onkeydown={(e) => {
                               if (e.key === 'Escape') activeColorPickerTicketId = null;
@@ -345,7 +333,7 @@
                             tabindex="-1"
                           >
                             <span
-                              class="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                              class="px-2 py-1 text-xs font-medium text-muted-foreground"
                             >
                               Etiqueta
                             </span>

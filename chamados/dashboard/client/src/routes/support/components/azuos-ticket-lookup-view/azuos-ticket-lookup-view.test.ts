@@ -117,9 +117,14 @@ describe('AzuosTicketLookupView', () => {
       },
     });
 
-    expect(screen.getByRole('link', { name: /abrir o print/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Abrir print-CH-0007.png' })).toHaveAttribute(
       'href',
       'https://x.invalid/a.png',
+    );
+    // Arquivo tem as duas ações: abrir e baixar.
+    expect(screen.getByRole('link', { name: 'Baixar print-CH-0007.png' })).toHaveAttribute(
+      'download',
+      'print-CH-0007.png',
     );
   });
 

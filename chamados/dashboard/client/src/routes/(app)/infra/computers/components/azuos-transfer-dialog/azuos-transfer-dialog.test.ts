@@ -115,13 +115,16 @@ describe('AzuosTransferDialog', () => {
 
     const dialog = within(screen.getByRole('dialog'));
     expect(dialog.getByText('Teclado USB ABNT2 — Teclado')).toBeInTheDocument();
-    expect(dialog.getByRole('radio', { name: 'Vai junto com a máquina' })).toBeChecked();
+    expect(dialog.getByRole('button', { name: 'Vai junto com a máquina' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 
   it('tells the screen a peripheral is staying behind', async () => {
     renderDialog();
 
-    await userEvent.click(screen.getByRole('radio', { name: 'Fica na estação' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Fica na estação' }));
 
     expect(actions.onDestinyChange).toHaveBeenCalledWith(7, 'station');
   });

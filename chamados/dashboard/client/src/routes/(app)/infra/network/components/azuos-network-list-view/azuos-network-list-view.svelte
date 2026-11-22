@@ -121,6 +121,7 @@
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import {
     Table,
     TableActions,
@@ -131,7 +132,6 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
   import { formatDateTime } from '$lib/utils/format-date';
 
@@ -159,7 +159,7 @@
   }
 </script>
 
-<div class="flex w-full flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{ title: 'Rede', description: 'Quedas e instabilidade do link de internet.' }}
   >
@@ -307,12 +307,8 @@
       data-slot="network-cards-mobile"
     >
       {#each data.events as event (event.id)}
-        <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
-        <div
-          use:fillFromPointer
-          style:--fill-color={fillColorOf(networkSeverityTone(event.severity))}
-          class="hover-fill bg-card rounded-surface p-4 shadow-card"
-        >
+        <!-- A situação está no selo: o hover do card é só o véu neutro (padrão Apple). -->
+        <CardSurface ui={{ className: 'p-4' }}>
           <div class="flex flex-wrap items-start justify-between gap-2">
             <div class="flex flex-wrap items-center gap-2">
               <StatusBadge
@@ -366,7 +362,7 @@
               />
             {/if}
           </div>
-        </div>
+        </CardSurface>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">

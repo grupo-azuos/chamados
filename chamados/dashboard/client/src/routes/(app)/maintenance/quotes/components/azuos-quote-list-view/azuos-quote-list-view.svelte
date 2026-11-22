@@ -82,6 +82,7 @@
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import FileLinks from '$lib/components/azuos-file-links/azuos-file-links.svelte';
   import { formatDay } from '$lib/utils/format-date';
 
   let { data, state: listState, actions }: AzuosQuoteListViewProps = $props();
@@ -96,7 +97,7 @@
   );
 </script>
 
-<div class="flex w-full flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Orçamentos',
@@ -220,18 +221,22 @@
             {/if}
 
             <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
-              <!-- O documento abre em outra aba: quem está conferindo o orçamento quer o PDF
-                   ao lado da lista, não no lugar dela. -->
+              <!-- O documento tem as duas ações do grupo: abrir em outra aba (quem confere quer o
+                   PDF ao lado da lista) e baixar com o nome original. -->
               {#if quote.attachmentUrl}
-                <a
-                  href={quote.attachmentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-primary inline-flex min-w-0 items-center gap-1.5 text-xs font-medium underline-offset-4 hover:underline"
-                >
-                  <Paperclip class="size-3.5 shrink-0" aria-hidden="true" />
-                  <span class="truncate">{quote.attachmentName ?? 'Abrir documento'}</span>
-                </a>
+                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                  <span class="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 text-xs">
+                    <Paperclip class="size-3.5 shrink-0" aria-hidden="true" />
+                    <span class="truncate">{quote.attachmentName ?? 'Documento do orçamento'}</span>
+                  </span>
+                  <FileLinks
+                    data={{
+                      fileName: quote.attachmentName ?? 'orcamento.pdf',
+                      viewUrl: quote.attachmentUrl,
+                      downloadUrl: quote.attachmentUrl,
+                    }}
+                  />
+                </div>
               {:else}
                 <span class="text-muted-foreground text-xs">Sem documento</span>
               {/if}

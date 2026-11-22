@@ -20,37 +20,40 @@
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
 
   let { data, state: viewState, actions }: AzuosServiceOrderLookupFormProps = $props();
 </script>
 
-<form
-  class="bg-card rounded-surface flex flex-col gap-4 p-5 shadow-card"
-  onsubmit={(event) => {
-    event.preventDefault();
-    actions.onSubmit();
-  }}
->
-  <TextField
-    data={{
-      label: 'Código do documento',
-      name: 'code',
-      value: data.code,
-      placeholder: 'Ex.: a1b2c3d4e5f6',
-      autoComplete: 'off',
-      isRequired: true,
+<CardSurface ui={{ className: 'p-5' }}>
+  <form
+    class="flex flex-col gap-4"
+    onsubmit={(event) => {
+      event.preventDefault();
+      actions.onSubmit();
     }}
-    state={{ error: viewState?.error, isAutoFocused: true }}
-    actions={{ onChange: actions.onChange }}
-  />
+  >
+    <TextField
+      data={{
+        label: 'Código do documento',
+        name: 'code',
+        value: data.code,
+        placeholder: 'Ex.: a1b2c3d4e5f6',
+        autoComplete: 'off',
+        isRequired: true,
+      }}
+      state={{ error: viewState?.error, isAutoFocused: true }}
+      actions={{ onChange: actions.onChange }}
+    />
 
-  <p class="text-ink-500 text-xs">
-    O código fica no rodapé da ordem de serviço, ao lado do QR code.
-  </p>
+    <p class="text-ink-500 text-xs">
+      O código fica no rodapé da ordem de serviço, ao lado do QR code.
+    </p>
 
-  <ActionButton
-    data={{ label: 'Conferir documento' }}
-    ui={{ icon: FileCheck, className: 'self-start' }}
-    actions={{ onClick: actions.onSubmit }}
-  />
-</form>
+    <ActionButton
+      data={{ label: 'Conferir documento' }}
+      ui={{ icon: FileCheck, className: 'self-start' }}
+      actions={{ onClick: actions.onSubmit }}
+    />
+  </form>
+</CardSurface>

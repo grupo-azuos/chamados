@@ -66,7 +66,7 @@
   );
 </script>
 
-<div class="flex w-full flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Descarte',

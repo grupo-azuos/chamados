@@ -118,6 +118,7 @@
   import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
 
   let { data, state, actions }: AzuosProjectDetailViewProps = $props();
 
@@ -128,7 +129,7 @@
     ICONS[event.type as keyof typeof ICONS] ?? History;
 </script>
 
-<div class="flex w-full flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <BackButton data={{ destination: data.backDestination ?? 'os projetos' }} actions={{ onClick: actions.onBack }} />
 
   <PageHeader
@@ -180,7 +181,7 @@
 
   <!-- 2. O que está acontecendo agora, e os chamados que dependem disso. -->
   <div class="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-    <section class="bg-card rounded-surface min-w-0 shadow-card">
+    <CardSurface ui={{ className: 'min-w-0' }}>
       <header class="border-border border-b px-4 py-3">
         <h2 class="text-ink-900 text-sm font-semibold">Em andamento agora</h2>
         <p class="text-ink-500 text-xs">PRs abertos e issues pendentes, do mais recente.</p>
@@ -216,9 +217,9 @@
           {/each}
         </ul>
       {/if}
-    </section>
+    </CardSurface>
 
-    <section class="bg-card rounded-surface min-w-0 shadow-card">
+    <CardSurface ui={{ className: 'min-w-0' }}>
       <header class="border-border border-b px-4 py-3">
         <h2 class="text-ink-900 text-sm font-semibold">Chamados abertos</h2>
         <p class="text-ink-500 text-xs">Os pedidos de suporte deste sistema ainda sem solução.</p>
@@ -232,7 +233,7 @@
               <button
                 type="button"
                 onclick={() => actions.onOpenTicket(ticket)}
-                class="hover:bg-muted flex w-full min-w-0 items-start gap-3 px-4 py-3 text-left transition-colors"
+                class="hover:bg-hover-veil flex w-full min-w-0 items-start gap-3 px-4 py-3 text-left transition-colors"
               >
                 <div class="min-w-0 flex-1">
                   <p class="text-ink-900 text-sm font-medium">
@@ -250,11 +251,11 @@
           {/each}
         </ul>
       {/if}
-    </section>
+    </CardSurface>
   </div>
 
   <!-- 3. A timeline, dia a dia. -->
-  <section class="bg-card rounded-surface min-w-0 shadow-card">
+  <CardSurface ui={{ className: 'min-w-0' }}>
     <header
       class="border-border flex min-w-0 flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-end sm:justify-between"
     >
@@ -285,7 +286,7 @@
       <ol class="flex flex-col gap-6 px-4 py-5">
         {#each data.days as day (day.day)}
           <li class="min-w-0">
-            <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wide uppercase">
+            <h3 class="text-muted-foreground mb-3 text-sm font-medium">
               {formatDay(day.day)}
             </h3>
             <!-- A linha vertical liga os eventos do dia; o ícone marca o tipo. -->
@@ -328,5 +329,5 @@
         </p>
       {/if}
     {/if}
-  </section>
+  </CardSurface>
 </div>

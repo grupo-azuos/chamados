@@ -83,7 +83,7 @@
 <div class="border-border flex flex-col gap-5 border-t pt-4">
   <form novalidate class="flex flex-col gap-3" onsubmit={handleSubmit} aria-label={copy.title}>
     <div class="flex flex-col gap-0.5">
-      <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">{copy.title}</p>
+      <p class="text-muted-foreground text-sm font-medium">{copy.title}</p>
       <p class="text-ink-500 text-xs">{copy.hint}</p>
     </div>
 
@@ -133,7 +133,7 @@
   </form>
 
   <section class="flex flex-col gap-1.5" aria-label="Pessoas vinculadas">
-    <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+    <p class="text-muted-foreground text-sm font-medium">
       Pessoas vinculadas
     </p>
     <p class="text-ink-500 text-xs">

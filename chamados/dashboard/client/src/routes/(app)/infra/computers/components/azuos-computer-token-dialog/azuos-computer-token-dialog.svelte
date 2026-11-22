@@ -90,14 +90,14 @@
     </DialogHeader>
 
     <div
-      class="min-w-0 rounded-box border border-border bg-foreground p-4 font-mono text-xs text-background break-all select-all flex items-center gap-3"
+      class="min-w-0 rounded-box bg-foreground p-4 font-mono text-xs text-background break-all select-all flex items-center gap-3"
       data-testid="agent-token"
     >
       <span class="min-w-0 break-all tracking-wider">{data.token}</span>
     </div>
 
     <div
-      class="rounded-box border border-border bg-muted p-3 text-xs text-muted-foreground flex flex-col gap-2"
+      class="rounded-box bg-muted p-3 text-xs text-muted-foreground flex flex-col gap-2"
     >
       <div class="flex items-center justify-between gap-2">
         <span class="font-medium text-foreground">Comando no PowerShell:</span>
@@ -110,7 +110,7 @@
         </button>
       </div>
       <code
-        class="block min-w-0 whitespace-normal break-all font-mono text-xs select-all text-foreground bg-background p-2 rounded-box border border-border"
+        class="block min-w-0 whitespace-normal break-all font-mono text-xs select-all text-foreground bg-background p-2 rounded-box"
       >
         .\install-agent.ps1 -Token '{data.token}'
       </code>

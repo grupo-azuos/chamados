@@ -67,6 +67,7 @@
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
 
   let { data, state: listState, actions }: AzuosStockListViewProps = $props();
 
@@ -85,7 +86,7 @@
   }
 </script>
 
-<div class="flex w-full flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Depósito',
@@ -93,7 +94,7 @@
     }}
   />
 
-  <div class="rounded-surface bg-card flex flex-col gap-3 p-4 shadow-card">
+  <CardSurface ui={{ className: 'flex flex-col gap-3 p-4' }}>
     <TextField
       data={{
         label: 'Buscar',
@@ -137,7 +138,7 @@
         />
       {/if}
     </div>
-  </div>
+  </CardSurface>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2). -->
   {#if listState.error}
@@ -183,51 +184,53 @@
       <!-- Uma coluna no celular, duas no tablet, três no monitor: o número precisa de espaço. -->
       <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {#each data.items as item (item.id)}
-          <li class="rounded-surface bg-card flex flex-col gap-3 p-4 shadow-card">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <h3 class="text-ink-900 text-sm leading-tight font-semibold">{item.name}</h3>
-                <p class="text-ink-500 mt-1 text-xs">{detailOf(item)}</p>
-                <TicketStockLinks
-                  data={{
-                    links: item.ticketLinks,
-                    balance: item.balance,
-                    ticketsPath: '/maintenance/tickets',
-                  }}
-                />
+          <li class="flex">
+            <CardSurface ui={{ className: 'flex flex-1 flex-col gap-3 p-4' }}>
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <h3 class="text-ink-900 text-sm leading-tight font-semibold">{item.name}</h3>
+                  <p class="text-ink-500 mt-1 text-xs">{detailOf(item)}</p>
+                  <TicketStockLinks
+                    data={{
+                      links: item.ticketLinks,
+                      balance: item.balance,
+                      ticketsPath: '/maintenance/tickets',
+                    }}
+                  />
+                </div>
+
+                <div class="shrink-0 text-right">
+                  <p class="text-ink-900 text-2xl leading-none font-semibold tabular-nums">
+                    {item.balance}
+                  </p>
+                  <p class="text-muted-foreground mt-1 text-xs">{inventoryUnitLabel(item.unit)}</p>
+                </div>
               </div>
 
-              <div class="shrink-0 text-right">
-                <p class="text-ink-900 text-2xl leading-none font-semibold tabular-nums">
-                  {item.balance}
-                </p>
-                <p class="text-muted-foreground mt-1 text-xs">{inventoryUnitLabel(item.unit)}</p>
-              </div>
-            </div>
+              <div class="mt-auto flex flex-wrap items-center justify-between gap-2">
+                {#if item.balance === 0}
+                  <StatusBadge data={{ label: 'Sem estoque' }} ui={{ tone: 'danger', size: 'sm' }} />
+                {:else}
+                  <span></span>
+                {/if}
 
-            <div class="mt-auto flex flex-wrap items-center justify-between gap-2">
-              {#if item.balance === 0}
-                <StatusBadge data={{ label: 'Sem estoque' }} ui={{ tone: 'danger', size: 'sm' }} />
-              {:else}
-                <span></span>
-              {/if}
-
-              <div class="flex items-center gap-2">
-                <ActionButton
-                  data={{ label: 'Entrada' }}
-                  ui={{ variant: 'secondary', size: 'sm', icon: ArrowDownLeft }}
-                  actions={{ onClick: () => actions.onEntry(item) }}
-                />
-                <!-- Sem estoque não há o que tirar: o botão fica apagado em vez de abrir um
-                     diálogo que só serviria para o servidor recusar. -->
-                <ActionButton
-                  data={{ label: 'Saída' }}
-                  ui={{ variant: 'secondary', size: 'sm', icon: ArrowUpRight }}
-                  state={{ isDisabled: item.balance === 0 }}
-                  actions={{ onClick: () => actions.onExit(item) }}
-                />
+                <div class="flex items-center gap-2">
+                  <ActionButton
+                    data={{ label: 'Entrada' }}
+                    ui={{ variant: 'secondary', size: 'sm', icon: ArrowDownLeft }}
+                    actions={{ onClick: () => actions.onEntry(item) }}
+                  />
+                  <!-- Sem estoque não há o que tirar: o botão fica apagado em vez de abrir um
+                       diálogo que só serviria para o servidor recusar. -->
+                  <ActionButton
+                    data={{ label: 'Saída' }}
+                    ui={{ variant: 'secondary', size: 'sm', icon: ArrowUpRight }}
+                    state={{ isDisabled: item.balance === 0 }}
+                    actions={{ onClick: () => actions.onExit(item) }}
+                  />
+                </div>
               </div>
-            </div>
+            </CardSurface>
           </li>
         {/each}
       </ul>

@@ -52,7 +52,7 @@
   };
 
   const CHECK_CLASSES: Record<Exclude<ServiceOrderFileCheck, 'idle'>, string> = {
-    checking: 'border-border bg-muted text-foreground',
+    checking: 'bg-muted text-foreground',
     match: 'bg-success-soft text-foreground',
     mismatch: 'bg-destructive-soft text-foreground',
     unreadable: 'bg-warning-soft text-foreground',
@@ -67,6 +67,7 @@
   import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
   import Upload from '@lucide/svelte/icons/upload';
 
+  import Collapsible from '$lib/components/azuos-collapsible/azuos-collapsible.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import {
@@ -74,6 +75,7 @@
     formatMinutesSpent,
   } from '$lib/components/azuos-history-timeline/azuos-history-timeline.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, state: viewState, actions }: AzuosServiceOrderVerifyViewProps = $props();
@@ -122,7 +124,7 @@
   <p class="text-muted-foreground py-16 text-center text-sm">Procurando o registro…</p>
 {:else}
   <div class="flex flex-col gap-5">
-    <section class="rounded-surface bg-card flex flex-col gap-4 p-5 shadow-card">
+    <CardSurface ui={{ className: 'flex flex-col gap-4 p-5' }}>
       <header class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 class="text-foreground text-lg font-bold">Ordem de serviço {order.protocol}</h2>
@@ -170,9 +172,12 @@
         </div>
       </dl>
 
-      <details class="text-muted-foreground text-xs">
-        <summary class="cursor-pointer select-none">Ver o código e a impressão digital inteiros</summary>
-        <dl class="mt-2 flex flex-col gap-2">
+      <!-- Abre e fecha animado (padrão Apple); em cinza, porque já está dentro de um card. -->
+      <Collapsible
+        data={{ title: 'Ver o código e a impressão digital inteiros' }}
+        ui={{ className: 'bg-muted shadow-none' }}
+      >
+        <dl class="text-muted-foreground flex flex-col gap-2 text-xs">
           <div>
             <dt>Código</dt>
             <dd class="text-foreground font-mono break-all">{order.code}</dd>
@@ -182,10 +187,10 @@
             <dd class="text-foreground font-mono break-all">{order.fileHash}</dd>
           </div>
         </dl>
-      </details>
-    </section>
+      </Collapsible>
+    </CardSurface>
 
-    <section class="rounded-surface bg-card flex flex-col gap-4 p-5 shadow-card">
+    <CardSurface ui={{ className: 'flex flex-col gap-4 p-5' }}>
       <header>
         <h2 class="text-foreground text-lg font-bold">Conferir o arquivo</h2>
         <p class="text-muted-foreground text-sm">
@@ -218,7 +223,7 @@
       <div aria-live="polite">
         {#if fileCheck !== 'idle'}
           {@const CheckIcon = CHECK_ICONS[fileCheck]}
-          <div class={cn('rounded-box flex items-start gap-3 border px-4 py-3.5', CHECK_CLASSES[fileCheck])}>
+          <div class={cn('rounded-box flex items-start gap-3 px-4 py-3.5', CHECK_CLASSES[fileCheck])}>
             <CheckIcon
               class={cn('mt-0.5 size-5 shrink-0', fileCheck === 'checking' && 'animate-spin')}
               aria-hidden="true"
@@ -233,6 +238,6 @@
           </div>
         {/if}
       </div>
-    </section>
+    </CardSurface>
   </div>
 {/if}

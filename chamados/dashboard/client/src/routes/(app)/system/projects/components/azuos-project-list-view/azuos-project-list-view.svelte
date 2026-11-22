@@ -76,6 +76,7 @@
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
 
   let { data, state, actions }: AzuosProjectListViewProps = $props();
 
@@ -160,7 +161,7 @@
   {#if state.isLoading}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {#each [0, 1, 2] as idx (idx)}
-        <div class="h-56 animate-pulse rounded-surface border border-border bg-muted"></div>
+        <div class="h-56 animate-pulse rounded-surface bg-muted"></div>
       {/each}
     </div>
   {:else if state.error}
@@ -206,9 +207,7 @@
     <!-- Grid de Projetos -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {#each data.items as project (project.id)}
-        <div
-          class="flex flex-col justify-between rounded-surface bg-card p-5 transition hover:border-border shadow-card"
-        >
+        <CardSurface ui={{ className: 'flex flex-col justify-between p-5' }}>
           <div>
             <!-- Topo: Nome, Tag e Status -->
             <div class="flex items-start justify-between gap-2">
@@ -279,7 +278,7 @@
             <div class="flex items-center gap-1">
               <button
                 type="button"
-                class="flex items-center gap-1 rounded-control border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                class="control-sm flex items-center gap-1 rounded-button bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-hover-veil"
                 onclick={() => actions.onViewTimeline(project)}
                 title="Abrir o sistema: o que está em andamento e a timeline"
               >
@@ -290,7 +289,7 @@
               {#if state.canSync ?? state.canEdit !== false}
                 <button
                   type="button"
-                  class="flex items-center gap-1 rounded-control border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                  class="control-sm flex items-center gap-1 rounded-button bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-hover-veil"
                   disabled={state.isSyncing}
                   onclick={() => actions.onSyncGithub(project.id)}
                   title="Sincronizar Pull Requests com o GitHub"
@@ -322,7 +321,7 @@
               </div>
             {/if}
           </div>
-        </div>
+        </CardSurface>
       {/each}
     </div>
   {/if}

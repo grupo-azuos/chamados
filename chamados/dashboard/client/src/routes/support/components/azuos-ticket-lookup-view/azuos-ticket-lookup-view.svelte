@@ -123,6 +123,9 @@
   } from '$lib/components/azuos-history-timeline/azuos-history-timeline.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
+  import FileLinks from '$lib/components/azuos-file-links/azuos-file-links.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, state: viewState, actions, slots }: AzuosTicketLookupViewProps = $props();
@@ -207,25 +210,18 @@
       />
     </form>
 
-    <!-- A aba escolhida ganha fundo cheio, não traço: barra colorida é proibida no grupo. -->
-    <div class="bg-muted rounded-control grid grid-cols-2 gap-1 p-1">
-      {#each [{ key: 'running', label: 'Em andamento', count: groups.running.length }, { key: 'closed', label: 'Encerrados', count: groups.closed.length }] as const as option (option.key)}
-        <button
-          type="button"
-          aria-pressed={tab === option.key}
-          onclick={() => (chosenTab = option.key)}
-          class={cn(
-            'control-sm rounded-chip focus-visible:ring-ring inline-flex cursor-pointer items-center justify-center gap-1.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
-            tab === option.key ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          {option.label}
-          <span class="bg-muted text-muted-foreground rounded-full px-1.5 text-[0.6875rem] tabular-nums">
-            {option.count}
-          </span>
-        </button>
-      {/each}
-    </div>
+    <!-- O recorte é o segmentado do padrão Apple: pílula cinza com o escolhido em branco. -->
+    <SegmentedControl
+      data={{
+        value: tab,
+        options: [
+          { value: 'running', label: `Em andamento · ${groups.running.length}` },
+          { value: 'closed', label: `Encerrados · ${groups.closed.length}` },
+        ],
+      }}
+      ui={{ ariaLabel: 'Recorte dos seus chamados', className: 'w-full' }}
+      actions={{ onChange: (value) => (chosenTab = value as typeof tab) }}
+    />
 
     {#if viewState?.mineError}
       <ErrorState data={{ message: viewState.mineError }} ui={{ variant: 'inline' }} />
@@ -305,7 +301,7 @@
     {:else if ticket}
       {@const facts = factsOf(ticket)}
       {@const journey = journeyOf(ticket.status)}
-      <article class="rounded-surface bg-card flex flex-col gap-6 p-5 sm:p-6 shadow-card">
+      <CardSurface ui={{ className: 'flex flex-col gap-6 p-5 sm:p-6' }}>
         <header class="flex flex-col gap-4">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-foreground font-mono text-2xl font-bold">{ticket.protocol}</h2>
@@ -352,7 +348,7 @@
                 <fact.icon class="size-4" aria-hidden="true" />
               </span>
               <div class="min-w-0">
-                <dt class="text-muted-foreground text-[0.6875rem] font-semibold tracking-wider uppercase">{fact.label}</dt>
+                <dt class="text-muted-foreground text-xs font-medium">{fact.label}</dt>
                 <dd class={cn('text-foreground truncate text-sm font-medium', fact.isCode && 'font-mono')} title={fact.value}>
                   {fact.value}
                 </dd>
@@ -362,7 +358,7 @@
         </dl>
 
         <div class="rounded-box bg-muted p-4">
-          <p class="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
+          <p class="text-muted-foreground mb-1 text-sm font-medium">
             Aberto por {ticket.requesterName}
           </p>
           <p class="text-foreground text-sm leading-relaxed whitespace-pre-line">{ticket.description}</p>
@@ -370,27 +366,28 @@
 
         {#if ownFiles.length > 0 || ticket.screenshotUrl}
           <div class="flex flex-col gap-2">
-            <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Arquivos do chamado</p>
+            <p class="text-muted-foreground text-sm font-medium">Arquivos do chamado</p>
             {#if ownFiles.length > 0}
               <AttachmentList data={{ attachments: ownFiles }} ui={{ actor: 'requester' }} />
             {/if}
             {#if ticket.screenshotUrl}
-              <a
-                class="control-sm rounded-control bg-muted text-primary hover:bg-accent inline-flex w-fit items-center gap-1.5 border text-xs font-semibold transition-colors border-transparent"
-                href={ticket.screenshotUrl}
-                target="_blank"
-                rel="noopener"
-              >
-                <ImageIcon class="size-3.5" aria-hidden="true" />
-                Abrir o print enviado
-              </a>
+              <!-- Arquivo tem sempre as duas ações: abrir em outra aba e baixar. -->
+              <FileLinks
+                data={{
+                  fileName: `print-${ticket.protocol}.png`,
+                  viewUrl: ticket.screenshotUrl,
+                  downloadUrl: ticket.screenshotUrl,
+                  openLabel: 'Abrir o print enviado',
+                }}
+                ui={{ openIcon: ImageIcon }}
+              />
             {/if}
           </div>
         {/if}
 
         <!-- O ANDAMENTO: é o que a pessoa veio buscar. -->
         <div class="border-border flex flex-col gap-3 border-t pt-5">
-          <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+          <p class="text-muted-foreground text-sm font-medium">
             Andamento · {ticket.histories.length}
           </p>
           <HistoryTimeline
@@ -400,7 +397,7 @@
         </div>
 
         {@render slots?.ticketActions?.(ticket)}
-      </article>
+      </CardSurface>
     {:else}
       <EmptyState
         data={{

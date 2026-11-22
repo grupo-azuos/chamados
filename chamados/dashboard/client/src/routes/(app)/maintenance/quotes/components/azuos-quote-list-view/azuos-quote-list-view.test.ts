@@ -81,13 +81,18 @@ describe('AzuosQuoteListView', () => {
     expect(screen.getByText('1 orçamento · R$ 960,00')).toBeInTheDocument();
   });
 
-  /* O documento abre em outra aba, pelo link assinado que veio do servidor. */
+  /* O documento abre em outra aba e baixa, pelo link assinado que veio do servidor. */
   it('links to the document that the company sent', () => {
     setup();
 
-    const link = screen.getByRole('link', { name: 'orcamento-clima-norte.pdf' });
+    const link = screen.getByRole('link', { name: 'Abrir orcamento-clima-norte.pdf' });
     expect(link).toHaveAttribute('href', 'https://r2.exemplo/doc?assinatura');
     expect(link).toHaveAttribute('target', '_blank');
+    // Arquivo tem as duas ações: abrir e baixar com o nome original.
+    expect(screen.getByRole('link', { name: 'Baixar orcamento-clima-norte.pdf' })).toHaveAttribute(
+      'download',
+      'orcamento-clima-norte.pdf',
+    );
   });
 
   it('asks to keep, to correct and to delete', async () => {
@@ -233,7 +238,7 @@ describe('AzuosQuoteListView — filters, a nameless document and the cut list',
       data: { quotes: [quote({ attachmentName: null }), quote({ id: 2 })], total: 2, amountCents: 192000, filter: emptyFilter, deleting: null },
       state: { ...settled, isTruncated: true },
     });
-    expect(screen.getByText('Abrir documento')).toBeInTheDocument();
+    expect(screen.getByText('Documento do orçamento')).toBeInTheDocument();
     expect(screen.getByText(/2 orçamentos/)).toBeInTheDocument();
     expect(screen.getByText(/A lista mostra os orçamentos mais recentes/)).toBeInTheDocument();
   });

@@ -273,7 +273,7 @@ describe('AzuosInsightsView', () => {
 
     const section = screen
       .getByRole('heading', { name: 'Máquinas sobrecarregadas' })
-      .closest('section')!;
+      .closest<HTMLElement>('[data-slot="azuos-card-surface"]')!;
     const { getByText, queryByText, getByRole } = within(section);
 
     expect(getByText('Máquina 10')).toBeInTheDocument();
@@ -356,7 +356,7 @@ describe('AzuosInsightsView — period, pages and the open buttons of every list
       ['Máquinas que dão mais trabalho', 'Trabalho 35'],
       ['Máquinas de reserva', 'Reserva 45'],
     ] as const) {
-      const section = screen.getByRole('heading', { name: heading }).closest('section')!;
+      const section = screen.getByRole('heading', { name: heading }).closest<HTMLElement>('[data-slot="azuos-card-surface"]')!;
       expect(within(section).queryByText(last)).not.toBeInTheDocument();
       await user.click(within(section).getByRole('button', { name: /Próxima/i }));
       expect(within(section).getByText(last)).toBeInTheDocument();

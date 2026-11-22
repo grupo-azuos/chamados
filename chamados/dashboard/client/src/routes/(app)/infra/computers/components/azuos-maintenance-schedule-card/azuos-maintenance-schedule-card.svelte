@@ -9,6 +9,8 @@
   } from '@template/shared/domain/maintenance.util';
   import { type MaintenanceSchedule } from '@template/shared/schemas/maintenance.schema';
 
+  import { type AzuosCardTone } from '$lib/utils/card-tone.util';
+
   /**
    * O PRÓXIMO COMPROMISSO de manutenção da máquina, no alto da ficha.
    *
@@ -81,11 +83,13 @@
     };
   }
 
-  const TONE_CLASSES: Record<ScheduleSummary['tone'], string> = {
-    danger: 'bg-muted',
-    warning: 'bg-warning-soft',
-    info: 'bg-muted',
-    neutral: 'bg-card',
+  /* Padrão Apple: o card fica na superfície, sem fundo nem borda coloridos — a urgência do
+     prazo mora no ícone cheio, no tom do assunto. */
+  const ICON_TONES: Record<ScheduleSummary['tone'], AzuosCardTone> = {
+    danger: 'danger',
+    warning: 'warning',
+    info: 'info',
+    neutral: 'brand',
   };
 </script>
 
@@ -94,20 +98,32 @@
   import Wrench from '@lucide/svelte/icons/wrench';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import { cardToneClasses } from '$lib/utils/card-tone.util';
+  import { cn } from '$lib/utils/cn';
 
   let { data, state: cardState, actions }: AzuosMaintenanceScheduleCardProps = $props();
 
   const summary = $derived(scheduleSummaryOf(data.schedule, data.lastPreventiveAt));
 </script>
 
-<section
-  aria-label="Próxima manutenção"
-  class="rounded-surface flex flex-col gap-3 border p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between {TONE_CLASSES[summary.tone]}"
-  data-slot="maintenance-schedule-card"
+<CardSurface
+  data={{ label: 'Próxima manutenção' }}
+  ui={{
+    className:
+      'flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between',
+  }}
 >
   <div class="flex min-w-0 items-start gap-3">
-    <CalendarClock class="text-ink-700 mt-0.5 size-5 shrink-0" aria-hidden="true" />
+    <span
+      class={cn(
+        'rounded-icon inline-flex size-9 shrink-0 items-center justify-center shadow-xs',
+        cardToneClasses(ICON_TONES[summary.tone]).dot,
+      )}
+    >
+      <CalendarClock class="size-5" aria-hidden="true" />
+    </span>
     <div class="min-w-0">
       {#if cardState?.isLoading}
         <p class="text-ink-500 text-sm">Conferindo a agenda da máquina…</p>
@@ -166,4 +182,4 @@
       <ErrorState data={{ message: cardState.error }} ui={{ variant: 'inline' }} />
     </div>
   {/if}
-</section>
+</CardSurface>

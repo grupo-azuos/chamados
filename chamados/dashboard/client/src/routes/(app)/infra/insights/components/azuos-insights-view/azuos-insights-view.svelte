@@ -152,6 +152,7 @@
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import PanelCard from '$lib/components/azuos-panel-card/azuos-panel-card.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import { formatDate } from '$lib/utils/format-date';
 
   let { data, state: viewState, actions }: AzuosInsightsViewProps = $props();
@@ -216,7 +217,7 @@
   );
 </script>
 
-<div class="flex w-full flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Inteligência',
@@ -255,11 +256,13 @@
     </EmptyState>
   {:else if insights}
     {#if !hasAnything}
-      <p class="flex items-center gap-2 rounded-surface bg-card p-4 text-sm text-success shadow-card">
-        <PartyPopper class="size-4" aria-hidden="true" />
-        Nada a recomendar nos últimos {insights.days} dias: nenhuma máquina no limite, nenhuma
-        pedindo upgrade e nenhuma dando trabalho demais.
-      </p>
+      <CardSurface ui={{ className: 'p-4' }}>
+        <p class="flex items-center gap-2 text-sm text-success">
+          <PartyPopper class="size-4" aria-hidden="true" />
+          Nada a recomendar nos últimos {insights.days} dias: nenhuma máquina no limite, nenhuma
+          pedindo upgrade e nenhuma dando trabalho demais.
+        </p>
+      </CardSurface>
     {/if}
 
     <!-- O retrato dos números ANTES das listas: as listas dizem o que fazer com cada
@@ -298,7 +301,7 @@
     {/if}
 
     <!-- Sobrecarregadas -->
-    <section class="bg-card rounded-surface p-4 shadow-card">
+    <CardSurface data={{ label: 'Máquinas sobrecarregadas' }} ui={{ className: 'p-4' }}>
       <h2 class="text-ink-900 text-sm font-semibold">Máquinas sobrecarregadas</h2>
       <p class="text-ink-500 mb-3 text-xs">
         Média de uso nos últimos {insights.days} dias acima de {OVERLOADED_CPU_PERCENT}% de
@@ -352,10 +355,10 @@
           </div>
         {/if}
       {/if}
-    </section>
+    </CardSurface>
 
     <!-- Upgrades -->
-    <section class="bg-card rounded-surface p-4 shadow-card">
+    <CardSurface data={{ label: 'Quem precisa de upgrade' }} ui={{ className: 'p-4' }}>
       <h2 class="text-ink-900 text-sm font-semibold">Quem precisa de upgrade</h2>
       <p class="text-ink-500 mb-3 text-xs">
         Menos de {UPGRADE_MEMORY_GB} GB de memória, ou disco quase cheio. Troca de HD por SSD não
@@ -410,10 +413,10 @@
           </div>
         {/if}
       {/if}
-    </section>
+    </CardSurface>
 
     <!-- Dão trabalho demais -->
-    <section class="bg-card rounded-surface p-4 shadow-card">
+    <CardSurface data={{ label: 'Máquinas que dão mais trabalho' }} ui={{ className: 'p-4' }}>
       <h2 class="text-ink-900 text-sm font-semibold">Máquinas que dão mais trabalho</h2>
       <p class="text-ink-500 mb-3 text-xs">
         A partir de {TROUBLESOME_MAINTENANCE_COUNT} manutenções registradas. A conta é de
@@ -467,10 +470,10 @@
           </div>
         {/if}
       {/if}
-    </section>
+    </CardSurface>
 
     <!-- Reserva -->
-    <section class="bg-card rounded-surface p-4 shadow-card">
+    <CardSurface data={{ label: 'Máquinas de reserva' }} ui={{ className: 'p-4' }}>
       <h2 class="text-ink-900 text-sm font-semibold">Máquinas de reserva</h2>
       <p class="text-ink-500 mb-3 text-xs">
         As que estão cadastradas e SEM departamento — é assim que o sistema sabe que elas estão
@@ -525,6 +528,6 @@
           </div>
         {/if}
       {/if}
-    </section>
+    </CardSurface>
   {/if}
 </div>
