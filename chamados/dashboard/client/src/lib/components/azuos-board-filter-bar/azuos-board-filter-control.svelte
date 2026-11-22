@@ -22,8 +22,6 @@
     actions: { onChange: (patch: Partial<BoardFilterValues>) => void };
   };
 
-  /** Etiquetas só até aqui: mais opções não cabem numa linha, e a peça vira a lista com busca. */
-  export const MAX_CHIPS = 6;
 </script>
 
 <script lang="ts">
@@ -77,7 +75,9 @@
   const options = $derived<BoardFilterOption[]>(optionsOf(kind));
   const value = $derived(kind === 'period' ? presetOf(data.values.period) : (data.values[kind] ?? ''));
   const period = $derived(data.values.period);
-  const display = $derived(data.display === 'chips' && options.length > MAX_CHIPS ? 'search' : data.display);
+  /* O desenho é o que quem montou escolheu, com quantas opções houver: etiquetas a mais rolam de
+     lado. Trocar sozinho para a busca desfazia a escolha assim que a lista crescia. */
+  const display = $derived(data.display);
   const isSearch = $derived(display === 'search' || options.length > SEARCH_FROM);
 
   /* "Pessoa": todas, eu, ou alguém da lista. "Eu" serve a todo mundo, cada um vê o seu. */

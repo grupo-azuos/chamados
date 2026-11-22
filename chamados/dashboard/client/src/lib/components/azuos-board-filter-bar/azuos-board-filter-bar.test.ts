@@ -137,4 +137,23 @@ describe('AzuosBoardFilterBar', () => {
     expect(screen.getByRole('button', { name: 'Ajustar os filtros (2)' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Descer o filtro Pessoa' })).toBeNull();
   });
+
+  // triste
+  it('keeps the chips with many options, instead of turning them into a search', () => {
+    const names = ['Contábil', 'Fiscal', 'Paralegal', 'Tecnologia', 'Recursos Humanos', 'ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'];
+    render(BoardFilterBar, {
+      props: {
+        data: {
+          filters: [{ id: 'dep', kind: 'department' as const, label: 'Departamento', display: 'chips' as const, place: { x: 0, y: 0, w: 1, h: 1 } }],
+          values: EMPTY_BOARD_FILTER_VALUES,
+          counts: { dep: { total: 0, isLoading: false, series: names.map((name) => ({ key: name, label: name, value: 0 })) } },
+        },
+        actions: { onChange: vi.fn() },
+      },
+    });
+
+    expect(screen.getByRole('radiogroup', { name: 'Departamento' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'RECEPÇÃO' })).toBeInTheDocument();
+  });
 });
+
