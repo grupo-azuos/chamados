@@ -13,7 +13,7 @@
   const filters: BoardFilter[] = [
     { id: 'pessoa', kind: 'person', label: 'Pessoa' },
     { id: 'ticketStatus', kind: 'ticketStatus', label: 'Situação' },
-    { id: 'ticketPriority', kind: 'ticketPriority', label: 'Prioridade', display: 'chips', width: 'full' },
+    { id: 'ticketPriority', kind: 'ticketPriority', label: 'Prioridade', display: 'cards' },
     { id: 'periodo', kind: 'period', label: 'Período' },
   ];
   const counts = {

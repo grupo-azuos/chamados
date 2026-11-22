@@ -110,7 +110,7 @@ function board(module: BoardModule, scope: BoardSeed['scope'], blocks: Block[], 
 }
 
 /* Os filtros da barra, na ordem em que aparecem: os de uma peça na grade e, por último, as faixas
-   (os cards e as etiquetas na linha inteira). */
+   de cards. */
 const filter = (kind: BoardFilter['kind'], label: string, display?: BoardFilter['display'], width?: BoardFilter['width']): BoardFilter => ({
   id: kind,
   kind,
@@ -177,7 +177,7 @@ const SYSTEM_TEAM = board(
     block('github', { kind: 'column', title: 'Atividade no GitHub no mês', source: 'softwareActivity', groupBy: 'type', period: 'month' }, at(0, 7, 2, 2)),
     block('agenda', { kind: 'calendar', title: 'Agenda', source: 'scheduleEvents', groupBy: 'day' }, at(2, 7, 2, 2)),
   ],
-  [PERIOD, PERSON, filter('project', 'Sistema', 'search'), STATUS, PROBLEM, PRIORITY, filter('department', 'Departamento', 'chips', 'full')],
+  [PERIOD, PERSON, filter('project', 'Sistema', 'search'), STATUS, PROBLEM, PRIORITY, filter('department', 'Departamento', 'cards', 'full')],
 );
 
 const SYSTEM_MANAGER = board(
@@ -222,7 +222,7 @@ const INFRA_TEAM = board(
     infra.urgent(2, 7),
     infra.unassigned(3, 7),
   ],
-  [PERIOD, PERSON, DEPARTMENT, PROBLEM, filter('computerHealth', 'Saúde da máquina', 'chips'), PRIORITY],
+  [PERIOD, PERSON, DEPARTMENT, PROBLEM, filter('computerHealth', 'Saúde da máquina', 'select'), PRIORITY],
 );
 
 const INFRA_MANAGER = board(
@@ -267,7 +267,7 @@ const UPKEEP_TEAM = board(
     upkeep.urgent(2, 7),
     upkeep.unassigned(3, 7),
   ],
-  [PERIOD, PERSON, DEPARTMENT, PROBLEM, filter('inventoryCategory', 'Categoria do produto', 'chips'), PRIORITY],
+  [PERIOD, PERSON, DEPARTMENT, PROBLEM, filter('inventoryCategory', 'Categoria do produto', 'select'), PRIORITY],
 );
 
 const UPKEEP_MANAGER = board(
