@@ -76,7 +76,10 @@
 >
   <!-- O degrau `lg` da RÉGUA DE MEDIDAS (`lib/theme/tokens.css`): este campo fica sempre ao
        lado de um `TextField` ou dentro de um formulário, e vinha 4px mais baixo e com um raio
-       só dele (menor que o dos vizinhos), destoando de tudo em volta.
+       só dele (menor que o dos vizinhos), destoando de tudo em volta. A altura vai repetida na
+       variante do tamanho: o `data-[size=default]:h-9` do `ui/select` é mais específico que o
+       `control-lg` e ganhava — o campo ficava com 36px, e na peça do filtro (40px) sobrava uma
+       faixa embaixo que o hover não pintava.
 
        `max-w-full`: sem ele, uma opção de nome longo faz o gatilho crescer além do espaço que
        ele tem e empurra a largura de quem está em volta. `min-w-40` é o piso: abaixo de 10rem o
@@ -86,7 +89,7 @@
     aria-label={ui?.ariaLabel}
     title={selectedLabel || undefined}
     class={cn(
-      'control-lg rounded-control border-input bg-muted dark:bg-muted dark:hover:bg-muted text-foreground max-w-full min-w-40 text-sm',
+      'control-lg rounded-control border-input bg-muted dark:bg-muted dark:hover:bg-muted text-foreground max-w-full min-w-40 text-sm data-[size=default]:h-(--control-lg)',
       ui?.className,
     )}
   >
