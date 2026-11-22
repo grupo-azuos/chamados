@@ -9,6 +9,12 @@ const config: StorybookConfig = {
   addons: ['@storybook/addon-a11y', '@storybook/addon-svelte-csf'],
   framework: { name: '@storybook/sveltekit', options: {} },
   core: { disableTelemetry: true },
+  /* Sem o quadro "Get started" do Storybook: o começo deste catálogo são as próprias stories. */
+  features: { sidebarOnboardingChecklist: false, menuOnboardingChecklist: false },
+  /* O ícone da aba do navegador: a arara da Azuos, direto da CDN da marca (sem cópia no app). */
+  managerHead: (head) => `${head ?? ''}
+    <link rel="icon" type="image/svg+xml" href="https://cdn.grupoazuos.com.br/logo/svg/icon.svg" />
+    <title>Azuos · Design System</title>`,
 };
 
 export default config;
