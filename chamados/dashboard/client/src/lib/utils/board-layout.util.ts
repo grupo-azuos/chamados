@@ -144,14 +144,22 @@ export function isCompactKind(kind: WidgetKind): boolean {
   return COMPACT_WIDGET_KINDS.includes(kind);
 }
 
+/**
+ * O tamanho de uma casa e o espaço entre elas. `rowGap`, quando há, é o espaço entre os ANDARES —
+ * montando, maior que o das colunas, para a barra de ferramentas de cada bloco caber acima dele.
+ */
+export type GridCell = { width: number; height: number; gap: number; rowGap?: number };
+
+const rowGapOf = (cell: GridCell): number => cell.rowGap ?? cell.gap;
+
 /** A casa da grade sob um ponto, dado o tamanho de uma casa (e o espaço entre elas). */
 export function cellAt(
   point: { x: number; y: number },
-  cell: { width: number; height: number; gap: number },
+  cell: GridCell,
 ): { x: number; y: number } {
   return {
     x: Math.max(0, Math.min(GRID_COLUMNS - 1, Math.floor(point.x / (cell.width + cell.gap)))),
-    y: Math.max(0, Math.floor(point.y / (cell.height + cell.gap))),
+    y: Math.max(0, Math.floor(point.y / (cell.height + rowGapOf(cell)))),
   };
 }
 
@@ -193,11 +201,11 @@ export function resizeFromHandle(
  */
 export function dropCellOf(
   topLeft: { x: number; y: number },
-  cell: { width: number; height: number; gap: number },
+  cell: GridCell,
   w: number,
 ): { x: number; y: number } {
   const x = Math.round(topLeft.x / (cell.width + cell.gap));
-  const y = Math.round(topLeft.y / (cell.height + cell.gap));
+  const y = Math.round(topLeft.y / (cell.height + rowGapOf(cell)));
 
   return { x: Math.max(0, Math.min(GRID_COLUMNS - w, x)), y: Math.max(0, y) };
 }
@@ -205,13 +213,13 @@ export function dropCellOf(
 /** O retângulo em pixels de um bloco na grade — onde o canvas o desenha. */
 export function pixelsOf(
   item: Pick<LayoutItem, 'x' | 'y' | 'w' | 'h'>,
-  cell: { width: number; height: number; gap: number },
+  cell: GridCell,
 ): { left: number; top: number; width: number; height: number } {
   return {
     left: item.x * (cell.width + cell.gap),
-    top: item.y * (cell.height + cell.gap),
+    top: item.y * (cell.height + rowGapOf(cell)),
     width: item.w * cell.width + (item.w - 1) * cell.gap,
-    height: item.h * cell.height + (item.h - 1) * cell.gap,
+    height: item.h * cell.height + (item.h - 1) * rowGapOf(cell),
   };
 }
 

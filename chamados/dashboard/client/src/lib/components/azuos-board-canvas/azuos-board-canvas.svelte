@@ -83,6 +83,13 @@
    * 11px — com o vão de quem só vê, os puxadores de um bloco cairiam em cima do vizinho.
    */
   export const BOARD_EDITING_GAP_PX = 32;
+  /**
+   * E os ANDARES se afastam mais: acima de cada bloco flutua a barra de ferramentas dele (40px),
+   * fora do conteúdo — o bloco aparece igual ao do painel, sem nada por cima.
+   */
+  export const BOARD_EDITING_ROW_GAP_PX = 80;
+  /** O espaço acima do primeiro andar, montando: onde fica a barra dos blocos de cima. */
+  export const BOARD_EDITING_TOP_PX = 72;
   /** Abaixo desta largura do canvas, vendo, os blocos se empilham numa coluna só. */
   const WIDE_CANVAS = 720;
 </script>
@@ -134,11 +141,12 @@
   let dropping = $state<{ kind: Widget['kind']; layout: LayoutItem[] } | null>(null);
 
   const gap = $derived(canvasState.isEditing ? BOARD_EDITING_GAP_PX : GAP);
-  const cell = $derived({ width: Math.max(1, (width - gap * 3) / 4), height: BOARD_ROW_HEIGHT_PX, gap });
+  const rowGap = $derived(canvasState.isEditing ? BOARD_EDITING_ROW_GAP_PX : GAP);
+  const cell = $derived({ width: Math.max(1, (width - gap * 3) / 4), height: BOARD_ROW_HEIGHT_PX, gap, rowGap });
   const layout = $derived(dropping?.layout ?? gesture?.layout ?? data.layout);
   const isStacked = $derived(!canvasState.isEditing && width > 0 && width < WIDE_CANVAS);
   const rows = $derived(canvasState.isEditing ? Math.max(slotRows(data.layout), rowsOf(layout)) : rowsOf(layout));
-  const height = $derived(Math.max(0, rows * (BOARD_ROW_HEIGHT_PX + gap) - gap));
+  const height = $derived(Math.max(0, rows * (BOARD_ROW_HEIGHT_PX + rowGap) - rowGap));
   const placeholder = $derived(placeholderOf());
   /* Os blocos que já estavam quando o canvas abriu: só os outros pousam com animação. */
   const firstIds = untrack(() => data.widgets.map((widget) => widget.id));
@@ -341,6 +349,7 @@
     bind:clientWidth={width}
     class="relative w-full"
     style:height={`${height}px`}
+    style:margin-top={canvasState.isEditing ? `${BOARD_EDITING_TOP_PX}px` : undefined}
     data-testid="board-canvas"
     onpointerdown={onPointerDown}
     onkeydown={onKeyDown}

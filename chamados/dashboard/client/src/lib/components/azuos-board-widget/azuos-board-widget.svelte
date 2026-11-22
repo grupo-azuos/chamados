@@ -117,6 +117,18 @@
   </button>
 {/snippet}
 
+{#snippet editBar()}
+  <!-- A BARRA DO BLOCO, montando: flutua ACIMA do bloco, no vão entre os andares, como a etiqueta
+       de um quadro num editor de design. O bloco embaixo fica igual ao do painel — nada por cima do
+       título, do número ou do gráfico. -->
+  <div
+    class="rounded-button bg-card shadow-card ring-foreground/8 absolute bottom-full left-0 z-10 mb-4 flex max-w-full items-center gap-1 p-1 ring-1"
+  >
+    {@render dragHandle()}
+    <WidgetEditTools data={{ widget }} {actions} />
+  </div>
+{/snippet}
+
 {#if isCard}
   <!-- Sem a faixa de selos, a nota do período do painel vai num selo acima dos cards. -->
   <div class="relative flex h-full flex-col gap-1">
@@ -129,30 +141,26 @@
       <WidgetBody data={{ widget, result: data.result }} {actions} />
     </div>
     {#if widgetState.isEditing}
-      <div class="rounded-box bg-card absolute top-2 right-2 z-10 flex items-center gap-1 p-1 shadow-xs">
-        {@render dragHandle()}
-        <WidgetEditTools data={{ widget }} {actions} />
-      </div>
+      {@render editBar()}
     {/if}
   </div>
 {:else}
   <!-- O cartão: a faixa do cabeçalho (ícone, título, o que conta, o recorte em selos) e as
        ferramentas dentro dela — nada solto embaixo (conectividade uniforme). Montando, quem
        desenha a seleção é o canvas (o contorno tracejado e os puxadores). -->
-  <section aria-label={widget.title} class="rounded-surface bg-card shadow-card flex h-full min-h-0 flex-col">
+  <section aria-label={widget.title} class="rounded-surface bg-card shadow-card relative flex h-full min-h-0 flex-col">
+    {#if widgetState.isEditing}
+      {@render editBar()}
+    {/if}
     <header
       class={cn(
         'border-border flex items-start gap-3 border-b px-4 pt-3.5 pb-3',
         widgetState.isEditing && cn(DRAG_HANDLE, 'cursor-grab active:cursor-grabbing'),
       )}
     >
-      {#if widgetState.isEditing}
-        {@render dragHandle()}
-      {:else}
-        <span class="rounded-box bg-primary-soft text-primary flex size-10 shrink-0 items-center justify-center">
-          <Icon class="size-5" aria-hidden="true" />
-        </span>
-      {/if}
+      <span class="rounded-box bg-primary-soft text-primary flex size-10 shrink-0 items-center justify-center">
+        <Icon class="size-5" aria-hidden="true" />
+      </span>
       <span class="min-w-0 flex-1">
         <h3 class="text-ink-900 truncate text-sm font-bold tracking-tight">{widget.title}</h3>
         <span class="text-ink-500 block truncate text-xs">{measureOf(widget)}</span>
@@ -172,9 +180,7 @@
         {/if}
       </span>
       <span class={cn('flex shrink-0 items-center gap-1', NO_DRAG)}>
-        {#if widgetState.isEditing}
-          <WidgetEditTools data={{ widget }} {actions} />
-        {:else if !widgetState.isPreview}
+        {#if !widgetState.isEditing && !widgetState.isPreview}
           <AzuosActionButton
             data={{ label: `Expandir ${widget.title}` }}
             ui={{ variant: 'ghost', icon: Maximize2, isIconOnly: true }}
