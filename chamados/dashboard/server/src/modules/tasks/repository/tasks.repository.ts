@@ -38,7 +38,27 @@ import {
   taskStages,
   type TaskStageRow,
 } from '../../../lib/db/schema/tasks.schema';
+import { ticketStockItems } from '../../../lib/db/schema/ticket-stock-items.schema';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
+
+/* Os vínculos que vêm do chamado não têm linha própria: o id é negativo e não colide. */
+const STOCK_LINK_OFFSET = 1_000_000;
+const MACHINE_LINK_OFFSET = 2_000_000;
+
+type LinkWithLabel = TaskLinkRow & { label: string | null; source: 'task' | 'ticket' };
+
+/** Os da tarefa primeiro; o do chamado só entra se a tarefa ainda não aponta para o mesmo item. */
+function mergeLinks(own: LinkWithLabel[], fromTicket: LinkWithLabel[]): LinkWithLabel[] {
+  const seen = new Set(own.map((link) => `${link.kind}:${link.targetId}`));
+  const extra = fromTicket.filter((link) => {
+    const key = `${link.kind}:${link.targetId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return [...own, ...extra];
+}
 
 /** O dia de hoje no relógio do escritório, no SQL — o mesmo de `brasiliaClock`. */
 const TODAY = sql`(now() at time zone 'America/Sao_Paulo')::date`;
@@ -47,7 +67,12 @@ export type TaskRelations = {
   /** A situação própria em que a tarefa está (`null`: a coluna fixa dela). */
   stage: TaskStageRow | null;
   steps: TaskStepRow[];
-  links: (TaskLinkRow & { label: string | null })[];
+  /**
+   * Os vínculos: os da tarefa (`source: 'task'`) e, na tarefa de chamado, os que vêm DO CHAMADO
+   * (`source: 'ticket'`) — o próprio chamado, o que ele usou do estoque e as máquinas para onde foi.
+   * Os do chamado não têm linha em `task_links` (id negativo) e não se desvinculam na tarefa.
+   */
+  links: (TaskLinkRow & { label: string | null; source: 'task' | 'ticket' })[];
   people: TaskPersonRow[];
 };
 
@@ -421,17 +446,85 @@ export class TasksRepository {
         'ler participantes',
       ),
     ]);
-    const labels = await this.labelsOf(links);
+    const fromTickets = await this.ticketLinksOf(rows);
+    const labels = await this.labelsOf([...links, ...fromTickets.map((derived) => derived.link)]);
+    const labelOf = (link: TaskLinkRow, own: string | null = null) =>
+      own ?? labels.get(`${link.kind}:${link.targetId}`) ?? null;
 
     return rows.map((row) => ({
       ...row,
       stage: stages.find((stage) => stage.id === row.stageId) ?? null,
       steps: steps.filter((step) => step.taskId === row.id),
-      links: links
-        .filter((link) => link.taskId === row.id)
-        .map((link) => ({ ...link, label: labels.get(`${link.kind}:${link.targetId}`) ?? null })),
+      links: mergeLinks(
+        links
+          .filter((link) => link.taskId === row.id)
+          .map((link) => ({ ...link, label: labelOf(link), source: 'task' as const })),
+        fromTickets
+          .filter((derived) => derived.link.taskId === row.id)
+          .map((derived) => ({
+            ...derived.link,
+            label: labelOf(derived.link, derived.label),
+            source: 'ticket' as const,
+          })),
+      ),
       people: people.filter((person) => person.taskId === row.id),
     }));
+  }
+
+  /**
+   * O QUE VEM DO CHAMADO, na tarefa de chamado: o chamado, cada peça e item que ele usou do estoque
+   * ("Monitor 24 × 2") e as máquinas para onde foram. Tirado do estoque arquivado não conta.
+   */
+  private async ticketLinksOf(
+    rows: readonly TaskRow[],
+  ): Promise<{ link: TaskLinkRow; label: string | null }[]> {
+    const byTicket = new Map(
+      rows.flatMap((row) => (row.ticketId ? [[row.ticketId, row] as const] : [])),
+    );
+    if (!byTicket.size) return [];
+    const items = await runQuery(
+      this.db
+        .select()
+        .from(ticketStockItems)
+        .where(
+          and(
+            inArray(ticketStockItems.ticketId, [...byTicket.keys()]),
+            isNull(ticketStockItems.archivedAt),
+          ),
+        )
+        .orderBy(asc(ticketStockItems.id)),
+      'ler o estoque usado nos chamados',
+    );
+    const derived: { link: TaskLinkRow; label: string | null }[] = [];
+    const add = (
+      row: TaskRow,
+      kind: TaskLinkKind,
+      targetId: number,
+      id: number,
+      label: string | null = null,
+    ) =>
+      derived.push({
+        link: { id, taskId: row.id, kind, targetId, createdAt: row.createdAt, createdBy: 'system' },
+        label,
+      });
+
+    for (const [ticketId, row] of byTicket) add(row, 'ticket', ticketId, -ticketId);
+    for (const item of items) {
+      const row = byTicket.get(item.ticketId)!;
+      const kind: TaskLinkKind = item.partId ? 'part' : 'inventory_item';
+      const targetId = item.partId ?? item.inventoryItemId;
+      if (targetId)
+        add(
+          row,
+          kind,
+          targetId,
+          -(STOCK_LINK_OFFSET + item.id),
+          `${item.itemName} × ${item.quantity}`,
+        );
+      if (item.computerId) add(row, 'computer', item.computerId, -(MACHINE_LINK_OFFSET + item.id));
+    }
+
+    return derived;
   }
 
   /** O nome de cada vinculado, lido na hora: "CH-0056", "Computador 02", a peça, o item. */

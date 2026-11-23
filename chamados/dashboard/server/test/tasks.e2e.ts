@@ -5,6 +5,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { computers } from '../src/lib/db/schema/computers.schema';
 import { tasks } from '../src/lib/db/schema/tasks.schema';
+import { parts } from '../src/lib/db/schema/parts.schema';
+import { ticketStockItems } from '../src/lib/db/schema/ticket-stock-items.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
 import { TasksService } from '../src/modules/tasks/service/tasks.service';
 import { ANA, asAna, asBia, createE2eApp, type E2eApp } from './support/e2e-app.util';
@@ -54,6 +56,8 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
 
   beforeEach(async () => {
     await started.truncate(
+      'ticket_stock_items',
+      'parts',
       'history',
       'task_stages',
       'tasks',
@@ -416,5 +420,38 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
     });
     const others = await started.db.select().from(tasks).where(eq(tasks.ticketId, manutencao!.id));
     expect(others).toEqual([]);
+  });
+
+  // feliz
+  it('brings into the ticket task the ticket itself and what it used from the stock', async () => {
+    const opened = await api().post('/api/v1/tickets').set(asAna()).send(PEDIDO).expect(201);
+    const task = await taskOfTicket(opened.body.id as number);
+    const [monitor] = await started.db
+      .insert(parts)
+      .values({ name: 'Monitor 24', category: 'monitor', createdBy: ANA.id })
+      .returning();
+    await started.db.insert(ticketStockItems).values({
+      ticketId: opened.body.id as number,
+      partId: monitor!.id,
+      itemName: 'Monitor 24',
+      direction: 'out',
+      quantity: 2,
+      createdBy: ANA.id,
+      createdByName: ANA.name,
+    });
+
+    const found = await api().get(`/api/v1/tasks/${task.id}`).set(asAna()).expect(200);
+
+    expect(found.body.links).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'ticket', targetId: opened.body.id, source: 'ticket' }),
+        expect.objectContaining({
+          kind: 'part',
+          targetId: monitor!.id,
+          label: 'Monitor 24 × 2',
+          source: 'ticket',
+        }),
+      ]),
+    );
   });
 });

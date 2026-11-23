@@ -84,6 +84,7 @@ export const TASK_MAP_LAYOUT = {
     person: PAD,
     task: PAD + PERSON_WIDTH + COLUMN_GAP,
     direct: PAD + PERSON_WIDTH + NODE_WIDTH + COLUMN_GAP * 2,
+    owned: PAD + PERSON_WIDTH + NODE_WIDTH * 2 + COLUMN_GAP * 3,
   },
   /** Quantas ilhas lado a lado, e o espaço entre elas. */
   islandColumns: 3,
@@ -91,7 +92,7 @@ export const TASK_MAP_LAYOUT = {
 } as const;
 
 /** A largura de uma ilha cheia — a vaga de cada coluna de ilhas. */
-const ISLAND_SLOT = TASK_MAP_LAYOUT.columns.direct + NODE_WIDTH + PAD;
+const ISLAND_SLOT = TASK_MAP_LAYOUT.columns.owned + NODE_WIDTH + PAD;
 
 export function islandNodeId(taskId: number): string {
   return `island:${taskId}`;
@@ -174,23 +175,60 @@ export function buildTaskMap(
 
 type Island = TaskMap & { height: number };
 
+/** Uma linha da direita: o item que a tarefa toca, com o que é DELE ao lado (o do chamado). */
+type Row = { direct: TaskLink; owned: TaskLink[] };
+
+/**
+ * As linhas da direita: o chamado da tarefa com o que ele usou (estoque, máquinas) ao lado; o
+ * resto, sozinho, ligado direto na tarefa. Sem o chamado à vista (tirado no "Mostrar"), o que veio
+ * dele também liga direto.
+ */
+export function rowsOf(links: readonly TaskLink[]): Row[] {
+  const ticket = links.find((link) => link.kind === 'ticket' && link.source === 'ticket');
+  const isOwned = (link: TaskLink) =>
+    Boolean(ticket) && link.source === 'ticket' && link.kind !== 'ticket';
+
+  return links
+    .filter((link) => !isOwned(link))
+    .map((direct) => ({ direct, owned: direct === ticket ? links.filter(isOwned) : [] }));
+}
+
+/** A ilha só é larga até a última coluna que ela usa. */
+function widthOf(rows: readonly Row[]): number {
+  const { columns } = TASK_MAP_LAYOUT;
+  if (rows.some((row) => row.owned.length > 0)) return ISLAND_SLOT;
+  if (rows.length > 0) return columns.direct + NODE_WIDTH + PAD;
+
+  return columns.task + NODE_WIDTH + PAD;
+}
+
 function islandOf(task: Task, kinds: readonly TaskLinkKind[], now: Date, base: string): Island {
   const { taskHeight, personHeight, targetHeight, gap, columns } = TASK_MAP_LAYOUT;
-  const links = uniqueLinks(task.links.filter((link) => kinds.includes(link.kind)));
+  const rows = rowsOf(uniqueLinks(task.links.filter((link) => kinds.includes(link.kind))));
   const people = peopleOf(task);
-  const rightHeight = spanOf(links.length, targetHeight);
+  const rowHeights = rows.map((row) => spanOf(Math.max(1, row.owned.length), targetHeight));
+  const rightHeight = rowHeights.reduce((sum, height) => sum + height + gap, 0) - gap;
   const peopleHeight = spanOf(people.length, personHeight);
   const content = Math.max(taskHeight, peopleHeight, rightHeight);
   const frameId = islandNodeId(task.id);
   const taskId = taskNodeId(task.id);
   const isPending = task.status !== 'done';
   const child = { parentId: frameId, extent: 'parent' as const, draggable: false };
+  const target = (link: TaskLink, x: number, y: number): TaskMapNode => ({
+    ...child,
+    id: targetNodeId(task.id, link.kind, link.targetId),
+    type: 'target',
+    position: { x, y },
+    width: NODE_WIDTH,
+    height: targetHeight,
+    data: targetDataOf(link, base),
+  });
   const nodes: TaskMapNode[] = [
     {
       id: frameId,
       type: 'island',
       position: { x: 0, y: 0 },
-      width: links.length > 0 ? ISLAND_SLOT : columns.task + NODE_WIDTH + PAD,
+      width: widthOf(rows),
       height: content + PAD * 2,
       data: { title: task.title },
       selectable: false,
@@ -220,19 +258,18 @@ function islandOf(task: Task, kinds: readonly TaskLinkKind[], now: Date, base: s
     });
     edges.push(edgeOf(id, taskId, { isDashed: person.role === 'Participante' }));
   });
-  const linksTop = PAD + centered(content, rightHeight);
-  links.forEach((link, index) => {
-    const id = targetNodeId(task.id, link.kind, link.targetId);
-    nodes.push({
-      ...child,
-      id,
-      type: 'target',
-      position: { x: columns.direct, y: linksTop + index * (targetHeight + gap) },
-      width: NODE_WIDTH,
-      height: targetHeight,
-      data: targetDataOf(link, base),
+  let top = PAD + centered(content, rightHeight);
+  rows.forEach((row, index) => {
+    const span = rowHeights[index]!;
+    const direct = target(row.direct, columns.direct, top + centered(span, targetHeight));
+    nodes.push(direct);
+    edges.push(edgeOf(taskId, direct.id, { isPending }));
+    row.owned.forEach((item, position) => {
+      const owned = target(item, columns.owned, top + position * (targetHeight + gap));
+      nodes.push(owned);
+      edges.push(edgeOf(direct.id, owned.id, { isPending }));
     });
-    edges.push(edgeOf(taskId, id, { isPending }));
+    top += span + gap;
   });
 
   return { nodes, edges, height: content + PAD * 2 };

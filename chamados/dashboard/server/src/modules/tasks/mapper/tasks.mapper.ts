@@ -55,6 +55,7 @@ export function toTask(
       kind: link.kind,
       targetId: link.targetId,
       label: link.label,
+      source: link.source,
     })),
     progress: { done, total: row.steps.length },
     finishedAt: row.finishedAt?.toISOString() ?? null,

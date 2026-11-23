@@ -101,4 +101,18 @@ describe('AzuosTaskDetailView', () => {
     setup({ task: null }, { error: 'Tarefa não encontrada.' });
     expect(screen.getByText('Tarefa não encontrada.')).toBeInTheDocument();
   });
+
+  // feliz
+  it('shows what came from the ticket as "do chamado", without the unlink button', () => {
+    setup({
+      task: taskFixture({
+        origin: 'ticket',
+        ticketId: 9,
+        links: [{ id: -1000001, kind: 'part', targetId: 3, label: 'Monitor 24 × 2', source: 'ticket' }],
+      }),
+    });
+
+    expect(screen.getByText('do chamado')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Desvincular Monitor 24 × 2' })).not.toBeInTheDocument();
+  });
 });

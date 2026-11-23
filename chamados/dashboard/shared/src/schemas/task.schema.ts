@@ -50,6 +50,11 @@ export const taskLinkSchema = z.object({
   targetId: z.number().int(),
   /** O nome do vinculado lido na hora ("CH-0056", "Computador 02"); nulo se ele sumiu. */
   label: z.string().nullable(),
+  /**
+   * De onde veio: vinculado NA TAREFA, ou trazido DO CHAMADO dela (o chamado, o estoque que ele
+   * usou, as máquinas). O do chamado não se desvincula na tarefa: muda-se no chamado.
+   */
+  source: z.enum(['task', 'ticket']),
 });
 
 export type TaskLink = z.infer<typeof taskLinkSchema>;

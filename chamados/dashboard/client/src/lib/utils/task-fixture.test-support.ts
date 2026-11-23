@@ -31,7 +31,9 @@ export function taskFixture(over: Partial<Task> = {}): Task {
       },
       { id: 12, label: 'Instalar', position: 1, done: false, doneAt: null, doneBy: null },
     ],
-    links: [{ id: 101, kind: 'computer', targetId: 3, label: 'Computador 02' }],
+    links: [
+      { id: 101, kind: 'computer', targetId: 3, label: 'Computador 02', source: 'task' as const },
+    ],
     progress: { done: 1, total: 2 },
     finishedAt: null,
     createdBy: { id: 'person-ana', name: 'Ana Prado', avatarUrl: null },
