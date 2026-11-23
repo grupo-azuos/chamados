@@ -190,8 +190,8 @@
     />
   {:else if data.view === 'calendar'}
     <TaskCalendar
-      data={{ tasks: data.tasks, month: data.month, today: data.today, now: data.now }}
-      actions={{ onOpen: actions.onOpen, onMonthChange: actions.onMonthChange }}
+      data={{ tasks: data.tasks, month: data.month, now: data.now }}
+      actions={{ onOpen: actions.onOpen, onRangeChange: actions.onRangeChange }}
     />
   {:else}
     <TaskTimeline

@@ -3,32 +3,51 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TEST_NOW, taskFixture } from '../task-fixture.test-support';
-import TaskCalendar from './azuos-task-calendar.svelte';
+import TaskCalendar, { taskEventOf } from './azuos-task-calendar.svelte';
 
 function setup(tasks = [taskFixture()]) {
-  const actions = { onOpen: vi.fn(), onMonthChange: vi.fn() };
-  render(TaskCalendar, {
-    props: { data: { tasks, month: '2026-11', today: '2026-11-23', now: TEST_NOW }, actions },
-  });
+  const actions = { onOpen: vi.fn(), onRangeChange: vi.fn() };
+  render(TaskCalendar, { props: { data: { tasks, month: '2026-11', now: TEST_NOW }, actions } });
   return actions;
 }
 
 describe('AzuosTaskCalendar', () => {
   // feliz
-  it('puts the task on its due day, opens it and changes the month', async () => {
+  it('shows the month of the big-calendar, opens the task and asks for the next period', async () => {
     const actions = setup();
 
-    expect(screen.getByRole('heading', { name: 'Novembro de 2026' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'novembro de 2026' })).toBeInTheDocument();
+    expect(actions.onRangeChange).toHaveBeenCalledWith({
+      view: 'month',
+      from: '2026-11-01',
+      to: '2026-12-05',
+      anchor: '2026-11-01',
+    });
     await userEvent.click(screen.getByRole('button', { name: 'Trocar o switch da sala 2' }));
     expect(actions.onOpen).toHaveBeenCalled();
-    await userEvent.click(screen.getByRole('button', { name: 'Próximo mês' }));
-    expect(actions.onMonthChange).toHaveBeenCalledWith('2026-12');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo: mês' }));
+    expect(actions.onRangeChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ anchor: '2026-12-01' }),
+    );
+  });
+
+  // feliz
+  it('offers month, week, day, list and year', async () => {
+    const actions = setup();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ano' }));
+
+    expect(screen.getByRole('heading', { name: '2026' })).toBeInTheDocument();
+    expect(actions.onRangeChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ view: 'year', from: '2026-01-01', to: '2026-12-31' }),
+    );
   });
 
   // triste
-  it('shows "+N" when a day has more tasks than fit', () => {
+  it('shows "+N mais" when a day has more tasks than fit, and colors a finished task green', () => {
     setup([1, 2, 3, 4, 5].map((id) => taskFixture({ id, title: `Tarefa ${id}` })));
 
-    expect(screen.getByText('+2')).toBeInTheDocument();
+    expect(screen.getByText('+2 mais')).toBeInTheDocument();
+    expect(taskEventOf(taskFixture({ status: 'done' }), TEST_NOW).color).toBe('var(--success)');
   });
 });

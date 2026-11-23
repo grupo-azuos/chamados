@@ -352,10 +352,14 @@ describe('AzuosTicketLookupView — Enter, the list states and the actions slot'
     vi.mocked(actions.onSearch).mockClear();
     setup({
       data: { protocol: 'CH-0007', ticket },
-      slots: { ticketActions: createRawSnippet(() => ({ render: () => '<p>ações do chamado</p>' })) },
+      slots: {
+        ticketActions: createRawSnippet(() => ({ render: () => '<p>ações do chamado</p>' })),
+      },
     });
 
-    await fireEvent.submit(screen.getByRole('textbox', { name: 'Número do chamado' }).closest('form')!);
+    await fireEvent.submit(
+      screen.getByRole('textbox', { name: 'Número do chamado' }).closest('form')!,
+    );
     expect(actions.onSearch).toHaveBeenCalledOnce();
     expect(screen.getByText('ações do chamado')).toBeInTheDocument();
   });
@@ -375,7 +379,19 @@ describe('AzuosTicketLookupView — Enter, the list states and the actions slot'
   it('says there is nothing closed yet when the closed tab is empty', async () => {
     setup({
       data: {
-        mine: [{ id: 1, protocol: 'CH-0001', status: 'open', priority: 'high', area: 'infra', problemType: 'printer', description: 'x', createdAt: '2026-10-14T13:00:00.000Z', isWatching: false }],
+        mine: [
+          {
+            id: 1,
+            protocol: 'CH-0001',
+            status: 'open',
+            priority: 'high',
+            area: 'infra',
+            problemType: 'printer',
+            description: 'x',
+            createdAt: '2026-10-14T13:00:00.000Z',
+            isWatching: false,
+          },
+        ],
       },
     });
     await userEvent.click(screen.getByRole('button', { name: /encerrados/i }));
@@ -389,8 +405,38 @@ describe('AzuosTicketLookupView — typing the protocol and a box with only clos
     vi.mocked(actions.onProtocolChange).mockClear();
     setup({
       data: {
-        mine: [{ id: 2, protocol: 'CH-0002', status: 'resolved', priority: 'low', area: 'infra', problemType: 'printer', description: 'x', createdAt: '2026-10-14T13:00:00.000Z', isWatching: false }],
-        ticket: { ...ticket, attachments: [{ id: 1, ticketId: 7, historyId: 3, kind: 'pdf', origin: 'requester', fileName: 'nota.pdf', contentType: 'application/pdf', sizeBytes: 10, viewUrl: 'https://r2/abrir', downloadUrl: 'https://r2/baixar', createdAt: '2026-09-15T12:10:00.000Z', createdBy: null }] },
+        mine: [
+          {
+            id: 2,
+            protocol: 'CH-0002',
+            status: 'resolved',
+            priority: 'low',
+            area: 'infra',
+            problemType: 'printer',
+            description: 'x',
+            createdAt: '2026-10-14T13:00:00.000Z',
+            isWatching: false,
+          },
+        ],
+        ticket: {
+          ...ticket,
+          attachments: [
+            {
+              id: 1,
+              ticketId: 7,
+              historyId: 3,
+              kind: 'pdf',
+              origin: 'requester',
+              fileName: 'nota.pdf',
+              contentType: 'application/pdf',
+              sizeBytes: 10,
+              viewUrl: 'https://r2/abrir',
+              downloadUrl: 'https://r2/baixar',
+              createdAt: '2026-09-15T12:10:00.000Z',
+              createdBy: null,
+            },
+          ],
+        },
       },
     });
 

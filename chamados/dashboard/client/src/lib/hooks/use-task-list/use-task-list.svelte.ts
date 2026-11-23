@@ -88,6 +88,8 @@ export type TaskListModel = {
     onClearFilters: () => void;
     onPageChange: (page: number) => void;
     onMonthChange: (month: string) => void;
+    /** O calendário mudou o período à mostra (mês, semana, dia, lista ou ano): busca esse período. */
+    onRangeChange: (range: TaskRange) => void;
     onOpen: (task: Task) => void;
     onClose: () => void;
     onMove: (task: Task, status: 'done' | 'reopened') => void;
@@ -99,6 +101,9 @@ export type TaskListModel = {
     onRetry: () => void;
   };
 };
+
+/** O período à mostra no calendário: `from` e `to` em `aaaa-mm-dd`, e o dia de referência. */
+export type TaskRange = { from: string; to: string; anchor: string };
 
 const VIEW_STORAGE_KEY = 'azuos:tasks:view';
 
@@ -152,6 +157,7 @@ function queryOf(
   filter: TaskListFilter,
   page: number,
   month: string,
+  range: TaskRange | null = null,
 ): Partial<TaskListQuery> & Pick<TaskListQuery, 'area'> {
   const paged = view === 'list' || view === 'cards';
   const ranged = view === 'calendar' || view === 'timeline';
@@ -161,8 +167,19 @@ function queryOf(
     ...filterParams(filter),
     page: paged ? page : 1,
     pageSize: paged ? TASKS_PAGE_SIZE : MAX_PAGE_SIZE,
-    ...(ranged ? monthRange(month) : {}),
+    ...(ranged ? rangeOf(view, month, range) : {}),
   };
+}
+
+/** O calendário busca o período que mostra (a semana, o ano); a timeline, o mês. */
+function rangeOf(
+  view: TaskView,
+  month: string,
+  range: TaskRange | null,
+): { from: string; to: string } {
+  if (view === 'calendar' && range) return { from: range.from, to: range.to };
+
+  return monthRange(month);
 }
 
 function countActive(filter: TaskListFilter): number {
@@ -181,6 +198,7 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
   const page = mirrorStore(pageStore);
   const monthStore = writable<string>(brasiliaClock().day.slice(0, 7));
   const month = mirrorStore(monthStore);
+  const rangeStore = writable<TaskRange | null>(null);
 
   let selectedId = $state<number | null>(null);
   let removing = $state<Task | null>(null);
@@ -188,8 +206,8 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
 
   const list = mirrorStore(
     createQuery(
-      derived([viewStore, filterStore, pageStore, monthStore], ([v, f, p, m]) => {
-        const query = queryOf(area, v, f, p, m);
+      derived([viewStore, filterStore, pageStore, monthStore, rangeStore], ([v, f, p, m, r]) => {
+        const query = queryOf(area, v, f, p, m, r);
         return {
           queryKey: [...TASKS_QUERY_KEY, 'list', query],
           queryFn: () => tasksApi.list(query),
@@ -348,6 +366,11 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
       onClearFilters: () => setFilter({ ...EMPTY_FILTER, search: filter.current.search }),
       onPageChange: (next) => pageStore.set(next),
       onMonthChange: (next) => monthStore.set(next),
+      onRangeChange: (next) => {
+        rangeStore.set(next);
+        /* O mês acompanha o calendário: trocar para a timeline continua no mesmo mês. */
+        monthStore.set(next.anchor.slice(0, 7));
+      },
       onOpen: (task) => {
         selectedId = task.id;
       },

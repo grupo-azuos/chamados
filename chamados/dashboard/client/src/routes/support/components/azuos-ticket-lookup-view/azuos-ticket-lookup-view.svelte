@@ -240,7 +240,7 @@
           { value: 'closed', label: `Encerrados · ${groups.closed.length}` },
         ],
       }}
-      ui={{ ariaLabel: 'Recorte dos seus chamados', className: 'w-full' }}
+      ui={{ ariaLabel: 'Recorte dos seus chamados' }}
       actions={{ onChange: (value) => (chosenTab = value as typeof tab) }}
     />
 

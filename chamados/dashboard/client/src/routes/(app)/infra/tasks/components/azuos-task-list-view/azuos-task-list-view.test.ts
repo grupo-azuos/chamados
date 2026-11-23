@@ -17,6 +17,7 @@ function setup(
     onClearFilters: vi.fn(),
     onPageChange: vi.fn(),
     onMonthChange: vi.fn(),
+    onRangeChange: vi.fn(),
     onOpen: vi.fn(),
     onClose: vi.fn(),
     onMove: vi.fn(),

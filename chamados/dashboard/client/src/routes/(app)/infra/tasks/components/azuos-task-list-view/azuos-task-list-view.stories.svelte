@@ -38,7 +38,7 @@
   const state = { isLoading: false, isEmpty: false, isFilteredOut: false, isTruncated: false, isMutating: false, error: null, actionError: null };
   const actions = {
     onViewChange: fn(), onSearchChange: fn(), onFilterChange: fn(), onClearFilters: fn(), onPageChange: fn(),
-    onMonthChange: fn(), onOpen: fn(), onClose: fn(), onMove: fn(), onToggleStep: fn(), onRemoveLink: fn(),
+    onMonthChange: fn(), onRangeChange: fn(), onOpen: fn(), onClose: fn(), onMove: fn(), onToggleStep: fn(), onRemoveLink: fn(),
     onAskRemove: fn(), onCancelRemove: fn(), onConfirmRemove: fn(), onRetry: fn(), onNew: fn(), onRefuse: fn(),
   };
 </script>
