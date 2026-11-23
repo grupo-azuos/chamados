@@ -53,11 +53,16 @@ describe('the cumulative block in the editor', () => {
   // triste
   it('offers nothing in time for a source without dates', () => {
     expect(
-      groupOptions({ ...COLUMN, kind: 'cumulative', source: 'softwareProjects', groupBy: 'status' }).map(
-        (option) => option.value,
-      ),
+      groupOptions({
+        ...COLUMN,
+        kind: 'cumulative',
+        source: 'softwareProjects',
+        groupBy: 'status',
+      }).map((option) => option.value),
     ).toEqual(['createdMonth']);
-    expect(groupOptions({ ...COLUMN, kind: 'calendar', source: 'quotes', groupBy: 'status' })).toEqual([]);
+    expect(
+      groupOptions({ ...COLUMN, kind: 'calendar', source: 'quotes', groupBy: 'status' }),
+    ).toEqual([]);
   });
 });
 
@@ -67,7 +72,9 @@ describe('weeks and age bands in the editor', () => {
     const inTime = groupOptions({ ...COLUMN, kind: 'area' }).map((option) => option.value);
     const asCategory = groupOptions(COLUMN).map((option) => option.value);
 
-    expect(inTime).toEqual(expect.arrayContaining(['createdWeek', 'resolvedWeek', 'resolvedMonth']));
+    expect(inTime).toEqual(
+      expect.arrayContaining(['createdWeek', 'resolvedWeek', 'resolvedMonth']),
+    );
     expect(inTime).not.toContain('openAge');
     expect(asCategory).toEqual(expect.arrayContaining(['openAge', 'priority']));
     expect(asCategory).not.toContain('createdWeek');
@@ -95,14 +102,23 @@ describe('newWidget', () => {
   it('starts a block on the first source of the module, with a suggested title', () => {
     const widget = newWidget('manutencao', 'donut', 'w9');
 
-    expect(widget).toMatchObject({ id: 'w9', kind: 'donut', source: 'maintenanceTickets', groupBy: 'status' });
+    expect(widget).toMatchObject({
+      id: 'w9',
+      kind: 'donut',
+      source: 'maintenanceTickets',
+      groupBy: 'status',
+    });
     expect(widget.title).toBe('Chamados por situação');
     expect(widgetSchema.safeParse(widget).success).toBe(true);
   });
 
   // triste
   it('keeps the agenda inside the module, on a source that has days', () => {
-    const widget = fitGroup({ ...newWidget('manutencao', 'column', 'w1'), source: 'inventoryItems', kind: 'agenda' });
+    const widget = fitGroup({
+      ...newWidget('manutencao', 'column', 'w1'),
+      source: 'inventoryItems',
+      kind: 'agenda',
+    });
 
     expect(widget.source).not.toBe('quotes');
     expect(widget.groupBy).toBe('createdDay');
@@ -113,16 +129,26 @@ describe('newWidget', () => {
 describe('the window of the agenda', () => {
   // feliz
   it('keeps what it can when the mode changes, and exact dates are born on the window of now', () => {
-    const month = { mode: 'relative' as const, unit: 'month' as const, count: 1, direction: 'next' as const };
+    const month = {
+      mode: 'relative' as const,
+      unit: 'month' as const,
+      count: 1,
+      direction: 'next' as const,
+    };
 
     expect(windowForMode('last', month, '2026-11-21')).toEqual({ ...month, direction: 'last' });
     expect(windowForMode('custom', month, '2026-11-21')).toMatchObject({ mode: 'custom' });
-    expect(withUnit({ ...month, unit: 'day', count: 30 }, 'week')).toMatchObject({ unit: 'week', count: 1 });
+    expect(withUnit({ ...month, unit: 'day', count: 30 }, 'week')).toMatchObject({
+      unit: 'week',
+      count: 1,
+    });
   });
 
   // triste
   it('falls back to a month ahead when leaving exact dates, and keeps the ring card one row tall', () => {
-    expect(windowForMode('next', { mode: 'custom', from: '2026-11-01', to: '2026-11-10' }, '2026-11-21')).toEqual({
+    expect(
+      windowForMode('next', { mode: 'custom', from: '2026-11-01', to: '2026-11-10' }, '2026-11-21'),
+    ).toEqual({
       mode: 'relative',
       unit: 'month',
       count: 1,

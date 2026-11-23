@@ -15,15 +15,21 @@ import { tasksApi } from '$lib/api/tasks.api';
 import { ticketsApi } from '$lib/api/tickets.api';
 import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import {
+  type GanttWindow,
+  ganttWindowOf,
+  shiftGanttWindow,
+  type TimelineZoom,
+} from '$lib/utils/task-gantt.util';
 
 /**
  * O MODEL DA TELA DE TAREFAS: os modos de ver, os filtros, a página, o mês do calendário e as
  * ações que não precisam de formulário (finalizar, reabrir, marcar etapa, apagar).
  *
  * Lista e cards são paginados; quadro, calendário e timeline trazem tudo o que cabe no recorte
- * (até `MAX_PAGE_SIZE`) — quadro sem paginação, calendário e timeline pelo mês à vista.
+ * (até `MAX_PAGE_SIZE`) — quadro e mapa sem paginação, calendário e timeline pelo período à vista.
  */
-export const TASK_VIEWS = ['list', 'cards', 'board', 'calendar', 'timeline'] as const;
+export const TASK_VIEWS = ['list', 'cards', 'board', 'calendar', 'timeline', 'map'] as const;
 export type TaskView = (typeof TASK_VIEWS)[number];
 
 export const TASK_VIEW_LABELS: Record<TaskView, string> = {
@@ -32,6 +38,7 @@ export const TASK_VIEW_LABELS: Record<TaskView, string> = {
   board: 'Quadro',
   calendar: 'Calendário',
   timeline: 'Timeline',
+  map: 'Mapa',
 };
 
 export const TASKS_PAGE_SIZE = 15;
@@ -66,8 +73,11 @@ export type TaskListModel = {
     activeFilterCount: number;
     page: number;
     pageSize: number;
-    /** O mês à vista no calendário e na timeline: `aaaa-mm`. */
+    /** O mês em que o calendário abre: `aaaa-mm`. */
     month: string;
+    /** Os dias à vista na timeline e o zoom dela. */
+    window: GanttWindow;
+    zoom: TimelineZoom;
     people: AzuosPersonPickerPerson[];
     selected: Task | null;
     removing: Task | null;
@@ -90,6 +100,9 @@ export type TaskListModel = {
     onMonthChange: (month: string) => void;
     /** O calendário mudou o período à mostra (mês, semana, dia, lista ou ano): busca esse período. */
     onRangeChange: (range: TaskRange) => void;
+    onShiftWindow: (weeks: number) => void;
+    onWindowToday: () => void;
+    onZoom: (zoom: TimelineZoom) => void;
     onOpen: (task: Task) => void;
     onClose: () => void;
     onMove: (task: Task, status: 'done' | 'reopened') => void;
@@ -158,6 +171,7 @@ function queryOf(
   page: number,
   month: string,
   range: TaskRange | null = null,
+  window: GanttWindow | null = null,
 ): Partial<TaskListQuery> & Pick<TaskListQuery, 'area'> {
   const paged = view === 'list' || view === 'cards';
   const ranged = view === 'calendar' || view === 'timeline';
@@ -167,7 +181,7 @@ function queryOf(
     ...filterParams(filter),
     page: paged ? page : 1,
     pageSize: paged ? TASKS_PAGE_SIZE : MAX_PAGE_SIZE,
-    ...(ranged ? rangeOf(view, month, range) : {}),
+    ...(ranged ? rangeOf(view, month, range, window) : {}),
   };
 }
 
@@ -176,8 +190,10 @@ function rangeOf(
   view: TaskView,
   month: string,
   range: TaskRange | null,
+  window: GanttWindow | null,
 ): { from: string; to: string } {
   if (view === 'calendar' && range) return { from: range.from, to: range.to };
+  if (view === 'timeline' && window) return window;
 
   return monthRange(month);
 }
@@ -199,6 +215,10 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
   const monthStore = writable<string>(brasiliaClock().day.slice(0, 7));
   const month = mirrorStore(monthStore);
   const rangeStore = writable<TaskRange | null>(null);
+  const zoomStore = writable<TimelineZoom>('month');
+  const zoom = mirrorStore(zoomStore);
+  const windowStore = writable<GanttWindow>(ganttWindowOf(brasiliaClock().day, 'month'));
+  const window = mirrorStore(windowStore);
 
   let selectedId = $state<number | null>(null);
   let removing = $state<Task | null>(null);
@@ -206,14 +226,17 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
 
   const list = mirrorStore(
     createQuery(
-      derived([viewStore, filterStore, pageStore, monthStore, rangeStore], ([v, f, p, m, r]) => {
-        const query = queryOf(area, v, f, p, m, r);
-        return {
-          queryKey: [...TASKS_QUERY_KEY, 'list', query],
-          queryFn: () => tasksApi.list(query),
-          placeholderData: (previous: TaskPage | undefined) => previous,
-        };
-      }),
+      derived(
+        [viewStore, filterStore, pageStore, monthStore, rangeStore, windowStore],
+        ([v, f, p, m, r, w]) => {
+          const query = queryOf(area, v, f, p, m, r, w);
+          return {
+            queryKey: [...TASKS_QUERY_KEY, 'list', query],
+            queryFn: () => tasksApi.list(query),
+            placeholderData: (previous: TaskPage | undefined) => previous,
+          };
+        },
+      ),
     ),
   );
 
@@ -312,6 +335,12 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
       get month() {
         return month.current;
       },
+      get window() {
+        return window.current;
+      },
+      get zoom() {
+        return zoom.current;
+      },
       get people() {
         return (people.current.data ?? []).map((person) => ({
           id: person.id,
@@ -366,6 +395,12 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
       onClearFilters: () => setFilter({ ...EMPTY_FILTER, search: filter.current.search }),
       onPageChange: (next) => pageStore.set(next),
       onMonthChange: (next) => monthStore.set(next),
+      onShiftWindow: (weeks) => windowStore.set(shiftGanttWindow(window.current, weeks)),
+      onWindowToday: () => windowStore.set(ganttWindowOf(brasiliaClock().day, zoom.current)),
+      onZoom: (next) => {
+        zoomStore.set(next);
+        windowStore.set(ganttWindowOf(brasiliaClock().day, next));
+      },
       onRangeChange: (next) => {
         rangeStore.set(next);
         /* O mês acompanha o calendário: trocar para a timeline continua no mesmo mês. */

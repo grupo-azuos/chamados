@@ -35,7 +35,11 @@ export function loadScreenFilters(userId: string | undefined, screen: string): u
   return stored?.screens[screen];
 }
 
-export function saveScreenFilters(userId: string | undefined, screen: string, value: unknown): void {
+export function saveScreenFilters(
+  userId: string | undefined,
+  screen: string,
+  value: unknown,
+): void {
   if (!userId) return;
   const stored = readStored(userId) ?? emptyStored();
 

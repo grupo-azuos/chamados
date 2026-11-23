@@ -18,6 +18,9 @@ function setup(
     onPageChange: vi.fn(),
     onMonthChange: vi.fn(),
     onRangeChange: vi.fn(),
+    onShiftWindow: vi.fn(),
+    onWindowToday: vi.fn(),
+    onZoom: vi.fn(),
     onOpen: vi.fn(),
     onClose: vi.fn(),
     onMove: vi.fn(),
@@ -29,6 +32,7 @@ function setup(
     onRetry: vi.fn(),
     onNew: vi.fn(),
     onRefuse: vi.fn(),
+    map: { onPeopleChange: vi.fn(), onIslandMove: vi.fn(), onResetLayout: vi.fn() },
   };
   render(TaskListView, {
     props: {
@@ -43,6 +47,9 @@ function setup(
         page: 1,
         pageSize: 15,
         month: '2026-11',
+        window: { from: '2026-11-16', to: '2026-12-20' },
+        zoom: 'month',
+        map: { peopleIds: [], positions: {} },
         people: [],
         selected: null,
         removing: null,

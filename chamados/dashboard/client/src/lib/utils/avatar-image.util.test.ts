@@ -94,7 +94,9 @@ describe('assertIsImageFile', () => {
  * as duas funções de costura tocam. O que se prova é a ORDEM — girar, cortar, medir — e o que
  * cada falha do navegador vira para a pessoa.
  */
-function fakeCanvasWorld(options: { dataUrl?: string; blob?: Blob | null; context?: boolean } = {}) {
+function fakeCanvasWorld(
+  options: { dataUrl?: string; blob?: Blob | null; context?: boolean } = {},
+) {
   const drawn: unknown[][] = [];
   const context = {
     translate: () => {},
@@ -168,11 +170,15 @@ describe('toCroppedAvatarUpload', () => {
     unreadable.restore();
 
     const noContext = fakeCanvasWorld({ context: false });
-    await expect(toCroppedAvatarUpload(image(), selection)).rejects.toThrow('não conseguiu preparar');
+    await expect(toCroppedAvatarUpload(image(), selection)).rejects.toThrow(
+      'não conseguiu preparar',
+    );
     noContext.restore();
 
     const badType = fakeCanvasWorld({ dataUrl: 'data:image/gif;base64,AAAA' });
-    await expect(toCroppedAvatarUpload(image(), selection)).rejects.toThrow('não conseguiu preparar');
+    await expect(toCroppedAvatarUpload(image(), selection)).rejects.toThrow(
+      'não conseguiu preparar',
+    );
     badType.restore();
 
     const tooBig = fakeCanvasWorld({ dataUrl: `data:image/png;base64,${'A'.repeat(1_400_000)}` });

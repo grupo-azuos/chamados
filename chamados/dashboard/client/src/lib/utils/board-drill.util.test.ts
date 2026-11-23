@@ -1,5 +1,8 @@
 import { drillFromParam } from '@template/shared/schemas/board-drill.schema';
-import { EMPTY_BOARD_FILTER_VALUES, type Widget } from '@template/shared/schemas/dashboard-board.schema';
+import {
+  EMPTY_BOARD_FILTER_VALUES,
+  type Widget,
+} from '@template/shared/schemas/dashboard-board.schema';
 import { describe, expect, it } from 'vitest';
 
 import { drillHref, drillOf, hasDrillTarget } from './board-drill.util';
@@ -20,7 +23,11 @@ const WIDGET = {
 describe('drillOf', () => {
   // feliz
   it('carries the block question, the board filters and the clicked item', () => {
-    const drill = drillOf(WIDGET, { ...EMPTY_BOARD_FILTER_VALUES, ticketPriority: 'alta' }, { key: 'aberto', label: 'Aberto' });
+    const drill = drillOf(
+      WIDGET,
+      { ...EMPTY_BOARD_FILTER_VALUES, ticketPriority: 'alta' },
+      { key: 'aberto', label: 'Aberto' },
+    );
 
     expect(drill).toMatchObject({
       source: 'systemTickets',
@@ -48,7 +55,11 @@ describe('drillHref', () => {
 
   // triste
   it('has nowhere to go for a source without a list', () => {
-    const drill = drillOf({ ...WIDGET, source: 'softwareActivity', groupBy: null } as Widget, EMPTY_BOARD_FILTER_VALUES, { key: null });
+    const drill = drillOf(
+      { ...WIDGET, source: 'softwareActivity', groupBy: null } as Widget,
+      EMPTY_BOARD_FILTER_VALUES,
+      { key: null },
+    );
 
     expect(hasDrillTarget('softwareActivity')).toBe(false);
     expect(drillHref(drill)).toBeNull();

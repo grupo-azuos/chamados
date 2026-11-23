@@ -13,14 +13,21 @@
 </script>
 
 <script lang="ts">
-  const actions = { onOpen: fn(), onMonthChange: fn() };
+  const actions = { onShift: fn(), onToday: fn(), onZoom: fn(), onOpen: fn() };
   const tasks = [
     taskFixture(),
-    taskFixture({ id: 2, title: 'Atrasada', startDate: '2026-11-02', dueDate: '2026-11-20' }),
-    taskFixture({ id: 3, title: 'Atravessa o mês', startDate: '2026-10-25', dueDate: '2026-12-05', status: 'reopened' }),
-    taskFixture({ id: 4, title: 'Finalizada', status: 'done', startDate: '2026-11-03', dueDate: '2026-11-09' }),
+    taskFixture({ id: 2, title: 'Atrasada', startDate: '2026-11-17', dueDate: '2026-11-20' }),
+    taskFixture({ id: 3, title: 'Atravessa a janela', startDate: '2026-11-10', dueDate: '2027-01-05', status: 'reopened' }),
+    taskFixture({ id: 4, title: 'Finalizada', status: 'done', startDate: '2026-11-18', dueDate: '2026-11-24' }),
+    taskFixture({ id: 5, title: 'Sem responsável', owner: null, startDate: '2026-11-25', dueDate: '2026-11-27' }),
   ];
+  const window = { from: '2026-11-16', to: '2026-12-20' };
 </script>
 
-<Story name="Default" args={{ data: { tasks, month: '2026-11', today: '2026-11-23', now: TEST_NOW }, actions }} />
-<Story name="MesVazio" args={{ data: { tasks, month: '2027-03', today: '2026-11-23', now: TEST_NOW }, actions }} />
+<Story name="Mes" args={{ data: { tasks, window, zoom: 'month', today: '2026-11-23', now: TEST_NOW }, actions }} />
+<Story
+  name="Semana"
+  args={{ data: { tasks, window: { from: '2026-11-23', to: '2026-11-29' }, zoom: 'week', today: '2026-11-23', now: TEST_NOW }, actions }}
+/>
+<Story name="Vazia" args={{ data: { tasks: [], window, zoom: 'month', today: '2026-11-23', now: TEST_NOW }, actions }} />
+<Story name="Carregando" args={{ data: { tasks, window, zoom: 'month', today: '2026-11-23', now: TEST_NOW }, state: { isLoading: true }, actions }} />

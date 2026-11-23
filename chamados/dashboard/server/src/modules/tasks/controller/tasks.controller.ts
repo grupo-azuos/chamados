@@ -31,6 +31,7 @@ import {
   SetTaskStatusDto,
   SetTaskStepDoneDto,
   TaskDto,
+  TaskHistoryEntryDto,
   TaskListQueryDto,
   TaskPageDto,
   UpdateTaskDto,
@@ -72,6 +73,21 @@ export class TasksController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<TaskDto> {
     return this.service.get(user, id);
+  }
+
+  @Get(':id/history')
+  @ApiOperation({
+    summary: 'A linha do tempo da tarefa',
+    description:
+      'O que o Histórico gravou sobre a tarefa — quem mudou o quê e quando —, da mais nova para a mais velha.',
+  })
+  @ApiOkResponse({ type: [TaskHistoryEntryDto] })
+  @ApiNotFoundResponse({ description: 'Tarefa não encontrada.' })
+  async history(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<TaskHistoryEntryDto[]> {
+    return this.service.history(user, id);
   }
 
   @Post()

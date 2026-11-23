@@ -6,7 +6,9 @@ const SERIES = [
   { key: 'open', label: 'Em aberto', value: 7 },
   { key: 'done', label: 'Resolvido', value: 4 },
 ];
-const CELLS = [{ row: 'high', rowLabel: 'Alta', column: 'open', columnLabel: 'Em aberto', value: 3 }];
+const CELLS = [
+  { row: 'high', rowLabel: 'Alta', column: 'open', columnLabel: 'Em aberto', value: 3 },
+];
 
 describe('widget items', () => {
   // feliz
@@ -38,8 +40,14 @@ describe('timeItemOf', () => {
 
   // feliz
   it('finds the day or the month that was drawn at the clicked point', () => {
-    expect(timeItemOf(TIME, '2026-11-20T12:00:00.000Z')).toEqual({ key: '2026-11-20', label: '20/11' });
-    expect(timeItemOf(TIME, '2026-10-01T12:00:00.000Z')).toEqual({ key: '2026-10', label: 'out/2026' });
+    expect(timeItemOf(TIME, '2026-11-20T12:00:00.000Z')).toEqual({
+      key: '2026-11-20',
+      label: '20/11',
+    });
+    expect(timeItemOf(TIME, '2026-10-01T12:00:00.000Z')).toEqual({
+      key: '2026-10',
+      label: 'out/2026',
+    });
   });
 
   // triste

@@ -37,7 +37,16 @@ export function calendarDaysOf(data: WidgetData | null): { date: string; count: 
 }
 
 /** Os tons dos cards, um por grupo, na ordem — os mesmos oito sotaques da marca. */
-const CARD_TONES: AzuosCardTone[] = ['blue', 'green', 'yellow', 'red', 'plum', 'steel', 'copper', 'slate'];
+const CARD_TONES: AzuosCardTone[] = [
+  'blue',
+  'green',
+  'yellow',
+  'red',
+  'plum',
+  'steel',
+  'copper',
+  'slate',
+];
 
 export type StatItem = { key: string; label: string; value: number; tone: AzuosCardTone };
 
@@ -49,7 +58,8 @@ export const MAX_STAT_ITEMS = 4;
  * um card por grupo, os maiores primeiro, até quatro.
  */
 export function statItemsOf(data: WidgetData | null, noun: string, isGrouped: boolean): StatItem[] {
-  if (!isGrouped) return [{ key: 'total', label: capitalize(noun), value: data?.total ?? 0, tone: 'blue' }];
+  if (!isGrouped)
+    return [{ key: 'total', label: capitalize(noun), value: data?.total ?? 0, tone: 'blue' }];
 
   return (data?.series ?? []).slice(0, MAX_STAT_ITEMS).map((item, index) => ({
     key: item.key,

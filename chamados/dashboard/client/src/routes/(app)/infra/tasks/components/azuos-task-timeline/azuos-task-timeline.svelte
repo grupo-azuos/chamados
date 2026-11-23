@@ -1,161 +1,259 @@
 <!--
   @component
-  A TIMELINE DAS TAREFAS — cada tarefa numa linha, com a barra do início ao prazo dentro do mês
-  à vista. A cor da barra é a da situação (finalizada verde, reaberta amarela, aberta azul;
-  atrasada vermelha); o dia de hoje é a linha vertical.
+  A TIMELINE DAS TAREFAS (o Gantt do Paralegal) — cada tarefa uma barra, do dia em que começa ao
+  prazo; a sem prazo, um dia só. Uma RAIA POR RESPONSÁVEL, com a foto: dá para ver quem está com o
+  quê, e quando.
 
-  Toda barra tem o RÓTULO: o prazo (ou o início), quem responde e as etapas. Dentro da barra quando
-  ela é larga; ao lado (depois, ou antes quando ela termina no fim do mês) quando é curta — barra
-  muda obrigava a abrir a tarefa para saber de quando a quando ela ia.
+  O zoom diz quantos dias cabem (Semana, 2 semanas, Mês), e cada um tem a sua largura mínima de
+  dia: o que não cabe rola para o lado, com a coluna dos nomes sempre à vista. O título fica sempre
+  DENTRO da barra, cortado quando não cabe, e inteiro na dica. As setas andam de semana em semana;
+  "Hoje" volta à janela de agora. A coluna de hoje fica marcada, e o fim de semana num tom mais
+  fundo. A barra que passa da janela fica com a ponta reta e a seta ("até 05/12"). A cor é a da
+  situação; a atrasada, vermelha. Clicar abre a tarefa.
 
-  - `data`: `tasks`, `month`, `today`, `now`.
-  - `actions`: `onOpen`, `onMonthChange`.
+  - `data`: `tasks`, `window`, `zoom`, `today`, `now`.
+  - `state`: `isLoading`.
+  - `actions`: `onShift(weeks)`, `onToday`, `onZoom`, `onOpen`.
 -->
 <script lang="ts" module>
   import { type Task } from '@template/shared/schemas/task.schema';
 
+  import { type GanttWindow, type TimelineZoom } from '$lib/utils/task-gantt.util';
+
   export type AzuosTaskTimelineProps = {
-    data: { tasks: Task[]; month: string; today: string; now?: Date };
-    actions: { onOpen: (task: Task) => void; onMonthChange: (month: string) => void };
+    data: { tasks: Task[]; window: GanttWindow; zoom: TimelineZoom; today: string; now?: Date };
+    state?: { isLoading?: boolean };
+    actions: {
+      onShift: (weeks: number) => void;
+      onToday: () => void;
+      onZoom: (zoom: TimelineZoom) => void;
+      onOpen: (task: Task) => void;
+    };
   };
+
+  const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+  const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+  export function dayHeadOf(day: string, index: number): string {
+    if (index === 0 || day.endsWith('-01')) return MONTHS[Number(day.slice(5, 7)) - 1]!;
+
+    return WEEKDAYS[new Date(`${day}T00:00:00.000Z`).getUTCDay()]!;
+  }
 </script>
 
 <script lang="ts">
+  import CalendarRange from '@lucide/svelte/icons/calendar-range';
   import ChevronLeft from '@lucide/svelte/icons/chevron-left';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import LocateFixed from '@lucide/svelte/icons/locate-fixed';
+  import { TASK_STATUS_LABELS } from '@template/shared/domain/task-flow.util';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import { shiftMonth } from '$lib/hooks/use-task-list/use-task-list.svelte';
+  import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
+  import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
+  import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
+  import { cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
-  import { taskDueBadge } from '$lib/utils/task-due.util';
-  import { daysOfMonth, monthLabel, timelineSpan } from '../azuos-task-calendar/task-calendar.util';
+  import {
+    brazilianDay,
+    ganttBarOf,
+    ganttDays,
+    ganttLanesOf,
+    ganttTitleOf,
+    isWeekend,
+    TASK_STATUS_HUES,
+    taskHueOf,
+    TIMELINE_DAY_PX,
+    TIMELINE_ZOOM_LABELS,
+    TIMELINE_ZOOMS,
+  } from '$lib/utils/task-gantt.util';
 
-  let { data, actions }: AzuosTaskTimelineProps = $props();
+  let { data, state: timelineState, actions }: AzuosTaskTimelineProps = $props();
 
-  const days = $derived(daysOfMonth(data.month));
-  const rows = $derived(
-    data.tasks.flatMap((task) => {
-      const span = timelineSpan(task, data.month);
-      return span ? [{ task, span }] : [];
-    }),
+  const NAME_COLUMN_PX = 240;
+  /** Abaixo disso, a barra não tem lugar para o "até 05/12": fica só a seta (e o dia, na dica). */
+  const CUT_DATE_MIN_DAYS = 3;
+  /* A coluna dos nomes fica presa à esquerda ao rolar para o lado: sem ela, a barra perde a dona. */
+  const STICKY_NAME = 'bg-card sticky left-0 z-20';
+  const FOCUS = 'focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none';
+
+  const ZOOM_OPTIONS = TIMELINE_ZOOMS.map((zoom) => ({ value: zoom, label: TIMELINE_ZOOM_LABELS[zoom] }));
+  const LEGEND = [
+    ...Object.entries(TASK_STATUS_HUES).map(([status, hue]) => ({
+      label: TASK_STATUS_LABELS[status as keyof typeof TASK_STATUS_HUES],
+      hue,
+    })),
+    { label: 'Atrasada', hue: 'red' as const },
+  ];
+
+  const days = $derived(ganttDays(data.window));
+  const dayPx = $derived(TIMELINE_DAY_PX[data.zoom]);
+  const grid = $derived(
+    `grid-template-columns: ${NAME_COLUMN_PX}px repeat(${days.length}, minmax(${dayPx}px, 1fr)); min-width: ${NAME_COLUMN_PX + days.length * dayPx}px`,
   );
-  const todayIndex = $derived(days.indexOf(data.today));
+  const lanes = $derived(ganttLanesOf(data.tasks.filter((task) => ganttBarOf(task, data.window))));
 
-  /** A partir de quantos dias a barra leva o rótulo dentro dela. */
-  const INSIDE_MIN_DAYS = 6;
-  /** Quantos dias o rótulo de fora precisa depois da barra; sem isso, ele vai antes. */
-  const OUTSIDE_LABEL_DAYS = 8;
+  /** Hoje marcado; sábado e domingo num tom mais fundo. */
+  function dayTone(day: string): string {
+    if (day === data.today) return 'bg-accent';
 
-  function barClass(task: Task): string {
-    if (taskDueBadge(task, data.now)?.tone === 'danger') return 'bg-destructive text-destructive-foreground';
-    if (task.status === 'done') return 'bg-success text-success-foreground';
-    if (task.status === 'reopened') return 'bg-warning text-warning-foreground';
-
-    return 'bg-primary text-primary-foreground';
+    return isWeekend(day) ? 'bg-muted' : '';
   }
 
-  function shortDay(day: string): string {
-    return `${day.slice(8)}/${day.slice(5, 7)}`;
+  function situationOf(task: Task): string {
+    return TASK_STATUS_LABELS[task.status];
   }
 
-  /** "Atrasada · 05/11 · Wellington Queiroz · 0/4" — o que se lê sem abrir a tarefa. */
-  function barLabel(task: Task): string {
-    const when = taskDueBadge(task, data.now)?.label ?? `Início ${shortDay(task.startDate)}`;
-    const owner = task.owner?.name ?? 'Sem responsável';
-    const steps = task.progress.total > 0 ? `${task.progress.done}/${task.progress.total}` : null;
+  function periodOf(task: Task): string {
+    if (!task.dueDate) return `começa em ${brazilianDay(task.startDate)}, sem prazo`;
 
-    return [when, owner, steps].filter(Boolean).join(' · ');
-  }
-
-  function labelSpot(span: { start: number; end: number }): 'inside' | 'after' | 'before' {
-    if (span.end - span.start + 1 >= INSIDE_MIN_DAYS) return 'inside';
-
-    return span.end + 1 + OUTSIDE_LABEL_DAYS <= days.length ? 'after' : 'before';
+    return `de ${brazilianDay(task.startDate)} a ${brazilianDay(task.dueDate)}`;
   }
 </script>
 
-<section aria-label="Timeline das tarefas" class="rounded-surface bg-card shadow-card flex flex-col gap-3 p-4">
-  <header class="flex items-center justify-between gap-2">
+<section aria-label="Timeline das tarefas" class="flex flex-col gap-3">
+  <div class="flex flex-wrap items-center gap-2">
     <ActionButton
-      data={{ label: 'Mês anterior' }}
-      ui={{ variant: 'ghost', icon: ChevronLeft, isIconOnly: true }}
-      actions={{ onClick: () => actions.onMonthChange(shiftMonth(data.month, -1)) }}
+      data={{ label: 'Semana anterior' }}
+      ui={{ variant: 'secondary', size: 'sm', icon: ChevronLeft, isIconOnly: true }}
+      actions={{ onClick: () => actions.onShift(-1) }}
     />
-    <h2 class="text-foreground text-base font-semibold">{monthLabel(data.month)}</h2>
     <ActionButton
-      data={{ label: 'Próximo mês' }}
-      ui={{ variant: 'ghost', icon: ChevronRight, isIconOnly: true }}
-      actions={{ onClick: () => actions.onMonthChange(shiftMonth(data.month, 1)) }}
+      data={{ label: 'Hoje' }}
+      ui={{ variant: 'secondary', size: 'sm', icon: LocateFixed }}
+      actions={{ onClick: actions.onToday }}
     />
-  </header>
+    <ActionButton
+      data={{ label: 'Próxima semana' }}
+      ui={{ variant: 'secondary', size: 'sm', icon: ChevronRight, isIconOnly: true }}
+      actions={{ onClick: () => actions.onShift(1) }}
+    />
+    <h2 class="text-foreground text-base font-semibold">{ganttTitleOf(data.window)}</h2>
+    <SegmentedControl
+      data={{ value: data.zoom, options: ZOOM_OPTIONS }}
+      ui={{ ariaLabel: 'Quantos dias mostrar' }}
+      actions={{ onChange: (value) => actions.onZoom(value as TimelineZoom) }}
+    />
+    <ul aria-label="Legenda" class="ml-auto flex flex-wrap items-center gap-3">
+      {#each LEGEND as item (item.label)}
+        <li class="text-muted-foreground flex items-center gap-1.5 text-xs">
+          <span aria-hidden="true" class={cn('size-2.5 rounded-full', cardToneClasses(item.hue).swatch)}></span>
+          {item.label}
+        </li>
+      {/each}
+    </ul>
+  </div>
 
-  {#if rows.length === 0}
-    <p class="text-muted-foreground py-8 text-center text-sm">Nenhuma tarefa neste mês.</p>
+  {#if timelineState?.isLoading}
+    <LoadingState data={{ label: 'Carregando as tarefas…' }} />
+  {:else if lanes.length === 0}
+    <EmptyState
+      data={{ title: 'Nenhuma tarefa nestes dias', description: 'Ande pelas semanas, mude o zoom ou os filtros.' }}
+      ui={{ icon: CalendarRange }}
+    />
   {:else}
-    <div class="overflow-x-auto">
-      <div class="min-w-[48rem]">
-        <div class="grid items-end gap-px pl-56" style={`grid-template-columns: repeat(${days.length}, minmax(0, 1fr))`}>
-          {#each days as day (day)}
-            <span class={cn('text-center text-xs tabular-nums', day === data.today ? 'text-primary font-bold' : 'text-muted-foreground')}>
-              {Number(day.slice(8))}
+    <div class="rounded-surface bg-card shadow-card overflow-x-auto">
+      <div role="table" aria-label="Tarefas por responsável e dia">
+        <div role="row" class="border-border grid border-b" style={grid}>
+          <span role="columnheader" class={cn(STICKY_NAME, 'text-muted-foreground px-3 py-2 text-xs font-semibold')}>
+            Tarefa
+          </span>
+          {#each days as day, index (day)}
+            <span
+              role="columnheader"
+              aria-label={brazilianDay(day)}
+              class={cn(
+                'flex flex-col items-center py-1 text-xs tabular-nums',
+                dayTone(day),
+                day === data.today ? 'text-foreground font-bold' : 'text-muted-foreground',
+              )}
+            >
+              <span>{dayHeadOf(day, index)}</span>
+              <span>{day.slice(8, 10)}</span>
             </span>
           {/each}
         </div>
-        <ul class="divide-border/60 relative mt-1 divide-y">
-          {#each rows as row (row.task.id)}
-            {@const label = barLabel(row.task)}
-            {@const spot = labelSpot(row.span)}
-            <li class="flex items-center gap-2 py-1.5">
-              <button
-                type="button"
-                class="text-foreground hover:text-primary w-54 shrink-0 truncate text-left text-sm"
-                title={row.task.title}
-                onclick={() => actions.onOpen(row.task)}
-              >
-                {row.task.title}
-              </button>
-              <div
-                class="relative grid h-6 flex-1 gap-px"
-                style={`grid-template-columns: repeat(${days.length}, minmax(0, 1fr))`}
-              >
-                {#if todayIndex >= 0}
-                  <span
-                    aria-hidden="true"
-                    class="bg-primary/40 pointer-events-none absolute inset-y-0 w-px"
-                    style={`left: ${((todayIndex + 0.5) / days.length) * 100}%`}
-                  ></span>
-                {/if}
-                <button
-                  type="button"
-                  aria-label={`Abrir a tarefa ${row.task.title}`}
-                  title={label}
-                  class={cn(
-                    'rounded-chip flex h-6 min-w-0 items-center overflow-hidden px-2 text-left text-xs font-medium focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none',
-                    barClass(row.task),
-                  )}
-                  style={`grid-column: ${row.span.start + 1} / ${row.span.end + 2}; grid-row: 1`}
-                  onclick={() => actions.onOpen(row.task)}
-                >
-                  {#if spot === 'inside'}<span class="truncate">{label}</span>{/if}
-                </button>
-                {#if spot !== 'inside'}
-                  <span
-                    data-slot="task-timeline-label"
-                    class={cn(
-                      'text-muted-foreground min-w-0 self-center truncate px-1.5 text-xs',
-                      spot === 'before' && 'text-right',
-                    )}
-                    style={spot === 'after'
-                      ? `grid-column: ${row.span.end + 2} / -1; grid-row: 1`
-                      : `grid-column: 1 / ${row.span.start + 1}; grid-row: 1`}
+
+        {#each lanes as lane (lane.ownerId)}
+          <div role="rowgroup" aria-label={lane.ownerName}>
+            <div role="row" class="border-border bg-mantle border-b py-1.5">
+              <span role="rowheader" class="text-foreground sticky left-0 inline-flex items-center gap-2 px-3 text-sm font-semibold">
+                <PersonAvatar
+                  name={lane.ownerName}
+                  avatarUrl={lane.ownerPhoto}
+                  personId={lane.ownerId || null}
+                  ui={{ size: 'sm' }}
+                />
+                {lane.ownerName}
+                <span class="text-muted-foreground text-xs font-normal">
+                  {lane.tasks.length}
+                  {lane.tasks.length === 1 ? 'tarefa' : 'tarefas'}
+                </span>
+              </span>
+            </div>
+            {#each lane.tasks as task (task.id)}
+              {@const bar = ganttBarOf(task, data.window)}
+              {@const label = `${task.title} · ${situationOf(task)}, ${periodOf(task)}`}
+              <div role="row" class="border-border grid border-b last:border-b-0" style={grid}>
+                <span role="rowheader" class={cn(STICKY_NAME, 'row-start-1 flex min-w-0 items-center px-3 py-1.5')}>
+                  <button
+                    type="button"
+                    onclick={() => actions.onOpen(task)}
+                    class={cn('rounded-control text-foreground truncate text-left text-sm hover:underline', FOCUS)}
                   >
-                    {label}
+                    {task.title}
+                  </button>
+                </span>
+                {#each days as day, index (day)}
+                  <span aria-hidden="true" class={cn('row-start-1', dayTone(day))} style={`grid-column: ${index + 2}`}></span>
+                {/each}
+                {#if bar}
+                  <span
+                    role="cell"
+                    class="z-10 row-start-1 flex min-w-0 items-center py-1.5"
+                    style={`grid-column: ${bar.column + 2} / span ${bar.span}`}
+                  >
+                    <Tooltip.Provider>
+                      <Tooltip.Root>
+                        <Tooltip.Trigger>
+                          {#snippet child({ props })}
+                            <button
+                              {...props}
+                              type="button"
+                              onclick={() => actions.onOpen(task)}
+                              aria-label={`Abrir a tarefa ${label}`}
+                              class={cn(
+                                'rounded-chip shadow-card flex h-6 w-full min-w-0 items-center gap-1 px-2 text-left text-xs font-medium',
+                                FOCUS,
+                                cardToneClasses(taskHueOf(task, data.now)).dot,
+                                bar.isCutStart && 'rounded-l-none pl-1',
+                                bar.isCutEnd && 'rounded-r-none pr-1',
+                              )}
+                            >
+                              {#if bar.isCutStart}<ChevronLeft aria-hidden="true" class="size-3.5 shrink-0" />{/if}
+                              <span class="min-w-0 flex-1 truncate">{task.title}</span>
+                              {#if bar.isCutEnd}
+                                <span class="ml-auto flex shrink-0 items-center gap-0.5 tabular-nums">
+                                  {#if task.dueDate && bar.span >= CUT_DATE_MIN_DAYS}
+                                    até {task.dueDate.slice(8, 10)}/{task.dueDate.slice(5, 7)}
+                                  {/if}
+                                  <ChevronRight aria-hidden="true" class="size-3.5" />
+                                </span>
+                              {/if}
+                            </button>
+                          {/snippet}
+                        </Tooltip.Trigger>
+                        <Tooltip.Content class="max-w-xs whitespace-normal">{label}</Tooltip.Content>
+                      </Tooltip.Root>
+                    </Tooltip.Provider>
                   </span>
                 {/if}
               </div>
-            </li>
-          {/each}
-        </ul>
+            {/each}
+          </div>
+        {/each}
       </div>
     </div>
   {/if}

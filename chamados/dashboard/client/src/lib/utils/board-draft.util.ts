@@ -37,7 +37,9 @@ export function visibleScopes(
 ): { value: DashboardScope; label: string }[] {
   const level = roleInContext(user, module);
   const isManager = level === 'admin' || level === 'manager' || level === 'superadmin';
-  const scopes: DashboardScope[] = isManager ? ['team', 'manager', 'personal'] : ['team', 'personal'];
+  const scopes: DashboardScope[] = isManager
+    ? ['team', 'manager', 'personal']
+    : ['team', 'personal'];
 
   return scopes.map((value) => ({ value, label: DASHBOARD_SCOPE_LABELS[value] }));
 }
@@ -49,14 +51,20 @@ export function upsertWidget(
   place?: Omit<LayoutItem, 'i'>,
 ): BoardDraft {
   if (current.widgets.some((item) => item.id === widget.id)) {
-    return { ...current, widgets: current.widgets.map((item) => (item.id === widget.id ? widget : item)) };
+    return {
+      ...current,
+      widgets: current.widgets.map((item) => (item.id === widget.id ? widget : item)),
+    };
   }
   const spot = place ?? bottomPlace(current.layout, widget.kind);
 
   return {
     ...current,
     widgets: [...current.widgets, widget],
-    layout: normalizeLayout([...current.layout, { i: widget.id, ...spot }], compactIdsOf([...current.widgets, widget])),
+    layout: normalizeLayout(
+      [...current.layout, { i: widget.id, ...spot }],
+      compactIdsOf([...current.widgets, widget]),
+    ),
   };
 }
 
@@ -85,11 +93,18 @@ export function removeWidget(current: BoardDraft, id: string): BoardDraft {
 
 /** Os tipos que cabem numa casa só (1×1) vêm do contrato: a tela e o servidor contam igual. */
 export function compactIdsOf(widgets: readonly Widget[]): ReadonlySet<string> {
-  return new Set(widgets.filter((widget) => COMPACT_WIDGET_KINDS.includes(widget.kind)).map((widget) => widget.id));
+  return new Set(
+    widgets
+      .filter((widget) => COMPACT_WIDGET_KINDS.includes(widget.kind))
+      .map((widget) => widget.id),
+  );
 }
 
 /** Nenhum bloco passa da borda, e nenhum fica 1×1 — a não ser o compacto. */
-export function normalizeLayout(layout: readonly LayoutItem[], compactIds: ReadonlySet<string> = new Set()): LayoutItem[] {
+export function normalizeLayout(
+  layout: readonly LayoutItem[],
+  compactIds: ReadonlySet<string> = new Set(),
+): LayoutItem[] {
   return layout.map((item) => {
     const w = Math.min(Math.max(item.w, 1), GRID_COLUMNS);
     const x = Math.min(item.x, GRID_COLUMNS - w);
@@ -103,7 +118,10 @@ export function normalizeLayout(layout: readonly LayoutItem[], compactIds: Reado
 export function addBoardFilter(current: BoardDraft, kind: BoardFilterKind): BoardDraft {
   if (current.filters.some((filter) => filter.kind === kind)) return current;
 
-  return { ...current, filters: [...current.filters, { id: kind, kind, label: BOARD_FILTER_KIND_LABELS[kind] }] };
+  return {
+    ...current,
+    filters: [...current.filters, { id: kind, kind, label: BOARD_FILTER_KIND_LABELS[kind] }],
+  };
 }
 
 export function removeBoardFilter(current: BoardDraft, id: string): BoardDraft {
@@ -111,7 +129,11 @@ export function removeBoardFilter(current: BoardDraft, id: string): BoardDraft {
 }
 
 /** Troca o desenho de um filtro (lista, etiquetas, cards); o resto do painel fica como está. */
-export function setBoardFilterDisplay(current: BoardDraft, id: string, display: BoardFilterDisplay): BoardDraft {
+export function setBoardFilterDisplay(
+  current: BoardDraft,
+  id: string,
+  display: BoardFilterDisplay,
+): BoardDraft {
   return {
     ...current,
     filters: current.filters.map((filter) => (filter.id === id ? { ...filter, display } : filter)),
@@ -119,7 +141,11 @@ export function setBoardFilterDisplay(current: BoardDraft, id: string, display: 
 }
 
 /** A largura nova do filtro na barra — normal ou a linha inteira. */
-export function setBoardFilterWidth(current: BoardDraft, id: string, width: BoardFilterWidth): BoardDraft {
+export function setBoardFilterWidth(
+  current: BoardDraft,
+  id: string,
+  width: BoardFilterWidth,
+): BoardDraft {
   return {
     ...current,
     filters: current.filters.map((filter) => (filter.id === id ? { ...filter, width } : filter)),
@@ -132,7 +158,10 @@ export type BoardFilterPlaceChange = { id: string; place: BoardFilterPlace };
  * O lugar novo de cada filtro, como a grade devolveu. Só muda o lugar: o resto do filtro (nome,
  * desenho) fica como estava, e um id que o painel não tem é ignorado.
  */
-export function setBoardFilterPlaces(current: BoardDraft, places: readonly BoardFilterPlaceChange[]): BoardDraft {
+export function setBoardFilterPlaces(
+  current: BoardDraft,
+  places: readonly BoardFilterPlaceChange[],
+): BoardDraft {
   const byId = new Map(places.map((change) => [change.id, change.place]));
 
   return {
@@ -146,7 +175,10 @@ export function setBoardFilterPlaces(current: BoardDraft, places: readonly Board
 }
 
 /** Só valem os valores dos filtros que o painel tem: tirar o filtro solta o recorte. */
-export function activeValues(filters: readonly BoardFilter[], chosen: BoardFilterValues): BoardFilterValues {
+export function activeValues(
+  filters: readonly BoardFilter[],
+  chosen: BoardFilterValues,
+): BoardFilterValues {
   const kept = { ...EMPTY_BOARD_FILTER_VALUES };
   for (const { kind } of filters) Object.assign(kept, { [kind]: chosen[kind] });
 
@@ -185,7 +217,11 @@ export function filterCountQuery(
  * A recusa do "Salvar", dita pelo NOME do bloco. O servidor aponta por posição (`widgets.2`),
  * que não diz nada a quem monta; aqui cada uma vira `"Chamados": o motivo`.
  */
-export function saveErrorOf(error: unknown, widgets: readonly Widget[], layout: readonly LayoutItem[]): string | null {
+export function saveErrorOf(
+  error: unknown,
+  widgets: readonly Widget[],
+  layout: readonly LayoutItem[],
+): string | null {
   if (!error) return null;
   const details = error instanceof ApiError ? error.details : [];
   if (details.length === 0) return `Não salvei o painel: ${readError(error)}`;
