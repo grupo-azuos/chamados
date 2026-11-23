@@ -21,7 +21,8 @@
   Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
   filtrada sem resultado e em erro.
 
-  - `data`: `computers`, `total`, `summary`, `filter`, `scheduledFor`, `departmentOptions`, `sort`
+  - `data`: `computers`, `total`, `summary`, `filter`, `scheduledFor`, `departmentOptions`,
+    `responsibleOptions`, `sort`
     e `paging`.
   - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated`,
     `isSummaryLoading`, `error`, `exportingFormat` e `exportError`.
@@ -40,6 +41,10 @@
     type ComputerListItem,
   } from '@template/shared/schemas/computer.schema';
   import { type ReportFormat } from '@template/shared/schemas/report.schema';
+  import type { LucideIcon } from '@lucide/svelte';
+  import { type StatCardTone } from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import { type ComputerUpgradeFilter } from '@template/shared/domain/computer-upgrade.util';
+  import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 
   import {
     type ComputerTableSort,
@@ -60,6 +65,9 @@
     resourceCondition: ResourceCondition | '';
     preventive: ComputerPreventiveFilter | '';
     includeArchived: boolean;
+    /** O id da pessoa do diretório, ou `COMPUTER_NO_RESPONSIBLE_FILTER`. */
+    responsibleId: string;
+    upgrade: ComputerUpgradeFilter | '';
   };
 
   export type ComputerSummary = {
@@ -72,6 +80,7 @@
     critical: number;
     attention: number;
     neverSeen: number;
+    needsUpgrade: number;
   };
 
   /**
@@ -95,6 +104,8 @@
       scheduledFor?: Record<number, string>;
       /** Os departamentos do RH e, depois da linha, os daqui. */
       departmentOptions?: DepartmentChoice[];
+      /** As pessoas do filtro "Responsável", com a foto. */
+      responsibleOptions?: AzuosPersonPickerPerson[];
       /** A ordem em vigor — a seta do cabeçalho da tabela. */
       sort?: ComputerTableSort;
       /** A página dos cartões. Sem ela, a grade mostra tudo (o Storybook, os testes antigos). */
@@ -122,6 +133,8 @@
       onResourceConditionChange: (resourceCondition: ResourceCondition | '') => void;
       onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
       onArchivedChange: (includeArchived: boolean) => void;
+      onResponsibleChange: (responsibleId: string) => void;
+      onUpgradeChange: (upgrade: ComputerUpgradeFilter | '') => void;
       onClearFilters: () => void;
       /** "Máquinas": desliga os atalhos dos cartões. Sem ele, o cartão só mostra o número. */
       onClearShortcuts?: () => void;
@@ -146,14 +159,28 @@
     return items.slice(start, start + paging.pageSize);
   }
 
+  /** Um cartão-atalho do topo: o número, o tom do ícone e o filtro que ele liga. */
+  export type StatShortcut = {
+    key: string;
+    label: string;
+    value: number;
+    tone: StatCardTone;
+    icon: LucideIcon;
+    isSelected: boolean;
+    onClick: () => void;
+  };
+
   /** Nenhum atalho dos cartões ligado: é quando "Máquinas" (o total) fica marcado. */
   export function hasNoShortcut(filter: ComputerListFilter): boolean {
-    return !filter.healthStatus && !filter.alert && !filter.onlyOnline && !filter.onlyOffline;
+    return (
+      !filter.healthStatus && !filter.alert && !filter.onlyOnline && !filter.onlyOffline && !filter.upgrade
+    );
   }
 </script>
 
 <script lang="ts">
   import BellRing from '@lucide/svelte/icons/bell-ring';
+  import CircleFadingArrowUp from '@lucide/svelte/icons/circle-fading-arrow-up';
   import Cpu from '@lucide/svelte/icons/cpu';
   import HardDrive from '@lucide/svelte/icons/hard-drive';
   import HeartPulse from '@lucide/svelte/icons/heart-pulse';
@@ -213,6 +240,67 @@
     actions.onAlertChange(data.filter.alert === alert ? '' : alert);
     scrollToFilters();
   }
+
+  function filterByUpgrade() {
+    actions.onUpgradeChange(data.filter.upgrade === 'any' ? '' : 'any');
+    scrollToFilters();
+  }
+
+  /**
+   * A segunda fileira: o que está fora do ar, o que está sofrendo AGORA e quem está aquém.
+   * Cinco cartões passam do limite de quatro por linha: como lista, a fileira vira a faixa que
+   * desliza (`AzuosStatCardGrid`), em vez de uma terceira linha com um cartão sozinho. O upgrade
+   * vem logo depois do offline, à vista: é a pergunta que a tela de Inteligência respondia; o
+   * último da faixa (memória elevada) fica a uma seta.
+   */
+  const secondRow = $derived<StatShortcut[]>([
+    {
+      key: 'offline',
+      label: 'Offline',
+      value: summary?.offline ?? 0,
+      tone: 'slate',
+      icon: WifiOff,
+      isSelected: data.filter.onlyOffline,
+      onClick: filterByOffline,
+    },
+    /* Upgrade é atenção, não emergência: amarelo, como o aviso do cartão. */
+    {
+      key: 'upgrade',
+      label: 'Precisa de upgrade',
+      value: summary?.needsUpgrade ?? 0,
+      tone: 'yellow',
+      icon: CircleFadingArrowUp,
+      isSelected: data.filter.upgrade === 'any',
+      onClick: filterByUpgrade,
+    },
+    {
+      key: 'alerts',
+      label: 'Com alerta ativo',
+      value: summary?.withAlerts ?? 0,
+      tone: 'danger',
+      icon: BellRing,
+      isSelected: data.filter.alert === 'any',
+      onClick: () => filterByAlert('any'),
+    },
+    {
+      key: 'cpu',
+      label: 'CPU elevada',
+      value: summary?.cpuHigh ?? 0,
+      tone: 'copper',
+      icon: Cpu,
+      isSelected: data.filter.alert === 'cpu',
+      onClick: () => filterByAlert('cpu'),
+    },
+    {
+      key: 'memory',
+      label: 'Memória elevada',
+      value: summary?.memoryHigh ?? 0,
+      tone: 'plum',
+      icon: MemoryStick,
+      isSelected: data.filter.alert === 'memory',
+      onClick: () => filterByAlert('memory'),
+    },
+  ]);
 
   function showAll() {
     actions.onClearShortcuts?.();
@@ -297,39 +385,27 @@
     />
   </StatCardGrid>
 
-  <!-- A segunda fileira: o que está fora do ar e o que está sofrendo AGORA. -->
-  <StatCardGrid>
-    <StatCard
-      data={{ label: 'Offline', value: summary?.offline ?? 0 }}
-      ui={{ tone: 'slate', icon: WifiOff }}
-      state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.onlyOffline }}
-      actions={{ onClick: filterByOffline }}
-    />
-    <StatCard
-      data={{ label: 'Com alerta ativo', value: summary?.withAlerts ?? 0 }}
-      ui={{ tone: 'danger', icon: BellRing }}
-      state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.alert === 'any' }}
-      actions={{ onClick: () => filterByAlert('any') }}
-    />
-    <StatCard
-      data={{ label: 'CPU elevada', value: summary?.cpuHigh ?? 0 }}
-      ui={{ tone: 'copper', icon: Cpu }}
-      state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.alert === 'cpu' }}
-      actions={{ onClick: () => filterByAlert('cpu') }}
-    />
-    <StatCard
-      data={{ label: 'Memória elevada', value: summary?.memoryHigh ?? 0 }}
-      ui={{ tone: 'plum', icon: MemoryStick }}
-      state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.alert === 'memory' }}
-      actions={{ onClick: () => filterByAlert('memory') }}
-    />
+  <!-- A segunda fileira: fora do ar, sofrendo AGORA e quem precisa de upgrade. -->
+  <StatCardGrid data={{ items: secondRow }} ui={{ ariaLabel: 'Conexão, alertas e upgrade' }}>
+    {#snippet card(shortcut: StatShortcut)}
+      <StatCard
+        data={{ label: shortcut.label, value: shortcut.value }}
+        ui={{ tone: shortcut.tone, icon: shortcut.icon }}
+        state={{ isLoading: state.isSummaryLoading, isSelected: shortcut.isSelected }}
+        actions={{ onClick: shortcut.onClick }}
+      />
+    {/snippet}
   </StatCardGrid>
 
   <!-- Os filtros ficam juntos e acima da lista, para a pessoa ver de uma vez o que está
        limitando o que ela enxerga. -->
   <div bind:this={filtersElement} class="scroll-mt-4">
     <InventoryFilters
-      data={{ filter: data.filter, departmentOptions: data.departmentOptions ?? [] }}
+      data={{
+        filter: data.filter,
+        departmentOptions: data.departmentOptions ?? [],
+        responsibleOptions: data.responsibleOptions ?? [],
+      }}
       state={{ isFilteredOut: state.isFilteredOut }}
       {actions}
     />

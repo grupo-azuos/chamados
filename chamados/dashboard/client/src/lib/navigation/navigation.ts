@@ -6,7 +6,6 @@ import Code2 from '@lucide/svelte/icons/code-2';
 import Columns3 from '@lucide/svelte/icons/columns-3';
 import FileText from '@lucide/svelte/icons/file-text';
 import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
-import Lightbulb from '@lucide/svelte/icons/lightbulb';
 import LifeBuoy from '@lucide/svelte/icons/life-buoy';
 import Package from '@lucide/svelte/icons/package';
 import Trash2 from '@lucide/svelte/icons/trash-2';
@@ -102,7 +101,6 @@ export const INFRA_NAV_ITEMS: readonly NavItem[] = [
   navItem('infra', 'parts', 'Depósito', Package),
   navItem('infra', 'disposal', 'Descarte', Trash2),
   navItem('infra', 'network', 'Rede', Wifi),
-  navItem('infra', 'insights', 'Inteligência', Lightbulb),
   navItem('infra', 'budget', 'Orçamento', FileText),
   navItem('infra', 'agent', 'Agente Windows', Download),
 ];

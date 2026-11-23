@@ -69,7 +69,9 @@
     HEALTH_CLASSES,
     situationOf,
   } from '../azuos-computer-card/azuos-computer-card.svelte';
+  import UpgradeBadge from '../azuos-computer-upgrade-badge/azuos-computer-upgrade-badge.svelte';
   import ComputerMaintenanceStatus from '../azuos-computer-maintenance-status/azuos-computer-maintenance-status.svelte';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import {
     Table,
@@ -179,11 +181,23 @@
           </span>
         </TableCell>
         <TableCell class="max-w-[220px]">
-          <span class="text-ink-700 block leading-snug break-words">
-            {computer.responsibleName ?? 'Sem responsável'}
-          </span>
-          <span class="text-muted-foreground mt-0.5 block text-xs">
-            {computer.department ? departmentLabel(computer.department) : 'Sem departamento'}
+          <!-- A foto do responsável vem do admin-console, como no cartão; sem ela, as iniciais. -->
+          <span class="flex items-center gap-2">
+            {#if computer.responsibleName}
+              <PersonAvatar
+                name={computer.responsibleName}
+                avatarUrl={computer.responsibleAvatarUrl ?? null}
+                ui={{ size: 'sm' }}
+              />
+            {/if}
+            <span class="min-w-0">
+              <span class="text-ink-700 block leading-snug break-words">
+                {computer.responsibleName ?? 'Sem responsável'}
+              </span>
+              <span class="text-muted-foreground mt-0.5 block text-xs">
+                {computer.department ? departmentLabel(computer.department) : 'Sem departamento'}
+              </span>
+            </span>
           </span>
         </TableCell>
         <TableCell>
@@ -211,7 +225,11 @@
           </span>
         </TableCell>
         <TableCell>
-          <StatusBadge data={{ label: situation.label }} ui={{ tone: situation.tone, size: 'sm' }} />
+          <!-- A situação e, embaixo, o aviso de upgrade (calmo, com os motivos no balão). -->
+          <span class="flex flex-col items-start gap-1">
+            <StatusBadge data={{ label: situation.label }} ui={{ tone: situation.tone, size: 'sm' }} />
+            <UpgradeBadge data={{ computer }} ui={{ className: 'relative z-10' }} />
+          </span>
         </TableCell>
         <TableCell class="text-muted-foreground text-xs whitespace-nowrap">
           {formatTimeAgo(computer.lastSeenAt)}

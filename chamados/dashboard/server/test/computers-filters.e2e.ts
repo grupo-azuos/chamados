@@ -292,4 +292,31 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     await api().get('/api/v1/computers/999999/samples').set(asAna()).expect(404);
     await api().get('/api/v1/computers/999999/alerts').set(asAna()).expect(404);
   });
+  // feliz
+  /* As réguas do aviso de upgrade, provadas no Postgres: a mesma máquina que o cartão marca. */
+  it('filters the machines that need an upgrade, by any reason or by one', async () => {
+    const GB = 1024 ** 3;
+    const machines: [string, Partial<typeof computers.$inferInsert>][] = [
+      ['UPG-MEMORIA', { totalMemoryBytes: 4 * GB, totalDiskBytes: 500 * GB, freeDiskBytes: 300 * GB }],
+      ['UPG-DISCO', { totalMemoryBytes: 16 * GB, totalDiskBytes: 100 * GB, freeDiskBytes: 9 * GB }],
+      ['UPG-CPU', { totalMemoryBytes: 16 * GB, cpuModel: 'Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz' }],
+      ['UPG-EM-DIA', { totalMemoryBytes: 16 * GB, totalDiskBytes: 500 * GB, freeDiskBytes: 300 * GB, cpuModel: '12th Gen Intel(R) Core(TM) i5-12400' }],
+    ];
+    for (const [name, values] of machines) {
+      const id = await registerComputer(name);
+      await started.db.update(computers).set(values).where(eq(computers.id, id));
+    }
+
+    const list = (upgrade: string) => api().get('/api/v1/computers').query({ upgrade }).set(asAna()).expect(200);
+
+    expect(names(await list('any'))).toEqual(['UPG-CPU', 'UPG-DISCO', 'UPG-MEMORIA']);
+    expect(names(await list('memory'))).toEqual(['UPG-MEMORIA']);
+    expect(names(await list('disk'))).toEqual(['UPG-DISCO']);
+    expect(names(await list('cpu'))).toEqual(['UPG-CPU']);
+  });
+
+  // triste
+  it('refuses an upgrade reason the rules do not have', async () => {
+    await api().get('/api/v1/computers?upgrade=ssd').set(asAna()).expect(400);
+  });
 });

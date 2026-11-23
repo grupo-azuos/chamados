@@ -1,34 +1,17 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import Page from './+page.svelte';
-import { expectOutageShown, renderPage, visiting } from '../../../route-page.test-support';
+import { load } from './+page';
 
-/* Só o `apiRequest` é fingido: `ApiError` e `readError` continuam reais. */
-vi.mock('$lib/api/http-client', async (importOriginal) => {
-  const original = await importOriginal<Record<string, unknown>>();
-  const ApiError = original.ApiError as new (status: number, message: string) => Error;
-  const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
-
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
-});
-
-describe('a rota infra/insights', () => {
+describe('the old Intelligence address (/infra/insights)', () => {
   // feliz
-  it('mounts the screen and titles the tab', async () => {
-    visiting({});
-
-    const { container } = renderPage(Page as never);
-
-    expect(container).toBeTruthy();
-    await vi.waitFor(() => expect(document.title).toContain('Inteligência'), { timeout: 4_000 });
+  it('sends the old link to the inventory filtered by machines that need an upgrade', () => {
+    expect(() => load()).toThrow(
+      expect.objectContaining({ status: 307, location: '/infra/computers?upgrade=any' }),
+    );
   });
 
   // triste
-  it('shows what the server answered when the API is down', async () => {
-    visiting({});
-
-    renderPage(Page as never);
-
-    await expectOutageShown();
+  it('never renders the removed screen: the load always redirects', () => {
+    expect(() => load()).toThrow();
   });
 });

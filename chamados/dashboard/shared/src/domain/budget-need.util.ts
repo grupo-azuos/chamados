@@ -2,12 +2,20 @@
  * AS NECESSIDADES DO ORÇAMENTO: o que o parque pede, e de qual prateleira isso sai.
  *
  * Três necessidades, e só três, porque só há três medidas confiáveis para sustentá-las:
- * memória total, espaço livre em disco e número de manutenções. As réguas são as MESMAS da
- * tela de Inteligência (`insight-rules.util`) — duas telas contando a mesma coisa com réguas
- * diferentes é como a equipe passa a discutir qual delas está certa.
+ * memória total, espaço livre em disco e número de manutenções. As réguas de memória e disco são
+ * as MESMAS do aviso de upgrade do inventário (`computer-upgrade.util`) — duas telas contando a
+ * mesma coisa com réguas diferentes é como a equipe passa a discutir qual delas está certa.
  */
 
 import { type PartCategory } from './part-catalog.util';
+
+/**
+ * A partir de quantas manutenções a máquina vira assunto de troca.
+ *
+ * Três é o mesmo número da tela de Manutenção, e de propósito: dois lugares contando a mesma
+ * coisa com réguas diferentes é como a equipe passa a discutir qual tela está certa.
+ */
+export const TROUBLESOME_MAINTENANCE_COUNT = 3;
 
 export const BUDGET_NEEDS = ['memory', 'disk', 'computer'] as const;
 

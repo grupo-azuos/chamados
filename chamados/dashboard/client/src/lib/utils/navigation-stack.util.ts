@@ -45,7 +45,6 @@ const PATH_LABELS: [RegExp, string][] = [
   [/^\/maintenance\/stock/, 'o depósito'],
   [new RegExp(`${MODULE}\\/disposal`), 'o descarte'],
   [/^\/infra\/network/, 'a rede'],
-  [/^\/infra\/insights/, 'a inteligência'],
   [/^\/infra\/budget/, 'o orçamento'],
   [/^\/maintenance\/inventory/, 'o inventário'],
   [/^\/maintenance\/quotes/, 'os orçamentos'],

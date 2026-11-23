@@ -12,6 +12,7 @@ import { disposalTypeLabel } from '@template/shared/domain/disposal.util';
 import { type AgentSnapshot } from '@template/shared/schemas/agent-snapshot.schema';
 import { type ComputerLive } from '@template/shared/schemas/computer-live.schema';
 import {
+  COMPUTER_NO_RESPONSIBLE_FILTER,
   type Computer,
   type ComputerListItem,
   type ComputerAlert,
@@ -26,9 +27,12 @@ import {
 } from '@template/shared/schemas/computer.schema';
 import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
+import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 import { type SQL } from 'drizzle-orm';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { assertCanCreate, assertCanRead } from '../../../lib/policy/policy-assert.util';
 import { type ComputerRow } from '../../../lib/db/schema/computers.schema';
 import { type BuiltDocument, type DocumentTone } from '../../../lib/report/document.type';
@@ -51,6 +55,12 @@ import { AgentPresenceService } from '../presence/agent-presence.service';
 import { LiveWatchService, WATCHED_CADENCE_SECONDS } from '../presence/live-watch.service';
 import { ComputersRepository, type PresenceFilter } from '../repository/computers.repository';
 import { createComputerToken, hashComputerToken } from '../token/computer-token.util';
+import {
+  indexPeopleByName,
+  responsibleFilterOf,
+  responsiblePersonOf,
+  type ResponsibleFilter,
+} from './computer-responsible.util';
 
 const BYTES_PER_GB = 1024 ** 3;
 
@@ -94,6 +104,11 @@ function presenceFilterOf(
   if (query.onlyOffline) return { onlineIds: [...online], wantOnline: false };
 
   return undefined;
+}
+
+/** O filtro "Responsável" pede uma PESSOA (e não "sem responsável") — aí o diretório é obrigatório. */
+function wantsPerson(query: Pick<ComputerListQuery, 'responsibleId'>): boolean {
+  return Boolean(query.responsibleId) && query.responsibleId !== COMPUTER_NO_RESPONSIBLE_FILTER;
 }
 
 const COMPUTER_REPORT_COLUMNS: ReportColumn<ComputerRow>[] = [
@@ -178,6 +193,7 @@ export class ComputersService {
     private readonly presence: AgentPresenceService,
     private readonly watch: LiveWatchService,
     @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
+    @Optional() @Inject(USER_DIRECTORY_PROVIDER) private readonly directory?: UserDirectoryProvider,
   ) {}
 
   async list(user: RequestUser, query: ComputerListQuery): Promise<Paginated<ComputerListItem>> {
@@ -186,14 +202,20 @@ export class ComputersService {
     /* Os ids online vêm de uma vez: perguntar linha a linha daria o mesmo resultado com mais
        trabalho, e a lista pode ter duzentas máquinas. */
     const online = this.presence.onlineIds();
+    const people = await this.directoryFor(query);
     const page = await this.repository.list(
       query,
       presenceFilterOf(query, online),
       await this.drillOf(user, query),
+      responsibleFilterOf(query.responsibleId, people),
     );
+    /* A foto do responsável vem do diretório, casada pelo nome: o cadastro guarda o nome. */
+    const index = indexPeopleByName(people);
 
     return {
-      items: page.rows.map((row) => toComputerListItem(row, online.has(row.id))),
+      items: page.rows.map((row) =>
+        toComputerListItem(row, online.has(row.id), responsiblePersonOf(row.responsibleName, index)),
+      ),
       total: page.total,
       page: query.page,
       pageSize: query.pageSize,
@@ -212,6 +234,7 @@ export class ComputersService {
       query,
       presenceFilterOf(query, this.presence.onlineIds()),
       await this.drillOf(user, query),
+      await this.responsibleFilterFor(query),
     );
     const { rows, isTruncated } = capReportRows(matching);
 
@@ -223,6 +246,36 @@ export class ComputersService {
       columns: COMPUTER_REPORT_COLUMNS,
       rows,
     });
+  }
+
+  /**
+   * As pessoas do escritório, para a foto do responsável e o filtro "Responsável".
+   *
+   * Duas regras, e é de propósito que são diferentes:
+   * - Com o filtro por PESSOA ligado, a falha do diretório aparece (503): sem ele não há como
+   *   saber de quem é o nome, e uma lista vazia diria "a Ana não tem máquina" — mentira.
+   * - Sem esse filtro, a falha só tira as fotos: o inventário não pode sair do ar porque o
+   *   admin-console demorou. As iniciais continuam no lugar.
+   *
+   * O diretório guarda a lista por um minuto, então a lista que se atualiza a cada 60 segundos
+   * não vira uma ida ao admin-console por cartão.
+   */
+  private async directoryFor(
+    query: Pick<ComputerListQuery, 'responsibleId'>,
+  ): Promise<DirectoryUser[]> {
+    if (!this.directory) return [];
+    if (wantsPerson(query)) return this.directory.listAllUsers();
+
+    return this.directory.listAllUsers().catch(() => []);
+  }
+
+  /** O filtro "Responsável" do relatório: o mesmo da lista, sem buscar o diretório à toa. */
+  private async responsibleFilterFor(
+    query: Pick<ComputerListQuery, 'responsibleId'>,
+  ): Promise<ResponsibleFilter | undefined> {
+    if (!query.responsibleId) return undefined;
+
+    return responsibleFilterOf(query.responsibleId, wantsPerson(query) ? await this.directoryFor(query) : []);
   }
 
   /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */

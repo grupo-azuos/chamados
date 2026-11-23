@@ -123,6 +123,7 @@
     critical: 2,
     attention: 1,
     neverSeen: 1,
+    needsUpgrade: 2,
   };
 
   const emptyFilter: ComputerListFilter = {
@@ -131,6 +132,8 @@
     healthStatus: '',
     kind: '',
     includeArchived: false,
+    responsibleId: '',
+    upgrade: '',
     onlyOnline: false,
     onlyOffline: false,
     alert: '',
@@ -143,6 +146,8 @@
     onDepartmentChange: () => {},
     onHealthStatusChange: () => {},
     onArchivedChange: () => {},
+    onResponsibleChange: () => {},
+    onUpgradeChange: () => {},
     onOnlineChange: () => {},
     onOfflineChange: () => {},
     onKindChange: () => {},
@@ -199,6 +204,35 @@
     actions={onlineActions}
   />
 </Story>
+
+<!-- Vinda do endereço antigo da Inteligência: só quem precisa de upgrade, com o cartão marcado. -->
+<Story
+  name="UpgradeFilter"
+  args={{
+    data: { computers, total: computers.length, summary, filter: { ...emptyFilter, upgrade: 'any' } },
+    state: settled,
+    actions,
+  }}
+/>
+
+<!-- Filtrada por responsável: o campo de pessoa com a foto e a etiqueta com o nome. -->
+<Story
+  name="ResponsibleFilter"
+  args={{
+    data: {
+      computers,
+      total: computers.length,
+      summary,
+      filter: { ...emptyFilter, responsibleId: 'p-1' },
+      responsibleOptions: [
+        { id: 'p-1', name: 'Camila Duarte', photo: 'https://i.pravatar.cc/64?img=47' },
+        { id: 'p-2', name: 'Gabriel Moura', photo: null },
+      ],
+    },
+    state: settled,
+    actions,
+  }}
+/>
 
 <!-- "Mais filtros" nasce aberto quando a lista chega filtrada: aqui, só quem precisa de
      manutenção — no computador e no celular, onde os grupos ficam um embaixo do outro. -->
@@ -267,7 +301,7 @@
     data: {
       computers: [],
       total: 0,
-      summary: { total: 0, online: 0, offline: 0, withAlerts: 0, cpuHigh: 0, memoryHigh: 0, critical: 0, attention: 0, neverSeen: 0 },
+      summary: { total: 0, online: 0, offline: 0, withAlerts: 0, cpuHigh: 0, memoryHigh: 0, critical: 0, attention: 0, neverSeen: 0, needsUpgrade: 0 },
       filter: emptyFilter,
     },
     state: { ...settled, isEmpty: true },
@@ -352,7 +386,7 @@
         computer({ id: 23, displayName: 'Atendimento — alerta em andamento', activeAlerts: 1, activeAlertMetrics: ['cpu'] }),
         computer({ id: 24, displayName: 'Financeiro — preventiva em dia' }),
       ],
-      total: 4, summary: { total: 4, online: 3, offline: 1, withAlerts: 1, cpuHigh: 1, memoryHigh: 0, critical: 0, attention: 0, neverSeen: 0 }, filter: emptyFilter,
+      total: 4, summary: { total: 4, online: 3, offline: 1, withAlerts: 1, cpuHigh: 1, memoryHigh: 0, critical: 0, attention: 0, neverSeen: 0, needsUpgrade: 0 }, filter: emptyFilter,
     },
     state: settled, actions,
   }}

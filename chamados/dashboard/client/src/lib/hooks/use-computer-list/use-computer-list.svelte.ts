@@ -6,6 +6,11 @@ import {
   type ResourceCondition,
 } from '@template/shared/domain/computer-resource.util';
 import { COMPUTER_KINDS, type ComputerKind } from '@template/shared/domain/computer-kind.util';
+import {
+  COMPUTER_UPGRADE_FILTERS,
+  type ComputerUpgradeFilter,
+  matchesUpgradeFilter,
+} from '@template/shared/domain/computer-upgrade.util';
 import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
 import { compareMachines, type NumberedMachine } from '@template/shared/domain/machine-number.util';
 import { type BoardDrill } from '@template/shared/schemas/board-drill.schema';
@@ -23,6 +28,7 @@ import { type ReportFormat } from '@template/shared/schemas/report.schema';
 import { derived, writable } from 'svelte/store';
 
 import { computersApi } from '$lib/api/computers.api';
+import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 import { readError } from '$lib/api/http-client';
 import { type BoardDrillBanner, useBoardDrillModel } from '$lib/hooks/use-board-drill/use-board-drill.svelte';
 import {
@@ -58,6 +64,13 @@ export type ComputerListFilter = {
   preventive: ComputerPreventiveFilter | '';
   /** Arquivadas saíram de uso: só aparecem quando alguém pede por elas. */
   includeArchived: boolean;
+  /**
+   * A pessoa do diretório (o id) ou `COMPUTER_NO_RESPONSIBLE_FILTER` ("Sem responsável"). O id,
+   * e não o nome: nome muda e se repete, e o filtro salvo não pode passar a achar outra pessoa.
+   */
+  responsibleId: string;
+  /** Quem precisa de upgrade: qualquer motivo ou um só (`computer-upgrade.util`). */
+  upgrade: ComputerUpgradeFilter | '';
 };
 
 /** Os números do topo da tela: o estado do parque de relance. */
@@ -73,6 +86,8 @@ export type ComputerSummary = {
   attention: number;
   /** Cadastradas cujo agente nunca conectou — falta instalar o agente nelas. */
   neverSeen: number;
+  /** Em uso e aquém em algum ponto: pouca memória, pouco disco ou processador antigo. */
+  needsUpgrade: number;
 };
 
 /** Por qual coluna a lista está em ordem. `number` é o número da máquina, pelo nome físico. */
@@ -105,6 +120,8 @@ export type ComputerListModel = {
     scheduledFor: Record<number, string>;
     /** As opções do filtro de departamento: as do RH e, depois da linha, as daqui. */
     departmentOptions: DepartmentChoice[];
+    /** As pessoas do filtro "Responsável": quem responde por alguma máquina, com a foto. */
+    responsibleOptions: AzuosPersonPickerPerson[];
     /** A faixa do recorte do Painel, quando a lista veio de um clique num bloco. */
     drillBanner: BoardDrillBanner | null;
     /** A ordem em vigor — é ela que decide a seta do cabeçalho da tabela. */
@@ -137,10 +154,12 @@ export type ComputerListModel = {
     onResourceConditionChange: (resourceCondition: ResourceCondition | '') => void;
     onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
     onArchivedChange: (includeArchived: boolean) => void;
+    onResponsibleChange: (responsibleId: string) => void;
+    onUpgradeChange: (upgrade: ComputerUpgradeFilter | '') => void;
     onClearFilters: () => void;
     /**
-     * O cartão "Máquinas" do topo: desliga os atalhos dos outros cartões (saúde, conexão e
-     * alerta) de uma vez, sem mexer na busca, no departamento nem no resto do painel.
+     * O cartão "Máquinas" do topo: desliga os atalhos dos outros cartões (saúde, conexão,
+     * alerta e upgrade) de uma vez, sem mexer na busca, no departamento nem no resto do painel.
      */
     onClearShortcuts: () => void;
     /** Mesma coluna inverte a direção; outra coluna começa em ordem crescente. */
@@ -165,6 +184,8 @@ const EMPTY_FILTER: ComputerListFilter = {
   resourceCondition: '',
   preventive: '',
   includeArchived: false,
+  responsibleId: '',
+  upgrade: '',
 };
 
 /** Cada campo do filtro conferido sozinho: um campo salvo que não serve volta ao padrão. */
@@ -179,6 +200,8 @@ const FILTER_GUARDS: FieldGuards<ComputerListFilter> = {
   resourceCondition: oneOf('', ...RESOURCE_CONDITIONS),
   preventive: oneOf('', ...COMPUTER_PREVENTIVE_FILTERS),
   includeArchived: isFlag,
+  responsibleId: isText,
+  upgrade: oneOf('', ...COMPUTER_UPGRADE_FILTERS),
 };
 
 /**
@@ -216,11 +239,17 @@ function filterScopeOf(filter: ComputerListFilter) {
     healthStatus: filter.healthStatus || undefined,
     kind: filter.kind || undefined,
     ...presenceOf(filter),
+    ...planningScopeOf(filter),
     alert: filter.alert || undefined,
     resourceCondition: filter.resourceCondition || undefined,
     preventive: filter.preventive || undefined,
     includeArchived: filter.includeArchived || undefined,
   };
+}
+
+/** O responsável e o upgrade, separados para o `filterScopeOf` caber no limite de complexidade. */
+function planningScopeOf(filter: ComputerListFilter) {
+  return { responsibleId: filter.responsibleId || undefined, upgrade: filter.upgrade || undefined };
 }
 
 /** Online e offline, separados para o `scopeOf` caber no limite de complexidade. */
@@ -342,6 +371,34 @@ export function clampPage(page: number, total: number, pageSize: number): number
   return Math.min(Math.max(1, page), last);
 }
 
+/**
+ * As pessoas do filtro "Responsável": quem responde por ALGUMA máquina do parque, uma vez só,
+ * com a foto do admin-console e em ordem de nome. O id e a foto vêm do servidor, que casou o
+ * nome do cadastro com o diretório.
+ *
+ * Só quem tem máquina, e não o escritório inteiro: escolher alguém sem máquina daria sempre a
+ * lista vazia. Nome digitado que não bate com ninguém do diretório não vira opção — não há id
+ * para guardar —, mas continua achável pela busca.
+ *
+ * Exportada e pura para ter teste próprio.
+ */
+export function responsibleOptionsOf(
+  computers: readonly ComputerListItem[],
+): AzuosPersonPickerPerson[] {
+  /* Objeto comum, e não `Map`: é uma tabela de consulta descartável, sem reatividade. */
+  const people: Record<string, AzuosPersonPickerPerson> = {};
+  for (const computer of computers) {
+    if (!computer.responsibleId || people[computer.responsibleId]) continue;
+    people[computer.responsibleId] = {
+      id: computer.responsibleId,
+      name: computer.responsibleName?.trim() || computer.responsibleId,
+      photo: computer.responsibleAvatarUrl ?? null,
+    };
+  }
+
+  return Object.values(people).sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+}
+
 export function summarizeComputers(computers: readonly ComputerListItem[]): ComputerSummary {
   return {
     total: computers.length,
@@ -354,6 +411,11 @@ export function summarizeComputers(computers: readonly ComputerListItem[]): Comp
     critical: computers.filter((computer) => computer.healthStatus === 'critical').length,
     attention: computers.filter((computer) => computer.healthStatus === 'attention').length,
     neverSeen: computers.filter((computer) => computer.lastSeenAt === null).length,
+    /* A mesma régua do aviso do cartão e do filtro do servidor. A lista do resumo já vem sem
+       arquivadas e descartadas, que não recebem peça. */
+    needsUpgrade: computers.filter((computer) =>
+      matchesUpgradeFilter(computer.hardware ?? {}, 'any'),
+    ).length,
   };
 }
 
@@ -441,6 +503,9 @@ export function useComputerListModel(): ComputerListModel {
         filter: filter.current,
         scheduledFor: scheduledDayByComputer(schedules.current.data),
         departmentOptions: departments.options,
+        /* Do resumo, e não da lista: com a lista filtrada pela Ana, a Ana seria a única opção
+           — e trocar de pessoa obrigaria a limpar o filtro antes. */
+        responsibleOptions: responsibleOptionsOf(summary.current.data?.items ?? []),
         drillBanner: drill.banner,
         sort,
         paging: {
@@ -483,6 +548,9 @@ export function useComputerListModel(): ComputerListModel {
       onPreventiveChange: (preventive) => changeFilter((current) => ({ ...current, preventive })),
       onArchivedChange: (includeArchived) =>
         changeFilter((current) => ({ ...current, includeArchived })),
+      onResponsibleChange: (responsibleId) =>
+        changeFilter((current) => ({ ...current, responsibleId })),
+      onUpgradeChange: (upgrade) => changeFilter((current) => ({ ...current, upgrade })),
       onClearFilters: () => {
         page = 1;
         filterStore.clear();
@@ -495,6 +563,7 @@ export function useComputerListModel(): ComputerListModel {
           alert: '',
           onlyOnline: false,
           onlyOffline: false,
+          upgrade: '',
         })),
       onSortChange: (field) => {
         page = 1;
@@ -539,8 +608,13 @@ type ListQueryLike = {
   data: ComputerPage;
 };
 
+/** A busca, o responsável e o upgrade, separados para o `hasAnyFilter` caber no limite de complexidade. */
+function hasTextFilter(filter: ComputerListFilter): boolean {
+  return filter.search.trim() !== '' || filter.responsibleId !== '' || filter.upgrade !== '';
+}
+
 function hasAnyFilter(filter: ComputerListFilter): boolean {
-  if (filter.search.trim() !== '') return true;
+  if (hasTextFilter(filter)) return true;
 
   return (
     filter.department !== '' ||

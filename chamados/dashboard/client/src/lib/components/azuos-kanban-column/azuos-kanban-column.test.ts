@@ -1,24 +1,18 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { DragDropManager } from '@dnd-kit/dom';
+import Hourglass from '@lucide/svelte/icons/hourglass';
+import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import Harness from './azuos-kanban-column-harness.test.svelte';
 import KanbanColumn from './azuos-kanban-column.svelte';
-
-/** O arrasto nativo que o jsdom não monta: só o `getData` que a coluna lê. */
-function dropWith(text: string) {
-  return { dataTransfer: { getData: () => text, setData: () => {} } };
-}
 
 describe('AzuosKanbanColumn', () => {
   // feliz
   it('shows the stage with its count and adds a card', async () => {
     const onAdd = vi.fn();
     render(KanbanColumn, {
-      props: {
-        data: { title: 'Em andamento', count: 4 },
-        ui: { tone: 'info' },
-        actions: { onAdd },
-      },
+      props: { data: { title: 'Em andamento', count: 4 }, ui: { tone: 'info' }, actions: { onAdd } },
     });
 
     expect(screen.getByRole('region', { name: 'Em andamento' })).toBeInTheDocument();
@@ -28,57 +22,40 @@ describe('AzuosKanbanColumn', () => {
     expect(onAdd).toHaveBeenCalledOnce();
   });
 
-  it('tells the screen which card was dropped on it', async () => {
-    const onDropItem = vi.fn();
-    render(KanbanColumn, {
-      props: { data: { title: 'Feito', count: 0 }, actions: { onDropItem } },
+  it('shows the stage icon in its tone and edits the stage from the pencil', async () => {
+    const onEdit = vi.fn();
+    const { container } = render(KanbanColumn, {
+      props: { data: { title: 'Aguardando', count: 2 }, ui: { tone: 'warning', icon: Hourglass }, actions: { onEdit } },
     });
 
-    await fireEvent.drop(screen.getByRole('region', { name: 'Feito' }), dropWith('42'));
+    expect(container.querySelector('header svg')).toBeInTheDocument();
+    expect(container.querySelector('header')).toHaveClass('bg-hue-yellow');
+    await userEvent.click(screen.getByRole('button', { name: 'Editar Aguardando' }));
+    expect(onEdit).toHaveBeenCalledOnce();
+  });
 
-    expect(onDropItem).toHaveBeenCalledWith(42);
+  it('becomes a drop area of the board when it gets a drop id', () => {
+    const manager = new DragDropManager();
+    render(Harness, { props: { manager, dropId: 'column:in_progress' } });
+
+    const droppable = manager.registry.droppables.get('column:in_progress');
+    expect(droppable?.element).toBe(screen.getByRole('region', { name: 'Em atendimento' }));
+    expect(droppable?.isDropTarget).toBe(false);
   });
 
   // triste
-  it('ignores something dropped that is not a card from the screen', async () => {
-    const onDropItem = vi.fn();
-    render(KanbanColumn, {
-      props: { data: { title: 'Feito', count: 0 }, actions: { onDropItem } },
-    });
-
-    await fireEvent.drop(screen.getByRole('region', { name: 'Feito' }), dropWith('um texto'));
-
-    expect(onDropItem).not.toHaveBeenCalled();
-  });
-
-  it('has no add button when the screen gives no add action', () => {
-    render(KanbanColumn, { props: { data: { title: 'Feito', count: 0 } } });
+  it('has no add button, pencil or icon when the screen gives none', () => {
+    const { container } = render(KanbanColumn, { props: { data: { title: 'Feito', count: 0 } } });
 
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
-  });
-});
-
-describe('AzuosKanbanColumn — hovering a card over the column', () => {
-  // feliz
-  it('lights up while a card hovers over it and dims when the card leaves', async () => {
-    render(KanbanColumn, {
-      props: { data: { title: 'Em atendimento', count: 1 }, ui: { addLabel: 'Novo' }, actions: { onDropItem: vi.fn(), onAdd: vi.fn() } },
-    });
-    const column = screen.getByRole('region', { name: 'Em atendimento' });
-
-    await fireEvent.dragOver(column, dropWith('ticket:1'));
-    expect(column).toHaveClass('bg-accent');
-    await fireEvent.dragLeave(column);
-    expect(column).not.toHaveClass('bg-accent');
-    expect(screen.getByRole('button', { name: /Novo/ })).toBeInTheDocument();
+    expect(container.querySelector('header svg')).not.toBeInTheDocument();
   });
 
-  // triste
-  it('does not react to a card when nothing can be dropped on it', async () => {
-    render(KanbanColumn, { props: { data: { title: 'Encerrados', count: 0 } } });
-    const column = screen.getByRole('region', { name: 'Encerrados' });
+  it('is only a drawing without a drop id, even inside a board', () => {
+    const manager = new DragDropManager();
+    render(Harness, { props: { manager } });
 
-    await fireEvent.dragOver(column, dropWith('ticket:1'));
-    expect(column).not.toHaveClass('bg-accent');
+    expect(screen.getByRole('region', { name: 'Em atendimento' })).not.toHaveClass('bg-accent');
+    expect([...manager.registry.droppables]).toHaveLength(0);
   });
 });

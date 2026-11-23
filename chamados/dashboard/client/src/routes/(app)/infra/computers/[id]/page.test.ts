@@ -137,7 +137,7 @@ describe('the infra/computers detail route with the machine loaded', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Gerar token novo' }));
     expect(await screen.findByText('Token de CONTABIL-03')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Baixar pacote de instalação (.zip)' }));
+    await user.click(screen.getByRole('button', { name: 'Baixar instalador (.zip)' }));
     await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent(/Não consegui/));
     await user.click(screen.getByRole('button', { name: 'Já guardei' }));
     await waitFor(() => expect(screen.queryByText('Token de CONTABIL-03')).not.toBeInTheDocument());

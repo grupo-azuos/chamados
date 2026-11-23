@@ -5,7 +5,8 @@
   números e o rodapé de quem é.
 
   - A FAIXA DE CIMA é a saúde num olhar (bolinha + "Boa", "Atenção", "Crítica"); do lado, a
-    situação (arquivada, bloqueada, online ou offline) e o SELO que pisca enquanto houver alerta
+    situação (arquivada, bloqueada, online ou offline), o aviso âmbar de UPGRADE quando a máquina
+    está aquém (`AzuosComputerUpgradeBadge`, não pisca) e o SELO que pisca enquanto houver alerta
     crítico aberto ou preventiva vencida (`AzuosComputerAlertBadge`).
   - O ÍCONE CHEIO é a condição dos recursos (disco, memória, tempo sem reiniciar), no tom dela —
     a cor do assunto mora no ícone, nunca no fundo nem no hover do card.
@@ -99,6 +100,7 @@
   import { departmentLabel } from '@template/shared/domain/department.util';
 
   import AlertBadge from '../azuos-computer-alert-badge/azuos-computer-alert-badge.svelte';
+  import UpgradeBadge from '../azuos-computer-upgrade-badge/azuos-computer-upgrade-badge.svelte';
   import ComputerMaintenanceStatus from '../azuos-computer-maintenance-status/azuos-computer-maintenance-status.svelte';
   import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
@@ -162,7 +164,9 @@
         <span aria-hidden="true" class={cn('size-1.5 rounded-full', situation.dot)}></span>
         {situation.label}
       </span>
-      <!-- Acima da camada clicável do card, para o balão do selo abrir no mouse. -->
+      <!-- Acima da camada clicável do card, para o balão do selo abrir no mouse. O aviso de
+           upgrade vem antes do selo vermelho: é atenção, calmo, e não pisca. -->
+      <UpgradeBadge data={{ computer }} ui={{ className: 'relative z-20' }} />
       <AlertBadge data={{ computer }} ui={{ className: 'relative z-20' }} />
     </span>
   </div>
@@ -223,8 +227,13 @@
         {lastSeenLabelOf(computer)}
       </span>
     </span>
+    <!-- A foto vem do admin-console (o servidor casa o nome com o diretório); sem ela, as iniciais. -->
     {#if computer.responsibleName}
-      <PersonAvatar name={computer.responsibleName} ui={{ size: 'sm' }} />
+      <PersonAvatar
+        name={computer.responsibleName}
+        avatarUrl={computer.responsibleAvatarUrl ?? null}
+        ui={{ size: 'sm' }}
+      />
     {/if}
     <!-- Só desenho: quem abre a ficha é o card inteiro, que já é o botão. -->
     <span

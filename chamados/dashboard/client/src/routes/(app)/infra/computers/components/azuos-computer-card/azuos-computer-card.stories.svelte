@@ -67,6 +67,27 @@
 
 <!-- Máquina em dia: sem selo, faixa verde, hover só neutro. -->
 <Story name="Default" args={{ data: { computer: computer() }, actions }} />
+<!-- Precisa de upgrade: o selo âmbar, calmo, com os motivos no balão. -->
+<Story
+  name="PrecisaDeUpgrade"
+  args={{
+    data: {
+      computer: computer({
+        hardware: {
+          ...computer().hardware,
+          totalMemoryBytes: 4 * 1024 ** 3,
+          cpuModel: 'Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz',
+        },
+      }),
+    },
+    actions,
+  }}
+/>
+<!-- Com a foto do responsável, vinda do admin-console; sem ela, ficam as iniciais (Default). -->
+<Story
+  name="ComFotoDoResponsavel"
+  args={{ data: { computer: computer({ responsibleAvatarUrl: 'https://i.pravatar.cc/64?img=47' }) }, actions }}
+/>
 <!-- Alerta crítico aberto: o selo vermelho pisca no canto da faixa. -->
 <Story
   name="Com alerta"

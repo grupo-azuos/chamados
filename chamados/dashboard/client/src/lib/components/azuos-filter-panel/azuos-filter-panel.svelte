@@ -16,22 +16,29 @@
 -->
 <script lang="ts" module>
   import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 
   /**
    * Um filtro do painel. `control` diz o formato: `pills` para poucas opções (escolha num
    * clique, à vista) e `select` para muitas (lista suspensa com busca). Alternar os dois na grade
    * é o desenho do painel.
+   *
+   * `person` é o filtro de PESSOA (regra `select-standard`): o campo de pessoa do sistema, com a
+   * foto e busca, que guarda o id. Aí `people` traz as pessoas e `options` vira as opções que vêm
+   * ANTES delas ("(Sem responsável)"), logo depois do "todos" de `allLabel`.
    */
   export type FilterPanelField = {
     key: string;
     label: string;
-    control: 'pills' | 'select';
+    control: 'pills' | 'select' | 'person';
     ariaLabel: string;
     /** O rótulo da opção "sem filtro" — "Todas", "Toda a saúde". */
     allLabel: string;
     value: string;
     options: OptionPickerOption[];
     searchPlaceholder?: string;
+    /** As pessoas do filtro `person`. */
+    people?: AzuosPersonPickerPerson[];
   };
 
   /** Uma etiqueta de filtro ligado: o que ela diz. Tirar é `actions.onRemoveChip(key)`. */
@@ -85,6 +92,7 @@
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import InputGroup from '$lib/components/azuos-input-group/azuos-input-group.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import { DURATION, prefersReducedMotion } from '$lib/motion/motion';
   import { cn } from '$lib/utils/cn';
@@ -104,7 +112,7 @@
    * colunas. Com mais, ficam do tamanho das opções — esticadas, sobrava faixa vazia.
    */
   function fillsCell(field: FilterPanelField): boolean {
-    return field.control === 'select' || field.options.length + 1 <= 3;
+    return field.control !== 'pills' || field.options.length + 1 <= 3;
   }
 </script>
 
@@ -208,17 +216,29 @@
             data={{ label: field.label }}
             ui={{ className: fillsCell(field) ? 'sm:w-full' : 'items-start sm:w-full' }}
           >
-            <OptionPicker
-              data={{ value: field.value, options: field.options }}
-              ui={{
-                ariaLabel: field.ariaLabel,
-                allLabel: field.allLabel,
-                mode: field.control === 'select' ? 'combobox' : 'auto',
-                fullWidth: fillsCell(field),
-                searchPlaceholder: field.searchPlaceholder ?? 'Buscar…',
-              }}
-              actions={{ onChange: (value: string) => actions.onFieldChange(field.key, value) }}
-            />
+            {#if field.control === 'person'}
+              <PersonPickerField
+                data={{
+                  value: field.value,
+                  people: field.people ?? [],
+                  leading: [{ value: '', label: field.allLabel }, ...field.options],
+                }}
+                ui={{ ariaLabel: field.ariaLabel, placeholder: field.allLabel, className: 'w-full' }}
+                actions={{ onChange: (value: string) => actions.onFieldChange(field.key, value) }}
+              />
+            {:else}
+              <OptionPicker
+                data={{ value: field.value, options: field.options }}
+                ui={{
+                  ariaLabel: field.ariaLabel,
+                  allLabel: field.allLabel,
+                  mode: field.control === 'select' ? 'combobox' : 'auto',
+                  fullWidth: fillsCell(field),
+                  searchPlaceholder: field.searchPlaceholder ?? 'Buscar…',
+                }}
+                actions={{ onChange: (value: string) => actions.onFieldChange(field.key, value) }}
+              />
+            {/if}
           </FilterField>
         {/each}
       </div>

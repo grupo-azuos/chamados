@@ -4,13 +4,15 @@
 
   Em cima, o que se usa toda hora: busca (nome, apelido ou responsável), departamento e o botão
   "Filtros". O resto mora num painel que desliza ao abrir (`AzuosFilterPanel`), agrupado pelo que
-  pergunta — conexão, saúde, recursos, tipo, alertas, arquivadas e preventiva. Embaixo, uma etiqueta
+  pergunta — responsável, conexão, saúde, recursos, upgrade, tipo, alertas, arquivadas e
+  preventiva. Embaixo, uma etiqueta
   por filtro ligado, com o X que o desliga: com o painel fechado, é ela que mostra o que está
   limitando a lista. Online e offline são um filtro só (a conexão).
 
   Função pura de props. O único estado próprio é visual — o painel aberto ou fechado.
 
-  - `data`: `filter` e `departmentOptions` (os do RH e, depois da linha, os daqui).
+  - `data`: `filter`, `departmentOptions` (os do RH e, depois da linha, os daqui) e
+    `responsibleOptions` (quem responde por alguma máquina, com a foto).
   - `state.isFilteredOut`: o filtro escondeu tudo — aí quem oferece "Limpar filtros" é o aviso de
     lista vazia.
   - `actions`: um `on…Change` por filtro e `onClearFilters`.
@@ -37,9 +39,16 @@
   import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
   import {
     COMPUTER_ALERT_FILTERS,
+    COMPUTER_NO_RESPONSIBLE_FILTER,
     type ComputerAlertFilter,
     type ComputerPreventiveFilter,
   } from '@template/shared/schemas/computer.schema';
+  import {
+    COMPUTER_UPGRADE_FILTERS,
+    type ComputerUpgradeFilter,
+    UPGRADE_FILTER_LABELS,
+  } from '@template/shared/domain/computer-upgrade.util';
+  import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 
   /** O recorte do inventário — o mesmo do hook `use-computer-list`. */
   export type InventoryFilter = {
@@ -53,6 +62,9 @@
     resourceCondition: ResourceCondition | '';
     preventive: ComputerPreventiveFilter | '';
     includeArchived: boolean;
+    /** O id da pessoa do diretório, ou `COMPUTER_NO_RESPONSIBLE_FILTER`. */
+    responsibleId: string;
+    upgrade: ComputerUpgradeFilter | '';
   };
 
   /**
@@ -70,6 +82,8 @@
       filter: InventoryFilter;
       /** Os departamentos do RH e, depois da linha, os daqui. */
       departmentOptions: DepartmentChoice[];
+      /** As pessoas do filtro "Responsável", com a foto. Sem elas, só "(Sem responsável)". */
+      responsibleOptions?: AzuosPersonPickerPerson[];
     };
     state?: {
       /** O filtro escondeu tudo: quem oferece "Limpar filtros" é o aviso de lista vazia —
@@ -87,6 +101,8 @@
       onResourceConditionChange: (resourceCondition: ResourceCondition | '') => void;
       onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
       onArchivedChange: (includeArchived: boolean) => void;
+      onResponsibleChange: (responsibleId: string) => void;
+      onUpgradeChange: (upgrade: ComputerUpgradeFilter | '') => void;
       onClearFilters: () => void;
     };
   };
@@ -149,6 +165,23 @@
     label: COMPUTER_KIND_LABELS[kind],
   }));
 
+  /**
+   * "(Sem responsável)" vem antes das pessoas, entre parênteses como no resto do grupo: é a
+   * pergunta de quem arruma o parque — "qual máquina ainda não tem dono?".
+   */
+  export const NO_RESPONSIBLE_LABEL = '(Sem responsável)';
+  const RESPONSIBLE_LEADING = [{ value: COMPUTER_NO_RESPONSIBLE_FILTER, label: NO_RESPONSIBLE_LABEL }];
+
+  /**
+   * "Upgrade": qualquer motivo primeiro (a pergunta do dia a dia), depois um por um, nas réguas
+   * do `computer-upgrade.util`. "Sem SSD" não aparece: o agente não sabe o tipo do disco.
+   */
+  const UPGRADE_OPTIONS = COMPUTER_UPGRADE_FILTERS.map((upgrade) => ({
+    value: upgrade,
+    label: UPGRADE_FILTER_LABELS[upgrade],
+    tone: 'warning' as const,
+  }));
+
   /** "Arquivadas": a opção sem valor ("Ocultar") vem do `allLabel` do seletor. */
   const ARCHIVED_OPTIONS = [{ value: 'yes', label: 'Mostrar' }];
 
@@ -166,8 +199,10 @@
   export function activeFilterChips(
     filter: InventoryFilter,
     actions: AzuosInventoryFiltersProps['actions'],
+    people?: readonly AzuosPersonPickerPerson[],
   ): ActiveFilterChip[] {
     const chips: (ActiveFilterChip | null)[] = [
+      responsibleChip(filter, actions, people),
       connectionOf(filter)
         ? {
             key: 'connection',
@@ -184,6 +219,7 @@
           }
         : null,
       resourceChip(filter, actions),
+      upgradeChip(filter, actions),
       filter.alert
         ? {
             key: 'alert',
@@ -231,6 +267,42 @@
     };
   }
 
+  /**
+   * A etiqueta do responsável. A pessoa que saiu da lista (não responde mais por máquina) segue
+   * filtrável pelo link salvo: a etiqueta diz "Responsável" em vez de sumir com o filtro ligado.
+   */
+  export function responsibleChip(
+    filter: InventoryFilter,
+    actions: AzuosInventoryFiltersProps['actions'],
+    people: readonly AzuosPersonPickerPerson[] = [],
+  ): ActiveFilterChip | null {
+    if (!filter.responsibleId) return null;
+
+    const onRemove = () => actions.onResponsibleChange('');
+    if (filter.responsibleId === COMPUTER_NO_RESPONSIBLE_FILTER) {
+      return { key: 'responsible', label: NO_RESPONSIBLE_LABEL, onRemove };
+    }
+    const name = people.find((person) => person.id === filter.responsibleId)?.name;
+
+    return { key: 'responsible', label: name ? `Responsável: ${name}` : 'Responsável', onRemove };
+  }
+
+  /** A etiqueta do filtro "Upgrade": "Precisa de upgrade" ou "Upgrade: Processador antigo". */
+  export function upgradeChip(
+    filter: InventoryFilter,
+    actions: AzuosInventoryFiltersProps['actions'],
+  ): ActiveFilterChip | null {
+    if (!filter.upgrade) return null;
+
+    const label = UPGRADE_FILTER_LABELS[filter.upgrade];
+
+    return {
+      key: 'upgrade',
+      label: filter.upgrade === 'any' ? label : `Upgrade: ${label}`,
+      onRemove: () => actions.onUpgradeChange(''),
+    };
+  }
+
   /** Há o que limpar — inclusive a busca e o departamento, que não viram etiqueta. */
   export function hasAnyFilter(filter: InventoryFilter, chips: readonly ActiveFilterChip[]): boolean {
     return chips.length > 0 || filter.search.trim() !== '' || filter.department !== '';
@@ -244,13 +316,23 @@
 
   let { data, state: filtersState, actions }: AzuosInventoryFiltersProps = $props();
 
-  const chips = $derived(activeFilterChips(data.filter, actions));
+  const chips = $derived(activeFilterChips(data.filter, actions, data.responsibleOptions));
 
   /**
    * Os filtros do painel, intercalando pastilhas (poucas opções) e listas suspensas (muitas):
    * o que a máquina está fazendo agora, a manutenção e o cadastro.
    */
   const fields: FilterPanelField[] = $derived([
+    {
+      key: 'responsible',
+      label: 'Responsável',
+      control: 'person',
+      ariaLabel: 'Filtrar por responsável',
+      allLabel: 'Todos os responsáveis',
+      value: data.filter.responsibleId,
+      options: RESPONSIBLE_LEADING,
+      people: data.responsibleOptions ?? [],
+    },
     {
       key: 'connection',
       label: 'Conexão',
@@ -278,6 +360,15 @@
       value: data.filter.resourceCondition,
       options: RESOURCE_OPTIONS,
       searchPlaceholder: 'Buscar condição…',
+    },
+    {
+      key: 'upgrade',
+      label: 'Upgrade',
+      control: 'select',
+      ariaLabel: 'Filtrar por upgrade',
+      allLabel: 'Todos',
+      value: data.filter.upgrade,
+      options: UPGRADE_OPTIONS,
     },
     {
       key: 'kind',
@@ -339,6 +430,8 @@
     alert: (value) => actions.onAlertChange(value as ComputerAlertFilter | ''),
     archived: (value) => actions.onArchivedChange(value === 'yes'),
     preventive: (value) => actions.onPreventiveChange(value as ComputerPreventiveFilter | ''),
+    responsible: (value) => actions.onResponsibleChange(value),
+    upgrade: (value) => actions.onUpgradeChange(value as ComputerUpgradeFilter | ''),
   };
 
   function changeConnection(value: string) {

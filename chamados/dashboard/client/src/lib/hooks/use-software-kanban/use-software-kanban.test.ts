@@ -12,7 +12,7 @@ vi.mock('$lib/api/software-projects.api', () => ({
 }));
 
 vi.mock('$lib/api/tickets.api', () => ({
-  ticketsApi: { list: vi.fn(), createHistory: vi.fn() },
+  ticketsApi: { list: vi.fn(), createHistory: vi.fn(), assigneeOptions: vi.fn(() => Promise.resolve([])) },
 }));
 
 const { softwareProjectsApi } = await import('$lib/api/software-projects.api');
@@ -127,6 +127,28 @@ describe('useSoftwareKanbanModel', () => {
     expect(model.data.totalTickets).toBe(6);
     expect(model.data.projects).toHaveLength(1);
     expect(model.state.isEmpty).toBe(false);
+  });
+
+  it('gives each assignee photo by the person id, for the card to show the face', async () => {
+    vi.mocked(ticketsApi.assigneeOptions).mockResolvedValueOnce([
+      { id: 'u-ana', name: 'Ana', avatarUrl: 'https://cdn.example/ana.png' },
+      { id: 'u-bia', name: 'Bia' },
+    ]);
+    const model = await mountLoadedModel();
+
+    await waitFor(() =>
+      expect(model.data.assigneePhotos).toEqual({ 'u-ana': 'https://cdn.example/ana.png', 'u-bia': null }),
+    );
+    expect(ticketsApi.assigneeOptions).toHaveBeenCalledWith('sistema');
+  });
+
+  // triste
+  it('keeps the board without photos when the people list does not come', async () => {
+    vi.mocked(ticketsApi.assigneeOptions).mockRejectedValueOnce(new ApiError(503, 'Fora do ar.'));
+    const model = await mountLoadedModel();
+
+    expect(model.data.assigneePhotos).toEqual({});
+    expect(model.state.error).toBeNull();
   });
 
   it('asks the server again for the tickets of the chosen system', async () => {

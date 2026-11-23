@@ -1,7 +1,7 @@
 import { type ComputerListItem } from '@template/shared/schemas/computer.schema';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import ComputerCard, {
   displayNameOf,
@@ -88,6 +88,87 @@ describe('the card helpers', () => {
     expect(situationOf(computer({ isBlocked: true })).label).toBe('Bloqueada');
     expect(situationOf(computer()).label).toBe('Online');
     expect(situationOf(computer({ isOnline: false })).label).toBe('Offline');
+  });
+});
+
+
+/**
+ * O `Avatar` do Bits-UI só mostra a foto depois de um `new Image()` carregar — o jsdom nunca
+ * carrega. Mesmo dublê do teste do `AzuosPersonAvatar`.
+ */
+class InstantLoadImage {
+  complete = false;
+  naturalWidth = 0;
+
+  addEventListener(type: string, listener: () => void) {
+    if (type === 'load') listener();
+  }
+  removeEventListener() {}
+
+  set src(_value: string) {
+    this.complete = true;
+    this.naturalWidth = 1;
+  }
+}
+
+describe('AzuosComputerCard — upgrade', () => {
+  // feliz
+  it('marks a machine that needs an upgrade with the calm badge', () => {
+    render(ComputerCard, {
+      props: {
+        data: { computer: computer({ hardware: { ...computer().hardware, totalMemoryBytes: 4 * 1024 ** 3 } }) },
+        actions: { onOpen: vi.fn() },
+      },
+    });
+
+    expect(screen.getByRole('img', { name: /^Precisa de upgrade: Pouca memória/ })).toBeInTheDocument();
+  });
+
+  // triste
+  it('shows no upgrade badge on a machine up to date', () => {
+    const { container } = render(ComputerCard, {
+      props: {
+        data: {
+          computer: computer({
+            hardware: {
+              ...computer().hardware,
+              totalMemoryBytes: 16 * 1024 ** 3,
+              totalDiskBytes: 500 * 1024 ** 3,
+              freeDiskBytes: 300 * 1024 ** 3,
+              cpuModel: '12th Gen Intel(R) Core(TM) i5-12400',
+            },
+          }),
+        },
+        actions: { onOpen: vi.fn() },
+      },
+    });
+
+    expect(container.querySelector('[data-slot="computer-upgrade-badge"]')).toBeNull();
+  });
+});
+
+describe('AzuosComputerCard — responsible photo', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  // feliz
+  it('shows the real photo of the responsible from the directory', async () => {
+    vi.stubGlobal('Image', InstantLoadImage);
+    const { container } = render(ComputerCard, {
+      props: { data: { computer: computer({ responsibleAvatarUrl: '/avatars/ana.png' }) }, actions: { onOpen: vi.fn() } },
+    });
+
+    const image = await vi.waitUntil(() => container.querySelector('[data-slot="avatar-image"]'));
+    expect(image).toHaveAttribute('src', '/avatars/ana.png');
+  });
+
+  // triste
+  it('falls back to the initials when the directory has no photo', () => {
+    const { container } = render(ComputerCard, {
+      props: { data: { computer: computer({ responsibleAvatarUrl: null }) }, actions: { onOpen: vi.fn() } },
+    });
+
+    expect(container.querySelector('[data-slot="avatar-image"]')).toBeNull();
+    expect(screen.getByText('AP')).toBeInTheDocument();
   });
 });
 

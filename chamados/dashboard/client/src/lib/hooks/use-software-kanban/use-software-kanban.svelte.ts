@@ -63,6 +63,8 @@ export type SoftwareKanbanModel = {
     selectedProjectId: number | null;
     totalTickets: number;
     cardColors: Record<number, string>;
+    /** A foto de cada responsável, pelo id dele — o cartão mostra quem cuida pelo rosto. */
+    assigneePhotos: Record<string, string | null>;
   };
   state: {
     isLoading: boolean;
@@ -234,6 +236,18 @@ export function useSoftwareKanbanModel(): SoftwareKanbanModel {
     ),
   );
 
+  /* Quem atende Sistema muda pouco: a lista vale por 5 minutos, e o quadro funciona mesmo
+     enquanto ela não chega (ou se o admin-console não responder) — só sem as fotos. */
+  const assigneesQuery = mirrorStore(
+    createQuery(
+      writable({
+        queryKey: [...TICKETS_QUERY_KEY, 'assignee-options', 'sistema'],
+        queryFn: () => ticketsApi.assigneeOptions('sistema'),
+        staleTime: 5 * 60 * 1000,
+      }),
+    ),
+  );
+
   const moveMutation = mirrorStore(
     createMutation({
       mutationFn: async ({
@@ -307,6 +321,9 @@ export function useSoftwareKanbanModel(): SoftwareKanbanModel {
         selectedProjectId: selectedStore.current,
         totalTickets: ticketsWithOptimism.length,
         cardColors: colorsMirror.current,
+        assigneePhotos: Object.fromEntries(
+          (assigneesQuery.current.data ?? []).map((person) => [person.id, person.avatarUrl ?? null]),
+        ),
       };
     },
     get state() {
