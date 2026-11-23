@@ -22,8 +22,8 @@
     origin: 'manual',
     people: [{ id: 'bia', name: 'Bia Souza', avatarUrl: null }],
     links: [
-      { id: 1, kind: 'computer', targetId: 3, label: 'Computador 03' },
-      { id: 2, kind: 'ticket', targetId: 9, label: null },
+      { id: 1, kind: 'computer', targetId: 3, label: 'Computador 03', source: 'task' as const },
+      { id: 2, kind: 'ticket', targetId: 9, label: null, source: 'task' as const },
     ],
   });
   const timeline = [

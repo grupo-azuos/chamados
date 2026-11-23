@@ -19,11 +19,11 @@
       id: 1,
       people: [{ id: 'bia', name: 'Bia Souza', avatarUrl: null }],
       links: [
-        { id: 1, kind: 'computer', targetId: 3, label: 'Computador 03' },
-        { id: 2, kind: 'ticket', targetId: 9, label: 'CH-0009' },
+        { id: 1, kind: 'computer', targetId: 3, label: 'Computador 03', source: 'task' as const },
+        { id: 2, kind: 'ticket', targetId: 9, label: 'CH-0009', source: 'task' as const },
       ],
     }),
-    taskFixture({ id: 2, title: 'Finalizada', status: 'done', links: [{ id: 3, kind: 'part', targetId: 1, label: 'SSD 480GB' }] }),
+    taskFixture({ id: 2, title: 'Finalizada', status: 'done', links: [{ id: 3, kind: 'part', targetId: 1, label: 'SSD 480GB', source: 'task' as const }] }),
     taskFixture({ id: 3, title: 'Sem responsável', owner: null }),
   ];
 </script>

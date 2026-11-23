@@ -26,7 +26,9 @@ function setup(
   const tasks = [
     taskFixture({
       id: 1,
-      links: [{ id: 1, kind: 'computer', targetId: 3, label: 'Computador 03' }],
+      links: [
+        { id: 1, kind: 'computer', targetId: 3, label: 'Computador 03', source: 'task' as const },
+      ],
     }),
     taskFixture({
       id: 2,

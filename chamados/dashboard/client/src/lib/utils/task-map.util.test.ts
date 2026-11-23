@@ -5,6 +5,7 @@ import {
   buildTaskMap,
   islandNodeId,
   linkHref,
+  rowsOf,
   TASK_MAP_KINDS,
   taskIdOfIsland,
   tasksOfPeople,
@@ -17,9 +18,9 @@ describe('task map', () => {
       id: 7,
       people: [{ id: 'bia', name: 'Bia', avatarUrl: null }],
       links: [
-        { id: 1, kind: 'computer', targetId: 3, label: 'Computador 03' },
-        { id: 2, kind: 'computer', targetId: 3, label: 'Computador 03' },
-        { id: 3, kind: 'ticket', targetId: 9, label: 'CH-0009' },
+        { id: 1, kind: 'computer', targetId: 3, label: 'Computador 03', source: 'task' as const },
+        { id: 2, kind: 'computer', targetId: 3, label: 'Computador 03', source: 'task' as const },
+        { id: 3, kind: 'ticket', targetId: 9, label: 'CH-0009', source: 'task' as const },
       ],
     });
 
@@ -60,8 +61,8 @@ describe('task map', () => {
       owner: null,
       status: 'done',
       links: [
-        { id: 1, kind: 'part', targetId: 2, label: null },
-        { id: 2, kind: 'ticket', targetId: 4, label: 'CH-0004' },
+        { id: 1, kind: 'part', targetId: 2, label: null, source: 'task' as const },
+        { id: 2, kind: 'ticket', targetId: 4, label: 'CH-0004', source: 'task' as const },
       ],
     });
 
@@ -87,5 +88,38 @@ describe('task map', () => {
 
     expect(tasksOfPeople(tasks, ['bia']).map((task) => task.id)).toEqual([2]);
     expect(tasksOfPeople(tasks, [])).toHaveLength(2);
+  });
+
+  // feliz
+  it('hangs what came from the ticket (the stock it used) beside the ticket, in the fourth column', () => {
+    const links = [
+      { id: -9, kind: 'ticket' as const, targetId: 9, label: 'CH-0009', source: 'ticket' as const },
+      {
+        id: -1000001,
+        kind: 'part' as const,
+        targetId: 3,
+        label: 'Monitor 24 × 2',
+        source: 'ticket' as const,
+      },
+      {
+        id: 5,
+        kind: 'computer' as const,
+        targetId: 2,
+        label: 'Computador 02',
+        source: 'task' as const,
+      },
+    ];
+
+    const rows = rowsOf(links);
+    const map = buildTaskMap([taskFixture({ id: 4, links })], TASK_MAP_KINDS, TEST_NOW);
+
+    expect(rows.map((row) => [row.direct.label, row.owned.map((item) => item.label)])).toEqual([
+      ['CH-0009', ['Monitor 24 × 2']],
+      ['Computador 02', []],
+    ]);
+    expect(
+      map.edges.some((edge) => edge.source === '4/ticket:9' && edge.target === '4/part:3'),
+    ).toBe(true);
+    expect(rowsOf(links.slice(1)).map((row) => row.owned)).toEqual([[], []]);
   });
 });

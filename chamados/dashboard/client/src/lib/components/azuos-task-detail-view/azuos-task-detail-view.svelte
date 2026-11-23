@@ -330,12 +330,17 @@
                   {:else}
                     <span class="text-muted-foreground min-w-0 flex-1 truncate text-sm">{label} — saiu do cadastro</span>
                   {/if}
-                  <ActionButton
-                    data={{ label: `Desvincular ${label}` }}
-                    ui={{ icon: Trash2, variant: 'ghost', isIconOnly: true, size: 'sm' }}
-                    state={{ isDisabled: viewState.isBusy }}
-                    actions={{ onClick: () => actions.onRemoveLink(link.id) }}
-                  />
+                  {#if link.source === 'ticket'}
+                    <!-- Veio do chamado (o estoque que ele usou, a máquina): muda-se no chamado. -->
+                    <span class="text-muted-foreground text-xs">do chamado</span>
+                  {:else}
+                    <ActionButton
+                      data={{ label: `Desvincular ${label}` }}
+                      ui={{ icon: Trash2, variant: 'ghost', isIconOnly: true, size: 'sm' }}
+                      state={{ isDisabled: viewState.isBusy }}
+                      actions={{ onClick: () => actions.onRemoveLink(link.id) }}
+                    />
+                  {/if}
                 </li>
               {/each}
             </ul>
