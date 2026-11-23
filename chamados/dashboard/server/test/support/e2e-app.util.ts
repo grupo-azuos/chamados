@@ -154,7 +154,13 @@ class FakeUserDirectoryProvider implements UserDirectoryProvider {
 
 /** A ficha de uma pessoa do teste no diretório, como o admin-console a devolveria. */
 export function directoryEntry(person: SessionUser): DirectoryUser {
-  return { id: person.id, name: person.name, email: person.email, role: person.role, banned: false };
+  return {
+    id: person.id,
+    name: person.name,
+    email: person.email,
+    role: person.role,
+    banned: false,
+  };
 }
 
 export type E2eAppOptions = {

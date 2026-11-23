@@ -59,8 +59,10 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
 
   // feliz
   it('turns the initial quantity into the first entry of the statement', async () => {
-    const created = await registerPart({ initialQuantity: 3, createdBy: 'caio@empresa.com.br' })
-      .expect(201);
+    const created = await registerPart({
+      initialQuantity: 3,
+      createdBy: 'caio@empresa.com.br',
+    }).expect(201);
 
     expect(created.body).toMatchObject({
       name: 'SSD 240 GB',
@@ -98,7 +100,9 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
   });
 
   it('lists by category and then by name, filtered in the query', async () => {
-    await registerPart({ name: 'Monitor 24"', category: 'monitor', initialQuantity: 1 }).expect(201);
+    await registerPart({ name: 'Monitor 24"', category: 'monitor', initialQuantity: 1 }).expect(
+      201,
+    );
     await registerPart({ name: 'SSD 480 GB', category: 'ssd', condition: 'used' }).expect(201);
     await registerPart({ name: 'SSD 240 GB', category: 'ssd', initialQuantity: 2 }).expect(201);
 
@@ -121,8 +125,13 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
       .expect(200);
     expect(inStock.body.items.map((part: { name: string }) => part.name)).toEqual(['SSD 240 GB']);
 
-    const outOfStock = await api().get('/api/v1/parts?outOfStockOnly=true').set(asAna()).expect(200);
-    expect(outOfStock.body.items.map((part: { name: string }) => part.name)).toEqual(['SSD 480 GB']);
+    const outOfStock = await api()
+      .get('/api/v1/parts?outOfStockOnly=true')
+      .set(asAna())
+      .expect(200);
+    expect(outOfStock.body.items.map((part: { name: string }) => part.name)).toEqual([
+      'SSD 480 GB',
+    ]);
 
     const paged = await api().get('/api/v1/parts?page=2&pageSize=2').set(asAna()).expect(200);
     expect(paged.body).toMatchObject({ total: 3, page: 2, pageSize: 2 });

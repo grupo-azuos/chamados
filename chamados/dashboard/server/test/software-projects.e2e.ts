@@ -115,7 +115,8 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
     );
     process.env.GITHUB_OAUTH_CLIENT_ID = 'cliente-de-teste';
     process.env.GITHUB_OAUTH_CLIENT_SECRET = 'segredo-de-teste';
-    process.env.GITHUB_OAUTH_REDIRECT_URI = 'http://localhost:3005/api/integrations/github/callback';
+    process.env.GITHUB_OAUTH_REDIRECT_URI =
+      'http://localhost:3005/api/integrations/github/callback';
     process.env.GITHUB_OAUTH_FRONTEND_URL = 'http://localhost:5005';
     process.env.GITHUB_OAUTH_ENCRYPTION_KEY = ENCRYPTION_KEY;
     /* O App da organização assina um JWT com a chave privada; a chave é gerada aqui e nunca
@@ -123,7 +124,10 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
     const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
     process.env.GITHUB_APP_ID = '12';
     process.env.GITHUB_APP_INSTALLATION_ID = '34';
-    process.env.GITHUB_APP_PRIVATE_KEY = privateKey.export({ type: 'pkcs1', format: 'pem' }) as string;
+    process.env.GITHUB_APP_PRIVATE_KEY = privateKey.export({
+      type: 'pkcs1',
+      format: 'pem',
+    }) as string;
     started = await createE2eApp(testDatabaseUrl!);
     app = started.app;
   });
@@ -170,8 +174,11 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
 
     it('lists with search and status, counting open tickets of each system', async () => {
       const chamados = await registerProject({}).expect(201);
-      await registerProject({ name: 'Legado', repositoryUrl: 'org/legado', status: 'deprecated' })
-        .expect(201);
+      await registerProject({
+        name: 'Legado',
+        repositoryUrl: 'org/legado',
+        status: 'deprecated',
+      }).expect(201);
 
       await started.db.insert(tickets).values([
         {
@@ -231,8 +238,13 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
         color: 'green',
       });
 
+      /* Excluir ARQUIVA: o sistema sai da lista e continua acessível pelo endereço, arquivado. */
       await api().delete(`/api/v1/software-projects/${created.body.id}`).set(asDora()).expect(204);
-      await api().get(`/api/v1/software-projects/${created.body.id}`).set(asDora()).expect(404);
+      const archived = await api()
+        .get(`/api/v1/software-projects/${created.body.id}`)
+        .set(asDora())
+        .expect(200);
+      expect(archived.body.archive).not.toBeNull();
     });
 
     it('synchronizes one system and all of them with the linked GitHub account', async () => {
@@ -245,7 +257,10 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       expect(one.body).toMatchObject({ synced: 1 });
       expect(one.body.message).toContain('1 Pull Requests');
 
-      const all = await api().post('/api/v1/software-projects/sync-github').set(asDora()).expect(201);
+      const all = await api()
+        .post('/api/v1/software-projects/sync-github')
+        .set(asDora())
+        .expect(201);
       expect(all.body).toMatchObject({ projects: 1, prs: 1, issues: 0, merges: 0, failed: [] });
 
       const found = await api()
@@ -335,8 +350,10 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
     it('schedules an appointment and a record, naming the system', async () => {
       const project = await registerProject({}).expect(201);
 
-      const appointment = await registerEvent({ projectId: project.body.id, note: '  Ao vivo. ' })
-        .expect(201);
+      const appointment = await registerEvent({
+        projectId: project.body.id,
+        note: '  Ao vivo. ',
+      }).expect(201);
       expect(appointment.body).toMatchObject({
         kind: 'appointment',
         title: 'Deploy do Chamados',
@@ -395,8 +412,13 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
         .expect(200);
       expect(asRecord.body).toMatchObject({ kind: 'record', endTime: null });
 
+      /* Excluir ARQUIVA: o evento sai do cronograma e continua acessível, arquivado. */
       await api().delete(`/api/v1/software-schedule/${created.body.id}`).set(asOlga()).expect(204);
-      await api().get(`/api/v1/software-schedule/${created.body.id}`).set(asDora()).expect(404);
+      const archived = await api()
+        .get(`/api/v1/software-schedule/${created.body.id}`)
+        .set(asDora())
+        .expect(200);
+      expect(archived.body.archive).not.toBeNull();
     });
 
     // triste
@@ -434,7 +456,9 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
         .expect(404);
 
       await registerEvent({}, asEdu()).expect(403);
-      await api().get('/api/v1/software-schedule?startDate=2026-10-19&endDate=2026-10-25').expect(401);
+      await api()
+        .get('/api/v1/software-schedule?startDate=2026-10-19&endDate=2026-10-25')
+        .expect(401);
     });
   });
 });

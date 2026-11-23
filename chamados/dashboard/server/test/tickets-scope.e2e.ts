@@ -46,7 +46,10 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
   const api = () => request(app.getHttpServer());
 
   const open = (extra: Record<string, unknown> = {}, who = asAna()) =>
-    api().post('/api/v1/tickets').set(who).send({ ...PEDIDO, ...extra });
+    api()
+      .post('/api/v1/tickets')
+      .set(who)
+      .send({ ...PEDIDO, ...extra });
 
   const registerComputer = async (name: string): Promise<number> => {
     const created = await api()
@@ -136,7 +139,9 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
 
   it('exports the same queue in Excel, Word and PDF', async () => {
     await open({}).expect(201);
-    await open({ description: 'O e-mail da Joana não sincroniza.', problemType: 'email' }).expect(201);
+    await open({ description: 'O e-mail da Joana não sincroniza.', problemType: 'email' }).expect(
+      201,
+    );
 
     for (const format of ['xlsx', 'docx', 'pdf']) {
       const file = await api()
@@ -191,7 +196,10 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
     expect(people.body.watchers).toEqual([{ id: BIA.id, name: 'Bia' }]);
     /* Quem abriu e quem está vinculado podem ser avisados; quem pergunta (Caio) não. */
     expect(people.body.notifiable).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: ANA.id }), { id: BIA.id, name: 'Bia' }]),
+      expect.arrayContaining([
+        expect.objectContaining({ id: ANA.id }),
+        { id: BIA.id, name: 'Bia' },
+      ]),
     );
 
     const replaced = await api()
@@ -245,13 +253,14 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
       .get('/api/v1/tickets/assignee-options?area=infra')
       .set(asAna())
       .expect(200);
-    expect(infra.body).toEqual([{ id: CAIO.id, name: 'Caio' }]);
+    /* Cada opção leva a foto da pessoa (regra do grupo: pessoa sempre com a foto). */
+    expect(infra.body).toEqual([{ id: CAIO.id, name: 'Caio', avatarUrl: null }]);
 
     const sistema = await api()
       .get('/api/v1/tickets/assignee-options?area=sistema')
       .set(asAna())
       .expect(200);
-    expect(sistema.body).toEqual([{ id: DORA.id, name: 'Dora' }]);
+    expect(sistema.body).toEqual([{ id: DORA.id, name: 'Dora', avatarUrl: null }]);
   });
 
   // triste
@@ -282,7 +291,10 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
     expect(await repository.requesterIdsByPhone('(62) 99999-1234')).toEqual([ANA.id]);
     expect(await repository.lastPhoneOf(ANA.id)).toBe('62 99999-1234');
     expect(await repository.lastPhoneOf(DORA.id)).toBeNull();
-    expect(await repository.list({ page: 1, pageSize: 10 } as never, [])).toEqual({ rows: [], total: 0 });
+    expect(await repository.list({ page: 1, pageSize: 10 } as never, [])).toEqual({
+      rows: [],
+      total: 0,
+    });
   });
 
   it('refuses whoever only consults to share the ticket or change its people', async () => {

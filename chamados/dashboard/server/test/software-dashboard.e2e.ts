@@ -58,8 +58,18 @@ describe.skipIf(!testDatabaseUrl)('Software dashboard counts (e2e)', () => {
     const [project] = await started.db
       .insert(softwareProjects)
       .values([
-        { name: 'Chamados', repositoryUrl: 'org/a', status: 'active', createdBy: 'ti@empresa.com.br' },
-        { name: 'Legado', repositoryUrl: 'org/b', status: 'deprecated', createdBy: 'ti@empresa.com.br' },
+        {
+          name: 'Chamados',
+          repositoryUrl: 'org/a',
+          status: 'active',
+          createdBy: 'ti@empresa.com.br',
+        },
+        {
+          name: 'Legado',
+          repositoryUrl: 'org/b',
+          status: 'deprecated',
+          createdBy: 'ti@empresa.com.br',
+        },
       ])
       .returning();
     projectId = project!.id;
@@ -127,9 +137,14 @@ describe.skipIf(!testDatabaseUrl)('Software dashboard counts (e2e)', () => {
     await started.db.insert(tickets).values([
       ticket('2026-10-01T03:30:00Z'),
       ticket('2026-10-29T15:00:00Z'),
-      ticket('2026-11-01T01:00:00Z', { status: 'resolved', resolvedAt: new Date('2026-11-01T02:00:00Z') }),
+      ticket('2026-11-01T01:00:00Z', {
+        status: 'resolved',
+        resolvedAt: new Date('2026-11-01T02:00:00Z'),
+      }),
     ]);
-    await started.db.insert(softwareTimelineEvents).values([pr('#9', '2026-10-15T12:00:00Z', 'merged')]);
+    await started.db
+      .insert(softwareTimelineEvents)
+      .values([pr('#9', '2026-10-15T12:00:00Z', 'merged')]);
 
     const weeks = await repository.weeklyCounts(OCTOBER);
 
