@@ -294,7 +294,9 @@
             footer: {
               title: project.responsibleName ?? 'Sem responsável',
               subtitle: 'Responsável',
-              person: project.responsibleName ? { name: project.responsibleName } : null,
+              person: project.responsibleName
+                ? { id: project.responsibleId, name: project.responsibleName }
+                : null,
             },
             openLabel: 'Ver sistema',
             menu: { label: `Ações de ${project.name}`, items: menuItems },

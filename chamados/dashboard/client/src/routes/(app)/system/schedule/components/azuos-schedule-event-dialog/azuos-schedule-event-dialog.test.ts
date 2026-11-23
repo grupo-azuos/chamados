@@ -157,7 +157,10 @@ describe('AzuosScheduleEventDialog color', () => {
     });
 
     expect(screen.getByRole('button', { name: 'Rosa' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Amarelo' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Amarelo' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     expect(screen.getByText(/· Rosa/)).toBeInTheDocument();
   });
 
@@ -293,9 +296,19 @@ describe('AzuosScheduleEventDialog — editing the fields', () => {
 
   // triste
   it('blocks the delete button while deleting or saving', () => {
-    const model = createMockModel({ data: { mode: 'edit' } as never, state: { isSubmitting: true, error: null } });
+    const model = createMockModel({
+      data: { mode: 'edit' } as never,
+      state: { isSubmitting: true, error: null },
+    });
     render(ScheduleEventDialog, {
-      props: { open: true, model, projects: [], onClose: vi.fn(), onDelete: vi.fn(), isDeleting: true },
+      props: {
+        open: true,
+        model,
+        projects: [],
+        onClose: vi.fn(),
+        onDelete: vi.fn(),
+        isDeleting: true,
+      },
     });
 
     expect(screen.getByRole('button', { name: 'Excluindo…' })).toBeDisabled();

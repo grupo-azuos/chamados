@@ -30,7 +30,11 @@ describe('computerPendingOf', () => {
     expect(computerPendingOf({ ...calm, preventiveStatus: 'never' })).toBeNull();
     expect(computerPendingOf({ ...calm, activeAlerts: 1, isArchived: true })).toBeNull();
     expect(
-      computerPendingOf({ ...calm, preventiveStatus: 'due', disposedAt: '2026-10-01T00:00:00.000Z' }),
+      computerPendingOf({
+        ...calm,
+        preventiveStatus: 'due',
+        disposedAt: '2026-10-01T00:00:00.000Z',
+      }),
     ).toBeNull();
   });
 });

@@ -1,7 +1,4 @@
-import {
-  type Maintenance,
-  type PreventiveDue,
-} from '@template/shared/schemas/maintenance.schema';
+import { type Maintenance, type PreventiveDue } from '@template/shared/schemas/maintenance.schema';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -77,11 +74,13 @@ const settled: {
   error: null,
 };
 
-function renderView(over: {
-  maintenances?: Maintenance[];
-  removing?: Maintenance | null;
-  state?: Partial<typeof settled> & { actionError?: string | null; isRemoving?: boolean };
-} = {}) {
+function renderView(
+  over: {
+    maintenances?: Maintenance[];
+    removing?: Maintenance | null;
+    state?: Partial<typeof settled> & { actionError?: string | null; isRemoving?: boolean };
+  } = {},
+) {
   return render(MaintenanceListView, {
     props: {
       data: {
@@ -96,7 +95,6 @@ function renderView(over: {
     },
   });
 }
-
 
 /* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
 function hasCardsOnlyTable(): boolean {
@@ -165,9 +163,7 @@ describe('AzuosMaintenanceListView', () => {
   it('shows the reason the history did not load', () => {
     renderView({ state: { error: 'Não consegui falar com o servidor.' } });
 
-    expect(screen.getAllByRole('alert')[0]).toHaveTextContent(
-      'Não consegui falar com o servidor.',
-    );
+    expect(screen.getAllByRole('alert')[0]).toHaveTextContent('Não consegui falar com o servidor.');
   });
 
   /* Registro lançado correndo, sem descrição e sem responsável: a tela mostra traço, e não
@@ -247,7 +243,14 @@ describe('AzuosMaintenanceListView — filters, rows and the cut list', () => {
     vi.mocked(actions.onRegister).mockClear();
     render(MaintenanceListView, {
       props: {
-        data: { maintenances: [maintenance()], total: 1, preventive, schedules: [schedule], filter: emptyFilter, removing: null },
+        data: {
+          maintenances: [maintenance()],
+          total: 1,
+          preventive,
+          schedules: [schedule],
+          filter: emptyFilter,
+          removing: null,
+        },
         state: settled,
         actions,
       },
@@ -264,7 +267,13 @@ describe('AzuosMaintenanceListView — filters, rows and the cut list', () => {
     const user = userEvent.setup();
     render(MaintenanceListView, {
       props: {
-        data: { maintenances: [maintenance()], total: 1, preventive, filter: { ...emptyFilter, search: 'cooler' }, removing: null },
+        data: {
+          maintenances: [maintenance()],
+          total: 1,
+          preventive,
+          filter: { ...emptyFilter, search: 'cooler' },
+          removing: null,
+        },
         state: settled,
         actions,
       },
@@ -285,7 +294,16 @@ describe('AzuosMaintenanceListView — filters, rows and the cut list', () => {
   it('describes equipment outside the inventory and a machine without department', () => {
     renderView({
       maintenances: [
-        maintenance({ id: 1, computerId: null, computerName: null, computerDisplayName: null, computerDepartment: null, otherMachine: 'Impressora da recepção', performedBy: null, description: null }),
+        maintenance({
+          id: 1,
+          computerId: null,
+          computerName: null,
+          computerDisplayName: null,
+          computerDepartment: null,
+          otherMachine: 'Impressora da recepção',
+          performedBy: null,
+          description: null,
+        }),
         maintenance({ id: 2, computerDepartment: null, computerDisplayName: '  ' }),
       ],
       state: { isTruncated: true },
@@ -353,7 +371,9 @@ describe('maintenance-list-view — cards only', () => {
 describe('machineLabelOf — nothing to name the machine by', () => {
   // triste
   it('falls back to a generic name when neither nickname nor hostname came', () => {
-    expect(machineLabelOf(maintenance({ computerDisplayName: null, computerName: null } as never))).toBe('Máquina');
+    expect(
+      machineLabelOf(maintenance({ computerDisplayName: null, computerName: null } as never)),
+    ).toBe('Máquina');
     expect(machineLabelOf(maintenance({ computerId: null, otherMachine: null }))).toBe(
       'Equipamento não identificado',
     );

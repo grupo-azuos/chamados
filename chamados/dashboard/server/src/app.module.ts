@@ -17,6 +17,7 @@ import { AuthApiModule } from './modules/auth/auth.module';
 import { GithubIntegrationModule } from './modules/github-integration/github-integration.module';
 import { GithubWebhooksModule } from './modules/github-webhooks/github-webhooks.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { TraceabilityModule } from './modules/traceability/traceability.module';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { WhatsappIntakeModule } from './modules/whatsapp-intake/whatsapp-intake.module';
 import { BudgetModule } from './modules/budget/budget.module';
@@ -82,6 +83,7 @@ const CLIENT_DIST = join(__dirname, '..', '..', 'client', 'dist');
     GithubIntegrationModule,
     GithubWebhooksModule,
     TasksModule,
+    TraceabilityModule,
     WhatsappModule,
     WhatsappIntakeModule,
     HealthModule,

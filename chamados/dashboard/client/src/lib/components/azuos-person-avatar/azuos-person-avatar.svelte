@@ -6,7 +6,12 @@
   Ribeiro". Duas letras bastam — nome comprido no avatar vira borrão ilegível.
 
   - `name`: o nome de onde saem as iniciais.
-  - `avatarUrl`: a foto; sem ela, ficam as iniciais.
+  - `avatarUrl`: a foto, quando a tela já a tem.
+  - `personId`: o id da pessoa no diretório.
+
+  REGRA DO GRUPO: onde aparece uma pessoa, aparece a FOTO dela. Sem `avatarUrl`, o rosto procura
+  a foto no diretório de pessoas (`people-directory`) pelo `personId` — ou pelo `name`, quando o
+  registro só guardou o nome. As iniciais só aparecem quando a pessoa não tem foto mesmo.
   - `ui`: o tamanho (`sm`, `md`, `lg`, `xl`) e classes extras.
 -->
 <script lang="ts" module>
@@ -18,6 +23,7 @@
      * pessoa de verdade: quem usa `PersonAvatar` não muda, só passa a receber `avatarUrl`.
      */
     avatarUrl?: string | null;
+    personId?: string | null;
     ui?: { size?: 'sm' | 'md' | 'lg' | 'xl'; className?: string };
   };
 
@@ -42,16 +48,19 @@
 
 <script lang="ts">
   import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
+  import { personPhotoOf } from '$lib/hooks/use-people-directory/people-directory.svelte';
   import { cn } from '$lib/utils/cn';
 
-  let { name, avatarUrl, ui }: AzuosPersonAvatarProps = $props();
+  let { name, avatarUrl, personId, ui }: AzuosPersonAvatarProps = $props();
+
+  const photo = $derived(avatarUrl || personPhotoOf({ id: personId, name }));
 
   const size = $derived(ui?.size ?? 'sm');
 </script>
 
 <Avatar class={cn('relative flex shrink-0 overflow-hidden rounded-full aspect-square', SIZE_CLASS[size], ui?.className)}>
-  {#if avatarUrl}
-    <AvatarImage src={avatarUrl} alt={name} class="aspect-square size-full object-cover rounded-full" />
+  {#if photo}
+    <AvatarImage src={photo} alt={name} class="aspect-square size-full object-cover rounded-full" />
   {/if}
   <AvatarFallback
     class={cn(

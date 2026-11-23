@@ -24,7 +24,8 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
     responsibleAvatarUrl: null,
-    departmentId: null, departmentName: null,
+    departmentId: null,
+    departmentName: null,
     notes: null,
     kind: 'desktop',
     hardware: {
@@ -171,9 +172,7 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     );
     expect(actions.onHealthStatusChange).toHaveBeenLastCalledWith('critical');
 
-    await userEvent.click(
-      screen.getByRole('button', { name: /^Em atenção .+: filtrar a lista$/ }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: /^Em atenção .+: filtrar a lista$/ }));
     expect(actions.onHealthStatusChange).toHaveBeenLastCalledWith('attention');
   });
 
@@ -293,7 +292,9 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     renderWithFilter({ upgrade: 'any' });
 
     expect(hasNoShortcut({ ...emptyFilter, upgrade: 'any' })).toBe(false);
-    await userEvent.click(screen.getByRole('button', { name: /^Precisa de upgrade .+: tirar o filtro$/ }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Precisa de upgrade .+: tirar o filtro$/ }),
+    );
     expect(actions.onUpgradeChange).toHaveBeenLastCalledWith('');
   });
 
@@ -454,7 +455,9 @@ describe('AzuosComputerListView maintenance parity', () => {
       expect(within(section).getByText('2 alertas críticos ativos')).toBeInTheDocument();
       /* O selo que pisca, com o alerta e a preventiva somados. */
       expect(
-        within(section).getByRole('img', { name: '2 alertas críticos ativos · Preventiva vencida' }),
+        within(section).getByRole('img', {
+          name: '2 alertas críticos ativos · Preventiva vencida',
+        }),
       ).toHaveTextContent('3');
     }
     const cards = container.querySelector('[data-slot="computer-cards-mobile"]') as HTMLElement;
@@ -502,7 +505,14 @@ describe('AzuosComputerListView — export, situations and the cut list', () => 
   // feliz
   it('tells archived and offline machines apart, with or without a responsible', () => {
     renderList([
-      computer({ id: 1, isArchived: true, responsibleName: null, responsibleId: null, departmentId: null, departmentName: null }),
+      computer({
+        id: 1,
+        isArchived: true,
+        responsibleName: null,
+        responsibleId: null,
+        departmentId: null,
+        departmentName: null,
+      }),
       computer({
         id: 2,
         name: 'FISCAL-02',
@@ -637,7 +647,11 @@ describe('AzuosComputerListView — Paralegal format', () => {
   }
 
   const many = Array.from({ length: 30 }, (_, index) =>
-    computer({ id: index + 1, name: `MAQ-${String(index + 1).padStart(2, '0')}`, displayName: null }),
+    computer({
+      id: index + 1,
+      name: `MAQ-${String(index + 1).padStart(2, '0')}`,
+      displayName: null,
+    }),
   );
 
   // feliz
@@ -723,4 +737,3 @@ describe('AzuosComputerListView — Paralegal format', () => {
     expect(container.querySelector('[data-pending="true"]')).toBeNull();
   });
 });
-

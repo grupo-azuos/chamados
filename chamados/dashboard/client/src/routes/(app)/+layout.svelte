@@ -6,6 +6,7 @@
   import { useAppShellModel } from '$lib/hooks/use-app-shell/use-app-shell.svelte';
   import { useAreaContextModel } from '$lib/hooks/use-area-context/use-area-context.svelte';
   import { useNavigationStackRecorder } from '$lib/hooks/use-navigation-stack/use-navigation-stack.svelte';
+  import { usePeopleDirectoryLoader } from '$lib/hooks/use-people-directory/use-people-directory.svelte';
   import { contextOfPath, NAV_ITEMS_BY_CONTEXT } from '$lib/navigation/navigation';
   import type { LayoutData } from './$types';
 
@@ -31,6 +32,8 @@
 
   /* A pilha do "voltar" é gravada aqui, uma vez, para as telas logadas dos três módulos. */
   useNavigationStackRecorder();
+  /* A foto de cada pessoa, para o rosto de qualquer tela achar (regra do grupo: pessoa com foto). */
+  usePeopleDirectoryLoader();
 
   const lastContext = useAreaContextModel();
   const context = $derived(contextOfPath(page.url.pathname) ?? lastContext.context);

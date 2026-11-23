@@ -225,6 +225,20 @@
       "when": 1795456803177,
       "tag": "0031_tasks_from_infra_tickets",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1795460351717,
+      "tag": "0032_computer_responsible_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1795460352541,
+      "tag": "0033_computer_responsible_trigger",
+      "breakpoints": true
     }
   ]
 }

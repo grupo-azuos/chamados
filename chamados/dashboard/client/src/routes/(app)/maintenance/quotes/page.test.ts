@@ -9,7 +9,12 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota maintenance/quotes', () => {
@@ -58,7 +63,8 @@ describe('the maintenance/quotes route with quotes', () => {
   // feliz
   it('opens the form to save and to fix a quote', async () => {
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
-      if (path === '/maintenance-quotes') return { items: [quote], total: 1, page: 1, pageSize: 25 };
+      if (path === '/maintenance-quotes')
+        return { items: [quote], total: 1, page: 1, pageSize: 25 };
       return { items: [], total: 0, page: 1, pageSize: 25 };
     });
     visiting({});
@@ -70,7 +76,9 @@ describe('the maintenance/quotes route with quotes', () => {
     let dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    await user.click(screen.getAllByRole('button', { name: 'Editar o orçamento de Clima Norte Refrigeração' })[0]!);
+    await user.click(
+      screen.getAllByRole('button', { name: 'Editar o orçamento de Clima Norte Refrigeração' })[0]!,
+    );
     dialog = await screen.findByRole('dialog');
     expect(dialog).toBeInTheDocument();
   });

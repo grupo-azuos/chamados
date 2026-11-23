@@ -75,7 +75,9 @@ describe('AzuosQuoteListView', () => {
     expect(screen.getByText('Serviço · 02/10/2026')).toBeInTheDocument();
     expect(screen.getByText('R$ 960,00')).toBeInTheDocument();
     /* Dentro do CARTÃO: "Aguardando" também é uma opção do filtro, no alto da tela. */
-    const card = screen.getByRole('heading', { name: 'Clima Norte Refrigeração' }).closest('[data-slot="azuos-card-surface"]');
+    const card = screen
+      .getByRole('heading', { name: 'Clima Norte Refrigeração' })
+      .closest('[data-slot="azuos-card-surface"]');
     expect(within(card as HTMLElement).getByText('Aguardando')).toBeInTheDocument();
     expect(screen.getByText('Inclui a troca do filtro.')).toBeInTheDocument();
     expect(screen.getByText('1 orçamento · R$ 960,00')).toBeInTheDocument();
@@ -104,7 +106,9 @@ describe('AzuosQuoteListView', () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     await user.click(screen.getByRole('button', { name: 'Guardar orçamento' }));
     /* Editar e excluir moram no menu de três pontinhos do cartão. */
-    const menu = screen.getByRole('button', { name: 'Ações do orçamento de Clima Norte Refrigeração' });
+    const menu = screen.getByRole('button', {
+      name: 'Ações do orçamento de Clima Norte Refrigeração',
+    });
     await user.click(menu);
     await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
     await user.click(menu);
@@ -222,7 +226,9 @@ describe('AzuosQuoteListView — filters, a nameless document and the cut list',
       return;
     }
     await userEvent.click(screen.getByRole('button', { name: label }));
-    const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+    const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(
+      -1,
+    ) as HTMLElement;
     await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
   }
 
@@ -240,7 +246,13 @@ describe('AzuosQuoteListView — filters, a nameless document and the cut list',
   // triste
   it('names a nameless document generically and says the list was cut', () => {
     setup({
-      data: { quotes: [quote({ attachmentName: null }), quote({ id: 2 })], total: 2, amountCents: 192000, filter: emptyFilter, deleting: null },
+      data: {
+        quotes: [quote({ attachmentName: null }), quote({ id: 2 })],
+        total: 2,
+        amountCents: 192000,
+        filter: emptyFilter,
+        deleting: null,
+      },
       state: { ...settled, isTruncated: true },
     });
     expect(screen.getByText('Documento do orçamento')).toBeInTheDocument();

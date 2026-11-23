@@ -77,7 +77,8 @@
       footer?: {
         title: string;
         subtitle?: string | null;
-        person?: { name: string; avatarUrl?: string | null } | null;
+        /** A pessoa: com o `id`, o rosto acha a foto no diretório mesmo sem `avatarUrl`. */
+        person?: { id?: string | null; name: string; avatarUrl?: string | null } | null;
       } | null;
       /** O texto da pílula do rodapé ("Ver ficha", "Abrir"). Só aparece com `actions.onOpen`. */
       openLabel?: string | null;
@@ -348,6 +349,7 @@
         <PersonAvatar
           name={data.footer.person.name}
           avatarUrl={data.footer.person.avatarUrl ?? null}
+          personId={data.footer.person.id ?? null}
           ui={{ size: 'sm' }}
         />
       {/if}
@@ -366,6 +368,7 @@
         <PersonAvatar
           name={data.footer.person.name}
           avatarUrl={data.footer.person.avatarUrl ?? null}
+          personId={data.footer.person.id ?? null}
           ui={{ size: 'sm' }}
         />
       {/if}

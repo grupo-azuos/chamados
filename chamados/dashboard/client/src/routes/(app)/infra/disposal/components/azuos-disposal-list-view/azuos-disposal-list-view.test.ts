@@ -20,7 +20,8 @@ function computer(over: Partial<Computer> = {}): Computer {
     responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
     responsibleAvatarUrl: null,
-    departmentId: null, departmentName: null,
+    departmentId: null,
+    departmentName: null,
     notes: null,
     kind: 'desktop',
     hardware: {
@@ -264,7 +265,13 @@ describe('AzuosDisposalListView — search, type filter, rows and the restore di
     vi.mocked(actions.onAskRestore).mockClear();
     renderView({
       computers: [
-        computer({ departmentId: null, departmentName: null, disposalType: null, disposalReason: null, displayName: null }),
+        computer({
+          departmentId: null,
+          departmentName: null,
+          disposalType: null,
+          disposalReason: null,
+          displayName: null,
+        }),
       ],
     });
 
@@ -307,7 +314,9 @@ describe('disposal-list-view — the record card', () => {
   it('says the machine is out of use when nobody told why', () => {
     const { container } = renderView({ computers: [computer({ disposalType: null })] });
 
-    expect(container.querySelector('[data-slot="disposal-card-strip"]')).toHaveTextContent('Fora de uso');
+    expect(container.querySelector('[data-slot="disposal-card-strip"]')).toHaveTextContent(
+      'Fora de uso',
+    );
   });
 });
 

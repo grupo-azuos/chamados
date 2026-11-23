@@ -22,7 +22,12 @@ vi.mock('$lib/api/tickets.api', () => ({
 vi.mock('$lib/api/software-projects.api', () => ({
   softwareProjectsApi: {
     list: vi.fn(() =>
-      Promise.resolve({ items: [{ id: 7, name: 'Portal do cliente' }], total: 1, page: 1, pageSize: 100 }),
+      Promise.resolve({
+        items: [{ id: 7, name: 'Portal do cliente' }],
+        total: 1,
+        page: 1,
+        pageSize: 100,
+      }),
     ),
   },
 }));
@@ -97,35 +102,52 @@ describe('the ticket queue on the board, in each area', () => {
   });
 
   // feliz
-  it.each(AREAS)('shows the %s queue in columns, with every ticket of the cut', async (area, path) => {
-    opening(`${path}?view=kanban`);
-    vi.mocked(ticketsApi.list).mockResolvedValue({ items: [ticket(area)], total: 1, page: 1, pageSize: 200 });
+  it.each(AREAS)(
+    'shows the %s queue in columns, with every ticket of the cut',
+    async (area, path) => {
+      opening(`${path}?view=kanban`);
+      vi.mocked(ticketsApi.list).mockResolvedValue({
+        items: [ticket(area)],
+        total: 1,
+        page: 1,
+        pageSize: 200,
+      });
 
-    renderPage(Screen as never, { area });
+      renderPage(Screen as never, { area });
 
-    expect(await screen.findByRole('heading', { name: 'Em atendimento' })).toBeInTheDocument();
-    for (const title of [
-      'Aberto',
-      'Retorno do solicitante',
-      'Aguardando solicitante',
-      'Aguardando terceiro',
-      'Resolvido',
-      'Encerrado com ressalva',
-      'Cancelado',
-    ]) {
-      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
-    }
-    expect(screen.getByRole('button', { name: 'Mover o chamado CH-0031' })).toBeInTheDocument();
-    expect(ticketsApi.list).toHaveBeenCalledWith(expect.objectContaining({ area, page: 1, pageSize: 200 }));
-  });
+      expect(await screen.findByRole('heading', { name: 'Em atendimento' })).toBeInTheDocument();
+      for (const title of [
+        'Aberto',
+        'Retorno do solicitante',
+        'Aguardando solicitante',
+        'Aguardando terceiro',
+        'Resolvido',
+        'Encerrado com ressalva',
+        'Cancelado',
+      ]) {
+        expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+      }
+      expect(screen.getByRole('button', { name: 'Mover o chamado CH-0031' })).toBeInTheDocument();
+      expect(ticketsApi.list).toHaveBeenCalledWith(
+        expect.objectContaining({ area, page: 1, pageSize: 200 }),
+      );
+    },
+  );
 
   it('applies the search of the queue to the board', async () => {
     opening('/maintenance/tickets?view=kanban');
-    vi.mocked(ticketsApi.list).mockResolvedValue({ items: [ticket('manutencao')], total: 1, page: 1, pageSize: 200 });
+    vi.mocked(ticketsApi.list).mockResolvedValue({
+      items: [ticket('manutencao')],
+      total: 1,
+      page: 1,
+      pageSize: 200,
+    });
     renderPage(Screen as never, { area: 'manutencao' });
     await screen.findByRole('heading', { name: 'Em atendimento' });
 
-    await fireEvent.input(screen.getByRole('textbox', { name: 'Buscar' }), { target: { value: 'mesa' } });
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Buscar' }), {
+      target: { value: 'mesa' },
+    });
 
     await waitFor(() =>
       expect(ticketsApi.list).toHaveBeenLastCalledWith(
@@ -137,18 +159,30 @@ describe('the ticket queue on the board, in each area', () => {
   // triste
   it('shows the list, and not the board, when the address does not ask for it', async () => {
     opening('/infra/tickets');
-    vi.mocked(ticketsApi.list).mockResolvedValue({ items: [ticket('infra')], total: 1, page: 1, pageSize: 15 });
+    vi.mocked(ticketsApi.list).mockResolvedValue({
+      items: [ticket('infra')],
+      total: 1,
+      page: 1,
+      pageSize: 15,
+    });
 
     renderPage(Screen as never, { area: 'infra' });
 
-    await waitFor(() => expect(ticketsApi.list).toHaveBeenCalledWith(expect.objectContaining({ pageSize: 15 })));
+    await waitFor(() =>
+      expect(ticketsApi.list).toHaveBeenCalledWith(expect.objectContaining({ pageSize: 15 })),
+    );
     expect(screen.queryByRole('region', { name: 'Quadro dos chamados' })).not.toBeInTheDocument();
   });
 
   it('keeps the cards still for who only reads the area', async () => {
     visiting({}, { ...visitingAdmin(), role: 'user', roles: { infra: 'user' } } as never);
     opening('/infra/tickets?view=kanban');
-    vi.mocked(ticketsApi.list).mockResolvedValue({ items: [ticket('infra')], total: 1, page: 1, pageSize: 200 });
+    vi.mocked(ticketsApi.list).mockResolvedValue({
+      items: [ticket('infra')],
+      total: 1,
+      page: 1,
+      pageSize: 200,
+    });
 
     renderPage(Screen as never, { area: 'infra' });
 

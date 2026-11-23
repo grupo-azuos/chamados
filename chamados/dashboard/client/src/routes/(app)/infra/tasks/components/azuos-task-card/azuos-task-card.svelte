@@ -79,7 +79,7 @@
       title: ownerName,
       subtitle: task.description ? task.description.slice(0, 80) : null,
       /* Sem responsável não é uma pessoa: sem rosto, para não parecer alguém chamado "SR". */
-      person: task.owner ? { name: ownerName, avatarUrl: task.owner.avatarUrl } : null,
+      person: task.owner ? { id: task.owner.id, name: ownerName, avatarUrl: task.owner.avatarUrl } : null,
     },
     openLabel: 'Abrir',
     menu: menuItems.length ? { label: `Ações da tarefa ${task.title}`, items: menuItems } : null,

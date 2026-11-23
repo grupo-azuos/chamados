@@ -9,7 +9,12 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota infra/maintenance', () => {
@@ -58,7 +63,8 @@ describe('the infra/maintenance route with history', () => {
   // feliz
   it('opens the form to log and to fix a maintenance', async () => {
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
-      if (path === '/maintenances') return { items: [maintenance], total: 1, page: 1, pageSize: 25 };
+      if (path === '/maintenances')
+        return { items: [maintenance], total: 1, page: 1, pageSize: 25 };
       if (path === '/computers') return { items: [], total: 0, page: 1, pageSize: 100 };
       return [];
     });

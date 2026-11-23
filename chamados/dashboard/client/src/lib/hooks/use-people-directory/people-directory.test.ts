@@ -1,0 +1,24 @@
+import { afterEach, describe, expect, it } from 'vitest';
+
+import { normalizePersonName, personPhotoOf, setPeopleDirectory } from './people-directory.svelte';
+
+afterEach(() => setPeopleDirectory([]));
+
+describe('people directory', () => {
+  // feliz
+  it('finds the photo by id, and by the name when the record kept only the name', () => {
+    setPeopleDirectory([{ id: 'wq', name: 'Wellington Queiroz', avatarUrl: 'https://cdn/wq.png' }]);
+
+    expect(personPhotoOf({ id: 'wq' })).toBe('https://cdn/wq.png');
+    expect(personPhotoOf({ name: '  wellington   QUEIROZ ' })).toBe('https://cdn/wq.png');
+  });
+
+  // triste
+  it('gives no photo for someone unknown or without a photo', () => {
+    setPeopleDirectory([{ id: 'ana', name: 'Ana', avatarUrl: null }]);
+
+    expect(personPhotoOf({ id: 'ana', name: 'Ana' })).toBeNull();
+    expect(personPhotoOf({ id: 'x', name: 'Ninguém' })).toBeNull();
+    expect(normalizePersonName('Ângela  Souza')).toBe('angela souza');
+  });
+});

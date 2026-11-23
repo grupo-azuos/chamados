@@ -126,7 +126,10 @@ describe('AzuosProjectFormDialog — filling the form', () => {
     expect(model.actions.onChange).toHaveBeenCalledWith('status', 'maintenance');
     await pick(color!, 'Verde');
     expect(model.actions.onChange).toHaveBeenCalledWith('color', 'green');
-    await pick(screen.getByRole('combobox', { name: 'Responsável pelo sistema' }), 'Sem responsável');
+    await pick(
+      screen.getByRole('combobox', { name: 'Responsável pelo sistema' }),
+      'Sem responsável',
+    );
     expect(model.actions.onChange).toHaveBeenCalledWith('responsibleId', '');
 
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
@@ -139,7 +142,9 @@ describe('AzuosProjectFormDialog — filling the form', () => {
     render(ProjectFormDialog, { props: { open: true, model, onClose: vi.fn() } });
 
     expect(screen.getByText('Editar Sistema')).toBeInTheDocument();
-    await fireEvent.submit(screen.getByRole('textbox', { name: /Nome do sistema/ }).closest('form')!);
+    await fireEvent.submit(
+      screen.getByRole('textbox', { name: /Nome do sistema/ }).closest('form')!,
+    );
     expect(model.actions.onSubmit).toHaveBeenCalledOnce();
   });
 

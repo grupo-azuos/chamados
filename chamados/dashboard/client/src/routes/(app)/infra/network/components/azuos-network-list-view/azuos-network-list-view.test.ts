@@ -335,7 +335,6 @@ describe('AzuosNetworkListView — the outage shortcut switched off and the tabl
   });
 });
 
-
 describe('network-list-view — the record card', () => {
   // feliz
   it('shows the open outage in the strip and resolves it from the footer', async () => {
@@ -351,7 +350,9 @@ describe('network-list-view — the record card', () => {
   // triste
   it('offers to reopen an outage that already came back', async () => {
     vi.mocked(actions.onResolveChange).mockClear();
-    const { container } = renderView({ events: [event({ resolvedAt: '2026-11-20T12:30:00.000Z' })] });
+    const { container } = renderView({
+      events: [event({ resolvedAt: '2026-11-20T12:30:00.000Z' })],
+    });
 
     const cards = container.querySelector<HTMLElement>('[data-slot="network-cards-mobile"]')!;
     await userEvent.click(within(cards).getByRole('button', { name: 'Reabrir' }));

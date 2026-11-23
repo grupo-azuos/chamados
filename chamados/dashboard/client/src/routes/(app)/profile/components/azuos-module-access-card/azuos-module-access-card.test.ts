@@ -17,7 +17,9 @@ describe('AzuosModuleAccessCard', () => {
 
   // triste
   it('says when a module is closed to the person', () => {
-    const { getAllByText } = render(ModuleAccessCard, { props: { data: { role: 'user', roles: {} } } });
+    const { getAllByText } = render(ModuleAccessCard, {
+      props: { data: { role: 'user', roles: {} } },
+    });
 
     expect(getAllByText('Sem acesso')).toHaveLength(3);
   });

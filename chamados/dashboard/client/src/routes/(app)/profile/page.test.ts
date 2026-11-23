@@ -9,7 +9,12 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota profile', () => {
@@ -61,7 +66,11 @@ describe('the profile route of someone who administers everything', () => {
 
     expect(await screen.findByRole('link', { name: 'WhatsApp' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Equipe' })).toBeInTheDocument();
-    await user.click((await screen.findAllByRole('button', { name: /Liberar o primeiro módulo|Liberar módulo/ }))[0]!);
+    await user.click(
+      (
+        await screen.findAllByRole('button', { name: /Liberar o primeiro módulo|Liberar módulo/ })
+      )[0]!,
+    );
     const form = await screen.findByRole('dialog');
     expect(form).toHaveTextContent('Liberar módulos');
     await user.click(within(form).getByRole('button', { name: 'Cancelar' }));
@@ -83,7 +92,8 @@ describe('the profile route of someone who administers one module only', () => {
   // triste
   it('offers neither the bot texts nor the team, but shows the modules and WhatsApp', async () => {
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
-      if (path === '/integrations/whatsapp/status') return { ...connection, state: 'connected', phone: '5562988887777' };
+      if (path === '/integrations/whatsapp/status')
+        return { ...connection, state: 'connected', phone: '5562988887777' };
       return [];
     });
     const admin = { ...ADMIN, role: 'admin' as const };

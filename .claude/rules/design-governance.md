@@ -101,6 +101,17 @@ código (hook do Claude e CI); o resto está aqui e no Storybook.
   e "Cadastrar «termo»" quando der (skill `select-standard`). Pessoa é sempre
   `AzuosPersonPickerField`.
 
+## 7.1 Pessoa sempre com a foto
+
+- Onde aparece uma pessoa (card, lista, quadro, ficha, menu), aparece a **foto** dela. O rosto é
+  sempre o `AzuosPersonAvatar`.
+- O rosto acha a foto sozinho no **diretório de pessoas** (carregado uma vez com a casca): pelo
+  `personId`, ou pelo nome quando o registro só guardou o nome. Passe o `id` sempre que tiver.
+- As iniciais só aparecem quando a pessoa não tem foto mesmo. "Sem responsável" não é pessoa:
+  ícone neutro, nunca iniciais.
+- Proibido: `avatarUrl: null` escrito à mão e rosto montado com o `ui/avatar` ou iniciais
+  próprias (`person-photo`, sem exceção).
+
 ## 8. Listas e tabelas
 
 - Grade de cards (`card-grid`): sempre paginada com `<AzuosPaginationBar>`.

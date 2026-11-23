@@ -174,7 +174,9 @@ describe('AzuosProjectListView — messages, filters, cards and deletion', () =>
   // triste
   it('tells a manager to wait for an administrator when there is nothing registered', () => {
     renderView({ state: { isEmpty: true, canEdit: false } });
-    expect(screen.getByText('Aguarde um administrador cadastrar os sistemas da equipe.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Aguarde um administrador cadastrar os sistemas da equipe.'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cadastrar Sistema' })).not.toBeInTheDocument();
   });
 
@@ -195,7 +197,15 @@ describe('AzuosProjectListView — messages, filters, cards and deletion', () =>
     const actions = renderView({
       data: {
         items: [
-          { ...project, description: null, responsibleName: 'Ana Lima', repositoryUrl: 'https://github.com/example/portal', githubRepoOwner: null, githubRepoName: null, status: 'maintenance' },
+          {
+            ...project,
+            description: null,
+            responsibleName: 'Ana Lima',
+            repositoryUrl: 'https://github.com/example/portal',
+            githubRepoOwner: null,
+            githubRepoName: null,
+            status: 'maintenance',
+          },
         ],
       },
     });
@@ -220,7 +230,9 @@ describe('AzuosProjectListView — messages, filters, cards and deletion', () =>
   it('confirms or cancels the deletion in the dialog', async () => {
     const actions = renderView({ data: { deleting: project } });
     const dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveTextContent('"Azuos Ticket" sai da lista, com a linha do tempo e os chamados guardados.');
+    expect(dialog).toHaveTextContent(
+      '"Azuos Ticket" sai da lista, com a linha do tempo e os chamados guardados.',
+    );
     await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }));
     expect(actions.onConfirmDelete).toHaveBeenCalledOnce();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));

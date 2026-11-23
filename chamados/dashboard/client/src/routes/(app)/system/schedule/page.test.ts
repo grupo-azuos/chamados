@@ -9,7 +9,12 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota system/schedule', () => {
@@ -20,7 +25,9 @@ describe('a rota system/schedule', () => {
     const { container } = renderPage(Page as never);
 
     expect(container).toBeTruthy();
-    await vi.waitFor(() => expect(document.title).toContain('Cronograma de Sistemas'), { timeout: 4_000 });
+    await vi.waitFor(() => expect(document.title).toContain('Cronograma de Sistemas'), {
+      timeout: 4_000,
+    });
   });
 
   // triste
@@ -76,7 +83,8 @@ function serveSchedule() {
   vi.mocked(apiRequest).mockImplementation(async (path: string, options?: { method?: string }) => {
     if (options?.method === 'DELETE') return undefined;
     if (path === '/software-schedule') return [appointment];
-    if (path === '/software-timeline') return { items: [pullRequest], total: 1, page: 1, pageSize: 200 };
+    if (path === '/software-timeline')
+      return { items: [pullRequest], total: 1, page: 1, pageSize: 200 };
     return { items: [], total: 0, page: 1, pageSize: 100 };
   });
 }
@@ -110,7 +118,10 @@ describe('the system/schedule route with data', () => {
     expect(await screen.findByText('Editar Compromisso')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Excluir compromisso' }));
     await waitFor(() => expect(screen.queryByText('Editar Compromisso')).not.toBeInTheDocument());
-    expect(apiRequest).toHaveBeenCalledWith('/software-schedule/1', expect.objectContaining({ method: 'DELETE' }));
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/software-schedule/1',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
   });
 
   // feliz
@@ -129,7 +140,12 @@ describe('the system/schedule route with data', () => {
   // triste
   it('opens no form for someone who only views the system', async () => {
     serveSchedule();
-    const viewer = { ...ADMIN, id: 'u-bia', role: 'user' as const, roles: { ...ADMIN.roles, sistema: 'user' as const } };
+    const viewer = {
+      ...ADMIN,
+      id: 'u-bia',
+      role: 'user' as const,
+      roles: { ...ADMIN.roles, sistema: 'user' as const },
+    };
     visiting({}, viewer as never);
     renderPage(Page as never, { data: { user: viewer } });
 

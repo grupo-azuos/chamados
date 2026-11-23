@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import MaintenanceScheduleDialog from './azuos-maintenance-schedule-dialog.svelte';
 
-function props(over: { mode?: 'create' | 'edit'; dateError?: string | null; error?: string | null } = {}) {
+function props(
+  over: { mode?: 'create' | 'edit'; dateError?: string | null; error?: string | null } = {},
+) {
   return {
     data: {
       mode: over.mode ?? ('create' as const),
@@ -42,7 +44,10 @@ describe('AzuosMaintenanceScheduleDialog', () => {
   // triste
   it('shows why the date was refused and what the server said', () => {
     render(MaintenanceScheduleDialog, {
-      props: props({ dateError: 'Escolha hoje ou um dia depois de hoje', error: 'Máquina fora de uso.' }),
+      props: props({
+        dateError: 'Escolha hoje ou um dia depois de hoje',
+        error: 'Máquina fora de uso.',
+      }),
     });
 
     expect(screen.getByText('Escolha hoje ou um dia depois de hoje')).toBeInTheDocument();
@@ -57,9 +62,14 @@ describe('AzuosMaintenanceScheduleDialog — the day, the note and closing', () 
     render(MaintenanceScheduleDialog, { props: input });
 
     await userEvent.click(screen.getByRole('button', { name: 'Dia da manutenção' }));
-    const day = [...document.querySelectorAll('[data-bits-day]')].find((el) => el.textContent?.trim() === '20') as HTMLElement;
+    const day = [...document.querySelectorAll('[data-bits-day]')].find(
+      (el) => el.textContent?.trim() === '20',
+    ) as HTMLElement;
     await userEvent.click(day);
-    expect(input.actions.onChange).toHaveBeenCalledWith('scheduledFor', expect.stringMatching(/-20$/));
+    expect(input.actions.onChange).toHaveBeenCalledWith(
+      'scheduledFor',
+      expect.stringMatching(/-20$/),
+    );
     expect(input.actions.onBlur).toHaveBeenCalledWith('scheduledFor');
 
     await userEvent.type(screen.getByRole('textbox', { name: /O que vai ser feito/ }), 'L');

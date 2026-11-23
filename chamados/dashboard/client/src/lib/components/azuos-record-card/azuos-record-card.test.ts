@@ -41,7 +41,11 @@ describe('AzuosRecordCard', () => {
             { key: 'area', label: 'Área', value: 'Infra' },
             { key: 'machines', label: 'Máquinas', value: '2', tone: 'blue' },
           ],
-          footer: { title: 'Carlos Lima', subtitle: 'Aberto em 20/11/2026', person: { name: 'Carlos Lima' } },
+          footer: {
+            title: 'Carlos Lima',
+            subtitle: 'Aberto em 20/11/2026',
+            person: { name: 'Carlos Lima' },
+          },
           openLabel: 'Abrir',
         },
         ui: { icon: Printer, iconTone: 'info', iconLabel: 'Impressora' },
@@ -94,14 +98,22 @@ describe('AzuosRecordCard', () => {
     const link = screen.getByRole('link', { name: 'azuos/chamados' });
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(screen.getByRole('img', { name: 'Foto de Ana Prado' })).toHaveAttribute('src', '/photos/cadeira.png');
+    expect(screen.getByRole('img', { name: 'Foto de Ana Prado' })).toHaveAttribute(
+      'src',
+      '/photos/cadeira.png',
+    );
   });
 
   // triste
   it('draws no strip, no badge, no pill and no button when there is nothing to say or open', () => {
     const { container } = render(RecordCard, {
       props: {
-        data: { ...base, alert: { count: 0, message: 'nada' }, openLabel: 'Abrir', menu: { label: 'Ações', items: [] } },
+        data: {
+          ...base,
+          alert: { count: 0, message: 'nada' },
+          openLabel: 'Abrir',
+          menu: { label: 'Ações', items: [] },
+        },
       },
     });
 
@@ -115,7 +127,10 @@ describe('AzuosRecordCard', () => {
   it('turns the dot off for a zero and keeps the number in the text color', () => {
     const { container } = render(RecordCard, {
       props: {
-        data: { ...base, metrics: [{ key: 'alerts', label: 'Alertas', value: '0', tone: 'red', isOn: false }] },
+        data: {
+          ...base,
+          metrics: [{ key: 'alerts', label: 'Alertas', value: '0', tone: 'red', isOn: false }],
+        },
       },
     });
 

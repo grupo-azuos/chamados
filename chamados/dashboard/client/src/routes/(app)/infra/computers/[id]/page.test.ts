@@ -9,7 +9,12 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota infra/computers/detalhe', () => {
@@ -81,12 +86,19 @@ const machine = {
   updatedBy: null,
 };
 
-const PAGED = ['/computers', '/computers/3/alerts', '/maintenances', '/parts/movements', '/tickets'];
+const PAGED = [
+  '/computers',
+  '/computers/3/alerts',
+  '/maintenances',
+  '/parts/movements',
+  '/tickets',
+];
 
 /** A API respondendo de verdade: a máquina existe e todas as listas estão vazias. */
 function serveMachine() {
   vi.mocked(apiRequest).mockImplementation(async (path: string, options?: { method?: string }) => {
-    if (path === '/computers/3/token' && options?.method === 'POST') return { computer: machine, token: 'agt_novo' };
+    if (path === '/computers/3/token' && options?.method === 'POST')
+      return { computer: machine, token: 'agt_novo' };
     if (path === '/computers/3') return machine;
     if (path === '/computers/3/live') return { live: null };
     if (path === '/departments') return { rh: ['Contábil'], local: [], isRhAvailable: true };
@@ -109,7 +121,9 @@ describe('the infra/computers detail route with the machine loaded', () => {
     const openAndClose = async (button: string, title: string) => {
       await user.click(screen.getByRole('button', { name: button }));
       expect(await screen.findByRole('dialog')).toHaveTextContent(title);
-      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Fechar diálogo' }));
+      await user.click(
+        within(screen.getByRole('dialog')).getByRole('button', { name: 'Fechar diálogo' }),
+      );
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     };
     await openAndClose('Editar identificação', 'Identificação da máquina');
@@ -117,7 +131,9 @@ describe('the infra/computers detail route with the machine loaded', () => {
     await openAndClose('Agendar manutenção', 'Agendar manutenção');
     await user.click(screen.getAllByRole('button', { name: 'Registrar manutenção' })[0]!);
     expect(await screen.findByRole('dialog')).toHaveTextContent('Registrar manutenção');
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Fechar diálogo' }));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Fechar diálogo' }),
+    );
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     await user.click(screen.getByRole('button', { name: /Voltar para o inventário/ }));
@@ -134,7 +150,9 @@ describe('the infra/computers detail route with the machine loaded', () => {
     await screen.findByRole('heading', { name: 'Contábil — mesa do fechamento' });
     await user.click(screen.getByRole('button', { name: 'Mais ações' }));
     await user.click(screen.getByRole('menuitem', { name: 'Gerar token novo' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Gerar token novo' }));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Gerar token novo' }),
+    );
     expect(await screen.findByText('Token de CONTABIL-03')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Baixar instalador (.zip)' }));
@@ -167,6 +185,8 @@ describe('the infra/computers detail route with the machine loaded', () => {
     visiting({ id: '3' });
     renderPage(Page as never);
 
-    expect(await screen.findByText('Este computador não está mais no inventário')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Este computador não está mais no inventário'),
+    ).toBeInTheDocument();
   });
 });

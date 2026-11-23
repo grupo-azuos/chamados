@@ -477,6 +477,33 @@ function personFieldViolations(files) {
     );
 }
 
+/**
+ * Onde o rosto de pessoa pode ser montado: o próprio `azuos-person-avatar` (e o "Meu perfil",
+ * tela padrão dos 13 sistemas, que não se mexe por projeto).
+ */
+const PERSON_PHOTO_HOMES = /\/azuos-(person-avatar|my-profile-view)\//;
+const NULL_PHOTO = /\bavatarUrl\s*(?::\s*|=\{\s*)(?:null|undefined)\b/;
+const HAND_MADE_FACE = /components\/ui\/avatar|\bAvatar(?:Image|Fallback)\b|function\s+initialsOf\b/;
+
+/** @param {ProjectFile[]} files */
+function personPhotoViolations(files) {
+  return files
+    .filter((file) => isGroupSource(file) && !PERSON_PHOTO_HOMES.test(`/${file.path}`))
+    .flatMap((file) =>
+      codeLines(file)
+        .filter(({ text }) => !COMMENT_LINE.test(text))
+        .flatMap(({ text, line }) => {
+          if (NULL_PHOTO.test(text)) {
+            return [{ rule: 'person-photo', file: file.path, detail: 'foto de pessoa jogada fora (`avatarUrl` nulo)', line }];
+          }
+          if (HAND_MADE_FACE.test(text)) {
+            return [{ rule: 'person-photo', file: file.path, detail: 'rosto de pessoa montado à mão', line }];
+          }
+          return [];
+        }),
+    );
+}
+
 export const RULES = [
   {
     id: 'component-prefix',
@@ -782,6 +809,16 @@ export const RULES = [
     description:
       'Campo de pessoa usa `AzuosPersonPickerField` ou `AzuosPersonMultiPickerField` — nunca opção com foto montada à mão.',
     check: (files) => personFieldViolations(files),
+  },
+  /* REGRA DO GRUPO: onde aparece uma pessoa, aparece a FOTO dela. O rosto é sempre o
+     `AzuosPersonAvatar`, que acha a foto no diretório de pessoas pelo id — ou pelo nome, quando o
+     registro só guardou o nome. Escrever `avatarUrl: null` à mão, ou montar o rosto com o
+     `ui/avatar` e iniciais próprias, é o caminho de volta para as iniciais com a pessoa tendo foto. */
+  {
+    id: 'person-photo',
+    description:
+      'Pessoa sempre com a foto: o rosto é o `AzuosPersonAvatar` (que acha a foto pelo id ou pelo nome) — nunca `avatarUrl` nulo à mão nem rosto montado com `ui/avatar`.',
+    check: (files) => personPhotoViolations(files),
   },
   {
     id: 'doc-file-name',

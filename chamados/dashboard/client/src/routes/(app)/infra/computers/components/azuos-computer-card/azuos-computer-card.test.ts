@@ -25,7 +25,8 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     responsibleId: 'person-ana-prado',
     responsibleName: 'Ana Prado',
     responsibleAvatarUrl: null,
-    departmentId: 5, departmentName: 'Fiscal',
+    departmentId: 5,
+    departmentName: 'Fiscal',
     notes: null,
     kind: 'desktop',
     hardware: {
@@ -78,10 +79,14 @@ describe('the card helpers', () => {
 
   // triste
   it('says what is missing instead of inventing a number', () => {
-    expect(displayNameOf(computer({ displayName: ' ', hardware: { ...computer().hardware, hostname: null } }))).toBe(
-      'FISCAL-D01',
-    );
-    expect(freeDiskPercentOf(computer({ hardware: { ...computer().hardware, totalDiskBytes: null } }))).toBeNull();
+    expect(
+      displayNameOf(
+        computer({ displayName: ' ', hardware: { ...computer().hardware, hostname: null } }),
+      ),
+    ).toBe('FISCAL-D01');
+    expect(
+      freeDiskPercentOf(computer({ hardware: { ...computer().hardware, totalDiskBytes: null } })),
+    ).toBeNull();
     expect(lastSeenLabelOf(computer({ lastSeenAt: null }))).toBe('Agente nunca conectou');
   });
 
@@ -93,7 +98,6 @@ describe('the card helpers', () => {
     expect(situationOf(computer({ isOnline: false })).label).toBe('Offline');
   });
 });
-
 
 /**
  * O `Avatar` do Bits-UI só mostra a foto depois de um `new Image()` carregar — o jsdom nunca
@@ -119,12 +123,18 @@ describe('AzuosComputerCard — upgrade', () => {
   it('marks a machine that needs an upgrade with the calm badge', () => {
     render(ComputerCard, {
       props: {
-        data: { computer: computer({ hardware: { ...computer().hardware, totalMemoryBytes: 4 * 1024 ** 3 } }) },
+        data: {
+          computer: computer({
+            hardware: { ...computer().hardware, totalMemoryBytes: 4 * 1024 ** 3 },
+          }),
+        },
         actions: { onOpen: vi.fn() },
       },
     });
 
-    expect(screen.getByRole('img', { name: /^Precisa de upgrade: Pouca memória/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: /^Precisa de upgrade: Pouca memória/ }),
+    ).toBeInTheDocument();
   });
 
   // triste
@@ -157,7 +167,10 @@ describe('AzuosComputerCard — responsible photo', () => {
   it('shows the real photo of the responsible from the directory', async () => {
     vi.stubGlobal('Image', InstantLoadImage);
     const { container } = render(ComputerCard, {
-      props: { data: { computer: computer({ responsibleAvatarUrl: '/avatars/ana.png' }) }, actions: { onOpen: vi.fn() } },
+      props: {
+        data: { computer: computer({ responsibleAvatarUrl: '/avatars/ana.png' }) },
+        actions: { onOpen: vi.fn() },
+      },
     });
 
     const image = await vi.waitUntil(() => container.querySelector('[data-slot="avatar-image"]'));
@@ -167,7 +180,10 @@ describe('AzuosComputerCard — responsible photo', () => {
   // triste
   it('falls back to the initials when the directory has no photo', () => {
     const { container } = render(ComputerCard, {
-      props: { data: { computer: computer({ responsibleAvatarUrl: null }) }, actions: { onOpen: vi.fn() } },
+      props: {
+        data: { computer: computer({ responsibleAvatarUrl: null }) },
+        actions: { onOpen: vi.fn() },
+      },
     });
 
     expect(container.querySelector('[data-slot="avatar-image"]')).toBeNull();
@@ -208,7 +224,14 @@ describe('AzuosComputerCard', () => {
   it('does not pulse, nor paint the hover, for a calm machine without a responsible', () => {
     const { container } = render(ComputerCard, {
       props: {
-        data: { computer: computer({ responsibleName: null, responsibleId: null, departmentId: null, departmentName: null }) },
+        data: {
+          computer: computer({
+            responsibleName: null,
+            responsibleId: null,
+            departmentId: null,
+            departmentName: null,
+          }),
+        },
         actions: { onOpen: vi.fn() },
       },
     });
