@@ -30,6 +30,7 @@ import { ticketRelations } from './schema/ticket-relations.schema';
 import { ticketStockItems } from './schema/ticket-stock-items.schema';
 import { ticketWatchers } from './schema/ticket-watchers.schema';
 import { tickets } from './schema/tickets.schema';
+import { taskLinks, taskPeople, taskSteps, tasks } from './schema/tasks.schema';
 import {
   whatsappConnections,
   whatsappMessages,
@@ -51,6 +52,10 @@ import {
  * Tabela nova entra aqui, na mesma mudança em que o arquivo `<nome>.schema.ts` é criado.
  */
 export const drizzleSchema = {
+  tasks,
+  taskSteps,
+  taskLinks,
+  taskPeople,
   dashboardBoards,
   savedFilters,
   githubConnections,

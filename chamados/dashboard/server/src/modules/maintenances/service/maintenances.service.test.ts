@@ -49,7 +49,12 @@ function maintenanceRow(overrides: Partial<MaintenanceRow> = {}): MaintenanceRow
 function row(overrides: Partial<MaintenanceRow> = {}): MaintenanceWithComputer {
   return {
     maintenance: maintenanceRow(overrides),
-    computer: { id: 3, name: 'CONTABIL-03', displayName: 'Contábil — fechamento', department: 'contabil' },
+    computer: {
+      id: 3,
+      name: 'CONTABIL-03',
+      displayName: 'Contábil — fechamento',
+      department: 'contabil',
+    },
   };
 }
 
@@ -80,7 +85,12 @@ describe('MaintenancesService.list', () => {
     const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
     const cut = sql`true`;
     const drillCondition = vi.fn().mockResolvedValue(cut);
-    const drill = JSON.stringify({ source: 'maintenances', groupBy: 'type', filterId: null, key: 'preventive' });
+    const drill = JSON.stringify({
+      source: 'maintenances',
+      groupBy: 'type',
+      filterId: null,
+      key: 'preventive',
+    });
 
     await makeService({ list }, { drillCondition }).list(owner, query({ drill }));
 
@@ -132,9 +142,7 @@ describe('MaintenancesService.list', () => {
     const list = vi.fn();
     const service = makeService({ list });
 
-    await expect(service.list(noRole, query())).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(service.list(noRole, query())).rejects.toBeInstanceOf(ForbiddenException);
     expect(list).not.toHaveBeenCalled();
   });
 });
@@ -215,7 +223,10 @@ describe('MaintenancesService.update', () => {
 
     await service.update(owner, 1, { description: 'Troquei o SSD' });
 
-    expect(update).toHaveBeenCalledWith(1, expect.objectContaining({ description: 'Troquei o SSD' }));
+    expect(update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ description: 'Troquei o SSD' }),
+    );
   });
 
   it('lets a manager fix a record registered by someone else', async () => {
@@ -347,9 +358,7 @@ describe('MaintenancesService.preventive', () => {
     const listPreventive = vi.fn();
     const service = makeService({ listPreventive });
 
-    await expect(service.preventive(noRole)).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(service.preventive(noRole)).rejects.toBeInstanceOf(ForbiddenException);
     expect(listPreventive).not.toHaveBeenCalled();
   });
 });
@@ -369,7 +378,12 @@ function scheduleRow(overrides: Partial<MaintenanceScheduleRow> = {}): ScheduleW
       archivedBy: null,
       ...overrides,
     },
-    computer: { id: 3, name: 'CONTABIL-03', displayName: 'Contábil — fechamento', department: 'contabil' },
+    computer: {
+      id: 3,
+      name: 'CONTABIL-03',
+      displayName: 'Contábil — fechamento',
+      department: 'contabil',
+    },
   };
 }
 

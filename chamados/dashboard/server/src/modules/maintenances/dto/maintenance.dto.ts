@@ -23,7 +23,9 @@ export class MaintenanceDto extends createZodDto(maintenanceSchema) {}
 /** A manutenção AGENDADA: um dia combinado por máquina. */
 export class MaintenanceScheduleDto extends createZodDto(maintenanceScheduleSchema) {}
 export class SaveMaintenanceScheduleDto extends createZodDto(saveMaintenanceScheduleSchema) {}
-export class MaintenanceScheduleListQueryDto extends createZodDto(maintenanceScheduleListQuerySchema) {}
+export class MaintenanceScheduleListQueryDto extends createZodDto(
+  maintenanceScheduleListQuerySchema,
+) {}
 
 /** O cruzamento do inventário com o histórico — não é tabela, é resposta calculada. */
 export class PreventiveDueDto extends createZodDto(preventiveDueSchema) {}

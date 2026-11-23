@@ -108,6 +108,7 @@ import {
   TicketWhatsappNotifierService,
 } from './ticket-whatsapp-notifier.service';
 import { TicketsRepository, type TicketWithComputer } from '../repository/tickets.repository';
+import { TasksService } from '../../tasks/service/tasks.service';
 
 /** Sem repetir — somar a mesma área participante duas vezes não deve duplicar na resposta. */
 function dedupeAreas(areas: readonly TicketArea[]): TicketArea[] {
@@ -143,7 +144,11 @@ const TICKET_REPORT_COLUMNS: ReportColumn<TicketRow>[] = [
 const NOT_FOUND = TICKET_NOT_FOUND;
 
 /** As fontes do painel que a fila de chamados sabe recortar: os chamados de cada módulo. */
-const TICKET_DRILL_SOURCES: readonly DataSourceKey[] = ['infraTickets', 'systemTickets', 'maintenanceTickets'];
+const TICKET_DRILL_SOURCES: readonly DataSourceKey[] = [
+  'infraTickets',
+  'systemTickets',
+  'maintenanceTickets',
+];
 
 /** A pasta do print dentro do bucket. */
 const SCREENSHOT_FOLDER = 'tickets';
@@ -192,7 +197,13 @@ export class TicketsService {
     @Optional() private readonly stockItems?: TicketStockItemsService,
     @Optional() private readonly computers?: TicketComputersRepository,
     @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
+    @Optional() private readonly tasks?: TasksService,
   ) {}
+
+  /** O chamado de Infraestrutura vira tarefa, e ela acompanha o chamado (`TasksService.syncTicket`). */
+  private followTask(row: TicketRow): void {
+    this.tasks?.syncTicketInBackground(row);
+  }
 
   /**
    * As MÁQUINAS do chamado, de uma vez: a lista escolhida no diálogo troca a que existia. Vira
@@ -212,7 +223,9 @@ export class TicketsService {
 
     const existing = await this.computers.existingIds(computerIds);
     if (existing.length !== computerIds.length) {
-      throw new UnprocessableEntityException('Alguma máquina escolhida não existe mais no inventário.');
+      throw new UnprocessableEntityException(
+        'Alguma máquina escolhida não existe mais no inventário.',
+      );
     }
 
     const before = (await this.computers.listFor([id])).get(id) ?? [];
@@ -232,7 +245,10 @@ export class TicketsService {
   }
 
   /** Os itens de um depósito que podem entrar num chamado, com a sobra de cada um. */
-  async listStockOptions(user: RequestUser, source: TicketStockSource): Promise<TicketStockOption[]> {
+  async listStockOptions(
+    user: RequestUser,
+    source: TicketStockSource,
+  ): Promise<TicketStockOption[]> {
     return (await this.stockItems?.options(user, source)) ?? [];
   }
 
@@ -429,7 +445,10 @@ export class TicketsService {
   }
 
   /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
-  private async drillOf(user: RequestUser, query: Pick<TicketListQuery, 'drill'>): Promise<SQL | undefined> {
+  private async drillOf(
+    user: RequestUser,
+    query: Pick<TicketListQuery, 'drill'>,
+  ): Promise<SQL | undefined> {
     if (!query.drill || !this.drills) return undefined;
 
     return this.drills.drillCondition(user, query.drill, TICKET_DRILL_SOURCES);
@@ -543,6 +562,7 @@ export class TicketsService {
        apaga (ver `attachment-ownership.util`). */
     /* A linha do tempo começa aqui: a abertura é o primeiro histórico, de quem abriu. */
     await this.histories.recordOpening(row);
+    this.followTask(row);
 
     /* As pessoas que quem abriu VINCULOU — passam a ver e escrever no chamado. */
     await this.people?.attachOnOpening(
@@ -772,6 +792,9 @@ export class TicketsService {
       );
     }
 
+    /* O responsável trocado à mão chega à tarefa do chamado. */
+    this.followTask(row);
+
     return this.toFullTicket(row, reach.participantAreas);
   }
 
@@ -883,7 +906,8 @@ export function describeComputerChange(
   const names = (list: readonly { name: string }[]) =>
     list.length > 0 ? list.map((computer) => computer.name).join(', ') : 'nenhuma';
   const sameSet =
-    before.length === after.length && before.every((computer) => after.some((other) => other.id === computer.id));
+    before.length === after.length &&
+    before.every((computer) => after.some((other) => other.id === computer.id));
   if (sameSet) return null;
 
   return `Máquinas: ${names(before)} → ${names(after)}`;

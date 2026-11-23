@@ -33,6 +33,7 @@ import {
   type MaintenanceWithComputer,
   type PreventiveRow,
 } from '../repository/maintenances.repository';
+import { TasksService } from '../../tasks/service/tasks.service';
 
 /** O histórico só sabe filtrar a tabela das manutenções: só o recorte dela vale aqui. */
 const MAINTENANCE_DRILL_SOURCES: readonly DataSourceKey[] = ['maintenances'];
@@ -56,6 +57,7 @@ export class MaintenancesService {
   constructor(
     private readonly repository: MaintenancesRepository,
     @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
+    @Optional() private readonly tasks?: TasksService,
   ) {}
 
   async list(user: RequestUser, query: MaintenanceListQuery): Promise<Paginated<Maintenance>> {
@@ -99,6 +101,8 @@ export class MaintenancesService {
 
     /* Relê para devolver a máquina junto: o insert conhece o `computer_id`, mas não o nome
        dela, e a tela precisa do nome para desenhar a linha que acabou de aparecer. */
+    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
+    this.tasks?.syncMaintenanceInBackground();
     return toMaintenance(await this.requireMaintenance(id));
   }
 
@@ -113,6 +117,8 @@ export class MaintenancesService {
 
     await this.repository.update(id, toMaintenanceUpdate(input, user.email));
 
+    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
+    this.tasks?.syncMaintenanceInBackground();
     return toMaintenance(await this.requireMaintenance(id));
   }
 
@@ -124,6 +130,8 @@ export class MaintenancesService {
 
     /* Excluir ARQUIVA: some da lista e das contas, e volta pelo "Desfazer". */
     await this.repository.setArchived(id, true, user.id);
+    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
+    this.tasks?.syncMaintenanceInBackground();
   }
 
   /** Desfaz a exclusão. Quem podia excluir é quem pode desfazer. */
@@ -135,6 +143,8 @@ export class MaintenancesService {
 
     await this.repository.setArchived(id, false, null);
 
+    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
+    this.tasks?.syncMaintenanceInBackground();
     return toMaintenance(await this.requireMaintenance(id));
   }
 
@@ -189,6 +199,8 @@ export class MaintenancesService {
     const [saved] = await this.repository.listSchedules({ computerId, archived: 'hide' });
     if (!saved) throw new NotFoundException(COMPUTER_NOT_FOUND);
 
+    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
+    this.tasks?.syncMaintenanceInBackground();
     return toMaintenanceSchedule(saved);
   }
 
@@ -197,6 +209,8 @@ export class MaintenancesService {
     assertCanCreate(user.role, 'manutenções agendadas');
 
     await this.repository.archiveOpenSchedule(computerId, user.id);
+    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
+    this.tasks?.syncMaintenanceInBackground();
   }
 
   /**
@@ -223,6 +237,8 @@ export class MaintenancesService {
     });
     if (!restored) throw new NotFoundException(SCHEDULE_NOT_FOUND);
 
+    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
+    this.tasks?.syncMaintenanceInBackground();
     return toMaintenanceSchedule(restored);
   }
 

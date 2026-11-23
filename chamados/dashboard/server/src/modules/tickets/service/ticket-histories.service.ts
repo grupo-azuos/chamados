@@ -40,6 +40,7 @@ import {
   toTicketMove,
 } from '../mapper/ticket-histories.mapper';
 import { TicketHistoriesRepository } from '../repository/ticket-histories.repository';
+import { TasksService } from '../../tasks/service/tasks.service';
 import { TicketsRepository } from '../repository/tickets.repository';
 import { TICKET_NOT_FOUND, TicketAccessService, type TicketInReach } from './ticket-access.service';
 import { TicketAttachmentsService } from './ticket-attachments.service';
@@ -65,7 +66,21 @@ export class TicketHistoriesService {
     @Optional() private readonly notifier?: TicketWhatsappNotifierService,
     @Optional() private readonly tickets?: TicketsRepository,
     @Optional() private readonly stockItems?: TicketStockItemsService,
+    @Optional() private readonly tasks?: TasksService,
   ) {}
+
+  /**
+   * A tarefa do chamado acompanha o estágio que este histórico acabou de gravar. Relê o chamado
+   * (o estágio mudou na mesma transação) e não espera: a tarefa é consequência, não pré-requisito.
+   */
+  private followTask(ticketId: number): void {
+    const { tasks, tickets } = this;
+    if (!tasks || !tickets) return;
+    void tickets
+      .findById(ticketId)
+      .then((ticket) => tasks.syncTicketInBackground(ticket))
+      .catch(() => undefined);
+  }
 
   /** A linha do tempo inteira, para o painel. */
   async list(user: RequestUser, ticketId: number): Promise<TicketHistory[]> {
@@ -131,6 +146,7 @@ export class TicketHistoriesService {
       historyId: row.id,
     });
     this.mirrorToIssue(reach.ticket, entry, user.name);
+    this.followTask(ticketId);
     await this.notify(reach.ticket, row, user, notifyUserIds);
 
     return toTicketHistory(row, saved);
@@ -173,6 +189,7 @@ export class TicketHistoriesService {
       move,
       this.settlementOf(ticket, historyEntry, author),
     );
+    this.followTask(ticketId);
 
     return toTicketHistory(row);
   }
@@ -190,8 +207,12 @@ export class TicketHistoriesService {
     ticketId: number,
     input: CreateRequesterHistoryInput,
   ): Promise<PublicTicketHistory> {
-    const { type, description, attachments: files, notifyUserIds } =
-      createRequesterHistorySchema.parse(input);
+    const {
+      type,
+      description,
+      attachments: files,
+      notifyUserIds,
+    } = createRequesterHistorySchema.parse(input);
     const ticket = await this.tickets?.findById(ticketId);
     if (!ticket || !this.people) throw new NotFoundException(TICKET_NOT_FOUND);
 
@@ -218,6 +239,7 @@ export class TicketHistoriesService {
       historyId: row.id,
     });
     this.mirrorToIssue(ticket, entry, user.name);
+    this.followTask(ticketId);
     await this.notify(ticket, row, user, notifyUserIds);
 
     return toPublicTicketHistory(toTicketHistory(row, saved));
