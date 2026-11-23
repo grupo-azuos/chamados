@@ -70,7 +70,7 @@ describe('the maintenance/inventory route with products', () => {
     expect(dialog).toHaveTextContent('Cadastrar produto');
     await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    await user.click(screen.getAllByRole('button', { name: 'Corrigir' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Editar Cadeira giratória' })[0]!);
     dialog = await screen.findByRole('dialog');
     expect(dialog).toBeInTheDocument();
   });

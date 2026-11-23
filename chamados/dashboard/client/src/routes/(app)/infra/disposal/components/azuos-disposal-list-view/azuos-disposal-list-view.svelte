@@ -87,12 +87,17 @@
 
 <script lang="ts">
   import Archive from '@lucide/svelte/icons/archive';
+  import Clock from '@lucide/svelte/icons/clock';
+  import MonitorOff from '@lucide/svelte/icons/monitor-off';
   import FilterX from '@lucide/svelte/icons/filter-x';
   import Recycle from '@lucide/svelte/icons/recycle';
   import SearchX from '@lucide/svelte/icons/search-x';
   import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Undo2 from '@lucide/svelte/icons/undo-2';
   import Wrench from '@lucide/svelte/icons/wrench';
 
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
@@ -114,12 +119,14 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
   import { formatDate } from '$lib/utils/format-date';
 
   let { data, state: viewState, actions }: AzuosDisposalListViewProps = $props();
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  const cardPage = useCardPage(() => data.computers);
 
   const tableView = useTableViewModel();
 
@@ -256,56 +263,43 @@
       class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
       data-slot="disposal-cards-mobile"
     >
-      {#each data.computers as computer (computer.id)}
-        <!-- A situação está no selo: o hover do card é só o véu neutro (padrão Apple). -->
-        <CardSurface ui={{ className: 'p-4' }}>
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0 flex-1">
-              <span class="font-medium text-ink-900 break-words">
-                {machineLabelOf(computer)}
-              </span>
-              <span class="block text-xs text-ink-500 break-words">
-                {computer.hardware?.hostname || computer.name}
-                {#if computer.departmentId}
-                  · {computerDepartmentLabel(computer)}
-                {/if}
-              </span>
-            </div>
-            {#if computer.disposalType}
-              <StatusBadge
-                data={{ label: disposalTypeLabel(computer.disposalType) }}
-                ui={{ tone: disposalTypeTone(computer.disposalType), size: 'sm' }}
-              />
-            {/if}
-          </div>
-
-          <div class="mt-2 text-xs">
-            <span class="text-muted-foreground block text-xs">Motivo</span>
-            <p class="text-ink-700 break-words">
+      {#each cardPage.items as computer (computer.id)}
+        <!-- O cartão de registro do sistema: o card inteiro abre a ficha; "Voltar ao inventário"
+             mora no menu, e pergunta antes. -->
+        <RecordCard
+          data={{
+            label: `Ver ficha de ${machineLabelOf(computer)}`,
+            title: machineLabelOf(computer),
+            code: computer.hardware?.hostname || computer.name,
+            meta: computer.departmentId ? computerDepartmentLabel(computer) : null,
+            status: computer.disposalType
+              ? { label: disposalTypeLabel(computer.disposalType), tone: disposalTypeTone(computer.disposalType) }
+              : { label: 'Fora de uso', tone: 'neutral' },
+            footer: { title: `Saiu em ${formatDate(computer.disposedAt)}` },
+            openLabel: 'Ver ficha',
+            menu: {
+              label: `Ações de ${machineLabelOf(computer)}`,
+              items: [{ id: 'restore', label: 'Voltar ao inventário', icon: Undo2 }],
+            },
+          }}
+          ui={{
+            icon: MonitorOff,
+            iconTone: computer.disposalType ? disposalTypeTone(computer.disposalType) : 'slate',
+            footerIcon: Clock,
+            slot: 'disposal-card',
+          }}
+          actions={{
+            onOpen: () => actions.onOpenMachine(computer),
+            onMenuSelect: () => actions.onAskRestore(computer),
+          }}
+        >
+          {#snippet notes()}
+            <span class="text-muted-foreground text-xs">Motivo</span>
+            <p class="text-ink-700 line-clamp-3 text-xs break-words" title={computer.disposalReason ?? undefined}>
               {computer.disposalReason ?? '—'}
             </p>
-          </div>
-
-          <!-- A data fica numa linha e os botões em outra: lado a lado, o cartão estreito
-               cortava "Voltar ao inventário" no meio da palavra. -->
-          <div class="border-border mt-3 flex flex-col gap-2 border-t pt-2">
-            <span class="text-xs text-ink-500">
-              Saiu em {formatDate(computer.disposedAt)}
-            </span>
-            <div class="flex flex-wrap items-center gap-1">
-              <ActionButton
-                data={{ label: 'Ver ficha' }}
-                ui={{ variant: 'secondary', size: 'sm' }}
-                actions={{ onClick: () => actions.onOpenMachine(computer) }}
-              />
-              <ActionButton
-                data={{ label: 'Voltar ao inventário' }}
-                ui={{ variant: 'ghost', size: 'sm' }}
-                actions={{ onClick: () => actions.onAskRestore(computer) }}
-              />
-            </div>
-          </div>
-        </CardSurface>
+          {/snippet}
+        </RecordCard>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">
@@ -313,6 +307,21 @@
         <span>{data.computers.length} registro(s)</span>
       </div>
     </div>
+      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
+           fileira. A barra só aparece quando há mais de uma página. -->
+      {#if cardPage.total > cardPage.pageSize}
+        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
+          <PaginationBar
+            data={{
+              page: cardPage.page,
+              pageSize: cardPage.pageSize,
+              total: cardPage.total,
+              noun: ['máquina', 'máquinas'],
+            }}
+            actions={{ onPageChange: cardPage.actions.onPageChange }}
+          />
+        </div>
+      {/if}
 
     <!-- Tabela para desktop (>= xl) -->
     <div

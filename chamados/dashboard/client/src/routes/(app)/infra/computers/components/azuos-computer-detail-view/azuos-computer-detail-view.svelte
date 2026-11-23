@@ -316,7 +316,7 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
 
   import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
-  import ActionMenu from '../azuos-action-menu/azuos-action-menu.svelte';
+  import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import ComputerLivePanel from '../azuos-computer-live-panel/azuos-computer-live-panel.svelte';
   import ComputerProcessTable from '../azuos-computer-process-table/azuos-computer-process-table.svelte';

@@ -156,8 +156,12 @@
   import Wrench from '@lucide/svelte/icons/wrench';
   import X from '@lucide/svelte/icons/x';
 
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+  import RecordCard, {
+    type AzuosRecordCardMenuItem,
+  } from '$lib/components/azuos-record-card/azuos-record-card.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
@@ -199,6 +203,31 @@
   }
 
   const people = $derived(groupRolesByPerson(data.roles));
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  const cardPage = useCardPage(() => people);
+
+  /* O menu do cartão da pessoa: tirar cada módulo e dar mais um — só para o Super Admin. */
+  function menuItemsOf(person: RolePerson): AzuosRecordCardMenuItem[] {
+    if (!canManage) return [];
+
+    const canGrant = Boolean(actions.onGrantTo) && person.roles.length < ROLE_CONTEXTS.length;
+    const removals = person.roles.map((role, index) => ({
+      id: `remove:${role.id}`,
+      label: `Tirar o módulo ${ROLE_CONTEXT_LABELS[role.context]}`,
+      icon: X,
+      isDestructive: true,
+      separatorBefore: index === 0 && canGrant,
+    }));
+
+    return canGrant ? [{ id: 'grant', label: 'Adicionar módulo', icon: Plus }, ...removals] : removals;
+  }
+
+  function chooseAction(id: string, person: RolePerson) {
+    if (id === 'grant') return actions.onGrantTo?.(person);
+
+    const role = person.roles.find((item) => `remove:${item.id}` === id);
+    if (role) actions.onAskDelete(role);
+  }
 
   /* Quem liberou cada módulo, sem repetir: "a@x" quando foi um só, "a@x, b@y" quando foram dois. */
   function creatorsOf(person: RolePerson): string {
@@ -432,47 +461,59 @@
       class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
       data-slot="role-cards-mobile"
     >
-      {#each people as person (person.userId)}
+      {#each cardPage.items as person (person.userId)}
         {@const user = resolveUser(person)}
         {@const displayName = user?.name || person.userEmail || person.userId}
         {@const creators = creatorsOf(person)}
-        <!-- O card de conteúdo do grupo: superfície da marca, hover neutro. A cor dos módulos mora
-             nos selos, nunca no fundo do card. -->
-        <ContentCard data={{ label: displayName }} ui={{ className: 'gap-3' }}>
-          <div class="flex items-center gap-3 min-w-0">
-            <PersonAvatar name={displayName} avatarUrl={user?.image} ui={{ size: 'lg' }} />
-            <div class="min-w-0">
-              <span class="block font-semibold text-foreground text-sm break-words">
-                {displayName}
-              </span>
-              {#if person.userEmail}
-                <span class="block text-xs text-muted-foreground break-all">
-                  {person.userEmail}
-                </span>
-              {/if}
-              <span class="block text-xs font-mono text-muted-foreground break-all">
-                ID: {person.userId}
-              </span>
-            </div>
-          </div>
-
-          <div class="flex flex-col gap-1 pt-2 border-t border-border">
+        <!-- O cartão de registro do sistema, com o rosto no lugar do ícone. A cor dos módulos mora
+             nos selos, nunca no fundo do card; tirar e dar módulo ficam no menu de três pontinhos. -->
+        <RecordCard
+          data={{
+            label: displayName,
+            title: displayName,
+            code: `ID: ${person.userId}`,
+            /* Sem nome no diretório, o título já é o e-mail: não repete embaixo. */
+            meta: person.userEmail !== displayName ? person.userEmail : null,
+            footer: creators ? { title: `Liberado por: ${creators}` } : null,
+            menu: { label: `Ações de ${displayName}`, items: menuItemsOf(person) },
+          }}
+          ui={{ slot: 'role-card' }}
+          actions={{ onMenuSelect: (id) => chooseAction(id, person) }}
+        >
+          {#snippet leading()}
+            <PersonAvatar name={displayName} avatarUrl={user?.image} ui={{ size: 'md' }} />
+          {/snippet}
+          {#snippet body()}
             <span class="text-xs font-medium text-muted-foreground">
               {person.roles.length > 1 ? 'Módulos' : 'Módulo'}
             </span>
-            {@render moduleBadges(person)}
-          </div>
-
-          {#if creators}
-            <div
-              class="flex items-center justify-between text-xs font-mono text-muted-foreground pt-1 border-t border-border"
-            >
-              <span class="break-all">Liberado por: {creators}</span>
+            <div class="flex flex-wrap items-center gap-1.5">
+              {#each person.roles as role (role.id)}
+                <StatusBadge
+                  data={{ label: ROLE_CONTEXT_LABELS[role.context] }}
+                  ui={{ tone: contextTone(role.context), size: 'sm' }}
+                />
+              {/each}
             </div>
-          {/if}
-        </ContentCard>
+          {/snippet}
+        </RecordCard>
       {/each}
     </div>
+      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
+           fileira. A barra só aparece quando há mais de uma página. -->
+      {#if cardPage.total > cardPage.pageSize}
+        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
+          <PaginationBar
+            data={{
+              page: cardPage.page,
+              pageSize: cardPage.pageSize,
+              total: cardPage.total,
+              noun: ['pessoa', 'pessoas'],
+            }}
+            actions={{ onPageChange: cardPage.actions.onPageChange }}
+          />
+        </div>
+      {/if}
 
     <!-- 2. Visualização em Tabela para Desktop (>= xl) -->
     <div
