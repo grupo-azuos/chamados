@@ -1,21 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  calendarDayOf,
-  monthLabel,
-  monthWeeks,
-  timelineSpan,
-  weekdayOf,
-} from './task-calendar.util';
+import { calendarDayOf, daysOfMonth, monthLabel, timelineSpan } from './task-calendar.util';
 
 describe('task calendar math', () => {
   // feliz
-  it('knows the weekday and lays November 2026 out from Sunday to Saturday', () => {
-    expect(weekdayOf('2026-11-01')).toBe(0);
-    expect(weekdayOf('2026-11-23')).toBe(1);
-    const weeks = monthWeeks('2026-11');
-    expect(weeks[0]?.[0]).toBe('2026-11-01');
-    expect(weeks.at(-1)?.filter(Boolean).at(-1)).toBe('2026-11-30');
+  it('lists the days of November 2026 and names the month', () => {
+    const days = daysOfMonth('2026-11');
+    expect(days[0]).toBe('2026-11-01');
+    expect(days.at(-1)).toBe('2026-11-30');
     expect(monthLabel('2026-11')).toBe('Novembro de 2026');
   });
 

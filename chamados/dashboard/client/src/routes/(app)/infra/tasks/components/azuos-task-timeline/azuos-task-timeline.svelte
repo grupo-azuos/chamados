@@ -4,6 +4,10 @@
   à vista. A cor da barra é a da situação (finalizada verde, reaberta amarela, aberta azul;
   atrasada vermelha); o dia de hoje é a linha vertical.
 
+  Toda barra tem o RÓTULO: o prazo (ou o início), quem responde e as etapas. Dentro da barra quando
+  ela é larga; ao lado (depois, ou antes quando ela termina no fim do mês) quando é curta — barra
+  muda obrigava a abrir a tarefa para saber de quando a quando ela ia.
+
   - `data`: `tasks`, `month`, `today`, `now`.
   - `actions`: `onOpen`, `onMonthChange`.
 -->
@@ -37,12 +41,36 @@
   );
   const todayIndex = $derived(days.indexOf(data.today));
 
-  function barClass(task: Task): string {
-    if (taskDueBadge(task, data.now)?.tone === 'danger') return 'bg-destructive';
-    if (task.status === 'done') return 'bg-success';
-    if (task.status === 'reopened') return 'bg-warning';
+  /** A partir de quantos dias a barra leva o rótulo dentro dela. */
+  const INSIDE_MIN_DAYS = 6;
+  /** Quantos dias o rótulo de fora precisa depois da barra; sem isso, ele vai antes. */
+  const OUTSIDE_LABEL_DAYS = 8;
 
-    return 'bg-primary';
+  function barClass(task: Task): string {
+    if (taskDueBadge(task, data.now)?.tone === 'danger') return 'bg-destructive text-destructive-foreground';
+    if (task.status === 'done') return 'bg-success text-success-foreground';
+    if (task.status === 'reopened') return 'bg-warning text-warning-foreground';
+
+    return 'bg-primary text-primary-foreground';
+  }
+
+  function shortDay(day: string): string {
+    return `${day.slice(8)}/${day.slice(5, 7)}`;
+  }
+
+  /** "Atrasada · 05/11 · Wellington Queiroz · 0/4" — o que se lê sem abrir a tarefa. */
+  function barLabel(task: Task): string {
+    const when = taskDueBadge(task, data.now)?.label ?? `Início ${shortDay(task.startDate)}`;
+    const owner = task.owner?.name ?? 'Sem responsável';
+    const steps = task.progress.total > 0 ? `${task.progress.done}/${task.progress.total}` : null;
+
+    return [when, owner, steps].filter(Boolean).join(' · ');
+  }
+
+  function labelSpot(span: { start: number; end: number }): 'inside' | 'after' | 'before' {
+    if (span.end - span.start + 1 >= INSIDE_MIN_DAYS) return 'inside';
+
+    return span.end + 1 + OUTSIDE_LABEL_DAYS <= days.length ? 'after' : 'before';
   }
 </script>
 
@@ -75,6 +103,8 @@
         </div>
         <ul class="divide-border/60 relative mt-1 divide-y">
           {#each rows as row (row.task.id)}
+            {@const label = barLabel(row.task)}
+            {@const spot = labelSpot(row.span)}
             <li class="flex items-center gap-2 py-1.5">
               <button
                 type="button"
@@ -85,7 +115,7 @@
                 {row.task.title}
               </button>
               <div
-                class="relative grid h-5 flex-1 gap-px"
+                class="relative grid h-6 flex-1 gap-px"
                 style={`grid-template-columns: repeat(${days.length}, minmax(0, 1fr))`}
               >
                 {#if todayIndex >= 0}
@@ -98,10 +128,30 @@
                 <button
                   type="button"
                   aria-label={`Abrir a tarefa ${row.task.title}`}
-                  class={cn('rounded-chip h-5 focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none', barClass(row.task))}
-                  style={`grid-column: ${row.span.start + 1} / ${row.span.end + 2}`}
+                  title={label}
+                  class={cn(
+                    'rounded-chip flex h-6 min-w-0 items-center overflow-hidden px-2 text-left text-xs font-medium focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none',
+                    barClass(row.task),
+                  )}
+                  style={`grid-column: ${row.span.start + 1} / ${row.span.end + 2}; grid-row: 1`}
                   onclick={() => actions.onOpen(row.task)}
-                ></button>
+                >
+                  {#if spot === 'inside'}<span class="truncate">{label}</span>{/if}
+                </button>
+                {#if spot !== 'inside'}
+                  <span
+                    data-slot="task-timeline-label"
+                    class={cn(
+                      'text-muted-foreground min-w-0 self-center truncate px-1.5 text-xs',
+                      spot === 'before' && 'text-right',
+                    )}
+                    style={spot === 'after'
+                      ? `grid-column: ${row.span.end + 2} / -1; grid-row: 1`
+                      : `grid-column: 1 / ${row.span.start + 1}; grid-row: 1`}
+                  >
+                    {label}
+                  </span>
+                {/if}
               </div>
             </li>
           {/each}
