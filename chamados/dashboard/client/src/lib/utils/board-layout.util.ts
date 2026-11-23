@@ -26,7 +26,10 @@ export function defaultSizeOf(kind: WidgetKind): { w: number; h: number } {
 }
 
 /** Onde entra o bloco posto com um clique: embaixo de tudo, no tamanho do tipo. */
-export function bottomPlace(layout: readonly LayoutItem[], kind: WidgetKind): Omit<LayoutItem, 'i'> {
+export function bottomPlace(
+  layout: readonly LayoutItem[],
+  kind: WidgetKind,
+): Omit<LayoutItem, 'i'> {
   return { x: 0, y: rowsOf(layout), ...defaultSizeOf(kind) };
 }
 
@@ -68,7 +71,10 @@ export function compactLayout(layout: readonly LayoutItem[]): LayoutItem[] {
 
   for (const item of order) {
     let current = { ...item };
-    while (current.y > 0 && !placed.some((other) => overlaps({ ...current, y: current.y - 1 }, other))) {
+    while (
+      current.y > 0 &&
+      !placed.some((other) => overlaps({ ...current, y: current.y - 1 }, other))
+    ) {
       current = { ...current, y: current.y - 1 };
     }
     placed.push(current);
@@ -101,7 +107,12 @@ function pushAway(result: LayoutItem[], mover: LayoutItem): LayoutItem[] {
 }
 
 /** O bloco vai para (x, y); quem está no caminho desce, e tudo sobe até encostar. */
-export function moveItem(layout: readonly LayoutItem[], id: string, x: number, y: number): LayoutItem[] {
+export function moveItem(
+  layout: readonly LayoutItem[],
+  id: string,
+  x: number,
+  y: number,
+): LayoutItem[] {
   const item = layout.find((candidate) => candidate.i === id);
   if (!item) return [...layout];
   const moved = clampItem({ ...item, x, y });
@@ -153,10 +164,7 @@ export type GridCell = { width: number; height: number; gap: number; rowGap?: nu
 const rowGapOf = (cell: GridCell): number => cell.rowGap ?? cell.gap;
 
 /** A casa da grade sob um ponto, dado o tamanho de uma casa (e o espaço entre elas). */
-export function cellAt(
-  point: { x: number; y: number },
-  cell: GridCell,
-): { x: number; y: number } {
+export function cellAt(point: { x: number; y: number }, cell: GridCell): { x: number; y: number } {
   return {
     x: Math.max(0, Math.min(GRID_COLUMNS - 1, Math.floor(point.x / (cell.width + cell.gap)))),
     y: Math.max(0, Math.floor(point.y / (cell.height + rowGapOf(cell)))),
@@ -235,7 +243,10 @@ export function slotRows(layout: readonly Pick<LayoutItem, 'y' | 'h'>[]): number
  * Quantos andares o conteúdo de um bloco pede: a altura dele, mais o vão entre os andares que ele
  * atravessa — de um andar até o teto de um bloco.
  */
-export function rowsToFit(contentPx: number, cell: Pick<GridCell, 'height' | 'gap' | 'rowGap'>): number {
+export function rowsToFit(
+  contentPx: number,
+  cell: Pick<GridCell, 'height' | 'gap' | 'rowGap'>,
+): number {
   const rowGap = rowGapOf({ width: 0, ...cell });
   const rows = Math.ceil((contentPx + rowGap) / (cell.height + rowGap));
 
@@ -248,7 +259,10 @@ export function rowsToFit(contentPx: number, cell: Pick<GridCell, 'height' | 'ga
  * encolhe o bloco que a pessoa fez maior. Vendo, nada se grava; montando, o gesto parte desta
  * grade, e o painel grava o que a pessoa vê.
  */
-export function fitLayout(layout: readonly LayoutItem[], fitted: Readonly<Record<string, number>>): LayoutItem[] {
+export function fitLayout(
+  layout: readonly LayoutItem[],
+  fitted: Readonly<Record<string, number>>,
+): LayoutItem[] {
   let result = [...layout];
   for (const item of layout) {
     const fit = fitted[item.i] ?? 0;

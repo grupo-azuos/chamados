@@ -20,6 +20,7 @@ import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database, type DatabaseExecutor } from '../../../lib/db/db.type';
 import { computers } from '../../../lib/db/schema/computers.schema';
+import { history, type HistoryRow } from '../../../lib/db/schema/history.schema';
 import { inventoryItems } from '../../../lib/db/schema/inventory-items.schema';
 import { maintenanceSchedules } from '../../../lib/db/schema/maintenance-schedules.schema';
 import { maintenances } from '../../../lib/db/schema/maintenances.schema';
@@ -57,6 +58,9 @@ export type MaintenanceCandidate = {
   scheduleNote: string | null;
   lastPreventiveAt: Date | null;
 };
+
+/** A linha do tempo mostra as últimas mudanças; o Histórico inteiro mora na tela dele. */
+const HISTORY_LIMIT = 100;
 
 @Injectable()
 export class TasksRepository {
@@ -104,6 +108,19 @@ export class TasksRepository {
       overdue: totals?.overdue ?? 0,
       dueSoon: totals?.dueSoon ?? 0,
     };
+  }
+
+  /** A linha do tempo da tarefa: o que o Histórico gravou sobre ela, da mais nova para a mais velha. */
+  async historyOf(id: number): Promise<HistoryRow[]> {
+    return runQuery(
+      this.db
+        .select()
+        .from(history)
+        .where(and(eq(history.targetType, 'tasks'), eq(history.targetId, String(id))))
+        .orderBy(desc(history.occurredAt), desc(history.id))
+        .limit(HISTORY_LIMIT),
+      'ler a linha do tempo da tarefa',
+    );
   }
 
   async findById(id: number): Promise<TaskWithRelations | null> {

@@ -45,6 +45,7 @@ export function toTask(
       position: step.position,
       done: step.doneAt !== null,
       doneAt: step.doneAt?.toISOString() ?? null,
+      doneBy: personOf(step.doneBy, directory),
     })),
     links: row.links.map((link) => ({
       id: link.id,
@@ -54,12 +55,18 @@ export function toTask(
     })),
     progress: { done, total: row.steps.length },
     finishedAt: row.finishedAt?.toISOString() ?? null,
+    createdBy: personOf(systemAuthorOr(row.createdBy), directory),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
 
 /** O título da tarefa de um chamado: o texto do pedido numa linha, no tamanho do título. */
+/* A tarefa que nasceu sozinha (do chamado, da manutenção) não tem pessoa por trás. */
+function systemAuthorOr(id: string): string | null {
+  return id.startsWith('system') ? null : id;
+}
+
 export function ticketTaskTitle(description: string): string {
   const line = description.replace(/\s+/g, ' ').trim();
 

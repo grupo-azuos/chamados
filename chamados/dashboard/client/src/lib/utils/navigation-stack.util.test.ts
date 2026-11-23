@@ -42,7 +42,9 @@ describe('nextStack', () => {
   it('keeps the stack when only a filter or tab of the same screen changes', () => {
     const before = [entry('/infra/dashboard')];
 
-    expect(nextStack(before, entry('/infra/tickets/7'), '/infra/tickets/7/', ROOTS)).toEqual(before);
+    expect(nextStack(before, entry('/infra/tickets/7'), '/infra/tickets/7/', ROOTS)).toEqual(
+      before,
+    );
   });
 
   it('cuts the stack back when the person returns to a screen already on the path', () => {
@@ -56,11 +58,15 @@ describe('nextStack', () => {
   // triste
   it('starts with no stack on the first screen of the tab and on a menu screen', () => {
     expect(nextStack([], null, '/infra/tickets/7', ROOTS)).toEqual([]);
-    expect(nextStack([entry('/infra/computers/3')], entry('/infra/tickets/7'), '/infra/tickets', ROOTS)).toEqual([]);
+    expect(
+      nextStack([entry('/infra/computers/3')], entry('/infra/tickets/7'), '/infra/tickets', ROOTS),
+    ).toEqual([]);
   });
 
   it('never grows past the ceiling', () => {
-    const deep = Array.from({ length: MAX_STACK_DEPTH }, (_, index) => entry(`/infra/tickets/${index}`));
+    const deep = Array.from({ length: MAX_STACK_DEPTH }, (_, index) =>
+      entry(`/infra/tickets/${index}`),
+    );
 
     expect(nextStack(deep, entry('/infra/computers/1'), '/infra/computers/2', ROOTS)).toHaveLength(
       MAX_STACK_DEPTH,
@@ -71,13 +77,17 @@ describe('nextStack', () => {
 describe('backEntryOf and parseStack', () => {
   // feliz
   it('takes the top of the stack as the way back', () => {
-    expect(backEntryOf([entry('/infra/dashboard'), entry('/infra/computers/3')])?.label).toBe('a máquina');
+    expect(backEntryOf([entry('/infra/dashboard'), entry('/infra/computers/3')])?.label).toBe(
+      'a máquina',
+    );
   });
 
   // triste
   it('drops anything stored without the right shape', () => {
     expect(backEntryOf([])).toBeNull();
     expect(parseStack('lixo')).toEqual([]);
-    expect(parseStack([entry('/infra/tickets/1', 4), { href: 1 }, null])).toEqual([entry('/infra/tickets/1', 4)]);
+    expect(parseStack([entry('/infra/tickets/1', 4), { href: 1 }, null])).toEqual([
+      entry('/infra/tickets/1', 4),
+    ]);
   });
 });

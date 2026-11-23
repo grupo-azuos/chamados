@@ -1,4 +1,7 @@
-import { EMPTY_BOARD_FILTER_VALUES, type Widget } from '@template/shared/schemas/dashboard-board.schema';
+import {
+  EMPTY_BOARD_FILTER_VALUES,
+  type Widget,
+} from '@template/shared/schemas/dashboard-board.schema';
 import { describe, expect, it } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
@@ -32,24 +35,25 @@ const WIDGET: Widget = {
   window: null,
 };
 
-const DRAFT: BoardDraft = { widgets: [WIDGET], layout: [{ i: 'a', x: 0, y: 0, w: 2, h: 2 }], filters: [] };
+const DRAFT: BoardDraft = {
+  widgets: [WIDGET],
+  layout: [{ i: 'a', x: 0, y: 0, w: 2, h: 2 }],
+  filters: [],
+};
 
 describe('visibleScopes', () => {
   // feliz
   it('shows the manager tab to the manager and the admin of the module', () => {
-    expect(visibleScopes({ role: 'manager', roles: { infra: 'manager' } }, 'infra').map((s) => s.value)).toEqual([
-      'team',
-      'manager',
-      'personal',
-    ]);
+    expect(
+      visibleScopes({ role: 'manager', roles: { infra: 'manager' } }, 'infra').map((s) => s.value),
+    ).toEqual(['team', 'manager', 'personal']);
   });
 
   // triste
   it('hides the manager tab from plain users and from managers of another module', () => {
-    expect(visibleScopes({ role: 'user', roles: { infra: 'user' } }, 'infra').map((s) => s.label)).toEqual([
-      'Equipe',
-      'Pessoal',
-    ]);
+    expect(
+      visibleScopes({ role: 'user', roles: { infra: 'user' } }, 'infra').map((s) => s.label),
+    ).toEqual(['Equipe', 'Pessoal']);
     expect(visibleScopes({ role: 'admin', roles: { sistema: 'admin' } }, 'infra')).toHaveLength(2);
   });
 });
@@ -76,7 +80,9 @@ describe('the draft of a board', () => {
 
   // triste
   it('never keeps a chart in a single cell, nor past the border', () => {
-    expect(normalizeLayout([{ i: 'a', x: 3, y: 0, w: 1, h: 1 }])).toEqual([{ i: 'a', x: 3, y: 0, w: 1, h: 2 }]);
+    expect(normalizeLayout([{ i: 'a', x: 3, y: 0, w: 1, h: 1 }])).toEqual([
+      { i: 'a', x: 3, y: 0, w: 1, h: 2 },
+    ]);
     expect(normalizeLayout([{ i: 'a', x: 3, y: 0, w: 4, h: 1 }])[0]).toMatchObject({ x: 0, w: 4 });
   });
 
@@ -126,7 +132,9 @@ describe('filterCountQuery', () => {
 describe('saveErrorOf', () => {
   // feliz
   it('names the block the server refused', () => {
-    const error = new ApiError(422, 'Confira o painel', [{ field: 'widgets.0', message: 'Escolha como agrupar' }]);
+    const error = new ApiError(422, 'Confira o painel', [
+      { field: 'widgets.0', message: 'Escolha como agrupar' },
+    ]);
 
     expect(saveErrorOf(error, [WIDGET], DRAFT.layout)).toBe(
       'Não salvei o painel. "Chamados por situação": Escolha como agrupar.',
@@ -135,7 +143,9 @@ describe('saveErrorOf', () => {
 
   // triste
   it('says the plain reason when the server points nowhere, and nothing without an error', () => {
-    expect(saveErrorOf(new ApiError(500, 'Banco fora do ar'), [], [])).toBe('Não salvei o painel: Banco fora do ar');
+    expect(saveErrorOf(new ApiError(500, 'Banco fora do ar'), [], [])).toBe(
+      'Não salvei o painel: Banco fora do ar',
+    );
     expect(saveErrorOf(null, [], [])).toBeNull();
   });
 });
@@ -151,12 +161,19 @@ describe('setBoardFilterPlaces', () => {
   it('moves a filter to the place the grid gave back, keeping its name', () => {
     const next = setBoardFilterPlaces(draft, [{ id: 'person', place: { x: 1, y: 0, w: 2, h: 1 } }]);
 
-    expect(next.filters[0]).toEqual({ id: 'person', kind: 'person', label: 'Pessoa', place: { x: 1, y: 0, w: 2, h: 1 } });
+    expect(next.filters[0]).toEqual({
+      id: 'person',
+      kind: 'person',
+      label: 'Pessoa',
+      place: { x: 1, y: 0, w: 2, h: 1 },
+    });
   });
 
   // triste
   it('ignores a place for a filter the board does not have', () => {
-    expect(setBoardFilterPlaces(draft, [{ id: 'ghost', place: { x: 0, y: 0, w: 1, h: 1 } }]).filters).toEqual(draft.filters);
+    expect(
+      setBoardFilterPlaces(draft, [{ id: 'ghost', place: { x: 0, y: 0, w: 1, h: 1 } }]).filters,
+    ).toEqual(draft.filters);
   });
 });
 
@@ -165,7 +182,11 @@ describe('duplicateWidget', () => {
   it('copies the block, same size, at the end of the board, with "(cópia)" in the title', () => {
     const next = duplicateWidget(DRAFT, 'a', 'b');
 
-    expect(next.widgets[1]).toMatchObject({ id: 'b', title: 'Chamados por situação (cópia)', groupBy: 'status' });
+    expect(next.widgets[1]).toMatchObject({
+      id: 'b',
+      title: 'Chamados por situação (cópia)',
+      groupBy: 'status',
+    });
     expect(next.layout.find((item) => item.i === 'b')).toMatchObject({ w: 2, h: 2, y: 2 });
   });
 
@@ -174,4 +195,3 @@ describe('duplicateWidget', () => {
     expect(duplicateWidget(DRAFT, 'nope', 'b')).toBe(DRAFT);
   });
 });
-

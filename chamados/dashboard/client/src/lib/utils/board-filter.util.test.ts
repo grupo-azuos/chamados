@@ -1,4 +1,7 @@
-import { EMPTY_BOARD_FILTER_VALUES, ME_VALUE } from '@template/shared/schemas/dashboard-board.schema';
+import {
+  EMPTY_BOARD_FILTER_VALUES,
+  ME_VALUE,
+} from '@template/shared/schemas/dashboard-board.schema';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -18,7 +21,13 @@ import {
   withPeople,
 } from './board-filter.util';
 
-const COUNTS = { total: 3, series: [{ key: 'TI', label: 'TI', value: 2 }, { key: '(Sem departamento)', label: '(Sem departamento)', value: 1 }] };
+const COUNTS = {
+  total: 3,
+  series: [
+    { key: 'TI', label: 'TI', value: 2 },
+    { key: '(Sem departamento)', label: '(Sem departamento)', value: 1 },
+  ],
+};
 
 /* A conta vazia: o módulo sem chamado nenhum. */
 const EMPTY = { total: 0, series: [] };
@@ -31,13 +40,22 @@ describe('board filter rules', () => {
     expect(window).toEqual({ mode: 'relative', direction: 'last', count: 30, unit: 'day' });
     expect(presetOf(window)).toBe('last-30-day');
     expect(presetOf(null)).toBe('each');
-    expect(windowOfPreset('custom', '2026-11-21')).toMatchObject({ mode: 'custom', to: '2026-11-21' });
+    expect(windowOfPreset('custom', '2026-11-21')).toMatchObject({
+      mode: 'custom',
+      to: '2026-11-21',
+    });
   });
 
   // triste
   it('pulls an exact date range back to 90 days, and puts it in order', () => {
-    expect(clampRange('2026-01-01', '2026-12-31')).toEqual({ from: '2026-01-01', to: '2026-03-31' });
-    expect(clampRange('2026-02-10', '2026-02-01')).toEqual({ from: '2026-02-01', to: '2026-02-10' });
+    expect(clampRange('2026-01-01', '2026-12-31')).toEqual({
+      from: '2026-01-01',
+      to: '2026-03-31',
+    });
+    expect(clampRange('2026-02-10', '2026-02-01')).toEqual({
+      from: '2026-02-01',
+      to: '2026-02-10',
+    });
   });
 
   // feliz
@@ -123,7 +141,10 @@ describe('the Grafana-like filter toolbar', () => {
       filters,
       { pessoa: people, abriu: opened, dep: COUNTS },
       {
-        team: [{ name: 'Ana Lima', avatarUrl: 'https://x/ana.png' }, { name: 'Caio Reis', avatarUrl: null }],
+        team: [
+          { name: 'Ana Lima', avatarUrl: 'https://x/ana.png' },
+          { name: 'Caio Reis', avatarUrl: null },
+        ],
         directory: [{ name: 'Bia Souza', avatarUrl: 'https://x/bia.png' }],
       },
       EMPTY,
@@ -133,14 +154,24 @@ describe('the Grafana-like filter toolbar', () => {
       ['Ana Lima', 'https://x/ana.png'],
       ['Caio Reis', null],
     ]);
-    expect(personOptions(counts.abriu)).toEqual([{ value: 'Bia Souza', label: 'Bia Souza', personName: 'Bia Souza', avatarUrl: 'https://x/bia.png' }]);
+    expect(personOptions(counts.abriu)).toEqual([
+      {
+        value: 'Bia Souza',
+        label: 'Bia Souza',
+        personName: 'Bia Souza',
+        avatarUrl: 'https://x/bia.png',
+      },
+    ]);
     expect(counts.dep).toBe(COUNTS);
   });
 
   // triste
   it('shows the team even in a module without tickets, and keeps the initials of who is not in the directory', () => {
     const counts = withPeople(
-      [{ id: 'pessoa', kind: 'person' as const }, { id: 'abriu', kind: 'requester' as const }],
+      [
+        { id: 'pessoa', kind: 'person' as const },
+        { id: 'abriu', kind: 'requester' as const },
+      ],
       { abriu: { total: 1, series: [{ key: 'Caio Reis', label: 'Caio Reis', value: 1 }] } },
       { team: [{ name: 'Ana Lima' }], directory: [] },
       EMPTY,
@@ -157,7 +188,13 @@ describe('withDepartmentCatalog', () => {
     { id: 'who', kind: 'person' as const },
   ];
   const COUNTS = {
-    dep: { total: 3, series: [{ key: 'Tecnologia', label: 'Tecnologia', value: 2 }, { key: 'Antigo', label: 'Antigo', value: 1 }] },
+    dep: {
+      total: 3,
+      series: [
+        { key: 'Tecnologia', label: 'Tecnologia', value: 2 },
+        { key: 'Antigo', label: 'Antigo', value: 1 },
+      ],
+    },
     who: { total: 3, series: [{ key: 'Ana', label: 'Ana', value: 3 }] },
   };
 
@@ -176,7 +213,9 @@ describe('withDepartmentCatalog', () => {
   // triste
   it('keeps what the count brought while the catalog has not arrived, and lists it in a module without tickets', () => {
     expect(withDepartmentCatalog(FILTERS, COUNTS, [], EMPTY)).toBe(COUNTS);
-    expect(withDepartmentCatalog(FILTERS, { who: COUNTS.who }, ['Contábil'], EMPTY).dep?.series).toEqual([{ key: 'Contábil', label: 'Contábil', value: 0 }]);
+    expect(
+      withDepartmentCatalog(FILTERS, { who: COUNTS.who }, ['Contábil'], EMPTY).dep?.series,
+    ).toEqual([{ key: 'Contábil', label: 'Contábil', value: 0 }]);
   });
 });
 
@@ -197,4 +236,3 @@ describe('optionCounts', () => {
     expect(counts.has('@me')).toBe(false);
   });
 });
-

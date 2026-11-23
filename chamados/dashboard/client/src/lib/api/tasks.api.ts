@@ -4,6 +4,7 @@ import {
   type SaveTaskStepsInput,
   type SetTaskStatusInput,
   type Task,
+  type TaskHistoryEntry,
   type TaskListQuery,
   type TaskPage,
   type UpdateTaskInput,
@@ -36,6 +37,8 @@ export const tasksApi = {
     }),
 
   findById: (id: number) => apiRequest<Task>(`/tasks/${id}`),
+
+  history: (id: number) => apiRequest<TaskHistoryEntry[]>(`/tasks/${id}/history`),
 
   create: (body: CreateTaskInput) => apiRequest<Task>('/tasks', { method: 'POST', body }),
 

@@ -12,12 +12,17 @@
 -->
 <script lang="ts" module>
   import { type TaskListModel } from '$lib/hooks/use-task-list/use-task-list.svelte';
+  import { type TaskMapModel } from '$lib/hooks/use-task-map/use-task-map.svelte';
 
   export type AzuosTaskListViewProps = {
-    data: TaskListModel['data'] & { today: string; now?: Date };
+    data: TaskListModel['data'] & { today: string; now?: Date; map: TaskMapModel['data'] };
     ui?: { canCreate?: boolean };
     state: TaskListModel['state'];
-    actions: TaskListModel['actions'] & { onNew: () => void; onRefuse: (message: string) => void };
+    actions: TaskListModel['actions'] & {
+      onNew: () => void;
+      onRefuse: (message: string) => void;
+      map: TaskMapModel['actions'];
+    };
   };
 </script>
 
@@ -50,6 +55,7 @@
   import TaskCalendar from '../azuos-task-calendar/azuos-task-calendar.svelte';
   import TaskCard from '../azuos-task-card/azuos-task-card.svelte';
   import TaskRow from '../azuos-task-row/azuos-task-row.svelte';
+  import TaskMap from '../azuos-task-map/azuos-task-map.svelte';
   import TaskTimeline from '../azuos-task-timeline/azuos-task-timeline.svelte';
 
   let { data, ui, state: viewState, actions }: AzuosTaskListViewProps = $props();
@@ -193,10 +199,28 @@
       data={{ tasks: data.tasks, month: data.month, now: data.now }}
       actions={{ onOpen: actions.onOpen, onRangeChange: actions.onRangeChange }}
     />
+  {:else if data.view === 'map'}
+    <TaskMap
+      data={{
+        tasks: data.tasks,
+        people: data.people,
+        peopleIds: data.map.peopleIds,
+        positions: data.map.positions,
+        now: data.now,
+      }}
+      state={{ isLoading: viewState.isLoading }}
+      actions={actions.map}
+    />
   {:else}
     <TaskTimeline
-      data={{ tasks: data.tasks, month: data.month, today: data.today, now: data.now }}
-      actions={{ onOpen: actions.onOpen, onMonthChange: actions.onMonthChange }}
+      data={{ tasks: data.tasks, window: data.window, zoom: data.zoom, today: data.today, now: data.now }}
+      state={{ isLoading: viewState.isLoading }}
+      actions={{
+        onShift: actions.onShiftWindow,
+        onToday: actions.onWindowToday,
+        onZoom: actions.onZoom,
+        onOpen: actions.onOpen,
+      }}
     />
   {/if}
 

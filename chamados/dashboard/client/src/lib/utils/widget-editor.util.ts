@@ -187,7 +187,11 @@ export function suggestedTitle(kind: WidgetKind, noun: string, groupLabel: strin
  * Um bloco NOVO no módulo: a primeira fonte dele, no tipo escolhido, já com o agrupamento que
  * serve e o título sugerido.
  */
-export function newWidget(module: BoardModule, kind: WidgetKind = 'column', id = newWidgetId()): Widget {
+export function newWidget(
+  module: BoardModule,
+  kind: WidgetKind = 'column',
+  id = newWidgetId(),
+): Widget {
   const source = sourcesOf(module)[0]!;
   const draft = fitGroup({
     id,
@@ -251,7 +255,10 @@ export function windowForMode(mode: string, current: WidgetWindow, today: string
 }
 
 /** Trocar a unidade mantém a quantidade se ela existe na nova; senão, a menor. */
-export function withUnit(window: Extract<WidgetWindow, { mode: 'relative' }>, unit: WindowUnit): WidgetWindow {
+export function withUnit(
+  window: Extract<WidgetWindow, { mode: 'relative' }>,
+  unit: WindowUnit,
+): WidgetWindow {
   const counts = WINDOW_COUNTS[unit];
   const count = counts.includes(window.count) ? window.count : (counts[0] ?? 1);
 

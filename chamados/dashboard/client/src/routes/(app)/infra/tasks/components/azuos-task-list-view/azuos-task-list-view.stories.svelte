@@ -29,6 +29,9 @@
     page: 1,
     pageSize: 15,
     month: '2026-11',
+    window: { from: '2026-11-16', to: '2026-12-20' },
+    zoom: 'month' as const,
+    map: { peopleIds: [], positions: {} },
     people: [],
     selected: null,
     removing: null,
@@ -38,8 +41,9 @@
   const state = { isLoading: false, isEmpty: false, isFilteredOut: false, isTruncated: false, isMutating: false, error: null, actionError: null };
   const actions = {
     onViewChange: fn(), onSearchChange: fn(), onFilterChange: fn(), onClearFilters: fn(), onPageChange: fn(),
-    onMonthChange: fn(), onRangeChange: fn(), onOpen: fn(), onClose: fn(), onMove: fn(), onToggleStep: fn(), onRemoveLink: fn(),
+    onMonthChange: fn(), onRangeChange: fn(), onShiftWindow: fn(), onWindowToday: fn(), onZoom: fn(), onOpen: fn(), onClose: fn(), onMove: fn(), onToggleStep: fn(), onRemoveLink: fn(),
     onAskRemove: fn(), onCancelRemove: fn(), onConfirmRemove: fn(), onRetry: fn(), onNew: fn(), onRefuse: fn(),
+    map: { onPeopleChange: fn(), onIslandMove: fn(), onResetLayout: fn() },
   };
 </script>
 
@@ -48,5 +52,6 @@
 <Story name="Quadro" args={{ data: { ...data, view: 'board' }, state, actions }} />
 <Story name="Calendario" args={{ data: { ...data, view: 'calendar' }, state, actions }} />
 <Story name="Timeline" args={{ data: { ...data, view: 'timeline' }, state, actions }} />
+<Story name="Mapa" args={{ data: { ...data, view: 'map' }, state, actions }} />
 <Story name="Vazia" args={{ data: { ...data, tasks: [], total: 0, alerts: { overdue: 0, dueSoon: 0 } }, state: { ...state, isEmpty: true }, actions }} />
 <Story name="ComErro" args={{ data: { ...data, tasks: [] }, state: { ...state, error: 'A API está fora do ar.' }, actions }} />

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { fieldParser, isFlag, isText, oneOf, urlParser, type FieldGuards } from './filter-fields.util';
+import {
+  fieldParser,
+  isFlag,
+  isText,
+  oneOf,
+  urlParser,
+  type FieldGuards,
+} from './filter-fields.util';
 
 type Filter = { search: string; kind: '' | 'desktop' | 'notebook'; archived: boolean };
 
@@ -14,7 +21,9 @@ const GUARDS: FieldGuards<Filter> = {
 describe('fieldParser', () => {
   // feliz
   it('reads every valid field from the saved object', () => {
-    expect(fieldParser(DEFAULTS, GUARDS)({ search: 'rh', kind: 'notebook', archived: true })).toEqual({
+    expect(
+      fieldParser(DEFAULTS, GUARDS)({ search: 'rh', kind: 'notebook', archived: true }),
+    ).toEqual({
       search: 'rh',
       kind: 'notebook',
       archived: true,
@@ -24,7 +33,9 @@ describe('fieldParser', () => {
   // triste
   /* Um campo ruim (um tipo que deixou de existir) volta ao padrão sem levar os outros junto. */
   it('drops only the field that no longer fits', () => {
-    expect(fieldParser(DEFAULTS, GUARDS)({ search: 'rh', kind: 'tablet', archived: 'sim' })).toEqual({
+    expect(
+      fieldParser(DEFAULTS, GUARDS)({ search: 'rh', kind: 'tablet', archived: 'sim' }),
+    ).toEqual({
       search: 'rh',
       kind: '',
       archived: false,

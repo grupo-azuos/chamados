@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatTaxId, handleTaxIdInput, isValidTaxId, maskTaxId, normalizeTaxId, taxIdCheckDigits } from './tax-id.util';
+import {
+  formatTaxId,
+  handleTaxIdInput,
+  isValidTaxId,
+  maskTaxId,
+  normalizeTaxId,
+  taxIdCheckDigits,
+} from './tax-id.util';
 
 describe('tax-id.util', () => {
   // feliz

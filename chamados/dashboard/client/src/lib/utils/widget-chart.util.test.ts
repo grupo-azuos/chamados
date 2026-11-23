@@ -140,12 +140,18 @@ describe('countRingOption', () => {
 
   // feliz
   it('splits the ring into the count and what is left of the total', () => {
-    expect(ringData(countRingOption({ count: 14, total: 136, hue: 'blue' }, { track: 'gray' }))).toEqual([14, 122]);
+    expect(
+      ringData(countRingOption({ count: 14, total: 136, hue: 'blue' }, { track: 'gray' })),
+    ).toEqual([14, 122]);
   });
 
   // triste
   it('never overflows the ring, and is only the track without a total', () => {
-    expect(ringData(countRingOption({ count: 99, total: 10, hue: 'blue' }, { track: 'gray' }))).toEqual([10, 0]);
-    expect(ringData(countRingOption({ count: 3, total: 0, hue: 'blue' }, { track: 'gray' }))).toEqual([0, 1]);
+    expect(
+      ringData(countRingOption({ count: 99, total: 10, hue: 'blue' }, { track: 'gray' })),
+    ).toEqual([10, 0]);
+    expect(
+      ringData(countRingOption({ count: 3, total: 0, hue: 'blue' }, { track: 'gray' })),
+    ).toEqual([0, 1]);
   });
 });

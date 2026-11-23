@@ -1,4 +1,7 @@
-import { type Maintenance, type MaintenanceSchedule } from '@template/shared/schemas/maintenance.schema';
+import {
+  type Maintenance,
+  type MaintenanceSchedule,
+} from '@template/shared/schemas/maintenance.schema';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -77,7 +80,9 @@ describe('archived items', () => {
 
   // triste
   it('falls back to a placeholder when the maintenance has no machine name', () => {
-    expect(archivedMaintenanceItem({ ...maintenance, otherMachine: null }).label).toBe('(Sem máquina)');
+    expect(archivedMaintenanceItem({ ...maintenance, otherMachine: null }).label).toBe(
+      '(Sem máquina)',
+    );
   });
 });
 

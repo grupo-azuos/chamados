@@ -2,8 +2,14 @@ import { ALERT_METRIC_LABELS } from '@template/shared/domain/computer-alert.util
 import { HEALTH_STATUS_LABELS } from '@template/shared/domain/computer-health.util';
 import { COMPUTER_KIND_LABELS } from '@template/shared/domain/computer-kind.util';
 import { INVENTORY_CATEGORY_LABELS } from '@template/shared/domain/inventory-catalog.util';
-import { DISPOSAL_REASON_LABELS, STOCK_MOVEMENT_TYPE_LABELS } from '@template/shared/domain/inventory-stock.util';
-import { QUOTE_KIND_LABELS, QUOTE_STATUS_LABELS } from '@template/shared/domain/maintenance-quote.util';
+import {
+  DISPOSAL_REASON_LABELS,
+  STOCK_MOVEMENT_TYPE_LABELS,
+} from '@template/shared/domain/inventory-stock.util';
+import {
+  QUOTE_KIND_LABELS,
+  QUOTE_STATUS_LABELS,
+} from '@template/shared/domain/maintenance-quote.util';
 import { MAINTENANCE_TYPE_LABELS } from '@template/shared/domain/maintenance.util';
 import { MOVEMENT_TYPE_LABELS } from '@template/shared/domain/part-catalog.util';
 import {
@@ -12,7 +18,11 @@ import {
   SOFTWARE_PROJECT_STATUS_LABELS,
   TIMELINE_EVENT_TYPE_LABELS,
 } from '@template/shared/domain/software-project.util';
-import { TICKET_PRIORITIES, TICKET_STATUS_LABELS, ticketPriorityLabel } from '@template/shared/domain/ticket-status.util';
+import {
+  TICKET_PRIORITIES,
+  TICKET_STATUS_LABELS,
+  ticketPriorityLabel,
+} from '@template/shared/domain/ticket-status.util';
 import {
   type DataField,
   type DataFieldType,
@@ -70,7 +80,9 @@ export function isListOperator(operator: FilterRule['operator']): boolean {
 /** O rótulo de cada opção de um campo de lista — o mesmo nome que a tela mostra no resto do sistema. */
 const ENUM_LABELS: Record<string, string> = {
   ...(TICKET_STATUS_LABELS as Record<string, string>),
-  ...Object.fromEntries(TICKET_PRIORITIES.map((priority) => [priority, ticketPriorityLabel(priority)])),
+  ...Object.fromEntries(
+    TICKET_PRIORITIES.map((priority) => [priority, ticketPriorityLabel(priority)]),
+  ),
   ...COMPUTER_KIND_LABELS,
   ...HEALTH_STATUS_LABELS,
   ...ALERT_METRIC_LABELS,
@@ -125,13 +137,19 @@ export function withField(source: DataSourceKey, rule: FilterRule, field: string
   const definition = fieldsOf(source)[field];
   if (!definition) return rule;
 
-  return { ...rule, field, operator: operatorsFor(definition)[0]!, value: defaultValueOf(definition) };
+  return {
+    ...rule,
+    field,
+    operator: operatorsFor(definition)[0]!,
+    value: defaultValueOf(definition),
+  };
 }
 
 /** Trocar o operador acerta o valor: lista vira lista, "entre" vira duas pontas, vazio some. */
 export function withOperator(rule: FilterRule, operator: FilterRule['operator']): FilterRule {
   if (!needsValue(operator)) return { ...rule, operator, value: null };
-  if (isListOperator(operator)) return { ...rule, operator, value: Array.isArray(rule.value) ? rule.value : [] };
+  if (isListOperator(operator))
+    return { ...rule, operator, value: Array.isArray(rule.value) ? rule.value : [] };
   if (operator === 'between') return { ...rule, operator, value: ['@monthStart', '@today'] };
   const single = Array.isArray(rule.value) ? (rule.value[0] ?? '') : rule.value;
 
@@ -139,7 +157,11 @@ export function withOperator(rule: FilterRule, operator: FilterRule['operator'])
 }
 
 /** A árvore com um nó trocado, achado pelo id em qualquer nível. */
-export function replaceNode(group: FilterGroup, id: string, next: FilterRule | FilterGroup | null): FilterGroup {
+export function replaceNode(
+  group: FilterGroup,
+  id: string,
+  next: FilterRule | FilterGroup | null,
+): FilterGroup {
   const rules = group.rules.flatMap((node) => {
     if (node.id === id) return next ? [next] : [];
 
@@ -172,6 +194,8 @@ export function withIds(group: FilterGroup): FilterGroup {
   return {
     ...group,
     id: group.id ?? ruleId(),
-    rules: group.rules.map((node) => (isFilterGroup(node) ? withIds(node) : { ...node, id: node.id ?? ruleId() })),
+    rules: group.rules.map((node) =>
+      isFilterGroup(node) ? withIds(node) : { ...node, id: node.id ?? ruleId() },
+    ),
   };
 }

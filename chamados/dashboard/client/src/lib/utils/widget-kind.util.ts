@@ -55,7 +55,14 @@ export const WIDGET_KIND_LOOK: Record<WidgetKind, { icon: LucideIcon; short: str
  * OS SEIS MAIS USADOS, à frente; os outros dezesseis num segundo grupo. Vinte e duas opções com o
  * mesmo peso demoram para escolher (Lei de Hick) — o comum fica à mão, o raro continua a um passo.
  */
-export const MAIN_KINDS: readonly WidgetKind[] = ['column', 'bar', 'area', 'donut', 'stats', 'list'];
+export const MAIN_KINDS: readonly WidgetKind[] = [
+  'column',
+  'bar',
+  'area',
+  'donut',
+  'stats',
+  'list',
+];
 export const OTHER_KINDS: readonly WidgetKind[] = [
   'hero',
   'agenda',

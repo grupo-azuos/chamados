@@ -3,7 +3,11 @@ import Package from '@lucide/svelte/icons/package';
 import Printer from '@lucide/svelte/icons/printer';
 import { describe, expect, it } from 'vitest';
 
-import { inventoryCategoryIconOf, partCategoryIconOf, ticketProblemIconOf } from './record-icon.util';
+import {
+  inventoryCategoryIconOf,
+  partCategoryIconOf,
+  ticketProblemIconOf,
+} from './record-icon.util';
 
 describe('record icons', () => {
   // feliz

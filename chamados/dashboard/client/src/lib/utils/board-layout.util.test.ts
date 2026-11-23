@@ -45,7 +45,10 @@ describe('board layout', () => {
 
   // feliz
   it('lifts everything up so no hole is left', () => {
-    const compacted = compactLayout([{ ...A, y: 3 }, { ...B, y: 5 }]);
+    const compacted = compactLayout([
+      { ...A, y: 3 },
+      { ...B, y: 5 },
+    ]);
 
     expect(compacted.map((item) => item.y)).toEqual([0, 0]);
   });
@@ -62,7 +65,10 @@ describe('board layout', () => {
   // triste
   it('never shrinks a block below two cells, unless it is compact', () => {
     expect(resizeItem([A], 'a', 1, 1).find((item) => item.i === 'a')).toMatchObject({ w: 1, h: 2 });
-    expect(resizeItem([A], 'a', 1, 1, true).find((item) => item.i === 'a')).toMatchObject({ w: 1, h: 1 });
+    expect(resizeItem([A], 'a', 1, 1, true).find((item) => item.i === 'a')).toMatchObject({
+      w: 1,
+      h: 1,
+    });
   });
 
   // triste
@@ -73,8 +79,14 @@ describe('board layout', () => {
 
   // feliz
   it('finds the cell under the pointer', () => {
-    expect(cellAt({ x: 250, y: 190 }, { width: 200, height: 160, gap: 16 })).toEqual({ x: 1, y: 1 });
-    expect(cellAt({ x: 5000, y: -10 }, { width: 200, height: 160, gap: 16 })).toEqual({ x: 3, y: 0 });
+    expect(cellAt({ x: 250, y: 190 }, { width: 200, height: 160, gap: 16 })).toEqual({
+      x: 1,
+      y: 1,
+    });
+    expect(cellAt({ x: 5000, y: -10 }, { width: 200, height: 160, gap: 16 })).toEqual({
+      x: 3,
+      y: 0,
+    });
   });
 
   // feliz
@@ -116,7 +128,12 @@ describe('board layout', () => {
   it('spaces the rows apart by the row gap while building, for the bar above each block', () => {
     const cell = { width: 200, height: 140, gap: 32, rowGap: 72 };
 
-    expect(pixelsOf({ x: 1, y: 1, w: 1, h: 2 }, cell)).toEqual({ left: 232, top: 212, width: 200, height: 352 });
+    expect(pixelsOf({ x: 1, y: 1, w: 1, h: 2 }, cell)).toEqual({
+      left: 232,
+      top: 212,
+      width: 200,
+      height: 352,
+    });
     expect(cellAt({ x: 240, y: 220 }, cell)).toEqual({ x: 1, y: 1 });
   });
 
@@ -125,7 +142,6 @@ describe('board layout', () => {
     expect(cellAt({ x: 0, y: 150 }, { width: 200, height: 140, gap: 16 })).toEqual({ x: 0, y: 0 });
   });
 });
-
 
 describe('the cell grows with its content', () => {
   const VIEW = { height: 140, gap: 16 };

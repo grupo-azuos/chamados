@@ -53,6 +53,7 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
 
   beforeEach(async () => {
     await started.truncate(
+      'history',
       'tasks',
       'ticket_histories',
       'tickets',
@@ -135,6 +136,27 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
       .expect(200);
 
     expect(done.body).toMatchObject({ status: 'done', progress: { done: 2, total: 2 } });
+    /* Quem marcou cada etapa e quem criou aparecem na página da tarefa ("feita por", "Criada por"). */
+    expect(done.body.steps[0]).toMatchObject({
+      done: true,
+      doneBy: { id: ANA.id, name: ANA.name },
+    });
+    expect(done.body.createdBy).toMatchObject({ id: ANA.id, name: ANA.name });
+
+    /* A linha do tempo lê o Histórico: a mais nova primeiro, com o nome de quem fez. */
+    const timeline = await api()
+      .get(`/api/v1/tasks/${created.body.id}/history`)
+      .set(asAna())
+      .expect(200);
+    expect(timeline.body.map((entry: { action: string }) => entry.action)).toEqual([
+      'setStepDone',
+      'setStepDone',
+      'create',
+    ]);
+    expect(timeline.body[0]).toMatchObject({
+      actorName: ANA.name,
+      changes: [{ field: 'done', to: true }],
+    });
 
     const list = await api().get('/api/v1/tasks').query({ area: 'infra' }).set(asAna()).expect(200);
     expect(list.body.total).toBe(2);

@@ -17,8 +17,15 @@ import {
 describe('filter builder', () => {
   // feliz
   it('starts a condition on the first field of the source', () => {
-    expect(emptyRule('infraTickets', 'r1')).toEqual({ id: 'r1', field: 'status', operator: '=', value: 'open' });
-    expect(enumOptionsOf({ label: 'Prioridade', type: 'enum', options: ['high'] })).toEqual([{ value: 'high', label: 'Alta' }]);
+    expect(emptyRule('infraTickets', 'r1')).toEqual({
+      id: 'r1',
+      field: 'status',
+      operator: '=',
+      value: 'open',
+    });
+    expect(enumOptionsOf({ label: 'Prioridade', type: 'enum', options: ['high'] })).toEqual([
+      { value: 'high', label: 'Alta' },
+    ]);
   });
 
   // feliz
@@ -35,7 +42,11 @@ describe('filter builder', () => {
     expect(withOperator(rule, 'in').value).toEqual([]);
     expect(withOperator(rule, 'null')).toMatchObject({ operator: 'null', value: null });
     expect(withOperator(rule, 'between').value).toEqual(['@monthStart', '@today']);
-    expect(withField('infraTickets', rule, 'assignee')).toMatchObject({ field: 'assignee', operator: '=', value: '@me' });
+    expect(withField('infraTickets', rule, 'assignee')).toMatchObject({
+      field: 'assignee',
+      operator: '=',
+      value: '@me',
+    });
     expect(needsValue('notNull')).toBe(false);
   });
 
@@ -43,7 +54,13 @@ describe('filter builder', () => {
   it('replaces or removes a node at any depth', () => {
     const tree: FilterGroup = {
       combinator: 'and',
-      rules: [{ id: 'g', combinator: 'or', rules: [{ id: 'a', field: 'status', operator: '=', value: 'new' }] }],
+      rules: [
+        {
+          id: 'g',
+          combinator: 'or',
+          rules: [{ id: 'a', field: 'status', operator: '=', value: 'new' }],
+        },
+      ],
     };
 
     const removed = replaceNode(tree, 'a', null);
@@ -70,7 +87,10 @@ describe('filter builder', () => {
 describe('withIds', () => {
   // feliz
   it('gives an id to every node that came without one', () => {
-    const tree = withIds({ combinator: 'and', rules: [{ field: 'status', operator: '=', value: 'open' }] });
+    const tree = withIds({
+      combinator: 'and',
+      rules: [{ field: 'status', operator: '=', value: 'open' }],
+    });
 
     expect(tree.id).toBeTruthy();
     expect(tree.rules[0]?.id).toBeTruthy();

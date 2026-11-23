@@ -37,6 +37,8 @@ export const taskStepSchema = z.object({
   position: z.number().int().min(0),
   done: z.boolean(),
   doneAt: z.iso.datetime({ offset: true }).nullable(),
+  /** Quem marcou a etapa ("feita por"); nulo enquanto ela está a fazer. */
+  doneBy: personSchema.nullable(),
 });
 
 export type TaskStep = z.infer<typeof taskStepSchema>;
@@ -71,11 +73,28 @@ export const taskSchema = z.object({
   links: z.array(taskLinkSchema),
   progress: z.object({ done: z.number().int().min(0), total: z.number().int().min(0) }),
   finishedAt: z.iso.datetime({ offset: true }).nullable(),
+  /** Quem criou ("Criada por"); nulo quando nasceu sozinha (chamado, manutenção). */
+  createdBy: personSchema.nullable(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
 });
 
 export type Task = z.infer<typeof taskSchema>;
+
+/**
+ * UMA LINHA DA LINHA DO TEMPO da tarefa — o que mudou, quem mudou e quando, lido do Histórico (que
+ * grava toda escrita). `action` é o nome da operação (`update`, `setStatus`, `setStepDone`…): a tela
+ * a traduz em frase ("Mudou a situação da tarefa").
+ */
+export const taskHistoryEntrySchema = z.object({
+  id: z.number().int(),
+  action: z.string(),
+  actorName: z.string().nullable(),
+  occurredAt: z.iso.datetime({ offset: true }),
+  changes: z.array(z.object({ field: z.string(), from: z.unknown(), to: z.unknown() })),
+});
+
+export type TaskHistoryEntry = z.infer<typeof taskHistoryEntrySchema>;
 
 export const taskLinkInputSchema = z.object({
   kind: taskLinkKindSchema,

@@ -27,6 +27,7 @@ import {
   type SaveTaskStepsInput,
   type SetTaskStatusInput,
   type Task,
+  type TaskHistoryEntry,
   type TaskLinkInput,
   type TaskListQuery,
   type TaskPage,
@@ -91,6 +92,21 @@ export class TasksService {
     this.assertCanReadArea(user, row.area);
 
     return toTask(row, await this.people());
+  }
+
+  /** A linha do tempo da tarefa — quem mudou o quê e quando, com o nome de hoje de cada pessoa. */
+  async history(user: RequestUser, id: number): Promise<TaskHistoryEntry[]> {
+    const row = await this.require(id);
+    this.assertCanReadArea(user, row.area);
+    const [rows, people] = await Promise.all([this.repository.historyOf(id), this.people()]);
+
+    return rows.map((entry) => ({
+      id: entry.id,
+      action: entry.action.replace(/^tasks\./, ''),
+      actorName: (entry.actorId && people.get(entry.actorId)?.name) || entry.actorEmail,
+      occurredAt: entry.occurredAt.toISOString(),
+      changes: entry.changes,
+    }));
   }
 
   async create(user: RequestUser, input: CreateTaskInput): Promise<Task> {

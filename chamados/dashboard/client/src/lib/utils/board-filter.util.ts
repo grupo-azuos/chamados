@@ -29,12 +29,21 @@ export type FilterCountsLike = {
   series: { key: string; label: string; value: number; avatarUrl?: string | null }[];
 };
 
-export type BoardFilterOption = { value: string; label: string; personName?: string; avatarUrl?: string | null };
+export type BoardFilterOption = {
+  value: string;
+  label: string;
+  personName?: string;
+  avatarUrl?: string | null;
+};
 
 /** Até aqui, um seletor; daqui para cima, a lista ganha busca (regra dos 15 itens). */
 export const SEARCH_FROM = 15;
 
-const relative = (direction: 'next' | 'last', count: number, unit: 'day' | 'week' | 'month'): WidgetWindow => ({
+const relative = (
+  direction: 'next' | 'last',
+  count: number,
+  unit: 'day' | 'week' | 'month',
+): WidgetWindow => ({
   mode: 'relative',
   direction,
   count,
@@ -62,7 +71,8 @@ export function presetOf(window: WidgetWindow | null): string {
 
 /** A janela de uma opção pronta. "Datas exatas" nasce nos últimos 30 dias, para ajustar. */
 export function windowOfPreset(value: string, today: string): WidgetWindow | null {
-  if (value === 'custom') return { mode: 'custom', ...windowRange(relative('last', 30, 'day'), today) };
+  if (value === 'custom')
+    return { mode: 'custom', ...windowRange(relative('last', 30, 'day'), today) };
 
   return PERIOD_PRESETS.find((preset) => preset.value === value)?.window ?? null;
 }
@@ -81,9 +91,20 @@ export function clampRange(from: string, to: string): { from: string; to: string
 }
 
 /** As opções de um filtro de campo: as fixas do contrato, ou as que a conta do módulo trouxe. */
-export function fieldFilterOptions(kind: BoardFieldFilterKind, counts: FilterCountsLike | null | undefined): BoardFilterOption[] {
-  if (kind === 'ticketStatus') return TICKET_STATUSES.map((status) => ({ value: status, label: TICKET_STATUS_LABELS[status] }));
-  if (kind === 'ticketPriority') return TICKET_PRIORITIES.map((priority) => ({ value: priority, label: ticketPriorityLabel(priority) }));
+export function fieldFilterOptions(
+  kind: BoardFieldFilterKind,
+  counts: FilterCountsLike | null | undefined,
+): BoardFilterOption[] {
+  if (kind === 'ticketStatus')
+    return TICKET_STATUSES.map((status) => ({
+      value: status,
+      label: TICKET_STATUS_LABELS[status],
+    }));
+  if (kind === 'ticketPriority')
+    return TICKET_PRIORITIES.map((priority) => ({
+      value: priority,
+      label: ticketPriorityLabel(priority),
+    }));
 
   return countedOptions(counts);
 }
@@ -115,7 +136,9 @@ export function withPeople<T extends FilterCountsLike>(
   people: { team: readonly PersonLike[]; directory: readonly PersonLike[] },
   empty: T,
 ): Record<string, T> {
-  const photos = new Map([...people.directory, ...people.team].map((person) => [person.name, person.avatarUrl ?? null]));
+  const photos = new Map(
+    [...people.directory, ...people.team].map((person) => [person.name, person.avatarUrl ?? null]),
+  );
   const photoOf = (name: string) => photos.get(name) ?? null;
   const next = { ...counts };
   for (const filter of filters) {
@@ -123,8 +146,14 @@ export function withPeople<T extends FilterCountsLike>(
     const count = next[filter.id] ?? empty;
     const counted = count.series.map((item) => ({ ...item, avatarUrl: photoOf(item.key) }));
     const known = new Set(count.series.map((item) => item.key));
-    const team = filter.kind === 'person' ? people.team.filter((person) => !known.has(person.name)) : [];
-    const idle = team.map((person) => ({ key: person.name, label: person.name, value: 0, avatarUrl: photoOf(person.name) }));
+    const team =
+      filter.kind === 'person' ? people.team.filter((person) => !known.has(person.name)) : [];
+    const idle = team.map((person) => ({
+      key: person.name,
+      label: person.name,
+      value: 0,
+      avatarUrl: photoOf(person.name),
+    }));
     next[filter.id] = { ...count, series: [...counted, ...idle] };
   }
 
@@ -185,19 +214,28 @@ export function activeSummary(
   });
 }
 
-function valueLabel(filter: BoardFilter, values: BoardFilterValues, counts: FilterCountsLike | undefined): string | null {
+function valueLabel(
+  filter: BoardFilter,
+  values: BoardFilterValues,
+  counts: FilterCountsLike | undefined,
+): string | null {
   const kind: BoardFilterKind = filter.kind;
   if (kind === 'period') return values.period ? windowLabel(values.period) : null;
   const value = values[kind];
   if (!value) return null;
-  if (kind === 'person') return value === ME_VALUE ? 'Eu' : (personOptions(counts).find((option) => option.value === value)?.label ?? value);
+  if (kind === 'person')
+    return value === ME_VALUE
+      ? 'Eu'
+      : (personOptions(counts).find((option) => option.value === value)?.label ?? value);
 
   return fieldFilterOptions(kind, counts).find((option) => option.value === value)?.label ?? value;
 }
 
 /** De cima para baixo e da esquerda para a direita: a ordem em que a coluna única empilha. */
 export function readingOrder<T extends { place: BoardFilterPlace }>(filters: readonly T[]): T[] {
-  return [...filters].sort((one, other) => one.place.y - other.place.y || one.place.x - other.place.x);
+  return [...filters].sort(
+    (one, other) => one.place.y - other.place.y || one.place.x - other.place.x,
+  );
 }
 
 /**
@@ -215,7 +253,9 @@ export function toolbarDisplaysOf(kind: BoardFilterKind): BoardFilterDisplay[] {
 }
 
 /** O desenho do filtro na barra: o escolhido, se for compacto; senão, a lista com busca (pessoa) ou a suspensa. */
-export function toolbarDisplayOf(filter: Pick<BoardFilter, 'kind' | 'display'>): BoardFilterDisplay {
+export function toolbarDisplayOf(
+  filter: Pick<BoardFilter, 'kind' | 'display'>,
+): BoardFilterDisplay {
   const display = boardFilterDisplay(filter);
   if (toolbarDisplaysOf(filter.kind).includes(display)) return display;
 
@@ -226,7 +266,10 @@ export function toolbarDisplayOf(filter: Pick<BoardFilter, 'kind' | 'display'>):
  * A ORDEM da barra gravada no lugar de cada filtro: a barra lê da esquerda para a direita, e a
  * grade guarda a ordem de leitura (linha, depois coluna). Cada filtro numa casa 1×1, em sequência.
  */
-export function placesInOrder(ids: readonly string[], columns: number): { id: string; place: BoardFilterPlace }[] {
+export function placesInOrder(
+  ids: readonly string[],
+  columns: number,
+): { id: string; place: BoardFilterPlace }[] {
   return ids.map((id, index) => ({
     id,
     place: { x: index % columns, y: Math.floor(index / columns), w: 1, h: 1 },
@@ -235,7 +278,8 @@ export function placesInOrder(ids: readonly string[], columns: number): { id: st
 
 /** A lista com o item `from` levado para a posição `to` — o arrastar e as setas da ordem. */
 export function moveInList<T>(items: readonly T[], from: number, to: number): T[] {
-  if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) return [...items];
+  if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length)
+    return [...items];
   const next = [...items];
   const [moved] = next.splice(from, 1);
   next.splice(to, 0, moved as T);

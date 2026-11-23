@@ -4,7 +4,10 @@ import { roleContextLabel } from '@template/shared/domain/role-context.util';
 import { type InventoryItem } from '@template/shared/schemas/inventory-item.schema';
 import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
 import { type MaintenanceQuote } from '@template/shared/schemas/maintenance-quote.schema';
-import { type Maintenance, type MaintenanceSchedule } from '@template/shared/schemas/maintenance.schema';
+import {
+  type Maintenance,
+  type MaintenanceSchedule,
+} from '@template/shared/schemas/maintenance.schema';
 import { type PartMovement } from '@template/shared/schemas/part.schema';
 import { type SoftwareProject } from '@template/shared/schemas/software-project.schema';
 import { type SoftwareScheduleEvent } from '@template/shared/schemas/software-schedule.schema';
@@ -30,21 +33,38 @@ function archivedAtOf(row: { archive?: { archivedAt: string } | null }): string 
   return row.archive?.archivedAt ?? '';
 }
 
-function line(key: number | string, label: string, archivedAt: string, kind?: string): AzuosArchivedItem {
+function line(
+  key: number | string,
+  label: string,
+  archivedAt: string,
+  kind?: string,
+): AzuosArchivedItem {
   return { key: String(key), label, kind, archivedAt, canRestore: true };
 }
 
 export function archivedMaintenanceItem(maintenance: Maintenance): AzuosArchivedItem {
   const machine =
-    maintenance.computerDisplayName ?? maintenance.computerName ?? maintenance.otherMachine ?? '(Sem máquina)';
+    maintenance.computerDisplayName ??
+    maintenance.computerName ??
+    maintenance.otherMachine ??
+    '(Sem máquina)';
 
-  return line(maintenance.id, machine, archivedAtOf(maintenance), maintenanceTypeLabel(maintenance.type));
+  return line(
+    maintenance.id,
+    machine,
+    archivedAtOf(maintenance),
+    maintenanceTypeLabel(maintenance.type),
+  );
 }
 
 export function archivedScheduleItem(schedule: MaintenanceSchedule): AzuosArchivedItem {
   const machine = schedule.computerDisplayName ?? schedule.computerName;
 
-  return line(schedule.id, `${machine} — ${formatDay(schedule.scheduledFor)}`, archivedAtOf(schedule));
+  return line(
+    schedule.id,
+    `${machine} — ${formatDay(schedule.scheduledFor)}`,
+    archivedAtOf(schedule),
+  );
 }
 
 export function archivedInventoryItem(item: InventoryItem): AzuosArchivedItem {
@@ -73,7 +93,12 @@ export function archivedScheduleEventItem(event: SoftwareScheduleEvent): AzuosAr
 }
 
 export function archivedRoleItem(role: InternalRole): AzuosArchivedItem {
-  return line(role.id, role.userEmail ?? role.userId, archivedAtOf(role), roleContextLabel(role.context));
+  return line(
+    role.id,
+    role.userEmail ?? role.userId,
+    archivedAtOf(role),
+    roleContextLabel(role.context),
+  );
 }
 
 /** A linha do chamado já vem pronta do servidor, com quem pode desfazer. */
@@ -107,7 +132,10 @@ export function parseTicketRemovedKey(
  * A janela dos excluídos da Agenda: seis meses para trás e um ano para a frente. A Agenda pede
  * sempre um período, e a janela fixa deixa o bloco igual em qualquer semana que a tela mostre.
  */
-export function archivedScheduleWindow(now: Date = new Date()): { startDate: string; endDate: string } {
+export function archivedScheduleWindow(now: Date = new Date()): {
+  startDate: string;
+  endDate: string;
+} {
   const day = (offset: number) => {
     const date = new Date(now);
     date.setDate(date.getDate() + offset);

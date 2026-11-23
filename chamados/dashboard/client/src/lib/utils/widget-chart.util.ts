@@ -331,7 +331,11 @@ export function countRingOption(
         emphasis: { disabled: true },
         data: [
           { name: 'Contagem', value: done, itemStyle: { color: data.hue } },
-          { name: 'Restante', value: total > 0 ? total - done : 1, itemStyle: { color: theme.track } },
+          {
+            name: 'Restante',
+            value: total > 0 ? total - done : 1,
+            itemStyle: { color: theme.track },
+          },
         ],
       },
     ],
