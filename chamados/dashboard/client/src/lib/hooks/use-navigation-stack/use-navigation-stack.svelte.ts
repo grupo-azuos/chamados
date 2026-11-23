@@ -34,8 +34,13 @@ const ROOTS = Object.values(NAV_ITEMS_BY_CONTEXT).flatMap((items) => items.map((
 
 type Stored = { key: number; stack: NavigationEntry[] }[];
 
-/** O lugar de onde se navega, no formato que o SvelteKit entrega em `afterNavigate`. */
-export type NavigationPlace = { url: URL } | null;
+/**
+ * O lugar de onde se navega, no formato que o SvelteKit entrega em `afterNavigate`. Na abertura
+ * da aba o SvelteKit manda um `from` SEM endereço (`url: null`), não `null`: ler `from.url`
+ * direto quebrava o `afterNavigate`, o roteador não terminava de ligar e todo clique no menu
+ * virava recarregamento da página inteira — a tela "piscando".
+ */
+export type NavigationPlace = { url: URL | null } | null;
 
 const stackState = $state<{ current: NavigationEntry[] }>({ current: [] });
 
@@ -95,11 +100,12 @@ export function recordNavigation(to: URL, from: NavigationPlace, index: number |
     return;
   }
 
+  const fromUrl = from?.url ?? null;
   const fromIndex = index === null ? null : index - 1;
-  const fromStack = from ? (stackOfKey(fromIndex) ?? stackState.current) : [];
+  const fromStack = fromUrl ? (stackOfKey(fromIndex) ?? stackState.current) : [];
   const stack = nextStack(
     fromStack,
-    from ? entryOf(from.url, fromIndex) : null,
+    fromUrl ? entryOf(fromUrl, fromIndex) : null,
     to.pathname,
     ROOTS,
   );

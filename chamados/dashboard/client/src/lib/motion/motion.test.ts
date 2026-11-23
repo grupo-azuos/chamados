@@ -5,7 +5,7 @@ vi.mock('gsap', () => ({
 }));
 
 const { default: gsap } = await import('gsap');
-const { countTo, fadeInUp, highlightIn, pageEnter, popIn, prefersReducedMotion, staggerIn } =
+const { countTo, fadeInUp, highlightIn, popIn, prefersReducedMotion, staggerIn } =
   await import('./motion');
 
 /** O que o sistema operacional diz sobre "reduzir movimento". */
@@ -52,8 +52,15 @@ describe('entrances', () => {
     popIn(target);
 
     expect(gsap.from).toHaveBeenCalledWith(target, expect.objectContaining({ y: 12, delay: 0.1 }));
-    expect(gsap.from).toHaveBeenCalledWith([target], expect.objectContaining({ stagger: 0.05, delay: 0 }));
-    expect(gsap.fromTo).toHaveBeenCalledWith(target, { scale: 0.7 }, expect.objectContaining({ scale: 1 }));
+    expect(gsap.from).toHaveBeenCalledWith(
+      [target],
+      expect.objectContaining({ stagger: 0.05, delay: 0 }),
+    );
+    expect(gsap.fromTo).toHaveBeenCalledWith(
+      target,
+      { scale: 0.7 },
+      expect.objectContaining({ scale: 1 }),
+    );
   });
 
   // triste
@@ -130,37 +137,5 @@ describe('countTo', () => {
 
     expect(element.textContent).toBe('7');
     expect(gsap.to).not.toHaveBeenCalled();
-  });
-});
-
-describe('pageEnter', () => {
-  // feliz
-  /* A troca de tela: só opacidade, sempre terminando em 1, e a entrada anterior morre antes —
-     senão uma troca no meio do esmaecer deixava a tela apagada pela metade. */
-  it('fades the content in from scratch, without moving it', () => {
-    stubMotionPreference(false);
-    const target = document.createElement('div');
-
-    pageEnter(target);
-
-    expect(gsap.killTweensOf).toHaveBeenCalledWith(target);
-    expect(gsap.fromTo).toHaveBeenCalledWith(
-      target,
-      { opacity: 0 },
-      expect.objectContaining({ opacity: 1, clearProps: 'opacity' }),
-    );
-    const call: unknown[] = vi.mocked(gsap.fromTo).mock.calls[0] ?? [];
-    expect(call[2]).not.toHaveProperty('y');
-  });
-
-  // triste
-  it('does nothing without a target or when the person asked for less motion', () => {
-    stubMotionPreference(false);
-    pageEnter(null);
-    stubMotionPreference(true);
-    pageEnter(document.createElement('div'));
-
-    expect(gsap.killTweensOf).not.toHaveBeenCalled();
-    expect(gsap.fromTo).not.toHaveBeenCalled();
   });
 });
