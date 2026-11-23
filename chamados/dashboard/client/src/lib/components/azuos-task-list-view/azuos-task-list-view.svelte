@@ -31,8 +31,9 @@
       onNew: () => void;
       onRefuse: (message: string) => void;
       map: TaskMapModel['actions'];
-      /** Abre o diálogo "Situações". */
-      onManageStages: () => void;
+      /** "+ Nova situação" e o lápis da coluna própria: abrem o diálogo da situação. */
+      onNewStage: () => void;
+      onEditStage: (stage: TaskStage) => void;
     };
   };
 
@@ -231,7 +232,8 @@
         onMove: actions.onMove,
         onStage: actions.onStage,
         onRefuse: actions.onRefuse,
-        onManageStages: actions.onManageStages,
+        onNewStage: actions.onNewStage,
+        onEditStage: actions.onEditStage,
       }}
     />
   {:else if data.view === 'calendar'}

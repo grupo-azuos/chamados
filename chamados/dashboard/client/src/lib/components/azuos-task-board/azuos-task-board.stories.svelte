@@ -22,12 +22,12 @@
     taskFixture({ id: 3, title: 'Comprar teclados', status: 'reopened' }),
     taskFixture({ id: 4, title: 'Organizar o rack', status: 'done' }),
   ];
-  const actions = { onOpen: fn(), onMove: fn(), onStage: fn(), onRefuse: fn(), onManageStages: fn() };
+  const actions = { onOpen: fn(), onMove: fn(), onStage: fn(), onRefuse: fn(), onNewStage: fn(), onEditStage: fn() };
   const stages = [
-    { id: 4, area: 'infra' as const, label: 'Aguardando peça', color: ORANGE, position: 0 },
-    { id: 5, area: 'infra' as const, label: 'Com o fornecedor', color: PURPLE, position: 1 },
+    { id: 4, area: 'infra' as const, label: 'Aguardando peça', color: ORANGE, position: 0, icon: 'hourglass', archivedAt: null },
+    { id: 5, area: 'infra' as const, label: 'Com o fornecedor', color: PURPLE, position: 1, icon: 'hourglass', archivedAt: null },
   ];
-  const staged = [...tasks, taskFixture({ id: 5, title: 'Fonte queimada', stage: { id: 4, label: 'Aguardando peça', color: ORANGE } })];
+  const staged = [...tasks, taskFixture({ id: 5, title: 'Fonte queimada', stage: { id: 4, label: 'Aguardando peça', color: ORANGE, icon: 'hourglass' } })];
 </script>
 
 <Story name="Default" args={{ data: { tasks, now: TEST_NOW }, actions }} />

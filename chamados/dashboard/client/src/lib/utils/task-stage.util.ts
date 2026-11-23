@@ -6,14 +6,23 @@ import {
 import { type Task } from '@template/shared/schemas/task.schema';
 import { type TaskStage } from '@template/shared/schemas/task-stage.schema';
 
+import type { LucideIcon } from '@lucide/svelte';
+
 import { type AzuosCardTone, cardHueFromHex } from '$lib/utils/card-tone.util';
+import { taskStageIconOf } from '$lib/utils/task-stage-icon.util';
 
 /**
  * AS SITUAÇÕES NA TELA (como no Paralegal) — as três fixas (Aberta, Reaberta, Finalizada) e, entre
  * Reaberta e Finalizada, as próprias da equipe. A tarefa numa própria continua aberta (ou reaberta)
  * por baixo: a tela mostra o nome da própria; o servidor guarda as duas coisas.
  */
-export type TaskSituation = { label: string; tone: AzuosCardTone; color: string | null };
+/** `icon` só na própria: as fixas não levam ícone no selo. */
+export type TaskSituation = {
+  label: string;
+  tone: AzuosCardTone;
+  color: string | null;
+  icon?: LucideIcon;
+};
 
 /** O nome e a cor da situação da tarefa — a própria, quando ela está numa. */
 export function situationOf(task: Pick<Task, 'status' | 'stage'>): TaskSituation {
@@ -22,6 +31,7 @@ export function situationOf(task: Pick<Task, 'status' | 'stage'>): TaskSituation
       label: task.stage.label,
       tone: cardHueFromHex(task.stage.color),
       color: task.stage.color,
+      icon: taskStageIconOf(task.stage.icon),
     };
 
   return {

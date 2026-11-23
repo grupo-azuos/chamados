@@ -14,6 +14,36 @@ import { TASK_STATUS_LABELS } from '../domain/task-flow.util';
  */
 export const TASK_STAGE_LABEL_MAX = 40;
 
+/** Os ícones que a situação pode ter — o mesmo vocabulário das situações do Paralegal. */
+export const TASK_STAGE_ICONS = [
+  'tag',
+  'circle-play',
+  'circle-check',
+  'circle-x',
+  'circle-pause',
+  'clock',
+  'hourglass',
+  'triangle-alert',
+  'flag',
+  'star',
+  'file-text',
+  'file-check',
+  'file-x',
+  'shield-check',
+  'circle-dollar-sign',
+  'user-round',
+  'building',
+  'archive',
+  'calendar',
+  'wrench',
+  'package',
+  'truck',
+] as const;
+
+export type TaskStageIcon = (typeof TASK_STAGE_ICONS)[number];
+
+const iconSchema = z.enum(TASK_STAGE_ICONS, { message: 'Escolha um ícone da lista' });
+
 const FIXED_LABELS = Object.values(TASK_STATUS_LABELS).map((label) => label.toLowerCase());
 
 const labelSchema = z
@@ -36,6 +66,8 @@ export const taskStageRefSchema = z.object({
   id: z.number().int().positive(),
   label: z.string(),
   color: z.string(),
+  /** Um dos `TASK_STAGE_ICONS`; sem ele, a etiqueta. */
+  icon: z.string().nullable(),
 });
 
 export type TaskStageRef = z.infer<typeof taskStageRefSchema>;
@@ -44,11 +76,17 @@ export type TaskStageRef = z.infer<typeof taskStageRefSchema>;
 export const taskStageSchema = taskStageRefSchema.extend({
   area: z.enum(ROLE_CONTEXTS),
   position: z.number().int(),
+  /** Quando foi arquivada; nula enquanto está em uso. */
+  archivedAt: z.iso.datetime({ offset: true }).nullable(),
 });
 
 export type TaskStage = z.infer<typeof taskStageSchema>;
 
-export const taskStageListQuerySchema = z.object({ area: z.enum(ROLE_CONTEXTS) });
+export const taskStageListQuerySchema = z.object({
+  area: z.enum(ROLE_CONTEXTS),
+  /** `only`: as arquivadas (para desarquivar em "Nova situação"). */
+  archived: z.enum(['only']).optional(),
+});
 
 export type TaskStageListQuery = z.infer<typeof taskStageListQuerySchema>;
 
@@ -56,15 +94,23 @@ export const createTaskStageSchema = z.object({
   area: z.enum(ROLE_CONTEXTS),
   label: labelSchema,
   color: colorSchema,
+  icon: iconSchema.nullish(),
 });
 
 export type CreateTaskStageInput = z.infer<typeof createTaskStageSchema>;
 
 export const updateTaskStageSchema = z
-  .object({ label: labelSchema.optional(), color: colorSchema.optional() })
-  .refine((input) => input.label !== undefined || input.color !== undefined, {
-    message: 'Mude o nome ou a cor',
-  });
+  .object({
+    label: labelSchema.optional(),
+    color: colorSchema.optional(),
+    icon: iconSchema.nullish(),
+  })
+  .refine(
+    (input) => input.label !== undefined || input.color !== undefined || input.icon !== undefined,
+    {
+      message: 'Mude o nome, a cor ou o ícone',
+    },
+  );
 
 export type UpdateTaskStageInput = z.infer<typeof updateTaskStageSchema>;
 

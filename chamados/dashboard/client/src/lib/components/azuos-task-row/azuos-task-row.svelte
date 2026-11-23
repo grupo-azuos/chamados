@@ -58,7 +58,7 @@
     <span class="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
       <StatusBadge
         data={{ label: situationOf(task).label }}
-        ui={{ tone: TASK_STATUS_TONES[task.status], color: situationOf(task).color, size: 'sm' }}
+        ui={{ tone: TASK_STATUS_TONES[task.status], color: situationOf(task).color, icon: situationOf(task).icon, size: 'sm' }}
       />
       <span>{TASK_ORIGIN_LABELS[task.origin]}</span>
       {#if linkCount > 0}

@@ -73,7 +73,11 @@ export const tasksApi = {
   setStage: (id: number, stageId: number | null) =>
     apiRequest<Task>(`/tasks/${id}/stage`, { method: 'PUT', body: { stageId } }),
 
-  stages: (area: RoleContext) => apiRequest<TaskStage[]>('/task-stages', { query: { area } }),
+  stages: (area: RoleContext, archived?: 'only') =>
+    apiRequest<TaskStage[]>('/task-stages', { query: { area, archived } }),
+
+  restoreStage: (id: number) =>
+    apiRequest<TaskStage>(`/task-stages/${id}/restore`, { method: 'POST' }),
 
   createStage: (body: CreateTaskStageInput) =>
     apiRequest<TaskStage>('/task-stages', { method: 'POST', body }),

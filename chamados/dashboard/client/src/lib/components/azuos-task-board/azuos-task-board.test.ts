@@ -10,7 +10,9 @@ const STAGE = {
   area: 'infra' as const,
   label: 'Aguardando peça',
   color: '#ff9500',
+  icon: 'hourglass',
   position: 0,
+  archivedAt: null,
 };
 
 function setup(canManage = true) {
@@ -19,7 +21,8 @@ function setup(canManage = true) {
     onMove: vi.fn(),
     onStage: vi.fn(),
     onRefuse: vi.fn(),
-    onManageStages: vi.fn(),
+    onNewStage: vi.fn(),
+    onEditStage: vi.fn(),
   };
   render(TaskBoard, {
     props: {
@@ -30,7 +33,7 @@ function setup(canManage = true) {
           taskFixture({
             id: 3,
             title: 'Na própria',
-            stage: { id: 4, label: 'Aguardando peça', color: '#ff9500' },
+            stage: { id: 4, label: 'Aguardando peça', color: '#ff9500', icon: 'hourglass' },
           }),
         ],
         stages: [STAGE],
@@ -44,7 +47,7 @@ function setup(canManage = true) {
 
 describe('AzuosTaskBoard', () => {
   // feliz
-  it('draws the stages of the team between Reaberta and Finalizada, with the task in its stage', async () => {
+  it('draws the stages of the team between Reaberta and Finalizada, with "Nova situação" and the pencil', async () => {
     const actions = setup();
 
     /* Cada coluna é uma região com o nome dela, na ordem do quadro. */
@@ -53,16 +56,22 @@ describe('AzuosTaskBoard', () => {
       .map((region) => region.getAttribute('aria-label'))
       .filter((label) => label !== 'Quadro das tarefas');
     expect(titles).toEqual(['Aberta', 'Reaberta', 'Aguardando peça', 'Finalizada']);
-    expect(screen.getByRole('button', { name: 'Abrir a tarefa Na própria' })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Situações' }));
-    expect(actions.onManageStages).toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir a tarefa Na própria' }));
+    expect(actions.onOpen).toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Nova situação' }));
+    expect(actions.onNewStage).toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Editar Aguardando peça' }));
+    expect(actions.onEditStage).toHaveBeenCalledWith(expect.objectContaining({ id: 4 }));
   });
 
   // triste
-  it('hides "Situações" from who cannot manage, and an empty column asks to drag', () => {
+  it('hides "Nova situação" and the pencil from who cannot manage, and an empty column asks to drag', () => {
     setup(false);
 
-    expect(screen.queryByRole('button', { name: 'Situações' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nova situação' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Editar Aguardando peça' }),
+    ).not.toBeInTheDocument();
     expect(screen.getAllByText('Arraste para cá.')).toHaveLength(1);
   });
 });

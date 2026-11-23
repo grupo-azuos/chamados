@@ -2,64 +2,100 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import TaskStageDialog from './azuos-task-stage-dialog.svelte';
+import TaskStageDialog, { stageFormOf } from './azuos-task-stage-dialog.svelte';
 
-const STAGES = [
-  { id: 4, area: 'infra' as const, label: 'Aguardando peça', color: '#ff9500', position: 0 },
-  { id: 5, area: 'infra' as const, label: 'Com o fornecedor', color: '#5856d6', position: 1 },
-];
+const stage = (id: number, label: string, position: number) => ({
+  id,
+  area: 'infra' as const,
+  label,
+  color: '#ff9500',
+  icon: 'hourglass',
+  position,
+  archivedAt: null,
+});
+const STAGES = [stage(4, 'Aguardando peça', 0), stage(5, 'Com o fornecedor', 1)];
 
-function setup(error: string | null = null) {
+function setup(editing: (typeof STAGES)[number] | null, error: string | null = null) {
   const actions = {
-    onCreate: vi.fn(),
-    onUpdate: vi.fn(),
-    onMove: vi.fn(),
-    onArchive: vi.fn(),
     onClose: vi.fn(),
+    onCreate: vi.fn().mockResolvedValue(true),
+    onUpdate: vi.fn().mockResolvedValue(true),
+    onMove: vi.fn(),
+    onRemove: vi.fn().mockResolvedValue(true),
+    onArchiveOpenChange: vi.fn(),
+    onRestore: vi.fn(),
   };
   render(TaskStageDialog, {
-    props: { data: { stages: STAGES }, state: { isOpen: true, error }, actions },
+    props: {
+      data: {
+        editing,
+        stages: STAGES,
+        archivedStages: [
+          {
+            key: '9',
+            label: 'Na garantia',
+            archivedAt: '2026-11-20T10:00:00.000Z',
+            canRestore: true,
+          },
+        ],
+      },
+      state: {
+        isOpen: true,
+        isSaving: false,
+        error,
+        archive: { isLoading: false, restoringKey: null, error: null },
+      },
+      actions,
+    },
   });
   return actions;
 }
 
 describe('AzuosTaskStageDialog', () => {
   // feliz
-  it('lists the columns in order, creates, moves, edits and archives a stage', async () => {
-    const actions = setup();
+  it('creates a stage with name, color and icon, and offers the archived ones', async () => {
+    const actions = setup(null);
 
-    const order = screen.getByRole('list', { name: 'Ordem das colunas' });
-    expect(order).toHaveTextContent(
-      /Aberta.*Reaberta.*Aguardando peça.*Com o fornecedor.*Finalizada/,
-    );
-    await userEvent.type(screen.getByLabelText('Nova situação'), 'Na garantia');
+    expect(screen.getByRole('heading', { name: 'Nova situação' })).toBeInTheDocument();
+    expect(screen.getByText('Situações arquivadas')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/Nome da situação/), 'Com o técnico');
     await userEvent.click(screen.getByRole('button', { name: 'Criar situação' }));
-    expect(actions.onCreate).toHaveBeenCalledWith('Na garantia', expect.any(String));
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Levar Com o fornecedor para a esquerda' }),
-    );
+
+    expect(actions.onCreate).toHaveBeenCalledWith({
+      label: 'Com o técnico',
+      color: expect.any(String),
+      icon: 'tag',
+    });
+    expect(actions.onClose).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('edits a stage: saves, moves it on the board and archives it after confirming', async () => {
+    const actions = setup(STAGES[1]!);
+
+    expect(screen.getByRole('heading', { name: 'Editar situação' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mover para a direita' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Mover para a esquerda' }));
     expect(actions.onMove).toHaveBeenCalledWith(5, -1);
-    await userEvent.click(screen.getByRole('button', { name: 'Arquivar Aguardando peça' }));
-    expect(actions.onArchive).toHaveBeenCalledWith(4);
-    await userEvent.click(screen.getByRole('button', { name: 'Editar Aguardando peça' }));
-    const name = screen.getByLabelText('Nome da situação');
-    await userEvent.clear(name);
-    await userEvent.type(name, 'Esperando peça');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(actions.onUpdate).toHaveBeenCalledWith(4, { label: 'Esperando peça', color: '#ff9500' });
+    expect(actions.onUpdate).toHaveBeenCalledWith(5, {
+      label: 'Com o fornecedor',
+      color: '#ff9500',
+      icon: 'hourglass',
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Arquivar situação' }));
+    await userEvent.click(screen.getAllByRole('button', { name: 'Arquivar situação' }).at(-1)!);
+    expect(actions.onRemove).toHaveBeenCalledWith(5);
   });
 
   // triste
-  it('does not create without a name, keeps the ends still, and shows the refusal', () => {
-    setup('Já existe uma situação com esse nome.');
+  it('does not create without a name, and shows the refusal of the server', async () => {
+    const actions = setup(null, 'Já existe uma situação com esse nome.');
 
-    expect(screen.getByRole('button', { name: 'Criar situação' })).toBeDisabled();
-    expect(
-      screen.getByRole('button', { name: 'Levar Aguardando peça para a esquerda' }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole('button', { name: 'Levar Com o fornecedor para a direita' }),
-    ).toBeDisabled();
-    expect(screen.getByText('Já existe uma situação com esse nome.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar situação' }));
+
+    expect(actions.onCreate).not.toHaveBeenCalled();
+    expect(screen.getByText('Informe o nome da situação.')).toBeInTheDocument();
+    expect(stageFormOf(null, '#000000')).toEqual({ label: '', color: '#000000', icon: 'tag' });
   });
 });

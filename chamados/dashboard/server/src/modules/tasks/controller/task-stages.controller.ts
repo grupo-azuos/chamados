@@ -46,7 +46,7 @@ export class TaskStagesController {
   @ApiOperation({
     summary: 'As situações próprias das tarefas de uma área',
     description:
-      'Na ordem das colunas do quadro (entre Reaberta e Finalizada). As arquivadas não vêm.',
+      'Na ordem das colunas do quadro (entre Reaberta e Finalizada). As arquivadas não vêm; `?archived=only` traz só elas.',
   })
   @ApiOkResponse({ type: [TaskStageDto] })
   async list(
@@ -91,6 +91,21 @@ export class TaskStagesController {
     @Body() body: MoveTaskStageDto,
   ): Promise<TaskStageDto[]> {
     return this.service.move(user, id, body);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Desarquiva a situação',
+    description:
+      'Volta como a última coluna própria, vazia (as tarefas dela foram para a coluna fixa ao arquivar).',
+  })
+  @ApiCreatedResponse({ type: TaskStageDto })
+  @ApiConflictResponse({ description: 'Já existe outra situação em uso com esse nome.' })
+  async restore(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<TaskStageDto> {
+    return this.service.restore(user, id);
   }
 
   @Delete(':id')

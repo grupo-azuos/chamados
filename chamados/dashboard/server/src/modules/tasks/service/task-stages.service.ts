@@ -25,6 +25,7 @@ export class TaskStagesService {
 
   async list(user: RequestUser, query: TaskStageListQuery): Promise<TaskStage[]> {
     assertCanRead(getRoleInContext(user, query.area), 'as situações das tarefas');
+    if (query.archived === 'only') return this.repository.listArchived(query.area);
 
     return this.repository.list(query.area);
   }
@@ -59,6 +60,16 @@ export class TaskStagesService {
     assertCanManageInContext(user, stage.area, 'arquivar situações de tarefa');
 
     await this.repository.archive(id, user.id);
+  }
+
+  /** Desarquiva — volta como a última coluna própria, vazia. O nome já usado por outra é recusado. */
+  async restore(user: RequestUser, id: number): Promise<TaskStage> {
+    const stage = await this.repository.findAny(id);
+    if (!stage) throw new NotFoundException(STAGE_NOT_FOUND);
+    assertCanManageInContext(user, stage.area, 'desarquivar situações de tarefa');
+    if (!stage.archivedAt) return stage;
+
+    return this.repository.restore(stage, user.id);
   }
 
   private async found(id: number): Promise<TaskStage> {
