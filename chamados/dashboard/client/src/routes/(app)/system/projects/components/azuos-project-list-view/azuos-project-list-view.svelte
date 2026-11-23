@@ -107,6 +107,7 @@
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import RecordCard, {
     type AzuosRecordCardMenuItem,
@@ -186,9 +187,9 @@
     </p>
   {/if}
 
-  <!-- Filtros -->
-  <div class="flex flex-wrap items-end justify-between gap-4">
-    <div class="w-full max-w-sm">
+  <!-- Filtros: no card, como em toda tela do grupo (a busca e o seletor soltos sumiam no fundo). -->
+  <CardSurface ui={{ className: 'p-4' }}>
+    <div class="grid items-end gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <TextField
         data={{
           label: 'Buscar',
@@ -198,21 +199,21 @@
         }}
         actions={{ onChange: actions.onSearchChange }}
       />
+      <div class="flex flex-col gap-1.5">
+        <span class="text-ink-700 text-sm font-medium">Situação</span>
+        <SelectField
+          data={{
+            value: data.filter.status,
+            options: statusFilterOptions,
+          }}
+          ui={{ ariaLabel: 'Filtrar por situação', placeholder: 'Todas as situações' }}
+          actions={{
+            onChange: (val) => actions.onStatusChange(val as SoftwareProjectStatus | ''),
+          }}
+        />
+      </div>
     </div>
-
-    <div class="w-56">
-      <SelectField
-        data={{
-          value: data.filter.status,
-          options: statusFilterOptions,
-        }}
-        ui={{ ariaLabel: 'Filtrar por situação', placeholder: 'Todas as situações' }}
-        actions={{
-          onChange: (val) => actions.onStatusChange(val as SoftwareProjectStatus | ''),
-        }}
-      />
-    </div>
-  </div>
+  </CardSurface>
 
   {#if state.isLoading}
     <div class="card-grid">
