@@ -1056,7 +1056,7 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   AzuosTicketKanbanBoard: {
     summary:
-      'O modo quadro da fila de chamados, nas três áreas, no formato do quadro de tarefas do paralegal: os chamados em colunas por etapa (A fazer / triagem, Em atendimento, Aguardando, Concluído), que começam na esquerda e rolam para o lado, arrastados de uma para outra pelo `@dnd-kit` (o cartão inteiro acompanha o ponteiro, o quadro rola sozinho perto da borda e o teclado também arrasta), com a altura da tela (cada coluna rola por dentro), o aviso de recusa e o "Expandir" para a tela inteira. O cartão de quem só consulta fica parado.',
+      'O modo quadro da fila de chamados, nas três áreas, no formato do quadro de tarefas do paralegal: os chamados em uma coluna por estágio — todos os do catálogo, na ordem em que o chamado anda (Aberto, Retorno do solicitante, Em atendimento, Aguardando solicitante, Aguardando terceiro, Resolvido, Encerrado com ressalva, Cancelado), com o nome, a cor do selo e a contagem de cada um —, que começam na esquerda e rolam para o lado (largura fixa; coluna vazia diz "Arraste para cá."), arrastados de uma para outra pelo `@dnd-kit` (o cartão inteiro acompanha o ponteiro, o quadro rola sozinho perto da borda e o teclado também arrasta), com a altura da tela (cada coluna rola por dentro), o aviso de recusa e o "Expandir" para a tela inteira. O cartão de quem só consulta fica parado.',
     use: ['Dentro do `AzuosTicketListView`, no modo quadro (`board`).'],
     avoid: [
       'Fora da fila: carregando, vazio, erro e os filtros são dela.',
@@ -1074,7 +1074,7 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   AzuosTicketMoveDialog: {
     summary:
-      'O diálogo do arrasto que pede texto: soltar em "Concluído" (a solução), em "Aguardando" (por quem se espera) ou reabrir um encerrado. Dentro, o mesmo formulário de histórico da ficha, só com os tipos que levam à coluna; o cartão só muda depois de registrar, e Cancelar o devolve.',
+      'O diálogo do arrasto que pede texto: soltar em "Resolvido" (a solução), "Encerrado com ressalva" (a ressalva), "Cancelado" (o motivo), numa coluna "Aguardando" (por quem se espera) ou reabrir um encerrado em "Em atendimento". Dentro, o mesmo formulário de histórico da ficha, já no tipo que leva ao estágio da coluna; o cartão só muda depois de registrar, e Cancelar o devolve.',
     use: ['No quadro da fila de chamados, quando o arrasto precisa de um histórico escrito.'],
     avoid: [
       'Pegar da fila ou retomar: o quadro lança na hora, sem diálogo.',

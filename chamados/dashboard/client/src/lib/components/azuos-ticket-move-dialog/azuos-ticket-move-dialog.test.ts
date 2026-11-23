@@ -11,7 +11,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import TicketMoveDialog, { type AzuosTicketMoveDialogProps } from './azuos-ticket-move-dialog.svelte';
 
-const CLOSING: ManualTicketHistoryType[] = ['resolution', 'closure_with_caveats', 'cancellation'];
+/* Cada coluna é um estágio: soltar em "Resolvido" abre o formulário só com a Solução. */
+const CLOSING: ManualTicketHistoryType[] = ['resolution'];
 
 function formData(): AzuosTicketMoveDialogProps['data']['form'] {
   return {
@@ -46,7 +47,7 @@ function renderDialog(state: Partial<AzuosTicketMoveDialogProps['state']> = {}) 
   };
   render(TicketMoveDialog, {
     props: {
-      data: { protocol: 'CH-0010', targetTitle: 'Concluído', form: formData() },
+      data: { protocol: 'CH-0010', targetTitle: 'Resolvido', form: formData() },
       state: { isOpen: true, ...state },
       actions,
     },
@@ -57,12 +58,13 @@ function renderDialog(state: Partial<AzuosTicketMoveDialogProps['state']> = {}) 
 
 describe('AzuosTicketMoveDialog', () => {
   // feliz
-  it('asks for the history of the move, with only the types that lead to the column', async () => {
+  it('asks for the history of the move, already on the one type that leads to the stage', async () => {
     const actions = renderDialog();
 
-    expect(await screen.findByRole('heading', { name: 'Mover CH-0010 para "Concluído"' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Mover CH-0010 para "Resolvido"' })).toBeInTheDocument();
     expect(screen.getByText('Solução')).toBeInTheDocument();
     expect(screen.queryByText('Andamento')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cancelamento')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Encerrar chamado' }));
     expect(actions.form.onSubmit).toHaveBeenCalled();

@@ -29,10 +29,20 @@ const TICKET = {
 function closing(): TicketKanbanPendingMove {
   return {
     ticket: TICKET,
-    target: 'closed',
-    targetTitle: 'Concluído',
-    types: ['resolution', 'closure_with_caveats', 'cancellation'],
+    target: 'resolved',
+    targetTitle: 'Resolvido',
+    types: ['resolution'],
     initialType: 'resolution',
+  };
+}
+
+function cancelling(): TicketKanbanPendingMove {
+  return {
+    ticket: TICKET,
+    target: 'cancelled',
+    targetTitle: 'Cancelado',
+    types: ['cancellation'],
+    initialType: 'cancellation',
   };
 }
 
@@ -56,10 +66,10 @@ describe('the dialog of a move on the board', () => {
   });
 
   // feliz
-  it('records the solution and only then lets the card go to "done"', async () => {
+  it('records the solution and only then lets the card go to "Resolvido"', async () => {
     const { onRecorded } = renderSlot();
 
-    expect(await screen.findByRole('heading', { name: 'Mover CH-0044 para "Concluído"' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Mover CH-0044 para "Resolvido"' })).toBeInTheDocument();
     await describeSolution('Troquei a dobradiça da porta.');
     await userEvent.click(screen.getByRole('button', { name: 'Encerrar chamado' }));
 
@@ -71,10 +81,11 @@ describe('the dialog of a move on the board', () => {
     );
   });
 
-  it('lets the person pick another way to close among the ones that lead there', async () => {
-    const { onRecorded } = renderSlot();
+  it('opens already on the cancellation when the card goes to "Cancelado"', async () => {
+    const { onRecorded } = renderSlot(cancelling());
 
-    await userEvent.click(await screen.findByRole('radio', { name: /Cancelamento/ }));
+    expect(await screen.findByRole('heading', { name: 'Mover CH-0044 para "Cancelado"' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Solução/ })).not.toBeInTheDocument();
     await describeSolution('Aberto em duplicidade.');
     await userEvent.click(screen.getByRole('button', { name: 'Encerrar chamado' }));
 

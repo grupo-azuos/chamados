@@ -1,42 +1,48 @@
 import {
   availableTicketHistoryTypes,
+  REQUESTER_TICKET_HISTORY_TYPES,
   TICKET_HISTORY_CATALOG,
   type ManualTicketHistoryType,
 } from './ticket-history.util';
-import { ticketStatusPhase, type TicketPhase, type TicketStatus } from './ticket-status.util';
+import {
+  isClosedTicketStatus,
+  TICKET_STATUSES,
+  ticketStatusLabel,
+  WAITING_TICKET_STATUSES,
+  type TicketStatus,
+} from './ticket-status.util';
 
 /**
  * O QUADRO (kanban) DA FILA DE CHAMADOS — o mesmo nas três áreas (Infraestrutura, Sistema e
  * Manutenção), porque os estágios são os mesmos nas três (`ticket-status.util`).
  *
- * Uma coluna por MOMENTO do chamado (`TicketPhase`), e não por estágio: oito estágios lado a lado
- * dariam oito colunas estreitas, e "aguardando solicitante" e "aguardando terceiro" são, para quem
- * olha o quadro, a mesma pergunta — o que está parado esperando alguém.
+ * Uma coluna por ESTÁGIO do chamado, todos eles, na ordem do catálogo (que é a ordem em que o
+ * chamado anda: fila, atendimento, espera, fim) e com o nome que a fila e a ficha já mostram.
+ * Assim o que o selo do cartão diz e a coluna em que ele está são sempre a mesma palavra — e um
+ * estágio novo no catálogo vira coluna sozinho.
  *
  * Mover um cartão é LANÇAR UM HISTÓRICO, como na ficha: é o único caminho que muda o estágio. Qual
  * histórico cabe sai do catálogo (`ticket-history.util`), pela mesma regra que a API usa para
  * recusar — o quadro não tem regra própria.
  */
-export const TICKET_KANBAN_COLUMNS = [
-  { phase: 'queue', title: 'A fazer / triagem' },
-  { phase: 'working', title: 'Em atendimento' },
-  { phase: 'waiting', title: 'Aguardando' },
-  { phase: 'closed', title: 'Concluído' },
-] as const satisfies readonly { phase: TicketPhase; title: string }[];
+export const TICKET_KANBAN_COLUMNS: readonly { status: TicketStatus; title: string }[] =
+  TICKET_STATUSES.map((status) => ({ status, title: ticketStatusLabel(status) }));
 
-export function ticketKanbanTitle(phase: TicketPhase): string {
-  return TICKET_KANBAN_COLUMNS.find((column) => column.phase === phase)?.title ?? phase;
+export function ticketKanbanTitle(status: TicketStatus): string {
+  return ticketStatusLabel(status);
 }
 
 /**
  * O que soltar o cartão numa coluna pede:
  *
  *  - `none`    — soltou na coluna em que ele já estava;
- *  - `refused` — nenhum histórico leva até lá (o motivo é texto de tela);
+ *  - `refused` — nenhum histórico de quem atende leva até lá (o motivo é texto de tela);
  *  - `direct`  — um histórico só leva até lá, e ele não precisa de texto de ninguém (pegar o
  *                chamado, retomar o que esperava): o quadro lança na hora;
- *  - `dialog`  — é preciso escolher ou escrever (a solução, o motivo da reabertura, por quem se
- *                espera): abre o formulário de histórico, e o cartão só muda depois de confirmar.
+ *  - `dialog`  — é preciso escrever (a solução, a ressalva, o motivo do cancelamento ou da
+ *                reabertura, por quem se espera): abre o formulário de histórico já no tipo que
+ *                leva à coluna, e o cartão só muda depois de confirmar. Se mais de um tipo
+ *                levasse ao mesmo estágio, o formulário ofereceria só esses.
  */
 export type TicketKanbanMove =
   | { kind: 'none' }
@@ -46,38 +52,46 @@ export type TicketKanbanMove =
 
 /**
  * Os históricos que o quadro lança SOZINHO, com o texto que fica na linha do tempo. São os que só
- * dizem "estou com ele": pegar da fila e retomar o que esperava. Encerrar, reabrir e pôr em espera
- * nunca entram — a solução, o motivo e por quem se espera são escritos por quem atende.
+ * dizem "estou com ele": pegar da fila e retomar o que esperava. Encerrar, cancelar, reabrir e pôr
+ * em espera nunca entram — a solução, o motivo e por quem se espera são escritos por quem atende.
  */
 const DIRECT_DESCRIPTIONS: Partial<Record<ManualTicketHistoryType, string>> = {
   start: 'Iniciado atendimento via Kanban.',
   resume: 'Retomado o atendimento via Kanban.',
 };
 
-function phaseItLeadsTo(type: ManualTicketHistoryType): TicketPhase | null {
-  const leadsTo = TICKET_HISTORY_CATALOG[type].leadsTo;
-
-  return leadsTo === null ? null : ticketStatusPhase(leadsTo);
+/** O estágio a que só QUEM PEDIU leva o chamado (responder, reabrir pela Central). */
+function isRequesterStage(target: TicketStatus): boolean {
+  return REQUESTER_TICKET_HISTORY_TYPES.some((type) => TICKET_HISTORY_CATALOG[type].leadsTo === target);
 }
 
-/* Num chamado em andamento, toda coluna tem um histórico que leva até ela — menos a fila, que só
-   quem pediu devolve. Encerrado, só a reabertura sai dele. Por isso duas frases bastam. */
-function refusalOf(current: TicketPhase): string {
-  if (current === 'closed') {
-    return 'Este chamado está encerrado. Para mexer nele de novo, mova-o para "Em atendimento" — é a reabertura.';
+function quoted(statuses: readonly TicketStatus[]): string {
+  return statuses.map((status) => `"${ticketStatusLabel(status)}"`).join(' ou ');
+}
+
+/* Num chamado em andamento, toda coluna tem um histórico de quem atende que leva até ela — menos as
+   da fila: "Aberto" é só a abertura, e "Retorno do solicitante" é de quem pediu. Encerrado, só a
+   reabertura sai dele. Por isso três frases bastam. */
+function refusalOf(status: TicketStatus, target: TicketStatus): string {
+  if (isClosedTicketStatus(status)) {
+    return `Este chamado está encerrado. Para mexer nele de novo, mova-o para "${ticketStatusLabel('in_progress')}" — é a reabertura.`;
+  }
+  if (isRequesterStage(target)) {
+    return `"${ticketStatusLabel(target)}" é lançado por quem abriu o chamado, quando ele responde pela Central.`;
   }
 
-  return 'Um chamado já iniciado não volta para "A fazer". Para pausá-lo, mova para "Aguardando".';
+  return `Um chamado não volta para "${ticketStatusLabel(target)}". Para pausá-lo, mova para ${quoted(WAITING_TICKET_STATUSES)}.`;
 }
 
-/** O que acontece ao soltar um chamado NESTE estágio na coluna `target`. */
-export function ticketKanbanMove(status: TicketStatus, target: TicketPhase): TicketKanbanMove {
-  const current = ticketStatusPhase(status);
-  if (current === target) return { kind: 'none' };
+/** O que acontece ao soltar um chamado NESTE estágio na coluna do estágio `target`. */
+export function ticketKanbanMove(status: TicketStatus, target: TicketStatus): TicketKanbanMove {
+  if (status === target) return { kind: 'none' };
 
-  const types = availableTicketHistoryTypes(status).filter((type) => phaseItLeadsTo(type) === target);
+  const types = availableTicketHistoryTypes(status).filter(
+    (type) => TICKET_HISTORY_CATALOG[type].leadsTo === target,
+  );
   const [first] = types;
-  if (!first) return { kind: 'refused', message: refusalOf(current) };
+  if (!first) return { kind: 'refused', message: refusalOf(status, target) };
 
   const description = types.length === 1 ? DIRECT_DESCRIPTIONS[first] : undefined;
   if (description) return { kind: 'direct', type: first, description };

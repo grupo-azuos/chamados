@@ -113,7 +113,7 @@ describe('toOptionGroups', () => {
     }
   });
 
-  /* O arrasto para "Concluído" no quadro: só os tipos que levam até lá. */
+  /* O arrasto no quadro: só os tipos que levam ao estágio da coluna. */
   it('keeps only the types asked for, when the board says where the ticket goes', () => {
     const groups = toOptionGroups('in_progress', ['resolution', 'cancellation']);
 
@@ -225,7 +225,7 @@ describe('useTicketHistoryFormModel', () => {
     expect(model.data.effectLabel).toContain('Encerra o chamado');
   });
 
-  /* O arrasto para "Concluído": o formulário nasce na Solução, só com os tipos que encerram. */
+  /* O arrasto para um estágio encerrado: o formulário nasce no tipo pedido, só com os que cabem. */
   it('opens on the type the board asked, and records it', async () => {
     const onRecorded = vi.fn();
     const model = mountModel(ticket(), onRecorded, {

@@ -104,7 +104,15 @@ describe('the ticket queue on the board, in each area', () => {
     renderPage(Screen as never, { area });
 
     expect(await screen.findByRole('heading', { name: 'Em atendimento' })).toBeInTheDocument();
-    for (const title of ['A fazer / triagem', 'Aguardando', 'Concluído']) {
+    for (const title of [
+      'Aberto',
+      'Retorno do solicitante',
+      'Aguardando solicitante',
+      'Aguardando terceiro',
+      'Resolvido',
+      'Encerrado com ressalva',
+      'Cancelado',
+    ]) {
       expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
     }
     expect(screen.getByRole('button', { name: 'Mover o chamado CH-0031' })).toBeInTheDocument();

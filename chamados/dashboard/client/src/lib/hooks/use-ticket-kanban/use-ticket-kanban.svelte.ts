@@ -11,11 +11,7 @@ import {
   ticketKanbanMove,
   ticketKanbanTitle,
 } from '@template/shared/domain/ticket-kanban.util';
-import {
-  ticketStatusPhase,
-  type TicketPhase,
-  type TicketStatus,
-} from '@template/shared/domain/ticket-status.util';
+import { type TicketStatus } from '@template/shared/domain/ticket-status.util';
 import { type Ticket } from '@template/shared/schemas/ticket.schema';
 import { writable } from 'svelte/store';
 
@@ -26,8 +22,8 @@ import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte
 import { TICKETS_QUERY_KEY } from '$lib/hooks/use-ticket-list/use-ticket-list.svelte';
 import { contextPath } from '$lib/navigation/navigation';
 
-/** A coluna do quadro É o momento do chamado (`TicketPhase`): fila, atendimento, espera, fim. */
-export type KanbanColumnId = TicketPhase;
+/** A coluna do quadro É o estágio do chamado (`TicketStatus`): uma coluna para cada um. */
+export type KanbanColumnId = TicketStatus;
 
 export type KanbanColumn = {
   id: KanbanColumnId;
@@ -36,9 +32,9 @@ export type KanbanColumn = {
 };
 
 /**
- * Um arrasto que precisa de texto ou de escolha (encerrar, reabrir, pôr em espera): o quadro
- * abre o formulário de histórico com só os tipos que levam à coluna, e o cartão só muda depois
- * de confirmar. Desistir devolve o cartão — ele nunca saiu do lugar.
+ * Um arrasto que precisa de texto (encerrar, cancelar, reabrir, pôr em espera): o quadro abre o
+ * formulário de histórico já no tipo que leva ao estágio da coluna, e o cartão só muda depois de
+ * confirmar. Desistir devolve o cartão — ele nunca saiu do lugar.
  */
 export type TicketKanbanPendingMove = {
   ticket: Ticket;
@@ -97,7 +93,7 @@ function saveStoredColors(colors: Record<number, string>): void {
   }
 }
 
-/** Os chamados em colunas, pelo momento de cada um, já com as mudanças a caminho do servidor. */
+/** Os chamados em colunas, pelo estágio de cada um, já com as mudanças a caminho do servidor. */
 export function toKanbanColumns(
   tickets: readonly Ticket[],
   overrides: Record<number, TicketStatus> = {},
@@ -109,9 +105,9 @@ export function toKanbanColumns(
   });
 
   return TICKET_KANBAN_COLUMNS.map((column) => ({
-    id: column.phase,
+    id: column.status,
     title: column.title,
-    tickets: effective.filter((ticket) => ticketStatusPhase(ticket.status) === column.phase),
+    tickets: effective.filter((ticket) => ticket.status === column.status),
   }));
 }
 
@@ -131,7 +127,8 @@ function withoutKey(record: Record<number, TicketStatus>, key: number): Record<n
  * o arrasto (com o histórico que ele lança), as etiquetas, as fotos e quem só consulta.
  *
  * Mover é lançar histórico, como na ficha (`ticketKanbanMove`, do domínio): pegar da fila e
- * retomar vão direto; encerrar, reabrir e pôr em espera abrem o formulário (`pendingMove`).
+ * retomar vão direto; encerrar, cancelar, reabrir e pôr em espera abrem o formulário
+ * (`pendingMove`), já no tipo que leva ao estágio da coluna.
  */
 export function useTicketKanbanModel(input: {
   area: AreaContext;

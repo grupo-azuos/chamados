@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { TICKET_KANBAN_COLUMNS } from '@template/shared/domain/ticket-kanban.util';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import TicketKanbanBoard, {
@@ -7,6 +8,7 @@ import TicketKanbanBoard, {
   columnDropId,
   isReadOnlyBoard,
   moveOfDrop,
+  stageLookOf,
 } from './azuos-ticket-kanban-board.svelte';
 
 /* O jsdom não tem as animações, a camada de cima (popover) nem o "o que está neste ponto" do
@@ -18,11 +20,10 @@ beforeAll(() => {
   Object.assign(HTMLElement.prototype, { showPopover() {}, hidePopover() {} });
 });
 
-const COLUMNS_WITHOUT_TICKETS: AzuosTicketKanbanBoardProps['data']['columns'] = [
-  { id: 'working', title: 'Em atendimento', tickets: [] },
-  { id: 'waiting', title: 'Aguardando', tickets: [] },
-  { id: 'closed', title: 'Concluído', tickets: [] },
-];
+/* Todos os estágios menos o primeiro ("Aberto"), vazios: são sete colunas. */
+const COLUMNS_WITHOUT_TICKETS: AzuosTicketKanbanBoardProps['data']['columns'] = TICKET_KANBAN_COLUMNS.slice(1).map(
+  (column) => ({ id: column.status, title: column.title, tickets: [] }),
+);
 
 const CARD = {
   id: 10,
@@ -59,7 +60,7 @@ function renderBoard(
       data: {
         cardColors: {},
         assigneePhotos: { 'u-carlos': 'https://cdn.example/carlos.png' },
-        columns: [{ id: 'queue', title: 'A fazer / triagem', tickets: [CARD] }, ...COLUMNS_WITHOUT_TICKETS],
+        columns: [{ id: 'open', title: 'Aberto', tickets: [CARD] }, ...COLUMNS_WITHOUT_TICKETS],
         ...overrides.data,
       },
       state: overrides.state,
@@ -72,15 +73,18 @@ function renderBoard(
 
 describe('AzuosTicketKanbanBoard', () => {
   // feliz
-  it('renders the stage columns and the ticket card with its assignee', () => {
+  it('renders one column per stage, with its count, and the ticket card with its assignee', () => {
     renderBoard();
 
-    expect(screen.getByRole('heading', { name: 'A fazer / triagem' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent?.trim())).toEqual(
+      TICKET_KANBAN_COLUMNS.map((column) => column.title),
+    );
+    expect(screen.getByRole('region', { name: 'Aberto' })).toHaveTextContent('1');
     expect(screen.getByText('CH-0010')).toBeInTheDocument();
     expect(screen.getByText('Bug no login')).toBeInTheDocument();
     expect(screen.getByText('#42')).toBeInTheDocument();
     expect(screen.getByText('Carlos Dev')).toBeInTheDocument();
-    expect(screen.getAllByText('Arraste para cá.')).toHaveLength(3);
+    expect(screen.getAllByText('Arraste para cá.')).toHaveLength(7);
   });
 
   it('opens the ticket from the card', async () => {
@@ -152,31 +156,46 @@ describe('AzuosTicketKanbanBoard', () => {
       'true',
     );
     expect(screen.getByText(/só de consulta/)).toBeInTheDocument();
-    expect(screen.getAllByText('Nada nesta etapa.')).toHaveLength(3);
+    expect(screen.getAllByText('Nada nesta etapa.')).toHaveLength(7);
   });
 });
 
 const BOARD: AzuosTicketKanbanBoardProps['data']['columns'] = [
-  { id: 'queue', title: 'A fazer / triagem', tickets: [{ id: 10 } as never] },
+  { id: 'open', title: 'Aberto', tickets: [{ id: 10 } as never] },
   ...COLUMNS_WITHOUT_TICKETS,
 ];
 
 describe('moveOfDrop', () => {
   // feliz
   it('moves the ticket to the stage of the column it was dropped on', () => {
-    expect(moveOfDrop({ sourceId: 10, targetId: columnDropId('closed') }, BOARD)).toEqual({
+    expect(moveOfDrop({ sourceId: 10, targetId: columnDropId('resolved_with_caveats') }, BOARD)).toEqual({
       ticketId: 10,
-      columnId: 'closed',
+      columnId: 'resolved_with_caveats',
     });
   });
 
   // triste
   it('asks nothing when dropped outside a column, on its own column or on something else', () => {
     expect(moveOfDrop({ sourceId: 10, targetId: undefined }, BOARD)).toBeNull();
-    expect(moveOfDrop({ sourceId: 10, targetId: columnDropId('queue') }, BOARD)).toBeNull();
+    expect(moveOfDrop({ sourceId: 10, targetId: columnDropId('open') }, BOARD)).toBeNull();
     expect(moveOfDrop({ sourceId: 10, targetId: 11 }, BOARD)).toBeNull();
     expect(moveOfDrop({ sourceId: 10, targetId: 'column:nada' }, BOARD)).toBeNull();
-    expect(moveOfDrop({ sourceId: 99, targetId: columnDropId('closed') }, BOARD)).toBeNull();
+    expect(moveOfDrop({ sourceId: 99, targetId: columnDropId('cancelled') }, BOARD)).toBeNull();
+  });
+});
+
+describe('stageLookOf', () => {
+  // feliz
+  it('paints the column in the tone of the stage badge', () => {
+    expect(stageLookOf('open').tone).toBe('danger');
+    expect(stageLookOf('in_progress').tone).toBe('info');
+    expect(stageLookOf('resolved_with_caveats').tone).toBe('warning');
+    expect(stageLookOf('cancelled').tone).toBe('neutral');
+  });
+
+  // triste
+  it('gives every stage an icon, even the ones with no number card', () => {
+    for (const column of TICKET_KANBAN_COLUMNS) expect(stageLookOf(column.status).icon).toBeTruthy();
   });
 });
 
