@@ -1,9 +1,10 @@
 <!--
   @component
   O QUADRO DA FILA DE CHAMADOS — o modo kanban da fila, nas três áreas (Infraestrutura, Sistema e
-  Manutenção), no formato do quadro de tarefas do paralegal: uma coluna por etapa
-  (`AzuosKanbanColumn`, com o cabeçalho na cor e no ícone da etapa), que começa na esquerda e rola
-  para o lado, e cada chamado no cartão do quadro (`AzuosTicketKanbanCard`).
+  Manutenção), no formato do quadro de tarefas do paralegal: uma coluna por estágio do chamado —
+  todos os do catálogo, na ordem em que o chamado anda (`AzuosKanbanColumn`, com o cabeçalho na cor
+  do selo do estágio e no ícone dele) —, que começa na esquerda e rola para o lado, com a largura
+  fixa de sempre, e cada chamado no cartão do quadro (`AzuosTicketKanbanCard`).
 
   O arrasto é do `@dnd-kit` (o mesmo do paralegal, no adaptador do Svelte), e não o nativo do
   navegador: o cartão inteiro acompanha o ponteiro (`DragOverlay`), o quadro rola sozinho quando o
@@ -24,18 +25,24 @@
 -->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
+  import CircleAlert from '@lucide/svelte/icons/circle-alert';
   import CircleCheck from '@lucide/svelte/icons/circle-check';
-  import CircleDot from '@lucide/svelte/icons/circle-dot';
+  import CircleX from '@lucide/svelte/icons/circle-x';
+  import Headset from '@lucide/svelte/icons/headset';
   import Hourglass from '@lucide/svelte/icons/hourglass';
-  import Wrench from '@lucide/svelte/icons/wrench';
-  import { type TicketPhase } from '@template/shared/domain/ticket-status.util';
+  import MessageCircle from '@lucide/svelte/icons/message-circle';
+  import {
+    INITIAL_TICKET_STATUS,
+    ticketStatusTone,
+    type TicketStatus,
+  } from '@template/shared/domain/ticket-status.util';
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
 
   import { type StatusBadgeTone } from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { type AzuosCardTone } from '$lib/utils/card-tone.util';
 
-  /** A coluna do quadro é o MOMENTO do chamado: fila, atendimento, espera, encerrado. */
-  export type TicketKanbanColumnId = TicketPhase;
+  /** A coluna do quadro é o ESTÁGIO do chamado: uma coluna para cada um do catálogo. */
+  export type TicketKanbanColumnId = TicketStatus;
 
   export type TicketKanbanColumn = {
     id: TicketKanbanColumnId;
@@ -64,14 +71,25 @@
     };
   };
 
-  /* A cor e o ícone de cada etapa, no cabeçalho da coluna e no ícone grande do cartão: a fila é
-     neutra, em atendimento é informação, esperando pede atenção e concluído é sucesso. */
-  const COLUMN_LOOKS: Record<TicketKanbanColumnId, { tone: AzuosCardTone; icon: LucideIcon }> = {
-    queue: { tone: 'neutral', icon: CircleDot },
-    working: { tone: 'info', icon: Wrench },
-    waiting: { tone: 'warning', icon: Hourglass },
-    closed: { tone: 'success', icon: CircleCheck },
+  /* O ícone de cada estágio, no cabeçalho da coluna e no ícone grande do cartão: os mesmos dos
+     cartões de número da fila (Abertos, Em atendimento, Aguardando, Resolvidos) e o balão de
+     conversa do retorno. A COR não é escolhida aqui: é a do selo do estágio (`ticketStatusTone`,
+     do catálogo), para a coluna e o selo do cartão nunca discordarem. */
+  const STAGE_ICONS: Record<TicketKanbanColumnId, LucideIcon> = {
+    open: CircleAlert,
+    requester_reply: MessageCircle,
+    in_progress: Headset,
+    waiting_requester: Hourglass,
+    waiting_third_party: Hourglass,
+    resolved: CircleCheck,
+    resolved_with_caveats: CircleCheck,
+    cancelled: CircleX,
   };
+
+  /** A cor e o ícone do estágio: a cor do selo, o ícone dos cartões de número. */
+  export function stageLookOf(status: TicketKanbanColumnId): { tone: AzuosCardTone; icon: LucideIcon } {
+    return { tone: ticketStatusTone(status), icon: STAGE_ICONS[status] };
+  }
 
   const COLUMN_DROP_PREFIX = 'column:';
 
@@ -82,8 +100,8 @@
 
   /**
    * O que o solto pede: mover o chamado para a etapa da coluna. Nada quando soltou fora de uma
-   * coluna, ou na coluna em que ele já estava. Se a etapa não aceita (chamado iniciado não volta
-   * para "A fazer"), quem diz é o view-model, com o aviso do quadro.
+   * coluna, ou na coluna em que ele já estava. Se o estágio não aceita (chamado não volta para
+   * "Aberto"), quem diz é o view-model, com o aviso do quadro.
    */
   export function moveOfDrop(
     drop: { sourceId: unknown; targetId: unknown },
@@ -199,7 +217,7 @@
   function lookOfTicket(id: unknown) {
     const column = data.columns.find((item) => item.tickets.some((ticket) => ticket.id === Number(id)));
 
-    return COLUMN_LOOKS[column?.id ?? 'queue'];
+    return stageLookOf(column?.id ?? INITIAL_TICKET_STATUS);
   }
 
   function handleDragEnd(event: DragSnapshot) {
@@ -242,7 +260,7 @@
       class={cn('flex w-full items-start justify-start gap-4 overflow-x-auto pb-4', isFull && 'h-full')}
     >
       {#each data.columns as column (column.id)}
-        {@const look = COLUMN_LOOKS[column.id]}
+        {@const look = stageLookOf(column.id)}
         <StageColumn
           data={{ title: column.title, count: column.tickets.length }}
           ui={{ tone: look.tone, icon: look.icon, dropId: columnDropId(column.id) }}

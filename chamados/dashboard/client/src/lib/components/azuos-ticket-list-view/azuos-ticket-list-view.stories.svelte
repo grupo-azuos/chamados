@@ -3,7 +3,6 @@
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
 
   import { TICKET_KANBAN_COLUMNS } from '@template/shared/domain/ticket-kanban.util';
-  import { ticketStatusPhase } from '@template/shared/domain/ticket-status.util';
 
   import { type TicketDashboard } from '$lib/api/tickets.api';
   import TicketKanbanBoard from '$lib/components/azuos-ticket-kanban-board/azuos-ticket-kanban-board.svelte';
@@ -120,11 +119,11 @@
     error: null,
   };
 
-  /* O quadro como a fila o entrega: cada chamado na coluna do momento dele. */
+  /* O quadro como a fila o entrega: cada chamado na coluna do estágio dele. */
   const boardColumns = TICKET_KANBAN_COLUMNS.map((column) => ({
-    id: column.phase,
+    id: column.status,
     title: column.title,
-    tickets: tickets.filter((item) => ticketStatusPhase(item.status) === column.phase),
+    tickets: tickets.filter((item) => item.status === column.status),
   }));
 
   const boardActions = {

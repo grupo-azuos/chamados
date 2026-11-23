@@ -80,18 +80,23 @@ const idsOf = (model: TicketKanbanModel, column: number) =>
 
 describe('toKanbanColumns', () => {
   // feliz
-  it('puts each ticket in the column of its moment, waiting ones together', () => {
+  it('puts each ticket in the column of its own stage, every stage in order', () => {
     expect(toKanbanColumns(BOARD).map((column) => [column.id, column.tickets.map((t) => t.id)])).toEqual([
-      ['queue', [1]],
-      ['working', [2]],
-      ['waiting', [3, 5]],
-      ['closed', [4, 6]],
+      ['open', [1]],
+      ['requester_reply', []],
+      ['in_progress', [2]],
+      ['waiting_requester', [3]],
+      ['waiting_third_party', [5]],
+      ['resolved', [4]],
+      ['resolved_with_caveats', []],
+      ['cancelled', [6]],
     ]);
+    expect(toKanbanColumns(BOARD).map((column) => column.title)).toContain('Encerrado com ressalva');
   });
 
   // triste
-  it('keeps the four columns even without any ticket', () => {
-    expect(toKanbanColumns([]).map((column) => column.tickets.length)).toEqual([0, 0, 0, 0]);
+  it('keeps every stage column even without any ticket', () => {
+    expect(toKanbanColumns([]).map((column) => column.tickets.length)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 });
 
@@ -107,8 +112,8 @@ describe('useTicketKanbanModel', () => {
   it('starts a queued ticket right away when it is dragged to "in progress", optimistically', async () => {
     const model = mountModel();
 
-    const move = model.actions.onMoveTicket(1, 'working');
-    expect(idsOf(model, 1)).toContain(1);
+    const move = model.actions.onMoveTicket(1, 'in_progress');
+    expect(idsOf(model, 2)).toContain(1);
     await move;
 
     expect(ticketsApi.createHistory).toHaveBeenCalledWith(
@@ -123,43 +128,51 @@ describe('useTicketKanbanModel', () => {
   it('resumes a ticket that was waiting on a third party', async () => {
     const model = mountModel();
 
-    await model.actions.onMoveTicket(5, 'working');
+    await model.actions.onMoveTicket(5, 'in_progress');
 
     expect(ticketsApi.createHistory).toHaveBeenCalledWith(5, expect.objectContaining({ type: 'resume' }), []);
   });
 
-  /* Encerrar pede a solução: o quadro abre o formulário, e nada é lançado antes de confirmar. */
-  it('opens the history form when the ticket is dragged to "done", offering only the closing types', async () => {
+  /* Encerrar pede a solução: o quadro abre o formulário já na Solução, e nada é lançado antes de
+     confirmar. */
+  it('opens the history form on the solution when the ticket is dragged to "Resolvido"', async () => {
     const model = mountModel();
 
-    await model.actions.onMoveTicket(2, 'closed');
+    await model.actions.onMoveTicket(2, 'resolved');
 
     expect(ticketsApi.createHistory).not.toHaveBeenCalled();
     expect(model.data.pendingMove).toMatchObject({
       ticket: { id: 2 },
-      target: 'closed',
-      targetTitle: 'Concluído',
-      types: ['resolution', 'closure_with_caveats', 'cancellation'],
+      target: 'resolved',
+      targetTitle: 'Resolvido',
+      types: ['resolution'],
       initialType: 'resolution',
     });
     /* O cartão não sai do lugar enquanto o diálogo está aberto. */
-    expect(idsOf(model, 1)).toEqual([2]);
+    expect(idsOf(model, 2)).toEqual([2]);
   });
 
-  it('asks who the ticket waits for, and why a closed one is reopened', async () => {
+  it('opens the form on the exact history of each column: caveat, cancellation, waiting, reopening', async () => {
     const model = mountModel();
+    const typesOn = async (ticketId: number, target: Parameters<typeof model.actions.onMoveTicket>[1]) => {
+      await model.actions.onMoveTicket(ticketId, target);
+      const types = model.data.pendingMove?.types;
+      model.actions.onCancelMove();
 
-    await model.actions.onMoveTicket(2, 'waiting');
-    expect(model.data.pendingMove?.types).toEqual(['waiting_requester', 'waiting_third_party']);
-    model.actions.onCancelMove();
+      return types;
+    };
 
-    await model.actions.onMoveTicket(4, 'working');
-    expect(model.data.pendingMove?.types).toEqual(['reopening']);
+    expect(await typesOn(2, 'resolved_with_caveats')).toEqual(['closure_with_caveats']);
+    expect(await typesOn(1, 'cancelled')).toEqual(['cancellation']);
+    expect(await typesOn(2, 'waiting_requester')).toEqual(['waiting_requester']);
+    expect(await typesOn(3, 'waiting_third_party')).toEqual(['waiting_third_party']);
+    expect(await typesOn(4, 'in_progress')).toEqual(['reopening']);
+    expect(ticketsApi.createHistory).not.toHaveBeenCalled();
   });
 
   it('closes the form once the history is recorded', async () => {
     const model = mountModel();
-    await model.actions.onMoveTicket(2, 'closed');
+    await model.actions.onMoveTicket(2, 'resolved');
 
     model.actions.onMoveRecorded();
 
@@ -199,20 +212,20 @@ describe('useTicketKanbanModel', () => {
   // triste
   it('cancelling the form leaves the card where it was, with nothing recorded', async () => {
     const model = mountModel();
-    await model.actions.onMoveTicket(2, 'closed');
+    await model.actions.onMoveTicket(2, 'resolved');
 
     model.actions.onCancelMove();
 
     expect(model.data.pendingMove).toBeNull();
-    expect(idsOf(model, 1)).toEqual([2]);
+    expect(idsOf(model, 2)).toEqual([2]);
     expect(ticketsApi.createHistory).not.toHaveBeenCalled();
   });
 
   it('does not start another move while the form is open', async () => {
     const model = mountModel();
-    await model.actions.onMoveTicket(2, 'closed');
+    await model.actions.onMoveTicket(2, 'resolved');
 
-    await model.actions.onMoveTicket(1, 'working');
+    await model.actions.onMoveTicket(1, 'in_progress');
 
     expect(ticketsApi.createHistory).not.toHaveBeenCalled();
     expect(model.data.pendingMove?.ticket.id).toBe(2);
@@ -221,8 +234,8 @@ describe('useTicketKanbanModel', () => {
   it('does nothing when the card is dropped on its own column or is not on the board', async () => {
     const model = mountModel();
 
-    await model.actions.onMoveTicket(3, 'waiting');
-    await model.actions.onMoveTicket(999, 'closed');
+    await model.actions.onMoveTicket(3, 'waiting_requester');
+    await model.actions.onMoveTicket(999, 'resolved');
 
     expect(ticketsApi.createHistory).not.toHaveBeenCalled();
     expect(model.data.pendingMove).toBeNull();
@@ -231,10 +244,13 @@ describe('useTicketKanbanModel', () => {
   it('refuses moves no history can make, explaining why', async () => {
     const model = mountModel();
 
-    await model.actions.onMoveTicket(2, 'queue');
-    expect(model.state.moveError).toContain('não volta para "A fazer"');
+    await model.actions.onMoveTicket(2, 'open');
+    expect(model.state.moveError).toContain('não volta para "Aberto"');
 
-    await model.actions.onMoveTicket(4, 'waiting');
+    await model.actions.onMoveTicket(2, 'requester_reply');
+    expect(model.state.moveError).toContain('quem abriu o chamado');
+
+    await model.actions.onMoveTicket(4, 'cancelled');
     expect(model.state.moveError).toContain('reabertura');
     expect(ticketsApi.createHistory).not.toHaveBeenCalled();
 
@@ -248,17 +264,18 @@ describe('useTicketKanbanModel', () => {
     );
     const model = mountModel();
 
-    await model.actions.onMoveTicket(1, 'working');
+    await model.actions.onMoveTicket(1, 'in_progress');
 
     expect(model.state.moveError).toContain('só de consulta');
     expect(idsOf(model, 0)).toEqual([1]);
+    expect(idsOf(model, 2)).toEqual([2]);
   });
 
   it('explains a refused move with a generic message when the server said nothing', async () => {
     vi.mocked(ticketsApi.createHistory).mockRejectedValueOnce(null as never);
     const model = mountModel();
 
-    await model.actions.onMoveTicket(1, 'working');
+    await model.actions.onMoveTicket(1, 'in_progress');
 
     expect(model.state.moveError).toMatch(/Não foi possível movimentar/);
   });
@@ -272,9 +289,9 @@ describe('useTicketKanbanModel', () => {
     );
     const model = mountModel();
 
-    const first = model.actions.onMoveTicket(1, 'working');
+    const first = model.actions.onMoveTicket(1, 'in_progress');
     await waitFor(() => expect(model.state.isMoving).toBe(true));
-    await model.actions.onMoveTicket(5, 'working');
+    await model.actions.onMoveTicket(5, 'in_progress');
     expect(ticketsApi.createHistory).toHaveBeenCalledTimes(1);
     finish();
     await first;
@@ -301,7 +318,7 @@ describe('useTicketKanbanModel — who can drag', () => {
     });
 
     expect(model.data.lockedTicketIds).toEqual([]);
-    await model.actions.onMoveTicket(8, 'working');
+    await model.actions.onMoveTicket(8, 'in_progress');
     expect(ticketsApi.createHistory).toHaveBeenCalled();
   });
 
@@ -312,8 +329,8 @@ describe('useTicketKanbanModel — who can drag', () => {
     const model = mountModel();
 
     expect(model.data.lockedTicketIds).toEqual([1, 2, 3, 4, 5, 6]);
-    await model.actions.onMoveTicket(1, 'working');
-    await model.actions.onMoveTicket(2, 'closed');
+    await model.actions.onMoveTicket(1, 'in_progress');
+    await model.actions.onMoveTicket(2, 'resolved');
 
     expect(ticketsApi.createHistory).not.toHaveBeenCalled();
     expect(model.data.pendingMove).toBeNull();

@@ -95,10 +95,10 @@ export function useTicketHistoryFormModel({
   onRecorded?: () => void;
   /**
    * Só estes tipos (os que cabem no estágio, sempre) — o arrasto no quadro abre o formulário
-   * com os que levam à coluna de destino: soltar em "Concluído" oferece só os que encerram.
+   * com os que levam ao estágio da coluna de destino: soltar em "Resolvido" oferece só a Solução.
    */
   types?: readonly ManualTicketHistoryType[];
-  /** Com que tipo nasce, quando quem abre já sabe (o arrasto para "Concluído" nasce na Solução). */
+  /** Com que tipo nasce, quando quem abre já sabe (o arrasto para "Resolvido" nasce na Solução). */
   initialType?: ManualTicketHistoryType;
 }): TicketHistoryFormModel {
   const queryClient = useQueryClient();

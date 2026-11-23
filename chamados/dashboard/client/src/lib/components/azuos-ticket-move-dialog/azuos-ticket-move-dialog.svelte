@@ -1,11 +1,13 @@
 <!--
   @component
-  MOVER UM CHAMADO NO QUADRO QUANDO A ETAPA PEDE TEXTO — o diálogo que abre ao soltar um cartão em
-  "Concluído" (a solução), em "Aguardando" (por quem se espera, e o quê) ou um encerrado em "Em
-  atendimento" (por que reabrir).
+  MOVER UM CHAMADO NO QUADRO QUANDO O ESTÁGIO PEDE TEXTO — o diálogo que abre ao soltar um cartão em
+  "Resolvido" (a solução), "Encerrado com ressalva" (o que ficou por fazer), "Cancelado" (o motivo),
+  numa das colunas "Aguardando" (por quem se espera, e o quê) ou um encerrado em "Em atendimento"
+  (por que reabrir).
 
-  Dentro, o MESMO formulário de histórico da ficha do chamado (`AzuosTicketHistoryForm`), só com os
-  tipos que levam à coluna de destino: mover no quadro é lançar um histórico, com as mesmas regras
+  Dentro, o MESMO formulário de histórico da ficha do chamado (`AzuosTicketHistoryForm`), já no tipo
+  que leva ao estágio da coluna de destino (só ele, sem escolha — a não ser que o catálogo tenha mais
+  de um tipo para o mesmo estágio): mover no quadro é lançar um histórico, com as mesmas regras
   e o mesmo texto obrigatório. O cartão só muda de coluna quando o histórico é registrado; "Cancelar"
   (ou Esc, ou o X) fecha sem registrar nada, e o cartão fica onde estava.
 

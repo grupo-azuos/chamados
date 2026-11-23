@@ -28,7 +28,7 @@
     tone: ticketHistoryTone(type),
   });
 
-  /* O formulário como o arrasto o abre: só os tipos que levam à coluna de destino. */
+  /* O formulário como o arrasto o abre: só o tipo que leva ao estágio da coluna de destino. */
   function formFor(
     type: ManualTicketHistoryType,
     groups: { continuing: ManualTicketHistoryType[]; closing: ManualTicketHistoryType[] },
@@ -52,28 +52,56 @@
   });
 </script>
 
-<!-- Soltou em "Concluído": a solução é obrigatória, e as três formas de encerrar ficam à escolha. -->
+<!-- Soltou em "Resolvido": o formulário já vem na Solução, que é obrigatória. -->
 <Story
   name="Default"
   args={{
     data: {
       protocol: 'CH-0010',
-      targetTitle: 'Concluído',
-      form: formFor('resolution', { continuing: [], closing: ['resolution', 'closure_with_caveats', 'cancellation'] }),
+      targetTitle: 'Resolvido',
+      form: formFor('resolution', { continuing: [], closing: ['resolution'] }),
     },
     state: { isOpen: true },
     actions: { onCancel: fn(), form: formActions },
   }}
 />
 
-<!-- Soltou em "Aguardando": por quem se espera. -->
+<!-- Soltou em "Encerrado com ressalva": a ressalva diz o que ficou por fazer. -->
+<Story
+  name="With caveats"
+  args={{
+    data: {
+      protocol: 'CH-0012',
+      targetTitle: 'Encerrado com ressalva',
+      form: formFor('closure_with_caveats', { continuing: [], closing: ['closure_with_caveats'] }),
+    },
+    state: { isOpen: true },
+    actions: { onCancel: fn(), form: formActions },
+  }}
+/>
+
+<!-- Soltou em "Cancelado": o motivo do cancelamento fica na linha do tempo. -->
+<Story
+  name="Cancellation"
+  args={{
+    data: {
+      protocol: 'CH-0013',
+      targetTitle: 'Cancelado',
+      form: formFor('cancellation', { continuing: [], closing: ['cancellation'] }),
+    },
+    state: { isOpen: true },
+    actions: { onCancel: fn(), form: formActions },
+  }}
+/>
+
+<!-- Soltou em "Aguardando terceiro": por quem se espera, e o quê. -->
 <Story
   name="Waiting"
   args={{
     data: {
       protocol: 'CH-0011',
-      targetTitle: 'Aguardando',
-      form: formFor('waiting_requester', { continuing: ['waiting_requester', 'waiting_third_party'], closing: [] }),
+      targetTitle: 'Aguardando terceiro',
+      form: formFor('waiting_third_party', { continuing: ['waiting_third_party'], closing: [] }),
     },
     state: { isOpen: true },
     actions: { onCancel: fn(), form: formActions },
@@ -100,8 +128,8 @@
   args={{
     data: {
       protocol: 'CH-0010',
-      targetTitle: 'Concluído',
-      form: formFor('resolution', { continuing: [], closing: ['resolution', 'closure_with_caveats', 'cancellation'] }),
+      targetTitle: 'Resolvido',
+      form: formFor('resolution', { continuing: [], closing: ['resolution'] }),
     },
     state: { isOpen: true, form: { isSubmitting: true } },
     actions: { onCancel: fn(), form: formActions },
@@ -114,8 +142,8 @@
   args={{
     data: {
       protocol: 'CH-0010',
-      targetTitle: 'Concluído',
-      form: formFor('resolution', { continuing: [], closing: ['resolution', 'closure_with_caveats', 'cancellation'] }),
+      targetTitle: 'Resolvido',
+      form: formFor('resolution', { continuing: [], closing: ['resolution'] }),
     },
     state: { isOpen: true, form: { error: 'Só quem administra alguma área deste chamado pode encerrá-lo ou reabri-lo.' } },
     actions: { onCancel: fn(), form: formActions },

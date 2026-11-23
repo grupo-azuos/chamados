@@ -1,5 +1,6 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
+  import { TICKET_KANBAN_COLUMNS } from '@template/shared/domain/ticket-kanban.util';
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
   import { fn } from 'storybook/test';
 
@@ -35,63 +36,74 @@
     };
   }
 
-  const mockColumns = [
-    {
-      id: 'queue' as const,
-      title: 'A fazer / triagem',
-      tickets: [
-        mockTicket({
-          id: 10,
-          protocol: 'CH-0010',
-          description: 'Erro na autenticação do sistema',
-          priority: 'high',
-          projectName: 'Azuos Ticket',
-          requesterName: 'Ana Souza',
-          githubIssueNumber: 42,
-          githubIssueUrl: 'https://github.com/issue/42',
-          createdAt: '2026-10-06T12:00:00.000Z',
-        }),
-      ],
-    },
-    {
-      id: 'working' as const,
-      title: 'Em atendimento',
-      tickets: [
-        mockTicket({
-          id: 11,
-          protocol: 'CH-0011',
-          description: 'Refatoração da sincronização de PRs',
-          priority: 'medium',
-          projectName: 'Azuos Ticket',
-          requesterName: 'Carlos Dev',
-          assignee: 'Bruno Lima',
-          assigneeId: 'u-bruno',
-          githubIssueNumber: null,
-          githubIssueUrl: null,
-          createdAt: '2026-10-05T15:00:00.000Z',
-        }),
-      ],
-    },
-    {
-      id: 'waiting' as const,
-      title: 'Aguardando',
-      tickets: [
-        mockTicket({
-          id: 12,
-          status: 'waiting_third_party',
-          protocol: 'CH-0012',
-          description: 'Integração com o banco devolvendo erro 500 no fechamento do mês',
-          priority: 'high',
-          customSystemName: 'Planilha do financeiro',
-          projectId: null,
-          projectName: null,
-          assignee: 'Bruno Lima',
-          assigneeId: 'u-bruno',
-        }),
-      ],
-    },
-    { id: 'closed' as const, title: 'Concluído', tickets: [] },
-  ];
+  /* Uma coluna por estágio do catálogo, como a fila entrega: cada chamado na coluna do seu. */
+  function columnsOf(tickets: Ticket[]) {
+    return TICKET_KANBAN_COLUMNS.map((column) => ({
+      id: column.status,
+      title: column.title,
+      tickets: tickets.filter((ticket) => ticket.status === column.status),
+    }));
+  }
+
+  const mockColumns = columnsOf([
+    mockTicket({
+      id: 10,
+      protocol: 'CH-0010',
+      description: 'Erro na autenticação do sistema',
+      priority: 'high',
+      projectName: 'Azuos Ticket',
+      requesterName: 'Ana Souza',
+      githubIssueNumber: 42,
+      githubIssueUrl: 'https://github.com/issue/42',
+      createdAt: '2026-10-06T12:00:00.000Z',
+    }),
+    mockTicket({
+      id: 13,
+      status: 'requester_reply',
+      protocol: 'CH-0013',
+      description: 'Mandei o print do erro que aparece ao salvar',
+      requesterName: 'Paula Reis',
+    }),
+    mockTicket({
+      id: 11,
+      status: 'in_progress',
+      protocol: 'CH-0011',
+      description: 'Refatoração da sincronização de PRs',
+      priority: 'medium',
+      projectName: 'Azuos Ticket',
+      requesterName: 'Carlos Dev',
+      assignee: 'Bruno Lima',
+      assigneeId: 'u-bruno',
+      createdAt: '2026-10-05T15:00:00.000Z',
+    }),
+    mockTicket({
+      id: 12,
+      status: 'waiting_third_party',
+      protocol: 'CH-0012',
+      description: 'Integração com o banco devolvendo erro 500 no fechamento do mês',
+      priority: 'high',
+      customSystemName: 'Planilha do financeiro',
+      projectId: null,
+      projectName: null,
+      assignee: 'Bruno Lima',
+      assigneeId: 'u-bruno',
+    }),
+    mockTicket({
+      id: 14,
+      status: 'resolved',
+      protocol: 'CH-0014',
+      description: 'Relatório de vendas sem o filtro de mês',
+      assignee: 'Bruno Lima',
+      assigneeId: 'u-bruno',
+    }),
+    mockTicket({
+      id: 15,
+      status: 'cancelled',
+      protocol: 'CH-0015',
+      description: 'Aberto em duplicidade',
+      priority: 'low',
+    }),
+  ]);
 
   const baseData = {
     columns: mockColumns,
@@ -114,6 +126,7 @@
   });
 </script>
 
+<!-- Todos os estágios, cada um na sua coluna: as que não cabem rolam para o lado. -->
 <Story
   name="Default"
   args={{
@@ -123,12 +136,13 @@
   }}
 />
 
-<!-- Com uma mudança de etapa indo para o servidor e o aviso do quadro. -->
+<!-- Com uma mudança de estágio indo para o servidor e o aviso do quadro. -->
 <Story
   name="MovingWithNotice"
   args={{
     data: baseData,
-    state: { ...baseState, isMoving: true, moveError: 'Um chamado já iniciado não volta para "A fazer".' },
+    state: { ...baseState, isMoving: true, moveError:
+        'Um chamado não volta para "Aberto". Para pausá-lo, mova para "Aguardando solicitante" ou "Aguardando terceiro".' },
     actions: { ...baseActions, onClearMoveError: fn() },
   }}
 />
@@ -137,7 +151,7 @@
 <Story
   name="ReadOnly"
   args={{
-    data: { ...baseData, lockedTicketIds: [10, 11, 12] },
+    data: { ...baseData, lockedTicketIds: [10, 11, 12, 13, 14, 15] },
     state: baseState,
     actions: baseActions,
   }}
@@ -149,26 +163,17 @@
   args={{
     data: {
       ...baseData,
-      columns: [
-        {
-          id: 'queue' as const,
-          title: 'A fazer / triagem',
-          tickets: [
-            mockTicket({
-              id: 20,
-              protocol: 'CH-0020',
-              description: 'Ar-condicionado da sala 3 pingando',
-              area: 'manutencao',
-              problemType: 'other',
-              projectId: null,
-              projectName: null,
-            }),
-          ],
-        },
-        { id: 'working' as const, title: 'Em atendimento', tickets: [] },
-        { id: 'waiting' as const, title: 'Aguardando', tickets: [] },
-        { id: 'closed' as const, title: 'Concluído', tickets: [] },
-      ],
+      columns: columnsOf([
+        mockTicket({
+          id: 20,
+          protocol: 'CH-0020',
+          description: 'Ar-condicionado da sala 3 pingando',
+          area: 'manutencao',
+          problemType: 'other',
+          projectId: null,
+          projectName: null,
+        }),
+      ]),
     },
     state: baseState,
     actions: baseActions,
