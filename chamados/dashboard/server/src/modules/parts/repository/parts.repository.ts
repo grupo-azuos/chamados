@@ -18,6 +18,7 @@ import {
   type PartMovementRow,
 } from '../../../lib/db/schema/part-movements.schema';
 import { parts, type PartInsert, type PartRow } from '../../../lib/db/schema/parts.schema';
+import { computerPlaceNameSql } from '../../../lib/db/reference-names.util';
 
 export type PartPage = { rows: PartRow[]; total: number };
 
@@ -37,12 +38,15 @@ export type MovementPage = { rows: MovementWithRefs[]; total: number };
 
 const partColumns = { id: parts.id, name: parts.name, condition: parts.condition };
 
-const computerColumns = {
-  id: computers.id,
-  name: computers.name,
-  displayName: computers.displayName,
-  department: computers.department,
-};
+/* Função, e não objeto: o nome do departamento vem da última lista do RH, lida na hora da consulta. */
+function computerColumns() {
+  return {
+    id: computers.id,
+    name: computers.name,
+    displayName: computers.displayName,
+    department: computerPlaceNameSql(),
+  };
+}
 
 /**
  * O repository não tem regra: traduz filtro em consulta e devolve linha. Toda decisão — quem
@@ -127,7 +131,7 @@ export class PartsRepository {
     const [rows, [counted]] = await Promise.all([
       runQuery(
         this.db
-          .select({ movement: partMovements, part: partColumns, computer: computerColumns })
+          .select({ movement: partMovements, part: partColumns, computer: computerColumns() })
           .from(partMovements)
           .leftJoin(parts, eq(partMovements.partId, parts.id))
           .leftJoin(computers, eq(partMovements.computerId, computers.id))
@@ -157,7 +161,7 @@ export class PartsRepository {
   ): Promise<MovementWithRefs | null> {
     return runMaybe(
       executor
-        .select({ movement: partMovements, part: partColumns, computer: computerColumns })
+        .select({ movement: partMovements, part: partColumns, computer: computerColumns() })
         .from(partMovements)
         .leftJoin(parts, eq(partMovements.partId, parts.id))
         .leftJoin(computers, eq(partMovements.computerId, computers.id))

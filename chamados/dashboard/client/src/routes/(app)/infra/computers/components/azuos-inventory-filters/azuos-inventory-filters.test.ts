@@ -13,7 +13,8 @@ import InventoryFilters, {
 
 const emptyFilter: InventoryFilter = {
   search: '',
-  department: '',
+  departmentId: '',
+  location: '',
   healthStatus: '',
   kind: '',
   onlyOnline: false,
@@ -273,7 +274,7 @@ describe('activeFilterChips', () => {
 
   // triste
   it('leaves search and department out, which stay in sight', () => {
-    const filter = { ...emptyFilter, search: 'rh', department: 'TI' };
+    const filter = { ...emptyFilter, search: 'rh', departmentId: '5' };
     const chips = activeFilterChips(filter, actions);
 
     expect(chips).toEqual([]);
@@ -333,7 +334,7 @@ describe('AzuosInventoryFilters — every grouped filter and its chip', () => {
   it('filters by department from the always visible selector', async () => {
     render(InventoryFilters, {
       props: {
-        data: { filter: emptyFilter, departmentOptions: [{ value: 'fiscal', label: 'Fiscal' }] },
+        data: { filter: emptyFilter, departmentOptions: [{ value: '5', label: 'Fiscal' }] },
         actions,
       },
     });
@@ -341,7 +342,17 @@ describe('AzuosInventoryFilters — every grouped filter and its chip', () => {
     const search = await screen.findByPlaceholderText('Buscar departamento…');
     const popup = search.closest('[data-slot="popover-content"]') as HTMLElement;
     await fireEvent.click(within(popup).getByText('Fiscal'));
-    expect(actions.onDepartmentChange).toHaveBeenLastCalledWith('fiscal');
+    expect(actions.onDepartmentChange).toHaveBeenLastCalledWith('5');
+  });
+
+  // feliz
+  it('filters by the fixed location, apart from the department, and shows it as a chip', () => {
+    const onLocationChange = vi.fn();
+    const chips = activeFilterChips({ ...emptyFilter, location: 'RECEPÇÃO' }, { ...actions, onLocationChange });
+
+    expect(chips.map((chip) => chip.label)).toEqual(['Local: RECEPÇÃO']);
+    chips[0]?.onRemove();
+    expect(onLocationChange).toHaveBeenCalledWith('');
   });
 });
 

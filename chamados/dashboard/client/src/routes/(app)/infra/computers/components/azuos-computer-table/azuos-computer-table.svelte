@@ -58,7 +58,7 @@
     healthStatusLabel,
     healthStatusTone,
   } from '@template/shared/domain/computer-health.util';
-  import { departmentLabel } from '@template/shared/domain/department.util';
+  import { computerPlaceLabel, computerResponsibleLabel } from '$lib/utils/computer-place.util';
 
   import ActionMenu from '../azuos-action-menu/azuos-action-menu.svelte';
   import AlertBadge, {
@@ -192,10 +192,10 @@
             {/if}
             <span class="min-w-0">
               <span class="text-ink-700 block leading-snug break-words">
-                {computer.responsibleName ?? 'Sem responsável'}
+                {computerResponsibleLabel(computer)}
               </span>
               <span class="text-muted-foreground mt-0.5 block text-xs">
-                {computer.department ? departmentLabel(computer.department) : 'Sem departamento'}
+                {computerPlaceLabel(computer)}
               </span>
             </span>
           </span>

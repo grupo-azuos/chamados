@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { DEPARTMENT_NAME_MAX_LENGTH } from '../domain/department.util';
+import { COMPUTER_LOCATIONS, DEPARTMENT_NAME_MAX_LENGTH } from '../domain/department.util';
 
 /**
  * O departamento como campo de formulário e de API: o NOME, como o RH o escreve.
@@ -23,8 +23,29 @@ export function departmentNameSchema(requiredMessage: string) {
  * `isRhAvailable` falso quer dizer que o RH não respondeu e não há lista guardada: a tela
  * oferece só os daqui, e o aviso explica por quê — lista curta calada pareceria um RH vazio.
  */
+export const departmentOptionSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+});
+
+/**
+ * O departamento OFICIAL como campo de API: o ID do item na lista "Departamentos" do RH. É o que
+ * o computador guarda — o nome muda no RH sem reescrever nada aqui.
+ */
+export const departmentIdSchema = z
+  .number({ error: 'Escolha um departamento da lista' })
+  .int('Escolha um departamento da lista')
+  .positive('Escolha um departamento da lista');
+
+/** O LOCAL do computador: só os da lista fechada (`COMPUTER_LOCATIONS`), nunca texto livre. */
+export const computerLocationSchema = z.enum(COMPUTER_LOCATIONS, {
+  error: 'Escolha um local da lista',
+});
+
 export const departmentCatalogSchema = z.object({
   rh: z.array(z.string()),
+  /** Os mesmos de `rh`, com o id do RH — é o id que o computador guarda. */
+  rhOptions: z.array(departmentOptionSchema),
   local: z.array(z.string()),
   isRhAvailable: z.boolean(),
 });

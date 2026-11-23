@@ -14,7 +14,8 @@ const computer = {
   id: 2,
   name: 'FINANCEIRO-02',
   displayName: 'Financeiro — mesa 2',
-  department: 'financeiro',
+  departmentId: 4, departmentName: 'Financeiro', location: null,
+  notes: null,
 } as Computer;
 
 function peripheral(over: Partial<PeripheralChoice> = {}): PeripheralChoice {
@@ -72,7 +73,7 @@ describe('currentPlaceOf', () => {
   // triste
   /* Sem departamento não é "vazio": é a prateleira, e a tela diz isso com todas as letras. */
   it('calls the shelf by its name', () => {
-    expect(currentPlaceOf({ ...computer, department: null } as Computer)).toBe(
+    expect(currentPlaceOf({ ...computer, departmentId: null, departmentName: null, location: null } as Computer)).toBe(
       'Sem departamento (na prateleira)',
     );
   });

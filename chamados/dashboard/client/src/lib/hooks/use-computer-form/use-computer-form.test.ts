@@ -15,7 +15,28 @@ vi.mock('$lib/api/computers.api', () => ({
   },
 }));
 
+vi.mock('$lib/api/departments.api', () => ({
+  departmentsApi: {
+    catalog: vi.fn().mockResolvedValue({
+      rh: ['Paralegal', 'Recursos Humanos'],
+      rhOptions: [
+        { id: 6, name: 'Paralegal' },
+        { id: 8, name: 'Recursos Humanos' },
+      ],
+      local: ['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'],
+      isRhAvailable: true,
+    }),
+  },
+}));
+
 const { computersApi } = await import('$lib/api/computers.api');
+const { departmentsApi } = await import('$lib/api/departments.api');
+
+/* O seletor de departamento só conhece o id depois que a lista do RH chega. */
+async function waitForCatalog(model: ComputerFormModel) {
+  await waitFor(() => expect(departmentsApi.catalog).toHaveBeenCalled());
+  await waitFor(() => expect(model.data.departmentOptions.length).toBeGreaterThan(0));
+}
 
 const GB = 1024 ** 3;
 
@@ -24,8 +45,11 @@ function computer(over: Partial<Computer> = {}): Computer {
     id: 1,
     name: 'RECEPCAO-01',
     displayName: 'Recepção — balcão',
+    responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
-    department: 'recepcao',
+    responsibleAvatarUrl: null,
+    departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 11 Pro',
@@ -86,8 +110,8 @@ describe('useComputerFormModel', () => {
     /* O parque de onde sai o próximo número: o Paralegal já vai até o Computador 06. */
     vi.mocked(computersApi.list).mockResolvedValue({
       items: [
-        { ...computer({ id: 5, name: 'PARALEGAL-D05', displayName: 'Computador 05', department: 'Paralegal' }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] },
-        { ...computer({ id: 6, name: 'PARALEGAL-D06', displayName: 'Computador 06', department: 'Paralegal' }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] },
+        { ...computer({ id: 5, name: 'PARALEGAL-D05', displayName: 'Computador 05', departmentId: 6, departmentName: 'Paralegal', location: null }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] },
+        { ...computer({ id: 6, name: 'PARALEGAL-D06', displayName: 'Computador 06', departmentId: 6, departmentName: 'Paralegal', location: null }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] },
       ],
       total: 2,
       page: 1,
@@ -101,8 +125,10 @@ describe('useComputerFormModel', () => {
     await waitFor(() => expect(computersApi.list).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 0));
 
+    await waitForCatalog(model);
+
     model.actions.onChange('kind', 'desktop');
-    model.actions.onChange('department', 'Paralegal');
+    model.actions.onChange('departmentId', '6');
 
     await waitFor(() => expect(model.data.fields.displayName.value).toBe('Computador 07'));
   });
@@ -112,7 +138,9 @@ describe('useComputerFormModel', () => {
     await waitFor(() => expect(computersApi.list).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    model.actions.onChange('department', 'Paralegal');
+    await waitForCatalog(model);
+
+    model.actions.onChange('departmentId', '6');
 
     await waitFor(() => expect(model.data.fields.displayName.value).toBe('Computador 07'));
   });
@@ -123,12 +151,14 @@ describe('useComputerFormModel', () => {
     await waitFor(() => expect(computersApi.list).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 0));
 
+    await waitForCatalog(model);
+
     model.actions.onChange('kind', 'desktop');
-    model.actions.onChange('department', 'Recursos Humanos');
+    model.actions.onChange('departmentId', '8');
     expect(model.data.fields.displayName.value).toBe('');
 
     model.actions.onChange('displayName', 'Máquina da recepção');
-    model.actions.onChange('department', 'Paralegal');
+    model.actions.onChange('departmentId', '6');
     expect(model.data.fields.displayName.value).toBe('Máquina da recepção');
   });
 
@@ -139,7 +169,7 @@ describe('useComputerFormModel', () => {
 
     model.actions.onChange('name', 'RECEPCAO-01');
     model.actions.onChange('kind', 'desktop');
-    model.actions.onChange('responsibleName', 'Bia Costa');
+    model.actions.onChange('responsibleId', 'person-bia-costa');
     model.actions.onSubmit();
 
     await waitFor(() =>
@@ -165,8 +195,10 @@ describe('useComputerFormModel', () => {
         name: 'FISCAL-04',
         kind: 'notebook',
         displayName: null,
-        responsibleName: null,
-        department: null,
+        responsibleId: null,
+        departmentId: null,
+        location: null,
+        notes: null,
       }),
     );
   });
@@ -182,8 +214,10 @@ describe('useComputerFormModel', () => {
       expect(computersApi.update).toHaveBeenCalledWith(1, {
         kind: 'desktop',
         displayName: 'Recepção — balcão novo',
-        responsibleName: 'Bia Costa',
-        department: 'recepcao',
+        responsibleId: 'person-bia-costa',
+        departmentId: null,
+        location: 'RECEPÇÃO',
+        notes: null,
       }),
     );
   });
@@ -237,13 +271,46 @@ describe('useComputerFormModel', () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
-  it('keeps directory failures separate from saving and preserves a manual name', async () => {
+  it('keeps directory failures separate from saving', async () => {
     vi.mocked(computersApi.responsibles).mockRejectedValue(new ApiError(503, 'Diretório indisponível'));
     const model = mountModel();
     await waitFor(() => expect(model.state.responsiblesError).toBe('Diretório indisponível'));
     expect(model.state.error).toBeNull();
-    model.actions.onChange('responsibleName', 'Equipe externa');
-    expect(model.data.fields.responsibleName.value).toBe('Equipe externa');
+  });
+
+  // feliz
+  it('sends the official department by id, the fixed location and the note', async () => {
+    const model = mountModel();
+    await waitForCatalog(model);
+
+    model.actions.onChange('name', 'FISCAL-05');
+    model.actions.onChange('kind', 'desktop');
+    model.actions.onChange('departmentId', '6');
+    model.actions.onChange('location', 'RECEPÇÃO');
+    model.actions.onChange('notes', '  Monitor emprestado  ');
+    model.actions.onSubmit();
+
+    await waitFor(() =>
+      expect(computersApi.create).toHaveBeenCalledWith(
+        expect.objectContaining({ departmentId: 6, location: 'RECEPÇÃO', notes: 'Monitor emprestado' }),
+      ),
+    );
+  });
+
+  // triste
+  it('keeps the current department and person in the options when they left the lists', async () => {
+    const model = mountModel({
+      computer: computer({ departmentId: 99, departmentName: null, responsibleId: 'gone', responsibleName: null }),
+    });
+    await waitForCatalog(model);
+
+    expect(model.data.departmentOptions).toContainEqual(
+      expect.objectContaining({ value: '99', label: 'Departamento atual (fora da lista do RH)' }),
+    );
+    expect(model.data.responsibles).toContainEqual(
+      expect.objectContaining({ id: 'gone', name: 'Responsável atual (fora da lista do escritório)' }),
+    );
+    expect(model.data.fields.departmentId.value).toBe('99');
   });
 
 });
@@ -256,19 +323,20 @@ describe('useComputerFormModel — editing and the park still loading', () => {
   // feliz
   it('reads an unnamed machine as blank fields, never as "null"', () => {
     const model = mountModel({
-      computer: computer({ displayName: null, responsibleName: null, department: null }),
+      computer: computer({ displayName: null, responsibleName: null, responsibleId: null, departmentId: null, departmentName: null, location: null }),
     });
 
     expect(model.data.fields.displayName.value).toBe('');
-    expect(model.data.fields.responsibleName.value).toBe('');
-    expect(model.data.fields.department.value).toBe('');
+    expect(model.data.fields.responsibleId.value).toBe('');
+    expect(model.data.fields.departmentId.value).toBe('');
+    expect(model.data.fields.location.value).toBe('');
   });
 
   // triste
   /* Na edição o apelido é o que a pessoa deu: trocar o departamento não o reescreve. */
   it('never suggests a nickname over the name of a machine being edited', async () => {
     vi.mocked(computersApi.list).mockResolvedValue({
-      items: [{ ...computer({ id: 5, name: 'PARALEGAL-D05', displayName: 'Computador 05', department: 'Paralegal' }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] }],
+      items: [{ ...computer({ id: 5, name: 'PARALEGAL-D05', displayName: 'Computador 05', departmentId: 6, departmentName: 'Paralegal', location: null }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] }],
       total: 1,
       page: 1,
       pageSize: 200,
@@ -276,7 +344,7 @@ describe('useComputerFormModel — editing and the park still loading', () => {
     const model = mountModel({ computer: computer() });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    model.actions.onChange('department', 'Paralegal');
+    model.actions.onChange('departmentId', '6');
 
     expect(model.data.fields.displayName.value).toBe('Recepção — balcão');
   });
@@ -285,7 +353,7 @@ describe('useComputerFormModel — editing and the park still loading', () => {
     vi.mocked(computersApi.list).mockReturnValue(new Promise(() => undefined));
     const model = mountModel();
 
-    model.actions.onChange('department', 'Paralegal');
+    model.actions.onChange('departmentId', '6');
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(model.data.fields.displayName.value).toBe('');

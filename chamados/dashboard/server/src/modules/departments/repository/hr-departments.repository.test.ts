@@ -37,9 +37,9 @@ describe('HrDepartmentsRepository', () => {
       },
     });
 
-    await expect(new HrDepartmentsRepository(env).listNames()).resolves.toEqual([
-      'Fiscal',
-      'Recursos Humanos',
+    await expect(new HrDepartmentsRepository(env).listOptions()).resolves.toEqual([
+      { id: 1, name: 'Fiscal' },
+      { id: 2, name: 'Recursos Humanos' },
     ]);
     const [url, init] = fetcher.mock.calls[0] ?? [];
     expect(String(url)).toBe('http://admin-console:3000/api/v1/systems/me/organization-options');
@@ -53,20 +53,35 @@ describe('HrDepartmentsRepository', () => {
       data: { organizationOptions: { isAvailable: false, jobTitles: [], departments: [] } },
     });
 
-    await expect(new HrDepartmentsRepository(env).listNames()).rejects.toThrow('unavailable');
+    await expect(new HrDepartmentsRepository(env).listOptions()).rejects.toThrow('unavailable');
+  });
+
+  it('drops items without an integer id, which nothing could store', async () => {
+    answer({
+      data: {
+        organizationOptions: {
+          isAvailable: true,
+          departments: [{ id: '4', name: 'Fiscal' }, { name: 'Comercial' }, { id: 5, name: 'Contábil' }],
+        },
+      },
+    });
+
+    await expect(new HrDepartmentsRepository(env).listOptions()).resolves.toEqual([
+      { id: 5, name: 'Contábil' },
+    ]);
   });
 
   it('fails when the admin-console refuses the token', async () => {
     answer({ message: 'Forbidden' }, 403);
 
-    await expect(new HrDepartmentsRepository(env).listNames()).rejects.toThrow('403');
+    await expect(new HrDepartmentsRepository(env).listOptions()).rejects.toThrow('403');
   });
 
   it('fails without calling anyone when the admin-console address is missing', async () => {
     const fetcher = vi.spyOn(global, 'fetch');
 
     await expect(
-      new HrDepartmentsRepository({ ...env, ADMIN_CONSOLE_URL: undefined } as Env).listNames(),
+      new HrDepartmentsRepository({ ...env, ADMIN_CONSOLE_URL: undefined } as Env).listOptions(),
     ).rejects.toThrow('ADMIN_CONSOLE_URL');
     expect(fetcher).not.toHaveBeenCalled();
   });

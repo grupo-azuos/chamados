@@ -14,6 +14,8 @@ export class ComputerResponsiblesService {
   async list(user: RequestUser): Promise<ComputerResponsible[]> {
     assertCanCreate(user.role, 'computadores');
     const people = await this.directory.listAllUsers();
-    return people.filter((person) => !person.banned).map(({ id, name }) => ({ id, name }));
+    return people
+      .filter((person) => !person.banned)
+      .map(({ id, name, image }) => ({ id, name, avatarUrl: image ?? null }));
   }
 }

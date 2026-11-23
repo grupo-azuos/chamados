@@ -1,5 +1,4 @@
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
-import { departmentLabel } from '@template/shared/domain/department.util';
 import { type ComputerListItem } from '@template/shared/schemas/computer.schema';
 import { type Ticket } from '@template/shared/schemas/ticket.schema';
 import { writable } from 'svelte/store';
@@ -10,6 +9,7 @@ import { ticketsApi } from '$lib/api/tickets.api';
 import { type TicketComputerChoice } from '$lib/components/azuos-ticket-computers-dialog/azuos-ticket-computers-dialog.svelte';
 import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
 import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
+import { computerPlaceLabel } from '$lib/utils/computer-place.util';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { TICKETS_QUERY_KEY } from '$lib/hooks/use-ticket-list/use-ticket-list.svelte';
 
@@ -57,7 +57,7 @@ export function useTicketComputersModel(ticket: Ticket): TicketComputersModel {
     ),
   );
 
-  /* A MESMA lista de departamentos do Inventário: as do RH e, depois da linha, as daqui. */
+  /* Os departamentos OFICIAIS (pelo id) e, depois da linha, os locais fixos — como no Inventário. */
   const departments = useDepartmentOptionsModel();
 
   let linked = $state(linkedOf(ticket));
@@ -87,7 +87,10 @@ export function useTicketComputersModel(ticket: Ticket): TicketComputersModel {
         selectedIds,
         search,
         department,
-        departments: departments.options,
+        departments: [
+          ...departments.officialOptions,
+          ...departments.locationOptions.map((option, index) => ({ ...option, separatorBefore: index === 0 })),
+        ],
       };
     },
     get state() {
@@ -144,8 +147,10 @@ export function toChoice(computer: ComputerListItem): TicketComputerChoice {
     label: computer.displayName?.trim() || computer.name,
     hostname: computer.name,
     responsibleName: computer.responsibleName,
-    department: computer.department ? departmentLabel(computer.department) : null,
-    departmentKey: computer.department,
+    department: computer.departmentId || computer.location ? computerPlaceLabel(computer) : null,
+    /* As chaves do filtro: o id do departamento oficial e o local — a máquina casa com qualquer um. */
+    departmentKey: computer.departmentId ? String(computer.departmentId) : null,
+    locationKey: computer.location,
     isOnline: computer.isOnline,
   };
 }
@@ -159,7 +164,7 @@ export function filterChoices(
   const wanted = search.trim().toLocaleLowerCase('pt-BR');
 
   return choices.filter((choice) => {
-    if (department && (choice.departmentKey ?? choice.department) !== department) return false;
+    if (department && choice.departmentKey !== department && choice.locationKey !== department) return false;
     if (!wanted) return true;
 
     return [choice.label, choice.hostname, choice.responsibleName ?? ''].some((text) =>

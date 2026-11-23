@@ -22,7 +22,7 @@
   filtrada sem resultado e em erro.
 
   - `data`: `computers`, `total`, `summary`, `filter`, `scheduledFor`, `departmentOptions`,
-    `responsibleOptions`, `sort`
+    `locationOptions`, `responsibleOptions`, `sort`
     e `paging`.
   - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated`,
     `isSummaryLoading`, `error`, `exportingFormat` e `exportError`.
@@ -33,7 +33,7 @@
   import { type ResourceCondition } from '@template/shared/domain/computer-resource.util';
   import { type HealthStatus } from '@template/shared/domain/computer-health.util';
   import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
-  import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
+  import { type ComputerLocation, type DepartmentChoice } from '@template/shared/domain/department.util';
   import {
     type Computer,
     type ComputerAlertFilter,
@@ -56,7 +56,8 @@
 
   export type ComputerListFilter = {
     search: string;
-    department: Department | '';
+    departmentId: string;
+    location: ComputerLocation | '';
     healthStatus: HealthStatus | '';
     kind: ComputerKind | '';
     onlyOnline: boolean;
@@ -104,6 +105,7 @@
       scheduledFor?: Record<number, string>;
       /** Os departamentos do RH e, depois da linha, os daqui. */
       departmentOptions?: DepartmentChoice[];
+      locationOptions?: DepartmentChoice[];
       /** As pessoas do filtro "Responsável", com a foto. */
       responsibleOptions?: AzuosPersonPickerPerson[];
       /** A ordem em vigor — a seta do cabeçalho da tabela. */
@@ -124,7 +126,8 @@
     };
     actions: {
       onSearchChange: (search: string) => void;
-      onDepartmentChange: (department: Department | '') => void;
+      onDepartmentChange: (departmentId: string) => void;
+      onLocationChange?: (location: ComputerLocation | '') => void;
       onHealthStatusChange: (healthStatus: HealthStatus | '') => void;
       onKindChange: (kind: ComputerKind | '') => void;
       onOnlineChange: (onlyOnline: boolean) => void;
@@ -404,6 +407,7 @@
       data={{
         filter: data.filter,
         departmentOptions: data.departmentOptions ?? [],
+        locationOptions: data.locationOptions ?? [],
         responsibleOptions: data.responsibleOptions ?? [],
       }}
       state={{ isFilteredOut: state.isFilteredOut }}

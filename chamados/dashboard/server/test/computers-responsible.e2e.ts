@@ -7,9 +7,8 @@ import { ANA, BIA, asCaio, createE2eApp, directoryEntry, type E2eApp } from './s
 /**
  * O FILTRO "RESPONSÁVEL" e a FOTO do responsável na lista de máquinas.
  *
- * O cadastro guarda o NOME; o filtro manda o ID da pessoa do diretório, e a foto vem do mesmo
- * diretório. É o Postgres que prova que o nome guardado com outra caixa e espaço sobrando ainda
- * casa com a pessoa — a mesma régua da foto.
+ * O cadastro guarda o ID da pessoa do diretório; o filtro manda o mesmo id, e o nome e a foto
+ * vêm do diretório na resposta.
  *
  * Sem `TEST_DATABASE_URL` a suíte é pulada, e não falha.
  */
@@ -21,11 +20,11 @@ describe.skipIf(!testDatabaseUrl)('Computers responsible filter API (e2e)', () =
 
   const api = () => request(app.getHttpServer());
 
-  const registerComputer = (name: string, responsibleName?: string) =>
+  const registerComputer = (name: string, responsibleId?: string) =>
     api()
       .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name, kind: 'desktop', department: 'RECEPÇÃO', responsibleName })
+      .send({ name, kind: 'desktop', location: 'RECEPÇÃO', responsibleId })
       .expect(201);
 
   const names = (response: { body: { items: { name: string }[] } }) =>
@@ -40,8 +39,8 @@ describe.skipIf(!testDatabaseUrl)('Computers responsible filter API (e2e)', () =
 
   beforeEach(async () => {
     await started.truncate('computer_alerts', 'computer_samples', 'maintenances', 'computers');
-    await registerComputer('RESP-ANA', '  ana ');
-    await registerComputer('RESP-BIA', 'Bia');
+    await registerComputer('RESP-ANA', ANA.id);
+    await registerComputer('RESP-BIA', BIA.id);
     await registerComputer('RESP-NINGUEM');
   });
 
@@ -54,7 +53,11 @@ describe.skipIf(!testDatabaseUrl)('Computers responsible filter API (e2e)', () =
     const response = await api().get('/api/v1/computers').query({ responsibleId: ANA.id }).set(asCaio()).expect(200);
 
     expect(names(response)).toEqual(['RESP-ANA']);
-    expect(response.body.items[0]).toMatchObject({ responsibleId: ANA.id, responsibleAvatarUrl: '/avatars/ana.png' });
+    expect(response.body.items[0]).toMatchObject({
+      responsibleId: ANA.id,
+      responsibleName: ANA.name,
+      responsibleAvatarUrl: '/avatars/ana.png',
+    });
   });
 
   // feliz

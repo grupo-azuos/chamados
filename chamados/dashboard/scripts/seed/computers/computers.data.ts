@@ -1,6 +1,7 @@
 import { type ComputerAlertInsert } from '../../../server/src/lib/db/schema/computer-alerts.schema';
 import { type ComputerSampleInsert } from '../../../server/src/lib/db/schema/computer-samples.schema';
 import { type ComputerInsert } from '../../../server/src/lib/db/schema/computers.schema';
+import { seedReferences } from './computer-references.seed';
 import {
   GENERATED_ALERTS_SEED,
   GENERATED_COMPUTERS_SEED,
@@ -154,8 +155,7 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
   {
     ...base(1, 'RECEPCAO-01'),
     displayName: 'Recepção — balcão',
-    responsibleName: 'Bia Costa',
-    department: 'RECEPÇÃO',
+    ...seedReferences('Bia Costa', 'RECEPÇÃO'),
     os: 'Microsoft Windows 11 Pro',
     platform: 'windows',
     platformVersion: '10.0.26100',
@@ -199,8 +199,7 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
     /* Um notebook entre as máquinas, para o filtro de tipo ter o que mostrar. */
     kind: 'notebook',
     displayName: 'Financeiro — mesa 2',
-    responsibleName: 'Carlos Menezes',
-    department: 'Financeiro',
+    ...seedReferences('Carlos Menezes', 'Financeiro'),
     os: 'Microsoft Windows 10 Pro',
     platform: 'windows',
     platformVersion: '10.0.19045',
@@ -241,8 +240,7 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
   {
     ...base(3, 'CONTABIL-03'),
     displayName: 'Contábil — mesa do fechamento',
-    responsibleName: 'Daniela Prado',
-    department: 'Contábil',
+    ...seedReferences('Daniela Prado', 'Contábil'),
     os: 'Microsoft Windows 11 Pro',
     platform: 'windows',
     platformVersion: '10.0.26100',
@@ -290,8 +288,7 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
   {
     ...base(4, 'FISCAL-04'),
     displayName: 'Fiscal — máquina nova, agente pendente',
-    responsibleName: 'Eduardo Lima',
-    department: 'Fiscal',
+    ...seedReferences('Eduardo Lima', 'Fiscal'),
     createdAt: daysAgo(2),
   },
 
@@ -299,8 +296,7 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
   {
     ...base(5, 'COMERCIAL-05'),
     displayName: 'Comercial — notebook de visita',
-    responsibleName: 'Fernanda Rocha',
-    department: 'Comercial',
+    ...seedReferences('Fernanda Rocha', 'Comercial'),
     os: 'Microsoft Windows 11 Pro',
     platform: 'windows',
     platformVersion: '10.0.26100',
@@ -328,8 +324,7 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
     ...base(6, 'CS-06'),
     kind: 'notebook',
     displayName: 'CS — máquina de estágio',
-    responsibleName: 'Gustavo Alves',
-    department: 'Experiência do Cliente',
+    ...seedReferences('Gustavo Alves', 'Experiência do Cliente'),
     os: 'Microsoft Windows 10 Pro',
     platform: 'windows',
     platformVersion: '10.0.19045',
@@ -360,8 +355,7 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
   {
     ...base(7, 'RH-07'),
     displayName: 'RH — desktop antigo (trocado)',
-    responsibleName: 'Helena Braga',
-    department: 'Recursos Humanos',
+    ...seedReferences('Helena Braga', 'Recursos Humanos'),
     os: 'Microsoft Windows 10 Pro',
     platform: 'windows',
     platformVersion: '10.0.19045',
@@ -392,8 +386,7 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
   {
     ...base(9, 'RECEPCAO-09'),
     displayName: 'Recepção — micro antigo do balcão',
-    responsibleName: 'Bia Costa',
-    department: 'RECEPÇÃO',
+    ...seedReferences('Bia Costa', 'RECEPÇÃO'),
     os: 'Microsoft Windows 10 Pro',
     platform: 'windows',
     platformVersion: '10.0.19045',
@@ -425,8 +418,7 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
   {
     ...base(10, 'FISCAL-10'),
     displayName: 'Fiscal — micro que pegou raio',
-    responsibleName: 'Eduardo Lima',
-    department: 'Fiscal',
+    ...seedReferences('Eduardo Lima', 'Fiscal'),
     os: 'Microsoft Windows 10 Pro',
     platform: 'windows',
     arch: 'amd64',
@@ -453,8 +445,7 @@ export const HANDWRITTEN_COMPUTERS: ComputerInsert[] = [
   {
     ...base(8, 'PARALEGAL-08-ESTACAO-COMPARTILHADA'),
     displayName: 'Paralegal — estação compartilhada do corredor (usada por mais de uma pessoa)',
-    responsibleName: 'Isabela Marques de Oliveira e Souza Rodrigues',
-    department: 'Paralegal',
+    ...seedReferences('Isabela Marques de Oliveira e Souza Rodrigues', 'Paralegal'),
     os: 'Microsoft Windows 11 Pro',
     platform: 'windows',
     platformVersion: '10.0.26100',

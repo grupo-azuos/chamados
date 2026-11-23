@@ -22,8 +22,11 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     activeAlertMetrics: [],
     name: 'FISCAL-D01',
     displayName: 'Fiscal — mesa 1',
+    responsibleId: 'person-ana-prado',
     responsibleName: 'Ana Prado',
-    department: 'fiscal',
+    responsibleAvatarUrl: null,
+    departmentId: 5, departmentName: 'Fiscal', location: null,
+    notes: null,
     kind: 'desktop',
     hardware: {
       hostname: 'FISCAL-D01',
@@ -205,13 +208,13 @@ describe('AzuosComputerCard', () => {
   it('does not pulse, nor paint the hover, for a calm machine without a responsible', () => {
     const { container } = render(ComputerCard, {
       props: {
-        data: { computer: computer({ responsibleName: null, department: null }) },
+        data: { computer: computer({ responsibleName: null, responsibleId: null, departmentId: null, departmentName: null, location: null }) },
         actions: { onOpen: vi.fn() },
       },
     });
 
     expect(container.querySelector('[data-slot="computer-alert-badge"]')).toBeNull();
-    expect(screen.getByText('Sem responsável')).toBeInTheDocument();
+    expect(screen.getByText('(Sem responsável)')).toBeInTheDocument();
     expect(screen.getByText(/Sem departamento/)).toBeInTheDocument();
     const wash = container.querySelector<HTMLElement>('[data-slot="card-wash"]')!;
     expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');

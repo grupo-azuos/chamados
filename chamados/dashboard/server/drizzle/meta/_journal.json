@@ -169,6 +169,27 @@
       "when": 1795400360275,
       "tag": "0023_lowercase_custom_system_names",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795409967433,
+      "tag": "0024_computer_reference_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795409977354,
+      "tag": "0025_computer_names_to_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795410022242,
+      "tag": "0026_drop_computer_name_columns",
+      "breakpoints": true
     }
   ]
 }

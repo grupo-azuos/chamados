@@ -8,7 +8,8 @@
     id: 2,
     name: 'FINANCEIRO-02',
     displayName: 'Financeiro — mesa 2',
-    department: 'financeiro',
+    departmentId: 4, departmentName: 'Financeiro', location: null,
+    notes: null,
   } as Computer;
 
   const departments = [

@@ -53,8 +53,11 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     id: 1,
     name: 'RECEPCAO-01',
     displayName: 'Recepção — balcão',
+    responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
-    department: 'recepcao',
+    responsibleAvatarUrl: null,
+    departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 11 Pro',
@@ -318,14 +321,15 @@ describe('useComputerListModel', () => {
         fileName: 'inventario.docx',
       });
       const model = await mountLoadedModel();
-      model.actions.onDepartmentChange('rh');
-      await waitFor(() => expect(model.data.filter.department).toBe('rh'));
+      model.actions.onDepartmentChange('8');
+      model.actions.onLocationChange('RECEPÇÃO');
+      await waitFor(() => expect(model.data.filter.departmentId).toBe('8'));
 
       model.actions.onExportReport('docx');
       await waitFor(() => expect(model.state.exportingFormat).toBeNull());
 
       expect(computersApi.exportReport).toHaveBeenCalledWith(
-        expect.objectContaining({ department: 'rh' }),
+        expect.objectContaining({ departmentId: 8, location: 'RECEPÇÃO' }),
         'docx',
       );
       expect(triggerBrowserDownload).toHaveBeenCalledWith(expect.any(Blob), 'inventario.docx');
@@ -425,7 +429,7 @@ describe('useComputerListModel with a board cut', () => {
 describe('sortComputers', () => {
   const park = [
     computer({ id: 1, name: 'FISCAL-D02', displayName: null, healthScore: 90, responsibleName: 'Bruno', ticketsThisMonth: 1 }),
-    computer({ id: 2, name: 'FISCAL-D10', displayName: null, healthScore: 40, responsibleName: null, ticketsThisMonth: 5, lastSeenAt: null }),
+    computer({ id: 2, name: 'FISCAL-D10', displayName: null, healthScore: 40, responsibleName: null, responsibleId: null, ticketsThisMonth: 5, lastSeenAt: null }),
     computer({ id: 3, name: 'ANALYZE-D01', displayName: null, healthScore: 70, responsibleName: 'Ana', ticketsThisMonth: 1 }),
   ];
   const ids = (list: ComputerListItem[]) => list.map((item) => item.id);
@@ -554,14 +558,13 @@ describe('responsibleOptionsOf', () => {
   });
 
   // triste
-  it('leaves out machines without responsible and names the directory did not recognize', () => {
+  it('leaves out machines without responsible, and names a person the directory lost', () => {
     const options = responsibleOptionsOf([
       computer({ id: 1, responsibleName: null, responsibleId: null }),
-      computer({ id: 2, responsibleName: 'Digitado à mão', responsibleId: null }),
-      computer({ id: 3, responsibleName: 'Sem id' }),
+      computer({ id: 2, responsibleName: null, responsibleId: 'p-gone' }),
     ]);
 
-    expect(options).toEqual([]);
+    expect(options).toEqual([{ id: 'p-gone', name: '(Pessoa fora da lista do escritório)', photo: null }]);
   });
 });
 

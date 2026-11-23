@@ -11,8 +11,8 @@
 
   Função pura de props. O único estado próprio é visual — o painel aberto ou fechado.
 
-  - `data`: `filter`, `departmentOptions` (os do RH e, depois da linha, os daqui) e
-    `responsibleOptions` (quem responde por alguma máquina, com a foto).
+  - `data`: `filter`, `departmentOptions` (os OFICIAIS do RH, pelo id), `locationOptions` (os
+    locais fixos) e `responsibleOptions` (quem responde por alguma máquina, com a foto).
   - `state.isFilteredOut`: o filtro escondeu tudo — aí quem oferece "Limpar filtros" é o aviso de
     lista vazia.
   - `actions`: um `on…Change` por filtro e `onClearFilters`.
@@ -36,7 +36,7 @@
     COMPUTER_KIND_LABELS,
     type ComputerKind,
   } from '@template/shared/domain/computer-kind.util';
-  import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
+  import { type ComputerLocation, type DepartmentChoice } from '@template/shared/domain/department.util';
   import {
     COMPUTER_ALERT_FILTERS,
     COMPUTER_NO_RESPONSIBLE_FILTER,
@@ -53,7 +53,9 @@
   /** O recorte do inventário — o mesmo do hook `use-computer-list`. */
   export type InventoryFilter = {
     search: string;
-    department: Department | '';
+    /** O id do departamento oficial, como texto. */
+    departmentId: string;
+    location: ComputerLocation | '';
     healthStatus: HealthStatus | '';
     kind: ComputerKind | '';
     onlyOnline: boolean;
@@ -82,6 +84,7 @@
       filter: InventoryFilter;
       /** Os departamentos do RH e, depois da linha, os daqui. */
       departmentOptions: DepartmentChoice[];
+      locationOptions?: DepartmentChoice[];
       /** As pessoas do filtro "Responsável", com a foto. Sem elas, só "(Sem responsável)". */
       responsibleOptions?: AzuosPersonPickerPerson[];
     };
@@ -92,7 +95,8 @@
     };
     actions: {
       onSearchChange: (search: string) => void;
-      onDepartmentChange: (department: Department | '') => void;
+      onDepartmentChange: (departmentId: string) => void;
+      onLocationChange?: (location: ComputerLocation | '') => void;
       onHealthStatusChange: (healthStatus: HealthStatus | '') => void;
       onKindChange: (kind: ComputerKind | '') => void;
       onOnlineChange: (onlyOnline: boolean) => void;
@@ -220,6 +224,7 @@
         : null,
       resourceChip(filter, actions),
       upgradeChip(filter, actions),
+      locationChip(filter, actions),
       filter.alert
         ? {
             key: 'alert',
@@ -287,6 +292,16 @@
     return { key: 'responsible', label: name ? `Responsável: ${name}` : 'Responsável', onRemove };
   }
 
+  /** A etiqueta do local fixo: "Local: RECEPÇÃO". */
+  export function locationChip(
+    filter: InventoryFilter,
+    actions: AzuosInventoryFiltersProps['actions'],
+  ): ActiveFilterChip | null {
+    if (!filter.location) return null;
+
+    return { key: 'location', label: `Local: ${filter.location}`, onRemove: () => actions.onLocationChange?.('') };
+  }
+
   /** A etiqueta do filtro "Upgrade": "Precisa de upgrade" ou "Upgrade: Processador antigo". */
   export function upgradeChip(
     filter: InventoryFilter,
@@ -305,7 +320,7 @@
 
   /** Há o que limpar — inclusive a busca e o departamento, que não viram etiqueta. */
   export function hasAnyFilter(filter: InventoryFilter, chips: readonly ActiveFilterChip[]): boolean {
-    return chips.length > 0 || filter.search.trim() !== '' || filter.department !== '';
+    return chips.length > 0 || filter.search.trim() !== '' || filter.departmentId !== '';
   }
 </script>
 
@@ -332,6 +347,15 @@
       value: data.filter.responsibleId,
       options: RESPONSIBLE_LEADING,
       people: data.responsibleOptions ?? [],
+    },
+    {
+      key: 'location',
+      label: 'Local',
+      control: 'pills',
+      ariaLabel: 'Filtrar por local',
+      allLabel: 'Todos',
+      value: data.filter.location,
+      options: data.locationOptions ?? [],
     },
     {
       key: 'connection',
@@ -415,14 +439,15 @@
     control: 'select',
     ariaLabel: 'Filtrar por departamento',
     allLabel: 'Todos os departamentos',
-    value: data.filter.department,
+    value: data.filter.departmentId,
     options: data.departmentOptions,
     searchPlaceholder: 'Buscar departamento…',
   });
 
   /** Qual ação do inventário cada filtro do painel chama. */
   const ON_CHANGE: Record<string, (value: string) => void> = {
-    department: (value) => actions.onDepartmentChange(value as Department | ''),
+    department: (value) => actions.onDepartmentChange(value),
+    location: (value) => actions.onLocationChange?.(value as ComputerLocation | ''),
     connection: (value) => changeConnection(value),
     health: (value) => actions.onHealthStatusChange(value as HealthStatus | ''),
     resource: (value) => actions.onResourceConditionChange(value as ResourceCondition | ''),

@@ -15,8 +15,10 @@ function fields(
   return {
     name: field(),
     displayName: field(),
-    responsibleName: field(),
-    department: field(),
+    responsibleId: field(),
+    departmentId: field(),
+    location: field(),
+    notes: field(),
     kind: field(),
     ...over,
   };
@@ -128,48 +130,74 @@ describe('AzuosComputerFormDialog', () => {
 
 describe('AzuosComputerFormDialog responsible directory', () => {
   // feliz
-  it('names the display field and selects a directory person by name', async () => {
+  it('picks the responsible from the office directory and keeps the person id', async () => {
     const onChange = vi.fn();
     render(ComputerFormDialog, { props: {
       data: { mode: 'create', fields: fields(), responsibles: [
-        { id: 'person-1', name: 'Ana Exemplo' },
+        { id: 'person-1', name: 'Ana Exemplo', avatarUrl: null },
       ] }, state: { isOpen: true }, actions: { ...actions, onChange },
     } });
     expect(screen.getByLabelText('Nome do dispositivo')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Responsável' }));
-    /* O jsdom não mede o balão; buscamos dentro dele mesmo quando marcado como oculto. */
-    const search = await screen.findByPlaceholderText('Buscar pessoa ou digitar nome…');
-    const popup = search.closest('[data-slot="popover-content"]') as HTMLElement;
-    expect(within(popup).queryByText(/@/)).not.toBeInTheDocument();
-    await fireEvent.click(within(popup).getByText('Ana Exemplo'));
-    expect(onChange).toHaveBeenCalledWith('responsibleName', 'Ana Exemplo');
+    await fireEvent.click(screen.getByRole('combobox', { name: 'Responsável' }));
+    await fireEvent.click(await screen.findByRole('option', { name: /Ana Exemplo/ }));
+    expect(onChange).toHaveBeenCalledWith('responsibleId', 'person-1');
   });
 
   // triste
-  it('allows a free name when the directory is unavailable', async () => {
+  it('never offers to use a typed name: a name nobody has finds nobody', async () => {
     const onChange = vi.fn();
     render(ComputerFormDialog, { props: {
-      data: { mode: 'create', fields: fields(), responsibles: [] },
-      state: { isOpen: true, responsiblesError: 'Diretório indisponível' }, actions: { ...actions, onChange },
+      data: { mode: 'create', fields: fields(), responsibles: [{ id: 'person-1', name: 'Ana Exemplo', avatarUrl: null }] },
+      state: { isOpen: true }, actions: { ...actions, onChange },
     } });
-    expect(screen.getByRole('status')).toHaveTextContent('A lista de pessoas não carregou');
-    await userEvent.click(screen.getByRole('button', { name: 'Responsável' }));
-    const search = await screen.findByPlaceholderText('Buscar pessoa ou digitar nome…');
+    expect(screen.queryByText(/Digite o nome/)).not.toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('combobox', { name: 'Responsável' }));
+    const search = await screen.findByPlaceholderText('Buscar pessoa...');
     await fireEvent.input(search, { target: { value: 'Equipe externa' } });
-    await fireEvent.click(await screen.findByText('Usar “Equipe externa”'));
-    expect(onChange).toHaveBeenCalledWith('responsibleName', 'Equipe externa');
+    expect(screen.queryByText(/Usar/)).not.toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalledWith('responsibleId', 'Equipe externa');
   });
 
   // triste
-  it('explains a short department list when HR did not answer', () => {
+  it('says the responsible cannot be chosen when the directory is unavailable', () => {
+    render(ComputerFormDialog, { props: {
+      data: { mode: 'create', fields: fields(), responsibles: [] },
+      state: { isOpen: true, responsiblesError: 'Diretório indisponível' }, actions,
+    } });
+    expect(screen.getByRole('status')).toHaveTextContent('Não dá para escolher o responsável agora');
+    expect(screen.getByRole('combobox', { name: 'Responsável' })).toBeDisabled();
+  });
+
+  // feliz
+  it('chooses the official department by id and the fixed location apart', async () => {
+    const onChange = vi.fn();
+    render(ComputerFormDialog, { props: {
+      data: {
+        mode: 'create',
+        fields: fields(),
+        departmentOptions: [{ value: '12', label: 'Fiscal' }],
+        locationOptions: [{ value: 'RECEPÇÃO', label: 'RECEPÇÃO' }],
+      },
+      state: { isOpen: true }, actions: { ...actions, onChange },
+    } });
+    await userEvent.click(screen.getByRole('button', { name: 'Departamento' }));
+    await fireEvent.click(await screen.findByText('Fiscal'));
+    expect(onChange).toHaveBeenCalledWith('departmentId', '12');
+    expect(screen.getByText('Local')).toBeInTheDocument();
+    expect(screen.getByText('RECEPÇÃO')).toBeInTheDocument();
+    expect(screen.getByLabelText('Observação')).toBeInTheDocument();
+  });
+
+  // triste
+  it('explains an empty department list when HR did not answer', () => {
     render(ComputerFormDialog, {
       props: {
-        data: { mode: 'create', fields: fields(), departmentOptions: [{ value: 'ANALYZE', label: 'ANALYZE' }] },
+        data: { mode: 'create', fields: fields(), departmentOptions: [] },
         state: { isOpen: true, isRhUnavailable: true },
         actions,
       },
     });
 
-    expect(screen.getByText('A lista do RH não carregou. Aparecem só os departamentos daqui.')).toBeInTheDocument();
+    expect(screen.getByText('A lista do RH não carregou. Não dá para escolher o departamento agora.')).toBeInTheDocument();
   });
 });

@@ -22,8 +22,10 @@
     responsibleName: string | null;
     /** O departamento como a tela o escreve. */
     department: string | null;
-    /** O departamento como o filtro o compara (o valor da lista do RH). */
+    /** O departamento como o filtro o compara: o id do RH, como texto. */
     departmentKey?: string | null;
+    /** O local fixo, que o filtro também compara. */
+    locationKey?: string | null;
     isOnline: boolean;
   };
 
@@ -33,7 +35,7 @@
       selectedIds: number[];
       search: string;
       department: string;
-      /** Os do RH e, depois da linha divisória, os daqui — a mesma lista do Inventário. */
+      /** Os oficiais do RH (pelo id) e, depois da linha divisória, os locais fixos. */
       departments: { value: string; label: string; separatorBefore?: boolean }[];
     };
     state?: {

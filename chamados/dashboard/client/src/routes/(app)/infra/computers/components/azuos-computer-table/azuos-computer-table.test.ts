@@ -15,8 +15,11 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     activeAlertMetrics: [],
     name: 'CAIXA-N01',
     displayName: null,
+    responsibleId: null,
     responsibleName: null,
-    department: null,
+    responsibleAvatarUrl: null,
+    departmentId: null, departmentName: null, location: null,
+    notes: null,
     kind: 'notebook',
     hardware: {
       os: null,
@@ -107,7 +110,7 @@ describe('AzuosComputerTable', () => {
     });
 
     expect(screen.queryByRole('button', { name: /Responsável/ })).toBeNull();
-    expect(screen.getByText('Sem responsável')).toBeInTheDocument();
+    expect(screen.getByText('(Sem responsável)')).toBeInTheDocument();
     expect(screen.getByText('Sem departamento')).toBeInTheDocument();
     expect(screen.getByText('nunca')).toBeInTheDocument();
   });
@@ -160,7 +163,7 @@ describe('AzuosComputerTable — responsible photo', () => {
     });
 
     expect(screen.getByText('YK')).toBeInTheDocument();
-    expect(screen.getByText('Sem responsável')).toBeInTheDocument();
+    expect(screen.getByText('(Sem responsável)')).toBeInTheDocument();
   });
 });
 

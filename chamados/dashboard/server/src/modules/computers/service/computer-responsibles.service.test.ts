@@ -18,10 +18,10 @@ function setup() {
 
 describe('ComputerResponsiblesService', () => {
   // feliz
-  it('lists office users without system access, returning only identifiers and names', async () => {
+  it('lists active office users without system access, returning identifiers, names and photos', async () => {
     const { service, listAllUsers, listUsers } = setup();
     await expect(service.list(actor)).resolves.toEqual([
-      { id: 'person-1', name: 'Ana Exemplo' },
+      { id: 'person-1', name: 'Ana Exemplo', avatarUrl: '/avatar' },
     ]);
     expect(listAllUsers).toHaveBeenCalledOnce();
     expect(listUsers).not.toHaveBeenCalled();

@@ -5,15 +5,27 @@ import { createTransferSchema, installedPartSchema, transferSchema } from './tra
 describe('transfer contract', () => {
   // feliz
   it('accepts a transfer to the shelf, with no peripherals by default', () => {
-    expect(createTransferSchema.parse({ toDepartment: null })).toEqual({
-      toDepartment: null,
+    expect(createTransferSchema.parse({ toDepartmentId: null })).toEqual({
+      toDepartmentId: null,
+      toLocation: null,
       peripherals: [],
     });
   });
 
+  // feliz
+  it('accepts a fixed location as destination', () => {
+    expect(createTransferSchema.parse({ toDepartmentId: null, toLocation: 'RECEPÇÃO' }).toLocation).toBe('RECEPÇÃO');
+  });
+
+  // triste
+  it('refuses a destination department sent as a name, or a location outside the list', () => {
+    expect(createTransferSchema.safeParse({ toDepartmentId: 'Fiscal' }).success).toBe(false);
+    expect(createTransferSchema.safeParse({ toDepartmentId: null, toLocation: 'SALA' }).success).toBe(false);
+  });
+
   it('accepts a peripheral that goes with the machine, and one left at a station', () => {
     const parsed = createTransferSchema.safeParse({
-      toDepartment: 'Fiscal',
+      toDepartmentId: 12,
       responsible: 'Joana',
       peripherals: [
         { partId: 1, quantity: 1, destiny: 'machine' },
@@ -43,7 +55,7 @@ describe('transfer contract', () => {
   // triste
   it('asks which machine takes a peripheral left at the station', () => {
     const refused = createTransferSchema.safeParse({
-      toDepartment: 'Fiscal',
+      toDepartmentId: 12,
       peripherals: [{ partId: 2, quantity: 1, destiny: 'station' }],
     });
 

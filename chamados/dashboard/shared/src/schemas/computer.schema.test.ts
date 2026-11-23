@@ -27,11 +27,13 @@ describe('createComputerSchema', () => {
       name: 'RECEPCAO-01',
       kind: 'notebook',
       displayName: 'Computador da recepção',
-      responsibleName: 'Helena Dias',
-      department: 'recepcao',
+      responsibleId: 'person-1',
+      departmentId: 12,
+      location: 'RECEPÇÃO',
+      notes: '  Mesa da entrada  ',
     });
 
-    expect(parsed.department).toBe('recepcao');
+    expect(parsed).toMatchObject({ responsibleId: 'person-1', departmentId: 12, location: 'RECEPÇÃO', notes: 'Mesa da entrada' });
   });
 
   it('trims the name before storing it', () => {
@@ -46,24 +48,32 @@ describe('createComputerSchema', () => {
     expect(result.error?.issues[0]?.message).toBe('Informe o nome da máquina');
   });
 
-  /* O nome vem da lista do RH, que muda sem código: o schema recusa só o vazio e o absurdo. */
-  it('refuses a blank department, in Portuguese', () => {
-    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', department: '  ' });
+  /* O departamento é o ID do RH, nunca um nome digitado. */
+  it('refuses a department sent as a name, in Portuguese', () => {
+    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', departmentId: 'Fiscal' });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe('Escolha um departamento da lista');
   });
 
-  it('refuses a department name longer than any real one', () => {
-    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', department: 'x'.repeat(121) });
+  it('refuses a location outside the closed list', () => {
+    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', location: 'SALA NOVA' });
 
     expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe('Escolha um local da lista');
   });
 
-  it('accepts a department exactly as HR names it', () => {
-    const parsed = createComputerSchema.parse({ name: 'PC-1', kind: 'desktop', department: 'Experiência do Cliente' });
+  it('refuses a blank responsible id instead of treating it as nobody', () => {
+    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', responsibleId: '   ' });
 
-    expect(parsed.department).toBe('Experiência do Cliente');
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe('Escolha o responsável na lista de pessoas');
+  });
+
+  it('ignores the old free-text responsible name, which is not stored anymore', () => {
+    const parsed = createComputerSchema.parse({ name: 'PC-1', kind: 'desktop', responsibleName: 'Marta' });
+
+    expect(parsed).not.toHaveProperty('responsibleName');
   });
 
   /* Hardware é medido, não digitado: aceitá-lo aqui faria a ficha discordar da máquina. */
@@ -96,9 +106,10 @@ describe('createComputerSchema', () => {
 describe('updateComputerSchema', () => {
   // feliz
   it('accepts changing only the responsible person', () => {
-    expect(updateComputerSchema.parse({ responsibleName: 'Ana' })).toEqual({
-      responsibleName: 'Ana',
+    expect(updateComputerSchema.parse({ responsibleId: 'person-1' })).toEqual({
+      responsibleId: 'person-1',
     });
+    expect(updateComputerSchema.parse({ responsibleId: null })).toEqual({ responsibleId: null });
   });
 
   it('turns an emptied nickname into null, so the field is actually cleared', () => {
@@ -159,17 +170,20 @@ describe('computerListQuerySchema', () => {
     const parsed = computerListQuerySchema.parse({});
 
     expect(parsed.page).toBe(1);
-    expect(parsed.department).toBeUndefined();
+    expect(parsed.departmentId).toBeUndefined();
   });
 
   it('accepts the panel filters together', () => {
     const parsed = computerListQuerySchema.parse({
       search: '  recepcao  ',
-      department: 'rh',
+      departmentId: '12',
+      location: 'ANALYZE',
       healthStatus: 'critical',
     });
 
     expect(parsed.search).toBe('recepcao');
+    expect(parsed.departmentId).toBe(12);
+    expect(parsed.location).toBe('ANALYZE');
     expect(parsed.healthStatus).toBe('critical');
   });
 
@@ -211,15 +225,15 @@ describe('computerListQuerySchema', () => {
 describe('computerReportQuerySchema', () => {
   // feliz
   it('accepts the same filters as the list, plus the file format', () => {
-    const parsed = computerReportQuerySchema.parse({ department: 'rh', format: 'pdf' });
+    const parsed = computerReportQuerySchema.parse({ departmentId: '12', format: 'pdf' });
 
-    expect(parsed.department).toBe('rh');
+    expect(parsed.departmentId).toBe(12);
     expect(parsed.format).toBe('pdf');
   });
 
   // triste
   it('refuses a report with no format chosen', () => {
-    expect(computerReportQuerySchema.safeParse({ department: 'rh' }).success).toBe(false);
+    expect(computerReportQuerySchema.safeParse({ departmentId: 12 }).success).toBe(false);
   });
 });
 
@@ -269,9 +283,9 @@ describe('computerAlertSchema', () => {
 
 describe('computerResponsibleSchema', () => {
   // feliz
-  it('exposes only the identifier and name for the responsible picker', () => {
-    expect(computerResponsibleSchema.parse({ id: 'person-1', name: 'Ana Exemplo', email: 'ana@example.invalid' }))
-      .toEqual({ id: 'person-1', name: 'Ana Exemplo' });
+  it('exposes only the identifier, name and photo for the responsible picker', () => {
+    expect(computerResponsibleSchema.parse({ id: 'person-1', name: 'Ana Exemplo', avatarUrl: null, email: 'ana@example.invalid' }))
+      .toEqual({ id: 'person-1', name: 'Ana Exemplo', avatarUrl: null });
   });
 
   // triste
@@ -281,11 +295,25 @@ describe('computerResponsibleSchema', () => {
 });
 
 describe('computerCreateFormSchema', () => {
-  const filled = { name: 'PC-1', displayName: '', responsibleName: '', department: '' as const };
+  const filled = {
+    name: 'PC-1',
+    displayName: '',
+    responsibleId: '',
+    departmentId: '' as const,
+    location: '' as const,
+    notes: '',
+  };
 
   // feliz
   it('accepts the form once desktop or notebook was chosen', () => {
     expect(computerCreateFormSchema.safeParse({ ...filled, kind: 'notebook' }).success).toBe(true);
+  });
+
+  // triste
+  it('refuses a department typed as text instead of chosen by id', () => {
+    const result = computerCreateFormSchema.safeParse({ ...filled, kind: 'desktop', departmentId: 'Fiscal' });
+
+    expect(result.success).toBe(false);
   });
 
   // triste

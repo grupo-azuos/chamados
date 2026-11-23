@@ -46,6 +46,10 @@ import { softwareScheduleEvents } from '../../../lib/db/schema/software-schedule
 import { softwareTimelineEvents } from '../../../lib/db/schema/software-timeline-events.schema';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
 import { ticketInArea } from '../../../lib/db/ticket-area.util';
+import {
+  computerPlaceNameSql,
+  computerResponsibleNameSql,
+} from '../../../lib/db/reference-names.util';
 
 /**
  * AS FONTES DE DADOS NO BANCO — a única ponte entre os nomes do contrato (`status`,
@@ -271,23 +275,34 @@ export const SOURCE_TABLES: Record<DataSourceKey, SourceTable> = {
   systemTickets: ticketSource('sistema', true),
   maintenanceTickets: ticketSource('manutencao'),
 
+  /* A máquina guarda o departamento e o responsável pelo ID (do RH e do diretório). O painel
+     agrupa e filtra pelo NOME, então os dois campos são lidos na hora da consulta, da última
+     lista lida (`reference-names.util`) — por isso são `get`, e não valores fixos do módulo. */
   computers: {
     table: computers,
     inCirculation: computerInUse,
     fields: {
-      department: { expression: sql`${computers.department}`, type: 'text' },
+      get department(): SourceColumn {
+        return { expression: computerPlaceNameSql(), type: 'text' };
+      },
       kind: { expression: sql`${computers.kind}`, type: 'enum' },
       healthStatus: { expression: sql`${computers.healthStatus}`, type: 'enum' },
-      responsible: { expression: sql`${computers.responsibleName}`, type: 'text', person: 'name' },
+      get responsible(): SourceColumn {
+        return { expression: computerResponsibleNameSql(), type: 'text', person: 'name' };
+      },
       isBlocked: { expression: sql`${computers.isBlocked}`, type: 'boolean' },
       createdAt: { expression: computerCreatedDay, type: 'date' },
       lastSeenAt: { expression: computerSeenDay, type: 'date' },
     },
     dimensions: {
-      department: orNone(computers.department, '(Sem departamento)'),
+      get department(): SQL {
+        return orNone(computerPlaceNameSql(), '(Sem departamento)');
+      },
       kind: sql`coalesce(${computers.kind}, '(Sem tipo)')`,
       healthStatus: sql`coalesce(${computers.healthStatus}, '(Sem leitura)')`,
-      responsible: orNone(computers.responsibleName, '(Sem responsável)'),
+      get responsible(): SQL {
+        return orNone(computerResponsibleNameSql(), '(Sem responsável)');
+      },
       createdMonth: monthKey(computerCreatedDay),
     },
     periodDay: computerCreatedDay,

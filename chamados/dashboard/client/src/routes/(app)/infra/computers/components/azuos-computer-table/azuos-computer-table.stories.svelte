@@ -17,8 +17,11 @@
       activeAlertMetrics: [],
       name: 'RECEPCAO-01',
       displayName: 'Recepção — balcão',
+      responsibleId: 'person-bia-costa',
       responsibleName: 'Bia Costa',
-      department: 'recepcao',
+      responsibleAvatarUrl: null,
+      departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+      notes: null,
       kind: 'desktop',
       hardware: {
         os: 'Microsoft Windows 11 Pro',
@@ -61,7 +64,7 @@
     computer(),
     computer({ id: 2, name: 'FISCAL-D02', displayName: null, activeAlerts: 1, healthStatus: 'critical', healthScore: 51, ticketsThisMonth: 4, responsibleAvatarUrl: 'https://i.pravatar.cc/64?img=47' }),
     computer({ id: 3, name: 'CAIXA-N01', displayName: 'Caixa — notebook', kind: 'notebook', preventiveStatus: 'due', lastPreventiveAt: '2026-01-10T12:00:00.000Z', isOnline: false }),
-    computer({ id: 4, name: 'CS-D06', displayName: null, isBlocked: true, isOnline: false, responsibleName: null, department: null }),
+    computer({ id: 4, name: 'CS-D06', displayName: null, isBlocked: true, isOnline: false, responsibleName: null, responsibleId: null, departmentId: null, departmentName: null, location: null }),
   ];
   const actions = { onOpen: fn(), onSortChange: fn() };
   const { Story } = defineMeta({

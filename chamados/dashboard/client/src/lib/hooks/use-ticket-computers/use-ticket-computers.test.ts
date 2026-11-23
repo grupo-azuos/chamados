@@ -94,6 +94,8 @@ const six = {
   hostname: 'COMERCIAL-D06',
   responsibleName: 'Carol',
   department: 'Comercial',
+  departmentKey: '1',
+  locationKey: null,
   isOnline: true,
 };
 const eleven = {
@@ -101,7 +103,9 @@ const eleven = {
   label: 'COMPUTADOR - 11',
   hostname: 'FISCAL-D11',
   responsibleName: null,
-  department: 'Fiscal',
+  department: 'Fiscal · RECEPÇÃO',
+  departmentKey: '5',
+  locationKey: 'RECEPÇÃO',
   isOnline: false,
 };
 
@@ -112,15 +116,14 @@ describe('filterChoices', () => {
     expect(filterChoices([six, eleven], 'fiscal-d', '')).toEqual([eleven]);
   });
 
-  it('narrows to the chosen department', () => {
-    expect(filterChoices([six, eleven], '', 'Fiscal')).toEqual([eleven]);
+  /* O filtro compara pelo id do RH, e não pelo nome que a tela mostra. */
+  it('narrows to the chosen department by its id', () => {
+    expect(filterChoices([six, eleven], '', '5')).toEqual([eleven]);
+    expect(filterChoices([six, eleven], '', 'Fiscal')).toEqual([]);
   });
 
-  /* O filtro compara pelo valor da lista do RH, e não pelo nome que a tela mostra. */
-  it('compares the department by its key when there is one', () => {
-    const keyed = { ...eleven, department: 'Fiscal e Tributário', departmentKey: 'fiscal' };
-
-    expect(filterChoices([six, keyed], '', 'fiscal')).toEqual([keyed]);
+  it('narrows to the chosen fixed location', () => {
+    expect(filterChoices([six, eleven], '', 'RECEPÇÃO')).toEqual([eleven]);
   });
 
   // triste
