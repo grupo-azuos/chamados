@@ -1,8 +1,8 @@
 <!--
   @component
   O card de uso geral com tom — o par Svelte do `AzuosToneCard` do template, sobre a
-  `AzuosCardSurface`: superfície da marca, véu no hover (tingido no tom, o tempo todo, quando
-  `mode="interactive"`) e escolhido no azul claro da marca. Mantido para as telas que já o usam;
+  `AzuosCardSurface`: superfície da marca, véu neutro no hover (em qualquer `mode` — não existe
+  hover colorido) e escolhido no azul claro da marca. Mantido para as telas que já o usam;
   card novo usa um dos quatro formatos (`AzuosStatCard`, `AzuosMiniStatCard`, `AzuosContentCard`,
   hero).
 
@@ -37,8 +37,6 @@
   {data}
   ui={{
     className: cn('p-4', ui?.className),
-    isHoverColored: ui?.mode === 'interactive',
-    hoverTone: ui?.tone,
   }}
   state={cardState}
   {actions}

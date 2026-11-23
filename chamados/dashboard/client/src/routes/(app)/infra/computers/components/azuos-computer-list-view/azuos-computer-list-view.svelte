@@ -1,14 +1,19 @@
 <!--
   @component
-  O INVENTÁRIO: as máquinas da empresa, na ordem do número (pelo nome físico).
+  O INVENTÁRIO: as máquinas da empresa, no formato da lista de empresas do Paralegal.
 
-  Cabeçalho com a exportação do relatório e "Cadastrar computador". No alto, duas fileiras de
-  números — máquinas, online, saúde crítica, em atenção, offline, com alerta, CPU e memória
-  elevadas —, e os que filtram são atalhos: clicar liga o filtro (e rola até ele), clicar de novo
-  desliga. Depois, a barra de filtros (`AzuosInventoryFilters`), a alternância entre cards
-  (celular) e tabela (monitor) e a lista: o nome que a pessoa reconhece (o apelido ganha do nome
-  técnico, que fica embaixo), responsável, saúde, situação de manutenção, chamados, selos de
-  arquivada, bloqueada, online ou offline, e "Ver ficha".
+  A ordem é a do molde de toda tela (padrão Apple): cabeçalho (exportar e "Cadastrar
+  computador") → os cartões de resumo → a barra de ferramentas (busca → departamento → "Filtros" →
+  formato tabela/cards) → o conteúdo → a paginação.
+
+  Os cartões de resumo são o `AzuosStatCard` com o ícone cheio do assunto, e os que filtram são
+  atalhos: clicar liga o filtro (e rola até a barra), clicar de novo desliga, e o escolhido fica
+  marcado. "Máquinas" é o "Total" do Paralegal: marcado quando nenhum atalho está valendo, e
+  clicar nele desliga todos. O resumo é do parque inteiro e não acompanha o filtro.
+
+  Nos cartões, a grade pagina (`AzuosPaginationBar`); a tabela rola. Cartão (`AzuosComputerCard`) e
+  linha (`AzuosComputerTable`) mostram a mesma máquina, com o selo que pisca quando há alerta
+  crítico aberto ou preventiva vencida. O hover é sempre o neutro.
 
   Não há botão de excluir, e a ausência é a regra do sistema: máquina que saiu de uso é ARQUIVADA,
   porque é o histórico dela que sustenta a decisão de compra.
@@ -16,29 +21,18 @@
   Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
   filtrada sem resultado e em erro.
 
-  - `data`: `computers`, `total`, `summary`, `filter`, `scheduledFor` e `departmentOptions`.
+  - `data`: `computers`, `total`, `summary`, `filter`, `scheduledFor`, `departmentOptions`, `sort`
+    e `paging`.
   - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated`,
     `isSummaryLoading`, `error`, `exportingFormat` e `exportError`.
-  - `actions`: um `on…Change` por filtro, `onClearFilters`, `onRetry`, `onOpen(computer)`,
-    `onRegister` e `onExportReport(format)`.
+  - `actions`: um `on…Change` por filtro, `onClearFilters`, `onClearShortcuts`, `onSortChange`,
+    `onPageChange`, `onRetry`, `onOpen(computer)`, `onRegister` e `onExportReport(format)`.
 -->
 <script lang="ts" module>
-  import {
-    resourceConditionOf,
-    resourceConditionTone,
-    type ResourceCondition,
-  } from '@template/shared/domain/computer-resource.util';
-  import {
-    healthStatusLabel,
-    healthStatusTone,
-    type HealthStatus,
-  } from '@template/shared/domain/computer-health.util';
+  import { type ResourceCondition } from '@template/shared/domain/computer-resource.util';
+  import { type HealthStatus } from '@template/shared/domain/computer-health.util';
   import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
-  import {
-    departmentLabel,
-    type Department,
-    type DepartmentChoice,
-  } from '@template/shared/domain/department.util';
+  import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
   import {
     type Computer,
     type ComputerAlertFilter,
@@ -46,6 +40,14 @@
     type ComputerListItem,
   } from '@template/shared/schemas/computer.schema';
   import { type ReportFormat } from '@template/shared/schemas/report.schema';
+
+  import {
+    type ComputerTableSort,
+    type ComputerTableSortField,
+  } from '../azuos-computer-table/azuos-computer-table.svelte';
+
+  /* O nome da máquina mora no cartão (quem mais o usa); daqui ele continua exportado, como era. */
+  export { displayNameOf } from '../azuos-computer-card/azuos-computer-card.svelte';
 
   export type ComputerListFilter = {
     search: string;
@@ -93,6 +95,10 @@
       scheduledFor?: Record<number, string>;
       /** Os departamentos do RH e, depois da linha, os daqui. */
       departmentOptions?: DepartmentChoice[];
+      /** A ordem em vigor — a seta do cabeçalho da tabela. */
+      sort?: ComputerTableSort;
+      /** A página dos cartões. Sem ela, a grade mostra tudo (o Storybook, os testes antigos). */
+      paging?: { page: number; pageSize: number; total: number };
     };
     state: {
       isLoading: boolean;
@@ -117,6 +123,10 @@
       onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
       onArchivedChange: (includeArchived: boolean) => void;
       onClearFilters: () => void;
+      /** "Máquinas": desliga os atalhos dos cartões. Sem ele, o cartão só mostra o número. */
+      onClearShortcuts?: () => void;
+      onSortChange?: (field: ComputerTableSortField) => void;
+      onPageChange?: (page: number) => void;
       onRetry: () => void;
       onOpen: (computer: Computer) => void;
       onRegister: () => void;
@@ -124,54 +134,60 @@
     };
   };
 
-  /**
-   * O nome que a pessoa reconhece.
-   *
-   * O apelido dado pelo TI ganha da etiqueta que a máquina informa: quem procura "o
-   * computador da recepção" não sabe que ele se chama RECEPCAO-01. O nome técnico continua
-   * embaixo, porque é por ele que o agente aparece no log.
-   */
-  export function displayNameOf(computer: Computer): string {
-    return computer.displayName?.trim() || computer.hardware?.hostname?.trim() || computer.name;
+  /** A página dos cartões: o recorte da lista que cabe nela. Sem página, a lista inteira. */
+  export function pageSliceOf<T>(
+    items: readonly T[],
+    paging?: { page: number; pageSize: number } | null,
+  ): T[] {
+    if (!paging) return [...items];
+
+    const start = (paging.page - 1) * paging.pageSize;
+
+    return items.slice(start, start + paging.pageSize);
+  }
+
+  /** Nenhum atalho dos cartões ligado: é quando "Máquinas" (o total) fica marcado. */
+  export function hasNoShortcut(filter: ComputerListFilter): boolean {
+    return !filter.healthStatus && !filter.alert && !filter.onlyOnline && !filter.onlyOffline;
   }
 </script>
 
 <script lang="ts">
+  import BellRing from '@lucide/svelte/icons/bell-ring';
+  import Cpu from '@lucide/svelte/icons/cpu';
   import HardDrive from '@lucide/svelte/icons/hard-drive';
-  import Laptop from '@lucide/svelte/icons/laptop';
+  import HeartPulse from '@lucide/svelte/icons/heart-pulse';
+  import MemoryStick from '@lucide/svelte/icons/memory-stick';
   import Monitor from '@lucide/svelte/icons/monitor';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
+  import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+  import Wifi from '@lucide/svelte/icons/wifi';
+  import WifiOff from '@lucide/svelte/icons/wifi-off';
 
+  import ComputerCard from '../azuos-computer-card/azuos-computer-card.svelte';
+  import ComputerTable from '../azuos-computer-table/azuos-computer-table.svelte';
   import InventoryFilters from '../azuos-inventory-filters/azuos-inventory-filters.svelte';
-  import ComputerMaintenanceStatus from '../azuos-computer-maintenance-status/azuos-computer-maintenance-status.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import ReportExportActions from '$lib/components/azuos-report-export-actions/azuos-report-export-actions.svelte';
   import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
-  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
-  import { RESOURCE_CONDITION_ICONS } from '$lib/utils/resource-condition-icon.util';
-  import {
-    Table,
-    TableActions,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-  } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
-  import { formatTimeAgo } from '$lib/utils/format-machine';
 
   let { data, state, actions }: AzuosComputerListViewProps = $props();
 
   const summary = $derived(data.summary);
   const tableView = useTableViewModel();
+  const cardComputers = $derived(pageSliceOf(data.computers, data.paging));
+  /* A barra só aparece quando há mais de uma página: "24 computadores" sozinho já diz tudo. */
+  const showsPaging = $derived(
+    Boolean(data.paging && actions.onPageChange && data.paging.total > data.paging.pageSize),
+  );
 
   /* Quem clica num cartão do topo precisa VER o resultado: a tela rola até os filtros.
      Variável comum, e não `$state`: este componente recebe uma prop chamada `state`, e com ela
@@ -195,6 +211,11 @@
 
   function filterByAlert(alert: ComputerAlertFilter) {
     actions.onAlertChange(data.filter.alert === alert ? '' : alert);
+    scrollToFilters();
+  }
+
+  function showAll() {
+    actions.onClearShortcuts?.();
     scrollToFilters();
   }
 
@@ -232,23 +253,29 @@
     <ErrorState data={{ message: state.exportError }} ui={{ variant: 'inline' }} />
   {/if}
 
+  <!-- Os cartões de resumo, como os "Por tag" do Paralegal: o ícone cheio carrega a cor do
+       assunto, o número fica na cor do texto, e os que filtram são atalhos — clicar liga, clicar
+       de novo desliga. Cartões de grupos diferentes se somam (saúde E alerta); do mesmo grupo,
+       um troca o outro. -->
   <StatCardGrid>
     <StatCard
       data={{ label: 'Máquinas', value: summary?.total ?? 0 }}
-      ui={{ tone: 'brand' }}
-      state={{ isLoading: state.isSummaryLoading }}
+      ui={{ tone: 'brand', icon: Monitor }}
+      state={{
+        isLoading: state.isSummaryLoading,
+        isSelected: actions.onClearShortcuts ? hasNoShortcut(data.filter) : false,
+      }}
+      actions={actions.onClearShortcuts ? { onClick: showAll } : undefined}
     />
     <StatCard
       data={{ label: 'Online agora', value: summary?.online ?? 0 }}
-      ui={{ tone: 'success' }}
+      ui={{ tone: 'success', icon: Wifi }}
       state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.onlyOnline }}
       actions={{ onClick: filterByOnline }}
     />
-    <!-- Estes dois são ATALHOS do filtro de saúde: clicar liga o mesmo filtro das pastilhas, e
-         clicar de novo desliga. "Online agora" também alterna o filtro de conexão. -->
     <StatCard
       data={{ label: 'Saúde crítica', value: summary?.critical ?? 0 }}
-      ui={{ tone: 'danger' }}
+      ui={{ tone: 'danger', icon: HeartPulse }}
       state={{
         isLoading: state.isSummaryLoading,
         isSelected: data.filter.healthStatus === 'critical',
@@ -261,7 +288,7 @@
         value: summary?.attention ?? 0,
         hint: summary?.neverSeen ? `${summary.neverSeen} sem o agente instalado` : null,
       }}
-      ui={{ tone: 'warning' }}
+      ui={{ tone: 'warning', icon: TriangleAlert }}
       state={{
         isLoading: state.isSummaryLoading,
         isSelected: data.filter.healthStatus === 'attention',
@@ -270,30 +297,29 @@
     />
   </StatCardGrid>
 
-  <!-- A segunda fileira: o que está fora do ar e o que está sofrendo AGORA. Cada cartão é
-       atalho do filtro de mesmo nome logo abaixo — clicar liga, clicar de novo desliga. -->
+  <!-- A segunda fileira: o que está fora do ar e o que está sofrendo AGORA. -->
   <StatCardGrid>
     <StatCard
       data={{ label: 'Offline', value: summary?.offline ?? 0 }}
-      ui={{ tone: 'neutral' }}
+      ui={{ tone: 'slate', icon: WifiOff }}
       state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.onlyOffline }}
       actions={{ onClick: filterByOffline }}
     />
     <StatCard
       data={{ label: 'Com alerta ativo', value: summary?.withAlerts ?? 0 }}
-      ui={{ tone: 'danger' }}
+      ui={{ tone: 'danger', icon: BellRing }}
       state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.alert === 'any' }}
       actions={{ onClick: () => filterByAlert('any') }}
     />
     <StatCard
       data={{ label: 'CPU elevada', value: summary?.cpuHigh ?? 0 }}
-      ui={{ tone: 'warning' }}
+      ui={{ tone: 'copper', icon: Cpu }}
       state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.alert === 'cpu' }}
       actions={{ onClick: () => filterByAlert('cpu') }}
     />
     <StatCard
       data={{ label: 'Memória elevada', value: summary?.memoryHigh ?? 0 }}
-      ui={{ tone: 'warning' }}
+      ui={{ tone: 'plum', icon: MemoryStick }}
       state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.alert === 'memory' }}
       actions={{ onClick: () => filterByAlert('memory') }}
     />
@@ -348,198 +374,43 @@
       />
     </EmptyState>
   {:else}
-    <!-- Lista de cartões para mobile (< xl) -->
-    <div
-      class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
-      data-slot="computer-cards-mobile"
-    >
-      {#each data.computers as computer (computer.id)}
-        <!-- O card de conteúdo do grupo: a condição dos recursos (disco, memória, tempo sem
-             reiniciar) entra como o ícone grande do canto e como a cor do hover. -->
-        {@const condition = resourceConditionOf(computer.hardware ?? {})}
-        <ContentCard
-          data={{ label: displayNameOf(computer) }}
-          ui={{
-            tone: resourceConditionTone(condition),
-            icon: RESOURCE_CONDITION_ICONS[condition],
-            isHoverColored: true,
-            markSize: 'lg',
-            className: 'min-w-0 gap-0 p-4',
-          }}
-        >
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div class="min-w-0 flex-1 basis-40">
-              <span class="text-ink-900 flex items-center gap-1.5 leading-snug font-medium break-words">
-                {#if computer.kind === 'notebook'}
-                  <Laptop class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
-                {:else}
-                  <Monitor class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
-                {/if}
-                {displayNameOf(computer)}
-              </span>
-              <span class="block text-xs text-ink-500 break-words leading-tight mt-0.5"
-                >{computer.hardware?.hostname || computer.name}</span
-              >
-            </div>
-            <div class="flex flex-col items-end gap-1 shrink-0">
-              <StatusBadge
-                data={{ label: healthStatusLabel(computer.healthStatus) }}
-                ui={{ tone: healthStatusTone(computer.healthStatus), size: 'sm' }}
-              />
-              <span class="text-xs text-ink-500 tabular-nums">
-                {computer.healthScore}/100
-              </span>
-            </div>
-          </div>
-
-          <div class="mt-4 grid grid-cols-1 gap-3 rounded-box bg-muted p-3 text-sm min-[380px]:grid-cols-2">
-            <div>
-              <span class="text-muted-foreground block text-xs">Responsável</span>
-              <span class="font-medium text-ink-700 break-words"
-                >{computer.responsibleName ?? '—'}</span
-              >
-              <span class="block text-ink-500 text-xs">
-                {computer.department ? departmentLabel(computer.department) : 'Sem departamento'}
-              </span>
-            </div>
-            <div>
-              <span class="text-muted-foreground block text-xs">Situação</span>
-              {#if computer.isArchived}
-                <StatusBadge data={{ label: 'Arquivada' }} ui={{ tone: 'neutral', size: 'sm' }} />
-              {:else if computer.isBlocked}
-                <StatusBadge data={{ label: 'Bloqueada' }} ui={{ tone: 'danger', size: 'sm' }} />
-              {:else if computer.isOnline}
-                <StatusBadge data={{ label: 'Online' }} ui={{ tone: 'success', size: 'sm' }} />
-              {:else}
-                <StatusBadge data={{ label: 'Offline' }} ui={{ tone: 'neutral', size: 'sm' }} />
-              {/if}
-              <span class="block text-ink-500 text-xs mt-1">
-                {formatTimeAgo(computer.lastSeenAt)}
-              </span>
-            </div>
-          </div>
-
-          <!-- A caixa de manutenção cresce até o rodapé: os cartões da mesma linha têm a mesma
-               altura, e sem isso cada um sobrava um vão diferente acima do "Ver ficha". -->
-          <div class="mt-3 min-w-0 flex-1 rounded-box bg-muted p-3">
-            <p class="text-muted-foreground mb-2 text-xs">Manutenção</p>
-            <ComputerMaintenanceStatus data={{ computer, scheduledFor: data.scheduledFor?.[computer.id] ?? null }} />
-          </div>
-
-          <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <span class="text-xs text-ink-500">
-              Chamados no mês: <strong class="text-foreground">{computer.ticketsThisMonth}</strong>
-            </span>
-            <ActionButton
-              data={{ label: 'Ver ficha' }}
-              ui={{ variant: 'secondary', size: 'sm' }}
-              actions={{ onClick: () => actions.onOpen(computer) }}
-            />
-          </div>
-        </ContentCard>
-      {/each}
-      <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
-      <div class="text-muted-foreground col-span-full flex flex-wrap justify-between gap-2 px-1 text-xs">
-        <span>Parque de computadores sincronizado</span>
-        <span>{data.computers.length} computador(es) listado(s)</span>
+    <!-- CARTÃO PAGINA, TABELA ROLA (como no Paralegal). Os cartões valem sempre no celular e no
+         tablet; no monitor, só quando a pessoa pediu cards (`AzuosTableViewToggle`). A barra de
+         páginas mora junto da grade, para sumir e aparecer com ela. -->
+    <div class={cn('flex flex-col gap-3', !tableView.forceCards && 'xl:hidden')}>
+      <div class="card-grid" data-slot="computer-cards-mobile">
+        {#each cardComputers as computer (computer.id)}
+          <ComputerCard
+            data={{ computer, scheduledFor: data.scheduledFor?.[computer.id] ?? null }}
+            actions={{ onOpen: actions.onOpen }}
+          />
+        {/each}
       </div>
+      {#if showsPaging && data.paging && actions.onPageChange}
+        <PaginationBar
+          data={{
+            page: data.paging.page,
+            pageSize: data.paging.pageSize,
+            total: data.paging.total,
+            noun: ['computador', 'computadores'],
+          }}
+          actions={{ onPageChange: actions.onPageChange }}
+        />
+      {:else}
+        <p class="text-muted-foreground px-1 text-right text-xs">
+          {data.computers.length} computador(es) listado(s)
+        </p>
+      {/if}
     </div>
 
-    <!-- Tabela para desktop (>= xl) -->
     <div
-      class={cn('overflow-x-auto', tableView.forceCards ? 'hidden' : 'hidden xl:block')}
+      class={cn(tableView.forceCards ? 'hidden' : 'hidden xl:block')}
       data-slot="computer-table-desktop"
     >
-      <Table class="min-w-[1080px]">
-        <TableHeader>
-          <TableRow>
-            <TableHead class="min-w-[240px]">Máquina</TableHead>
-            <TableHead class="min-w-[180px]">Responsável</TableHead>
-            <TableHead class="min-w-[120px]">Saúde</TableHead>
-            <TableHead class="min-w-[200px]">Manutenção</TableHead>
-            <TableHead class="min-w-[120px]">Chamados no mês</TableHead>
-            <TableHead class="min-w-[120px]">Situação</TableHead>
-            <TableHead class="min-w-[110px]">Vista</TableHead>
-            <TableHead class="min-w-[100px] text-right"
-              ><span class="sr-only">Ações</span></TableHead
-            >
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {#each data.computers as computer (computer.id)}
-            <TableRow>
-              <TableCell class="max-w-[280px]">
-                <span class="block font-medium text-ink-900 break-words leading-snug">
-                  {displayNameOf(computer)}
-                </span>
-                <span class="block text-xs text-ink-500 break-words leading-tight mt-0.5"
-                  >{computer.hardware?.hostname || computer.name}</span
-                >
-              </TableCell>
-              <TableCell class="max-w-[220px]">
-                <span class="block text-ink-700 break-words leading-snug"
-                  >{computer.responsibleName ?? '—'}</span
-                >
-                <span class="block text-xs text-ink-500 mt-0.5">
-                  {computer.department ? departmentLabel(computer.department) : 'Sem departamento'}
-                </span>
-              </TableCell>
-              <TableCell>
-                <StatusBadge
-                  data={{ label: healthStatusLabel(computer.healthStatus) }}
-                  ui={{ tone: healthStatusTone(computer.healthStatus), size: 'sm' }}
-                />
-                <span class="block text-xs text-ink-500 tabular-nums">
-                  {computer.healthScore}/100
-                </span>
-              </TableCell>
-              <TableCell class="max-w-[240px]">
-                <ComputerMaintenanceStatus data={{ computer, scheduledFor: data.scheduledFor?.[computer.id] ?? null }} />
-              </TableCell>
-              <!-- Quantos problemas esta máquina deu no mês corrente. Zero fica cinza e
-                   discreto: a coluna existe para as que DÃO trabalho saltarem aos olhos. -->
-              <TableCell class="tabular-nums">
-                <span
-                  class={computer.ticketsThisMonth > 0
-                    ? 'text-ink-900 font-medium'
-                    : 'text-ink-500'}
-                >
-                  {computer.ticketsThisMonth}
-                </span>
-              </TableCell>
-              <TableCell>
-                <!-- Arquivada e bloqueada vêm antes de online/offline: são decisões do TI, e
-                     explicam por que a máquina não está enviando nada. -->
-                {#if computer.isArchived}
-                  <StatusBadge data={{ label: 'Arquivada' }} ui={{ tone: 'neutral', size: 'sm' }} />
-                {:else if computer.isBlocked}
-                  <StatusBadge data={{ label: 'Bloqueada' }} ui={{ tone: 'danger', size: 'sm' }} />
-                {:else if computer.isOnline}
-                  <StatusBadge data={{ label: 'Online' }} ui={{ tone: 'success', size: 'sm' }} />
-                {:else}
-                  <StatusBadge data={{ label: 'Offline' }} ui={{ tone: 'neutral', size: 'sm' }} />
-                {/if}
-              </TableCell>
-              <TableCell class="text-ink-500 whitespace-nowrap text-xs">
-                {formatTimeAgo(computer.lastSeenAt)}
-              </TableCell>
-              <TableCell class="text-right whitespace-nowrap">
-                <TableActions>
-                  <ActionButton
-                    data={{ label: 'Ver ficha' }}
-                    ui={{ variant: 'secondary', size: 'sm' }}
-                    actions={{ onClick: () => actions.onOpen(computer) }}
-                  />
-                </TableActions>
-              </TableCell>
-            </TableRow>
-          {/each}
-        </TableBody>
-        {#snippet footer()}
-          <span>Parque de computadores sincronizado com o agente</span>
-          <span>{data.computers.length} computador(es) listado(s)</span>
-        {/snippet}
-      </Table>
+      <ComputerTable
+        data={{ computers: data.computers, sort: data.sort, scheduledFor: data.scheduledFor }}
+        actions={{ onOpen: actions.onOpen, onSortChange: actions.onSortChange }}
+      />
     </div>
 
     <!-- Truncar calado é mentir sobre o tamanho do parque. -->

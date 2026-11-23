@@ -13,8 +13,8 @@
     <p class="text-muted-foreground text-xs">ANALYZE-D01 · Pouca memória</p>
   </ContentCard>
 </Story>
-<Story name="HoverColored" asChild>
-  <ContentCard data={{ label: 'Computador 02' }} ui={{ tone: 'yellow', icon: MemoryStick, isHoverColored: true, className: 'w-64 min-h-44' }}>
+<Story name="Clickable" asChild>
+  <ContentCard data={{ label: 'Computador 02' }} ui={{ tone: 'yellow', icon: MemoryStick, className: 'w-64 min-h-44' }} actions={{ onClick: () => {} }}>
     <h3 class="text-sm font-bold">Computador 02</h3>
   </ContentCard>
 </Story>

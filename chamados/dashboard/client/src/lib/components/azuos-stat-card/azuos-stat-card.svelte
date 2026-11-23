@@ -12,7 +12,8 @@
   rótulo, com a explicação de como o número é calculado.
 
   - `data`: rótulo, valor, `hint` e `tooltip`.
-  - `ui`: tom, tamanho (`md` ou `lg`), ícone, cor da pessoa, hover colorido e classes extras.
+  - `ui`: tom, tamanho (`md` ou `lg`), ícone, cor da pessoa e classes extras. O hover é sempre o
+    véu neutro da superfície.
   - `state`: carregando e `isSelected`, quando o filtro deste cartão já está valendo.
   - `actions`: `onClick`, que faz o cartão filtrar a lista pelo que ele conta.
 -->
@@ -37,8 +38,6 @@
       icon?: LucideIcon;
       /** Uma cor escolhida pela pessoa (`#rrggbb`): vira o tom mais próximo da paleta. */
       color?: string | null;
-      /** O hover pinta a mancha no sotaque do card, em vez do véu neutro. */
-      isHoverColored?: boolean;
     };
     state?: {
       isLoading?: boolean;
@@ -120,8 +119,6 @@
     data={{ label }}
     ui={{
       className: cn('p-5', ui?.className),
-      isHoverColored: ui?.isHoverColored,
-      hoverTone: tone,
     }}
     state={{ isSelected, isDisabled: cardState?.isLoading }}
     {actions}

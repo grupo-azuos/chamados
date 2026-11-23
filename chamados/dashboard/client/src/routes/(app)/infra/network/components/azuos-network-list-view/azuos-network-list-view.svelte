@@ -130,8 +130,12 @@
 
 <script lang="ts">
   import FilterX from '@lucide/svelte/icons/filter-x';
+  import Gauge from '@lucide/svelte/icons/gauge';
   import SearchX from '@lucide/svelte/icons/search-x';
+  import Timer from '@lucide/svelte/icons/timer';
+  import Unplug from '@lucide/svelte/icons/unplug';
   import Wifi from '@lucide/svelte/icons/wifi';
+  import WifiOff from '@lucide/svelte/icons/wifi-off';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
@@ -198,7 +202,7 @@
          novo desliga. Os outros dois são medidas, sem filtro correspondente. -->
     <StatCard
       data={{ label: 'Em aberto agora', value: summary?.open ?? 0 }}
-      ui={{ tone: 'danger' }}
+      ui={{ tone: 'danger', icon: WifiOff }}
       state={{ isLoading: viewState.isSummaryLoading, isSelected: data.filter.onlyOpen }}
       actions={{
         onClick: () => applyShortcut(() => actions.onOnlyOpenChange(!data.filter.onlyOpen)),
@@ -206,7 +210,7 @@
     />
     <StatCard
       data={{ label: 'Quedas no período', value: summary?.outages ?? 0 }}
-      ui={{ tone: 'warning' }}
+      ui={{ tone: 'warning', icon: Unplug }}
       state={{
         isLoading: viewState.isSummaryLoading,
         isSelected: data.filter.type === OUTAGE_TYPE,
@@ -224,7 +228,7 @@
         value: formatDuration(summary?.totalOutageSeconds ?? null),
         hint: 'somando as quedas que já terminaram',
       }}
-      ui={{ tone: 'info' }}
+      ui={{ tone: 'info', icon: Timer }}
       state={{ isLoading: viewState.isSummaryLoading }}
     />
     <StatCard
@@ -235,7 +239,7 @@
           ? `${summary.worstPacketLossPercent.toFixed(1).replace('.', ',')}% de perda no pior momento`
           : null,
       }}
-      ui={{ tone: 'brand' }}
+      ui={{ tone: 'brand', icon: Gauge }}
       state={{ isLoading: viewState.isSummaryLoading }}
     />
   </StatCardGrid>

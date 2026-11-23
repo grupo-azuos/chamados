@@ -185,6 +185,10 @@
 </script>
 
 <script lang="ts">
+  import CircleAlert from '@lucide/svelte/icons/circle-alert';
+  import CircleCheck from '@lucide/svelte/icons/circle-check';
+  import Headset from '@lucide/svelte/icons/headset';
+  import Hourglass from '@lucide/svelte/icons/hourglass';
   import Inbox from '@lucide/svelte/icons/inbox';
   import SearchX from '@lucide/svelte/icons/search-x';
 
@@ -370,13 +374,13 @@
   <StatCardGrid>
     <StatCard
       data={{ label: 'Abertos', value: dashboard?.open ?? 0 }}
-      ui={{ tone: 'danger' }}
+      ui={{ tone: 'danger', icon: CircleAlert }}
       state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.status === 'open' }}
       actions={{ onClick: () => filterByStatus('open') }}
     />
     <StatCard
       data={{ label: 'Em atendimento', value: dashboard?.inProgress ?? 0 }}
-      ui={{ tone: 'info' }}
+      ui={{ tone: 'info', icon: Headset }}
       state={{
         isLoading: state.isDashboardLoading,
         isSelected: data.filter.status === 'in_progress',
@@ -389,7 +393,7 @@
         value: dashboard?.waiting ?? 0,
         hint: 'solicitante, terceiro ou peça',
       }}
-      ui={{ tone: 'warning' }}
+      ui={{ tone: 'warning', icon: Hourglass }}
       state={{
         isLoading: state.isDashboardLoading,
         isSelected: data.filter.statusGroup === 'waiting',
@@ -407,7 +411,7 @@
           ? `tempo médio: ${formatAverage(dashboard.averageResolutionHours)}`
           : 'nada resolvido ainda',
       }}
-      ui={{ tone: 'success' }}
+      ui={{ tone: 'success', icon: CircleCheck }}
       state={{
         isLoading: state.isDashboardLoading,
         isSelected: data.filter.statusGroup === 'solved',
@@ -522,12 +526,12 @@
           data-slot="ticket-cards-mobile"
         >
           {#each data.tickets as ticket (ticket.id)}
-            <!-- O card de conteúdo do grupo: superfície da marca, hover na cor da situação. Os
+            <!-- O card de conteúdo do grupo: superfície da marca, hover neutro. Os
                  textos cortam com reticências (o inteiro fica no `title`), para nenhum nome
                  comprido esticar a altura de toda a linha de cards. -->
             <ContentCard
               data={{ label: `${ticket.protocol} — ${ticket.requesterName}` }}
-              ui={{ tone: ticketStatusTone(ticket.status), isHoverColored: true, className: 'min-w-0 gap-3 p-4' }}
+              ui={{ tone: ticketStatusTone(ticket.status), className: 'min-w-0 gap-3 p-4' }}
             >
               <div class="flex min-w-0 items-center justify-between gap-2">
                 <span class="text-ink-900 shrink-0 font-mono text-xs font-semibold">
@@ -561,7 +565,7 @@
                   { label: 'Máquina', value: ticket.computerName ?? '—' },
                 ] as field (field.label)}
                   <div class="flex min-w-0 flex-col gap-0.5">
-                    <span class="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                    <span class="text-muted-foreground text-xs font-medium">
                       {field.label}
                     </span>
                     <span class="text-ink-700 truncate" title={field.value}>{field.value}</span>

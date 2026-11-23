@@ -22,6 +22,7 @@
   import Download from '@lucide/svelte/icons/download';
   import Monitor from '@lucide/svelte/icons/monitor';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
@@ -75,10 +76,8 @@
       ui={{ icon: Monitor }}
     />
   {:else}
-    <section
-      class="rounded-surface bg-card p-6 shadow-card"
-      aria-label="Versão do agente"
-    >
+    <!-- O card padrão do grupo (superfície sem borda, sombra difusa), nunca montado à mão. -->
+    <CardSurface data={{ label: 'Versão do agente' }} ui={{ className: 'p-6' }}>
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
           <p class="text-muted-foreground text-sm">Versão LTS</p>
@@ -166,13 +165,10 @@
           mesmos arquivos; o inventário continua na Infraestrutura.
         </p>
       </div>
-    </section>
+    </CardSurface>
   {/if}
 
-  <section
-    class="rounded-surface bg-card p-6 shadow-card"
-    aria-label="Todas as versões"
-  >
+  <CardSurface data={{ label: 'Todas as versões' }} ui={{ className: 'p-6' }}>
     <h2 class="text-foreground font-semibold">Todas as versões</h2>
     <p class="text-muted-foreground mt-1 text-sm">
       Até 30 versões publicadas, da mais nova para a mais antiga. Prefira a LTS.
@@ -224,7 +220,7 @@
         {/each}
       </ul>
     {/if}
-  </section>
+  </CardSurface>
 
   {#if state.downloadError}
     <ErrorState

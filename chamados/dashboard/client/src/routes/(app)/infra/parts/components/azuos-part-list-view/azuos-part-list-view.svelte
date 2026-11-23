@@ -113,7 +113,10 @@
 
 <script lang="ts">
   import FilterX from '@lucide/svelte/icons/filter-x';
+  import Layers from '@lucide/svelte/icons/layers';
   import Package from '@lucide/svelte/icons/package';
+  import PackageCheck from '@lucide/svelte/icons/package-check';
+  import PackageX from '@lucide/svelte/icons/package-x';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
 
@@ -201,7 +204,7 @@
   <StatCardGrid>
     <StatCard
       data={{ label: 'Tipos de peça', value: summary?.kinds ?? 0 }}
-      ui={{ tone: 'brand' }}
+      ui={{ tone: 'brand', icon: Layers }}
       state={{ isLoading: viewState.isSummaryLoading }}
     />
     <!-- Estes dois são ATALHOS do filtro de estoque: "Peças na prateleira" mostra só o que tem
@@ -209,7 +212,7 @@
          total do cadastro — não filtra nada. -->
     <StatCard
       data={{ label: 'Peças na prateleira', value: summary?.items ?? 0 }}
-      ui={{ tone: 'success' }}
+      ui={{ tone: 'success', icon: PackageCheck }}
       state={{ isLoading: viewState.isSummaryLoading, isSelected: data.filter.inStockOnly }}
       actions={{ onClick: () => chooseStockFromCard('in') }}
     />
@@ -219,7 +222,7 @@
         value: summary?.outOfStock ?? 0,
         hint: summary?.outOfStock ? 'são as que podem precisar de compra' : null,
       }}
-      ui={{ tone: 'danger' }}
+      ui={{ tone: 'danger', icon: PackageX }}
       state={{ isLoading: viewState.isSummaryLoading, isSelected: data.filter.outOfStockOnly }}
       actions={{ onClick: () => chooseStockFromCard('out') }}
     />
@@ -326,11 +329,11 @@
       data-slot="part-cards-mobile"
     >
       {#each data.parts as part (part.id)}
-        <!-- O card de conteúdo do grupo, hover na cor da condição. O nome corta em duas linhas
+        <!-- O card de conteúdo do grupo, hover neutro. O nome corta em duas linhas
              (o inteiro fica na dica), para um nome comprido não esticar a linha de cards. -->
         <ContentCard
           data={{ label: part.name }}
-          ui={{ tone: partConditionTone(part.condition), isHoverColored: true, className: 'min-w-0 gap-0 p-4' }}
+          ui={{ tone: partConditionTone(part.condition), className: 'min-w-0 gap-0 p-4' }}
           actions={{ onClick: () => actions.onOpenLedger(part) }}
         >
           <div class="flex items-start justify-between gap-2">

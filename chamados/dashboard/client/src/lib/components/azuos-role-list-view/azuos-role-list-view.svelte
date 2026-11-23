@@ -148,12 +148,16 @@
 
 <script lang="ts">
   import Info from '@lucide/svelte/icons/info';
+  import MonitorCog from '@lucide/svelte/icons/monitor-cog';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
+  import Server from '@lucide/svelte/icons/server';
   import ShieldCheck from '@lucide/svelte/icons/shield-check';
+  import Wrench from '@lucide/svelte/icons/wrench';
   import X from '@lucide/svelte/icons/x';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
@@ -173,7 +177,6 @@
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
 
   let { afterProfile, data, ui, state, actions }: AzuosRoleListViewProps = $props();
@@ -337,22 +340,22 @@
   <StatCardGrid>
     <StatCard
       data={{ label: 'Módulos liberados', value: data.roles.length }}
-      ui={{ tone: 'brand', icon: ShieldCheck }}
+      ui={{ tone: 'neutral', icon: ShieldCheck }}
       state={{ isLoading: state.isLoading }}
     />
     <StatCard
       data={{ label: 'Sistema', value: countByContext('sistema') }}
-      ui={{ tone: 'brand' }}
+      ui={{ tone: contextTone('sistema'), icon: MonitorCog }}
       state={{ isLoading: state.isLoading }}
     />
     <StatCard
       data={{ label: 'Infraestrutura', value: countByContext('infra') }}
-      ui={{ tone: 'info' }}
+      ui={{ tone: contextTone('infra'), icon: Server }}
       state={{ isLoading: state.isLoading }}
     />
     <StatCard
       data={{ label: 'Manutenção', value: countByContext('manutencao') }}
-      ui={{ tone: 'warning' }}
+      ui={{ tone: contextTone('manutencao'), icon: Wrench }}
       state={{ isLoading: state.isLoading }}
     />
   </StatCardGrid>
@@ -433,12 +436,9 @@
         {@const user = resolveUser(person)}
         {@const displayName = user?.name || person.userEmail || person.userId}
         {@const creators = creatorsOf(person)}
-        <!-- A cor entra por onde o mouse entrou (`hover-fill`, em tokens.css): a do primeiro módulo. -->
-        <div
-          use:fillFromPointer
-          style:--fill-color={fillColorOf(contextTone(person.roles[0]?.context ?? 'sistema'))}
-          class="hover-fill flex flex-col gap-3 rounded-box bg-card p-4 shadow-card"
-        >
+        <!-- O card de conteúdo do grupo: superfície da marca, hover neutro. A cor dos módulos mora
+             nos selos, nunca no fundo do card. -->
+        <ContentCard data={{ label: displayName }} ui={{ className: 'gap-3' }}>
           <div class="flex items-center gap-3 min-w-0">
             <PersonAvatar name={displayName} avatarUrl={user?.image} ui={{ size: 'lg' }} />
             <div class="min-w-0">
@@ -457,7 +457,7 @@
           </div>
 
           <div class="flex flex-col gap-1 pt-2 border-t border-border">
-            <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <span class="text-xs font-medium text-muted-foreground">
               {person.roles.length > 1 ? 'Módulos' : 'Módulo'}
             </span>
             {@render moduleBadges(person)}
@@ -470,7 +470,7 @@
               <span class="break-all">Liberado por: {creators}</span>
             </div>
           {/if}
-        </div>
+        </ContentCard>
       {/each}
     </div>
 

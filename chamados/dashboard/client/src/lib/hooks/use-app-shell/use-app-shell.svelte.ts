@@ -60,7 +60,7 @@ export type AppShellModel = {
     /** A conta da pessoa no admin-console; `null` enquanto não se sabe ou se não há. */
     accountUrl: string | null;
   };
-  /** O menu DO MÓDULO que montou esta casca — o mesmo que entrou por `items`. */
+  /** O menu do módulo da tela aberta — o mesmo que entrou por `items`. */
   ui: { items: readonly NavItem[] };
   state: {
     activeKey: string | undefined;
@@ -87,11 +87,11 @@ export type AppShellModel = {
  * `routes/(app)/+layout.ts`. Por isso ele só monta dentro do grupo `(app)`, depois que a
  * sessão já foi conferida.
  *
- * `context` e `items` TAMBÉM chegam por parâmetro, e é aí que está a independência dos três
- * módulos: quem monta a casca é o `+layout.svelte` de cada contexto, que passa o contexto
- * dele e só a lista de menu dele. Este hook não descobre contexto nenhum — nem pelo endereço,
- * nem pelo que está guardado no navegador —, e por isso não tem como montar o menu de um
- * módulo dentro de outro.
+ * `context` e `items` TAMBÉM chegam por parâmetro: quem decide é `routes/(app)/+layout.svelte`,
+ * pelo endereço (`/infra/...` é Infraestrutura) e pelo mapa fixo `NAV_ITEMS_BY_CONTEXT`. Este
+ * hook não descobre contexto nenhum, e por isso não tem como montar o menu de um módulo dentro
+ * de outro. Os dois podem chegar como `get`: a casca é montada UMA vez para o painel inteiro, e
+ * trocar de módulo troca só o menu e o conteúdo — nada de desmontar a barra e piscar a tela.
  *
  * Contador de menu (ex.: "3 chamados atrasados") é buscado AQUI, uma vez, e não em cada rota:
  * o menu é o mesmo em todas, e buscar de novo a cada navegação repetiria a mesma consulta a
@@ -100,10 +100,10 @@ export type AppShellModel = {
  */
 export function useAppShellModel(input: {
   user: SessionUser;
-  /** O módulo dono desta casca. */
-  context: AreaContext;
+  /** O módulo da tela aberta (lido a cada acesso: pode ser um `get`). */
+  readonly context: AreaContext;
   /** O menu dele — `INFRA_NAV_ITEMS`, `SYSTEM_NAV_ITEMS` ou `MAINTENANCE_NAV_ITEMS`. */
-  items: readonly NavItem[];
+  readonly items: readonly NavItem[];
 }): AppShellModel {
   let isProfileOpen = $state(false);
   const queryClient = useQueryClient();
@@ -216,10 +216,13 @@ export function useAppShellModel(input: {
         }));
       },
     },
-    /* O menu é o que o layout do módulo passou, e nada mais. Valor fixo, e não `get`: a casca
-       de um contexto vive e morre com a pasta dele — trocar de contexto é trocar de endereço,
-       e aí monta a casca do outro módulo, com a lista dele. */
-    ui: { items: input.items },
+    /* O menu é o que o layout passou, e nada mais. `get` e não valor: a casca fica montada ao
+       trocar de módulo, e o menu acompanha o endereço novo. */
+    ui: {
+      get items() {
+        return input.items;
+      },
+    },
     /* Qual item está ativo é decidido AQUI, e não no componente: resolver a rota atual é
        trabalho de hook; o componente continua sem saber de roteamento.
 
@@ -249,9 +252,8 @@ export function useAppShellModel(input: {
       /* Trocar de contexto é TROCAR DE ENDEREÇO, sempre: a pessoa vai para a mesma tela do
          contexto escolhido (Chamados existe nos três) ou, quando a tela não existe lá (o
          Depósito de máquinas), para a primeira dele — a decisão está em `contextSwitchPath`.
-         Do perfil, que não é de módulo nenhum, ela entra na primeira tela do contexto: a
-         casca de cada módulo é montada pela pasta dele, e não há como trocar só o menu
-         ficando onde está. */
+         Do perfil, que não é de módulo nenhum, ela entra na primeira tela do contexto: o
+         menu é o do endereço, e não há como trocar só o menu ficando onde está. */
       onAreaContextChange: (context: AreaContext) => {
         lastContext.actions.onContextChange(context);
 

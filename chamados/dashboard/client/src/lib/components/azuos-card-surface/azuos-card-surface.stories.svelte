@@ -10,9 +10,9 @@
 <Story name="Default" asChild>
   <CardSurface data={{ label: 'Card' }}><p class="p-5 text-sm">Conteúdo do card</p></CardSurface>
 </Story>
-<Story name="HoverColored" asChild>
-  <CardSurface data={{ label: 'Card' }} ui={{ isHoverColored: true, hoverTone: 'red' }}>
-    <p class="p-5 text-sm">Hover na cor do sotaque</p>
+<Story name="Clickable" asChild>
+  <CardSurface data={{ label: 'Card' }} actions={{ onClick: () => {} }}>
+    <p class="p-5 text-sm">Hover: sobe 2px, a sombra cresce e o véu é neutro</p>
   </CardSurface>
 </Story>
 <Story name="WithMark" asChild>

@@ -17,13 +17,14 @@ describe('AzuosToneCard (Svelte)', () => {
     expect(card.className).not.toMatch(/bg-hue|-soft|-fill/);
   });
 
-  it('colours the hover wash with its tone when interactive', () => {
+  /* Não existe hover colorido: mesmo interativo, o véu é o neutro do tema. */
+  it('keeps the neutral hover veil even when interactive', () => {
     const { container } = render(ToneCard, {
       props: { data: { label: 'Em dia' }, ui: { tone: 'success', mode: 'interactive' }, children },
     });
 
     const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
-    expect(wash.style.getPropertyValue('--card-veil')).toContain('--hue-green');
+    expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
   });
 
   it('turns the card into a button when it is clickable', async () => {

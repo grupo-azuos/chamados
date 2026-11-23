@@ -19,13 +19,14 @@ import { ROLE_CONTEXTS, type RoleContext } from '@template/shared/domain/role-co
  *
  * São três sistemas dentro de um — Infraestrutura, Sistema e Manutenção —, cada um com a
  * própria pasta em `src/routes/(app)` (`/infra/...`, `/system/...`, `/maintenance/...`) e com
- * a PRÓPRIA CASCA: cada `+layout.svelte` de contexto importa só a lista dele e monta o seu
- * menu. Nenhum módulo enxerga a lista do outro.
+ * o PRÓPRIO MENU: a casca, montada uma vez em `(app)/+layout.svelte`, lê o módulo do endereço
+ * e mostra só a lista dele. Nenhum módulo enxerga a lista do outro.
  *
  * Antes existia uma lista única, com o contexto como campo, e a casca a FILTRAVA em tempo de
  * execução a partir do contexto guardado no navegador. Era por aí que um módulo se achava
  * dono do sistema inteiro: a lista sabia das três áreas, e bastava o filtro falhar (ou nem
- * ser aplicado) para o menu de um aparecer no outro. Agora não há filtro: a pasta é o filtro.
+ * ser aplicado) para o menu de um aparecer no outro. Agora não há filtro: o endereço escolhe
+ * a lista inteira, pelo mapa `NAV_ITEMS_BY_CONTEXT`.
  *
  * Tela nova no menu = uma linha na lista do módulo dono.
  *
@@ -135,11 +136,11 @@ export const MAINTENANCE_NAV_ITEMS: readonly NavItem[] = [
 /**
  * O MAPA DOS TRÊS — e o único lugar do sistema que conhece os três menus.
  *
- * Serve a duas coisas que são, por natureza, de fora dos módulos: o SELETOR de contexto no
- * cabeçalho (que precisa saber para qual endereço ir) e a casca das telas que não são de
- * contexto nenhum (o perfil, os cargos), que mostra o menu do último contexto usado.
+ * Serve a coisas que são, por natureza, de fora dos módulos: o SELETOR de contexto no trilho
+ * (que precisa saber para qual endereço ir) e a casca do painel, que mostra a lista do módulo
+ * do endereço — ou, no perfil e nos cargos, a do último contexto usado.
  *
- * Nenhuma tela de módulo importa isto: a casca de cada contexto importa a lista dele.
+ * Nenhuma tela de módulo importa isto: ela só aparece dentro da casca.
  */
 export const NAV_ITEMS_BY_CONTEXT: Record<RoleContext, readonly NavItem[]> = {
   infra: INFRA_NAV_ITEMS,

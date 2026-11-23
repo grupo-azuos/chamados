@@ -39,4 +39,18 @@ describe('AzuosActionMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(onSelect).not.toHaveBeenCalled();
   });
+
+  // feliz
+  it('opens from the three dots alone, named for the screen reader', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(ActionMenu, { props: { data, ui: { isIconOnly: true }, actions: { onSelect } } });
+
+    const trigger = screen.getByRole('button', { name: 'Mais ações' });
+    expect(trigger).not.toHaveTextContent('Mais ações');
+    await user.click(trigger);
+    await user.click(await screen.findByRole('menuitem', { name: 'Arquivar' }));
+
+    expect(onSelect).toHaveBeenCalledWith('archive');
+  });
 });

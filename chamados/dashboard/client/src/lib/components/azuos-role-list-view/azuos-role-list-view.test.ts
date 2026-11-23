@@ -139,7 +139,7 @@ describe('AzuosRoleListView', () => {
     renderView();
 
     const cards = document.querySelector('[data-slot="role-cards-mobile"]') as HTMLElement;
-    expect(cards.querySelectorAll('.hover-fill')).toHaveLength(1);
+    expect(cards.querySelectorAll('[data-slot="azuos-card-surface"]')).toHaveLength(1);
     expect(screen.getAllByText('Módulos').length).toBeGreaterThan(0);
   });
 

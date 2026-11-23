@@ -95,6 +95,7 @@
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
@@ -132,7 +133,7 @@
     />
   </PageHeader>
 
-  <div class="rounded-surface bg-card flex flex-col gap-3 p-4 shadow-card">
+  <CardSurface ui={{ className: 'flex flex-col gap-3 p-4' }}>
     <TextField
       data={{
         label: 'Buscar',
@@ -170,7 +171,7 @@
         />
       {/if}
     </div>
-  </div>
+  </CardSurface>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2). -->
   {#if listState.error}
@@ -215,7 +216,8 @@
 
       <ul class="flex flex-col gap-3">
         {#each data.quotes as quote (quote.id)}
-          <li class="rounded-surface bg-card flex flex-col gap-2.5 p-4 shadow-card">
+          <li class="flex">
+            <CardSurface ui={{ className: 'flex flex-1 flex-col gap-2.5 p-4' }}>
             <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
               <div class="min-w-0">
                 <h3 class="text-ink-900 text-sm leading-tight font-semibold">{quote.supplier}</h3>
@@ -275,6 +277,7 @@
                 />
               </div>
             </div>
+            </CardSurface>
           </li>
         {/each}
       </ul>

@@ -7,8 +7,13 @@ import { ApiError } from '$lib/api/http-client';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 import Harness from './use-computer-list-harness.test.svelte';
 import {
+  clampPage,
+  COMPUTER_CARD_PAGE_SIZE,
+  nextSort,
   scheduledDayByComputer,
+  sortComputers,
   summarizeComputers,
+  withSinglePresence,
   type ComputerListModel,
 } from './use-computer-list.svelte';
 
@@ -408,3 +413,119 @@ describe('useComputerListModel with a board cut', () => {
     expect(model.state.isEmpty).toBe(true);
   });
 });
+
+describe('sortComputers', () => {
+  const park = [
+    computer({ id: 1, name: 'FISCAL-D02', displayName: null, healthScore: 90, responsibleName: 'Bruno', ticketsThisMonth: 1 }),
+    computer({ id: 2, name: 'FISCAL-D10', displayName: null, healthScore: 40, responsibleName: null, ticketsThisMonth: 5, lastSeenAt: null }),
+    computer({ id: 3, name: 'ANALYZE-D01', displayName: null, healthScore: 70, responsibleName: 'Ana', ticketsThisMonth: 1 }),
+  ];
+  const ids = (list: ComputerListItem[]) => list.map((item) => item.id);
+
+  // feliz
+  it('keeps the machine number order by default and reverses it on request', () => {
+    expect(ids(sortComputers(park, { field: 'number', direction: 'asc' }))).toEqual([3, 1, 2]);
+    expect(ids(sortComputers(park, { field: 'number', direction: 'desc' }))).toEqual([2, 1, 3]);
+  });
+
+  it('puts the worst health first and the busiest machine first when asked', () => {
+    expect(ids(sortComputers(park, { field: 'health', direction: 'asc' }))).toEqual([2, 3, 1]);
+    /* Empate (1 chamado) cai no número da máquina: a ordem não pula a cada atualização. */
+    expect(ids(sortComputers(park, { field: 'tickets', direction: 'desc' }))).toEqual([2, 3, 1]);
+  });
+
+  // triste
+  it('sends the missing responsible and the machine that never connected to the end, both ways', () => {
+    expect(ids(sortComputers(park, { field: 'responsible', direction: 'asc' }))).toEqual([3, 1, 2]);
+    expect(ids(sortComputers(park, { field: 'responsible', direction: 'desc' }))).toEqual([1, 3, 2]);
+    expect(ids(sortComputers(park, { field: 'lastSeen', direction: 'desc' })).at(-1)).toBe(2);
+  });
+});
+
+describe('nextSort, clampPage and withSinglePresence', () => {
+  // feliz
+  it('flips the direction on the same column and starts a new one ascending', () => {
+    expect(nextSort({ field: 'health', direction: 'asc' }, 'health')).toEqual({ field: 'health', direction: 'desc' });
+    expect(nextSort({ field: 'health', direction: 'desc' }, 'tickets')).toEqual({ field: 'tickets', direction: 'asc' });
+  });
+
+  // triste
+  it('never points at a page that does not exist', () => {
+    expect(clampPage(3, 30, 24)).toBe(2);
+    expect(clampPage(5, 0, 24)).toBe(1);
+    expect(clampPage(0, 30, 24)).toBe(1);
+  });
+
+  /* Um salvo antigo ou um endereço com os dois ligados: ganha o online, igual ao servidor. */
+  it('never lets online and offline arrive on together', () => {
+    expect(withSinglePresence({ onlyOnline: true, onlyOffline: true })).toEqual({ onlyOnline: true, onlyOffline: false });
+    expect(withSinglePresence({ onlyOffline: true })).toEqual({ onlyOffline: true });
+  });
+});
+
+describe('useComputerListModel — pages, order and the total card', () => {
+  const park = Array.from({ length: 30 }, (_, index) =>
+    computer({ id: index + 1, name: `MAQ-D${String(index + 1).padStart(2, '0')}`, displayName: null }),
+  );
+
+  beforeEach(() => {
+    vi.mocked(computersApi.list).mockResolvedValue(page(park));
+  });
+
+  // feliz
+  it('pages the cards and goes back to the first page when a filter changes', async () => {
+    const model = await mountLoadedModel();
+    expect(model.data.paging).toEqual({ page: 1, pageSize: COMPUTER_CARD_PAGE_SIZE, total: 30 });
+
+    model.actions.onPageChange(2);
+    expect(model.data.paging.page).toBe(2);
+
+    model.actions.onSearchChange('MAQ');
+    expect(model.data.paging.page).toBe(1);
+  });
+
+  // triste
+  it('pulls the page back when the list shrinks under it', async () => {
+    const model = await mountLoadedModel();
+    model.actions.onPageChange(9);
+
+    expect(model.data.paging.page).toBe(2);
+  });
+
+  // feliz
+  it('sorts by the clicked column and starts over on the first page', async () => {
+    const model = await mountLoadedModel();
+    model.actions.onPageChange(2);
+
+    model.actions.onSortChange('number');
+
+    expect(model.data.sort).toEqual({ field: 'number', direction: 'desc' });
+    expect(model.data.computers[0]?.name).toBe('MAQ-D30');
+    expect(model.data.paging.page).toBe(1);
+  });
+
+  /* Uma consulta só, com os quatro atalhos desligados — e a busca continua valendo. */
+  it('turns every shortcut off at once from the total card, keeping the search', async () => {
+    const model = await mountLoadedModel();
+    model.actions.onSearchChange('MAQ');
+    model.actions.onHealthStatusChange('critical');
+    model.actions.onAlertChange('cpu');
+    model.actions.onOfflineChange(true);
+    await waitFor(() =>
+      expect(computersApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ healthStatus: 'critical', alert: 'cpu', onlyOffline: true }),
+      ),
+    );
+    vi.mocked(computersApi.list).mockClear();
+
+    model.actions.onClearShortcuts();
+
+    await waitFor(() => expect(computersApi.list).toHaveBeenCalled());
+    const calls = vi.mocked(computersApi.list).mock.calls.filter(([query]) => query.search === 'MAQ');
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.[0]).toEqual(
+      expect.objectContaining({ healthStatus: undefined, alert: undefined, onlyOffline: undefined }),
+    );
+  });
+});
+

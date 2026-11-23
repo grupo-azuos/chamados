@@ -10,10 +10,9 @@
    *
    * - Fundo: a superfície (`bg-card`) SEM borda, com o fio de 1px e a sombra difusa do padrão
    *   Apple. A cor entra no ícone cheio do assunto (`$lib/utils/card-tone.util`), nunca no fundo.
-   * - Cor: card com tom (`ui.isHoverColored` + `ui.hoverTone`) fica TINGIDO o tempo todo — o tom
-   *   a 16%, a mesma cor que a antiga mancha animada deixava no fim. Card sem tom fica na
-   *   superfície e ganha só o véu neutro (`--hover-veil`) no hover, sem crescer de onde o mouse
-   *   entrou.
+   * - Hover: clicável, o card sobe 2px e a sombra cresce (`shadow-card-hover`); por cima aparece só
+   *   o véu NEUTRO do tema (`--hover-veil`), o mesmo das linhas de lista. Não existe hover colorido:
+   *   a cor do assunto mora no ícone, nunca no fundo — nem no hover.
    * - Marca d'água: `ui.mark` desenha o ícone grande no canto, no sotaque de `ui.markTone`.
    * - Escolhido: o azul claro da marca (`bg-card-selected`) com texto branco.
    * - Clicável: um botão de verdade cobre o card inteiro.
@@ -22,9 +21,6 @@
     data?: { label?: string };
     ui?: {
       className?: string;
-      /** O card fica tingido, o tempo todo, na cor de `hoverTone`. Sem a flag, só o véu neutro no hover. */
-      isHoverColored?: boolean;
-      hoverTone?: AzuosCardTone;
       mark?: LucideIcon;
       markTone?: AzuosCardTone;
       /** `lg`: o ícone 30% maior, para card alto (a máquina do inventário). */
@@ -37,7 +33,7 @@
 </script>
 
 <script lang="ts">
-  import { cardToneClasses, cardToneVeilOf } from '$lib/utils/card-tone.util';
+  import { cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state: cardState, actions, children }: AzuosCardSurfaceProps = $props();
@@ -46,12 +42,6 @@
   const isDisabled = $derived(Boolean(cardState?.isDisabled));
   const isClickable = $derived(Boolean(actions?.onClick) && !isDisabled);
   const Mark = $derived(ui?.mark);
-
-  /* O véu do hover: o sotaque a 16% (card com tom, `ui.isHoverColored`) ou o véu neutro do tema,
-     o mesmo das linhas de lista. */
-  const veilColor = $derived(
-    ui?.isHoverColored && ui.hoverTone ? cardToneVeilOf(ui.hoverTone) : 'var(--hover-veil)',
-  );
 </script>
 
 <div
@@ -70,12 +60,12 @@
     ui?.className,
   )}
 >
-  <!-- O véu cobre o card inteiro no hover — sem crescer de onde o mouse entrou. -->
+  <!-- O véu NEUTRO cobre o card inteiro no hover — sem cor e sem crescer de onde o mouse entrou. -->
   <span
     aria-hidden="true"
     data-slot="card-wash"
     class="pointer-events-none absolute inset-0 -z-10 group-hover/card:bg-(--card-veil)"
-    style:--card-veil={veilColor}
+    style:--card-veil="var(--hover-veil)"
   ></span>
 
   {#if Mark}

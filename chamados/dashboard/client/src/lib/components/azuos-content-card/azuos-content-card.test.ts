@@ -38,4 +38,14 @@ describe('AzuosContentCard (Svelte)', () => {
 
     expect(container.querySelector('[data-slot="card-mark"]')).toBeNull();
   });
+
+  /* A flag antiga de hover colorido não pinta mais nada: o véu segue neutro. */
+  it('ignores the old coloured-hover flag and keeps the neutral veil', () => {
+    const { container } = render(ContentCard, {
+      props: { ui: { tone: 'success', icon: MemoryStick }, children },
+    });
+
+    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
+    expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
+  });
 });
