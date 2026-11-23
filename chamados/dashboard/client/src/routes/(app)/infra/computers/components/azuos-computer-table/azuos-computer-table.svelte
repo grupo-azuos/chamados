@@ -60,7 +60,7 @@
   } from '@template/shared/domain/computer-health.util';
   import { computerDepartmentLabel, computerResponsibleLabel } from '$lib/utils/computer-place.util';
 
-  import ActionMenu from '../azuos-action-menu/azuos-action-menu.svelte';
+  import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
   import AlertBadge, {
     computerPendingOf,
   } from '../azuos-computer-alert-badge/azuos-computer-alert-badge.svelte';

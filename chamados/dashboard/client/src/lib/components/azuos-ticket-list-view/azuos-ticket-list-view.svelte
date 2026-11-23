@@ -252,7 +252,7 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+  import TicketCard from '$lib/components/azuos-ticket-card/azuos-ticket-card.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, state, actions, board }: AzuosTicketListViewProps = $props();
@@ -266,6 +266,13 @@
   );
 
   const tableView = useTableViewModel();
+
+  /* A foto de quem atende vem das opções do filtro de responsável, que já trazem o rosto. */
+  function photoOf(assigneeId: string | null | undefined): string | null {
+    if (!assigneeId) return null;
+
+    return data.assigneeOptions?.find((option) => option.value === assigneeId)?.avatarUrl ?? null;
+  }
 
   const dashboard = $derived(data.dashboard);
 
@@ -558,11 +565,12 @@
     {/if}
     {@render board?.()}
   {:else}
-  <div class="flex flex-col rounded-surface bg-card shadow-card">
-    <div>
-      <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
+  <div class="flex flex-col">
+    <div class="flex flex-col gap-3">
+      <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). Os estados
+           moram no cartão da lista; a grade de cards, não (card dentro de card é proibido). -->
       {#if state.error}
-        <div class="p-4">
+        <div class="rounded-surface bg-card shadow-card p-4">
           <ErrorState
             data={{ title: 'Não consegui carregar os chamados', message: state.error }}
             state={{ isRetrying: state.isRefetching }}
@@ -570,9 +578,11 @@
           />
         </div>
       {:else if state.isLoading}
-        <p class="text-ink-500 py-10 text-center text-sm">Carregando os chamados…</p>
+        <p class="rounded-surface bg-card shadow-card text-ink-500 py-10 text-center text-sm">
+          Carregando os chamados…
+        </p>
       {:else if state.isEmpty}
-        <div class="p-4">
+        <div class="rounded-surface bg-card shadow-card p-4">
           <EmptyState
             data={{
               title: 'Nenhum chamado ainda',
@@ -582,7 +592,7 @@
           />
         </div>
       {:else if state.isFilteredOut}
-        <div class="p-4">
+        <div class="rounded-surface bg-card shadow-card p-4">
           <EmptyState
             data={{
               title: 'Nenhum chamado com esses filtros',
@@ -599,77 +609,24 @@
         </div>
       {:else}
         <!-- 1. Visualização em Cards: sempre que a tela é estreita (< xl), ou quando a pessoa
-         pediu para ver sempre assim (`TableViewToggle`, no cabeçalho dos filtros). -->
+         pediu para ver sempre assim (`TableViewToggle`, no cabeçalho dos filtros). Os cards ficam
+         sobre o fundo da página, fora do cartão da tabela: card dentro de card é proibido. -->
         <div
-          class={cn('card-grid p-4', !tableView.forceCards && 'xl:hidden')}
+          class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
           data-slot="ticket-cards-mobile"
         >
           {#each data.tickets as ticket (ticket.id)}
-            <!-- O card de conteúdo do grupo: superfície da marca, hover neutro. Os
-                 textos cortam com reticências (o inteiro fica no `title`), para nenhum nome
-                 comprido esticar a altura de toda a linha de cards. -->
-            <ContentCard
-              data={{ label: `${ticket.protocol} — ${ticket.requesterName}` }}
-              ui={{ tone: ticketStatusTone(ticket.status), className: 'min-w-0 gap-3 p-4' }}
-            >
-              <div class="flex min-w-0 items-center justify-between gap-2">
-                <span class="text-ink-900 shrink-0 font-mono text-xs font-semibold">
-                  {ticket.protocol}
-                </span>
-                <div class="flex min-w-0 items-center justify-end gap-1.5">
-                  <StatusBadge
-                    data={{ label: ticketPriorityLabel(ticket.priority) }}
-                    ui={{ tone: ticketPriorityTone(ticket.priority), size: 'sm' }}
-                  />
-                  <StatusBadge
-                    data={{ label: ticketStatusLabel(ticket.status) }}
-                    ui={{ tone: ticketStatusTone(ticket.status), size: 'sm' }}
-                  />
-                </div>
-              </div>
-
-              <div class="flex min-w-0 flex-col gap-0.5">
-                <span class="text-ink-900 truncate text-sm font-semibold" title={ticket.requesterName}>
-                  {ticket.requesterName}
-                </span>
-                <span class="text-ink-500 truncate text-xs" title={ticketDepartmentLabel(ticket.department)}>
-                  {ticketDepartmentLabel(ticket.department)}
-                </span>
-              </div>
-
-              <div class="border-border grid min-w-0 grid-cols-1 gap-2 border-t pt-2 text-xs min-[380px]:grid-cols-3">
-                {#each [
-                  { label: 'Área', value: ticketAreaLabel(ticket.area) },
-                  { label: 'Tipo', value: ticketProblemTypeLabel(ticket.problemType) },
-                  { label: 'Máquina', value: ticket.computerName ?? '—' },
-                ] as field (field.label)}
-                  <div class="flex min-w-0 flex-col gap-0.5">
-                    <span class="text-muted-foreground text-xs font-medium">
-                      {field.label}
-                    </span>
-                    <span class="text-ink-700 truncate" title={field.value}>{field.value}</span>
-                  </div>
-                {/each}
-              </div>
-
-              <div class="border-border mt-auto flex items-center justify-between gap-2 border-t pt-2">
-                <span class="text-ink-500 truncate text-xs">
-                  Aberto em {formatDate(ticket.createdAt)}
-                </span>
-                <ActionButton
-                  data={{ label: 'Abrir' }}
-                  ui={{ variant: 'secondary', size: 'sm' }}
-                  actions={{ onClick: () => actions.onAnswer(ticket) }}
-                />
-              </div>
-            </ContentCard>
+            <TicketCard
+              data={{ ticket, assigneePhoto: photoOf(ticket.assigneeId) }}
+              actions={{ onOpen: actions.onAnswer }}
+            />
           {/each}
         </div>
 
         <!-- 2. Visualização em Tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu
          sempre cards. -->
         <div
-          class={cn('hidden', !tableView.forceCards && 'xl:block')}
+          class={cn('rounded-surface bg-card shadow-card hidden', !tableView.forceCards && 'xl:block')}
           data-slot="ticket-table-desktop"
         >
           <Table

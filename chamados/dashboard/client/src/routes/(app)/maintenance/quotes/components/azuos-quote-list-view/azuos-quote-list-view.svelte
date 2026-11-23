@@ -88,12 +88,15 @@
 </script>
 
 <script lang="ts">
+  import Clock from '@lucide/svelte/icons/clock';
   import FileText from '@lucide/svelte/icons/file-text';
   import Paperclip from '@lucide/svelte/icons/paperclip';
   import Pencil from '@lucide/svelte/icons/pencil';
   import Plus from '@lucide/svelte/icons/plus';
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
@@ -102,12 +105,14 @@
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import FileLinks from '$lib/components/azuos-file-links/azuos-file-links.svelte';
-  import { formatDay } from '$lib/utils/format-date';
+  import { formatDate, formatDay } from '$lib/utils/format-date';
 
   let { data, state: listState, actions }: AzuosQuoteListViewProps = $props();
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  const cardPage = useCardPage(() => data.quotes);
 
   const hasActiveFilter = $derived(
     data.filter.search.trim() !== '' || data.filter.status !== '' || data.filter.kind !== '',
@@ -214,40 +219,48 @@
     <section class="flex flex-col gap-3">
       <p class="text-muted-foreground text-xs">{summary}</p>
 
-      <ul class="flex flex-col gap-3">
-        {#each data.quotes as quote (quote.id)}
-          <li class="flex">
-            <CardSurface ui={{ className: 'flex flex-1 flex-col gap-2.5 p-4' }}>
-            <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
-              <div class="min-w-0">
-                <h3 class="text-ink-900 text-sm leading-tight font-semibold">{quote.supplier}</h3>
-                <p class="text-ink-500 mt-1 text-xs">
-                  {quoteKindLabel(quote.kind)} · {formatDay(quote.quotedOn)}
-                </p>
-              </div>
-
-              <div class="flex shrink-0 items-center gap-2">
-                <span class="text-ink-900 text-base font-semibold tabular-nums">
-                  {formatCents(quote.amountCents)}
-                </span>
-                <StatusBadge
-                  data={{ label: quoteStatusLabel(quote.status) }}
-                  ui={{ tone: quoteStatusTone(quote.status), size: 'sm' }}
-                />
-              </div>
-            </div>
-
-            <p class="text-ink-700 text-sm">{quote.description}</p>
-
-            {#if quote.note}
-              <p class="text-ink-500 text-xs">{quote.note}</p>
-            {/if}
-
-            <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+      <!-- A grade padrão de cards: cada orçamento é o cartão de registro, e o card inteiro abre
+           a correção. Editar e excluir moram no menu de três pontinhos. -->
+      <div class="card-grid" data-slot="quote-cards">
+        {#each cardPage.items as quote (quote.id)}
+          <RecordCard
+            data={{
+              label: `Editar o orçamento de ${quote.supplier}`,
+              title: quote.supplier,
+              meta: `${quoteKindLabel(quote.kind)} · ${formatDay(quote.quotedOn)}`,
+              status: { label: quoteStatusLabel(quote.status), tone: quoteStatusTone(quote.status) },
+              tags: quote.attachmentUrl ? [] : [{ label: 'Sem documento' }],
+              metrics: [{ key: 'amount', label: 'Valor', value: formatCents(quote.amountCents), tone: 'blue' }],
+              footer: {
+                title: quote.updatedBy ?? quote.createdBy,
+                subtitle: `Atualizado em ${formatDate(quote.updatedAt ?? quote.createdAt)}`,
+              },
+              openLabel: 'Editar',
+              menu: {
+                label: `Ações do orçamento de ${quote.supplier}`,
+                items: [
+                  { id: 'edit', label: 'Editar', icon: Pencil },
+                  { id: 'delete', label: 'Excluir', icon: Trash2, isDestructive: true, separatorBefore: true },
+                ],
+              },
+            }}
+            ui={{ icon: FileText, iconTone: quoteStatusTone(quote.status), footerIcon: Clock, slot: 'quote-card' }}
+            actions={{
+              onOpen: () => actions.onEdit(quote),
+              onMenuSelect: (id) => (id === 'delete' ? actions.onAskDelete(quote) : actions.onEdit(quote)),
+            }}
+          >
+            {#snippet body()}
+              <p class="text-ink-700 line-clamp-2 text-xs">{quote.description}</p>
+              {#if quote.note}
+                <p class="text-muted-foreground line-clamp-2 text-xs">{quote.note}</p>
+              {/if}
+            {/snippet}
+            {#snippet notes()}
               <!-- O documento tem as duas ações do grupo: abrir em outra aba (quem confere quer o
-                   PDF ao lado da lista) e baixar com o nome original. -->
+                   PDF ao lado da lista) e baixar com o nome original. Sobe acima do botão do card. -->
               {#if quote.attachmentUrl}
-                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                <div class="relative z-20 flex min-w-0 flex-wrap items-center gap-2">
                   <span class="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 text-xs">
                     <Paperclip class="size-3.5 shrink-0" aria-hidden="true" />
                     <span class="truncate">{quote.attachmentName ?? 'Documento do orçamento'}</span>
@@ -260,27 +273,26 @@
                     }}
                   />
                 </div>
-              {:else}
-                <span class="text-muted-foreground text-xs">Sem documento</span>
               {/if}
-
-              <div class="flex items-center gap-1">
-                <ActionButton
-                  data={{ label: 'Corrigir' }}
-                  ui={{ variant: 'ghost', size: 'sm', icon: Pencil, isIconOnly: true }}
-                  actions={{ onClick: () => actions.onEdit(quote) }}
-                />
-                <ActionButton
-                  data={{ label: 'Excluir' }}
-                  ui={{ variant: 'ghost', size: 'sm', icon: Trash2, isIconOnly: true }}
-                  actions={{ onClick: () => actions.onAskDelete(quote) }}
-                />
-              </div>
-            </div>
-            </CardSurface>
-          </li>
+            {/snippet}
+          </RecordCard>
         {/each}
-      </ul>
+      </div>
+      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
+           fileira. A barra só aparece quando há mais de uma página. -->
+      {#if cardPage.total > cardPage.pageSize}
+        <div class="flex justify-center">
+          <PaginationBar
+            data={{
+              page: cardPage.page,
+              pageSize: cardPage.pageSize,
+              total: cardPage.total,
+              noun: ['orçamento', 'orçamentos'],
+            }}
+            actions={{ onPageChange: cardPage.actions.onPageChange }}
+          />
+        </div>
+      {/if}
 
       {#if listState.isTruncated}
         <p class="text-muted-foreground text-xs">

@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import MaintenanceListView, {
   machineLabelOf,
+  placeOf,
   type MaintenanceListFilter,
 } from './azuos-maintenance-list-view.svelte';
 import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
@@ -356,5 +357,29 @@ describe('machineLabelOf — nothing to name the machine by', () => {
     expect(machineLabelOf(maintenance({ computerId: null, otherMachine: null }))).toBe(
       'Equipamento não identificado',
     );
+  });
+});
+
+describe('maintenance-list-view — the record card', () => {
+  // feliz
+  it('opens the fix from the card and removes from its menu', async () => {
+    vi.mocked(actions.onEdit).mockClear();
+    vi.mocked(actions.onAskRemove).mockClear();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const { container } = renderView();
+
+    const cards = container.querySelector<HTMLElement>('[data-slot="maintenance-cards-mobile"]')!;
+    expect(cards.querySelector('[data-slot="maintenance-card-strip"]')).not.toBeNull();
+    await user.click(within(cards).getByRole('button', { name: /^Editar a manutenção de / }));
+    expect(actions.onEdit).toHaveBeenCalledOnce();
+    await user.click(within(cards).getByRole('button', { name: /^Ações da manutenção de / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
+    expect(actions.onAskRemove).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('says where a machine outside the inventory lives', () => {
+    expect(placeOf(maintenance({ computerId: null }))).toBe('Fora do inventário');
+    expect(placeOf(maintenance({ computerDepartment: null }))).toBe('Sem departamento');
   });
 });

@@ -75,13 +75,14 @@ describe('the system/projects route with systems', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    await user.click(screen.getAllByRole('button', { name: 'Editar' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Ações de Azuos Ticket' })[0]!);
+    await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
     dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Editar Sistema');
     await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    await user.click(screen.getAllByRole('button', { name: 'Ver sistema' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Ver sistema Azuos Ticket' })[0]!);
     expect(goto).toHaveBeenCalledWith('/system/projects/7');
   });
 });

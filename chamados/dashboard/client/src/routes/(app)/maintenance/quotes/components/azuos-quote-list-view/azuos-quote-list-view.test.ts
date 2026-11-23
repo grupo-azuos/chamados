@@ -75,7 +75,7 @@ describe('AzuosQuoteListView', () => {
     expect(screen.getByText('Serviço · 02/10/2026')).toBeInTheDocument();
     expect(screen.getByText('R$ 960,00')).toBeInTheDocument();
     /* Dentro do CARTÃO: "Aguardando" também é uma opção do filtro, no alto da tela. */
-    const card = screen.getByRole('heading', { name: 'Clima Norte Refrigeração' }).closest('li');
+    const card = screen.getByRole('heading', { name: 'Clima Norte Refrigeração' }).closest('[data-slot="azuos-card-surface"]');
     expect(within(card as HTMLElement).getByText('Aguardando')).toBeInTheDocument();
     expect(screen.getByText('Inclui a troca do filtro.')).toBeInTheDocument();
     expect(screen.getByText('1 orçamento · R$ 960,00')).toBeInTheDocument();
@@ -101,9 +101,14 @@ describe('AzuosQuoteListView', () => {
     const onAskDelete = vi.fn();
     setup({ actions: { ...actions, onRegister, onEdit, onAskDelete } });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Guardar orçamento' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    await user.click(screen.getByRole('button', { name: 'Guardar orçamento' }));
+    /* Editar e excluir moram no menu de três pontinhos do cartão. */
+    const menu = screen.getByRole('button', { name: 'Ações do orçamento de Clima Norte Refrigeração' });
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
 
     expect(onRegister).toHaveBeenCalledOnce();
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));

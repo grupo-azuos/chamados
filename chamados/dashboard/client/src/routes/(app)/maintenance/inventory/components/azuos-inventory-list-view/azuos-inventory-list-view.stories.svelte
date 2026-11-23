@@ -110,6 +110,21 @@
   }}
 />
 
+<!-- Muitos produtos: a grade pagina de doze em doze, com a barra de páginas embaixo. -->
+<Story
+  name="Paginado"
+  args={{
+    data: {
+      items: Array.from({ length: 30 }, (_, index) => item({ id: 100 + index, name: `Produto ${index + 1}` })),
+      total: 30,
+      filter: emptyFilter,
+      deleting: null,
+    },
+    state: settled,
+    actions,
+  }}
+/>
+
 <!-- A MESMA tela em 400px: a grade vira uma coluna só (skill `ui-standards`). -->
 <Story
   name="Mobile"

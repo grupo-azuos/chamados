@@ -63,7 +63,10 @@
 <script lang="ts">
   import Plus from '@lucide/svelte/icons/plus';
   import Trash2 from '@lucide/svelte/icons/trash-2';
+  import UserRound from '@lucide/svelte/icons/user-round';
 
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
@@ -71,10 +74,12 @@
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
   import { formatDate } from '$lib/utils/format-date';
 
   let { data, state: listState, actions }: AzuosInventoryDisposalListViewProps = $props();
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  const cardPage = useCardPage(() => data.disposals);
 
   /* "3 descartes · 7 unidades": linhas e unidades são números diferentes, e os dois importam. */
   const summary = $derived(
@@ -159,40 +164,59 @@
     <section class="flex flex-col gap-3">
       <p class="text-muted-foreground text-xs">{summary}</p>
 
-      <ul class="flex flex-col gap-3">
-        {#each data.disposals as disposal (disposal.id)}
-          <li class="flex">
-            <CardSurface ui={{ className: 'flex flex-1 flex-col gap-2 p-4' }}>
-            <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
-              <h3 class="text-ink-900 min-w-0 text-sm leading-tight font-semibold">
-                {disposal.itemName}
-              </h3>
-              <div class="flex shrink-0 items-center gap-2">
-                <span class="text-ink-900 text-sm font-semibold tabular-nums">
-                  {disposal.quantity}
-                  {inventoryUnitShortLabel(disposal.itemUnit)}
-                </span>
-                {#if disposal.reason}
-                  <StatusBadge
-                    data={{ label: disposalReasonLabel(disposal.reason) }}
-                    ui={{ tone: 'danger', size: 'sm' }}
-                  />
-                {/if}
-              </div>
-            </div>
-
-            {#if disposal.note}
-              <p class="text-ink-700 text-sm">{disposal.note}</p>
-            {/if}
-
-            <p class="text-muted-foreground text-xs">
-              {formatDate(disposal.createdAt)} · {disposal.createdBy} · ficaram
-              {disposal.balanceAfter} no depósito
-            </p>
-            </CardSurface>
-          </li>
+      <!-- A grade padrão de cards. O descarte é história: o cartão não abre nada nem tem ação. -->
+      <div class="card-grid" data-slot="inventory-disposal-cards">
+        {#each cardPage.items as disposal (disposal.id)}
+          <RecordCard
+            data={{
+              label: disposal.itemName,
+              title: disposal.itemName,
+              meta: `Descartado em ${formatDate(disposal.createdAt)}`,
+              status: disposal.reason
+                ? { label: disposalReasonLabel(disposal.reason), tone: 'danger' }
+                : { label: 'Descarte', tone: 'neutral' },
+              metrics: [
+                {
+                  key: 'quantity',
+                  label: 'Descartado',
+                  value: `${disposal.quantity} ${inventoryUnitShortLabel(disposal.itemUnit)}`,
+                  tone: 'red',
+                },
+                {
+                  key: 'balance',
+                  label: 'No depósito',
+                  value: String(disposal.balanceAfter),
+                  tone: 'green',
+                  isOn: disposal.balanceAfter > 0,
+                },
+              ],
+              footer: { title: disposal.createdBy, subtitle: 'Quem registrou' },
+            }}
+            ui={{ icon: Trash2, iconTone: 'danger', footerIcon: UserRound, slot: 'inventory-disposal-card' }}
+          >
+            {#snippet body()}
+              {#if disposal.note}
+                <p class="text-ink-700 line-clamp-3 text-xs">{disposal.note}</p>
+              {/if}
+            {/snippet}
+          </RecordCard>
         {/each}
-      </ul>
+      </div>
+      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
+           fileira. A barra só aparece quando há mais de uma página. -->
+      {#if cardPage.total > cardPage.pageSize}
+        <div class="flex justify-center">
+          <PaginationBar
+            data={{
+              page: cardPage.page,
+              pageSize: cardPage.pageSize,
+              total: cardPage.total,
+              noun: ['descarte', 'descartes'],
+            }}
+            actions={{ onPageChange: cardPage.actions.onPageChange }}
+          />
+        </div>
+      {/if}
 
       {#if listState.isTruncated}
         <p class="text-muted-foreground text-xs">

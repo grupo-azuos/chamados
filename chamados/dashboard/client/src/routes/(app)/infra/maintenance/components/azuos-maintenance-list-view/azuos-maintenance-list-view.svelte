@@ -113,10 +113,18 @@
 
     return maintenance.otherMachine ?? 'Equipamento não identificado';
   }
+
+  /** Onde a máquina mora: o departamento dela, ou o aviso de que está fora do inventário. */
+  export function placeOf(maintenance: Maintenance): string {
+    if (!maintenance.computerId) return 'Fora do inventário';
+
+    return maintenance.computerDepartment ? departmentLabel(maintenance.computerDepartment) : 'Sem departamento';
+  }
 </script>
 
 <script lang="ts">
   import FilterX from '@lucide/svelte/icons/filter-x';
+  import Pencil from '@lucide/svelte/icons/pencil';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
   import Trash2 from '@lucide/svelte/icons/trash-2';
@@ -143,7 +151,7 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
   import { formatDate } from '$lib/utils/format-date';
@@ -267,60 +275,44 @@
       data-slot="maintenance-cards-mobile"
     >
       {#each data.maintenances as maintenance (maintenance.id)}
-        <!-- A situação está no selo: o hover do card é só o véu neutro (padrão Apple). -->
-        <CardSurface ui={{ className: 'p-4' }}>
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0 flex-1">
-              <span class="block font-medium text-ink-900 break-words leading-snug">
-                {machineLabelOf(maintenance)}
-              </span>
-              <span class="block text-xs text-ink-500 break-words leading-tight mt-0.5">
-                {#if maintenance.computerId}
-                  {maintenance.computerName}
-                  {#if maintenance.computerDepartment}
-                    · {departmentLabel(maintenance.computerDepartment)}
-                  {/if}
-                {:else}
-                  Fora do inventário
-                {/if}
-              </span>
-            </div>
-            <StatusBadge
-              data={{ label: maintenanceTypeLabel(maintenance.type) }}
-              ui={{ tone: maintenanceTypeTone(maintenance.type), size: 'sm' }}
-            />
-          </div>
-
-          <p class="text-ink-700 mt-2 text-sm break-words">
-            {maintenance.description ?? '—'}
-          </p>
-
-          <div class="mt-2 flex items-center justify-between text-xs text-ink-500">
-            <span>{formatDate(maintenance.performedAt)}</span>
-            {#if maintenance.performedBy}
-              <span>Por: {maintenance.performedBy}</span>
-            {/if}
-          </div>
-
-          <div class="border-border mt-3 flex items-center justify-end gap-2 border-t pt-2">
-            <ActionButton
-              data={{ label: 'Corrigir' }}
-              ui={{ variant: 'secondary', size: 'sm' }}
-              actions={{ onClick: () => actions.onEdit(maintenance) }}
-            />
-            <ActionButton
-              data={{ label: 'Excluir' }}
-              ui={{
-                variant: 'ghost',
-                size: 'sm',
-                icon: Trash2,
-                isIconOnly: true,
-                className: 'text-ink-500 hover:text-destructive hover:bg-muted',
-              }}
-              actions={{ onClick: () => actions.onAskRemove(maintenance) }}
-            />
-          </div>
-        </CardSurface>
+        <!-- O cartão de registro do sistema: o card inteiro abre a correção; editar e excluir
+             moram no menu de três pontinhos. -->
+        <RecordCard
+          data={{
+            label: `Editar a manutenção de ${machineLabelOf(maintenance)}`,
+            title: machineLabelOf(maintenance),
+            code: maintenance.computerId ? maintenance.computerName : null,
+            meta: placeOf(maintenance),
+            status: { label: maintenanceTypeLabel(maintenance.type), tone: maintenanceTypeTone(maintenance.type) },
+            footer: {
+              title: maintenance.performedBy ?? 'Sem responsável',
+              subtitle: formatDate(maintenance.performedAt),
+              person: maintenance.performedBy ? { name: maintenance.performedBy } : null,
+            },
+            openLabel: 'Editar',
+            menu: {
+              label: `Ações da manutenção de ${machineLabelOf(maintenance)}`,
+              items: [
+                { id: 'edit', label: 'Editar', icon: Pencil },
+                { id: 'remove', label: 'Excluir', icon: Trash2, isDestructive: true, separatorBefore: true },
+              ],
+            },
+          }}
+          ui={{
+            icon: Wrench,
+            iconTone: maintenanceTypeTone(maintenance.type),
+            slot: 'maintenance-card',
+          }}
+          actions={{
+            onOpen: () => actions.onEdit(maintenance),
+            onMenuSelect: (id) =>
+              id === 'remove' ? actions.onAskRemove(maintenance) : actions.onEdit(maintenance),
+          }}
+        >
+          {#snippet body()}
+            <p class="text-ink-700 line-clamp-3 text-xs break-words">{maintenance.description ?? '—'}</p>
+          {/snippet}
+        </RecordCard>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">

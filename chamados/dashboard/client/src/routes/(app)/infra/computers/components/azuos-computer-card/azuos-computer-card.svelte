@@ -14,6 +14,8 @@
   - A MANUTENÇÃO (`AzuosComputerMaintenanceStatus`) vem logo abaixo, a mesma leitura da tabela.
   - O RODAPÉ diz de quem é e quando a máquina deu sinal por último, com "Ver ficha".
 
+  Desenhado sobre o `AzuosRecordCard`, o cartão de registro comum a todas as grades do sistema.
+
   O cartão inteiro é o botão que abre a ficha. O hover é o neutro da superfície: sobe, a sombra
   cresce e o véu cinza cobre — nada de tingir o card.
 
@@ -85,7 +87,6 @@
 </script>
 
 <script lang="ts">
-  import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import Clock from '@lucide/svelte/icons/clock';
   import {
     healthStatusLabel,
@@ -102,146 +103,88 @@
   import AlertBadge from '../azuos-computer-alert-badge/azuos-computer-alert-badge.svelte';
   import UpgradeBadge from '../azuos-computer-upgrade-badge/azuos-computer-upgrade-badge.svelte';
   import ComputerMaintenanceStatus from '../azuos-computer-maintenance-status/azuos-computer-maintenance-status.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
-  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
-  import { cardToneClasses } from '$lib/utils/card-tone.util';
-  import { cn } from '$lib/utils/cn';
+  import RecordCard, {
+    type AzuosRecordCardMetric,
+  } from '$lib/components/azuos-record-card/azuos-record-card.svelte';
   import { RESOURCE_CONDITION_ICONS } from '$lib/utils/resource-condition-icon.util';
 
   let { data, ui, actions }: AzuosComputerCardProps = $props();
 
   const computer = $derived(data.computer);
   const name = $derived(displayNameOf(computer));
-  const health = $derived(HEALTH_CLASSES[healthStatusTone(computer.healthStatus)]);
+  const healthTone = $derived(healthStatusTone(computer.healthStatus));
   const situation = $derived(situationOf(computer));
   const condition = $derived(resourceConditionOf(computer.hardware ?? {}));
-  const ConditionIcon = $derived(RESOURCE_CONDITION_ICONS[condition]);
   const freeDisk = $derived(freeDiskPercentOf(computer));
 
   /* Os quatro números, com a bolinha no tom do assunto. O número fica na cor do texto: a cor
      mora na bolinha, nunca no número (padrão Apple). Zero apaga a bolinha. */
-  const tally = $derived([
-    { key: 'health', label: 'Saúde', value: String(computer.healthScore), dot: health.dot, isOn: true },
+  const tally = $derived<AzuosRecordCardMetric[]>([
+    { key: 'health', label: 'Saúde', value: String(computer.healthScore), tone: healthTone },
     {
       key: 'tickets',
       label: 'Chamados',
       value: String(computer.ticketsThisMonth),
-      dot: 'bg-hue-blue',
+      tone: 'blue',
       isOn: computer.ticketsThisMonth > 0,
     },
     {
       key: 'alerts',
       label: 'Alertas',
       value: String(computer.activeAlerts),
-      dot: 'bg-hue-red',
+      tone: 'red',
       isOn: computer.activeAlerts > 0,
     },
     {
       key: 'disk',
       label: 'Disco livre',
       value: freeDisk === null ? '—' : `${freeDisk}%`,
-      dot: 'bg-hue-steel',
+      tone: 'steel',
       isOn: freeDisk !== null,
     },
   ]);
 </script>
 
-<CardSurface
-  data={{ label: `Ver ficha de ${name}` }}
-  ui={{ className: cn('flex flex-col text-left', ui?.className) }}
-  actions={{ onClick: () => actions.onOpen(computer) }}
+<RecordCard
+  data={{
+    label: `Ver ficha de ${name}`,
+    title: name,
+    code: computer.hardware?.hostname || computer.name,
+    meta: `${COMPUTER_KIND_LABELS[computer.kind]} · ${computerDepartmentLabel(computer)}`,
+    status: { label: healthStatusLabel(computer.healthStatus), tone: healthTone },
+    tags: [
+      /* Offline e arquivada ficam com a bolinha no cinza do fio. */
+      { label: situation.label, tone: situation.tone === 'neutral' ? null : situation.tone },
+    ],
+    metrics: tally,
+    /* Sem responsável é dito por extenso: é uma máquina esperando quem responda por ela. A foto
+       vem do admin-console (o servidor lê a pessoa pelo id); sem ela, as iniciais. */
+    footer: {
+      title: computerResponsibleLabel(computer),
+      subtitle: lastSeenLabelOf(computer),
+      person: computer.responsibleName
+        ? { name: computer.responsibleName, avatarUrl: computer.responsibleAvatarUrl ?? null }
+        : null,
+    },
+    openLabel: 'Ver ficha',
+  }}
+  ui={{
+    icon: RESOURCE_CONDITION_ICONS[condition],
+    iconTone: resourceConditionTone(condition),
+    iconLabel: `Recursos: ${RESOURCE_CONDITION_LABELS[condition]}`,
+    footerIcon: Clock,
+    slot: 'computer-card',
+    className: ui?.className,
+  }}
+  actions={{ onOpen: () => actions.onOpen(computer) }}
 >
-  <div
-    data-slot="computer-card-strip"
-    class="bg-muted flex items-center justify-between gap-2 px-4 py-1.5 text-xs font-semibold"
-  >
-    <span class={cn('flex items-center gap-1.5', health.text)}>
-      <span aria-hidden="true" class={cn('size-1.5 rounded-full', health.dot)}></span>
-      {healthStatusLabel(computer.healthStatus)}
-    </span>
-    <span class="text-muted-foreground flex items-center gap-2">
-      <span class="flex items-center gap-1.5">
-        <span aria-hidden="true" class={cn('size-1.5 rounded-full', situation.dot)}></span>
-        {situation.label}
-      </span>
-      <!-- Acima da camada clicável do card, para o balão do selo abrir no mouse. O aviso de
-           upgrade vem antes do selo vermelho: é atenção, calmo, e não pisca. -->
-      <UpgradeBadge data={{ computer }} ui={{ className: 'relative z-20' }} />
-      <AlertBadge data={{ computer }} ui={{ className: 'relative z-20' }} />
-    </span>
-  </div>
-
-  <div class="flex items-start gap-3 px-4 pt-3">
-    <span
-      role="img"
-      aria-label={`Recursos: ${RESOURCE_CONDITION_LABELS[condition]}`}
-      class={cn(
-        'rounded-icon inline-flex size-9 shrink-0 items-center justify-center shadow-xs',
-        cardToneClasses(resourceConditionTone(condition)).dot,
-      )}
-    >
-      <ConditionIcon aria-hidden="true" class="block size-4.5 shrink-0 stroke-[1.8]" />
-    </span>
-    <div class="flex min-w-0 flex-1 flex-col">
-      <h3 class="line-clamp-2 text-sm leading-tight font-semibold break-words">{name}</h3>
-      <span class="text-muted-foreground mt-0.5 truncate font-mono text-xs">
-        {computer.hardware?.hostname || computer.name}
-      </span>
-      <span class="text-muted-foreground truncate text-xs">
-        {COMPUTER_KIND_LABELS[computer.kind]} ·
-        {computerDepartmentLabel(computer)}
-      </span>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-4 gap-1.5 px-4 pt-3">
-    {#each tally as cell (cell.key)}
-      <span
-        data-slot={`computer-card-${cell.key}`}
-        class="rounded-control bg-muted flex min-w-0 flex-col items-center py-1.5"
-      >
-        <span class="text-foreground text-base font-bold tabular-nums">{cell.value}</span>
-        <span class="text-muted-foreground flex max-w-full items-center gap-1 px-1 text-xs">
-          <span
-            aria-hidden="true"
-            class={cn('size-1.5 shrink-0 rounded-full', cell.isOn ? cell.dot : 'bg-border')}
-          ></span>
-          <span class="truncate">{cell.label}</span>
-        </span>
-      </span>
-    {/each}
-  </div>
-
-  <!-- A manutenção cresce até o rodapé: os cartões da mesma linha têm a mesma altura, e sem isso
-       cada um sobrava um vão diferente acima do rodapé. -->
-  <div class="flex-1 px-4 pt-3">
+  {#snippet stripEnd()}
+    <!-- Acima da camada clicável do card, para o balão do selo abrir no mouse. O aviso de
+         upgrade vem antes do selo vermelho: é atenção, calmo, e não pisca. -->
+    <UpgradeBadge data={{ computer }} ui={{ className: 'relative z-20' }} />
+    <AlertBadge data={{ computer }} ui={{ className: 'relative z-20' }} />
+  {/snippet}
+  {#snippet notes()}
     <ComputerMaintenanceStatus data={{ computer, scheduledFor: data.scheduledFor ?? null }} />
-  </div>
-
-  <div class="border-border mt-3 flex items-center gap-2.5 border-t px-4 py-3">
-    <Clock aria-hidden="true" class="text-muted-foreground size-4 shrink-0" />
-    <span class="flex min-w-0 flex-1 flex-col">
-      <!-- Sem responsável é dito por extenso: é uma máquina esperando quem responda por ela. -->
-      <span class="truncate text-xs font-semibold">{computerResponsibleLabel(computer)}</span>
-      <span class="text-muted-foreground truncate text-xs">
-        {lastSeenLabelOf(computer)}
-      </span>
-    </span>
-    <!-- A foto vem do admin-console (o servidor lê a pessoa pelo id); sem ela, as iniciais. -->
-    {#if computer.responsibleName}
-      <PersonAvatar
-        name={computer.responsibleName}
-        avatarUrl={computer.responsibleAvatarUrl ?? null}
-        ui={{ size: 'sm' }}
-      />
-    {/if}
-    <!-- Só desenho: quem abre a ficha é o card inteiro, que já é o botão. -->
-    <span
-      aria-hidden="true"
-      class="control-sm rounded-button bg-muted text-muted-foreground group-hover/card:bg-foreground group-hover/card:text-background inline-flex shrink-0 items-center gap-1 px-2.5 text-xs font-medium transition-colors"
-    >
-      Ver ficha
-      <ArrowRight class="size-3.5" />
-    </span>
-  </div>
-</CardSurface>
+  {/snippet}
+</RecordCard>

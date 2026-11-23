@@ -410,6 +410,37 @@ describe('AzuosTicketListView', () => {
     expect(desktopTable?.classList.contains('xl:block')).toBe(true);
   });
 
+  // feliz
+  it('draws each ticket as the standard record card, which opens the ticket', async () => {
+    const onAnswer = vi.fn();
+    const { container } = setup({ actions: { ...actions, onAnswer } });
+
+    const cards = container.querySelector<HTMLElement>('[data-slot="ticket-cards-mobile"]')!;
+    expect(within(cards).getByRole('heading', { name: 'Bia Costa' })).toBeInTheDocument();
+    expect(cards.querySelector('[data-slot="ticket-card-strip"]')).toHaveTextContent('Aberto');
+
+    await userEvent.click(within(cards).getByRole('button', { name: 'Abrir o chamado CH-0001 — Bia Costa' }));
+    expect(onAnswer).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+
+  // triste
+  it('keeps the initials when the person who answers is not among the filter options', () => {
+    const { container } = setup({
+      data: {
+        area: 'infra',
+        tickets: [ticket({ assignee: 'Carlos Lima', assigneeId: 'u-carlos' })],
+        total: 1,
+        dashboard,
+        filter: emptyFilter,
+        assigneeOptions: [{ value: 'u-outra', label: 'Outra pessoa', avatarUrl: '/x.png' }],
+      },
+    });
+
+    const cards = container.querySelector<HTMLElement>('[data-slot="ticket-cards-mobile"]')!;
+    expect(within(cards).getByText('CL')).toBeInTheDocument();
+    expect(cards.querySelector('[data-slot="avatar-image"]')).toBeNull();
+  });
+
   it('renders pagination bar and notifies page changes', async () => {
     const onPageChange = vi.fn();
     setup({

@@ -311,6 +311,20 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
     use: ['Grades de registros (empresas, contratos, processos).'],
     avoid: ['Número de painel: use o `AzuosStatCard`.'],
   },
+  AzuosRecordCard: {
+    summary:
+      'O cartão de registro de toda grade do sistema (máquina, chamado, produto, sistema), no formato do cartão de empresa do Paralegal: faixa cinza com a situação e o selo de pendência, ícone cheio (ou a foto pequena) com título, código em mono e linha de apoio, caixinhas de número, a linha de situação e o rodapé com a pessoa, a pílula "Ver …" e o menu de três pontinhos.',
+    use: [
+      'Toda grade de cards de registros (`card-grid`), paginada.',
+      'Registro que abre uma ficha: o card inteiro é o botão, a pílula é só desenho.',
+      'Ações de linha (corrigir, excluir, sincronizar) no menu `data.menu`; ações próprias (Entrada, Saída) no `footerActions`.',
+    ],
+    avoid: [
+      'Número de painel: use o `AzuosStatCard`.',
+      'Cartão do quadro (kanban): use o `AzuosTicketKanbanCard`.',
+      'Ícones soltos de lápis e lixeira no card: vão no menu.',
+    ],
+  },
   AzuosContentStatCard: {
     summary:
       'O número dentro do card de conteúdo: o mesmo card da empresa, com uma contagem em destaque.',

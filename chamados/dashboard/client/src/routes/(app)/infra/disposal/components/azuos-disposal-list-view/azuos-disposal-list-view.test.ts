@@ -286,6 +286,31 @@ describe('AzuosDisposalListView — search, type filter, rows and the restore di
   });
 });
 
+describe('disposal-list-view — the record card', () => {
+  // feliz
+  it('opens the record from the card and asks to restore from its menu', async () => {
+    vi.mocked(actions.onOpenMachine).mockClear();
+    vi.mocked(actions.onAskRestore).mockClear();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const { container } = renderView();
+
+    const strip = container.querySelector('[data-slot="disposal-card-strip"]');
+    expect(strip).toHaveTextContent('Com defeito');
+    await user.click(screen.getByRole('button', { name: /^Ver ficha de / }));
+    expect(actions.onOpenMachine).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole('button', { name: /^Ações de / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Voltar ao inventário' }));
+    expect(actions.onAskRestore).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('says the machine is out of use when nobody told why', () => {
+    const { container } = renderView({ computers: [computer({ disposalType: null })] });
+
+    expect(container.querySelector('[data-slot="disposal-card-strip"]')).toHaveTextContent('Fora de uso');
+  });
+});
+
 describe('disposal-list-view — cards only', () => {
   // feliz
   it('hides the table completely when the person asked for cards only', () => {

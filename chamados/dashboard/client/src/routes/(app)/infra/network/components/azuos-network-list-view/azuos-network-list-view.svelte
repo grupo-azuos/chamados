@@ -129,6 +129,9 @@
 </script>
 
 <script lang="ts">
+  import type { LucideIcon } from '@lucide/svelte';
+  import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
+  import Clock from '@lucide/svelte/icons/clock';
   import FilterX from '@lucide/svelte/icons/filter-x';
   import Gauge from '@lucide/svelte/icons/gauge';
   import SearchX from '@lucide/svelte/icons/search-x';
@@ -137,6 +140,8 @@
   import Wifi from '@lucide/svelte/icons/wifi';
   import WifiOff from '@lucide/svelte/icons/wifi-off';
 
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
@@ -147,7 +152,7 @@
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
   import {
     Table,
     TableActions,
@@ -162,6 +167,18 @@
   import { formatDateTime } from '$lib/utils/format-date';
 
   let { data, state: viewState, actions }: AzuosNetworkListViewProps = $props();
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  const cardPage = useCardPage(() => data.events);
+
+  /* O desenho de cada aviso no ícone cheio do card. */
+  const NETWORK_TYPE_ICONS: Record<string, LucideIcon> = {
+    wan_down: WifiOff,
+    wan_up: Wifi,
+    failover: ArrowLeftRight,
+    high_latency: Timer,
+    packet_loss: Unplug,
+    other: Gauge,
+  };
 
   const summary = $derived(data.summary);
   const tableView = useTableViewModel();
@@ -332,63 +349,54 @@
       class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
       data-slot="network-cards-mobile"
     >
-      {#each data.events as event (event.id)}
-        <!-- A situação está no selo: o hover do card é só o véu neutro (padrão Apple). -->
-        <CardSurface ui={{ className: 'p-4' }}>
-          <div class="flex flex-wrap items-start justify-between gap-2">
-            <div class="flex flex-wrap items-center gap-2">
-              <StatusBadge
-                data={{ label: networkSeverityLabel(event.severity) }}
-                ui={{ tone: networkSeverityTone(event.severity), size: 'sm' }}
-              />
-              <span class="font-medium text-ink-900 break-words text-sm">
-                {networkEventTypeLabel(event.type)}
-              </span>
-            </div>
-            {#if event.resolvedAt}
-              <span class="text-ink-700 text-xs shrink-0">{durationLabelOf(event)}</span>
-            {:else}
-              <StatusBadge data={{ label: 'Em aberto' }} ui={{ tone: 'danger', size: 'sm' }} />
+      {#each cardPage.items as event (event.id)}
+        <!-- O cartão de registro do sistema. O evento não tem ficha: o card não abre nada, e o
+             botão de resolver (ou reabrir) mora no rodapé. -->
+        <RecordCard
+          data={{
+            label: `${networkEventTypeLabel(event.type)} — ${event.title}`,
+            title: networkEventTypeLabel(event.type),
+            meta: event.title,
+            status: { label: networkSeverityLabel(event.severity), tone: networkSeverityTone(event.severity) },
+            tags: event.resolvedAt
+              ? [{ label: durationLabelOf(event) }]
+              : [{ label: 'Em aberto', tone: 'danger' }],
+            metrics: [
+              { key: 'link', label: 'Link', value: event.linkName ?? '—', isText: true },
+              { key: 'measures', label: 'Medidas', value: measuresOf(event) || '—', isText: true },
+            ],
+            footer: { title: formatDateTime(event.occurredAt) },
+          }}
+          ui={{
+            icon: NETWORK_TYPE_ICONS[event.type] ?? Wifi,
+            iconTone: networkSeverityTone(event.severity),
+            footerIcon: Clock,
+            slot: 'network-card',
+          }}
+        >
+          {#snippet body()}
+            {#if event.message}
+              <p class="text-muted-foreground line-clamp-2 text-xs break-words">{event.message}</p>
             {/if}
-          </div>
-
-          <span class="text-ink-500 block text-xs break-words mt-1">{event.title}</span>
-          {#if event.message}
-            <span class="text-ink-500 block text-xs break-words mt-0.5">{event.message}</span>
-          {/if}
-
-          <div class="mt-3 grid grid-cols-1 gap-3 min-[380px]:grid-cols-2 text-sm">
-            <div>
-              <span class="text-muted-foreground block text-xs">Link</span>
-              <span class="text-ink-700 font-medium break-words">{event.linkName ?? '—'}</span>
-            </div>
-            <div>
-              <span class="text-muted-foreground block text-xs">Medidas</span>
-              <span class="text-ink-700">{measuresOf(event) || '—'}</span>
-            </div>
-          </div>
-
-          <div class="border-border mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
-            <span class="text-ink-500 text-xs">
-              {formatDateTime(event.occurredAt)}
-            </span>
+          {/snippet}
+          {#snippet footerActions()}
             {#if event.resolvedAt}
               <ActionButton
                 data={{ label: 'Reabrir' }}
-                ui={{ variant: 'ghost', size: 'sm' }}
+                ui={{ variant: 'secondary', size: 'sm' }}
                 state={{ isDisabled: viewState.isSaving }}
                 actions={{ onClick: () => actions.onResolveChange(event, false) }}
               />
             {:else}
               <ActionButton
-                data={{ label: 'Marcar como resolvido' }}
+                data={{ label: 'Resolver' }}
                 ui={{ variant: 'secondary', size: 'sm' }}
                 state={{ isDisabled: viewState.isSaving }}
                 actions={{ onClick: () => actions.onResolveChange(event, true) }}
               />
             {/if}
-          </div>
-        </CardSurface>
+          {/snippet}
+        </RecordCard>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">
@@ -396,6 +404,21 @@
         <span>{data.events.length} evento(s)</span>
       </div>
     </div>
+      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
+           fileira. A barra só aparece quando há mais de uma página. -->
+      {#if cardPage.total > cardPage.pageSize}
+        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
+          <PaginationBar
+            data={{
+              page: cardPage.page,
+              pageSize: cardPage.pageSize,
+              total: cardPage.total,
+              noun: ['evento', 'eventos'],
+            }}
+            actions={{ onPageChange: cardPage.actions.onPageChange }}
+          />
+        </div>
+      {/if}
 
     <!-- Tabela para desktop (>= xl) -->
     <div

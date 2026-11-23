@@ -70,7 +70,7 @@ describe('the maintenance/quotes route with quotes', () => {
     let dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    await user.click(screen.getAllByRole('button', { name: 'Corrigir' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Editar o orçamento de Clima Norte Refrigeração' })[0]!);
     dialog = await screen.findByRole('dialog');
     expect(dialog).toBeInTheDocument();
   });

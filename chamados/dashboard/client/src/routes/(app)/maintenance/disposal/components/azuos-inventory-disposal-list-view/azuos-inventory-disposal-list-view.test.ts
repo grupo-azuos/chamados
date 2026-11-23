@@ -59,10 +59,13 @@ describe('AzuosInventoryDisposalListView', () => {
     /* `^…$`: "2 un" é a quantidade do cartão; "2 unidades" é o resumo no alto da lista. */
     expect(screen.getByText(/^2\s+un$/)).toBeInTheDocument();
     /* Dentro do CARTÃO: "Quebrou" também é uma opção do filtro, no alto da tela. */
-    const card = screen.getByRole('heading', { name: 'Cadeira giratória' }).closest('li');
+    const card = screen.getByRole('heading', { name: 'Cadeira giratória' }).closest('[data-slot="azuos-card-surface"]');
     expect(within(card as HTMLElement).getByText('Quebrou')).toBeInTheDocument();
     expect(screen.getByText('Base rachou; sem conserto.')).toBeInTheDocument();
-    expect(screen.getByText(/ficaram\s+5 no depósito/)).toBeInTheDocument();
+    /* O que ficou no depósito é a caixinha de número ao lado do descartado. */
+    const balance = (card as HTMLElement).querySelector('[data-slot="inventory-disposal-card-balance"]');
+    expect(balance).toHaveTextContent('5');
+    expect(balance).toHaveTextContent('No depósito');
   });
 
   /* Linhas e unidades são números diferentes, e os dois aparecem. */
