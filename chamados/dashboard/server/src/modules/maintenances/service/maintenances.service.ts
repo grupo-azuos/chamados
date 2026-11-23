@@ -99,10 +99,10 @@ export class MaintenancesService {
        fonte" e registrou "troca de peça" fez o que tinha combinado. */
     if (input.computerId) await this.repository.archiveOpenSchedule(input.computerId, user.id);
 
+    await this.followTasks(input.computerId);
+
     /* Relê para devolver a máquina junto: o insert conhece o `computer_id`, mas não o nome
        dela, e a tela precisa do nome para desenhar a linha que acabou de aparecer. */
-    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
-    this.tasks?.syncMaintenanceInBackground();
     return toMaintenance(await this.requireMaintenance(id));
   }
 
@@ -117,8 +117,7 @@ export class MaintenancesService {
 
     await this.repository.update(id, toMaintenanceUpdate(input, user.email));
 
-    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
-    this.tasks?.syncMaintenanceInBackground();
+    await this.followTasks(current.maintenance.computerId, input.computerId);
     return toMaintenance(await this.requireMaintenance(id));
   }
 
@@ -130,8 +129,7 @@ export class MaintenancesService {
 
     /* Excluir ARQUIVA: some da lista e das contas, e volta pelo "Desfazer". */
     await this.repository.setArchived(id, true, user.id);
-    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
-    this.tasks?.syncMaintenanceInBackground();
+    await this.followTasks(current.maintenance.computerId);
   }
 
   /** Desfaz a exclusão. Quem podia excluir é quem pode desfazer. */
@@ -143,8 +141,7 @@ export class MaintenancesService {
 
     await this.repository.setArchived(id, false, null);
 
-    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
-    this.tasks?.syncMaintenanceInBackground();
+    await this.followTasks(current.maintenance.computerId);
     return toMaintenance(await this.requireMaintenance(id));
   }
 
@@ -199,8 +196,7 @@ export class MaintenancesService {
     const [saved] = await this.repository.listSchedules({ computerId, archived: 'hide' });
     if (!saved) throw new NotFoundException(COMPUTER_NOT_FOUND);
 
-    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
-    this.tasks?.syncMaintenanceInBackground();
+    await this.followTasks(computerId);
     return toMaintenanceSchedule(saved);
   }
 
@@ -209,8 +205,7 @@ export class MaintenancesService {
     assertCanCreate(user.role, 'manutenções agendadas');
 
     await this.repository.archiveOpenSchedule(computerId, user.id);
-    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
-    this.tasks?.syncMaintenanceInBackground();
+    await this.followTasks(computerId);
   }
 
   /**
@@ -237,14 +232,24 @@ export class MaintenancesService {
     });
     if (!restored) throw new NotFoundException(SCHEDULE_NOT_FOUND);
 
-    /* A manutenção mudou: as tarefas de manutenção se ajustam já, sem esperar a rodada da manhã. */
-    this.tasks?.syncMaintenanceInBackground();
+    await this.followTasks(schedule.computerId);
     return toMaintenanceSchedule(restored);
   }
 
   private async requireActiveComputer(computerId: number): Promise<void> {
     const computer = await this.repository.findActiveComputer(computerId);
     if (!computer) throw new NotFoundException(COMPUTER_NOT_FOUND);
+  }
+
+  /**
+   * A tarefa de manutenção da máquina se ajusta NA HORA — abre, muda o prazo ou finaliza —, e
+   * só a dela. Falhar aqui não desfaz a manutenção gravada: a rodada da manhã corrige.
+   */
+  private async followTasks(...computerIds: (number | null | undefined)[]): Promise<void> {
+    if (!this.tasks) return;
+    for (const computerId of new Set(computerIds)) {
+      if (computerId) await this.tasks.syncMaintenanceFor(computerId);
+    }
   }
 
   private async requireMaintenance(id: number): Promise<MaintenanceWithComputer> {

@@ -326,7 +326,7 @@ export class TasksRepository {
   }
 
   /** As máquinas em uso, com o agendamento em aberto e a última preventiva (ou corretiva). */
-  async maintenanceCandidates(): Promise<MaintenanceCandidate[]> {
+  async maintenanceCandidates(computerId?: number): Promise<MaintenanceCandidate[]> {
     const rows = await runQuery(
       this.db
         .select({
@@ -350,7 +350,13 @@ export class TasksRepository {
             isNull(maintenanceSchedules.archivedAt),
           ),
         )
-        .where(and(eq(computers.isArchived, false), isNull(computers.disposedAt))),
+        .where(
+          and(
+            eq(computers.isArchived, false),
+            isNull(computers.disposedAt),
+            computerId ? eq(computers.id, computerId) : undefined,
+          ),
+        ),
       'máquinas para tarefas de manutenção',
     );
 

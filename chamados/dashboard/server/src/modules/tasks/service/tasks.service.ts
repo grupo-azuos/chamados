@@ -315,10 +315,24 @@ export class TasksService {
     return 'opened';
   }
 
-  syncMaintenanceInBackground(): void {
-    void this.syncMaintenance().catch((error: unknown) => {
-      this.logger.warn(`Tarefas de manutenção não sincronizaram: ${String(error)}`);
-    });
+  /**
+   * Só a máquina que mudou — chamado por quem registra ou agenda manutenção. Máquina que saiu de
+   * uso não pede mais nada: a tarefa aberta dela é finalizada. Nunca derruba quem chamou.
+   */
+  async syncMaintenanceFor(computerId: number, now = new Date()): Promise<void> {
+    try {
+      const [machine] = await this.repository.maintenanceCandidates(computerId);
+      if (machine) {
+        await this.syncMachine(machine, now);
+        return;
+      }
+      const open = await this.repository.findOpenMaintenance(computerId);
+      if (open) await this.repository.update(open.id, statusChange('done', SYSTEM_ACTOR));
+    } catch (error) {
+      this.logger.warn(
+        `Tarefa de manutenção da máquina ${computerId} não se ajustou: ${String(error)}`,
+      );
+    }
   }
 
   // ── Apoio ──────────────────────────────────────────────────────────────────────────────────
