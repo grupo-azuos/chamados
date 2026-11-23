@@ -86,8 +86,11 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
   });
 
   it('lists the most recent first, filtered in the query', async () => {
-    await registerQuote({ supplier: 'Elétrica Souza', quotedOn: '2026-09-01', kind: 'product' })
-      .expect(201);
+    await registerQuote({
+      supplier: 'Elétrica Souza',
+      quotedOn: '2026-09-01',
+      kind: 'product',
+    }).expect(201);
     await registerQuote({ quotedOn: '2026-10-20', status: 'approved' }).expect(201);
     await registerQuote({ description: 'Pintura da fachada', quotedOn: '2026-10-05' }).expect(201);
 
@@ -104,7 +107,10 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
       .expect(200);
     expect(approved.body.total).toBe(1);
 
-    const products = await api().get('/api/v1/maintenance-quotes?kind=product').set(asDora()).expect(200);
+    const products = await api()
+      .get('/api/v1/maintenance-quotes?kind=product')
+      .set(asDora())
+      .expect(200);
     expect(products.body.items[0].supplier).toBe('Elétrica Souza');
 
     const search = await api()
@@ -152,13 +158,18 @@ describe.skipIf(!testDatabaseUrl)('Maintenance quotes API (e2e)', () => {
     expect(found.body.status).toBe('approved');
   });
 
-  it('deletes the quote together with its document', async () => {
+  it('deleting archives the quote and keeps its document for the undo', async () => {
     const created = await registerQuote({ attachment: await sendDocument() }).expect(201);
 
     await api().delete(`/api/v1/maintenance-quotes/${created.body.id}`).set(asDora()).expect(204);
 
-    expect(started.storage.size).toBe(0);
-    await api().get(`/api/v1/maintenance-quotes/${created.body.id}`).set(asDora()).expect(404);
+    /* Excluir ARQUIVA: o documento fica no bucket para o "Desfazer" devolver o orçamento. */
+    expect(started.storage.size).toBe(1);
+    const archived = await api()
+      .get(`/api/v1/maintenance-quotes/${created.body.id}`)
+      .set(asDora())
+      .expect(200);
+    expect(archived.body.archive).not.toBeNull();
   });
 
   // triste

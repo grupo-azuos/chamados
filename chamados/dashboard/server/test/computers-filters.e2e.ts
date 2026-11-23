@@ -29,7 +29,10 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
 
   const api = () => request(app.getHttpServer());
 
-  const registerComputer = async (name: string, extra: Record<string, unknown> = {}): Promise<number> => {
+  const registerComputer = async (
+    name: string,
+    extra: Record<string, unknown> = {},
+  ): Promise<number> => {
     const created = await api()
       .post('/api/v1/computers')
       .set(asCaio())
@@ -70,7 +73,14 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     await registerComputer('PC-NUNCA');
 
     await started.db.insert(computerAlerts).values([
-      { computerId: withAlert, metric: 'cpu', peakValue: 97, threshold: 90, status: 'active', startedAt: NOW },
+      {
+        computerId: withAlert,
+        metric: 'cpu',
+        peakValue: 97,
+        threshold: 90,
+        status: 'active',
+        startedAt: NOW,
+      },
       {
         computerId: preventiveOk,
         metric: 'memory',
@@ -90,16 +100,16 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     expect(names(await api().get('/api/v1/computers?alert=cpu').set(asAna()).expect(200))).toEqual([
       'PC-ALERTA',
     ]);
-    expect(names(await api().get('/api/v1/computers?alert=memory').set(asAna()).expect(200))).toEqual(
-      [],
-    );
+    expect(
+      names(await api().get('/api/v1/computers?alert=memory').set(asAna()).expect(200)),
+    ).toEqual([]);
 
-    expect(names(await api().get('/api/v1/computers?preventive=ok').set(asAna()).expect(200))).toEqual(
-      ['PC-EM-DIA'],
-    );
-    expect(names(await api().get('/api/v1/computers?preventive=due').set(asAna()).expect(200))).toEqual(
-      ['PC-VENCIDA'],
-    );
+    expect(
+      names(await api().get('/api/v1/computers?preventive=ok').set(asAna()).expect(200)),
+    ).toEqual(['PC-EM-DIA']);
+    expect(
+      names(await api().get('/api/v1/computers?preventive=due').set(asAna()).expect(200)),
+    ).toEqual(['PC-VENCIDA']);
     expect(
       names(await api().get('/api/v1/computers?preventive=never').set(asAna()).expect(200)),
     ).toEqual(['PC-ALERTA', 'PC-NUNCA']);
@@ -107,9 +117,9 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
       names(await api().get('/api/v1/computers?preventive=needed').set(asAna()).expect(200)),
     ).toEqual(['PC-ALERTA', 'PC-NUNCA', 'PC-VENCIDA']);
 
-    expect(names(await api().get('/api/v1/computers?kind=notebook').set(asAna()).expect(200))).toEqual(
-      ['PC-EM-DIA'],
-    );
+    expect(
+      names(await api().get('/api/v1/computers?kind=notebook').set(asAna()).expect(200)),
+    ).toEqual(['PC-EM-DIA']);
     expect(
       names(await api().get('/api/v1/computers?healthStatus=critical').set(asAna()).expect(200)),
     ).toEqual([]);
@@ -119,11 +129,28 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     const GB = 1024 ** 3;
     const DAY = 86_400;
     const readings: [string, Record<string, number | null>][] = [
-      ['PC-DISCO-CHEIO', { totalDiskBytes: 100 * GB, freeDiskBytes: 2 * GB, totalMemoryBytes: 4 * GB }],
-      ['PC-DISCO-BAIXO', { totalDiskBytes: 100 * GB, freeDiskBytes: 8 * GB, totalMemoryBytes: 16 * GB }],
-      ['PC-POUCA-RAM', { totalDiskBytes: 100 * GB, freeDiskBytes: 60 * GB, totalMemoryBytes: 4 * GB }],
+      [
+        'PC-DISCO-CHEIO',
+        { totalDiskBytes: 100 * GB, freeDiskBytes: 2 * GB, totalMemoryBytes: 4 * GB },
+      ],
+      [
+        'PC-DISCO-BAIXO',
+        { totalDiskBytes: 100 * GB, freeDiskBytes: 8 * GB, totalMemoryBytes: 16 * GB },
+      ],
+      [
+        'PC-POUCA-RAM',
+        { totalDiskBytes: 100 * GB, freeDiskBytes: 60 * GB, totalMemoryBytes: 4 * GB },
+      ],
       ['PC-SEM-REINICIAR', { totalMemoryBytes: 16 * GB, uptimeSeconds: 45 * DAY }],
-      ['PC-EM-DIA', { totalDiskBytes: 100 * GB, freeDiskBytes: 60 * GB, totalMemoryBytes: 16 * GB, uptimeSeconds: 2 * DAY }],
+      [
+        'PC-EM-DIA',
+        {
+          totalDiskBytes: 100 * GB,
+          freeDiskBytes: 60 * GB,
+          totalMemoryBytes: 16 * GB,
+          uptimeSeconds: 2 * DAY,
+        },
+      ],
     ];
     for (const [name, values] of readings) {
       const id = await registerComputer(name);
@@ -132,7 +159,12 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     await registerComputer('PC-SEM-LEITURA');
 
     const byCondition = async (condition: string) =>
-      names(await api().get(`/api/v1/computers?resourceCondition=${condition}`).set(asAna()).expect(200));
+      names(
+        await api()
+          .get(`/api/v1/computers?resourceCondition=${condition}`)
+          .set(asAna())
+          .expect(200),
+      );
 
     expect(await byCondition('disk-critical')).toEqual(['PC-DISCO-CHEIO']);
     expect(await byCondition('disk-low')).toEqual(['PC-DISCO-BAIXO']);
@@ -147,9 +179,9 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
   it('filters by presence: nobody is online in the test, so offline is everyone', async () => {
     await registerComputer('PC-DESLIGADO');
 
-    expect(names(await api().get('/api/v1/computers?onlyOnline=true').set(asAna()).expect(200))).toEqual(
-      [],
-    );
+    expect(
+      names(await api().get('/api/v1/computers?onlyOnline=true').set(asAna()).expect(200)),
+    ).toEqual([]);
     expect(
       names(await api().get('/api/v1/computers?onlyOffline=true').set(asAna()).expect(200)),
     ).toEqual(['PC-DESLIGADO']);
@@ -164,7 +196,9 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
       .send({ type: 'scrap', reason: 'Placa-mãe queimada e sem conserto.' })
       .expect(201);
 
-    expect(names(await api().get('/api/v1/computers').set(asAna()).expect(200))).toEqual(['PC-VIVO']);
+    expect(names(await api().get('/api/v1/computers').set(asAna()).expect(200))).toEqual([
+      'PC-VIVO',
+    ]);
     expect(
       names(
         await api()
@@ -196,7 +230,14 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
       },
     ]);
     await started.db.insert(computerAlerts).values([
-      { computerId: id, metric: 'cpu', peakValue: 97, threshold: 90, status: 'active', startedAt: NOW },
+      {
+        computerId: id,
+        metric: 'cpu',
+        peakValue: 97,
+        threshold: 90,
+        status: 'active',
+        startedAt: NOW,
+      },
       {
         computerId: id,
         metric: 'disk',
@@ -297,17 +338,32 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
   it('filters the machines that need an upgrade, by any reason or by one', async () => {
     const GB = 1024 ** 3;
     const machines: [string, Partial<typeof computers.$inferInsert>][] = [
-      ['UPG-MEMORIA', { totalMemoryBytes: 4 * GB, totalDiskBytes: 500 * GB, freeDiskBytes: 300 * GB }],
+      [
+        'UPG-MEMORIA',
+        { totalMemoryBytes: 4 * GB, totalDiskBytes: 500 * GB, freeDiskBytes: 300 * GB },
+      ],
       ['UPG-DISCO', { totalMemoryBytes: 16 * GB, totalDiskBytes: 100 * GB, freeDiskBytes: 9 * GB }],
-      ['UPG-CPU', { totalMemoryBytes: 16 * GB, cpuModel: 'Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz' }],
-      ['UPG-EM-DIA', { totalMemoryBytes: 16 * GB, totalDiskBytes: 500 * GB, freeDiskBytes: 300 * GB, cpuModel: '12th Gen Intel(R) Core(TM) i5-12400' }],
+      [
+        'UPG-CPU',
+        { totalMemoryBytes: 16 * GB, cpuModel: 'Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz' },
+      ],
+      [
+        'UPG-EM-DIA',
+        {
+          totalMemoryBytes: 16 * GB,
+          totalDiskBytes: 500 * GB,
+          freeDiskBytes: 300 * GB,
+          cpuModel: '12th Gen Intel(R) Core(TM) i5-12400',
+        },
+      ],
     ];
     for (const [name, values] of machines) {
       const id = await registerComputer(name);
       await started.db.update(computers).set(values).where(eq(computers.id, id));
     }
 
-    const list = (upgrade: string) => api().get('/api/v1/computers').query({ upgrade }).set(asAna()).expect(200);
+    const list = (upgrade: string) =>
+      api().get('/api/v1/computers').query({ upgrade }).set(asAna()).expect(200);
 
     expect(names(await list('any'))).toEqual(['UPG-CPU', 'UPG-DISCO', 'UPG-MEMORIA']);
     expect(names(await list('memory'))).toEqual(['UPG-MEMORIA']);

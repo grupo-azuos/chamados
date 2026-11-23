@@ -537,7 +537,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
     }
   });
 
-  it('lets the IT side delete its own file, and takes it out of the storage too', async () => {
+  it('lets the IT side delete its own file: it leaves the ticket and is kept archived', async () => {
     const created = await openTicket().expect(201);
 
     const attached = await request(app.getHttpServer())
@@ -553,9 +553,8 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
       .set(asCaio())
       .expect(204);
 
-    /* A regra é "sai do banco E do armazenamento". Sem a segunda metade sobraria um arquivo
-       pago que ninguém alcança. */
-    expect(started.storage.size).toBe(0);
+    /* Excluir ARQUIVA: o anexo sai do chamado e o arquivo fica guardado, com quem excluiu. */
+    expect(started.storage.size).toBe(1);
 
     const left = await request(app.getHttpServer())
       .get(`/api/v1/tickets/${created.body.id}/attachments`)

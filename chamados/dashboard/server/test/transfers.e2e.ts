@@ -99,9 +99,10 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
       .get(`/api/v1/computers/${computerId}/transfers`)
       .set(asBia())
       .expect(200);
-    expect(history.body.map((item: { toDepartment: string | null }) => item.toDepartment)).toEqual(
-      [null, 'Fiscal'],
-    );
+    expect(history.body.map((item: { toDepartment: string | null }) => item.toDepartment)).toEqual([
+      null,
+      'Fiscal',
+    ]);
   });
 
   it('lists what is installed on the machine: what left the shelf for it and did not come back', async () => {

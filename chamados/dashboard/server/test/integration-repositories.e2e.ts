@@ -113,7 +113,10 @@ describe.skipIf(!testDatabaseUrl)('Integration repositories (e2e)', () => {
       await repository.save('u1', '5511999991111');
       await repository.save('u2', '5511999992222', 'Caio');
 
-      expect(await repository.find('u1')).toMatchObject({ phone: '5511999991111', operatorName: null });
+      expect(await repository.find('u1')).toMatchObject({
+        phone: '5511999991111',
+        operatorName: null,
+      });
       expect(await repository.list()).toHaveLength(2);
 
       /* Desvincular arquiva: some da busca e da lista, e vincular de novo reaproveita a linha. */
@@ -122,7 +125,10 @@ describe.skipIf(!testDatabaseUrl)('Integration repositories (e2e)', () => {
       expect(await repository.list()).toHaveLength(1);
 
       await repository.save('u1', '5511999993333', 'Ana');
-      expect(await repository.find('u1')).toMatchObject({ phone: '5511999993333', archivedAt: null });
+      expect(await repository.find('u1')).toMatchObject({
+        phone: '5511999993333',
+        archivedAt: null,
+      });
     });
   });
 
@@ -209,7 +215,11 @@ describe.skipIf(!testDatabaseUrl)('Integration repositories (e2e)', () => {
 
       await repository.stop(first!.id, 'failed', 'expired');
       [row] = await repository.listForTicket(7);
-      expect(row).toMatchObject({ status: 'failed', failureReason: 'expired', nextAttemptAt: null });
+      expect(row).toMatchObject({
+        status: 'failed',
+        failureReason: 'expired',
+        nextAttemptAt: null,
+      });
 
       const requeued = await repository.requeue(7, first!.id, NOW, IN_ONE_HOUR);
       expect(requeued).toMatchObject({ status: 'pending', attempts: 0, failureReason: null });

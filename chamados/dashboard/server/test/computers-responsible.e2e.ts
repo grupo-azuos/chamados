@@ -2,7 +2,14 @@ import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { ANA, BIA, asCaio, createE2eApp, directoryEntry, type E2eApp } from './support/e2e-app.util';
+import {
+  ANA,
+  BIA,
+  asCaio,
+  createE2eApp,
+  directoryEntry,
+  type E2eApp,
+} from './support/e2e-app.util';
 
 /**
  * O FILTRO "RESPONSÁVEL" e a FOTO do responsável na lista de máquinas.
@@ -50,7 +57,11 @@ describe.skipIf(!testDatabaseUrl)('Computers responsible filter API (e2e)', () =
 
   // feliz
   it('lists only the machines of the chosen person, by directory id', async () => {
-    const response = await api().get('/api/v1/computers').query({ responsibleId: ANA.id }).set(asCaio()).expect(200);
+    const response = await api()
+      .get('/api/v1/computers')
+      .query({ responsibleId: ANA.id })
+      .set(asCaio())
+      .expect(200);
 
     expect(names(response)).toEqual(['RESP-ANA']);
     expect(response.body.items[0]).toMatchObject({
@@ -62,7 +73,11 @@ describe.skipIf(!testDatabaseUrl)('Computers responsible filter API (e2e)', () =
 
   // feliz
   it('lists the machines without responsible on "none"', async () => {
-    const response = await api().get('/api/v1/computers').query({ responsibleId: 'none' }).set(asCaio()).expect(200);
+    const response = await api()
+      .get('/api/v1/computers')
+      .query({ responsibleId: 'none' })
+      .set(asCaio())
+      .expect(200);
 
     expect(names(response)).toEqual(['RESP-NINGUEM']);
   });
@@ -80,8 +95,15 @@ describe.skipIf(!testDatabaseUrl)('Computers responsible filter API (e2e)', () =
 
   // triste
   it('falls back to no photo when the person has none in the directory', async () => {
-    const response = await api().get('/api/v1/computers').query({ responsibleId: BIA.id }).set(asCaio()).expect(200);
+    const response = await api()
+      .get('/api/v1/computers')
+      .query({ responsibleId: BIA.id })
+      .set(asCaio())
+      .expect(200);
 
-    expect(response.body.items[0]).toMatchObject({ responsibleId: BIA.id, responsibleAvatarUrl: null });
+    expect(response.body.items[0]).toMatchObject({
+      responsibleId: BIA.id,
+      responsibleAvatarUrl: null,
+    });
   });
 });
