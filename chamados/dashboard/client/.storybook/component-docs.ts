@@ -474,7 +474,10 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
     summary:
       'Uma coluna de quadro, no desenho do paralegal: o cabeçalho na cor e no ícone da etapa (com a contagem e o lápis quando dá para editar), os cartões rolando por dentro e o "Adicionar" no fim. Com `ui.dropId`, é uma área de soltar do `@dnd-kit` e acende quando um cartão passa por cima.',
     use: ['Quadros de tarefas, de etapas, de funil.'],
-    avoid: ['Lista simples: use a tabela.', 'Cor da etapa em borda ou no fundo da coluna: a cor fica só no cabeçalho.'],
+    avoid: [
+      'Lista simples: use a tabela.',
+      'Cor da etapa em borda ou no fundo da coluna: a cor fica só no cabeçalho.',
+    ],
   },
   AzuosPaginationBar: {
     summary:
@@ -495,7 +498,10 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
       'Toda lista com os dois modos.',
       'Com o quadro, nas filas de chamados de Infraestrutura, Sistema e Manutenção.',
     ],
-    avoid: ['Lista de um formato só.', 'Trocar de tela: o quadro é um modo da mesma fila, não outra rota.'],
+    avoid: [
+      'Lista de um formato só.',
+      'Trocar de tela: o quadro é um modo da mesma fila, não outra rota.',
+    ],
   },
 
   /* ------------------------------------------------------------------ Conteúdo e marcadores */
@@ -594,12 +600,6 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
       'O diálogo que, no celular, nasce de baixo com a alça de arrastar; no computador, é o diálogo central.',
     use: ['Todo diálogo que precisa funcionar bem no celular.'],
     avoid: ['Editor grande: use o `AzuosExpandableScreen`.'],
-  },
-  AzuosTaskFormDialog: {
-    summary:
-      'O formulário de criar e editar tarefa, num diálogo — o molde de todo formulário em diálogo.',
-    use: ['Referência para formulários de feature em diálogo.'],
-    avoid: ['Formulário longo: use uma tela própria.'],
   },
 
   /* ------------------------------------------------------------------ Notificações */
@@ -812,12 +812,6 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
     summary: 'O que notificar, do administrador: cada assunto ligado ou não, e com que nível.',
     use: ['Configuração de notificações do sistema.'],
     avoid: ['Preferência pessoal de tema ou efeitos.'],
-  },
-  AzuosTaskListView: {
-    summary:
-      'A tela de Tarefas, a feature de exemplo do template e o molde de toda tela de lista: cabeçalho, resumo, filtros, lista e estados.',
-    use: ['Como referência ao criar qualquer tela de lista.'],
-    avoid: ['Copiar sem adaptar o domínio.'],
   },
   AzuosWidgetChart: {
     summary:
@@ -1214,7 +1208,9 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   AzuosComputerUpgradeBadge: {
     summary:
       'O aviso âmbar "Upgrade" da máquina que está aquém — pouca memória, pouco espaço em disco ou processador antigo —, com os motivos e os números no balão. É atenção, não emergência: não pisca nem entra no selo vermelho dos alertas.',
-    use: ['No cartão e na tabela do Inventário (já vem no `AzuosComputerCard` e no `AzuosComputerTable`).'],
+    use: [
+      'No cartão e na tabela do Inventário (já vem no `AzuosComputerCard` e no `AzuosComputerTable`).',
+    ],
     avoid: [
       'Para alerta aberto ou preventiva vencida: é o `AzuosComputerAlertBadge`, que pisca.',
       'Para quantas peças comprar: é o `AzuosBudgetView`.',
@@ -1536,5 +1532,76 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
       'Digitar o código: é o `AzuosServiceOrderLookupForm`.',
       'A impressão digital do arquivo não é calculada aqui: o resultado chega pronto por props.',
     ],
+  },
+
+  // ── Tarefas (Infraestrutura) ──────────────────────────────────────────────────────────────
+  AzuosTaskListView: {
+    summary:
+      'A tela de Tarefas no molde do grupo: cabeçalho com os modos de ver (Lista, Cards, Quadro, Calendário, Timeline) e "Nova tarefa", os números (Tarefas, Atrasadas piscando, Vencem na semana), a busca e os filtros, o conteúdo do modo escolhido e a paginação.',
+    use: ['Na rota de Tarefas de uma área, recebendo o model `useTaskListModel` inteiro.'],
+    avoid: [
+      'Buscar dados aqui: é função pura de props — quem busca é o model.',
+      'Abrir a ficha ou o formulário por dentro: a rota decide qual peça está na frente.',
+    ],
+  },
+  AzuosTaskRow: {
+    summary:
+      'Uma tarefa na lista, no formato do Paralegal: título com situação, origem e vínculos; o responsável com foto; o selo do prazo; e a barra das etapas. Atrasada ganha o ponto vermelho pulsando.',
+    use: ['No modo Lista da tela de Tarefas.'],
+    avoid: [
+      'Grade de cards: é o `AzuosTaskCard`.',
+      'Quadro: o cartão compacto mora no `AzuosTaskBoard`.',
+    ],
+  },
+  AzuosTaskCard: {
+    summary:
+      'A tarefa em card, sobre o `AzuosRecordCard`: situação e origem na faixa, selo vermelho quando atrasada, etapas, vínculos e pessoas nas caixinhas, o responsável no rodapé e finalizar, reabrir e excluir no menu.',
+    use: ['No modo Cards da tela de Tarefas.'],
+    avoid: [
+      'Mover a tarefa de um chamado: ela acompanha o chamado — o menu não oferece.',
+      'Montar outro card à mão: use este, que já segue o card padrão.',
+    ],
+  },
+  AzuosTaskBoard: {
+    summary:
+      'O quadro das tarefas: uma coluna por situação (Aberta, Reaberta, Finalizada), com o mesmo arrastar do quadro dos chamados. Soltar em Finalizada finaliza; tirar de Finalizada para Reaberta reabre; o resto é recusado com aviso.',
+    use: ['No modo Quadro da tela de Tarefas.'],
+    avoid: [
+      'Etapas de chamado: o quadro dos chamados é o `AzuosTicketKanbanBoard`.',
+      'Arrastar tarefa de chamado: ela fica presa e acompanha o chamado.',
+    ],
+  },
+  AzuosTaskCalendar: {
+    summary:
+      'O mês em grade, de domingo a sábado, com cada tarefa no dia do prazo (ou do início, sem prazo). A cor diz se está atrasada ou vencendo; dia cheio mostra três e "+N".',
+    use: ['No modo Calendário da tela de Tarefas.'],
+    avoid: ['Escolher uma data num campo: é o `AzuosDatePicker`.'],
+  },
+  AzuosTaskTimeline: {
+    summary:
+      'Cada tarefa numa linha, com a barra do início ao prazo dentro do mês à vista, na cor da situação, e a linha do dia de hoje.',
+    use: ['No modo Timeline da tela de Tarefas.'],
+    avoid: ['Linha do tempo de um chamado: é o `AzuosHistoryTimeline`.'],
+  },
+  AzuosTaskFormDialog: {
+    summary:
+      'Criar ou editar a tarefa: título, descrição, responsável e participantes pelo seletor de pessoa, início, prazo e hora, as etapas (o checklist) e os vínculos a chamados, computadores, peças e itens — quantos forem.',
+    use: ['Ao clicar em "Nova tarefa" ou em "Editar" na ficha, pela ponte `task-form-slot`.'],
+    avoid: [
+      'Digitar o nome de uma pessoa: responsável é sempre pelo seletor, por ID.',
+      'Tirar vínculo no editar: é na ficha, um a um.',
+    ],
+  },
+  AzuosTaskDetailDialog: {
+    summary:
+      'A ficha da tarefa: quem, até quando, o checklist para marcar (a última etapa finaliza sozinha) e os vínculos, cada um levando à tela dele. A tarefa de chamado mostra "Abrir o chamado" no lugar de finalizar.',
+    use: ['Ao abrir uma tarefa em qualquer modo da tela.'],
+    avoid: ['Editar os campos aqui: o "Editar" abre o `AzuosTaskFormDialog`.'],
+  },
+  AzuosTaskOwnerAvatar: {
+    summary:
+      'O rosto do responsável da tarefa; sem responsável, um ícone neutro — para "Sem responsável" não parecer uma pessoa chamada "SR".',
+    use: ['Onde a tarefa mostra o responsável: linha, quadro.'],
+    avoid: ['Uma pessoa qualquer: é o `AzuosPersonAvatar`.'],
   },
 };

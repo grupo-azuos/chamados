@@ -6,6 +6,7 @@ import Code2 from '@lucide/svelte/icons/code-2';
 import FileText from '@lucide/svelte/icons/file-text';
 import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
 import LifeBuoy from '@lucide/svelte/icons/life-buoy';
+import ListChecks from '@lucide/svelte/icons/list-checks';
 import Package from '@lucide/svelte/icons/package';
 import Trash2 from '@lucide/svelte/icons/trash-2';
 import Wifi from '@lucide/svelte/icons/wifi';
@@ -95,6 +96,8 @@ function navItem(context: RoleContext, feature: string, label: string, icon: Luc
 export const INFRA_NAV_ITEMS: readonly NavItem[] = [
   navItem('infra', 'dashboard', 'Painel', LayoutDashboard),
   navItem('infra', 'tickets', 'Chamados', LifeBuoy),
+  /* Chamados e manutenções viram tarefa; a produtividade da Infraestrutura mora aqui. */
+  navItem('infra', 'tasks', 'Tarefas', ListChecks),
   navItem('infra', 'computers', 'Inventário', Boxes),
   navItem('infra', 'maintenance', 'Manutenção', Wrench),
   navItem('infra', 'parts', 'Depósito', Package),

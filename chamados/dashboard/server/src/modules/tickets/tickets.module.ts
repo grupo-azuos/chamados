@@ -1,3 +1,4 @@
+import { TasksModule } from '../tasks/tasks.module';
 import { Module } from '@nestjs/common';
 
 import { TicketAttachmentsController } from './controller/ticket-attachments.controller';
@@ -39,7 +40,7 @@ import { SoftwareProjectsModule } from '../software-projects/software-projects.m
  */
 @Module({
   /* `AuthModule` dá o diretório de usuários, de onde sai quem pode ser responsável. */
-  imports: [SoftwareProjectsModule, AuthModule, RolesModule, WhatsappModule],
+  imports: [SoftwareProjectsModule, AuthModule, RolesModule, WhatsappModule, TasksModule],
   controllers: [
     TicketServiceOrdersController,
     TicketsController,
