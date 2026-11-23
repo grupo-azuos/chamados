@@ -37,7 +37,7 @@ header Content-Type image/svg+xml*
         request_header -X-Forwarded-User-Role
         request_header -X-Forwarded-Host
         request_header -X-Forwarded-Proto
-        @public path /api/health /agent /api/v1/agent/releases/latest /api/v1/network/webhook /api/v1/integrations/github/callback /api/v1/integrations/whatsapp/inbound
+        @public path /api/health /agent /api/v1/agent/releases/latest /api/v1/network/webhook /api/v1/github/webhook /api/v1/integrations/github/callback /api/v1/integrations/whatsapp/inbound
         handle @public {
             reverse_proxy app:{$API_PORT}
         }
