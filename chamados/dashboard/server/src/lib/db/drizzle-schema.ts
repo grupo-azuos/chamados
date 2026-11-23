@@ -1,4 +1,5 @@
 import { githubConnections, githubOauthStates } from './schema/github-connections.schema';
+import { githubWebhookEvents } from './schema/github-webhook-events.schema';
 import { computerAlerts } from './schema/computer-alerts.schema';
 import { computerSamples } from './schema/computer-samples.schema';
 import { computerTransfers } from './schema/computer-transfers.schema';
@@ -53,6 +54,7 @@ export const drizzleSchema = {
   dashboardBoards,
   savedFilters,
   githubConnections,
+  githubWebhookEvents,
   githubOauthStates,
   whatsappConnections,
   whatsappMessages,

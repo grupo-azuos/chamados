@@ -21,7 +21,9 @@ async function bootstrap(): Promise<void> {
   /* `bufferLogs` segura as linhas da partida até o pino assumir: sem isto, o que o Nest escreve
      ao montar os módulos sai no formato antigo, fora do JSON e sem nível certo. O nível vem do
      `API_LOG_LEVEL`, aplicado pelo `LoggingModule`. */
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  /* `rawBody` guarda os bytes do corpo como chegaram (em `req.rawBody`): a assinatura do
+     webhook do GitHub é calculada sobre ELES, e o JSON reconvertido nem sempre bate byte a byte. */
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   app.useLogger(app.get(PinoLogger));
   /* Fecha o banco com Ctrl+C: é o que grava o WAL de volta no arquivo principal. */
   app.enableShutdownHooks();

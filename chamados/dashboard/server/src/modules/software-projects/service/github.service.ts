@@ -67,6 +67,37 @@ const MAX_COMMITS_FOR_COAUTHORS = 250;
 /* Co-autores de PR só dos mergeados nos últimos 120 dias: o histórico inteiro, num
    "Sincronizar todos", passaria de mil chamadas e o clique estouraria o tempo. */
 const COAUTHOR_WINDOW_MS = 120 * 24 * 60 * 60 * 1000;
+/* Quanto antes do fechamento um comentário ainda conta como "o texto do fechamento". O
+   "Close with comment" do GitHub grava o comentário segundos antes de fechar; a margem cobre
+   quem escreve o comentário e fecha logo em seguida. */
+const CLOSING_COMMENT_WINDOW_MS = 5 * 60 * 1000;
+
+type RawIssueComment = {
+  body?: string | null;
+  created_at: string;
+  user?: { login?: string | null; type?: string | null } | null;
+  performed_via_github_app?: unknown;
+};
+
+/**
+ * O último comentário de PESSOA escrito até o fechamento. Bot e comentário feito pelo App (o
+ * espelho do próprio chamado) ficam de fora — senão o eco do sistema viraria a solução.
+ */
+export function closingCommentOf(
+  comments: readonly RawIssueComment[],
+  closedAt: Date,
+): string | null {
+  const limit = closedAt.getTime() + 1000;
+  const human = comments.filter((comment) => {
+    if (comment.performed_via_github_app) return false;
+    if (comment.user?.type === 'Bot' || comment.user?.login?.endsWith('[bot]')) return false;
+    if (new Date(comment.created_at).getTime() > limit) return false;
+    return Boolean(comment.body?.trim());
+  });
+  const last = human.at(-1);
+
+  return last?.body?.trim() ?? null;
+}
 
 /** Quem não é gente: assistente de IA e robôs não contam como co-autor de ninguém. */
 function isAutomation(login: string | null, name: string, email?: string): boolean {
@@ -653,6 +684,35 @@ export class GithubService {
       };
     } catch (error) {
       this.logger.warn(`Falha ao criar Issue no GitHub: ${String(error)}`);
+      return null;
+    }
+  }
+
+  /**
+   * O texto com que a issue foi FECHADA. O aviso `issues.closed` do GitHub não traz comentário
+   * nenhum — o "Close with comment" chega como um comentário à parte, segundos antes. Lemos os
+   * comentários dos últimos minutos e ficamos com o último de uma PESSOA (ver `closingCommentOf`).
+   *
+   * O comentário é COMPLEMENTO: sem o App configurado ou com o GitHub fora do ar, devolve `null`
+   * e o chamado encerra mesmo assim, com "fechada no GitHub por @login". Deixar a falha subir
+   * faria a issue fechada não encerrar o chamado — o contrário do 1:1.
+   */
+  async fetchClosingComment(
+    repoInfo: { owner: string; repo: string },
+    issueNumber: number,
+    closedAt: Date,
+  ): Promise<string | null> {
+    try {
+      const token = this.app ? await this.app.accessToken() : this.token;
+      const since = new Date(closedAt.getTime() - CLOSING_COMMENT_WINDOW_MS).toISOString();
+      const comments = await this.readJson<RawIssueComment[]>(
+        `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/issues/${issueNumber}/comments?since=${encodeURIComponent(since)}&per_page=100`,
+        token,
+      );
+
+      return closingCommentOf(comments ?? [], closedAt);
+    } catch (error) {
+      this.logger.warn(`Sem o comentário de fechamento da issue #${issueNumber}: ${String(error)}`);
       return null;
     }
   }

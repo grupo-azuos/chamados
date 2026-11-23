@@ -126,7 +126,12 @@ export class SoftwareTimelineRepository {
    * Quem gravou primeiro (`createdBy`, `createdAt`) fica: atualizar não reescreve a autoria.
    * Devolve quantos foram gravados.
    */
-  async upsertMany(input: readonly SoftwareTimelineEventInsert[]): Promise<number> {
+  async upsertMany(
+    input: readonly SoftwareTimelineEventInsert[],
+    /* O webhook não lê os commits do PR: sem isto, um aviso de "PR editado" apagaria os
+       co-autores que a sincronização já tinha achado. */
+    options: { keepCoAuthors?: boolean } = {},
+  ): Promise<number> {
     const rows = lastPerKey(input);
     let written = 0;
     for (let start = 0; start < rows.length; start += UPSERT_BATCH) {
@@ -147,7 +152,7 @@ export class SoftwareTimelineRepository {
               url: sql.raw('excluded.url'),
               author: sql.raw('excluded.author'),
               authorName: sql.raw('excluded.author_name'),
-              coAuthors: sql.raw('excluded.co_authors'),
+              ...(options.keepCoAuthors ? {} : { coAuthors: sql.raw('excluded.co_authors') }),
               eventDate: sql.raw('excluded.event_date'),
             },
           }),
