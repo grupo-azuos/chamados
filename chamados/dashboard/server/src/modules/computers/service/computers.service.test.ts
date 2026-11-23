@@ -41,7 +41,6 @@ function computerRow(over: Partial<ComputerRow> = {}): ComputerRow {
     displayName: null,
     responsibleId: null,
     departmentId: null,
-    location: null,
     notes: null,
     kind: 'desktop',
     tokenHash: hashComputerToken('token-de-verdade'),

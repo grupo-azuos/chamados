@@ -21,9 +21,8 @@
   Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
   filtrada sem resultado e em erro.
 
-  - `data`: `computers`, `total`, `summary`, `filter`, `scheduledFor`, `departmentOptions`,
-    `locationOptions`, `responsibleOptions`, `sort`
-    e `paging`.
+  - `data`: `computers`, `total`, `summary`, `filter`, `scheduledFor`, `departmentOptions` (só os
+    oficiais do RH), `responsibleOptions`, `sort` e `paging`.
   - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated`,
     `isSummaryLoading`, `error`, `exportingFormat` e `exportError`.
   - `actions`: um `on…Change` por filtro, `onClearFilters`, `onClearShortcuts`, `onSortChange`,
@@ -33,7 +32,7 @@
   import { type ResourceCondition } from '@template/shared/domain/computer-resource.util';
   import { type HealthStatus } from '@template/shared/domain/computer-health.util';
   import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
-  import { type ComputerLocation, type DepartmentChoice } from '@template/shared/domain/department.util';
+  import { type DepartmentChoice } from '@template/shared/domain/department.util';
   import {
     type Computer,
     type ComputerAlertFilter,
@@ -57,7 +56,6 @@
   export type ComputerListFilter = {
     search: string;
     departmentId: string;
-    location: ComputerLocation | '';
     healthStatus: HealthStatus | '';
     kind: ComputerKind | '';
     onlyOnline: boolean;
@@ -103,9 +101,8 @@
       filter: ComputerListFilter;
       /** O dia agendado de cada máquina (`AAAA-MM-DD`), pelo id. */
       scheduledFor?: Record<number, string>;
-      /** Os departamentos do RH e, depois da linha, os daqui. */
+      /** Só os departamentos oficiais do RH, com o id como valor. */
       departmentOptions?: DepartmentChoice[];
-      locationOptions?: DepartmentChoice[];
       /** As pessoas do filtro "Responsável", com a foto. */
       responsibleOptions?: AzuosPersonPickerPerson[];
       /** A ordem em vigor — a seta do cabeçalho da tabela. */
@@ -127,7 +124,6 @@
     actions: {
       onSearchChange: (search: string) => void;
       onDepartmentChange: (departmentId: string) => void;
-      onLocationChange?: (location: ComputerLocation | '') => void;
       onHealthStatusChange: (healthStatus: HealthStatus | '') => void;
       onKindChange: (kind: ComputerKind | '') => void;
       onOnlineChange: (onlyOnline: boolean) => void;
@@ -407,7 +403,6 @@
       data={{
         filter: data.filter,
         departmentOptions: data.departmentOptions ?? [],
-        locationOptions: data.locationOptions ?? [],
         responsibleOptions: data.responsibleOptions ?? [],
       }}
       state={{ isFilteredOut: state.isFilteredOut }}

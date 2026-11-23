@@ -16,8 +16,9 @@ import { asAna, asBia, asCaio, createE2eApp, type E2eApp } from './support/e2e-a
  */
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
-/* O departamento do RH, pelo id; RECEPÇÃO é um dos locais fixos daqui. */
+/* Os departamentos do RH, pelo id — o computador só conhece estes. */
 const FISCAL = { id: 31, name: 'Fiscal' };
+const RECEPTION = { id: 32, name: 'Recepção' };
 
 describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
   let started: E2eApp;
@@ -29,7 +30,7 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     const created = await api()
       .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name, kind: 'desktop', location: 'RECEPÇÃO' })
+      .send({ name, kind: 'desktop', departmentId: RECEPTION.id })
       .expect(201);
 
     return created.body.computer.id as number;
@@ -56,7 +57,7 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     api().post(`/api/v1/computers/${computerId}/transfers`).set(who).send(body);
 
   beforeAll(async () => {
-    started = await createE2eApp(testDatabaseUrl!, { departments: [FISCAL] });
+    started = await createE2eApp(testDatabaseUrl!, { departments: [FISCAL, RECEPTION] });
     app = started.app;
   });
 
@@ -80,7 +81,7 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
 
     expect(moved.body).toMatchObject({
       computerId,
-      fromDepartment: 'RECEPÇÃO',
+      fromDepartment: 'Recepção',
       toDepartment: 'Fiscal',
       responsible: 'Joana',
       note: null,
@@ -89,7 +90,7 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     });
 
     const computer = await api().get(`/api/v1/computers/${computerId}`).set(asAna()).expect(200);
-    expect(computer.body).toMatchObject({ departmentId: FISCAL.id, departmentName: 'Fiscal', location: null });
+    expect(computer.body).toMatchObject({ departmentId: FISCAL.id, departmentName: 'Fiscal' });
 
     /* De volta à prateleira: sem departamento. */
     await transfer(computerId, { toDepartmentId: null }).expect(201);
@@ -163,7 +164,7 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
   it('refuses a transfer to the same department', async () => {
     const computerId = await registerComputer('PC-RECEPCAO-05');
 
-    const refused = await transfer(computerId, { toDepartmentId: null, toLocation: 'RECEPÇÃO' }).expect(422);
+    const refused = await transfer(computerId, { toDepartmentId: RECEPTION.id }).expect(422);
     expect(refused.body.message).toEqual(expect.any(String));
 
     /* Departamento que o RH não tem não é destino: 400, e nada muda. */

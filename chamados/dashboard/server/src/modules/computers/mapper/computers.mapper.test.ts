@@ -28,7 +28,6 @@ function computerRow(over: Partial<ComputerRow> = {}): ComputerRow {
     displayName: null,
     responsibleId: null,
     departmentId: null,
-    location: null,
     notes: null,
     kind: 'desktop',
     tokenHash: 'hash-secreto',
@@ -269,7 +268,7 @@ describe('toSnapshotUpdate', () => {
     expect(update).not.toHaveProperty('displayName');
     expect(update).not.toHaveProperty('responsibleId');
     expect(update).not.toHaveProperty('departmentId');
-    expect(update).not.toHaveProperty('location');
+    expect(update).not.toHaveProperty('notes');
   });
 });
 
@@ -473,7 +472,7 @@ describe('toComputer references', () => {
     rememberDepartments([{ id: 12, name: 'Fiscal' }]);
 
     const computer = toComputer(
-      computerRow({ responsibleId: 'person-1', departmentId: 12, location: 'RECEPÇÃO', notes: 'Mesa 3' }),
+      computerRow({ responsibleId: 'person-1', departmentId: 12, notes: 'Mesa 3\nLocal anterior: RECEPÇÃO' }),
       false,
     );
 
@@ -483,9 +482,9 @@ describe('toComputer references', () => {
       responsibleAvatarUrl: '/ana.png',
       departmentId: 12,
       departmentName: 'Fiscal',
-      location: 'RECEPÇÃO',
-      notes: 'Mesa 3',
+      notes: 'Mesa 3\nLocal anterior: RECEPÇÃO',
     });
+    expect(computer).not.toHaveProperty('location');
   });
 
   // triste
@@ -500,20 +499,21 @@ describe('toComputer references', () => {
 
 describe('toComputerInsert references', () => {
   // feliz
-  it('stores the ids, the location and the trimmed notes', () => {
+  it('stores the ids and the trimmed notes, and never a location', () => {
     const insert = toComputerInsert(
-      { name: ' PC-1 ', kind: 'desktop', responsibleId: ' person-1 ', departmentId: 12, location: 'ANALYZE', notes: ' Mesa ' },
+      { name: ' PC-1 ', kind: 'desktop', responsibleId: ' person-1 ', departmentId: 12, notes: ' Mesa ' },
       'hash',
       ANA,
     );
 
-    expect(insert).toMatchObject({ responsibleId: 'person-1', departmentId: 12, location: 'ANALYZE', notes: 'Mesa' });
+    expect(insert).toMatchObject({ responsibleId: 'person-1', departmentId: 12, notes: 'Mesa' });
+    expect(insert).not.toHaveProperty('location');
   });
 
   // triste
   it('stores nulls for an empty responsible and blank notes', () => {
     const insert = toComputerInsert({ name: 'PC-1', kind: 'desktop', responsibleId: null, notes: '   ' }, 'hash', ANA);
 
-    expect(insert).toMatchObject({ responsibleId: null, departmentId: null, location: null, notes: null });
+    expect(insert).toMatchObject({ responsibleId: null, departmentId: null, notes: null });
   });
 });

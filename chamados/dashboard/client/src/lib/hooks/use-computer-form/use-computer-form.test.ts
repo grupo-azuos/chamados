@@ -48,7 +48,7 @@ function computer(over: Partial<Computer> = {}): Computer {
     responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
     responsibleAvatarUrl: null,
-    departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+    departmentId: null, departmentName: null,
     notes: null,
     kind: 'desktop',
     hardware: {
@@ -110,8 +110,8 @@ describe('useComputerFormModel', () => {
     /* O parque de onde sai o próximo número: o Paralegal já vai até o Computador 06. */
     vi.mocked(computersApi.list).mockResolvedValue({
       items: [
-        { ...computer({ id: 5, name: 'PARALEGAL-D05', displayName: 'Computador 05', departmentId: 6, departmentName: 'Paralegal', location: null }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] },
-        { ...computer({ id: 6, name: 'PARALEGAL-D06', displayName: 'Computador 06', departmentId: 6, departmentName: 'Paralegal', location: null }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] },
+        { ...computer({ id: 5, name: 'PARALEGAL-D05', displayName: 'Computador 05', departmentId: 6, departmentName: 'Paralegal' }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] },
+        { ...computer({ id: 6, name: 'PARALEGAL-D06', displayName: 'Computador 06', departmentId: 6, departmentName: 'Paralegal' }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] },
       ],
       total: 2,
       page: 1,
@@ -197,7 +197,6 @@ describe('useComputerFormModel', () => {
         displayName: null,
         responsibleId: null,
         departmentId: null,
-        location: null,
         notes: null,
       }),
     );
@@ -216,7 +215,6 @@ describe('useComputerFormModel', () => {
         displayName: 'Recepção — balcão novo',
         responsibleId: 'person-bia-costa',
         departmentId: null,
-        location: 'RECEPÇÃO',
         notes: null,
       }),
     );
@@ -279,22 +277,22 @@ describe('useComputerFormModel', () => {
   });
 
   // feliz
-  it('sends the official department by id, the fixed location and the note', async () => {
+  it('sends the official department by id and the note, and never a location', async () => {
     const model = mountModel();
     await waitForCatalog(model);
 
     model.actions.onChange('name', 'FISCAL-05');
     model.actions.onChange('kind', 'desktop');
     model.actions.onChange('departmentId', '6');
-    model.actions.onChange('location', 'RECEPÇÃO');
     model.actions.onChange('notes', '  Monitor emprestado  ');
     model.actions.onSubmit();
 
     await waitFor(() =>
       expect(computersApi.create).toHaveBeenCalledWith(
-        expect.objectContaining({ departmentId: 6, location: 'RECEPÇÃO', notes: 'Monitor emprestado' }),
+        expect.objectContaining({ departmentId: 6, notes: 'Monitor emprestado' }),
       ),
     );
+    expect(vi.mocked(computersApi.create).mock.calls[0]?.[0]).not.toHaveProperty('location');
   });
 
   // triste
@@ -323,20 +321,20 @@ describe('useComputerFormModel — editing and the park still loading', () => {
   // feliz
   it('reads an unnamed machine as blank fields, never as "null"', () => {
     const model = mountModel({
-      computer: computer({ displayName: null, responsibleName: null, responsibleId: null, departmentId: null, departmentName: null, location: null }),
+      computer: computer({ displayName: null, responsibleName: null, responsibleId: null, departmentId: null, departmentName: null }),
     });
 
     expect(model.data.fields.displayName.value).toBe('');
     expect(model.data.fields.responsibleId.value).toBe('');
     expect(model.data.fields.departmentId.value).toBe('');
-    expect(model.data.fields.location.value).toBe('');
+    expect(model.data.fields).not.toHaveProperty('location');
   });
 
   // triste
   /* Na edição o apelido é o que a pessoa deu: trocar o departamento não o reescreve. */
   it('never suggests a nickname over the name of a machine being edited', async () => {
     vi.mocked(computersApi.list).mockResolvedValue({
-      items: [{ ...computer({ id: 5, name: 'PARALEGAL-D05', displayName: 'Computador 05', departmentId: 6, departmentName: 'Paralegal', location: null }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] }],
+      items: [{ ...computer({ id: 5, name: 'PARALEGAL-D05', displayName: 'Computador 05', departmentId: 6, departmentName: 'Paralegal' }), ticketsThisMonth: 0, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] }],
       total: 1,
       page: 1,
       pageSize: 200,

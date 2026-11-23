@@ -24,7 +24,7 @@ const computer = {
   id: 2,
   name: 'FINANCEIRO-02',
   displayName: 'Financeiro — mesa 2',
-  departmentId: 4, departmentName: 'Financeiro', location: null,
+  departmentId: 4, departmentName: 'Financeiro',
   notes: null,
 } as ComputerListItem;
 
@@ -104,7 +104,6 @@ describe('useTransferFormModel', () => {
     await waitFor(() =>
       expect(transfersApi.create).toHaveBeenCalledWith(2, {
         toDepartmentId: 5,
-        toLocation: null,
         responsible: undefined,
         note: undefined,
         peripherals: [
@@ -135,7 +134,7 @@ describe('useTransferFormModel', () => {
     await waitFor(() =>
       expect(transfersApi.create).toHaveBeenCalledWith(
         2,
-        expect.objectContaining({ toDepartmentId: null, toLocation: null }),
+        expect.objectContaining({ toDepartmentId: null }),
       ),
     );
   });
@@ -207,7 +206,7 @@ describe('useTransferFormModel — the free texts and a machine on the shelf', (
     let model!: TransferFormModel;
     render(Harness, {
       props: {
-        computer: { ...computer, departmentId: null, departmentName: null, location: null } as ComputerListItem,
+        computer: { ...computer, departmentId: null, departmentName: null } as ComputerListItem,
         onSaved: vi.fn(),
         onReady: (ready: TransferFormModel) => (model = ready),
       },
@@ -286,22 +285,21 @@ describe('useTransferFormModel — before the peripherals arrive, and the machin
 
 describe('the transfer destination', () => {
   // feliz
-  it('reads and writes an official department by id and a fixed location', () => {
-    expect(destinationOf({ departmentId: 4, location: null })).toBe('department:4');
-    expect(destinationOf({ departmentId: null, location: 'RECEPÇÃO' })).toBe('location:RECEPÇÃO');
-    expect(toDestination('department:4')).toEqual({ toDepartmentId: 4, toLocation: null });
-    expect(toDestination('location:RECEPÇÃO')).toEqual({ toDepartmentId: null, toLocation: 'RECEPÇÃO' });
+  it('reads and writes an official department by id, offering only HR departments and the shelf', () => {
+    expect(destinationOf({ departmentId: 4 })).toBe('department:4');
+    expect(destinationOf({ departmentId: null })).toBe('');
+    expect(toDestination('department:4')).toEqual({ toDepartmentId: 4 });
     expect(
       destinationChoices([{ id: 4, name: 'Financeiro' }], { departmentId: 4, departmentName: 'Financeiro' }).map(
         (option) => option.value,
       ),
-    ).toEqual(['department:4', 'location:ANALYZE', 'location:CERTIFICADO', 'location:RECEPÇÃO', '']);
+    ).toEqual(['department:4', '']);
   });
 
   // triste
-  it('keeps a department that left HR, and never invents a location from free text', () => {
-    expect(toDestination('')).toEqual({ toDepartmentId: null, toLocation: null });
-    expect(toDestination('location:COPA')).toEqual({ toDepartmentId: null, toLocation: null });
+  it('keeps a department that left HR, and turns an old location value into the shelf', () => {
+    expect(toDestination('')).toEqual({ toDepartmentId: null });
+    expect(toDestination('location:RECEPÇÃO')).toEqual({ toDepartmentId: null });
     expect(destinationChoices([], { departmentId: 9, departmentName: null })[0]).toEqual({
       value: 'department:9',
       label: 'Departamento atual (fora da lista do RH)',

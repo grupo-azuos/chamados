@@ -305,7 +305,6 @@
   import MemoryStick from '@lucide/svelte/icons/memory-stick';
   import ShieldCheck from '@lucide/svelte/icons/shield-check';
   import UserRound from '@lucide/svelte/icons/user-round';
-  import MapPin from '@lucide/svelte/icons/map-pin';
   import StickyNote from '@lucide/svelte/icons/sticky-note';
   import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
   import KeyRound from '@lucide/svelte/icons/key-round';
@@ -460,13 +459,6 @@
         </div>
       </div>
       <div class="flex min-w-0 items-start gap-2.5">
-        <MapPin class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        <div class="min-w-0">
-          <dt class="text-ink-500 text-xs">Local</dt>
-          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computer.location ?? 'Sem local'}</dd>
-        </div>
-      </div>
-      <div class="flex min-w-0 items-start gap-2.5">
         <UserRound class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <div class="min-w-0">
           <dt class="text-ink-500 text-xs">Responsável</dt>
@@ -474,8 +466,8 @@
         </div>
       </div>
       {#if computer.notes}
-        <!-- A observação guarda também o responsável e o departamento antigos, da migração de
-             nome para id: as quebras de linha ficam, uma informação por linha. -->
+        <!-- A observação guarda também o responsável, o departamento e o local antigos, das
+             migrações ("… anterior: <nome>"): as quebras de linha ficam, uma informação por linha. -->
         <div class="flex min-w-0 items-start gap-2.5 sm:col-span-2">
           <StickyNote class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <div class="min-w-0">

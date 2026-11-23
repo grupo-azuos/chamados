@@ -844,7 +844,7 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   AzuosComputerFormDialog: {
     summary:
-      'O modal de cadastrar máquina e de corrigir a identificação dela: nome, tipo, nome do dispositivo, responsável (só uma pessoa da lista do escritório, pelo campo de pessoa com foto — nunca um nome digitado), departamento oficial do RH (guardado pelo id), local fixo (ANALYZE, CERTIFICADO, RECEPÇÃO) e observação. O nome da máquina só se edita no cadastro; depois quem o informa é o agente.',
+      'O modal de cadastrar máquina e de corrigir a identificação dela: nome, tipo, nome do dispositivo, responsável (só uma pessoa da lista do escritório, pelo campo de pessoa com foto — nunca um nome digitado), só o departamento oficial do RH (guardado pelo id, sem os fixos daqui) e observação — onde ficaram, nas linhas "… anterior:", o responsável e o local antigos. O nome da máquina só se edita no cadastro; depois quem o informa é o agente.',
     use: ['Cadastrar ou corrigir uma máquina do inventário da Infra.'],
     avoid: [
       'Transferir a máquina de pessoa ou de lugar: use o `AzuosTransferDialog`.',
@@ -1189,7 +1189,7 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   InventoryFilters: {
     summary:
-      'A barra de filtros do inventário: busca, departamento oficial (pelo id do RH) e o botão "Filtros", que abre o painel com responsável, local, conexão, saúde, recursos, alertas, preventiva, tipo e arquivadas. Cada filtro ligado vira uma etiqueta com X embaixo.',
+      'A barra de filtros do inventário: busca, departamento oficial (pelo id do RH) e o botão "Filtros", que abre o painel com responsável, conexão, saúde, recursos, alertas, preventiva, tipo e arquivadas. Cada filtro ligado vira uma etiqueta com X embaixo.',
     use: ['Na tela Inventário (já vem no `AzuosComputerListView`).'],
     avoid: ['Para filtrar outra lista: monte a barra com o `FilterPanel` e os campos da casa.'],
   },
@@ -1210,7 +1210,7 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   AzuosTransferDialog: {
     summary:
-      'O modal de transferir a máquina de departamento: para onde vai (um departamento oficial do RH, um local fixo ou a prateleira), quem levou, observação e, para cada peça ligada a ela, se vai junto ou fica na estação — e, se fica, qual máquina assume.',
+      'O modal de transferir a máquina de departamento: para onde vai (um departamento oficial do RH ou a prateleira), quem levou, observação e, para cada peça ligada a ela, se vai junto ou fica na estação — e, se fica, qual máquina assume.',
     use: ['Pelo botão "Transferir" da ficha da máquina.'],
     avoid: [
       'Para só corrigir o cadastro da máquina: é o `AzuosComputerFormDialog`.',

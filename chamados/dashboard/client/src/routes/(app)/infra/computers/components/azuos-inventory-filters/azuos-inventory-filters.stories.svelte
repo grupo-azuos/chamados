@@ -6,7 +6,6 @@
   const emptyFilter: InventoryFilter = {
     search: '',
     departmentId: '',
-  location: '',
     healthStatus: '',
     kind: '',
     onlyOnline: false,
@@ -24,13 +23,6 @@
     { value: '4', label: 'Financeiro' },
     { value: '8', label: 'Recursos Humanos' },
     { value: '5', label: 'TI' },
-  ];
-
-  /* Os locais fixos: lista fechada, filtro à parte do departamento. */
-  const locationOptions = [
-    { value: 'ANALYZE', label: 'ANALYZE' },
-    { value: 'CERTIFICADO', label: 'CERTIFICADO' },
-    { value: 'RECEPÇÃO', label: 'RECEPÇÃO' },
   ];
 
   /* Pessoas inventadas; a foto é um avatar genérico, como na história do AzuosPersonAvatar. */
@@ -63,13 +55,7 @@
 </script>
 
 <!-- Sem filtro: só a barra, painel fechado. -->
-<Story name="Default" args={{ data: { filter: emptyFilter, departmentOptions, locationOptions }, actions }} />
-
-<!-- O local (ANALYZE, CERTIFICADO, RECEPÇÃO) filtra à parte e vira etiqueta. -->
-<Story
-  name="ByLocation"
-  args={{ data: { filter: { ...emptyFilter, location: 'RECEPÇÃO' }, departmentOptions, locationOptions }, actions }}
-/>
+<Story name="Default" args={{ data: { filter: emptyFilter, departmentOptions }, actions }} />
 
 <!-- Chegou filtrada (um cartão do painel, um filtro salvo): painel aberto e etiquetas à vista. -->
 <Story

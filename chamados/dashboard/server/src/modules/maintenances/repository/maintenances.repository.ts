@@ -20,7 +20,7 @@ import {
   type MaintenanceInsert,
   type MaintenanceRow,
 } from '../../../lib/db/schema/maintenances.schema';
-import { computerPlaceNameSql } from '../../../lib/db/reference-names.util';
+import { computerDepartmentNameSql } from '../../../lib/db/reference-names.util';
 
 /**
  * A manutenção com a máquina dela, do jeito que a tela precisa ler.
@@ -70,7 +70,7 @@ function computerColumns() {
     id: computers.id,
     name: computers.name,
     displayName: computers.displayName,
-    department: computerPlaceNameSql(),
+    department: computerDepartmentNameSql(),
   };
 }
 
@@ -277,7 +277,7 @@ export class MaintenancesRepository {
           computerId: computers.id,
           computerName: computers.name,
           computerDisplayName: computers.displayName,
-          computerDepartment: computerPlaceNameSql(),
+          computerDepartment: computerDepartmentNameSql(),
           lastDoneAt: asDate(
             sql<Date | null>`max(${maintenances.performedAt}) filter (where ${maintenances.type} in ('preventive', 'corrective'))`,
             maintenances.performedAt,

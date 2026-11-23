@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { COMPUTER_LOCATIONS, DEPARTMENT_NAME_MAX_LENGTH } from '../domain/department.util';
+import { DEPARTMENT_NAME_MAX_LENGTH } from '../domain/department.util';
 
 /**
  * O departamento como campo de formulário e de API: o NOME, como o RH o escreve.
@@ -36,11 +36,6 @@ export const departmentIdSchema = z
   .number({ error: 'Escolha um departamento da lista' })
   .int('Escolha um departamento da lista')
   .positive('Escolha um departamento da lista');
-
-/** O LOCAL do computador: só os da lista fechada (`COMPUTER_LOCATIONS`), nunca texto livre. */
-export const computerLocationSchema = z.enum(COMPUTER_LOCATIONS, {
-  error: 'Escolha um local da lista',
-});
 
 export const departmentCatalogSchema = z.object({
   rh: z.array(z.string()),

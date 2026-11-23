@@ -15,7 +15,7 @@ import { maintenanceSchedules } from '../../../lib/db/schema/maintenance-schedul
 import { maintenances } from '../../../lib/db/schema/maintenances.schema';
 import { parts } from '../../../lib/db/schema/parts.schema';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
-import { computerPlaceNameSql } from '../../../lib/db/reference-names.util';
+import { computerDepartmentNameSql } from '../../../lib/db/reference-names.util';
 
 export type StatusCount = { key: string; count: number };
 
@@ -332,7 +332,7 @@ export class DashboardRepository {
           computerId: computers.id,
           computerName: computers.name,
           computerDisplayName: computers.displayName,
-          department: computerPlaceNameSql(),
+          department: computerDepartmentNameSql(),
           healthScore: computers.healthScore,
           healthStatus: computers.healthStatus,
           activeAlerts: sql<number>`(
@@ -478,7 +478,7 @@ export class DashboardRepository {
         .select({
           computerId: computers.id,
           computerName: sql<string>`coalesce(${computers.displayName}, ${computers.name})`,
-          department: computerPlaceNameSql(),
+          department: computerDepartmentNameSql(),
           lastDoneAt: asDate(
             sql<Date | null>`max(${maintenances.performedAt}) filter (
               where ${maintenances.type} in ('preventive', 'corrective')
@@ -516,7 +516,7 @@ export class DashboardRepository {
         .select({
           computerId: computers.id,
           computerName: sql<string>`coalesce(${computers.displayName}, ${computers.name})`,
-          department: computerPlaceNameSql(),
+          department: computerDepartmentNameSql(),
           scheduledFor: maintenanceSchedules.scheduledFor,
           note: maintenanceSchedules.note,
         })

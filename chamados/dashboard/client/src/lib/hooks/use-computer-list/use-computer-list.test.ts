@@ -56,7 +56,7 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
     responsibleAvatarUrl: null,
-    departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+    departmentId: null, departmentName: null,
     notes: null,
     kind: 'desktop',
     hardware: {
@@ -322,16 +322,16 @@ describe('useComputerListModel', () => {
       });
       const model = await mountLoadedModel();
       model.actions.onDepartmentChange('8');
-      model.actions.onLocationChange('RECEPÇÃO');
       await waitFor(() => expect(model.data.filter.departmentId).toBe('8'));
 
       model.actions.onExportReport('docx');
       await waitFor(() => expect(model.state.exportingFormat).toBeNull());
 
       expect(computersApi.exportReport).toHaveBeenCalledWith(
-        expect.objectContaining({ departmentId: 8, location: 'RECEPÇÃO' }),
+        expect.objectContaining({ departmentId: 8 }),
         'docx',
       );
+      expect(vi.mocked(computersApi.exportReport).mock.calls[0]?.[0]).not.toHaveProperty('location');
       expect(triggerBrowserDownload).toHaveBeenCalledWith(expect.any(Blob), 'inventario.docx');
     });
 
@@ -423,6 +423,19 @@ describe('useComputerListModel with a board cut', () => {
     expect(vi.mocked(computersApi.list).mock.calls.every(([query]) => query.drill === undefined)).toBe(true);
     expect(model.data.drillBanner?.notice).not.toBeNull();
     expect(model.state.isEmpty).toBe(true);
+  });
+
+  // triste
+  /* O filtro de Local saiu: um link (ou filtro salvo) antigo com `location` abre sem ele, e o
+     resto do filtro continua valendo. */
+  it('ignores the old Local filter in an address, keeping the department', async () => {
+    appPage.url = new URL(`http://localhost:5173/infra/computers?departmentId=8&location=${encodeURIComponent('RECEPÇÃO')}`);
+
+    const model = await mountLoadedModel();
+
+    expect(model.data.filter.departmentId).toBe('8');
+    expect(model.data.filter).not.toHaveProperty('location');
+    expect(vi.mocked(computersApi.list).mock.calls.every(([query]) => !('location' in query))).toBe(true);
   });
 });
 

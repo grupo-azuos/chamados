@@ -31,7 +31,6 @@ function computer(over: Partial<ComputerRow> = {}): ComputerRow {
     displayName: 'Financeiro — mesa 2',
     responsibleId: 'person-bruno',
     departmentId: 20,
-    location: null,
     isArchived: false,
     disposedAt: null,
     ...over,
@@ -139,18 +138,23 @@ describe('TransfersService.create', () => {
 
     await service.create(ana, 1, input());
 
-    expect(transfers.updateComputer).toHaveBeenCalledWith(1, { departmentId: 21, location: null }, {});
+    expect(transfers.updateComputer).toHaveBeenCalledWith(1, { departmentId: 21 }, {});
   });
 
-  // feliz
-  it('moves the machine to a fixed location, leaving the official department empty', async () => {
+  // triste
+  /* O Local saiu do computador: um destino "local" de uma tela antiga não muda nada na máquina. */
+  it('ignores a fixed location sent by an old screen and sends the machine to the shelf', async () => {
     const { service, transfers } = makeService();
 
-    await service.create(ana, 1, input({ toDepartmentId: null, toLocation: 'RECEPÇÃO' }));
+    await service.create(ana, 1, { ...input({ toDepartmentId: null }), toLocation: 'RECEPÇÃO' } as never);
 
-    expect(transfers.updateComputer).toHaveBeenCalledWith(1, { departmentId: null, location: 'RECEPÇÃO' }, {});
+    expect(transfers.updateComputer).toHaveBeenCalledWith(
+      1,
+      expect.not.objectContaining({ location: expect.anything() }),
+      {},
+    );
     expect(transfers.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ fromDepartment: 'Financeiro', toDepartment: 'RECEPÇÃO' }),
+      expect.objectContaining({ fromDepartment: 'Financeiro', toDepartment: null }),
       expect.anything(),
     );
   });
@@ -180,7 +184,6 @@ describe('TransfersService.create', () => {
       1,
       {
         departmentId: null,
-        location: null,
         responsibleId: null,
         displayName: 'Reserva — FINANCEIRO-02',
       },

@@ -14,7 +14,7 @@ const computer = {
   id: 2,
   name: 'FINANCEIRO-02',
   displayName: 'Financeiro — mesa 2',
-  departmentId: 4, departmentName: 'Financeiro', location: null,
+  departmentId: 4, departmentName: 'Financeiro',
   notes: null,
 } as Computer;
 
@@ -73,7 +73,7 @@ describe('currentPlaceOf', () => {
   // triste
   /* Sem departamento não é "vazio": é a prateleira, e a tela diz isso com todas as letras. */
   it('calls the shelf by its name', () => {
-    expect(currentPlaceOf({ ...computer, departmentId: null, departmentName: null, location: null } as Computer)).toBe(
+    expect(currentPlaceOf({ ...computer, departmentId: null, departmentName: null } as Computer)).toBe(
       'Sem departamento (na prateleira)',
     );
   });

@@ -97,7 +97,7 @@
     resourceConditionOf,
     resourceConditionTone,
   } from '@template/shared/domain/computer-resource.util';
-  import { computerPlaceLabel, computerResponsibleLabel } from '$lib/utils/computer-place.util';
+  import { computerDepartmentLabel, computerResponsibleLabel } from '$lib/utils/computer-place.util';
 
   import AlertBadge from '../azuos-computer-alert-badge/azuos-computer-alert-badge.svelte';
   import UpgradeBadge from '../azuos-computer-upgrade-badge/azuos-computer-upgrade-badge.svelte';
@@ -189,7 +189,7 @@
       </span>
       <span class="text-muted-foreground truncate text-xs">
         {COMPUTER_KIND_LABELS[computer.kind]} ·
-        {computerPlaceLabel(computer)}
+        {computerDepartmentLabel(computer)}
       </span>
     </div>
   </div>

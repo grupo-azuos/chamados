@@ -59,14 +59,6 @@ export function computerDepartmentNameSql(): SQL<string | null> {
   return sql<string | null>`(select "ref"."name" from (values ${values}) as "ref"("id", "name") where "ref"."id" = ${qualified(computers.departmentId)})`;
 }
 
-/**
- * Onde a máquina está, como NOME, para quem só tinha uma coluna "departamento": o departamento
- * oficial e, sem ele, o local fixo (ANALYZE, CERTIFICADO, RECEPÇÃO).
- */
-export function computerPlaceNameSql(): SQL<string | null> {
-  return sql<string | null>`coalesce(${computerDepartmentNameSql()}, ${qualified(computers.location)})`;
-}
-
 /** O nome do responsável da máquina, em SQL — nulo sem responsável ou com id sem par. */
 export function computerResponsibleNameSql(): SQL<string | null> {
   const entries = [...people.entries()];

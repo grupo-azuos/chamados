@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { PART_CATEGORIES } from '../domain/part-catalog.util';
 import { PERIPHERAL_DESTINIES } from '../domain/transfer.util';
 import { departmentSchema } from './computer.schema';
-import { computerLocationSchema, departmentIdSchema } from './department.schema';
+import { departmentIdSchema } from './department.schema';
 
 /**
  * O CONTRATO DA TRANSFERÊNCIA: para onde a máquina foi, quem levou e o que ficou para trás.
@@ -54,11 +54,9 @@ export const transferPeripheralSchema = z
 export type TransferPeripheralInput = z.infer<typeof transferPeripheralSchema>;
 
 export const createTransferSchema = z.object({
-  /* O departamento OFICIAL de destino, pelo id do RH. Nulo com local nulo é "sem departamento":
-     a máquina volta para a prateleira. */
+  /* O departamento OFICIAL de destino, pelo id do RH. Nulo é "sem departamento": a máquina
+     volta para a prateleira. */
   toDepartmentId: departmentIdSchema.nullable(),
-  /* O local fixo de destino (ANALYZE, CERTIFICADO, RECEPÇÃO), da lista fechada. */
-  toLocation: computerLocationSchema.nullable().default(null),
   /* Quem levou a máquina. Texto livre: pode ser alguém sem login no sistema. */
   responsible: z.string().trim().max(120).optional(),
   note: z.string().trim().max(500).optional(),
@@ -71,7 +69,7 @@ export type CreateTransferInput = z.input<typeof createTransferSchema>;
  * Uma linha do histórico.
  *
  * Origem e destino são o NOME de onde a máquina estava e para onde foi, como estava escrito no
- * dia (o departamento do RH e/ou o local) — o histórico é um retrato, não uma referência viva.
+ * dia (o departamento do RH) — o histórico é um retrato, não uma referência viva.
  *
  * `fromDepartment` fica GUARDADO, e não é lido da máquina na hora de mostrar: o departamento
  * de origem é um fato do dia da mudança, e a máquina já andou para outro lugar desde então.

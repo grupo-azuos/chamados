@@ -33,7 +33,7 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     responsibleId: 'person-daniela-prado',
     responsibleName: 'Daniela Prado',
     responsibleAvatarUrl: null,
-    departmentId: 2, departmentName: 'Contábil', location: null,
+    departmentId: 2, departmentName: 'Contábil',
     notes: null,
     kind: 'desktop',
     hardware: {

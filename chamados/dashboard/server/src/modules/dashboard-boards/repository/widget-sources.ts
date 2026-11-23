@@ -47,7 +47,7 @@ import { softwareTimelineEvents } from '../../../lib/db/schema/software-timeline
 import { tickets } from '../../../lib/db/schema/tickets.schema';
 import { ticketInArea } from '../../../lib/db/ticket-area.util';
 import {
-  computerPlaceNameSql,
+  computerDepartmentNameSql,
   computerResponsibleNameSql,
 } from '../../../lib/db/reference-names.util';
 
@@ -283,7 +283,7 @@ export const SOURCE_TABLES: Record<DataSourceKey, SourceTable> = {
     inCirculation: computerInUse,
     fields: {
       get department(): SourceColumn {
-        return { expression: computerPlaceNameSql(), type: 'text' };
+        return { expression: computerDepartmentNameSql(), type: 'text' };
       },
       kind: { expression: sql`${computers.kind}`, type: 'enum' },
       healthStatus: { expression: sql`${computers.healthStatus}`, type: 'enum' },
@@ -296,7 +296,7 @@ export const SOURCE_TABLES: Record<DataSourceKey, SourceTable> = {
     },
     dimensions: {
       get department(): SQL {
-        return orNone(computerPlaceNameSql(), '(Sem departamento)');
+        return orNone(computerDepartmentNameSql(), '(Sem departamento)');
       },
       kind: sql`coalesce(${computers.kind}, '(Sem tipo)')`,
       healthStatus: sql`coalesce(${computers.healthStatus}, '(Sem leitura)')`,

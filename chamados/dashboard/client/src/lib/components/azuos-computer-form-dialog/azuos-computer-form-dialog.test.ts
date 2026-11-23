@@ -17,7 +17,6 @@ function fields(
     displayName: field(),
     responsibleId: field(),
     departmentId: field(),
-    location: field(),
     notes: field(),
     kind: field(),
     ...over,
@@ -169,23 +168,34 @@ describe('AzuosComputerFormDialog responsible directory', () => {
   });
 
   // feliz
-  it('chooses the official department by id and the fixed location apart', async () => {
+  it('chooses only the official department by id, with no Local field', async () => {
     const onChange = vi.fn();
     render(ComputerFormDialog, { props: {
       data: {
         mode: 'create',
         fields: fields(),
         departmentOptions: [{ value: '12', label: 'Fiscal' }],
-        locationOptions: [{ value: 'RECEPÇÃO', label: 'RECEPÇÃO' }],
       },
       state: { isOpen: true }, actions: { ...actions, onChange },
     } });
     await userEvent.click(screen.getByRole('button', { name: 'Departamento' }));
     await fireEvent.click(await screen.findByText('Fiscal'));
     expect(onChange).toHaveBeenCalledWith('departmentId', '12');
-    expect(screen.getByText('Local')).toBeInTheDocument();
-    expect(screen.getByText('RECEPÇÃO')).toBeInTheDocument();
+    expect(screen.queryByText('Local')).not.toBeInTheDocument();
+    expect(screen.queryByText('RECEPÇÃO')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Observação')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('shows the old responsible and location lines kept in the note', () => {
+    render(ComputerFormDialog, { props: {
+      data: {
+        mode: 'edit',
+        fields: fields({ name: field('PC-1'), notes: field('Responsável anterior: Ana\nLocal anterior: RECEPÇÃO') }),
+      },
+      state: { isOpen: true }, actions,
+    } });
+    expect(screen.getByLabelText('Observação')).toHaveValue('Responsável anterior: Ana\nLocal anterior: RECEPÇÃO');
   });
 
   // triste

@@ -16,6 +16,9 @@ import { asAna, asBia, asCaio, createE2eApp, type E2eApp } from './support/e2e-a
  */
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
+/* O departamento do RH da máquina, pelo id — o nome vem do catálogo na resposta. */
+const RECEPTION = { id: 32, name: 'Recepção' };
+
 describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
   let started: E2eApp;
   let app: INestApplication;
@@ -32,7 +35,7 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
     const created = await api()
       .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name, kind: 'desktop', location: 'RECEPÇÃO' })
+      .send({ name, kind: 'desktop', departmentId: RECEPTION.id })
       .expect(201);
 
     return created.body.computer.id;
@@ -42,7 +45,7 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
     api().post(`/api/v1/parts/${partId}/movements`).set(who).send(body);
 
   beforeAll(async () => {
-    started = await createE2eApp(testDatabaseUrl!);
+    started = await createE2eApp(testDatabaseUrl!, { departments: [RECEPTION] });
     app = started.app;
   });
 
@@ -165,7 +168,7 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
       balanceAfter: 3,
       computerId,
       computerName: 'PC-RECEPCAO-01',
-      computerDepartment: 'RECEPÇÃO',
+      computerDepartment: 'Recepção',
       handledBy: 'Marta',
       createdBy: 'ana@empresa.com.br',
     });

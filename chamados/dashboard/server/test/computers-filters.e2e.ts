@@ -33,7 +33,7 @@ describe.skipIf(!testDatabaseUrl)('Computers filters API (e2e)', () => {
     const created = await api()
       .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name, kind: 'desktop', location: 'RECEPÇÃO', ...extra })
+      .send({ name, kind: 'desktop', ...extra })
       .expect(201);
 
     return created.body.computer.id;

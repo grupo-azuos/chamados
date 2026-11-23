@@ -11,11 +11,7 @@ import {
   type ComputerUpgradeFilter,
   matchesUpgradeFilter,
 } from '@template/shared/domain/computer-upgrade.util';
-import {
-  COMPUTER_LOCATIONS,
-  type ComputerLocation,
-  type DepartmentChoice,
-} from '@template/shared/domain/department.util';
+import { type DepartmentChoice } from '@template/shared/domain/department.util';
 import { compareMachines, type NumberedMachine } from '@template/shared/domain/machine-number.util';
 import { type BoardDrill } from '@template/shared/schemas/board-drill.schema';
 import {
@@ -57,8 +53,6 @@ export type ComputerListFilter = {
   search: string;
   /** O departamento OFICIAL pelo id do RH, como texto (`'12'`) — o mesmo que a máquina guarda. */
   departmentId: string;
-  /** O local fixo (ANALYZE, CERTIFICADO, RECEPÇÃO). */
-  location: ComputerLocation | '';
   healthStatus: HealthStatus | '';
   kind: ComputerKind | '';
   /** Online e offline nunca ficam ligados juntos: ligar um desliga o outro. */
@@ -127,8 +121,6 @@ export type ComputerListModel = {
     scheduledFor: Record<number, string>;
     /** As opções do filtro de departamento: só as OFICIAIS do RH, com o id como valor. */
     departmentOptions: DepartmentChoice[];
-    /** As opções do filtro de local: a lista fechada. */
-    locationOptions: DepartmentChoice[];
     /** As pessoas do filtro "Responsável": quem responde por alguma máquina, com a foto. */
     responsibleOptions: AzuosPersonPickerPerson[];
     /** A faixa do recorte do Painel, quando a lista veio de um clique num bloco. */
@@ -155,7 +147,6 @@ export type ComputerListModel = {
   actions: {
     onSearchChange: (search: string) => void;
     onDepartmentChange: (departmentId: string) => void;
-    onLocationChange: (location: ComputerLocation | '') => void;
     onHealthStatusChange: (healthStatus: HealthStatus | '') => void;
     onKindChange: (kind: ComputerKind | '') => void;
     onOnlineChange: (onlyOnline: boolean) => void;
@@ -186,7 +177,6 @@ export type ComputerListModel = {
 const EMPTY_FILTER: ComputerListFilter = {
   search: '',
   departmentId: '',
-  location: '',
   healthStatus: '',
   kind: '',
   onlyOnline: false,
@@ -202,8 +192,9 @@ const EMPTY_FILTER: ComputerListFilter = {
 /** Cada campo do filtro conferido sozinho: um campo salvo que não serve volta ao padrão. */
 const FILTER_GUARDS: FieldGuards<ComputerListFilter> = {
   search: isText,
+  /* Sem `location`: o filtro de Local saiu, e um filtro salvo (ou link) antigo com ele é lido
+     sem esse campo — os outros continuam valendo. */
   departmentId: isText,
-  location: oneOf('', ...COMPUTER_LOCATIONS),
   healthStatus: oneOf('', ...HEALTH_STATUSES),
   kind: oneOf('', ...COMPUTER_KINDS),
   onlyOnline: isFlag,
@@ -248,7 +239,6 @@ function filterScopeOf(filter: ComputerListFilter) {
   return {
     search: filter.search.trim() || undefined,
     departmentId: filter.departmentId ? Number(filter.departmentId) : undefined,
-    location: filter.location || undefined,
     healthStatus: filter.healthStatus || undefined,
     kind: filter.kind || undefined,
     ...presenceOf(filter),
@@ -297,7 +287,7 @@ export function toNumberedMachine(computer: Computer): NumberedMachine {
     name: computer.name,
     displayName: computer.displayName,
     hostname: computer.hardware?.hostname ?? null,
-    department: computer.departmentName ?? computer.location,
+    department: computer.departmentName,
     kind: computer.kind,
   };
 }
@@ -516,7 +506,6 @@ export function useComputerListModel(): ComputerListModel {
         filter: filter.current,
         scheduledFor: scheduledDayByComputer(schedules.current.data),
         departmentOptions: departments.officialOptions,
-        locationOptions: departments.locationOptions,
         /* Do resumo, e não da lista: com a lista filtrada pela Ana, a Ana seria a única opção
            — e trocar de pessoa obrigaria a limpar o filtro antes. */
         responsibleOptions: responsibleOptionsOf(summary.current.data?.items ?? []),
@@ -540,7 +529,6 @@ export function useComputerListModel(): ComputerListModel {
     actions: {
       onSearchChange: (search) => changeFilter((current) => ({ ...current, search })),
       onDepartmentChange: (departmentId) => changeFilter((current) => ({ ...current, departmentId })),
-      onLocationChange: (location) => changeFilter((current) => ({ ...current, location })),
       onHealthStatusChange: (healthStatus) =>
         changeFilter((current) => ({ ...current, healthStatus })),
       onKindChange: (kind) => changeFilter((current) => ({ ...current, kind })),
@@ -628,8 +616,7 @@ function hasTextFilter(filter: ComputerListFilter): boolean {
   return (
     filter.search.trim() !== '' ||
     filter.responsibleId !== '' ||
-    filter.upgrade !== '' ||
-    filter.location !== ''
+    filter.upgrade !== ''
   );
 }
 

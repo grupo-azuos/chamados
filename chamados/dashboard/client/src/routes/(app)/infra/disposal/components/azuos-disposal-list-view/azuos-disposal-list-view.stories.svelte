@@ -17,7 +17,7 @@
       responsibleId: 'person-bia-costa',
       responsibleName: 'Bia Costa',
       responsibleAvatarUrl: null,
-      departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+      departmentId: null, departmentName: null,
       notes: null,
       kind: 'desktop',
       hardware: {
@@ -63,7 +63,7 @@
       id: 10,
       name: 'FISCAL-10',
       displayName: 'Fiscal — micro que pegou raio',
-      departmentId: 5, departmentName: 'Fiscal', location: null,
+      departmentId: 5, departmentName: 'Fiscal',
       notes: null,
       disposalType: 'scrap',
       disposalReason: 'Placa-mãe queimada em descarga elétrica; sem conserto.',
@@ -74,7 +74,7 @@
       id: 11,
       name: 'PARALEGAL-11-ESTACAO-COMPARTILHADA',
       displayName: 'Paralegal — estação compartilhada do corredor',
-      departmentId: 6, departmentName: 'Paralegal', location: null,
+      departmentId: 6, departmentName: 'Paralegal',
       notes: null,
       disposalReason:
         'Travava três vezes por semana desde a troca do disco; o técnico externo não achou defeito, e o custo de continuar investigando passou do valor de uma máquina nova.',

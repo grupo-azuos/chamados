@@ -25,7 +25,7 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     responsibleId: 'person-ana-prado',
     responsibleName: 'Ana Prado',
     responsibleAvatarUrl: null,
-    departmentId: 5, departmentName: 'Fiscal', location: null,
+    departmentId: 5, departmentName: 'Fiscal',
     notes: null,
     kind: 'desktop',
     hardware: {
@@ -208,7 +208,7 @@ describe('AzuosComputerCard', () => {
   it('does not pulse, nor paint the hover, for a calm machine without a responsible', () => {
     const { container } = render(ComputerCard, {
       props: {
-        data: { computer: computer({ responsibleName: null, responsibleId: null, departmentId: null, departmentName: null, location: null }) },
+        data: { computer: computer({ responsibleName: null, responsibleId: null, departmentId: null, departmentName: null }) },
         actions: { onOpen: vi.fn() },
       },
     });

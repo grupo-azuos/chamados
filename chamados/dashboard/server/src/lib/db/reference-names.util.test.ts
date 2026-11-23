@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   computerDepartmentNameSql,
-  computerPlaceNameSql,
   computerResponsibleNameSql,
   departmentNameOf,
   forgetReferenceNames,
@@ -31,11 +30,6 @@ describe('reference names', () => {
     expect(query.sql).not.toContain("O'Brien");
     expect(query.params).toEqual([12, 'Fiscal', 13, "O'Brien"]);
     expect(departmentNameOf(12)).toBe('Fiscal');
-  });
-
-  // feliz
-  it('falls back to the fixed location when the machine has no official department', () => {
-    expect(dialect.sqlToQuery(computerPlaceNameSql()).sql).toContain('"computers"."location"');
   });
 
   // feliz
