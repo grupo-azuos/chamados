@@ -7,9 +7,9 @@
   `@internationalized/date`, que não carrega fuso; escolher um dia entrega o texto ISO, fecha o
   balão e chama `onBlur`.
 
-  Com `showMonthYearSelects`, o mês e o ano trocam pelo seletor do projeto em cima do calendário. O
-  campo escondido existe para o formulário nativo enxergar o valor: sem ele, um `FormData` do
-  formulário em volta não traria a data.
+  O calendário é o `AzuosCalendar`, igual ao do template: o mês e o ano trocam no próprio título,
+  pelo `AzuosCalendarDropdown`, entre as duas setas. O campo escondido existe para o formulário
+  nativo enxergar o valor: sem ele, um `FormData` do formulário em volta não traria a data.
 
   Props soltas (não nos quatro grupos): `value` (bindable), `placeholder`, `disabled`, `name`, `id`,
   os `aria-*` e os retornos `onValueChange` e `onBlur`.
@@ -25,9 +25,8 @@
   import { Calendar as CalendarIcon } from "lucide-svelte";
   import { cn } from "$lib/utils/cn";
   import { Button } from "$lib/components/ui/button";
-  import { Calendar } from "$lib/components/ui/calendar";
+  import AzuosCalendar from "$lib/components/azuos-calendar/azuos-calendar.svelte";
   import * as Popover from "$lib/components/ui/popover";
-  import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
 
   let {
     value = $bindable(),
@@ -39,7 +38,6 @@
     id,
     ariaInvalid = false,
     ariaDescribedBy,
-    showMonthYearSelects = false,
     onBlur,
     onValueChange,
   }: {
@@ -52,7 +50,6 @@
     id?: string;
     ariaInvalid?: boolean;
     ariaDescribedBy?: string;
-    showMonthYearSelects?: boolean;
     onBlur?: () => void;
     onValueChange?: (val: string | null) => void;
   } = $props();
@@ -64,24 +61,6 @@
   let internalDate: DateValue | undefined = $state.raw(undefined);
   let calendarPage: DateValue = $state.raw(today(getLocalTimeZone()));
   let isOpen = $state(false);
-  const currentDate = today(getLocalTimeZone());
-  const currentYear = currentDate.year;
-  const monthFormatter = new DateFormatter('pt-BR', { month: 'long' });
-  const monthOptions = Array.from({ length: 12 }, (_, index) => ({
-    value: String(index + 1),
-    label: monthFormatter.format(
-      currentDate.set({ month: index + 1 }).toDate(getLocalTimeZone()),
-    ),
-  }));
-  const firstYear = $derived(Math.min(currentYear - 10, calendarPage.year));
-  const lastYear = $derived(Math.max(currentYear + 10, calendarPage.year));
-  const yearOptions = $derived(
-    Array.from({ length: lastYear - firstYear + 1 }, (_, index) => {
-      const value = String(firstYear + index);
-      return { value, label: value };
-    }),
-  );
-
   $effect(() => {
     if (!value) {
       internalDate = undefined;
@@ -167,43 +146,18 @@
         </Button>
       {/snippet}
     </Popover.Trigger>
-    <!-- Centralizado embaixo do campo, como todo menu. O teto de largura e de altura (com a
-         rolagem) é do chamados: em tela baixa, os seletores de mês e ano empurravam o calendário
-         para fora da janela. -->
+    <!-- Centralizado embaixo do campo, como todo menu — a mesma caixa do template. -->
     <Popover.Content
       sideOffset={6}
-      class="rounded-surface bg-popover ring-foreground/8 max-h-(--bits-popover-content-available-height) w-auto max-w-[calc(100vw-2rem)] overflow-y-auto border-transparent p-0 shadow-xl ring-1"
+      class="rounded-surface bg-popover ring-foreground/8 w-auto border-transparent p-0 shadow-xl ring-1"
       align="center"
-      collisionPadding={12}
       aria-label={ariaLabel ? `Selecionar ${ariaLabel.toLowerCase()}` : 'Selecionar data'}
     >
-      {#if showMonthYearSelects}
-        <!-- Seletores do projeto: mês e ano não abrem menus nativos diferentes em cada SO. -->
-        <div class="grid grid-cols-[1.4fr_1fr] gap-2 border-b border-border p-3">
-          <SelectField
-            data={{ value: String(calendarPage.month), options: monthOptions }}
-            ui={{ ariaLabel: 'Mês', className: 'h-10! w-full capitalize' }}
-            state={{ isDisabled: disabled }}
-            actions={{ onChange: (value) => (calendarPage = calendarPage.set({ month: Number(value) })) }}
-          />
-          <SelectField
-            data={{ value: String(calendarPage.year), options: yearOptions }}
-            ui={{ ariaLabel: 'Ano', className: 'h-10! w-full tabular-nums' }}
-            state={{ isDisabled: disabled }}
-            actions={{ onChange: (value) => (calendarPage = calendarPage.set({ year: Number(value) })) }}
-          />
-        </div>
-      {/if}
-      <Calendar
-        type="single"
-        {disabled}
-        value={internalDate}
-        placeholder={calendarPage}
-        onPlaceholderChange={(date) => (calendarPage = date)}
-        onValueChange={handleSelect}
-        locale="pt-BR"
-        captionLayout={showMonthYearSelects ? 'label' : 'dropdown'}
-        class="rounded-control border-0 p-3 [--cell-size:--spacing(9)]"
+      <AzuosCalendar
+        data={{ value: internalDate, month: calendarPage }}
+        ui={{ className: 'rounded-control border-0 p-3' }}
+        state={{ isDisabled: disabled }}
+        actions={{ onValueChange: handleSelect, onMonthChange: (date) => (calendarPage = date) }}
       />
     </Popover.Content>
   </Popover.Root>
