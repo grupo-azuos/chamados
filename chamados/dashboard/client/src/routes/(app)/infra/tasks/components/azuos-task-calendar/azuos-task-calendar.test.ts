@@ -5,16 +5,19 @@ import { describe, expect, it, vi } from 'vitest';
 import { TEST_NOW, taskFixture } from '../task-fixture.test-support';
 import TaskCalendar, { taskEventOf } from './azuos-task-calendar.svelte';
 
-function setup(tasks = [taskFixture()]) {
+/* Um mês que não é o de hoje: o calendário abre no dia 1 (no mês de hoje, abriria em hoje). */
+function setup(tasks = [taskFixture()], month = '2026-11') {
   const actions = { onOpen: vi.fn(), onRangeChange: vi.fn() };
-  render(TaskCalendar, { props: { data: { tasks, month: '2026-11', now: TEST_NOW }, actions } });
+  render(TaskCalendar, { props: { data: { tasks, month, now: TEST_NOW }, actions } });
   return actions;
 }
 
 describe('AzuosTaskCalendar', () => {
   // feliz
   it('shows the month of the big-calendar, opens the task and asks for the next period', async () => {
+    vi.useFakeTimers({ now: new Date(2027, 0, 10, 12), shouldAdvanceTime: true });
     const actions = setup();
+    vi.useRealTimers();
 
     expect(screen.getByRole('heading', { name: 'novembro de 2026' })).toBeInTheDocument();
     expect(actions.onRangeChange).toHaveBeenCalledWith({
