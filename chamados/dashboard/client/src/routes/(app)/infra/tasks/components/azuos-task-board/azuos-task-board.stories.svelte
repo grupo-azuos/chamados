@@ -1,4 +1,5 @@
 <script module lang="ts">
+  import { COMPANY_COLOR_PALETTE } from '$lib/utils/company-color.util';
   import { defineMeta } from '@storybook/addon-svelte-csf';
   import { fn } from 'storybook/test';
 
@@ -13,6 +14,8 @@
 </script>
 
 <script lang="ts">
+  /* A cor de cada situação é a que a pessoa escolheu — aqui, da paleta do projeto. */
+  const [, , PURPLE, , ORANGE] = COMPANY_COLOR_PALETTE;
   const tasks = [
     taskFixture(),
     taskFixture({ id: 2, title: 'Impressora da recepção', origin: 'ticket', ticketId: 56 }),
@@ -21,10 +24,10 @@
   ];
   const actions = { onOpen: fn(), onMove: fn(), onStage: fn(), onRefuse: fn(), onManageStages: fn() };
   const stages = [
-    { id: 4, area: 'infra' as const, label: 'Aguardando peça', color: '#ff9500', position: 0 },
-    { id: 5, area: 'infra' as const, label: 'Com o fornecedor', color: '#5856d6', position: 1 },
+    { id: 4, area: 'infra' as const, label: 'Aguardando peça', color: ORANGE, position: 0 },
+    { id: 5, area: 'infra' as const, label: 'Com o fornecedor', color: PURPLE, position: 1 },
   ];
-  const staged = [...tasks, taskFixture({ id: 5, title: 'Fonte queimada', stage: { id: 4, label: 'Aguardando peça', color: '#ff9500' } })];
+  const staged = [...tasks, taskFixture({ id: 5, title: 'Fonte queimada', stage: { id: 4, label: 'Aguardando peça', color: ORANGE } })];
 </script>
 
 <Story name="Default" args={{ data: { tasks, now: TEST_NOW }, actions }} />
