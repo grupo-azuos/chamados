@@ -14,10 +14,15 @@ const STAGE = {
   area: 'infra' as const,
   label: 'Aguardando peça',
   color: '#ff9500',
+  icon: 'hourglass',
   position: 0,
+  archivedAt: null,
 };
 const open = { status: 'open' as const, stage: null, origin: 'manual' as const };
-const inStage = { ...open, stage: { id: 4, label: 'Aguardando peça', color: '#ff9500' } };
+const inStage = {
+  ...open,
+  stage: { id: 4, label: 'Aguardando peça', color: '#ff9500', icon: 'hourglass' },
+};
 const done = { ...open, status: 'done' as const };
 
 describe('task stages on screen', () => {

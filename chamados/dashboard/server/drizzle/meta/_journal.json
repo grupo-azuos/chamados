@@ -253,6 +253,13 @@
       "when": 1795468213635,
       "tag": "0035_tasks_from_system_tickets",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1795471979452,
+      "tag": "0036_task_stage_icon",
+      "breakpoints": true
     }
   ]
 }

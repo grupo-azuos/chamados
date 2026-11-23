@@ -125,7 +125,7 @@
           <div class="flex flex-wrap items-center gap-2 text-sm">
             <StatusBadge
               data={{ label: situationOf(task).label }}
-              ui={{ tone: TASK_STATUS_TONES[task.status], color: situationOf(task).color }}
+              ui={{ tone: TASK_STATUS_TONES[task.status], color: situationOf(task).color, icon: situationOf(task).icon }}
             />
             {#if due}<StatusBadge data={{ label: due.label }} ui={{ tone: DUE_TONE[due.tone] }} />{/if}
             <span class="text-muted-foreground">{TASK_ORIGIN_LABELS[task.origin]}</span>

@@ -3,7 +3,8 @@
   O QUADRO DAS TAREFAS — uma coluna por situação: Aberta, Reaberta, AS PRÓPRIAS DA EQUIPE (na
   ordem dela, cada uma na cor que ganhou) e Finalizada, como no Paralegal. O mesmo arrastar do
   quadro dos chamados (`@dnd-kit`: teclado, o cartão inteiro seguindo o ponteiro, rolagem perto da
-  borda). "Situações" abre o diálogo de criar, renomear, mudar de lugar e arquivar as próprias.
+  borda). "+ Nova situação" (a coluna tracejada antes de Finalizada) cria uma própria; o lápis da
+  coluna própria a edita. O card leva, no fundo, o ícone grande da coluna em que está.
 
   Os movimentos são os de `moveOfTaskDrop`: soltar numa própria põe a tarefa nela; em Finalizada,
   finaliza; de Finalizada para Reaberta, reabre; da própria para a coluna fixa dela, sai da própria.
@@ -12,7 +13,7 @@
 
   - `data.tasks`, `data.stages`, `data.now`; `ui.canManageStages`; `state.isMoving`.
   - `actions`: `onOpen`, `onMove(task, 'done' | 'reopened')`, `onStage(task, stageId)`,
-    `onRefuse(mensagem)`, `onManageStages`.
+    `onRefuse(mensagem)`, `onNewStage`, `onEditStage(stage)`.
 -->
 <script lang="ts" module>
   import { type Task } from '@template/shared/schemas/task.schema';
@@ -27,7 +28,8 @@
       onMove: (task: Task, status: 'done' | 'reopened') => void;
       onStage: (task: Task, stageId: number | null) => void;
       onRefuse: (message: string) => void;
-      onManageStages?: () => void;
+      onNewStage?: () => void;
+      onEditStage?: (stage: TaskStage) => void;
     };
   };
 </script>
@@ -45,10 +47,9 @@
     PreventSelection,
   } from '@dnd-kit/dom';
   import { DragDropProvider, DragOverlay, KeyboardSensor, PointerSensor } from '@dnd-kit/svelte';
-  import Settings2 from '@lucide/svelte/icons/settings-2';
-  import Tag from '@lucide/svelte/icons/tag';
+  import Plus from '@lucide/svelte/icons/plus';
 
-  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import DraggableCard from '$lib/components/azuos-kanban-draggable-card/azuos-kanban-draggable-card.svelte';
   import StageColumn from '$lib/components/azuos-kanban-column/azuos-kanban-column.svelte';
   import OwnerAvatar from '$lib/components/azuos-task-owner-avatar/azuos-task-owner-avatar.svelte';
@@ -57,6 +58,7 @@
   import { cardHueFromHex } from '$lib/utils/card-tone.util';
   import { taskDueBadge, taskPercentage } from '$lib/utils/task-due.util';
   import { columnIdOf, moveOfTaskDrop, type TaskColumn, taskColumnsOf } from '$lib/utils/task-stage.util';
+  import { taskStageIconOf } from '$lib/utils/task-stage-icon.util';
 
   let { data, ui, state: boardState, actions }: AzuosTaskBoardProps = $props();
 
@@ -75,9 +77,18 @@
 
   /** A cor e o ícone da coluna: as fixas no tom delas; a própria, no tom mais perto da cor dela. */
   function lookOf(column: TaskColumn) {
-    if (column.kind === 'stage') return { tone: cardHueFromHex(column.stage.color), icon: Tag };
+    if (column.kind === 'stage') {
+      return { tone: cardHueFromHex(column.stage.color), icon: taskStageIconOf(column.stage.icon) };
+    }
 
     return LOOK[column.status];
+  }
+
+  /** O ícone e o tom da coluna em que a tarefa está — o desenho grande no fundo do card. */
+  function lookOfTask(task: Task) {
+    const column = columns.find((item) => item.column.id === columnIdOf(task))?.column;
+
+    return column ? lookOf(column) : LOOK[task.status];
   }
 
   const sensors = [
@@ -123,12 +134,13 @@
 
 {#snippet card(task: Task)}
   {@const due = taskDueBadge(task, data.now)}
-  <button
-    type="button"
-    aria-label={`Abrir a tarefa ${task.title}`}
-    class="rounded-surface bg-card shadow-card hover:shadow-card-hover focus-visible:ring-ring/50 flex w-full flex-col gap-2 p-3 text-left transition-shadow focus-visible:ring-3 focus-visible:outline-none"
-    onclick={() => actions.onOpen(task)}
+  {@const look = lookOfTask(task)}
+  <CardSurface
+    data={{ label: `Abrir a tarefa ${task.title}` }}
+    ui={{ mark: look.icon, markTone: look.tone, className: 'w-full' }}
+    actions={{ onClick: () => actions.onOpen(task) }}
   >
+  <div class="flex flex-col gap-2 p-3 text-left">
     <span class="text-foreground line-clamp-2 text-sm font-semibold">{task.title}</span>
     {#if due}
       <span class="self-start">
@@ -143,24 +155,33 @@
       <OwnerAvatar owner={task.owner} />
       <span class="truncate">{task.owner ? (task.owner.name ?? 'Fora do diretório') : 'Sem responsável'}</span>
     </span>
-  </button>
+  </div>
+  </CardSurface>
 {/snippet}
 
 <section aria-label="Quadro das tarefas" class="flex flex-col gap-3">
-  {#if ui?.canManageStages && actions.onManageStages}
-    <div class="flex justify-end">
-      <ActionButton
-        data={{ label: 'Situações' }}
-        ui={{ variant: 'secondary', size: 'sm', icon: Settings2 }}
-        actions={{ onClick: actions.onManageStages }}
-      />
-    </div>
-  {/if}
   <DragDropProvider {sensors} {plugins} onDragEnd={handleDragEnd}>
     <div class="flex w-full items-start justify-start gap-4 overflow-x-auto pb-4">
       {#each columns as { column, tasks } (column.id)}
         {@const look = lookOf(column)}
-        <StageColumn data={{ title: column.title, count: tasks.length }} ui={{ tone: look.tone, icon: look.icon, dropId: column.id }}>
+        {#if column.kind === 'status' && column.status === 'done' && ui?.canManageStages && actions.onNewStage}
+          <!-- O "+ Nova situação": uma coluna tracejada, no lugar onde a nova vai nascer. -->
+          <button
+            type="button"
+            onclick={actions.onNewStage}
+            class="rounded-surface border-input text-ink-500 hover:bg-accent hover:text-foreground focus-visible:ring-ring flex min-h-24 w-72 shrink-0 items-center justify-center gap-2 border-2 border-dashed text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:w-80"
+          >
+            <Plus aria-hidden="true" class="size-4" />
+            Nova situação
+          </button>
+        {/if}
+        <StageColumn
+          data={{ title: column.title, count: tasks.length }}
+          ui={{ tone: look.tone, icon: look.icon, dropId: column.id }}
+          actions={column.kind === 'stage' && ui?.canManageStages && actions.onEditStage
+            ? { onEdit: () => column.kind === 'stage' && actions.onEditStage?.(column.stage) }
+            : undefined}
+        >
           {#if tasks.length === 0}
             <p class="text-muted-foreground py-6 text-center text-xs">Arraste para cá.</p>
           {:else}

@@ -54,7 +54,8 @@
     /* Abrir a tarefa leva à PÁGINA dela (como no Paralegal), e não a um modal. */
     onOpen: (task: Task) => void goto(`${base}/tasks/${task.id}`),
     map: map.actions,
-    onManageStages: stages.actions.onOpen,
+    onNewStage: stages.actions.onNew,
+    onEditStage: stages.actions.onEdit,
     onNew: () => (form = { task: null }),
     onRefuse: (message: string) => (refusal = message),
     onMove: (task: Task, status: 'done' | 'reopened') => {
@@ -89,14 +90,4 @@
   actions={{ onConfirm: list.actions.onConfirmRemove, onCancel: list.actions.onCancelRemove }}
 />
 
-<TaskStageDialog
-  data={stages.data}
-  state={stages.state}
-  actions={{
-    onCreate: stages.actions.onCreate,
-    onUpdate: stages.actions.onUpdate,
-    onMove: stages.actions.onMove,
-    onArchive: stages.actions.onArchive,
-    onClose: stages.actions.onClose,
-  }}
-/>
+<TaskStageDialog data={stages.data} state={stages.state} actions={stages.actions} />

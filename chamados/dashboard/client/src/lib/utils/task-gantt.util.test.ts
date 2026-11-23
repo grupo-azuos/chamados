@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  TEST_NOW,
-  taskFixture,
-} from '$lib/utils/task-fixture.test-support';
+import { TEST_NOW, taskFixture } from '$lib/utils/task-fixture.test-support';
 import {
   brazilianDay,
   ganttBarOf,

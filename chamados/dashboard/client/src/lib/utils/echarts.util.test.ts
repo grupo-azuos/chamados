@@ -154,12 +154,10 @@ describe('echarts.util — colours the browser cannot resolve', () => {
 describe('echarts.util — edge cases', () => {
   // feliz
   it('keeps a resolved color when the probe element resolves the variable', () => {
-    const spy = vi
-      .spyOn(window, 'getComputedStyle')
-      .mockReturnValue({
-        color: 'rgb(1, 2, 3)',
-        getPropertyValue: () => '',
-      } as unknown as CSSStyleDeclaration);
+    const spy = vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+      color: 'rgb(1, 2, 3)',
+      getPropertyValue: () => '',
+    } as unknown as CSSStyleDeclaration);
     try {
       expect(resolveColor('var(--foreground)')).toBe('rgb(1, 2, 3)');
     } finally {
@@ -198,12 +196,10 @@ describe('echarts.util — edge cases', () => {
 describe('resolveColor — a broken variable', () => {
   // triste
   it('resolves to nothing when the variable has no name to look up', () => {
-    const spy = vi
-      .spyOn(window, 'getComputedStyle')
-      .mockReturnValue({
-        color: 'var(--x)',
-        getPropertyValue: () => '',
-      } as unknown as CSSStyleDeclaration);
+    const spy = vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+      color: 'var(--x)',
+      getPropertyValue: () => '',
+    } as unknown as CSSStyleDeclaration);
     try {
       expect(resolveColor('var(', '#abcdef')).toBe('');
     } finally {

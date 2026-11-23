@@ -254,14 +254,20 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
     const waiting = await api()
       .post('/api/v1/task-stages')
       .set(asAna())
-      .send({ area: 'infra', label: 'Aguardando peça', color: '#FF9500' })
+      .send({ area: 'infra', label: 'Aguardando peça', color: '#FF9500', icon: 'hourglass' })
       .expect(201);
     const supplier = await api()
       .post('/api/v1/task-stages')
       .set(asAna())
       .send({ area: 'infra', label: 'Com o fornecedor', color: '#5856d6' })
       .expect(201);
-    expect(waiting.body).toMatchObject({ label: 'Aguardando peça', color: '#ff9500', position: 0 });
+    expect(waiting.body).toMatchObject({
+      label: 'Aguardando peça',
+      color: '#ff9500',
+      icon: 'hourglass',
+      position: 0,
+      archivedAt: null,
+    });
     expect(supplier.body.position).toBe(1);
 
     const moved = await api()
@@ -320,6 +326,25 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
       .set(asAna())
       .expect(200);
     expect(left.body.map((stage: { label: string }) => stage.label)).toEqual(['Aguardando peça']);
+
+    /* Arquivada aparece em "Situações arquivadas" e volta vazia, como a última coluna. */
+    const archived = await api()
+      .get('/api/v1/task-stages')
+      .query({ area: 'infra', archived: 'only' })
+      .set(asAna())
+      .expect(200);
+    expect(archived.body.map((stage: { label: string }) => stage.label)).toEqual([
+      'Com o fornecedor',
+    ]);
+    const restored = await api()
+      .post(`/api/v1/task-stages/${supplier.body.id}/restore`)
+      .set(asAna())
+      .expect(201);
+    expect(restored.body).toMatchObject({
+      label: 'Com o fornecedor',
+      archivedAt: null,
+      position: 2,
+    });
   });
 
   // triste

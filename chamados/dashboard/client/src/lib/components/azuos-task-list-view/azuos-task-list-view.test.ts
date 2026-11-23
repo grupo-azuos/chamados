@@ -34,7 +34,8 @@ function setup(
     onNew: vi.fn(),
     onRefuse: vi.fn(),
     map: { onPeopleChange: vi.fn(), onIslandMove: vi.fn(), onResetLayout: vi.fn() },
-    onManageStages: vi.fn(),
+    onNewStage: vi.fn(),
+    onEditStage: vi.fn(),
   };
   render(TaskListView, {
     props: {

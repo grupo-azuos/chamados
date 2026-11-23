@@ -45,7 +45,8 @@
     onMonthChange: fn(), onRangeChange: fn(), onShiftWindow: fn(), onWindowToday: fn(), onZoom: fn(), onOpen: fn(), onClose: fn(), onMove: fn(), onStage: fn(), onToggleStep: fn(), onRemoveLink: fn(),
     onAskRemove: fn(), onCancelRemove: fn(), onConfirmRemove: fn(), onRetry: fn(), onNew: fn(), onRefuse: fn(),
     map: { onPeopleChange: fn(), onIslandMove: fn(), onResetLayout: fn() },
-    onManageStages: fn(),
+    onNewStage: fn(),
+    onEditStage: fn(),
   };
 </script>
 

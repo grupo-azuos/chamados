@@ -48,6 +48,8 @@ export const taskStages = chamadosSchema.table(
     area: text('area', { enum: ROLE_CONTEXTS }).notNull(),
     label: text('label').notNull(),
     color: text('color').notNull(),
+    /** Um dos `TASK_STAGE_ICONS` — o ícone da coluna e do selo. */
+    icon: text('icon'),
     position: integer('position').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     createdBy: text('created_by').notNull(),

@@ -4,7 +4,7 @@ import {
   type TaskStage,
   type UpdateTaskStageInput,
 } from '@template/shared/schemas/task-stage.schema';
-import { and, asc, eq, isNull, max } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull, max } from 'drizzle-orm';
 
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
@@ -12,7 +12,15 @@ import { type Database } from '../../../lib/db/db.type';
 import { taskStages, tasks, type TaskStageRow } from '../../../lib/db/schema/tasks.schema';
 
 function toStage(row: TaskStageRow): TaskStage {
-  return { id: row.id, area: row.area, label: row.label, color: row.color, position: row.position };
+  return {
+    id: row.id,
+    area: row.area,
+    label: row.label,
+    color: row.color,
+    icon: row.icon,
+    position: row.position,
+    archivedAt: row.archivedAt?.toISOString() ?? null,
+  };
 }
 
 /** As situações próprias das tarefas, por área, na ordem das colunas do quadro. */
@@ -33,6 +41,57 @@ export class TaskStagesRepository {
     return rows.map(toStage);
   }
 
+  /** As arquivadas da área, a mais recente primeiro — para desarquivar em "Nova situação". */
+  async listArchived(area: RoleContext): Promise<TaskStage[]> {
+    const rows = await runQuery(
+      this.db
+        .select()
+        .from(taskStages)
+        .where(and(eq(taskStages.area, area), isNotNull(taskStages.archivedAt)))
+        .orderBy(desc(taskStages.archivedAt)),
+      'listar situações arquivadas',
+    );
+
+    return rows.map(toStage);
+  }
+
+  async findAny(id: number): Promise<TaskStage | null> {
+    const row = await runMaybe(
+      this.db.select().from(taskStages).where(eq(taskStages.id, id)).limit(1),
+      'ler situação',
+    );
+
+    return row ? toStage(row) : null;
+  }
+
+  /** Desarquiva: volta como a última coluna própria, vazia. */
+  async restore(stage: TaskStage, actor: string): Promise<TaskStage> {
+    const [last] = await runQuery(
+      this.db
+        .select({ position: max(taskStages.position) })
+        .from(taskStages)
+        .where(and(eq(taskStages.area, stage.area), isNull(taskStages.archivedAt))),
+      'ler a última situação',
+    );
+    const [row] = await runQuery(
+      this.db
+        .update(taskStages)
+        .set({
+          archivedAt: null,
+          archivedBy: null,
+          position: (last?.position ?? -1) + 1,
+          updatedAt: new Date(),
+          updatedBy: actor,
+        })
+        .where(eq(taskStages.id, stage.id))
+        .returning(),
+      'desarquivar situação da tarefa',
+    );
+    if (!row) throw new Error('A situação não foi desarquivada.');
+
+    return toStage(row);
+  }
+
   /** A situação em uso (não arquivada); `null` quando não existe ou já saiu. */
   async findActive(id: number): Promise<TaskStage | null> {
     const row = await runMaybe(
@@ -49,7 +108,7 @@ export class TaskStagesRepository {
 
   /** A nova entra como a última coluna própria, logo antes de Finalizada. */
   async insert(
-    input: { area: RoleContext; label: string; color: string },
+    input: { area: RoleContext; label: string; color: string; icon?: string | null },
     actor: string,
   ): Promise<TaskStage> {
     const [last] = await runQuery(
