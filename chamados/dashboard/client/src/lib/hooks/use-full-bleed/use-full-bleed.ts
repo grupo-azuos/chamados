@@ -13,12 +13,20 @@
  * lá no fim — quem arrastava um cartão de baixo não alcançava as colunas da direita. Com altura
  * de tela, cada coluna rola por dentro e a barra de lado fica sempre à vista.
  *
+ * Com `isScreenTall` (junto do `isHeightFitted`), a altura é a da área visível inteira, e não "daqui
+ * até o pé": é o quadro que mora LÁ EMBAIXO, depois dos números e dos filtros (a fila de chamados
+ * no modo quadro). Medido até o pé, ele sairia sempre no mínimo; com a altura da tela, quem rola até
+ * ele vê o quadro inteiro, com a barra de lado à vista.
+ *
  * Fora da casca (teste, história) não há o que medir: o bloco fica do tamanho de sempre.
  */
 export type FullBleedStyle = { marginLeft?: number; width?: number; height?: number };
 
-export function fullBleed(gutter = 24, options: { isHeightFitted?: boolean } = {}) {
-  const { isHeightFitted = false } = options;
+export function fullBleed(
+  gutter = 24,
+  options: { isHeightFitted?: boolean; isScreenTall?: boolean } = {},
+) {
+  const { isHeightFitted = false, isScreenTall = false } = options;
 
   return (element: HTMLElement): (() => void) | undefined => {
     const inset = element.closest<HTMLElement>('[data-slot="sidebar-inset"]');
@@ -29,8 +37,10 @@ export function fullBleed(gutter = 24, options: { isHeightFitted?: boolean } = {
     const measure = () => {
       const bleed = bleedStyle(clientBox(scroller), parent.getBoundingClientRect(), gutter);
       if (!isHeightFitted) return applyStyle(element, bleed);
-      const top =
-        element.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+      /* Alto como a tela: conta como se começasse no topo, com a folga de cima. */
+      const top = isScreenTall
+        ? gutter
+        : element.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
       applyStyle(element, { ...bleed, height: fittedHeight(scroller.clientHeight, top, gutter) });
     };
     measure();

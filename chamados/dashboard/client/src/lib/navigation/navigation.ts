@@ -3,7 +3,6 @@ import Download from '@lucide/svelte/icons/download';
 import Boxes from '@lucide/svelte/icons/boxes';
 import Calendar from '@lucide/svelte/icons/calendar';
 import Code2 from '@lucide/svelte/icons/code-2';
-import Columns3 from '@lucide/svelte/icons/columns-3';
 import FileText from '@lucide/svelte/icons/file-text';
 import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
 import LifeBuoy from '@lucide/svelte/icons/life-buoy';
@@ -105,11 +104,13 @@ export const INFRA_NAV_ITEMS: readonly NavItem[] = [
   navItem('infra', 'agent', 'Agente Windows', Download),
 ];
 
-/** SISTEMA — os sistemas da empresa, cronograma, kanban e os chamados deles. */
+/**
+ * SISTEMA — os sistemas da empresa, cronograma e os chamados deles. O quadro (kanban) não é item
+ * do menu: é um modo de ver a fila de Chamados, nas três áreas.
+ */
 export const SYSTEM_NAV_ITEMS: readonly NavItem[] = [
   navItem('sistema', 'dashboard', 'Painel', LayoutDashboard),
   navItem('sistema', 'tickets', 'Chamados', LifeBuoy),
-  navItem('sistema', 'kanban', 'Kanban', Columns3),
   navItem('sistema', 'schedule', 'Cronograma', Calendar),
   navItem('sistema', 'projects', 'Projetos', Code2),
   navItem('sistema', 'agent', 'Agente Windows', Download),

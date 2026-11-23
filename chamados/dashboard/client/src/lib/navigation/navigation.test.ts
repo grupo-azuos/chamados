@@ -244,7 +244,6 @@ describe('the module menus', () => {
     expect(SYSTEM_NAV_ITEMS.map((entry) => entry.feature)).toEqual([
       'dashboard',
       'tickets',
-      'kanban',
       'schedule',
       'projects',
       'agent',

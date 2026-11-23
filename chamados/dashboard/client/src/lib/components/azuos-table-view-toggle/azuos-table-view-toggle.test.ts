@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
-import TableViewToggle from './azuos-table-view-toggle.svelte';
+import TableViewToggle, { chosenView } from './azuos-table-view-toggle.svelte';
 
 const STORAGE_KEY = 'azuos-table-view';
 
@@ -71,5 +71,87 @@ describe('AzuosTableViewToggle', () => {
     await userEvent.click(cardsButton());
 
     expect(cardsButton()).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+const kanbanButton = () => screen.getByRole('button', { name: 'Ver em quadro' });
+
+function renderWithKanban(isKanban = false) {
+  const onKanbanChange = vi.fn();
+  render(TableViewToggle, {
+    props: { ui: { hasKanban: true }, state: { isKanban }, actions: { onKanbanChange } },
+  });
+
+  return onKanbanChange;
+}
+
+describe('AzuosTableViewToggle with the board', () => {
+  // feliz
+  it('offers the board as a third option, and only where the screen asks for it', () => {
+    renderWithKanban();
+
+    expect(tableButton()).toHaveAttribute('aria-pressed', 'true');
+    expect(kanbanButton()).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('asks the screen for the board, without touching the list preference', async () => {
+    const onKanbanChange = renderWithKanban();
+
+    await userEvent.click(kanbanButton());
+
+    expect(onKanbanChange).toHaveBeenCalledWith(true);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('marks only the board while the screen is on it, and leaves it for the cards', async () => {
+    const onKanbanChange = renderWithKanban(true);
+
+    expect(kanbanButton()).toHaveAttribute('aria-pressed', 'true');
+    expect(tableButton()).toHaveAttribute('aria-pressed', 'false');
+    expect(cardsButton()).toHaveAttribute('aria-pressed', 'false');
+
+    await userEvent.click(cardsButton());
+
+    expect(onKanbanChange).toHaveBeenCalledWith(false);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('cards');
+  });
+
+  it('goes back from the board to the table already in use without flipping it', async () => {
+    const onKanbanChange = renderWithKanban(true);
+
+    await userEvent.click(tableButton());
+
+    expect(onKanbanChange).toHaveBeenCalledWith(false);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  // triste
+  it('does nothing when the board already in use is clicked again', async () => {
+    const onKanbanChange = renderWithKanban(true);
+
+    await userEvent.click(kanbanButton());
+
+    expect(onKanbanChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps the two options of always when the screen does not offer the board', () => {
+    render(TableViewToggle, { props: { state: { isKanban: true } } });
+
+    expect(screen.queryByRole('button', { name: 'Ver em quadro' })).not.toBeInTheDocument();
+    expect(tableButton()).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+describe('chosenView', () => {
+  // feliz
+  it('marks the board over any list preference', () => {
+    expect(chosenView({ isKanban: true, forceCards: true, isNarrow: false })).toBe('kanban');
+    expect(chosenView({ isKanban: false, forceCards: false, isNarrow: false })).toBe('table');
+  });
+
+  // triste
+  /* Abaixo de `xl` não há tabela: marcar "Tabela" ali seria mentira. */
+  it('marks the cards on a narrow screen, where there is no table', () => {
+    expect(chosenView({ isKanban: false, forceCards: false, isNarrow: true })).toBe('cards');
   });
 });

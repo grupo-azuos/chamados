@@ -5,7 +5,7 @@
   import DraggableCard from './azuos-kanban-draggable-card.svelte';
 
   const { Story } = defineMeta({
-    title: 'Features/System/AzuosKanbanDraggableCard',
+    title: 'Components/AzuosKanbanDraggableCard',
     component: DraggableCard,
     parameters: { layout: 'padded' },
   });

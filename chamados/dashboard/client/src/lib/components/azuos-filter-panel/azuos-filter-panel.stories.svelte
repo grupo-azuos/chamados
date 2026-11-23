@@ -110,6 +110,17 @@
   args={{ data: { search, fields, chips: [], canClear: false }, ui: { showViewToggle: false }, actions }}
 />
 
+<!-- As filas de chamados: a troca ganha a terceira opção, o quadro — aqui, marcado. -->
+<Story
+  name="WithKanbanView"
+  args={{
+    data: { search, primary, fields, chips: [], canClear: false },
+    ui: { hasKanbanView: true },
+    state: { isKanbanView: true },
+    actions: { ...actions, onKanbanViewChange: () => {} },
+  }}
+/>
+
 <!-- O filtro escondeu tudo: "Limpar filtros" fica com o aviso de lista vazia. -->
 <Story
   name="FilteredOut"

@@ -141,3 +141,40 @@ describe('AzuosFilterPanel — person field', () => {
     );
   });
 });
+
+describe('AzuosFilterPanel: the board in the view toggle', () => {
+  function renderWithBoard(isKanbanView: boolean, onKanbanViewChange = vi.fn()) {
+    render(FilterPanel, {
+      props: {
+        data: { search: { value: '', placeholder: 'Buscar…' }, fields, chips: [], canClear: false },
+        ui: { hasKanbanView: true },
+        state: { isKanbanView },
+        actions: { ...actions, onKanbanViewChange },
+      },
+    });
+
+    return onKanbanViewChange;
+  }
+
+  // feliz
+  it('offers the board beside table and cards, and reports the choice', async () => {
+    const onKanbanViewChange = renderWithBoard(false);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ver em quadro' }));
+
+    expect(onKanbanViewChange).toHaveBeenCalledWith(true);
+  });
+
+  // triste
+  it('has only table and cards when the screen does not offer the board', () => {
+    renderWith();
+
+    expect(screen.queryByRole('button', { name: 'Ver em quadro' })).not.toBeInTheDocument();
+  });
+
+  it('marks the board while the screen is on it', () => {
+    renderWithBoard(true);
+
+    expect(screen.getByRole('button', { name: 'Ver em quadro' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});

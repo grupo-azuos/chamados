@@ -476,9 +476,12 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   AzuosTableViewToggle: {
     summary:
-      'Tabela ou cartões, ao lado de cada lista que tem os dois formatos, guardando a preferência da pessoa.',
-    use: ['Toda lista com os dois modos.'],
-    avoid: ['Lista de um formato só.'],
+      'Tabela ou cartões, ao lado de cada lista que tem os dois formatos, guardando a preferência da pessoa. Com `ui.hasKanban`, ganha a terceira opção, o quadro: um modo da tela, que a própria tela guarda (`state.isKanban`, `actions.onKanbanChange`).',
+    use: [
+      'Toda lista com os dois modos.',
+      'Com o quadro, nas filas de chamados de Infraestrutura, Sistema e Manutenção.',
+    ],
+    avoid: ['Lista de um formato só.', 'Trocar de tela: o quadro é um modo da mesma fila, não outra rota.'],
   },
 
   /* ------------------------------------------------------------------ Conteúdo e marcadores */
@@ -878,6 +881,7 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
     use: [
       'No alto de toda lista com busca e vários filtros.',
       'Com `ui.showViewToggle`, quando a lista alterna entre tabela e cards.',
+      'Com `ui.hasKanbanView`, quando a lista também tem o modo quadro (as filas de chamados).',
     ],
     avoid: [
       'Filtro do dashboard: use o `AzuosBoardFilterBar`.',
@@ -1043,11 +1047,38 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   AzuosTicketListView: {
     summary:
-      'A fila de chamados de uma área: cartões de número que filtram, gráficos, filtros (estágio, urgência, departamento, tipo, responsável), a lista paginada e o relatório para baixar.',
+      'A fila de chamados de uma área: cartões de número que filtram, gráficos, filtros (estágio, urgência, departamento, tipo, responsável e, em Sistema, o sistema), o relatório para baixar e dois modos de ver — a lista paginada (tabela ou cards) e o quadro por etapas (`board`), com os mesmos filtros.',
     use: ['Na fila de chamados de Infraestrutura, Sistema e Manutenção.'],
     avoid: [
-      'Mudar o estágio ou excluir: chamado não some da fila, e o estágio muda na ficha.',
-      'O quadro por colunas do Sistema: use o `AzuosSystemKanbanView`.',
+      'Excluir: chamado não some da fila, e o estágio muda lançando um histórico (na ficha ou arrastando no quadro).',
+      'O quadro sozinho, fora da fila: os filtros e os estados são da fila — use o `AzuosTicketKanbanBoard` só dentro dela.',
+    ],
+  },
+  AzuosTicketKanbanBoard: {
+    summary:
+      'O modo quadro da fila de chamados, nas três áreas, no formato do quadro de tarefas do paralegal: os chamados em colunas por etapa (A fazer / triagem, Em atendimento, Aguardando, Concluído), que começam na esquerda e rolam para o lado, arrastados de uma para outra pelo `@dnd-kit` (o cartão inteiro acompanha o ponteiro, o quadro rola sozinho perto da borda e o teclado também arrasta), com a altura da tela (cada coluna rola por dentro), o aviso de recusa e o "Expandir" para a tela inteira. O cartão de quem só consulta fica parado.',
+    use: ['Dentro do `AzuosTicketListView`, no modo quadro (`board`).'],
+    avoid: [
+      'Fora da fila: carregando, vazio, erro e os filtros são dela.',
+      'Coluna de quadro genérica: é o `AzuosKanbanColumn`.',
+    ],
+  },
+  AzuosTicketKanbanCard: {
+    summary:
+      'Um chamado no quadro da fila: o texto, os selos (o assunto — o sistema em Sistema, o tipo de problema nas outras áreas —, a urgência, a etiqueta e a issue do GitHub), o protocolo com quem abriu e o responsável com foto, com o ícone grande da etapa no canto. O menu de três pontinhos troca a etiqueta.',
+    use: ['Dentro das colunas do `AzuosTicketKanbanBoard`.'],
+    avoid: [
+      'Chamado numa lista ou tabela: é o `AzuosTicketListView`.',
+      'Mudar a etapa com um seletor dentro do cartão: a etapa muda pelo arrasto (`AzuosKanbanDraggableCard`).',
+    ],
+  },
+  AzuosTicketMoveDialog: {
+    summary:
+      'O diálogo do arrasto que pede texto: soltar em "Concluído" (a solução), em "Aguardando" (por quem se espera) ou reabrir um encerrado. Dentro, o mesmo formulário de histórico da ficha, só com os tipos que levam à coluna; o cartão só muda depois de registrar, e Cancelar o devolve.',
+    use: ['No quadro da fila de chamados, quando o arrasto precisa de um histórico escrito.'],
+    avoid: [
+      'Pegar da fila ou retomar: o quadro lança na hora, sem diálogo.',
+      'Lançar histórico fora do quadro: é o `AzuosTicketHistoryForm`, na ficha.',
     ],
   },
   AzuosTicketRelationsCard: {
@@ -1358,27 +1389,9 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
     use: ['Na entrada do módulo Sistema, para quem ainda não vinculou o GitHub.'],
     avoid: ['Dentro de uma tela que a pessoa já acessa: ele ocupa a tela inteira.'],
   },
-  AzuosSystemKanbanView: {
-    summary:
-      'O Kanban de Sistema, no formato do quadro de tarefas do paralegal: os chamados em colunas por etapa, que começam na esquerda e rolam para o lado, arrastados de uma para outra pelo `@dnd-kit` (o cartão inteiro acompanha o ponteiro, o quadro rola sozinho perto da borda e o teclado também arrasta), com filtro por sistema, a altura da tela (cada coluna rola por dentro) e o "Expandir" para a tela inteira.',
-    use: ['Na tela de Kanban do módulo Sistema.'],
-    avoid: [
-      'Lista de chamados com busca e filtros: é o `AzuosTicketListView`.',
-      'Coluna de quadro genérica: é o `AzuosKanbanColumn`.',
-    ],
-  },
-  AzuosSystemTicketCard: {
-    summary:
-      'Um chamado no Kanban de Sistema: o texto, os selos (sistema, urgência, etiqueta e a issue do GitHub), o protocolo com quem abriu e o responsável com foto, com o ícone grande da etapa no canto. O menu de três pontinhos troca a etiqueta.',
-    use: ['Dentro das colunas do `AzuosSystemKanbanView`.'],
-    avoid: [
-      'Chamado numa lista ou tabela: é o `AzuosTicketListView`.',
-      'Mudar a etapa com um seletor dentro do cartão: a etapa muda pelo arrasto (`AzuosKanbanDraggableCard`).',
-    ],
-  },
   AzuosKanbanDraggableCard: {
     summary:
-      'O invólucro que torna um cartão arrastável no quadro, pelo `@dnd-kit`: mouse, toque e teclado (foco, Espaço pega, setas levam, Espaço solta, Esc desiste). O lugar do cartão fica apagado enquanto a cópia acompanha o ponteiro.',
+      'O invólucro que torna um cartão arrastável no quadro, pelo `@dnd-kit`: mouse, toque e teclado (foco, Espaço pega, setas levam, Espaço solta, Esc desiste). O lugar do cartão vira o tracejado de "solte aqui" enquanto a cópia acompanha o ponteiro, e o cartão travado (`state.isDisabled`) não sai do lugar.',
     use: ['Em volta de cada cartão de um quadro, dentro do `DragDropProvider` do quadro.'],
     avoid: [
       'Fora de um `DragDropProvider`: sem o quadro em volta, não há para onde arrastar.',

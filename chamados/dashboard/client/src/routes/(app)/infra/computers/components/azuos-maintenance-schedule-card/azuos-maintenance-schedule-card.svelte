@@ -129,7 +129,9 @@
       'flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between',
   }}
 >
-  <div class="flex min-w-0 items-start gap-3">
+  <!-- `items-center`: o texto fica no meio da altura do ícone e do botão "Agendar manutenção",
+       e não colado no alto da faixa. -->
+  <div class="flex min-w-0 items-center gap-3">
     <span
       class={cn(
         'rounded-icon inline-flex size-9 shrink-0 items-center justify-center shadow-xs',
