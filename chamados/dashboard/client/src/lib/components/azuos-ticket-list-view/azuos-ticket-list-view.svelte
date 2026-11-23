@@ -10,10 +10,16 @@
   estágio, nunca sumindo. E o estágio muda na FICHA do chamado, lançando um histórico — daqui só se
   abre a ficha.
 
+  DOIS MODOS de ver a mesma fila, na troca ao lado dos filtros: a LISTA (tabela ou cards, paginada)
+  e o QUADRO (`board`, o `AzuosTicketKanbanBoard` que a rota entrega), com todos os chamados do
+  recorte em colunas por etapa. Os filtros, os cartões do topo e os estados (carregando, vazio,
+  filtrado, erro) são os mesmos nos dois — muda só o desenho do conteúdo. No quadro não há páginas:
+  quando o recorte passa do que ele traz de uma vez, a tela avisa.
+
   `data` leva a área, os chamados, o total, os números do painel, o filtro, as opções de
-  departamento e de responsável e a paginação; `state`, carregamento, vazio, filtrado, truncado,
-  erro e exportação; `actions`, um para cada filtro, limpar, tentar de novo, abrir a ficha, exportar
-  e trocar de página.
+  departamento, de responsável e de sistema (só Sistema), a paginação e o modo; `state`,
+  carregamento, vazio, filtrado, truncado, erro e exportação; `actions`, um para cada filtro, limpar,
+  tentar de novo, abrir a ficha, exportar, trocar de página e de modo; `board`, o quadro.
 -->
 <script lang="ts" module>
   import { type DepartmentChoice } from '@template/shared/domain/department.util';
@@ -44,6 +50,7 @@
 
   import { type TicketDashboard } from '$lib/api/tickets.api';
   import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import type { Snippet } from 'svelte';
 
   /** Uma pessoa no filtro de responsável: nome, valor e a foto. */
   export type TicketAssigneeFilterOption = OptionPickerOption;
@@ -61,7 +68,12 @@
     problemType: TicketProblemType | '';
     /** O id do responsável, `TICKET_UNASSIGNED_FILTER` para os sem ninguém. Ausente = todos. */
     assigneeId?: string;
+    /** O sistema (só na fila de Sistema), pelo id em texto. Ausente ou '' = todos. */
+    projectId?: string;
   };
+
+  /** Lista (tabela ou cards) ou quadro. */
+  export type TicketListViewMode = 'list' | 'kanban';
 
   export type AzuosTicketListViewProps = {
     data: {
@@ -80,6 +92,10 @@
         pageSize: number;
         total: number;
       };
+      /** Os sistemas cadastrados — o filtro "Sistema", que só a fila de Sistema tem. */
+      projectOptions?: OptionPickerOption[];
+      /** O modo à vista. Sem ele, lista. */
+      view?: TicketListViewMode;
     };
     state: {
       isLoading: boolean;
@@ -100,12 +116,17 @@
       onDepartmentChange: (department: TicketDepartment | '') => void;
       onProblemTypeChange: (problemType: TicketProblemType | '') => void;
       onAssigneeChange?: (assigneeId: string) => void;
+      onProjectChange?: (projectId: string) => void;
       onClearFilters: () => void;
       onRetry: () => void;
       onAnswer: (ticket: Ticket) => void;
       onExportReport: (format: ReportFormat) => void;
       onPageChange?: (page: number) => void;
+      /** Lista ou quadro. Sem ela (ou sem `board`), a troca só tem tabela e cards. */
+      onViewChange?: (view: TicketListViewMode) => void;
     };
+    /** O quadro do modo kanban — com os chamados desta mesma fila, já filtrados. */
+    board?: Snippet;
   };
 
   const STATUS_FILTER_OPTIONS = TICKET_STATUSES.map((status) => ({
@@ -139,6 +160,7 @@
     filter: TicketListFilter,
     problemTypeOptions: readonly { value: string; label: string }[],
     assigneeOptions: readonly { value: string; label: string }[] = [],
+    projectOptions: readonly { value: string; label: string }[] = [],
   ): { key: string; label: string }[] {
     const chips: ({ key: string; label: string } | null)[] = [
       filter.status ? { key: 'status', label: `Situação: ${TICKET_STATUS_LABELS[filter.status]}` } : null,
@@ -157,6 +179,7 @@
           }
         : null,
       assigneeChip(filter.assigneeId, assigneeOptions),
+      projectChip(filter.projectId, projectOptions),
     ];
 
     return chips.filter((chip): chip is { key: string; label: string } => chip !== null);
@@ -174,6 +197,18 @@
     if (assigneeId === TICKET_UNASSIGNED_FILTER) return { key: 'assigneeId', label: '(Sem responsável)' };
 
     return { key: 'assigneeId', label: name ? `Responsável: ${name}` : 'Responsável' };
+  }
+
+  /* Sistema que saiu do cadastro continua filtrável pelo filtro salvo: a etiqueta diz "Sistema". */
+  function projectChip(
+    projectId: string | undefined,
+    options: readonly { value: string; label: string }[],
+  ): { key: string; label: string } | null {
+    if (!projectId) return null;
+
+    const name = options.find((option) => option.value === projectId)?.label;
+
+    return { key: 'projectId', label: name ? `Sistema: ${name}` : 'Sistema' };
   }
 
   export function formatAverage(hours: number | null | undefined): string {
@@ -220,7 +255,15 @@
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { cn } from '$lib/utils/cn';
 
-  let { data, state, actions }: AzuosTicketListViewProps = $props();
+  let { data, state, actions, board }: AzuosTicketListViewProps = $props();
+
+  /* O quadro só existe quando a rota o entrega E sabe trocar de modo. */
+  const hasBoard = $derived(Boolean(board && actions.onViewChange));
+  const isBoard = $derived(hasBoard && data.view === 'kanban');
+  /* O quadro aparece no lugar do conteúdo; os estados da fila continuam valendo antes dele. */
+  const showsBoard = $derived(
+    isBoard && !state.error && !state.isLoading && !state.isEmpty && !state.isFilteredOut,
+  );
 
   const tableView = useTableViewModel();
 
@@ -255,6 +298,17 @@
     value: data.filter.department,
     options: data.departmentOptions ?? [],
     searchPlaceholder: 'Buscar departamento…',
+  });
+
+  const projectField: FilterPanelField = $derived({
+    key: 'projectId',
+    label: 'Sistema',
+    control: 'select',
+    ariaLabel: 'Filtrar por sistema',
+    allLabel: 'Todos os sistemas',
+    value: data.filter.projectId ?? '',
+    options: data.projectOptions ?? [],
+    searchPlaceholder: 'Buscar sistema…',
   });
 
   /* O painel intercala lista suspensa (situação, tipo de problema: muitas opções) e pastilhas
@@ -297,16 +351,23 @@
       options: data.assigneeOptions ?? [],
       searchPlaceholder: 'Buscar pessoa…',
     },
+    /* O sistema é assunto só da fila de Sistema — era o filtro do antigo Kanban de Sistema. */
+    ...(data.area === 'sistema' ? [projectField] : []),
   ]);
 
   /** Qual ação da fila cada filtro do painel (e cada etiqueta) chama. */
+  const FILTER_ACTIONS: Record<string, (value: string) => void> = {
+    department: (value) => actions.onDepartmentChange(value as TicketDepartment | ''),
+    status: (value) => actions.onStatusChange(value as TicketStatus | ''),
+    statusGroup: (value) => actions.onStatusGroupChange?.(value as TicketStatusGroup | ''),
+    priority: (value) => actions.onPriorityChange(value as TicketPriority | ''),
+    problemType: (value) => actions.onProblemTypeChange(value as TicketProblemType | ''),
+    assigneeId: (value) => actions.onAssigneeChange?.(value),
+    projectId: (value) => actions.onProjectChange?.(value),
+  };
+
   function changeFilter(key: string, value: string) {
-    if (key === 'department') return actions.onDepartmentChange(value as TicketDepartment | '');
-    if (key === 'status') return actions.onStatusChange(value as TicketStatus | '');
-    if (key === 'statusGroup') return actions.onStatusGroupChange?.(value as TicketStatusGroup | '');
-    if (key === 'priority') return actions.onPriorityChange(value as TicketPriority | '');
-    if (key === 'problemType') return actions.onProblemTypeChange(value as TicketProblemType | '');
-    if (key === 'assigneeId') actions.onAssigneeChange?.(value);
+    FILTER_ACTIONS[key]?.(value);
   }
 
   function formatDate(value: string): string {
@@ -321,7 +382,8 @@
         data.filter.priority ||
         data.filter.department ||
         data.filter.problemType ||
-        data.filter.assigneeId,
+        data.filter.assigneeId ||
+        data.filter.projectId,
     ),
   );
 
@@ -466,19 +528,36 @@
         },
         primary: departmentField,
         fields: filterFields,
-        chips: ticketFilterChips(data.filter, problemTypeFilterOptions, data.assigneeOptions),
+        chips: ticketFilterChips(
+          data.filter,
+          problemTypeFilterOptions,
+          data.assigneeOptions,
+          data.projectOptions,
+        ),
         canClear: hasActiveFilter,
       }}
-      ui={{ ariaLabel: 'Filtros da fila de chamados' }}
-      state={{ isFilteredOut: state.isFilteredOut }}
+      ui={{ ariaLabel: 'Filtros da fila de chamados', hasKanbanView: hasBoard }}
+      state={{ isFilteredOut: state.isFilteredOut, isKanbanView: isBoard }}
       actions={{
         onSearchChange: actions.onSearchChange,
         onFieldChange: changeFilter,
         onRemoveChip: (key) => changeFilter(key, ''),
         onClearFilters: actions.onClearFilters,
+        onKanbanViewChange: (isKanban) => actions.onViewChange?.(isKanban ? 'kanban' : 'list'),
       }}
     />
 
+  <!-- O QUADRO fica fora do cartão da lista: as colunas já são superfícies, e card dentro de
+       card da mesma cor é proibido. Os estados (erro, carregando, vazio) continuam no cartão. -->
+  {#if showsBoard}
+    {#if state.isTruncated}
+      <p class="text-ink-500 text-xs">
+        O quadro mostra {data.tickets.length} de {data.total} chamados. Use os filtros para chegar ao que
+        procura.
+      </p>
+    {/if}
+    {@render board?.()}
+  {:else}
   <div class="flex flex-col rounded-surface bg-card shadow-card">
     <div>
       <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
@@ -674,10 +753,11 @@
       {/if}
     </div>
   </div>
+  {/if}
   </div>
 
-  <!-- Paginação da fila de chamados -->
-  {#if (data.paging ? data.paging.total : data.total) > 0}
+  <!-- Paginação da fila de chamados — só na lista: o quadro traz tudo de uma vez. -->
+  {#if !isBoard && (data.paging ? data.paging.total : data.total) > 0}
     <PaginationBar
       data={{
         page: data.paging?.page ?? 1,
@@ -691,7 +771,7 @@
   {/if}
 
   <!-- Truncar calado é mentir sobre o tamanho da fila. -->
-  {#if state.isTruncated && !data.paging}
+  {#if state.isTruncated && !data.paging && !isBoard}
     <p class="text-ink-500 text-xs">
       Mostrando {data.tickets.length} de {data.total} chamados. Use os filtros para chegar ao que procura.
     </p>

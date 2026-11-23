@@ -59,3 +59,15 @@ export function canWriteModule(user: ModuleUser | null | undefined, context: Rol
 export function modulesOf(user: ModuleUser | null | undefined): RoleContext[] {
   return ROLE_CONTEXTS.filter((context) => hasModule(user, context));
 }
+
+/**
+ * Pode ATENDER um chamado destas áreas (a original e as participantes)? Administrador de alguma
+ * delas — a mesma régua do `TicketAccessService` do servidor. A tela usa para não oferecer o que
+ * daria 403 (o arrasto no quadro); quem decide continua sendo o servidor.
+ */
+export function canAttendTicketIn(
+  user: ModuleUser | null | undefined,
+  areas: readonly RoleContext[],
+): boolean {
+  return areas.some((area) => canWriteModule(user, area));
+}

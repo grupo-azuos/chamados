@@ -11,8 +11,10 @@
   Função pura de props. O único estado próprio é visual — o painel aberto ou fechado.
 
   Props: `data` traz a busca, o filtro principal, os filtros, as etiquetas e se há o que limpar;
-  `ui` traz o nome da região, a troca tabela/cards e as colunas; `state.isFilteredOut` avisa que o
-  filtro escondeu tudo; `actions` recebe a busca, a troca de filtro, a etiqueta removida e o limpar.
+  `ui` traz o nome da região, a troca tabela/cards (e se ela oferece o quadro) e as colunas;
+  `state.isFilteredOut` avisa que o filtro escondeu tudo, e `state.isKanbanView` que a tela está no
+  quadro; `actions` recebe a busca, a troca de filtro, a etiqueta removida, o limpar e a troca de
+  quadro (`onKanbanViewChange`).
 -->
 <script lang="ts" module>
   import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
@@ -59,6 +61,8 @@
       ariaLabel?: string;
       /** Mostra a troca tabela/cards no fim da barra. */
       showViewToggle?: boolean;
+      /** A troca ganha a terceira opção, o quadro (ver `AzuosTableViewToggle`). */
+      hasKanbanView?: boolean;
       /**
        * Quantos filtros por linha na tela larga (3 é o padrão). Com 7 filtros, 4 por linha os
        * mantém em DUAS linhas — uma terceira linha empurra a lista para baixo da dobra.
@@ -68,12 +72,16 @@
     state?: {
       /** O filtro escondeu tudo: quem oferece "Limpar filtros" é o aviso de lista vazia. */
       isFilteredOut?: boolean;
+      /** A tela está no quadro — é o botão marcado na troca. */
+      isKanbanView?: boolean;
     };
     actions: {
       onSearchChange: (search: string) => void;
       onFieldChange: (key: string, value: string) => void;
       onRemoveChip: (key: string) => void;
       onClearFilters: () => void;
+      /** Quadro ou lista, quando a troca oferece o quadro. */
+      onKanbanViewChange?: (isKanban: boolean) => void;
     };
   };
 </script>
@@ -190,7 +198,11 @@
         />
       </button>
       {#if ui?.showViewToggle !== false}
-        <TableViewToggle />
+        <TableViewToggle
+          ui={{ hasKanban: ui?.hasKanbanView }}
+          state={{ isKanban: panelState?.isKanbanView }}
+          actions={{ onKanbanChange: actions.onKanbanViewChange }}
+        />
       {/if}
     </div>
   </div>

@@ -4,7 +4,7 @@ import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import TicketCard, { type AzuosSystemTicketCardProps } from './azuos-system-ticket-card.svelte';
+import TicketCard, { subjectOf, type AzuosTicketKanbanCardProps } from './azuos-ticket-kanban-card.svelte';
 
 function ticket(overrides: Partial<Ticket> = {}): Ticket {
   return {
@@ -41,7 +41,7 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
 }
 
 function renderCard(
-  overrides: { data?: Partial<AzuosSystemTicketCardProps['data']>; state?: AzuosSystemTicketCardProps['state'] } = {},
+  overrides: { data?: Partial<AzuosTicketKanbanCardProps['data']>; state?: AzuosTicketKanbanCardProps['state'] } = {},
 ) {
   const actions = { onOpen: vi.fn(), onSetLabel: vi.fn() };
   render(TicketCard, {
@@ -61,7 +61,7 @@ function renderCard(
   return actions;
 }
 
-describe('AzuosSystemTicketCard', () => {
+describe('AzuosTicketKanbanCard', () => {
   // feliz
   it('shows the ticket text, chips, protocol and the assignee', () => {
     renderCard({ data: { label: 'warning' } });
@@ -106,6 +106,25 @@ describe('AzuosSystemTicketCard', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Urgente' }));
 
     expect(actions.onSetLabel).toHaveBeenCalledWith(10, 'danger');
+  });
+
+  /* Fora de Sistema não há sistema: o selo diz do que é o chamado pelo tipo de problema. */
+  it('names a ticket of another area by its kind of problem', () => {
+    renderCard({
+      data: {
+        ticket: ticket({
+          area: 'manutencao',
+          problemType: 'air_conditioning' as never,
+          projectId: null,
+          projectName: null,
+          githubIssueNumber: null,
+          githubIssueUrl: null,
+        }),
+      },
+    });
+
+    expect(screen.getByText(subjectOf(ticket({ projectName: null, problemType: 'air_conditioning' as never })))).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
   // triste

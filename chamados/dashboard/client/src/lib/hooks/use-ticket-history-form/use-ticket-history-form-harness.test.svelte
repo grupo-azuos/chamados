@@ -1,5 +1,6 @@
 <script lang="ts">
   import { QueryClient, setQueryClientContext } from '@tanstack/svelte-query';
+  import { type ManualTicketHistoryType } from '@template/shared/domain/ticket-history.util';
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
 
   import {
@@ -12,10 +13,14 @@
     ticket,
     onRecorded,
     onReady,
+    types,
+    initialType,
   }: {
     ticket: Ticket;
     onRecorded: () => void;
     onReady: (model: TicketHistoryFormModel) => void;
+    types?: ManualTicketHistoryType[];
+    initialType?: ManualTicketHistoryType;
   } = $props();
 
   setQueryClientContext(
@@ -25,5 +30,5 @@
   );
 
   // svelte-ignore state_referenced_locally
-  onReady(useTicketHistoryFormModel({ ticket, onRecorded }));
+  onReady(useTicketHistoryFormModel({ ticket, onRecorded, types, initialType }));
 </script>

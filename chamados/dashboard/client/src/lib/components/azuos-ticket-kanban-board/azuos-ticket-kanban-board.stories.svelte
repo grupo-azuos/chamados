@@ -1,30 +1,9 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
-  import { type SoftwareProject } from '@template/shared/schemas/software-project.schema';
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
   import { fn } from 'storybook/test';
 
-  import SystemKanbanView from './azuos-system-kanban-view.svelte';
-
-  const mockProjects: SoftwareProject[] = [
-    {
-      id: 1,
-      name: 'Azuos Ticket',
-      description: 'Sistema central',
-      repositoryUrl: 'grupo-azuos/chamados',
-      githubRepoOwner: 'vinicius-gpl',
-      githubRepoName: 'azuos-ticket',
-      responsibleId: null,
-      responsibleName: null,
-      status: 'active',
-      color: 'blue',
-      openTicketsCount: 3,
-      pullRequestsCount: 5,
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: null,
-      archive: null,
-    },
-  ];
+  import TicketKanbanBoard from './azuos-ticket-kanban-board.svelte';
 
   function mockTicket(partial: Partial<Ticket> & Pick<Ticket, 'id' | 'protocol' | 'description'>): Ticket {
     return {
@@ -58,8 +37,8 @@
 
   const mockColumns = [
     {
-      id: 'todo' as const,
-      title: 'Abertos',
+      id: 'queue' as const,
+      title: 'A fazer / triagem',
       tickets: [
         mockTicket({
           id: 10,
@@ -75,8 +54,8 @@
       ],
     },
     {
-      id: 'in_progress' as const,
-      title: 'Em Atendimento',
+      id: 'working' as const,
+      title: 'Em atendimento',
       tickets: [
         mockTicket({
           id: 11,
@@ -95,7 +74,7 @@
     },
     {
       id: 'waiting' as const,
-      title: 'Aguardando Terceiros',
+      title: 'Aguardando',
       tickets: [
         mockTicket({
           id: 12,
@@ -111,35 +90,26 @@
         }),
       ],
     },
-    { id: 'done' as const, title: 'Resolvidos', tickets: [] },
+    { id: 'closed' as const, title: 'Concluído', tickets: [] },
   ];
 
   const baseData = {
     columns: mockColumns,
-    projects: mockProjects,
-    selectedProjectId: null,
-    totalTickets: 3,
     cardColors: { 12: 'danger' },
     assigneePhotos: { 'u-bruno': null },
   };
 
-  const baseState = {
-    isLoading: false,
-    isEmpty: false,
-    error: null,
-  };
+  const baseState = { isMoving: false, moveError: null };
 
   const baseActions = {
-    onSelectProject: fn(),
-    onRetry: fn(),
     onOpenTicket: fn(),
     onMoveTicket: fn(),
     onSetCardColor: fn(),
   };
 
   const { Story } = defineMeta({
-    title: 'Features/System/AzuosSystemKanbanView',
-    component: SystemKanbanView,
+    title: 'Components/AzuosTicketKanbanBoard',
+    component: TicketKanbanBoard,
     parameters: { layout: 'padded' },
   });
 </script>
@@ -158,34 +128,62 @@
   name="MovingWithNotice"
   args={{
     data: baseData,
-    state: { ...baseState, isMoving: true, moveError: 'Um chamado já iniciado não volta para "A Fazer".' },
+    state: { ...baseState, isMoving: true, moveError: 'Um chamado já iniciado não volta para "A fazer".' },
     actions: { ...baseActions, onClearMoveError: fn() },
   }}
 />
 
+<!-- Quem só consulta a área: o quadro aparece, mas nenhum cartão se arrasta. -->
 <Story
-  name="Loading"
+  name="ReadOnly"
   args={{
-    data: { ...baseData, columns: [] },
-    state: { ...baseState, isLoading: true },
+    data: { ...baseData, lockedTicketIds: [10, 11, 12] },
+    state: baseState,
     actions: baseActions,
   }}
 />
 
+<!-- Um chamado de Manutenção: sem sistema e sem issue, o selo do cartão é o tipo de problema. -->
 <Story
-  name="Empty"
+  name="OtherArea"
   args={{
-    data: { ...baseData, columns: [], totalTickets: 0 },
-    state: { ...baseState, isEmpty: true },
+    data: {
+      ...baseData,
+      columns: [
+        {
+          id: 'queue' as const,
+          title: 'A fazer / triagem',
+          tickets: [
+            mockTicket({
+              id: 20,
+              protocol: 'CH-0020',
+              description: 'Ar-condicionado da sala 3 pingando',
+              area: 'manutencao',
+              problemType: 'other',
+              projectId: null,
+              projectName: null,
+            }),
+          ],
+        },
+        { id: 'working' as const, title: 'Em atendimento', tickets: [] },
+        { id: 'waiting' as const, title: 'Aguardando', tickets: [] },
+        { id: 'closed' as const, title: 'Concluído', tickets: [] },
+      ],
+    },
+    state: baseState,
     actions: baseActions,
   }}
 />
 
+<!-- Caso limite: nenhum chamado no recorte (a fila mostra o vazio antes; aqui, o quadro sozinho). -->
 <Story
-  name="WithError"
+  name="EmptyColumns"
   args={{
-    data: baseData,
-    state: { ...baseState, error: 'Falha ao carregar chamados para o Kanban.' },
+    data: {
+      ...baseData,
+      columns: mockColumns.map((column) => ({ ...column, tickets: [] })),
+    },
+    state: baseState,
     actions: baseActions,
   }}
 />

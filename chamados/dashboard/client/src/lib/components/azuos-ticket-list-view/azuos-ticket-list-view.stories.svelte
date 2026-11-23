@@ -2,7 +2,11 @@
   import { defineMeta } from '@storybook/addon-svelte-csf';
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
 
+  import { TICKET_KANBAN_COLUMNS } from '@template/shared/domain/ticket-kanban.util';
+  import { ticketStatusPhase } from '@template/shared/domain/ticket-status.util';
+
   import { type TicketDashboard } from '$lib/api/tickets.api';
+  import TicketKanbanBoard from '$lib/components/azuos-ticket-kanban-board/azuos-ticket-kanban-board.svelte';
   import TicketListView, { type TicketListFilter } from './azuos-ticket-list-view.svelte';
 
   function ticket(over: Partial<Ticket> = {}): Ticket {
@@ -116,6 +120,19 @@
     error: null,
   };
 
+  /* O quadro como a fila o entrega: cada chamado na coluna do momento dele. */
+  const boardColumns = TICKET_KANBAN_COLUMNS.map((column) => ({
+    id: column.phase,
+    title: column.title,
+    tickets: tickets.filter((item) => ticketStatusPhase(item.status) === column.phase),
+  }));
+
+  const boardActions = {
+    onOpenTicket: () => {},
+    onMoveTicket: () => Promise.resolve(),
+    onSetCardColor: () => {},
+  };
+
   const { Story } = defineMeta({
     title: 'Components/AzuosTicketListView',
     component: TicketListView,
@@ -126,6 +143,40 @@
   name="Default"
   args={{
     data: { area: 'infra', tickets, total: tickets.length, dashboard, filter: emptyFilter },
+    state: settled,
+    actions,
+  }}
+/>
+
+<!-- O MODO QUADRO: os mesmos números, gráficos e filtros, e no lugar da tabela o quadro por
+     etapas — sem páginas. A troca ao lado dos filtros marca "Ver em quadro". -->
+<Story name="KanbanView" asChild>
+  <TicketListView
+    data={{ area: 'sistema', tickets, total: tickets.length, dashboard, filter: emptyFilter, view: 'kanban' }}
+    state={settled}
+    actions={{ ...actions, onViewChange: () => {} }}
+  >
+    {#snippet board()}
+      <TicketKanbanBoard data={{ columns: boardColumns, cardColors: {} }} actions={boardActions} />
+    {/snippet}
+  </TicketListView>
+</Story>
+
+<!-- A fila de SISTEMA filtrada por um sistema: o filtro que era do antigo Kanban de Sistema. -->
+<Story
+  name="SystemQueueBySystem"
+  args={{
+    data: {
+      area: 'sistema',
+      tickets,
+      total: tickets.length,
+      dashboard,
+      filter: { ...emptyFilter, projectId: '7' },
+      projectOptions: [
+        { value: '7', label: 'Portal do cliente' },
+        { value: '8', label: 'ERP' },
+      ],
+    },
     state: settled,
     actions,
   }}

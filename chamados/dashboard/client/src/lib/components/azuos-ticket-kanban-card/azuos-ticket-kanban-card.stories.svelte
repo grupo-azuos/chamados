@@ -6,7 +6,7 @@
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
   import { fn } from 'storybook/test';
 
-  import TicketCard from './azuos-system-ticket-card.svelte';
+  import TicketCard from './azuos-ticket-kanban-card.svelte';
 
   const ticket: Ticket = {
     id: 10,
@@ -42,7 +42,7 @@
   const actions = { onOpen: fn(), onSetLabel: fn() };
 
   const { Story } = defineMeta({
-    title: 'Features/System/AzuosSystemTicketCard',
+    title: 'Components/AzuosTicketKanbanCard',
     component: TicketCard,
     parameters: { layout: 'padded' },
   });
@@ -54,7 +54,7 @@
   </div>
 </Story>
 
-<!-- Com etiqueta, na coluna "Em Atendimento". -->
+<!-- Com etiqueta, na coluna "Em atendimento". -->
 <Story name="WithLabel" asChild>
   <div class="w-80">
     <TicketCard data={{ ticket: { ...ticket, priority: 'high' }, label: 'danger', assigneePhoto: null }} ui={{ icon: Wrench, tone: 'info' }} {actions} />
@@ -64,6 +64,30 @@
 <Story name="Saving" asChild>
   <div class="w-80">
     <TicketCard data={{ ticket, label: null, assigneePhoto: null }} ui={{ icon: Wrench, tone: 'info' }} state={{ isBusy: true }} {actions} />
+  </div>
+</Story>
+
+<!-- Um chamado de Manutenção: sem sistema, o selo é o tipo de problema. -->
+<Story name="OtherArea" asChild>
+  <div class="w-80">
+    <TicketCard
+      data={{
+        ticket: {
+          ...ticket,
+          area: 'manutencao',
+          problemType: 'other',
+          projectId: null,
+          projectName: null,
+          githubIssueNumber: null,
+          githubIssueUrl: null,
+          description: 'A porta da sala de reunião não fecha.',
+        },
+        label: null,
+        assigneePhoto: null,
+      }}
+      ui={{ icon: CircleDot, tone: 'neutral' }}
+      {actions}
+    />
   </div>
 </Story>
 

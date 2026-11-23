@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { canWriteModule, hasModule, moduleRoleFor, modulesOf } from './module-access.util';
+import {
+  canAttendTicketIn,
+  canWriteModule,
+  hasModule,
+  moduleRoleFor,
+  modulesOf,
+} from './module-access.util';
 
 describe('moduleRoleFor', () => {
   // feliz
@@ -53,5 +59,24 @@ describe('hasModule / canWriteModule', () => {
     expect(hasModule(null, 'infra')).toBe(false);
     expect(canWriteModule(undefined, 'infra')).toBe(false);
     expect(modulesOf(null)).toEqual([]);
+  });
+});
+
+describe('canAttendTicketIn', () => {
+  // feliz
+  it('lets an Administrator of the original area or of a participant area attend', () => {
+    const maintenanceAdmin = { role: 'admin', roles: { manutencao: 'admin' } };
+
+    expect(canAttendTicketIn(maintenanceAdmin, ['manutencao'])).toBe(true);
+    expect(canAttendTicketIn(maintenanceAdmin, ['infra', 'manutencao'])).toBe(true);
+  });
+
+  // triste
+  it('keeps the read-only people and those without the area away', () => {
+    const infraViewer = { role: 'manager', roles: { infra: 'user' } };
+
+    expect(canAttendTicketIn(infraViewer, ['infra'])).toBe(false);
+    expect(canAttendTicketIn(infraViewer, ['sistema'])).toBe(false);
+    expect(canAttendTicketIn(null, ['infra'])).toBe(false);
   });
 });

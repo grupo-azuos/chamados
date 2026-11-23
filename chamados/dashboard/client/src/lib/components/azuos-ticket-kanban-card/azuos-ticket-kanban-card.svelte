@@ -1,9 +1,13 @@
 <!--
   @component
-  UM CHAMADO NO KANBAN DE SISTEMA — o mesmo cartão do quadro de tarefas do paralegal. O ícone
-  grande do canto e a cor saem da ETAPA (a coluna): mudou de coluna, o cartão muda. Em cima o
-  texto do chamado, depois os selos (sistema, urgência, etiqueta e a issue do GitHub), o protocolo
-  com quem abriu e, embaixo, o responsável com foto.
+  UM CHAMADO NO QUADRO DA FILA — o mesmo cartão do quadro de tarefas do paralegal, nas três áreas
+  (Infraestrutura, Sistema e Manutenção). O ícone grande do canto e a cor saem da ETAPA (a coluna):
+  mudou de coluna, o cartão muda. Em cima o texto do chamado, depois os selos (o assunto, a
+  urgência, a etiqueta e, em Sistema, a issue do GitHub), o protocolo com quem abriu e, embaixo, o
+  responsável com foto.
+
+  O primeiro selo diz DO QUE é o chamado: o sistema, em Sistema (o cadastrado ou o que quem abriu
+  digitou); o tipo de problema, nas outras áreas ("Impressora", "Ar-condicionado").
 
   Clicar no cartão abre o chamado. Mudar de etapa é arrastando (ver `AzuosKanbanDraggableCard`),
   como no paralegal; a etiqueta, que o paralegal não tem, fica num menu pequeno de três pontinhos
@@ -15,12 +19,13 @@
 -->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
+  import { ticketProblemTypeLabel } from '@template/shared/domain/ticket-catalog.util';
   import { type Ticket } from '@template/shared/schemas/ticket.schema';
 
   import { type StatusBadgeTone } from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { type AzuosCardTone } from '$lib/utils/card-tone.util';
 
-  export type AzuosSystemTicketCardProps = {
+  export type AzuosTicketKanbanCardProps = {
     data: {
       ticket: Ticket;
       /** A etiqueta que a pessoa deu ao cartão; `null` (ou `neutral`) é sem etiqueta. */
@@ -57,9 +62,9 @@
     { tone: 'neutral', label: 'Padrão' },
   ];
 
-  /** O sistema do chamado: o cadastrado ou o que quem abriu digitou. */
-  function systemOf(ticket: Ticket): string | null {
-    return ticket.projectName ?? ticket.customSystemName ?? null;
+  /** Do que é o chamado: o sistema (cadastrado ou digitado) ou, sem sistema, o tipo de problema. */
+  export function subjectOf(ticket: Ticket): string {
+    return ticket.projectName ?? ticket.customSystemName ?? ticketProblemTypeLabel(ticket.problemType);
   }
 </script>
 
@@ -77,10 +82,10 @@
   import AzuosStatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { cardToneClasses } from '$lib/utils/card-tone.util';
 
-  let { data, ui, state: cardState, actions }: AzuosSystemTicketCardProps = $props();
+  let { data, ui, state: cardState, actions }: AzuosTicketKanbanCardProps = $props();
 
   const ticket = $derived(data.ticket);
-  const system = $derived(systemOf(ticket));
+  const subject = $derived(subjectOf(ticket));
   const labelText = $derived(
     data.label && data.label !== 'neutral'
       ? (TICKET_LABEL_OPTIONS.find((option) => option.tone === data.label)?.label ?? null)
@@ -133,9 +138,7 @@
 
   <span class="text-foreground line-clamp-2 pr-12 font-semibold">{ticket.description}</span>
   <span class="flex flex-wrap items-center gap-1.5 pr-24">
-    {#if system}
-      <AzuosStatusBadge data={{ label: system }} ui={{ tone: 'neutral', size: 'sm' }} />
-    {/if}
+    <AzuosStatusBadge data={{ label: subject }} ui={{ tone: 'neutral', size: 'sm' }} />
     <AzuosStatusBadge
       data={{ label: PRIORITY_LABELS[ticket.priority] ?? ticket.priority }}
       ui={{ tone: PRIORITY_TONES[ticket.priority] ?? 'neutral', size: 'sm' }}

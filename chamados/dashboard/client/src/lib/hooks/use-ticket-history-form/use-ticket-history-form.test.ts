@@ -1,6 +1,7 @@
 import {
   isClosingTicketHistoryType,
   TICKET_HISTORY_TYPES,
+  type ManualTicketHistoryType,
 } from '@template/shared/domain/ticket-history.util';
 import { TICKET_STATUSES } from '@template/shared/domain/ticket-status.util';
 import { type Ticket } from '@template/shared/schemas/ticket.schema';
@@ -62,12 +63,17 @@ function ticket(over: Partial<Ticket> = {}): Ticket {
   };
 }
 
-function mountModel(current: Ticket = ticket(), onRecorded = vi.fn()): TicketHistoryFormModel {
+function mountModel(
+  current: Ticket = ticket(),
+  onRecorded = vi.fn(),
+  options: { types?: ManualTicketHistoryType[]; initialType?: ManualTicketHistoryType } = {},
+): TicketHistoryFormModel {
   let model!: TicketHistoryFormModel;
   render(Harness, {
     props: {
       ticket: current,
       onRecorded,
+      ...options,
       onReady: (ready: TicketHistoryFormModel) => (model = ready),
     },
   });
@@ -107,7 +113,22 @@ describe('toOptionGroups', () => {
     }
   });
 
+  /* O arrasto para "Concluído" no quadro: só os tipos que levam até lá. */
+  it('keeps only the types asked for, when the board says where the ticket goes', () => {
+    const groups = toOptionGroups('in_progress', ['resolution', 'cancellation']);
+
+    expect(groups.continuing).toEqual([]);
+    expect(groups.closing.map((option) => option.value)).toEqual(['resolution', 'cancellation']);
+  });
+
   // triste
+  it('never offers a type asked for that the stage does not accept', () => {
+    const groups = toOptionGroups('resolved', ['resolution', 'reopening']);
+
+    expect(groups.continuing.map((option) => option.value)).toEqual(['reopening']);
+    expect(groups.closing).toEqual([]);
+  });
+
   it('offers only the reopening on a closed ticket, and nothing that closes it again', () => {
     const groups = toOptionGroups('resolved');
 
@@ -138,6 +159,10 @@ describe('initialTypeFor', () => {
 
 describe('initialValuesFor', () => {
   // feliz
+  it('starts on the type chosen by who opened the form', () => {
+    expect(initialValuesFor('in_progress', 'resolution').type).toBe('resolution');
+  });
+
   it('starts visible to the requester, with nothing typed', () => {
     expect(initialValuesFor('open')).toEqual({
       type: 'note',
@@ -198,6 +223,27 @@ describe('useTicketHistoryFormModel', () => {
 
     await waitFor(() => expect(model.data.effect).toBe('closes'));
     expect(model.data.effectLabel).toContain('Encerra o chamado');
+  });
+
+  /* O arrasto para "Concluído": o formulário nasce na Solução, só com os tipos que encerram. */
+  it('opens on the type the board asked, and records it', async () => {
+    const onRecorded = vi.fn();
+    const model = mountModel(ticket(), onRecorded, {
+      types: ['resolution', 'closure_with_caveats', 'cancellation'],
+      initialType: 'resolution',
+    });
+
+    expect(model.data.type).toBe('resolution');
+    expect(model.data.groups.continuing).toEqual([]);
+    model.actions.onChange('description', 'Troquei a fonte.');
+    model.actions.onSubmit();
+
+    await waitFor(() => expect(onRecorded).toHaveBeenCalledOnce());
+    expect(ticketsApi.createHistory).toHaveBeenCalledWith(
+      22,
+      expect.objectContaining({ type: 'resolution', description: 'Troquei a fonte.' }),
+      [],
+    );
   });
 
   it('records the history with its files and tells whoever is listening', async () => {

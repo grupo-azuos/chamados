@@ -60,7 +60,7 @@ describe('useSoftwareDashboardModel', () => {
 
     expect(vi.mocked(goto).mock.calls.map(([path]) => String(path))).toEqual([
       expect.stringContaining('/tickets'),
-      expect.stringContaining('/kanban'),
+      expect.stringContaining('/tickets?view=kanban'),
       expect.stringContaining('/schedule'),
       expect.stringContaining('/projects'),
     ]);

@@ -102,6 +102,22 @@ describe('fullBleed', () => {
     expect(disconnect).toHaveBeenCalled();
   });
 
+  it('makes a board that lives far down the page as tall as the visible area', () => {
+    const inset = document.createElement('div');
+    inset.dataset.slot = 'sidebar-inset';
+    Object.defineProperty(inset, 'clientHeight', { value: 1000 });
+    const parent = document.createElement('div');
+    const board = document.createElement('div');
+    parent.append(board);
+    inset.append(parent);
+    document.body.append(inset);
+
+    fullBleed(24, { isHeightFitted: true, isScreenTall: true })(board);
+
+    /* A tela de 1000px menos a folga de cima e a de baixo — não importa onde o quadro começa. */
+    expect(board.style.height).toBe('952px');
+  });
+
   // triste
   it('does nothing outside the app shell', () => {
     const board = document.createElement('div');

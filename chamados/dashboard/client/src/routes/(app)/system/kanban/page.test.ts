@@ -1,34 +1,30 @@
-import { describe, expect, it, vi } from 'vitest';
+import { isRedirect } from '@sveltejs/kit';
+import { describe, expect, it } from 'vitest';
 
-import Page from './+page.svelte';
-import { expectOutageShown, renderPage, visiting } from '../../../route-page.test-support';
+import { load } from './+page';
 
-/* Só o `apiRequest` é fingido: `ApiError` e `readError` continuam reais. */
-vi.mock('$lib/api/http-client', async (importOriginal) => {
-  const original = await importOriginal<Record<string, unknown>>();
-  const ApiError = original.ApiError as new (status: number, message: string) => Error;
-  const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
+function caught(): unknown {
+  try {
+    load();
+  } catch (thrown: unknown) {
+    return thrown;
+  }
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
-});
+  return null;
+}
 
-describe('a rota system/kanban', () => {
+describe('the old system/kanban address', () => {
   // feliz
-  it('mounts the screen and titles the tab', async () => {
-    visiting({});
+  it('sends the person to the System tickets, already on the board', () => {
+    const thrown = caught();
 
-    const { container } = renderPage(Page as never);
-
-    expect(container).toBeTruthy();
-    await vi.waitFor(() => expect(document.title).toContain('Kanban de Sistema'), { timeout: 4_000 });
+    expect(isRedirect(thrown)).toBe(true);
+    expect(thrown).toMatchObject({ status: 308, location: '/system/tickets?view=kanban' });
   });
 
   // triste
-  it('shows what the server answered when the API is down', async () => {
-    visiting({});
-
-    renderPage(Page as never);
-
-    await expectOutageShown();
+  /* O quadro não tem mais tela própria: nada deste endereço monta, só redireciona. */
+  it('never answers with a screen of its own', () => {
+    expect(() => load()).toThrow();
   });
 });
