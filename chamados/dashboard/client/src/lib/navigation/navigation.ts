@@ -114,6 +114,7 @@ export const INFRA_NAV_ITEMS: readonly NavItem[] = [
 export const SYSTEM_NAV_ITEMS: readonly NavItem[] = [
   navItem('sistema', 'dashboard', 'Painel', LayoutDashboard),
   navItem('sistema', 'tickets', 'Chamados', LifeBuoy),
+  navItem('sistema', 'tasks', 'Tarefas', ListChecks),
   navItem('sistema', 'schedule', 'Cronograma', Calendar),
   navItem('sistema', 'projects', 'Projetos', Code2),
   navItem('sistema', 'agent', 'Agente Windows', Download),

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   TEST_NOW,
   taskFixture,
-} from '../../routes/(app)/infra/tasks/components/task-fixture.test-support';
+} from '$lib/utils/task-fixture.test-support';
 import {
   brazilianDay,
   ganttBarOf,

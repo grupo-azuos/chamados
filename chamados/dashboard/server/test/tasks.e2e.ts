@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { computers } from '../src/lib/db/schema/computers.schema';
 import { tasks } from '../src/lib/db/schema/tasks.schema';
+import { tickets } from '../src/lib/db/schema/tickets.schema';
 import { TasksService } from '../src/modules/tasks/service/tasks.service';
 import { ANA, asAna, asBia, createE2eApp, type E2eApp } from './support/e2e-app.util';
 
@@ -353,5 +354,42 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
       .set(asBia())
       .send({ area: 'infra', label: 'Outra', color: '#ff9500' })
       .expect(403);
+  });
+
+  // feliz
+  it('turns a Sistema ticket into a task of Sistema, and leaves a Manutenção ticket alone', async () => {
+    const [sistema, manutencao] = await started.db
+      .insert(tickets)
+      .values([
+        {
+          requesterName: 'Pessoa de Teste',
+          area: 'sistema',
+          department: 'Comercial',
+          problemType: 'bug',
+          description: 'A tela de vendas não abre.',
+        },
+        {
+          requesterName: 'Pessoa de Teste',
+          area: 'manutencao',
+          department: 'Comercial',
+          problemType: 'other',
+          description: 'A porta da sala range.',
+        },
+      ])
+      .returning();
+    const service = app.get(TasksService);
+
+    await service.syncTicket(sistema!);
+    await service.syncTicket(manutencao!);
+
+    const [task] = await started.db.select().from(tasks).where(eq(tasks.ticketId, sistema!.id));
+    expect(task).toMatchObject({
+      area: 'sistema',
+      origin: 'ticket',
+      status: 'open',
+      title: 'A tela de vendas não abre.',
+    });
+    const others = await started.db.select().from(tasks).where(eq(tasks.ticketId, manutencao!.id));
+    expect(others).toEqual([]);
   });
 });
