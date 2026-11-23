@@ -97,6 +97,8 @@ describe('AzuosGithubCalendarEvent — without an external id', () => {
   it('still names the event when GitHub gave it no number', () => {
     render(Harness, { event: { ...event, externalId: null } });
 
-    expect(screen.getByRole('link', { name: 'Pull Request : Melhora o calendário' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Pull Request : Melhora o calendário' }),
+    ).toBeInTheDocument();
   });
 });

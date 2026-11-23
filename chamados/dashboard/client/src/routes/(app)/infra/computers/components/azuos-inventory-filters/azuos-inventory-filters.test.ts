@@ -68,7 +68,10 @@ describe('AzuosInventoryFilters — responsible', () => {
   // feliz
   it('filters by a person picked with the photo, keeping her id', async () => {
     render(InventoryFilters, {
-      props: { data: { filter: emptyFilter, departmentOptions: [], responsibleOptions: people }, actions },
+      props: {
+        data: { filter: emptyFilter, departmentOptions: [], responsibleOptions: people },
+        actions,
+      },
     });
     await userEvent.click(screen.getByRole('button', { name: /Filtros/ }));
 
@@ -81,7 +84,10 @@ describe('AzuosInventoryFilters — responsible', () => {
   // feliz
   it('offers "(Sem responsável)" before the people', async () => {
     render(InventoryFilters, {
-      props: { data: { filter: emptyFilter, departmentOptions: [], responsibleOptions: people }, actions },
+      props: {
+        data: { filter: emptyFilter, departmentOptions: [], responsibleOptions: people },
+        actions,
+      },
     });
     await userEvent.click(screen.getByRole('button', { name: /Filtros/ }));
 
@@ -101,12 +107,18 @@ describe('AzuosInventoryFilters — responsible', () => {
   it('shows the chosen person on a chip that switches the filter off', async () => {
     render(InventoryFilters, {
       props: {
-        data: { filter: { ...emptyFilter, responsibleId: 'p-ana' }, departmentOptions: [], responsibleOptions: people },
+        data: {
+          filter: { ...emptyFilter, responsibleId: 'p-ana' },
+          departmentOptions: [],
+          responsibleOptions: people,
+        },
         actions,
       },
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Responsável: Ana Lima' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Tirar o filtro Responsável: Ana Lima' }),
+    );
     expect(actions.onResponsibleChange).toHaveBeenLastCalledWith('');
   });
 
@@ -115,7 +127,9 @@ describe('AzuosInventoryFilters — responsible', () => {
     const chip = responsibleChip({ ...emptyFilter, responsibleId: 'p-gone' }, actions, people);
 
     expect(chip?.label).toBe('Responsável');
-    expect(responsibleChip({ ...emptyFilter, responsibleId: 'none' }, actions, people)?.label).toBe('(Sem responsável)');
+    expect(responsibleChip({ ...emptyFilter, responsibleId: 'none' }, actions, people)?.label).toBe(
+      '(Sem responsável)',
+    );
     expect(responsibleChip(emptyFilter, actions, people)).toBeNull();
   });
 });
@@ -136,14 +150,18 @@ describe('AzuosInventoryFilters — upgrade', () => {
   it('shows the reason on a chip that switches the filter off', async () => {
     renderWith({ upgrade: 'memory' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Upgrade: Pouca memória' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Tirar o filtro Upgrade: Pouca memória' }),
+    );
     expect(actions.onUpgradeChange).toHaveBeenLastCalledWith('');
   });
 
   // triste
   it('has no chip while the upgrade filter is off, and a plain one for any reason', () => {
     expect(upgradeChip(emptyFilter, actions)).toBeNull();
-    expect(upgradeChip({ ...emptyFilter, upgrade: 'any' }, actions)?.label).toBe('Precisa de upgrade');
+    expect(upgradeChip({ ...emptyFilter, upgrade: 'any' }, actions)?.label).toBe(
+      'Precisa de upgrade',
+    );
   });
 });
 
@@ -381,4 +399,3 @@ describe('ALERT_FILTER_LABELS', () => {
     expect(chips.map((chip) => chip.label)).toEqual(['Disco quase cheio']);
   });
 });
-

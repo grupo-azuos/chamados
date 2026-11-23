@@ -40,7 +40,8 @@ function computer(over: Partial<Computer> = {}): Computer {
     responsibleId: 'person-daniela-prado',
     responsibleName: 'Daniela Prado',
     responsibleAvatarUrl: null,
-    departmentId: 2, departmentName: 'Contábil',
+    departmentId: 2,
+    departmentName: 'Contábil',
     notes: null,
     kind: 'desktop',
     hardware: {
@@ -311,8 +312,22 @@ describe('totalDiskPercentOf', () => {
      diferentes fariam o cartão pular ao agente cair, sem nada ter mudado na máquina. */
   it('adds the volumes up instead of picking the worst one', () => {
     const disks = [
-      { mountpoint: 'C:', fstype: 'NTFS', totalBytes: 100, usedBytes: 90, freeBytes: 10, usedPercent: 90 },
-      { mountpoint: 'D:', fstype: 'NTFS', totalBytes: 100, usedBytes: 10, freeBytes: 90, usedPercent: 10 },
+      {
+        mountpoint: 'C:',
+        fstype: 'NTFS',
+        totalBytes: 100,
+        usedBytes: 90,
+        freeBytes: 10,
+        usedPercent: 90,
+      },
+      {
+        mountpoint: 'D:',
+        fstype: 'NTFS',
+        totalBytes: 100,
+        usedBytes: 10,
+        freeBytes: 90,
+        usedPercent: 10,
+      },
     ];
 
     expect(totalDiskPercentOf(disks)).toBe(50);
@@ -342,7 +357,14 @@ describe('nowReadingOf', () => {
       swapUsedPercent: 0,
     },
     disks: [
-      { mountpoint: 'C:', fstype: 'NTFS', totalBytes: 100, usedBytes: 70, freeBytes: 30, usedPercent: 70 },
+      {
+        mountpoint: 'C:',
+        fstype: 'NTFS',
+        totalBytes: 100,
+        usedBytes: 70,
+        freeBytes: 30,
+        usedPercent: 70,
+      },
     ],
     diskIo: { readBytesPerSec: 0, writeBytesPerSec: 0 },
     network: [],
@@ -491,7 +513,11 @@ describe('AzuosComputerDetailView', () => {
   });
 
   it('keeps a disposed machine read-only until it is restored', () => {
-    renderDetail({ disposedAt: '2026-10-01T12:00:00.000Z', disposalType: 'scrap', disposalReason: 'Equipamento substituído.' });
+    renderDetail({
+      disposedAt: '2026-10-01T12:00:00.000Z',
+      disposalType: 'scrap',
+      disposalReason: 'Equipamento substituído.',
+    });
 
     expect(screen.queryByRole('button', { name: 'Mais ações' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Editar identificação' })).not.toBeInTheDocument();
@@ -508,7 +534,9 @@ describe('AzuosComputerDetailView', () => {
   });
 
   it('shows the delay once the preventive has expired', () => {
-    renderDetail({}, [maintenance({ performedAt: new Date(Date.now() - 100 * DAY).toISOString() })]);
+    renderDetail({}, [
+      maintenance({ performedAt: new Date(Date.now() - 100 * DAY).toISOString() }),
+    ]);
 
     expect(screen.getByText('venceu há 8 dias')).toBeInTheDocument();
   });
@@ -707,7 +735,14 @@ const liveReading = {
     swapUsedPercent: 0,
   },
   disks: [
-    { mountpoint: 'C:', fstype: 'NTFS', totalBytes: 100, usedBytes: 70, freeBytes: 30, usedPercent: 70 },
+    {
+      mountpoint: 'C:',
+      fstype: 'NTFS',
+      totalBytes: 100,
+      usedBytes: 70,
+      freeBytes: 30,
+      usedPercent: 70,
+    },
   ],
   diskIo: { readBytesPerSec: 0, writeBytesPerSec: 0 },
   network: [],
@@ -798,7 +833,10 @@ describe('AzuosComputerDetailView: the questions behind each action', () => {
     const dialog = await openMenu(user, 'Descartar');
     await user.type(within(dialog).getByRole('textbox', { name: 'Motivo' }), 'Placa-mãe queimada');
     await user.click(within(dialog).getByRole('button', { name: 'Descartar máquina' }));
-    expect(actions.onDispose).toHaveBeenCalledWith({ type: 'defect', reason: 'Placa-mãe queimada' });
+    expect(actions.onDispose).toHaveBeenCalledWith({
+      type: 'defect',
+      reason: 'Placa-mãe queimada',
+    });
   });
 
   // triste
@@ -814,7 +852,11 @@ describe('AzuosComputerDetailView: the questions behind each action', () => {
   // feliz
   it('restores a disposed machine after confirming', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
-    renderDetail({ disposedAt: '2026-10-01T12:00:00.000Z', disposalType: 'defect', disposalReason: 'Sem conserto.' });
+    renderDetail({
+      disposedAt: '2026-10-01T12:00:00.000Z',
+      disposalType: 'defect',
+      disposalReason: 'Sem conserto.',
+    });
     expect(screen.getByText(/Fora de uso \(Com defeito\)/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Voltar ao inventário' }));
     let dialog = screen.getByRole('dialog');
@@ -877,7 +919,12 @@ describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
     renderWithHistory({
       alerts: [
         alert(),
-        alert({ id: 2, recoveredAt: '2026-09-22T17:30:00.000Z', causeProcess: null, status: 'recovered' }),
+        alert({
+          id: 2,
+          recoveredAt: '2026-09-22T17:30:00.000Z',
+          causeProcess: null,
+          status: 'recovered',
+        }),
       ],
       alertPaging: { page: 1, pageSize: 1, total: 2 },
     });
@@ -894,7 +941,14 @@ describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
     const user = userEvent.setup();
     renderWithHistory({
       tickets: [
-        { id: 7, protocol: 'CH-0007', status: 'open', problemType: 'printer', requesterName: 'Marta', createdAt: '2026-09-20T12:00:00.000Z' } as never,
+        {
+          id: 7,
+          protocol: 'CH-0007',
+          status: 'open',
+          problemType: 'printer',
+          requesterName: 'Marta',
+          createdAt: '2026-09-20T12:00:00.000Z',
+        } as never,
       ],
       ticketPaging: { page: 1, pageSize: 1, total: 3 },
     });
@@ -904,7 +958,15 @@ describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
 
   // triste
   it('says it is loading the alerts and the samples', () => {
-    renderWithHistory({}, { isAlertsLoading: true, isSamplesLoading: true, isScheduleLoading: true, isLiveLoading: true });
+    renderWithHistory(
+      {},
+      {
+        isAlertsLoading: true,
+        isSamplesLoading: true,
+        isScheduleLoading: true,
+        isLiveLoading: true,
+      },
+    );
     expect(screen.getByText('Carregando os alertas…')).toBeInTheDocument();
   });
 
@@ -918,7 +980,8 @@ describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
         responsibleId: null,
         responsibleName: null,
         responsibleAvatarUrl: null,
-        departmentId: null, departmentName: null,
+        departmentId: null,
+        departmentName: null,
         notes: null,
         warnings: [{ severity: 'attention', message: 'Memória abaixo de 8 GB' }],
         hardware: { ...computer().hardware, hostname: 'contabil-03.local' } as never,
@@ -958,7 +1021,10 @@ describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
 });
 
 describe('AzuosComputerDetailView — cancelled questions', () => {
-  async function askFromMenu(user: ReturnType<typeof userEvent.setup>, item: string): Promise<HTMLElement> {
+  async function askFromMenu(
+    user: ReturnType<typeof userEvent.setup>,
+    item: string,
+  ): Promise<HTMLElement> {
     await user.click(screen.getByRole('button', { name: 'Mais ações' }));
     await user.click(screen.getByRole('menuitem', { name: item }));
 

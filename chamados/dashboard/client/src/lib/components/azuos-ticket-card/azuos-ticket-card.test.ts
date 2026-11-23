@@ -51,7 +51,9 @@ describe('AzuosTicketCard', () => {
     expect(screen.getByText('Carlos Lima')).toBeInTheDocument();
     expect(screen.getByText('Aberto em 06/10/2026')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Abrir o chamado CH-0010 — Ana Souza' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Abrir o chamado CH-0010 — Ana Souza' }),
+    );
     expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 10 }));
   });
 
@@ -59,7 +61,14 @@ describe('AzuosTicketCard', () => {
   it('says nobody answers yet and draws a dash for a ticket without machine', () => {
     render(TicketCard, {
       props: {
-        data: { ticket: ticket({ assignee: null, assigneeId: null, computerId: null, computerName: null }) },
+        data: {
+          ticket: ticket({
+            assignee: null,
+            assigneeId: null,
+            computerId: null,
+            computerName: null,
+          }),
+        },
         actions: { onOpen: vi.fn() },
       },
     });

@@ -697,3 +697,23 @@ test('colored-border: leaves the shadcn ui files alone, they are not edited by h
     [`${SRC}/lib/components/azuos-x/azuos-x.svelte`],
   );
 });
+
+test('person-photo: refuses a photo thrown away by hand and a face built with ui/avatar', () => {
+  const files = project({
+    [`${SRC}/routes/tasks/components/azuos-x/azuos-x.component.tsx`]: 'person: { name: p.name, avatarUrl: null },',
+    [`${SRC}/lib/components/azuos-y/azuos-y.component.tsx`]: "import { AvatarImage } from '../ui/avatar';",
+  });
+
+  assert.equal(run('person-photo', files).length, 2);
+});
+
+test('person-photo: lets the person avatar itself, the profile and comments through', () => {
+  const files = project({
+    [`${SRC}/lib/components/azuos-person-avatar/azuos-person-avatar.component.tsx`]:
+      "import { AvatarImage } from '../ui/avatar';\nfunction initialsOf(name) {}",
+    [`${SRC}/lib/components/azuos-my-profile-view/azuos-my-profile-view.component.tsx`]: 'function initialsOf(name) {}',
+    [`${SRC}/routes/tasks/components/azuos-x/azuos-x.component.tsx`]: ' * Nunca `avatarUrl: null` à mão.',
+  });
+
+  assert.deepEqual(run('person-photo', files), []);
+});

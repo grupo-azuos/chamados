@@ -3,7 +3,9 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import MaintenanceScheduleCard, { scheduleSummaryOf } from './azuos-maintenance-schedule-card.svelte';
+import MaintenanceScheduleCard, {
+  scheduleSummaryOf,
+} from './azuos-maintenance-schedule-card.svelte';
 
 const NOW = new Date(2026, 9, 21, 9, 0);
 const DAY = 24 * 60 * 60 * 1000;
@@ -139,6 +141,8 @@ describe('AzuosMaintenanceScheduleCard — states', () => {
 
   /* Um dia que não se lê conta como hoje: melhor "é hoje" do que um cartão quebrado. */
   it('treats an unreadable scheduled day as today', () => {
-    expect(scheduleSummaryOf(schedule({ scheduledFor: 'sem-data' }), null, NOW).countdown).toBe('é hoje');
+    expect(scheduleSummaryOf(schedule({ scheduledFor: 'sem-data' }), null, NOW).countdown).toBe(
+      'é hoje',
+    );
   });
 });

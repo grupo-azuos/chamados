@@ -216,7 +216,14 @@ describe('AzuosInventoryListView — the filters and the note of a product', () 
   // feliz
   it('searches, filters by category and by missing photo, and shows the note', async () => {
     vi.mocked(actions.onCategoryChange).mockClear();
-    setup({ data: { items: [item({ note: 'Pé quebrado.' })], total: 2, filter: emptyFilter, deleting: null } });
+    setup({
+      data: {
+        items: [item({ note: 'Pé quebrado.' })],
+        total: 2,
+        filter: emptyFilter,
+        deleting: null,
+      },
+    });
 
     expect(screen.getByText('Pé quebrado.')).toBeInTheDocument();
     expect(screen.getByText(/2\s*produtos/)).toBeInTheDocument();
@@ -231,7 +238,9 @@ describe('AzuosInventoryListView — the filters and the note of a product', () 
     if (category) await userEvent.click(within(category).getAllByRole('button')[1]!);
     else {
       await userEvent.click(screen.getByRole('button', { name: 'Filtrar por categoria' }));
-      const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+      const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(
+        -1,
+      ) as HTMLElement;
       await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
     }
     expect(actions.onCategoryChange).toHaveBeenCalled();
@@ -241,7 +250,9 @@ describe('AzuosInventoryListView — the filters and the note of a product', () 
 describe('AzuosInventoryListView — pages of cards', () => {
   // feliz
   it('shows twelve cards per page and walks to the next one', async () => {
-    const many = Array.from({ length: 14 }, (_, index) => item({ id: index + 1, name: `Produto ${index + 1}` }));
+    const many = Array.from({ length: 14 }, (_, index) =>
+      item({ id: index + 1, name: `Produto ${index + 1}` }),
+    );
     setup({ data: { items: many, total: 14, filter: emptyFilter, deleting: null } });
 
     expect(screen.getAllByRole('heading', { name: /^Produto / })).toHaveLength(12);

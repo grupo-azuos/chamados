@@ -296,7 +296,9 @@ describe('part-list-view — the record card', () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderView();
 
-    await user.click(screen.getByRole('button', { name: 'Ver o histórico de SSD 240 GB Kingston' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Ver o histórico de SSD 240 GB Kingston' }),
+    );
     expect(actions.onOpenLedger).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     await user.click(screen.getByRole('button', { name: 'Ações de SSD 240 GB Kingston' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));

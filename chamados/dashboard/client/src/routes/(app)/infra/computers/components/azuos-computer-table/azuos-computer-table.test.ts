@@ -18,7 +18,8 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     responsibleId: null,
     responsibleName: null,
     responsibleAvatarUrl: null,
-    departmentId: null, departmentName: null,
+    departmentId: null,
+    departmentName: null,
     notes: null,
     kind: 'notebook',
     hardware: {
@@ -90,9 +91,14 @@ describe('AzuosComputerTable', () => {
 
     const rows = screen.getAllByRole('row').slice(1);
     expect(rows[0]).toHaveAttribute('data-pending', 'true');
-    expect(within(rows[0]!).getByRole('img', { name: '2 alertas críticos ativos' })).toBeInTheDocument();
+    expect(
+      within(rows[0]!).getByRole('img', { name: '2 alertas críticos ativos' }),
+    ).toBeInTheDocument();
     expect(rows[1]).not.toHaveAttribute('data-pending');
-    expect(screen.getByRole('columnheader', { name: /Saúde/ })).toHaveAttribute('aria-sort', 'ascending');
+    expect(screen.getByRole('columnheader', { name: /Saúde/ })).toHaveAttribute(
+      'aria-sort',
+      'ascending',
+    );
 
     await user.click(screen.getByRole('button', { name: /Responsável/ }));
     expect(onSortChange).toHaveBeenCalledWith('responsible');
@@ -143,7 +149,11 @@ describe('AzuosComputerTable — responsible photo', () => {
     vi.stubGlobal('Image', InstantLoadImage);
     const { container } = render(ComputerTable, {
       props: {
-        data: { computers: [computer({ responsibleName: 'Gabriel Souza', responsibleAvatarUrl: '/avatars/g.png' })] },
+        data: {
+          computers: [
+            computer({ responsibleName: 'Gabriel Souza', responsibleAvatarUrl: '/avatars/g.png' }),
+          ],
+        },
         actions: { onOpen: vi.fn() },
       },
     });
@@ -157,7 +167,9 @@ describe('AzuosComputerTable — responsible photo', () => {
   it('shows the initials without a photo, and no avatar without a responsible', () => {
     render(ComputerTable, {
       props: {
-        data: { computers: [computer({ id: 1, responsibleName: 'Yasmin Kato' }), computer({ id: 2 })] },
+        data: {
+          computers: [computer({ id: 1, responsibleName: 'Yasmin Kato' }), computer({ id: 2 })],
+        },
         actions: { onOpen: vi.fn() },
       },
     });
@@ -174,14 +186,21 @@ describe('AzuosComputerTable — upgrade', () => {
       props: {
         data: {
           computers: [
-            computer({ hardware: { ...computer().hardware, cpuModel: 'Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz' } }),
+            computer({
+              hardware: {
+                ...computer().hardware,
+                cpuModel: 'Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz',
+              },
+            }),
           ],
         },
         actions: { onOpen: vi.fn() },
       },
     });
 
-    expect(screen.getByRole('img', { name: /^Precisa de upgrade: Processador antigo/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: /^Precisa de upgrade: Processador antigo/ }),
+    ).toBeInTheDocument();
   });
 
   // triste
@@ -192,7 +211,10 @@ describe('AzuosComputerTable — upgrade', () => {
           computers: [
             computer({
               isArchived: true,
-              hardware: { ...computer().hardware, cpuModel: 'Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz' },
+              hardware: {
+                ...computer().hardware,
+                cpuModel: 'Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz',
+              },
             }),
           ],
         },

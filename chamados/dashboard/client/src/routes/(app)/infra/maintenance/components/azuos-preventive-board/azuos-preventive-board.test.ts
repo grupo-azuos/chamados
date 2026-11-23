@@ -3,7 +3,11 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import PreventiveBoard, { dayLabelOf, machineLabelOf, pendingOf } from './azuos-preventive-board.svelte';
+import PreventiveBoard, {
+  dayLabelOf,
+  machineLabelOf,
+  pendingOf,
+} from './azuos-preventive-board.svelte';
 
 function row(over: Partial<PreventiveDue> = {}): PreventiveDue {
   return {
@@ -174,7 +178,10 @@ describe('AzuosPreventiveBoard — scheduled rows, quiet machines and loading', 
   it('tells that an overdue machine is already scheduled, by its technical name', () => {
     render(PreventiveBoard, {
       props: {
-        data: { rows: [row({ computerDepartment: null, maintenanceCount: 1 })], schedules: [schedule] },
+        data: {
+          rows: [row({ computerDepartment: null, maintenanceCount: 1 })],
+          schedules: [schedule],
+        },
         actions: { onRegister: vi.fn() },
       },
     });
@@ -189,7 +196,11 @@ describe('AzuosPreventiveBoard — scheduled rows, quiet machines and loading', 
   // triste
   it('hides the counters and the schedules while checking the machines', () => {
     render(PreventiveBoard, {
-      props: { data: { rows: [row()], schedules: [schedule] }, state: { isLoading: true }, actions: { onRegister: vi.fn() } },
+      props: {
+        data: { rows: [row()], schedules: [schedule] },
+        state: { isLoading: true },
+        actions: { onRegister: vi.fn() },
+      },
     });
 
     expect(screen.getByText('Conferindo as máquinas…')).toBeInTheDocument();

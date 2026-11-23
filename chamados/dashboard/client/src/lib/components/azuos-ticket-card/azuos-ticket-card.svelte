@@ -68,7 +68,9 @@
     footer: {
       title: ticket.assignee ?? 'Sem responsável',
       subtitle: `Aberto em ${formatDate(ticket.createdAt)}`,
-      person: ticket.assignee ? { name: ticket.assignee, avatarUrl: data.assigneePhoto ?? null } : null,
+      person: ticket.assignee
+        ? { id: ticket.assigneeId ?? null, name: ticket.assignee, avatarUrl: data.assigneePhoto ?? null }
+        : null,
     },
     openLabel: 'Abrir',
   }}

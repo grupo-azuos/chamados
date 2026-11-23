@@ -10,7 +10,13 @@ const fields = {
 };
 
 function renderDialog(overrides: Partial<AzuosRoleFormDialogProps> = {}) {
-  const actions = { onContextsChange: vi.fn(), onChange: vi.fn(), onBlur: vi.fn(), onSubmit: vi.fn(), onClose: vi.fn() };
+  const actions = {
+    onContextsChange: vi.fn(),
+    onChange: vi.fn(),
+    onBlur: vi.fn(),
+    onSubmit: vi.fn(),
+    onClose: vi.fn(),
+  };
 
   render(RoleFormDialog, {
     props: {
@@ -43,9 +49,14 @@ describe('AzuosRoleFormDialog', () => {
   });
 
   it('keeps the other selections when a module is removed', async () => {
-    const actions = renderDialog({ data: { mode: 'create', fields, contexts: ['infra', 'sistema'] } });
+    const actions = renderDialog({
+      data: { mode: 'create', fields, contexts: ['infra', 'sistema'] },
+    });
 
-    expect(screen.getByRole('button', { name: /Sistema/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /Sistema/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await userEvent.click(screen.getByRole('button', { name: /Infraestrutura/i }));
     expect(actions.onContextsChange).toHaveBeenCalledWith(['sistema']);
     expect(screen.getByRole('button', { name: 'Liberar 2 módulos' })).toBeInTheDocument();
@@ -77,7 +88,12 @@ describe('AzuosRoleFormDialog', () => {
 
   it('lists directory users and allows picking a user via the person field', async () => {
     const mockUsers = [
-      { id: 'usr_carlos', name: 'Carlos Oliveira', email: 'carlos@empresa.com.br', role: 'manager' },
+      {
+        id: 'usr_carlos',
+        name: 'Carlos Oliveira',
+        email: 'carlos@empresa.com.br',
+        role: 'manager',
+      },
     ];
 
     const actions = renderDialog({
@@ -136,9 +152,20 @@ describe('AzuosRoleFormDialog — picking people and the edit mode', () => {
   // feliz
   it('hands the picked person to the dedicated callback', async () => {
     const onSelectUser = vi.fn();
-    const actions = { onContextsChange: vi.fn(), onChange: vi.fn(), onBlur: vi.fn(), onSubmit: vi.fn(), onClose: vi.fn(), onSelectUser };
+    const actions = {
+      onContextsChange: vi.fn(),
+      onChange: vi.fn(),
+      onBlur: vi.fn(),
+      onSubmit: vi.fn(),
+      onClose: vi.fn(),
+      onSelectUser,
+    };
     render(RoleFormDialog, {
-      props: { data: { mode: 'create', users, fields: chosen, contexts: [] }, state: { isOpen: true }, actions },
+      props: {
+        data: { mode: 'create', users, fields: chosen, contexts: [] },
+        state: { isOpen: true },
+        actions,
+      },
     });
 
     /* Trocar de pessoa é escolher outra na lista: o campo mostra quem está escolhido. */
@@ -157,7 +184,10 @@ describe('AzuosRoleFormDialog — picking people and the edit mode', () => {
     expect(await screen.findByText('Ninguém com esse nome')).toBeInTheDocument();
 
     cleanup();
-    renderDialog({ data: { mode: 'create', users, fields, contexts: [] }, state: { isOpen: true, isLoadingUsers: true } });
+    renderDialog({
+      data: { mode: 'create', users, fields, contexts: [] },
+      state: { isOpen: true, isLoadingUsers: true },
+    });
     const field = screen.getByRole('combobox', { name: 'Pessoa' });
     expect(field).toBeDisabled();
     expect(field).toHaveTextContent('Carregando lista de pessoas…');
@@ -169,7 +199,10 @@ describe('AzuosRoleFormDialog — picking people and the edit mode', () => {
       data: {
         mode: 'create',
         users,
-        fields: { userId: { value: 'usr_x', error: 'Escolha uma pessoa' }, userEmail: { value: 'x@empresa.com.br', error: null } },
+        fields: {
+          userId: { value: 'usr_x', error: 'Escolha uma pessoa' },
+          userEmail: { value: 'x@empresa.com.br', error: null },
+        },
         contexts: ['infra', 'sistema', 'manutencao'],
         contextsError: 'Escolha ao menos um módulo',
       },

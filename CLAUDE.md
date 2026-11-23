@@ -260,4 +260,7 @@ O menu (app-shell) e a tela "Meu perfil" são **iguais nos 13 sistemas do Grupo 
   colorido; `interactive` com o hover-fill do Chamados); selecionado = fundo na cor cheia. Ficam
   só a borda neutra, o anel de foco e os spinners.
 - **Nunca `<select>` nativo**: sempre o combobox/seletor do projeto.
+- **Pessoa sempre com a foto**: o rosto é o `AzuosPersonAvatar`, que acha a foto no diretório de
+  pessoas pelo id (ou pelo nome, quando o registro só guardou o nome). Nunca `avatarUrl: null` à mão
+  nem rosto montado com `ui/avatar` — a regra `person-photo` do `check:design` recusa.
 - Checado no hook e no CI (`check:design`). Exceção só pelo suporte (Central de Chamados).

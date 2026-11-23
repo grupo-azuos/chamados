@@ -2,8 +2,13 @@ import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 import ComputerMaintenanceStatus from './azuos-computer-maintenance-status.svelte';
 
-const computer = { preventiveStatus: 'due' as const, lastPreventiveAt: '2020-01-01T12:00:00.000Z',
-  activeAlerts: 2, isArchived: false, disposedAt: null };
+const computer = {
+  preventiveStatus: 'due' as const,
+  lastPreventiveAt: '2020-01-01T12:00:00.000Z',
+  activeAlerts: 2,
+  isArchived: false,
+  disposedAt: null,
+};
 
 describe('AzuosComputerMaintenanceStatus', () => {
   // feliz
@@ -16,8 +21,18 @@ describe('AzuosComputerMaintenanceStatus', () => {
 
   it('tells how many days are left when the preventive is up to date', () => {
     const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString();
-    render(ComputerMaintenanceStatus, { props: { data: { computer: { ...computer,
-      preventiveStatus: 'ok', lastPreventiveAt: tenDaysAgo, activeAlerts: 0 } } } });
+    render(ComputerMaintenanceStatus, {
+      props: {
+        data: {
+          computer: {
+            ...computer,
+            preventiveStatus: 'ok',
+            lastPreventiveAt: tenDaysAgo,
+            activeAlerts: 0,
+          },
+        },
+      },
+    });
     expect(screen.getByText('Preventiva em dia')).toBeInTheDocument();
     expect(screen.getByText(/Próxima em .* · faltam 82 dias/)).toBeInTheDocument();
   });
@@ -31,15 +46,27 @@ describe('AzuosComputerMaintenanceStatus', () => {
 
   // triste
   it('does not describe missing history as a completed preventive', () => {
-    render(ComputerMaintenanceStatus, { props: { data: { computer: { ...computer,
-      preventiveStatus: 'never', lastPreventiveAt: null, activeAlerts: 0 } } } });
+    render(ComputerMaintenanceStatus, {
+      props: {
+        data: {
+          computer: {
+            ...computer,
+            preventiveStatus: 'never',
+            lastPreventiveAt: null,
+            activeAlerts: 0,
+          },
+        },
+      },
+    });
     expect(screen.getByText('Preventiva sem registro')).toBeInTheDocument();
     expect(screen.queryByText('Preventiva em dia')).not.toBeInTheDocument();
     expect(screen.queryByText(/alertas críticos/)).not.toBeInTheDocument();
   });
 
   it('does not show outstanding work for a retired device', () => {
-    render(ComputerMaintenanceStatus, { props: { data: { computer: { ...computer, isArchived: true } } } });
+    render(ComputerMaintenanceStatus, {
+      props: { data: { computer: { ...computer, isArchived: true } } },
+    });
     expect(screen.getByText('Fora de uso')).toBeInTheDocument();
     expect(screen.queryByText('Preventiva vencida')).not.toBeInTheDocument();
     expect(screen.queryByText('2 alertas críticos ativos')).not.toBeInTheDocument();
@@ -50,7 +77,16 @@ describe('AzuosComputerMaintenanceStatus — singular alert, unknown history and
   // feliz
   it('counts a single alert in the singular and says when the history is unknown', () => {
     render(ComputerMaintenanceStatus, {
-      props: { data: { computer: { ...computer, activeAlerts: 1, preventiveStatus: 'unknown' as never, lastPreventiveAt: null } } },
+      props: {
+        data: {
+          computer: {
+            ...computer,
+            activeAlerts: 1,
+            preventiveStatus: 'unknown' as never,
+            lastPreventiveAt: null,
+          },
+        },
+      },
     });
     expect(screen.getByText('1 alerta crítico ativo')).toBeInTheDocument();
     expect(screen.getByText('Preventiva não informada')).toBeInTheDocument();
@@ -59,7 +95,16 @@ describe('AzuosComputerMaintenanceStatus — singular alert, unknown history and
   // triste
   it('says only that the preventive is up to date when the date is missing', () => {
     render(ComputerMaintenanceStatus, {
-      props: { data: { computer: { ...computer, preventiveStatus: 'ok', lastPreventiveAt: null, activeAlerts: 0 } } },
+      props: {
+        data: {
+          computer: {
+            ...computer,
+            preventiveStatus: 'ok',
+            lastPreventiveAt: null,
+            activeAlerts: 0,
+          },
+        },
+      },
     });
     expect(screen.getByText('Preventiva em dia')).toBeInTheDocument();
     expect(screen.queryByText(/Próxima em/)).not.toBeInTheDocument();

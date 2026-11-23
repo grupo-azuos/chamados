@@ -129,7 +129,9 @@ describe('AzuosProjectDetailView — sync feedback, tickets and the timeline fil
     data: Partial<Parameters<typeof ProjectDetailView>[1]['data']> = {},
     state: Parameters<typeof ProjectDetailView>[1]['state'] = { canSync: true },
   ) {
-    const events = [event({ id: 1, status: 'open', url: 'https://github.com/example/portal/pull/1' })];
+    const events = [
+      event({ id: 1, status: 'open', url: 'https://github.com/example/portal/pull/1' }),
+    ];
     return render(ProjectDetailView, {
       props: {
         data: {
@@ -150,7 +152,10 @@ describe('AzuosProjectDetailView — sync feedback, tickets and the timeline fil
 
   // triste
   it('shows the sync failure before any success message', () => {
-    renderFull({ syncMessage: 'Sincronizado agora.' }, { canSync: true, syncError: 'GitHub indisponível.', isSyncing: true });
+    renderFull(
+      { syncMessage: 'Sincronizado agora.' },
+      { canSync: true, syncError: 'GitHub indisponível.', isSyncing: true },
+    );
     expect(screen.getByText('GitHub indisponível.')).toBeInTheDocument();
     expect(screen.queryByText('Sincronizado agora.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sincronizando…' })).toBeInTheDocument();
@@ -200,8 +205,14 @@ describe('AzuosProjectDetailView — sync feedback, tickets and the timeline fil
 describe('eventStatusOf — every kind', () => {
   // feliz
   it('reads merged PRs, resolved issues and releases', () => {
-    expect(eventStatusOf(event({ status: 'merged' }))).toEqual({ label: 'Entregue', tone: 'success' });
-    expect(eventStatusOf(event({ type: 'issue', status: 'closed' }))).toEqual({ label: 'Resolvida', tone: 'success' });
+    expect(eventStatusOf(event({ status: 'merged' }))).toEqual({
+      label: 'Entregue',
+      tone: 'success',
+    });
+    expect(eventStatusOf(event({ type: 'issue', status: 'closed' }))).toEqual({
+      label: 'Resolvida',
+      tone: 'success',
+    });
     expect(eventStatusOf(event({ type: 'release', status: 'closed' })).tone).toBe('brand');
   });
 
@@ -217,11 +228,18 @@ describe('AzuosProjectDetailView — events without a number, with a link', () =
   // feliz
   it('links the open work to GitHub and copes with events that have no number', () => {
     renderWith([
-      event({ id: 1, status: 'open', externalId: null, url: 'https://github.com/example/project/pull/1' }),
+      event({
+        id: 1,
+        status: 'open',
+        externalId: null,
+        url: 'https://github.com/example/project/pull/1',
+      }),
       event({ id: 2, status: 'merged', externalId: null, title: 'Merge sem número' }),
     ]);
 
-    const links = screen.getAllByRole('link').filter((link) => link.getAttribute('href')?.includes('/pull/1'));
+    const links = screen
+      .getAllByRole('link')
+      .filter((link) => link.getAttribute('href')?.includes('/pull/1'));
     expect(links.length).toBeGreaterThan(0);
     expect(screen.getAllByText('Merge sem número').length).toBeGreaterThan(0);
   });

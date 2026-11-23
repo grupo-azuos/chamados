@@ -39,7 +39,10 @@ const machine = (over: Partial<ComputerUpgradeSource> = {}): ComputerUpgradeSour
 });
 
 const slow = machine({
-  hardware: hardware({ totalMemoryBytes: 4 * GB, cpuModel: 'Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz' }),
+  hardware: hardware({
+    totalMemoryBytes: 4 * GB,
+    cpuModel: 'Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz',
+  }),
 });
 
 describe('computerUpgradeReasonsOf', () => {
@@ -55,7 +58,9 @@ describe('computerUpgradeReasonsOf', () => {
   it('has nothing for a machine up to date, archived or disposed', () => {
     expect(computerUpgradeReasonsOf(machine())).toEqual([]);
     expect(computerUpgradeReasonsOf({ ...slow, isArchived: true })).toEqual([]);
-    expect(computerUpgradeReasonsOf({ ...slow, disposedAt: '2026-10-01T00:00:00.000Z' })).toEqual([]);
+    expect(computerUpgradeReasonsOf({ ...slow, disposedAt: '2026-10-01T00:00:00.000Z' })).toEqual(
+      [],
+    );
   });
 });
 
@@ -64,7 +69,9 @@ describe('AzuosComputerUpgradeBadge', () => {
   it('shows a calm "Upgrade" badge that never pulses', () => {
     render(UpgradeBadge, { props: { data: { computer: slow } } });
 
-    const badge = screen.getByRole('img', { name: 'Precisa de upgrade: Pouca memória, Processador antigo' });
+    const badge = screen.getByRole('img', {
+      name: 'Precisa de upgrade: Pouca memória, Processador antigo',
+    });
     expect(badge).toHaveTextContent('Upgrade');
     expect(badge.querySelector('[class*="animate"]')).toBeNull();
   });

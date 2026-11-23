@@ -64,7 +64,9 @@ function setup(props: Record<string, unknown> = {}) {
 
 /** O cartão de um produto, pelo nome dele. */
 function cardOf(name: string): HTMLElement {
-  return screen.getByRole('heading', { name }).closest('[data-slot="azuos-card-surface"]') as HTMLElement;
+  return screen
+    .getByRole('heading', { name })
+    .closest('[data-slot="azuos-card-surface"]') as HTMLElement;
 }
 
 describe('AzuosStockListView', () => {

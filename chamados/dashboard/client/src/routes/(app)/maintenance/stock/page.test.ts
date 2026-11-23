@@ -9,7 +9,12 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota maintenance/stock', () => {
@@ -78,7 +83,12 @@ describe('the maintenance/stock route with products', () => {
 
   // triste
   it('leads to the inventory when there is no product', async () => {
-    vi.mocked(apiRequest).mockImplementation(async () => ({ items: [], total: 0, page: 1, pageSize: 25 }));
+    vi.mocked(apiRequest).mockImplementation(async () => ({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 25,
+    }));
     visiting({});
     renderPage(Page as never);
 
