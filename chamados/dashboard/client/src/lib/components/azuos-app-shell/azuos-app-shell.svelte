@@ -54,6 +54,8 @@
       activeKey?: string;
       /** O caminho da rota atual — trocar de valor é o gatilho da animação entre telas. */
       routeKey?: string;
+      /** A troca veio do voltar/avançar: a rolagem de antes volta, em vez de ir ao topo. */
+      isHistoryNavigation?: boolean;
       isProfileOpen?: boolean;
       areaContext?: AreaContext;
       isSigningOut?: boolean;
@@ -136,7 +138,7 @@
   import { cn } from '$lib/utils/cn';
   import SidebarControls from '$lib/components/azuos-sidebar-controls/azuos-sidebar-controls.svelte';
   import { BrandMark } from '$lib/components/azuos-brand-mark/azuos-brand-mark';
-  import { fadeInUp } from '$lib/motion/motion';
+  import { pageEnter } from '$lib/motion/motion';
   import {
     Sidebar,
     SidebarContent,
@@ -221,11 +223,34 @@
   }
   const canShowTooltip = $derived(!sidebarOpen && !isMobile.current);
 
-  /* A troca de tela nasce com um fade sutil. `routeKey` é o caminho da rota: só ele muda a cada
-     navegação, então é nele que o efeito escuta. */
+  /* A troca de tela nasce com um esmaecer curto, só quando o CAMINHO muda. O `$derived` é o
+     que garante isso: `state` chega como um objeto novo a cada mudança de `page.url` (um filtro
+     na busca, um `replaceState`), do cargo ou da saída — lido direto no efeito, cada uma delas
+     apagava a área de conteúdo inteira e a fazia reaparecer. Um texto igual não dispara nada. */
+  const routeKey = $derived(shellState?.routeKey);
+
+  /* A ROLAGEM É DA CAIXA DE CONTEÚDO, não da janela — e o SvelteKit só cuida da janela. Sem
+     isto, abrir outra tela do fim de uma lista caía no meio da tela nova. Igual ao navegador:
+     caminho novo abre no topo, voltar/avançar devolve onde a pessoa estava. Só o CAMINHO conta:
+     um filtro na busca (`?status=`) não tira a pessoa do lugar. */
+  /* Objeto simples, e não `$state`/`SvelteMap`: é memória da casca, nada na tela depende dele. */
+  const scrollByRoute: Record<string, number> = {};
+  let shownRouteKey: string | undefined;
+
+  function rememberScroll() {
+    if (shownRouteKey !== undefined && contentEl) scrollByRoute[shownRouteKey] = contentEl.scrollTop;
+  }
+
   $effect(() => {
-    void shellState?.routeKey;
-    fadeInUp(contentEl ?? null);
+    const key = routeKey;
+    const el = contentEl;
+    untrack(() => {
+      if (el && shownRouteKey !== undefined && key !== shownRouteKey) {
+        el.scrollTop = shellState?.isHistoryNavigation ? (scrollByRoute[key ?? ''] ?? 0) : 0;
+      }
+      shownRouteKey = key;
+      pageEnter(el ?? null);
+    });
   });
 </script>
 
@@ -559,6 +584,7 @@
          o fim do conteúdo desconta a barra de baixo. -->
     <div
       bind:this={contentEl}
+      onscroll={rememberScroll}
       class="app-content min-h-0 min-w-0 w-full flex-1 overflow-y-auto overscroll-contain pt-3 pr-[max(0.75rem,env(safe-area-inset-right))] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] sm:pt-4 sm:pr-[max(1.5rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] md:pb-[max(2.5rem,env(safe-area-inset-bottom))]"
     >
       <!-- Toda tela cabe nesta moldura: inteira até Full HD, centralizada acima disso. -->

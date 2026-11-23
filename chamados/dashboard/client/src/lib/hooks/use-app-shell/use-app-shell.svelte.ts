@@ -1,4 +1,4 @@
-import { goto } from '$app/navigation';
+import { goto, onNavigate } from '$app/navigation';
 import { page } from '$app/state';
 import type { LucideIcon } from '@lucide/svelte';
 import Cpu from '@lucide/svelte/icons/cpu';
@@ -65,6 +65,8 @@ export type AppShellModel = {
   state: {
     activeKey: string | undefined;
     routeKey: string;
+    /** A troca de tela veio do voltar/avançar do navegador: a casca devolve a rolagem. */
+    isHistoryNavigation: boolean;
     isProfileOpen: boolean;
     areaContext: AreaContext;
     isSigningOut: boolean;
@@ -106,6 +108,14 @@ export function useAppShellModel(input: {
   readonly items: readonly NavItem[];
 }): AppShellModel {
   let isProfileOpen = $state(false);
+
+  /* Como o navegador faz com a janela: tela nova abre no topo, e voltar ou avançar devolve a
+     tela onde a pessoa estava. Só aqui se sabe COMO se chegou — o componente recebe a resposta.
+     `onNavigate` roda antes da tela nova aparecer, então a casca já a encontra certa. */
+  let isHistoryNavigation = $state(false);
+  onNavigate((navigation) => {
+    isHistoryNavigation = navigation.type === 'popstate';
+  });
   const queryClient = useQueryClient();
   const signOut = mirrorStore(
     createMutation({
@@ -232,6 +242,7 @@ export function useAppShellModel(input: {
       return {
         activeKey: activeNavKeyOf(page.url.pathname, input.items),
         routeKey: page.url.pathname,
+        isHistoryNavigation,
         isProfileOpen,
         areaContext: input.context,
         isSigningOut: signOut.current.isPending,

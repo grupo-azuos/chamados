@@ -5,7 +5,15 @@ import ListChecks from '@lucide/svelte/icons/list-checks';
 import { createRawSnippet } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type * as motion from '$lib/motion/motion';
+import { pageEnter } from '$lib/motion/motion';
 import AppShell, { type AzuosAppShellProps } from './azuos-app-shell.svelte';
+
+/* Só a troca de tela é espiada; o resto do movimento segue o de verdade. */
+vi.mock('$lib/motion/motion', async (importOriginal) => {
+  const original = await importOriginal<typeof motion>();
+  return { ...original, pageEnter: vi.fn() };
+});
 
 const items = [
   {
@@ -640,5 +648,79 @@ describe('AzuosAppShell — phone: the open screen in the drawer', () => {
     const sheet = await screen.findByRole('dialog');
 
     expect(within(sheet).getByRole('link', { name: /Chamados/ })).toHaveAttribute('aria-current', 'page');
+  });
+});
+
+describe('AzuosAppShell — changing screens', () => {
+  afterEach(() => vi.mocked(pageEnter).mockClear());
+
+  // feliz
+  it('fades the content area in when the path changes', async () => {
+    const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
+    await waitFor(() => expect(pageEnter).toHaveBeenCalledTimes(1));
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/reports' } });
+
+    await waitFor(() => expect(pageEnter).toHaveBeenCalledTimes(2));
+  });
+
+  // triste
+  /* `state` chega como objeto novo a cada mudança de `page.url` (um filtro na busca) ou da
+     saída: nada disso é trocar de tela, e a área de conteúdo não pode apagar e voltar. */
+  it('does not fade again when the state changes but the path stays the same', async () => {
+    const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
+    await waitFor(() => expect(pageEnter).toHaveBeenCalledTimes(1));
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/tickets', activeKey: 'tickets' } });
+    await view.rerender({ ui: { items }, state: { routeKey: '/tickets', isSigningOut: true } });
+
+    expect(pageEnter).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AzuosAppShell — scroll of the content box', () => {
+  function contentBox(): HTMLElement {
+    const box = document.querySelector<HTMLElement>('.app-content');
+    if (!box) throw new Error('content box not found');
+    return box;
+  }
+
+  /* Rola a caixa como a pessoa rolaria: o valor muda e o evento avisa a casca. */
+  async function scrollTo(top: number) {
+    contentBox().scrollTop = top;
+    await fireEvent.scroll(contentBox());
+  }
+
+  // feliz
+  it('opens a new path at the top and gives the old place back on back or forward', async () => {
+    const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
+    await scrollTo(480);
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/reports' } });
+    expect(contentBox().scrollTop).toBe(0);
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/tickets', isHistoryNavigation: true } });
+    expect(contentBox().scrollTop).toBe(480);
+  });
+
+  // triste
+  /* Um filtro na busca ou um `replaceState` muda o estado, não o caminho: a pessoa fica onde está. */
+  it('keeps the place when only the query or the state changes', async () => {
+    const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
+    await scrollTo(300);
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/tickets', activeKey: 'tickets' } });
+
+    expect(contentBox().scrollTop).toBe(300);
+  });
+
+  // triste
+  it('starts at the top when back or forward reaches a path it never saw', async () => {
+    const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
+    await scrollTo(200);
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/reports', isHistoryNavigation: true } });
+
+    expect(contentBox().scrollTop).toBe(0);
   });
 });
