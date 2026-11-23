@@ -1,6 +1,5 @@
 import { HEALTH_STATUSES } from '@template/shared/domain/computer-health.util';
 import { COMPUTER_KINDS } from '@template/shared/domain/computer-kind.util';
-import { COMPUTER_LOCATIONS } from '@template/shared/domain/department.util';
 import { DISPOSAL_TYPES } from '@template/shared/domain/disposal.util';
 import { sql } from 'drizzle-orm';
 import {
@@ -54,10 +53,8 @@ export const computers = chamadosSchema.table(
     /* O departamento OFICIAL, pelo id do item na lista "Departamentos" do RH. Mesmo motivo:
        o RH renomeia sem reescrever nada aqui, e o nome vem do catálogo na hora. */
     departmentId: integer('department_id'),
-    /* O LOCAL fixo (ANALYZE, CERTIFICADO, RECEPÇÃO), da lista fechada `COMPUTER_LOCATIONS`. */
-    location: text('location', { enum: COMPUTER_LOCATIONS }),
-    /* A observação do TI. É também onde a migração 0025 guardou o responsável e o departamento
-       que não tinham par — nada do que estava escrito se perdeu. */
+    /* A observação do TI. É também onde as migrações 0025 e 0027 guardaram o responsável, o
+       departamento sem par e o local antigos — nada do que estava escrito se perdeu. */
     notes: text('notes'),
     /* Desktop ou notebook, escolhido no cadastro. O padrão só existe para as máquinas que já
        estavam cadastradas antes do campo: elas entram como desktop e o TI corrige as que não são. */
@@ -147,10 +144,6 @@ export const computers = chamadosSchema.table(
       sql`${table.healthStatus} in (${valuesFor(HEALTH_STATUSES)})`,
     ),
     check('computers_kind_valid', sql`${table.kind} in (${valuesFor(COMPUTER_KINDS)})`),
-    check(
-      'computers_location_valid',
-      sql`${table.location} is null or ${table.location} in (${valuesFor(COMPUTER_LOCATIONS)})`,
-    ),
     check('computers_health_score_range', sql`${table.healthScore} between 0 and 100`),
     /* Máquina descartada sem tipo e sem motivo é uma saída que não explica nada — e o mapa
        de "o que saiu de uso e por quê" é justamente para isso que existe. */

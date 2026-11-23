@@ -5,7 +5,6 @@ import {
   ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { type ComputerLocation } from '@template/shared/domain/department.util';
 import { balanceAfter } from '@template/shared/domain/part-catalog.util';
 import { isRealTransfer, reserveDisplayNameOf } from '@template/shared/domain/transfer.util';
 import {
@@ -80,10 +79,7 @@ export class TransfersService {
   ): Promise<Transfer> {
     assertCanCreate(user.role, 'transferências de máquina');
 
-    const destination: Place = {
-      departmentId: input.toDepartmentId ?? null,
-      location: input.toLocation ?? null,
-    };
+    const destination: Place = { departmentId: input.toDepartmentId ?? null };
     /* O destino oficial é conferido na lista do RH antes de mexer em qualquer coisa; e a
        leitura deixa os nomes à mão para o histórico guardar de onde e para onde. */
     if (destination.departmentId) {
@@ -208,41 +204,35 @@ export class TransfersService {
  * não a usa mais. Ir para outro setor mexe só no setor.
  */
 function movedValues(computer: ComputerRow, destination: Place) {
-  if (destination.departmentId || destination.location) return { ...destination };
+  if (destination.departmentId) return { ...destination };
 
   return {
     departmentId: null,
-    location: null,
     responsibleId: null,
     displayName: reserveDisplayNameOf(computer.name),
   };
 }
 
-/** Onde a máquina está: o departamento oficial (id do RH) e o local fixo. Os dois nulos é a prateleira. */
-type Place = { departmentId: number | null; location: ComputerLocation | null };
+/** Onde a máquina está: o departamento oficial (id do RH). Nulo é a prateleira. */
+type Place = { departmentId: number | null };
 
 function placeOf(computer: ComputerRow): Place {
-  return { departmentId: computer.departmentId, location: computer.location };
+  return { departmentId: computer.departmentId };
 }
 
-/** A chave de comparação: mesmo departamento E mesmo local é a mesma mesa. */
+/** A chave de comparação: o mesmo departamento é a mesma mesa. */
 function placeKey(place: Place): string | null {
-  if (!place.departmentId && !place.location) return null;
-
-  return `${place.departmentId ?? ''}|${place.location ?? ''}`;
+  return place.departmentId ? String(place.departmentId) : null;
 }
 
 /**
- * O lugar como TEXTO, para o histórico: o nome do departamento no RH hoje e/ou o local. É um
- * retrato do dia — renomear o departamento depois não reescreve a mudança de ontem.
+ * O lugar como TEXTO, para o histórico: o nome do departamento no RH hoje. É um retrato do dia
+ * — renomear o departamento depois não reescreve a mudança de ontem.
  */
 function placeLabel(place: Place): string | null {
-  const department = place.departmentId
-    ? (departmentNameOf(place.departmentId) ?? `Departamento ${place.departmentId} (fora da lista do RH)`)
-    : null;
-  const parts = [department, place.location].filter((part): part is string => Boolean(part));
+  if (!place.departmentId) return null;
 
-  return parts.length > 0 ? parts.join(' · ') : null;
+  return departmentNameOf(place.departmentId) ?? `Departamento ${place.departmentId} (fora da lista do RH)`;
 }
 
 function destinationMissing(peripheral: TransferPeripheralInput): string {

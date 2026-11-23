@@ -1,7 +1,7 @@
 import { createForm } from '@tanstack/svelte-form';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
-import { type ComputerLocation, type DepartmentOption } from '@template/shared/domain/department.util';
+import { type DepartmentOption } from '@template/shared/domain/department.util';
 import { suggestNickname } from '@template/shared/domain/machine-number.util';
 import { MAX_PAGE_SIZE } from '@template/shared/schemas/pagination.schema';
 import {
@@ -33,7 +33,6 @@ export type ComputerFormModel = {
     fields: Record<ComputerFormField, FormFieldState>;
     responsibles: ComputerResponsible[];
     departmentOptions: OptionPickerOption[];
-    locationOptions: OptionPickerOption[];
   };
   state: {
     isSubmitting: boolean;
@@ -165,14 +164,12 @@ export function useComputerFormModel({
         responsibles: withCurrentResponsible(responsibles.current.data ?? [], computer),
         /* O departamento que a máquina já tem entra na lista mesmo que o RH o tenha tirado. */
         departmentOptions: withCurrentDepartmentId(departments.officialOptions, computer),
-        locationOptions: departments.locationOptions,
         fields: {
           name: field('name'),
           kind: field('kind'),
           displayName: field('displayName'),
           responsibleId: field('responsibleId'),
           departmentId: field('departmentId'),
-          location: field('location'),
           notes: field('notes'),
         },
       };
@@ -186,7 +183,7 @@ export function useComputerFormModel({
     actions: {
       onChange: (field, value) => {
         form.setFieldValue(field, value as never);
-        if (field === 'departmentId' || field === 'location' || field === 'kind') {
+        if (field === 'departmentId' || field === 'kind') {
           suggestNicknameFor(form.state.values);
         }
       },
@@ -202,20 +199,18 @@ export function useComputerFormModel({
   };
 }
 
-/** O "lugar" do padrão de apelido: o nome do departamento oficial escolhido e, sem ele, o local. */
+/** O "lugar" do padrão de apelido: o nome do departamento oficial escolhido. */
 function placeOf(
-  values: Pick<ComputerCreateFormValues, 'departmentId' | 'location'>,
+  values: Pick<ComputerCreateFormValues, 'departmentId'>,
   official: readonly DepartmentOption[],
 ): string | null {
-  const department = official.find((option) => String(option.id) === values.departmentId)?.name;
-
-  return department ?? (values.location || null);
+  return official.find((option) => String(option.id) === values.departmentId)?.name ?? null;
 }
 
 function toFormValues(computer: Computer | null): ComputerCreateFormValues {
   /* No cadastro o tipo começa VAZIO: a pessoa escolhe, o formulário não presume desktop. */
   if (!computer) {
-    return { name: '', kind: '', displayName: '', responsibleId: '', departmentId: '', location: '', notes: '' };
+    return { name: '', kind: '', displayName: '', responsibleId: '', departmentId: '', notes: '' };
   }
 
   return {
@@ -224,7 +219,6 @@ function toFormValues(computer: Computer | null): ComputerCreateFormValues {
     displayName: computer.displayName ?? '',
     responsibleId: computer.responsibleId ?? '',
     departmentId: computer.departmentId ? String(computer.departmentId) : '',
-    location: computer.location ?? '',
     notes: computer.notes ?? '',
   };
 }
@@ -286,7 +280,6 @@ function toUpdateInput(values: ComputerCreateFormValues) {
     displayName: values.displayName.trim() || null,
     responsibleId: values.responsibleId.trim() || null,
     departmentId: values.departmentId ? Number(values.departmentId) : null,
-    location: (values.location || null) as ComputerLocation | null,
     notes: values.notes.trim() || null,
   };
 }

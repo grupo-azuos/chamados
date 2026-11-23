@@ -1,10 +1,6 @@
 import { createForm } from '@tanstack/svelte-form';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
-import {
-  COMPUTER_LOCATIONS,
-  type ComputerLocation,
-  type DepartmentOption as OfficialDepartment,
-} from '@template/shared/domain/department.util';
+import { type DepartmentOption as OfficialDepartment } from '@template/shared/domain/department.util';
 import { partCategoryLabel } from '@template/shared/domain/part-catalog.util';
 import { type PeripheralDestiny } from '@template/shared/domain/transfer.util';
 import { type Computer } from '@template/shared/schemas/computer.schema';
@@ -25,9 +21,8 @@ import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use
 /** O valor do `select` quando a máquina volta para a prateleira. */
 export const NO_DEPARTMENT = '';
 
-/* Um destino só, num seletor só: o departamento OFICIAL pelo id do RH, ou um local fixo. */
+/* O destino é um departamento OFICIAL, pelo id do RH — os fixos daqui não entram. */
 const DEPARTMENT_PREFIX = 'department:';
-const LOCATION_PREFIX = 'location:';
 
 export type DepartmentOption = { value: string; label: string; separatorBefore?: boolean };
 
@@ -189,32 +184,22 @@ export function useTransferFormModel({
 }
 
 /**
- * Onde a máquina está, como valor do seletor: o departamento oficial e, sem ele, o local.
+ * Onde a máquina está, como valor do seletor: o departamento oficial, ou a prateleira.
  * Exportado para ter teste próprio.
  */
-export function destinationOf(computer: Pick<Computer, 'departmentId' | 'location'>): string {
-  if (computer.departmentId) return `${DEPARTMENT_PREFIX}${computer.departmentId}`;
-  if (computer.location) return `${LOCATION_PREFIX}${computer.location}`;
-
-  return NO_DEPARTMENT;
+export function destinationOf(computer: Pick<Computer, 'departmentId'>): string {
+  return computer.departmentId ? `${DEPARTMENT_PREFIX}${computer.departmentId}` : NO_DEPARTMENT;
 }
 
-/** O valor do seletor no contrato. Vazio é "sem departamento" — a prateleira. */
-export function toDestination(value: string): {
-  toDepartmentId: number | null;
-  toLocation: ComputerLocation | null;
-} {
-  if (value.startsWith(DEPARTMENT_PREFIX)) {
-    return { toDepartmentId: Number(value.slice(DEPARTMENT_PREFIX.length)) || null, toLocation: null };
-  }
-  const location = COMPUTER_LOCATIONS.find((name) => `${LOCATION_PREFIX}${name}` === value);
+/** O valor do seletor no contrato. Vazio (ou qualquer outra coisa) é "sem departamento" — a prateleira. */
+export function toDestination(value: string): { toDepartmentId: number | null } {
+  if (!value.startsWith(DEPARTMENT_PREFIX)) return { toDepartmentId: null };
 
-  return { toDepartmentId: null, toLocation: location ?? null };
+  return { toDepartmentId: Number(value.slice(DEPARTMENT_PREFIX.length)) || null };
 }
 
 /**
- * Os departamentos OFICIAIS do RH, depois de uma linha os locais fixos e, separada no fim, a
- * prateleira. O departamento atual que saiu da lista do RH continua escolhível, para o seletor
+ * Só os departamentos OFICIAIS do RH e, separada no fim, a prateleira. O departamento atual que saiu da lista do RH continua escolhível, para o seletor
  * não abrir vazio.
  */
 export function destinationChoices(
@@ -231,11 +216,6 @@ export function destinationChoices(
 
   return [
     ...departments,
-    ...COMPUTER_LOCATIONS.map((location, index) => ({
-      value: `${LOCATION_PREFIX}${location}`,
-      label: location,
-      separatorBefore: index === 0,
-    })),
     { value: NO_DEPARTMENT, label: '(Sem departamento) — volta para a prateleira', separatorBefore: true },
   ];
 }

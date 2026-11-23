@@ -11,8 +11,8 @@
 
   Função pura de props. O único estado próprio é visual — o painel aberto ou fechado.
 
-  - `data`: `filter`, `departmentOptions` (os OFICIAIS do RH, pelo id), `locationOptions` (os
-    locais fixos) e `responsibleOptions` (quem responde por alguma máquina, com a foto).
+  - `data`: `filter`, `departmentOptions` (só os OFICIAIS do RH, pelo id) e `responsibleOptions`
+    (quem responde por alguma máquina, com a foto).
   - `state.isFilteredOut`: o filtro escondeu tudo — aí quem oferece "Limpar filtros" é o aviso de
     lista vazia.
   - `actions`: um `on…Change` por filtro e `onClearFilters`.
@@ -36,7 +36,7 @@
     COMPUTER_KIND_LABELS,
     type ComputerKind,
   } from '@template/shared/domain/computer-kind.util';
-  import { type ComputerLocation, type DepartmentChoice } from '@template/shared/domain/department.util';
+  import { type DepartmentChoice } from '@template/shared/domain/department.util';
   import {
     COMPUTER_ALERT_FILTERS,
     COMPUTER_NO_RESPONSIBLE_FILTER,
@@ -55,7 +55,6 @@
     search: string;
     /** O id do departamento oficial, como texto. */
     departmentId: string;
-    location: ComputerLocation | '';
     healthStatus: HealthStatus | '';
     kind: ComputerKind | '';
     onlyOnline: boolean;
@@ -82,9 +81,8 @@
   export type AzuosInventoryFiltersProps = {
     data: {
       filter: InventoryFilter;
-      /** Os departamentos do RH e, depois da linha, os daqui. */
+      /** Só os departamentos oficiais do RH, com o id como valor. */
       departmentOptions: DepartmentChoice[];
-      locationOptions?: DepartmentChoice[];
       /** As pessoas do filtro "Responsável", com a foto. Sem elas, só "(Sem responsável)". */
       responsibleOptions?: AzuosPersonPickerPerson[];
     };
@@ -96,7 +94,6 @@
     actions: {
       onSearchChange: (search: string) => void;
       onDepartmentChange: (departmentId: string) => void;
-      onLocationChange?: (location: ComputerLocation | '') => void;
       onHealthStatusChange: (healthStatus: HealthStatus | '') => void;
       onKindChange: (kind: ComputerKind | '') => void;
       onOnlineChange: (onlyOnline: boolean) => void;
@@ -224,7 +221,6 @@
         : null,
       resourceChip(filter, actions),
       upgradeChip(filter, actions),
-      locationChip(filter, actions),
       filter.alert
         ? {
             key: 'alert',
@@ -292,16 +288,6 @@
     return { key: 'responsible', label: name ? `Responsável: ${name}` : 'Responsável', onRemove };
   }
 
-  /** A etiqueta do local fixo: "Local: RECEPÇÃO". */
-  export function locationChip(
-    filter: InventoryFilter,
-    actions: AzuosInventoryFiltersProps['actions'],
-  ): ActiveFilterChip | null {
-    if (!filter.location) return null;
-
-    return { key: 'location', label: `Local: ${filter.location}`, onRemove: () => actions.onLocationChange?.('') };
-  }
-
   /** A etiqueta do filtro "Upgrade": "Precisa de upgrade" ou "Upgrade: Processador antigo". */
   export function upgradeChip(
     filter: InventoryFilter,
@@ -347,15 +333,6 @@
       value: data.filter.responsibleId,
       options: RESPONSIBLE_LEADING,
       people: data.responsibleOptions ?? [],
-    },
-    {
-      key: 'location',
-      label: 'Local',
-      control: 'pills',
-      ariaLabel: 'Filtrar por local',
-      allLabel: 'Todos',
-      value: data.filter.location,
-      options: data.locationOptions ?? [],
     },
     {
       key: 'connection',
@@ -447,7 +424,6 @@
   /** Qual ação do inventário cada filtro do painel chama. */
   const ON_CHANGE: Record<string, (value: string) => void> = {
     department: (value) => actions.onDepartmentChange(value),
-    location: (value) => actions.onLocationChange?.(value as ComputerLocation | ''),
     connection: (value) => changeConnection(value),
     health: (value) => actions.onHealthStatusChange(value as HealthStatus | ''),
     resource: (value) => actions.onResourceConditionChange(value as ResourceCondition | ''),

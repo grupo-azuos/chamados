@@ -18,7 +18,7 @@ import {
   type PartMovementRow,
 } from '../../../lib/db/schema/part-movements.schema';
 import { parts, type PartInsert, type PartRow } from '../../../lib/db/schema/parts.schema';
-import { computerPlaceNameSql } from '../../../lib/db/reference-names.util';
+import { computerDepartmentNameSql } from '../../../lib/db/reference-names.util';
 
 export type PartPage = { rows: PartRow[]; total: number };
 
@@ -44,7 +44,7 @@ function computerColumns() {
     id: computers.id,
     name: computers.name,
     displayName: computers.displayName,
-    department: computerPlaceNameSql(),
+    department: computerDepartmentNameSql(),
   };
 }
 

@@ -42,7 +42,7 @@ describe('useDepartmentOptionsModel', () => {
       { value: '3', label: 'Contábil' },
       { value: '7', label: 'Fiscal' },
     ]);
-    expect(model.locationOptions.map((option) => option.value)).toEqual(['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO']);
+    expect(model).not.toHaveProperty('locationOptions');
   });
 
   // triste

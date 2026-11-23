@@ -56,7 +56,6 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
       displayName: 'Recepção',
       responsibleId: ANA.id,
       departmentId: FISCAL.id,
-      location: 'RECEPÇÃO',
       notes: 'Mesa da entrada',
     }).expect(201);
 
@@ -68,7 +67,6 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
       responsibleName: ANA.name,
       departmentId: FISCAL.id,
       departmentName: 'Fiscal',
-      location: 'RECEPÇÃO',
       notes: 'Mesa da entrada',
       isArchived: false,
       isBlocked: false,
@@ -135,8 +133,8 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     expect(new Set(names).size).toBe(7);
   });
 
-  it('filters by department id, by location and by search, on the query and not on the screen', async () => {
-    await register('PC-RECEPCAO-01', { location: 'RECEPÇÃO', responsibleId: ANA.id }).expect(201);
+  it('filters by department id and by search, on the query and not on the screen', async () => {
+    await register('PC-RECEPCAO-01', { responsibleId: ANA.id }).expect(201);
     await register('PC-FISCAL-01', { departmentId: FISCAL.id, responsibleId: BIA.id }).expect(201);
     await register('PC-FISCAL-02', { departmentId: FISCAL.id, responsibleId: CAIO.id }).expect(201);
 
@@ -148,12 +146,13 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     expect(fiscal.body.total).toBe(2);
     expect(fiscal.body.items).toHaveLength(2);
 
-    const reception = await request(app.getHttpServer())
+    /* O filtro de Local saiu: um link antigo com `location` não filtra nada nem dá erro. */
+    const oldLink = await request(app.getHttpServer())
       .get(`/api/v1/computers?location=${encodeURIComponent('RECEPÇÃO')}`)
       .set(asCaio())
       .expect(200);
 
-    expect(reception.body.total).toBe(1);
+    expect(oldLink.body.total).toBe(3);
 
     /* A busca também procura no responsável — pelo nome no diretório, que vira o id. */
     const byPerson = await request(app.getHttpServer())
@@ -177,7 +176,9 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     const legacy = await register('PC-ERRADO-03', { responsibleName: 'Marta' }).expect(201);
     expect(legacy.body.computer).toMatchObject({ responsibleId: null, responsibleName: null });
 
-    await register('PC-ERRADO-04', { location: 'SALA NOVA' }).expect(400);
+    /* O Local também não existe mais: o campo é ignorado, e a máquina nasce sem ele. */
+    const oldLocation = await register('PC-ERRADO-04', { location: 'RECEPÇÃO' }).expect(201);
+    expect(oldLocation.body.computer).not.toHaveProperty('location');
   });
 
   // feliz
@@ -186,6 +187,8 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     await started.db.insert(computers).values([
       { name: 'PC-ANTIGO-01', tokenHash: 'h-1', createdBy: 'seed', notes: 'Responsável anterior: Marta\nDepartamento anterior: fiscal' },
       { name: 'PC-ANTIGO-02', tokenHash: 'h-2', createdBy: 'seed', notes: 'Departamento anterior: Departamento X' },
+      /* O local antigo (0027) fica na observação: nunca vira departamento sozinho. */
+      { name: 'PC-ANTIGO-03', tokenHash: 'h-3', createdBy: 'seed', notes: 'Responsável anterior: Bia\nLocal anterior: RECEPÇÃO' },
     ]);
 
     await expect(app.get(ComputerReferenceBackfillService).run()).resolves.toBe(1);
@@ -197,6 +200,7 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     );
     expect(byName['PC-ANTIGO-01']).toMatchObject({ departmentId: FISCAL.id, departmentName: 'Fiscal', notes: 'Responsável anterior: Marta' });
     expect(byName['PC-ANTIGO-02']).toMatchObject({ departmentId: null, notes: 'Departamento anterior: Departamento X' });
+    expect(byName['PC-ANTIGO-03']).toMatchObject({ departmentId: null, notes: 'Responsável anterior: Bia\nLocal anterior: RECEPÇÃO' });
   });
 
   it('blocks a machine, keeping the reason', async () => {

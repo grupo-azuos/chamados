@@ -58,7 +58,7 @@
     healthStatusLabel,
     healthStatusTone,
   } from '@template/shared/domain/computer-health.util';
-  import { computerPlaceLabel, computerResponsibleLabel } from '$lib/utils/computer-place.util';
+  import { computerDepartmentLabel, computerResponsibleLabel } from '$lib/utils/computer-place.util';
 
   import ActionMenu from '../azuos-action-menu/azuos-action-menu.svelte';
   import AlertBadge, {
@@ -195,7 +195,7 @@
                 {computerResponsibleLabel(computer)}
               </span>
               <span class="text-muted-foreground mt-0.5 block text-xs">
-                {computerPlaceLabel(computer)}
+                {computerDepartmentLabel(computer)}
               </span>
             </span>
           </span>

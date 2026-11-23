@@ -21,33 +21,14 @@ export type Department = string;
  * Os departamentos que existem SÓ AQUI, sem par na lista do RH. Continuam escolhíveis, abaixo
  * dos do RH e separados por uma linha: quem os usa sabe o que são, mas eles não são da lista
  * oficial.
+ *
+ * O COMPUTADOR não os usa: ele guarda só o departamento oficial, pelo id do RH, e o local antigo
+ * ficou na observação (migration 0027).
  */
 export const LOCAL_DEPARTMENTS = ['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'] as const;
 
-/**
- * O LOCAL de uma máquina: os mesmos daqui de cima, numa lista FECHADA.
- *
- * No computador, o departamento oficial (do RH) e o local são duas colunas: o departamento é
- * guardado pelo ID do RH, e o local é um destes valores — nunca texto livre. Um local novo
- * entra aqui, com o `check` do banco, numa mudança de código.
- */
-export const COMPUTER_LOCATIONS = LOCAL_DEPARTMENTS;
-
-export type ComputerLocation = (typeof COMPUTER_LOCATIONS)[number];
-
 /** Um departamento OFICIAL, como o RH o identifica: o id do item na lista "Departamentos". */
 export type DepartmentOption = { id: number; name: string };
-
-/**
- * O local a partir de um texto antigo ("recepcao", "Recepção ", "RECEPÇÃO"): sem acento, sem
- * caixa e sem espaço sobrando. Sem encontro, nulo — nunca um chute.
- */
-export function computerLocationFromText(text: string | null | undefined): ComputerLocation | null {
-  const wanted = normalize(text);
-  if (!wanted) return null;
-
-  return COMPUTER_LOCATIONS.find((location) => normalize(location) === wanted) ?? null;
-}
 
 /**
  * O id do departamento OFICIAL cujo nome é este texto — o nome atual do RH, ou um código antigo

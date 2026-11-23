@@ -117,7 +117,7 @@ const DIRECTORY_UNAVAILABLE =
 const HR_UNAVAILABLE =
   'Não consegui ler a lista de departamentos do RH para conferir o departamento. Tente de novo em instantes.';
 
-/** Onde a máquina está, para o relatório: o departamento oficial e/ou o local fixo. */
+/** Onde a máquina está, para o relatório: o departamento oficial. */
 function placeOf(row: ComputerRow): string {
   const department = departmentNameOf(row.departmentId);
 
@@ -129,7 +129,6 @@ const COMPUTER_REPORT_COLUMNS: ReportColumn<ComputerRow>[] = [
   { header: 'Nome técnico', value: (row) => row.name },
   { header: 'Tipo', value: (row) => computerKindLabel(row.kind) },
   { header: 'Departamento', value: placeOf },
-  { header: 'Local', value: (row) => row.location ?? '—' },
   { header: 'Responsável', value: (row) => personOf(row.responsibleId)?.name ?? '(Sem responsável)' },
   {
     header: 'Saúde',

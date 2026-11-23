@@ -400,7 +400,6 @@ type ComputerFilter = Pick<
   ComputerListQuery,
   | 'search'
   | 'departmentId'
-  | 'location'
   | 'healthStatus'
   | 'kind'
   | 'alert'
@@ -435,14 +434,9 @@ function buildWhere(
   return filters.length > 0 ? and(...filters) : undefined;
 }
 
-/** Onde a máquina está: o departamento oficial (id do RH) e o local fixo. */
+/** Onde a máquina está: o departamento oficial (id do RH). */
 function placeFilters(query: ComputerFilter): SQL[] {
-  const filters: SQL[] = [];
-
-  if (query.departmentId) filters.push(eq(computers.departmentId, query.departmentId));
-  if (query.location) filters.push(eq(computers.location, query.location));
-
-  return filters;
+  return query.departmentId ? [eq(computers.departmentId, query.departmentId)] : [];
 }
 
 /** Arquivada e descartada: em que ponto da vida a máquina está. Separado para o `buildWhere` caber no limite de complexidade. */

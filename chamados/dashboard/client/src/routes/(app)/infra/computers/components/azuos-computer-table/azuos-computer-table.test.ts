@@ -18,7 +18,7 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     responsibleId: null,
     responsibleName: null,
     responsibleAvatarUrl: null,
-    departmentId: null, departmentName: null, location: null,
+    departmentId: null, departmentName: null,
     notes: null,
     kind: 'notebook',
     hardware: {

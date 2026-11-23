@@ -8,7 +8,7 @@ import { RESOURCE_CONDITIONS } from '../domain/computer-resource.util';
 import { COMPUTER_UPGRADE_FILTERS } from '../domain/computer-upgrade.util';
 import { PREVENTIVE_STATUSES } from '../domain/maintenance.util';
 import { boardDrillParamSchema } from './board-drill.schema';
-import { computerLocationSchema, departmentIdSchema, departmentNameSchema } from './department.schema';
+import { departmentIdSchema, departmentNameSchema } from './department.schema';
 import { MAX_PAGE_SIZE, paginatedSchema, paginationQuerySchema } from './pagination.schema';
 import { reportFormatSchema } from './report.schema';
 
@@ -57,8 +57,8 @@ export type ComputerPreventiveFilter = (typeof COMPUTER_PREVENTIVE_FILTERS)[numb
 
 /**
  * O NOME do departamento, como a tela o mostra. No computador ele não é gravado: a máquina
- * guarda o ID do RH (`departmentId`) e o local (`location`), e o servidor escreve o nome na
- * resposta. Os contratos de leitura (manutenção, painel, orçamento) continuam recebendo o nome.
+ * guarda o ID do RH (`departmentId`), e o servidor escreve o nome na resposta. Os contratos
+ * de leitura (manutenção, painel, orçamento) continuam recebendo o nome.
  */
 export const departmentSchema = departmentNameSchema('Escolha um departamento da lista');
 
@@ -153,8 +153,10 @@ export const computerSchema = z.object({
   departmentId: z.number().int().nullable(),
   /** O nome atual desse departamento no RH. Nulo sem departamento ou com o RH sem resposta. */
   departmentName: z.string().nullable(),
-  /** O local fixo (ANALYZE, CERTIFICADO, RECEPÇÃO), da lista fechada. */
-  location: computerLocationSchema.nullable(),
+  /**
+   * A observação do TI. É onde ficaram o responsável, o departamento e o local antigos, nas
+   * linhas "… anterior: <nome>" que as migrations escreveram.
+   */
   notes: z.string().nullable(),
   kind: computerKindSchema,
 
@@ -230,7 +232,6 @@ export const createComputerSchema = z.object({
   displayName: displayNameSchema.optional(),
   responsibleId: responsibleIdSchema.nullable().optional(),
   departmentId: departmentIdSchema.nullable().optional(),
-  location: computerLocationSchema.nullable().optional(),
   notes: notesSchema.optional(),
 });
 
@@ -258,7 +259,6 @@ export const updateComputerSchema = z.object({
   displayName: displayNameSchema.optional(),
   responsibleId: responsibleIdSchema.nullable().optional(),
   departmentId: departmentIdSchema.nullable().optional(),
-  location: computerLocationSchema.nullable().optional(),
   notes: notesSchema.optional(),
   isArchived: z.boolean().optional(),
   isBlocked: z.boolean().optional(),
@@ -274,7 +274,6 @@ export const computerFormSchema = z.object({
   responsibleId: z.string().max(RESPONSIBLE_ID_MAX_LENGTH, 'Escolha o responsável na lista de pessoas'),
   /* O id do departamento do RH, como texto do seletor (`'12'`); vazio é "sem departamento". */
   departmentId: z.union([z.string().regex(/^[1-9]\d*$/, 'Escolha um departamento da lista'), z.literal('')]),
-  location: z.union([computerLocationSchema, z.literal('')]),
   notes: z.string().max(COMPUTER_NOTES_MAX_LENGTH, `Até ${COMPUTER_NOTES_MAX_LENGTH} caracteres`),
   /* Vazio é o cadastro recém-aberto: a pessoa ESCOLHE, o formulário não presume desktop. */
   kind: z
@@ -317,8 +316,6 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
   responsibleId: z.string().trim().min(1).max(RESPONSIBLE_ID_MAX_LENGTH).optional(),
   /** O departamento oficial pelo id do RH. */
   departmentId: z.coerce.number<number>().int().positive().optional(),
-  /** O local fixo, da lista fechada. */
-  location: computerLocationSchema.optional(),
   healthStatus: healthStatusSchema.optional(),
   kind: computerKindSchema.optional(),
   /** Query strings precisam distinguir "false" de true; Boolean("false") não serve. */

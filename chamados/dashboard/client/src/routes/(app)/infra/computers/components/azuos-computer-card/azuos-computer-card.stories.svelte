@@ -20,7 +20,7 @@
       responsibleId: 'person-bia-costa',
       responsibleName: 'Bia Costa',
       responsibleAvatarUrl: null,
-      departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+      departmentId: null, departmentName: null,
       notes: null,
       kind: 'desktop',
       hardware: {
@@ -107,7 +107,7 @@
 />
 <Story
   name="Offline sem responsável"
-  args={{ data: { computer: computer({ isOnline: false, lastSeenAt: null, responsibleName: null, responsibleId: null, departmentId: null, departmentName: null, location: null }) }, actions }}
+  args={{ data: { computer: computer({ isOnline: false, lastSeenAt: null, responsibleName: null, responsibleId: null, departmentId: null, departmentName: null }) }, actions }}
 />
 <Story name="Bloqueada" args={{ data: { computer: computer({ isOnline: false, isBlocked: true }) }, actions }} />
 <Story name="Arquivada" args={{ data: { computer: computer({ isArchived: true, activeAlerts: 1 }) }, actions }} />
@@ -122,7 +122,7 @@
         responsibleId: 'person-isabela-marques-de-o',
         responsibleName: 'Isabela Marques de Oliveira e Souza Rodrigues',
         responsibleAvatarUrl: null,
-        departmentId: 6, departmentName: 'Paralegal', location: null,
+        departmentId: 6, departmentName: 'Paralegal',
         notes: null,
         activeAlerts: 140,
       }),

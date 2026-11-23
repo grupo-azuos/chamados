@@ -7,20 +7,14 @@ describe('transfer contract', () => {
   it('accepts a transfer to the shelf, with no peripherals by default', () => {
     expect(createTransferSchema.parse({ toDepartmentId: null })).toEqual({
       toDepartmentId: null,
-      toLocation: null,
       peripherals: [],
     });
   });
 
-  // feliz
-  it('accepts a fixed location as destination', () => {
-    expect(createTransferSchema.parse({ toDepartmentId: null, toLocation: 'RECEPÇÃO' }).toLocation).toBe('RECEPÇÃO');
-  });
-
   // triste
-  it('refuses a destination department sent as a name, or a location outside the list', () => {
+  it('refuses a destination department sent as a name, and ignores a location from an old screen', () => {
     expect(createTransferSchema.safeParse({ toDepartmentId: 'Fiscal' }).success).toBe(false);
-    expect(createTransferSchema.safeParse({ toDepartmentId: null, toLocation: 'SALA' }).success).toBe(false);
+    expect(createTransferSchema.parse({ toDepartmentId: null, toLocation: 'RECEPÇÃO' })).not.toHaveProperty('toLocation');
   });
 
   it('accepts a peripheral that goes with the machine, and one left at a station', () => {

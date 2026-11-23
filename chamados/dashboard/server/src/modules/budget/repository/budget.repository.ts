@@ -8,7 +8,7 @@ import { qualified } from '../../../lib/db/sql-column.util';
 import { computers } from '../../../lib/db/schema/computers.schema';
 import { maintenances } from '../../../lib/db/schema/maintenances.schema';
 import { parts } from '../../../lib/db/schema/parts.schema';
-import { computerPlaceNameSql } from '../../../lib/db/reference-names.util';
+import { computerDepartmentNameSql } from '../../../lib/db/reference-names.util';
 
 export type BudgetComputerRow = {
   computerId: number;
@@ -48,7 +48,7 @@ export class BudgetRepository {
           computerId: computers.id,
           computerName: computers.name,
           computerDisplayName: computers.displayName,
-          department: computerPlaceNameSql(),
+          department: computerDepartmentNameSql(),
           totalMemoryBytes: computers.totalMemoryBytes,
           totalDiskBytes: computers.totalDiskBytes,
           freeDiskBytes: computers.freeDiskBytes,

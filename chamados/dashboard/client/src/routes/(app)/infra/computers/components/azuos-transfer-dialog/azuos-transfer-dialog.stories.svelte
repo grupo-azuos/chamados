@@ -8,7 +8,7 @@
     id: 2,
     name: 'FINANCEIRO-02',
     displayName: 'Financeiro — mesa 2',
-    departmentId: 4, departmentName: 'Financeiro', location: null,
+    departmentId: 4, departmentName: 'Financeiro',
     notes: null,
   } as Computer;
 

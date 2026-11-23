@@ -24,8 +24,6 @@
     department: string | null;
     /** O departamento como o filtro o compara: o id do RH, como texto. */
     departmentKey?: string | null;
-    /** O local fixo, que o filtro também compara. */
-    locationKey?: string | null;
     isOnline: boolean;
   };
 

@@ -24,7 +24,7 @@ describe.skipIf(!testDatabaseUrl)('Computers responsible filter API (e2e)', () =
     api()
       .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name, kind: 'desktop', location: 'RECEPÇÃO', responsibleId })
+      .send({ name, kind: 'desktop', responsibleId })
       .expect(201);
 
   const names = (response: { body: { items: { name: string }[] } }) =>

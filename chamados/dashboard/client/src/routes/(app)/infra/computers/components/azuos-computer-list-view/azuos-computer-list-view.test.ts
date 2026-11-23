@@ -24,7 +24,7 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
     responsibleAvatarUrl: null,
-    departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+    departmentId: null, departmentName: null,
     notes: null,
     kind: 'desktop',
     hardware: {
@@ -80,7 +80,6 @@ const summary: ComputerSummary = {
 const emptyFilter: ComputerListFilter = {
   search: '',
   departmentId: '',
-  location: '',
   healthStatus: '',
   kind: '',
   includeArchived: false,
@@ -503,7 +502,7 @@ describe('AzuosComputerListView — export, situations and the cut list', () => 
   // feliz
   it('tells archived and offline machines apart, with or without a responsible', () => {
     renderList([
-      computer({ id: 1, isArchived: true, responsibleName: null, responsibleId: null, departmentId: null, departmentName: null, location: null }),
+      computer({ id: 1, isArchived: true, responsibleName: null, responsibleId: null, departmentId: null, departmentName: null }),
       computer({
         id: 2,
         name: 'FISCAL-02',

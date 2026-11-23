@@ -14,7 +14,14 @@ import {
 vi.mock('$lib/api/tickets.api', () => ({ ticketsApi: { updateComputers: vi.fn() } }));
 vi.mock('$lib/api/computers.api', () => ({ computersApi: { list: vi.fn() } }));
 vi.mock('$lib/api/departments.api', () => ({
-  departmentsApi: { catalog: vi.fn().mockResolvedValue({ rh: [], local: [], isRhAvailable: true }) },
+  departmentsApi: {
+    catalog: vi.fn().mockResolvedValue({
+      rh: ['Fiscal'],
+      rhOptions: [{ id: 5, name: 'Fiscal' }],
+      local: ['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'],
+      isRhAvailable: true,
+    }),
+  },
 }));
 
 const { ticketsApi } = await import('$lib/api/tickets.api');
@@ -76,6 +83,14 @@ describe('useTicketComputersModel', () => {
     expect(model.state.isOpen).toBe(true);
   });
 
+  // feliz
+  /* O filtro de departamento da escolha de máquinas oferece só os do RH, pelo id: os fixos não. */
+  it('offers only the official HR departments to narrow the machines', async () => {
+    const model = mountModel();
+
+    await waitFor(() => expect(model.data.departments).toEqual([{ value: '5', label: 'Fiscal' }]));
+  });
+
   it('drops the draft when closed without applying', () => {
     const model = mountModel();
 
@@ -95,7 +110,6 @@ const six = {
   responsibleName: 'Carol',
   department: 'Comercial',
   departmentKey: '1',
-  locationKey: null,
   isOnline: true,
 };
 const eleven = {
@@ -103,9 +117,8 @@ const eleven = {
   label: 'COMPUTADOR - 11',
   hostname: 'FISCAL-D11',
   responsibleName: null,
-  department: 'Fiscal · RECEPÇÃO',
+  department: 'Fiscal',
   departmentKey: '5',
-  locationKey: 'RECEPÇÃO',
   isOnline: false,
 };
 
@@ -122,8 +135,10 @@ describe('filterChoices', () => {
     expect(filterChoices([six, eleven], '', 'Fiscal')).toEqual([]);
   });
 
-  it('narrows to the chosen fixed location', () => {
-    expect(filterChoices([six, eleven], '', 'RECEPÇÃO')).toEqual([eleven]);
+  // triste
+  /* Os fixos daqui saíram do filtro: um valor antigo como "RECEPÇÃO" não casa com máquina nenhuma. */
+  it('finds nothing for an old fixed location value', () => {
+    expect(filterChoices([six, eleven], '', 'RECEPÇÃO')).toEqual([]);
   });
 
   // triste

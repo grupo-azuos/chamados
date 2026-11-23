@@ -106,7 +106,7 @@ function referencesOf(
   row: ComputerRow,
 ): Pick<
   Computer,
-  'responsibleId' | 'responsibleName' | 'responsibleAvatarUrl' | 'departmentId' | 'departmentName' | 'location' | 'notes'
+  'responsibleId' | 'responsibleName' | 'responsibleAvatarUrl' | 'departmentId' | 'departmentName' | 'notes'
 > {
   const person = personOf(row.responsibleId);
 
@@ -116,7 +116,6 @@ function referencesOf(
     responsibleAvatarUrl: person?.avatarUrl ?? null,
     departmentId: row.departmentId,
     departmentName: departmentNameOf(row.departmentId),
-    location: row.location,
     notes: row.notes,
   };
 }
@@ -137,7 +136,6 @@ export function toComputerInsert(
     displayName: normalizeOptional(input.displayName) ?? null,
     responsibleId: normalizeOptional(input.responsibleId) ?? null,
     departmentId: input.departmentId ?? null,
-    location: input.location ?? null,
     notes: normalizeOptional(input.notes) ?? null,
     kind: input.kind,
     tokenHash,
@@ -156,7 +154,6 @@ export function toComputerUpdate(
   setIfDefined(update, 'displayName', normalizeOptional(input.displayName));
   setIfDefined(update, 'responsibleId', normalizeOptional(input.responsibleId));
   setIfDefined(update, 'departmentId', input.departmentId);
-  setIfDefined(update, 'location', input.location);
   setIfDefined(update, 'notes', normalizeOptional(input.notes));
   setIfDefined(update, 'kind', input.kind);
   setIfDefined(update, 'isArchived', input.isArchived);

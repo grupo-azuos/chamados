@@ -18,7 +18,7 @@
     `onDestinationChange`, `onSubmit` e `onClose`.
 -->
 <script lang="ts" module>
-  import { computerPlaceLabel } from '$lib/utils/computer-place.util';
+  import { computerDepartmentLabel } from '$lib/utils/computer-place.util';
   import {
     PERIPHERAL_DESTINIES,
     peripheralDestinyLabel,
@@ -27,8 +27,7 @@
   import { type Computer } from '@template/shared/schemas/computer.schema';
 
   /**
-   * Um destino: um departamento oficial (`department:<id do RH>`), um local fixo
-   * (`location:<NOME>`) ou `''`, a prateleira.
+   * Um destino: um departamento oficial (`department:<id do RH>`) ou `''`, a prateleira.
    */
   export type DepartmentOption = { value: string; label: string; separatorBefore?: boolean };
 
@@ -82,9 +81,9 @@
 
   /** Onde a máquina está hoje, escrito como quem pergunta: "está no financeiro". */
   export function currentPlaceOf(computer: Computer): string {
-    if (!computer.departmentId && !computer.location) return 'Sem departamento (na prateleira)';
+    if (!computer.departmentId) return 'Sem departamento (na prateleira)';
 
-    return computerPlaceLabel(computer);
+    return computerDepartmentLabel(computer);
   }
 
   export function machineLabelOf(computer: Computer): string {

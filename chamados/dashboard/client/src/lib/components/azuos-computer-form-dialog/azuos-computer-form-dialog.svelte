@@ -14,11 +14,11 @@
   digitado.
 
   **O responsável é uma pessoa da lista do escritório, escolhida pelo campo de pessoa (com foto) —
-  nunca um nome digitado.** O departamento é um dos OFICIAIS do RH (o valor é o id), e o local
-  (ANALYZE, CERTIFICADO, RECEPÇÃO) é outro campo, de lista fechada.
+  nunca um nome digitado.** O departamento é só um dos OFICIAIS do RH (o valor é o id). Não há
+  campo de local: o local antigo ficou escrito na observação ("Local anterior: …").
 
-  Props: `data` traz o modo (`create`/`edit`), os campos, os responsáveis, os departamentos e os
-  locais; `state` diz se está aberto, enviando, com erro, carregando os responsáveis ou sem o RH;
+  Props: `data` traz o modo (`create`/`edit`), os campos, os responsáveis e os departamentos;
+  `state` diz se está aberto, enviando, com erro, carregando os responsáveis ou sem o RH;
   `actions` recebe a digitação (`onChange`, `onBlur`), o envio e o fechar.
 -->
 <script lang="ts" module>
@@ -35,7 +35,6 @@
     | 'displayName'
     | 'responsibleId'
     | 'departmentId'
-    | 'location'
     | 'notes';
 
   export type AzuosComputerFormDialogProps = {
@@ -44,8 +43,6 @@
       responsibles?: ComputerResponsible[];
       /** Só os departamentos OFICIAIS do RH; o valor é o id (`'12'`). */
       departmentOptions?: OptionPickerOption[];
-      /** Os locais fixos — lista fechada. */
-      locationOptions?: OptionPickerOption[];
       fields: Record<ComputerFormField, FormFieldState>;
     };
     state: {
@@ -68,8 +65,6 @@
   const KIND_OPTIONS = COMPUTER_KINDS.map((kind) => ({ value: kind, label: COMPUTER_KIND_LABELS[kind] }));
 
   const NO_DEPARTMENT = { value: '', label: '(Sem departamento)' };
-
-  const NO_LOCATION = { value: '', label: '(Sem local)' };
 
   const NO_RESPONSIBLE = { value: '', label: '(Sem responsável)' };
 </script>
@@ -122,7 +117,7 @@
         </div>
         <DialogDescription class="text-xs text-muted-foreground">
           {isEdit
-            ? 'Apelido, responsável, departamento, local e observação. O resto a própria máquina informa.'
+            ? 'Apelido, responsável, departamento e observação. O resto a própria máquina informa.'
             : 'Só o nome e o tipo são obrigatórios. Ao salvar, você recebe o token para instalar o agente nela.'}
         </DialogDescription>
       </DialogHeader>
@@ -216,30 +211,18 @@
         {/if}
       </div>
 
-      <!-- Onde a máquina está: o departamento oficial (do RH) e o local fixo, cada um no seu campo. -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        <div class="flex min-w-0 flex-col gap-1.5">
-          <span class="text-ink-700 text-sm font-medium">Departamento</span>
-          <OptionPicker
-            data={{ value: fields.departmentId.value, options: [NO_DEPARTMENT, ...(data.departmentOptions ?? [])] }}
-            ui={{ ariaLabel: 'Departamento', fullWidth: true, mode: 'combobox' }}
-            state={{ isDisabled: state.isSubmitting, error: fields.departmentId.error }}
-            actions={{ onChange: (value: string) => actions.onChange('departmentId', value) }}
-          />
-          {#if state.isRhUnavailable}
-            <p role="status" class="text-warning-ink text-xs">A lista do RH não carregou. Não dá para escolher o departamento agora.</p>
-          {/if}
-        </div>
-
-        <div class="flex min-w-0 flex-col gap-1.5">
-          <span class="text-ink-700 text-sm font-medium">Local</span>
-          <OptionPicker
-            data={{ value: fields.location.value, options: [NO_LOCATION, ...(data.locationOptions ?? [])] }}
-            ui={{ ariaLabel: 'Local', fullWidth: true }}
-            state={{ isDisabled: state.isSubmitting, error: fields.location.error }}
-            actions={{ onChange: (value: string) => actions.onChange('location', value) }}
-          />
-        </div>
+      <!-- Onde a máquina está: só o departamento oficial (do RH), pelo id. -->
+      <div class="flex min-w-0 flex-col gap-1.5">
+        <span class="text-ink-700 text-sm font-medium">Departamento</span>
+        <OptionPicker
+          data={{ value: fields.departmentId.value, options: [NO_DEPARTMENT, ...(data.departmentOptions ?? [])] }}
+          ui={{ ariaLabel: 'Departamento', fullWidth: true, mode: 'combobox' }}
+          state={{ isDisabled: state.isSubmitting, error: fields.departmentId.error }}
+          actions={{ onChange: (value: string) => actions.onChange('departmentId', value) }}
+        />
+        {#if state.isRhUnavailable}
+          <p role="status" class="text-warning-ink text-xs">A lista do RH não carregou. Não dá para escolher o departamento agora.</p>
+        {/if}
       </div>
 
       <TextAreaField

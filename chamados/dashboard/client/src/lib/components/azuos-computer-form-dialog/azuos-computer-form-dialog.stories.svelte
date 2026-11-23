@@ -16,7 +16,6 @@
       displayName: field(),
       responsibleId: field(),
       departmentId: field(),
-      location: field(),
       notes: field(),
       kind: field(),
       ...over,
@@ -30,13 +29,6 @@
     { value: '7', label: 'Departamento Pessoal' },
     { value: '5', label: 'Fiscal' },
     { value: '6', label: 'Paralegal' },
-  ];
-
-  /* Os locais fixos: lista fechada, outro campo. */
-  const locationOptions = [
-    { value: 'ANALYZE', label: 'ANALYZE' },
-    { value: 'CERTIFICADO', label: 'CERTIFICADO' },
-    { value: 'RECEPÇÃO', label: 'RECEPÇÃO' },
   ];
 
   const people = [
@@ -61,7 +53,7 @@
 <Story
   name="Default"
   args={{
-    data: { mode: 'create', fields: fields(), responsibles: people, departmentOptions, locationOptions },
+    data: { mode: 'create', fields: fields(), responsibles: people, departmentOptions },
     state: { isOpen: true },
     actions,
   }}
@@ -75,13 +67,11 @@
       mode: 'edit',
       responsibles: people,
       departmentOptions,
-      locationOptions,
       fields: fields({
         name: field('RECEPCAO-01'),
         displayName: field('Recepção — balcão'),
         responsibleId: field('person-bia'),
-        location: field('RECEPÇÃO'),
-        notes: field('Responsável anterior: Bia Costa'),
+        notes: field('Responsável anterior: Bia Costa\nLocal anterior: RECEPÇÃO'),
         kind: field('desktop'),
       }),
     },
@@ -126,7 +116,6 @@
       mode: 'edit',
       responsibles: people,
       departmentOptions,
-      locationOptions,
       fields: fields({
         name: field('PARALEGAL-08-ESTACAO-COMPARTILHADA'),
         displayName: field('Paralegal — estação compartilhada do corredor (mais de uma pessoa)'),
@@ -160,17 +149,17 @@
 <Story name="DirectoryUnavailable" args={{ data: { mode: 'create', fields: fields() }, state: { isOpen: true, responsiblesError: 'Diretório indisponível' }, actions }} />
 <Story name="DirectoryLoading" args={{ data: { mode: 'create', fields: fields() }, state: { isOpen: true, isLoadingResponsibles: true }, actions }} />
 
-<!-- Os departamentos vêm do RH, pelo id; os locais fixos são outro campo, de lista fechada. -->
+<!-- Os departamentos vêm só do RH, pelo id; não há campo de local. -->
 <Story
   name="RhDepartments"
-  args={{ data: { mode: 'create', fields: fields(), departmentOptions, locationOptions }, state: { isOpen: true }, actions }}
+  args={{ data: { mode: 'create', fields: fields(), departmentOptions }, state: { isOpen: true }, actions }}
 />
 
 <!-- O RH não respondeu: nenhum departamento para escolher, e o aviso explica por quê. -->
 <Story
   name="RhUnavailable"
   args={{
-    data: { mode: 'create', fields: fields(), departmentOptions: [], locationOptions },
+    data: { mode: 'create', fields: fields(), departmentOptions: [] },
     state: { isOpen: true, isRhUnavailable: true },
     actions,
   }}

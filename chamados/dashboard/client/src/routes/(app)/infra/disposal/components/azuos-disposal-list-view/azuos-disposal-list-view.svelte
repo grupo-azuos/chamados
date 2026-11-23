@@ -21,7 +21,7 @@
     `onOpenMachine` e a devolução (`onAskRestore`, `onCancelRestore`, `onConfirmRestore`).
 -->
 <script lang="ts" module>
-  import { computerPlaceLabel } from '$lib/utils/computer-place.util';
+  import { computerDepartmentLabel } from '$lib/utils/computer-place.util';
   import {
     DISPOSAL_TYPES,
     DISPOSAL_TYPE_LABELS,
@@ -266,8 +266,8 @@
               </span>
               <span class="block text-xs text-ink-500 break-words">
                 {computer.hardware?.hostname || computer.name}
-                {#if computer.departmentId || computer.location}
-                  · {computerPlaceLabel(computer)}
+                {#if computer.departmentId}
+                  · {computerDepartmentLabel(computer)}
                 {/if}
               </span>
             </div>
@@ -338,8 +338,8 @@
                 </span>
                 <span class="block text-xs text-ink-500 break-words">
                   {computer.hardware?.hostname || computer.name}
-                  {#if computer.departmentId || computer.location}
-                    · {computerPlaceLabel(computer)}
+                  {#if computer.departmentId}
+                    · {computerDepartmentLabel(computer)}
                   {/if}
                 </span>
               </TableCell>

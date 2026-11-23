@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   LOCAL_DEPARTMENTS,
-  computerLocationFromText,
   departmentIdFromName,
   departmentChoices,
   departmentFromText,
@@ -112,22 +111,6 @@ describe('legacyCodesOf and isSameDepartment', () => {
     expect(legacyCodesOf('Marketing')).toEqual([]);
     expect(isSameDepartment('fiscal', 'Contábil')).toBe(false);
     expect(isSameDepartment(null, 'Contábil')).toBe(false);
-  });
-});
-
-describe('computerLocationFromText', () => {
-  // feliz
-  it('finds the fixed location in any spelling: code, accent, case or spaces', () => {
-    expect(computerLocationFromText('recepcao')).toBe('RECEPÇÃO');
-    expect(computerLocationFromText(' Recepção ')).toBe('RECEPÇÃO');
-    expect(computerLocationFromText('analyze')).toBe('ANALYZE');
-  });
-
-  // triste
-  it('answers null for an official department or nothing, never a guess', () => {
-    expect(computerLocationFromText('Fiscal')).toBeNull();
-    expect(computerLocationFromText('')).toBeNull();
-    expect(computerLocationFromText(null)).toBeNull();
   });
 });
 

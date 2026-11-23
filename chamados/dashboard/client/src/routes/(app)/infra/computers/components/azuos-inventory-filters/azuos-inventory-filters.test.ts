@@ -14,7 +14,6 @@ import InventoryFilters, {
 const emptyFilter: InventoryFilter = {
   search: '',
   departmentId: '',
-  location: '',
   healthStatus: '',
   kind: '',
   onlyOnline: false,
@@ -346,13 +345,20 @@ describe('AzuosInventoryFilters — every grouped filter and its chip', () => {
   });
 
   // feliz
-  it('filters by the fixed location, apart from the department, and shows it as a chip', () => {
-    const onLocationChange = vi.fn();
-    const chips = activeFilterChips({ ...emptyFilter, location: 'RECEPÇÃO' }, { ...actions, onLocationChange });
+  it('offers no Local filter in the panel: the department is the only place', async () => {
+    renderWith();
+    await userEvent.click(screen.getByRole('button', { name: /Filtros/ }));
 
-    expect(chips.map((chip) => chip.label)).toEqual(['Local: RECEPÇÃO']);
-    chips[0]?.onRemove();
-    expect(onLocationChange).toHaveBeenCalledWith('');
+    expect(screen.queryByText('Local')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Filtrar por local' })).not.toBeInTheDocument();
+  });
+
+  // triste
+  /* Um filtro salvo antes da mudança ainda pode trazer `location`: ele não vira etiqueta. */
+  it('ignores a location left in an old saved filter', () => {
+    const old = { ...emptyFilter, location: 'RECEPÇÃO' } as InventoryFilter;
+
+    expect(activeFilterChips(old, actions)).toEqual([]);
   });
 });
 

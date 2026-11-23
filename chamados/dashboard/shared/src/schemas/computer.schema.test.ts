@@ -29,11 +29,10 @@ describe('createComputerSchema', () => {
       displayName: 'Computador da recepção',
       responsibleId: 'person-1',
       departmentId: 12,
-      location: 'RECEPÇÃO',
       notes: '  Mesa da entrada  ',
     });
 
-    expect(parsed).toMatchObject({ responsibleId: 'person-1', departmentId: 12, location: 'RECEPÇÃO', notes: 'Mesa da entrada' });
+    expect(parsed).toMatchObject({ responsibleId: 'person-1', departmentId: 12, notes: 'Mesa da entrada' });
   });
 
   it('trims the name before storing it', () => {
@@ -56,11 +55,12 @@ describe('createComputerSchema', () => {
     expect(result.error?.issues[0]?.message).toBe('Escolha um departamento da lista');
   });
 
-  it('refuses a location outside the closed list', () => {
-    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', location: 'SALA NOVA' });
+  /* O Local saiu do computador: o que um formulário antigo ainda mandar é descartado, não gravado. */
+  it('drops a location sent by an old screen instead of storing it', () => {
+    const parsed = createComputerSchema.parse({ name: 'PC-1', kind: 'desktop', location: 'RECEPÇÃO' });
 
-    expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toBe('Escolha um local da lista');
+    expect(parsed).not.toHaveProperty('location');
+    expect(updateComputerSchema.parse({ location: 'ANALYZE' })).not.toHaveProperty('location');
   });
 
   it('refuses a blank responsible id instead of treating it as nobody', () => {
@@ -177,13 +177,11 @@ describe('computerListQuerySchema', () => {
     const parsed = computerListQuerySchema.parse({
       search: '  recepcao  ',
       departmentId: '12',
-      location: 'ANALYZE',
       healthStatus: 'critical',
     });
 
     expect(parsed.search).toBe('recepcao');
     expect(parsed.departmentId).toBe(12);
-    expect(parsed.location).toBe('ANALYZE');
     expect(parsed.healthStatus).toBe('critical');
   });
 
@@ -300,7 +298,6 @@ describe('computerCreateFormSchema', () => {
     displayName: '',
     responsibleId: '',
     departmentId: '' as const,
-    location: '' as const,
     notes: '',
   };
 

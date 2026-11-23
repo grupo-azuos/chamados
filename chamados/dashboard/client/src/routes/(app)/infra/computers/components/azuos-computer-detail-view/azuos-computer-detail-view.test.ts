@@ -40,7 +40,7 @@ function computer(over: Partial<Computer> = {}): Computer {
     responsibleId: 'person-daniela-prado',
     responsibleName: 'Daniela Prado',
     responsibleAvatarUrl: null,
-    departmentId: 2, departmentName: 'Contábil', location: null,
+    departmentId: 2, departmentName: 'Contábil',
     notes: null,
     kind: 'desktop',
     hardware: {
@@ -918,7 +918,7 @@ describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
         responsibleId: null,
         responsibleName: null,
         responsibleAvatarUrl: null,
-        departmentId: null, departmentName: null, location: null,
+        departmentId: null, departmentName: null,
         notes: null,
         warnings: [{ severity: 'attention', message: 'Memória abaixo de 8 GB' }],
         hardware: { ...computer().hardware, hostname: 'contabil-03.local' } as never,
@@ -931,23 +931,23 @@ describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
     expect(screen.getByText('(Sem responsável)')).toBeInTheDocument();
     expect(screen.getByText('Atenção')).toBeInTheDocument();
     expect(screen.getByText(/Nenhum alerta registrado/)).toBeInTheDocument();
-    expect(screen.getByText('Sem local')).toBeInTheDocument();
+    expect(screen.queryByText('Local')).not.toBeInTheDocument();
     expect(screen.queryByText('Observação')).not.toBeInTheDocument();
   });
 
   // feliz
-  it('shows the official department, the fixed location and the note line by line', () => {
+  it('shows the official department and, in the note, the old responsible and location line by line', () => {
     renderWithHistory({
       computer: computer({
         departmentId: 5,
         departmentName: 'Fiscal',
-        location: 'RECEPÇÃO',
-        notes: 'Responsável anterior: Bia Costa\nDepartamento anterior: Fiscal antigo',
+        notes: 'Responsável anterior: Bia Costa\nLocal anterior: RECEPÇÃO',
       }),
     });
     expect(screen.getByText('Fiscal')).toBeInTheDocument();
-    expect(screen.getByText('RECEPÇÃO')).toBeInTheDocument();
+    expect(screen.queryByText('Local')).not.toBeInTheDocument();
     expect(screen.getByText(/Responsável anterior: Bia Costa/)).toHaveClass('whitespace-pre-line');
+    expect(screen.getByText(/Local anterior: RECEPÇÃO/)).toBeInTheDocument();
   });
 
   // triste

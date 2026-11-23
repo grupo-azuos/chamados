@@ -25,9 +25,9 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
 
   const api = () => request(app.getHttpServer());
 
-  /* Sem departamento oficial, a máquina fica no local RECEPÇÃO; com ele, no Fiscal do RH (id 31). */
-  const registerComputer = async (name: string, department: 'RECEPÇÃO' | 'Fiscal' = 'RECEPÇÃO'): Promise<number> => {
-    const place = department === 'Fiscal' ? { departmentId: 31 } : { location: 'RECEPÇÃO' };
+  /* Sem departamento, a máquina fica sem nenhum; com ele, no Fiscal do RH (id 31). */
+  const registerComputer = async (name: string, department: 'Fiscal' | null = null): Promise<number> => {
+    const place = department === 'Fiscal' ? { departmentId: 31 } : {};
     const created = await api()
       .post('/api/v1/computers')
       .set(asCaio())

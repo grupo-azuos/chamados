@@ -9,7 +9,7 @@ import { ticketsApi } from '$lib/api/tickets.api';
 import { type TicketComputerChoice } from '$lib/components/azuos-ticket-computers-dialog/azuos-ticket-computers-dialog.svelte';
 import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
 import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
-import { computerPlaceLabel } from '$lib/utils/computer-place.util';
+import { computerDepartmentLabel } from '$lib/utils/computer-place.util';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { TICKETS_QUERY_KEY } from '$lib/hooks/use-ticket-list/use-ticket-list.svelte';
 
@@ -57,7 +57,7 @@ export function useTicketComputersModel(ticket: Ticket): TicketComputersModel {
     ),
   );
 
-  /* Os departamentos OFICIAIS (pelo id) e, depois da linha, os locais fixos — como no Inventário. */
+  /* Só os departamentos OFICIAIS do RH (pelo id) — como no Inventário; os fixos daqui não entram. */
   const departments = useDepartmentOptionsModel();
 
   let linked = $state(linkedOf(ticket));
@@ -87,10 +87,7 @@ export function useTicketComputersModel(ticket: Ticket): TicketComputersModel {
         selectedIds,
         search,
         department,
-        departments: [
-          ...departments.officialOptions,
-          ...departments.locationOptions.map((option, index) => ({ ...option, separatorBefore: index === 0 })),
-        ],
+        departments: departments.officialOptions,
       };
     },
     get state() {
@@ -147,10 +144,9 @@ export function toChoice(computer: ComputerListItem): TicketComputerChoice {
     label: computer.displayName?.trim() || computer.name,
     hostname: computer.name,
     responsibleName: computer.responsibleName,
-    department: computer.departmentId || computer.location ? computerPlaceLabel(computer) : null,
-    /* As chaves do filtro: o id do departamento oficial e o local — a máquina casa com qualquer um. */
+    department: computer.departmentId ? computerDepartmentLabel(computer) : null,
+    /* A chave do filtro: o id do departamento oficial. */
     departmentKey: computer.departmentId ? String(computer.departmentId) : null,
-    locationKey: computer.location,
     isOnline: computer.isOnline,
   };
 }
@@ -164,7 +160,7 @@ export function filterChoices(
   const wanted = search.trim().toLocaleLowerCase('pt-BR');
 
   return choices.filter((choice) => {
-    if (department && choice.departmentKey !== department && choice.locationKey !== department) return false;
+    if (department && choice.departmentKey !== department) return false;
     if (!wanted) return true;
 
     return [choice.label, choice.hostname, choice.responsibleName ?? ''].some((text) =>
