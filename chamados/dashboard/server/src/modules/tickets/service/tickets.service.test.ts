@@ -333,12 +333,12 @@ describe('TicketsService.create', () => {
       problemType: 'bug',
       contactPhone: '62999999999',
       description: 'O sistema não carrega.',
-      customSystemName: 'Planilha do financeiro',
+      customSystemName: '  Planilha  do FINANCEIRO ',
     });
 
     expect(insert.mock.calls[0]?.[0]).toMatchObject({
       projectId: null,
-      customSystemName: 'Planilha do financeiro',
+      customSystemName: 'planilha do financeiro',
     });
     expect(isTicketOption).not.toHaveBeenCalled();
     expect(syncTicketToIssueInBackground).not.toHaveBeenCalled();
@@ -501,6 +501,16 @@ describe('TicketsService.update', () => {
     await service.update(ana, 7, { priority: 'high' });
 
     expect(update.mock.calls[0]?.[1]).toMatchObject({ priority: 'high', updatedBy: ana.email });
+  });
+
+  /* "Trilha" e "trilha" são o mesmo sistema: a correção grava sempre em minúsculas. */
+  it('stores the corrected typed system name in lowercase', async () => {
+    const update = vi.fn().mockResolvedValue(ticketRow({ customSystemName: 'trilha' }));
+    const service = makeService({ findById: vi.fn().mockResolvedValue(ticketRow()), update });
+
+    await service.update(ana, 7, { customSystemName: '  TRILHA ' });
+
+    expect(update.mock.calls[0]?.[1]).toMatchObject({ customSystemName: 'trilha' });
   });
 
   it('leaves what changed on the timeline, signed by who changed it', async () => {
