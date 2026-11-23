@@ -98,7 +98,10 @@ export class SoftwareScheduleRepository {
     );
   }
 
-  async update(id: number, data: Partial<SoftwareScheduleEventInsert>): Promise<SoftwareScheduleEventRow> {
+  async update(
+    id: number,
+    data: Partial<SoftwareScheduleEventInsert>,
+  ): Promise<SoftwareScheduleEventRow> {
     return runOne(
       this.db
         .update(softwareScheduleEvents)

@@ -7,9 +7,16 @@ import {
 } from '@template/shared/schemas/software-project.schema';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
 
+import { type ProjectMap } from '@template/shared/schemas/project-map.schema';
 import { apiRequest } from './http-client';
 
 export const softwareProjectsApi = {
+  /** O mapa dos projetos (os escolhidos, ou todos os em uso). */
+  map: (ids: readonly string[] = []) =>
+    apiRequest<ProjectMap>('/software-projects/map', {
+      query: { ids: ids.length ? ids.join(',') : undefined },
+    }),
+
   list: (query: Partial<SoftwareProjectListQuery> = {}) =>
     apiRequest<Paginated<SoftwareProject>>('/software-projects', {
       query: {

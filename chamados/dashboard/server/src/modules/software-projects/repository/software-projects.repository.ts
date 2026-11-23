@@ -1,7 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { RUNNING_TICKET_STATUSES } from '@template/shared/domain/ticket-status.util';
 import { type SoftwareProjectListQuery } from '@template/shared/schemas/software-project.schema';
-import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  type SQL,
+} from 'drizzle-orm';
 
 import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runOne, runQuery } from '../../../lib/db/db-error.util';
@@ -13,6 +25,7 @@ import {
   type SoftwareProjectRow,
 } from '../../../lib/db/schema/software-projects.schema';
 import { softwareTimelineEvents } from '../../../lib/db/schema/software-timeline-events.schema';
+import { tasks } from '../../../lib/db/schema/tasks.schema';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
 
 export type SoftwareProjectPage = {
@@ -23,6 +36,69 @@ export type SoftwareProjectPage = {
 @Injectable()
 export class SoftwareProjectsRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
+
+  /**
+   * Os fatos do mapa dos projetos: os sistemas (os escolhidos, ou todos os em uso), os eventos do
+   * GitHub de cada um, os chamados deles e as tarefas que nasceram desses chamados.
+   */
+  async mapFacts(ids: number[] | null) {
+    const projects = await runQuery(
+      this.db
+        .select()
+        .from(softwareProjects)
+        .where(
+          and(
+            isNull(softwareProjects.archivedAt),
+            ids ? inArray(softwareProjects.id, ids) : undefined,
+          ),
+        )
+        .orderBy(asc(softwareProjects.name)),
+      'ler os sistemas do mapa',
+    );
+    const projectIds = projects.map((project) => project.id);
+    if (!projectIds.length) return { projects, events: [], tickets: [], tasks: [] };
+    const [events, projectTickets] = await Promise.all([
+      runQuery(
+        this.db
+          .select()
+          .from(softwareTimelineEvents)
+          .where(inArray(softwareTimelineEvents.projectId, projectIds))
+          .orderBy(desc(softwareTimelineEvents.eventDate), desc(softwareTimelineEvents.id)),
+        'ler os eventos dos sistemas',
+      ),
+      runQuery(
+        this.db
+          .select({
+            id: tickets.id,
+            projectId: tickets.projectId,
+            status: tickets.status,
+            description: tickets.description,
+            githubIssueNumber: tickets.githubIssueNumber,
+          })
+          .from(tickets)
+          .where(inArray(tickets.projectId, projectIds))
+          .orderBy(desc(tickets.id)),
+        'ler os chamados dos sistemas',
+      ),
+    ]);
+    const ticketIds = projectTickets.map((ticket) => ticket.id);
+    const ticketTasks = ticketIds.length
+      ? await runQuery(
+          this.db
+            .select({
+              id: tasks.id,
+              title: tasks.title,
+              status: tasks.status,
+              ticketId: tasks.ticketId,
+            })
+            .from(tasks)
+            .where(inArray(tasks.ticketId, ticketIds)),
+          'ler as tarefas dos chamados dos sistemas',
+        )
+      : [];
+
+    return { projects, events, tickets: projectTickets, tasks: ticketTasks };
+  }
 
   /** `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro. */
   async list(query: SoftwareProjectListQuery, drill?: SQL): Promise<SoftwareProjectPage> {

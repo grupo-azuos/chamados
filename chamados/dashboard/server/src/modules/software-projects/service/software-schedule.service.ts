@@ -151,7 +151,8 @@ export class SoftwareScheduleService {
   /** O agendamento, se existe e se esta pessoa pode mexer nele (quem marcou ou Super Admin). */
   private async findOwnedOrRefuse(user: RequestUser, id: number): Promise<SoftwareScheduleEvent> {
     const event = await this.findById(user, id);
-    if (!canChangeScheduleEvent(user, event)) throw new ForbiddenException(SCHEDULE_EVENT_NOT_YOURS);
+    if (!canChangeScheduleEvent(user, event))
+      throw new ForbiddenException(SCHEDULE_EVENT_NOT_YOURS);
 
     return event;
   }

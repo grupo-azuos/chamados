@@ -111,9 +111,9 @@ describe('SoftwareDashboardService', () => {
   it('refuses an unidentified request without touching the database', async () => {
     const { service, repository } = makeService();
 
-    await expect(service.summary({ ...user, role: null } as unknown as RequestUser)).rejects.toThrow(
-      ForbiddenException,
-    );
+    await expect(
+      service.summary({ ...user, role: null } as unknown as RequestUser),
+    ).rejects.toThrow(ForbiddenException);
     expect(repository.ticketCounts).not.toHaveBeenCalled();
   });
 });

@@ -24,6 +24,8 @@ import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   CreateSoftwareProjectDto,
+  ProjectMapEntryDto,
+  ProjectMapQueryDto,
   SoftwareProjectDto,
   SoftwareProjectListQueryDto,
   SoftwareProjectListResponseDto,
@@ -52,6 +54,20 @@ export class SoftwareProjectsController {
     @Query() query: SoftwareProjectListQueryDto,
   ): Promise<SoftwareProjectListResponseDto> {
     return this.service.list(user, query);
+  }
+
+  @Get('map')
+  @ApiOperation({
+    summary: 'O mapa dos projetos',
+    description:
+      'Cada sistema (os de `ids`, ou todos os em uso) com as issues, os PRs, os merges, as releases, os chamados e as tarefas deles. Do que já fechou vêm só os mais recentes de cada tipo.',
+  })
+  @ApiOkResponse({ type: [ProjectMapEntryDto] })
+  async map(
+    @CurrentUser() user: RequestUser,
+    @Query() query: ProjectMapQueryDto,
+  ): Promise<ProjectMapEntryDto[]> {
+    return this.service.map(user, query);
   }
 
   @Get(':id')
