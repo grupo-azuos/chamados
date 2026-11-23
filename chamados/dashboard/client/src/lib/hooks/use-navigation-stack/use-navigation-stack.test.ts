@@ -43,6 +43,12 @@ describe('recordNavigation', () => {
     recordNavigation(at('/infra/tickets'), { url: at('/infra/tickets/7') }, 5);
     expect(currentStack()).toEqual([]);
   });
+
+  // triste
+  it('treats the opening of the tab, which SvelteKit sends as a place with no url, as no origin', () => {
+    expect(() => recordNavigation(at('/infra/tickets/7'), { url: null }, null)).not.toThrow();
+    expect(currentStack()).toEqual([]);
+  });
 });
 
 describe('useBackTarget', () => {

@@ -138,7 +138,6 @@
   import { cn } from '$lib/utils/cn';
   import SidebarControls from '$lib/components/azuos-sidebar-controls/azuos-sidebar-controls.svelte';
   import { BrandMark } from '$lib/components/azuos-brand-mark/azuos-brand-mark';
-  import { pageEnter } from '$lib/motion/motion';
   import {
     Sidebar,
     SidebarContent,
@@ -223,10 +222,10 @@
   }
   const canShowTooltip = $derived(!sidebarOpen && !isMobile.current);
 
-  /* A troca de tela nasce com um esmaecer curto, só quando o CAMINHO muda. O `$derived` é o
-     que garante isso: `state` chega como um objeto novo a cada mudança de `page.url` (um filtro
-     na busca, um `replaceState`), do cargo ou da saída — lido direto no efeito, cada uma delas
-     apagava a área de conteúdo inteira e a fazia reaparecer. Um texto igual não dispara nada. */
+  /* A troca de tela é DIRETA: a casca fica e só o conteúdo muda, sem esmaecer. Um esmaecer saindo
+     do zero escurecia a área inteira a cada clique, e a pessoa lia isso como a tela piscando.
+     O `$derived` faz a casca reagir só quando o CAMINHO muda: `state` chega como objeto novo a
+     cada mudança de `page.url` (um filtro na busca, um `replaceState`), do cargo ou da saída. */
   const routeKey = $derived(shellState?.routeKey);
 
   /* A ROLAGEM É DA CAIXA DE CONTEÚDO, não da janela — e o SvelteKit só cuida da janela. Sem
@@ -249,7 +248,6 @@
         el.scrollTop = shellState?.isHistoryNavigation ? (scrollByRoute[key ?? ''] ?? 0) : 0;
       }
       shownRouteKey = key;
-      pageEnter(el ?? null);
     });
   });
 </script>

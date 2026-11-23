@@ -5,15 +5,7 @@ import ListChecks from '@lucide/svelte/icons/list-checks';
 import { createRawSnippet } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type * as motion from '$lib/motion/motion';
-import { pageEnter } from '$lib/motion/motion';
 import AppShell, { type AzuosAppShellProps } from './azuos-app-shell.svelte';
-
-/* Só a troca de tela é espiada; o resto do movimento segue o de verdade. */
-vi.mock('$lib/motion/motion', async (importOriginal) => {
-  const original = await importOriginal<typeof motion>();
-  return { ...original, pageEnter: vi.fn() };
-});
 
 const items = [
   {
@@ -652,29 +644,30 @@ describe('AzuosAppShell — phone: the open screen in the drawer', () => {
 });
 
 describe('AzuosAppShell — changing screens', () => {
-  afterEach(() => vi.mocked(pageEnter).mockClear());
+  function contentBox(): HTMLElement {
+    const box = document.querySelector<HTMLElement>('.app-content');
+    if (!box) throw new Error('content box not found');
+    return box;
+  }
 
   // feliz
-  it('fades the content area in when the path changes', async () => {
+  /* Trocar de tela não esmaece a área de conteúdo: um esmaecer saindo do zero era lido como a
+     tela piscando a cada clique no menu. */
+  it('swaps the screen without fading the content area', async () => {
     const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
-    await waitFor(() => expect(pageEnter).toHaveBeenCalledTimes(1));
 
     await view.rerender({ ui: { items }, state: { routeKey: '/reports' } });
 
-    await waitFor(() => expect(pageEnter).toHaveBeenCalledTimes(2));
+    expect(contentBox().style.opacity).toBe('');
   });
 
   // triste
-  /* `state` chega como objeto novo a cada mudança de `page.url` (um filtro na busca) ou da
-     saída: nada disso é trocar de tela, e a área de conteúdo não pode apagar e voltar. */
-  it('does not fade again when the state changes but the path stays the same', async () => {
+  it('keeps the content area untouched when only the state changes', async () => {
     const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
-    await waitFor(() => expect(pageEnter).toHaveBeenCalledTimes(1));
 
-    await view.rerender({ ui: { items }, state: { routeKey: '/tickets', activeKey: 'tickets' } });
     await view.rerender({ ui: { items }, state: { routeKey: '/tickets', isSigningOut: true } });
 
-    expect(pageEnter).toHaveBeenCalledTimes(1);
+    expect(contentBox().style.opacity).toBe('');
   });
 });
 
