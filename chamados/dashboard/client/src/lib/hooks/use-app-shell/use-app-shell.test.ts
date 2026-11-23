@@ -37,7 +37,7 @@ const { leaveSession } = await import('$lib/utils/leave-session.util');
 const { authApi } = await import('$lib/api/auth.api');
 const { accountProfileApi } = await import('$lib/api/account-profile.api');
 const { ticketsApi } = await import('$lib/api/tickets.api');
-const { goto } = await import('$app/navigation');
+const { goto, onNavigate } = await import('$app/navigation');
 const { page } = await import('$app/state');
 
 /** A tela aberta, do ponto de vista do model: é dela que sai o item aceso. */
@@ -298,5 +298,33 @@ describe('useAppShellModel — the areas of the person', () => {
     model.actions.onViewRoles();
 
     await waitFor(() => expect(goto).toHaveBeenCalledWith('/profile'));
+  });
+});
+
+describe('useAppShellModel — how the person arrived', () => {
+  /** O que o SvelteKit entrega ao `onNavigate` registrado pelo model. */
+  function navigate(type: 'link' | 'goto' | 'popstate') {
+    const callback = vi.mocked(onNavigate).mock.calls.at(-1)?.[0];
+    callback?.({ type } as Parameters<typeof callback>[0]);
+  }
+
+  // feliz
+  it('tells the shell when the screen came from back or forward', () => {
+    const model = mountModel();
+
+    navigate('popstate');
+
+    expect(model.state.isHistoryNavigation).toBe(true);
+  });
+
+  // triste
+  it('treats a link or a goto as a new screen, and starts that way', () => {
+    const model = mountModel();
+    expect(model.state.isHistoryNavigation).toBe(false);
+
+    navigate('popstate');
+    navigate('link');
+
+    expect(model.state.isHistoryNavigation).toBe(false);
   });
 });

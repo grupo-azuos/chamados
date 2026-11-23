@@ -56,6 +56,27 @@ export function fadeInUp(targets: gsap.TweenTarget, options: { delay?: number } 
 }
 
 /**
+ * A TROCA DE TELA: um esmaecer curto da área de conteúdo, igual ao `PageTransition` do template.
+ *
+ * Três cuidados que o `fadeInUp` não tem, e que faziam a tela piscar a cada navegação:
+ * - só opacidade, sem deslocar: um `transform` na caixa que rola vira o "pai" de tudo que é
+ *   `fixed` dentro dela, e janelas e avisos pulavam junto com a tela;
+ * - `fromTo` terminando em `1`, depois de matar a entrada anterior: com `from`, trocar de tela
+ *   no meio do esmaecer lia a opacidade pela metade como valor final, e a tela ficava apagada;
+ * - `clearProps`: no fim não sobra `opacity` escrita no elemento.
+ */
+export function pageEnter(target: Element | null): void {
+  if (!target || prefersReducedMotion()) return;
+
+  gsap.killTweensOf(target);
+  gsap.fromTo(
+    target,
+    { opacity: 0 },
+    { opacity: 1, duration: DURATION.fast, ease: EASE.out, clearProps: 'opacity' },
+  );
+}
+
+/**
  * Entrada em cascata, para listas e grupos de cartões.
  *
  * `stagger` pequeno de propósito: o atraso existe para dar ordem de leitura, não para fazer

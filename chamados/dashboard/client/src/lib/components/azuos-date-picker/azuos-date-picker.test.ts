@@ -1,5 +1,5 @@
 import { parseDate } from '@internationalized/date';
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -42,15 +42,14 @@ describe('AzuosDatePicker', () => {
     expect(screen.getByRole('button')).toBeDisabled();
   });
 
-  it('offers custom month and year selectors when requested', async () => {
-    render(AzuosDatePicker, {
-      props: { value: '2026-10-19', ariaLabel: 'Data', showMonthYearSelects: true },
-    });
+  it('shows the month and year dropdowns of the house in the calendar title, never a native select', async () => {
+    render(AzuosDatePicker, { props: { value: '2026-10-19', ariaLabel: 'Data' } });
 
     await userEvent.click(screen.getByRole('button', { name: 'Data' }));
 
-    expect(screen.getByRole('combobox', { name: 'Mês' })).toHaveTextContent('outubro');
-    expect(screen.getByRole('combobox', { name: 'Ano' })).toHaveTextContent('2026');
+    expect(screen.getByRole('button', { name: 'Mês: Outubro' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ano: 2026' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ir para o mês anterior' })).toBeInTheDocument();
     expect(document.querySelector('[data-slot="popover-content"] select')).not.toBeInTheDocument();
   });
 
@@ -65,10 +64,9 @@ describe('AzuosDatePicker', () => {
 });
 
 describe('AzuosDatePicker — jumping between months and odd values', () => {
-  const pick = async (combobox: HTMLElement, option: string) => {
-    await fireEvent.pointerDown(combobox);
-    await fireEvent.click(combobox);
-    await fireEvent.pointerUp(await screen.findByRole('option', { name: option }));
+  const pick = async (dropdown: string, option: string) => {
+    await userEvent.click(screen.getByRole('button', { name: new RegExp(`^${dropdown}:`) }));
+    await userEvent.click(screen.getByRole('option', { name: option }));
   };
 
   // feliz
@@ -76,12 +74,12 @@ describe('AzuosDatePicker — jumping between months and odd values', () => {
     const onValueChange = vi.fn();
     const onBlur = vi.fn();
     render(AzuosDatePicker, {
-      props: { value: '2026-10-19', ariaLabel: 'Data', showMonthYearSelects: true, onValueChange, onBlur },
+      props: { value: '2026-10-19', ariaLabel: 'Data', onValueChange, onBlur },
     });
 
     await userEvent.click(screen.getByRole('button', { name: 'Data' }));
-    await pick(screen.getByRole('combobox', { name: 'Mês' }), 'março');
-    await pick(screen.getByRole('combobox', { name: 'Ano' }), '2025');
+    await pick('Mês', 'Março');
+    await pick('Ano', '2025');
     const day = [...document.querySelectorAll('[data-bits-day]')].find((el) => el.textContent?.trim() === '14') as HTMLElement;
     await userEvent.click(day);
 

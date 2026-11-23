@@ -135,11 +135,13 @@
   {/if}
 {:else if widget.kind === 'hero'}
   <!-- O destaque com o Zuzu: o total no título e, agrupando, até quatro cards LADO A LADO dentro
-       dele. Compacto para caber em dois andares. -->
+       dele. Compacto para caber em dois andares. Sem rolagem própria: se o conteúdo passa dos
+       andares (cards em duas fileiras, a nota do recorte em cima), quem cresce é a casa da grade
+       (`CONTENT_FIT_KINDS` do canvas) — a barra de rolagem por dentro cortava os cards. -->
   {@const heroTotal = total.toLocaleString('pt-BR')}
   <DashboardHeroCard
     data={{ title: `${heroTotal} ${noun}`, description: widget.title, zuzu: { pose: 'alert', size: 112 } }}
-    ui={{ className: 'h-full justify-between gap-4 overflow-y-auto p-5 sm:p-5' }}
+    ui={{ className: 'h-full justify-between gap-4 p-5 sm:p-5' }}
   >
     {#if widget.groupBy && slices.length > 0}
       {@render statRow(slices.slice(0, 4), '', 'p-3')}

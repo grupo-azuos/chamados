@@ -1,10 +1,27 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import SystemKanbanView, {
   type AzuosSystemKanbanViewProps,
+  columnDropId,
+  moveOfDrop,
 } from './azuos-system-kanban-view.svelte';
+
+/* O jsdom não tem as animações, a camada de cima (popover) nem o "o que está neste ponto" do
+   navegador, que o arrasto usa: aqui eles não fazem nada. */
+beforeAll(() => {
+  const noAnimations = () => [];
+  Object.assign(document, { getAnimations: noAnimations, elementFromPoint: () => null });
+  Object.assign(Element.prototype, { getAnimations: noAnimations });
+  Object.assign(HTMLElement.prototype, { showPopover() {}, hidePopover() {} });
+});
+
+const COLUMNS_WITHOUT_TICKETS: AzuosSystemKanbanViewProps['data']['columns'] = [
+  { id: 'in_progress', title: 'Em Atendimento', tickets: [] },
+  { id: 'waiting', title: 'Aguardando Terceiros', tickets: [] },
+  { id: 'done', title: 'Resolvidos', tickets: [] },
+];
 
 function renderView(
   overrides: {
@@ -24,6 +41,7 @@ function renderView(
     props: {
       data: {
         cardColors: {},
+        assigneePhotos: { 'u-carlos': 'https://cdn.example/carlos.png' },
         columns: [
           {
             id: 'todo',
@@ -32,20 +50,19 @@ function renderView(
               {
                 id: 10,
                 protocol: 'CH-0010',
-                title: 'Bug no login',
                 description: 'Bug no login',
                 priority: 'high',
                 projectName: 'Azuos Ticket',
                 requesterName: 'Ana',
+                assignee: 'Carlos Dev',
+                assigneeId: 'u-carlos',
                 githubIssueNumber: 42,
                 githubIssueUrl: 'https://github.com/issue/42',
                 createdAt: '2026-10-06T12:00:00.000Z',
-              } as any,
+              } as never,
             ],
           },
-          { id: 'in_progress', title: 'Em Atendimento', tickets: [] },
-          { id: 'waiting', title: 'Aguardando Terceiros', tickets: [] },
-          { id: 'done', title: 'Resolvidos', tickets: [] },
+          ...COLUMNS_WITHOUT_TICKETS,
         ],
         projects: [
           {
@@ -70,12 +87,7 @@ function renderView(
         totalTickets: 1,
         ...overrides.data,
       },
-      state: {
-        isLoading: false,
-        isEmpty: false,
-        error: null,
-        ...overrides.state,
-      },
+      state: { isLoading: false, isEmpty: false, error: null, ...overrides.state },
       actions,
     },
   });
@@ -100,178 +112,115 @@ it('searches systems and restores the all-systems filter', async () => {
 });
 
 describe('AzuosSystemKanbanView', () => {
-  it('moves a ticket using the stage selector without opening its details', async () => {
-    const actions = renderView();
-    const trigger = screen.getByRole('combobox', { name: 'Mover CH-0010 para' });
-    await fireEvent.pointerDown(trigger);
-    await fireEvent.click(trigger);
-    await fireEvent.pointerUp(await screen.findByRole('option', { name: 'Em Atendimento' }));
-    expect(actions.onMoveTicket).toHaveBeenCalledWith(10, 'in_progress');
-    expect(actions.onOpenTicket).not.toHaveBeenCalled();
-  });
-
-  it('disables the stage selector while a move is pending', () => {
-    renderView({ state: { isMoving: true } });
-    expect(screen.getByRole('combobox', { name: 'Mover CH-0010 para' })).toBeDisabled();
-  });
-
   // feliz
-  it('renders kanban columns and ticket card', () => {
+  it('renders the stage columns and the ticket card with its assignee photo', () => {
     renderView();
 
     expect(screen.getByRole('heading', { name: 'Abertos' })).toBeInTheDocument();
     expect(screen.getByText('CH-0010')).toBeInTheDocument();
     expect(screen.getByText('Bug no login')).toBeInTheDocument();
     expect(screen.getByText('#42')).toBeInTheDocument();
+    expect(screen.getByText('Carlos Dev')).toBeInTheDocument();
+    expect(screen.getAllByText('Arraste para cá.')).toHaveLength(3);
   });
 
-  it('triggers onOpenTicket when ticket card is clicked', async () => {
+  it('opens the ticket from the card', async () => {
     const actions = renderView();
 
-    /* No jsdom não há layout: o clique vai direto ao botão que a superfície estende sobre o card. */
-    await userEvent.click(screen.getByRole('button', { name: /CH-0010/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir o chamado CH-0010' }));
 
     expect(actions.onOpenTicket).toHaveBeenCalledWith(10);
   });
 
-  // triste
-  it('displays error state and allows retry', async () => {
-    const actions = renderView({
-      state: { error: 'Erro de conexão' },
-    });
-
-    expect(screen.getByText(/não foi possível carregar o kanban/i)).toBeInTheDocument();
-
-    const retryBtn = screen.getByRole('button', { name: /tentar de novo/i });
-    await userEvent.click(retryBtn);
-    expect(actions.onRetry).toHaveBeenCalled();
-  });
-
-  it('displays empty state when total tickets is 0', () => {
-    renderView({
-      data: {
-        columns: [
-          { id: 'todo', title: 'Abertos', tickets: [] },
-          { id: 'in_progress', title: 'Em Atendimento', tickets: [] },
-          { id: 'waiting', title: 'Aguardando Terceiros', tickets: [] },
-          { id: 'done', title: 'Resolvidos', tickets: [] },
-        ],
-        totalTickets: 0,
-      },
-      state: { isEmpty: true },
-    });
-
-    expect(screen.getByText(/nenhum chamado no kanban/i)).toBeInTheDocument();
-  });
-});
-
-/** O `dataTransfer` que o navegador manda num arrasto — o jsdom não cria um. */
-function dataTransfer(payload: Record<string, string> = {}) {
-  return {
-    effectAllowed: '',
-    dropEffect: '',
-    setData: (type: string, value: string) => {
-      payload[type] = value;
-    },
-    getData: (type: string) => payload[type] ?? '',
-  };
-}
-
-describe('AzuosSystemKanbanView: drag and drop', () => {
-  // feliz
-  it('moves the card to the column it was dropped on', async () => {
-    const actions = renderView();
-    const card = screen.getByRole('button', { name: /CH-0010/ });
-    const target = screen.getByRole('region', { name: 'Em Atendimento' });
-    const transfer = dataTransfer();
-
-    await fireEvent.dragStart(card, { dataTransfer: transfer });
-    await fireEvent.dragEnter(target, { dataTransfer: transfer });
-    await fireEvent.dragOver(target, { dataTransfer: transfer });
-    expect(screen.getByText('Solte aqui para mover para Em Atendimento')).toBeInTheDocument();
-
-    await fireEvent.drop(target, { dataTransfer: transfer });
-
-    expect(actions.onMoveTicket).toHaveBeenCalledWith(10, 'in_progress');
-    /* Logo depois de arrastar, o clique que o navegador dispara não abre o chamado. */
-    await fireEvent.click(card);
-    expect(actions.onOpenTicket).not.toHaveBeenCalled();
-  });
-
-  it('clears the highlight when the card leaves the column, and on drag end', async () => {
-    renderView();
-    const card = screen.getByRole('button', { name: /CH-0010/ });
-    const target = screen.getByRole('region', { name: 'Aguardando Terceiros' });
-
-    await fireEvent.dragStart(card);
-    await fireEvent.dragEnter(target);
-    await fireEvent.dragEnter(target);
-    await fireEvent.dragLeave(target);
-    expect(screen.getByText(/Solte aqui/)).toBeInTheDocument();
-    await fireEvent.dragLeave(target);
-    expect(screen.queryByText(/Solte aqui/)).not.toBeInTheDocument();
-
-    await fireEvent.dragEnd(card);
-    expect(screen.getAllByText('Arraste um card para cá')).toHaveLength(3);
-  });
-
-  // triste
-  it('falls back to the dragged card when the drop carries no data, and ignores garbage', async () => {
-    const actions = renderView();
-    const card = screen.getByRole('button', { name: /CH-0010/ });
-    const target = screen.getByRole('region', { name: 'Resolvidos' });
-
-    await fireEvent.dragStart(card);
-    await fireEvent.drop(target);
-    expect(actions.onMoveTicket).toHaveBeenCalledWith(10, 'done');
-
-    await fireEvent.drop(target, { dataTransfer: dataTransfer({ 'text/plain': 'x' }) });
-    expect(actions.onMoveTicket).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('AzuosSystemKanbanView: labels, keyboard and notices', () => {
-  // feliz
-  it('labels a card with a tone and shows the badge of the chosen tone', async () => {
+  it('labels a ticket from the menu and shows the chosen label', async () => {
+    const user = userEvent.setup();
     const actions = renderView({ data: { cardColors: { 10: 'warning' } } });
     expect(screen.getByText('Atenção')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByTitle('Atribuir etiqueta ao card'));
-    const picker = screen.getByRole('dialog');
-    await userEvent.click(within(picker).getByRole('button', { name: /Urgente/ }));
+    await user.click(screen.getByRole('button', { name: 'Etiqueta do chamado CH-0010' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Urgente' }));
 
     expect(actions.onSetCardColor).toHaveBeenCalledWith(10, 'danger');
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('opens the board on the full screen', async () => {
+    renderView();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Expandir o quadro' }));
+
+    expect(await screen.findByText('Quadro dos chamados')).toBeInTheDocument();
+  });
+
+  // triste
+  it('displays error state and allows retry', async () => {
+    const actions = renderView({ state: { error: 'Erro de conexão' } });
+
+    expect(screen.getByText(/não foi possível carregar o kanban/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /tentar de novo/i }));
+    expect(actions.onRetry).toHaveBeenCalled();
+  });
+
+  it('displays empty state when there is no ticket', () => {
+    renderView({ data: { totalTickets: 0 }, state: { isEmpty: true } });
+
+    expect(screen.getByText(/nenhum chamado no kanban/i)).toBeInTheDocument();
+  });
+
+  it('shows only placeholders while loading', () => {
+    renderView({ state: { isLoading: true } });
+
+    expect(screen.queryByRole('region', { name: 'Abertos' })).not.toBeInTheDocument();
+  });
+});
+
+const BOARD: AzuosSystemKanbanViewProps['data']['columns'] = [
+  { id: 'todo', title: 'Abertos', tickets: [{ id: 10 } as never] },
+  ...COLUMNS_WITHOUT_TICKETS,
+];
+
+describe('moveOfDrop', () => {
+  // feliz
+  it('moves the ticket to the stage of the column it was dropped on', () => {
+    expect(moveOfDrop({ sourceId: 10, targetId: columnDropId('waiting') }, BOARD)).toEqual({
+      ticketId: 10,
+      columnId: 'waiting',
+    });
+  });
+
+  // triste
+  it('asks nothing when dropped outside a column, on its own column or on something else', () => {
+    expect(moveOfDrop({ sourceId: 10, targetId: undefined }, BOARD)).toBeNull();
+    expect(moveOfDrop({ sourceId: 10, targetId: columnDropId('todo') }, BOARD)).toBeNull();
+    expect(moveOfDrop({ sourceId: 10, targetId: 11 }, BOARD)).toBeNull();
+    expect(moveOfDrop({ sourceId: 10, targetId: 'column:nada' }, BOARD)).toBeNull();
+    expect(moveOfDrop({ sourceId: 99, targetId: columnDropId('done') }, BOARD)).toBeNull();
+  });
+});
+
+describe('AzuosSystemKanbanView: drag and drop', () => {
+  // feliz
+  it('lets the keyboard pick a card up, and giving it back moves nothing', async () => {
+    const actions = renderView();
+    const card = screen.getByRole('button', { name: 'Mover o chamado CH-0010' });
+
+    card.focus();
+    await userEvent.keyboard(' ');
+    await userEvent.keyboard('{Escape}');
+
+    expect(actions.onMoveTicket).not.toHaveBeenCalled();
     expect(actions.onOpenTicket).not.toHaveBeenCalled();
   });
 
-  it('closes the label picker with Escape or by clicking the tag again', async () => {
-    renderView();
-    const tag = screen.getByTitle('Atribuir etiqueta ao card');
+  // triste
+  it('does not let a card be dragged while a move is going to the server', () => {
+    renderView({ state: { isMoving: true } });
 
-    await userEvent.click(tag);
-    await userEvent.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-
-    await userEvent.click(tag);
-    await userEvent.click(screen.getByRole('dialog'));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    await userEvent.click(tag);
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Mover o chamado CH-0010' })).toHaveAttribute('aria-disabled', 'true');
   });
+});
 
-  it('opens the ticket with Enter or Space on the card', async () => {
-    const actions = renderView();
-    /* O card é a superfície padrão: quem recebe o foco é o botão de verdade que a cobre. */
-    screen.getByRole('button', { name: /CH-0010/ }).focus();
-
-    await userEvent.keyboard('{Enter}');
-    await userEvent.keyboard(' ');
-    await userEvent.keyboard('a');
-
-    expect(actions.onOpenTicket).toHaveBeenCalledTimes(2);
-  });
-
+describe('AzuosSystemKanbanView: notices and the issue link', () => {
+  // feliz
   it('shows the move notice and lets the person dismiss it', async () => {
     const onClearMoveError = vi.fn();
     render(SystemKanbanView, {
@@ -294,85 +243,27 @@ describe('AzuosSystemKanbanView: labels, keyboard and notices', () => {
     expect(onClearMoveError).toHaveBeenCalled();
   });
 
-  // triste
-  it('shows a card without a system, an issue or a known priority', () => {
-    renderView({
-      data: {
-        columns: [
-          {
-            id: 'todo',
-            title: 'Abertos',
-            tickets: [
-              {
-                id: 11,
-                protocol: 'CH-0011',
-                description: 'Sem sistema',
-                priority: 'urgentissima',
-                requesterName: 'Bia',
-                githubIssueNumber: null,
-                githubIssueUrl: null,
-              } as never,
-            ],
-          },
-          { id: 'in_progress', title: 'Em Atendimento', tickets: [] },
-          { id: 'waiting', title: 'Aguardando Terceiros', tickets: [] },
-          { id: 'done', title: 'Resolvidos', tickets: [] },
-        ],
-      },
-    });
+  it('opens the GitHub issue without opening the ticket', async () => {
+    const actions = renderView();
 
-    expect(screen.getByText('urgentissima')).toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    const issue = screen.getByRole('link', { name: /#42/ });
+    issue.addEventListener('click', (event) => event.preventDefault());
+    await userEvent.click(issue);
+
+    expect(actions.onOpenTicket).not.toHaveBeenCalled();
   });
 
+  // triste
   it('keeps the notice without a close button when nothing can dismiss it', () => {
     renderView({ state: { moveError: 'Aviso fixo.' } });
 
     expect(screen.getByRole('alert')).toHaveTextContent('Aviso fixo.');
     expect(screen.queryByTitle('Fechar aviso')).not.toBeInTheDocument();
   });
-});
 
-describe('AzuosSystemKanbanView — the issue link and a card hovering with data', () => {
-  // feliz
-  it('opens the GitHub issue without opening the ticket, and accepts a card hovering with drag data', async () => {
-    const actions = renderView();
+  it('shows the initials when the assignee has no photo', () => {
+    renderView({ data: { assigneePhotos: undefined } });
 
-    const issue = screen.getByRole('link', { name: /#42/ });
-    issue.addEventListener('click', (event) => event.preventDefault());
-    await userEvent.click(issue);
-    expect(actions.onOpenTicket).not.toHaveBeenCalled();
-
-    const column = screen.getByText('Em Atendimento').closest('section, div[role="region"], div')!;
-    await fireEvent.dragOver(column, { dataTransfer: { dropEffect: 'none', getData: () => 'ticket:10', setData: () => {} } });
-    await fireEvent.dragEnter(column, { dataTransfer: { getData: () => 'ticket:10', setData: () => {} } });
-    await fireEvent.dragLeave(column, { dataTransfer: { getData: () => 'ticket:10', setData: () => {} } });
-    expect(column).toBeInTheDocument();
-  });
-});
-
-describe('AzuosSystemKanbanView: drag edges and the picker keys', () => {
-  // triste
-  /* Sem `dataTransfer` (alguns navegadores em arrastos sintéticos) a coluna ainda acende. */
-  it('highlights the column even when the drag carries no dataTransfer', async () => {
-    renderView();
-    const target = screen.getByRole('region', { name: 'Em Atendimento' });
-    await fireEvent.dragStart(screen.getByRole('button', { name: /CH-0010/ }), { dataTransfer: dataTransfer() });
-
-    await fireEvent.dragOver(target);
-    expect(screen.getByText('Solte aqui para mover para Em Atendimento')).toBeInTheDocument();
-
-    /* Sair de uma coluna em que nunca se entrou não deixa contador negativo. */
-    await fireEvent.dragLeave(target);
-    expect(screen.queryByText('Solte aqui para mover para Em Atendimento')).not.toBeInTheDocument();
-  });
-
-  it('keeps the label picker open on any key other than Escape', async () => {
-    renderView();
-    await userEvent.click(screen.getByTitle('Atribuir etiqueta ao card'));
-
-    await fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Tab' });
-
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('CD')).toBeInTheDocument();
   });
 });

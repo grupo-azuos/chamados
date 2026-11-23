@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import ComputerListView, {
+  hasNoShortcut,
   displayNameOf,
   type ComputerListFilter,
   type ComputerSummary,
@@ -70,6 +71,7 @@ const summary: ComputerSummary = {
   critical: 2,
   attention: 1,
   neverSeen: 1,
+  needsUpgrade: 2,
 };
 
 const emptyFilter: ComputerListFilter = {
@@ -78,6 +80,8 @@ const emptyFilter: ComputerListFilter = {
   healthStatus: '',
   kind: '',
   includeArchived: false,
+  responsibleId: '',
+  upgrade: '',
   onlyOnline: false,
   onlyOffline: false,
   alert: '',
@@ -90,6 +94,8 @@ const actions = {
   onDepartmentChange: vi.fn(),
   onHealthStatusChange: vi.fn(),
   onArchivedChange: vi.fn(),
+  onResponsibleChange: vi.fn(),
+  onUpgradeChange: vi.fn(),
   onOnlineChange: vi.fn(),
   onOfflineChange: vi.fn(),
   onKindChange: vi.fn(),
@@ -267,6 +273,25 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
       screen.getByRole('button', { name: /^Com alerta ativo .+: filtrar a lista$/ }),
     );
     expect(actions.onAlertChange).toHaveBeenLastCalledWith('any');
+  });
+
+  // feliz
+  it('filters the machines that need an upgrade from their card, and counts them', async () => {
+    renderWithFilter();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Precisa de upgrade .+: filtrar a lista$/ }),
+    );
+    expect(actions.onUpgradeChange).toHaveBeenLastCalledWith('any');
+  });
+
+  // triste
+  it('turns the upgrade filter off on a second click, and the total card stays unmarked', async () => {
+    renderWithFilter({ upgrade: 'any' });
+
+    expect(hasNoShortcut({ ...emptyFilter, upgrade: 'any' })).toBe(false);
+    await userEvent.click(screen.getByRole('button', { name: /^Precisa de upgrade .+: tirar o filtro$/ }));
+    expect(actions.onUpgradeChange).toHaveBeenLastCalledWith('');
   });
 
   // triste
@@ -648,7 +673,8 @@ describe('AzuosComputerListView — Paralegal format', () => {
     expect(container.querySelectorAll('[data-slot="computer-row"]')).toHaveLength(30);
     expect(screen.getByText('25–30 de 30 computadores')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /anterior/i }));
+    /* "Anterior" da paginação, e não o "Ver anteriores" da faixa de cartões do topo. */
+    await userEvent.click(screen.getByRole('button', { name: /^anterior/i }));
     expect(onPageChange).toHaveBeenCalledWith(1);
   });
 

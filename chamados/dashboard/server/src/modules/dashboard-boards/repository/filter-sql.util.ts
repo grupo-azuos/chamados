@@ -67,20 +67,30 @@ function compareRule(column: SourceColumn, rule: FilterRule): SQL {
   const operator = operators[rule.operator as keyof typeof operators];
   if (!operator) throw new InvalidFilterError(`O operador "${rule.operator}" não vale aqui.`);
 
-  return sql`${column.expression} ${operator} ${value}`;
+  return sql`${subject(column)} ${operator} ${operand(column, value)}`;
+}
+
+/* Campo que não distingue maiúscula ("Trilha" = "trilha"): os dois lados vão em minúsculas. */
+function subject(column: SourceColumn): SQL {
+  return column.caseInsensitive ? sql`lower(${column.expression})` : column.expression;
+}
+
+function operand(column: SourceColumn, value: string | number | boolean): SQL {
+  return column.caseInsensitive && typeof value === 'string' ? sql`lower(${value})` : sql`${value}`;
 }
 
 function listRule(column: SourceColumn, rule: FilterRule): SQL {
   const values = listOf(rule.value).map((value) => scalar(column, value));
   if (values.length === 0) return rule.operator === 'in' ? sql`false` : sql`true`;
   const list = sql.join(
-    values.map((value) => sql`${value}`),
+    values.map((value) => operand(column, value)),
     sql`, `,
   );
+  const expression = subject(column);
 
   return rule.operator === 'in'
-    ? sql`${column.expression} in (${list})`
-    : sql`(${column.expression} is null or ${column.expression} not in (${list}))`;
+    ? sql`${expression} in (${list})`
+    : sql`(${expression} is null or ${expression} not in (${list}))`;
 }
 
 function textRule(column: SourceColumn, rule: FilterRule): SQL {

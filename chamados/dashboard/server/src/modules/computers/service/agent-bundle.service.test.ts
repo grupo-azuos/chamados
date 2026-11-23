@@ -63,6 +63,20 @@ function entryNames(zip: Buffer): string[] {
   return names;
 }
 
+/** O conteúdo de uma entrada, lido do cabeçalho local (o zip é "store", sem compressão). */
+function entryContent(zip: Buffer, name: string): Buffer {
+  for (let offset = zip.indexOf(Buffer.from([0x50, 0x4b, 0x03, 0x04])); offset >= 0; ) {
+    const size = zip.readUInt32LE(offset + 18);
+    const nameLength = zip.readUInt16LE(offset + 26);
+    const extraLength = zip.readUInt16LE(offset + 28);
+    const start = offset + 30 + nameLength + extraLength;
+    if (zip.subarray(offset + 30, offset + 30 + nameLength).toString('utf8') === name)
+      return zip.subarray(start, start + size);
+    offset = zip.indexOf(Buffer.from([0x50, 0x4b, 0x03, 0x04]), start + size);
+  }
+  throw new Error(`entry ${name} not found`);
+}
+
 describe('AgentBundleService', () => {
   // feliz
   it('packs the MSI, certificate, scripts and readme for a generic install', async () => {
@@ -75,6 +89,7 @@ describe('AgentBundleService', () => {
       'azuos-agent-1.2.3-x64.msi',
       'publisher.cer',
       'install-certificate.ps1',
+      'instalar.cmd',
       'install-agent.ps1',
       'LEIA-ME.txt',
     ]);
@@ -92,9 +107,52 @@ describe('AgentBundleService', () => {
       computerId: 7,
     });
 
-    expect(bundle.fileName).toBe('azuos-agent-1.2.3-recepcao-01.zip');
+    expect(bundle.fileName).toBe('instalar-agente-recepcao-01.zip');
     expect(bundle.content.includes("[string]$Token = 'token-da-recepcao'")).toBe(true);
     expect(bundle.content.includes("[string]$ServerUrl = 'https://chamados.example.test'")).toBe(true);
+  });
+
+  // feliz
+  /* O duplo clique precisa chamar o script da mesma pasta, com a política liberada só para ele,
+     e o script precisa do BOM para o PowerShell 5.1 ler os acentos. */
+  it('ships a double-click launcher that runs the script with the execution policy bypassed', async () => {
+    const { service } = setup();
+
+    const bundle = await service.bundle(person({ infra: 'admin' }), {
+      ...request,
+      token: 'token-da-recepcao',
+      computerId: 7,
+    });
+
+    const launcher = entryContent(bundle.content, 'instalar.cmd').toString('utf8');
+    expect(launcher).toContain('-ExecutionPolicy Bypass -File "%~dp0install-agent.ps1"');
+    expect(launcher).toContain('Unblock-File');
+    expect(launcher).toContain('\r\n');
+    expect([...entryContent(bundle.content, 'install-agent.ps1').subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+  });
+
+  // triste
+  it('refuses a token from someone whose profile cannot register computers', async () => {
+    const { service, authenticateAgent } = setup();
+
+    await expect(
+      service.bundle(
+        /* Papel fora da lista: a policy de cadastrar computador recusa antes de olhar o token. */
+        { ...person({ infra: 'admin' }), role: 'guest' as unknown as RequestUser['role'] },
+        { ...request, token: 't', computerId: 7 },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(authenticateAgent).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('refuses a token that matches no machine at all', async () => {
+    const { service, authenticateAgent } = setup();
+    authenticateAgent.mockResolvedValueOnce({ ok: false, reason: 'invalid-token' });
+
+    await expect(
+      service.bundle(person({ infra: 'admin' }), { ...request, token: 'inventado', computerId: 7 }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   // triste

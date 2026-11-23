@@ -6,6 +6,7 @@ import ExcelJS from 'exceljs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { type ComputerRow } from '../../../lib/db/schema/computers.schema';
 import { type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { REPORT_FETCH_LIMIT, REPORT_MAX_ROWS } from '../../../lib/report/report-limit.util';
@@ -132,15 +133,135 @@ function makeService(
   presence = new AgentPresenceService(),
   watch = new LiveWatchService(),
   drills?: BoardDrillResolver,
+  directory?: UserDirectoryProvider,
 ) {
   return {
-    service: new ComputersService(repository as ComputersRepository, presence, watch, drills),
+    service: new ComputersService(repository as ComputersRepository, presence, watch, drills, directory),
     presence,
     watch,
   };
 }
 
 const query = (overrides: Record<string, unknown> = {}) => computerListQuerySchema.parse(overrides);
+
+/** O diretório do admin-console, fingido: só a lista do escritório inteiro importa aqui. */
+function directoryWith(listAllUsers: () => Promise<unknown>): UserDirectoryProvider {
+  return { listAllUsers: vi.fn(listAllUsers) } as unknown as UserDirectoryProvider;
+}
+
+const listRow = (over: Partial<ComputerRow> = {}) => ({
+  ...computerRow(over),
+  lastPreventiveAt: null,
+  activeAlerts: 0,
+  activeAlertMetrics: [],
+  ticketsThisMonth: 0,
+});
+
+describe('ComputersService.list — responsible', () => {
+  const people = [
+    { id: 'person-ana', name: 'Ana Exemplo', email: 'ana@exemplo.invalid', image: '/avatars/ana.png', banned: false },
+  ];
+
+  // feliz
+  it('brings the directory photo and id of each responsible, matched by name', async () => {
+    const list = vi.fn().mockResolvedValue({
+      rows: [listRow({ id: 1, responsibleName: 'ana exemplo' }), listRow({ id: 2, responsibleName: 'Fora do Diretório' })],
+      total: 2,
+    });
+    const { service } = makeService({ list }, undefined, undefined, undefined, directoryWith(() => Promise.resolve(people)));
+
+    const page = await service.list(ana, query());
+
+    expect(page.items.map(({ responsibleId, responsibleAvatarUrl }) => ({ responsibleId, responsibleAvatarUrl }))).toEqual([
+      { responsibleId: 'person-ana', responsibleAvatarUrl: '/avatars/ana.png' },
+      { responsibleId: null, responsibleAvatarUrl: null },
+    ]);
+  });
+
+  // feliz
+  it('translates the chosen person into her name before asking the repository', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const { service } = makeService({ list }, undefined, undefined, undefined, directoryWith(() => Promise.resolve(people)));
+
+    await service.list(ana, query({ responsibleId: 'person-ana' }));
+
+    expect(list).toHaveBeenCalledWith(expect.anything(), undefined, undefined, { kind: 'name', name: 'ana exemplo' });
+  });
+
+  // feliz
+  it('asks for machines without responsible without depending on the directory', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const { service } = makeService({ list }, undefined, undefined, undefined, directoryWith(() => Promise.reject(new Error('fora'))));
+
+    await service.list(ana, query({ responsibleId: 'none' }));
+
+    expect(list).toHaveBeenCalledWith(expect.anything(), undefined, undefined, { kind: 'none' });
+  });
+
+  // triste
+  it('keeps the inventory up with initials when the directory fails and no person was asked', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [listRow({ responsibleName: 'Ana Exemplo' })], total: 1 });
+    const { service } = makeService({ list }, undefined, undefined, undefined, directoryWith(() => Promise.reject(new Error('fora'))));
+
+    const page = await service.list(ana, query());
+
+    expect(page.items[0]?.responsibleAvatarUrl).toBeNull();
+  });
+
+  // triste
+  it('surfaces the directory failure when filtering by a person, instead of an empty list', async () => {
+    const list = vi.fn();
+    const { service } = makeService({ list }, undefined, undefined, undefined, directoryWith(() => Promise.reject(new Error('fora'))));
+
+    await expect(service.list(ana, query({ responsibleId: 'person-ana' }))).rejects.toThrow('fora');
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('matches no machine when the chosen person is no longer in the directory', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const { service } = makeService({ list }, undefined, undefined, undefined, directoryWith(() => Promise.resolve(people)));
+
+    await service.list(ana, query({ responsibleId: 'person-gone' }));
+
+    expect(list).toHaveBeenCalledWith(expect.anything(), undefined, undefined, { kind: 'nobody' });
+  });
+
+  // feliz
+  it('applies the same responsible filter to the report', async () => {
+    const listAll = vi.fn().mockResolvedValue([]);
+    const { service } = makeService({ listAll }, undefined, undefined, undefined, directoryWith(() => Promise.resolve(people)));
+
+    await service.exportList(ana, { format: 'xlsx', responsibleId: 'person-ana' });
+
+    expect(listAll).toHaveBeenCalledWith(expect.anything(), undefined, undefined, { kind: 'name', name: 'ana exemplo' });
+  });
+});
+
+describe('ComputersService — upgrade filter', () => {
+  // feliz
+  it('hands the upgrade filter to the list and to the report', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const listAll = vi.fn().mockResolvedValue([]);
+    const { service } = makeService({ list, listAll });
+
+    await service.list(ana, query({ upgrade: 'cpu' }));
+    await service.exportList(ana, { format: 'xlsx', upgrade: 'any' });
+
+    expect(list).toHaveBeenCalledWith(expect.objectContaining({ upgrade: 'cpu' }), undefined, undefined, undefined);
+    expect(listAll).toHaveBeenCalledWith(expect.objectContaining({ upgrade: 'any' }), undefined, undefined, undefined);
+  });
+
+  // triste
+  it('sends no upgrade filter while it is off', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const { service } = makeService({ list });
+
+    await service.list(ana, query());
+
+    expect(list.mock.calls[0]?.[0].upgrade).toBeUndefined();
+  });
+});
 
 describe('ComputersService.list', () => {
   // feliz
@@ -156,7 +277,7 @@ describe('ComputersService.list', () => {
     expect(drillCondition).toHaveBeenCalledWith(ana, expect.objectContaining({ key: 'notebook' }), [
       'computers',
     ]);
-    expect(list).toHaveBeenCalledWith(expect.anything(), undefined, cut);
+    expect(list).toHaveBeenCalledWith(expect.anything(), undefined, cut, undefined);
   });
 
   // triste
@@ -168,7 +289,7 @@ describe('ComputersService.list', () => {
     await service.list(ana, query());
 
     expect(drillCondition).not.toHaveBeenCalled();
-    expect(list).toHaveBeenCalledWith(expect.anything(), undefined, undefined);
+    expect(list).toHaveBeenCalledWith(expect.anything(), undefined, undefined, undefined);
   });
 
   // triste
@@ -191,7 +312,7 @@ describe('ComputersService.list', () => {
 
     await service.list(ana, onlyOnline);
 
-    expect(list).toHaveBeenCalledWith(onlyOnline, { onlineIds: [7], wantOnline: true }, undefined);
+    expect(list).toHaveBeenCalledWith(onlyOnline, { onlineIds: [7], wantOnline: true }, undefined, undefined);
   });
 
   // triste
@@ -202,7 +323,7 @@ describe('ComputersService.list', () => {
 
     const page = await service.list(ana, onlyOnline);
 
-    expect(list).toHaveBeenCalledWith(onlyOnline, { onlineIds: [], wantOnline: true }, undefined);
+    expect(list).toHaveBeenCalledWith(onlyOnline, { onlineIds: [], wantOnline: true }, undefined, undefined);
     expect(page.total).toBe(0);
   });
 
@@ -216,7 +337,7 @@ describe('ComputersService.list', () => {
 
     await service.list(ana, onlyOffline);
 
-    expect(list).toHaveBeenCalledWith(onlyOffline, { onlineIds: [7], wantOnline: false }, undefined);
+    expect(list).toHaveBeenCalledWith(onlyOffline, { onlineIds: [7], wantOnline: false }, undefined, undefined);
   });
 
   // triste
@@ -227,7 +348,7 @@ describe('ComputersService.list', () => {
 
     await service.list(ana, all);
 
-    expect(list).toHaveBeenCalledWith(all, undefined, undefined);
+    expect(list).toHaveBeenCalledWith(all, undefined, undefined, undefined);
   });
   // feliz
   it('returns the page translated into the contract', async () => {
@@ -279,7 +400,7 @@ describe('ComputersService.exportList', () => {
 
     await service.exportList(ana, { format: 'pdf', onlyOnline: true });
 
-    expect(listAll).toHaveBeenCalledWith({ format: 'pdf', onlyOnline: true }, { onlineIds: [7], wantOnline: true }, undefined);
+    expect(listAll).toHaveBeenCalledWith({ format: 'pdf', onlyOnline: true }, { onlineIds: [7], wantOnline: true }, undefined, undefined);
   });
   // feliz
   it('builds the file from every machine that matched, not only a page', async () => {
@@ -288,7 +409,7 @@ describe('ComputersService.exportList', () => {
 
     const report = await service.exportList(ana, { format: 'pdf', department: 'rh' });
 
-    expect(listAll).toHaveBeenCalledWith({ format: 'pdf', department: 'rh' }, undefined, undefined);
+    expect(listAll).toHaveBeenCalledWith({ format: 'pdf', department: 'rh' }, undefined, undefined, undefined);
     expect(report.fileName).toBe('inventario.pdf');
     expect(report.buffer.length).toBeGreaterThan(0);
   });

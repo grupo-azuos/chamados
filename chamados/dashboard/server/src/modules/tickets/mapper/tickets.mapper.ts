@@ -1,5 +1,6 @@
 import { type TicketAttachment } from '@template/shared/schemas/ticket-attachment.schema';
 import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
+import { normalizeSystemName } from '@template/shared/domain/system-name.util';
 import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { type PublicTicketHistory } from '@template/shared/schemas/ticket-history.schema';
 import { type TicketPerson } from '@template/shared/schemas/ticket-person.schema';
@@ -231,10 +232,8 @@ export function toTicketUpdate(
     /* Escolheu da lista? O nome digitado é limpo — o cadastro já diz qual é. */
     update.customSystemName = null;
   } else if (input.customSystemName !== undefined) {
-    update.customSystemName =
-      typeof input.customSystemName === 'string'
-        ? normalizeOptional(input.customSystemName) ?? null
-        : null;
+    /* "Trilha" e "trilha" são o mesmo sistema: grava sempre do mesmo jeito, em minúsculas. */
+    update.customSystemName = normalizeSystemName(input.customSystemName);
   }
 
   return update;
@@ -243,9 +242,9 @@ export function toTicketUpdate(
 /* Escolheu da lista? O nome digitado não vale — o cadastro já diz qual é. */
 function resolveCustomSystemName(input: CreateTicketInput): string | null {
   if (input.projectId) return null;
-  if (typeof input.customSystemName !== 'string') return null;
 
-  return normalizeOptional(input.customSystemName) ?? null;
+  /* "Trilha" e "trilha" são o mesmo sistema: grava sempre do mesmo jeito, em minúsculas. */
+  return normalizeSystemName(input.customSystemName);
 }
 
 /** Texto opcional só com espaço vira nulo: "" e nulo significando a mesma coisa confunde a busca. */

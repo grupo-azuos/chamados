@@ -28,6 +28,8 @@
     "api:client": "openapi-typescript http://localhost:3005/docs-json -o src/lib/api/generated/schema.ts"
   },
   "dependencies": {
+    "@dnd-kit/dom": "^0.5.3",
+    "@dnd-kit/svelte": "^0.5.3",
     "@internationalized/date": "^3.12.4",
     "@lucide/svelte": "^1.48.0",
     "@sveltejs/adapter-static": "^3.0.10",

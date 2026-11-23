@@ -20,7 +20,8 @@
     pessoa: { total: 9, isLoading: false, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 5 }, { key: 'Caio Reis', label: 'Caio Reis', value: 4 }] },
     ticketStatus: { total: 9, isLoading: false, series: [{ key: 'open', label: 'Aberto', value: 6 }, { key: 'in_progress', label: 'Em atendimento', value: 3 }] },
   };
-  const actions = { onChange: () => {}, onClear: () => {}, onAdd: () => {}, onRemove: () => {}, onDisplayChange: () => {}, onWidthChange: () => {}, onPlaceChange: () => {} };
+  const exactDates = { ...EMPTY_BOARD_FILTER_VALUES, period: { mode: 'custom' as const, from: '2026-11-01', to: '2026-11-30' } };
+  const actions = { onChange: () => {}, onClear: () => {}, onOpenChange: () => {}, onAdd: () => {}, onRemove: () => {}, onDisplayChange: () => {}, onWidthChange: () => {}, onPlaceChange: () => {} };
 </script>
 
 <Story name="Default" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />
@@ -31,6 +32,16 @@
 <Story name="Pessoas com foto" args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts: { ...counts, pessoa: { ...counts.pessoa, series: [{ key: 'Ana Lima', label: 'Ana Lima', value: 5, avatarUrl: '/icon-192.png' }, { key: 'Caio Reis', label: 'Caio Reis', value: 4, avatarUrl: null }] } } }, actions }} />
 
 <!-- Caso limite: tela estreita — as peças descem uma por linha. -->
+<!-- Com valores escolhidos e a faixa fechada pela seta: o cabeçalho fica, com o selo dos filtros
+     ligados e o "Limpar filtros" na ponta direita. -->
+<Story name="Fechado" args={{ data: { filters, values: { ...EMPTY_BOARD_FILTER_VALUES, person: 'Ana Lima', ticketStatus: 'open' }, counts }, state: { isOpen: false }, actions }} />
+
+<!-- Datas exatas: as datas entram ao lado do período, na mesma fileira e na mesma altura. -->
+<Story name="Datas exatas" args={{ data: { filters, values: exactDates, counts }, ui: { part: 'period' }, actions }} />
+
+<!-- Caso limite: datas exatas numa largura de celular — as datas quebram para a linha de baixo. -->
+<Story name="Datas exatas em tela estreita" parameters={{ viewport: { defaultViewport: 'mobile1' } }} args={{ data: { filters, values: exactDates, counts }, ui: { part: 'period' }, actions }} />
+
 <Story name="Tela estreita" parameters={{ viewport: { defaultViewport: 'mobile1' } }} args={{ data: { filters, values: EMPTY_BOARD_FILTER_VALUES, counts }, actions }} />
 
 <!-- Os cards: uma faixa da largura da barra, cada opção com quantos há nela. -->

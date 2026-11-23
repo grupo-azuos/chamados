@@ -96,3 +96,48 @@ describe('AzuosFilterPanel', () => {
     expect(screen.queryByRole('button', { name: 'Limpar filtros' })).toBeNull();
   });
 });
+
+describe('AzuosFilterPanel — person field', () => {
+  const personField: FilterPanelField = {
+    key: 'responsible',
+    label: 'Responsável',
+    control: 'person',
+    ariaLabel: 'Filtrar por responsável',
+    allLabel: 'Todos os responsáveis',
+    value: '',
+    options: [{ value: 'none', label: '(Sem responsável)' }],
+    people: [{ id: 'p-ana', name: 'Ana Lima', photo: null }],
+  };
+
+  function renderPerson(value = '') {
+    return render(FilterPanel, {
+      props: {
+        data: {
+          search: { value: '', placeholder: 'Buscar…' },
+          fields: [{ ...personField, value }],
+          chips: [{ key: 'responsible', label: 'Responsável' }],
+          canClear: true,
+        },
+        actions,
+      },
+    });
+  }
+
+  // feliz
+  it('uses the person picker with the photo and reports the chosen id by key', async () => {
+    renderPerson();
+
+    await fireEvent.click(screen.getByRole('combobox', { name: 'Filtrar por responsável' }));
+    await fireEvent.click(await screen.findByRole('option', { name: /Ana Lima/ }));
+
+    expect(actions.onFieldChange).toHaveBeenLastCalledWith('responsible', 'p-ana');
+  });
+
+  // triste
+  it('reads "everyone" while no person is chosen, and the special choice when it is', async () => {
+    renderPerson();
+    expect(screen.getByRole('combobox', { name: 'Filtrar por responsável' })).toHaveTextContent(
+      'Todos os responsáveis',
+    );
+  });
+});

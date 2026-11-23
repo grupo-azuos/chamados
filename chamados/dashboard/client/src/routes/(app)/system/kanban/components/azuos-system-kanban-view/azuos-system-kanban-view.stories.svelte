@@ -85,13 +85,32 @@
           priority: 'medium',
           projectName: 'Azuos Ticket',
           requesterName: 'Carlos Dev',
+          assignee: 'Bruno Lima',
+          assigneeId: 'u-bruno',
           githubIssueNumber: null,
           githubIssueUrl: null,
           createdAt: '2026-10-05T15:00:00.000Z',
         }),
       ],
     },
-    { id: 'waiting' as const, title: 'Aguardando Terceiros', tickets: [] },
+    {
+      id: 'waiting' as const,
+      title: 'Aguardando Terceiros',
+      tickets: [
+        mockTicket({
+          id: 12,
+          status: 'waiting_third_party',
+          protocol: 'CH-0012',
+          description: 'Integração com o banco devolvendo erro 500 no fechamento do mês',
+          priority: 'high',
+          customSystemName: 'Planilha do financeiro',
+          projectId: null,
+          projectName: null,
+          assignee: 'Bruno Lima',
+          assigneeId: 'u-bruno',
+        }),
+      ],
+    },
     { id: 'done' as const, title: 'Resolvidos', tickets: [] },
   ];
 
@@ -99,8 +118,9 @@
     columns: mockColumns,
     projects: mockProjects,
     selectedProjectId: null,
-    totalTickets: 2,
-    cardColors: {},
+    totalTickets: 3,
+    cardColors: { 12: 'danger' },
+    assigneePhotos: { 'u-bruno': null },
   };
 
   const baseState = {
@@ -130,6 +150,16 @@
     data: baseData,
     state: baseState,
     actions: baseActions,
+  }}
+/>
+
+<!-- Com uma mudança de etapa indo para o servidor e o aviso do quadro. -->
+<Story
+  name="MovingWithNotice"
+  args={{
+    data: baseData,
+    state: { ...baseState, isMoving: true, moveError: 'Um chamado já iniciado não volta para "A Fazer".' },
+    actions: { ...baseActions, onClearMoveError: fn() },
   }}
 />
 

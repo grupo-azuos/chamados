@@ -59,7 +59,8 @@
         do merge; os demais, o da criação. Issues resolvidas usam o horário de fechamento.
       </DialogDescription>
     </DialogHeader>
-    <div class="max-h-[60vh] space-y-3 overflow-y-auto">
+    <!-- Sem rolagem própria: quem rola é a área do diálogo, que tem respiro nas bordas. -->
+    <div class="space-y-3">
       {#each data.items as event (event.id)}
         <article class="rounded-box bg-muted p-3">
           <div class="flex items-center justify-between gap-2 text-xs text-muted-foreground">

@@ -262,7 +262,6 @@
             disabled={model.state.isSubmitting}
             ariaInvalid={Boolean(model.data.fields.date.error)}
             ariaDescribedBy={model.data.fields.date.error ? dateErrorId : undefined}
-            showMonthYearSelects
             onValueChange={(value) => model.actions.onChange('date', value ?? '')}
             onBlur={() => model.actions.onBlur('date')}
           />

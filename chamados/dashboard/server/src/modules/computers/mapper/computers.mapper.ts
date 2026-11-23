@@ -7,6 +7,7 @@ import {
 } from '@template/shared/schemas/agent-snapshot.schema';
 import { type ComputerLive } from '@template/shared/schemas/computer-live.schema';
 import { type ComputerWithTickets } from '../repository/computers.repository';
+import { type ResponsiblePerson } from '../service/computer-responsible.util';
 import {
   type Computer,
   type ComputerListItem,
@@ -28,7 +29,16 @@ import { type ComputerInsert, type ComputerRow } from '../../../lib/db/schema/co
  * agora, e quem sabe disso é o registro de conexões vivas, não o banco.
  */
 /** A linha da LISTA: a máquina mais a conta de chamados do mês. */
-export function toComputerListItem(row: ComputerWithTickets, isOnline: boolean): ComputerListItem {
+/**
+ * `person`: a pessoa do diretório por trás do nome do responsável (`computer-responsible.util`)
+ * — de onde vêm o id do filtro e a foto do cartão. Sem ela, os dois ficam nulos e a tela mostra
+ * as iniciais.
+ */
+export function toComputerListItem(
+  row: ComputerWithTickets,
+  isOnline: boolean,
+  person: ResponsiblePerson | null = null,
+): ComputerListItem {
   const lastPreventiveAt = row.lastPreventiveAt?.toISOString() ?? null;
   return {
     ...toComputer(row, isOnline),
@@ -37,6 +47,8 @@ export function toComputerListItem(row: ComputerWithTickets, isOnline: boolean):
     lastPreventiveAt,
     activeAlerts: row.activeAlerts,
     activeAlertMetrics: row.activeAlertMetrics,
+    responsibleId: person?.id ?? null,
+    responsibleAvatarUrl: person?.avatarUrl ?? null,
   };
 }
 

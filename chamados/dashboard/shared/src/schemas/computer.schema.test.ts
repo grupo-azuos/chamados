@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  COMPUTER_NO_RESPONSIBLE_FILTER,
   computerAlertSchema,
   computerCreateFormSchema,
   computerResponsibleSchema,
@@ -180,6 +181,30 @@ describe('computerListQuerySchema', () => {
 
   it('refuses a page size above the ceiling', () => {
     expect(computerListQuerySchema.safeParse({ pageSize: 5000 }).success).toBe(false);
+  });
+
+  // feliz
+  it('accepts a responsible person by directory id, or the "no responsible" choice', () => {
+    expect(computerListQuerySchema.parse({ responsibleId: ' person-1 ' }).responsibleId).toBe('person-1');
+    expect(computerListQuerySchema.parse({ responsibleId: COMPUTER_NO_RESPONSIBLE_FILTER }).responsibleId).toBe(
+      'none',
+    );
+  });
+
+  // feliz
+  it('accepts the upgrade filter: any reason or a single one', () => {
+    expect(computerListQuerySchema.parse({ upgrade: 'any' }).upgrade).toBe('any');
+    expect(computerListQuerySchema.parse({ upgrade: 'cpu' }).upgrade).toBe('cpu');
+  });
+
+  // triste
+  it('refuses an upgrade reason the rules do not have, like "ssd"', () => {
+    expect(computerListQuerySchema.safeParse({ upgrade: 'ssd' }).success).toBe(false);
+  });
+
+  // triste
+  it('refuses a blank responsible filter instead of treating it as "no responsible"', () => {
+    expect(computerListQuerySchema.safeParse({ responsibleId: '   ' }).success).toBe(false);
   });
 });
 

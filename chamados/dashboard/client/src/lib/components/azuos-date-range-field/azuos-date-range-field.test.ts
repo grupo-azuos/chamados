@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -53,10 +53,10 @@ describe('AzuosDateRangeField', () => {
 });
 
 describe('AzuosDateRangeField — the calendar and the month and year selectors', () => {
-  const pick = async (combobox: HTMLElement, option: string) => {
-    await fireEvent.pointerDown(combobox);
-    await fireEvent.click(combobox);
-    await fireEvent.pointerUp(await screen.findByRole('option', { name: option }));
+  /* Com dois calendários há dois pares de listas; o primeiro manda na página. */
+  const pick = async (dropdown: string, option: string) => {
+    await userEvent.click((await screen.findAllByRole('button', { name: new RegExp(`^${dropdown}:`) }))[0]!);
+    await userEvent.click(screen.getByRole('option', { name: option }));
   };
 
   // feliz
@@ -67,9 +67,11 @@ describe('AzuosDateRangeField — the calendar and the month and year selectors'
     });
 
     await userEvent.click(screen.getByRole('button', { name: 'Período' }));
-    await pick(await screen.findByRole('combobox', { name: 'Mês' }), 'maio');
-    await pick(screen.getByRole('combobox', { name: 'Ano' }), '2027');
-    expect(screen.getByRole('combobox', { name: 'Ano' })).toHaveTextContent('2027');
+    await pick('Mês', 'Maio');
+    await pick('Ano', '2027');
+    expect(screen.getAllByRole('button', { name: 'Ano: 2027' })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Mês: Junho' })).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="popover-content"] select')).not.toBeInTheDocument();
 
     const days = document.querySelectorAll('[data-bits-day]');
     const first = [...days].find((day) => day.textContent?.trim() === '5') as HTMLElement;

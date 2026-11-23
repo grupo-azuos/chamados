@@ -91,8 +91,9 @@
     </DialogHeader>
 
     <div class="space-y-4">
-      <!-- Seus Cargos por Área -->
-      <div class="rounded-box bg-card p-4 space-y-3 shadow-card">
+      <!-- Seus Cargos por Área. Dentro do diálogo branco o bloco é a caixa cinza, sem sombra:
+           card branco dentro de superfície branca é proibido (padrão Apple). -->
+      <div class="rounded-box bg-muted p-4 space-y-3">
         <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
           <ShieldCheck class="size-4 text-primary" />
           <span>Seus Cargos Internos por Área</span>
@@ -120,7 +121,7 @@
       </div>
 
       <!-- Perfis da Equipe -->
-      <div class="rounded-box border border-border bg-muted p-4 space-y-2.5">
+      <div class="rounded-box bg-muted p-4 space-y-2.5">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Users class="size-4 text-muted-foreground" />

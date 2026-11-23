@@ -7,6 +7,14 @@ import {
   STALE_UPTIME_DAYS,
 } from '@template/shared/domain/computer-health.util';
 import { type ResourceCondition } from '@template/shared/domain/computer-resource.util';
+import {
+  type ComputerUpgradeFilter,
+  OLD_CPU_PATTERNS,
+  UPGRADE_DISK_FREE_PERCENT,
+  UPGRADE_MEMORY_BYTES,
+  UPGRADE_NEEDS,
+  type UpgradeNeed,
+} from '@template/shared/domain/computer-upgrade.util';
 import { Inject, Injectable } from '@nestjs/common';
 import { type AlertMetric } from '@template/shared/domain/computer-alert.util';
 import { compareMachines } from '@template/shared/domain/machine-number.util';
@@ -59,6 +67,7 @@ import {
   type ComputerInsert,
   type ComputerRow,
 } from '../../../lib/db/schema/computers.schema';
+import { type ResponsibleFilter } from '../service/computer-responsible.util';
 
 /** Agregados da lista, na mesma consulta: chamados do mês, última preventiva e alertas ativos. */
 export type ComputerWithTickets = ComputerRow & {
@@ -138,13 +147,22 @@ function computerColumns() {
 export class ComputersRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  /** `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro. */
+  /**
+   * `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro.
+   * `responsible`: o filtro "Responsável", já traduzido do id da pessoa para o nome.
+   */
   async list(
     query: ComputerListQuery,
     presence?: PresenceFilter,
     drill?: SQL,
+    responsible?: ResponsibleFilter,
   ): Promise<ComputerPage> {
-    const where = and(buildWhere(query, presence), drill);
+    const where = and(
+      buildWhere(query, presence),
+      responsibleCondition(responsible),
+      upgradeCondition(query.upgrade),
+      drill,
+    );
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([
@@ -182,12 +200,20 @@ export class ComputersRepository {
     query: ComputerReportQuery,
     presence?: PresenceFilter,
     drill?: SQL,
+    responsible?: ResponsibleFilter,
   ): Promise<ComputerRow[]> {
     const rows = await runQuery(
       this.db
         .select()
         .from(computers)
-        .where(and(buildWhere(query, presence), drill))
+        .where(
+          and(
+            buildWhere(query, presence),
+            responsibleCondition(responsible),
+            upgradeCondition(query.upgrade),
+            drill,
+          ),
+        )
         .orderBy(computers.name)
         .limit(REPORT_FETCH_LIMIT),
       'listar computadores para o relatório',
@@ -400,6 +426,50 @@ function lifecycleFilters(query: ComputerFilter): SQL[] {
   if (query.disposalType) filters.push(eq(computers.disposalType, query.disposalType));
 
   return filters;
+}
+
+/**
+ * O filtro "Responsável" em SQL. O nome chega já normalizado (`normalizePersonName`), e a
+ * coluna passa pela MESMA régua aqui — sem espaço sobrando, sem diferença de maiúscula —, para o
+ * filtro trazer as mesmas máquinas que o cartão mostra com a foto daquela pessoa.
+ *
+ * Exportado para ter teste próprio: errar aqui é a lista dizer "nenhuma máquina da Ana".
+ */
+export function responsibleCondition(filter?: ResponsibleFilter): SQL | undefined {
+  if (!filter) return undefined;
+  if (filter.kind === 'nobody') return sql`false`;
+
+  const normalized = sql`lower(regexp_replace(trim(coalesce(${computers.responsibleName}, '')), '[[:space:]]+', ' ', 'g'))`;
+  if (filter.kind === 'none') return sql`${normalized} = ''`;
+
+  return sql`${normalized} = ${filter.name}`;
+}
+
+/**
+ * O filtro "Upgrade" em SQL, com as MESMAS réguas do aviso do cartão (`computer-upgrade.util`):
+ * os números de memória e disco e os nomes de processador antigo vêm de lá, e o Postgres só os
+ * aplica — a lista filtrada traz exatamente as máquinas que o cartão marca.
+ *
+ * Exportado para ter teste próprio.
+ */
+export function upgradeCondition(filter?: ComputerUpgradeFilter): SQL | undefined {
+  if (!filter) return undefined;
+  if (filter === 'any') return or(...UPGRADE_NEEDS.map(upgradeNeedCondition));
+
+  return upgradeNeedCondition(filter);
+}
+
+function upgradeNeedCondition(need: UpgradeNeed): SQL {
+  if (need === 'memory') {
+    return sql`(${computers.totalMemoryBytes} > 0 and ${computers.totalMemoryBytes} < ${UPGRADE_MEMORY_BYTES})`;
+  }
+  if (need === 'disk') {
+    return sql`(${computers.totalDiskBytes} > 0 and ${computers.freeDiskBytes} is not null
+      and ${computers.freeDiskBytes} * 100.0 < ${computers.totalDiskBytes} * ${UPGRADE_DISK_FREE_PERCENT})`;
+  }
+
+  /* `~*`: a expressão regular sem diferença de maiúscula, como o `RegExp(…, 'i')` do cartão. */
+  return sql`(${or(...OLD_CPU_PATTERNS.map((pattern) => sql`${computers.cpuModel} ~* ${pattern}`))})`;
 }
 
 /**

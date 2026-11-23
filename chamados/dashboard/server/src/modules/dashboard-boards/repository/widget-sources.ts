@@ -61,6 +61,8 @@ export type SourceColumn = {
   type: DataFieldType;
   /** Campo de pessoa: o "eu" do filtro vira o nome de quem vê. */
   person?: 'name';
+  /** Texto que não distingue maiúscula: "Trilha" e "trilha" são o mesmo valor no filtro. */
+  caseInsensitive?: boolean;
 };
 
 export type SourceTable = {
@@ -156,9 +158,18 @@ const closedList = sql.join(
 );
 const ticketIsOpen = sql`${tickets.status} not in (${closedList})`;
 
-/* O sistema do chamado de Sistema: o cadastrado ou o digitado à mão. A correlação vai escrita
-   por inteiro: dentro de um `sql` cru a coluna sairia sem a tabela. */
-const ticketProject = sql`coalesce((select project.name from ${softwareProjects} as project where project.id = "chamados"."tickets"."project_id"), nullif(btrim(${tickets.customSystemName}), ''), '(Sem sistema)')`;
+/* O nome DIGITADO limpo como o `normalizeSystemName` (shared/src/domain/system-name.util.ts)
+   grava: um espaço só, sem pontas, em minúsculas. Assim "Trilha" e "trilha" gravados antes da
+   regra já caem no MESMO grupo, mesmo sem a migration ter rodado. */
+const typedSystemName = sql.raw(
+  `nullif(lower(btrim(regexp_replace("chamados"."tickets"."custom_system_name", '\\s+', ' ', 'g'))), '')`,
+);
+
+/* O sistema do chamado de Sistema: o cadastrado; senão, o cadastrado com o MESMO nome do
+   digitado (sem olhar maiúscula) — "trilha" digitado e "Trilha" da lista são um sistema só;
+   senão, o digitado. A correlação vai escrita por inteiro: dentro de um `sql` cru a coluna
+   sairia sem a tabela. */
+const ticketProject = sql`coalesce((select project.name from ${softwareProjects} as project where project.id = "chamados"."tickets"."project_id"), (select project.name from ${softwareProjects} as project where lower(btrim(project.name)) = ${typedSystemName} order by project.id limit 1), ${typedSystemName}, '(Sem sistema)')`;
 
 const TICKET_LABELS = {
   status: TICKET_STATUS_LABELS as Record<string, string>,
@@ -178,7 +189,9 @@ function ticketSource(area: TicketArea, withProject = false): SourceTable {
       isOpen: { expression: ticketIsOpen, type: 'boolean' },
       createdAt: { expression: ticketCreatedDay, type: 'date' },
       resolvedAt: { expression: ticketResolvedDay, type: 'date' },
-      ...(withProject ? { project: { expression: ticketProject, type: 'text' as const } } : {}),
+      ...(withProject
+        ? { project: { expression: ticketProject, type: 'text' as const, caseInsensitive: true } }
+        : {}),
     },
     dimensions: {
       status: sql`${tickets.status}`,
@@ -393,7 +406,7 @@ export const SOURCE_TABLES: Record<DataSourceKey, SourceTable> = {
     fields: {
       type: { expression: sql`${softwareTimelineEvents.type}`, type: 'enum' },
       author: { expression: activityAuthor, type: 'text', person: 'name' },
-      project: { expression: activityProject, type: 'text' },
+      project: { expression: activityProject, type: 'text', caseInsensitive: true },
       eventDate: { expression: activityDay, type: 'date' },
     },
     dimensions: {
@@ -416,7 +429,7 @@ export const SOURCE_TABLES: Record<DataSourceKey, SourceTable> = {
       category: { expression: sql`${softwareScheduleEvents.category}`, type: 'enum' },
       kind: { expression: sql`${softwareScheduleEvents.kind}`, type: 'enum' },
       createdBy: { expression: eventAuthor, type: 'text', person: 'name' },
-      project: { expression: eventProject, type: 'text' },
+      project: { expression: eventProject, type: 'text', caseInsensitive: true },
       date: { expression: eventDay, type: 'date' },
     },
     dimensions: {

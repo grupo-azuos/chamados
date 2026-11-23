@@ -149,7 +149,7 @@
           <span class="text-ink-700 text-sm font-medium">Como fica</span>
           <!-- `whitespace-pre-wrap`: as quebras de linha do texto são parte da mensagem. -->
           <p
-            class="rounded-box border-border bg-muted text-foreground border p-3 text-sm whitespace-pre-wrap"
+            class="rounded-box bg-muted text-foreground p-3 text-sm whitespace-pre-wrap"
             data-testid="whatsapp-template-preview"
           >
             {data.preview}
@@ -159,7 +159,7 @@
 
         <!-- Restaurar o original não apaga a edição: ela fica guardada e volta daqui. -->
         {#if !selected.isCustomized && selected.archivedEdit && actions.onRestoreEdit}
-          <div class="rounded-box border-border bg-muted flex flex-wrap items-center justify-between gap-3 border p-3">
+          <div class="rounded-box bg-muted flex flex-wrap items-center justify-between gap-3 p-3">
             <p class="text-ink-700 text-sm">
               O texto editado foi guardado em {formatDateTime(selected.archivedEdit.archivedAt)}.
             </p>

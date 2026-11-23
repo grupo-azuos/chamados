@@ -101,6 +101,28 @@
   export const BOARD_EDITING_TOP_PX = 72;
   /** Abaixo desta largura do canvas, vendo, os blocos se empilham numa coluna só. */
   const WIDE_CANVAS = 720;
+
+  /**
+   * Os blocos de ALTURA PRÓPRIA — o texto e os cards do destaque, dos números e do card com anel: a
+   * casa cresce até caber o conteúdo, e o bloco nunca ganha rolagem por dentro. Os gráficos se
+   * esticam na casa que tiverem, e a lista rola por dentro de propósito: esses ficam no tamanho dado.
+   */
+  const CONTENT_FIT_KINDS: readonly Widget['kind'][] = ['stats', 'hero', 'ringCard'];
+
+  /**
+   * A altura NATURAL do conteúdo: por um instante, a caixa perde a altura da casa (`auto`), e quem
+   * estava esticado nela (`h-full`) volta ao tamanho do que tem dentro. Lido e desfeito antes da
+   * pintura — ninguém vê. Medir a caixa esticada não servia: ela só diz a altura da casa, e o bloco
+   * que cresceu numa tela estreita nunca mais encolhia.
+   */
+  export function naturalHeightOf(element: HTMLElement): number {
+    const before = element.style.height;
+    element.style.height = 'auto';
+    const height = element.offsetHeight;
+    element.style.height = before;
+
+    return height;
+  }
 </script>
 
 <script lang="ts">
@@ -113,6 +135,7 @@
     cellAt,
     defaultSizeOf,
     dropCellOf,
+    fitLayout,
     isCompactKind,
     moveItem,
     pixelsOf,
@@ -121,6 +144,7 @@
     resizeFromHandle,
     resizeItem,
     rowsOf,
+    rowsToFit,
     slotRows,
   } from '$lib/utils/board-layout.util';
   import { cn } from '$lib/utils/cn';
@@ -152,9 +176,13 @@
   const gap = $derived(canvasState.isEditing ? BOARD_EDITING_GAP_PX : GAP);
   const rowGap = $derived(canvasState.isEditing ? BOARD_EDITING_ROW_GAP_PX : GAP);
   const cell = $derived({ width: Math.max(1, (width - gap * 3) / 4), height: BOARD_ROW_HEIGHT_PX, gap, rowGap });
-  const layout = $derived(dropping?.layout ?? gesture?.layout ?? data.layout);
   const isStacked = $derived(!canvasState.isEditing && width > 0 && width < WIDE_CANVAS);
-  const rows = $derived(canvasState.isEditing ? Math.max(slotRows(data.layout), rowsOf(layout)) : rowsOf(layout));
+  /* Os andares que o conteúdo pede, por bloco de altura própria — medidos depois de cada desenho. */
+  let contentRows = $state<Record<string, number>>({});
+  /* A grade gravada, com a casa de quem não cabia crescida: é dela que todo gesto parte. */
+  const base = $derived(fitLayout(data.layout, contentRows));
+  const layout = $derived(dropping?.layout ?? gesture?.layout ?? base);
+  const rows = $derived(canvasState.isEditing ? Math.max(slotRows(base), rowsOf(layout)) : rowsOf(layout));
   const height = $derived(Math.max(0, rows * (BOARD_ROW_HEIGHT_PX + rowGap) - rowGap));
   const placeholder = $derived(placeholderOf());
   /* Os blocos que já estavam quando o canvas abriu: só os outros pousam com animação. */
@@ -202,7 +230,7 @@
     const rect = pixelsOf(placeOf(id), cell);
     gesture = {
       id,
-      layout: data.layout,
+      layout: base,
       lifted: handle ? null : { left: rect.left, top: rect.top },
       offset: { x: point.x - rect.left, y: point.y - rect.top },
       handle: (handle?.dataset.resizeHandle as ResizeHandle | undefined) ?? null,
@@ -215,17 +243,19 @@
     if (!gesture) return;
     const point = pointerIn(event);
     const widget = data.widgets.find((item) => item.id === gesture?.id);
-    const start = data.layout.find((item) => item.i === gesture?.id);
+    const start = base.find((item) => item.i === gesture?.id);
     if (!widget || !start) return;
     if (gesture.handle) {
       const next = resizeFromHandle(start, gesture.handle, cellAt(point, cell));
-      const moved = moveItem(data.layout, widget.id, next.x, next.y);
-      gesture = { ...gesture, layout: resizeItem(moved, widget.id, next.w, next.h, isCompactKind(widget.kind)) };
+      const moved = moveItem(base, widget.id, next.x, next.y);
+      /* O puxador não desce abaixo do conteúdo: o bloco não ganha rolagem por dentro. */
+      const h = Math.max(next.h, contentRows[widget.id] ?? 1);
+      gesture = { ...gesture, layout: resizeItem(moved, widget.id, next.w, h, isCompactKind(widget.kind)) };
       return;
     }
     const topLeft = { x: point.x - gesture.offset.x, y: point.y - gesture.offset.y };
     const target = dropCellOf(topLeft, cell, start.w);
-    gesture = { ...gesture, lifted: { left: topLeft.x, top: topLeft.y }, layout: moveItem(data.layout, widget.id, target.x, target.y) };
+    gesture = { ...gesture, lifted: { left: topLeft.x, top: topLeft.y }, layout: moveItem(base, widget.id, target.x, target.y) };
     followScroll(event);
   }
 
@@ -260,10 +290,11 @@
     if (!step || !widget || !target.closest(`.${DRAG_HANDLE}`) || target.closest(`.${NO_DRAG}`)) return;
     event.preventDefault();
     const item = placeOf(widget.id);
+    const h = Math.max(item.h + step[1], contentRows[widget.id] ?? 1);
     actions.onLayoutChange(
       event.shiftKey
-        ? resizeItem(data.layout, widget.id, item.w + step[0], item.h + step[1], isCompactKind(widget.kind))
-        : moveItem(data.layout, widget.id, item.x + step[0], item.y + step[1]),
+        ? resizeItem(base, widget.id, item.w + step[0], h, isCompactKind(widget.kind))
+        : moveItem(base, widget.id, item.x + step[0], item.y + step[1]),
     );
   }
 
@@ -278,7 +309,7 @@
     const point = pointerIn(event);
     const target = cellAt(point, cell);
     const x = Math.min(target.x, 4 - size.w);
-    const withSlot = [...data.layout, { i: DROPPING_ID, x, y: target.y, ...size }];
+    const withSlot = [...base, { i: DROPPING_ID, x, y: target.y, ...size }];
     dropping = { kind, layout: moveItem(withSlot, DROPPING_ID, x, target.y) };
   }
 
@@ -295,6 +326,48 @@
     event.preventDefault();
     actions.onDropKind?.(kind, { x: slot.x, y: slot.y, w: slot.w, h: slot.h });
   }
+
+  /**
+   * OS ANDARES QUE O CONTEÚDO PEDE, por bloco de altura própria (`data-fit-id`). Mede depois de
+   * cada desenho, antes da pintura, sempre que muda o que mexe na altura do conteúdo: a largura do
+   * painel (tela, menu aberto), o vão entre os andares (vendo ou montando), a largura de cada bloco,
+   * os blocos e os números que chegam. A altura natural não depende da altura da casa, então
+   * crescer não pede outra medida — sem laço.
+   */
+  function measureContent() {
+    if (!container) return;
+    const cellNow = { height: BOARD_ROW_HEIGHT_PX, gap, rowGap };
+    const next: Record<string, number> = {};
+    for (const element of container.querySelectorAll<HTMLElement>('[data-fit-id]')) {
+      const id = element.dataset.fitId;
+      if (id) next[id] = rowsToFit(naturalHeightOf(element), cellNow);
+    }
+    if (!sameRows(contentRows, next)) contentRows = next;
+  }
+
+  function sameRows(a: Record<string, number>, b: Record<string, number>): boolean {
+    const keys = Object.keys(a);
+
+    return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key]);
+  }
+
+  $effect(() => {
+    /* O que muda a altura do conteúdo — lido aqui para o efeito rodar de novo quando mudar. */
+    void [width, rowGap, isStacked, data.widgets, data.results, data.layout, data.boardPeriod];
+    untrack(measureContent);
+  });
+
+  /* A casa muda de largura DESLIZANDO (a transição da grade, 200ms): a medida do desenho pega o
+     começo dela. Quem vê a largura final é o observador de tamanho de cada caixa. */
+  $effect(() => {
+    const root = container;
+    void [isStacked, data.widgets];
+    if (!root || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => measureContent());
+    for (const element of root.querySelectorAll('[data-fit-id]')) observer.observe(element);
+
+    return () => observer.disconnect();
+  });
 
   /**
    * O POUSO: o bloco que acabou de entrar no painel (solto da lateral ou posto com um clique)
@@ -325,6 +398,8 @@
 </script>
 
 {#snippet widgetOf(widget: Widget)}
+  <!-- A caixa que se mede (`measureContent`), nos blocos de altura própria. -->
+  <div class="h-full" data-fit-id={CONTENT_FIT_KINDS.includes(widget.kind) ? widget.id : undefined}>
   <BoardWidget
     data={{
       widget,
@@ -342,6 +417,7 @@
       onOpenItem: canvasState.isEditing ? undefined : actions.onOpenItem,
     }}
   />
+  </div>
 {/snippet}
 
 {#if data.widgets.length === 0 && !canvasState.isEditing}
@@ -350,7 +426,7 @@
   </p>
 {:else if isStacked}
   <!-- Estreito, vendo: um bloco embaixo do outro, na ordem da grade, cada um da altura dele. -->
-  <div bind:clientWidth={width} class="grid grid-cols-1 gap-4" data-testid="board-canvas">
+  <div bind:this={container} bind:clientWidth={width} class="grid grid-cols-1 gap-4" data-testid="board-canvas">
     {#each ordered as widget (widget.id)}
       <div class="min-w-0" style:height={`${placeOf(widget.id).h * BOARD_ROW_HEIGHT_PX + (placeOf(widget.id).h - 1) * GAP}px`} data-widget-id={widget.id}>
         {@render widgetOf(widget)}

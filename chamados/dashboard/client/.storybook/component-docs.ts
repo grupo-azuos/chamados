@@ -67,6 +67,17 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
     use: ['Todo lugar de anexar arquivo (regra da casa: aceita Ctrl+V).'],
     avoid: ['Para mostrar arquivos já enviados: use o `AzuosAttachmentList`.'],
   },
+  AzuosCalendar: {
+    summary:
+      'O calendário da casa, igual ao do template: as setas nas pontas do título, o mês e o ano no meio (pelo `AzuosCalendarDropdown`), hoje em cinza, o dia escolhido em azul e o período ligado por uma faixa. Uma data ou um período, em português.',
+    use: [
+      'Por baixo de todo calendário do sistema (o `AzuosDatePicker` e o `AzuosDateRangeField` já o trazem).',
+    ],
+    avoid: [
+      'Direto numa tela: use o `AzuosDatePicker` (uma data) ou o `AzuosDateRangeField` (período).',
+      'Datas distantes (nascimento): use o `AzuosDateField`, que pergunta o ano primeiro.',
+    ],
+  },
   AzuosCalendarDropdown: {
     summary:
       'O seletor de mês e de ano no título de um calendário, no lugar do `<select>` nativo, com o visual da casa.',
@@ -434,9 +445,10 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
     avoid: ['Grade de cards: ela pagina com o `AzuosPaginationBar`.'],
   },
   AzuosKanbanColumn: {
-    summary: 'Uma coluna de quadro: título com contagem, os cartões e o "Adicionar" no fim.',
+    summary:
+      'Uma coluna de quadro, no desenho do paralegal: o cabeçalho na cor e no ícone da etapa (com a contagem e o lápis quando dá para editar), os cartões rolando por dentro e o "Adicionar" no fim. Com `ui.dropId`, é uma área de soltar do `@dnd-kit` e acende quando um cartão passa por cima.',
     use: ['Quadros de tarefas, de etapas, de funil.'],
-    avoid: ['Lista simples: use a tabela.'],
+    avoid: ['Lista simples: use a tabela.', 'Cor da etapa em borda ou no fundo da coluna: a cor fica só no cabeçalho.'],
   },
   AzuosPaginationBar: {
     summary:
@@ -1075,7 +1087,7 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
     use: ['Na tela Orçamento da Infra (já vem nela).'],
     avoid: [
       'Para ver o saldo de cada peça: é o `AzuosPartListView` (Depósito).',
-      'Para saber quais máquinas estão no limite: é o `AzuosInsightsView` (Inteligência).',
+      'Para achar as máquinas que precisam de upgrade: é o filtro "Upgrade" do `AzuosComputerListView`.',
     ],
   },
   AzuosActionMenu: {
@@ -1142,6 +1154,15 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
       'No alto da ficha, com as ações de agendar e registrar: é o `AzuosMaintenanceScheduleCard`.',
     ],
   },
+  AzuosComputerUpgradeBadge: {
+    summary:
+      'O aviso âmbar "Upgrade" da máquina que está aquém — pouca memória, pouco espaço em disco ou processador antigo —, com os motivos e os números no balão. É atenção, não emergência: não pisca nem entra no selo vermelho dos alertas.',
+    use: ['No cartão e na tabela do Inventário (já vem no `AzuosComputerCard` e no `AzuosComputerTable`).'],
+    avoid: [
+      'Para alerta aberto ou preventiva vencida: é o `AzuosComputerAlertBadge`, que pisca.',
+      'Para quantas peças comprar: é o `AzuosBudgetView`.',
+    ],
+  },
   AzuosComputerProcessTable: {
     summary:
       'Os aplicativos que mais pesam na máquina, com processador e memória de cada um e quantos processos ele abriu. Mostra os dez primeiros (ou o `limit`) e resume o resto em "e mais N".',
@@ -1150,7 +1171,7 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   AzuosComputerTokenDialog: {
     summary:
-      'O token do agente, mostrado uma única vez: o código, o comando do PowerShell para copiar, o "Copiar código" e, quando a tela oferece, o download do pacote de instalação com o token dentro. Fechou sem guardar, só gerando outro.',
+      'O token do agente, mostrado uma única vez, com três saídas: "Copiar código", "Copiar comando" (o do PowerShell) e, quando a tela oferece, "Baixar instalador (.zip)" — MSI, certificado, scripts e o instalar.cmd de dois cliques, com o token dentro. Ao copiar, o botão diz "Copiado!". Fechou sem guardar, só gerando outro.',
     use: ['Logo depois de cadastrar uma máquina ou de gerar um token novo pela ficha.'],
     avoid: ['Para mostrar um dado que pode ser lido de novo depois: aí não precisa deste aviso.'],
   },
@@ -1200,15 +1221,6 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
     avoid: [
       'Para descartar uma máquina: isso acontece na ficha, pelo `AzuosComputerDisposalDialog`.',
       'Para produtos do depósito da Manutenção: é o `AzuosInventoryDisposalListView`.',
-    ],
-  },
-  AzuosInsightsView: {
-    summary:
-      'A tela de Inteligência: o que os dados juntos dizem, no período escolhido (7, 30 ou 90 dias). Dois gráficos de retrato e quatro listas paginadas — sobrecarregadas, que precisam de upgrade, que dão mais trabalho e de reserva —, cada uma com a régua que usou.',
-    use: ['Na tela Inteligência da Infra (já vem nela).'],
-    avoid: [
-      'Para a situação de uma máquina só: é o `AzuosComputerDetailView`.',
-      'Para saber o que comprar: é o `AzuosBudgetView`.',
     ],
   },
   AzuosMaintenanceListView: {
@@ -1336,11 +1348,29 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   AzuosSystemKanbanView: {
     summary:
-      'O Kanban de Sistema: os chamados em colunas (Abertos, Em Atendimento, Aguardando Terceiros, Resolvidos), arrastados de uma para outra, com filtro por sistema, a prioridade no selo e uma cor de etiqueta para cada cartão.',
+      'O Kanban de Sistema, no formato do quadro de tarefas do paralegal: os chamados em colunas por etapa, que começam na esquerda e rolam para o lado, arrastados de uma para outra pelo `@dnd-kit` (o cartão inteiro acompanha o ponteiro, o quadro rola sozinho perto da borda e o teclado também arrasta), com filtro por sistema, a altura da tela (cada coluna rola por dentro) e o "Expandir" para a tela inteira.',
     use: ['Na tela de Kanban do módulo Sistema.'],
     avoid: [
       'Lista de chamados com busca e filtros: é o `AzuosTicketListView`.',
       'Coluna de quadro genérica: é o `AzuosKanbanColumn`.',
+    ],
+  },
+  AzuosSystemTicketCard: {
+    summary:
+      'Um chamado no Kanban de Sistema: o texto, os selos (sistema, urgência, etiqueta e a issue do GitHub), o protocolo com quem abriu e o responsável com foto, com o ícone grande da etapa no canto. O menu de três pontinhos troca a etiqueta.',
+    use: ['Dentro das colunas do `AzuosSystemKanbanView`.'],
+    avoid: [
+      'Chamado numa lista ou tabela: é o `AzuosTicketListView`.',
+      'Mudar a etapa com um seletor dentro do cartão: a etapa muda pelo arrasto (`AzuosKanbanDraggableCard`).',
+    ],
+  },
+  AzuosKanbanDraggableCard: {
+    summary:
+      'O invólucro que torna um cartão arrastável no quadro, pelo `@dnd-kit`: mouse, toque e teclado (foco, Espaço pega, setas levam, Espaço solta, Esc desiste). O lugar do cartão fica apagado enquanto a cópia acompanha o ponteiro.',
+    use: ['Em volta de cada cartão de um quadro, dentro do `DragDropProvider` do quadro.'],
+    avoid: [
+      'Fora de um `DragDropProvider`: sem o quadro em volta, não há para onde arrastar.',
+      'Reordenar itens de uma lista: aí é o `@dnd-kit/svelte/sortable`.',
     ],
   },
   ProjectDetailView: {

@@ -129,3 +129,41 @@ describe('filterToSql with relative dates', () => {
     expect(() => dayOf('=', '@today*2')).toThrow('nem uma data relativa');
   });
 });
+
+describe('filterToSql on the system name', () => {
+  function compileSystem(rule: FilterRule) {
+    const condition = filterToSql(SOURCE_TABLES.systemTickets, { combinator: 'and', rules: [rule] });
+
+    return condition ? dialect.sqlToQuery(condition) : null;
+  }
+
+  // feliz
+  /* "Trilha" e "trilha" são o mesmo sistema: o filtro compara os dois lados em minúsculas. */
+  it('matches the system name without telling upper from lower case', () => {
+    const equal = compileSystem({ field: 'project', operator: '=', value: 'Trilha' });
+    const list = compileSystem({ field: 'project', operator: 'in', value: ['Trilha', 'Portal'] });
+
+    expect(equal?.sql).toMatch(/^lower\(coalesce\(.*\) = lower\(\$1\)$/);
+    expect(equal?.params).toEqual(['Trilha']);
+    expect(list?.sql).toContain('in (lower($1), lower($2))');
+  });
+
+  it('groups the typed name by its lowercase, trimmed form', () => {
+    const grouped = dialect.sqlToQuery(SOURCE_TABLES.systemTickets.dimensions.project!);
+
+    expect(grouped.sql).toContain(
+      `lower(btrim(regexp_replace("chamados"."tickets"."custom_system_name", '\\s+', ' ', 'g')))`,
+    );
+    expect(grouped.sql).toContain('lower(btrim(project.name)) =');
+  });
+
+  // triste
+  it('keeps comparing other text fields exactly as typed', () => {
+    const query = compile({
+      combinator: 'and',
+      rules: [{ field: 'assignee', operator: '=', value: 'Ana' }],
+    });
+
+    expect(query?.sql).not.toContain('lower(');
+  });
+});

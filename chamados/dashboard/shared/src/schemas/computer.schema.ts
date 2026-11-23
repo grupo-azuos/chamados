@@ -5,6 +5,7 @@ import { COMPUTER_KINDS } from '../domain/computer-kind.util';
 import { DISPOSAL_TYPES } from '../domain/disposal.util';
 import { HEALTH_STATUSES } from '../domain/computer-health.util';
 import { RESOURCE_CONDITIONS } from '../domain/computer-resource.util';
+import { COMPUTER_UPGRADE_FILTERS } from '../domain/computer-upgrade.util';
 import { PREVENTIVE_STATUSES } from '../domain/maintenance.util';
 import { boardDrillParamSchema } from './board-drill.schema';
 import { departmentNameSchema } from './department.schema';
@@ -182,6 +183,14 @@ export const computerListItemSchema = computerSchema.extend({
   activeAlerts: z.number().int().nonnegative(),
   /** De QUAIS peças são os alertas abertos — é o que conta "CPU elevada" no topo da lista. */
   activeAlertMetrics: z.array(z.enum(ALERT_METRICS)),
+  /**
+   * A PESSOA do diretório (admin-console) cujo nome é o do responsável — o id que o filtro
+   * "Responsável" guarda. Nulo quando não há responsável, quando o nome digitado não bate com
+   * ninguém do escritório ou quando o diretório não respondeu: a lista nunca cai por isso.
+   */
+  responsibleId: z.string().nullable().optional(),
+  /** A foto dessa pessoa no admin-console. Nula, o cartão mostra as iniciais. */
+  responsibleAvatarUrl: z.string().nullable().optional(),
 });
 
 export type ComputerListItem = z.infer<typeof computerListItemSchema>;
@@ -265,8 +274,19 @@ const queryBooleanSchema = z.union([
   z.enum(['true', 'false']).transform((value) => value === 'true'),
 ]);
 
+/**
+ * O valor do filtro "Responsável" que pede as máquinas SEM ninguém — e não uma pessoa. Não
+ * colide com id do diretório, que é UUID.
+ */
+export const COMPUTER_NO_RESPONSIBLE_FILTER = 'none';
+
 export const computerListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
+  /**
+   * A pessoa do diretório (o id, que não muda quando o nome muda) ou
+   * `COMPUTER_NO_RESPONSIBLE_FILTER`. O servidor traduz o id no nome que o cadastro guarda.
+   */
+  responsibleId: z.string().trim().min(1).max(120).optional(),
   department: departmentSchema.optional(),
   healthStatus: healthStatusSchema.optional(),
   kind: computerKindSchema.optional(),
@@ -277,6 +297,8 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
   /** Qual recurso está pedindo atenção (disco, memória, tempo sem reiniciar) — `computer-resource.util`. */
   resourceCondition: z.enum(RESOURCE_CONDITIONS).optional(),
   preventive: z.enum(COMPUTER_PREVENTIVE_FILTERS).optional(),
+  /** Quem precisa de upgrade: qualquer motivo, ou um só (`computer-upgrade.util`). */
+  upgrade: z.enum(COMPUTER_UPGRADE_FILTERS).optional(),
   /** Por padrão as arquivadas NÃO vêm: elas saíram de uso e só atrapalhariam a lista. */
   includeArchived: z.coerce.boolean<boolean>().optional(),
   /**
