@@ -86,9 +86,12 @@
 </script>
 
 <script lang="ts">
+  import Archive from '@lucide/svelte/icons/archive';
   import FilterX from '@lucide/svelte/icons/filter-x';
+  import Recycle from '@lucide/svelte/icons/recycle';
   import SearchX from '@lucide/svelte/icons/search-x';
   import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Wrench from '@lucide/svelte/icons/wrench';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
@@ -150,7 +153,7 @@
   <StatCardGrid>
     <StatCard
       data={{ label: 'Máquinas fora de uso', value: data.summary.total }}
-      ui={{ tone: 'neutral' }}
+      ui={{ tone: 'neutral', icon: Archive }}
     />
     <StatCard
       data={{
@@ -158,13 +161,13 @@
         value: data.summary.defect,
         hint: 'ainda rendem peça ou conserto',
       }}
-      ui={{ tone: 'warning' }}
+      ui={{ tone: 'warning', icon: Wrench }}
       state={{ isSelected: data.filter.type === 'defect' }}
       actions={{ onClick: () => filterByType('defect') }}
     />
     <StatCard
       data={{ label: 'Lixo', value: data.summary.scrap, hint: 'não ligam mais' }}
-      ui={{ tone: 'neutral' }}
+      ui={{ tone: 'neutral', icon: Recycle }}
       state={{ isSelected: data.filter.type === 'scrap' }}
       actions={{ onClick: () => filterByType('scrap') }}
     />

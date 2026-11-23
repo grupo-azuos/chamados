@@ -119,6 +119,7 @@
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
   import GithubCalendarEvent from '../azuos-github-calendar-event/azuos-github-calendar-event.svelte';
@@ -381,36 +382,26 @@
       </CardSurface>
     {/if}
 
+    <!-- Os dois números do período no card de painel padrão: ícone cheio no tom do assunto, número
+         na cor do texto, e o "i" com a explicação de como cada um é contado. -->
     <div class="grid grid-cols-2 gap-3 sm:max-w-md">
-      <Tooltip.Root
-        ><Tooltip.Trigger
-          >{#snippet child({ props })}<button
-              {...props}
-              type="button"
-              class="w-full text-left rounded-surface bg-card px-4 py-3 shadow-card"
-            >
-              <p class="text-xl font-semibold text-foreground">{data.mergedPullRequests ?? 0}</p>
-              <p class="text-xs text-muted-foreground">PRs mergeados no período</p>
-            </button>{/snippet}</Tooltip.Trigger
-        ><Tooltip.Content class="max-w-sm whitespace-normal"
-          >PRs mergeados nas datas exibidas no calendário. Cada PR conta no horário do merge.</Tooltip.Content
-        ></Tooltip.Root
-      >
-      <Tooltip.Root
-        ><Tooltip.Trigger
-          >{#snippet child({ props })}<button
-              {...props}
-              type="button"
-              class="w-full text-left rounded-surface bg-card px-4 py-3 shadow-card"
-            >
-              <p class="text-xl font-semibold text-foreground">{data.resolvedIssues ?? 0}</p>
-              <p class="text-xs text-muted-foreground">Issues resolvidas no período</p>
-            </button>{/snippet}</Tooltip.Trigger
-        ><Tooltip.Content class="max-w-sm whitespace-normal"
-          >Issues resolvidas nas datas exibidas no calendário. Cada issue conta no horário de
-          fechamento.</Tooltip.Content
-        ></Tooltip.Root
-      >
+      <StatCard
+        data={{
+          label: 'PRs mergeados no período',
+          value: data.mergedPullRequests ?? 0,
+          tooltip: 'PRs mergeados nas datas exibidas no calendário. Cada PR conta no horário do merge.',
+        }}
+        ui={{ tone: 'plum', icon: GitMerge, className: 'px-4 py-3' }}
+      />
+      <StatCard
+        data={{
+          label: 'Issues resolvidas no período',
+          value: data.resolvedIssues ?? 0,
+          tooltip:
+            'Issues resolvidas nas datas exibidas no calendário. Cada issue conta no horário de fechamento.',
+        }}
+        ui={{ tone: 'success', icon: CircleCheckBig, className: 'px-4 py-3' }}
+      />
     </div>
 
     {#if data.developerStats?.length}

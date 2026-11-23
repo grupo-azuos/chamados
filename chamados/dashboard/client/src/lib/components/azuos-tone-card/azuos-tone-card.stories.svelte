@@ -10,8 +10,8 @@
   <ToneCard data={{ label: 'Vencidos' }} ui={{ tone: 'danger' }}>Vencidos: 3</ToneCard>
 </Story>
 <Story name="Interactive" asChild>
-  <ToneCard data={{ label: 'Em dia' }} ui={{ tone: 'success', mode: 'interactive' }}>Em dia: 8</ToneCard>
+  <ToneCard data={{ label: 'Em dia' }} ui={{ tone: 'success' }} actions={{ onClick: () => {} }}>Em dia: 8</ToneCard>
 </Story>
 <Story name="Selected" asChild>
-  <ToneCard data={{ label: 'Todos' }} ui={{ tone: 'brand', mode: 'interactive' }} state={{ isSelected: true }}>Todos: 12</ToneCard>
+  <ToneCard data={{ label: 'Todos' }} ui={{ tone: 'brand' }} actions={{ onClick: () => {} }} state={{ isSelected: true }}>Todos: 12</ToneCard>
 </Story>

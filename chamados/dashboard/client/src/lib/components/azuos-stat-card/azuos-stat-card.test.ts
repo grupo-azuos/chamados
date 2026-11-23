@@ -235,4 +235,18 @@ describe('AzuosStatCard', () => {
     expect(screen.getByText('7')).toHaveClass('text-foreground');
     expect(screen.getByText('7').getAttribute('style') ?? '').toBe('');
   });
+
+  /* Não existe hover colorido: o filtro com tom ganha só o véu neutro da superfície. */
+  it('keeps the neutral hover veil on a clickable toned filter', () => {
+    const { container } = render(StatCard, {
+      props: {
+        data: { label: 'Sem estoque', value: 3 },
+        ui: { tone: 'danger', icon: Building2 },
+        actions: { onClick: vi.fn() },
+      },
+    });
+
+    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
+    expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
+  });
 });

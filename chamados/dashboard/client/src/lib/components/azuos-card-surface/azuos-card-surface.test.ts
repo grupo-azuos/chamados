@@ -29,35 +29,21 @@ describe('AzuosCardSurface (Svelte)', () => {
     expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
   });
 
-  it('shows the veil in the tone of the card only on hover', () => {
-    const { container } = render(CardSurface, {
-      props: {
-        data: { label: 'Projeto' },
-        ui: { isHoverColored: true, hoverTone: 'red' },
-        children,
-      },
-    });
-
-    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
-    expect(wash).toHaveClass('group-hover/card:bg-(--card-veil)');
-    expect(wash).not.toHaveClass('bg-(--card-veil)');
-    expect(wash.style.getPropertyValue('--card-veil')).toContain('--hue-red');
-  });
-
   it('draws the mark in the accent, and turns into a real button when clickable', async () => {
     const onClick = vi.fn();
     const { container } = render(CardSurface, {
       props: {
         data: { label: 'Abrir' },
-        ui: { mark: HardDrive, markTone: 'red', isHoverColored: true, hoverTone: 'red' },
+        ui: { mark: HardDrive, markTone: 'red' },
         actions: { onClick },
         children,
       },
     });
 
     expect(container.querySelector('[data-slot="card-mark"]')).toHaveClass('text-hue-red');
+    /* A cor fica na marca d'água; o véu do hover continua neutro. */
     const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
-    expect(wash.style.getPropertyValue('--card-veil')).toContain('--hue-red');
+    expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
     await userEvent.click(screen.getByRole('button', { name: 'Abrir' }));
     expect(onClick).toHaveBeenCalledOnce();
   });
@@ -71,11 +57,11 @@ describe('AzuosCardSurface (Svelte)', () => {
   });
 
   // triste
-  it('disables the button while loading, and a toned card without the flag stays neutral', () => {
+  it('disables the button while loading, and a card with a toned mark keeps the neutral veil', () => {
     const { container } = render(CardSurface, {
       props: {
         data: { label: 'Carregando' },
-        ui: { hoverTone: 'red' },
+        ui: { mark: HardDrive, markTone: 'red' },
         state: { isDisabled: true },
         actions: { onClick: vi.fn() },
         children,

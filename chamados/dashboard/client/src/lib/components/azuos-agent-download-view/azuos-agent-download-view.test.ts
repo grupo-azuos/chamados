@@ -26,6 +26,17 @@ const actions = () => ({
 
 describe('AzuosAgentDownloadView', () => {
   // feliz
+  /* Os dois blocos são o card padrão do grupo (superfície sem borda), não card montado à mão. */
+  it('puts the LTS and the version list on the standard card surface', () => {
+    render(AgentDownloadView, { data, state, actions: actions() });
+
+    for (const name of ['Versão do agente', 'Todas as versões']) {
+      const card = screen.getByRole('group', { name });
+      expect(card).toHaveAttribute('data-slot', 'azuos-card-surface');
+      expect(card).toHaveClass('bg-card', 'shadow-card');
+    }
+  });
+
   it('shows the LTS and requests each installation artifact separately', async () => {
     const callbacks = actions();
     render(AgentDownloadView, { data, state, actions: callbacks });

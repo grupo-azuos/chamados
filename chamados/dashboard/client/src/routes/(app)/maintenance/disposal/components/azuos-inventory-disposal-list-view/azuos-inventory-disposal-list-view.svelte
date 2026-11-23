@@ -65,6 +65,7 @@
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
@@ -97,7 +98,7 @@
     />
   </PageHeader>
 
-  <div class="rounded-surface bg-card flex flex-wrap items-end gap-x-4 gap-y-3 p-4 shadow-card">
+  <CardSurface ui={{ className: 'flex flex-wrap items-end gap-x-4 gap-y-3 p-4' }}>
     <FilterField data={{ label: 'Motivo' }}>
       <OptionPicker
         data={{ value: data.filter.reason, options: REASON_FILTER_OPTIONS }}
@@ -115,7 +116,7 @@
         actions={{ onClick: actions.onClearFilters }}
       />
     {/if}
-  </div>
+  </CardSurface>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2). -->
   {#if listState.error}
@@ -160,7 +161,8 @@
 
       <ul class="flex flex-col gap-3">
         {#each data.disposals as disposal (disposal.id)}
-          <li class="rounded-surface bg-card flex flex-col gap-2 p-4 shadow-card">
+          <li class="flex">
+            <CardSurface ui={{ className: 'flex flex-1 flex-col gap-2 p-4' }}>
             <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
               <h3 class="text-ink-900 min-w-0 text-sm leading-tight font-semibold">
                 {disposal.itemName}
@@ -187,6 +189,7 @@
               {formatDate(disposal.createdAt)} · {disposal.createdBy} · ficaram
               {disposal.balanceAfter} no depósito
             </p>
+            </CardSurface>
           </li>
         {/each}
       </ul>

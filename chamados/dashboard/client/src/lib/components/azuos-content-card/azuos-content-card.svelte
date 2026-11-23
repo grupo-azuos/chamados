@@ -4,10 +4,9 @@
 
   Superfície da marca (`AzuosCardSurface`) com o ícone do assunto grande no canto, no sotaque dele —
   é por ali que a cor do assunto aparece sem pintar o card. O conteúdo é livre (`children`). O hover
-  é o véu da superfície; no tom com `ui.isHoverColored`.
+  é sempre o véu neutro da superfície — nunca no tom.
 
-  Props: `data.label` é o nome acessível; `ui` traz o tom, o ícone, o tamanho da marca e o hover
-  colorido; `state.isSelected` marca o escolhido; com `actions.onClick` o card vira clicável.
+  Props: `data.label` é o nome acessível; `ui` traz o tom, o ícone e o tamanho da marca; `state.isSelected` marca o escolhido; com `actions.onClick` o card vira clicável.
 -->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
@@ -20,7 +19,6 @@
     ui?: {
       tone?: AzuosCardTone;
       icon?: LucideIcon;
-      isHoverColored?: boolean;
       markSize?: 'md' | 'lg';
       className?: string;
     };
@@ -44,8 +42,6 @@
     mark: ui?.icon,
     markSize: ui?.markSize,
     markTone: ui?.tone,
-    isHoverColored: ui?.isHoverColored,
-    hoverTone: ui?.tone,
   }}
   state={cardState}
   {actions}
