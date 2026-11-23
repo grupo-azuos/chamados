@@ -1,9 +1,6 @@
 import { z } from 'zod';
 
-import {
-  SERVICE_ORDER_CODE_LENGTH,
-  SERVICE_ORDER_HASH_LENGTH,
-} from '../domain/service-order.util';
+import { SERVICE_ORDER_CODE_LENGTH, SERVICE_ORDER_HASH_LENGTH } from '../domain/service-order.util';
 import { TICKET_STATUSES } from '../domain/ticket-status.util';
 
 /**

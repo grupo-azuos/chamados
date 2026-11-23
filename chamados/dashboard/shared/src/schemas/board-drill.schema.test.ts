@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { boardDrillParamSchema, drillFromParam, drillParam, drillSummary } from './board-drill.schema';
+import {
+  boardDrillParamSchema,
+  drillFromParam,
+  drillParam,
+  drillSummary,
+} from './board-drill.schema';
 
 const BASE = {
   source: 'systemTickets',
@@ -11,7 +16,9 @@ const BASE = {
 describe('boardDrillParamSchema', () => {
   // feliz
   it('reads the drill from its JSON text, with the defaults filled in', () => {
-    const parsed = boardDrillParamSchema.parse(JSON.stringify({ ...BASE, key: 'aberto', label: 'Aberto' }));
+    const parsed = boardDrillParamSchema.parse(
+      JSON.stringify({ ...BASE, key: 'aberto', label: 'Aberto' }),
+    );
 
     expect(parsed.key).toBe('aberto');
     expect(parsed.key2).toBeNull();
@@ -29,7 +36,9 @@ describe('boardDrillParamSchema', () => {
 
   // triste
   it('rejects a source that does not exist', () => {
-    expect(boardDrillParamSchema.safeParse(JSON.stringify({ ...BASE, source: 'nope' })).success).toBe(false);
+    expect(
+      boardDrillParamSchema.safeParse(JSON.stringify({ ...BASE, source: 'nope' })).success,
+    ).toBe(false);
   });
 });
 

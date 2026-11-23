@@ -19,10 +19,17 @@
     taskFixture({ id: 3, title: 'Comprar teclados', status: 'reopened' }),
     taskFixture({ id: 4, title: 'Organizar o rack', status: 'done' }),
   ];
-  const actions = { onOpen: fn(), onMove: fn(), onRefuse: fn() };
+  const actions = { onOpen: fn(), onMove: fn(), onStage: fn(), onRefuse: fn(), onManageStages: fn() };
+  const stages = [
+    { id: 4, area: 'infra' as const, label: 'Aguardando peça', color: '#ff9500', position: 0 },
+    { id: 5, area: 'infra' as const, label: 'Com o fornecedor', color: '#5856d6', position: 1 },
+  ];
+  const staged = [...tasks, taskFixture({ id: 5, title: 'Fonte queimada', stage: { id: 4, label: 'Aguardando peça', color: '#ff9500' } })];
 </script>
 
 <Story name="Default" args={{ data: { tasks, now: TEST_NOW }, actions }} />
+<!-- As situações da equipe entre Reaberta e Finalizada, com "Situações" para mexer nelas. -->
+<Story name="ComSituacoes" args={{ data: { tasks: staged, stages, now: TEST_NOW }, ui: { canManageStages: true }, actions }} />
 <!-- Sem nada: cada coluna pede para arrastar. -->
 <Story name="Vazio" args={{ data: { tasks: [], now: TEST_NOW }, actions }} />
 <!-- Salvando um movimento: nada se arrasta. -->

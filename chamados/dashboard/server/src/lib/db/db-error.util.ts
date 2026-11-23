@@ -93,6 +93,7 @@ const CONFLICT_MESSAGES: Record<string, string> = {
     'Já existe uma peça com essa descrição e essa condição. Registre uma entrada nela em vez de cadastrar outra.',
   /* A etiqueta de patrimônio é colada na coisa: duas iguais fariam o inventário discordar
      da parede. O nome, esse repete à vontade — há cinco cadeiras iguais em salas diferentes. */
+  task_stages_label_unique: 'Já existe uma situação com esse nome.',
   inventory_items_code_unique:
     'Já existe um produto com esse código de patrimônio. Confira a etiqueta ou abra o cadastro que já existe.',
   /* Uma máquina tem um agendamento por vez: remarcar é trocar a data do que já existe. */
@@ -110,7 +111,8 @@ const CHECK_MESSAGES: Record<string, string> = {
   ticket_histories_type_valid: 'O tipo do histórico precisa ser um dos da lista.',
   ticket_histories_status_after_valid: 'O estágio do chamado precisa ser um dos da lista.',
   ticket_histories_minutes_not_negative: 'O tempo gasto não pode ser negativo.',
-  ticket_service_orders_version_positive: 'A versão da ordem de serviço precisa ser maior que zero.',
+  ticket_service_orders_version_positive:
+    'A versão da ordem de serviço precisa ser maior que zero.',
   ticket_service_orders_status_valid: 'O estágio do chamado precisa ser um dos da lista.',
   ticket_areas_area_valid: 'A área precisa ser Infra, Sistema ou Manutenção.',
   computers_health_status_valid: 'A situação de saúde precisa ser uma das opções da lista.',

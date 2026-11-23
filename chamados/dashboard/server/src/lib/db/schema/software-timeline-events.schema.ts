@@ -3,7 +3,16 @@ import {
   TIMELINE_EVENT_TYPES,
 } from '@template/shared/domain/software-project.util';
 import { sql } from 'drizzle-orm';
-import { check, index, integer, jsonb, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  check,
+  index,
+  integer,
+  jsonb,
+  serial,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 
 import { chamadosSchema } from './chamados.schema';
 

@@ -29,13 +29,13 @@
   import Wrench from '@lucide/svelte/icons/wrench';
   import {
     TASK_ORIGIN_LABELS,
-    TASK_STATUS_LABELS,
     TASK_STATUS_TONES,
   } from '@template/shared/domain/task-flow.util';
 
   import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
   import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
   import { taskDueBadge } from '$lib/utils/task-due.util';
+  import { situationOf } from '$lib/utils/task-stage.util';
 
   let { data, actions }: AzuosTaskCardProps = $props();
 
@@ -67,7 +67,7 @@
     title: task.title,
     code: task.ticketId ? formatTicketProtocol(task.ticketId) : null,
     meta: due?.label ?? 'Sem prazo',
-    status: { label: TASK_STATUS_LABELS[task.status], tone: TASK_STATUS_TONES[task.status] },
+    status: { label: situationOf(task).label, tone: situationOf(task).tone },
     tags: [{ label: TASK_ORIGIN_LABELS[task.origin], tone: null }],
     alert: due?.tone === 'danger' ? { count: 1, message: 'Tarefa atrasada' } : null,
     metrics: [

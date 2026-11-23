@@ -116,6 +116,7 @@ describe('directoryUserSchema', () => {
 describe('userRoleLabel', () => {
   // feliz
   it('labels every role', () => {
-    for (const role of userRoleSchema.options) expect(userRoleLabel(role)).toBe(USER_ROLE_LABELS[role]);
+    for (const role of userRoleSchema.options)
+      expect(userRoleLabel(role)).toBe(USER_ROLE_LABELS[role]);
   });
 });

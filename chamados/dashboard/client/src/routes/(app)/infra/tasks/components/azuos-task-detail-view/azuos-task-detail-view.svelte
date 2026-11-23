@@ -66,7 +66,6 @@
   import {
     TASK_LINK_KIND_LABELS,
     TASK_ORIGIN_LABELS,
-    TASK_STATUS_LABELS,
     TASK_STATUS_TONES,
   } from '@template/shared/domain/task-flow.util';
 
@@ -83,6 +82,7 @@
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { moved } from '$lib/hooks/use-task-detail/use-task-detail.svelte';
   import { formatDay, taskDueBadge, taskPercentage } from '$lib/utils/task-due.util';
+  import { situationOf } from '$lib/utils/task-stage.util';
   import { linkHref } from '$lib/utils/task-map.util';
   import TaskHistory from '../azuos-task-history/azuos-task-history.svelte';
 
@@ -121,7 +121,10 @@
         <div class="flex min-w-0 flex-1 flex-col gap-2">
           <h1 class="text-foreground text-xl font-semibold">{task.title}</h1>
           <div class="flex flex-wrap items-center gap-2 text-sm">
-            <StatusBadge data={{ label: TASK_STATUS_LABELS[task.status] }} ui={{ tone: TASK_STATUS_TONES[task.status] }} />
+            <StatusBadge
+              data={{ label: situationOf(task).label }}
+              ui={{ tone: TASK_STATUS_TONES[task.status], color: situationOf(task).color }}
+            />
             {#if due}<StatusBadge data={{ label: due.label }} ui={{ tone: DUE_TONE[due.tone] }} />{/if}
             <span class="text-muted-foreground">{TASK_ORIGIN_LABELS[task.origin]}</span>
           </div>

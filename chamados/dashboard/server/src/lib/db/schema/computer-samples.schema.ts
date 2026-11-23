@@ -1,10 +1,4 @@
-import {
-  bigserial,
-  doublePrecision,
-  index,
-  integer,
-  timestamp,
-} from 'drizzle-orm/pg-core';
+import { bigserial, doublePrecision, index, integer, timestamp } from 'drizzle-orm/pg-core';
 
 import { chamadosSchema } from './chamados.schema';
 
@@ -32,9 +26,7 @@ export const computerSamples = chamadosSchema.table(
     computerId: integer('computer_id')
       .notNull()
       .references(() => computers.id, { onDelete: 'cascade' }),
-    sampledAt: timestamp('sampled_at', { withTimezone: true, mode: 'date' })
-      .notNull()
-      .defaultNow(),
+    sampledAt: timestamp('sampled_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
 
     cpuPercent: doublePrecision('cpu_percent').notNull(),
     memoryPercent: doublePrecision('memory_percent').notNull(),

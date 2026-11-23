@@ -34,6 +34,41 @@ function valuesFor(values: readonly string[]) {
  * - por máquina EM ABERTO na manutenção (`computer_id` único enquanto não finalizada) — a
  *   próxima preventiva abre uma nova depois que esta for cumprida.
  */
+/**
+ * AS SITUAÇÕES PRÓPRIAS DAS TAREFAS (as do Paralegal) — as que a equipe de cada área cria
+ * ("Aguardando peça", "Com o fornecedor"), com nome e cor. As três fixas (Aberta, Reaberta,
+ * Finalizada) são o `status` da tarefa e não estão aqui. `position` é o lugar da coluna no quadro,
+ * entre Reaberta e Finalizada. O nome repetido é recusado entre as em uso da área; a arquivada não
+ * segura o nome.
+ */
+export const taskStages = chamadosSchema.table(
+  'task_stages',
+  {
+    id: serial('id').primaryKey(),
+    area: text('area', { enum: ROLE_CONTEXTS }).notNull(),
+    label: text('label').notNull(),
+    color: text('color').notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+    createdBy: text('created_by').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+    updatedBy: text('updated_by'),
+    archivedAt: timestamp('archived_at', { withTimezone: true, mode: 'date' }),
+    archivedBy: text('archived_by'),
+  },
+  (table) => [
+    check('task_stages_area_valid', sql`${table.area} in (${valuesFor(ROLE_CONTEXTS)})`),
+    check('task_stages_color', sql`${table.color} ~ '^#[0-9a-f]{6}$'`),
+    check('task_stages_not_blank', sql`length(btrim(${table.label})) > 0`),
+    uniqueIndex('task_stages_label_unique')
+      .on(table.area, sql`lower(${table.label})`)
+      .where(sql`${table.archivedAt} is null`),
+    index('task_stages_area_idx').on(table.area, table.position),
+  ],
+);
+
+export type TaskStageRow = typeof taskStages.$inferSelect;
+
 export const tasks = chamadosSchema.table(
   'tasks',
   {
@@ -45,6 +80,8 @@ export const tasks = chamadosSchema.table(
     origin: text('origin', { enum: TASK_ORIGINS }).notNull().default('manual'),
     ticketId: integer('ticket_id').references(() => tickets.id, { onDelete: 'cascade' }),
     computerId: integer('computer_id').references(() => computers.id, { onDelete: 'cascade' }),
+    /** A situação própria em que a tarefa está; nula é a coluna fixa dela (Aberta ou Reaberta). */
+    stageId: integer('stage_id').references(() => taskStages.id, { onDelete: 'set null' }),
     /** O responsável, pelo ID do diretório. Nulo: ninguém pegou ainda. */
     ownerId: text('owner_id'),
     startDate: date('start_date', { mode: 'string' }).notNull(),
@@ -62,6 +99,8 @@ export const tasks = chamadosSchema.table(
     check('tasks_origin_valid', sql`${table.origin} in (${valuesFor(TASK_ORIGINS)})`),
     check('tasks_title_not_blank', sql`length(btrim(${table.title})) > 0`),
     check('tasks_finished_only_done', sql`${table.finishedAt} is null or ${table.status} = 'done'`),
+    /* Finalizar tira a tarefa da situação própria: a finalizada mora na coluna fixa. */
+    check('tasks_stage_not_done', sql`${table.stageId} is null or ${table.status} <> 'done'`),
     check(
       'tasks_due_time_needs_day',
       sql`${table.dueTime} is null or ${table.dueDate} is not null`,
@@ -86,6 +125,7 @@ export const tasks = chamadosSchema.table(
       .where(sql`${table.origin} = 'maintenance' and ${table.status} <> 'done'`),
     index('tasks_area_status_idx').on(table.area, table.status),
     index('tasks_owner_idx').on(table.ownerId),
+    index('tasks_stage_idx').on(table.stageId),
     index('tasks_due_date_idx').on(table.dueDate),
     index('tasks_start_date_idx').on(table.startDate),
   ],

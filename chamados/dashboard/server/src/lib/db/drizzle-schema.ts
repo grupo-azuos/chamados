@@ -31,7 +31,7 @@ import { ticketRelations } from './schema/ticket-relations.schema';
 import { ticketStockItems } from './schema/ticket-stock-items.schema';
 import { ticketWatchers } from './schema/ticket-watchers.schema';
 import { tickets } from './schema/tickets.schema';
-import { taskLinks, taskPeople, taskSteps, tasks } from './schema/tasks.schema';
+import { taskLinks, taskPeople, taskStages, taskSteps, tasks } from './schema/tasks.schema';
 import {
   whatsappConnections,
   whatsappMessages,
@@ -55,6 +55,7 @@ import {
 export const drizzleSchema = {
   computerResponsibleHistory,
   tasks,
+  taskStages,
   taskSteps,
   taskLinks,
   taskPeople,

@@ -14,7 +14,9 @@ describe('transfer contract', () => {
   // triste
   it('refuses a destination department sent as a name, and ignores a location from an old screen', () => {
     expect(createTransferSchema.safeParse({ toDepartmentId: 'Fiscal' }).success).toBe(false);
-    expect(createTransferSchema.parse({ toDepartmentId: null, toLocation: 'RECEPÇÃO' })).not.toHaveProperty('toLocation');
+    expect(
+      createTransferSchema.parse({ toDepartmentId: null, toLocation: 'RECEPÇÃO' }),
+    ).not.toHaveProperty('toLocation');
   });
 
   it('accepts a peripheral that goes with the machine, and one left at a station', () => {
@@ -29,7 +31,12 @@ describe('transfer contract', () => {
     expect(parsed.success).toBe(true);
 
     expect(
-      installedPartSchema.safeParse({ partId: 1, name: 'Teclado', category: 'keyboard', quantity: 1 }).success,
+      installedPartSchema.safeParse({
+        partId: 1,
+        name: 'Teclado',
+        category: 'keyboard',
+        quantity: 1,
+      }).success,
     ).toBe(true);
     expect(
       transferSchema.safeParse({
@@ -54,6 +61,8 @@ describe('transfer contract', () => {
     });
 
     expect(refused.success).toBe(false);
-    expect(refused.success ? '' : refused.error.issues[0]?.message).toBe('Diga qual máquina assume esta peça.');
+    expect(refused.success ? '' : refused.error.issues[0]?.message).toBe(
+      'Diga qual máquina assume esta peça.',
+    );
   });
 });

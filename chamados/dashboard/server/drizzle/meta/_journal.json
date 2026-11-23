@@ -239,6 +239,13 @@
       "when": 1795460352541,
       "tag": "0033_computer_responsible_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795466624401,
+      "tag": "0034_task_stages",
+      "breakpoints": true
     }
   ]
 }

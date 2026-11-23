@@ -21,9 +21,7 @@ export const ticketRelations = chamadosSchema.table(
     relatedTicketId: integer('related_ticket_id')
       .notNull()
       .references(() => tickets.id, { onDelete: 'cascade' }),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     createdBy: text('created_by'),
     /* Desvincular ARQUIVA: o vínculo some do chamado e volta pelo "Desfazer". */
     ...archiveColumns(),

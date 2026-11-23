@@ -123,12 +123,21 @@ describe('inventory movement messages', () => {
   // triste
   it('explains the type and the reason in Portuguese', () => {
     const type = stockMovementTypeSchema.safeParse('venda');
-    expect(type.success ? '' : type.error.issues[0]?.message).toBe('Escolha entrada, saída ou descarte');
+    expect(type.success ? '' : type.error.issues[0]?.message).toBe(
+      'Escolha entrada, saída ou descarte',
+    );
     const reason = disposalReasonSchema.safeParse('sumiu');
-    expect(reason.success ? '' : reason.error.issues[0]?.message).toBe('Escolha o motivo do descarte');
+    expect(reason.success ? '' : reason.error.issues[0]?.message).toBe(
+      'Escolha o motivo do descarte',
+    );
     expect(
-      inventoryMovementFormSchema.safeParse({ itemId: '1', type: 'disposal', quantity: '1', reason: 'broken', note: '' })
-        .success,
+      inventoryMovementFormSchema.safeParse({
+        itemId: '1',
+        type: 'disposal',
+        quantity: '1',
+        reason: 'broken',
+        note: '',
+      }).success,
     ).toBe(true);
   });
 });

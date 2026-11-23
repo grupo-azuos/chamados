@@ -11,6 +11,7 @@ export function taskFixture(over: Partial<Task> = {}): Task {
     title: 'Trocar o switch da sala 2',
     description: 'O switch velho está perdendo pacotes.',
     status: 'open',
+    stage: null,
     origin: 'manual',
     ticketId: null,
     computerId: null,

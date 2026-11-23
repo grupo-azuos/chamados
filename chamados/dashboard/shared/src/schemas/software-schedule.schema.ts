@@ -11,9 +11,7 @@ import { partialUpdate } from './partial-update.schema';
 
 export const scheduleCategorySchema = z.enum(SCHEDULE_EVENT_CATEGORIES);
 export const scheduleKindSchema = z.enum(SCHEDULE_EVENT_KINDS);
-export const scheduleColorSchema = z.enum(
-  [...SOFTWARE_PROJECT_COLORS, 'neutral', 'red'] as const,
-);
+export const scheduleColorSchema = z.enum([...SOFTWARE_PROJECT_COLORS, 'neutral', 'red'] as const);
 
 export const softwareScheduleEventSchema = z.object({
   id: z.number().int(),

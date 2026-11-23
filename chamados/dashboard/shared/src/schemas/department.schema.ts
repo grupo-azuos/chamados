@@ -14,7 +14,10 @@ export function departmentNameSchema(requiredMessage: string) {
     .string({ error: requiredMessage })
     .trim()
     .min(1, requiredMessage)
-    .max(DEPARTMENT_NAME_MAX_LENGTH, `O departamento pode ter até ${DEPARTMENT_NAME_MAX_LENGTH} caracteres`);
+    .max(
+      DEPARTMENT_NAME_MAX_LENGTH,
+      `O departamento pode ter até ${DEPARTMENT_NAME_MAX_LENGTH} caracteres`,
+    );
 }
 
 /**

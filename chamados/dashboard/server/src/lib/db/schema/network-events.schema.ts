@@ -3,15 +3,7 @@ import {
   NETWORK_SEVERITIES,
 } from '@template/shared/domain/network-event.util';
 import { sql } from 'drizzle-orm';
-import {
-  check,
-  doublePrecision,
-  index,
-  jsonb,
-  serial,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core';
+import { check, doublePrecision, index, jsonb, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { chamadosSchema } from './chamados.schema';
 

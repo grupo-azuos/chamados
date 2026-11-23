@@ -29,14 +29,18 @@ export function rememberDepartments(options: readonly DepartmentOption[]): void 
 }
 
 export function rememberPeople(users: readonly DirectoryUser[]): void {
-  people = new Map(users.map((user) => [user.id, { name: user.name, avatarUrl: user.image ?? null }]));
+  people = new Map(
+    users.map((user) => [user.id, { name: user.name, avatarUrl: user.image ?? null }]),
+  );
 }
 
 export function departmentNameOf(id: number | null | undefined): string | null {
   return id === null || id === undefined ? null : (departmentNames.get(id) ?? null);
 }
 
-export function personOf(id: string | null | undefined): { name: string; avatarUrl: string | null } | null {
+export function personOf(
+  id: string | null | undefined,
+): { name: string; avatarUrl: string | null } | null {
   return id ? (people.get(id) ?? null) : null;
 }
 
@@ -56,7 +60,9 @@ export function computerDepartmentNameSql(): SQL<string | null> {
     sql`, `,
   );
 
-  return sql<string | null>`(select "ref"."name" from (values ${values}) as "ref"("id", "name") where "ref"."id" = ${qualified(computers.departmentId)})`;
+  return sql<
+    string | null
+  >`(select "ref"."name" from (values ${values}) as "ref"("id", "name") where "ref"."id" = ${qualified(computers.departmentId)})`;
 }
 
 /** O nome do responsável da máquina, em SQL — nulo sem responsável ou com id sem par. */
@@ -69,5 +75,7 @@ export function computerResponsibleNameSql(): SQL<string | null> {
     sql`, `,
   );
 
-  return sql<string | null>`(select "ref"."name" from (values ${values}) as "ref"("id", "name") where "ref"."id" = ${qualified(computers.responsibleId)})`;
+  return sql<
+    string | null
+  >`(select "ref"."name" from (values ${values}) as "ref"("id", "name") where "ref"."id" = ${qualified(computers.responsibleId)})`;
 }

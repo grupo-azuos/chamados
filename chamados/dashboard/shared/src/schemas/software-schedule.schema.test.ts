@@ -21,17 +21,25 @@ describe('software schedule contract', () => {
 
   it('accepts a record without an end, and a partial update', () => {
     expect(
-      createSoftwareScheduleEventSchema.safeParse({ ...APPOINTMENT, kind: 'record', endTime: null }).success,
+      createSoftwareScheduleEventSchema.safeParse({ ...APPOINTMENT, kind: 'record', endTime: null })
+        .success,
     ).toBe(true);
     expect(updateSoftwareScheduleEventSchema.parse({ title: 'Novo' })).toEqual({ title: 'Novo' });
-    expect(softwareScheduleQuerySchema.parse({ startDate: '2026-10-19', endDate: '2026-10-25' })).toBeTruthy();
+    expect(
+      softwareScheduleQuerySchema.parse({ startDate: '2026-10-19', endDate: '2026-10-25' }),
+    ).toBeTruthy();
   });
 
   // triste
   it('refuses an end before the start, on the API and on the form', () => {
-    const refused = createSoftwareScheduleEventSchema.safeParse({ ...APPOINTMENT, endTime: '08:00' });
+    const refused = createSoftwareScheduleEventSchema.safeParse({
+      ...APPOINTMENT,
+      endTime: '08:00',
+    });
     expect(refused.success).toBe(false);
-    expect(refused.success ? [] : refused.error.issues.map((issue) => issue.path)).toEqual([['endTime']]);
+    expect(refused.success ? [] : refused.error.issues.map((issue) => issue.path)).toEqual([
+      ['endTime'],
+    ]);
 
     expect(
       softwareScheduleFormSchema.safeParse({
@@ -44,6 +52,8 @@ describe('software schedule contract', () => {
         endTime: '08:00',
       }).success,
     ).toBe(false);
-    expect(softwareScheduleQuerySchema.safeParse({ startDate: '20/10/2026', endDate: 'x' }).success).toBe(false);
+    expect(
+      softwareScheduleQuerySchema.safeParse({ startDate: '20/10/2026', endDate: 'x' }).success,
+    ).toBe(false);
   });
 });

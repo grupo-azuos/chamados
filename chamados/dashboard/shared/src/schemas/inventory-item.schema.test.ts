@@ -35,9 +35,7 @@ describe('createInventoryItemSchema', () => {
 
   /* Quem digita um espaço antes do nome não está dando outro nome ao produto. */
   it('trims the name', () => {
-    expect(createInventoryItemSchema.parse({ ...validItem(), name: '  Café  ' }).name).toBe(
-      'Café',
-    );
+    expect(createInventoryItemSchema.parse({ ...validItem(), name: '  Café  ' }).name).toBe('Café');
   });
 
   /* Campo em branco vira NULO: `''` no banco fingiria que a pessoa escreveu alguma coisa. */
@@ -164,4 +162,3 @@ describe('inventoryResponsibleSchema', () => {
     expect(inventoryResponsibleSchema.safeParse({ name: 'Gisele' }).success).toBe(false);
   });
 });
-

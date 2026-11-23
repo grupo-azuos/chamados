@@ -24,6 +24,7 @@ function setup(
     onOpen: vi.fn(),
     onClose: vi.fn(),
     onMove: vi.fn(),
+    onStage: vi.fn(),
     onToggleStep: vi.fn(),
     onRemoveLink: vi.fn(),
     onAskRemove: vi.fn(),
@@ -33,6 +34,7 @@ function setup(
     onNew: vi.fn(),
     onRefuse: vi.fn(),
     map: { onPeopleChange: vi.fn(), onIslandMove: vi.fn(), onResetLayout: vi.fn() },
+    onManageStages: vi.fn(),
   };
   render(TaskListView, {
     props: {
@@ -50,6 +52,7 @@ function setup(
         window: { from: '2026-11-16', to: '2026-12-20' },
         zoom: 'month',
         map: { peopleIds: [], positions: {} },
+        stages: [],
         people: [],
         selected: null,
         removing: null,

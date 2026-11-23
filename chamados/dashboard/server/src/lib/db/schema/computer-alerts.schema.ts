@@ -50,18 +50,14 @@ export const computerAlerts = chamadosSchema.table(
     threshold: doublePrecision('threshold').notNull(),
 
     status: text('status', { enum: ALERT_STATUSES }).notNull().default('active'),
-    startedAt: timestamp('started_at', { withTimezone: true, mode: 'date' })
-      .notNull()
-      .defaultNow(),
+    startedAt: timestamp('started_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     /* Nulo enquanto o episódio não terminou — é o que separa "está travada agora" de
        "travou ontem". */
     recoveredAt: timestamp('recovered_at', { withTimezone: true, mode: 'date' }),
 
     causeProcess: text('cause_process'),
 
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   },
   (table) => [
     index('computer_alerts_computer_time_idx').on(table.computerId, table.startedAt.desc()),
