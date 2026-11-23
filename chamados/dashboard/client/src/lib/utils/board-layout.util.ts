@@ -230,3 +230,33 @@ const SPARE_ROWS = 2;
 export function slotRows(layout: readonly Pick<LayoutItem, 'y' | 'h'>[]): number {
   return Math.max(4, rowsOf(layout)) + SPARE_ROWS;
 }
+
+/**
+ * Quantos andares o conteúdo de um bloco pede: a altura dele, mais o vão entre os andares que ele
+ * atravessa — de um andar até o teto de um bloco.
+ */
+export function rowsToFit(contentPx: number, cell: Pick<GridCell, 'height' | 'gap' | 'rowGap'>): number {
+  const rowGap = rowGapOf({ width: 0, ...cell });
+  const rows = Math.ceil((contentPx + rowGap) / (cell.height + rowGap));
+
+  return Math.min(MAX_ROWS_PER_WIDGET, Math.max(1, rows));
+}
+
+/**
+ * A grade que o canvas desenha: cada bloco no tamanho gravado, ou mais alto quando o conteúdo pede
+ * (`fitted`, os andares medidos de cada bloco de altura própria) — quem fica embaixo desce. Nunca
+ * encolhe o bloco que a pessoa fez maior. Vendo, nada se grava; montando, o gesto parte desta
+ * grade, e o painel grava o que a pessoa vê.
+ */
+export function fitLayout(layout: readonly LayoutItem[], fitted: Readonly<Record<string, number>>): LayoutItem[] {
+  let result = [...layout];
+  for (const item of layout) {
+    const fit = fitted[item.i] ?? 0;
+    const current = result.find((candidate) => candidate.i === item.i);
+    if (!current || fit <= current.h) continue;
+    const grown = { ...current, h: fit };
+    result = compactAround(pushDown(result, grown), grown);
+  }
+
+  return result;
+}

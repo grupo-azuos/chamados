@@ -7,12 +7,14 @@ import {
   compactLayout,
   defaultSizeOf,
   dropCellOf,
+  fitLayout,
   moveItem,
   overlaps,
   pixelsOf,
   resizeFromHandle,
   resizeItem,
   rowsOf,
+  rowsToFit,
   slotRows,
 } from './board-layout.util';
 
@@ -124,3 +126,44 @@ describe('board layout', () => {
   });
 });
 
+
+describe('the cell grows with its content', () => {
+  const VIEW = { height: 140, gap: 16 };
+
+  // feliz
+  it('counts the rows the content needs, with the gaps between them', () => {
+    expect(rowsToFit(288, VIEW)).toBe(2);
+    expect(rowsToFit(312, VIEW)).toBe(3);
+    /* Montando, o vão entre andares é maior: os mesmos 312px cabem em dois. */
+    expect(rowsToFit(312, { ...VIEW, gap: 32, rowGap: 80 })).toBe(2);
+  });
+
+  // triste
+  it('never asks for less than one row nor more than the block ceiling', () => {
+    expect(rowsToFit(0, VIEW)).toBe(1);
+    expect(rowsToFit(5000, VIEW)).toBe(8);
+  });
+
+  // feliz
+  it('raises a block to the rows its content needs, and whoever is below moves down', () => {
+    const hero: LayoutItem = { i: 'h', x: 0, y: 0, w: 4, h: 2 };
+    const below: LayoutItem = { i: 'c', x: 0, y: 2, w: 2, h: 2 };
+    const fitted = fitLayout([hero, below], { h: 3 });
+
+    expect(fitted).toEqual([
+      { ...hero, h: 3 },
+      { ...below, y: 3 },
+    ]);
+    expect(noOverlap(fitted)).toBe(true);
+  });
+
+  // triste
+  it('never shrinks a block the person made taller, nor touches unmeasured ones', () => {
+    const layout = [
+      { ...A, h: 4 },
+      { ...C, y: 4 },
+    ];
+
+    expect(fitLayout(layout, { a: 3 })).toEqual(layout);
+  });
+});

@@ -2,7 +2,7 @@ import { type Widget } from '@template/shared/schemas/dashboard-board.schema';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
-import BoardCanvas, { KIND_DRAG_TYPE, kindDragTypeOf, kindOf } from './azuos-board-canvas.svelte';
+import BoardCanvas, { KIND_DRAG_TYPE, kindDragTypeOf, kindOf, naturalHeightOf } from './azuos-board-canvas.svelte';
 
 const WIDGET: Widget = {
   id: 'a',
@@ -128,3 +128,81 @@ describe('AzuosBoardCanvas', () => {
   });
 });
 
+
+/**
+ * O jsdom não mede nada: a altura natural (a caixa em `auto`) vem daqui — `px` para quem mede o
+ * conteúdo, zero para o resto, como o jsdom devolve.
+ */
+function mockNaturalHeight(px: number) {
+  return vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+    return this.style.height === 'auto' ? px : 0;
+  });
+}
+
+function renderHero(kind: Widget['kind']) {
+  const hero = { ...WIDGET, id: 'h', kind, title: 'Destaque' };
+  const below = { ...WIDGET, id: 'c', title: 'Por situação' };
+
+  return render(BoardCanvas, {
+    props: {
+      data: {
+        widgets: [hero, below],
+        layout: [
+          { i: 'h', x: 0, y: 0, w: 4, h: 2 },
+          { i: 'c', x: 0, y: 2, w: 2, h: 2 },
+        ],
+        results: {},
+        filterNames: {},
+      },
+      state: { isEditing: false },
+      actions: { onLayoutChange: vi.fn(), onEditWidget: vi.fn(), onRemoveWidget: vi.fn() },
+    },
+  });
+}
+
+describe('AzuosBoardCanvas — a casa cresce com o conteúdo', () => {
+  // feliz
+  it('grows the hero cell to fit its content instead of scrolling inside it, and the block below moves down', async () => {
+    const height = mockNaturalHeight(312);
+    const { container } = renderHero('hero');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    /* 312px não cabem em dois andares (296px): a casa vai a três (3 × 140 + 2 × 16). */
+    const cell = container.querySelector<HTMLElement>('[data-widget-id="h"]');
+    expect(cell?.style.height).toBe('452px');
+    expect(container.querySelector<HTMLElement>('[data-widget-id="c"]')?.style.top).toBe('468px');
+    expect(cell?.querySelector('.overflow-y-auto')).toBeNull();
+    height.mockRestore();
+  });
+
+  // triste
+  it('never grows a chart, which stretches to whatever cell it has', async () => {
+    const height = mockNaturalHeight(900);
+    const { container } = renderHero('column');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(container.querySelector<HTMLElement>('[data-widget-id="h"]')?.style.height).toBe('296px');
+    height.mockRestore();
+  });
+});
+
+describe('naturalHeightOf', () => {
+  // feliz
+  it('reads the content height with the box released, and puts the box back', () => {
+    const height = mockNaturalHeight(312);
+    const box = document.createElement('div');
+    box.style.height = '296px';
+
+    expect(naturalHeightOf(box)).toBe(312);
+    expect(box.style.height).toBe('296px');
+    height.mockRestore();
+  });
+
+  // triste
+  it('restores an empty inline height (the class decides it again)', () => {
+    const box = document.createElement('div');
+
+    expect(naturalHeightOf(box)).toBe(0);
+    expect(box.style.height).toBe('');
+  });
+});
