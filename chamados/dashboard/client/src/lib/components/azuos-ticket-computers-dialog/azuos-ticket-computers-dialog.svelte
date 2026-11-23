@@ -136,23 +136,26 @@
       />
     {:else}
       <ul
-        class="grid max-h-[55vh] grid-cols-1 gap-3 overflow-y-auto p-1 sm:grid-cols-2 lg:grid-cols-3"
+        class="-mx-1 grid max-h-[55vh] grid-cols-1 gap-3 overflow-y-auto p-1 sm:grid-cols-2 lg:grid-cols-3"
         aria-label="Máquinas do inventário"
       >
         {#each data.computers as computer (computer.id)}
           {@const isSelected = data.selectedIds.includes(computer.id)}
           <li>
-            <!-- Escolhida = fundo na cor cheia (regra de UI do grupo), nunca borda colorida. -->
+            <!-- Escolhida = fundo na cor cheia (regra de UI do grupo), nunca borda colorida. As
+                 demais são a caixa cinza sem borda e sem sombra: dentro do diálogo branco, card
+                 branco seria card dentro de card da mesma cor. O hover é o véu neutro por cima. -->
             <button
               type="button"
               aria-pressed={isSelected}
               disabled={isBusy}
               onclick={() => actions.onToggle(computer.id)}
               class={cn(
-                'rounded-surface flex w-full cursor-pointer flex-col gap-2 border p-4 text-left shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                'rounded-box relative isolate flex w-full cursor-pointer flex-col gap-2 p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                'before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-box hover:before:bg-hover-veil',
                 isSelected
-                  ? 'bg-primary text-primary-foreground border-border'
-                  : 'bg-card border-border/70 hover:bg-muted/50',
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-foreground',
               )}
             >
               <span class="flex items-start justify-between gap-2">

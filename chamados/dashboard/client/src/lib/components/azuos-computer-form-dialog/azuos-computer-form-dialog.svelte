@@ -107,7 +107,7 @@
       <!-- Identificação do equipamento na rede -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         {#if isEdit}
-          <div class="flex flex-col gap-1 rounded-box border border-border bg-muted p-3 sm:col-span-2">
+          <div class="flex flex-col gap-1 rounded-box bg-muted p-3 sm:col-span-2">
             <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nome informado pela máquina</span>
             <span class="font-mono text-sm font-medium text-foreground">{fields.name.value}</span>
           </div>
