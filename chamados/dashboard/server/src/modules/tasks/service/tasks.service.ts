@@ -56,6 +56,9 @@ export const TASK_NOT_FOUND = 'Tarefa não encontrada.';
 /** Quem fica registrado no que o próprio sistema cria (tarefa de chamado, de manutenção). */
 export const SYSTEM_ACTOR = 'system';
 
+/** As áreas cujo chamado vira tarefa: as que têm a tela de Tarefas. */
+export const TICKET_TASK_AREAS: readonly RoleContext[] = ['infra', 'sistema'];
+
 /**
  * AS TAREFAS — regras e policy (ver `task-flow.util` para o "porquê" de cada regra).
  *
@@ -259,19 +262,20 @@ export class TasksService {
   // ── Origens automáticas ────────────────────────────────────────────────────────────────────
 
   /**
-   * A tarefa do CHAMADO acompanha o chamado: nasce com ele (só os de Infraestrutura), finaliza
+   * A tarefa do CHAMADO acompanha o chamado: nasce com ele (os de Infraestrutura e de Sistema — as
+   * áreas com tela de Tarefas), finaliza
    * quando ele encerra, reabre quando ele reabre, e pega o responsável dele. Lê o chamado como
    * está AGORA — chamar duas vezes não faz nada a mais.
    */
   async syncTicket(ticket: TicketRow): Promise<void> {
-    if (ticket.area !== 'infra') return;
+    if (!TICKET_TASK_AREAS.includes(ticket.area)) return;
     const closed = isClosedTicketStatus(ticket.status);
     const task = await this.repository.findByTicket(ticket.id);
 
     if (!task) {
       await this.repository.insert(
         {
-          area: 'infra',
+          area: ticket.area,
           title: ticketTaskTitle(ticket.description),
           description: ticket.description,
           origin: 'ticket',

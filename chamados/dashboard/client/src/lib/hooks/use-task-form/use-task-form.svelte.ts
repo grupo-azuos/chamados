@@ -57,11 +57,13 @@ const LINK_SEARCH_SIZE = 20;
 export async function searchLinkOptions(
   kind: TaskLinkKind,
   term: string,
+  /** A área da tarefa: o chamado vinculado é da mesma área. */
+  area: RoleContext = 'infra',
 ): Promise<TaskLinkOption[]> {
   const search = term.trim() || undefined;
   const query = { search, page: 1, pageSize: LINK_SEARCH_SIZE };
   if (kind === 'ticket') {
-    const page = await ticketsApi.list({ ...query, area: 'infra' });
+    const page = await ticketsApi.list({ ...query, area });
     return page.items.map((ticket) => ({
       id: ticket.id,
       label: `${formatTicketProtocol(ticket.id)} · ${ticket.requesterName}`,
@@ -248,7 +250,7 @@ export function useTaskFormModel(options: {
       onRemoveLink: (index) => {
         links = links.filter((_, at) => at !== index);
       },
-      searchLinkOptions,
+      searchLinkOptions: (kind, term) => searchLinkOptions(kind, term, options.area),
       onSubmit: () => {
         touched = true;
         if (Object.keys(errorsOf(input)).length) return;

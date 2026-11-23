@@ -132,9 +132,9 @@ export function tasksOfPeople<T extends Pick<Task, 'owner' | 'people'>>(
   );
 }
 
-/** Para onde cada item leva. */
-export function linkHref(link: Pick<TaskLink, 'kind' | 'targetId'>): string {
-  if (link.kind === 'ticket') return `/infra/tickets/${link.targetId}`;
+/** Para onde cada item leva. O chamado é da área da tarefa (`base`: `/infra`, `/system`). */
+export function linkHref(link: Pick<TaskLink, 'kind' | 'targetId'>, base = '/infra'): string {
+  if (link.kind === 'ticket') return `${base}/tickets/${link.targetId}`;
   if (link.kind === 'computer') return `/infra/computers/${link.targetId}`;
   if (link.kind === 'part') return '/infra/parts';
 
@@ -150,11 +150,13 @@ export function buildTaskMap(
   kinds: readonly TaskLinkKind[],
   now: Date = new Date(),
   positions: TaskMapPositions = {},
+  /** O começo do endereço da área (`/infra`, `/system`): para onde a tarefa e o chamado levam. */
+  base = '/infra',
 ): TaskMap {
   const heights: number[] = Array.from({ length: TASK_MAP_LAYOUT.islandColumns }, () => 0);
   const map: TaskMap = { nodes: [], edges: [] };
   for (const task of tasks) {
-    const island = islandOf(task, kinds, now);
+    const island = islandOf(task, kinds, now, base);
     /* Cada ilha vai para a coluna mais baixa: a tela enche por igual, sem buracos. */
     const column = heights.indexOf(Math.min(...heights));
     const frame = map.nodes.length;
@@ -172,7 +174,7 @@ export function buildTaskMap(
 
 type Island = TaskMap & { height: number };
 
-function islandOf(task: Task, kinds: readonly TaskLinkKind[], now: Date): Island {
+function islandOf(task: Task, kinds: readonly TaskLinkKind[], now: Date, base: string): Island {
   const { taskHeight, personHeight, targetHeight, gap, columns } = TASK_MAP_LAYOUT;
   const links = uniqueLinks(task.links.filter((link) => kinds.includes(link.kind)));
   const people = peopleOf(task);
@@ -200,7 +202,7 @@ function islandOf(task: Task, kinds: readonly TaskLinkKind[], now: Date): Island
       position: { x: columns.task, y: PAD + centered(content, taskHeight) },
       width: NODE_WIDTH,
       height: taskHeight,
-      data: taskDataOf(task, now),
+      data: taskDataOf(task, now, base),
     },
   ];
   const edges: Edge[] = [];
@@ -228,7 +230,7 @@ function islandOf(task: Task, kinds: readonly TaskLinkKind[], now: Date): Island
       position: { x: columns.direct, y: linksTop + index * (targetHeight + gap) },
       width: NODE_WIDTH,
       height: targetHeight,
-      data: targetDataOf(link),
+      data: targetDataOf(link, base),
     });
     edges.push(edgeOf(taskId, id, { isPending }));
   });
@@ -295,23 +297,23 @@ function edgeOf(
   };
 }
 
-function taskDataOf(task: Task, now: Date): TaskMapTaskData {
+function taskDataOf(task: Task, now: Date, base: string): TaskMapTaskData {
   return {
     title: task.title,
     status: TASK_STATUS_LABELS[task.status],
     ownerName: task.owner?.name ?? 'Sem responsável',
     hue: taskHueOf(task, now),
-    href: `/infra/tasks/${task.id}`,
+    href: `${base}/tasks/${task.id}`,
     isPending: task.status !== 'done',
   };
 }
 
-function targetDataOf(link: TaskLink): TaskMapTargetData {
+function targetDataOf(link: TaskLink, base: string): TaskMapTargetData {
   const kindLabel = TASK_LINK_KIND_LABELS[link.kind];
   if (link.label === null)
     return { kind: link.kind, kindLabel, label: 'Saiu do cadastro', href: null };
 
-  return { kind: link.kind, kindLabel, label: link.label, href: linkHref(link) };
+  return { kind: link.kind, kindLabel, label: link.label, href: linkHref(link, base) };
 }
 
 /**
