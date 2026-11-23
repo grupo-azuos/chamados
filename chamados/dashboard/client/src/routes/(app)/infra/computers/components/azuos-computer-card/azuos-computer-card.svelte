@@ -97,7 +97,7 @@
     resourceConditionOf,
     resourceConditionTone,
   } from '@template/shared/domain/computer-resource.util';
-  import { departmentLabel } from '@template/shared/domain/department.util';
+  import { computerPlaceLabel, computerResponsibleLabel } from '$lib/utils/computer-place.util';
 
   import AlertBadge from '../azuos-computer-alert-badge/azuos-computer-alert-badge.svelte';
   import UpgradeBadge from '../azuos-computer-upgrade-badge/azuos-computer-upgrade-badge.svelte';
@@ -189,7 +189,7 @@
       </span>
       <span class="text-muted-foreground truncate text-xs">
         {COMPUTER_KIND_LABELS[computer.kind]} ·
-        {computer.department ? departmentLabel(computer.department) : 'Sem departamento'}
+        {computerPlaceLabel(computer)}
       </span>
     </div>
   </div>
@@ -222,12 +222,12 @@
     <Clock aria-hidden="true" class="text-muted-foreground size-4 shrink-0" />
     <span class="flex min-w-0 flex-1 flex-col">
       <!-- Sem responsável é dito por extenso: é uma máquina esperando quem responda por ela. -->
-      <span class="truncate text-xs font-semibold">{computer.responsibleName ?? 'Sem responsável'}</span>
+      <span class="truncate text-xs font-semibold">{computerResponsibleLabel(computer)}</span>
       <span class="text-muted-foreground truncate text-xs">
         {lastSeenLabelOf(computer)}
       </span>
     </span>
-    <!-- A foto vem do admin-console (o servidor casa o nome com o diretório); sem ela, as iniciais. -->
+    <!-- A foto vem do admin-console (o servidor lê a pessoa pelo id); sem ela, as iniciais. -->
     {#if computer.responsibleName}
       <PersonAvatar
         name={computer.responsibleName}

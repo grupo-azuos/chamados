@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { DepartmentsModule } from '../departments/departments.module';
 import { PartsModule } from '../parts/parts.module';
 import { TransfersController } from './controller/transfers.controller';
 import { TransfersRepository } from './repository/transfers.repository';
@@ -13,7 +14,7 @@ import { TransfersService } from './service/transfers.service';
  * de pé — é o dono dele. Uma segunda cópia dessa conta aqui começaria a discordar da primeira.
  */
 @Module({
-  imports: [PartsModule],
+  imports: [PartsModule, DepartmentsModule],
   controllers: [TransfersController],
   providers: [TransfersService, TransfersRepository],
 })

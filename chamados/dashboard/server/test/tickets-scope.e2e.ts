@@ -52,7 +52,7 @@ describe.skipIf(!testDatabaseUrl)('Tickets scope API (e2e)', () => {
     const created = await api()
       .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name, kind: 'desktop', department: 'RECEPÇÃO' })
+      .send({ name, kind: 'desktop', location: 'RECEPÇÃO' })
       .expect(201);
 
     return created.body.computer.id;

@@ -37,8 +37,11 @@ function computer(over: Partial<Computer> = {}): Computer {
     id: 3,
     name: 'CONTABIL-03',
     displayName: 'Contábil — mesa do fechamento',
+    responsibleId: 'person-daniela-prado',
     responsibleName: 'Daniela Prado',
-    department: 'contabil',
+    responsibleAvatarUrl: null,
+    departmentId: 2, departmentName: 'Contábil', location: null,
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 11 Pro',
@@ -912,8 +915,11 @@ describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
         displayName: null,
         isOnline: false,
         lastSeenAt: null,
+        responsibleId: null,
         responsibleName: null,
-        department: null,
+        responsibleAvatarUrl: null,
+        departmentId: null, departmentName: null, location: null,
+        notes: null,
         warnings: [{ severity: 'attention', message: 'Memória abaixo de 8 GB' }],
         hardware: { ...computer().hardware, hostname: 'contabil-03.local' } as never,
       }),
@@ -922,9 +928,32 @@ describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
     expect(screen.getByRole('heading', { name: 'contabil-03.local' })).toBeInTheDocument();
     expect(screen.getByText('Offline')).toBeInTheDocument();
     expect(screen.getByText('Sem departamento')).toBeInTheDocument();
-    expect(screen.getByText('Sem responsável')).toBeInTheDocument();
+    expect(screen.getByText('(Sem responsável)')).toBeInTheDocument();
     expect(screen.getByText('Atenção')).toBeInTheDocument();
     expect(screen.getByText(/Nenhum alerta registrado/)).toBeInTheDocument();
+    expect(screen.getByText('Sem local')).toBeInTheDocument();
+    expect(screen.queryByText('Observação')).not.toBeInTheDocument();
+  });
+
+  // feliz
+  it('shows the official department, the fixed location and the note line by line', () => {
+    renderWithHistory({
+      computer: computer({
+        departmentId: 5,
+        departmentName: 'Fiscal',
+        location: 'RECEPÇÃO',
+        notes: 'Responsável anterior: Bia Costa\nDepartamento anterior: Fiscal antigo',
+      }),
+    });
+    expect(screen.getByText('Fiscal')).toBeInTheDocument();
+    expect(screen.getByText('RECEPÇÃO')).toBeInTheDocument();
+    expect(screen.getByText(/Responsável anterior: Bia Costa/)).toHaveClass('whitespace-pre-line');
+  });
+
+  // triste
+  it('says the department left the HR list instead of showing nothing', () => {
+    renderWithHistory({ computer: computer({ departmentId: 99, departmentName: null }) });
+    expect(screen.getByText('(Departamento fora da lista do RH)')).toBeInTheDocument();
   });
 });
 

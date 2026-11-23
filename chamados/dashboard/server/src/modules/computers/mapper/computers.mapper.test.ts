@@ -1,6 +1,9 @@
 import { type AgentSnapshot } from '@template/shared/schemas/agent-snapshot.schema';
 import { describe, expect, it } from 'vitest';
 
+import { afterEach } from 'vitest';
+
+import { forgetReferenceNames, rememberDepartments, rememberPeople } from '../../../lib/db/reference-names.util';
 import { type ComputerRow } from '../../../lib/db/schema/computers.schema';
 import { type ComputerAlertRow } from '../../../lib/db/schema/computer-alerts.schema';
 import {
@@ -23,8 +26,10 @@ function computerRow(over: Partial<ComputerRow> = {}): ComputerRow {
     id: 1,
     name: 'RECEPCAO-01',
     displayName: null,
-    responsibleName: null,
-    department: null,
+    responsibleId: null,
+    departmentId: null,
+    location: null,
+    notes: null,
     kind: 'desktop',
     tokenHash: 'hash-secreto',
     os: null,
@@ -184,14 +189,14 @@ describe('toComputerUpdate kind', () => {
 
   // triste
   it('leaves the kind alone when the change does not mention it', () => {
-    expect(toComputerUpdate({ responsibleName: 'Helena' }, ANA, NOW)).not.toHaveProperty('kind');
+    expect(toComputerUpdate({ responsibleId: 'person-1' }, ANA, NOW)).not.toHaveProperty('kind');
   });
 });
 
 describe('toComputerUpdate', () => {
   // feliz
   it('always stamps who touched it and when', () => {
-    const update = toComputerUpdate({ responsibleName: 'Helena' }, ANA, NOW);
+    const update = toComputerUpdate({ responsibleId: 'person-1' }, ANA, NOW);
 
     expect(update.updatedBy).toBe(ANA);
     expect(update.updatedAt).toBe(NOW);
@@ -262,8 +267,9 @@ describe('toSnapshotUpdate', () => {
     const update = toSnapshotUpdate(snapshot(), '1.0.0', NOW);
 
     expect(update).not.toHaveProperty('displayName');
-    expect(update).not.toHaveProperty('responsibleName');
-    expect(update).not.toHaveProperty('department');
+    expect(update).not.toHaveProperty('responsibleId');
+    expect(update).not.toHaveProperty('departmentId');
+    expect(update).not.toHaveProperty('location');
   });
 });
 
@@ -455,5 +461,59 @@ describe('toComputerListItem maintenance signals', () => {
     const item = toComputerListItem({ ...computerRow(), isArchived: true, ticketsThisMonth: 0,
       lastPreventiveAt: null, activeAlerts: 0, activeAlertMetrics: [] }, false);
     expect(item.preventiveStatus).toBeNull();
+  });
+});
+
+describe('toComputer references', () => {
+  afterEach(() => forgetReferenceNames());
+
+  // feliz
+  it('writes the name and photo of the responsible and the HR department name, from the ids', () => {
+    rememberPeople([{ id: 'person-1', name: 'Ana Exemplo', email: 'ana@exemplo.invalid', image: '/ana.png' }]);
+    rememberDepartments([{ id: 12, name: 'Fiscal' }]);
+
+    const computer = toComputer(
+      computerRow({ responsibleId: 'person-1', departmentId: 12, location: 'RECEPÇÃO', notes: 'Mesa 3' }),
+      false,
+    );
+
+    expect(computer).toMatchObject({
+      responsibleId: 'person-1',
+      responsibleName: 'Ana Exemplo',
+      responsibleAvatarUrl: '/ana.png',
+      departmentId: 12,
+      departmentName: 'Fiscal',
+      location: 'RECEPÇÃO',
+      notes: 'Mesa 3',
+    });
+  });
+
+  // triste
+  it('leaves the names empty, never the raw id, when the person or department is unknown', () => {
+    const computer = toComputer(computerRow({ responsibleId: 'gone', departmentId: 99 }), false);
+
+    expect(computer.responsibleName).toBeNull();
+    expect(computer.responsibleAvatarUrl).toBeNull();
+    expect(computer.departmentName).toBeNull();
+  });
+});
+
+describe('toComputerInsert references', () => {
+  // feliz
+  it('stores the ids, the location and the trimmed notes', () => {
+    const insert = toComputerInsert(
+      { name: ' PC-1 ', kind: 'desktop', responsibleId: ' person-1 ', departmentId: 12, location: 'ANALYZE', notes: ' Mesa ' },
+      'hash',
+      ANA,
+    );
+
+    expect(insert).toMatchObject({ responsibleId: 'person-1', departmentId: 12, location: 'ANALYZE', notes: 'Mesa' });
+  });
+
+  // triste
+  it('stores nulls for an empty responsible and blank notes', () => {
+    const insert = toComputerInsert({ name: 'PC-1', kind: 'desktop', responsibleId: null, notes: '   ' }, 'hash', ANA);
+
+    expect(insert).toMatchObject({ responsibleId: null, departmentId: null, location: null, notes: null });
   });
 });

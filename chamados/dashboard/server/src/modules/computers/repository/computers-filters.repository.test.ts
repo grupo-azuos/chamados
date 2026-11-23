@@ -12,21 +12,16 @@ const render = (condition: ReturnType<typeof responsibleCondition | typeof upgra
 
 describe('responsibleCondition', () => {
   // feliz
-  it('compares the normalized stored name with the chosen person name, as a parameter', () => {
-    const query = render(responsibleCondition({ kind: 'name', name: 'ana exemplo' }));
+  it('compares the stored person id with the chosen one, as a parameter', () => {
+    const query = render(responsibleCondition({ kind: 'person', id: 'person-1' }));
 
-    expect(query?.sql).toContain('lower(regexp_replace(trim(coalesce("chamados"."computers"."responsible_name"');
-    expect(query?.params).toEqual(['ana exemplo']);
+    expect(query?.sql).toContain('"chamados"."computers"."responsible_id" = $1');
+    expect(query?.params).toEqual(['person-1']);
   });
 
   // feliz
-  it('asks for an empty name on "no responsible"', () => {
-    expect(render(responsibleCondition({ kind: 'none' }))?.sql).toMatch(/= ''$/);
-  });
-
-  // triste
-  it('matches nothing when the person is not in the directory', () => {
-    expect(render(responsibleCondition({ kind: 'nobody' }))?.sql).toBe('false');
+  it('asks for an empty id on "no responsible"', () => {
+    expect(render(responsibleCondition({ kind: 'none' }))?.sql).toContain('"responsible_id" is null');
   });
 
   // triste

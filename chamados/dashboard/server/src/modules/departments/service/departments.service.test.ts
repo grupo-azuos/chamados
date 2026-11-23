@@ -1,16 +1,24 @@
+import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
+
+import { departmentNameOf } from '../../../lib/db/reference-names.util';
 
 import { type HrDepartmentsRepository } from '../repository/hr-departments.repository';
 import { DepartmentsService, HR_DEPARTMENTS_TTL_MS } from './departments.service';
 
-function setup(listNames = vi.fn().mockResolvedValue(['Contábil', 'Fiscal'])) {
+const OPTIONS = [
+  { id: 10, name: 'Contábil' },
+  { id: 11, name: 'Fiscal' },
+];
+
+function setup(listOptions = vi.fn().mockResolvedValue(OPTIONS)) {
   let now = 1_000;
   const service = new DepartmentsService(
-    { listNames } as unknown as HrDepartmentsRepository,
+    { listOptions } as unknown as HrDepartmentsRepository,
     () => now,
   );
 
-  return { service, listNames, advance: (ms: number) => (now += ms) };
+  return { service, listNames: listOptions, advance: (ms: number) => (now += ms) };
 }
 
 describe('DepartmentsService', () => {
@@ -20,9 +28,11 @@ describe('DepartmentsService', () => {
 
     await expect(service.catalog()).resolves.toEqual({
       rh: ['Contábil', 'Fiscal'],
+      rhOptions: OPTIONS,
       local: ['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'],
       isRhAvailable: true,
     });
+    expect(departmentNameOf(11)).toBe('Fiscal');
     await expect(service.names()).resolves.toEqual([
       'Contábil',
       'Fiscal',
@@ -60,8 +70,25 @@ describe('DepartmentsService', () => {
 
     await expect(service.catalog()).resolves.toEqual({
       rh: [],
+      rhOptions: [],
       local: ['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'],
       isRhAvailable: false,
     });
+  });
+
+  // feliz
+  it('accepts an official department id', async () => {
+    await expect(setup().service.assertOfficial(11)).resolves.toBeUndefined();
+  });
+
+  // triste
+  it('refuses an id that is not in the HR list with 400', async () => {
+    await expect(setup().service.assertOfficial(99)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('refuses with 503, instead of accepting blindly, when HR never answered', async () => {
+    const { service } = setup(vi.fn().mockRejectedValue(new Error('fora do ar')));
+
+    await expect(service.assertOfficial(11)).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 });

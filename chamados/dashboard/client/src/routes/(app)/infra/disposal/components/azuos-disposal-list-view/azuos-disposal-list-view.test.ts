@@ -17,8 +17,11 @@ function computer(over: Partial<Computer> = {}): Computer {
     id: 9,
     name: 'RECEPCAO-09',
     displayName: 'Recepção — micro antigo do balcão',
+    responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
-    department: 'recepcao',
+    responsibleAvatarUrl: null,
+    departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 10 Pro',
@@ -261,7 +264,7 @@ describe('AzuosDisposalListView — search, type filter, rows and the restore di
     vi.mocked(actions.onAskRestore).mockClear();
     renderView({
       computers: [
-        computer({ department: null, disposalType: null, disposalReason: null, displayName: null }),
+        computer({ departmentId: null, departmentName: null, location: null, disposalType: null, disposalReason: null, displayName: null }),
       ],
     });
 

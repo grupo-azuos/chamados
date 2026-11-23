@@ -30,8 +30,11 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     id: 3,
     name: 'CONTABIL-03',
     displayName: 'Contábil — mesa do fechamento',
+    responsibleId: null,
     responsibleName: null,
-    department: 'contabil',
+    responsibleAvatarUrl: null,
+    departmentId: 2, departmentName: 'Contábil', location: null,
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: null,

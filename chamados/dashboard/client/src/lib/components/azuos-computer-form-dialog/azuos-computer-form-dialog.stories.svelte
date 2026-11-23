@@ -14,22 +14,34 @@
     return {
       name: field(),
       displayName: field(),
-      responsibleName: field(),
-      department: field(),
+      responsibleId: field(),
+      departmentId: field(),
+      location: field(),
+      notes: field(),
       kind: field(),
       ...over,
     };
   }
 
-  /* Os departamentos como chegam do servidor: os do RH e, depois da linha, os daqui. */
+  /* Os departamentos OFICIAIS como chegam do RH: o valor é o id. */
   const departmentOptions = [
-    { value: 'Comercial', label: 'Comercial' },
-    { value: 'Contábil', label: 'Contábil' },
-    { value: 'Departamento Pessoal', label: 'Departamento Pessoal' },
-    { value: 'Fiscal', label: 'Fiscal' },
-    { value: 'ANALYZE', label: 'ANALYZE', separatorBefore: true },
+    { value: '1', label: 'Comercial' },
+    { value: '2', label: 'Contábil' },
+    { value: '7', label: 'Departamento Pessoal' },
+    { value: '5', label: 'Fiscal' },
+    { value: '6', label: 'Paralegal' },
+  ];
+
+  /* Os locais fixos: lista fechada, outro campo. */
+  const locationOptions = [
+    { value: 'ANALYZE', label: 'ANALYZE' },
     { value: 'CERTIFICADO', label: 'CERTIFICADO' },
     { value: 'RECEPÇÃO', label: 'RECEPÇÃO' },
+  ];
+
+  const people = [
+    { id: 'person-bia', name: 'Bia Costa', avatarUrl: null },
+    { id: 'person-isabela', name: 'Isabela Marques de Oliveira e Souza Rodrigues', avatarUrl: null },
   ];
 
   const actions = {
@@ -48,7 +60,11 @@
 <!-- Cadastro: o nome é digitado, e ao salvar nasce o token do agente. -->
 <Story
   name="Default"
-  args={{ data: { mode: 'create', fields: fields() }, state: { isOpen: true }, actions }}
+  args={{
+    data: { mode: 'create', fields: fields(), responsibles: people, departmentOptions, locationOptions },
+    state: { isOpen: true },
+    actions,
+  }}
 />
 
 <!-- Edição: o nome vira contexto, porque quem o informa é a máquina. -->
@@ -57,11 +73,15 @@
   args={{
     data: {
       mode: 'edit',
+      responsibles: people,
+      departmentOptions,
+      locationOptions,
       fields: fields({
         name: field('RECEPCAO-01'),
         displayName: field('Recepção — balcão'),
-        responsibleName: field('Bia Costa'),
-        department: field('recepcao'),
+        responsibleId: field('person-bia'),
+        location: field('RECEPÇÃO'),
+        notes: field('Responsável anterior: Bia Costa'),
         kind: field('desktop'),
       }),
     },
@@ -104,11 +124,15 @@
   args={{
     data: {
       mode: 'edit',
+      responsibles: people,
+      departmentOptions,
+      locationOptions,
       fields: fields({
         name: field('PARALEGAL-08-ESTACAO-COMPARTILHADA'),
         displayName: field('Paralegal — estação compartilhada do corredor (mais de uma pessoa)'),
-        responsibleName: field('Isabela Marques de Oliveira e Souza Rodrigues'),
-        department: field('paralegal'),
+        responsibleId: field('person-isabela'),
+        departmentId: field('6'),
+        notes: field('Responsável anterior: Isabela Marques\nDepartamento anterior: Paralegal antigo — sala 3, mesa compartilhada entre dois turnos'),
         kind: field('desktop'),
       }),
     },
@@ -120,8 +144,8 @@
 <script lang="ts">
   let directoryFields = $state(fields());
   const directoryUsers = [
-    { id: 'person-1', name: 'Ana Exemplo' },
-    { id: 'person-2', name: 'Bruno Exemplo' },
+    { id: 'person-1', name: 'Ana Exemplo', avatarUrl: null },
+    { id: 'person-2', name: 'Bruno Exemplo', avatarUrl: null },
   ];
 </script>
 
@@ -136,17 +160,17 @@
 <Story name="DirectoryUnavailable" args={{ data: { mode: 'create', fields: fields() }, state: { isOpen: true, responsiblesError: 'Diretório indisponível' }, actions }} />
 <Story name="DirectoryLoading" args={{ data: { mode: 'create', fields: fields() }, state: { isOpen: true, isLoadingResponsibles: true }, actions }} />
 
-<!-- Os departamentos vêm do RH; os que existem só aqui aparecem depois de uma linha. -->
+<!-- Os departamentos vêm do RH, pelo id; os locais fixos são outro campo, de lista fechada. -->
 <Story
   name="RhDepartments"
-  args={{ data: { mode: 'create', fields: fields(), departmentOptions }, state: { isOpen: true }, actions }}
+  args={{ data: { mode: 'create', fields: fields(), departmentOptions, locationOptions }, state: { isOpen: true }, actions }}
 />
 
-<!-- O RH não respondeu: só os departamentos daqui, e o aviso explica a lista curta. -->
+<!-- O RH não respondeu: nenhum departamento para escolher, e o aviso explica por quê. -->
 <Story
   name="RhUnavailable"
   args={{
-    data: { mode: 'create', fields: fields(), departmentOptions: departmentOptions.slice(4) },
+    data: { mode: 'create', fields: fields(), departmentOptions: [], locationOptions },
     state: { isOpen: true, isRhUnavailable: true },
     actions,
   }}

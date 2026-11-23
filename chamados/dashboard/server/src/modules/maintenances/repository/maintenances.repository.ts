@@ -20,6 +20,7 @@ import {
   type MaintenanceInsert,
   type MaintenanceRow,
 } from '../../../lib/db/schema/maintenances.schema';
+import { computerPlaceNameSql } from '../../../lib/db/reference-names.util';
 
 /**
  * A manutenção com a máquina dela, do jeito que a tela precisa ler.
@@ -63,12 +64,15 @@ export type PreventiveRow = {
   maintenanceCount: number;
 };
 
-const computerColumns = {
-  id: computers.id,
-  name: computers.name,
-  displayName: computers.displayName,
-  department: computers.department,
-};
+/* Função, e não objeto: o nome do departamento vem da última lista do RH, lida na hora da consulta. */
+function computerColumns() {
+  return {
+    id: computers.id,
+    name: computers.name,
+    displayName: computers.displayName,
+    department: computerPlaceNameSql(),
+  };
+}
 
 /**
  * O repository não tem regra: traduz filtro em consulta e devolve linha. Toda decisão — quem
@@ -89,7 +93,7 @@ export class MaintenancesRepository {
     const [rows, [counted]] = await Promise.all([
       runQuery(
         this.db
-          .select({ maintenance: maintenances, computer: computerColumns })
+          .select({ maintenance: maintenances, computer: computerColumns() })
           .from(maintenances)
           .leftJoin(computers, eq(maintenances.computerId, computers.id))
           .where(where)
@@ -116,7 +120,7 @@ export class MaintenancesRepository {
   async findById(id: number): Promise<MaintenanceWithComputer | null> {
     return runMaybe(
       this.db
-        .select({ maintenance: maintenances, computer: computerColumns })
+        .select({ maintenance: maintenances, computer: computerColumns() })
         .from(maintenances)
         .leftJoin(computers, eq(maintenances.computerId, computers.id))
         .where(eq(maintenances.id, id))
@@ -168,7 +172,7 @@ export class MaintenancesRepository {
 
     return runQuery(
       this.db
-        .select({ schedule: maintenanceSchedules, computer: computerColumns })
+        .select({ schedule: maintenanceSchedules, computer: computerColumns() })
         .from(maintenanceSchedules)
         .innerJoin(computers, eq(maintenanceSchedules.computerId, computers.id))
         .where(and(...filters))
@@ -273,7 +277,7 @@ export class MaintenancesRepository {
           computerId: computers.id,
           computerName: computers.name,
           computerDisplayName: computers.displayName,
-          computerDepartment: computers.department,
+          computerDepartment: computerPlaceNameSql(),
           lastDoneAt: asDate(
             sql<Date | null>`max(${maintenances.performedAt}) filter (where ${maintenances.type} in ('preventive', 'corrective'))`,
             maintenances.performedAt,

@@ -25,11 +25,13 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
 
   const api = () => request(app.getHttpServer());
 
-  const registerComputer = async (name: string, department = 'RECEPÇÃO'): Promise<number> => {
+  /* Sem departamento oficial, a máquina fica no local RECEPÇÃO; com ele, no Fiscal do RH (id 31). */
+  const registerComputer = async (name: string, department: 'RECEPÇÃO' | 'Fiscal' = 'RECEPÇÃO'): Promise<number> => {
+    const place = department === 'Fiscal' ? { departmentId: 31 } : { location: 'RECEPÇÃO' };
     const created = await api()
       .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name, kind: 'desktop', department })
+      .send({ name, kind: 'desktop', ...place })
       .expect(201);
 
     return created.body.computer.id;
@@ -53,7 +55,7 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
   });
 
   beforeAll(async () => {
-    started = await createE2eApp(testDatabaseUrl!);
+    started = await createE2eApp(testDatabaseUrl!, { departments: [{ id: 31, name: 'Fiscal' }] });
     app = started.app;
   });
 

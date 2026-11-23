@@ -45,6 +45,18 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
     use: ['No fim da barra de filtros de qualquer lista.'],
     avoid: ['Para desfazer um formulário: aí é o botão "Cancelar" do próprio formulário.'],
   },
+  AzuosCopyButton: {
+    summary:
+      'O botão de copiar que fica dentro da caixa de um código, comando ou link: só o ícone, com a dica, o ✓ "Copiado!" por dois segundos e sem quebrar quando o navegador não deixa copiar.',
+    use: [
+      'Ao lado de um texto que a pessoa vai colar em outro lugar (token, comando, endereço).',
+      'Na caixa invertida (fundo escuro), com o tom `inverse`.',
+    ],
+    avoid: [
+      'Ação principal da área: use o `AzuosActionButton` com rótulo.',
+      'Texto que a pessoa só lê: deixe sem botão, para não poluir a tela.',
+    ],
+  },
   AzuosFileLinks: {
     summary:
       'Os dois caminhos de um arquivo anexado: abrir numa aba nova e baixar com o nome original. Regra da casa: todo arquivo tem as duas ações.',
@@ -832,7 +844,7 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   AzuosComputerFormDialog: {
     summary:
-      'O modal de cadastrar máquina e de corrigir a identificação dela: nome, tipo, nome do dispositivo, responsável (do diretório, ou digitado) e departamento. O nome da máquina só se edita no cadastro; depois quem o informa é o agente.',
+      'O modal de cadastrar máquina e de corrigir a identificação dela: nome, tipo, nome do dispositivo, responsável (só uma pessoa da lista do escritório, pelo campo de pessoa com foto — nunca um nome digitado), departamento oficial do RH (guardado pelo id), local fixo (ANALYZE, CERTIFICADO, RECEPÇÃO) e observação. O nome da máquina só se edita no cadastro; depois quem o informa é o agente.',
     use: ['Cadastrar ou corrigir uma máquina do inventário da Infra.'],
     avoid: [
       'Transferir a máquina de pessoa ou de lugar: use o `AzuosTransferDialog`.',
@@ -1177,7 +1189,7 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   InventoryFilters: {
     summary:
-      'A barra de filtros do inventário: busca, departamento e o botão "Filtros", que abre o painel com conexão, saúde, recursos, alertas, preventiva, tipo e arquivadas. Cada filtro ligado vira uma etiqueta com X embaixo.',
+      'A barra de filtros do inventário: busca, departamento oficial (pelo id do RH) e o botão "Filtros", que abre o painel com responsável, local, conexão, saúde, recursos, alertas, preventiva, tipo e arquivadas. Cada filtro ligado vira uma etiqueta com X embaixo.',
     use: ['Na tela Inventário (já vem no `AzuosComputerListView`).'],
     avoid: ['Para filtrar outra lista: monte a barra com o `FilterPanel` e os campos da casa.'],
   },
@@ -1198,7 +1210,7 @@ export const COMPONENT_DOCS: Record<string, ComponentDoc> = {
   },
   AzuosTransferDialog: {
     summary:
-      'O modal de transferir a máquina de departamento: para onde vai, quem levou, observação e, para cada peça ligada a ela, se vai junto ou fica na estação — e, se fica, qual máquina assume.',
+      'O modal de transferir a máquina de departamento: para onde vai (um departamento oficial do RH, um local fixo ou a prateleira), quem levou, observação e, para cada peça ligada a ela, se vai junto ou fica na estação — e, se fica, qual máquina assume.',
     use: ['Pelo botão "Transferir" da ficha da máquina.'],
     avoid: [
       'Para só corrigir o cadastro da máquina: é o `AzuosComputerFormDialog`.',

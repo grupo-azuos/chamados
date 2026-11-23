@@ -37,6 +37,7 @@
     healthStatusTone,
   } from '@template/shared/domain/computer-health.util';
   import { departmentLabel } from '@template/shared/domain/department.util';
+  import { computerDepartmentLabel, computerResponsibleLabel } from '$lib/utils/computer-place.util';
   import {
     disposalTypeLabel,
     disposalTypeTone,
@@ -304,6 +305,8 @@
   import MemoryStick from '@lucide/svelte/icons/memory-stick';
   import ShieldCheck from '@lucide/svelte/icons/shield-check';
   import UserRound from '@lucide/svelte/icons/user-round';
+  import MapPin from '@lucide/svelte/icons/map-pin';
+  import StickyNote from '@lucide/svelte/icons/sticky-note';
   import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
   import KeyRound from '@lucide/svelte/icons/key-round';
   import Pencil from '@lucide/svelte/icons/pencil';
@@ -453,16 +456,34 @@
         <Building2 class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <div class="min-w-0">
           <dt class="text-ink-500 text-xs">Departamento</dt>
-          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computer.department ? departmentLabel(computer.department) : 'Sem departamento'}</dd>
+          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computerDepartmentLabel(computer)}</dd>
+        </div>
+      </div>
+      <div class="flex min-w-0 items-start gap-2.5">
+        <MapPin class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <div class="min-w-0">
+          <dt class="text-ink-500 text-xs">Local</dt>
+          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computer.location ?? 'Sem local'}</dd>
         </div>
       </div>
       <div class="flex min-w-0 items-start gap-2.5">
         <UserRound class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <div class="min-w-0">
           <dt class="text-ink-500 text-xs">Responsável</dt>
-          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computer.responsibleName ?? 'Sem responsável'}</dd>
+          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computerResponsibleLabel(computer)}</dd>
         </div>
       </div>
+      {#if computer.notes}
+        <!-- A observação guarda também o responsável e o departamento antigos, da migração de
+             nome para id: as quebras de linha ficam, uma informação por linha. -->
+        <div class="flex min-w-0 items-start gap-2.5 sm:col-span-2">
+          <StickyNote class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <div class="min-w-0">
+            <dt class="text-ink-500 text-xs">Observação</dt>
+            <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words whitespace-pre-line">{computer.notes}</dd>
+          </div>
+        </div>
+      {/if}
     </dl>
 
     <div class="border-border mt-5 flex flex-wrap items-center gap-2 border-t pt-4">

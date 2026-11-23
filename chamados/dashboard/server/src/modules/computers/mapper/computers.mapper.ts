@@ -7,7 +7,6 @@ import {
 } from '@template/shared/schemas/agent-snapshot.schema';
 import { type ComputerLive } from '@template/shared/schemas/computer-live.schema';
 import { type ComputerWithTickets } from '../repository/computers.repository';
-import { type ResponsiblePerson } from '../service/computer-responsible.util';
 import {
   type Computer,
   type ComputerListItem,
@@ -18,6 +17,7 @@ import {
 } from '@template/shared/schemas/computer.schema';
 
 import { mapDefined, setIfDefined } from '../../../lib/db/partial-update.util';
+import { departmentNameOf, personOf } from '../../../lib/db/reference-names.util';
 import { type ComputerAlertRow } from '../../../lib/db/schema/computer-alerts.schema';
 import { type ComputerSampleInsert } from '../../../lib/db/schema/computer-samples.schema';
 import { type ComputerInsert, type ComputerRow } from '../../../lib/db/schema/computers.schema';
@@ -29,16 +29,7 @@ import { type ComputerInsert, type ComputerRow } from '../../../lib/db/schema/co
  * agora, e quem sabe disso é o registro de conexões vivas, não o banco.
  */
 /** A linha da LISTA: a máquina mais a conta de chamados do mês. */
-/**
- * `person`: a pessoa do diretório por trás do nome do responsável (`computer-responsible.util`)
- * — de onde vêm o id do filtro e a foto do cartão. Sem ela, os dois ficam nulos e a tela mostra
- * as iniciais.
- */
-export function toComputerListItem(
-  row: ComputerWithTickets,
-  isOnline: boolean,
-  person: ResponsiblePerson | null = null,
-): ComputerListItem {
+export function toComputerListItem(row: ComputerWithTickets, isOnline: boolean): ComputerListItem {
   const lastPreventiveAt = row.lastPreventiveAt?.toISOString() ?? null;
   return {
     ...toComputer(row, isOnline),
@@ -47,8 +38,6 @@ export function toComputerListItem(
     lastPreventiveAt,
     activeAlerts: row.activeAlerts,
     activeAlertMetrics: row.activeAlertMetrics,
-    responsibleId: person?.id ?? null,
-    responsibleAvatarUrl: person?.avatarUrl ?? null,
   };
 }
 
@@ -57,13 +46,17 @@ function hostnameFromSnapshot(value: unknown): string | null {
   return parsed.success ? parsed.data.host.hostname : null;
 }
 
+/**
+ * O nome e a foto do responsável e o nome do departamento NÃO estão na linha: a linha guarda os
+ * ids, e os nomes vêm das últimas listas lidas do diretório e do RH (`reference-names.util`) —
+ * o service as lê antes de responder. Id sem par vira nulo, e a tela mostra "(Sem responsável)".
+ */
 export function toComputer(row: ComputerRow, isOnline: boolean): Computer {
   return {
     id: row.id,
     name: row.name,
     displayName: row.displayName,
-    responsibleName: row.responsibleName,
-    department: row.department,
+    ...referencesOf(row),
     kind: row.kind,
 
     hardware: {
@@ -108,6 +101,26 @@ export function toComputer(row: ComputerRow, isOnline: boolean): Computer {
   };
 }
 
+/** O responsável e o lugar da máquina: os ids guardados e os nomes lidos das listas de fora. */
+function referencesOf(
+  row: ComputerRow,
+): Pick<
+  Computer,
+  'responsibleId' | 'responsibleName' | 'responsibleAvatarUrl' | 'departmentId' | 'departmentName' | 'location' | 'notes'
+> {
+  const person = personOf(row.responsibleId);
+
+  return {
+    responsibleId: row.responsibleId,
+    responsibleName: person?.name ?? null,
+    responsibleAvatarUrl: person?.avatarUrl ?? null,
+    departmentId: row.departmentId,
+    departmentName: departmentNameOf(row.departmentId),
+    location: row.location,
+    notes: row.notes,
+  };
+}
+
 /**
  * O cadastro inicial. Nada de hardware: ele chega medido, na primeira conexão do agente.
  *
@@ -122,8 +135,10 @@ export function toComputerInsert(
   return {
     name: input.name.trim(),
     displayName: normalizeOptional(input.displayName) ?? null,
-    responsibleName: normalizeOptional(input.responsibleName) ?? null,
-    department: input.department ?? null,
+    responsibleId: normalizeOptional(input.responsibleId) ?? null,
+    departmentId: input.departmentId ?? null,
+    location: input.location ?? null,
+    notes: normalizeOptional(input.notes) ?? null,
     kind: input.kind,
     tokenHash,
     createdBy: actorEmail,
@@ -139,8 +154,10 @@ export function toComputerUpdate(
   const update: Partial<ComputerInsert> = { updatedAt: now, updatedBy: actorEmail };
 
   setIfDefined(update, 'displayName', normalizeOptional(input.displayName));
-  setIfDefined(update, 'responsibleName', normalizeOptional(input.responsibleName));
-  setIfDefined(update, 'department', input.department);
+  setIfDefined(update, 'responsibleId', normalizeOptional(input.responsibleId));
+  setIfDefined(update, 'departmentId', input.departmentId);
+  setIfDefined(update, 'location', input.location);
+  setIfDefined(update, 'notes', normalizeOptional(input.notes));
   setIfDefined(update, 'kind', input.kind);
   setIfDefined(update, 'isArchived', input.isArchived);
   setIfDefined(update, 'isBlocked', input.isBlocked);

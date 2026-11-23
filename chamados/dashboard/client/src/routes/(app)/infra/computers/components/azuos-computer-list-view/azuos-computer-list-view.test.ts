@@ -21,8 +21,11 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     activeAlertMetrics: [],
     name: 'RECEPCAO-01',
     displayName: 'Recepção — balcão',
+    responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
-    department: 'recepcao',
+    responsibleAvatarUrl: null,
+    departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 11 Pro',
@@ -76,7 +79,8 @@ const summary: ComputerSummary = {
 
 const emptyFilter: ComputerListFilter = {
   search: '',
-  department: '',
+  departmentId: '',
+  location: '',
   healthStatus: '',
   kind: '',
   includeArchived: false,
@@ -499,7 +503,7 @@ describe('AzuosComputerListView — export, situations and the cut list', () => 
   // feliz
   it('tells archived and offline machines apart, with or without a responsible', () => {
     renderList([
-      computer({ id: 1, isArchived: true, responsibleName: null, department: null }),
+      computer({ id: 1, isArchived: true, responsibleName: null, responsibleId: null, departmentId: null, departmentName: null, location: null }),
       computer({
         id: 2,
         name: 'FISCAL-02',
@@ -511,7 +515,7 @@ describe('AzuosComputerListView — export, situations and the cut list', () => 
     expect(screen.getAllByText('Arquivada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Offline').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Sem departamento').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Sem responsável').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('(Sem responsável)').length).toBeGreaterThan(0);
     expect(screen.getAllByText('3').length).toBeGreaterThan(0);
   });
 

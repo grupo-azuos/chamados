@@ -5,7 +5,8 @@
 
   const emptyFilter: InventoryFilter = {
     search: '',
-    department: '',
+    departmentId: '',
+  location: '',
     healthStatus: '',
     kind: '',
     onlyOnline: false,
@@ -20,10 +21,16 @@
 
   /* Dados inventados: departamentos genéricos, nenhum nome de pessoa. */
   const departmentOptions = [
-    { value: 'Financeiro', label: 'Financeiro' },
-    { value: 'Recursos Humanos', label: 'Recursos Humanos' },
-    { value: 'TI', label: 'TI' },
-    { value: 'RECEPÇÃO', label: 'RECEPÇÃO', separatorBefore: true },
+    { value: '4', label: 'Financeiro' },
+    { value: '8', label: 'Recursos Humanos' },
+    { value: '5', label: 'TI' },
+  ];
+
+  /* Os locais fixos: lista fechada, filtro à parte do departamento. */
+  const locationOptions = [
+    { value: 'ANALYZE', label: 'ANALYZE' },
+    { value: 'CERTIFICADO', label: 'CERTIFICADO' },
+    { value: 'RECEPÇÃO', label: 'RECEPÇÃO' },
   ];
 
   /* Pessoas inventadas; a foto é um avatar genérico, como na história do AzuosPersonAvatar. */
@@ -56,7 +63,13 @@
 </script>
 
 <!-- Sem filtro: só a barra, painel fechado. -->
-<Story name="Default" args={{ data: { filter: emptyFilter, departmentOptions }, actions }} />
+<Story name="Default" args={{ data: { filter: emptyFilter, departmentOptions, locationOptions }, actions }} />
+
+<!-- O local (ANALYZE, CERTIFICADO, RECEPÇÃO) filtra à parte e vira etiqueta. -->
+<Story
+  name="ByLocation"
+  args={{ data: { filter: { ...emptyFilter, location: 'RECEPÇÃO' }, departmentOptions, locationOptions }, actions }}
+/>
 
 <!-- Chegou filtrada (um cartão do painel, um filtro salvo): painel aberto e etiquetas à vista. -->
 <Story
@@ -74,7 +87,7 @@
 <Story
   name="SearchOnly"
   args={{
-    data: { filter: { ...emptyFilter, search: 'recepção', department: 'TI' }, departmentOptions },
+    data: { filter: { ...emptyFilter, search: 'recepção', departmentId: '5' }, departmentOptions },
     actions,
   }}
 />

@@ -17,8 +17,11 @@
       activeAlertMetrics: [],
       name: 'RECEPCAO-01',
       displayName: 'Recepção — balcão',
+      responsibleId: 'person-bia-costa',
       responsibleName: 'Bia Costa',
-      department: 'recepcao',
+      responsibleAvatarUrl: null,
+      departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+      notes: null,
       kind: 'desktop',
       hardware: {
         os: 'Microsoft Windows 11 Pro',
@@ -104,7 +107,7 @@
 />
 <Story
   name="Offline sem responsável"
-  args={{ data: { computer: computer({ isOnline: false, lastSeenAt: null, responsibleName: null, department: null }) }, actions }}
+  args={{ data: { computer: computer({ isOnline: false, lastSeenAt: null, responsibleName: null, responsibleId: null, departmentId: null, departmentName: null, location: null }) }, actions }}
 />
 <Story name="Bloqueada" args={{ data: { computer: computer({ isOnline: false, isBlocked: true }) }, actions }} />
 <Story name="Arquivada" args={{ data: { computer: computer({ isArchived: true, activeAlerts: 1 }) }, actions }} />
@@ -116,8 +119,11 @@
       computer: computer({
         name: 'PARALEGAL-08-ESTACAO-COMPARTILHADA',
         displayName: 'Paralegal — estação compartilhada do corredor (usada por mais de uma pessoa)',
+        responsibleId: 'person-isabela-marques-de-o',
         responsibleName: 'Isabela Marques de Oliveira e Souza Rodrigues',
-        department: 'paralegal',
+        responsibleAvatarUrl: null,
+        departmentId: 6, departmentName: 'Paralegal', location: null,
+        notes: null,
         activeAlerts: 140,
       }),
     },

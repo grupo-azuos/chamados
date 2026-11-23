@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Optional,
+  ServiceUnavailableException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import { type ComputerLocation } from '@template/shared/domain/department.util';
 import { balanceAfter } from '@template/shared/domain/part-catalog.util';
 import { isRealTransfer, reserveDisplayNameOf } from '@template/shared/domain/transfer.util';
 import {
@@ -12,12 +19,17 @@ import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type DatabaseExecutor } from '../../../lib/db/db.type';
 import { type ComputerRow } from '../../../lib/db/schema/computers.schema';
 import { assertCanCreate, assertCanRead } from '../../../lib/policy/policy-assert.util';
+import { departmentNameOf } from '../../../lib/db/reference-names.util';
+import { DepartmentsService } from '../../departments/service/departments.service';
 import { PartsRepository } from '../../parts/repository/parts.repository';
 import { toInstalledPart, toTransfer } from '../mapper/transfers.mapper';
 import { TransfersRepository } from '../repository/transfers.repository';
 
 const COMPUTER_NOT_FOUND =
   'Máquina não encontrada. Ela pode ter sido excluída — recarregue a lista.';
+
+const HR_UNAVAILABLE =
+  'Não consegui ler a lista de departamentos do RH para conferir o destino. Tente de novo em instantes.';
 
 const SAME_DEPARTMENT = 'A máquina já está nesse departamento. Escolha um destino diferente.';
 
@@ -41,6 +53,7 @@ export class TransfersService {
   constructor(
     private readonly repository: TransfersRepository,
     private readonly parts: PartsRepository,
+    @Optional() private readonly departments?: DepartmentsService,
   ) {}
 
   async listByComputer(user: RequestUser, computerId: number): Promise<Transfer[]> {
@@ -67,7 +80,17 @@ export class TransfersService {
   ): Promise<Transfer> {
     assertCanCreate(user.role, 'transferências de máquina');
 
-    const toDepartment = input.toDepartment ?? null;
+    const destination: Place = {
+      departmentId: input.toDepartmentId ?? null,
+      location: input.toLocation ?? null,
+    };
+    /* O destino oficial é conferido na lista do RH antes de mexer em qualquer coisa; e a
+       leitura deixa os nomes à mão para o histórico guardar de onde e para onde. */
+    if (destination.departmentId) {
+      if (!this.departments) throw new ServiceUnavailableException(HR_UNAVAILABLE);
+      await this.departments.assertOfficial(destination.departmentId);
+    }
+    await this.departments?.catalog();
     const leftBehind = (input.peripherals ?? []).filter(
       (peripheral) => peripheral.destiny === 'station',
     ) as TransferPeripheralInput[];
@@ -75,7 +98,8 @@ export class TransfersService {
     return this.repository.transaction(async (executor) => {
       const computer = await this.requireComputerForUpdate(computerId, executor);
 
-      if (!isRealTransfer(computer.department, toDepartment)) {
+      const from = placeOf(computer);
+      if (!isRealTransfer(placeKey(from), placeKey(destination))) {
         throw new UnprocessableEntityException(SAME_DEPARTMENT);
       }
 
@@ -86,8 +110,8 @@ export class TransfersService {
       const row = await this.repository.insert(
         {
           computerId,
-          fromDepartment: computer.department,
-          toDepartment,
+          fromDepartment: placeLabel(from),
+          toDepartment: placeLabel(destination),
           responsible: input.responsible?.trim() || null,
           note: input.note?.trim() || null,
           peripheralsLeftBehind: leftBehind.length,
@@ -96,7 +120,7 @@ export class TransfersService {
         executor,
       );
 
-      await this.repository.updateComputer(computerId, movedValues(computer, toDepartment), executor);
+      await this.repository.updateComputer(computerId, movedValues(computer, destination), executor);
 
       return toTransfer(row);
     });
@@ -183,14 +207,42 @@ export class TransfersService {
  * são do antigo dono, e mantê-los faria a máquina aparecer no inventário com o nome de quem
  * não a usa mais. Ir para outro setor mexe só no setor.
  */
-function movedValues(computer: ComputerRow, toDepartment: string | null) {
-  if (toDepartment) return { department: toDepartment as ComputerRow['department'] };
+function movedValues(computer: ComputerRow, destination: Place) {
+  if (destination.departmentId || destination.location) return { ...destination };
 
   return {
-    department: null,
-    responsibleName: null,
+    departmentId: null,
+    location: null,
+    responsibleId: null,
     displayName: reserveDisplayNameOf(computer.name),
   };
+}
+
+/** Onde a máquina está: o departamento oficial (id do RH) e o local fixo. Os dois nulos é a prateleira. */
+type Place = { departmentId: number | null; location: ComputerLocation | null };
+
+function placeOf(computer: ComputerRow): Place {
+  return { departmentId: computer.departmentId, location: computer.location };
+}
+
+/** A chave de comparação: mesmo departamento E mesmo local é a mesma mesa. */
+function placeKey(place: Place): string | null {
+  if (!place.departmentId && !place.location) return null;
+
+  return `${place.departmentId ?? ''}|${place.location ?? ''}`;
+}
+
+/**
+ * O lugar como TEXTO, para o histórico: o nome do departamento no RH hoje e/ou o local. É um
+ * retrato do dia — renomear o departamento depois não reescreve a mudança de ontem.
+ */
+function placeLabel(place: Place): string | null {
+  const department = place.departmentId
+    ? (departmentNameOf(place.departmentId) ?? `Departamento ${place.departmentId} (fora da lista do RH)`)
+    : null;
+  const parts = [department, place.location].filter((part): part is string => Boolean(part));
+
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 function destinationMissing(peripheral: TransferPeripheralInput): string {

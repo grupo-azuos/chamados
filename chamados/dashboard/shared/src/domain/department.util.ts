@@ -25,6 +25,49 @@ export type Department = string;
 export const LOCAL_DEPARTMENTS = ['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'] as const;
 
 /**
+ * O LOCAL de uma máquina: os mesmos daqui de cima, numa lista FECHADA.
+ *
+ * No computador, o departamento oficial (do RH) e o local são duas colunas: o departamento é
+ * guardado pelo ID do RH, e o local é um destes valores — nunca texto livre. Um local novo
+ * entra aqui, com o `check` do banco, numa mudança de código.
+ */
+export const COMPUTER_LOCATIONS = LOCAL_DEPARTMENTS;
+
+export type ComputerLocation = (typeof COMPUTER_LOCATIONS)[number];
+
+/** Um departamento OFICIAL, como o RH o identifica: o id do item na lista "Departamentos". */
+export type DepartmentOption = { id: number; name: string };
+
+/**
+ * O local a partir de um texto antigo ("recepcao", "Recepção ", "RECEPÇÃO"): sem acento, sem
+ * caixa e sem espaço sobrando. Sem encontro, nulo — nunca um chute.
+ */
+export function computerLocationFromText(text: string | null | undefined): ComputerLocation | null {
+  const wanted = normalize(text);
+  if (!wanted) return null;
+
+  return COMPUTER_LOCATIONS.find((location) => normalize(location) === wanted) ?? null;
+}
+
+/**
+ * O id do departamento OFICIAL cujo nome é este texto — o nome atual do RH, ou um código antigo
+ * (`contabil`). Compara sem acento, sem caixa e sem espaço sobrando, e só aceita UM encontro:
+ * dois departamentos com o mesmo nome no RH deixam a máquina sem departamento, em vez de num
+ * dos dois por sorte.
+ */
+export function departmentIdFromName(
+  text: string | null | undefined,
+  options: readonly DepartmentOption[],
+): number | null {
+  const wanted = normalize(text ? departmentLabel(text.trim()) : '');
+  if (!wanted) return null;
+
+  const found = options.filter((option) => normalize(option.name) === wanted);
+
+  return found.length === 1 ? (found[0]?.id ?? null) : null;
+}
+
+/**
  * Os códigos que o sistema guardava antes de a lista vir do RH, e o nome que cada um virou.
  *
  * A migration troca os dados gravados por estes nomes; o mapa fica aqui para a tela ainda ler

@@ -27,8 +27,11 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     id: 9,
     name: 'RECEPCAO-09',
     displayName: 'Recepção — micro antigo do balcão',
+    responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
-    department: 'recepcao',
+    responsibleAvatarUrl: null,
+    departmentId: null, departmentName: null, location: 'RECEPÇÃO',
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: null,

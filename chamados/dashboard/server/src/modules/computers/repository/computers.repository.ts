@@ -46,7 +46,6 @@ import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
-import { departmentMatches } from '../../../lib/db/department-match.util';
 import { qualified } from '../../../lib/db/sql-column.util';
 import { ticketInArea, ticketOnComputer } from '../../../lib/db/ticket-area.util';
 import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
@@ -149,16 +148,19 @@ export class ComputersRepository {
 
   /**
    * `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro.
-   * `responsible`: o filtro "Responsável", já traduzido do id da pessoa para o nome.
+   * `responsible`: o filtro "Responsável", pelo id da pessoa.
+   * `searchResponsibleIds`: as pessoas cujo nome casa com a busca livre — a busca acha a máquina
+   * pelo nome do responsável, e o banco só guarda o id.
    */
   async list(
     query: ComputerListQuery,
     presence?: PresenceFilter,
     drill?: SQL,
     responsible?: ResponsibleFilter,
+    searchResponsibleIds: readonly string[] = [],
   ): Promise<ComputerPage> {
     const where = and(
-      buildWhere(query, presence),
+      buildWhere(query, presence, searchResponsibleIds),
       responsibleCondition(responsible),
       upgradeCondition(query.upgrade),
       drill,
@@ -201,6 +203,7 @@ export class ComputersRepository {
     presence?: PresenceFilter,
     drill?: SQL,
     responsible?: ResponsibleFilter,
+    searchResponsibleIds: readonly string[] = [],
   ): Promise<ComputerRow[]> {
     const rows = await runQuery(
       this.db
@@ -208,7 +211,7 @@ export class ComputersRepository {
         .from(computers)
         .where(
           and(
-            buildWhere(query, presence),
+            buildWhere(query, presence, searchResponsibleIds),
             responsibleCondition(responsible),
             upgradeCondition(query.upgrade),
             drill,
@@ -246,6 +249,20 @@ export class ComputersRepository {
     return runMaybe(
       this.db.select().from(computers).where(eq(computers.tokenHash, tokenHash)).limit(1),
       'encontrar computador do agente',
+    );
+  }
+
+  /**
+   * As máquinas SEM departamento oficial que ainda têm a linha "Departamento anterior: …" da
+   * migration 0025 — as que o RH talvez saiba casar (`ComputerReferenceBackfillService`).
+   */
+  async listWithPreviousDepartment(marker: string): Promise<ComputerRow[]> {
+    return runQuery(
+      this.db
+        .select()
+        .from(computers)
+        .where(and(isNull(computers.departmentId), ilike(computers.notes, `%${marker}%`))),
+      'listar computadores com departamento anterior',
     );
   }
 
@@ -382,7 +399,8 @@ export class ComputersRepository {
 type ComputerFilter = Pick<
   ComputerListQuery,
   | 'search'
-  | 'department'
+  | 'departmentId'
+  | 'location'
   | 'healthStatus'
   | 'kind'
   | 'alert'
@@ -399,19 +417,32 @@ type ComputerFilter = Pick<
  * A máquina arquivada fica de FORA por padrão: ela saiu de uso, e quem abre o inventário está
  * trabalhando com o que está em uso hoje.
  */
-function buildWhere(query: ComputerFilter, presence?: PresenceFilter): SQL | undefined {
-  const filters: (SQL | undefined)[] = [...lifecycleFilters(query)];
+function buildWhere(
+  query: ComputerFilter,
+  presence?: PresenceFilter,
+  searchResponsibleIds: readonly string[] = [],
+): SQL | undefined {
+  const filters: (SQL | undefined)[] = [...lifecycleFilters(query), ...placeFilters(query)];
 
   if (presence) filters.push(presenceFilter(presence));
-  if (query.department) filters.push(departmentMatches(computers.department, query.department));
   if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
   if (query.kind) filters.push(eq(computers.kind, query.kind));
   if (query.alert) filters.push(alertFilter(query.alert));
   if (query.resourceCondition) filters.push(resourceConditionFilter(query.resourceCondition));
   if (query.preventive) filters.push(preventiveFilter(query.preventive));
-  if (query.search) filters.push(searchFilter(query.search));
+  if (query.search) filters.push(searchFilter(query.search, searchResponsibleIds));
 
   return filters.length > 0 ? and(...filters) : undefined;
+}
+
+/** Onde a máquina está: o departamento oficial (id do RH) e o local fixo. */
+function placeFilters(query: ComputerFilter): SQL[] {
+  const filters: SQL[] = [];
+
+  if (query.departmentId) filters.push(eq(computers.departmentId, query.departmentId));
+  if (query.location) filters.push(eq(computers.location, query.location));
+
+  return filters;
 }
 
 /** Arquivada e descartada: em que ponto da vida a máquina está. Separado para o `buildWhere` caber no limite de complexidade. */
@@ -429,20 +460,15 @@ function lifecycleFilters(query: ComputerFilter): SQL[] {
 }
 
 /**
- * O filtro "Responsável" em SQL. O nome chega já normalizado (`normalizePersonName`), e a
- * coluna passa pela MESMA régua aqui — sem espaço sobrando, sem diferença de maiúscula —, para o
- * filtro trazer as mesmas máquinas que o cartão mostra com a foto daquela pessoa.
+ * O filtro "Responsável" em SQL, pelo id da pessoa — o mesmo que o cadastro guarda.
  *
  * Exportado para ter teste próprio: errar aqui é a lista dizer "nenhuma máquina da Ana".
  */
 export function responsibleCondition(filter?: ResponsibleFilter): SQL | undefined {
   if (!filter) return undefined;
-  if (filter.kind === 'nobody') return sql`false`;
+  if (filter.kind === 'none') return isNull(computers.responsibleId);
 
-  const normalized = sql`lower(regexp_replace(trim(coalesce(${computers.responsibleName}, '')), '[[:space:]]+', ' ', 'g'))`;
-  if (filter.kind === 'none') return sql`${normalized} = ''`;
-
-  return sql`${normalized} = ${filter.name}`;
+  return eq(computers.responsibleId, filter.id);
 }
 
 /**
@@ -549,15 +575,18 @@ function resourceConditionFilter(condition: ResourceCondition): SQL {
   return sql`(${byCondition[condition]})`;
 }
 
-/** A busca livre olha nome, apelido, hostname, responsável e processador. */
-function searchFilter(search: string): SQL | undefined {
+/**
+ * A busca livre olha nome, apelido, hostname, processador e o RESPONSÁVEL — este pelos ids das
+ * pessoas cujo nome casa com o termo (o service os acha no diretório).
+ */
+function searchFilter(search: string, responsibleIds: readonly string[]): SQL | undefined {
   const term = `%${search}%`;
 
   return or(
     ilike(computers.name, term),
     ilike(computers.displayName, term),
     sql`(${computers.lastSnapshot}->'host'->>'hostname') ilike ${term}`,
-    ilike(computers.responsibleName, term),
+    responsibleIds.length > 0 ? inArray(computers.responsibleId, [...responsibleIds]) : undefined,
     ilike(computers.cpuModel, term),
   );
 }

@@ -2,7 +2,12 @@ import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { asCaio, createE2eApp, type E2eApp } from './support/e2e-app.util';
+import { ANA, BIA, CAIO, asCaio, createE2eApp, directoryEntry, type E2eApp } from './support/e2e-app.util';
+
+import { computers } from '../src/lib/db/schema/computers.schema';
+import { ComputerReferenceBackfillService } from '../src/modules/computers/service/computer-reference-backfill.service';
+
+const FISCAL = { id: 31, name: 'Fiscal' };
 
 /**
  * O INVENTÁRIO de ponta a ponta: cadastrar e receber o token do agente, achar a máquina na
@@ -29,7 +34,10 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
       .send({ name, kind: 'desktop', ...extra });
 
   beforeAll(async () => {
-    started = await createE2eApp(testDatabaseUrl!);
+    started = await createE2eApp(testDatabaseUrl!, {
+      people: [directoryEntry(ANA), directoryEntry(BIA), directoryEntry(CAIO)],
+      departments: [FISCAL, { id: 32, name: 'Contábil' }],
+    });
     app = started.app;
   });
 
@@ -46,15 +54,22 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
   it('registers a machine and hands over the agent token, once', async () => {
     const created = await register('PC-RECEPCAO-01', {
       displayName: 'Recepção',
-      responsibleName: 'Marta',
-      department: 'RECEPÇÃO',
+      responsibleId: ANA.id,
+      departmentId: FISCAL.id,
+      location: 'RECEPÇÃO',
+      notes: 'Mesa da entrada',
     }).expect(201);
 
     expect(created.body.token).toBeTruthy();
     expect(created.body.computer).toMatchObject({
       name: 'PC-RECEPCAO-01',
       displayName: 'Recepção',
-      department: 'RECEPÇÃO',
+      responsibleId: ANA.id,
+      responsibleName: ANA.name,
+      departmentId: FISCAL.id,
+      departmentName: 'Fiscal',
+      location: 'RECEPÇÃO',
+      notes: 'Mesa da entrada',
       isArchived: false,
       isBlocked: false,
       isOnline: false,
@@ -120,29 +135,68 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     expect(new Set(names).size).toBe(7);
   });
 
-  it('filters by department and by search, on the query and not on the screen', async () => {
-    await register('PC-RECEPCAO-01', { department: 'RECEPÇÃO', responsibleName: 'Marta' }).expect(
-      201,
-    );
-    await register('PC-FISCAL-01', { department: 'Fiscal', responsibleName: 'Joana' }).expect(201);
-    await register('PC-FISCAL-02', { department: 'Fiscal', responsibleName: 'Pedro' }).expect(201);
+  it('filters by department id, by location and by search, on the query and not on the screen', async () => {
+    await register('PC-RECEPCAO-01', { location: 'RECEPÇÃO', responsibleId: ANA.id }).expect(201);
+    await register('PC-FISCAL-01', { departmentId: FISCAL.id, responsibleId: BIA.id }).expect(201);
+    await register('PC-FISCAL-02', { departmentId: FISCAL.id, responsibleId: CAIO.id }).expect(201);
 
     const fiscal = await request(app.getHttpServer())
-      .get('/api/v1/computers?department=fiscal')
+      .get(`/api/v1/computers?departmentId=${FISCAL.id}`)
       .set(asCaio())
       .expect(200);
 
     expect(fiscal.body.total).toBe(2);
     expect(fiscal.body.items).toHaveLength(2);
 
-    /* A busca também procura no responsável — é como se acha "a máquina da Marta". */
+    const reception = await request(app.getHttpServer())
+      .get(`/api/v1/computers?location=${encodeURIComponent('RECEPÇÃO')}`)
+      .set(asCaio())
+      .expect(200);
+
+    expect(reception.body.total).toBe(1);
+
+    /* A busca também procura no responsável — pelo nome no diretório, que vira o id. */
     const byPerson = await request(app.getHttpServer())
-      .get('/api/v1/computers?search=marta')
+      .get(`/api/v1/computers?search=${encodeURIComponent(ANA.name.split(' ')[0] ?? ANA.name)}`)
       .set(asCaio())
       .expect(200);
 
     expect(byPerson.body.total).toBe(1);
     expect(byPerson.body.items[0].name).toBe('PC-RECEPCAO-01');
+  });
+
+  // triste
+  it('refuses a responsible who is not in the directory and a department HR does not have', async () => {
+    const wrongPerson = await register('PC-ERRADO-01', { responsibleId: 'quem-nao-existe' }).expect(400);
+    expect(wrongPerson.body.message).toContain('pessoa');
+
+    const wrongDepartment = await register('PC-ERRADO-02', { departmentId: 999 }).expect(400);
+    expect(wrongDepartment.body.message).toContain('RH');
+
+    /* Texto livre de responsável não existe mais: o campo antigo é ignorado, nada é gravado. */
+    const legacy = await register('PC-ERRADO-03', { responsibleName: 'Marta' }).expect(201);
+    expect(legacy.body.computer).toMatchObject({ responsibleId: null, responsibleName: null });
+
+    await register('PC-ERRADO-04', { location: 'SALA NOVA' }).expect(400);
+  });
+
+  // feliz
+  /* O fim da migração 0025: o nome antigo que casa com o RH vira id; o sem par fica na observação. */
+  it('adopts the HR id of the old department names left in the notes by the migration', async () => {
+    await started.db.insert(computers).values([
+      { name: 'PC-ANTIGO-01', tokenHash: 'h-1', createdBy: 'seed', notes: 'Responsável anterior: Marta\nDepartamento anterior: fiscal' },
+      { name: 'PC-ANTIGO-02', tokenHash: 'h-2', createdBy: 'seed', notes: 'Departamento anterior: Departamento X' },
+    ]);
+
+    await expect(app.get(ComputerReferenceBackfillService).run()).resolves.toBe(1);
+    await expect(app.get(ComputerReferenceBackfillService).run()).resolves.toBe(0);
+
+    const list = await request(app.getHttpServer()).get('/api/v1/computers').set(asCaio()).expect(200);
+    const byName = Object.fromEntries(
+      list.body.items.map((item: { name: string; departmentId: number | null; notes: string | null }) => [item.name, item]),
+    );
+    expect(byName['PC-ANTIGO-01']).toMatchObject({ departmentId: FISCAL.id, departmentName: 'Fiscal', notes: 'Responsável anterior: Marta' });
+    expect(byName['PC-ANTIGO-02']).toMatchObject({ departmentId: null, notes: 'Departamento anterior: Departamento X' });
   });
 
   it('blocks a machine, keeping the reason', async () => {
