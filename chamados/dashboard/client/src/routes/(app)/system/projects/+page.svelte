@@ -9,11 +9,15 @@
 
   import { useGithubConnectionModel } from '$lib/hooks/use-github-connection/use-github-connection.svelte';
   import { useSoftwareProjectListModel } from '$lib/hooks/use-software-project-list/use-software-project-list.svelte';
+  import ProjectMap from '$lib/components/azuos-project-map/azuos-project-map.svelte';
+  import { useProjectMapModel } from '$lib/hooks/use-project-map/use-project-map.svelte';
   import ProjectListView from './components/azuos-project-list-view/azuos-project-list-view.svelte';
   import ProjectFormSlot from './project-form-slot.svelte';
 
   const listModel = useSoftwareProjectListModel();
   const archived = useArchivedProjectsModel();
+  /* O mapa dos projetos (a visão "Mapa"): cada sistema com issues, PRs, chamados e tarefas. */
+  const projectMap = useProjectMapModel();
   /* Sincronizar é de quem tem o GitHub vinculado — qualquer papel, e só esses. */
   const github = useGithubConnectionModel(page.data.user?.id ?? '', Boolean(page.data.user?.id));
 
@@ -49,7 +53,7 @@
     />
   {/if}
   <ProjectListView
-    data={listModel.data}
+    data={{ ...listModel.data, view: projectMap.data.view }}
     state={{
       ...listModel.state,
       canEdit: canEditSystem(page.data.user),
@@ -61,8 +65,13 @@
       onRegister: handleRegister,
       onEdit: handleEdit,
       onViewTimeline: (project) => goto(`/system/projects/${project.id}`),
+      onViewChange: projectMap.actions.onViewChange,
     }}
-  />
+  >
+    {#snippet map()}
+      <ProjectMap data={projectMap.data} state={projectMap.state} actions={projectMap.actions} />
+    {/snippet}
+  </ProjectListView>
 </div>
 
 <!-- O que foi excluído some da lista e aparece aqui, fechado, com o "Desfazer". -->

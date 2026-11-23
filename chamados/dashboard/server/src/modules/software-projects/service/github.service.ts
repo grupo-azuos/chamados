@@ -102,7 +102,8 @@ export function closingCommentOf(
 /** Quem não é gente: assistente de IA e robôs não contam como co-autor de ninguém. */
 function isAutomation(login: string | null, name: string, email?: string): boolean {
   if (login?.endsWith('[bot]')) return true;
-  if (email && /noreply@anthropic\.com|\[bot\]@users\.noreply\.github\.com/i.test(email)) return true;
+  if (email && /noreply@anthropic\.com|\[bot\]@users\.noreply\.github\.com/i.test(email))
+    return true;
 
   return /\[bot\]|^claude\b|github-actions|dependabot/i.test(name.trim());
 }
@@ -576,7 +577,8 @@ export class GithubService {
       `https://api.github.com/repos/${owner}/${repo}/commits/${commit.sha}/pulls`,
       { headers: this.headers(token), signal: AbortSignal.timeout(10_000) },
     );
-    if (!associated.ok) throw new BadGatewayException('Não foi possível identificar os merges sem PR.');
+    if (!associated.ok)
+      throw new BadGatewayException('Não foi possível identificar os merges sem PR.');
     const pullRequests = (await associated.json()) as Array<{ merge_commit_sha?: string | null }>;
     if (pullRequests.some((pr) => pr.merge_commit_sha === commit.sha)) return null;
 
@@ -605,11 +607,15 @@ export class GithubService {
     userId?: string,
   ): FetchedMerge[] {
     if (!userId) {
-      this.logger.warn(`Falha na comunicação com o GitHub para merges de ${owner}/${repo}: ${String(error)}`);
+      this.logger.warn(
+        `Falha na comunicação com o GitHub para merges de ${owner}/${repo}: ${String(error)}`,
+      );
       return [];
     }
     if (error instanceof BadGatewayException) throw error;
-    throw new BadGatewayException('Não foi possível sincronizar os merges sem PR. Tente novamente.');
+    throw new BadGatewayException(
+      'Não foi possível sincronizar os merges sem PR. Tente novamente.',
+    );
   }
 
   private issueFetchError(
@@ -740,14 +746,26 @@ export class GithubService {
         const token = this.app ? await this.app.accessToken() : this.token;
         const issueUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/issues/${githubIssueNumber}`;
         if (change.comment) {
-          await this.sendIssueChange(`${issueUrl}/comments`, 'POST', { body: change.comment }, token);
+          await this.sendIssueChange(
+            `${issueUrl}/comments`,
+            'POST',
+            { body: change.comment },
+            token,
+          );
         }
         if (change.state) {
           const reason = change.state === 'closed' ? 'completed' : 'reopened';
-          await this.sendIssueChange(issueUrl, 'PATCH', { state: change.state, state_reason: reason }, token);
+          await this.sendIssueChange(
+            issueUrl,
+            'PATCH',
+            { state: change.state, state_reason: reason },
+            token,
+          );
         }
       } catch (error) {
-        this.logger.warn(`Não consegui levar o chamado ${ticket.id} para a issue: ${String(error)}`);
+        this.logger.warn(
+          `Não consegui levar o chamado ${ticket.id} para a issue: ${String(error)}`,
+        );
       }
     })();
   }
@@ -768,7 +786,9 @@ export class GithubService {
   }
 
   /** O repositório de um sistema: as colunas já separadas, ou o que der para ler do endereço. */
-  private async repositoryOfProject(projectId: number): Promise<{ owner: string; repo: string } | null> {
+  private async repositoryOfProject(
+    projectId: number,
+  ): Promise<{ owner: string; repo: string } | null> {
     const [project] = await this.db
       .select()
       .from(softwareProjects)

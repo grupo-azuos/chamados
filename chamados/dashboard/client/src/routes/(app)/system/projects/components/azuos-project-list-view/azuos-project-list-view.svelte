@@ -22,6 +22,7 @@
     `onConfirmDelete`), `onSyncGithub(id)` e `onSyncAllGithub`.
 -->
 <script lang="ts" module>
+  import type { Snippet } from 'svelte';
   import {
     softwareProjectStatusLabel,
     type SoftwareProjectStatus,
@@ -36,6 +37,8 @@
       total: number;
       filter: SoftwareProjectListFilter;
       deleting: SoftwareProject | null;
+      /** Cards (a grade) ou Mapa (cada sistema numa ilha com issues, PRs, chamados e tarefas). */
+      view?: 'cards' | 'map';
     };
     state: {
       canEdit?: boolean;
@@ -68,7 +71,10 @@
       onConfirmDelete: () => void;
       onSyncGithub: (id: number) => void;
       onSyncAllGithub?: () => void;
+      onViewChange?: (view: 'cards' | 'map') => void;
     };
+    /** O mapa dos projetos, já montado pela tela: aparece no lugar dos cards na visão Mapa. */
+    map?: Snippet;
   };
 
   /** "dono/repositório" quando o GitHub já respondeu; senão, o endereço como foi cadastrado. */
@@ -106,6 +112,7 @@
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
   import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
@@ -113,7 +120,12 @@
     type AzuosRecordCardMenuItem,
   } from '$lib/components/azuos-record-card/azuos-record-card.svelte';
 
-  let { data, state, actions }: AzuosProjectListViewProps = $props();
+  let { data, state, actions, map }: AzuosProjectListViewProps = $props();
+
+  const VIEW_OPTIONS = [
+    { value: 'cards', label: 'Cards' },
+    { value: 'map', label: 'Mapa' },
+  ];
   /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
   const cardPage = useCardPage(() => data.items);
 
@@ -153,6 +165,13 @@
         'Cadastre os softwares da empresa, acompanhe Pull Requests e vincule chamados de suporte.',
     }}
   >
+    {#if actions.onViewChange && map}
+      <SegmentedControl
+        data={{ value: data.view ?? 'cards', options: VIEW_OPTIONS }}
+        ui={{ ariaLabel: 'Modo de ver os sistemas' }}
+        actions={{ onChange: (value: string) => actions.onViewChange?.(value as 'cards' | 'map') }}
+      />
+    {/if}
     {#if state.canSyncAll}
       <ActionButton
         data={{ label: 'Sincronizar todos', loadingLabel: 'Sincronizando…' }}
@@ -187,6 +206,9 @@
     </p>
   {/if}
 
+  {#if data.view === 'map' && map}
+    {@render map()}
+  {:else}
   <!-- Filtros: no card, como em toda tela do grupo (a busca e o seletor soltos sumiam no fundo). -->
   <CardSurface ui={{ className: 'p-4' }}>
     <div class="grid items-end gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
@@ -332,6 +354,7 @@
           />
         </div>
       {/if}
+  {/if}
   {/if}
 
   <!-- Confirmação de Exclusão -->

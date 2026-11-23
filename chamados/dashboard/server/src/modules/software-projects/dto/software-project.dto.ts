@@ -15,6 +15,10 @@ import {
   updateSoftwareScheduleEventSchema,
 } from '@template/shared/schemas/software-schedule.schema';
 import { softwareDashboardSchema } from '@template/shared/schemas/software-dashboard.schema';
+import {
+  projectMapEntrySchema,
+  projectMapQuerySchema,
+} from '@template/shared/schemas/project-map.schema';
 import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
 
@@ -45,8 +49,14 @@ export class SoftwareTimelineListResponseDto extends createZodDto(
 ) {}
 
 export class SoftwareScheduleEventDto extends createZodDto(softwareScheduleEventSchema) {}
-export class CreateSoftwareScheduleEventDto extends createZodDto(createSoftwareScheduleEventSchema) {}
-export class UpdateSoftwareScheduleEventDto extends createZodDto(updateSoftwareScheduleEventSchema) {}
+export class CreateSoftwareScheduleEventDto extends createZodDto(
+  createSoftwareScheduleEventSchema,
+) {}
+export class UpdateSoftwareScheduleEventDto extends createZodDto(
+  updateSoftwareScheduleEventSchema,
+) {}
 export class SoftwareScheduleQueryDto extends createZodDto(softwareScheduleQuerySchema) {}
 
 export class SoftwareDashboardDto extends createZodDto(softwareDashboardSchema) {}
+export class ProjectMapQueryDto extends createZodDto(projectMapQuerySchema) {}
+export class ProjectMapEntryDto extends createZodDto(projectMapEntrySchema) {}

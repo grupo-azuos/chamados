@@ -14,7 +14,12 @@ const ana: RequestUser = {
   roles: { infra: 'user', sistema: 'admin', manutencao: 'user' },
 };
 const bia: RequestUser = { ...ana, id: 'u-bia', email: 'bia@empresa.com.br', name: 'Bia Souza' };
-const root: RequestUser = { id: 'u-root', email: 'root@empresa.com.br', name: 'Root', role: 'superadmin' };
+const root: RequestUser = {
+  id: 'u-root',
+  email: 'root@empresa.com.br',
+  name: 'Root',
+  role: 'superadmin',
+};
 
 function eventRow(overrides: Partial<SoftwareScheduleEventRow> = {}) {
   return {
@@ -81,7 +86,11 @@ describe('SoftwareScheduleService', () => {
   it('shows who marked it, with the e-mail for events from before the name existed', async () => {
     const { service } = makeService(eventRow({ createdById: null, createdByName: null }));
 
-    const [event] = await service.list(ana, { startDate: '2026-10-01', endDate: '2026-10-31', archived: 'hide' });
+    const [event] = await service.list(ana, {
+      startDate: '2026-10-01',
+      endDate: '2026-10-31',
+      archived: 'hide',
+    });
 
     expect(event).toMatchObject({ createdByName: 'ana@empresa.com.br', createdById: null });
   });
@@ -111,7 +120,9 @@ describe('SoftwareScheduleService', () => {
 
   // feliz
   it('lets whoever marked it bring a deleted event back', async () => {
-    const { service, repository } = makeService(eventRow({ archivedAt: new Date(), archivedBy: 'u-ana' }));
+    const { service, repository } = makeService(
+      eventRow({ archivedAt: new Date(), archivedBy: 'u-ana' }),
+    );
 
     await service.restore(ana, 1);
 

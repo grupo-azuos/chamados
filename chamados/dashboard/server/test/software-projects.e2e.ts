@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { githubConnections } from '../src/lib/db/schema/github-connections.schema';
+import { softwareTimelineEvents } from '../src/lib/db/schema/software-timeline-events.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
 import { encryptGithubToken } from '../src/modules/github-integration/service/github-token-cipher.util';
 import {
@@ -170,6 +171,66 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
         openTicketsCount: 0,
         pullRequestsCount: 0,
       });
+    });
+
+    it('draws the map of a system: its issues, PRs, merges and tickets', async () => {
+      const chamados = await registerProject({}).expect(201);
+      await registerProject({ name: 'Outro', repositoryUrl: 'org/outro' }).expect(201);
+      await started.db.insert(softwareTimelineEvents).values([
+        {
+          projectId: chamados.body.id,
+          type: 'issue',
+          externalId: '#12',
+          title: 'Tela não abre',
+          status: 'open',
+          createdBy: 'teste',
+        },
+        {
+          projectId: chamados.body.id,
+          type: 'pr',
+          externalId: '#13',
+          title: 'Corrige a tela (#12)',
+          status: 'merged',
+          createdBy: 'teste',
+        },
+      ]);
+      await started.db.insert(tickets).values({
+        requesterName: 'Pessoa de Teste',
+        area: 'sistema',
+        department: 'Comercial',
+        problemType: 'bug',
+        description: 'A tela não abre.',
+        projectId: chamados.body.id,
+        githubIssueNumber: 12,
+        status: 'open',
+      });
+
+      const map = await api()
+        .get('/api/v1/software-projects/map')
+        .query({ ids: String(chamados.body.id) })
+        .set(asDora())
+        .expect(200);
+
+      expect(map.body).toHaveLength(1);
+      expect(map.body[0]).toMatchObject({
+        project: { id: chamados.body.id, name: 'Chamados' },
+        hiddenEvents: 0,
+        tickets: [{ githubIssueNumber: 12, isClosed: false }],
+      });
+      expect(map.body[0].events.map((event: { externalId: string }) => event.externalId)).toEqual(
+        expect.arrayContaining(['#12', '#13']),
+      );
+
+      const all = await api().get('/api/v1/software-projects/map').set(asDora()).expect(200);
+      expect(all.body.map((entry: { project: { name: string } }) => entry.project.name)).toEqual([
+        'Chamados',
+        'Outro',
+      ]);
+      await api()
+        .get('/api/v1/software-projects/map')
+        .query({ ids: '1,x' })
+        .set(asDora())
+        .expect(400);
     });
 
     it('lists with search and status, counting open tickets of each system', async () => {

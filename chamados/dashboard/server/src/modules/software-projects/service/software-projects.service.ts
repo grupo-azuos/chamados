@@ -21,10 +21,7 @@ import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
 import { GithubConnectionsRepository } from '../../github-integration/repository/github-connections.repository';
-import {
-  assertCanEditSystem,
-  assertCanRead,
-} from '../../../lib/policy/policy-assert.util';
+import { assertCanEditSystem, assertCanRead } from '../../../lib/policy/policy-assert.util';
 import { TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import {
   type ProjectResponsible,
@@ -37,6 +34,8 @@ import {
   type SoftwareProjectPage,
 } from '../repository/software-projects.repository';
 import { SoftwareTimelineRepository } from '../repository/software-timeline.repository';
+import { toProjectMap } from '../mapper/project-map.mapper';
+import { type ProjectMap, type ProjectMapQuery } from '@template/shared/schemas/project-map.schema';
 import { type FetchedCoAuthor, GithubService } from './github.service';
 
 /** A fonte do painel que esta lista sabe recortar: a tabela dela, os sistemas. */
@@ -127,7 +126,10 @@ export class SoftwareProjectsService {
   ): Promise<{ items: SoftwareProject[]; total: number; page: number; pageSize: number }> {
     assertCanRead(user.role, 'os sistemas');
 
-    const page: SoftwareProjectPage = await this.repository.list(query, await this.drillOf(user, query));
+    const page: SoftwareProjectPage = await this.repository.list(
+      query,
+      await this.drillOf(user, query),
+    );
     const ids = page.rows.map((row) => row.id);
 
     const [openTicketsMap, prsMap] = await Promise.all([
@@ -148,10 +150,20 @@ export class SoftwareProjectsService {
   }
 
   /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
-  private async drillOf(user: RequestUser, query: Pick<SoftwareProjectListQuery, 'drill'>): Promise<SQL | undefined> {
+  private async drillOf(
+    user: RequestUser,
+    query: Pick<SoftwareProjectListQuery, 'drill'>,
+  ): Promise<SQL | undefined> {
     if (!query.drill || !this.drills) return undefined;
 
     return this.drills.drillCondition(user, query.drill, PROJECT_DRILL_SOURCES);
+  }
+
+  /** O mapa dos projetos: cada sistema com issues, PRs, merges, chamados e tarefas. */
+  async map(user: RequestUser, query: ProjectMapQuery): Promise<ProjectMap> {
+    assertCanRead(user.role, 'os sistemas');
+
+    return toProjectMap(await this.repository.mapFacts(query.ids ?? null));
   }
 
   async findById(user: RequestUser, id: number): Promise<SoftwareProject> {
@@ -236,7 +248,13 @@ export class SoftwareProjectsService {
     }
 
     const names = await this.linkedNames();
-    const { prs, issues, merges } = await this.syncRepository(id, repoInfo, user.email, user.id, names);
+    const { prs, issues, merges } = await this.syncRepository(
+      id,
+      repoInfo,
+      user.email,
+      user.id,
+      names,
+    );
 
     return {
       synced: prs,

@@ -153,12 +153,21 @@ describe('SoftwareProjectsService', () => {
       const drillCondition = vi.fn().mockResolvedValue(cut);
       const { service, repository } = makeService({}, {}, {}, { drillCondition });
       const drill = softwareProjectListQuerySchema.shape.drill.parse(
-        JSON.stringify({ source: 'softwareProjects', groupBy: 'status', filterId: null, key: 'active' }),
+        JSON.stringify({
+          source: 'softwareProjects',
+          groupBy: 'status',
+          filterId: null,
+          key: 'active',
+        }),
       );
 
       await service.list(user, { page: 1, pageSize: 10, archived: 'hide', drill });
 
-      expect(drillCondition).toHaveBeenCalledWith(user, expect.objectContaining({ key: 'active' }), ['softwareProjects']);
+      expect(drillCondition).toHaveBeenCalledWith(
+        user,
+        expect.objectContaining({ key: 'active' }),
+        ['softwareProjects'],
+      );
       expect(repository.list).toHaveBeenCalledWith(expect.anything(), cut);
     });
 
@@ -273,17 +282,15 @@ describe('SoftwareProjectsService', () => {
     it('syncs every project and tells which ones failed', async () => {
       const { service, githubService } = makeService(
         {
-          listAll: vi
-            .fn()
-            .mockResolvedValue([
-              projectRow({ id: 1, name: 'Chamados', githubRepoOwner: 'org', githubRepoName: 'ok' }),
-              projectRow({
-                id: 2,
-                name: 'Paralegal',
-                githubRepoOwner: 'org',
-                githubRepoName: 'fora',
-              }),
-            ]),
+          listAll: vi.fn().mockResolvedValue([
+            projectRow({ id: 1, name: 'Chamados', githubRepoOwner: 'org', githubRepoName: 'ok' }),
+            projectRow({
+              id: 2,
+              name: 'Paralegal',
+              githubRepoOwner: 'org',
+              githubRepoName: 'fora',
+            }),
+          ]),
         },
         {},
         {
