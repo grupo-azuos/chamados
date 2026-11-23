@@ -91,6 +91,8 @@
   const options = $derived<BoardFilterOption[]>(optionsOf(kind));
   const value = $derived(kind === 'period' ? presetOf(data.values.period) : (data.values[kind] ?? ''));
   const period = $derived(data.values.period);
+  const isExactDates = $derived(kind === 'period' && period?.mode === 'custom');
+  const rangeLabel = `Entre (até ${MAX_WINDOW_DAYS} dias)`;
   /* O desenho é o que quem montou escolheu, com quantas opções houver: cards a mais deslizam no
      carrossel. Trocar sozinho para a busca desfazia a escolha assim que a lista crescia. */
   const display = $derived(data.display);
@@ -125,8 +127,11 @@
   }
 </script>
 
-<!-- Uma célula da grade da barra: a peça e, no período "entre datas", as datas logo abaixo. -->
-<div class="flex min-w-0 flex-col gap-2">
+<!-- Uma célula da grade da barra: a peça e, no período "Datas exatas", as datas LOGO AO LADO, na
+     mesma fileira e na mesma altura — sem rótulo em cima, que descia o campo para baixo da barra
+     de cima. O "até 90 dias" segue no nome acessível do campo e na dica ao passar o mouse. Sem
+     espaço (celular, célula estreita), as datas quebram para a linha de baixo, inteiras. -->
+<div class={cn('flex min-w-0', isExactDates ? 'flex-wrap items-center gap-2' : 'flex-col gap-2')}>
   {#if display === 'cards'}
     <!-- OS CARDS: uma faixa com o nome do filtro e, embaixo, uma opção por quadro, com quantos há
          nela — escolher é clicar no quadro. Quadros cinza sobre o cartão da barra (card dentro de
@@ -165,7 +170,11 @@
     <!-- A peça: o nome num lado, o valor no outro, numa moldura cinza só — os três desenhos com o
          mesmo fundo, a mesma altura e o mesmo fio entre o nome e o valor. As etiquetas saíram: numa
          peça só elas rolavam de lado e cortavam as opções; quem quer tudo à vista usa os cards. -->
-    <div role="group" aria-label={label} class="rounded-control bg-muted flex h-10 min-w-0 items-stretch overflow-hidden">
+    <div
+      role="group"
+      aria-label={label}
+      class={cn('rounded-control bg-muted flex h-10 min-w-0 items-stretch overflow-hidden', isExactDates && 'w-72 max-w-full')}
+    >
       <span
         class="text-muted-foreground border-border flex max-w-[55%] shrink-0 items-center gap-1.5 border-r px-3 text-sm font-medium"
         title={label}
@@ -189,11 +198,15 @@
       {/if}
     </div>
   {/if}
-  {#if kind === 'period' && period?.mode === 'custom'}
-    <AzuosDateRangeField
-      data={{ label: `Entre (até ${MAX_WINDOW_DAYS} dias)`, name: 'boardPeriod', value: { from: period.from, to: period.to } }}
-      ui={{ className: 'w-full' }}
-      actions={{ onChange: onRange }}
-    />
+  {#if isExactDates && period?.mode === 'custom'}
+    <div class="w-64 max-w-full min-w-0" title={rangeLabel}>
+      <!-- O rótulo fica só para o leitor de tela: à vista, a peça "Período" ao lado já diz o que
+           são as datas. -->
+      <AzuosDateRangeField
+        data={{ label: rangeLabel, name: 'boardPeriod', value: { from: period.from, to: period.to } }}
+        ui={{ className: 'w-full gap-0 [&>label]:sr-only' }}
+        actions={{ onChange: onRange }}
+      />
+    </div>
   {/if}
 </div>

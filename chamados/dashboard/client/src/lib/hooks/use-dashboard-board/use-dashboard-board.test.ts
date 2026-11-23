@@ -89,6 +89,24 @@ describe('useDashboardBoardModel', () => {
     expect(dashboardBoardsApi.saveBoard).toHaveBeenCalledWith('infra', 'team', { widgets: [], layout: [], filters: [] });
   });
 
+  // feliz
+  it('opens the filters by default and remembers closing them for that board only', async () => {
+    const model = mount();
+    await waitFor(() => expect(model.state.isLoading).toBe(false));
+
+    expect(model.state.isFiltersOpen).toBe(true);
+    model.actions.onFiltersOpenChange(false);
+    expect(model.state.isFiltersOpen).toBe(false);
+    expect(localStorage.getItem('azuos:dashboard:filters-open:infra:team')).toBe('closed');
+
+    model.actions.onScopeChange('personal');
+    await waitFor(() => expect(model.data.scope).toBe('personal'));
+    expect(model.state.isFiltersOpen).toBe(true);
+    model.actions.onScopeChange('team');
+    await waitFor(() => expect(model.data.scope).toBe('team'));
+    expect(model.state.isFiltersOpen).toBe(false);
+  });
+
   // triste
   it('drops the draft when the person gives up', async () => {
     const model = mount();

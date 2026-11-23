@@ -53,6 +53,7 @@ import {
   visibleScopes,
 } from '$lib/utils/board-draft.util';
 import { withDepartmentCatalog, withPeople } from '$lib/utils/board-filter.util';
+import { readBoardFiltersOpen, writeBoardFiltersOpen } from '$lib/utils/board-filters-open.util';
 import { drillHref, drillOf } from '$lib/utils/board-drill.util';
 import { newWidget, newWidgetId } from '$lib/utils/widget-editor.util';
 import { type BoardItem } from '$lib/utils/widget-items.util';
@@ -125,6 +126,10 @@ export function useDashboardBoardModel(module: BoardModule) {
     },
   });
   const chosenScope = mirrorStore(scopeStore);
+  /* A faixa de filtros aberta ou fechada, por painel (módulo e escopo) — lida do armazenamento
+     na primeira vez, lembrada aqui depois. */
+  let filtersOpen = $state<Record<string, boolean>>({});
+  const boardKey = () => `${module}:${chosenScope.current.scope}`;
 
   let draft = $state<BoardDraft | null>(null);
   let editing = $state<BoardEditing | null>(null);
@@ -294,6 +299,8 @@ export function useDashboardBoardModel(module: BoardModule) {
         /* Cabe mais um bloco enquanto sobra ao menos 1 ponto (o peso do mais leve) na cota. */
         canAdd: boardWeight(shown.widgets) < MAX_BOARD_WEIGHT,
         error: readError(board.current.error) ?? saveErrorOf(save.current.error, shown.widgets, shown.layout),
+        /** A faixa de filtros do painel aberta — escolha de quem vê, lembrada por painel. */
+        isFiltersOpen: filtersOpen[boardKey()] ?? readBoardFiltersOpen(boardKey()),
       };
     },
     actions: {
@@ -355,6 +362,11 @@ export function useDashboardBoardModel(module: BoardModule) {
       },
       onClearFilterValues: () => {
         chosen = EMPTY_BOARD_FILTER_VALUES;
+      },
+      /** A seta dos "Filtros": abriu ou fechou a faixa — fica lembrado para este painel. */
+      onFiltersOpenChange: (isOpen: boolean) => {
+        writeBoardFiltersOpen(boardKey(), isOpen);
+        filtersOpen = { ...filtersOpen, [boardKey()]: isOpen };
       },
       onAddBoardFilter: (kind: BoardFilterKind) => edit((current) => addBoardFilter(current, kind)),
       onRemoveBoardFilter: (id: string) => edit((current) => removeBoardFilter(current, id)),

@@ -4,7 +4,8 @@
   TODOS de uma vez, na ordem que quem montou escolheu — o Período inclusive. Cada
   filtro é uma peça só ("Situação | Todos ▾"), num cartão, em grade que se ajusta à largura.
 
-  O valor escolhido é de quem está vendo, e não se grava.
+  O valor escolhido é de quem está vendo, e não se grava. A faixa abre e fecha pela seta dos
+  "Filtros", no cabeçalho do cartão, com o "Limpar filtros" na outra ponta; nasce aberta.
 
   Montando, a barra aparece como fica e, embaixo, a lista dos filtros (como as variáveis do
   Grafana): arrastar para ordenar, escolher o desenho, tirar; e os que faltam, para pôr. A
@@ -13,9 +14,10 @@
   - `data`: os filtros, os valores escolhidos, a conta de cada opção e os filtros que o módulo
     aceita.
   - `ui`: `part` — só o Período (`period`), só os outros (`fields`) ou todos.
-  - `state`: montando e `isListOpen` (a lista dos filtros já nasce aberta).
-  - `actions`: mudar o valor, limpar e, montando, pôr, tirar, trocar o desenho, a largura e a
-    ordem.
+  - `state`: montando, `isListOpen` (a lista dos filtros já nasce aberta) e `isOpen` (a faixa
+    dos filtros nasce aberta — o padrão — ou fechada, a escolha lembrada).
+  - `actions`: mudar o valor, limpar, abrir e fechar a faixa e, montando, pôr, tirar, trocar o
+    desenho, a largura e a ordem.
 -->
 <script lang="ts" module>
   import {
@@ -43,12 +45,17 @@
      * cima do painel; `fields` são os outros filtros, na faixa acima dos blocos. Sem ele, todos.
      */
     ui?: { part?: 'fields' | 'period' };
-    /** `isListOpen`: montando, a lista dos filtros já nasce aberta (nas configurações do painel). */
-    state?: { isEditing?: boolean; isListOpen?: boolean };
+    /**
+     * `isListOpen`: montando, a lista dos filtros já nasce aberta (nas configurações do painel).
+     * `isOpen`: a faixa dos filtros nasce aberta (o padrão) ou fechada — a escolha lembrada.
+     */
+    state?: { isEditing?: boolean; isListOpen?: boolean; isOpen?: boolean };
     actions: {
       onChange: (patch: Partial<BoardFilterValues>) => void;
       /** "Limpar filtros": todos voltam a "todos". Sem ela, o botão não aparece. */
       onClear?: () => void;
+      /** A seta dos "Filtros" abriu ou fechou a faixa — para a tela lembrar. */
+      onOpenChange?: (isOpen: boolean) => void;
       onAdd?: (kind: BoardFilterKind) => void;
       onRemove?: (id: string) => void;
       /** Montando: troca o desenho do filtro. */
@@ -59,6 +66,13 @@
       onPlaceChange?: (places: readonly BoardFilterPlaceChange[]) => void;
     };
   };
+
+  /** O selo do cabeçalho: quantos filtros estão ligados; sem nenhum, selo nenhum. */
+  export function activeBadge(count: number): string | undefined {
+    if (count === 0) return undefined;
+
+    return count === 1 ? '1 ativo' : `${count} ativos`;
+  }
 </script>
 
 <script lang="ts">
@@ -102,21 +116,34 @@
 {/snippet}
 
 {#snippet toolbar()}
-  <!-- O cartão que junta os filtros numa faixa só. Dentro, uma GRADE que se ajusta à largura: cada
-       peça tem no mínimo 18rem e as colunas se dividem por igual — no celular, uma por linha; numa
-       tela larga, todas lado a lado, sem sobra torta no fim. A ordem é a da lista de quem montou. -->
-  <AzuosCardSurface ui={{ className: 'flex flex-col gap-2 p-3 sm:flex-row sm:items-start' }}>
-    <div class="grid min-w-0 flex-1 grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2">
-      {#each ordered as filter (filter.id)}
-        <!-- "Linha inteira" (e os cards, que são uma faixa): a peça ocupa a linha toda, sozinha. -->
-        <div class={cn('min-w-0', (filter.width === 'full' || toolbarDisplayOf(filter) === 'cards') && 'col-span-full')}>{@render control(filter)}</div>
-      {/each}
-    </div>
-    {#if actions.onClear && !isEditing && active.length > 0}
-      <div class="flex shrink-0 items-center justify-end sm:h-10">
-        <AzuosClearFiltersButton state={{ hasFilter: true }} actions={{ onClear: actions.onClear }} />
+  <!-- O cartão que junta os filtros numa faixa só. No alto, o cabeçalho: "Filtros" com a seta, que
+       abre e fecha a faixa, e o selo de quantos estão ligados — fechada, a pessoa ainda sabe que o
+       painel está recortado; na outra ponta, o "Limpar filtros". Ele mora no cabeçalho, e não na
+       grade: como célula, empurrava as peças e quebrava a faixa dos cards.
+
+       Dentro, uma GRADE que se ajusta à largura: cada peça tem no mínimo 18rem e as colunas se
+       dividem por igual — no celular, uma por linha; numa tela larga, todas lado a lado, sem sobra
+       torta no fim. A ordem é a da lista de quem montou. O bloco que abre e fecha é transparente:
+       o cartão é a superfície (card dentro de card não). -->
+  <AzuosCardSurface>
+    <AzuosCollapsible
+      data={{ title: 'Filtros', badge: activeBadge(active.length) }}
+      ui={{ className: 'rounded-none bg-transparent shadow-none' }}
+      state={{ isOpen: barState?.isOpen ?? true }}
+      actions={{ onOpenChange: actions.onOpenChange }}
+    >
+      {#snippet aside()}
+        {#if actions.onClear && !isEditing && active.length > 0}
+          <AzuosClearFiltersButton state={{ hasFilter: true }} actions={{ onClear: () => actions.onClear?.() }} />
+        {/if}
+      {/snippet}
+      <div class="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2">
+        {#each ordered as filter (filter.id)}
+          <!-- "Linha inteira" (e os cards, que são uma faixa): a peça ocupa a linha toda, sozinha. -->
+          <div class={cn('min-w-0', (filter.width === 'full' || toolbarDisplayOf(filter) === 'cards') && 'col-span-full')}>{@render control(filter)}</div>
+        {/each}
       </div>
-    {/if}
+    </AzuosCollapsible>
   </AzuosCardSurface>
 {/snippet}
 
@@ -158,9 +185,11 @@
 {:else if ui?.part === 'period' && ordered.length > 0}
   <!-- O SELETOR DE TEMPO, no canto de cima, ao lado do "Atualizar" — sem cartão: é um controle da
        barra de cima, como no Grafana. -->
+  <!-- Em "Datas exatas", as datas entram ao lado dele, na mesma fileira (a peça cresce para caber
+       as duas). -->
   <div role="group" aria-label="Período do painel" class="flex flex-wrap items-start gap-2">
     {#each ordered as filter (filter.id)}
-      <div class="w-72 max-w-full">{@render control(filter)}</div>
+      <div class={cn('max-w-full min-w-0', data.values.period?.mode !== 'custom' && 'w-72')}>{@render control(filter)}</div>
     {/each}
   </div>
 {:else if ordered.length > 0}

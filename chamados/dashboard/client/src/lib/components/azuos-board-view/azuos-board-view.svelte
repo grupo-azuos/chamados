@@ -77,6 +77,8 @@
       isFilterSaving?: boolean;
       isFilterArchiving?: boolean;
       filterError?: string | null;
+      /** A faixa de filtros do painel aberta — a escolha lembrada por painel; sem ela, aberta. */
+      isFiltersOpen?: boolean;
     };
     actions: {
       onScopeChange: (scope: string) => void;
@@ -99,6 +101,8 @@
       onPreviewChange: (widget: Widget) => void;
       onFilterValueChange: (patch: Partial<BoardFilterValues>) => void;
       onClearFilterValues: () => void;
+      /** A seta dos "Filtros" abriu ou fechou a faixa — para lembrar neste painel. */
+      onFiltersOpenChange?: (isOpen: boolean) => void;
       onAddBoardFilter: (kind: BoardFilterKind) => void;
       onRemoveBoardFilter: (id: string) => void;
       onBoardFilterDisplayChange: (id: string, display: BoardFilterDisplay) => void;
@@ -297,7 +301,15 @@
   {#if viewState.isLoading}
     <LoadingState data={{ label: 'Carregando o painel…' }} />
   {:else}
-    <BoardFilterBar data={filterBarData} ui={{ part: 'fields' }} actions={{ onChange: actions.onFilterValueChange, onClear: actions.onClearFilterValues }} />
+    <!-- Uma faixa por painel: trocar de painel abre a faixa como ele a deixou (`#key`). -->
+    {#key data.scope}
+      <BoardFilterBar
+        data={filterBarData}
+        ui={{ part: 'fields' }}
+        state={{ isOpen: viewState.isFiltersOpen }}
+        actions={{ onChange: actions.onFilterValueChange, onClear: actions.onClearFilterValues, onOpenChange: actions.onFiltersOpenChange }}
+      />
+    {/key}
     <BoardCanvas
       data={{
         widgets: data.widgets,

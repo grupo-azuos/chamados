@@ -14,10 +14,11 @@ const COUNTS = {
 
 type AnyFilter = Omit<typeof PERSON | typeof STATUS | typeof PERIOD, 'display'> & { display?: 'select' | 'search' | 'cards'; width?: 'auto' | 'full' };
 
-function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_FILTER_VALUES; filters?: AnyFilter[] } = {}) {
+function renderBar(options: { isEditing?: boolean; isOpen?: boolean; values?: typeof EMPTY_BOARD_FILTER_VALUES; filters?: AnyFilter[] } = {}) {
   const actions = {
     onChange: vi.fn(),
     onClear: vi.fn(),
+    onOpenChange: vi.fn(),
     onAdd: vi.fn(),
     onRemove: vi.fn(),
     onDisplayChange: vi.fn(),
@@ -27,7 +28,7 @@ function renderBar(options: { isEditing?: boolean; values?: typeof EMPTY_BOARD_F
   render(BoardFilterBar, {
     props: {
       data: { filters: options.filters ?? [PERSON, STATUS, PERIOD], values: options.values ?? EMPTY_BOARD_FILTER_VALUES, counts: COUNTS },
-      state: { isEditing: options.isEditing ?? false },
+      state: { isEditing: options.isEditing ?? false, isOpen: options.isOpen },
       actions,
     },
   });
@@ -60,11 +61,55 @@ describe('AzuosBoardFilterBar', () => {
   });
 
   // feliz
-  it('offers to clear the filters once one is chosen', async () => {
+  it('offers to clear the filters in the header, outside the grid, once one is chosen', async () => {
     const actions = renderBar({ values: { ...EMPTY_BOARD_FILTER_VALUES, person: ME_VALUE } });
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(screen.getByRole('button', { name: /Filtros.*1 ativo/ })).toBeInTheDocument();
+    const clear = screen.getByRole('button', { name: 'Limpar filtros' });
+    expect(clear.closest('.grid')).toBeNull();
+    await fireEvent.click(clear);
     expect(actions.onClear).toHaveBeenCalled();
+    expect(actions.onOpenChange).not.toHaveBeenCalled();
+  });
+
+  // feliz
+  it('collapses and expands the filters with the arrow, telling the screen to remember', async () => {
+    const actions = renderBar();
+
+    const toggle = screen.getByRole('button', { name: 'Filtros' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('group', { name: 'Pessoa' })).toBeInTheDocument();
+
+    await fireEvent.click(toggle);
+    expect(actions.onOpenChange).toHaveBeenCalledWith(false);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    await fireEvent.click(toggle);
+    expect(actions.onOpenChange).toHaveBeenCalledWith(true);
+    expect(screen.getByRole('group', { name: 'Pessoa' })).toBeInTheDocument();
+  });
+
+  // feliz
+  it('opens the exact dates beside the period, in the same row, still named for screen readers', () => {
+    render(BoardFilterBar, {
+      props: {
+        data: {
+          filters: [PERIOD],
+          values: { ...EMPTY_BOARD_FILTER_VALUES, period: { mode: 'custom', from: '2026-11-01', to: '2026-11-30' } },
+          counts: COUNTS,
+        },
+        ui: { part: 'period' },
+        actions: { onChange: vi.fn() },
+      },
+    });
+
+    const range = screen.getByRole('button', { name: 'Entre (até 90 dias)' });
+    const piece = screen.getByRole('group', { name: 'Período' });
+    expect(range).toHaveTextContent('01/11/2026 até 30/11/2026');
+    expect(range.closest('[title]')).toHaveAttribute('title', 'Entre (até 90 dias)');
+    // A mesma fileira: a peça e as datas são irmãs, e o rótulo não ocupa linha própria.
+    expect(piece.parentElement).toBe(range.closest('[title]')?.parentElement);
+    expect(screen.getByText('Entre (até 90 dias)').parentElement).toHaveClass('[&>label]:sr-only');
   });
 
   // triste
@@ -72,6 +117,15 @@ describe('AzuosBoardFilterBar', () => {
     renderBar();
 
     expect(screen.queryByRole('button', { name: 'Limpar filtros' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Filtros' })).toBeInTheDocument();
+  });
+
+  // triste
+  it('starts collapsed when the remembered choice says so, keeping the header in sight', () => {
+    renderBar({ isOpen: false });
+
+    expect(screen.getByRole('button', { name: 'Filtros' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('group', { name: 'Pessoa' })).toBeNull();
   });
 
   // feliz
