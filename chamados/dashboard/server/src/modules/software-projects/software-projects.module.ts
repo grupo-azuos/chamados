@@ -43,6 +43,6 @@ import { SoftwareTimelineService } from './service/software-timeline.service';
     SoftwareDashboardService,
     TicketAssigneesService,
   ],
-  exports: [SoftwareProjectsService, GithubService],
+  exports: [SoftwareProjectsService, GithubService, SoftwareTimelineRepository],
 })
 export class SoftwareProjectsModule {}

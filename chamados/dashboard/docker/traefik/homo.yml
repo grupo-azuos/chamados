@@ -41,6 +41,8 @@ http:
     #    com a chave do computador no `Authorization` (`AgentReleaseService`).
     #  - `/api/network/webhook` — o controlador UniFi manda alertas com `?token=` igual a
     #    `UNIFI_WEBHOOK_TOKEN`; o app ainda aplica a trava própria de webhook.
+    #  - `/api/v1/github/webhook` — o webhook do GitHub App; cada aviso é assinado com
+    #    `GITHUB_APP_WEBHOOK_SECRET` (`X-Hub-Signature-256`) e o app recusa o que não bate.
     #  - `/api/integrations/github/callback` — o GitHub devolve o navegador aqui (router próprio,
     #    abaixo).
     #
@@ -50,7 +52,7 @@ http:
     # health não precisa entregar o token de sessão ao app.
     chamados-public:
       entryPoints: [https]
-      rule: Host(`chamados.homo.grupoazuos.com.br`) && (Path(`/api/health`) || Path(`/api/agent/releases/latest`) || Path(`/api/network/webhook`))
+      rule: Host(`chamados.homo.grupoazuos.com.br`) && (Path(`/api/health`) || Path(`/api/agent/releases/latest`) || Path(`/api/network/webhook`) || Path(`/api/v1/github/webhook`))
       priority: 1000
       middlewares: [chamados-headers, chamados-rate, chamados-strip-cookie, chamados-strip-identity, chamados-gzip]
       service: chamados

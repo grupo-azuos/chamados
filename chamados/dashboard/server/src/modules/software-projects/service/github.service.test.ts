@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type Database } from '../../../lib/db/db.type';
 import {
   CHAMADOS_BOT_NAME,
+  closingCommentOf,
   coAuthorsOfCommits,
   coAuthorTrailersOf,
   GithubService,
@@ -87,7 +88,8 @@ describe('GithubService', () => {
       state,
       created_at: '2026-10-16T12:00:00Z',
       closed_at: state === 'closed' ? '2026-10-17T12:00:00Z' : null,
-      closed_by: state === 'closed' ? { login: number === 30 ? 'app-chamados[bot]' : 'vinicius-gpl' } : null,
+      closed_by:
+        state === 'closed' ? { login: number === 30 ? 'app-chamados[bot]' : 'vinicius-gpl' } : null,
       performed_via_github_app: appId ? { id: appId } : null,
     });
     vi.spyOn(global, 'fetch').mockImplementation(async (url) =>
@@ -149,7 +151,8 @@ describe('GithubService', () => {
     const service = new GithubService({} as Database);
     vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
       if (String(url).endsWith('/pulls'))
-        return new Response(String(url).includes('def123456789')
+        return new Response(
+          String(url).includes('def123456789')
             ? '[{"number":4,"merge_commit_sha":"def123456789"}]'
             : '[]',
         );
@@ -166,7 +169,10 @@ describe('GithubService', () => {
           {
             sha: 'def123456789',
             html_url: 'https://github.com/org/repo/commit/def123456789',
-            commit: { message: 'Merge pull request #4', committer: { date: '2026-10-16T13:00:00Z' } },
+            commit: {
+              message: 'Merge pull request #4',
+              committer: { date: '2026-10-16T13:00:00Z' },
+            },
             author: { login: 'dev' },
             parents: [{ sha: 'three' }, { sha: 'four' }],
           },
@@ -623,13 +629,18 @@ describe('GithubService: pull request pages and co-authors', () => {
 
     const result = await service.fetchPullRequests('org', 'repo');
 
-    expect(result[0]).toMatchObject({ authorName: 'dev', coAuthors: [{ login: 'caio', name: 'Caio' }] });
+    expect(result[0]).toMatchObject({
+      authorName: 'dev',
+      coAuthors: [{ login: 'caio', name: 'Caio' }],
+    });
     /* Sem usuário no GitHub, o autor é "github"; fechado sem merge é `closed`. */
     expect(result[1]).toMatchObject({ author: 'github', status: 'closed' });
     expect(result[1]).not.toHaveProperty('coAuthors');
     /* O nome de cada login é lido UMA vez — a segunda pergunta sai do cache. */
     await service.fetchPullRequests('org', 'repo');
-    expect(fetcher.mock.calls.filter(([url]) => String(url).includes('/users/dev'))).toHaveLength(1);
+    expect(fetcher.mock.calls.filter(([url]) => String(url).includes('/users/dev'))).toHaveLength(
+      1,
+    );
   });
 
   it('stops reading commits when GitHub refuses a page', async () => {
@@ -724,7 +735,12 @@ describe('GithubService: issues in the background', () => {
 
   // feliz
   it('comments and closes the issue of the ticket, with the organization token', async () => {
-    const { db } = fakeDb({ id: 1, githubRepoOwner: 'org', githubRepoName: 'repo', repositoryUrl: 'x' });
+    const { db } = fakeDb({
+      id: 1,
+      githubRepoOwner: 'org',
+      githubRepoName: 'repo',
+      repositoryUrl: 'x',
+    });
     const app = { accessToken: vi.fn().mockResolvedValue('app-token') };
     const service = new GithubService(db, app as unknown as GithubAppService);
     const fetcher = vi.spyOn(global, 'fetch').mockResolvedValue(new Response('{}'));
@@ -747,7 +763,12 @@ describe('GithubService: issues in the background', () => {
   });
 
   it('reopens the issue reading the repository from the link of the system', async () => {
-    const { db } = fakeDb({ id: 1, githubRepoOwner: null, githubRepoName: null, repositoryUrl: 'org/repo' });
+    const { db } = fakeDb({
+      id: 1,
+      githubRepoOwner: null,
+      githubRepoName: null,
+      repositoryUrl: 'org/repo',
+    });
     const service = new GithubService(db);
     const fetcher = vi.spyOn(global, 'fetch').mockResolvedValue(new Response('{}'));
 
@@ -792,10 +813,16 @@ describe('GithubService: issues in the background', () => {
     const service = new GithubService(db);
     const fetcher = vi.spyOn(global, 'fetch').mockResolvedValue(new Response('{}'));
 
-    service.mirrorTicketToIssueInBackground({ id: 1, projectId: null, githubIssueNumber: 3 }, { state: 'open' });
+    service.mirrorTicketToIssueInBackground(
+      { id: 1, projectId: null, githubIssueNumber: 3 },
+      { state: 'open' },
+    );
     service.mirrorTicketToIssueInBackground({ id: 1, projectId: 1, githubIssueNumber: 3 }, {});
     /* Sistema apagado: a issue fica como está. */
-    service.mirrorTicketToIssueInBackground({ id: 1, projectId: 1, githubIssueNumber: 3 }, { state: 'open' });
+    service.mirrorTicketToIssueInBackground(
+      { id: 1, projectId: 1, githubIssueNumber: 3 },
+      { state: 'open' },
+    );
     service.syncTicketToIssueInBackground(10, 1, 'CH-0010', 'Erro', 'Descrição', 'Marta');
     await flush();
 
@@ -803,19 +830,35 @@ describe('GithubService: issues in the background', () => {
   });
 
   it('only warns when GitHub refuses the change or the link cannot be parsed', async () => {
-    const refused = fakeDb({ id: 1, githubRepoOwner: 'org', githubRepoName: 'repo', repositoryUrl: 'x' });
+    const refused = fakeDb({
+      id: 1,
+      githubRepoOwner: 'org',
+      githubRepoName: 'repo',
+      repositoryUrl: 'x',
+    });
     const service = new GithubService(refused.db);
     vi.spyOn(global, 'fetch').mockResolvedValue(new Response('', { status: 422 }));
 
-    service.mirrorTicketToIssueInBackground({ id: 1, projectId: 1, githubIssueNumber: 3 }, { comment: 'x' });
+    service.mirrorTicketToIssueInBackground(
+      { id: 1, projectId: 1, githubIssueNumber: 3 },
+      { comment: 'x' },
+    );
     service.syncTicketToIssueInBackground(10, 1, 'CH-0010', 'Erro', 'Descrição', 'Marta');
     await flush();
     expect(refused.updates).toEqual([]);
 
-    const unparsable = fakeDb({ id: 1, githubRepoOwner: null, githubRepoName: null, repositoryUrl: 'sem-link' });
+    const unparsable = fakeDb({
+      id: 1,
+      githubRepoOwner: null,
+      githubRepoName: null,
+      repositoryUrl: 'sem-link',
+    });
     const other = new GithubService(unparsable.db);
     other.syncTicketToIssueInBackground(10, 1, 'CH-0010', 'Erro', 'Descrição', 'Marta');
-    other.mirrorTicketToIssueInBackground({ id: 1, projectId: 1, githubIssueNumber: 3 }, { comment: 'x' });
+    other.mirrorTicketToIssueInBackground(
+      { id: 1, projectId: 1, githubIssueNumber: 3 },
+      { comment: 'x' },
+    );
     await flush();
     expect(unparsable.updates).toEqual([]);
   });
@@ -828,5 +871,70 @@ describe('GithubService: issues in the background', () => {
 
     vi.spyOn(global, 'fetch').mockRejectedValueOnce(new TypeError('fetch failed'));
     expect(await service.createIssue('org', 'repo', 'T', 'B', 'token')).toBeNull();
+  });
+});
+
+describe('closingCommentOf', () => {
+  const closedAt = new Date('2026-11-23T15:00:00Z');
+
+  // feliz
+  it('takes the last comment written by a person up to the closing', () => {
+    expect(
+      closingCommentOf(
+        [
+          {
+            body: 'Vou olhar.',
+            created_at: '2026-11-23T14:56:00Z',
+            user: { login: 'ana', type: 'User' },
+          },
+          {
+            body: '  Corrigido no PR #90. ',
+            created_at: '2026-11-23T14:59:58Z',
+            user: { login: 'ana', type: 'User' },
+          },
+        ],
+        closedAt,
+      ),
+    ).toBe('Corrigido no PR #90.');
+  });
+
+  // triste
+  /* O espelho do chamado comenta como o App: o eco do próprio sistema não vira a solução. */
+  it('ignores bot and App comments, comments after the closing and empty ones', () => {
+    expect(
+      closingCommentOf(
+        [
+          {
+            body: 'Encerrado no painel.',
+            created_at: '2026-11-23T14:59:00Z',
+            user: { login: 'app-chamados[bot]', type: 'Bot' },
+          },
+          {
+            body: 'Feito.',
+            created_at: '2026-11-23T14:59:30Z',
+            user: { login: 'ana' },
+            performed_via_github_app: { id: 1 },
+          },
+          { body: '   ', created_at: '2026-11-23T14:59:40Z', user: { login: 'ana' } },
+          { body: 'Depois de fechar.', created_at: '2026-11-23T15:03:00Z', user: { login: 'ana' } },
+        ],
+        closedAt,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe('GithubService.fetchClosingComment', () => {
+  // triste
+  /* O comentário é complemento: sem o App, a issue fechada encerra o chamado mesmo assim. */
+  it('gives up quietly when the GitHub App cannot issue a token', async () => {
+    const app = {
+      accessToken: vi.fn().mockRejectedValue(new Error('App não configurado')),
+    } as unknown as GithubAppService;
+    const service = new GithubService({} as Database, app);
+
+    await expect(
+      service.fetchClosingComment({ owner: 'org', repo: 'repo' }, 85, new Date()),
+    ).resolves.toBeNull();
   });
 });

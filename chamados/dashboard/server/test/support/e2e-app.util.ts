@@ -214,7 +214,8 @@ export async function createE2eApp(
   }
   const moduleRef = await builder.compile();
 
-  const app = moduleRef.createNestApplication({ logger: ['error'] });
+  /* `rawBody` igual ao `main.ts`: sem ele o webhook do GitHub não tem o corpo para conferir. */
+  const app = moduleRef.createNestApplication({ logger: ['error'], rawBody: true });
   setupApp(app, parseEnv(process.env));
   /* Sem isto o Nest tenta carregar o Socket.IO para o gateway dos agentes, não acha, e mata o
      processo — a suíte morre antes do primeiro teste. */

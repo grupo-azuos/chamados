@@ -71,6 +71,6 @@ import { SoftwareProjectsModule } from '../software-projects/software-projects.m
     TicketComputersRepository,
     TicketRemovedService,
   ],
-  exports: [TicketsService, TicketAssigneesService],
+  exports: [TicketsService, TicketAssigneesService, TicketHistoriesService],
 })
 export class TicketsModule {}

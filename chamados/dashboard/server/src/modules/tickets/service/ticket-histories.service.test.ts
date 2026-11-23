@@ -147,7 +147,12 @@ describe('TicketHistoriesService.create — stock items', () => {
       stockItems as unknown as TicketStockItemsService,
     );
 
-    return { service, record, stockItems, actor: { ...ana, roles: { infra: 'admin' } } as RequestUser };
+    return {
+      service,
+      record,
+      stockItems,
+      actor: { ...ana, roles: { infra: 'admin' } } as RequestUser,
+    };
   }
 
   // feliz
@@ -362,7 +367,9 @@ describe('TicketHistoriesService.create — the GitHub issue', () => {
       roles: { sistema: 'user' },
     });
 
-    await expect(service.create(actor, 7, entry('note'))).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.create(actor, 7, entry('note'))).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
     expect(github.mirrorTicketToIssueInBackground).not.toHaveBeenCalled();
   });
 });
@@ -441,14 +448,22 @@ describe('TicketHistoriesService.listPublic', () => {
 });
 
 describe('TicketHistoriesService.createByRequester', () => {
-  const bia: RequestUser = { id: 'bia-id', email: 'bia@azuos.com.br', name: 'Bia Costa', role: 'user' };
+  const bia: RequestUser = {
+    id: 'bia-id',
+    email: 'bia@azuos.com.br',
+    name: 'Bia Costa',
+    role: 'user',
+  };
 
-  function requesterSetup(options: {
-    ticket?: TicketWithComputer | null;
-    watchers?: { id: string; name: string }[];
-    update?: ReturnType<typeof vi.fn>;
-  } = {}) {
-    const ticket = options.ticket === undefined ? ticketRow({ requesterId: bia.id }) : options.ticket;
+  function requesterSetup(
+    options: {
+      ticket?: TicketWithComputer | null;
+      watchers?: { id: string; name: string }[];
+      update?: ReturnType<typeof vi.fn>;
+    } = {},
+  ) {
+    const ticket =
+      options.ticket === undefined ? ticketRow({ requesterId: bia.id }) : options.ticket;
     const tickets = {
       findById: vi.fn().mockResolvedValue(ticket),
       listAreasOf: vi.fn().mockResolvedValue([]),
@@ -485,7 +500,9 @@ describe('TicketHistoriesService.createByRequester', () => {
 
   // feliz
   it('records the reply, moves the ticket to "requester reply" and keeps the assignee', async () => {
-    const { service, record } = requesterSetup({ ticket: ticketRow({ requesterId: bia.id, assignee: null }) });
+    const { service, record } = requesterSetup({
+      ticket: ticketRow({ requesterId: bia.id, assignee: null }),
+    });
 
     const saved = await service.createByRequester(bia, 7, {
       type: 'requester_reply',
@@ -493,7 +510,11 @@ describe('TicketHistoriesService.createByRequester', () => {
     });
 
     const [history, move] = record.mock.calls[0] ?? [];
-    expect(history).toMatchObject({ type: 'requester_reply', statusAfter: 'requester_reply', authorName: 'Bia Costa' });
+    expect(history).toMatchObject({
+      type: 'requester_reply',
+      statusAfter: 'requester_reply',
+      authorName: 'Bia Costa',
+    });
     expect(move).toMatchObject({ status: 'requester_reply' });
     /* Quem pede respondendo não "pega" o próprio chamado. */
     expect(move).not.toHaveProperty('assignee');
@@ -507,7 +528,10 @@ describe('TicketHistoriesService.createByRequester', () => {
       watchers: [{ id: bia.id, name: 'Bia Costa' }],
     });
 
-    await service.createByRequester(bia, 7, { type: 'requester_reopening', description: 'Voltou a travar.' });
+    await service.createByRequester(bia, 7, {
+      type: 'requester_reopening',
+      description: 'Voltou a travar.',
+    });
 
     expect(record.mock.calls[0]?.[1]).toMatchObject({ status: 'requester_reply', solution: null });
   });
@@ -531,7 +555,9 @@ describe('TicketHistoriesService.createByRequester', () => {
 
   // triste
   it('answers 404 to someone who neither opened nor is linked', async () => {
-    const { service, record } = requesterSetup({ ticket: ticketRow({ requesterId: 'someone-else' }) });
+    const { service, record } = requesterSetup({
+      ticket: ticketRow({ requesterId: 'someone-else' }),
+    });
 
     await expect(
       service.createByRequester(bia, 7, { type: 'requester_reply', description: 'Oi' }),
@@ -558,5 +584,82 @@ describe('TicketHistoriesService.createByRequester', () => {
     await service.createByRequester(bia, 7, { type: 'requester_reply', description: 'Oi' });
 
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe('TicketHistoriesService.recordFromGithub', () => {
+  function githubSetup(ticket: TicketWithComputer) {
+    const record = vi.fn().mockImplementation(async (history) => historyRow(history));
+    const mirror = vi.fn();
+    const tickets = {
+      findById: vi.fn().mockResolvedValue(ticket),
+    } as unknown as TicketsRepository;
+    const service = new TicketHistoriesService(
+      { record } as unknown as TicketHistoriesRepository,
+      new TicketAccessService(tickets),
+      {} as TicketAttachmentsService,
+      { mirrorTicketToIssueInBackground: mirror } as unknown as GithubService,
+      undefined,
+      undefined,
+      tickets,
+    );
+
+    return { service, record, mirror };
+  }
+
+  const closed = {
+    action: 'closed',
+    stateReason: 'completed',
+    issueNumber: 85,
+    senderLogin: 'vinicius-gpl',
+    closingComment: 'Corrigido no PR #90.',
+  };
+
+  // feliz
+  it('closes the ticket with the closing comment and the linked person as author, without mirroring back', async () => {
+    const { service, record, mirror } = githubSetup(
+      ticketRow({ status: 'in_progress', assignee: null }),
+    );
+
+    await service.recordFromGithub(7, closed, {
+      name: 'Vinícius',
+      email: 'v@azuos.com.br',
+      id: 'u-1',
+    });
+
+    const [history, move] = record.mock.calls[0] ?? [];
+    expect(history).toMatchObject({
+      type: 'resolution',
+      description: 'Corrigido no PR #90.',
+      authorName: 'Vinícius',
+    });
+    expect(move).toMatchObject({
+      status: 'resolved',
+      solution: 'Corrigido no PR #90.',
+      assigneeId: 'u-1',
+    });
+    /* A mudança nasceu na issue: devolver para lá seria o eco. */
+    expect(mirror).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('never makes an unlinked GitHub login the assignee', async () => {
+    const { service, record } = githubSetup(ticketRow({ status: 'open', assignee: null }));
+
+    await service.recordFromGithub(7, closed, { name: '@fulano (GitHub)', email: 'github:fulano' });
+
+    const [, move] = record.mock.calls[0] ?? [];
+    expect(move).not.toHaveProperty('assignee');
+    expect(move).not.toHaveProperty('assigneeId');
+  });
+
+  // triste
+  it('records nothing when the ticket is already closed (the echo of its own mirror)', async () => {
+    const { service, record } = githubSetup(ticketRow({ status: 'resolved' }));
+
+    const saved = await service.recordFromGithub(7, closed, { name: 'X', email: 'x' });
+
+    expect(saved).toBeNull();
+    expect(record).not.toHaveBeenCalled();
   });
 });

@@ -10,6 +10,10 @@ import {
   refuseTicketHistory,
   ticketHistoryTypeLabel,
 } from '@template/shared/domain/ticket-history.util';
+import {
+  type GithubIssueEvent,
+  ticketHistoryOfIssueEvent,
+} from '@template/shared/domain/github-issue-sync.util';
 import { isClosedTicketStatus } from '@template/shared/domain/ticket-status.util';
 import { type StagedFile } from '@template/shared/schemas/staged-file.schema';
 import { type TicketAttachment } from '@template/shared/schemas/ticket-attachment.schema';
@@ -27,6 +31,7 @@ import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
 import { assertCanAttendTicket, assertCanRead } from '../../../lib/policy/policy-assert.util';
 import { GithubService } from '../../software-projects/service/github.service';
 import {
+  type HistoryAuthor,
   type HistoryEntry,
   toHistoryInsert,
   toOpeningHistory,
@@ -129,6 +134,47 @@ export class TicketHistoriesService {
     await this.notify(reach.ticket, row, user, notifyUserIds);
 
     return toTicketHistory(row, saved);
+  }
+
+  /**
+   * O andamento que VEIO DO GITHUB: a issue do chamado foi fechada ou reaberta lá.
+   *
+   * Sem pessoa logada — quem garante a origem é a assinatura do webhook, conferida antes. Grava
+   * pela mesma função dos outros históricos (estágio, solução, baixa do estoque ao encerrar), mas
+   * NÃO espelha de volta na issue: a mudança nasceu nela.
+   *
+   * Quem fechou só vira responsável do chamado quando a conta do GitHub está vinculada a uma
+   * pessoa da base (tem `id`). Um login solto não vira responsável: responsável é sempre por ID.
+   */
+  async recordFromGithub(
+    ticketId: number,
+    event: GithubIssueEvent,
+    author: HistoryAuthor,
+  ): Promise<TicketHistory | null> {
+    const ticket = await this.tickets?.findById(ticketId);
+    if (!ticket) return null;
+    /* A decisão é pelo estágio de AGORA: é o que mata o eco do próprio espelho (ver a regra). */
+    const entry = ticketHistoryOfIssueEvent(event, ticket.status);
+    if (!entry) return null;
+
+    const historyEntry = {
+      type: entry.type as HistoryEntry['type'],
+      description: entry.description,
+      isVisibleToRequester: true,
+      minutesSpent: null,
+    };
+    const move = toTicketMove(ticket, historyEntry, author);
+    if (!author.id) {
+      delete move.assignee;
+      delete move.assigneeId;
+    }
+    const row = await this.repository.record(
+      toHistoryInsert(ticket, historyEntry, author),
+      move,
+      this.settlementOf(ticket, historyEntry, author),
+    );
+
+    return toTicketHistory(row);
   }
 
   /**
