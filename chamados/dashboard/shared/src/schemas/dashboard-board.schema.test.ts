@@ -91,9 +91,9 @@ describe('widgetSchema', () => {
     expect(widgetSchema.safeParse({ ...WIDGET, kind: 'sankey', splitBy: 'status' }).success).toBe(
       false,
     );
-    expect(
-      widgetSchema.safeParse({ ...WIDGET, source: 'computers', onlyMine: true }).success,
-    ).toBe(false);
+    expect(widgetSchema.safeParse({ ...WIDGET, source: 'computers', onlyMine: true }).success).toBe(
+      false,
+    );
   });
 
   // feliz
@@ -104,9 +104,9 @@ describe('widgetSchema', () => {
     expect(
       widgetSchema.safeParse({ ...WIDGET, kind: 'cumulative', groupBy: 'createdMonth' }).success,
     ).toBe(true);
-    expect(widgetSchema.safeParse({ ...WIDGET, kind: 'grouped', splitBy: 'priority' }).success).toBe(
-      true,
-    );
+    expect(
+      widgetSchema.safeParse({ ...WIDGET, kind: 'grouped', splitBy: 'priority' }).success,
+    ).toBe(true);
   });
 
   // triste
@@ -539,9 +539,9 @@ describe('age bands', () => {
       widgetSchema.safeParse({ ...base, kind: 'column', groupBy: 'openAge', ageBands: [5, 10] })
         .success,
     ).toBe(true);
-    expect(
-      widgetSchema.safeParse({ ...base, kind: 'area', groupBy: 'createdWeek' }).success,
-    ).toBe(true);
+    expect(widgetSchema.safeParse({ ...base, kind: 'area', groupBy: 'createdWeek' }).success).toBe(
+      true,
+    );
   });
 
   // triste
@@ -603,7 +603,9 @@ describe('boardFilterKindsOf', () => {
     expect(boardFilterKindsOf('sistema')).toContain('project');
     expect(boardFilterKindsOf('infra')).toContain('computerHealth');
     expect(boardFilterKindsOf('manutencao')).toContain('inventoryCategory');
-    expect(boardFilterKindsOf('infra')).toEqual(expect.arrayContaining(['person', 'period', 'problemType', 'requester']));
+    expect(boardFilterKindsOf('infra')).toEqual(
+      expect.arrayContaining(['person', 'period', 'problemType', 'requester']),
+    );
   });
 
   // triste
@@ -617,15 +619,24 @@ describe('boardFilterKindsOf', () => {
 describe('the new field filters', () => {
   // feliz
   it('count in their own source and cut the blocks that have the field', () => {
-    expect(boardFilterCardSource('computerHealth', 'infra')).toEqual({ source: 'computers', groupBy: 'healthStatus' });
-    expect(boardFilterCardSource('problemType', 'manutencao')).toEqual({ source: 'maintenanceTickets', groupBy: 'problemType' });
-    expect(boardMatches({ ...EMPTY_BOARD_FILTER_VALUES, project: 'Paralegal' }, 'softwareActivity')).toEqual([{ field: 'project', value: 'Paralegal' }]);
+    expect(boardFilterCardSource('computerHealth', 'infra')).toEqual({
+      source: 'computers',
+      groupBy: 'healthStatus',
+    });
+    expect(boardFilterCardSource('problemType', 'manutencao')).toEqual({
+      source: 'maintenanceTickets',
+      groupBy: 'problemType',
+    });
+    expect(
+      boardMatches({ ...EMPTY_BOARD_FILTER_VALUES, project: 'Paralegal' }, 'softwareActivity'),
+    ).toEqual([{ field: 'project', value: 'Paralegal' }]);
   });
 
   // triste
   it('have no count outside their module and leave other sources alone', () => {
     expect(boardFilterCardSource('project', 'infra')).toBeNull();
-    expect(boardMatches({ ...EMPTY_BOARD_FILTER_VALUES, computerHealth: 'critical' }, 'infraTickets')).toEqual([]);
+    expect(
+      boardMatches({ ...EMPTY_BOARD_FILTER_VALUES, computerHealth: 'critical' }, 'infraTickets'),
+    ).toEqual([]);
   });
 });
-

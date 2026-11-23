@@ -24,7 +24,9 @@ export const githubWebhookEvents = chamadosSchema.table(
     repositoryFullName: text('repository_full_name'),
     senderLogin: text('sender_login'),
     payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
-    receivedAt: timestamp('received_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+    receivedAt: timestamp('received_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow(),
     processedAt: timestamp('processed_at', { withTimezone: true, mode: 'date' }),
     error: text('error'),
   },

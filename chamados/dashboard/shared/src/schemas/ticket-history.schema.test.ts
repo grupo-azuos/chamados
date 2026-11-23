@@ -144,12 +144,19 @@ describe('createRequesterHistorySchema', () => {
       description: '  Segue o print.  ',
     });
 
-    expect(parsed).toMatchObject({ description: 'Segue o print.', notifyUserIds: [], attachments: [] });
+    expect(parsed).toMatchObject({
+      description: 'Segue o print.',
+      notifyUserIds: [],
+      attachments: [],
+    });
   });
 
   // triste
   it('refuses a type that only the attendant launches', () => {
-    const result = createRequesterHistorySchema.safeParse({ type: 'resolution', description: 'Feito.' });
+    const result = createRequesterHistorySchema.safeParse({
+      type: 'resolution',
+      description: 'Feito.',
+    });
 
     expect(result.success).toBe(false);
   });

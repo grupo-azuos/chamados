@@ -496,10 +496,9 @@ export const updateTicketSchema = z.object({
   /** O sistema do chamado. Nulo DESVINCULA. */
   projectId: z.number().int().positive().nullable().optional(),
   /** O sistema digitado por não estar na lista. Nulo limpa o nome digitado. */
-  customSystemName: z.preprocess(
-    (value) => (value === '' ? null : value),
-    customSystemNameSchema.nullable(),
-  ).optional(),
+  customSystemName: z
+    .preprocess((value) => (value === '' ? null : value), customSystemNameSchema.nullable())
+    .optional(),
   /**
    * TROCAR O RESPONSÁVEL — só o super admin. Para os demais o campo é recusado pelo servidor:
    * quem assume um chamado vira responsável ao lançar o primeiro histórico (`toTicketMove`), e

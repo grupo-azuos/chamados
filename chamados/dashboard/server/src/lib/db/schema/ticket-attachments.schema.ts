@@ -1,15 +1,7 @@
 import { ATTACHMENT_KINDS } from '@template/shared/domain/attachment-catalog.util';
 import { ATTACHMENT_ORIGINS } from '@template/shared/schemas/ticket-attachment.schema';
 import { sql } from 'drizzle-orm';
-import {
-  bigint,
-  check,
-  index,
-  integer,
-  serial,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core';
+import { bigint, check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';

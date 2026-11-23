@@ -6,15 +6,7 @@ import {
   TICKET_STATUSES,
 } from '@template/shared/domain/ticket-status.util';
 import { sql } from 'drizzle-orm';
-import {
-  boolean,
-  check,
-  index,
-  integer,
-  serial,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core';
+import { boolean, check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { chamadosSchema } from './chamados.schema';
 
@@ -97,7 +89,9 @@ export const tickets = chamadosSchema.table(
     /**
      * O SISTEMA/PROJETO de software vinculado ao chamado (área de Sistema).
      */
-    projectId: integer('project_id').references(() => softwareProjects.id, { onDelete: 'set null' }),
+    projectId: integer('project_id').references(() => softwareProjects.id, {
+      onDelete: 'set null',
+    }),
     /* O sistema que quem abriu DIGITOU, por não achá-lo na lista. Texto solto, sem vínculo:
        por isso não abre Issue no GitHub. Só existe quando não há `project_id`. */
     customSystemName: text('custom_system_name'),
@@ -114,9 +108,7 @@ export const tickets = chamadosSchema.table(
     assigneeId: text('assignee_id'),
     solution: text('solution'),
 
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     /* Quando o TI assumiu e quando resolveu. São o que o indicador de tempo médio mede —
        por isso são carimbos próprios, e não deduções a partir de `updated_at`, que qualquer
        edição de texto moveria. */

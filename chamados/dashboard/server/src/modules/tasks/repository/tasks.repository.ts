@@ -35,6 +35,8 @@ import {
   type TaskStepRow,
   taskSteps,
   tasks,
+  taskStages,
+  type TaskStageRow,
 } from '../../../lib/db/schema/tasks.schema';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
 
@@ -42,6 +44,8 @@ import { tickets } from '../../../lib/db/schema/tickets.schema';
 const TODAY = sql`(now() at time zone 'America/Sao_Paulo')::date`;
 
 export type TaskRelations = {
+  /** A situação própria em que a tarefa está (`null`: a coluna fixa dela). */
+  stage: TaskStageRow | null;
   steps: TaskStepRow[];
   links: (TaskLinkRow & { label: string | null })[];
   people: TaskPersonRow[];
@@ -388,7 +392,14 @@ export class TasksRepository {
   private async withRelations(rows: readonly TaskRow[]): Promise<TaskWithRelations[]> {
     if (!rows.length) return [];
     const ids = rows.map((row) => row.id);
-    const [steps, links, people] = await Promise.all([
+    const stageIds = [...new Set(rows.flatMap((row) => (row.stageId ? [row.stageId] : [])))];
+    const [stages, steps, links, people] = await Promise.all([
+      stageIds.length
+        ? runQuery(
+            this.db.select().from(taskStages).where(inArray(taskStages.id, stageIds)),
+            'ler situações',
+          )
+        : Promise.resolve([] as TaskStageRow[]),
       runQuery(
         this.db
           .select()
@@ -414,6 +425,7 @@ export class TasksRepository {
 
     return rows.map((row) => ({
       ...row,
+      stage: stages.find((stage) => stage.id === row.stageId) ?? null,
       steps: steps.filter((step) => step.taskId === row.id),
       links: links
         .filter((link) => link.taskId === row.id)
@@ -488,6 +500,7 @@ export class TasksRepository {
     const filters: SQL[] = [eq(tasks.area, query.area)];
     if (query.status) filters.push(eq(tasks.status, query.status));
     if (query.origin) filters.push(eq(tasks.origin, query.origin));
+    if (query.stageId) filters.push(eq(tasks.stageId, query.stageId));
     if (query.ownerId) filters.push(eq(tasks.ownerId, query.ownerId));
     if (query.mine) filters.push(this.mineFilter(viewerId));
     if (query.linkKind && query.linkId) filters.push(this.linkFilter(query.linkKind, query.linkId));

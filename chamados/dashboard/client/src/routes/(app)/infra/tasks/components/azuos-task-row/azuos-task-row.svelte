@@ -22,7 +22,6 @@
 <script lang="ts">
   import {
     TASK_ORIGIN_LABELS,
-    TASK_STATUS_LABELS,
     TASK_STATUS_TONES,
   } from '@template/shared/domain/task-flow.util';
 
@@ -30,6 +29,7 @@
   import ProgressBar from '$lib/components/azuos-progress-bar/azuos-progress-bar.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { taskDueBadge, taskPercentage } from '$lib/utils/task-due.util';
+  import { situationOf } from '$lib/utils/task-stage.util';
 
   let { data, actions }: AzuosTaskRowProps = $props();
 
@@ -57,8 +57,8 @@
     </span>
     <span class="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
       <StatusBadge
-        data={{ label: TASK_STATUS_LABELS[task.status] }}
-        ui={{ tone: TASK_STATUS_TONES[task.status], size: 'sm' }}
+        data={{ label: situationOf(task).label }}
+        ui={{ tone: TASK_STATUS_TONES[task.status], color: situationOf(task).color, size: 'sm' }}
       />
       <span>{TASK_ORIGIN_LABELS[task.origin]}</span>
       {#if linkCount > 0}

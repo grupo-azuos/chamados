@@ -61,12 +61,15 @@ describe('assignRoleSchema', () => {
   });
 });
 
-
 describe('assignRolesSchema', () => {
   // feliz
   it('accepts multiple modules for the same person without taking a role from the body', () => {
-    const parsed = assignRolesSchema.parse({ userId: 'usr_1', userEmail: 'ana@empresa.com.br',
-      contexts: ['infra', 'sistema'], role: 'superadmin' });
+    const parsed = assignRolesSchema.parse({
+      userId: 'usr_1',
+      userEmail: 'ana@empresa.com.br',
+      contexts: ['infra', 'sistema'],
+      role: 'superadmin',
+    });
     expect(parsed.contexts).toEqual(['infra', 'sistema']);
     expect(parsed).not.toHaveProperty('role');
   });
@@ -78,7 +81,11 @@ describe('assignRolesSchema', () => {
   });
 
   it('rejects duplicates and unknown modules', () => {
-    expect(assignRolesSchema.safeParse({ userId: 'usr_1', contexts: ['infra', 'infra'] }).success).toBe(false);
-    expect(assignRolesSchema.safeParse({ userId: 'usr_1', contexts: ['infra', 'financeiro'] }).success).toBe(false);
+    expect(
+      assignRolesSchema.safeParse({ userId: 'usr_1', contexts: ['infra', 'infra'] }).success,
+    ).toBe(false);
+    expect(
+      assignRolesSchema.safeParse({ userId: 'usr_1', contexts: ['infra', 'financeiro'] }).success,
+    ).toBe(false);
   });
 });

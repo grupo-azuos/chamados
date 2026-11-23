@@ -46,7 +46,8 @@ export const TASKS_QUERY_KEY = ['tasks'] as const;
 
 export type TaskListFilter = {
   search: string;
-  status: TaskStatus | '';
+  /** Uma situação fixa (`open`) ou uma própria (`stage:4`); vazio é todas. */
+  status: TaskStatus | `stage:${number}` | '';
   origin: TaskOrigin | '';
   ownerId: string;
   mine: boolean;
@@ -106,6 +107,8 @@ export type TaskListModel = {
     onOpen: (task: Task) => void;
     onClose: () => void;
     onMove: (task: Task, status: 'done' | 'reopened') => void;
+    /** Põe a tarefa numa situação própria, ou (`null`) a devolve à coluna fixa. */
+    onStage: (task: Task, stageId: number | null) => void;
     onToggleStep: (task: Task, stepId: number, done: boolean) => void;
     onRemoveLink: (task: Task, linkId: number) => void;
     onAskRemove: (task: Task) => void;
@@ -156,12 +159,23 @@ export function shiftMonth(month: string, delta: number): string {
 function filterParams(filter: TaskListFilter): Partial<TaskListQuery> {
   return {
     search: filter.search.trim() || undefined,
-    status: filter.status || undefined,
+    ...situationParams(filter.status),
     origin: filter.origin || undefined,
     ownerId: filter.ownerId || undefined,
     mine: filter.mine || undefined,
     overdue: filter.overdue || undefined,
   };
+}
+
+/** A situação do filtro vira o parâmetro certo: a fixa vai em `status`, a própria em `stageId`. */
+export function situationParams(value: TaskListFilter['status']): {
+  status?: TaskStatus;
+  stageId?: number;
+} {
+  if (!value) return {};
+  if (value.startsWith('stage:')) return { stageId: Number(value.slice('stage:'.length)) };
+
+  return { status: value as TaskStatus };
 }
 
 function queryOf(
@@ -265,6 +279,13 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
     createMutation({
       mutationFn: (input: { id: number; status: 'done' | 'reopened' }) =>
         tasksApi.setStatus(input.id, { status: input.status }),
+      ...onDone,
+    }),
+  );
+  const stage = mirrorStore(
+    createMutation({
+      mutationFn: (input: { id: number; stageId: number | null }) =>
+        tasksApi.setStage(input.id, input.stageId),
       ...onDone,
     }),
   );
@@ -372,6 +393,7 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
       get isMutating() {
         return (
           move.current.isPending ||
+          stage.current.isPending ||
           toggleStep.current.isPending ||
           remove.current.isPending ||
           unlink.current.isPending
@@ -413,6 +435,7 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
         selectedId = null;
       },
       onMove: (task, status) => move.current.mutate({ id: task.id, status }),
+      onStage: (task, stageId) => stage.current.mutate({ id: task.id, stageId }),
       onToggleStep: (task, stepId, done) =>
         toggleStep.current.mutate({ id: task.id, stepId, done }),
       onRemoveLink: (task, linkId) => unlink.current.mutate({ id: task.id, linkId }),

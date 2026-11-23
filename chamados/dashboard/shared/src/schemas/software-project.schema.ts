@@ -94,15 +94,18 @@ export const softwareProjectFormSchema = z.object({
     .string()
     .trim()
     .min(1, 'Informe o nome do sistema')
-    .max(SOFTWARE_PROJECT_NAME_MAX_LENGTH, `O nome pode ter até ${SOFTWARE_PROJECT_NAME_MAX_LENGTH} caracteres`),
+    .max(
+      SOFTWARE_PROJECT_NAME_MAX_LENGTH,
+      `O nome pode ter até ${SOFTWARE_PROJECT_NAME_MAX_LENGTH} caracteres`,
+    ),
   description: z
     .string()
     .trim()
-    .max(SOFTWARE_PROJECT_DESCRIPTION_MAX_LENGTH, `A descrição pode ter até ${SOFTWARE_PROJECT_DESCRIPTION_MAX_LENGTH} caracteres`),
-  repositoryUrl: z
-    .string()
-    .trim()
-    .min(1, 'Informe o link do repositório no GitHub'),
+    .max(
+      SOFTWARE_PROJECT_DESCRIPTION_MAX_LENGTH,
+      `A descrição pode ter até ${SOFTWARE_PROJECT_DESCRIPTION_MAX_LENGTH} caracteres`,
+    ),
+  repositoryUrl: z.string().trim().min(1, 'Informe o link do repositório no GitHub'),
   status: softwareProjectStatusSchema,
   color: softwareProjectColorSchema,
   /** Vazio é "sem responsável". */

@@ -3,14 +3,7 @@ import {
   INVENTORY_UNITS,
 } from '@template/shared/domain/inventory-catalog.util';
 import { sql } from 'drizzle-orm';
-import {
-  check,
-  index,
-  integer,
-  serial,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core';
+import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
@@ -67,7 +60,10 @@ export const inventoryItems = chamadosSchema.table(
     index('inventory_items_name_idx').on(table.name),
     index('inventory_items_department_idx').on(table.department),
     index('inventory_items_user_id_idx').on(table.userId),
-    check('inventory_items_category_valid', sql`${table.category} in (${valuesFor(INVENTORY_CATEGORIES)})`),
+    check(
+      'inventory_items_category_valid',
+      sql`${table.category} in (${valuesFor(INVENTORY_CATEGORIES)})`,
+    ),
     check('inventory_items_unit_valid', sql`${table.unit} in (${valuesFor(INVENTORY_UNITS)})`),
     /* Saldo negativo é entrada esquecida. A API já recusa a saída que não cabe; esta é a
        trava de trás, para o caso de duas saídas passarem juntas. */

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { TASK_LINK_KINDS, TASK_ORIGINS, TASK_STATUSES } from '../domain/task-flow.util';
 import { ROLE_CONTEXTS } from '../domain/role-context.util';
 import { paginatedSchema, paginationQuerySchema } from './pagination.schema';
+import { taskStageRefSchema } from './task-stage.schema';
 
 /**
  * O CONTRATO DAS TAREFAS — o mesmo schema valida a API e o formulário.
@@ -59,6 +60,11 @@ export const taskSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),
   status: taskStatusSchema,
+  /**
+   * A situação própria da equipe ("Aguardando peça"), entre Reaberta e Finalizada. Só existe com
+   * `status` aberta ou reaberta: finalizar tira a tarefa dela.
+   */
+  stage: taskStageRefSchema.nullable(),
   origin: taskOriginSchema,
   /** O chamado de onde nasceu (origem `ticket`). */
   ticketId: z.number().int().nullable(),
@@ -195,6 +201,8 @@ export const taskListQuerySchema = paginationQuerySchema.extend({
   area: taskAreaSchema,
   status: taskStatusSchema.optional(),
   origin: taskOriginSchema.optional(),
+  /** Só as tarefas de uma situação própria. */
+  stageId: z.coerce.number<number>().int().positive().optional(),
   ownerId: z.string().min(1).optional(),
   /** Só as tarefas de quem pergunta (como dono ou participante). */
   mine: flagSchema,

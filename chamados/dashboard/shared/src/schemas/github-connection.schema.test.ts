@@ -5,7 +5,9 @@ import { githubAuthorizationSchema, githubConnectionSchema } from './github-conn
 describe('github connection contract', () => {
   // feliz
   it('accepts the status and the authorization address', () => {
-    expect(githubConnectionSchema.parse({ isConfigured: true, isLinked: false, login: null })).toBeTruthy();
+    expect(
+      githubConnectionSchema.parse({ isConfigured: true, isLinked: false, login: null }),
+    ).toBeTruthy();
     expect(githubAuthorizationSchema.parse({ url: 'https://github.com/login/oauth' })).toBeTruthy();
   });
 

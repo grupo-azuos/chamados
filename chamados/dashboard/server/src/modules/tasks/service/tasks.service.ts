@@ -45,6 +45,7 @@ import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
 import { getRoleInContext } from '../../../lib/policy/access.policy';
 import { assertCanManageInContext, assertCanRead } from '../../../lib/policy/policy-assert.util';
 import { ticketTaskTitle, toTask } from '../mapper/tasks.mapper';
+import { TaskStagesRepository } from '../repository/task-stages.repository';
 import {
   type MaintenanceCandidate,
   TasksRepository,
@@ -67,6 +68,7 @@ export class TasksService {
 
   constructor(
     private readonly repository: TasksRepository,
+    private readonly stages: TaskStagesRepository,
     @Inject(DB) private readonly db: Database,
     @Optional()
     @Inject(USER_DIRECTORY_PROVIDER)
@@ -150,6 +152,29 @@ export class TasksService {
     await this.db.transaction(async (tx) => {
       await this.repository.update(id, updateChangeOf(input, ownerId, user.id), tx);
       if (input.peopleIds) await this.repository.replacePeople(id, input.peopleIds, tx);
+    });
+
+    return this.get(user, id);
+  }
+
+  /**
+   * Põe a tarefa numa SITUAÇÃO PRÓPRIA da área ("Aguardando peça"), ou (`null`) a devolve à coluna
+   * fixa. A finalizada que vai para uma própria é reaberta (a própria fica entre Reaberta e
+   * Finalizada); a de chamado finalizada não — ela acompanha o chamado.
+   */
+  async setStage(user: RequestUser, id: number, stageId: number | null): Promise<Task> {
+    const row = await this.requireManageable(user, id, 'mudar a situação de tarefas');
+    if (stageId !== null) await this.assertStageOfArea(stageId, row.area);
+    const reopens = stageId !== null && row.status === 'done';
+    if (reopens && row.origin === 'ticket') {
+      throw new UnprocessableEntityException(
+        'A tarefa de um chamado acompanha o chamado: reabra o chamado antes.',
+      );
+    }
+    await this.repository.update(id, {
+      stageId,
+      updatedBy: user.id,
+      ...(reopens ? statusChange('reopened', user.id) : {}),
     });
 
     return this.get(user, id);
@@ -353,6 +378,13 @@ export class TasksService {
 
   // ── Apoio ──────────────────────────────────────────────────────────────────────────────────
 
+  private async assertStageOfArea(stageId: number, area: RoleContext): Promise<void> {
+    const stage = await this.stages.findActive(stageId);
+    if (!stage || stage.area !== area) {
+      throw new UnprocessableEntityException('Escolha uma situação desta área.');
+    }
+  }
+
   private assertCanReadArea(user: RequestUser, area: RoleContext): void {
     assertCanRead(getRoleInContext(user, area), 'as tarefas desta área');
   }
@@ -432,8 +464,16 @@ export class TasksService {
   }
 }
 
+/* Finalizar tira a tarefa da situação própria: a finalizada mora na coluna fixa. */
 function statusChange(status: TaskStatus, actor: string): Partial<TaskInsert> {
-  return { status, finishedAt: status === 'done' ? new Date() : null, updatedBy: actor };
+  const isDone = status === 'done';
+
+  return {
+    status,
+    finishedAt: isDone ? new Date() : null,
+    updatedBy: actor,
+    ...(isDone ? { stageId: null } : {}),
+  };
 }
 
 function updateChangeOf(

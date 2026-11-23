@@ -32,6 +32,7 @@
     window: { from: '2026-11-16', to: '2026-12-20' },
     zoom: 'month' as const,
     map: { peopleIds: [], positions: {} },
+    stages: [],
     people: [],
     selected: null,
     removing: null,
@@ -41,9 +42,10 @@
   const state = { isLoading: false, isEmpty: false, isFilteredOut: false, isTruncated: false, isMutating: false, error: null, actionError: null };
   const actions = {
     onViewChange: fn(), onSearchChange: fn(), onFilterChange: fn(), onClearFilters: fn(), onPageChange: fn(),
-    onMonthChange: fn(), onRangeChange: fn(), onShiftWindow: fn(), onWindowToday: fn(), onZoom: fn(), onOpen: fn(), onClose: fn(), onMove: fn(), onToggleStep: fn(), onRemoveLink: fn(),
+    onMonthChange: fn(), onRangeChange: fn(), onShiftWindow: fn(), onWindowToday: fn(), onZoom: fn(), onOpen: fn(), onClose: fn(), onMove: fn(), onStage: fn(), onToggleStep: fn(), onRemoveLink: fn(),
     onAskRemove: fn(), onCancelRemove: fn(), onConfirmRemove: fn(), onRetry: fn(), onNew: fn(), onRefuse: fn(),
     map: { onPeopleChange: fn(), onIslandMove: fn(), onResetLayout: fn() },
+    onManageStages: fn(),
   };
 </script>
 

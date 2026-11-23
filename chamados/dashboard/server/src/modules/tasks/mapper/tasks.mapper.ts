@@ -28,6 +28,7 @@ export function toTask(
     title: row.title,
     description: row.description,
     status: row.status,
+    stage: row.stage ? { id: row.stage.id, label: row.stage.label, color: row.stage.color } : null,
     origin: row.origin,
     ticketId: row.ticketId,
     computerId: row.computerId,

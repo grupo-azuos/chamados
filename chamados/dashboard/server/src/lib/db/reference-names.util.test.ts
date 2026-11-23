@@ -34,9 +34,14 @@ describe('reference names', () => {
 
   // feliz
   it('names the responsible by the directory id', () => {
-    rememberPeople([{ id: 'person-1', name: 'Ana Exemplo', email: 'ana@exemplo.invalid', image: '/a.png' }]);
+    rememberPeople([
+      { id: 'person-1', name: 'Ana Exemplo', email: 'ana@exemplo.invalid', image: '/a.png' },
+    ]);
 
-    expect(dialect.sqlToQuery(computerResponsibleNameSql()).params).toEqual(['person-1', 'Ana Exemplo']);
+    expect(dialect.sqlToQuery(computerResponsibleNameSql()).params).toEqual([
+      'person-1',
+      'Ana Exemplo',
+    ]);
     expect(personOf('person-1')).toEqual({ name: 'Ana Exemplo', avatarUrl: '/a.png' });
   });
 

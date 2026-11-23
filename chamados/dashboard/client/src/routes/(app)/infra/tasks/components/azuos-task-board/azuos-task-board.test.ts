@@ -1,41 +1,68 @@
 import { render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { taskFixture } from '../task-fixture.test-support';
-import TaskBoard, { moveOfTaskDrop } from './azuos-task-board.svelte';
+import TaskBoard from './azuos-task-board.svelte';
 
-describe('moveOfTaskDrop', () => {
-  // feliz
-  it('finishes on "Finalizada" and reopens a finished task on "Reaberta"', () => {
-    expect(moveOfTaskDrop({ status: 'open', origin: 'manual' }, 'done')).toEqual({
-      status: 'done',
-    });
-    expect(moveOfTaskDrop({ status: 'done', origin: 'maintenance' }, 'reopened')).toEqual({
-      status: 'reopened',
-    });
-  });
+const STAGE = {
+  id: 4,
+  area: 'infra' as const,
+  label: 'Aguardando peça',
+  color: '#ff9500',
+  position: 0,
+};
 
-  // triste
-  it('refuses moving a ticket task and going back to "Aberta", and ignores the same column', () => {
-    expect(moveOfTaskDrop({ status: 'open', origin: 'ticket' }, 'done')).toHaveProperty('refusal');
-    expect(moveOfTaskDrop({ status: 'done', origin: 'manual' }, 'open')).toHaveProperty('refusal');
-    expect(moveOfTaskDrop({ status: 'open', origin: 'manual' }, 'open')).toBeNull();
+function setup(canManage = true) {
+  const actions = {
+    onOpen: vi.fn(),
+    onMove: vi.fn(),
+    onStage: vi.fn(),
+    onRefuse: vi.fn(),
+    onManageStages: vi.fn(),
+  };
+  render(TaskBoard, {
+    props: {
+      data: {
+        tasks: [
+          taskFixture(),
+          taskFixture({ id: 2, status: 'done' }),
+          taskFixture({
+            id: 3,
+            title: 'Na própria',
+            stage: { id: 4, label: 'Aguardando peça', color: '#ff9500' },
+          }),
+        ],
+        stages: [STAGE],
+      },
+      ui: { canManageStages: canManage },
+      actions,
+    },
   });
-});
+  return actions;
+}
 
 describe('AzuosTaskBoard', () => {
   // feliz
-  it('draws one column per status with its count', () => {
-    render(TaskBoard, {
-      props: {
-        data: { tasks: [taskFixture(), taskFixture({ id: 2, status: 'done' })] },
-        actions: { onOpen: vi.fn(), onMove: vi.fn(), onRefuse: vi.fn() },
-      },
-    });
+  it('draws the stages of the team between Reaberta and Finalizada, with the task in its stage', async () => {
+    const actions = setup();
 
-    expect(screen.getByText('Aberta')).toBeInTheDocument();
-    expect(screen.getByText('Reaberta')).toBeInTheDocument();
-    expect(screen.getByText('Finalizada')).toBeInTheDocument();
+    /* Cada coluna é uma região com o nome dela, na ordem do quadro. */
+    const titles = screen
+      .getAllByRole('region')
+      .map((region) => region.getAttribute('aria-label'))
+      .filter((label) => label !== 'Quadro das tarefas');
+    expect(titles).toEqual(['Aberta', 'Reaberta', 'Aguardando peça', 'Finalizada']);
+    expect(screen.getByRole('button', { name: 'Abrir a tarefa Na própria' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Situações' }));
+    expect(actions.onManageStages).toHaveBeenCalled();
+  });
+
+  // triste
+  it('hides "Situações" from who cannot manage, and an empty column asks to drag', () => {
+    setup(false);
+
+    expect(screen.queryByRole('button', { name: 'Situações' })).not.toBeInTheDocument();
     expect(screen.getAllByText('Arraste para cá.')).toHaveLength(1);
   });
 });

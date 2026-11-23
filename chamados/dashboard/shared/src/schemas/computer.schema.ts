@@ -271,9 +271,14 @@ export type UpdateComputerInput = z.input<typeof updateComputerSchema>;
 export const computerFormSchema = z.object({
   displayName: z.string().max(DISPLAY_NAME_MAX_LENGTH, `Até ${DISPLAY_NAME_MAX_LENGTH} caracteres`),
   /* O id da pessoa escolhida na lista; vazio é "sem responsável". Não há campo de digitar nome. */
-  responsibleId: z.string().max(RESPONSIBLE_ID_MAX_LENGTH, 'Escolha o responsável na lista de pessoas'),
+  responsibleId: z
+    .string()
+    .max(RESPONSIBLE_ID_MAX_LENGTH, 'Escolha o responsável na lista de pessoas'),
   /* O id do departamento do RH, como texto do seletor (`'12'`); vazio é "sem departamento". */
-  departmentId: z.union([z.string().regex(/^[1-9]\d*$/, 'Escolha um departamento da lista'), z.literal('')]),
+  departmentId: z.union([
+    z.string().regex(/^[1-9]\d*$/, 'Escolha um departamento da lista'),
+    z.literal(''),
+  ]),
   notes: z.string().max(COMPUTER_NOTES_MAX_LENGTH, `Até ${COMPUTER_NOTES_MAX_LENGTH} caracteres`),
   /* Vazio é o cadastro recém-aberto: a pessoa ESCOLHE, o formulário não presume desktop. */
   kind: z

@@ -57,7 +57,9 @@ describe('software project messages', () => {
   // triste
   it('explains the status and the color in Portuguese', () => {
     const status = softwareProjectStatusSchema.safeParse('parado');
-    expect(status.success ? '' : status.error.issues[0]?.message).toBe('Escolha uma situação válida');
+    expect(status.success ? '' : status.error.issues[0]?.message).toBe(
+      'Escolha uma situação válida',
+    );
     const color = softwareProjectColorSchema.safeParse('roxo-escuro');
     expect(color.success ? '' : color.error.issues[0]?.message).toBe('Escolha uma cor');
   });

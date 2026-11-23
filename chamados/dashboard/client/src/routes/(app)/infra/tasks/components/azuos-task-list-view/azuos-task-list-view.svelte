@@ -13,15 +13,24 @@
 <script lang="ts" module>
   import { type TaskListModel } from '$lib/hooks/use-task-list/use-task-list.svelte';
   import { type TaskMapModel } from '$lib/hooks/use-task-map/use-task-map.svelte';
+  import { type TaskStage } from '@template/shared/schemas/task-stage.schema';
 
   export type AzuosTaskListViewProps = {
-    data: TaskListModel['data'] & { today: string; now?: Date; map: TaskMapModel['data'] };
+    data: TaskListModel['data'] & {
+      today: string;
+      now?: Date;
+      map: TaskMapModel['data'];
+      /** As situações próprias da área: as colunas do quadro e o filtro "Situação". */
+      stages: TaskStage[];
+    };
     ui?: { canCreate?: boolean };
     state: TaskListModel['state'];
     actions: TaskListModel['actions'] & {
       onNew: () => void;
       onRefuse: (message: string) => void;
       map: TaskMapModel['actions'];
+      /** Abre o diálogo "Situações". */
+      onManageStages: () => void;
     };
   };
 </script>
@@ -128,7 +137,13 @@
       <div class="flex flex-col gap-1.5">
         <span class="text-ink-700 text-sm font-medium">Situação</span>
         <OptionPicker
-          data={{ value: data.filter.status, options: TASK_STATUSES.map((status) => ({ value: status, label: TASK_STATUS_LABELS[status] })) }}
+          data={{
+            value: data.filter.status,
+            options: [
+              ...TASK_STATUSES.map((status) => ({ value: status, label: TASK_STATUS_LABELS[status] })),
+              ...data.stages.map((stage) => ({ value: `stage:${stage.id}`, label: stage.label })),
+            ],
+          }}
           ui={{ ariaLabel: 'Situação', allLabel: 'Todas', mode: 'combobox', fullWidth: true }}
           actions={{ onChange: (value: string) => actions.onFilterChange('status', value as typeof data.filter.status) }}
         />
@@ -190,9 +205,16 @@
     </div>
   {:else if data.view === 'board'}
     <TaskBoard
-      data={{ tasks: data.tasks, now: data.now }}
+      data={{ tasks: data.tasks, stages: data.stages, now: data.now }}
+      ui={{ canManageStages: ui?.canCreate !== false }}
       state={{ isMoving: viewState.isMutating }}
-      actions={{ onOpen: actions.onOpen, onMove: actions.onMove, onRefuse: actions.onRefuse }}
+      actions={{
+        onOpen: actions.onOpen,
+        onMove: actions.onMove,
+        onStage: actions.onStage,
+        onRefuse: actions.onRefuse,
+        onManageStages: actions.onManageStages,
+      }}
     />
   {:else if data.view === 'calendar'}
     <TaskCalendar

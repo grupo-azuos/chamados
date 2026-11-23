@@ -1,44 +1,35 @@
 <!--
   @component
-  O QUADRO DAS TAREFAS — uma coluna por situação (Aberta, Reaberta, Finalizada), com o mesmo
-  arrastar do quadro dos chamados (`@dnd-kit`: teclado, o cartão inteiro seguindo o ponteiro,
-  rolagem perto da borda).
+  O QUADRO DAS TAREFAS — uma coluna por situação: Aberta, Reaberta, AS PRÓPRIAS DA EQUIPE (na
+  ordem dela, cada uma na cor que ganhou) e Finalizada, como no Paralegal. O mesmo arrastar do
+  quadro dos chamados (`@dnd-kit`: teclado, o cartão inteiro seguindo o ponteiro, rolagem perto da
+  borda). "Situações" abre o diálogo de criar, renomear, mudar de lugar e arquivar as próprias.
 
-  Os movimentos são os da régua (`canMoveTask`): soltar em Finalizada finaliza; tirar de
-  Finalizada para Reaberta reabre. O resto é recusado com aviso. A tarefa de chamado não se
-  arrasta — ela acompanha o chamado.
+  Os movimentos são os de `moveOfTaskDrop`: soltar numa própria põe a tarefa nela; em Finalizada,
+  finaliza; de Finalizada para Reaberta, reabre; da própria para a coluna fixa dela, sai da própria.
+  O resto é recusado com aviso. A tarefa de chamado não finaliza nem reabre por aqui — ela acompanha
+  o chamado —, mas anda pelas próprias.
 
-  - `data.tasks`, `data.now`; `state.isMoving`.
-  - `actions`: `onOpen`, `onMove(task, 'done' | 'reopened')`, `onRefuse(mensagem)`.
+  - `data.tasks`, `data.stages`, `data.now`; `ui.canManageStages`; `state.isMoving`.
+  - `actions`: `onOpen`, `onMove(task, 'done' | 'reopened')`, `onStage(task, stageId)`,
+    `onRefuse(mensagem)`, `onManageStages`.
 -->
 <script lang="ts" module>
-  import { type TaskStatus } from '@template/shared/domain/task-flow.util';
   import { type Task } from '@template/shared/schemas/task.schema';
+  import { type TaskStage } from '@template/shared/schemas/task-stage.schema';
 
   export type AzuosTaskBoardProps = {
-    data: { tasks: Task[]; now?: Date };
+    data: { tasks: Task[]; stages?: TaskStage[]; now?: Date };
+    ui?: { canManageStages?: boolean };
     state?: { isMoving?: boolean };
     actions: {
       onOpen: (task: Task) => void;
       onMove: (task: Task, status: 'done' | 'reopened') => void;
+      onStage: (task: Task, stageId: number | null) => void;
       onRefuse: (message: string) => void;
+      onManageStages?: () => void;
     };
   };
-
-  /** A coluna onde a tarefa foi solta vira o movimento — ou a recusa. */
-  export function moveOfTaskDrop(
-    task: Pick<Task, 'status' | 'origin'>,
-    column: TaskStatus,
-  ): { status: 'done' | 'reopened' } | { refusal: string } | null {
-    if (task.status === column) return null;
-    if (task.origin === 'ticket') {
-      return { refusal: 'A tarefa de um chamado acompanha o chamado: encerre ou reabra o chamado.' };
-    }
-    if (column === 'done') return { status: 'done' };
-    if (column === 'reopened' && task.status === 'done') return { status: 'reopened' };
-
-    return { refusal: 'Tarefa não volta para "Aberta": finalizada, ela é reaberta.' };
-  }
 </script>
 
 <script lang="ts">
@@ -54,16 +45,20 @@
     PreventSelection,
   } from '@dnd-kit/dom';
   import { DragDropProvider, DragOverlay, KeyboardSensor, PointerSensor } from '@dnd-kit/svelte';
-  import { TASK_STATUS_LABELS, TASK_STATUSES } from '@template/shared/domain/task-flow.util';
+  import Settings2 from '@lucide/svelte/icons/settings-2';
+  import Tag from '@lucide/svelte/icons/tag';
 
+  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import DraggableCard from '$lib/components/azuos-kanban-draggable-card/azuos-kanban-draggable-card.svelte';
   import StageColumn from '$lib/components/azuos-kanban-column/azuos-kanban-column.svelte';
   import OwnerAvatar from '../azuos-task-owner-avatar/azuos-task-owner-avatar.svelte';
   import ProgressBar from '$lib/components/azuos-progress-bar/azuos-progress-bar.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import { cardHueFromHex } from '$lib/utils/card-tone.util';
   import { taskDueBadge, taskPercentage } from '$lib/utils/task-due.util';
+  import { columnIdOf, moveOfTaskDrop, type TaskColumn, taskColumnsOf } from '$lib/utils/task-stage.util';
 
-  let { data, state: boardState, actions }: AzuosTaskBoardProps = $props();
+  let { data, ui, state: boardState, actions }: AzuosTaskBoardProps = $props();
 
   const LOOK = {
     open: { tone: 'info', icon: CircleDot },
@@ -71,10 +66,19 @@
     done: { tone: 'success', icon: CircleCheck },
   } as const;
 
-  const dropIdOf = (status: TaskStatus) => `column:${status}`;
   const columns = $derived(
-    TASK_STATUSES.map((status) => ({ status, tasks: data.tasks.filter((task) => task.status === status) })),
+    taskColumnsOf(data.stages ?? []).map((column) => ({
+      column,
+      tasks: data.tasks.filter((task) => columnIdOf(task) === column.id),
+    })),
   );
+
+  /** A cor e o ícone da coluna: as fixas no tom delas; a própria, no tom mais perto da cor dela. */
+  function lookOf(column: TaskColumn) {
+    if (column.kind === 'stage') return { tone: cardHueFromHex(column.stage.color), icon: Tag };
+
+    return LOOK[column.status];
+  }
 
   const sensors = [
     PointerSensor.configure({
@@ -108,14 +112,11 @@
   function handleDragEnd(event: DragSnapshot): void {
     if (event.canceled || !event.operation.target) return;
     const task = taskOf(event.operation.source?.id);
-    const status = String(event.operation.target.id).replace('column:', '') as TaskStatus;
     if (!task) return;
-    const move = moveOfTaskDrop(task, status);
+    const move = moveOfTaskDrop(task, String(event.operation.target.id));
     if (!move) return;
-    if ('refusal' in move) {
-      actions.onRefuse(move.refusal);
-      return;
-    }
+    if ('refusal' in move) return actions.onRefuse(move.refusal);
+    if ('stageId' in move) return actions.onStage(task, move.stageId);
     actions.onMove(task, move.status);
   }
 </script>
@@ -145,21 +146,28 @@
   </button>
 {/snippet}
 
-<section aria-label="Quadro das tarefas">
+<section aria-label="Quadro das tarefas" class="flex flex-col gap-3">
+  {#if ui?.canManageStages && actions.onManageStages}
+    <div class="flex justify-end">
+      <ActionButton
+        data={{ label: 'Situações' }}
+        ui={{ variant: 'secondary', size: 'sm', icon: Settings2 }}
+        actions={{ onClick: actions.onManageStages }}
+      />
+    </div>
+  {/if}
   <DragDropProvider {sensors} {plugins} onDragEnd={handleDragEnd}>
     <div class="flex w-full items-start justify-start gap-4 overflow-x-auto pb-4">
-      {#each columns as column (column.status)}
-        <StageColumn
-          data={{ title: TASK_STATUS_LABELS[column.status], count: column.tasks.length }}
-          ui={{ tone: LOOK[column.status].tone, icon: LOOK[column.status].icon, dropId: dropIdOf(column.status) }}
-        >
-          {#if column.tasks.length === 0}
+      {#each columns as { column, tasks } (column.id)}
+        {@const look = lookOf(column)}
+        <StageColumn data={{ title: column.title, count: tasks.length }} ui={{ tone: look.tone, icon: look.icon, dropId: column.id }}>
+          {#if tasks.length === 0}
             <p class="text-muted-foreground py-6 text-center text-xs">Arraste para cá.</p>
           {:else}
-            {#each column.tasks as task (task.id)}
+            {#each tasks as task (task.id)}
               <DraggableCard
                 data={{ id: task.id, label: `Mover a tarefa ${task.title}` }}
-                state={{ isDisabled: Boolean(boardState?.isMoving) || task.origin === 'ticket' }}
+                state={{ isDisabled: Boolean(boardState?.isMoving) }}
               >
                 {@render card(task)}
               </DraggableCard>

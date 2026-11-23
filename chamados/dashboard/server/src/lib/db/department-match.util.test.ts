@@ -22,7 +22,9 @@ describe('departmentMatches', () => {
 
   // triste
   it('compares only by name when there is no legacy code, never writing the name into the SQL', () => {
-    const query = dialect.sqlToQuery(departmentMatches(tickets.department, "Novo'; drop table x; --"));
+    const query = dialect.sqlToQuery(
+      departmentMatches(tickets.department, "Novo'; drop table x; --"),
+    );
 
     expect(query.sql).not.toContain(' or ');
     expect(query.sql).not.toContain('drop table');

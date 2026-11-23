@@ -126,8 +126,10 @@ const MATCH_LABELS: Record<string, string> = {
 
 /** A situação e a prioridade guardam a chave ("em_andamento"); a faixa mostra o nome. */
 function matchValue(match: BoardMatch): string {
-  if (match.field === 'status') return (TICKET_STATUS_LABELS as Record<string, string>)[match.value] ?? match.value;
-  if (match.field === 'priority') return ticketPriorityLabel(match.value as TicketPriority) ?? match.value;
+  if (match.field === 'status')
+    return (TICKET_STATUS_LABELS as Record<string, string>)[match.value] ?? match.value;
+  if (match.field === 'priority')
+    return ticketPriorityLabel(match.value as TicketPriority) ?? match.value;
 
   return match.value;
 }

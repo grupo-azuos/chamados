@@ -54,6 +54,7 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
   beforeEach(async () => {
     await started.truncate(
       'history',
+      'task_stages',
       'tasks',
       'ticket_histories',
       'tickets',
@@ -245,5 +246,112 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
     });
     const [closed] = await started.db.select().from(tasks).where(eq(tasks.id, task!.id));
     expect(closed?.status).toBe('done');
+  });
+
+  // feliz
+  it('creates stages of the team, moves a task through them and finishing takes it out', async () => {
+    const waiting = await api()
+      .post('/api/v1/task-stages')
+      .set(asAna())
+      .send({ area: 'infra', label: 'Aguardando peça', color: '#FF9500' })
+      .expect(201);
+    const supplier = await api()
+      .post('/api/v1/task-stages')
+      .set(asAna())
+      .send({ area: 'infra', label: 'Com o fornecedor', color: '#5856d6' })
+      .expect(201);
+    expect(waiting.body).toMatchObject({ label: 'Aguardando peça', color: '#ff9500', position: 0 });
+    expect(supplier.body.position).toBe(1);
+
+    const moved = await api()
+      .post(`/api/v1/task-stages/${supplier.body.id}/move`)
+      .set(asAna())
+      .send({ direction: -1 })
+      .expect(201);
+    expect(moved.body.map((stage: { label: string }) => stage.label)).toEqual([
+      'Com o fornecedor',
+      'Aguardando peça',
+    ]);
+
+    const task = await api()
+      .post('/api/v1/tasks')
+      .set(asAna())
+      .send({ area: 'infra', title: 'Trocar a fonte', startDate: '2026-11-23' })
+      .expect(201);
+    const staged = await api()
+      .put(`/api/v1/tasks/${task.body.id}/stage`)
+      .set(asAna())
+      .send({ stageId: waiting.body.id })
+      .expect(200);
+    expect(staged.body).toMatchObject({
+      status: 'open',
+      stage: { label: 'Aguardando peça', color: '#ff9500' },
+    });
+
+    const filtered = await api()
+      .get('/api/v1/tasks')
+      .query({ area: 'infra', stageId: waiting.body.id })
+      .set(asAna())
+      .expect(200);
+    expect(filtered.body.total).toBe(1);
+
+    const finished = await api()
+      .post(`/api/v1/tasks/${task.body.id}/status`)
+      .set(asAna())
+      .send({ status: 'done' })
+      .expect(201);
+    expect(finished.body).toMatchObject({ status: 'done', stage: null });
+
+    /* A finalizada que vai para uma situação própria é reaberta. */
+    const back = await api()
+      .put(`/api/v1/tasks/${task.body.id}/stage`)
+      .set(asAna())
+      .send({ stageId: supplier.body.id })
+      .expect(200);
+    expect(back.body).toMatchObject({ status: 'reopened', stage: { label: 'Com o fornecedor' } });
+
+    await api().delete(`/api/v1/task-stages/${supplier.body.id}`).set(asAna()).expect(204);
+    const released = await api().get(`/api/v1/tasks/${task.body.id}`).set(asAna()).expect(200);
+    expect(released.body).toMatchObject({ status: 'reopened', stage: null });
+    const left = await api()
+      .get('/api/v1/task-stages')
+      .query({ area: 'infra' })
+      .set(asAna())
+      .expect(200);
+    expect(left.body.map((stage: { label: string }) => stage.label)).toEqual(['Aguardando peça']);
+  });
+
+  // triste
+  it('refuses a repeated or fixed stage name, a stage that does not exist and a manager that only reads', async () => {
+    await api()
+      .post('/api/v1/task-stages')
+      .set(asAna())
+      .send({ area: 'infra', label: 'Aguardando peça', color: '#ff9500' })
+      .expect(201);
+    await api()
+      .post('/api/v1/task-stages')
+      .set(asAna())
+      .send({ area: 'infra', label: 'aguardando PEÇA', color: '#ff9500' })
+      .expect(409);
+    await api()
+      .post('/api/v1/task-stages')
+      .set(asAna())
+      .send({ area: 'infra', label: 'Finalizada', color: '#ff9500' })
+      .expect(400);
+    const task = await api()
+      .post('/api/v1/tasks')
+      .set(asAna())
+      .send({ area: 'infra', title: 'Trocar a fonte', startDate: '2026-11-23' })
+      .expect(201);
+    await api()
+      .put(`/api/v1/tasks/${task.body.id}/stage`)
+      .set(asAna())
+      .send({ stageId: 999 })
+      .expect(422);
+    await api()
+      .post('/api/v1/task-stages')
+      .set(asBia())
+      .send({ area: 'infra', label: 'Outra', color: '#ff9500' })
+      .expect(403);
   });
 });

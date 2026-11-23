@@ -28,6 +28,7 @@ import {
   AddTaskLinksDto,
   CreateTaskDto,
   SaveTaskStepsDto,
+  SetTaskStageDto,
   SetTaskStatusDto,
   SetTaskStepDoneDto,
   TaskDto,
@@ -125,6 +126,24 @@ export class TasksController {
     @Body() body: SetTaskStatusDto,
   ): Promise<TaskDto> {
     return this.service.setStatus(user, id, body);
+  }
+
+  @Put(':id/stage')
+  @ApiOperation({
+    summary: 'Põe a tarefa numa situação própria da área',
+    description:
+      '`stageId` de uma situação própria ("Aguardando peça"), ou `null` para voltar à coluna fixa (Aberta ou Reaberta). A finalizada que vai para uma própria é reaberta.',
+  })
+  @ApiOkResponse({ type: TaskDto })
+  @ApiUnprocessableEntityResponse({
+    description: 'Situação de outra área, arquivada, ou tarefa de chamado finalizada.',
+  })
+  async setStage(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: SetTaskStageDto,
+  ): Promise<TaskDto> {
+    return this.service.setStage(user, id, body.stageId);
   }
 
   @Put(':id/steps')

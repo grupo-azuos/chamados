@@ -1,15 +1,7 @@
 import { TICKET_HISTORY_TYPES } from '@template/shared/domain/ticket-history.util';
 import { TICKET_STATUSES } from '@template/shared/domain/ticket-status.util';
 import { sql } from 'drizzle-orm';
-import {
-  boolean,
-  check,
-  index,
-  integer,
-  serial,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core';
+import { boolean, check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { chamadosSchema } from './chamados.schema';
 
@@ -79,7 +71,10 @@ export const ticketHistories = chamadosSchema.table(
   (table) => [
     /* A consulta é sempre "a linha do tempo deste chamado", em ordem. */
     index('ticket_histories_ticket_idx').on(table.ticketId, table.createdAt),
-    check('ticket_histories_type_valid', sql`${table.type} in (${valuesFor(TICKET_HISTORY_TYPES)})`),
+    check(
+      'ticket_histories_type_valid',
+      sql`${table.type} in (${valuesFor(TICKET_HISTORY_TYPES)})`,
+    ),
     check(
       'ticket_histories_status_after_valid',
       sql`${table.statusAfter} in (${valuesFor(TICKET_STATUSES)})`,

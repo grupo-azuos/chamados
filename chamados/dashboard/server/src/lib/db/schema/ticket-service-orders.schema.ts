@@ -1,14 +1,6 @@
 import { TICKET_STATUSES } from '@template/shared/domain/ticket-status.util';
 import { sql } from 'drizzle-orm';
-import {
-  check,
-  index,
-  integer,
-  serial,
-  text,
-  timestamp,
-  uniqueIndex,
-} from 'drizzle-orm/pg-core';
+import { check, index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 import { chamadosSchema } from './chamados.schema';
 

@@ -110,7 +110,9 @@ describe('toHttpException', () => {
     const exception = toHttpException(wrapped('23001'), 'apagar o chamado');
 
     expect(exception).toBeInstanceOf(ConflictException);
-    expect(exception.message).toBe('Este registro é permanente: não pode ser alterado nem apagado.');
+    expect(exception.message).toBe(
+      'Este registro é permanente: não pode ser alterado nem apagado.',
+    );
   });
 
   /* A checagem do banco tem mensagem própria: "o banco recusou" não diz o que corrigir. */

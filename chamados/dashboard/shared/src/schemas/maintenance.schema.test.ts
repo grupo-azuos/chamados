@@ -154,10 +154,12 @@ describe('maintenance schedule contract', () => {
   it('accepts today or later on the form, and a blank note as null on the API', () => {
     const form = maintenanceScheduleFormSchema('2026-10-20');
     expect(form.safeParse({ scheduledFor: '2026-10-20', note: '' }).success).toBe(true);
-    expect(saveMaintenanceScheduleSchema.parse({ scheduledFor: '2026-10-21', note: '  ' })).toEqual({
-      scheduledFor: '2026-10-21',
-      note: null,
-    });
+    expect(saveMaintenanceScheduleSchema.parse({ scheduledFor: '2026-10-21', note: '  ' })).toEqual(
+      {
+        scheduledFor: '2026-10-21',
+        note: null,
+      },
+    );
   });
 
   // triste
@@ -165,6 +167,8 @@ describe('maintenance schedule contract', () => {
     const form = maintenanceScheduleFormSchema('2026-10-20');
     expect(form.safeParse({ scheduledFor: '2026-10-19', note: '' }).success).toBe(false);
     expect(form.safeParse({ scheduledFor: '2026-13-45', note: '' }).success).toBe(false);
-    expect(saveMaintenanceScheduleSchema.safeParse({ scheduledFor: '20/10/2026' }).success).toBe(false);
+    expect(saveMaintenanceScheduleSchema.safeParse({ scheduledFor: '20/10/2026' }).success).toBe(
+      false,
+    );
   });
 });

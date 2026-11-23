@@ -10,6 +10,13 @@ import {
   type UpdateTaskInput,
 } from '@template/shared/schemas/task.schema';
 
+import {
+  type CreateTaskStageInput,
+  type TaskStage,
+  type UpdateTaskStageInput,
+} from '@template/shared/schemas/task-stage.schema';
+import { type RoleContext } from '@template/shared/domain/role-context.util';
+
 import { apiRequest } from './http-client';
 
 /**
@@ -24,6 +31,7 @@ export const tasksApi = {
         page: query.page,
         pageSize: query.pageSize,
         status: query.status,
+        stageId: query.stageId,
         origin: query.origin,
         ownerId: query.ownerId,
         mine: query.mine ? 'true' : undefined,
@@ -61,4 +69,20 @@ export const tasksApi = {
     apiRequest<Task>(`/tasks/${id}/links/${linkId}`, { method: 'DELETE' }),
 
   remove: (id: number) => apiRequest<void>(`/tasks/${id}`, { method: 'DELETE' }),
+
+  setStage: (id: number, stageId: number | null) =>
+    apiRequest<Task>(`/tasks/${id}/stage`, { method: 'PUT', body: { stageId } }),
+
+  stages: (area: RoleContext) => apiRequest<TaskStage[]>('/task-stages', { query: { area } }),
+
+  createStage: (body: CreateTaskStageInput) =>
+    apiRequest<TaskStage>('/task-stages', { method: 'POST', body }),
+
+  updateStage: (id: number, body: UpdateTaskStageInput) =>
+    apiRequest<TaskStage>(`/task-stages/${id}`, { method: 'PATCH', body }),
+
+  moveStage: (id: number, direction: -1 | 1) =>
+    apiRequest<TaskStage[]>(`/task-stages/${id}/move`, { method: 'POST', body: { direction } }),
+
+  removeStage: (id: number) => apiRequest<void>(`/task-stages/${id}`, { method: 'DELETE' }),
 };

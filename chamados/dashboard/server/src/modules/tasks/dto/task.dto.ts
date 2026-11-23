@@ -10,7 +10,14 @@ import {
   taskSchema,
   updateTaskSchema,
 } from '@template/shared/schemas/task.schema';
-
+import {
+  createTaskStageSchema,
+  moveTaskStageSchema,
+  setTaskStageSchema,
+  taskStageListQuerySchema,
+  taskStageSchema,
+  updateTaskStageSchema,
+} from '@template/shared/schemas/task-stage.schema';
 import { createZodDto } from '../../../lib/http/zod-dto';
 
 /**
@@ -27,3 +34,9 @@ export class SetTaskStatusDto extends createZodDto(setTaskStatusSchema) {}
 export class SaveTaskStepsDto extends createZodDto(saveTaskStepsSchema) {}
 export class SetTaskStepDoneDto extends createZodDto(setTaskStepDoneSchema) {}
 export class AddTaskLinksDto extends createZodDto(addTaskLinksSchema) {}
+export class TaskStageDto extends createZodDto(taskStageSchema) {}
+export class TaskStageListQueryDto extends createZodDto(taskStageListQuerySchema) {}
+export class CreateTaskStageDto extends createZodDto(createTaskStageSchema) {}
+export class UpdateTaskStageDto extends createZodDto(updateTaskStageSchema) {}
+export class MoveTaskStageDto extends createZodDto(moveTaskStageSchema) {}
+export class SetTaskStageDto extends createZodDto(setTaskStageSchema) {}

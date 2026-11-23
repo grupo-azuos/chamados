@@ -667,7 +667,6 @@ export const saveFilterSchema = z
 
 export type SaveFilterInput = z.infer<typeof saveFilterSchema>;
 
-
 /* ---------------------------------------------------------------- blocos e canvas */
 
 export const WIDGET_KINDS = [
@@ -1261,7 +1260,9 @@ const CARD_GROUPS: Partial<Record<BoardFilterKind, string>> = {
  * Os filtros que não são de chamado contam na fonte DELES: a saúde, nas máquinas; a categoria, no
  * inventário; o sistema, nos chamados de Sistema (o campo que mais se recorta por ele).
  */
-const OWN_CARD_SOURCES: Partial<Record<BoardFilterKind, { source: DataSourceKey; groupBy: string }>> = {
+const OWN_CARD_SOURCES: Partial<
+  Record<BoardFilterKind, { source: DataSourceKey; groupBy: string }>
+> = {
   project: { source: 'systemTickets', groupBy: 'project' },
   computerHealth: { source: 'computers', groupBy: 'healthStatus' },
   inventoryCategory: { source: 'inventoryItems', groupBy: 'category' },
@@ -1287,7 +1288,9 @@ export function boardFilterKindsOf(module: BoardModule): BoardFilterKind[] {
   return BOARD_FILTER_KINDS.filter((kind) => {
     if (!isFieldFilterKind(kind)) return true;
 
-    return Object.keys(BOARD_FILTER_FIELDS[kind]).some((source) => isSourceOf(module, source as DataSourceKey));
+    return Object.keys(BOARD_FILTER_FIELDS[kind]).some((source) =>
+      isSourceOf(module, source as DataSourceKey),
+    );
   });
 }
 
@@ -1575,7 +1578,6 @@ export const boardSchema = z.object({
 
 export type Board = z.infer<typeof boardSchema>;
 
-
 /* ---------------------------------------------------------------- os dados de um bloco */
 
 export const widgetQuerySchema = z.object({
@@ -1643,4 +1645,3 @@ export const widgetDataSchema = z.object({
 });
 
 export type WidgetData = z.infer<typeof widgetDataSchema>;
-
