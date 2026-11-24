@@ -23,6 +23,11 @@ export type TraceabilityMapNode =
 
 export type TraceabilityMap = { nodes: TraceabilityMapNode[]; edges: Edge[] };
 
+/* O rótulo da linha ("chamado", "2 un.") é um chip no padrão: pílula com o fio de 1px, no fundo
+   do card, em cinza de apoio — solto, ele parecia texto perdido no meio do mapa. */
+export const EDGE_LABEL_STYLE =
+  'border: 1px solid var(--border); border-radius: var(--shape-chip); background: var(--card); color: var(--muted-foreground); padding: 1px 8px; font-size: 11px; font-weight: 500;';
+
 const PAD = 20;
 const GAP = 16;
 const COLUMN_GAP = 64;
@@ -62,6 +67,7 @@ function edgeOf(edge: TraceabilityEdge): Edge {
     target: edge.target,
     type: 'smoothstep',
     label: edge.label ?? undefined,
+    labelStyle: EDGE_LABEL_STYLE,
     animated: edge.isPending,
     selectable: false,
     focusable: false,

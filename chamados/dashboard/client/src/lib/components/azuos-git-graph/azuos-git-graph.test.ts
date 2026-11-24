@@ -19,7 +19,7 @@ describe('AzuosGitGraph', () => {
 
     expect(screen.getByText('[merge](web): Tela')).toBeInTheDocument();
     expect(screen.getAllByText('VG')).toHaveLength(3);
-    expect(screen.getByTitle('Branch nova: feature/mapa')).toBeInTheDocument();
+    expect(screen.getByLabelText('Branch nova: feature/mapa')).toBeInTheDocument();
     expect(screen.getByText('develop')).toBeInTheDocument();
   });
 

@@ -62,7 +62,7 @@
                 href={branchUrl(data.git.project.repositoryUrl, branch.name)}
                 target="_blank"
                 rel="noopener noreferrer"
-                title={isNew(branch.firstSeenAt) ? `Branch nova: ${branch.name}` : branch.name}
+                aria-label={isNew(branch.firstSeenAt) ? `Branch nova: ${branch.name}` : branch.name}
                 class={cn(
                   'rounded-chip inline-flex items-center gap-1.5 px-3 py-1 font-mono text-xs font-medium hover:underline',
                   cardToneClasses(GIT_CATEGORY_HUES[categoryOfBranch(branch.name)]).dot,

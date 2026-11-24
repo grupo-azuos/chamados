@@ -28,6 +28,7 @@
 </script>
 
 <script lang="ts">
+  import Hint from '$lib/components/azuos-hint/azuos-hint.svelte';
   import { Handle, Position } from '@xyflow/svelte';
 
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
@@ -68,14 +69,22 @@
 {/snippet}
 
 {#if data.href}
-  <a
-    href={data.href}
-    aria-label={`${TRACEABILITY_KIND_LABELS[data.kind]}: ${data.label}`}
-    title={data.label}
-    class={cn(BOX, data.isPast && 'opacity-60', 'hover:bg-hover-veil focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none')}
-  >
-    {@render body()}
-  </a>
+  <Hint data={{ text: data.label }}>
+    {#snippet child(props)}
+      <a
+        {...props}
+        href={data.href}
+        aria-label={`${TRACEABILITY_KIND_LABELS[data.kind]}: ${data.label}`}
+        class={cn(BOX, data.isPast && 'opacity-60', 'hover:bg-hover-veil focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none')}
+      >
+        {@render body()}
+      </a>
+    {/snippet}
+  </Hint>
 {:else}
-  <div class={cn(BOX, data.isPast && 'opacity-60')} title={data.label}>{@render body()}</div>
+  <Hint data={{ text: data.label }}>
+    {#snippet child(props)}
+      <div {...props} class={cn(BOX, data.isPast && 'opacity-60')}>{@render body()}</div>
+    {/snippet}
+  </Hint>
 {/if}
