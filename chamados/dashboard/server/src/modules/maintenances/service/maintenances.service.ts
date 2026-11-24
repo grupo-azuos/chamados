@@ -1,4 +1,11 @@
-import { ConflictException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  Optional,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { type Department } from '@template/shared/domain/department.util';
 import { preventiveStatusOf } from '@template/shared/domain/maintenance.util';
 import {
@@ -15,6 +22,8 @@ import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.sch
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
 import { type SQL } from 'drizzle-orm';
 
+import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   assertCanCreate,
@@ -58,7 +67,25 @@ export class MaintenancesService {
     private readonly repository: MaintenancesRepository,
     @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
     @Optional() private readonly tasks?: TasksService,
+    @Optional()
+    @Inject(USER_DIRECTORY_PROVIDER)
+    private readonly directory?: UserDirectoryProvider,
   ) {}
+
+  /**
+   * QUEM FEZ, pela pessoa escolhida na lista: o nome dela no diretório vai para `performedBy`
+   * (o nome daquele dia, que a ordem de serviço mostra). Id que o diretório não conhece é recusado.
+   */
+  private async withPerformer<
+    T extends { performedById?: string | null; performedBy?: string | null },
+  >(input: T): Promise<T> {
+    if (input.performedById === null) return { ...input, performedBy: null };
+    if (!input.performedById || !this.directory) return input;
+    const person = await this.directory.getUserById(input.performedById);
+    if (!person) throw new UnprocessableEntityException('Escolha quem fez pela lista de pessoas.');
+
+    return { ...input, performedBy: person.name };
+  }
 
   async list(user: RequestUser, query: MaintenanceListQuery): Promise<Paginated<Maintenance>> {
     assertCanRead(user.role, 'as manutenções');
@@ -92,7 +119,9 @@ export class MaintenancesService {
   async create(user: RequestUser, input: CreateMaintenanceInput): Promise<Maintenance> {
     assertCanCreate(user.role, 'manutenções');
 
-    const id = await this.repository.insert(toMaintenanceInsert(input, user.email));
+    const id = await this.repository.insert(
+      toMaintenanceInsert(await this.withPerformer(input), user.email),
+    );
 
     /* Registrar a manutenção CUMPRE o agendamento: deixá-lo de pé faria a ficha continuar
        cobrando uma visita que já aconteceu. Qualquer tipo conta — quem agendou "trocar a
@@ -115,7 +144,10 @@ export class MaintenancesService {
        "é seu?". A leitura já foi liberada acima, então nada vaza nessa ordem. */
     assertCanModifyRecord(user.role, user.email, current.maintenance.createdBy, 'Esta manutenção');
 
-    await this.repository.update(id, toMaintenanceUpdate(input, user.email));
+    await this.repository.update(
+      id,
+      toMaintenanceUpdate(await this.withPerformer(input), user.email),
+    );
 
     await this.followTasks(current.maintenance.computerId, input.computerId);
     return toMaintenance(await this.requireMaintenance(id));

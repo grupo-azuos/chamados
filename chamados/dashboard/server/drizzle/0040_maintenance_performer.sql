@@ -1,0 +1,1 @@
+ALTER TABLE "chamados"."maintenances" ADD COLUMN "performed_by_id" text;

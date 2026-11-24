@@ -18,12 +18,16 @@
       otherMachine: field(),
       type: field('preventive'),
       description: field(),
-      performedBy: field(),
+      performedById: field(),
       performedAt: field('2026-09-20'),
       ...over,
     };
   }
 
+  const people = [
+    { id: 'u-ana', name: 'Ana Souza', photo: null },
+    { id: 'u-caio', name: 'Caio Reis', photo: null },
+  ];
   const machines = [
     { value: '1', label: 'Recepção — balcão (RECEPCAO-01)' },
     { value: '2', label: 'Financeiro — mesa 2 (FINANCEIRO-02)' },
@@ -46,7 +50,7 @@
 <Story
   name="Default"
   args={{
-    data: { mode: 'create', fields: fields(), machines },
+    data: { mode: 'create', fields: fields(), machines, people },
     state: { isOpen: true },
     actions,
   }}
@@ -64,6 +68,7 @@
         type: field('corrective'),
       }),
       machines,
+      people,
     },
     state: { isOpen: true },
     actions,
@@ -77,9 +82,10 @@
       mode: 'edit',
       fields: fields({
         description: field('Limpeza interna, troca da pasta térmica e verificação dos cabos.'),
-        performedBy: field('Suporte TI'),
+        performedById: field('u-ana'),
       }),
       machines,
+      people,
     },
     state: { isOpen: true },
     actions,
@@ -96,6 +102,7 @@
         otherMachine: field('', 'Escolha a máquina na lista ou escreva o nome do equipamento'),
       }),
       machines,
+      people,
     },
     state: { isOpen: true },
     actions,
@@ -106,7 +113,7 @@
 <Story
   name="Server error"
   args={{
-    data: { mode: 'create', fields: fields({ description: field('Troca de SSD') }), machines },
+    data: { mode: 'create', fields: fields({ description: field('Troca de SSD') }), machines, people },
     state: { isOpen: true, error: 'A máquina escolhida não existe mais.' },
     actions,
   }}
@@ -115,7 +122,7 @@
 <Story
   name="Submitting"
   args={{
-    data: { mode: 'create', fields: fields(), machines },
+    data: { mode: 'create', fields: fields(), machines, people },
     state: { isOpen: true, isSubmitting: true },
     actions,
   }}

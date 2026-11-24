@@ -1,3 +1,4 @@
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { maintenanceListQuerySchema } from '@template/shared/schemas/maintenance.schema';
 import { sql } from 'drizzle-orm';
@@ -35,6 +36,7 @@ function maintenanceRow(overrides: Partial<MaintenanceRow> = {}): MaintenanceRow
     type: 'preventive',
     description: 'Limpeza interna e pasta térmica',
     performedBy: 'Suporte TI',
+    performedById: null,
     performedAt: new Date('2026-09-20T12:00:00.000Z'),
     createdAt: new Date('2026-09-20T13:00:00.000Z'),
     createdBy: 'ana@empresa.com.br',
@@ -162,6 +164,44 @@ describe('MaintenancesService.create', () => {
     expect(insert).toHaveBeenCalledWith(
       expect.objectContaining({ createdBy: 'ana@empresa.com.br' }),
     );
+  });
+
+  /* Quem fez é a pessoa da lista: o nome dela no diretório vai para o registro. */
+  it('writes the name of the person chosen as who did it, and refuses one the directory does not know', async () => {
+    const insert = vi.fn().mockResolvedValue(1);
+    const directory = {
+      getUserById: vi.fn(async (id: string) => (id === 'u-ana' ? { id, name: 'Ana Souza' } : null)),
+    } as unknown as UserDirectoryProvider;
+    const service = new MaintenancesService(
+      {
+        insert,
+        archiveOpenSchedule: vi.fn(),
+        findById: vi.fn().mockResolvedValue(row()),
+      } as unknown as MaintenancesRepository,
+      undefined,
+      undefined,
+      directory,
+    );
+
+    await service.create(owner, {
+      computerId: 3,
+      type: 'preventive',
+      performedAt: NOW,
+      performedById: 'u-ana',
+    });
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ performedById: 'u-ana', performedBy: 'Ana Souza' }),
+    );
+
+    // triste
+    await expect(
+      service.create(owner, {
+        computerId: 3,
+        type: 'preventive',
+        performedAt: NOW,
+        performedById: 'u-fora',
+      }),
+    ).rejects.toThrow('Escolha quem fez pela lista de pessoas.');
   });
 
   /* A visita combinada aconteceu: a ficha não pode continuar cobrando. */

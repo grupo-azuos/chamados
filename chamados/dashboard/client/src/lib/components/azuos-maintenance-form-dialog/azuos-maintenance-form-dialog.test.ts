@@ -19,7 +19,7 @@ function fields(
     otherMachine: field(),
     type: field('preventive'),
     description: field(),
-    performedBy: field(),
+    performedById: field(),
     performedAt: field('2026-09-20'),
     ...over,
   };
@@ -188,13 +188,14 @@ describe('AzuosMaintenanceFormDialog — every field reports to the model', () =
     await userEvent.tab();
     expect(actions.onChange).toHaveBeenCalledWith('description', expect.any(String));
     expect(actions.onBlur).toHaveBeenCalledWith('description');
-    await userEvent.type(screen.getByRole('textbox', { name: /Quem fez/ }), 'C');
-    await userEvent.tab();
-    expect(actions.onChange).toHaveBeenCalledWith('performedBy', expect.any(String));
-    expect(actions.onBlur).toHaveBeenCalledWith('performedBy');
+    /* Quem fez é o campo de PESSOA (a lista, com a foto), não texto solto. */
+    expect(screen.getByRole('combobox', { name: 'Quem fez' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /Quem fez/ })).toBeNull();
 
     await userEvent.click(screen.getByRole('button', { name: 'Data do serviço' }));
-    const day = [...document.querySelectorAll('[data-bits-day]')].find((el) => el.textContent?.trim() === '15') as HTMLElement;
+    const day = [...document.querySelectorAll('[data-bits-day]')].find(
+      (el) => el.textContent?.trim() === '15',
+    ) as HTMLElement;
     await userEvent.click(day);
     expect(actions.onChange).toHaveBeenCalledWith('performedAt', expect.stringMatching(/-15$/));
     expect(actions.onBlur).toHaveBeenCalledWith('performedAt');
@@ -204,7 +205,11 @@ describe('AzuosMaintenanceFormDialog — every field reports to the model', () =
   it('shows the date error under the date', () => {
     render(MaintenanceFormDialog, {
       props: {
-        data: { mode: 'create', fields: fields({ performedAt: field('', 'Informe a data') }), machines },
+        data: {
+          mode: 'create',
+          fields: fields({ performedAt: field('', 'Informe a data') }),
+          machines,
+        },
         state: { isOpen: true },
         actions,
       },
