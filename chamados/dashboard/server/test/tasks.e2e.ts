@@ -189,7 +189,7 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
   });
 
   // triste
-  it('does not let a ticket task be finished by hand nor deleted', async () => {
+  it('does not let a ticket task be finished by hand, and archiving keeps it out of "Em uso"', async () => {
     const opened = await api().post('/api/v1/tickets').set(asAna()).send(PEDIDO).expect(201);
     const task = await taskOfTicket(opened.body.id as number);
 
@@ -198,7 +198,27 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
       .set(asAna())
       .send({ status: 'done' })
       .expect(422);
-    await api().delete(`/api/v1/tasks/${task.id}`).set(asAna()).expect(422);
+    /* Excluir ARQUIVA (qualquer origem): sai de "Em uso", aparece em "Arquivadas" e volta. */
+    await api().delete(`/api/v1/tasks/${task.id}`).set(asAna()).expect(204);
+    const inUse = await api()
+      .get('/api/v1/tasks')
+      .query({ area: 'infra' })
+      .set(asAna())
+      .expect(200);
+    expect(inUse.body.items.map((item: { id: number }) => item.id)).not.toContain(task.id);
+    const archived = await api()
+      .get('/api/v1/tasks')
+      .query({ area: 'infra', archived: 'only' })
+      .set(asAna())
+      .expect(200);
+    expect(archived.body.items[0]).toMatchObject({ id: task.id, archive: { archivedBy: ANA.id } });
+    await api()
+      .post(`/api/v1/tasks/${task.id}/status`)
+      .set(asAna())
+      .send({ status: 'done' })
+      .expect(422);
+    const restored = await api().post(`/api/v1/tasks/${task.id}/restore`).set(asAna()).expect(201);
+    expect(restored.body.archive).toBeNull();
   });
 
   // feliz

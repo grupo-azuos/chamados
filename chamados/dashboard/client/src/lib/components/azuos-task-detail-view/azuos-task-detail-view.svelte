@@ -48,6 +48,10 @@
       onEdit: () => void;
       onRemoveLink: (linkId: number) => void;
       onRemove: () => void;
+      /** Devolve a tarefa arquivada a "Em uso". */
+      onRestore: () => void;
+      /** Abre o diálogo "Vincular". */
+      onLink: () => void;
       /** O "voltar" pelo caminho da pessoa. Sem ele, o voltar é um link para as Tarefas. */
       onBack?: () => void;
     };
@@ -55,6 +59,8 @@
 </script>
 
 <script lang="ts">
+  import Archive from '@lucide/svelte/icons/archive';
+  import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
   import ArrowDown from '@lucide/svelte/icons/arrow-down';
   import ArrowUp from '@lucide/svelte/icons/arrow-up';
   import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
@@ -128,6 +134,7 @@
               ui={{ tone: TASK_STATUS_TONES[task.status], color: situationOf(task).color, icon: situationOf(task).icon }}
             />
             {#if due}<StatusBadge data={{ label: due.label }} ui={{ tone: DUE_TONE[due.tone] }} />{/if}
+            {#if task.archive}<StatusBadge data={{ label: 'Arquivada' }} ui={{ tone: 'neutral' }} />{/if}
             <span class="text-muted-foreground">{TASK_ORIGIN_LABELS[task.origin]}</span>
           </div>
         </div>
@@ -144,7 +151,7 @@
             <ActionButton
               data={{ label: isDone ? 'Reabrir' : 'Finalizar' }}
               ui={{ icon: isDone ? RotateCcw : CheckCircle2, variant: isDone ? 'secondary' : 'primary' }}
-              state={{ isDisabled: viewState.isBusy }}
+              state={{ isDisabled: viewState.isBusy || task.archive !== null }}
               actions={{ onClick: isDone ? actions.onReopen : actions.onFinish }}
             />
           {/if}
@@ -154,14 +161,13 @@
             state={{ isDisabled: viewState.isBusy }}
             actions={{ onClick: actions.onEdit }}
           />
-          {#if task.origin === 'manual'}
-            <ActionButton
-              data={{ label: 'Excluir' }}
-              ui={{ icon: Trash2, variant: 'ghost' }}
-              state={{ isDisabled: viewState.isBusy }}
-              actions={{ onClick: actions.onRemove }}
-            />
-          {/if}
+          <!-- Excluir ARQUIVA (como no Paralegal): a tarefa sai de "Em uso" e volta pelo Desarquivar. -->
+          <ActionButton
+            data={{ label: task.archive ? 'Desarquivar' : 'Arquivar' }}
+            ui={{ icon: task.archive ? ArchiveRestore : Archive, variant: 'ghost' }}
+            state={{ isDisabled: viewState.isBusy }}
+            actions={{ onClick: task.archive ? actions.onRestore : actions.onRemove }}
+          />
         </div>
       </div>
       <dl class="grid gap-3 text-sm sm:grid-cols-3">
@@ -305,13 +311,13 @@
           </div>
         </PanelCard>
 
-        <PanelCard data={{ title: 'Vínculos', hint: 'Clique para abrir. "Editar" vincula outros itens.' }}>
+        <PanelCard data={{ title: 'Vínculos', hint: 'Clique para abrir. "Vincular" busca no cadastro.' }}>
           {#snippet tools()}
             <ActionButton
               data={{ label: 'Vincular' }}
               ui={{ icon: Link2, variant: 'ghost', size: 'sm' }}
               state={{ isDisabled: viewState.isBusy }}
-              actions={{ onClick: actions.onEdit }}
+              actions={{ onClick: actions.onLink }}
             />
           {/snippet}
           {#if task.links.length === 0}

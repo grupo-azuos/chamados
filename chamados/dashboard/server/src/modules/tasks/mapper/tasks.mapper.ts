@@ -1,6 +1,7 @@
 import { type Task } from '@template/shared/schemas/task.schema';
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
 
+import { toArchive } from '../../../lib/db/archive.util';
 import { type TaskWithRelations } from '../repository/tasks.repository';
 
 type Person = Task['owner'];
@@ -62,6 +63,7 @@ export function toTask(
     createdBy: personOf(systemAuthorOr(row.createdBy), directory),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    archive: toArchive(row),
   };
 }
 

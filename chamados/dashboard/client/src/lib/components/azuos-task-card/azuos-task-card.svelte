@@ -19,6 +19,7 @@
       onOpen: (task: Task) => void;
       onMove: (task: Task, status: 'done' | 'reopened') => void;
       onRemove: (task: Task) => void;
+      onRestore?: (task: Task) => void;
     };
   };
 </script>
@@ -44,20 +45,24 @@
   const icon = $derived(task.origin === 'ticket' ? Ticket : task.origin === 'maintenance' ? Wrench : ClipboardCheck);
   const ownerName = $derived(task.owner?.name ?? 'Sem responsável');
 
-  /* A tarefa de chamado se move pelo chamado; só a manual se apaga. */
-  const menuItems = $derived([
-    ...(task.origin === 'ticket'
-      ? []
-      : task.status === 'done'
-        ? [{ id: 'reopen', label: 'Reabrir' }]
-        : [{ id: 'finish', label: 'Finalizar' }]),
-    ...(task.origin === 'manual' ? [{ id: 'remove', label: 'Excluir', isDestructive: true }] : []),
-  ]);
+  /* A tarefa de chamado se move pelo chamado; a arquivada fica parada. Excluir ARQUIVA, de qualquer
+     origem, e a arquivada volta pelo Desarquivar (como no Paralegal). */
+  const menuItems = $derived(task.archive ? [{ id: 'restore', label: 'Desarquivar' }] : activeMenu(task));
+
+  function activeMenu(item: Task) {
+    const move =
+      item.origin === 'ticket'
+        ? []
+        : [item.status === 'done' ? { id: 'reopen', label: 'Reabrir' } : { id: 'finish', label: 'Finalizar' }];
+
+    return [...move, { id: 'remove', label: 'Arquivar', isDestructive: true }];
+  }
 
   function select(id: string): void {
     if (id === 'finish') actions.onMove(task, 'done');
     if (id === 'reopen') actions.onMove(task, 'reopened');
     if (id === 'remove') actions.onRemove(task);
+    if (id === 'restore') actions.onRestore?.(task);
   }
 </script>
 

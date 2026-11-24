@@ -190,6 +190,11 @@ export class TasksService {
    */
   async setStatus(user: RequestUser, id: number, input: SetTaskStatusInput): Promise<Task> {
     const row = await this.requireManageable(user, id, 'mudar a situação de tarefas');
+    if (row.archivedAt) {
+      throw new UnprocessableEntityException(
+        'A tarefa está arquivada: desarquive para mudar a situação.',
+      );
+    }
     if (row.origin === 'ticket') {
       throw new UnprocessableEntityException(
         'A tarefa de um chamado acompanha o chamado: encerre ou reabra o chamado.',
@@ -248,15 +253,20 @@ export class TasksService {
     return this.get(user, id);
   }
 
-  /** Só a tarefa feita à mão se apaga: a de chamado e a de manutenção vivem com a origem. */
+  /**
+   * Excluir ARQUIVA (como no Paralegal): a tarefa sai de "Em uso", fica guardada com quem arquivou e
+   * volta pelo "Desarquivar". Vale para qualquer origem: a de chamado continua acompanhando o chamado.
+   */
   async remove(user: RequestUser, id: number): Promise<void> {
-    const row = await this.requireManageable(user, id, 'apagar tarefas');
-    if (row.origin !== 'manual') {
-      throw new UnprocessableEntityException(
-        'Esta tarefa nasceu de um chamado ou de uma manutenção e acompanha a origem — não se apaga.',
-      );
-    }
-    await this.repository.remove(id);
+    await this.requireManageable(user, id, 'arquivar tarefas');
+    await this.repository.setArchived(id, true, user.id);
+  }
+
+  async restore(user: RequestUser, id: number): Promise<Task> {
+    await this.requireManageable(user, id, 'desarquivar tarefas');
+    await this.repository.setArchived(id, false, user.id);
+
+    return this.get(user, id);
   }
 
   // ── Origens automáticas ────────────────────────────────────────────────────────────────────

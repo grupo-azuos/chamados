@@ -80,10 +80,10 @@
 
 <ConfirmDialog
   data={{
-    title: 'Excluir a tarefa?',
-    description: `"${list.data.removing?.title ?? ''}" sai da lista. Etapas e vínculos vão junto.`,
-    confirmLabel: 'Excluir',
-    confirmingLabel: 'Excluindo…',
+    title: 'Arquivar a tarefa?',
+    description: `"${list.data.removing?.title ?? ''}" sai de "Em uso" e fica em "Arquivadas", de onde volta pelo Desarquivar.`,
+    confirmLabel: 'Arquivar',
+    confirmingLabel: 'Arquivando…',
   }}
   ui={{ tone: 'danger' }}
   state={{ isOpen: list.data.removing !== null, isConfirming: list.state.isMutating, error: list.state.actionError }}

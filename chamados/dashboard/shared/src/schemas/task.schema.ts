@@ -4,6 +4,7 @@ import { TASK_LINK_KINDS, TASK_ORIGINS, TASK_STATUSES } from '../domain/task-flo
 import { ROLE_CONTEXTS } from '../domain/role-context.util';
 import { paginatedSchema, paginationQuerySchema } from './pagination.schema';
 import { taskStageRefSchema } from './task-stage.schema';
+import { archivedFilterSchema, archiveSchema } from './archive.schema';
 
 /**
  * O CONTRATO DAS TAREFAS — o mesmo schema valida a API e o formulário.
@@ -88,6 +89,8 @@ export const taskSchema = z.object({
   createdBy: personSchema.nullable(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
+  /** Arquivada: fora de "Em uso", parada (não muda de situação) até desarquivar. */
+  archive: archiveSchema,
 });
 
 export type Task = z.infer<typeof taskSchema>;
@@ -215,6 +218,8 @@ export const taskListQuerySchema = paginationQuerySchema.extend({
   linkId: z.coerce.number<number>().int().positive().optional(),
   search: z.string().trim().max(TASK_TITLE_MAX).optional(),
   overdue: flagSchema,
+  /** Em uso (`hide`, o padrão), arquivadas (`only`) ou todas (`show`). */
+  archived: archivedFilterSchema,
   /** O recorte do calendário e da timeline: tarefas que tocam o intervalo. */
   from: isoDaySchema.optional(),
   to: isoDaySchema.optional(),

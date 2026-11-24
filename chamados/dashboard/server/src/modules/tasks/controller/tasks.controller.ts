@@ -194,8 +194,8 @@ export class TasksController {
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({
-    summary: 'Apaga uma tarefa feita à mão',
-    description: 'A de chamado e a de manutenção acompanham a origem e não se apagam.',
+    summary: 'Arquiva a tarefa',
+    description: 'Excluir ARQUIVA: sai de "Em uso" e volta por `POST :id/restore`.',
   })
   @ApiNoContentResponse()
   async remove(
@@ -203,5 +203,15 @@ export class TasksController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
     await this.service.remove(user, id);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({ summary: 'Desarquiva a tarefa' })
+  @ApiOkResponse({ type: TaskDto })
+  async restore(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<TaskDto> {
+    return this.service.restore(user, id);
   }
 }
