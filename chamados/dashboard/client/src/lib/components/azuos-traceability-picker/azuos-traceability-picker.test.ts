@@ -59,4 +59,33 @@ describe('AzuosTraceabilityPicker', () => {
     expect(screen.getByText('Nenhum departamento encontrado')).toBeInTheDocument();
     expect(screen.queryByText('Todos os departamentos')).not.toBeInTheDocument();
   });
+
+  // feliz
+  it('for a person, switches between the PC responsibles and the whole office', async () => {
+    const actions = {
+      onSearch: vi.fn(),
+      onDepartmentChange: vi.fn(),
+      onPick: vi.fn(),
+      onClose: vi.fn(),
+      onPersonScopeChange: vi.fn(),
+    };
+    render(Picker, {
+      props: {
+        data: {
+          focus: 'person',
+          picks: [],
+          selectedId: '',
+          search: '',
+          department: '',
+          departments: [],
+          personScope: 'responsibles',
+        },
+        state: { isOpen: true },
+        actions,
+      },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Todo o escritório' }));
+    expect(actions.onPersonScopeChange).toHaveBeenCalledWith('all');
+  });
 });

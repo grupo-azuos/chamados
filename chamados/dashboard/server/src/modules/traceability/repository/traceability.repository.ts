@@ -45,6 +45,20 @@ export class TraceabilityRepository {
   }
 
   /** Toda máquina que a pessoa já teve — pelo histórico — ou tem agora. */
+  /** Quantas máquinas (fora do descarte) cada pessoa responde hoje, pelo id. */
+  async computersByResponsible(): Promise<Map<string, number>> {
+    const rows = await runQuery(
+      this.db
+        .select({ responsibleId: computers.responsibleId, total: sql<number>`count(*)::int` })
+        .from(computers)
+        .where(sql`${computers.responsibleId} is not null`)
+        .groupBy(computers.responsibleId),
+      'máquinas por responsável',
+    );
+
+    return new Map(rows.map((row) => [row.responsibleId!, row.total]));
+  }
+
   async computerIdsOfPerson(personId: string): Promise<number[]> {
     const [history, current] = await Promise.all([
       runQuery(

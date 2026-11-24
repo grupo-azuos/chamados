@@ -5,7 +5,8 @@
   online ou offline na máquina; a foto na pessoa). Um toque no card escolhe e fecha.
 
   - `data`: `focus` (computador, departamento ou pessoa), `picks` (já filtradas), `selectedId`,
-    `search`, `department` e `departments`.
+    `search`, `department`, `departments` e, na pessoa, `personScope` ("Responsáveis por PC" ou
+    "Todo o escritório": o responsável pela máquina pode não ter acesso ao Chamados).
   - `state`: `isOpen`, `isLoading`.
   - `actions`: `onSearch`, `onDepartmentChange`, `onPick`, `onClose`.
 -->
@@ -22,15 +23,23 @@
       search: string;
       department: string;
       departments: { value: string; label: string }[];
+      /** Na pessoa: só quem responde por PC (o padrão), ou todo o escritório. */
+      personScope?: 'responsibles' | 'all';
     };
     state?: { isOpen?: boolean; isLoading?: boolean };
     actions: {
       onSearch: (value: string) => void;
       onDepartmentChange: (value: string) => void;
+      onPersonScopeChange?: (scope: 'responsibles' | 'all') => void;
       onPick: (id: string) => void;
       onClose: () => void;
     };
   };
+
+  const PERSON_SCOPES = [
+    { value: 'responsibles', label: 'Responsáveis por PC' },
+    { value: 'all', label: 'Todo o escritório' },
+  ];
 
   const TEXT: Record<TraceabilityFocus, { title: string; placeholder: string; empty: string }> = {
     computer: {
@@ -57,6 +66,7 @@
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
@@ -78,7 +88,7 @@
       <DialogDescription>O mapa parte daqui: toque no card para ver o que passou por ele.</DialogDescription>
     </DialogHeader>
 
-    <div class={cn('grid grid-cols-1 gap-3', data.focus !== 'department' && 'md:grid-cols-[1fr_16rem]')}>
+    <div class={cn('grid grid-cols-1 gap-3', data.focus !== 'department' && 'md:grid-cols-[1fr_auto]')}>
       <TextField
         data={{ label: 'Buscar', name: 'traceabilitySearch', value: data.search, placeholder: text.placeholder }}
         actions={{ onChange: actions.onSearch }}
@@ -95,6 +105,15 @@
               searchPlaceholder: 'Buscar departamento…',
             }}
             actions={{ onChange: actions.onDepartmentChange }}
+          />
+        </FilterField>
+      {/if}
+      {#if data.focus === 'person'}
+        <FilterField data={{ label: 'Mostrar' }}>
+          <SegmentedControl
+            data={{ value: data.personScope ?? 'responsibles', options: PERSON_SCOPES }}
+            ui={{ ariaLabel: 'Mostrar' }}
+            actions={{ onChange: (value) => actions.onPersonScopeChange?.(value as 'responsibles' | 'all') }}
           />
         </FilterField>
       {/if}

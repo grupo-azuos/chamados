@@ -1,6 +1,5 @@
 import { type ComputerListItem } from '@template/shared/schemas/computer.schema';
 
-import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 import { computerDepartmentLabel } from '$lib/utils/computer-place.util';
 
 /**
@@ -19,6 +18,8 @@ export type TraceabilityPick = {
   isOnline?: boolean;
   /** Só a pessoa: o rosto, com a foto. */
   person?: { id: string; name: string; photo: string | null };
+  /** Só a pessoa: quantas máquinas ela responde hoje. */
+  computers?: number;
 };
 
 export function computerPicks(computers: readonly ComputerListItem[]): TraceabilityPick[] {
@@ -57,15 +58,28 @@ export function departmentPicks(
   });
 }
 
-export function personPicks(people: readonly AzuosPersonPickerPerson[]): TraceabilityPick[] {
+export function personPicks(
+  people: readonly { id: string; name: string; avatarUrl: string | null; computers: number }[],
+): TraceabilityPick[] {
   return people.map((person) => ({
     id: person.id,
     title: person.name,
     subtitle: null,
-    detail: null,
+    detail:
+      person.computers === 0
+        ? 'Sem máquina'
+        : person.computers === 1
+          ? '1 máquina'
+          : `${person.computers} máquinas`,
     departmentKey: null,
-    person,
+    person: { id: person.id, name: person.name, photo: person.avatarUrl },
+    computers: person.computers,
   }));
+}
+
+/** "Responsáveis por PC": só quem responde por alguma máquina hoje. */
+export function onlyResponsibles(picks: readonly TraceabilityPick[]): TraceabilityPick[] {
+  return picks.filter((pick) => (pick.computers ?? 0) > 0);
 }
 
 /** A busca: o nome, a linha de apoio e o detalhe, sem diferença de maiúscula; e o departamento. */

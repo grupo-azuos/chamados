@@ -53,6 +53,18 @@ export const traceabilityEdgeSchema = z.object({
 });
 export type TraceabilityEdge = z.infer<typeof traceabilityEdgeSchema>;
 
+/**
+ * As PESSOAS da busca da Rastreabilidade: todo o diretório do escritório (responder por uma máquina
+ * independe de ter acesso ao Chamados), com quantas máquinas cada uma responde hoje.
+ */
+export const traceabilityPersonSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  avatarUrl: z.string().nullable(),
+  computers: z.number().int().nonnegative(),
+});
+export type TraceabilityPerson = z.infer<typeof traceabilityPersonSchema>;
+
 export const traceabilityGraphSchema = z.object({
   focusId: z.string(),
   nodes: z.array(traceabilityNodeSchema),

@@ -4,7 +4,11 @@ import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nest
 import { CurrentUser } from '../../../lib/auth/current-user.decorator';
 import { ModuleContext } from '../../../lib/auth/module-context.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
-import { TraceabilityGraphDto, TraceabilityQueryDto } from '../dto/traceability.dto';
+import {
+  TraceabilityGraphDto,
+  TraceabilityPersonDto,
+  TraceabilityQueryDto,
+} from '../dto/traceability.dto';
 import { TraceabilityService } from '../service/traceability.service';
 
 /** O controller só recebe e entrega. Nenhuma regra aqui: ela vive no service. */
@@ -13,6 +17,17 @@ import { TraceabilityService } from '../service/traceability.service';
 @Controller('traceability')
 export class TraceabilityController {
   constructor(private readonly service: TraceabilityService) {}
+
+  @Get('people')
+  @ApiOperation({
+    summary: 'As pessoas da busca da Rastreabilidade',
+    description:
+      'Todo o diretório do escritório (responder por uma máquina independe de acesso ao Chamados), com quantas máquinas cada pessoa responde hoje; quem responde por máquina vem primeiro.',
+  })
+  @ApiOkResponse({ type: [TraceabilityPersonDto] })
+  async people(@CurrentUser() user: RequestUser): Promise<TraceabilityPersonDto[]> {
+    return this.service.people(user);
+  }
 
   @Get()
   @ApiOperation({

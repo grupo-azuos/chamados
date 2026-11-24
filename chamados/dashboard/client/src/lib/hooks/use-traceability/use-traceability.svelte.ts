@@ -11,7 +11,6 @@ import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { computersApi } from '$lib/api/computers.api';
 import { readError } from '$lib/api/http-client';
-import { ticketsApi } from '$lib/api/tickets.api';
 import { traceabilityApi } from '$lib/api/traceability.api';
 import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
@@ -26,6 +25,7 @@ import {
   computerPicks,
   departmentPicks,
   filterPicks,
+  onlyResponsibles,
   personPicks,
   type TraceabilityPick,
 } from '$lib/utils/traceability-pick.util';
@@ -37,6 +37,7 @@ import {
  * última escolha fica salva para quem entra sem nada no endereço.
  */
 export type TraceabilityPrefs = { focus: TraceabilityFocus; id: string };
+export type TraceabilityPersonScope = 'responsibles' | 'all';
 
 export type TraceabilityModel = {
   data: {
@@ -54,6 +55,8 @@ export type TraceabilityModel = {
       search: string;
       department: string;
       departments: { value: string; label: string }[];
+      /** Na pessoa: só quem responde por PC, ou todo o escritório. */
+      personScope: TraceabilityPersonScope;
     };
   };
   state: { isLoading: boolean; error: string | null; isPickerLoading: boolean };
@@ -63,6 +66,7 @@ export type TraceabilityModel = {
     onClosePicker: () => void;
     onSearch: (value: string) => void;
     onDepartmentChange: (value: string) => void;
+    onPersonScopeChange: (scope: TraceabilityPersonScope) => void;
     onPick: (id: string) => void;
     onCloseRecord: () => void;
   };
@@ -108,6 +112,7 @@ export function useTraceabilityModel(): TraceabilityModel {
   const choice = writable<TraceabilityPrefs>(DEFAULTS);
 
   let picker = $state({ isOpen: false, search: '', department: '' });
+  let personScope = $state<TraceabilityPersonScope>('responsibles');
   const go = (search: string, replaceState = false) =>
     void goto(`?${search}`, { ...NAVIGATE, replaceState });
   /* Aberto daqui (um clique no mapa): fechar é voltar no histórico. Aberto por um link colado:
@@ -158,8 +163,8 @@ export function useTraceabilityModel(): TraceabilityModel {
   const people = mirrorStore(
     createQuery(
       writable({
-        queryKey: ['tickets', 'people-options'],
-        queryFn: () => ticketsApi.peopleOptions(),
+        queryKey: ['traceability', 'people'],
+        queryFn: () => traceabilityApi.people(),
         staleTime: 5 * 60_000,
       }),
     ),
@@ -171,13 +176,9 @@ export function useTraceabilityModel(): TraceabilityModel {
     if (current.focus === 'department')
       return departmentPicks(departments.officialOptions, machines);
 
-    return personPicks(
-      (people.current.data ?? []).map((person) => ({
-        id: person.id,
-        name: person.name,
-        photo: person.avatarUrl ?? null,
-      })),
-    );
+    const everyone = personPicks(people.current.data ?? []);
+
+    return personScope === 'responsibles' ? onlyResponsibles(everyone) : everyone;
   });
 
   return {
@@ -207,6 +208,7 @@ export function useTraceabilityModel(): TraceabilityModel {
           search: picker.search,
           department: picker.department,
           departments: departments.officialOptions,
+          personScope,
         };
       },
     },
@@ -233,6 +235,7 @@ export function useTraceabilityModel(): TraceabilityModel {
       onClosePicker: () => (picker = { ...picker, isOpen: false }),
       onSearch: (search) => (picker = { ...picker, search }),
       onDepartmentChange: (department) => (picker = { ...picker, department }),
+      onPersonScopeChange: (scope) => (personScope = scope),
       onPick: (id) => {
         picker = { isOpen: false, search: '', department: '' };
         go(searchOf({ focus: current.focus, id }));
