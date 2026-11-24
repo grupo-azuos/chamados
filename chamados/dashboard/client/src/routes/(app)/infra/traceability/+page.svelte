@@ -50,6 +50,7 @@
     actions={{
       onSearch: traceability.actions.onSearch,
       onDepartmentChange: traceability.actions.onDepartmentChange,
+      onPersonScopeChange: traceability.actions.onPersonScopeChange,
       onPick: traceability.actions.onPick,
       onClose: traceability.actions.onClosePicker,
     }}

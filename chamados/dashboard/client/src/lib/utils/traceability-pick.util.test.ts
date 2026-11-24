@@ -1,7 +1,13 @@
 import { type ComputerListItem } from '@template/shared/schemas/computer.schema';
 import { describe, expect, it } from 'vitest';
 
-import { computerPicks, departmentPicks, filterPicks, personPicks } from './traceability-pick.util';
+import {
+  computerPicks,
+  departmentPicks,
+  filterPicks,
+  onlyResponsibles,
+  personPicks,
+} from './traceability-pick.util';
 
 const computer = (over: Partial<ComputerListItem>) =>
   ({
@@ -43,10 +49,17 @@ describe('traceability picks', () => {
       title: 'Paralegal',
       detail: '1 máquina',
     });
-    expect(personPicks([{ id: 'u1', name: 'Ana Souza', photo: null }])[0]).toMatchObject({
+    const people = personPicks([
+      { id: 'u1', name: 'Ana Souza', avatarUrl: null, computers: 2 },
+      { id: 'u2', name: 'Bia Lima', avatarUrl: null, computers: 0 },
+    ]);
+    expect(people[0]).toMatchObject({
       id: 'u1',
+      detail: '2 máquinas',
       person: { name: 'Ana Souza' },
     });
+    expect(onlyResponsibles(people).map((pick) => pick.id)).toEqual(['u1']);
+    expect(people[1]?.detail).toBe('Sem máquina');
   });
 
   // triste

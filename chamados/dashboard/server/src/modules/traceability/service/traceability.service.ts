@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException, Optional } from '@nestjs/common'
 import { traceabilityGraph } from '@template/shared/domain/traceability-graph.util';
 import {
   type TraceabilityGraph,
+  type TraceabilityPerson,
   type TraceabilityQuery,
 } from '@template/shared/schemas/traceability.schema';
 
@@ -34,6 +35,32 @@ export class TraceabilityService {
     @Inject(USER_DIRECTORY_PROVIDER)
     private readonly directory?: UserDirectoryProvider,
   ) {}
+
+  /**
+   * As pessoas da busca: TODO o diretório do escritório (o responsável pela máquina pode não ter
+   * acesso ao Chamados), quem responde por máquina primeiro, com quantas.
+   */
+  async people(user: RequestUser): Promise<TraceabilityPerson[]> {
+    assertCanRead(getRoleInContext(user, 'infra'), 'a rastreabilidade');
+    const [directory, counts] = await Promise.all([
+      this.directory?.listAllUsers() ?? Promise.resolve([]),
+      this.repository.computersByResponsible(),
+    ]);
+
+    return directory
+      .filter((person) => !person.banned)
+      .map((person) => ({
+        id: person.id,
+        name: person.name,
+        avatarUrl: person.image ?? null,
+        computers: counts.get(person.id) ?? 0,
+      }))
+      .sort(
+        (a, b) =>
+          Number(b.computers > 0) - Number(a.computers > 0) ||
+          a.name.localeCompare(b.name, 'pt-BR'),
+      );
+  }
 
   async graph(user: RequestUser, query: TraceabilityQuery): Promise<TraceabilityGraph> {
     assertCanRead(getRoleInContext(user, 'infra'), 'a rastreabilidade');
