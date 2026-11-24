@@ -42,6 +42,18 @@ export const TASK_ORIGIN_LABELS: Record<TaskOrigin, string> = {
 export const TASK_LINK_KINDS = ['ticket', 'computer', 'part', 'inventory_item'] as const;
 export type TaskLinkKind = (typeof TASK_LINK_KINDS)[number];
 
+/**
+ * O que cada MÓDULO tem para vincular. Computador, peça e item do inventário são da
+ * Infraestrutura; em Sistema não existem — a tarefa de Sistema só se liga a chamados.
+ */
+export function taskLinkKindsOf(area: string): readonly TaskLinkKind[] {
+  return area === 'infra' ? TASK_LINK_KINDS : ['ticket'];
+}
+
+export function isTaskLinkKindOf(area: string, kind: TaskLinkKind): boolean {
+  return taskLinkKindsOf(area).includes(kind);
+}
+
 export const TASK_LINK_KIND_LABELS: Record<TaskLinkKind, string> = {
   ticket: 'Chamado',
   computer: 'Computador',

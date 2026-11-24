@@ -14,6 +14,7 @@ import {
   canMoveTask,
   DEFAULT_MAINTENANCE_TASK_STEPS,
   maintenanceTaskNeed,
+  isTaskLinkKindOf,
   TASK_LINK_KIND_LABELS,
   taskStatusAfterSteps,
   taskStatusFromTicket,
@@ -65,6 +66,13 @@ export const TICKET_TASK_AREAS: readonly RoleContext[] = ['infra', 'sistema'];
  * Quem lê precisa de cargo na área da tarefa; quem mexe precisa poder gerenciar a área — a mesma
  * régua do resto do módulo. Pessoa e vínculo são sempre por ID, e só entram se existirem.
  */
+/** A máquina do chamado vira vínculo só na Infraestrutura: Sistema não tem computador. */
+function ticketMachineLinks(ticket: { area: string; computerId: number | null }): TaskLinkInput[] {
+  if (!ticket.computerId || !isTaskLinkKindOf(ticket.area, 'computer')) return [];
+
+  return [{ kind: 'computer', targetId: ticket.computerId }];
+}
+
 @Injectable()
 export class TasksService {
   private readonly logger = new Logger(TasksService.name);
@@ -118,7 +126,7 @@ export class TasksService {
     assertCanManageInContext(user, input.area, 'criar tarefas');
     const ownerId = input.ownerId ?? user.id;
     await this.assertPeopleExist([ownerId, ...(input.peopleIds ?? [])]);
-    const links = await this.validLinks(input.links ?? []);
+    const links = await this.validLinks(input.area, input.links ?? []);
 
     const row = await this.db.transaction((tx) =>
       this.repository.insert(
@@ -238,8 +246,8 @@ export class TasksService {
   }
 
   async addLinks(user: RequestUser, id: number, input: AddTaskLinksInput): Promise<Task> {
-    await this.requireManageable(user, id, 'vincular a tarefa');
-    await this.repository.addLinks(id, await this.validLinks(input.links), user.id);
+    const row = await this.requireManageable(user, id, 'vincular a tarefa');
+    await this.repository.addLinks(id, await this.validLinks(row.area, input.links), user.id);
 
     return this.get(user, id);
   }
@@ -298,7 +306,7 @@ export class TasksService {
         },
         {
           steps: [],
-          links: ticket.computerId ? [{ kind: 'computer', targetId: ticket.computerId }] : [],
+          links: ticketMachineLinks(ticket),
           peopleIds: [],
         },
       );
@@ -436,7 +444,16 @@ export class TasksService {
     if (next !== row.status) await this.repository.update(row.id, statusChange(next, actor), tx);
   }
 
-  private async validLinks(links: readonly TaskLinkInput[]): Promise<TaskLinkInput[]> {
+  private async validLinks(
+    area: string,
+    links: readonly TaskLinkInput[],
+  ): Promise<TaskLinkInput[]> {
+    const foreign = links.find((link) => !isTaskLinkKindOf(area, link.kind));
+    if (foreign) {
+      throw new UnprocessableEntityException(
+        `${TASK_LINK_KIND_LABELS[foreign.kind]} não é deste módulo: em Sistema, a tarefa só se vincula a chamados.`,
+      );
+    }
     for (const kind of new Set(links.map((link) => link.kind))) {
       const ids = links.filter((link) => link.kind === kind).map((link) => link.targetId);
       const existing = await this.repository.existingTargets(kind, ids);

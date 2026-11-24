@@ -411,6 +411,29 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
   });
 
   // feliz
+  it('refuses a computer, a part or an inventory item on a Sistema task', async () => {
+    const [computer] = await started.db
+      .insert(computers)
+      .values({ name: 'SISTEMA-D01', tokenHash: 'hash-do-sistema', createdBy: 'ti@empresa.com.br' })
+      .returning();
+    const refused = await request(app.getHttpServer())
+      .post('/api/v1/tasks')
+      .set(asOlga())
+      .send({
+        area: 'sistema',
+        title: 'Tela de vendas',
+        startDate: '2026-11-23',
+        dueDate: '2026-11-30',
+        steps: ['Corrigir'],
+        ownerId: ANA.id,
+        links: [{ kind: 'computer', targetId: computer!.id }],
+      })
+      .expect(422);
+
+    expect(refused.body.message).toContain('em Sistema, a tarefa só se vincula a chamados');
+  });
+
+  // feliz
   it('shows on a Sistema task the git of its system, with the branches of the task marked', async () => {
     const [project] = await started.db
       .insert(softwareProjects)

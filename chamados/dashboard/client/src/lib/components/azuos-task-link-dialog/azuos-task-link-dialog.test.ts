@@ -9,6 +9,7 @@ function setup(
     selectedIds?: number[];
     options?: { id: number; label: string }[];
     isSearching?: boolean;
+    kinds?: readonly ('ticket' | 'computer' | 'part' | 'inventory_item')[];
   } = {},
 ) {
   const actions = {
@@ -28,6 +29,7 @@ function setup(
           { id: 3, label: 'Computador 03' },
         ],
         selectedIds: over.selectedIds ?? [],
+        kinds: over.kinds,
       },
       state: { isOpen: true, isSearching: over.isSearching },
       actions,
@@ -57,5 +59,14 @@ describe('AzuosTaskLinkDialog', () => {
 
     expect(screen.getByRole('button', { name: 'Vincular' })).toBeDisabled();
     expect(screen.getByText('Nada com esse nome.')).toBeInTheDocument();
+  });
+
+  // triste
+  it('in Sistema, offers only tickets: there is no computer, part or inventory there', () => {
+    setup({ kinds: ['ticket'] });
+
+    expect(screen.getByRole('button', { name: 'Chamado' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Computador' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Peça' })).not.toBeInTheDocument();
   });
 });

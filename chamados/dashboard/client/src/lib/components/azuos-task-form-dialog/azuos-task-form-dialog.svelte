@@ -34,6 +34,8 @@
       peopleIds: string[];
       steps: TaskDialogStep[];
       links: TaskDialogLink[];
+      /** Os tipos de vínculo do módulo (em Sistema, só chamado). @default todos */
+      kinds?: readonly TaskLinkKind[];
     };
     state: { isOpen: boolean; isSubmitting?: boolean; error?: string | null };
     actions: {
@@ -266,7 +268,7 @@
           <OptionPicker
             data={{
               value: linkKind,
-              options: TASK_LINK_KINDS.map((kind) => ({ value: kind, label: TASK_LINK_KIND_LABELS[kind] })),
+              options: (data.kinds ?? TASK_LINK_KINDS).map((kind) => ({ value: kind, label: TASK_LINK_KIND_LABELS[kind] })),
             }}
             ui={{ ariaLabel: 'Tipo de vínculo', mode: 'combobox', fullWidth: true }}
             actions={{

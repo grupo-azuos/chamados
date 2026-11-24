@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type TaskListQuery } from '@template/shared/schemas/task.schema';
-import { type TaskLinkKind } from '@template/shared/domain/task-flow.util';
+import { isTaskLinkKindOf, type TaskLinkKind } from '@template/shared/domain/task-flow.util';
 import {
   and,
   asc,
@@ -486,8 +486,13 @@ export class TasksRepository {
         links
           .filter((link) => link.taskId === row.id)
           .map((link) => ({ ...link, label: labelOf(link), source: 'task' as const })),
+        /* Do chamado, só o que o módulo da tarefa tem: em Sistema, a máquina e o estoque do
+           chamado não aparecem (Sistema não tem computador nem peça). */
         fromTickets
-          .filter((derived) => derived.link.taskId === row.id)
+          .filter(
+            (derived) =>
+              derived.link.taskId === row.id && isTaskLinkKindOf(row.area, derived.link.kind),
+          )
           .map((derived) => ({
             ...derived.link,
             label: labelOf(derived.link, derived.label),
