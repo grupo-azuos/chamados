@@ -12,7 +12,9 @@ describe('AzuosGitGraph', () => {
     render(GitGraph, {
       props: {
         data: {
-          rows: buildGitGraph(entry.commits, entry.branches, {}, new Date('2026-11-22T12:00:00Z')),
+          rows: buildGitGraph(entry.commits, entry.branches, {}, new Date('2026-11-22T12:00:00Z'), [
+            { name: 'v1.0.0', sha: entry.commits[0]!.sha },
+          ]),
         },
       },
     });
@@ -21,6 +23,7 @@ describe('AzuosGitGraph', () => {
     expect(screen.getAllByText('VG')).toHaveLength(3);
     expect(screen.getByLabelText('Branch nova: feature/mapa')).toBeInTheDocument();
     expect(screen.getByText('develop')).toBeInTheDocument();
+    expect(screen.getByLabelText('Versão v1.0.0')).toBeInTheDocument();
   });
 
   // triste

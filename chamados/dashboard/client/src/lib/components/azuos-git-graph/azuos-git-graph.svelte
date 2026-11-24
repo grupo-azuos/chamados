@@ -3,11 +3,13 @@
   O GIT GRAPH — o desenho do lazygit: cada commit uma linha (o hash curto, as iniciais de quem fez,
   o ponto na lane e a mensagem). A develop corre numa lane; cada branch sai dela noutra lane e volta
   no merge (o ponto vazado). A cor da lane é a do git-flow; a ponta de cada branch leva o nome dela,
-  e a branch nova pulsa tracejada. As linhas vêm prontas de `buildGitGraph`.
+  e a branch nova pulsa tracejada. A versão (tag) é a etiqueta amarela no commit dela. As linhas vêm prontas de `buildGitGraph`.
 
   - `data.rows`: as linhas do grafo.
 -->
 <script lang="ts">
+  import TagIcon from '@lucide/svelte/icons/tag';
+
   import Hint from '$lib/components/azuos-hint/azuos-hint.svelte';
   import { type AzuosCardHue, cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
@@ -64,6 +66,17 @@
             aria-label={head.isNew ? `Branch nova: ${head.name}` : head.name}
           >
             {head.name}
+          </span>
+        {/each}
+        {#each row.tags as tag (tag)}
+          <span
+            class={cn(
+              'rounded-chip inline-flex shrink-0 items-center gap-1 px-1.5 py-px font-sans text-xs font-semibold',
+              cardToneClasses('yellow').dot,
+            )}
+            aria-label={`Versão ${tag}`}
+          >
+            <TagIcon class="size-3" aria-hidden="true" />{tag}
           </span>
         {/each}
         <Hint data={{ text: row.commit.message }}>

@@ -12,6 +12,7 @@ import {
 } from '@template/shared/schemas/project-map.schema';
 import { type Edge, type Node } from '@xyflow/svelte';
 
+import { ANCHOR_TOP, type AnchorRefs, anchorOf } from '$lib/utils/project-anchor.util';
 import {
   buildGitGraph,
   GIT_ROW_HEIGHT,
@@ -20,31 +21,23 @@ import {
 } from '$lib/utils/git-graph.util';
 
 /**
- * O MAPA DOS PROJETOS — cada sistema numa ILHA gigante, como o mapa das tarefas: o projeto, os
- * grupos (issues, pull requests, merges e versões, chamados sem issue), cada item do grupo, e à
- * direita o que ele puxa: a issue leva ao chamado dela (1:1) e o chamado à tarefa. O PR que cita
- * uma issue no título ("#12") liga nela. O que está EM ABERTO (issue, PR, chamado, tarefa) tem a
- * linha tracejada e animada.
+ * O MAPA DOS PROJETOS — cada sistema numa ILHA gigante, e o EIXO da ilha é o GIT GRAPH (o
+ * `git log --graph`, no desenho do lazygit): cada commit uma linha, a develop e a main em lanes
+ * próprias, cada branch ao lado voltando no merge `--no-ff`, na cor do git-flow, a branch nova
+ * pulsando e a versão (tag) em amarelo.
  *
- * À esquerda de tudo, o GIT GRAPH do sistema (o do lazygit): cada commit uma linha, a develop numa
- * lane e cada branch noutra, na cor do git-flow — e a branch nova pulsando.
+ * Cada issue, PR e chamado sai da LINHA DO COMMIT ONDE FECHOU (ver `anchorOf`): o que o cita na
+ * mensagem, ou a primeira versão depois de fechar; o que está em aberto sai do topo. À direita, o
+ * que ele puxa: a issue leva ao chamado dela (1:1) e o chamado à tarefa. O PR que cita uma issue
+ * no título ("#12") liga nela. O que está EM ABERTO tem a linha tracejada e animada.
  */
-export type ProjectMapKind = 'git' | 'issues' | 'prs' | 'merges' | 'tickets' | 'tasks';
+export type ProjectMapKind = 'issues' | 'prs' | 'tickets' | 'tasks';
 
-export const PROJECT_MAP_KINDS: readonly ProjectMapKind[] = [
-  'git',
-  'issues',
-  'prs',
-  'merges',
-  'tickets',
-  'tasks',
-];
+export const PROJECT_MAP_KINDS: readonly ProjectMapKind[] = ['issues', 'prs', 'tickets', 'tasks'];
 
 export const PROJECT_MAP_KIND_TOGGLES: { kind: ProjectMapKind; label: string }[] = [
-  { kind: 'git', label: 'Git graph' },
   { kind: 'issues', label: 'Issues' },
   { kind: 'prs', label: 'Pull requests' },
-  { kind: 'merges', label: 'Merges e versões' },
   { kind: 'tickets', label: 'Chamados' },
   { kind: 'tasks', label: 'Tarefas' },
 ];
@@ -53,7 +46,6 @@ export const PROJECT_MAP_KIND_TOGGLES: { kind: ProjectMapKind; label: string }[]
 export type ProjectMapItemKind = TimelineEventType | 'ticket' | 'task';
 
 export type ProjectMapProjectData = { name: string; repository: string; hidden: number };
-export type ProjectMapHubData = { label: string; count: number };
 export type ProjectMapItemData = {
   kind: ProjectMapItemKind;
   title: string;
@@ -64,13 +56,15 @@ export type ProjectMapItemData = {
   isPending: boolean;
 };
 export type ProjectMapIslandData = { title: string };
-/** O git graph do sistema: as linhas que cabem e quantas o recorte tinha. */
-export type ProjectMapGitData = { rows: GitGraphRow[]; total: number };
+/**
+ * O git graph do sistema: as linhas que cabem, quantas o recorte tinha e os commits de onde sai
+ * alguma linha para um item (cada um ganha a sua ponta, na altura da linha dele).
+ */
+export type ProjectMapGitData = { rows: GitGraphRow[]; total: number; anchors: string[] };
 
 export type ProjectMapNode =
   | Node<ProjectMapIslandData, 'island'>
   | Node<ProjectMapProjectData, 'project'>
-  | Node<ProjectMapHubData, 'hub'>
   | Node<ProjectMapItemData, 'item'>
   | Node<ProjectMapGitData, 'git'>;
 
@@ -84,20 +78,17 @@ const GAP = 16;
 const COLUMN_GAP = 56;
 const SIZE = {
   project: { width: 240, height: 76 },
-  hub: { width: 200, height: 52 },
   item: { width: 280, height: 60 },
 };
-/* O git graph: a largura da coluna, a altura de cada commit (a do lazygit, uma linha de texto) e
-   quantos commits cabem — o resto fica no rodapé ("60 de 200"), como no lazygit. */
-export const GIT_VISIBLE_ROWS = 60;
-const GIT = { width: 600, header: 44, footer: 32 };
-const LEFT = PAD + GIT.width + COLUMN_GAP;
+/* O git graph: a largura da coluna, o cabeçalho e o rodapé (as alturas da caixa dele) e quantos
+   commits cabem — o resto fica no rodapé ("150 de 200"), como no lazygit. */
+export const GIT_VISIBLE_ROWS = 150;
+export const GIT_BOX = { width: 600, header: 44, footer: 32 };
+const GIT_TOP = PAD + SIZE.project.height + GAP;
 const COLUMNS = {
-  project: LEFT,
-  hub: LEFT + SIZE.project.width + COLUMN_GAP,
-  item: LEFT + SIZE.project.width + SIZE.hub.width + COLUMN_GAP * 2,
-  ticket: LEFT + SIZE.project.width + SIZE.hub.width + SIZE.item.width + COLUMN_GAP * 3,
-  task: LEFT + SIZE.project.width + SIZE.hub.width + SIZE.item.width * 2 + COLUMN_GAP * 4,
+  item: PAD + GIT_BOX.width + COLUMN_GAP,
+  ticket: PAD + GIT_BOX.width + SIZE.item.width + COLUMN_GAP * 2,
+  task: PAD + GIT_BOX.width + SIZE.item.width * 2 + COLUMN_GAP * 3,
 };
 const ISLAND_WIDTH = COLUMNS.task + SIZE.item.width + PAD;
 const ISLAND_COLUMNS = 2;
@@ -161,73 +152,146 @@ function edgeOf(source: string, target: string, isPending: boolean): Edge {
   };
 }
 
-type Group = {
-  key: string;
-  label: string;
-  items: ProjectMapItemData[];
-  events: ProjectMapEvent[];
-  tickets: ProjectMapTicket[];
+/** Um item da coluna do trabalho: a issue, o PR ou o chamado sem issue, e o que o pendura. */
+type WorkItem = {
+  nodeId: string;
+  data: ProjectMapItemData;
+  refs: AnchorRefs;
+  event?: ProjectMapEvent;
+  ticket?: ProjectMapTicket;
 };
 
-function groupsOf(entry: ProjectMapEntry, kinds: readonly ProjectMapKind[]): Group[] {
-  const byType = (types: TimelineEventType[]) =>
-    entry.events.filter((event) => types.includes(event.type));
-  const issueNumbers = new Set(byType(['issue']).flatMap((issue) => numberOf(issue) ?? []));
-  const groups: Group[] = [];
-  const add = (
-    kind: ProjectMapKind,
-    key: string,
-    label: string,
-    events: ProjectMapEvent[],
-    tickets: ProjectMapTicket[] = [],
-  ) => {
-    if (!kinds.includes(kind) || events.length + tickets.length === 0) return;
-    groups.push({
-      key,
-      label,
-      items: [...events.map(eventItem), ...tickets.map(ticketItem)],
-      events,
-      tickets,
-    });
+function eventWork(
+  entry: ProjectMapEntry,
+  event: ProjectMapEvent,
+  ticketByIssue: ReadonlyMap<number, ProjectMapTicket>,
+): WorkItem {
+  const number = numberOf(event);
+  const linked = number !== null ? ticketByIssue.get(number) : undefined;
+
+  return {
+    nodeId: `${entry.project.id}/event:${event.id}`,
+    data: eventItem(event),
+    refs: {
+      numbers: number !== null ? [number] : [],
+      protocols: linked ? [linked.id] : [],
+      closedAt: event.status === 'open' ? null : event.eventDate,
+    },
+    event,
   };
-  add('issues', 'issues', 'Issues', byType(['issue']));
-  add('prs', 'prs', 'Pull requests', byType(['pr']));
-  add(
-    'merges',
-    'merges',
-    'Merges e versões',
-    byType(['merge', 'release', 'deploy', 'maintenance']),
+}
+
+/** A coluna do trabalho: as issues, os PRs e os chamados sem issue, conforme o "Mostrar". */
+function workOf(entry: ProjectMapEntry, kinds: readonly ProjectMapKind[]): WorkItem[] {
+  const ticketByIssue = new Map(
+    entry.tickets.flatMap((ticket) =>
+      ticket.githubIssueNumber ? [[ticket.githubIssueNumber, ticket] as const] : [],
+    ),
   );
-  /* O chamado com issue aparece ao lado dela; aqui ficam os que não têm (ou cuja issue não veio). */
+  const byType = (type: TimelineEventType) => entry.events.filter((event) => event.type === type);
+  const issues = byType('issue');
+  const issueNumbers = new Set(issues.flatMap((issue) => numberOf(issue) ?? []));
   const loose = entry.tickets.filter(
     (ticket) => !ticket.githubIssueNumber || !issueNumbers.has(ticket.githubIssueNumber),
   );
-  add('tickets', 'tickets', 'Chamados sem issue', [], loose);
 
-  return groups;
+  return [
+    ...(kinds.includes('issues')
+      ? issues.map((issue) => eventWork(entry, issue, ticketByIssue))
+      : []),
+    ...(kinds.includes('prs') ? byType('pr').map((pr) => eventWork(entry, pr, ticketByIssue)) : []),
+    ...(kinds.includes('tickets')
+      ? loose.map((ticket) => ({
+          nodeId: `${entry.project.id}/ticket:${ticket.id}`,
+          data: ticketItem(ticket),
+          refs: {
+            numbers: ticket.githubIssueNumber ? [ticket.githubIssueNumber] : [],
+            protocols: [ticket.id],
+            closedAt: ticket.isClosed ? (ticket.closedAt ?? null) : null,
+          },
+          ticket,
+        }))
+      : []),
+  ];
 }
 
-function islandHeight(groups: readonly Group[]): number {
-  const rows = groups.reduce((sum, group) => sum + Math.max(group.items.length, 1), 0);
-
-  return Math.max(rows * ROW - GAP, SIZE.project.height) + PAD * 2 + (groups.length - 1) * GAP;
+/** O meio da linha do commit, na altura da ilha. */
+function rowCenterOf(index: number): number {
+  return GIT_TOP + GIT_BOX.header + index * GIT_ROW_HEIGHT + GIT_ROW_HEIGHT / 2;
 }
 
-/** O git graph do sistema no recorte — ou nada, com o "Git graph" desligado. */
-function gitOf(
-  entry: ProjectMapEntry,
-  kinds: readonly ProjectMapKind[],
-  filter: GitGraphFilter,
-  now: Date,
-): ProjectMapGitData | null {
-  if (!kinds.includes('git')) return null;
-  const rows = buildGitGraph(entry.commits, entry.branches, filter, now);
-
-  return { rows: rows.slice(0, GIT_VISIBLE_ROWS), total: rows.length };
+function gitHeightOf(rows: number): number {
+  return GIT_BOX.header + Math.max(rows, 1) * GIT_ROW_HEIGHT + GIT_BOX.footer;
 }
 
-function gitHeight(git: ProjectMapGitData): number {
-  return GIT.header + Math.max(git.rows.length, 1) * GIT_ROW_HEIGHT + GIT.footer;
+type IslandBuilder = {
+  entry: ProjectMapEntry;
+  kinds: readonly ProjectMapKind[];
+  child: { parentId: string; extent: 'parent'; draggable: false };
+  nodes: ProjectMapNode[];
+  edges: Edge[];
+};
+
+function itemNode(
+  builder: IslandBuilder,
+  nodeId: string,
+  x: number,
+  y: number,
+  data: ProjectMapItemData,
+): void {
+  builder.nodes.push({
+    ...builder.child,
+    id: nodeId,
+    type: 'item',
+    position: { x, y },
+    ...SIZE.item,
+    data,
+  });
+}
+
+/** As tarefas do chamado, uma embaixo da outra; devolve quantas linhas ocuparam. */
+function addTasks(
+  builder: IslandBuilder,
+  ticketNode: string,
+  ticketId: number,
+  x: number,
+  y: number,
+): number {
+  if (!builder.kinds.includes('tasks')) return 1;
+  const tasks = builder.entry.tasks.filter((task) => task.ticketId === ticketId);
+  tasks.forEach((task, index) => {
+    const taskNode = `${builder.entry.project.id}/task:${task.id}`;
+    itemNode(builder, taskNode, x, y + index * ROW, {
+      kind: 'task',
+      title: task.title,
+      sublabel: TASK_STATUS_LABELS[task.status],
+      href: `/system/tasks/${task.id}`,
+      isExternal: false,
+      isPending: task.status !== 'done',
+    });
+    builder.edges.push(edgeOf(ticketNode, taskNode, task.status !== 'done'));
+  });
+
+  return Math.max(tasks.length, 1);
+}
+
+/** O que o item puxa à direita: a issue, o chamado dela; o chamado, as tarefas. Devolve as linhas. */
+function addChain(
+  builder: IslandBuilder,
+  item: WorkItem,
+  y: number,
+  ticketByIssue: ReadonlyMap<number, ProjectMapTicket>,
+): number {
+  if (item.ticket) return addTasks(builder, item.nodeId, item.ticket.id, COLUMNS.ticket, y);
+  const number = item.event?.type === 'issue' ? numberOf(item.event) : null;
+  const linked =
+    number !== null && builder.kinds.includes('tickets') ? ticketByIssue.get(number) : undefined;
+  if (!linked) return 1;
+  const ticketNode = `${builder.entry.project.id}/ticket:${linked.id}`;
+  itemNode(builder, ticketNode, COLUMNS.ticket, y, ticketItem(linked));
+  builder.edges.push(edgeOf(item.nodeId, ticketNode, !linked.isClosed));
+
+  return addTasks(builder, ticketNode, linked.id, COLUMNS.task, y);
 }
 
 function islandOf(
@@ -238,133 +302,100 @@ function islandOf(
 ): ProjectMapGraph & { height: number } {
   const id = entry.project.id;
   const frameId = `island:${id}`;
-  const projectId = `${id}/project`;
-  const child = { parentId: frameId, extent: 'parent' as const, draggable: false };
-  const groups = groupsOf(entry, kinds);
-  const git = gitOf(entry, kinds, filter, now);
-  const height = Math.max(islandHeight(groups), git ? gitHeight(git) + PAD * 2 : 0);
-  const nodes: ProjectMapNode[] = [
-    {
-      id: frameId,
-      type: 'island',
-      position: { x: 0, y: 0 },
-      width: ISLAND_WIDTH,
-      height,
-      data: { title: entry.project.name },
-      selectable: false,
-    },
-    {
-      ...child,
-      id: projectId,
-      type: 'project',
-      position: { x: COLUMNS.project, y: Math.round((height - SIZE.project.height) / 2) },
-      ...SIZE.project,
-      data: {
-        name: entry.project.name,
-        repository: entry.project.repositoryUrl,
-        hidden: entry.hiddenEvents,
-      },
-    },
-  ];
-  const edges: Edge[] = [];
-  if (git) {
-    const gitNode = `${id}/git`;
-    nodes.push({
-      ...child,
-      id: gitNode,
-      type: 'git',
-      position: { x: PAD, y: PAD },
-      width: GIT.width,
-      height: gitHeight(git),
-      data: git,
-    });
-    edges.push(edgeOf(gitNode, projectId, false));
-  }
-  const item = (
-    nodeId: string,
-    x: number,
-    y: number,
-    data: ProjectMapItemData,
-  ): ProjectMapNode => ({
-    ...child,
-    id: nodeId,
-    type: 'item',
-    position: { x, y },
-    ...SIZE.item,
-    data,
-  });
-  const tasksOf = (ticketId: number) =>
-    kinds.includes('tasks') ? entry.tasks.filter((task) => task.ticketId === ticketId) : [];
+  const gitNode = `${id}/git`;
+  const allRows = buildGitGraph(entry.commits, entry.branches, filter, now, entry.tags ?? []);
+  const rows = allRows.slice(0, GIT_VISIBLE_ROWS);
+  const commits = rows.map((row) => row.commit);
+  const topSha = rows[0]?.commit.sha ?? ANCHOR_TOP;
+  const builder: IslandBuilder = {
+    entry,
+    kinds,
+    child: { parentId: frameId, extent: 'parent', draggable: false },
+    nodes: [],
+    edges: [],
+  };
   const ticketByIssue = new Map(
     entry.tickets.flatMap((ticket) =>
       ticket.githubIssueNumber ? [[ticket.githubIssueNumber, ticket] as const] : [],
     ),
   );
-  const issueNodeByNumber = new Map<number, string>();
-  let top = PAD;
+  const indexOf = new Map(rows.map((row, index) => [row.commit.sha, index]));
+  const placed = workOf(entry, kinds)
+    .map((item, order) => {
+      const anchor = anchorOf(item.refs, commits, entry.tags ?? []);
+      const sha = anchor === ANCHOR_TOP ? topSha : anchor;
 
-  const addTaskOf = (ticketNode: string, ticketId: number, x: number, y: number) => {
-    for (const task of tasksOf(ticketId)) {
-      const taskNode = `${id}/task:${task.id}`;
-      nodes.push(
-        item(taskNode, x, y, {
-          kind: 'task',
-          title: task.title,
-          sublabel: TASK_STATUS_LABELS[task.status],
-          href: `/system/tasks/${task.id}`,
-          isExternal: false,
-          isPending: task.status !== 'done',
-        }),
-      );
-      edges.push(edgeOf(ticketNode, taskNode, task.status !== 'done'));
-    }
-  };
+      return { item, sha, index: indexOf.get(sha) ?? 0, order };
+    })
+    .sort((a, b) => a.index - b.index || a.order - b.order);
 
-  for (const group of groups) {
-    const rows = Math.max(group.items.length, 1);
-    const hubNode = `${id}/hub:${group.key}`;
-    nodes.push({
-      ...child,
-      id: hubNode,
-      type: 'hub',
-      position: { x: COLUMNS.hub, y: top + Math.round((rows * ROW - GAP - SIZE.hub.height) / 2) },
-      ...SIZE.hub,
-      data: { label: group.label, count: group.items.length },
+  let nextY = GIT_TOP;
+  for (const { item, sha, index } of placed) {
+    const y = Math.max(rowCenterOf(index) - SIZE.item.height / 2, nextY);
+    itemNode(builder, item.nodeId, COLUMNS.item, y, item.data);
+    builder.edges.push({
+      ...edgeOf(gitNode, item.nodeId, item.data.isPending),
+      sourceHandle: `row:${sha}`,
     });
-    edges.push(edgeOf(projectId, hubNode, false));
-    group.items.forEach((data, index) => {
-      const y = top + index * ROW;
-      const event = group.events[index];
-      const ticket = event ? undefined : group.tickets[index - group.events.length];
-      const nodeId = event ? `${id}/event:${event.id}` : `${id}/ticket:${ticket!.id}`;
-      nodes.push(item(nodeId, COLUMNS.item, y, data));
-      edges.push(edgeOf(hubNode, nodeId, data.isPending));
-      if (ticket) addTaskOf(nodeId, ticket.id, COLUMNS.ticket, y);
-      const number = event?.type === 'issue' ? numberOf(event) : null;
-      if (number === null) return;
-      issueNodeByNumber.set(number, nodeId);
-      const linked = kinds.includes('tickets') ? ticketByIssue.get(number) : undefined;
-      if (!linked) return;
-      const ticketNode = `${id}/ticket:${linked.id}`;
-      nodes.push(item(ticketNode, COLUMNS.ticket, y, ticketItem(linked)));
-      edges.push(edgeOf(nodeId, ticketNode, !linked.isClosed));
-      addTaskOf(ticketNode, linked.id, COLUMNS.task, y);
-    });
-    top += rows * ROW - GAP + GAP * 2;
+    nextY = y + addChain(builder, item, y, ticketByIssue) * ROW;
   }
+  builder.edges.push(...prIssueEdges(entry, kinds));
 
-  edges.push(...prIssueEdges(entry, kinds, issueNodeByNumber));
+  const gitHeight = gitHeightOf(rows.length);
+  const height = Math.max(GIT_TOP + gitHeight, nextY - GAP) + PAD;
+  const anchors = [...new Set(placed.map((entryItem) => entryItem.sha))];
 
-  return { nodes, edges, height };
+  return {
+    nodes: [
+      {
+        id: frameId,
+        type: 'island',
+        position: { x: 0, y: 0 },
+        width: ISLAND_WIDTH,
+        height,
+        data: { title: entry.project.name },
+        selectable: false,
+      },
+      {
+        ...builder.child,
+        id: `${id}/project`,
+        type: 'project',
+        position: { x: PAD, y: PAD },
+        ...SIZE.project,
+        data: {
+          name: entry.project.name,
+          repository: entry.project.repositoryUrl,
+          hidden: entry.hiddenEvents,
+        },
+      },
+      {
+        ...builder.child,
+        id: gitNode,
+        type: 'git',
+        position: { x: PAD, y: GIT_TOP },
+        width: GIT_BOX.width,
+        height: gitHeight,
+        data: { rows, total: allRows.length, anchors },
+      },
+      ...builder.nodes,
+    ],
+    edges: builder.edges,
+    height,
+  };
 }
 
 /** O PR que cita uma issue no título ("#12") liga nela. */
-function prIssueEdges(
-  entry: ProjectMapEntry,
-  kinds: readonly ProjectMapKind[],
-  issueNodeByNumber: ReadonlyMap<number, string>,
-): Edge[] {
-  if (!kinds.includes('prs')) return [];
+function prIssueEdges(entry: ProjectMapEntry, kinds: readonly ProjectMapKind[]): Edge[] {
+  if (!kinds.includes('prs') || !kinds.includes('issues')) return [];
+  const issueNodeByNumber = new Map(
+    entry.events
+      .filter((event) => event.type === 'issue')
+      .flatMap((issue) => {
+        const number = numberOf(issue);
+
+        return number !== null ? [[number, `${entry.project.id}/event:${issue.id}`] as const] : [];
+      }),
+  );
 
   return entry.events
     .filter((event) => event.type === 'pr')

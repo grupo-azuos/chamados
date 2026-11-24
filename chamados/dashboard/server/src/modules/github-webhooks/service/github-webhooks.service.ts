@@ -59,7 +59,9 @@ const GRAPH_TRUNKS = ['develop', 'main', 'master'];
 
 export type GitChange =
   | { kind: 'created' | 'pushed'; branch: string; headSha: string | null }
-  | { kind: 'deleted'; branch: string };
+  | { kind: 'deleted'; branch: string }
+  | { kind: 'tagged'; tag: string; sha: string }
+  | { kind: 'untagged'; tag: string };
 
 /**
  * O que o aviso diz da branch: `create`/`delete` de branch (tag não conta) e `push` em
@@ -75,7 +77,11 @@ function branchRefChange(
   event: 'create' | 'delete',
   payload: Record<string, unknown>,
 ): GitChange | null {
-  if (payload.ref_type !== 'branch' || typeof payload.ref !== 'string') return null;
+  if (typeof payload.ref !== 'string') return null;
+  /* A tag nova chega pelo push de `refs/tags/...` (que traz o commit); aqui só a apagada. */
+  if (payload.ref_type === 'tag')
+    return event === 'delete' ? { kind: 'untagged', tag: payload.ref } : null;
+  if (payload.ref_type !== 'branch') return null;
 
   return event === 'delete'
     ? { kind: 'deleted', branch: payload.ref }
@@ -84,7 +90,11 @@ function branchRefChange(
 
 function pushChange(payload: Record<string, unknown>): GitChange | null {
   const ref = typeof payload.ref === 'string' ? payload.ref : '';
-  if (!ref.startsWith('refs/heads/') || payload.deleted === true) return null;
+  if (payload.deleted === true) return null;
+  if (ref.startsWith('refs/tags/') && typeof payload.after === 'string') {
+    return { kind: 'tagged', tag: ref.slice('refs/tags/'.length), sha: payload.after };
+  }
+  if (!ref.startsWith('refs/heads/')) return null;
 
   return {
     kind: 'pushed',
@@ -185,15 +195,36 @@ export class GithubWebhooksService {
     const change = gitChangeOf(event.event, event.payload);
     if (!projectId || !change || !this.git) return false;
 
+    if (change.kind === 'tagged' || change.kind === 'untagged')
+      return this.applyTag(projectId, change);
     if (change.kind === 'deleted') {
       await this.git.deleteBranch(projectId, change.branch);
       return true;
     }
-    await this.git.touchBranch(projectId, change.branch, change.headSha, new Date());
-    if (change.kind === 'pushed' && GRAPH_TRUNKS.includes(change.branch)) {
-      const [owner, repo] = fullName.split('/');
-      if (owner && repo && this.projects) void this.projects.syncGraph(projectId, owner, repo);
-    }
+    await this.applyPush(projectId, fullName, change);
+
+    return true;
+  }
+
+  /** Branch criada ou com push: a ponta muda; push na develop ou na main relê o grafo. */
+  private async applyPush(
+    projectId: number,
+    fullName: string,
+    change: Extract<GitChange, { kind: 'created' | 'pushed' }>,
+  ): Promise<void> {
+    await this.git!.touchBranch(projectId, change.branch, change.headSha, new Date());
+    if (change.kind !== 'pushed' || !GRAPH_TRUNKS.includes(change.branch)) return;
+    const [owner, repo] = fullName.split('/');
+    if (owner && repo && this.projects) void this.projects.syncGraph(projectId, owner, repo);
+  }
+
+  /** A versão nova (ou apagada) entra no git graph na hora. */
+  private async applyTag(
+    projectId: number,
+    change: Extract<GitChange, { kind: 'tagged' | 'untagged' }>,
+  ): Promise<boolean> {
+    if (change.kind === 'tagged') await this.git!.touchTag(projectId, change.tag, change.sha);
+    else await this.git!.deleteTag(projectId, change.tag);
 
     return true;
   }

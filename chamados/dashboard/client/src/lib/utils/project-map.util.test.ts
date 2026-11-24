@@ -1,4 +1,3 @@
-import { projectMapEntryFixture } from './project-map.fixture.test-support';
 import { describe, expect, it } from 'vitest';
 
 import { type ProjectMapEntry } from '@template/shared/schemas/project-map.schema';
@@ -27,9 +26,24 @@ const event = (
   eventDate: '2026-11-20T10:00:00.000Z',
 });
 
+const commit = (sha: string, parents: string[], message: string, day: string) => ({
+  sha,
+  parents,
+  message,
+  authorLogin: 'vini',
+  authorName: 'Vinícius Gabriel',
+  committedAt: `2026-11-${day}T10:00:00.000Z`,
+});
+
 const ENTRY: ProjectMapEntry = {
-  commits: projectMapEntryFixture().commits,
-  branches: projectMapEntryFixture().branches,
+  commits: [
+    commit('pr13', ['fix31', 'feat'], 'Merge pull request #13 from grupo-azuos/feature/tela', '21'),
+    commit('feat', ['fix31'], '[feat](web): Tela', '20'),
+    commit('fix31', ['base'], '[merge](web): Corrige o CH-0031', '19'),
+    commit('base', [], '[feat](web): Início', '18'),
+  ],
+  branches: [],
+  tags: [{ name: 'v1.0.0', sha: 'base' }],
   project: { id: 1, name: 'Paralegal', repositoryUrl: 'org/paralegal', status: 'active' },
   events: [
     event(10, 'issue', '#12', 'Tela não abre', 'open'),
@@ -61,23 +75,33 @@ const ENTRY: ProjectMapEntry = {
 
 describe('project map', () => {
   // feliz
-  it('draws the project, its groups, the issue → ticket → task chain and the PR that cites the issue', () => {
-    const map = buildProjectMap([ENTRY], PROJECT_MAP_KINDS);
+  it('draws the git graph as the axis, hangs each item on the commit where it closed, and the chains', () => {
+    const map = buildProjectMap(
+      [ENTRY],
+      PROJECT_MAP_KINDS,
+      {},
+      {},
+      new Date('2026-11-22T12:00:00Z'),
+    );
     const has = (source: string, target: string) =>
       map.edges.some((edge) => edge.source === source && edge.target === target);
+    const fromGit = (target: string) =>
+      map.edges.find((edge) => edge.source === '1/git' && edge.target === target)?.sourceHandle;
 
-    expect(map.nodes.filter((node) => node.type === 'hub').map((node) => node.data)).toEqual([
-      { label: 'Issues', count: 1 },
-      { label: 'Pull requests', count: 1 },
-      { label: 'Merges e versões', count: 1 },
-      { label: 'Chamados sem issue', count: 1 },
-    ]);
+    /* O PR #13 é citado no merge "Merge pull request #13": sai da linha dele. */
+    expect(fromGit('1/event:11')).toBe('row:pr13');
+    /* A issue #12 aberta, sem commit que a cite, sai do topo (o commit mais novo). */
+    expect(fromGit('1/event:10')).toBe('row:pr13');
+    /* O chamado sem issue fechou e é citado como CH-0031 no merge da correção. */
+    expect(fromGit('1/ticket:31')).toBe('row:fix31');
     expect(has('1/event:10', '1/ticket:30')).toBe(true);
     expect(has('1/ticket:30', '1/task:40')).toBe(true);
     expect(has('1/event:11', '1/event:10')).toBe(true);
     expect(has('1/ticket:31', '1/task:41')).toBe(true);
     expect(map.edges.find((edge) => edge.target === '1/ticket:30')!.animated).toBe(true);
-    expect(map.nodes.find((node) => node.type === 'project')!.data).toMatchObject({ hidden: 4 });
+    expect(map.nodes.find((node) => node.type === 'git')!.data).toMatchObject({
+      anchors: ['pr13', 'fix31'],
+    });
   });
 
   // feliz
@@ -99,18 +123,19 @@ describe('project map', () => {
   });
 
   // triste
-  it('puts the git graph of the system at the left of the island, cut like the rest', () => {
+  it('without commits, everything hangs on the top and the graph says to synchronize', () => {
     const map = buildProjectMap(
-      [ENTRY],
+      [{ ...ENTRY, commits: [], branches: [], tags: [] }],
       PROJECT_MAP_KINDS,
-      {},
-      { onlyMerges: true },
-      new Date('2026-11-22T12:00:00Z'),
     );
     const git = map.nodes.find((node) => node.type === 'git');
 
-    expect(git?.data).toMatchObject({ total: 2 });
-    expect(map.edges.some((edge) => edge.source === `${ENTRY.project.id}/git`)).toBe(true);
+    expect(git?.data).toMatchObject({ rows: [], total: 0, anchors: ['top'] });
+    expect(
+      map.edges
+        .filter((edge) => edge.source === '1/git')
+        .every((edge) => edge.sourceHandle === 'row:top'),
+    ).toBe(true);
   });
 
   // triste

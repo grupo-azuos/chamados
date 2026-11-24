@@ -92,4 +92,14 @@ describe('git graph', () => {
     expect(categoryOfMessage('qualquer')).toBe('other');
     expect(initialsOf('Vinícius Gabriel')).toBe('VG');
   });
+
+  // feliz
+  it('marks the version on its commit and keeps it in "only merges and branches"', () => {
+    const rows = buildGitGraph(COMMITS, [], { onlyMerges: true }, new Date(), [
+      { name: 'v1.0.0', sha: 'base' },
+    ]);
+
+    expect(rows.map((row) => row.commit.sha)).toEqual(['m2', 'm1', 'base']);
+    expect(rows[2]!.tags).toEqual(['v1.0.0']);
+  });
 });

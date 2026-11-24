@@ -13,7 +13,6 @@
   import { cn } from '$lib/utils/cn';
   import { type ProjectMapGraph, projectIdOfIsland } from '$lib/utils/project-map.util';
   import GitNode from './azuos-project-map-git.svelte';
-  import HubNode from './azuos-project-map-hub.svelte';
   import ItemNode from './azuos-project-map-item.svelte';
   import ProjectNode from './azuos-project-map-project.svelte';
 
@@ -27,7 +26,7 @@
     actions: { onIslandMove: (projectId: string, position: { x: number; y: number }) => void; onExpand?: () => void };
   } = $props();
 
-  const nodeTypes = { island: IslandNode, project: ProjectNode, hub: HubNode, item: ItemNode, git: GitNode };
+  const nodeTypes = { island: IslandNode, project: ProjectNode, item: ItemNode, git: GitNode };
 
   let nodes = $state.raw<Node[]>([]);
   let edges = $state.raw<Edge[]>([]);

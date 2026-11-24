@@ -127,6 +127,7 @@ export class SoftwareProjectsRepository {
             status: tickets.status,
             description: tickets.description,
             githubIssueNumber: tickets.githubIssueNumber,
+            resolvedAt: tickets.resolvedAt,
           })
           .from(tickets)
           .where(and(inArray(tickets.projectId, projectIds), ...ticketFilters(filter)))

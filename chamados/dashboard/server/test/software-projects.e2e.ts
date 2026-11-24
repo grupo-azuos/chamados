@@ -6,7 +6,11 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { githubConnections } from '../src/lib/db/schema/github-connections.schema';
-import { softwareBranches, softwareCommits } from '../src/lib/db/schema/software-git.schema';
+import {
+  softwareBranches,
+  softwareCommits,
+  softwareTags,
+} from '../src/lib/db/schema/software-git.schema';
 import { softwareTimelineEvents } from '../src/lib/db/schema/software-timeline-events.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
 import { encryptGithubToken } from '../src/modules/github-integration/service/github-token-cipher.util';
@@ -254,6 +258,9 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       await started.db
         .insert(softwareBranches)
         .values({ projectId: chamados.body.id, name: 'feature/mapa', headSha: 'c3' });
+      await started.db
+        .insert(softwareTags)
+        .values({ projectId: chamados.body.id, name: 'v1.0.0', sha: 'b2' });
       const graph = await api()
         .get('/api/v1/software-projects/map')
         .query({ ids: String(chamados.body.id), from: '2030-01-01' })
@@ -266,6 +273,7 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       expect(graph.body.entries[0].branches).toEqual([
         expect.objectContaining({ name: 'feature/mapa', headSha: 'c3' }),
       ]);
+      expect(graph.body.entries[0].tags).toEqual([{ name: 'v1.0.0', sha: 'b2' }]);
       expect(graph.body.entries[0].events).toEqual([]);
       expect(graph.body.entries[0].tickets).toEqual([]);
 

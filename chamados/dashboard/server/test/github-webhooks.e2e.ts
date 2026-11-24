@@ -6,7 +6,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { githubWebhookEvents } from '../src/lib/db/schema/github-webhook-events.schema';
-import { softwareBranches } from '../src/lib/db/schema/software-git.schema';
+import { softwareBranches, softwareTags } from '../src/lib/db/schema/software-git.schema';
 import { softwareProjects } from '../src/lib/db/schema/software-projects.schema';
 import { softwareTimelineEvents } from '../src/lib/db/schema/software-timeline-events.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
@@ -72,6 +72,7 @@ describe.skipIf(!testDatabaseUrl)('GitHub webhook (e2e)', () => {
     await started.truncate(
       'github_webhook_events',
       'software_branches',
+      'software_tags',
       'software_commits',
       'software_timeline_events',
       'ticket_histories',
@@ -142,6 +143,22 @@ describe.skipIf(!testDatabaseUrl)('GitHub webhook (e2e)', () => {
     ).expect(202);
     const [deleted] = await started.db.select().from(softwareBranches);
     expect(deleted?.deletedAt).toBeInstanceOf(Date);
+  });
+
+  // feliz
+  it('puts a version pushed as a tag on the graph, and takes it out when the tag is deleted', async () => {
+    const repository = { full_name: 'grupo-azuos/paralegal' };
+    await send(
+      'push',
+      { ref: 'refs/tags/v1.4.0', after: 'c0ffee', repository },
+      'delivery-t1',
+    ).expect(202);
+    expect(await started.db.select().from(softwareTags)).toEqual([
+      expect.objectContaining({ projectId, name: 'v1.4.0', sha: 'c0ffee' }),
+    ]);
+
+    await send('delete', { ref_type: 'tag', ref: 'v1.4.0', repository }, 'delivery-t2').expect(202);
+    expect(await started.db.select().from(softwareTags)).toEqual([]);
   });
 
   // feliz
