@@ -24,15 +24,14 @@ function setup(
     error: string | null;
   }> = {},
 ) {
-  const actions = { onFocusChange: vi.fn(), onIdChange: vi.fn() };
+  const actions = { onFocusChange: vi.fn(), onOpenPicker: vi.fn() };
   render(TraceabilityMap, {
     props: {
       data: {
         focus: 'department',
         id: over.id ?? '3',
-        computers: [{ value: '1', label: 'PC-FISCAL-01' }],
-        departments: [{ value: '3', label: 'Fiscal' }],
-        people: [{ id: 'ana', name: 'Ana Souza', photo: null }],
+        choiceLabel: 'Fiscal',
+        params: 'focus=department&id=3',
         graph: over.graph === undefined ? traceabilityGraphFixture() : over.graph,
       },
       state: { error: over.error ?? null },
@@ -48,7 +47,12 @@ describe('AzuosTraceabilityMap', () => {
     const actions = setup();
 
     expect(screen.getByRole('region', { name: 'Mapa de rastreabilidade' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Departamento' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Fiscal' }));
+    expect(actions.onOpenPicker).toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'Chamado: CH-0009' })).toHaveAttribute(
+      'href',
+      '?focus=department&id=3&ticket=9',
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Pessoa' }));
     expect(actions.onFocusChange).toHaveBeenCalledWith('person');
   });

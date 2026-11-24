@@ -2,8 +2,8 @@
   @component
   UMA CAIXA no mapa de rastreabilidade: computador, departamento, pessoa (com a foto), chamado, peça
   ou tarefa — o ícone cheio na cor do tipo, o nome e o detalhe. O que está em aberto leva a bolinha
-  que pulsa; o que é de antes (o responsável que já passou a máquina) fica apagado. O computador, o
-  chamado e a tarefa levam à tela deles.
+  que pulsa; o que é de antes (o responsável que já passou a máquina) fica apagado. Tudo leva de volta
+  à Rastreabilidade: a pessoa e o departamento viram o ponto de partida; o resto abre num diálogo.
 -->
 <script lang="ts" module>
   import Building2 from '@lucide/svelte/icons/building-2';
@@ -74,6 +74,8 @@
       <a
         {...props}
         href={data.href}
+        data-sveltekit-noscroll
+        data-sveltekit-keepfocus
         aria-label={`${TRACEABILITY_KIND_LABELS[data.kind]}: ${data.label}`}
         class={cn(BOX, data.isPast && 'opacity-60', 'hover:bg-hover-veil focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none')}
       >

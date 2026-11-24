@@ -17,16 +17,12 @@
 </script>
 
 <script lang="ts">
-  const actions = { onFocusChange: fn(), onIdChange: fn() };
-  const options = {
-    computers: [{ value: '1', label: 'PC-FISCAL-01' }],
-    departments: [{ value: '3', label: 'Fiscal' }],
-    people: [{ id: 'ana', name: 'Ana Souza', photo: null }],
-  };
+  const actions = { onFocusChange: fn(), onOpenPicker: fn() };
+  const options = { choiceLabel: 'Fiscal', params: 'focus=department&id=3' };
   const graph = traceabilityGraphFixture();
 </script>
 
 <Story name="Default" args={{ data: { focus: 'department', id: '3', ...options, graph }, actions }} />
-<Story name="Sem escolha" args={{ data: { focus: 'person', id: '', ...options, graph: null }, actions }} />
+<Story name="Sem escolha" args={{ data: { focus: 'person', id: '', ...options, choiceLabel: null, graph: null }, actions }} />
 <Story name="Nada ligado" args={{ data: { focus: 'computer', id: '1', ...options, graph: { focusId: 'computer:1', nodes: [], edges: [] } }, actions }} />
 <Story name="Carregando" args={{ data: { focus: 'computer', id: '1', ...options, graph: null }, state: { isLoading: true }, actions }} />

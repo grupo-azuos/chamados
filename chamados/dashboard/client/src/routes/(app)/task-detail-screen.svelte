@@ -1,7 +1,15 @@
 <script lang="ts" module>
   import { type RoleContext } from '@template/shared/domain/role-context.util';
 
-  export type TaskDetailScreenProps = { area: RoleContext };
+  export type TaskDetailScreenProps = {
+    area: RoleContext;
+    /** A tarefa; sem ele, a do endereço (`/infra/tasks/12`). */
+    id?: number;
+    /** O voltar de quem embrulha a tela (o diálogo da Rastreabilidade fecha). */
+    onBack?: () => void;
+    /** Dentro de outra tela: o título da aba é dela. */
+    isEmbedded?: boolean;
+  };
 </script>
 
 <script lang="ts">
@@ -25,14 +33,16 @@
    * que se cola num chamado, e é para onde levam o mapa, o quadro e a timeline. O que mora aqui é
    * QUAL PEÇA ESTÁ NA FRENTE: o formulário de editar e a confirmação de excluir.
    */
-  let { area }: TaskDetailScreenProps = $props();
+  let { area, id: givenId, onBack, isEmbedded = false }: TaskDetailScreenProps = $props();
 
   const base = $derived(contextPath(area));
-  const id = Number(page.params.id);
+  // svelte-ignore state_referenced_locally
+  const id = givenId ?? Number(page.params.id);
   const detail = useTaskDetailModel(id);
   /* "Voltar para o mapa", quando veio de lá: o caminho da pessoa, e não um endereço fixo. */
   // svelte-ignore state_referenced_locally
   const back = useBackTarget({ to: `${contextPath(area)}/tasks`, destination: 'as tarefas' });
+  const goBack = $derived(onBack ?? back.onBack);
   const viewerId = $derived((page.data.user as { id: string } | undefined)?.id ?? '');
 
   let isEditing = $state(false);
@@ -40,15 +50,17 @@
 </script>
 
 <svelte:head>
-  <title>{detail.data.task?.title ?? 'Tarefa'}</title>
+  {#if !isEmbedded}
+    <title>{detail.data.task?.title ?? 'Tarefa'}</title>
+  {/if}
 </svelte:head>
 
 <TaskDetailView
-  data={{ ...detail.data, backDestination: back.destination, base }}
+  data={{ ...detail.data, backDestination: isEmbedded ? 'a rastreabilidade' : back.destination, base }}
   state={detail.state}
   actions={{
     ...detail.actions,
-    onBack: back.onBack,
+    onBack: goBack,
     onEdit: () => (isEditing = true),
     onRemove: () => (isRemoving = true),
     onRestore: detail.actions.onRestore,

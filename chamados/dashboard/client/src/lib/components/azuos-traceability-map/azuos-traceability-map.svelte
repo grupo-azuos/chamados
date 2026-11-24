@@ -3,14 +3,16 @@
   O MAPA DE RASTREABILIDADE da Infraestrutura — usuário, computador e departamento, e o que passou
   pela máquina (chamados, peças, tarefas), no formato das ilhas do paralegal.
 
-  "Ver por" escolhe o ponto de partida (um computador, um departamento ou uma pessoa) e o campo ao
-  lado escolhe qual. O que está em aberto tem a linha tracejada e animada; o responsável de antes
-  fica apagado, com a linha pontilhada. "Expandir" põe o mapa na tela inteira.
+  "Ver por" escolhe o tipo do ponto de partida (computador, departamento ou pessoa) e o botão ao
+  lado abre a busca para escolher qual. O que está em aberto tem a linha tracejada e animada; o
+  responsável de antes fica apagado, com a linha pontilhada. Cada caixa leva de volta a esta tela:
+  a pessoa e o departamento viram o novo ponto de partida; o resto abre num diálogo sobre o mapa.
+  "Expandir" põe o mapa na tela inteira.
 
-  - `data`: `focus`, `id`, as opções de cada ponto de partida (`computers`, `departments`,
-    `people`) e o `graph` que veio da API (nulo antes da escolha).
+  - `data`: `focus`, `id`, `choiceLabel` (o nome do escolhido), o `graph` que veio da API (nulo
+    antes da escolha) e `params` (o endereço de agora, para os links das caixas).
   - `state`: `isLoading`, `error`.
-  - `actions`: `onFocusChange`, `onIdChange`.
+  - `actions`: `onFocusChange`, `onOpenPicker`.
 -->
 <script lang="ts" module>
   import {
@@ -18,23 +20,23 @@
     type TraceabilityGraph,
   } from '@template/shared/schemas/traceability.schema';
 
-  import { type AzuosComboboxFieldOption } from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
-  import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 
   export type AzuosTraceabilityMapProps = {
     data: {
       focus: TraceabilityFocus;
       /** O ponto de partida escolhido; vazio antes da escolha. */
       id: string;
-      computers: AzuosComboboxFieldOption[];
-      departments: AzuosComboboxFieldOption[];
-      people: AzuosPersonPickerPerson[];
+      /** O nome do ponto de partida escolhido; nulo antes da escolha. */
+      choiceLabel?: string | null;
       graph: TraceabilityGraph | null;
+      /** O endereço de agora, sem o "?". */
+      params?: string;
     };
     state?: { isLoading?: boolean; error?: string | null };
     actions: {
       onFocusChange: (focus: TraceabilityFocus) => void;
-      onIdChange: (id: string) => void;
+      /** Abre a busca do ponto de partida. */
+      onOpenPicker: () => void;
     };
   };
 
@@ -43,6 +45,12 @@
     { value: 'department', label: 'Departamento' },
     { value: 'person', label: 'Pessoa' },
   ];
+
+  const CHOOSE_LABELS: Record<TraceabilityFocus, string> = {
+    computer: 'Escolher o computador',
+    department: 'Escolher o departamento',
+    person: 'Escolher a pessoa',
+  };
 
   const PICK_HINTS: Record<TraceabilityFocus, string> = {
     computer: 'Escolha um computador para ver quem usa, os chamados, as peças e as tarefas dele.',
@@ -54,12 +62,13 @@
 <script lang="ts">
   import Network from '@lucide/svelte/icons/network';
 
-  import ComboboxField from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
+  import Search from '@lucide/svelte/icons/search';
+
+  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import ExpandableScreen from '$lib/components/azuos-expandable-screen/azuos-expandable-screen.svelte';
   import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
-  import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import { buildTraceabilityMap } from '$lib/utils/traceability-map.util';
   import MapCanvas from './azuos-traceability-map-canvas.svelte';
@@ -68,7 +77,7 @@
 
   let isExpanded = $state(false);
 
-  const map = $derived(data.graph ? buildTraceabilityMap(data.graph) : null);
+  const map = $derived(data.graph ? buildTraceabilityMap(data.graph, new URLSearchParams(data.params ?? '')) : null);
 </script>
 
 {#snippet toolbar()}
@@ -78,23 +87,11 @@
       ui={{ ariaLabel: 'Ver por' }}
       actions={{ onChange: (value) => actions.onFocusChange(value as TraceabilityFocus) }}
     />
-    {#if data.focus === 'person'}
-      <PersonPickerField
-        data={{ value: data.id, people: data.people }}
-        ui={{ ariaLabel: 'Pessoa', placeholder: 'Escolha a pessoa', className: 'w-72' }}
-        actions={{ onChange: actions.onIdChange }}
-      />
-    {:else}
-      <ComboboxField
-        data={{ value: data.id, options: data.focus === 'computer' ? data.computers : data.departments }}
-        ui={{
-          ariaLabel: data.focus === 'computer' ? 'Computador' : 'Departamento',
-          placeholder: data.focus === 'computer' ? 'Escolha o computador' : 'Escolha o departamento',
-          className: 'w-72',
-        }}
-        actions={{ onChange: actions.onIdChange }}
-      />
-    {/if}
+    <ActionButton
+      data={{ label: data.choiceLabel ?? CHOOSE_LABELS[data.focus] }}
+      ui={{ variant: 'secondary', icon: Search }}
+      actions={{ onClick: actions.onOpenPicker }}
+    />
     <ul aria-label="Legenda" class="text-muted-foreground flex flex-wrap items-center gap-4 text-xs">
       <li class="flex items-center gap-1.5">
         <svg aria-hidden="true" width="24" height="4"><line x1="0" y1="2" x2="24" y2="2" stroke="var(--primary)" stroke-width="2" stroke-dasharray="6 4" /></svg>Em aberto

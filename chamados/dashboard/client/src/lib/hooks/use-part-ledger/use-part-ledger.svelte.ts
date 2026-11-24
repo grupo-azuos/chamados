@@ -96,3 +96,34 @@ export function usePartLedgerModel({ part }: { part: Part }): PartLedgerModel {
     },
   };
 }
+
+/**
+ * A PEÇA PELO ID — para quem só tem o número dela (a Rastreabilidade, que abre o extrato num
+ * diálogo sobre o mapa). O extrato precisa da peça inteira (nome, saldo).
+ */
+export function usePartByIdModel(id: number): {
+  readonly part: Part | null;
+  readonly isLoading: boolean;
+  readonly error: string | null;
+} {
+  const part = mirrorStore(
+    createQuery(
+      writable({
+        queryKey: [...PARTS_QUERY_KEY, 'detail', id],
+        queryFn: () => partsApi.findById(id),
+      }),
+    ),
+  );
+
+  return {
+    get part() {
+      return part.current.data ?? null;
+    },
+    get isLoading() {
+      return part.current.isPending;
+    },
+    get error() {
+      return part.current.error ? readError(part.current.error) : null;
+    },
+  };
+}
