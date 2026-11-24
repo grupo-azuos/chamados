@@ -37,7 +37,11 @@ import {
 import { SoftwareGitRepository } from '../repository/software-git.repository';
 import { SoftwareTimelineRepository } from '../repository/software-timeline.repository';
 import { toProjectMap } from '../mapper/project-map.mapper';
-import { type ProjectMap, type ProjectMapQuery } from '@template/shared/schemas/project-map.schema';
+import {
+  type ProjectMap,
+  type ProjectMapQuery,
+  type SupportSystem,
+} from '@template/shared/schemas/project-map.schema';
 import { type FetchedCoAuthor, GithubService } from './github.service';
 
 /** A fonte do painel que esta lista sabe recortar: a tabela dela, os sistemas. */
@@ -181,6 +185,29 @@ export class SoftwareProjectsService {
     if (!map.entries.length) throw new NotFoundException('Sistema não encontrado.');
 
     return map;
+  }
+
+  /** O ANDAMENTO DE TODOS OS SISTEMAS na Central: basta estar identificado (como o mapa de um). */
+  async supportList(): Promise<SupportSystem[]> {
+    const { projects, activity } = await this.repository.supportList();
+    const openTickets = await this.repository.countOpenTicketsByProject(
+      projects.map((project) => project.id),
+    );
+
+    return projects.map((project) => {
+      const facts = activity.find((row) => row.projectId === project.id);
+      const lastAt = facts?.lastAt ? new Date(facts.lastAt) : null;
+
+      return {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        status: project.status,
+        openTickets: openTickets[project.id] ?? 0,
+        openIssues: facts?.openIssues ?? 0,
+        lastActivityAt: lastAt ? lastAt.toISOString() : null,
+      };
+    });
   }
 
   private async mapOf(query: ProjectMapQuery): Promise<ProjectMap> {

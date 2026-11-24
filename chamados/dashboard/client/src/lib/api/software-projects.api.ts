@@ -7,7 +7,7 @@ import {
 } from '@template/shared/schemas/software-project.schema';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
 
-import { type ProjectMap } from '@template/shared/schemas/project-map.schema';
+import { type ProjectMap, type SupportSystem } from '@template/shared/schemas/project-map.schema';
 import { apiRequest } from './http-client';
 
 export const softwareProjectsApi = {
@@ -24,6 +24,9 @@ export const softwareProjectsApi = {
         personId: filter.personId || undefined,
       },
     }),
+
+  /** O andamento de todos os sistemas, na Central. */
+  supportList: () => apiRequest<SupportSystem[]>('/support/systems'),
 
   /** O mapa de UM sistema na Central (quem pede chamado), no período e da pessoa. */
   supportMap: (

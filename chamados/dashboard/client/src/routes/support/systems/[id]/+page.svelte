@@ -19,7 +19,7 @@
 </svelte:head>
 
 <main class="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6">
-  <BackButton data={{ destination: 'os chamados', to: '/support/tickets' }} />
+  <BackButton data={{ destination: 'os sistemas', to: '/support/systems' }} />
   <header class="flex flex-col gap-1">
     <h1 class="text-foreground text-2xl font-bold">{map.data.name ?? 'Mapa do sistema'}</h1>
     <p class="text-muted-foreground text-sm">

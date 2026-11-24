@@ -38,6 +38,22 @@ export const projectMapQuerySchema = z.object({
 
 export type ProjectMapQuery = z.infer<typeof projectMapQuerySchema>;
 
+/**
+ * UM SISTEMA NA LISTA DA CENTRAL — o andamento num olhar, para quem pede chamado: o nome, para que
+ * serve, a situação, os chamados abertos e o último movimento no GitHub. O card leva ao mapa dele.
+ */
+export const supportSystemSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  description: z.string().nullable(),
+  status: z.enum(SOFTWARE_PROJECT_STATUSES),
+  openTickets: z.number().int(),
+  openIssues: z.number().int(),
+  lastActivityAt: z.iso.datetime({ offset: true }).nullable(),
+});
+
+export type SupportSystem = z.infer<typeof supportSystemSchema>;
+
 /** O mapa de UM sistema na Central: o período e a pessoa; o sistema vem no endereço. */
 export const supportProjectMapQuerySchema = projectMapQuerySchema.omit({ ids: true });
 export type SupportProjectMapQuery = z.infer<typeof supportProjectMapQuerySchema>;
