@@ -3,7 +3,10 @@ import { type Task, type TaskHistoryEntry } from '@template/shared/schemas/task.
 import { writable } from 'svelte/store';
 
 import { readError } from '$lib/api/http-client';
+import { type TaskLinkKind } from '@template/shared/domain/task-flow.util';
+
 import { tasksApi } from '$lib/api/tasks.api';
+import { searchLinkOptions } from '$lib/hooks/use-task-form/use-task-form.svelte';
 import { ticketsApi } from '$lib/api/tickets.api';
 import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
@@ -27,6 +30,15 @@ export type TaskDetailModel = {
     /** A linha do tempo já em frase, com o nome de hoje de cada pessoa. */
     timeline: TaskTimelineEntry[];
     stepsDraft: StepDraft[] | null;
+    /** O diálogo "Vincular": o tipo, a busca, o que ela achou e o que foi marcado (de todo tipo). */
+    linkPicker: {
+      isOpen: boolean;
+      kind: TaskLinkKind;
+      term: string;
+      options: { id: number; label: string }[];
+      selected: { kind: TaskLinkKind; targetId: number }[];
+      isSearching: boolean;
+    };
     /** Quem tem acesso, com a foto — o formulário de editar escolhe por aqui. */
     people: AzuosPersonPickerPerson[];
   };
@@ -47,7 +59,17 @@ export type TaskDetailModel = {
     onSaveSteps: () => void;
     onCancelSteps: () => void;
     onRemoveLink: (linkId: number) => void;
+    /** Excluir ARQUIVA (como no Paralegal); `onRestore` devolve a "Em uso". */
     onRemove: (onRemoved: () => void) => void;
+    onRestore: () => void;
+    link: {
+      onOpen: () => void;
+      onClose: () => void;
+      onKindChange: (kind: TaskLinkKind) => void;
+      onSearch: (term: string) => void;
+      onToggle: (targetId: number) => void;
+      onConfirm: () => void;
+    };
   };
 };
 
@@ -156,6 +178,43 @@ export function useTaskDetailModel(id: number): TaskDetailModel {
   const unlink = mirrorStore(
     createMutation({ mutationFn: (linkId: number) => tasksApi.removeLink(id, linkId), ...onDone }),
   );
+  const restore = mirrorStore(
+    createMutation({ mutationFn: () => tasksApi.restore(id), ...onDone }),
+  );
+  let linkPicker = $state<TaskDetailModel['data']['linkPicker']>({
+    isOpen: false,
+    kind: 'ticket',
+    term: '',
+    options: [],
+    selected: [],
+    isSearching: false,
+  });
+  const addLinks = mirrorStore(
+    createMutation({
+      mutationFn: (links: { kind: TaskLinkKind; targetId: number }[]) =>
+        tasksApi.addLinks(id, { links }),
+      onSuccess: () => {
+        linkPicker = { ...linkPicker, isOpen: false, selected: [] };
+        onDone.onSuccess();
+      },
+      onError: onDone.onError,
+    }),
+  );
+
+  /* A busca da vez: a resposta de uma busca antiga não sobrescreve a mais nova. */
+  let searchTicket = 0;
+  async function searchLinks(kind: TaskLinkKind, term: string) {
+    const ticket = ++searchTicket;
+    linkPicker = { ...linkPicker, kind, term, isSearching: true };
+    try {
+      const options = await searchLinkOptions(kind, term, task.current.data?.area ?? 'infra');
+      if (ticket === searchTicket) linkPicker = { ...linkPicker, options, isSearching: false };
+    } catch (error) {
+      if (ticket === searchTicket) linkPicker = { ...linkPicker, options: [], isSearching: false };
+      actionError = readError(error);
+    }
+  }
+
   const remove = mirrorStore(
     createMutation({ mutationFn: () => tasksApi.remove(id), onError: onDone.onError }),
   );
@@ -164,7 +223,9 @@ export function useTaskDetailModel(id: number): TaskDetailModel {
     status.current.isPending ||
       step.current.isPending ||
       saveSteps.current.isPending ||
-      unlink.current.isPending,
+      unlink.current.isPending ||
+      restore.current.isPending ||
+      addLinks.current.isPending,
   );
 
   return {
@@ -177,6 +238,9 @@ export function useTaskDetailModel(id: number): TaskDetailModel {
       },
       get stepsDraft() {
         return stepsDraft;
+      },
+      get linkPicker() {
+        return linkPicker;
       },
       get timeline() {
         return timeline;
@@ -233,6 +297,32 @@ export function useTaskDetailModel(id: number): TaskDetailModel {
             onRemoved();
           },
         }),
+      onRestore: () => restore.current.mutate(),
+      link: {
+        onOpen: () => {
+          actionError = null;
+          linkPicker = { ...linkPicker, isOpen: true, selected: [], term: '' };
+          void searchLinks(linkPicker.kind, '');
+        },
+        onClose: () => {
+          linkPicker = { ...linkPicker, isOpen: false };
+        },
+        onKindChange: (kind) => void searchLinks(kind, ''),
+        onSearch: (term) => void searchLinks(linkPicker.kind, term),
+        onToggle: (targetId) => {
+          const { kind, selected } = linkPicker;
+          const isOn = selected.some((item) => item.kind === kind && item.targetId === targetId);
+          linkPicker = {
+            ...linkPicker,
+            selected: isOn
+              ? selected.filter((item) => !(item.kind === kind && item.targetId === targetId))
+              : [...selected, { kind, targetId }],
+          };
+        },
+        onConfirm: () => {
+          if (linkPicker.selected.length) addLinks.current.mutate(linkPicker.selected);
+        },
+      },
     },
   };
 }

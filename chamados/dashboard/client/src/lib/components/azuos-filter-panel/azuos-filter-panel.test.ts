@@ -38,7 +38,13 @@ const actions = {
   onClearFilters: vi.fn(),
 };
 
-function renderWith(over: { chips?: { key: string; label: string }[]; canClear?: boolean; isFilteredOut?: boolean } = {}) {
+function renderWith(
+  over: {
+    chips?: { key: string; label: string }[];
+    canClear?: boolean;
+    isFilteredOut?: boolean;
+  } = {},
+) {
   return render(FilterPanel, {
     props: {
       data: {
@@ -77,7 +83,10 @@ describe('AzuosFilterPanel', () => {
   it('arrives open and counted when a filter is on, and each chip switches it off', async () => {
     renderWith({ chips: [{ key: 'priority', label: 'Urgência: Alta' }], canClear: true });
 
-    expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
     expect(screen.getByLabelText('1 ativo')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Urgência: Alta' }));
     expect(actions.onRemoveChip).toHaveBeenCalledWith('priority');
@@ -175,6 +184,9 @@ describe('AzuosFilterPanel: the board in the view toggle', () => {
   it('marks the board while the screen is on it', () => {
     renderWithBoard(true);
 
-    expect(screen.getByRole('button', { name: 'Ver em quadro' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Ver em quadro' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 });

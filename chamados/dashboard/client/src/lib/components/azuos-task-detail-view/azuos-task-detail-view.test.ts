@@ -25,6 +25,8 @@ function setup(over: Record<string, unknown> = {}, state: Partial<typeof STATE> 
     onEdit: vi.fn(),
     onRemoveLink: vi.fn(),
     onRemove: vi.fn(),
+    onRestore: vi.fn(),
+    onLink: vi.fn(),
   };
   render(TaskDetailView, {
     props: {
@@ -54,8 +56,10 @@ describe('AzuosTaskDetailView', () => {
     expect(actions.onFinish).toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Personalizar' }));
     expect(actions.onEditSteps).toHaveBeenCalled();
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Arquivar' }));
     expect(actions.onRemove).toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Vincular' }));
+    expect(actions.onLink).toHaveBeenCalled();
   });
 
   // feliz
@@ -93,7 +97,7 @@ describe('AzuosTaskDetailView', () => {
       '/infra/tickets/56',
     );
     expect(screen.queryByRole('button', { name: 'Finalizar' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Excluir' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Arquivar' })).toBeInTheDocument();
   });
 
   // triste
@@ -108,11 +112,30 @@ describe('AzuosTaskDetailView', () => {
       task: taskFixture({
         origin: 'ticket',
         ticketId: 9,
-        links: [{ id: -1000001, kind: 'part', targetId: 3, label: 'Monitor 24 × 2', source: 'ticket' }],
+        links: [
+          { id: -1000001, kind: 'part', targetId: 3, label: 'Monitor 24 × 2', source: 'ticket' },
+        ],
       }),
     });
 
     expect(screen.getByText('do chamado')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Desvincular Monitor 24 × 2' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Desvincular Monitor 24 × 2' }),
+    ).not.toBeInTheDocument();
+  });
+
+  // triste
+  it('an archived task says so, does not finish and offers "Desarquivar"', async () => {
+    const actions = setup({
+      task: taskFixture({
+        origin: 'manual',
+        archive: { archivedAt: '2026-11-20T10:00:00.000Z', archivedBy: 'ana' },
+      }),
+    });
+
+    expect(screen.getByText('Arquivada')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finalizar' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Desarquivar' }));
+    expect(actions.onRestore).toHaveBeenCalled();
   });
 });

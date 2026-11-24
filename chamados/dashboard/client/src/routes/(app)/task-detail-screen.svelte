@@ -12,6 +12,7 @@
   import { useBackTarget } from '$lib/hooks/use-navigation-stack/use-navigation-stack.svelte';
   import { useTaskDetailModel } from '$lib/hooks/use-task-detail/use-task-detail.svelte';
   import TaskDetailView from '$lib/components/azuos-task-detail-view/azuos-task-detail-view.svelte';
+  import TaskLinkDialog from '$lib/components/azuos-task-link-dialog/azuos-task-link-dialog.svelte';
   import { contextPath } from '$lib/navigation/navigation';
   import TaskFormSlot from './task-form-slot.svelte';
 
@@ -48,6 +49,8 @@
     onBack: back.onBack,
     onEdit: () => (isEditing = true),
     onRemove: () => (isRemoving = true),
+    onRestore: detail.actions.onRestore,
+    onLink: detail.actions.link.onOpen,
   }}
 />
 
@@ -64,10 +67,10 @@
 
 <ConfirmDialog
   data={{
-    title: 'Excluir a tarefa?',
-    description: `"${detail.data.task?.title ?? ''}" sai da lista. Etapas e vínculos vão junto.`,
-    confirmLabel: 'Excluir',
-    confirmingLabel: 'Excluindo…',
+    title: 'Arquivar a tarefa?',
+    description: `"${detail.data.task?.title ?? ''}" sai de "Em uso" e fica em "Arquivadas", de onde volta pelo Desarquivar.`,
+    confirmLabel: 'Arquivar',
+    confirmingLabel: 'Arquivando…',
   }}
   ui={{ tone: 'danger' }}
   state={{ isOpen: isRemoving, isConfirming: detail.state.isRemoving, error: detail.state.actionError }}
@@ -77,3 +80,26 @@
   }}
 />
 
+<TaskLinkDialog
+  data={{
+    kind: detail.data.linkPicker.kind,
+    term: detail.data.linkPicker.term,
+    options: detail.data.linkPicker.options,
+    selectedIds: detail.data.linkPicker.selected
+      .filter((item) => item.kind === detail.data.linkPicker.kind)
+      .map((item) => item.targetId),
+  }}
+  state={{
+    isOpen: detail.data.linkPicker.isOpen,
+    isSaving: detail.state.isBusy,
+    isSearching: detail.data.linkPicker.isSearching,
+    error: detail.state.actionError,
+  }}
+  actions={{
+    onKindChange: detail.actions.link.onKindChange,
+    onSearch: detail.actions.link.onSearch,
+    onToggle: detail.actions.link.onToggle,
+    onConfirm: detail.actions.link.onConfirm,
+    onClose: detail.actions.link.onClose,
+  }}
+/>

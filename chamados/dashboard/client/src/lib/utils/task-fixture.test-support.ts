@@ -37,6 +37,7 @@ export function taskFixture(over: Partial<Task> = {}): Task {
     progress: { done: 1, total: 2 },
     finishedAt: null,
     createdBy: { id: 'person-ana', name: 'Ana Prado', avatarUrl: null },
+    archive: null,
     createdAt: '2026-11-10T10:00:00.000Z',
     updatedAt: '2026-11-20T10:00:00.000Z',
     ...over,

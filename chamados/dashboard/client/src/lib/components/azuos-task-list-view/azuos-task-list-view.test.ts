@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { type TaskListModel } from '$lib/hooks/use-task-list/use-task-list.svelte';
 import { TEST_NOW, taskFixture } from '$lib/utils/task-fixture.test-support';
-import TaskListView from './azuos-task-list-view.svelte';
+import TaskListView, { taskFilterPanelOf } from './azuos-task-list-view.svelte';
 
 function setup(
   over: Partial<TaskListModel['data']> = {},
@@ -30,6 +30,7 @@ function setup(
     onAskRemove: vi.fn(),
     onCancelRemove: vi.fn(),
     onConfirmRemove: vi.fn(),
+    onRestore: vi.fn(),
     onRetry: vi.fn(),
     onNew: vi.fn(),
     onRefuse: vi.fn(),
@@ -45,7 +46,15 @@ function setup(
         tasks: [taskFixture()],
         total: 1,
         alerts: { overdue: 1, dueSoon: 0 },
-        filter: { search: '', status: '', origin: '', ownerId: '', mine: false, overdue: false },
+        filter: {
+          search: '',
+          status: '',
+          origin: '',
+          ownerId: '',
+          mine: false,
+          overdue: false,
+          archived: 'hide' as const,
+        },
         activeFilterCount: 0,
         page: 1,
         pageSize: 15,
@@ -105,5 +114,41 @@ describe('AzuosTaskListView', () => {
     expect(screen.getByText('A API está fora do ar.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Tentar de novo/ }));
     expect(actions.onRetry).toHaveBeenCalled();
+  });
+
+  // feliz
+  it('shows "Em uso / Arquivadas" below the filters and asks for the archived ones', async () => {
+    const actions = setup();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Arquivadas' }));
+
+    expect(actions.onFilterChange).toHaveBeenCalledWith('archived', 'only');
+  });
+
+  // triste
+  it('turns the hidden filters into chips, and the map drops the owner field', () => {
+    const base = {
+      view: 'list' as const,
+      filter: {
+        search: '',
+        status: 'open' as const,
+        origin: '' as const,
+        ownerId: 'ana',
+        mine: false,
+        overdue: true,
+        archived: 'hide' as const,
+      },
+      stages: [],
+      people: [{ id: 'ana', name: 'Ana Prado', photo: null }],
+    };
+
+    const panel = taskFilterPanelOf(base as never);
+    expect(panel.chips.map((chip) => chip.label)).toEqual([
+      'Responsável: Ana Prado',
+      'Aberta',
+      'Atrasadas',
+    ]);
+    expect(panel.canClear).toBe(true);
+    expect(taskFilterPanelOf({ ...base, view: 'map' } as never).primary).toBeUndefined();
   });
 });

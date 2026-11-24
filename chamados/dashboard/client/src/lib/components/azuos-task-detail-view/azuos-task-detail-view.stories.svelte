@@ -15,7 +15,7 @@
 <script lang="ts">
   const actions = {
     onFinish: fn(), onReopen: fn(), onToggleStep: fn(), onEditSteps: fn(), onStepsChange: fn(), onSaveSteps: fn(),
-    onCancelSteps: fn(), onEdit: fn(), onRemoveLink: fn(), onRemove: fn(),
+    onCancelSteps: fn(), onEdit: fn(), onRemoveLink: fn(), onRemove: fn(), onRestore: fn(), onLink: fn(),
   };
   const state = { isLoading: false, isHistoryLoading: false, isBusy: false, error: null, actionError: null };
   const task = taskFixture({

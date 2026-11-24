@@ -24,7 +24,7 @@
     tasks,
     total: tasks.length,
     alerts: { overdue: 1, dueSoon: 2 },
-    filter: { search: '', status: '' as const, origin: '' as const, ownerId: '', mine: false, overdue: false },
+    filter: { search: '', status: '' as const, origin: '' as const, ownerId: '', mine: false, overdue: false, archived: 'hide' as const },
     activeFilterCount: 0,
     page: 1,
     pageSize: 15,
@@ -43,7 +43,8 @@
   const actions = {
     onViewChange: fn(), onSearchChange: fn(), onFilterChange: fn(), onClearFilters: fn(), onPageChange: fn(),
     onMonthChange: fn(), onRangeChange: fn(), onShiftWindow: fn(), onWindowToday: fn(), onZoom: fn(), onOpen: fn(), onClose: fn(), onMove: fn(), onStage: fn(), onToggleStep: fn(), onRemoveLink: fn(),
-    onAskRemove: fn(), onCancelRemove: fn(), onConfirmRemove: fn(), onRetry: fn(), onNew: fn(), onRefuse: fn(),
+    onAskRemove: fn(), onCancelRemove: fn(), onConfirmRemove: fn(),
+    onRestore: fn(), onRetry: fn(), onNew: fn(), onRefuse: fn(),
     map: { onPeopleChange: fn(), onIslandMove: fn(), onResetLayout: fn() },
     onNewStage: fn(),
     onEditStage: fn(),

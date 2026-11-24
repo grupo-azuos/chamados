@@ -52,6 +52,8 @@ export type TaskListFilter = {
   ownerId: string;
   mine: boolean;
   overdue: boolean;
+  /** Em uso (`hide`) ou arquivadas (`only`), como no Paralegal. */
+  archived: 'hide' | 'only';
 };
 
 const EMPTY_FILTER: TaskListFilter = {
@@ -61,6 +63,7 @@ const EMPTY_FILTER: TaskListFilter = {
   ownerId: '',
   mine: false,
   overdue: false,
+  archived: 'hide',
 };
 
 export type TaskListModel = {
@@ -114,6 +117,8 @@ export type TaskListModel = {
     onAskRemove: (task: Task) => void;
     onCancelRemove: () => void;
     onConfirmRemove: () => void;
+    /** Devolve a tarefa arquivada a "Em uso". */
+    onRestore: (task: Task) => void;
     onRetry: () => void;
   };
 };
@@ -164,6 +169,7 @@ function filterParams(filter: TaskListFilter): Partial<TaskListQuery> {
     ownerId: filter.ownerId || undefined,
     mine: filter.mine || undefined,
     overdue: filter.overdue || undefined,
+    archived: filter.archived,
   };
 }
 
@@ -302,6 +308,9 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
         tasksApi.removeLink(input.id, input.linkId),
       ...onDone,
     }),
+  );
+  const restore = mirrorStore(
+    createMutation({ mutationFn: (id: number) => tasksApi.restore(id), ...onDone }),
   );
   const remove = mirrorStore(
     createMutation({
@@ -448,6 +457,7 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
       onConfirmRemove: () => {
         if (removing) remove.current.mutate(removing.id);
       },
+      onRestore: (task) => restore.current.mutate(task.id),
       onRetry: () => void list.current.refetch(),
     },
   };

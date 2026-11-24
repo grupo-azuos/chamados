@@ -14,9 +14,11 @@
   `ui` traz o nome da região, a troca tabela/cards (e se ela oferece o quadro) e as colunas;
   `state.isFilteredOut` avisa que o filtro escondeu tudo, e `state.isKanbanView` que a tela está no
   quadro; `actions` recebe a busca, a troca de filtro, a etiqueta removida, o limpar e a troca de
-  quadro (`onKanbanViewChange`).
+  quadro (`onKanbanViewChange`). `toggles` é a faixa de baixo, sempre à vista, com o que a lista
+  MOSTRA (de quem, em uso ou arquivadas) — o mesmo cartão de filtros do Paralegal.
 -->
 <script lang="ts" module>
+  import type { Snippet } from 'svelte';
   import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 
@@ -83,6 +85,8 @@
       /** Quadro ou lista, quando a troca oferece o quadro. */
       onKanbanViewChange?: (isKanban: boolean) => void;
     };
+    /** A faixa de baixo, sempre à vista: o que a lista MOSTRA ("Da equipe / Minhas"). */
+    toggles?: Snippet;
   };
 </script>
 
@@ -105,7 +109,7 @@
   import { DURATION, prefersReducedMotion } from '$lib/motion/motion';
   import { cn } from '$lib/utils/cn';
 
-  let { data, ui, state: panelState, actions }: AzuosFilterPanelProps = $props();
+  let { data, ui, state: panelState, actions, toggles }: AzuosFilterPanelProps = $props();
 
   /* Estado VISUAL: o painel aberto. Nasce aberto quando a tela chega filtrada lá dentro (um
      cartão do painel, um filtro salvo) — senão a pessoa veria a lista recortada sem saber por quê. */
@@ -291,6 +295,11 @@
           actions={{ onClick: actions.onClearFilters }}
         />
       {/if}
+    </div>
+  {/if}
+  {#if toggles}
+    <div class="border-border flex flex-wrap items-center gap-3 border-t px-3 py-2.5 sm:px-4">
+      {@render toggles()}
     </div>
   {/if}
 </section>

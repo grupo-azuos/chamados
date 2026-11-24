@@ -16,6 +16,7 @@ import {
   type SQL,
 } from 'drizzle-orm';
 
+import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database, type DatabaseExecutor } from '../../../lib/db/db.type';
@@ -203,8 +204,15 @@ export class TasksRepository {
     );
   }
 
-  async remove(id: number): Promise<void> {
-    await runQuery(this.db.delete(tasks).where(eq(tasks.id, id)), 'apagar tarefa');
+  /** Arquiva (com quem) ou desarquiva a tarefa. */
+  async setArchived(id: number, archived: boolean, actor: string): Promise<void> {
+    await runQuery(
+      this.db
+        .update(tasks)
+        .set({ ...archiveValues(archived, actor), updatedAt: new Date(), updatedBy: actor })
+        .where(eq(tasks.id, id)),
+      archived ? 'arquivar tarefa' : 'desarquivar tarefa',
+    );
   }
 
   async replacePeople(
@@ -591,6 +599,8 @@ export class TasksRepository {
 
   private filtersOf(query: TaskListQuery, viewerId: string): SQL[] {
     const filters: SQL[] = [eq(tasks.area, query.area)];
+    const archived = archivedCondition(tasks.archivedAt, query.archived ?? 'hide');
+    if (archived) filters.push(archived);
     if (query.status) filters.push(eq(tasks.status, query.status));
     if (query.origin) filters.push(eq(tasks.origin, query.origin));
     if (query.stageId) filters.push(eq(tasks.stageId, query.stageId));

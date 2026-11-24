@@ -18,6 +18,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 import { computers } from './computers.schema';
 import { tickets } from './tickets.schema';
@@ -94,6 +95,8 @@ export const tasks = chamadosSchema.table(
     createdBy: text('created_by').notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     updatedBy: text('updated_by'),
+    /* Excluir ARQUIVA: a tarefa sai de "Em uso" e volta pelo "Desarquivar", como no Paralegal. */
+    ...archiveColumns(),
   },
   (table) => [
     check('tasks_area_valid', sql`${table.area} in (${valuesFor(ROLE_CONTEXTS)})`),

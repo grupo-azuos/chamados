@@ -11,8 +11,15 @@
   da tela — `today`, `now`, `canCreate` e `onNew`/`onRefuse`.
 -->
 <script lang="ts" module>
+  import {
+    TASK_ORIGIN_LABELS,
+    TASK_ORIGINS,
+    TASK_STATUS_LABELS,
+    TASK_STATUSES,
+  } from '@template/shared/domain/task-flow.util';
   import { type TaskListModel } from '$lib/hooks/use-task-list/use-task-list.svelte';
   import { type TaskMapModel } from '$lib/hooks/use-task-map/use-task-map.svelte';
+  import { type AzuosFilterPanelProps } from '$lib/components/azuos-filter-panel/azuos-filter-panel.svelte';
   import { type TaskStage } from '@template/shared/schemas/task-stage.schema';
 
   export type AzuosTaskListViewProps = {
@@ -52,6 +59,51 @@
       empty: 'Os chamados da Manutenção viram tarefa sozinhos. Para o resto, use "Nova tarefa".',
     },
   };
+
+  /**
+   * O painel de filtros das tarefas: a busca, o responsável à vista (fora do mapa, que tem o campo
+   * de pessoas dele) e, atrás do "Filtros", situação (as fixas e as próprias), origem e prazo.
+   */
+  export function taskFilterPanelOf(data: AzuosTaskListViewProps['data']): AzuosFilterPanelProps['data'] {
+    const { filter } = data;
+    const situations = [
+      ...TASK_STATUSES.map((status) => ({ value: status, label: TASK_STATUS_LABELS[status] })),
+      ...data.stages.map((stage) => ({ value: `stage:${stage.id}`, label: stage.label })),
+    ];
+    const origins = TASK_ORIGINS.map((origin) => ({ value: origin, label: TASK_ORIGIN_LABELS[origin] }));
+    const deadlines = [{ value: 'overdue', label: 'Atrasadas' }];
+    const owner = data.people.find((person) => person.id === filter.ownerId);
+    const chips = [
+      owner ? { key: 'ownerId', label: `Responsável: ${owner.name}` } : null,
+      filter.status ? { key: 'status', label: situations.find((item) => item.value === filter.status)?.label ?? filter.status } : null,
+      filter.origin ? { key: 'origin', label: TASK_ORIGIN_LABELS[filter.origin] } : null,
+      filter.overdue ? { key: 'deadline', label: 'Atrasadas' } : null,
+    ].filter((chip): chip is { key: string; label: string } => chip !== null);
+
+    return {
+      search: { value: filter.search, placeholder: 'Título ou descrição' },
+      primary:
+        data.view === 'map'
+          ? undefined
+          : {
+              key: 'ownerId',
+              label: 'Responsável',
+              control: 'person',
+              ariaLabel: 'Responsável',
+              allLabel: 'Todos os responsáveis',
+              value: filter.ownerId,
+              options: [],
+              people: data.people,
+            },
+      fields: [
+        { key: 'status', label: 'Situação', control: 'select', ariaLabel: 'Situação', allLabel: 'Todas', value: filter.status, options: situations },
+        { key: 'origin', label: 'Origem', control: 'pills', ariaLabel: 'Origem', allLabel: 'Todas', value: filter.origin, options: origins },
+        { key: 'deadline', label: 'Prazo', control: 'pills', ariaLabel: 'Prazo', allLabel: 'Todos', value: filter.overdue ? 'overdue' : '', options: deadlines },
+      ],
+      chips,
+      canClear: chips.length > 0 || filter.search.trim() !== '',
+    };
+  }
 </script>
 
 <script lang="ts">
@@ -60,24 +112,15 @@
   import ClipboardList from '@lucide/svelte/icons/clipboard-list';
   import ListChecks from '@lucide/svelte/icons/list-checks';
   import Plus from '@lucide/svelte/icons/plus';
-  import {
-    TASK_ORIGIN_LABELS,
-    TASK_ORIGINS,
-    TASK_STATUS_LABELS,
-    TASK_STATUSES,
-  } from '@template/shared/domain/task-flow.util';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import FilterPanel from '$lib/components/azuos-filter-panel/azuos-filter-panel.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
-  import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
-  import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
-  import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { TASK_VIEW_LABELS, TASK_VIEWS, type TaskView } from '$lib/hooks/use-task-list/use-task-list.svelte';
   import TaskBoard from '$lib/components/azuos-task-board/azuos-task-board.svelte';
   import TaskCalendar from '$lib/components/azuos-task-calendar/azuos-task-calendar.svelte';
@@ -89,6 +132,23 @@
   let { data, ui, state: viewState, actions }: AzuosTaskListViewProps = $props();
 
   const paged = $derived(data.view === 'list' || data.view === 'cards');
+
+  const WHO_OPTIONS = [
+    { value: 'team', label: 'Da equipe' },
+    { value: 'mine', label: 'Minhas' },
+  ];
+  const ARCHIVED_OPTIONS = [
+    { value: 'hide', label: 'Em uso' },
+    { value: 'only', label: 'Arquivadas' },
+  ];
+
+  /** Um campo do painel vira o filtro da tela ("Prazo: Atrasadas" é o `overdue`). */
+  function changeField(key: string, value: string) {
+    if (key === 'deadline') return actions.onFilterChange('overdue', value === 'overdue');
+    if (key === 'ownerId') return actions.onFilterChange('ownerId', value);
+    if (key === 'origin') return actions.onFilterChange('origin', value as typeof data.filter.origin);
+    actions.onFilterChange('status', value as typeof data.filter.status);
+  }
 </script>
 
 <section class="flex flex-col gap-6" aria-label="Tarefas">
@@ -139,61 +199,34 @@
     />
   </div>
 
-  <CardSurface ui={{ className: 'flex flex-col gap-3 p-4' }}>
-    <div class="grid items-end gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
-      <TextField
-        data={{ label: 'Buscar', name: 'search', value: data.filter.search, placeholder: 'Título ou descrição' }}
-        actions={{ onChange: actions.onSearchChange }}
-      />
-      <div class="flex flex-col gap-1.5">
-        <span class="text-ink-700 text-sm font-medium">Responsável</span>
-        <PersonPickerField
-          data={{ value: data.filter.ownerId, people: data.people, leading: [{ value: '', label: 'Todos os responsáveis' }] }}
-          ui={{ ariaLabel: 'Responsável' }}
-          actions={{ onChange: (id: string) => actions.onFilterChange('ownerId', id) }}
-        />
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <span class="text-ink-700 text-sm font-medium">Situação</span>
-        <OptionPicker
-          data={{
-            value: data.filter.status,
-            options: [
-              ...TASK_STATUSES.map((status) => ({ value: status, label: TASK_STATUS_LABELS[status] })),
-              ...data.stages.map((stage) => ({ value: `stage:${stage.id}`, label: stage.label })),
-            ],
-          }}
-          ui={{ ariaLabel: 'Situação', allLabel: 'Todas', mode: 'combobox', fullWidth: true }}
-          actions={{ onChange: (value: string) => actions.onFilterChange('status', value as typeof data.filter.status) }}
-        />
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <span class="text-ink-700 text-sm font-medium">Origem</span>
-        <OptionPicker
-          data={{ value: data.filter.origin, options: TASK_ORIGINS.map((origin) => ({ value: origin, label: TASK_ORIGIN_LABELS[origin] })) }}
-          ui={{ ariaLabel: 'Origem', allLabel: 'Todas', mode: 'combobox', fullWidth: true }}
-          actions={{ onChange: (value: string) => actions.onFilterChange('origin', value as typeof data.filter.origin) }}
-        />
-      </div>
-    </div>
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <span class="text-muted-foreground text-sm font-medium">Mostrar</span>
+  <!-- O cartão de filtros do grupo (o do Inventário e dos Chamados, como o do Paralegal): à vista a
+       busca e o responsável; situação, origem e prazo atrás do "Filtros"; embaixo, o que MOSTRA. -->
+  <FilterPanel
+    data={taskFilterPanelOf(data)}
+    ui={{ ariaLabel: 'Filtros das tarefas' }}
+    actions={{
+      onSearchChange: actions.onSearchChange,
+      onFieldChange: (key: string, value: string) => changeField(key, value),
+      onRemoveChip: (key: string) => changeField(key, ''),
+      onClearFilters: actions.onClearFilters,
+    }}
+  >
+    {#snippet toggles()}
+      <span class="text-muted-foreground text-sm font-medium">Mostrar</span>
+      {#if data.view !== 'map'}
         <SegmentedControl
-          data={{ value: data.filter.mine ? 'mine' : 'team', options: [{ value: 'team', label: 'Da equipe' }, { value: 'mine', label: 'Minhas' }] }}
+          data={{ value: data.filter.mine ? 'mine' : 'team', options: WHO_OPTIONS }}
           ui={{ ariaLabel: 'Tarefas da equipe ou só as minhas' }}
           actions={{ onChange: (value: string) => actions.onFilterChange('mine', value === 'mine') }}
         />
-      </div>
-      {#if data.activeFilterCount > 0}
-        <ActionButton
-          data={{ label: 'Limpar filtros' }}
-          ui={{ variant: 'ghost', size: 'sm' }}
-          actions={{ onClick: actions.onClearFilters }}
-        />
       {/if}
-    </div>
-  </CardSurface>
+      <SegmentedControl
+        data={{ value: data.filter.archived, options: ARCHIVED_OPTIONS }}
+        ui={{ ariaLabel: 'Em uso ou arquivadas' }}
+        actions={{ onChange: (value: string) => actions.onFilterChange('archived', value as 'hide' | 'only') }}
+      />
+    {/snippet}
+  </FilterPanel>
 
   {#if viewState.actionError}
     <ErrorState data={{ message: viewState.actionError }} ui={{ variant: 'inline' }} />
@@ -218,7 +251,7 @@
       {#each data.tasks as task (task.id)}
         <TaskCard
           data={{ task, now: data.now }}
-          actions={{ onOpen: actions.onOpen, onMove: actions.onMove, onRemove: actions.onAskRemove }}
+          actions={{ onOpen: actions.onOpen, onMove: actions.onMove, onRemove: actions.onAskRemove, onRestore: actions.onRestore }}
         />
       {/each}
     </div>

@@ -39,6 +39,7 @@ export const tasksApi = {
         linkId: query.linkId,
         search: query.search,
         overdue: query.overdue ? 'true' : undefined,
+        archived: query.archived,
         from: query.from,
         to: query.to,
       },
@@ -68,7 +69,10 @@ export const tasksApi = {
   removeLink: (id: number, linkId: number) =>
     apiRequest<Task>(`/tasks/${id}/links/${linkId}`, { method: 'DELETE' }),
 
+  /** Excluir ARQUIVA: volta por `restore`. */
   remove: (id: number) => apiRequest<void>(`/tasks/${id}`, { method: 'DELETE' }),
+
+  restore: (id: number) => apiRequest<Task>(`/tasks/${id}/restore`, { method: 'POST' }),
 
   setStage: (id: number, stageId: number | null) =>
     apiRequest<Task>(`/tasks/${id}/stage`, { method: 'PUT', body: { stageId } }),
