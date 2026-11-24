@@ -15,6 +15,7 @@
 -->
 <script lang="ts" module>
   import { type Task } from '@template/shared/schemas/task.schema';
+  import { type TaskGit } from '@template/shared/schemas/task-git.schema';
 
   import { type StepDraft } from '$lib/hooks/use-task-detail/use-task-detail.svelte';
   import { type TaskTimelineEntry } from '$lib/utils/task-history.util';
@@ -29,6 +30,8 @@
       backDestination?: string;
       /** O começo do endereço da área (`/infra`, `/system`). @default '/infra' */
       base?: string;
+      /** O git do sistema (só na tarefa de Sistema com chamado): as branches dela e o grafo. */
+      git?: TaskGit | null;
     };
     state: {
       isLoading: boolean;
@@ -92,6 +95,7 @@
   import { formatDay, taskDueBadge, taskPercentage } from '$lib/utils/task-due.util';
   import { situationOf } from '$lib/utils/task-stage.util';
   import { linkHref } from '$lib/utils/task-map.util';
+  import TaskGitView from '$lib/components/azuos-task-git/azuos-task-git.svelte';
   import TaskHistory from '$lib/components/azuos-task-history/azuos-task-history.svelte';
 
   let { data, state: viewState, actions }: AzuosTaskDetailViewProps = $props();
@@ -353,6 +357,12 @@
           {/if}
         </PanelCard>
       </div>
+
+      {#if data.git}
+        <PanelCard data={{ title: 'Branches', hint: 'As do sistema com a tarefa, o chamado ou a issue no nome.' }}>
+          <TaskGitView data={{ git: data.git, now: data.now }} />
+        </PanelCard>
+      {/if}
 
       <PanelCard data={{ title: 'Linha do tempo', hint: 'Cada mudança, com quem fez.' }}>
         <TaskHistory data={{ entries: data.timeline }} state={{ isLoading: viewState.isHistoryLoading }} />

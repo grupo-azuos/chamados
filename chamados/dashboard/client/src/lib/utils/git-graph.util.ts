@@ -40,6 +40,9 @@ export const GIT_CATEGORY_LABELS: Record<GitCategory, string> = {
 
 const TRUNKS = ['develop', 'main', 'master'];
 
+/** A altura de cada commit no desenho (uma linha de texto, como no lazygit). */
+export const GIT_ROW_HEIGHT = 24;
+
 /* O prefixo da branch (`feature/…`) e o tipo da mensagem (`[feat](web): …`, `fix: …`) → categoria. */
 const BRANCH_PREFIXES: Record<string, GitCategory> = {
   main: 'main',

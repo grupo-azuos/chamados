@@ -10,6 +10,7 @@ import {
   taskSchema,
   updateTaskSchema,
 } from '@template/shared/schemas/task.schema';
+import { taskGitSchema } from '@template/shared/schemas/task-git.schema';
 import {
   createTaskStageSchema,
   moveTaskStageSchema,
@@ -40,3 +41,4 @@ export class CreateTaskStageDto extends createZodDto(createTaskStageSchema) {}
 export class UpdateTaskStageDto extends createZodDto(updateTaskStageSchema) {}
 export class MoveTaskStageDto extends createZodDto(moveTaskStageSchema) {}
 export class SetTaskStageDto extends createZodDto(setTaskStageSchema) {}
+export class TaskGitDto extends createZodDto(taskGitSchema) {}

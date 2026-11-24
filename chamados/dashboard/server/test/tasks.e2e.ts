@@ -6,10 +6,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { computers } from '../src/lib/db/schema/computers.schema';
 import { tasks } from '../src/lib/db/schema/tasks.schema';
 import { parts } from '../src/lib/db/schema/parts.schema';
+import { softwareBranches, softwareCommits } from '../src/lib/db/schema/software-git.schema';
+import { softwareProjects } from '../src/lib/db/schema/software-projects.schema';
 import { ticketStockItems } from '../src/lib/db/schema/ticket-stock-items.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
 import { TasksService } from '../src/modules/tasks/service/tasks.service';
-import { ANA, asAna, asBia, createE2eApp, type E2eApp } from './support/e2e-app.util';
+import { ANA, asAna, asBia, asOlga, createE2eApp, type E2eApp } from './support/e2e-app.util';
 
 /**
  * AS TAREFAS de ponta a ponta, contra um Postgres de verdade: a migration, o chamado de infra
@@ -66,6 +68,9 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
       'maintenances',
       'maintenance_schedules',
       'computers',
+      'software_branches',
+      'software_commits',
+      'software_projects',
     );
   });
 
@@ -403,6 +408,80 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
       .set(asBia())
       .send({ area: 'infra', label: 'Outra', color: '#ff9500' })
       .expect(403);
+  });
+
+  // feliz
+  it('shows on a Sistema task the git of its system, with the branches of the task marked', async () => {
+    const [project] = await started.db
+      .insert(softwareProjects)
+      .values({
+        name: 'Paralegal',
+        repositoryUrl: 'https://github.com/grupo-azuos/paralegal',
+        createdBy: 'ti@empresa.com.br',
+      })
+      .returning();
+    const [ticket] = await started.db
+      .insert(tickets)
+      .values({
+        requesterName: 'Pessoa de Teste',
+        area: 'sistema',
+        department: 'Comercial',
+        problemType: 'bug',
+        description: 'A tela de vendas não abre.',
+        projectId: project!.id,
+        githubIssueNumber: 85,
+      })
+      .returning();
+    await app.get(TasksService).syncTicket(ticket!);
+    const [task] = await started.db.select().from(tasks).where(eq(tasks.ticketId, ticket!.id));
+    await started.db.insert(softwareCommits).values({
+      projectId: project!.id,
+      sha: 'a1',
+      parents: [],
+      message: '[feat](web): Tela de vendas',
+      authorName: 'Pessoa de Teste',
+      committedAt: new Date('2026-11-20T10:00:00Z'),
+    });
+    await started.db.insert(softwareBranches).values([
+      { projectId: project!.id, name: 'feature/85-tela-de-vendas', headSha: 'a1' },
+      { projectId: project!.id, name: 'feature/outra-coisa', headSha: 'a1' },
+    ]);
+
+    const git = await request(app.getHttpServer())
+      .get(`/api/v1/tasks/${task!.id}/git`)
+      .set(asOlga())
+      .expect(200);
+
+    expect(git.body.project).toMatchObject({ id: project!.id, name: 'Paralegal' });
+    expect(git.body.commits).toHaveLength(1);
+    expect(git.body.branches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'feature/85-tela-de-vendas', isOfTask: true }),
+        expect.objectContaining({ name: 'feature/outra-coisa', isOfTask: false }),
+      ]),
+    );
+  });
+
+  // triste
+  it('a task without a ticket of a system has no git, and an unknown task is 404', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api/v1/tasks')
+      .set(asAna())
+      .send({
+        area: 'infra',
+        title: 'Arrumar o rack',
+        startDate: '2026-11-23',
+        dueDate: '2026-11-30',
+        steps: ['Arrumar'],
+      })
+      .expect(201);
+
+    const git = await request(app.getHttpServer())
+      .get(`/api/v1/tasks/${created.body.id}/git`)
+      .set(asAna())
+      .expect(200);
+    expect(git.body).toEqual({ project: null, commits: [], branches: [] });
+    await request(app.getHttpServer()).get('/api/v1/tasks/999999/git').set(asOlga()).expect(404);
   });
 
   // feliz

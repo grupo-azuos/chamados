@@ -17,6 +17,7 @@ import {
 } from '@template/shared/schemas/task-stage.schema';
 import { type RoleContext } from '@template/shared/domain/role-context.util';
 
+import { type TaskGit } from '@template/shared/schemas/task-git.schema';
 import { apiRequest } from './http-client';
 
 /**
@@ -48,6 +49,9 @@ export const tasksApi = {
   findById: (id: number) => apiRequest<Task>(`/tasks/${id}`),
 
   history: (id: number) => apiRequest<TaskHistoryEntry[]>(`/tasks/${id}/history`),
+
+  /** O git do sistema do chamado da tarefa, com as branches dela marcadas. */
+  git: (id: number) => apiRequest<TaskGit>(`/tasks/${id}/git`),
 
   create: (body: CreateTaskInput) => apiRequest<Task>('/tasks', { method: 'POST', body }),
 

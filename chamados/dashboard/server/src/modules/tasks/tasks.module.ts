@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 
 import { AuthModule } from '../../lib/auth/auth.module';
+import { SoftwareProjectsModule } from '../software-projects/software-projects.module';
 import { TaskStagesController } from './controller/task-stages.controller';
 import { TasksController } from './controller/tasks.controller';
 import { TaskStagesRepository } from './repository/task-stages.repository';
 import { TasksRepository } from './repository/tasks.repository';
 import { MaintenanceTaskSyncService } from './service/maintenance-task-sync.service';
+import { TaskGitService } from './service/task-git.service';
 import { TaskStagesService } from './service/task-stages.service';
 import { TasksService } from './service/tasks.service';
 
@@ -15,11 +17,12 @@ import { TasksService } from './service/tasks.service';
  * ciclo entre os módulos.
  */
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, SoftwareProjectsModule],
   controllers: [TasksController, TaskStagesController],
   providers: [
     TasksRepository,
     TasksService,
+    TaskGitService,
     MaintenanceTaskSyncService,
     TaskStagesRepository,
     TaskStagesService,

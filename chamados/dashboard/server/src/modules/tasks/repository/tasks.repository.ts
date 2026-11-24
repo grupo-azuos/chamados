@@ -21,6 +21,7 @@ import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database, type DatabaseExecutor } from '../../../lib/db/db.type';
 import { computers } from '../../../lib/db/schema/computers.schema';
+import { softwareProjects } from '../../../lib/db/schema/software-projects.schema';
 import { history, type HistoryRow } from '../../../lib/db/schema/history.schema';
 import { inventoryItems } from '../../../lib/db/schema/inventory-items.schema';
 import { maintenanceSchedules } from '../../../lib/db/schema/maintenance-schedules.schema';
@@ -150,6 +151,24 @@ export class TasksRepository {
         .orderBy(desc(history.occurredAt), desc(history.id))
         .limit(HISTORY_LIMIT),
       'ler a linha do tempo da tarefa',
+    );
+  }
+
+  /** O sistema do chamado da tarefa (e a issue do chamado), para o git dela. */
+  async projectOfTicket(ticketId: number) {
+    return runMaybe(
+      this.db
+        .select({
+          id: softwareProjects.id,
+          name: softwareProjects.name,
+          repositoryUrl: softwareProjects.repositoryUrl,
+          issueNumber: tickets.githubIssueNumber,
+        })
+        .from(tickets)
+        .innerJoin(softwareProjects, eq(softwareProjects.id, tickets.projectId))
+        .where(eq(tickets.id, ticketId))
+        .limit(1),
+      'ler o sistema do chamado da tarefa',
     );
   }
 
