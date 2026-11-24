@@ -1,12 +1,10 @@
 import { type Part } from '@template/shared/schemas/part.schema';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type FormFieldState } from '$lib/types/form-field.type';
-import MovementFormDialog, {
-  type MovementFormField,
-} from './azuos-movement-form-dialog.svelte';
+import MovementFormDialog, { type MovementFormField } from './azuos-movement-form-dialog.svelte';
 
 function part(over: Partial<Part> = {}): Part {
   return {
@@ -40,6 +38,16 @@ function fields(
 }
 
 const machines = [{ value: '3', label: 'Contábil — mesa do fechamento (CONTABIL-03)' }];
+const machinePicks = [
+  {
+    id: '3',
+    title: 'Contábil — mesa do fechamento',
+    subtitle: 'CONTABIL-03',
+    detail: 'Sem responsável',
+    departmentKey: null,
+    isOnline: false,
+  },
+];
 
 const actions = {
   onChange: vi.fn(),
@@ -87,7 +95,7 @@ describe('AzuosMovementFormDialog', () => {
       },
     });
 
-    expect(screen.getByLabelText('Para qual máquina')).toBeInTheDocument();
+    expect(screen.getByText('Para qual máquina')).toBeInTheDocument();
 
     await rerender({
       data: { part: part(), type: 'in', fields: fields(), machines },
@@ -95,7 +103,7 @@ describe('AzuosMovementFormDialog', () => {
       actions,
     });
 
-    expect(screen.getByLabelText('De qual máquina')).toBeInTheDocument();
+    expect(screen.getByText('De qual máquina')).toBeInTheDocument();
   });
 
   it('sends the form when it is submitted', async () => {
@@ -161,21 +169,6 @@ describe('AzuosMovementFormDialog', () => {
     expect(screen.getByText('Carregando as máquinas do inventário…')).toBeInTheDocument();
   });
 });
-/** Escolhe uma opção num seletor do projeto: pastilhas quando há poucas opções, lista com busca quando há muitas. */
-async function choose(label: string, option: string) {
-  const group = screen.queryByRole('group', { name: label });
-  if (group) {
-    await userEvent.click(within(group).getByRole('button', { name: option }));
-    return;
-  }
-  await userEvent.click(screen.getByRole('button', { name: label }));
-  const popup = await waitFor(() => {
-    const open = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1);
-    expect(open).toBeTruthy();
-    return open as HTMLElement;
-  });
-  await fireEvent.click(within(popup).getByText(option, { exact: true }));
-}
 
 describe('AzuosMovementFormDialog — every field reports to the model', () => {
   // feliz
@@ -183,7 +176,7 @@ describe('AzuosMovementFormDialog — every field reports to the model', () => {
     vi.mocked(actions.onChange).mockClear();
     render(MovementFormDialog, {
       props: {
-        data: { part: part(), type: 'out', fields: fields(), machines },
+        data: { part: part(), type: 'out', fields: fields(), machines, machinePicks },
         state: { isOpen: true },
         actions,
       },
@@ -197,13 +190,18 @@ describe('AzuosMovementFormDialog — every field reports to the model', () => {
     await userEvent.tab();
     expect(actions.onChange).toHaveBeenCalledWith('note', 'x');
     expect(actions.onBlur).toHaveBeenCalledWith('note');
-    const handledBy = screen.getAllByRole('textbox').find((box) => box.getAttribute('name') === 'handledBy')!;
+    const handledBy = screen
+      .getAllByRole('textbox')
+      .find((box) => box.getAttribute('name') === 'handledBy')!;
     await userEvent.type(handledBy, 'C');
     await userEvent.tab();
     expect(actions.onChange).toHaveBeenCalledWith('handledBy', expect.any(String));
     expect(actions.onBlur).toHaveBeenCalledWith('handledBy');
 
-    await choose('Para qual máquina', 'Contábil — mesa do fechamento (CONTABIL-03)');
+    /* A máquina se escolhe na busca: o botão abre o diálogo, o card escolhe. */
+    await userEvent.click(screen.getByRole('button', { name: '(Nenhuma máquina)' }));
+    expect(screen.getByText('Para qual máquina vai')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /CONTABIL-03/ }));
     expect(actions.onChange).toHaveBeenCalledWith('computerId', '3');
   });
 
@@ -211,7 +209,11 @@ describe('AzuosMovementFormDialog — every field reports to the model', () => {
   it('closes with Escape', async () => {
     vi.mocked(actions.onClose).mockClear();
     render(MovementFormDialog, {
-      props: { data: { part: part(), type: 'in', fields: fields(), machines }, state: { isOpen: true }, actions },
+      props: {
+        data: { part: part(), type: 'in', fields: fields(), machines },
+        state: { isOpen: true },
+        actions,
+      },
     });
     await userEvent.keyboard('{Escape}');
     expect(actions.onClose).toHaveBeenCalled();

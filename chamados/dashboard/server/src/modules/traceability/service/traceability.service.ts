@@ -107,7 +107,9 @@ export class TraceabilityService {
   private async refreshNames(): Promise<void> {
     await Promise.allSettled([
       this.departments?.officialOptions(),
-      this.directory?.listUsers().then((users) => rememberPeople(users)),
+      /* TODO o escritório: o responsável pela máquina pode não ter acesso ao Chamados, e com a lista
+         só de quem tem, ele aparecia no mapa como "Fora do diretório". */
+      this.directory?.listAllUsers().then((users) => rememberPeople(users)),
     ]);
   }
 }

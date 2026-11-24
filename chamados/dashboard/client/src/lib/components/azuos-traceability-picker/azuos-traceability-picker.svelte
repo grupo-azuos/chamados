@@ -26,6 +26,11 @@
       /** Na pessoa: só quem responde por PC (o padrão), ou todo o escritório. */
       personScope?: 'responsibles' | 'all';
     };
+    /**
+     * Para usar a busca fora da Rastreabilidade (a movimentação de peça): o título, a explicação e
+     * a opção vazia ("(Nenhuma máquina)"), que escolhe `''`.
+     */
+    ui?: { title?: string; description?: string; noneLabel?: string };
     state?: { isOpen?: boolean; isLoading?: boolean };
     actions: {
       onSearch: (value: string) => void;
@@ -73,7 +78,7 @@
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { cn } from '$lib/utils/cn';
 
-  let { data, state: pickerState, actions }: AzuosTraceabilityPickerProps = $props();
+  let { data, ui, state: pickerState, actions }: AzuosTraceabilityPickerProps = $props();
 
   const text = $derived(TEXT[data.focus]);
 </script>
@@ -84,8 +89,8 @@
 >
   <DialogContent class="sm:max-w-6xl">
     <DialogHeader>
-      <DialogTitle>{text.title}</DialogTitle>
-      <DialogDescription>O mapa parte daqui: toque no card para ver o que passou por ele.</DialogDescription>
+      <DialogTitle>{ui?.title ?? text.title}</DialogTitle>
+      <DialogDescription>{ui?.description ?? 'O mapa parte daqui: toque no card para ver o que passou por ele.'}</DialogDescription>
     </DialogHeader>
 
     <div class={cn('grid grid-cols-1 gap-3', data.focus !== 'department' && 'md:grid-cols-[1fr_auto]')}>
@@ -121,10 +126,26 @@
 
     {#if pickerState?.isLoading}
       <p class="text-muted-foreground py-10 text-center text-sm">Carregando…</p>
-    {:else if data.picks.length === 0}
+    {:else if data.picks.length === 0 && !ui?.noneLabel}
       <EmptyState data={{ title: text.empty, description: 'Confira a busca.' }} ui={{ icon: SearchX }} />
     {:else}
       <ul class="-mx-1 grid max-h-[55vh] grid-cols-1 gap-3 overflow-y-auto p-1 sm:grid-cols-2 lg:grid-cols-3" aria-label={text.title}>
+        {#if ui?.noneLabel}
+          <li>
+            <button
+              type="button"
+              aria-pressed={data.selectedId === ''}
+              onclick={() => actions.onPick('')}
+              class={cn(
+                'rounded-box relative isolate flex w-full cursor-pointer items-center gap-3 p-4 text-left transition-colors',
+                'before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-box hover:before:bg-hover-veil',
+                data.selectedId === '' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
+              )}
+            >
+              <span class="text-sm font-semibold">{ui.noneLabel}</span>
+            </button>
+          </li>
+        {/if}
         {#each data.picks as pick (pick.id)}
           {@const isSelected = pick.id === data.selectedId}
           <li>

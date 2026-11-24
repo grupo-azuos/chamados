@@ -36,6 +36,14 @@
     };
   }
 
+  const machinePicks = [
+    { id: '3', title: 'Contábil — mesa do fechamento', subtitle: 'CONTABIL-03', detail: 'Ana Souza · Contábil', departmentKey: '1', isOnline: true },
+    { id: '4', title: 'Recepção', subtitle: 'RECEPCAO-01', detail: 'Sem responsável · Recepção', departmentKey: '2', isOnline: false },
+  ];
+  const departments = [
+    { value: '1', label: 'Contábil' },
+    { value: '2', label: 'Recepção' },
+  ];
   const machines = [
     { value: '1', label: 'Recepção — balcão (RECEPCAO-01)' },
     { value: '3', label: 'Contábil — mesa do fechamento (CONTABIL-03)' },
@@ -58,7 +66,7 @@
 <Story
   name="Default"
   args={{
-    data: { part: part(), type: 'out', fields: fields({ computerId: field('3') }), machines },
+    data: { part: part(), type: 'out', fields: fields({ computerId: field('3') }), machines, machinePicks, departments },
     state: { isOpen: true },
     actions,
   }}
@@ -68,7 +76,7 @@
 <Story
   name="Entry"
   args={{
-    data: { part: part(), type: 'in', fields: fields({ quantity: field('5') }), machines },
+    data: { part: part(), type: 'in', fields: fields({ quantity: field('5') }), machines, machinePicks, departments },
     state: { isOpen: true },
     actions,
   }}
@@ -82,6 +90,8 @@
       type: 'out',
       fields: fields({ quantity: field('0', 'A quantidade precisa ser pelo menos 1') }),
       machines,
+      machinePicks,
+      departments,
     },
     state: { isOpen: true },
     actions,
@@ -92,7 +102,7 @@
 <Story
   name="Not enough stock"
   args={{
-    data: { part: part(), type: 'out', fields: fields({ quantity: field('5') }), machines },
+    data: { part: part(), type: 'out', fields: fields({ quantity: field('5') }), machines, machinePicks, departments },
     state: {
       isOpen: true,
       error: 'Só há 3 de SSD 240 GB Kingston no depósito, e a saída é de 5. Confira a prateleira.',
@@ -122,6 +132,8 @@
       type: 'out',
       fields: fields(),
       machines,
+      machinePicks,
+      departments,
     },
     state: { isOpen: true },
     actions,

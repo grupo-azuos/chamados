@@ -23,6 +23,7 @@
   import { NOTE_MAX_LENGTH, type Part } from '@template/shared/schemas/part.schema';
 
   import { type FormFieldState } from '$lib/types/form-field.type';
+  import { filterPicks, type TraceabilityPick } from '$lib/utils/traceability-pick.util';
 
   export type MovementFormField = 'quantity' | 'computerId' | 'handledBy' | 'note';
 
@@ -34,6 +35,10 @@
       type: MovementType;
       fields: Record<MovementFormField, FormFieldState>;
       machines: MachineOption[];
+      /** As máquinas como a busca as mostra; sem elas, a busca fica vazia. */
+      machinePicks?: TraceabilityPick[];
+      /** Os departamentos do filtro da busca. */
+      departments?: { value: string; label: string }[];
     };
     state: {
       isOpen: boolean;
@@ -64,7 +69,8 @@
   } from '$lib/components/ui/dialog';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
-  import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import Monitor from '@lucide/svelte/icons/monitor';
+  import TraceabilityPicker from '$lib/components/azuos-traceability-picker/azuos-traceability-picker.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
@@ -76,7 +82,11 @@
 
   const fields = $derived(data.fields);
   const isOut = $derived(data.type === 'out');
-  const machineOptions = $derived([NO_MACHINE_OPTION, ...data.machines]);
+  const machineLabel = $derived(
+    data.machines.find((machine) => machine.value === data.fields.computerId.value)?.label ?? NO_MACHINE_OPTION.label,
+  );
+  /* A busca de máquina é estado de TELA: abre, filtra e fecha, sem dado novo. */
+  let picker = $state({ isOpen: false, search: '', department: '' });
 
   function handleSubmit(event: SubmitEvent): void {
     event.preventDefault();
@@ -134,11 +144,13 @@
           <span class="text-ink-700 text-sm font-medium">
             {isOut ? 'Para qual máquina' : 'De qual máquina'}
           </span>
-          <OptionPicker
-            data={{ value: fields.computerId.value, options: machineOptions }}
-            ui={{ ariaLabel: isOut ? 'Para qual máquina' : 'De qual máquina', fullWidth: true }}
+          <!-- A máquina se escolhe na BUSCA (o diálogo com o "Buscar" e o departamento): numa lista
+               corrida de dezenas de máquinas, achar a certa era rolar até cansar. -->
+          <ActionButton
+            data={{ label: machineLabel }}
+            ui={{ variant: 'secondary', icon: Monitor, className: 'w-full justify-start' }}
             state={{ isDisabled: dialogState.isSubmitting || dialogState.isMachinesLoading }}
-            actions={{ onChange: (value: string) => actions.onChange('computerId', value) }}
+            actions={{ onClick: () => (picker = { isOpen: true, search: '', department: '' }) }}
           />
           <span class="text-ink-500 text-xs">
             {#if dialogState.isMachinesLoading}
@@ -204,3 +216,31 @@
     </form>
   </DialogContent>
 </Dialog>
+
+{#if picker.isOpen}
+  <TraceabilityPicker
+    data={{
+      focus: 'computer',
+      picks: filterPicks(data.machinePicks ?? [], picker.search, picker.department),
+      selectedId: data.fields.computerId.value,
+      search: picker.search,
+      department: picker.department,
+      departments: data.departments ?? [],
+    }}
+    ui={{
+      title: isOut ? 'Para qual máquina vai' : 'De qual máquina vem',
+      description: 'Ligando à máquina, a peça aparece na ficha dela. Toque no card para escolher.',
+      noneLabel: NO_MACHINE_OPTION.label,
+    }}
+    state={{ isOpen: true, isLoading: dialogState.isMachinesLoading }}
+    actions={{
+      onSearch: (search) => (picker = { ...picker, search }),
+      onDepartmentChange: (department) => (picker = { ...picker, department }),
+      onPick: (id) => {
+        actions.onChange('computerId', id);
+        picker = { isOpen: false, search: '', department: '' };
+      },
+      onClose: () => (picker = { ...picker, isOpen: false }),
+    }}
+  />
+{/if}

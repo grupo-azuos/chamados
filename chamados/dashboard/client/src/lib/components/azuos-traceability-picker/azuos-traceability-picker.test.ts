@@ -88,4 +88,33 @@ describe('AzuosTraceabilityPicker', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Todo o escritório' }));
     expect(actions.onPersonScopeChange).toHaveBeenCalledWith('all');
   });
+
+  // feliz
+  it('used outside the map: its own title and the empty option that picks no machine', async () => {
+    const actions = {
+      onSearch: vi.fn(),
+      onDepartmentChange: vi.fn(),
+      onPick: vi.fn(),
+      onClose: vi.fn(),
+    };
+    render(Picker, {
+      props: {
+        data: {
+          focus: 'computer',
+          picks: [],
+          selectedId: '3',
+          search: '',
+          department: '',
+          departments: [],
+        },
+        ui: { title: 'De qual máquina vem', noneLabel: '(Nenhuma máquina)' },
+        state: { isOpen: true },
+        actions,
+      },
+    });
+
+    expect(screen.getByText('De qual máquina vem')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '(Nenhuma máquina)' }));
+    expect(actions.onPick).toHaveBeenCalledWith('');
+  });
 });
