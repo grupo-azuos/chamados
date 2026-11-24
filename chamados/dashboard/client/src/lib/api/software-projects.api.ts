@@ -11,10 +11,18 @@ import { type ProjectMap } from '@template/shared/schemas/project-map.schema';
 import { apiRequest } from './http-client';
 
 export const softwareProjectsApi = {
-  /** O mapa dos projetos (os escolhidos, ou todos os em uso). */
-  map: (ids: readonly string[] = []) =>
+  /** O mapa dos projetos (os escolhidos, ou todos os em uso), no período e da pessoa. */
+  map: (
+    ids: readonly string[] = [],
+    filter: { from?: string | null; to?: string | null; personId?: string } = {},
+  ) =>
     apiRequest<ProjectMap>('/software-projects/map', {
-      query: { ids: ids.length ? ids.join(',') : undefined },
+      query: {
+        ids: ids.length ? ids.join(',') : undefined,
+        from: filter.from ?? undefined,
+        to: filter.to ?? undefined,
+        personId: filter.personId || undefined,
+      },
     }),
 
   list: (query: Partial<SoftwareProjectListQuery> = {}) =>

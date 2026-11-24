@@ -1,6 +1,18 @@
 import { type ProjectMapEntry } from '@template/shared/schemas/project-map.schema';
 
-/** Um sistema com uma issue aberta (com chamado e tarefa), um PR que cita a issue e um merge. */
+/**
+ * Um sistema com uma issue aberta (com chamado e tarefa), um PR que cita a issue, um merge e o git:
+ * a develop que juntou uma feature, e uma branch nova (pulsa).
+ */
+const commit = (sha: string, parents: string[], message: string, day: string) => ({
+  sha,
+  parents,
+  message,
+  authorLogin: 'vini',
+  authorName: 'Vinícius Gabriel',
+  committedAt: `${day}T10:00:00.000Z`,
+});
+
 export function projectMapEntryFixture(id = 1, name = 'Paralegal'): ProjectMapEntry {
   const event = (
     eventId: number,
@@ -37,5 +49,24 @@ export function projectMapEntryFixture(id = 1, name = 'Paralegal'): ProjectMapEn
       },
     ],
     tasks: [{ id: id * 1000, title: 'A tela não abre', status: 'open', ticketId: id * 100 }],
+    commits: [
+      commit('m2c4e6a8', ['b1a2c3d4', 'f9e8d7c6'], '[merge](web): Tela', '2026-11-21'),
+      commit('f9e8d7c6', ['b1a2c3d4'], '[feat](web): Tela', '2026-11-20'),
+      commit('b1a2c3d4', [], '[feat](web): Início', '2026-11-18'),
+    ],
+    branches: [
+      {
+        name: 'develop',
+        headSha: 'm2c4e6a8',
+        firstSeenAt: '2026-01-01T00:00:00.000Z',
+        lastPushAt: null,
+      },
+      {
+        name: 'feature/mapa',
+        headSha: 'f9e8d7c6',
+        firstSeenAt: '2026-11-22T00:00:00.000Z',
+        lastPushAt: null,
+      },
+    ],
   };
 }

@@ -6,6 +6,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { githubWebhookEvents } from '../src/lib/db/schema/github-webhook-events.schema';
+import { softwareBranches } from '../src/lib/db/schema/software-git.schema';
 import { softwareProjects } from '../src/lib/db/schema/software-projects.schema';
 import { softwareTimelineEvents } from '../src/lib/db/schema/software-timeline-events.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
@@ -70,6 +71,8 @@ describe.skipIf(!testDatabaseUrl)('GitHub webhook (e2e)', () => {
   beforeEach(async () => {
     await started.truncate(
       'github_webhook_events',
+      'software_branches',
+      'software_commits',
       'software_timeline_events',
       'ticket_histories',
       'tickets',
@@ -107,6 +110,38 @@ describe.skipIf(!testDatabaseUrl)('GitHub webhook (e2e)', () => {
   afterAll(async () => {
     await app.close();
     delete process.env.GITHUB_APP_WEBHOOK_SECRET;
+  });
+
+  // feliz
+  it('marks the new branch (it pulses on the map), its push and its deletion', async () => {
+    const repository = { full_name: 'grupo-azuos/paralegal' };
+    await send(
+      'create',
+      { ref_type: 'branch', ref: 'feature/mapa', repository },
+      'delivery-b1',
+    ).expect(202);
+    await send(
+      'push',
+      { ref: 'refs/heads/feature/mapa', after: 'c0ffee', repository },
+      'delivery-b2',
+    ).expect(202);
+
+    const [branch] = await started.db.select().from(softwareBranches);
+    expect(branch).toMatchObject({
+      projectId,
+      name: 'feature/mapa',
+      headSha: 'c0ffee',
+      deletedAt: null,
+    });
+    expect(branch?.lastPushAt).toBeInstanceOf(Date);
+
+    await send(
+      'delete',
+      { ref_type: 'branch', ref: 'feature/mapa', repository },
+      'delivery-b3',
+    ).expect(202);
+    const [deleted] = await started.db.select().from(softwareBranches);
+    expect(deleted?.deletedAt).toBeInstanceOf(Date);
   });
 
   // feliz

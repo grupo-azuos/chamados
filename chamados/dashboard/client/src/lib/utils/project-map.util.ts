@@ -12,16 +12,22 @@ import {
 } from '@template/shared/schemas/project-map.schema';
 import { type Edge, type Node } from '@xyflow/svelte';
 
+import { buildGitGraph, type GitGraphFilter, type GitGraphRow } from '$lib/utils/git-graph.util';
+
 /**
  * O MAPA DOS PROJETOS — cada sistema numa ILHA gigante, como o mapa das tarefas: o projeto, os
  * grupos (issues, pull requests, merges e versões, chamados sem issue), cada item do grupo, e à
  * direita o que ele puxa: a issue leva ao chamado dela (1:1) e o chamado à tarefa. O PR que cita
  * uma issue no título ("#12") liga nela. O que está EM ABERTO (issue, PR, chamado, tarefa) tem a
  * linha tracejada e animada.
+ *
+ * À esquerda de tudo, o GIT GRAPH do sistema (o do lazygit): cada commit uma linha, a develop numa
+ * lane e cada branch noutra, na cor do git-flow — e a branch nova pulsando.
  */
-export type ProjectMapKind = 'issues' | 'prs' | 'merges' | 'tickets' | 'tasks';
+export type ProjectMapKind = 'git' | 'issues' | 'prs' | 'merges' | 'tickets' | 'tasks';
 
 export const PROJECT_MAP_KINDS: readonly ProjectMapKind[] = [
+  'git',
   'issues',
   'prs',
   'merges',
@@ -30,6 +36,7 @@ export const PROJECT_MAP_KINDS: readonly ProjectMapKind[] = [
 ];
 
 export const PROJECT_MAP_KIND_TOGGLES: { kind: ProjectMapKind; label: string }[] = [
+  { kind: 'git', label: 'Git graph' },
   { kind: 'issues', label: 'Issues' },
   { kind: 'prs', label: 'Pull requests' },
   { kind: 'merges', label: 'Merges e versões' },
@@ -52,12 +59,15 @@ export type ProjectMapItemData = {
   isPending: boolean;
 };
 export type ProjectMapIslandData = { title: string };
+/** O git graph do sistema: as linhas que cabem e quantas o recorte tinha. */
+export type ProjectMapGitData = { rows: GitGraphRow[]; total: number };
 
 export type ProjectMapNode =
   | Node<ProjectMapIslandData, 'island'>
   | Node<ProjectMapProjectData, 'project'>
   | Node<ProjectMapHubData, 'hub'>
-  | Node<ProjectMapItemData, 'item'>;
+  | Node<ProjectMapItemData, 'item'>
+  | Node<ProjectMapGitData, 'git'>;
 
 export type ProjectMapGraph = { nodes: ProjectMapNode[]; edges: Edge[] };
 
@@ -72,12 +82,18 @@ const SIZE = {
   hub: { width: 200, height: 52 },
   item: { width: 280, height: 60 },
 };
+/* O git graph: a largura da coluna, a altura de cada commit (a do lazygit, uma linha de texto) e
+   quantos commits cabem — o resto fica no rodapé ("60 de 200"), como no lazygit. */
+export const GIT_ROW_HEIGHT = 24;
+export const GIT_VISIBLE_ROWS = 60;
+const GIT = { width: 600, header: 44, footer: 32 };
+const LEFT = PAD + GIT.width + COLUMN_GAP;
 const COLUMNS = {
-  project: PAD,
-  hub: PAD + SIZE.project.width + COLUMN_GAP,
-  item: PAD + SIZE.project.width + SIZE.hub.width + COLUMN_GAP * 2,
-  ticket: PAD + SIZE.project.width + SIZE.hub.width + SIZE.item.width + COLUMN_GAP * 3,
-  task: PAD + SIZE.project.width + SIZE.hub.width + SIZE.item.width * 2 + COLUMN_GAP * 4,
+  project: LEFT,
+  hub: LEFT + SIZE.project.width + COLUMN_GAP,
+  item: LEFT + SIZE.project.width + SIZE.hub.width + COLUMN_GAP * 2,
+  ticket: LEFT + SIZE.project.width + SIZE.hub.width + SIZE.item.width + COLUMN_GAP * 3,
+  task: LEFT + SIZE.project.width + SIZE.hub.width + SIZE.item.width * 2 + COLUMN_GAP * 4,
 };
 const ISLAND_WIDTH = COLUMNS.task + SIZE.item.width + PAD;
 const ISLAND_COLUMNS = 2;
@@ -193,16 +209,36 @@ function islandHeight(groups: readonly Group[]): number {
   return Math.max(rows * ROW - GAP, SIZE.project.height) + PAD * 2 + (groups.length - 1) * GAP;
 }
 
+/** O git graph do sistema no recorte — ou nada, com o "Git graph" desligado. */
+function gitOf(
+  entry: ProjectMapEntry,
+  kinds: readonly ProjectMapKind[],
+  filter: GitGraphFilter,
+  now: Date,
+): ProjectMapGitData | null {
+  if (!kinds.includes('git')) return null;
+  const rows = buildGitGraph(entry.commits, entry.branches, filter, now);
+
+  return { rows: rows.slice(0, GIT_VISIBLE_ROWS), total: rows.length };
+}
+
+function gitHeight(git: ProjectMapGitData): number {
+  return GIT.header + Math.max(git.rows.length, 1) * GIT_ROW_HEIGHT + GIT.footer;
+}
+
 function islandOf(
   entry: ProjectMapEntry,
   kinds: readonly ProjectMapKind[],
+  filter: GitGraphFilter,
+  now: Date,
 ): ProjectMapGraph & { height: number } {
   const id = entry.project.id;
   const frameId = `island:${id}`;
   const projectId = `${id}/project`;
   const child = { parentId: frameId, extent: 'parent' as const, draggable: false };
   const groups = groupsOf(entry, kinds);
-  const height = islandHeight(groups);
+  const git = gitOf(entry, kinds, filter, now);
+  const height = Math.max(islandHeight(groups), git ? gitHeight(git) + PAD * 2 : 0);
   const nodes: ProjectMapNode[] = [
     {
       id: frameId,
@@ -227,6 +263,19 @@ function islandOf(
     },
   ];
   const edges: Edge[] = [];
+  if (git) {
+    const gitNode = `${id}/git`;
+    nodes.push({
+      ...child,
+      id: gitNode,
+      type: 'git',
+      position: { x: PAD, y: PAD },
+      width: GIT.width,
+      height: gitHeight(git),
+      data: git,
+    });
+    edges.push(edgeOf(gitNode, projectId, false));
+  }
   const item = (
     nodeId: string,
     x: number,
@@ -333,11 +382,13 @@ export function buildProjectMap(
   entries: readonly ProjectMapEntry[],
   kinds: readonly ProjectMapKind[],
   positions: ProjectMapPositions = {},
+  filter: GitGraphFilter = {},
+  now: Date = new Date(),
 ): ProjectMapGraph {
   const heights = Array.from({ length: ISLAND_COLUMNS }, () => 0);
   const graph: ProjectMapGraph = { nodes: [], edges: [] };
   for (const entry of entries) {
-    const island = islandOf(entry, kinds);
+    const island = islandOf(entry, kinds, filter, now);
     const column = heights.indexOf(Math.min(...heights));
     const frame = graph.nodes.length;
     graph.nodes.push(...island.nodes);
