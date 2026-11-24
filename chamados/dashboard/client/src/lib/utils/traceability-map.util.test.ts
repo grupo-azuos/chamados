@@ -110,4 +110,14 @@ describe('traceability map', () => {
     expect(openRecordOf(here)).toEqual({ kind: 'task', id: 5 });
     expect(withoutOpenRecord(here).toString()).toBe('focus=computer&id=1');
   });
+
+  // triste
+  it('a machine with nothing passed through it gets a narrow island, and side lines are curves', () => {
+    const map = buildTraceabilityMap(GRAPH);
+    const islands = map.nodes.filter((item) => item.type === 'island');
+
+    expect(islands[1]!.width).toBeLessThan(islands[0]!.width!);
+    expect(map.edges.find((item) => item.id === 'person:ana->computer:1')?.type).toBe('default');
+    expect(map.edges.find((item) => item.id === 'computer:1->ticket:9')?.type).toBe('smoothstep');
+  });
 });

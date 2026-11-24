@@ -34,7 +34,12 @@ const COLUMN_GAP = 64;
 const ITEM = { width: 260, height: 60 };
 const ROW = ITEM.height + GAP;
 const ISLAND_LEFT = ITEM.width + COLUMN_GAP * 2;
-const ISLAND_WIDTH = PAD + ITEM.width + COLUMN_GAP + ITEM.width + PAD;
+/* A ilha tem a largura do que tem dentro: só a máquina, ou a máquina e a coluna do que passou por
+   ela. Com a largura fixa, a máquina sem chamado ficava num fundo esticado e vazio. */
+const ISLAND_WIDTH = {
+  alone: PAD + ITEM.width + PAD,
+  withWork: PAD + ITEM.width + COLUMN_GAP + ITEM.width + PAD,
+};
 const ISLAND_GAP = 48;
 
 /** A ordem da coluna da esquerda e da direita das ilhas. */
@@ -95,6 +100,9 @@ export function traceabilityHref(
   return `?${next}`;
 }
 
+const isSideKind = (nodeId: string) =>
+  nodeId.startsWith('department:') || nodeId.startsWith('person:');
+
 function edgeOf(edge: TraceabilityEdge): Edge {
   const style = edge.isPending
     ? 'stroke: var(--primary); stroke-width: 2; stroke-dasharray: 6 4;'
@@ -106,7 +114,10 @@ function edgeOf(edge: TraceabilityEdge): Edge {
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    type: 'smoothstep',
+    /* Do departamento e da pessoa (a coluna da esquerda) a linha é CURVA: as retas em degrau de
+       várias caixas se juntavam no mesmo trecho antes da máquina, e os chips ficavam uns em cima
+       dos outros. Dentro da ilha, o degrau continua (é uma máquina para vários itens). */
+    type: isSideKind(edge.source) ? 'default' : 'smoothstep',
     label: edge.label ?? undefined,
     labelStyle: EDGE_LABEL_STYLE,
     animated: edge.isPending,
@@ -166,7 +177,7 @@ export function buildTraceabilityMap(
       id: islandId,
       type: 'island',
       position: { x: ISLAND_LEFT, y: top },
-      width: ISLAND_WIDTH,
+      width: work.length ? ISLAND_WIDTH.withWork : ISLAND_WIDTH.alone,
       height,
       data: { title: computer.label },
       selectable: false,
