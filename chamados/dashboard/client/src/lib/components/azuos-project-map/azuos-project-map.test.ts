@@ -21,6 +21,7 @@ function setup(
   over: Partial<{
     entries: ReturnType<typeof projectMapEntryFixture>[];
     error: string | null;
+    isCentral: boolean;
   }> = {},
 ) {
   const actions = {
@@ -44,6 +45,7 @@ function setup(
         personLogin: null,
         onlyMerges: false,
       },
+      ui: { isCentral: over.isCentral ?? false },
       state: { error: over.error ?? null },
       actions,
     },
@@ -57,6 +59,7 @@ describe('AzuosProjectMap', () => {
     const actions = setup();
 
     expect(screen.getByRole('group', { name: 'Mostrar no mapa' })).toBeInTheDocument();
+    expect(screen.getByText('Todos os projetos')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Pull requests' }));
     expect(screen.getByRole('button', { name: 'Pull requests' })).toHaveAttribute(
       'aria-pressed',
@@ -80,5 +83,13 @@ describe('AzuosProjectMap', () => {
   it('shows the error of the map', () => {
     setup({ error: 'O mapa está fora do ar.' });
     expect(screen.getByText('O mapa está fora do ar.')).toBeInTheDocument();
+  });
+
+  // feliz
+  it('in the Central, has no project picker: it is the map of one system', () => {
+    setup({ isCentral: true });
+
+    expect(screen.queryByText('Todos os projetos')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Responsável' })).toBeInTheDocument();
   });
 });

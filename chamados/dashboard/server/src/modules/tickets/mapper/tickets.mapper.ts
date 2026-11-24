@@ -121,6 +121,8 @@ export function toPublicTicket(
     notifiable: people.notifiable,
     canReply: people.canReply,
     createdAt: ticket.createdAt,
+    projectId: ticket.projectId ?? null,
+    projectName: ticket.projectName ?? null,
   };
 }
 

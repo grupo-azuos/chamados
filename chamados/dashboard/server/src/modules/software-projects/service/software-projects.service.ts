@@ -167,6 +167,23 @@ export class SoftwareProjectsService {
   /** O mapa dos projetos: cada sistema com issues, PRs, merges, chamados e tarefas. */
   async map(user: RequestUser, query: ProjectMapQuery): Promise<ProjectMap> {
     assertCanRead(user.role, 'os sistemas');
+
+    return this.mapOf(query);
+  }
+
+  /**
+   * O MAPA DE UM SISTEMA NA CENTRAL — quem pede chamado vê o sistema inteiro (decisão de quem
+   * administra: ver o que já está em andamento desencoraja o chamado repetido). Basta estar
+   * identificado; o sistema arquivado (ou que não existe) é 404.
+   */
+  async supportMap(id: number, query: Omit<ProjectMapQuery, 'ids'>): Promise<ProjectMap> {
+    const map = await this.mapOf({ ...query, ids: [id] });
+    if (!map.entries.length) throw new NotFoundException('Sistema não encontrado.');
+
+    return map;
+  }
+
+  private async mapOf(query: ProjectMapQuery): Promise<ProjectMap> {
     const personLogin = query.personId
       ? ((await this.connections?.find(query.personId))?.login ?? null)
       : null;

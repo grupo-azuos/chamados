@@ -205,6 +205,9 @@ export const publicTicketSchema = ticketSchema
     description: true,
     screenshotUrl: true,
     createdAt: true,
+    /* O sistema do chamado de Sistema: a Central leva quem pediu ao mapa dele. */
+    projectId: true,
+    projectName: true,
   })
   .extend({
     /**

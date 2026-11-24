@@ -120,6 +120,7 @@
 </script>
 
 <script lang="ts">
+  import Network from '@lucide/svelte/icons/network';
   import Building2 from '@lucide/svelte/icons/building-2';
   import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
   import Clock from '@lucide/svelte/icons/clock';
@@ -384,6 +385,20 @@
           </p>
           <p class="text-foreground text-sm leading-relaxed whitespace-pre-line">{ticket.description}</p>
         </div>
+
+        {#if ticket.projectId}
+          <!-- Quem pede vê o sistema inteiro: o que já está em andamento evita o chamado repetido. -->
+          <a
+            href={`/support/systems/${ticket.projectId}`}
+            class="rounded-box bg-muted hover:bg-hover-veil focus-visible:ring-ring/50 flex items-center gap-3 p-4 focus-visible:ring-3 focus-visible:outline-none"
+          >
+            <Network class="text-primary size-5 shrink-0" aria-hidden="true" />
+            <span class="flex min-w-0 flex-col">
+              <span class="text-foreground text-sm font-semibold">Ver o mapa do sistema {ticket.projectName ?? ''}</span>
+              <span class="text-muted-foreground text-xs">O que está em andamento: commits, issues, chamados e tarefas.</span>
+            </span>
+          </a>
+        {/if}
 
         {#if ownFiles.length > 0 || ticket.screenshotUrl}
           <div class="flex flex-col gap-2">

@@ -281,6 +281,40 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       });
     });
 
+    it('shows the whole map of one system to whoever asks for tickets, in the Central', async () => {
+      const chamados = await registerProject({}).expect(201);
+      await started.db.insert(softwareTimelineEvents).values({
+        projectId: chamados.body.id,
+        type: 'issue',
+        externalId: '#12',
+        title: 'Tela não abre',
+        url: 'https://github.com/x/y/issues/12',
+        author: 'vini',
+        authorName: 'Vinícius',
+        status: 'open',
+        eventDate: new Date('2026-11-20T10:00:00Z'),
+        createdBy: 'ti@empresa.com.br',
+      });
+
+      const map = await api()
+        .get(`/api/v1/support/systems/${chamados.body.id}/map`)
+        .set(asAna())
+        .expect(200);
+
+      expect(map.body.entries).toHaveLength(1);
+      expect(map.body.entries[0].project).toMatchObject({ id: chamados.body.id, name: 'Chamados' });
+      expect(map.body.entries[0].events).toEqual(
+        expect.arrayContaining([expect.objectContaining({ externalId: '#12' })]),
+      );
+    });
+
+    // triste
+    it('answers 404 in the Central for a system that does not exist', async () => {
+      await api().get('/api/v1/support/systems/999999/map').set(asAna()).expect(404);
+      await api().get('/api/v1/support/systems/x/map').set(asAna()).expect(400);
+    });
+
+    // feliz
     it('lists with search and status, counting open tickets of each system', async () => {
       const chamados = await registerProject({}).expect(201);
       await registerProject({
