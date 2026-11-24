@@ -1,6 +1,7 @@
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
+import { type TaskGit } from '@template/shared/schemas/task-git.schema';
 import { type Task, type TaskHistoryEntry } from '@template/shared/schemas/task.schema';
-import { writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 
 import { readError } from '$lib/api/http-client';
 import { type TaskLinkKind } from '@template/shared/domain/task-flow.util';
@@ -27,6 +28,8 @@ export type TaskDetailModel = {
   data: {
     task: Task | null;
     history: TaskHistoryEntry[];
+    /** O git do sistema da tarefa (só a de Sistema com chamado); nulo nas outras e antes de chegar. */
+    git: TaskGit | null;
     /** A linha do tempo já em frase, com o nome de hoje de cada pessoa. */
     timeline: TaskTimelineEntry[];
     stepsDraft: StepDraft[] | null;
@@ -99,12 +102,22 @@ export function useTaskDetailModel(id: number): TaskDetailModel {
   let stepsDraft = $state<StepDraft[] | null>(null);
   let actionError = $state<string | null>(null);
 
-  const task = mirrorStore(
+  const taskQuery = createQuery(
+    writable({
+      queryKey: [...TASKS_QUERY_KEY, 'detail', id],
+      queryFn: () => tasksApi.findById(id),
+    }),
+  );
+  const task = mirrorStore(taskQuery);
+  /* O git só existe para a tarefa de Sistema que veio de um chamado: as outras não perguntam. */
+  const git = mirrorStore(
     createQuery(
-      writable({
-        queryKey: [...TASKS_QUERY_KEY, 'detail', id],
-        queryFn: () => tasksApi.findById(id),
-      }),
+      derived(taskQuery, (current) => ({
+        queryKey: [...TASKS_QUERY_KEY, 'git', id],
+        queryFn: () => tasksApi.git(id),
+        enabled: current.data?.area === 'sistema' && current.data.ticketId !== null,
+        staleTime: 60_000,
+      })),
     ),
   );
   const history = mirrorStore(
@@ -230,6 +243,9 @@ export function useTaskDetailModel(id: number): TaskDetailModel {
 
   return {
     data: {
+      get git() {
+        return git.current.data ?? null;
+      },
       get task() {
         return task.current.data ?? null;
       },

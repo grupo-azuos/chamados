@@ -12,7 +12,12 @@ import {
 } from '@template/shared/schemas/project-map.schema';
 import { type Edge, type Node } from '@xyflow/svelte';
 
-import { buildGitGraph, type GitGraphFilter, type GitGraphRow } from '$lib/utils/git-graph.util';
+import {
+  buildGitGraph,
+  GIT_ROW_HEIGHT,
+  type GitGraphFilter,
+  type GitGraphRow,
+} from '$lib/utils/git-graph.util';
 
 /**
  * O MAPA DOS PROJETOS — cada sistema numa ILHA gigante, como o mapa das tarefas: o projeto, os
@@ -84,7 +89,6 @@ const SIZE = {
 };
 /* O git graph: a largura da coluna, a altura de cada commit (a do lazygit, uma linha de texto) e
    quantos commits cabem — o resto fica no rodapé ("60 de 200"), como no lazygit. */
-export const GIT_ROW_HEIGHT = 24;
 export const GIT_VISIBLE_ROWS = 60;
 const GIT = { width: 600, header: 44, footer: 32 };
 const LEFT = PAD + GIT.width + COLUMN_GAP;

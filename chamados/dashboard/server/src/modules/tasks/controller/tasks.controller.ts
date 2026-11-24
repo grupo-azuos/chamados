@@ -32,11 +32,13 @@ import {
   SetTaskStatusDto,
   SetTaskStepDoneDto,
   TaskDto,
+  TaskGitDto,
   TaskHistoryEntryDto,
   TaskListQueryDto,
   TaskPageDto,
   UpdateTaskDto,
 } from '../dto/task.dto';
+import { TaskGitService } from '../service/task-git.service';
 import { TasksService } from '../service/tasks.service';
 
 /**
@@ -49,7 +51,10 @@ import { TasksService } from '../service/tasks.service';
 @AnyModule()
 @Controller('tasks')
 export class TasksController {
-  constructor(private readonly service: TasksService) {}
+  constructor(
+    private readonly service: TasksService,
+    private readonly taskGit: TaskGitService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -74,6 +79,21 @@ export class TasksController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<TaskDto> {
     return this.service.get(user, id);
+  }
+
+  @Get(':id/git')
+  @ApiOperation({
+    summary: 'O git da tarefa',
+    description:
+      'O sistema do chamado da tarefa, o git graph dele (commits e branches) e as branches desta tarefa marcadas (`isOfTask`). Sem chamado com sistema, `project` vem nulo.',
+  })
+  @ApiOkResponse({ type: TaskGitDto })
+  @ApiNotFoundResponse({ description: 'Tarefa não encontrada.' })
+  async git(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<TaskGitDto> {
+    return this.taskGit.of(user, id);
   }
 
   @Get(':id/history')
