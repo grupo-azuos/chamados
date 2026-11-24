@@ -12,7 +12,14 @@
   import { TASK_LINK_KIND_LABELS, type TaskLinkKind } from '@template/shared/domain/task-flow.util';
 
   export type AzuosTaskLinkDialogProps = {
-    data: { kind: TaskLinkKind; term: string; options: { id: number; label: string }[]; selectedIds: number[] };
+    data: {
+      kind: TaskLinkKind;
+      term: string;
+      options: { id: number; label: string }[];
+      selectedIds: number[];
+      /** Os tipos do módulo (em Sistema, só chamado). @default todos */
+      kinds?: readonly TaskLinkKind[];
+    };
     state: { isOpen: boolean; isSaving?: boolean; isSearching?: boolean; error?: string | null };
     actions: {
       onKindChange: (kind: TaskLinkKind) => void;
@@ -69,7 +76,10 @@
       }}
     >
       <SegmentedControl
-        data={{ value: data.kind, options: TASK_LINK_KIND_OPTIONS }}
+        data={{
+          value: data.kind,
+          options: TASK_LINK_KIND_OPTIONS.filter((option) => !data.kinds || data.kinds.includes(option.value)),
+        }}
         ui={{ ariaLabel: 'O que vincular' }}
         state={{ isDisabled: dialogState.isSaving }}
         actions={{ onChange: (kind: string) => actions.onKindChange(kind as TaskLinkKind) }}

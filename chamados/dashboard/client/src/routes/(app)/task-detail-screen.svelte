@@ -12,6 +12,8 @@
   import { useBackTarget } from '$lib/hooks/use-navigation-stack/use-navigation-stack.svelte';
   import { useTaskDetailModel } from '$lib/hooks/use-task-detail/use-task-detail.svelte';
   import TaskDetailView from '$lib/components/azuos-task-detail-view/azuos-task-detail-view.svelte';
+  import { taskLinkKindsOf } from '@template/shared/domain/task-flow.util';
+
   import TaskLinkDialog from '$lib/components/azuos-task-link-dialog/azuos-task-link-dialog.svelte';
   import { contextPath } from '$lib/navigation/navigation';
   import TaskFormSlot from './task-form-slot.svelte';
@@ -88,6 +90,7 @@
     selectedIds: detail.data.linkPicker.selected
       .filter((item) => item.kind === detail.data.linkPicker.kind)
       .map((item) => item.targetId),
+    kinds: taskLinkKindsOf(area),
   }}
   state={{
     isOpen: detail.data.linkPicker.isOpen,

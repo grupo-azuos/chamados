@@ -20,7 +20,11 @@ beforeAll(() => {
 });
 
 function setup(
-  over: { peopleIds?: string[]; positions?: Record<string, { x: number; y: number }> } = {},
+  over: {
+    peopleIds?: string[];
+    positions?: Record<string, { x: number; y: number }>;
+    kinds?: readonly ('ticket' | 'computer' | 'part' | 'inventory_item')[];
+  } = {},
 ) {
   const actions = { onPeopleChange: vi.fn(), onIslandMove: vi.fn(), onResetLayout: vi.fn() };
   const tasks = [
@@ -44,6 +48,7 @@ function setup(
         peopleIds: over.peopleIds ?? ['person-ana'],
         positions: over.positions ?? {},
         now: TEST_NOW,
+        kinds: over.kinds,
       },
       actions,
     },
@@ -86,5 +91,14 @@ describe('AzuosTaskMap', () => {
     );
 
     expect(people.map((person) => person.name)).toEqual(['Ana', 'Bia']);
+  });
+
+  // triste
+  it('in Sistema, "Mostrar" offers only tickets', () => {
+    setup({ kinds: ['ticket'], positions: { '1': { x: 0, y: 0 } } });
+
+    expect(screen.getByRole('button', { name: 'Chamados' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Computadores' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Inventário' })).not.toBeInTheDocument();
   });
 });

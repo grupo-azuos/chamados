@@ -107,6 +107,7 @@
 </script>
 
 <script lang="ts">
+  import { taskLinkKindsOf } from '@template/shared/domain/task-flow.util';
   import AlarmClock from '@lucide/svelte/icons/alarm-clock';
   import CalendarClock from '@lucide/svelte/icons/calendar-clock';
   import ClipboardList from '@lucide/svelte/icons/clipboard-list';
@@ -283,6 +284,7 @@
         positions: data.map.positions,
         now: data.now,
         base: data.base,
+        kinds: taskLinkKindsOf(data.area),
       }}
       state={{ isLoading: viewState.isLoading }}
       actions={actions.map}

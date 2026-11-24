@@ -21,6 +21,8 @@
 
 <script lang="ts">
   import { useTaskFormModel } from '$lib/hooks/use-task-form/use-task-form.svelte';
+  import { taskLinkKindsOf } from '@template/shared/domain/task-flow.util';
+
   import TaskFormDialog from '$lib/components/azuos-task-form-dialog/azuos-task-form-dialog.svelte';
 
   let { area, task, viewerId, people, onSaved, onClose }: TaskFormSlotProps = $props();
@@ -32,7 +34,7 @@
 </script>
 
 <TaskFormDialog
-  data={{ ...form.data, people }}
+  data={{ ...form.data, people, kinds: taskLinkKindsOf(area) }}
   state={{ ...form.state, isOpen: true }}
   actions={{ ...form.actions, onClose: () => (form.state.isSubmitting ? undefined : onClose()) }}
 />

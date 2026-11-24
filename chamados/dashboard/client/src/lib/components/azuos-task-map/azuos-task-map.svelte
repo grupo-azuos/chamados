@@ -33,6 +33,8 @@
       now?: Date;
       /** O começo do endereço da área (`/infra`, `/system`). @default '/infra' */
       base?: string;
+      /** Os tipos do módulo (em Sistema, só chamado): o "Mostrar" só oferece estes. @default todos */
+      kinds?: readonly TaskLinkKind[];
     };
     state?: { isLoading?: boolean };
     actions: {
@@ -64,7 +66,8 @@
   let { data, state: mapState, actions }: AzuosTaskMapProps = $props();
 
   /* O "Mostrar" é estado de TELA: some ao sair, como no Paralegal. */
-  let kinds = $state<TaskLinkKind[]>([...TASK_MAP_KINDS]);
+  // svelte-ignore state_referenced_locally
+  let kinds = $state<TaskLinkKind[]>([...(data.kinds ?? TASK_MAP_KINDS)]);
   let isExpanded = $state(false);
 
   const shown = $derived(tasksOfPeople(data.tasks, data.peopleIds));
@@ -85,7 +88,7 @@
     />
     <div role="group" aria-label="Mostrar no mapa" class="flex flex-wrap items-center gap-2">
       <span class="text-muted-foreground text-sm font-medium">Mostrar</span>
-      {#each TASK_MAP_KIND_TOGGLES as item (item.kind)}
+      {#each TASK_MAP_KIND_TOGGLES.filter((toggle) => !data.kinds || data.kinds.includes(toggle.kind)) as item (item.kind)}
         <ActionButton
           data={{ label: item.label }}
           ui={{ variant: kinds.includes(item.kind) ? 'primary' : 'secondary', size: 'sm' }}
