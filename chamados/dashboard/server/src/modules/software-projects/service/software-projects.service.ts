@@ -195,7 +195,7 @@ export class SoftwareProjectsService {
     });
     const graph = this.git
       ? await this.git.graphOf(facts.projects.map((project) => project.id))
-      : { commits: [], branches: [] };
+      : { commits: [], branches: [], tags: [] };
 
     return { entries: toProjectMap({ ...facts, ...graph }), personLogin };
   }
@@ -457,6 +457,7 @@ export class SoftwareProjectsService {
         })),
       );
       if (graph.branches.length) await this.git.syncBranches(projectId, graph.branches);
+      await this.git.syncTags(projectId, graph.tags);
     } catch (error) {
       GRAPH_LOGGER.warn(`Git graph de ${owner}/${repo} não sincronizou: ${String(error)}`);
     }

@@ -63,6 +63,8 @@ export const projectMapTicketSchema = z.object({
   description: z.string(),
   /** A issue do chamado (1:1), quando ele tem. */
   githubIssueNumber: z.number().int().nullable(),
+  /** Quando ele fechou: sem commit que o cite, ele se liga à primeira versão depois disso. */
+  closedAt: z.iso.datetime({ offset: true }).nullable().optional(),
 });
 
 export type ProjectMapTicket = z.infer<typeof projectMapTicketSchema>;
@@ -98,6 +100,11 @@ export const projectMapBranchSchema = z.object({
 
 export type ProjectMapBranch = z.infer<typeof projectMapBranchSchema>;
 
+/** Uma versão (tag do git): a etiqueta e o commit dela. */
+export const projectMapTagSchema = z.object({ name: z.string(), sha: z.string() });
+
+export type ProjectMapTag = z.infer<typeof projectMapTagSchema>;
+
 export const projectMapEntrySchema = z.object({
   project: z.object({
     id: z.number().int(),
@@ -114,6 +121,7 @@ export const projectMapEntrySchema = z.object({
       precisa da história inteira para ligar os pontos que sobram). */
   commits: z.array(projectMapCommitSchema),
   branches: z.array(projectMapBranchSchema),
+  tags: z.array(projectMapTagSchema).default([]),
 });
 
 export type ProjectMapEntry = z.infer<typeof projectMapEntrySchema>;

@@ -21,10 +21,24 @@ describe('gitChangeOf', () => {
     });
   });
 
+  // feliz
+  it('reads a version tagged by push and a tag deleted', () => {
+    expect(gitChangeOf('push', { ref: 'refs/tags/v1.4.0', after: 'c0ffee' })).toEqual({
+      kind: 'tagged',
+      tag: 'v1.4.0',
+      sha: 'c0ffee',
+    });
+    expect(gitChangeOf('delete', { ref_type: 'tag', ref: 'v1.4.0' })).toEqual({
+      kind: 'untagged',
+      tag: 'v1.4.0',
+    });
+  });
+
   // triste
   it('ignores tags, the push that deletes and other events', () => {
     expect(gitChangeOf('create', { ref_type: 'tag', ref: 'v1.0.0' })).toBeNull();
     expect(gitChangeOf('push', { ref: 'refs/tags/v1.0.0' })).toBeNull();
+    expect(gitChangeOf('push', { ref: 'refs/notes/x', after: 'a1' })).toBeNull();
     expect(gitChangeOf('push', { ref: 'refs/heads/feature/x', deleted: true })).toBeNull();
     expect(gitChangeOf('issues', {})).toBeNull();
   });

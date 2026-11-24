@@ -47,6 +47,7 @@ export type FetchedCommit = {
 export type FetchedGraph = {
   commits: FetchedCommit[];
   branches: { name: string; headSha: string | null }[];
+  tags: { name: string; sha: string }[];
 };
 
 /* As linhas principais do git-flow: a história delas vem inteira (duas páginas); a de cada branch
@@ -566,8 +567,15 @@ export class GithubService {
     );
     const bySha = new Map<string, FetchedCommit>();
     for (const commit of lists.flat()) bySha.set(commit.sha, commit);
+    const listedTags = await this.readJson<Array<{ name: string; commit?: { sha?: string } }>>(
+      `${base}/tags?per_page=100`,
+      token,
+    );
+    const tags = (listedTags ?? []).flatMap((tag) =>
+      tag.commit?.sha ? [{ name: tag.name, sha: tag.commit.sha }] : [],
+    );
 
-    return { commits: [...bySha.values()], branches };
+    return { commits: [...bySha.values()], branches, tags };
   }
 
   private async readBranchCommits(

@@ -56,3 +56,20 @@ export const softwareBranches = chamadosSchema.table(
 );
 
 export type SoftwareBranchRow = typeof softwareBranches.$inferSelect;
+
+/** As TAGS (versões) de cada sistema: a etiqueta e o commit dela. A versão fecha o que entrou antes. */
+export const softwareTags = chamadosSchema.table(
+  'software_tags',
+  {
+    id: serial('id').primaryKey(),
+    projectId: integer('project_id')
+      .notNull()
+      .references(() => softwareProjects.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    sha: text('sha').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('software_tags_name_unique').on(table.projectId, table.name)],
+);
+
+export type SoftwareTagRow = typeof softwareTags.$inferSelect;

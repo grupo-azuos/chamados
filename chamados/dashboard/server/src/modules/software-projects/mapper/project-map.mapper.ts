@@ -10,6 +10,7 @@ import {
 import {
   type SoftwareBranchRow,
   type SoftwareCommitRow,
+  type SoftwareTagRow,
 } from '../../../lib/db/schema/software-git.schema';
 import { type SoftwareProjectRow } from '../../../lib/db/schema/software-projects.schema';
 import { type SoftwareTimelineEventRow } from '../../../lib/db/schema/software-timeline-events.schema';
@@ -24,10 +25,12 @@ export type ProjectMapFacts = {
     status: TicketStatus;
     description: string;
     githubIssueNumber: number | null;
+    resolvedAt?: Date | null;
   }[];
   tasks: { id: number; title: string; status: TaskStatus; ticketId: number | null }[];
   commits?: SoftwareCommitRow[];
   branches?: SoftwareBranchRow[];
+  tags?: SoftwareTagRow[];
 };
 
 /**
@@ -88,6 +91,7 @@ export function toProjectMap(facts: ProjectMapFacts): ProjectMap['entries'] {
         isClosed: isClosedTicketStatus(ticket.status),
         description: ticket.description,
         githubIssueNumber: ticket.githubIssueNumber,
+        closedAt: ticket.resolvedAt?.toISOString() ?? null,
       })),
       tasks: facts.tasks.filter((task) => task.ticketId !== null && ticketIds.has(task.ticketId)),
       commits: (facts.commits ?? [])
@@ -100,6 +104,9 @@ export function toProjectMap(facts: ProjectMapFacts): ProjectMap['entries'] {
           authorName: commit.authorName,
           committedAt: commit.committedAt.toISOString(),
         })),
+      tags: (facts.tags ?? [])
+        .filter((tag) => tag.projectId === project.id)
+        .map((tag) => ({ name: tag.name, sha: tag.sha })),
       branches: (facts.branches ?? [])
         .filter((branch) => branch.projectId === project.id)
         .map((branch) => ({

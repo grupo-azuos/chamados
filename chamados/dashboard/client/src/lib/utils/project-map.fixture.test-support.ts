@@ -54,6 +54,7 @@ export function projectMapEntryFixture(id = 1, name = 'Paralegal'): ProjectMapEn
       commit('f9e8d7c6', ['b1a2c3d4'], '[feat](web): Tela', '2026-11-20'),
       commit('b1a2c3d4', [], '[feat](web): Início', '2026-11-18'),
     ],
+    tags: [{ name: 'v1.0.0', sha: 'b1a2c3d4' }],
     branches: [
       {
         name: 'develop',

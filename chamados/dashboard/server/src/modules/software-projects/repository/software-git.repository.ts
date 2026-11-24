@@ -10,6 +10,8 @@ import {
   type SoftwareCommitInsert,
   type SoftwareCommitRow,
   softwareCommits,
+  type SoftwareTagRow,
+  softwareTags,
 } from '../../../lib/db/schema/software-git.schema';
 
 /** Quantos commits de cada sistema o git graph desenha: os mais recentes. */
@@ -72,6 +74,57 @@ export class SoftwareGitRepository {
     });
   }
 
+  /** As tags que o GitHub listou agora: a nova entra, a que mudou de commit troca, a que sumiu sai. */
+  async syncTags(projectId: number, tags: readonly { name: string; sha: string }[]): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      await runQuery(
+        tx.delete(softwareTags).where(
+          and(
+            eq(softwareTags.projectId, projectId),
+            tags.length
+              ? notInArray(
+                  softwareTags.name,
+                  tags.map((tag) => tag.name),
+                )
+              : undefined,
+          ),
+        ),
+        'tirar tags apagadas',
+      );
+      if (!tags.length) return;
+      await runQuery(
+        tx
+          .insert(softwareTags)
+          .values(tags.map((tag) => ({ projectId, name: tag.name, sha: tag.sha })))
+          .onConflictDoUpdate({
+            target: [softwareTags.projectId, softwareTags.name],
+            set: { sha: sql`excluded.sha` },
+          }),
+        'gravar tags do sistema',
+      );
+    });
+  }
+
+  /** O aviso do webhook: tag nova (o push de `refs/tags/...`) ou apagada. */
+  async touchTag(projectId: number, name: string, sha: string): Promise<void> {
+    await runQuery(
+      this.db
+        .insert(softwareTags)
+        .values({ projectId, name, sha })
+        .onConflictDoUpdate({ target: [softwareTags.projectId, softwareTags.name], set: { sha } }),
+      'avisar tag nova',
+    );
+  }
+
+  async deleteTag(projectId: number, name: string): Promise<void> {
+    await runQuery(
+      this.db
+        .delete(softwareTags)
+        .where(and(eq(softwareTags.projectId, projectId), eq(softwareTags.name, name))),
+      'tirar tag apagada',
+    );
+  }
+
   /** O aviso do webhook: branch criada ou com push novo (a ponta e a hora). */
   async touchBranch(
     projectId: number,
@@ -108,9 +161,13 @@ export class SoftwareGitRepository {
   /** Os commits mais recentes e as branches vivas de cada sistema. */
   async graphOf(
     projectIds: readonly number[],
-  ): Promise<{ commits: SoftwareCommitRow[]; branches: SoftwareBranchRow[] }> {
-    if (!projectIds.length) return { commits: [], branches: [] };
-    const [commits, branches] = await Promise.all([
+  ): Promise<{
+    commits: SoftwareCommitRow[];
+    branches: SoftwareBranchRow[];
+    tags: SoftwareTagRow[];
+  }> {
+    if (!projectIds.length) return { commits: [], branches: [], tags: [] };
+    const [commits, branches, tags] = await Promise.all([
       runQuery(
         this.db
           .select()
@@ -142,8 +199,15 @@ export class SoftwareGitRepository {
           ),
         'ler as branches dos sistemas',
       ),
+      runQuery(
+        this.db
+          .select()
+          .from(softwareTags)
+          .where(inArray(softwareTags.projectId, [...projectIds])),
+        'ler as tags dos sistemas',
+      ),
     ]);
 
-    return { commits, branches };
+    return { commits, branches, tags };
   }
 }

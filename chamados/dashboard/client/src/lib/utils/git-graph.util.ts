@@ -1,6 +1,7 @@
 import {
   type ProjectMapBranch,
   type ProjectMapCommit,
+  type ProjectMapTag,
 } from '@template/shared/schemas/project-map.schema';
 
 import { type AzuosCardHue } from '$lib/utils/card-tone.util';
@@ -100,6 +101,8 @@ export type GitGraphRow = {
   isMerge: boolean;
   /** As branches cuja ponta é este commit; `isNew`: apareceu há pouco (pulsa). */
   heads: { name: string; category: GitCategory; isNew: boolean }[];
+  /** As versões (tags) deste commit: "v1.4.0". */
+  tags: string[];
   /** As linhas que passam por cima (da linha anterior até este ponto) e por baixo (até a próxima). */
   above: GitGraphLink[];
   below: GitGraphLink[];
@@ -155,6 +158,7 @@ type GraphContext = {
   bySha: ReadonlyMap<string, ProjectMapCommit>;
   kept: ReadonlySet<string>;
   headsBySha: ReadonlyMap<string, ProjectMapBranch[]>;
+  tagsBySha: ReadonlyMap<string, string[]>;
   now: Date;
 };
 
@@ -236,6 +240,13 @@ function widthOf(lane: number, above: GitGraphLink[], below: GitGraphLink[]): nu
   );
 }
 
+function tagsByShaOf(tags: readonly ProjectMapTag[]): Map<string, string[]> {
+  const bySha = new Map<string, string[]>();
+  for (const tag of tags) bySha.set(tag.sha, [...(bySha.get(tag.sha) ?? []), tag.name]);
+
+  return bySha;
+}
+
 /**
  * As linhas do grafo, do commit mais novo para o mais velho. `commits` vem do mais novo para o mais
  * velho (como a API manda); `branches` dá o nome das pontas.
@@ -245,14 +256,18 @@ export function buildGitGraph(
   branches: readonly ProjectMapBranch[],
   filter: GitGraphFilter = {},
   now: Date = new Date(),
+  tags: readonly ProjectMapTag[] = [],
 ): GitGraphRow[] {
   const headsBySha = headsByShaOf(branches);
-  const headShas = new Set(headsBySha.keys());
+  const tagsBySha = tagsByShaOf(tags);
+  /* A ponta de branch e a versão ficam mesmo no "só merges e branches": são marcos do grafo. */
+  const headShas = new Set([...headsBySha.keys(), ...tagsBySha.keys()]);
   const keptCommits = commits.filter((commit) => isKept(commit, filter, headShas));
   const context: GraphContext = {
     bySha: new Map(commits.map((commit) => [commit.sha, commit])),
     kept: new Set(keptCommits.map((commit) => commit.sha)),
     headsBySha,
+    tagsBySha,
     now,
   };
   const lanes: Lane[] = [];
@@ -273,6 +288,7 @@ export function buildGitGraph(
       hue,
       isMerge: commit.parents.length > 1,
       heads,
+      tags: context.tagsBySha.get(commit.sha) ?? [],
       above,
       below,
       width: widthOf(lane, above, below),
