@@ -40,6 +40,8 @@ export const maintenances = chamadosSchema.table(
     description: text('description'),
     /* Texto livre: quem fez pode ser alguém de fora da empresa, que não tem login aqui. */
     performedBy: text('performed_by'),
+    /** Quem fez, pelo id do diretório; o nome em `performed_by` é o daquele dia. */
+    performedById: text('performed_by_id'),
     /* QUANDO O SERVIÇO FOI FEITO — diferente de `created_at`, que é quando alguém digitou.
        Manutenção lançada na segunda-feira sobre o sábado é o caso comum, não a exceção. */
     performedAt: timestamp('performed_at', { withTimezone: true, mode: 'date' })

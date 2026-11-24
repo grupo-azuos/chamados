@@ -64,8 +64,10 @@ export const maintenanceSchema = z.object({
 
   type: maintenanceTypeSchema,
   description: z.string().nullable(),
-  /** Quem fez o serviço. Texto livre: pode ser alguém de fora da empresa. */
+  /** O nome de quem fez o serviço (o do diretório quando escolhido pela lista). */
   performedBy: z.string().nullable(),
+  /** Quem fez, pelo id do diretório — o campo de pessoa da tela; nulo nos registros antigos. */
+  performedById: z.string().nullable().optional(),
   performedAt: z.iso.datetime(),
 
   createdAt: z.iso.datetime(),
@@ -105,6 +107,8 @@ const maintenanceInputShape = {
   type: maintenanceTypeSchema,
   description: descriptionSchema.optional(),
   performedBy: performedBySchema.optional(),
+  /** Quem fez, pelo id do diretório: o servidor escreve o nome dele em `performedBy`. */
+  performedById: z.string().trim().min(1).nullable().optional(),
   /** Quando o serviço foi feito — não é a data em que alguém digitou. */
   performedAt: z.iso.datetime({ message: 'Informe uma data válida' }),
 };
@@ -135,9 +139,8 @@ export const maintenanceFormSchema = z
       .max(OTHER_MACHINE_MAX_LENGTH, `Até ${OTHER_MACHINE_MAX_LENGTH} caracteres`),
     type: maintenanceTypeSchema,
     description: z.string().max(DESCRIPTION_MAX_LENGTH, `Até ${DESCRIPTION_MAX_LENGTH} caracteres`),
-    performedBy: z
-      .string()
-      .max(PERFORMED_BY_MAX_LENGTH, `Até ${PERFORMED_BY_MAX_LENGTH} caracteres`),
+    /* Quem fez é uma pessoa da lista (o id); vazio é ninguém. */
+    performedById: z.string(),
     performedAt: z.string().min(1, 'Informe a data'),
   })
   .superRefine((value, context) => {

@@ -15,6 +15,15 @@ vi.mock('$lib/api/computers.api', () => ({
   computersApi: { list: vi.fn() },
 }));
 
+vi.mock('$lib/api/tickets.api', () => ({
+  ticketsApi: {
+    peopleOptions: vi.fn().mockResolvedValue([
+      { id: 'u-suporte', name: 'Suporte TI', avatarUrl: null },
+      { id: 'u-ana', name: 'Ana Souza', avatarUrl: null },
+    ]),
+  },
+}));
+
 const { maintenancesApi } = await import('$lib/api/maintenances.api');
 const { computersApi } = await import('$lib/api/computers.api');
 
@@ -33,7 +42,8 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     responsibleId: 'person-daniela-prado',
     responsibleName: 'Daniela Prado',
     responsibleAvatarUrl: null,
-    departmentId: 2, departmentName: 'Contábil',
+    departmentId: 2,
+    departmentName: 'Contábil',
     notes: null,
     kind: 'desktop',
     hardware: {
@@ -95,7 +105,11 @@ function maintenance(over: Partial<Maintenance> = {}): Maintenance {
 }
 
 function mountModel(
-  props: { maintenance?: Maintenance | null; computerId?: number | null; onSaved?: () => void } = {},
+  props: {
+    maintenance?: Maintenance | null;
+    computerId?: number | null;
+    onSaved?: () => void;
+  } = {},
 ): MaintenanceFormModel {
   let model!: MaintenanceFormModel;
   render(Harness, {
@@ -160,6 +174,22 @@ describe('useMaintenanceFormModel', () => {
     );
   });
 
+  it('turns the person chosen into who did it, and finds the person of an old record by name', async () => {
+    const model = mountModel({ maintenance: maintenance() });
+
+    await waitFor(() => expect(model.data.fields.performedById.value).toBe('u-suporte'));
+    expect(model.data.people.map((person) => person.name)).toEqual(['Suporte TI', 'Ana Souza']);
+    model.actions.onChange('performedById', 'u-ana');
+    model.actions.onSubmit();
+
+    await waitFor(() =>
+      expect(maintenancesApi.update).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({ performedById: 'u-ana' }),
+      ),
+    );
+  });
+
   it('edits the existing record instead of creating another one', async () => {
     const model = mountModel({ maintenance: maintenance() });
 
@@ -204,7 +234,12 @@ describe('useMaintenanceFormModel', () => {
 
 describe('useMaintenanceFormModel — blur and the record being corrected', () => {
   beforeEach(() => {
-    vi.mocked(computersApi.list).mockResolvedValue({ items: [computer()], total: 1, page: 1, pageSize: 100 });
+    vi.mocked(computersApi.list).mockResolvedValue({
+      items: [computer()],
+      total: 1,
+      page: 1,
+      pageSize: 100,
+    });
   });
 
   // triste
@@ -220,14 +255,19 @@ describe('useMaintenanceFormModel — blur and the record being corrected', () =
   // feliz
   it('opens an equipment outside the inventory with blanks for what was never filled', () => {
     const model = mountModel({
-      maintenance: maintenance({ computerId: null, otherMachine: 'Impressora', description: null, performedBy: null }),
+      maintenance: maintenance({
+        computerId: null,
+        otherMachine: 'Impressora',
+        description: null,
+        performedBy: null,
+      }),
     });
 
     expect(model.data.mode).toBe('edit');
     expect(model.data.fields.computerId.value).toBe('');
     expect(model.data.fields.otherMachine.value).toBe('Impressora');
     expect(model.data.fields.description.value).toBe('');
-    expect(model.data.fields.performedBy.value).toBe('');
+    expect(model.data.fields.performedById.value).toBe('');
   });
 });
 
@@ -235,7 +275,12 @@ describe('useMaintenanceFormModel — equipment without a machine', () => {
   beforeEach(() => {
     vi.mocked(maintenancesApi.create).mockReset();
     vi.mocked(maintenancesApi.create).mockResolvedValue(maintenance());
-    vi.mocked(computersApi.list).mockResolvedValue({ items: [computer()], total: 1, page: 1, pageSize: 200 });
+    vi.mocked(computersApi.list).mockResolvedValue({
+      items: [computer()],
+      total: 1,
+      page: 1,
+      pageSize: 200,
+    });
   });
 
   // feliz

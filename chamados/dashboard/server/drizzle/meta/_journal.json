@@ -281,6 +281,13 @@
       "when": 1795489128218,
       "tag": "0039_software_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795537095848,
+      "tag": "0040_maintenance_performer",
+      "breakpoints": true
     }
   ]
 }

@@ -21,6 +21,7 @@
   } from '@template/shared/domain/maintenance.util';
   import { DESCRIPTION_MAX_LENGTH } from '@template/shared/schemas/maintenance.schema';
 
+  import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import { type FormFieldState } from '$lib/types/form-field.type';
 
   export type MaintenanceFormField =
@@ -28,7 +29,7 @@
     | 'otherMachine'
     | 'type'
     | 'description'
-    | 'performedBy'
+    | 'performedById'
     | 'performedAt';
 
   export type MachineOption = { value: string; label: string };
@@ -38,6 +39,8 @@
       mode: 'create' | 'edit';
       fields: Record<MaintenanceFormField, FormFieldState>;
       machines: MachineOption[];
+      /** As pessoas para "Quem fez", com a foto. */
+      people?: AzuosPersonPickerPerson[];
     };
     state: {
       isOpen: boolean;
@@ -79,6 +82,7 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
@@ -174,19 +178,19 @@
       />
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        <TextField
-          data={{
-            label: 'Quem fez',
-            name: 'performedBy',
-            value: fields.performedBy.value,
-            placeholder: 'Nome de quem fez o serviço',
-          }}
-          state={{ error: fields.performedBy.error, isDisabled: dialogState.isSubmitting }}
-          actions={{
-            onChange: (value: string) => actions.onChange('performedBy', value),
-            onBlur: () => actions.onBlur('performedBy'),
-          }}
-        />
+        <div class="flex flex-col gap-1.5">
+          <span class="text-ink-700 text-sm font-medium">Quem fez</span>
+          <PersonPickerField
+            data={{
+              value: fields.performedById.value,
+              people: data.people ?? [],
+              leading: [{ value: '', label: '(Sem pessoa)' }],
+            }}
+            ui={{ ariaLabel: 'Quem fez', placeholder: 'Escolha quem fez o serviço' }}
+            state={{ isDisabled: dialogState.isSubmitting, isInvalid: Boolean(fields.performedById.error) }}
+            actions={{ onChange: (id: string) => actions.onChange('performedById', id) }}
+          />
+        </div>
 
         <div class="flex flex-col gap-1.5">
           <span class="text-ink-700 text-sm font-medium">Data do serviço</span>
