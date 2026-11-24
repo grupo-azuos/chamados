@@ -34,6 +34,39 @@ export type FetchedMerge = {
   coAuthors?: FetchedCoAuthor[];
 };
 
+/** Um commit do git graph: o hash, os pais, a primeira linha da mensagem e quem fez. */
+export type FetchedCommit = {
+  sha: string;
+  parents: string[];
+  message: string;
+  authorLogin: string | null;
+  authorName: string;
+  committedAt: Date;
+};
+
+export type FetchedGraph = {
+  commits: FetchedCommit[];
+  branches: { name: string; headSha: string | null }[];
+};
+
+/* As linhas principais do git-flow: a história delas vem inteira (duas páginas); a de cada branch
+   aberta, só o começo — o resto já está na develop quando ela é juntada. */
+const GRAPH_TRUNKS = ['develop', 'main', 'master'];
+const GRAPH_TRUNK_PAGES = 2;
+const GRAPH_OPEN_BRANCHES = 20;
+const GRAPH_BRANCH_COMMITS = 20;
+
+function fetchedCommitOf(commit: RawGithubCommit): FetchedCommit {
+  return {
+    sha: commit.sha,
+    parents: commit.parents.map((parent) => parent.sha),
+    message: commit.commit.message.split('\n')[0]?.trim() || commit.sha.slice(0, 7),
+    authorLogin: commit.author?.login ?? null,
+    authorName: commit.commit.author?.name ?? commit.author?.login ?? 'github',
+    committedAt: commitDate(commit),
+  };
+}
+
 type RawGithubPr = {
   number: number;
   title: string;
@@ -499,6 +532,63 @@ export class GithubService {
       );
       if (!response.headers.get('link')?.includes('rel="next"')) return items;
     }
+  }
+
+  /**
+   * O GIT GRAPH DE UM REPOSITÓRIO — os commits recentes da develop, da main e das branches abertas
+   * (com os pais, que dão as linhas do grafo) e a lista de branches. Falhar devolve vazio: o grafo
+   * é um extra da sincronização, não pode derrubá-la.
+   */
+  async fetchGraph(owner: string, repo: string): Promise<FetchedGraph> {
+    const token = this.app ? await this.app.accessToken() : this.token;
+    const base = `https://api.github.com/repos/${owner}/${repo}`;
+    const listed = await this.readJson<Array<{ name: string; commit?: { sha?: string } }>>(
+      `${base}/branches?per_page=100`,
+      token,
+    );
+    const branches = (listed ?? []).map((branch) => ({
+      name: branch.name,
+      headSha: branch.commit?.sha ?? null,
+    }));
+    const trunk = branches
+      .filter((branch) => GRAPH_TRUNKS.includes(branch.name))
+      .map((branch) => branch.name);
+    const others = branches
+      .filter((branch) => !GRAPH_TRUNKS.includes(branch.name))
+      .slice(0, GRAPH_OPEN_BRANCHES)
+      .map((branch) => branch.name);
+    const reads = [
+      ...trunk.map((name) => ({ name, pages: GRAPH_TRUNK_PAGES, perPage: 100 })),
+      ...others.map((name) => ({ name, pages: 1, perPage: GRAPH_BRANCH_COMMITS })),
+    ];
+    const lists = await inPool(reads, GITHUB_CONCURRENCY, (read) =>
+      this.readBranchCommits(base, read.name, read.pages, read.perPage, token),
+    );
+    const bySha = new Map<string, FetchedCommit>();
+    for (const commit of lists.flat()) bySha.set(commit.sha, commit);
+
+    return { commits: [...bySha.values()], branches };
+  }
+
+  private async readBranchCommits(
+    base: string,
+    branch: string,
+    pages: number,
+    perPage: number,
+    token: string | undefined,
+  ): Promise<FetchedCommit[]> {
+    const commits: FetchedCommit[] = [];
+    for (let page = 1; page <= pages; page++) {
+      const list = await this.readJson<RawGithubCommit[]>(
+        `${base}/commits?sha=${encodeURIComponent(branch)}&per_page=${perPage}&page=${page}`,
+        token,
+      );
+      if (!Array.isArray(list) || list.length === 0) break;
+      commits.push(...list.map(fetchedCommitOf));
+      if (list.length < perPage) break;
+    }
+
+    return commits;
   }
 
   /**

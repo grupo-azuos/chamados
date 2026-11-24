@@ -1,20 +1,27 @@
 <!--
   @component
-  O MAPA DOS PROJETOS — cada sistema numa ilha gigante: o projeto, as issues, os PRs, os merges e
-  versões, os chamados (com a issue de cada um) e as tarefas que nasceram deles. O que está em
+  O MAPA DOS PROJETOS — cada sistema numa ilha gigante: o git graph (os commits, as branches na cor
+  do git-flow), o projeto, as issues, os PRs, os merges e versões, os chamados (com a issue de cada
+  um) e as tarefas que nasceram deles. O que está em
   aberto tem a linha tracejada e animada; o PR que cita uma issue liga nela.
 
-  "Projetos" escolhe quais aparecem (nenhum é todos); "Mostrar" esconde tipos; "Arrumar de novo"
+  "Projetos" escolhe quais aparecem (nenhum é todos); "Período" e "Responsável" recortam tudo,
+  inclusive o git graph (a pessoa pelos commits da conta do GitHub dela); "Só merges e branches"
+  tira do grafo os commits do meio; "Mostrar" esconde tipos; "Arrumar de novo"
   esquece onde as ilhas foram deixadas; "Expandir" põe o mapa na tela inteira. Cada caixa leva ao
   que ela é: o GitHub em nova aba, o chamado e a tarefa na tela deles.
 
-  - `data`: `entries`, `projects` (as opções), `projectIds`, `positions`.
+  - `data`: `entries`, `projects` (as opções), `projectIds`, `positions`, `period`, `personId`,
+    `people`, `personLogin`, `onlyMerges`.
   - `state`: `isLoading`, `error`.
-  - `actions`: `onProjectsChange`, `onIslandMove`, `onResetLayout`.
+  - `actions`: `onProjectsChange`, `onIslandMove`, `onResetLayout`, `onPeriodChange`,
+    `onPersonChange`, `onOnlyMergesChange`.
 -->
 <script lang="ts" module>
   import { type ProjectMapEntry } from '@template/shared/schemas/project-map.schema';
 
+  import { type AzuosDateRange } from '$lib/components/azuos-date-range-field/azuos-date-range-field.svelte';
+  import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import { type ProjectMapPositions } from '$lib/utils/project-map.util';
 
   export type AzuosProjectMapProps = {
@@ -24,12 +31,22 @@
       /** Os sistemas escolhidos; vazio é todos. */
       projectIds: string[];
       positions: ProjectMapPositions;
+      period: AzuosDateRange;
+      /** A pessoa do filtro; vazio é todo mundo. */
+      personId: string;
+      people: AzuosPersonPickerPerson[];
+      /** A conta do GitHub da pessoa do filtro (os commits dela); nula sem conta vinculada. */
+      personLogin: string | null;
+      onlyMerges: boolean;
     };
     state?: { isLoading?: boolean; error?: string | null };
     actions: {
       onProjectsChange: (projectIds: string[]) => void;
       onIslandMove: (projectId: string, position: { x: number; y: number }) => void;
       onResetLayout: () => void;
+      onPeriodChange: (period: AzuosDateRange) => void;
+      onPersonChange: (personId: string) => void;
+      onOnlyMergesChange: (onlyMerges: boolean) => void;
     };
   };
 </script>
@@ -39,11 +56,13 @@
   import Network from '@lucide/svelte/icons/network';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import DateRangeField from '$lib/components/azuos-date-range-field/azuos-date-range-field.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import ExpandableScreen from '$lib/components/azuos-expandable-screen/azuos-expandable-screen.svelte';
   import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
   import MultiSelectField from '$lib/components/azuos-multi-select-field/azuos-multi-select-field.svelte';
+  import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import {
     buildProjectMap,
     PROJECT_MAP_KIND_TOGGLES,
@@ -58,7 +77,15 @@
   let kinds = $state<ProjectMapKind[]>([...PROJECT_MAP_KINDS]);
   let isExpanded = $state(false);
 
-  const map = $derived(buildProjectMap(data.entries, kinds, data.positions));
+  const map = $derived(
+    buildProjectMap(data.entries, kinds, data.positions, {
+      from: data.period.from ?? undefined,
+      to: data.period.to ?? undefined,
+      isPersonFiltered: data.personId !== '',
+      personLogin: data.personLogin,
+      onlyMerges: data.onlyMerges,
+    }),
+  );
   const options = $derived(data.projects.map((project) => ({ value: String(project.id), label: project.name })));
 
   function toggle(kind: ProjectMapKind) {
@@ -67,11 +94,28 @@
 </script>
 
 {#snippet toolbar()}
-  <div class="flex flex-wrap items-center gap-3">
+  <!-- Pela base: o "Período" tem rótulo em cima, e os outros campos se alinham à caixa dele. -->
+  <div class="flex flex-wrap items-end gap-3">
     <MultiSelectField
       data={{ values: data.projectIds, options, placeholder: 'Todos os projetos', noun: 'projetos' }}
       ui={{ ariaLabel: 'Projetos no mapa', className: 'w-64' }}
       actions={{ onChange: actions.onProjectsChange }}
+    />
+    <DateRangeField
+      data={{ label: 'Período', name: 'mapPeriod', value: data.period }}
+      ui={{ placeholder: 'Todo o período', className: 'w-64' }}
+      actions={{ onChange: actions.onPeriodChange }}
+    />
+    <PersonPickerField
+      data={{ value: data.personId, people: data.people, leading: [{ value: '', label: 'Todos os responsáveis' }] }}
+      ui={{ ariaLabel: 'Responsável', placeholder: 'Todos os responsáveis', className: 'w-64' }}
+      actions={{ onChange: actions.onPersonChange }}
+    />
+    <ActionButton
+      data={{ label: 'Só merges e branches' }}
+      ui={{ variant: data.onlyMerges ? 'primary' : 'secondary', size: 'sm' }}
+      state={{ isPressed: data.onlyMerges }}
+      actions={{ onClick: () => actions.onOnlyMergesChange(!data.onlyMerges) }}
     />
     <div role="group" aria-label="Mostrar no mapa" class="flex flex-wrap items-center gap-2">
       <span class="text-muted-foreground text-sm font-medium">Mostrar</span>

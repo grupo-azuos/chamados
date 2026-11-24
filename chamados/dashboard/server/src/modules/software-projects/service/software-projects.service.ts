@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Inject,
+  Logger,
   Injectable,
   NotFoundException,
   Optional,
@@ -33,6 +34,7 @@ import {
   SoftwareProjectsRepository,
   type SoftwareProjectPage,
 } from '../repository/software-projects.repository';
+import { SoftwareGitRepository } from '../repository/software-git.repository';
 import { SoftwareTimelineRepository } from '../repository/software-timeline.repository';
 import { toProjectMap } from '../mapper/project-map.mapper';
 import { type ProjectMap, type ProjectMapQuery } from '@template/shared/schemas/project-map.schema';
@@ -58,6 +60,8 @@ export type GithubSyncAllResult = {
 export const RESPONSIBLE_NOT_ATTENDANT =
   'O responsável escolhido não atende a área de Sistema. Escolha outro.';
 
+const GRAPH_LOGGER = new Logger('SoftwareProjectsService');
+
 @Injectable()
 export class SoftwareProjectsService {
   constructor(
@@ -70,6 +74,7 @@ export class SoftwareProjectsService {
     @Inject(USER_DIRECTORY_PROVIDER)
     private readonly directory?: UserDirectoryProvider,
     @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
+    @Optional() private readonly git?: SoftwareGitRepository,
   ) {}
 
   /**
@@ -162,8 +167,20 @@ export class SoftwareProjectsService {
   /** O mapa dos projetos: cada sistema com issues, PRs, merges, chamados e tarefas. */
   async map(user: RequestUser, query: ProjectMapQuery): Promise<ProjectMap> {
     assertCanRead(user.role, 'os sistemas');
+    const personLogin = query.personId
+      ? ((await this.connections?.find(query.personId))?.login ?? null)
+      : null;
+    const facts = await this.repository.mapFacts(query.ids ?? null, {
+      from: query.from,
+      to: query.to,
+      personId: query.personId,
+      personLogin,
+    });
+    const graph = this.git
+      ? await this.git.graphOf(facts.projects.map((project) => project.id))
+      : { commits: [], branches: [] };
 
-    return toProjectMap(await this.repository.mapFacts(query.ids ?? null));
+    return { entries: toProjectMap({ ...facts, ...graph }), personLogin };
   }
 
   async findById(user: RequestUser, id: number): Promise<SoftwareProject> {
@@ -391,7 +408,41 @@ export class SoftwareProjectsService {
       })),
     );
 
+    await this.syncGraph(projectId, owner, repo, nameOf);
+
     return { prs: prs.length, issues: issues.length, merges: merges.length };
+  }
+
+  /**
+   * O GIT GRAPH do sistema: os commits (com os pais) e as branches. É um extra da sincronização —
+   * falhar aqui não derruba a leitura dos PRs e das issues.
+   */
+  async syncGraph(
+    projectId: number,
+    owner: string,
+    repo: string,
+    nameOf: (login: string, fallback: string) => string = (_login, fallback) => fallback,
+  ): Promise<void> {
+    if (!this.git) return;
+    try {
+      const graph = await this.githubService.fetchGraph(owner, repo);
+      await this.git.upsertCommits(
+        graph.commits.map((commit) => ({
+          projectId,
+          sha: commit.sha,
+          parents: commit.parents,
+          message: commit.message,
+          authorLogin: commit.authorLogin,
+          authorName: commit.authorLogin
+            ? nameOf(commit.authorLogin, commit.authorName)
+            : commit.authorName,
+          committedAt: commit.committedAt,
+        })),
+      );
+      if (graph.branches.length) await this.git.syncBranches(projectId, graph.branches);
+    } catch (error) {
+      GRAPH_LOGGER.warn(`Git graph de ${owner}/${repo} não sincronizou: ${String(error)}`);
+    }
   }
 
   /**

@@ -1,3 +1,5 @@
+import { SoftwareGitRepository } from '../../software-projects/repository/software-git.repository';
+import { SoftwareProjectsService } from '../../software-projects/service/software-projects.service';
 import {
   BadRequestException,
   Inject,
@@ -51,6 +53,46 @@ type GithubPerson = { name: string; email: string; id?: string };
  * Falha no passo 4 não devolve erro ao GitHub: o aviso já está guardado, e um 500 só faria o
  * GitHub reenviar o mesmo aviso — que cairia no "duplicado" do passo 3.
  */
+/** Os avisos do GitHub que mexem no git graph. */
+const GIT_EVENTS = ['create', 'delete', 'push'];
+const GRAPH_TRUNKS = ['develop', 'main', 'master'];
+
+export type GitChange =
+  | { kind: 'created' | 'pushed'; branch: string; headSha: string | null }
+  | { kind: 'deleted'; branch: string };
+
+/**
+ * O que o aviso diz da branch: `create`/`delete` de branch (tag não conta) e `push` em
+ * `refs/heads/...` (o push que apaga a branch é o `delete`).
+ */
+export function gitChangeOf(event: string, payload: Record<string, unknown>): GitChange | null {
+  if (event === 'create' || event === 'delete') return branchRefChange(event, payload);
+
+  return event === 'push' ? pushChange(payload) : null;
+}
+
+function branchRefChange(
+  event: 'create' | 'delete',
+  payload: Record<string, unknown>,
+): GitChange | null {
+  if (payload.ref_type !== 'branch' || typeof payload.ref !== 'string') return null;
+
+  return event === 'delete'
+    ? { kind: 'deleted', branch: payload.ref }
+    : { kind: 'created', branch: payload.ref, headSha: null };
+}
+
+function pushChange(payload: Record<string, unknown>): GitChange | null {
+  const ref = typeof payload.ref === 'string' ? payload.ref : '';
+  if (!ref.startsWith('refs/heads/') || payload.deleted === true) return null;
+
+  return {
+    kind: 'pushed',
+    branch: ref.slice('refs/heads/'.length),
+    headSha: typeof payload.after === 'string' ? payload.after : null,
+  };
+}
+
 @Injectable()
 export class GithubWebhooksService {
   private readonly logger = new Logger(GithubWebhooksService.name);
@@ -65,6 +107,8 @@ export class GithubWebhooksService {
     @Optional()
     @Inject(USER_DIRECTORY_PROVIDER)
     private readonly directory?: UserDirectoryProvider,
+    @Optional() private readonly git?: SoftwareGitRepository,
+    @Optional() private readonly projects?: SoftwareProjectsService,
   ) {}
 
   async receive(
@@ -115,6 +159,7 @@ export class GithubWebhooksService {
 
   private async dispatch(event: GithubWebhookEventRow): Promise<boolean> {
     if (!event.repositoryFullName) return false;
+    if (GIT_EVENTS.includes(event.event)) return this.dispatchGit(event, event.repositoryFullName);
     if (event.event !== 'issues' && event.event !== 'pull_request') return false;
 
     const projectId = await this.repository.findProjectIdByRepository(event.repositoryFullName);
@@ -127,6 +172,28 @@ export class GithubWebhooksService {
     if (item) await this.writeTimeline(projectId, item);
 
     if (event.event === 'issues') await this.syncTicket(projectId, event);
+
+    return true;
+  }
+
+  /**
+   * O GIT GRAPH NA HORA: branch criada (pulsa no mapa), apagada ou com push novo. Push na develop ou
+   * na main relê o grafo do repositório, em segundo plano, para os commits novos entrarem com os pais.
+   */
+  private async dispatchGit(event: GithubWebhookEventRow, fullName: string): Promise<boolean> {
+    const projectId = await this.repository.findProjectIdByRepository(fullName);
+    const change = gitChangeOf(event.event, event.payload);
+    if (!projectId || !change || !this.git) return false;
+
+    if (change.kind === 'deleted') {
+      await this.git.deleteBranch(projectId, change.branch);
+      return true;
+    }
+    await this.git.touchBranch(projectId, change.branch, change.headSha, new Date());
+    if (change.kind === 'pushed' && GRAPH_TRUNKS.includes(change.branch)) {
+      const [owner, repo] = fullName.split('/');
+      if (owner && repo && this.projects) void this.projects.syncGraph(projectId, owner, repo);
+    }
 
     return true;
   }

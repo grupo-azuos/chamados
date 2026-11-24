@@ -25,5 +25,6 @@
       <span class="text-muted-foreground text-xs">+{data.hidden} antigos fora do mapa</span>
     {/if}
   </span>
+  <Handle type="target" position={Position.Left} class="opacity-0" isConnectable={false} />
   <Handle type="source" position={Position.Right} class="opacity-0" isConnectable={false} />
 </div>

@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { githubConnections } from '../src/lib/db/schema/github-connections.schema';
+import { softwareBranches, softwareCommits } from '../src/lib/db/schema/software-git.schema';
 import { softwareTimelineEvents } from '../src/lib/db/schema/software-timeline-events.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
 import { encryptGithubToken } from '../src/modules/github-integration/service/github-token-cipher.util';
@@ -211,26 +212,73 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
         .set(asDora())
         .expect(200);
 
-      expect(map.body).toHaveLength(1);
-      expect(map.body[0]).toMatchObject({
+      expect(map.body.entries).toHaveLength(1);
+      expect(map.body.entries[0]).toMatchObject({
         project: { id: chamados.body.id, name: 'Chamados' },
         hiddenEvents: 0,
         tickets: [{ githubIssueNumber: 12, isClosed: false }],
       });
-      expect(map.body[0].events.map((event: { externalId: string }) => event.externalId)).toEqual(
-        expect.arrayContaining(['#12', '#13']),
-      );
+      expect(
+        map.body.entries[0].events.map((event: { externalId: string }) => event.externalId),
+      ).toEqual(expect.arrayContaining(['#12', '#13']));
 
       const all = await api().get('/api/v1/software-projects/map').set(asDora()).expect(200);
-      expect(all.body.map((entry: { project: { name: string } }) => entry.project.name)).toEqual([
-        'Chamados',
-        'Outro',
-      ]);
+      expect(
+        all.body.entries.map((entry: { project: { name: string } }) => entry.project.name),
+      ).toEqual(['Chamados', 'Outro']);
       await api()
         .get('/api/v1/software-projects/map')
         .query({ ids: '1,x' })
         .set(asDora())
         .expect(400);
+
+      /* O git graph: commits com os pais e as branches vivas; e o período recorta o resto. */
+      await started.db.insert(softwareCommits).values([
+        {
+          projectId: chamados.body.id,
+          sha: 'a1',
+          parents: [],
+          message: '[feat](web): Tela',
+          authorName: 'Dora',
+          committedAt: new Date('2026-11-20T10:00:00Z'),
+        },
+        {
+          projectId: chamados.body.id,
+          sha: 'b2',
+          parents: ['a1'],
+          message: '[merge](web): Tela',
+          authorName: 'Dora',
+          committedAt: new Date('2026-11-21T10:00:00Z'),
+        },
+      ]);
+      await started.db
+        .insert(softwareBranches)
+        .values({ projectId: chamados.body.id, name: 'feature/mapa', headSha: 'c3' });
+      const graph = await api()
+        .get('/api/v1/software-projects/map')
+        .query({ ids: String(chamados.body.id), from: '2030-01-01' })
+        .set(asDora())
+        .expect(200);
+      expect(graph.body.entries[0].commits.map((commit: { sha: string }) => commit.sha)).toEqual([
+        'b2',
+        'a1',
+      ]);
+      expect(graph.body.entries[0].branches).toEqual([
+        expect.objectContaining({ name: 'feature/mapa', headSha: 'c3' }),
+      ]);
+      expect(graph.body.entries[0].events).toEqual([]);
+      expect(graph.body.entries[0].tickets).toEqual([]);
+
+      /* A pessoa sem GitHub vinculado não tem issue nem PR dela; o chamado é pelo responsável. */
+      const person = await api()
+        .get('/api/v1/software-projects/map')
+        .query({ ids: String(chamados.body.id), personId: 'ninguem' })
+        .set(asDora())
+        .expect(200);
+      expect(person.body).toMatchObject({
+        personLogin: null,
+        entries: [{ events: [], tickets: [] }],
+      });
     });
 
     it('lists with search and status, counting open tickets of each system', async () => {

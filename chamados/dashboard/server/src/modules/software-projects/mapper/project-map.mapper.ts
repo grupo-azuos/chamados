@@ -7,6 +7,10 @@ import {
   PROJECT_MAP_CLOSED_PER_TYPE,
 } from '@template/shared/schemas/project-map.schema';
 
+import {
+  type SoftwareBranchRow,
+  type SoftwareCommitRow,
+} from '../../../lib/db/schema/software-git.schema';
 import { type SoftwareProjectRow } from '../../../lib/db/schema/software-projects.schema';
 import { type SoftwareTimelineEventRow } from '../../../lib/db/schema/software-timeline-events.schema';
 
@@ -22,6 +26,8 @@ export type ProjectMapFacts = {
     githubIssueNumber: number | null;
   }[];
   tasks: { id: number; title: string; status: TaskStatus; ticketId: number | null }[];
+  commits?: SoftwareCommitRow[];
+  branches?: SoftwareBranchRow[];
 };
 
 /**
@@ -59,7 +65,7 @@ function visibleEvents(events: readonly SoftwareTimelineEventRow[]): {
   return { shown: shown.map(toEvent), hidden: events.length - shown.length };
 }
 
-export function toProjectMap(facts: ProjectMapFacts): ProjectMap {
+export function toProjectMap(facts: ProjectMapFacts): ProjectMap['entries'] {
   return facts.projects.map((project) => {
     const { shown, hidden } = visibleEvents(
       facts.events.filter((event) => event.projectId === project.id),
@@ -84,6 +90,24 @@ export function toProjectMap(facts: ProjectMapFacts): ProjectMap {
         githubIssueNumber: ticket.githubIssueNumber,
       })),
       tasks: facts.tasks.filter((task) => task.ticketId !== null && ticketIds.has(task.ticketId)),
+      commits: (facts.commits ?? [])
+        .filter((commit) => commit.projectId === project.id)
+        .map((commit) => ({
+          sha: commit.sha,
+          parents: commit.parents,
+          message: commit.message,
+          authorLogin: commit.authorLogin,
+          authorName: commit.authorName,
+          committedAt: commit.committedAt.toISOString(),
+        })),
+      branches: (facts.branches ?? [])
+        .filter((branch) => branch.projectId === project.id)
+        .map((branch) => ({
+          name: branch.name,
+          headSha: branch.headSha,
+          firstSeenAt: branch.firstSeenAt.toISOString(),
+          lastPushAt: branch.lastPushAt?.toISOString() ?? null,
+        })),
     };
   });
 }

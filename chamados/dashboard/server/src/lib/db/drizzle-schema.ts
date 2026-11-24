@@ -19,6 +19,7 @@ import { networkEvents } from './schema/network-events.schema';
 import { partMovements } from './schema/part-movements.schema';
 import { parts } from './schema/parts.schema';
 import { softwareProjects } from './schema/software-projects.schema';
+import { softwareBranches, softwareCommits } from './schema/software-git.schema';
 import { softwareTimelineEvents } from './schema/software-timeline-events.schema';
 import { softwareScheduleEvents } from './schema/software-schedule-events.schema';
 import { ticketAreas } from './schema/ticket-areas.schema';
@@ -71,6 +72,8 @@ export const drizzleSchema = {
   whatsappInboundMessages,
   softwareProjects,
   softwareTimelineEvents,
+  softwareCommits,
+  softwareBranches,
   softwareScheduleEvents,
   tickets,
   ticketAreas,

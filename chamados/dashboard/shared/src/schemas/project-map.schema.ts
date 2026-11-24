@@ -19,7 +19,14 @@ import { TICKET_STATUSES } from '../domain/ticket-status.util';
  */
 export const PROJECT_MAP_CLOSED_PER_TYPE = 15;
 
+const isoDay = z.iso.date('Use uma data válida');
+
 export const projectMapQuerySchema = z.object({
+  /** O período: só o que aconteceu de `from` a `to` (os dois dias inclusos). */
+  from: isoDay.optional(),
+  to: isoDay.optional(),
+  /** Só o que é da pessoa (pelo id): o que ela abriu ou fez no GitHub, e o chamado e a tarefa dela. */
+  personId: z.string().trim().min(1).optional(),
   /** Os sistemas do mapa, separados por vírgula; sem ele, todos os em uso. */
   ids: z
     .string()
@@ -65,6 +72,28 @@ export const projectMapTaskSchema = z.object({
 
 export type ProjectMapTask = z.infer<typeof projectMapTaskSchema>;
 
+/** Um commit do git graph: o hash, os pais (as linhas do grafo), a mensagem e quem fez. */
+export const projectMapCommitSchema = z.object({
+  sha: z.string(),
+  parents: z.array(z.string()),
+  message: z.string(),
+  authorLogin: z.string().nullable(),
+  authorName: z.string(),
+  committedAt: z.iso.datetime({ offset: true }),
+});
+
+export type ProjectMapCommit = z.infer<typeof projectMapCommitSchema>;
+
+/** Uma branch viva: a ponta e quando apareceu (a nova pulsa no mapa). */
+export const projectMapBranchSchema = z.object({
+  name: z.string(),
+  headSha: z.string().nullable(),
+  firstSeenAt: z.iso.datetime({ offset: true }),
+  lastPushAt: z.iso.datetime({ offset: true }).nullable(),
+});
+
+export type ProjectMapBranch = z.infer<typeof projectMapBranchSchema>;
+
 export const projectMapEntrySchema = z.object({
   project: z.object({
     id: z.number().int(),
@@ -77,10 +106,18 @@ export const projectMapEntrySchema = z.object({
   hiddenEvents: z.number().int().min(0),
   tickets: z.array(projectMapTicketSchema),
   tasks: z.array(projectMapTaskSchema),
+  /** Os commits mais recentes (todos: o filtro de período e de pessoa do grafo é da tela, que
+      precisa da história inteira para ligar os pontos que sobram). */
+  commits: z.array(projectMapCommitSchema),
+  branches: z.array(projectMapBranchSchema),
 });
 
 export type ProjectMapEntry = z.infer<typeof projectMapEntrySchema>;
 
-export const projectMapSchema = z.array(projectMapEntrySchema);
+export const projectMapSchema = z.object({
+  entries: z.array(projectMapEntrySchema),
+  /** A conta do GitHub da pessoa do filtro (para o grafo achar os commits dela); nula sem ela. */
+  personLogin: z.string().nullable(),
+});
 
 export type ProjectMap = z.infer<typeof projectMapSchema>;

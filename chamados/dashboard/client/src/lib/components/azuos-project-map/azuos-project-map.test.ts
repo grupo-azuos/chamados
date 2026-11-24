@@ -23,7 +23,14 @@ function setup(
     error: string | null;
   }> = {},
 ) {
-  const actions = { onProjectsChange: vi.fn(), onIslandMove: vi.fn(), onResetLayout: vi.fn() };
+  const actions = {
+    onProjectsChange: vi.fn(),
+    onIslandMove: vi.fn(),
+    onResetLayout: vi.fn(),
+    onPeriodChange: vi.fn(),
+    onPersonChange: vi.fn(),
+    onOnlyMergesChange: vi.fn(),
+  };
   render(ProjectMap, {
     props: {
       data: {
@@ -31,6 +38,11 @@ function setup(
         projects: [{ id: 1, name: 'Paralegal' }],
         projectIds: [],
         positions: { '1': { x: 0, y: 0 } },
+        period: { from: null, to: null },
+        personId: '',
+        people: [{ id: 'u-1', name: 'Ana Souza', photo: null }],
+        personLogin: null,
+        onlyMerges: false,
       },
       state: { error: over.error ?? null },
       actions,
@@ -52,6 +64,10 @@ describe('AzuosProjectMap', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Arrumar de novo' }));
     expect(actions.onResetLayout).toHaveBeenCalled();
+    expect(screen.getByRole('combobox', { name: 'Responsável' })).toBeInTheDocument();
+    expect(screen.getByText('Período')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Só merges e branches' }));
+    expect(actions.onOnlyMergesChange).toHaveBeenCalledWith(true);
   });
 
   // triste

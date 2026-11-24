@@ -7,13 +7,17 @@ import {
   count,
   desc,
   eq,
+  gte,
   ilike,
   inArray,
   isNotNull,
   isNull,
+  lte,
   or,
   type SQL,
+  sql,
 } from 'drizzle-orm';
+import { type AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runOne, runQuery } from '../../../lib/db/db-error.util';
@@ -33,6 +37,53 @@ export type SoftwareProjectPage = {
   total: number;
 };
 
+/** O recorte do mapa: o período (dias inclusos) e a pessoa (o id e a conta do GitHub dela). */
+export type ProjectMapFilter = {
+  from?: string;
+  to?: string;
+  personId?: string;
+  personLogin?: string | null;
+};
+
+const DAY_START = (day: string) => new Date(`${day}T00:00:00-03:00`);
+const DAY_END = (day: string) => new Date(`${day}T23:59:59.999-03:00`);
+
+function periodOf(column: AnyPgColumn, filter: ProjectMapFilter): SQL[] {
+  return [
+    ...(filter.from ? [gte(column, DAY_START(filter.from))] : []),
+    ...(filter.to ? [lte(column, DAY_END(filter.to))] : []),
+  ];
+}
+
+/** Do GitHub, o que a pessoa abriu ou fez (pela conta dela); sem conta vinculada, nada. */
+function eventFilters(filter: ProjectMapFilter): SQL[] {
+  const person = filter.personId
+    ? [
+        filter.personLogin
+          ? sql`lower(${softwareTimelineEvents.author}) = lower(${filter.personLogin})`
+          : sql`false`,
+      ]
+    : [];
+
+  return [...periodOf(softwareTimelineEvents.eventDate, filter), ...person];
+}
+
+function ticketFilters(filter: ProjectMapFilter): SQL[] {
+  return [
+    ...periodOf(tickets.createdAt, filter),
+    ...(filter.personId ? [eq(tickets.assigneeId, filter.personId)] : []),
+  ];
+}
+
+/** A tarefa que toca o período (do início ao prazo) e que é da pessoa. */
+function taskFilters(filter: ProjectMapFilter): SQL[] {
+  return [
+    ...(filter.to ? [lte(tasks.startDate, filter.to)] : []),
+    ...(filter.from ? [gte(sql`coalesce(${tasks.dueDate}, ${tasks.startDate})`, filter.from)] : []),
+    ...(filter.personId ? [eq(tasks.ownerId, filter.personId)] : []),
+  ];
+}
+
 @Injectable()
 export class SoftwareProjectsRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
@@ -41,7 +92,7 @@ export class SoftwareProjectsRepository {
    * Os fatos do mapa dos projetos: os sistemas (os escolhidos, ou todos os em uso), os eventos do
    * GitHub de cada um, os chamados deles e as tarefas que nasceram desses chamados.
    */
-  async mapFacts(ids: number[] | null) {
+  async mapFacts(ids: number[] | null, filter: ProjectMapFilter = {}) {
     const projects = await runQuery(
       this.db
         .select()
@@ -62,7 +113,9 @@ export class SoftwareProjectsRepository {
         this.db
           .select()
           .from(softwareTimelineEvents)
-          .where(inArray(softwareTimelineEvents.projectId, projectIds))
+          .where(
+            and(inArray(softwareTimelineEvents.projectId, projectIds), ...eventFilters(filter)),
+          )
           .orderBy(desc(softwareTimelineEvents.eventDate), desc(softwareTimelineEvents.id)),
         'ler os eventos dos sistemas',
       ),
@@ -76,7 +129,7 @@ export class SoftwareProjectsRepository {
             githubIssueNumber: tickets.githubIssueNumber,
           })
           .from(tickets)
-          .where(inArray(tickets.projectId, projectIds))
+          .where(and(inArray(tickets.projectId, projectIds), ...ticketFilters(filter)))
           .orderBy(desc(tickets.id)),
         'ler os chamados dos sistemas',
       ),
@@ -92,7 +145,7 @@ export class SoftwareProjectsRepository {
               ticketId: tasks.ticketId,
             })
             .from(tasks)
-            .where(inArray(tasks.ticketId, ticketIds)),
+            .where(and(inArray(tasks.ticketId, ticketIds), ...taskFilters(filter))),
           'ler as tarefas dos chamados dos sistemas',
         )
       : [];

@@ -9,6 +9,7 @@ import { SoftwareProjectsController } from './controller/software-projects.contr
 import { SoftwareScheduleController } from './controller/software-schedule.controller';
 import { SoftwareTimelineController } from './controller/software-timeline.controller';
 import { SoftwareDashboardRepository } from './repository/software-dashboard.repository';
+import { SoftwareGitRepository } from './repository/software-git.repository';
 import { SoftwareProjectsRepository } from './repository/software-projects.repository';
 import { SoftwareScheduleRepository } from './repository/software-schedule.repository';
 import { SoftwareTimelineRepository } from './repository/software-timeline.repository';
@@ -35,6 +36,7 @@ import { SoftwareTimelineService } from './service/software-timeline.service';
     SoftwareTimelineRepository,
     SoftwareScheduleRepository,
     SoftwareDashboardRepository,
+    SoftwareGitRepository,
     GithubService,
     GithubDailySyncService,
     SoftwareProjectsService,
@@ -43,6 +45,11 @@ import { SoftwareTimelineService } from './service/software-timeline.service';
     SoftwareDashboardService,
     TicketAssigneesService,
   ],
-  exports: [SoftwareProjectsService, GithubService, SoftwareTimelineRepository],
+  exports: [
+    SoftwareProjectsService,
+    GithubService,
+    SoftwareTimelineRepository,
+    SoftwareGitRepository,
+  ],
 })
 export class SoftwareProjectsModule {}

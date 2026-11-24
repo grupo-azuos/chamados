@@ -1,3 +1,4 @@
+import { projectMapEntryFixture } from './project-map.fixture.test-support';
 import { describe, expect, it } from 'vitest';
 
 import { type ProjectMapEntry } from '@template/shared/schemas/project-map.schema';
@@ -27,6 +28,8 @@ const event = (
 });
 
 const ENTRY: ProjectMapEntry = {
+  commits: projectMapEntryFixture().commits,
+  branches: projectMapEntryFixture().branches,
   project: { id: 1, name: 'Paralegal', repositoryUrl: 'org/paralegal', status: 'active' },
   events: [
     event(10, 'issue', '#12', 'Tela não abre', 'open'),
@@ -93,6 +96,21 @@ describe('project map', () => {
     expect(islands[0]!.position).toEqual({ x: 5, y: 6 });
     expect(islands[1]!.position.x).not.toBe(islands[2]!.position.x);
     expect(projectIdOfIsland(islands[1]!.id)).toBe('2');
+  });
+
+  // triste
+  it('puts the git graph of the system at the left of the island, cut like the rest', () => {
+    const map = buildProjectMap(
+      [ENTRY],
+      PROJECT_MAP_KINDS,
+      {},
+      { onlyMerges: true },
+      new Date('2026-11-22T12:00:00Z'),
+    );
+    const git = map.nodes.find((node) => node.type === 'git');
+
+    expect(git?.data).toMatchObject({ total: 2 });
+    expect(map.edges.some((edge) => edge.source === `${ENTRY.project.id}/git`)).toBe(true);
   });
 
   // triste
