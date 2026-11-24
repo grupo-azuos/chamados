@@ -25,6 +25,19 @@ export const softwareProjectsApi = {
       },
     }),
 
+  /** O mapa de UM sistema na Central (quem pede chamado), no período e da pessoa. */
+  supportMap: (
+    id: number,
+    filter: { from?: string | null; to?: string | null; personId?: string } = {},
+  ) =>
+    apiRequest<ProjectMap>(`/support/systems/${id}/map`, {
+      query: {
+        from: filter.from ?? undefined,
+        to: filter.to ?? undefined,
+        personId: filter.personId || undefined,
+      },
+    }),
+
   list: (query: Partial<SoftwareProjectListQuery> = {}) =>
     apiRequest<Paginated<SoftwareProject>>('/software-projects', {
       query: {

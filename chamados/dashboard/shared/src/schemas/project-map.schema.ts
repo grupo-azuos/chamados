@@ -38,6 +38,10 @@ export const projectMapQuerySchema = z.object({
 
 export type ProjectMapQuery = z.infer<typeof projectMapQuerySchema>;
 
+/** O mapa de UM sistema na Central: o período e a pessoa; o sistema vem no endereço. */
+export const supportProjectMapQuerySchema = projectMapQuerySchema.omit({ ids: true });
+export type SupportProjectMapQuery = z.infer<typeof supportProjectMapQuerySchema>;
+
 export const projectMapEventSchema = z.object({
   id: z.number().int(),
   type: z.enum(TIMELINE_EVENT_TYPES),

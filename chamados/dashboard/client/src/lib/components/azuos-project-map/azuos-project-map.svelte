@@ -39,6 +39,11 @@
       personLogin: string | null;
       onlyMerges: boolean;
     };
+    /**
+     * `isCentral`: o mapa de UM sistema na Central, para quem pede chamado — sem o "Projetos", e o
+     * chamado e a tarefa não levam ao painel (que é do time); o GitHub continua abrindo.
+     */
+    ui?: { isCentral?: boolean };
     state?: { isLoading?: boolean; error?: string | null };
     actions: {
       onProjectsChange: (projectIds: string[]) => void;
@@ -65,19 +70,20 @@
   import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import {
     buildProjectMap,
+    type ProjectMapGraph,
     PROJECT_MAP_KIND_TOGGLES,
     PROJECT_MAP_KINDS,
     type ProjectMapKind,
   } from '$lib/utils/project-map.util';
   import MapCanvas from './azuos-project-map-canvas.svelte';
 
-  let { data, state: mapState, actions }: AzuosProjectMapProps = $props();
+  let { data, ui, state: mapState, actions }: AzuosProjectMapProps = $props();
 
   /* O "Mostrar" é estado de TELA: some ao sair, como no mapa das tarefas. */
   let kinds = $state<ProjectMapKind[]>([...PROJECT_MAP_KINDS]);
   let isExpanded = $state(false);
 
-  const map = $derived(
+  const built = $derived(
     buildProjectMap(data.entries, kinds, data.positions, {
       from: data.period.from ?? undefined,
       to: data.period.to ?? undefined,
@@ -86,6 +92,16 @@
       onlyMerges: data.onlyMerges,
     }),
   );
+  const map = $derived(ui?.isCentral ? withoutPanelLinks(built) : built);
+
+  function withoutPanelLinks(graph: ProjectMapGraph): ProjectMapGraph {
+    return {
+      ...graph,
+      nodes: graph.nodes.map((node) =>
+        node.type === 'item' && !node.data.isExternal ? { ...node, data: { ...node.data, href: null } } : node,
+      ),
+    };
+  }
   const options = $derived(data.projects.map((project) => ({ value: String(project.id), label: project.name })));
 
   function toggle(kind: ProjectMapKind) {
@@ -96,11 +112,13 @@
 {#snippet toolbar()}
   <!-- Pela base: o "Período" tem rótulo em cima, e os outros campos se alinham à caixa dele. -->
   <div class="flex flex-wrap items-end gap-3">
-    <MultiSelectField
-      data={{ values: data.projectIds, options, placeholder: 'Todos os projetos', noun: 'projetos' }}
-      ui={{ ariaLabel: 'Projetos no mapa', className: 'w-64' }}
-      actions={{ onChange: actions.onProjectsChange }}
-    />
+    {#if !ui?.isCentral}
+      <MultiSelectField
+        data={{ values: data.projectIds, options, placeholder: 'Todos os projetos', noun: 'projetos' }}
+        ui={{ ariaLabel: 'Projetos no mapa', className: 'w-64' }}
+        actions={{ onChange: actions.onProjectsChange }}
+      />
+    {/if}
     <DateRangeField
       data={{ label: 'Período', name: 'mapPeriod', value: data.period }}
       ui={{ placeholder: 'Todo o período', className: 'w-64' }}

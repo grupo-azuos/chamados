@@ -59,6 +59,25 @@ describe('AzuosTicketLookupView', () => {
     expect(screen.getByText('Impressora')).toBeInTheDocument();
   });
 
+  // feliz
+  it('takes who asked to the map of the system of a Sistema ticket', () => {
+    setup({
+      data: { protocol: 'CH-0007', ticket: { ...ticket, projectId: 3, projectName: 'Paralegal' } },
+    });
+
+    expect(screen.getByRole('link', { name: /Ver o mapa do sistema Paralegal/ })).toHaveAttribute(
+      'href',
+      '/support/systems/3',
+    );
+  });
+
+  // triste
+  it('offers no map when the ticket has no system', () => {
+    setup({ data: { protocol: 'CH-0007', ticket } });
+
+    expect(screen.queryByRole('link', { name: /Ver o mapa do sistema/ })).not.toBeInTheDocument();
+  });
+
   /* A grade de dados responde o básico sem a pessoa ler a linha do tempo inteira. */
   it('shows the area, when it was opened and how much progress was registered', () => {
     setup({ data: { protocol: 'CH-0007', ticket } });
