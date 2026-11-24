@@ -134,14 +134,15 @@
     AutoScroller,
     Cursor,
     Feedback,
-    PointerActivationConstraints,
     PreventSelection,
   } from '@dnd-kit/dom';
-  import { DragDropProvider, DragOverlay, KeyboardSensor, PointerSensor } from '@dnd-kit/svelte';
+  import { DragDropProvider, DragOverlay } from '@dnd-kit/svelte';
 
   import AzuosActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import AzuosExpandableScreen from '$lib/components/azuos-expandable-screen/azuos-expandable-screen.svelte';
-  import DraggableCard from '$lib/components/azuos-kanban-draggable-card/azuos-kanban-draggable-card.svelte';
+  import DraggableCard, {
+    KANBAN_CARD_SENSORS,
+  } from '$lib/components/azuos-kanban-draggable-card/azuos-kanban-draggable-card.svelte';
   import StageColumn from '$lib/components/azuos-kanban-column/azuos-kanban-column.svelte';
   import TicketCard from '$lib/components/azuos-ticket-kanban-card/azuos-ticket-kanban-card.svelte';
   import { fullBleed } from '$lib/hooks/use-full-bleed/use-full-bleed';
@@ -156,18 +157,9 @@
   const isMoving = $derived(Boolean(viewState?.isMoving));
   const isReadOnly = $derived(isReadOnlyBoard(data.columns, data.lockedTicketIds));
 
-  /* Como no paralegal: o arrasto com o mouse só começa depois de 6px, e assim um clique no cartão
-     continua abrindo o chamado. Começa de qualquer ponto do cartão — inclusive do botão que o
-     cobre —, menos do menu de etiqueta e do link da issue (`data-no-drag`). */
-  const sensors = [
-    PointerSensor.configure({
-      /* Um par novo a cada toque: a regra guarda o estado do arrasto que está medindo. */
-      activationConstraints: () => [new PointerActivationConstraints.Distance({ value: 6 })],
-      preventActivation: (event) =>
-        event.target instanceof Element && event.target.closest('[data-no-drag]') !== null,
-    }),
-    KeyboardSensor,
-  ];
+  /* Os mesmos sensores dos cartões (ver `KANBAN_CARD_SENSORS`): o arrasto começa de qualquer
+     ponto do cartão, depois de 6px, menos do que for `data-no-drag`; e pelo teclado. */
+  const sensors = KANBAN_CARD_SENSORS;
 
   /** O pedaço do arrasto que os avisos e o soltar leem: quem foi pego e onde está. */
   type DragSnapshot = {
@@ -214,11 +206,13 @@
     return data.columns.find((column) => columnDropId(column.id) === dropId)?.title ?? String(dropId);
   }
 
+  /** O desenho do cartão que acompanha o ponteiro: o da coluna de onde ele saiu, com o nome dela. */
   function lookOfTicket(id: unknown) {
     const column = data.columns.find((item) => item.tickets.some((ticket) => ticket.id === Number(id)));
 
-    return stageLookOf(column?.id ?? INITIAL_TICKET_STATUS);
+    return { ...stageLookOf(column?.id ?? INITIAL_TICKET_STATUS), stageLabel: column?.title };
   }
+
 
   function handleDragEnd(event: DragSnapshot) {
     if (event.canceled) return;
@@ -279,7 +273,7 @@
               >
                 <TicketCard
                   data={{ ticket, label: labelOf(ticket.id), assigneePhoto: photoOf(ticket.assigneeId) }}
-                  ui={look}
+                  ui={{ ...look, stageLabel: column.title }}
                   state={{ isBusy: isMoving && movingId === ticket.id }}
                   actions={{ onOpen: actions.onOpenTicket, onSetLabel: actions.onSetCardColor }}
                 />

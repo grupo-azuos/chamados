@@ -13,6 +13,27 @@
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
+  import { KeyboardSensor, PointerActivationConstraints, PointerSensor } from '@dnd-kit/dom';
+
+  /**
+   * O ARRASTO DO CARTÃO, como no paralegal: com o mouse, começa depois de 6px (um clique continua
+   * abrindo o cartão), de QUALQUER ponto dele — inclusive do botão que o cobre —, menos do que
+   * estiver marcado `data-no-drag` (o menu, o link da issue); e pelo teclado.
+   *
+   * Fica NO CARTÃO, e não só no quadro: o quadro passa os sensores dele depois que os cartões já
+   * se registraram, e o cartão ficava com o sensor padrão — que não deixa o arrasto começar em
+   * cima de um botão. Como o cartão inteiro é o botão que abre o chamado, nada se arrastava.
+   */
+  export const KANBAN_CARD_SENSORS = [
+    PointerSensor.configure({
+      /* Um par novo a cada toque: a regra guarda o estado do arrasto que está medindo. */
+      activationConstraints: () => [new PointerActivationConstraints.Distance({ value: 6 })],
+      preventActivation: (event: PointerEvent) =>
+        event.target instanceof Element && event.target.closest('[data-no-drag]') !== null,
+    }),
+    KeyboardSensor,
+  ];
+
   export type AzuosKanbanDraggableCardProps = {
     data: { id: number | string; label: string };
     state?: { isDisabled?: boolean };
@@ -35,6 +56,7 @@
     get disabled() {
       return !canDrag;
     },
+    sensors: KANBAN_CARD_SENSORS,
   });
 </script>
 

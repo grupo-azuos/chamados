@@ -4,7 +4,10 @@ import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import TicketCard, { subjectOf, type AzuosTicketKanbanCardProps } from './azuos-ticket-kanban-card.svelte';
+import TicketCard, {
+  subjectOf,
+  type AzuosTicketKanbanCardProps,
+} from './azuos-ticket-kanban-card.svelte';
 
 function ticket(overrides: Partial<Ticket> = {}): Ticket {
   return {
@@ -41,7 +44,10 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
 }
 
 function renderCard(
-  overrides: { data?: Partial<AzuosTicketKanbanCardProps['data']>; state?: AzuosTicketKanbanCardProps['state'] } = {},
+  overrides: {
+    data?: Partial<AzuosTicketKanbanCardProps['data']>;
+    state?: AzuosTicketKanbanCardProps['state'];
+  } = {},
 ) {
   const actions = { onOpen: vi.fn(), onSetLabel: vi.fn() };
   render(TicketCard, {
@@ -52,7 +58,7 @@ function renderCard(
         assigneePhoto: null,
         ...overrides.data,
       },
-      ui: { icon: CircleDot, tone: 'neutral' },
+      ui: { icon: CircleDot, tone: 'neutral', stageLabel: 'Em atendimento' },
       state: overrides.state,
       actions,
     },
@@ -72,6 +78,8 @@ describe('AzuosTicketKanbanCard', () => {
     expect(screen.getByText('Atenção')).toBeInTheDocument();
     expect(screen.getByText('CH-0010')).toBeInTheDocument();
     expect(screen.getByText('Carlos Dev')).toBeInTheDocument();
+    /* A faixa de cima, como no paralegal: a etapa em que o cartão está. */
+    expect(screen.getByText('Em atendimento')).toBeInTheDocument();
     const issue = screen.getByRole('link', { name: /#42/ });
     expect(issue).toHaveAttribute('target', '_blank');
     expect(issue).toHaveAttribute('rel', 'noopener noreferrer');
@@ -123,7 +131,11 @@ describe('AzuosTicketKanbanCard', () => {
       },
     });
 
-    expect(screen.getByText(subjectOf(ticket({ projectName: null, problemType: 'air_conditioning' as never })))).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        subjectOf(ticket({ projectName: null, problemType: 'air_conditioning' as never })),
+      ),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
@@ -162,7 +174,11 @@ describe('AzuosTicketKanbanCard', () => {
   it('is only a drawing when it gets no actions', () => {
     render(TicketCard, {
       props: {
-        data: { ticket: ticket({ customSystemName: 'Planilha do RH', projectName: null }), label: null, assigneePhoto: null },
+        data: {
+          ticket: ticket({ customSystemName: 'Planilha do RH', projectName: null }),
+          label: null,
+          assigneePhoto: null,
+        },
         ui: { icon: CircleDot, tone: 'neutral' },
       },
     });

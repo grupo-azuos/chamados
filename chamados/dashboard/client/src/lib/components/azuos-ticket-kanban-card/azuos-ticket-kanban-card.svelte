@@ -1,10 +1,10 @@
 <!--
   @component
-  UM CHAMADO NO QUADRO DA FILA — o mesmo cartão do quadro de tarefas do paralegal, nas três áreas
-  (Infraestrutura, Sistema e Manutenção). O ícone grande do canto e a cor saem da ETAPA (a coluna):
-  mudou de coluna, o cartão muda. Em cima o texto do chamado, depois os selos (o assunto, a
-  urgência, a etiqueta e, em Sistema, a issue do GitHub), o protocolo com quem abriu e, embaixo, o
-  responsável com foto.
+  UM CHAMADO NO QUADRO DA FILA — no formato do cartão do kanban do paralegal (Solicitações), nas
+  três áreas (Infraestrutura, Sistema e Manutenção): a faixa cinza com a situação (bolinha e nome
+  no tom da etapa) e o protocolo; o ícone cheio da etapa, o texto do chamado em até duas linhas e os
+  selos (o assunto, a urgência, a etiqueta e, em Sistema, a issue do GitHub); no pé, quem atende
+  (com a foto), quem abriu e quando, e o menu da etiqueta. Mudou de coluna, a cor muda junto.
 
   O primeiro selo diz DO QUE é o chamado: o sistema, em Sistema (o cadastrado ou o que quem abriu
   digitou); o tipo de problema, nas outras áreas ("Impressora", "Ar-condicionado").
@@ -32,7 +32,8 @@
       label: StatusBadgeTone | null;
       assigneePhoto: string | null;
     };
-    ui: { icon: LucideIcon; tone: AzuosCardTone };
+    /** `stageLabel`: o nome da coluna em que o cartão está (a faixa de cima). */
+    ui: { icon: LucideIcon; tone: AzuosCardTone; stageLabel?: string };
     state?: { isBusy?: boolean };
     actions?: {
       onOpen: (ticketId: number) => void;
@@ -77,10 +78,13 @@
     AzuosButtonPrimitive as Button,
     AzuosDropdownMenuPrimitive as DropdownMenu,
   } from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import AzuosContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import Hint from '$lib/components/azuos-hint/azuos-hint.svelte';
   import AzuosPersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import AzuosStatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { cardToneClasses } from '$lib/utils/card-tone.util';
+  import { cn } from '$lib/utils/cn';
+  import { formatDate } from '$lib/utils/format-date';
 
   let { data, ui, state: cardState, actions }: AzuosTicketKanbanCardProps = $props();
 
@@ -93,83 +97,107 @@
   );
   const assigneeName = $derived(ticket.assignee ?? 'Sem responsável');
   const isBusy = $derived(cardState?.isBusy ?? false);
+  const tone = $derived(cardToneClasses(ui.tone));
+  const Icon = $derived(ui.icon);
 </script>
 
-<AzuosContentCard
+<CardSurface
   data={{ label: `Abrir o chamado ${ticket.protocol}` }}
-  ui={{ icon: ui.icon, tone: ui.tone }}
+  ui={{ className: 'flex flex-col text-left' }}
   actions={actions ? { onClick: () => actions.onOpen(ticket.id) } : undefined}
 >
-  {#if actions}
-    <!-- O menu sobe acima do botão que cobre o card: sem isso o clique nele abriria o chamado.
-         `data-no-drag`: apertar os três pontinhos abre o menu, e não começa um arrasto. -->
-    <div class="absolute top-2 right-2 z-20" data-no-drag>
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger disabled={isBusy}>
-          {#snippet child({ props })}
-            <Button
-              {...props}
-              type="button"
-              aria-label={`Etiqueta do chamado ${ticket.protocol}`}
-              class={actionButton({ variant: 'ghost', size: 'sm', isIconOnly: true })}
-            >
-              <Ellipsis aria-hidden="true" />
-            </Button>
-          {/snippet}
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content
-          align="center"
-          class="rounded-surface ring-foreground/8 w-max max-w-[min(26rem,calc(100vw-2rem))] min-w-56 border-transparent p-1.5 shadow-xl"
-        >
-          <DropdownMenu.Label class="px-3">Etiqueta</DropdownMenu.Label>
-          {#each TICKET_LABEL_OPTIONS as option (option.tone)}
-            <DropdownMenu.Item
-              class="rounded-chip min-h-10 cursor-pointer gap-2 px-3 py-2"
-              onSelect={() => actions.onSetLabel(ticket.id, option.tone)}
-            >
-              <span aria-hidden="true" class={`size-2 shrink-0 rounded-full ${cardToneClasses(option.tone).swatch}`}></span>
-              {option.label}
-            </DropdownMenu.Item>
-          {/each}
-        </DropdownMenu.Content>
-      </DropdownMenu.Root>
-    </div>
-  {/if}
+  <!-- A FAIXA da situação, como no paralegal: a bolinha e o nome no tom da etapa; à direita, o
+       protocolo. -->
+  <div class="bg-muted flex items-center justify-between gap-2 px-4 py-1.5 text-xs font-semibold">
+    <span class={cn('flex min-w-0 items-center gap-1.5', tone.text)}>
+      <span aria-hidden="true" class={cn('size-1.5 shrink-0 rounded-full', tone.swatch)}></span>
+      <span class="truncate">{ui.stageLabel ?? ''}</span>
+    </span>
+    <span class="text-muted-foreground font-mono">{ticket.protocol}</span>
+  </div>
 
-  <span class="text-foreground line-clamp-2 pr-12 font-semibold">{ticket.description}</span>
-  <span class="flex flex-wrap items-center gap-1.5 pr-24">
-    <AzuosStatusBadge data={{ label: subject }} ui={{ tone: 'neutral', size: 'sm' }} />
-    <AzuosStatusBadge
-      data={{ label: PRIORITY_LABELS[ticket.priority] ?? ticket.priority }}
-      ui={{ tone: PRIORITY_TONES[ticket.priority] ?? 'neutral', size: 'sm' }}
-    />
-    {#if labelText && data.label}
-      <AzuosStatusBadge data={{ label: labelText }} ui={{ tone: data.label, size: 'sm' }} />
+  <div class="flex items-start gap-3 px-4 pt-3">
+    <span aria-hidden="true" class={cn('rounded-icon inline-flex size-9 shrink-0 items-center justify-center shadow-xs', tone.dot)}>
+      <Icon class="size-4.5" />
+    </span>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <Hint data={{ text: ticket.description }}>
+        {#snippet child(props)}
+          <h3 {...props} class="text-foreground line-clamp-2 text-sm leading-tight font-semibold">{ticket.description}</h3>
+        {/snippet}
+      </Hint>
+      <span class="mt-1 flex flex-wrap items-center gap-1">
+        <AzuosStatusBadge data={{ label: subject }} ui={{ tone: 'neutral', size: 'sm' }} />
+        <AzuosStatusBadge
+          data={{ label: PRIORITY_LABELS[ticket.priority] ?? ticket.priority }}
+          ui={{ tone: PRIORITY_TONES[ticket.priority] ?? 'neutral', size: 'sm' }}
+        />
+        {#if labelText && data.label}
+          <AzuosStatusBadge data={{ label: labelText }} ui={{ tone: data.label, size: 'sm' }} />
+        {/if}
+        {#if ticket.githubIssueUrl && ticket.githubIssueNumber}
+          <!-- A issue abre noutra aba e não abre o chamado: o link sobe acima do botão do card. -->
+          <a
+            href={ticket.githubIssueUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-no-drag
+            class="rounded-chip bg-muted text-muted-foreground hover:text-foreground relative z-20 inline-flex items-center gap-0.5 px-2 py-0.5 font-mono text-xs hover:underline"
+          >
+            #{ticket.githubIssueNumber}
+            <ArrowUpRight aria-hidden="true" class="size-3" />
+          </a>
+        {/if}
+        {#if isBusy}
+          <span class="text-muted-foreground text-xs">Salvando…</span>
+        {/if}
+      </span>
+    </div>
+  </div>
+
+  <div aria-hidden="true" class="min-h-3 flex-1"></div>
+
+  <!-- O PÉ: quem atende (com a foto), quem abriu e quando; o menu da etiqueta no canto. -->
+  <div class="border-border flex items-center gap-2.5 border-t px-4 py-3">
+    <AzuosPersonAvatar name={assigneeName} avatarUrl={data.assigneePhoto} personId={ticket.assigneeId} ui={{ size: 'sm' }} />
+    <span class="flex min-w-0 flex-1 flex-col">
+      <span class="truncate text-xs font-semibold">{assigneeName}</span>
+      <span class="text-muted-foreground truncate text-xs">{ticket.requesterName} · {formatDate(ticket.createdAt)}</span>
+    </span>
+    {#if actions}
+      <!-- No rodapé, como no paralegal; sobe acima do botão que cobre o card (o clique não abre o
+           chamado) e não começa um arrasto (`data-no-drag`). -->
+      <div class="relative z-20 shrink-0" data-no-drag>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger disabled={isBusy}>
+            {#snippet child({ props })}
+              <Button
+                {...props}
+                type="button"
+                aria-label={`Etiqueta do chamado ${ticket.protocol}`}
+                class={actionButton({ variant: 'ghost', size: 'sm', isIconOnly: true })}
+              >
+                <Ellipsis aria-hidden="true" />
+              </Button>
+            {/snippet}
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content
+            align="center"
+            class="rounded-surface ring-foreground/8 w-max max-w-[min(26rem,calc(100vw-2rem))] min-w-56 border-transparent p-1.5 shadow-xl"
+          >
+            <DropdownMenu.Label class="px-3">Etiqueta</DropdownMenu.Label>
+            {#each TICKET_LABEL_OPTIONS as option (option.tone)}
+              <DropdownMenu.Item
+                class="rounded-chip min-h-10 cursor-pointer gap-2 px-3 py-2"
+                onSelect={() => actions.onSetLabel(ticket.id, option.tone)}
+              >
+                <span aria-hidden="true" class={`size-2 shrink-0 rounded-full ${cardToneClasses(option.tone).swatch}`}></span>
+                {option.label}
+              </DropdownMenu.Item>
+            {/each}
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
+      </div>
     {/if}
-    {#if ticket.githubIssueUrl && ticket.githubIssueNumber}
-      <!-- A issue abre noutra aba e não abre o chamado: o link sobe acima do botão do card. -->
-      <a
-        href={ticket.githubIssueUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-no-drag
-        class="rounded-chip bg-muted text-muted-foreground hover:text-foreground relative z-20 inline-flex items-center gap-0.5 px-2 py-0.5 font-mono text-xs hover:underline"
-      >
-        #{ticket.githubIssueNumber}
-        <ArrowUpRight aria-hidden="true" class="size-3" />
-      </a>
-    {/if}
-    {#if isBusy}
-      <span class="text-muted-foreground text-xs">Salvando…</span>
-    {/if}
-  </span>
-  <span class="text-muted-foreground truncate pr-24 text-xs">
-    <span class="font-mono">{ticket.protocol}</span> · {ticket.requesterName}
-  </span>
-  <!-- A linha de baixo passa na altura do ícone grande do canto: a margem à direita é a largura
-       dele, para o texto nunca correr por baixo do desenho. -->
-  <span class="text-muted-foreground flex min-w-0 items-center gap-2 pr-24 text-xs">
-    <AzuosPersonAvatar name={assigneeName} avatarUrl={data.assigneePhoto} ui={{ size: 'sm' }} />
-    <span class="truncate">{assigneeName}</span>
-  </span>
-</AzuosContentCard>
+  </div>
+</CardSurface>
