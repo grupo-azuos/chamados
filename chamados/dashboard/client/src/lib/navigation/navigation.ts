@@ -10,6 +10,7 @@ import ListChecks from '@lucide/svelte/icons/list-checks';
 import Package from '@lucide/svelte/icons/package';
 import Trash2 from '@lucide/svelte/icons/trash-2';
 import Wifi from '@lucide/svelte/icons/wifi';
+import Network from '@lucide/svelte/icons/network';
 import Wrench from '@lucide/svelte/icons/wrench';
 import { ROLE_CONTEXTS, type RoleContext } from '@template/shared/domain/role-context.util';
 
@@ -99,6 +100,8 @@ export const INFRA_NAV_ITEMS: readonly NavItem[] = [
   /* Chamados e manutenções viram tarefa; a produtividade da Infraestrutura mora aqui. */
   navItem('infra', 'tasks', 'Tarefas', ListChecks),
   navItem('infra', 'computers', 'Inventário', Boxes),
+  /* Quem usa cada máquina, de que departamento, e o que passou por ela. */
+  navItem('infra', 'traceability', 'Rastreabilidade', Network),
   navItem('infra', 'maintenance', 'Manutenção', Wrench),
   navItem('infra', 'parts', 'Depósito', Package),
   navItem('infra', 'disposal', 'Descarte', Trash2),
