@@ -260,6 +260,37 @@ export class SoftwareProjectsRepository {
     );
   }
 
+  /**
+   * O ANDAMENTO DOS SISTEMAS para a Central: os em uso, com as issues abertas e o último movimento
+   * do GitHub (a data mais nova da timeline). Os chamados abertos vêm de `countOpenTicketsByProject`.
+   */
+  async supportList() {
+    const projects = await runQuery(
+      this.db
+        .select()
+        .from(softwareProjects)
+        .where(isNull(softwareProjects.archivedAt))
+        .orderBy(asc(softwareProjects.name)),
+      'ler os sistemas da Central',
+    );
+    const ids = projects.map((project) => project.id);
+    if (!ids.length) return { projects, activity: [] };
+    const activity = await runQuery(
+      this.db
+        .select({
+          projectId: softwareTimelineEvents.projectId,
+          openIssues: sql<number>`count(*) filter (where ${softwareTimelineEvents.type} = 'issue' and ${softwareTimelineEvents.status} = 'open')::int`,
+          lastAt: sql<Date | null>`max(${softwareTimelineEvents.eventDate})`,
+        })
+        .from(softwareTimelineEvents)
+        .where(inArray(softwareTimelineEvents.projectId, ids))
+        .groupBy(softwareTimelineEvents.projectId),
+      'ler o andamento dos sistemas',
+    );
+
+    return { projects, activity };
+  }
+
   async countOpenTicketsByProject(projectIds: number[]): Promise<Record<number, number>> {
     if (projectIds.length === 0) return {};
 

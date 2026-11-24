@@ -317,6 +317,36 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
     });
 
     // triste
+    it('lists every system in use with how it is going, to whoever asks for tickets', async () => {
+      const chamados = await registerProject({}).expect(201);
+      await started.db.insert(softwareTimelineEvents).values({
+        projectId: chamados.body.id,
+        type: 'issue',
+        externalId: '#30',
+        title: 'Tela lenta',
+        url: 'https://github.com/x/y/issues/30',
+        author: 'vini',
+        authorName: 'Vinícius',
+        status: 'open',
+        eventDate: new Date('2026-11-21T10:00:00Z'),
+        createdBy: 'ti@empresa.com.br',
+      });
+
+      const list = await api().get('/api/v1/support/systems').set(asAna()).expect(200);
+
+      expect(list.body).toEqual([
+        expect.objectContaining({
+          id: chamados.body.id,
+          name: 'Chamados',
+          openTickets: 0,
+          status: 'active',
+        }),
+      ]);
+      expect(list.body[0].openIssues).toBeGreaterThanOrEqual(1);
+      expect(list.body[0].lastActivityAt).not.toBeNull();
+    });
+
+    // triste
     it('answers 404 in the Central for a system that does not exist', async () => {
       await api().get('/api/v1/support/systems/999999/map').set(asAna()).expect(404);
       await api().get('/api/v1/support/systems/x/map').set(asAna()).expect(400);

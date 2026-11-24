@@ -2,7 +2,11 @@ import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { AnyModule } from '../../../lib/auth/module-context.decorator';
-import { ProjectMapDto, SupportProjectMapQueryDto } from '../dto/software-project.dto';
+import {
+  ProjectMapDto,
+  SupportProjectMapQueryDto,
+  SupportSystemDto,
+} from '../dto/software-project.dto';
 import { SoftwareProjectsService } from '../service/software-projects.service';
 
 /**
@@ -14,6 +18,17 @@ import { SoftwareProjectsService } from '../service/software-projects.service';
 @Controller('support/systems')
 export class SupportSystemsController {
   constructor(private readonly service: SoftwareProjectsService) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'O andamento de todos os sistemas, para quem pede chamado',
+    description:
+      'Os sistemas em uso, com os chamados e as issues abertas e o último movimento no GitHub. Cada um leva ao mapa dele (`GET /support/systems/:id/map`).',
+  })
+  @ApiOkResponse({ type: [SupportSystemDto] })
+  async list(): Promise<SupportSystemDto[]> {
+    return this.service.supportList();
+  }
 
   @Get(':id/map')
   @ApiOperation({
