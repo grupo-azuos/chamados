@@ -1,125 +1,43 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
+  import { fn } from 'storybook/test';
 
   import TicketStockItemsCard from './azuos-ticket-stock-items-card.svelte';
 
-  const options = [
-    { id: 1, name: 'Mouse USB', available: 3 },
-    { id: 2, name: 'Monitor 24"', available: 1 },
-    { id: 3, name: 'Teclado ABNT2', available: 0 },
-  ];
+  const line = (id: number, name: string, direction: 'in' | 'out', computerId: number | null, computerName: string | null) => ({
+    id,
+    ticketId: 49,
+    source: 'parts' as const,
+    itemId: id,
+    name,
+    direction,
+    quantity: 1,
+    computerId,
+    computerName,
+    settledAt: null,
+    createdAt: '2026-11-12T12:00:00.000Z',
+    createdByName: 'Ana Lima',
+  });
   const items = [
-    {
-      id: 10,
-      ticketId: 49,
-      source: 'parts' as const,
-      itemId: 2,
-      name: 'Monitor 24"',
-      direction: 'out' as const,
-      quantity: 1,
-      settledAt: null,
-      createdAt: '2026-11-12T12:00:00.000Z',
-      createdByName: 'Ana Lima',
-    },
-    {
-      id: 11,
-      ticketId: 49,
-      source: 'parts' as const,
-      itemId: 4,
-      name: 'Monitor 22" com a tela de cor trocada, devolvido para conserto',
-      direction: 'in' as const,
-      quantity: 1,
-      settledAt: null,
-      createdAt: '2026-11-12T12:05:00.000Z',
-      createdByName: 'Ana Lima',
-    },
+    line(10, 'Monitor 24"', 'out', 6, 'Computador 06'),
+    line(11, 'Monitor 24"', 'out', 6, 'Computador 06'),
+    line(12, 'Monitor 22" com a tela de cor trocada, devolvido para conserto', 'in', 6, 'Computador 06'),
+    line(13, 'Cabo HDMI', 'out', null, null),
   ];
-  const values = { itemId: '', direction: 'out' as const, quantity: '1' };
-  const actions = { onChange: () => {}, onSubmit: () => {}, onRemove: () => {} };
+  const actions = { onOpenLink: fn(), onRemove: fn() };
 
+  /**
+   * Os itens de estoque do chamado POR MÁQUINA (1 máquina para vários itens): "Computador 06 →
+   * Monitor 24", Monitor 22"". "Vincular itens" abre o diálogo de dois lados.
+   */
   const { Story } = defineMeta({
     title: 'Components/AzuosTicketStockItemsCard',
     component: TicketStockItemsCard,
+    tags: ['autodocs'],
   });
 </script>
 
-<Story
-  name="Default"
-  args={{ data: { items, options, values }, ui: { shelfLabel: 'Depósito da TI' }, actions }}
-/>
-
-<Story name="Empty" args={{ data: { items: [], options, values }, actions }} />
-
-<Story name="Loading" args={{ data: { items: [], options: [], values }, state: { isLoading: true }, actions }} />
-
-<Story
-  name="Closed ticket"
-  args={{
-    data: {
-      items: items.map((item) => ({ ...item, settledAt: '2026-11-12T15:00:00.000Z' })),
-      options,
-      values,
-    },
-    state: { isClosed: true },
-    actions,
-  }}
-/>
-
-<Story
-  name="Refused"
-  args={{
-    data: { items, options, values: { ...values, quantity: '0' }, errors: { quantity: 'A quantidade mínima é 1' } },
-    state: { error: 'Só há 1 de Monitor 24" disponível no depósito.' },
-    actions,
-  }}
-/>
-
-<Story
-  name="Adding"
-  args={{ data: { items, options, values: { itemId: '1', direction: 'out', quantity: '2' } }, state: { isAdding: true }, actions }}
-/>
-
-<!-- Chamado com duas máquinas: quem vincula escolhe para qual vai o item. -->
-<Story
-  name="Ticket with many machines"
-  args={{
-    data: {
-      items: items.map((item) => ({ ...item, computerId: 6, computerName: 'COMPUTADOR - 06' })),
-      options,
-      values,
-      machines: [
-        { value: '6', label: 'COMPUTADOR - 06' },
-        { value: '7', label: 'COMPUTADOR - 07' },
-      ],
-    },
-    actions,
-  }}
-/>
-
-<!-- Dentro de uma seção que já tem o nome: o cartão sem o próprio título. -->
-<Story
-  name="Without header"
-  args={{ data: { items, options, values }, ui: { isHeaderHidden: true }, actions }}
-/>
-
-<!-- Vários itens: os cards quebram linha, nenhum estica na largura toda. -->
-<Story
-  name="Many items"
-  args={{
-    data: {
-      items: ['Monitor 24P 75hz', 'Mouse USB', 'Cabo HDMI 2 m', 'Teclado ABNT2', 'Fonte 500 W', 'Memória 8 GB'].map(
-        (name, index) => ({
-          ...(items[0] as (typeof items)[number]),
-          id: 100 + index,
-          name,
-          direction: index % 3 === 1 ? ('in' as const) : ('out' as const),
-          quantity: index + 1,
-          computerName: index % 2 === 0 ? 'Computador 04' : 'Computador 06',
-        }),
-      ),
-      options,
-      values,
-    },
-    actions,
-  }}
-/>
+<Story name="Default" args={{ data: { items }, ui: { shelfLabel: 'Depósito da TI' }, actions }} />
+<Story name="Vazio" args={{ data: { items: [] }, actions }} />
+<Story name="Encerrado" args={{ data: { items }, state: { isClosed: true }, actions }} />
+<Story name="Recusa do servidor" args={{ data: { items }, state: { error: 'Só há 1 de Monitor 24" disponível no depósito.' }, actions }} />

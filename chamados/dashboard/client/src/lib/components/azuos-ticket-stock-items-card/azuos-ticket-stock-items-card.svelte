@@ -1,43 +1,22 @@
 <!--
   @component
-  OS ITENS DE ESTOQUE na ficha do chamado — além da máquina, o que o atendimento tira do depósito
-  (saída) ou devolve a ele (entrada), quantos forem.
+  OS ITENS DE ESTOQUE na ficha do chamado — o que o atendimento tira do depósito (saída) ou devolve
+  a ele (entrada), POR MÁQUINA: 1 máquina para vários itens, cada linha "Computador 01 → Monitor 24
+  ×2, Teclado ×1" (o que não tem máquina fica em "Sem máquina"). "Vincular itens" abre o diálogo de
+  dois lados (a máquina de um, os itens do outro).
 
   O item fica RESERVADO enquanto o chamado está aberto: o saldo do depósito só anda no encerramento.
   Com o chamado encerrado, a lista vira só leitura — para mexer, reabre-se.
 
-  Função pura de props: os itens, as opções e o que está sendo digitado chegam prontos do view-model
-  (`use-ticket-stock-items`). Na saída só se oferece o que ainda sobra, com a sobra no nome. `data`
-  leva itens, opções, valores, erros e as máquinas do chamado (com mais de uma, escolhe-se para qual
-  vai o item); `ui`, o nome do depósito e `isHeaderHidden`; `state`, encerrado, carregamento,
-  inclusão, remoção e erro; `actions`, mudar campo, incluir e tirar.
+  Função pura de props. `data` leva os itens; `ui`, o nome do depósito e `isHeaderHidden`; `state`,
+  encerrado, carregamento, remoção e erro; `actions`, abrir o diálogo e tirar um item.
 -->
 <script lang="ts" module>
-  import {
-    TICKET_STOCK_DIRECTIONS,
-    ticketStockDirectionLabel,
-    type TicketStockDirection,
-  } from '@template/shared/domain/ticket-stock.util';
-  import {
-    type TicketStockItem,
-    type TicketStockItemFormValues,
-    type TicketStockOption,
-  } from '@template/shared/schemas/ticket-stock-item.schema';
-
-  export type TicketStockField = keyof TicketStockItemFormValues;
+  import { ticketStockDirectionLabel } from '@template/shared/domain/ticket-stock.util';
+  import { type TicketStockItem } from '@template/shared/schemas/ticket-stock-item.schema';
 
   export type AzuosTicketStockItemsCardProps = {
-    data: {
-      items: TicketStockItem[];
-      options: TicketStockOption[];
-      values: TicketStockItemFormValues;
-      errors?: Partial<Record<TicketStockField, string>>;
-      /**
-       * As máquinas do chamado. Com MAIS DE UMA, quem vincula escolhe para qual vai o item;
-       * com uma (ou nenhuma), o campo nem aparece.
-       */
-      machines?: { value: string; label: string }[];
-    };
+    data: { items: TicketStockItem[] };
     ui?: {
       /** O nome do depósito na tela — "Depósito da TI", "Depósito da Manutenção". */
       shelfLabel?: string;
@@ -47,75 +26,48 @@
     state?: {
       isClosed?: boolean;
       isLoading?: boolean;
-      isAdding?: boolean;
       removingId?: number | null;
       error?: string | null;
     };
     actions: {
-      onChange: (field: TicketStockField, value: string) => void;
-      onSubmit: () => void;
+      /** Abre "Vincular itens". */
+      onOpenLink: () => void;
       onRemove: (id: number) => void;
     };
   };
-
-  const DIRECTION_OPTIONS = TICKET_STOCK_DIRECTIONS.map((direction) => ({
-    value: direction,
-    label: ticketStockDirectionLabel(direction),
-    tone: direction === 'out' ? ('warning' as const) : ('success' as const),
-  }));
-
-  /**
-   * As opções do item conforme o sentido. Na SAÍDA só entra o que ainda sobra (com a sobra no
-   * nome, para a pessoa não pedir mais do que existe); na ENTRADA, qualquer item do depósito.
-   */
-  export function itemOptionsFor(
-    options: readonly TicketStockOption[],
-    direction: TicketStockDirection,
-  ): { value: string; label: string }[] {
-    if (direction === 'in') {
-      return options.map((option) => ({ value: String(option.id), label: option.name }));
-    }
-
-    return options
-      .filter((option) => option.available > 0)
-      .map((option) => ({
-        value: String(option.id),
-        label: `${option.name} — ${option.available} ${option.available === 1 ? 'disponível' : 'disponíveis'}`,
-      }));
-  }
 </script>
 
 <script lang="ts">
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
+  import Link2 from '@lucide/svelte/icons/link-2';
+  import Monitor from '@lucide/svelte/icons/monitor';
   import XIcon from '@lucide/svelte/icons/x';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
-  import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
-  import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
-  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import { cardToneClasses } from '$lib/utils/card-tone.util';
+  import { cn } from '$lib/utils/cn';
+  import { groupByMachine } from '$lib/utils/ticket-stock-link.util';
 
   let { data, ui, state: cardState, actions }: AzuosTicketStockItemsCardProps = $props();
 
-  const direction = $derived(data.values.direction);
-  const itemOptions = $derived(itemOptionsFor(data.options, direction));
-  const isBusy = $derived(Boolean(cardState?.isAdding));
-
-  function handleSubmit(event: SubmitEvent): void {
-    event.preventDefault();
-    actions.onSubmit();
-  }
+  const groups = $derived(groupByMachine(data.items));
 </script>
 
 <div class={ui?.isHeaderHidden ? 'flex flex-col gap-3' : 'border-border/70 flex flex-col gap-3 border-t pt-4'}>
-  <div>
-    {#if !ui?.isHeaderHidden}
-      <p class="text-ink-700 text-sm font-medium">Itens do estoque</p>
+  <div class="flex flex-wrap items-start justify-between gap-2">
+    <div>
+      {#if !ui?.isHeaderHidden}
+        <p class="text-ink-700 text-sm font-medium">Itens do estoque</p>
+      {/if}
+      <p class="text-muted-foreground text-xs">
+        O que sai ou volta para o {ui?.shelfLabel ?? 'depósito'}, por máquina. O saldo só muda quando
+        o chamado for encerrado.
+      </p>
+    </div>
+    {#if !cardState?.isClosed}
+      <ActionButton data={{ label: 'Vincular itens' }} ui={{ variant: 'secondary', icon: Link2 }} actions={{ onClick: actions.onOpenLink }} />
     {/if}
-    <p class="text-muted-foreground text-xs">
-      O que sai ou volta para o {ui?.shelfLabel ?? 'depósito'}. O saldo só muda quando o chamado
-      for encerrado.
-    </p>
   </div>
 
   {#if cardState?.isLoading}
@@ -123,118 +75,47 @@
   {:else if data.items.length === 0}
     <p class="text-muted-foreground/70 text-xs">Nenhum item do estoque neste chamado.</p>
   {:else}
-    <!-- Um card pequeno por item, lado a lado: com três, dez ou vinte itens a grade só quebra
-         linha, e nenhum item estica na largura toda da ficha. -->
-    <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {#each data.items as item (item.id)}
-        <li class="bg-card rounded-box flex flex-col gap-2 p-3 shadow-card">
-          <div class="flex items-start justify-between gap-2">
-            <p class="text-ink-900 line-clamp-2 min-w-0 text-sm font-medium" title={item.name}>
-              {item.name}
-            </p>
-            {#if !cardState?.isClosed}
-              <ActionButton
-                data={{ label: `Tirar ${item.name} do chamado` }}
-                ui={{ variant: 'ghost', size: 'sm', icon: XIcon, isIconOnly: true, className: '-mt-1 -mr-1' }}
-                state={{
-                  isDisabled: cardState?.removingId === item.id,
-                  isLoading: cardState?.removingId === item.id,
-                }}
-                actions={{ onClick: () => actions.onRemove(item.id) }}
-              />
-            {/if}
-          </div>
-          <div class="flex items-center justify-between gap-2">
-            <StatusBadge
-              data={{ label: ticketStockDirectionLabel(item.direction) }}
-              ui={{ tone: item.direction === 'out' ? 'warning' : 'success', size: 'sm' }}
-            />
-            <span class="text-ink-900 text-lg leading-none font-semibold tabular-nums">
-              {item.quantity} <span class="text-muted-foreground text-xs font-normal">un.</span>
+    <!-- Uma linha por máquina: ela à esquerda, a seta, e os itens dela à direita (1 para vários). -->
+    <ul class="divide-border flex flex-col divide-y" aria-label="Itens por máquina">
+      {#each groups as group (group.machineId)}
+        <li class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-3">
+          <span class="flex min-w-0 shrink-0 items-center gap-2 sm:w-56">
+            <span aria-hidden="true" class={cn('rounded-icon inline-flex size-7 shrink-0 items-center justify-center', cardToneClasses('blue').dot)}>
+              <Monitor class="size-3.5" />
             </span>
-          </div>
-          <div class="text-muted-foreground border-border flex flex-col gap-0.5 border-t pt-2 text-xs">
-            <span class="truncate" title={item.computerName ?? undefined}>
-              Máquina: <span class="text-ink-700">{item.computerName ?? '—'}</span>
-            </span>
-            <span>{item.settledAt ? 'Baixado no depósito' : 'Reservado'}</span>
-          </div>
+            <span class="text-foreground truncate text-sm font-semibold">{group.machineName ?? 'Sem máquina'}</span>
+          </span>
+          <ArrowRight class="text-muted-foreground hidden size-4 shrink-0 sm:block" aria-hidden="true" />
+          <ul class="flex min-w-0 flex-1 flex-wrap gap-2" aria-label={`Itens de ${group.machineName ?? 'sem máquina'}`}>
+            {#each group.items as item (item.id)}
+              <li class="rounded-chip bg-muted flex items-center gap-1.5 py-1 pr-1 pl-3 text-sm">
+                <span
+                  aria-hidden="true"
+                  class={cn('size-2 shrink-0 rounded-full', cardToneClasses(item.direction === 'out' ? 'yellow' : 'green').swatch)}
+                ></span>
+                <span class="text-foreground font-medium">{item.name}</span>
+                <span class="text-muted-foreground tabular-nums">×{item.quantity}</span>
+                <span class="text-muted-foreground text-xs">
+                  · {ticketStockDirectionLabel(item.direction)} · {item.settledAt ? 'baixado' : 'reservado'}
+                </span>
+                {#if !cardState?.isClosed}
+                  <ActionButton
+                    data={{ label: `Tirar ${item.name} do chamado` }}
+                    ui={{ variant: 'ghost', size: 'sm', icon: XIcon, isIconOnly: true }}
+                    state={{ isDisabled: cardState?.removingId === item.id, isLoading: cardState?.removingId === item.id }}
+                    actions={{ onClick: () => actions.onRemove(item.id) }}
+                  />
+                {/if}
+              </li>
+            {/each}
+          </ul>
         </li>
       {/each}
     </ul>
   {/if}
 
   {#if cardState?.isClosed}
-    <p class="text-muted-foreground text-xs">
-      Chamado encerrado: para tirar ou colocar itens, reabra o chamado.
-    </p>
-  {:else}
-    <!-- O ADICIONAR numa linha só: movimento, item, máquina (só com várias), quantidade e o botão.
-         Empilhado, ele ocupava mais altura do que os próprios itens. -->
-    <form novalidate class="flex flex-wrap items-start gap-3" onsubmit={handleSubmit}>
-      <div class="w-full sm:w-56">
-      <FilterField data={{ label: 'Movimento' }}>
-        <OptionPicker
-          data={{ value: direction, options: DIRECTION_OPTIONS }}
-          ui={{ ariaLabel: 'Movimento do item', fullWidth: true }}
-          state={{ isDisabled: isBusy }}
-          actions={{ onChange: (value: string) => actions.onChange('direction', value) }}
-        />
-      </FilterField>
-      </div>
-
-      <div class="min-w-56 flex-1">
-      <FilterField data={{ label: 'Item' }}>
-        <OptionPicker
-          data={{ value: data.values.itemId, options: itemOptions }}
-          ui={{
-            ariaLabel: 'Item do estoque',
-            placeholder: direction === 'out' ? 'Escolha o que sai' : 'Escolha o que volta',
-            fullWidth: true,
-            mode: 'combobox',
-            searchPlaceholder: 'Buscar item…',
-            showSelectedTooltip: true,
-          }}
-          state={{ isDisabled: isBusy, error: data.errors?.itemId }}
-          actions={{ onChange: (value: string) => actions.onChange('itemId', value) }}
-        />
-      </FilterField>
-      </div>
-
-      {#if (data.machines ?? []).length > 1}
-        <div class="w-full sm:w-56">
-        <FilterField data={{ label: 'Máquina' }}>
-          <OptionPicker
-            data={{ value: data.values.computerId ?? '', options: data.machines ?? [] }}
-            ui={{
-              ariaLabel: 'Máquina do item',
-              placeholder: 'Para qual máquina vai',
-              fullWidth: true,
-              mode: 'combobox',
-              searchPlaceholder: 'Buscar máquina…',
-            }}
-            state={{ isDisabled: isBusy, error: data.errors?.computerId }}
-            actions={{ onChange: (value: string) => actions.onChange('computerId', value) }}
-          />
-        </FilterField>
-        </div>
-      {/if}
-
-      <div class="flex items-end gap-2">
-        <TextField
-          data={{ label: 'Quantidade', name: 'stockQuantity', value: data.values.quantity }}
-          ui={{ inputMode: 'numeric', className: 'w-24' }}
-          state={{ error: data.errors?.quantity, isDisabled: isBusy }}
-          actions={{ onChange: (value: string) => actions.onChange('quantity', value) }}
-        />
-        <ActionButton
-          data={{ label: 'Adicionar item', loadingLabel: 'Adicionando…' }}
-          ui={{ variant: 'secondary', size: 'lg' }}
-          state={{ isLoading: isBusy }}
-          actions={{ onClick: actions.onSubmit }}
-        />
-      </div>
-    </form>
+    <p class="text-muted-foreground text-xs">Chamado encerrado: para tirar ou colocar itens, reabra o chamado.</p>
   {/if}
 
   {#if cardState?.error}
