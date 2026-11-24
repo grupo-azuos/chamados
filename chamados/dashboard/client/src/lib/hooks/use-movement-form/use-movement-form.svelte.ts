@@ -19,6 +19,8 @@ import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte
 import { COMPUTERS_QUERY_KEY } from '$lib/hooks/use-computer-list/use-computer-list.svelte';
 import { PARTS_QUERY_KEY } from '$lib/hooks/use-part-list/use-part-list.svelte';
 import { type FormFieldState } from '$lib/types/form-field.type';
+import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
+import { computerPicks, type TraceabilityPick } from '$lib/utils/traceability-pick.util';
 
 export type MachineOption = { value: string; label: string };
 
@@ -28,6 +30,10 @@ export type MovementFormModel = {
     type: MovementType;
     fields: Record<MovementFormField, FormFieldState>;
     machines: MachineOption[];
+    /** As máquinas como a busca (diálogo) as mostra: nome, hostname, responsável, departamento. */
+    machinePicks: TraceabilityPick[];
+    /** Os departamentos do filtro da busca. */
+    departments: { value: string; label: string }[];
   };
   state: { isSubmitting: boolean; isMachinesLoading: boolean; error: string | null };
   actions: {
@@ -58,6 +64,7 @@ export function useMovementFormModel({
   onSaved: () => void;
 }): MovementFormModel {
   const queryClient = useQueryClient();
+  const departments = useDepartmentOptionsModel();
 
   const machines = mirrorStore(
     createQuery(
@@ -123,6 +130,8 @@ export function useMovementFormModel({
           note: field('note'),
         },
         machines: toMachineOptions(machines.current.data?.items ?? []),
+        machinePicks: computerPicks(machines.current.data?.items ?? []),
+        departments: departments.officialOptions,
       };
     },
     get state() {
