@@ -1,7 +1,12 @@
 import { type TraceabilityGraph } from '@template/shared/schemas/traceability.schema';
 import { describe, expect, it } from 'vitest';
 
-import { buildTraceabilityMap, traceabilityHref } from './traceability-map.util';
+import {
+  buildTraceabilityMap,
+  openRecordOf,
+  traceabilityHref,
+  withoutOpenRecord,
+} from './traceability-map.util';
 
 const node = (
   id: string,
@@ -79,11 +84,30 @@ describe('traceability map', () => {
     });
 
     expect(map.edges.some((item) => item.target === 'gone:1')).toBe(false);
-    expect(traceabilityHref(node('part:4', 'part', 'Monitor'))).toBeNull();
-    expect(traceabilityHref(node('computer:1', 'computer', 'PC'))).toBe('/infra/computers/1');
+    expect(traceabilityHref(node('department:x', 'department', 'Nada'))).toBe(
+      '?focus=department&id=x',
+    );
+    expect(openRecordOf(new URLSearchParams('ticket=abc'))).toBeNull();
     expect(buildTraceabilityMap({ focusId: 'person:x', nodes: [], edges: [] })).toEqual({
       nodes: [],
       edges: [],
     });
+  });
+
+  // feliz
+  it('opens each box over the map, keeping where the map starts; people and departments restart it', () => {
+    const here = new URLSearchParams('focus=computer&id=1&task=5');
+
+    expect(traceabilityHref(node('ticket:9', 'ticket', 'CH-0009'), here)).toBe(
+      '?focus=computer&id=1&ticket=9',
+    );
+    expect(traceabilityHref(node('part:4', 'part', 'Monitor'), here)).toBe(
+      '?focus=computer&id=1&part=4',
+    );
+    expect(traceabilityHref(node('person:ana', 'person', 'Ana'), here)).toBe(
+      '?focus=person&id=ana',
+    );
+    expect(openRecordOf(here)).toEqual({ kind: 'task', id: 5 });
+    expect(withoutOpenRecord(here).toString()).toBe('focus=computer&id=1');
   });
 });

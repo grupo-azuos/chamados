@@ -41,17 +41,58 @@ const ISLAND_GAP = 48;
 const SIDE_ORDER: TraceabilityNodeKind[] = ['department', 'person'];
 const WORK_ORDER: TraceabilityNodeKind[] = ['ticket', 'task', 'part'];
 
-const DETAIL_PATHS: Partial<Record<TraceabilityNodeKind, string>> = {
-  computer: '/infra/computers',
-  ticket: '/infra/tickets',
-  task: '/infra/tasks',
-};
+/**
+ * O QUE ABRE NUM DIÁLOGO sobre o mapa (como no Paralegal): o endereço guarda o registro aberto
+ * (`?focus=computer&id=4&ticket=52`), o link abre direto nele, e o voltar do navegador o fecha.
+ */
+export const TRACEABILITY_OPEN_KINDS = ['computer', 'ticket', 'task', 'part'] as const;
+export type TraceabilityOpenKind = (typeof TRACEABILITY_OPEN_KINDS)[number];
 
-/** Onde a caixa leva: a tela do registro, quando ela existe. */
-export function traceabilityHref(node: TraceabilityNode): string | null {
-  const path = DETAIL_PATHS[node.kind];
+const isOpenKind = (kind: string): kind is TraceabilityOpenKind =>
+  (TRACEABILITY_OPEN_KINDS as readonly string[]).includes(kind);
 
-  return path && node.recordId !== null ? `${path}/${node.recordId}` : null;
+/** O registro aberto no endereço, se houver. */
+export function openRecordOf(
+  params: URLSearchParams,
+): { kind: TraceabilityOpenKind; id: number } | null {
+  for (const kind of TRACEABILITY_OPEN_KINDS) {
+    const id = Number(params.get(kind));
+    if (Number.isInteger(id) && id > 0) return { kind, id };
+  }
+
+  return null;
+}
+
+/** O texto do endereço (sem o "?") a partir dos campos. */
+export function searchOf(values: Record<string, string>): string {
+  return new URLSearchParams(values).toString();
+}
+
+/** O endereço sem o registro aberto — o mapa por baixo do diálogo. */
+export function withoutOpenRecord(params: URLSearchParams): URLSearchParams {
+  const next = new URLSearchParams(params);
+  for (const kind of TRACEABILITY_OPEN_KINDS) next.delete(kind);
+
+  return next;
+}
+
+/**
+ * Onde a caixa leva — sempre de volta à Rastreabilidade: a pessoa e o departamento viram o novo
+ * ponto de partida; o computador, o chamado, a tarefa e a peça abrem no diálogo sobre o mapa.
+ */
+export function traceabilityHref(
+  node: TraceabilityNode,
+  params: URLSearchParams = new URLSearchParams(),
+): string | null {
+  const [, key = ''] = node.id.split(':');
+  if (node.kind === 'person' || node.kind === 'department') {
+    return `?${new URLSearchParams({ focus: node.kind, id: key })}`;
+  }
+  if (!isOpenKind(node.kind) || node.recordId === null) return null;
+  const next = withoutOpenRecord(params);
+  next.set(node.kind, String(node.recordId));
+
+  return `?${next}`;
 }
 
 function edgeOf(edge: TraceabilityEdge): Edge {
@@ -81,6 +122,7 @@ const byOrder = (order: TraceabilityNodeKind[]) => (a: TraceabilityNode, b: Trac
 function itemNode(
   node: TraceabilityNode,
   position: { x: number; y: number },
+  params: URLSearchParams,
   parentId?: string,
 ): TraceabilityMapNode {
   return {
@@ -88,7 +130,7 @@ function itemNode(
     type: 'item',
     position,
     ...ITEM,
-    data: { ...node, href: traceabilityHref(node) },
+    data: { ...node, href: traceabilityHref(node, params) },
     ...(parentId ? { parentId, extent: 'parent' as const, draggable: false } : {}),
   };
 }
@@ -105,12 +147,15 @@ function workOf(computerId: string, graph: TraceabilityGraph): TraceabilityNode[
 }
 
 /** As ilhas dos computadores, uma embaixo da outra, e a coluna das pessoas e departamentos. */
-export function buildTraceabilityMap(graph: TraceabilityGraph): TraceabilityMap {
+export function buildTraceabilityMap(
+  graph: TraceabilityGraph,
+  params: URLSearchParams = new URLSearchParams(),
+): TraceabilityMap {
   const nodes: TraceabilityMapNode[] = [];
   const side = graph.nodes
     .filter((node) => SIDE_ORDER.includes(node.kind))
     .sort(byOrder(SIDE_ORDER));
-  side.forEach((node, index) => nodes.push(itemNode(node, { x: 0, y: index * ROW })));
+  side.forEach((node, index) => nodes.push(itemNode(node, { x: 0, y: index * ROW }, params)));
   let top = 0;
   for (const computer of graph.nodes.filter((node) => node.kind === 'computer')) {
     const work = workOf(computer.id, graph);
@@ -126,10 +171,17 @@ export function buildTraceabilityMap(graph: TraceabilityGraph): TraceabilityMap 
       data: { title: computer.label },
       selectable: false,
     });
-    nodes.push(itemNode(computer, { x: PAD, y: Math.round((height - ITEM.height) / 2) }, islandId));
+    nodes.push(
+      itemNode(computer, { x: PAD, y: Math.round((height - ITEM.height) / 2) }, params, islandId),
+    );
     work.forEach((node, index) =>
       nodes.push(
-        itemNode(node, { x: PAD + ITEM.width + COLUMN_GAP, y: PAD + index * ROW }, islandId),
+        itemNode(
+          node,
+          { x: PAD + ITEM.width + COLUMN_GAP, y: PAD + index * ROW },
+          params,
+          islandId,
+        ),
       ),
     );
     top += height + ISLAND_GAP;
