@@ -237,6 +237,9 @@
     };
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp, { once: true });
+    /* O navegador pode cancelar o ponteiro (a janela perdeu o foco, o toque virou rolagem): o
+       gesto termina do mesmo jeito, e não fica preso seguindo o mouse. */
+    window.addEventListener('pointercancel', onPointerUp, { once: true });
   }
 
   function onPointerMove(event: PointerEvent) {
@@ -261,6 +264,8 @@
 
   function onPointerUp() {
     window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
     if (!gesture) return;
     const next = gesture.layout;
     gesture = null;
@@ -438,7 +443,7 @@
   <div
     bind:this={container}
     bind:clientWidth={width}
-    class="relative w-full"
+    class={cn('relative w-full', gesture && 'cursor-grabbing select-none')}
     style:height={`${height}px`}
     style:margin-top={canvasState.isEditing ? `${BOARD_EDITING_TOP_PX}px` : undefined}
     data-testid="board-canvas"

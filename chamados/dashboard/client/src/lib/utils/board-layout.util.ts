@@ -83,24 +83,35 @@ export function compactLayout(layout: readonly LayoutItem[]): LayoutItem[] {
   return layout.map((item) => placed.find((other) => other.i === item.i)!);
 }
 
-/** Quem está no caminho DESCE até não encostar mais em ninguém — em cascata. */
+/**
+ * Quem está no caminho DESCE até não encostar mais em ninguém — em cascata.
+ *
+ * A fila guarda QUEM desceu (o id), e cada vez se lê a posição de AGORA dele. Antes ela guardava
+ * cópias da posição de quando o bloco entrou: a cópia velha empurrava de novo quem já tinha
+ * descido, a fila crescia sem parar e, com um painel de uns 14 blocos, arrastar rápido travava a
+ * aba. O bloco que a pessoa está mexendo (`fixed`) nunca é empurrado — os outros se arrumam.
+ */
 function pushDown(layout: LayoutItem[], fixed: LayoutItem): LayoutItem[] {
   const result = layout.map((item) => (item.i === fixed.i ? fixed : item));
-  const queue = [fixed];
+  const queue = [fixed.i];
 
-  while (queue.length > 0) queue.push(...pushAway(result, queue.shift()!));
+  while (queue.length > 0) {
+    const mover = result.find((item) => item.i === queue[0]);
+    queue.shift();
+    const moved = mover ? pushAway(result, mover, fixed.i) : [];
+    queue.push(...moved.filter((id) => !queue.includes(id)));
+  }
 
   return result;
 }
 
-/** Quem encosta no bloco que se mexeu desce para baixo dele; devolve os que desceram. */
-function pushAway(result: LayoutItem[], mover: LayoutItem): LayoutItem[] {
-  const moved: LayoutItem[] = [];
+/** Quem encosta no bloco que se mexeu desce para baixo dele (menos o fixo); devolve quem desceu. */
+function pushAway(result: LayoutItem[], mover: LayoutItem, fixedId: string): string[] {
+  const moved: string[] = [];
   for (const [index, item] of result.entries()) {
-    if (!overlaps(mover, item)) continue;
-    const next = { ...item, y: mover.y + mover.h };
-    result[index] = next;
-    moved.push(next);
+    if (item.i === fixedId || !overlaps(mover, item)) continue;
+    result[index] = { ...item, y: mover.y + mover.h };
+    moved.push(item.i);
   }
 
   return moved;
