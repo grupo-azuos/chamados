@@ -182,4 +182,25 @@ describe('the cell grows with its content', () => {
 
     expect(fitLayout(layout, { a: 3 })).toEqual(layout);
   });
+
+  // triste
+  it('a big board (14 blocks) moved and resized all over still answers at once — it used to hang', () => {
+    const layout = Array.from({ length: 14 }, (_, n) => ({
+      i: `w${n}`,
+      x: (n % 2) * 2,
+      y: Math.floor(n / 2) * 3,
+      w: 2,
+      h: 2 + (n % 3),
+    }));
+    const started = performance.now();
+    for (let x = 0; x < 3; x++) {
+      for (let y = 0; y < 30; y++) {
+        const moved = moveItem(layout, 'w13', x, y);
+        expect(moved.find((item) => item.i === 'w13')?.x).toBe(x);
+        resizeItem(layout, 'w0', 2 + (x % 2), 1 + (y % 8));
+      }
+    }
+
+    expect(performance.now() - started).toBeLessThan(2000);
+  });
 });
