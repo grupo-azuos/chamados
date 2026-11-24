@@ -4,6 +4,7 @@
   o que saiu do cadastro fica, apagado, sem levar a lugar nenhum.
 -->
 <script lang="ts">
+  import Hint from '$lib/components/azuos-hint/azuos-hint.svelte';
   import { Handle, Position } from '@xyflow/svelte';
 
   import { cn } from '$lib/utils/cn';
@@ -22,14 +23,22 @@
 {/snippet}
 
 {#if data.href}
-  <a
-    href={data.href}
-    aria-label={`${data.kindLabel}: ${data.label}`}
-    title={data.label}
-    class={cn(BOX, 'hover:bg-hover-veil focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none')}
-  >
-    {@render body()}
-  </a>
+  <Hint data={{ text: data.label }}>
+    {#snippet child(props)}
+      <a
+        {...props}
+        href={data.href}
+        aria-label={`${data.kindLabel}: ${data.label}`}
+        class={cn(BOX, 'hover:bg-hover-veil focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none')}
+      >
+        {@render body()}
+      </a>
+    {/snippet}
+  </Hint>
 {:else}
-  <span class={cn(BOX, 'text-muted-foreground')} title={data.label}>{@render body()}</span>
+  <Hint data={{ text: data.label }}>
+    {#snippet child(props)}
+      <span {...props} class={cn(BOX, 'text-muted-foreground')}>{@render body()}</span>
+    {/snippet}
+  </Hint>
 {/if}

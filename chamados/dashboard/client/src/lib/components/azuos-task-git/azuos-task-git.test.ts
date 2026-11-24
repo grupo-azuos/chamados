@@ -43,7 +43,7 @@ describe('AzuosTaskGit', () => {
       'href',
       'https://github.com/grupo-azuos/paralegal/tree/feature/tarefa-42-tela',
     );
-    expect(link).toHaveAttribute('title', 'Branch nova: feature/tarefa-42-tela');
+    expect(link).toHaveAttribute('aria-label', 'Branch nova: feature/tarefa-42-tela');
     expect(screen.getByText('[feat](web): Tela de vendas')).toBeInTheDocument();
   });
 

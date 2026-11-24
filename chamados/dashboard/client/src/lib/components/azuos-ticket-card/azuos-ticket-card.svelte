@@ -40,8 +40,13 @@
   } from '@template/shared/domain/ticket-status.util';
 
   import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
+  import { type AzuosCardTone } from '$lib/utils/card-tone.util';
   import { formatDate } from '$lib/utils/format-date';
   import { ticketProblemIconOf } from '$lib/utils/record-icon.util';
+
+  /* A bolinha de cada caixinha tem a cor do assunto (cinza não diz nada): a área na cor do
+     módulo, o tipo em ciano e a máquina em verde — apagada quando ainda não há máquina. */
+  const AREA_TONES: Record<string, AzuosCardTone> = { infra: 'blue', sistema: 'plum', manutencao: 'copper' };
 
   let { data, ui, actions }: AzuosTicketCardProps = $props();
 
@@ -61,9 +66,16 @@
     /* A maioria dos chamados não tem máquina: quem atende é que vincula. O traço diz "ainda não
        vinculado" sem virar um vazio que parece defeito de tela. */
     metrics: [
-      { key: 'area', label: 'Área', value: ticketAreaLabel(ticket.area), isText: true },
-      { key: 'type', label: 'Tipo', value: problemType, isText: true },
-      { key: 'machine', label: 'Máquina', value: ticket.computerName ?? '—', isText: true },
+      { key: 'area', label: 'Área', value: ticketAreaLabel(ticket.area), isText: true, tone: AREA_TONES[ticket.area] },
+      { key: 'type', label: 'Tipo', value: problemType, isText: true, tone: 'steel' },
+      {
+        key: 'machine',
+        label: 'Máquina',
+        value: ticket.computerName ?? '—',
+        isText: true,
+        tone: 'green',
+        isOn: ticket.computerName !== null && ticket.computerName !== undefined,
+      },
     ],
     footer: {
       title: ticket.assignee ?? 'Sem responsável',

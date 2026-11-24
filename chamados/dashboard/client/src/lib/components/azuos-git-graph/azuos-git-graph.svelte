@@ -8,6 +8,7 @@
   - `data.rows`: as linhas do grafo.
 -->
 <script lang="ts">
+  import Hint from '$lib/components/azuos-hint/azuos-hint.svelte';
   import { type AzuosCardHue, cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
   import { GIT_CATEGORY_HUES, GIT_ROW_HEIGHT, type GitGraphRow, initialsOf } from '$lib/utils/git-graph.util';
@@ -28,7 +29,7 @@
 {:else}
   <ol class="px-2">
     {#each data.rows as row (row.commit.sha)}
-      <li class="flex items-center gap-2 font-mono text-xs" style:height="{ROW}px" title={row.commit.message}>
+      <li class="flex items-center gap-2 font-mono text-xs" style:height="{ROW}px">
         <span class="text-hue-steel w-14 shrink-0">{row.commit.sha.slice(0, 8)}</span>
         <span class="text-hue-blue w-5 shrink-0 font-semibold">{initialsOf(row.commit.authorName)}</span>
         <svg aria-hidden="true" class="shrink-0 overflow-visible" width={lanes * LANE} height={ROW}>
@@ -60,12 +61,16 @@
               cardToneClasses(GIT_CATEGORY_HUES[head.category]).dot,
               head.isNew && 'outline-foreground outline-2 outline-offset-1 outline-dashed motion-safe:animate-pulse',
             )}
-            title={head.isNew ? `Branch nova: ${head.name}` : head.name}
+            aria-label={head.isNew ? `Branch nova: ${head.name}` : head.name}
           >
             {head.name}
           </span>
         {/each}
-        <span class="text-foreground min-w-0 truncate font-sans">{row.commit.message}</span>
+        <Hint data={{ text: row.commit.message }}>
+          {#snippet child(props)}
+            <span {...props} class="text-foreground min-w-0 truncate font-sans">{row.commit.message}</span>
+          {/snippet}
+        </Hint>
       </li>
     {/each}
   </ol>

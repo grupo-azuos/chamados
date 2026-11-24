@@ -76,4 +76,24 @@ describe('AzuosTicketCard', () => {
     expect(screen.getByText('Sem responsável')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
   });
+
+  // feliz
+  it('colors the dot of each field: area in the module color, machine green only when there is one', () => {
+    const { container, unmount } = render(TicketCard, {
+      props: { data: { ticket: ticket() }, actions: { onOpen: vi.fn() } },
+    });
+    expect(container.querySelector('.bg-hue-blue')).not.toBeNull();
+    expect(container.querySelector('.bg-hue-green')).not.toBeNull();
+    unmount();
+
+    // triste
+    const empty = render(TicketCard, {
+      props: {
+        data: { ticket: ticket({ computerName: null, area: 'sistema' }) },
+        actions: { onOpen: vi.fn() },
+      },
+    });
+    expect(empty.container.querySelector('.bg-hue-plum')).not.toBeNull();
+    expect(empty.container.querySelector('.bg-hue-green')).toBeNull();
+  });
 });

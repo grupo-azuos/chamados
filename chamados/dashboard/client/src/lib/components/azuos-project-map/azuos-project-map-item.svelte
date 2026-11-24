@@ -31,6 +31,7 @@
 </script>
 
 <script lang="ts">
+  import Hint from '$lib/components/azuos-hint/azuos-hint.svelte';
   import { Handle, Position } from '@xyflow/svelte';
 
   import { cardToneClasses } from '$lib/utils/card-tone.util';
@@ -64,16 +65,24 @@
 {/snippet}
 
 {#if data.href}
-  <a
-    href={data.href}
-    target={data.isExternal ? '_blank' : undefined}
-    rel={data.isExternal ? 'noopener noreferrer' : undefined}
-    aria-label={`${PROJECT_MAP_ITEM_LABELS[data.kind]}: ${data.title}`}
-    title={data.title}
-    class={cn(BOX, 'hover:bg-hover-veil focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none')}
-  >
-    {@render body()}
-  </a>
+  <Hint data={{ text: data.title }}>
+    {#snippet child(props)}
+      <a
+        {...props}
+        href={data.href}
+        target={data.isExternal ? '_blank' : undefined}
+        rel={data.isExternal ? 'noopener noreferrer' : undefined}
+        aria-label={`${PROJECT_MAP_ITEM_LABELS[data.kind]}: ${data.title}`}
+        class={cn(BOX, 'hover:bg-hover-veil focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none')}
+      >
+        {@render body()}
+      </a>
+    {/snippet}
+  </Hint>
 {:else}
-  <div class={BOX} title={data.title}>{@render body()}</div>
+  <Hint data={{ text: data.title }}>
+    {#snippet child(props)}
+      <div {...props} class={BOX}>{@render body()}</div>
+    {/snippet}
+  </Hint>
 {/if}
