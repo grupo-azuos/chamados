@@ -1,4 +1,5 @@
-import { MOVEMENT_TYPES } from '@template/shared/domain/part-catalog.util';
+import { DISPOSAL_REASONS } from '@template/shared/domain/inventory-stock.util';
+import { PART_MOVEMENT_KINDS } from '@template/shared/domain/part-catalog.util';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
@@ -37,7 +38,9 @@ export const partMovements = chamadosSchema.table(
       .notNull()
       .references(() => parts.id, { onDelete: 'restrict' }),
 
-    type: text('type', { enum: MOVEMENT_TYPES }).notNull(),
+    type: text('type', { enum: PART_MOVEMENT_KINDS }).notNull(),
+    /* Por que a peça foi para o descarte — só no descarte, e nele sempre. */
+    reason: text('reason', { enum: DISPOSAL_REASONS }),
     quantity: integer('quantity').notNull(),
     balanceAfter: integer('balance_after').notNull(),
 
@@ -66,7 +69,11 @@ export const partMovements = chamadosSchema.table(
     index('part_movements_part_time_idx').on(table.partId, table.createdAt.desc()),
     /* "Que peças esta máquina recebeu" é a consulta da ficha do computador. */
     index('part_movements_computer_idx').on(table.computerId),
-    check('part_movements_type_valid', sql`${table.type} in (${valuesFor(MOVEMENT_TYPES)})`),
+    check('part_movements_type_valid', sql`${table.type} in (${valuesFor(PART_MOVEMENT_KINDS)})`),
+    check(
+      'part_movements_reason_matches_type',
+      sql`(${table.type} = 'disposal') = (${table.reason} is not null)`,
+    ),
     /* Movimentação de zero não move nada, e negativa é a outra movimentação escrita ao
        contrário — as duas embaralhariam o extrato. */
     check('part_movements_quantity_positive', sql`${table.quantity} > 0`),

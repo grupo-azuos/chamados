@@ -5,6 +5,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { type DisposalReason, disposalReasonLabel } from '@template/shared/domain/inventory-stock.util';
 import { ticketAreaLabel } from '@template/shared/domain/ticket-catalog.util';
 import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { isClosedTicketStatus } from '@template/shared/domain/ticket-status.util';
@@ -15,6 +16,7 @@ import {
   reverseTicketStockDirection,
   ticketStockDirectionLabel,
   ticketStockSourceArea,
+  type TicketStockDirection,
   type TicketStockSource,
 } from '@template/shared/domain/ticket-stock.util';
 import {
@@ -104,7 +106,7 @@ export class TicketStockItemsService {
     input: CreateTicketStockItemInput,
   ): Promise<TicketStockItem> {
     assertCanAttendTicket(user.role);
-    const { source, itemId, direction, quantity, computerId } =
+    const { source, itemId, direction, quantity, computerId, reason } =
       createTicketStockItemSchema.parse(input);
 
     const reach = await this.access.reach(user, ticketId);
@@ -121,17 +123,9 @@ export class TicketStockItemsService {
     const refusal = refuseTicketStockItem({ name: item.name, direction, quantity, available });
     if (refusal) throw new UnprocessableEntityException(refusal);
 
-    const row = await this.repository.insert({
-      ticketId,
-      partId: source === 'parts' ? item.id : null,
-      inventoryItemId: source === 'inventory' ? item.id : null,
-      itemName: item.name,
-      direction,
-      quantity,
-      computerId: machineId,
-      createdBy: user.email,
-      createdByName: user.name,
-    });
+    const row = await this.repository.insert(
+      lineOf({ ticketId, source, item, direction, reason, quantity, computerId: machineId }, user),
+    );
 
     await this.histories.record(
       toUpdateHistory(reach.ticket, `Item do estoque: ${describe(row)}.`, user),
@@ -197,10 +191,17 @@ export class TicketStockItemsService {
 
     await this.repository.restore(row.id);
     await this.histories.record(
-      toUpdateHistory(reach.ticket, `Desfez a retirada do item do estoque: ${describe(row)}.`, user),
+      toUpdateHistory(
+        reach.ticket,
+        `Desfez a retirada do item do estoque: ${describe(row)}.`,
+        user,
+      ),
     );
 
-    return toTicketStockItem({ ...row, archivedAt: null, archivedBy: null, settledAt: null }, await this.computerNamesOf(ticketId));
+    return toTicketStockItem(
+      { ...row, archivedAt: null, archivedBy: null, settledAt: null },
+      await this.computerNamesOf(ticketId),
+    );
   }
 
   /**
@@ -234,6 +235,7 @@ export class TicketStockItemsService {
           source,
           itemId,
           direction: row.direction,
+          reason: row.reason ?? null,
           quantity: row.quantity,
           note: `Chamado ${formatTicketProtocol(ticket.id)}`,
           computerId: row.computerId ?? ticket.computerId,
@@ -338,11 +340,14 @@ export function pickMachine(
   }
   if (machines.length <= 1) return machines[0]?.id ?? null;
 
-  throw new UnprocessableEntityException('O chamado tem mais de uma máquina: escolha para qual vai o item.');
+  throw new UnprocessableEntityException(
+    'O chamado tem mais de uma máquina: escolha para qual vai o item.',
+  );
 }
 
 function assertOpen(ticket: TicketRow): void {
-  if (isClosedTicketStatus(ticket.status)) throw new UnprocessableEntityException(CLOSED_TICKET_STOCK);
+  if (isClosedTicketStatus(ticket.status))
+    throw new UnprocessableEntityException(CLOSED_TICKET_STOCK);
 }
 
 function shelfIdOf(row: TicketStockItemRow): number {
@@ -350,6 +355,37 @@ function shelfIdOf(row: TicketStockItemRow): number {
 }
 
 /** "saída de 2 × Mouse USB" — o que a linha do tempo conta. */
+/** A linha nova do chamado: a prateleira certa, e o motivo só no descarte. */
+function lineOf(
+  line: {
+    ticketId: number;
+    source: TicketStockSource;
+    item: { id: number; name: string };
+    direction: TicketStockDirection;
+    reason?: DisposalReason | null;
+    quantity: number;
+    computerId: number | null;
+  },
+  user: RequestUser,
+) {
+  return {
+    ticketId: line.ticketId,
+    partId: line.source === 'parts' ? line.item.id : null,
+    inventoryItemId: line.source === 'inventory' ? line.item.id : null,
+    itemName: line.item.name,
+    direction: line.direction,
+    reason: line.direction === 'disposal' ? (line.reason ?? null) : null,
+    quantity: line.quantity,
+    computerId: line.computerId,
+    createdBy: user.email,
+    createdByName: user.name,
+  };
+}
+
 function describe(row: TicketStockItemRow): string {
-  return `${ticketStockDirectionLabel(row.direction).toLowerCase()} de ${row.quantity} × ${row.itemName}`;
+  const what = `${ticketStockDirectionLabel(row.direction).toLowerCase()} de ${row.quantity} × ${row.itemName}`;
+  /* O descarte diz o motivo: é ele que o painel de perdas conta. */
+  if (row.direction !== 'disposal' || !row.reason) return what;
+
+  return `${what} (${disposalReasonLabel(row.reason).toLowerCase()})`;
 }

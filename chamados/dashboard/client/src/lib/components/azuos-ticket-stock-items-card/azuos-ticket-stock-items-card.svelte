@@ -38,6 +38,10 @@
 </script>
 
 <script lang="ts">
+  import { disposalReasonLabel } from '@template/shared/domain/inventory-stock.util';
+
+  /* A bolinha de cada sentido: a saída no amarelo, a entrada no verde, o descarte no vermelho. */
+  const DIRECTION_TONES = { out: 'yellow', in: 'green', disposal: 'red' } as const;
   import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import Link2 from '@lucide/svelte/icons/link-2';
   import Monitor from '@lucide/svelte/icons/monitor';
@@ -91,12 +95,12 @@
               <li class="rounded-chip bg-muted flex items-center gap-1.5 py-1 pr-1 pl-3 text-sm">
                 <span
                   aria-hidden="true"
-                  class={cn('size-2 shrink-0 rounded-full', cardToneClasses(item.direction === 'out' ? 'yellow' : 'green').swatch)}
+                  class={cn('size-2 shrink-0 rounded-full', cardToneClasses(DIRECTION_TONES[item.direction]).swatch)}
                 ></span>
                 <span class="text-foreground font-medium">{item.name}</span>
                 <span class="text-muted-foreground tabular-nums">×{item.quantity}</span>
                 <span class="text-muted-foreground text-xs">
-                  · {ticketStockDirectionLabel(item.direction)} · {item.settledAt ? 'baixado' : 'reservado'}
+                  · {ticketStockDirectionLabel(item.direction)}{item.reason ? ` (${disposalReasonLabel(item.reason).toLowerCase()})` : ''} · {item.settledAt ? 'baixado' : 'reservado'}
                 </span>
                 {#if !cardState?.isClosed}
                   <ActionButton

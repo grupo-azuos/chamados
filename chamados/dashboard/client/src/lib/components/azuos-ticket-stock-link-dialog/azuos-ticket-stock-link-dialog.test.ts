@@ -58,3 +58,56 @@ describe('AzuosTicketStockLinkDialog', () => {
     expect(linkSummary(null, 3)).toBe('Sem máquina → 3 itens');
   });
 });
+
+describe('AzuosTicketStockLinkDialog — descarte e cadastro', () => {
+  // feliz
+  it('asks the reason on the disposal, and opens the new item form', async () => {
+    const onReasonChange = vi.fn();
+    const onOpenNew = vi.fn();
+    render(Dialog, {
+      props: {
+        data: {
+          machines: [],
+          machineId: '',
+          direction: 'disposal',
+          options: [],
+          search: '',
+          selection: {},
+          reason: '',
+          reasonError: 'Escolha o motivo do descarte',
+          newItem: {
+            source: 'parts',
+            isOpen: false,
+            values: { name: '', quantity: '1', category: '', condition: 'new', unit: 'unit' },
+          },
+        },
+        state: { isOpen: true },
+        actions: {
+          onMachineChange: vi.fn(),
+          onDirectionChange: vi.fn(),
+          onSearch: vi.fn(),
+          onToggle: vi.fn(),
+          onQuantityChange: vi.fn(),
+          onApply: vi.fn(),
+          onClose: vi.fn(),
+          onReasonChange,
+          newItem: { onOpen: onOpenNew, onChange: vi.fn(), onSave: vi.fn(), onCancel: vi.fn() },
+        },
+      },
+    });
+
+    expect(screen.getByText('Escolha o motivo do descarte')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Motivo do descarte' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar item' }));
+    expect(onOpenNew).toHaveBeenCalled();
+  });
+
+  // triste
+  it('has no reason nor new item button when the screen does not give them', () => {
+    setup();
+
+    expect(screen.queryByRole('combobox', { name: 'Motivo do descarte' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cadastrar item' })).toBeNull();
+  });
+});
+

@@ -73,11 +73,24 @@
   {/key}
   {#if stock.data.link.isOpen}
     <TicketStockLinkDialog
-      data={{ ...stock.data.link, machines, shelfLabel: 'Depósito da Manutenção' }}
-      state={{ isOpen: true, isSaving: stock.state.isLinking, error: stock.state.linkError }}
+      data={{
+        ...stock.data.link,
+        machines,
+        shelfLabel: 'Depósito da Manutenção',
+        newItem: { source: 'inventory', ...stock.data.link.newItem },
+      }}
+      state={{
+        isOpen: true,
+        isSaving: stock.state.isLinking,
+        error: stock.state.linkError,
+        isCreating: stock.state.isCreating,
+        createError: stock.state.createError,
+      }}
       actions={{
         onMachineChange: stock.actions.link.onMachineChange,
         onDirectionChange: stock.actions.link.onDirectionChange,
+        onReasonChange: stock.actions.link.onReasonChange,
+        newItem: stock.actions.link.newItem,
         onSearch: stock.actions.link.onSearch,
         onToggle: stock.actions.link.onToggle,
         onQuantityChange: stock.actions.link.onQuantityChange,

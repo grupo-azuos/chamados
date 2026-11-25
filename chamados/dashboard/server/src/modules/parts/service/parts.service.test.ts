@@ -44,6 +44,7 @@ function movementRow(overrides: Partial<PartMovementRow> = {}): PartMovementRow 
     id: 10,
     partId: 1,
     type: 'out',
+    reason: null,
     quantity: 1,
     balanceAfter: 3,
     computerId: 3,

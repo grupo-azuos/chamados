@@ -202,6 +202,61 @@ describe.skipIf(!testDatabaseUrl)('Tickets API (e2e)', () => {
    * A ORDEM DE SERVIÇO de ponta a ponta: abrir, assumir, esperar a peça, retomar e encerrar —
    * cada passo um histórico, e o estágio do chamado sempre a leitura do último.
    */
+  it('sends a part to the disposal through the ticket, with the reason, when it closes', async () => {
+    await started.truncate('ticket_stock_items', 'part_movements', 'parts');
+    const api = () => request(app.getHttpServer());
+    const part = await api()
+      .post('/api/v1/parts')
+      .set(asCaio())
+      .send({ name: 'Fonte ATX 500W', category: 'other', condition: 'new', initialQuantity: 5 })
+      .expect(201);
+    const created = await openTicket().expect(201);
+    const stock = (body: Record<string, unknown>) =>
+      api().post(`/api/v1/tickets/${created.body.id}/stock-items`).set(asCaio()).send(body);
+
+    // triste
+    await stock({
+      source: 'parts',
+      itemId: part.body.id,
+      direction: 'disposal',
+      quantity: 2,
+    }).expect(400);
+    await stock({
+      source: 'parts',
+      itemId: part.body.id,
+      direction: 'disposal',
+      quantity: 9,
+      reason: 'broken',
+    }).expect(422);
+
+    // feliz
+    const line = await stock({
+      source: 'parts',
+      itemId: part.body.id,
+      direction: 'disposal',
+      quantity: 2,
+      reason: 'broken',
+    }).expect(201);
+    expect(line.body).toMatchObject({ direction: 'disposal', reason: 'broken', settledAt: null });
+
+    const launch = (type: string, description: string) =>
+      api()
+        .post(`/api/v1/tickets/${created.body.id}/histories`)
+        .set(asCaio())
+        .send({ type, description });
+    await launch('start', 'Assumi o chamado.').expect(201);
+    await launch('resolution', 'Fonte queimada, descartada.').expect(201);
+
+    const after = await api().get(`/api/v1/parts/${part.body.id}`).set(asCaio()).expect(200);
+    expect(after.body.balance).toBe(3);
+    const moves = await api()
+      .get(`/api/v1/parts/movements?partId=${part.body.id}&type=disposal`)
+      .set(asCaio())
+      .expect(200);
+    expect(moves.body.items).toHaveLength(1);
+    expect(moves.body.items[0]).toMatchObject({ type: 'disposal', reason: 'broken', quantity: 2 });
+  });
+
   it('walks a ticket through its whole timeline, one history at a time', async () => {
     const created = await openTicket().expect(201);
     const launch = (type: string, description: string) =>

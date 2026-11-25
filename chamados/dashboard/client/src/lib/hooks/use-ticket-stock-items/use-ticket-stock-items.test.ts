@@ -14,7 +14,13 @@ vi.mock('$lib/api/tickets.api', () => ({
   },
 }));
 
+vi.mock('$lib/api/parts.api', () => ({ partsApi: { create: vi.fn() } }));
+vi.mock('$lib/api/inventory-items.api', () => ({
+  inventoryItemsApi: { create: vi.fn(), createMovement: vi.fn() },
+}));
+
 const { ticketsApi } = await import('$lib/api/tickets.api');
+const { partsApi } = await import('$lib/api/parts.api');
 
 function mountModel(): TicketStockItemsModel {
   let model: TicketStockItemsModel | undefined;
@@ -119,4 +125,66 @@ describe('useTicketStockItemsModel', () => {
 
     await waitFor(() => expect(model.state.linkError).toMatch(/Só há 1/));
   });
+
+  // feliz
+  it('sends a disposal with its reason, and refuses it without one', async () => {
+    vi.mocked(ticketsApi.addStockItem).mockResolvedValue({ ...partLine, direction: 'disposal' });
+    const model = mountModel();
+    await waitFor(() => expect(model.state.isLoading).toBe(false));
+
+    model.actions.link.onOpen('');
+    model.actions.link.onDirectionChange('disposal');
+    model.actions.link.onToggle('1');
+    model.actions.link.onApply();
+
+    /* triste: sem motivo, nada sai */
+    expect(model.data.link.reasonError).toBe('Escolha o motivo do descarte');
+    expect(ticketsApi.addStockItem).not.toHaveBeenCalled();
+
+    model.actions.link.onReasonChange('broken');
+    model.actions.link.onApply();
+
+    await waitFor(() =>
+      expect(ticketsApi.addStockItem).toHaveBeenCalledWith(49, {
+        source: 'parts',
+        itemId: 1,
+        direction: 'disposal',
+        quantity: 1,
+        reason: 'broken',
+      }),
+    );
+  });
+
+  // feliz
+  it('registers a new item on the shelf and marks it in the link', async () => {
+    vi.mocked(partsApi.create).mockResolvedValue({ id: 42 } as never);
+    const model = mountModel();
+    await waitFor(() => expect(model.state.isLoading).toBe(false));
+
+    model.actions.link.onOpen('');
+    model.actions.link.onSearch('Fonte ATX');
+    model.actions.link.newItem.onOpen();
+    expect(model.data.link.newItem.values.name).toBe('Fonte ATX');
+
+    /* triste: sem categoria, não cadastra */
+    model.actions.link.newItem.onSave();
+    expect(model.data.link.newItem.errors.category).toBe('Escolha a categoria');
+    expect(partsApi.create).not.toHaveBeenCalled();
+
+    model.actions.link.newItem.onChange('category', 'other');
+    model.actions.link.newItem.onChange('quantity', '3');
+    model.actions.link.newItem.onSave();
+
+    await waitFor(() =>
+      expect(partsApi.create).toHaveBeenCalledWith({
+        name: 'Fonte ATX',
+        category: 'other',
+        condition: 'new',
+        initialQuantity: 3,
+      }),
+    );
+    await waitFor(() => expect(model.data.link.selection).toEqual({ '42': '1' }));
+    expect(model.data.link.newItem.isOpen).toBe(false);
+  });
 });
+

@@ -6,6 +6,7 @@ import {
   refuseTicketStockItem,
   refuseTicketStockSettlement,
   reverseTicketStockDirection,
+  takesFromShelf,
   ticketStockSourceArea,
   ticketStockSourceOf,
 } from './ticket-stock.util';
@@ -86,5 +87,30 @@ describe('balanceAfterTicketItem and reverseTicketStockDirection', () => {
   it('undoes a take-out by bringing it back', () => {
     expect(reverseTicketStockDirection('out')).toBe('in');
     expect(reverseTicketStockDirection('in')).toBe('out');
+  });
+});
+
+describe('o descarte', () => {
+  // feliz
+  it('takes from the shelf like a take-out, and undoing it puts the item back', () => {
+    expect(takesFromShelf('disposal')).toBe(true);
+    expect(balanceAfterTicketItem(5, 'disposal', 2)).toBe(3);
+    expect(reverseTicketStockDirection('disposal')).toBe('in');
+  });
+
+  // triste
+  it('is refused when it does not fit, like a take-out', () => {
+    expect(
+      refuseTicketStockItem({ name: 'Mouse', direction: 'disposal', quantity: 3, available: 1 }),
+    ).toBe('Só há 1 de Mouse disponível no depósito.');
+    expect(
+      refuseTicketStockSettlement({
+        name: 'Mouse',
+        direction: 'disposal',
+        quantity: 3,
+        balance: 1,
+      }),
+    ).not.toBeNull();
+    expect(takesFromShelf('in')).toBe(false);
   });
 });

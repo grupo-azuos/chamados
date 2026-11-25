@@ -14,10 +14,18 @@ import { ticketsApi } from '$lib/api/tickets.api';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { TICKETS_QUERY_KEY } from '$lib/hooks/use-ticket-list/use-ticket-list.svelte';
 import {
+  EMPTY_NEW_ITEM,
   linkOptions,
+  newItemErrors,
   selectionErrors,
+  type TicketStockNewItemValues,
   type TicketStockSelection,
 } from '$lib/utils/ticket-stock-link.util';
+import { inventoryItemsApi } from '$lib/api/inventory-items.api';
+import { partsApi } from '$lib/api/parts.api';
+import { type DisposalReason } from '@template/shared/domain/inventory-stock.util';
+import { type InventoryCategory, type InventoryUnit } from '@template/shared/domain/inventory-catalog.util';
+import { type PartCategory, type PartCondition } from '@template/shared/domain/part-catalog.util';
 
 /** O rascunho do diálogo "Vincular itens": a máquina, o sentido, a busca e o que foi marcado. */
 export type TicketStockLinkDraft = {
@@ -27,6 +35,11 @@ export type TicketStockLinkDraft = {
   search: string;
   selection: TicketStockSelection;
   errors: Record<string, string>;
+  /** O motivo do descarte; vazio fora do descarte. */
+  reason: string;
+  reasonError: string | null;
+  /** O cadastro de item na hora. */
+  newItem: { isOpen: boolean; values: TicketStockNewItemValues; errors: Partial<Record<keyof TicketStockNewItemValues, string>> };
 };
 
 export type TicketStockItemsModel = {
@@ -44,6 +57,8 @@ export type TicketStockItemsModel = {
     removingId: number | null;
     error: string | null;
     linkError: string | null;
+    isCreating: boolean;
+    createError: string | null;
   };
   actions: {
     onRemove: (id: number) => void;
@@ -57,6 +72,13 @@ export type TicketStockItemsModel = {
       onToggle: (itemId: string) => void;
       onQuantityChange: (itemId: string, value: string) => void;
       onApply: () => void;
+      onReasonChange: (reason: string) => void;
+      newItem: {
+        onOpen: () => void;
+        onChange: (field: keyof TicketStockNewItemValues, value: string) => void;
+        onSave: () => void;
+        onCancel: () => void;
+      };
     };
   };
 };
@@ -68,6 +90,9 @@ const CLOSED: TicketStockLinkDraft = {
   search: '',
   selection: {},
   errors: {},
+  reason: '',
+  reasonError: null,
+  newItem: { isOpen: false, values: { ...EMPTY_NEW_ITEM }, errors: {} },
 };
 
 /** A chave dos itens de estoque de um chamado — o Depósito e a ficha leem a mesma. */
@@ -133,6 +158,7 @@ export function useTicketStockItemsModel(
             itemId: Number(itemId),
             direction: input.direction,
             quantity: Number(quantity),
+            ...(input.direction === 'disposal' ? { reason: input.reason as DisposalReason } : {}),
             /* Vazio: sem máquina (ou o chamado tem uma só, e o servidor sabe qual). */
             ...(input.machineId ? { computerId: Number(input.machineId) } : {}),
           });
@@ -155,6 +181,22 @@ export function useTicketStockItemsModel(
     }),
   );
 
+  /* O item novo nasce no depósito com a quantidade informada (uma entrada) e volta marcado. */
+  const create = mirrorStore(
+    createMutation({
+      mutationFn: (values: TicketStockNewItemValues) => createShelfItem(source, values),
+      onSuccess: async (itemId: number) => {
+        await queryClient.invalidateQueries({ queryKey: [...TICKETS_QUERY_KEY, 'stock-options', source] });
+        draft = {
+          ...draft,
+          search: '',
+          selection: { ...draft.selection, [String(itemId)]: '1' },
+          newItem: { isOpen: false, values: { ...EMPTY_NEW_ITEM }, errors: {} },
+        };
+      },
+    }),
+  );
+
   const allOptions = $derived(options.current.data ?? []);
 
   return {
@@ -172,6 +214,8 @@ export function useTicketStockItemsModel(
         removingId,
         error: readError(remove.current.error) ?? readError(items.current.error),
         linkError: readError(link.current.error),
+        isCreating: create.current.isPending,
+        createError: readError(create.current.error),
       };
     },
     actions: {
@@ -188,7 +232,7 @@ export function useTicketStockItemsModel(
         onMachineChange: (machineId) => (draft = { ...draft, machineId }),
         /* Trocar o sentido muda o que dá para escolher (a saída só mostra o que sobra): começa de novo. */
         onDirectionChange: (direction) =>
-          (draft = { ...draft, direction, selection: {}, errors: {} }),
+          (draft = { ...draft, direction, selection: {}, errors: {}, reason: '', reasonError: null }),
         onSearch: (search) => (draft = { ...draft, search }),
         onToggle: (itemId) =>
           (draft = { ...draft, selection: toggleSelection(draft.selection, itemId), errors: {} }),
@@ -196,11 +240,76 @@ export function useTicketStockItemsModel(
           (draft = { ...draft, selection: { ...draft.selection, [itemId]: value }, errors: {} }),
         onApply: () => {
           const errors = selectionErrors(draft.selection, allOptions, draft.direction);
-          draft = { ...draft, errors };
-          if (Object.keys(errors).length || !Object.keys(draft.selection).length) return;
+          const reasonError =
+            draft.direction === 'disposal' && !draft.reason ? 'Escolha o motivo do descarte' : null;
+          draft = { ...draft, errors, reasonError };
+          if (Object.keys(errors).length || reasonError || !Object.keys(draft.selection).length) return;
           link.current.mutate(draft);
+        },
+        onReasonChange: (reason) => (draft = { ...draft, reason, reasonError: null }),
+        newItem: {
+          onOpen: () => {
+            create.current.reset();
+            draft = {
+              ...draft,
+              newItem: { isOpen: true, values: { ...EMPTY_NEW_ITEM, name: draft.search.trim() }, errors: {} },
+            };
+          },
+          onChange: (field, value) =>
+            (draft = {
+              ...draft,
+              newItem: { ...draft.newItem, values: { ...draft.newItem.values, [field]: value }, errors: {} },
+            }),
+          onSave: () => {
+            const errors = newItemErrors(draft.newItem.values);
+            draft = { ...draft, newItem: { ...draft.newItem, errors } };
+            if (Object.keys(errors).length) return;
+            create.current.mutate(draft.newItem.values);
+          },
+          onCancel: () =>
+            (draft = { ...draft, newItem: { isOpen: false, values: { ...EMPTY_NEW_ITEM }, errors: {} } }),
         },
       },
     },
   };
 }
+
+/**
+ * Cadastra o item no depósito da área e devolve o id. A peça da TI nasce com a quantidade inicial
+ * (o cadastro já registra a entrada); o produto da Manutenção nasce e recebe a entrada logo depois.
+ */
+export async function createShelfItem(
+  source: TicketStockSource,
+  values: TicketStockNewItemValues,
+): Promise<number> {
+  const name = values.name.trim();
+  const quantity = Number(values.quantity);
+  if (source === 'parts') {
+    const part = await partsApi.create({
+      name,
+      category: values.category as PartCategory,
+      condition: values.condition as PartCondition,
+      initialQuantity: quantity,
+    });
+    return part.id;
+  }
+
+  const item = await inventoryItemsApi.create(
+    {
+      name,
+      category: values.category as InventoryCategory,
+      unit: values.unit as InventoryUnit,
+      location: '',
+      department: '',
+      userId: '',
+      userName: '',
+      code: '',
+      note: '',
+    },
+    null,
+  );
+  await inventoryItemsApi.createMovement(item.id, { type: 'in', quantity, reason: null, note: 'Cadastrado num chamado' });
+
+  return item.id;
+}
+
