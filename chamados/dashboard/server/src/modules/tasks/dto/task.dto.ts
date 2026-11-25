@@ -1,5 +1,6 @@
 import {
   addTaskLinksSchema,
+  addTaskNoteSchema,
   createTaskSchema,
   saveTaskStepsSchema,
   setTaskStatusSchema,
@@ -35,6 +36,7 @@ export class SetTaskStatusDto extends createZodDto(setTaskStatusSchema) {}
 export class SaveTaskStepsDto extends createZodDto(saveTaskStepsSchema) {}
 export class SetTaskStepDoneDto extends createZodDto(setTaskStepDoneSchema) {}
 export class AddTaskLinksDto extends createZodDto(addTaskLinksSchema) {}
+export class AddTaskNoteDto extends createZodDto(addTaskNoteSchema) {}
 export class TaskStageDto extends createZodDto(taskStageSchema) {}
 export class TaskStageListQueryDto extends createZodDto(taskStageListQuerySchema) {}
 export class CreateTaskStageDto extends createZodDto(createTaskStageSchema) {}

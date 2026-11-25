@@ -33,6 +33,8 @@ export type TaskDetailModel = {
     /** A linha do tempo já em frase, com o nome de hoje de cada pessoa. */
     timeline: TaskTimelineEntry[];
     stepsDraft: StepDraft[] | null;
+    /** O texto da anotação que a pessoa está escrevendo. */
+    noteDraft: string;
     /** O diálogo "Vincular": o tipo, a busca, o que ela achou e o que foi marcado (de todo tipo). */
     linkPicker: {
       isOpen: boolean;
@@ -50,6 +52,8 @@ export type TaskDetailModel = {
     isHistoryLoading: boolean;
     isBusy: boolean;
     isRemoving: boolean;
+    isNoting: boolean;
+    noteError: string | null;
     error: string | null;
     actionError: string | null;
   };
@@ -61,6 +65,8 @@ export type TaskDetailModel = {
     onStepsChange: (steps: StepDraft[]) => void;
     onSaveSteps: () => void;
     onCancelSteps: () => void;
+    onNoteChange: (text: string) => void;
+    onAddNote: () => void;
     onRemoveLink: (linkId: number) => void;
     /** Excluir ARQUIVA (como no Paralegal); `onRestore` devolve a "Em uso". */
     onRemove: (onRemoved: () => void) => void;
@@ -228,6 +234,17 @@ export function useTaskDetailModel(id: number): TaskDetailModel {
     }
   }
 
+  let noteDraft = $state('');
+  const note = mirrorStore(
+    createMutation({
+      mutationFn: (text: string) => tasksApi.addNote(id, { note: text }),
+      onSuccess: () => {
+        noteDraft = '';
+        void refresh();
+      },
+    }),
+  );
+
   const remove = mirrorStore(
     createMutation({ mutationFn: () => tasksApi.remove(id), onError: onDone.onError }),
   );
@@ -258,6 +275,9 @@ export function useTaskDetailModel(id: number): TaskDetailModel {
       get linkPicker() {
         return linkPicker;
       },
+      get noteDraft() {
+        return noteDraft;
+      },
       get timeline() {
         return timeline;
       },
@@ -277,6 +297,12 @@ export function useTaskDetailModel(id: number): TaskDetailModel {
       },
       get isRemoving() {
         return remove.current.isPending;
+      },
+      get isNoting() {
+        return note.current.isPending;
+      },
+      get noteError() {
+        return note.current.error ? readError(note.current.error) : null;
       },
       get error() {
         return task.current.error ? readError(task.current.error) : null;
@@ -306,6 +332,13 @@ export function useTaskDetailModel(id: number): TaskDetailModel {
         actionError = null;
       },
       onRemoveLink: (linkId) => unlink.current.mutate(linkId),
+      onNoteChange: (text) => {
+        noteDraft = text;
+      },
+      onAddNote: () => {
+        const text = noteDraft.trim();
+        if (text) note.current.mutate(text);
+      },
       onRemove: (onRemoved) =>
         remove.current.mutate(undefined, {
           onSuccess: () => {

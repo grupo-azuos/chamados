@@ -25,6 +25,8 @@ const ACTION_LABELS: Record<string, string> = {
   setStepDone: 'Marcou uma etapa da tarefa',
   addLinks: 'Vinculou à tarefa',
   removeLink: 'Desvinculou da tarefa',
+  registerMaintenance: 'Registrou a manutenção',
+  addNote: 'Anotou',
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -39,13 +41,16 @@ const FIELD_LABELS: Record<string, string> = {
   done: 'Etapa',
   steps: 'Etapas',
   links: 'Vínculos',
+  maintenance: 'O que foi feito',
+  performedByIds: 'Quem fez',
+  note: 'Anotação',
 };
 
 /** O nome de hoje de cada pessoa, pelo id. */
 type Names = Readonly<Record<string, string>>;
 
 function listOf(value: unknown[], field: string, names: Names): string {
-  if (field === 'peopleIds')
+  if (field === 'peopleIds' || field === 'performedByIds')
     return value.map((id) => names[String(id)] ?? 'Sem cadastro').join(', ');
   if (field === 'steps') {
     return value

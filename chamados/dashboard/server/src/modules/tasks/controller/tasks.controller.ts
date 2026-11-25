@@ -26,6 +26,7 @@ import { AnyModule } from '../../../lib/auth/module-context.decorator';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   AddTaskLinksDto,
+  AddTaskNoteDto,
   CreateTaskDto,
   SaveTaskStepsDto,
   SetTaskStageDto,
@@ -198,6 +199,19 @@ export class TasksController {
     @Body() body: AddTaskLinksDto,
   ): Promise<TaskDto> {
     return this.service.addLinks(user, id, body);
+  }
+
+  /* A anotação vive na linha do tempo: o interceptor do Histórico grava `tasks.addNote` com o
+     texto, e a tarefa volta igual. */
+  @Post(':id/notes')
+  @ApiOperation({ summary: 'Escreve uma anotação na linha do tempo da tarefa' })
+  @ApiOkResponse({ type: TaskDto })
+  async addNote(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() _body: AddTaskNoteDto,
+  ): Promise<TaskDto> {
+    return this.service.addNote(user, id);
   }
 
   @Delete(':id/links/:linkId')

@@ -11,7 +11,7 @@ import { softwareProjects } from '../src/lib/db/schema/software-projects.schema'
 import { ticketStockItems } from '../src/lib/db/schema/ticket-stock-items.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
 import { TasksService } from '../src/modules/tasks/service/tasks.service';
-import { ANA, asAna, asBia, asOlga, createE2eApp, type E2eApp } from './support/e2e-app.util';
+import { ANA, CAIO, asAna, asBia, asOlga, createE2eApp, type E2eApp } from './support/e2e-app.util';
 
 /**
  * AS TAREFAS de ponta a ponta, contra um Postgres de verdade: a migration, o chamado de infra
@@ -51,7 +51,10 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
        é chamada à mão, no momento certo. */
     process.env.BACKGROUND_JOBS_ENABLED = 'false';
     started = await createE2eApp(testDatabaseUrl!, {
-      people: [{ id: ANA.id, name: ANA.name, email: ANA.email, image: null }],
+      people: [
+        { id: ANA.id, name: ANA.name, email: ANA.email, image: null },
+        { id: CAIO.id, name: CAIO.name, email: CAIO.email, image: null },
+      ],
     });
     app = started.app;
   });
@@ -276,6 +279,88 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
     });
     const [closed] = await started.db.select().from(tasks).where(eq(tasks.id, task!.id));
     expect(closed?.status).toBe('done');
+  });
+
+  // feliz
+  it('registering the maintenance finishes the machine task in the name of who did it', async () => {
+    const [machine] = await started.db
+      .insert(computers)
+      .values({ name: 'FISCAL-D02', tokenHash: 'hash-fiscal', createdBy: 'ti@empresa.com.br' })
+      .returning();
+    await started.db.execute(
+      `insert into chamados.maintenances (computer_id, type, performed_at, created_by)
+       values (${machine!.id}, 'preventive', '2026-07-01T12:00:00Z', 'ti@empresa.com.br')`,
+    );
+    await app.get(TasksService).syncMaintenance(new Date());
+    const [open] = await started.db.select().from(tasks).where(eq(tasks.computerId, machine!.id));
+    expect(open?.status).toBe('open');
+
+    await api()
+      .post('/api/v1/maintenances')
+      .set(asAna())
+      .send({
+        computerId: machine!.id,
+        type: 'preventive',
+        description: 'Limpeza e troca de pasta térmica',
+        performedAt: new Date().toISOString(),
+        performedByIds: [CAIO.id, ANA.id],
+      })
+      .expect(201);
+
+    const task = await api().get(`/api/v1/tasks/${open!.id}`).set(asAna()).expect(200);
+    expect(task.body).toMatchObject({ status: 'done', owner: { id: CAIO.id } });
+    expect(task.body.people.map((person: { id: string }) => person.id)).toEqual([ANA.id]);
+    expect(task.body.progress.done).toBe(task.body.progress.total);
+
+    const timeline = await api().get(`/api/v1/tasks/${open!.id}/history`).set(asAna()).expect(200);
+    expect(timeline.body[0]).toMatchObject({ action: 'registerMaintenance' });
+    expect(timeline.body[0].changes).toEqual(
+      expect.arrayContaining([
+        { field: 'maintenance', from: null, to: 'Preventiva: Limpeza e troca de pasta térmica' },
+        { field: 'performedByIds', from: null, to: [CAIO.id, ANA.id] },
+      ]),
+    );
+
+    /* Sem tarefa aberta (a corretiva), a tarefa nasce finalizada — e conta para quem fez. */
+    await api()
+      .post('/api/v1/maintenances')
+      .set(asAna())
+      .send({ computerId: machine!.id, type: 'corrective', performedAt: new Date().toISOString() })
+      .expect(201);
+    const done = await started.db.select().from(tasks).where(eq(tasks.computerId, machine!.id));
+    const corrective = done.find((row) => row.title === 'Corretiva — FISCAL-D02');
+    expect(corrective).toMatchObject({ status: 'done', ownerId: ANA.id, origin: 'maintenance' });
+  });
+
+  // feliz
+  it('writes a note on the task timeline, with who wrote it', async () => {
+    const created = await api()
+      .post('/api/v1/tasks')
+      .set(asAna())
+      .send({ area: 'infra', title: 'Trocar o monitor da recepção', startDate: '2026-11-25' })
+      .expect(201);
+
+    await api()
+      .post(`/api/v1/tasks/${created.body.id}/notes`)
+      .set(asAna())
+      .send({ note: 'Liguei para a usuária, a máquina fica livre às 14h.' })
+      .expect(201);
+
+    const timeline = await api()
+      .get(`/api/v1/tasks/${created.body.id}/history`)
+      .set(asAna())
+      .expect(200);
+    expect(timeline.body[0]).toMatchObject({ action: 'addNote', actorName: 'Ana' });
+    expect(timeline.body[0].changes).toEqual([
+      { field: 'note', from: null, to: 'Liguei para a usuária, a máquina fica livre às 14h.' },
+    ]);
+
+    // triste
+    await api()
+      .post(`/api/v1/tasks/${created.body.id}/notes`)
+      .set(asAna())
+      .send({ note: '   ' })
+      .expect(400);
   });
 
   // feliz

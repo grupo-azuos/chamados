@@ -138,4 +138,49 @@ describe('AzuosTaskDetailView', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Desarquivar' }));
     expect(actions.onRestore).toHaveBeenCalled();
   });
+
+  // feliz
+  it('writes a note on the timeline when the screen gives the note actions', async () => {
+    const onNoteChange = vi.fn();
+    const onAddNote = vi.fn();
+    render(TaskDetailView, {
+      props: {
+        data: {
+          task: taskFixture({ origin: 'manual' }),
+          timeline: [],
+          stepsDraft: null,
+          now: TEST_NOW,
+          noteDraft: 'Máquina livre às 14h.',
+        },
+        state: STATE,
+        actions: {
+          onFinish: vi.fn(),
+          onReopen: vi.fn(),
+          onToggleStep: vi.fn(),
+          onEditSteps: vi.fn(),
+          onStepsChange: vi.fn(),
+          onSaveSteps: vi.fn(),
+          onCancelSteps: vi.fn(),
+          onEdit: vi.fn(),
+          onRemoveLink: vi.fn(),
+          onRemove: vi.fn(),
+          onRestore: vi.fn(),
+          onLink: vi.fn(),
+          onNoteChange,
+          onAddNote,
+        },
+      },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Anotar' }));
+
+    expect(onAddNote).toHaveBeenCalled();
+  });
+
+  // triste
+  it('has no note field when the screen does not give the note actions', () => {
+    setup();
+
+    expect(screen.queryByLabelText('Anotação')).toBeNull();
+  });
 });

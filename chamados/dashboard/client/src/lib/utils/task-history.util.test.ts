@@ -41,6 +41,49 @@ describe('task timeline in words', () => {
     expect(readableValue('done', false, NAMES)).toBe('A fazer');
   });
 
+  // feliz
+  it('reads the registered maintenance and the note in words', () => {
+    const [maintenance, note] = taskTimelineOf(
+      [
+        {
+          id: 2,
+          action: 'registerMaintenance',
+          actorName: 'Ana Prado',
+          occurredAt: '2026-11-25T10:00:00.000Z',
+          changes: [
+            { field: 'maintenance', from: null, to: 'Preventiva: Limpeza' },
+            { field: 'performedByIds', from: null, to: ['ana', 'x'] },
+            { field: 'status', from: null, to: 'done' },
+          ],
+        },
+        {
+          id: 3,
+          action: 'addNote',
+          actorName: 'Ana Prado',
+          occurredAt: '2026-11-25T11:00:00.000Z',
+          changes: [{ field: 'note', from: null, to: 'Máquina livre às 14h.' }],
+        },
+      ],
+      'Preventiva — Computador 02',
+      NAMES,
+    );
+
+    expect(maintenance).toMatchObject({
+      kindLabel: 'Registrou a manutenção',
+      tone: 'success',
+      lines: [
+        'Tarefa: Preventiva — Computador 02',
+        'O que foi feito: Preventiva: Limpeza',
+        'Quem fez: Ana Prado, Sem cadastro',
+        'Situação: Finalizada',
+      ],
+    });
+    expect(note).toMatchObject({
+      kindLabel: 'Anotou',
+      lines: ['Tarefa: Preventiva — Computador 02', 'Anotação: Máquina livre às 14h.'],
+    });
+  });
+
   // triste
   it('falls back for an unknown action, a missing actor and empty values, and skips unknown fields', () => {
     const [entry] = taskTimelineOf(

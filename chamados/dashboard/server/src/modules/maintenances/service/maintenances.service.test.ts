@@ -1,3 +1,4 @@
+import { type TasksService } from '../../tasks/service/tasks.service';
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { maintenanceListQuerySchema } from '@template/shared/schemas/maintenance.schema';
@@ -150,6 +151,39 @@ describe('MaintenancesService.list', () => {
 });
 
 describe('MaintenancesService.create', () => {
+  // feliz
+  it('updates the machine task in the name of who did it, and leaves another equipment alone', async () => {
+    const registerMaintenance = vi.fn().mockResolvedValue(undefined);
+    const tasks = { registerMaintenance, syncMaintenanceFor: vi.fn() } as unknown as TasksService;
+    const repository = {
+      insert: vi.fn().mockResolvedValue(1),
+      archiveOpenSchedule: vi.fn(),
+      findById: vi.fn().mockResolvedValue(row({ performedByIds: ['u-caio'] })),
+    } as unknown as MaintenancesRepository;
+    const service = new MaintenancesService(repository, undefined, tasks);
+
+    await service.create(owner, { computerId: 3, type: 'preventive', performedAt: NOW });
+
+    expect(registerMaintenance).toHaveBeenCalledWith(owner, {
+      computerId: 3,
+      computerName: 'Contábil — fechamento',
+      type: 'preventive',
+      description: 'Limpeza interna e pasta térmica',
+      performedByIds: ['u-caio'],
+      performedAt: '2026-09-20T12:00:00.000Z',
+    });
+
+    // triste
+    registerMaintenance.mockClear();
+    vi.mocked(repository.findById).mockResolvedValue({
+      maintenance: maintenanceRow({ computerId: null, otherMachine: 'Impressora' }),
+      computer: null,
+    } as never);
+    await service.create(owner, { otherMachine: 'Impressora', type: 'other', performedAt: NOW });
+
+    expect(registerMaintenance).not.toHaveBeenCalled();
+  });
+
   // feliz
   it('stamps the author from the identity, never from the body', async () => {
     const insert = vi.fn().mockResolvedValue(1);
