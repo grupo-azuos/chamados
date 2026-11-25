@@ -66,8 +66,8 @@ export const maintenanceSchema = z.object({
   description: z.string().nullable(),
   /** O nome de quem fez o serviço (o do diretório quando escolhido pela lista). */
   performedBy: z.string().nullable(),
-  /** Quem fez, pelo id do diretório — o campo de pessoa da tela; nulo nos registros antigos. */
-  performedById: z.string().nullable().optional(),
+  /** Quem fez, pelos ids do diretório — uma ou mais pessoas; vazio nos registros antigos. */
+  performedByIds: z.array(z.string()).optional(),
   performedAt: z.iso.datetime(),
 
   createdAt: z.iso.datetime(),
@@ -107,8 +107,8 @@ const maintenanceInputShape = {
   type: maintenanceTypeSchema,
   description: descriptionSchema.optional(),
   performedBy: performedBySchema.optional(),
-  /** Quem fez, pelo id do diretório: o servidor escreve o nome dele em `performedBy`. */
-  performedById: z.string().trim().min(1).nullable().optional(),
+  /** Quem fez, pelos ids do diretório: o servidor escreve os nomes em `performedBy`. */
+  performedByIds: z.array(z.string().trim().min(1)).max(20, 'Até 20 pessoas').optional(),
   /** Quando o serviço foi feito — não é a data em que alguém digitou. */
   performedAt: z.iso.datetime({ message: 'Informe uma data válida' }),
 };
@@ -139,8 +139,9 @@ export const maintenanceFormSchema = z
       .max(OTHER_MACHINE_MAX_LENGTH, `Até ${OTHER_MACHINE_MAX_LENGTH} caracteres`),
     type: maintenanceTypeSchema,
     description: z.string().max(DESCRIPTION_MAX_LENGTH, `Até ${DESCRIPTION_MAX_LENGTH} caracteres`),
-    /* Quem fez é uma pessoa da lista (o id); vazio é ninguém. */
-    performedById: z.string(),
+    /* Quem fez são pessoas da lista: os ids separados por vírgula (o campo da tela é texto); vazio
+       é ninguém. */
+    performedByIds: z.string(),
     performedAt: z.string().min(1, 'Informe a data'),
   })
   .superRefine((value, context) => {

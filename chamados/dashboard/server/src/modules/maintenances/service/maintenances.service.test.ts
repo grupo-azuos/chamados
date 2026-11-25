@@ -36,7 +36,7 @@ function maintenanceRow(overrides: Partial<MaintenanceRow> = {}): MaintenanceRow
     type: 'preventive',
     description: 'Limpeza interna e pasta térmica',
     performedBy: 'Suporte TI',
-    performedById: null,
+    performedByIds: [],
     performedAt: new Date('2026-09-20T12:00:00.000Z'),
     createdAt: new Date('2026-09-20T13:00:00.000Z'),
     createdBy: 'ana@empresa.com.br',
@@ -167,10 +167,18 @@ describe('MaintenancesService.create', () => {
   });
 
   /* Quem fez é a pessoa da lista: o nome dela no diretório vai para o registro. */
-  it('writes the name of the person chosen as who did it, and refuses one the directory does not know', async () => {
+  it('writes the names of everyone chosen as who did it, and refuses one the directory does not know', async () => {
     const insert = vi.fn().mockResolvedValue(1);
     const directory = {
-      getUserById: vi.fn(async (id: string) => (id === 'u-ana' ? { id, name: 'Ana Souza' } : null)),
+      getUserById: vi.fn(
+        async (id: string) =>
+          (
+            ({ 'u-ana': { id, name: 'Ana Souza' }, 'u-caio': { id, name: 'Caio Reis' } }) as Record<
+              string,
+              unknown
+            >
+          )[id] ?? null,
+      ),
     } as unknown as UserDirectoryProvider;
     const service = new MaintenancesService(
       {
@@ -187,10 +195,13 @@ describe('MaintenancesService.create', () => {
       computerId: 3,
       type: 'preventive',
       performedAt: NOW,
-      performedById: 'u-ana',
+      performedByIds: ['u-ana', 'u-caio'],
     });
     expect(insert).toHaveBeenCalledWith(
-      expect.objectContaining({ performedById: 'u-ana', performedBy: 'Ana Souza' }),
+      expect.objectContaining({
+        performedByIds: ['u-ana', 'u-caio'],
+        performedBy: 'Ana Souza, Caio Reis',
+      }),
     );
 
     // triste
@@ -199,7 +210,7 @@ describe('MaintenancesService.create', () => {
         computerId: 3,
         type: 'preventive',
         performedAt: NOW,
-        performedById: 'u-fora',
+        performedByIds: ['u-ana', 'u-fora'],
       }),
     ).rejects.toThrow('Escolha quem fez pela lista de pessoas.');
   });

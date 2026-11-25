@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-maintenance-form-harness.test.svelte';
-import { type MaintenanceFormModel } from './use-maintenance-form.svelte';
+import { personIdsByNames, type MaintenanceFormModel } from './use-maintenance-form.svelte';
 
 vi.mock('$lib/api/maintenances.api', () => ({
   maintenancesApi: { create: vi.fn(), update: vi.fn() },
@@ -177,15 +177,15 @@ describe('useMaintenanceFormModel', () => {
   it('turns the person chosen into who did it, and finds the person of an old record by name', async () => {
     const model = mountModel({ maintenance: maintenance() });
 
-    await waitFor(() => expect(model.data.fields.performedById.value).toBe('u-suporte'));
+    await waitFor(() => expect(model.data.fields.performedByIds.value).toBe('u-suporte'));
     expect(model.data.people.map((person) => person.name)).toEqual(['Suporte TI', 'Ana Souza']);
-    model.actions.onChange('performedById', 'u-ana');
+    model.actions.onChange('performedByIds', 'u-ana,u-suporte');
     model.actions.onSubmit();
 
     await waitFor(() =>
       expect(maintenancesApi.update).toHaveBeenCalledWith(
         5,
-        expect.objectContaining({ performedById: 'u-ana' }),
+        expect.objectContaining({ performedByIds: ['u-ana', 'u-suporte'] }),
       ),
     );
   });
@@ -267,7 +267,7 @@ describe('useMaintenanceFormModel — blur and the record being corrected', () =
     expect(model.data.fields.computerId.value).toBe('');
     expect(model.data.fields.otherMachine.value).toBe('Impressora');
     expect(model.data.fields.description.value).toBe('');
-    expect(model.data.fields.performedById.value).toBe('');
+    expect(model.data.fields.performedByIds.value).toBe('');
   });
 });
 
@@ -295,5 +295,22 @@ describe('useMaintenanceFormModel — equipment without a machine', () => {
         expect.objectContaining({ computerId: null, otherMachine: 'Impressora da recepção' }),
       ),
     );
+  });
+});
+
+describe('personIdsByNames', () => {
+  // feliz
+  it('finds everyone an old record named, without caring about case or spaces', () => {
+    const list = [
+      { id: 'u-ana', name: 'Ana Souza' },
+      { id: 'u-caio', name: 'Caio Reis' },
+    ];
+
+    expect(personIdsByNames(list, 'ana souza,  Caio Reis ')).toEqual(['u-ana', 'u-caio']);
+  });
+
+  // triste
+  it('leaves out a name nobody has', () => {
+    expect(personIdsByNames([{ id: 'u-ana', name: 'Ana Souza' }], 'Fulano de Fora')).toEqual([]);
   });
 });

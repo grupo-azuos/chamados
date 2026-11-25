@@ -19,7 +19,7 @@ function fields(
     otherMachine: field(),
     type: field('preventive'),
     description: field(),
-    performedById: field(),
+    performedByIds: field(),
     performedAt: field('2026-09-20'),
     ...over,
   };
@@ -188,8 +188,8 @@ describe('AzuosMaintenanceFormDialog — every field reports to the model', () =
     await userEvent.tab();
     expect(actions.onChange).toHaveBeenCalledWith('description', expect.any(String));
     expect(actions.onBlur).toHaveBeenCalledWith('description');
-    /* Quem fez é o campo de PESSOA (a lista, com a foto), não texto solto. */
-    expect(screen.getByRole('combobox', { name: 'Quem fez' })).toBeInTheDocument();
+    /* Quem fez é o campo de VÁRIAS pessoas (a lista, com a foto), não texto solto. */
+    expect(screen.getByRole('button', { name: /Quem fez/ })).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: /Quem fez/ })).toBeNull();
 
     await userEvent.click(screen.getByRole('button', { name: 'Data do serviço' }));

@@ -288,6 +288,20 @@
       "when": 1795537095848,
       "tag": "0040_maintenance_performer",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795603765192,
+      "tag": "0041_maintenance_performers",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795603770702,
+      "tag": "0042_maintenance_drop_single_performer",
+      "breakpoints": true
     }
   ]
 }

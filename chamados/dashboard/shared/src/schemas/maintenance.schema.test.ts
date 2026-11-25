@@ -99,7 +99,7 @@ describe('maintenanceFormSchema', () => {
     otherMachine: '',
     type: 'preventive' as const,
     description: 'Limpeza interna',
-    performedById: 'u-suporte',
+    performedByIds: 'u-suporte,u-ana',
     performedAt: '2026-09-20',
   };
 
