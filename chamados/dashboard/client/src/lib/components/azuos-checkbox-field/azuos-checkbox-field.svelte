@@ -51,7 +51,14 @@
       disabled={isDisabled}
       aria-describedby={data.description ? descriptionId : undefined}
       onCheckedChange={(checked) => actions?.onChange?.(checked === true)}
-      class="bg-muted shrink-0"
+      class={cn(
+        /* O bits-ui marca a caixinha com `data-state`, e o `data-checked:` do shadcn nunca casava:
+           marcada, ela não ficava azul. E a borda era da cor do campo — no escuro, sumia no fundo
+           do menu. Borda cinza de apoio, que aparece no claro e no escuro; marcada, azul cheia. */
+        'border-muted-foreground/60 dark:bg-transparent shrink-0 bg-transparent',
+        'data-[state=checked]:border-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary',
+        'data-[state=indeterminate]:border-transparent data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground dark:data-[state=indeterminate]:bg-primary',
+      )}
     />
     <label
       for={inputId}
