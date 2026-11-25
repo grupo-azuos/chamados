@@ -2,11 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { type MaintenanceRow } from '../../../lib/db/schema/maintenances.schema';
 import { type MaintenanceWithComputer } from '../repository/maintenances.repository';
-import {
-  toMaintenance,
-  toMaintenanceInsert,
-  toMaintenanceUpdate,
-} from './maintenances.mapper';
+import { toMaintenance, toMaintenanceInsert, toMaintenanceUpdate } from './maintenances.mapper';
 
 const ANA = 'ana@empresa.com.br';
 const AT = '2026-09-20T12:00:00.000Z';
@@ -19,11 +15,14 @@ function maintenanceRow(overrides: Partial<MaintenanceRow> = {}): MaintenanceRow
     type: 'preventive',
     description: 'Limpeza interna',
     performedBy: 'Suporte TI',
+    performedByIds: [],
     performedAt: new Date(AT),
     createdAt: new Date('2026-09-20T13:00:00.000Z'),
     createdBy: ANA,
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }
@@ -86,7 +85,12 @@ describe('toMaintenanceInsert', () => {
 
   it('never takes the author from the body', () => {
     const insert = toMaintenanceInsert(
-      { computerId: 3, type: 'preventive', performedAt: AT, createdBy: 'bia@empresa.com.br' } as never,
+      {
+        computerId: 3,
+        type: 'preventive',
+        performedAt: AT,
+        createdBy: 'bia@empresa.com.br',
+      } as never,
       ANA,
     );
 

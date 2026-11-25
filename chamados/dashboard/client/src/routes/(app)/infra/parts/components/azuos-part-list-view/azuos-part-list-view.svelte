@@ -1,3 +1,27 @@
+<!--
+  @component
+  O DEPÓSITO: as peças de reposição que a TI tem em mãos.
+
+  Cabeçalho com "Cadastrar peça"; no alto, os números (tipos de peça, peças na prateleira e sem
+  estoque — os dois últimos são atalhos do filtro de estoque, e clicar de novo desliga). Depois,
+  busca, categoria, condição, estoque e a alternância entre cards (celular) e tabela (monitor).
+  Clicar na peça abre o extrato dela; cada uma tem "Entrada", "Saída" e "Corrigir" (no card, o
+  cartão de registro `AzuosContentCard`, "Editar" mora no menu de três pontinhos).
+
+  Peça com saldo zero NÃO some da lista: é por ela que alguém descobre o que precisa comprar. Ela
+  aparece com o saldo em vermelho, e o filtro "só com estoque" é quem a esconde — quando a pergunta
+  for outra. Lista cortada avisa, em vez de esconder o tamanho do depósito.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro.
+
+  - `data`: `parts`, `total`, `summary` e `filter`.
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated`,
+    `isSummaryLoading` e `error`.
+  - `actions`: filtros (`onSearchChange`, `onCategoryChange`, `onConditionChange`,
+    `onInStockOnlyChange`, `onOutOfStockOnlyChange`, `onClearFilters`), `onRetry`, `onRegister`,
+    `onEdit`, `onMove(part, 'in' | 'out')` e `onOpenLedger`.
+-->
 <script lang="ts" module>
   import {
     PART_CATEGORIES,
@@ -90,21 +114,26 @@
 
 <script lang="ts">
   import FilterX from '@lucide/svelte/icons/filter-x';
+  import Layers from '@lucide/svelte/icons/layers';
   import Package from '@lucide/svelte/icons/package';
+  import PackageCheck from '@lucide/svelte/icons/package-check';
+  import PackageX from '@lucide/svelte/icons/package-x';
+  import Pencil from '@lucide/svelte/icons/pencil';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
 
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
-  import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
+    import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
@@ -118,8 +147,11 @@
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
+  import { partCategoryIconOf } from '$lib/utils/record-icon.util';
 
   let { data, state: viewState, actions }: AzuosPartListViewProps = $props();
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  const cardPage = useCardPage(() => data.parts);
 
   const summary = $derived(data.summary);
   const tableView = useTableViewModel();
@@ -161,7 +193,7 @@
   }
 </script>
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Depósito',
@@ -176,30 +208,12 @@
   </PageHeader>
 
   <StatCardGrid>
-    <StatCard
-      data={{ label: 'Tipos de peça', value: summary?.kinds ?? 0 }}
-      ui={{ tone: 'brand' }}
-      state={{ isLoading: viewState.isSummaryLoading }}
-    />
+    <ContentCard data={{ label: 'Tipos de peça', title: 'Tipos de peça', highlight: { value: summary?.kinds ?? 0 } }} ui={{ icon: Layers, iconTone: 'brand' }} state={{ isLoading: viewState.isSummaryLoading }} />
     <!-- Estes dois são ATALHOS do filtro de estoque: "Peças na prateleira" mostra só o que tem
          saldo, "Sem estoque" só o que está zerado. Clicar de novo desliga. "Tipos de peça" é o
          total do cadastro — não filtra nada. -->
-    <StatCard
-      data={{ label: 'Peças na prateleira', value: summary?.items ?? 0 }}
-      ui={{ tone: 'success' }}
-      state={{ isLoading: viewState.isSummaryLoading, isSelected: data.filter.inStockOnly }}
-      actions={{ onClick: () => chooseStockFromCard('in') }}
-    />
-    <StatCard
-      data={{
-        label: 'Sem estoque',
-        value: summary?.outOfStock ?? 0,
-        hint: summary?.outOfStock ? 'são as que podem precisar de compra' : null,
-      }}
-      ui={{ tone: 'danger' }}
-      state={{ isLoading: viewState.isSummaryLoading, isSelected: data.filter.outOfStockOnly }}
-      actions={{ onClick: () => chooseStockFromCard('out') }}
-    />
+    <ContentCard data={{ label: 'Peças na prateleira', title: 'Peças na prateleira', highlight: { value: summary?.items ?? 0 } }} ui={{ icon: PackageCheck, iconTone: 'success' }} state={{ isLoading: viewState.isSummaryLoading, isSelected: data.filter.inStockOnly }} actions={{ onOpen: () => chooseStockFromCard('in') }} />
+    <ContentCard data={{ label: 'Sem estoque', title: 'Sem estoque', highlight: { value: summary?.outOfStock ?? 0, hint: summary?.outOfStock ? 'são as que podem precisar de compra' : null } }} ui={{ icon: PackageX, iconTone: 'danger' }} state={{ isLoading: viewState.isSummaryLoading, isSelected: data.filter.outOfStockOnly }} actions={{ onOpen: () => chooseStockFromCard('out') }} />
   </StatCardGrid>
 
   <div bind:this={filtersElement} class="flex scroll-mt-4 flex-col gap-3">
@@ -302,55 +316,45 @@
       class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
       data-slot="part-cards-mobile"
     >
-      {#each data.parts as part (part.id)}
-        <!-- O card de conteúdo do grupo, hover na cor da condição. O nome corta em duas linhas
-             (o inteiro fica na dica), para um nome comprido não esticar a linha de cards. -->
+      {#each cardPage.items as part (part.id)}
+        <!-- O cartão de registro do sistema: o card inteiro abre o histórico da peça. Entrada e
+             Saída ficam no rodapé (são o dia a dia do depósito); corrigir, no menu. -->
         <ContentCard
-          data={{ label: part.name }}
-          ui={{ tone: partConditionTone(part.condition), isHoverColored: true, className: 'min-w-0 gap-0 p-4' }}
-          actions={{ onClick: () => actions.onOpenLedger(part) }}
+          data={{
+            label: `Ver o histórico de ${part.name}`,
+            title: part.name,
+            meta: partCategoryLabel(part.category),
+            status: { label: partConditionLabel(part.condition), tone: partConditionTone(part.condition) },
+            tags: part.balance === 0 ? [{ label: 'Sem estoque', tone: 'danger' }] : [],
+            metrics: [
+              {
+                key: 'balance',
+                label: 'Na prateleira',
+                value: String(part.balance),
+                tone: part.balance === 0 ? 'danger' : 'success',
+              },
+            ],
+            menu: {
+              label: `Ações de ${part.name}`,
+              items: [{ id: 'edit', label: 'Editar', icon: Pencil }],
+            },
+          }}
+          ui={{
+            icon: partCategoryIconOf(part.category),
+            iconTone: partConditionTone(part.condition),
+            slot: 'part-card',
+          }}
+          actions={{ onOpen: () => actions.onOpenLedger(part), onMenuSelect: () => actions.onEdit(part) }}
         >
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0 flex-1">
-              <!-- O card inteiro abre o histórico (o clique do próprio card). O que tem ação própria
-                   (nome, chamados, Entrada, Saída) fica por cima dele, `z-20`. -->
-              <button
-                type="button"
-                class="text-ink-900 relative z-20 line-clamp-2 text-left font-medium hover:underline"
-                title={part.name}
-                onclick={() => actions.onOpenLedger(part)}
-              >
-                {part.name}
-              </button>
-              <span class="text-ink-500 block text-xs">Ver o histórico</span>
-              <div class="relative z-20">
-                <TicketStockLinks
-                  data={{ links: part.ticketLinks, balance: part.balance, ticketsPath: '/infra/tickets' }}
-                />
-              </div>
-            </div>
-            <div class="flex flex-col items-end gap-1 shrink-0">
-              <StatusBadge
-                data={{ label: partConditionLabel(part.condition) }}
-                ui={{ tone: partConditionTone(part.condition), size: 'sm' }}
+          {#snippet notes()}
+            <!-- Os chamados ligados têm link próprio: sobem acima do botão do card. -->
+            <div class="relative z-20">
+              <TicketStockLinks
+                data={{ links: part.ticketLinks, balance: part.balance, ticketsPath: '/infra/tickets' }}
               />
-              <span
-                class={cn(
-                  'text-base font-semibold tabular-nums',
-                  part.balance === 0 ? 'text-destructive' : 'text-ink-900',
-                )}
-              >
-                {part.balance} <span class="text-xs font-normal text-muted-foreground">na prateleira</span>
-              </span>
             </div>
-          </div>
-
-          <div class="mt-2 truncate text-xs" title={partCategoryLabel(part.category)}>
-            <span class="text-muted-foreground">Categoria: </span>
-            <span class="text-ink-700 font-medium">{partCategoryLabel(part.category)}</span>
-          </div>
-
-          <div class="border-border relative z-20 mt-3 flex items-center justify-end gap-2 border-t pt-2">
+          {/snippet}
+          {#snippet footerActions()}
             <ActionButton
               data={{ label: 'Entrada' }}
               ui={{ variant: 'secondary', size: 'sm' }}
@@ -362,12 +366,7 @@
               state={{ isDisabled: part.balance === 0 }}
               actions={{ onClick: () => actions.onMove(part, 'out') }}
             />
-            <ActionButton
-              data={{ label: 'Corrigir' }}
-              ui={{ variant: 'ghost', size: 'sm' }}
-              actions={{ onClick: () => actions.onEdit(part) }}
-            />
-          </div>
+          {/snippet}
         </ContentCard>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
@@ -376,6 +375,21 @@
         <span>{data.parts.length} item(ns)</span>
       </div>
     </div>
+      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
+           fileira. A barra só aparece quando há mais de uma página. -->
+      {#if cardPage.total > cardPage.pageSize}
+        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
+          <PaginationBar
+            data={{
+              page: cardPage.page,
+              pageSize: cardPage.pageSize,
+              total: cardPage.total,
+              noun: ['peça', 'peças'],
+            }}
+            actions={{ onPageChange: cardPage.actions.onPageChange }}
+          />
+        </div>
+      {/if}
 
     <!-- Tabela para desktop (>= xl) -->
     <div

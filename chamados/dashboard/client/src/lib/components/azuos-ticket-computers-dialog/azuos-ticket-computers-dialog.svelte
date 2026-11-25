@@ -1,3 +1,16 @@
+<!--
+  @component
+  VINCULAR MÁQUINAS a um chamado — um diálogo grande, com a busca do Inventário, onde se marcam
+  quantas máquinas forem antes de aplicar. Um atendimento pode passar por várias (o monitor trocado
+  em duas mesas), e escolher uma por vez num campo estreito não dava.
+
+  Nada é gravado ao marcar: a escolha é um rascunho, e só "Aplicar" a envia. Cancelar desfaz.
+
+  Função pura de props: a lista já chega filtrada, e a escolha vive no view-model. `data` leva as
+  máquinas, os ids marcados, a busca, o departamento e a lista de departamentos; `state`, `isOpen`,
+  `isLoading`, `isSaving` e `error`; `actions`, buscar, filtrar por departamento, marcar, limpar a
+  escolha, aplicar e fechar.
+-->
 <script lang="ts" module>
   /** Uma máquina como o diálogo a mostra — o bastante para reconhecê-la de relance. */
   export type TicketComputerChoice = {
@@ -9,27 +22,18 @@
     responsibleName: string | null;
     /** O departamento como a tela o escreve. */
     department: string | null;
-    /** O departamento como o filtro o compara (o valor da lista do RH). */
+    /** O departamento como o filtro o compara: o id do RH, como texto. */
     departmentKey?: string | null;
     isOnline: boolean;
   };
 
-  /**
-   * VINCULAR MÁQUINAS a um chamado — um diálogo grande, com a busca do Inventário, onde se
-   * marcam quantas máquinas forem antes de aplicar. Um atendimento pode passar por várias (o
-   * monitor trocado em duas mesas), e escolher uma por vez num campo estreito não dava.
-   *
-   * Nada é gravado ao marcar: a escolha é um rascunho, e só "Aplicar" a envia. Cancelar desfaz.
-   *
-   * Função pura de props: a lista já chega filtrada, e a escolha vive no view-model.
-   */
   export type AzuosTicketComputersDialogProps = {
     data: {
       computers: TicketComputerChoice[];
       selectedIds: number[];
       search: string;
       department: string;
-      /** Os do RH e, depois da linha divisória, os daqui — a mesma lista do Inventário. */
+      /** Os oficiais do RH (pelo id) e, depois da linha divisória, os locais fixos. */
       departments: { value: string; label: string; separatorBefore?: boolean }[];
     };
     state?: {
@@ -132,23 +136,26 @@
       />
     {:else}
       <ul
-        class="grid max-h-[55vh] grid-cols-1 gap-3 overflow-y-auto p-1 sm:grid-cols-2 lg:grid-cols-3"
+        class="-mx-1 grid max-h-[55vh] grid-cols-1 gap-3 overflow-y-auto p-1 sm:grid-cols-2 lg:grid-cols-3"
         aria-label="Máquinas do inventário"
       >
         {#each data.computers as computer (computer.id)}
           {@const isSelected = data.selectedIds.includes(computer.id)}
           <li>
-            <!-- Escolhida = fundo na cor cheia (regra de UI do grupo), nunca borda colorida. -->
+            <!-- Escolhida = fundo na cor cheia (regra de UI do grupo), nunca borda colorida. As
+                 demais são a caixa cinza sem borda e sem sombra: dentro do diálogo branco, card
+                 branco seria card dentro de card da mesma cor. O hover é o véu neutro por cima. -->
             <button
               type="button"
               aria-pressed={isSelected}
               disabled={isBusy}
               onclick={() => actions.onToggle(computer.id)}
               class={cn(
-                'rounded-surface flex w-full cursor-pointer flex-col gap-2 border p-4 text-left shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                'rounded-box relative isolate flex w-full cursor-pointer flex-col gap-2 p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                'before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-box hover:before:bg-hover-veil',
                 isSelected
-                  ? 'bg-primary text-primary-foreground border-border'
-                  : 'bg-card border-border/70 hover:bg-muted/50',
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-foreground',
               )}
             >
               <span class="flex items-start justify-between gap-2">

@@ -1,7 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import gsap from 'gsap';
-import HardDrive from '@lucide/svelte/icons/hard-drive';
 import { createRawSnippet } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,39 +11,26 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('AzuosCardSurface (Svelte)', () => {
   // feliz
-  it('sits on the brand surface with the neutral border', () => {
+  it('sits on the brand surface without a border, separated by the Apple shadow', () => {
     render(CardSurface, { props: { data: { label: 'Máquina' }, children } });
 
-    expect(screen.getByRole('group', { name: 'Máquina' })).toHaveClass('bg-card', 'border-border');
-  });
-
-  it('grows the wash from the pointer with GSAP, and shrinks it on leave', async () => {
-    const fromTo = vi.spyOn(gsap, 'fromTo');
-    const to = vi.spyOn(gsap, 'to');
-    render(CardSurface, { props: { data: { label: 'Máquina' }, children } });
     const card = screen.getByRole('group', { name: 'Máquina' });
-
-    await fireEvent.pointerEnter(card, { clientX: 5, clientY: 5 });
-    await fireEvent.pointerLeave(card, { clientX: 5, clientY: 5 });
-
-    expect(fromTo).toHaveBeenCalledOnce();
-    expect(to).toHaveBeenCalledOnce();
+    expect(card).toHaveClass('bg-card', 'shadow-card');
+    expect(card).not.toHaveClass('border');
   });
 
-  it('draws the mark in the accent, and turns into a real button when clickable', async () => {
+  /* O card não se mexe no hover: nem sobe, nem muda a sombra, nem ganha véu ou ícone no canto. */
+  it('stays still on hover, and turns into a real button when clickable', async () => {
     const onClick = vi.fn();
     const { container } = render(CardSurface, {
-      props: {
-        data: { label: 'Abrir' },
-        ui: { mark: HardDrive, markTone: 'red', isHoverColored: true, hoverTone: 'red' },
-        actions: { onClick },
-        children,
-      },
+      props: { data: { label: 'Abrir' }, actions: { onClick }, children },
     });
 
-    expect(container.querySelector('[data-slot="card-mark"]')).toHaveClass('text-hue-red');
-    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
-    expect(wash.style.backgroundColor).toContain('--hue-red');
+    const card = screen.getByRole('group', { name: 'Abrir' });
+    expect(card).toHaveClass('cursor-pointer');
+    expect(card.className).not.toMatch(/hover:|translate|transition|duration|shadow-card-hover/);
+    expect(container.querySelector('[data-slot="card-wash"]')).toBeNull();
+    expect(container.querySelector('[data-slot="card-mark"]')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Abrir' }));
     expect(onClick).toHaveBeenCalledOnce();
   });
@@ -59,9 +44,7 @@ describe('AzuosCardSurface (Svelte)', () => {
   });
 
   // triste
-  it('skips the growth when motion is reduced, and disables the button while loading', async () => {
-    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
-    const fromTo = vi.spyOn(gsap, 'fromTo');
+  it('disables the button while loading', () => {
     render(CardSurface, {
       props: {
         data: { label: 'Carregando' },
@@ -70,12 +53,7 @@ describe('AzuosCardSurface (Svelte)', () => {
         children,
       },
     });
-    const card = screen.getByRole('group', { name: 'Carregando' });
 
-    await fireEvent.pointerEnter(card, { clientX: 1, clientY: 1 });
-    await fireEvent.pointerLeave(card, { clientX: 1, clientY: 1 });
-
-    expect(fromTo).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Carregando' })).toBeDisabled();
   });
 });

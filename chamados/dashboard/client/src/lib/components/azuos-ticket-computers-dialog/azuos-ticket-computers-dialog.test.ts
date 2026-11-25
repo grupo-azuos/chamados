@@ -99,3 +99,31 @@ describe('AzuosTicketComputersDialog', () => {
     expect(screen.getByText('Alguma máquina escolhida não existe mais no inventário.')).toBeInTheDocument();
   });
 });
+
+/* Dentro do diálogo branco, a máquina é a caixa cinza sem borda e sem sombra. */
+describe('AzuosTicketComputersDialog — inside the dialog surface', () => {
+  // feliz
+  it('draws the machines as muted boxes, without border or shadow', () => {
+    render(TicketComputersDialog, {
+      data: { ...base, computers: [choice(), choice({ id: 7, label: 'COMPUTADOR - 07' })], selectedIds: [6] },
+      actions: actions(),
+    });
+
+    const other = screen.getByRole('button', { name: /COMPUTADOR - 07/ });
+    expect(other.className).toContain('bg-muted');
+    expect(other.className).toContain('rounded-box');
+    expect(other.className).not.toMatch(/shadow-xs|bg-card|\bborder\b/);
+  });
+
+  // triste
+  it('keeps the chosen machine on the full color, never a coloured border', () => {
+    render(TicketComputersDialog, {
+      data: { ...base, computers: [choice()], selectedIds: [6] },
+      actions: actions(),
+    });
+
+    const chosen = screen.getByRole('button', { name: /COMPUTADOR - 06/ });
+    expect(chosen.className).toContain('bg-primary');
+    expect(chosen.className).not.toMatch(/\bborder\b|bg-muted/);
+  });
+});

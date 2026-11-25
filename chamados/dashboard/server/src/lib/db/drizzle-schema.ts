@@ -1,8 +1,11 @@
 import { githubConnections, githubOauthStates } from './schema/github-connections.schema';
+import { githubWebhookEvents } from './schema/github-webhook-events.schema';
 import { computerAlerts } from './schema/computer-alerts.schema';
 import { computerSamples } from './schema/computer-samples.schema';
 import { computerTransfers } from './schema/computer-transfers.schema';
 import { computers } from './schema/computers.schema';
+import { computerResponsibleHistory } from './schema/computer-responsible-history.schema';
+import { dashboardBoards, savedFilters } from './schema/dashboard-boards.schema';
 import { history } from './schema/history.schema';
 import { internalRoles } from './schema/internal-roles.schema';
 import { superAdmins } from './schema/super-admins.schema';
@@ -16,6 +19,7 @@ import { networkEvents } from './schema/network-events.schema';
 import { partMovements } from './schema/part-movements.schema';
 import { parts } from './schema/parts.schema';
 import { softwareProjects } from './schema/software-projects.schema';
+import { softwareBranches, softwareCommits, softwareTags } from './schema/software-git.schema';
 import { softwareTimelineEvents } from './schema/software-timeline-events.schema';
 import { softwareScheduleEvents } from './schema/software-schedule-events.schema';
 import { ticketAreas } from './schema/ticket-areas.schema';
@@ -28,6 +32,7 @@ import { ticketRelations } from './schema/ticket-relations.schema';
 import { ticketStockItems } from './schema/ticket-stock-items.schema';
 import { ticketWatchers } from './schema/ticket-watchers.schema';
 import { tickets } from './schema/tickets.schema';
+import { taskLinks, taskPeople, taskStages, taskSteps, tasks } from './schema/tasks.schema';
 import {
   whatsappConnections,
   whatsappMessages,
@@ -49,7 +54,16 @@ import {
  * Tabela nova entra aqui, na mesma mudança em que o arquivo `<nome>.schema.ts` é criado.
  */
 export const drizzleSchema = {
+  computerResponsibleHistory,
+  tasks,
+  taskStages,
+  taskSteps,
+  taskLinks,
+  taskPeople,
+  dashboardBoards,
+  savedFilters,
   githubConnections,
+  githubWebhookEvents,
   githubOauthStates,
   whatsappConnections,
   whatsappMessages,
@@ -58,6 +72,9 @@ export const drizzleSchema = {
   whatsappInboundMessages,
   softwareProjects,
   softwareTimelineEvents,
+  softwareCommits,
+  softwareBranches,
+  softwareTags,
   softwareScheduleEvents,
   tickets,
   ticketAreas,

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import ComputerListView, {
+  hasNoShortcut,
   displayNameOf,
   type ComputerListFilter,
   type ComputerSummary,
@@ -20,8 +21,12 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     activeAlertMetrics: [],
     name: 'RECEPCAO-01',
     displayName: 'Recepção — balcão',
+    responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
-    department: 'recepcao',
+    responsibleAvatarUrl: null,
+    departmentId: null,
+    departmentName: null,
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 11 Pro',
@@ -70,14 +75,17 @@ const summary: ComputerSummary = {
   critical: 2,
   attention: 1,
   neverSeen: 1,
+  needsUpgrade: 2,
 };
 
 const emptyFilter: ComputerListFilter = {
   search: '',
-  department: '',
+  departmentId: '',
   healthStatus: '',
   kind: '',
   includeArchived: false,
+  responsibleId: '',
+  upgrade: '',
   onlyOnline: false,
   onlyOffline: false,
   alert: '',
@@ -90,6 +98,8 @@ const actions = {
   onDepartmentChange: vi.fn(),
   onHealthStatusChange: vi.fn(),
   onArchivedChange: vi.fn(),
+  onResponsibleChange: vi.fn(),
+  onUpgradeChange: vi.fn(),
   onOnlineChange: vi.fn(),
   onOfflineChange: vi.fn(),
   onKindChange: vi.fn(),
@@ -162,9 +172,7 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     );
     expect(actions.onHealthStatusChange).toHaveBeenLastCalledWith('critical');
 
-    await userEvent.click(
-      screen.getByRole('button', { name: /^Em atenção .+: filtrar a lista$/ }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: /^Em atenção .+: filtrar a lista$/ }));
     expect(actions.onHealthStatusChange).toHaveBeenLastCalledWith('attention');
   });
 
@@ -269,6 +277,27 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
     expect(actions.onAlertChange).toHaveBeenLastCalledWith('any');
   });
 
+  // feliz
+  it('filters the machines that need an upgrade from their card, and counts them', async () => {
+    renderWithFilter();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Precisa de upgrade .+: filtrar a lista$/ }),
+    );
+    expect(actions.onUpgradeChange).toHaveBeenLastCalledWith('any');
+  });
+
+  // triste
+  it('turns the upgrade filter off on a second click, and the total card stays unmarked', async () => {
+    renderWithFilter({ upgrade: 'any' });
+
+    expect(hasNoShortcut({ ...emptyFilter, upgrade: 'any' })).toBe(false);
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Precisa de upgrade .+: tirar o filtro$/ }),
+    );
+    expect(actions.onUpgradeChange).toHaveBeenLastCalledWith('');
+  });
+
   // triste
   it('turns the alert filter off when its selected card is clicked again', async () => {
     renderWithFilter({ alert: 'memory' });
@@ -306,7 +335,8 @@ describe('AzuosComputerListView', () => {
       },
     });
 
-    await user.click(screen.getAllByRole('button', { name: 'Ver ficha' })[0]!);
+    /* O cartão inteiro é o botão da ficha, com o nome da máquina no nome acessível. */
+    await user.click(screen.getByRole('button', { name: 'Ver ficha de Recepção — balcão' }));
 
     expect(actions.onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
@@ -423,8 +453,17 @@ describe('AzuosComputerListView maintenance parity', () => {
       const section = container.querySelector(`[data-slot="${slot}"]`) as HTMLElement;
       expect(within(section).getByText('Preventiva vencida')).toBeInTheDocument();
       expect(within(section).getByText('2 alertas críticos ativos')).toBeInTheDocument();
-      expect(within(section).getByText('100/100')).toBeInTheDocument();
+      /* O selo que pisca, com o alerta e a preventiva somados. */
+      expect(
+        within(section).getByRole('img', {
+          name: '2 alertas críticos ativos · Preventiva vencida',
+        }),
+      ).toHaveTextContent('3');
     }
+    const cards = container.querySelector('[data-slot="computer-cards-mobile"]') as HTMLElement;
+    expect(cards.querySelector('[data-slot="computer-card-health"]')).toHaveTextContent('100');
+    const table = container.querySelector('[data-slot="computer-table-desktop"]') as HTMLElement;
+    expect(within(table).getByText('100/100')).toBeInTheDocument();
   });
 });
 
@@ -466,7 +505,14 @@ describe('AzuosComputerListView — export, situations and the cut list', () => 
   // feliz
   it('tells archived and offline machines apart, with or without a responsible', () => {
     renderList([
-      computer({ id: 1, isArchived: true, responsibleName: null, department: null }),
+      computer({
+        id: 1,
+        isArchived: true,
+        responsibleName: null,
+        responsibleId: null,
+        departmentId: null,
+        departmentName: null,
+      }),
       computer({
         id: 2,
         name: 'FISCAL-02',
@@ -478,16 +524,28 @@ describe('AzuosComputerListView — export, situations and the cut list', () => 
     expect(screen.getAllByText('Arquivada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Offline').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Sem departamento').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('(Sem responsável)').length).toBeGreaterThan(0);
     expect(screen.getAllByText('3').length).toBeGreaterThan(0);
   });
 
   // feliz
-  it('opens the record from the table as well as from the card', async () => {
-    renderList([computer()]);
-    const buttons = screen.getAllByRole('button', { name: 'Ver ficha' });
-    await userEvent.click(buttons.at(-1)!);
-    expect(actions.onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  it('opens the record from the table row, its name and its three-dot menu', async () => {
+    const user = userEvent.setup();
+    const { container } = renderList([computer()]);
+    const table = container.querySelector('[data-slot="computer-table-desktop"]') as HTMLElement;
+    actions.onOpen.mockClear();
+
+    await user.click(within(table).getByRole('button', { name: 'Recepção — balcão' }));
+    expect(actions.onOpen).toHaveBeenCalledTimes(1);
+
+    await user.click(within(table).getByText('100/100'));
+    expect(actions.onOpen).toHaveBeenCalledTimes(2);
+
+    await user.click(within(table).getByRole('button', { name: 'Ações de Recepção — balcão' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Ver ficha' }));
+    /* O menu abre a ficha uma vez só: o clique nos três pontinhos não sobe para a linha. */
+    expect(actions.onOpen).toHaveBeenCalledTimes(3);
+    expect(actions.onOpen).toHaveBeenLastCalledWith(expect.objectContaining({ id: 1 }));
   });
 });
 
@@ -552,13 +610,133 @@ describe('AzuosComputerListView — cards only', () => {
         },
       });
 
-      const hidden = Array.from(document.querySelectorAll('.overflow-x-auto')).some(
-        (element) =>
-          element.classList.contains('hidden') && !element.classList.contains('xl:block'),
-      );
-      expect(hidden).toBe(true);
+      const table = document.querySelector('[data-slot="computer-table-desktop"]')!;
+      expect(table.classList.contains('hidden')).toBe(true);
+      expect(table.classList.contains('xl:block')).toBe(false);
     } finally {
       tableView.actions.onToggle();
     }
+  });
+});
+
+describe('AzuosComputerListView — Paralegal format', () => {
+  function renderWith(
+    over: {
+      computers?: ComputerListItem[];
+      filter?: Partial<ComputerListFilter>;
+      paging?: { page: number; pageSize: number; total: number };
+    } = {},
+    extra: Record<string, unknown> = {},
+  ) {
+    const computers = over.computers ?? [computer()];
+
+    return render(ComputerListView, {
+      props: {
+        data: {
+          computers,
+          total: computers.length,
+          summary,
+          filter: { ...emptyFilter, ...over.filter },
+          paging: over.paging,
+          sort: { field: 'number', direction: 'asc' },
+        },
+        state: settled,
+        actions: { ...actions, ...extra },
+      },
+    });
+  }
+
+  const many = Array.from({ length: 30 }, (_, index) =>
+    computer({
+      id: index + 1,
+      name: `MAQ-${String(index + 1).padStart(2, '0')}`,
+      displayName: null,
+    }),
+  );
+
+  // feliz
+  /* "Máquinas" é o "Total" do Paralegal: marcado sem atalho valendo, e clicar desliga os atalhos. */
+  it('turns the machines card into the total that clears the shortcuts', async () => {
+    const onClearShortcuts = vi.fn();
+    renderWith({ filter: { healthStatus: 'critical' } }, { onClearShortcuts });
+
+    const total = screen.getByRole('button', { name: /^Máquinas 8: filtrar a lista$/ });
+    expect(total).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(total);
+
+    expect(onClearShortcuts).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the machines card while no shortcut is on', () => {
+    renderWith({}, { onClearShortcuts: vi.fn() });
+
+    expect(screen.getByRole('button', { name: /^Máquinas 8: tirar o filtro$/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  // feliz
+  it('pages the card grid and walks to the next page', async () => {
+    const onPageChange = vi.fn();
+    const { container } = renderWith(
+      { computers: many, paging: { page: 2, pageSize: 24, total: 30 } },
+      { onPageChange },
+    );
+
+    const cards = container.querySelector('[data-slot="computer-cards-mobile"]') as HTMLElement;
+    /* A página 2 tem só as 6 que sobraram; a tabela continua com as 30 (ela rola). */
+    expect(within(cards).getAllByRole('button', { name: /^Ver ficha de/ })).toHaveLength(6);
+    expect(container.querySelectorAll('[data-slot="computer-row"]')).toHaveLength(30);
+    expect(screen.getByText('25–30 de 30 computadores')).toBeInTheDocument();
+
+    /* "Anterior" da paginação, e não o "Ver anteriores" da faixa de cartões do topo. */
+    await userEvent.click(screen.getByRole('button', { name: /^anterior/i }));
+    expect(onPageChange).toHaveBeenCalledWith(1);
+  });
+
+  // triste
+  it('has no page bar when every card fits on one page', () => {
+    renderWith({ paging: { page: 1, pageSize: 24, total: 1 } }, { onPageChange: vi.fn() });
+
+    expect(screen.queryByRole('button', { name: /próxima/i })).toBeNull();
+    expect(screen.getByText('1 computador(es) listado(s)', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  // feliz
+  it('sorts from the table header and says which column is in charge', async () => {
+    const onSortChange = vi.fn();
+    const { container } = renderWith({}, { onSortChange });
+    const table = container.querySelector('[data-slot="computer-table-desktop"]') as HTMLElement;
+
+    expect(within(table).getByRole('columnheader', { name: /Máquina/ })).toHaveAttribute(
+      'aria-sort',
+      'ascending',
+    );
+    await userEvent.click(within(table).getByRole('button', { name: /Chamados no mês/ }));
+
+    expect(onSortChange).toHaveBeenCalledWith('tickets');
+  });
+
+  // triste
+  /* O hover nunca pinta o card: o véu é sempre o neutro do tema, mesmo com a condição colorida. */
+  /* O card de conteúdo não tem véu nem se mexe no hover, seja qual for a saúde da máquina. */
+  it('keeps the card still on hover, whatever the machine condition', () => {
+    const { container } = renderWith({
+      computers: [computer({ hardware: { ...computer().hardware, freeDiskBytes: 1 } })],
+    });
+    const cards = container.querySelector('[data-slot="computer-cards-mobile"]') as HTMLElement;
+
+    expect(cards.querySelector('[data-slot="card-wash"]')).toBeNull();
+    expect(cards.querySelector('[data-slot="azuos-card-surface"]')?.className).not.toMatch(
+      /translate|hover:/,
+    );
+  });
+
+  it('does not pulse a calm machine', () => {
+    const { container } = renderWith();
+
+    expect(container.querySelector('[data-slot="computer-alert-badge"]')).toBeNull();
+    expect(container.querySelector('[data-pending="true"]')).toBeNull();
   });
 });

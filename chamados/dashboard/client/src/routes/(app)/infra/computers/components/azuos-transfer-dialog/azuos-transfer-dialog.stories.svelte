@@ -8,14 +8,15 @@
     id: 2,
     name: 'FINANCEIRO-02',
     displayName: 'Financeiro — mesa 2',
-    department: 'financeiro',
+    departmentId: 4, departmentName: 'Financeiro',
+    notes: null,
   } as Computer;
 
   const departments = [
     { value: 'financeiro', label: 'Financeiro' },
     { value: 'fiscal', label: 'Fiscal' },
     { value: 'contabil', label: 'Contábil' },
-    { value: '', label: 'Sem departamento (volta para a prateleira)' },
+    { value: '', label: '(Sem departamento, volta para a prateleira)' },
   ];
 
   const machines = [

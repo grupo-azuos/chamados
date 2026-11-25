@@ -1,3 +1,15 @@
+<!--
+  @component
+  O diálogo do PERFIL DA PESSOA: foto, nome e e-mail no topo, e os cargos dela em cada área do
+  sistema (Sistema, Infra e Manutenção), cada um num selo, com uma frase do que aquela área dá
+  acesso. Área sem cargo informado aparece como o cargo comum.
+
+  Embaixo, o atalho para ver os cargos da equipe e, no rodapé, o botão de sair — cada um só aparece
+  quando a ação correspondente chega.
+
+  `data.user` leva nome, e-mail, cargo e os cargos por área; `state.isOpen` abre o diálogo;
+  `actions` leva `onClose`, `onViewRoles` e `onLogout`.
+-->
 <script lang="ts" module>
   import {
     ROLE_CONTEXT_LABELS,
@@ -79,8 +91,9 @@
     </DialogHeader>
 
     <div class="space-y-4">
-      <!-- Seus Cargos por Área -->
-      <div class="rounded-box border border-border bg-card p-4 space-y-3">
+      <!-- Seus Cargos por Área. Dentro do diálogo branco o bloco é a caixa cinza, sem sombra:
+           card branco dentro de superfície branca é proibido (padrão Apple). -->
+      <div class="rounded-box bg-muted p-4 space-y-3">
         <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
           <ShieldCheck class="size-4 text-primary" />
           <span>Seus Cargos Internos por Área</span>
@@ -108,7 +121,7 @@
       </div>
 
       <!-- Perfis da Equipe -->
-      <div class="rounded-box border border-border bg-muted p-4 space-y-2.5">
+      <div class="rounded-box bg-muted p-4 space-y-2.5">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Users class="size-4 text-muted-foreground" />

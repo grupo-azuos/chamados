@@ -1,3 +1,15 @@
+<!--
+  @component
+  Os GESTOS do menu lateral, e a alça para recolhê-lo.
+
+  No desktop, a alça é a faixa fina na borda direita do menu: clicar recolhe ou expande, e arrastar
+  para o lado faz o mesmo (arrastar para a direita abre, para a esquerda recolhe). No celular,
+  arrastar a gaveta aberta para a esquerda fecha, e tocar num link dentro dela também fecha — a
+  pessoa já escolheu para onde ir. Só conta o arrasto de lado, de pelo menos 48px: rolar o menu para
+  cima e para baixo não mexe nele.
+
+  Sem props: lê e muda o estado do menu pelo `useSidebar()`.
+-->
 <script lang="ts">
   import { useSidebar } from '$lib/components/ui/sidebar/context.svelte';
 

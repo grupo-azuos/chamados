@@ -1,3 +1,4 @@
+import { drillParam } from '@template/shared/schemas/board-drill.schema';
 import {
   type CreateInventoryItemEventInput,
   type InventoryItemEvent,
@@ -10,6 +11,7 @@ import {
 } from '@template/shared/schemas/inventory-item.schema';
 import {
   type CreateInventoryMovementInput,
+  type CreateStockMovementInput,
   type InventoryMovement,
   type InventoryMovementListQuery,
 } from '@template/shared/schemas/inventory-movement.schema';
@@ -29,13 +31,17 @@ import { apiRequest, uploadFile } from './http-client';
 export const inventoryItemsApi = {
   list: (query: Partial<InventoryItemListQuery>) =>
     apiRequest<Paginated<InventoryItem>>('/inventory-items', {
-      /* O filtro INTEIRO vai para o servidor, que filtra no SQL. */
-      query: { ...query },
+      /* O filtro INTEIRO vai para o servidor, que filtra no SQL. O recorte do painel vai em
+         JSON, numa string: na URL, um objeto viraria "[object Object]". */
+      query: { ...query, drill: query.drill ? drillParam(query.drill) : undefined },
     }),
 
   findById: (id: number) => apiRequest<InventoryItem>(`/inventory-items/${id}`),
 
   responsibles: () => apiRequest<InventoryResponsible[]>('/inventory-items/responsibles'),
+
+  /** Os nomes de produto, um por grafia — a lista do campo "Nome do produto". */
+  names: () => apiRequest<string[]>('/inventory-items/names'),
 
   create: async (values: InventoryItemFormValues, photo: File | null) =>
     apiRequest<InventoryItem>('/inventory-items', {
@@ -58,7 +64,11 @@ export const inventoryItemsApi = {
       body: toInventoryBody(values, await uploadPhoto(photo), removePhoto),
     }),
 
+  /** Exclui ARQUIVANDO: o produto, o extrato e a foto ficam, e `restore` o devolve. */
   remove: (id: number) => apiRequest<void>(`/inventory-items/${id}`, { method: 'DELETE' }),
+
+  restore: (id: number) =>
+    apiRequest<InventoryItem>(`/inventory-items/${id}/restore`, { method: 'POST' }),
 
   /** O extrato do depósito. `type: 'disposal'` é a tela de Descarte inteira. */
   movements: (query: Partial<InventoryMovementListQuery>) =>
@@ -74,9 +84,12 @@ export const inventoryItemsApi = {
       body,
     }),
 
+  /** Entrada, saída ou descarte pelo NOME do produto — o que o Depósito usa. */
+  createStockMovement: (body: CreateStockMovementInput) =>
+    apiRequest<InventoryMovement>('/inventory-items/stock/movements', { method: 'POST', body }),
+
   /** A linha do tempo de ocorrências do produto (defeitos, trocas, manutenções, observações). */
-  events: (itemId: number) =>
-    apiRequest<InventoryItemEvent[]>(`/inventory-items/${itemId}/events`),
+  events: (itemId: number) => apiRequest<InventoryItemEvent[]>(`/inventory-items/${itemId}/events`),
 
   /** Registra uma nova ocorrência na linha do tempo do produto. */
   addEvent: (itemId: number, body: CreateInventoryItemEventInput) =>

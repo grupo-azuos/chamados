@@ -1,12 +1,20 @@
+<!--
+  @component
+  SELETOR DE VÁRIAS PESSOAS — busca no balão, marca quantas quiser, as escolhidas ficam como fichas
+  embaixo (com o "x" para tirar).
+
+  Nasceu para as PESSOAS VINCULADAS de um chamado (a "OS com envolvidos" do Tasy), que se escolhem
+  na abertura, na Central e no painel — por isso é genérico. É o par de várias escolhas do
+  `AzuosOptionPicker`: o mesmo gatilho de 40px, o mesmo balão com busca. O gatilho resume a escolha
+  ("Ana", "Ana e Bia", "Ana e mais 2") para não crescer sem fim; cada pessoa aparece com a foto ou
+  as iniciais.
+
+  - `data`: os ids escolhidos e as pessoas que podem ser escolhidas.
+  - `ui`: o nome para leitor de tela, o convite, o texto de lista vazia e classes extras.
+  - `state`: desabilitado, carregando e erro.
+  - `actions`: `onChange`, com a lista nova de ids.
+-->
 <script lang="ts" module>
-  /**
-   * SELETOR DE VÁRIAS PESSOAS — busca no balão, marca quantas quiser, as escolhidas ficam como
-   * fichas embaixo (com o "x" para tirar).
-   *
-   * Nasceu para as PESSOAS VINCULADAS de um chamado (a "OS com envolvidos" do Tasy), que se
-   * escolhem na abertura, na Central e no painel — por isso é genérico. É o par de várias
-   * escolhas do `AzuosOptionPicker`: o mesmo gatilho de 40px, o mesmo balão com busca.
-   */
   /** `avatarUrl`: a foto da pessoa; sem ela, as iniciais. */
   export type PeoplePickerOption = { id: string; name: string; avatarUrl?: string | null };
 
@@ -77,7 +85,7 @@
       aria-label={ui?.ariaLabel}
       aria-invalid={Boolean(fieldState?.error)}
       aria-describedby={fieldState?.error ? errorId : undefined}
-      class="control-lg rounded-control border-border bg-card text-foreground hover:bg-muted inline-flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 border text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+      class="control-lg rounded-control bg-muted text-foreground hover:bg-accent inline-flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 border text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 border-transparent"
     >
       <span class={cn('truncate', selected.length === 0 && 'text-muted-foreground font-normal')}>
         {summaryOf(selected, ui?.placeholder ?? 'Escolha as pessoas')}
@@ -86,7 +94,7 @@
     </PopoverTrigger>
 
     <PopoverContent
-      class="w-auto min-w-(--bits-popover-anchor-width) max-w-[min(26rem,calc(100vw-2rem))] p-0"
+      class="w-auto min-w-(--bits-popover-anchor-width) max-w-[min(26rem,calc(100vw-2rem))] overflow-hidden p-0 rounded-surface border-transparent bg-popover shadow-xl ring-1 ring-foreground/8"
       align="start"
     >
       <div class="border-border relative shrink-0 border-b p-2">

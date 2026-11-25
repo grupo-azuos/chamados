@@ -1,3 +1,4 @@
+import { boardDrillSchema, drillParam } from '@template/shared/schemas/board-drill.schema';
 import { type MaintenanceQuote } from '@template/shared/schemas/maintenance-quote.schema';
 import { render, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,6 +12,22 @@ vi.mock('$lib/api/maintenance-quotes.api', () => ({
 }));
 
 const { maintenanceQuotesApi } = await import('$lib/api/maintenance-quotes.api');
+
+/* O endereço da tela: com `?drill=`, a lista veio de um clique no Painel. */
+const address = vi.hoisted(() => ({ search: '' }));
+vi.mock('$app/state', () => ({
+  page: {
+    get url() {
+      return new URL(`http://localhost/maintenance/quotes${address.search}`);
+    },
+  },
+}));
+
+const DRILL = boardDrillSchema.parse({ source: 'quotes', groupBy: 'status', filterId: null, key: 'pending', label: 'Pendente', title: 'Orçamentos por situação' });
+
+function openFromBoard() {
+  address.search = `?drill=${encodeURIComponent(drillParam(DRILL))}`;
+}
 
 function quote(over: Partial<MaintenanceQuote> = {}): MaintenanceQuote {
   return {
@@ -28,6 +45,7 @@ function quote(over: Partial<MaintenanceQuote> = {}): MaintenanceQuote {
     createdBy: 'manutencao@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...over,
   };
 }
@@ -172,5 +190,43 @@ describe('useMaintenanceQuoteListModel', () => {
     model.actions.onConfirmDelete();
 
     expect(maintenanceQuotesApi.remove).not.toHaveBeenCalled();
+  });
+});
+
+describe('with a board cut', () => {
+  beforeEach(() => {
+    address.search = '';
+  });
+
+  // feliz
+  it('sends the board cut to the server and shows what it narrowed', async () => {
+    openFromBoard();
+    const model = mountModel();
+
+    await waitFor(() =>
+      expect(maintenanceQuotesApi.list).toHaveBeenCalledWith(
+        expect.objectContaining({ drill: expect.objectContaining({ key: 'pending' }) }),
+      ),
+    );
+    expect(model.data.drillBanner?.summary[0]).toBe(DRILL.title);
+  });
+
+  // triste
+  it('calls an empty cut a filtered-out list, not an empty one', async () => {
+    openFromBoard();
+    vi.mocked(maintenanceQuotesApi.list).mockResolvedValue(page([]));
+    const model = mountModel();
+
+    await waitFor(() => expect(model.state.isFilteredOut).toBe(true));
+    expect(model.state.isEmpty).toBe(false);
+  });
+
+  // triste
+  it('opens without a cut or a banner when the address has none', async () => {
+    const model = mountModel();
+
+    await waitFor(() => expect(maintenanceQuotesApi.list).toHaveBeenCalled());
+    expect(vi.mocked(maintenanceQuotesApi.list).mock.calls[0]?.[0]).toMatchObject({ drill: undefined });
+    expect(model.data.drillBanner).toBeNull();
   });
 });

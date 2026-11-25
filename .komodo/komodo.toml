@@ -4,7 +4,7 @@
 #
 #   Repo       clone do repositório no servidor do ambiente; Build e Stack leem dele.
 #   Build      docker/dockerfile no builder do ambiente: imagem local azuos/<app>:<hash>-<ambiente>.
-#   Stack      docker/compose.yml no Swarm; o Infisical só entra nas etapas de docker/komodo.sh.
+#   Stack      docker/compose.yml no Swarm; o Vault só entra nas etapas de docker/komodo.sh.
 #   Procedure  Pull → Build → Deploy, disparada pelo webhook do GitHub
 #              (/listener/github/procedure/<ambiente>_<app>/<branch>).
 #   Action     rollback nativo do Swarm para a versão anterior.
@@ -60,22 +60,22 @@ file_paths = ["docker/compose.yml"]
 extra_args = ["--resolve-image", "never", "--detach=false"]
 links = ["https://chamados.homo.grupoazuos.com.br"]
 pre_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_HOMO_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_HOMO_SECRET_ID]]' \
 sh docker/komodo.sh pre-deploy chamados homo
 '''
 compose_cmd_wrapper_include = ["config", "deploy"]
 compose_cmd_wrapper = '''
-INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_HOMO_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_HOMO_SECRET_ID]]' \
 sh docker/komodo.sh deploy chamados homo [[COMPOSE_COMMAND]]
 '''
 post_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_HOMO_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_HOMO_SECRET_ID]]' \
 sh docker/komodo.sh post-deploy chamados homo
 '''
 
@@ -158,22 +158,22 @@ run_directory = "chamados/dashboard/bot"
 file_paths = ["docker/compose.yml"]
 extra_args = ["--resolve-image", "never", "--detach=false"]
 pre_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_HOMO_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_HOMO_SECRET_ID]]' \
 sh docker/komodo.sh pre-deploy chamados-bot homo
 '''
 compose_cmd_wrapper_include = ["config", "deploy"]
 compose_cmd_wrapper = '''
-INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_HOMO_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_HOMO_SECRET_ID]]' \
 sh docker/komodo.sh deploy chamados-bot homo [[COMPOSE_COMMAND]]
 '''
 post_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_HOMO_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_HOMO_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_HOMO_SECRET_ID]]' \
 sh docker/komodo.sh post-deploy chamados-bot homo
 '''
 
@@ -271,22 +271,22 @@ file_paths = ["docker/compose.yml"]
 extra_args = ["--resolve-image", "never", "--detach=false"]
 links = ["https://chamados.grupoazuos.com.br"]
 pre_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_PROD_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_PROD_SECRET_ID]]' \
 sh docker/komodo.sh pre-deploy chamados prod
 '''
 compose_cmd_wrapper_include = ["config", "deploy"]
 compose_cmd_wrapper = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_PROD_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_PROD_SECRET_ID]]' \
 sh docker/komodo.sh deploy chamados prod [[COMPOSE_COMMAND]]
 '''
 post_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_PROD_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_PROD_SECRET_ID]]' \
 sh docker/komodo.sh post-deploy chamados prod
 '''
 
@@ -369,22 +369,22 @@ run_directory = "chamados/dashboard/bot"
 file_paths = ["docker/compose.yml"]
 extra_args = ["--resolve-image", "never", "--detach=false"]
 pre_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_PROD_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_PROD_SECRET_ID]]' \
 sh docker/komodo.sh pre-deploy chamados-bot prod
 '''
 compose_cmd_wrapper_include = ["config", "deploy"]
 compose_cmd_wrapper = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_PROD_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_PROD_SECRET_ID]]' \
 sh docker/komodo.sh deploy chamados-bot prod [[COMPOSE_COMMAND]]
 '''
 post_deploy.command = '''
-INFISICAL_TOKEN='[[INFISICAL_PROD_TOKEN]]' \
-INFISICAL_DOMAIN='[[INFISICAL_API_URL]]' \
-INFISICAL_PROJECT_ID='[[CHAMADOS_INFISICAL_PROJECT_ID]]' \
+VAULT_ADDR='[[VAULT_ADDR]]' \
+VAULT_ROLE_ID='[[VAULT_PROD_ROLE_ID]]' \
+VAULT_SECRET_ID='[[VAULT_PROD_SECRET_ID]]' \
 sh docker/komodo.sh post-deploy chamados-bot prod
 '''
 

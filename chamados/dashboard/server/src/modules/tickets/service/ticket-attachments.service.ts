@@ -247,12 +247,8 @@ export class TicketAttachmentsService {
   }
 
   /**
-   * Exclui um anexo — do banco e do bucket.
-   *
-   * O cadastro sai primeiro. Se a remoção no storage falhar, sobra um arquivo pago que ninguém
-   * alcança; na ordem inversa, sobraria uma linha apontando para um arquivo que não existe, e
-   * a tela mostraria um anexo que dá erro ao abrir. O primeiro problema é de custo, o segundo
-   * é de confiança.
+   * Exclui um anexo: ARQUIVA a linha. O anexo some do chamado, e a linha e o arquivo no bucket
+   * ficam guardados, com quem excluiu e quando, para o "Desfazer".
    */
   async remove(user: RequestUser, ticketId: number, attachmentId: number): Promise<void> {
     assertCanAttendTicket(user.role);
@@ -272,8 +268,7 @@ export class TicketAttachmentsService {
     const refusal = refuseAttachmentRemoval(row.origin, 'support');
     if (refusal) throw new ForbiddenException(refusal);
 
-    await this.repository.remove(row.id);
-    await this.storage.remove([row.storageKey]);
+    await this.repository.setArchived(row.id, true, user.id);
   }
 
   private async requireTicket(ticketId: number): Promise<void> {

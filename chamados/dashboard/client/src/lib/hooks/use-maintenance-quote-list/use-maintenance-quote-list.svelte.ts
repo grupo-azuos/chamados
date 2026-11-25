@@ -1,13 +1,16 @@
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { type QuoteKind, type QuoteStatus } from '@template/shared/domain/maintenance-quote.util';
+import { type BoardDrill } from '@template/shared/schemas/board-drill.schema';
 import { type MaintenanceQuote } from '@template/shared/schemas/maintenance-quote.schema';
 import { MAX_PAGE_SIZE } from '@template/shared/schemas/pagination.schema';
 import { derived, writable } from 'svelte/store';
 
 import { readError } from '$lib/api/http-client';
 import { maintenanceQuotesApi } from '$lib/api/maintenance-quotes.api';
+import { type BoardDrillBanner, useBoardDrillModel } from '$lib/hooks/use-board-drill/use-board-drill.svelte';
 import { MAINTENANCE_DASHBOARD_QUERY_KEY } from '$lib/hooks/use-inventory-movement-form/use-inventory-movement-form.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { contextPath } from '$lib/navigation/navigation';
 
 export type MaintenanceQuoteListFilter = {
   search: string;
@@ -24,6 +27,8 @@ export type MaintenanceQuoteListModel = {
     filter: MaintenanceQuoteListFilter;
     /** O orçamento que está esperando confirmação de exclusão — nulo quando não há. */
     deleting: MaintenanceQuote | null;
+    /** A faixa do recorte do Painel, quando a lista veio de um clique num bloco. */
+    drillBanner: BoardDrillBanner | null;
   };
   state: {
     isLoading: boolean;
@@ -40,6 +45,8 @@ export type MaintenanceQuoteListModel = {
     onStatusChange: (status: QuoteStatus | '') => void;
     onKindChange: (kind: QuoteKind | '') => void;
     onClearFilters: () => void;
+    onClearDrill: () => void;
+    onBackToBoard: () => void;
     onRetry: () => void;
     onAskDelete: (quote: MaintenanceQuote) => void;
     onCancelDelete: () => void;
@@ -51,8 +58,9 @@ const EMPTY_FILTER: MaintenanceQuoteListFilter = { search: '', status: '', kind:
 
 export const MAINTENANCE_QUOTES_QUERY_KEY = ['maintenance-quotes'] as const;
 
-function scopeOf(filter: MaintenanceQuoteListFilter) {
+function scopeOf(filter: MaintenanceQuoteListFilter, drill: BoardDrill | null = null) {
   return {
+    drill: drill ?? undefined,
     search: filter.search.trim() || undefined,
     status: filter.status || undefined,
     kind: filter.kind || undefined,
@@ -81,15 +89,22 @@ export function useMaintenanceQuoteListModel(): MaintenanceQuoteListModel {
   const filterStore = writable<MaintenanceQuoteListFilter>({ ...EMPTY_FILTER });
   const filter = mirrorStore(filterStore);
 
+  /* O recorte de um clique no Painel (`?drill=`): soma ao filtro da lista. */
+  const drill = useBoardDrillModel({ module: 'manutencao', path: contextPath('manutencao', '/quotes') });
+
   let deleting = $state<MaintenanceQuote | null>(null);
   let deleteError = $state<string | null>(null);
 
   const list = mirrorStore(
     createQuery(
-      derived(filterStore, (current) => ({
-        queryKey: [...MAINTENANCE_QUOTES_QUERY_KEY, 'list', scopeOf(current)],
+      derived([filterStore, drill.store], ([current, currentDrill]) => ({
+        queryKey: [...MAINTENANCE_QUOTES_QUERY_KEY, 'list', scopeOf(current, currentDrill)],
         queryFn: () =>
-          maintenanceQuotesApi.list({ ...scopeOf(current), page: 1, pageSize: MAX_PAGE_SIZE }),
+          maintenanceQuotesApi.list({
+            ...scopeOf(current, currentDrill),
+            page: 1,
+            pageSize: MAX_PAGE_SIZE,
+          }),
       })),
     ),
   );
@@ -124,13 +139,15 @@ export function useMaintenanceQuoteListModel(): MaintenanceQuoteListModel {
         amountCents: quotes.reduce((sum, quote) => sum + quote.amountCents, 0),
         filter: filter.current,
         deleting,
+        drillBanner: drill.banner,
       };
     },
     get state() {
       const count = list.current.data?.items.length ?? 0;
       /* Vazio só é vazio DEPOIS que a consulta terminou. */
       const isSettledEmpty = list.current.isSuccess && count === 0;
-      const filtered = hasAnyFilter(filter.current);
+      /* Com recorte, a lista vazia é "nada casou", e não "não há orçamentos". */
+      const filtered = drill.drill !== null || hasAnyFilter(filter.current);
 
       return {
         isLoading: list.current.isPending,
@@ -149,6 +166,8 @@ export function useMaintenanceQuoteListModel(): MaintenanceQuoteListModel {
       onStatusChange: (status) => filterStore.update((current) => ({ ...current, status })),
       onKindChange: (kind) => filterStore.update((current) => ({ ...current, kind })),
       onClearFilters: () => filterStore.set({ ...EMPTY_FILTER }),
+      onClearDrill: drill.onClear,
+      onBackToBoard: drill.onBack,
       onRetry: () => {
         void list.current.refetch();
       },

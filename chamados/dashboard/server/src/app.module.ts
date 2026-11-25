@@ -15,16 +15,19 @@ import { SecurityModule } from './lib/security/security.module';
 import { StorageModule } from './lib/storage/storage.module';
 import { AuthApiModule } from './modules/auth/auth.module';
 import { GithubIntegrationModule } from './modules/github-integration/github-integration.module';
+import { GithubWebhooksModule } from './modules/github-webhooks/github-webhooks.module';
+import { TasksModule } from './modules/tasks/tasks.module';
+import { TraceabilityModule } from './modules/traceability/traceability.module';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { WhatsappIntakeModule } from './modules/whatsapp-intake/whatsapp-intake.module';
 import { BudgetModule } from './modules/budget/budget.module';
 import { ComputersModule } from './modules/computers/computers.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { DashboardBoardsModule } from './modules/dashboard-boards/dashboard-boards.module';
 import { HistoryModule } from './modules/history/history.module';
 import { HealthModule } from './modules/health/health.module';
 import { MaintenancesModule } from './modules/maintenances/maintenances.module';
-import { InsightsModule } from './modules/insights/insights.module';
 import { NetworkModule } from './modules/network/network.module';
 import { InventoryItemsModule } from './modules/inventory-items/inventory-items.module';
 import { MaintenanceDashboardModule } from './modules/maintenance-dashboard/maintenance-dashboard.module';
@@ -78,6 +81,9 @@ const CLIENT_DIST = join(__dirname, '..', '..', 'client', 'dist');
     /* Logo depois da identidade: o histórico precisa saber quem mudou o quê. */
     HistoryModule,
     GithubIntegrationModule,
+    GithubWebhooksModule,
+    TasksModule,
+    TraceabilityModule,
     WhatsappModule,
     WhatsappIntakeModule,
     HealthModule,
@@ -90,8 +96,8 @@ const CLIENT_DIST = join(__dirname, '..', '..', 'client', 'dist');
     MaintenanceQuotesModule,
     MaintenanceDashboardModule,
     DashboardModule,
+    DashboardBoardsModule,
     NetworkModule,
-    InsightsModule,
     BudgetModule,
     TransfersModule,
     RolesModule,

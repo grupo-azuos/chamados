@@ -1,7 +1,8 @@
 import { MAINTENANCE_TYPES } from '@template/shared/domain/maintenance.util';
 import { sql } from 'drizzle-orm';
-import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { check, index, integer, jsonb, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 import { computers } from './computers.schema';
@@ -39,6 +40,11 @@ export const maintenances = chamadosSchema.table(
     description: text('description'),
     /* Texto livre: quem fez pode ser alguém de fora da empresa, que não tem login aqui. */
     performedBy: text('performed_by'),
+    /**
+     * Quem fez, pelos ids do diretório — uma manutenção pode ter mais de um responsável. Os nomes
+     * daquele dia ficam em `performed_by`, separados por vírgula.
+     */
+    performedByIds: jsonb('performed_by_ids').$type<string[]>().notNull().default([]),
     /* QUANDO O SERVIÇO FOI FEITO — diferente de `created_at`, que é quando alguém digitou.
        Manutenção lançada na segunda-feira sobre o sábado é o caso comum, não a exceção. */
     performedAt: timestamp('performed_at', { withTimezone: true, mode: 'date' })
@@ -49,6 +55,8 @@ export const maintenances = chamadosSchema.table(
     createdBy: text('created_by').notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
+    /* Excluir ARQUIVA: a linha fica, some da lista e volta pelo "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
     /* "O que já fizeram nesta máquina" é a consulta da ficha do computador. */

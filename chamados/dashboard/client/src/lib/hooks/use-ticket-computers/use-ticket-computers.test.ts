@@ -14,7 +14,14 @@ import {
 vi.mock('$lib/api/tickets.api', () => ({ ticketsApi: { updateComputers: vi.fn() } }));
 vi.mock('$lib/api/computers.api', () => ({ computersApi: { list: vi.fn() } }));
 vi.mock('$lib/api/departments.api', () => ({
-  departmentsApi: { catalog: vi.fn().mockResolvedValue({ rh: [], local: [], isRhAvailable: true }) },
+  departmentsApi: {
+    catalog: vi.fn().mockResolvedValue({
+      rh: ['Fiscal'],
+      rhOptions: [{ id: 5, name: 'Fiscal' }],
+      local: ['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'],
+      isRhAvailable: true,
+    }),
+  },
 }));
 
 const { ticketsApi } = await import('$lib/api/tickets.api');
@@ -76,6 +83,14 @@ describe('useTicketComputersModel', () => {
     expect(model.state.isOpen).toBe(true);
   });
 
+  // feliz
+  /* O filtro de departamento da escolha de máquinas oferece só os do RH, pelo id: os fixos não. */
+  it('offers only the official HR departments to narrow the machines', async () => {
+    const model = mountModel();
+
+    await waitFor(() => expect(model.data.departments).toEqual([{ value: '5', label: 'Fiscal' }]));
+  });
+
   it('drops the draft when closed without applying', () => {
     const model = mountModel();
 
@@ -94,6 +109,7 @@ const six = {
   hostname: 'COMERCIAL-D06',
   responsibleName: 'Carol',
   department: 'Comercial',
+  departmentKey: '1',
   isOnline: true,
 };
 const eleven = {
@@ -102,6 +118,7 @@ const eleven = {
   hostname: 'FISCAL-D11',
   responsibleName: null,
   department: 'Fiscal',
+  departmentKey: '5',
   isOnline: false,
 };
 
@@ -112,15 +129,16 @@ describe('filterChoices', () => {
     expect(filterChoices([six, eleven], 'fiscal-d', '')).toEqual([eleven]);
   });
 
-  it('narrows to the chosen department', () => {
-    expect(filterChoices([six, eleven], '', 'Fiscal')).toEqual([eleven]);
+  /* O filtro compara pelo id do RH, e não pelo nome que a tela mostra. */
+  it('narrows to the chosen department by its id', () => {
+    expect(filterChoices([six, eleven], '', '5')).toEqual([eleven]);
+    expect(filterChoices([six, eleven], '', 'Fiscal')).toEqual([]);
   });
 
-  /* O filtro compara pelo valor da lista do RH, e não pelo nome que a tela mostra. */
-  it('compares the department by its key when there is one', () => {
-    const keyed = { ...eleven, department: 'Fiscal e Tributário', departmentKey: 'fiscal' };
-
-    expect(filterChoices([six, keyed], '', 'fiscal')).toEqual([keyed]);
+  // triste
+  /* Os fixos daqui saíram do filtro: um valor antigo como "RECEPÇÃO" não casa com máquina nenhuma. */
+  it('finds nothing for an old fixed location value', () => {
+    expect(filterChoices([six, eleven], '', 'RECEPÇÃO')).toEqual([]);
   });
 
   // triste

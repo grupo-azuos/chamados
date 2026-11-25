@@ -31,14 +31,14 @@
 {/snippet}
 
 <Story name="Default" asChild>
-  <div class="w-96 rounded-surface border border-border bg-card p-5">
+  <div class="w-96 rounded-surface bg-card p-5 shadow-card">
     <Timeline>{@render threeSteps()}</Timeline>
   </div>
 </Story>
 
 <!-- Caso limite: uma etapa só, sem linha para lugar nenhum. -->
 <Story name="SingleStep" asChild>
-  <div class="w-96 rounded-surface border border-border bg-card p-5">
+  <div class="w-96 rounded-surface bg-card p-5 shadow-card">
     <Timeline>
       <TimelineStep data={{ title: 'Única etapa', icon: ClipboardCheck }} ui={{ isLast: true }}>
         <p class="text-xs text-muted-foreground">Sem próxima etapa, sem linha descendo.</p>

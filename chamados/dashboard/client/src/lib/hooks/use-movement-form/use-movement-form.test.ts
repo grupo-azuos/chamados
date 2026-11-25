@@ -30,8 +30,12 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     id: 3,
     name: 'CONTABIL-03',
     displayName: 'Contábil — mesa do fechamento',
+    responsibleId: null,
     responsibleName: null,
-    department: 'contabil',
+    responsibleAvatarUrl: null,
+    departmentId: 2,
+    departmentName: 'Contábil',
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: null,
@@ -82,9 +86,7 @@ const part: Part = {
   updatedBy: null,
 };
 
-function mountModel(
-  props: { type?: 'in' | 'out'; onSaved?: () => void } = {},
-): MovementFormModel {
+function mountModel(props: { type?: 'in' | 'out'; onSaved?: () => void } = {}): MovementFormModel {
   let model!: MovementFormModel;
   render(Harness, {
     props: { part, ...props, onReady: (ready: MovementFormModel) => (model = ready) },
@@ -119,6 +121,7 @@ describe('useMovementFormModel', () => {
       createdBy: 'suporte@azuos.local',
       updatedAt: null,
       updatedBy: null,
+      archive: null,
     });
   });
 
@@ -198,7 +201,9 @@ describe('useMovementFormModel', () => {
     model.actions.onSubmit();
 
     await waitFor(() =>
-      expect(model.state.error).toBe('Só há 3 de SSD 240 GB Kingston no depósito, e a saída é de 5.'),
+      expect(model.state.error).toBe(
+        'Só há 3 de SSD 240 GB Kingston no depósito, e a saída é de 5.',
+      ),
     );
     expect(onSaved).not.toHaveBeenCalled();
   });

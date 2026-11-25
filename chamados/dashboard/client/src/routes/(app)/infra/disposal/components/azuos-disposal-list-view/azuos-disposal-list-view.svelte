@@ -1,5 +1,27 @@
+<!--
+  @component
+  O DESCARTE: as máquinas que saíram de uso, e o motivo de cada uma.
+
+  No alto, os números: o total fora de uso e os atalhos "Com defeito" e "Lixo", que ligam (e
+  desligam) o mesmo filtro de tipo e rolam a tela até a lista. Depois, busca, tipo de descarte e a
+  alternância entre cards (celular) e tabela (monitor). Cada máquina mostra o nome, o departamento,
+  o tipo, o motivo, a data em que saiu, "Ver ficha" e "Voltar ao inventário" — que pergunta antes e
+  apaga só o motivo do descarte, com o histórico inteiro.
+
+  Aqui não se descarta nada — isso acontece na FICHA da máquina, que é onde a pessoa está olhando
+  quando decide. Esta tela é o histórico, e a única escrita dela é desfazer.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro.
+
+  - `data`: `computers`, `total`, `summary`, `filter` e `restoring` (a que espera confirmação).
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isRestoring`, `error` e
+    `actionError`.
+  - `actions`: filtros (`onSearchChange`, `onTypeChange`, `onClearFilters`), `onRetry`,
+    `onOpenMachine` e a devolução (`onAskRestore`, `onCancelRestore`, `onConfirmRestore`).
+-->
 <script lang="ts" module>
-  import { departmentLabel } from '@template/shared/domain/department.util';
+  import { computerDepartmentLabel } from '$lib/utils/computer-place.util';
   import {
     DISPOSAL_TYPES,
     DISPOSAL_TYPE_LABELS,
@@ -64,10 +86,18 @@
 </script>
 
 <script lang="ts">
+  import Archive from '@lucide/svelte/icons/archive';
+  import Clock from '@lucide/svelte/icons/clock';
+  import MonitorOff from '@lucide/svelte/icons/monitor-off';
   import FilterX from '@lucide/svelte/icons/filter-x';
+  import Recycle from '@lucide/svelte/icons/recycle';
   import SearchX from '@lucide/svelte/icons/search-x';
   import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Undo2 from '@lucide/svelte/icons/undo-2';
+  import Wrench from '@lucide/svelte/icons/wrench';
 
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
@@ -75,7 +105,7 @@
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
@@ -89,12 +119,13 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
+    import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
   import { formatDate } from '$lib/utils/format-date';
 
   let { data, state: viewState, actions }: AzuosDisposalListViewProps = $props();
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  const cardPage = useCardPage(() => data.computers);
 
   const tableView = useTableViewModel();
 
@@ -115,7 +146,7 @@
   }
 </script>
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Descarte',
@@ -126,26 +157,9 @@
   <!-- "Com defeito" e "Lixo" são ATALHOS do filtro de tipo: clicar liga o mesmo filtro das
        pastilhas, clicar de novo desliga. "Máquinas fora de uso" é o total — não filtra nada. -->
   <StatCardGrid>
-    <StatCard
-      data={{ label: 'Máquinas fora de uso', value: data.summary.total }}
-      ui={{ tone: 'neutral' }}
-    />
-    <StatCard
-      data={{
-        label: 'Com defeito',
-        value: data.summary.defect,
-        hint: 'ainda rendem peça ou conserto',
-      }}
-      ui={{ tone: 'warning' }}
-      state={{ isSelected: data.filter.type === 'defect' }}
-      actions={{ onClick: () => filterByType('defect') }}
-    />
-    <StatCard
-      data={{ label: 'Lixo', value: data.summary.scrap, hint: 'não ligam mais' }}
-      ui={{ tone: 'neutral' }}
-      state={{ isSelected: data.filter.type === 'scrap' }}
-      actions={{ onClick: () => filterByType('scrap') }}
-    />
+    <ContentCard data={{ label: 'Máquinas fora de uso', title: 'Máquinas fora de uso', highlight: { value: data.summary.total } }} ui={{ icon: Archive, iconTone: 'neutral' }} />
+    <ContentCard data={{ label: 'Com defeito', title: 'Com defeito', highlight: { value: data.summary.defect, hint: 'ainda rendem peça ou conserto' } }} ui={{ icon: Wrench, iconTone: 'warning' }} state={{ isSelected: data.filter.type === 'defect' }} actions={{ onOpen: () => filterByType('defect') }} />
+    <ContentCard data={{ label: 'Lixo', title: 'Lixo', highlight: { value: data.summary.scrap, hint: 'não ligam mais' } }} ui={{ icon: Recycle, iconTone: 'neutral' }} state={{ isSelected: data.filter.type === 'scrap' }} actions={{ onOpen: () => filterByType('scrap') }} />
   </StatCardGrid>
 
   <!-- A falha de uma AÇÃO fica na tela, em vermelho, até resolver (CONTRIBUTING §15). -->
@@ -231,62 +245,43 @@
       class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
       data-slot="disposal-cards-mobile"
     >
-      {#each data.computers as computer (computer.id)}
-        <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
-        <div
-          use:fillFromPointer
-          style:--fill-color={fillColorOf(
-            computer.disposalType ? disposalTypeTone(computer.disposalType) : 'neutral',
-          )}
-          class="hover-fill border-border bg-card rounded-surface border p-4 shadow-xs"
+      {#each cardPage.items as computer (computer.id)}
+        <!-- O cartão de registro do sistema: o card inteiro abre a ficha; "Voltar ao inventário"
+             mora no menu, e pergunta antes. -->
+        <ContentCard
+          data={{
+            label: `Ver ficha de ${machineLabelOf(computer)}`,
+            title: machineLabelOf(computer),
+            code: computer.hardware?.hostname || computer.name,
+            meta: computer.departmentId ? computerDepartmentLabel(computer) : null,
+            status: computer.disposalType
+              ? { label: disposalTypeLabel(computer.disposalType), tone: disposalTypeTone(computer.disposalType) }
+              : { label: 'Fora de uso', tone: 'neutral' },
+            footer: { title: `Saiu em ${formatDate(computer.disposedAt)}` },
+            openLabel: 'Ver ficha',
+            menu: {
+              label: `Ações de ${machineLabelOf(computer)}`,
+              items: [{ id: 'restore', label: 'Voltar ao inventário', icon: Undo2 }],
+            },
+          }}
+          ui={{
+            icon: MonitorOff,
+            iconTone: computer.disposalType ? disposalTypeTone(computer.disposalType) : 'slate',
+            footerIcon: Clock,
+            slot: 'disposal-card',
+          }}
+          actions={{
+            onOpen: () => actions.onOpenMachine(computer),
+            onMenuSelect: () => actions.onAskRestore(computer),
+          }}
         >
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0 flex-1">
-              <span class="font-medium text-ink-900 break-words">
-                {machineLabelOf(computer)}
-              </span>
-              <span class="block text-xs text-ink-500 break-words">
-                {computer.hardware?.hostname || computer.name}
-                {#if computer.department}
-                  · {departmentLabel(computer.department)}
-                {/if}
-              </span>
-            </div>
-            {#if computer.disposalType}
-              <StatusBadge
-                data={{ label: disposalTypeLabel(computer.disposalType) }}
-                ui={{ tone: disposalTypeTone(computer.disposalType), size: 'sm' }}
-              />
-            {/if}
-          </div>
-
-          <div class="mt-2 text-xs">
-            <span class="text-muted-foreground block text-xs">Motivo</span>
-            <p class="text-ink-700 break-words">
+          {#snippet notes()}
+            <span class="text-muted-foreground text-xs">Motivo</span>
+            <p class="text-ink-700 line-clamp-3 text-xs break-words" title={computer.disposalReason ?? undefined}>
               {computer.disposalReason ?? '—'}
             </p>
-          </div>
-
-          <!-- A data fica numa linha e os botões em outra: lado a lado, o cartão estreito
-               cortava "Voltar ao inventário" no meio da palavra. -->
-          <div class="border-border mt-3 flex flex-col gap-2 border-t pt-2">
-            <span class="text-xs text-ink-500">
-              Saiu em {formatDate(computer.disposedAt)}
-            </span>
-            <div class="flex flex-wrap items-center gap-1">
-              <ActionButton
-                data={{ label: 'Ver ficha' }}
-                ui={{ variant: 'secondary', size: 'sm' }}
-                actions={{ onClick: () => actions.onOpenMachine(computer) }}
-              />
-              <ActionButton
-                data={{ label: 'Voltar ao inventário' }}
-                ui={{ variant: 'ghost', size: 'sm' }}
-                actions={{ onClick: () => actions.onAskRestore(computer) }}
-              />
-            </div>
-          </div>
-        </div>
+          {/snippet}
+        </ContentCard>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">
@@ -294,6 +289,21 @@
         <span>{data.computers.length} registro(s)</span>
       </div>
     </div>
+      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
+           fileira. A barra só aparece quando há mais de uma página. -->
+      {#if cardPage.total > cardPage.pageSize}
+        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
+          <PaginationBar
+            data={{
+              page: cardPage.page,
+              pageSize: cardPage.pageSize,
+              total: cardPage.total,
+              noun: ['máquina', 'máquinas'],
+            }}
+            actions={{ onPageChange: cardPage.actions.onPageChange }}
+          />
+        </div>
+      {/if}
 
     <!-- Tabela para desktop (>= xl) -->
     <div
@@ -319,8 +329,8 @@
                 </span>
                 <span class="block text-xs text-ink-500 break-words">
                   {computer.hardware?.hostname || computer.name}
-                  {#if computer.department}
-                    · {departmentLabel(computer.department)}
+                  {#if computer.departmentId}
+                    · {computerDepartmentLabel(computer)}
                   {/if}
                 </span>
               </TableCell>

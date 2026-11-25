@@ -9,12 +9,17 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota profile', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
@@ -24,7 +29,7 @@ describe('a rota profile', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -47,9 +52,9 @@ const connection = {
   dailyLimit: 100,
 };
 
-describe('a rota profile de quem administra tudo', () => {
+describe('the profile route of someone who administers everything', () => {
   // feliz
-  it('mostra o WhatsApp e a equipe, e abre o formulário de liberar módulo', async () => {
+  it('shows WhatsApp and the team, and opens the grant-module form', async () => {
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
       if (path === '/integrations/whatsapp/status') return connection;
       if (path === '/integrations/whatsapp/templates') return [];
@@ -61,7 +66,11 @@ describe('a rota profile de quem administra tudo', () => {
 
     expect(await screen.findByRole('link', { name: 'WhatsApp' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Equipe' })).toBeInTheDocument();
-    await user.click((await screen.findAllByRole('button', { name: /Liberar o primeiro módulo|Liberar módulo/ }))[0]!);
+    await user.click(
+      (
+        await screen.findAllByRole('button', { name: /Liberar o primeiro módulo|Liberar módulo/ })
+      )[0]!,
+    );
     const form = await screen.findByRole('dialog');
     expect(form).toHaveTextContent('Liberar módulos');
     await user.click(within(form).getByRole('button', { name: 'Cancelar' }));
@@ -79,11 +88,12 @@ describe('a rota profile de quem administra tudo', () => {
 
 const { ADMIN } = await import('../../route-page.test-support');
 
-describe('a rota profile de quem só administra um módulo', () => {
+describe('the profile route of someone who administers one module only', () => {
   // triste
-  it('não oferece os textos do bot nem a equipe, mas mostra os módulos e o WhatsApp', async () => {
+  it('offers neither the bot texts nor the team, but shows the modules and WhatsApp', async () => {
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
-      if (path === '/integrations/whatsapp/status') return { ...connection, state: 'connected', phone: '5562988887777' };
+      if (path === '/integrations/whatsapp/status')
+        return { ...connection, state: 'connected', phone: '5562988887777' };
       return [];
     });
     const admin = { ...ADMIN, role: 'admin' as const };
@@ -103,9 +113,9 @@ describe('a rota profile de quem só administra um módulo', () => {
   });
 });
 
-describe('a rota profile sem sessão', () => {
+describe('the profile route without a session', () => {
   // triste
-  it('monta a tela mesmo sem usuário na sessão', async () => {
+  it('mounts the screen even without a user in the session', async () => {
     visiting({}, undefined);
 
     const { container } = renderPage(Page as never, { data: { user: undefined } });

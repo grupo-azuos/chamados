@@ -6,11 +6,11 @@ import {
   toBuyOf,
 } from '@template/shared/domain/budget-need.util';
 import { type Department } from '@template/shared/domain/department.util';
+import { TROUBLESOME_MAINTENANCE_COUNT } from '@template/shared/domain/budget-need.util';
 import {
-  TROUBLESOME_MAINTENANCE_COUNT,
   UPGRADE_DISK_FREE_PERCENT,
   UPGRADE_MEMORY_GB,
-} from '@template/shared/domain/insight-rules.util';
+} from '@template/shared/domain/computer-upgrade.util';
 import {
   type Budget,
   type BudgetMachine,
@@ -29,13 +29,12 @@ const MACHINE_LIMIT = 10;
 /**
  * O ORÇAMENTO: quantas peças comprar, já descontando o depósito.
  *
- * As réguas são IMPORTADAS da Inteligência (`insight-rules.util`), de propósito: se esta tela
- * usasse 6 GB e a outra 8 GB, as duas apontariam números diferentes para o mesmo parque e a
- * equipe passaria a discutir qual está certa em vez de comprar a memória.
+ * As réguas são IMPORTADAS do aviso de upgrade do inventário (`computer-upgrade.util`), de
+ * propósito: se esta tela usasse 6 GB e a outra 8 GB, as duas apontariam números diferentes
+ * para o mesmo parque e a equipe passaria a discutir qual está certa em vez de comprar a memória.
  *
- * **Uma diferença deliberada em relação à Inteligência:** lá, uma máquina apertada de memória
- * E de disco aparece uma vez só, com a recomendação mais barata primeiro — é uma lista de
- * atenção. Aqui ela entra nas duas necessidades, porque são duas peças a comprar.
+ * Uma máquina apertada de memória E de disco entra nas duas necessidades, porque são duas peças
+ * a comprar. Processador antigo não entra: não é peça de prateleira, é troca da máquina.
  */
 @Injectable()
 export class BudgetService {

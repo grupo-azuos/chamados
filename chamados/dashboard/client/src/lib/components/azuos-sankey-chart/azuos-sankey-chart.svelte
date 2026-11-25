@@ -1,17 +1,23 @@
+<!--
+  @component
+  FLUXO (Sankey) — para onde o volume vai, etapa por etapa.
+
+  Cada coluna é uma etapa (tipo → responsável → situação, por exemplo) e a espessura de cada faixa é
+  a quantidade que passa por ali. **Poucos nós por coluna** (até uns dez): quem monta a tela agrupa
+  a cauda em "Outros" antes de entregar. Passar o ponteiro num nó acende só as faixas dele; clicar
+  num nó abre o detalhamento (`actions.onSelect`, com o `id` do nó).
+
+  O `id` é único no gráfico todo e o `label` é o que aparece: o mesmo nome pode existir em duas
+  colunas sem os dois virarem um nó só.
+
+  - `data`: os nós, as ligações (`from`, `to`, `value`) e o nome da série no balão.
+  - `state`: `isLoading`.
+  - `ui`: o texto de vazio e a altura.
+  - `actions`: `onSelect`.
+-->
 <script lang="ts" module>
   import { formatCount, resolveColor, shortenLabel, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * FLUXO (Sankey) — para onde o volume vai, etapa por etapa.
-   *
-   * Cada coluna é uma etapa (tipo → responsável → situação, por exemplo) e a espessura de cada
-   * faixa é a quantidade que passa por ali. **Poucos nós por coluna** (até uns dez): quem monta a
-   * tela agrupa a cauda em "Outros" antes de entregar. Passar o ponteiro num nó acende só as faixas
-   * dele; clicar num nó abre o detalhamento (`actions.onSelect`, com o `id` do nó).
-   *
-   * O `id` é único no gráfico todo e o `label` é o que aparece: o mesmo nome pode existir em duas
-   * colunas sem os dois virarem um nó só.
-   */
   export type SankeyNode = { id: string; label: string; color: string };
 
   export type SankeyLink = { from: string; to: string; value: number };

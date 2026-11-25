@@ -23,7 +23,8 @@
 
 <Story name="Disabled" args={{ value: '2026-09-14', disabled: true }} />
 
-<Story name="MonthAndYearSelectors" args={{ value: '2026-10-19', showMonthYearSelects: true }} />
+<!-- O mês e o ano trocam no título do calendário, pelo `AzuosCalendarDropdown`. -->
+<Story name="MonthAndYearInTitle" args={{ value: '2026-10-19' }} />
 
 <!-- Caso limite: a API devolve data com hora; o campo mostra só o dia. -->
 <Story name="Value With Time" args={{ value: '2026-09-14T10:30:00.000Z' }} />

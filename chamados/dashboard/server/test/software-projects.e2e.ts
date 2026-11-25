@@ -6,6 +6,12 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { githubConnections } from '../src/lib/db/schema/github-connections.schema';
+import {
+  softwareBranches,
+  softwareCommits,
+  softwareTags,
+} from '../src/lib/db/schema/software-git.schema';
+import { softwareTimelineEvents } from '../src/lib/db/schema/software-timeline-events.schema';
 import { tickets } from '../src/lib/db/schema/tickets.schema';
 import { encryptGithubToken } from '../src/modules/github-integration/service/github-token-cipher.util';
 import {
@@ -115,7 +121,8 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
     );
     process.env.GITHUB_OAUTH_CLIENT_ID = 'cliente-de-teste';
     process.env.GITHUB_OAUTH_CLIENT_SECRET = 'segredo-de-teste';
-    process.env.GITHUB_OAUTH_REDIRECT_URI = 'http://localhost:3005/api/integrations/github/callback';
+    process.env.GITHUB_OAUTH_REDIRECT_URI =
+      'http://localhost:3005/api/integrations/github/callback';
     process.env.GITHUB_OAUTH_FRONTEND_URL = 'http://localhost:5005';
     process.env.GITHUB_OAUTH_ENCRYPTION_KEY = ENCRYPTION_KEY;
     /* O App da organização assina um JWT com a chave privada; a chave é gerada aqui e nunca
@@ -123,7 +130,10 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
     const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
     process.env.GITHUB_APP_ID = '12';
     process.env.GITHUB_APP_INSTALLATION_ID = '34';
-    process.env.GITHUB_APP_PRIVATE_KEY = privateKey.export({ type: 'pkcs1', format: 'pem' }) as string;
+    process.env.GITHUB_APP_PRIVATE_KEY = privateKey.export({
+      type: 'pkcs1',
+      format: 'pem',
+    }) as string;
     started = await createE2eApp(testDatabaseUrl!);
     app = started.app;
   });
@@ -168,10 +178,188 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       });
     });
 
+    it('draws the map of a system: its issues, PRs, merges and tickets', async () => {
+      const chamados = await registerProject({}).expect(201);
+      await registerProject({ name: 'Outro', repositoryUrl: 'org/outro' }).expect(201);
+      await started.db.insert(softwareTimelineEvents).values([
+        {
+          projectId: chamados.body.id,
+          type: 'issue',
+          externalId: '#12',
+          title: 'Tela não abre',
+          status: 'open',
+          createdBy: 'teste',
+        },
+        {
+          projectId: chamados.body.id,
+          type: 'pr',
+          externalId: '#13',
+          title: 'Corrige a tela (#12)',
+          status: 'merged',
+          createdBy: 'teste',
+        },
+      ]);
+      await started.db.insert(tickets).values({
+        requesterName: 'Pessoa de Teste',
+        area: 'sistema',
+        department: 'Comercial',
+        problemType: 'bug',
+        description: 'A tela não abre.',
+        projectId: chamados.body.id,
+        githubIssueNumber: 12,
+        status: 'open',
+      });
+
+      const map = await api()
+        .get('/api/v1/software-projects/map')
+        .query({ ids: String(chamados.body.id) })
+        .set(asDora())
+        .expect(200);
+
+      expect(map.body.entries).toHaveLength(1);
+      expect(map.body.entries[0]).toMatchObject({
+        project: { id: chamados.body.id, name: 'Chamados' },
+        hiddenEvents: 0,
+        tickets: [{ githubIssueNumber: 12, isClosed: false }],
+      });
+      expect(
+        map.body.entries[0].events.map((event: { externalId: string }) => event.externalId),
+      ).toEqual(expect.arrayContaining(['#12', '#13']));
+
+      const all = await api().get('/api/v1/software-projects/map').set(asDora()).expect(200);
+      expect(
+        all.body.entries.map((entry: { project: { name: string } }) => entry.project.name),
+      ).toEqual(['Chamados', 'Outro']);
+      await api()
+        .get('/api/v1/software-projects/map')
+        .query({ ids: '1,x' })
+        .set(asDora())
+        .expect(400);
+
+      /* O git graph: commits com os pais e as branches vivas; e o período recorta o resto. */
+      await started.db.insert(softwareCommits).values([
+        {
+          projectId: chamados.body.id,
+          sha: 'a1',
+          parents: [],
+          message: '[feat](web): Tela',
+          authorName: 'Dora',
+          committedAt: new Date('2026-11-20T10:00:00Z'),
+        },
+        {
+          projectId: chamados.body.id,
+          sha: 'b2',
+          parents: ['a1'],
+          message: '[merge](web): Tela',
+          authorName: 'Dora',
+          committedAt: new Date('2026-11-21T10:00:00Z'),
+        },
+      ]);
+      await started.db
+        .insert(softwareBranches)
+        .values({ projectId: chamados.body.id, name: 'feature/mapa', headSha: 'c3' });
+      await started.db
+        .insert(softwareTags)
+        .values({ projectId: chamados.body.id, name: 'v1.0.0', sha: 'b2' });
+      const graph = await api()
+        .get('/api/v1/software-projects/map')
+        .query({ ids: String(chamados.body.id), from: '2030-01-01' })
+        .set(asDora())
+        .expect(200);
+      expect(graph.body.entries[0].commits.map((commit: { sha: string }) => commit.sha)).toEqual([
+        'b2',
+        'a1',
+      ]);
+      expect(graph.body.entries[0].branches).toEqual([
+        expect.objectContaining({ name: 'feature/mapa', headSha: 'c3' }),
+      ]);
+      expect(graph.body.entries[0].tags).toEqual([{ name: 'v1.0.0', sha: 'b2' }]);
+      expect(graph.body.entries[0].events).toEqual([]);
+      expect(graph.body.entries[0].tickets).toEqual([]);
+
+      /* A pessoa sem GitHub vinculado não tem issue nem PR dela; o chamado é pelo responsável. */
+      const person = await api()
+        .get('/api/v1/software-projects/map')
+        .query({ ids: String(chamados.body.id), personId: 'ninguem' })
+        .set(asDora())
+        .expect(200);
+      expect(person.body).toMatchObject({
+        personLogin: null,
+        entries: [{ events: [], tickets: [] }],
+      });
+    });
+
+    it('shows the whole map of one system to whoever asks for tickets, in the Central', async () => {
+      const chamados = await registerProject({}).expect(201);
+      await started.db.insert(softwareTimelineEvents).values({
+        projectId: chamados.body.id,
+        type: 'issue',
+        externalId: '#12',
+        title: 'Tela não abre',
+        url: 'https://github.com/x/y/issues/12',
+        author: 'vini',
+        authorName: 'Vinícius',
+        status: 'open',
+        eventDate: new Date('2026-11-20T10:00:00Z'),
+        createdBy: 'ti@empresa.com.br',
+      });
+
+      const map = await api()
+        .get(`/api/v1/support/systems/${chamados.body.id}/map`)
+        .set(asAna())
+        .expect(200);
+
+      expect(map.body.entries).toHaveLength(1);
+      expect(map.body.entries[0].project).toMatchObject({ id: chamados.body.id, name: 'Chamados' });
+      expect(map.body.entries[0].events).toEqual(
+        expect.arrayContaining([expect.objectContaining({ externalId: '#12' })]),
+      );
+    });
+
+    // triste
+    it('lists every system in use with how it is going, to whoever asks for tickets', async () => {
+      const chamados = await registerProject({}).expect(201);
+      await started.db.insert(softwareTimelineEvents).values({
+        projectId: chamados.body.id,
+        type: 'issue',
+        externalId: '#30',
+        title: 'Tela lenta',
+        url: 'https://github.com/x/y/issues/30',
+        author: 'vini',
+        authorName: 'Vinícius',
+        status: 'open',
+        eventDate: new Date('2026-11-21T10:00:00Z'),
+        createdBy: 'ti@empresa.com.br',
+      });
+
+      const list = await api().get('/api/v1/support/systems').set(asAna()).expect(200);
+
+      expect(list.body).toEqual([
+        expect.objectContaining({
+          id: chamados.body.id,
+          name: 'Chamados',
+          openTickets: 0,
+          status: 'active',
+        }),
+      ]);
+      expect(list.body[0].openIssues).toBeGreaterThanOrEqual(1);
+      expect(list.body[0].lastActivityAt).not.toBeNull();
+    });
+
+    // triste
+    it('answers 404 in the Central for a system that does not exist', async () => {
+      await api().get('/api/v1/support/systems/999999/map').set(asAna()).expect(404);
+      await api().get('/api/v1/support/systems/x/map').set(asAna()).expect(400);
+    });
+
+    // feliz
     it('lists with search and status, counting open tickets of each system', async () => {
       const chamados = await registerProject({}).expect(201);
-      await registerProject({ name: 'Legado', repositoryUrl: 'org/legado', status: 'deprecated' })
-        .expect(201);
+      await registerProject({
+        name: 'Legado',
+        repositoryUrl: 'org/legado',
+        status: 'deprecated',
+      }).expect(201);
 
       await started.db.insert(tickets).values([
         {
@@ -231,8 +419,13 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
         color: 'green',
       });
 
+      /* Excluir ARQUIVA: o sistema sai da lista e continua acessível pelo endereço, arquivado. */
       await api().delete(`/api/v1/software-projects/${created.body.id}`).set(asDora()).expect(204);
-      await api().get(`/api/v1/software-projects/${created.body.id}`).set(asDora()).expect(404);
+      const archived = await api()
+        .get(`/api/v1/software-projects/${created.body.id}`)
+        .set(asDora())
+        .expect(200);
+      expect(archived.body.archive).not.toBeNull();
     });
 
     it('synchronizes one system and all of them with the linked GitHub account', async () => {
@@ -245,7 +438,10 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
       expect(one.body).toMatchObject({ synced: 1 });
       expect(one.body.message).toContain('1 Pull Requests');
 
-      const all = await api().post('/api/v1/software-projects/sync-github').set(asDora()).expect(201);
+      const all = await api()
+        .post('/api/v1/software-projects/sync-github')
+        .set(asDora())
+        .expect(201);
       expect(all.body).toMatchObject({ projects: 1, prs: 1, issues: 0, merges: 0, failed: [] });
 
       const found = await api()
@@ -335,8 +531,10 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
     it('schedules an appointment and a record, naming the system', async () => {
       const project = await registerProject({}).expect(201);
 
-      const appointment = await registerEvent({ projectId: project.body.id, note: '  Ao vivo. ' })
-        .expect(201);
+      const appointment = await registerEvent({
+        projectId: project.body.id,
+        note: '  Ao vivo. ',
+      }).expect(201);
       expect(appointment.body).toMatchObject({
         kind: 'appointment',
         title: 'Deploy do Chamados',
@@ -395,8 +593,13 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
         .expect(200);
       expect(asRecord.body).toMatchObject({ kind: 'record', endTime: null });
 
+      /* Excluir ARQUIVA: o evento sai do cronograma e continua acessível, arquivado. */
       await api().delete(`/api/v1/software-schedule/${created.body.id}`).set(asOlga()).expect(204);
-      await api().get(`/api/v1/software-schedule/${created.body.id}`).set(asDora()).expect(404);
+      const archived = await api()
+        .get(`/api/v1/software-schedule/${created.body.id}`)
+        .set(asDora())
+        .expect(200);
+      expect(archived.body.archive).not.toBeNull();
     });
 
     // triste
@@ -434,7 +637,9 @@ describe.skipIf(!testDatabaseUrl)('Software projects API (e2e)', () => {
         .expect(404);
 
       await registerEvent({}, asEdu()).expect(403);
-      await api().get('/api/v1/software-schedule?startDate=2026-10-19&endDate=2026-10-25').expect(401);
+      await api()
+        .get('/api/v1/software-schedule?startDate=2026-10-19&endDate=2026-10-25')
+        .expect(401);
     });
   });
 });

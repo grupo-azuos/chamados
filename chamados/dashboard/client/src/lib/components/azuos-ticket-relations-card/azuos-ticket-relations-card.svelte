@@ -1,15 +1,20 @@
+<!--
+  @component
+  OS CHAMADOS VINCULADOS na ficha do chamado.
+
+  Permite relacionar chamados entre si (relação N:N). Exibe a lista dos chamados já vinculados com
+  link direto e permite buscar por id, protocolo ou assunto para vincular novos.
+
+  `data` leva as relações, o termo e os resultados da busca e o chamado atual; `ui.isHeaderHidden`
+  tira o título quando o cartão mora numa seção que já tem o nome dele; `state`, carregamento,
+  busca, inclusão, remoção e erro; `actions`, buscar, vincular e desvincular.
+-->
 <script lang="ts" module>
   import {
     type RelatedTicketSummary,
     type TicketRelation,
   } from '@template/shared/schemas/ticket-relation.schema';
 
-  /**
-   * OS CHAMADOS VINCULADOS na ficha do chamado.
-   *
-   * Permite relacionar chamados entre si (relação N:N). Exibe a lista dos chamados
-   * já vinculados com link direto e permite buscar por id/protocolo ou texto para vincular novos.
-   */
   export type AzuosTicketRelationsCardProps = {
     data: {
       relations: TicketRelation[];
@@ -109,7 +114,7 @@
         placeholder="Buscar chamado por ID, protocolo ou assunto…"
         aria-label="Buscar chamado para vincular"
         disabled={cardState?.isAdding}
-        class="border-border bg-card text-foreground placeholder:text-muted-foreground focus:ring-primary h-10 w-full rounded-control border pr-3 pl-9 text-xs shadow-xs focus:ring-1 focus:outline-none disabled:bg-muted disabled:text-muted-foreground"
+        class="bg-muted text-foreground placeholder:text-muted-foreground focus:ring-primary h-10 w-full rounded-control border pr-3 pl-9 text-xs focus:ring-1 focus:outline-none disabled:bg-muted disabled:text-muted-foreground border-transparent"
       />
     </div>
 
@@ -118,7 +123,7 @@
       <p class="text-muted-foreground py-1 text-center text-xs">Buscando chamados…</p>
     {:else if data.searchResults && data.searchResults.length > 0}
       <ul
-        class="border-border bg-card rounded-box flex max-h-48 flex-col gap-1 overflow-y-auto border p-1 shadow-sm"
+        class="bg-card rounded-box flex max-h-48 flex-col gap-1 overflow-y-auto p-1 shadow-card"
         aria-label="Resultados da busca de chamados"
       >
         {#each data.searchResults as item (item.id)}
@@ -172,7 +177,7 @@
       {#each data.relations as relation (relation.id)}
         {@const target = relation.relatedTicket}
         <li
-          class="border-border bg-card rounded-control flex items-center justify-between gap-2 border p-2 shadow-xs"
+          class="bg-muted rounded-control flex items-center justify-between gap-2 border p-2 border-transparent"
         >
           <a
             href={ticketHref(target)}

@@ -13,6 +13,7 @@ import {
   TICKET_STATUS_GROUPS,
   TICKET_STATUSES,
 } from '../domain/ticket-status.util';
+import { boardDrillParamSchema } from './board-drill.schema';
 import { paginationQuerySchema } from './pagination.schema';
 import { reportFormatSchema } from './report.schema';
 import { ticketAttachmentSchema } from './ticket-attachment.schema';
@@ -204,6 +205,9 @@ export const publicTicketSchema = ticketSchema
     description: true,
     screenshotUrl: true,
     createdAt: true,
+    /* O sistema do chamado de Sistema: a Central leva quem pediu ao mapa dele. */
+    projectId: true,
+    projectName: true,
   })
   .extend({
     /**
@@ -495,10 +499,9 @@ export const updateTicketSchema = z.object({
   /** O sistema do chamado. Nulo DESVINCULA. */
   projectId: z.number().int().positive().nullable().optional(),
   /** O sistema digitado por não estar na lista. Nulo limpa o nome digitado. */
-  customSystemName: z.preprocess(
-    (value) => (value === '' ? null : value),
-    customSystemNameSchema.nullable(),
-  ).optional(),
+  customSystemName: z
+    .preprocess((value) => (value === '' ? null : value), customSystemNameSchema.nullable())
+    .optional(),
   /**
    * TROCAR O RESPONSÁVEL — só o super admin. Para os demais o campo é recusado pelo servidor:
    * quem assume um chamado vira responsável ao lançar o primeiro histórico (`toTicketMove`), e
@@ -587,6 +590,8 @@ export const ticketListQuerySchema = paginationQuerySchema.extend({
   area: ticketAreaSchema.optional(),
   department: ticketDepartmentSchema.optional(),
   problemType: ticketProblemTypeSchema.optional(),
+  /** O recorte de um clique no painel (`board-drill.schema`): estreita a lista ao item clicado. */
+  drill: boardDrillParamSchema.optional(),
 });
 
 export type TicketListQuery = z.infer<typeof ticketListQuerySchema>;

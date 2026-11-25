@@ -1,26 +1,31 @@
+<!--
+  @component
+  Uma faixa que desliza para o lado — arrastando com o mouse ou o dedo, ou pelas setas nas
+  pontas.
+
+  Existe para a fileira que não cabe numa linha: com doze cartões, a grade virava três linhas e
+  empurrava a lista (que é o que a pessoa veio ver) para baixo da dobra. Na faixa, o que sobra
+  fica a um arraste de distância, e a altura é sempre a de UM cartão.
+
+  As setas saem da posição do shadcn (penduradas FORA da caixa) e entram na própria linha:
+  penduradas, elas caíam em cima do menu lateral. O rótulo é em português.
+
+  No Svelte os itens vêm em `data.items` e cada um é desenhado pelo snippet `item` — é o jeito
+  de embrulhar cada filho num item da faixa, que no React era `Children.map`.
+
+  - `data`: os itens.
+  - `ui`: `ariaLabel` (obrigatório), a largura de cada item e classe extra.
+  - `item`: o snippet que desenha cada item.
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
-  /**
-   * Uma faixa que desliza para o lado — arrastando com o mouse ou o dedo, ou pelas setas nas
-   * pontas.
-   *
-   * Existe para a fileira que não cabe numa linha: com doze cartões, a grade virava três linhas e
-   * empurrava a lista (que é o que a pessoa veio ver) para baixo da dobra. Na faixa, o que sobra
-   * fica a um arraste de distância, e a altura é sempre a de UM cartão.
-   *
-   * As setas saem da posição do shadcn (penduradas FORA da caixa) e entram na própria linha:
-   * penduradas, elas caíam em cima do menu lateral. O rótulo é em português.
-   *
-   * No Svelte os itens vêm em `data.items` e cada um é desenhado pelo snippet `item` — é o jeito
-   * de embrulhar cada filho num item da faixa, que no React era `Children.map`.
-   */
   export type AzuosCarouselProps<T> = {
     data: { items: T[] };
     ui: {
       /** O nome da faixa para o leitor de tela ("Resumo por status"). */
       ariaLabel: string;
-      /** Quanto cada item ocupa da faixa — `basis-1/2 lg:basis-1/4`, por exemplo. */
+      /** Quanto cada item ocupa da faixa. Sem ele, cada item tem a largura de um cartão (13rem). */
       itemClassName?: string;
       className?: string;
     };
@@ -34,7 +39,11 @@
 
   let { data, ui, item }: AzuosCarouselProps<T> = $props();
 
-  const ARROW_CLASS = 'rounded-control static size-(--control-lg) shrink-0 translate-x-0 translate-y-0';
+  const ARROW_CLASS = 'rounded-full static size-(--control-sm) shrink-0 translate-x-0 translate-y-0';
+
+  /* A largura padrão de um item: a de um cartão de número, com o rótulo inteiro. Responsivo pela
+     largura da faixa, e não pela janela. */
+  const ITEM_WIDTH = 'basis-52';
 </script>
 
 <!-- `dragFree`: solta, a faixa corre um pouco e para onde parou, como uma lista de celular —
@@ -51,7 +60,7 @@
   <div class="pointer-events-none -mt-4 -mb-9 min-w-0 flex-1">
     <Carousel.Content class="-ml-3 pt-6 pb-11 pl-3">
       {#each data.items as entry, index (index)}
-        <Carousel.Item class={cn('pointer-events-auto pl-3 last:pr-3', ui.itemClassName)}>
+        <Carousel.Item class={cn('pointer-events-auto pl-3 last:pr-3', ui.itemClassName ?? ITEM_WIDTH)}>
           {@render item(entry, index)}
         </Carousel.Item>
       {/each}

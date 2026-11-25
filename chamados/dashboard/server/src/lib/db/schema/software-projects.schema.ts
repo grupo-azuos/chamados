@@ -3,14 +3,9 @@ import {
   SOFTWARE_PROJECT_STATUSES,
 } from '@template/shared/domain/software-project.util';
 import { sql } from 'drizzle-orm';
-import {
-  check,
-  index,
-  serial,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core';
+import { check, index, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 function valuesFor(values: readonly string[]) {
@@ -41,18 +36,24 @@ export const softwareProjects = chamadosSchema.table(
     responsibleId: text('responsible_id'),
     responsibleName: text('responsible_name'),
 
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     createdBy: text('created_by').notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
+    /* Excluir ARQUIVA: o sistema sai das listas, com o histórico e os chamados guardados. */
+    ...archiveColumns(),
   },
   (table) => [
     index('software_projects_status_idx').on(table.status),
     index('software_projects_name_idx').on(table.name),
-    check('software_projects_status_valid', sql`${table.status} in (${valuesFor(SOFTWARE_PROJECT_STATUSES)})`),
-    check('software_projects_color_valid', sql`${table.color} in (${valuesFor(SOFTWARE_PROJECT_COLORS)})`),
+    check(
+      'software_projects_status_valid',
+      sql`${table.status} in (${valuesFor(SOFTWARE_PROJECT_STATUSES)})`,
+    ),
+    check(
+      'software_projects_color_valid',
+      sql`${table.color} in (${valuesFor(SOFTWARE_PROJECT_COLORS)})`,
+    ),
   ],
 );
 

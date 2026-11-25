@@ -6,7 +6,14 @@
     type AzuosWhatsappTemplatesDialogProps,
   } from './azuos-whatsapp-templates-dialog.svelte';
 
-  const actions = { onSelect: fn(), onDraftChange: fn(), onSave: fn(), onRestore: fn(), onClose: fn() };
+  const actions = {
+    onSelect: fn(),
+    onDraftChange: fn(),
+    onSave: fn(),
+    onRestore: fn(),
+    onRestoreEdit: fn(),
+    onClose: fn(),
+  };
 
   const ready = {
     key: 'ticket_ready' as const,
@@ -16,6 +23,7 @@
     body: 'Olá, {{nome}}! O seu chamado *{{protocolo}}* foi finalizado.',
     defaultBody: 'Olá, {{nome}}! O seu chamado *{{protocolo}}* foi finalizado.',
     isCustomized: false,
+    archivedEdit: null,
   };
   const opened = { ...ready, key: 'ticket_opened' as const, label: 'Chamado aberto' };
 
@@ -33,6 +41,31 @@
 </script>
 
 <Story name="Default" args={{ data, state: { isOpen: true }, actions }} />
+
+<!-- Voltou ao original: a edição ficou guardada, e o "Desfazer" a traz de volta. -->
+<Story
+  name="EditKept"
+  args={{
+    data: {
+      ...data,
+      selected: { ...ready, archivedEdit: { body: 'Pronto, {{nome}}!', archivedAt: '2026-11-20T12:00:00.000Z' } },
+    },
+    state: { isOpen: true },
+    actions,
+  }}
+/>
+
+<Story
+  name="RestoringEdit"
+  args={{
+    data: {
+      ...data,
+      selected: { ...ready, archivedEdit: { body: 'Pronto, {{nome}}!', archivedAt: '2026-11-20T12:00:00.000Z' } },
+    },
+    state: { isOpen: true, isRestoringEdit: true },
+    actions,
+  }}
+/>
 
 <!-- O texto mudou e está certo: dá para salvar. -->
 <Story

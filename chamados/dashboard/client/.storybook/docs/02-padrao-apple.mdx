@@ -1,0 +1,30 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Fundamentos/Padrão Apple" />
+
+# Padrão Apple
+
+Um só visual para todos os sistemas, inspirado no iOS e no macOS. A ideia é **calma com cor
+onde ajuda**: a tela é limpa e neutra, e a cor aparece só onde o olho precisa achar alguma coisa.
+
+## Os seis princípios
+
+1. **Card sem borda, sobre o fundo.** O fundo da página é cinza; o card é branco (grafite no
+   escuro). O que separa os dois é um fio de 1px quase invisível e uma sombra difusa
+   (`shadow-card`). Card nunca vai dentro de card da mesma cor.
+2. **Cor no ícone, não no fundo.** Cada assunto tem um tom; ele vai no ícone cheio do card, na
+   bolinha de status, no chip e no gráfico. O fundo do card, a borda e o número grande ficam
+   neutros.
+3. **Cantos grandes, botões em pílula.** Card com 20px, diálogo com 22px, campo com 10px, botão e
+   chip em pílula, ícone de assunto em "squircle".
+4. **Fonte do sistema e texto em frase.** SF Pro no Apple, Segoe no Windows. Rótulos escritos como
+   frase ("Alvarás vencidos"), em cinza de apoio — nada de CAIXA ALTA espaçada.
+5. **Hover destaca, nunca esconde.** O card clicável sobe 2px e a sombra cresce. Nada desliza por
+   cima do conteúdo.
+6. **Campos cinza, sem contorno.** O campo é um retângulo cinza cheio; o foco é um anel azul suave.
+
+## O que é recusado
+
+O check de design (`mise run design:check`) recusa: card com borda em volta, cor escrita na tela (hex, paleta do Tailwind),
+gradiente, vidro com desfoque, painel que cobre o conteúdo no hover, Zuzu animado, botão de
+voltar feito à mão e `<select>` nativo. E avisa rótulo em caixa alta espaçada.

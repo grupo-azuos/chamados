@@ -5,7 +5,7 @@ description: Coloca o nome do MVP onde as pessoas o veem — título da aba do n
 
 # Dar nome ao MVP
 
-**Só os nomes visíveis mudam.** A pasta `chamados/dashboard/` e o pacote interno `@chamados/dashboard/shared`
+**Só os nomes visíveis mudam.** A pasta `chamados/dashboard/` e o pacote interno `@template/shared`
 continuam com esses nomes: eles não aparecem para quem usa o sistema, e trocá-los mexe na
 estrutura protegida do projeto (hooks, CI, regras) — isso é do suporte.
 
@@ -37,7 +37,7 @@ configurações — são protegidos e não carregam o nome do MVP.
 ## 4. Verificar e terminar
 
 ```bash
-cd template
+cd chamados/dashboard
 npm run lint && npm run typecheck && npm test
 ```
 

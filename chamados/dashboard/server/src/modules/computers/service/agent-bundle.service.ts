@@ -16,6 +16,7 @@ import {
 } from '@template/shared/schemas/agent-release.schema';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { assertCanCreate } from '../../../lib/policy/policy-assert.util';
 import { type FileStorage } from '../../../lib/storage/file-storage.type';
 import { STORAGE } from '../../../lib/storage/storage.token';
 import { createZipArchive, type ZipEntry } from '../bundle/zip-archive.util';
@@ -28,21 +29,47 @@ export type AgentBundle = { fileName: string; content: Buffer };
 const README = `AZUOS AGENT — INSTALAÇÃO
 
 1. Descompacte esta pasta inteira no computador (todos os arquivos juntos).
-2. Clique com o botão direito em install-agent.ps1 e escolha "Executar com o PowerShell".
-   Se o Windows bloquear, abra o PowerShell como Administrador nesta pasta e rode:
-   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force; & ".\\install-agent.ps1"
-3. Se o pacote não veio com o token, o script pede: cole o token gerado no cadastro da máquina.
+2. Dê dois cliques em instalar.cmd e aceite o pedido de Administrador do Windows.
+   (Se preferir: clique com o botão direito em install-agent.ps1 e escolha
+   "Executar com o PowerShell".)
+3. Se o pacote não veio com o token, o instalador pede: cole o token gerado no cadastro da máquina.
 
-O script instala o certificado, o agente e já conecta a máquina ao sistema.
+O instalador põe o certificado, o agente e já conecta a máquina ao sistema.
 `;
 
 /**
- * O PACOTE DE INSTALAÇÃO: MSI, certificado, script do certificado e o install-agent.ps1 num
- * zip só, para quem instala não precisar baixar quatro arquivos e juntar na mesma pasta.
+ * O DUPLO CLIQUE: o Windows não roda um .ps1 com dois cliques (abre no Bloco de Notas) e, baixado
+ * da internet, ainda o bloqueia pela política de execução. Este .cmd tira a marca de "veio da
+ * internet" dos arquivos da pasta e chama o install-agent.ps1 com a política liberada só para
+ * esta execução. O pedido de Administrador quem faz é o próprio .ps1.
+ *
+ * Fim de linha CRLF: é o que o cmd.exe espera.
+ */
+const INSTALL_CMD = [
+  '@echo off',
+  'chcp 65001 >nul',
+  'cd /d "%~dp0"',
+  'title Azuos Agent',
+  'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -LiteralPath . -File | Unblock-File"',
+  'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install-agent.ps1"',
+  '',
+].join('\r\n');
+
+/** O BOM faz o PowerShell 5.1 ler o script em UTF-8; sem ele, "Instalação" vira "InstalaÃ§Ã£o". */
+const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
+
+/**
+ * O PACOTE DE INSTALAÇÃO: MSI, certificado, script do certificado, o install-agent.ps1 e o
+ * instalar.cmd (o duplo clique) num zip só, para quem instala não precisar baixar cinco arquivos
+ * e juntar na mesma pasta.
  *
  * O zip é montado aqui, e não no navegador, porque os arquivos moram no bucket — e o servidor
  * já fala com ele sem depender de CORS. O MSI é conferido pelo hash do manifesto antes de
  * entrar: um arquivo corrompido no bucket não chega ao PC disfarçado de instalador.
+ *
+ * Com token, o zip só sai para quem pode cadastrar computador, e só se o hash do token bater com
+ * o da máquina pedida. O token nunca é registrado em log: ele só vive no corpo da requisição e
+ * dentro do script do pacote, montado em memória.
  */
 @Injectable()
 export class AgentBundleService {
@@ -53,7 +80,7 @@ export class AgentBundleService {
   ) {}
 
   async bundle(user: RequestUser, request: AgentBundleRequest): Promise<AgentBundle> {
-    this.assertAccess(user);
+    this.assertAccess(user, request);
     const manifest = await this.manifestOf(request.version);
     const computerName = await this.computerNameFor(request);
     const files = await this.releaseFiles(manifest);
@@ -66,7 +93,8 @@ export class AgentBundleService {
       fileName: bundleFileName(manifest.version, computerName),
       content: createZipArchive([
         ...files,
-        { name: 'install-agent.ps1', content: Buffer.from(script, 'utf8') },
+        { name: 'instalar.cmd', content: Buffer.from(INSTALL_CMD, 'utf8') },
+        { name: 'install-agent.ps1', content: Buffer.concat([UTF8_BOM, Buffer.from(script, 'utf8')]) },
         { name: 'LEIA-ME.txt', content: Buffer.from(README, 'utf8') },
       ]),
     };
@@ -126,11 +154,13 @@ export class AgentBundleService {
     }
   }
 
-  private assertAccess(user: RequestUser): void {
-    if (hasModule(user, 'infra') || hasModule(user, 'sistema')) return;
-    throw new ForbiddenException(
-      'O download do agente é de Infraestrutura ou Sistema. Peça acesso a um desses módulos.',
-    );
+  private assertAccess(user: RequestUser, request: AgentBundleRequest): void {
+    if (!hasModule(user, 'infra') && !hasModule(user, 'sistema'))
+      throw new ForbiddenException(
+        'O download do agente é de Infraestrutura ou Sistema. Peça acesso a um desses módulos.',
+      );
+    /* O pacote com token liga uma máquina ao sistema: é a mesma permissão de cadastrá-la. */
+    if (request.token) assertCanCreate(user.role, 'computadores');
   }
 }
 
@@ -138,7 +168,8 @@ function sha256(content: Buffer): string {
   return createHash('sha256').update(content).digest('hex');
 }
 
-/** O nome do zip leva a máquina quando o token vem dentro: dois pacotes baixados não se confundem. */
+/** Com o token dentro, o zip é o instalador DAQUELA máquina — e o nome diz qual: dois baixados
+    no mesmo dia não se confundem. */
 function bundleFileName(version: string, computerName: string | null): string {
   const slug = (computerName ?? '')
     .normalize('NFD')
@@ -148,5 +179,5 @@ function bundleFileName(version: string, computerName: string | null): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 60);
 
-  return slug ? `azuos-agent-${version}-${slug}.zip` : `azuos-agent-${version}-x64.zip`;
+  return slug ? `instalar-agente-${slug}.zip` : `azuos-agent-${version}-x64.zip`;
 }

@@ -9,12 +9,17 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota infra/computers/detalhe', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({ id: '3' });
 
     const { container } = renderPage(Page as never);
@@ -24,7 +29,7 @@ describe('a rota infra/computers/detalhe', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({ id: '3' });
 
     renderPage(Page as never);
@@ -81,12 +86,19 @@ const machine = {
   updatedBy: null,
 };
 
-const PAGED = ['/computers', '/computers/3/alerts', '/maintenances', '/parts/movements', '/tickets'];
+const PAGED = [
+  '/computers',
+  '/computers/3/alerts',
+  '/maintenances',
+  '/parts/movements',
+  '/tickets',
+];
 
 /** A API respondendo de verdade: a máquina existe e todas as listas estão vazias. */
 function serveMachine() {
   vi.mocked(apiRequest).mockImplementation(async (path: string, options?: { method?: string }) => {
-    if (path === '/computers/3/token' && options?.method === 'POST') return { computer: machine, token: 'agt_novo' };
+    if (path === '/computers/3/token' && options?.method === 'POST')
+      return { computer: machine, token: 'agt_novo' };
     if (path === '/computers/3') return machine;
     if (path === '/computers/3/live') return { live: null };
     if (path === '/departments') return { rh: ['Contábil'], local: [], isRhAvailable: true };
@@ -95,9 +107,9 @@ function serveMachine() {
   });
 }
 
-describe('a rota infra/computers/detalhe com a máquina carregada', () => {
+describe('the infra/computers detail route with the machine loaded', () => {
   // feliz
-  it('abre cada formulário da ficha e volta ao inventário', async () => {
+  it('opens each form of the record and goes back to the inventory', async () => {
     serveMachine();
     visiting({ id: '3' });
     renderPage(Page as never);
@@ -109,7 +121,9 @@ describe('a rota infra/computers/detalhe com a máquina carregada', () => {
     const openAndClose = async (button: string, title: string) => {
       await user.click(screen.getByRole('button', { name: button }));
       expect(await screen.findByRole('dialog')).toHaveTextContent(title);
-      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Fechar diálogo' }));
+      await user.click(
+        within(screen.getByRole('dialog')).getByRole('button', { name: 'Fechar diálogo' }),
+      );
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     };
     await openAndClose('Editar identificação', 'Identificação da máquina');
@@ -117,7 +131,9 @@ describe('a rota infra/computers/detalhe com a máquina carregada', () => {
     await openAndClose('Agendar manutenção', 'Agendar manutenção');
     await user.click(screen.getAllByRole('button', { name: 'Registrar manutenção' })[0]!);
     expect(await screen.findByRole('dialog')).toHaveTextContent('Registrar manutenção');
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Fechar diálogo' }));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Fechar diálogo' }),
+    );
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     await user.click(screen.getByRole('button', { name: /Voltar para o inventário/ }));
@@ -125,7 +141,7 @@ describe('a rota infra/computers/detalhe com a máquina carregada', () => {
   });
 
   // feliz
-  it('mostra o token novo uma vez e tenta montar o pacote de instalação', async () => {
+  it('shows the new token once and tries to build the install package', async () => {
     serveMachine();
     visiting({ id: '3' });
     renderPage(Page as never);
@@ -134,17 +150,19 @@ describe('a rota infra/computers/detalhe com a máquina carregada', () => {
     await screen.findByRole('heading', { name: 'Contábil — mesa do fechamento' });
     await user.click(screen.getByRole('button', { name: 'Mais ações' }));
     await user.click(screen.getByRole('menuitem', { name: 'Gerar token novo' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Gerar token novo' }));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Gerar token novo' }),
+    );
     expect(await screen.findByText('Token de CONTABIL-03')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Baixar pacote de instalação (.zip)' }));
+    await user.click(screen.getByRole('button', { name: 'Baixar instalador (.zip)' }));
     await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent(/Não consegui/));
     await user.click(screen.getByRole('button', { name: 'Já guardei' }));
     await waitFor(() => expect(screen.queryByText('Token de CONTABIL-03')).not.toBeInTheDocument());
   });
 
   // triste
-  it('avisa quando o instalador não pôde ser montado', async () => {
+  it('warns when the installer could not be built', async () => {
     serveMachine();
     visiting({ id: '3' });
     renderPage(Page as never);
@@ -157,7 +175,7 @@ describe('a rota infra/computers/detalhe com a máquina carregada', () => {
   });
 
   // triste
-  it('explica quando a máquina saiu do inventário', async () => {
+  it('explains when the machine left the inventory', async () => {
     const { ApiError } = await import('$lib/api/http-client');
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
       if (path === '/computers/3') throw new ApiError(404, 'Computador não encontrado.');
@@ -167,6 +185,8 @@ describe('a rota infra/computers/detalhe com a máquina carregada', () => {
     visiting({ id: '3' });
     renderPage(Page as never);
 
-    expect(await screen.findByText('Este computador não está mais no inventário')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Este computador não está mais no inventário'),
+    ).toBeInTheDocument();
   });
 });

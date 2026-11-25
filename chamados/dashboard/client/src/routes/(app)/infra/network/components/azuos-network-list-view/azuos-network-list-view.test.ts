@@ -335,6 +335,31 @@ describe('AzuosNetworkListView — the outage shortcut switched off and the tabl
   });
 });
 
+describe('network-list-view — the record card', () => {
+  // feliz
+  it('shows the open outage in the strip and resolves it from the footer', async () => {
+    vi.mocked(actions.onResolveChange).mockClear();
+    const { container } = renderView();
+
+    const cards = container.querySelector<HTMLElement>('[data-slot="network-cards-mobile"]')!;
+    expect(cards.querySelector('[data-slot="network-card-strip"]')).toHaveTextContent('Em aberto');
+    await userEvent.click(within(cards).getByRole('button', { name: 'Resolver' }));
+    expect(actions.onResolveChange).toHaveBeenCalledWith(expect.anything(), true);
+  });
+
+  // triste
+  it('offers to reopen an outage that already came back', async () => {
+    vi.mocked(actions.onResolveChange).mockClear();
+    const { container } = renderView({
+      events: [event({ resolvedAt: '2026-11-20T12:30:00.000Z' })],
+    });
+
+    const cards = container.querySelector<HTMLElement>('[data-slot="network-cards-mobile"]')!;
+    await userEvent.click(within(cards).getByRole('button', { name: 'Reabrir' }));
+    expect(actions.onResolveChange).toHaveBeenCalledWith(expect.anything(), false);
+  });
+});
+
 describe('network-list-view — cards only', () => {
   // feliz
   it('hides the table completely when the person asked for cards only', () => {

@@ -17,8 +17,12 @@ function computer(over: Partial<Computer> = {}): Computer {
     id: 9,
     name: 'RECEPCAO-09',
     displayName: 'Recepção — micro antigo do balcão',
+    responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
-    department: 'recepcao',
+    responsibleAvatarUrl: null,
+    departmentId: null,
+    departmentName: null,
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 10 Pro',
@@ -261,7 +265,13 @@ describe('AzuosDisposalListView — search, type filter, rows and the restore di
     vi.mocked(actions.onAskRestore).mockClear();
     renderView({
       computers: [
-        computer({ department: null, disposalType: null, disposalReason: null, displayName: null }),
+        computer({
+          departmentId: null,
+          departmentName: null,
+          disposalType: null,
+          disposalReason: null,
+          displayName: null,
+        }),
       ],
     });
 
@@ -280,6 +290,33 @@ describe('AzuosDisposalListView — search, type filter, rows and the restore di
     renderView({ restoring: computer() });
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
     expect(actions.onCancelRestore).toHaveBeenCalled();
+  });
+});
+
+describe('disposal-list-view — the record card', () => {
+  // feliz
+  it('opens the record from the card and asks to restore from its menu', async () => {
+    vi.mocked(actions.onOpenMachine).mockClear();
+    vi.mocked(actions.onAskRestore).mockClear();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const { container } = renderView();
+
+    const strip = container.querySelector('[data-slot="disposal-card-strip"]');
+    expect(strip).toHaveTextContent('Com defeito');
+    await user.click(screen.getByRole('button', { name: /^Ver ficha de / }));
+    expect(actions.onOpenMachine).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole('button', { name: /^Ações de / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Voltar ao inventário' }));
+    expect(actions.onAskRestore).toHaveBeenCalledOnce();
+  });
+
+  // triste
+  it('says the machine is out of use when nobody told why', () => {
+    const { container } = renderView({ computers: [computer({ disposalType: null })] });
+
+    expect(container.querySelector('[data-slot="disposal-card-strip"]')).toHaveTextContent(
+      'Fora de uso',
+    );
   });
 });
 

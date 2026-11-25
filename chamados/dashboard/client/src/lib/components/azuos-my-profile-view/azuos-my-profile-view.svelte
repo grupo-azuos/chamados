@@ -1,16 +1,22 @@
+<!--
+  @component
+  MEU PERFIL — a mesma ficha dos 13 sistemas, no par Svelte da casca padrão.
+
+  Igual ao `AzuosMyProfileView` dos sistemas em React: cartão com a faixa da marca, a foto, os
+  fatos de relance, as seções com índice ao lado e nenhum campo de texto — quem edita a conta é o
+  admin-console. O que é só do Chamados (módulos, WhatsApp, equipe, efeitos) entra pelos encaixes,
+  sempre DEPOIS das seções padrão.
+
+  - `data`: a pessoa, o endereço da conta no admin-console e o tema atual.
+  - `state`: carregando e erro.
+  - `actions`: `onToggleTheme` e `onRetry`.
+  - `slots`: as seções a mais (`extraSections`) e a preferência a mais (`preferencesExtra`).
+
+  Travada pelo hook `protect-app-shell.mjs`. Pedido de mudança vai para o suporte.
+-->
 <script lang="ts" module>
   import type { Component, Snippet } from 'svelte';
 
-  /**
-   * MEU PERFIL — a mesma ficha dos 13 sistemas, no par Svelte da casca padrão.
-   *
-   * Igual ao `AzuosMyProfileView` dos sistemas em React: cartão com a faixa da marca, a foto,
-   * os fatos de relance, as seções com índice ao lado e nenhum campo de texto — quem edita a
-   * conta é o admin-console. O que é só do Chamados (módulos, WhatsApp, equipe, efeitos) entra
-   * pelos encaixes, sempre DEPOIS das seções padrão.
-   *
-   * Travada pelo hook `protect-app-shell.mjs`. Pedido de mudança vai para o suporte.
-   */
   export type MyProfileSystem = { name: string; url: string; roleLabel: string };
 
   export type MyProfilePerson = {
@@ -94,7 +100,7 @@
 
 {#snippet fact(label: string, value: string | null | undefined, Icon: Component)}
   <div class="bg-muted rounded-box flex min-w-0 items-center gap-3 p-3">
-    <span class="bg-muted text-primary rounded-chip flex size-9 shrink-0 items-center justify-center">
+    <span class="rounded-chip bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center">
       <Icon class="size-4" aria-hidden="true" />
     </span>
     <div class="min-w-0">
@@ -109,10 +115,10 @@
 {#snippet card(title: string, Icon: Component, body: Snippet)}
   <section
     aria-label={title}
-    class="bg-card border-border rounded-surface flex flex-col gap-4 border p-4 shadow-xs sm:p-6"
+    class="bg-card rounded-surface flex flex-col gap-4 p-4 sm:p-6 shadow-card"
   >
     <h2 class="text-foreground flex items-center gap-2 text-base font-semibold">
-      <span class="bg-muted text-primary rounded-chip flex size-8 items-center justify-center">
+      <span class="rounded-chip bg-primary/10 text-primary flex size-8 items-center justify-center">
         <Icon class="size-4" aria-hidden="true" />
       </span>
       {title}
@@ -122,7 +128,7 @@
 {/snippet}
 
 {#snippet roleBadge(label: string)}
-  <span class="bg-muted text-primary inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
+  <span class="bg-primary/10 text-primary inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
     {label}
   </span>
 {/snippet}
@@ -142,13 +148,18 @@
 {/snippet}
 
 {#if state?.isLoading}
-  <div role="status" aria-busy="true" class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-10 sm:px-6">
+  <div role="status" aria-busy="true" class="flex w-full flex-col gap-6 px-4 pb-10 sm:px-6">
     <span class="sr-only">Carregando seu perfil…</span>
-    <div class="bg-card border-border rounded-surface overflow-hidden border shadow-xs">
+    <div class="bg-card rounded-surface overflow-hidden shadow-card">
       <div class="bg-muted h-20 animate-pulse"></div>
       <div class="flex flex-col gap-4 p-4 sm:p-6">
         <div class="bg-muted -mt-16 size-24 animate-pulse rounded-full"></div>
         <div class="bg-muted rounded-box h-6 w-56 animate-pulse"></div>
+        <div class="grid gap-3 sm:grid-cols-3">
+          {#each [0, 1, 2] as item (item)}
+            <div class="rounded-box bg-muted h-16 animate-pulse"></div>
+          {/each}
+        </div>
       </div>
     </div>
     <div class="bg-muted rounded-surface h-40 animate-pulse"></div>
@@ -157,8 +168,8 @@
   {@render errorNotice(state?.error ?? 'Não consegui carregar seu perfil.')}
 {:else}
   {@const person = data.person}
-  <section aria-label="Meu perfil" class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-10 sm:px-6">
-    <section aria-label="Identidade" class="bg-card border-border rounded-surface overflow-hidden border shadow-xs">
+  <section aria-label="Meu perfil" class="flex w-full flex-col gap-6 px-4 pb-10 sm:px-6">
+    <section aria-label="Identidade" class="bg-card rounded-surface overflow-hidden shadow-card">
       <div aria-hidden="true" class="bg-primary h-20 sm:h-24"></div>
       <div class="flex flex-col gap-5 px-4 pb-4 sm:px-6 sm:pb-6">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -183,7 +194,7 @@
           {#if data.accountUrl}
             <a
               href={data.accountUrl}
-              class="border-border text-foreground hover:bg-muted rounded-control inline-flex shrink-0 items-center gap-2 self-start border px-3 py-2 text-sm font-medium transition-colors sm:mt-3"
+              class="rounded-button bg-muted text-foreground hover:bg-muted inline-flex shrink-0 items-center gap-2 self-start px-3 py-2 text-sm font-medium transition-colors sm:mt-3"
             >
               <ExternalLink class="size-4" aria-hidden="true" />
               Editar no Admin Console
@@ -272,11 +283,13 @@
 
         <div id="profile-preferences" class="scroll-mt-6">
           {#snippet preferencesBody()}
-            <dl class="flex flex-col gap-4">
-              <div class="flex items-center justify-between gap-4">
+            <!-- `*:sm:col-span-2`: a preferência a mais do sistema (`preferencesExtra`) ocupa a
+                 linha inteira, como o tema; sem isso ela cairia só na primeira coluna. -->
+            <dl class="grid gap-4 sm:grid-cols-2 *:sm:col-span-2">
+              <div class="flex items-center justify-between gap-4 sm:col-span-2">
                 <div class="flex min-w-0 flex-col gap-1">
                   <dt class="text-foreground text-sm font-medium">Tema escuro</dt>
-                  <dd class="text-ink-500 text-xs">Vale para este navegador.</dd>
+                  <dd class="text-ink-500 text-xs">Vale para todos os sistemas do grupo neste navegador.</dd>
                 </div>
                 <button
                   type="button"

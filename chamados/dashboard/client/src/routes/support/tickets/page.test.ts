@@ -14,7 +14,7 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
 
 describe('a rota support/tickets', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
@@ -24,7 +24,7 @@ describe('a rota support/tickets', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -58,9 +58,9 @@ const publicTicket = {
   createdAt: '2026-09-15T12:10:00.000Z',
 };
 
-describe('a rota support/tickets com o link de acesso', () => {
+describe('the support/tickets route with the access link', () => {
   // feliz
-  it('abre o chamado do link e oferece a resposta', async () => {
+  it('opens the linked ticket and offers the reply', async () => {
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
       if (path.startsWith('/tickets/access/')) return publicTicket;
       if (path === '/tickets/mine') return [];

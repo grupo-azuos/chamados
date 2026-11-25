@@ -1,3 +1,16 @@
+<!--
+  @component
+  A SITUAÇÃO DE MANUTENÇÃO de uma máquina, igual no card e na tabela — sem confundir alerta com
+  chamado.
+
+  Empilha, do mais urgente ao mais calmo: o dia agendado com a contagem regressiva, os alertas
+  críticos ativos e a preventiva (vencida, sem registro, em dia com a próxima data, ou não
+  informada). O prazo sai da mesma data que decide o status, para os dois nunca se contradizerem.
+  Máquina arquivada ou descartada aparece só como "Fora de uso". Só leitura.
+
+  - `data.computer`: a preventiva, a última manutenção, os alertas e se está fora de uso.
+  - `data.scheduledFor`: o dia agendado (`AAAA-MM-DD`), que vem da Manutenção, não da máquina.
+-->
 <script lang="ts" module>
   import type { ComputerListItem } from '@template/shared/schemas/computer.schema';
 

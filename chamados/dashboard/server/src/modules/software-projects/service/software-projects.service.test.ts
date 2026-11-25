@@ -1,7 +1,11 @@
 import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { softwareProjectListQuerySchema } from '@template/shared/schemas/software-project.schema';
 import { describe, expect, it, vi } from 'vitest';
 
+import { sql } from 'drizzle-orm';
+
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { type SoftwareProjectRow } from '../../../lib/db/schema/software-projects.schema';
 import { type TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import { type SoftwareProjectsRepository } from '../repository/software-projects.repository';
@@ -49,6 +53,8 @@ function projectRow(overrides: Partial<SoftwareProjectRow> = {}): SoftwareProjec
     createdBy: 'gestor@empresa.com.br',
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }
@@ -57,13 +63,14 @@ function makeService(
   repoOverrides: Partial<SoftwareProjectsRepository> = {},
   timelineOverrides: Partial<SoftwareTimelineRepository> = {},
   githubOverrides: Partial<GithubService> = {},
+  drills?: BoardDrillResolver,
 ) {
   const repository = {
     list: vi.fn().mockResolvedValue({ rows: [projectRow()], total: 1 }),
     findById: vi.fn().mockResolvedValue(projectRow()),
     insert: vi.fn().mockResolvedValue(projectRow()),
     update: vi.fn().mockResolvedValue(projectRow()),
-    remove: vi.fn().mockResolvedValue(undefined),
+    setArchived: vi.fn().mockResolvedValue(undefined),
     countOpenTicketsByProject: vi.fn().mockResolvedValue({ 1: 3 }),
     countPullRequestsByProject: vi.fn().mockResolvedValue({ 1: 5 }),
     ...repoOverrides,
@@ -103,6 +110,8 @@ function makeService(
       githubService,
       assignees,
       connections,
+      undefined,
+      drills,
     ),
     repository,
     timelineRepository,
@@ -127,7 +136,7 @@ describe('SoftwareProjectsService', () => {
     it('returns projects mapped with counts of open tickets and PRs', async () => {
       const { service } = makeService();
 
-      const result = await service.list(user, { page: 1, pageSize: 10 });
+      const result = await service.list(user, { page: 1, pageSize: 10, archived: 'hide' });
 
       expect(result.total).toBe(1);
       expect(result.items[0]).toMatchObject({
@@ -136,6 +145,41 @@ describe('SoftwareProjectsService', () => {
         openTicketsCount: 3,
         pullRequestsCount: 5,
       });
+    });
+
+    // feliz
+    it('narrows the systems to the board block that was clicked', async () => {
+      const cut = sql`true`;
+      const drillCondition = vi.fn().mockResolvedValue(cut);
+      const { service, repository } = makeService({}, {}, {}, { drillCondition });
+      const drill = softwareProjectListQuerySchema.shape.drill.parse(
+        JSON.stringify({
+          source: 'softwareProjects',
+          groupBy: 'status',
+          filterId: null,
+          key: 'active',
+        }),
+      );
+
+      await service.list(user, { page: 1, pageSize: 10, archived: 'hide', drill });
+
+      expect(drillCondition).toHaveBeenCalledWith(
+        user,
+        expect.objectContaining({ key: 'active' }),
+        ['softwareProjects'],
+      );
+      expect(repository.list).toHaveBeenCalledWith(expect.anything(), cut);
+    });
+
+    // triste
+    it('lists without a cut when no block was clicked', async () => {
+      const drillCondition = vi.fn();
+      const { service, repository } = makeService({}, {}, {}, { drillCondition });
+
+      await service.list(user, { page: 1, pageSize: 10, archived: 'hide' });
+
+      expect(drillCondition).not.toHaveBeenCalled();
+      expect(repository.list).toHaveBeenCalledWith(expect.anything(), undefined);
     });
   });
 
@@ -238,17 +282,15 @@ describe('SoftwareProjectsService', () => {
     it('syncs every project and tells which ones failed', async () => {
       const { service, githubService } = makeService(
         {
-          listAll: vi
-            .fn()
-            .mockResolvedValue([
-              projectRow({ id: 1, name: 'Chamados', githubRepoOwner: 'org', githubRepoName: 'ok' }),
-              projectRow({
-                id: 2,
-                name: 'Paralegal',
-                githubRepoOwner: 'org',
-                githubRepoName: 'fora',
-              }),
-            ]),
+          listAll: vi.fn().mockResolvedValue([
+            projectRow({ id: 1, name: 'Chamados', githubRepoOwner: 'org', githubRepoName: 'ok' }),
+            projectRow({
+              id: 2,
+              name: 'Paralegal',
+              githubRepoOwner: 'org',
+              githubRepoName: 'fora',
+            }),
+          ]),
         },
         {},
         {
@@ -474,12 +516,41 @@ describe('SoftwareProjectsService', () => {
   });
 
   describe('remove', () => {
-    it('removes project when caller has permission', async () => {
+    // feliz
+    it('archives the project when caller has permission, stamping who did it', async () => {
       const { service, repository } = makeService();
 
       await service.remove(admin, 1);
 
-      expect(repository.remove).toHaveBeenCalledWith(1);
+      expect(repository.setArchived).toHaveBeenCalledWith(1, true, admin.id);
+    });
+
+    // triste
+    it('refuses a plain user, without archiving', async () => {
+      const { service, repository } = makeService();
+
+      await expect(service.remove(user, 1)).rejects.toThrow();
+      expect(repository.setArchived).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restore', () => {
+    // feliz
+    it('brings the archived project back', async () => {
+      const { service, repository } = makeService();
+
+      const restored = await service.restore(admin, 1);
+
+      expect(repository.setArchived).toHaveBeenCalledWith(1, false, null);
+      expect(restored.archive).toBeNull();
+    });
+
+    // triste
+    it('refuses a plain user, without restoring', async () => {
+      const { service, repository } = makeService();
+
+      await expect(service.restore(user, 1)).rejects.toThrow();
+      expect(repository.setArchived).not.toHaveBeenCalled();
     });
   });
 

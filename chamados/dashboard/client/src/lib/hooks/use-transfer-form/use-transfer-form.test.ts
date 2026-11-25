@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-transfer-form-harness.test.svelte';
-import { type TransferFormModel } from './use-transfer-form.svelte';
+import {
+  destinationChoices,
+  destinationOf,
+  toDestination,
+  type TransferFormModel,
+} from './use-transfer-form.svelte';
 
 vi.mock('$lib/api/transfers.api', () => ({
   transfersApi: { list: vi.fn(), installedParts: vi.fn(), create: vi.fn() },
@@ -19,7 +24,8 @@ const computer = {
   id: 2,
   name: 'FINANCEIRO-02',
   displayName: 'Financeiro — mesa 2',
-  department: 'financeiro',
+  departmentId: 4, departmentName: 'Financeiro',
+  notes: null,
 } as ComputerListItem;
 
 const other = { id: 3, name: 'CONTABIL-03', displayName: null } as ComputerListItem;
@@ -69,7 +75,7 @@ describe('useTransferFormModel', () => {
   it('opens on the department the machine is in', async () => {
     const model = await mountLoadedModel();
 
-    expect(model.data.toDepartment).toBe('financeiro');
+    expect(model.data.toDepartment).toBe('department:4');
   });
 
   it('lists what is on the machine, everything going along by default', async () => {
@@ -90,14 +96,14 @@ describe('useTransferFormModel', () => {
   it('sends only what stays behind to the server', async () => {
     const model = await mountLoadedModel();
 
-    model.actions.onDepartmentChange('fiscal');
+    model.actions.onDepartmentChange('department:5');
     model.actions.onDestinyChange(7, 'station');
     model.actions.onDestinationChange(7, '3');
     model.actions.onSubmit();
 
     await waitFor(() =>
       expect(transfersApi.create).toHaveBeenCalledWith(2, {
-        toDepartment: 'fiscal',
+        toDepartmentId: 5,
         responsible: undefined,
         note: undefined,
         peripherals: [
@@ -110,7 +116,7 @@ describe('useTransferFormModel', () => {
   it('sends nothing about peripherals when everything goes along', async () => {
     const model = await mountLoadedModel();
 
-    model.actions.onDepartmentChange('fiscal');
+    model.actions.onDepartmentChange('department:5');
     model.actions.onSubmit();
 
     await waitFor(() =>
@@ -128,7 +134,7 @@ describe('useTransferFormModel', () => {
     await waitFor(() =>
       expect(transfersApi.create).toHaveBeenCalledWith(
         2,
-        expect.objectContaining({ toDepartment: null }),
+        expect.objectContaining({ toDepartmentId: null }),
       ),
     );
   });
@@ -137,7 +143,7 @@ describe('useTransferFormModel', () => {
     const onSaved = vi.fn();
     const model = await mountLoadedModel(onSaved);
 
-    model.actions.onDepartmentChange('fiscal');
+    model.actions.onDepartmentChange('department:5');
     model.actions.onSubmit();
 
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
@@ -200,7 +206,7 @@ describe('useTransferFormModel — the free texts and a machine on the shelf', (
     let model!: TransferFormModel;
     render(Harness, {
       props: {
-        computer: { ...computer, department: null } as ComputerListItem,
+        computer: { ...computer, departmentId: null, departmentName: null } as ComputerListItem,
         onSaved: vi.fn(),
         onReady: (ready: TransferFormModel) => (model = ready),
       },
@@ -268,11 +274,35 @@ describe('useTransferFormModel — before the peripherals arrive, and the machin
     vi.mocked(computersApi.list).mockResolvedValue({ items: [computer, other], total: 2, page: 1, pageSize: 100 });
     const model = mountModel();
 
-    model.actions.onDepartmentChange('fiscal');
+    model.actions.onDepartmentChange('department:5');
     model.actions.onSubmit();
 
     await waitFor(() =>
       expect(transfersApi.create).toHaveBeenCalledWith(2, expect.objectContaining({ peripherals: [] })),
     );
+  });
+});
+
+describe('the transfer destination', () => {
+  // feliz
+  it('reads and writes an official department by id, offering only HR departments and the shelf', () => {
+    expect(destinationOf({ departmentId: 4 })).toBe('department:4');
+    expect(destinationOf({ departmentId: null })).toBe('');
+    expect(toDestination('department:4')).toEqual({ toDepartmentId: 4 });
+    expect(
+      destinationChoices([{ id: 4, name: 'Financeiro' }], { departmentId: 4, departmentName: 'Financeiro' }).map(
+        (option) => option.value,
+      ),
+    ).toEqual(['department:4', '']);
+  });
+
+  // triste
+  it('keeps a department that left HR, and turns an old location value into the shelf', () => {
+    expect(toDestination('')).toEqual({ toDepartmentId: null });
+    expect(toDestination('location:RECEPÇÃO')).toEqual({ toDepartmentId: null });
+    expect(destinationChoices([], { departmentId: 9, departmentName: null })[0]).toEqual({
+      value: 'department:9',
+      label: 'Departamento atual (fora da lista do RH)',
+    });
   });
 });

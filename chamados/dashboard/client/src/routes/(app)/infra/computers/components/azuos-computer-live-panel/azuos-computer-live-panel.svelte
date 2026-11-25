@@ -1,3 +1,16 @@
+<!--
+  @component
+  A MÁQUINA AGORA: o painel da última leitura ao vivo do agente — processador, memória, volumes e
+  rede.
+
+  O processador mostra o total e um medidor por núcleo; a memória, o uso e a memória virtual (só
+  quando existe); os volumes, o espaço livre de cada um e a velocidade de leitura e escrita; a rede,
+  só as interfaces com tráfego no instante. Sem nenhuma leitura, explica que o agente ainda não foi
+  instalado. Só leitura.
+
+  - `data.live`: a leitura, ou nulo quando a máquina nunca enviou nada.
+  - `state.isLoading`: a leitura ainda não chegou.
+-->
 <script lang="ts" module>
   import { type ComputerLive } from '@template/shared/schemas/computer-live.schema';
 
@@ -51,8 +64,8 @@
   />
 {:else}
   <div class="grid gap-3 lg:grid-cols-2 lg:items-start">
-    <section aria-label="Uso do processador" class="bg-muted rounded-box min-w-0 border p-4 lg:row-span-2">
-      <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">
+    <section aria-label="Uso do processador" class="bg-muted rounded-box min-w-0 p-4 lg:row-span-2">
+      <h3 class="text-muted-foreground mb-3 text-sm font-medium">
         Processador — {formatPercent(live.cpu.percentTotal)} no total
       </h3>
 
@@ -67,8 +80,8 @@
       {/if}
     </section>
 
-    <section aria-label="Uso da memória" class="bg-muted rounded-box min-w-0 border p-4">
-      <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">Memória</h3>
+    <section aria-label="Uso da memória" class="bg-muted rounded-box min-w-0 p-4">
+      <h3 class="text-muted-foreground mb-3 text-sm font-medium">Memória</h3>
       <UsageMeter
         data={{ label: 'Em uso', percentage: live.memory.usedPercent, detail: memoryDetail }}
       />
@@ -88,8 +101,8 @@
       {/if}
     </section>
 
-    <section aria-label="Uso dos volumes" class="bg-muted rounded-box min-w-0 border p-4">
-      <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">Volumes</h3>
+    <section aria-label="Uso dos volumes" class="bg-muted rounded-box min-w-0 p-4">
+      <h3 class="text-muted-foreground mb-3 text-sm font-medium">Volumes</h3>
 
       {#if live.disks.length === 0}
         <p class="text-ink-500 text-xs">Nenhum volume informado.</p>
@@ -113,8 +126,8 @@
       </p>
     </section>
 
-    <section aria-label="Tráfego de rede" class="bg-muted rounded-box min-w-0 border p-4 lg:col-span-2">
-      <h3 class="text-ink-500 mb-3 text-xs font-semibold tracking-wider uppercase">Rede</h3>
+    <section aria-label="Tráfego de rede" class="bg-muted rounded-box min-w-0 p-4 lg:col-span-2">
+      <h3 class="text-muted-foreground mb-3 text-sm font-medium">Rede</h3>
 
       {#if activeInterfaces.length === 0}
         <p class="text-ink-500 text-xs">Sem tráfego neste instante.</p>

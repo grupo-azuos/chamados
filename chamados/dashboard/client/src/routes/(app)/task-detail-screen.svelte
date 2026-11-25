@@ -1,0 +1,120 @@
+<script lang="ts" module>
+  import { type RoleContext } from '@template/shared/domain/role-context.util';
+
+  export type TaskDetailScreenProps = {
+    area: RoleContext;
+    /** A tarefa; sem ele, a do endereço (`/infra/tasks/12`). */
+    id?: number;
+    /** O voltar de quem embrulha a tela (o diálogo da Rastreabilidade fecha). */
+    onBack?: () => void;
+    /** Dentro de outra tela: o título da aba é dela. */
+    isEmbedded?: boolean;
+  };
+</script>
+
+<script lang="ts">
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
+
+  import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
+  import { useBackTarget } from '$lib/hooks/use-navigation-stack/use-navigation-stack.svelte';
+  import { useTaskDetailModel } from '$lib/hooks/use-task-detail/use-task-detail.svelte';
+  import TaskDetailView from '$lib/components/azuos-task-detail-view/azuos-task-detail-view.svelte';
+  import { taskLinkKindsOf } from '@template/shared/domain/task-flow.util';
+
+  import TaskLinkDialog from '$lib/components/azuos-task-link-dialog/azuos-task-link-dialog.svelte';
+  import { contextPath } from '$lib/navigation/navigation';
+  import TaskFormSlot from './task-form-slot.svelte';
+
+  /**
+   * A rota só compõe: chama o model e entrega para a view (CONTRIBUTING §3).
+   *
+   * A tarefa é uma PÁGINA, e não um modal sobre a lista (como no Paralegal): tem endereço próprio,
+   * que se cola num chamado, e é para onde levam o mapa, o quadro e a timeline. O que mora aqui é
+   * QUAL PEÇA ESTÁ NA FRENTE: o formulário de editar e a confirmação de excluir.
+   */
+  let { area, id: givenId, onBack, isEmbedded = false }: TaskDetailScreenProps = $props();
+
+  const base = $derived(contextPath(area));
+  // svelte-ignore state_referenced_locally
+  const id = givenId ?? Number(page.params.id);
+  const detail = useTaskDetailModel(id);
+  /* "Voltar para o mapa", quando veio de lá: o caminho da pessoa, e não um endereço fixo. */
+  // svelte-ignore state_referenced_locally
+  const back = useBackTarget({ to: `${contextPath(area)}/tasks`, destination: 'as tarefas' });
+  const goBack = $derived(onBack ?? back.onBack);
+  const viewerId = $derived((page.data.user as { id: string } | undefined)?.id ?? '');
+
+  let isEditing = $state(false);
+  let isRemoving = $state(false);
+</script>
+
+<svelte:head>
+  {#if !isEmbedded}
+    <title>{detail.data.task?.title ?? 'Tarefa'}</title>
+  {/if}
+</svelte:head>
+
+<TaskDetailView
+  data={{ ...detail.data, backDestination: isEmbedded ? 'a rastreabilidade' : back.destination, base }}
+  state={detail.state}
+  actions={{
+    ...detail.actions,
+    onBack: goBack,
+    onEdit: () => (isEditing = true),
+    onRemove: () => (isRemoving = true),
+    onRestore: detail.actions.onRestore,
+    onLink: detail.actions.link.onOpen,
+  }}
+/>
+
+{#if isEditing && detail.data.task}
+  <TaskFormSlot
+    {area}
+    task={detail.data.task}
+    {viewerId}
+    people={detail.data.people}
+    onSaved={() => (isEditing = false)}
+    onClose={() => (isEditing = false)}
+  />
+{/if}
+
+<ConfirmDialog
+  data={{
+    title: 'Arquivar a tarefa?',
+    description: `"${detail.data.task?.title ?? ''}" sai de "Em uso" e fica em "Arquivadas", de onde volta pelo Desarquivar.`,
+    confirmLabel: 'Arquivar',
+    confirmingLabel: 'Arquivando…',
+  }}
+  ui={{ tone: 'danger' }}
+  state={{ isOpen: isRemoving, isConfirming: detail.state.isRemoving, error: detail.state.actionError }}
+  actions={{
+    onConfirm: () => detail.actions.onRemove(() => void goto(`${base}/tasks`)),
+    onCancel: () => (isRemoving = false),
+  }}
+/>
+
+<TaskLinkDialog
+  data={{
+    kind: detail.data.linkPicker.kind,
+    term: detail.data.linkPicker.term,
+    options: detail.data.linkPicker.options,
+    selectedIds: detail.data.linkPicker.selected
+      .filter((item) => item.kind === detail.data.linkPicker.kind)
+      .map((item) => item.targetId),
+    kinds: taskLinkKindsOf(area),
+  }}
+  state={{
+    isOpen: detail.data.linkPicker.isOpen,
+    isSaving: detail.state.isBusy,
+    isSearching: detail.data.linkPicker.isSearching,
+    error: detail.state.actionError,
+  }}
+  actions={{
+    onKindChange: detail.actions.link.onKindChange,
+    onSearch: detail.actions.link.onSearch,
+    onToggle: detail.actions.link.onToggle,
+    onConfirm: detail.actions.link.onConfirm,
+    onClose: detail.actions.link.onClose,
+  }}
+/>

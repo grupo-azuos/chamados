@@ -6,13 +6,12 @@ import {
   SOFTWARE_PROJECT_COLORS,
   scheduleEndTimeError,
 } from '../domain/software-project.util';
+import { archivedFilterSchema, archiveSchema } from './archive.schema';
 import { partialUpdate } from './partial-update.schema';
 
 export const scheduleCategorySchema = z.enum(SCHEDULE_EVENT_CATEGORIES);
 export const scheduleKindSchema = z.enum(SCHEDULE_EVENT_KINDS);
-export const scheduleColorSchema = z.enum(
-  [...SOFTWARE_PROJECT_COLORS, 'neutral', 'red'] as const,
-);
+export const scheduleColorSchema = z.enum([...SOFTWARE_PROJECT_COLORS, 'neutral', 'red'] as const);
 
 export const softwareScheduleEventSchema = z.object({
   id: z.number().int(),
@@ -36,6 +35,8 @@ export const softwareScheduleEventSchema = z.object({
   createdById: z.string().nullable(),
   createdByEmail: z.string(),
   createdByName: z.string(),
+  /** Nulo em uso; excluir arquiva o item da Agenda, e o "Desfazer" devolve. */
+  archive: archiveSchema,
 });
 
 export type SoftwareScheduleEvent = z.infer<typeof softwareScheduleEventSchema>;
@@ -84,6 +85,7 @@ export type UpdateSoftwareScheduleEventInput = z.infer<typeof updateSoftwareSche
 export const softwareScheduleQuerySchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  archived: archivedFilterSchema,
 });
 
 export type SoftwareScheduleQuery = z.infer<typeof softwareScheduleQuerySchema>;

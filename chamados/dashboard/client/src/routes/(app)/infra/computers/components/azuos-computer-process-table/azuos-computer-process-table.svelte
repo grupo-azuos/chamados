@@ -1,3 +1,16 @@
+<!--
+  @component
+  OS APLICATIVOS QUE MAIS GASTAM na leitura ao vivo da máquina: nome, processador e memória.
+
+  Mostra só os primeiros (10 por padrão); o resto vira a linha "e mais N aplicativos com consumo
+  menor". Quando um aplicativo abre vários processos (o Chrome, um por aba), diz quantos são, para
+  o número de memória não parecer absurdo para um "programa só". Tem o estado de lendo e o de
+  leitura sem aplicativos.
+
+  - `data.processes`: a lista que o agente mandou, já na ordem de consumo.
+  - `ui.limit`: quantos mostrar.
+  - `state.isLoading`: a leitura ainda não chegou.
+-->
 <script lang="ts" module>
   import { type ComputerLive } from '@template/shared/schemas/computer-live.schema';
 

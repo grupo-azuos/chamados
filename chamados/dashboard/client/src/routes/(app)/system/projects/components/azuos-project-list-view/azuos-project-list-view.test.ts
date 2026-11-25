@@ -20,6 +20,7 @@ const project: SoftwareProject = {
   pullRequestsCount: 7,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: null,
+  archive: null,
 };
 
 function renderView(
@@ -75,8 +76,8 @@ describe('AzuosProjectListView', () => {
     const actions = renderView({ state: { canEdit: false } });
     expect(screen.queryByRole('button', { name: /novo sistema/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /sincronizar/i })).not.toBeInTheDocument();
-    expect(screen.queryByTitle('Editar')).not.toBeInTheDocument();
-    expect(screen.queryByTitle('Excluir')).not.toBeInTheDocument();
+    /* Sem sincronizar nem editar, o card não tem menu. */
+    expect(screen.queryByRole('button', { name: 'Ações de Azuos Ticket' })).not.toBeInTheDocument();
     /* O botão virou "Ver sistema" quando a página de cada sistema nasceu (a timeline mora nela). */
     await userEvent.click(screen.getByRole('button', { name: /ver sistema/i }));
     expect(actions.onViewTimeline).toHaveBeenCalledWith(project);
@@ -102,8 +103,9 @@ describe('AzuosProjectListView', () => {
   it('triggers sync action on clicking Sincronizar', async () => {
     const actions = renderView();
 
-    const syncBtn = screen.getByRole('button', { name: /sincronizar/i });
-    await userEvent.click(syncBtn);
+    /* Sincronizar mora no menu de três pontinhos do card. */
+    await userEvent.click(screen.getByRole('button', { name: 'Ações de Azuos Ticket' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Sincronizar' }));
 
     expect(actions.onSyncGithub).toHaveBeenCalledWith(1);
   });
@@ -172,7 +174,9 @@ describe('AzuosProjectListView — messages, filters, cards and deletion', () =>
   // triste
   it('tells a manager to wait for an administrator when there is nothing registered', () => {
     renderView({ state: { isEmpty: true, canEdit: false } });
-    expect(screen.getByText('Aguarde um administrador cadastrar os sistemas da equipe.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Aguarde um administrador cadastrar os sistemas da equipe.'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cadastrar Sistema' })).not.toBeInTheDocument();
   });
 
@@ -193,18 +197,32 @@ describe('AzuosProjectListView — messages, filters, cards and deletion', () =>
     const actions = renderView({
       data: {
         items: [
-          { ...project, description: null, responsibleName: 'Ana Lima', repositoryUrl: 'https://github.com/example/portal', githubRepoOwner: null, githubRepoName: null, status: 'maintenance' },
+          {
+            ...project,
+            description: null,
+            responsibleName: 'Ana Lima',
+            repositoryUrl: 'https://github.com/example/portal',
+            githubRepoOwner: null,
+            githubRepoName: null,
+            status: 'maintenance',
+          },
         ],
       },
     });
     expect(screen.getByText('Sem descrição cadastrada.')).toBeInTheDocument();
     expect(screen.getByText('Ana Lima')).toBeInTheDocument();
-    expect(screen.getByRole('link')).toHaveAttribute('href', 'https://github.com/example/portal');
-    await userEvent.click(screen.getByRole('button', { name: 'Ver sistema' }));
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', 'https://github.com/example/portal');
+    expect(link).toHaveAttribute('target', '_blank');
+    await userEvent.click(screen.getByRole('button', { name: /^Ver sistema/ }));
     expect(actions.onViewTimeline).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
-    await userEvent.click(screen.getByTitle('Editar'));
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const menu = screen.getByRole('button', { name: /^Ações de/ });
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
     expect(actions.onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
-    await userEvent.click(screen.getByTitle('Excluir'));
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
     expect(actions.onAskDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
 
@@ -212,7 +230,9 @@ describe('AzuosProjectListView — messages, filters, cards and deletion', () =>
   it('confirms or cancels the deletion in the dialog', async () => {
     const actions = renderView({ data: { deleting: project } });
     const dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveTextContent('Tem certeza que deseja excluir "Azuos Ticket"?');
+    expect(dialog).toHaveTextContent(
+      '"Azuos Ticket" sai da lista, com a linha do tempo e os chamados guardados.',
+    );
     await userEvent.click(within(dialog).getByRole('button', { name: 'Excluir' }));
     expect(actions.onConfirmDelete).toHaveBeenCalledOnce();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));

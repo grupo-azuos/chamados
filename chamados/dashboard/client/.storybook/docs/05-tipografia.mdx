@@ -1,0 +1,39 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Fundamentos/Tipografia" />
+
+# Tipografia
+
+A fonte é a **do sistema**: SF Pro no Mac e no iPhone, Segoe UI no Windows, Roboto no Android.
+Ela vem dos tokens `--brand-font-sans` e `--brand-font-heading`.
+
+<div
+  style={{
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+    padding: 24,
+    background: 'var(--card)',
+    borderRadius: 'var(--shape-card)',
+    boxShadow: 'var(--elevation-card)',
+    fontFamily: 'var(--brand-font-sans)',
+    color: 'var(--foreground)',
+  }}
+>
+  <span style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.02em' }}>Título da tela</span>
+  <span style={{ fontSize: 20, fontWeight: 700 }}>Título de seção</span>
+  <span style={{ fontSize: 16 }}>Texto corrido, que a pessoa lê com calma.</span>
+  <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--muted-foreground)' }}>
+    Rótulo de card, em frase
+  </span>
+  <span style={{ fontSize: 30, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>1.284</span>
+</div>
+
+## Regras
+
+- **Rótulo em frase**, em cinza de apoio: "Alvarás vencidos", e não "ALVARÁS VENCIDOS". Caixa alta
+  espaçada é do visual antigo, e o check de design (`mise run design:check`) avisa.
+- **Número de painel** grande, em negrito e com `tabular-nums` (os dígitos com a mesma largura não
+  "dançam" quando o número muda).
+- **Tamanho pela escala** do Tailwind (`text-sm`, `text-base`, `text-xl`…), nunca em pixel solto.
+- No celular, campo de formulário com 16px no mínimo (evita o zoom automático).

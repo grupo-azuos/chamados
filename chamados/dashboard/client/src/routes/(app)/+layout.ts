@@ -4,6 +4,7 @@ import { type SessionUser } from '@template/shared/schemas/user.schema';
 import { modulesOf } from '@template/shared/domain/module-access.util';
 
 import { authApi } from '$lib/api/auth.api';
+import { sidebarOpenFromCookie } from '$lib/utils/sidebar-state.util';
 
 /**
  * A GUARDA de sessão: todo o painel interno mora dentro deste grupo de rota, e ninguém
@@ -19,14 +20,16 @@ import { authApi } from '$lib/api/auth.api';
  * Qualquer falha de autenticação (401) sobe em vez de mascarar com redirecionamento,
  * garantindo que a pessoa entre pelo login.
  */
-export async function load(): Promise<{ user: SessionUser }> {
+export async function load(): Promise<{ user: SessionUser; sidebarOpen: boolean }> {
   const user = await loadUser();
 
   /* Quem não tem módulo nenhum só abre e acompanha chamado pelo /support e valida documentos.
      Todo o painel interno é de algum módulo, então a pessoa sem módulos vai direto para a Central. */
   if (modulesOf(user).length === 0) redirect(307, '/support');
 
-  return { user };
+  /* A barra aberta ou recolhida, como a pessoa deixou. Lida aqui, junto da casca, que é uma
+     só para o painel inteiro — no navegador, não no servidor: a tela é um SPA estático. */
+  return { user, sidebarOpen: sidebarOpenFromCookie(document.cookie) };
 }
 
 async function loadUser(): Promise<SessionUser> {

@@ -1,3 +1,26 @@
+<!--
+  @component
+  O HISTÓRICO DE MANUTENÇÃO: o que já foi feito em cada equipamento, do mais recente para o mais
+  antigo.
+
+  O quadro de preventivas (`AzuosPreventiveBoard`) fica ACIMA da lista de propósito: ele responde
+  "o que falta fazer", e a lista responde "o que já foi feito". Quem abre a tela de manhã está atrás
+  da primeira pergunta. Depois vêm a busca, o filtro de tipo, a alternância entre cards (celular) e
+  tabela (monitor) e a paginação. Cada registro mostra a máquina (pelo apelido) ou o equipamento de
+  fora, o tipo, a data, quem fez, "Corrigir" e "Excluir" — que pergunta antes; o registro vai para
+  "Removidos", onde dá para desfazer. Lista cortada avisa, em vez de esconder o tamanho do
+  histórico.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro.
+
+  - `data`: `maintenances`, `total`, `preventive`, `schedules`, `filter`, `removing` e `paging`.
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated`,
+    `isPreventiveLoading`, `isRemoving`, `error` e `actionError`.
+  - `actions`: filtros (`onSearchChange`, `onTypeChange`, `onClearFilters`), `onPageChange`,
+    `onRetry`, `onRegister(computerId?)`, `onEdit` e a exclusão (`onAskRemove`, `onCancelRemove`,
+    `onConfirmRemove`).
+-->
 <script lang="ts" module>
   import { departmentLabel } from '@template/shared/domain/department.util';
   import {
@@ -90,10 +113,18 @@
 
     return maintenance.otherMachine ?? 'Equipamento não identificado';
   }
+
+  /** Onde a máquina mora: o departamento dela, ou o aviso de que está fora do inventário. */
+  export function placeOf(maintenance: Maintenance): string {
+    if (!maintenance.computerId) return 'Fora do inventário';
+
+    return maintenance.computerDepartment ? departmentLabel(maintenance.computerDepartment) : 'Sem departamento';
+  }
 </script>
 
 <script lang="ts">
   import FilterX from '@lucide/svelte/icons/filter-x';
+  import Pencil from '@lucide/svelte/icons/pencil';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
   import Trash2 from '@lucide/svelte/icons/trash-2';
@@ -120,8 +151,8 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
   import { formatDate } from '$lib/utils/format-date';
 
@@ -132,7 +163,7 @@
   const hasActiveFilter = $derived(Boolean(data.filter.search || data.filter.type));
 </script>
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Manutenção',
@@ -244,64 +275,44 @@
       data-slot="maintenance-cards-mobile"
     >
       {#each data.maintenances as maintenance (maintenance.id)}
-        <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
-        <div
-          use:fillFromPointer
-          style:--fill-color={fillColorOf(maintenanceTypeTone(maintenance.type))}
-          class="hover-fill border-border bg-card rounded-surface border p-4 shadow-xs"
+        <!-- O cartão de registro do sistema: o card inteiro abre a correção; editar e excluir
+             moram no menu de três pontinhos. -->
+        <ContentCard
+          data={{
+            label: `Editar a manutenção de ${machineLabelOf(maintenance)}`,
+            title: machineLabelOf(maintenance),
+            code: maintenance.computerId ? maintenance.computerName : null,
+            meta: placeOf(maintenance),
+            status: { label: maintenanceTypeLabel(maintenance.type), tone: maintenanceTypeTone(maintenance.type) },
+            footer: {
+              title: maintenance.performedBy ?? 'Sem responsável',
+              subtitle: formatDate(maintenance.performedAt),
+              person: maintenance.performedBy ? { name: maintenance.performedBy } : null,
+            },
+            openLabel: 'Editar',
+            menu: {
+              label: `Ações da manutenção de ${machineLabelOf(maintenance)}`,
+              items: [
+                { id: 'edit', label: 'Editar', icon: Pencil },
+                { id: 'remove', label: 'Excluir', icon: Trash2, isDestructive: true, separatorBefore: true },
+              ],
+            },
+          }}
+          ui={{
+            icon: Wrench,
+            iconTone: maintenanceTypeTone(maintenance.type),
+            slot: 'maintenance-card',
+          }}
+          actions={{
+            onOpen: () => actions.onEdit(maintenance),
+            onMenuSelect: (id) =>
+              id === 'remove' ? actions.onAskRemove(maintenance) : actions.onEdit(maintenance),
+          }}
         >
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0 flex-1">
-              <span class="block font-medium text-ink-900 break-words leading-snug">
-                {machineLabelOf(maintenance)}
-              </span>
-              <span class="block text-xs text-ink-500 break-words leading-tight mt-0.5">
-                {#if maintenance.computerId}
-                  {maintenance.computerName}
-                  {#if maintenance.computerDepartment}
-                    · {departmentLabel(maintenance.computerDepartment)}
-                  {/if}
-                {:else}
-                  Fora do inventário
-                {/if}
-              </span>
-            </div>
-            <StatusBadge
-              data={{ label: maintenanceTypeLabel(maintenance.type) }}
-              ui={{ tone: maintenanceTypeTone(maintenance.type), size: 'sm' }}
-            />
-          </div>
-
-          <p class="text-ink-700 mt-2 text-sm break-words">
-            {maintenance.description ?? '—'}
-          </p>
-
-          <div class="mt-2 flex items-center justify-between text-xs text-ink-500">
-            <span>{formatDate(maintenance.performedAt)}</span>
-            {#if maintenance.performedBy}
-              <span>Por: {maintenance.performedBy}</span>
-            {/if}
-          </div>
-
-          <div class="border-border mt-3 flex items-center justify-end gap-2 border-t pt-2">
-            <ActionButton
-              data={{ label: 'Corrigir' }}
-              ui={{ variant: 'secondary', size: 'sm' }}
-              actions={{ onClick: () => actions.onEdit(maintenance) }}
-            />
-            <ActionButton
-              data={{ label: 'Excluir' }}
-              ui={{
-                variant: 'ghost',
-                size: 'sm',
-                icon: Trash2,
-                isIconOnly: true,
-                className: 'text-ink-500 hover:text-destructive hover:bg-muted',
-              }}
-              actions={{ onClick: () => actions.onAskRemove(maintenance) }}
-            />
-          </div>
-        </div>
+          {#snippet body()}
+            <p class="text-ink-700 line-clamp-3 text-xs break-words">{maintenance.description ?? '—'}</p>
+          {/snippet}
+        </ContentCard>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">
@@ -417,7 +428,7 @@
   data={{
     title: 'Excluir esta manutenção?',
     description: data.removing
-      ? `O registro de ${formatDate(data.removing.performedAt)} em ${machineLabelOf(data.removing)} sai do histórico. Não dá para desfazer.`
+      ? `O registro de ${formatDate(data.removing.performedAt)} em ${machineLabelOf(data.removing)} sai do histórico. Ele fica em "Removidos", onde dá para desfazer.`
       : '',
     confirmLabel: 'Excluir manutenção',
     confirmingLabel: 'Excluindo…',

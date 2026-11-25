@@ -3,6 +3,7 @@ import {
   assignRolesSchema,
   internalRoleSchema,
 } from '@template/shared/schemas/internal-role.schema';
+import { archivedQuerySchema } from '@template/shared/schemas/archive.schema';
 import { directoryUserSchema } from '@template/shared/schemas/user.schema';
 import { createZodDto } from '../../../lib/http/zod-dto';
 import { z } from 'zod';
@@ -12,6 +13,7 @@ import { z } from 'zod';
  * Nascem dos schemas Zod em `@template/shared` para paridade total entre API e cliente.
  */
 export class InternalRoleDto extends createZodDto(internalRoleSchema) {}
+export class InternalRoleListQueryDto extends createZodDto(archivedQuerySchema) {}
 export class AssignRoleDto extends createZodDto(assignRoleSchema) {}
 export class AssignRolesDto extends createZodDto(assignRolesSchema) {}
 export class InternalRoleListDto extends createZodDto(z.array(internalRoleSchema)) {}

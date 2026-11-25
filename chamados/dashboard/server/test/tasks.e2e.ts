@@ -1,0 +1,664 @@
+import { type INestApplication } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
+import request from 'supertest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+
+import { computers } from '../src/lib/db/schema/computers.schema';
+import { tasks } from '../src/lib/db/schema/tasks.schema';
+import { parts } from '../src/lib/db/schema/parts.schema';
+import { softwareBranches, softwareCommits } from '../src/lib/db/schema/software-git.schema';
+import { softwareProjects } from '../src/lib/db/schema/software-projects.schema';
+import { ticketStockItems } from '../src/lib/db/schema/ticket-stock-items.schema';
+import { tickets } from '../src/lib/db/schema/tickets.schema';
+import { TasksService } from '../src/modules/tasks/service/tasks.service';
+import { ANA, CAIO, asAna, asBia, asOlga, createE2eApp, type E2eApp } from './support/e2e-app.util';
+
+/**
+ * AS TAREFAS de ponta a ponta, contra um Postgres de verdade: a migration, o chamado de infra
+ * virando tarefa (e a tarefa acompanhando o encerramento), a tarefa à mão com etapas e vínculos,
+ * e a manutenção vencida virando tarefa da máquina.
+ *
+ * Sem `TEST_DATABASE_URL` a suíte é pulada, e não falha.
+ */
+const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+
+const PEDIDO = {
+  requesterName: 'Marta da Recepção',
+  area: 'infra',
+  department: 'RECEPÇÃO',
+  problemType: 'printer',
+  contactPhone: '62 99999-1234',
+  description: 'A impressora da recepção não puxa papel desde ontem.',
+};
+
+describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
+  let started: E2eApp;
+  let app: INestApplication;
+  const api = () => request(app.getHttpServer());
+
+  /** A tarefa do chamado nasce em segundo plano: espera ela aparecer. */
+  async function taskOfTicket(ticketId: number) {
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const [row] = await started.db.select().from(tasks).where(eq(tasks.ticketId, ticketId));
+      if (row) return row;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error(`A tarefa do chamado ${ticketId} não apareceu`);
+  }
+
+  beforeAll(async () => {
+    /* A rodada de manutenção ao subir escreveria junto com o `truncate` de cada teste; aqui ela
+       é chamada à mão, no momento certo. */
+    process.env.BACKGROUND_JOBS_ENABLED = 'false';
+    started = await createE2eApp(testDatabaseUrl!, {
+      people: [
+        { id: ANA.id, name: ANA.name, email: ANA.email, image: null },
+        { id: CAIO.id, name: CAIO.name, email: CAIO.email, image: null },
+      ],
+    });
+    app = started.app;
+  });
+
+  beforeEach(async () => {
+    await started.truncate(
+      'ticket_stock_items',
+      'parts',
+      'history',
+      'task_stages',
+      'tasks',
+      'ticket_histories',
+      'tickets',
+      'maintenances',
+      'maintenance_schedules',
+      'computers',
+      'software_branches',
+      'software_commits',
+      'software_projects',
+    );
+  });
+
+  afterAll(async () => {
+    await app.close();
+    delete process.env.BACKGROUND_JOBS_ENABLED;
+  });
+
+  // feliz
+  it('turns an infra ticket into a task that finishes when the ticket is resolved', async () => {
+    const opened = await api().post('/api/v1/tickets').set(asAna()).send(PEDIDO).expect(201);
+    const ticketId = opened.body.id as number;
+
+    const task = await taskOfTicket(ticketId);
+    expect(task).toMatchObject({ area: 'infra', origin: 'ticket', status: 'open' });
+
+    await api()
+      .post(`/api/v1/tickets/${ticketId}/histories`)
+      .set(asAna())
+      .send({ type: 'start', description: 'Peguei o chamado.' })
+      .expect(201);
+    await api()
+      .post(`/api/v1/tickets/${ticketId}/histories`)
+      .set(asAna())
+      .send({ type: 'resolution', description: 'Troquei o rolete.' })
+      .expect(201);
+
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const [row] = await started.db.select().from(tasks).where(eq(tasks.id, task.id));
+      if (row?.status === 'done') break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    const [finished] = await started.db.select().from(tasks).where(eq(tasks.id, task.id));
+    expect(finished).toMatchObject({ status: 'done', ownerId: ANA.id });
+    expect(finished?.finishedAt).toBeInstanceOf(Date);
+  });
+
+  // feliz
+  it('creates a task by hand with steps and links, and finishes it on the last step', async () => {
+    const opened = await api().post('/api/v1/tickets').set(asAna()).send(PEDIDO).expect(201);
+    await taskOfTicket(opened.body.id as number);
+
+    const created = await api()
+      .post('/api/v1/tasks')
+      .set(asAna())
+      .send({
+        area: 'infra',
+        title: 'Trocar o switch da sala 2',
+        startDate: '2026-11-23',
+        dueDate: '2026-11-30',
+        steps: ['Comprar', 'Instalar'],
+        links: [{ kind: 'ticket', targetId: opened.body.id }],
+      })
+      .expect(201);
+
+    expect(created.body).toMatchObject({
+      origin: 'manual',
+      status: 'open',
+      owner: { id: ANA.id, name: ANA.name },
+      progress: { done: 0, total: 2 },
+      links: [{ kind: 'ticket', label: expect.stringMatching(/^CH-\d{4}$/) }],
+    });
+
+    const [first, second] = created.body.steps as { id: number }[];
+    await api()
+      .patch(`/api/v1/tasks/${created.body.id}/steps/${first!.id}`)
+      .set(asAna())
+      .send({ done: true })
+      .expect(200);
+    const done = await api()
+      .patch(`/api/v1/tasks/${created.body.id}/steps/${second!.id}`)
+      .set(asAna())
+      .send({ done: true })
+      .expect(200);
+
+    expect(done.body).toMatchObject({ status: 'done', progress: { done: 2, total: 2 } });
+    /* Quem marcou cada etapa e quem criou aparecem na página da tarefa ("feita por", "Criada por"). */
+    expect(done.body.steps[0]).toMatchObject({
+      done: true,
+      doneBy: { id: ANA.id, name: ANA.name },
+    });
+    expect(done.body.createdBy).toMatchObject({ id: ANA.id, name: ANA.name });
+
+    /* A linha do tempo lê o Histórico: a mais nova primeiro, com o nome de quem fez. */
+    const timeline = await api()
+      .get(`/api/v1/tasks/${created.body.id}/history`)
+      .set(asAna())
+      .expect(200);
+    expect(timeline.body.map((entry: { action: string }) => entry.action)).toEqual([
+      'setStepDone',
+      'setStepDone',
+      'create',
+    ]);
+    expect(timeline.body[0]).toMatchObject({
+      actorName: ANA.name,
+      changes: [{ field: 'done', to: true }],
+    });
+
+    const list = await api().get('/api/v1/tasks').query({ area: 'infra' }).set(asAna()).expect(200);
+    expect(list.body.total).toBe(2);
+  });
+
+  // triste
+  it('refuses a link to something that does not exist and a manager that only reads', async () => {
+    await api()
+      .post('/api/v1/tasks')
+      .set(asAna())
+      .send({
+        area: 'infra',
+        title: 'Fantasma',
+        startDate: '2026-11-23',
+        links: [{ kind: 'computer', targetId: 999 }],
+      })
+      .expect(422);
+
+    await api()
+      .post('/api/v1/tasks')
+      .set(asBia())
+      .send({ area: 'infra', title: 'Sem permissão', startDate: '2026-11-23' })
+      .expect(403);
+  });
+
+  // triste
+  it('does not let a ticket task be finished by hand, and archiving keeps it out of "Em uso"', async () => {
+    const opened = await api().post('/api/v1/tickets').set(asAna()).send(PEDIDO).expect(201);
+    const task = await taskOfTicket(opened.body.id as number);
+
+    await api()
+      .post(`/api/v1/tasks/${task.id}/status`)
+      .set(asAna())
+      .send({ status: 'done' })
+      .expect(422);
+    /* Excluir ARQUIVA (qualquer origem): sai de "Em uso", aparece em "Arquivadas" e volta. */
+    await api().delete(`/api/v1/tasks/${task.id}`).set(asAna()).expect(204);
+    const inUse = await api()
+      .get('/api/v1/tasks')
+      .query({ area: 'infra' })
+      .set(asAna())
+      .expect(200);
+    expect(inUse.body.items.map((item: { id: number }) => item.id)).not.toContain(task.id);
+    const archived = await api()
+      .get('/api/v1/tasks')
+      .query({ area: 'infra', archived: 'only' })
+      .set(asAna())
+      .expect(200);
+    expect(archived.body.items[0]).toMatchObject({ id: task.id, archive: { archivedBy: ANA.id } });
+    await api()
+      .post(`/api/v1/tasks/${task.id}/status`)
+      .set(asAna())
+      .send({ status: 'done' })
+      .expect(422);
+    const restored = await api().post(`/api/v1/tasks/${task.id}/restore`).set(asAna()).expect(201);
+    expect(restored.body.archive).toBeNull();
+  });
+
+  // feliz
+  it('opens a maintenance task for a machine whose preventive is overdue, once', async () => {
+    const [machine] = await started.db
+      .insert(computers)
+      .values({
+        name: 'RECEPCAO-D01',
+        tokenHash: 'hash-da-recepcao',
+        createdBy: 'ti@empresa.com.br',
+      })
+      .returning();
+    const service = app.get(TasksService);
+
+    const first = await service.syncMaintenance(new Date('2026-11-23T12:00:00Z'));
+    const again = await service.syncMaintenance(new Date('2026-11-23T12:00:00Z'));
+
+    /* Máquina sem preventiva nenhuma não tem data de partida: nada vence, nada abre. */
+    expect(first).toEqual({ opened: 0, finished: 0 });
+    expect(again).toEqual({ opened: 0, finished: 0 });
+
+    await started.db.execute(
+      `insert into chamados.maintenances (computer_id, type, performed_at, created_by)
+       values (${machine!.id}, 'preventive', '2026-07-01T12:00:00Z', 'ti@empresa.com.br')`,
+    );
+    expect(await service.syncMaintenance(new Date('2026-11-23T12:00:00Z'))).toEqual({
+      opened: 1,
+      finished: 0,
+    });
+    expect(await service.syncMaintenance(new Date('2026-11-23T12:00:00Z'))).toEqual({
+      opened: 0,
+      finished: 0,
+    });
+
+    const [task] = await started.db.select().from(tasks).where(eq(tasks.computerId, machine!.id));
+    expect(task).toMatchObject({
+      origin: 'maintenance',
+      status: 'open',
+      title: 'Preventiva — RECEPCAO-D01',
+    });
+
+    /* A preventiva registrada: a máquina não pede mais, e a tarefa finaliza. */
+    await started.db.execute(
+      `insert into chamados.maintenances (computer_id, type, performed_at, created_by)
+       values (${machine!.id}, 'preventive', '2026-11-23T11:00:00Z', 'ti@empresa.com.br')`,
+    );
+    expect(await service.syncMaintenance(new Date('2026-11-23T12:00:00Z'))).toEqual({
+      opened: 0,
+      finished: 1,
+    });
+    const [closed] = await started.db.select().from(tasks).where(eq(tasks.id, task!.id));
+    expect(closed?.status).toBe('done');
+  });
+
+  // feliz
+  it('registering the maintenance finishes the machine task in the name of who did it', async () => {
+    const [machine] = await started.db
+      .insert(computers)
+      .values({ name: 'FISCAL-D02', tokenHash: 'hash-fiscal', createdBy: 'ti@empresa.com.br' })
+      .returning();
+    await started.db.execute(
+      `insert into chamados.maintenances (computer_id, type, performed_at, created_by)
+       values (${machine!.id}, 'preventive', '2026-07-01T12:00:00Z', 'ti@empresa.com.br')`,
+    );
+    await app.get(TasksService).syncMaintenance(new Date());
+    const [open] = await started.db.select().from(tasks).where(eq(tasks.computerId, machine!.id));
+    expect(open?.status).toBe('open');
+
+    await api()
+      .post('/api/v1/maintenances')
+      .set(asAna())
+      .send({
+        computerId: machine!.id,
+        type: 'preventive',
+        description: 'Limpeza e troca de pasta térmica',
+        performedAt: new Date().toISOString(),
+        performedByIds: [CAIO.id, ANA.id],
+      })
+      .expect(201);
+
+    const task = await api().get(`/api/v1/tasks/${open!.id}`).set(asAna()).expect(200);
+    expect(task.body).toMatchObject({ status: 'done', owner: { id: CAIO.id } });
+    expect(task.body.people.map((person: { id: string }) => person.id)).toEqual([ANA.id]);
+    expect(task.body.progress.done).toBe(task.body.progress.total);
+
+    const timeline = await api().get(`/api/v1/tasks/${open!.id}/history`).set(asAna()).expect(200);
+    expect(timeline.body[0]).toMatchObject({ action: 'registerMaintenance' });
+    expect(timeline.body[0].changes).toEqual(
+      expect.arrayContaining([
+        { field: 'maintenance', from: null, to: 'Preventiva: Limpeza e troca de pasta térmica' },
+        { field: 'performedByIds', from: null, to: [CAIO.id, ANA.id] },
+      ]),
+    );
+
+    /* Sem tarefa aberta (a corretiva), a tarefa nasce finalizada — e conta para quem fez. */
+    await api()
+      .post('/api/v1/maintenances')
+      .set(asAna())
+      .send({ computerId: machine!.id, type: 'corrective', performedAt: new Date().toISOString() })
+      .expect(201);
+    const done = await started.db.select().from(tasks).where(eq(tasks.computerId, machine!.id));
+    const corrective = done.find((row) => row.title === 'Corretiva — FISCAL-D02');
+    expect(corrective).toMatchObject({ status: 'done', ownerId: ANA.id, origin: 'maintenance' });
+  });
+
+  // feliz
+  it('writes a note on the task timeline, with who wrote it', async () => {
+    const created = await api()
+      .post('/api/v1/tasks')
+      .set(asAna())
+      .send({ area: 'infra', title: 'Trocar o monitor da recepção', startDate: '2026-11-25' })
+      .expect(201);
+
+    await api()
+      .post(`/api/v1/tasks/${created.body.id}/notes`)
+      .set(asAna())
+      .send({ note: 'Liguei para a usuária, a máquina fica livre às 14h.' })
+      .expect(201);
+
+    const timeline = await api()
+      .get(`/api/v1/tasks/${created.body.id}/history`)
+      .set(asAna())
+      .expect(200);
+    expect(timeline.body[0]).toMatchObject({ action: 'addNote', actorName: 'Ana' });
+    expect(timeline.body[0].changes).toEqual([
+      { field: 'note', from: null, to: 'Liguei para a usuária, a máquina fica livre às 14h.' },
+    ]);
+
+    // triste
+    await api()
+      .post(`/api/v1/tasks/${created.body.id}/notes`)
+      .set(asAna())
+      .send({ note: '   ' })
+      .expect(400);
+  });
+
+  // feliz
+  it('creates stages of the team, moves a task through them and finishing takes it out', async () => {
+    const waiting = await api()
+      .post('/api/v1/task-stages')
+      .set(asAna())
+      .send({ area: 'infra', label: 'Aguardando peça', color: '#FF9500', icon: 'hourglass' })
+      .expect(201);
+    const supplier = await api()
+      .post('/api/v1/task-stages')
+      .set(asAna())
+      .send({ area: 'infra', label: 'Com o fornecedor', color: '#5856d6' })
+      .expect(201);
+    expect(waiting.body).toMatchObject({
+      label: 'Aguardando peça',
+      color: '#ff9500',
+      icon: 'hourglass',
+      position: 0,
+      archivedAt: null,
+    });
+    expect(supplier.body.position).toBe(1);
+
+    const moved = await api()
+      .post(`/api/v1/task-stages/${supplier.body.id}/move`)
+      .set(asAna())
+      .send({ direction: -1 })
+      .expect(201);
+    expect(moved.body.map((stage: { label: string }) => stage.label)).toEqual([
+      'Com o fornecedor',
+      'Aguardando peça',
+    ]);
+
+    const task = await api()
+      .post('/api/v1/tasks')
+      .set(asAna())
+      .send({ area: 'infra', title: 'Trocar a fonte', startDate: '2026-11-23' })
+      .expect(201);
+    const staged = await api()
+      .put(`/api/v1/tasks/${task.body.id}/stage`)
+      .set(asAna())
+      .send({ stageId: waiting.body.id })
+      .expect(200);
+    expect(staged.body).toMatchObject({
+      status: 'open',
+      stage: { label: 'Aguardando peça', color: '#ff9500' },
+    });
+
+    const filtered = await api()
+      .get('/api/v1/tasks')
+      .query({ area: 'infra', stageId: waiting.body.id })
+      .set(asAna())
+      .expect(200);
+    expect(filtered.body.total).toBe(1);
+
+    const finished = await api()
+      .post(`/api/v1/tasks/${task.body.id}/status`)
+      .set(asAna())
+      .send({ status: 'done' })
+      .expect(201);
+    expect(finished.body).toMatchObject({ status: 'done', stage: null });
+
+    /* A finalizada que vai para uma situação própria é reaberta. */
+    const back = await api()
+      .put(`/api/v1/tasks/${task.body.id}/stage`)
+      .set(asAna())
+      .send({ stageId: supplier.body.id })
+      .expect(200);
+    expect(back.body).toMatchObject({ status: 'reopened', stage: { label: 'Com o fornecedor' } });
+
+    await api().delete(`/api/v1/task-stages/${supplier.body.id}`).set(asAna()).expect(204);
+    const released = await api().get(`/api/v1/tasks/${task.body.id}`).set(asAna()).expect(200);
+    expect(released.body).toMatchObject({ status: 'reopened', stage: null });
+    const left = await api()
+      .get('/api/v1/task-stages')
+      .query({ area: 'infra' })
+      .set(asAna())
+      .expect(200);
+    expect(left.body.map((stage: { label: string }) => stage.label)).toEqual(['Aguardando peça']);
+
+    /* Arquivada aparece em "Situações arquivadas" e volta vazia, como a última coluna. */
+    const archived = await api()
+      .get('/api/v1/task-stages')
+      .query({ area: 'infra', archived: 'only' })
+      .set(asAna())
+      .expect(200);
+    expect(archived.body.map((stage: { label: string }) => stage.label)).toEqual([
+      'Com o fornecedor',
+    ]);
+    const restored = await api()
+      .post(`/api/v1/task-stages/${supplier.body.id}/restore`)
+      .set(asAna())
+      .expect(201);
+    expect(restored.body).toMatchObject({
+      label: 'Com o fornecedor',
+      archivedAt: null,
+      position: 2,
+    });
+  });
+
+  // triste
+  it('refuses a repeated or fixed stage name, a stage that does not exist and a manager that only reads', async () => {
+    await api()
+      .post('/api/v1/task-stages')
+      .set(asAna())
+      .send({ area: 'infra', label: 'Aguardando peça', color: '#ff9500' })
+      .expect(201);
+    await api()
+      .post('/api/v1/task-stages')
+      .set(asAna())
+      .send({ area: 'infra', label: 'aguardando PEÇA', color: '#ff9500' })
+      .expect(409);
+    await api()
+      .post('/api/v1/task-stages')
+      .set(asAna())
+      .send({ area: 'infra', label: 'Finalizada', color: '#ff9500' })
+      .expect(400);
+    const task = await api()
+      .post('/api/v1/tasks')
+      .set(asAna())
+      .send({ area: 'infra', title: 'Trocar a fonte', startDate: '2026-11-23' })
+      .expect(201);
+    await api()
+      .put(`/api/v1/tasks/${task.body.id}/stage`)
+      .set(asAna())
+      .send({ stageId: 999 })
+      .expect(422);
+    await api()
+      .post('/api/v1/task-stages')
+      .set(asBia())
+      .send({ area: 'infra', label: 'Outra', color: '#ff9500' })
+      .expect(403);
+  });
+
+  // feliz
+  it('refuses a computer, a part or an inventory item on a Sistema task', async () => {
+    const [computer] = await started.db
+      .insert(computers)
+      .values({ name: 'SISTEMA-D01', tokenHash: 'hash-do-sistema', createdBy: 'ti@empresa.com.br' })
+      .returning();
+    const refused = await request(app.getHttpServer())
+      .post('/api/v1/tasks')
+      .set(asOlga())
+      .send({
+        area: 'sistema',
+        title: 'Tela de vendas',
+        startDate: '2026-11-23',
+        dueDate: '2026-11-30',
+        steps: ['Corrigir'],
+        ownerId: ANA.id,
+        links: [{ kind: 'computer', targetId: computer!.id }],
+      })
+      .expect(422);
+
+    expect(refused.body.message).toContain('em Sistema, a tarefa só se vincula a chamados');
+  });
+
+  // feliz
+  it('shows on a Sistema task the git of its system, with the branches of the task marked', async () => {
+    const [project] = await started.db
+      .insert(softwareProjects)
+      .values({
+        name: 'Paralegal',
+        repositoryUrl: 'https://github.com/grupo-azuos/paralegal',
+        createdBy: 'ti@empresa.com.br',
+      })
+      .returning();
+    const [ticket] = await started.db
+      .insert(tickets)
+      .values({
+        requesterName: 'Pessoa de Teste',
+        area: 'sistema',
+        department: 'Comercial',
+        problemType: 'bug',
+        description: 'A tela de vendas não abre.',
+        projectId: project!.id,
+        githubIssueNumber: 85,
+      })
+      .returning();
+    await app.get(TasksService).syncTicket(ticket!);
+    const [task] = await started.db.select().from(tasks).where(eq(tasks.ticketId, ticket!.id));
+    await started.db.insert(softwareCommits).values({
+      projectId: project!.id,
+      sha: 'a1',
+      parents: [],
+      message: '[feat](web): Tela de vendas',
+      authorName: 'Pessoa de Teste',
+      committedAt: new Date('2026-11-20T10:00:00Z'),
+    });
+    await started.db.insert(softwareBranches).values([
+      { projectId: project!.id, name: 'feature/85-tela-de-vendas', headSha: 'a1' },
+      { projectId: project!.id, name: 'feature/outra-coisa', headSha: 'a1' },
+    ]);
+
+    const git = await request(app.getHttpServer())
+      .get(`/api/v1/tasks/${task!.id}/git`)
+      .set(asOlga())
+      .expect(200);
+
+    expect(git.body.project).toMatchObject({ id: project!.id, name: 'Paralegal' });
+    expect(git.body.commits).toHaveLength(1);
+    expect(git.body.branches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'feature/85-tela-de-vendas', isOfTask: true }),
+        expect.objectContaining({ name: 'feature/outra-coisa', isOfTask: false }),
+      ]),
+    );
+  });
+
+  // triste
+  it('a task without a ticket of a system has no git, and an unknown task is 404', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api/v1/tasks')
+      .set(asAna())
+      .send({
+        area: 'infra',
+        title: 'Arrumar o rack',
+        startDate: '2026-11-23',
+        dueDate: '2026-11-30',
+        steps: ['Arrumar'],
+      })
+      .expect(201);
+
+    const git = await request(app.getHttpServer())
+      .get(`/api/v1/tasks/${created.body.id}/git`)
+      .set(asAna())
+      .expect(200);
+    expect(git.body).toEqual({ project: null, commits: [], branches: [] });
+    await request(app.getHttpServer()).get('/api/v1/tasks/999999/git').set(asOlga()).expect(404);
+  });
+
+  // feliz
+  it('turns a Sistema ticket into a task of Sistema, and leaves a Manutenção ticket alone', async () => {
+    const [sistema, manutencao] = await started.db
+      .insert(tickets)
+      .values([
+        {
+          requesterName: 'Pessoa de Teste',
+          area: 'sistema',
+          department: 'Comercial',
+          problemType: 'bug',
+          description: 'A tela de vendas não abre.',
+        },
+        {
+          requesterName: 'Pessoa de Teste',
+          area: 'manutencao',
+          department: 'Comercial',
+          problemType: 'other',
+          description: 'A porta da sala range.',
+        },
+      ])
+      .returning();
+    const service = app.get(TasksService);
+
+    await service.syncTicket(sistema!);
+    await service.syncTicket(manutencao!);
+
+    const [task] = await started.db.select().from(tasks).where(eq(tasks.ticketId, sistema!.id));
+    expect(task).toMatchObject({
+      area: 'sistema',
+      origin: 'ticket',
+      status: 'open',
+      title: 'A tela de vendas não abre.',
+    });
+    const others = await started.db.select().from(tasks).where(eq(tasks.ticketId, manutencao!.id));
+    expect(others).toEqual([]);
+  });
+
+  // feliz
+  it('brings into the ticket task the ticket itself and what it used from the stock', async () => {
+    const opened = await api().post('/api/v1/tickets').set(asAna()).send(PEDIDO).expect(201);
+    const task = await taskOfTicket(opened.body.id as number);
+    const [monitor] = await started.db
+      .insert(parts)
+      .values({ name: 'Monitor 24', category: 'monitor', createdBy: ANA.id })
+      .returning();
+    await started.db.insert(ticketStockItems).values({
+      ticketId: opened.body.id as number,
+      partId: monitor!.id,
+      itemName: 'Monitor 24',
+      direction: 'out',
+      quantity: 2,
+      createdBy: ANA.id,
+      createdByName: ANA.name,
+    });
+
+    const found = await api().get(`/api/v1/tasks/${task.id}`).set(asAna()).expect(200);
+
+    expect(found.body.links).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'ticket', targetId: opened.body.id, source: 'ticket' }),
+        expect.objectContaining({
+          kind: 'part',
+          targetId: monitor!.id,
+          label: 'Monitor 24 × 2',
+          source: 'ticket',
+        }),
+      ]),
+    );
+  });
+});

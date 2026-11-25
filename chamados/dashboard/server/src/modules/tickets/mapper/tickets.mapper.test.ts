@@ -147,7 +147,19 @@ describe('toTicketInsert', () => {
   it('stores the system name the person typed when none was chosen', () => {
     const values = toTicketInsert({ ...input, customSystemName: '  Planilha  ' }, null);
 
-    expect(values.customSystemName).toBe('Planilha');
+    expect(values.customSystemName).toBe('planilha');
+  });
+
+  /* Sistema só tem um nome: "Trilha" e "TRILHA" gravados diferentes viravam dois no painel. */
+  it('stores the typed system name always in lowercase, with single spaces', () => {
+    const values = toTicketInsert({ ...input, customSystemName: ' Portal   DO Cliente ' }, null);
+
+    expect(values.customSystemName).toBe('portal do cliente');
+  });
+
+  // triste
+  it('stores no system name when the typed one is only spaces', () => {
+    expect(toTicketInsert({ ...input, customSystemName: '   ' }, null).customSystemName).toBeNull();
   });
 
   // triste
@@ -198,8 +210,10 @@ describe('toTicketUpdate', () => {
 
   it('updates or clears customSystemName, clearing it when a project is chosen', () => {
     expect(toTicketUpdate({ customSystemName: '  Trilha  ' }, ANA, NOW).customSystemName).toBe(
-      'Trilha',
+      'trilha',
     );
+    expect(toTicketUpdate({ customSystemName: 'TRILHA' }, ANA, NOW).customSystemName).toBe('trilha');
+    expect(toTicketUpdate({ customSystemName: '   ' }, ANA, NOW).customSystemName).toBeNull();
     expect(toTicketUpdate({ customSystemName: null }, ANA, NOW).customSystemName).toBeNull();
     expect(toTicketUpdate({ projectId: 5, customSystemName: 'Trilha' }, ANA, NOW)).toMatchObject({
       projectId: 5,
@@ -233,7 +247,7 @@ describe('toTicketUpdate', () => {
   });
 });
 
-describe('toTicket com máquina', () => {
+describe('toTicket with a machine', () => {
   // feliz
   it('carries the machine the ticket was linked to, with the name the screen shows', () => {
     const ticket = toTicket(
@@ -262,7 +276,7 @@ describe('toTicket com máquina', () => {
   });
 });
 
-describe('toTicketUpdate com máquina e tipo', () => {
+describe('toTicketUpdate with a machine and a type', () => {
   // feliz
   it('links the machine and corrects the problem type', () => {
     const update = toTicketUpdate({ computerId: 11, problemType: 'slow_computer' }, ANA, NOW);

@@ -3,8 +3,9 @@ import {
   type MaintenanceListQuery,
   type MaintenanceScheduleListQuery,
 } from '@template/shared/schemas/maintenance.schema';
-import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
 
+import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
@@ -19,6 +20,7 @@ import {
   type MaintenanceInsert,
   type MaintenanceRow,
 } from '../../../lib/db/schema/maintenances.schema';
+import { computerDepartmentNameSql } from '../../../lib/db/reference-names.util';
 
 /**
  * A manutenção com a máquina dela, do jeito que a tela precisa ler.
@@ -62,12 +64,15 @@ export type PreventiveRow = {
   maintenanceCount: number;
 };
 
-const computerColumns = {
-  id: computers.id,
-  name: computers.name,
-  displayName: computers.displayName,
-  department: computers.department,
-};
+/* Função, e não objeto: o nome do departamento vem da última lista do RH, lida na hora da consulta. */
+function computerColumns() {
+  return {
+    id: computers.id,
+    name: computers.name,
+    displayName: computers.displayName,
+    department: computerDepartmentNameSql(),
+  };
+}
 
 /**
  * O repository não tem regra: traduz filtro em consulta e devolve linha. Toda decisão — quem
@@ -80,14 +85,15 @@ const computerColumns = {
 export class MaintenancesRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(query: MaintenanceListQuery): Promise<MaintenancePage> {
-    const where = buildWhere(query);
+  /** `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro. */
+  async list(query: MaintenanceListQuery, drill?: SQL): Promise<MaintenancePage> {
+    const where = and(buildWhere(query), drill);
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([
       runQuery(
         this.db
-          .select({ maintenance: maintenances, computer: computerColumns })
+          .select({ maintenance: maintenances, computer: computerColumns() })
           .from(maintenances)
           .leftJoin(computers, eq(maintenances.computerId, computers.id))
           .where(where)
@@ -114,7 +120,7 @@ export class MaintenancesRepository {
   async findById(id: number): Promise<MaintenanceWithComputer | null> {
     return runMaybe(
       this.db
-        .select({ maintenance: maintenances, computer: computerColumns })
+        .select({ maintenance: maintenances, computer: computerColumns() })
         .from(maintenances)
         .leftJoin(computers, eq(maintenances.computerId, computers.id))
         .where(eq(maintenances.id, id))
@@ -139,10 +145,14 @@ export class MaintenancesRepository {
     );
   }
 
-  async delete(id: number): Promise<void> {
+  /** Arquiva (excluir) ou desarquiva (desfazer). A linha nunca sai do banco. */
+  async setArchived(id: number, archived: boolean, actorId: string | null): Promise<void> {
     await runQuery(
-      this.db.delete(maintenances).where(eq(maintenances.id, id)),
-      'excluir manutenção',
+      this.db
+        .update(maintenances)
+        .set(archiveValues(archived, actorId))
+        .where(eq(maintenances.id, id)),
+      archived ? 'arquivar manutenção' : 'desarquivar manutenção',
     );
   }
 
@@ -150,15 +160,19 @@ export class MaintenancesRepository {
    * Os agendamentos em aberto, do mais próximo para o mais distante.
    *
    * Máquina arquivada ou descartada fica de fora: agendamento de máquina que saiu de uso é
-   * compromisso com ninguém.
+   * compromisso com ninguém. Os agendamentos encerrados (arquivados) só vêm quando pedidos.
    */
   async listSchedules(query: MaintenanceScheduleListQuery): Promise<ScheduleWithComputer[]> {
-    const filters: SQL[] = [eq(computers.isArchived, false), sql`${computers.disposedAt} is null`];
+    const filters: (SQL | undefined)[] = [
+      eq(computers.isArchived, false),
+      sql`${computers.disposedAt} is null`,
+      archivedCondition(maintenanceSchedules.archivedAt, query.archived),
+    ];
     if (query.computerId) filters.push(eq(maintenanceSchedules.computerId, query.computerId));
 
     return runQuery(
       this.db
-        .select({ schedule: maintenanceSchedules, computer: computerColumns })
+        .select({ schedule: maintenanceSchedules, computer: computerColumns() })
         .from(maintenanceSchedules)
         .innerJoin(computers, eq(maintenanceSchedules.computerId, computers.id))
         .where(and(...filters))
@@ -182,18 +196,47 @@ export class MaintenancesRepository {
         .insert(maintenanceSchedules)
         .values({ computerId, ...values, createdBy: actorEmail })
         .onConflictDoUpdate({
+          /* O índice único é só das em aberto: a arquivada da mesma máquina não conflita. */
           target: maintenanceSchedules.computerId,
+          targetWhere: isNull(maintenanceSchedules.archivedAt),
           set: { ...values, updatedAt: new Date(), updatedBy: actorEmail },
         }),
       'agendar manutenção',
     );
   }
 
-  /** Tira o agendamento — cancelado, ou cumprido porque a manutenção foi registrada. */
-  async deleteSchedule(computerId: number): Promise<void> {
+  /** Encerra o agendamento em aberto — cancelado, ou cumprido porque a manutenção foi
+   *  registrada. Arquiva: a linha fica, com quem e quando. */
+  async archiveOpenSchedule(computerId: number, actorId: string | null): Promise<void> {
     await runQuery(
-      this.db.delete(maintenanceSchedules).where(eq(maintenanceSchedules.computerId, computerId)),
+      this.db
+        .update(maintenanceSchedules)
+        .set(archiveValues(true, actorId))
+        .where(
+          and(
+            eq(maintenanceSchedules.computerId, computerId),
+            isNull(maintenanceSchedules.archivedAt),
+          ),
+        ),
       'cancelar manutenção agendada',
+    );
+  }
+
+  async findSchedule(id: number): Promise<MaintenanceScheduleRow | null> {
+    return runMaybe(
+      this.db.select().from(maintenanceSchedules).where(eq(maintenanceSchedules.id, id)).limit(1),
+      'ler manutenção agendada',
+    );
+  }
+
+  /** Desfaz o cancelamento: o agendamento volta a ser o em aberto da máquina. */
+  async restoreSchedule(id: number): Promise<void> {
+    await runQuery(
+      this.db
+        .update(maintenanceSchedules)
+        .set(archiveValues(false, null))
+        .where(eq(maintenanceSchedules.id, id)),
+      'desfazer o cancelamento da manutenção agendada',
     );
   }
 
@@ -234,7 +277,7 @@ export class MaintenancesRepository {
           computerId: computers.id,
           computerName: computers.name,
           computerDisplayName: computers.displayName,
-          computerDepartment: computers.department,
+          computerDepartment: computerDepartmentNameSql(),
           lastDoneAt: asDate(
             sql<Date | null>`max(${maintenances.performedAt}) filter (where ${maintenances.type} in ('preventive', 'corrective'))`,
             maintenances.performedAt,
@@ -242,7 +285,10 @@ export class MaintenancesRepository {
           maintenanceCount: sql<number>`count(${maintenances.id})::int`,
         })
         .from(computers)
-        .leftJoin(maintenances, eq(maintenances.computerId, computers.id))
+        .leftJoin(
+          maintenances,
+          and(eq(maintenances.computerId, computers.id), isNull(maintenances.archivedAt)),
+        )
         .where(eq(computers.isArchived, false))
         .groupBy(computers.id)
         .orderBy(computers.name),
@@ -259,7 +305,7 @@ export class MaintenancesRepository {
  * busca sem acento é trabalho para quando alguém pedir.
  */
 function buildWhere(query: MaintenanceListQuery): SQL | undefined {
-  const filters: (SQL | undefined)[] = [];
+  const filters: (SQL | undefined)[] = [archivedCondition(maintenances.archivedAt, query.archived)];
 
   if (query.computerId) filters.push(eq(maintenances.computerId, query.computerId));
   if (query.type) filters.push(eq(maintenances.type, query.type));

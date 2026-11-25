@@ -106,7 +106,8 @@ export class TicketAttachmentsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Exclui um anexo',
-    description: 'Tira o arquivo do chamado e do armazenamento. Não há como desfazer.',
+    description:
+      'Tira o arquivo do chamado. Excluir ARQUIVA: o arquivo fica guardado, com quem excluiu e quando.',
   })
   @ApiNoContentResponse({ description: 'Anexo excluído.' })
   @ApiNotFoundResponse({ description: 'Chamado ou anexo não encontrado.' })

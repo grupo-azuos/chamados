@@ -1,3 +1,21 @@
+<!--
+  @component
+  ENTRADA, SAÍDA ou DESCARTE de um produto do depósito da Manutenção, num modal.
+
+  O tipo NÃO é um campo: ele vem do botão que abriu o diálogo e aparece no título. Quem clicou em
+  "Saída" já disse o que queria, e um seletor aqui dentro só criaria a chance de registrar o
+  contrário.
+
+  O PRODUTO às vezes já vem escolhido (o Depósito abre o diálogo a partir do cartão dele) e às vezes
+  é a pessoa quem escolhe (o Descarte começa pela pergunta "o que foi?"). Com produto escolhido,
+  `product` vem preenchido e a lista de opções não aparece.
+
+  O saldo atual fica visível o tempo todo: é o número que decide se a saída cabe.
+
+  Props: `data` traz o tipo, o produto, as opções de produto e os campos; `state` diz se está
+  aberto, enviando, carregando os produtos ou com erro; `actions` recebe a digitação (`onChange`,
+  `onBlur`), o envio e o fechar.
+-->
 <script lang="ts" module>
   import {
     disposalReasonOptions,
@@ -11,19 +29,6 @@
 
   export type InventoryProductOption = { value: string; label: string };
 
-  /**
-   * ENTRADA, SAÍDA ou DESCARTE de um produto do depósito da Manutenção, num modal.
-   *
-   * O tipo NÃO é um campo: ele vem do botão que abriu o diálogo e aparece no título. Quem
-   * clicou em "Saída" já disse o que queria, e um seletor aqui dentro só criaria a chance de
-   * registrar o contrário.
-   *
-   * O PRODUTO às vezes já vem escolhido (o Depósito abre o diálogo a partir do cartão dele) e
-   * às vezes é a pessoa quem escolhe (o Descarte começa pela pergunta "o que foi?"). Com
-   * produto escolhido, `product` vem preenchido e a lista de opções não aparece.
-   *
-   * O saldo atual fica visível o tempo todo: é o número que decide se a saída cabe.
-   */
   export type AzuosInventoryMovementDialogProps = {
     data: {
       type: StockMovementType;
@@ -57,7 +62,7 @@
 
   const TONE: Record<StockMovementType, string> = {
     in: 'bg-muted text-success',
-    out: 'bg-muted text-warning',
+    out: 'bg-muted text-warning-ink',
     disposal: 'bg-muted text-destructive',
   };
 </script>

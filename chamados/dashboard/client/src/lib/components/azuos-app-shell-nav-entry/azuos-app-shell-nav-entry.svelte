@@ -1,13 +1,20 @@
+<!--
+  @component
+  Um item do menu com ícone + rótulo — da casca padrão (skill `app-shell-standard`).
+
+  Extraído do `AzuosAppShell` só porque a animação de "virou ativo" precisa do próprio ciclo de
+  vida do componente (`$effect` por item). Não é peça pública: fora do teste, só o
+  `azuos-app-shell.svelte` importa isto.
+
+  Recebe o `item` (`NavItem` de `lib/navigation/navigation.ts`), o `badge` (o contador ao lado)
+  e `isActive`. O ícone pulsa só na TROCA para ativo; recolhida a barra, o rótulo vira dica.
+-->
 <script lang="ts">
-  /**
-   * Um item do menu — extraído do `AppShell` só porque a animação de "virou ativo" precisa do
-   * próprio ciclo de vida do componente (`$effect` por item). Não é peça pública: nada fora de
-   * `app-shell.component.svelte` importa isto.
-   */
   import { useSidebar } from '$lib/components/ui/sidebar/context.svelte';
   import { popIn } from '$lib/motion/motion';
   import { SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem } from '$lib/components/ui/sidebar';
   import type { NavItem } from '$lib/navigation/navigation';
+  import { cn } from '$lib/utils/cn';
 
   let { item, badge, isActive }: { item: NavItem; badge: number | undefined; isActive: boolean } =
     $props();
@@ -52,16 +59,19 @@
              truncado em "T…" dentro dos 32px do botão, espremendo o ícone junto — a barra
              perde a leitura de relance e não ganha espaço nenhum. Quem diz o nome ali é o
              `tooltipContent` do SidebarMenuButton, logo acima. -->
-        <span class="group-data-[collapsible=icon]:hidden">{item.label}</span>
+        <!-- Com selo, o rótulo para antes dele (e corta com "…"), em vez de passar por baixo. -->
+        <span class={cn('truncate group-data-[collapsible=icon]:hidden', badge && 'pr-10')}>{item.label}</span>
       </a>
     {/snippet}
   </SidebarMenuButton>
 
   <!-- Zero não vira selo: um "0" ao lado de cada item é ruído. O `SidebarMenuBadge` some
        sozinho quando a barra está recolhida. -->
+  <!-- Centrado na altura do item: o `top` fixo do shadcn é medido para o botão dele, mais baixo
+       que o nosso, e o selo ficava colado em cima. -->
   {#if badge}
     <SidebarMenuBadge
-      class="bg-destructive font-bold text-destructive-foreground shadow-xs shadow-destructive/40"
+      class="rounded-chip bg-destructive text-destructive-foreground top-1/2! -translate-y-1/2 px-1.5 leading-none font-bold shadow-xs"
     >
       {badge}
     </SidebarMenuBadge>

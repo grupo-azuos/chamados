@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { TasksModule } from '../tasks/tasks.module';
 import { MaintenancesController } from './controller/maintenances.controller';
 import { MaintenancesRepository } from './repository/maintenances.repository';
 import { MaintenancesService } from './service/maintenances.service';
@@ -10,6 +11,7 @@ import { MaintenancesService } from './service/maintenances.service';
  * rota dá 404".
  */
 @Module({
+  imports: [TasksModule],
   controllers: [MaintenancesController],
   providers: [MaintenancesService, MaintenancesRepository],
   exports: [MaintenancesService],

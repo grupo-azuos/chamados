@@ -1,12 +1,34 @@
+<!--
+  @component
+  OS SISTEMAS E PROJETOS da empresa: a tela de lista do módulo Sistema.
+
+  Cabeçalho com "Sincronizar todos" (só com `canSyncAll`) e "Novo Sistema" (só para quem edita),
+  busca por nome ou repositório e filtro de situação. Cada sistema é o cartão de registro
+  (`AzuosContentCard`): situação na faixa, nome, link do repositório no GitHub (abre em nova aba),
+  descrição, chamados e PRs abertos e o responsável (ou "Sem responsável"). O card inteiro abre a
+  página do sistema ("Ver sistema"); no menu de três pontinhos, "Sincronizar" (com `canSync`) e,
+  para quem edita, "Editar" e "Excluir".
+  Excluir pergunta antes; o sistema vai para "Removidos", onde dá para desfazer. Tem os estados de
+  carregando (esqueletos), erro, vazio e filtrado sem resultado, e os avisos da sincronização.
+
+  Função pura de props: não busca nada e não navega.
+
+  - `data`: `items`, `total`, `filter` e `deleting` (o que espera confirmação).
+  - `state`: permissões (`canEdit`, `canSync`, `canSyncAll`), lista (`isLoading`, `isRefetching`,
+    `isEmpty`, `isFilteredOut`, `error`), exclusão (`isDeleting`, `deleteError`) e sincronização
+    (`isSyncing`, `isSyncingAll`, `syncMessage`, `syncError`).
+  - `actions`: filtros (`onSearchChange`, `onStatusChange`, `onClearFilters`), `onRetry`,
+    `onRegister`, `onEdit`, `onViewTimeline`, exclusão (`onAskDelete`, `onCancelDelete`,
+    `onConfirmDelete`), `onSyncGithub(id)` e `onSyncAllGithub`.
+-->
 <script lang="ts" module>
+  import type { Snippet } from 'svelte';
   import {
     softwareProjectStatusLabel,
     type SoftwareProjectStatus,
   } from '@template/shared/domain/software-project.util';
   import { type SoftwareProject } from '@template/shared/schemas/software-project.schema';
-  import StatusBadge, {
-    type StatusBadgeTone,
-  } from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import { type StatusBadgeTone } from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { type SoftwareProjectListFilter } from '$lib/hooks/use-software-project-list/use-software-project-list.svelte';
 
   export type AzuosProjectListViewProps = {
@@ -15,6 +37,8 @@
       total: number;
       filter: SoftwareProjectListFilter;
       deleting: SoftwareProject | null;
+      /** Cards (a grade) ou Mapa (cada sistema numa ilha com issues, PRs, chamados e tarefas). */
+      view?: 'cards' | 'map';
     };
     state: {
       canEdit?: boolean;
@@ -47,8 +71,25 @@
       onConfirmDelete: () => void;
       onSyncGithub: (id: number) => void;
       onSyncAllGithub?: () => void;
+      onViewChange?: (view: 'cards' | 'map') => void;
     };
+    /** O mapa dos projetos, já montado pela tela: aparece no lugar dos cards na visão Mapa. */
+    map?: Snippet;
   };
+
+  /** "dono/repositório" quando o GitHub já respondeu; senão, o endereço como foi cadastrado. */
+  export function repositoryLabelOf(project: SoftwareProject): string {
+    return project.githubRepoOwner
+      ? `${project.githubRepoOwner}/${project.githubRepoName}`
+      : project.repositoryUrl;
+  }
+
+  /** O link do repositório: o endereço cadastrado, ou o do GitHub quando veio só "dono/nome". */
+  export function repositoryHrefOf(project: SoftwareProject): string {
+    return project.repositoryUrl.startsWith('http')
+      ? project.repositoryUrl
+      : `https://github.com/${project.repositoryUrl}`;
+  }
 
   const STATUS_TONES: Record<string, StatusBadgeTone> = {
     active: 'success',
@@ -58,26 +99,54 @@
 </script>
 
 <script lang="ts">
-  import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
   import Code2 from '@lucide/svelte/icons/code-2';
-  import GitPullRequest from '@lucide/svelte/icons/git-pull-request';
-  import History from '@lucide/svelte/icons/history';
-  import LifeBuoy from '@lucide/svelte/icons/life-buoy';
   import Pencil from '@lucide/svelte/icons/pencil';
   import Plus from '@lucide/svelte/icons/plus';
   import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import Trash2 from '@lucide/svelte/icons/trash-2';
-  import UserRound from '@lucide/svelte/icons/user-round';
 
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import ContentCard, {
+    type AzuosContentCardMenuItem,
+  } from '$lib/components/azuos-content-card/azuos-content-card.svelte';
 
-  let { data, state, actions }: AzuosProjectListViewProps = $props();
+  let { data, state, actions, map }: AzuosProjectListViewProps = $props();
+
+  const VIEW_OPTIONS = [
+    { value: 'cards', label: 'Cards' },
+    { value: 'map', label: 'Mapa' },
+  ];
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  const cardPage = useCardPage(() => data.items);
+
+  /* O menu do card: sincronizar é de quem tem o GitHub vinculado; corrigir e excluir, de quem edita. */
+  const menuItems = $derived<AzuosContentCardMenuItem[]>([
+    ...((state.canSync ?? state.canEdit !== false)
+      ? [{ id: 'sync', label: state.isSyncing ? 'Sincronizando…' : 'Sincronizar', icon: RefreshCw }]
+      : []),
+    ...(state.canEdit !== false
+      ? [
+          { id: 'edit', label: 'Editar', icon: Pencil, separatorBefore: true },
+          { id: 'delete', label: 'Excluir', icon: Trash2, isDestructive: true },
+        ]
+      : []),
+  ]);
+
+  function chooseAction(id: string, project: SoftwareProject) {
+    if (id === 'sync') return actions.onSyncGithub(project.id);
+    if (id === 'delete') return actions.onAskDelete(project);
+
+    actions.onEdit(project);
+  }
 
   const statusFilterOptions = [
     { value: '', label: 'Todas as situações' },
@@ -87,7 +156,7 @@
   ];
 </script>
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Sistemas e Projetos',
@@ -95,6 +164,13 @@
         'Cadastre os softwares da empresa, acompanhe Pull Requests e vincule chamados de suporte.',
     }}
   >
+    {#if actions.onViewChange && map}
+      <SegmentedControl
+        data={{ value: data.view ?? 'cards', options: VIEW_OPTIONS }}
+        ui={{ ariaLabel: 'Modo de ver os sistemas' }}
+        actions={{ onChange: (value: string) => actions.onViewChange?.(value as 'cards' | 'map') }}
+      />
+    {/if}
     {#if state.canSyncAll}
       <ActionButton
         data={{ label: 'Sincronizar todos', loadingLabel: 'Sincronizando…' }}
@@ -129,9 +205,14 @@
     </p>
   {/if}
 
-  <!-- Filtros -->
-  <div class="flex flex-wrap items-end justify-between gap-4">
-    <div class="w-full max-w-sm">
+  {#if data.view === 'map' && map}
+    {@render map()}
+  {:else}
+  <!-- Filtros: no card, como em toda tela do grupo (a busca e o seletor soltos sumiam no fundo). -->
+  <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-4">
+    <div class="grid items-end gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <TextField
         data={{
           label: 'Buscar',
@@ -141,26 +222,28 @@
         }}
         actions={{ onChange: actions.onSearchChange }}
       />
-    </div>
-
-    <div class="w-56">
-      <SelectField
-        data={{
-          value: data.filter.status,
-          options: statusFilterOptions,
-        }}
-        ui={{ ariaLabel: 'Filtrar por situação', placeholder: 'Todas as situações' }}
-        actions={{
-          onChange: (val) => actions.onStatusChange(val as SoftwareProjectStatus | ''),
-        }}
-      />
+      <div class="flex flex-col gap-1.5">
+        <span class="text-ink-700 text-sm font-medium">Situação</span>
+        <SelectField
+          data={{
+            value: data.filter.status,
+            options: statusFilterOptions,
+          }}
+          ui={{ ariaLabel: 'Filtrar por situação', placeholder: 'Todas as situações' }}
+          actions={{
+            onChange: (val) => actions.onStatusChange(val as SoftwareProjectStatus | ''),
+          }}
+        />
+      </div>
     </div>
   </div>
+{/snippet}
+</ContentCard>
 
   {#if state.isLoading}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="card-grid">
       {#each [0, 1, 2] as idx (idx)}
-        <div class="h-56 animate-pulse rounded-surface border border-border bg-muted"></div>
+        <div class="h-56 animate-pulse rounded-surface bg-muted"></div>
       {/each}
     </div>
   {:else if state.error}
@@ -203,128 +286,78 @@
       />
     </EmptyState>
   {:else}
-    <!-- Grid de Projetos -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {#each data.items as project (project.id)}
-        <div
-          class="flex flex-col justify-between rounded-surface border border-border bg-card p-5 shadow-xs transition hover:border-border"
+    <!-- A grade padrão de cards: cada sistema é o cartão de registro, e o card inteiro abre a
+         página dele ("Ver sistema"). Sincronizar, corrigir e excluir moram no menu. -->
+    <div class="card-grid" data-slot="project-cards">
+      {#each cardPage.items as project (project.id)}
+        <ContentCard
+          data={{
+            label: `Ver sistema ${project.name}`,
+            title: project.name,
+            code: repositoryLabelOf(project),
+            codeHref: repositoryHrefOf(project),
+            status: {
+              label: softwareProjectStatusLabel(project.status),
+              tone: STATUS_TONES[project.status] ?? 'neutral',
+            },
+            metrics: [
+              {
+                key: 'tickets',
+                label: 'Chamados',
+                value: String(project.openTicketsCount),
+                tone: 'blue',
+                isOn: project.openTicketsCount > 0,
+              },
+              {
+                key: 'prs',
+                label: 'PRs',
+                value: String(project.pullRequestsCount),
+                tone: 'plum',
+                isOn: project.pullRequestsCount > 0,
+              },
+            ],
+            /* Quem responde pelo sistema. Sem ninguém, diz isso: espaço vazio pareceria erro. */
+            footer: {
+              title: project.responsibleName ?? 'Sem responsável',
+              subtitle: 'Responsável',
+              person: project.responsibleName
+                ? { id: project.responsibleId, name: project.responsibleName }
+                : null,
+            },
+            openLabel: 'Ver sistema',
+            menu: { label: `Ações de ${project.name}`, items: menuItems },
+          }}
+          ui={{ icon: Code2, iconTone: 'blue', slot: 'project-card' }}
+          state={{ isMenuDisabled: state.isSyncing }}
+          actions={{
+            onOpen: () => actions.onViewTimeline(project),
+            onMenuSelect: (id) => chooseAction(id, project),
+          }}
         >
-          <div>
-            <!-- Topo: Nome, Tag e Status -->
-            <div class="flex items-start justify-between gap-2">
-              <h3 class="text-sm font-semibold text-foreground">
-                {project.name}
-              </h3>
-              <StatusBadge
-                data={{ label: softwareProjectStatusLabel(project.status) }}
-                ui={{ tone: STATUS_TONES[project.status] ?? 'neutral', size: 'sm' }}
-              />
-            </div>
-
-            <!-- Descrição -->
-            <p class="mt-2 line-clamp-2 text-xs text-muted-foreground">
+          {#snippet body()}
+            <p class="text-muted-foreground line-clamp-2 text-xs">
               {project.description || 'Sem descrição cadastrada.'}
             </p>
-
-            <!-- Quem responde pelo sistema. Sem ninguém, diz isso: espaço vazio pareceria erro. -->
-            <p class="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <UserRound class="size-3.5" aria-hidden="true" />
-              <span>
-                Responsável:
-                <strong class="font-medium text-foreground">
-                  {project.responsibleName ?? 'Sem responsável'}
-                </strong>
-              </span>
-            </p>
-
-            <!-- Link do Repositório GitHub -->
-            <div class="mt-3">
-              <a
-                href={project.repositoryUrl.startsWith('http')
-                  ? project.repositoryUrl
-                  : `https://github.com/${project.repositoryUrl}`}
-                target="_blank"
-                rel="noreferrer"
-                class="inline-flex items-center gap-1.5 rounded-control bg-muted px-2.5 py-1 text-xs font-mono text-foreground hover:bg-muted"
-              >
-                <Code2 class="size-3.5 text-muted-foreground" />
-                <span class="truncate max-w-[200px]"
-                  >{project.githubRepoOwner
-                    ? `${project.githubRepoOwner}/${project.githubRepoName}`
-                    : project.repositoryUrl}</span
-                >
-                <ArrowUpRight class="size-3 text-muted-foreground" />
-              </a>
-            </div>
-
-            <!-- Métricas: Chamados e PRs -->
-            <div class="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-3 text-xs">
-              <div class="flex items-center gap-2">
-                <LifeBuoy class="size-3.5 text-primary" />
-                <span class="text-muted-foreground">
-                  <strong class="text-foreground">{project.openTicketsCount}</strong> chamados
-                </span>
-              </div>
-              <div class="flex items-center gap-2">
-                <GitPullRequest class="size-3.5 text-primary" />
-                <span class="text-muted-foreground">
-                  <strong class="text-foreground">{project.pullRequestsCount}</strong> PRs
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Ações do Card -->
-          <div class="mt-4 flex items-center justify-between border-t border-border pt-3">
-            <div class="flex items-center gap-1">
-              <button
-                type="button"
-                class="flex items-center gap-1 rounded-control border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
-                onclick={() => actions.onViewTimeline(project)}
-                title="Abrir o sistema: o que está em andamento e a timeline"
-              >
-                <History class="size-3" />
-                Ver sistema
-              </button>
-
-              {#if state.canSync ?? state.canEdit !== false}
-                <button
-                  type="button"
-                  class="flex items-center gap-1 rounded-control border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
-                  disabled={state.isSyncing}
-                  onclick={() => actions.onSyncGithub(project.id)}
-                  title="Sincronizar Pull Requests com o GitHub"
-                >
-                  <RefreshCw class="size-3 {state.isSyncing ? 'animate-spin' : ''}" />
-                  Sincronizar
-                </button>
-              {/if}
-            </div>
-
-            {#if state.canEdit !== false}
-              <div class="flex items-center gap-1">
-                <button
-                  type="button"
-                  class="p-1 text-muted-foreground hover:text-foreground"
-                  onclick={() => actions.onEdit(project)}
-                  title="Editar"
-                >
-                  <Pencil class="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  class="p-1 text-muted-foreground hover:text-destructive"
-                  onclick={() => actions.onAskDelete(project)}
-                  title="Excluir"
-                >
-                  <Trash2 class="size-3.5" />
-                </button>
-              </div>
-            {/if}
-          </div>
-        </div>
+          {/snippet}
+        </ContentCard>
       {/each}
     </div>
+      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
+           fileira. A barra só aparece quando há mais de uma página. -->
+      {#if cardPage.total > cardPage.pageSize}
+        <div class="flex justify-center">
+          <PaginationBar
+            data={{
+              page: cardPage.page,
+              pageSize: cardPage.pageSize,
+              total: cardPage.total,
+              noun: ['sistema', 'sistemas'],
+            }}
+            actions={{ onPageChange: cardPage.actions.onPageChange }}
+          />
+        </div>
+      {/if}
+  {/if}
   {/if}
 
   <!-- Confirmação de Exclusão -->
@@ -332,7 +365,7 @@
     <ConfirmDialog
       data={{
         title: 'Excluir sistema',
-        description: `Tem certeza que deseja excluir "${data.deleting.name}"? Todos os eventos da timeline serão excluídos.`,
+        description: `"${data.deleting.name}" sai da lista, com a linha do tempo e os chamados guardados. Ele fica em "Removidos", onde dá para desfazer.`,
         confirmLabel: 'Excluir',
       }}
       ui={{ tone: 'danger' }}

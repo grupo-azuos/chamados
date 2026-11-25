@@ -1,6 +1,6 @@
 import { createForm } from '@tanstack/svelte-form';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
-import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
+import { type DepartmentOption as OfficialDepartment } from '@template/shared/domain/department.util';
 import { partCategoryLabel } from '@template/shared/domain/part-catalog.util';
 import { type PeripheralDestiny } from '@template/shared/domain/transfer.util';
 import { type Computer } from '@template/shared/schemas/computer.schema';
@@ -20,6 +20,9 @@ import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use
 
 /** O valor do `select` quando a máquina volta para a prateleira. */
 export const NO_DEPARTMENT = '';
+
+/* O destino é um departamento OFICIAL, pelo id do RH — os fixos daqui não entram. */
+const DEPARTMENT_PREFIX = 'department:';
 
 export type DepartmentOption = { value: string; label: string; separatorBefore?: boolean };
 
@@ -123,7 +126,7 @@ export function useTransferFormModel({
     defaultValues: {
       /* Abre no departamento atual: quem só quer registrar o responsável não muda nada sem
          querer, e a recusa "já está nesse departamento" explica o resto. */
-      toDepartment: computer.department ?? NO_DEPARTMENT,
+      toDepartment: destinationOf(computer),
       responsible: '',
       note: '',
     } satisfies TransferFormValues,
@@ -131,7 +134,7 @@ export function useTransferFormModel({
        está nesse departamento") já chega à tela por `save.error`. */
     onSubmit: ({ value }: { value: TransferFormValues }) => {
       save.current.mutate({
-        toDepartment: toDepartmentValue(value.toDepartment),
+        ...toDestination(value.toDepartment),
         responsible: value.responsible.trim() || undefined,
         note: value.note.trim() || undefined,
         peripherals: toPeripheralInput(installed.current.data ?? [], choices),
@@ -149,7 +152,7 @@ export function useTransferFormModel({
         toDepartment: values.current.toDepartment,
         responsible: values.current.responsible,
         note: values.current.note,
-        departments: departmentChoices(departmentOptions.options),
+        departments: destinationChoices(departmentOptions.official, computer),
         machines: machineChoices(machines.current.data?.items ?? [], computer.id),
         peripherals: peripheralChoices(installed.current.data ?? [], choices),
       };
@@ -180,16 +183,40 @@ export function useTransferFormModel({
   };
 }
 
-/** Vazio é "sem departamento", que é um destino de verdade — a prateleira. */
-function toDepartmentValue(value: string): Department | null {
-  return value === NO_DEPARTMENT ? null : (value as Department);
+/**
+ * Onde a máquina está, como valor do seletor: o departamento oficial, ou a prateleira.
+ * Exportado para ter teste próprio.
+ */
+export function destinationOf(computer: Pick<Computer, 'departmentId'>): string {
+  return computer.departmentId ? `${DEPARTMENT_PREFIX}${computer.departmentId}` : NO_DEPARTMENT;
 }
 
-/** Os departamentos do RH e os daqui e, separada no fim, a prateleira. */
-function departmentChoices(options: readonly DepartmentChoice[]): DepartmentOption[] {
+/** O valor do seletor no contrato. Vazio (ou qualquer outra coisa) é "sem departamento" — a prateleira. */
+export function toDestination(value: string): { toDepartmentId: number | null } {
+  if (!value.startsWith(DEPARTMENT_PREFIX)) return { toDepartmentId: null };
+
+  return { toDepartmentId: Number(value.slice(DEPARTMENT_PREFIX.length)) || null };
+}
+
+/**
+ * Só os departamentos OFICIAIS do RH e, separada no fim, a prateleira. O departamento atual que saiu da lista do RH continua escolhível, para o seletor
+ * não abrir vazio.
+ */
+export function destinationChoices(
+  official: readonly OfficialDepartment[],
+  computer: Pick<Computer, 'departmentId' | 'departmentName'>,
+): DepartmentOption[] {
+  const departments = official.map((option) => ({ value: `${DEPARTMENT_PREFIX}${option.id}`, label: option.name }));
+  if (computer.departmentId && !official.some((option) => option.id === computer.departmentId)) {
+    departments.push({
+      value: `${DEPARTMENT_PREFIX}${computer.departmentId}`,
+      label: computer.departmentName ?? 'Departamento atual (fora da lista do RH)',
+    });
+  }
+
   return [
-    ...options,
-    { value: NO_DEPARTMENT, label: 'Sem departamento (volta para a prateleira)', separatorBefore: true },
+    ...departments,
+    { value: NO_DEPARTMENT, label: '(Sem departamento) — volta para a prateleira', separatorBefore: true },
   ];
 }
 

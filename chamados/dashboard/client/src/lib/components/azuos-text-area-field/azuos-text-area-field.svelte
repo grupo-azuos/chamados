@@ -1,15 +1,19 @@
+<!--
+  @component
+  Um campo de texto longo: rótulo, área e erro. Mesmo contrato do `AzuosTextField`.
+
+  O erro fica COLADO no campo, e não num resumo no topo: resumo obriga a pessoa a procurar qual dos
+  campos ele descreve.
+
+  O contador aparece só perto do limite (80%). Contador o tempo todo é ruído; contador nenhum é
+  descobrir o limite quando o servidor recusa.
+
+  `data` leva rótulo, nome, valor, `placeholder`, `maxLength` e `isRequired`; `ui`, `rows` e
+  `className`; `state`, `error` e `isDisabled`; `actions`, `onChange` e `onBlur`.
+-->
 <script lang="ts" module>
   import { cn } from '$lib/utils/cn';
 
-  /**
-   * Um campo de texto longo: rótulo, área e erro. Mesmo contrato do `TextField`.
-   *
-   * O erro fica COLADO no campo, e não num resumo no topo: resumo obriga a pessoa a procurar
-   * qual dos campos ele descreve.
-   *
-   * O contador aparece só perto do limite (80%). Contador o tempo todo é ruído; contador
-   * nenhum é descobrir o limite quando o servidor recusa.
-   */
   export type AzuosTextAreaFieldProps = {
     data: {
       label: string;
@@ -62,9 +66,9 @@
       /* O raio de CONTROLE da régua de medidas (`lib/theme/tokens.css`), o mesmo do
          `TextField` e do `ActionButton`. A altura não entra: aqui ela é o número de linhas. */
       'rounded-control',
-      'bg-card text-foreground w-full resize-y border px-3 py-2.5 text-sm transition-colors',
+      'bg-muted text-foreground w-full resize-y border px-3 py-2.5 text-sm transition-colors',
       'placeholder:text-ink-500 disabled:cursor-not-allowed disabled:opacity-60',
-      error ? 'border-border bg-destructive-soft' : 'border-input',
+      error ? 'bg-destructive-soft border-transparent' : 'border-transparent',
     )}
   ></textarea>
 

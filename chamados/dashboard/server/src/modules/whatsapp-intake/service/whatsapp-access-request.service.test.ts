@@ -92,7 +92,7 @@ const lastKind = (messaging: ReturnType<typeof makeService>['messaging']) =>
 const MARIA = { id: 'maria-id', name: 'Maria Clara Souza', email: 'maria@empresa.com.br' };
 const MARIA_LIMA = { id: 'lima-id', name: 'Maria Clara Lima', email: 'maria.lima@empresa.com.br' };
 
-describe('WhatsappAccessRequestService — quem está pedindo', () => {
+describe('WhatsappAccessRequestService — who is asking', () => {
   // feliz
   it('recognizes the person by the name, skips the e-mail and links the ticket to them', async () => {
     const { say, tickets, history, directory } = makeService({ people: [MARIA, MARIA_LIMA] });

@@ -9,22 +9,29 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota roles', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
 
     expect(container).toBeTruthy();
-    await vi.waitFor(() => expect(document.title).toContain('Acessos por módulo'), { timeout: 4_000 });
+    await vi.waitFor(() => expect(document.title).toContain('Acessos por módulo'), {
+      timeout: 4_000,
+    });
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -48,10 +55,12 @@ const role = {
   updatedBy: null,
 };
 
-describe('a rota roles com acessos carregados', () => {
+describe('the roles route with the access loaded', () => {
   // feliz
-  it('abre o formulário de liberar módulo e a pergunta de tirar módulo', async () => {
-    vi.mocked(apiRequest).mockImplementation(async (path: string) => (path === '/roles' ? [role] : []));
+  it('opens the grant-module form and the remove-module question', async () => {
+    vi.mocked(apiRequest).mockImplementation(async (path: string) =>
+      path === '/roles' ? [role] : [],
+    );
     visiting({});
     renderPage(Page as never);
     const user = userEvent.setup({ pointerEventsCheck: 0 });

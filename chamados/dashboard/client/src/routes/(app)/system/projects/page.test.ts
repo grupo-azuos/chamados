@@ -9,12 +9,17 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota system/projects', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
@@ -24,7 +29,7 @@ describe('a rota system/projects', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -55,11 +60,12 @@ const project = {
   updatedAt: null,
 };
 
-describe('a rota system/projects com sistemas', () => {
+describe('the system/projects route with systems', () => {
   // feliz
-  it('abre o cadastro e a edição de um sistema, e leva à linha do tempo', async () => {
+  it('opens the registration and the edit of a system, and leads to the timeline', async () => {
     vi.mocked(apiRequest).mockImplementation(async (path: string) => {
-      if (path === '/software-projects') return { items: [project], total: 1, page: 1, pageSize: 25 };
+      if (path === '/software-projects')
+        return { items: [project], total: 1, page: 1, pageSize: 25 };
       if (path === '/integrations/github/status') return { isLinked: false };
       if (path.includes('assignee-options')) return [];
       return { items: [], total: 0, page: 1, pageSize: 25 };
@@ -75,13 +81,14 @@ describe('a rota system/projects com sistemas', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    await user.click(screen.getAllByRole('button', { name: 'Editar' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Ações de Azuos Ticket' })[0]!);
+    await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
     dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Editar Sistema');
     await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    await user.click(screen.getAllByRole('button', { name: 'Ver sistema' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Ver sistema Azuos Ticket' })[0]!);
     expect(goto).toHaveBeenCalledWith('/system/projects/7');
   });
 });

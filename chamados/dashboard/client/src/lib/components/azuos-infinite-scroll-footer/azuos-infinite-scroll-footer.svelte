@@ -1,17 +1,20 @@
+<!--
+  @component
+  O FIM DA LISTA QUE ROLA — pede a próxima página ao chegar perto dele.
+
+  É o rodapé das listagens em TABELA. Cartão pagina com botão (`AzuosPaginationBar`); tabela rola.
+  No modo cartão a pessoa varre visualmente e quer saber onde está; na tabela ela procura uma linha
+  e rolar é o gesto natural.
+
+  O botão "Carregar mais" continua aqui, e não é redundância: rolagem com teclado nem sempre chega
+  ao sentinela, e leitor de tela não "rola até ver". Sem o botão, quem não dispara o observador fica
+  sem caminho nenhum para o resto da lista.
+
+  Compositor puro: recebe tudo por props e não busca nada. `data` traz quantos já vieram e o total;
+  `ui.itemNoun` diz o que está sendo contado ("de 566 chamados"); `state` traz o carregando e se há
+  mais; `actions.onLoadMore` pede a próxima página.
+-->
 <script lang="ts" module>
-  /**
-   * O FIM DA LISTA QUE ROLA — pede a próxima página ao chegar perto dele.
-   *
-   * É o rodapé das listagens em TABELA. Cartão pagina com botão (`AzuosPaginationBar`); tabela
-   * rola. No modo cartão a pessoa varre visualmente e quer saber onde está; na tabela ela procura
-   * uma linha e rolar é o gesto natural.
-   *
-   * O botão "Carregar mais" continua aqui, e não é redundância: rolagem com teclado nem sempre
-   * chega ao sentinela, e leitor de tela não "rola até ver". Sem o botão, quem não dispara o
-   * observador fica sem caminho nenhum para o resto da lista.
-   *
-   * Compositor puro: recebe tudo por props e não busca nada.
-   */
   export type AzuosInfiniteScrollFooterProps = {
     data: { loaded: number; totalItems: number };
     ui?: {

@@ -98,12 +98,21 @@ export function useWhatsappTemplatesModel() {
     }),
   );
 
+  /* O "Desfazer" do restaurar: a edição guardada volta a valer. */
+  const restoreEdit = mirrorStore(
+    createMutation({
+      mutationFn: (key: string) => whatsappIntegrationApi.restoreTemplateEdit(key),
+      onSuccess: accept,
+    }),
+  );
+
   function select(key: string): void {
     selectedKey = key;
     draft = templates.find((template) => template.key === key)?.body ?? '';
     isSaved = false;
     save.current.reset();
     restore.current.reset();
+    restoreEdit.current.reset();
   }
 
   /* A lista chega depois de o diálogo abrir: o rascunho começa pelo texto da primeira mensagem. */
@@ -128,6 +137,7 @@ export function useWhatsappTemplatesModel() {
         isLoading: query.current.isPending,
         isSaving: save.current.isPending,
         isRestoring: restore.current.isPending,
+        isRestoringEdit: restoreEdit.current.isPending,
         isSaved,
         /* Só há o que salvar quando o texto mudou e não tem problema. */
         canSave: problem === null && selected !== null && draft.trim() !== selected.body,
@@ -135,6 +145,7 @@ export function useWhatsappTemplatesModel() {
         error:
           readError(save.current.error) ??
           readError(restore.current.error) ??
+          readError(restoreEdit.current.error) ??
           readError(query.current.error),
       };
     },
@@ -158,6 +169,9 @@ export function useWhatsappTemplatesModel() {
       },
       onRestore: () => {
         if (selected && !restore.current.isPending) restore.current.mutate(selected.key);
+      },
+      onRestoreEdit: () => {
+        if (selected && !restoreEdit.current.isPending) restoreEdit.current.mutate(selected.key);
       },
     },
   };

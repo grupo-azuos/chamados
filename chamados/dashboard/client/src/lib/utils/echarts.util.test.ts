@@ -82,7 +82,12 @@ describe('echarts.util', () => {
     const option = withChartTheme(
       {
         tooltip: { trigger: 'item', formatter },
-        series: [{ type: 'pie', data: [{ name: 'Mais memória', value: 3, itemStyle: { color: 'var(--chart-5)' } }] }],
+        series: [
+          {
+            type: 'pie',
+            data: [{ name: 'Mais memória', value: 3, itemStyle: { color: 'var(--chart-5)' } }],
+          },
+        ],
       },
       THEME,
     );
@@ -94,7 +99,9 @@ describe('echarts.util', () => {
   });
 
   it('keeps numbers, arrays and plain colours untouched while resolving', () => {
-    expect(resolveCssColors({ radius: ['62%', '100%'], value: 3, color: '#fff', show: false })).toEqual({
+    expect(
+      resolveCssColors({ radius: ['62%', '100%'], value: 3, color: '#fff', show: false }),
+    ).toEqual({
       radius: ['62%', '100%'],
       value: 3,
       color: '#fff',
@@ -123,8 +130,18 @@ describe('echarts.util — colours the browser cannot resolve', () => {
 
   // feliz
   it('reads the clicked item by its id and without row or column', () => {
-    expect(selectionOf({ name: 'x', data: { id: 'node:1' }, dataType: 'node' })).toEqual({ name: 'node:1', kind: 'node', row: undefined, column: undefined });
-    expect(selectionOf({})).toEqual({ name: '', kind: undefined, row: undefined, column: undefined });
+    expect(selectionOf({ name: 'x', data: { id: 'node:1' }, dataType: 'node' })).toEqual({
+      name: 'node:1',
+      kind: 'node',
+      row: undefined,
+      column: undefined,
+    });
+    expect(selectionOf({})).toEqual({
+      name: '',
+      kind: undefined,
+      row: undefined,
+      column: undefined,
+    });
   });
 
   // feliz
@@ -137,9 +154,10 @@ describe('echarts.util — colours the browser cannot resolve', () => {
 describe('echarts.util — edge cases', () => {
   // feliz
   it('keeps a resolved color when the probe element resolves the variable', () => {
-    const spy = vi
-      .spyOn(window, 'getComputedStyle')
-      .mockReturnValue({ color: 'rgb(1, 2, 3)', getPropertyValue: () => '' } as unknown as CSSStyleDeclaration);
+    const spy = vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+      color: 'rgb(1, 2, 3)',
+      getPropertyValue: () => '',
+    } as unknown as CSSStyleDeclaration);
     try {
       expect(resolveColor('var(--foreground)')).toBe('rgb(1, 2, 3)');
     } finally {
@@ -154,7 +172,9 @@ describe('echarts.util — edge cases', () => {
   });
 
   it('walks objects without a prototype like plain ones', () => {
-    const bare = Object.assign(Object.create(null) as Record<string, unknown>, { color: '#123456' });
+    const bare = Object.assign(Object.create(null) as Record<string, unknown>, {
+      color: '#123456',
+    });
 
     expect(resolveCssColors(bare)).toEqual({ color: '#123456' });
   });
@@ -176,9 +196,10 @@ describe('echarts.util — edge cases', () => {
 describe('resolveColor — a broken variable', () => {
   // triste
   it('resolves to nothing when the variable has no name to look up', () => {
-    const spy = vi
-      .spyOn(window, 'getComputedStyle')
-      .mockReturnValue({ color: 'var(--x)', getPropertyValue: () => '' } as unknown as CSSStyleDeclaration);
+    const spy = vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+      color: 'var(--x)',
+      getPropertyValue: () => '',
+    } as unknown as CSSStyleDeclaration);
     try {
       expect(resolveColor('var(', '#abcdef')).toBe('');
     } finally {

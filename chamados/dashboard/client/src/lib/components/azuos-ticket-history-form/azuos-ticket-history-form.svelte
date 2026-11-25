@@ -1,3 +1,19 @@
+<!--
+  @component
+  LANÇAR UM HISTÓRICO na ordem de serviço.
+
+  Função pura de props: quais tipos cabem, o que cada um faz e o texto do aviso chegam prontos, e
+  por isso o formulário abre no Storybook em qualquer estágio do chamado.
+
+  A decisão de desenho que importa: os tipos vêm em DOIS GRUPOS com título — os que dão andamento e
+  os que encerram. E o que o tipo escolhido faz é dito três vezes, de três jeitos: no grupo em que
+  ele está, na frase embaixo e no texto do botão. Encerrar um chamado por engano é o erro que este
+  formulário existe para não deixar acontecer.
+
+  `data` leva o tipo, os grupos, o efeito e a frase, os campos (descrição e tempo), se a pessoa que
+  abriu vê, os arquivos e quem é avisado por WhatsApp; `state`, envio, carregamento das pessoas e
+  erros; `actions`, uma para cada campo e o `onSubmit`.
+-->
 <script lang="ts" module>
   import {
     type ManualTicketHistoryType,
@@ -12,17 +28,6 @@
     tone: TicketHistoryTone;
   };
 
-  /**
-   * LANÇAR UM HISTÓRICO na ordem de serviço.
-   *
-   * Função pura de props: quais tipos cabem, o que cada um faz e o texto do aviso chegam
-   * prontos, e por isso o formulário abre no Storybook em qualquer estágio do chamado.
-   *
-   * A decisão de desenho que importa: os tipos vêm em DOIS GRUPOS com título — os que dão
-   * andamento e os que encerram. E o que o tipo escolhido faz é dito três vezes, de três
-   * jeitos: no grupo em que ele está, na frase embaixo e no texto do botão. Encerrar um
-   * chamado por engano é o erro que este formulário existe para não deixar acontecer.
-   */
   export type AzuosTicketHistoryFormProps = {
     data: {
       type: ManualTicketHistoryType;
@@ -120,7 +125,7 @@
              — a página "subia" e ficava cortada. -->
         <label
           class={cn(
-            'relative control-lg rounded-control border-border bg-card text-foreground inline-flex cursor-pointer items-center gap-2 border text-sm font-medium transition-colors',
+            'relative control-lg rounded-control bg-muted text-foreground inline-flex cursor-pointer items-center gap-2 border text-sm font-medium transition-colors border-transparent',
             'hover:bg-muted has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
             'has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
             data.type === option.value &&
@@ -209,7 +214,7 @@
       <span class="text-ink-700 text-sm font-medium" aria-hidden="true">Visibilidade</span>
       <label
         class={cn(
-          'control-lg rounded-control border-input bg-card text-foreground flex cursor-pointer items-center gap-2.5 border text-sm transition-colors',
+          'control-lg rounded-control bg-muted text-foreground flex cursor-pointer items-center gap-2.5 border text-sm transition-colors border-transparent',
           'hover:bg-muted has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
         )}
       >

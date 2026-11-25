@@ -23,4 +23,9 @@ export const whatsappIntegrationApi = {
   /** Restaurar devolve a mensagem já com o texto original. */
   restoreTemplate: (key: string) =>
     apiRequest<WhatsappTemplate>(`/integrations/whatsapp/templates/${key}`, { method: 'DELETE' }),
+  /** Desfaz a volta ao original: a edição guardada passa a valer de novo. */
+  restoreTemplateEdit: (key: string) =>
+    apiRequest<WhatsappTemplate>(`/integrations/whatsapp/templates/${key}/restore-edit`, {
+      method: 'POST',
+    }),
 };

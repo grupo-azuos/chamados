@@ -19,6 +19,7 @@
   import { useTicketDataFormModel } from '$lib/hooks/use-ticket-data-form/use-ticket-data-form.svelte';
   import { useTicketRelationsModel } from '$lib/hooks/use-ticket-relations/use-ticket-relations.svelte';
   import TicketStockItemsCard from '$lib/components/azuos-ticket-stock-items-card/azuos-ticket-stock-items-card.svelte';
+  import TicketStockLinkDialog from '$lib/components/azuos-ticket-stock-link-dialog/azuos-ticket-stock-link-dialog.svelte';
   import { useTicketStockItemsModel } from '$lib/hooks/use-ticket-stock-items/use-ticket-stock-items.svelte';
   import { useTicketWatchersModel } from '$lib/hooks/use-ticket-watchers/use-ticket-watchers.svelte';
 
@@ -40,6 +41,10 @@
   /* As máquinas do chamado: o diálogo grande de escolha, e a lista que a ficha mostra. */
   // svelte-ignore state_referenced_locally
   const computers = useTicketComputersModel(ticket);
+  /* As máquinas do chamado, para o lado esquerdo de "Vincular itens". */
+  const machines = $derived(
+    computers.data.linked.map((computer) => ({ value: String(computer.id), label: computer.name })),
+  );
 </script>
 
 <div class="flex flex-col gap-3">
@@ -56,19 +61,31 @@
       state={{ isOpen: stock.data.items.length > 0 }}
     >
       <TicketStockItemsCard
-        data={{
-          ...stock.data,
-          machines: computers.data.linked.map((computer) => ({
-            value: String(computer.id),
-            label: computer.name,
-          })),
-        }}
+        data={{ items: stock.data.items }}
         ui={{ shelfLabel: 'Depósito da TI', isHeaderHidden: true }}
         state={{ ...stock.state, isClosed: isClosedTicketStatus(ticket.status) }}
-        actions={stock.actions}
+        actions={{
+          onRemove: stock.actions.onRemove,
+          onOpenLink: () => stock.actions.link.onOpen(machines[0]?.value ?? ''),
+        }}
       />
     </Collapsible>
   {/key}
+  {#if stock.data.link.isOpen}
+    <TicketStockLinkDialog
+      data={{ ...stock.data.link, machines, shelfLabel: 'Depósito da TI' }}
+      state={{ isOpen: true, isSaving: stock.state.isLinking, error: stock.state.linkError }}
+      actions={{
+        onMachineChange: stock.actions.link.onMachineChange,
+        onDirectionChange: stock.actions.link.onDirectionChange,
+        onSearch: stock.actions.link.onSearch,
+        onToggle: stock.actions.link.onToggle,
+        onQuantityChange: stock.actions.link.onQuantityChange,
+        onApply: stock.actions.link.onApply,
+        onClose: stock.actions.link.onClose,
+      }}
+    />
+  {/if}
   {#key watchers.data.selectedIds.length > 0}
     <Collapsible
       data={{ title: `Pessoas vinculadas (${watchers.data.selectedIds.length})` }}

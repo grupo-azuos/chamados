@@ -1,3 +1,21 @@
+<!--
+  @component
+  CRIAR OU EDITAR UM ITEM DA AGENDA do módulo Sistema, num diálogo largo: um compromisso (marcado
+  para acontecer) ou um registro (o que já foi feito).
+
+  O tipo muda o texto e os campos: o compromisso tem data, início e fim; o registro marca só data e
+  hora. Os outros campos são título, categoria, sistema vinculado (só quando há sistemas), cor na
+  agenda e descrição. As oito cores (`SWATCHES`) têm cada uma o seu token, e a bolinha do seletor e
+  o cartão do calendário saem da mesma linha: o que a pessoa escolhe aqui é o que ela vê na semana.
+  Na edição, aparece "Excluir" no rodapé quando `onDelete` é passada.
+
+  Recebe o view-model do formulário pronto (`use-software-schedule-form`): valores, erros, envio e
+  as ações de mudar, sair do campo e salvar vêm dele.
+
+  - `open` (bindable), `model` e `projects`.
+  - Exclusão: `onDelete`, `isDeleting` e `deleteError`.
+  - `onClose`: cancelar ou fechar.
+-->
 <script lang="ts" module>
   /**
    * As cores da agenda — as OITO que o compromisso pode guardar, cada uma com o seu próprio
@@ -22,7 +40,7 @@
       value: 'neutral',
       label: 'Grafite',
       dotClass: 'bg-muted-foreground',
-      surfaceClass: 'border-border bg-card hover:border-border',
+      surfaceClass: 'bg-muted',
     },
   ] as const;
 
@@ -110,7 +128,7 @@
   }));
 
   const projectOptions = $derived([
-    { value: '', label: 'Nenhum' },
+    { value: '', label: '(Nenhum)' },
     ...projects.map((p) => ({ value: String(p.id), label: p.name })),
   ]);
 
@@ -244,7 +262,6 @@
             disabled={model.state.isSubmitting}
             ariaInvalid={Boolean(model.data.fields.date.error)}
             ariaDescribedBy={model.data.fields.date.error ? dateErrorId : undefined}
-            showMonthYearSelects
             onValueChange={(value) => model.actions.onChange('date', value ?? '')}
             onBlur={() => model.actions.onBlur('date')}
           />

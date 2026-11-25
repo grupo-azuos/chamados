@@ -2,10 +2,18 @@ import { type Ticket } from '@template/shared/schemas/ticket.schema';
 import { render, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { replaceState } from '$app/navigation';
+import { page as currentPage } from '$app/state';
+import { type AreaContext } from '$lib/hooks/use-area-context/use-area-context.svelte';
 import { ApiError } from '$lib/api/http-client';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 import Harness from './use-ticket-list-harness.test.svelte';
-import { toAssigneeFilterOptions, type TicketListModel } from './use-ticket-list.svelte';
+import {
+  TICKETS_BOARD_SIZE,
+  toAssigneeFilterOptions,
+  toProjectFilterOptions,
+  type TicketListModel,
+} from './use-ticket-list.svelte';
 
 vi.mock('$lib/api/tickets.api', () => ({
   ticketsApi: {
@@ -17,9 +25,14 @@ vi.mock('$lib/api/tickets.api', () => ({
   },
 }));
 
+vi.mock('$lib/api/software-projects.api', () => ({
+  softwareProjectsApi: { list: vi.fn() },
+}));
+
 vi.mock('$lib/utils/download-file.util', () => ({ triggerBrowserDownload: vi.fn() }));
 
 const { ticketsApi } = await import('$lib/api/tickets.api');
+const { softwareProjectsApi } = await import('$lib/api/software-projects.api');
 
 function ticket(overrides: Partial<Ticket> = {}): Ticket {
   return {
@@ -67,22 +80,28 @@ const emptyDashboard = {
 };
 
 /** Monta o model. O objeto devolvido tem getters, então continua vivo enquanto o teste roda. */
-function mountModel(): TicketListModel {
+function mountModel(area: AreaContext = 'infra'): TicketListModel {
   let model!: TicketListModel;
-  render(Harness, { props: { onReady: (ready: TicketListModel) => (model = ready) } });
+  render(Harness, { props: { area, onReady: (ready: TicketListModel) => (model = ready) } });
 
   return model;
 }
 
-async function mountLoadedModel(): Promise<TicketListModel> {
-  const model = mountModel();
+async function mountLoadedModel(area: AreaContext = 'infra'): Promise<TicketListModel> {
+  const model = mountModel(area);
   await waitFor(() => expect(model.state.isLoading).toBe(false));
 
   return model;
 }
 
+/* O endereço é de escopo de módulo no apoio do `$app/state`: cada teste começa na fila limpa. */
+function visitingUrl(path = '/infra/tickets') {
+  (currentPage as { url: URL }).url = new URL(`http://localhost:5173${path}`);
+}
+
 describe('useTicketListModel', () => {
   beforeEach(() => {
+    visitingUrl();
     vi.mocked(ticketsApi.list).mockResolvedValue(page([ticket()]));
     vi.mocked(ticketsApi.dashboard).mockResolvedValue(emptyDashboard);
     vi.mocked(ticketsApi.assigneeOptions).mockResolvedValue([
@@ -168,7 +187,7 @@ describe('useTicketListModel', () => {
     model.actions.onPageChange(3);
 
     await waitFor(() => {
-      expect(model.data.paging.page).toBe(3);
+      expect(model.data.paging?.page).toBe(3);
       expect(ticketsApi.list).toHaveBeenCalledWith(expect.objectContaining({ page: 3 }));
     });
   });
@@ -177,12 +196,12 @@ describe('useTicketListModel', () => {
     const model = await mountLoadedModel();
 
     model.actions.onPageChange(2);
-    await waitFor(() => expect(model.data.paging.page).toBe(2));
+    await waitFor(() => expect(model.data.paging?.page).toBe(2));
 
     model.actions.onStatusChange('open');
 
     await waitFor(() => {
-      expect(model.data.paging.page).toBe(1);
+      expect(model.data.paging?.page).toBe(1);
       expect(ticketsApi.list).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'open', page: 1 }),
       );
@@ -278,13 +297,164 @@ describe('useTicketListModel', () => {
   });
 });
 
+describe('useTicketListModel — the board view', () => {
+  beforeEach(() => {
+    visitingUrl();
+    vi.mocked(ticketsApi.list).mockReset().mockResolvedValue(page([ticket()]));
+    vi.mocked(ticketsApi.dashboard).mockResolvedValue(emptyDashboard);
+    vi.mocked(ticketsApi.assigneeOptions).mockResolvedValue([]);
+    vi.mocked(replaceState).mockClear();
+  });
+
+  // feliz
+  it('opens on the board when the address asks, bringing every ticket and no pages', async () => {
+    visitingUrl('/infra/tickets?view=kanban');
+    const model = await mountLoadedModel();
+
+    expect(model.data.view).toBe('kanban');
+    expect(model.data.paging).toBeUndefined();
+    expect(ticketsApi.list).toHaveBeenCalledTimes(1);
+    expect(ticketsApi.list).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, pageSize: TICKETS_BOARD_SIZE, area: 'infra' }),
+    );
+  });
+
+  it('switches to the board and back, writing the choice on the address', async () => {
+    const model = await mountLoadedModel();
+
+    model.actions.onViewChange('kanban');
+    await waitFor(() =>
+      expect(ticketsApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pageSize: TICKETS_BOARD_SIZE }),
+      ),
+    );
+    expect(currentPage.url.searchParams.get('view')).toBe('kanban');
+
+    model.actions.onViewChange('list');
+    await waitFor(() => expect(model.data.paging?.page).toBe(1));
+    expect(currentPage.url.searchParams.has('view')).toBe(false);
+  });
+
+  it('applies the same filters of the list to the board', async () => {
+    visitingUrl('/infra/tickets?view=kanban');
+    const model = await mountLoadedModel();
+
+    model.actions.onSearchChange('impressora');
+    model.actions.onStatusGroupChange('waiting');
+    model.actions.onDepartmentChange('rh');
+
+    await waitFor(() =>
+      expect(ticketsApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          search: 'impressora',
+          statusGroup: 'waiting',
+          department: 'rh',
+          pageSize: TICKETS_BOARD_SIZE,
+        }),
+      ),
+    );
+  });
+
+  it('says the board does not hold everything that matched', async () => {
+    visitingUrl('/infra/tickets?view=kanban');
+    vi.mocked(ticketsApi.list).mockResolvedValue(page([ticket()], 450));
+    const model = await mountLoadedModel();
+
+    expect(model.state.isTruncated).toBe(true);
+    expect(model.data.total).toBe(450);
+  });
+
+  // triste
+  it('ignores a view the address made up, and a click on the view already in use', async () => {
+    visitingUrl('/infra/tickets?view=gantt');
+    const model = await mountLoadedModel();
+
+    expect(model.data.view).toBe('list');
+    model.actions.onViewChange('list');
+
+    expect(replaceState).not.toHaveBeenCalled();
+  });
+
+  it('shows the error of the board and asks again on retry', async () => {
+    visitingUrl('/infra/tickets?view=kanban');
+    vi.mocked(ticketsApi.list).mockRejectedValueOnce(new ApiError(500, 'Banco fora do ar.'));
+    const model = mountModel();
+
+    await waitFor(() => expect(model.state.error).toBe('Banco fora do ar.'));
+    model.actions.onRetry();
+
+    await waitFor(() => expect(model.state.error).toBeNull());
+  });
+});
+
+describe('useTicketListModel — the system filter', () => {
+  beforeEach(() => {
+    visitingUrl('/system/tickets');
+    vi.mocked(ticketsApi.list).mockReset().mockResolvedValue(page([ticket({ area: 'sistema' })]));
+    vi.mocked(ticketsApi.dashboard).mockResolvedValue(emptyDashboard);
+    vi.mocked(ticketsApi.assigneeOptions).mockResolvedValue([]);
+    vi.mocked(softwareProjectsApi.list).mockReset().mockResolvedValue({
+      items: [{ id: 7, name: 'Portal do cliente' }] as never,
+      total: 1,
+      page: 1,
+      pageSize: 100,
+    });
+  });
+
+  // feliz
+  it('offers the registered systems and asks the queue of the one picked', async () => {
+    const model = await mountLoadedModel('sistema');
+    await waitFor(() =>
+      expect(model.data.projectOptions).toEqual([{ value: '7', label: 'Portal do cliente' }]),
+    );
+
+    model.actions.onProjectChange('7');
+
+    await waitFor(() =>
+      expect(ticketsApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ area: 'sistema', projectId: 7 }),
+      ),
+    );
+    expect(model.state.isFilteredOut).toBe(false);
+  });
+
+  // triste
+  it('never asks for systems, nor sends one, outside the System queue', async () => {
+    visitingUrl('/infra/tickets?projectId=7');
+    const model = await mountLoadedModel('infra');
+
+    expect(softwareProjectsApi.list).not.toHaveBeenCalled();
+    expect(model.data.projectOptions).toEqual([]);
+    expect(ticketsApi.list).toHaveBeenLastCalledWith(expect.objectContaining({ projectId: undefined }));
+  });
+
+  it('refuses a system id that is not a number', async () => {
+    visitingUrl('/system/tickets?projectId=abc');
+    const model = await mountLoadedModel('sistema');
+
+    expect(model.data.filter.projectId).toBe('');
+  });
+});
+
+describe('toProjectFilterOptions', () => {
+  // feliz
+  it('turns each system into an option by its id', () => {
+    expect(toProjectFilterOptions([{ id: 3, name: 'ERP' }])).toEqual([{ value: '3', label: 'ERP' }]);
+  });
+
+  // triste
+  it('offers nothing when no system is registered', () => {
+    expect(toProjectFilterOptions([])).toEqual([]);
+  });
+});
+
 describe('toAssigneeFilterOptions', () => {
   // feliz
   it('puts the tickets nobody took first, then the people of the area with photo', () => {
     expect(
       toAssigneeFilterOptions([{ id: 'u-ana', name: 'Ana Lima', avatarUrl: 'https://f/ana.png' }]),
     ).toEqual([
-      { value: 'none', label: 'Sem responsável' },
+      { value: 'none', label: '(Sem responsável)' },
       {
         value: 'u-ana',
         label: 'Ana Lima',
@@ -296,7 +466,7 @@ describe('toAssigneeFilterOptions', () => {
 
   // triste
   it('still offers the unassigned queue when nobody attends the area, or has no photo', () => {
-    expect(toAssigneeFilterOptions([])).toEqual([{ value: 'none', label: 'Sem responsável' }]);
+    expect(toAssigneeFilterOptions([])).toEqual([{ value: 'none', label: '(Sem responsável)' }]);
     expect(toAssigneeFilterOptions([{ id: 'u-bia', name: 'Bia' }])[1]?.avatar?.url).toBeNull();
   });
 });

@@ -9,12 +9,17 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota infra/parts', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
@@ -24,7 +29,7 @@ describe('a rota infra/parts', () => {
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -53,14 +58,15 @@ function serveParts() {
   vi.mocked(apiRequest).mockImplementation(async (path: string) => {
     if (path === '/parts') return { items: [part], total: 1, page: 1, pageSize: 25 };
     if (path === '/parts/summary') return { kinds: 1, items: 3, outOfStock: 0 };
-    if (path.startsWith('/parts/movements') || path === '/computers') return { items: [], total: 0, page: 1, pageSize: 25 };
+    if (path.startsWith('/parts/movements') || path === '/computers')
+      return { items: [], total: 0, page: 1, pageSize: 25 };
     return [];
   });
 }
 
-describe('a rota infra/parts com peças', () => {
+describe('the infra/parts route with parts', () => {
   // feliz
-  it('abre o cadastro, a correção e a movimentação de uma peça', async () => {
+  it('opens the registration, the fix and the movement of a part', async () => {
     serveParts();
     visiting({});
     renderPage(Page as never);
@@ -68,7 +74,9 @@ describe('a rota infra/parts com peças', () => {
 
     await screen.findAllByText('SSD 240 GB Kingston');
     const closeDialog = async () => {
-      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Fechar diálogo' }));
+      await user.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: 'Fechar diálogo' }),
+      );
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     };
 

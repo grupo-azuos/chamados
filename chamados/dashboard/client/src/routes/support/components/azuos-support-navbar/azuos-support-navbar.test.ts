@@ -18,7 +18,7 @@ function renderNavbar(activeHref = '/support', overrides: { person?: typeof pers
 
 describe('AzuosSupportNavbar', () => {
   // feliz
-  it('leva às duas telas da Central e marca a atual', () => {
+  it('leads to both Central screens and marks the current one', () => {
     renderNavbar('/support/tickets');
 
     expect(screen.getByRole('link', { name: /abrir chamado/i }).getAttribute('href')).toBe('/support');
@@ -28,7 +28,7 @@ describe('AzuosSupportNavbar', () => {
   });
 
   // feliz
-  it('mostra a pessoa logada com o caminho para o perfil', () => {
+  it('shows the signed-in person with the way to the profile', () => {
     renderNavbar();
 
     const link = screen.getByRole('link', { name: /meu perfil — bia costa/i });
@@ -36,7 +36,7 @@ describe('AzuosSupportNavbar', () => {
   });
 
   // feliz
-  it('troca o tema e sai da conta pelos botões', async () => {
+  it('switches the theme and signs out through the buttons', async () => {
     const actions = renderNavbar();
 
     await userEvent.click(screen.getByRole('button', { name: 'Usar tema escuro' }));
@@ -47,7 +47,7 @@ describe('AzuosSupportNavbar', () => {
   });
 
   // triste
-  it('não mostra o cartão da pessoa quando ainda não se sabe quem é', () => {
+  it('hides the person card while it is not known who they are', () => {
     renderNavbar('/support', { person: null });
 
     expect(screen.queryByRole('link', { name: /meu perfil/i })).toBeNull();

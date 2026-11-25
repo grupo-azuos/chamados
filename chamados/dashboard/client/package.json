@@ -28,6 +28,8 @@
     "api:client": "openapi-typescript http://localhost:3005/docs-json -o src/lib/api/generated/schema.ts"
   },
   "dependencies": {
+    "@dnd-kit/dom": "^0.5.3",
+    "@dnd-kit/svelte": "^0.5.3",
     "@internationalized/date": "^3.12.4",
     "@lucide/svelte": "^1.48.0",
     "@sveltejs/adapter-static": "^3.0.10",
@@ -36,6 +38,7 @@
     "@tanstack/svelte-query": "^5.90.2",
     "@tanstack/svelte-table": "^9.2.4",
     "@template/shared": "*",
+    "@xyflow/svelte": "^2.0.3",
     "bits-ui": "^2.19.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -56,6 +59,7 @@
     "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.48.0",
     "@storybook/addon-a11y": "^10.6.0",
+    "@storybook/addon-docs": "^10.6.0",
     "@storybook/addon-svelte-csf": "^5.1.2",
     "@storybook/svelte": "^10.6.0",
     "@storybook/sveltekit": "^10.6.0",

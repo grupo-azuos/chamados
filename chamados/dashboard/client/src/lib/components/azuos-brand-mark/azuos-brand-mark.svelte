@@ -1,16 +1,19 @@
+<!--
+  @component
+  A marca, a partir dos ARQUIVOS OFICIAIS do Grupo Azuos — o mesmo formato do paralegal.
+
+  - `full`: a logo branca inteira. Feita para fundo escuro, por isso só existe sobre a barra
+    azul (ou outro fundo da marca), nunca sobre o branco do conteúdo.
+  - `icon`: o símbolo oficial em SVG, também branco. É o que identifica a marca com a barra
+    recolhida, sem espremer o nome inteiro em poucos pixels.
+  - `tile`: o ícone de app oficial (símbolo sobre o quadrado azul). É o que vai nas telas de
+    fundo claro — entrar, recuperar senha —, onde as duas versões brancas sumiriam.
+
+  Os arquivos vêm da CDN da marca, publicados pelo app brand; nenhum é redesenhado à mão.
+
+  `ui`: `variant` (`full`, `icon` ou `tile`), `size` (`sm`, `md`, `lg`) e classe extra.
+-->
 <script lang="ts" module>
-  /**
-   * A marca, a partir dos ARQUIVOS OFICIAIS do Grupo Azuos — o mesmo formato do paralegal.
-   *
-   * - `full`: a logo branca inteira. Feita para fundo escuro, por isso só existe sobre a barra
-   *   azul (ou outro fundo da marca), nunca sobre o branco do conteúdo.
-   * - `icon`: o símbolo oficial em SVG, também branco. É o que identifica a marca com a barra
-   *   recolhida, sem espremer o nome inteiro em poucos pixels.
-   * - `tile`: o ícone de app oficial (símbolo sobre o quadrado azul). É o que vai nas telas de
-   *   fundo claro — entrar, recuperar senha —, onde as duas versões brancas sumiriam.
-   *
-   * Os arquivos vêm do pacote de marca (`brand/logo`); nenhum é redesenhado à mão.
-   */
   export type AzuosBrandMarkProps = {
     ui?: {
       size?: 'sm' | 'md' | 'lg';
@@ -28,14 +31,16 @@
 </script>
 
 <script lang="ts">
+  import { brandAssetUrl } from '$lib/utils/brand-asset.util';
   import { cn } from '$lib/utils/cn';
-  import appIcon from './assets/azuos-app-icon.png';
-  import icon from './assets/azuos-icon.svg';
-  import logoWhite from './assets/azuos-logo-oficial-white.png';
 
   let { ui }: AzuosBrandMarkProps = $props();
 
-  const SOURCES = { full: logoWhite, icon, tile: appIcon } as const;
+  const SOURCES = {
+    full: brandAssetUrl('logo/png/azuos-logo-oficial-white.png'),
+    icon: brandAssetUrl('logo/svg/icon.svg'),
+    tile: brandAssetUrl('logo/web/icon-512.png'),
+  } as const;
 
   const variant = $derived(ui?.variant ?? 'full');
   const width = $derived(BRAND_WIDTHS[variant][ui?.size ?? 'md']);

@@ -18,7 +18,7 @@
       },
       /* Dado INVENTADO: nenhum nome daqui existe. */
       responsibleOptions: [
-        { value: '', label: 'Sem responsável' },
+        { value: '', label: '(Sem responsável)' },
         { value: 'u-ana', label: 'Ana Lima' },
         { value: 'u-bia', label: 'Bia Costa' },
       ],

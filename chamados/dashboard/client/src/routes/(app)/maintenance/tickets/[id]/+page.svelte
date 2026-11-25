@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
+  import { useTicketRemovedModel } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import { page } from '$app/state';
   import Ticket from '@lucide/svelte/icons/ticket';
 
@@ -7,6 +8,7 @@
   import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import { useBackTarget } from '$lib/hooks/use-navigation-stack/use-navigation-stack.svelte';
   import { useTicketDetailModel } from '$lib/hooks/use-ticket-detail/use-ticket-detail.svelte';
   import TicketDetailView from '$lib/components/azuos-ticket-detail-view/azuos-ticket-detail-view.svelte';
   import WhatsappNoticeList from '$lib/components/azuos-whatsapp-notice-list/azuos-whatsapp-notice-list.svelte';
@@ -22,8 +24,11 @@
   const id = Number(page.params.id);
 
   const detail = useTicketDetailModel(id);
+  const removed = useTicketRemovedModel(id);
 
-  const backToQueue = () => void goto('/maintenance/tickets');
+  /* O voltar leva à tela de onde a pessoa veio (a ficha da máquina, o painel), e sem caminho
+     à fila do módulo. */
+  const back = useBackTarget({ to: '/maintenance/tickets', destination: 'os chamados' });
 </script>
 
 <svelte:head>
@@ -40,7 +45,7 @@
       }}
       ui={{ icon: Ticket }}
     >
-      <BackButton data={{ destination: 'os chamados' }} actions={{ onClick: backToQueue }} />
+      <BackButton data={{ destination: back.destination }} actions={{ onClick: back.onBack }} />
     </EmptyState>
   </div>
 {:else if detail.state.error}
@@ -60,9 +65,10 @@
       histories: detail.data.histories,
       attachments: detail.data.attachments,
       whatsAppLink: detail.data.whatsAppLink,
+      backDestination: back.destination,
     }}
     state={detail.state}
-    actions={{ ...detail.actions, onBack: backToQueue }}
+    actions={{ ...detail.actions, onBack: back.onBack }}
   >
     {#snippet historyForm()}
       <!-- `{#key}` pelo ESTÁGIO: os tipos de histórico que cabem mudam com ele, e o formulário
@@ -91,4 +97,12 @@
       />
     {/snippet}
   </TicketDetailView>
+
+  <!-- O que saiu do chamado (anexo, máquina, pessoa, item, vínculo, área) fica aqui, com o "Desfazer". -->
+  <ArchivedList
+    data={removed.data}
+    ui={{ className: 'mt-6' }}
+    state={removed.state}
+    actions={removed.actions}
+  />
 {/if}

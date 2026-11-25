@@ -1,16 +1,21 @@
+<!--
+  @component
+  Um controle deslizante com NOME — o Slider do bits-ui, com o visual do shadcn.
+
+  Não é o `ui/slider` embrulhado: aquele desenha a alça (`role="slider"`) sem aceitar rótulo, e o
+  `aria-label` posto na raiz não chega nela. O leitor de tela anunciaria só "controle deslizante",
+  sem dizer de quê. Como o `ui/` não se edita, este campo monta as mesmas peças do bits-ui e dá o
+  nome à alça.
+
+  - `data`: o rótulo, o valor, o mínimo, o máximo e o passo.
+  - `ui`: classes extras.
+  - `state`: `isDisabled`.
+  - `actions`: `onChange`, com o valor novo.
+  - `startIcon`/`endIcon`: os ícones das pontas, só decoração — o nome está no rótulo.
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
 
-  /**
-   * Um controle deslizante com NOME — o Slider do bits-ui, com o visual do shadcn.
-   *
-   * Não é o `ui/slider` embrulhado: aquele desenha a alça (`role="slider"`) sem aceitar rótulo, e o
-   * `aria-label` posto na raiz não chega nela. O leitor de tela anunciaria só "controle
-   * deslizante", sem dizer de quê. Como o `ui/` não se edita, este campo monta as mesmas peças do
-   * bits-ui e dá o nome à alça.
-   *
-   * Os ícones das pontas (`startIcon`/`endIcon`) são decoração: o nome está no rótulo.
-   */
   export type AzuosSliderFieldProps = {
     data: { label: string; value: number; min: number; max: number; step: number };
     ui?: { className?: string };
@@ -28,7 +33,7 @@
   let { data, ui, state, actions, startIcon, endIcon }: AzuosSliderFieldProps = $props();
 </script>
 
-<div class={cn('flex min-h-10 items-center gap-3', ui?.className)}>
+<div class={cn('flex items-center gap-3', ui?.className)}>
   {@render startIcon?.()}
   <SliderPrimitive.Root
     type="single"
@@ -46,7 +51,7 @@
     <SliderPrimitive.Thumb
       index={0}
       aria-label={data.label}
-      class="border-border bg-card focus-visible:ring-ring block size-4 shrink-0 rounded-full border shadow-xs transition-[color,box-shadow] after:absolute after:-inset-3 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none"
+      class="bg-card ring-foreground/10 block size-5 shrink-0 rounded-full shadow-xs ring-1 transition-[color,box-shadow] after:absolute after:-inset-3 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none"
     />
   </SliderPrimitive.Root>
   {@render endIcon?.()}

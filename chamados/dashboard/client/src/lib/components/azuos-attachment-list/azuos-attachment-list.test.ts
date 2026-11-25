@@ -28,12 +28,12 @@ describe('AzuosAttachmentList', () => {
   it('offers both ways of getting to the file', () => {
     render(AttachmentList, { props: { data: { attachments: [attachment()] } } });
 
-    expect(screen.getByRole('link', { name: 'Abrir' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^Abrir/ })).toHaveAttribute(
       'href',
       'https://r2.example/abrir',
     );
 
-    const download = screen.getByRole('link', { name: 'Baixar' });
+    const download = screen.getByRole('link', { name: /^Baixar/ });
     expect(download).toHaveAttribute('href', 'https://r2.example/baixar');
     expect(download).toHaveAttribute('download', 'nota-fiscal.pdf');
   });
@@ -50,7 +50,7 @@ describe('AzuosAttachmentList', () => {
       props: { data: { attachments: [attachment()] }, actions: { onRemove } },
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Excluir/ }));
 
     expect(onRemove).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
@@ -61,7 +61,7 @@ describe('AzuosAttachmentList', () => {
   it('does not offer to remove when the screen cannot remove', () => {
     render(AttachmentList, { props: { data: { attachments: [attachment()] } } });
 
-    expect(screen.queryByRole('button', { name: 'Excluir' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Excluir/ })).not.toBeInTheDocument();
   });
 
   /**
@@ -86,7 +86,7 @@ describe('AzuosAttachmentList', () => {
     });
 
     /* Dois arquivos na lista, UM botão de excluir: o do TI. */
-    expect(screen.getAllByRole('button', { name: 'Excluir' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Excluir/ })).toHaveLength(1);
   });
 
   /* A mesma lista, do outro lado: agora é o contrário. */
@@ -104,7 +104,7 @@ describe('AzuosAttachmentList', () => {
       },
     });
 
-    expect(screen.getAllByRole('button', { name: 'Excluir' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Excluir/ })).toHaveLength(1);
   });
 
   /* De quem é o arquivo vai ESCRITO: sem isso, a única pista de por que uns têm botão e

@@ -40,6 +40,13 @@ export const envSchema = z.object({
   GITHUB_APP_ID: z.string().regex(/^\d+$/).optional(),
   GITHUB_APP_INSTALLATION_ID: z.string().regex(/^\d+$/).optional(),
   GITHUB_APP_PRIVATE_KEY: z.string().min(1).optional(),
+  /**
+   * O segredo do WEBHOOK do GitHub App — o mesmo texto cadastrado em "Webhook secret" no App.
+   * O GitHub assina cada aviso com ele (`X-Hub-Signature-256`), e só aviso com assinatura certa
+   * entra. Sem a variável, a porta `/github/webhook` fica FECHADA: aceitar aviso sem conferir
+   * deixaria qualquer um fechar chamado fingindo ser o GitHub.
+   */
+  GITHUB_APP_WEBHOOK_SECRET: z.string().min(16).optional(),
   GITHUB_OAUTH_CLIENT_ID: z.string().trim().min(1).optional(),
   GITHUB_OAUTH_CLIENT_SECRET: z.string().trim().min(1).optional(),
   GITHUB_OAUTH_REDIRECT_URI: z.url().optional(),

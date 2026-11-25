@@ -56,11 +56,11 @@
   --brand-yellow-400: #f7ce3c;
   --brand-yellow-300: #fade7a;
 
-  --ink-900: #111827;
-  --ink-700: #374151;
-  --ink-500: #6b7280;
-  --ink-300: #d1d5db;
-  --ink-100: #f3f4f6;
+  --ink-900: #1d1d1f;
+  --ink-700: #3a3a3c;
+  --ink-500: #6e6e73;
+  --ink-300: #d8d8dd;
+  --ink-100: #ececf0;
 
   /**
    * ---- Os TONS DE FUNDO, do mais fundo ao mais alto ----
@@ -73,10 +73,10 @@
    * mesma pergunta que aparece em toda tela ("este bloco está acima ou abaixo do fundo?") e
    * sem nome cada tela responde com um cinza diferente.
    */
-  --crust: #e5e7eb;
+  --crust: #e5e5ea;
   --mantle: var(--ink-100);
-  --base: #f9fafb;
-  --surface: #e5e7eb;
+  --base: #f7f7fa;
+  --surface: #e5e5ea;
 
   /* O terceiro degrau de texto. Aponta para o mesmo valor de `muted-foreground`: é um apelido
      por PAPEL ("texto de apoio"), não um tom novo — inventar um degrau intermediário daria
@@ -85,19 +85,25 @@
 
   --radius: 0.625rem;
 
-  /* Arredondamento "gordinho" canônico Azuos: controles 14px, botões 14px, cartões 20px, diálogos 16px. */
-  --shape-control: 14px;
-  --shape-button: 14px;
+  /* Forma do padrão Apple: campos 10px, botões e chips em pílula, cartões 20px, diálogos 22px.
+     Card sem borda: o que separa é o fio de 1px e a sombra difusa do `--elevation-card`. */
+  --shape-control: 10px;
+  --shape-button: 9999px;
   --shape-card: 20px;
-  --shape-dialog: 16px;
+  --shape-dialog: 22px;
   --shape-chip: 9999px;
   --shape-badge: 9999px;
+  /* O ícone do card: quadrado de canto bem redondo ("squircle"), cheio na cor do assunto. */
+  --shape-icon: 28%;
   --border-width: 1px;
   --border-style: solid;
-  --card-border-color: var(--border);
+  --card-border-color: transparent;
   --card-background: var(--card);
-  --elevation-card: none;
-  --elevation-button: none;
+  --elevation-card:
+    0 0 0 1px color-mix(in oklch, var(--foreground) 6%, transparent), 0 6px 24px rgb(0 0 0 / 0.07);
+  --elevation-button: 0 1px 2px rgb(0 0 0 / 0.08);
+  --elevation-card-hover:
+    0 0 0 1px color-mix(in oklch, var(--foreground) 8%, transparent), 0 14px 36px rgb(0 0 0 / 0.12);
   --control-height: 44px;
   --heading-weight: 700;
   --heading-tracking: -0.02em;
@@ -109,47 +115,57 @@
   --focus-color: var(--color-ring);
   --link-decoration: none;
 
-  --brand-font-sans: 'IBM Plex Sans', system-ui, sans-serif;
-  --brand-font-heading: 'IBM Plex Sans', system-ui, sans-serif;
+  --brand-font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, system-ui, sans-serif;
+  --brand-font-heading:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, system-ui, sans-serif;
 
   /* ---- Semântica da PÁGINA ---- */
-  --background: #f8fafc;
+  --background: #f2f2f7;
   --foreground: var(--ink-900);
-  --card: #fbfbfd;
+  --card: #ffffff;
   --card-foreground: var(--ink-900);
-  --popover: #fbfbfd;
+  --popover: #ffffff;
   --popover-foreground: var(--ink-900);
-  --primary: var(--brand-blue-800);
-  --primary-foreground: #f8fafc;
-  --primary-strong: var(--brand-blue-900);
-  --primary-soft: var(--brand-blue-100);
-  --secondary: var(--ink-100);
+  --primary: #007aff;
+  --primary-foreground: #ffffff;
+  --primary-strong: #0060df;
+  --primary-soft: #e5f0ff;
+  --secondary: #ececf0;
   --secondary-foreground: var(--ink-900);
-  --muted: var(--ink-100);
+  --muted: #ececf0;
   --muted-foreground: var(--ink-500);
-  --accent: var(--brand-blue-100);
-  --accent-foreground: var(--brand-blue-900);
-  --accent-strong: #b45309;
-  --tertiary: #8b5cf6;
-  --tertiary-strong: #6d28d9;
-  --destructive: #dc2626;
-  --border: var(--ink-300);
-  --input: var(--ink-300);
-  --ring: var(--brand-blue-600);
-  --destructive-foreground: #f8fafc;
+  /* O VÉU DO HOVER: o texto do tema a 6%, por cima do que estiver embaixo. É o hover do card e o
+     da linha de lista ou tabela — o mesmo tom nos dois, e nos dois temas, porque segue o
+     `--foreground` (escurece no claro, clareia no escuro). */
+  --hover-veil: color-mix(in srgb, var(--foreground) 5%, transparent);
+  --accent: #e5f0ff;
+  --accent-foreground: #0050b8;
+  --accent-strong: var(--yellow);
+  --tertiary: #af52de;
+  --tertiary-strong: #8944ab;
+  /* O vermelho do sistema é o das tags (`COMPANY_COLOR_PALETTE`), igual nos dois temas: um
+     vermelho só, em vez de quatro tons parecidos espalhados. */
+  --red: #e0182d;
+  --destructive: var(--red);
+  --border: #e3e3e8;
+  --input: var(--muted);
+  --ring: #007aff;
+  --destructive-foreground: #ffffff;
 
   /* Texto sobre cada cor forte. No claro as cores são escuras e o texto é claro; no escuro elas
      sobem para o tom pastel e o texto desce para escuro — por isso cada tom tem o seu. */
   --success-foreground: #f8fafc;
-  --warning-foreground: #f8fafc;
+  /* O aviso é amarelo nos dois temas: o texto por cima é sempre escuro. */
+  --warning-foreground: #111827;
   --info-foreground: #f8fafc;
 
   /* O "preto" e o "branco" da marca: nunca puros. São o que `bg-black`/`text-white` dos
      primitivos do shadcn (`lib/components/ui/`, que não se editam) passam a usar, pelo `@theme`
      lá embaixo. Iguais nos dois temas de propósito: véu de diálogo e fundo de recorte de foto
      ficam escuros no claro e no escuro. */
-  --black: #111827;
-  --white: #f8fafc;
+  --black: #1d1d1f;
+  --white: #ffffff;
   --backdrop: var(--black);
   /* Texto sobre um fundo que é SEMPRE escuro (`bg-brand-blue-900`, `bg-backdrop`) ou sempre
      claro, nos dois temas. `foreground`/`primary-foreground` viram no escuro; estes não. */
@@ -179,24 +195,32 @@
    * de cor conforme o que estivesse atrás dele, e o mesmo "Concluída" ficava de dois tons na
    * mesma lista (um sobre o branco do cartão, outro sobre a linha cinza da tabela).
    */
-  --success: #047857;
-  --success-soft: #d1fae5;
-  --warning: #b45309;
-  --warning-soft: #fef3c7;
-  --info: #1d4ed8;
-  --info-soft: #dbeafe;
-  --destructive-soft: #fee2e2;
-  --primary-soft: var(--brand-blue-100);
+  --success: #1f7a35;
+  --success-soft: #e3f6e8;
+  /* O aviso é o amarelo do grupo, rgb(255, 220, 0) — nada de âmbar nem de laranja-marrom, nem
+     amarelo escurecido (que vira âmbar). Ele é FUNDO, traço, bolinha e gráfico. Como TEXTO ou
+     ícone solto o amarelo some no claro, e aí o `--warning-ink` é o texto escuro da marca: a cor
+     fica na bolinha ao lado, nunca na letra. No escuro o `-ink` volta a ser o amarelo do grupo.
+     A regra `brand/readable-yellow-text` do `check:design` recusa `text-warning` e
+     `text-hue-yellow`. */
+  --warning: var(--yellow);
+  --warning-ink: var(--ink-900);
+  --warning-soft: #fff6d6;
+  --info: #0071e3;
+  --info-soft: #e5f0ff;
+  --destructive-soft: #ffe9e7;
+  --primary-soft: #e5f0ff;
 
   /*
    * `-fill` é o PREENCHIMENTO cheio do tom (cartão escolhido, hover de cartão clicável), sempre
    * com texto `--on-dark` por cima. Os mesmos nos dois temas, e todos ≥ 4,5:1 com o branco: os
    * tons de texto acima clareiam no escuro, e como fundo eles pediam texto preto.
    */
-  --destructive-fill: #b91c1c;
-  --warning-fill: #b45309;
-  --info-fill: #1d4ed8;
-  --success-fill: #047857;
+  --destructive-fill: var(--red);
+  /* A exceção da regra acima: o amarelo é claro, e o texto sobre ele é `--warning-foreground`. */
+  --warning-fill: var(--yellow);
+  --info-fill: #007aff;
+  --success-fill: #34c759;
 
   /**
    * ---- Os SOTAQUES de card ----
@@ -207,18 +231,29 @@
    * manter contraste ≥ 5:1 sobre o card. O ícone dentro da bolinha usa `--on-hue`.
    * Escolhido = `--card-selected` (o azul claro da marca) com texto e ícone brancos.
    */
-  --hue-blue: #1b3a8c;
-  --hue-red: #a8423a;
-  --hue-amber: #9a6412;
-  --hue-green: #23705f;
-  --hue-steel: #2f6383;
-  --hue-plum: #62468a;
-  --hue-slate: #4c5668;
-  --hue-copper: #8f4f2a;
-  --on-hue: #f8fafc;
-  --card-selected: #2f5fd0;
-  --card-selected-hover: #3a6be0;
-  --on-card-selected: #f8fafc;
+  --hue-blue: #007aff;
+  --hue-red: var(--red);
+  /* O amarelo do grupo, rgb(255, 220, 0), igual nos dois temas. O ícone dentro da bolinha
+     amarela é escuro (`--on-yellow`): o `--on-hue` claro sumiria nele. */
+  --yellow: #ffcc00;
+  --on-yellow: #1d1d1f;
+  --hue-yellow: var(--yellow);
+  /* O SOTAQUE amarelo do card (o número grande, o ícone do canto) é o amarelo do grupo, puro, nos
+     dois temas — decisão de quem administra. Letra pequena em amarelo (selo, aviso) não usa este:
+     usa o `--warning-ink`, o texto escuro. */
+  --hue-yellow-ink: #a07c00;
+  --hue-green: #34c759;
+  --hue-steel: #32ade6;
+  --hue-plum: #af52de;
+  --hue-slate: #8e8e93;
+  --hue-copper: #5856d6;
+  --on-hue: #ffffff;
+  /* A opção escolhida de um segmentado (pílula por cima do trilho cinza): branca no claro, um
+     cinza MAIS CLARO que o trilho no escuro — como no iOS; o card escuro sumiria no trilho. */
+  --segment-selected: var(--card);
+  --card-selected: #007aff;
+  --card-selected-hover: #0a84ff;
+  --on-card-selected: #ffffff;
 
   /**
    * ---- As cores de CATEGORIA dos gráficos ----
@@ -226,11 +261,11 @@
    * A ordem é fixa e percorrida, nunca sorteada: sorteio faria a mesma fatia mudar de cor a
    * cada recarga. Quem resolve a cor de uma fatia é `lib/utils/chart-slice.util.ts`.
    */
-  --chart-1: var(--brand-blue-600);
-  --chart-2: #10b981;
-  --chart-3: var(--brand-yellow-500);
-  --chart-4: #ef4444;
-  --chart-5: #8b5cf6;
+  --chart-1: #007aff;
+  --chart-2: #34c759;
+  --chart-3: #ffcc00;
+  --chart-4: #ff3b30;
+  --chart-5: #af52de;
 
   /**
    * ---- Semântica da BARRA LATERAL ----
@@ -240,6 +275,9 @@
    * logo — e a logo oficial é branca, feita para fundo escuro. Sobre branco ela some.
    */
   --sidebar: var(--brand-blue-800);
+  /* O TRILHO da casca de duas colunas (a coluna estreita de ícones): um azul-marinho bem mais
+     fundo que o painel, para as duas colunas se lerem como dois níveis — a parte e a tela. */
+  --sidebar-rail: #15306f;
   --sidebar-foreground: #e2e8f0;
   --sidebar-primary: var(--brand-blue-600);
   --sidebar-primary-foreground: #f8fafc;
@@ -260,43 +298,44 @@
      escuro ela vira do avesso — o 900 é o texto principal, então passa a ser claro —, senão
      todo texto escrito com ela some no fundo escuro. Por isso os tokens abaixo não usam mais
      `var(--ink-*)`: escrevem a cor, para não virar junto. */
-  --ink-900: #f3f4f6;
-  --ink-700: #d1d5db;
-  --ink-500: #9ca3af;
-  --ink-300: #374151;
-  --ink-100: #1f2937;
+  --ink-900: #f5f5f7;
+  --ink-700: #d1d1d6;
+  --ink-500: #98989d;
+  --ink-300: #3a3a3d;
+  --ink-100: #2c2c2f;
 
-  --background: #0b1220;
-  --foreground: #f3f4f6;
-  --card: #111827;
-  --card-foreground: #f3f4f6;
-  --popover: #111827;
-  --popover-foreground: #f3f4f6;
+  --background: #161618;
+  --foreground: #f5f5f7;
+  --card: #222225;
+  --card-foreground: #f5f5f7;
+  --popover: #2a2a2d;
+  --popover-foreground: #f5f5f7;
   /* No escuro o azul principal SOBE para o tom 400: é texto sobre fundo escuro e sobre o
      `primary-soft` (4,7:1), e fundo de botão com texto escuro por cima. */
-  --primary: var(--brand-blue-400);
-  --primary-foreground: #0b1220;
-  --primary-strong: var(--brand-blue-300);
-  --primary-soft: #16265c;
-  --secondary: #1f2937;
+  --primary: #0a84ff;
+  --primary-foreground: #ffffff;
+  --primary-strong: #409cff;
+  --primary-soft: #0b2a4d;
+  --secondary: #2c2c2f;
   --secondary-foreground: #f3f4f6;
-  --muted: #1f2937;
-  --muted-foreground: #9ca3af;
-  --accent: #1e293b;
-  --accent-foreground: #f3f4f6;
-  --border: #2b2c3d;
-  --input: #2b2c3d;
+  --muted: #2c2c2f;
+  --muted-foreground: #98989d;
+  --accent: #2c2c2f;
+  --accent-foreground: #f5f5f7;
+  --border: #333336;
+  --input: var(--muted);
 
-  --crust: #060b14;
-  --mantle: #0b1220;
-  --base: #111827;
-  --surface: #1f2937;
-  --subtext: #9ca3af;
+  --crust: #0f0f10;
+  --mantle: #161618;
+  --base: #222225;
+  --surface: #2c2c2f;
+  --subtext: #98989d;
 
-  /* O vermelho do claro (um tom 600) fica quase preto sobre o fundo escuro. Aqui ele sobe para
-     o 400, que é o degrau legível — a mesma troca que `success`, `warning` e `info` fazem. */
-  --destructive: #f87171;
-  --destructive-foreground: #111827;
+  /* O vermelho do tema claro (3,8:1) se apaga no fundo escuro: aqui o texto, o ícone e o sotaque
+     sobem para o tom pastel (≥ 5,4:1), como o verde e o azul, e o texto sobre ele desce para
+     escuro. O preenchimento cheio continua o vermelho das tags (`--destructive-fill`). */
+  --destructive: #ff453a;
+  --destructive-foreground: #ffffff;
   --success-foreground: #111827;
   --warning-foreground: #111827;
   --info-foreground: #111827;
@@ -304,41 +343,56 @@
   --accent-hero: var(--brand-yellow-400);
   --accent-hero-foreground: #111827;
   --accent-strong: var(--brand-yellow-400);
-  --tertiary: #a78bfa;
-  --tertiary-strong: #a78bfa;
+  --tertiary: #bf5af2;
+  --tertiary-strong: #bf5af2;
 
-  --success: #34d399;
+  --success: #30d158;
   /* No escuro, os `-soft` são fundos escuros só levemente tingidos — e não marrom ou bordô —,
      legíveis com o texto do tom por cima. */
-  --success-soft: #0f2e2a;
-  --warning: #fbbf24;
-  --warning-soft: #2f2a17;
-  --info: #60a5fa;
-  --info-soft: #172554;
-  --destructive-soft: #3b1a22;
-  --primary-soft: #16265c;
+  --success-soft: #12301b;
+  --warning: var(--yellow);
+  /* No escuro o amarelo do grupo já se lê como texto (10:1). */
+  --warning-ink: var(--yellow);
+  --warning-soft: #332a07;
+  --info: #0a84ff;
+  --info-soft: #0b2a4d;
+  --destructive-soft: #3a1715;
+  --primary-soft: #0b2a4d;
 
-  --chart-1: var(--brand-blue-500);
-  --chart-2: #34d399;
-  --chart-3: var(--brand-yellow-400);
-  --chart-4: #f87171;
-  --chart-5: #a78bfa;
+  --chart-1: #0a84ff;
+  --chart-2: #30d158;
+  --chart-3: #ffd60a;
+  --chart-4: #ff453a;
+  --chart-5: #bf5af2;
 
   /* A barra continua azul, um tom abaixo: encostar no tom do fundo da página apagaria a
      separação entre menu e conteúdo. */
   --sidebar: #16265c;
+  --sidebar-rail: #0f2256;
 
-  --hue-blue: #6f8fe0;
-  --hue-red: #e8877d;
-  --hue-amber: #e3b061;
-  --hue-green: #6cc3ad;
-  --hue-steel: #86b5d6;
-  --hue-plum: #b09ad6;
-  --hue-slate: #a7b0c2;
-  --hue-copper: #e09b72;
-  --on-hue: #1a2234;
+  --hue-blue: #0a84ff;
+  --hue-red: #ff453a;
+  --hue-yellow: var(--yellow);
+  --hue-yellow-ink: #ffd60a;
+  --hue-green: #30d158;
+  --hue-steel: #64d2ff;
+  --hue-plum: #bf5af2;
+  --hue-slate: #98989d;
+  --hue-copper: #5e5ce6;
+  --on-hue: #ffffff;
 
   color-scheme: dark;
+
+  /* No escuro a sombra quase não aparece: o fio de 1px é o que separa o card do fundo. */
+  --elevation-card:
+    0 0 0 1px color-mix(in oklch, var(--foreground) 8%, transparent), 0 10px 30px rgb(0 0 0 / 0.35);
+  --elevation-button: 0 1px 2px rgb(0 0 0 / 0.3);
+  --elevation-card-hover:
+    0 0 0 1px color-mix(in oklch, var(--foreground) 12%, transparent), 0 16px 40px rgb(0 0 0 / 0.5);
+  --segment-selected: #48484c;
+  --card-selected: #0a84ff;
+  --card-selected-hover: #409cff;
+  --hover-veil: color-mix(in srgb, var(--foreground) 7%, transparent);
 }
 
 /* ==========================================================================
@@ -387,6 +441,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-hover-veil: var(--hover-veil);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-hero: var(--accent-hero);
@@ -411,6 +466,7 @@
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
+  --color-warning-ink: var(--warning-ink);
   --color-warning-soft: var(--warning-soft);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
@@ -422,7 +478,9 @@
   --color-success-fill: var(--success-fill);
   --color-hue-blue: var(--hue-blue);
   --color-hue-red: var(--hue-red);
-  --color-hue-amber: var(--hue-amber);
+  --color-hue-yellow: var(--hue-yellow);
+  --color-hue-yellow-ink: var(--hue-yellow-ink);
+  --color-on-yellow: var(--on-yellow);
   --color-hue-green: var(--hue-green);
   --color-hue-steel: var(--hue-steel);
   --color-hue-plum: var(--hue-plum);
@@ -440,6 +498,7 @@
   --color-chart-5: var(--chart-5);
 
   --color-sidebar: var(--sidebar);
+  --color-sidebar-rail: var(--sidebar-rail);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
@@ -460,10 +519,13 @@
   --radius-dialog: var(--shape-dialog);
   --radius-chip: var(--shape-chip);
   --radius-badge: var(--shape-badge);
+  --radius-icon: var(--shape-icon);
+  --color-segment-selected: var(--segment-selected);
   --radius-surface: var(--shape-card);
   --radius-box: var(--shape-control);
 
   --shadow-card: var(--elevation-card);
+  --shadow-card-hover: var(--elevation-card-hover);
   --shadow-button: var(--elevation-button);
   --ease-brand: var(--motion-easing);
   --spacing-control: var(--control-height);
@@ -477,6 +539,25 @@
   @keyframes shimmer {
     to {
       background-position: 200% center;
+    }
+  }
+
+  /* A tremida curta de "ainda não": a janela que não pode fechar responde a quem clica fora.
+     Usada sempre com `motion-safe:`, para quem pediu menos movimento ela não acontece. */
+  --animate-nudge: nudge 0.4s ease-in-out;
+
+  @keyframes nudge {
+    0%,
+    100% {
+      transform: translate(-50%, -50%);
+    }
+    20%,
+    60% {
+      transform: translate(calc(-50% - 8px), -50%);
+    }
+    40%,
+    80% {
+      transform: translate(calc(-50% + 8px), -50%);
     }
   }
 }
@@ -518,6 +599,17 @@
 @utility control-sm {
   height: var(--control-sm);
   padding-inline: 0.625rem;
+}
+
+/*
+ * A LARGURA DAS TELAS. Até Full HD a tela ocupa todo o espaço que a barra deixa; numa tela maior
+ * que isso, o conteúdo para na largura que ele teria em Full HD e fica centralizado — linha de
+ * texto e tabela esticadas num monitor de 34" não se leem.
+ */
+@utility page-frame {
+  width: 100%;
+  max-width: 1600px;
+  margin-inline: auto;
 }
 
 @utility control-md {

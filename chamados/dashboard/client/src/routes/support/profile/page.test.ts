@@ -14,7 +14,7 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
 
 describe('a rota support/profile', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
@@ -25,7 +25,7 @@ describe('a rota support/profile', () => {
 
   // triste
   /* A ficha vem da sessão, não da API: mesmo com o servidor fora, a pessoa se vê. */
-  it('mostra a ficha de quem está logado mesmo com a API fora', async () => {
+  it('shows the record of the signed-in person even with the API down', async () => {
     visiting({});
 
     renderPage(Page as never);

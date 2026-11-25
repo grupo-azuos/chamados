@@ -9,22 +9,29 @@ vi.mock('$lib/api/http-client', async (importOriginal) => {
   const ApiError = original.ApiError as new (status: number, message: string) => Error;
   const outage = () => Promise.reject(new ApiError(503, 'Serviço fora do ar.'));
 
-  return { ...original, apiRequest: vi.fn(outage), apiDownload: vi.fn(outage), uploadFile: vi.fn(outage) };
+  return {
+    ...original,
+    apiRequest: vi.fn(outage),
+    apiDownload: vi.fn(outage),
+    uploadFile: vi.fn(outage),
+  };
 });
 
 describe('a rota system/schedule', () => {
   // feliz
-  it('monta a tela e dá título à aba', async () => {
+  it('mounts the screen and titles the tab', async () => {
     visiting({});
 
     const { container } = renderPage(Page as never);
 
     expect(container).toBeTruthy();
-    await vi.waitFor(() => expect(document.title).toContain('Cronograma de Sistemas'), { timeout: 4_000 });
+    await vi.waitFor(() => expect(document.title).toContain('Cronograma de Sistemas'), {
+      timeout: 4_000,
+    });
   });
 
   // triste
-  it('mostra o que o servidor respondeu quando a API está fora', async () => {
+  it('shows what the server answered when the API is down', async () => {
     visiting({});
 
     renderPage(Page as never);
@@ -76,14 +83,15 @@ function serveSchedule() {
   vi.mocked(apiRequest).mockImplementation(async (path: string, options?: { method?: string }) => {
     if (options?.method === 'DELETE') return undefined;
     if (path === '/software-schedule') return [appointment];
-    if (path === '/software-timeline') return { items: [pullRequest], total: 1, page: 1, pageSize: 200 };
+    if (path === '/software-timeline')
+      return { items: [pullRequest], total: 1, page: 1, pageSize: 200 };
     return { items: [], total: 0, page: 1, pageSize: 100 };
   });
 }
 
-describe('a rota system/schedule com dados', () => {
+describe('the system/schedule route with data', () => {
   // feliz
-  it('abre o formulário de novo agendamento pelo botão e pelo dia clicado', async () => {
+  it('opens the new-event form from the button and from the clicked day', async () => {
     serveSchedule();
     visiting({});
     renderPage(Page as never);
@@ -101,7 +109,7 @@ describe('a rota system/schedule com dados', () => {
   });
 
   // feliz
-  it('abre o agendamento de quem marcou e o exclui', async () => {
+  it('opens the event of whoever booked it and deletes it', async () => {
     serveSchedule();
     visiting({});
     renderPage(Page as never);
@@ -110,11 +118,14 @@ describe('a rota system/schedule com dados', () => {
     expect(await screen.findByText('Editar Compromisso')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Excluir compromisso' }));
     await waitFor(() => expect(screen.queryByText('Editar Compromisso')).not.toBeInTheDocument());
-    expect(apiRequest).toHaveBeenCalledWith('/software-schedule/1', expect.objectContaining({ method: 'DELETE' }));
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/software-schedule/1',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
   });
 
   // feliz
-  it('abre e fecha a janela dos PRs do dia', async () => {
+  it('opens and closes the window with the PRs of the day', async () => {
     serveSchedule();
     visiting({});
     renderPage(Page as never);
@@ -127,9 +138,14 @@ describe('a rota system/schedule com dados', () => {
   });
 
   // triste
-  it('não abre formulário para quem só consulta o sistema', async () => {
+  it('opens no form for someone who only views the system', async () => {
     serveSchedule();
-    const viewer = { ...ADMIN, id: 'u-bia', role: 'user' as const, roles: { ...ADMIN.roles, sistema: 'user' as const } };
+    const viewer = {
+      ...ADMIN,
+      id: 'u-bia',
+      role: 'user' as const,
+      roles: { ...ADMIN.roles, sistema: 'user' as const },
+    };
     visiting({}, viewer as never);
     renderPage(Page as never, { data: { user: viewer } });
 

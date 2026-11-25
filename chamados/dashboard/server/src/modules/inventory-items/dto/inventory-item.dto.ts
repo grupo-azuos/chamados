@@ -11,6 +11,7 @@ import {
 } from '@template/shared/schemas/inventory-item.schema';
 import {
   createInventoryMovementSchema,
+  createStockMovementSchema,
   inventoryMovementListQuerySchema,
   inventoryMovementSchema,
 } from '@template/shared/schemas/inventory-movement.schema';
@@ -44,6 +45,7 @@ export class InventoryItemListResponseDto extends createZodDto(
 /* O DEPÓSITO: cada entrada, saída e descarte de um produto. */
 export class InventoryMovementDto extends createZodDto(inventoryMovementSchema) {}
 export class CreateInventoryMovementDto extends createZodDto(createInventoryMovementSchema) {}
+export class CreateStockMovementDto extends createZodDto(createStockMovementSchema) {}
 export class InventoryMovementListQueryDto extends createZodDto(inventoryMovementListQuerySchema) {}
 export class InventoryMovementListResponseDto extends createZodDto(
   paginatedSchema(inventoryMovementSchema),

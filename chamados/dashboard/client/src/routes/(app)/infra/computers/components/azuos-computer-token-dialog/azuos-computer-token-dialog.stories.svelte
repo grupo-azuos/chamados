@@ -19,6 +19,12 @@
   args={{ data: { computerName: 'RECEPCAO-01', token: TOKEN }, actions }}
 />
 
+<!-- Sem o zip: a tela que não monta o instalador mostra só as duas cópias. -->
+<Story
+  name="Without installer"
+  args={{ data: { computerName: 'RECEPCAO-01', token: TOKEN }, actions: { onClose: () => {} } }}
+/>
+
 <!-- Fechado: o diálogo só existe no instante seguinte ao cadastro. -->
 <Story
   name="Closed"
@@ -34,15 +40,15 @@
   }}
 />
 
-<!-- Montando o zip: o botão fica ocupado até o arquivo chegar. -->
+<!-- Montando o instalador: o botão fica ocupado até o arquivo chegar. -->
 <Story
-  name="Building package"
+  name="Building installer"
   args={{ data: { computerName: 'RECEPCAO-01', token: TOKEN }, state: { isDownloadingBundle: true }, actions }}
 />
 
-<!-- Falha ao montar o pacote: o motivo aparece, e o token continua na tela. -->
+<!-- Falha ao montar o instalador: o motivo aparece, e o token continua na tela. -->
 <Story
-  name="Package failed"
+  name="Installer failed"
   args={{
     data: { computerName: 'RECEPCAO-01', token: TOKEN },
     state: { bundleError: 'Faltam arquivos desta versão do agente. Avise a Infraestrutura.' },

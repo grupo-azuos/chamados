@@ -1,3 +1,20 @@
+<!--
+  @component
+  O formulário de GUARDAR um orçamento feito com uma empresa de fora e o de corrigi-lo, num modal.
+
+  Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e o
+  documento chega como um nome para mostrar. Por isso o modal abre no Storybook preenchido, com
+  documento, com erro ou enviando — sem servidor no meio.
+
+  O DOCUMENTO é um campo à parte, com erro próprio: recusar o arquivo não pode apagar o que a pessoa
+  já digitou, e o motivo da recusa precisa aparecer ao lado dele.
+
+  - `data`: o modo (`create` ou `edit`), os campos (empresa, descrição, tipo, valor, data, situação,
+    observação) e o nome do documento à vista.
+  - `state`: aberto, enviando, o erro do envio e o erro do documento.
+  - `actions`: `onChange` e `onBlur` por campo, `onAttachmentChange`, `onAttachmentRemove`,
+    `onSubmit` e `onClose`.
+-->
 <script lang="ts" module>
   import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
   import {
@@ -21,17 +38,6 @@
     | 'status'
     | 'note';
 
-  /**
-   * O formulário de GUARDAR um orçamento feito com uma empresa de fora e o de corrigi-lo, num
-   * modal.
-   *
-   * Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e
-   * o documento chega como um nome para mostrar. Por isso o modal abre no Storybook
-   * preenchido, com documento, com erro ou enviando — sem servidor no meio.
-   *
-   * O DOCUMENTO é um campo à parte, com erro próprio: recusar o arquivo não pode apagar o que
-   * a pessoa já digitou, e o motivo da recusa precisa aparecer ao lado dele.
-   */
   export type AzuosQuoteFormDialogProps = {
     data: {
       mode: 'create' | 'edit';

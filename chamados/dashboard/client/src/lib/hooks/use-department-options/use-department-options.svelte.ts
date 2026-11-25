@@ -2,6 +2,7 @@ import { createQuery } from '@tanstack/svelte-query';
 import {
   LOCAL_DEPARTMENTS,
   type DepartmentChoice,
+  type DepartmentOption,
   departmentChoices,
 } from '@template/shared/domain/department.util';
 
@@ -17,6 +18,13 @@ const DEPARTMENTS_STALE_MS = 5 * 60 * 1000;
 export type DepartmentOptionsModel = {
   /** As do RH e, depois de uma linha, as daqui. Antes de a lista chegar, só as daqui. */
   readonly options: DepartmentChoice[];
+  /**
+   * Só os departamentos OFICIAIS, com o id do RH como valor (`'12'`) — é o que o computador
+   * guarda, e é a única lista que as telas de computador oferecem: os fixos daqui não entram.
+   */
+  readonly officialOptions: DepartmentChoice[];
+  /** Os departamentos oficiais como vieram do RH, com id e nome. */
+  readonly official: DepartmentOption[];
   /** Falso quando o RH não respondeu: a tela avisa por que a lista está curta. */
   readonly isRhAvailable: boolean;
   readonly isLoading: boolean;
@@ -40,6 +48,15 @@ export function useDepartmentOptionsModel(): DepartmentOptionsModel {
   return {
     get options() {
       return departmentChoices(catalog.current.data ?? { rh: [], local: [...LOCAL_DEPARTMENTS] });
+    },
+    get official() {
+      return catalog.current.data?.rhOptions ?? [];
+    },
+    get officialOptions() {
+      return (catalog.current.data?.rhOptions ?? []).map((option) => ({
+        value: String(option.id),
+        label: option.name,
+      }));
     },
     /* Enquanto carrega, não acusa o RH: "fora do ar" só depois de ele responder que está. */
     get isRhAvailable() {

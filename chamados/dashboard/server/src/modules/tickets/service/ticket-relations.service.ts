@@ -65,7 +65,7 @@ export class TicketRelationsService {
     const reach = await this.access.reach(user, ticketId);
     this.access.assertCanWrite(reach);
 
-    await this.relations.remove(ticketId, relatedTicketId);
+    await this.relations.remove(ticketId, relatedTicketId, user.id);
 
     await this.histories.record({
       ...toUpdateHistory(

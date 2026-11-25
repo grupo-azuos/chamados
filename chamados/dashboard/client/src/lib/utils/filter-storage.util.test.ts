@@ -38,7 +38,10 @@ describe('filter storage', () => {
     window.localStorage.setItem(filterStorageKey(USER), '{quebrado');
     expect(loadScreenFilters(USER, 'infra-computers')).toBeUndefined();
 
-    window.localStorage.setItem(filterStorageKey(USER), JSON.stringify({ version: 0, screens: {} }));
+    window.localStorage.setItem(
+      filterStorageKey(USER),
+      JSON.stringify({ version: 0, screens: {} }),
+    );
     expect(loadScreenFilters(USER, 'infra-computers')).toBeUndefined();
   });
 
@@ -62,9 +65,15 @@ describe('filter storage — clearing what is not there and odd saved shapes', (
   it('ignores a saved value that is not an object, has another version or has screens as a list', () => {
     window.localStorage.setItem(filterStorageKey(USER), JSON.stringify('texto'));
     expect(loadScreenFilters(USER, 'tickets')).toBeUndefined();
-    window.localStorage.setItem(filterStorageKey(USER), JSON.stringify({ version: 99, screens: {} }));
+    window.localStorage.setItem(
+      filterStorageKey(USER),
+      JSON.stringify({ version: 99, screens: {} }),
+    );
     expect(loadScreenFilters(USER, 'tickets')).toBeUndefined();
-    window.localStorage.setItem(filterStorageKey(USER), JSON.stringify({ version: 1, screens: [] }));
+    window.localStorage.setItem(
+      filterStorageKey(USER),
+      JSON.stringify({ version: 1, screens: [] }),
+    );
     expect(loadScreenFilters(USER, 'tickets')).toBeUndefined();
   });
 });

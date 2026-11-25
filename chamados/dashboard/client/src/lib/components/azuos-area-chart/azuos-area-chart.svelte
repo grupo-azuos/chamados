@@ -1,24 +1,33 @@
+<!--
+  @component
+  ÁREA — o volume de alguma coisa ao longo do tempo.
+
+  Área, e não barra: aqui a pergunta é "quando subiu e por quanto tempo ficou lá", e a
+  resposta é a FORMA da curva. Trinta barras de meio pixel não desenham forma nenhuma.
+
+  Duas formas de empilhar, e a escolha muda o que o gráfico responde:
+
+   - **`overlap`** (o padrão): as séries se sobrepõem, cada uma lida na própria altura. É o
+     que se quer quando elas são a MESMA medida em coisas diferentes — processador, memória
+     e disco, todos de 0 a 100%. Empilhar daria 240% de nada.
+   - **`stack`**: uma em cima da outra, e a altura total é a soma. É o que se quer quando
+     elas são PARTES de um todo — quantos chamados de cada tipo entraram no dia.
+
+  - `data`: os pontos no tempo e as séries.
+  - `ui`: `layout`, a régua do eixo (`tick`: hora ou dia), `isPercent` (trava em 0–100), a
+    altura e o texto de vazio.
+  - `state`: carregando.
+  - `actions`: `onSelect`, o clique num ponto do tempo.
+-->
 <script lang="ts" module>
   import { resolveColor, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
   import { dayLabel, hourLabel, type TimePoint, type TimeRow, type TimeSeriesDef } from '$lib/utils/time-series';
 
-  /**
-   * ÁREA — o volume de alguma coisa ao longo do tempo.
-   *
-   * Área, e não barra: aqui a pergunta é "quando subiu e por quanto tempo ficou lá", e a
-   * resposta é a FORMA da curva. Trinta barras de meio pixel não desenham forma nenhuma.
-   *
-   * Duas formas de empilhar, e a escolha muda o que o gráfico responde:
-   *
-   *  - **`overlap`** (o padrão): as séries se sobrepõem, cada uma lida na própria altura. É o
-   *    que se quer quando elas são a MESMA medida em coisas diferentes — processador, memória
-   *    e disco, todos de 0 a 100%. Empilhar daria 240% de nada.
-   *  - **`stack`**: uma em cima da outra, e a altura total é a soma. É o que se quer quando
-   *    elas são PARTES de um todo — quantos chamados de cada tipo entraram no dia.
-   */
   export type AzuosAreaChartProps = {
     data: { points: readonly TimePoint[]; series: readonly TimeSeriesDef[] };
     state?: { isLoading?: boolean };
+    /** `onSelect`: o clique num ponto do tempo, com o instante dele (`TimePoint.at`). */
+    actions?: { onSelect?: (at: string) => void };
     ui?: {
       emptyLabel?: string;
       className?: string;
@@ -90,7 +99,7 @@
   import { cn } from '$lib/utils/cn';
   import { toTimeRows } from '$lib/utils/time-series';
 
-  let { data, state: chartState, ui }: AzuosAreaChartProps = $props();
+  let { data, state: chartState, ui, actions }: AzuosAreaChartProps = $props();
 
   const rows = $derived(toTimeRows(data.points, data.series));
 </script>
@@ -111,6 +120,14 @@
         description: data.series.map((item) => item.label).join(', '),
       }}
       ui={{ heightClass: ui?.heightClass ?? 'h-48' }}
+      actions={{
+        onAxisSelect: actions?.onSelect
+          ? (index) => {
+              const row = rows[index];
+              if (row) actions.onSelect?.(row.at.toISOString());
+            }
+          : undefined,
+      }}
     />
   </div>
 {/if}

@@ -1,6 +1,20 @@
+<!--
+  @component
+  A TELA DO AGENTE WINDOWS — onde se baixa o agente Azuos para instalar nos computadores.
+
+  A mesma tela nos dois módulos: só apresenta dados e devolve as intenções de download.
+
+  Mostra a versão LTS com o instalador, o pacote completo (.zip), o script de instalação, o
+  certificado e o script do certificado; embaixo, todas as versões, cada uma com os arquivos
+  dela. Cada botão de download mostra o próprio "Preparando…" e, enquanto um baixa, os outros
+  ficam travados. Sem versão LTS, a lista vazia diz isso; cada falha (consultar, listar, preparar,
+  montar o pacote) aparece no próprio aviso, com o "Tentar de novo".
+
+  As props são o próprio model (`AgentDownloadModel`): `data` (as versões), `state` (carregando,
+  o que está baixando e os erros) e `actions` (baixar cada arquivo, o pacote e tentar de novo).
+-->
 <script lang="ts" module>
   import type { AgentDownloadModel } from '$lib/hooks/use-agent-download/use-agent-download.svelte';
-  /** A mesma tela nos dois módulos: só apresenta dados e devolve as intenções de download. */
   export type AzuosAgentDownloadViewProps = AgentDownloadModel;
 </script>
 
@@ -8,6 +22,7 @@
   import Download from '@lucide/svelte/icons/download';
   import Monitor from '@lucide/svelte/icons/monitor';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
@@ -36,7 +51,7 @@
   );
 </script>
 
-<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Agente Windows',
@@ -61,21 +76,23 @@
       ui={{ icon: Monitor }}
     />
   {:else}
-    <section
-      class="rounded-surface border border-border bg-card p-6 shadow-xs"
-      aria-label="Versão do agente"
-    >
+    <!-- O card de conteúdo do grupo. O `@const` guarda a versão já conferida: dentro do conteúdo
+         do card, o TypeScript não lembra mais que ela existe. -->
+    {@const release = data.release}
+    <ContentCard data={{ label: 'Versão do agente', title: '' }}>
+{#snippet body()}
+<div class="p-6">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
           <p class="text-muted-foreground text-sm">Versão LTS</p>
           <h2 class="text-foreground mt-1 text-2xl font-bold break-words">
-            Azuos Agent {data.release.version}
+            Azuos Agent {release.version}
           </h2>
           <p class="text-muted-foreground mt-2 text-sm">
             Windows 10 (1809 ou superior) e Windows 11 · 64 bits
           </p>
           <p class="text-muted-foreground mt-1 text-sm">
-            Publicada em {formatDateTime(data.release.publishedAt)}
+            Publicada em {formatDateTime(release.publishedAt)}
           </p>
         </div>
         <ActionButton
@@ -86,7 +103,7 @@
         />
       </div>
       <p class="text-muted-foreground mt-3 text-sm">
-        MSI · {(data.release.sizeBytes / 1024 / 1024).toLocaleString('pt-BR', {
+        MSI · {(release.sizeBytes / 1024 / 1024).toLocaleString('pt-BR', {
           maximumFractionDigits: 1,
         })} MB
       </p>
@@ -152,13 +169,14 @@
           mesmos arquivos; o inventário continua na Infraestrutura.
         </p>
       </div>
-    </section>
+    </div>
+{/snippet}
+</ContentCard>
   {/if}
 
-  <section
-    class="rounded-surface border border-border bg-card p-6 shadow-xs"
-    aria-label="Todas as versões"
-  >
+  <ContentCard data={{ label: 'Todas as versões', title: '' }}>
+{#snippet body()}
+<div class="p-6">
     <h2 class="text-foreground font-semibold">Todas as versões</h2>
     <p class="text-muted-foreground mt-1 text-sm">
       Até 30 versões publicadas, da mais nova para a mais antiga. Prefira a LTS.
@@ -210,7 +228,9 @@
         {/each}
       </ul>
     {/if}
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 
   {#if state.downloadError}
     <ErrorState

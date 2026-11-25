@@ -1,19 +1,26 @@
+<!--
+  @component
+  A BARRA DE PÁGINA de uma lista longa.
+
+  Ela diz TRÊS coisas, e as três importam:
+
+  1. **Quantos itens existem ao todo** — "26–50 de 312". Sem isso a lista é cortada em silêncio, e
+     quem lê não sabe que há mais (CONTRIBUTING §15).
+  2. **Onde a pessoa está** — página 2 de 13.
+  3. **Como andar** — anterior e próxima, desligadas nas pontas em vez de escondidas: um botão que
+     some faz a barra pular de lugar a cada clique.
+
+  Não tem lista de números de página, de propósito: com trezentas páginas ela viraria uma régua, e
+  a pergunta que se faz numa lista ordenada por data é "mais um pouco para trás", não "me leve à
+  página 47".
+
+  - `data`: a página, o tamanho dela, o total de itens (não só os desta página) e o nome do que é
+    contado, no singular e no plural.
+  - `state`: `isLoading`, que desliga os dois botões enquanto a página carrega.
+  - `ui`: classes extras.
+  - `actions`: `onPageChange`, com a página nova.
+-->
 <script lang="ts" module>
-  /**
-   * A BARRA DE PÁGINA de uma lista longa.
-   *
-   * Ela diz TRÊS coisas, e as três importam:
-   *
-   *  1. **Quantos itens existem ao todo** — "26–50 de 312". Sem isso a lista é cortada em
-   *     silêncio, e quem lê não sabe que há mais (CONTRIBUTING §15).
-   *  2. **Onde a pessoa está** — página 2 de 13.
-   *  3. **Como andar** — anterior e próxima, desligadas nas pontas em vez de escondidas: um
-   *     botão que some faz a barra pular de lugar a cada clique.
-   *
-   * Não tem lista de números de página, de propósito: com trezentas páginas ela viraria uma
-   * régua, e a pergunta que se faz numa lista ordenada por data é "mais um pouco para trás",
-   * não "me leve à página 47".
-   */
   export type AzuosPaginationBarProps = {
     data: {
       page: number;
@@ -67,6 +74,9 @@
   const pageCount = $derived(pageCountOf(data.total, data.pageSize));
   const isFirst = $derived(data.page <= 1);
   const isLast = $derived(data.page >= pageCount);
+
+  const STEP_CLASS =
+    'bg-muted hover:bg-accent text-foreground rounded-button control-sm inline-flex cursor-pointer items-center gap-1 border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50';
 </script>
 
 <!-- Empilha no celular: os três blocos lado a lado a 360 px espremem o texto do meio. -->
@@ -84,7 +94,7 @@
         type="button"
         disabled={isFirst || barState?.isLoading}
         onclick={() => actions.onPageChange(data.page - 1)}
-        class="border-border bg-card hover:bg-muted text-foreground inline-flex cursor-pointer items-center gap-1 rounded-control control-sm border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        class={STEP_CLASS}
       >
         <ChevronLeft class="size-3.5" aria-hidden="true" />
         Anterior
@@ -96,7 +106,7 @@
         type="button"
         disabled={isLast || barState?.isLoading}
         onclick={() => actions.onPageChange(data.page + 1)}
-        class="border-border bg-card hover:bg-muted text-foreground inline-flex cursor-pointer items-center gap-1 rounded-control control-sm border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        class={STEP_CLASS}
       >
         Próxima
         <ChevronRight class="size-3.5" aria-hidden="true" />

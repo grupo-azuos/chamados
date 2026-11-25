@@ -26,6 +26,8 @@ function row(overrides: Partial<MaintenanceQuoteRow> = {}): MaintenanceQuoteRow 
     createdBy: 'ana@empresa.com.br',
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }

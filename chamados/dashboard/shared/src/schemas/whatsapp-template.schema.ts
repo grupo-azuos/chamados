@@ -19,6 +19,11 @@ export const whatsappTemplateSchema = z.object({
   defaultBody: z.string(),
   /** Falso quando o texto em uso é o original. */
   isCustomized: z.boolean(),
+  /**
+   * A edição que voltou ao original. Ela não se apaga: fica guardada, e o "Desfazer" a traz de
+   * volta. Nulo quando não há edição guardada (ou quando a edição está em uso).
+   */
+  archivedEdit: z.object({ body: z.string(), archivedAt: z.iso.datetime() }).nullable(),
 });
 export type WhatsappTemplate = z.infer<typeof whatsappTemplateSchema>;
 

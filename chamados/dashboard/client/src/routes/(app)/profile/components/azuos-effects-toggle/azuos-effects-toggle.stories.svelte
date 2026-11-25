@@ -31,7 +31,7 @@
       <EffectsToggle />
     </div>
     <div
-      class="hover-fill border-border bg-card rounded-surface border p-4 text-sm shadow-xs"
+      class="hover-fill bg-card rounded-surface p-4 text-sm shadow-card"
       style="--fill-color: var(--warning-soft)"
     >
       Passe o mouse aqui.

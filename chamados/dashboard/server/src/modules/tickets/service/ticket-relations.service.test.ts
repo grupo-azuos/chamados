@@ -103,7 +103,7 @@ describe('TicketRelationsService', () => {
     const { service, relations, histories } = setup();
     await service.remove(operator, 10, 20);
 
-    expect(relations.remove).toHaveBeenCalledWith(10, 20);
+    expect(relations.remove).toHaveBeenCalledWith(10, 20, operator.id);
     expect(histories.record).toHaveBeenCalledWith(
       expect.objectContaining({
         ticketId: 10,

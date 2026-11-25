@@ -62,7 +62,9 @@ export class WhatsappLinkService {
     assertCanLink(user);
 
     await this.bot.unlink(user.id);
-    await this.repository.remove(user.id);
+    /* Desvincular ARQUIVA a linha: as chaves somem do bot, e o sistema guarda que o número foi
+       vinculado, por quem foi desvinculado e quando. */
+    await this.repository.archive(user.id, user.id);
   }
 
   /**
@@ -82,7 +84,7 @@ export class WhatsappLinkService {
     }
 
     /* Em `pairing` nada muda: é o meio do caminho, e ainda não há número. */
-    if (status.state === 'disconnected' && stored) await this.repository.remove(user.id);
+    if (status.state === 'disconnected' && stored) await this.repository.archive(user.id, null);
   }
 }
 

@@ -1,3 +1,16 @@
+<!--
+  @component
+  OS AVISOS DE WHATSAPP DE UM CHAMADO — saíram, estão na fila ou pararam, e por quê.
+
+  O aviso não sai na hora: entra numa fila e o servidor o entrega em seguida, tentando de novo
+  quando o WhatsApp está fora. Esta lista é o que mostra a quem atende o que aconteceu com ele — e,
+  quando parou, oferece mandar de novo.
+
+  Função pura de props. Sem aviso nenhum, não desenha nada: a maior parte dos chamados não pediu
+  aviso, e um quadro vazio em cada ficha seria ruído. `data.notices` vem do mais novo para o mais
+  antigo; `state` diz qual aviso está sendo reenviado (só a linha dele trava) e o erro;
+  `actions.onRetry`, ausente, esconde o botão de reenviar.
+-->
 <script lang="ts" module>
   import {
     canRetryWhatsappNotice,
@@ -8,16 +21,6 @@
     type WhatsappNotice,
   } from '@template/shared/schemas/whatsapp-notice.schema';
 
-  /**
-   * OS AVISOS DE WHATSAPP DE UM CHAMADO — saíram, estão na fila ou pararam, e por quê.
-   *
-   * O aviso não sai na hora: entra numa fila e o servidor o entrega em seguida, tentando de
-   * novo quando o WhatsApp está fora. Esta lista é o que mostra a quem atende o que aconteceu
-   * com ele — e, quando parou, oferece mandar de novo.
-   *
-   * Função pura de props. Sem aviso nenhum, não desenha nada: a maior parte dos chamados não
-   * pediu aviso, e um quadro vazio em cada ficha seria ruído.
-   */
   export type AzuosWhatsappNoticeListProps = {
     data: {
       /** Do mais novo para o mais antigo. */

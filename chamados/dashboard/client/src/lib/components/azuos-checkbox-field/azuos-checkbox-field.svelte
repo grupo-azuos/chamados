@@ -1,12 +1,18 @@
+<!--
+  @component
+  Uma caixa de marcar com o rótulo ao lado — a escolha de "sim ou não" que não precisa de
+  "não sei" (para isso, use um `AzuosSelectField` com a opção vazia).
+
+  É o `Checkbox` do shadcn-svelte (bits-ui): teclado (espaço marca), foco e leitor de tela vêm
+  prontos. O rótulo inteiro é clicável, porque acertar um quadrado de 16px o dia todo cansa — e a
+  linha tem a altura da régua, para o alvo do toque não ser só a caixa.
+
+  - `data`: o rótulo, o nome, se está marcada e a descrição.
+  - `ui`: `isLabelHidden` (o rótulo fica só para o leitor de tela) e classe extra.
+  - `state`: desligado.
+  - `actions`: `onChange`.
+-->
 <script lang="ts" module>
-  /**
-   * Uma caixa de marcar com o rótulo ao lado — a escolha de "sim ou não" que não precisa de
-   * "não sei" (para isso, use um `AzuosSelectField` com a opção vazia).
-   *
-   * É o `Checkbox` do shadcn-svelte (bits-ui): teclado (espaço marca), foco e leitor de tela vêm
-   * prontos. O rótulo inteiro é clicável, porque acertar um quadrado de 16px o dia todo cansa — e a
-   * linha tem a altura da régua, para o alvo do toque não ser só a caixa.
-   */
   export type AzuosCheckboxFieldProps = {
     data: { label: string; name: string; isChecked: boolean; description?: string };
     /** `isLabelHidden`: numa linha de tabela o contexto já diz o que é; o rótulo fica só para o leitor de tela. */
@@ -27,29 +33,45 @@
   const isDisabled = $derived(state?.isDisabled === true);
 </script>
 
-<div class={cn('flex min-h-10 items-start gap-2 py-2', ui?.className)}>
-  <Checkbox
-    id={inputId}
-    name={data.name}
-    checked={data.isChecked}
-    disabled={isDisabled}
-    aria-describedby={data.description ? descriptionId : undefined}
-    onCheckedChange={(checked) => actions?.onChange?.(checked === true)}
-    class="bg-muted mt-0.5"
-  />
-  <div class="min-w-0">
+<!-- A caixinha e o rótulo numa linha só, CENTRADOS um no outro; a descrição embaixo, alinhada
+     ao rótulo (e não à caixinha). A régua de altura (`control-md`) vale para o campo sozinho; com
+     descrição, ele cresce o que precisa. -->
+<div
+  class={cn(
+    'flex flex-col justify-center gap-0.5',
+    data.description ? 'py-2' : 'control-md',
+    ui?.className,
+  )}
+>
+  <div class="flex min-h-5 items-center gap-2">
+    <Checkbox
+      id={inputId}
+      name={data.name}
+      checked={data.isChecked}
+      disabled={isDisabled}
+      aria-describedby={data.description ? descriptionId : undefined}
+      onCheckedChange={(checked) => actions?.onChange?.(checked === true)}
+      class={cn(
+        /* O bits-ui marca a caixinha com `data-state`, e o `data-checked:` do shadcn nunca casava:
+           marcada, ela não ficava azul. E a borda era da cor do campo — no escuro, sumia no fundo
+           do menu. Borda cinza de apoio, que aparece no claro e no escuro; marcada, azul cheia. */
+        'border-muted-foreground/60 dark:bg-transparent shrink-0 bg-transparent',
+        'data-[state=checked]:border-transparent data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary',
+        'data-[state=indeterminate]:border-transparent data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground dark:data-[state=indeterminate]:bg-primary',
+      )}
+    />
     <label
       for={inputId}
       class={cn(
-        'text-foreground cursor-pointer text-sm break-words',
+        'text-foreground min-w-0 cursor-pointer text-sm leading-5 break-words',
         ui?.isLabelHidden && 'sr-only',
         isDisabled && 'text-muted-foreground cursor-not-allowed',
       )}
     >
       {data.label}
     </label>
-    {#if data.description}
-      <p id={descriptionId} class="text-muted-foreground text-xs">{data.description}</p>
-    {/if}
   </div>
+  {#if data.description}
+    <p id={descriptionId} class="text-muted-foreground pl-6 text-xs">{data.description}</p>
+  {/if}
 </div>

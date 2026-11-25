@@ -1,6 +1,7 @@
+import { boardDrillSchema, drillParam } from '@template/shared/schemas/board-drill.schema';
 import { type Maintenance } from '@template/shared/schemas/maintenance.schema';
 import { render, waitFor } from '@testing-library/svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-maintenance-list-harness.test.svelte';
@@ -16,6 +17,7 @@ vi.mock('$lib/api/maintenances.api', () => ({
 }));
 
 const { maintenancesApi } = await import('$lib/api/maintenances.api');
+const { page: appPage } = await import('$app/state');
 
 function maintenance(over: Partial<Maintenance> = {}): Maintenance {
   return {
@@ -33,6 +35,7 @@ function maintenance(over: Partial<Maintenance> = {}): Maintenance {
     createdBy: 'suporte@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...over,
   };
 }
@@ -175,5 +178,48 @@ describe('useMaintenanceListModel', () => {
 
     expect(model.state.isLoading).toBe(true);
     expect(model.state.isEmpty).toBe(false);
+  });
+});
+
+/* O recorte de um clique no Painel chega pela URL (`?drill=`) e soma ao filtro do histórico. */
+describe('useMaintenanceListModel with a board cut', () => {
+  const DRILL = boardDrillSchema.parse({
+    source: 'maintenances',
+    groupBy: 'type',
+    filterId: null,
+    key: 'preventive',
+    label: 'Preventiva',
+    title: 'Manutenções por tipo',
+  });
+
+  beforeEach(() => {
+    vi.mocked(maintenancesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 15 });
+    vi.mocked(maintenancesApi.preventive).mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    appPage.url = new URL('http://localhost:5173/infra/maintenance');
+  });
+
+  // feliz
+  it('asks the API for the clicked block and says so on the banner', async () => {
+    appPage.url = new URL(`http://localhost:5173/infra/maintenance?drill=${encodeURIComponent(drillParam(DRILL))}`);
+
+    const model = await mountLoadedModel();
+
+    expect(maintenancesApi.list).toHaveBeenCalledWith(
+      expect.objectContaining({ drill: expect.objectContaining({ key: 'preventive' }) }),
+    );
+    expect(model.data.drillBanner?.summary).toContain('Manutenções por tipo');
+    expect(model.state.isFilteredOut).toBe(true);
+  });
+
+  // triste
+  it('lists the whole history, with no banner, when no block was clicked', async () => {
+    const model = await mountLoadedModel();
+
+    expect(maintenancesApi.list).toHaveBeenLastCalledWith(expect.objectContaining({ drill: undefined }));
+    expect(model.data.drillBanner).toBeNull();
+    expect(model.state.isEmpty).toBe(true);
   });
 });

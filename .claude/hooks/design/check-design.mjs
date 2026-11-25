@@ -90,16 +90,19 @@ export function runHook(payload, config, root) {
 export function runArchitectureScan(root, updateBaseline = false) {
 	const baseline = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")) : {};
 	const scanRoots = ["chamados/dashboard/client/src"];
-	const textFile = /\.(tsx|ts|md)$/;
+	const textFile = /\.(tsx|ts|svelte|md)$/;
 	const generated = /routeTree\.gen\.ts$/;
 	const accepts = (p) => textFile.test(p) && !generated.test(p);
 
 	const covered = new Set(scanRoots.map((p) => join(root, p)));
 	const sourceFiles = [...covered].flatMap((p) => collectTextFiles(p, accepts));
+	/* Os módulos da API entram só pelo NOME (`*.module.ts`): a regra `standard-screens` confere que
+	   Dashboard e Histórico existem dos dois lados; o resto das regras é só do client. */
+	const modules = collectTextFiles(join(root, "chamados/dashboard/server/src/modules"), (p) => /\.module\.ts$/.test(p));
 	const docs = collectDocumentation(join(root, "template"), covered, accepts);
 	const rootDocs = collectTextFiles(join(root, "docs"), accepts);
 
-	const files = [...new Set([...sourceFiles, ...docs, ...rootDocs])].map((full) => ({
+	const files = [...new Set([...sourceFiles, ...modules, ...docs, ...rootDocs])].map((full) => ({
 		path: relative(root, full).split("\\").join("/"),
 		content: readFileSync(full, "utf8")
 	}));

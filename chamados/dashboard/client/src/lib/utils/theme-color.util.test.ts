@@ -9,9 +9,9 @@ describe('themeColor', () => {
   });
 
   it('follows var() chains down to the written colour', () => {
-    // `--chart-1` aponta para `--brand-blue-600`: a resposta é a cor, não a referência.
-    expect(themeColor('--chart-1')).toBe(themeColor('--brand-blue-600'));
-    expect(themeColor('--chart-1')).not.toContain('var(');
+    // `--warning` aponta para `--yellow`: a resposta é a cor, não a referência.
+    expect(themeColor('--warning')).toBe(themeColor('--yellow'));
+    expect(themeColor('--warning')).not.toContain('var(');
   });
 
   it('accepts the name with or without the dashes, and inside var()', () => {

@@ -1,23 +1,62 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
+  import { page } from '$app/state';
+  import AppShell from '$lib/components/azuos-app-shell/azuos-app-shell.svelte';
+  import { useAppShellModel } from '$lib/hooks/use-app-shell/use-app-shell.svelte';
+  import { useAreaContextModel } from '$lib/hooks/use-area-context/use-area-context.svelte';
+  import { useNavigationStackRecorder } from '$lib/hooks/use-navigation-stack/use-navigation-stack.svelte';
+  import { usePeopleDirectoryLoader } from '$lib/hooks/use-people-directory/use-people-directory.svelte';
+  import { contextOfPath, NAV_ITEMS_BY_CONTEXT } from '$lib/navigation/navigation';
+  import type { LayoutData } from './$types';
+
   /**
-   * AQUI NÃO SE DESENHA CASCA NENHUMA — de propósito.
+   * A CASCA DO PAINEL INTERNO — montada UMA vez, aqui, como o `__root` dos sistemas em React.
    *
-   * Este grupo só existe pela guarda de sessão em `+layout.ts`: quando qualquer coisa daqui
-   * para baixo roda, a sessão já foi conferida.
+   * Antes cada módulo (`infra`, `system`, `maintenance`) e as telas da pessoa (`profile`,
+   * `roles`) montavam a própria casca no próprio `+layout.svelte`. O SvelteKit desmonta o
+   * layout de uma pasta ao sair dela: trocar de módulo no trilho, abrir o perfil ou voltar dele
+   * destruía a barra inteira e a criava de novo — a tela toda piscava, em vez de só o conteúdo
+   * mudar. Agora a barra fica, e só o menu e a área de conteúdo trocam.
    *
-   * O menu lateral é de CADA MÓDULO: `infra/+layout.svelte`, `system/+layout.svelte` e
-   * `maintenance/+layout.svelte` montam a própria casca, cada um com a própria lista de menu
-   * (ver `lib/navigation/navigation.ts`); o perfil e os cargos, que não são de contexto
-   * nenhum, usam a casca de `(account)/+layout.svelte`.
+   * O MENU CONTINUA SENDO DO MÓDULO DO ENDEREÇO: `/infra/...` mostra a lista da
+   * Infraestrutura, e nenhuma outra. Não há filtro de lista única pelo que está guardado no
+   * navegador (o que fazia um módulo se achar dono do sistema inteiro): o contexto sai do
+   * endereço, e a lista sai do mapa fixo `NAV_ITEMS_BY_CONTEXT`. Só nas telas que não são de
+   * módulo nenhum (o perfil, os cargos) vale o ÚLTIMO contexto usado — é o menu que a pessoa
+   * espera continuar vendo ao voltar.
    *
-   * Antes a casca era UMA, montada aqui, e ela decidia o menu filtrando uma lista única pelo
-   * contexto guardado no navegador. Era o que fazia um módulo se achar dono do sistema
-   * inteiro. Uma casca aqui voltaria a envolver os três — e os layouts de baixo não têm como
-   * tirá-la.
+   * A sessão já foi conferida pela guarda em `+layout.ts` quando qualquer coisa daqui roda.
    */
-  let { children }: { children: Snippet } = $props();
+  let { data, children }: { data: LayoutData; children: Snippet } = $props();
+
+  /* A pilha do "voltar" é gravada aqui, uma vez, para as telas logadas dos três módulos. */
+  useNavigationStackRecorder();
+  /* A foto de cada pessoa, para o rosto de qualquer tela achar (regra do grupo: pessoa com foto). */
+  usePeopleDirectoryLoader();
+
+  const lastContext = useAreaContextModel();
+  const context = $derived(contextOfPath(page.url.pathname) ?? lastContext.context);
+
+  const shell = useAppShellModel({
+    get user() {
+      return data.user;
+    },
+    get context() {
+      return context;
+    },
+    get items() {
+      return NAV_ITEMS_BY_CONTEXT[context];
+    },
+  });
 </script>
 
-{@render children()}
+<AppShell
+  initialSidebarOpen={data.sidebarOpen}
+  data={shell.data}
+  ui={shell.ui}
+  state={shell.state}
+  actions={shell.actions}
+>
+  {@render children()}
+</AppShell>

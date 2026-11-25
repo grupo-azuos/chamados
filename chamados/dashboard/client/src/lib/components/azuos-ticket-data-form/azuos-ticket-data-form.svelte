@@ -1,3 +1,20 @@
+<!--
+  @component
+  Os DADOS do chamado que o TI corrige: urgência, área, tipo, máquina e sistema, mais as áreas
+  participantes.
+
+  O RESPONSÁVEL não se troca à mão: quem assume o chamado vira responsável ao lançar o primeiro
+  histórico. O campo só aparece quando chegam `data.fields.assigneeId` e a lista `data.assignees` —
+  para quem pode trocá-lo (o super admin).
+
+  O ESTÁGIO não está neste formulário, e não é esquecimento: ele só muda lançando um histórico. Aqui
+  se corrige o cadastro — e cada correção fica, sozinha, na linha do tempo.
+
+  Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), com as
+  opções de máquinas, projetos, tipos e áreas em `data`. `state` diz se está enviando, salvo, com
+  erro, e o andamento das áreas e do cadastro de tipo; `actions` muda e valida cada campo, envia,
+  inclui e tira área participante, abre o diálogo das máquinas e cadastra um tipo novo na hora.
+-->
 <script lang="ts" module>
   import {
     ticketAreaLabel,
@@ -23,17 +40,6 @@
     | 'customSystemName'
     | 'assigneeId';
 
-  /**
-   * Os DADOS do chamado que o TI corrige: urgência, área, tipo, máquina e sistema.
-   *
-   * O RESPONSÁVEL não está aqui, de propósito: ele não se troca à mão. Quem assume o chamado
-   * vira responsável ao lançar o primeiro histórico, e a ficha o mostra só para leitura.
-   *
-   * Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`).
-   *
-   * O ESTÁGIO não está neste formulário, e não é esquecimento: ele só muda lançando um
-   * histórico. Aqui se corrige o cadastro — e cada correção fica, sozinha, na linha do tempo.
-   */
   export type AzuosTicketDataFormProps = {
     data: {
       ticket: Ticket;
@@ -123,7 +129,7 @@
   /* "Nenhuma" precisa ser uma opção de verdade: é assim que se desfaz um vínculo errado. O
      valor vazio é o que o view-model traduz de volta para nulo ao salvar. */
   const machineOptions = $derived([
-    { value: '', label: 'Nenhuma' },
+    { value: '', label: '(Nenhuma)' },
     ...data.machines.map((machine) => ({ ...machine, icon: LaptopIcon })),
   ]);
 
@@ -165,7 +171,7 @@
   );
 
   const projectOptions = $derived([
-    { value: '', label: 'Nenhum' },
+    { value: '', label: '(Nenhum)' },
     ...customProjectOption,
     ...(data.projects ?? []),
   ]);
@@ -277,7 +283,7 @@
         data={{ value: systemValue, options: projectOptions }}
         ui={{
           ariaLabel: 'Sistema / Software',
-          placeholder: 'Nenhum',
+          placeholder: '(Nenhum)',
           searchPlaceholder: 'Busque ou digite o nome do sistema',
           fullWidth: true,
           allowCustomValue: true,
@@ -311,7 +317,7 @@
       data={{ value: fields.computerId.value, options: machineOptions }}
       ui={{
         ariaLabel: 'Máquina',
-        placeholder: 'Nenhuma',
+        placeholder: '(Nenhuma)',
         fullWidth: true,
         mode: 'combobox',
         searchPlaceholder: 'Buscar máquina…',

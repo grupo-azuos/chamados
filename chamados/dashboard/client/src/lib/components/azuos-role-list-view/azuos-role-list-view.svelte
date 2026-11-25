@@ -1,3 +1,19 @@
+<!--
+  @component
+  A tela de ACESSOS POR MÓDULO: quem é de Infraestrutura, de Sistema e de Manutenção.
+
+  Em cima, o cartão da pessoa que está usando, com os papéis dela; logo abaixo entra o que a tela
+  passar em `afterProfile` (hoje, o vínculo de WhatsApp). Com `ui.showTeam`, vem a parte da equipe:
+  cabeçalho com "Liberar módulo", os cards de contagem por módulo, a busca e o filtro de módulo, e a
+  lista de pessoas com os módulos de cada uma — com os estados de carregando, erro, vazio e
+  filtrado. Só o Super Admin libera e tira módulos; para os outros a tela avisa que é só consulta.
+
+  - `data`: a pessoa atual, os acessos (`roles`), as pessoas do diretório, o total e o filtro.
+  - `ui`: `showTeam` (sem ele, só o cartão da pessoa — a lista da equipe é do super-admin).
+  - `state`: carregando, recarregando, vazio, filtrado, erro e o andamento da remoção.
+  - `actions`: liberar (`onCreate`, `onGrantTo`), pedir remoção (`onAskDelete`), busca, filtro de
+    módulo, limpar filtros e tentar de novo.
+-->
 <script lang="ts" module>
   import type { Snippet } from 'svelte';
   import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
@@ -46,6 +62,8 @@
     };
     actions: {
       onCreate: () => void;
+      /** Abre o "Liberar módulo" já com esta pessoa escolhida. */
+      onGrantTo?: (person: RolePerson) => void;
       onAskDelete: (role: InternalRole) => void;
       onSearchChange: (search: string) => void;
       onContextChange: (context: RoleContext | '') => void;
@@ -130,18 +148,25 @@
 
 <script lang="ts">
   import Info from '@lucide/svelte/icons/info';
+  import MonitorCog from '@lucide/svelte/icons/monitor-cog';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
+  import Server from '@lucide/svelte/icons/server';
   import ShieldCheck from '@lucide/svelte/icons/shield-check';
+  import Wrench from '@lucide/svelte/icons/wrench';
   import X from '@lucide/svelte/icons/x';
 
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ContentCard, {
+    type AzuosContentCardMenuItem,
+  } from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
@@ -155,7 +180,6 @@
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
 
   let { afterProfile, data, ui, state, actions }: AzuosRoleListViewProps = $props();
@@ -178,6 +202,31 @@
   }
 
   const people = $derived(groupRolesByPerson(data.roles));
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  const cardPage = useCardPage(() => people);
+
+  /* O menu do cartão da pessoa: tirar cada módulo e dar mais um — só para o Super Admin. */
+  function menuItemsOf(person: RolePerson): AzuosContentCardMenuItem[] {
+    if (!canManage) return [];
+
+    const canGrant = Boolean(actions.onGrantTo) && person.roles.length < ROLE_CONTEXTS.length;
+    const removals = person.roles.map((role, index) => ({
+      id: `remove:${role.id}`,
+      label: `Tirar o módulo ${ROLE_CONTEXT_LABELS[role.context]}`,
+      icon: X,
+      isDestructive: true,
+      separatorBefore: index === 0 && canGrant,
+    }));
+
+    return canGrant ? [{ id: 'grant', label: 'Adicionar módulo', icon: Plus }, ...removals] : removals;
+  }
+
+  function chooseAction(id: string, person: RolePerson) {
+    if (id === 'grant') return actions.onGrantTo?.(person);
+
+    const role = person.roles.find((item) => `remove:${item.id}` === id);
+    if (role) actions.onAskDelete(role);
+  }
 
   /* Quem liberou cada módulo, sem repetir: "a@x" quando foi um só, "a@x, b@y" quando foram dois. */
   function creatorsOf(person: RolePerson): string {
@@ -208,13 +257,22 @@
         {/if}
       </span>
     {/each}
+    <!-- Dar módulo direto na pessoa, sem procurá-la de novo na lista do formulário. Some quando
+         ela já tem os três. -->
+    {#if canManage && actions.onGrantTo && person.roles.length < ROLE_CONTEXTS.length}
+      <ActionButton
+        data={{ label: 'Adicionar módulo' }}
+        ui={{ icon: Plus, variant: 'ghost', size: 'sm' }}
+        actions={{ onClick: () => actions.onGrantTo?.(person) }}
+      />
+    {/if}
   </div>
 {/snippet}
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+<div class="flex w-full flex-col gap-6">
   <!-- 1. Meu Perfil -->
   {#if data.currentUser}
-    <div class="rounded-box border border-border bg-card p-6 shadow-xs">
+    <div class="rounded-box bg-card p-6 shadow-card">
       <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div class="flex items-center gap-4">
           <div class="relative shrink-0">
@@ -308,26 +366,10 @@
 
   <!-- 3. Indicadores de Estatísticas (StatCards) -->
   <StatCardGrid>
-    <StatCard
-      data={{ label: 'Módulos liberados', value: data.roles.length }}
-      ui={{ tone: 'brand', icon: ShieldCheck }}
-      state={{ isLoading: state.isLoading }}
-    />
-    <StatCard
-      data={{ label: 'Sistema', value: countByContext('sistema') }}
-      ui={{ tone: 'brand' }}
-      state={{ isLoading: state.isLoading }}
-    />
-    <StatCard
-      data={{ label: 'Infraestrutura', value: countByContext('infra') }}
-      ui={{ tone: 'info' }}
-      state={{ isLoading: state.isLoading }}
-    />
-    <StatCard
-      data={{ label: 'Manutenção', value: countByContext('manutencao') }}
-      ui={{ tone: 'warning' }}
-      state={{ isLoading: state.isLoading }}
-    />
+    <ContentCard data={{ label: 'Módulos liberados', title: 'Módulos liberados', highlight: { value: data.roles.length } }} ui={{ icon: ShieldCheck, iconTone: 'neutral' }} state={{ isLoading: state.isLoading }} />
+    <ContentCard data={{ label: 'Sistema', title: 'Sistema', highlight: { value: countByContext('sistema') } }} ui={{ icon: MonitorCog, iconTone: contextTone('sistema') }} state={{ isLoading: state.isLoading }} />
+    <ContentCard data={{ label: 'Infraestrutura', title: 'Infraestrutura', highlight: { value: countByContext('infra') } }} ui={{ icon: Server, iconTone: contextTone('infra') }} state={{ isLoading: state.isLoading }} />
+    <ContentCard data={{ label: 'Manutenção', title: 'Manutenção', highlight: { value: countByContext('manutencao') } }} ui={{ icon: Wrench, iconTone: contextTone('manutencao') }} state={{ isLoading: state.isLoading }} />
   </StatCardGrid>
 
   <!-- 4. Filtros Padronizados -->
@@ -402,50 +444,59 @@
       class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
       data-slot="role-cards-mobile"
     >
-      {#each people as person (person.userId)}
+      {#each cardPage.items as person (person.userId)}
         {@const user = resolveUser(person)}
         {@const displayName = user?.name || person.userEmail || person.userId}
         {@const creators = creatorsOf(person)}
-        <!-- A cor entra por onde o mouse entrou (`hover-fill`, em tokens.css): a do primeiro módulo. -->
-        <div
-          use:fillFromPointer
-          style:--fill-color={fillColorOf(contextTone(person.roles[0]?.context ?? 'sistema'))}
-          class="hover-fill flex flex-col gap-3 rounded-box border border-border bg-card p-4 shadow-xs"
+        <!-- O cartão de registro do sistema, com o rosto no lugar do ícone. A cor dos módulos mora
+             nos selos, nunca no fundo do card; tirar e dar módulo ficam no menu de três pontinhos. -->
+        <ContentCard
+          data={{
+            label: displayName,
+            title: displayName,
+            code: `ID: ${person.userId}`,
+            /* Sem nome no diretório, o título já é o e-mail: não repete embaixo. */
+            meta: person.userEmail !== displayName ? person.userEmail : null,
+            footer: creators ? { title: `Liberado por: ${creators}` } : null,
+            menu: { label: `Ações de ${displayName}`, items: menuItemsOf(person) },
+          }}
+          ui={{ slot: 'role-card' }}
+          actions={{ onMenuSelect: (id) => chooseAction(id, person) }}
         >
-          <div class="flex items-center gap-3 min-w-0">
-            <PersonAvatar name={displayName} avatarUrl={user?.image} ui={{ size: 'lg' }} />
-            <div class="min-w-0">
-              <span class="block font-semibold text-foreground text-sm break-words">
-                {displayName}
-              </span>
-              {#if person.userEmail}
-                <span class="block text-xs text-muted-foreground break-all">
-                  {person.userEmail}
-                </span>
-              {/if}
-              <span class="block text-xs font-mono text-muted-foreground break-all">
-                ID: {person.userId}
-              </span>
-            </div>
-          </div>
-
-          <div class="flex flex-col gap-1 pt-2 border-t border-border">
-            <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {#snippet leading()}
+            <PersonAvatar name={displayName} avatarUrl={user?.image} ui={{ size: 'md' }} />
+          {/snippet}
+          {#snippet body()}
+            <span class="text-xs font-medium text-muted-foreground">
               {person.roles.length > 1 ? 'Módulos' : 'Módulo'}
             </span>
-            {@render moduleBadges(person)}
-          </div>
-
-          {#if creators}
-            <div
-              class="flex items-center justify-between text-xs font-mono text-muted-foreground pt-1 border-t border-border"
-            >
-              <span class="break-all">Liberado por: {creators}</span>
+            <div class="flex flex-wrap items-center gap-1.5">
+              {#each person.roles as role (role.id)}
+                <StatusBadge
+                  data={{ label: ROLE_CONTEXT_LABELS[role.context] }}
+                  ui={{ tone: contextTone(role.context), size: 'sm' }}
+                />
+              {/each}
             </div>
-          {/if}
-        </div>
+          {/snippet}
+        </ContentCard>
       {/each}
     </div>
+      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
+           fileira. A barra só aparece quando há mais de uma página. -->
+      {#if cardPage.total > cardPage.pageSize}
+        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
+          <PaginationBar
+            data={{
+              page: cardPage.page,
+              pageSize: cardPage.pageSize,
+              total: cardPage.total,
+              noun: ['pessoa', 'pessoas'],
+            }}
+            actions={{ onPageChange: cardPage.actions.onPageChange }}
+          />
+        </div>
+      {/if}
 
     <!-- 2. Visualização em Tabela para Desktop (>= xl) -->
     <div

@@ -1,3 +1,23 @@
+<!--
+  @component
+  O EXTRATO de uma peça: cada entrada, cada saída e o saldo depois de cada uma.
+
+  É esta tela que responde "como chegamos em 3?". Sem ela, o saldo é uma afirmação sem prova. Abre
+  num diálogo largo, com o estado da peça e o saldo atual no alto (tirado da linha mais recente do
+  extrato, para nunca desmentir a lista); a lista vem em cards no celular e em tabela no monitor,
+  com a alternância entre os dois. Cada linha mostra quando, o movimento com sinal, a máquina,
+  quem fez e o saldo depois.
+
+  Movimento que veio de um CHAMADO é um link para ele, e não tem lixeira: desfaz-se pelo chamado,
+  reaberto, senão o chamado e o depósito discordam. Os demais podem ser excluídos, com confirmação;
+  a linha vai para "Movimentações estornadas", onde dá para desfazer.
+
+  Função pura de props: não busca nada e não apaga nada — avisa quem pediu.
+
+  - `data`: `part`, `movements` (do mais recente ao mais antigo) e `removing`.
+  - `state`: `isOpen`, `isLoading`, `isEmpty`, `isRemoving`, `error` e `actionError`.
+  - `actions`: `onAskRemove`, `onCancelRemove`, `onConfirmRemove`, `onRetry` e `onClose`.
+-->
 <script lang="ts" module>
   import { departmentLabel } from '@template/shared/domain/department.util';
   import {
@@ -104,7 +124,6 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
   import { cn } from '$lib/utils/cn';
   import { formatDateTime } from '$lib/utils/format-date';
 
@@ -144,27 +163,31 @@
         Esta peça ainda não teve entrada nem saída registrada.
       </p>
     {:else}
-      <div class="flex justify-end">
+      <!-- A contagem e a alternância numa linha só, alinhadas com o cabeçalho do diálogo. -->
+      <div class="flex items-center justify-between gap-3" data-slot="part-ledger-toolbar">
+        <span class="text-muted-foreground text-sm font-medium">
+          {data.movements.length} movimentação(ões)
+        </span>
         <TableViewToggle />
       </div>
 
       <!-- 1. Visualização Mobile (< xl) -->
+      <!-- Sem rolagem própria: quem rola é a área do diálogo, que já tem respiro nas bordas. Uma
+           segunda rolagem aqui dentro cortava a sombra e colava o primeiro item na beirada. -->
       <div
-        class={cn(
-          'card-grid max-h-[60vh] overflow-y-auto pr-1',
-          !tableView.forceCards && 'xl:hidden',
-        )}
+        class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
         data-slot="part-ledger-cards-mobile"
       >
         {#each data.movements as movement (movement.id)}
-          <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
+          <!-- Dentro do diálogo branco, o item é a caixa cinza sem sombra (card dentro de card da
+               mesma cor é proibido). O hover é o véu neutro, só no que leva ao chamado. -->
           <div
-            use:fillFromPointer
-            style:--fill-color={fillColorOf(movementTypeTone(movement.type))}
             class={cn(
-              'hover-fill relative flex flex-col gap-2 rounded-box border border-border bg-card p-3 shadow-xs',
-              movement.ticketId && 'cursor-pointer',
+              'rounded-box bg-muted relative isolate flex flex-col gap-2 p-3',
+              movement.ticketId &&
+                'before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-box hover:before:bg-hover-veil cursor-pointer',
             )}
+            data-slot="part-ledger-item"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="flex flex-col gap-1 min-w-0">
@@ -189,7 +212,7 @@
                       icon: Trash2,
                       isIconOnly: true,
                       className:
-                        'text-ink-500 hover:text-destructive hover:bg-muted',
+                        'text-ink-500 hover:text-destructive hover:bg-hover-veil',
                     }}
                     actions={{ onClick: () => actions.onAskRemove(movement) }}
                   />
@@ -229,9 +252,9 @@
         )}
         data-slot="part-ledger-table-desktop"
       >
-        <!-- Sem moldura própria e sem largura mínima: a tabela já tem fundo e borda, e uma
-             segunda moldura em volta dava o fundo dobrado e a rolagem para o lado. -->
-        <Table>
+        <!-- Dentro do diálogo a tabela é plana: sem o fundo branco e a sombra de cartão, que
+             viravam card dentro de card da mesma cor e tinham a sombra cortada pela rolagem. -->
+        <Table containerClass="rounded-none border-0 bg-transparent shadow-none">
           <TableHeader>
             <TableRow>
               <TableHead>Quando</TableHead>
@@ -284,7 +307,7 @@
                           icon: Trash2,
                           isIconOnly: true,
                           className:
-                            'text-ink-500 hover:text-destructive hover:bg-muted',
+                            'text-ink-500 hover:text-destructive hover:bg-hover-veil',
                         }}
                         actions={{ onClick: () => actions.onAskRemove(movement) }}
                       />
@@ -316,7 +339,7 @@
   data={{
     title: 'Excluir esta movimentação?',
     description: data.removing
-      ? `A peça volta para o saldo como se esta linha nunca tivesse existido: ${movementTypeLabel(data.removing.type)} de ${data.removing.quantity}. Não dá para desfazer.`
+      ? `A peça volta para o saldo como se esta linha nunca tivesse existido: ${movementTypeLabel(data.removing.type)} de ${data.removing.quantity}. A linha fica em "Movimentações estornadas", onde dá para desfazer.`
       : '',
     confirmLabel: 'Excluir e devolver o saldo',
     confirmingLabel: 'Excluindo…',

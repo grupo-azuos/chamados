@@ -1,13 +1,18 @@
+<!--
+  @component
+  CALENDÁRIO DE CALOR — quantas coisas caem em cada dia, mês a mês (o "estilo GitHub").
+
+  É o gráfico do PICO: uma semana carregada salta aos olhos como uma mancha escura. Cada
+  quadradinho é um dia; dia sem nada fica na cor da trilha, não some. **Um ano no computador,
+  quatro meses no celular**: doze meses numa tela de 360px dariam quadradinhos de 5px.
+
+  - `data`: os dias com a conta, o nome do que se conta e o primeiro dia mostrado.
+  - `ui`: o texto de vazio e a altura da caixa inteira (`heightClass`).
+  - `state`: carregando.
+-->
 <script lang="ts" module>
   import { formatCount, resolveColor, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * CALENDÁRIO DE CALOR — quantas coisas caem em cada dia, mês a mês (o "estilo GitHub").
-   *
-   * É o gráfico do PICO: uma semana carregada salta aos olhos como uma mancha escura. Cada
-   * quadradinho é um dia; dia sem nada fica na cor da trilha, não some. **Um ano no computador,
-   * quatro meses no celular**: doze meses numa tela de 360px dariam quadradinhos de 5px.
-   */
   export type CalendarDay = { date: string; count: number };
 
   export type AzuosCalendarChartProps = {
@@ -19,7 +24,12 @@
       from?: string;
     };
     state?: { isLoading?: boolean };
-    ui?: { emptyLabel?: string };
+    /**
+     * `heightClass`: a caixa inteira (quadro + legenda), para caber num bloco do painel. Sem ela,
+     * o quadro tem altura própria — e, dentro de um bloco mais baixo, vazava com a legenda por
+     * baixo do bloco vizinho.
+     */
+    ui?: { emptyLabel?: string; heightClass?: string };
   };
 
   const DESKTOP_MONTHS = 12;
@@ -28,7 +38,7 @@
   const MOBILE_BREAKPOINT = 768;
 
   /** Do mais claro ao mais forte: a escala vai do amarelo ao vermelho. */
-  export const HEAT_COLORS = ['var(--warning-soft)', 'var(--warning)', 'var(--chart-4)', 'var(--destructive)'];
+  export const HEAT_COLORS = ['var(--brand-yellow-300)', 'var(--brand-yellow-500)', 'var(--warning)', 'var(--destructive)'];
 
   export function firstDayOfMonth(today: Date): string {
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
@@ -89,11 +99,19 @@
     };
   }
 
+  /** Com caixa dada, o quadro ocupa o que sobra dela depois da legenda; sem, a altura própria. */
+  export function chartHeightOf(boxClass: string | undefined, isMobile: boolean): string {
+    if (boxClass) return 'min-h-0 flex-1';
+
+    return isMobile ? 'h-44' : 'h-48';
+  }
+
   export { MOBILE_BREAKPOINT };
 </script>
 
 <script lang="ts">
   import Echart from '$lib/components/azuos-echart/azuos-echart.svelte';
+  import { cn } from '$lib/utils/cn';
   import { useMediaQuery } from '$lib/hooks/use-media-query/use-media-query.svelte';
 
   let { data, state: chartState, ui }: AzuosCalendarChartProps = $props();
@@ -105,18 +123,18 @@
   const total = $derived(data.days.reduce((sum, day) => sum + day.count, 0));
 </script>
 
-<div class="flex flex-col gap-2">
+<div class={cn('flex flex-col gap-2', ui?.heightClass)}>
   <Echart
     data={{
       option: (theme) => calendarOption(data.days, range, data.seriesLabel, theme),
       description: `${formatCount(total)} ${data.seriesLabel} entre ${range[0]} e ${range[1]}`,
     }}
-    ui={{ heightClass: isMobile.current ? 'h-44' : 'h-48', emptyLabel: ui?.emptyLabel }}
+    ui={{ heightClass: chartHeightOf(ui?.heightClass, isMobile.current), emptyLabel: ui?.emptyLabel }}
     state={{ isLoading: chartState?.isLoading, isEmpty: data.days.length === 0 }}
   />
   {#if data.days.length > 0 && !chartState?.isLoading}
     <!-- A escala escrita ("Menos … Mais"): a cor não pode ser o único jeito de ler o quadro. -->
-    <div class="text-muted-foreground flex items-center justify-end gap-1 text-xs">
+    <div class="text-muted-foreground flex shrink-0 items-center justify-end gap-1 text-xs">
       <span>Menos</span>
       {#each HEAT_COLORS as color (color)}
         <span class="size-3 rounded-chip" style="background-color: {color}" aria-hidden="true"></span>

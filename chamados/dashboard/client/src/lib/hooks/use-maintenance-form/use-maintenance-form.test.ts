@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-maintenance-form-harness.test.svelte';
-import { type MaintenanceFormModel } from './use-maintenance-form.svelte';
+import { personIdsByNames, type MaintenanceFormModel } from './use-maintenance-form.svelte';
 
 vi.mock('$lib/api/maintenances.api', () => ({
   maintenancesApi: { create: vi.fn(), update: vi.fn() },
@@ -13,6 +13,15 @@ vi.mock('$lib/api/maintenances.api', () => ({
 
 vi.mock('$lib/api/computers.api', () => ({
   computersApi: { list: vi.fn() },
+}));
+
+vi.mock('$lib/api/tickets.api', () => ({
+  ticketsApi: {
+    peopleOptions: vi.fn().mockResolvedValue([
+      { id: 'u-suporte', name: 'Suporte TI', avatarUrl: null },
+      { id: 'u-ana', name: 'Ana Souza', avatarUrl: null },
+    ]),
+  },
 }));
 
 const { maintenancesApi } = await import('$lib/api/maintenances.api');
@@ -30,8 +39,12 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     id: 3,
     name: 'CONTABIL-03',
     displayName: 'Contábil — mesa do fechamento',
+    responsibleId: 'person-daniela-prado',
     responsibleName: 'Daniela Prado',
-    department: 'contabil',
+    responsibleAvatarUrl: null,
+    departmentId: 2,
+    departmentName: 'Contábil',
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: null,
@@ -86,12 +99,17 @@ function maintenance(over: Partial<Maintenance> = {}): Maintenance {
     createdBy: 'suporte@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...over,
   };
 }
 
 function mountModel(
-  props: { maintenance?: Maintenance | null; computerId?: number | null; onSaved?: () => void } = {},
+  props: {
+    maintenance?: Maintenance | null;
+    computerId?: number | null;
+    onSaved?: () => void;
+  } = {},
 ): MaintenanceFormModel {
   let model!: MaintenanceFormModel;
   render(Harness, {
@@ -156,6 +174,22 @@ describe('useMaintenanceFormModel', () => {
     );
   });
 
+  it('turns the person chosen into who did it, and finds the person of an old record by name', async () => {
+    const model = mountModel({ maintenance: maintenance() });
+
+    await waitFor(() => expect(model.data.fields.performedByIds.value).toBe('u-suporte'));
+    expect(model.data.people.map((person) => person.name)).toEqual(['Suporte TI', 'Ana Souza']);
+    model.actions.onChange('performedByIds', 'u-ana,u-suporte');
+    model.actions.onSubmit();
+
+    await waitFor(() =>
+      expect(maintenancesApi.update).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({ performedByIds: ['u-ana', 'u-suporte'] }),
+      ),
+    );
+  });
+
   it('edits the existing record instead of creating another one', async () => {
     const model = mountModel({ maintenance: maintenance() });
 
@@ -200,7 +234,12 @@ describe('useMaintenanceFormModel', () => {
 
 describe('useMaintenanceFormModel — blur and the record being corrected', () => {
   beforeEach(() => {
-    vi.mocked(computersApi.list).mockResolvedValue({ items: [computer()], total: 1, page: 1, pageSize: 100 });
+    vi.mocked(computersApi.list).mockResolvedValue({
+      items: [computer()],
+      total: 1,
+      page: 1,
+      pageSize: 100,
+    });
   });
 
   // triste
@@ -216,14 +255,19 @@ describe('useMaintenanceFormModel — blur and the record being corrected', () =
   // feliz
   it('opens an equipment outside the inventory with blanks for what was never filled', () => {
     const model = mountModel({
-      maintenance: maintenance({ computerId: null, otherMachine: 'Impressora', description: null, performedBy: null }),
+      maintenance: maintenance({
+        computerId: null,
+        otherMachine: 'Impressora',
+        description: null,
+        performedBy: null,
+      }),
     });
 
     expect(model.data.mode).toBe('edit');
     expect(model.data.fields.computerId.value).toBe('');
     expect(model.data.fields.otherMachine.value).toBe('Impressora');
     expect(model.data.fields.description.value).toBe('');
-    expect(model.data.fields.performedBy.value).toBe('');
+    expect(model.data.fields.performedByIds.value).toBe('');
   });
 });
 
@@ -231,7 +275,12 @@ describe('useMaintenanceFormModel — equipment without a machine', () => {
   beforeEach(() => {
     vi.mocked(maintenancesApi.create).mockReset();
     vi.mocked(maintenancesApi.create).mockResolvedValue(maintenance());
-    vi.mocked(computersApi.list).mockResolvedValue({ items: [computer()], total: 1, page: 1, pageSize: 200 });
+    vi.mocked(computersApi.list).mockResolvedValue({
+      items: [computer()],
+      total: 1,
+      page: 1,
+      pageSize: 200,
+    });
   });
 
   // feliz
@@ -246,5 +295,22 @@ describe('useMaintenanceFormModel — equipment without a machine', () => {
         expect.objectContaining({ computerId: null, otherMachine: 'Impressora da recepção' }),
       ),
     );
+  });
+});
+
+describe('personIdsByNames', () => {
+  // feliz
+  it('finds everyone an old record named, without caring about case or spaces', () => {
+    const list = [
+      { id: 'u-ana', name: 'Ana Souza' },
+      { id: 'u-caio', name: 'Caio Reis' },
+    ];
+
+    expect(personIdsByNames(list, 'ana souza,  Caio Reis ')).toEqual(['u-ana', 'u-caio']);
+  });
+
+  // triste
+  it('leaves out a name nobody has', () => {
+    expect(personIdsByNames([{ id: 'u-ana', name: 'Ana Souza' }], 'Fulano de Fora')).toEqual([]);
   });
 });

@@ -1,3 +1,4 @@
+import { drillParam } from '@template/shared/schemas/board-drill.schema';
 import { type TicketArea } from '@template/shared/domain/ticket-catalog.util';
 import { type TicketInvite } from '@template/shared/domain/ticket-invite.util';
 import { type TicketStockSource } from '@template/shared/domain/ticket-stock.util';
@@ -15,6 +16,10 @@ import {
 } from '@template/shared/schemas/ticket-history.schema';
 import { type TicketPeople, type TicketPerson } from '@template/shared/schemas/ticket-person.schema';
 import { type TicketRelation } from '@template/shared/schemas/ticket-relation.schema';
+import {
+  type TicketRemovedItem,
+  type TicketRemovedKind,
+} from '@template/shared/schemas/ticket-removed.schema';
 import {
   type MyTicket,
   type OpenedTicket,
@@ -127,6 +132,7 @@ export const ticketsApi = {
   list: (query: Partial<TicketListQuery>) =>
     apiRequest<Paginated<Ticket>>('/tickets', {
       query: {
+        drill: query.drill ? drillParam(query.drill) : undefined,
         page: query.page,
         pageSize: query.pageSize,
         search: query.search,
@@ -159,6 +165,7 @@ export const ticketsApi = {
     apiDownload('/tickets/export', {
       query: {
         format,
+        drill: query.drill ? drillParam(query.drill) : undefined,
         search: query.search,
         status: query.status,
         statusGroup: query.statusGroup,
@@ -291,6 +298,13 @@ export const ticketsApi = {
     apiRequest<TicketRelation[]>(`/tickets/${ticketId}/relations/${relatedTicketId}`, {
       method: 'DELETE',
     }),
+
+  /** O que foi tirado do chamado — anexos, máquinas, pessoas, itens, vínculos e áreas. */
+  removed: (ticketId: number) => apiRequest<TicketRemovedItem[]>(`/tickets/${ticketId}/removed`),
+
+  /** Desfaz a remoção de um deles. */
+  restoreRemoved: (ticketId: number, kind: TicketRemovedKind, itemId: number) =>
+    apiRequest<void>(`/tickets/${ticketId}/removed/${kind}/${itemId}/restore`, { method: 'POST' }),
 
   /**
    * Quem pediu (ou alguém vinculado) escreve no chamado pela Central: responder ou reabrir.

@@ -38,7 +38,13 @@ const actions = {
   onClearFilters: vi.fn(),
 };
 
-function renderWith(over: { chips?: { key: string; label: string }[]; canClear?: boolean; isFilteredOut?: boolean } = {}) {
+function renderWith(
+  over: {
+    chips?: { key: string; label: string }[];
+    canClear?: boolean;
+    isFilteredOut?: boolean;
+  } = {},
+) {
   return render(FilterPanel, {
     props: {
       data: {
@@ -77,7 +83,10 @@ describe('AzuosFilterPanel', () => {
   it('arrives open and counted when a filter is on, and each chip switches it off', async () => {
     renderWith({ chips: [{ key: 'priority', label: 'Urgência: Alta' }], canClear: true });
 
-    expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
     expect(screen.getByLabelText('1 ativo')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Urgência: Alta' }));
     expect(actions.onRemoveChip).toHaveBeenCalledWith('priority');
@@ -94,5 +103,90 @@ describe('AzuosFilterPanel', () => {
     renderWith({ canClear: true, isFilteredOut: true });
 
     expect(screen.queryByRole('button', { name: 'Limpar filtros' })).toBeNull();
+  });
+});
+
+describe('AzuosFilterPanel — person field', () => {
+  const personField: FilterPanelField = {
+    key: 'responsible',
+    label: 'Responsável',
+    control: 'person',
+    ariaLabel: 'Filtrar por responsável',
+    allLabel: 'Todos os responsáveis',
+    value: '',
+    options: [{ value: 'none', label: '(Sem responsável)' }],
+    people: [{ id: 'p-ana', name: 'Ana Lima', photo: null }],
+  };
+
+  function renderPerson(value = '') {
+    return render(FilterPanel, {
+      props: {
+        data: {
+          search: { value: '', placeholder: 'Buscar…' },
+          fields: [{ ...personField, value }],
+          chips: [{ key: 'responsible', label: 'Responsável' }],
+          canClear: true,
+        },
+        actions,
+      },
+    });
+  }
+
+  // feliz
+  it('uses the person picker with the photo and reports the chosen id by key', async () => {
+    renderPerson();
+
+    await fireEvent.click(screen.getByRole('combobox', { name: 'Filtrar por responsável' }));
+    await fireEvent.click(await screen.findByRole('option', { name: /Ana Lima/ }));
+
+    expect(actions.onFieldChange).toHaveBeenLastCalledWith('responsible', 'p-ana');
+  });
+
+  // triste
+  it('reads "everyone" while no person is chosen, and the special choice when it is', async () => {
+    renderPerson();
+    expect(screen.getByRole('combobox', { name: 'Filtrar por responsável' })).toHaveTextContent(
+      'Todos os responsáveis',
+    );
+  });
+});
+
+describe('AzuosFilterPanel: the board in the view toggle', () => {
+  function renderWithBoard(isKanbanView: boolean, onKanbanViewChange = vi.fn()) {
+    render(FilterPanel, {
+      props: {
+        data: { search: { value: '', placeholder: 'Buscar…' }, fields, chips: [], canClear: false },
+        ui: { hasKanbanView: true },
+        state: { isKanbanView },
+        actions: { ...actions, onKanbanViewChange },
+      },
+    });
+
+    return onKanbanViewChange;
+  }
+
+  // feliz
+  it('offers the board beside table and cards, and reports the choice', async () => {
+    const onKanbanViewChange = renderWithBoard(false);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ver em quadro' }));
+
+    expect(onKanbanViewChange).toHaveBeenCalledWith(true);
+  });
+
+  // triste
+  it('has only table and cards when the screen does not offer the board', () => {
+    renderWith();
+
+    expect(screen.queryByRole('button', { name: 'Ver em quadro' })).not.toBeInTheDocument();
+  });
+
+  it('marks the board while the screen is on it', () => {
+    renderWithBoard(true);
+
+    expect(screen.getByRole('button', { name: 'Ver em quadro' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 });

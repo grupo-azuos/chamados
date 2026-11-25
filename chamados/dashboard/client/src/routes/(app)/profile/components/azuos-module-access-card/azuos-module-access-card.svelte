@@ -1,3 +1,14 @@
+<!--
+  @component
+  OS MÓDULOS DA PESSOA no Chamados — uma seção a mais da ficha padrão do perfil, só deste sistema.
+
+  Mostra um bloco por módulo (`ROLE_CONTEXTS`), com o nome, a descrição e o selo do nível de
+  acesso. O nível é o do papel no admin-console; módulo ausente é "sem acesso", e o super admin
+  aparece com o mesmo nível em todos. Só leitura: não tem estado nem ação.
+
+  - `data.role`: o papel geral da pessoa (`superadmin` vale para todos os módulos).
+  - `data.roles`: o papel em cada módulo.
+-->
 <script lang="ts" module>
   import { type ContextRoles, type UserRole } from '@template/shared/schemas/user.schema';
 
@@ -26,7 +37,7 @@
 
 <section
   aria-label="Seus módulos"
-  class="bg-card border-border rounded-surface flex flex-col gap-4 border p-4 shadow-xs sm:p-6"
+  class="bg-card rounded-surface flex flex-col gap-4 p-4 sm:p-6 shadow-card"
 >
   <h2 class="text-foreground flex items-center gap-2 text-base font-semibold">
     <span class="bg-muted text-primary rounded-chip flex size-8 items-center justify-center">

@@ -55,8 +55,8 @@
 
 <!-- Agendadas no alto: uma no prazo, uma atrasada. -->
 <Story name="WithSchedules" args={{ data: { rows, schedules: [
-  { computerId: 2, computerName: 'FINANCEIRO-02', computerDisplayName: 'Financeiro — mesa 2', computerDepartment: 'financeiro', scheduledFor: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), note: 'Trocar fonte', createdAt: new Date().toISOString(), createdBy: 'suporte@azuos.local', updatedAt: null, updatedBy: null },
-  { computerId: 9, computerName: 'RECEPCAO-01', computerDisplayName: null, computerDepartment: null, scheduledFor: '2026-01-10', note: null, createdAt: new Date().toISOString(), createdBy: 'suporte@azuos.local', updatedAt: null, updatedBy: null },
+  { id: 2, computerId: 2, computerName: 'FINANCEIRO-02', computerDisplayName: 'Financeiro — mesa 2', computerDepartment: 'financeiro', scheduledFor: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), note: 'Trocar fonte', createdAt: new Date().toISOString(), createdBy: 'suporte@azuos.local', updatedAt: null, updatedBy: null, archive: null },
+  { id: 9, computerId: 9, computerName: 'RECEPCAO-01', computerDisplayName: null, computerDepartment: null, scheduledFor: '2026-01-10', note: null, createdAt: new Date().toISOString(), createdBy: 'suporte@azuos.local', updatedAt: null, updatedBy: null, archive: null },
 ] }, actions }} />
 <Story name="Loading" args={{ data: { rows: [] }, state: { isLoading: true }, actions }} />
 

@@ -1,3 +1,27 @@
+<!--
+  @component
+  A AGENDA DO MÓDULO SISTEMA: o calendário dos compromissos e registros da equipe, junto da
+  atividade do GitHub.
+
+  Em cima, a barra: o mês e o ano, voltar/hoje/avançar, Dia/Semana/Mês e "Novo agendamento" (só
+  para quem edita), e os filtros de projeto, autor e tipo. Depois, o resumo por pessoa (PRs, merges
+  e issues no período, contando o que fez como co-autor). No mês, uma célula por dia com os itens
+  empilhados; no dia e na semana, a grade de horas das 08:00 às 18:00, com a atividade do GitHub no
+  alto de cada dia e a linha da hora atual. Clicar num espaço vazio abre um agendamento naquele dia
+  (e horário); clicar num item abre a edição. Os cartões saem na cor escolhida (a mesma tabela do
+  seletor de cor); agendamentos fora do horário da grade aparecem numa lista à parte. Embaixo, a
+  atividade do GitHub no período, dia a dia.
+
+  Função pura de props: os dias, os itens e a posição da linha de agora chegam prontos do view-model
+  da agenda (`use-software-schedule`).
+
+  - `data`: `monthYearTitle`, `viewMode`, `days`, `events`, `githubEvents`, os totais
+    (`mergedPullRequests`, `resolvedIssues`, `developerStats`), `nowTopPx` e `filters`.
+  - `state`: `canEdit`, `isLoading`, `isRefetching` e `error`.
+  - `actions`: navegação (`onPrev`, `onNext`, `onToday`, `onViewModeChange`), criação (`onNewEvent`,
+    `onNewEventAt`), `onSelectEvent`, `onRetry`, `onOpenGithubDay` e os filtros
+    (`onProjectFilterChange`, `onAuthorFilterChange`, `onTypeFilterChange`, `onClearFilters`).
+-->
 <script lang="ts" module>
   import {
     type DayColumn,
@@ -94,6 +118,8 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+    import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
   import GithubCalendarEvent from '../azuos-github-calendar-event/azuos-github-calendar-event.svelte';
   import {
@@ -193,7 +219,7 @@
 {/snippet}
 
 <Tooltip.Provider>
-  <section class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+  <section class="flex w-full flex-col gap-6">
     <!-- Toolbar: Mês/Ano, Navegação, Segmented Control e Botão Novo Evento -->
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-4">
@@ -207,7 +233,7 @@
                 <button
                   {...props}
                   type="button"
-                  class="grid size-10 place-items-center rounded-control border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  class="control-icon-lg bg-muted text-muted-foreground hover:bg-hover-veil hover:text-foreground grid place-items-center rounded-button transition-colors"
                   onclick={actions.onPrev}
                   aria-label={PERIOD_LABELS[data.viewMode].prev}
                 >
@@ -225,7 +251,7 @@
                 <button
                   {...props}
                   type="button"
-                  class="rounded-control border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted"
+                  class="control-md bg-muted text-foreground hover:bg-hover-veil rounded-button px-4 text-sm font-medium transition-colors"
                   onclick={actions.onToday}
                 >
                   Hoje
@@ -242,7 +268,7 @@
                 <button
                   {...props}
                   type="button"
-                  class="grid size-10 place-items-center rounded-control border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  class="control-icon-lg bg-muted text-muted-foreground hover:bg-hover-veil hover:text-foreground grid place-items-center rounded-button transition-colors"
                   onclick={actions.onNext}
                   aria-label={PERIOD_LABELS[data.viewMode].next}
                 >
@@ -258,66 +284,19 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <!-- Segmented Day / Week / Month -->
-        <div class="flex rounded-control border border-border bg-muted p-1">
-          <Tooltip.Root
-            ><Tooltip.Trigger
-              >{#snippet child({ props })}
-                <button
-                  {...props}
-                  type="button"
-                  class="rounded-chip px-3 py-1.5 text-xs font-medium {data.viewMode === 'day'
-                    ? 'bg-card text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'}"
-                  onclick={() => actions.onViewModeChange('day')}
-                >
-                  Dia
-                </button>
-              {/snippet}</Tooltip.Trigger
-            ><Tooltip.Content
-              class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
-              >Mostrar a agenda de um dia</Tooltip.Content
-            ></Tooltip.Root
-          >
-          <Tooltip.Root
-            ><Tooltip.Trigger
-              >{#snippet child({ props })}
-                <button
-                  {...props}
-                  type="button"
-                  class="rounded-chip px-3 py-1.5 text-xs font-medium {data.viewMode === 'week'
-                    ? 'bg-card text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'}"
-                  onclick={() => actions.onViewModeChange('week')}
-                >
-                  Semana
-                </button>
-              {/snippet}</Tooltip.Trigger
-            ><Tooltip.Content
-              class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
-              >Mostrar a agenda da semana</Tooltip.Content
-            ></Tooltip.Root
-          >
-          <Tooltip.Root
-            ><Tooltip.Trigger
-              >{#snippet child({ props })}
-                <button
-                  {...props}
-                  type="button"
-                  class="rounded-chip px-3 py-1.5 text-xs font-medium {data.viewMode === 'month'
-                    ? 'bg-card text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'}"
-                  onclick={() => actions.onViewModeChange('month')}
-                >
-                  Mês
-                </button>
-              {/snippet}</Tooltip.Trigger
-            ><Tooltip.Content
-              class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
-              >Mostrar a agenda do mês</Tooltip.Content
-            ></Tooltip.Root
-          >
-        </div>
+        <!-- Dia / Semana / Mês: o segmentado do padrão Apple (pílula cinza, escolhido em branco). -->
+        <SegmentedControl
+          data={{
+            value: data.viewMode,
+            options: [
+              { value: 'day', label: 'Dia' },
+              { value: 'week', label: 'Semana' },
+              { value: 'month', label: 'Mês' },
+            ],
+          }}
+          ui={{ ariaLabel: 'Período da agenda' }}
+          actions={{ onChange: (value) => actions.onViewModeChange(value as typeof data.viewMode) }}
+        />
 
         <Tooltip.Root bind:open={newAppointmentTooltipOpen}
           ><Tooltip.Trigger
@@ -342,9 +321,12 @@
     </div>
 
     {#if data.filters}
-      <div class="rounded-surface border border-border bg-card p-3 sm:p-4">
+      {@const filters = data.filters}
+      <ContentCard data={{ label: 'Filtros', title: '' }}>
+{#snippet body()}
+<div class="p-3 sm:p-4">
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {#each [{ key: 'project', label: 'Projeto', hint: 'Filtrar agendamentos, PRs, issues e merges por projeto', value: data.filters.project, options: data.filters.projectOptions, onChange: actions.onProjectFilterChange }, { key: 'author', label: 'Autor', hint: 'Filtrar PRs, issues e merges pelo autor registrado no GitHub', value: data.filters.author, options: data.filters.authorOptions, onChange: actions.onAuthorFilterChange }, { key: 'type', label: 'Tipo', hint: 'Mostrar PRs, issues, merges ou todos na agenda', value: data.filters.type, options: [{ value: '', label: 'Todos' }, { value: 'pr', label: 'PRs' }, { value: 'issue', label: 'Issues' }, { value: 'merge', label: 'Merges locais' }], onChange: actions.onTypeFilterChange }] as filter (filter.key)}
+          {#each [{ key: 'project', label: 'Projeto', hint: 'Filtrar agendamentos, PRs, issues e merges por projeto', value: filters.project, options: filters.projectOptions, onChange: actions.onProjectFilterChange }, { key: 'author', label: 'Autor', hint: 'Filtrar PRs, issues e merges pelo autor registrado no GitHub', value: filters.author, options: filters.authorOptions, onChange: actions.onAuthorFilterChange }, { key: 'type', label: 'Tipo', hint: 'Mostrar PRs, issues, merges ou todos na agenda', value: filters.type, options: [{ value: '', label: 'Todos' }, { value: 'pr', label: 'PRs' }, { value: 'issue', label: 'Issues' }, { value: 'merge', label: 'Merges locais' }], onChange: actions.onTypeFilterChange }] as filter (filter.key)}
             <div
               class="min-w-0 space-y-1.5 {filter.key === 'type'
                 ? 'sm:col-span-2 xl:col-span-1'
@@ -381,7 +363,7 @@
               </Tooltip.Root>
             </div>
           {/each}
-          {#if data.filters.isActive}
+          {#if filters.isActive}
             <Tooltip.Root>
               <Tooltip.Trigger>
                 {#snippet child({ props })}
@@ -400,42 +382,21 @@
           {/if}
         </div>
       </div>
+{/snippet}
+</ContentCard>
     {/if}
 
+    <!-- Os dois números do período no card de painel padrão: ícone cheio no tom do assunto, número
+         na cor do texto, e o "i" com a explicação de como cada um é contado. -->
     <div class="grid grid-cols-2 gap-3 sm:max-w-md">
-      <Tooltip.Root
-        ><Tooltip.Trigger
-          >{#snippet child({ props })}<button
-              {...props}
-              type="button"
-              class="w-full text-left rounded-surface border border-border bg-card px-4 py-3"
-            >
-              <p class="text-xl font-semibold text-foreground">{data.mergedPullRequests ?? 0}</p>
-              <p class="text-xs text-muted-foreground">PRs mergeados no período</p>
-            </button>{/snippet}</Tooltip.Trigger
-        ><Tooltip.Content class="max-w-sm whitespace-normal"
-          >PRs mergeados nas datas exibidas no calendário. Cada PR conta no horário do merge.</Tooltip.Content
-        ></Tooltip.Root
-      >
-      <Tooltip.Root
-        ><Tooltip.Trigger
-          >{#snippet child({ props })}<button
-              {...props}
-              type="button"
-              class="w-full text-left rounded-surface border border-border bg-card px-4 py-3"
-            >
-              <p class="text-xl font-semibold text-foreground">{data.resolvedIssues ?? 0}</p>
-              <p class="text-xs text-muted-foreground">Issues resolvidas no período</p>
-            </button>{/snippet}</Tooltip.Trigger
-        ><Tooltip.Content class="max-w-sm whitespace-normal"
-          >Issues resolvidas nas datas exibidas no calendário. Cada issue conta no horário de
-          fechamento.</Tooltip.Content
-        ></Tooltip.Root
-      >
+      <ContentCard data={{ label: 'PRs mergeados no período', title: 'PRs mergeados no período', meta: 'PRs mergeados nas datas exibidas no calendário. Cada PR conta no horário do merge.', highlight: { value: data.mergedPullRequests ?? 0 } }} ui={{ icon: GitMerge, iconTone: 'plum', className: 'px-4 py-3' }} />
+      <ContentCard data={{ label: 'Issues resolvidas no período', title: 'Issues resolvidas no período', meta: 'Issues resolvidas nas datas exibidas no calendário. Cada issue conta no horário de fechamento.', highlight: { value: data.resolvedIssues ?? 0 } }} ui={{ icon: CircleCheckBig, iconTone: 'success', className: 'px-4 py-3' }} />
     </div>
 
     {#if data.developerStats?.length}
-      <div class="overflow-hidden rounded-surface border border-border bg-card shadow-xs">
+      <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="">
         <div class="border-b border-border px-4 py-3">
           <h2 class="text-sm font-semibold text-foreground">Produtividade por desenvolvedor</h2>
           <p class="mt-1 text-xs text-muted-foreground">
@@ -472,12 +433,14 @@
           {/each}
         </div>
       </div>
+{/snippet}
+</ContentCard>
     {/if}
 
     {#if gridState.isLoading}
       <p
         role="status"
-        class="rounded-surface border border-border p-8 text-center text-sm text-muted-foreground"
+        class="p-8 text-center text-sm text-muted-foreground"
       >
         Carregando cronograma…
       </p>
@@ -491,7 +454,10 @@
       />
     {:else if data.viewMode === 'month'}
       <!-- Mês: calendário de 7 colunas, uma célula por dia, eventos empilhados -->
-      <div class="overflow-x-auto rounded-surface border border-border bg-card shadow-xs">
+      <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="">
+        <div class="overflow-x-auto">
         <div class="min-w-[840px]">
           <div class="grid grid-cols-7 border-b border-border">
             {#each WEEKDAY_HEADERS as weekday, index (weekday)}
@@ -500,7 +466,7 @@
                   >{#snippet child({ props })}<button
                       {...props}
                       type="button"
-                      class="px-3 py-2 text-center text-xs uppercase tracking-wider text-muted-foreground {index >
+                      class="px-3 py-2 text-center text-xs font-medium text-muted-foreground {index >
                       0
                         ? 'border-l border-border'
                         : ''}"
@@ -607,7 +573,7 @@
                         <button
                           {...props}
                           type="button"
-                          class="truncate rounded-chip border px-1.5 py-0.5 text-left text-xs font-medium text-foreground transition {surfaceOf(event)}"
+                          class="truncate rounded-chip px-1.5 py-0.5 text-left text-xs font-medium text-foreground transition {surfaceOf(event)}"
                           onclick={() => actions.onSelectEvent(event)}
                         >
                           {#if event.kind === 'record'}<CircleCheckBig
@@ -636,11 +602,17 @@
             {/each}
           </div>
         </div>
+        </div>
       </div>
+{/snippet}
+</ContentCard>
     {:else}
       <!-- Dia e Semana: grade de horas com 1 ou 7 colunas -->
       {@const columns = data.days.length}
-      <div class="overflow-x-auto rounded-surface border border-border bg-card shadow-xs">
+      <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="">
+        <div class="overflow-x-auto">
         <div style="min-width:{columns === 1 ? 360 : 840}px">
           <!-- Header dos dias -->
           <div
@@ -656,7 +628,7 @@
                       type="button"
                       class="w-full text-left border-l border-border px-3 py-3 text-center"
                     >
-                      <p class="text-xs uppercase tracking-wider text-muted-foreground">
+                      <p class="text-xs font-medium text-muted-foreground">
                         {day.weekdayShort}
                       </p>
                       {#if day.isToday}
@@ -756,7 +728,7 @@
                         <button
                           {...props}
                           type="button"
-                          class="absolute inset-x-1 overflow-hidden rounded-box border text-left shadow-xs transition {event.kind ===
+                          class="absolute inset-x-1 overflow-hidden rounded-box text-left shadow-xs transition {event.kind ===
                           'record'
                             ? 'px-2 py-1'
                             : 'p-2'} {surfaceOf(event)}"
@@ -880,9 +852,14 @@
             {/if}
           </div>
         </div>
+        </div>
       </div>
+{/snippet}
+</ContentCard>
       {#if data.events.some(isOutsideScheduleGrid)}
-        <div class="flex flex-col gap-2 rounded-surface border border-border bg-card p-4">
+        <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-2 p-4">
           <h2 class="text-sm font-semibold">Agendamentos fora do horário da grade</h2>
           {#each data.events.filter(isOutsideScheduleGrid) as event (event.id)}
             <Tooltip.Root
@@ -891,7 +868,7 @@
                   <button
                     {...props}
                     type="button"
-                    class="rounded-control border border-border p-2 text-left text-xs hover:bg-muted"
+                    class="rounded-control bg-muted px-3 py-2 text-left text-xs transition-colors hover:bg-hover-veil"
                     onclick={() => actions.onSelectEvent(event)}
                   >
                     {event.date.split('-').reverse().join('/')} · {formatScheduleEventTime(event)}
@@ -911,10 +888,14 @@
             >
           {/each}
         </div>
+{/snippet}
+</ContentCard>
       {/if}
     {/if}
 
-    <section class="rounded-surface border border-border bg-card p-4 shadow-xs">
+    <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-4">
       <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 class="text-sm font-semibold text-foreground">Atividade do GitHub no período</h2>
         <p class="text-xs text-muted-foreground">
@@ -943,7 +924,7 @@
                           href={event.url ?? undefined}
                           target="_blank"
                           rel="noreferrer"
-                          class="flex min-w-0 items-center gap-3 rounded-box border border-border bg-muted p-3 transition hover:bg-muted"
+                          class="flex min-w-0 items-center gap-3 rounded-box bg-muted p-3 transition-colors hover:bg-hover-veil"
                         >
                           <span
                             class="grid size-8 shrink-0 place-items-center rounded-full bg-primary-soft text-primary"
@@ -989,6 +970,8 @@
           {/each}
         </div>
       {/if}
-    </section>
+    </div>
+{/snippet}
+</ContentCard>
   </section>
 </Tooltip.Provider>

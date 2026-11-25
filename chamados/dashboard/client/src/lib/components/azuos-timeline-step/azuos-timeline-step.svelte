@@ -1,28 +1,43 @@
+<!--
+  @component
+  Uma etapa dentro de `AzuosTimeline`.
+
+  `ui.isLast` é passado por QUEM CHAMA, e não descoberto sozinho, porque o número de etapas de um
+  formulário é fixo e conhecido no próprio arquivo — descobrir isso por CSS exigiria selecionar o
+  último irmão de dentro de um componente que não é o pai da lista. Sem a linha, a última etapa não
+  tem "para onde ir depois", que é o efeito certo.
+
+  `data` leva título, descrição e ícone; `ui`, `isLast`, o `tone` (`neutral`, `brand`, `success`, ou
+  `danger` para o passo que NÃO aconteceu) e `className`; o conteúdo da etapa vem em `children`. A
+  cor do passo mora no ícone cheio.
+-->
 <script lang="ts" module>
   import type { Component, Snippet } from 'svelte';
 
-  /**
-   * Uma etapa dentro de `Timeline`.
-   *
-   * `ui.isLast` é passado por quem chama (não descoberto sozinho) porque o número de etapas de
-   * um formulário é sempre fixo e conhecido no próprio arquivo — descobrir isso por CSS
-   * exigiria selecionar o último irmão de dentro de um componente que não é o pai da lista.
-   * Sem a linha, a última etapa não tem "para onde ir depois", que é o efeito certo.
-   */
+  import { cardToneClasses } from '$lib/utils/card-tone.util';
+
   export type AzuosTimelineStepProps = {
     data: {
       title: string;
       description?: string;
       icon: Component<{ class?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
     };
-    ui?: { isLast?: boolean; tone?: 'neutral' | 'brand' | 'success'; className?: string };
+    ui?: {
+      isLast?: boolean;
+      /** `danger`: o passo que NÃO aconteceu (uma consulta recusada, por exemplo). */
+      tone?: 'neutral' | 'brand' | 'success' | 'danger';
+      className?: string;
+    };
     children: Snippet;
   };
 
+  /* A cor do passo mora no ícone cheio (o padrão Apple): o neutro é o cinza de campo, e os
+     outros tons usam a bolinha cheia do `card-tone`, a mesma dos cards. */
   const ICON_TONE_CLASSES: Record<NonNullable<AzuosTimelineStepProps['ui']>['tone'] & string, string> = {
-    neutral: 'border-border bg-card text-foreground',
-    brand: 'bg-muted text-primary',
-    success: 'bg-muted text-success',
+    neutral: 'border-transparent bg-muted text-foreground',
+    brand: cardToneClasses('brand').dot,
+    success: cardToneClasses('success').dot,
+    danger: cardToneClasses('danger').dot,
   };
 </script>
 

@@ -1,3 +1,29 @@
+<!--
+  @component
+  O FORMULÁRIO PÚBLICO DE ABRIR CHAMADO — em ETAPAS, uma por vez, tipo onboarding.
+
+  As etapas: a área (Infraestrutura, Sistema ou Manutenção, em cards — a primeira escolha, que nasce
+  vazia de propósito), quem é você, sobre o problema (departamento, tipo com "Cadastrar" na busca,
+  urgência e, conforme a área, AnyDesk ou o sistema), o que aconteceu (descrição, print colado com
+  Ctrl+V e anexos) e quem cuida do chamado (responsável, aviso por WhatsApp e pessoas vinculadas).
+  A barra de progresso mostra onde a pessoa está; "Avançar" só trava nos campos obrigatórios que
+  podem chegar vazios, e um envio com erro pula para a primeira etapa com campo em erro.
+
+  Depois de abrir, o formulário SAI DA TELA e dá lugar ao protocolo: é o único dado que a pessoa
+  precisa guardar.
+
+  Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e por
+  isso a tela abre no Storybook preenchida, com erro, enviando e já com o protocolo. Qual etapa está
+  na frente é `$state` puramente visual.
+
+  - `data`: `fields`, `notifyWhatsapp`, `screenshotName`, `attachments`, `opened` e as opções
+    (`systemProjects`, `problemTypes`, `departmentOptions`, `assignees`, `invite`, `watcherIds`,
+    `peopleOptions`).
+  - `state`: `isSubmitting`, `error`, `screenshotError`, `attachmentError`, `systemProjectsLoading`,
+    `systemProjectsError`, `inviteError` e `isNameLocked`.
+  - `actions`: `onChange`, `onBlur`, `onNotifyChange`, `onScreenshotChange`, `onAttachmentsChange`,
+    `onAttachmentError`, `onWatchersChange`, `onRegisterProblemType`, `onSubmit` e `onOpenAnother`.
+-->
 <script lang="ts" module>
   import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import LaptopIcon from '@lucide/svelte/icons/laptop';
@@ -211,6 +237,7 @@
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import Timeline from '$lib/components/azuos-timeline/azuos-timeline.svelte';
   import TimelineStep from '$lib/components/azuos-timeline-step/azuos-timeline-step.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { fadeInUp } from '$lib/motion/motion';
   import { cn } from '$lib/utils/cn';
 
@@ -393,12 +420,14 @@
 
 <svelte:window onpaste={handlePaste} />
 
-<section class="bg-card rounded-surface border p-5">
+<ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-5">
   {#if data.opened}
     <!-- O protocolo ocupa a tela inteira: é o que a pessoa precisa levar daqui. -->
     <div class="flex flex-col items-center gap-3 py-6 text-center">
       <p class="text-ink-700 text-sm">Chamado aberto. Seu protocolo é:</p>
-      <strong class="text-primary text-3xl font-bold tracking-wide">{data.opened.protocol}</strong>
+      <strong class="text-foreground text-3xl font-bold tracking-wide tabular-nums">{data.opened.protocol}</strong>
       <p class="text-ink-500 max-w-md text-sm">
         Guarde este número — é com ele que você acompanha o andamento aqui mesmo.
       </p>
@@ -409,7 +438,7 @@
         </p>
       {:else if data.opened.whatsAppLink}
         <a
-          class="bg-primary text-primary-foreground hover:bg-muted control-md rounded-control inline-flex items-center text-sm font-semibold"
+          class="bg-primary text-primary-foreground hover:bg-primary/90 control-md rounded-button inline-flex items-center px-4 text-sm font-semibold transition-colors"
           href={data.opened.whatsAppLink}
           target="_blank"
           rel="noopener"
@@ -478,10 +507,10 @@
                   aria-pressed={isSelected}
                   onclick={() => handleAreaChange(card.value)}
                   class={cn(
-                    'flex flex-col items-start gap-2 rounded-box border p-4 text-left transition-colors',
-                    isSelected
-                      ? 'bg-muted'
-                      : 'border-border bg-card hover:bg-muted',
+                    'flex flex-col items-start gap-2 rounded-box p-4 text-left transition-colors',
+                    /* Sem borda (padrão Apple): a escolhida ganha o fundo claro da marca, como
+                       o responsável mais abaixo. */
+                    isSelected ? 'bg-primary-soft' : 'bg-muted hover:bg-hover-veil',
                   )}
                 >
                   <card.icon class="text-primary size-5" aria-hidden="true" />
@@ -710,7 +739,7 @@
                     type="button"
                     onclick={removeFile}
                     aria-label="Remover o print anexado"
-                    class="text-muted-foreground hover:text-destructive hover:bg-muted control-icon-lg flex shrink-0 items-center justify-center rounded-control border border-border transition-colors"
+                    class="text-muted-foreground hover:text-destructive bg-muted hover:bg-hover-veil control-icon-lg flex shrink-0 items-center justify-center rounded-control transition-colors"
                   >
                     <XIcon class="size-4" aria-hidden="true" />
                   </button>
@@ -753,7 +782,7 @@
           <TimelineStep data={{ title: 'Quem cuida do chamado', icon: MessageCircle }} ui={{ isLast: true, tone: 'success' }}>
             <!-- BLOCO 1 — quem atende E o aviso, juntos: o WhatsApp sai do número de quem
                  atende, então as duas escolhas são uma conversa só. -->
-            <div class="rounded-box border-border flex flex-col gap-3 border p-3 sm:p-4">
+            <div class="flex flex-col gap-3">
               {#if assignees.length > 0}
                 <fieldset class="flex flex-col gap-2">
                   <legend class="text-ink-700 mb-2 text-sm font-medium">Quem vai te atender?</legend>
@@ -887,4 +916,6 @@
       </div>
     </form>
   {/if}
-</section>
+</div>
+{/snippet}
+</ContentCard>

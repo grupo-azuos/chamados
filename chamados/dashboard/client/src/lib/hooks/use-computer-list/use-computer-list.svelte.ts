@@ -6,8 +6,14 @@ import {
   type ResourceCondition,
 } from '@template/shared/domain/computer-resource.util';
 import { COMPUTER_KINDS, type ComputerKind } from '@template/shared/domain/computer-kind.util';
-import { type Department, type DepartmentChoice } from '@template/shared/domain/department.util';
+import {
+  COMPUTER_UPGRADE_FILTERS,
+  type ComputerUpgradeFilter,
+  matchesUpgradeFilter,
+} from '@template/shared/domain/computer-upgrade.util';
+import { type DepartmentChoice } from '@template/shared/domain/department.util';
 import { compareMachines, type NumberedMachine } from '@template/shared/domain/machine-number.util';
+import { type BoardDrill } from '@template/shared/schemas/board-drill.schema';
 import {
   COMPUTER_ALERT_FILTERS,
   COMPUTER_PREVENTIVE_FILTERS,
@@ -22,7 +28,9 @@ import { type ReportFormat } from '@template/shared/schemas/report.schema';
 import { derived, writable } from 'svelte/store';
 
 import { computersApi } from '$lib/api/computers.api';
+import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 import { readError } from '$lib/api/http-client';
+import { type BoardDrillBanner, useBoardDrillModel } from '$lib/hooks/use-board-drill/use-board-drill.svelte';
 import {
   allSchedulesQuery,
   schedulesByComputer,
@@ -30,6 +38,7 @@ import {
 import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
+import { contextPath } from '$lib/navigation/navigation';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 import {
   fieldParser,
@@ -42,7 +51,8 @@ import {
 
 export type ComputerListFilter = {
   search: string;
-  department: Department | '';
+  /** O departamento OFICIAL pelo id do RH, como texto (`'12'`) — o mesmo que a máquina guarda. */
+  departmentId: string;
   healthStatus: HealthStatus | '';
   kind: ComputerKind | '';
   /** Online e offline nunca ficam ligados juntos: ligar um desliga o outro. */
@@ -51,11 +61,17 @@ export type ComputerListFilter = {
   alert: ComputerAlertFilter | '';
   /** Qual recurso está pedindo atenção: disco, memória, tempo sem reiniciar. */
   resourceCondition: ResourceCondition | '';
-  /** Só quem precisa de manutenção: preventiva nunca feita ou vencida. */
   /** A situação da preventiva — ou só quem precisa de manutenção (vencida ou nunca feita). */
   preventive: ComputerPreventiveFilter | '';
   /** Arquivadas saíram de uso: só aparecem quando alguém pede por elas. */
   includeArchived: boolean;
+  /**
+   * A pessoa do diretório (o id) ou `COMPUTER_NO_RESPONSIBLE_FILTER` ("Sem responsável"). O id,
+   * e não o nome: nome muda e se repete, e o filtro salvo não pode passar a achar outra pessoa.
+   */
+  responsibleId: string;
+  /** Quem precisa de upgrade: qualquer motivo ou um só (`computer-upgrade.util`). */
+  upgrade: ComputerUpgradeFilter | '';
 };
 
 /** Os números do topo da tela: o estado do parque de relance. */
@@ -71,7 +87,27 @@ export type ComputerSummary = {
   attention: number;
   /** Cadastradas cujo agente nunca conectou — falta instalar o agente nelas. */
   neverSeen: number;
+  /** Em uso e aquém em algum ponto: pouca memória, pouco disco ou processador antigo. */
+  needsUpgrade: number;
 };
+
+/** Por qual coluna a lista está em ordem. `number` é o número da máquina, pelo nome físico. */
+export const COMPUTER_SORT_FIELDS = ['number', 'responsible', 'health', 'tickets', 'lastSeen'] as const;
+
+export type ComputerSortField = (typeof COMPUTER_SORT_FIELDS)[number];
+
+export type ComputerSort = { field: ComputerSortField; direction: 'asc' | 'desc' };
+
+/** A página dos cartões e o total que casou com o filtro — a tabela rola, não pagina. */
+export type ComputerPaging = { page: number; pageSize: number; total: number };
+
+/**
+ * Quantos cartões por página. 24 fecha a grade em 4, 3 ou 2 colunas sem sobrar buraco na última
+ * linha de uma página cheia.
+ */
+export const COMPUTER_CARD_PAGE_SIZE = 24;
+
+export const DEFAULT_COMPUTER_SORT: ComputerSort = { field: 'number', direction: 'asc' };
 
 export type ComputerListModel = {
   data: {
@@ -83,8 +119,16 @@ export type ComputerListModel = {
     filter: ComputerListFilter;
     /** O dia agendado de cada máquina (`AAAA-MM-DD`), pelo id. Só as que têm agendamento. */
     scheduledFor: Record<number, string>;
-    /** As opções do filtro de departamento: as do RH e, depois da linha, as daqui. */
+    /** As opções do filtro de departamento: só as OFICIAIS do RH, com o id como valor. */
     departmentOptions: DepartmentChoice[];
+    /** As pessoas do filtro "Responsável": quem responde por alguma máquina, com a foto. */
+    responsibleOptions: AzuosPersonPickerPerson[];
+    /** A faixa do recorte do Painel, quando a lista veio de um clique num bloco. */
+    drillBanner: BoardDrillBanner | null;
+    /** A ordem em vigor — é ela que decide a seta do cabeçalho da tabela. */
+    sort: ComputerSort;
+    /** A página dos cartões. */
+    paging: ComputerPaging;
   };
   state: {
     isLoading: boolean;
@@ -102,7 +146,7 @@ export type ComputerListModel = {
   };
   actions: {
     onSearchChange: (search: string) => void;
-    onDepartmentChange: (department: Department | '') => void;
+    onDepartmentChange: (departmentId: string) => void;
     onHealthStatusChange: (healthStatus: HealthStatus | '') => void;
     onKindChange: (kind: ComputerKind | '') => void;
     onOnlineChange: (onlyOnline: boolean) => void;
@@ -111,16 +155,28 @@ export type ComputerListModel = {
     onResourceConditionChange: (resourceCondition: ResourceCondition | '') => void;
     onPreventiveChange: (preventive: ComputerPreventiveFilter | '') => void;
     onArchivedChange: (includeArchived: boolean) => void;
+    onResponsibleChange: (responsibleId: string) => void;
+    onUpgradeChange: (upgrade: ComputerUpgradeFilter | '') => void;
     onClearFilters: () => void;
+    /**
+     * O cartão "Máquinas" do topo: desliga os atalhos dos outros cartões (saúde, conexão,
+     * alerta e upgrade) de uma vez, sem mexer na busca, no departamento nem no resto do painel.
+     */
+    onClearShortcuts: () => void;
+    /** Mesma coluna inverte a direção; outra coluna começa em ordem crescente. */
+    onSortChange: (field: ComputerSortField) => void;
+    onPageChange: (page: number) => void;
     onRetry: () => void;
     onOpen: (computer: Computer) => void;
     onExportReport: (format: ReportFormat) => void;
+    onClearDrill: () => void;
+    onBackToBoard: () => void;
   };
 };
 
 const EMPTY_FILTER: ComputerListFilter = {
   search: '',
-  department: '',
+  departmentId: '',
   healthStatus: '',
   kind: '',
   onlyOnline: false,
@@ -129,12 +185,16 @@ const EMPTY_FILTER: ComputerListFilter = {
   resourceCondition: '',
   preventive: '',
   includeArchived: false,
+  responsibleId: '',
+  upgrade: '',
 };
 
 /** Cada campo do filtro conferido sozinho: um campo salvo que não serve volta ao padrão. */
 const FILTER_GUARDS: FieldGuards<ComputerListFilter> = {
   search: isText,
-  department: isText,
+  /* Sem `location`: o filtro de Local saiu, e um filtro salvo (ou link) antigo com ele é lido
+     sem esse campo — os outros continuam valendo. */
+  departmentId: isText,
   healthStatus: oneOf('', ...HEALTH_STATUSES),
   kind: oneOf('', ...COMPUTER_KINDS),
   onlyOnline: isFlag,
@@ -143,7 +203,25 @@ const FILTER_GUARDS: FieldGuards<ComputerListFilter> = {
   resourceCondition: oneOf('', ...RESOURCE_CONDITIONS),
   preventive: oneOf('', ...COMPUTER_PREVENTIVE_FILTERS),
   includeArchived: isFlag,
+  responsibleId: isText,
+  upgrade: oneOf('', ...COMPUTER_UPGRADE_FILTERS),
 };
+
+/**
+ * Online e offline ligados JUNTOS não existem na tela, mas podem chegar de um salvo antigo ou de
+ * um endereço digitado. O servidor faria valer só o online, e a tela marcaria os dois cartões —
+ * a lista diria uma coisa e o topo outra. Aqui ganha o online, igual ao servidor.
+ */
+export function withSinglePresence<T extends Partial<Pick<ComputerListFilter, 'onlyOnline' | 'onlyOffline'>>>(
+  filter: T,
+): T {
+  if (!filter.onlyOnline || !filter.onlyOffline) return filter;
+
+  return { ...filter, onlyOffline: false };
+}
+
+const parseSaved = fieldParser(EMPTY_FILTER, FILTER_GUARDS);
+const parseUrl = urlParser(EMPTY_FILTER, FILTER_GUARDS);
 
 /** O nome desta tela no armazém dos filtros. Estável: renomear faz todo mundo perder o salvo. */
 export const COMPUTER_LIST_FILTER_SCREEN = 'infra-computers';
@@ -151,18 +229,30 @@ export const COMPUTER_LIST_FILTER_SCREEN = 'infra-computers';
 export const COMPUTERS_QUERY_KEY = ['computers'] as const;
 export const COMPUTER_NAME_REFRESH_MS = 60_000;
 
-function scopeOf(filter: ComputerListFilter) {
+/** O recorte de um clique no Painel SOMA ao filtro da lista, não o substitui. */
+function scopeOf(filter: ComputerListFilter, drill: BoardDrill | null = null) {
+  return { drill: drill ?? undefined, ...filterScopeOf(filter) };
+}
+
+/** Os campos do filtro, separados do recorte para o `scopeOf` caber no limite de complexidade. */
+function filterScopeOf(filter: ComputerListFilter) {
   return {
     search: filter.search.trim() || undefined,
-    department: filter.department || undefined,
+    departmentId: filter.departmentId ? Number(filter.departmentId) : undefined,
     healthStatus: filter.healthStatus || undefined,
     kind: filter.kind || undefined,
     ...presenceOf(filter),
+    ...planningScopeOf(filter),
     alert: filter.alert || undefined,
     resourceCondition: filter.resourceCondition || undefined,
     preventive: filter.preventive || undefined,
     includeArchived: filter.includeArchived || undefined,
   };
+}
+
+/** O responsável e o upgrade, separados para o `filterScopeOf` caber no limite de complexidade. */
+function planningScopeOf(filter: ComputerListFilter) {
+  return { responsibleId: filter.responsibleId || undefined, upgrade: filter.upgrade || undefined };
 }
 
 /** Online e offline, separados para o `scopeOf` caber no limite de complexidade. */
@@ -197,7 +287,7 @@ export function toNumberedMachine(computer: Computer): NumberedMachine {
     name: computer.name,
     displayName: computer.displayName,
     hostname: computer.hardware?.hostname ?? null,
-    department: computer.department,
+    department: computer.departmentName,
     kind: computer.kind,
   };
 }
@@ -212,6 +302,106 @@ export function sortByMachineNumber<T extends Computer>(computers: readonly T[])
   return [...computers].sort((a, b) => compareMachines(toNumberedMachine(a), toNumberedMachine(b)));
 }
 
+/** O valor de cada máquina na coluna pedida. Nulo vai sempre para o fim, nas duas direções. */
+const SORT_VALUE: Record<
+  Exclude<ComputerSortField, 'number'>,
+  (computer: ComputerListItem) => string | number | null
+> = {
+  responsible: (computer) => computer.responsibleName?.trim() || null,
+  /* Nota crescente = pior saúde primeiro: é o que quem ordena por saúde está procurando. */
+  health: (computer) => computer.healthScore,
+  tickets: (computer) => computer.ticketsThisMonth,
+  lastSeen: (computer) => (computer.lastSeenAt ? Date.parse(computer.lastSeenAt) : null),
+};
+
+function compareValues(a: string | number, b: string | number): number {
+  if (typeof a === 'string' && typeof b === 'string') return a.localeCompare(b, 'pt-BR');
+
+  return Number(a) - Number(b);
+}
+
+/**
+ * A lista na ordem pedida pelo cabeçalho da tabela. Empate cai no número da máquina, para a
+ * ordem não "pular" a cada atualização de 60 segundos.
+ *
+ * Exportada e pura para ter teste próprio: a ordenação acontece aqui, e não no servidor, porque a
+ * lista inteira (até 200) já está na tela e o número da máquina não se ordena em SQL.
+ */
+export function sortComputers(
+  computers: readonly ComputerListItem[],
+  sort: ComputerSort,
+): ComputerListItem[] {
+  const byNumber = sortByMachineNumber(computers);
+  const direction = sort.direction === 'asc' ? 1 : -1;
+  if (sort.field === 'number') return sort.direction === 'asc' ? byNumber : byNumber.reverse();
+
+  const valueOf = SORT_VALUE[sort.field];
+  /* Objeto comum, e não `Map`: é uma tabela de consulta descartável, sem reatividade. */
+  const position: Record<number, number> = Object.fromEntries(
+    byNumber.map((computer, index) => [computer.id, index]),
+  );
+
+  return byNumber.sort((a, b) => {
+    const left = valueOf(a);
+    const right = valueOf(b);
+    if (left === null || right === null) {
+      return (left === null ? 1 : 0) - (right === null ? 1 : 0) || tieBreak(a, b, position);
+    }
+
+    return compareValues(left, right) * direction || tieBreak(a, b, position);
+  });
+}
+
+function tieBreak(
+  a: ComputerListItem,
+  b: ComputerListItem,
+  position: Record<number, number>,
+): number {
+  return (position[a.id] ?? 0) - (position[b.id] ?? 0);
+}
+
+/** A ordem que o clique no cabeçalho pede: mesma coluna inverte, outra começa crescente. */
+export function nextSort(current: ComputerSort, field: ComputerSortField): ComputerSort {
+  if (current.field !== field) return { field, direction: 'asc' };
+
+  return { field, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+}
+
+/** A página que existe: com o filtro mais estreito, a página 3 de antes pode não existir mais. */
+export function clampPage(page: number, total: number, pageSize: number): number {
+  const last = Math.max(1, Math.ceil(total / pageSize));
+
+  return Math.min(Math.max(1, page), last);
+}
+
+/**
+ * As pessoas do filtro "Responsável": quem responde por ALGUMA máquina do parque, uma vez só,
+ * com a foto do admin-console e em ordem de nome. O id e a foto vêm do servidor, que casou o
+ * nome do cadastro com o diretório.
+ *
+ * Só quem tem máquina, e não o escritório inteiro: escolher alguém sem máquina daria sempre a
+ * lista vazia. Nome digitado que não bate com ninguém do diretório não vira opção — não há id
+ * para guardar —, mas continua achável pela busca.
+ *
+ * Exportada e pura para ter teste próprio.
+ */
+export function responsibleOptionsOf(
+  computers: readonly ComputerListItem[],
+): AzuosPersonPickerPerson[] {
+  /* Objeto comum, e não `Map`: é uma tabela de consulta descartável, sem reatividade. */
+  const people: Record<string, AzuosPersonPickerPerson> = {};
+  for (const computer of computers) {
+    if (!computer.responsibleId || people[computer.responsibleId]) continue;
+    people[computer.responsibleId] = {
+      id: computer.responsibleId,
+      name: computer.responsibleName?.trim() || '(Pessoa fora da lista do escritório)',
+      photo: computer.responsibleAvatarUrl ?? null,
+    };
+  }
+
+  return Object.values(people).sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+}
+
 export function summarizeComputers(computers: readonly ComputerListItem[]): ComputerSummary {
   return {
     total: computers.length,
@@ -224,6 +414,11 @@ export function summarizeComputers(computers: readonly ComputerListItem[]): Comp
     critical: computers.filter((computer) => computer.healthStatus === 'critical').length,
     attention: computers.filter((computer) => computer.healthStatus === 'attention').length,
     neverSeen: computers.filter((computer) => computer.lastSeenAt === null).length,
+    /* A mesma régua do aviso do cartão e do filtro do servidor. A lista do resumo já vem sem
+       arquivadas e descartadas, que não recebem peça. */
+    needsUpgrade: computers.filter((computer) =>
+      matchesUpgradeFilter(computer.hardware ?? {}, 'any'),
+    ).length,
   };
 }
 
@@ -242,19 +437,39 @@ export function useComputerListModel(): ComputerListModel {
   const filterStore = persistedFilterStore<ComputerListFilter>({
     screen: COMPUTER_LIST_FILTER_SCREEN,
     defaults: EMPTY_FILTER,
-    parse: fieldParser(EMPTY_FILTER, FILTER_GUARDS),
-    fromUrl: urlParser(EMPTY_FILTER, FILTER_GUARDS),
+    parse: (raw) => {
+      const parsed = parseSaved(raw);
+
+      return parsed ? withSinglePresence(parsed) : null;
+    },
+    fromUrl: (params) => {
+      const requested = parseUrl(params);
+
+      return requested ? withSinglePresence(requested) : null;
+    },
   });
   const filter = mirrorStore(filterStore);
+  /* O recorte de um clique no Painel (`?drill=`): soma ao filtro do inventário. */
+  const drill = useBoardDrillModel({ module: 'infra', path: contextPath('infra', '/computers') });
 
   let exportingFormat = $state<ReportFormat | null>(null);
   let exportError = $state<string | null>(null);
+  let sort = $state<ComputerSort>(DEFAULT_COMPUTER_SORT);
+  let page = $state(1);
+
+  /* Todo filtro que muda volta para a página 1: ficar na página 3 de um recorte novo mostraria
+     uma página vazia — ou pior, o meio da lista, sem a pessoa ver as primeiras. */
+  function changeFilter(change: (current: ComputerListFilter) => ComputerListFilter) {
+    page = 1;
+    filterStore.update(change);
+  }
 
   const list = mirrorStore(
     createQuery(
-      derived(filterStore, (current) => ({
-        queryKey: [...COMPUTERS_QUERY_KEY, 'list', scopeOf(current)],
-        queryFn: () => computersApi.list({ ...scopeOf(current), page: 1, pageSize: MAX_PAGE_SIZE }),
+      derived([filterStore, drill.store], ([current, currentDrill]) => ({
+        queryKey: [...COMPUTERS_QUERY_KEY, 'list', scopeOf(current, currentDrill)],
+        queryFn: () =>
+          computersApi.list({ ...scopeOf(current, currentDrill), page: 1, pageSize: MAX_PAGE_SIZE }),
         refetchInterval: COMPUTER_NAME_REFRESH_MS,
       })),
     ),
@@ -282,51 +497,84 @@ export function useComputerListModel(): ComputerListModel {
     /* `get` em vez de valor: o objeto é montado uma vez e a tela lê dele a cada mudança. Com
        valores fixos, a lista congelaria no primeiro carregamento. */
     get data() {
+      const computers = sortComputers(list.current.data?.items ?? [], sort);
+
       return {
-        computers: sortByMachineNumber(list.current.data?.items ?? []),
+        computers,
         total: list.current.data?.total ?? 0,
         summary: summary.current.data ? summarizeComputers(summary.current.data.items) : null,
         filter: filter.current,
         scheduledFor: scheduledDayByComputer(schedules.current.data),
-        departmentOptions: departments.options,
+        departmentOptions: departments.officialOptions,
+        /* Do resumo, e não da lista: com a lista filtrada pela Ana, a Ana seria a única opção
+           — e trocar de pessoa obrigaria a limpar o filtro antes. */
+        responsibleOptions: responsibleOptionsOf(summary.current.data?.items ?? []),
+        drillBanner: drill.banner,
+        sort,
+        paging: {
+          page: clampPage(page, computers.length, COMPUTER_CARD_PAGE_SIZE),
+          pageSize: COMPUTER_CARD_PAGE_SIZE,
+          total: computers.length,
+        },
       };
     },
     get state() {
       return {
-        ...buildListState(list.current, filter.current),
+        ...buildListState(list.current, filter.current, drill.drill !== null),
         isSummaryLoading: summary.current.isPending,
         exportingFormat,
         exportError,
       };
     },
     actions: {
-      onSearchChange: (search) => filterStore.update((current) => ({ ...current, search })),
-      onDepartmentChange: (department) =>
-        filterStore.update((current) => ({ ...current, department })),
+      onSearchChange: (search) => changeFilter((current) => ({ ...current, search })),
+      onDepartmentChange: (departmentId) => changeFilter((current) => ({ ...current, departmentId })),
       onHealthStatusChange: (healthStatus) =>
-        filterStore.update((current) => ({ ...current, healthStatus })),
-      onKindChange: (kind) => filterStore.update((current) => ({ ...current, kind })),
+        changeFilter((current) => ({ ...current, healthStatus })),
+      onKindChange: (kind) => changeFilter((current) => ({ ...current, kind })),
       /* Ligar online desliga offline (e o contrário): os dois juntos não trariam máquina nenhuma. */
       onOnlineChange: (onlyOnline) =>
-        filterStore.update((current) => ({
+        changeFilter((current) => ({
           ...current,
           onlyOnline,
           onlyOffline: onlyOnline ? false : current.onlyOffline,
         })),
       onOfflineChange: (onlyOffline) =>
-        filterStore.update((current) => ({
+        changeFilter((current) => ({
           ...current,
           onlyOffline,
           onlyOnline: onlyOffline ? false : current.onlyOnline,
         })),
-      onAlertChange: (alert) => filterStore.update((current) => ({ ...current, alert })),
+      onAlertChange: (alert) => changeFilter((current) => ({ ...current, alert })),
       onResourceConditionChange: (resourceCondition) =>
-        filterStore.update((current) => ({ ...current, resourceCondition })),
-      onPreventiveChange: (preventive) =>
-        filterStore.update((current) => ({ ...current, preventive })),
+        changeFilter((current) => ({ ...current, resourceCondition })),
+      onPreventiveChange: (preventive) => changeFilter((current) => ({ ...current, preventive })),
       onArchivedChange: (includeArchived) =>
-        filterStore.update((current) => ({ ...current, includeArchived })),
-      onClearFilters: () => filterStore.clear(),
+        changeFilter((current) => ({ ...current, includeArchived })),
+      onResponsibleChange: (responsibleId) =>
+        changeFilter((current) => ({ ...current, responsibleId })),
+      onUpgradeChange: (upgrade) => changeFilter((current) => ({ ...current, upgrade })),
+      onClearFilters: () => {
+        page = 1;
+        filterStore.clear();
+      },
+      /* Uma mudança só, e não quatro: cada uma viraria uma consulta à API com o valor do meio. */
+      onClearShortcuts: () =>
+        changeFilter((current) => ({
+          ...current,
+          healthStatus: '',
+          alert: '',
+          onlyOnline: false,
+          onlyOffline: false,
+          upgrade: '',
+        })),
+      onSortChange: (field) => {
+        page = 1;
+        sort = nextSort(sort, field);
+      },
+      onPageChange: (next) => {
+        page = Math.max(1, next);
+      },
       onRetry: () => {
         void list.current.refetch();
         void summary.current.refetch();
@@ -338,7 +586,7 @@ export function useComputerListModel(): ComputerListModel {
         exportingFormat = format;
 
         computersApi
-          .exportReport(scopeOf(filter.current), format)
+          .exportReport(scopeOf(filter.current, drill.drill), format)
           .then(({ blob, fileName }) => triggerBrowserDownload(blob, fileName))
           .catch((error: unknown) => {
             exportError = readError(error) ?? 'Não consegui gerar o relatório.';
@@ -347,6 +595,8 @@ export function useComputerListModel(): ComputerListModel {
             exportingFormat = null;
           });
       },
+      onClearDrill: drill.onClear,
+      onBackToBoard: drill.onBack,
     },
   };
 }
@@ -361,11 +611,20 @@ type ListQueryLike = {
   data: ComputerPage;
 };
 
+/** A busca, o responsável e o upgrade, separados para o `hasAnyFilter` caber no limite de complexidade. */
+function hasTextFilter(filter: ComputerListFilter): boolean {
+  return (
+    filter.search.trim() !== '' ||
+    filter.responsibleId !== '' ||
+    filter.upgrade !== ''
+  );
+}
+
 function hasAnyFilter(filter: ComputerListFilter): boolean {
-  if (filter.search.trim() !== '') return true;
+  if (hasTextFilter(filter)) return true;
 
   return (
-    filter.department !== '' ||
+    filter.departmentId !== '' ||
     filter.healthStatus !== '' ||
     filter.kind !== '' ||
     filter.alert !== '' ||
@@ -380,12 +639,14 @@ function hasAnyFilter(filter: ComputerListFilter): boolean {
 function buildListState(
   list: ListQueryLike,
   filter: ComputerListFilter,
+  hasDrill = false,
 ): Omit<ComputerListModel['state'], 'isSummaryLoading' | 'exportingFormat' | 'exportError'> {
   const count = list.data?.items.length ?? 0;
   /* Vazio só é vazio DEPOIS que a consulta terminou. Mostrar "nenhuma máquina" durante o
      carregamento faz a pessoa achar que o inventário sumiu — e recarregar. */
   const isSettledEmpty = list.isSuccess && count === 0;
-  const filtered = hasAnyFilter(filter);
+  /* O recorte do Painel também é filtro: vazio com ele é "o recorte escondeu tudo". */
+  const filtered = hasDrill || hasAnyFilter(filter);
 
   return {
     isLoading: list.isPending,

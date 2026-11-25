@@ -7,7 +7,9 @@
  * pequena, como um status que deixou de existir.
  */
 
-export type FieldGuards<TFilters> = { [K in keyof TFilters]: (value: unknown) => value is TFilters[K] };
+export type FieldGuards<TFilters> = {
+  [K in keyof TFilters]: (value: unknown) => value is TFilters[K];
+};
 
 export const isText = (value: unknown): value is string => typeof value === 'string';
 

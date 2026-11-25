@@ -13,6 +13,8 @@ describe('toInternalRole', () => {
     createdBy: 'admin@template.local',
     updatedAt: new Date('2026-10-01T13:00:00.000Z'),
     updatedBy: 'admin@template.local',
+    archivedAt: null,
+    archivedBy: null,
   };
 
   // feliz
@@ -26,6 +28,7 @@ describe('toInternalRole', () => {
       createdBy: 'admin@template.local',
       updatedAt: '2026-10-01T13:00:00.000Z',
       updatedBy: 'admin@template.local',
+      archive: null,
     });
   });
 
@@ -48,6 +51,7 @@ describe('toInternalRole', () => {
       createdBy: null,
       updatedAt: null,
       updatedBy: null,
+      archive: null,
     });
   });
 });

@@ -4,6 +4,8 @@ import {
   SOFTWARE_PROJECT_COLORS,
   SOFTWARE_PROJECT_STATUSES,
 } from '../domain/software-project.util';
+import { archivedFilterSchema, archiveSchema } from './archive.schema';
+import { boardDrillParamSchema } from './board-drill.schema';
 import { paginationQuerySchema } from './pagination.schema';
 import { partialUpdate } from './partial-update.schema';
 
@@ -34,6 +36,8 @@ export const softwareProjectSchema = z.object({
   pullRequestsCount: z.number().int().default(0),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime().nullable(),
+  /** Nulo em uso; excluir arquiva o sistema, e o "Desfazer" devolve. */
+  archive: archiveSchema,
 });
 
 export type SoftwareProject = z.infer<typeof softwareProjectSchema>;
@@ -77,6 +81,9 @@ export type UpdateSoftwareProjectInput = z.infer<typeof updateSoftwareProjectSch
 export const softwareProjectListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   status: softwareProjectStatusSchema.optional(),
+  archived: archivedFilterSchema,
+  /** O recorte de um clique no painel (`board-drill.schema`): estreita a lista ao item clicado. */
+  drill: boardDrillParamSchema.optional(),
 });
 
 export type SoftwareProjectListQuery = z.infer<typeof softwareProjectListQuerySchema>;
@@ -87,15 +94,18 @@ export const softwareProjectFormSchema = z.object({
     .string()
     .trim()
     .min(1, 'Informe o nome do sistema')
-    .max(SOFTWARE_PROJECT_NAME_MAX_LENGTH, `O nome pode ter até ${SOFTWARE_PROJECT_NAME_MAX_LENGTH} caracteres`),
+    .max(
+      SOFTWARE_PROJECT_NAME_MAX_LENGTH,
+      `O nome pode ter até ${SOFTWARE_PROJECT_NAME_MAX_LENGTH} caracteres`,
+    ),
   description: z
     .string()
     .trim()
-    .max(SOFTWARE_PROJECT_DESCRIPTION_MAX_LENGTH, `A descrição pode ter até ${SOFTWARE_PROJECT_DESCRIPTION_MAX_LENGTH} caracteres`),
-  repositoryUrl: z
-    .string()
-    .trim()
-    .min(1, 'Informe o link do repositório no GitHub'),
+    .max(
+      SOFTWARE_PROJECT_DESCRIPTION_MAX_LENGTH,
+      `A descrição pode ter até ${SOFTWARE_PROJECT_DESCRIPTION_MAX_LENGTH} caracteres`,
+    ),
+  repositoryUrl: z.string().trim().min(1, 'Informe o link do repositório no GitHub'),
   status: softwareProjectStatusSchema,
   color: softwareProjectColorSchema,
   /** Vazio é "sem responsável". */

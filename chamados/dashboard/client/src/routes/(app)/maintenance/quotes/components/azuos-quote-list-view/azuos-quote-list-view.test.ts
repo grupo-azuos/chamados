@@ -21,6 +21,7 @@ function quote(overrides: Partial<MaintenanceQuote> = {}): MaintenanceQuote {
     createdBy: 'manutencao@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...overrides,
   };
 }
@@ -74,19 +75,26 @@ describe('AzuosQuoteListView', () => {
     expect(screen.getByText('Serviço · 02/10/2026')).toBeInTheDocument();
     expect(screen.getByText('R$ 960,00')).toBeInTheDocument();
     /* Dentro do CARTÃO: "Aguardando" também é uma opção do filtro, no alto da tela. */
-    const card = screen.getByRole('heading', { name: 'Clima Norte Refrigeração' }).closest('li');
+    const card = screen
+      .getByRole('heading', { name: 'Clima Norte Refrigeração' })
+      .closest('[data-slot="azuos-card-surface"]');
     expect(within(card as HTMLElement).getByText('Aguardando')).toBeInTheDocument();
     expect(screen.getByText('Inclui a troca do filtro.')).toBeInTheDocument();
     expect(screen.getByText('1 orçamento · R$ 960,00')).toBeInTheDocument();
   });
 
-  /* O documento abre em outra aba, pelo link assinado que veio do servidor. */
+  /* O documento abre em outra aba e baixa, pelo link assinado que veio do servidor. */
   it('links to the document that the company sent', () => {
     setup();
 
-    const link = screen.getByRole('link', { name: 'orcamento-clima-norte.pdf' });
+    const link = screen.getByRole('link', { name: 'Abrir orcamento-clima-norte.pdf' });
     expect(link).toHaveAttribute('href', 'https://r2.exemplo/doc?assinatura');
     expect(link).toHaveAttribute('target', '_blank');
+    // Arquivo tem as duas ações: abrir e baixar com o nome original.
+    expect(screen.getByRole('link', { name: 'Baixar orcamento-clima-norte.pdf' })).toHaveAttribute(
+      'download',
+      'orcamento-clima-norte.pdf',
+    );
   });
 
   it('asks to keep, to correct and to delete', async () => {
@@ -95,9 +103,16 @@ describe('AzuosQuoteListView', () => {
     const onAskDelete = vi.fn();
     setup({ actions: { ...actions, onRegister, onEdit, onAskDelete } });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Guardar orçamento' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    await user.click(screen.getByRole('button', { name: 'Guardar orçamento' }));
+    /* Editar e excluir moram no menu de três pontinhos do cartão. */
+    const menu = screen.getByRole('button', {
+      name: 'Ações do orçamento de Clima Norte Refrigeração',
+    });
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
 
     expect(onRegister).toHaveBeenCalledOnce();
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
@@ -211,7 +226,9 @@ describe('AzuosQuoteListView — filters, a nameless document and the cut list',
       return;
     }
     await userEvent.click(screen.getByRole('button', { name: label }));
-    const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+    const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(
+      -1,
+    ) as HTMLElement;
     await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
   }
 
@@ -229,10 +246,16 @@ describe('AzuosQuoteListView — filters, a nameless document and the cut list',
   // triste
   it('names a nameless document generically and says the list was cut', () => {
     setup({
-      data: { quotes: [quote({ attachmentName: null }), quote({ id: 2 })], total: 2, amountCents: 192000, filter: emptyFilter, deleting: null },
+      data: {
+        quotes: [quote({ attachmentName: null }), quote({ id: 2 })],
+        total: 2,
+        amountCents: 192000,
+        filter: emptyFilter,
+        deleting: null,
+      },
       state: { ...settled, isTruncated: true },
     });
-    expect(screen.getByText('Abrir documento')).toBeInTheDocument();
+    expect(screen.getByText('Documento do orçamento')).toBeInTheDocument();
     expect(screen.getByText(/2 orçamentos/)).toBeInTheDocument();
     expect(screen.getByText(/A lista mostra os orçamentos mais recentes/)).toBeInTheDocument();
   });

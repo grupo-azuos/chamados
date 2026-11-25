@@ -1,16 +1,9 @@
 import { ATTACHMENT_KINDS } from '@template/shared/domain/attachment-catalog.util';
 import { ATTACHMENT_ORIGINS } from '@template/shared/schemas/ticket-attachment.schema';
 import { sql } from 'drizzle-orm';
-import {
-  bigint,
-  check,
-  index,
-  integer,
-  serial,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core';
+import { bigint, check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 import { ticketHistories } from './ticket-histories.schema';
@@ -92,6 +85,8 @@ export const ticketAttachments = chamadosSchema.table(
      * identidade, e carimbar uma diria que alguém do TI anexou o que a pessoa mandou.
      */
     createdBy: text('created_by'),
+    /* Excluir ARQUIVA: o anexo some do chamado, o arquivo fica no bucket, e volta pelo "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
     /* A consulta é sempre "os anexos deste chamado". */

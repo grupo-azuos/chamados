@@ -2,8 +2,11 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
+import { type SQL } from 'drizzle-orm';
 import { refuseQuoteAttachment } from '@template/shared/domain/maintenance-quote.util';
 import {
   type CreateMaintenanceQuoteInput,
@@ -18,6 +21,7 @@ import {
   type UploadTicket,
 } from '@template/shared/schemas/staged-file.schema';
 
+import { BOARD_DRILL, type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type MaintenanceQuoteRow } from '../../../lib/db/schema/maintenance-quotes.schema';
 import { assertCanManageInContext, assertCanRead } from '../../../lib/policy/policy-assert.util';
@@ -31,6 +35,9 @@ import {
   toMaintenanceQuoteUpdate,
 } from '../mapper/maintenance-quotes.mapper';
 import { MaintenanceQuotesRepository } from '../repository/maintenance-quotes.repository';
+
+/** A fonte do painel que esta lista sabe recortar: a tabela dela, os orçamentos. */
+const QUOTE_DRILL_SOURCES: readonly DataSourceKey[] = ['quotes'];
 
 const QUOTE_NOT_FOUND =
   'Orçamento não encontrado. Ele pode ter sido excluído — recarregue a lista.';
@@ -55,6 +62,7 @@ export class MaintenanceQuotesService {
     private readonly repository: MaintenanceQuotesRepository,
     private readonly staging: StagedUploadsService,
     @Inject(STORAGE) private readonly storage: FileStorage,
+    @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
   ) {}
 
   /**
@@ -79,10 +87,17 @@ export class MaintenanceQuotesService {
   ): Promise<Paginated<MaintenanceQuote>> {
     assertCanRead(user.role, 'os orçamentos da Manutenção');
 
-    const page = await this.repository.list(query);
+    const page = await this.repository.list(query, await this.drillOf(user, query));
     const items = await Promise.all(page.rows.map((row) => this.toQuote(row)));
 
     return { items, total: page.total, page: query.page, pageSize: query.pageSize };
+  }
+
+  /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
+  private async drillOf(user: RequestUser, query: Pick<MaintenanceQuoteListQuery, 'drill'>): Promise<SQL | undefined> {
+    if (!query.drill || !this.drills) return undefined;
+
+    return this.drills.drillCondition(user, query.drill, QUOTE_DRILL_SOURCES);
   }
 
   async findById(user: RequestUser, id: number): Promise<MaintenanceQuote> {
@@ -131,10 +146,21 @@ export class MaintenanceQuotesService {
   async remove(user: RequestUser, id: number): Promise<void> {
     assertCanManageInContext(user, 'manutencao', 'excluir orçamentos');
 
-    const current = await this.require(id);
+    await this.require(id);
 
-    await this.repository.remove(id);
-    await this.discardReplacedAttachment(current.attachmentKey, null);
+    /* Excluir ARQUIVA: o orçamento sai da lista, e o documento continua no bucket para o
+       "Desfazer" devolvê-lo como estava. */
+    await this.repository.setArchived(id, true, user.id);
+  }
+
+  /** Desfaz a exclusão. Quem pode excluir é quem pode desfazer. */
+  async restore(user: RequestUser, id: number): Promise<MaintenanceQuote> {
+    assertCanManageInContext(user, 'manutencao', 'excluir orçamentos');
+
+    await this.require(id);
+    await this.repository.setArchived(id, false, null);
+
+    return this.toQuote(await this.require(id));
   }
 
   /** O orçamento, ou 404 com uma frase que diz o que fazer. */

@@ -1,19 +1,25 @@
+<!--
+  @component
+  O campo de texto com RECURSOS A MAIS que o `AzuosTextField` não tem: dica embaixo (`data.hint`),
+  ícone de lupa com Enter (`ui.icon` + `actions.onSubmit`), limite de caracteres, `inputMode` e o
+  tipo `month`. Sem nenhum desses, use o `AzuosTextField`.
+
+  Este arquivo também é o KIT DE CAMPO: `FIELD_CONTROL_CLASS`, `HINT_TONES` e as folgas são o que o
+  campo de sugestões e os de data usam para ficar na mesma família visual.
+
+  O erro fica COLADO no campo, e não num resumo no topo. A dica é a linha miúda que explica de onde
+  o valor veio ("Calculado: 45 dias a partir do início."); ela sai quando há erro — duas mensagens
+  embaixo do mesmo campo competem, e a que importa é a do erro. A dica em tom de erro é âmbar, e não
+  vermelha: ela avisa, mas não trava o envio.
+
+  - `data`: rótulo, nome, valor, convite, `autoComplete`, dica, limite e `inputMode`.
+  - `ui`: o tipo do campo, o ícone de dentro e classes extras.
+  - `state`: erro, desabilitado e obrigatório (o asterisco no rótulo).
+  - `actions`: `onChange`, `onBlur` e `onSubmit`, que faz o Enter e a lupa enviarem.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import type { HTMLInputAttributes } from 'svelte/elements';
-
-  /**
-   * O campo de texto com RECURSOS A MAIS que o `AzuosTextField` não tem: dica embaixo
-   * (`data.hint`), ícone de lupa com Enter (`ui.icon` + `actions.onSubmit`), limite de caracteres,
-   * `inputMode` e o tipo `month`. Sem nenhum desses, use o `AzuosTextField`.
-   *
-   * Este arquivo também é o KIT DE CAMPO: `FIELD_CONTROL_CLASS`, `HINT_TONES` e as folgas são o
-   * que o campo de sugestões e os de data usam para ficar na mesma família visual.
-   *
-   * O erro fica COLADO no campo, e não num resumo no topo. A dica é a linha miúda que explica de
-   * onde o valor veio ("Calculado: 45 dias a partir do início."); ela sai quando há erro — duas
-   * mensagens embaixo do mesmo campo competem, e a que importa é a do erro.
-   */
 
   /** A altura do rótulo mais o vão até o campo — para encostar um controle SEM rótulo na mesma
    * linha de um COM rótulo. 20px do `text-sm` mais 6px do `gap-1.5`. */
@@ -27,8 +33,8 @@
    * grade do formulário, e caixa diferente é o que faz a fileira parecer torta. */
   export const FIELD_CONTROL_CLASS =
     'control-lg rounded-control bg-muted text-foreground w-full border text-sm transition-colors';
-  /** O recusado: fundo vermelho claro, borda neutra — borda colorida é proibida no grupo. */
-  export const CHOICE_ERROR_CLASS = 'border-border bg-destructive-soft';
+  /** O recusado: fundo vermelho claro, sem borda — borda colorida é proibida no grupo. */
+  export const CHOICE_ERROR_CLASS = 'border-transparent bg-destructive-soft';
 
   export type AzuosRichTextFieldType = 'text' | 'email' | 'password' | 'date' | 'month' | 'tel';
 
@@ -38,7 +44,7 @@
   export const HINT_TONES: Record<AzuosRichTextFieldHint['tone'], string> = {
     neutral: 'text-ink-500',
     calculated: 'text-brand-blue-800 dark:text-foreground',
-    error: 'text-warning',
+    error: 'text-warning-ink',
   };
 
   export type AzuosRichTextFieldProps = {
@@ -124,7 +130,7 @@
         onclick={actions.onSubmit}
         class={cn(
           iconPlace,
-          'hover:text-ink-700 focus-visible:ring-ring rounded-chip cursor-pointer after:absolute after:-inset-3 focus-visible:ring-2 focus-visible:outline-none',
+          'rounded-chip hover:text-ink-700 focus-visible:ring-brand-blue-700 cursor-pointer after:absolute after:-inset-3 focus-visible:ring-2 focus-visible:outline-none',
         )}
       >
         <Icon aria-hidden="true" class="size-4" />
@@ -155,7 +161,7 @@
         'placeholder:text-ink-500 disabled:cursor-not-allowed disabled:opacity-60',
         isPassword && 'pr-11',
         Icon && 'pl-9',
-        hasError ? 'border-border bg-destructive-soft' : 'border-input',
+        hasError ? 'bg-destructive-soft border-transparent' : 'border-transparent',
       )}
     />
     <!-- `tabindex="-1"`: no teclado, a tecla seguinte à senha precisa ser o botão de entrar. -->

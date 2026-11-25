@@ -88,16 +88,25 @@ export type TicketHistoryFormModel = {
 export function useTicketHistoryFormModel({
   ticket,
   onRecorded,
+  types,
+  initialType,
 }: {
   ticket: Ticket;
   onRecorded?: () => void;
+  /**
+   * Só estes tipos (os que cabem no estágio, sempre) — o arrasto no quadro abre o formulário
+   * com os que levam ao estágio da coluna de destino: soltar em "Resolvido" oferece só a Solução.
+   */
+  types?: readonly ManualTicketHistoryType[];
+  /** Com que tipo nasce, quando quem abre já sabe (o arrasto para "Resolvido" nasce na Solução). */
+  initialType?: ManualTicketHistoryType;
 }): TicketHistoryFormModel {
   const queryClient = useQueryClient();
 
   let chosenFiles = $state<File[]>([]);
   let attachmentError = $state<string | null>(null);
 
-  const groups = toOptionGroups(ticket.status);
+  const groups = toOptionGroups(ticket.status, types);
 
   /* As pessoas do chamado — a mesma chave que a ficha invalida ao trocar os vinculados, para a
      lista de quem avisar acompanhar a troca. */
@@ -127,7 +136,7 @@ export function useTicketHistoryFormModel({
   );
 
   const form = createForm(() => ({
-    defaultValues: initialValuesFor(ticket.status),
+    defaultValues: initialValuesFor(ticket.status, initialType),
     /* UM validador só, em `onChange` — ver o comentário em `use-open-ticket`. */
     validators: { onChange: ticketHistoryFormSchema },
     /* `mutate`, e não `await mutateAsync`: a recusa do servidor já chega por `save.error`. */
@@ -202,13 +211,20 @@ function toOption(type: ManualTicketHistoryType): TicketHistoryTypeOption {
   return { value: type, label: ticketHistoryTypeLabel(type), tone: ticketHistoryTone(type) };
 }
 
-/** As opções de tipo para um chamado neste estágio, nos dois grupos que a tela mostra. */
-export function toOptionGroups(status: TicketStatus): TicketHistoryFormModel['data']['groups'] {
+/**
+ * As opções de tipo para um chamado neste estágio, nos dois grupos que a tela mostra. Com
+ * `only`, ficam só esses — e nunca um que o estágio não aceita.
+ */
+export function toOptionGroups(
+  status: TicketStatus,
+  only?: readonly ManualTicketHistoryType[],
+): TicketHistoryFormModel['data']['groups'] {
   const groups = ticketHistoryTypeGroups(status);
+  const keeps = (type: ManualTicketHistoryType) => !only || only.includes(type);
 
   return {
-    continuing: groups.continuing.map(toOption),
-    closing: groups.closing.map(toOption),
+    continuing: groups.continuing.filter(keeps).map(toOption),
+    closing: groups.closing.filter(keeps).map(toOption),
   };
 }
 
@@ -228,9 +244,12 @@ export function initialTypeFor(status: TicketStatus): ManualTicketHistoryType {
   return safest ?? closing[0] ?? 'note';
 }
 
-export function initialValuesFor(status: TicketStatus): TicketHistoryFormValues {
+export function initialValuesFor(
+  status: TicketStatus,
+  type: ManualTicketHistoryType = initialTypeFor(status),
+): TicketHistoryFormValues {
   return {
-    type: initialTypeFor(status),
+    type,
     description: '',
     /* O padrão é a pessoa acompanhar o que acontece com o pedido dela. */
     isVisibleToRequester: true,

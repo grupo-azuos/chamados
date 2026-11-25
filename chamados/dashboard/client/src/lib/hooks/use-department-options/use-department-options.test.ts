@@ -21,6 +21,10 @@ describe('useDepartmentOptionsModel', () => {
   it('offers the HR departments first and the local ones after a divider', async () => {
     vi.mocked(departmentsApi.catalog).mockResolvedValue({
       rh: ['Contábil', 'Fiscal'],
+      rhOptions: [
+        { id: 3, name: 'Contábil' },
+        { id: 7, name: 'Fiscal' },
+      ],
       local: ['ANALYZE'],
       isRhAvailable: true,
     });
@@ -34,12 +38,18 @@ describe('useDepartmentOptionsModel', () => {
       { value: 'ANALYZE', label: 'ANALYZE', separatorBefore: true },
     ]);
     expect(model.isRhAvailable).toBe(true);
+    expect(model.officialOptions).toEqual([
+      { value: '3', label: 'Contábil' },
+      { value: '7', label: 'Fiscal' },
+    ]);
+    expect(model).not.toHaveProperty('locationOptions');
   });
 
   // triste
   it('says HR is unavailable and keeps the local departments to choose from', async () => {
     vi.mocked(departmentsApi.catalog).mockResolvedValue({
       rh: [],
+      rhOptions: [],
       local: ['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'],
       isRhAvailable: false,
     });
@@ -48,6 +58,7 @@ describe('useDepartmentOptionsModel', () => {
     await waitFor(() => expect(model.isRhAvailable).toBe(false));
 
     expect(model.options.map((option) => option.value)).toEqual(['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO']);
+    expect(model.officialOptions).toEqual([]);
   });
 
   it('offers the local departments while the list is still loading', () => {

@@ -1,0 +1,100 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Fundamentos/Cores" />
+
+export const Swatch = ({ token, name, note }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
+    <span
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: '28%',
+        background: `var(${token})`,
+        boxShadow: 'var(--elevation-card)',
+        flexShrink: 0,
+      }}
+    />
+    <span style={{ display: 'flex', flexDirection: 'column' }}>
+      <strong>{name}</strong>
+      <code>{token}</code>
+      {note ? <span style={{ color: 'var(--muted-foreground)', fontSize: 13 }}>{note}</span> : null}
+    </span>
+  </div>
+);
+
+export const Grid = ({ children }) => (
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
+      gap: 8,
+    }}
+  >
+    {children}
+  </div>
+);
+
+# Cores
+
+Toda cor vem de um **token** do `lib/theme/tokens.css`. A tela nunca escreve a cor (hex, rgb ou
+paleta do Tailwind): escreve o nome do token (`bg-card`, `text-muted-foreground`,
+`bg-hue-blue`). Assim o claro e o escuro funcionam sozinhos. Troque o **Tema** na barra de cima
+para ver as duas versões.
+
+## Superfícies e texto
+
+<Grid>
+  <Swatch
+    token="--background"
+    name="Fundo da página"
+    note="Cinza do sistema; os cards ficam por cima."
+  />
+  <Swatch token="--card" name="Card" note="Branco no claro, grafite no escuro." />
+  <Swatch
+    token="--muted"
+    name="Campo e trilho"
+    note="Fundo de campo, de segmentado, de botão secundário."
+  />
+  <Swatch token="--popover" name="Menu flutuante" />
+  <Swatch token="--foreground" name="Texto" />
+  <Swatch token="--muted-foreground" name="Texto de apoio" note="Rótulos, legendas, datas." />
+  <Swatch
+    token="--border"
+    name="Divisória"
+    note="Só como linha entre itens, nunca em volta de card."
+  />
+</Grid>
+
+## Ação e estado
+
+<Grid>
+  <Swatch token="--primary" name="Principal" note="Botão principal, link, foco, escolhido." />
+  <Swatch token="--destructive" name="Perigo" note="Excluir, vencido, erro." />
+  <Swatch token="--success" name="Sucesso" />
+  <Swatch token="--warning" name="Atenção" note="Amarelo é fundo; como texto use o -ink." />
+  <Swatch token="--info" name="Informação" />
+</Grid>
+
+## Tons de assunto
+
+Cada área ou assunto tem um tom. Ele aparece **no ícone cheio** do card (com o desenho branco;
+escuro no amarelo), na bolinha de status, no chip e no gráfico — nunca no fundo do card.
+
+<Grid>
+  <Swatch token="--hue-blue" name="Azul" note="blue / brand" />
+  <Swatch token="--hue-red" name="Vermelho" note="red / danger" />
+  <Swatch token="--hue-yellow" name="Amarelo" note="yellow / warning" />
+  <Swatch token="--hue-green" name="Verde" note="green / success" />
+  <Swatch token="--hue-steel" name="Ciano" note="steel / info" />
+  <Swatch token="--hue-plum" name="Roxo" note="plum" />
+  <Swatch token="--hue-copper" name="Índigo" note="copper" />
+  <Swatch token="--hue-slate" name="Cinza" note="slate / neutral" />
+</Grid>
+
+## Regras de uso
+
+- **Uma ação principal por área** em azul; o resto é cinza.
+- **Status em chip:** fundo claro do tom + texto do tom (`AzuosStatusBadge`).
+- **Número na cor do texto**, mesmo no card colorido.
+- **Cor que a pessoa escolhe** (etiqueta, empresa) vira o tom mais próximo (`cardHueFromHex`).
+- **Cor nova** entra primeiro no `tokens.css` do template.

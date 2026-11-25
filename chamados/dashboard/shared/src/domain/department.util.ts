@@ -21,8 +21,32 @@ export type Department = string;
  * Os departamentos que existem SÓ AQUI, sem par na lista do RH. Continuam escolhíveis, abaixo
  * dos do RH e separados por uma linha: quem os usa sabe o que são, mas eles não são da lista
  * oficial.
+ *
+ * O COMPUTADOR não os usa: ele guarda só o departamento oficial, pelo id do RH, e o local antigo
+ * ficou na observação (migration 0027).
  */
 export const LOCAL_DEPARTMENTS = ['ANALYZE', 'CERTIFICADO', 'RECEPÇÃO'] as const;
+
+/** Um departamento OFICIAL, como o RH o identifica: o id do item na lista "Departamentos". */
+export type DepartmentOption = { id: number; name: string };
+
+/**
+ * O id do departamento OFICIAL cujo nome é este texto — o nome atual do RH, ou um código antigo
+ * (`contabil`). Compara sem acento, sem caixa e sem espaço sobrando, e só aceita UM encontro:
+ * dois departamentos com o mesmo nome no RH deixam a máquina sem departamento, em vez de num
+ * dos dois por sorte.
+ */
+export function departmentIdFromName(
+  text: string | null | undefined,
+  options: readonly DepartmentOption[],
+): number | null {
+  const wanted = normalize(text ? departmentLabel(text.trim()) : '');
+  if (!wanted) return null;
+
+  const found = options.filter((option) => normalize(option.name) === wanted);
+
+  return found.length === 1 ? (found[0]?.id ?? null) : null;
+}
 
 /**
  * Os códigos que o sistema guardava antes de a lista vir do RH, e o nome que cada um virou.

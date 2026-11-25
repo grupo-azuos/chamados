@@ -34,6 +34,40 @@ export type FetchedMerge = {
   coAuthors?: FetchedCoAuthor[];
 };
 
+/** Um commit do git graph: o hash, os pais, a primeira linha da mensagem e quem fez. */
+export type FetchedCommit = {
+  sha: string;
+  parents: string[];
+  message: string;
+  authorLogin: string | null;
+  authorName: string;
+  committedAt: Date;
+};
+
+export type FetchedGraph = {
+  commits: FetchedCommit[];
+  branches: { name: string; headSha: string | null }[];
+  tags: { name: string; sha: string }[];
+};
+
+/* As linhas principais do git-flow: a história delas vem inteira (duas páginas); a de cada branch
+   aberta, só o começo — o resto já está na develop quando ela é juntada. */
+const GRAPH_TRUNKS = ['develop', 'main', 'master'];
+const GRAPH_TRUNK_PAGES = 2;
+const GRAPH_OPEN_BRANCHES = 20;
+const GRAPH_BRANCH_COMMITS = 20;
+
+function fetchedCommitOf(commit: RawGithubCommit): FetchedCommit {
+  return {
+    sha: commit.sha,
+    parents: commit.parents.map((parent) => parent.sha),
+    message: commit.commit.message.split('\n')[0]?.trim() || commit.sha.slice(0, 7),
+    authorLogin: commit.author?.login ?? null,
+    authorName: commit.commit.author?.name ?? commit.author?.login ?? 'github',
+    committedAt: commitDate(commit),
+  };
+}
+
 type RawGithubPr = {
   number: number;
   title: string;
@@ -67,11 +101,43 @@ const MAX_COMMITS_FOR_COAUTHORS = 250;
 /* Co-autores de PR só dos mergeados nos últimos 120 dias: o histórico inteiro, num
    "Sincronizar todos", passaria de mil chamadas e o clique estouraria o tempo. */
 const COAUTHOR_WINDOW_MS = 120 * 24 * 60 * 60 * 1000;
+/* Quanto antes do fechamento um comentário ainda conta como "o texto do fechamento". O
+   "Close with comment" do GitHub grava o comentário segundos antes de fechar; a margem cobre
+   quem escreve o comentário e fecha logo em seguida. */
+const CLOSING_COMMENT_WINDOW_MS = 5 * 60 * 1000;
+
+type RawIssueComment = {
+  body?: string | null;
+  created_at: string;
+  user?: { login?: string | null; type?: string | null } | null;
+  performed_via_github_app?: unknown;
+};
+
+/**
+ * O último comentário de PESSOA escrito até o fechamento. Bot e comentário feito pelo App (o
+ * espelho do próprio chamado) ficam de fora — senão o eco do sistema viraria a solução.
+ */
+export function closingCommentOf(
+  comments: readonly RawIssueComment[],
+  closedAt: Date,
+): string | null {
+  const limit = closedAt.getTime() + 1000;
+  const human = comments.filter((comment) => {
+    if (comment.performed_via_github_app) return false;
+    if (comment.user?.type === 'Bot' || comment.user?.login?.endsWith('[bot]')) return false;
+    if (new Date(comment.created_at).getTime() > limit) return false;
+    return Boolean(comment.body?.trim());
+  });
+  const last = human.at(-1);
+
+  return last?.body?.trim() ?? null;
+}
 
 /** Quem não é gente: assistente de IA e robôs não contam como co-autor de ninguém. */
 function isAutomation(login: string | null, name: string, email?: string): boolean {
   if (login?.endsWith('[bot]')) return true;
-  if (email && /noreply@anthropic\.com|\[bot\]@users\.noreply\.github\.com/i.test(email)) return true;
+  if (email && /noreply@anthropic\.com|\[bot\]@users\.noreply\.github\.com/i.test(email))
+    return true;
 
   return /\[bot\]|^claude\b|github-actions|dependabot/i.test(name.trim());
 }
@@ -470,6 +536,70 @@ export class GithubService {
   }
 
   /**
+   * O GIT GRAPH DE UM REPOSITÓRIO — os commits recentes da develop, da main e das branches abertas
+   * (com os pais, que dão as linhas do grafo) e a lista de branches. Falhar devolve vazio: o grafo
+   * é um extra da sincronização, não pode derrubá-la.
+   */
+  async fetchGraph(owner: string, repo: string): Promise<FetchedGraph> {
+    const token = this.app ? await this.app.accessToken() : this.token;
+    const base = `https://api.github.com/repos/${owner}/${repo}`;
+    const listed = await this.readJson<Array<{ name: string; commit?: { sha?: string } }>>(
+      `${base}/branches?per_page=100`,
+      token,
+    );
+    const branches = (listed ?? []).map((branch) => ({
+      name: branch.name,
+      headSha: branch.commit?.sha ?? null,
+    }));
+    const trunk = branches
+      .filter((branch) => GRAPH_TRUNKS.includes(branch.name))
+      .map((branch) => branch.name);
+    const others = branches
+      .filter((branch) => !GRAPH_TRUNKS.includes(branch.name))
+      .slice(0, GRAPH_OPEN_BRANCHES)
+      .map((branch) => branch.name);
+    const reads = [
+      ...trunk.map((name) => ({ name, pages: GRAPH_TRUNK_PAGES, perPage: 100 })),
+      ...others.map((name) => ({ name, pages: 1, perPage: GRAPH_BRANCH_COMMITS })),
+    ];
+    const lists = await inPool(reads, GITHUB_CONCURRENCY, (read) =>
+      this.readBranchCommits(base, read.name, read.pages, read.perPage, token),
+    );
+    const bySha = new Map<string, FetchedCommit>();
+    for (const commit of lists.flat()) bySha.set(commit.sha, commit);
+    const listedTags = await this.readJson<Array<{ name: string; commit?: { sha?: string } }>>(
+      `${base}/tags?per_page=100`,
+      token,
+    );
+    const tags = (listedTags ?? []).flatMap((tag) =>
+      tag.commit?.sha ? [{ name: tag.name, sha: tag.commit.sha }] : [],
+    );
+
+    return { commits: [...bySha.values()], branches, tags };
+  }
+
+  private async readBranchCommits(
+    base: string,
+    branch: string,
+    pages: number,
+    perPage: number,
+    token: string | undefined,
+  ): Promise<FetchedCommit[]> {
+    const commits: FetchedCommit[] = [];
+    for (let page = 1; page <= pages; page++) {
+      const list = await this.readJson<RawGithubCommit[]>(
+        `${base}/commits?sha=${encodeURIComponent(branch)}&per_page=${perPage}&page=${page}`,
+        token,
+      );
+      if (!Array.isArray(list) || list.length === 0) break;
+      commits.push(...list.map(fetchedCommitOf));
+      if (list.length < perPage) break;
+    }
+
+    return commits;
+  }
+
+  /**
    * Lista merges sem PR que chegaram à branch develop. Commits associados a PRs são ignorados,
    * para não contar duas vezes a mesma entrega já exibida como Pull Request.
    */
@@ -545,7 +675,8 @@ export class GithubService {
       `https://api.github.com/repos/${owner}/${repo}/commits/${commit.sha}/pulls`,
       { headers: this.headers(token), signal: AbortSignal.timeout(10_000) },
     );
-    if (!associated.ok) throw new BadGatewayException('Não foi possível identificar os merges sem PR.');
+    if (!associated.ok)
+      throw new BadGatewayException('Não foi possível identificar os merges sem PR.');
     const pullRequests = (await associated.json()) as Array<{ merge_commit_sha?: string | null }>;
     if (pullRequests.some((pr) => pr.merge_commit_sha === commit.sha)) return null;
 
@@ -574,11 +705,15 @@ export class GithubService {
     userId?: string,
   ): FetchedMerge[] {
     if (!userId) {
-      this.logger.warn(`Falha na comunicação com o GitHub para merges de ${owner}/${repo}: ${String(error)}`);
+      this.logger.warn(
+        `Falha na comunicação com o GitHub para merges de ${owner}/${repo}: ${String(error)}`,
+      );
       return [];
     }
     if (error instanceof BadGatewayException) throw error;
-    throw new BadGatewayException('Não foi possível sincronizar os merges sem PR. Tente novamente.');
+    throw new BadGatewayException(
+      'Não foi possível sincronizar os merges sem PR. Tente novamente.',
+    );
   }
 
   private issueFetchError(
@@ -658,6 +793,35 @@ export class GithubService {
   }
 
   /**
+   * O texto com que a issue foi FECHADA. O aviso `issues.closed` do GitHub não traz comentário
+   * nenhum — o "Close with comment" chega como um comentário à parte, segundos antes. Lemos os
+   * comentários dos últimos minutos e ficamos com o último de uma PESSOA (ver `closingCommentOf`).
+   *
+   * O comentário é COMPLEMENTO: sem o App configurado ou com o GitHub fora do ar, devolve `null`
+   * e o chamado encerra mesmo assim, com "fechada no GitHub por @login". Deixar a falha subir
+   * faria a issue fechada não encerrar o chamado — o contrário do 1:1.
+   */
+  async fetchClosingComment(
+    repoInfo: { owner: string; repo: string },
+    issueNumber: number,
+    closedAt: Date,
+  ): Promise<string | null> {
+    try {
+      const token = this.app ? await this.app.accessToken() : this.token;
+      const since = new Date(closedAt.getTime() - CLOSING_COMMENT_WINDOW_MS).toISOString();
+      const comments = await this.readJson<RawIssueComment[]>(
+        `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/issues/${issueNumber}/comments?since=${encodeURIComponent(since)}&per_page=100`,
+        token,
+      );
+
+      return closingCommentOf(comments ?? [], closedAt);
+    } catch (error) {
+      this.logger.warn(`Sem o comentário de fechamento da issue #${issueNumber}: ${String(error)}`);
+      return null;
+    }
+  }
+
+  /**
    * O que acontece no CHAMADO chega à ISSUE dele, em segundo plano: o comentário (cada
    * histórico lançado) e o estado (encerrar o chamado fecha a issue; reabrir reabre).
    *
@@ -680,14 +844,26 @@ export class GithubService {
         const token = this.app ? await this.app.accessToken() : this.token;
         const issueUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/issues/${githubIssueNumber}`;
         if (change.comment) {
-          await this.sendIssueChange(`${issueUrl}/comments`, 'POST', { body: change.comment }, token);
+          await this.sendIssueChange(
+            `${issueUrl}/comments`,
+            'POST',
+            { body: change.comment },
+            token,
+          );
         }
         if (change.state) {
           const reason = change.state === 'closed' ? 'completed' : 'reopened';
-          await this.sendIssueChange(issueUrl, 'PATCH', { state: change.state, state_reason: reason }, token);
+          await this.sendIssueChange(
+            issueUrl,
+            'PATCH',
+            { state: change.state, state_reason: reason },
+            token,
+          );
         }
       } catch (error) {
-        this.logger.warn(`Não consegui levar o chamado ${ticket.id} para a issue: ${String(error)}`);
+        this.logger.warn(
+          `Não consegui levar o chamado ${ticket.id} para a issue: ${String(error)}`,
+        );
       }
     })();
   }
@@ -708,7 +884,9 @@ export class GithubService {
   }
 
   /** O repositório de um sistema: as colunas já separadas, ou o que der para ler do endereço. */
-  private async repositoryOfProject(projectId: number): Promise<{ owner: string; repo: string } | null> {
+  private async repositoryOfProject(
+    projectId: number,
+  ): Promise<{ owner: string; repo: string } | null> {
     const [project] = await this.db
       .select()
       .from(softwareProjects)

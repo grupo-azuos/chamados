@@ -19,7 +19,7 @@
       endTime: '11:00',
       color: 'green',
       category: 'deploy',
-      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
+      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima', archive: null,
     },
     {
       id: 2,
@@ -33,7 +33,7 @@
       endTime: '16:00',
       color: 'blue',
       category: 'standup',
-      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
+      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima', archive: null,
     },
     /* Registro: algo feito, só com a hora — aparece como um bloco de uma linha. */
     {
@@ -48,7 +48,7 @@
       endTime: null,
       color: 'rose',
       category: 'review',
-      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
+      createdAt: '2026-10-01T00:00:00Z', createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima', archive: null,
     },
   ];
 

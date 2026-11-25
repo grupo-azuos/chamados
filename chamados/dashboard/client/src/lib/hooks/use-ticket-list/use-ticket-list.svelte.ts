@@ -13,6 +13,8 @@ import {
   type TicketStatus,
   type TicketStatusGroup,
 } from '@template/shared/domain/ticket-status.util';
+import { type BoardDrill } from '@template/shared/schemas/board-drill.schema';
+import { MAX_PAGE_SIZE } from '@template/shared/schemas/pagination.schema';
 import { type ReportFormat } from '@template/shared/schemas/report.schema';
 import {
   TICKET_UNASSIGNED_FILTER,
@@ -21,12 +23,17 @@ import {
 } from '@template/shared/schemas/ticket.schema';
 import { derived, writable } from 'svelte/store';
 
+import { replaceState } from '$app/navigation';
+import { page as currentPage } from '$app/state';
 import { readError } from '$lib/api/http-client';
+import { softwareProjectsApi } from '$lib/api/software-projects.api';
 import { ticketsApi, type TicketDashboard } from '$lib/api/tickets.api';
 import { type AreaContext } from '$lib/hooks/use-area-context/use-area-context.svelte';
+import { type BoardDrillBanner, useBoardDrillModel } from '$lib/hooks/use-board-drill/use-board-drill.svelte';
 import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
+import { contextPath } from '$lib/navigation/navigation';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 import {
   fieldParser,
@@ -37,6 +44,21 @@ import {
 } from '$lib/utils/filter-fields.util';
 
 export const TICKETS_PAGE_SIZE = 15;
+
+/**
+ * Quantos chamados o QUADRO traz de uma vez: o maior pedaço que a API entrega (o mesmo do antigo
+ * Kanban de Sistema). O quadro não pagina — uma coluna cortada em páginas não se arrasta —, e o
+ * que passar disso a tela avisa, para a pessoa estreitar pelos filtros.
+ */
+export const TICKETS_BOARD_SIZE = MAX_PAGE_SIZE;
+
+/** Os jeitos de ver a fila: a lista (tabela ou cards) ou o quadro por colunas. */
+export const TICKET_QUEUE_VIEWS = ['list', 'kanban'] as const;
+
+export type TicketQueueView = (typeof TICKET_QUEUE_VIEWS)[number];
+
+/** O parâmetro do endereço que abre a fila já num modo (`?view=kanban`). */
+export const TICKET_VIEW_PARAM = 'view';
 
 export type TicketListFilter = {
   search: string;
@@ -51,7 +73,15 @@ export type TicketListFilter = {
   problemType: TicketProblemType | '';
   /** O id do responsável, `TICKET_UNASSIGNED_FILTER` para os sem ninguém, ou '' para todos. */
   assigneeId: string;
+  /**
+   * O SISTEMA (cadastro de Sistemas e Projetos), pelo id em texto — '' para todos. Só a fila de
+   * Sistema tem sistema; nas outras áreas o campo nem aparece e não vai para a API.
+   */
+  projectId: string;
 };
+
+/** Um sistema no filtro da fila de Sistema. */
+export type TicketProjectFilterOption = { value: string; label: string };
 
 /** Uma pessoa no filtro de responsável — com a foto, para achar pelo rosto. */
 export type TicketAssigneeFilterOption = {
@@ -75,15 +105,22 @@ export type TicketListModel = {
     /** Os indicadores, sobre TODOS os chamados: eles não seguem o filtro da lista. */
     dashboard: TicketDashboard | null;
     filter: TicketListFilter;
-    paging: {
+    /** A página da lista. Ausente no quadro, que traz tudo de uma vez. */
+    paging?: {
       page: number;
       pageSize: number;
       total: number;
     };
     /** As opções do filtro de departamento: as do RH e, depois da linha, as daqui. */
     departmentOptions: DepartmentChoice[];
+    /** A faixa do recorte de um clique no Painel — nula quando a fila não veio de lá. */
+    drillBanner: BoardDrillBanner | null;
     /** "Sem responsável" e, depois da linha, quem atende a área — com foto. */
     assigneeOptions: TicketAssigneeFilterOption[];
+    /** Os sistemas cadastrados — só na fila de Sistema; vazio nas outras áreas. */
+    projectOptions: TicketProjectFilterOption[];
+    /** Lista (tabela ou cards) ou quadro. */
+    view: TicketQueueView;
   };
   state: {
     isLoading: boolean;
@@ -107,10 +144,16 @@ export type TicketListModel = {
     onDepartmentChange: (department: TicketDepartment | '') => void;
     onProblemTypeChange: (problemType: TicketProblemType | '') => void;
     onAssigneeChange: (assigneeId: string) => void;
+    onProjectChange: (projectId: string) => void;
     onPageChange: (page: number) => void;
+    /** Lista ou quadro — a escolha fica guardada por fila, e no endereço. */
+    onViewChange: (view: TicketQueueView) => void;
     onClearFilters: () => void;
     onRetry: () => void;
     onExportReport: (format: ReportFormat) => void;
+    /** "Limpar recorte": a fila volta aos filtros dela. */
+    onClearDrill: () => void;
+    onBackToBoard: () => void;
   };
 };
 
@@ -122,7 +165,11 @@ const EMPTY_FILTER: TicketListFilter = {
   department: '',
   problemType: '',
   assigneeId: '',
+  projectId: '',
 };
+
+const isProjectId = (value: unknown): value is string =>
+  typeof value === 'string' && /^\d*$/.test(value);
 
 /** Cada campo do filtro conferido sozinho: um campo salvo que não serve volta ao padrão. */
 const FILTER_GUARDS: FieldGuards<TicketListFilter> = {
@@ -133,7 +180,14 @@ const FILTER_GUARDS: FieldGuards<TicketListFilter> = {
   department: isText,
   problemType: oneOf('', ...TICKET_PROBLEM_TYPES),
   assigneeId: isText,
+  projectId: isProjectId,
 };
+
+type ViewChoice = { view: TicketQueueView };
+
+const VIEW_DEFAULTS: ViewChoice = { view: 'list' };
+
+const VIEW_GUARDS: FieldGuards<ViewChoice> = { view: oneOf(...TICKET_QUEUE_VIEWS) };
 
 export const TICKETS_QUERY_KEY = ['tickets'] as const;
 
@@ -142,8 +196,9 @@ export const TICKETS_QUERY_KEY = ['tickets'] as const;
  * A fila é SEMPRE dessa área: não existe mais um "Todas" misturando chamado de computador com
  * chamado de ar-condicionado na mesma lista. Ele SOMA ao filtro, não o substitui.
  */
-function scopeOf(filter: TicketListFilter, areaContext: AreaContext) {
+function scopeOf(filter: TicketListFilter, areaContext: AreaContext, drill: BoardDrill | null = null) {
   return {
+    drill: drill ?? undefined,
     search: filter.search.trim() || undefined,
     status: filter.status || undefined,
     statusGroup: filter.statusGroup || undefined,
@@ -152,7 +207,28 @@ function scopeOf(filter: TicketListFilter, areaContext: AreaContext) {
     department: filter.department || undefined,
     problemType: filter.problemType || undefined,
     assigneeId: filter.assigneeId || undefined,
+    projectId: projectIdOf(filter, areaContext),
   };
+}
+
+/* Sistema só existe na fila de Sistema: um filtro salvo noutra área nunca vai para a API. */
+function projectIdOf(filter: TicketListFilter, areaContext: AreaContext): number | undefined {
+  if (areaContext !== 'sistema' || filter.projectId === '') return undefined;
+
+  return Number(filter.projectId);
+}
+
+/**
+ * O modo escolhido vai também para o ENDEREÇO (`?view=kanban`), sem recarregar nada: o link
+ * copiado abre no mesmo modo, e o F5 não volta para o modo que a URL antiga dizia.
+ */
+function syncViewParam(view: TicketQueueView): void {
+  const url = new URL(currentPage.url);
+  if (view === 'kanban') url.searchParams.set(TICKET_VIEW_PARAM, view);
+  if (view !== 'kanban') url.searchParams.delete(TICKET_VIEW_PARAM);
+  if (url.href === currentPage.url.href) return;
+
+  replaceState(url, currentPage.state ?? {});
 }
 
 /**
@@ -164,7 +240,7 @@ export function toAssigneeFilterOptions(
   people: readonly TicketAssigneeOption[],
 ): TicketAssigneeFilterOption[] {
   return [
-    { value: TICKET_UNASSIGNED_FILTER, label: 'Sem responsável' },
+    { value: TICKET_UNASSIGNED_FILTER, label: '(Sem responsável)' },
     ...people.map((person, index) => ({
       value: person.id,
       label: person.name,
@@ -172,6 +248,13 @@ export function toAssigneeFilterOptions(
       separatorBefore: index === 0,
     })),
   ];
+}
+
+/** As opções do filtro de sistema, do cadastro de Sistemas e Projetos. */
+export function toProjectFilterOptions(
+  projects: readonly { id: number; name: string }[],
+): TicketProjectFilterOption[] {
+  return projects.map((project) => ({ value: String(project.id), label: project.name }));
 }
 
 /**
@@ -203,23 +286,70 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
   const filter = mirrorStore(filterStore);
   const pageStore = writable<number>(1);
   const page = mirrorStore(pageStore);
+  /* O recorte de um clique no Painel (`?drill=`): soma ao filtro da fila. */
+  const drill = useBoardDrillModel({ module: area, path: contextPath(area, '/tickets') });
 
   let exportingFormat = $state<ReportFormat | null>(null);
   let exportError = $state<string | null>(null);
 
+  /* Lista ou quadro, por fila: quem trabalha a de Sistema no quadro não muda a de Infra. O
+     endereço (`?view=kanban`) ganha do guardado — é por ele que o antigo `/system/kanban` chega. */
+  const viewStore = persistedFilterStore<ViewChoice>({
+    screen: `${area}-tickets-view`,
+    defaults: VIEW_DEFAULTS,
+    parse: fieldParser(VIEW_DEFAULTS, VIEW_GUARDS),
+    fromUrl: urlParser(VIEW_DEFAULTS, VIEW_GUARDS),
+  });
+  const view = mirrorStore(viewStore);
+
+  /* Só o modo à vista busca: a página de 15 da lista e o quadro inteiro (até 200) nunca saem
+     juntos. Os dois com o MESMO recorte — busca, departamento, painel e cartões do topo. */
   const list = mirrorStore(
     createQuery(
-      derived([filterStore, pageStore], ([currentFilter, currentPage]) => ({
-        queryKey: [...TICKETS_QUERY_KEY, 'list', scopeOf(currentFilter, area), currentPage],
+      derived(
+        [filterStore, pageStore, drill.store, viewStore],
+        ([currentFilter, currentPageNumber, currentDrill, currentView]) => ({
+          queryKey: [...TICKETS_QUERY_KEY, 'list', scopeOf(currentFilter, area, currentDrill), currentPageNumber],
+          queryFn: () =>
+            ticketsApi.list({
+              ...scopeOf(currentFilter, area, currentDrill),
+              page: currentPageNumber,
+              pageSize: TICKETS_PAGE_SIZE,
+            }),
+          enabled: currentView.view === 'list',
+        }),
+      ),
+    ),
+  );
+
+  const board = mirrorStore(
+    createQuery(
+      derived([filterStore, drill.store, viewStore], ([currentFilter, currentDrill, currentView]) => ({
+        queryKey: [...TICKETS_QUERY_KEY, 'board', scopeOf(currentFilter, area, currentDrill)],
         queryFn: () =>
           ticketsApi.list({
-            ...scopeOf(currentFilter, area),
-            page: currentPage,
-            pageSize: TICKETS_PAGE_SIZE,
+            ...scopeOf(currentFilter, area, currentDrill),
+            page: 1,
+            pageSize: TICKETS_BOARD_SIZE,
           }),
+        enabled: currentView.view === 'kanban',
       })),
     ),
   );
+
+  /* Os sistemas só existem na fila de Sistema: nas outras áreas a consulta nem sai. */
+  const projects = mirrorStore(
+    createQuery(
+      writable({
+        queryKey: ['software-projects', 'all'],
+        queryFn: () => softwareProjectsApi.list({ page: 1, pageSize: 100 }),
+        enabled: area === 'sistema',
+        staleTime: 5 * 60 * 1000,
+      }),
+    ),
+  );
+
+  const activeQuery = () => (view.current.view === 'kanban' ? board.current : list.current);
 
   /* Os indicadores NÃO recebem o filtro: "quanto tempo levamos para resolver" é uma pergunta
      sobre o atendimento inteiro. Recalculá-los a cada filtro faria o número mudar enquanto a
@@ -258,16 +388,19 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
       return buildData({
         departmentOptions: departments.options,
         assigneeOptions: toAssigneeFilterOptions(assignees.current.data ?? []),
+        projectOptions: toProjectFilterOptions(projects.current.data?.items ?? []),
         area,
-        page: list.current.data,
+        view: view.current.view,
+        page: activeQuery().data,
         currentPage: page.current,
         dashboard: dashboard.current.data ?? null,
         filter: filter.current,
+        drillBanner: drill.banner,
       });
     },
     get state() {
       return {
-        ...buildListState(list.current, filter.current),
+        ...buildListState(activeQuery(), filter.current, drill.drill !== null),
         isDashboardLoading: dashboard.current.isPending,
         exportingFormat,
         exportError,
@@ -304,13 +437,22 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
         pageStore.set(1);
         filterStore.update((current) => ({ ...current, assigneeId }));
       },
+      onProjectChange: (projectId) => {
+        pageStore.set(1);
+        filterStore.update((current) => ({ ...current, projectId }));
+      },
       onPageChange: (newPage) => pageStore.set(newPage),
+      onViewChange: (nextView) => {
+        if (view.current.view === nextView) return;
+        viewStore.update(() => ({ view: nextView }));
+        syncViewParam(nextView);
+      },
       onExportReport: (format) => {
         exportError = null;
         exportingFormat = format;
 
         ticketsApi
-          .exportReport(scopeOf(filter.current, area), format)
+          .exportReport(scopeOf(filter.current, area, drill.drill), format)
           .then(({ blob, fileName }) => triggerBrowserDownload(blob, fileName))
           .catch((error: unknown) => {
             exportError = readError(error) ?? 'Não consegui gerar o relatório.';
@@ -323,8 +465,13 @@ export function useTicketListModel(input: { area: AreaContext }): TicketListMode
         pageStore.set(1);
         filterStore.clear();
       },
+      onClearDrill: () => {
+        pageStore.set(1);
+        drill.onClear();
+      },
+      onBackToBoard: drill.onBack,
       onRetry: () => {
-        void list.current.refetch();
+        void activeQuery().refetch();
         void dashboard.current.refetch();
       },
     },
@@ -340,11 +487,14 @@ type TicketPage = { items: Ticket[]; total: number } | undefined;
 function buildData(input: {
   departmentOptions: DepartmentChoice[];
   assigneeOptions: TicketAssigneeFilterOption[];
+  projectOptions: TicketProjectFilterOption[];
   area: AreaContext;
+  view: TicketQueueView;
   page: TicketPage;
   currentPage: number;
   dashboard: TicketDashboard | null;
   filter: TicketListFilter;
+  drillBanner: BoardDrillBanner | null;
 }): TicketListModel['data'] {
   const total = input.page?.total ?? 0;
 
@@ -354,13 +504,17 @@ function buildData(input: {
     total,
     dashboard: input.dashboard,
     filter: input.filter,
-    paging: {
-      page: input.currentPage,
-      pageSize: TICKETS_PAGE_SIZE,
-      total,
-    },
+    /* O quadro não pagina: sem `paging`, a tela não desenha a barra de páginas e avisa quando
+       veio menos do que casou. */
+    paging:
+      input.view === 'kanban'
+        ? undefined
+        : { page: input.currentPage, pageSize: TICKETS_PAGE_SIZE, total },
     departmentOptions: input.departmentOptions,
     assigneeOptions: input.assigneeOptions,
+    projectOptions: input.projectOptions,
+    drillBanner: input.drillBanner,
+    view: input.view,
   };
 }
 
@@ -381,19 +535,22 @@ function hasAnyFilter(filter: TicketListFilter): boolean {
     filter.priority !== '' ||
     filter.department !== '' ||
     filter.problemType !== '' ||
-    filter.assigneeId !== ''
+    filter.assigneeId !== '' ||
+    filter.projectId !== ''
   );
 }
 
 function buildListState(
   list: ListQueryLike,
   filter: TicketListFilter,
+  hasDrill = false,
 ): Omit<TicketListModel['state'], 'isDashboardLoading' | 'exportingFormat' | 'exportError'> {
   const count = list.data?.items.length ?? 0;
   /* Vazio só é vazio DEPOIS que a consulta terminou. Mostrar "nenhum chamado" durante o
      carregamento faz a pessoa achar que os dados sumiram — e recarregar. */
   const isSettledEmpty = list.isSuccess && count === 0;
-  const filtered = hasAnyFilter(filter);
+  /* O recorte do Painel também é filtro: vazio com ele é "o recorte escondeu tudo". */
+  const filtered = hasDrill || hasAnyFilter(filter);
 
   return {
     isLoading: list.isPending,

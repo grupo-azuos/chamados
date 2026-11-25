@@ -1,17 +1,22 @@
+<!--
+  @component
+  Um campo de texto com a lista de opções cadastradas embaixo — Departamento, Cargo, Fornecedor.
+
+  Por que não a lista de sugestões nativa (`datalist`): a lista nativa só aparece DEPOIS de digitar,
+  e a pessoa nunca via o que já estava cadastrado. Aqui a lista inteira abre ao focar o campo e vai
+  filtrando conforme se digita.
+
+  O campo aceita um valor que NÃO está na lista, de propósito: travar obrigaria a pessoa a sair do
+  formulário para cadastrar o item e voltar, perdendo o que já tinha preenchido.
+
+  Teclado: seta para baixo/cima percorre, Enter escolhe, Esc fecha. O estado de aberto e de opção
+  ativa é puramente visual.
+
+  `data` leva rótulo, nome, valor, as `options` e o `emptyMessage` (o que dizer quando não há nada
+  cadastrado); `state` leva `error`, `isRequired`, `isDisabled` e `isLoading`; `actions`, `onChange`
+  e `onBlur`.
+-->
 <script lang="ts" module>
-  /**
-   * Um campo de texto com a lista de opções cadastradas embaixo — Departamento, Cargo, Fornecedor.
-   *
-   * Por que não `<datalist>`: a lista nativa só aparece DEPOIS de digitar, e a pessoa nunca via o
-   * que já estava cadastrado. Aqui a lista inteira abre ao focar o campo e vai filtrando conforme
-   * se digita.
-   *
-   * O campo aceita um valor que NÃO está na lista, de propósito: travar obrigaria a pessoa a sair
-   * do formulário para cadastrar o item e voltar, perdendo o que já tinha preenchido.
-   *
-   * Teclado: seta para baixo/cima percorre, Enter escolhe, Esc fecha. O estado de aberto e de
-   * opção ativa é puramente visual.
-   */
   export type AzuosSuggestionTextFieldProps = {
     data: {
       label: string;
@@ -161,9 +166,10 @@
       onkeydown={handleKeyDown}
       class={cn(
         FIELD_CONTROL_CLASS,
-        'pr-10',
+        /* Espaço à direita para a seta que abre a lista não cair sobre o texto. */
+        'pr-9',
         'placeholder:text-ink-500 disabled:cursor-not-allowed disabled:opacity-60',
-        error ? 'border-border bg-destructive-soft' : 'border-input',
+        error ? 'bg-destructive-soft border-transparent' : 'border-transparent',
       )}
     />
     <button
@@ -172,7 +178,7 @@
       aria-label={`Ver as opções de ${data.label}`}
       disabled={fieldState?.isDisabled}
       onmousedown={toggleFromButton}
-      class="text-ink-500 hover:text-ink-700 absolute inset-y-0 right-0 flex w-10 items-center justify-center"
+      class="text-ink-500 hover:text-ink-700 absolute inset-y-0 right-0 flex w-9 items-center justify-center"
     >
       <ChevronDown class="size-4" aria-hidden="true" />
     </button>
@@ -180,7 +186,7 @@
       <div
         id={listId}
         role="listbox"
-        class="border-border bg-card rounded-box absolute inset-x-0 top-full z-30 mt-1 max-h-56 overflow-y-auto border p-1 shadow-xl"
+        class="rounded-box bg-popover ring-foreground/8 absolute inset-x-0 top-full z-30 mt-1 max-h-56 overflow-y-auto p-1 shadow-xl ring-1"
       >
         {#if visible.length === 0}
           <p class="text-ink-500 px-2 py-2 text-sm">{emptyMessageOf(data, fieldState)}</p>
@@ -198,7 +204,7 @@
                 pick(option);
               }}
               class={cn(
-                'text-ink-900 rounded-chip flex min-h-10 cursor-pointer items-center px-2 text-sm break-words',
+                'rounded-chip text-ink-900 cursor-pointer px-2 py-1.5 text-sm break-words',
                 index === activeIndex && 'bg-accent',
                 comparable(option) === selectedKey && 'font-semibold',
               )}

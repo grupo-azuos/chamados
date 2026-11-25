@@ -1,0 +1,1 @@
+ALTER TABLE "chamados"."maintenances" DROP COLUMN "performed_by_id";

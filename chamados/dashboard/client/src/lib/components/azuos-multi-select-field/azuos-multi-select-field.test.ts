@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import MultiSelectField, {
+  filterOptions,
   summarizeSelection,
   targetIndex,
 } from './azuos-multi-select-field.svelte';
@@ -114,5 +115,35 @@ describe('AzuosMultiSelectField with people', () => {
     });
 
     expect(document.querySelector('[data-slot="avatar"]')).toBeNull();
+  });
+});
+
+describe('AzuosMultiSelectField — searching the list', () => {
+  // feliz
+  it('filters by name ignoring accents and case, and the arrow down goes to the list', async () => {
+    render(MultiSelectField, {
+      props: { data: { ...base, values: [] }, ui: { ariaLabel: 'Área' }, actions: { onChange: vi.fn() } },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Área: Todas as áreas' }));
+    const search = await screen.findByRole('searchbox', { name: 'Pesquisar em Área' });
+    await userEvent.type(search, 'MANUTENCAO');
+
+    expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+    await fireEvent.keyDown(search, { key: 'ArrowDown' });
+    expect(screen.getByRole('checkbox', { name: 'Manutenção' })).toHaveFocus();
+    expect(filterOptions(options, '')).toHaveLength(3);
+  });
+
+  // triste
+  it('says nothing was found when no option matches', async () => {
+    render(MultiSelectField, {
+      props: { data: { ...base, values: [] }, ui: { ariaLabel: 'Área' }, actions: { onChange: vi.fn() } },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Área: Todas as áreas' }));
+    await userEvent.type(await screen.findByRole('searchbox'), 'xyz');
+
+    expect(screen.getByText('Nada encontrado para «xyz».')).toBeInTheDocument();
   });
 });

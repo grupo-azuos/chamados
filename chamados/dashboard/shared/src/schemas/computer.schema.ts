@@ -5,8 +5,10 @@ import { COMPUTER_KINDS } from '../domain/computer-kind.util';
 import { DISPOSAL_TYPES } from '../domain/disposal.util';
 import { HEALTH_STATUSES } from '../domain/computer-health.util';
 import { RESOURCE_CONDITIONS } from '../domain/computer-resource.util';
+import { COMPUTER_UPGRADE_FILTERS } from '../domain/computer-upgrade.util';
 import { PREVENTIVE_STATUSES } from '../domain/maintenance.util';
-import { departmentNameSchema } from './department.schema';
+import { boardDrillParamSchema } from './board-drill.schema';
+import { departmentIdSchema, departmentNameSchema } from './department.schema';
 import { MAX_PAGE_SIZE, paginatedSchema, paginationQuerySchema } from './pagination.schema';
 import { reportFormatSchema } from './report.schema';
 
@@ -18,7 +20,8 @@ import { reportFormatSchema } from './report.schema';
  */
 export const COMPUTER_NAME_MAX_LENGTH = 120;
 export const DISPLAY_NAME_MAX_LENGTH = 120;
-export const RESPONSIBLE_NAME_MAX_LENGTH = 200;
+export const RESPONSIBLE_ID_MAX_LENGTH = 120;
+export const COMPUTER_NOTES_MAX_LENGTH = 2000;
 export const BLOCK_REASON_MAX_LENGTH = 300;
 export const DISPOSAL_REASON_MAX_LENGTH = 300;
 
@@ -52,7 +55,11 @@ export const COMPUTER_PREVENTIVE_FILTERS = ['needed', 'due', 'never', 'ok'] as c
 
 export type ComputerPreventiveFilter = (typeof COMPUTER_PREVENTIVE_FILTERS)[number];
 
-/** O NOME do departamento, como o RH o escreve — ver `department.schema.ts`. */
+/**
+ * O NOME do departamento, como a tela o mostra. No computador ele não é gravado: a máquina
+ * guarda o ID do RH (`departmentId`), e o servidor escreve o nome na resposta. Os contratos
+ * de leitura (manutenção, painel, orçamento) continuam recebendo o nome.
+ */
 export const departmentSchema = departmentNameSchema('Escolha um departamento da lista');
 
 const computerNameSchema = z
@@ -74,9 +81,20 @@ const displayNameSchema = optionalText(
   `O nome do dispositivo pode ter até ${DISPLAY_NAME_MAX_LENGTH} caracteres`,
 );
 
-const responsibleNameSchema = optionalText(
-  RESPONSIBLE_NAME_MAX_LENGTH,
-  `O nome do responsável pode ter até ${RESPONSIBLE_NAME_MAX_LENGTH} caracteres`,
+/**
+ * O RESPONSÁVEL é uma PESSOA do diretório do escritório (admin-console), pelo ID — nunca um nome
+ * digitado. O servidor confere que o id existe lá antes de gravar.
+ */
+const responsibleIdSchema = z
+  .string({ error: 'Escolha o responsável na lista de pessoas' })
+  .trim()
+  .min(1, 'Escolha o responsável na lista de pessoas')
+  .max(RESPONSIBLE_ID_MAX_LENGTH, 'Escolha o responsável na lista de pessoas');
+
+/** A observação livre do TI sobre a máquina — é também onde a migração guardou os nomes antigos. */
+const notesSchema = optionalText(
+  COMPUTER_NOTES_MAX_LENGTH,
+  `A observação pode ter até ${COMPUTER_NOTES_MAX_LENGTH} caracteres`,
 );
 
 const blockReasonSchema = optionalText(
@@ -122,8 +140,24 @@ export const computerSchema = z.object({
   name: z.string(),
   /** O apelido que o TI deu. Quando existe, é ele que aparece nas listas. */
   displayName: z.string().nullable(),
+  /** A pessoa do diretório responsável pela máquina — o que é GRAVADO. */
+  responsibleId: z.string().nullable(),
+  /**
+   * O nome e a foto dessa pessoa, lidos do diretório na hora da resposta. Nulos quando não há
+   * responsável, quando o id não existe mais lá ou quando o diretório não respondeu: a tela
+   * mostra "(Sem responsável)".
+   */
   responsibleName: z.string().nullable(),
-  department: departmentSchema.nullable(),
+  responsibleAvatarUrl: z.string().nullable(),
+  /** O departamento OFICIAL, pelo id do RH — o que é GRAVADO. */
+  departmentId: z.number().int().nullable(),
+  /** O nome atual desse departamento no RH. Nulo sem departamento ou com o RH sem resposta. */
+  departmentName: z.string().nullable(),
+  /**
+   * A observação do TI. É onde ficaram o responsável, o departamento e o local antigos, nas
+   * linhas "… anterior: <nome>" que as migrations escreveram.
+   */
+  notes: z.string().nullable(),
   kind: computerKindSchema,
 
   hardware: computerHardwareSchema,
@@ -196,8 +230,9 @@ export const createComputerSchema = z.object({
   name: computerNameSchema,
   kind: computerKindSchema,
   displayName: displayNameSchema.optional(),
-  responsibleName: responsibleNameSchema.optional(),
-  department: departmentSchema.nullable().optional(),
+  responsibleId: responsibleIdSchema.nullable().optional(),
+  departmentId: departmentIdSchema.nullable().optional(),
+  notes: notesSchema.optional(),
 });
 
 export type CreateComputerInput = z.input<typeof createComputerSchema>;
@@ -222,8 +257,9 @@ export type CreatedComputer = z.infer<typeof createdComputerSchema>;
 export const updateComputerSchema = z.object({
   kind: computerKindSchema.optional(),
   displayName: displayNameSchema.optional(),
-  responsibleName: responsibleNameSchema.optional(),
-  department: departmentSchema.nullable().optional(),
+  responsibleId: responsibleIdSchema.nullable().optional(),
+  departmentId: departmentIdSchema.nullable().optional(),
+  notes: notesSchema.optional(),
   isArchived: z.boolean().optional(),
   isBlocked: z.boolean().optional(),
   blockReason: blockReasonSchema.optional(),
@@ -234,10 +270,16 @@ export type UpdateComputerInput = z.input<typeof updateComputerSchema>;
 /** A forma do formulário de identificação, no painel. */
 export const computerFormSchema = z.object({
   displayName: z.string().max(DISPLAY_NAME_MAX_LENGTH, `Até ${DISPLAY_NAME_MAX_LENGTH} caracteres`),
-  responsibleName: z
+  /* O id da pessoa escolhida na lista; vazio é "sem responsável". Não há campo de digitar nome. */
+  responsibleId: z
     .string()
-    .max(RESPONSIBLE_NAME_MAX_LENGTH, `Até ${RESPONSIBLE_NAME_MAX_LENGTH} caracteres`),
-  department: z.union([departmentSchema, z.literal('')]),
+    .max(RESPONSIBLE_ID_MAX_LENGTH, 'Escolha o responsável na lista de pessoas'),
+  /* O id do departamento do RH, como texto do seletor (`'12'`); vazio é "sem departamento". */
+  departmentId: z.union([
+    z.string().regex(/^[1-9]\d*$/, 'Escolha um departamento da lista'),
+    z.literal(''),
+  ]),
+  notes: z.string().max(COMPUTER_NOTES_MAX_LENGTH, `Até ${COMPUTER_NOTES_MAX_LENGTH} caracteres`),
   /* Vazio é o cadastro recém-aberto: a pessoa ESCOLHE, o formulário não presume desktop. */
   kind: z
     .union([computerKindSchema, z.literal('')])
@@ -264,9 +306,21 @@ const queryBooleanSchema = z.union([
   z.enum(['true', 'false']).transform((value) => value === 'true'),
 ]);
 
+/**
+ * O valor do filtro "Responsável" que pede as máquinas SEM ninguém — e não uma pessoa. Não
+ * colide com id do diretório, que é UUID.
+ */
+export const COMPUTER_NO_RESPONSIBLE_FILTER = 'none';
+
 export const computerListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
-  department: departmentSchema.optional(),
+  /**
+   * A pessoa do diretório (o id, que é o que o cadastro guarda) ou
+   * `COMPUTER_NO_RESPONSIBLE_FILTER`.
+   */
+  responsibleId: z.string().trim().min(1).max(RESPONSIBLE_ID_MAX_LENGTH).optional(),
+  /** O departamento oficial pelo id do RH. */
+  departmentId: z.coerce.number<number>().int().positive().optional(),
   healthStatus: healthStatusSchema.optional(),
   kind: computerKindSchema.optional(),
   /** Query strings precisam distinguir "false" de true; Boolean("false") não serve. */
@@ -276,6 +330,8 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
   /** Qual recurso está pedindo atenção (disco, memória, tempo sem reiniciar) — `computer-resource.util`. */
   resourceCondition: z.enum(RESOURCE_CONDITIONS).optional(),
   preventive: z.enum(COMPUTER_PREVENTIVE_FILTERS).optional(),
+  /** Quem precisa de upgrade: qualquer motivo, ou um só (`computer-upgrade.util`). */
+  upgrade: z.enum(COMPUTER_UPGRADE_FILTERS).optional(),
   /** Por padrão as arquivadas NÃO vêm: elas saíram de uso e só atrapalhariam a lista. */
   includeArchived: z.coerce.boolean<boolean>().optional(),
   /**
@@ -284,6 +340,8 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
    */
   onlyDisposed: z.coerce.boolean<boolean>().optional(),
   disposalType: disposalTypeSchema.optional(),
+  /** O recorte de um clique no painel (`board-drill.schema`): estreita a lista ao item clicado. */
+  drill: boardDrillParamSchema.optional(),
 });
 
 /**
@@ -394,5 +452,7 @@ export type PaginatedComputerAlerts = z.infer<typeof paginatedComputerAlertSchem
 export const computerResponsibleSchema = z.object({
   id: z.string(),
   name: z.string(),
+  /** A foto no admin-console — o campo de pessoa mostra a foto ou as iniciais. */
+  avatarUrl: z.string().nullable(),
 });
 export type ComputerResponsible = z.infer<typeof computerResponsibleSchema>;

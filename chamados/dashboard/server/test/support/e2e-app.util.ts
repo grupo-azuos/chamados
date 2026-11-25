@@ -12,6 +12,7 @@ import { DB } from '../../src/lib/db/db.token';
 import { type Database } from '../../src/lib/db/db.type';
 import { type UserDirectoryProvider } from '../../src/lib/auth/user-directory.type';
 import { USER_DIRECTORY_PROVIDER } from '../../src/lib/auth/user-directory.token';
+import { HrDepartmentsRepository } from '../../src/modules/departments/repository/hr-departments.repository';
 import { MemoryStorage } from '../../src/lib/storage/memory-storage';
 import { STORAGE } from '../../src/lib/storage/storage.token';
 
@@ -153,13 +154,22 @@ class FakeUserDirectoryProvider implements UserDirectoryProvider {
 
 /** A ficha de uma pessoa do teste no diretório, como o admin-console a devolveria. */
 export function directoryEntry(person: SessionUser): DirectoryUser {
-  return { id: person.id, name: person.name, email: person.email, role: person.role, banned: false };
+  return {
+    id: person.id,
+    name: person.name,
+    email: person.email,
+    role: person.role,
+    banned: false,
+  };
 }
 
 export type E2eAppOptions = {
   /** As pessoas que o diretório do admin-console conhece. Sem isto, o diretório é o real (e
       sem endereço configurado, responde "serviço fora"). */
   people?: DirectoryUser[];
+  /** Os departamentos que o RH conhece, com o id. Sem isto, o RH é o real (e sem endereço
+      configurado, não responde: departamento oficial nenhum pode ser gravado). */
+  departments?: { id: number; name: string }[];
 };
 
 export type E2eApp = {
@@ -197,6 +207,12 @@ export async function createE2eApp(
     .useClass(FakeIdentityProvider)
     .overrideProvider(STORAGE)
     .useValue(storage);
+  if (options.departments) {
+    const departments = options.departments;
+    builder
+      .overrideProvider(HrDepartmentsRepository)
+      .useValue({ listOptions: () => Promise.resolve(departments) });
+  }
   if (options.people) {
     builder
       .overrideProvider(USER_DIRECTORY_PROVIDER)
@@ -204,7 +220,8 @@ export async function createE2eApp(
   }
   const moduleRef = await builder.compile();
 
-  const app = moduleRef.createNestApplication({ logger: ['error'] });
+  /* `rawBody` igual ao `main.ts`: sem ele o webhook do GitHub não tem o corpo para conferir. */
+  const app = moduleRef.createNestApplication({ logger: ['error'], rawBody: true });
   setupApp(app, parseEnv(process.env));
   /* Sem isto o Nest tenta carregar o Socket.IO para o gateway dos agentes, não acha, e mata o
      processo — a suíte morre antes do primeiro teste. */

@@ -1,3 +1,18 @@
+<!--
+  @component
+  A BARRA DE CIMA da Central de Chamados — marca, as duas telas (abrir e consultar), o tema, a
+  pessoa logada e a saída. Uma linha só, sem título nem descrição.
+
+  A Central fica fora da casca dos módulos (não tem menu lateral); com as telas na barra, quem está
+  em qualquer uma chega às outras com um clique. A tela atual ganha fundo (nunca traço embaixo), e
+  no celular os links usam o rótulo curto. A foto da pessoa leva a "Meu perfil".
+
+  A tela atual vem por `activeHref` (quem compõe lê o endereço): a barra não navega sozinha.
+
+  - `data`: `activeHref`, `person` (nome e foto, ou nulo) e `theme`.
+  - `state.isSigningOut`: o botão de sair em "Saindo…".
+  - `actions`: `onToggleTheme` e `onSignOut`.
+-->
 <script lang="ts" module>
   /**
    * A BARRA DE CIMA da Central de Chamados — marca, as duas telas (abrir e consultar), o tema,
@@ -12,6 +27,8 @@
   export const SUPPORT_LINKS = [
     { href: '/support', label: 'Abrir chamado', shortLabel: 'Abrir' },
     { href: '/support/tickets', label: 'Consultar chamado', shortLabel: 'Consultar' },
+    /* O andamento dos sistemas: quem pede vê o que já está em curso antes de abrir outro chamado. */
+    { href: '/support/systems', label: 'Sistemas', shortLabel: 'Sistemas' },
   ] as const;
 
   export const SUPPORT_PROFILE_HREF = '/support/profile';
@@ -29,6 +46,7 @@
 </script>
 
 <script lang="ts">
+  import Network from '@lucide/svelte/icons/network';
   import FilePlus2 from '@lucide/svelte/icons/file-plus-2';
   import LogOut from '@lucide/svelte/icons/log-out';
   import Moon from '@lucide/svelte/icons/moon';
@@ -42,7 +60,7 @@
 
   let { data, state, actions }: AzuosSupportNavbarProps = $props();
 
-  const ICONS = { '/support': FilePlus2, '/support/tickets': Search } as const;
+  const ICONS = { '/support': FilePlus2, '/support/tickets': Search, '/support/systems': Network } as const;
   const isOnProfile = $derived(data.activeHref === SUPPORT_PROFILE_HREF);
 </script>
 
@@ -57,7 +75,7 @@
     <nav class="flex min-w-0 flex-1 items-center gap-1" aria-label="Telas da Central">
       {#each SUPPORT_LINKS as link (link.href)}
         {@const Icon = ICONS[link.href]}
-        {@const isActive = data.activeHref === link.href}
+        {@const isActive = data.activeHref === link.href || (link.href === '/support/systems' && data.activeHref.startsWith('/support/systems/'))}
         <a
           href={link.href}
           aria-current={isActive ? 'page' : undefined}

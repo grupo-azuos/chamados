@@ -7,6 +7,14 @@ import {
   STALE_UPTIME_DAYS,
 } from '@template/shared/domain/computer-health.util';
 import { type ResourceCondition } from '@template/shared/domain/computer-resource.util';
+import {
+  type ComputerUpgradeFilter,
+  OLD_CPU_PATTERNS,
+  UPGRADE_DISK_FREE_PERCENT,
+  UPGRADE_MEMORY_BYTES,
+  UPGRADE_NEEDS,
+  type UpgradeNeed,
+} from '@template/shared/domain/computer-upgrade.util';
 import { Inject, Injectable } from '@nestjs/common';
 import { type AlertMetric } from '@template/shared/domain/computer-alert.util';
 import { compareMachines } from '@template/shared/domain/machine-number.util';
@@ -38,7 +46,6 @@ import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { REPORT_FETCH_LIMIT } from '../../../lib/report/report-limit.util';
 import { type Database } from '../../../lib/db/db.type';
-import { departmentMatches } from '../../../lib/db/department-match.util';
 import { qualified } from '../../../lib/db/sql-column.util';
 import { ticketInArea, ticketOnComputer } from '../../../lib/db/ticket-area.util';
 import { asDate, asTimestamp } from '../../../lib/db/sql-timestamp.util';
@@ -59,6 +66,7 @@ import {
   type ComputerInsert,
   type ComputerRow,
 } from '../../../lib/db/schema/computers.schema';
+import { type ResponsibleFilter } from '../service/computer-responsible.util';
 
 /** Agregados da lista, na mesma consulta: chamados do mês, última preventiva e alertas ativos. */
 export type ComputerWithTickets = ComputerRow & {
@@ -108,6 +116,7 @@ function computerColumns() {
       select max(${qualified(maintenances.performedAt)}) from ${maintenances}
       where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
         and ${qualified(maintenances.type)} in ('preventive', 'corrective')
+        and ${qualified(maintenances.archivedAt)} is null
     )`, maintenances.performedAt),
     activeAlerts: sql<number>`(
       select count(*)::int from ${computerAlerts}
@@ -137,8 +146,25 @@ function computerColumns() {
 export class ComputersRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(query: ComputerListQuery, presence?: PresenceFilter): Promise<ComputerPage> {
-    const where = buildWhere(query, presence);
+  /**
+   * `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro.
+   * `responsible`: o filtro "Responsável", pelo id da pessoa.
+   * `searchResponsibleIds`: as pessoas cujo nome casa com a busca livre — a busca acha a máquina
+   * pelo nome do responsável, e o banco só guarda o id.
+   */
+  async list(
+    query: ComputerListQuery,
+    presence?: PresenceFilter,
+    drill?: SQL,
+    responsible?: ResponsibleFilter,
+    searchResponsibleIds: readonly string[] = [],
+  ): Promise<ComputerPage> {
+    const where = and(
+      buildWhere(query, presence, searchResponsibleIds),
+      responsibleCondition(responsible),
+      upgradeCondition(query.upgrade),
+      drill,
+    );
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([
@@ -172,12 +198,25 @@ export class ComputersRepository {
    * não ordena "D2" antes de "D10" sem uma collation própria; com o limite do relatório, a
    * ordem em memória sai de graça.
    */
-  async listAll(query: ComputerReportQuery, presence?: PresenceFilter): Promise<ComputerRow[]> {
+  async listAll(
+    query: ComputerReportQuery,
+    presence?: PresenceFilter,
+    drill?: SQL,
+    responsible?: ResponsibleFilter,
+    searchResponsibleIds: readonly string[] = [],
+  ): Promise<ComputerRow[]> {
     const rows = await runQuery(
       this.db
         .select()
         .from(computers)
-        .where(buildWhere(query, presence))
+        .where(
+          and(
+            buildWhere(query, presence, searchResponsibleIds),
+            responsibleCondition(responsible),
+            upgradeCondition(query.upgrade),
+            drill,
+          ),
+        )
         .orderBy(computers.name)
         .limit(REPORT_FETCH_LIMIT),
       'listar computadores para o relatório',
@@ -210,6 +249,20 @@ export class ComputersRepository {
     return runMaybe(
       this.db.select().from(computers).where(eq(computers.tokenHash, tokenHash)).limit(1),
       'encontrar computador do agente',
+    );
+  }
+
+  /**
+   * As máquinas SEM departamento oficial que ainda têm a linha "Departamento anterior: …" da
+   * migration 0025 — as que o RH talvez saiba casar (`ComputerReferenceBackfillService`).
+   */
+  async listWithPreviousDepartment(marker: string): Promise<ComputerRow[]> {
+    return runQuery(
+      this.db
+        .select()
+        .from(computers)
+        .where(and(isNull(computers.departmentId), ilike(computers.notes, `%${marker}%`))),
+      'listar computadores com departamento anterior',
     );
   }
 
@@ -346,7 +399,7 @@ export class ComputersRepository {
 type ComputerFilter = Pick<
   ComputerListQuery,
   | 'search'
-  | 'department'
+  | 'departmentId'
   | 'healthStatus'
   | 'kind'
   | 'alert'
@@ -363,19 +416,27 @@ type ComputerFilter = Pick<
  * A máquina arquivada fica de FORA por padrão: ela saiu de uso, e quem abre o inventário está
  * trabalhando com o que está em uso hoje.
  */
-function buildWhere(query: ComputerFilter, presence?: PresenceFilter): SQL | undefined {
-  const filters: (SQL | undefined)[] = [...lifecycleFilters(query)];
+function buildWhere(
+  query: ComputerFilter,
+  presence?: PresenceFilter,
+  searchResponsibleIds: readonly string[] = [],
+): SQL | undefined {
+  const filters: (SQL | undefined)[] = [...lifecycleFilters(query), ...placeFilters(query)];
 
   if (presence) filters.push(presenceFilter(presence));
-  if (query.department) filters.push(departmentMatches(computers.department, query.department));
   if (query.healthStatus) filters.push(eq(computers.healthStatus, query.healthStatus));
   if (query.kind) filters.push(eq(computers.kind, query.kind));
   if (query.alert) filters.push(alertFilter(query.alert));
   if (query.resourceCondition) filters.push(resourceConditionFilter(query.resourceCondition));
   if (query.preventive) filters.push(preventiveFilter(query.preventive));
-  if (query.search) filters.push(searchFilter(query.search));
+  if (query.search) filters.push(searchFilter(query.search, searchResponsibleIds));
 
   return filters.length > 0 ? and(...filters) : undefined;
+}
+
+/** Onde a máquina está: o departamento oficial (id do RH). */
+function placeFilters(query: ComputerFilter): SQL[] {
+  return query.departmentId ? [eq(computers.departmentId, query.departmentId)] : [];
 }
 
 /** Arquivada e descartada: em que ponto da vida a máquina está. Separado para o `buildWhere` caber no limite de complexidade. */
@@ -390,6 +451,45 @@ function lifecycleFilters(query: ComputerFilter): SQL[] {
   if (query.disposalType) filters.push(eq(computers.disposalType, query.disposalType));
 
   return filters;
+}
+
+/**
+ * O filtro "Responsável" em SQL, pelo id da pessoa — o mesmo que o cadastro guarda.
+ *
+ * Exportado para ter teste próprio: errar aqui é a lista dizer "nenhuma máquina da Ana".
+ */
+export function responsibleCondition(filter?: ResponsibleFilter): SQL | undefined {
+  if (!filter) return undefined;
+  if (filter.kind === 'none') return isNull(computers.responsibleId);
+
+  return eq(computers.responsibleId, filter.id);
+}
+
+/**
+ * O filtro "Upgrade" em SQL, com as MESMAS réguas do aviso do cartão (`computer-upgrade.util`):
+ * os números de memória e disco e os nomes de processador antigo vêm de lá, e o Postgres só os
+ * aplica — a lista filtrada traz exatamente as máquinas que o cartão marca.
+ *
+ * Exportado para ter teste próprio.
+ */
+export function upgradeCondition(filter?: ComputerUpgradeFilter): SQL | undefined {
+  if (!filter) return undefined;
+  if (filter === 'any') return or(...UPGRADE_NEEDS.map(upgradeNeedCondition));
+
+  return upgradeNeedCondition(filter);
+}
+
+function upgradeNeedCondition(need: UpgradeNeed): SQL {
+  if (need === 'memory') {
+    return sql`(${computers.totalMemoryBytes} > 0 and ${computers.totalMemoryBytes} < ${UPGRADE_MEMORY_BYTES})`;
+  }
+  if (need === 'disk') {
+    return sql`(${computers.totalDiskBytes} > 0 and ${computers.freeDiskBytes} is not null
+      and ${computers.freeDiskBytes} * 100.0 < ${computers.totalDiskBytes} * ${UPGRADE_DISK_FREE_PERCENT})`;
+  }
+
+  /* `~*`: a expressão regular sem diferença de maiúscula, como o `RegExp(…, 'i')` do cartão. */
+  return sql`(${or(...OLD_CPU_PATTERNS.map((pattern) => sql`${computers.cpuModel} ~* ${pattern}`))})`;
 }
 
 /**
@@ -417,6 +517,7 @@ function preventiveFilter(preventive: NonNullable<ComputerFilter['preventive']>)
     select max(${qualified(maintenances.performedAt)}) from ${maintenances}
     where ${qualified(maintenances.computerId)} = ${qualified(computers.id)}
       and ${qualified(maintenances.type)} in ('preventive', 'corrective')
+      and ${qualified(maintenances.archivedAt)} is null
   )`;
   const cutoff = asTimestamp(preventiveDueBefore());
   const byStatus: Record<typeof preventive, SQL> = {
@@ -468,15 +569,18 @@ function resourceConditionFilter(condition: ResourceCondition): SQL {
   return sql`(${byCondition[condition]})`;
 }
 
-/** A busca livre olha nome, apelido, hostname, responsável e processador. */
-function searchFilter(search: string): SQL | undefined {
+/**
+ * A busca livre olha nome, apelido, hostname, processador e o RESPONSÁVEL — este pelos ids das
+ * pessoas cujo nome casa com o termo (o service os acha no diretório).
+ */
+function searchFilter(search: string, responsibleIds: readonly string[]): SQL | undefined {
   const term = `%${search}%`;
 
   return or(
     ilike(computers.name, term),
     ilike(computers.displayName, term),
     sql`(${computers.lastSnapshot}->'host'->>'hostname') ilike ${term}`,
-    ilike(computers.responsibleName, term),
+    responsibleIds.length > 0 ? inArray(computers.responsibleId, [...responsibleIds]) : undefined,
     ilike(computers.cpuModel, term),
   );
 }

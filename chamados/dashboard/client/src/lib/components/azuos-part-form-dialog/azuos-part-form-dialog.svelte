@@ -1,3 +1,18 @@
+<!--
+  @component
+  O formulário de cadastrar peça e o de corrigir o cadastro dela, num modal.
+
+  Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`). Por isso
+  o modal abre no Storybook preenchido, com erro ou enviando — sem servidor e sem biblioteca de
+  formulário no meio.
+
+  **A quantidade só aparece no cadastro.** Depois, o saldo só se move por entrada e saída: um campo
+  de quantidade na edição seria um jeito de reescrever o estoque sem deixar linha no extrato.
+
+  - `data`: o modo (`create` ou `edit`) e os campos (nome, categoria, condição, quantidade inicial).
+  - `state`: aberto, enviando e o erro do envio.
+  - `actions`: `onChange` e `onBlur` por campo, `onSubmit` e `onClose`.
+-->
 <script lang="ts" module>
   import {
     PART_CATEGORIES,
@@ -11,17 +26,6 @@
 
   export type PartFormField = 'name' | 'category' | 'condition' | 'initialQuantity';
 
-  /**
-   * O formulário de cadastrar peça e o de corrigir o cadastro dela, num modal.
-   *
-   * Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`).
-   * Por isso o modal abre no Storybook preenchido, com erro ou enviando — sem servidor e sem
-   * biblioteca de formulário no meio.
-   *
-   * **A quantidade só aparece no cadastro.** Depois, o saldo só se move por entrada e saída:
-   * um campo de quantidade na edição seria um jeito de reescrever o estoque sem deixar linha
-   * no extrato.
-   */
   export type AzuosPartFormDialogProps = {
     data: {
       mode: 'create' | 'edit';

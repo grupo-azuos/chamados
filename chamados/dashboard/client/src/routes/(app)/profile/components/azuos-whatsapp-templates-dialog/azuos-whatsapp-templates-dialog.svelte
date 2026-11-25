@@ -1,3 +1,20 @@
+<!--
+  @component
+  A EDIÇÃO DOS TEXTOS DO BOT DE WHATSAPP — só o super admin chega aqui.
+
+  Cada mensagem é um modelo com variáveis entre chaves duplas. A pessoa escolhe a mensagem, mexe no
+  texto e vê, embaixo, como ela fica com um chamado de exemplo. As variáveis que valem para aquela
+  mensagem ficam à vista: clicar numa a acrescenta ao fim do texto. Texto editado pode voltar ao
+  original ("Restaurar o original"); a edição fica guardada e volta pelo "Desfazer".
+
+  Função pura de props: a prévia, o erro do rascunho e o "pode salvar" chegam prontos.
+
+  - `data`: `templates`, `selected`, `draft` (ainda não salvo) e `preview`.
+  - `state`: `isOpen`, `isLoading`, `isSaving`, `isRestoring`, `isRestoringEdit`, `isSaved`,
+    `canSave`, `draftError` e `error`.
+  - `actions`: `onSelect`, `onDraftChange`, `onSave`, `onRestore`, `onRestoreEdit` (opcional) e
+    `onClose`.
+-->
 <script lang="ts" module>
   import type { WhatsappTemplate } from '@template/shared/schemas/whatsapp-template.schema';
 
@@ -24,6 +41,8 @@
       isLoading?: boolean;
       isSaving?: boolean;
       isRestoring?: boolean;
+      /** Desfazendo a volta ao original (trazendo a edição guardada). */
+      isRestoringEdit?: boolean;
       /** Acabou de salvar ou restaurar — some na próxima tecla. */
       isSaved?: boolean;
       canSave?: boolean;
@@ -36,12 +55,16 @@
       onDraftChange: (text: string) => void;
       onSave: () => void;
       onRestore: () => void;
+      /** O "Desfazer" do restaurar: só aparece quando há uma edição guardada. */
+      onRestoreEdit?: () => void;
       onClose: () => void;
     };
   };
 </script>
 
 <script lang="ts">
+  import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
+
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import {
@@ -54,13 +77,14 @@
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
+  import { formatDateTime } from '$lib/utils/format-date';
 
   let { data, state, actions }: AzuosWhatsappTemplatesDialogProps = $props();
 
   const options = $derived(
     data.templates.map((template) => ({ value: template.key, label: template.label })),
   );
-  const isBusy = $derived(Boolean(state.isSaving || state.isRestoring));
+  const isBusy = $derived(Boolean(state.isSaving || state.isRestoring || state.isRestoringEdit));
 
   function insertVariable(name: string): void {
     const separator = data.draft.length === 0 || data.draft.endsWith(' ') ? '' : ' ';
@@ -125,13 +149,28 @@
           <span class="text-ink-700 text-sm font-medium">Como fica</span>
           <!-- `whitespace-pre-wrap`: as quebras de linha do texto são parte da mensagem. -->
           <p
-            class="rounded-box border-border bg-muted text-foreground border p-3 text-sm whitespace-pre-wrap"
+            class="rounded-box bg-muted text-foreground p-3 text-sm whitespace-pre-wrap"
             data-testid="whatsapp-template-preview"
           >
             {data.preview}
           </p>
           <p class="text-muted-foreground text-xs">Prévia com um chamado de exemplo.</p>
         </div>
+
+        <!-- Restaurar o original não apaga a edição: ela fica guardada e volta daqui. -->
+        {#if !selected.isCustomized && selected.archivedEdit && actions.onRestoreEdit}
+          <div class="rounded-box bg-muted flex flex-wrap items-center justify-between gap-3 p-3">
+            <p class="text-ink-700 text-sm">
+              O texto editado foi guardado em {formatDateTime(selected.archivedEdit.archivedAt)}.
+            </p>
+            <ActionButton
+              data={{ label: 'Desfazer', loadingLabel: 'Desfazendo…' }}
+              ui={{ variant: 'secondary', size: 'sm', icon: ArchiveRestore }}
+              state={{ isLoading: state.isRestoringEdit, isDisabled: isBusy }}
+              actions={{ onClick: actions.onRestoreEdit }}
+            />
+          </div>
+        {/if}
 
         {#if state.error}
           <ErrorState data={{ message: state.error }} ui={{ variant: 'inline' }} />

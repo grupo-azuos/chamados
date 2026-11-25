@@ -1,3 +1,21 @@
+<!--
+  @component
+  A CONFERÊNCIA PÚBLICA de uma ordem de serviço emitida.
+
+  A tela separa DOIS níveis, e diz qual é qual: o registro (esta emissão existe, e foi isto que o
+  sistema emitiu — protocolo, versão, data, estágio, históricos, tempo, código e impressão digital)
+  e o arquivo (o PDF que você tem é exatamente o emitido). Sem a separação, quem abrisse o link de
+  um PDF adulterado leria "ordem de serviço válida" e pararia ali. Avisa quando existe uma versão
+  mais nova. O PDF é escolhido (ou colado com Ctrl+V) e o resultado — confere, não confere, ilegível
+  — é dito com palavras e ícone, não só cor.
+
+  Função pura de props: não busca nada nem calcula impressão digital — recebe o registro e o
+  resultado prontos, e por isso abre no Storybook em qualquer estado.
+
+  - `data`: `order` (ou nulo) e `checkedFileName`.
+  - `state`: `isLoading`, `isNotFound`, `error` e `fileCheck`.
+  - `actions`: `onRetry` e `onFileChosen(file)`.
+-->
 <script lang="ts" module>
   import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
   import { shortServiceOrderCode } from '@template/shared/domain/service-order.util';
@@ -52,7 +70,7 @@
   };
 
   const CHECK_CLASSES: Record<Exclude<ServiceOrderFileCheck, 'idle'>, string> = {
-    checking: 'border-border bg-muted text-foreground',
+    checking: 'bg-muted text-foreground',
     match: 'bg-success-soft text-foreground',
     mismatch: 'bg-destructive-soft text-foreground',
     unreadable: 'bg-warning-soft text-foreground',
@@ -67,6 +85,7 @@
   import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
   import Upload from '@lucide/svelte/icons/upload';
 
+  import Collapsible from '$lib/components/azuos-collapsible/azuos-collapsible.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import {
@@ -74,6 +93,7 @@
     formatMinutesSpent,
   } from '$lib/components/azuos-history-timeline/azuos-history-timeline.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, state: viewState, actions }: AzuosServiceOrderVerifyViewProps = $props();
@@ -122,7 +142,9 @@
   <p class="text-muted-foreground py-16 text-center text-sm">Procurando o registro…</p>
 {:else}
   <div class="flex flex-col gap-5">
-    <section class="rounded-surface border-border bg-card flex flex-col gap-4 border p-5">
+    <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-4 p-5">
       <header class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 class="text-foreground text-lg font-bold">Ordem de serviço {order.protocol}</h2>
@@ -170,9 +192,12 @@
         </div>
       </dl>
 
-      <details class="text-muted-foreground text-xs">
-        <summary class="cursor-pointer select-none">Ver o código e a impressão digital inteiros</summary>
-        <dl class="mt-2 flex flex-col gap-2">
+      <!-- Abre e fecha animado (padrão Apple); em cinza, porque já está dentro de um card. -->
+      <Collapsible
+        data={{ title: 'Ver o código e a impressão digital inteiros' }}
+        ui={{ className: 'bg-muted shadow-none' }}
+      >
+        <dl class="text-muted-foreground flex flex-col gap-2 text-xs">
           <div>
             <dt>Código</dt>
             <dd class="text-foreground font-mono break-all">{order.code}</dd>
@@ -182,10 +207,14 @@
             <dd class="text-foreground font-mono break-all">{order.fileHash}</dd>
           </div>
         </dl>
-      </details>
-    </section>
+      </Collapsible>
+    </div>
+{/snippet}
+</ContentCard>
 
-    <section class="rounded-surface border-border bg-card flex flex-col gap-4 border p-5">
+    <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-4 p-5">
       <header>
         <h2 class="text-foreground text-lg font-bold">Conferir o arquivo</h2>
         <p class="text-muted-foreground text-sm">
@@ -197,7 +226,7 @@
 
       <label onpaste={pasteFilesIntoInput}
         class={cn(
-          'control-lg rounded-control border-input bg-card text-foreground inline-flex w-full cursor-pointer items-center justify-center gap-2 border text-sm font-medium transition-colors sm:w-auto sm:self-start',
+          'control-lg rounded-control bg-muted text-foreground inline-flex w-full cursor-pointer items-center justify-center gap-2 border text-sm font-medium transition-colors sm:w-auto sm:self-start border-transparent',
           'hover:bg-muted has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
           'has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
         )}
@@ -218,7 +247,7 @@
       <div aria-live="polite">
         {#if fileCheck !== 'idle'}
           {@const CheckIcon = CHECK_ICONS[fileCheck]}
-          <div class={cn('rounded-box flex items-start gap-3 border px-4 py-3.5', CHECK_CLASSES[fileCheck])}>
+          <div class={cn('rounded-box flex items-start gap-3 px-4 py-3.5', CHECK_CLASSES[fileCheck])}>
             <CheckIcon
               class={cn('mt-0.5 size-5 shrink-0', fileCheck === 'checking' && 'animate-spin')}
               aria-hidden="true"
@@ -233,6 +262,8 @@
           </div>
         {/if}
       </div>
-    </section>
+    </div>
+{/snippet}
+</ContentCard>
   </div>
 {/if}

@@ -1,27 +1,33 @@
+<!--
+  @component
+  RADAR — o PERFIL de um conjunto de categorias, de uma vez só.
+
+  É o gráfico para "em que este parque dá problema", e não para "qual dá mais". A rosca responderia
+  a mesma pergunta em teoria, mas com nove ou dez categorias ela vira um anel de fatias finas que só
+  se lê pela legenda ao lado — e aí quem está lendo a legenda não está olhando o desenho. O radar
+  escreve o nome de cada categoria NO PRÓPRIO eixo: não há legenda para consultar, e a forma da teia
+  é reconhecível de longe.
+
+  Onde ele NÃO serve, e por isso não é o gráfico padrão de nada:
+
+  - **Poucas categorias.** Com três eixos o radar vira um triângulo que não diz nada; a barra diz.
+  - **Muitas categorias.** Passando de umas doze (`RADAR_MAX_SLICES`), os nomes em volta se
+    encavalam.
+  - **Ordenar.** "Quem é o maior" se lê em barra, na hora; num radar é preciso comparar distâncias
+    até o centro.
+
+  O valor de cada ponta continua no balão, ao passar o ponteiro, e na lista para leitor de tela: a
+  forma mostra o perfil, mas o número exato ninguém mede a olho num radar.
+
+  - `data`: as categorias (`slices`) e o nome da série no balão.
+  - `state`: `isLoading`.
+  - `ui`: o texto de vazio, a cor da teia, a altura e classes extras.
+  - `actions`: `onSelect`, com a categoria clicada.
+-->
 <script lang="ts" module>
   import type { ChartSlice } from '$lib/utils/chart-slice';
   import { formatCount, resolveColor, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * RADAR — o PERFIL de um conjunto de categorias, de uma vez só.
-   *
-   * É o gráfico para "em que este parque dá problema", e não para "qual dá mais". A rosca
-   * responderia a mesma pergunta em teoria, mas com nove ou dez categorias ela vira um anel
-   * de fatias finas que só se lê pela legenda ao lado — e aí quem está lendo a legenda não
-   * está olhando o desenho. O radar escreve o nome de cada categoria NO PRÓPRIO eixo: não há
-   * legenda para consultar, e a forma da teia é reconhecível de longe.
-   *
-   * Onde ele NÃO serve, e por isso não é o gráfico padrão de nada:
-   *
-   *  - **Poucas categorias.** Com três eixos o radar vira um triângulo que não diz nada; a
-   *    barra diz.
-   *  - **Muitas categorias.** Passando de umas doze, os nomes em volta se encavalam.
-   *  - **Ordenar.** "Quem é o maior" se lê em barra, na hora; num radar é preciso comparar
-   *    distâncias até o centro.
-   *
-   * O valor de cada ponta continua no balão, ao passar o ponteiro, e na lista para leitor de
-   * tela: a forma mostra o perfil, mas o número exato ninguém mede a olho num radar.
-   */
   export type AzuosRadarChartProps = {
     data: {
       slices: ChartSlice[];

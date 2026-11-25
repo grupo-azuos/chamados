@@ -25,11 +25,16 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
 
   const api = () => request(app.getHttpServer());
 
-  const registerComputer = async (name: string, department = 'RECEPÇÃO'): Promise<number> => {
+  /* Sem departamento, a máquina fica sem nenhum; com ele, no Fiscal do RH (id 31). */
+  const registerComputer = async (
+    name: string,
+    department: 'Fiscal' | null = null,
+  ): Promise<number> => {
+    const place = department === 'Fiscal' ? { departmentId: 31 } : {};
     const created = await api()
       .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name, kind: 'desktop', department })
+      .send({ name, kind: 'desktop', ...place })
       .expect(201);
 
     return created.body.computer.id;
@@ -42,7 +47,9 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
       .send({ computerId, type, performedAt: performedAt.toISOString(), description: 'Feito.' })
       .expect(201);
 
-  const ticket = (overrides: Partial<typeof tickets.$inferInsert> = {}): typeof tickets.$inferInsert => ({
+  const ticket = (
+    overrides: Partial<typeof tickets.$inferInsert> = {},
+  ): typeof tickets.$inferInsert => ({
     requesterName: 'Marta',
     area: 'infra',
     department: 'RECEPÇÃO',
@@ -53,7 +60,7 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
   });
 
   beforeAll(async () => {
-    started = await createE2eApp(testDatabaseUrl!);
+    started = await createE2eApp(testDatabaseUrl!, { departments: [{ id: 31, name: 'Fiscal' }] });
     app = started.app;
   });
 
@@ -108,7 +115,14 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
     ]);
 
     await started.db.insert(computerAlerts).values([
-      { computerId: recepcao, metric: 'cpu', peakValue: 97, threshold: 90, status: 'active', startedAt: NOW },
+      {
+        computerId: recepcao,
+        metric: 'cpu',
+        peakValue: 97,
+        threshold: 90,
+        status: 'active',
+        startedAt: NOW,
+      },
       {
         computerId: recepcao,
         metric: 'memory',
@@ -131,7 +145,12 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
     );
 
     await started.db.insert(maintenanceSchedules).values([
-      { computerId: fiscal, scheduledFor: TODAY, note: 'Trocar a pasta térmica.', createdBy: 'ana@empresa.com.br' },
+      {
+        computerId: fiscal,
+        scheduledFor: TODAY,
+        note: 'Trocar a pasta térmica.',
+        createdBy: 'ana@empresa.com.br',
+      },
     ]);
 
     await api()
@@ -161,7 +180,9 @@ describe.skipIf(!testDatabaseUrl)('Dashboard API (e2e)', () => {
     expect(summary.body.byProblemType).toEqual(
       expect.arrayContaining([{ key: 'email', count: 3 }]),
     );
-    expect(summary.body.byDepartment).toEqual(expect.arrayContaining([{ key: 'Fiscal', count: 3 }]));
+    expect(summary.body.byDepartment).toEqual(
+      expect.arrayContaining([{ key: 'Fiscal', count: 3 }]),
+    );
     expect(summary.body.daily.length).toBeGreaterThan(0);
 
     const machines = summary.body.worstMachines.map(

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -10,7 +10,13 @@ const fields = {
 };
 
 function renderDialog(overrides: Partial<AzuosRoleFormDialogProps> = {}) {
-  const actions = { onContextsChange: vi.fn(), onChange: vi.fn(), onBlur: vi.fn(), onSubmit: vi.fn(), onClose: vi.fn() };
+  const actions = {
+    onContextsChange: vi.fn(),
+    onChange: vi.fn(),
+    onBlur: vi.fn(),
+    onSubmit: vi.fn(),
+    onClose: vi.fn(),
+  };
 
   render(RoleFormDialog, {
     props: {
@@ -43,9 +49,14 @@ describe('AzuosRoleFormDialog', () => {
   });
 
   it('keeps the other selections when a module is removed', async () => {
-    const actions = renderDialog({ data: { mode: 'create', fields, contexts: ['infra', 'sistema'] } });
+    const actions = renderDialog({
+      data: { mode: 'create', fields, contexts: ['infra', 'sistema'] },
+    });
 
-    expect(screen.getByRole('button', { name: /Sistema/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /Sistema/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await userEvent.click(screen.getByRole('button', { name: /Infraestrutura/i }));
     expect(actions.onContextsChange).toHaveBeenCalledWith(['sistema']);
     expect(screen.getByRole('button', { name: 'Liberar 2 módulos' })).toBeInTheDocument();
@@ -75,7 +86,7 @@ describe('AzuosRoleFormDialog', () => {
     expect(screen.getByText('Falha de comunicação com o servidor')).toBeInTheDocument();
   });
 
-  it('lists directory users and allows picking a user via combobox', async () => {
+  it('lists directory users and allows picking a user via the person field', async () => {
     const mockUsers = [
       {
         id: 'usr_carlos',
@@ -89,61 +100,42 @@ describe('AzuosRoleFormDialog', () => {
       data: { mode: 'create', users: mockUsers, fields, contexts: [] },
     });
 
-    // Clica no combobox para abrir as opções
-    await userEvent.click(screen.getByRole('button', { name: /Selecionar pessoa da lista/i }));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Pessoa' }));
+    await userEvent.click(await screen.findByRole('option', { name: /Carlos Oliveira/ }));
 
-    expect(screen.getByText('Carlos Oliveira')).toBeInTheDocument();
-    expect(screen.getByText('carlos@empresa.com.br')).toBeInTheDocument();
-
-    await userEvent.click(screen.getByText('Carlos Oliveira'));
     expect(actions.onChange).toHaveBeenCalledWith('userId', 'usr_carlos');
     expect(actions.onChange).toHaveBeenCalledWith('userEmail', 'carlos@empresa.com.br');
   });
 
-  it('filters users by search query inside combobox', async () => {
+  it('filters users by name inside the person field', async () => {
     const mockUsers = [
       { id: 'usr_carlos', name: 'Carlos Oliveira', email: 'carlos@empresa.com.br' },
       { id: 'usr_mariana', name: 'Mariana Silva', email: 'mariana@empresa.com.br' },
     ];
 
-    renderDialog({
-      data: { mode: 'create', users: mockUsers, fields, contexts: [] },
-    });
+    renderDialog({ data: { mode: 'create', users: mockUsers, fields, contexts: [] } });
 
-    await userEvent.click(screen.getByRole('button', { name: /Selecionar pessoa da lista/i }));
-    expect(screen.getByText('Carlos Oliveira')).toBeInTheDocument();
-    expect(screen.getByText('Mariana Silva')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('combobox', { name: 'Pessoa' }));
+    await userEvent.type(await screen.findByPlaceholderText('Buscar pessoa...'), 'Mariana');
 
-    const searchInput = screen.getByPlaceholderText(/Buscar colaborador por nome/i);
-    await userEvent.type(searchInput, 'Mariana');
-
-    expect(screen.queryByText('Carlos Oliveira')).not.toBeInTheDocument();
-    expect(screen.getByText('Mariana Silva')).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /Carlos Oliveira/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Mariana Silva/ })).toBeInTheDocument();
   });
 
-  it('renders selected user card and allows changing person', async () => {
-    const selectedFields = {
-      ...fields,
-      userId: { value: 'usr_carlos', error: null },
-      userEmail: { value: 'carlos@empresa.com.br', error: null },
-    };
-
-    const actions = renderDialog({
+  it('shows the chosen person in the field', () => {
+    renderDialog({
       data: {
         mode: 'create',
-        fields: selectedFields,
+        fields: {
+          userId: { value: 'usr_carlos', error: null },
+          userEmail: { value: 'carlos@empresa.com.br', error: null },
+        },
         contexts: [],
         users: [{ id: 'usr_carlos', name: 'Carlos Oliveira', email: 'carlos@empresa.com.br' }],
       },
     });
 
-    expect(screen.getByText('Carlos Oliveira')).toBeInTheDocument();
-    expect(screen.getByText('Selecionada')).toBeInTheDocument();
-
-    const changeBtn = screen.getByRole('button', { name: 'Trocar pessoa' });
-    await userEvent.click(changeBtn);
-    expect(actions.onChange).toHaveBeenCalledWith('userId', '');
-    expect(actions.onChange).toHaveBeenCalledWith('userEmail', '');
+    expect(screen.getByRole('combobox', { name: 'Pessoa' })).toHaveTextContent('Carlos Oliveira');
   });
 });
 
@@ -158,71 +150,87 @@ describe('AzuosRoleFormDialog — picking people and the edit mode', () => {
   };
 
   // feliz
-  it('hands the picked and the cleared person to the dedicated callbacks', async () => {
+  it('hands the picked person to the dedicated callback', async () => {
     const onSelectUser = vi.fn();
-    const onClearUser = vi.fn();
-    const actions = { onContextsChange: vi.fn(), onChange: vi.fn(), onBlur: vi.fn(), onSubmit: vi.fn(), onClose: vi.fn(), onSelectUser, onClearUser };
+    const actions = {
+      onContextsChange: vi.fn(),
+      onChange: vi.fn(),
+      onBlur: vi.fn(),
+      onSubmit: vi.fn(),
+      onClose: vi.fn(),
+      onSelectUser,
+    };
     render(RoleFormDialog, {
-      props: { data: { mode: 'create', users, fields, contexts: [] }, state: { isOpen: true }, actions },
+      props: {
+        data: { mode: 'create', users, fields: chosen, contexts: [] },
+        state: { isOpen: true },
+        actions,
+      },
     });
 
-    await userEvent.click(screen.getByRole('button', { name: /Selecionar pessoa da lista/i }));
-    await userEvent.click(screen.getByText('Mariana Silva'));
+    /* Trocar de pessoa é escolher outra na lista: o campo mostra quem está escolhido. */
+    await userEvent.click(screen.getByRole('combobox', { name: 'Pessoa' }));
+    await userEvent.click(await screen.findByRole('option', { name: /Mariana Silva/ }));
+
     expect(onSelectUser).toHaveBeenCalledWith(expect.objectContaining({ id: 'usr_mariana' }));
     expect(actions.onChange).not.toHaveBeenCalled();
-
-    cleanup();
-    render(RoleFormDialog, {
-      props: { data: { mode: 'create', users, fields: chosen, contexts: [] }, state: { isOpen: true }, actions },
-    });
-    await userEvent.click(screen.getByRole('button', { name: 'Trocar pessoa' }));
-    expect(onClearUser).toHaveBeenCalledOnce();
-  });
-
-  // feliz
-  it('marks the already chosen person in the list and shows her role', async () => {
-    renderDialog({ data: { mode: 'create', users, fields: chosen, contexts: [] } });
-
-    expect(screen.getByText('Gestor')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Alterar pessoa selecionada/i }));
-    const list = screen.getByRole('listbox', { name: 'Lista de colaboradores' });
-    const options = within(list).getAllByRole('option');
-    expect(options[0]).toHaveAttribute('aria-selected', 'true');
-    expect(within(list).getAllByText('Gestor').length).toBeGreaterThan(0);
   });
 
   // triste
-  it('explains an empty list, a search without results and the loading of people', async () => {
-    renderDialog({ data: { mode: 'create', users: [], fields, contexts: [] } });
-    await userEvent.click(screen.getByRole('button', { name: /Selecionar pessoa da lista/i }));
-    expect(screen.getByText('Nenhuma pessoa disponível no diretório.')).toBeInTheDocument();
-    await userEvent.type(screen.getByPlaceholderText(/Buscar colaborador/i), 'zzz');
-    expect(screen.getByText('Nenhuma pessoa encontrada com esse termo.')).toBeInTheDocument();
+  it('explains a search without results and the loading of people', async () => {
+    renderDialog({ data: { mode: 'create', users, fields, contexts: [] } });
+    await userEvent.click(screen.getByRole('combobox', { name: 'Pessoa' }));
+    await userEvent.type(await screen.findByPlaceholderText('Buscar pessoa...'), 'zzz');
+    expect(await screen.findByText('Ninguém com esse nome')).toBeInTheDocument();
 
     cleanup();
-    renderDialog({ data: { mode: 'create', users, fields, contexts: [] }, state: { isOpen: true, isLoadingUsers: true } });
-    expect(screen.getByRole('button', { name: /Selecionar pessoa da lista/i })).toBeDisabled();
-    expect(screen.getByText('Carregando lista de pessoas…')).toBeInTheDocument();
+    renderDialog({
+      data: { mode: 'create', users, fields, contexts: [] },
+      state: { isOpen: true, isLoadingUsers: true },
+    });
+    const field = screen.getByRole('combobox', { name: 'Pessoa' });
+    expect(field).toBeDisabled();
+    expect(field).toHaveTextContent('Carregando lista de pessoas…');
   });
 
-  // feliz
-  it('finds a person by id and keeps the typed e-mail when the directory has no name', async () => {
+  // triste
+  it('keeps a chosen person that is not in the directory and shows the field error', () => {
     renderDialog({
       data: {
         mode: 'create',
         users,
-        fields: { userId: { value: 'usr_x', error: 'Escolha uma pessoa' }, userEmail: { value: 'x@empresa.com.br', error: null } },
+        fields: {
+          userId: { value: 'usr_x', error: 'Escolha uma pessoa' },
+          userEmail: { value: 'x@empresa.com.br', error: null },
+        },
         contexts: ['infra', 'sistema', 'manutencao'],
         contextsError: 'Escolha ao menos um módulo',
       },
     });
-    expect(screen.getAllByText('x@empresa.com.br').length).toBeGreaterThan(0);
+
+    const field = screen.getByRole('combobox', { name: 'Pessoa' });
+    expect(field).toHaveTextContent('x@empresa.com.br');
+    expect(field).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByText('Escolha uma pessoa')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Escolha ao menos um módulo');
     expect(screen.getByRole('button', { name: 'Liberar 3 módulos' })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Alterar pessoa selecionada/i }));
-    await userEvent.type(screen.getByPlaceholderText(/Buscar colaborador/i), 'usr_mar');
-    expect(screen.getByText('Mariana Silva')).toBeInTheDocument();
+  });
+
+  // triste
+  it('ignores a pick that is not a directory person', async () => {
+    const actions = renderDialog({
+      data: {
+        mode: 'create',
+        users,
+        fields: { userId: { value: 'usr_x', error: null }, userEmail: { value: '', error: null } },
+        contexts: [],
+      },
+    });
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Pessoa' }));
+    await userEvent.click(await screen.findByRole('option', { name: /usr_x/ }));
+
+    expect(actions.onChange).not.toHaveBeenCalled();
   });
 
   // feliz
@@ -237,6 +245,7 @@ describe('AzuosRoleFormDialog — picking people and the edit mode', () => {
     expect(screen.getByText('1 módulo selecionado.')).toBeInTheDocument();
     expect(screen.getByText('Sem permissão.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Infraestrutura/i })).toBeDisabled();
+    expect(screen.queryByRole('combobox', { name: 'Pessoa' })).not.toBeInTheDocument();
   });
 
   // feliz
@@ -264,23 +273,5 @@ describe('AzuosRoleFormDialog — closing and loading people', () => {
     renderDialog({ state: { isOpen: true, isLoadingUsers: true } });
 
     expect(document.body.textContent).toMatch(/Carregando/);
-  });
-});
-
-describe('AzuosRoleFormDialog — a person with an unknown role and no e-mail', () => {
-  // triste
-  it('shows the raw role and no e-mail line when the directory has neither', async () => {
-    renderDialog({
-      data: {
-        mode: 'create',
-        fields: { userId: { value: 'usr_carlos', error: null }, userEmail: { value: '', error: null } },
-        contexts: [],
-        users: [{ id: 'usr_carlos', name: 'Carlos Oliveira', email: 'carlos@empresa.com.br', role: 'guest' }] as never,
-      },
-    });
-
-    expect(screen.getAllByText('guest').length).toBeGreaterThan(0);
-    await userEvent.click(screen.getByRole('button', { name: /Alterar pessoa selecionada/i }));
-    expect(screen.getAllByText('guest').length).toBeGreaterThan(1);
   });
 });

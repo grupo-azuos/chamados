@@ -19,8 +19,11 @@
       id: 3,
       name: 'CONTABIL-03',
       displayName: 'Contábil — mesa do fechamento',
+      responsibleId: 'person-daniela-prado',
       responsibleName: 'Daniela Prado',
-      department: 'contabil',
+      responsibleAvatarUrl: null,
+      departmentId: 2, departmentName: 'Contábil',
+      notes: null,
       kind: 'desktop',
       hardware: {
         os: 'Microsoft Windows 11 Pro',
@@ -70,8 +73,11 @@
     id: 4,
     name: 'FISCAL-04',
     displayName: 'Fiscal — máquina nova, agente pendente',
+    responsibleId: 'person-eduardo-lima',
     responsibleName: 'Eduardo Lima',
-    department: 'fiscal',
+    responsibleAvatarUrl: null,
+    departmentId: 5, departmentName: 'Fiscal',
+    notes: 'Responsável anterior: Eduardo Lima\nDepartamento anterior: Fiscal',
     healthScore: 100,
     healthStatus: 'good',
     warnings: [],
@@ -154,6 +160,7 @@
       createdBy: 'suporte@azuos.local',
       updatedAt: null,
       updatedBy: null,
+      archive: null,
     },
   ];
 
@@ -226,10 +233,10 @@
 <!-- Com manutenção agendada: o cartão do alto troca o prazo automático pelo dia combinado. -->
 <Story name="WithSchedule" args={{ data: { computer: computer(), samples, live: null,
         tickets: [], alerts, alertPaging: paging, ticketPaging: noPaging, maintenances, partMovements: [], transfers,
-        schedule: { computerId: 3, computerName: 'CONTABIL-03', computerDisplayName: 'Contábil — mesa do fechamento',
+        schedule: { id: 1, computerId: 3, computerName: 'CONTABIL-03', computerDisplayName: 'Contábil — mesa do fechamento',
           computerDepartment: 'contabil', scheduledFor: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
           note: 'Trocar pasta térmica', createdAt: new Date().toISOString(), createdBy: 'suporte@azuos.local',
-          updatedAt: null, updatedBy: null } }, actions }} />
+          updatedAt: null, updatedBy: null, archive: null } }, actions }} />
 
 <!-- A MESMA tela em 400px: a tabela sai de cena e entra o cartão empilhado (skill `ui-standards`). -->
 <Story name="Celular" globals={{ viewport: { value: 'celular' } }} args={{ data: { computer: computer(), samples, live: null,
@@ -244,8 +251,11 @@
         id: 1,
         name: 'RECEPCAO-01',
         displayName: 'Recepção — balcão',
+        responsibleId: 'person-bia-costa',
         responsibleName: 'Bia Costa',
-        department: 'recepcao',
+        responsibleAvatarUrl: null,
+        departmentId: null, departmentName: null,
+        notes: 'Local anterior: RECEPÇÃO',
         healthScore: 100,
         healthStatus: 'good',
         warnings: [],

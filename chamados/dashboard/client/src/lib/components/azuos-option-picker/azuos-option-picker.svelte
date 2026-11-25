@@ -1,20 +1,28 @@
+<!--
+  @component
+  Seletor dinâmico — substitui o select nativo em filtro e formulário.
+
+  Com POUCAS opções vira uma fileira de pastilhas (pílula cinza com a escolhida em branco por
+  cima): a pessoa compara e troca com um clique, sem abrir nada. O limite é de 6 em filtro e de 3
+  em formulário, onde a pastilha só serve enquanto cabe numa linha. Com MUITAS (departamento, tipo
+  de problema...) vira um botão que abre um balão com busca. `ui.mode: 'combobox'` mantém a busca
+  mesmo com poucas opções.
+
+  O tom (verde, vermelho...) é decidido por QUEM CHAMA — o mesmo cuidado do `StatusBadge`, para a
+  cor de uma situação nunca variar de tela para tela. A opção pode levar ícone ou a foto da pessoa.
+
+  - `data`: o valor escolhido e as opções.
+  - `ui`: o "Todos os X" de filtro (`allLabel`), textos, largura cheia, modo, tooltip do escolhido
+    e o valor livre (`allowCustomValue`, com o verbo em `customValueAction`).
+  - `state`: desabilitado e erro.
+  - `actions`: `onChange` e, com valor livre, `onCustomValue`.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import { tv } from 'tailwind-variants';
 
   import type { StatusBadgeTone } from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
 
-  /**
-   * Seletor dinâmico — substitui o `<select>` nativo em filtro e formulário.
-   *
-   * Com POUCAS opções (até 6, contando "Todos"), vira uma fileira de pastilhas: a pessoa
-   * compara e troca com um clique, sem abrir nada. Com MUITAS (departamento, tipo de
-   * problema...), pastilha lado a lado viraria uma parede de botões — vira um botão que abre
-   * um balão com busca, como o filtro de processos do agente.
-   *
-   * O tom (verde, vermelho...) é decidido por QUEM CHAMA — o mesmo cuidado do `StatusBadge`,
-   * para a cor de uma situação nunca variar de tela pra tela.
-   */
   /** `icon` é opcional: um desenho na frente do texto, para a opção não ser só uma palavra. */
   export type OptionPickerOption = {
     value: string;
@@ -93,78 +101,44 @@
    * numa linha só.
    */
   const optionTrack = tv({
-    base: 'items-stretch gap-1 rounded-control border border-border bg-muted p-1 min-h-(--control-lg) max-w-full min-w-0',
+    base: 'bg-muted min-h-(--control-lg) max-w-full min-w-0 items-stretch gap-1 rounded-full p-1',
     variants: {
       layout: {
         filter: 'inline-flex flex-wrap',
-        form: 'grid w-full',
+        /* Deitadas lado a lado, cada pastilha cresce pelo tamanho do texto: a mais longa ganha
+           mais espaço, em vez de três colunas iguais que cortavam a maior. */
+        form: 'flex w-full',
       },
-      /* Só vale na grade do formulário: uma coluna por opção. */
-      columns: { 1: '', 2: '', 3: '' },
     },
-    compoundVariants: [
-      { layout: 'form', columns: 1, class: 'grid-cols-1' },
-      { layout: 'form', columns: 2, class: 'grid-cols-2' },
-      { layout: 'form', columns: 3, class: 'grid-cols-3' },
-    ],
-    defaultVariants: { layout: 'filter', columns: 3 },
+    defaultVariants: { layout: 'filter' },
   });
 
-  /**
-   * A PASTILHA. Preenche a altura do trilho (que é quem tem os 40px de campo), e o raio é
-   * `box`, um degrau abaixo do `control` do trilho: filho menor que o pai.
-   *
-   * A cor só entra quando a pastilha está escolhida, e aí é a do tom — o mesmo cuidado do
-   * `StatusBadge`, para a cor de uma situação nunca variar de tela para tela.
-   */
+  /* O padrão Apple: a pílula cinza com a opção escolhida em branco por cima. A cor do tom fica só
+     no ícone da escolhida — o texto segue na cor do texto. */
   const optionPill = tv({
-    base: 'rounded-box inline-flex cursor-pointer items-center gap-1.5 border px-3 py-1 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60',
+    base: 'inline-flex min-w-0 cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap transition-all disabled:cursor-not-allowed disabled:opacity-60',
     variants: {
       layout: {
         filter: '',
-        /* Na grade o texto fica centrado na coluna. Sem altura mínima própria: a pastilha
-           preenche o trilho, e é o trilho que tem os 40px — com um mínimo aqui ele passava a
-           42px e desalinhava do seletor ao lado. */
-        form: 'justify-center text-center',
+        /* Na grade a pastilha centra o texto e preenche o trilho, que tem os 40px. */
+        form: 'flex-auto justify-center px-2.5',
       },
       isSelected: {
-        true: 'shadow-xs font-semibold',
-        false: 'border-transparent text-muted-foreground hover:bg-card hover:text-foreground',
+        true: 'bg-segment-selected text-foreground font-semibold shadow-xs',
+        false: 'text-muted-foreground hover:bg-hover-veil hover:text-foreground',
       },
       tone: { neutral: '', info: '', success: '', warning: '', danger: '', brand: '' },
     },
     compoundVariants: [
-      {
-        isSelected: true,
-        tone: 'neutral',
-        class: 'border-foreground bg-foreground text-background',
-      },
-      { isSelected: true, tone: 'info', class: 'bg-info text-info-foreground' },
-      {
-        isSelected: true,
-        tone: 'success',
-        class: 'bg-success text-success-foreground',
-      },
-      {
-        isSelected: true,
-        tone: 'warning',
-        class: 'bg-warning text-warning-foreground',
-      },
-      {
-        isSelected: true,
-        tone: 'danger',
-        class: 'bg-destructive text-destructive-foreground',
-      },
-      {
-        isSelected: true,
-        tone: 'brand',
-        class: 'bg-primary text-primary-foreground',
-      },
+      { isSelected: true, tone: 'info', class: '[&_svg]:text-info' },
+      { isSelected: true, tone: 'success', class: '[&_svg]:text-success' },
+      { isSelected: true, tone: 'warning', class: '[&_svg]:text-warning-ink' },
+      { isSelected: true, tone: 'danger', class: '[&_svg]:text-destructive' },
+      { isSelected: true, tone: 'brand', class: '[&_svg]:text-primary' },
     ],
     defaultVariants: { layout: 'filter', isSelected: false, tone: 'neutral' },
   });
 
-  /** A bolinha do tom, ao lado do texto de uma opção que não está escolhida. */
   const optionDot = tv({
     base: 'size-1.5 shrink-0 rounded-full',
     variants: {
@@ -179,13 +153,6 @@
     },
     defaultVariants: { tone: 'neutral' },
   });
-
-  /* Uma coluna por opção. Em formulário nunca passam de três — acima disso não há pastilhas. */
-  function resolveGridColumns(count: number): 1 | 2 | 3 {
-    if (count <= 1) return 1;
-
-    return count === 2 ? 2 : 3;
-  }
 
   function resolveOptions(
     data: AzuosOptionPickerProps['data'],
@@ -220,7 +187,6 @@
   const isPillMode = $derived(
     !isMobile.current && !ui?.allowCustomValue && ui?.mode !== 'combobox' && options.length <= PILL_MAX_OPTIONS[layout],
   );
-  const gridColumns = $derived(resolveGridColumns(options.length));
   const selectedOption = $derived(options.find((option) => option.value === data.value) ?? null);
 
   const selectedLabel = $derived(ui?.selectedLabel ?? selectedOption?.label ??
@@ -250,7 +216,7 @@
     aria-describedby={fieldState?.error ? errorId : undefined}
     class={cn(
       'control-lg',
-      'rounded-control inline-flex min-w-40 max-w-full w-full cursor-pointer items-center justify-between gap-2 border border-border bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60',
+      'rounded-control bg-muted text-foreground hover:bg-muted/40 inline-flex w-full max-w-full min-w-40 cursor-pointer items-center justify-between gap-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60',
       ui?.fullWidth ? 'sm:w-full' : 'sm:w-auto sm:min-w-[180px]',
       ui?.className,
     )}
@@ -278,7 +244,7 @@
      fundo próprio, em vez de cada opção ser um botão bordado e solto. É o que faz ler como
      UM controle com vários estados, não uma fileira de botões separados. -->
   <div
-    class={cn(optionTrack({ layout, columns: gridColumns }), ui?.className)}
+    class={cn(optionTrack({ layout }), ui?.className)}
     role="group"
     aria-label={ui?.ariaLabel}
   >
@@ -297,10 +263,10 @@
           </span>
         {:else if option.icon}
           <option.icon class="size-3.5 shrink-0" aria-hidden="true" />
-        {:else if option.tone && !isSelected}
+        {:else if option.tone}
           <span class={optionDot({ tone: option.tone })} aria-hidden="true"></span>
         {/if}
-        {option.label}
+        <span class="min-w-0 truncate">{option.label}</span>
       </button>
     {/each}
   </div>
@@ -334,10 +300,10 @@
          daí para baixo ele nunca fica menor que o botão, e o teto impede que uma opção de
          nome comprido estique o balão pela tela — a opção é cortada, não a tela. -->
     <PopoverContent
-      class="min-w-[max(16rem,var(--bits-popover-anchor-width))] w-auto max-w-[min(26rem,calc(100vw-2rem))] p-0"
-      align="start"
+      class="rounded-surface bg-popover ring-foreground/8 w-max max-w-[min(26rem,calc(100vw-2rem))] min-w-(--bits-popover-anchor-width) overflow-hidden border-transparent p-0 shadow-xl ring-1"
+      align="center"
     >
-      <div class="relative shrink-0 border-b border-border p-2">
+      <div class="border-border/70 relative shrink-0 border-b p-2">
         <SearchIcon
           class="pointer-events-none absolute top-1/2 left-4 size-3.5 -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
@@ -350,14 +316,14 @@
           class={cn(
             /* A busca do balão é um controle como os outros: degrau `sm` da régua. */
             ui?.allowCustomValue ? 'control-lg rounded-control' : 'control-sm rounded-control',
-            'w-full border border-border bg-muted pr-2 pl-7 text-xs text-foreground outline-none',
+            'bg-muted text-foreground w-full pr-2 pl-7 text-xs outline-none',
           )}
         />
       </div>
       <!-- `overflow-x-hidden` ao lado do vertical: pelo CSS, pedir rolagem num eixo
            transforma o outro em `auto` sozinho, e uma opção de nome comprido daria barra de
            rolagem horizontal dentro do balão. -->
-      <div class="min-h-0 max-h-96 overflow-x-hidden overscroll-contain overflow-y-auto p-1">
+      <div class="max-h-64 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain p-1">
         {#each filteredOptions as option, index (option.value || '__all__')}
           {@const isSelected = option.value === data.value}
           {#if option.separatorBefore && index > 0}
@@ -368,10 +334,10 @@
             onclick={() => select(option.value)}
             class={cn(
               /* Item de lista dentro de um balão é MIUDEZA, não controle: raio `chip`. */
-              'flex w-full cursor-pointer items-center gap-2 rounded-chip min-h-11 px-3 py-2.5 text-left text-sm transition-colors',
+              'rounded-chip flex w-full cursor-pointer items-center gap-2 px-2.5 py-1.5 text-left text-xs transition-colors',
               isSelected
-                ? 'bg-muted font-semibold text-primary'
-                : 'text-foreground hover:bg-muted',
+                ? 'bg-primary/10 text-primary font-semibold'
+                : 'text-foreground hover:bg-muted/60',
             )}
           >
             {#if option.avatar}
@@ -385,7 +351,7 @@
             {:else if option.tone}
               <span class={optionDot({ tone: option.tone })} aria-hidden="true"></span>
             {/if}
-            <span class="min-w-0 flex-1 break-words">{option.label}</span>
+            <span class="flex-1 truncate">{option.label}</span>
             {#if isSelected}
               <CheckIcon class="size-3.5 shrink-0" aria-hidden="true" />
             {/if}
@@ -397,7 +363,7 @@
           <button
             type="button"
             onclick={() => select(customValue, true)}
-            class="text-primary hover:bg-muted flex min-h-11 w-full cursor-pointer items-center rounded-chip px-3 py-2.5 text-left text-sm font-medium break-words"
+            class="text-primary hover:bg-muted/60 rounded-chip flex w-full cursor-pointer items-center px-2.5 py-1.5 text-left text-xs font-medium break-words"
           >{ui?.customValueAction ?? 'Usar'} “{customValue}”</button>
         {:else if ui?.allowCustomValue && filteredOptions.length === 0}
           <p class="px-3 pb-3 text-xs text-muted-foreground">Digite um nome na busca para usá-lo.</p>

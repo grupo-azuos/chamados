@@ -1,18 +1,23 @@
+<!--
+  @component
+  O CÓDIGO DE SEIS NÚMEROS, uma caixa por dígito.
+
+  Seis caixas em vez de um campo só porque o código chega para ser COPIADO de um e-mail e
+  conferido dígito a dígito: a caixa vazia é visível de longe.
+
+  Controlado por um valor só — a string inteira —, e não por seis estados: costurar seis estados a
+  cada tecla é onde nascem os códigos com um dígito fora de ordem.
+
+  - **Colar funciona**: o código colado inteiro preenche todas as caixas.
+  - **Apagar volta**: `Backspace` numa caixa vazia vai para a anterior e apaga lá.
+  - **`autocomplete="one-time-code"`** só na PRIMEIRA caixa, onde o celular procura.
+  - **`inputmode="numeric"`** abre o teclado numérico no celular.
+
+  Props: `data` (rótulo, valor e quantidade de caixas), `ui` (classes extras), `state` (erro,
+  desabilitado, foco inicial) e `actions` (`onChange` e `onComplete`, chamado quando a última caixa
+  é preenchida — é o que permite conferir sem clicar).
+-->
 <script lang="ts" module>
-  /**
-   * O CÓDIGO DE SEIS NÚMEROS, uma caixa por dígito.
-   *
-   * Seis caixas em vez de um campo só porque o código chega para ser COPIADO de um e-mail e
-   * conferido dígito a dígito: a caixa vazia é visível de longe.
-   *
-   * Controlado por um valor só — a string inteira —, e não por seis estados: costurar seis
-   * estados a cada tecla é onde nascem os códigos com um dígito fora de ordem.
-   *
-   * - **Colar funciona**: o código colado inteiro preenche todas as caixas.
-   * - **Apagar volta**: `Backspace` numa caixa vazia vai para a anterior e apaga lá.
-   * - **`autocomplete="one-time-code"`** só na PRIMEIRA caixa, onde o celular procura.
-   * - **`inputmode="numeric"`** abre o teclado numérico no celular.
-   */
   export type AzuosOtpFieldProps = {
     data: {
       label: string;
@@ -140,9 +145,11 @@
         onfocus={(event) => event.currentTarget.select()}
         class={cn(
           'rounded-control aspect-square w-full max-w-12 min-w-0 flex-1 border text-center text-lg font-semibold transition-colors',
-          'focus-visible:ring-ring/50 focus:ring-[3px] focus:outline-none',
+          'focus:ring-brand-blue-800/20 focus:ring-2 focus:outline-none',
           'disabled:cursor-not-allowed disabled:opacity-60',
-          hasError ? 'border-border bg-destructive-soft text-destructive' : 'border-input bg-muted text-foreground',
+          hasError
+            ? 'bg-destructive-soft text-destructive border-transparent'
+            : 'bg-muted text-foreground border-transparent',
         )}
       />
     {/each}

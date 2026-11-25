@@ -17,6 +17,7 @@ import {
 } from '@template/shared/schemas/computer.schema';
 
 import { mapDefined, setIfDefined } from '../../../lib/db/partial-update.util';
+import { departmentNameOf, personOf } from '../../../lib/db/reference-names.util';
 import { type ComputerAlertRow } from '../../../lib/db/schema/computer-alerts.schema';
 import { type ComputerSampleInsert } from '../../../lib/db/schema/computer-samples.schema';
 import { type ComputerInsert, type ComputerRow } from '../../../lib/db/schema/computers.schema';
@@ -45,13 +46,17 @@ function hostnameFromSnapshot(value: unknown): string | null {
   return parsed.success ? parsed.data.host.hostname : null;
 }
 
+/**
+ * O nome e a foto do responsável e o nome do departamento NÃO estão na linha: a linha guarda os
+ * ids, e os nomes vêm das últimas listas lidas do diretório e do RH (`reference-names.util`) —
+ * o service as lê antes de responder. Id sem par vira nulo, e a tela mostra "(Sem responsável)".
+ */
 export function toComputer(row: ComputerRow, isOnline: boolean): Computer {
   return {
     id: row.id,
     name: row.name,
     displayName: row.displayName,
-    responsibleName: row.responsibleName,
-    department: row.department,
+    ...referencesOf(row),
     kind: row.kind,
 
     hardware: {
@@ -96,6 +101,25 @@ export function toComputer(row: ComputerRow, isOnline: boolean): Computer {
   };
 }
 
+/** O responsável e o lugar da máquina: os ids guardados e os nomes lidos das listas de fora. */
+function referencesOf(
+  row: ComputerRow,
+): Pick<
+  Computer,
+  'responsibleId' | 'responsibleName' | 'responsibleAvatarUrl' | 'departmentId' | 'departmentName' | 'notes'
+> {
+  const person = personOf(row.responsibleId);
+
+  return {
+    responsibleId: row.responsibleId,
+    responsibleName: person?.name ?? null,
+    responsibleAvatarUrl: person?.avatarUrl ?? null,
+    departmentId: row.departmentId,
+    departmentName: departmentNameOf(row.departmentId),
+    notes: row.notes,
+  };
+}
+
 /**
  * O cadastro inicial. Nada de hardware: ele chega medido, na primeira conexão do agente.
  *
@@ -110,8 +134,9 @@ export function toComputerInsert(
   return {
     name: input.name.trim(),
     displayName: normalizeOptional(input.displayName) ?? null,
-    responsibleName: normalizeOptional(input.responsibleName) ?? null,
-    department: input.department ?? null,
+    responsibleId: normalizeOptional(input.responsibleId) ?? null,
+    departmentId: input.departmentId ?? null,
+    notes: normalizeOptional(input.notes) ?? null,
     kind: input.kind,
     tokenHash,
     createdBy: actorEmail,
@@ -127,8 +152,9 @@ export function toComputerUpdate(
   const update: Partial<ComputerInsert> = { updatedAt: now, updatedBy: actorEmail };
 
   setIfDefined(update, 'displayName', normalizeOptional(input.displayName));
-  setIfDefined(update, 'responsibleName', normalizeOptional(input.responsibleName));
-  setIfDefined(update, 'department', input.department);
+  setIfDefined(update, 'responsibleId', normalizeOptional(input.responsibleId));
+  setIfDefined(update, 'departmentId', input.departmentId);
+  setIfDefined(update, 'notes', normalizeOptional(input.notes));
   setIfDefined(update, 'kind', input.kind);
   setIfDefined(update, 'isArchived', input.isArchived);
   setIfDefined(update, 'isBlocked', input.isBlocked);

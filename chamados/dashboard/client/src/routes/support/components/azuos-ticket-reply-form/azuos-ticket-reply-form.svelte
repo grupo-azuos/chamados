@@ -1,3 +1,24 @@
+<!--
+  @component
+  O LADO DE QUEM PEDIU da ordem de serviço, dentro da consulta da Central: escrever no chamado
+  (texto e arquivos), escolher quem avisar e cuidar das pessoas vinculadas.
+
+  Responder e reabrir são o MESMO formulário — o estágio do chamado decide qual dos dois ele é
+  (`type`): andando, a pessoa dá retorno; encerrado, ela reabre dizendo por quê. Assim não existe
+  "reabrir sem explicar". Os textos de cada caso saem de `copyOf`. O campo "Avisar por WhatsApp"
+  só aparece quando há alguém para avisar; embaixo, as pessoas vinculadas (que veem e escrevem no
+  chamado).
+
+  Função pura de props: o envio, a lista de pessoas e a troca de vinculados são do hook
+  `use-ticket-reply`.
+
+  - `data`: `type`, `description`, `chosenFiles`, `notifyIds`/`notifiable` e
+    `watcherIds`/`peopleOptions`.
+  - `state`: envio (`isSubmitting`, `error`, `descriptionError`, `attachmentError`, `sentMessage`)
+    e vinculados (`isLoadingPeople`, `isSavingWatchers`, `watchersError`).
+  - `actions`: `onDescriptionChange`, `onChosenFilesChange`, `onAttachmentError`, `onNotifyChange`,
+    `onWatchersChange` e `onSubmit`.
+-->
 <script lang="ts" module>
   import { type RequesterTicketHistoryType } from '@template/shared/domain/ticket-history.util';
   import { type TicketPerson } from '@template/shared/schemas/ticket-person.schema';
@@ -83,7 +104,7 @@
 <div class="border-border flex flex-col gap-5 border-t pt-4">
   <form novalidate class="flex flex-col gap-3" onsubmit={handleSubmit} aria-label={copy.title}>
     <div class="flex flex-col gap-0.5">
-      <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">{copy.title}</p>
+      <p class="text-muted-foreground text-sm font-medium">{copy.title}</p>
       <p class="text-ink-500 text-xs">{copy.hint}</p>
     </div>
 
@@ -133,7 +154,7 @@
   </form>
 
   <section class="flex flex-col gap-1.5" aria-label="Pessoas vinculadas">
-    <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+    <p class="text-muted-foreground text-sm font-medium">
       Pessoas vinculadas
     </p>
     <p class="text-ink-500 text-xs">

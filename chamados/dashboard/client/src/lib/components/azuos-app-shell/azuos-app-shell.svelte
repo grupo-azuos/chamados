@@ -1,3 +1,27 @@
+<!--
+  @component
+  A CASCA PADRÃO DO GRUPO AZUOS — a mesma dos outros 12 sistemas, em Svelte.
+
+  Skill `app-shell-standard`. Este arquivo é TRAVADO pelo hook `protect-app-shell.mjs`: só
+  quem administra (`git config azuos.admin true`) muda. Ele é o par, tela por tela, do
+  `azuos-app-shell.component.tsx` dos sistemas em React:
+
+  COMPUTADOR — barra azul à esquerda (`variant="inset"`, `collapsible="icon"`):
+   - menos de dois módulos → UMA coluna: logo, itens com ícone + rótulo, e no rodapé os
+     atalhos, o Zuzu debruçado, o perfil e o Sair. Recolhida, tudo vira ícone com dica.
+   - dois módulos ou mais → DUAS colunas: o trilho de ícones (logo, módulos, e no rodapé
+     atalhos, foto e Sair) e o painel com os itens do módulo, rotulados, com o Zuzu no pé.
+     Recolhida, sobra só o trilho — com os itens do módulo em ícone.
+
+  CELULAR — sem barra lateral: uma barra fixa embaixo com 3 itens + ☰, e o ☰ abre o menu
+  inteiro numa gaveta de baixo.
+
+  Os itens vêm da lista do módulo dono, em `lib/navigation/navigation.ts`, e entram por
+  `ui.items`. Tela nova no menu é uma linha lá, não aqui.
+
+  A tela vem em `children`. `data` traz os contadores do menu, quem está usando e os módulos
+  que a pessoa atende; `ui.items` traz o menu.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
@@ -8,26 +32,6 @@
   import type { NavItem } from '$lib/navigation/navigation';
   import type { ContextRoles } from '@template/shared/schemas/user.schema';
 
-  /**
-   * A CASCA PADRÃO DO GRUPO AZUOS — a mesma dos outros 12 sistemas, em Svelte.
-   *
-   * Skill `app-shell-standard`. Este arquivo é TRAVADO pelo hook `protect-app-shell.mjs`: só
-   * quem administra (`git config azuos.admin true`) muda. Ele é o par, tela por tela, do
-   * `azuos-app-shell.component.tsx` dos sistemas em React:
-   *
-   * COMPUTADOR — barra azul à esquerda (`variant="inset"`, `collapsible="icon"`):
-   *  - menos de dois módulos → UMA coluna: logo, itens com ícone + rótulo, e no rodapé os
-   *    atalhos, o Zuzu debruçado, o perfil e o Sair. Recolhida, tudo vira ícone com dica.
-   *  - dois módulos ou mais → DUAS colunas: o trilho de ícones (logo, módulos, e no rodapé
-   *    atalhos, foto e Sair) e o painel com os itens do módulo, rotulados, com o Zuzu no pé.
-   *    Recolhida, sobra só o trilho — com os itens do módulo em ícone.
-   *
-   * CELULAR — sem barra lateral: uma barra fixa embaixo com 3 itens + ☰, e o ☰ abre o menu
-   * inteiro numa gaveta de baixo.
-   *
-   * Os itens vêm da lista do módulo dono, em `lib/navigation/navigation.ts`, e entram por
-   * `ui.items`. Tela nova no menu é uma linha lá, não aqui.
-   */
   export type AzuosAppShellProps = {
     children: Snippet;
     data?: {
@@ -50,6 +54,8 @@
       activeKey?: string;
       /** O caminho da rota atual — trocar de valor é o gatilho da animação entre telas. */
       routeKey?: string;
+      /** A troca veio do voltar/avançar: a rolagem de antes volta, em vez de ir ao topo. */
+      isHistoryNavigation?: boolean;
       isProfileOpen?: boolean;
       areaContext?: AreaContext;
       isSigningOut?: boolean;
@@ -80,6 +86,20 @@
   /* Duas colunas: o trilho tem a largura da barra recolhida, e o painel, a de sempre. */
   /* Trilho (ícone + a folga do `inset`, que ele ocupa por inteiro) + painel de 16rem. */
   const TWO_COLUMN_WIDTH = '--sidebar-width: calc(var(--sidebar-width-icon) + 1rem + 2px + 16rem);';
+
+  /**
+   * A rolagem da lista de itens: só na vertical (a de lado aparecia por um selo que passava da
+   * borda), fina, e contida — chegar ao fim não rola a página por trás.
+   */
+  const NAV_SCROLL =
+    'overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:var(--sidebar-border)_transparent]';
+
+  /**
+   * A rolagem do trilho recolhido: rola, mas sem a barra. O trilho tem a largura de um ícone, e a
+   * barra comia o lado direito — os ícones saíam do centro e ficavam tortos.
+   */
+  const RAIL_SCROLL =
+    'overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
   const RAIL_BUTTON =
     'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground rounded-box flex size-9 shrink-0 items-center justify-center outline-hidden transition-colors focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-5';
@@ -118,7 +138,6 @@
   import { cn } from '$lib/utils/cn';
   import SidebarControls from '$lib/components/azuos-sidebar-controls/azuos-sidebar-controls.svelte';
   import { BrandMark } from '$lib/components/azuos-brand-mark/azuos-brand-mark';
-  import { fadeInUp } from '$lib/motion/motion';
   import {
     Sidebar,
     SidebarContent,
@@ -203,11 +222,33 @@
   }
   const canShowTooltip = $derived(!sidebarOpen && !isMobile.current);
 
-  /* A troca de tela nasce com um fade sutil. `routeKey` é o caminho da rota: só ele muda a cada
-     navegação, então é nele que o efeito escuta. */
+  /* A troca de tela é DIRETA: a casca fica e só o conteúdo muda, sem esmaecer. Um esmaecer saindo
+     do zero escurecia a área inteira a cada clique, e a pessoa lia isso como a tela piscando.
+     O `$derived` faz a casca reagir só quando o CAMINHO muda: `state` chega como objeto novo a
+     cada mudança de `page.url` (um filtro na busca, um `replaceState`), do cargo ou da saída. */
+  const routeKey = $derived(shellState?.routeKey);
+
+  /* A ROLAGEM É DA CAIXA DE CONTEÚDO, não da janela — e o SvelteKit só cuida da janela. Sem
+     isto, abrir outra tela do fim de uma lista caía no meio da tela nova. Igual ao navegador:
+     caminho novo abre no topo, voltar/avançar devolve onde a pessoa estava. Só o CAMINHO conta:
+     um filtro na busca (`?status=`) não tira a pessoa do lugar. */
+  /* Objeto simples, e não `$state`/`SvelteMap`: é memória da casca, nada na tela depende dele. */
+  const scrollByRoute: Record<string, number> = {};
+  let shownRouteKey: string | undefined;
+
+  function rememberScroll() {
+    if (shownRouteKey !== undefined && contentEl) scrollByRoute[shownRouteKey] = contentEl.scrollTop;
+  }
+
   $effect(() => {
-    void shellState?.routeKey;
-    fadeInUp(contentEl ?? null);
+    const key = routeKey;
+    const el = contentEl;
+    untrack(() => {
+      if (el && shownRouteKey !== undefined && key !== shownRouteKey) {
+        el.scrollTop = shellState?.isHistoryNavigation ? (scrollByRoute[key ?? ''] ?? 0) : 0;
+      }
+      shownRouteKey = key;
+    });
   });
 </script>
 
@@ -280,7 +321,7 @@
          lado) deixava os ícones fora do centro. O trilho é mais escuro que o painel: primeiro
          nível (o módulo) e segundo (a tela), separados pela cor, sem linha divisória. -->
     <Sidebar collapsible="icon" variant="inset" class="overflow-hidden p-0! *:data-[sidebar=sidebar]:flex-row">
-      <Sidebar collapsible="none" class="w-[calc(var(--sidebar-width-icon)+1rem+2px)]! bg-brand-blue-900!">
+      <Sidebar collapsible="none" class="w-[calc(var(--sidebar-width-icon)+1rem+2px)]! bg-sidebar-rail!">
         <SidebarHeader class="items-center px-0 pt-3">
           <!-- A logo como ícone de app: um ladrilho de canto arredondado no azul do painel. -->
           <div class="bg-sidebar rounded-box flex size-10 items-center justify-center">
@@ -288,7 +329,10 @@
           </div>
         </SidebarHeader>
 
-        <SidebarContent class="items-center gap-1 px-0 py-2">
+        <!-- O trilho não rola inteiro: os módulos ficam parados em cima, e só os itens do módulo
+             (recolhido) rolam no meio, entre dois divisores — o perfil e o Sair ficam sempre à
+             vista embaixo. -->
+        <SidebarContent class="items-center gap-1 overflow-hidden px-0 py-2">
           <div role="group" aria-label="Módulos" use:slidingIndicator={RAIL_INDICATOR} class="flex flex-col items-center gap-1">
             {#each areas as option (option.value)}
               {@const Icon = option.icon}
@@ -309,9 +353,9 @@
           </div>
 
           <!-- Recolhida, o painel some: os itens do módulo descem para o trilho. -->
-          <div class="hidden flex-col items-center gap-1 group-data-[collapsible=icon]:flex">
-            <SidebarSeparator class="my-1 h-px w-6" />
-            <nav aria-label="Menu principal" class="flex flex-col items-center gap-1">
+          <div class="hidden min-h-0 w-full flex-1 flex-col items-center group-data-[collapsible=icon]:flex">
+            <SidebarSeparator class="my-1 h-px w-6 shrink-0" />
+            <nav aria-label="Menu principal" class={cn('flex min-h-0 w-full flex-1 flex-col items-center gap-1', RAIL_SCROLL)}>
               {#each items as item (item.key)}
                 {@const ItemIcon = item.icon}
                 {#snippet itemLink(props: Record<string, unknown>)}
@@ -332,6 +376,7 @@
           </div>
         </SidebarContent>
 
+        <SidebarSeparator class="mx-auto my-1 h-px w-6" />
         <SidebarFooter class="items-center gap-1 px-0 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           {#each shellActions as link (link.href)}
             {@const LinkIcon = link.icon}
@@ -361,9 +406,11 @@
       <!-- Sem logo no painel: a marca já está no trilho (o "S" no ladrilho), e o painel começa
            direto no nome do módulo. -->
       <Sidebar collapsible="none" class="hidden min-w-0 flex-1 pt-3 pb-2 md:flex">
-        <SidebarContent>
+        <!-- Só a lista de telas rola, e só na vertical; o Zuzu e o nome ficam presos embaixo,
+             sem divisor — o divisor é o do trilho. -->
+        <SidebarContent class={NAV_SCROLL}>
           <SidebarGroup>
-            <SidebarGroupLabel class="text-sidebar-foreground text-xs font-semibold tracking-wider uppercase">
+            <SidebarGroupLabel class="text-sidebar-foreground/70 text-xs font-semibold tracking-wider uppercase">
               {activeArea?.label ?? ''}
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -430,7 +477,7 @@
              um título separando o que é tela do que é atalho. Abre em outra aba? A setinha avisa. -->
         {#if shellActions.length > 0}
           <SidebarGroup class="mt-auto">
-            <SidebarGroupLabel class="text-sidebar-foreground text-xs font-semibold tracking-wider uppercase">
+            <SidebarGroupLabel class="text-sidebar-foreground/70 text-xs font-semibold tracking-wider uppercase">
               Atalhos
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -454,7 +501,7 @@
                           <span class="flex min-w-0 flex-1 items-center gap-1.5 group-data-[collapsible=icon]:hidden">
                             <span class="truncate">{link.label}</span>
                             {#if link.opensInNewTab}
-                              <ArrowUpRight aria-hidden="true" class="text-sidebar-foreground size-3.5! shrink-0" />
+                              <ArrowUpRight aria-hidden="true" class="text-sidebar-foreground/60 size-3.5! shrink-0" />
                             {/if}
                           </span>
                         </a>
@@ -535,9 +582,11 @@
          o fim do conteúdo desconta a barra de baixo. -->
     <div
       bind:this={contentEl}
+      onscroll={rememberScroll}
       class="app-content min-h-0 min-w-0 w-full flex-1 overflow-y-auto overscroll-contain pt-3 pr-[max(0.75rem,env(safe-area-inset-right))] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] sm:pt-4 sm:pr-[max(1.5rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] md:pb-[max(2.5rem,env(safe-area-inset-bottom))]"
     >
-      {@render children()}
+      <!-- Toda tela cabe nesta moldura: inteira até Full HD, centralizada acima disso. -->
+      <div class="page-frame">{@render children()}</div>
     </div>
   </SidebarInset>
 
@@ -615,7 +664,7 @@
 
         <div class="flex flex-col gap-3 px-3">
           {#if isTwoColumn}
-            <div role="group" aria-label="Módulos" class="rounded-box bg-muted flex gap-1 p-1">
+            <div role="group" aria-label="Módulos" class="rounded-box bg-sidebar-accent/40 flex gap-1 p-1">
               {#each areas as option (option.value)}
                 {@const Icon = option.icon}
                 <button

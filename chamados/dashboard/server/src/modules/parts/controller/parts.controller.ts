@@ -162,11 +162,11 @@ export class PartsController {
   @Delete('movements/:movementId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Exclui uma movimentação e devolve o saldo',
+    summary: 'Estorna (arquiva) uma movimentação e devolve o saldo',
     description:
-      'Desfaz o efeito da linha no estoque e refaz o extrato da peça, para a sequência de saldos continuar fechando.',
+      'Desfaz o efeito da linha no estoque e refaz o extrato da peça, para a sequência de saldos continuar fechando. A linha fica guardada, com quem estornou e quando; `POST movements/:movementId/restore` a devolve.',
   })
-  @ApiNoContentResponse({ description: 'Movimentação excluída e saldo devolvido.' })
+  @ApiNoContentResponse({ description: 'Movimentação estornada e saldo devolvido.' })
   @ApiNotFoundResponse({ description: 'Movimentação não encontrada.' })
   @ApiForbiddenResponse({ description: 'A movimentação é de outra pessoa.' })
   async removeMovement(
@@ -174,5 +174,22 @@ export class PartsController {
     @Param('movementId', ParseIntPipe) movementId: number,
   ): Promise<void> {
     return this.service.removeMovement(user, movementId);
+  }
+
+  @Post('movements/:movementId/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Desfaz o estorno de uma movimentação',
+    description: 'A linha volta ao extrato e o saldo é refeito. Recusa se o saldo ficaria negativo.',
+  })
+  @ApiOkResponse({ type: PartMovementDto })
+  @ApiNotFoundResponse({ description: 'Movimentação não encontrada.' })
+  @ApiForbiddenResponse({ description: 'A movimentação é de outra pessoa.' })
+  @ApiUnprocessableEntityResponse({ description: 'O saldo da peça ficaria negativo.' })
+  async restoreMovement(
+    @CurrentUser() user: RequestUser,
+    @Param('movementId', ParseIntPipe) movementId: number,
+  ): Promise<PartMovementDto> {
+    return this.service.restoreMovement(user, movementId);
   }
 }

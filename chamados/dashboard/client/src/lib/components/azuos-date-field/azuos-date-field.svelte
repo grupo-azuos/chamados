@@ -1,19 +1,26 @@
+<!--
+  @component
+  O campo de UMA data: a pessoa DIGITA `dd/mm/aaaa` ou toca no calendário, que pergunta o ano,
+  depois o mês, depois o dia (`AzuosDateStepper`).
+
+  Os dois caminhos servem a pessoas diferentes. Quem sabe a data de cor digita oito números e as
+  barras entram sozinhas. Quem prefere escolher não cai num calendário aberto no mês de hoje, onde é
+  fácil marcar o dia e esquecer de trocar o ano.
+
+  O VALOR ENTRA E SAI COMO TEXTO ISO (`1990-03-25`). O campo escondido leva o ISO no `name`; o campo
+  que se vê não tem `name`, para o formulário nativo não enviar a data duas vezes.
+
+  Enquanto a pessoa digita, o texto é dela: a data só é entregue quando fica completa e válida, e o
+  aviso de data inválida só aparece ao sair do campo — avisar a cada tecla seria acusar de erro quem
+  ainda está no meio do número.
+
+  Props: `data` traz o rótulo, o `name`, o valor e os limites (`min`, `max`); `ui` traz o ano em que
+  o calendário abre e o rótulo escondido; `state` traz o erro e o desabilitado; `actions` recebe
+  `onChange` e `onBlur`.
+-->
 <script lang="ts" module>
   import { isIsoWithin, isoFromDisplay, rangeHint } from '$lib/utils/date-input.util';
 
-  /**
-   * O campo de UMA data: a pessoa DIGITA `dd/mm/aaaa` ou toca no calendário, que pergunta o ano,
-   * depois o mês, depois o dia (`AzuosDateStepper`).
-   *
-   * Quem sabe a data de cor digita oito números e as barras entram sozinhas. Quem prefere escolher
-   * não cai num calendário aberto no mês de hoje, onde é fácil marcar o dia e esquecer o ano.
-   *
-   * O VALOR ENTRA E SAI COMO TEXTO ISO (`1990-03-25`). O campo escondido leva o ISO no `name`; o
-   * campo que se vê não tem `name`, para o formulário nativo não enviar a data duas vezes.
-   *
-   * Enquanto a pessoa digita, o texto é dela: a data só é entregue quando fica completa e válida,
-   * e o aviso de data inválida só aparece ao sair do campo.
-   */
   export type AzuosDateFieldProps = {
     data: {
       label: string;
@@ -155,7 +162,11 @@
             </InputGroupButton>
           {/snippet}
         </Popover.Trigger>
-        <Popover.Content align="end" class="rounded-surface border-border bg-card w-auto p-0 shadow-xl">
+        <Popover.Content
+          sideOffset={6}
+          align="center"
+          class="rounded-surface bg-popover ring-foreground/8 w-auto border-transparent p-0 shadow-xl ring-1"
+        >
           <DateStepper
             data={{ value: data.value, min: data.min, max: data.max }}
             ui={{ startYear: ui?.startYear }}

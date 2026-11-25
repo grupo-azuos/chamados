@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 import { MAINTENANCE_TYPES, PREVENTIVE_STATUSES } from '../domain/maintenance.util';
+import { archivedFilterSchema, archiveSchema } from './archive.schema';
+import { boardDrillParamSchema } from './board-drill.schema';
 import { departmentSchema } from './computer.schema';
 import { paginationQuerySchema } from './pagination.schema';
 
@@ -62,14 +64,18 @@ export const maintenanceSchema = z.object({
 
   type: maintenanceTypeSchema,
   description: z.string().nullable(),
-  /** Quem fez o serviço. Texto livre: pode ser alguém de fora da empresa. */
+  /** O nome de quem fez o serviço (o do diretório quando escolhido pela lista). */
   performedBy: z.string().nullable(),
+  /** Quem fez, pelos ids do diretório — uma ou mais pessoas; vazio nos registros antigos. */
+  performedByIds: z.array(z.string()).optional(),
   performedAt: z.iso.datetime(),
 
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
+  /** Nulo em uso; excluir arquiva, e o "Desfazer" devolve. */
+  archive: archiveSchema,
 });
 
 export type Maintenance = z.infer<typeof maintenanceSchema>;
@@ -101,6 +107,8 @@ const maintenanceInputShape = {
   type: maintenanceTypeSchema,
   description: descriptionSchema.optional(),
   performedBy: performedBySchema.optional(),
+  /** Quem fez, pelos ids do diretório: o servidor escreve os nomes em `performedBy`. */
+  performedByIds: z.array(z.string().trim().min(1)).max(20, 'Até 20 pessoas').optional(),
   /** Quando o serviço foi feito — não é a data em que alguém digitou. */
   performedAt: z.iso.datetime({ message: 'Informe uma data válida' }),
 };
@@ -131,9 +139,9 @@ export const maintenanceFormSchema = z
       .max(OTHER_MACHINE_MAX_LENGTH, `Até ${OTHER_MACHINE_MAX_LENGTH} caracteres`),
     type: maintenanceTypeSchema,
     description: z.string().max(DESCRIPTION_MAX_LENGTH, `Até ${DESCRIPTION_MAX_LENGTH} caracteres`),
-    performedBy: z
-      .string()
-      .max(PERFORMED_BY_MAX_LENGTH, `Até ${PERFORMED_BY_MAX_LENGTH} caracteres`),
+    /* Quem fez são pessoas da lista: os ids separados por vírgula (o campo da tela é texto); vazio
+       é ninguém. */
+    performedByIds: z.string(),
     performedAt: z.string().min(1, 'Informe a data'),
   })
   .superRefine((value, context) => {
@@ -152,6 +160,9 @@ export const maintenanceListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   computerId: z.coerce.number<number>().int().optional(),
   type: maintenanceTypeSchema.optional(),
+  archived: archivedFilterSchema,
+  /** O recorte de um clique no painel (`board-drill.schema`): estreita a lista ao item clicado. */
+  drill: boardDrillParamSchema.optional(),
 });
 
 export type MaintenanceListQuery = z.infer<typeof maintenanceListQuerySchema>;
@@ -198,6 +209,7 @@ const scheduleNoteSchema = optionalText(
  * viraria a véspera em outro.
  */
 export const maintenanceScheduleSchema = z.object({
+  id: z.number().int(),
   computerId: z.number().int(),
   computerName: z.string(),
   computerDisplayName: z.string().nullable(),
@@ -208,6 +220,8 @@ export const maintenanceScheduleSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime().nullable(),
   updatedBy: z.string().nullable(),
+  /** Nulo em aberto; cumprido ou cancelado, o agendamento é arquivado. */
+  archive: archiveSchema,
 });
 
 export type MaintenanceSchedule = z.infer<typeof maintenanceScheduleSchema>;
@@ -241,6 +255,7 @@ export type MaintenanceScheduleFormValues = { scheduledFor: string; note: string
 
 export const maintenanceScheduleListQuerySchema = z.object({
   computerId: z.coerce.number<number>().int().optional(),
+  archived: archivedFilterSchema,
 });
 
 export type MaintenanceScheduleListQuery = z.infer<typeof maintenanceScheduleListQuerySchema>;

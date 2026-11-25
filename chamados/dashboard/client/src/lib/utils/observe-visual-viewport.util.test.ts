@@ -1,7 +1,10 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { observeVisualViewport } from './observe-visual-viewport.util';
 
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 // feliz: o teclado e o deslocamento da área visível alteram a posição e a altura do sheet.
 it('tracks keyboard height and visual viewport offset', () => {

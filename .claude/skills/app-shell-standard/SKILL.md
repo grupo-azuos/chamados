@@ -81,13 +81,13 @@ foco: tudo proibido. A cor vem do **fundo**:
 
 | Quero | Use |
 |---|---|
-| Card colorido, só informação | `AzuosToneCard` com `ui.mode: 'static'` — fundo suave do tom, sem hover |
-| Card que reage ao mouse | `AzuosToneCard` com `ui.mode: 'interactive'` — neutro parado; no hover a cor do tom entra por onde o mouse entrou (`hover-fill`, o mesmo do Chamados) |
-| Card/filtro selecionado | `state.isSelected` — fundo na cor CHEIA do tom |
-| Número de relance | `AzuosStatCard` (fundo suave do tom; selecionado = cor cheia) |
+| Card de assunto | `AzuosContentCard` com `data.highlight` — card sem borda, ícone cheio à esquerda na cor do tom, número na cor do texto |
+| Card que abre algo | `AzuosContentCard` com `actions.onOpen` — o card inteiro é o botão; no hover nada se mexe |
+| Card/filtro selecionado | `state.isSelected` — fundo azul de escolhido, texto e ícone brancos |
+| Número de relance | `AzuosContentCard` com `data.highlight` (o mesmo card) |
 | Campo com erro | fundo vermelho claro (`aria-invalid:bg-destructive-soft`) + a mensagem embaixo |
 
-Fica só: borda **neutra** (`border-border`, `border-input`), o **anel de foco** do teclado
+Fica só: borda **neutra como divisória** (`border-b`, `divide-y`), o **anel de foco** do teclado
 (`focus-visible:ring-*`, acessibilidade) e os **spinners** de carregamento.
 
 **2. Nunca `<select>` nativo.** Sempre o combobox/seletor do projeto (`AzuosSelectField`,

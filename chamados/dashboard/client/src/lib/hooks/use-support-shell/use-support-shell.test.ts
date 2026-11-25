@@ -46,7 +46,7 @@ describe('useSupportShellModel', () => {
   });
 
   // triste
-  it('continua na Central e mostra o motivo quando a saída falha', async () => {
+  it('stays in the Central and shows the reason when sign-out fails', async () => {
     vi.mocked(authApi.logout).mockRejectedValue(new ApiError(500, 'Não foi possível sair.'));
     const model = mountModel();
 

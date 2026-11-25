@@ -16,13 +16,13 @@ describe('AzuosStatusBadge', () => {
       props: { data: { label: 'Resolvido' }, ui: { tone: 'success' } },
     });
 
-    expect(container.firstElementChild?.className).toContain('hue-green');
+    expect(container.firstElementChild?.className).toContain('bg-success-soft');
   });
 
   it('falls back to neutral when no tone was given, instead of having no color', () => {
     const { container } = render(StatusBadge, { props: { data: { label: 'Aberto' } } });
 
-    expect(container.firstElementChild?.className).toContain('hue-slate');
+    expect(container.firstElementChild?.className).toContain('bg-muted');
   });
 
   // triste
@@ -47,6 +47,26 @@ describe('AzuosStatusBadge', () => {
     });
 
     expect(container.firstElementChild?.className).toContain('ml-4');
-    expect(container.firstElementChild?.className).toContain('hue-green');
+    expect(container.firstElementChild?.className).toContain('bg-success-soft');
+  });
+});
+
+describe('AzuosStatusBadge colors', () => {
+  // feliz
+  it('turns a color chosen by a person into the closest tone of the palette', () => {
+    const { container } = render(StatusBadge, {
+      props: { data: { label: 'Urgente' }, ui: { color: '#e11d48' } },
+    });
+
+    expect(container.firstElementChild?.className).toContain('text-hue-red');
+  });
+
+  // triste
+  it('keeps the yellow readable, with the ink text on the light yellow', () => {
+    const { container } = render(StatusBadge, {
+      props: { data: { label: 'Aguardando' }, ui: { tone: 'warning' } },
+    });
+
+    expect(container.firstElementChild?.className).toContain('text-warning-ink');
   });
 });

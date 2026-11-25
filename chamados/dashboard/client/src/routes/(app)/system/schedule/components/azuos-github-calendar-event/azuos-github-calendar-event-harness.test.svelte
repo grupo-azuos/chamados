@@ -1,3 +1,11 @@
+<!--
+  @component
+  Moldura de teste do `AzuosGithubCalendarEvent`: põe o acontecimento dentro do provedor de dicas
+  (sem atraso), que a tela real já tem em volta, para o teste conseguir abrir a dica. Não é usado
+  em tela.
+
+  - `event`, `compact` e `inTimeGrid`: repassados ao componente.
+-->
 <script lang="ts">
   import type { SoftwareTimelineEvent } from '@template/shared/schemas/software-timeline.schema';
   import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';

@@ -1,20 +1,24 @@
+<!--
+  @component
+  O select do projeto (`AzuosSelectField`) com rótulo, dica e mensagem de erro — o que um formulário
+  precisa e o seletor de filtro não traz.
+
+  Por baixo só compõe o `AzuosSelectField`: altura, raio e lista vêm dele.
+
+  O rótulo pode ficar só para leitor de tela (`isLabelHidden`): numa linha de tabela a coluna já diz
+  o que é. Com ele escondido, a mensagem também fica só para o leitor de tela — o motivo já está no
+  `title`.
+
+  O erro vence a dica: quem errou precisa ler o erro, não o motivo de o campo existir.
+
+  Props: `data` traz o rótulo, o valor, as opções e a dica; `ui` traz o rótulo escondido; `state`
+  traz o desabilitado, o erro e o obrigatório; `actions.onChange` recebe a escolha.
+-->
 <script lang="ts" module>
   import type { SelectFieldOption } from '$lib/components/azuos-select-field/azuos-select-field.svelte';
 
   export type AzuosFormSelectFieldOption = SelectFieldOption;
 
-  /**
-   * O select do projeto (`AzuosSelectField`) com rótulo, dica e mensagem de erro — o que um
-   * formulário precisa e o seletor de filtro não traz.
-   *
-   * Por baixo só compõe o `AzuosSelectField`: altura, raio e lista vêm dele.
-   *
-   * O rótulo pode ficar só para leitor de tela (`isLabelHidden`): numa linha de tabela a coluna
-   * já diz o que é. Com ele escondido, a mensagem também fica só para o leitor de tela — o motivo
-   * já está no `title`.
-   *
-   * O erro vence a dica: quem errou precisa ler o erro, não o motivo de o campo existir.
-   */
   export type AzuosFormSelectFieldProps = {
     data: {
       label: string;
@@ -52,7 +56,7 @@
     data={{ value: data.value, options: data.options }}
     ui={{
       ariaLabel: data.label,
-      className: cn('w-full', error !== null && 'border-border bg-destructive-soft'),
+      className: cn('w-full', error !== null && 'bg-destructive-soft border-transparent'),
     }}
     state={{ isDisabled: state?.isDisabled ?? false }}
     actions={{ onChange: (value) => actions?.onChange?.(value) }}

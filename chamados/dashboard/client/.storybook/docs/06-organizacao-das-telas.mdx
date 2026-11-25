@@ -1,0 +1,62 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Fundamentos/Organização das telas" />
+
+# Organização das telas
+
+Toda tela segue o mesmo molde. Quem aprende uma tela, aprende todas.
+
+## O molde
+
+1. **Cabeçalho** — o título (`AzuosPageHeader`) e a ação principal à direita. Em tela de detalhe,
+   o `AzuosBackButton` em cima.
+2. **Resumo** — os números da tela em `AzuosStatCard`, numa `AzuosStatCardGrid`. Clicáveis, viram
+   filtro.
+3. **Barra de ferramentas** — nesta ordem: busca → filtros (`AzuosFilterField`) → ordenar → modo
+   de ver (`AzuosTableViewToggle`). O "Limpar filtros" no fim.
+4. **Conteúdo** — cards (`card-grid`, paginada) ou tabela (`AzuosTable`, rolagem contínua).
+5. **Paginação** — `AzuosPaginationBar`, só na grade.
+
+## Cards ou tabela?
+
+<table>
+  <thead>
+    <tr>
+      <th>Cards</th>
+      <th>Tabela</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Poucos registros, ricos em detalhe</td>
+      <td>Muitos registros, poucos campos</td>
+    </tr>
+    <tr>
+      <td>Comparar de relance</td>
+      <td>Ordenar e varrer</td>
+    </tr>
+    <tr>
+      <td>Sempre paginados</td>
+      <td>Rolam sem fim, com esqueletos</td>
+    </tr>
+  </tbody>
+</table>
+
+## Estados da tela
+
+- **Carregando:** esqueletos do tamanho real (`Skeleton`, de `azuos-skeleton`) ou o `AzuosLoadingState`, dizendo o
+  quê.
+- **Vazio:** `AzuosEmptyState`, com o Zuzu e o que fazer.
+- **Erro:** `AzuosErrorState`, com o motivo e o "Tentar de novo".
+
+## Notificação e pendência
+
+Um card com pendência ganha o **selo vermelho** no canto com a quantidade; ele pulsa só para quem
+não pediu menos movimento. O sininho da casca soma tudo.
+
+## Hover e clique
+
+- Card clicável: sobe 2px e a sombra cresce. A ação extra vai num lugar reservado (uma seta no
+  rodapé), nunca num painel por cima do conteúdo.
+- Linha de lista: véu cinza com respiro nas laterais e cantos arredondados.
+- Ação em linha de tabela: menu de 3 pontinhos.

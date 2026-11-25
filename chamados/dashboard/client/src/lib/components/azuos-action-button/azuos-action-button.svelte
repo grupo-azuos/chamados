@@ -1,3 +1,21 @@
+<!--
+  @component
+  O botão do sistema. Toda ação que não é "enviar formulário" passa por aqui.
+
+  O `Button` baixado do shadcn-svelte NÃO é editado nem importado pelas telas. Este componente o
+  envolve e aplica as NOSSAS variantes com `tv()` (`primary`, `secondary`, `ghost`, `danger`,
+  `danger-soft`) — o dia em que o CLI sobrescrever o vendor, nenhuma tela muda. A altura e o raio
+  vêm da RÉGUA DE MEDIDAS (`lib/theme/tokens.css`): `sm`, `md` (o padrão) e `lg`.
+
+  Carregando (`state.isLoading`), ele trava e troca o ícone pelo giro, com `data.loadingLabel` no
+  lugar do rótulo: dois cliques em "Excluir" seriam duas requisições, e a segunda voltaria como
+  "não encontrado" de algo que acabou de dar certo.
+
+  - `data`: o rótulo e o rótulo de carregando.
+  - `ui`: variante, tamanho, ícone e `isIconOnly` (o rótulo vira `aria-label` e dica).
+  - `state`: carregando, desligado e `isPressed` (anuncia o botão que liga/desliga).
+  - `actions`: `onClick`.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
   import { tv } from 'tailwind-variants';
@@ -16,13 +34,17 @@
    * pelo espaço entre ícone e texto. A altura é nossa.
    */
   export const actionButton = tv({
-    base: 'align-middle font-semibold rounded-control shadow-xs transition-all',
+    base: 'rounded-button max-w-full min-w-0 align-middle font-semibold shadow-xs transition-all',
     variants: {
       variant: {
-        primary: 'bg-primary hover:bg-primary-strong text-primary-foreground',
-        secondary: 'border-border bg-card text-foreground hover:bg-muted border',
-        ghost: 'text-foreground hover:bg-accent hover:text-foreground bg-transparent shadow-none border border-transparent',
-        danger: 'bg-destructive-fill text-on-dark hover:bg-destructive',
+        primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        secondary: 'bg-muted text-foreground hover:bg-accent',
+        ghost:
+          'text-foreground/80 hover:bg-accent hover:text-foreground border border-transparent bg-transparent shadow-none',
+        danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        /* O perigo discreto, para a lixeira de uma linha: vermelho claro parado, cheio no hover. */
+        'danger-soft':
+          'bg-destructive-soft text-destructive hover:bg-destructive hover:text-destructive-foreground shadow-none',
       },
       size: {
         sm: 'control-sm',
@@ -40,7 +62,7 @@
     defaultVariants: { variant: 'primary', size: 'md', isIconOnly: false },
   });
 
-  export type ActionButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+  export type ActionButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-soft';
 
   export type ActionButtonSize = 'sm' | 'md' | 'lg';
 
@@ -137,5 +159,8 @@
   {#if Icon}
     <Icon class={cn(isBusy && 'animate-spin')} aria-hidden="true" />
   {/if}
-  {label}
+  <!-- Rótulo longo numa coluna estreita: corta com "…" em vez de estourar a coluna. -->
+  {#if label}
+    <span class="min-w-0 truncate">{label}</span>
+  {/if}
 </Button>

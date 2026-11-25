@@ -1,6 +1,7 @@
-import { sql } from 'drizzle-orm';
+import { isNull, sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 import { tickets } from './tickets.schema';
 
@@ -20,13 +21,16 @@ export const ticketRelations = chamadosSchema.table(
     relatedTicketId: integer('related_ticket_id')
       .notNull()
       .references(() => tickets.id, { onDelete: 'cascade' }),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     createdBy: text('created_by'),
+    /* Desvincular ARQUIVA: o vínculo some do chamado e volta pelo "Desfazer". */
+    ...archiveColumns(),
   },
   (table) => [
-    uniqueIndex('ticket_relations_pair_idx').on(table.ticketId, table.relatedTicketId),
+    /* Um vínculo valendo por par; os desfeitos (arquivados) não contam. */
+    uniqueIndex('ticket_relations_pair_idx')
+      .on(table.ticketId, table.relatedTicketId)
+      .where(isNull(table.archivedAt)),
     index('ticket_relations_ticket_idx').on(table.ticketId),
     index('ticket_relations_related_ticket_idx').on(table.relatedTicketId),
     check('ticket_relations_different', sql`${table.ticketId} <> ${table.relatedTicketId}`),

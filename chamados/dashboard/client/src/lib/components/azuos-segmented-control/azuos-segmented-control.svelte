@@ -1,18 +1,24 @@
+<!--
+  @component
+  Um grupo de botões em que só um fica ligado — para trocar o RECORTE de uma tela ("Abertos",
+  "Resolvidos").
+
+  Botões lado a lado, e não um select: o recorte é a primeira pergunta da tela, e as opções precisam
+  estar à vista para a pessoa saber que existem.
+
+  O desenho é o do padrão Apple: um trilho em pílula cinza do tamanho das opções, e a opção ligada
+  em branco por cima, com sombra. O destaque não é pintado em cada botão: ele DESLIZA até a opção
+  escolhida. A variante `prominent` tira o trilho e pinta a ligada no azul principal.
+
+  `aria-pressed` diz ao leitor de tela qual está ligado. Quando as opções não cabem (celular), o
+  trilho rola de lado, em vez de empurrar a página.
+
+  - `data`: o valor ligado e as opções.
+  - `ui`: o `ariaLabel`, a variante e classes extras.
+  - `state`: `isDisabled`.
+  - `actions`: `onChange`, só quando a opção muda.
+-->
 <script lang="ts" module>
-  /**
-   * Um grupo de botões em que só um fica ligado — para trocar o RECORTE de uma tela ("Abertos",
-   * "Resolvidos").
-   *
-   * Botões lado a lado, e não um select: o recorte é a primeira pergunta da tela, e as opções
-   * precisam estar à vista para a pessoa saber que existem.
-   *
-   * O desenho é o segmentado da Trilha Azuos: um trilho no azul-claro do fundo, e a opção ligada
-   * como uma "pastilha" com sombra, em azul e negrito — ligada se lê pelo relevo e pelo peso, não
-   * só pela cor.
-   *
-   * `aria-pressed` diz ao leitor de tela qual está ligado. Em tela estreita os botões quebram
-   * linha dentro do trilho, em vez de empurrar a página para o lado.
-   */
   export type AzuosSegmentedControlOption = { value: string; label: string };
 
   export type AzuosSegmentedControlProps = {
@@ -24,6 +30,7 @@
 </script>
 
 <script lang="ts">
+  import { slidingIndicator } from '$lib/motion/sliding-indicator';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state, actions }: AzuosSegmentedControlProps = $props();
@@ -36,11 +43,19 @@
   }
 </script>
 
+<!-- O escolhido não pinta o próprio fundo: um destaque só DESLIZA até ele, como no menu. -->
 <div
   role="group"
   aria-label={ui.ariaLabel}
+  use:slidingIndicator={{
+    selector: '[aria-pressed="true"]',
+    indicatorClass: isProminent ? 'rounded-full bg-primary' : 'rounded-full bg-segment-selected shadow-xs',
+    attributes: ['aria-pressed'],
+  }}
   class={cn(
-    'bg-mantle rounded-surface flex flex-wrap gap-1 p-1',
+    /* O trilho tem o tamanho das opções (padrão Apple), e não a largura da tela: uma pílula
+       esticada com metade vazia parecia um campo. Quando não cabe (celular), rola de lado. */
+    'bg-muted inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-full p-1',
     isProminent && 'w-full gap-2 bg-transparent p-0 sm:w-auto',
     ui.className,
   )}
@@ -53,16 +68,16 @@
       disabled={state?.isDisabled}
       onclick={() => choose(option.value)}
       class={cn(
-        'rounded-control min-h-10 px-3 text-sm transition-[color,background-color,box-shadow] duration-200 disabled:cursor-not-allowed disabled:opacity-60',
+        'shrink-0 rounded-full px-3 py-1.5 text-sm whitespace-nowrap transition-[color,background-color,box-shadow] duration-200 disabled:cursor-not-allowed disabled:opacity-60',
         isActive
-          ? 'text-primary bg-card font-bold shadow-xs'
-          : 'text-muted-foreground hover:text-foreground hover:bg-card font-semibold',
+          ? 'text-foreground font-semibold'
+          : 'text-muted-foreground hover:bg-hover-veil hover:text-foreground font-medium',
         isProminent &&
           'control-lg focus-visible:outline-primary flex-auto px-5 text-base whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 sm:flex-none',
         isProminent &&
           (isActive
-            ? 'bg-primary text-primary-foreground shadow-none'
-            : 'bg-primary-soft text-ink-900 hover:bg-primary-soft hover:text-ink-900 shadow-none'),
+            ? 'text-primary-foreground shadow-none'
+            : 'bg-primary/10 text-ink-900 hover:bg-primary/20 hover:text-ink-900 shadow-none'),
       )}
     >
       {option.label}

@@ -1,26 +1,31 @@
+<!--
+  @component
+  A MOLDURA DE TODO GRÁFICO — onde o ECharts é montado.
+
+  Todo gráfico do projeto passa por aqui, e é aqui que mora o que não pode variar de um para outro:
+
+  1. **A altura como decisão de quem chama** (`heightClass`): dois quadros lado a lado só alinham se
+     tiverem a mesma caixa.
+  2. **Carregando e vazio iguais em todos**: o bloco pulsando com a altura do gráfico e o vazio como
+     FRASE (um quadro em branco se lê como defeito).
+  3. **O tema claro/escuro acompanhando a troca na hora**: a moldura observa a classe/atributo de
+     tema do documento e entrega ao gráfico as cores novas.
+  4. **O tamanho acompanhando o quadro — uma vez só**: abrir ou fechar o menu anima a largura, e o
+     gráfico só se redesenha quando o tamanho PARA de mudar (`RESIZE_SETTLE_MS`), sem animação.
+     Redesenhar a cada quadro derrubava o FPS da tela inteira.
+  5. **Uma descrição em texto** (`description`) para leitor de tela: um desenho não se lê em voz
+     alta.
+
+  `option` pode ser uma FUNÇÃO do tema, para o gráfico que precisa das cores do tema no próprio
+  desenho (a trilha do medidor, o texto do rótulo).
+
+  Props: `data` traz a `option` e a descrição; `ui` traz a altura, o texto do vazio e a altura de
+  rolagem (`scrollHeight`); `state` traz o carregando e o vazio; `actions` recebe o clique num item
+  (`onSelect`) e num ponto do eixo (`onAxisSelect`).
+-->
 <script lang="ts" module>
   import type { ChartOption, ChartSelection, ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * A MOLDURA DE TODO GRÁFICO — onde o ECharts é montado.
-   *
-   * Todo gráfico do projeto passa por aqui, e é aqui que mora o que não pode variar de um para
-   * outro:
-   *
-   *  1. **A altura como decisão de quem chama** (`heightClass`): dois quadros lado a lado só
-   *     alinham se tiverem a mesma caixa.
-   *  2. **Carregando e vazio iguais em todos**: o bloco pulsando com a altura do gráfico e o
-   *     vazio como FRASE (um quadro em branco se lê como defeito).
-   *  3. **O tema claro/escuro acompanhando a troca na hora**: a moldura observa a classe/atributo
-   *     de tema do documento e entrega ao gráfico as cores novas.
-   *  4. **O tamanho acompanhando o quadro — uma vez só**: abrir ou fechar o menu anima a largura,
-   *     e o gráfico só se redesenha quando o tamanho PARA de mudar (`RESIZE_SETTLE_MS`), sem
-   *     animação. Redesenhar a cada quadro derrubava o FPS da tela inteira.
-   *  5. **Uma descrição em texto** (`description`) para leitor de tela.
-   *
-   * `option` pode ser uma FUNÇÃO do tema, para o gráfico que precisa das cores do tema no
-   * próprio desenho (a trilha do medidor, o texto do rótulo).
-   */
   export type AzuosEchartProps = {
     data: {
       option: ChartOption | ((theme: ChartTheme) => ChartOption);
@@ -40,7 +45,14 @@
       scrollHeight?: number;
     };
     state?: { isLoading?: boolean; isEmpty?: boolean };
-    actions?: { onSelect?: (selection: ChartSelection) => void };
+    actions?: {
+      onSelect?: (selection: ChartSelection) => void;
+      /**
+       * O clique em QUALQUER ponto da área do gráfico, como a posição no eixo das categorias — o
+       * gráfico de área não tem símbolo para clicar, e a pessoa clica no dia, não na linha.
+       */
+      onAxisSelect?: (index: number) => void;
+    };
   };
 
   /** Quanto o tamanho precisa ficar parado para o gráfico se redesenhar — um pouco mais que a animação do menu. */
@@ -92,6 +104,15 @@
         height: element.clientHeight || 300,
       });
       instance.on('click', (params) => actions?.onSelect?.(selectionOf(params)));
+      /* Só quem pede o clique no eixo ouve a área inteira: nos outros gráficos, um clique fora
+         das barras não é nada. */
+      if (actions?.onAxisSelect) instance.getZr().on('click', (event) => {
+        if (!actions?.onAxisSelect) return;
+        const point = [event.offsetX, event.offsetY];
+        if (!instance.containPixel({ gridIndex: 0 }, point)) return;
+        const [index] = instance.convertFromPixel({ gridIndex: 0 }, point) as number[];
+        if (index !== undefined && Number.isFinite(index)) actions.onAxisSelect(Math.round(index));
+      });
       chart = instance;
 
       observer = new ResizeObserver(([entry]) => {
@@ -145,7 +166,7 @@
       role="img"
       aria-label={data.description}
       data-slot="chart"
-      class={cn('w-full', actions?.onSelect && 'cursor-pointer')}
+      class={cn('w-full', (actions?.onSelect || actions?.onAxisSelect) && 'cursor-pointer')}
       style="height: {ui.scrollHeight}px"
     ></div>
   </div>
@@ -155,6 +176,6 @@
     role="img"
     aria-label={data.description}
     data-slot="chart"
-    class={cn('w-full', heightClass, ui?.className, actions?.onSelect && 'cursor-pointer')}
+    class={cn('w-full', heightClass, ui?.className, (actions?.onSelect || actions?.onAxisSelect) && 'cursor-pointer')}
   ></div>
 {/if}

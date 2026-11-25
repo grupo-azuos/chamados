@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 
+import { archiveValues } from '../../../lib/db/archive.util';
 import { runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
@@ -26,9 +27,21 @@ export class TicketAttachmentsRepository {
       this.db
         .select()
         .from(ticketAttachments)
-        .where(eq(ticketAttachments.ticketId, ticketId))
+        .where(and(eq(ticketAttachments.ticketId, ticketId), isNull(ticketAttachments.archivedAt)))
         .orderBy(asc(ticketAttachments.id)),
       'ler os anexos do chamado',
+    );
+  }
+
+  /** Os anexos excluídos do chamado — o bloco "Removidos". */
+  async listArchived(ticketId: number): Promise<TicketAttachmentRow[]> {
+    return runQuery(
+      this.db
+        .select()
+        .from(ticketAttachments)
+        .where(and(eq(ticketAttachments.ticketId, ticketId), isNotNull(ticketAttachments.archivedAt)))
+        .orderBy(desc(ticketAttachments.archivedAt)),
+      'ler os anexos excluídos do chamado',
     );
   }
 
@@ -66,12 +79,14 @@ export class TicketAttachmentsRepository {
     return row ?? null;
   }
 
-  async remove(attachmentId: number): Promise<void> {
+  /** Exclui (arquiva) ou desfaz (desarquiva). A linha e o arquivo no bucket ficam. */
+  async setArchived(attachmentId: number, archived: boolean, actorId: string | null): Promise<void> {
     await runQuery(
-      this.db.delete(ticketAttachments).where(eq(ticketAttachments.id, attachmentId)).returning({
-        id: ticketAttachments.id,
-      }),
-      'excluir o anexo',
+      this.db
+        .update(ticketAttachments)
+        .set(archiveValues(archived, actorId))
+        .where(eq(ticketAttachments.id, attachmentId)),
+      archived ? 'excluir o anexo' : 'devolver o anexo',
     );
   }
 }

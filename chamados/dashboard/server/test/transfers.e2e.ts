@@ -16,17 +16,21 @@ import { asAna, asBia, asCaio, createE2eApp, type E2eApp } from './support/e2e-a
  */
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
+/* Os departamentos do RH, pelo id — o computador só conhece estes. */
+const FISCAL = { id: 31, name: 'Fiscal' };
+const RECEPTION = { id: 32, name: 'Recepção' };
+
 describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
   let started: E2eApp;
   let app: INestApplication;
 
   const api = () => request(app.getHttpServer());
 
-  const registerComputer = async (name: string, department: string | null = 'RECEPÇÃO') => {
+  const registerComputer = async (name: string) => {
     const created = await api()
       .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name, kind: 'desktop', department })
+      .send({ name, kind: 'desktop', departmentId: RECEPTION.id })
       .expect(201);
 
     return created.body.computer.id as number;
@@ -53,7 +57,7 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     api().post(`/api/v1/computers/${computerId}/transfers`).set(who).send(body);
 
   beforeAll(async () => {
-    started = await createE2eApp(testDatabaseUrl!);
+    started = await createE2eApp(testDatabaseUrl!, { departments: [FISCAL, RECEPTION] });
     app = started.app;
   });
 
@@ -70,14 +74,14 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     const computerId = await registerComputer('PC-RECEPCAO-01');
 
     const moved = await transfer(computerId, {
-      toDepartment: 'Fiscal',
+      toDepartmentId: FISCAL.id,
       responsible: '  Joana  ',
       note: '',
     }).expect(201);
 
     expect(moved.body).toMatchObject({
       computerId,
-      fromDepartment: 'RECEPÇÃO',
+      fromDepartment: 'Recepção',
       toDepartment: 'Fiscal',
       responsible: 'Joana',
       note: null,
@@ -86,18 +90,19 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     });
 
     const computer = await api().get(`/api/v1/computers/${computerId}`).set(asAna()).expect(200);
-    expect(computer.body.department).toBe('Fiscal');
+    expect(computer.body).toMatchObject({ departmentId: FISCAL.id, departmentName: 'Fiscal' });
 
     /* De volta à prateleira: sem departamento. */
-    await transfer(computerId, { toDepartment: null }).expect(201);
+    await transfer(computerId, { toDepartmentId: null }).expect(201);
 
     const history = await api()
       .get(`/api/v1/computers/${computerId}/transfers`)
       .set(asBia())
       .expect(200);
-    expect(history.body.map((item: { toDepartment: string | null }) => item.toDepartment)).toEqual(
-      [null, 'Fiscal'],
-    );
+    expect(history.body.map((item: { toDepartment: string | null }) => item.toDepartment)).toEqual([
+      null,
+      'Fiscal',
+    ]);
   });
 
   it('lists what is installed on the machine: what left the shelf for it and did not come back', async () => {
@@ -129,7 +134,7 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     await handOut(keyboard, leaving, 1);
 
     const moved = await transfer(leaving, {
-      toDepartment: 'Fiscal',
+      toDepartmentId: FISCAL.id,
       peripherals: [
         { partId: keyboard, quantity: 1, destiny: 'station', destinationComputerId: staying },
         { partId: keyboard, quantity: 1, destiny: 'machine' },
@@ -160,8 +165,11 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
   it('refuses a transfer to the same department', async () => {
     const computerId = await registerComputer('PC-RECEPCAO-05');
 
-    const refused = await transfer(computerId, { toDepartment: 'RECEPÇÃO' }).expect(422);
+    const refused = await transfer(computerId, { toDepartmentId: RECEPTION.id }).expect(422);
     expect(refused.body.message).toEqual(expect.any(String));
+
+    /* Departamento que o RH não tem não é destino: 400, e nada muda. */
+    await transfer(computerId, { toDepartmentId: 999 }).expect(400);
   });
 
   it('refuses a machine that is out of use, and a station without a machine that stays', async () => {
@@ -170,19 +178,19 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
     await handOut(keyboard, computerId, 1);
 
     await transfer(computerId, {
-      toDepartment: 'Fiscal',
+      toDepartmentId: FISCAL.id,
       peripherals: [{ partId: keyboard, quantity: 1, destiny: 'station' }],
     }).expect(400);
 
     await transfer(computerId, {
-      toDepartment: 'Fiscal',
+      toDepartmentId: FISCAL.id,
       peripherals: [
         { partId: keyboard, quantity: 1, destiny: 'station', destinationComputerId: 999999 },
       ],
     }).expect(404);
 
     await transfer(computerId, {
-      toDepartment: 'Fiscal',
+      toDepartmentId: FISCAL.id,
       peripherals: [
         { partId: 999999, quantity: 1, destiny: 'station', destinationComputerId: computerId },
       ],
@@ -193,15 +201,15 @@ describe.skipIf(!testDatabaseUrl)('Transfers API (e2e)', () => {
       .set(asCaio())
       .send({ type: 'defect', reason: 'Placa-mãe queimada.' })
       .expect(201);
-    const outOfUse = await transfer(computerId, { toDepartment: 'Fiscal' }).expect(422);
+    const outOfUse = await transfer(computerId, { toDepartmentId: FISCAL.id }).expect(422);
     expect(outOfUse.body.message).toEqual(expect.any(String));
   });
 
   it('answers 404 for a missing machine and refuses who only consults', async () => {
-    await transfer(999999, { toDepartment: 'Fiscal' }).expect(404);
+    await transfer(999999, { toDepartmentId: FISCAL.id }).expect(404);
 
     const computerId = await registerComputer('PC-RECEPCAO-07');
-    await transfer(computerId, { toDepartment: 'Fiscal' }, asBia()).expect(403);
+    await transfer(computerId, { toDepartmentId: FISCAL.id }, asBia()).expect(403);
     await api().get(`/api/v1/computers/${computerId}/transfers`).expect(401);
   });
 });

@@ -1,3 +1,21 @@
+<!--
+  @component
+  O DIÁLOGO DE VÍNCULO DO WHATSAPP, em dois passos.
+
+  1. RISCOS. Vincular o número pessoal a uma automação tem consequência de verdade (o WhatsApp
+     pode banir o número). A lista de riscos (`WHATSAPP_LINK_RISKS`) vem antes, e o botão de
+     confirmar fica travado com a contagem regressiva: é o tempo de ler, e não de clicar por
+     reflexo.
+  2. QR CODE. A pessoa lê o código com o celular (sobre fundo branco fixo, nos dois temas); quando
+     o vínculo fecha, quem fecha o diálogo é a tela.
+
+  A contagem e a imagem do QR code vêm prontas por props: aqui não há relógio nem geração de
+  imagem.
+
+  - `data.qrImage`: a imagem do QR code, ou nula enquanto não chegou.
+  - `state`: `step` (`closed`, `risks` ou `qr`), `secondsLeft`, `isLinking` e `error`.
+  - `actions`: `onConfirm` e `onClose`.
+-->
 <script lang="ts" module>
   /**
    * O diálogo de vínculo do WhatsApp, em dois passos.

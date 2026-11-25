@@ -5,7 +5,7 @@
 
   const emptyFilter: InventoryFilter = {
     search: '',
-    department: '',
+    departmentId: '',
     healthStatus: '',
     kind: '',
     onlyOnline: false,
@@ -14,14 +14,21 @@
     resourceCondition: '',
     preventive: '',
     includeArchived: false,
+    responsibleId: '',
+    upgrade: '',
   };
 
   /* Dados inventados: departamentos genéricos, nenhum nome de pessoa. */
   const departmentOptions = [
-    { value: 'Financeiro', label: 'Financeiro' },
-    { value: 'Recursos Humanos', label: 'Recursos Humanos' },
-    { value: 'TI', label: 'TI' },
-    { value: 'RECEPÇÃO', label: 'RECEPÇÃO', separatorBefore: true },
+    { value: '4', label: 'Financeiro' },
+    { value: '8', label: 'Recursos Humanos' },
+    { value: '5', label: 'TI' },
+  ];
+
+  /* Pessoas inventadas; a foto é um avatar genérico, como na história do AzuosPersonAvatar. */
+  const responsibleOptions = [
+    { id: 'p-1', name: 'Camila Duarte', photo: 'https://i.pravatar.cc/64?img=47' },
+    { id: 'p-2', name: 'Gabriel Moura', photo: null },
   ];
 
   const actions = {
@@ -35,6 +42,8 @@
     onResourceConditionChange: () => {},
     onPreventiveChange: () => {},
     onArchivedChange: () => {},
+    onResponsibleChange: () => {},
+    onUpgradeChange: () => {},
     onClearFilters: () => {},
   };
 
@@ -64,7 +73,7 @@
 <Story
   name="SearchOnly"
   args={{
-    data: { filter: { ...emptyFilter, search: 'recepção', department: 'TI' }, departmentOptions },
+    data: { filter: { ...emptyFilter, search: 'recepção', departmentId: '5' }, departmentOptions },
     actions,
   }}
 />
@@ -89,6 +98,39 @@
     },
     actions,
   }}
+/>
+
+<!-- Filtrada por uma pessoa: o campo de pessoa mostra a foto, e a etiqueta diz quem é. -->
+<Story
+  name="ByResponsible"
+  args={{
+    data: { filter: { ...emptyFilter, responsibleId: 'p-1' }, departmentOptions, responsibleOptions },
+    actions,
+  }}
+/>
+
+<!-- "(Sem responsável)": as máquinas que ainda não têm dono. -->
+<Story
+  name="WithoutResponsible"
+  args={{
+    data: { filter: { ...emptyFilter, responsibleId: 'none' }, departmentOptions, responsibleOptions },
+    actions,
+  }}
+/>
+
+<!-- Caso limite: a pessoa do link salvo não responde mais por máquina — a etiqueta fica genérica. -->
+<Story
+  name="ResponsibleGone"
+  args={{
+    data: { filter: { ...emptyFilter, responsibleId: 'p-gone' }, departmentOptions, responsibleOptions },
+    actions,
+  }}
+/>
+
+<!-- Filtrada por um motivo de upgrade: a etiqueta diz qual. -->
+<Story
+  name="ByUpgrade"
+  args={{ data: { filter: { ...emptyFilter, upgrade: 'cpu' }, departmentOptions, responsibleOptions }, actions }}
 />
 
 <!-- RH fora do ar: sem departamentos, a lista mostra só "Todos". -->

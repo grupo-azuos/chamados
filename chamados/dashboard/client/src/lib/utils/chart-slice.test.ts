@@ -32,8 +32,8 @@ describe('countBy', () => {
 
   // triste
   /* Fatia que some esconde que há registro sem o campo preenchido. */
-  it('turns a missing value into N/A instead of dropping it', () => {
-    expect(countBy([{ city: null }], (row) => row.city)).toEqual([{ label: 'N/A', value: 1 }]);
+  it('turns a missing value into (Vazio) instead of dropping it', () => {
+    expect(countBy([{ city: null }], (row) => row.city)).toEqual([{ label: '(Vazio)', value: 1 }]);
   });
 
   it('returns an empty list for no rows', () => {

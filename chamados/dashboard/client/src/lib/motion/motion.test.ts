@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('gsap', () => ({ default: { from: vi.fn(), fromTo: vi.fn(), to: vi.fn() } }));
+vi.mock('gsap', () => ({
+  default: { from: vi.fn(), fromTo: vi.fn(), to: vi.fn(), killTweensOf: vi.fn() },
+}));
 
 const { default: gsap } = await import('gsap');
-const { countTo, fadeInUp, highlightIn, popIn, prefersReducedMotion, staggerIn } = await import('./motion');
+const { countTo, fadeInUp, highlightIn, popIn, prefersReducedMotion, staggerIn } =
+  await import('./motion');
 
 /** O que o sistema operacional diz sobre "reduzir movimento". */
 function stubMotionPreference(reduce: boolean) {
@@ -17,6 +20,7 @@ afterEach(() => {
   vi.mocked(gsap.from).mockClear();
   vi.mocked(gsap.fromTo).mockClear();
   vi.mocked(gsap.to).mockClear();
+  vi.mocked(gsap.killTweensOf).mockClear();
 });
 
 describe('prefersReducedMotion', () => {
@@ -48,8 +52,15 @@ describe('entrances', () => {
     popIn(target);
 
     expect(gsap.from).toHaveBeenCalledWith(target, expect.objectContaining({ y: 12, delay: 0.1 }));
-    expect(gsap.from).toHaveBeenCalledWith([target], expect.objectContaining({ stagger: 0.05, delay: 0 }));
-    expect(gsap.fromTo).toHaveBeenCalledWith(target, { scale: 0.7 }, expect.objectContaining({ scale: 1 }));
+    expect(gsap.from).toHaveBeenCalledWith(
+      [target],
+      expect.objectContaining({ stagger: 0.05, delay: 0 }),
+    );
+    expect(gsap.fromTo).toHaveBeenCalledWith(
+      target,
+      { scale: 0.7 },
+      expect.objectContaining({ scale: 1 }),
+    );
   });
 
   // triste

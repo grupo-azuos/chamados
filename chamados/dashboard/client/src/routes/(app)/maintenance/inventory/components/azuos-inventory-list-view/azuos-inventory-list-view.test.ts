@@ -25,6 +25,7 @@ function item(overrides: Partial<InventoryItem> = {}): InventoryItem {
     createdBy: 'manutencao@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...overrides,
   };
 }
@@ -102,8 +103,12 @@ describe('AzuosInventoryListView', () => {
     const onAskDelete = vi.fn();
     setup({ actions: { ...actions, onEdit, onAskDelete } });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
+    /* Editar e excluir moram no menu de três pontinhos do cartão, nunca em ícone solto. */
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    await user.click(screen.getByRole('button', { name: 'Ações de Cadeira giratória' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
+    await user.click(screen.getByRole('button', { name: 'Ações de Cadeira giratória' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
 
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     expect(onAskDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
@@ -192,7 +197,10 @@ describe('AzuosInventoryListView', () => {
     });
 
     expect(screen.getByRole('heading', { name: 'Extintor' })).toBeInTheDocument();
+    /* Sem foto, o ícone da categoria (enfeite) e o aviso "Sem foto" na faixa. */
     expect(screen.queryByRole('img')).toBeNull();
+    const strip = document.querySelector('[data-slot="inventory-card-strip"]')!;
+    expect(strip).toHaveTextContent('Sem foto');
     expect(screen.getByText('Unidade')).toBeInTheDocument();
   });
 
@@ -208,7 +216,14 @@ describe('AzuosInventoryListView — the filters and the note of a product', () 
   // feliz
   it('searches, filters by category and by missing photo, and shows the note', async () => {
     vi.mocked(actions.onCategoryChange).mockClear();
-    setup({ data: { items: [item({ note: 'Pé quebrado.' })], total: 2, filter: emptyFilter, deleting: null } });
+    setup({
+      data: {
+        items: [item({ note: 'Pé quebrado.' })],
+        total: 2,
+        filter: emptyFilter,
+        deleting: null,
+      },
+    });
 
     expect(screen.getByText('Pé quebrado.')).toBeInTheDocument();
     expect(screen.getByText(/2\s*produtos/)).toBeInTheDocument();
@@ -223,9 +238,32 @@ describe('AzuosInventoryListView — the filters and the note of a product', () 
     if (category) await userEvent.click(within(category).getAllByRole('button')[1]!);
     else {
       await userEvent.click(screen.getByRole('button', { name: 'Filtrar por categoria' }));
-      const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+      const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(
+        -1,
+      ) as HTMLElement;
       await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
     }
     expect(actions.onCategoryChange).toHaveBeenCalled();
+  });
+});
+
+describe('AzuosInventoryListView — pages of cards', () => {
+  // feliz
+  it('shows twelve cards per page and walks to the next one', async () => {
+    const many = Array.from({ length: 14 }, (_, index) =>
+      item({ id: index + 1, name: `Produto ${index + 1}` }),
+    );
+    setup({ data: { items: many, total: 14, filter: emptyFilter, deleting: null } });
+
+    expect(screen.getAllByRole('heading', { name: /^Produto / })).toHaveLength(12);
+    await userEvent.click(screen.getByRole('button', { name: /próxima/i }));
+    expect(screen.getAllByRole('heading', { name: /^Produto / })).toHaveLength(2);
+  });
+
+  // triste
+  it('shows no page bar while everything fits on one page', () => {
+    setup();
+
+    expect(screen.queryByRole('button', { name: /próxima/i })).toBeNull();
   });
 });

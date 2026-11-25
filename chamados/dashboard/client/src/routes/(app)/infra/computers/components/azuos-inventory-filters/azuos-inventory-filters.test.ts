@@ -3,14 +3,17 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import InventoryFilters, {
+  ALERT_FILTER_LABELS,
   activeFilterChips,
   hasAnyFilter,
+  responsibleChip,
+  upgradeChip,
   type InventoryFilter,
 } from './azuos-inventory-filters.svelte';
 
 const emptyFilter: InventoryFilter = {
   search: '',
-  department: '',
+  departmentId: '',
   healthStatus: '',
   kind: '',
   onlyOnline: false,
@@ -19,6 +22,8 @@ const emptyFilter: InventoryFilter = {
   resourceCondition: '',
   preventive: '',
   includeArchived: false,
+  responsibleId: '',
+  upgrade: '',
 };
 
 const actions = {
@@ -32,6 +37,8 @@ const actions = {
   onResourceConditionChange: vi.fn(),
   onPreventiveChange: vi.fn(),
   onArchivedChange: vi.fn(),
+  onResponsibleChange: vi.fn(),
+  onUpgradeChange: vi.fn(),
   onClearFilters: vi.fn(),
 };
 
@@ -51,6 +58,112 @@ async function choose(listName: string, option: string) {
 }
 
 beforeEach(() => vi.clearAllMocks());
+
+const people = [
+  { id: 'p-ana', name: 'Ana Lima', photo: '/ana.png' },
+  { id: 'p-bia', name: 'Bia Costa', photo: null },
+];
+
+describe('AzuosInventoryFilters — responsible', () => {
+  // feliz
+  it('filters by a person picked with the photo, keeping her id', async () => {
+    render(InventoryFilters, {
+      props: {
+        data: { filter: emptyFilter, departmentOptions: [], responsibleOptions: people },
+        actions,
+      },
+    });
+    await userEvent.click(screen.getByRole('button', { name: /Filtros/ }));
+
+    await fireEvent.click(screen.getByRole('combobox', { name: 'Filtrar por responsável' }));
+    await fireEvent.click(await screen.findByRole('option', { name: /Bia Costa/ }));
+
+    expect(actions.onResponsibleChange).toHaveBeenLastCalledWith('p-bia');
+  });
+
+  // feliz
+  it('offers "(Sem responsável)" before the people', async () => {
+    render(InventoryFilters, {
+      props: {
+        data: { filter: emptyFilter, departmentOptions: [], responsibleOptions: people },
+        actions,
+      },
+    });
+    await userEvent.click(screen.getByRole('button', { name: /Filtros/ }));
+
+    await fireEvent.click(screen.getByRole('combobox', { name: 'Filtrar por responsável' }));
+    const options = await screen.findAllByRole('option');
+    expect(options.map((option) => option.textContent?.trim())).toEqual([
+      'Todos os responsáveis',
+      '(Sem responsável)',
+      expect.stringContaining('Ana Lima'),
+      expect.stringContaining('Bia Costa'),
+    ]);
+    await fireEvent.click(options[1]!);
+    expect(actions.onResponsibleChange).toHaveBeenLastCalledWith('none');
+  });
+
+  // feliz
+  it('shows the chosen person on a chip that switches the filter off', async () => {
+    render(InventoryFilters, {
+      props: {
+        data: {
+          filter: { ...emptyFilter, responsibleId: 'p-ana' },
+          departmentOptions: [],
+          responsibleOptions: people,
+        },
+        actions,
+      },
+    });
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Tirar o filtro Responsável: Ana Lima' }),
+    );
+    expect(actions.onResponsibleChange).toHaveBeenLastCalledWith('');
+  });
+
+  // triste
+  it('keeps a generic chip for a person who no longer answers for any machine', () => {
+    const chip = responsibleChip({ ...emptyFilter, responsibleId: 'p-gone' }, actions, people);
+
+    expect(chip?.label).toBe('Responsável');
+    expect(responsibleChip({ ...emptyFilter, responsibleId: 'none' }, actions, people)?.label).toBe(
+      '(Sem responsável)',
+    );
+    expect(responsibleChip(emptyFilter, actions, people)).toBeNull();
+  });
+});
+
+describe('AzuosInventoryFilters — upgrade', () => {
+  // feliz
+  it('filters by any upgrade reason or by one, from the panel', async () => {
+    renderWith();
+    await userEvent.click(screen.getByRole('button', { name: /Filtros/ }));
+
+    await choose('Filtrar por upgrade', 'Precisa de upgrade');
+    expect(actions.onUpgradeChange).toHaveBeenLastCalledWith('any');
+    await choose('Filtrar por upgrade', 'Processador antigo');
+    expect(actions.onUpgradeChange).toHaveBeenLastCalledWith('cpu');
+  });
+
+  // feliz
+  it('shows the reason on a chip that switches the filter off', async () => {
+    renderWith({ upgrade: 'memory' });
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Tirar o filtro Upgrade: Pouca memória' }),
+    );
+    expect(actions.onUpgradeChange).toHaveBeenLastCalledWith('');
+  });
+
+  // triste
+  it('has no chip while the upgrade filter is off, and a plain one for any reason', () => {
+    expect(upgradeChip(emptyFilter, actions)).toBeNull();
+    expect(upgradeChip({ ...emptyFilter, upgrade: 'any' }, actions)?.label).toBe(
+      'Precisa de upgrade',
+    );
+  });
+});
 
 describe('AzuosInventoryFilters', () => {
   // feliz
@@ -178,7 +291,7 @@ describe('activeFilterChips', () => {
 
   // triste
   it('leaves search and department out, which stay in sight', () => {
-    const filter = { ...emptyFilter, search: 'rh', department: 'TI' };
+    const filter = { ...emptyFilter, search: 'rh', departmentId: '5' };
     const chips = activeFilterChips(filter, actions);
 
     expect(chips).toEqual([]);
@@ -238,7 +351,7 @@ describe('AzuosInventoryFilters — every grouped filter and its chip', () => {
   it('filters by department from the always visible selector', async () => {
     render(InventoryFilters, {
       props: {
-        data: { filter: emptyFilter, departmentOptions: [{ value: 'fiscal', label: 'Fiscal' }] },
+        data: { filter: emptyFilter, departmentOptions: [{ value: '5', label: 'Fiscal' }] },
         actions,
       },
     });
@@ -246,6 +359,43 @@ describe('AzuosInventoryFilters — every grouped filter and its chip', () => {
     const search = await screen.findByPlaceholderText('Buscar departamento…');
     const popup = search.closest('[data-slot="popover-content"]') as HTMLElement;
     await fireEvent.click(within(popup).getByText('Fiscal'));
-    expect(actions.onDepartmentChange).toHaveBeenLastCalledWith('fiscal');
+    expect(actions.onDepartmentChange).toHaveBeenLastCalledWith('5');
+  });
+
+  // feliz
+  it('offers no Local filter in the panel: the department is the only place', async () => {
+    renderWith();
+    await userEvent.click(screen.getByRole('button', { name: /Filtros/ }));
+
+    expect(screen.queryByText('Local')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Filtrar por local' })).not.toBeInTheDocument();
+  });
+
+  // triste
+  /* Um filtro salvo antes da mudança ainda pode trazer `location`: ele não vira etiqueta. */
+  it('ignores a location left in an old saved filter', () => {
+    const old = { ...emptyFilter, location: 'RECEPÇÃO' } as InventoryFilter;
+
+    expect(activeFilterChips(old, actions)).toEqual([]);
+  });
+});
+
+describe('ALERT_FILTER_LABELS', () => {
+  // feliz
+  it('names each alert filter in proper Portuguese, the disk included', () => {
+    expect(ALERT_FILTER_LABELS).toEqual({
+      any: 'Com alerta ativo',
+      cpu: 'CPU elevada',
+      memory: 'Memória elevada',
+      disk: 'Disco quase cheio',
+    });
+  });
+
+  // triste
+  /* Montado como "<peça> elevada", o chip do disco saía "Disco elevada". */
+  it('never shows the misgendered disk chip', () => {
+    const chips = activeFilterChips({ ...emptyFilter, alert: 'disk' }, actions);
+
+    expect(chips.map((chip) => chip.label)).toEqual(['Disco quase cheio']);
   });
 });

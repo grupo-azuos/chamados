@@ -77,7 +77,7 @@ describe('daily GitHub PRs', () => {
       note: null,
       projectId: 1,
       projectName: 'Azuos',
-      createdAt: new Date().toISOString(), createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima',
+      createdAt: new Date().toISOString(), createdById: 'u-ana', createdByEmail: 'ana@empresa.com.br', createdByName: 'Ana Lima', archive: null,
     };
     vi.mocked(softwareScheduleApi.list).mockResolvedValue([
       appointment,
@@ -442,6 +442,7 @@ describe('projects, people and the current time', () => {
     pullRequestsCount: 0,
     createdAt: '2026-10-01T00:00:00Z',
     updatedAt: null,
+    archive: null,
   };
 
   // feliz

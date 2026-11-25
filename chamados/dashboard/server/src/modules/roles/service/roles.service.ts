@@ -1,4 +1,5 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { type ArchivedFilter } from '@template/shared/schemas/archive.schema';
 import {
   type AssignRoleInput,
   type AssignRolesInput,
@@ -34,10 +35,10 @@ export class RolesService {
     @Inject(ENV) private readonly env: Env,
   ) {}
 
-  async list(actor: RequestUser): Promise<InternalRole[]> {
+  async list(actor: RequestUser, archived: ArchivedFilter = 'hide'): Promise<InternalRole[]> {
     assertIsSuperAdmin(actor.role, 'Consultar os acessos');
 
-    const rows = withoutMockIdentity(await this.repository.list(), this.env);
+    const rows = withoutMockIdentity(await this.repository.list(archived), this.env);
     return rows.map(toInternalRole);
   }
 
@@ -85,6 +86,26 @@ export class RolesService {
       throw new NotFoundException('Acesso não encontrado.');
     }
 
-    await this.repository.delete(id);
+    /* Tirar ARQUIVA: a pessoa perde o módulo na hora, e a linha fica para o "Desfazer". */
+    await this.repository.setArchived(id, true, actor.id);
+  }
+
+  /** Devolve o módulo tirado. Se ele já foi liberado de novo, não há o que devolver. */
+  async restore(actor: RequestUser, id: number): Promise<InternalRole> {
+    assertIsSuperAdmin(actor.role, 'Devolver módulo');
+
+    const existing = await this.repository.findById(id);
+    if (!existing) throw new NotFoundException('Acesso não encontrado.');
+
+    const active = await this.repository.findActive(existing.userId, existing.context);
+    if (active && active.id !== id) {
+      throw new ConflictException('Esta pessoa já tem este módulo de novo.');
+    }
+
+    await this.repository.setArchived(id, false, null);
+    const restored = await this.repository.findById(id);
+    if (!restored) throw new NotFoundException('Acesso não encontrado.');
+
+    return toInternalRole(restored);
   }
 }

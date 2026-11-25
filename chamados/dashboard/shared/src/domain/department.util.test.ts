@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   LOCAL_DEPARTMENTS,
+  departmentIdFromName,
   departmentChoices,
   departmentFromText,
   departmentLabel,
@@ -110,5 +111,27 @@ describe('legacyCodesOf and isSameDepartment', () => {
     expect(legacyCodesOf('Marketing')).toEqual([]);
     expect(isSameDepartment('fiscal', 'Contábil')).toBe(false);
     expect(isSameDepartment(null, 'Contábil')).toBe(false);
+  });
+});
+
+describe('departmentIdFromName', () => {
+  const options = [
+    { id: 12, name: 'Fiscal' },
+    { id: 13, name: 'Departamento Pessoal' },
+    { id: 14, name: 'Contábil' },
+  ];
+
+  // feliz
+  it('finds the HR id by the name, ignoring accent and case, or by the old code', () => {
+    expect(departmentIdFromName(' FISCAL ', options)).toBe(12);
+    expect(departmentIdFromName('contabil', options)).toBe(14);
+    expect(departmentIdFromName('pessoal', options)).toBe(13);
+  });
+
+  // triste
+  it('answers null for an unknown name, an empty one, or a name HR has twice', () => {
+    expect(departmentIdFromName('Departamento X', options)).toBeNull();
+    expect(departmentIdFromName('  ', options)).toBeNull();
+    expect(departmentIdFromName('Fiscal', [...options, { id: 99, name: 'fiscal' }])).toBeNull();
   });
 });

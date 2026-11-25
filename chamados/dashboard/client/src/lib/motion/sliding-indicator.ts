@@ -32,13 +32,14 @@ export const slidingIndicator: Action<HTMLElement, SlidingIndicatorOptions> = (n
   function snap(isAnimated: boolean) {
     tween?.kill();
     const active = node.querySelector<HTMLElement>(options.selector);
+    /* Sem ativo na lista (a tela aberta é de outra parte do menu), o destaque some E encolhe no
+       topo: só invisível, ele ficava do tamanho e na altura do ativo antigo — e, lá embaixo,
+       esticava a lista e deixava uma barra de rolagem num menu curto. */
     if (!active) {
-      gsap.set(indicator, { opacity: 0 });
+      gsap.set(indicator, { opacity: 0, x: 0, y: 0, width: 0, height: 0 });
       return;
     }
-    const box = node.getBoundingClientRect();
-    const rect = active.getBoundingClientRect();
-    const target = { opacity: 1, x: rect.left - box.left, y: rect.top - box.top, width: rect.width, height: rect.height };
+    const target = targetOf(node, active);
     if (!isAnimated || prefersReducedMotion()) {
       gsap.set(indicator, target);
       return;
@@ -49,7 +50,14 @@ export const slidingIndicator: Action<HTMLElement, SlidingIndicatorOptions> = (n
   snap(false);
   const frame = requestAnimationFrame(() => snap(false));
   const mutations = new MutationObserver(() => snap(true));
-  mutations.observe(node, { attributes: true, subtree: true, attributeFilter: options.attributes });
+  /* `childList`: trocar a parte do menu troca a LISTA inteira, e os itens novos nascem sem
+     mudar atributo nenhum — sem isto, o destaque ficava onde estava. */
+  mutations.observe(node, {
+    attributes: true,
+    childList: true,
+    subtree: true,
+    attributeFilter: options.attributes,
+  });
   const resize = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(() => snap(false));
   resize?.observe(node);
 
@@ -63,3 +71,33 @@ export const slidingIndicator: Action<HTMLElement, SlidingIndicatorOptions> = (n
     },
   };
 };
+
+/** Onde o destaque tem de estar: a caixa do item ativo, relativa ao container. */
+export function targetOf(node: HTMLElement, active: HTMLElement) {
+  /* A medida de LAYOUT, quando o container é o pai posicionado do item: ela ignora `transform`.
+     Dentro de um diálogo que abre com zoom, a caixa da tela vinha encolhida no meio da animação,
+     e o destaque ficava menor e deslocado para o lado da aba escolhida. */
+  if (active.offsetParent === node) {
+    return {
+      opacity: 1,
+      x: active.offsetLeft,
+      y: active.offsetTop,
+      width: active.offsetWidth,
+      height: active.offsetHeight,
+    };
+  }
+
+  /* O `absolute` conta a partir de DENTRO da borda do container, e o `getBoundingClientRect` de
+     FORA dela — sem descontar a borda (`clientLeft`/`clientTop`), o destaque ficava 1px à direita
+     e abaixo do item. */
+  const box = node.getBoundingClientRect();
+  const rect = active.getBoundingClientRect();
+
+  return {
+    opacity: 1,
+    x: rect.left - box.left - node.clientLeft,
+    y: rect.top - box.top - node.clientTop,
+    width: rect.width,
+    height: rect.height,
+  };
+}

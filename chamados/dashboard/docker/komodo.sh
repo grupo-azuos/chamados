@@ -6,7 +6,7 @@
 #   sh docker/komodo.sh deploy      <app> <prod|homo> <comando>  comando `docker stack` do Komodo
 #   sh docker/komodo.sh post-deploy <app> <prod|homo>            rota no Caddy de borda
 #
-# O Komodo passa INFISICAL_TOKEN, INFISICAL_DOMAIN e INFISICAL_PROJECT_ID. A imagem do app vem do
+# O Komodo passa VAULT_ADDR, VAULT_ROLE_ID e VAULT_SECRET_ID (AppRole do ambiente). A imagem do app vem do
 # Build do Komodo, com a tag `<hash curto do commit>-<ambiente>`.
 #
 # Nomes: o stack é `<ambiente>_<app>` (homo_template) e o Docker completa os serviços com
@@ -35,21 +35,33 @@ export APP_NAME DEPLOY_ENV APP_REVISION APP_IMAGE STACK_NAME DEPLOY_NODE_ID
 
 # Imagens auxiliares, construídas uma vez por host e reaproveitadas por todos os apps.
 build_runtime_images() {
-  docker image inspect azuos-deploy-tools:1 >/dev/null 2>&1 \
-    || docker build --tag azuos-deploy-tools:1 "$RUNTIME_DIR/deploy-tools"
+  docker image inspect azuos-deploy-tools:2 >/dev/null 2>&1 \
+    || docker build --tag azuos-deploy-tools:2 "$RUNTIME_DIR/deploy-tools"
   docker image inspect azuos-gateway:2.11 >/dev/null 2>&1 \
     || docker build --tag azuos-gateway:2.11 "$RUNTIME_DIR/gateway"
 }
 
-# Roda o comando com os segredos do Infisical do app e do ambiente.
+# Entra no Vault pelo AppRole do ambiente, exporta os segredos de <ambiente>/<app> e roda o comando.
+# O token só serve para esta leitura e é revogado logo em seguida; nenhum valor passa pelo log.
+VAULT_RUN='set -eu
+token=$(jq -n --arg r "$VAULT_ROLE_ID" --arg s "$VAULT_SECRET_ID" "{role_id: \$r, secret_id: \$s}" \
+  | curl -fsS --data @- "$VAULT_ADDR/v1/auth/approle/login" | jq -r .auth.client_token)
+secrets=$(printf "X-Vault-Token: %s\n" "$token" | curl -fsS -H @- "$VAULT_ADDR/v1/$DEPLOY_ENV/data/$APP_NAME")
+printf "X-Vault-Token: %s\n" "$token" | curl -fsS -o /dev/null -X POST -H @- "$VAULT_ADDR/v1/auth/token/revoke-self"
+eval "$(printf "%s" "$secrets" | jq -r ".data.data | to_entries[] | \"export \(.key)=\(.value | @sh)\"")"
+unset VAULT_ROLE_ID VAULT_SECRET_ID token secrets
+exec "$@"'
+
+# Roda o comando com os segredos do Vault do app e do ambiente.
 with_secrets() {
-  : "${INFISICAL_TOKEN:?}" "${INFISICAL_DOMAIN:?}" "${INFISICAL_PROJECT_ID:?}"
+  : "${VAULT_ADDR:?}" "${VAULT_ROLE_ID:?}" "${VAULT_SECRET_ID:?}"
 
   docker run --rm \
     --security-opt label=disable \
     --network host \
-    --env INFISICAL_TOKEN \
-    --env INFISICAL_DOMAIN \
+    --env VAULT_ADDR \
+    --env VAULT_ROLE_ID \
+    --env VAULT_SECRET_ID \
     --env APP_NAME \
     --env DEPLOY_ENV \
     --env APP_REVISION \
@@ -59,10 +71,8 @@ with_secrets() {
     --volume /var/run/docker.sock:/var/run/docker.sock \
     --volume "$PWD:$PWD:ro,z" \
     --workdir "$PWD" \
-    azuos-deploy-tools:1 \
-    infisical run --silent --expand=false --secret-overriding=false \
-    --projectId="$INFISICAL_PROJECT_ID" --env="$DEPLOY_ENV" --path=/ \
-    -- "$@"
+    azuos-deploy-tools:2 \
+    sh -c "$VAULT_RUN" sh "$@"
 }
 
 # Nomes anteriores ao padrão <ambiente>_<app>: contabil-homo e contabil_homo. Saem do Caddy e do

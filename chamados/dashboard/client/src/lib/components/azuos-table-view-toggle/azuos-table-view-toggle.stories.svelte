@@ -1,6 +1,8 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
 
+  import { fn } from 'storybook/test';
+
   import TableViewToggle from './azuos-table-view-toggle.svelte';
 
   const { Story } = defineMeta({
@@ -18,3 +20,15 @@
     <TableViewToggle />
   </div>
 </Story>
+
+<!-- As filas de chamados: a terceira opção é o quadro, que a tela guarda (aparece em qualquer
+     largura; abaixo de `xl`, sem o "Tabela"). -->
+<Story
+  name="WithKanban"
+  args={{ ui: { hasKanban: true }, state: { isKanban: false }, actions: { onKanbanChange: fn() } }}
+/>
+
+<Story
+  name="OnKanban"
+  args={{ ui: { hasKanban: true }, state: { isKanban: true }, actions: { onKanbanChange: fn() } }}
+/>

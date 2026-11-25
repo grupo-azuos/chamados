@@ -1,3 +1,24 @@
+<!--
+  @component
+  CONSULTAR CHAMADO — a tela de acompanhar, separada da de abrir.
+
+  Duas colunas, como uma caixa de entrada: à esquerda a busca pelo número e os chamados da pessoa
+  (os que ela abriu e os em que foi vinculada), divididos entre "Em andamento" e "Encerrados"; à
+  direita o chamado aberto, com a TRILHA (recebido → em atendimento → encerrado, `journeyOf`), a
+  situação e a urgência, os dados, os arquivos (abrir e baixar), a linha do tempo e o que ela pode
+  fazer nele. No celular é uma coluna só: abrir um chamado troca a lista por ele, e "Meus chamados"
+  volta. "Não encontrado" é resposta, não falha — por isso não vem em vermelho.
+
+  Função pura de props: não busca nada. O chamado que chega já vem podado pelo servidor — sem
+  telefone e sem responsável, e só com os históricos visíveis para quem abriu.
+
+  - `data`: `protocol` (o número digitado), `ticket` (o aberto, ou nulo) e `mine`.
+  - `state`: a busca (`isSearching`, `isInvalid`, `isNotFound`, `error`) e a lista (`isLoadingMine`,
+    `mineError`).
+  - `actions`: `onProtocolChange`, `onSearch`, `onOpenMine(protocol)` e `onBackToList`.
+  - `slots.ticketActions`: o que quem pediu faz com o chamado (responder, reabrir, vincular), depois
+    da linha do tempo.
+-->
 <script lang="ts" module>
   import {
     ticketAreaLabel,
@@ -99,6 +120,7 @@
 </script>
 
 <script lang="ts">
+  import Network from '@lucide/svelte/icons/network';
   import Building2 from '@lucide/svelte/icons/building-2';
   import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
   import Clock from '@lucide/svelte/icons/clock';
@@ -123,6 +145,9 @@
   } from '$lib/components/azuos-history-timeline/azuos-history-timeline.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
+  import FileLinks from '$lib/components/azuos-file-links/azuos-file-links.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, state: viewState, actions, slots }: AzuosTicketLookupViewProps = $props();
@@ -207,25 +232,18 @@
       />
     </form>
 
-    <!-- A aba escolhida ganha fundo cheio, não traço: barra colorida é proibida no grupo. -->
-    <div class="bg-muted rounded-control grid grid-cols-2 gap-1 p-1">
-      {#each [{ key: 'running', label: 'Em andamento', count: groups.running.length }, { key: 'closed', label: 'Encerrados', count: groups.closed.length }] as const as option (option.key)}
-        <button
-          type="button"
-          aria-pressed={tab === option.key}
-          onclick={() => (chosenTab = option.key)}
-          class={cn(
-            'control-sm rounded-chip focus-visible:ring-ring inline-flex cursor-pointer items-center justify-center gap-1.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
-            tab === option.key ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          {option.label}
-          <span class="bg-muted text-muted-foreground rounded-full px-1.5 text-[0.6875rem] tabular-nums">
-            {option.count}
-          </span>
-        </button>
-      {/each}
-    </div>
+    <!-- O recorte é o segmentado do padrão Apple: pílula cinza com o escolhido em branco. -->
+    <SegmentedControl
+      data={{
+        value: tab,
+        options: [
+          { value: 'running', label: `Em andamento · ${groups.running.length}` },
+          { value: 'closed', label: `Encerrados · ${groups.closed.length}` },
+        ],
+      }}
+      ui={{ ariaLabel: 'Recorte dos seus chamados' }}
+      actions={{ onChange: (value) => (chosenTab = value as typeof tab) }}
+    />
 
     {#if viewState?.mineError}
       <ErrorState data={{ message: viewState.mineError }} ui={{ variant: 'inline' }} />
@@ -252,7 +270,7 @@
               onclick={() => actions.onOpenMine(item.protocol)}
               class={cn(
                 'rounded-box focus-visible:ring-ring flex w-full cursor-pointer flex-col gap-1.5 p-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
-                isOpen ? 'bg-primary-soft' : 'bg-card hover:bg-muted border-border border',
+                isOpen ? 'bg-primary-soft' : 'bg-card shadow-card hover:bg-hover-veil',
               )}
             >
               <span class="flex items-center justify-between gap-2">
@@ -305,7 +323,9 @@
     {:else if ticket}
       {@const facts = factsOf(ticket)}
       {@const journey = journeyOf(ticket.status)}
-      <article class="rounded-surface border-border bg-card flex flex-col gap-6 border p-5 shadow-xs sm:p-6">
+      <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-6 p-5 sm:p-6">
         <header class="flex flex-col gap-4">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-foreground font-mono text-2xl font-bold">{ticket.protocol}</h2>
@@ -352,7 +372,7 @@
                 <fact.icon class="size-4" aria-hidden="true" />
               </span>
               <div class="min-w-0">
-                <dt class="text-muted-foreground text-[0.6875rem] font-semibold tracking-wider uppercase">{fact.label}</dt>
+                <dt class="text-muted-foreground text-xs font-medium">{fact.label}</dt>
                 <dd class={cn('text-foreground truncate text-sm font-medium', fact.isCode && 'font-mono')} title={fact.value}>
                   {fact.value}
                 </dd>
@@ -362,35 +382,50 @@
         </dl>
 
         <div class="rounded-box bg-muted p-4">
-          <p class="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
+          <p class="text-muted-foreground mb-1 text-sm font-medium">
             Aberto por {ticket.requesterName}
           </p>
           <p class="text-foreground text-sm leading-relaxed whitespace-pre-line">{ticket.description}</p>
         </div>
 
+        {#if ticket.projectId}
+          <!-- Quem pede vê o sistema inteiro: o que já está em andamento evita o chamado repetido. -->
+          <a
+            href={`/support/systems/${ticket.projectId}`}
+            class="rounded-box bg-muted hover:bg-hover-veil focus-visible:ring-ring/50 flex items-center gap-3 p-4 focus-visible:ring-3 focus-visible:outline-none"
+          >
+            <Network class="text-primary size-5 shrink-0" aria-hidden="true" />
+            <span class="flex min-w-0 flex-col">
+              <span class="text-foreground text-sm font-semibold">Ver o mapa do sistema {ticket.projectName ?? ''}</span>
+              <span class="text-muted-foreground text-xs">O que está em andamento: commits, issues, chamados e tarefas.</span>
+            </span>
+          </a>
+        {/if}
+
         {#if ownFiles.length > 0 || ticket.screenshotUrl}
           <div class="flex flex-col gap-2">
-            <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Arquivos do chamado</p>
+            <p class="text-muted-foreground text-sm font-medium">Arquivos do chamado</p>
             {#if ownFiles.length > 0}
               <AttachmentList data={{ attachments: ownFiles }} ui={{ actor: 'requester' }} />
             {/if}
             {#if ticket.screenshotUrl}
-              <a
-                class="control-sm rounded-control border-border bg-card text-primary hover:bg-muted inline-flex w-fit items-center gap-1.5 border text-xs font-semibold shadow-xs transition-colors"
-                href={ticket.screenshotUrl}
-                target="_blank"
-                rel="noopener"
-              >
-                <ImageIcon class="size-3.5" aria-hidden="true" />
-                Abrir o print enviado
-              </a>
+              <!-- Arquivo tem sempre as duas ações: abrir em outra aba e baixar. -->
+              <FileLinks
+                data={{
+                  fileName: `print-${ticket.protocol}.png`,
+                  viewUrl: ticket.screenshotUrl,
+                  downloadUrl: ticket.screenshotUrl,
+                  openLabel: 'Abrir o print enviado',
+                }}
+                ui={{ openIcon: ImageIcon }}
+              />
             {/if}
           </div>
         {/if}
 
         <!-- O ANDAMENTO: é o que a pessoa veio buscar. -->
         <div class="border-border flex flex-col gap-3 border-t pt-5">
-          <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+          <p class="text-muted-foreground text-sm font-medium">
             Andamento · {ticket.histories.length}
           </p>
           <HistoryTimeline
@@ -400,7 +435,9 @@
         </div>
 
         {@render slots?.ticketActions?.(ticket)}
-      </article>
+      </div>
+{/snippet}
+</ContentCard>
     {:else}
       <EmptyState
         data={{

@@ -175,7 +175,7 @@ test('refuses a colored border or a selection ring in any screen', () => {
   ]) {
     assert.match(
       checkEdit(ROOT, { file_path: join(ROOT, `${SRC}/routes/tasks/index.tsx`), content }) ?? '',
-      /borda colorida[\s\S]*AzuosToneCard/,
+      /borda colorida[\s\S]*AzuosContentCard/,
     );
   }
 });
@@ -195,7 +195,7 @@ test('lets the focus ring, neutral borders, spinners and comments through', () =
   assert.equal(
     checkEdit(ROOT, {
       file_path: join(ROOT, `${SRC}/routes/tasks/index.tsx`),
-      content: "<AzuosToneCard ui={{ tone: 'danger', mode: 'interactive' }}>3</AzuosToneCard>",
+      content: "<AzuosContentCard data={{ label: 'A', title: 'A' }} ui={{ iconTone: 'red' }} />",
     }),
     null,
   );

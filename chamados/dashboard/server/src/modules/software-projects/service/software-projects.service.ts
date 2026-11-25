@@ -1,11 +1,14 @@
 import {
   ForbiddenException,
   Inject,
+  Logger,
   Injectable,
   NotFoundException,
   Optional,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
+import { type SQL } from 'drizzle-orm';
 import { parseGitHubRepo } from '@template/shared/domain/software-project.util';
 import {
   type CreateSoftwareProjectInput,
@@ -14,14 +17,12 @@ import {
   type UpdateSoftwareProjectInput,
 } from '@template/shared/schemas/software-project.schema';
 
+import { BOARD_DRILL, type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
 import { GithubConnectionsRepository } from '../../github-integration/repository/github-connections.repository';
-import {
-  assertCanEditSystem,
-  assertCanRead,
-} from '../../../lib/policy/policy-assert.util';
+import { assertCanEditSystem, assertCanRead } from '../../../lib/policy/policy-assert.util';
 import { TicketAssigneesService } from '../../tickets/service/ticket-assignees.service';
 import {
   type ProjectResponsible,
@@ -33,8 +34,18 @@ import {
   SoftwareProjectsRepository,
   type SoftwareProjectPage,
 } from '../repository/software-projects.repository';
+import { SoftwareGitRepository } from '../repository/software-git.repository';
 import { SoftwareTimelineRepository } from '../repository/software-timeline.repository';
+import { toProjectMap } from '../mapper/project-map.mapper';
+import {
+  type ProjectMap,
+  type ProjectMapQuery,
+  type SupportSystem,
+} from '@template/shared/schemas/project-map.schema';
 import { type FetchedCoAuthor, GithubService } from './github.service';
+
+/** A fonte do painel que esta lista sabe recortar: a tabela dela, os sistemas. */
+const PROJECT_DRILL_SOURCES: readonly DataSourceKey[] = ['softwareProjects'];
 
 export const PROJECT_NOT_FOUND = 'Sistema não encontrado.';
 /** Quem aparece como autor do que a rodada automática grava. */
@@ -53,6 +64,8 @@ export type GithubSyncAllResult = {
 export const RESPONSIBLE_NOT_ATTENDANT =
   'O responsável escolhido não atende a área de Sistema. Escolha outro.';
 
+const GRAPH_LOGGER = new Logger('SoftwareProjectsService');
+
 @Injectable()
 export class SoftwareProjectsService {
   constructor(
@@ -64,6 +77,8 @@ export class SoftwareProjectsService {
     @Optional()
     @Inject(USER_DIRECTORY_PROVIDER)
     private readonly directory?: UserDirectoryProvider,
+    @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
+    @Optional() private readonly git?: SoftwareGitRepository,
   ) {}
 
   /**
@@ -120,7 +135,10 @@ export class SoftwareProjectsService {
   ): Promise<{ items: SoftwareProject[]; total: number; page: number; pageSize: number }> {
     assertCanRead(user.role, 'os sistemas');
 
-    const page: SoftwareProjectPage = await this.repository.list(query);
+    const page: SoftwareProjectPage = await this.repository.list(
+      query,
+      await this.drillOf(user, query),
+    );
     const ids = page.rows.map((row) => row.id);
 
     const [openTicketsMap, prsMap] = await Promise.all([
@@ -138,6 +156,75 @@ export class SoftwareProjectsService {
       page: query.page,
       pageSize: query.pageSize,
     };
+  }
+
+  /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
+  private async drillOf(
+    user: RequestUser,
+    query: Pick<SoftwareProjectListQuery, 'drill'>,
+  ): Promise<SQL | undefined> {
+    if (!query.drill || !this.drills) return undefined;
+
+    return this.drills.drillCondition(user, query.drill, PROJECT_DRILL_SOURCES);
+  }
+
+  /** O mapa dos projetos: cada sistema com issues, PRs, merges, chamados e tarefas. */
+  async map(user: RequestUser, query: ProjectMapQuery): Promise<ProjectMap> {
+    assertCanRead(user.role, 'os sistemas');
+
+    return this.mapOf(query);
+  }
+
+  /**
+   * O MAPA DE UM SISTEMA NA CENTRAL — quem pede chamado vê o sistema inteiro (decisão de quem
+   * administra: ver o que já está em andamento desencoraja o chamado repetido). Basta estar
+   * identificado; o sistema arquivado (ou que não existe) é 404.
+   */
+  async supportMap(id: number, query: Omit<ProjectMapQuery, 'ids'>): Promise<ProjectMap> {
+    const map = await this.mapOf({ ...query, ids: [id] });
+    if (!map.entries.length) throw new NotFoundException('Sistema não encontrado.');
+
+    return map;
+  }
+
+  /** O ANDAMENTO DE TODOS OS SISTEMAS na Central: basta estar identificado (como o mapa de um). */
+  async supportList(): Promise<SupportSystem[]> {
+    const { projects, activity } = await this.repository.supportList();
+    const openTickets = await this.repository.countOpenTicketsByProject(
+      projects.map((project) => project.id),
+    );
+
+    return projects.map((project) => {
+      const facts = activity.find((row) => row.projectId === project.id);
+      const lastAt = facts?.lastAt ? new Date(facts.lastAt) : null;
+
+      return {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        status: project.status,
+        openTickets: openTickets[project.id] ?? 0,
+        openIssues: facts?.openIssues ?? 0,
+        lastActivityAt: lastAt ? lastAt.toISOString() : null,
+      };
+    });
+  }
+
+  private async mapOf(query: ProjectMapQuery): Promise<ProjectMap> {
+    const personLogin = query.personId
+      ? ((await this.connections?.find(query.personId))?.login ?? null)
+      : null;
+    const facts = await this.repository.mapFacts(query.ids ?? null, {
+      from: query.from,
+      to: query.to,
+      personId: query.personId,
+      personLogin,
+    });
+    const graph = this.git
+      ? await this.git.graphOf(facts.projects.map((project) => project.id))
+      : { commits: [], branches: [], tags: [] };
+
+    return { entries: toProjectMap({ ...facts, ...graph }), personLogin };
   }
 
   async findById(user: RequestUser, id: number): Promise<SoftwareProject> {
@@ -198,7 +285,19 @@ export class SoftwareProjectsService {
     assertCanEditSystem(user, 'excluir sistema');
 
     await this.findById(user, id);
-    await this.repository.remove(id);
+    /* Excluir ARQUIVA: o sistema sai das listas, e a linha do tempo, a Agenda e os chamados
+       ligados a ele ficam como estavam para o "Desfazer". */
+    await this.repository.setArchived(id, true, user.id);
+  }
+
+  /** Desfaz a exclusão. Quem pode excluir é quem pode desfazer. */
+  async restore(user: RequestUser, id: number): Promise<SoftwareProject> {
+    assertCanEditSystem(user, 'excluir sistema');
+
+    await this.findById(user, id);
+    await this.repository.setArchived(id, false, null);
+
+    return this.findById(user, id);
   }
 
   async syncGithubPrs(user: RequestUser, id: number): Promise<{ synced: number; message: string }> {
@@ -210,7 +309,13 @@ export class SoftwareProjectsService {
     }
 
     const names = await this.linkedNames();
-    const { prs, issues, merges } = await this.syncRepository(id, repoInfo, user.email, user.id, names);
+    const { prs, issues, merges } = await this.syncRepository(
+      id,
+      repoInfo,
+      user.email,
+      user.id,
+      names,
+    );
 
     return {
       synced: prs,
@@ -347,7 +452,42 @@ export class SoftwareProjectsService {
       })),
     );
 
+    await this.syncGraph(projectId, owner, repo, nameOf);
+
     return { prs: prs.length, issues: issues.length, merges: merges.length };
+  }
+
+  /**
+   * O GIT GRAPH do sistema: os commits (com os pais) e as branches. É um extra da sincronização —
+   * falhar aqui não derruba a leitura dos PRs e das issues.
+   */
+  async syncGraph(
+    projectId: number,
+    owner: string,
+    repo: string,
+    nameOf: (login: string, fallback: string) => string = (_login, fallback) => fallback,
+  ): Promise<void> {
+    if (!this.git) return;
+    try {
+      const graph = await this.githubService.fetchGraph(owner, repo);
+      await this.git.upsertCommits(
+        graph.commits.map((commit) => ({
+          projectId,
+          sha: commit.sha,
+          parents: commit.parents,
+          message: commit.message,
+          authorLogin: commit.authorLogin,
+          authorName: commit.authorLogin
+            ? nameOf(commit.authorLogin, commit.authorName)
+            : commit.authorName,
+          committedAt: commit.committedAt,
+        })),
+      );
+      if (graph.branches.length) await this.git.syncBranches(projectId, graph.branches);
+      await this.git.syncTags(projectId, graph.tags);
+    } catch (error) {
+      GRAPH_LOGGER.warn(`Git graph de ${owner}/${repo} não sincronizou: ${String(error)}`);
+    }
   }
 
   /**

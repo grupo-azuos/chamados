@@ -1,17 +1,21 @@
+<!--
+  @component
+  A escolha de uma data EM TRÊS PERGUNTAS: o ano, depois o mês, depois o dia.
+
+  Um calendário comum abre no mês de hoje, e quem vai informar a data de compra de uma máquina
+  antiga escolhe o dia e não percebe que o ano continua sendo o atual. Aqui a ordem é a da resposta
+  mais larga para a mais estreita, e cada tela faz UMA pergunta. O que já foi respondido fica no
+  topo, como botão: tocar nele volta àquela pergunta.
+
+  É só o painel — não abre nem fecha nada. Quem o põe dentro de um balão é o `AzuosDateField`.
+
+  O valor entra e sai como texto ISO (`1990-03-25`): é o formato do contrato, e montar o texto pelos
+  números escolhidos não tem fuso para errar.
+
+  Props: `data` traz o valor e os limites (`min`, `max`); `ui.startYear` é o ano em que a lista abre
+  vazia; `actions.onChange` recebe a data completa.
+-->
 <script lang="ts" module>
-  /**
-   * A escolha de uma data EM TRÊS PERGUNTAS: o ano, depois o mês, depois o dia.
-   *
-   * Um calendário comum abre no mês de hoje, e quem vai informar a data de compra de uma máquina
-   * antiga escolhe o dia e não percebe que o ano continua sendo o atual. Aqui a ordem é a da
-   * resposta mais larga para a mais estreita, e cada tela faz UMA pergunta. O que já foi
-   * respondido fica no topo, como botão: tocar nele volta àquela pergunta.
-   *
-   * É só o painel — não abre nem fecha nada. Quem o põe dentro de um balão é o `AzuosDateField`.
-   *
-   * O valor entra e sai como texto ISO (`1990-03-25`): é o formato do contrato, e montar o texto
-   * pelos números escolhidos não tem fuso para errar.
-   */
   export type AzuosDateStepperProps = {
     data: {
       /** A data em ISO (`1990-03-25`), ou vazio quando ninguém escolheu. */
@@ -118,7 +122,7 @@
     return cn(
       'rounded-control text-foreground hover:bg-accent cursor-pointer border border-transparent text-sm transition-colors outline-none',
       'focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-      'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-inherit',
+      'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
       cell.isToday && 'bg-primary-soft text-primary font-semibold',
       cell.isSelected && 'bg-primary text-primary-foreground hover:bg-primary font-semibold',
       extra,
@@ -235,7 +239,7 @@
     type="button"
     onclick={onClick}
     aria-label={`${label}: ${value}. Trocar`}
-    class="control-sm rounded-control border-border bg-muted text-ink-700 hover:bg-accent focus-visible:ring-ring/50 inline-flex cursor-pointer items-center gap-1 border text-xs transition-colors outline-none focus-visible:ring-[3px]"
+    class="control-sm bg-muted text-ink-700 hover:bg-accent focus-visible:ring-ring/50 inline-flex cursor-pointer items-center gap-1 rounded-full text-xs transition-colors outline-none focus-visible:ring-[3px]"
   >
     <span class="text-ink-500">{label}:</span>
     <span class="text-ink-900 font-semibold">{value}</span>

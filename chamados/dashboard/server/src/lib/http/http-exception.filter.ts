@@ -86,7 +86,7 @@ function describeHttpException(exception: HttpException): {
   const statusCode = exception.getStatus();
   const payload = exception.getResponse();
 
-  if (typeof payload === 'string') return { statusCode, message: payload };
+  if (typeof payload === 'string') return { statusCode, message: inPortuguese(statusCode, payload) };
 
   const record = payload as { message?: unknown; errors?: unknown };
   const details = readValidationDetails(record.errors);
@@ -102,7 +102,40 @@ function describeHttpException(exception: HttpException): {
     ? record.message.join('; ')
     : String(record.message ?? exception.message);
 
-  return { statusCode, message };
+  return { statusCode, message: inPortuguese(statusCode, message) };
+}
+
+/**
+ * O que a pessoa lê é em português. As recusas do PRÓPRIO framework — do Nest ("Not Found",
+ * "Cannot GET /x") e do leitor do corpo ("request entity too large") — chegam em inglês e iam
+ * direto para a tela. Elas são reconhecidas pelo texto e trocadas pelo motivo do status; as
+ * nossas, já em português, passam como vieram.
+ */
+const FRAMEWORK_MESSAGE =
+  /^(?:request entity too large|request aborted|request size did not match content length|unsupported (?:charset|content encoding)\b.*|unexpected (?:token|end of json)\b.*|.*is not valid json.*|cannot (?:get|post|put|patch|delete|head|options) .*|bad request|unauthorized|forbidden|not found|method not allowed|not acceptable|request timeout|conflict|gone|payload too large|unsupported media type|unprocessable entity|too many requests|internal server error|not implemented|bad gateway|service unavailable|gateway timeout)(?: exception)?$/i;
+
+const STATUS_MESSAGE: Record<number, string> = {
+  400: 'O pedido chegou incompleto ou mal formado. Tente de novo.',
+  401: 'Sua sessão não foi reconhecida. Entre de novo.',
+  403: 'Você não tem permissão para isso.',
+  404: 'Não encontrei o que foi pedido.',
+  405: 'Esta ação não existe aqui.',
+  408: 'O pedido demorou demais. Tente de novo.',
+  409: 'Outra pessoa mudou isto antes. Recarregue e tente de novo.',
+  413: 'O pedido ficou grande demais para enviar. Diminua o recorte e tente de novo.',
+  415: 'O formato enviado não é aceito.',
+  422: 'Confira os campos destacados.',
+  429: 'Muitos pedidos seguidos. Espere um instante e tente de novo.',
+  503: 'O serviço está fora do ar agora. Tente de novo em instantes.',
+};
+
+function inPortuguese(statusCode: number, message: string): string {
+  if (!FRAMEWORK_MESSAGE.test(message.trim())) return message;
+
+  return (
+    STATUS_MESSAGE[statusCode] ??
+    'Não consegui concluir. O erro foi registrado — tente de novo em instantes.'
+  );
 }
 
 /** `createZodDto` entrega os erros de validação aqui; o resto da API ignora o campo. */

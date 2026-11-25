@@ -45,6 +45,7 @@ function movement(over: Partial<PartMovement> = {}): PartMovement {
     createdBy: 'suporte@azuos.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
     ...over,
   };
 }
@@ -56,7 +57,6 @@ const actions = {
   onRetry: vi.fn(),
   onClose: vi.fn(),
 };
-
 
 /* Em "só cards" a tabela some de vez, em qualquer largura: nem a classe `xl:block` fica. */
 function hasCardsOnlyTable(): boolean {
@@ -217,17 +217,31 @@ describe('AzuosPartLedgerDialog', () => {
 });
 
 describe('AzuosPartLedgerDialog — the lines, the buttons and the closing', () => {
-  function renderLedger(movements: PartMovement[], over: Partial<NonNullable<Parameters<typeof PartLedgerDialog>[1]['state']>> = {}, removing: PartMovement | null = null) {
+  function renderLedger(
+    movements: PartMovement[],
+    over: Partial<NonNullable<Parameters<typeof PartLedgerDialog>[1]['state']>> = {},
+    removing: PartMovement | null = null,
+  ) {
     return render(PartLedgerDialog, {
-      props: { data: { part: part(), movements, removing }, state: { isOpen: true, ...over }, actions },
+      props: {
+        data: { part: part(), movements, removing },
+        state: { isOpen: true, ...over },
+        actions,
+      },
     });
   }
 
   // feliz
   it('names the destination with what it knows about the machine', () => {
     expect(destinationOf(movement({ computerDepartment: null }))).toBe('Contábil — fechamento');
-    expect(destinationOf(movement({ computerDisplayName: '  ', computerDepartment: null }))).toBe('CONTABIL-03');
-    expect(destinationOf(movement({ computerDisplayName: null, computerName: null, computerDepartment: null }))).toBe('Máquina');
+    expect(destinationOf(movement({ computerDisplayName: '  ', computerDepartment: null }))).toBe(
+      'CONTABIL-03',
+    );
+    expect(
+      destinationOf(
+        movement({ computerDisplayName: null, computerName: null, computerDepartment: null }),
+      ),
+    ).toBe('Máquina');
     expect(signedQuantity(movement({ type: 'in', quantity: 2 }))).toBe('+2');
   });
 
@@ -273,7 +287,10 @@ describe('AzuosPartLedgerDialog — closing and cards only', () => {
   it('closes with Escape, like any dialog', async () => {
     const onClose = vi.fn();
     render(PartLedgerDialog, {
-      props: { data: { part: part(), movements: [movement()], removing: null }, actions: { ...actions, onClose } },
+      props: {
+        data: { part: part(), movements: [movement()], removing: null },
+        actions: { ...actions, onClose },
+      },
     });
 
     await userEvent.keyboard('{Escape}');
@@ -293,5 +310,66 @@ describe('AzuosPartLedgerDialog — closing and cards only', () => {
     } finally {
       tableView.actions.onToggle();
     }
+  });
+});
+
+/* Dentro do diálogo branco, nada de card branco com sombra: o item é a caixa cinza, a tabela é
+   plana e quem rola é a área do diálogo — nada cortado nem colado na beirada. */
+describe('AzuosPartLedgerDialog — inside the dialog surface', () => {
+  // feliz
+  it('draws each movement as the muted box, without shadow or own scroll', () => {
+    render(PartLedgerDialog, {
+      props: {
+        data: { part: part(), movements: [movement(), movement({ id: 11 })], removing: null },
+        actions,
+      },
+    });
+
+    const grid = document.querySelector('[data-slot="part-ledger-cards-mobile"]');
+    expect(grid?.className).not.toMatch(/overflow-y-auto|max-h-/);
+
+    const items = document.querySelectorAll('[data-slot="part-ledger-item"]');
+    expect(items).toHaveLength(2);
+    for (const item of items) {
+      expect(item.className).toContain('bg-muted');
+      expect(item.className).toContain('rounded-box');
+      expect(item.className).not.toMatch(/shadow-card|bg-card/);
+    }
+
+    const table = document.querySelector('[data-slot="table-surface"]');
+    expect(table?.className).toContain('shadow-none');
+    expect(table?.className).toContain('bg-transparent');
+  });
+
+  it('puts the count beside the toggle, in the same row', () => {
+    render(PartLedgerDialog, {
+      props: {
+        data: { part: part(), movements: [movement(), movement({ id: 11 })], removing: null },
+        actions,
+      },
+    });
+
+    const toolbar = document.querySelector('[data-slot="part-ledger-toolbar"]') as HTMLElement;
+    expect(within(toolbar).getByText('2 movimentação(ões)')).toBeInTheDocument();
+  });
+
+  // triste
+  it('keeps the hover veil only on the movements that lead to a ticket', () => {
+    render(PartLedgerDialog, {
+      props: {
+        data: {
+          part: part(),
+          movements: [movement(), movement({ id: 11, ticketId: 42 })],
+          removing: null,
+        },
+        actions,
+      },
+    });
+
+    const [manual, fromTicket] = Array.from(
+      document.querySelectorAll('[data-slot="part-ledger-item"]'),
+    );
+    expect(manual?.className).not.toContain('hover:before:bg-hover-veil');
+    expect(fromTicket?.className).toContain('hover:before:bg-hover-veil');
   });
 });

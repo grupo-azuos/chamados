@@ -1,14 +1,19 @@
+<!--
+  @component
+  Um campo de formulário: rótulo, entrada e erro.
+
+  O erro fica COLADO no campo, e não num resumo no topo. Resumo obriga a pessoa a procurar qual dos
+  campos ele descreve, e num formulário de quatro campos ela erra a procura — corrige o que estava
+  certo e reenvia o mesmo erro.
+
+  `data` leva rótulo, nome, valor, `placeholder`, `autoComplete` e `isRequired`; `ui`, o `type`
+  (`text`, `email`, `password`, `date`, `time`, `tel`), o `inputMode` do teclado do celular e
+  `className`; `state`, `error`, `isDisabled` e `isAutoFocused`; `actions`, `onChange` e `onBlur`.
+-->
 <script lang="ts" module>
   import type { HTMLInputAttributes } from 'svelte/elements';
   import { cn } from '$lib/utils/cn';
 
-  /**
-   * Um campo de formulário: rótulo, entrada e erro.
-   *
-   * O erro fica COLADO no campo, e não num resumo no topo. Resumo obriga a pessoa a
-   * procurar qual dos campos ele descreve, e num formulário de quatro campos ela erra a
-   * procura — corrige o que estava certo e reenvia o mesmo erro.
-   */
   /* `date` entra aqui, e não num componente separado, porque só o `type` do `input` muda —
      rótulo, erro e acessibilidade são exatamente os mesmos. */
   export type TextFieldType = 'text' | 'email' | 'password' | 'date' | 'time' | 'tel';
@@ -80,7 +85,7 @@
       'bg-muted text-foreground w-full border text-sm transition-colors',
       'placeholder:text-ink-500 disabled:cursor-not-allowed disabled:opacity-60',
       isPassword && 'pr-11',
-      hasError ? 'border-border bg-destructive-soft' : 'border-input',
+      hasError ? 'bg-destructive-soft border-transparent' : 'border-transparent',
     ),
   );
 </script>

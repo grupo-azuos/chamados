@@ -19,8 +19,11 @@
       activeAlertMetrics: [],
       name: 'RECEPCAO-01',
       displayName: 'Recepção — balcão',
+      responsibleId: 'person-bia-costa',
       responsibleName: 'Bia Costa',
-      department: 'recepcao',
+      responsibleAvatarUrl: null,
+      departmentId: null, departmentName: null,
+      notes: null,
       kind: 'desktop',
       hardware: {
         os: 'Microsoft Windows 11 Pro',
@@ -64,8 +67,11 @@
       id: 3,
       name: 'CONTABIL-03',
       displayName: 'Contábil — mesa do fechamento',
+      responsibleId: 'person-daniela-prado',
       responsibleName: 'Daniela Prado',
-      department: 'contabil',
+      responsibleAvatarUrl: null,
+      departmentId: 2, departmentName: 'Contábil',
+      notes: null,
       healthScore: 63,
       healthStatus: 'critical',
       warnings: [{ severity: 'critical', message: 'Disco quase cheio: só 2,8% livre' }],
@@ -74,8 +80,11 @@
       id: 2,
       name: 'FINANCEIRO-02',
       displayName: 'Financeiro — mesa 2',
+      responsibleId: 'person-carlos-menezes',
       responsibleName: 'Carlos Menezes',
-      department: 'financeiro',
+      responsibleAvatarUrl: null,
+      departmentId: 4, departmentName: 'Financeiro',
+      notes: null,
       healthScore: 88,
       healthStatus: 'attention',
       warnings: [{ severity: 'attention', message: 'Memória RAM abaixo de 8 GB: 4,0 GB' }],
@@ -86,8 +95,11 @@
       id: 4,
       name: 'FISCAL-04',
       displayName: 'Fiscal — máquina nova, agente pendente',
+      responsibleId: 'person-eduardo-lima',
       responsibleName: 'Eduardo Lima',
-      department: 'fiscal',
+      responsibleAvatarUrl: null,
+      departmentId: 5, departmentName: 'Fiscal',
+      notes: null,
       isOnline: false,
       lastSeenAt: null,
       agentVersion: null,
@@ -96,8 +108,11 @@
       id: 6,
       name: 'CS-06',
       displayName: 'CS — máquina de estágio',
+      responsibleId: 'person-gustavo-alves',
       responsibleName: 'Gustavo Alves',
-      department: 'cs',
+      responsibleAvatarUrl: null,
+      departmentId: 3, departmentName: 'Experiência do Cliente',
+      notes: null,
       isOnline: false,
       isBlocked: true,
       blockReason: 'Máquina devolvida ao fornecedor.',
@@ -109,8 +124,11 @@
     id: 8,
     name: 'PARALEGAL-08-ESTACAO-COMPARTILHADA',
     displayName: 'Paralegal — estação compartilhada do corredor (usada por mais de uma pessoa)',
+    responsibleId: 'person-isabela-marques-de-o',
     responsibleName: 'Isabela Marques de Oliveira e Souza Rodrigues',
-    department: 'paralegal',
+    responsibleAvatarUrl: null,
+    departmentId: 6, departmentName: 'Paralegal',
+    notes: null,
   });
 
   const summary: ComputerSummary = {
@@ -123,14 +141,17 @@
     critical: 2,
     attention: 1,
     neverSeen: 1,
+    needsUpgrade: 2,
   };
 
   const emptyFilter: ComputerListFilter = {
     search: '',
-    department: '',
+    departmentId: '',
     healthStatus: '',
     kind: '',
     includeArchived: false,
+    responsibleId: '',
+    upgrade: '',
     onlyOnline: false,
     onlyOffline: false,
     alert: '',
@@ -143,6 +164,8 @@
     onDepartmentChange: () => {},
     onHealthStatusChange: () => {},
     onArchivedChange: () => {},
+    onResponsibleChange: () => {},
+    onUpgradeChange: () => {},
     onOnlineChange: () => {},
     onOfflineChange: () => {},
     onKindChange: () => {},
@@ -150,6 +173,9 @@
     onResourceConditionChange: () => {},
     onPreventiveChange: () => {},
     onClearFilters: () => {},
+    onClearShortcuts: () => {},
+    onSortChange: () => {},
+    onPageChange: () => {},
     onRetry: () => {},
     onOpen: () => {},
     onRegister: () => {},
@@ -196,6 +222,35 @@
     actions={onlineActions}
   />
 </Story>
+
+<!-- Vinda do endereço antigo da Inteligência: só quem precisa de upgrade, com o cartão marcado. -->
+<Story
+  name="UpgradeFilter"
+  args={{
+    data: { computers, total: computers.length, summary, filter: { ...emptyFilter, upgrade: 'any' } },
+    state: settled,
+    actions,
+  }}
+/>
+
+<!-- Filtrada por responsável: o campo de pessoa com a foto e a etiqueta com o nome. -->
+<Story
+  name="ResponsibleFilter"
+  args={{
+    data: {
+      computers,
+      total: computers.length,
+      summary,
+      filter: { ...emptyFilter, responsibleId: 'p-1' },
+      responsibleOptions: [
+        { id: 'p-1', name: 'Camila Duarte', photo: 'https://i.pravatar.cc/64?img=47' },
+        { id: 'p-2', name: 'Gabriel Moura', photo: null },
+      ],
+    },
+    state: settled,
+    actions,
+  }}
+/>
 
 <!-- "Mais filtros" nasce aberto quando a lista chega filtrada: aqui, só quem precisa de
      manutenção — no computador e no celular, onde os grupos ficam um embaixo do outro. -->
@@ -264,7 +319,7 @@
     data: {
       computers: [],
       total: 0,
-      summary: { total: 0, online: 0, offline: 0, withAlerts: 0, cpuHigh: 0, memoryHigh: 0, critical: 0, attention: 0, neverSeen: 0 },
+      summary: { total: 0, online: 0, offline: 0, withAlerts: 0, cpuHigh: 0, memoryHigh: 0, critical: 0, attention: 0, neverSeen: 0, needsUpgrade: 0 },
       filter: emptyFilter,
     },
     state: { ...settled, isEmpty: true },
@@ -349,8 +404,30 @@
         computer({ id: 23, displayName: 'Atendimento — alerta em andamento', activeAlerts: 1, activeAlertMetrics: ['cpu'] }),
         computer({ id: 24, displayName: 'Financeiro — preventiva em dia' }),
       ],
-      total: 4, summary: { total: 4, online: 3, offline: 1, withAlerts: 1, cpuHigh: 1, memoryHigh: 0, critical: 0, attention: 0, neverSeen: 0 }, filter: emptyFilter,
+      total: 4, summary: { total: 4, online: 3, offline: 1, withAlerts: 1, cpuHigh: 1, memoryHigh: 0, critical: 0, attention: 0, neverSeen: 0, needsUpgrade: 0 }, filter: emptyFilter,
     },
     state: settled, actions,
   }}
 />
+
+<!-- Muitas máquinas no modo cards: a grade pagina (página 2 de 2) e a tabela rola. -->
+<Story
+  name="Paged cards"
+  globals={{ viewport: { value: 'celular' } }}
+  args={{
+    data: {
+      computers: Array.from({ length: 30 }, (_, index) =>
+        computer({ id: 100 + index, name: `MAQ-D${String(index + 1).padStart(2, '0')}`, displayName: null,
+          activeAlerts: index % 7 === 0 ? 1 : 0 }),
+      ),
+      total: 30,
+      summary,
+      filter: emptyFilter,
+      paging: { page: 2, pageSize: 24, total: 30 },
+      sort: { field: 'number', direction: 'asc' },
+    },
+    state: settled,
+    actions,
+  }}
+/>
+

@@ -1,3 +1,4 @@
+import { TasksModule } from '../tasks/tasks.module';
 import { Module } from '@nestjs/common';
 
 import { TicketAttachmentsController } from './controller/ticket-attachments.controller';
@@ -8,6 +9,8 @@ import { TicketsController } from './controller/tickets.controller';
 import { TicketServiceOrdersRepository } from './repository/ticket-service-orders.repository';
 import { TicketServiceOrdersService } from './service/ticket-service-orders.service';
 import { TicketAttachmentsRepository } from './repository/ticket-attachments.repository';
+import { TicketRemovedController } from './controller/ticket-removed.controller';
+import { TicketRemovedService } from './service/ticket-removed.service';
 import { TicketHistoriesRepository } from './repository/ticket-histories.repository';
 import { TicketsRepository } from './repository/tickets.repository';
 import { TicketWatchersRepository } from './repository/ticket-watchers.repository';
@@ -37,13 +40,14 @@ import { SoftwareProjectsModule } from '../software-projects/software-projects.m
  */
 @Module({
   /* `AuthModule` dá o diretório de usuários, de onde sai quem pode ser responsável. */
-  imports: [SoftwareProjectsModule, AuthModule, RolesModule, WhatsappModule],
+  imports: [SoftwareProjectsModule, AuthModule, RolesModule, WhatsappModule, TasksModule],
   controllers: [
     TicketServiceOrdersController,
     TicketsController,
     TicketAttachmentsController,
     TicketHistoriesController,
     TicketStockItemsController,
+    TicketRemovedController,
   ],
   providers: [
     TicketServiceOrdersService,
@@ -66,7 +70,8 @@ import { SoftwareProjectsModule } from '../software-projects/software-projects.m
     TicketStockItemsService,
     TicketStockItemsRepository,
     TicketComputersRepository,
+    TicketRemovedService,
   ],
-  exports: [TicketsService, TicketAssigneesService],
+  exports: [TicketsService, TicketAssigneesService, TicketHistoriesService],
 })
 export class TicketsModule {}

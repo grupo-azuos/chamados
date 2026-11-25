@@ -1,5 +1,5 @@
 import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
-import { cleanup, render, screen } from '@testing-library/svelte';
+import { cleanup, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -46,8 +46,8 @@ class InstantLoadImage {
   }
 }
 
-function renderView(overrides: Partial<AzuosRoleListViewProps> = {}) {
-  const actions = {
+function baseActions() {
+  return {
     onCreate: vi.fn(),
     onAskDelete: vi.fn(),
     onSearchChange: vi.fn(),
@@ -55,6 +55,10 @@ function renderView(overrides: Partial<AzuosRoleListViewProps> = {}) {
     onClearFilters: vi.fn(),
     onRetry: vi.fn(),
   };
+}
+
+function renderView(overrides: Partial<AzuosRoleListViewProps> = {}) {
+  const actions = baseActions();
 
   render(RoleListView, {
     props: {
@@ -99,6 +103,29 @@ describe('AzuosRoleListView', () => {
     expect(actions.onCreate).toHaveBeenCalledOnce();
   });
 
+  it('gives a module straight from the person card', async () => {
+    const onGrantTo = vi.fn();
+    renderView({ actions: { ...baseActions(), onGrantTo } });
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Adicionar módulo' })[0]!);
+    expect(onGrantTo).toHaveBeenCalledWith(expect.objectContaining({ userId: 'usr_1' }));
+  });
+
+  // triste
+  it('offers no add button to someone who is not super admin', () => {
+    renderView({
+      data: {
+        currentUser: { name: 'Operador', email: 'op@empresa.com.br', role: 'admin' },
+        roles: mockRoles,
+        total: 2,
+        filter: { search: '', context: '' },
+      },
+      actions: { ...baseActions(), onGrantTo: vi.fn() },
+    });
+
+    expect(screen.queryByRole('button', { name: 'Adicionar módulo' })).not.toBeInTheDocument();
+  });
+
   it('takes out only the module whose x was clicked', async () => {
     const actions = renderView();
 
@@ -112,7 +139,7 @@ describe('AzuosRoleListView', () => {
     renderView();
 
     const cards = document.querySelector('[data-slot="role-cards-mobile"]') as HTMLElement;
-    expect(cards.querySelectorAll('.hover-fill')).toHaveLength(1);
+    expect(cards.querySelectorAll('[data-slot="azuos-card-surface"]')).toHaveLength(1);
     expect(screen.getAllByText('Módulos').length).toBeGreaterThan(0);
   });
 
@@ -372,5 +399,39 @@ describe('AzuosRoleListView — unknown roles, people without e-mail and the tab
     const removes = screen.queryAllByRole('button', { name: /^Tirar o módulo / });
     for (const button of removes) await userEvent.click(button);
     expect(actions.onAskDelete).toHaveBeenCalledTimes(removes.length);
+  });
+});
+
+describe('AzuosRoleListView — the person card', () => {
+  // feliz
+  it('takes a module out and gives another from the menu of the card', async () => {
+    const onGrantTo = vi.fn();
+    const actions = { ...baseActions(), onGrantTo };
+    renderView({ actions });
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    const cards = document.querySelector('[data-slot="role-cards-mobile"]') as HTMLElement;
+    const menu = within(cards).getByRole('button', { name: /^Ações de / });
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Tirar o módulo Sistema' }));
+    expect(actions.onAskDelete).toHaveBeenCalledWith(mockRoles[1]);
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Adicionar módulo' }));
+    expect(onGrantTo).toHaveBeenCalledWith(expect.objectContaining({ userId: 'usr_1' }));
+  });
+
+  // triste
+  it('shows no menu on the card to someone who only reads', () => {
+    renderView({
+      data: {
+        currentUser: { name: 'Operador', email: 'op@empresa.com.br', role: 'admin' },
+        roles: mockRoles,
+        total: 2,
+        filter: { search: '', context: '' },
+      },
+    });
+
+    const cards = document.querySelector('[data-slot="role-cards-mobile"]') as HTMLElement;
+    expect(within(cards).queryByRole('button', { name: /^Ações de / })).toBeNull();
   });
 });

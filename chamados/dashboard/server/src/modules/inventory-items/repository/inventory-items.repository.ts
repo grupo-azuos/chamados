@@ -4,6 +4,7 @@ import { type InventoryMovementListQuery } from '@template/shared/schemas/invent
 import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
 import { and, asc, count, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
 
+import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { ticketStockLinksOf } from '../../../lib/db/ticket-stock-link.util';
@@ -43,8 +44,9 @@ const movementItemColumns = { name: inventoryItems.name, unit: inventoryItems.un
 export class InventoryItemsRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(query: InventoryItemListQuery): Promise<InventoryItemPage> {
-    const where = buildWhere(query);
+  /** `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro. */
+  async list(query: InventoryItemListQuery, drill?: SQL): Promise<InventoryItemPage> {
+    const where = and(buildWhere(query), drill);
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([
@@ -90,26 +92,23 @@ export class InventoryItemsRepository {
     return row as InventoryItemRow;
   }
 
-  async update(
-    id: number,
-    values: Partial<InventoryItemInsert>,
-  ): Promise<InventoryItemRow | null> {
+  async update(id: number, values: Partial<InventoryItemInsert>): Promise<InventoryItemRow | null> {
     const [row] = await runQuery(
-      this.db
-        .update(inventoryItems)
-        .set(values)
-        .where(eq(inventoryItems.id, id))
-        .returning(),
+      this.db.update(inventoryItems).set(values).where(eq(inventoryItems.id, id)).returning(),
       'alterar produto do inventário',
     );
 
     return row ?? null;
   }
 
-  async remove(id: number): Promise<void> {
+  /** Arquiva (excluir) ou desarquiva (desfazer). O produto, o extrato e a foto ficam. */
+  async setArchived(id: number, archived: boolean, actorId: string | null): Promise<void> {
     await runQuery(
-      this.db.delete(inventoryItems).where(eq(inventoryItems.id, id)),
-      'excluir produto do inventário',
+      this.db
+        .update(inventoryItems)
+        .set(archiveValues(archived, actorId))
+        .where(eq(inventoryItems.id, id)),
+      archived ? 'arquivar produto do inventário' : 'desarquivar produto do inventário',
     );
   }
 
@@ -125,9 +124,45 @@ export class InventoryItemsRepository {
     executor: DatabaseExecutor,
   ): Promise<InventoryItemRow | null> {
     return runMaybe(
-      executor.select().from(inventoryItems).where(eq(inventoryItems.id, id)).limit(1).for('update'),
+      executor
+        .select()
+        .from(inventoryItems)
+        .where(eq(inventoryItems.id, id))
+        .limit(1)
+        .for('update'),
       'ler produto para movimentar',
     );
+  }
+
+  /**
+   * Os produtos de um NOME (sem diferença de maiúscula), travados para movimentar o depósito —
+   * do que tem mais saldo para o que tem menos: a entrada vai para o primeiro, a saída tira dele
+   * primeiro. Arquivado não entra.
+   */
+  async findByNameForUpdate(name: string, executor: DatabaseExecutor): Promise<InventoryItemRow[]> {
+    return runQuery(
+      executor
+        .select()
+        .from(inventoryItems)
+        .where(and(sameName(name), isNull(inventoryItems.archivedAt)))
+        .orderBy(desc(inventoryItems.balance), asc(inventoryItems.id))
+        .for('update'),
+      'ler produtos para movimentar',
+    );
+  }
+
+  /** Os nomes de todos os produtos que não foram arquivados — a lista do campo "Nome do produto". */
+  async names(): Promise<string[]> {
+    const rows = await runQuery(
+      this.db
+        .select({ name: inventoryItems.name })
+        .from(inventoryItems)
+        .where(isNull(inventoryItems.archivedAt))
+        .orderBy(asc(inventoryItems.id)),
+      'listar nomes de produtos',
+    );
+
+    return rows.map((row) => row.name);
   }
 
   async updateBalance(id: number, balance: number, executor: DatabaseExecutor): Promise<void> {
@@ -200,7 +235,9 @@ function buildMovementWhere(query: InventoryMovementListQuery): SQL | undefined 
  * produto — "cadeira", "sala da fiscal" ou a etiqueta que está colada nele.
  */
 function buildWhere(query: InventoryItemListQuery): SQL | undefined {
-  const filters: (SQL | undefined)[] = [];
+  const filters: (SQL | undefined)[] = [
+    archivedCondition(inventoryItems.archivedAt, query.archived),
+  ];
 
   if (query.category) filters.push(eq(inventoryItems.category, query.category));
   if (query.withoutPhotoOnly) filters.push(isNull(inventoryItems.photoKey));
@@ -220,4 +257,9 @@ function buildWhere(query: InventoryItemListQuery): SQL | undefined {
   }
 
   return filters.length > 0 ? and(...filters) : undefined;
+}
+
+/** Mesmo nome, sem diferença de maiúscula nem de espaço sobrando — a chave do Depósito. */
+function sameName(name: string): SQL {
+  return sql`lower(btrim(${inventoryItems.name})) = lower(btrim(${name}))`;
 }

@@ -1,10 +1,18 @@
-import { ForbiddenException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { createTransferSchema } from '@template/shared/schemas/transfer.schema';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { type ComputerTransferRow } from '../../../lib/db/schema/computer-transfers.schema';
+import { rememberDepartments } from '../../../lib/db/reference-names.util';
 import { type ComputerRow } from '../../../lib/db/schema/computers.schema';
+import { type DepartmentsService } from '../../departments/service/departments.service';
 import { type PartRow } from '../../../lib/db/schema/parts.schema';
 import { type PartsRepository } from '../../parts/repository/parts.repository';
 import { type TransfersRepository } from '../repository/transfers.repository';
@@ -21,8 +29,8 @@ function computer(over: Partial<ComputerRow> = {}): ComputerRow {
     id: 1,
     name: 'FINANCEIRO-02',
     displayName: 'Financeiro — mesa 2',
-    responsibleName: 'Bruno',
-    department: 'financeiro',
+    responsibleId: 'person-bruno',
+    departmentId: 20,
     isArchived: false,
     disposedAt: null,
     ...over,
@@ -37,8 +45,8 @@ function transferRow(over: Partial<ComputerTransferRow> = {}): ComputerTransferR
   return {
     id: 10,
     computerId: 1,
-    fromDepartment: 'financeiro',
-    toDepartment: 'fiscal',
+    fromDepartment: 'Financeiro',
+    toDepartment: 'Fiscal',
     responsible: null,
     note: null,
     peripheralsLeftBehind: 0,
@@ -51,7 +59,13 @@ function transferRow(over: Partial<ComputerTransferRow> = {}): ComputerTransferR
 type Overrides = {
   computers?: ComputerRow[];
   part?: PartRow | null;
+  withoutHr?: boolean;
 };
+
+const HR = [
+  { id: 20, name: 'Financeiro' },
+  { id: 21, name: 'Fiscal' },
+];
 
 function makeService(over: Overrides = {}) {
   const machines = over.computers ?? [computer()];
@@ -75,18 +89,30 @@ function makeService(over: Overrides = {}) {
     ),
   };
 
+  const departments = {
+    assertOfficial: vi.fn(async (id: number) => {
+      if (!HR.some((option) => option.id === id)) throw new BadRequestException('fora da lista');
+    }),
+    catalog: vi.fn(async () => {
+      rememberDepartments(HR);
+      return null;
+    }),
+  };
+
   return {
     service: new TransfersService(
       transfers as unknown as TransfersRepository,
       parts as unknown as PartsRepository,
+      over.withoutHr ? undefined : (departments as unknown as DepartmentsService),
     ),
     transfers,
     parts,
+    departments,
   };
 }
 
 const input = (over: Record<string, unknown> = {}) =>
-  createTransferSchema.parse({ toDepartment: 'fiscal', ...over });
+  createTransferSchema.parse({ toDepartmentId: 21, ...over });
 
 describe('TransfersService.create', () => {
   // feliz
@@ -98,13 +124,13 @@ describe('TransfersService.create', () => {
     expect(transfers.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         computerId: 1,
-        fromDepartment: 'financeiro',
-        toDepartment: 'fiscal',
+        fromDepartment: 'Financeiro',
+        toDepartment: 'Fiscal',
         createdBy: ana.email,
       }),
       expect.anything(),
     );
-    expect(transfer.toDepartment).toBe('fiscal');
+    expect(transfer.toDepartment).toBe('Fiscal');
   });
 
   it('moves the machine to the new department', async () => {
@@ -112,20 +138,53 @@ describe('TransfersService.create', () => {
 
     await service.create(ana, 1, input());
 
-    expect(transfers.updateComputer).toHaveBeenCalledWith(1, { department: 'fiscal' }, {});
+    expect(transfers.updateComputer).toHaveBeenCalledWith(1, { departmentId: 21 }, {});
+  });
+
+  // triste
+  /* O Local saiu do computador: um destino "local" de uma tela antiga não muda nada na máquina. */
+  it('ignores a fixed location sent by an old screen and sends the machine to the shelf', async () => {
+    const { service, transfers } = makeService();
+
+    await service.create(ana, 1, { ...input({ toDepartmentId: null }), toLocation: 'RECEPÇÃO' } as never);
+
+    expect(transfers.updateComputer).toHaveBeenCalledWith(
+      1,
+      expect.not.objectContaining({ location: expect.anything() }),
+      {},
+    );
+    expect(transfers.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ fromDepartment: 'Financeiro', toDepartment: null }),
+      expect.anything(),
+    );
+  });
+
+  // triste
+  it('refuses a destination department that HR does not have, before touching anything', async () => {
+    const { service, transfers } = makeService();
+
+    await expect(service.create(ana, 1, input({ toDepartmentId: 99 }))).rejects.toBeInstanceOf(BadRequestException);
+    expect(transfers.transaction).not.toHaveBeenCalled();
+  });
+
+  // triste
+  it('refuses with 503 a destination department when the HR list is not available', async () => {
+    const { service } = makeService({ withoutHr: true });
+
+    await expect(service.create(ana, 1, input())).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
   /* Voltar para a prateleira tira o apelido e o responsável: os dois são do antigo dono. */
   it('turns the machine into a spare when it goes back to the shelf', async () => {
     const { service, transfers } = makeService();
 
-    await service.create(ana, 1, input({ toDepartment: null }));
+    await service.create(ana, 1, input({ toDepartmentId: null }));
 
     expect(transfers.updateComputer).toHaveBeenCalledWith(
       1,
       {
-        department: null,
-        responsibleName: null,
+        departmentId: null,
+        responsibleId: null,
         displayName: 'Reserva — FINANCEIRO-02',
       },
       {},
@@ -136,7 +195,7 @@ describe('TransfersService.create', () => {
      saldo da prateleira termina igual ao que era. */
   it('hands a peripheral that stays to the machine taking over', async () => {
     const { service, parts } = makeService({
-      computers: [computer(), computer({ id: 2, name: 'FISCAL-04', department: 'fiscal' })],
+      computers: [computer(), computer({ id: 2, name: 'FISCAL-04', departmentId: 21 })],
     });
 
     await service.create(
@@ -158,7 +217,7 @@ describe('TransfersService.create', () => {
 
   it('counts how many peripherals were left behind', async () => {
     const { service, transfers } = makeService({
-      computers: [computer(), computer({ id: 2, name: 'FISCAL-04', department: 'fiscal' })],
+      computers: [computer(), computer({ id: 2, name: 'FISCAL-04', departmentId: 21 })],
     });
 
     await service.create(
@@ -191,7 +250,7 @@ describe('TransfersService.create', () => {
   it('refuses a move to the department the machine is already in', async () => {
     const { service, transfers } = makeService();
 
-    await expect(service.create(ana, 1, input({ toDepartment: 'financeiro' }))).rejects.toBeInstanceOf(
+    await expect(service.create(ana, 1, input({ toDepartmentId: 20 }))).rejects.toBeInstanceOf(
       UnprocessableEntityException,
     );
     expect(transfers.insert).not.toHaveBeenCalled();
@@ -223,7 +282,7 @@ describe('TransfersService.create', () => {
   /* A peça sumiu do depósito entre abrir a tela e confirmar: nada é gravado pela metade. */
   it('says the peripheral no longer exists', async () => {
     const { service, transfers } = makeService({
-      computers: [computer(), computer({ id: 2, name: 'FISCAL-04', department: 'fiscal' })],
+      computers: [computer(), computer({ id: 2, name: 'FISCAL-04', departmentId: 21 })],
       part: null,
     });
 
@@ -253,7 +312,7 @@ describe('TransfersService.listByComputer', () => {
 
     const history = await service.listByComputer(ana, 1);
 
-    expect(history[0]).toMatchObject({ fromDepartment: 'financeiro', toDepartment: 'fiscal' });
+    expect(history[0]).toMatchObject({ fromDepartment: 'Financeiro', toDepartment: 'Fiscal' });
     expect(history[0]?.createdAt).toBe('2026-09-25T12:00:00.000Z');
   });
 

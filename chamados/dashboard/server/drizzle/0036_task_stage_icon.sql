@@ -1,0 +1,1 @@
+ALTER TABLE "chamados"."task_stages" ADD COLUMN "icon" text;

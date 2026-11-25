@@ -1,13 +1,20 @@
+import { boardDrillSchema, drillParam } from '@template/shared/schemas/board-drill.schema';
 import { type ComputerListItem } from '@template/shared/schemas/computer.schema';
 import { render, waitFor } from '@testing-library/svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import { triggerBrowserDownload } from '$lib/utils/download-file.util';
 import Harness from './use-computer-list-harness.test.svelte';
 import {
+  clampPage,
+  COMPUTER_CARD_PAGE_SIZE,
+  nextSort,
+  responsibleOptionsOf,
   scheduledDayByComputer,
+  sortComputers,
   summarizeComputers,
+  withSinglePresence,
   type ComputerListModel,
 } from './use-computer-list.svelte';
 
@@ -32,6 +39,7 @@ vi.mock('$lib/api/maintenances.api', () => ({
 
 const { computersApi } = await import('$lib/api/computers.api');
 const { goto } = await import('$app/navigation');
+const { page: appPage } = await import('$app/state');
 
 const GB = 1024 ** 3;
 
@@ -45,8 +53,11 @@ function computer(over: Partial<ComputerListItem> = {}): ComputerListItem {
     id: 1,
     name: 'RECEPCAO-01',
     displayName: 'Recepção — balcão',
+    responsibleId: 'person-bia-costa',
     responsibleName: 'Bia Costa',
-    department: 'recepcao',
+    responsibleAvatarUrl: null,
+    departmentId: null, departmentName: null,
+    notes: null,
     kind: 'desktop',
     hardware: {
       os: 'Microsoft Windows 11 Pro',
@@ -109,7 +120,12 @@ describe('summarizeComputers', () => {
   it('counts the park by what matters to whoever opens the screen', () => {
     const summary = summarizeComputers([
       computer(),
-      computer({ id: 2, healthStatus: 'critical', isOnline: false }),
+      computer({
+        id: 2,
+        healthStatus: 'critical',
+        isOnline: false,
+        hardware: { ...computer().hardware, totalMemoryBytes: 4 * GB },
+      }),
       computer({ id: 3, healthStatus: 'attention', isOnline: false, lastSeenAt: null }),
       computer({ id: 4, activeAlerts: 2, activeAlertMetrics: ['cpu', 'memory'] }),
       computer({ id: 5, activeAlerts: 1, activeAlertMetrics: ['memory'] }),
@@ -125,6 +141,7 @@ describe('summarizeComputers', () => {
       critical: 1,
       attention: 1,
       neverSeen: 1,
+      needsUpgrade: 1,
     });
   });
 
@@ -140,6 +157,7 @@ describe('summarizeComputers', () => {
       critical: 0,
       attention: 0,
       neverSeen: 0,
+      needsUpgrade: 0,
     });
   });
 });
@@ -303,16 +321,17 @@ describe('useComputerListModel', () => {
         fileName: 'inventario.docx',
       });
       const model = await mountLoadedModel();
-      model.actions.onDepartmentChange('rh');
-      await waitFor(() => expect(model.data.filter.department).toBe('rh'));
+      model.actions.onDepartmentChange('8');
+      await waitFor(() => expect(model.data.filter.departmentId).toBe('8'));
 
       model.actions.onExportReport('docx');
       await waitFor(() => expect(model.state.exportingFormat).toBeNull());
 
       expect(computersApi.exportReport).toHaveBeenCalledWith(
-        expect.objectContaining({ department: 'rh' }),
+        expect.objectContaining({ departmentId: 8 }),
         'docx',
       );
+      expect(vi.mocked(computersApi.exportReport).mock.calls[0]?.[0]).not.toHaveProperty('location');
       expect(triggerBrowserDownload).toHaveBeenCalledWith(expect.any(Blob), 'inventario.docx');
     });
 
@@ -335,6 +354,7 @@ describe('useComputerListModel', () => {
 
 describe('scheduledDayByComputer', () => {
   const schedule = {
+    id: 7,
     computerId: 7,
     computerName: 'PC-7',
     computerDisplayName: null,
@@ -345,6 +365,7 @@ describe('scheduledDayByComputer', () => {
     createdBy: 'suporte@teste.local',
     updatedAt: null,
     updatedBy: null,
+    archive: null,
   };
 
   // feliz
@@ -355,5 +376,309 @@ describe('scheduledDayByComputer', () => {
   // triste
   it('gives nothing while the schedules have not arrived', () => {
     expect(scheduledDayByComputer(undefined)).toEqual({});
+  });
+});
+
+/* O recorte de um clique no Painel chega pela URL (`?drill=`) e soma ao filtro da lista. */
+describe('useComputerListModel with a board cut', () => {
+  const DRILL = boardDrillSchema.parse({
+    source: 'computers',
+    groupBy: 'kind',
+    filterId: null,
+    key: 'notebook',
+    label: 'Notebook',
+    title: 'Máquinas por tipo',
+  });
+
+  beforeEach(() => {
+    vi.mocked(computersApi.list).mockResolvedValue(page([]));
+  });
+
+  afterEach(() => {
+    appPage.url = new URL('http://localhost:5173/infra/computers');
+  });
+
+  // feliz
+  it('asks the API for the clicked block and says so on the banner', async () => {
+    appPage.url = new URL(`http://localhost:5173/infra/computers?drill=${encodeURIComponent(drillParam(DRILL))}`);
+
+    const model = await mountLoadedModel();
+
+    expect(computersApi.list).toHaveBeenCalledWith(
+      expect.objectContaining({ drill: expect.objectContaining({ key: 'notebook' }) }),
+    );
+    expect(model.data.drillBanner?.summary).toContain('Máquinas por tipo');
+    /* Vazio com recorte é "o recorte escondeu tudo", não "o inventário está vazio". */
+    expect(model.state.isFilteredOut).toBe(true);
+    expect(model.state.isEmpty).toBe(false);
+  });
+
+  // triste
+  it('opens without the cut, and warns, when the address cannot be read', async () => {
+    appPage.url = new URL('http://localhost:5173/infra/computers?drill=%7Boops');
+
+    const model = await mountLoadedModel();
+
+    /* Nenhuma busca levou o recorte quebrado: nem a da lista, nem a do resumo. */
+    expect(vi.mocked(computersApi.list).mock.calls.every(([query]) => query.drill === undefined)).toBe(true);
+    expect(model.data.drillBanner?.notice).not.toBeNull();
+    expect(model.state.isEmpty).toBe(true);
+  });
+
+  // triste
+  /* O filtro de Local saiu: um link (ou filtro salvo) antigo com `location` abre sem ele, e o
+     resto do filtro continua valendo. */
+  it('ignores the old Local filter in an address, keeping the department', async () => {
+    appPage.url = new URL(`http://localhost:5173/infra/computers?departmentId=8&location=${encodeURIComponent('RECEPÇÃO')}`);
+
+    const model = await mountLoadedModel();
+
+    expect(model.data.filter.departmentId).toBe('8');
+    expect(model.data.filter).not.toHaveProperty('location');
+    expect(vi.mocked(computersApi.list).mock.calls.every(([query]) => !('location' in query))).toBe(true);
+  });
+});
+
+describe('sortComputers', () => {
+  const park = [
+    computer({ id: 1, name: 'FISCAL-D02', displayName: null, healthScore: 90, responsibleName: 'Bruno', ticketsThisMonth: 1 }),
+    computer({ id: 2, name: 'FISCAL-D10', displayName: null, healthScore: 40, responsibleName: null, responsibleId: null, ticketsThisMonth: 5, lastSeenAt: null }),
+    computer({ id: 3, name: 'ANALYZE-D01', displayName: null, healthScore: 70, responsibleName: 'Ana', ticketsThisMonth: 1 }),
+  ];
+  const ids = (list: ComputerListItem[]) => list.map((item) => item.id);
+
+  // feliz
+  it('keeps the machine number order by default and reverses it on request', () => {
+    expect(ids(sortComputers(park, { field: 'number', direction: 'asc' }))).toEqual([3, 1, 2]);
+    expect(ids(sortComputers(park, { field: 'number', direction: 'desc' }))).toEqual([2, 1, 3]);
+  });
+
+  it('puts the worst health first and the busiest machine first when asked', () => {
+    expect(ids(sortComputers(park, { field: 'health', direction: 'asc' }))).toEqual([2, 3, 1]);
+    /* Empate (1 chamado) cai no número da máquina: a ordem não pula a cada atualização. */
+    expect(ids(sortComputers(park, { field: 'tickets', direction: 'desc' }))).toEqual([2, 3, 1]);
+  });
+
+  // triste
+  it('sends the missing responsible and the machine that never connected to the end, both ways', () => {
+    expect(ids(sortComputers(park, { field: 'responsible', direction: 'asc' }))).toEqual([3, 1, 2]);
+    expect(ids(sortComputers(park, { field: 'responsible', direction: 'desc' }))).toEqual([1, 3, 2]);
+    expect(ids(sortComputers(park, { field: 'lastSeen', direction: 'desc' })).at(-1)).toBe(2);
+  });
+});
+
+describe('nextSort, clampPage and withSinglePresence', () => {
+  // feliz
+  it('flips the direction on the same column and starts a new one ascending', () => {
+    expect(nextSort({ field: 'health', direction: 'asc' }, 'health')).toEqual({ field: 'health', direction: 'desc' });
+    expect(nextSort({ field: 'health', direction: 'desc' }, 'tickets')).toEqual({ field: 'tickets', direction: 'asc' });
+  });
+
+  // triste
+  it('never points at a page that does not exist', () => {
+    expect(clampPage(3, 30, 24)).toBe(2);
+    expect(clampPage(5, 0, 24)).toBe(1);
+    expect(clampPage(0, 30, 24)).toBe(1);
+  });
+
+  /* Um salvo antigo ou um endereço com os dois ligados: ganha o online, igual ao servidor. */
+  it('never lets online and offline arrive on together', () => {
+    expect(withSinglePresence({ onlyOnline: true, onlyOffline: true })).toEqual({ onlyOnline: true, onlyOffline: false });
+    expect(withSinglePresence({ onlyOffline: true })).toEqual({ onlyOffline: true });
+  });
+});
+
+describe('useComputerListModel — pages, order and the total card', () => {
+  const park = Array.from({ length: 30 }, (_, index) =>
+    computer({ id: index + 1, name: `MAQ-D${String(index + 1).padStart(2, '0')}`, displayName: null }),
+  );
+
+  beforeEach(() => {
+    vi.mocked(computersApi.list).mockResolvedValue(page(park));
+  });
+
+  // feliz
+  it('pages the cards and goes back to the first page when a filter changes', async () => {
+    const model = await mountLoadedModel();
+    expect(model.data.paging).toEqual({ page: 1, pageSize: COMPUTER_CARD_PAGE_SIZE, total: 30 });
+
+    model.actions.onPageChange(2);
+    expect(model.data.paging.page).toBe(2);
+
+    model.actions.onSearchChange('MAQ');
+    expect(model.data.paging.page).toBe(1);
+  });
+
+  // triste
+  it('pulls the page back when the list shrinks under it', async () => {
+    const model = await mountLoadedModel();
+    model.actions.onPageChange(9);
+
+    expect(model.data.paging.page).toBe(2);
+  });
+
+  // feliz
+  it('sorts by the clicked column and starts over on the first page', async () => {
+    const model = await mountLoadedModel();
+    model.actions.onPageChange(2);
+
+    model.actions.onSortChange('number');
+
+    expect(model.data.sort).toEqual({ field: 'number', direction: 'desc' });
+    expect(model.data.computers[0]?.name).toBe('MAQ-D30');
+    expect(model.data.paging.page).toBe(1);
+  });
+
+  /* Uma consulta só, com os quatro atalhos desligados — e a busca continua valendo. */
+  it('turns every shortcut off at once from the total card, keeping the search', async () => {
+    const model = await mountLoadedModel();
+    model.actions.onSearchChange('MAQ');
+    model.actions.onHealthStatusChange('critical');
+    model.actions.onAlertChange('cpu');
+    model.actions.onOfflineChange(true);
+    await waitFor(() =>
+      expect(computersApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ healthStatus: 'critical', alert: 'cpu', onlyOffline: true }),
+      ),
+    );
+    vi.mocked(computersApi.list).mockClear();
+
+    model.actions.onClearShortcuts();
+
+    await waitFor(() => expect(computersApi.list).toHaveBeenCalled());
+    const calls = vi.mocked(computersApi.list).mock.calls.filter(([query]) => query.search === 'MAQ');
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.[0]).toEqual(
+      expect.objectContaining({ healthStatus: undefined, alert: undefined, onlyOffline: undefined }),
+    );
+  });
+});
+
+
+describe('responsibleOptionsOf', () => {
+  // feliz
+  it('offers each directory person who answers for a machine once, with the photo, by name', () => {
+    const options = responsibleOptionsOf([
+      computer({ id: 1, responsibleName: 'Bia Costa', responsibleId: 'p-bia', responsibleAvatarUrl: '/bia.png' }),
+      computer({ id: 2, responsibleName: 'Ana Lima', responsibleId: 'p-ana', responsibleAvatarUrl: null }),
+      computer({ id: 3, responsibleName: 'Bia Costa', responsibleId: 'p-bia', responsibleAvatarUrl: '/bia.png' }),
+    ]);
+
+    expect(options).toEqual([
+      { id: 'p-ana', name: 'Ana Lima', photo: null },
+      { id: 'p-bia', name: 'Bia Costa', photo: '/bia.png' },
+    ]);
+  });
+
+  // triste
+  it('leaves out machines without responsible, and names a person the directory lost', () => {
+    const options = responsibleOptionsOf([
+      computer({ id: 1, responsibleName: null, responsibleId: null }),
+      computer({ id: 2, responsibleName: null, responsibleId: 'p-gone' }),
+    ]);
+
+    expect(options).toEqual([{ id: 'p-gone', name: '(Pessoa fora da lista do escritório)', photo: null }]);
+  });
+});
+
+describe('useComputerListModel — responsible filter', () => {
+  beforeEach(() => {
+    vi.mocked(computersApi.list).mockResolvedValue(
+      page([computer({ responsibleId: 'p-bia', responsibleAvatarUrl: '/bia.png' })]),
+    );
+  });
+
+  // feliz
+  it('sends the chosen person id to the API and offers the people of the whole park', async () => {
+    const model = await mountLoadedModel();
+    await waitFor(() => expect(model.data.responsibleOptions).toHaveLength(1));
+
+    model.actions.onResponsibleChange('p-bia');
+
+    await waitFor(() =>
+      expect(computersApi.list).toHaveBeenCalledWith(expect.objectContaining({ responsibleId: 'p-bia' })),
+    );
+    expect(model.data.filter.responsibleId).toBe('p-bia');
+    expect(model.data.responsibleOptions[0]).toEqual({ id: 'p-bia', name: 'Bia Costa', photo: '/bia.png' });
+  });
+
+  // feliz
+  it('goes back to the first card page when the responsible changes', async () => {
+    vi.mocked(computersApi.list).mockResolvedValue(
+      page(Array.from({ length: 30 }, (_, index) => computer({ id: index + 1, name: `MAQ-D${index + 10}` }))),
+    );
+    const model = await mountLoadedModel();
+    model.actions.onPageChange(2);
+
+    model.actions.onResponsibleChange('none');
+
+    expect(model.data.paging.page).toBe(1);
+  });
+
+  // triste
+  it('does not send the responsible filter while it is off, and clears it with the others', async () => {
+    const model = await mountLoadedModel();
+    expect(computersApi.list).toHaveBeenCalledWith(expect.objectContaining({ responsibleId: undefined }));
+
+    model.actions.onResponsibleChange('p-bia');
+    model.actions.onClearFilters();
+
+    await waitFor(() => expect(model.data.filter.responsibleId).toBe(''));
+  });
+
+  // triste
+  it('calls an empty result under the responsible filter "filtered out", not an empty inventory', async () => {
+    const model = await mountLoadedModel();
+    vi.mocked(computersApi.list).mockResolvedValue(page([]));
+
+    model.actions.onResponsibleChange('none');
+
+    await waitFor(() => expect(model.state.isFilteredOut).toBe(true));
+    expect(model.state.isEmpty).toBe(false);
+  });
+});
+
+describe('useComputerListModel — upgrade filter', () => {
+  beforeEach(() => {
+    vi.mocked(computersApi.list).mockResolvedValue(page([computer()]));
+  });
+
+  // feliz
+  it('sends the upgrade reason to the API and counts it as a filter', async () => {
+    const model = await mountLoadedModel();
+
+    model.actions.onUpgradeChange('cpu');
+
+    await waitFor(() =>
+      expect(computersApi.list).toHaveBeenCalledWith(expect.objectContaining({ upgrade: 'cpu' })),
+    );
+    expect(model.data.filter.upgrade).toBe('cpu');
+  });
+
+  // feliz
+  it('turns the upgrade shortcut off with the other shortcuts of the total card', async () => {
+    const model = await mountLoadedModel();
+    model.actions.onUpgradeChange('any');
+
+    model.actions.onClearShortcuts();
+
+    await waitFor(() => expect(model.data.filter.upgrade).toBe(''));
+  });
+
+  // triste
+  it('does not send the upgrade filter while it is off', async () => {
+    await mountLoadedModel();
+
+    expect(computersApi.list).toHaveBeenCalledWith(expect.objectContaining({ upgrade: undefined }));
+  });
+
+  // triste
+  it('calls an empty result under the upgrade filter "filtered out", not an empty inventory', async () => {
+    const model = await mountLoadedModel();
+    vi.mocked(computersApi.list).mockResolvedValue(page([]));
+
+    model.actions.onUpgradeChange('memory');
+
+    await waitFor(() => expect(model.state.isFilteredOut).toBe(true));
   });
 });

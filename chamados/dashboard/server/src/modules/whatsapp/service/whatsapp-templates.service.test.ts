@@ -21,12 +21,18 @@ const superAdmin: RequestUser = {
 };
 const admin: RequestUser = { id: 'u-ana', email: 'ana@exemplo.com', name: 'Ana', role: 'admin' };
 
-function makeService(rows: { key: string; body: string }[] = []) {
+type Row = { key: string; body: string; archivedAt?: Date | null };
+
+function makeService(rows: Row[] = []) {
+  const active = rows.filter((row) => !row.archivedAt);
+  const archived = rows.filter((row) => row.archivedAt);
   const repository = {
-    list: vi.fn().mockResolvedValue(rows),
-    find: vi.fn(async (key: string) => rows.find((row) => row.key === key) ?? null),
+    list: vi.fn().mockResolvedValue(active),
+    listArchived: vi.fn().mockResolvedValue(archived),
+    find: vi.fn(async (key: string) => active.find((row) => row.key === key) ?? null),
+    findArchived: vi.fn(async (key: string) => archived.find((row) => row.key === key) ?? null),
     save: vi.fn().mockResolvedValue(undefined),
-    remove: vi.fn().mockResolvedValue(undefined),
+    setArchived: vi.fn().mockResolvedValue(undefined),
   };
 
   return {
@@ -104,12 +110,12 @@ describe('WhatsappTemplatesService.update', () => {
 
 describe('WhatsappTemplatesService.restore', () => {
   // feliz
-  it('drops the edited text and hands back the original', async () => {
+  it('archives the edited text and hands back the original', async () => {
     const { service, repository } = makeService([{ key: 'ticket_ready', body: 'editado' }]);
 
     const restored = await service.restore(superAdmin, 'ticket_ready');
 
-    expect(repository.remove).toHaveBeenCalledWith('ticket_ready');
+    expect(repository.setArchived).toHaveBeenCalledWith('ticket_ready', true, superAdmin.id);
     expect(restored).toMatchObject({
       body: WHATSAPP_TEMPLATES.ticket_ready.defaultBody,
       isCustomized: false,
@@ -121,6 +127,30 @@ describe('WhatsappTemplatesService.restore', () => {
     await expect(makeService().service.restore(admin, 'ticket_ready')).rejects.toThrow(
       ForbiddenException,
     );
+  });
+});
+
+describe('WhatsappTemplatesService.restoreEdit', () => {
+  // feliz
+  it('brings the archived edit back into use', async () => {
+    const { service, repository } = makeService([
+      { key: 'ticket_ready', body: 'editado', archivedAt: new Date('2026-11-20T12:00:00.000Z') },
+    ]);
+
+    const restored = await service.restoreEdit(superAdmin, 'ticket_ready');
+
+    expect(repository.setArchived).toHaveBeenCalledWith('ticket_ready', false, null);
+    expect(restored).toMatchObject({ body: 'editado', isCustomized: true, archivedEdit: null });
+  });
+
+  // triste
+  it('answers not found when there is no archived edit', async () => {
+    const { service, repository } = makeService();
+
+    await expect(service.restoreEdit(superAdmin, 'ticket_ready')).rejects.toThrow(
+      NotFoundException,
+    );
+    expect(repository.setArchived).not.toHaveBeenCalled();
   });
 });
 

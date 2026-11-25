@@ -1,3 +1,21 @@
+<!--
+  @component
+  O LEMBRETE que não depende de ninguém lembrar: quais máquinas passaram do prazo de manutenção
+  preventiva.
+
+  **As máquinas em dia não entram na lista**: quem abre esta seção quer saber o que está pendente.
+  O total em dia aparece como uma linha de texto. **As AGENDADAS vêm no alto**, num bloco próprio,
+  antes das vencidas: são compromissos com dia marcado (e ficam fora da cadeia de estados, para não
+  sumir atrás do "todas em dia"). Cada pendente mostra o departamento, a última manutenção, se está
+  agendada, o aviso de máquina que já teve muitas manutenções, o selo da situação e "Registrar".
+
+  Função pura de props: a situação já vem calculada pela API (o cruzamento do inventário com o
+  histórico). O componente só ordena a leitura e oferece a ação.
+
+  - `data`: `rows` (a situação de cada máquina) e `schedules` (as agendadas).
+  - `state.isLoading`: conferindo as máquinas.
+  - `actions`: `onRegister(row)` para a pendente e `onRegisterMachine(computerId)` para a agendada.
+-->
 <script lang="ts" module>
   import {
     PREVENTIVE_INTERVAL_MONTHS,
@@ -61,6 +79,7 @@
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { formatDate } from '$lib/utils/format-date';
 
   let { data, state: boardState, actions }: AzuosPreventiveBoardProps = $props();
@@ -71,7 +90,9 @@
   const upToDate = $derived(data.rows.length - pending.length);
 </script>
 
-<section class="bg-card rounded-surface border p-4">
+<ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-4">
   <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
     <div>
       <h2 class="text-ink-900 text-sm font-semibold">Manutenção preventiva</h2>
@@ -88,7 +109,7 @@
   <!-- As agendadas ficam fora da cadeia de estados: com tudo em dia, ainda pode haver visita
        marcada, e ela não pode sumir atrás do "todas em dia". -->
   {#if !boardState?.isLoading && schedules.length > 0}
-    <div class="bg-muted rounded-box mb-4 border p-3" data-slot="scheduled-maintenances">
+    <div class="bg-muted rounded-box mb-4 p-3" data-slot="scheduled-maintenances">
       <h3 class="text-ink-900 mb-2 text-xs font-semibold">Agendadas ({schedules.length})</h3>
       <ul class="flex flex-col gap-2">
         {#each schedules as schedule (schedule.computerId)}
@@ -152,7 +173,7 @@
                 · <span class="text-primary font-medium">agendada para {dayLabelOf(scheduled.scheduledFor)}</span>
               {/if}
               {#if isFrequentlyServiced(row.maintenanceCount)}
-                · <span class="text-warning font-medium">
+                · <span class="text-warning-ink font-medium">
                   já foram {row.maintenanceCount} manutenções nesta máquina
                 </span>
               {/if}
@@ -173,4 +194,6 @@
       {/each}
     </ul>
   {/if}
-</section>
+</div>
+{/snippet}
+</ContentCard>

@@ -8,7 +8,7 @@ import { type TicketWatchersRepository } from '../repository/ticket-watchers.rep
 import { describeChange, TicketPeopleService } from './ticket-people.service';
 
 const directoryUsers = [
-  { id: 'bia', name: 'Bia Costa', email: 'bia@azuos.com.br', banned: false },
+  { id: 'bia', name: 'Bia Costa', email: 'bia@azuos.com.br', banned: false, image: 'https://x/bia.png' },
   { id: 'caio', name: 'Caio Reis', email: 'caio@azuos.com.br', banned: false },
   { id: 'dani', name: 'Dani Alves', email: 'dani@azuos.com.br', banned: false },
   { id: 'eva', name: 'Eva Banida', email: 'eva@azuos.com.br', banned: true },
@@ -44,13 +44,13 @@ function setup(current: { userId: string; userName: string }[] = []) {
 
 describe('TicketPeopleService', () => {
   // feliz
-  it('offers every active person of the admin-console, in alphabetical order', async () => {
+  it('offers every active person of the admin-console, in alphabetical order, with the photo', async () => {
     const { service } = setup();
 
     expect(await service.options()).toEqual([
-      { id: 'bia', name: 'Bia Costa' },
-      { id: 'caio', name: 'Caio Reis' },
-      { id: 'dani', name: 'Dani Alves' },
+      { id: 'bia', name: 'Bia Costa', avatarUrl: 'https://x/bia.png' },
+      { id: 'caio', name: 'Caio Reis', avatarUrl: null },
+      { id: 'dani', name: 'Dani Alves', avatarUrl: null },
     ]);
   });
 
@@ -70,7 +70,7 @@ describe('TicketPeopleService', () => {
     await service.replace(ticket, ['dani'], author);
 
     expect(watchers.add).toHaveBeenCalledWith(7, [{ userId: 'dani', userName: 'Dani Alves' }], author.email);
-    expect(watchers.remove).toHaveBeenCalledWith(7, ['caio']);
+    expect(watchers.remove).toHaveBeenCalledWith(7, ['caio'], author.id);
     expect(histories.record).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'update',

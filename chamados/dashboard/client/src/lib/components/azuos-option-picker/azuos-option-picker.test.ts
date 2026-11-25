@@ -76,7 +76,7 @@ const six = Array.from({ length: 6 }, (_value, index) => ({
 describe('AzuosOptionPicker — in a form', () => {
   // feliz
   /* Num campo de formulário, pastilha só serve enquanto cabe em uma linha. */
-  it('keeps up to three options as pills, one column each', () => {
+  it('keeps up to three options as pills side by side', () => {
     const three = six.slice(0, 3);
     render(OptionPicker, {
       props: {
@@ -88,7 +88,7 @@ describe('AzuosOptionPicker — in a form', () => {
 
     for (const option of three)
       expect(screen.getByRole('button', { name: option.label })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Tipo' }).className).toContain('grid-cols-3');
+    expect(screen.getByRole('group', { name: 'Tipo' }).className).toContain('flex w-full');
   });
 
   /* Com mais de três, vira a lista que abre: as opções não ficam espalhadas pelo diálogo. */
@@ -244,7 +244,7 @@ it('uses a searchable list for few options on mobile', async () => {
 
 /* Os dois testes do separador ficaram, num merge, DENTRO do teste do celular — e o Vitest recusa
    teste dentro de teste, derrubando os três. Cada um volta a ser um teste de verdade. */
-describe('AzuosOptionPicker — separador de grupo', () => {
+describe('AzuosOptionPicker — group separator', () => {
   // feliz
   it('draws a divider before the option that starts a new group', async () => {
     const user = userEvent.setup();

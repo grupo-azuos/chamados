@@ -1,23 +1,20 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
-  import HardDrive from '@lucide/svelte/icons/hard-drive';
 
   import CardSurface from './azuos-card-surface.svelte';
 
-  const { Story } = defineMeta({ title: 'Cards/AzuosCardSurface', component: CardSurface });
+  const { Story } = defineMeta({
+    title: 'Cards/AzuosCardSurface (base do card de conteúdo)',
+    component: CardSurface,
+  });
 </script>
 
 <Story name="Default" asChild>
   <CardSurface data={{ label: 'Card' }}><p class="p-5 text-sm">Conteúdo do card</p></CardSurface>
 </Story>
-<Story name="HoverColored" asChild>
-  <CardSurface data={{ label: 'Card' }} ui={{ isHoverColored: true, hoverTone: 'red' }}>
-    <p class="p-5 text-sm">Hover na cor do sotaque</p>
-  </CardSurface>
-</Story>
-<Story name="WithMark" asChild>
-  <CardSurface data={{ label: 'Card' }} ui={{ mark: HardDrive, markTone: 'red', className: 'min-h-40' }}>
-    <p class="p-5 text-sm">Ícone grande no canto</p>
+<Story name="Clickable" asChild>
+  <CardSurface data={{ label: 'Card' }} actions={{ onClick: () => {} }}>
+    <p class="p-5 text-sm">Clicável: no hover nada se mexe, só o cursor muda</p>
   </CardSurface>
 </Story>
 <Story name="Selected" asChild>

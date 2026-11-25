@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import {
   type AlertMetric,
   ALERT_THRESHOLDS,
@@ -7,7 +14,6 @@ import {
 } from '@template/shared/domain/computer-alert.util';
 import { healthStatusLabel, healthStatusTone } from '@template/shared/domain/computer-health.util';
 import { computerKindLabel } from '@template/shared/domain/computer-kind.util';
-import { departmentLabel } from '@template/shared/domain/department.util';
 import { disposalTypeLabel } from '@template/shared/domain/disposal.util';
 import { type AgentSnapshot } from '@template/shared/schemas/agent-snapshot.schema';
 import { type ComputerLive } from '@template/shared/schemas/computer-live.schema';
@@ -24,11 +30,18 @@ import {
   type CreatedComputer,
   type UpdateComputerInput,
 } from '@template/shared/schemas/computer.schema';
+import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
+import { type DirectoryUser } from '@template/shared/schemas/user.schema';
+import { type SQL } from 'drizzle-orm';
 
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { assertCanCreate, assertCanRead } from '../../../lib/policy/policy-assert.util';
 import { type ComputerRow } from '../../../lib/db/schema/computers.schema';
+import { departmentNameOf, personOf, rememberPeople } from '../../../lib/db/reference-names.util';
+import { DepartmentsService } from '../../departments/service/departments.service';
 import { type BuiltDocument, type DocumentTone } from '../../../lib/report/document.type';
 import { type ReportColumn } from '../../../lib/report/report.type';
 import { capReportRows } from '../../../lib/report/report-limit.util';
@@ -44,10 +57,12 @@ import {
   toSample,
   toSnapshotUpdate,
 } from '../mapper/computers.mapper';
+import { BOARD_DRILL, type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { AgentPresenceService } from '../presence/agent-presence.service';
 import { LiveWatchService, WATCHED_CADENCE_SECONDS } from '../presence/live-watch.service';
 import { ComputersRepository, type PresenceFilter } from '../repository/computers.repository';
 import { createComputerToken, hashComputerToken } from '../token/computer-token.util';
+import { peopleMatching, responsibleFilterOf } from './computer-responsible.util';
 
 const BYTES_PER_GB = 1024 ** 3;
 
@@ -93,15 +108,28 @@ function presenceFilterOf(
   return undefined;
 }
 
+const NOT_A_PERSON =
+  'O responsável precisa ser uma pessoa ativa da lista do escritório. Escolha a pessoa na lista.';
+
+const DIRECTORY_UNAVAILABLE =
+  'Não consegui ler a lista de pessoas do escritório para conferir o responsável. Tente de novo em instantes.';
+
+const HR_UNAVAILABLE =
+  'Não consegui ler a lista de departamentos do RH para conferir o departamento. Tente de novo em instantes.';
+
+/** Onde a máquina está, para o relatório: o departamento oficial. */
+function placeOf(row: ComputerRow): string {
+  const department = departmentNameOf(row.departmentId);
+
+  return department ?? (row.departmentId ? '(Departamento fora da lista do RH)' : 'Sem departamento');
+}
+
 const COMPUTER_REPORT_COLUMNS: ReportColumn<ComputerRow>[] = [
   { header: 'Máquina', value: (row) => row.displayName?.trim() || row.name, isTitle: true },
   { header: 'Nome técnico', value: (row) => row.name },
   { header: 'Tipo', value: (row) => computerKindLabel(row.kind) },
-  {
-    header: 'Departamento',
-    value: (row) => (row.department ? departmentLabel(row.department) : 'Sem departamento'),
-  },
-  { header: 'Responsável', value: (row) => row.responsibleName ?? '—' },
+  { header: 'Departamento', value: placeOf },
+  { header: 'Responsável', value: (row) => personOf(row.responsibleId)?.name ?? '(Sem responsável)' },
   {
     header: 'Saúde',
     value: (row) => healthStatusLabel(row.healthStatus),
@@ -118,6 +146,9 @@ const COMPUTER_REPORT_COLUMNS: ReportColumn<ComputerRow>[] = [
   },
   { header: 'Cadastrado em', value: (row) => formatReportDate(row.createdAt) },
 ];
+
+/** A lista do inventário só sabe filtrar a tabela das máquinas: só o recorte dela vale aqui. */
+const COMPUTER_DRILL_SOURCES: readonly DataSourceKey[] = ['computers'];
 
 const NOT_FOUND = 'Computador não encontrado. Ele pode ter sido arquivado — recarregue a lista.';
 
@@ -171,6 +202,9 @@ export class ComputersService {
     private readonly repository: ComputersRepository,
     private readonly presence: AgentPresenceService,
     private readonly watch: LiveWatchService,
+    @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
+    @Optional() @Inject(USER_DIRECTORY_PROVIDER) private readonly directory?: UserDirectoryProvider,
+    @Optional() private readonly departments?: DepartmentsService,
   ) {}
 
   async list(user: RequestUser, query: ComputerListQuery): Promise<Paginated<ComputerListItem>> {
@@ -179,7 +213,14 @@ export class ComputersService {
     /* Os ids online vêm de uma vez: perguntar linha a linha daria o mesmo resultado com mais
        trabalho, e a lista pode ter duzentas máquinas. */
     const online = this.presence.onlineIds();
-    const page = await this.repository.list(query, presenceFilterOf(query, online));
+    const people = await this.loadReferences();
+    const page = await this.repository.list(
+      query,
+      presenceFilterOf(query, online),
+      await this.drillOf(user, query),
+      responsibleFilterOf(query.responsibleId),
+      peopleMatching(query.search, people),
+    );
 
     return {
       items: page.rows.map((row) => toComputerListItem(row, online.has(row.id))),
@@ -197,9 +238,13 @@ export class ComputersService {
   async exportList(user: RequestUser, query: ComputerReportQuery): Promise<BuiltDocument> {
     assertCanRead(user.role, 'os computadores');
 
+    const people = await this.loadReferences();
     const matching = await this.repository.listAll(
       query,
       presenceFilterOf(query, this.presence.onlineIds()),
+      await this.drillOf(user, query),
+      responsibleFilterOf(query.responsibleId),
+      peopleMatching(query.search, people),
     );
     const { rows, isTruncated } = capReportRows(matching);
 
@@ -213,10 +258,86 @@ export class ComputersService {
     });
   }
 
+  /**
+   * As listas de FORA que dão nome aos ids da máquina: as pessoas do escritório (o responsável)
+   * e os departamentos do RH. As duas ficam na memória (`reference-names.util`), e o mapper lê
+   * de lá.
+   *
+   * Falha aqui não derruba a tela: o inventário não pode sair do ar porque o admin-console
+   * demorou. Vale a última lista boa; sem nenhuma, o nome sai nulo e a tela mostra
+   * "(Sem responsável)". O filtro e a gravação usam o id, que não depende de nenhuma das duas.
+   *
+   * O diretório guarda a lista por um minuto e o RH por cinco, então a lista que se atualiza a
+   * cada 60 segundos não vira uma ida a outro serviço por cartão.
+   */
+  async loadReferences(): Promise<DirectoryUser[]> {
+    const [people] = await Promise.all([
+      this.directory
+        ? this.directory.listAllUsers().then(
+            (users) => {
+              rememberPeople(users);
+              return users;
+            },
+            () => [],
+          )
+        : Promise.resolve([]),
+      this.departments?.catalog().catch(() => null),
+    ]);
+
+    return people;
+  }
+
+  /**
+   * Confere o responsável e o departamento ANTES de gravar — só o que mudou: uma máquina cuja
+   * pessoa saiu do escritório (ou cujo departamento o RH tirou) continua editável no resto.
+   *
+   * Responsável tem de ser uma pessoa ATIVA do diretório; departamento, um da lista do RH. Id
+   * fora da lista é 400. Lista que não pôde ser lida é 503: aceitar sem conferir gravaria um id
+   * que ninguém sabe de quem é — e a regra é não ter registro errado.
+   */
+  private async assertReferences(
+    input: Pick<UpdateComputerInput, 'responsibleId' | 'departmentId'>,
+    current?: ComputerRow,
+  ): Promise<void> {
+    const responsibleId = input.responsibleId?.trim();
+    if (responsibleId && responsibleId !== current?.responsibleId) {
+      await this.assertPerson(responsibleId);
+    }
+
+    const departmentId = input.departmentId;
+    if (departmentId && departmentId !== current?.departmentId) {
+      if (!this.departments) throw new ServiceUnavailableException(HR_UNAVAILABLE);
+      await this.departments.assertOfficial(departmentId);
+    }
+  }
+
+  private async assertPerson(id: string): Promise<void> {
+    if (!this.directory) throw new ServiceUnavailableException(DIRECTORY_UNAVAILABLE);
+
+    const people = await this.directory.listAllUsers().catch(() => {
+      throw new ServiceUnavailableException(DIRECTORY_UNAVAILABLE);
+    });
+    rememberPeople(people);
+
+    const person = people.find((candidate) => candidate.id === id);
+    if (!person || person.banned) throw new BadRequestException(NOT_A_PERSON);
+  }
+
+  /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
+  private async drillOf(
+    user: RequestUser,
+    query: Pick<ComputerListQuery, 'drill'>,
+  ): Promise<SQL | undefined> {
+    if (!query.drill || !this.drills) return undefined;
+
+    return this.drills.drillCondition(user, query.drill, COMPUTER_DRILL_SOURCES);
+  }
+
   async findById(user: RequestUser, id: number): Promise<Computer> {
     assertCanRead(user.role, 'os computadores');
 
     const row = await this.requireComputer(id);
+    await this.loadReferences();
 
     return toComputer(row, this.presence.isOnline(row.id));
   }
@@ -230,6 +351,7 @@ export class ComputersService {
   async create(user: RequestUser, input: CreateComputerInput): Promise<CreatedComputer> {
     assertCanCreate(user.role, 'computadores');
 
+    await this.assertReferences(input);
     const token = createComputerToken();
     const row = await this.repository.insert(
       toComputerInsert(input, hashComputerToken(token), user.email),
@@ -241,7 +363,8 @@ export class ComputersService {
   async update(user: RequestUser, id: number, input: UpdateComputerInput): Promise<Computer> {
     assertCanCreate(user.role, 'computadores');
 
-    await this.requireComputer(id);
+    const current = await this.requireComputer(id);
+    await this.assertReferences(input, current);
     const row = await this.repository.update(id, toComputerUpdate(input, user.email));
 
     return toComputer(row, this.presence.isOnline(row.id));

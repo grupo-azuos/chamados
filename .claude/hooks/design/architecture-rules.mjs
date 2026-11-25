@@ -372,9 +372,12 @@ function isColoredBorder([, variants, kind, color]) {
   return color !== 'ring' || isFocus;
 }
 
-/** Só as telas do sistema; teste e story ficam de fora. */
+/**
+ * Só as telas do sistema; teste e story ficam de fora — e o `ui/` do shadcn também: é código do
+ * CLI, que não se edita (a regra vale para o `azuos-*` que o envolve).
+ */
 function isGroupSource(file) {
-  return GROUP_SOURCE.test(`/${file.path}`) && !GROUP_SKIP.test(file.path);
+  return GROUP_SOURCE.test(`/${file.path}`) && !GROUP_SKIP.test(file.path) && !isUi(file.path);
 }
 
 function borderLineViolations(file, { text, line }) {
@@ -410,6 +413,95 @@ function nativeSelectViolations(files) {
 
     return codeLines(file).flatMap((entry) => selectLineViolations(file, ownDropdown, entry));
   });
+}
+
+/**
+ * AS TELAS PADRÃO DE TODO SISTEMA DO GRUPO — Dashboard e Histórico (regras `dashboard-standard` e
+ * `history-standard`). Cada uma tem a tela, o módulo da API e a entrada no menu; faltar qualquer
+ * uma reprova, porque um sistema sem histórico não responde "quem mudou isso?".
+ */
+export const STANDARD_SCREENS = [
+  {
+    name: 'Painel',
+    route: 'client/src/routes/(app)/infra/dashboard/+page.svelte',
+    module: 'server/src/modules/dashboard-boards/dashboard-boards.module.ts',
+    menu: "'dashboard', 'Painel'",
+  },
+];
+
+/** A raiz do app (`template/`) — o que vem antes de `client/src` no caminho do app. */
+function appRoot(app) {
+  return app.src.replace(/client\/src$/, '');
+}
+
+/** @param {ProjectFile[]} files */
+function standardScreenViolations(files) {
+  const paths = new Set(files.map((file) => file.path));
+
+  return APPS.flatMap((app) => {
+    const root = appRoot(app);
+    const menu = files.find((file) => file.path === `${app.src}/lib/navigation/navigation.ts`);
+
+    return STANDARD_SCREENS.flatMap((screen) => {
+      const missing = [];
+      if (!paths.has(`${root}${screen.route}`)) missing.push('a tela');
+      if (!paths.has(`${root}${screen.module}`)) missing.push('o módulo da API');
+      if (!menu?.content.includes(screen.menu)) missing.push('a entrada no menu');
+
+      return missing.map((what) => ({
+        rule: 'standard-screens',
+        file: `${root}${screen.route}`,
+        detail: `${screen.name} sem ${what}`,
+      }));
+    });
+  });
+}
+
+/** Onde a foto de pessoa pode ser montada: os seletores de pessoa e as peças por baixo deles. */
+const PERSON_FIELD_HOMES =
+  /\/azuos-(person-picker-field|person-multi-picker-field|combobox-field|multi-select-field|creatable-combobox-field)\//;
+
+/** @param {ProjectFile[]} files */
+function personFieldViolations(files) {
+  return files
+    .filter((file) => isGroupSource(file) && !PERSON_FIELD_HOMES.test(`/${file.path}`))
+    .flatMap((file) =>
+      codeLines(file)
+        .filter(({ text }) => !COMMENT_LINE.test(text) && /\bpersonName\s*:/.test(text))
+        .map(({ line }) => ({
+          rule: 'person-field',
+          file: file.path,
+          detail: 'opção de pessoa montada à mão',
+          line,
+        })),
+    );
+}
+
+/**
+ * Onde o rosto de pessoa pode ser montado: o próprio `azuos-person-avatar` (e o "Meu perfil",
+ * tela padrão dos 13 sistemas, que não se mexe por projeto).
+ */
+const PERSON_PHOTO_HOMES = /\/azuos-(person-avatar|my-profile-view)\//;
+const NULL_PHOTO = /\bavatarUrl\s*(?::\s*|=\{\s*)(?:null|undefined)\b/;
+const HAND_MADE_FACE = /components\/ui\/avatar|\bAvatar(?:Image|Fallback)\b|function\s+initialsOf\b/;
+
+/** @param {ProjectFile[]} files */
+function personPhotoViolations(files) {
+  return files
+    .filter((file) => isGroupSource(file) && !PERSON_PHOTO_HOMES.test(`/${file.path}`))
+    .flatMap((file) =>
+      codeLines(file)
+        .filter(({ text }) => !COMMENT_LINE.test(text))
+        .flatMap(({ text, line }) => {
+          if (NULL_PHOTO.test(text)) {
+            return [{ rule: 'person-photo', file: file.path, detail: 'foto de pessoa jogada fora (`avatarUrl` nulo)', line }];
+          }
+          if (HAND_MADE_FACE.test(text)) {
+            return [{ rule: 'person-photo', file: file.path, detail: 'rosto de pessoa montado à mão', line }];
+          }
+          return [];
+        }),
+    );
 }
 
 export const RULES = [
@@ -687,11 +779,11 @@ export const RULES = [
   },
   /* REGRA DO GRUPO (13 sistemas): cor de card vem do FUNDO, nunca da borda. Faixa lateral/topo
      colorida, contorno no tom e anel colorido de seleção são proibidos em QUALQUER componente.
-     Fica só o anel de FOCO (acessibilidade). Card colorido: `AzuosToneCard`. */
+     Fica só o anel de FOCO (acessibilidade). Card: o `AzuosContentCard`, a cor no ícone. */
   {
     id: 'colored-border',
     description:
-      'Borda colorida é proibida em qualquer componente: a cor vem do fundo (`AzuosToneCard`). Só o anel de foco fica.',
+      'Borda colorida é proibida em qualquer componente: a cor vem do ícone do `AzuosContentCard`. Só o anel de foco fica.',
     check: (files) => coloredBorderViolations(files),
   },
   /* REGRA DO GRUPO (13 sistemas): nunca `<select>` nativo — sempre o combobox do projeto. O
@@ -701,6 +793,32 @@ export const RULES = [
     id: 'native-select',
     description: 'Nunca `<select>` nativo: sempre o combobox/seletor personalizado do projeto.',
     check: (files) => nativeSelectViolations(files),
+  },
+  /* REGRA DO GRUPO: todo sistema tem Dashboard e Histórico, no padrão — tela, API e menu. */
+  {
+    id: 'standard-screens',
+    description:
+      'Todo sistema tem as telas padrão Dashboard e Histórico, com o módulo da API e a entrada no menu.',
+    check: (files) => standardScreenViolations(files),
+  },
+  /* REGRA DO GRUPO: campo de pessoa é SEMPRE a lista de quem usa o sistema, com a foto, e guarda o
+     id — `AzuosPersonPickerField` (uma) ou `AzuosPersonMultiPickerField` (várias). Montar a opção
+     com foto à mão é o caminho de volta para a caixa de texto e o nome digitado. */
+  {
+    id: 'person-field',
+    description:
+      'Campo de pessoa usa `AzuosPersonPickerField` ou `AzuosPersonMultiPickerField` — nunca opção com foto montada à mão.',
+    check: (files) => personFieldViolations(files),
+  },
+  /* REGRA DO GRUPO: onde aparece uma pessoa, aparece a FOTO dela. O rosto é sempre o
+     `AzuosPersonAvatar`, que acha a foto no diretório de pessoas pelo id — ou pelo nome, quando o
+     registro só guardou o nome. Escrever `avatarUrl: null` à mão, ou montar o rosto com o
+     `ui/avatar` e iniciais próprias, é o caminho de volta para as iniciais com a pessoa tendo foto. */
+  {
+    id: 'person-photo',
+    description:
+      'Pessoa sempre com a foto: o rosto é o `AzuosPersonAvatar` (que acha a foto pelo id ou pelo nome) — nunca `avatarUrl` nulo à mão nem rosto montado com `ui/avatar`.',
+    check: (files) => personPhotoViolations(files),
   },
   {
     id: 'doc-file-name',

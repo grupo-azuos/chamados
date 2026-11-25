@@ -59,10 +59,17 @@ describe('AzuosInventoryDisposalListView', () => {
     /* `^…$`: "2 un" é a quantidade do cartão; "2 unidades" é o resumo no alto da lista. */
     expect(screen.getByText(/^2\s+un$/)).toBeInTheDocument();
     /* Dentro do CARTÃO: "Quebrou" também é uma opção do filtro, no alto da tela. */
-    const card = screen.getByRole('heading', { name: 'Cadeira giratória' }).closest('li');
+    const card = screen
+      .getByRole('heading', { name: 'Cadeira giratória' })
+      .closest('[data-slot="azuos-card-surface"]');
     expect(within(card as HTMLElement).getByText('Quebrou')).toBeInTheDocument();
     expect(screen.getByText('Base rachou; sem conserto.')).toBeInTheDocument();
-    expect(screen.getByText(/ficaram\s+5 no depósito/)).toBeInTheDocument();
+    /* O que ficou no depósito é a caixinha de número ao lado do descartado. */
+    const balance = (card as HTMLElement).querySelector(
+      '[data-slot="inventory-disposal-card-balance"]',
+    );
+    expect(balance).toHaveTextContent('5');
+    expect(balance).toHaveTextContent('No depósito');
   });
 
   /* Linhas e unidades são números diferentes, e os dois aparecem. */
@@ -163,7 +170,12 @@ describe('AzuosInventoryDisposalListView — one line, the reason filter and the
   it('speaks in the singular for one disposal of one unit, filters by reason and says the list was cut', async () => {
     vi.mocked(actions.onReasonChange).mockClear();
     setup({
-      data: { disposals: [disposal({ quantity: 1, reason: null })], total: 1, units: 1, filter: noFilter },
+      data: {
+        disposals: [disposal({ quantity: 1, reason: null })],
+        total: 1,
+        units: 1,
+        filter: noFilter,
+      },
       state: { ...settled, isTruncated: true },
     });
 
@@ -174,7 +186,9 @@ describe('AzuosInventoryDisposalListView — one line, the reason filter and the
     if (group) await userEvent.click(within(group).getAllByRole('button')[1]!);
     else {
       await userEvent.click(screen.getByRole('button', { name: 'Filtrar por motivo' }));
-      const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(-1) as HTMLElement;
+      const popup = [...document.querySelectorAll('[data-slot="popover-content"]')].at(
+        -1,
+      ) as HTMLElement;
       await userEvent.click(within(popup).getAllByRole('button', { hidden: true })[1]!);
     }
     expect(actions.onReasonChange).toHaveBeenCalled();

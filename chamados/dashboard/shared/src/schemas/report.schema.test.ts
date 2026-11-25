@@ -16,7 +16,7 @@ describe('reportFormatSchema', () => {
   });
 
   // triste
-  it('recusa um formato fora da lista com uma frase em português', () => {
+  it('rejects a format outside the list with a Portuguese sentence', () => {
     const result = reportFormatSchema.safeParse('csv');
 
     expect(result.success).toBe(false);
@@ -28,7 +28,7 @@ describe('reportFormatSchema', () => {
 
 describe('reportFormatOptions', () => {
   // feliz
-  it('lista os três formatos com o rótulo em português', () => {
+  it('lists the three formats with the Portuguese label', () => {
     expect(reportFormatOptions()).toEqual([
       { value: 'xlsx', label: 'Excel' },
       { value: 'docx', label: 'Word' },
@@ -39,7 +39,7 @@ describe('reportFormatOptions', () => {
 
 describe('reportFormatLabel', () => {
   // feliz
-  it('traduz cada formato para o nome que a pessoa reconhece', () => {
+  it('translates each format into the name the person recognises', () => {
     expect(reportFormatLabel('xlsx')).toBe('Excel');
     expect(reportFormatLabel('docx')).toBe('Word');
     expect(reportFormatLabel('pdf')).toBe('PDF');

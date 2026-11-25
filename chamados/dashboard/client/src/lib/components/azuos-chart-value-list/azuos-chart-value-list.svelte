@@ -1,12 +1,15 @@
+<!--
+  @component
+  Os valores de um gráfico em TEXTO, só para leitor de tela.
+
+  Um desenho não se lê em voz alta: sem esta lista, quem usa leitor de tela ouve "imagem" e
+  nada mais. Fica escondida da vista (`sr-only`) — quem enxerga já tem o rótulo no gráfico.
+
+  `data`: as fatias do gráfico.
+-->
 <script lang="ts" module>
   import type { ChartSlice } from '$lib/utils/chart-slice';
 
-  /**
-   * Os valores de um gráfico em TEXTO, só para leitor de tela.
-   *
-   * Um desenho não se lê em voz alta: sem esta lista, quem usa leitor de tela ouve "imagem" e
-   * nada mais. Fica escondida da vista (`sr-only`) — quem enxerga já tem o rótulo no gráfico.
-   */
   export type AzuosChartValueListProps = {
     data: { slices: readonly ChartSlice[] };
   };

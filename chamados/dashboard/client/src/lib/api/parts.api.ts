@@ -42,6 +42,7 @@ export const partsApi = {
         partId: query.partId,
         computerId: query.computerId,
         type: query.type,
+        archived: query.archived,
       },
     }),
 
@@ -52,7 +53,11 @@ export const partsApi = {
   updateMovement: (movementId: number, body: UpdateMovementInput) =>
     apiRequest<PartMovement>(`/parts/movements/${movementId}`, { method: 'PATCH', body }),
 
-  /** Exclui a linha e devolve o saldo. */
+  /** Estorna a linha (arquiva) e devolve o saldo. */
   removeMovement: (movementId: number) =>
     apiRequest<void>(`/parts/movements/${movementId}`, { method: 'DELETE' }),
+
+  /** Desfaz o estorno: a linha volta ao extrato e o saldo é refeito. */
+  restoreMovement: (movementId: number) =>
+    apiRequest<PartMovement>(`/parts/movements/${movementId}/restore`, { method: 'POST' }),
 };

@@ -1,3 +1,17 @@
+<!--
+  @component
+  O DIA DO GITHUB, aberto: o diálogo com tudo o que aconteceu num dia da agenda — PRs, issues,
+  merges locais ou todas as atividades.
+
+  Lista do mais cedo ao mais tarde, no horário local: hora, situação (aberta, resolvida, mergeado,
+  fechado), número e título com link para o GitHub em nova aba, projeto e autor. A lista rola
+  dentro do diálogo e é paginada embaixo; sem itens, diz que nada foi sincronizado no dia. Fechar o
+  diálogo chama `onClose`.
+
+  - `data`: o dia aberto, vindo do view-model da agenda (`date`, `type`, `items`, `page`,
+    `pageSize`, `total`).
+  - `actions`: `onClose` e `onPageChange(page)`.
+-->
 <script lang="ts">
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import type { SoftwareScheduleModel } from '$lib/hooks/use-software-schedule/use-software-schedule.svelte';
@@ -45,9 +59,10 @@
         do merge; os demais, o da criação. Issues resolvidas usam o horário de fechamento.
       </DialogDescription>
     </DialogHeader>
-    <div class="max-h-[60vh] space-y-3 overflow-y-auto">
+    <!-- Sem rolagem própria: quem rola é a área do diálogo, que tem respiro nas bordas. -->
+    <div class="space-y-3">
       {#each data.items as event (event.id)}
-        <article class="rounded-box border border-border bg-muted p-3">
+        <article class="rounded-box bg-muted p-3">
           <div class="flex items-center justify-between gap-2 text-xs text-muted-foreground">
             <time
               datetime={event.eventDate}

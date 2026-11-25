@@ -420,7 +420,7 @@ describe('AzuosAppShell — celular', () => {
   });
 });
 
-describe('AzuosAppShell — celular: o que a gaveta oferece', () => {
+describe('AzuosAppShell — phone: what the drawer offers', () => {
   afterEach(() => vi.restoreAllMocks());
 
   const areaOptions = [
@@ -531,7 +531,7 @@ describe('AzuosAppShell — celular: o que a gaveta oferece', () => {
   });
 });
 
-describe('AzuosAppShell — o rodapé do trilho', () => {
+describe('AzuosAppShell — the rail footer', () => {
   const areaOptions = [
     { value: 'infra', label: 'Infraestrutura', icon: BarChart3 },
     { value: 'sistema', label: 'Sistema' },
@@ -616,7 +616,7 @@ describe('AzuosAppShell — collapsed rail while signing out', () => {
   });
 });
 
-describe('AzuosAppShell — celular: a tela aberta na gaveta', () => {
+describe('AzuosAppShell — phone: the open screen in the drawer', () => {
   afterEach(() => vi.restoreAllMocks());
 
   // feliz
@@ -640,5 +640,80 @@ describe('AzuosAppShell — celular: a tela aberta na gaveta', () => {
     const sheet = await screen.findByRole('dialog');
 
     expect(within(sheet).getByRole('link', { name: /Chamados/ })).toHaveAttribute('aria-current', 'page');
+  });
+});
+
+describe('AzuosAppShell — changing screens', () => {
+  function contentBox(): HTMLElement {
+    const box = document.querySelector<HTMLElement>('.app-content');
+    if (!box) throw new Error('content box not found');
+    return box;
+  }
+
+  // feliz
+  /* Trocar de tela não esmaece a área de conteúdo: um esmaecer saindo do zero era lido como a
+     tela piscando a cada clique no menu. */
+  it('swaps the screen without fading the content area', async () => {
+    const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/reports' } });
+
+    expect(contentBox().style.opacity).toBe('');
+  });
+
+  // triste
+  it('keeps the content area untouched when only the state changes', async () => {
+    const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/tickets', isSigningOut: true } });
+
+    expect(contentBox().style.opacity).toBe('');
+  });
+});
+
+describe('AzuosAppShell — scroll of the content box', () => {
+  function contentBox(): HTMLElement {
+    const box = document.querySelector<HTMLElement>('.app-content');
+    if (!box) throw new Error('content box not found');
+    return box;
+  }
+
+  /* Rola a caixa como a pessoa rolaria: o valor muda e o evento avisa a casca. */
+  async function scrollTo(top: number) {
+    contentBox().scrollTop = top;
+    await fireEvent.scroll(contentBox());
+  }
+
+  // feliz
+  it('opens a new path at the top and gives the old place back on back or forward', async () => {
+    const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
+    await scrollTo(480);
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/reports' } });
+    expect(contentBox().scrollTop).toBe(0);
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/tickets', isHistoryNavigation: true } });
+    expect(contentBox().scrollTop).toBe(480);
+  });
+
+  // triste
+  /* Um filtro na busca ou um `replaceState` muda o estado, não o caminho: a pessoa fica onde está. */
+  it('keeps the place when only the query or the state changes', async () => {
+    const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
+    await scrollTo(300);
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/tickets', activeKey: 'tickets' } });
+
+    expect(contentBox().scrollTop).toBe(300);
+  });
+
+  // triste
+  it('starts at the top when back or forward reaches a path it never saw', async () => {
+    const view = renderShell({ ui: { items }, state: { routeKey: '/tickets' } });
+    await scrollTo(200);
+
+    await view.rerender({ ui: { items }, state: { routeKey: '/reports', isHistoryNavigation: true } });
+
+    expect(contentBox().scrollTop).toBe(0);
   });
 });

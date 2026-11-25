@@ -1,43 +1,40 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { Portal } from 'bits-ui';
+  import { untrack, type Snippet } from 'svelte';
   import { requiresSystemGithub } from '@template/shared/domain/system-access.util';
 
-  import AppShell from '$lib/components/azuos-app-shell/azuos-app-shell.svelte';
-  import { useAppShellModel } from '$lib/hooks/use-app-shell/use-app-shell.svelte';
-  import { SYSTEM_NAV_ITEMS } from '$lib/navigation/navigation';
+  import { useGithubConnectionModel } from '$lib/hooks/use-github-connection/use-github-connection.svelte';
   import type { LayoutData } from './$types';
   import GithubLinkGate from './components/azuos-github-link-gate/azuos-github-link-gate.svelte';
-  import { useGithubConnectionModel } from '$lib/hooks/use-github-connection/use-github-connection.svelte';
 
   /**
-   * A CASCA DO SISTEMA — o menu de `/system/...`.
+   * A PORTA DO SISTEMA — quem edita o módulo precisa do GitHub vinculado para entrar.
    *
-   * O contexto e a lista de menu entram por parâmetro, fixos nesta pasta: este módulo não
-   * conhece a lista dos outros dois, e não existe filtro nenhum em tempo de execução. Trocar
-   * de contexto é trocar de endereço, e aí quem monta é a casca do outro módulo.
+   * A casca (o menu) NÃO mora aqui: ela é uma só, em `(app)/+layout.svelte`, e fica montada ao
+   * trocar de módulo. Este layout só decide o que vai na área de conteúdo:
+   *
+   * - conferindo a vinculação pela primeira vez → nada, com a barra já no lugar (a porta em
+   *   tela cheia por um instante e a casca logo depois era um piscar a cada entrada);
+   * - sem vinculação → a porta, em tela cheia por cima de tudo (`Portal` no `body`: dentro da
+   *   área de conteúdo ela ficaria presa à animação de troca de tela);
+   * - vinculado → a tela.
    *
    * `data.user` vem da guarda em `(app)/+layout.ts`, um nível acima.
    */
   let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
-  const shell = useAppShellModel({
-    user: data.user,
-    context: 'sistema',
-    items: SYSTEM_NAV_ITEMS,
-  });
-  const github = useGithubConnectionModel(data.user.id, requiresSystemGithub(data.user));
+  const needsGithub = $derived(requiresSystemGithub(data.user));
+  /* A conferência nasce uma vez, com quem entrou: a sessão não muda sem recarregar a tela. */
+  const user = untrack(() => data.user);
+  const github = useGithubConnectionModel(user.id, requiresSystemGithub(user));
 </script>
 
-{#if requiresSystemGithub(data.user) && !github.state.isLinked}
-  <GithubLinkGate state={github.state} actions={github.actions} />
-{:else}
-  <AppShell
-    initialSidebarOpen={data.sidebarOpen}
-    data={shell.data}
-    ui={shell.ui}
-    state={shell.state}
-    actions={shell.actions}
-  >
-    {@render children()}
-  </AppShell>
+{#if !needsGithub || github.state.isLinked}
+  {@render children()}
+{:else if !github.state.isLoading}
+  <Portal>
+    <div class="fixed inset-0 z-50 overflow-y-auto">
+      <GithubLinkGate state={github.state} actions={github.actions} />
+    </div>
+  </Portal>
 {/if}

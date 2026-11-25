@@ -10,6 +10,10 @@ import {
   refuseTicketHistory,
   ticketHistoryTypeLabel,
 } from '@template/shared/domain/ticket-history.util';
+import {
+  type GithubIssueEvent,
+  ticketHistoryOfIssueEvent,
+} from '@template/shared/domain/github-issue-sync.util';
 import { isClosedTicketStatus } from '@template/shared/domain/ticket-status.util';
 import { type StagedFile } from '@template/shared/schemas/staged-file.schema';
 import { type TicketAttachment } from '@template/shared/schemas/ticket-attachment.schema';
@@ -27,6 +31,7 @@ import { type TicketRow } from '../../../lib/db/schema/tickets.schema';
 import { assertCanAttendTicket, assertCanRead } from '../../../lib/policy/policy-assert.util';
 import { GithubService } from '../../software-projects/service/github.service';
 import {
+  type HistoryAuthor,
   type HistoryEntry,
   toHistoryInsert,
   toOpeningHistory,
@@ -35,6 +40,7 @@ import {
   toTicketMove,
 } from '../mapper/ticket-histories.mapper';
 import { TicketHistoriesRepository } from '../repository/ticket-histories.repository';
+import { TasksService } from '../../tasks/service/tasks.service';
 import { TicketsRepository } from '../repository/tickets.repository';
 import { TICKET_NOT_FOUND, TicketAccessService, type TicketInReach } from './ticket-access.service';
 import { TicketAttachmentsService } from './ticket-attachments.service';
@@ -60,7 +66,21 @@ export class TicketHistoriesService {
     @Optional() private readonly notifier?: TicketWhatsappNotifierService,
     @Optional() private readonly tickets?: TicketsRepository,
     @Optional() private readonly stockItems?: TicketStockItemsService,
+    @Optional() private readonly tasks?: TasksService,
   ) {}
+
+  /**
+   * A tarefa do chamado acompanha o estágio que este histórico acabou de gravar. Relê o chamado
+   * (o estágio mudou na mesma transação) e não espera: a tarefa é consequência, não pré-requisito.
+   */
+  private followTask(ticketId: number): void {
+    const { tasks, tickets } = this;
+    if (!tasks || !tickets) return;
+    void tickets
+      .findById(ticketId)
+      .then((ticket) => tasks.syncTicketInBackground(ticket))
+      .catch(() => undefined);
+  }
 
   /** A linha do tempo inteira, para o painel. */
   async list(user: RequestUser, ticketId: number): Promise<TicketHistory[]> {
@@ -126,9 +146,52 @@ export class TicketHistoriesService {
       historyId: row.id,
     });
     this.mirrorToIssue(reach.ticket, entry, user.name);
+    this.followTask(ticketId);
     await this.notify(reach.ticket, row, user, notifyUserIds);
 
     return toTicketHistory(row, saved);
+  }
+
+  /**
+   * O andamento que VEIO DO GITHUB: a issue do chamado foi fechada ou reaberta lá.
+   *
+   * Sem pessoa logada — quem garante a origem é a assinatura do webhook, conferida antes. Grava
+   * pela mesma função dos outros históricos (estágio, solução, baixa do estoque ao encerrar), mas
+   * NÃO espelha de volta na issue: a mudança nasceu nela.
+   *
+   * Quem fechou só vira responsável do chamado quando a conta do GitHub está vinculada a uma
+   * pessoa da base (tem `id`). Um login solto não vira responsável: responsável é sempre por ID.
+   */
+  async recordFromGithub(
+    ticketId: number,
+    event: GithubIssueEvent,
+    author: HistoryAuthor,
+  ): Promise<TicketHistory | null> {
+    const ticket = await this.tickets?.findById(ticketId);
+    if (!ticket) return null;
+    /* A decisão é pelo estágio de AGORA: é o que mata o eco do próprio espelho (ver a regra). */
+    const entry = ticketHistoryOfIssueEvent(event, ticket.status);
+    if (!entry) return null;
+
+    const historyEntry = {
+      type: entry.type as HistoryEntry['type'],
+      description: entry.description,
+      isVisibleToRequester: true,
+      minutesSpent: null,
+    };
+    const move = toTicketMove(ticket, historyEntry, author);
+    if (!author.id) {
+      delete move.assignee;
+      delete move.assigneeId;
+    }
+    const row = await this.repository.record(
+      toHistoryInsert(ticket, historyEntry, author),
+      move,
+      this.settlementOf(ticket, historyEntry, author),
+    );
+    this.followTask(ticketId);
+
+    return toTicketHistory(row);
   }
 
   /**
@@ -144,8 +207,12 @@ export class TicketHistoriesService {
     ticketId: number,
     input: CreateRequesterHistoryInput,
   ): Promise<PublicTicketHistory> {
-    const { type, description, attachments: files, notifyUserIds } =
-      createRequesterHistorySchema.parse(input);
+    const {
+      type,
+      description,
+      attachments: files,
+      notifyUserIds,
+    } = createRequesterHistorySchema.parse(input);
     const ticket = await this.tickets?.findById(ticketId);
     if (!ticket || !this.people) throw new NotFoundException(TICKET_NOT_FOUND);
 
@@ -172,6 +239,7 @@ export class TicketHistoriesService {
       historyId: row.id,
     });
     this.mirrorToIssue(ticket, entry, user.name);
+    this.followTask(ticketId);
     await this.notify(ticket, row, user, notifyUserIds);
 
     return toPublicTicketHistory(toTicketHistory(row, saved));

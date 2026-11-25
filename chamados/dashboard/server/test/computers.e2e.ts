@@ -2,7 +2,20 @@ import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { asCaio, createE2eApp, type E2eApp } from './support/e2e-app.util';
+import {
+  ANA,
+  BIA,
+  CAIO,
+  asCaio,
+  createE2eApp,
+  directoryEntry,
+  type E2eApp,
+} from './support/e2e-app.util';
+
+import { computers } from '../src/lib/db/schema/computers.schema';
+import { ComputerReferenceBackfillService } from '../src/modules/computers/service/computer-reference-backfill.service';
+
+const FISCAL = { id: 31, name: 'Fiscal' };
 
 /**
  * O INVENTÁRIO de ponta a ponta: cadastrar e receber o token do agente, achar a máquina na
@@ -29,7 +42,10 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
       .send({ name, kind: 'desktop', ...extra });
 
   beforeAll(async () => {
-    started = await createE2eApp(testDatabaseUrl!);
+    started = await createE2eApp(testDatabaseUrl!, {
+      people: [directoryEntry(ANA), directoryEntry(BIA), directoryEntry(CAIO)],
+      departments: [FISCAL, { id: 32, name: 'Contábil' }],
+    });
     app = started.app;
   });
 
@@ -46,15 +62,20 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
   it('registers a machine and hands over the agent token, once', async () => {
     const created = await register('PC-RECEPCAO-01', {
       displayName: 'Recepção',
-      responsibleName: 'Marta',
-      department: 'RECEPÇÃO',
+      responsibleId: ANA.id,
+      departmentId: FISCAL.id,
+      notes: 'Mesa da entrada',
     }).expect(201);
 
     expect(created.body.token).toBeTruthy();
     expect(created.body.computer).toMatchObject({
       name: 'PC-RECEPCAO-01',
       displayName: 'Recepção',
-      department: 'RECEPÇÃO',
+      responsibleId: ANA.id,
+      responsibleName: ANA.name,
+      departmentId: FISCAL.id,
+      departmentName: 'Fiscal',
+      notes: 'Mesa da entrada',
       isArchived: false,
       isBlocked: false,
       isOnline: false,
@@ -120,29 +141,109 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     expect(new Set(names).size).toBe(7);
   });
 
-  it('filters by department and by search, on the query and not on the screen', async () => {
-    await register('PC-RECEPCAO-01', { department: 'RECEPÇÃO', responsibleName: 'Marta' }).expect(
-      201,
-    );
-    await register('PC-FISCAL-01', { department: 'Fiscal', responsibleName: 'Joana' }).expect(201);
-    await register('PC-FISCAL-02', { department: 'Fiscal', responsibleName: 'Pedro' }).expect(201);
+  it('filters by department id and by search, on the query and not on the screen', async () => {
+    await register('PC-RECEPCAO-01', { responsibleId: ANA.id }).expect(201);
+    await register('PC-FISCAL-01', { departmentId: FISCAL.id, responsibleId: BIA.id }).expect(201);
+    await register('PC-FISCAL-02', { departmentId: FISCAL.id, responsibleId: CAIO.id }).expect(201);
 
     const fiscal = await request(app.getHttpServer())
-      .get('/api/v1/computers?department=fiscal')
+      .get(`/api/v1/computers?departmentId=${FISCAL.id}`)
       .set(asCaio())
       .expect(200);
 
     expect(fiscal.body.total).toBe(2);
     expect(fiscal.body.items).toHaveLength(2);
 
-    /* A busca também procura no responsável — é como se acha "a máquina da Marta". */
+    /* O filtro de Local saiu: um link antigo com `location` não filtra nada nem dá erro. */
+    const oldLink = await request(app.getHttpServer())
+      .get(`/api/v1/computers?location=${encodeURIComponent('RECEPÇÃO')}`)
+      .set(asCaio())
+      .expect(200);
+
+    expect(oldLink.body.total).toBe(3);
+
+    /* A busca também procura no responsável — pelo nome no diretório, que vira o id. */
     const byPerson = await request(app.getHttpServer())
-      .get('/api/v1/computers?search=marta')
+      .get(`/api/v1/computers?search=${encodeURIComponent(ANA.name.split(' ')[0] ?? ANA.name)}`)
       .set(asCaio())
       .expect(200);
 
     expect(byPerson.body.total).toBe(1);
     expect(byPerson.body.items[0].name).toBe('PC-RECEPCAO-01');
+  });
+
+  // triste
+  it('refuses a responsible who is not in the directory and a department HR does not have', async () => {
+    const wrongPerson = await register('PC-ERRADO-01', { responsibleId: 'quem-nao-existe' }).expect(
+      400,
+    );
+    expect(wrongPerson.body.message).toContain('pessoa');
+
+    const wrongDepartment = await register('PC-ERRADO-02', { departmentId: 999 }).expect(400);
+    expect(wrongDepartment.body.message).toContain('RH');
+
+    /* Texto livre de responsável não existe mais: o campo antigo é ignorado, nada é gravado. */
+    const legacy = await register('PC-ERRADO-03', { responsibleName: 'Marta' }).expect(201);
+    expect(legacy.body.computer).toMatchObject({ responsibleId: null, responsibleName: null });
+
+    /* O Local também não existe mais: o campo é ignorado, e a máquina nasce sem ele. */
+    const oldLocation = await register('PC-ERRADO-04', { location: 'RECEPÇÃO' }).expect(201);
+    expect(oldLocation.body.computer).not.toHaveProperty('location');
+  });
+
+  // feliz
+  /* O fim da migração 0025: o nome antigo que casa com o RH vira id; o sem par fica na observação. */
+  it('adopts the HR id of the old department names left in the notes by the migration', async () => {
+    await started.db.insert(computers).values([
+      {
+        name: 'PC-ANTIGO-01',
+        tokenHash: 'h-1',
+        createdBy: 'seed',
+        notes: 'Responsável anterior: Marta\nDepartamento anterior: fiscal',
+      },
+      {
+        name: 'PC-ANTIGO-02',
+        tokenHash: 'h-2',
+        createdBy: 'seed',
+        notes: 'Departamento anterior: Departamento X',
+      },
+      /* O local antigo (0027) fica na observação: nunca vira departamento sozinho. */
+      {
+        name: 'PC-ANTIGO-03',
+        tokenHash: 'h-3',
+        createdBy: 'seed',
+        notes: 'Responsável anterior: Bia\nLocal anterior: RECEPÇÃO',
+      },
+    ]);
+
+    await expect(app.get(ComputerReferenceBackfillService).run()).resolves.toBe(1);
+    await expect(app.get(ComputerReferenceBackfillService).run()).resolves.toBe(0);
+
+    const list = await request(app.getHttpServer())
+      .get('/api/v1/computers')
+      .set(asCaio())
+      .expect(200);
+    const byName = Object.fromEntries(
+      list.body.items.map(
+        (item: { name: string; departmentId: number | null; notes: string | null }) => [
+          item.name,
+          item,
+        ],
+      ),
+    );
+    expect(byName['PC-ANTIGO-01']).toMatchObject({
+      departmentId: FISCAL.id,
+      departmentName: 'Fiscal',
+      notes: 'Responsável anterior: Marta',
+    });
+    expect(byName['PC-ANTIGO-02']).toMatchObject({
+      departmentId: null,
+      notes: 'Departamento anterior: Departamento X',
+    });
+    expect(byName['PC-ANTIGO-03']).toMatchObject({
+      departmentId: null,
+      notes: 'Responsável anterior: Bia\nLocal anterior: RECEPÇÃO',
+    });
   });
 
   it('blocks a machine, keeping the reason', async () => {
@@ -161,7 +262,10 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
 
     /* Bloqueada NÃO sai da lista: ela continua no parque, só com a conexão do agente recusada.
        Esconder seria perder de vista justamente a máquina que alguém precisa destravar. */
-    const list = await request(app.getHttpServer()).get('/api/v1/computers').set(asCaio()).expect(200);
+    const list = await request(app.getHttpServer())
+      .get('/api/v1/computers')
+      .set(asCaio())
+      .expect(200);
 
     expect(list.body.total).toBe(1);
   });

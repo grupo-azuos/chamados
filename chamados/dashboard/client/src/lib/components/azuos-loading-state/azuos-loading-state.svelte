@@ -1,10 +1,13 @@
+<!--
+  @component
+  "Carregando…" com o que está carregando.
+
+  O texto diz O QUÊ, e não só que há espera: numa tela com lista e painel lado a lado, um girador
+  sem legenda deixa a pessoa sem saber se é a lista que falhou ou se ainda vem.
+
+  Props: `data.label` é o que está carregando; `ui.className` ajusta a caixa.
+-->
 <script lang="ts" module>
-  /**
-   * "Carregando…" com o que está carregando.
-   *
-   * O texto diz O QUÊ, e não só que há espera: numa tela com lista e painel lado a lado, um
-   * girador sem legenda deixa a pessoa sem saber se é a lista que falhou ou se ainda vem.
-   */
   export type AzuosLoadingStateProps = {
     data: { label: string };
     ui?: { className?: string };

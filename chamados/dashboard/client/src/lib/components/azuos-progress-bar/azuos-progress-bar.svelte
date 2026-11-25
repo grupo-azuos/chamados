@@ -1,3 +1,19 @@
+<!--
+  @component
+  Quanto já foi feito, numa barra e num número.
+
+  O número ao lado não é redundante: barra sozinha se lê "mais ou menos a metade", e quem decide
+  precisa saber se são 7 de 14 ou 7 de 15. `role="progressbar"` com os valores é o que dá a mesma
+  informação a quem usa leitor de tela.
+
+  Cada faixa tem um tom, e é por ele que a lista é lida de relance: completo, perto (70% ou mais),
+  no meio (40% ou mais) e atrasado. Os tons são as cores dos gráficos, para a barra combinar com o
+  gráfico ao lado no painel. Sem nada a cumprir, aparece o texto de vazio.
+
+  - `data`: a porcentagem, o feito e o total.
+  - `ui`: `showCount` (mostra "feito/total" em vez da porcentagem), o nome do que é contado para o
+    leitor de tela, o texto de vazio e classes extras.
+-->
 <script lang="ts" module>
   export type AzuosProgressBarProps = {
     data: { percentage: number; done: number; total: number };
@@ -11,22 +27,24 @@
     };
   };
 
-  type ProgressTone = 'emerald' | 'yellow' | 'orange' | 'red';
+  type ProgressTone = 'done' | 'close' | 'halfway' | 'behind';
 
+  /* As cores de categoria dos gráficos (`lib/theme/tokens.css`), e não um verde fixo da paleta
+     crua: assim a barra acompanha a troca de tema e combina com o gráfico ao lado dela no painel. */
   const TONE_CLASSES: Record<ProgressTone, string> = {
-    emerald: 'bg-chart-4',
-    yellow: 'bg-chart-3',
-    orange: 'bg-chart-2',
-    red: 'bg-chart-1',
+    done: 'bg-chart-2',
+    close: 'bg-chart-3',
+    halfway: 'bg-chart-5',
+    behind: 'bg-chart-4',
   };
 
   /** Cada faixa tem um tom, e é por ele que a lista é lida de relance. */
   function progressTone(percentage: number): ProgressTone {
-    if (percentage >= 100) return 'emerald';
-    if (percentage >= 70) return 'yellow';
-    if (percentage >= 40) return 'orange';
+    if (percentage >= 100) return 'done';
+    if (percentage >= 70) return 'close';
+    if (percentage >= 40) return 'halfway';
 
-    return 'red';
+    return 'behind';
   }
 </script>
 

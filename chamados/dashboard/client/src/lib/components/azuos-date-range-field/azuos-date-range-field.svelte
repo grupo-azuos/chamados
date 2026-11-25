@@ -1,22 +1,26 @@
+<!--
+  @component
+  O campo de PERÍODO: de uma data até outra, para filtro e para comparar intervalos.
+
+  Dois calendários lado a lado, porque um período quase sempre atravessa dois meses e num calendário
+  só a pessoa perde de vista onde começou. É o `AzuosCalendar`, igual ao do template: o mês e o ano
+  de cada um trocam no próprio título — sem isso, voltar um ano são doze toques na seta.
+
+  Em cima ficam os campos "De" e "Até", digitáveis (`dd/mm/aaaa`): quem sabe as datas de cor não
+  precisa procurar o dia, e digitar uma data leva o calendário até ela.
+
+  NADA É ENTREGUE ANTES DO "APLICAR". Escolher um período são dois toques, e entregar o primeiro
+  faria a tela de trás recarregar com meio período. "Limpar" esvazia e entrega na hora.
+
+  O valor entra e sai como dois textos ISO (`{ from: '2026-03-01', to: '2026-03-31' }`). Os dois
+  campos escondidos levam `{name}From` e `{name}To` para o formulário nativo.
+
+  Props: `data` traz o rótulo, o `name`, o período e os limites; `ui` traz o texto do campo vazio;
+  `state` traz o erro e o desabilitado; `actions.onChange` recebe o período aplicado.
+-->
 <script lang="ts" module>
   import { displayFromIso } from '$lib/utils/date-input.util';
 
-  /**
-   * O campo de PERÍODO: de uma data até outra, para filtro e para comparar intervalos.
-   *
-   * Dois calendários lado a lado, porque um período quase sempre atravessa dois meses e num
-   * calendário só a pessoa perde de vista onde começou. O mês e o ano trocam pelo seletor do
-   * projeto em cima dos calendários — sem ele, voltar um ano são doze toques na seta.
-   *
-   * Em cima ficam os campos "De" e "Até", digitáveis (`dd/mm/aaaa`): quem sabe as datas de cor não
-   * precisa procurar o dia, e digitar uma data leva o calendário até ela.
-   *
-   * NADA É ENTREGUE ANTES DO "APLICAR". Escolher um período são dois toques, e entregar o primeiro
-   * faria a tela de trás recarregar com meio período. "Limpar" esvazia e entrega na hora.
-   *
-   * O valor entra e sai como dois textos ISO (`{ from: '2026-03-01', to: '2026-03-31' }`). Os dois
-   * campos escondidos levam `<name>From` e `<name>To` para o formulário nativo.
-   */
   export type AzuosDateRange = { from: string | null; to: string | null };
 
   export type AzuosDateRangeFieldProps = {
@@ -61,9 +65,8 @@
   import { type DateValue, getLocalTimeZone, parseDate, today } from '@internationalized/date';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
+  import AzuosCalendar from '$lib/components/azuos-calendar/azuos-calendar.svelte';
   import * as Popover from '$lib/components/ui/popover';
-  import { RangeCalendar } from '$lib/components/ui/range-calendar';
   import { isIsoWithin, isoFromDisplay, maskDateInput } from '$lib/utils/date-input.util';
   import { cn } from '$lib/utils/cn';
 
@@ -82,22 +85,6 @@
   const error = $derived(fieldState?.error ?? null);
   const label = $derived(rangeLabel(data.value));
   const isComplete = $derived(Boolean(draft.from && draft.to));
-
-  const MONTH_NAME = new Intl.DateTimeFormat('pt-BR', { month: 'long', timeZone: 'UTC' });
-  const monthOptions = Array.from({ length: 12 }, (_, index) => ({
-    value: String(index + 1),
-    label: MONTH_NAME.format(new Date(Date.UTC(2024, index, 1))),
-  }));
-  const yearOptions = $derived.by(() => {
-    const now = today(getLocalTimeZone()).year;
-    const first = data.min ? parseDate(data.min).year : now - 100;
-    const last = data.max ? parseDate(data.max).year : now + 10;
-
-    return Array.from({ length: last - first + 1 }, (_, index) => ({
-      value: String(first + index),
-      label: String(first + index),
-    }));
-  });
 
   function dateOf(iso: string | null): DateValue | undefined {
     return iso ? parseDate(iso) : undefined;
@@ -148,7 +135,7 @@
           class={cn(
             'control-lg rounded-control bg-muted hover:bg-accent flex w-full cursor-pointer items-center gap-2.5 border text-left text-sm transition-colors outline-none',
             'focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-60',
-            error ? 'border-border bg-destructive-soft' : 'border-input',
+            error ? 'bg-destructive-soft border-transparent' : 'border-transparent',
             label ? 'text-foreground' : 'text-muted-foreground',
           )}
         >
@@ -158,8 +145,9 @@
       {/snippet}
     </Popover.Trigger>
     <Popover.Content
-      align="start"
-      class="rounded-surface border-border bg-card w-auto max-w-[calc(100vw-2rem)] overflow-x-auto p-0 shadow-xl"
+      sideOffset={6}
+      align="center"
+      class="rounded-surface bg-popover ring-foreground/8 w-auto max-w-[calc(100vw-2rem)] overflow-x-auto border-transparent p-0 shadow-xl ring-1"
     >
       <div class="flex flex-col gap-3 p-3">
         <div class="grid grid-cols-2 gap-3">
@@ -180,31 +168,21 @@
             </label>
           {/each}
         </div>
-        <div class="grid grid-cols-2 gap-2">
-          <SelectField
-            data={{ value: String(page.month), options: monthOptions }}
-            ui={{ ariaLabel: 'Mês', className: 'w-full capitalize' }}
-            actions={{ onChange: (value) => (page = page.set({ month: Number(value) })) }}
-          />
-          <SelectField
-            data={{ value: String(page.year), options: yearOptions }}
-            ui={{ ariaLabel: 'Ano', className: 'w-full tabular-nums' }}
-            actions={{ onChange: (value) => (page = page.set({ year: Number(value) })) }}
-          />
-        </div>
         <!-- Sem os dias do mês vizinho: com dois calendários lado a lado, o fim de março aparecia
              de novo no começo do quadro de abril, e o período parecia marcado duas vezes. -->
-        <RangeCalendar
-          value={{ start: dateOf(draft.from), end: dateOf(draft.to) }}
-          onValueChange={(range) => (draft = { from: range.start?.toString() ?? null, to: range.end?.toString() ?? null })}
-          placeholder={page}
-          onPlaceholderChange={(next) => (page = next)}
-          minValue={dateOf(data.min ?? null)}
-          maxValue={dateOf(data.max ?? null)}
-          numberOfMonths={2}
-          locale="pt-BR"
-          fixedWeeks={false}
-          class="rounded-control border-0 p-0"
+        <AzuosCalendar
+          data={{
+            range: { start: dateOf(draft.from), end: dateOf(draft.to) },
+            month: page,
+            min: dateOf(data.min ?? null),
+            max: dateOf(data.max ?? null),
+          }}
+          ui={{ mode: 'range', numberOfMonths: 2, showOutsideDays: false, className: 'rounded-control border-0 p-0' }}
+          actions={{
+            onRangeChange: (range) =>
+              (draft = { from: range.start?.toString() ?? null, to: range.end?.toString() ?? null }),
+            onMonthChange: (next) => (page = next),
+          }}
         />
         <div class="border-border flex flex-wrap items-center justify-between gap-2 border-t pt-3">
           <p class="text-ink-500 text-xs" aria-live="polite">

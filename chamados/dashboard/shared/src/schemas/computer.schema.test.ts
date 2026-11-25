@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  COMPUTER_NO_RESPONSIBLE_FILTER,
   computerAlertSchema,
   computerCreateFormSchema,
   computerResponsibleSchema,
@@ -26,15 +27,22 @@ describe('createComputerSchema', () => {
       name: 'RECEPCAO-01',
       kind: 'notebook',
       displayName: 'Computador da recepção',
-      responsibleName: 'Helena Dias',
-      department: 'recepcao',
+      responsibleId: 'person-1',
+      departmentId: 12,
+      notes: '  Mesa da entrada  ',
     });
 
-    expect(parsed.department).toBe('recepcao');
+    expect(parsed).toMatchObject({
+      responsibleId: 'person-1',
+      departmentId: 12,
+      notes: 'Mesa da entrada',
+    });
   });
 
   it('trims the name before storing it', () => {
-    expect(createComputerSchema.parse({ name: '  RECEPCAO-01  ', kind: 'desktop' }).name).toBe('RECEPCAO-01');
+    expect(createComputerSchema.parse({ name: '  RECEPCAO-01  ', kind: 'desktop' }).name).toBe(
+      'RECEPCAO-01',
+    );
   });
 
   // triste
@@ -45,36 +53,69 @@ describe('createComputerSchema', () => {
     expect(result.error?.issues[0]?.message).toBe('Informe o nome da máquina');
   });
 
-  /* O nome vem da lista do RH, que muda sem código: o schema recusa só o vazio e o absurdo. */
-  it('refuses a blank department, in Portuguese', () => {
-    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', department: '  ' });
+  /* O departamento é o ID do RH, nunca um nome digitado. */
+  it('refuses a department sent as a name, in Portuguese', () => {
+    const result = createComputerSchema.safeParse({
+      name: 'PC-1',
+      kind: 'desktop',
+      departmentId: 'Fiscal',
+    });
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe('Escolha um departamento da lista');
   });
 
-  it('refuses a department name longer than any real one', () => {
-    const result = createComputerSchema.safeParse({ name: 'PC-1', kind: 'desktop', department: 'x'.repeat(121) });
+  /* O Local saiu do computador: o que um formulário antigo ainda mandar é descartado, não gravado. */
+  it('drops a location sent by an old screen instead of storing it', () => {
+    const parsed = createComputerSchema.parse({
+      name: 'PC-1',
+      kind: 'desktop',
+      location: 'RECEPÇÃO',
+    });
 
-    expect(result.success).toBe(false);
+    expect(parsed).not.toHaveProperty('location');
+    expect(updateComputerSchema.parse({ location: 'ANALYZE' })).not.toHaveProperty('location');
   });
 
-  it('accepts a department exactly as HR names it', () => {
-    const parsed = createComputerSchema.parse({ name: 'PC-1', kind: 'desktop', department: 'Experiência do Cliente' });
+  it('refuses a blank responsible id instead of treating it as nobody', () => {
+    const result = createComputerSchema.safeParse({
+      name: 'PC-1',
+      kind: 'desktop',
+      responsibleId: '   ',
+    });
 
-    expect(parsed.department).toBe('Experiência do Cliente');
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe('Escolha o responsável na lista de pessoas');
+  });
+
+  it('ignores the old free-text responsible name, which is not stored anymore', () => {
+    const parsed = createComputerSchema.parse({
+      name: 'PC-1',
+      kind: 'desktop',
+      responsibleName: 'Marta',
+    });
+
+    expect(parsed).not.toHaveProperty('responsibleName');
   });
 
   /* Hardware é medido, não digitado: aceitá-lo aqui faria a ficha discordar da máquina. */
   it('ignores hardware sent at registration, because only the agent measures it', () => {
-    const parsed = createComputerSchema.parse({ name: 'PC-1', kind: 'desktop', totalMemoryBytes: 999 });
+    const parsed = createComputerSchema.parse({
+      name: 'PC-1',
+      kind: 'desktop',
+      totalMemoryBytes: 999,
+    });
 
     expect(parsed).not.toHaveProperty('totalMemoryBytes');
   });
 
   /* O token é gerado pelo servidor; aceitar um escolhido de fora anularia a proteção. */
   it('ignores a token sent at registration', () => {
-    const parsed = createComputerSchema.parse({ name: 'PC-1', kind: 'desktop', token: 'eu-escolhi' });
+    const parsed = createComputerSchema.parse({
+      name: 'PC-1',
+      kind: 'desktop',
+      token: 'eu-escolhi',
+    });
 
     expect(parsed).not.toHaveProperty('token');
   });
@@ -95,9 +136,10 @@ describe('createComputerSchema', () => {
 describe('updateComputerSchema', () => {
   // feliz
   it('accepts changing only the responsible person', () => {
-    expect(updateComputerSchema.parse({ responsibleName: 'Ana' })).toEqual({
-      responsibleName: 'Ana',
+    expect(updateComputerSchema.parse({ responsibleId: 'person-1' })).toEqual({
+      responsibleId: 'person-1',
     });
+    expect(updateComputerSchema.parse({ responsibleId: null })).toEqual({ responsibleId: null });
   });
 
   it('turns an emptied nickname into null, so the field is actually cleared', () => {
@@ -142,7 +184,11 @@ describe('computerListQuerySchema', () => {
     expect(computerListQuerySchema.parse({}).onlyOnline).toBeUndefined();
   });
   it('parses offline, kind and alert filters', () => {
-    const parsed = computerListQuerySchema.parse({ onlyOffline: 'true', kind: 'notebook', alert: 'memory' });
+    const parsed = computerListQuerySchema.parse({
+      onlyOffline: 'true',
+      kind: 'notebook',
+      alert: 'memory',
+    });
 
     expect(parsed.onlyOffline).toBe(true);
     expect(parsed.kind).toBe('notebook');
@@ -158,17 +204,18 @@ describe('computerListQuerySchema', () => {
     const parsed = computerListQuerySchema.parse({});
 
     expect(parsed.page).toBe(1);
-    expect(parsed.department).toBeUndefined();
+    expect(parsed.departmentId).toBeUndefined();
   });
 
   it('accepts the panel filters together', () => {
     const parsed = computerListQuerySchema.parse({
       search: '  recepcao  ',
-      department: 'rh',
+      departmentId: '12',
       healthStatus: 'critical',
     });
 
     expect(parsed.search).toBe('recepcao');
+    expect(parsed.departmentId).toBe(12);
     expect(parsed.healthStatus).toBe('critical');
   });
 
@@ -181,20 +228,47 @@ describe('computerListQuerySchema', () => {
   it('refuses a page size above the ceiling', () => {
     expect(computerListQuerySchema.safeParse({ pageSize: 5000 }).success).toBe(false);
   });
+
+  // feliz
+  it('accepts a responsible person by directory id, or the "no responsible" choice', () => {
+    expect(computerListQuerySchema.parse({ responsibleId: ' person-1 ' }).responsibleId).toBe(
+      'person-1',
+    );
+    expect(
+      computerListQuerySchema.parse({ responsibleId: COMPUTER_NO_RESPONSIBLE_FILTER })
+        .responsibleId,
+    ).toBe('none');
+  });
+
+  // feliz
+  it('accepts the upgrade filter: any reason or a single one', () => {
+    expect(computerListQuerySchema.parse({ upgrade: 'any' }).upgrade).toBe('any');
+    expect(computerListQuerySchema.parse({ upgrade: 'cpu' }).upgrade).toBe('cpu');
+  });
+
+  // triste
+  it('refuses an upgrade reason the rules do not have, like "ssd"', () => {
+    expect(computerListQuerySchema.safeParse({ upgrade: 'ssd' }).success).toBe(false);
+  });
+
+  // triste
+  it('refuses a blank responsible filter instead of treating it as "no responsible"', () => {
+    expect(computerListQuerySchema.safeParse({ responsibleId: '   ' }).success).toBe(false);
+  });
 });
 
 describe('computerReportQuerySchema', () => {
   // feliz
   it('accepts the same filters as the list, plus the file format', () => {
-    const parsed = computerReportQuerySchema.parse({ department: 'rh', format: 'pdf' });
+    const parsed = computerReportQuerySchema.parse({ departmentId: '12', format: 'pdf' });
 
-    expect(parsed.department).toBe('rh');
+    expect(parsed.departmentId).toBe(12);
     expect(parsed.format).toBe('pdf');
   });
 
   // triste
   it('refuses a report with no format chosen', () => {
-    expect(computerReportQuerySchema.safeParse({ department: 'rh' }).success).toBe(false);
+    expect(computerReportQuerySchema.safeParse({ departmentId: 12 }).success).toBe(false);
   });
 });
 
@@ -241,12 +315,17 @@ describe('computerAlertSchema', () => {
   });
 });
 
-
 describe('computerResponsibleSchema', () => {
   // feliz
-  it('exposes only the identifier and name for the responsible picker', () => {
-    expect(computerResponsibleSchema.parse({ id: 'person-1', name: 'Ana Exemplo', email: 'ana@example.invalid' }))
-      .toEqual({ id: 'person-1', name: 'Ana Exemplo' });
+  it('exposes only the identifier, name and photo for the responsible picker', () => {
+    expect(
+      computerResponsibleSchema.parse({
+        id: 'person-1',
+        name: 'Ana Exemplo',
+        avatarUrl: null,
+        email: 'ana@example.invalid',
+      }),
+    ).toEqual({ id: 'person-1', name: 'Ana Exemplo', avatarUrl: null });
   });
 
   // triste
@@ -256,11 +335,28 @@ describe('computerResponsibleSchema', () => {
 });
 
 describe('computerCreateFormSchema', () => {
-  const filled = { name: 'PC-1', displayName: '', responsibleName: '', department: '' as const };
+  const filled = {
+    name: 'PC-1',
+    displayName: '',
+    responsibleId: '',
+    departmentId: '' as const,
+    notes: '',
+  };
 
   // feliz
   it('accepts the form once desktop or notebook was chosen', () => {
     expect(computerCreateFormSchema.safeParse({ ...filled, kind: 'notebook' }).success).toBe(true);
+  });
+
+  // triste
+  it('refuses a department typed as text instead of chosen by id', () => {
+    const result = computerCreateFormSchema.safeParse({
+      ...filled,
+      kind: 'desktop',
+      departmentId: 'Fiscal',
+    });
+
+    expect(result.success).toBe(false);
   });
 
   // triste
@@ -276,8 +372,12 @@ describe('computer messages', () => {
   // triste
   it('explains the disposal type and the health status in Portuguese', () => {
     const disposal = disposalTypeSchema.safeParse('doacao');
-    expect(disposal.success ? '' : disposal.error.issues[0]?.message).toBe('Diga se a máquina tem defeito ou virou lixo');
+    expect(disposal.success ? '' : disposal.error.issues[0]?.message).toBe(
+      'Diga se a máquina tem defeito ou virou lixo',
+    );
     const health = healthStatusSchema.safeParse('otima');
-    expect(health.success ? '' : health.error.issues[0]?.message).toBe('Escolha uma situação de saúde da lista');
+    expect(health.success ? '' : health.error.issues[0]?.message).toBe(
+      'Escolha uma situação de saúde da lista',
+    );
   });
 });

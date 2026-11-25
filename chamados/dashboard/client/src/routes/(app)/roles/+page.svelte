@@ -1,8 +1,11 @@
 <script lang="ts">
+  import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
+  import { useArchivedRolesModel } from '$lib/hooks/use-archived-items/use-archived-items.svelte';
   import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
   import { ROLE_CONTEXT_LABELS } from '@template/shared/schemas/user.schema';
 
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
+  import { type RoleFormPerson } from '$lib/hooks/use-role-form/use-role-form.svelte';
   import RoleListView from '$lib/components/azuos-role-list-view/azuos-role-list-view.svelte';
   import { useRolesModel } from '$lib/hooks/use-roles/use-roles.svelte';
   import RoleFormSlot from './role-form-slot.svelte';
@@ -11,8 +14,9 @@
   let { data }: { data: PageData } = $props();
 
   const list = useRolesModel();
+  const archived = useArchivedRolesModel();
 
-  type FormTarget = { role: InternalRole | null } | null;
+  type FormTarget = { role: InternalRole | null; person?: RoleFormPerson } | null;
 
   let formTarget = $state<FormTarget>(null);
 </script>
@@ -38,19 +42,32 @@
   actions={{
     ...list.actions,
     onCreate: () => (formTarget = { role: null }),
+    onGrantTo: (person) =>
+      (formTarget = {
+        role: null,
+        person: { userId: person.userId, userEmail: person.userEmail, contexts: person.roles.map((r) => r.context) },
+      }),
   }}
 />
 
+<!-- O módulo tirado de alguém aparece aqui, fechado, com o "Desfazer" que devolve o acesso. -->
+<ArchivedList
+  data={{ ...archived.data, title: 'Módulos tirados' }}
+  ui={{ className: 'mt-6' }}
+  state={archived.state}
+  actions={archived.actions}
+/>
+
 {#if formTarget}
-  {#key formTarget.role?.id ?? 'new'}
-    <RoleFormSlot role={formTarget.role} onClose={() => (formTarget = null)} />
+  {#key formTarget.role?.id ?? formTarget.person?.userId ?? 'new'}
+    <RoleFormSlot role={formTarget.role} person={formTarget.person} onClose={() => (formTarget = null)} />
   {/key}
 {/if}
 
 <ConfirmDialog
   data={{
     title: 'Tirar este módulo?',
-    description: `"${list.data.pendingDelete?.userEmail || list.data.pendingDelete?.userId || ''}" deixa de ver ${list.data.pendingDelete ? ROLE_CONTEXT_LABELS[list.data.pendingDelete.context] : ''}. Abrir chamado e validar documento continuam disponíveis.`,
+    description: `"${list.data.pendingDelete?.userEmail || list.data.pendingDelete?.userId || ''}" deixa de ver ${list.data.pendingDelete ? ROLE_CONTEXT_LABELS[list.data.pendingDelete.context] : ''}. Abrir chamado e validar documento continuam disponíveis. Dá para devolver em "Módulos tirados".`,
     confirmLabel: 'Tirar módulo',
     confirmingLabel: 'Tirando…',
   }}

@@ -506,9 +506,9 @@ test('shadow-scale: exempts the mobile bottom sheet', () => {
 
 test('doc-file-name: accepts kebab-case and rejects uppercase names', () => {
   // feliz
-  assert.deepEqual(run('doc-file-name', project({ 'chamados/dashboard/docs/architecture.md': 'x' })), []);
+  assert.deepEqual(run('doc-file-name', project({ 'template/docs/architecture.md': 'x' })), []);
   // triste
-  assert.equal(run('doc-file-name', project({ 'chamados/dashboard/docs/ARQUITETURA.md': 'x' })).length, 1);
+  assert.equal(run('doc-file-name', project({ 'template/docs/ARQUITETURA.md': 'x' })).length, 1);
 });
 
 // ---------------------------------------------------------------- baseline
@@ -637,4 +637,83 @@ test('native-select: lets the calendar with its own list and a comment about sel
   });
 
   assert.deepEqual(run('native-select', files), []);
+});
+
+const APP = SRC.replace(/client\/src$/, '');
+
+/** Um sistema com as duas telas padrão inteiras: tela, módulo da API e menu. */
+function standardProject(overrides = {}) {
+  return project({
+    [`${APP}client/src/routes/(app)/infra/dashboard/+page.svelte`]: '<p>Painel</p>',
+    [`${APP}server/src/modules/dashboard-boards/dashboard-boards.module.ts`]: 'export class M {}',
+    [`${SRC}/lib/navigation/navigation.ts`]: "navItem('infra', 'dashboard', 'Painel', LayoutDashboard)",
+    ...overrides,
+  });
+}
+
+test('standard-screens: lets a system with the Painel in full through', () => {
+  assert.deepEqual(run('standard-screens', standardProject()), []);
+});
+
+test('standard-screens: refuses a system without the Painel module or menu entry', () => {
+  const files = standardProject({
+    [`${SRC}/lib/navigation/navigation.ts`]: "navItem('infra', 'tickets', 'Chamados', Ticket)",
+  }).filter((file) => !file.path.endsWith('dashboard-boards/dashboard-boards.module.ts'));
+
+  assert.deepEqual(
+    run('standard-screens', files).map((violation) => violation.detail),
+    ['Painel sem o módulo da API', 'Painel sem a entrada no menu'],
+  );
+});
+
+test('person-field: refuses a person option with a photo built by hand on a screen', () => {
+  const files = project({
+    [`${SRC}/routes/tasks/components/azuos-x/azuos-x.component.tsx`]:
+      'options={people.map((p) => ({ value: p.id, label: p.name, personName: p.name }))}',
+  });
+
+  assert.equal(run('person-field', files).length, 1);
+});
+
+test('person-field: lets the person pickers themselves and comments through', () => {
+  const files = project({
+    [`${SRC}/lib/components/azuos-person-picker-field/azuos-person-picker-field.component.tsx`]:
+      'personName: person.name,',
+    [`${SRC}/routes/tasks/components/azuos-x/azuos-x.component.tsx`]:
+      ' * Não monte `personName:` à mão: use o AzuosPersonPickerField.',
+  });
+
+  assert.deepEqual(run('person-field', files), []);
+});
+
+test('colored-border: leaves the shadcn ui files alone, they are not edited by hand', () => {
+  const files = project({
+    [`${SRC}/lib/components/ui/range-calendar/range-calendar-day.svelte`]: '<div class="focus:border-ring"></div>',
+    [`${SRC}/lib/components/azuos-x/azuos-x.svelte`]: '<div class="focus:border-ring"></div>',
+  });
+
+  assert.deepEqual(
+    run('colored-border', files).map((violation) => violation.file),
+    [`${SRC}/lib/components/azuos-x/azuos-x.svelte`],
+  );
+});
+
+test('person-photo: refuses a photo thrown away by hand and a face built with ui/avatar', () => {
+  const files = project({
+    [`${SRC}/routes/tasks/components/azuos-x/azuos-x.component.tsx`]: 'person: { name: p.name, avatarUrl: null },',
+    [`${SRC}/lib/components/azuos-y/azuos-y.component.tsx`]: "import { AvatarImage } from '../ui/avatar';",
+  });
+
+  assert.equal(run('person-photo', files).length, 2);
+});
+
+test('person-photo: lets the person avatar itself, the profile and comments through', () => {
+  const files = project({
+    [`${SRC}/lib/components/azuos-person-avatar/azuos-person-avatar.component.tsx`]:
+      "import { AvatarImage } from '../ui/avatar';\nfunction initialsOf(name) {}",
+    [`${SRC}/lib/components/azuos-my-profile-view/azuos-my-profile-view.component.tsx`]: 'function initialsOf(name) {}',
+    [`${SRC}/routes/tasks/components/azuos-x/azuos-x.component.tsx`]: ' * Nunca `avatarUrl: null` à mão.',
+  });
+
+  assert.deepEqual(run('person-photo', files), []);
 });

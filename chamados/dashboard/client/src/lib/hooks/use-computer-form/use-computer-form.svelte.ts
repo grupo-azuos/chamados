@@ -1,7 +1,7 @@
 import { createForm } from '@tanstack/svelte-form';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { type ComputerKind } from '@template/shared/domain/computer-kind.util';
-import { type Department, withCurrentDepartment } from '@template/shared/domain/department.util';
+import { type DepartmentOption } from '@template/shared/domain/department.util';
 import { suggestNickname } from '@template/shared/domain/machine-number.util';
 import { MAX_PAGE_SIZE } from '@template/shared/schemas/pagination.schema';
 import {
@@ -100,10 +100,11 @@ export function useComputerFormModel({
 
     /* Sem tipo escolhido ainda, sugere como Desktop — o mais comum no parque. Escolher
        Notebook depois troca a sugestão, porque ela ainda é a que este formulário pôs. */
-    const suggestion = values.department
+    const place = placeOf(values, departments.official);
+    const suggestion = place
       ? suggestNickname(
           (park.current.data?.items ?? []).map(toNumberedMachine),
-          values.department,
+          place,
           values.kind || 'desktop',
         )
       : null;
@@ -159,15 +160,17 @@ export function useComputerFormModel({
 
       return {
         mode: computer ? ('edit' as const) : ('create' as const),
-        responsibles: responsibles.current.data ?? [],
+        /* A pessoa que a máquina já tem entra na lista mesmo que tenha saído do diretório. */
+        responsibles: withCurrentResponsible(responsibles.current.data ?? [], computer),
         /* O departamento que a máquina já tem entra na lista mesmo que o RH o tenha tirado. */
-        departmentOptions: withCurrentDepartment(departments.options, computer?.department),
+        departmentOptions: withCurrentDepartmentId(departments.officialOptions, computer),
         fields: {
           name: field('name'),
           kind: field('kind'),
           displayName: field('displayName'),
-          responsibleName: field('responsibleName'),
-          department: field('department'),
+          responsibleId: field('responsibleId'),
+          departmentId: field('departmentId'),
+          notes: field('notes'),
         },
       };
     },
@@ -180,7 +183,9 @@ export function useComputerFormModel({
     actions: {
       onChange: (field, value) => {
         form.setFieldValue(field, value as never);
-        if (field === 'department' || field === 'kind') suggestNicknameFor(form.state.values);
+        if (field === 'departmentId' || field === 'kind') {
+          suggestNicknameFor(form.state.values);
+        }
       },
       /* `validateField` só marca "tocado" quando existe um `form.Field` montado — este hook
          chama `setFieldValue`/`validateField` direto, sem montar um. Sem marcar aqui, o erro
@@ -194,19 +199,68 @@ export function useComputerFormModel({
   };
 }
 
+/** O "lugar" do padrão de apelido: o nome do departamento oficial escolhido. */
+function placeOf(
+  values: Pick<ComputerCreateFormValues, 'departmentId'>,
+  official: readonly DepartmentOption[],
+): string | null {
+  return official.find((option) => String(option.id) === values.departmentId)?.name ?? null;
+}
+
 function toFormValues(computer: Computer | null): ComputerCreateFormValues {
   /* No cadastro o tipo começa VAZIO: a pessoa escolhe, o formulário não presume desktop. */
   if (!computer) {
-    return { name: '', kind: '', displayName: '', responsibleName: '', department: '' };
+    return { name: '', kind: '', displayName: '', responsibleId: '', departmentId: '', notes: '' };
   }
 
   return {
     name: computer.name,
     kind: computer.kind,
     displayName: computer.displayName ?? '',
-    responsibleName: computer.responsibleName ?? '',
-    department: computer.department ?? '',
+    responsibleId: computer.responsibleId ?? '',
+    departmentId: computer.departmentId ? String(computer.departmentId) : '',
+    notes: computer.notes ?? '',
   };
+}
+
+/** As pessoas com a ATUAL garantida — mesma razão do departamento, logo abaixo. */
+export function withCurrentResponsible(
+  people: readonly ComputerResponsible[],
+  computer: Pick<Computer, 'responsibleId' | 'responsibleName' | 'responsibleAvatarUrl'> | null,
+): ComputerResponsible[] {
+  const current = computer?.responsibleId;
+  if (!current || people.some((person) => person.id === current)) return [...people];
+
+  return [
+    ...people,
+    {
+      id: current,
+      name: computer.responsibleName ?? 'Responsável atual (fora da lista do escritório)',
+      avatarUrl: computer.responsibleAvatarUrl ?? null,
+    },
+  ];
+}
+
+/**
+ * As opções de departamento com o ATUAL garantido: uma máquina gravada com um departamento que o
+ * RH tirou abre a edição mostrando o que ela tem, e não "(Sem departamento)" — senão salvar sem
+ * tocar no campo pareceria apagar o departamento.
+ */
+export function withCurrentDepartmentId(
+  options: readonly OptionPickerOption[],
+  computer: Pick<Computer, 'departmentId' | 'departmentName'> | null,
+): OptionPickerOption[] {
+  const current = computer?.departmentId ? String(computer.departmentId) : '';
+  if (!current || options.some((option) => option.value === current)) return [...options];
+
+  return [
+    ...options,
+    {
+      value: current,
+      label: computer?.departmentName ?? 'Departamento atual (fora da lista do RH)',
+      separatorBefore: true,
+    },
+  ];
 }
 
 /**
@@ -224,7 +278,8 @@ function toUpdateInput(values: ComputerCreateFormValues) {
     /* O schema do formulário já recusou o vazio antes de chegar aqui. */
     kind: values.kind as ComputerKind,
     displayName: values.displayName.trim() || null,
-    responsibleName: values.responsibleName.trim() || null,
-    department: (values.department || null) as Department | null,
+    responsibleId: values.responsibleId.trim() || null,
+    departmentId: values.departmentId ? Number(values.departmentId) : null,
+    notes: values.notes.trim() || null,
   };
 }

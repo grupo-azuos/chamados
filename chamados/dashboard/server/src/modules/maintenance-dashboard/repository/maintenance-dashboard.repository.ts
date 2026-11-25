@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, eq, gte, sql } from 'drizzle-orm';
+import { and, count, eq, gte, isNull, sql } from 'drizzle-orm';
 
 import { runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
@@ -39,7 +39,9 @@ export class MaintenanceDashboardRepository {
             Number,
           ),
         })
-        .from(inventoryItems),
+        .from(inventoryItems)
+        /* O produto excluído (arquivado) saiu do inventário: não conta. */
+        .where(isNull(inventoryItems.archivedAt)),
       'contar o inventário da Manutenção',
     );
 
@@ -71,7 +73,8 @@ export class MaintenanceDashboardRepository {
               Number,
             ),
         })
-        .from(maintenanceQuotes),
+        .from(maintenanceQuotes)
+        .where(isNull(maintenanceQuotes.archivedAt)),
       'somar os orçamentos da Manutenção',
     );
 

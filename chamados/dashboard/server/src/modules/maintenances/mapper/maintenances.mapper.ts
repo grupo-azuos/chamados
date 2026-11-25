@@ -6,6 +6,7 @@ import {
   type UpdateMaintenanceInput,
 } from '@template/shared/schemas/maintenance.schema';
 
+import { toArchive } from '../../../lib/db/archive.util';
 import { setIfDefined } from '../../../lib/db/partial-update.util';
 import { type MaintenanceInsert } from '../../../lib/db/schema/maintenances.schema';
 import {
@@ -34,12 +35,14 @@ export function toMaintenance(row: MaintenanceWithComputer): Maintenance {
     type: maintenance.type,
     description: maintenance.description,
     performedBy: maintenance.performedBy,
+    performedByIds: maintenance.performedByIds ?? [],
     performedAt: maintenance.performedAt.toISOString(),
 
     createdAt: maintenance.createdAt.toISOString(),
     createdBy: maintenance.createdBy,
     updatedAt: maintenance.updatedAt?.toISOString() ?? null,
     updatedBy: maintenance.updatedBy,
+    archive: toArchive(maintenance),
   };
 }
 
@@ -65,6 +68,7 @@ export function toMaintenanceInsert(
     type: input.type,
     description: input.description ?? null,
     performedBy: input.performedBy ?? null,
+    performedByIds: input.performedByIds ?? [],
     performedAt: new Date(input.performedAt),
     createdBy: actorEmail,
   };
@@ -85,6 +89,7 @@ export function toMaintenanceUpdate(
   setIfDefined(values, 'type', input.type);
   setIfDefined(values, 'description', input.description);
   setIfDefined(values, 'performedBy', input.performedBy);
+  setIfDefined(values, 'performedByIds', input.performedByIds);
 
   if (input.performedAt !== undefined) values.performedAt = new Date(input.performedAt);
 
@@ -107,6 +112,7 @@ export function toMaintenanceSchedule(row: ScheduleWithComputer): MaintenanceSch
   const { schedule, computer } = row;
 
   return {
+    id: schedule.id,
     computerId: schedule.computerId,
     computerName: computer.name,
     computerDisplayName: computer.displayName,
@@ -117,5 +123,6 @@ export function toMaintenanceSchedule(row: ScheduleWithComputer): MaintenanceSch
     createdBy: schedule.createdBy,
     updatedAt: schedule.updatedAt?.toISOString() ?? null,
     updatedBy: schedule.updatedBy,
+    archive: toArchive(schedule),
   };
 }

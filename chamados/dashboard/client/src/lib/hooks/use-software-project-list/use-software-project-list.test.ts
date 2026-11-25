@@ -1,3 +1,4 @@
+import { boardDrillSchema, drillParam } from '@template/shared/schemas/board-drill.schema';
 import { type SoftwareProject } from '@template/shared/schemas/software-project.schema';
 import { render, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,6 +12,22 @@ vi.mock('$lib/api/software-projects.api', () => ({
 }));
 
 const { softwareProjectsApi } = await import('$lib/api/software-projects.api');
+
+/* O endereço da tela: com `?drill=`, a lista veio de um clique no Painel. */
+const address = vi.hoisted(() => ({ search: '' }));
+vi.mock('$app/state', () => ({
+  page: {
+    get url() {
+      return new URL(`http://localhost/system/projects${address.search}`);
+    },
+  },
+}));
+
+const DRILL = boardDrillSchema.parse({ source: 'softwareProjects', groupBy: 'status', filterId: null, key: 'active', label: 'Ativo', title: 'Sistemas por situação' });
+
+function openFromBoard() {
+  address.search = `?drill=${encodeURIComponent(drillParam(DRILL))}`;
+}
 
 function project(overrides: Partial<SoftwareProject> = {}): SoftwareProject {
   return {
@@ -28,6 +45,7 @@ function project(overrides: Partial<SoftwareProject> = {}): SoftwareProject {
     pullRequestsCount: 0,
     createdAt: '2026-09-01T12:00:00.000Z',
     updatedAt: null,
+    archive: null,
     ...overrides,
   };
 }
@@ -180,5 +198,43 @@ describe('useSoftwareProjectListModel', () => {
 
     release();
     await waitFor(() => expect(model.state.isSyncing).toBe(false));
+  });
+
+  describe('with a board cut', () => {
+    beforeEach(() => {
+      address.search = '';
+    });
+
+    // feliz
+    it('sends the board cut to the server and shows what it narrowed', async () => {
+      openFromBoard();
+      const model = mountModel();
+
+      await waitFor(() =>
+        expect(softwareProjectsApi.list).toHaveBeenCalledWith(
+          expect.objectContaining({ drill: expect.objectContaining({ key: 'active' }) }),
+        ),
+      );
+      expect(model.data.drillBanner?.summary[0]).toBe(DRILL.title);
+    });
+
+    // triste
+    it('calls an empty cut a filtered-out list, not an empty one', async () => {
+      openFromBoard();
+      vi.mocked(softwareProjectsApi.list).mockResolvedValue(page([]));
+      const model = mountModel();
+
+      await waitFor(() => expect(model.state.isFilteredOut).toBe(true));
+      expect(model.state.isEmpty).toBe(false);
+    });
+
+    // triste
+    it('opens without a cut or a banner when the address has none', async () => {
+      const model = mountModel();
+
+      await waitFor(() => expect(softwareProjectsApi.list).toHaveBeenCalled());
+      expect(vi.mocked(softwareProjectsApi.list).mock.calls[0]?.[0]).toMatchObject({ drill: undefined });
+      expect(model.data.drillBanner).toBeNull();
+    });
   });
 });

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BoardDrillBanner from '$lib/components/azuos-board-drill-banner/azuos-board-drill-banner.svelte';
   import ComputerListView from './components/azuos-computer-list-view/azuos-computer-list-view.svelte';
   import ComputerTokenDialog from './components/azuos-computer-token-dialog/azuos-computer-token-dialog.svelte';
   import { useAgentBundleModel } from '$lib/hooks/use-agent-bundle/use-agent-bundle.svelte';
@@ -24,11 +25,20 @@
   <title>Inventário</title>
 </svelte:head>
 
-<ComputerListView
-  data={list.data}
-  state={list.state}
-  actions={{ ...list.actions, onRegister: () => (isRegistering = true) }}
-/>
+<!-- Vinda de um clique no Painel, a lista mostra no alto o recorte que a trouxe. -->
+<div class="flex w-full flex-col">
+  {#if list.data.drillBanner}
+    <BoardDrillBanner
+      data={list.data.drillBanner}
+      actions={{ onClear: list.actions.onClearDrill, onBack: list.actions.onBackToBoard }}
+    />
+  {/if}
+  <ComputerListView
+    data={list.data}
+    state={list.state}
+    actions={{ ...list.actions, onRegister: () => (isRegistering = true) }}
+  />
+</div>
 
 {#if isRegistering}
   <ComputerFormSlot

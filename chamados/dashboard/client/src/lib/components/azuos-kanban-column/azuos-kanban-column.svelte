@@ -1,88 +1,114 @@
+<!--
+  @component
+  UMA COLUNA DE QUADRO (kanban): o cabeçalho na cor da etapa (ícone, nome, contagem e o lápis
+  quando dá para editar), os cartões e o "Adicionar" no fim. O mesmo desenho do paralegal.
+
+  Genérica: não sabe se o cartão é chamado ou projeto. Recebe os cartões prontos em `children`.
+  O arrasto é do `@dnd-kit` (como no paralegal): com `ui.dropId`, a coluna é uma área de soltar
+  dentro do `DragDropProvider` do quadro, e acende quando um cartão passa por cima. Quem decide o
+  que "mover para esta coluna" significa é a tela, no `onDragEnd` dela.
+
+  Props: `data` traz o título e a contagem; `ui` o tom e o ícone da etapa, o id de soltar, o texto
+  do "Adicionar" e classes extras; `actions` o "Adicionar" (`onAdd`) e o lápis (`onEdit`).
+-->
 <script lang="ts" module>
+  import type { LucideIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
 
-  /**
-   * UMA COLUNA DE QUADRO (kanban): título com contagem, os cartões e o "Adicionar" no fim.
-   *
-   * Genérica: não sabe se o cartão é chamado ou projeto. Recebe os cartões prontos em `children`
-   * e avisa `onDropItem` com o identificador do cartão solto nela (ver `drag-item.util.ts`) —
-   * quem decide o que "mover para esta coluna" significa é a tela.
-   *
-   * O destaque enquanto um cartão passa por cima é estado PURAMENTE visual, e por isso mora aqui.
-   * O cabeçalho é pintado inteiro na cor da etapa (fundo, nunca borda colorida).
-   */
-  export type AzuosKanbanColumnTone = 'neutral' | 'info' | 'warning' | 'brand' | 'success' | 'danger';
+  import { type AzuosCardTone } from '$lib/utils/card-tone.util';
+
+  export type AzuosKanbanColumnTone = AzuosCardTone;
 
   export type AzuosKanbanColumnProps = {
     data: { title: string; count: number };
-    ui?: { tone?: AzuosKanbanColumnTone; addLabel?: string; className?: string };
-    actions?: { onDropItem?: (id: number) => void; onAdd?: () => void };
+    ui?: {
+      tone?: AzuosKanbanColumnTone;
+      icon?: LucideIcon;
+      addLabel?: string;
+      className?: string;
+      /** O id desta coluna como área de soltar. Sem ele, não se solta cartão aqui. */
+      dropId?: string;
+    };
+    actions?: { onAdd?: () => void; onEdit?: () => void };
     children?: Snippet;
-  };
-
-  export const KANBAN_TONE_HEADER: Record<AzuosKanbanColumnTone, string> = {
-    neutral: 'bg-muted text-foreground',
-    info: 'bg-info text-info-foreground',
-    warning: 'bg-warning text-warning-foreground',
-    brand: 'bg-primary text-primary-foreground',
-    success: 'bg-success text-success-foreground',
-    danger: 'bg-destructive text-destructive-foreground',
   };
 </script>
 
 <script lang="ts">
+  import Pencil from '@lucide/svelte/icons/pencil';
   import Plus from '@lucide/svelte/icons/plus';
 
-  import { readDragItem } from '$lib/utils/drag-item.util';
+  import { createDroppable } from '@dnd-kit/svelte';
+  import { untrack } from 'svelte';
+
+  import { cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, actions, children }: AzuosKanbanColumnProps = $props();
 
-  let isOver = $state(false);
-  const canDrop = $derived(Boolean(actions?.onDropItem));
+  /* A área de soltar só existe com `dropId`, e por isso só dentro de um quadro com o
+     `DragDropProvider`: uma coluna solta (na história, num teste) é só desenho. O id da coluna
+     não muda enquanto ela vive; o `untrack` deixa isso dito. */
+  const droppable = untrack(() => ui?.dropId)
+    ? createDroppable({
+        get id() {
+          return ui?.dropId ?? '';
+        },
+      })
+    : null;
+  const isOver = $derived(droppable?.isDropTarget ?? false);
+  const Icon = $derived(ui?.icon);
 
-  function handleDragOver(event: DragEvent) {
-    if (!canDrop) return;
-    event.preventDefault();
-    isOver = true;
-  }
-
-  function handleDrop(event: DragEvent) {
-    event.preventDefault();
-    isOver = false;
-    if (!event.dataTransfer) return;
-    const id = readDragItem({ dataTransfer: event.dataTransfer });
-    if (id !== null) actions?.onDropItem?.(id);
+  /* Sem área de soltar, o anexo não faz nada. */
+  function attachDroppable(node: HTMLElement) {
+    return droppable?.attach(node);
   }
 </script>
 
+<!-- `max-h-full` + o miolo que rola: num quadro de altura fixa (a tela cheia), a coluna comprida
+     rola por dentro e a página não cresce para baixo. Num quadro sem altura, nada muda. -->
 <section
   aria-label={data.title}
   class={cn(
-    'bg-mantle rounded-surface flex w-72 shrink-0 flex-col sm:w-80',
+    'bg-mantle rounded-surface flex max-h-full min-h-0 w-72 shrink-0 flex-col transition-colors sm:w-80',
     isOver && 'bg-accent',
     ui?.className,
   )}
-  ondragover={handleDragOver}
-  ondragleave={() => (isOver = false)}
-  ondrop={handleDrop}
+  {@attach attachDroppable}
 >
   <header
     class={cn(
       'rounded-t-surface flex items-center justify-between gap-2 px-4 py-2.5 text-sm font-semibold',
-      KANBAN_TONE_HEADER[ui?.tone ?? 'neutral'],
+      cardToneClasses(ui?.tone ?? 'neutral').dot,
     )}
   >
-    <h2 class="truncate">{data.title}</h2>
-    <span class="tabular-nums" aria-label={`${data.count} itens`}>{data.count}</span>
+    <h2 class="flex min-w-0 items-center gap-2">
+      {#if Icon}
+        <Icon aria-hidden="true" class="size-4 shrink-0" />
+      {/if}
+      <span class="truncate">{data.title}</span>
+    </h2>
+    <span class="flex shrink-0 items-center gap-1">
+      <span class="tabular-nums" aria-label={`${data.count} itens`}>{data.count}</span>
+      {#if actions?.onEdit}
+        <button
+          type="button"
+          onclick={actions.onEdit}
+          aria-label={`Editar ${data.title}`}
+          class="rounded-control focus-visible:ring-ring inline-flex size-7 items-center justify-center focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <Pencil aria-hidden="true" class="size-3.5" />
+        </button>
+      {/if}
+    </span>
   </header>
-  <div class="flex min-h-48 flex-col gap-2 p-3">
+  <div class="flex min-h-48 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain p-3">
     {@render children?.()}
     {#if actions?.onAdd}
       <button
         type="button"
         onclick={actions.onAdd}
-        class="border-input text-ink-500 hover:bg-accent hover:text-foreground rounded-control control-lg flex items-center justify-center gap-1.5 border-2 border-dashed text-sm font-medium transition-colors"
+        class="border-input text-ink-500 hover:bg-accent hover:text-foreground rounded-control control-md flex items-center justify-center gap-1.5 border-2 border-dashed text-sm font-medium transition-colors"
       >
         <Plus aria-hidden="true" class="size-4" />
         {ui?.addLabel ?? 'Adicionar'}

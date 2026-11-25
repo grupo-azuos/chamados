@@ -12,7 +12,12 @@ describe('network event contract', () => {
   // feliz
   it('turns blank texts into null on creation', () => {
     expect(
-      createNetworkEventSchema.parse({ type: 'wan_down', title: ' Caiu ', message: '', linkName: '' }),
+      createNetworkEventSchema.parse({
+        type: 'wan_down',
+        title: ' Caiu ',
+        message: '',
+        linkName: '',
+      }),
     ).toEqual({ type: 'wan_down', title: 'Caiu', message: null, linkName: null });
   });
 
@@ -41,7 +46,10 @@ describe('network event contract', () => {
 
   // triste
   it('refuses a form without the title and a period outside the year', () => {
-    expect(networkEventFormSchema.safeParse({ type: 'wan_up', title: '', message: '', linkName: '' }).success).toBe(false);
+    expect(
+      networkEventFormSchema.safeParse({ type: 'wan_up', title: '', message: '', linkName: '' })
+        .success,
+    ).toBe(false);
     expect(networkEventListQuerySchema.safeParse({ days: 400 }).success).toBe(false);
     expect(networkWebhookSchema.safeParse({ packetLossPercent: 120 }).success).toBe(false);
   });

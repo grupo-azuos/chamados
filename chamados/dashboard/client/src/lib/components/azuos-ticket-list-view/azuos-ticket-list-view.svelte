@@ -1,3 +1,26 @@
+<!--
+  @component
+  A fila de chamados do painel do TI.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro — estados que, num componente que busca sozinho, só apareceriam
+  desligando o servidor.
+
+  Não há botão de excluir, e a ausência é a regra do sistema: chamado sai da fila mudando de
+  estágio, nunca sumindo. E o estágio muda na FICHA do chamado, lançando um histórico — daqui só se
+  abre a ficha.
+
+  DOIS MODOS de ver a mesma fila, na troca ao lado dos filtros: a LISTA (tabela ou cards, paginada)
+  e o QUADRO (`board`, o `AzuosTicketKanbanBoard` que a rota entrega), com todos os chamados do
+  recorte em colunas por etapa. Os filtros, os cartões do topo e os estados (carregando, vazio,
+  filtrado, erro) são os mesmos nos dois — muda só o desenho do conteúdo. No quadro não há páginas:
+  quando o recorte passa do que ele traz de uma vez, a tela avisa.
+
+  `data` leva a área, os chamados, o total, os números do painel, o filtro, as opções de
+  departamento, de responsável e de sistema (só Sistema), a paginação e o modo; `state`,
+  carregamento, vazio, filtrado, truncado, erro e exportação; `actions`, um para cada filtro, limpar,
+  tentar de novo, abrir a ficha, exportar, trocar de página e de modo; `board`, o quadro.
+-->
 <script lang="ts" module>
   import { type DepartmentChoice } from '@template/shared/domain/department.util';
   import {
@@ -27,6 +50,7 @@
 
   import { type TicketDashboard } from '$lib/api/tickets.api';
   import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import type { Snippet } from 'svelte';
 
   /** Uma pessoa no filtro de responsável: nome, valor e a foto. */
   export type TicketAssigneeFilterOption = OptionPickerOption;
@@ -44,19 +68,13 @@
     problemType: TicketProblemType | '';
     /** O id do responsável, `TICKET_UNASSIGNED_FILTER` para os sem ninguém. Ausente = todos. */
     assigneeId?: string;
+    /** O sistema (só na fila de Sistema), pelo id em texto. Ausente ou '' = todos. */
+    projectId?: string;
   };
 
-  /**
-   * A fila de chamados do painel do TI.
-   *
-   * Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando,
-   * vazia, filtrada sem resultado e em erro — estados que, num componente que busca sozinho,
-   * só apareceriam desligando o servidor.
-   *
-   * Não há botão de excluir, e a ausência é a regra do sistema: chamado sai da fila mudando
-   * de estágio, nunca sumindo. E o estágio muda na FICHA do chamado, lançando um histórico —
-   * daqui só se abre a ficha.
-   */
+  /** Lista (tabela ou cards) ou quadro. */
+  export type TicketListViewMode = 'list' | 'kanban';
+
   export type AzuosTicketListViewProps = {
     data: {
       /** A área da fila: é ela que diz quais tipos de problema o filtro oferece. */
@@ -74,6 +92,10 @@
         pageSize: number;
         total: number;
       };
+      /** Os sistemas cadastrados — o filtro "Sistema", que só a fila de Sistema tem. */
+      projectOptions?: OptionPickerOption[];
+      /** O modo à vista. Sem ele, lista. */
+      view?: TicketListViewMode;
     };
     state: {
       isLoading: boolean;
@@ -94,12 +116,17 @@
       onDepartmentChange: (department: TicketDepartment | '') => void;
       onProblemTypeChange: (problemType: TicketProblemType | '') => void;
       onAssigneeChange?: (assigneeId: string) => void;
+      onProjectChange?: (projectId: string) => void;
       onClearFilters: () => void;
       onRetry: () => void;
       onAnswer: (ticket: Ticket) => void;
       onExportReport: (format: ReportFormat) => void;
       onPageChange?: (page: number) => void;
+      /** Lista ou quadro. Sem ela (ou sem `board`), a troca só tem tabela e cards. */
+      onViewChange?: (view: TicketListViewMode) => void;
     };
+    /** O quadro do modo kanban — com os chamados desta mesma fila, já filtrados. */
+    board?: Snippet;
   };
 
   const STATUS_FILTER_OPTIONS = TICKET_STATUSES.map((status) => ({
@@ -133,6 +160,7 @@
     filter: TicketListFilter,
     problemTypeOptions: readonly { value: string; label: string }[],
     assigneeOptions: readonly { value: string; label: string }[] = [],
+    projectOptions: readonly { value: string; label: string }[] = [],
   ): { key: string; label: string }[] {
     const chips: ({ key: string; label: string } | null)[] = [
       filter.status ? { key: 'status', label: `Situação: ${TICKET_STATUS_LABELS[filter.status]}` } : null,
@@ -151,6 +179,7 @@
           }
         : null,
       assigneeChip(filter.assigneeId, assigneeOptions),
+      projectChip(filter.projectId, projectOptions),
     ];
 
     return chips.filter((chip): chip is { key: string; label: string } => chip !== null);
@@ -165,9 +194,21 @@
     if (!assigneeId) return null;
 
     const name = options.find((option) => option.value === assigneeId)?.label;
-    if (assigneeId === TICKET_UNASSIGNED_FILTER) return { key: 'assigneeId', label: 'Sem responsável' };
+    if (assigneeId === TICKET_UNASSIGNED_FILTER) return { key: 'assigneeId', label: '(Sem responsável)' };
 
     return { key: 'assigneeId', label: name ? `Responsável: ${name}` : 'Responsável' };
+  }
+
+  /* Sistema que saiu do cadastro continua filtrável pelo filtro salvo: a etiqueta diz "Sistema". */
+  function projectChip(
+    projectId: string | undefined,
+    options: readonly { value: string; label: string }[],
+  ): { key: string; label: string } | null {
+    if (!projectId) return null;
+
+    const name = options.find((option) => option.value === projectId)?.label;
+
+    return { key: 'projectId', label: name ? `Sistema: ${name}` : 'Sistema' };
   }
 
   export function formatAverage(hours: number | null | undefined): string {
@@ -179,6 +220,10 @@
 </script>
 
 <script lang="ts">
+  import CircleAlert from '@lucide/svelte/icons/circle-alert';
+  import CircleCheck from '@lucide/svelte/icons/circle-check';
+  import Headset from '@lucide/svelte/icons/headset';
+  import Hourglass from '@lucide/svelte/icons/hourglass';
   import Inbox from '@lucide/svelte/icons/inbox';
   import SearchX from '@lucide/svelte/icons/search-x';
 
@@ -191,11 +236,10 @@
   } from '$lib/components/azuos-filter-panel/azuos-filter-panel.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
-  import PanelCard from '$lib/components/azuos-panel-card/azuos-panel-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import RadarChart from '$lib/components/azuos-radar-chart/azuos-radar-chart.svelte';
   import ReportExportActions from '$lib/components/azuos-report-export-actions/azuos-report-export-actions.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
-  import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
+    import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import {
     Table,
@@ -207,12 +251,27 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+  import TicketCard from '$lib/components/azuos-ticket-card/azuos-ticket-card.svelte';
   import { cn } from '$lib/utils/cn';
 
-  let { data, state, actions }: AzuosTicketListViewProps = $props();
+  let { data, state, actions, board }: AzuosTicketListViewProps = $props();
+
+  /* O quadro só existe quando a rota o entrega E sabe trocar de modo. */
+  const hasBoard = $derived(Boolean(board && actions.onViewChange));
+  const isBoard = $derived(hasBoard && data.view === 'kanban');
+  /* O quadro aparece no lugar do conteúdo; os estados da fila continuam valendo antes dele. */
+  const showsBoard = $derived(
+    isBoard && !state.error && !state.isLoading && !state.isEmpty && !state.isFilteredOut,
+  );
 
   const tableView = useTableViewModel();
+
+  /* A foto de quem atende vem das opções do filtro de responsável, que já trazem o rosto. */
+  function photoOf(assigneeId: string | null | undefined): string | null {
+    if (!assigneeId) return null;
+
+    return data.assigneeOptions?.find((option) => option.value === assigneeId)?.avatarUrl ?? null;
+  }
 
   const dashboard = $derived(data.dashboard);
 
@@ -245,6 +304,17 @@
     value: data.filter.department,
     options: data.departmentOptions ?? [],
     searchPlaceholder: 'Buscar departamento…',
+  });
+
+  const projectField: FilterPanelField = $derived({
+    key: 'projectId',
+    label: 'Sistema',
+    control: 'select',
+    ariaLabel: 'Filtrar por sistema',
+    allLabel: 'Todos os sistemas',
+    value: data.filter.projectId ?? '',
+    options: data.projectOptions ?? [],
+    searchPlaceholder: 'Buscar sistema…',
   });
 
   /* O painel intercala lista suspensa (situação, tipo de problema: muitas opções) e pastilhas
@@ -287,16 +357,23 @@
       options: data.assigneeOptions ?? [],
       searchPlaceholder: 'Buscar pessoa…',
     },
+    /* O sistema é assunto só da fila de Sistema — era o filtro do antigo Kanban de Sistema. */
+    ...(data.area === 'sistema' ? [projectField] : []),
   ]);
 
   /** Qual ação da fila cada filtro do painel (e cada etiqueta) chama. */
+  const FILTER_ACTIONS: Record<string, (value: string) => void> = {
+    department: (value) => actions.onDepartmentChange(value as TicketDepartment | ''),
+    status: (value) => actions.onStatusChange(value as TicketStatus | ''),
+    statusGroup: (value) => actions.onStatusGroupChange?.(value as TicketStatusGroup | ''),
+    priority: (value) => actions.onPriorityChange(value as TicketPriority | ''),
+    problemType: (value) => actions.onProblemTypeChange(value as TicketProblemType | ''),
+    assigneeId: (value) => actions.onAssigneeChange?.(value),
+    projectId: (value) => actions.onProjectChange?.(value),
+  };
+
   function changeFilter(key: string, value: string) {
-    if (key === 'department') return actions.onDepartmentChange(value as TicketDepartment | '');
-    if (key === 'status') return actions.onStatusChange(value as TicketStatus | '');
-    if (key === 'statusGroup') return actions.onStatusGroupChange?.(value as TicketStatusGroup | '');
-    if (key === 'priority') return actions.onPriorityChange(value as TicketPriority | '');
-    if (key === 'problemType') return actions.onProblemTypeChange(value as TicketProblemType | '');
-    if (key === 'assigneeId') actions.onAssigneeChange?.(value);
+    FILTER_ACTIONS[key]?.(value);
   }
 
   function formatDate(value: string): string {
@@ -311,7 +388,8 @@
         data.filter.priority ||
         data.filter.department ||
         data.filter.problemType ||
-        data.filter.assigneeId,
+        data.filter.assigneeId ||
+        data.filter.projectId,
     ),
   );
 
@@ -345,7 +423,7 @@
 <!-- max-w-7xl, e não 6xl como as outras listas: com 9 colunas (a área entrou com o #13), a
      tabela de chamados é a mais larga do painel, e no 6xl ela não cabia — nascia com rolagem
      para o lado mesmo em tela cheia. -->
-<div class="mx-auto flex w-full max-w-7xl flex-col gap-5">
+<div class="flex w-full flex-col gap-5">
   <PageHeader data={{ title: 'Chamados', description: 'O que o pessoal pediu, e em que pé está.' }}>
     <ReportExportActions
       state={{ exportingFormat: state.exportingFormat ?? null }}
@@ -362,52 +440,12 @@
        "Resolvidos" contam mais de um estágio — e filtram pelo GRUPO inteiro, para o número do
        cartão e o tamanho da lista baterem. -->
   <StatCardGrid>
-    <StatCard
-      data={{ label: 'Abertos', value: dashboard?.open ?? 0 }}
-      ui={{ tone: 'danger' }}
-      state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.status === 'open' }}
-      actions={{ onClick: () => filterByStatus('open') }}
-    />
-    <StatCard
-      data={{ label: 'Em atendimento', value: dashboard?.inProgress ?? 0 }}
-      ui={{ tone: 'info' }}
-      state={{
-        isLoading: state.isDashboardLoading,
-        isSelected: data.filter.status === 'in_progress',
-      }}
-      actions={{ onClick: () => filterByStatus('in_progress') }}
-    />
-    <StatCard
-      data={{
-        label: 'Aguardando',
-        value: dashboard?.waiting ?? 0,
-        hint: 'solicitante, terceiro ou peça',
-      }}
-      ui={{ tone: 'warning' }}
-      state={{
-        isLoading: state.isDashboardLoading,
-        isSelected: data.filter.statusGroup === 'waiting',
-      }}
-      actions={{ onClick: () => filterByGroup('waiting') }}
-    />
-    <StatCard
-      data={{
-        label: 'Resolvidos',
-        value: dashboard?.resolved ?? 0,
-        /* O tempo médio mora AQUI, e não num quinto cartão: quatro por linha é o limite do que
-           se compara de relance (ver `azuos-stat-card-grid`), e a média é uma leitura dos
-           resolvidos — não uma quinta contagem. */
-        hint: dashboard?.resolved
-          ? `tempo médio: ${formatAverage(dashboard.averageResolutionHours)}`
-          : 'nada resolvido ainda',
-      }}
-      ui={{ tone: 'success' }}
-      state={{
-        isLoading: state.isDashboardLoading,
-        isSelected: data.filter.statusGroup === 'solved',
-      }}
-      actions={{ onClick: () => filterByGroup('solved') }}
-    />
+    <ContentCard data={{ label: 'Abertos', title: 'Abertos', highlight: { value: dashboard?.open ?? 0 } }} ui={{ icon: CircleAlert, iconTone: 'danger' }} state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.status === 'open' }} actions={{ onOpen: () => filterByStatus('open') }} />
+    <ContentCard data={{ label: 'Em atendimento', title: 'Em atendimento', highlight: { value: dashboard?.inProgress ?? 0 } }} ui={{ icon: Headset, iconTone: 'info' }} state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.status === 'in_progress' }} actions={{ onOpen: () => filterByStatus('in_progress') }} />
+    <ContentCard data={{ label: 'Aguardando', title: 'Aguardando', highlight: { value: dashboard?.waiting ?? 0, hint: 'solicitante, terceiro ou peça' } }} ui={{ icon: Hourglass, iconTone: 'warning' }} state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.statusGroup === 'waiting' }} actions={{ onOpen: () => filterByGroup('waiting') }} />
+    <!-- O tempo médio mora AQUI, e não num quinto cartão: quatro por linha é o limite do que se
+         compara de relance, e a média é uma leitura dos resolvidos — não uma quinta contagem. -->
+    <ContentCard data={{ label: 'Resolvidos', title: 'Resolvidos', highlight: { value: dashboard?.resolved ?? 0, hint: dashboard?.resolved ? `tempo médio: ${formatAverage(dashboard.averageResolutionHours)}` : 'nada resolvido ainda' } }} ui={{ icon: CircleCheck, iconTone: 'success' }} state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.statusGroup === 'solved' }} actions={{ onOpen: () => filterByGroup('solved') }} />
   </StatCardGrid>
 
   <!-- DOIS FORMATOS, porque são duas perguntas diferentes.
@@ -417,22 +455,21 @@
        ela vira um anel de fatias finas que só se lê pela legenda ao lado — e quem está lendo
        a legenda não está olhando o desenho. -->
   <div class="grid gap-4 lg:grid-cols-2">
-    <PanelCard
-      data={{ title: 'Problemas por tipo', hint: 'O perfil do que dá trabalho neste escritório' }}
-    >
+    <ContentCard data={{ label: 'Problemas por tipo', title: 'Problemas por tipo', meta: 'O perfil do que dá trabalho neste escritório' }}>
+{#snippet body()}
+<div class="pb-1">
       <RadarChart
         data={{ slices: problemSlices, seriesLabel: 'Chamados' }}
         state={{ isLoading: state.isDashboardLoading }}
         ui={{ emptyLabel: 'Ainda não há chamados para comparar.' }}
       />
-    </PanelCard>
+    </div>
+{/snippet}
+</ContentCard>
 
-    <PanelCard
-      data={{
-        title: 'Departamentos com mais chamados',
-        hint: 'Do que mais pediu para o que menos',
-      }}
-    >
+    <ContentCard data={{ label: 'Departamentos com mais chamados', title: 'Departamentos com mais chamados', meta: 'Do que mais pediu para o que menos' }}>
+{#snippet body()}
+<div class="pb-1">
       <div class="max-h-72 overflow-x-hidden overflow-y-auto">
         <ColumnChart
           data={{ slices: departmentSlices, seriesLabel: 'Chamados' }}
@@ -440,7 +477,9 @@
           ui={{ orientation: 'horizontal', emptyLabel: 'Ainda não há chamados para comparar.' }}
         />
       </div>
-    </PanelCard>
+    </div>
+{/snippet}
+</ContentCard>
   </div>
 
   <!-- Os filtros no MESMO desenho do Inventário (`azuos-filter-panel`): busca e departamento à
@@ -456,24 +495,42 @@
         },
         primary: departmentField,
         fields: filterFields,
-        chips: ticketFilterChips(data.filter, problemTypeFilterOptions, data.assigneeOptions),
+        chips: ticketFilterChips(
+          data.filter,
+          problemTypeFilterOptions,
+          data.assigneeOptions,
+          data.projectOptions,
+        ),
         canClear: hasActiveFilter,
       }}
-      ui={{ ariaLabel: 'Filtros da fila de chamados' }}
-      state={{ isFilteredOut: state.isFilteredOut }}
+      ui={{ ariaLabel: 'Filtros da fila de chamados', hasKanbanView: hasBoard }}
+      state={{ isFilteredOut: state.isFilteredOut, isKanbanView: isBoard }}
       actions={{
         onSearchChange: actions.onSearchChange,
         onFieldChange: changeFilter,
         onRemoveChip: (key) => changeFilter(key, ''),
         onClearFilters: actions.onClearFilters,
+        onKanbanViewChange: (isKanban) => actions.onViewChange?.(isKanban ? 'kanban' : 'list'),
       }}
     />
 
-  <div class="flex flex-col rounded-surface border border-border bg-card shadow-xs">
-    <div>
-      <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
+  <!-- O QUADRO fica fora do cartão da lista: as colunas já são superfícies, e card dentro de
+       card da mesma cor é proibido. Os estados (erro, carregando, vazio) continuam no cartão. -->
+  {#if showsBoard}
+    {#if state.isTruncated}
+      <p class="text-ink-500 text-xs">
+        O quadro mostra {data.tickets.length} de {data.total} chamados. Use os filtros para chegar ao que
+        procura.
+      </p>
+    {/if}
+    {@render board?.()}
+  {:else}
+  <div class="flex flex-col">
+    <div class="flex flex-col gap-3">
+      <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). Os estados
+           moram no cartão da lista; a grade de cards, não (card dentro de card é proibido). -->
       {#if state.error}
-        <div class="p-4">
+        <div class="rounded-surface bg-card shadow-card p-4">
           <ErrorState
             data={{ title: 'Não consegui carregar os chamados', message: state.error }}
             state={{ isRetrying: state.isRefetching }}
@@ -481,9 +538,11 @@
           />
         </div>
       {:else if state.isLoading}
-        <p class="text-ink-500 py-10 text-center text-sm">Carregando os chamados…</p>
+        <p class="rounded-surface bg-card shadow-card text-ink-500 py-10 text-center text-sm">
+          Carregando os chamados…
+        </p>
       {:else if state.isEmpty}
-        <div class="p-4">
+        <div class="rounded-surface bg-card shadow-card p-4">
           <EmptyState
             data={{
               title: 'Nenhum chamado ainda',
@@ -493,7 +552,7 @@
           />
         </div>
       {:else if state.isFilteredOut}
-        <div class="p-4">
+        <div class="rounded-surface bg-card shadow-card p-4">
           <EmptyState
             data={{
               title: 'Nenhum chamado com esses filtros',
@@ -510,77 +569,24 @@
         </div>
       {:else}
         <!-- 1. Visualização em Cards: sempre que a tela é estreita (< xl), ou quando a pessoa
-         pediu para ver sempre assim (`TableViewToggle`, no cabeçalho dos filtros). -->
+         pediu para ver sempre assim (`TableViewToggle`, no cabeçalho dos filtros). Os cards ficam
+         sobre o fundo da página, fora do cartão da tabela: card dentro de card é proibido. -->
         <div
-          class={cn('card-grid p-4', !tableView.forceCards && 'xl:hidden')}
+          class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
           data-slot="ticket-cards-mobile"
         >
           {#each data.tickets as ticket (ticket.id)}
-            <!-- O card de conteúdo do grupo: superfície da marca, hover na cor da situação. Os
-                 textos cortam com reticências (o inteiro fica no `title`), para nenhum nome
-                 comprido esticar a altura de toda a linha de cards. -->
-            <ContentCard
-              data={{ label: `${ticket.protocol} — ${ticket.requesterName}` }}
-              ui={{ tone: ticketStatusTone(ticket.status), isHoverColored: true, className: 'min-w-0 gap-3 p-4' }}
-            >
-              <div class="flex min-w-0 items-center justify-between gap-2">
-                <span class="text-ink-900 shrink-0 font-mono text-xs font-semibold">
-                  {ticket.protocol}
-                </span>
-                <div class="flex min-w-0 items-center justify-end gap-1.5">
-                  <StatusBadge
-                    data={{ label: ticketPriorityLabel(ticket.priority) }}
-                    ui={{ tone: ticketPriorityTone(ticket.priority), size: 'sm' }}
-                  />
-                  <StatusBadge
-                    data={{ label: ticketStatusLabel(ticket.status) }}
-                    ui={{ tone: ticketStatusTone(ticket.status), size: 'sm' }}
-                  />
-                </div>
-              </div>
-
-              <div class="flex min-w-0 flex-col gap-0.5">
-                <span class="text-ink-900 truncate text-sm font-semibold" title={ticket.requesterName}>
-                  {ticket.requesterName}
-                </span>
-                <span class="text-ink-500 truncate text-xs" title={ticketDepartmentLabel(ticket.department)}>
-                  {ticketDepartmentLabel(ticket.department)}
-                </span>
-              </div>
-
-              <div class="border-border grid min-w-0 grid-cols-1 gap-2 border-t pt-2 text-xs min-[380px]:grid-cols-3">
-                {#each [
-                  { label: 'Área', value: ticketAreaLabel(ticket.area) },
-                  { label: 'Tipo', value: ticketProblemTypeLabel(ticket.problemType) },
-                  { label: 'Máquina', value: ticket.computerName ?? '—' },
-                ] as field (field.label)}
-                  <div class="flex min-w-0 flex-col gap-0.5">
-                    <span class="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-                      {field.label}
-                    </span>
-                    <span class="text-ink-700 truncate" title={field.value}>{field.value}</span>
-                  </div>
-                {/each}
-              </div>
-
-              <div class="border-border mt-auto flex items-center justify-between gap-2 border-t pt-2">
-                <span class="text-ink-500 truncate text-xs">
-                  Aberto em {formatDate(ticket.createdAt)}
-                </span>
-                <ActionButton
-                  data={{ label: 'Abrir' }}
-                  ui={{ variant: 'secondary', size: 'sm' }}
-                  actions={{ onClick: () => actions.onAnswer(ticket) }}
-                />
-              </div>
-            </ContentCard>
+            <TicketCard
+              data={{ ticket, assigneePhoto: photoOf(ticket.assigneeId) }}
+              actions={{ onOpen: actions.onAnswer }}
+            />
           {/each}
         </div>
 
         <!-- 2. Visualização em Tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu
          sempre cards. -->
         <div
-          class={cn('hidden', !tableView.forceCards && 'xl:block')}
+          class={cn('rounded-surface bg-card shadow-card hidden', !tableView.forceCards && 'xl:block')}
           data-slot="ticket-table-desktop"
         >
           <Table
@@ -664,10 +670,11 @@
       {/if}
     </div>
   </div>
+  {/if}
   </div>
 
-  <!-- Paginação da fila de chamados -->
-  {#if (data.paging ? data.paging.total : data.total) > 0}
+  <!-- Paginação da fila de chamados — só na lista: o quadro traz tudo de uma vez. -->
+  {#if !isBoard && (data.paging ? data.paging.total : data.total) > 0}
     <PaginationBar
       data={{
         page: data.paging?.page ?? 1,
@@ -681,7 +688,7 @@
   {/if}
 
   <!-- Truncar calado é mentir sobre o tamanho da fila. -->
-  {#if state.isTruncated && !data.paging}
+  {#if state.isTruncated && !data.paging && !isBoard}
     <p class="text-ink-500 text-xs">
       Mostrando {data.tickets.length} de {data.total} chamados. Use os filtros para chegar ao que procura.
     </p>

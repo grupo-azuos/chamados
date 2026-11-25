@@ -1,6 +1,7 @@
 import { type Ticket } from '@template/shared/schemas/ticket.schema';
 import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { createRawSnippet } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type TicketDashboard } from '$lib/api/tickets.api';
@@ -259,7 +260,7 @@ describe('AzuosTicketListView — stat card shortcuts and filter bar', () => {
         dashboard,
         filter: emptyFilter,
         assigneeOptions: [
-          { value: 'none', label: 'Sem responsável' },
+          { value: 'none', label: '(Sem responsável)' },
           { value: 'u-ana', label: 'Ana Lima', avatar: { name: 'Ana Lima', url: null } },
           { value: 'u-bia', label: 'Bia Costa', avatar: { name: 'Bia Costa', url: null } },
         ],
@@ -409,6 +410,37 @@ describe('AzuosTicketListView', () => {
     expect(desktopTable?.classList.contains('xl:block')).toBe(true);
   });
 
+  // feliz
+  it('draws each ticket as the standard record card, which opens the ticket', async () => {
+    const onAnswer = vi.fn();
+    const { container } = setup({ actions: { ...actions, onAnswer } });
+
+    const cards = container.querySelector<HTMLElement>('[data-slot="ticket-cards-mobile"]')!;
+    expect(within(cards).getByRole('heading', { name: 'Bia Costa' })).toBeInTheDocument();
+    expect(cards.querySelector('[data-slot="ticket-card-strip"]')).toHaveTextContent('Aberto');
+
+    await userEvent.click(within(cards).getByRole('button', { name: 'Abrir o chamado CH-0001 — Bia Costa' }));
+    expect(onAnswer).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+
+  // triste
+  it('keeps the initials when the person who answers is not among the filter options', () => {
+    const { container } = setup({
+      data: {
+        area: 'infra',
+        tickets: [ticket({ assignee: 'Carlos Lima', assigneeId: 'u-carlos' })],
+        total: 1,
+        dashboard,
+        filter: emptyFilter,
+        assigneeOptions: [{ value: 'u-outra', label: 'Outra pessoa', avatarUrl: '/x.png' }],
+      },
+    });
+
+    const cards = container.querySelector<HTMLElement>('[data-slot="ticket-cards-mobile"]')!;
+    expect(within(cards).getByText('CL')).toBeInTheDocument();
+    expect(cards.querySelector('[data-slot="avatar-image"]')).toBeNull();
+  });
+
   it('renders pagination bar and notifies page changes', async () => {
     const onPageChange = vi.fn();
     setup({
@@ -449,7 +481,7 @@ describe('ticketFilterChips', () => {
       { key: 'assigneeId', label: 'Responsável: Ana Lima' },
     ]);
     expect(ticketFilterChips({ ...emptyFilter, assigneeId: 'none' }, [], people)[0]?.label).toBe(
-      'Sem responsável',
+      '(Sem responsável)',
     );
   });
 
@@ -600,5 +632,131 @@ describe('AzuosTicketListView — reduced motion', () => {
     } finally {
       restore();
     }
+  });
+});
+
+/* O quadro de verdade (`AzuosTicketKanbanBoard`) é testado sozinho; aqui só importa ONDE a fila o
+   põe, e quando. */
+const board = createRawSnippet(() => ({ render: () => '<div data-testid="board">O quadro</div>' }));
+
+function setupBoard(over: { data?: Record<string, unknown>; state?: Record<string, unknown> } = {}) {
+  const onViewChange = vi.fn();
+  render(TicketListView, {
+    props: {
+      data: {
+        area: 'sistema',
+        tickets: [ticket({ area: 'sistema' })],
+        total: 1,
+        dashboard,
+        filter: emptyFilter,
+        view: 'kanban',
+        ...over.data,
+      },
+      state: { ...settled, ...over.state },
+      actions: { ...actions, onViewChange },
+      board,
+    },
+  });
+
+  return onViewChange;
+}
+
+describe('AzuosTicketListView — the board view', () => {
+  // feliz
+  it('shows the board in place of the table, with the same filters and no pages', () => {
+    setupBoard({ data: { paging: undefined } });
+
+    expect(screen.getByTestId('board')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Filtros da fila de chamados' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: /pagina/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver em quadro' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('goes back to the list from the view toggle', async () => {
+    const onViewChange = setupBoard();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ver em tabela' }));
+
+    expect(onViewChange).toHaveBeenCalledWith('list');
+  });
+
+  it('asks for the board from the list', async () => {
+    const onViewChange = setupBoard({ data: { view: 'list' } });
+
+    expect(screen.queryByTestId('board')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Ver em quadro' }));
+
+    expect(onViewChange).toHaveBeenCalledWith('kanban');
+  });
+
+  it('says when the board does not hold everything that matched', () => {
+    setupBoard({ data: { total: 340 }, state: { isTruncated: true } });
+
+    expect(screen.getByText(/O quadro mostra 1 de 340 chamados/)).toBeInTheDocument();
+  });
+
+  // triste
+  it('keeps the states of the queue before the board: error, loading and filtered out', () => {
+    setupBoard({ state: { error: 'Banco fora do ar.' } });
+    expect(screen.getByText('Banco fora do ar.')).toBeInTheDocument();
+    expect(screen.queryByTestId('board')).not.toBeInTheDocument();
+  });
+
+  it('shows the filtered-out notice instead of an empty board', () => {
+    setupBoard({ data: { tickets: [] }, state: { isFilteredOut: true } });
+
+    expect(screen.getByText('Nenhum chamado com esses filtros')).toBeInTheDocument();
+    expect(screen.queryByTestId('board')).not.toBeInTheDocument();
+  });
+
+  it('offers no board when the screen did not hand one over', () => {
+    setup({ data: { area: 'infra', tickets: [ticket()], total: 1, dashboard, filter: emptyFilter, view: 'kanban' } });
+
+    expect(screen.queryByRole('button', { name: 'Ver em quadro' })).not.toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+});
+
+describe('AzuosTicketListView — the system filter', () => {
+  const projectOptions = [{ value: '7', label: 'Portal do cliente' }];
+
+  // feliz
+  it('filters the System queue by system, with its chip', async () => {
+    const onProjectChange = vi.fn();
+    render(TicketListView, {
+      props: {
+        data: {
+          area: 'sistema',
+          tickets: [ticket({ area: 'sistema' })],
+          total: 1,
+          dashboard,
+          filter: { ...emptyFilter, projectId: '7' },
+          projectOptions,
+        },
+        state: settled,
+        actions: { ...actions, onProjectChange },
+      },
+    });
+
+    expect(screen.getByText('Sistema: Portal do cliente')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Remover|Sistema: Portal do cliente/ }));
+
+    expect(onProjectChange).toHaveBeenCalledWith('');
+  });
+
+  // triste
+  it('has no system filter outside the System queue', async () => {
+    setup();
+
+    await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
+
+    expect(screen.queryByRole('button', { name: /Filtrar por sistema/ })).not.toBeInTheDocument();
+  });
+
+  it('names a system that left the register just "Sistema"', () => {
+    expect(ticketFilterChips({ ...emptyFilter, projectId: '9' }, [], [], projectOptions)).toEqual([
+      { key: 'projectId', label: 'Sistema' },
+    ]);
   });
 });

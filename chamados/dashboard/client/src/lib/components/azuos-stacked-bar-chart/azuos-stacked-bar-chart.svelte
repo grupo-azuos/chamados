@@ -1,13 +1,20 @@
+<!--
+  @component
+  BARRA EMPILHADA DEITADA — o tamanho de cada categoria E do que ela é feita.
+
+  É a troca da rosca quando as fatias têm quase o mesmo tamanho: doze fatias de 8% não dizem nada;
+  aqui cada categoria é uma linha que mostra quanto está resolvido e quanto falta. O maior fica em
+  cima, o total no fim da linha; passou da altura do quadro, as linhas ROLAM.
+
+  - `data`: as categorias (cada uma com o valor de cada série), as séries (nome e cor) e o nome da
+    série no balão.
+  - `state`: `isLoading`.
+  - `ui`: o texto de vazio e a altura.
+  - `actions`: `onSelect`, com a categoria clicada.
+-->
 <script lang="ts" module>
   import { formatCount, resolveColor, shortenLabel, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * BARRA EMPILHADA DEITADA — o tamanho de cada categoria E do que ela é feita.
-   *
-   * É a troca da rosca quando as fatias têm quase o mesmo tamanho: doze fatias de 8% não dizem
-   * nada; aqui cada categoria é uma linha que mostra quanto está resolvido e quanto falta. O maior
-   * fica em cima, o total no fim da linha; passou da altura do quadro, as linhas ROLAM.
-   */
   export type StackedBarSeries = { key: string; label: string; color: string };
 
   export type StackedBarCategory = { label: string; values: Record<string, number> };

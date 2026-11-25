@@ -1,3 +1,18 @@
+<!--
+  @component
+  DESCARTAR UMA MÁQUINA — a pergunta, com o tipo e o motivo.
+
+  Tem diálogo próprio, e não um `ConfirmDialog`, por causa dos dois campos. Explica que nada é
+  apagado (a máquina vai para o Descarte com histórico, manutenções e peças, e pode voltar). O tipo
+  é escolhido em pastilhas, com a explicação dele numa legenda embaixo. O motivo é OBRIGATÓRIO: sem
+  ele, confirmar mostra o erro colado no campo, sem ida ao servidor.
+
+  Função pura de props: o tipo e o motivo saem no `onConfirm`. O componente não grava nada.
+
+  - `data.computerName`: a máquina da pergunta.
+  - `state`: `isOpen`, `isConfirming` (trava os campos e mostra "Descartando…") e `error`.
+  - `actions`: `onConfirm({ type, reason })` e `onCancel`.
+-->
 <script lang="ts" module>
   import {
     DISPOSAL_TYPES,

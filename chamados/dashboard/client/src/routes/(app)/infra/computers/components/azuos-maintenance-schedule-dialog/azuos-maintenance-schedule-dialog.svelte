@@ -1,3 +1,19 @@
+<!--
+  @component
+  AGENDAR (ou remarcar) a manutenção de uma máquina, num modal: o dia e, se quiser, o que vai ser
+  feito.
+
+  Mostra o nome da máquina, para quem agenda ter certeza de qual está marcando, e avisa que o
+  agendamento é dado como cumprido quando registrarem a manutenção. O título e o botão mudam entre
+  "Agendar" e "Remarcar". Fechar o modal é cancelar.
+
+  Função pura de props: valor e erro de cada campo chegam prontos, e o modal abre no Storybook
+  preenchido, com erro ou salvando — sem servidor no meio.
+
+  - `data`: `mode` (`create` ou `edit`), `machineName` e `fields` (`scheduledFor`, `note`).
+  - `state`: `isOpen`, `isSubmitting` e `error` (o erro geral, embaixo dos campos).
+  - `actions`: `onChange`, `onBlur`, `onSubmit` e `onClose`.
+-->
 <script lang="ts" module>
   import { SCHEDULE_NOTE_MAX_LENGTH } from '@template/shared/schemas/maintenance.schema';
 

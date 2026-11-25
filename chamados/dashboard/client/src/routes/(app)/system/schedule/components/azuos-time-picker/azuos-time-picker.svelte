@@ -1,3 +1,17 @@
+<!--
+  @component
+  O CAMPO DE HORÁRIO da agenda: horário em 24 horas, sem depender do seletor do navegador nem
+  arredondar minutos.
+
+  O botão cinza mostra o horário escolhido (ou "Selecionar"); ao abrir, um painel com um seletor de
+  hora e outro de minuto, a prévia em destaque e "Aplicar horário". Abre no valor atual (ou 09:00,
+  se ainda não há um). O valor vai num campo escondido, para o formulário enviar.
+
+  - `data`: `label`, `name`, `value` (`HH:MM`) e `isRequired`.
+  - `ui.className`: o espaço em volta.
+  - `state`: `error` (fundo vermelho claro e a mensagem embaixo) e `isDisabled`.
+  - `actions`: `onChange(value)` ao aplicar e `onBlur` ao fechar o painel.
+-->
 <script lang="ts" module>
   /** Horário em 24 horas, sem depender do seletor do navegador nem arredondar minutos. */
   export type AzuosTimePickerProps = {
@@ -74,7 +88,7 @@
           aria-describedby={fieldState?.error ? errorId : undefined}
           disabled={fieldState?.isDisabled}
           onblur={() => !isOpen && actions.onBlur?.()}
-          class="h-10 w-full min-w-0 justify-start gap-2 rounded-control border-border bg-card px-3.5 font-normal shadow-xs hover:bg-muted"
+          class="control-lg w-full min-w-0 justify-start gap-2 rounded-control border-transparent bg-muted px-3.5 font-normal shadow-none hover:bg-muted aria-invalid:bg-destructive-soft"
         >
           <Clock class="size-4 text-muted-foreground" aria-hidden="true" />
           <span class={cn('tabular-nums', !hasValue && 'text-muted-foreground')}>
@@ -88,7 +102,7 @@
       align="start"
       collisionPadding={12}
       aria-label={`Selecionar horário de ${data.label.toLowerCase()}`}
-      class="w-64 max-w-[calc(100vw-2rem)] gap-4 rounded-surface border border-border bg-card p-4 shadow-xl"
+      class="w-64 max-w-[calc(100vw-2rem)] gap-4 rounded-surface border-transparent bg-popover p-4 shadow-xl ring-1 ring-foreground/8"
     >
       <div class="flex items-center justify-between gap-3">
         <div>

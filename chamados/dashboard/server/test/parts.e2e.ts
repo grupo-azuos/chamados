@@ -16,6 +16,9 @@ import { asAna, asBia, asCaio, createE2eApp, type E2eApp } from './support/e2e-a
  */
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
+/* O departamento do RH da máquina, pelo id — o nome vem do catálogo na resposta. */
+const RECEPTION = { id: 32, name: 'Recepção' };
+
 describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
   let started: E2eApp;
   let app: INestApplication;
@@ -32,7 +35,7 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
     const created = await api()
       .post('/api/v1/computers')
       .set(asCaio())
-      .send({ name, kind: 'desktop', department: 'RECEPÇÃO' })
+      .send({ name, kind: 'desktop', departmentId: RECEPTION.id })
       .expect(201);
 
     return created.body.computer.id;
@@ -42,7 +45,7 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
     api().post(`/api/v1/parts/${partId}/movements`).set(who).send(body);
 
   beforeAll(async () => {
-    started = await createE2eApp(testDatabaseUrl!);
+    started = await createE2eApp(testDatabaseUrl!, { departments: [RECEPTION] });
     app = started.app;
   });
 
@@ -56,8 +59,10 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
 
   // feliz
   it('turns the initial quantity into the first entry of the statement', async () => {
-    const created = await registerPart({ initialQuantity: 3, createdBy: 'caio@empresa.com.br' })
-      .expect(201);
+    const created = await registerPart({
+      initialQuantity: 3,
+      createdBy: 'caio@empresa.com.br',
+    }).expect(201);
 
     expect(created.body).toMatchObject({
       name: 'SSD 240 GB',
@@ -95,7 +100,9 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
   });
 
   it('lists by category and then by name, filtered in the query', async () => {
-    await registerPart({ name: 'Monitor 24"', category: 'monitor', initialQuantity: 1 }).expect(201);
+    await registerPart({ name: 'Monitor 24"', category: 'monitor', initialQuantity: 1 }).expect(
+      201,
+    );
     await registerPart({ name: 'SSD 480 GB', category: 'ssd', condition: 'used' }).expect(201);
     await registerPart({ name: 'SSD 240 GB', category: 'ssd', initialQuantity: 2 }).expect(201);
 
@@ -118,8 +125,13 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
       .expect(200);
     expect(inStock.body.items.map((part: { name: string }) => part.name)).toEqual(['SSD 240 GB']);
 
-    const outOfStock = await api().get('/api/v1/parts?outOfStockOnly=true').set(asAna()).expect(200);
-    expect(outOfStock.body.items.map((part: { name: string }) => part.name)).toEqual(['SSD 480 GB']);
+    const outOfStock = await api()
+      .get('/api/v1/parts?outOfStockOnly=true')
+      .set(asAna())
+      .expect(200);
+    expect(outOfStock.body.items.map((part: { name: string }) => part.name)).toEqual([
+      'SSD 480 GB',
+    ]);
 
     const paged = await api().get('/api/v1/parts?page=2&pageSize=2').set(asAna()).expect(200);
     expect(paged.body).toMatchObject({ total: 3, page: 2, pageSize: 2 });
@@ -165,7 +177,7 @@ describe.skipIf(!testDatabaseUrl)('Parts API (e2e)', () => {
       balanceAfter: 3,
       computerId,
       computerName: 'PC-RECEPCAO-01',
-      computerDepartment: 'RECEPÇÃO',
+      computerDepartment: 'Recepção',
       handledBy: 'Marta',
       createdBy: 'ana@empresa.com.br',
     });

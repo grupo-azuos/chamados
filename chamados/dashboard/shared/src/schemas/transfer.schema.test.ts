@@ -5,15 +5,23 @@ import { createTransferSchema, installedPartSchema, transferSchema } from './tra
 describe('transfer contract', () => {
   // feliz
   it('accepts a transfer to the shelf, with no peripherals by default', () => {
-    expect(createTransferSchema.parse({ toDepartment: null })).toEqual({
-      toDepartment: null,
+    expect(createTransferSchema.parse({ toDepartmentId: null })).toEqual({
+      toDepartmentId: null,
       peripherals: [],
     });
   });
 
+  // triste
+  it('refuses a destination department sent as a name, and ignores a location from an old screen', () => {
+    expect(createTransferSchema.safeParse({ toDepartmentId: 'Fiscal' }).success).toBe(false);
+    expect(
+      createTransferSchema.parse({ toDepartmentId: null, toLocation: 'RECEPÇÃO' }),
+    ).not.toHaveProperty('toLocation');
+  });
+
   it('accepts a peripheral that goes with the machine, and one left at a station', () => {
     const parsed = createTransferSchema.safeParse({
-      toDepartment: 'Fiscal',
+      toDepartmentId: 12,
       responsible: 'Joana',
       peripherals: [
         { partId: 1, quantity: 1, destiny: 'machine' },
@@ -23,7 +31,12 @@ describe('transfer contract', () => {
     expect(parsed.success).toBe(true);
 
     expect(
-      installedPartSchema.safeParse({ partId: 1, name: 'Teclado', category: 'keyboard', quantity: 1 }).success,
+      installedPartSchema.safeParse({
+        partId: 1,
+        name: 'Teclado',
+        category: 'keyboard',
+        quantity: 1,
+      }).success,
     ).toBe(true);
     expect(
       transferSchema.safeParse({
@@ -43,11 +56,13 @@ describe('transfer contract', () => {
   // triste
   it('asks which machine takes a peripheral left at the station', () => {
     const refused = createTransferSchema.safeParse({
-      toDepartment: 'Fiscal',
+      toDepartmentId: 12,
       peripherals: [{ partId: 2, quantity: 1, destiny: 'station' }],
     });
 
     expect(refused.success).toBe(false);
-    expect(refused.success ? '' : refused.error.issues[0]?.message).toBe('Diga qual máquina assume esta peça.');
+    expect(refused.success ? '' : refused.error.issues[0]?.message).toBe(
+      'Diga qual máquina assume esta peça.',
+    );
   });
 });

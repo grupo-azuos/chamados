@@ -32,8 +32,10 @@ import { PartsRepository } from '../repository/parts.repository';
 
 const PART_NOT_FOUND = 'Peça não encontrada. Ela pode ter sido excluída — recarregue a lista.';
 
-const MOVEMENT_NOT_FOUND =
-  'Movimentação não encontrada. Ela pode ter sido excluída — recarregue a lista.';
+const MOVEMENT_NOT_FOUND = 'Movimentação não encontrada. Recarregue a lista.';
+
+const NEGATIVE_AFTER_RESTORE =
+  'Desfazer este estorno deixaria o saldo da peça negativo. Registre a entrada que falta antes.';
 
 /**
  * O ÚNICO caminho de escrita do depósito.
@@ -199,10 +201,11 @@ export class PartsService {
   }
 
   /**
-   * Exclui uma movimentação lançada errada e DESFAZ o efeito dela no saldo.
+   * Estorna uma movimentação lançada errada e DESFAZ o efeito dela no saldo. A linha não sai do
+   * banco: é arquivada, sai do extrato e volta pelo "Desfazer".
    *
    * O extrato inteiro da peça é refeito depois: as linhas seguintes tinham no `balanceAfter`
-   * um saldo que contava com a linha excluída, e deixá-las como estavam faria o extrato
+   * um saldo que contava com a linha estornada, e deixá-las como estavam faria o extrato
    * mostrar uma sequência que não fecha — o tipo de detalhe que destrói a confiança no
    * número todo.
    */
@@ -226,9 +229,35 @@ export class PartsService {
 
     await this.repository.transaction(async (executor) => {
       await this.repository.findByIdForUpdate(partId, executor);
-      await this.repository.deleteMovement(id, executor);
+      await this.repository.setMovementArchived(id, true, user.id, executor);
       await this.recalculate(partId, executor);
     });
+  }
+
+  /**
+   * Desfaz o estorno: a linha volta ao extrato e o saldo é refeito. Se a volta deixar o saldo
+   * negativo em algum ponto (uma saída que já não cabe), recusa — a transação desfaz tudo.
+   */
+  async restoreMovement(user: RequestUser, id: number): Promise<PartMovement> {
+    assertCanRead(user.role, 'o depósito');
+
+    const current = await this.requireMovement(id);
+    assertCanModifyRecord(
+      user.role,
+      user.email,
+      current.movement.createdBy,
+      'Esta movimentação',
+    );
+
+    const partId = current.movement.partId;
+
+    await this.repository.transaction(async (executor) => {
+      await this.repository.findByIdForUpdate(partId, executor);
+      await this.repository.setMovementArchived(id, false, null, executor);
+      await this.recalculate(partId, executor);
+    });
+
+    return toMovement(await this.requireMovement(id));
   }
 
   /** Refaz o extrato de uma peça do zero e grava o saldo final. */
@@ -239,6 +268,7 @@ export class PartsService {
 
     for (const movement of movements) {
       balance = balanceAfter(balance, movement.type, movement.quantity);
+      if (balance < 0) throw new UnprocessableEntityException(NEGATIVE_AFTER_RESTORE);
 
       /* Só grava a linha que mudou: reescrever o extrato inteiro a cada exclusão encheria o
          histórico de alterações que não alteraram nada. */

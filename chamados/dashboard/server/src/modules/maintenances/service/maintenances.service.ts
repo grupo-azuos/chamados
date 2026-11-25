@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  Optional,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { type Department } from '@template/shared/domain/department.util';
 import { preventiveStatusOf } from '@template/shared/domain/maintenance.util';
 import {
@@ -11,14 +18,19 @@ import {
   type SaveMaintenanceScheduleInput,
   type UpdateMaintenanceInput,
 } from '@template/shared/schemas/maintenance.schema';
+import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
+import { type SQL } from 'drizzle-orm';
 
+import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
+import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import {
   assertCanCreate,
   assertCanModifyRecord,
   assertCanRead,
 } from '../../../lib/policy/policy-assert.util';
+import { BOARD_DRILL, type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import {
   toMaintenance,
   toMaintenanceInsert,
@@ -30,8 +42,15 @@ import {
   type MaintenanceWithComputer,
   type PreventiveRow,
 } from '../repository/maintenances.repository';
+import { TasksService } from '../../tasks/service/tasks.service';
 
-const NOT_FOUND = 'Manutenção não encontrada. Ela pode ter sido excluída — recarregue a lista.';
+/** O histórico só sabe filtrar a tabela das manutenções: só o recorte dela vale aqui. */
+const MAINTENANCE_DRILL_SOURCES: readonly DataSourceKey[] = ['maintenances'];
+
+const NOT_FOUND = 'Manutenção não encontrada. Recarregue a lista.';
+const SCHEDULE_NOT_FOUND = 'Agendamento não encontrado. Recarregue a lista.';
+const SCHEDULE_TAKEN =
+  'Esta máquina já tem outra manutenção agendada. Cancele aquela antes de desfazer esta.';
 const COMPUTER_NOT_FOUND =
   'Máquina não encontrada ou fora de uso. Só dá para agendar manutenção de máquina em uso.';
 
@@ -44,12 +63,42 @@ const COMPUTER_NOT_FOUND =
  */
 @Injectable()
 export class MaintenancesService {
-  constructor(private readonly repository: MaintenancesRepository) {}
+  constructor(
+    private readonly repository: MaintenancesRepository,
+    @Optional() @Inject(BOARD_DRILL) private readonly drills?: BoardDrillResolver,
+    @Optional() private readonly tasks?: TasksService,
+    @Optional()
+    @Inject(USER_DIRECTORY_PROVIDER)
+    private readonly directory?: UserDirectoryProvider,
+  ) {}
+
+  /**
+   * QUEM FEZ, pelas pessoas escolhidas na lista: os nomes delas no diretório vão para `performedBy`
+   * (os nomes daquele dia, separados por vírgula — o que a ordem de serviço e a busca usam). Id que
+   * o diretório não conhece é recusado; lista vazia é ninguém.
+   */
+  private async withPerformers<
+    T extends { performedByIds?: string[]; performedBy?: string | null },
+  >(input: T): Promise<T> {
+    if (input.performedByIds === undefined || !this.directory) return input;
+    const ids = [...new Set(input.performedByIds)];
+    if (!ids.length) return { ...input, performedByIds: [], performedBy: null };
+    const people = await Promise.all(ids.map((id) => this.directory!.getUserById(id)));
+    if (people.some((person) => !person)) {
+      throw new UnprocessableEntityException('Escolha quem fez pela lista de pessoas.');
+    }
+
+    return {
+      ...input,
+      performedByIds: ids,
+      performedBy: people.map((person) => person!.name).join(', '),
+    };
+  }
 
   async list(user: RequestUser, query: MaintenanceListQuery): Promise<Paginated<Maintenance>> {
     assertCanRead(user.role, 'as manutenções');
 
-    const page = await this.repository.list(query);
+    const page = await this.repository.list(query, await this.drillOf(user, query));
 
     return {
       items: page.rows.map(toMaintenance),
@@ -57,6 +106,16 @@ export class MaintenancesService {
       page: query.page,
       pageSize: query.pageSize,
     };
+  }
+
+  /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
+  private async drillOf(
+    user: RequestUser,
+    query: Pick<MaintenanceListQuery, 'drill'>,
+  ): Promise<SQL | undefined> {
+    if (!query.drill || !this.drills) return undefined;
+
+    return this.drills.drillCondition(user, query.drill, MAINTENANCE_DRILL_SOURCES);
   }
 
   async findById(user: RequestUser, id: number): Promise<Maintenance> {
@@ -68,16 +127,24 @@ export class MaintenancesService {
   async create(user: RequestUser, input: CreateMaintenanceInput): Promise<Maintenance> {
     assertCanCreate(user.role, 'manutenções');
 
-    const id = await this.repository.insert(toMaintenanceInsert(input, user.email));
+    const id = await this.repository.insert(
+      toMaintenanceInsert(await this.withPerformers(input), user.email),
+    );
 
     /* Registrar a manutenção CUMPRE o agendamento: deixá-lo de pé faria a ficha continuar
        cobrando uma visita que já aconteceu. Qualquer tipo conta — quem agendou "trocar a
        fonte" e registrou "troca de peça" fez o que tinha combinado. */
-    if (input.computerId) await this.repository.deleteSchedule(input.computerId);
+    if (input.computerId) await this.repository.archiveOpenSchedule(input.computerId, user.id);
 
     /* Relê para devolver a máquina junto: o insert conhece o `computer_id`, mas não o nome
        dela, e a tela precisa do nome para desenhar a linha que acabou de aparecer. */
-    return toMaintenance(await this.requireMaintenance(id));
+    const saved = toMaintenance(await this.requireMaintenance(id));
+
+    /* A tarefa da máquina se atualiza no nome de quem fez — e conta na produtividade dele. */
+    await this.registerOnTask(user, saved);
+    await this.followTasks(input.computerId);
+
+    return saved;
   }
 
   async update(user: RequestUser, id: number, input: UpdateMaintenanceInput): Promise<Maintenance> {
@@ -89,8 +156,12 @@ export class MaintenancesService {
        "é seu?". A leitura já foi liberada acima, então nada vaza nessa ordem. */
     assertCanModifyRecord(user.role, user.email, current.maintenance.createdBy, 'Esta manutenção');
 
-    await this.repository.update(id, toMaintenanceUpdate(input, user.email));
+    await this.repository.update(
+      id,
+      toMaintenanceUpdate(await this.withPerformers(input), user.email),
+    );
 
+    await this.followTasks(current.maintenance.computerId, input.computerId);
     return toMaintenance(await this.requireMaintenance(id));
   }
 
@@ -100,7 +171,22 @@ export class MaintenancesService {
     const current = await this.requireMaintenance(id);
     assertCanModifyRecord(user.role, user.email, current.maintenance.createdBy, 'Esta manutenção');
 
-    await this.repository.delete(id);
+    /* Excluir ARQUIVA: some da lista e das contas, e volta pelo "Desfazer". */
+    await this.repository.setArchived(id, true, user.id);
+    await this.followTasks(current.maintenance.computerId);
+  }
+
+  /** Desfaz a exclusão. Quem podia excluir é quem pode desfazer. */
+  async restore(user: RequestUser, id: number): Promise<Maintenance> {
+    assertCanRead(user.role, 'as manutenções');
+
+    const current = await this.requireMaintenance(id);
+    assertCanModifyRecord(user.role, user.email, current.maintenance.createdBy, 'Esta manutenção');
+
+    await this.repository.setArchived(id, false, null);
+
+    await this.followTasks(current.maintenance.computerId);
+    return toMaintenance(await this.requireMaintenance(id));
   }
 
   /**
@@ -151,9 +237,10 @@ export class MaintenancesService {
       user.email,
     );
 
-    const [saved] = await this.repository.listSchedules({ computerId });
+    const [saved] = await this.repository.listSchedules({ computerId, archived: 'hide' });
     if (!saved) throw new NotFoundException(COMPUTER_NOT_FOUND);
 
+    await this.followTasks(computerId);
     return toMaintenanceSchedule(saved);
   }
 
@@ -161,12 +248,67 @@ export class MaintenancesService {
   async cancelSchedule(user: RequestUser, computerId: number): Promise<void> {
     assertCanCreate(user.role, 'manutenções agendadas');
 
-    await this.repository.deleteSchedule(computerId);
+    await this.repository.archiveOpenSchedule(computerId, user.id);
+    await this.followTasks(computerId);
+  }
+
+  /**
+   * Desfaz o cancelamento. Se a máquina já ganhou outro agendamento, recusa: são dois
+   * compromissos para a mesma máquina, e a pessoa decide qual fica.
+   */
+  async restoreSchedule(user: RequestUser, id: number): Promise<MaintenanceSchedule> {
+    assertCanCreate(user.role, 'manutenções agendadas');
+
+    const schedule = await this.repository.findSchedule(id);
+    if (!schedule) throw new NotFoundException(SCHEDULE_NOT_FOUND);
+    await this.requireActiveComputer(schedule.computerId);
+
+    const [open] = await this.repository.listSchedules({
+      computerId: schedule.computerId,
+      archived: 'hide',
+    });
+    if (open && open.schedule.id !== id) throw new ConflictException(SCHEDULE_TAKEN);
+
+    await this.repository.restoreSchedule(id);
+    const [restored] = await this.repository.listSchedules({
+      computerId: schedule.computerId,
+      archived: 'hide',
+    });
+    if (!restored) throw new NotFoundException(SCHEDULE_NOT_FOUND);
+
+    await this.followTasks(schedule.computerId);
+    return toMaintenanceSchedule(restored);
   }
 
   private async requireActiveComputer(computerId: number): Promise<void> {
     const computer = await this.repository.findActiveComputer(computerId);
     if (!computer) throw new NotFoundException(COMPUTER_NOT_FOUND);
+  }
+
+  /**
+   * A tarefa de manutenção da máquina se ajusta NA HORA — abre, muda o prazo ou finaliza —, e
+   * só a dela. Falhar aqui não desfaz a manutenção gravada: a rodada da manhã corrige.
+   */
+  private async followTasks(...computerIds: (number | null | undefined)[]): Promise<void> {
+    if (!this.tasks) return;
+    for (const computerId of new Set(computerIds)) {
+      if (computerId) await this.tasks.syncMaintenanceFor(computerId);
+    }
+  }
+
+  /** A manutenção de uma MÁQUINA do inventário finaliza a tarefa dela; outro equipamento não tem tarefa. */
+  private async registerOnTask(user: RequestUser, saved: Maintenance): Promise<void> {
+    if (!this.tasks || !saved.computerId) return;
+
+    await this.tasks.registerMaintenance(user, {
+      computerId: saved.computerId,
+      computerName:
+        saved.computerDisplayName || saved.computerName || `Máquina ${saved.computerId}`,
+      type: saved.type,
+      description: saved.description,
+      performedByIds: saved.performedByIds ?? [],
+      performedAt: saved.performedAt,
+    });
   }
 
   private async requireMaintenance(id: number): Promise<MaintenanceWithComputer> {

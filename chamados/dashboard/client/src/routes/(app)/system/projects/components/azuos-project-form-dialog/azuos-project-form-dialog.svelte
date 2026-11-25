@@ -1,3 +1,19 @@
+<!--
+  @component
+  CADASTRAR OU EDITAR UM SISTEMA (projeto de software), num diálogo.
+
+  Campos: nome, repositório no GitHub (ambos obrigatórios), situação, cor identificadora,
+  responsável e descrição. O título muda entre "Novo Sistema" e "Editar Sistema" pelo modo do
+  formulário; o erro geral aparece no alto. O responsável é só informação: diz quem responde pelo
+  sistema, sem mudar a quem os chamados vão. Fechar o diálogo chama `onClose`.
+
+  Recebe o view-model do formulário pronto (`use-software-project-form`): valores, erros, envio e
+  as ações de mudar, sair do campo e salvar vêm dele.
+
+  - `open`: o diálogo aberto (bindable).
+  - `model`: o view-model do formulário.
+  - `onClose`: cancelar ou fechar.
+-->
 <script lang="ts">
   import { Dialog, DialogTitle } from '$lib/components/azuos-dialog/azuos-dialog';
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';

@@ -1,12 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
 import { type TicketRelation } from '@template/shared/schemas/ticket-relation.schema';
-import { and, desc, eq, inArray, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 
-import { runQuery } from '../../../lib/db/db-error.util';
+import { archiveValues } from '../../../lib/db/archive.util';
+import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
-import { ticketRelations } from '../../../lib/db/schema/ticket-relations.schema';
+import { ticketRelations, type TicketRelationRow } from '../../../lib/db/schema/ticket-relations.schema';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
 
 @Injectable()
@@ -21,9 +22,7 @@ export class TicketRelationsRepository {
       this.db
         .select()
         .from(ticketRelations)
-        .where(
-          or(eq(ticketRelations.ticketId, ticketId), eq(ticketRelations.relatedTicketId, ticketId)),
-        )
+        .where(and(involving(ticketId), isNull(ticketRelations.archivedAt)))
         .orderBy(desc(ticketRelations.createdAt), desc(ticketRelations.id)),
       'listar relações do chamado',
     );
@@ -77,18 +76,7 @@ export class TicketRelationsRepository {
       this.db
         .select({ id: ticketRelations.id })
         .from(ticketRelations)
-        .where(
-          or(
-            and(
-              eq(ticketRelations.ticketId, ticketId),
-              eq(ticketRelations.relatedTicketId, relatedTicketId),
-            ),
-            and(
-              eq(ticketRelations.ticketId, relatedTicketId),
-              eq(ticketRelations.relatedTicketId, ticketId),
-            ),
-          ),
-        )
+        .where(and(pair(ticketId, relatedTicketId), isNull(ticketRelations.archivedAt)))
         .limit(1),
       'conferir se chamados já estão vinculados',
     );
@@ -102,25 +90,70 @@ export class TicketRelationsRepository {
   }
 
   /**
-   * Remove o vínculo entre dois chamados (em qualquer direção).
+   * Desfaz o vínculo entre dois chamados (em qualquer direção): ARQUIVA a linha.
    */
-  async remove(ticketId: number, relatedTicketId: number): Promise<void> {
+  async remove(ticketId: number, relatedTicketId: number, actorId: string | null): Promise<void> {
     await runQuery(
       this.db
-        .delete(ticketRelations)
-        .where(
-          or(
-            and(
-              eq(ticketRelations.ticketId, ticketId),
-              eq(ticketRelations.relatedTicketId, relatedTicketId),
-            ),
-            and(
-              eq(ticketRelations.ticketId, relatedTicketId),
-              eq(ticketRelations.relatedTicketId, ticketId),
-            ),
-          ),
-        ),
+        .update(ticketRelations)
+        .set(archiveValues(true, actorId))
+        .where(and(pair(ticketId, relatedTicketId), isNull(ticketRelations.archivedAt))),
       'desvincular chamado',
     );
   }
+
+  /** Os vínculos desfeitos deste chamado — o bloco "Removidos". */
+  async listArchived(ticketId: number): Promise<TicketRelationRow[]> {
+    return runQuery(
+      this.db
+        .select()
+        .from(ticketRelations)
+        .where(and(involving(ticketId), isNotNull(ticketRelations.archivedAt)))
+        .orderBy(desc(ticketRelations.archivedAt)),
+      'listar vínculos desfeitos do chamado',
+    );
+  }
+
+  async findInTicket(ticketId: number, id: number): Promise<TicketRelationRow | null> {
+    return runMaybe(
+      this.db
+        .select()
+        .from(ticketRelations)
+        .where(and(eq(ticketRelations.id, id), involving(ticketId)))
+        .limit(1),
+      'ler vínculo do chamado',
+    );
+  }
+
+  /** O vínculo valendo entre os dois chamados, se houver. */
+  async findActivePair(ticketId: number, relatedTicketId: number): Promise<{ id: number } | null> {
+    return runMaybe(
+      this.db
+        .select({ id: ticketRelations.id })
+        .from(ticketRelations)
+        .where(and(pair(ticketId, relatedTicketId), isNull(ticketRelations.archivedAt)))
+        .limit(1),
+      'conferir vínculo valendo',
+    );
+  }
+
+  async restore(id: number): Promise<void> {
+    await runQuery(
+      this.db.update(ticketRelations).set(archiveValues(false, null)).where(eq(ticketRelations.id, id)),
+      'refazer vínculo de chamados',
+    );
+  }
+}
+
+/** O chamado em qualquer ponta do vínculo. */
+function involving(ticketId: number) {
+  return or(eq(ticketRelations.ticketId, ticketId), eq(ticketRelations.relatedTicketId, ticketId));
+}
+
+/** Os dois chamados, em qualquer direção. */
+function pair(ticketId: number, relatedTicketId: number) {
+  return or(
+    and(eq(ticketRelations.ticketId, ticketId), eq(ticketRelations.relatedTicketId, relatedTicketId)),
+    and(eq(ticketRelations.ticketId, relatedTicketId), eq(ticketRelations.relatedTicketId, ticketId)),
+  );
 }

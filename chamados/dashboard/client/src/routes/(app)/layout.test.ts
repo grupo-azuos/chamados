@@ -10,7 +10,7 @@ vi.mock('$lib/api/auth.api', () => ({ authApi: { me: vi.fn() } }));
 
 const me = vi.mocked(authApi.me);
 
-describe('a guarda de sessão', () => {
+describe('the session guard', () => {
   beforeEach(() => {
     me.mockReset();
   });
@@ -25,7 +25,7 @@ describe('a guarda de sessão', () => {
     } as Awaited<ReturnType<typeof authApi.me>>;
     me.mockResolvedValue(user);
 
-    await expect(load()).resolves.toEqual({ user });
+    await expect(load()).resolves.toEqual({ user, sidebarOpen: true });
   });
 
   // triste

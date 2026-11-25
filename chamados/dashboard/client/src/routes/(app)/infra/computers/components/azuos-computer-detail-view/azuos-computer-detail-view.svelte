@@ -1,3 +1,31 @@
+<!--
+  @component
+  A FICHA DE UM COMPUTADOR: quem é, como está e o que já aconteceu com ele.
+
+  A ordem da tela é a ordem da pergunta que se faz: primeiro o que está errado (os avisos de
+  saúde), depois o que a máquina é (hardware), depois como ela vem se comportando (gráfico) e por
+  último o histórico (alertas). Quem abre a ficha está atrás de problema. No alto, a identificação
+  com os selos (online, offline, bloqueada, arquivada), editar, transferir e "Mais ações" (baixar
+  instalador, token novo, bloquear, arquivar, descartar); depois o próximo compromisso de
+  manutenção, os números de agora, a leitura ao vivo, os aplicativos que mais pesam, o uso das
+  últimas 24 horas, o hardware, os alertas, as manutenções, os chamados, as transferências e as
+  peças recebidas. As ações que mudam a máquina pedem confirmação.
+
+  Os números do alto seguem a leitura AO VIVO quando ela existe; sem ela, sobra a última amostra, e
+  o rótulo deixa de dizer "agora" (`nowReadingOf`). Alertas e chamados são paginados no servidor.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook com a máquina
+  saudável, em estado crítico, bloqueada, arquivada e sem o agente instalado.
+
+  - `data`: `computer`, `samples`, `alerts`, `live`, `maintenances`, `schedule`, `tickets`,
+    `partMovements`, `transfers`, a paginação (`alertPaging`, `ticketPaging`) e `backDestination`.
+  - `state`: um `is…Loading` por bloco, `isSaving`, `actionError`, `isCancellingSchedule`,
+    `scheduleError`, `isDownloadingInstaller` e `installerError`.
+  - `actions`: `onEdit`, `onRegisterMaintenance`, `onScheduleMaintenance`, `onCancelSchedule`,
+    `onTransfer`, `onArchivedChange`, `onBlockedChange`, `onRegenerateToken`,
+    `onDownloadInstaller`, `onDispose`, `onRestore`, `onBack`, `onAlertPageChange` e
+    `onTicketPageChange`.
+-->
 <script lang="ts" module>
   import {
     alertDurationSeconds,
@@ -9,6 +37,7 @@
     healthStatusTone,
   } from '@template/shared/domain/computer-health.util';
   import { departmentLabel } from '@template/shared/domain/department.util';
+  import { computerDepartmentLabel, computerResponsibleLabel } from '$lib/utils/computer-place.util';
   import {
     disposalTypeLabel,
     disposalTypeTone,
@@ -46,6 +75,8 @@
    */
   export type AzuosComputerDetailViewProps = {
     data: {
+      /** O nome da tela para onde o "voltar" leva — a anterior do caminho da pessoa. */
+      backDestination?: string;
       computer: Computer;
       samples: ComputerSample[];
       alerts: ComputerAlert[];
@@ -274,6 +305,7 @@
   import MemoryStick from '@lucide/svelte/icons/memory-stick';
   import ShieldCheck from '@lucide/svelte/icons/shield-check';
   import UserRound from '@lucide/svelte/icons/user-round';
+  import StickyNote from '@lucide/svelte/icons/sticky-note';
   import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
   import KeyRound from '@lucide/svelte/icons/key-round';
   import Pencil from '@lucide/svelte/icons/pencil';
@@ -284,14 +316,14 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
 
   import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
-  import ActionMenu from '../azuos-action-menu/azuos-action-menu.svelte';
+  import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import ComputerLivePanel from '../azuos-computer-live-panel/azuos-computer-live-panel.svelte';
   import ComputerProcessTable from '../azuos-computer-process-table/azuos-computer-process-table.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
@@ -307,8 +339,7 @@
   import ComputerBlockDialog from '../azuos-computer-block-dialog/azuos-computer-block-dialog.svelte';
   import ComputerDisposalDialog from '../azuos-computer-disposal-dialog/azuos-computer-disposal-dialog.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-  import { fillColorOf, fillFromPointer } from '$lib/motion/hover-fill';
-  import { cn } from '$lib/utils/cn';
+      import { cn } from '$lib/utils/cn';
   import { formatDateTime } from '$lib/utils/format-date';
   import MaintenanceScheduleCard from '../azuos-maintenance-schedule-card/azuos-maintenance-schedule-card.svelte';
   import { formatPercent, formatTimeAgo } from '$lib/utils/format-machine';
@@ -370,10 +401,12 @@
   }
 </script>
 
-<div class="mx-auto flex w-full max-w-5xl flex-col gap-5">
-  <BackButton data={{ destination: 'o inventário' }} actions={{ onClick: actions.onBack }} />
+<div class="flex w-full flex-col gap-6">
+  <BackButton data={{ destination: data.backDestination ?? 'o inventário' }} actions={{ onClick: actions.onBack }} />
 
-  <section aria-label="Identificação do computador" class="bg-card rounded-surface min-w-0 border p-4 shadow-xs sm:p-5">
+  <ContentCard data={{ label: 'Identificação do computador', title: '' }} ui={{ className: 'min-w-0' }}>
+{#snippet body()}
+<div class="p-4 sm:p-5">
     <PageHeader
       data={{
         title: computer.displayName?.trim() || computer.hardware?.hostname?.trim() || computer.name,
@@ -422,16 +455,27 @@
         <Building2 class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <div class="min-w-0">
           <dt class="text-ink-500 text-xs">Departamento</dt>
-          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computer.department ? departmentLabel(computer.department) : 'Sem departamento'}</dd>
+          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computerDepartmentLabel(computer)}</dd>
         </div>
       </div>
       <div class="flex min-w-0 items-start gap-2.5">
         <UserRound class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <div class="min-w-0">
           <dt class="text-ink-500 text-xs">Responsável</dt>
-          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computer.responsibleName ?? 'Sem responsável'}</dd>
+          <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words">{computerResponsibleLabel(computer)}</dd>
         </div>
       </div>
+      {#if computer.notes}
+        <!-- A observação guarda também o responsável, o departamento e o local antigos, das
+             migrações ("… anterior: <nome>"): as quebras de linha ficam, uma informação por linha. -->
+        <div class="flex min-w-0 items-start gap-2.5 sm:col-span-2">
+          <StickyNote class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <div class="min-w-0">
+            <dt class="text-ink-500 text-xs">Observação</dt>
+            <dd class="text-ink-900 mt-0.5 text-sm font-medium break-words whitespace-pre-line">{computer.notes}</dd>
+          </div>
+        </div>
+      {/if}
     </dl>
 
     <div class="border-border mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
@@ -463,7 +507,9 @@
         {/if}
       </span>
     </div>
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 
   <!-- A falha de uma AÇÃO aparece aqui em cima, em vermelho, e fica até resolver: gravação
        que falha calada vira "o sistema não salva" (CONTRIBUTING §15). -->
@@ -475,7 +521,7 @@
   {/if}
 
   {#if disposed && computer.disposalType}
-    <p class="text-ink-700 bg-muted rounded-box border px-3 py-2 text-sm">
+    <p class="text-ink-700 bg-muted rounded-box px-3 py-2 text-sm">
       <span class="font-semibold">
         Fora de uso ({disposalTypeLabel(computer.disposalType)}) desde
         {formatDateTime(computer.disposedAt)}:
@@ -512,39 +558,19 @@
   {/if}
 
   <StatCardGrid ui={{ className: 'lg:grid-cols-2 xl:grid-cols-4' }}>
-    <StatCard
-      data={{
-        label: 'Condição dos recursos',
-        value: `${computer.healthScore}/100`,
-        hint: 'Capacidade e condição da máquina',
-        tooltip:
-          'Começa em 100 pontos. Perde 12 por aviso de atenção (RAM instalada abaixo de 8 GB, menos de 10% do disco livre ou mais de 30 dias sem reiniciar) e 25 por aviso crítico (menos de 5% do disco livre). Picos de uso de CPU e RAM aparecem nos alertas, mas não alteram esta pontuação.',
-      }}
-      ui={{ tone: CARD_TONES[computer.healthStatus], icon: ShieldCheck, className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }}
-    />
+    <ContentCard data={{ label: 'Condição dos recursos', title: 'Condição dos recursos', meta: 'Começa em 100 pontos. Perde 12 por aviso de atenção (RAM instalada abaixo de 8 GB, menos de 10% do disco livre ou mais de 30 dias sem reiniciar) e 25 por aviso crítico (menos de 5% do disco livre). Picos de uso de CPU e RAM aparecem nos alertas, mas não alteram esta pontuação.', highlight: { value: `${computer.healthScore}/100`, hint: 'Capacidade e condição da máquina' } }} ui={{ icon: ShieldCheck, iconTone: CARD_TONES[computer.healthStatus], className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }} />
     <!-- O rótulo muda junto com a origem do número: com o agente ligado é "agora"; com ele
          fora do ar vira "na última leitura", porque é o que o número é. Um cartão que diz
          "agora" em cima de um retrato de minutos atrás faz decidir errado. -->
-    <StatCard
-      data={{ label: `Processador ${nowSuffix}`, value: formatPercent(now.cpuPercent), hint: 'Uso total do processador' }}
-      ui={{ tone: 'info', icon: Cpu, className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }}
-      state={{ isLoading: viewState?.isSamplesLoading }}
-    />
-    <StatCard
-      data={{ label: `Memória ${nowSuffix}`, value: formatPercent(now.memoryPercent), hint: live ? `${formatBytes(live.memory.usedBytes)} de ${formatBytes(live.memory.totalBytes)}` : 'Memória em uso' }}
-      ui={{ tone: 'info', icon: MemoryStick, className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }}
-      state={{ isLoading: viewState?.isSamplesLoading }}
-    />
-    <StatCard
-      data={{ label: `Disco ${nowSuffix}`, value: formatPercent(now.diskPercent), hint: 'Espaço ocupado nos volumes' }}
-      ui={{ tone: 'brand', icon: HardDrive, className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }}
-      state={{ isLoading: viewState?.isSamplesLoading }}
-    />
+    <ContentCard data={{ label: `Processador ${nowSuffix}`, title: `Processador ${nowSuffix}`, highlight: { value: formatPercent(now.cpuPercent), hint: 'Uso total do processador' } }} ui={{ icon: Cpu, iconTone: 'info', className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }} state={{ isLoading: viewState?.isSamplesLoading }} />
+    <ContentCard data={{ label: `Memória ${nowSuffix}`, title: `Memória ${nowSuffix}`, highlight: { value: formatPercent(now.memoryPercent), hint: live ? `${formatBytes(live.memory.usedBytes)} de ${formatBytes(live.memory.totalBytes)}` : 'Memória em uso' } }} ui={{ icon: MemoryStick, iconTone: 'info', className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }} state={{ isLoading: viewState?.isSamplesLoading }} />
+    <ContentCard data={{ label: `Disco ${nowSuffix}`, title: `Disco ${nowSuffix}`, highlight: { value: formatPercent(now.diskPercent), hint: 'Espaço ocupado nos volumes' } }} ui={{ icon: HardDrive, iconTone: 'brand', className: '[&>div:last-child]:flex-col [&>div:last-child]:items-start' }} state={{ isLoading: viewState?.isSamplesLoading }} />
   </StatCardGrid>
 
   <!-- O que baixou a nota vem antes de tudo: é a razão de alguém abrir esta tela. -->
-  <section class="bg-card rounded-surface border p-4">
-    <h2 class="text-ink-900 mb-2 text-sm font-semibold">O que precisa de atenção</h2>
+  <ContentCard data={{ label: 'O que precisa de atenção', title: 'O que precisa de atenção' }}>
+{#snippet body()}
+<div class="pb-1">
     {#if computer.warnings.length === 0}
       <div class="flex items-start gap-3">
         <CircleCheck class="text-success mt-0.5 size-5 shrink-0" aria-hidden="true" />
@@ -565,37 +591,44 @@
         {/each}
       </ul>
     {/if}
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 
-  <section class="bg-card rounded-surface border p-4">
-    <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-      <h2 class="text-ink-900 text-sm font-semibold">O que está acontecendo agora</h2>
-      {#if live}
-        <span class="text-ink-500 shrink-0 text-xs">Lido {formatTimeAgo(live.receivedAt)}</span>
-      {/if}
-    </div>
+  <ContentCard data={{ label: 'O que está acontecendo agora', title: 'O que está acontecendo agora', meta: live ? `Lido ${formatTimeAgo(live.receivedAt)}` : null }}>
+{#snippet body()}
+<div class="pb-1">
     <ComputerLivePanel data={{ live }} state={{ isLoading: viewState?.isLiveLoading }} />
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 
-  <section class="bg-card rounded-surface border p-4">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">Aplicativos que mais pesam</h2>
+  <ContentCard data={{ label: 'Aplicativos que mais pesam', title: 'Aplicativos que mais pesam' }}>
+{#snippet body()}
+<div class="pb-1">
     <ComputerProcessTable
       data={{ processes: live?.processes ?? [] }}
       state={{ isLoading: viewState?.isLiveLoading }}
     />
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 
-  <section class="bg-card rounded-surface border p-4">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">Uso das últimas 24 horas</h2>
+  <ContentCard data={{ label: 'Uso das últimas 24 horas', title: 'Uso das últimas 24 horas' }}>
+{#snippet body()}
+<div class="pb-1">
     <UsageChart
       data={{ points }}
       state={{ isLoading: viewState?.isSamplesLoading }}
       ui={{ emptyLabel: 'Esta máquina ainda não enviou nenhuma leitura.' }}
     />
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 
-  <section class="bg-card rounded-surface border p-4">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">O que tem dentro</h2>
+  <ContentCard data={{ label: 'O que tem dentro', title: 'O que tem dentro' }}>
+{#snippet body()}
+<div class="pb-1">
     <dl class="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
       {#each facts as fact (fact.label)}
         <div class="min-w-0">
@@ -604,15 +637,19 @@
         </div>
       {/each}
     </dl>
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 
-  <section class="bg-card rounded-surface border p-4">
-    <div class="mb-3 flex items-center justify-between">
-      <h2 class="text-ink-900 text-sm font-semibold">Alertas</h2>
+  <ContentCard data={{ label: 'Alertas', title: 'Alertas' }}>
+{#snippet tools()}
       {#if data.alerts.length > 0}
         <TableViewToggle />
       {/if}
-    </div>
+    {/snippet}
+{#snippet body()}
+<div class="pb-1">
+    
     {#if viewState?.isAlertsLoading}
       <p class="text-ink-500 py-6 text-center text-sm">Carregando os alertas…</p>
     {:else if data.alerts.length === 0}
@@ -627,12 +664,10 @@
         data-slot="alert-cards-mobile"
       >
         {#each data.alerts as alert (alert.id)}
-          <!-- A cor da situação entra por onde o mouse entrou (`hover-fill`, em tokens.css). -->
-          <div
-            use:fillFromPointer
-            style:--fill-color={fillColorOf(alert.recoveredAt ? 'neutral' : 'danger')}
-            class="hover-fill border-border bg-card rounded-surface border p-3 shadow-xs"
-          >
+          <!-- A situação está no selo: o hover do card é só o véu neutro (padrão Apple). -->
+          <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-3">
             <div class="flex items-start justify-between gap-2">
               <span class="font-medium text-ink-900 text-sm">
                 {metricLabel(alert.metric)}
@@ -667,6 +702,8 @@
               </div>
             {/if}
           </div>
+{/snippet}
+</ContentCard>
         {/each}
       </div>
 
@@ -731,11 +768,12 @@
         actions={{ onPageChange: actions.onAlertPageChange }}
       />
     {/if}
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 
-  <section class="bg-card rounded-surface border p-4">
-    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-      <h2 class="text-ink-900 text-sm font-semibold">Manutenções desta máquina</h2>
+  <ContentCard data={{ label: 'Manutenções desta máquina', title: 'Manutenções desta máquina' }}>
+{#snippet tools()}
       {#if !disposed}
         <ActionButton
           data={{ label: 'Registrar manutenção' }}
@@ -743,7 +781,10 @@
           actions={{ onClick: actions.onRegisterMaintenance }}
         />
       {/if}
-    </div>
+    {/snippet}
+{#snippet body()}
+<div class="pb-1">
+    
 
     {#if viewState?.isMaintenancesLoading}
       <p class="text-ink-500 py-6 text-center text-sm">Carregando o histórico…</p>
@@ -777,10 +818,13 @@
         {/each}
       </ul>
     {/if}
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 
-  <section class="bg-card rounded-surface border p-4">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">Chamados desta máquina</h2>
+  <ContentCard data={{ label: 'Chamados desta máquina', title: 'Chamados desta máquina' }}>
+{#snippet body()}
+<div class="pb-1">
 
     {#if viewState?.isTicketsLoading}
       <p class="text-ink-500 text-sm">Carregando os chamados…</p>
@@ -824,10 +868,13 @@
         actions={{ onPageChange: actions.onTicketPageChange }}
       />
     {/if}
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 
-  <section class="bg-card rounded-surface border p-4">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">Por onde esta máquina andou</h2>
+  <ContentCard data={{ label: 'Por onde esta máquina andou', title: 'Por onde esta máquina andou' }}>
+{#snippet body()}
+<div class="pb-1">
 
     {#if viewState?.isTransfersLoading}
       <p class="text-ink-500 py-6 text-center text-sm">Carregando o histórico…</p>
@@ -866,10 +913,13 @@
         {/each}
       </ul>
     {/if}
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 
-  <section class="bg-card rounded-surface border p-4">
-    <h2 class="text-ink-900 mb-3 text-sm font-semibold">Peças que esta máquina recebeu</h2>
+  <ContentCard data={{ label: 'Peças que esta máquina recebeu', title: 'Peças que esta máquina recebeu' }}>
+{#snippet body()}
+<div class="pb-1">
 
     {#if viewState?.isPartsLoading}
       <p class="text-ink-500 py-6 text-center text-sm">Carregando as peças…</p>
@@ -904,7 +954,9 @@
         {/each}
       </ul>
     {/if}
-  </section>
+  </div>
+{/snippet}
+</ContentCard>
 </div>
 
 <ConfirmDialog

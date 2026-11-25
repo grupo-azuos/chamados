@@ -1,3 +1,24 @@
+<!--
+  @component
+  O DEPÓSITO DA MANUTENÇÃO: quanto há de cada produto, e os dois botões que mudam o número.
+
+  São os mesmos produtos do Inventário, lidos de outro jeito: lá importa O QUE é o produto (foto,
+  lugar, etiqueta), aqui importa QUANTO há — e por NOME: "Cadeira", "CADEIRA" e "cadeira" são um
+  cartão só, com a soma dos saldos e quantos cadastros o nome tem. Por isso o saldo é a caixinha de número do cartão
+  (`AzuosContentCard`), com a unidade, e a foto nem aparece. Tem a busca, o filtro de categoria e o atalho
+  "Sem estoque" (com quantos zeraram);
+  cada cartão mostra o nome, a categoria e o lugar, os chamados ligados, o saldo com a unidade,
+  "Entrada" e "Saída" — que fica apagada sem estoque, em vez de abrir um diálogo que o servidor
+  recusaria. Depósito vazio é inventário vazio: o aviso leva ao Inventário.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
+  filtrada sem resultado e em erro.
+
+  - `data`: `groups` (um por nome), `total`, `outOfStock` e `filter`.
+  - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated` e `error`.
+  - `actions`: filtros (`onSearchChange`, `onCategoryChange`, `onOutOfStockOnlyChange`,
+    `onClearFilters`), `onRetry`, `onEntry(group)`, `onExit(group)` e `onOpenInventory`.
+-->
 <script lang="ts" module>
   import {
     inventoryCategoryLabel,
@@ -5,7 +26,7 @@
     inventoryUnitLabel,
     type InventoryCategory,
   } from '@template/shared/domain/inventory-catalog.util';
-  import { type InventoryItem } from '@template/shared/schemas/inventory-item.schema';
+  import { type StockGroup } from '$lib/utils/inventory-stock-group.util';
 
   /**
    * O DEPÓSITO DA MANUTENÇÃO: quanto há de cada produto, e os dois botões que mudam o número.
@@ -25,7 +46,7 @@
 
   export type AzuosStockListViewProps = {
     data: {
-      items: InventoryItem[];
+      groups: StockGroup[];
       total: number;
       outOfStock: number;
       filter: StockListFilterValues;
@@ -44,8 +65,8 @@
       onOutOfStockOnlyChange: (outOfStockOnly: boolean) => void;
       onClearFilters: () => void;
       onRetry: () => void;
-      onEntry: (item: InventoryItem) => void;
-      onExit: (item: InventoryItem) => void;
+      onEntry: (group: StockGroup) => void;
+      onExit: (group: StockGroup) => void;
       onOpenInventory: () => void;
     };
   };
@@ -58,17 +79,22 @@
   import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
   import Package from '@lucide/svelte/icons/package';
 
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+    import { inventoryCategoryIconOf } from '$lib/utils/record-icon.util';
 
   let { data, state: listState, actions }: AzuosStockListViewProps = $props();
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  const cardPage = useCardPage(() => data.groups);
 
   const hasActiveFilter = $derived(
     data.filter.search.trim() !== '' || data.filter.category !== '' || data.filter.outOfStockOnly,
@@ -79,13 +105,16 @@
     data.outOfStock > 0 ? `Sem estoque (${data.outOfStock})` : 'Sem estoque',
   );
 
-  /* A linha de baixo do nome: categoria e lugar, sem repetir rótulo nenhum. */
-  function detailOf(item: InventoryItem): string {
-    return [inventoryCategoryLabel(item.category), item.location].filter(Boolean).join(' · ');
+  /* A linha de baixo do nome: a categoria e, com um cadastro só, o lugar; com vários, quantos
+     estão em uso (as cadeiras com pessoa e lugar no Inventário). */
+  function detailOf(group: StockGroup): string {
+    const where = group.items.length > 1 ? `${group.items.length} em uso` : group.items[0]?.location;
+
+    return [inventoryCategoryLabel(group.category), where].filter(Boolean).join(' · ');
   }
 </script>
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-5">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Depósito',
@@ -93,7 +122,9 @@
     }}
   />
 
-  <div class="rounded-surface border-border bg-card flex flex-col gap-3 border p-4 shadow-xs">
+  <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-3 p-4">
     <TextField
       data={{
         label: 'Buscar',
@@ -138,6 +169,8 @@
       {/if}
     </div>
   </div>
+{/snippet}
+</ContentCard>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2). -->
   {#if listState.error}
@@ -180,57 +213,77 @@
         {data.total === 1 ? 'produto' : 'produtos'}
       </p>
 
-      <!-- Uma coluna no celular, duas no tablet, três no monitor: o número precisa de espaço. -->
-      <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {#each data.items as item (item.id)}
-          <li class="rounded-surface border-border bg-card flex flex-col gap-3 border p-4 shadow-xs">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <h3 class="text-ink-900 text-sm leading-tight font-semibold">{item.name}</h3>
-                <p class="text-ink-500 mt-1 text-xs">{detailOf(item)}</p>
-                <TicketStockLinks
-                  data={{
-                    links: item.ticketLinks,
-                    balance: item.balance,
-                    ticketsPath: '/maintenance/tickets',
-                  }}
-                />
-              </div>
-
-              <div class="shrink-0 text-right">
-                <p class="text-ink-900 text-2xl leading-none font-semibold tabular-nums">
-                  {item.balance}
-                </p>
-                <p class="text-muted-foreground mt-1 text-xs">{inventoryUnitLabel(item.unit)}</p>
-              </div>
-            </div>
-
-            <div class="mt-auto flex flex-wrap items-center justify-between gap-2">
-              {#if item.balance === 0}
-                <StatusBadge data={{ label: 'Sem estoque' }} ui={{ tone: 'danger', size: 'sm' }} />
-              {:else}
-                <span></span>
-              {/if}
-
-              <div class="flex items-center gap-2">
-                <ActionButton
-                  data={{ label: 'Entrada' }}
-                  ui={{ variant: 'secondary', size: 'sm', icon: ArrowDownLeft }}
-                  actions={{ onClick: () => actions.onEntry(item) }}
-                />
-                <!-- Sem estoque não há o que tirar: o botão fica apagado em vez de abrir um
-                     diálogo que só serviria para o servidor recusar. -->
-                <ActionButton
-                  data={{ label: 'Saída' }}
-                  ui={{ variant: 'secondary', size: 'sm', icon: ArrowUpRight }}
-                  state={{ isDisabled: item.balance === 0 }}
-                  actions={{ onClick: () => actions.onExit(item) }}
-                />
-              </div>
-            </div>
-          </li>
+      <!-- A grade padrão de cards (`card-grid`). O depósito não tem ficha: o cartão não abre nada,
+           e as ações (Entrada, Saída) moram no rodapé. -->
+      <div class="card-grid" data-slot="stock-cards">
+        {#each cardPage.items as item (item.key)}
+          <ContentCard
+            data={{
+              label: item.name,
+              title: item.name,
+              code: item.items.length === 1 ? item.items[0]!.code : null,
+              meta: detailOf(item),
+              status:
+                item.balance === 0
+                  ? { label: 'Sem estoque', tone: 'danger' }
+                  : { label: 'Com estoque', tone: 'success' },
+              metrics: [
+                {
+                  key: 'balance',
+                  label: inventoryUnitLabel(item.unit),
+                  value: String(item.balance),
+                  tone: item.balance === 0 ? 'danger' : 'success',
+                },
+              ],
+            }}
+            ui={{
+              icon: inventoryCategoryIconOf(item.category),
+              iconTone: item.balance === 0 ? 'danger' : 'slate',
+              slot: 'stock-card',
+            }}
+          >
+            {#snippet notes()}
+              <TicketStockLinks
+                data={{
+                  links: item.ticketLinks,
+                  balance: item.balance,
+                  ticketsPath: '/maintenance/tickets',
+                }}
+              />
+            {/snippet}
+            {#snippet footerActions()}
+              <ActionButton
+                data={{ label: 'Entrada' }}
+                ui={{ variant: 'secondary', size: 'sm', icon: ArrowDownLeft }}
+                actions={{ onClick: () => actions.onEntry(item) }}
+              />
+              <!-- Sem estoque não há o que tirar: o botão fica apagado em vez de abrir um
+                   diálogo que só serviria para o servidor recusar. -->
+              <ActionButton
+                data={{ label: 'Saída' }}
+                ui={{ variant: 'secondary', size: 'sm', icon: ArrowUpRight }}
+                state={{ isDisabled: item.balance === 0 }}
+                actions={{ onClick: () => actions.onExit(item) }}
+              />
+            {/snippet}
+          </ContentCard>
         {/each}
-      </ul>
+      </div>
+      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
+           fileira. A barra só aparece quando há mais de uma página. -->
+      {#if cardPage.total > cardPage.pageSize}
+        <div class="flex justify-center">
+          <PaginationBar
+            data={{
+              page: cardPage.page,
+              pageSize: cardPage.pageSize,
+              total: cardPage.total,
+              noun: ['produto', 'produtos'],
+            }}
+            actions={{ onPageChange: cardPage.actions.onPageChange }}
+          />
+        </div>
+      {/if}
 
       {#if listState.isTruncated}
         <p class="text-muted-foreground text-xs">

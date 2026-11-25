@@ -1,17 +1,22 @@
+<!--
+  @component
+  A BARRA DE FORÇA — quatro blocos e uma lista do que falta.
+
+  Ela informa, e não tranca: o botão de enviar obedece ao schema, que é o mesmo que o servidor
+  confere. Travar o envio aqui criaria uma regra que só existe na tela.
+
+  Um bloco acende por critério cumprido, e a cor sobe junto: um critério é vermelho, dois e três
+  amarelo, os quatro verde. A lista embaixo existe porque a barra sozinha não ensina: com os quatro
+  itens à vista a pessoa vê qual deles falta.
+
+  A cor NUNCA é o único sinal: cada item tem ícone e o rótulo diz o nível por extenso.
+
+  - `data`: a força já calculada (`strength`).
+  - `ui`: classes extras.
+-->
 <script lang="ts" module>
   import type { PasswordStrength } from '$lib/utils/password-strength.util';
 
-  /**
-   * A BARRA DE FORÇA — quatro blocos e uma lista do que falta.
-   *
-   * Ela informa, e não tranca: o botão de enviar obedece ao schema, que é o mesmo que o servidor
-   * confere. Travar o envio aqui criaria uma regra que só existe na tela.
-   *
-   * A lista embaixo existe porque a barra sozinha não ensina: com os quatro itens à vista a pessoa
-   * vê qual deles falta.
-   *
-   * A cor NUNCA é o único sinal: cada item tem ícone e o rótulo diz o nível por extenso.
-   */
   export type AzuosPasswordStrengthMeterProps = {
     data: { strength: PasswordStrength };
     ui?: { className?: string };

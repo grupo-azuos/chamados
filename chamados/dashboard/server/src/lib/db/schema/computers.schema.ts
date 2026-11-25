@@ -46,9 +46,16 @@ export const computers = chamadosSchema.table(
     /* O hostname mais recente do agente. Antes da primeira leitura, mantém o nome do cadastro. */
     name: text('name').notNull().unique(),
     displayName: text('display_name'),
-    responsibleName: text('responsible_name'),
-    /* O NOME do departamento, como o RH o escreve — ver `department.util.ts`. */
-    department: text('department'),
+    /* A PESSOA responsável, pelo id do diretório do escritório (admin-console). O nome e a foto
+       são lidos de lá na hora: nome gravado aqui envelhece na primeira troca de sobrenome. Sem
+       chave estrangeira porque a pessoa não mora neste banco — quem confere é o service. */
+    responsibleId: text('responsible_id'),
+    /* O departamento OFICIAL, pelo id do item na lista "Departamentos" do RH. Mesmo motivo:
+       o RH renomeia sem reescrever nada aqui, e o nome vem do catálogo na hora. */
+    departmentId: integer('department_id'),
+    /* A observação do TI. É também onde as migrações 0025 e 0027 guardaram o responsável, o
+       departamento sem par e o local antigos — nada do que estava escrito se perdeu. */
+    notes: text('notes'),
     /* Desktop ou notebook, escolhido no cadastro. O padrão só existe para as máquinas que já
        estavam cadastradas antes do campo: elas entram como desktop e o TI corrige as que não são. */
     kind: text('kind', { enum: COMPUTER_KINDS }).notNull().default('desktop'),
@@ -124,7 +131,8 @@ export const computers = chamadosSchema.table(
     updatedBy: text('updated_by'),
   },
   (table) => [
-    index('computers_department_idx').on(table.department),
+    index('computers_department_id_idx').on(table.departmentId),
+    index('computers_responsible_id_idx').on(table.responsibleId),
     index('computers_health_status_idx').on(table.healthStatus),
     index('computers_last_seen_idx').on(table.lastSeenAt),
     /* O agente chega dizendo só o nome: esta busca acontece em toda conexão. */

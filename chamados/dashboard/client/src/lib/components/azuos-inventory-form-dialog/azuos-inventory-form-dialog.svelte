@@ -1,3 +1,22 @@
+<!--
+  @component
+  O formulário de cadastrar produto do inventário e o de corrigir o cadastro dele, num modal.
+
+  Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e a foto
+  chega como um endereço para mostrar. Por isso o modal abre no Storybook preenchido, com foto, com
+  erro ou enviando — sem servidor e sem biblioteca de formulário no meio.
+
+  A FOTO é um campo à parte, com erro próprio: recusar a imagem não pode apagar o que a pessoa já
+  digitou, e o motivo da recusa precisa aparecer ao lado dela, não no rodapé.
+
+  Na edição, um controle segmentado alterna entre "Dados do produto" e a "Linha do tempo" do produto
+  (`AzuosInventoryItemTimeline`).
+
+  Props: `data` traz o modo, os campos, a foto, os departamentos, as pessoas e a linha do tempo;
+  `state` diz se está aberto, enviando, com erro (do formulário e da foto) e o estado da linha do
+  tempo; `actions` recebe a digitação, a foto escolhida ou removida, o envio, o fechar e as ações da
+  linha do tempo.
+-->
 <script lang="ts" module>
   import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
   import {
@@ -21,22 +40,14 @@
     | 'code'
     | 'note';
 
-  /**
-   * O formulário de cadastrar produto do inventário e o de corrigir o cadastro dele, num modal.
-   *
-   * Função pura de props: o valor e o erro de cada campo chegam prontos (`FormFieldState`), e
-   * a foto chega como um endereço para mostrar. Por isso o modal abre no Storybook preenchido,
-   * com foto, com erro ou enviando — sem servidor e sem biblioteca de formulário no meio.
-   *
-   * A FOTO é um campo à parte, com erro próprio: recusar a imagem não pode apagar o que a
-   * pessoa já digitou, e o motivo da recusa precisa aparecer ao lado dela, não no rodapé.
-   */
   export type AzuosInventoryFormDialogProps = {
     data: {
       mode: 'create' | 'edit';
       fields: Record<InventoryFormField, FormFieldState>;
       photo: { previewUrl: string | null; fileName: string | null };
       departments?: string[];
+      /** Os nomes de produto que já existem — o campo de nome oferece estes antes de cadastrar outro. */
+      names?: string[];
       users?: { id: string; name: string }[];
       timeline?: {
         events: InventoryItemEvent[];
@@ -84,13 +95,16 @@
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ComboboxField from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
+  import PersonPickerField, {
+    type AzuosPersonPickerPerson,
+  } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import AzuosInventoryItemTimeline from '$lib/components/azuos-inventory-item-timeline/azuos-inventory-item-timeline.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import { cn } from '$lib/utils/cn';
   import {
     Dialog,
     DialogDescription,
@@ -107,7 +121,7 @@
   function buildDepartmentOptions(departments: string[] | undefined, current: string) {
     const list = departments ?? [];
     const options = [
-      { value: '', label: 'Nenhum' },
+      { value: '', label: '(Nenhum)' },
       ...list.map((dep) => ({ value: dep, label: dep })),
     ];
     if (current && !list.includes(current)) {
@@ -116,30 +130,39 @@
     return options;
   }
 
-  function buildUserOptions(
+  /**
+   * As pessoas do campo "Usuário / Responsável": as do admin-console e, se a ficha aponta para
+   * alguém que não está mais lá, essa pessoa também — o campo não pode esvaziar sozinho.
+   */
+  function peopleOf(
     users: { id: string; name: string }[] | undefined,
     currentId: string,
     currentName: string,
-  ) {
-    const list = users ?? [];
-    const options = [
-      { value: '', label: 'Nenhum' },
-      ...list.map((u) => ({ value: u.id, label: u.name, personName: u.name })),
-    ];
-    if (!currentId) return options;
-    if (list.some((u) => u.id === currentId)) return options;
+  ): AzuosPersonPickerPerson[] {
+    const people = (users ?? []).map((user) => ({ id: user.id, name: user.name, photo: null }));
+    if (!currentId || people.some((person) => person.id === currentId)) return people;
 
-    const display = currentName || currentId;
-    options.splice(1, 0, { value: currentId, label: display, personName: display });
-    return options;
+    return [{ id: currentId, name: currentName || currentId, photo: null }, ...people];
   }
+
+
+  /* Os nomes que já existem, e o que está no campo (um nome novo, ainda não salvo). Sem diferença
+     de maiúscula: o combobox só oferece "Cadastrar" quando nenhum nome bate. */
+  const nameOptions = $derived.by(() => {
+    const current = fields.name.value.trim();
+    const names = data.names ?? [];
+    const known = names.some((name) => name.toLowerCase() === current.toLowerCase());
+    const all = current && !known ? [current, ...names] : names;
+
+    return all.map((name) => ({ value: name, label: name }));
+  });
 
   const departmentOptions = $derived(
     buildDepartmentOptions(data.departments, fields.department?.value?.trim() ?? ''),
   );
 
-  const userOptions = $derived(
-    buildUserOptions(
+  const userPeople = $derived(
+    peopleOf(
       data.users,
       fields.userId?.value?.trim() ?? '',
       fields.userName?.value?.trim() ?? '',
@@ -201,59 +224,50 @@
       </DialogHeader>
 
       {#if isEdit}
-        <div class="border-border flex gap-4 border-b">
-          <button
-            type="button"
-            class={cn(
-              'border-b-2 px-1 pb-2 text-sm font-medium transition-colors cursor-pointer',
-              activeTab === 'details'
-                ? 'border-primary text-primary font-semibold'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
-            )}
-            onclick={() => (activeTab = 'details')}
-          >
-            Dados do produto
-          </button>
-          <button
-            type="button"
-            class={cn(
-              'border-b-2 px-1 pb-2 text-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5',
-              activeTab === 'timeline'
-                ? 'border-primary text-primary font-semibold'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
-            )}
-            onclick={() => (activeTab = 'timeline')}
-          >
-            Linha do tempo
-            {#if data.timeline && data.timeline.events.length > 0}
-              <span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground font-semibold">
-                {data.timeline.events.length}
-              </span>
-            {/if}
-          </button>
-        </div>
+        <!-- Duas vistas do mesmo produto: o controle segmentado, com a escolhida em branco. -->
+        <SegmentedControl
+          data={{
+            value: activeTab,
+            options: [
+              { value: 'details', label: 'Dados do produto' },
+              {
+                value: 'timeline',
+                label: data.timeline?.events.length
+                  ? `Linha do tempo (${data.timeline.events.length})`
+                  : 'Linha do tempo',
+              },
+            ],
+          }}
+          ui={{ ariaLabel: 'Vista do produto', className: 'w-fit' }}
+          actions={{ onChange: (value) => (activeTab = value as 'details' | 'timeline') }}
+        />
       {/if}
 
       {#if !isEdit || activeTab === 'details'}
         <form novalidate class="flex flex-col gap-4.5" onsubmit={handleSubmit}>
 
-      <TextField
-        data={{
-          label: 'Nome do produto',
-          name: 'name',
-          value: fields.name.value,
-          placeholder: 'Ex: Cadeira giratória, Café em pó 500 g',
-        }}
-        state={{
-          error: fields.name.error,
-          isDisabled: dialogState.isSubmitting,
-          isAutoFocused: true,
-        }}
-        actions={{
-          onChange: (value: string) => actions.onChange('name', value),
-          onBlur: () => actions.onBlur('name'),
-        }}
-      />
+      <!-- O nome é ESCOLHIDO entre os que existem, ou cadastrado ali mesmo: o Depósito agrupa
+           pelo nome, e "CADEIRA" ao lado de "Cadeira" virariam dois produtos. -->
+      <div class="flex flex-col gap-1.5">
+        <span class="text-ink-700 text-sm font-medium">Nome do produto</span>
+        <ComboboxField
+          data={{ value: fields.name.value, options: nameOptions }}
+          ui={{
+            placeholder: 'Ex: Cadeira giratória, Café em pó 500 g',
+            searchPlaceholder: 'Buscar ou digitar o nome…',
+            createLabel: 'Cadastrar',
+            ariaLabel: 'Nome do produto',
+          }}
+          state={{ isDisabled: dialogState.isSubmitting, isInvalid: Boolean(fields.name.error) }}
+          actions={{
+            onChange: (value: string) => actions.onChange('name', value),
+            onCreate: (value: string) => actions.onChange('name', value.trim()),
+          }}
+        />
+        {#if fields.name.error}
+          <p class="text-destructive text-xs">{fields.name.error}</p>
+        {/if}
+      </div>
 
       <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
         <div class="flex flex-col gap-1.5">
@@ -334,21 +348,15 @@
 
         <div class="flex flex-col gap-1.5">
           <span class="text-ink-700 text-sm font-medium">Usuário / Responsável</span>
-          <ComboboxField
+          <PersonPickerField
             data={{
               value: fields.userId?.value ?? '',
-              options: userOptions,
+              people: userPeople,
+              leading: [{ value: '', label: '(Nenhum)' }],
             }}
-            ui={{
-              placeholder: 'Vincular a um usuário (opcional)',
-              searchPlaceholder: 'Buscar usuário no admin-console…',
-              emptyLabel: 'Nenhum usuário encontrado.',
-              ariaLabel: 'Usuário',
-            }}
+            ui={{ ariaLabel: 'Usuário', placeholder: 'Vincular a um usuário (opcional)' }}
             state={{ isDisabled: dialogState.isSubmitting }}
-            actions={{
-              onChange: handleUserChange,
-            }}
+            actions={{ onChange: handleUserChange }}
           />
           {#if fields.userId?.error}
             <p class="text-destructive text-xs">{fields.userId.error}</p>

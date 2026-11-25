@@ -3,15 +3,9 @@ import {
   INVENTORY_UNITS,
 } from '@template/shared/domain/inventory-catalog.util';
 import { sql } from 'drizzle-orm';
-import {
-  check,
-  index,
-  integer,
-  serial,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core';
+import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
+import { archiveColumns } from '../archive.util';
 import { chamadosSchema } from './chamados.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
@@ -58,13 +52,18 @@ export const inventoryItems = chamadosSchema.table(
     createdBy: text('created_by').notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }),
     updatedBy: text('updated_by'),
+    /* Excluir ARQUIVA: o produto some do inventário com o extrato e a foto guardados. */
+    ...archiveColumns(),
   },
   (table) => [
     index('inventory_items_category_idx').on(table.category),
     index('inventory_items_name_idx').on(table.name),
     index('inventory_items_department_idx').on(table.department),
     index('inventory_items_user_id_idx').on(table.userId),
-    check('inventory_items_category_valid', sql`${table.category} in (${valuesFor(INVENTORY_CATEGORIES)})`),
+    check(
+      'inventory_items_category_valid',
+      sql`${table.category} in (${valuesFor(INVENTORY_CATEGORIES)})`,
+    ),
     check('inventory_items_unit_valid', sql`${table.unit} in (${valuesFor(INVENTORY_UNITS)})`),
     /* Saldo negativo é entrada esquecida. A API já recusa a saída que não cabe; esta é a
        trava de trás, para o caso de duas saídas passarem juntas. */

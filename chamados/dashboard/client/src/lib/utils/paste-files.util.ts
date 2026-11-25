@@ -8,7 +8,9 @@
  *
  * Campo sem `multiple` recebe só o primeiro arquivo; campo desabilitado não recebe nada.
  */
-export function pasteFilesIntoInput(event: ClipboardEvent & { currentTarget: EventTarget & HTMLElement }): void {
+export function pasteFilesIntoInput(
+  event: ClipboardEvent & { currentTarget: EventTarget & HTMLElement },
+): void {
   const input = event.currentTarget.querySelector<HTMLInputElement>('input[type="file"]');
   const pasted = Array.from(event.clipboardData?.files ?? []);
   if (!input || input.disabled || pasted.length === 0) return;

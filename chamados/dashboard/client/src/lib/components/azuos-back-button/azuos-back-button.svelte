@@ -1,16 +1,23 @@
+<!--
+  @component
+  BOTÃO DE VOLTAR CANÔNICO DO GRUPO AZUOS.
+
+  Regra absoluta de navegação da casa: todo retorno de página de detalhe/entidade utiliza
+  EXCLUSIVAMENTE este formato (`← Voltar para [destino]`). É um link de texto limpo, sem
+  moldura, sem caixa cinza, sem sombra e sem fundo: texto azul da marca (`text-brand-blue-700`),
+  sublinhado no hover, com seta fina de 14px à esquerda. É cópia fiel do voltar do paralegal
+  ("Voltar para empresas"), que é a referência do grupo — não mude o desenho aqui.
+
+  É proibido criar botões de voltar com variantes `outline`, circulares com ícone isolado,
+  botões cinzas ou textos arbitrários fora dessa convenção.
+
+  - `data`: o destino ("Voltar para [destino]"), um rótulo explícito e o caminho `to` — com ele,
+    vira um link.
+  - `ui`: classe extra.
+  - `state`: desligado.
+  - `actions`: `onClick`. Sem ele e sem `to`, volta pelo histórico do navegador.
+-->
 <script lang="ts" module>
-  /**
-   * BOTÃO DE VOLTAR CANÔNICO DO GRUPO AZUOS.
-   *
-   * Regra absoluta de navegação da casa: todo retorno de página de detalhe/entidade utiliza
-   * EXCLUSIVAMENTE este formato (`← Voltar para [destino]`). É um link de texto limpo, sem
-   * moldura, sem caixa cinza, sem sombra e sem fundo: texto azul da marca (`text-brand-blue-700`),
-   * sublinhado no hover, com seta fina de 14px à esquerda. É cópia fiel do voltar do paralegal
-   * ("Voltar para empresas"), que é a referência do grupo — não mude o desenho aqui.
-   *
-   * É proibido criar botões de voltar com variantes `outline`, circulares com ícone isolado,
-   * botões cinzas ou textos arbitrários fora dessa convenção.
-   */
   export type AzuosBackButtonProps = {
     data: {
       /** Nome amigável do destino, para compor "Voltar para [destination]". */

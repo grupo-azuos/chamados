@@ -1,3 +1,15 @@
+<!--
+  @component
+  UM ACONTECIMENTO DO GITHUB na agenda — pull request, issue ou merge local — como etiqueta azul
+  clicável que abre o item no GitHub em nova aba.
+
+  Mostra o horário, o tipo, o número e o título. Ao passar o mouse, a dica completa: tipo, número,
+  situação (aberta, resolvida, mergeado, fechado), título, projeto, autor e data. Só leitura.
+
+  - `event`: o acontecimento da linha do tempo do projeto.
+  - `compact`: a etiqueta menor, para a visão de mês.
+  - `inTimeGrid`: o bloco que ocupa a altura do horário na grade da semana, com o título em cima.
+-->
 <script lang="ts">
   import { type SoftwareTimelineEvent } from '@template/shared/schemas/software-timeline.schema';
 
@@ -55,7 +67,7 @@
         target="_blank"
         rel="noreferrer"
         aria-label="{kind} {event.externalId ?? ''}: {event.title}"
-        class="block overflow-hidden border border-border bg-primary-soft text-primary transition {inTimeGrid
+        class="block overflow-hidden bg-primary-soft text-primary transition {inTimeGrid
           ? 'h-full rounded-box p-2 text-xs'
           : compact
             ? 'truncate rounded-chip px-1 py-0.5 text-xs'

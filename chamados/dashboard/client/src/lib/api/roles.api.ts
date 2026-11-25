@@ -13,6 +13,9 @@ import { apiRequest } from './http-client';
 export const rolesApi = {
   list: () => apiRequest<InternalRole[]>('/roles'),
 
+  /** Os módulos tirados — o bloco "Removidos" da equipe. */
+  listArchived: () => apiRequest<InternalRole[]>('/roles', { query: { archived: 'only' } }),
+
   listUsers: () => apiRequest<DirectoryUser[]>('/roles/users'),
 
   listByUser: (identifier: string) =>
@@ -23,5 +26,8 @@ export const rolesApi = {
   assignMany: (body: AssignRolesInput) =>
     apiRequest<InternalRole[]>('/roles/batch', { method: 'POST', body }),
 
+  /** Tira o módulo ARQUIVANDO: a pessoa perde o acesso na hora, e `restore` devolve. */
   remove: (id: number) => apiRequest<void>(`/roles/${id}`, { method: 'DELETE' }),
+
+  restore: (id: number) => apiRequest<InternalRole>(`/roles/${id}/restore`, { method: 'POST' }),
 };

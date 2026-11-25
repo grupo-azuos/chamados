@@ -6,6 +6,7 @@ import { writable } from 'svelte/store';
 import { readError } from '$lib/api/http-client';
 import { softwareDashboardApi } from '$lib/api/software-dashboard.api';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { TICKET_VIEW_PARAM } from '$lib/hooks/use-ticket-list/use-ticket-list.svelte';
 import { contextPath } from '$lib/navigation/navigation';
 
 export const SOFTWARE_DASHBOARD_QUERY_KEY = ['software-dashboard'] as const;
@@ -56,7 +57,7 @@ export function useSoftwareDashboardModel(): SoftwareDashboardModel {
         void summary.current.refetch();
       },
       onOpenTickets: () => void goto(contextPath('sistema', '/tickets')),
-      onOpenKanban: () => void goto(contextPath('sistema', '/kanban')),
+      onOpenKanban: () => void goto(`${contextPath('sistema', '/tickets')}?${TICKET_VIEW_PARAM}=kanban`),
       onOpenSchedule: () => void goto(contextPath('sistema', '/schedule')),
       onOpenProjects: () => void goto(contextPath('sistema', '/projects')),
     },

@@ -59,6 +59,25 @@ describe('AzuosTicketLookupView', () => {
     expect(screen.getByText('Impressora')).toBeInTheDocument();
   });
 
+  // feliz
+  it('takes who asked to the map of the system of a Sistema ticket', () => {
+    setup({
+      data: { protocol: 'CH-0007', ticket: { ...ticket, projectId: 3, projectName: 'Paralegal' } },
+    });
+
+    expect(screen.getByRole('link', { name: /Ver o mapa do sistema Paralegal/ })).toHaveAttribute(
+      'href',
+      '/support/systems/3',
+    );
+  });
+
+  // triste
+  it('offers no map when the ticket has no system', () => {
+    setup({ data: { protocol: 'CH-0007', ticket } });
+
+    expect(screen.queryByRole('link', { name: /Ver o mapa do sistema/ })).not.toBeInTheDocument();
+  });
+
   /* A grade de dados responde o básico sem a pessoa ler a linha do tempo inteira. */
   it('shows the area, when it was opened and how much progress was registered', () => {
     setup({ data: { protocol: 'CH-0007', ticket } });
@@ -117,9 +136,14 @@ describe('AzuosTicketLookupView', () => {
       },
     });
 
-    expect(screen.getByRole('link', { name: /abrir o print/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Abrir print-CH-0007.png' })).toHaveAttribute(
       'href',
       'https://x.invalid/a.png',
+    );
+    // Arquivo tem as duas ações: abrir e baixar.
+    expect(screen.getByRole('link', { name: 'Baixar print-CH-0007.png' })).toHaveAttribute(
+      'download',
+      'print-CH-0007.png',
     );
   });
 
@@ -347,10 +371,14 @@ describe('AzuosTicketLookupView — Enter, the list states and the actions slot'
     vi.mocked(actions.onSearch).mockClear();
     setup({
       data: { protocol: 'CH-0007', ticket },
-      slots: { ticketActions: createRawSnippet(() => ({ render: () => '<p>ações do chamado</p>' })) },
+      slots: {
+        ticketActions: createRawSnippet(() => ({ render: () => '<p>ações do chamado</p>' })),
+      },
     });
 
-    await fireEvent.submit(screen.getByRole('textbox', { name: 'Número do chamado' }).closest('form')!);
+    await fireEvent.submit(
+      screen.getByRole('textbox', { name: 'Número do chamado' }).closest('form')!,
+    );
     expect(actions.onSearch).toHaveBeenCalledOnce();
     expect(screen.getByText('ações do chamado')).toBeInTheDocument();
   });
@@ -370,7 +398,19 @@ describe('AzuosTicketLookupView — Enter, the list states and the actions slot'
   it('says there is nothing closed yet when the closed tab is empty', async () => {
     setup({
       data: {
-        mine: [{ id: 1, protocol: 'CH-0001', status: 'open', priority: 'high', area: 'infra', problemType: 'printer', description: 'x', createdAt: '2026-10-14T13:00:00.000Z', isWatching: false }],
+        mine: [
+          {
+            id: 1,
+            protocol: 'CH-0001',
+            status: 'open',
+            priority: 'high',
+            area: 'infra',
+            problemType: 'printer',
+            description: 'x',
+            createdAt: '2026-10-14T13:00:00.000Z',
+            isWatching: false,
+          },
+        ],
       },
     });
     await userEvent.click(screen.getByRole('button', { name: /encerrados/i }));
@@ -384,8 +424,38 @@ describe('AzuosTicketLookupView — typing the protocol and a box with only clos
     vi.mocked(actions.onProtocolChange).mockClear();
     setup({
       data: {
-        mine: [{ id: 2, protocol: 'CH-0002', status: 'resolved', priority: 'low', area: 'infra', problemType: 'printer', description: 'x', createdAt: '2026-10-14T13:00:00.000Z', isWatching: false }],
-        ticket: { ...ticket, attachments: [{ id: 1, ticketId: 7, historyId: 3, kind: 'pdf', origin: 'requester', fileName: 'nota.pdf', contentType: 'application/pdf', sizeBytes: 10, viewUrl: 'https://r2/abrir', downloadUrl: 'https://r2/baixar', createdAt: '2026-09-15T12:10:00.000Z', createdBy: null }] },
+        mine: [
+          {
+            id: 2,
+            protocol: 'CH-0002',
+            status: 'resolved',
+            priority: 'low',
+            area: 'infra',
+            problemType: 'printer',
+            description: 'x',
+            createdAt: '2026-10-14T13:00:00.000Z',
+            isWatching: false,
+          },
+        ],
+        ticket: {
+          ...ticket,
+          attachments: [
+            {
+              id: 1,
+              ticketId: 7,
+              historyId: 3,
+              kind: 'pdf',
+              origin: 'requester',
+              fileName: 'nota.pdf',
+              contentType: 'application/pdf',
+              sizeBytes: 10,
+              viewUrl: 'https://r2/abrir',
+              downloadUrl: 'https://r2/baixar',
+              createdAt: '2026-09-15T12:10:00.000Z',
+              createdBy: null,
+            },
+          ],
+        },
       },
     });
 

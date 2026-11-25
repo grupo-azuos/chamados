@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { type Database } from '../db/db.type';
 import { internalRoles } from '../db/schema/internal-roles.schema';
@@ -140,7 +140,8 @@ describe('IdentityProvider', () => {
   // triste
   /* Os módulos são procurados só pelo UUID: o e-mail não entra na consulta, então um e-mail
      antigo herdado por outra pessoa não leva junto os módulos de quem o usava. */
-  it('looks the modules up by the UUID alone, never by the e-mail', async () => {
+  /* E só os módulos valendo: o tirado (arquivado) não dá mais acesso. */
+  it('looks the modules up by the UUID alone, never by the e-mail, skipping the taken ones', async () => {
     const moduleWhere = vi.fn().mockResolvedValue([]);
     const from = vi.fn((table) => ({
       where: table === internalRoles ? moduleWhere : vi.fn().mockResolvedValue([]),
@@ -149,7 +150,9 @@ describe('IdentityProvider', () => {
 
     await new IdentityProvider(db).resolve(ANA);
 
-    expect(moduleWhere).toHaveBeenCalledWith(eq(internalRoles.userId, ANA_ID));
+    expect(moduleWhere).toHaveBeenCalledWith(
+      and(eq(internalRoles.userId, ANA_ID), isNull(internalRoles.archivedAt)),
+    );
   });
 
   /* Uma linha de super-admin já reclamada por OUTRO UUID não promove quem herdou o e-mail. */

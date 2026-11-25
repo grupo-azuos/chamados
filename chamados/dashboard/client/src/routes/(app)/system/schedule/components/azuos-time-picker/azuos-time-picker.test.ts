@@ -64,7 +64,11 @@ describe('AzuosTimePicker', () => {
 
   it('announces validation errors on the labeled trigger', () => {
     render(TimePicker, {
-      props: { data, state: { error: 'Informe um horário válido.' }, actions: { onChange: vi.fn() } },
+      props: {
+        data,
+        state: { error: 'Informe um horário válido.' },
+        actions: { onChange: vi.fn() },
+      },
     });
 
     expect(screen.getByRole('button', { name: 'Início' })).toHaveAttribute('aria-invalid', 'true');
@@ -76,7 +80,9 @@ describe('AzuosTimePicker — empty and blurred', () => {
   // triste
   it('invites to select when there is no valid time yet and starts at 09:00', async () => {
     const onChange = vi.fn();
-    render(TimePicker, { props: { data: { ...data, value: '', isRequired: true }, actions: { onChange } } });
+    render(TimePicker, {
+      props: { data: { ...data, value: '', isRequired: true }, actions: { onChange } },
+    });
 
     const trigger = screen.getByRole('button', { name: 'Início' });
     expect(trigger).toHaveTextContent('Selecionar');

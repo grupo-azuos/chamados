@@ -1,3 +1,15 @@
+<!--
+  @component
+  Quanto de uma capacidade já foi consumido — disco, memória, cota.
+
+  É O CONTRÁRIO da barra de progresso, onde cheio é bom. Aqui cheio é RUIM: 95% de disco é uma
+  máquina que vai parar. Reaproveitar a barra de progresso daria verde justamente no pior caso,
+  então esta é uma peça própria: verde até 75%, amarelo até 90%, vermelho daí para cima — os mesmos
+  cortes da régua de saúde da máquina.
+
+  `data` leva o rótulo, o `percentage` (preso entre 0 e 100) e o `detail` em palavras ("12,4 GB de
+  16 GB"); `ui`, só `className`.
+-->
 <script lang="ts" module>
   export type AzuosUsageMeterProps = {
     data: {
@@ -14,9 +26,9 @@
   export type UsageTone = 'calm' | 'attention' | 'critical';
 
   const TONE_CLASSES: Record<UsageTone, string> = {
-    calm: 'bg-chart-4',
-    attention: 'bg-chart-3',
-    critical: 'bg-chart-1',
+    calm: 'bg-success',
+    attention: 'bg-warning',
+    critical: 'bg-destructive',
   };
 
   /**

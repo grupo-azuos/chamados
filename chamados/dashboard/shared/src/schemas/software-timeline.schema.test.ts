@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { softwareTimelineEventSchema, softwareTimelineListQuerySchema } from './software-timeline.schema';
+import {
+  softwareTimelineEventSchema,
+  softwareTimelineListQuerySchema,
+} from './software-timeline.schema';
 
 describe('software timeline contract', () => {
   // feliz

@@ -1,0 +1,167 @@
+<script lang="ts">
+  import HardDrive from '@lucide/svelte/icons/hard-drive';
+
+
+  import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
+  import ComputerDetailView from '../components/azuos-computer-detail-view/azuos-computer-detail-view.svelte';
+  import ComputerTokenDialog from '../components/azuos-computer-token-dialog/azuos-computer-token-dialog.svelte';
+  import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
+  import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import { useAgentBundleModel } from '$lib/hooks/use-agent-bundle/use-agent-bundle.svelte';
+  import { useBackTarget } from '$lib/hooks/use-navigation-stack/use-navigation-stack.svelte';
+  import { useComputerDetailModel } from '$lib/hooks/use-computer-detail/use-computer-detail.svelte';
+  import { useMaintenanceScheduleModel } from '$lib/hooks/use-maintenance-schedule/use-maintenance-schedule.svelte';
+  import MaintenanceFormSlot from '../../maintenance/maintenance-form-slot.svelte';
+  import ComputerFormSlot from '../computer-form-slot.svelte';
+  import ScheduleFormSlot from './schedule-form-slot.svelte';
+  import TransferFormSlot from './transfer-form-slot.svelte';
+
+  /**
+   * A rota só compõe: chama o model e entrega para a view (CONTRIBUTING §3).
+   *
+   * A ficha é uma ROTA, e não um modal sobre a lista, porque ela tem endereço próprio: o
+   * pessoal do TI cola `/computers/3` num chamado para dizer "é desta máquina que estou
+   * falando", e um modal não tem como ser apontado.
+   */
+  let { id, onBack, isEmbedded = false }: {
+    id: number;
+    /** O voltar de quem embrulha a ficha (o diálogo da Rastreabilidade fecha); sem ele, o caminho da pessoa. */
+    onBack?: () => void;
+    /** Dentro de outra tela: o título da aba é dela, e o voltar diz para onde volta. */
+    isEmbedded?: boolean;
+  } = $props();
+
+  // svelte-ignore state_referenced_locally
+  const detail = useComputerDetailModel(id);
+  // svelte-ignore state_referenced_locally
+  const schedule = useMaintenanceScheduleModel(id);
+  const bundle = useAgentBundleModel();
+  /* O voltar leva à tela de onde a pessoa veio (o chamado, o painel), e sem caminho ao inventário. */
+  const back = useBackTarget({ to: '/infra/computers', destination: 'o inventário' });
+  const goBack = $derived(onBack ?? back.onBack);
+
+  /* Qual peça está na frente — não é dado. */
+  let isEditing = $state(false);
+  let isRegisteringMaintenance = $state(false);
+  let isTransferring = $state(false);
+  let isScheduling = $state(false);
+</script>
+
+<svelte:head>
+  {#if !isEmbedded}
+    <title>{detail.data.computer?.displayName ?? detail.data.computer?.name ?? 'Computador'}</title>
+  {/if}
+</svelte:head>
+
+<!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
+{#if detail.state.isMissing}
+  <div class="mx-auto w-full max-w-3xl py-10">
+    <EmptyState
+      data={{
+        title: 'Este computador não está mais no inventário',
+        description: 'Ele pode ter sido removido do cadastro. Volte à lista para ver o parque.',
+      }}
+      ui={{ icon: HardDrive }}
+    >
+      <BackButton data={{ destination: back.destination }} actions={{ onClick: goBack }} />
+    </EmptyState>
+  </div>
+{:else if detail.state.error}
+  <div class="mx-auto w-full max-w-3xl py-10">
+    <ErrorState
+      data={{ title: 'Não consegui abrir esta máquina', message: detail.state.error }}
+      actions={{ onRetry: detail.actions.onRetry }}
+    />
+  </div>
+{:else if detail.state.isLoading || !detail.data.computer}
+  <p class="text-ink-500 py-16 text-center text-sm">Carregando a ficha da máquina…</p>
+{:else}
+  <ComputerDetailView
+    data={{
+      computer: detail.data.computer,
+      samples: detail.data.samples,
+      alerts: detail.data.alerts,
+      alertPaging: detail.data.alertPaging,
+      ticketPaging: detail.data.ticketPaging,
+      live: detail.data.live,
+      tickets: detail.data.tickets,
+      maintenances: detail.data.maintenances,
+      schedule: schedule.data.schedule,
+      partMovements: detail.data.partMovements,
+      transfers: detail.data.transfers,
+      backDestination: isEmbedded ? 'a rastreabilidade' : back.destination,
+    }}
+    state={{
+      ...detail.state,
+      isScheduleLoading: schedule.state.isLoading,
+      isCancellingSchedule: schedule.state.isCancelling,
+      scheduleError: schedule.state.error,
+      isDownloadingInstaller: bundle.state.isDownloading,
+      installerError: bundle.state.error,
+    }}
+    actions={{
+      ...detail.actions,
+      onScheduleMaintenance: () => (isScheduling = true),
+      onCancelSchedule: schedule.actions.onCancel,
+      onEdit: () => (isEditing = true),
+      onRegisterMaintenance: () => (isRegisteringMaintenance = true),
+      onTransfer: () => (isTransferring = true),
+      onDownloadInstaller: () => void bundle.actions.onDownload(),
+      onBack: goBack,
+    }}
+  />
+{/if}
+
+<!-- `{#key}` pelo id: trocar de máquina monta um formulário NOVO, com os valores dela. -->
+{#if isEditing && detail.data.computer}
+  {#key detail.data.computer.id}
+    <ComputerFormSlot
+      computer={detail.data.computer}
+      onSaved={() => (isEditing = false)}
+      onClose={() => (isEditing = false)}
+    />
+  {/key}
+{/if}
+
+<!-- O formulário de manutenção é o MESMO da tela de Manutenção, só que já com esta máquina
+     escolhida: dois formulários para o mesmo registro divergiriam no primeiro campo novo. -->
+{#if isRegisteringMaintenance && detail.data.computer}
+  <MaintenanceFormSlot
+    maintenance={null}
+    computerId={detail.data.computer.id}
+    onClose={() => (isRegisteringMaintenance = false)}
+  />
+{/if}
+
+<!-- Agendar e remarcar são o mesmo diálogo: com data marcada, ele já abre com ela. -->
+{#if isScheduling && detail.data.computer}
+  <ScheduleFormSlot
+    computerId={detail.data.computer.id}
+    machineName={detail.data.computer.displayName ?? detail.data.computer.name}
+    schedule={schedule.data.schedule}
+    onClose={() => (isScheduling = false)}
+  />
+{/if}
+
+<!-- `{#key}` pelo id: a transferência de outra máquina abre com as escolhas dela, zeradas. -->
+{#if isTransferring && detail.data.computer}
+  {#key detail.data.computer.id}
+    <TransferFormSlot
+      computer={detail.data.computer}
+      onClose={() => (isTransferring = false)}
+    />
+  {/key}
+{/if}
+
+<!-- Token gerado de novo: aparece uma vez, e some quando a pessoa diz que guardou. -->
+{#if detail.data.newToken && detail.data.computer}
+  <ComputerTokenDialog
+    data={{ computerName: detail.data.computer.name, token: detail.data.newToken }}
+    state={{ isDownloadingBundle: bundle.state.isDownloading, bundleError: bundle.state.error }}
+    actions={{
+      onClose: detail.actions.onDismissToken,
+      onDownloadBundle: () =>
+        detail.data.newToken && bundle.actions.onDownload({ token: detail.data.newToken, computerId: id }),
+    }}
+  />
+{/if}

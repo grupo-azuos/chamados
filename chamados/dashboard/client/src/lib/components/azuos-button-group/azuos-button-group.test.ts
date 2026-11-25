@@ -31,6 +31,14 @@ describe('AzuosButtonGroup', () => {
     expect(onChange).toHaveBeenCalledWith('month');
   });
 
+  it('draws the chosen one as the blue pill and the others with the neutral hover', () => {
+    render(AzuosButtonGroup, { props: { data: { options, value: 'week' }, ui } });
+
+    expect(screen.getByRole('button', { name: 'Semana' })).toHaveClass('text-primary-foreground');
+    expect(screen.getByRole('button', { name: 'Dia' })).toHaveClass('hover:bg-hover-veil');
+    expect(screen.getByRole('button', { name: 'Dia' })).not.toHaveClass('hover:bg-primary-soft');
+  });
+
   // triste
   it('locks every option when disabled', () => {
     render(AzuosButtonGroup, {

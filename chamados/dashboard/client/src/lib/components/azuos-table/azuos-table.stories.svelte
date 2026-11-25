@@ -72,7 +72,7 @@
 
 <!-- Dentro de um cartão que já tem borda: a superfície da tabela some. -->
 <Story name="InsideCard" asChild>
-  <div class="border-border bg-card rounded-surface border shadow-xs">
+  <div class="bg-card rounded-surface shadow-card">
     <Table containerClass="rounded-none border-0 bg-transparent shadow-none">
       {@render rows(parts)}
     </Table>

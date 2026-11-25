@@ -7,7 +7,10 @@ import { inventoryItemListQuerySchema } from '@template/shared/schemas/inventory
 import { inventoryMovementListQuerySchema } from '@template/shared/schemas/inventory-movement.schema';
 import { describe, expect, it, vi } from 'vitest';
 
+import { sql } from 'drizzle-orm';
+
 import { type RequestUser } from '../../../lib/auth/request-user.type';
+import { type BoardDrillResolver } from '../../dashboard-boards/board-drill.token';
 import { type InventoryItemRow } from '../../../lib/db/schema/inventory-items.schema';
 import { type InventoryItemEventRow } from '../../../lib/db/schema/inventory-item-events.schema';
 import { type InventoryMovementRow } from '../../../lib/db/schema/inventory-movements.schema';
@@ -78,6 +81,8 @@ function row(overrides: Partial<InventoryItemRow> = {}): InventoryItemRow {
     createdBy: 'ana@empresa.com.br',
     updatedAt: null,
     updatedBy: null,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }
@@ -114,7 +119,7 @@ const defaultRepository: Partial<InventoryItemsRepository> = {
   findById: vi.fn().mockResolvedValue(row()),
   insert: vi.fn().mockResolvedValue(row()),
   update: vi.fn().mockResolvedValue(row()),
-  remove: vi.fn().mockResolvedValue(undefined),
+  setArchived: vi.fn().mockResolvedValue(undefined),
   findByIdForUpdate: vi.fn().mockResolvedValue(row()),
   updateBalance: vi.fn().mockResolvedValue(undefined),
   insertMovement: vi.fn().mockImplementation(async (values) => movementRow(values)),
@@ -125,6 +130,9 @@ const defaultRepository: Partial<InventoryItemsRepository> = {
   /* A transação de mentira só roda o que recebeu: o que importa aqui é a ORDEM das decisões
      do service, não o banco. */
   transaction: vi.fn().mockImplementation(async (run) => run({})),
+  /* Nenhum nome cadastrado, a não ser que o teste diga o contrário. */
+  names: vi.fn().mockResolvedValue([]),
+  findByNameForUpdate: vi.fn().mockResolvedValue([row()]),
   /* Nenhum chamado prende produto, a não ser que o teste diga o contrário. */
   ticketLinksOf: vi.fn().mockResolvedValue(new Map()),
 };
@@ -163,6 +171,7 @@ function makeService(
   storage: Partial<FileStorage> = {},
   eventsRepository: Partial<InventoryItemEventsRepository> = {},
   directory?: Partial<UserDirectoryProvider>,
+  drills?: BoardDrillResolver,
 ) {
   const memory = Object.assign(
     storage instanceof MemoryStorage ? storage : new MemoryStorage(),
@@ -176,6 +185,7 @@ function makeService(
     new StagedUploadsService(memory),
     memory,
     directory as UserDirectoryProvider | undefined,
+    drills,
   );
 }
 
@@ -438,36 +448,64 @@ describe('InventoryItemsService.update', () => {
 
 describe('InventoryItemsService.remove', () => {
   // feliz
-  it('deletes the product and its photo', async () => {
-    const remove = vi.fn().mockResolvedValue(undefined);
+  it('archives the product and keeps its photo in the bucket', async () => {
+    const setArchived = vi.fn().mockResolvedValue(undefined);
     const storage = new MemoryStorage();
     await storage.put('inventory/a.webp', Buffer.from('a'), 'image/webp');
     const service = makeService(
-      { findById: vi.fn().mockResolvedValue(row({ photoKey: 'inventory/a.webp' })), remove },
+      { findById: vi.fn().mockResolvedValue(row({ photoKey: 'inventory/a.webp' })), setArchived },
       storage,
     );
 
     await service.remove(keeper, 1);
 
-    expect(remove).toHaveBeenCalledWith(1);
-    expect(await storage.head('inventory/a.webp')).toBeNull();
+    expect(setArchived).toHaveBeenCalledWith(1, true, keeper.id);
+    expect(await storage.head('inventory/a.webp')).not.toBeNull();
   });
 
   // triste
   it('refuses the deletion for someone who only queries the area', async () => {
-    const remove = vi.fn();
-    const service = makeService({ remove });
+    const setArchived = vi.fn();
+    const service = makeService({ setArchived });
 
     await expect(service.remove(viewer, 1)).rejects.toThrow(ForbiddenException);
-    expect(remove).not.toHaveBeenCalled();
+    expect(setArchived).not.toHaveBeenCalled();
   });
 
-  it('answers 404 for a product that does not exist, without deleting', async () => {
-    const remove = vi.fn();
-    const service = makeService({ findById: vi.fn().mockResolvedValue(null), remove });
+  it('answers 404 for a product that does not exist, without archiving', async () => {
+    const setArchived = vi.fn();
+    const service = makeService({ findById: vi.fn().mockResolvedValue(null), setArchived });
 
     await expect(service.remove(keeper, 99)).rejects.toThrow(NotFoundException);
-    expect(remove).not.toHaveBeenCalled();
+    expect(setArchived).not.toHaveBeenCalled();
+  });
+});
+
+describe('InventoryItemsService.restore', () => {
+  // feliz
+  it('brings the archived product back', async () => {
+    const setArchived = vi.fn().mockResolvedValue(undefined);
+    const service = makeService({
+      findById: vi
+        .fn()
+        .mockResolvedValueOnce(row({ archivedAt: new Date('2026-11-20T12:00:00.000Z') }))
+        .mockResolvedValueOnce(row()),
+      setArchived,
+    });
+
+    const restored = await service.restore(keeper, 1);
+
+    expect(setArchived).toHaveBeenCalledWith(1, false, null);
+    expect(restored.archive).toBeNull();
+  });
+
+  // triste
+  it('refuses the undo for someone who only queries the area', async () => {
+    const setArchived = vi.fn();
+    const service = makeService({ setArchived });
+
+    await expect(service.restore(viewer, 1)).rejects.toThrow(ForbiddenException);
+    expect(setArchived).not.toHaveBeenCalled();
   });
 });
 
@@ -496,6 +534,22 @@ describe('InventoryItemsService.movements', () => {
 });
 
 describe('InventoryItemsService.createMovement', () => {
+  // triste
+  it('refuses to move an archived product, without touching the balance', async () => {
+    const insertMovement = vi.fn();
+    const service = makeService({
+      findByIdForUpdate: vi
+        .fn()
+        .mockResolvedValue(row({ archivedAt: new Date('2026-11-20T12:00:00.000Z') })),
+      insertMovement,
+    });
+
+    await expect(service.createMovement(keeper, 1, { type: 'in', quantity: 1 })).rejects.toThrow(
+      UnprocessableEntityException,
+    );
+    expect(insertMovement).not.toHaveBeenCalled();
+  });
+
   // feliz
   it('registers an entry and moves the balance with it', async () => {
     const insertMovement = vi.fn().mockImplementation(async (values) => movementRow(values));
@@ -614,11 +668,7 @@ describe('InventoryItemsService.events', () => {
 describe('InventoryItemsService.addEvent', () => {
   it('records an event for a manager of maintenance', async () => {
     const add = vi.fn().mockImplementation(async (values) => eventRow(values));
-    const service = makeService(
-      { findById: vi.fn().mockResolvedValue(row()) },
-      {},
-      { add },
-    );
+    const service = makeService({ findById: vi.fn().mockResolvedValue(row()) }, {}, { add });
 
     const event = await service.addEvent(keeper, 1, {
       type: 'troca',
@@ -708,5 +758,151 @@ describe('InventoryItemsService.listResponsibles', () => {
   it('returns empty list when directory provider is not configured', async () => {
     const service = makeService();
     expect(await service.listResponsibles(viewer)).toEqual([]);
+  });
+});
+
+describe('InventoryItemsService.list with a board cut', () => {
+  // feliz
+  it('narrows the inventory to the board block that was clicked', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const cut = sql`true`;
+    const drillCondition = vi.fn().mockResolvedValue(cut);
+    const drill = JSON.stringify({
+      source: 'inventoryItems',
+      groupBy: 'category',
+      filterId: null,
+      key: 'chair',
+    });
+
+    await makeService({ list }, {}, {}, undefined, { drillCondition }).list(
+      viewer,
+      inventoryItemListQuerySchema.parse({ drill }),
+    );
+
+    expect(drillCondition).toHaveBeenCalledWith(viewer, expect.objectContaining({ key: 'chair' }), [
+      'inventoryItems',
+    ]);
+    expect(list).toHaveBeenCalledWith(expect.anything(), cut);
+  });
+
+  // triste
+  it('lists without a cut when no block was clicked', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const drillCondition = vi.fn();
+
+    await makeService({ list }, {}, {}, undefined, { drillCondition }).list(viewer, query);
+
+    expect(drillCondition).not.toHaveBeenCalled();
+    expect(list).toHaveBeenCalledWith(expect.anything(), undefined);
+  });
+});
+
+describe('InventoryItemsService name spelling', () => {
+  // feliz
+  it('registers CADEIRA with the spelling that already exists', async () => {
+    const insert = vi.fn().mockResolvedValue(row());
+    const service = makeService({
+      insert,
+      names: vi.fn().mockResolvedValue(['Cadeira', 'Cadeira', 'Mesa']),
+    });
+
+    await service.create(keeper, { name: ' CADEIRA ', category: 'furniture', unit: 'unit' });
+
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ name: 'Cadeira' }));
+  });
+
+  // triste
+  it('keeps a new name as typed, without the spaces around it', async () => {
+    const update = vi.fn().mockResolvedValue(row());
+    const service = makeService({ update, names: vi.fn().mockResolvedValue(['Cadeira']) });
+
+    await service.update(keeper, 1, { name: ' Armário ' });
+
+    expect(update).toHaveBeenCalledWith(1, expect.objectContaining({ name: 'Armário' }));
+  });
+
+  it('lists one name per product, in the most used spelling', async () => {
+    const service = makeService({
+      names: vi.fn().mockResolvedValue(['cadeira', 'Cadeira', 'Cadeira', 'Mesa']),
+    });
+
+    await expect(service.names(viewer)).resolves.toEqual(['Cadeira', 'Mesa']);
+  });
+});
+
+describe('InventoryItemsService.createStockMovement', () => {
+  // feliz
+  it('puts an entry on the registration of the name that has the most', async () => {
+    const insertMovement = vi.fn().mockImplementation(async (values) => movementRow(values));
+    const updateBalance = vi.fn().mockResolvedValue(undefined);
+    const service = makeService({
+      insertMovement,
+      updateBalance,
+      findByNameForUpdate: vi
+        .fn()
+        .mockResolvedValue([row({ id: 4, balance: 2 }), row({ id: 5, balance: 0 })]),
+    });
+
+    await service.createStockMovement(keeper, { name: 'cadeira', type: 'in', quantity: 3 });
+
+    expect(insertMovement).toHaveBeenCalledTimes(1);
+    expect(updateBalance).toHaveBeenCalledWith(4, 5, expect.anything());
+  });
+
+  it('takes an exit from one registration after the other, each with its line', async () => {
+    const insertMovement = vi.fn().mockImplementation(async (values) => movementRow(values));
+    const updateBalance = vi.fn().mockResolvedValue(undefined);
+    const service = makeService({
+      insertMovement,
+      updateBalance,
+      findByNameForUpdate: vi
+        .fn()
+        .mockResolvedValue([
+          row({ id: 4, balance: 2 }),
+          row({ id: 5, balance: 1 }),
+          row({ id: 6, balance: 0 }),
+        ]),
+    });
+
+    await service.createStockMovement(keeper, { name: 'Cadeira', type: 'out', quantity: 3 });
+
+    expect(insertMovement).toHaveBeenCalledTimes(2);
+    expect(insertMovement).toHaveBeenCalledWith(
+      expect.objectContaining({ itemId: 4, quantity: 2, balanceAfter: 0 }),
+      expect.anything(),
+    );
+    expect(updateBalance).toHaveBeenCalledWith(5, 0, expect.anything());
+  });
+
+  // triste
+  it('refuses an exit bigger than the whole name has, without moving anything', async () => {
+    const insertMovement = vi.fn();
+    const service = makeService({
+      insertMovement,
+      findByNameForUpdate: vi
+        .fn()
+        .mockResolvedValue([row({ id: 4, balance: 2 }), row({ id: 5, balance: 1 })]),
+    });
+
+    await expect(
+      service.createStockMovement(keeper, { name: 'Cadeira', type: 'out', quantity: 4 }),
+    ).rejects.toThrow(/Só há 3/);
+    expect(insertMovement).not.toHaveBeenCalled();
+  });
+
+  it('answers not found for a name nobody has', async () => {
+    const service = makeService({ findByNameForUpdate: vi.fn().mockResolvedValue([]) });
+
+    await expect(
+      service.createStockMovement(keeper, { name: 'Unicórnio', type: 'in', quantity: 1 }),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('refuses someone who can only look', async () => {
+    const service = makeService();
+
+    await expect(
+      service.createStockMovement(viewer, { name: 'Cadeira', type: 'in', quantity: 1 }),
+    ).rejects.toThrow();
   });
 });

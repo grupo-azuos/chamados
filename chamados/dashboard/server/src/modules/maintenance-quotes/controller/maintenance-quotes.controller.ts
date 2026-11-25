@@ -136,8 +136,12 @@ export class MaintenanceQuotesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Exclui um orçamento da Manutenção' })
-  @ApiNoContentResponse({ description: 'Orçamento excluído.' })
+  @ApiOperation({
+    summary: 'Exclui (arquiva) um orçamento da Manutenção',
+    description:
+      'O orçamento sai da lista com o documento guardado, e com quem excluiu e quando. `?archived=only` na lista traz os excluídos; `POST :id/restore` devolve.',
+  })
+  @ApiNoContentResponse({ description: 'Orçamento arquivado.' })
   @ApiForbiddenResponse({ description: 'Seu cargo em Manutenção só permite consultar.' })
   @ApiNotFoundResponse({ description: 'Orçamento não encontrado.' })
   async remove(
@@ -145,5 +149,18 @@ export class MaintenanceQuotesController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
     return this.service.remove(user, id);
+  }
+
+  @Post(':id/restore')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desfaz a exclusão de um orçamento da Manutenção' })
+  @ApiOkResponse({ type: MaintenanceQuoteDto })
+  @ApiForbiddenResponse({ description: 'Seu cargo em Manutenção só permite consultar.' })
+  @ApiNotFoundResponse({ description: 'Orçamento não encontrado.' })
+  async restore(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<MaintenanceQuoteDto> {
+    return this.service.restore(user, id);
   }
 }

@@ -102,8 +102,23 @@ describe('GithubDayDialog — kinds of activity', () => {
     renderDialog('all', [
       { ...event, id: 1, type: 'issue', status: 'open', title: 'Issue aberta' },
       { ...event, id: 2, type: 'merge', status: 'merged', title: 'Merge feito' },
-      { ...event, id: 3, type: 'pr', status: 'closed', title: 'PR fechado', authorName: 'Ana Lima' },
-      { ...event, id: 4, type: 'pr', status: 'open', title: 'PR aberto', projectName: null, author: null },
+      {
+        ...event,
+        id: 3,
+        type: 'pr',
+        status: 'closed',
+        title: 'PR fechado',
+        authorName: 'Ana Lima',
+      },
+      {
+        ...event,
+        id: 4,
+        type: 'pr',
+        status: 'open',
+        title: 'PR aberto',
+        projectName: null,
+        author: null,
+      },
     ]);
     expect(screen.getByText('Atividades do GitHub do dia 06/10/2026')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Issue #42 · Issue aberta' })).toBeInTheDocument();
@@ -131,7 +146,13 @@ describe('GithubDayDialog — who did it', () => {
   // feliz
   it('prefers the display name of the author', () => {
     render(GithubDayDialog, {
-      data: { date: '2026-10-06', items: [{ ...event, authorName: 'Ana Lima' }], total: 1, page: 1, pageSize: 5 },
+      data: {
+        date: '2026-10-06',
+        items: [{ ...event, authorName: 'Ana Lima' }],
+        total: 1,
+        page: 1,
+        pageSize: 5,
+      },
       actions: { onClose: vi.fn(), onPageChange: vi.fn() },
     });
 

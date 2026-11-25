@@ -1,6 +1,5 @@
 import { createQuery } from '@tanstack/svelte-query';
 import { type InventoryCategory } from '@template/shared/domain/inventory-catalog.util';
-import { type InventoryItem } from '@template/shared/schemas/inventory-item.schema';
 import { MAX_PAGE_SIZE } from '@template/shared/schemas/pagination.schema';
 import { derived, writable } from 'svelte/store';
 
@@ -8,6 +7,7 @@ import { readError } from '$lib/api/http-client';
 import { inventoryItemsApi } from '$lib/api/inventory-items.api';
 import { INVENTORY_QUERY_KEY } from '$lib/hooks/use-inventory-list/use-inventory-list.svelte';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
+import { groupStock, type StockGroup } from '$lib/utils/inventory-stock-group.util';
 
 export type InventoryStockFilter = {
   search: string;
@@ -18,7 +18,8 @@ export type InventoryStockFilter = {
 
 export type InventoryStockModel = {
   data: {
-    items: InventoryItem[];
+    /** Os produtos do depósito, um por NOME (sem diferença de maiúscula). */
+    groups: StockGroup[];
     total: number;
     /** Quantos produtos da lista estão zerados — o número do atalho "Sem estoque". */
     outOfStock: number;
@@ -50,11 +51,6 @@ function scopeOf(filter: InventoryStockFilter) {
   };
 }
 
-/** A lista leva também o "sem estoque"; o resumo do topo não — ele conta sobre a busca. */
-function listScopeOf(filter: InventoryStockFilter) {
-  return { ...scopeOf(filter), outOfStockOnly: filter.outOfStockOnly || undefined };
-}
-
 /**
  * Estado, consulta e handlers do DEPÓSITO da Manutenção: os mesmos produtos do inventário,
  * lidos pelo que importa aqui — quanto há de cada um.
@@ -69,18 +65,10 @@ export function useInventoryStockModel(): InventoryStockModel {
   const filterStore = writable<InventoryStockFilter>({ ...EMPTY_FILTER });
   const filter = mirrorStore(filterStore);
 
-  /* "Sem estoque" é filtrado no SQL. O número do topo conta os zerados da busca SEM esse
-     filtro — com ele desligado as duas chaves são iguais, e é uma ida só ao servidor. */
+  /* Uma consulta só: o depósito agrupa os cadastros pelo nome AQUI, e "Sem estoque" é o grupo
+     que somou zero — filtrar no SQL por cadastro esconderia a cadeira zerada de um nome que
+     ainda tem estoque em outro cadastro. */
   const list = mirrorStore(
-    createQuery(
-      derived(filterStore, (current) => ({
-        queryKey: [...INVENTORY_QUERY_KEY, 'list', listScopeOf(current)],
-        queryFn: () =>
-          inventoryItemsApi.list({ ...listScopeOf(current), page: 1, pageSize: MAX_PAGE_SIZE }),
-      })),
-    ),
-  );
-  const searched = mirrorStore(
     createQuery(
       derived(filterStore, (current) => ({
         queryKey: [...INVENTORY_QUERY_KEY, 'list', scopeOf(current)],
@@ -90,21 +78,25 @@ export function useInventoryStockModel(): InventoryStockModel {
     ),
   );
 
+  const allGroups = $derived(groupStock(list.current.data?.items ?? []));
+  const groups = $derived(
+    filter.current.outOfStockOnly ? allGroups.filter((group) => group.balance === 0) : allGroups,
+  );
+
   return {
     /* `get` em vez de valor: o objeto é montado uma vez e a tela lê dele a cada mudança. */
     get data() {
       return {
-        items: list.current.data?.items ?? [],
-        total: list.current.data?.total ?? 0,
-        outOfStock: (searched.current.data?.items ?? []).filter((item) => item.balance === 0)
-          .length,
+        groups,
+        total: groups.length,
+        outOfStock: allGroups.filter((group) => group.balance === 0).length,
         filter: filter.current,
       };
     },
     get state() {
       const loaded = list.current.data?.items ?? [];
       /* Vazio só é vazio DEPOIS que a consulta terminou. */
-      const isSettledEmpty = list.current.isSuccess && loaded.length === 0;
+      const isSettledEmpty = list.current.isSuccess && groups.length === 0;
       const filtered = hasAnyFilter(filter.current);
 
       return {

@@ -54,4 +54,20 @@ describe('AzuosCheckboxField', () => {
 
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  // feliz
+  /* O bits-ui marca com `data-state`: o azul da caixinha marcada precisa casar com ele. */
+  it('paints the ticked box blue and keeps the empty one outlined', () => {
+    render(CheckboxField, {
+      props: {
+        data: { label: 'Brand', name: 'brand', isChecked: true },
+        actions: { onChange: vi.fn() },
+      },
+    });
+
+    const box = screen.getByRole('checkbox', { name: 'Brand' });
+    expect(box).toHaveAttribute('data-state', 'checked');
+    expect(box.className).toContain('data-[state=checked]:bg-primary');
+    expect(box.className).toContain('border-muted-foreground/60');
+  });
 });

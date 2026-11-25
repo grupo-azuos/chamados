@@ -1,3 +1,9 @@
+<!--
+  @component
+  Campo de escolha COM BUSCA (combobox): o gatilho na régua `lg` e, no balão, a busca reta do
+  template com a lista filtrada. Use quando a lista passa de dez opções ou quando a pessoa pode
+  cadastrar ali mesmo (`actions.onCreate`); para pessoa, use `AzuosPersonPickerField`.
+-->
 <script lang="ts" module>
   import type { LucideIcon } from '@lucide/svelte';
 
@@ -59,10 +65,12 @@
   import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
   import Plus from '@lucide/svelte/icons/plus';
 
-  import * as Command from '$lib/components/ui/command';
+  import CommandSearch from '$lib/components/azuos-command-search/azuos-command-search.svelte';
+  import CommandSearchItem from '$lib/components/azuos-command-search-item/azuos-command-search-item.svelte';
   import * as Popover from '$lib/components/ui/popover';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import { cn } from '$lib/utils/cn';
+  import { computeCommandScore } from 'bits-ui';
 
   let { data, ui, state: fieldState, actions }: AzuosComboboxFieldProps = $props();
 
@@ -72,6 +80,12 @@
   const selectedOption = $derived(data.options.find((option) => option.value === data.value));
   const typed = $derived(term.trim());
   const canCreate = $derived(canCreateOption(data.options, typed, actions.onCreate));
+  /* O filtro é feito AQUI, com a mesma nota de semelhança do bits-ui ("ana s" ainda acha "Ana
+     Souza"): deixado com ele, a lista é reordenada direto na página e a linha "Criar «termo»" que
+     sai dela fica presa na tela. */
+  const visibleOptions = $derived(
+    typed ? data.options.filter((option) => computeCommandScore(option.label, typed) > 0) : data.options,
+  );
   const SelectedIcon = $derived(selectedOption?.icon);
 
   /* Fechar limpa a busca: reabrir com o termo antigo ainda filtrando mostra uma lista quase
@@ -129,43 +143,54 @@
       </button>
     {/snippet}
   </Popover.Trigger>
-  <!-- A LARGURA DA LISTA É A DO GATILHO, com piso: sem amarrar, ela se estica até o nome mais
-       comprido e nasce mais larga que o diálogo em volta; sem o piso (`min-w-64`), sob um
-       gatilho estreito cada opção saía cortada. O gatilho tem o piso dele (`min-w-40`). -->
-  <Popover.Content align="start" matchAnchorWidth class="min-w-64 p-0">
-    <!-- O filtro é o do próprio Command, por semelhança — "ana s" ainda acha "Ana Souza". -->
-    <Command.Root>
-      <Command.Input bind:value={term} placeholder={ui?.searchPlaceholder ?? 'Pesquisar…'} />
-      <Command.List>
-        <Command.Empty>{ui?.emptyLabel ?? 'Nada encontrado.'}</Command.Empty>
-        <Command.Group>
-          {#each data.options as option (option.value)}
-            {@const OptionIcon = option.icon}
-            <Command.Item value={option.label} onSelect={() => choose(option.value)}>
-              <Check
-                class={cn('size-4 shrink-0', option.value !== data.value && 'opacity-0')}
-                aria-hidden="true"
-              />
-              {#if option.personName}
-                <span aria-hidden="true" class="flex shrink-0">
-                  <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
-                </span>
-              {:else if OptionIcon}
-                <OptionIcon class="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
-              {/if}
-              <span class="truncate">{option.label}</span>
-            </Command.Item>
-          {/each}
-          <!-- O `value` é o próprio termo para que o filtro nunca esconda a linha de criar: ela é
-               justamente a saída de quem não achou o que procurava. -->
-          {#if canCreate}
-            <Command.Item value={typed} onSelect={create}>
-              <Plus class="size-4 shrink-0" aria-hidden="true" />
-              <span class="truncate">{ui?.createLabel ?? 'Criar'} “{typed}”</span>
-            </Command.Item>
+  <!-- A LARGURA DA LISTA É A DO CONTEÚDO, entre um piso e um teto (o padrão dos menus): nunca
+       mais estreita que o gatilho nem que 14rem (cabe o campo de busca), e no máximo 26rem. Presa
+       à largura do gatilho, sob um gatilho estreito cada nome saía cortado ("Vinícius…"). Abre
+       centralizada embaixo do gatilho. -->
+  <Popover.Content
+    sideOffset={6}
+    align="center"
+    class="rounded-surface bg-popover ring-foreground/8 w-max max-w-[min(26rem,calc(100vw-2rem))] min-w-[max(14rem,var(--bits-popover-anchor-width))] overflow-hidden border-transparent p-0 shadow-xl ring-1"
+  >
+    <!-- O filtro é o do próprio Command, por semelhança — "ana s" ainda acha "Ana Souza". A busca
+         e as linhas vêm dos `azuos-command-*`, com as classes do template: a linha reta de busca
+         com o fio embaixo, não a pílula do `ui/command`. -->
+    <CommandSearch
+      data={{ term }}
+      ui={{
+        placeholder: ui?.searchPlaceholder ?? 'Pesquisar…',
+        emptyLabel: ui?.emptyLabel ?? 'Nada encontrado.',
+        className: 'rounded-surface bg-card',
+        isFilteredOutside: true,
+      }}
+      actions={{ onTermChange: (next) => (term = next) }}
+    >
+      {#each visibleOptions as option (option.value)}
+        {@const OptionIcon = option.icon}
+        <CommandSearchItem
+          data={{ value: option.label }}
+          ui={{ className: 'rounded-chip' }}
+          actions={{ onSelect: () => choose(option.value) }}
+        >
+          <Check class={cn('size-4 shrink-0', option.value !== data.value && 'opacity-0')} aria-hidden="true" />
+          {#if option.personName}
+            <span aria-hidden="true" class="flex shrink-0">
+              <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
+            </span>
+          {:else if OptionIcon}
+            <OptionIcon class="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
           {/if}
-        </Command.Group>
-      </Command.List>
-    </Command.Root>
+          <span class="truncate">{option.label}</span>
+        </CommandSearchItem>
+      {/each}
+      <!-- O `value` é o próprio termo para que o filtro nunca esconda a linha de criar: ela é
+           justamente a saída de quem não achou o que procurava. -->
+      {#if canCreate}
+        <CommandSearchItem data={{ value: typed }} ui={{ className: 'rounded-chip' }} actions={{ onSelect: create }}>
+          <Plus class="size-4 shrink-0" aria-hidden="true" />
+          <span class="truncate">{ui?.createLabel ?? 'Criar'} “{typed}”</span>
+        </CommandSearchItem>
+      {/if}
+    </CommandSearch>
   </Popover.Content>
 </Popover.Root>

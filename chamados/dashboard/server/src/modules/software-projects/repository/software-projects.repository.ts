@@ -1,8 +1,25 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { RUNNING_TICKET_STATUSES } from '@template/shared/domain/ticket-status.util';
 import { type SoftwareProjectListQuery } from '@template/shared/schemas/software-project.schema';
-import { and, asc, count, desc, eq, ilike, inArray, isNotNull, or, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm';
+import { type AnyPgColumn } from 'drizzle-orm/pg-core';
 
+import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runOne, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { type Database } from '../../../lib/db/db.type';
@@ -12,6 +29,7 @@ import {
   type SoftwareProjectRow,
 } from '../../../lib/db/schema/software-projects.schema';
 import { softwareTimelineEvents } from '../../../lib/db/schema/software-timeline-events.schema';
+import { tasks } from '../../../lib/db/schema/tasks.schema';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
 
 export type SoftwareProjectPage = {
@@ -19,12 +37,126 @@ export type SoftwareProjectPage = {
   total: number;
 };
 
+/** O recorte do mapa: o período (dias inclusos) e a pessoa (o id e a conta do GitHub dela). */
+export type ProjectMapFilter = {
+  from?: string;
+  to?: string;
+  personId?: string;
+  personLogin?: string | null;
+};
+
+const DAY_START = (day: string) => new Date(`${day}T00:00:00-03:00`);
+const DAY_END = (day: string) => new Date(`${day}T23:59:59.999-03:00`);
+
+function periodOf(column: AnyPgColumn, filter: ProjectMapFilter): SQL[] {
+  return [
+    ...(filter.from ? [gte(column, DAY_START(filter.from))] : []),
+    ...(filter.to ? [lte(column, DAY_END(filter.to))] : []),
+  ];
+}
+
+/** Do GitHub, o que a pessoa abriu ou fez (pela conta dela); sem conta vinculada, nada. */
+function eventFilters(filter: ProjectMapFilter): SQL[] {
+  const person = filter.personId
+    ? [
+        filter.personLogin
+          ? sql`lower(${softwareTimelineEvents.author}) = lower(${filter.personLogin})`
+          : sql`false`,
+      ]
+    : [];
+
+  return [...periodOf(softwareTimelineEvents.eventDate, filter), ...person];
+}
+
+function ticketFilters(filter: ProjectMapFilter): SQL[] {
+  return [
+    ...periodOf(tickets.createdAt, filter),
+    ...(filter.personId ? [eq(tickets.assigneeId, filter.personId)] : []),
+  ];
+}
+
+/** A tarefa que toca o período (do início ao prazo) e que é da pessoa. */
+function taskFilters(filter: ProjectMapFilter): SQL[] {
+  return [
+    ...(filter.to ? [lte(tasks.startDate, filter.to)] : []),
+    ...(filter.from ? [gte(sql`coalesce(${tasks.dueDate}, ${tasks.startDate})`, filter.from)] : []),
+    ...(filter.personId ? [eq(tasks.ownerId, filter.personId)] : []),
+  ];
+}
+
 @Injectable()
 export class SoftwareProjectsRepository {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async list(query: SoftwareProjectListQuery): Promise<SoftwareProjectPage> {
-    const where = this.buildWhere(query);
+  /**
+   * Os fatos do mapa dos projetos: os sistemas (os escolhidos, ou todos os em uso), os eventos do
+   * GitHub de cada um, os chamados deles e as tarefas que nasceram desses chamados.
+   */
+  async mapFacts(ids: number[] | null, filter: ProjectMapFilter = {}) {
+    const projects = await runQuery(
+      this.db
+        .select()
+        .from(softwareProjects)
+        .where(
+          and(
+            isNull(softwareProjects.archivedAt),
+            ids ? inArray(softwareProjects.id, ids) : undefined,
+          ),
+        )
+        .orderBy(asc(softwareProjects.name)),
+      'ler os sistemas do mapa',
+    );
+    const projectIds = projects.map((project) => project.id);
+    if (!projectIds.length) return { projects, events: [], tickets: [], tasks: [] };
+    const [events, projectTickets] = await Promise.all([
+      runQuery(
+        this.db
+          .select()
+          .from(softwareTimelineEvents)
+          .where(
+            and(inArray(softwareTimelineEvents.projectId, projectIds), ...eventFilters(filter)),
+          )
+          .orderBy(desc(softwareTimelineEvents.eventDate), desc(softwareTimelineEvents.id)),
+        'ler os eventos dos sistemas',
+      ),
+      runQuery(
+        this.db
+          .select({
+            id: tickets.id,
+            projectId: tickets.projectId,
+            status: tickets.status,
+            description: tickets.description,
+            githubIssueNumber: tickets.githubIssueNumber,
+            resolvedAt: tickets.resolvedAt,
+          })
+          .from(tickets)
+          .where(and(inArray(tickets.projectId, projectIds), ...ticketFilters(filter)))
+          .orderBy(desc(tickets.id)),
+        'ler os chamados dos sistemas',
+      ),
+    ]);
+    const ticketIds = projectTickets.map((ticket) => ticket.id);
+    const ticketTasks = ticketIds.length
+      ? await runQuery(
+          this.db
+            .select({
+              id: tasks.id,
+              title: tasks.title,
+              status: tasks.status,
+              ticketId: tasks.ticketId,
+            })
+            .from(tasks)
+            .where(and(inArray(tasks.ticketId, ticketIds), ...taskFilters(filter))),
+          'ler as tarefas dos chamados dos sistemas',
+        )
+      : [];
+
+    return { projects, events, tickets: projectTickets, tasks: ticketTasks };
+  }
+
+  /** `drill`: o recorte de um clique no painel, já em SQL — mais uma condição E do filtro. */
+  async list(query: SoftwareProjectListQuery, drill?: SQL): Promise<SoftwareProjectPage> {
+    const where = and(this.buildWhere(query), drill);
     const offset = (query.page - 1) * query.pageSize;
 
     const [rows, [counted]] = await Promise.all([
@@ -49,7 +181,11 @@ export class SoftwareProjectsRepository {
 
   async listAll(): Promise<SoftwareProjectRow[]> {
     return runQuery(
-      this.db.select().from(softwareProjects).orderBy(desc(softwareProjects.createdAt)),
+      this.db
+        .select()
+        .from(softwareProjects)
+        .where(isNull(softwareProjects.archivedAt))
+        .orderBy(desc(softwareProjects.createdAt)),
       'listar todos os sistemas',
     );
   }
@@ -65,6 +201,7 @@ export class SoftwareProjectsRepository {
             inArray(softwareProjects.status, ['active', 'maintenance']),
             isNotNull(softwareProjects.githubRepoOwner),
             isNotNull(softwareProjects.githubRepoName),
+            isNull(softwareProjects.archivedAt),
           ),
         )
         .orderBy(asc(softwareProjects.name)),
@@ -83,6 +220,7 @@ export class SoftwareProjectsRepository {
             inArray(softwareProjects.status, ['active', 'maintenance']),
             isNotNull(softwareProjects.githubRepoOwner),
             isNotNull(softwareProjects.githubRepoName),
+            isNull(softwareProjects.archivedAt),
           ),
         )
         .limit(1),
@@ -110,11 +248,47 @@ export class SoftwareProjectsRepository {
     );
   }
 
-  async remove(id: number): Promise<void> {
+  /** Arquiva (excluir) ou desarquiva (desfazer). O sistema, a linha do tempo e os chamados
+   *  ficam. */
+  async setArchived(id: number, archived: boolean, actorId: string | null): Promise<void> {
     await runQuery(
-      this.db.delete(softwareProjects).where(eq(softwareProjects.id, id)),
-      'excluir sistema',
+      this.db
+        .update(softwareProjects)
+        .set(archiveValues(archived, actorId))
+        .where(eq(softwareProjects.id, id)),
+      archived ? 'arquivar sistema' : 'desarquivar sistema',
     );
+  }
+
+  /**
+   * O ANDAMENTO DOS SISTEMAS para a Central: os em uso, com as issues abertas e o último movimento
+   * do GitHub (a data mais nova da timeline). Os chamados abertos vêm de `countOpenTicketsByProject`.
+   */
+  async supportList() {
+    const projects = await runQuery(
+      this.db
+        .select()
+        .from(softwareProjects)
+        .where(isNull(softwareProjects.archivedAt))
+        .orderBy(asc(softwareProjects.name)),
+      'ler os sistemas da Central',
+    );
+    const ids = projects.map((project) => project.id);
+    if (!ids.length) return { projects, activity: [] };
+    const activity = await runQuery(
+      this.db
+        .select({
+          projectId: softwareTimelineEvents.projectId,
+          openIssues: sql<number>`count(*) filter (where ${softwareTimelineEvents.type} = 'issue' and ${softwareTimelineEvents.status} = 'open')::int`,
+          lastAt: sql<Date | null>`max(${softwareTimelineEvents.eventDate})`,
+        })
+        .from(softwareTimelineEvents)
+        .where(inArray(softwareTimelineEvents.projectId, ids))
+        .groupBy(softwareTimelineEvents.projectId),
+      'ler o andamento dos sistemas',
+    );
+
+    return { projects, activity };
   }
 
   async countOpenTicketsByProject(projectIds: number[]): Promise<Record<number, number>> {
@@ -175,7 +349,9 @@ export class SoftwareProjectsRepository {
   }
 
   private buildWhere(query: SoftwareProjectListQuery): SQL | undefined {
-    const filters: (SQL | undefined)[] = [];
+    const filters: (SQL | undefined)[] = [
+      archivedCondition(softwareProjects.archivedAt, query.archived),
+    ];
 
     if (query.status) {
       filters.push(eq(softwareProjects.status, query.status));

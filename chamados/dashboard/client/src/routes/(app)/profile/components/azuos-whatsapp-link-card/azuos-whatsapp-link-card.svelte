@@ -1,3 +1,20 @@
+<!--
+  @component
+  O CARTÃO DE WHATSAPP do perfil: mostra se há um número vinculado e oferece vincular ou
+  desvincular.
+
+  Conectado, mostra o número e o contador de mensagens automáticas do dia — em tom de aviso perto
+  do teto e avisando quando ele foi atingido. Sem a integração configurada, explica e não oferece
+  botão. Um vínculo começado e não terminado vira "Continuar vínculo". O botão "Textos do bot" só
+  aparece quando `onEditTemplates` é passada (super admin).
+
+  Só aparece para quem pode vincular — quem decide é a tela, que nem monta o cartão para os demais.
+  Aqui dentro não há regra de permissão.
+
+  - `data`: `phone` (já formatado), `sentToday` e `dailyLimit`.
+  - `state`: `isLoading`, `isConfigured`, `linkState` e `error`.
+  - `actions`: `onLink`, `onUnlink` e `onEditTemplates` (opcional).
+-->
 <script lang="ts" module>
   import {
     isNearWhatsappLimit,
@@ -58,7 +75,7 @@
 
 <section
   aria-labelledby="whatsapp-link-title"
-  class="rounded-box border-border bg-card flex flex-col gap-4 border p-6 shadow-xs md:flex-row md:items-center md:justify-between"
+  class="rounded-box bg-card flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between shadow-card"
 >
   <div class="flex min-w-0 items-start gap-3">
     <span
@@ -87,7 +104,7 @@
           dos chamados em que você é o responsável.
         </p>
         {#if dailyLimit > 0}
-          <p class={cn('mt-1 text-xs', isNearLimit ? 'text-warning font-medium' : 'text-muted-foreground')}>
+          <p class={cn('mt-1 text-xs', isNearLimit ? 'text-warning-ink font-medium' : 'text-muted-foreground')}>
             {sentToday} de {dailyLimit} mensagens automáticas hoje.
             {#if hasReachedLimit}
               Limite atingido: o sistema volta a enviar por você amanhã.

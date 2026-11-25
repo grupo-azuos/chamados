@@ -35,7 +35,7 @@ export class TicketPeopleService {
 
     return users
       .filter((user) => !user.banned)
-      .map((user) => ({ id: user.id, name: displayName(user) }))
+      .map((user) => ({ id: user.id, name: displayName(user), avatarUrl: user.image ?? null }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }
 
@@ -114,6 +114,7 @@ export class TicketPeopleService {
     await this.watchers.remove(
       ticket.id,
       removed.map((watcher) => watcher.id),
+      author.id ?? null,
     );
     /* Visível para quem pediu, ao contrário das outras alterações de dados: quem entrou e quem
        saiu do chamado é assunto de todos os envolvidos. */

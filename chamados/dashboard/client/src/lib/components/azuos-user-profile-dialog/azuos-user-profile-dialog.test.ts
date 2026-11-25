@@ -102,4 +102,13 @@ describe('AzuosUserProfileDialog — without a person, without the optional acti
     await userEvent.keyboard('{Escape}');
     expect(actions.onClose).toHaveBeenCalled();
   });
+
+  // feliz
+  it('draws its blocks as muted boxes, never a white card inside the white dialog', () => {
+    renderDialog();
+
+    const block = screen.getByText('Seus Cargos Internos por Área').closest('.rounded-box');
+    expect(block?.className).toContain('bg-muted');
+    expect(block?.className).not.toMatch(/bg-card|shadow-card|\bborder\b/);
+  });
 });

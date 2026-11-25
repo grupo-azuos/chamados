@@ -4,8 +4,9 @@ import {
   type PartListQuery,
 } from '@template/shared/schemas/part.schema';
 import { type TicketStockLink } from '@template/shared/schemas/ticket-stock-item.schema';
-import { and, asc, count, desc, eq, gt, ilike, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, ilike, isNull, or, type SQL } from 'drizzle-orm';
 
+import { archivedCondition, archiveValues } from '../../../lib/db/archive.util';
 import { runMaybe, runQuery } from '../../../lib/db/db-error.util';
 import { DB } from '../../../lib/db/db.token';
 import { ticketStockLinksOf } from '../../../lib/db/ticket-stock-link.util';
@@ -17,6 +18,7 @@ import {
   type PartMovementRow,
 } from '../../../lib/db/schema/part-movements.schema';
 import { parts, type PartInsert, type PartRow } from '../../../lib/db/schema/parts.schema';
+import { computerDepartmentNameSql } from '../../../lib/db/reference-names.util';
 
 export type PartPage = { rows: PartRow[]; total: number };
 
@@ -36,12 +38,15 @@ export type MovementPage = { rows: MovementWithRefs[]; total: number };
 
 const partColumns = { id: parts.id, name: parts.name, condition: parts.condition };
 
-const computerColumns = {
-  id: computers.id,
-  name: computers.name,
-  displayName: computers.displayName,
-  department: computers.department,
-};
+/* Função, e não objeto: o nome do departamento vem da última lista do RH, lida na hora da consulta. */
+function computerColumns() {
+  return {
+    id: computers.id,
+    name: computers.name,
+    displayName: computers.displayName,
+    department: computerDepartmentNameSql(),
+  };
+}
 
 /**
  * O repository não tem regra: traduz filtro em consulta e devolve linha. Toda decisão — quem
@@ -126,7 +131,7 @@ export class PartsRepository {
     const [rows, [counted]] = await Promise.all([
       runQuery(
         this.db
-          .select({ movement: partMovements, part: partColumns, computer: computerColumns })
+          .select({ movement: partMovements, part: partColumns, computer: computerColumns() })
           .from(partMovements)
           .leftJoin(parts, eq(partMovements.partId, parts.id))
           .leftJoin(computers, eq(partMovements.computerId, computers.id))
@@ -156,7 +161,7 @@ export class PartsRepository {
   ): Promise<MovementWithRefs | null> {
     return runMaybe(
       executor
-        .select({ movement: partMovements, part: partColumns, computer: computerColumns })
+        .select({ movement: partMovements, part: partColumns, computer: computerColumns() })
         .from(partMovements)
         .leftJoin(parts, eq(partMovements.partId, parts.id))
         .leftJoin(computers, eq(partMovements.computerId, computers.id))
@@ -186,14 +191,24 @@ export class PartsRepository {
     );
   }
 
-  async deleteMovement(id: number, executor: DatabaseExecutor): Promise<void> {
+  /** Estorna (arquiva) ou desfaz o estorno. A linha nunca sai do banco. */
+  async setMovementArchived(
+    id: number,
+    archived: boolean,
+    actorId: string | null,
+    executor: DatabaseExecutor,
+  ): Promise<void> {
     await runQuery(
-      executor.delete(partMovements).where(eq(partMovements.id, id)),
-      'excluir movimentação',
+      executor
+        .update(partMovements)
+        .set(archiveValues(archived, actorId))
+        .where(eq(partMovements.id, id)),
+      archived ? 'estornar movimentação' : 'desfazer o estorno da movimentação',
     );
   }
 
-  /** O extrato de uma peça em ordem cronológica — é assim que o saldo é refeito. */
+  /** O extrato de uma peça em ordem cronológica — é assim que o saldo é refeito. As linhas
+   *  estornadas (arquivadas) não contam. */
   async listMovementsOfPart(
     partId: number,
     executor: DatabaseExecutor,
@@ -202,7 +217,7 @@ export class PartsRepository {
       executor
         .select()
         .from(partMovements)
-        .where(eq(partMovements.partId, partId))
+        .where(and(eq(partMovements.partId, partId), isNull(partMovements.archivedAt)))
         .orderBy(asc(partMovements.createdAt), asc(partMovements.id)),
       'ler o extrato da peça',
     );
@@ -240,7 +255,7 @@ function buildPartWhere(query: PartListQuery): SQL | undefined {
 }
 
 function buildMovementWhere(query: MovementListQuery): SQL | undefined {
-  const filters: (SQL | undefined)[] = [];
+  const filters: (SQL | undefined)[] = [archivedCondition(partMovements.archivedAt, query.archived)];
 
   if (query.partId) filters.push(eq(partMovements.partId, query.partId));
   if (query.computerId) filters.push(eq(partMovements.computerId, query.computerId));

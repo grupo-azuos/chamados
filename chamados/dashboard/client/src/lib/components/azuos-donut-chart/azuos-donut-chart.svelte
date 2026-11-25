@@ -1,20 +1,25 @@
+<!--
+  @component
+  Rosca — para mostrar como um todo se divide (situação, tipo de problema, departamento).
+
+  O anel vem do ECharts (pela moldura `AzuosEchart`), limpo — sem número escrito em cima da fatia:
+  valor e porcentagem aparecem na legenda e, ao passar o mouse, no balão. O resto é o que o projeto
+  exige e a biblioteca não traz:
+
+  1. **Legenda ao lado, com o nome escrito**, o valor e a porcentagem. Cor sozinha não é informação
+     para quem não distingue cor (ver `chart-slice`).
+  2. **O total no MEIO do anel**, que poupa a soma de cabeça.
+  3. **Clique abre o detalhamento** (`actions.onSelect`) — tanto na fatia quanto na legenda. O
+     gráfico é o caminho para a lista, não um enfeite: é assim que alguém sai de "42 em andamento"
+     para "quais 42".
+
+  Props: `data` traz as fatias e o nome da série; `state.isLoading` mostra o carregando; `ui` traz o
+  texto do vazio; `actions.onSelect` recebe o nome da fatia clicada.
+-->
 <script lang="ts" module>
   import { colorOfSlice, type ChartSlice } from '$lib/utils/chart-slice';
   import { formatCount, type ChartOption, type ChartTheme } from '$lib/utils/echarts.util';
 
-  /**
-   * Rosca — para mostrar como um todo se divide (situação, tipo de problema, departamento).
-   *
-   * O anel vem do ECharts (pela moldura `AzuosEchart`), limpo — sem número escrito em cima da fatia;
-   * o resto é o que o projeto exige e a biblioteca não traz:
-   *
-   *  1. **Legenda ao lado, com o nome escrito**, o valor e a porcentagem. Cor sozinha não é
-   *     informação para quem não distingue cor (ver `chart-slice`).
-   *  2. **O total no MEIO do anel**, que poupa a soma de cabeça.
-   *  3. **Clique abre o detalhamento** (`actions.onSelect`) — tanto na fatia quanto na
-   *     legenda. O gráfico é o caminho para a lista, não um enfeite: é assim que alguém sai
-   *     de "42 em andamento" para "quais 42".
-   */
   export type AzuosDonutChartProps = {
     data: {
       slices: ChartSlice[];
@@ -90,21 +95,21 @@
     {ui?.emptyLabel ?? 'Sem dados para mostrar'}
   </p>
 {:else}
-  <!-- Empilhado no celular, lado a lado a partir do `sm`: com 320 px de largura, anel e
-       legenda lado a lado deixam os dois ilegíveis. -->
-  <div class={cn('flex h-full flex-col items-center gap-4 sm:flex-row', ui?.className)}>
+  <!-- No celular o anel vai EM CIMA e a legenda embaixo: lado a lado, numa tela de 360px,
+       sobrava um anel do tamanho de uma moeda e uma legenda com os nomes cortados. -->
+  <div class={cn('flex h-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-4', ui?.className)}>
     <!-- Quadrado próprio para a rosca: sem ele, a legenda ao lado empurra o centro do anel
          para fora do meio visual do cartão, e o total sobreposto fica desalinhado. -->
-    <div class="relative aspect-square h-40 shrink-0 sm:h-full">
+    <div class="relative mx-auto aspect-square h-40 shrink-0 sm:h-full">
       <Echart
-        data={{ option: (theme) => donutOption(data.slices, data.seriesLabel, theme), description: data.seriesLabel }}
+        data={{ option: (theme) => donutOption(data.slices, data.seriesLabel, theme), description: `${data.seriesLabel}: ${formatCount(total)} no total` }}
         ui={{ heightClass: 'h-full' }}
         actions={{ onSelect: actions?.onSelect ? (selection) => actions?.onSelect?.(selection.name) : undefined }}
       />
 
       <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
         <span class="text-foreground text-xl leading-tight font-bold">
-          {total.toLocaleString('pt-BR')}
+          {formatCount(total)}
         </span>
         <span class="text-muted-foreground text-xs tracking-wide uppercase">
           {data.seriesLabel}
@@ -119,7 +124,7 @@
          CSS, pedir rolagem num eixo transforma o outro em `auto` sozinho. Sem ele, qualquer
          nome um pouco largo demais dava barra de rolagem HORIZONTAL na legenda — e ninguém
          rola uma legenda para o lado. -->
-    <ul class="w-full min-w-0 flex-1 space-y-2.5 self-stretch overflow-x-hidden overflow-y-auto pr-1">
+    <ul class="min-h-0 min-w-0 flex-1 space-y-2.5 self-stretch overflow-x-hidden overflow-y-auto pr-1">
       <!-- A chave leva a POSIÇÃO junto com o rótulo: dois itens podem ter o mesmo nome, e
            chave repetida num `each` derruba a tela inteira em vez de só desenhar torto. -->
       {#each data.slices as slice, index (`${slice.label}-${index}`)}
@@ -132,7 +137,7 @@
             <button
               type="button"
               onclick={() => actions?.onSelect?.(slice.label)}
-              class="hover:bg-muted flex w-full cursor-pointer items-center gap-2 rounded-chip px-1 py-0.5 text-left text-xs"
+              class="hover:bg-muted rounded-chip flex w-full cursor-pointer items-center gap-2 px-1 py-0.5 text-left text-xs"
             >
               {@render row(slice, color, percent)}
             </button>
@@ -149,30 +154,22 @@
 
 {#snippet row(slice: ChartSlice, color: string | undefined, percent: number)}
   <span
-    class="size-2 shrink-0 rounded-none"
+    class="size-2 shrink-0 rounded-full"
     style="background-color: {color}"
     aria-hidden="true"
   ></span>
-  <!-- O nome ENCOLHE (`min-w-0 flex-1`), e não tem largura fixa.
-       Com largura fixa, a soma das partes passava da largura da legenda quando o cartão era
-       estreito, e sobrava só o que a rolagem horizontal resolveria — que é o que não se faz
-       numa legenda. Aqui quem cede espaço é o nome, que continua inteiro no `title`. -->
-  <span class="text-muted-foreground min-w-0 flex-1 truncate" title={slice.label}>
+  <span class="text-muted-foreground w-20 shrink-0 truncate" title={slice.label}>
     {slice.label}
   </span>
   <!-- Barrinha de proporção — não é `ProgressBar` (esse componente é pra "quanto já foi
        cumprido de uma obrigação"). Aqui a cor tem que ser a mesma do ponto e da fatia: é a
-       identidade da categoria, não uma leitura de "bom ou ruim".
-
-       Largura FIXA e à direita: é o que mantém todas as barrinhas começando na mesma linha
-       vertical. Desalinhadas, elas deixam de ser comparáveis de relance, que é a única razão
-       de existirem. Some no celular, onde não há largura para ela e para o nome. -->
-  <span class="bg-muted hidden h-1.5 w-14 shrink-0 overflow-hidden rounded-full sm:block">
+       identidade da categoria, não uma leitura de "bom ou ruim". -->
+  <span class="bg-muted h-1.5 min-w-8 flex-1 overflow-hidden rounded-full">
     <span
       class="block h-full rounded-full"
       style="width: {percent}%; background-color: {color}"
     ></span>
   </span>
-  <span class="text-foreground shrink-0 font-semibold">{slice.value}</span>
+  <span class="text-foreground shrink-0 font-semibold">{formatCount(slice.value)}</span>
   <span class="text-muted-foreground w-9 shrink-0 text-right">{percent}%</span>
 {/snippet}

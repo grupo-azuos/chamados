@@ -1,5 +1,24 @@
+<!--
+  @component
+  TRANSFERIR a máquina de departamento, num modal.
+
+  Mostra onde a máquina está hoje e pede para onde vai, quem levou e uma observação. Sem
+  departamento, ela volta a ser reserva (perde o responsável), e o modal avisa. A pergunta dos
+  periféricos é o coração desta tela, e não um detalhe: na prática quem troca de computador deixa
+  teclado, mouse e monitor na mesa. Para cada peça na máquina, a pessoa escolhe o destino e, se ela
+  fica na estação, qual máquina a assume — faltando isso, o envio trava com o aviso.
+
+  Função pura de props: não busca nada e não navega. Por isso abre no Storybook com peças, sem
+  peças, carregando e com o destino em falta.
+
+  - `data`: `computer`, `toDepartment`, `responsible`, `note`, `departments`, `machines` e
+    `peripherals`.
+  - `state`: `isOpen`, `isSubmitting`, `isLoadingPeripherals`, `isIncomplete` e `error`.
+  - `actions`: `onDepartmentChange`, `onResponsibleChange`, `onNoteChange`, `onDestinyChange`,
+    `onDestinationChange`, `onSubmit` e `onClose`.
+-->
 <script lang="ts" module>
-  import { departmentLabel } from '@template/shared/domain/department.util';
+  import { computerDepartmentLabel } from '$lib/utils/computer-place.util';
   import {
     PERIPHERAL_DESTINIES,
     peripheralDestinyLabel,
@@ -7,7 +26,10 @@
   } from '@template/shared/domain/transfer.util';
   import { type Computer } from '@template/shared/schemas/computer.schema';
 
-  export type DepartmentOption = { value: string; label: string };
+  /**
+   * Um destino: um departamento oficial (`department:<id do RH>`) ou `''`, a prateleira.
+   */
+  export type DepartmentOption = { value: string; label: string; separatorBefore?: boolean };
 
   export type MachineOption = { value: string; label: string };
 
@@ -59,9 +81,9 @@
 
   /** Onde a máquina está hoje, escrito como quem pergunta: "está no financeiro". */
   export function currentPlaceOf(computer: Computer): string {
-    return computer.department
-      ? departmentLabel(computer.department)
-      : 'Sem departamento (na prateleira)';
+    if (!computer.departmentId) return 'Sem departamento (na prateleira)';
+
+    return computerDepartmentLabel(computer);
   }
 
   export function machineLabelOf(computer: Computer): string {
@@ -84,6 +106,7 @@
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import {
     Dialog,
     DialogDescription,
@@ -170,8 +193,8 @@
       {#if dialogState.isLoadingPeripherals}
         <p class="text-ink-500 text-xs">Vendo quais peças estão nesta máquina…</p>
       {:else if data.peripherals.length > 0}
-        <fieldset class="flex flex-col gap-2 rounded-box border p-3">
-          <legend class="text-ink-700 px-1 text-sm font-medium">
+        <fieldset class="flex flex-col gap-2">
+          <legend class="text-ink-700 mb-1 text-sm font-medium">
             Peças nesta máquina — o que vai junto?
           </legend>
 
@@ -179,27 +202,28 @@
             <div class="flex flex-col gap-1 border-t pt-2 first:border-t-0 first:pt-0">
               <span class="text-ink-900 text-sm">{peripheralLabelOf(peripheral)}</span>
 
-              <div class="flex flex-wrap items-center gap-3">
-                {#each PERIPHERAL_DESTINIES as destiny (destiny)}
-                  <label class="text-ink-700 flex items-center gap-1.5 text-xs">
-                    <input
-                      type="radio"
-                      name={`destiny-${peripheral.partId}`}
-                      value={destiny}
-                      checked={peripheral.destiny === destiny}
-                      disabled={dialogState.isSubmitting}
-                      onchange={() => actions.onDestinyChange(peripheral.partId, destiny)}
-                    />
-                    {peripheralDestinyLabel(destiny)}
-                  </label>
-                {/each}
-              </div>
+              <!-- Duas opções à vista: o segmentado do padrão Apple, nunca rádio nativo. -->
+              <SegmentedControl
+                data={{
+                  value: peripheral.destiny,
+                  options: PERIPHERAL_DESTINIES.map((destiny) => ({
+                    value: destiny,
+                    label: peripheralDestinyLabel(destiny),
+                  })),
+                }}
+                ui={{ ariaLabel: `Destino de ${peripheralLabelOf(peripheral)}` }}
+                state={{ isDisabled: dialogState.isSubmitting }}
+                actions={{
+                  onChange: (value) =>
+                    actions.onDestinyChange(peripheral.partId, value as (typeof PERIPHERAL_DESTINIES)[number]),
+                }}
+              />
 
               {#if peripheral.destiny === 'station'}
                 <OptionPicker
                   data={{
                     value: peripheral.destinationComputerId,
-                    options: [{ value: '', label: '— máquina que assume —' }, ...data.machines],
+                    options: [{ value: '', label: '(Máquina que assume)' }, ...data.machines],
                   }}
                   ui={{ ariaLabel: `Máquina que assume ${peripheral.label}`, fullWidth: true }}
                   state={{ isDisabled: dialogState.isSubmitting }}
@@ -215,7 +239,7 @@
       {/if}
 
       {#if dialogState.isIncomplete}
-        <p class="text-xs text-warning">
+        <p class="text-xs text-warning-ink">
           Falta dizer qual máquina assume a peça que fica na estação.
         </p>
       {/if}

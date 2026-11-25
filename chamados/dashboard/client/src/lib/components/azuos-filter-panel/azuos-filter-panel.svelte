@@ -1,37 +1,53 @@
+<!--
+  @component
+  A BARRA DE FILTROS de uma lista — o mesmo desenho no Inventário e nas filas de chamados.
+
+  Em cima, o que se usa toda hora: a busca, um filtro principal em lista suspensa (o departamento) e
+  o botão "Filtros", que conta quantos estão ligados. O resto mora num painel que desliza, numa
+  grade que INTERCALA pastilhas (`pills`, poucas opções) e listas suspensas (`select`, muitas): 3
+  colunas no computador grande, 2 no tablet e 1 no celular. Embaixo, uma etiqueta por filtro ligado,
+  com o X que o desliga, e "Limpar filtros".
+
+  Função pura de props. O único estado próprio é visual — o painel aberto ou fechado.
+
+  Props: `data` traz a busca, o filtro principal, os filtros, as etiquetas e se há o que limpar;
+  `ui` traz o nome da região, a troca tabela/cards (e se ela oferece o quadro) e as colunas;
+  `state.isFilteredOut` avisa que o filtro escondeu tudo, e `state.isKanbanView` que a tela está no
+  quadro; `actions` recebe a busca, a troca de filtro, a etiqueta removida, o limpar e a troca de
+  quadro (`onKanbanViewChange`). `toggles` é a faixa de baixo, sempre à vista, com o que a lista
+  MOSTRA (de quem, em uso ou arquivadas) — o mesmo cartão de filtros do Paralegal.
+-->
 <script lang="ts" module>
+  import type { Snippet } from 'svelte';
   import { type OptionPickerOption } from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 
   /**
    * Um filtro do painel. `control` diz o formato: `pills` para poucas opções (escolha num
    * clique, à vista) e `select` para muitas (lista suspensa com busca). Alternar os dois na grade
    * é o desenho do painel.
+   *
+   * `person` é o filtro de PESSOA (regra `select-standard`): o campo de pessoa do sistema, com a
+   * foto e busca, que guarda o id. Aí `people` traz as pessoas e `options` vira as opções que vêm
+   * ANTES delas ("(Sem responsável)"), logo depois do "todos" de `allLabel`.
    */
   export type FilterPanelField = {
     key: string;
     label: string;
-    control: 'pills' | 'select';
+    control: 'pills' | 'select' | 'person';
     ariaLabel: string;
     /** O rótulo da opção "sem filtro" — "Todas", "Toda a saúde". */
     allLabel: string;
     value: string;
     options: OptionPickerOption[];
     searchPlaceholder?: string;
+    /** As pessoas do filtro `person`. */
+    people?: AzuosPersonPickerPerson[];
   };
 
   /** Uma etiqueta de filtro ligado: o que ela diz. Tirar é `actions.onRemoveChip(key)`. */
   export type FilterPanelChip = { key: string; label: string };
 
-  /**
-   * A BARRA DE FILTROS de uma lista — o mesmo desenho no Inventário e nas filas de chamados.
-   *
-   * Em cima, o que se usa toda hora: a busca, um filtro principal em lista suspensa (o
-   * departamento) e o botão "Filtros", que conta quantos estão ligados. O resto mora num painel
-   * que desliza, numa grade que INTERCALA pastilhas e listas suspensas: 3 colunas no computador
-   * grande, 2 no tablet e 1 no celular. Embaixo, uma etiqueta por filtro ligado, com o X que o
-   * desliga, e "Limpar filtros".
-   *
-   * Função pura de props. O único estado próprio é visual — o painel aberto ou fechado.
-   */
   export type AzuosFilterPanelProps = {
     data: {
       search: { value: string; placeholder: string };
@@ -47,6 +63,8 @@
       ariaLabel?: string;
       /** Mostra a troca tabela/cards no fim da barra. */
       showViewToggle?: boolean;
+      /** A troca ganha a terceira opção, o quadro (ver `AzuosTableViewToggle`). */
+      hasKanbanView?: boolean;
       /**
        * Quantos filtros por linha na tela larga (3 é o padrão). Com 7 filtros, 4 por linha os
        * mantém em DUAS linhas — uma terceira linha empurra a lista para baixo da dobra.
@@ -56,13 +74,19 @@
     state?: {
       /** O filtro escondeu tudo: quem oferece "Limpar filtros" é o aviso de lista vazia. */
       isFilteredOut?: boolean;
+      /** A tela está no quadro — é o botão marcado na troca. */
+      isKanbanView?: boolean;
     };
     actions: {
       onSearchChange: (search: string) => void;
       onFieldChange: (key: string, value: string) => void;
       onRemoveChip: (key: string) => void;
       onClearFilters: () => void;
+      /** Quadro ou lista, quando a troca oferece o quadro. */
+      onKanbanViewChange?: (isKanban: boolean) => void;
     };
+    /** A faixa de baixo, sempre à vista: o que a lista MOSTRA ("Da equipe / Minhas"). */
+    toggles?: Snippet;
   };
 </script>
 
@@ -80,11 +104,12 @@
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import InputGroup from '$lib/components/azuos-input-group/azuos-input-group.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import { DURATION, prefersReducedMotion } from '$lib/motion/motion';
   import { cn } from '$lib/utils/cn';
 
-  let { data, ui, state: panelState, actions }: AzuosFilterPanelProps = $props();
+  let { data, ui, state: panelState, actions, toggles }: AzuosFilterPanelProps = $props();
 
   /* Estado VISUAL: o painel aberto. Nasce aberto quando a tela chega filtrada lá dentro (um
      cartão do painel, um filtro salvo) — senão a pessoa veria a lista recortada sem saber por quê. */
@@ -99,13 +124,13 @@
    * colunas. Com mais, ficam do tamanho das opções — esticadas, sobrava faixa vazia.
    */
   function fillsCell(field: FilterPanelField): boolean {
-    return field.control === 'select' || field.options.length + 1 <= 3;
+    return field.control !== 'pills' || field.options.length + 1 <= 3;
   }
 </script>
 
 <section
   aria-label={ui?.ariaLabel ?? 'Filtros'}
-  class="border-border bg-card rounded-surface flex min-w-0 flex-col border shadow-xs"
+  class="bg-card rounded-surface flex min-w-0 flex-col shadow-card"
 >
   <!-- A barra: busca ocupa o que sobrar; no celular cada peça ganha a própria linha. -->
   <div class="flex min-w-0 flex-col gap-3 p-3 sm:p-4 md:flex-row md:items-end">
@@ -177,7 +202,11 @@
         />
       </button>
       {#if ui?.showViewToggle !== false}
-        <TableViewToggle />
+        <TableViewToggle
+          ui={{ hasKanban: ui?.hasKanbanView }}
+          state={{ isKanban: panelState?.isKanbanView }}
+          actions={{ onKanbanChange: actions.onKanbanViewChange }}
+        />
       {/if}
     </div>
   </div>
@@ -203,17 +232,29 @@
             data={{ label: field.label }}
             ui={{ className: fillsCell(field) ? 'sm:w-full' : 'items-start sm:w-full' }}
           >
-            <OptionPicker
-              data={{ value: field.value, options: field.options }}
-              ui={{
-                ariaLabel: field.ariaLabel,
-                allLabel: field.allLabel,
-                mode: field.control === 'select' ? 'combobox' : 'auto',
-                fullWidth: fillsCell(field),
-                searchPlaceholder: field.searchPlaceholder ?? 'Buscar…',
-              }}
-              actions={{ onChange: (value: string) => actions.onFieldChange(field.key, value) }}
-            />
+            {#if field.control === 'person'}
+              <PersonPickerField
+                data={{
+                  value: field.value,
+                  people: field.people ?? [],
+                  leading: [{ value: '', label: field.allLabel }, ...field.options],
+                }}
+                ui={{ ariaLabel: field.ariaLabel, placeholder: field.allLabel, className: 'w-full' }}
+                actions={{ onChange: (value: string) => actions.onFieldChange(field.key, value) }}
+              />
+            {:else}
+              <OptionPicker
+                data={{ value: field.value, options: field.options }}
+                ui={{
+                  ariaLabel: field.ariaLabel,
+                  allLabel: field.allLabel,
+                  mode: field.control === 'select' ? 'combobox' : 'auto',
+                  fullWidth: fillsCell(field),
+                  searchPlaceholder: field.searchPlaceholder ?? 'Buscar…',
+                }}
+                actions={{ onChange: (value: string) => actions.onFieldChange(field.key, value) }}
+              />
+            {/if}
           </FilterField>
         {/each}
       </div>
@@ -254,6 +295,11 @@
           actions={{ onClick: actions.onClearFilters }}
         />
       {/if}
+    </div>
+  {/if}
+  {#if toggles}
+    <div class="border-border flex flex-wrap items-center gap-3 border-t px-3 py-2.5 sm:px-4">
+      {@render toggles()}
     </div>
   {/if}
 </section>

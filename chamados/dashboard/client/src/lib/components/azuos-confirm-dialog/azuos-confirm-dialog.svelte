@@ -1,14 +1,20 @@
+<!--
+  @component
+  A pergunta antes do que não tem volta: excluir, arquivar, enviar.
+
+  Três decisões de propósito:
+
+  - O botão diz o VERBO ("Excluir chamado"), nunca "OK" nem "Sim". Quem lê só o botão precisa saber
+    o que vai acontecer.
+  - A recusa do servidor aparece DENTRO do modal, e ele continua aberto. Fechar e mostrar o erro em
+    outro lugar faria a pessoa achar que deu certo.
+  - Enquanto confirma, fechar não fecha: a requisição já saiu, e fechar esconderia o resultado.
+
+  Props: `data` traz o título, a descrição e o texto do botão (e o de "confirmando"); `ui.tone`
+  escolhe entre perigo e principal; `state` diz se está aberto, confirmando ou com erro; `actions`
+  recebe `onConfirm` e `onCancel`.
+-->
 <script lang="ts" module>
-  /**
-   * A pergunta antes do que não tem volta: excluir, arquivar, enviar.
-   *
-   * Três decisões de propósito:
-   *  - O botão diz o VERBO ("Excluir chamado"), nunca "OK" nem "Sim". Quem lê só o botão precisa
-   *    saber o que vai acontecer.
-   *  - A recusa do servidor aparece DENTRO do modal, e ele continua aberto. Fechar e mostrar o
-   *    erro em outro lugar faria a pessoa achar que deu certo.
-   *  - Enquanto confirma, fechar não fecha: a requisição já saiu, e fechar esconderia o resultado.
-   */
   export type AzuosConfirmDialogProps = {
     data: {
       title: string;
