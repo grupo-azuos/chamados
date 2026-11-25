@@ -33,7 +33,7 @@
   import RadialChart from '$lib/components/azuos-radial-chart/azuos-radial-chart.svelte';
   import SankeyChart from '$lib/components/azuos-sankey-chart/azuos-sankey-chart.svelte';
   import StackedBarChart from '$lib/components/azuos-stacked-bar-chart/azuos-stacked-bar-chart.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import TreemapChart from '$lib/components/azuos-treemap-chart/azuos-treemap-chart.svelte';
   import { type AzuosCardHue, cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
@@ -100,13 +100,7 @@
       class="grid h-full grid-cols-[repeat(var(--stat-columns-narrow),minmax(0,1fr))] gap-3 @3xl:grid-cols-[repeat(var(--stat-columns),minmax(0,1fr))]"
     >
       {#each cards as card, index (card.label)}
-        <StatCard
-          data={{ label: card.label, value: card.value.toLocaleString('pt-BR') }}
-          ui={{ tone: STAT_HUES[index % STAT_HUES.length], icon: Hash, className: cn('h-full p-4', cardClassName) }}
-          actions={{
-            onClick: onItem ? () => onItem(statItemOf(Boolean(widget.groupBy), series, card.label)) : undefined,
-          }}
-        />
+        <ContentCard data={{ label: card.label, title: card.label, highlight: { value: card.value.toLocaleString('pt-BR') } }} ui={{ icon: Hash, iconTone: STAT_HUES[index % STAT_HUES.length], className: cn('h-full', cardClassName) }} actions={{ onOpen: onItem ? () => onItem(statItemOf(Boolean(widget.groupBy), series, card.label)) : undefined }} />
       {/each}
     </div>
   </div>
@@ -123,12 +117,11 @@
   {#if statCards.length === 0}
     <!-- Agrupando e sem nenhum grupo, não sobra card: o aviso fica na superfície do card, para o
          bloco não sumir da grade como se tivesse quebrado. -->
-    <div
-      role="status"
-      class="rounded-surface bg-card shadow-card flex h-full flex-col items-center justify-center gap-1 p-4 text-center"
-    >
-      <span class="text-ink-900 text-sm font-semibold">{widget.title}</span>
-      <span class="text-ink-500 text-sm">Sem dados para mostrar neste recorte.</span>
+    <div role="status" class="h-full">
+      <ContentCard
+        data={{ label: widget.title, title: widget.title, meta: 'Sem dados para mostrar neste recorte.' }}
+        ui={{ icon: Hash, className: 'h-full' }}
+      />
     </div>
   {:else}
     {@render statRow(statCards, 'h-full', '')}
@@ -141,10 +134,10 @@
   {@const heroTotal = total.toLocaleString('pt-BR')}
   <DashboardHeroCard
     data={{ title: `${heroTotal} ${noun}`, description: widget.title, zuzu: { pose: 'alert', size: 112 } }}
-    ui={{ className: 'h-full justify-between gap-4 p-5 sm:p-5' }}
+    ui={{ className: 'h-full' }}
   >
     {#if widget.groupBy && slices.length > 0}
-      {@render statRow(slices.slice(0, 4), '', 'p-3')}
+      {@render statRow(slices.slice(0, 4), '', '')}
     {/if}
   </DashboardHeroCard>
 {:else if widget.kind === 'ringCard'}
@@ -153,11 +146,7 @@
        o texto nunca passar por baixo do anel. -->
   {@const hue = cardToneClasses(RING_TONE).color}
   <div class="relative h-full">
-    <StatCard
-      data={{ label: widget.title, value: formatCount(total), hint: `de ${formatCount(grandTotal)} ${noun}` }}
-      ui={{ tone: RING_TONE, icon: Hash, className: 'h-full pr-32' }}
-      state={{ isLoading }}
-    />
+    <ContentCard data={{ label: widget.title, title: widget.title, highlight: { value: formatCount(total), hint: `de ${formatCount(grandTotal)} ${noun}` } }} ui={{ icon: Hash, iconTone: RING_TONE, className: 'h-full pr-32' }} state={{ isLoading: isLoading }} />
     <div class="absolute top-1/2 right-5 size-24 -translate-y-1/2">
       <Echart
         data={{

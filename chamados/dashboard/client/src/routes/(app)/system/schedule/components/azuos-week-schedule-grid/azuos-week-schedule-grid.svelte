@@ -118,9 +118,8 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
-  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+    import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
   import GithubCalendarEvent from '../azuos-github-calendar-event/azuos-github-calendar-event.svelte';
   import {
@@ -322,9 +321,12 @@
     </div>
 
     {#if data.filters}
-      <CardSurface ui={{ className: 'p-3 sm:p-4' }}>
+      {@const filters = data.filters}
+      <ContentCard data={{ label: 'Filtros', title: '' }}>
+{#snippet body()}
+<div class="p-3 sm:p-4">
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {#each [{ key: 'project', label: 'Projeto', hint: 'Filtrar agendamentos, PRs, issues e merges por projeto', value: data.filters.project, options: data.filters.projectOptions, onChange: actions.onProjectFilterChange }, { key: 'author', label: 'Autor', hint: 'Filtrar PRs, issues e merges pelo autor registrado no GitHub', value: data.filters.author, options: data.filters.authorOptions, onChange: actions.onAuthorFilterChange }, { key: 'type', label: 'Tipo', hint: 'Mostrar PRs, issues, merges ou todos na agenda', value: data.filters.type, options: [{ value: '', label: 'Todos' }, { value: 'pr', label: 'PRs' }, { value: 'issue', label: 'Issues' }, { value: 'merge', label: 'Merges locais' }], onChange: actions.onTypeFilterChange }] as filter (filter.key)}
+          {#each [{ key: 'project', label: 'Projeto', hint: 'Filtrar agendamentos, PRs, issues e merges por projeto', value: filters.project, options: filters.projectOptions, onChange: actions.onProjectFilterChange }, { key: 'author', label: 'Autor', hint: 'Filtrar PRs, issues e merges pelo autor registrado no GitHub', value: filters.author, options: filters.authorOptions, onChange: actions.onAuthorFilterChange }, { key: 'type', label: 'Tipo', hint: 'Mostrar PRs, issues, merges ou todos na agenda', value: filters.type, options: [{ value: '', label: 'Todos' }, { value: 'pr', label: 'PRs' }, { value: 'issue', label: 'Issues' }, { value: 'merge', label: 'Merges locais' }], onChange: actions.onTypeFilterChange }] as filter (filter.key)}
             <div
               class="min-w-0 space-y-1.5 {filter.key === 'type'
                 ? 'sm:col-span-2 xl:col-span-1'
@@ -361,7 +363,7 @@
               </Tooltip.Root>
             </div>
           {/each}
-          {#if data.filters.isActive}
+          {#if filters.isActive}
             <Tooltip.Root>
               <Tooltip.Trigger>
                 {#snippet child({ props })}
@@ -379,33 +381,22 @@
             </Tooltip.Root>
           {/if}
         </div>
-      </CardSurface>
+      </div>
+{/snippet}
+</ContentCard>
     {/if}
 
     <!-- Os dois números do período no card de painel padrão: ícone cheio no tom do assunto, número
          na cor do texto, e o "i" com a explicação de como cada um é contado. -->
     <div class="grid grid-cols-2 gap-3 sm:max-w-md">
-      <StatCard
-        data={{
-          label: 'PRs mergeados no período',
-          value: data.mergedPullRequests ?? 0,
-          tooltip: 'PRs mergeados nas datas exibidas no calendário. Cada PR conta no horário do merge.',
-        }}
-        ui={{ tone: 'plum', icon: GitMerge, className: 'px-4 py-3' }}
-      />
-      <StatCard
-        data={{
-          label: 'Issues resolvidas no período',
-          value: data.resolvedIssues ?? 0,
-          tooltip:
-            'Issues resolvidas nas datas exibidas no calendário. Cada issue conta no horário de fechamento.',
-        }}
-        ui={{ tone: 'success', icon: CircleCheckBig, className: 'px-4 py-3' }}
-      />
+      <ContentCard data={{ label: 'PRs mergeados no período', title: 'PRs mergeados no período', meta: 'PRs mergeados nas datas exibidas no calendário. Cada PR conta no horário do merge.', highlight: { value: data.mergedPullRequests ?? 0 } }} ui={{ icon: GitMerge, iconTone: 'plum', className: 'px-4 py-3' }} />
+      <ContentCard data={{ label: 'Issues resolvidas no período', title: 'Issues resolvidas no período', meta: 'Issues resolvidas nas datas exibidas no calendário. Cada issue conta no horário de fechamento.', highlight: { value: data.resolvedIssues ?? 0 } }} ui={{ icon: CircleCheckBig, iconTone: 'success', className: 'px-4 py-3' }} />
     </div>
 
     {#if data.developerStats?.length}
-      <CardSurface>
+      <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="">
         <div class="border-b border-border px-4 py-3">
           <h2 class="text-sm font-semibold text-foreground">Produtividade por desenvolvedor</h2>
           <p class="mt-1 text-xs text-muted-foreground">
@@ -441,7 +432,9 @@
             >
           {/each}
         </div>
-      </CardSurface>
+      </div>
+{/snippet}
+</ContentCard>
     {/if}
 
     {#if gridState.isLoading}
@@ -461,7 +454,9 @@
       />
     {:else if data.viewMode === 'month'}
       <!-- Mês: calendário de 7 colunas, uma célula por dia, eventos empilhados -->
-      <CardSurface>
+      <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="">
         <div class="overflow-x-auto">
         <div class="min-w-[840px]">
           <div class="grid grid-cols-7 border-b border-border">
@@ -608,11 +603,15 @@
           </div>
         </div>
         </div>
-      </CardSurface>
+      </div>
+{/snippet}
+</ContentCard>
     {:else}
       <!-- Dia e Semana: grade de horas com 1 ou 7 colunas -->
       {@const columns = data.days.length}
-      <CardSurface>
+      <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="">
         <div class="overflow-x-auto">
         <div style="min-width:{columns === 1 ? 360 : 840}px">
           <!-- Header dos dias -->
@@ -854,9 +853,13 @@
           </div>
         </div>
         </div>
-      </CardSurface>
+      </div>
+{/snippet}
+</ContentCard>
       {#if data.events.some(isOutsideScheduleGrid)}
-        <CardSurface ui={{ className: 'flex flex-col gap-2 p-4' }}>
+        <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-2 p-4">
           <h2 class="text-sm font-semibold">Agendamentos fora do horário da grade</h2>
           {#each data.events.filter(isOutsideScheduleGrid) as event (event.id)}
             <Tooltip.Root
@@ -884,11 +887,15 @@
               ></Tooltip.Root
             >
           {/each}
-        </CardSurface>
+        </div>
+{/snippet}
+</ContentCard>
       {/if}
     {/if}
 
-    <CardSurface ui={{ className: 'p-4' }}>
+    <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-4">
       <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 class="text-sm font-semibold text-foreground">Atividade do GitHub no período</h2>
         <p class="text-xs text-muted-foreground">
@@ -963,6 +970,8 @@
           {/each}
         </div>
       {/if}
-    </CardSurface>
+    </div>
+{/snippet}
+</ContentCard>
   </section>
 </Tooltip.Provider>

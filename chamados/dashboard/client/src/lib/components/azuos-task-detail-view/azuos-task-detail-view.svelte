@@ -95,7 +95,7 @@
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
-  import PanelCard from '$lib/components/azuos-panel-card/azuos-panel-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import ProgressBar from '$lib/components/azuos-progress-bar/azuos-progress-bar.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
@@ -232,8 +232,8 @@
 
     <div class="grid gap-6 xl:grid-cols-2">
       <div class="flex min-w-0 flex-col gap-6">
-        <PanelCard data={{ title: 'Fluxo', hint: 'Marcar a última etapa finaliza a tarefa.' }}>
-          {#snippet tools()}
+        <ContentCard data={{ label: 'Fluxo', title: 'Fluxo', meta: 'Marcar a última etapa finaliza a tarefa.' }}>
+{#snippet tools()}
             {#if !data.stepsDraft}
               <ActionButton
                 data={{ label: 'Personalizar' }}
@@ -243,6 +243,9 @@
               />
             {/if}
           {/snippet}
+{#snippet body()}
+<div class="pb-1">
+          
           <div class="flex flex-col gap-4">
             <ProgressBar
               data={{ percentage: taskPercentage(task), done: task.progress.done, total: task.progress.total }}
@@ -322,10 +325,12 @@
               </ol>
             {/if}
           </div>
-        </PanelCard>
+        </div>
+{/snippet}
+</ContentCard>
 
-        <PanelCard data={{ title: 'Vínculos', hint: 'Clique para abrir. "Vincular" busca no cadastro.' }}>
-          {#snippet tools()}
+        <ContentCard data={{ label: 'Vínculos', title: 'Vínculos', meta: 'Clique para abrir. "Vincular" busca no cadastro.' }}>
+{#snippet tools()}
             <ActionButton
               data={{ label: 'Vincular' }}
               ui={{ icon: Link2, variant: 'ghost', size: 'sm' }}
@@ -333,6 +338,9 @@
               actions={{ onClick: actions.onLink }}
             />
           {/snippet}
+{#snippet body()}
+<div class="pb-1">
+          
           {#if task.links.length === 0}
             <EmptyState
               data={{ title: 'Sem vínculos', description: 'Vincule os chamados, computadores, peças e itens que esta tarefa toca.' }}
@@ -364,16 +372,25 @@
               {/each}
             </ul>
           {/if}
-        </PanelCard>
+        </div>
+{/snippet}
+</ContentCard>
       </div>
 
       {#if data.git}
-        <PanelCard data={{ title: 'Branches', hint: 'As do sistema com a tarefa, o chamado ou a issue no nome.' }}>
-          <TaskGitView data={{ git: data.git, now: data.now }} />
-        </PanelCard>
+        {@const git = data.git}
+        <ContentCard data={{ label: 'Branches', title: 'Branches', meta: 'As do sistema com a tarefa, o chamado ou a issue no nome.' }}>
+{#snippet body()}
+<div class="pb-1">
+          <TaskGitView data={{ git, now: data.now }} />
+        </div>
+{/snippet}
+</ContentCard>
       {/if}
 
-      <PanelCard data={{ title: 'Linha do tempo', hint: 'Cada mudança, com quem fez — e as anotações.' }}>
+      <ContentCard data={{ label: 'Linha do tempo', title: 'Linha do tempo', meta: 'Cada mudança, com quem fez — e as anotações.' }}>
+{#snippet body()}
+<div class="pb-1">
         {#if actions.onNoteChange && actions.onAddNote}
           <div class="mb-4">
             <TaskNoteForm
@@ -384,7 +401,9 @@
           </div>
         {/if}
         <TaskHistory data={{ entries: data.timeline }} state={{ isLoading: viewState.isHistoryLoading }} />
-      </PanelCard>
+      </div>
+{/snippet}
+</ContentCard>
     </div>
   {/if}
 </section>

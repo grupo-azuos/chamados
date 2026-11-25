@@ -5,7 +5,7 @@
   São os mesmos produtos do Inventário, lidos de outro jeito: lá importa O QUE é o produto (foto,
   lugar, etiqueta), aqui importa QUANTO há — e por NOME: "Cadeira", "CADEIRA" e "cadeira" são um
   cartão só, com a soma dos saldos e quantos cadastros o nome tem. Por isso o saldo é a caixinha de número do cartão
-  (`AzuosRecordCard`), com a unidade, e a foto nem aparece. Tem a busca, o filtro de categoria e o atalho
+  (`AzuosContentCard`), com a unidade, e a foto nem aparece. Tem a busca, o filtro de categoria e o atalho
   "Sem estoque" (com quantos zeraram);
   cada cartão mostra o nome, a categoria e o lugar, os chamados ligados, o saldo com a unidade,
   "Entrada" e "Saída" — que fica apagada sem estoque, em vez de abrir um diálogo que o servidor
@@ -89,9 +89,8 @@
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
-  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
-  import { inventoryCategoryIconOf } from '$lib/utils/record-icon.util';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+    import { inventoryCategoryIconOf } from '$lib/utils/record-icon.util';
 
   let { data, state: listState, actions }: AzuosStockListViewProps = $props();
   /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
@@ -123,7 +122,9 @@
     }}
   />
 
-  <CardSurface ui={{ className: 'flex flex-col gap-3 p-4' }}>
+  <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-3 p-4">
     <TextField
       data={{
         label: 'Buscar',
@@ -167,7 +168,9 @@
         />
       {/if}
     </div>
-  </CardSurface>
+  </div>
+{/snippet}
+</ContentCard>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2). -->
   {#if listState.error}
@@ -214,7 +217,7 @@
            e as ações (Entrada, Saída) moram no rodapé. -->
       <div class="card-grid" data-slot="stock-cards">
         {#each cardPage.items as item (item.key)}
-          <RecordCard
+          <ContentCard
             data={{
               label: item.name,
               title: item.name,
@@ -263,7 +266,7 @@
                 actions={{ onClick: () => actions.onExit(item) }}
               />
             {/snippet}
-          </RecordCard>
+          </ContentCard>
         {/each}
       </div>
       <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última

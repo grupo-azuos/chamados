@@ -1,31 +1,23 @@
+<!--
+  @component
+  A SUPERFÍCIE do card de conteúdo (`AzuosContentCard`) — o andar de baixo do único card do grupo.
+  Não é um formato de card: tela nenhuma monta card direto sobre ela.
+
+  - Fundo: a superfície (`bg-card`) SEM borda; o que separa o card do fundo é o fio de 1px e a
+    sombra difusa do `--elevation-card` (padrão Apple). A cor mora no ícone do assunto.
+  - Hover: NADA se mexe. O card não sobe, a sombra não cresce, nada aparece por cima — clicável, só
+    o cursor diz que ele abre.
+  - Escolhido: o azul claro da marca (`bg-card-selected`) com texto branco.
+  - Clicável: um botão de verdade cobre o card inteiro, alcançável pelo teclado.
+
+  Nunca borda colorida, nunca fundo no tom, nunca ícone grande no canto.
+-->
 <script lang="ts" module>
-  import type { LucideIcon } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
 
-  import { type AzuosCardTone } from '$lib/utils/card-tone.util';
-
-  /**
-   * A SUPERFÍCIE de todo card do grupo — o andar de baixo dos quatro formatos (card de painel,
-   * filtro pequeno, filtro grande com ícone e card de conteúdo). O mesmo desenho do template.
-   *
-   * - Fundo: a superfície (`bg-card`) SEM borda, com o fio de 1px e a sombra difusa do padrão
-   *   Apple. A cor entra no ícone cheio do assunto (`$lib/utils/card-tone.util`), nunca no fundo.
-   * - Hover: clicável, o card sobe 2px e a sombra cresce (`shadow-card-hover`); por cima aparece só
-   *   o véu NEUTRO do tema (`--hover-veil`), o mesmo das linhas de lista. Não existe hover colorido:
-   *   a cor do assunto mora no ícone, nunca no fundo — nem no hover.
-   * - Marca d'água: `ui.mark` desenha o ícone grande no canto, no sotaque de `ui.markTone`.
-   * - Escolhido: o azul claro da marca (`bg-card-selected`) com texto branco.
-   * - Clicável: um botão de verdade cobre o card inteiro.
-   */
   export type AzuosCardSurfaceProps = {
     data?: { label?: string };
-    ui?: {
-      className?: string;
-      mark?: LucideIcon;
-      markTone?: AzuosCardTone;
-      /** `lg`: o ícone 30% maior, para card alto (a máquina do inventário). */
-      markSize?: 'md' | 'lg';
-    };
+    ui?: { className?: string };
     state?: { isSelected?: boolean; isDisabled?: boolean };
     actions?: { onClick?: () => void };
     children: Snippet;
@@ -33,7 +25,6 @@
 </script>
 
 <script lang="ts">
-  import { cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
 
   let { data, ui, state: cardState, actions, children }: AzuosCardSurfaceProps = $props();
@@ -41,7 +32,6 @@
   const isSelected = $derived(Boolean(cardState?.isSelected));
   const isDisabled = $derived(Boolean(cardState?.isDisabled));
   const isClickable = $derived(Boolean(actions?.onClick) && !isDisabled);
-  const Mark = $derived(ui?.mark);
 </script>
 
 <div
@@ -51,37 +41,11 @@
   data-selected={isSelected ? 'true' : undefined}
   class={cn(
     'group/card rounded-surface shadow-card relative isolate overflow-hidden',
-    /* Padrão Apple: card SEM borda. O que separa o card do fundo cinza da página é o fio de 1px
-       e a sombra difusa do `--elevation-card` (`shadow-card`). */
     isSelected ? 'bg-card-selected text-on-card-selected' : 'bg-card text-card-foreground',
-    isClickable &&
-      'hover:shadow-card-hover cursor-pointer transition-[transform,box-shadow] duration-200 motion-safe:hover:-translate-y-0.5',
-    isSelected && isClickable && 'hover:bg-card-selected-hover',
+    isClickable && 'cursor-pointer',
     ui?.className,
   )}
 >
-  <!-- O véu NEUTRO cobre o card inteiro no hover — sem cor e sem crescer de onde o mouse entrou. -->
-  <span
-    aria-hidden="true"
-    data-slot="card-wash"
-    class="pointer-events-none absolute inset-0 -z-10 group-hover/card:bg-(--card-veil)"
-    style:--card-veil="var(--hover-veil)"
-  ></span>
-
-  {#if Mark}
-    <span
-      aria-hidden="true"
-      data-slot="card-mark"
-      class={cn(
-        'group-data-[selected=true]/card:text-on-card-selected pointer-events-none absolute -z-10',
-        ui?.markSize === 'lg' ? '-right-6 -bottom-6 size-40' : '-right-5 -bottom-5 size-31',
-        cardToneClasses(ui?.markTone).text,
-      )}
-    >
-      <Mark class="block size-full stroke-1" />
-    </span>
-  {/if}
-
   {#if actions?.onClick}
     <button
       type="button"

@@ -4,7 +4,7 @@
 
   Cabeçalho com "Sincronizar todos" (só com `canSyncAll`) e "Novo Sistema" (só para quem edita),
   busca por nome ou repositório e filtro de situação. Cada sistema é o cartão de registro
-  (`AzuosRecordCard`): situação na faixa, nome, link do repositório no GitHub (abre em nova aba),
+  (`AzuosContentCard`): situação na faixa, nome, link do repositório no GitHub (abre em nova aba),
   descrição, chamados e PRs abertos e o responsável (ou "Sem responsável"). O card inteiro abre a
   página do sistema ("Ver sistema"); no menu de três pontinhos, "Sincronizar" (com `canSync`) e,
   para quem edita, "Editar" e "Excluir".
@@ -114,11 +114,10 @@
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import RecordCard, {
-    type AzuosRecordCardMenuItem,
-  } from '$lib/components/azuos-record-card/azuos-record-card.svelte';
+  import ContentCard, {
+    type AzuosContentCardMenuItem,
+  } from '$lib/components/azuos-content-card/azuos-content-card.svelte';
 
   let { data, state, actions, map }: AzuosProjectListViewProps = $props();
 
@@ -130,7 +129,7 @@
   const cardPage = useCardPage(() => data.items);
 
   /* O menu do card: sincronizar é de quem tem o GitHub vinculado; corrigir e excluir, de quem edita. */
-  const menuItems = $derived<AzuosRecordCardMenuItem[]>([
+  const menuItems = $derived<AzuosContentCardMenuItem[]>([
     ...((state.canSync ?? state.canEdit !== false)
       ? [{ id: 'sync', label: state.isSyncing ? 'Sincronizando…' : 'Sincronizar', icon: RefreshCw }]
       : []),
@@ -210,7 +209,9 @@
     {@render map()}
   {:else}
   <!-- Filtros: no card, como em toda tela do grupo (a busca e o seletor soltos sumiam no fundo). -->
-  <CardSurface ui={{ className: 'p-4' }}>
+  <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-4">
     <div class="grid items-end gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <TextField
         data={{
@@ -235,7 +236,9 @@
         />
       </div>
     </div>
-  </CardSurface>
+  </div>
+{/snippet}
+</ContentCard>
 
   {#if state.isLoading}
     <div class="card-grid">
@@ -287,7 +290,7 @@
          página dele ("Ver sistema"). Sincronizar, corrigir e excluir moram no menu. -->
     <div class="card-grid" data-slot="project-cards">
       {#each cardPage.items as project (project.id)}
-        <RecordCard
+        <ContentCard
           data={{
             label: `Ver sistema ${project.name}`,
             title: project.name,
@@ -336,7 +339,7 @@
               {project.description || 'Sem descrição cadastrada.'}
             </p>
           {/snippet}
-        </RecordCard>
+        </ContentCard>
       {/each}
     </div>
       <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última

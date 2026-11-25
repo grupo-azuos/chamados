@@ -76,7 +76,7 @@ Uma ação principal por tela (azul). As outras são `secondary` ou `ghost`.
 1. **Botão de Voltar Canônico (`AzuosBackButton`):** Todo retorno de página é exclusivamente um link limpo `← Voltar para [destino]` no desenho do paralegal (`text-brand-blue-700`, `text-sm`, seta de 14px, sublinhado no hover, sem negrito). Proibido botão com moldura, circular com ícone ou texto fora desse padrão.
 2. **Inputs 100% com Fundo Sólido (`bg-muted`):** Todo input, textarea, select e combobox tem preenchimento sólido `bg-muted text-foreground`. Proibido `bg-transparent` ou misturar campos outline com campos cinzas.
 3. **Cards Sólidos Sem Vidro:** Cards são 100% opacos (`bg-card` ou cor sólida da paleta). Proibido `backdrop-blur`, gradientes (`bg-gradient-*`) e transparências translúcidas.
-4. **Cards de Dashboard com Ícone:** Cards de estatística (`AzuosStatCard`) e destaque (`AzuosHeroCard`) usam prioritariamente ícones Lucide padronizados.
+4. **Um card só, o de conteúdo (`AzuosContentCard`):** registro, número de painel e bloco usam o mesmo card, com o ícone Lucide cheio À ESQUERDA. Proibido outro formato de card, ícone grande no canto e animação no hover.
 5. **Mascote Zuzu Estático:** O mascote Zuzu corporativo é 100% estático. Proibido `animate-*`, giros ou transforms.
 6. **Card Grid sempre Pagina vs Tabela sempre Scroll Contínuo:** Visualização em grade de cards SEMPRE usa paginação (`AzuosPaginationBar`); tabela/lista usa scroll contínuo sem campos em branco.
 7. **Proibição de Tabela de Botões:** Proibido enfileirar botões em cada linha da tabela. Usar menu discreto de 3 pontinhos (`DropdownMenu`).
@@ -157,4 +157,4 @@ modo leve o resultado é o mesmo; só a animação sai. O preenchimento no hover
 ## Responsivo
 
 Tudo precisa funcionar em 400px de largura: filtros empilham (`flex-col sm:flex-row`), ações do
-`AzuosPageHeader` descem, grade de `AzuosStatCard` vira uma coluna.
+`AzuosPageHeader` descem, grade de cards de número (`AzuosContentCard` na `AzuosStatCardGrid`) vira uma coluna.

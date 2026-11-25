@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import HardDrive from '@lucide/svelte/icons/hard-drive';
 import { createRawSnippet } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,30 +19,18 @@ describe('AzuosCardSurface (Svelte)', () => {
     expect(card).not.toHaveClass('border');
   });
 
-  /* Sem a mancha animada: o card neutro ganha o véu do tema, parado, só no hover. */
-  it('covers a neutral card with the still theme veil, only on hover', () => {
-    const { container } = render(CardSurface, { props: { data: { label: 'Máquina' }, children } });
-
-    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
-    expect(wash).toHaveClass('inset-0', 'group-hover/card:bg-(--card-veil)');
-    expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
-  });
-
-  it('draws the mark in the accent, and turns into a real button when clickable', async () => {
+  /* O card não se mexe no hover: nem sobe, nem muda a sombra, nem ganha véu ou ícone no canto. */
+  it('stays still on hover, and turns into a real button when clickable', async () => {
     const onClick = vi.fn();
     const { container } = render(CardSurface, {
-      props: {
-        data: { label: 'Abrir' },
-        ui: { mark: HardDrive, markTone: 'red' },
-        actions: { onClick },
-        children,
-      },
+      props: { data: { label: 'Abrir' }, actions: { onClick }, children },
     });
 
-    expect(container.querySelector('[data-slot="card-mark"]')).toHaveClass('text-hue-red');
-    /* A cor fica na marca d'água; o véu do hover continua neutro. */
-    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
-    expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
+    const card = screen.getByRole('group', { name: 'Abrir' });
+    expect(card).toHaveClass('cursor-pointer');
+    expect(card.className).not.toMatch(/hover:|translate|transition|duration|shadow-card-hover/);
+    expect(container.querySelector('[data-slot="card-wash"]')).toBeNull();
+    expect(container.querySelector('[data-slot="card-mark"]')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Abrir' }));
     expect(onClick).toHaveBeenCalledOnce();
   });
@@ -57,11 +44,10 @@ describe('AzuosCardSurface (Svelte)', () => {
   });
 
   // triste
-  it('disables the button while loading, and a card with a toned mark keeps the neutral veil', () => {
-    const { container } = render(CardSurface, {
+  it('disables the button while loading', () => {
+    render(CardSurface, {
       props: {
         data: { label: 'Carregando' },
-        ui: { mark: HardDrive, markTone: 'red' },
         state: { isDisabled: true },
         actions: { onClick: vi.fn() },
         children,
@@ -69,7 +55,5 @@ describe('AzuosCardSurface (Svelte)', () => {
     });
 
     expect(screen.getByRole('button', { name: 'Carregando' })).toBeDisabled();
-    const wash = container.querySelector('[data-slot="card-wash"]') as HTMLElement;
-    expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
   });
 });

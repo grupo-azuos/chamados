@@ -151,7 +151,7 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
   import { formatDate } from '$lib/utils/format-date';
@@ -277,7 +277,7 @@
       {#each data.maintenances as maintenance (maintenance.id)}
         <!-- O cartão de registro do sistema: o card inteiro abre a correção; editar e excluir
              moram no menu de três pontinhos. -->
-        <RecordCard
+        <ContentCard
           data={{
             label: `Editar a manutenção de ${machineLabelOf(maintenance)}`,
             title: machineLabelOf(maintenance),
@@ -312,7 +312,7 @@
           {#snippet body()}
             <p class="text-ink-700 line-clamp-3 text-xs break-words">{maintenance.description ?? '—'}</p>
           {/snippet}
-        </RecordCard>
+        </ContentCard>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">

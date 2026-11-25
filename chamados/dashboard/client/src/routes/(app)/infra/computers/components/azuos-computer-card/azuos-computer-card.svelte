@@ -14,7 +14,7 @@
   - A MANUTENÇÃO (`AzuosComputerMaintenanceStatus`) vem logo abaixo, a mesma leitura da tabela.
   - O RODAPÉ diz de quem é e quando a máquina deu sinal por último, com "Ver ficha".
 
-  Desenhado sobre o `AzuosRecordCard`, o cartão de registro comum a todas as grades do sistema.
+  Desenhado sobre o `AzuosContentCard`, o cartão de registro comum a todas as grades do sistema.
 
   O cartão inteiro é o botão que abre a ficha. O hover é o neutro da superfície: sobe, a sombra
   cresce e o véu cinza cobre — nada de tingir o card.
@@ -103,9 +103,9 @@
   import AlertBadge from '../azuos-computer-alert-badge/azuos-computer-alert-badge.svelte';
   import UpgradeBadge from '../azuos-computer-upgrade-badge/azuos-computer-upgrade-badge.svelte';
   import ComputerMaintenanceStatus from '../azuos-computer-maintenance-status/azuos-computer-maintenance-status.svelte';
-  import RecordCard, {
-    type AzuosRecordCardMetric,
-  } from '$lib/components/azuos-record-card/azuos-record-card.svelte';
+  import ContentCard, {
+    type AzuosContentCardMetric,
+  } from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { RESOURCE_CONDITION_ICONS } from '$lib/utils/resource-condition-icon.util';
 
   let { data, ui, actions }: AzuosComputerCardProps = $props();
@@ -119,7 +119,7 @@
 
   /* Os quatro números, com a bolinha no tom do assunto. O número fica na cor do texto: a cor
      mora na bolinha, nunca no número (padrão Apple). Zero apaga a bolinha. */
-  const tally = $derived<AzuosRecordCardMetric[]>([
+  const tally = $derived<AzuosContentCardMetric[]>([
     { key: 'health', label: 'Saúde', value: String(computer.healthScore), tone: healthTone },
     {
       key: 'tickets',
@@ -145,7 +145,7 @@
   ]);
 </script>
 
-<RecordCard
+<ContentCard
   data={{
     label: `Ver ficha de ${name}`,
     title: name,
@@ -187,4 +187,4 @@
   {#snippet notes()}
     <ComputerMaintenanceStatus data={{ computer, scheduledFor: data.scheduledFor ?? null }} />
   {/snippet}
-</RecordCard>
+</ContentCard>

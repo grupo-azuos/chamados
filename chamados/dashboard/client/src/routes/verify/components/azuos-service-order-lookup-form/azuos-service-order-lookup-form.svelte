@@ -32,12 +32,14 @@
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
 
   let { data, state: viewState, actions }: AzuosServiceOrderLookupFormProps = $props();
 </script>
 
-<CardSurface ui={{ className: 'p-5' }}>
+<ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-5">
   <form
     class="flex flex-col gap-4"
     onsubmit={(event) => {
@@ -68,4 +70,6 @@
       actions={{ onClick: actions.onSubmit }}
     />
   </form>
-</CardSurface>
+</div>
+{/snippet}
+</ContentCard>

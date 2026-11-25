@@ -30,7 +30,7 @@ describe('AzuosDashboardHeroCard', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('2 urgentes')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('— hoje, 9h')).toBeInTheDocument();
+    expect(screen.getByText('hoje, 9h')).toBeInTheDocument();
   });
 
   it('turns a number with an action into a button', async () => {
@@ -78,7 +78,8 @@ describe('AzuosDashboardHeroCard — icons, hints, description and what goes bel
     expect(screen.getByText('O que pede atenção hoje.')).toBeInTheDocument();
     expect(screen.getByText('no parque')).toBeInTheDocument();
     expect(screen.getByText('ação do painel')).toBeInTheDocument();
-    expect(document.querySelectorAll('svg').length).toBeGreaterThanOrEqual(2);
+    /* O ícone de cada número fica; o do sobretítulo deu lugar ao Zuzu, no ícone do card. */
+    expect(document.querySelectorAll('svg').length).toBeGreaterThanOrEqual(1);
   });
 
   // triste

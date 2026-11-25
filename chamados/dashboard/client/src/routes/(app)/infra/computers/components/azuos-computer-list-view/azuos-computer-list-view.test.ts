@@ -720,14 +720,17 @@ describe('AzuosComputerListView — Paralegal format', () => {
 
   // triste
   /* O hover nunca pinta o card: o véu é sempre o neutro do tema, mesmo com a condição colorida. */
-  it('keeps the card hover neutral, whatever the machine condition', () => {
+  /* O card de conteúdo não tem véu nem se mexe no hover, seja qual for a saúde da máquina. */
+  it('keeps the card still on hover, whatever the machine condition', () => {
     const { container } = renderWith({
       computers: [computer({ hardware: { ...computer().hardware, freeDiskBytes: 1 } })],
     });
     const cards = container.querySelector('[data-slot="computer-cards-mobile"]') as HTMLElement;
-    const wash = cards.querySelector<HTMLElement>('[data-slot="card-wash"]')!;
 
-    expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
+    expect(cards.querySelector('[data-slot="card-wash"]')).toBeNull();
+    expect(cards.querySelector('[data-slot="azuos-card-surface"]')?.className).not.toMatch(
+      /translate|hover:/,
+    );
   });
 
   it('does not pulse a calm machine', () => {

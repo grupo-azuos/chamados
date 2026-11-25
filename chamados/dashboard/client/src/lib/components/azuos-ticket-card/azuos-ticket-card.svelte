@@ -1,7 +1,7 @@
 <!--
   @component
   UM CHAMADO NA GRADE DE CARDS da fila — nas três áreas (Infraestrutura, Sistema e Manutenção),
-  sobre o `AzuosRecordCard`, o mesmo cartão da máquina e do cartão de empresa do Paralegal.
+  sobre o `AzuosContentCard`, o mesmo cartão da máquina e do cartão de empresa do Paralegal.
 
   - A FAIXA: a situação do chamado (bolinha + texto no tom) e, à direita, a urgência.
   - O ÍCONE CHEIO é o tipo de problema ("Impressora", "Ar-condicionado"), no tom da situação.
@@ -39,7 +39,7 @@
     ticketStatusTone,
   } from '@template/shared/domain/ticket-status.util';
 
-  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { type AzuosCardTone } from '$lib/utils/card-tone.util';
   import { formatDate } from '$lib/utils/format-date';
   import { ticketProblemIconOf } from '$lib/utils/record-icon.util';
@@ -55,7 +55,7 @@
   const problemType = $derived(ticketProblemTypeLabel(ticket.problemType));
 </script>
 
-<RecordCard
+<ContentCard
   data={{
     label: `Abrir o chamado ${ticket.protocol} — ${ticket.requesterName}`,
     title: ticket.requesterName,

@@ -81,10 +81,10 @@ foco: tudo proibido. A cor vem do **fundo**:
 
 | Quero | Use |
 |---|---|
-| Card de assunto | `AzuosStatCard` — card sem borda, ícone cheio na cor do tom, número na cor do texto |
-| Card que reage ao mouse | `AzuosCardSurface` com `actions.onClick` — sobe 2px e a sombra cresce; nada cobre o conteúdo |
+| Card de assunto | `AzuosContentCard` com `data.highlight` — card sem borda, ícone cheio à esquerda na cor do tom, número na cor do texto |
+| Card que abre algo | `AzuosContentCard` com `actions.onOpen` — o card inteiro é o botão; no hover nada se mexe |
 | Card/filtro selecionado | `state.isSelected` — fundo azul de escolhido, texto e ícone brancos |
-| Número de relance | `AzuosMiniStatCard` — bolinha do tom + número na cor do texto |
+| Número de relance | `AzuosContentCard` com `data.highlight` (o mesmo card) |
 | Campo com erro | fundo vermelho claro (`aria-invalid:bg-destructive-soft`) + a mensagem embaixo |
 
 Fica só: borda **neutra como divisória** (`border-b`, `divide-y`), o **anel de foco** do teclado

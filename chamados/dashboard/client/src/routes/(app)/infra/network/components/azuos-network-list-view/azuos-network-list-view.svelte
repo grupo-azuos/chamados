@@ -148,12 +148,11 @@
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
-  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
-  import {
+    import {
     Table,
     TableActions,
     TableBody,
@@ -217,48 +216,15 @@
     <!-- Estes dois são ATALHOS de filtro: "Em aberto agora" liga "só em aberto", e "Quedas no
          período" filtra pelo tipo de aviso de queda (o mesmo que o número conta). Clicar de
          novo desliga. Os outros dois são medidas, sem filtro correspondente. -->
-    <StatCard
-      data={{ label: 'Em aberto agora', value: summary?.open ?? 0 }}
-      ui={{ tone: 'danger', icon: WifiOff }}
-      state={{ isLoading: viewState.isSummaryLoading, isSelected: data.filter.onlyOpen }}
-      actions={{
-        onClick: () => applyShortcut(() => actions.onOnlyOpenChange(!data.filter.onlyOpen)),
-      }}
-    />
-    <StatCard
-      data={{ label: 'Quedas no período', value: summary?.outages ?? 0 }}
-      ui={{ tone: 'warning', icon: Unplug }}
-      state={{
-        isLoading: viewState.isSummaryLoading,
-        isSelected: data.filter.type === OUTAGE_TYPE,
-      }}
-      actions={{
-        onClick: () =>
+    <ContentCard data={{ label: 'Em aberto agora', title: 'Em aberto agora', highlight: { value: summary?.open ?? 0 } }} ui={{ icon: WifiOff, iconTone: 'danger' }} state={{ isLoading: viewState.isSummaryLoading, isSelected: data.filter.onlyOpen }} actions={{ onOpen: () => applyShortcut(() => actions.onOnlyOpenChange(!data.filter.onlyOpen)) }} />
+    <ContentCard data={{ label: 'Quedas no período', title: 'Quedas no período', highlight: { value: summary?.outages ?? 0 } }} ui={{ icon: Unplug, iconTone: 'warning' }} state={{ isLoading: viewState.isSummaryLoading, isSelected: data.filter.type === OUTAGE_TYPE }} actions={{ onOpen: () =>
           applyShortcut(() =>
             actions.onTypeChange(data.filter.type === OUTAGE_TYPE ? '' : OUTAGE_TYPE),
-          ),
-      }}
-    />
-    <StatCard
-      data={{
-        label: 'Tempo fora do ar',
-        value: formatDuration(summary?.totalOutageSeconds ?? null),
-        hint: 'somando as quedas que já terminaram',
-      }}
-      ui={{ tone: 'info', icon: Timer }}
-      state={{ isLoading: viewState.isSummaryLoading }}
-    />
-    <StatCard
-      data={{
-        label: 'Pior latência',
-        value: summary?.worstLatencyMs ? `${Math.round(summary.worstLatencyMs)} ms` : '—',
-        hint: summary?.worstPacketLossPercent
+          ) }} />
+    <ContentCard data={{ label: 'Tempo fora do ar', title: 'Tempo fora do ar', highlight: { value: formatDuration(summary?.totalOutageSeconds ?? null), hint: 'somando as quedas que já terminaram' } }} ui={{ icon: Timer, iconTone: 'info' }} state={{ isLoading: viewState.isSummaryLoading }} />
+    <ContentCard data={{ label: 'Pior latência', title: 'Pior latência', highlight: { value: summary?.worstLatencyMs ? `${Math.round(summary.worstLatencyMs)} ms` : '—', hint: summary?.worstPacketLossPercent
           ? `${summary.worstPacketLossPercent.toFixed(1).replace('.', ',')}% de perda no pior momento`
-          : null,
-      }}
-      ui={{ tone: 'brand', icon: Gauge }}
-      state={{ isLoading: viewState.isSummaryLoading }}
-    />
+          : null } }} ui={{ icon: Gauge, iconTone: 'brand' }} state={{ isLoading: viewState.isSummaryLoading }} />
   </StatCardGrid>
 
   <!-- A falha de uma AÇÃO fica na tela, em vermelho, até resolver (CONTRIBUTING §15). -->
@@ -352,7 +318,7 @@
       {#each cardPage.items as event (event.id)}
         <!-- O cartão de registro do sistema. O evento não tem ficha: o card não abre nada, e o
              botão de resolver (ou reabrir) mora no rodapé. -->
-        <RecordCard
+        <ContentCard
           data={{
             label: `${networkEventTypeLabel(event.type)} — ${event.title}`,
             title: networkEventTypeLabel(event.type),
@@ -396,7 +362,7 @@
               />
             {/if}
           {/snippet}
-        </RecordCard>
+        </ContentCard>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">

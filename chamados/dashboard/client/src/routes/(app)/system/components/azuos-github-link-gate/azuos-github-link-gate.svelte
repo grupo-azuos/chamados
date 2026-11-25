@@ -25,7 +25,7 @@
 <script lang="ts">
   import GitBranch from '@lucide/svelte/icons/git-branch';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   let { state, actions }: AzuosGithubLinkGateProps = $props();
 </script>
 
@@ -33,9 +33,9 @@
   aria-label="Vinculação obrigatória do GitHub"
   class="flex min-h-svh w-full items-center justify-center bg-background p-6"
 >
-  <CardSurface
-    ui={{ className: 'flex w-full max-w-md flex-col items-center gap-5 p-8 text-center' }}
-  >
+  <ContentCard data={{ label: '', title: '' }} ui={{ className: 'w-full max-w-md' }}>
+{#snippet body()}
+<div class="flex flex-col items-center gap-5 p-8 text-center">
     <GitBranch class="size-10 text-primary" aria-hidden="true" />
     <h1 class="text-xl font-semibold text-foreground">Vincule seu GitHub para acessar Sistema</h1>
     {#if state.isLoading}
@@ -70,5 +70,7 @@
       ui={{ variant: 'ghost' }}
       actions={{ onClick: actions.onLeave }}
     />
-  </CardSurface>
+  </div>
+{/snippet}
+</ContentCard>
 </section>

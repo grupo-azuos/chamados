@@ -706,7 +706,7 @@ const appleCardWithoutBorder = {
 	law: "Marca",
 	severity: "error",
 	description: "Card ou painel com borda em volta: no padrão Apple o card não tem borda.",
-	hint: "Troque `border border-border bg-card` por `bg-card shadow-card` (ou use `AzuosCardSurface`/`AzuosPanelCard`). Divisória interna (`border-b`, `divide-y`) pode.",
+	hint: "Troque `border border-border bg-card` por `bg-card shadow-card` (ou use o `AzuosContentCard`). Divisória interna (`border-b`, `divide-y`) pode.",
 	enabled: (c) => c.brandRules?.appleCardWithoutBorder ?? true,
 	check: (file) => {
 		if (file.isTokenFile) return [];

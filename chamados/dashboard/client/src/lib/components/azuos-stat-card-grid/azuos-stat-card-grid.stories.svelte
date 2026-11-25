@@ -1,7 +1,8 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
 
-  import StatCard, { type StatCardTone } from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+  import { type AzuosCardTone as StatCardTone } from '$lib/utils/card-tone.util';
   import StatCardGrid from './azuos-stat-card-grid.svelte';
 
   const summary: { label: string; value: number; tone: StatCardTone }[] = [
@@ -24,10 +25,10 @@
 <Story name="Default">
   {#snippet template()}
     <StatCardGrid>
-      <StatCard data={{ label: 'Clientes', value: 560 }} ui={{ tone: 'brand' }} />
-      <StatCard data={{ label: 'Concluídas', value: 145 }} ui={{ tone: 'success' }} />
-      <StatCard data={{ label: 'Vencendo', value: 27 }} ui={{ tone: 'warning' }} />
-      <StatCard data={{ label: 'Vencidos', value: 23 }} ui={{ tone: 'danger' }} />
+      <ContentCard data={{ label: 'Clientes', title: 'Clientes', highlight: { value: 560 } }} ui={{ iconTone: 'brand' }} />
+      <ContentCard data={{ label: 'Concluídas', title: 'Concluídas', highlight: { value: 145 } }} ui={{ iconTone: 'success' }} />
+      <ContentCard data={{ label: 'Vencendo', title: 'Vencendo', highlight: { value: 27 } }} ui={{ iconTone: 'warning' }} />
+      <ContentCard data={{ label: 'Vencidos', title: 'Vencidos', highlight: { value: 23 } }} ui={{ iconTone: 'danger' }} />
     </StatCardGrid>
   {/snippet}
 </Story>
@@ -36,7 +37,7 @@
 <Story name="SingleCard (edge case)">
   {#snippet template()}
     <StatCardGrid>
-      <StatCard data={{ label: 'Total geral', value: 1708 }} ui={{ tone: 'brand' }} />
+      <ContentCard data={{ label: 'Total geral', title: 'Total geral', highlight: { value: 1708 } }} ui={{ iconTone: 'brand' }} />
     </StatCardGrid>
   {/snippet}
 </Story>
@@ -46,12 +47,12 @@
 <Story name="SecondRow (edge case)">
   {#snippet template()}
     <StatCardGrid>
-      <StatCard data={{ label: 'Clientes', value: 560 }} ui={{ tone: 'brand' }} />
-      <StatCard data={{ label: 'Concluídas', value: 145 }} ui={{ tone: 'success' }} />
-      <StatCard data={{ label: 'Vencendo', value: 27 }} ui={{ tone: 'warning' }} />
-      <StatCard data={{ label: 'Vencidos', value: 23 }} ui={{ tone: 'danger' }} />
-      <StatCard data={{ label: 'Em andamento', value: 59 }} ui={{ tone: 'info' }} />
-      <StatCard data={{ label: 'Não iniciado', value: 79 }} ui={{ tone: 'neutral' }} />
+      <ContentCard data={{ label: 'Clientes', title: 'Clientes', highlight: { value: 560 } }} ui={{ iconTone: 'brand' }} />
+      <ContentCard data={{ label: 'Concluídas', title: 'Concluídas', highlight: { value: 145 } }} ui={{ iconTone: 'success' }} />
+      <ContentCard data={{ label: 'Vencendo', title: 'Vencendo', highlight: { value: 27 } }} ui={{ iconTone: 'warning' }} />
+      <ContentCard data={{ label: 'Vencidos', title: 'Vencidos', highlight: { value: 23 } }} ui={{ iconTone: 'danger' }} />
+      <ContentCard data={{ label: 'Em andamento', title: 'Em andamento', highlight: { value: 59 } }} ui={{ iconTone: 'info' }} />
+      <ContentCard data={{ label: 'Não iniciado', title: 'Não iniciado', highlight: { value: 79 } }} ui={{ iconTone: 'neutral' }} />
     </StatCardGrid>
   {/snippet}
 </Story>
@@ -61,7 +62,7 @@
   {#snippet template()}
     <StatCardGrid data={{ items: summary }} ui={{ ariaLabel: 'Resumo dos chamados' }}>
       {#snippet card(entry)}
-        <StatCard data={{ label: entry.label, value: entry.value }} ui={{ tone: entry.tone }} />
+        <ContentCard data={{ label: entry.label, title: entry.label, highlight: { value: entry.value } }} ui={{ iconTone: entry.tone }} />
       {/snippet}
     </StatCardGrid>
   {/snippet}
