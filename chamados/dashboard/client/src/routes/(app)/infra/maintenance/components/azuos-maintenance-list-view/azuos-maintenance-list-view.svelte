@@ -115,6 +115,28 @@
   }
 
   /** Onde a máquina mora: o departamento dela, ou o aviso de que está fora do inventário. */
+  /**
+   * Quem fez, um rosto por pessoa — só quando é mais de uma (uma pessoa é o rosto de sempre). Os
+   * nomes chegam juntos em `performedBy` ("Ana Souza, Caio Reis"), na mesma ordem dos ids.
+   */
+  export function performersOf(
+    maintenance: Pick<Maintenance, 'performedBy' | 'performedByIds'>,
+  ): { id: string | null; name: string }[] {
+    const names = (maintenance.performedBy ?? '').split(',').map((name) => name.trim()).filter(Boolean);
+    if (names.length < 2) return [];
+    const ids = maintenance.performedByIds ?? [];
+
+    return names.map((name, index) => ({ id: ids[index] ?? null, name }));
+  }
+
+  /** O nome do rodapé: com várias pessoas, a primeira "e mais N" — os nomes todos não cabem. */
+  export function performersTitleOf(maintenance: Pick<Maintenance, 'performedBy' | 'performedByIds'>): string {
+    const faces = performersOf(maintenance);
+    if (faces.length > 1) return `${faces[0]!.name} e mais ${faces.length - 1}`;
+
+    return maintenance.performedBy ?? 'Sem responsável';
+  }
+
   export function placeOf(maintenance: Maintenance): string {
     if (!maintenance.computerId) return 'Fora do inventário';
 
@@ -285,9 +307,11 @@
             meta: placeOf(maintenance),
             status: { label: maintenanceTypeLabel(maintenance.type), tone: maintenanceTypeTone(maintenance.type) },
             footer: {
-              title: maintenance.performedBy ?? 'Sem responsável',
+              title: performersTitleOf(maintenance),
               subtitle: formatDate(maintenance.performedAt),
               person: maintenance.performedBy ? { name: maintenance.performedBy } : null,
+              /* Quem fez pode ser mais de uma pessoa: o rosto de cada uma, com a foto. */
+              people: performersOf(maintenance),
             },
             openLabel: 'Editar',
             menu: {
