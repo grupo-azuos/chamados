@@ -1,3 +1,4 @@
+import { DISPOSAL_REASONS } from '@template/shared/domain/inventory-stock.util';
 import { TICKET_STOCK_DIRECTIONS } from '@template/shared/domain/ticket-stock.util';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
@@ -45,6 +46,8 @@ export const ticketStockItems = chamadosSchema.table(
        porque alguém renomeou a peça depois. */
     itemName: text('item_name').notNull(),
     direction: text('direction', { enum: TICKET_STOCK_DIRECTIONS }).notNull(),
+    /* Por que foi para o descarte — só no descarte, e nele sempre. */
+    reason: text('reason', { enum: DISPOSAL_REASONS }),
     /* A máquina para onde o item foi, quando o chamado tem mais de uma. Nula, vale a máquina
        do chamado. `set null`: o item continua contando que saiu, mesmo sem o computador. */
     computerId: integer('computer_id').references(() => computers.id, { onDelete: 'set null' }),
@@ -72,6 +75,10 @@ export const ticketStockItems = chamadosSchema.table(
       sql`${table.direction} in (${valuesFor(TICKET_STOCK_DIRECTIONS)})`,
     ),
     check('ticket_stock_items_quantity_positive', sql`${table.quantity} > 0`),
+    check(
+      'ticket_stock_items_reason_matches_direction',
+      sql`(${table.direction} = 'disposal') = (${table.reason} is not null)`,
+    ),
   ],
 );
 

@@ -2,14 +2,16 @@
   @component
   VINCULAR ITENS DO ESTOQUE a uma máquina do chamado — 1 máquina para vários itens. De um lado as
   máquinas do chamado (escolhe-se uma; sem máquina, os itens vão sem); do outro os itens do
-  depósito, com busca, cada um com a quantidade. No topo, saída ou entrada. "Vincular" grava todos
-  de uma vez, e embaixo o diálogo diz o que vai ficar: "Computador 01 → 3 itens".
+  depósito, com busca, cada um com a quantidade. No topo, saída, entrada ou DESCARTE (com o motivo).
+  "Vincular" grava todos de uma vez, e embaixo o diálogo diz o que vai ficar: "Computador 01 → 3
+  itens". Item que ainda não existe no depósito se cadastra ali mesmo ("Cadastrar item") e já volta
+  marcado.
 
   - `data`: `machines`, `machineId`, `direction`, `options` (já filtradas pela busca e pelo
     sentido), `search`, `selection` (item → quantidade) e `errors` (por item).
   - `state`: `isOpen`, `isSaving`, `error`.
-  - `actions`: `onMachineChange`, `onDirectionChange`, `onSearch`, `onToggle`, `onQuantityChange`,
-    `onApply`, `onClose`.
+  - `actions`: `onMachineChange`, `onDirectionChange`, `onReasonChange`, `onSearch`, `onToggle`,
+    `onQuantityChange`, `onApply`, `onClose` e, com `newItem`, as do cadastro (`newItem.*`).
 -->
 <script lang="ts" module>
   import {
@@ -18,6 +20,8 @@
     type TicketStockDirection,
   } from '@template/shared/domain/ticket-stock.util';
   import { type TicketStockOption } from '@template/shared/schemas/ticket-stock-item.schema';
+  import { DISPOSAL_REASONS, disposalReasonLabel } from '@template/shared/domain/inventory-stock.util';
+  import { type AzuosTicketStockNewItemProps } from '$lib/components/azuos-ticket-stock-new-item/azuos-ticket-stock-new-item.svelte';
 
   export type AzuosTicketStockLinkDialogProps = {
     data: {
@@ -31,8 +35,24 @@
       errors?: Record<string, string>;
       /** O nome do depósito — "Depósito da TI". */
       shelfLabel?: string;
+      /** O motivo do descarte (só no descarte). */
+      reason?: string;
+      reasonError?: string | null;
+      /** O cadastro de item na hora: aberto, com os campos; nulo, só o botão. */
+      newItem?: {
+        source: AzuosTicketStockNewItemProps['data']['source'];
+        isOpen: boolean;
+        values: AzuosTicketStockNewItemProps['data']['values'];
+        errors?: AzuosTicketStockNewItemProps['data']['errors'];
+      } | null;
     };
-    state?: { isOpen?: boolean; isSaving?: boolean; error?: string | null };
+    state?: {
+      isOpen?: boolean;
+      isSaving?: boolean;
+      error?: string | null;
+      isCreating?: boolean;
+      createError?: string | null;
+    };
     actions: {
       onMachineChange: (id: string) => void;
       onDirectionChange: (direction: TicketStockDirection) => void;
@@ -41,8 +61,17 @@
       onQuantityChange: (itemId: string, value: string) => void;
       onApply: () => void;
       onClose: () => void;
+      onReasonChange?: (reason: string) => void;
+      newItem?: {
+        onOpen: () => void;
+        onChange: AzuosTicketStockNewItemProps['actions']['onChange'];
+        onSave: () => void;
+        onCancel: () => void;
+      };
     };
   };
+
+  const REASON_OPTIONS = DISPOSAL_REASONS.map((reason) => ({ value: reason, label: disposalReasonLabel(reason) }));
 
   const DIRECTION_OPTIONS = TICKET_STOCK_DIRECTIONS.map((direction) => ({
     value: direction,
@@ -62,6 +91,7 @@
   import CheckIcon from '@lucide/svelte/icons/check';
   import Monitor from '@lucide/svelte/icons/monitor';
   import PackageSearch from '@lucide/svelte/icons/package-search';
+  import Plus from '@lucide/svelte/icons/plus';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import {
@@ -75,6 +105,8 @@
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
+  import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
+  import NewItemForm from '$lib/components/azuos-ticket-stock-new-item/azuos-ticket-stock-new-item.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { cn } from '$lib/utils/cn';
 
@@ -93,8 +125,8 @@
     <DialogHeader>
       <DialogTitle>Vincular itens do estoque</DialogTitle>
       <DialogDescription>
-        Escolha a máquina e marque os itens que vão para ela (ou voltam dela) no {data.shelfLabel ?? 'depósito'}. O
-        saldo só muda quando o chamado for encerrado.
+        Escolha a máquina e marque os itens que vão para ela, voltam dela ou vão para o descarte, no
+        {data.shelfLabel ?? 'depósito'}. O saldo só muda quando o chamado for encerrado.
       </DialogDescription>
     </DialogHeader>
 
@@ -104,6 +136,22 @@
       state={{ isDisabled: isBusy }}
       actions={{ onChange: (value) => actions.onDirectionChange(value as TicketStockDirection) }}
     />
+
+    {#if data.direction === 'disposal' && actions.onReasonChange}
+      <!-- O motivo vale para todos os itens marcados: é por ele que o painel conta as perdas. -->
+      <div class="flex max-w-xs flex-col gap-1.5">
+        <span class="text-ink-700 text-sm font-medium">Motivo do descarte</span>
+        <SelectField
+          data={{ value: data.reason ?? '', options: REASON_OPTIONS }}
+          ui={{ ariaLabel: 'Motivo do descarte', placeholder: 'Escolha o motivo' }}
+          state={{ isDisabled: isBusy }}
+          actions={{ onChange: actions.onReasonChange }}
+        />
+        {#if data.reasonError}
+          <p class="text-destructive text-xs">{data.reasonError}</p>
+        {/if}
+      </div>
+    {/if}
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-[18rem_auto_1fr]">
       <section class="flex flex-col gap-2" aria-label="Máquina">
@@ -132,15 +180,35 @@
       </div>
 
       <section class="flex min-w-0 flex-col gap-2" aria-label="Itens">
-        <TextField
-          data={{ label: 'Itens', name: 'stockLinkSearch', value: data.search, placeholder: 'Buscar item…' }}
-          actions={{ onChange: actions.onSearch }}
-        />
+        <div class="flex items-end gap-2">
+          <div class="min-w-0 flex-1">
+            <TextField
+              data={{ label: 'Itens', name: 'stockLinkSearch', value: data.search, placeholder: 'Buscar item…' }}
+              actions={{ onChange: actions.onSearch }}
+            />
+          </div>
+          {#if data.newItem && actions.newItem && !data.newItem.isOpen}
+            <ActionButton
+              data={{ label: 'Cadastrar item' }}
+              ui={{ variant: 'secondary', icon: Plus }}
+              state={{ isDisabled: isBusy }}
+              actions={{ onClick: actions.newItem.onOpen }}
+            />
+          {/if}
+        </div>
+        {#if data.newItem?.isOpen && actions.newItem}
+          <NewItemForm
+            data={{ source: data.newItem.source, values: data.newItem.values, errors: data.newItem.errors }}
+            state={{ isSaving: dialogState?.isCreating, error: dialogState?.createError }}
+            actions={{ onChange: actions.newItem.onChange, onSave: actions.newItem.onSave, onCancel: actions.newItem.onCancel }}
+          />
+        {/if}
         {#if data.options.length === 0}
           <EmptyState
             data={{
               title: 'Nenhum item',
-              description: data.direction === 'out' ? 'Nada com saldo com esse nome.' : 'Nada com esse nome.',
+              description:
+                data.direction === 'in' ? 'Nada com esse nome. Cadastre o item.' : 'Nada com saldo com esse nome.',
             }}
             ui={{ icon: PackageSearch }}
           />

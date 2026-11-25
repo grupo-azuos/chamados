@@ -68,6 +68,7 @@ function lineRow(overrides: Partial<TicketStockItemRow> = {}): TicketStockItemRo
     itemName: 'Monitor 24"',
     computerId: null,
     direction: 'out',
+    reason: null,
     quantity: 1,
     settledAt: null,
     createdAt: CREATED_AT,
@@ -164,9 +165,10 @@ describe('TicketStockItemsService.add', () => {
   it('accepts any quantity coming back to the shelf', async () => {
     const { service, actor } = setup({ shelf: { id: 7, name: 'Monitor 24"', balance: 0 } });
 
-    await expect(
-      service.add(actor, 49, { ...out(5), direction: 'in' }),
-    ).resolves.toMatchObject({ direction: 'in', quantity: 5 });
+    await expect(service.add(actor, 49, { ...out(5), direction: 'in' })).resolves.toMatchObject({
+      direction: 'in',
+      quantity: 5,
+    });
   });
 
   // triste
@@ -186,9 +188,9 @@ describe('TicketStockItemsService.add', () => {
   it('refuses the Maintenance shelf on a ticket that is not of Maintenance', async () => {
     const { service, actor } = setup({ roles: { infra: 'admin', manutencao: 'admin' } });
 
-    await expect(
-      service.add(actor, 49, { ...out(1), source: 'inventory' }),
-    ).rejects.toBeInstanceOf(UnprocessableEntityException);
+    await expect(service.add(actor, 49, { ...out(1), source: 'inventory' })).rejects.toBeInstanceOf(
+      UnprocessableEntityException,
+    );
   });
 
   it('refuses who does not manage the area of the shelf', async () => {
@@ -197,9 +199,36 @@ describe('TicketStockItemsService.add', () => {
       participantAreas: ['manutencao'],
     });
 
+    await expect(service.add(actor, 49, { ...out(1), source: 'inventory' })).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+});
+
+describe('TicketStockItemsService.add — descarte', () => {
+  // feliz
+  it('reserves a disposal with its reason, and tells the timeline why', async () => {
+    const { service, repository, histories, actor } = setup();
+
+    await service.add(actor, 49, { ...out(1), direction: 'disposal', reason: 'broken' });
+
+    expect(repository.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ direction: 'disposal', reason: 'broken' }),
+    );
+    expect(histories.record.mock.calls[0]?.[0].description).toContain(
+      'descarte de 1 × Monitor 24" (quebrou)',
+    );
+  });
+
+  // triste
+  it('refuses a disposal without reason, and one bigger than what is left', async () => {
+    const { service, repository, actor } = setup({ reserved: new Map([[7, 2]]) });
+
+    await expect(service.add(actor, 49, { ...out(1), direction: 'disposal' })).rejects.toThrow();
     await expect(
-      service.add(actor, 49, { ...out(1), source: 'inventory' }),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+      service.add(actor, 49, { ...out(2), direction: 'disposal', reason: 'lost' }),
+    ).rejects.toThrow('Só há 1 de Monitor 24"');
+    expect(repository.insert).not.toHaveBeenCalled();
   });
 });
 
@@ -298,6 +327,23 @@ describe('TicketStockItemsService.settle', () => {
   });
 });
 
+describe('TicketStockItemsService.settle — descarte', () => {
+  // feliz
+  it('turns a reserved disposal into a disposal movement with the reason', async () => {
+    const { service, repository, ticket } = setup({
+      lines: [lineRow({ direction: 'disposal', reason: 'expired' })],
+    });
+
+    await service.settle(ticket, ana, TX);
+
+    expect(repository.moveShelf).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      expect.objectContaining({ direction: 'disposal', reason: 'expired' }),
+      TX,
+    );
+  });
+});
+
 describe('pickMachine', () => {
   // feliz
   it('takes the only machine of the ticket without asking', () => {
@@ -360,7 +406,9 @@ describe('TicketStockItemsService.restore', () => {
       lines: [lineRow({ archivedAt: CREATED_AT, quantity: 1 })],
     });
 
-    await expect(service.restore(actor, 49, 5)).rejects.toBeInstanceOf(UnprocessableEntityException);
+    await expect(service.restore(actor, 49, 5)).rejects.toBeInstanceOf(
+      UnprocessableEntityException,
+    );
     expect(repository.restore).not.toHaveBeenCalled();
   });
 

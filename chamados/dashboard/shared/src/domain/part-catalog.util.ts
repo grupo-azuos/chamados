@@ -63,22 +63,34 @@ export function partConditionTone(condition: PartCondition): 'success' | 'neutra
   return condition === 'new' ? 'success' : 'neutral';
 }
 
-/** Entrada soma ao saldo; saída subtrai. Não existe terceiro tipo. */
+/** O que a tela do Depósito lança: entrada soma ao saldo; saída subtrai. */
 export const MOVEMENT_TYPES = ['in', 'out'] as const;
 
 export type MovementType = (typeof MOVEMENT_TYPES)[number];
 
-export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
+/**
+ * O que o EXTRATO da peça mostra: além da entrada e da saída, o DESCARTE — a peça que saiu da
+ * prateleira como perda, pelo encerramento de um chamado, com o motivo. O descarte não se lança
+ * pela tela do Depósito: nasce no chamado.
+ */
+export const PART_MOVEMENT_KINDS = ['in', 'out', 'disposal'] as const;
+
+export type PartMovementKind = (typeof PART_MOVEMENT_KINDS)[number];
+
+export const MOVEMENT_TYPE_LABELS: Record<PartMovementKind, string> = {
   in: 'Entrada',
   out: 'Saída',
+  disposal: 'Descarte',
 };
 
-export function movementTypeLabel(type: MovementType): string {
+export function movementTypeLabel(type: PartMovementKind): string {
   return MOVEMENT_TYPE_LABELS[type];
 }
 
-export function movementTypeTone(type: MovementType): 'success' | 'warning' {
-  return type === 'in' ? 'success' : 'warning';
+export function movementTypeTone(type: PartMovementKind): 'success' | 'warning' | 'danger' {
+  if (type === 'in') return 'success';
+
+  return type === 'disposal' ? 'danger' : 'warning';
 }
 
 /**
@@ -88,7 +100,7 @@ export function movementTypeTone(type: MovementType): 'success' | 'warning' {
  * entradas e saídas. No sistema antigo esta conta vivia num gatilho do banco, onde não dava
  * para testá-la nem para ler a regra junto com o resto do código.
  */
-export function balanceAfter(balance: number, type: MovementType, quantity: number): number {
+export function balanceAfter(balance: number, type: PartMovementKind, quantity: number): number {
   return type === 'in' ? balance + quantity : balance - quantity;
 }
 
@@ -99,7 +111,7 @@ export function balanceAfter(balance: number, type: MovementType, quantity: numb
  * de um estoque de 2 deixava zero, sem avisar ninguém. O saldo passava a mentir, e a
  * diferença só aparecia quando alguém ia buscar a peça e não achava.
  */
-export function fitsInStock(balance: number, type: MovementType, quantity: number): boolean {
+export function fitsInStock(balance: number, type: PartMovementKind, quantity: number): boolean {
   if (type === 'in') return true;
 
   return quantity <= balance;

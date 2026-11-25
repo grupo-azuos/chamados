@@ -18,15 +18,25 @@ export const TICKET_STOCK_SOURCES = ['parts', 'inventory'] as const;
 
 export type TicketStockSource = (typeof TICKET_STOCK_SOURCES)[number];
 
-/** O sentido do item no chamado: sai da prateleira ou volta para ela. */
-export const TICKET_STOCK_DIRECTIONS = ['out', 'in'] as const;
+/**
+ * O sentido do item no chamado: sai da prateleira, volta para ela, ou sai dela para o DESCARTE
+ * (quebrou, venceu) — o descarte tira do saldo como a saída, mas fica registrado como perda, com
+ * o motivo.
+ */
+export const TICKET_STOCK_DIRECTIONS = ['out', 'in', 'disposal'] as const;
 
 export type TicketStockDirection = (typeof TICKET_STOCK_DIRECTIONS)[number];
 
 export const TICKET_STOCK_DIRECTION_LABELS: Record<TicketStockDirection, string> = {
   out: 'Saída',
   in: 'Entrada',
+  disposal: 'Descarte',
 };
+
+/** Tira da prateleira: a saída e o descarte. Só a entrada devolve. */
+export function takesFromShelf(direction: TicketStockDirection): boolean {
+  return direction !== 'in';
+}
 
 export function ticketStockDirectionLabel(direction: TicketStockDirection): string {
   return TICKET_STOCK_DIRECTION_LABELS[direction];
@@ -73,7 +83,7 @@ export function refuseTicketStockItem(input: {
   quantity: number;
   available: number;
 }): string | null {
-  if (input.direction === 'in') return null;
+  if (!takesFromShelf(input.direction)) return null;
   if (input.quantity <= input.available) return null;
   if (input.available === 0) return `Não há ${input.name} disponível no depósito.`;
 
@@ -90,7 +100,7 @@ export function refuseTicketStockSettlement(input: {
   quantity: number;
   balance: number;
 }): string | null {
-  if (input.direction === 'in') return null;
+  if (!takesFromShelf(input.direction)) return null;
   if (input.quantity <= input.balance) return null;
 
   return `O depósito tem ${input.balance} de ${input.name}, e o chamado tira ${input.quantity}. Ajuste o item ou registre a entrada que faltou antes de encerrar.`;
@@ -102,7 +112,7 @@ export function balanceAfterTicketItem(
   direction: TicketStockDirection,
   quantity: number,
 ): number {
-  return direction === 'in' ? balance + quantity : balance - quantity;
+  return takesFromShelf(direction) ? balance - quantity : balance + quantity;
 }
 
 /**
@@ -110,5 +120,6 @@ export function balanceAfterTicketItem(
  * movimento: a saída volta para a prateleira, a entrada sai dela. Este é o sentido do desfazer.
  */
 export function reverseTicketStockDirection(direction: TicketStockDirection): TicketStockDirection {
-  return direction === 'in' ? 'out' : 'in';
+  /* Desfazer um descarte devolve à prateleira, como desfazer uma saída. */
+  return takesFromShelf(direction) ? 'in' : 'out';
 }

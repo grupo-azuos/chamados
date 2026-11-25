@@ -80,6 +80,7 @@ export function toMovement(row: MovementWithRefs): PartMovement {
     ...partOf(row),
 
     type: movement.type,
+    reason: movement.reason ?? null,
     quantity: movement.quantity,
     balanceAfter: movement.balanceAfter,
 

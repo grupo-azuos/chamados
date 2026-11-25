@@ -20,6 +20,7 @@ export function toTicketStockItem(
     itemId: row.partId ?? row.inventoryItemId ?? 0,
     name: row.itemName,
     direction: row.direction,
+    reason: row.reason ?? null,
     quantity: row.quantity,
     computerId: row.computerId,
     computerName: row.computerId !== null ? (computerNames.get(row.computerId) ?? null) : null,

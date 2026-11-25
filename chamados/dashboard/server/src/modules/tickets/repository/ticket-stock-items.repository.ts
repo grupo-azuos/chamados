@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { type DisposalReason } from '@template/shared/domain/inventory-stock.util';
 import {
   balanceAfterTicketItem,
   type TicketStockDirection,
@@ -29,6 +30,8 @@ export type ShelfMove = {
   itemId: number;
   direction: TicketStockDirection;
   quantity: number;
+  /** O motivo, quando o item vai para o descarte. */
+  reason?: DisposalReason | null;
   /** O que o extrato do depósito diz sobre a linha — "Chamado CH-0049". */
   note: string;
   computerId: number | null;
@@ -82,7 +85,11 @@ export class TicketStockItemsRepository {
   }
 
   /** Tira o item do chamado: ARQUIVA a linha, com quem tirou. */
-  async archive(id: number, actorId: string | null, executor: DatabaseExecutor = this.db): Promise<void> {
+  async archive(
+    id: number,
+    actorId: string | null,
+    executor: DatabaseExecutor = this.db,
+  ): Promise<void> {
     await runQuery(
       executor
         .update(ticketStockItems)
@@ -191,7 +198,8 @@ export class TicketStockItemsRepository {
             isNotNull(column),
             isNull(ticketStockItems.settledAt),
             isNull(ticketStockItems.archivedAt),
-            eq(ticketStockItems.direction, 'out'),
+            /* O descarte também tira da prateleira: reserva como a saída. */
+            inArray(ticketStockItems.direction, ['out', 'disposal']),
           ),
         )
         .groupBy(column),
@@ -217,6 +225,7 @@ export class TicketStockItemsRepository {
         executor.insert(partMovements).values({
           partId: item.id,
           type: move.direction,
+          reason: move.direction === 'disposal' ? (move.reason ?? 'other') : null,
           quantity: move.quantity,
           balanceAfter: balance,
           computerId: move.computerId,
@@ -240,6 +249,7 @@ export class TicketStockItemsRepository {
       executor.insert(inventoryMovements).values({
         itemId: item.id,
         type: move.direction,
+        reason: move.direction === 'disposal' ? (move.reason ?? 'other') : null,
         quantity: move.quantity,
         balanceAfter: balance,
         note: move.note,
@@ -248,10 +258,7 @@ export class TicketStockItemsRepository {
       'registrar o movimento do produto',
     );
     await runQuery(
-      executor
-        .update(inventoryItems)
-        .set({ balance })
-        .where(eq(inventoryItems.id, item.id)),
+      executor.update(inventoryItems).set({ balance }).where(eq(inventoryItems.id, item.id)),
       'atualizar o saldo do produto',
     );
   }

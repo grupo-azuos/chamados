@@ -5,6 +5,7 @@ import {
   TICKET_STOCK_DIRECTIONS,
   TICKET_STOCK_SOURCES,
 } from '../domain/ticket-stock.util';
+import { DISPOSAL_REASONS } from '../domain/inventory-stock.util';
 
 /**
  * O CONTRATO dos itens de estoque de um chamado (ver `ticket-stock.util`). Mora num arquivo
@@ -16,7 +17,11 @@ export const ticketStockSourceSchema = z.enum(TICKET_STOCK_SOURCES, {
 });
 
 export const ticketStockDirectionSchema = z.enum(TICKET_STOCK_DIRECTIONS, {
-  error: () => ({ message: 'Escolha se o item sai ou entra no depósito' }),
+  error: () => ({ message: 'Escolha se o item sai, entra ou vai para o descarte' }),
+});
+
+const ticketDisposalReasonSchema = z.enum(DISPOSAL_REASONS, {
+  error: () => ({ message: 'Escolha o motivo do descarte' }),
 });
 
 /** Um item no chamado, como a ficha e a ordem de serviço o mostram. */
@@ -30,6 +35,8 @@ export const ticketStockItemSchema = z.object({
   name: z.string(),
   direction: ticketStockDirectionSchema,
   quantity: z.number().int(),
+  /** Por que foi para o descarte. Só existe no descarte. */
+  reason: ticketDisposalReasonSchema.nullable().optional(),
   /** A máquina para onde o item foi (ou de onde veio), quando o chamado tem máquina. */
   computerId: z.number().int().nullable().optional(),
   computerName: z.string().nullable().optional(),
@@ -45,24 +52,32 @@ export const ticketStockItemSchema = z.object({
 export type TicketStockItem = z.infer<typeof ticketStockItemSchema>;
 
 /** Vincular um item ao chamado. */
-export const createTicketStockItemSchema = z.object({
-  source: ticketStockSourceSchema,
-  itemId: z.coerce
-    .number<number>({ error: 'Escolha o item' })
-    .int('Escolha o item')
-    .positive('Escolha o item'),
-  direction: ticketStockDirectionSchema,
-  quantity: z.coerce
-    .number<number>({ error: 'Informe a quantidade' })
-    .int('A quantidade é um número inteiro')
-    .min(1, 'A quantidade mínima é 1')
-    .max(MAX_TICKET_STOCK_QUANTITY, `A quantidade máxima é ${MAX_TICKET_STOCK_QUANTITY}`),
-  /**
-   * A máquina do item. Com UMA máquina no chamado, é ela (não precisa vir); com várias, quem
-   * vincula escolhe — o servidor confere que ela é do chamado.
-   */
-  computerId: z.number().int().positive().nullable().optional(),
-});
+export const createTicketStockItemSchema = z
+  .object({
+    source: ticketStockSourceSchema,
+    itemId: z.coerce
+      .number<number>({ error: 'Escolha o item' })
+      .int('Escolha o item')
+      .positive('Escolha o item'),
+    direction: ticketStockDirectionSchema,
+    quantity: z.coerce
+      .number<number>({ error: 'Informe a quantidade' })
+      .int('A quantidade é um número inteiro')
+      .min(1, 'A quantidade mínima é 1')
+      .max(MAX_TICKET_STOCK_QUANTITY, `A quantidade máxima é ${MAX_TICKET_STOCK_QUANTITY}`),
+    /**
+     * A máquina do item. Com UMA máquina no chamado, é ela (não precisa vir); com várias, quem
+     * vincula escolhe — o servidor confere que ela é do chamado.
+     */
+    computerId: z.number().int().positive().nullable().optional(),
+    /** O motivo do descarte — obrigatório no descarte, ignorado no resto. */
+    reason: ticketDisposalReasonSchema.nullable().optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.direction !== 'disposal' || value.reason) return;
+
+    context.addIssue({ code: 'custom', path: ['reason'], message: 'Escolha o motivo do descarte' });
+  });
 
 export type CreateTicketStockItemInput = z.input<typeof createTicketStockItemSchema>;
 

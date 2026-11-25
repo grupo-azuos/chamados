@@ -151,7 +151,7 @@ function stockBlocksOf(items: readonly TicketStockItem[]): DocumentBlock[] {
         { text: STOCK_SOURCE_LABELS[item.source] },
         {
           text: ticketStockDirectionLabel(item.direction),
-          tone: item.direction === 'out' ? 'warning' : 'success',
+          tone: item.direction === 'in' ? 'success' : 'warning',
         },
         { text: String(item.quantity) },
         { text: stockSituationOf(item) },

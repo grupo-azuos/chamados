@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
-import { MOVEMENT_TYPES, PART_CATEGORIES, PART_CONDITIONS } from '../domain/part-catalog.util';
+import {
+  MOVEMENT_TYPES,
+  PART_CATEGORIES,
+  PART_CONDITIONS,
+  PART_MOVEMENT_KINDS,
+} from '../domain/part-catalog.util';
+import { DISPOSAL_REASONS } from '../domain/inventory-stock.util';
 import { departmentSchema } from './computer.schema';
 import { archivedFilterSchema, archiveSchema } from './archive.schema';
 import { paginationQuerySchema } from './pagination.schema';
@@ -30,6 +36,9 @@ export const partConditionSchema = z.enum(PART_CONDITIONS, {
 export const movementTypeSchema = z.enum(MOVEMENT_TYPES, {
   error: 'A movimentação precisa ser entrada ou saída',
 });
+
+/** O tipo como o EXTRATO o mostra — com o descarte, que nasce no chamado. */
+export const partMovementKindSchema = z.enum(PART_MOVEMENT_KINDS);
 
 const partNameSchema = z
   .string({ error: 'Informe o que é a peça' })
@@ -139,7 +148,9 @@ export const partMovementSchema = z.object({
   partName: z.string(),
   partCondition: partConditionSchema,
 
-  type: movementTypeSchema,
+  type: partMovementKindSchema,
+  /** Por que a peça foi para o descarte. Só existe no descarte. */
+  reason: z.enum(DISPOSAL_REASONS).nullable().optional(),
   quantity: z.number().int(),
   /** O saldo da peça DEPOIS desta linha — o extrato, como o de um banco. */
   balanceAfter: z.number().int(),
@@ -230,7 +241,7 @@ export type PartListQuery = z.infer<typeof partListQuerySchema>;
 export const movementListQuerySchema = paginationQuerySchema.extend({
   partId: z.coerce.number<number>().int().optional(),
   computerId: z.coerce.number<number>().int().optional(),
-  type: movementTypeSchema.optional(),
+  type: partMovementKindSchema.optional(),
   archived: archivedFilterSchema,
 });
 
