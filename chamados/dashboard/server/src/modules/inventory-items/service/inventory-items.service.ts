@@ -8,6 +8,10 @@ import {
 import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
 import { type SQL } from 'drizzle-orm';
 import { refuseInventoryPhoto } from '@template/shared/domain/inventory-photo.util';
+import {
+  distinctInventoryNames,
+  inventoryNameKey,
+} from '@template/shared/domain/inventory-name.util';
 import { fitsInInventoryStock, stockAfter } from '@template/shared/domain/inventory-stock.util';
 import {
   type CreateInventoryItemEventInput,
@@ -22,6 +26,7 @@ import {
 } from '@template/shared/schemas/inventory-item.schema';
 import {
   type CreateInventoryMovementInput,
+  type CreateStockMovementInput,
   type InventoryMovement,
   type InventoryMovementListQuery,
 } from '@template/shared/schemas/inventory-movement.schema';
@@ -37,6 +42,7 @@ import { BOARD_DRILL, type BoardDrillResolver } from '../../dashboard-boards/boa
 import { type RequestUser } from '../../../lib/auth/request-user.type';
 import { USER_DIRECTORY_PROVIDER } from '../../../lib/auth/user-directory.token';
 import { type UserDirectoryProvider } from '../../../lib/auth/user-directory.type';
+import { type DatabaseExecutor } from '../../../lib/db/db.type';
 import { type InventoryItemRow } from '../../../lib/db/schema/inventory-items.schema';
 import { assertCanManageInContext, assertCanRead } from '../../../lib/policy/policy-assert.util';
 import { DOWNLOAD_URL_TTL_SECONDS, type FileStorage } from '../../../lib/storage/file-storage.type';
@@ -127,7 +133,10 @@ export class InventoryItemsService {
   }
 
   /** O recorte de um clique no painel em SQL — sem recorte (ou sem o painel), nada. */
-  private async drillOf(user: RequestUser, query: Pick<InventoryItemListQuery, 'drill'>): Promise<SQL | undefined> {
+  private async drillOf(
+    user: RequestUser,
+    query: Pick<InventoryItemListQuery, 'drill'>,
+  ): Promise<SQL | undefined> {
     if (!query.drill || !this.drills) return undefined;
 
     return this.drills.drillCondition(user, query.drill, INVENTORY_DRILL_SOURCES);
@@ -145,7 +154,8 @@ export class InventoryItemsService {
     assertCanManageInContext(user, 'manutencao', 'cadastrar produtos');
 
     const photoKey = await this.storePhoto(input.photo);
-    const row = await this.repository.insert(toInventoryItemInsert(input, user.email, photoKey));
+    const named = { ...input, name: await this.spellingOf(input.name) };
+    const row = await this.repository.insert(toInventoryItemInsert(named, user.email, photoKey));
 
     return this.toItem(row);
   }
@@ -167,9 +177,11 @@ export class InventoryItemsService {
     const current = await this.require(id);
     const photoKey = input.photo ? await this.storePhoto(input.photo) : undefined;
 
+    const named =
+      input.name === undefined ? input : { ...input, name: await this.spellingOf(input.name) };
     const row = await this.repository.update(
       id,
-      toInventoryItemUpdate(input, user.email, photoKey),
+      toInventoryItemUpdate(named, user.email, photoKey),
     );
     if (!row) throw new NotFoundException(ITEM_NOT_FOUND);
 
@@ -255,6 +267,85 @@ export class InventoryItemsService {
     });
   }
 
+  /**
+   * Entrada, saída ou descarte pelo NOME do produto — o Depósito conta "Cadeira", não cada cadeira
+   * cadastrada. Numa transação, com os produtos do nome travados: a entrada vai para o que já tem
+   * mais saldo; a saída e o descarte tiram de um em um, do que tem mais para o que tem menos, cada
+   * parte com a sua linha no extrato. Devolve a primeira linha.
+   */
+  async createStockMovement(
+    user: RequestUser,
+    input: CreateStockMovementInput,
+  ): Promise<InventoryMovement> {
+    assertCanManageInContext(user, 'manutencao', 'movimentar o depósito');
+
+    const quantity = Number(input.quantity);
+
+    return this.repository.transaction(async (executor) => {
+      const items = await this.repository.findByNameForUpdate(input.name, executor);
+      if (!items.length) throw new NotFoundException(ITEM_NOT_FOUND);
+
+      const total = items.reduce((sum, item) => sum + item.balance, 0);
+      if (!fitsInInventoryStock(total, input.type, quantity)) {
+        throw new UnprocessableEntityException(
+          stockMessage({ ...items[0]!, balance: total }, quantity),
+        );
+      }
+
+      const parts =
+        input.type === 'in' ? [{ item: items[0]!, quantity }] : takeFrom(items, quantity);
+      const movements = [];
+      for (const part of parts) {
+        movements.push(
+          await this.moveOne(
+            part.item,
+            { ...input, quantity: part.quantity },
+            user.email,
+            executor,
+          ),
+        );
+      }
+
+      return movements[0]!;
+    });
+  }
+
+  /** Uma linha do extrato e o saldo novo de UM produto, dentro da transação de quem chamou. */
+  private async moveOne(
+    item: InventoryItemRow,
+    input: CreateInventoryMovementInput,
+    actorEmail: string,
+    executor: DatabaseExecutor,
+  ): Promise<InventoryMovement> {
+    const balance = stockAfter(item.balance, input.type, Number(input.quantity));
+    const movement = await this.repository.insertMovement(
+      toInventoryMovementInsert(item.id, input, balance, actorEmail),
+      executor,
+    );
+    await this.repository.updateBalance(item.id, balance, executor);
+
+    return toInventoryMovement({ movement, item });
+  }
+
+  /** Os nomes de produto, um por grafia (a mais usada) — a lista do campo "Nome do produto". */
+  async names(user: RequestUser): Promise<string[]> {
+    assertCanRead(user.role, 'o inventário da Manutenção');
+
+    return distinctInventoryNames(await this.repository.names());
+  }
+
+  /**
+   * A grafia que o nome já tem no inventário: quem escreve "CADEIRA" com "Cadeira" cadastrada
+   * grava "Cadeira" — o Depósito agrupa pelo nome e duas grafias virariam dois produtos.
+   */
+  private async spellingOf(name: string): Promise<string> {
+    const typed = name.trim();
+    const key = inventoryNameKey(typed);
+    const known = distinctInventoryNames(await this.repository.names());
+
+    return known.find((spelling) => inventoryNameKey(spelling) === key) ?? typed;
+  }
+
   /** A linha do tempo de ocorrências do produto: do mais antigo para o mais novo. */
   async events(user: RequestUser, itemId: number): Promise<InventoryItemEvent[]> {
     assertCanRead(user.role, 'as ocorrências do produto');
@@ -295,7 +386,10 @@ export class InventoryItemsService {
   }
 
   /** A linha do banco com o link temporário da foto, do jeito que a tela precisa. */
-  private async toItem(row: InventoryItemRow, ticketLinks?: TicketStockLink[]): Promise<InventoryItem> {
+  private async toItem(
+    row: InventoryItemRow,
+    ticketLinks?: TicketStockLink[],
+  ): Promise<InventoryItem> {
     return toInventoryItem(row, await this.photoUrl(row.photoKey), ticketLinks);
   }
 
@@ -371,6 +465,22 @@ export class InventoryItemsService {
  * Quem lê precisa saber se faltou uma ou faltaram dez para decidir o que fazer: registrar a
  * entrada que alguém esqueceu, ou conferir a prateleira.
  */
+/** Quanto sai de cada produto do nome, do que tem mais saldo para o que tem menos. */
+function takeFrom(
+  items: InventoryItemRow[],
+  quantity: number,
+): { item: InventoryItemRow; quantity: number }[] {
+  const parts: { item: InventoryItemRow; quantity: number }[] = [];
+  let missing = quantity;
+  for (const item of items) {
+    const taken = Math.min(item.balance, missing);
+    if (taken > 0) parts.push({ item, quantity: taken });
+    missing -= taken;
+  }
+
+  return parts;
+}
+
 function stockMessage(item: InventoryItemRow, quantity: number): string {
   if (item.balance === 0) {
     return `Não há ${item.name} no depósito. Registre uma entrada antes.`;

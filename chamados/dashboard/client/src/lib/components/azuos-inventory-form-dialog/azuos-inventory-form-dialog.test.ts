@@ -50,18 +50,57 @@ describe('AzuosInventoryFormDialog', () => {
     setup();
 
     expect(screen.getByRole('heading', { name: 'Cadastrar produto' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Nome do produto')).toHaveValue('Cadeira giratória');
+    expect(screen.getByRole('combobox', { name: 'Nome do produto' })).toHaveTextContent(
+      'Cadeira giratória',
+    );
     expect(screen.getByLabelText('Onde fica')).toHaveValue('Copa');
     expect(screen.getByLabelText('Código ou patrimônio')).toHaveValue('PAT-0101');
   });
 
-  it('reports what the person typed', async () => {
+  it('offers the names that exist, and registers a new one right there', async () => {
     const onChange = vi.fn();
-    setup({ actions: { ...actions, onChange } });
+    setup({
+      data: {
+        mode: 'create',
+        fields,
+        photo: { previewUrl: null, fileName: null },
+        names: ['Cadeira', 'Mesa'],
+      },
+      actions: { ...actions, onChange },
+    });
 
-    await userEvent.type(screen.getByLabelText('Nome do produto'), 'X');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Nome do produto' }));
+    expect(await screen.findByRole('option', { name: 'Mesa' })).toBeInTheDocument();
+    await userEvent.type(
+      await screen.findByPlaceholderText('Buscar ou digitar o nome…'),
+      'Armário',
+    );
+    await userEvent.click(await screen.findByRole('option', { name: /Cadastrar “Armário”/ }));
 
-    expect(onChange).toHaveBeenCalledWith('name', 'Cadeira giratóriaX');
+    expect(onChange).toHaveBeenCalledWith('name', 'Armário');
+  });
+
+  // triste
+  it('keeps the spelling that exists when the person types it in another case', async () => {
+    const onChange = vi.fn();
+    setup({
+      data: {
+        mode: 'create',
+        fields,
+        photo: { previewUrl: null, fileName: null },
+        names: ['Cadeira'],
+      },
+      actions: { ...actions, onChange },
+    });
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Nome do produto' }));
+    await userEvent.type(
+      await screen.findByPlaceholderText('Buscar ou digitar o nome…'),
+      'CADEIRA',
+    );
+    await userEvent.click(await screen.findByRole('option', { name: 'Cadeira' }));
+
+    expect(onChange).toHaveBeenCalledWith('name', 'Cadeira');
   });
 
   it('asks to save when the form is submitted', async () => {
@@ -142,7 +181,9 @@ describe('AzuosInventoryFormDialog', () => {
     setup({ state: { isOpen: true, photoError: 'A foto precisa ser uma imagem.' } });
 
     expect(screen.getByText('A foto precisa ser uma imagem.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Nome do produto')).toHaveValue('Cadeira giratória');
+    expect(screen.getByRole('combobox', { name: 'Nome do produto' })).toHaveTextContent(
+      'Cadeira giratória',
+    );
   });
 
   it('shows the failure of the save with its reason', () => {
@@ -155,7 +196,7 @@ describe('AzuosInventoryFormDialog', () => {
   it('locks the form while saving', () => {
     setup({ state: { isOpen: true, isSubmitting: true } });
 
-    expect(screen.getByLabelText('Nome do produto')).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'Nome do produto' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Tirar foto' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Escolher imagem' })).toBeDisabled();
   });
@@ -168,7 +209,6 @@ describe('AzuosInventoryFormDialog', () => {
     expect(screen.getByRole('button', { name: 'Escolher imagem' })).toBeInTheDocument();
   });
 });
-
 
 /** Escolhe a segunda opção de um seletor, seja ele de pastilhas ou de lista com busca. */
 async function chooseSecond(label: string) {

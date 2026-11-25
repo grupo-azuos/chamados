@@ -14,7 +14,17 @@
 
   export type AzuosCommandSearchProps = {
     data: { term: string };
-    ui?: { placeholder?: string; emptyLabel?: string; className?: string };
+    ui?: {
+      placeholder?: string;
+      emptyLabel?: string;
+      className?: string;
+      /**
+       * Quem usa já filtra as linhas pelo termo. O filtro do bits-ui REORDENA as linhas mexendo
+       * direto na página, e uma linha que sai da lista no meio disso (o "Criar «termo»") fica órfã,
+       * presa na tela com o texto velho.
+       */
+      isFilteredOutside?: boolean;
+    };
     actions: { onTermChange: (term: string) => void };
     /** As linhas da lista (`AzuosCommandSearchItem`). */
     children?: Snippet;
@@ -35,6 +45,7 @@
 </script>
 
 <CommandPrimitive.Root
+  shouldFilter={!ui?.isFilteredOutside}
   data-slot="command"
   class={cn('bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md', ui?.className)}
 >

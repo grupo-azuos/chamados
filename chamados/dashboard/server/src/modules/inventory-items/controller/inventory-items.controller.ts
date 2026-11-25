@@ -29,6 +29,7 @@ import {
   CreateInventoryItemDto,
   CreateInventoryItemEventDto,
   CreateInventoryMovementDto,
+  CreateStockMovementDto,
   InventoryItemDto,
   InventoryItemEventDto,
   InventoryItemListQueryDto,
@@ -89,6 +90,37 @@ export class InventoryItemsController {
     @Query() query: InventoryMovementListQueryDto,
   ): Promise<InventoryMovementListResponseDto> {
     return this.service.movements(user, query);
+  }
+
+  @Get('names')
+  @ApiOperation({
+    summary: 'Lista os nomes de produto do inventário',
+    description:
+      'Um por produto, sem diferença de maiúscula, na grafia mais usada — o campo "Nome do produto".',
+  })
+  @ApiOkResponse({ type: [String] })
+  async names(@CurrentUser() user: RequestUser): Promise<string[]> {
+    return this.service.names(user);
+  }
+
+  /* ANTES de `:id/movements` pelo mesmo motivo de `movements`: `stock` não é um id. */
+  @Post('stock/movements')
+  @ApiOperation({
+    summary: 'Registra uma entrada, uma saída ou um descarte pelo nome do produto',
+    description:
+      'O Depósito conta pelo nome, sem diferença de maiúscula. A entrada vai para o produto com mais saldo; a saída tira de um em um.',
+  })
+  @ApiCreatedResponse({ type: InventoryMovementDto })
+  @ApiForbiddenResponse({ description: 'Seu cargo em Manutenção só permite consultar.' })
+  @ApiNotFoundResponse({ description: 'Produto não encontrado.' })
+  @ApiUnprocessableEntityResponse({
+    description: 'A quantidade passa do que existe no depósito, ou falta o motivo do descarte.',
+  })
+  async createStockMovement(
+    @CurrentUser() user: RequestUser,
+    @Body() body: CreateStockMovementDto,
+  ): Promise<InventoryMovementDto> {
+    return this.service.createStockMovement(user, body);
   }
 
   @Get('responsibles')

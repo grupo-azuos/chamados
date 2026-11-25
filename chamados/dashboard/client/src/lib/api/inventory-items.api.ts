@@ -11,6 +11,7 @@ import {
 } from '@template/shared/schemas/inventory-item.schema';
 import {
   type CreateInventoryMovementInput,
+  type CreateStockMovementInput,
   type InventoryMovement,
   type InventoryMovementListQuery,
 } from '@template/shared/schemas/inventory-movement.schema';
@@ -38,6 +39,9 @@ export const inventoryItemsApi = {
   findById: (id: number) => apiRequest<InventoryItem>(`/inventory-items/${id}`),
 
   responsibles: () => apiRequest<InventoryResponsible[]>('/inventory-items/responsibles'),
+
+  /** Os nomes de produto, um por grafia — a lista do campo "Nome do produto". */
+  names: () => apiRequest<string[]>('/inventory-items/names'),
 
   create: async (values: InventoryItemFormValues, photo: File | null) =>
     apiRequest<InventoryItem>('/inventory-items', {
@@ -80,9 +84,12 @@ export const inventoryItemsApi = {
       body,
     }),
 
+  /** Entrada, saída ou descarte pelo NOME do produto — o que o Depósito usa. */
+  createStockMovement: (body: CreateStockMovementInput) =>
+    apiRequest<InventoryMovement>('/inventory-items/stock/movements', { method: 'POST', body }),
+
   /** A linha do tempo de ocorrências do produto (defeitos, trocas, manutenções, observações). */
-  events: (itemId: number) =>
-    apiRequest<InventoryItemEvent[]>(`/inventory-items/${itemId}/events`),
+  events: (itemId: number) => apiRequest<InventoryItemEvent[]>(`/inventory-items/${itemId}/events`),
 
   /** Registra uma nova ocorrência na linha do tempo do produto. */
   addEvent: (itemId: number, body: CreateInventoryItemEventInput) =>

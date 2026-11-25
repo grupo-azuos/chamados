@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import StockListView, { type StockListFilterValues } from './azuos-stock-list-view.svelte';
+import { groupStock } from '$lib/utils/inventory-stock-group.util';
 
 function item(overrides: Partial<InventoryItem> = {}): InventoryItem {
   return {
@@ -54,7 +55,7 @@ const actions = {
 function setup(props: Record<string, unknown> = {}) {
   return render(StockListView, {
     props: {
-      data: { items: [item(), sugar], total: 2, outOfStock: 1, filter: emptyFilter },
+      data: { groups: groupStock([item(), sugar]), total: 2, outOfStock: 1, filter: emptyFilter },
       state: settled,
       actions,
       ...props,
@@ -90,8 +91,8 @@ describe('AzuosStockListView', () => {
     await userEvent.click(coffee.getByRole('button', { name: 'Entrada' }));
     await userEvent.click(coffee.getByRole('button', { name: 'Saída' }));
 
-    expect(onEntry).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
-    expect(onExit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    expect(onEntry).toHaveBeenCalledWith(expect.objectContaining({ name: item().name }));
+    expect(onExit).toHaveBeenCalledWith(expect.objectContaining({ name: item().name }));
   });
 
   /* O que zerou fica marcado, e não dá para tirar de onde não há. */
@@ -112,7 +113,7 @@ describe('AzuosStockListView', () => {
 
     setup({
       data: {
-        items: [sugar],
+        groups: groupStock([sugar]),
         total: 1,
         outOfStock: 1,
         filter: { ...emptyFilter, outOfStockOnly: true },
@@ -127,7 +128,7 @@ describe('AzuosStockListView', () => {
   // triste
   it('says it is loading instead of saying there is nothing', () => {
     setup({
-      data: { items: [], total: 0, outOfStock: 0, filter: emptyFilter },
+      data: { groups: [], total: 0, outOfStock: 0, filter: emptyFilter },
       state: { ...settled, isLoading: true },
     });
 
@@ -139,7 +140,7 @@ describe('AzuosStockListView', () => {
   it('points to the inventory when there is no product at all', async () => {
     const onOpenInventory = vi.fn();
     setup({
-      data: { items: [], total: 0, outOfStock: 0, filter: emptyFilter },
+      data: { groups: [], total: 0, outOfStock: 0, filter: emptyFilter },
       state: { ...settled, isEmpty: true },
       actions: { ...actions, onOpenInventory },
     });
@@ -152,7 +153,7 @@ describe('AzuosStockListView', () => {
   it('separates the list hidden by a filter from the empty one', () => {
     setup({
       data: {
-        items: [],
+        groups: [],
         total: 0,
         outOfStock: 0,
         filter: { ...emptyFilter, category: 'utility' },
@@ -166,7 +167,7 @@ describe('AzuosStockListView', () => {
   it('shows the reason of the failure and the way back', async () => {
     const onRetry = vi.fn();
     setup({
-      data: { items: [], total: 0, outOfStock: 0, filter: emptyFilter },
+      data: { groups: [], total: 0, outOfStock: 0, filter: emptyFilter },
       state: { ...settled, error: 'Não consegui falar com o servidor.' },
       actions: { ...actions, onRetry },
     });
@@ -181,5 +182,27 @@ describe('AzuosStockListView', () => {
     setup({ state: { ...settled, isTruncated: true } });
 
     expect(screen.getByText(/mostra os primeiros produtos/)).toBeInTheDocument();
+  });
+});
+
+describe('AzuosStockListView by name', () => {
+  // feliz
+  it('shows CADEIRA, cadeira and Cadeira as one card, with the summed balance and how many are in use', () => {
+    setup({
+      data: {
+        groups: groupStock([
+          item({ id: 10, name: 'Cadeira', balance: 2 }),
+          item({ id: 11, name: 'CADEIRA', balance: 0 }),
+          item({ id: 12, name: 'cadeira', balance: 1 }),
+        ]),
+        total: 1,
+        outOfStock: 0,
+        filter: emptyFilter,
+      },
+    });
+
+    expect(screen.getAllByRole('heading', { name: /cadeira/i })).toHaveLength(1);
+    expect(cardOf('Cadeira')).toHaveTextContent('3');
+    expect(cardOf('Cadeira')).toHaveTextContent('3 em uso');
   });
 });

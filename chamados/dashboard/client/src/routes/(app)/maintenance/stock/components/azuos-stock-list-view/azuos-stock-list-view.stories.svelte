@@ -4,6 +4,7 @@
   import { fn } from 'storybook/test';
 
   import StockListView, { type StockListFilterValues } from './azuos-stock-list-view.svelte';
+  import { groupStock } from '$lib/utils/inventory-stock-group.util';
 
   function item(overrides: Partial<InventoryItem> = {}): InventoryItem {
     return {
@@ -80,7 +81,7 @@
 <Story
   name="Default"
   args={{
-    data: { items, total: items.length, outOfStock: 1, filter: emptyFilter },
+    data: { groups: groupStock(items), total: items.length, outOfStock: 1, filter: emptyFilter },
     state: settled,
     actions,
   }}
@@ -91,7 +92,7 @@
   name="Mobile"
   parameters={{ viewport: { defaultViewport: 'mobile1' } }}
   args={{
-    data: { items, total: items.length, outOfStock: 1, filter: emptyFilter },
+    data: { groups: groupStock(items), total: items.length, outOfStock: 1, filter: emptyFilter },
     state: settled,
     actions,
   }}
@@ -102,7 +103,7 @@
   name="OutOfStockOnly"
   args={{
     data: {
-      items: items.filter((entry) => entry.balance === 0),
+      groups: groupStock(items.filter((entry) => entry.balance === 0)),
       total: 1,
       outOfStock: 1,
       filter: { ...emptyFilter, outOfStockOnly: true },
@@ -116,7 +117,7 @@
 <Story
   name="Loading"
   args={{
-    data: { items: [], total: 0, outOfStock: 0, filter: emptyFilter },
+    data: { groups: [], total: 0, outOfStock: 0, filter: emptyFilter },
     state: { ...settled, isLoading: true },
     actions,
   }}
@@ -126,7 +127,7 @@
 <Story
   name="Empty"
   args={{
-    data: { items: [], total: 0, outOfStock: 0, filter: emptyFilter },
+    data: { groups: [], total: 0, outOfStock: 0, filter: emptyFilter },
     state: { ...settled, isEmpty: true },
     actions,
   }}
@@ -137,7 +138,7 @@
   name="FilteredOut"
   args={{
     data: {
-      items: [],
+      groups: [],
       total: 0,
       outOfStock: 0,
       filter: { ...emptyFilter, category: 'utility' },
@@ -151,7 +152,7 @@
 <Story
   name="WithError"
   args={{
-    data: { items: [], total: 0, outOfStock: 0, filter: emptyFilter },
+    data: { groups: [], total: 0, outOfStock: 0, filter: emptyFilter },
     state: { ...settled, error: 'Não consegui falar com o servidor.' },
     actions,
   }}
@@ -162,7 +163,7 @@
   name="LongText (edge case)"
   args={{
     data: {
-      items: [
+      groups: groupStock([
         item({
           name: 'Suporte articulado de parede para monitor de até 32 polegadas com inclinação',
           category: 'other',
@@ -170,7 +171,7 @@
           location: null,
           balance: 1250,
         }),
-      ],
+      ]),
       total: 1,
       outOfStock: 0,
       filter: emptyFilter,

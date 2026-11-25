@@ -7,7 +7,11 @@ import Harness from './use-inventory-form-harness.test.svelte';
 import { type InventoryFormModel } from './use-inventory-form.svelte';
 
 vi.mock('$lib/api/inventory-items.api', () => ({
-  inventoryItemsApi: { create: vi.fn(), update: vi.fn(), responsibles: vi.fn().mockResolvedValue([]) },
+  inventoryItemsApi: {
+    create: vi.fn(),
+    update: vi.fn(),
+    responsibles: vi.fn().mockResolvedValue([]),
+  },
 }));
 
 const { inventoryItemsApi } = await import('$lib/api/inventory-items.api');

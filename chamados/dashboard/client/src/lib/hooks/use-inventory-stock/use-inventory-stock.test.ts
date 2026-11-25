@@ -4,9 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '$lib/api/http-client';
 import Harness from './use-inventory-stock-harness.test.svelte';
-import {
-  type InventoryStockModel,
-} from './use-inventory-stock.svelte';
+import { type InventoryStockModel } from './use-inventory-stock.svelte';
 
 vi.mock('$lib/api/inventory-items.api', () => ({ inventoryItemsApi: { list: vi.fn() } }));
 
@@ -46,7 +44,6 @@ function mountModel(): InventoryStockModel {
   return model;
 }
 
-
 const sugar = item({ id: 2, name: 'Açúcar refinado', balance: 0 });
 
 beforeEach(() => {
@@ -60,27 +57,39 @@ describe('useInventoryStockModel', () => {
   it('lists the products with how much there is of each, counting what ran out', async () => {
     const model = mountModel();
 
-    await waitFor(() => expect(model.data.items).toHaveLength(2));
-    expect(model.data.items[0]?.balance).toBe(7);
+    await waitFor(() => expect(model.data.groups).toHaveLength(2));
+    expect(model.data.groups[0]?.balance).toBe(7);
     expect(model.data.outOfStock).toBe(1);
   });
 
-  /* "Sem estoque" é filtrado no SQL; o número do topo continua contando sobre a busca. */
-  it('asks the server for what ran out, and keeps counting what ran out in the search', async () => {
-    vi.mocked(inventoryItemsApi.list).mockImplementation(async (query) =>
-      page(query.outOfStockOnly ? [sugar] : [item(), sugar]),
+  // feliz
+  it('joins the products by name without caring about case, adding the balances', async () => {
+    vi.mocked(inventoryItemsApi.list).mockResolvedValue(
+      page([
+        item({ id: 3, name: 'Cadeira', balance: 0 }),
+        item({ id: 4, name: 'CADEIRA', balance: 2 }),
+        item({ id: 5, name: 'cadeira', balance: 0 }),
+      ]),
     );
     const model = mountModel();
-    await waitFor(() => expect(model.data.items).toHaveLength(2));
+
+    await waitFor(() => expect(model.data.groups).toHaveLength(1));
+    expect(model.data.groups[0]).toMatchObject({ name: 'Cadeira', balance: 2 });
+    expect(model.data.total).toBe(1);
+    expect(model.data.outOfStock).toBe(0);
+  });
+
+  /* "Sem estoque" é o NOME que somou zero, filtrado aqui; o número do topo conta sobre a busca. */
+  it('keeps only what ran out, and keeps counting what ran out in the search', async () => {
+    const model = mountModel();
+    await waitFor(() => expect(model.data.groups).toHaveLength(2));
 
     model.actions.onOutOfStockOnlyChange(true);
 
-    await waitFor(() => expect(model.data.items).toHaveLength(1));
+    await waitFor(() => expect(model.data.groups).toHaveLength(1));
+    expect(model.data.groups[0]?.name).toBe('Açúcar refinado');
     expect(model.data.total).toBe(1);
     expect(model.data.outOfStock).toBe(1);
-    expect(inventoryItemsApi.list).toHaveBeenCalledWith(
-      expect.objectContaining({ outOfStockOnly: true }),
-    );
   });
 
   it('asks the API again with the search and the category', async () => {
@@ -107,11 +116,9 @@ describe('useInventoryStockModel', () => {
   });
 
   it('separates empty from hidden by a filter', async () => {
-    vi.mocked(inventoryItemsApi.list).mockImplementation(async (query) =>
-      page(query.outOfStockOnly ? [] : [item()]),
-    );
+    vi.mocked(inventoryItemsApi.list).mockResolvedValue(page([item()]));
     const model = mountModel();
-    await waitFor(() => expect(model.data.items).toHaveLength(1));
+    await waitFor(() => expect(model.data.groups).toHaveLength(1));
 
     model.actions.onOutOfStockOnlyChange(true);
 
