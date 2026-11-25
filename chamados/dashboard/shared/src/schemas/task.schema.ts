@@ -195,6 +195,19 @@ export type SaveTaskStepsInput = z.infer<typeof saveTaskStepsSchema>;
 export const setTaskStepDoneSchema = z.object({ done: z.boolean() });
 export type SetTaskStepDoneInput = z.infer<typeof setTaskStepDoneSchema>;
 
+/** O tamanho de uma anotação: o que o Histórico guarda inteiro, sem cortar. */
+export const TASK_NOTE_MAX_LENGTH = 500;
+
+/** Uma anotação na linha do tempo da tarefa ("Liguei para a usuária, a máquina fica livre às 14h"). */
+export const addTaskNoteSchema = z.object({
+  note: z
+    .string()
+    .trim()
+    .min(1, 'Escreva a anotação')
+    .max(TASK_NOTE_MAX_LENGTH, `No máximo ${TASK_NOTE_MAX_LENGTH} caracteres`),
+});
+export type AddTaskNoteInput = z.infer<typeof addTaskNoteSchema>;
+
 export const addTaskLinksSchema = z.object({
   links: z.array(taskLinkInputSchema).min(1, 'Escolha ao menos um vínculo').max(MAX_TASK_LINKS),
 });

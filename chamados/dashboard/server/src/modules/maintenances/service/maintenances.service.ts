@@ -136,11 +136,15 @@ export class MaintenancesService {
        fonte" e registrou "troca de peça" fez o que tinha combinado. */
     if (input.computerId) await this.repository.archiveOpenSchedule(input.computerId, user.id);
 
-    await this.followTasks(input.computerId);
-
     /* Relê para devolver a máquina junto: o insert conhece o `computer_id`, mas não o nome
        dela, e a tela precisa do nome para desenhar a linha que acabou de aparecer. */
-    return toMaintenance(await this.requireMaintenance(id));
+    const saved = toMaintenance(await this.requireMaintenance(id));
+
+    /* A tarefa da máquina se atualiza no nome de quem fez — e conta na produtividade dele. */
+    await this.registerOnTask(user, saved);
+    await this.followTasks(input.computerId);
+
+    return saved;
   }
 
   async update(user: RequestUser, id: number, input: UpdateMaintenanceInput): Promise<Maintenance> {
@@ -290,6 +294,21 @@ export class MaintenancesService {
     for (const computerId of new Set(computerIds)) {
       if (computerId) await this.tasks.syncMaintenanceFor(computerId);
     }
+  }
+
+  /** A manutenção de uma MÁQUINA do inventário finaliza a tarefa dela; outro equipamento não tem tarefa. */
+  private async registerOnTask(user: RequestUser, saved: Maintenance): Promise<void> {
+    if (!this.tasks || !saved.computerId) return;
+
+    await this.tasks.registerMaintenance(user, {
+      computerId: saved.computerId,
+      computerName:
+        saved.computerDisplayName || saved.computerName || `Máquina ${saved.computerId}`,
+      type: saved.type,
+      description: saved.description,
+      performedByIds: saved.performedByIds ?? [],
+      performedAt: saved.performedAt,
+    });
   }
 
   private async requireMaintenance(id: number): Promise<MaintenanceWithComputer> {

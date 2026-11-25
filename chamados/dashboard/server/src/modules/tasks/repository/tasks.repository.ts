@@ -22,7 +22,11 @@ import { DB } from '../../../lib/db/db.token';
 import { type Database, type DatabaseExecutor } from '../../../lib/db/db.type';
 import { computers } from '../../../lib/db/schema/computers.schema';
 import { softwareProjects } from '../../../lib/db/schema/software-projects.schema';
-import { history, type HistoryRow } from '../../../lib/db/schema/history.schema';
+import {
+  history,
+  type HistoryInsert,
+  type HistoryRow,
+} from '../../../lib/db/schema/history.schema';
 import { inventoryItems } from '../../../lib/db/schema/inventory-items.schema';
 import { maintenanceSchedules } from '../../../lib/db/schema/maintenance-schedules.schema';
 import { maintenances } from '../../../lib/db/schema/maintenances.schema';
@@ -308,6 +312,29 @@ export class TasksRepository {
     );
 
     return result.length > 0;
+  }
+
+  /** Marca, de uma vez, as etapas que ainda faltavam — a manutenção registrada fez todas. */
+  async markAllStepsDone(
+    taskId: number,
+    doneBy: string,
+    executor: DatabaseExecutor = this.db,
+  ): Promise<void> {
+    await runQuery(
+      executor
+        .update(taskSteps)
+        .set({ doneAt: new Date(), doneBy })
+        .where(and(eq(taskSteps.taskId, taskId), isNull(taskSteps.doneAt))),
+      'marcar as etapas da tarefa',
+    );
+  }
+
+  /**
+   * Uma linha na linha do tempo da tarefa, escrita por quem muda a tarefa FORA de uma rota dela
+   * (a manutenção registrada) — o interceptor do Histórico só vê a rota que foi chamada.
+   */
+  async recordHistory(entry: HistoryInsert, executor: DatabaseExecutor = this.db): Promise<void> {
+    await runQuery(executor.insert(history).values(entry), 'gravar a linha do tempo da tarefa');
   }
 
   async stepsOf(taskId: number, executor: DatabaseExecutor = this.db): Promise<TaskStepRow[]> {

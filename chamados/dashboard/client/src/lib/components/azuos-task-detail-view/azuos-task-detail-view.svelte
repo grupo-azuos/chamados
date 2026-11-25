@@ -32,6 +32,8 @@
       base?: string;
       /** O git do sistema (só na tarefa de Sistema com chamado): as branches dela e o grafo. */
       git?: TaskGit | null;
+      /** O texto da anotação em escrita. */
+      noteDraft?: string;
     };
     state: {
       isLoading: boolean;
@@ -39,6 +41,8 @@
       isBusy: boolean;
       error: string | null;
       actionError: string | null;
+      isNoting?: boolean;
+      noteError?: string | null;
     };
     actions: {
       onFinish: () => void;
@@ -50,6 +54,9 @@
       onCancelSteps: () => void;
       onEdit: () => void;
       onRemoveLink: (linkId: number) => void;
+      /** A anotação na linha do tempo. Sem estas duas, o campo não aparece. */
+      onNoteChange?: (text: string) => void;
+      onAddNote?: () => void;
       onRemove: () => void;
       /** Devolve a tarefa arquivada a "Em uso". */
       onRestore: () => void;
@@ -62,6 +69,8 @@
 </script>
 
 <script lang="ts">
+  import { TASK_NOTE_MAX_LENGTH } from '@template/shared/schemas/task.schema';
+  import TaskNoteForm from '$lib/components/azuos-task-note-form/azuos-task-note-form.svelte';
   import Archive from '@lucide/svelte/icons/archive';
   import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
   import ArrowDown from '@lucide/svelte/icons/arrow-down';
@@ -364,7 +373,16 @@
         </PanelCard>
       {/if}
 
-      <PanelCard data={{ title: 'Linha do tempo', hint: 'Cada mudança, com quem fez.' }}>
+      <PanelCard data={{ title: 'Linha do tempo', hint: 'Cada mudança, com quem fez — e as anotações.' }}>
+        {#if actions.onNoteChange && actions.onAddNote}
+          <div class="mb-4">
+            <TaskNoteForm
+              data={{ value: data.noteDraft ?? '', maxLength: TASK_NOTE_MAX_LENGTH }}
+              state={{ isSaving: viewState.isNoting ?? false, error: viewState.noteError ?? null }}
+              actions={{ onChange: actions.onNoteChange, onSubmit: actions.onAddNote }}
+            />
+          </div>
+        {/if}
         <TaskHistory data={{ entries: data.timeline }} state={{ isLoading: viewState.isHistoryLoading }} />
       </PanelCard>
     </div>

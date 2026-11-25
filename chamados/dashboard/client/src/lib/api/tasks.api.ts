@@ -1,5 +1,6 @@
 import {
   type AddTaskLinksInput,
+  type AddTaskNoteInput,
   type CreateTaskInput,
   type SaveTaskStepsInput,
   type SetTaskStatusInput,
@@ -69,6 +70,10 @@ export const tasksApi = {
 
   addLinks: (id: number, body: AddTaskLinksInput) =>
     apiRequest<Task>(`/tasks/${id}/links`, { method: 'POST', body }),
+
+  /** Uma anotação na linha do tempo da tarefa. */
+  addNote: (id: number, body: AddTaskNoteInput) =>
+    apiRequest<Task>(`/tasks/${id}/notes`, { method: 'POST', body }),
 
   removeLink: (id: number, linkId: number) =>
     apiRequest<Task>(`/tasks/${id}/links/${linkId}`, { method: 'DELETE' }),

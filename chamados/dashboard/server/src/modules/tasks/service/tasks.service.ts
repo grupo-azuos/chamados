@@ -8,7 +8,11 @@ import {
   ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { nextPreventiveAt } from '@template/shared/domain/maintenance.util';
+import {
+  maintenanceTypeLabel,
+  nextPreventiveAt,
+  type MaintenanceType,
+} from '@template/shared/domain/maintenance.util';
 import {
   brasiliaClock,
   canMoveTask,
@@ -245,6 +249,16 @@ export class TasksService {
     return this.get(user, id);
   }
 
+  /**
+   * A anotação: quem pode mexer na tarefa escreve na linha do tempo dela. O texto é gravado pelo
+   * Histórico (a rota `POST :id/notes`); aqui só se confere quem pode, e a tarefa volta igual.
+   */
+  async addNote(user: RequestUser, id: number): Promise<Task> {
+    const row = await this.requireManageable(user, id, 'anotar na tarefa');
+
+    return toTask(row, await this.people());
+  }
+
   async addLinks(user: RequestUser, id: number, input: AddTaskLinksInput): Promise<Task> {
     const row = await this.requireManageable(user, id, 'vincular a tarefa');
     await this.repository.addLinks(id, await this.validLinks(row.area, input.links), user.id);
@@ -398,6 +412,38 @@ export class TasksService {
     }
   }
 
+  /**
+   * A MANUTENÇÃO REGISTRADA atualiza a tarefa da máquina NA HORA, no nome de quem fez: as etapas
+   * ficam marcadas, quem fez vira o responsável (o primeiro) e os participantes (os outros), a
+   * tarefa é finalizada e a linha do tempo diz o que foi feito. É assim que a manutenção conta
+   * na produtividade de cada pessoa. Sem tarefa aberta (a corretiva, a preventiva adiantada), a
+   * tarefa nasce já finalizada, pelo mesmo motivo. Sem "Quem fez", conta para quem registrou.
+   *
+   * Nunca derruba quem chamou: a manutenção já foi gravada, e a tarefa é consequência dela.
+   */
+  async registerMaintenance(user: RequestUser, done: MaintenanceDone): Promise<void> {
+    try {
+      const peopleIds = done.performedByIds.length ? [...new Set(done.performedByIds)] : [user.id];
+      const open = await this.repository.findOpenMaintenance(done.computerId);
+      await this.db.transaction(async (tx) => {
+        const [newTask, extras] = doneMaintenanceTaskOf(done);
+        const task = open ?? (await this.repository.insert(newTask, extras, tx));
+        await this.repository.update(
+          task.id,
+          { ...statusChange('done', user.email), ownerId: peopleIds[0] ?? null },
+          tx,
+        );
+        await this.repository.replacePeople(task.id, peopleIds.slice(1), tx);
+        await this.repository.markAllStepsDone(task.id, user.email, tx);
+        await this.repository.recordHistory(maintenanceHistoryOf(user, task, done, peopleIds), tx);
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Tarefa da manutenção da máquina ${done.computerId} não se atualizou: ${String(error)}`,
+      );
+    }
+  }
+
   // ── Apoio ──────────────────────────────────────────────────────────────────────────────────
 
   private async assertStageOfArea(stageId: number, area: RoleContext): Promise<void> {
@@ -524,6 +570,71 @@ function updateChangeOf(
 }
 
 /** A tarefa da manutenção que a máquina pede: começa hoje (ou no dia em que venceu). */
+/** A manutenção registrada, como a tarefa precisa dela. */
+export type MaintenanceDone = {
+  computerId: number;
+  computerName: string;
+  type: MaintenanceType;
+  description: string | null;
+  performedByIds: string[];
+  /** Quando o serviço foi feito (ISO); a tarefa guarda o dia em Brasília. */
+  performedAt: string;
+};
+
+/** A tarefa que nasce JÁ FINALIZADA, para a manutenção que não tinha tarefa aberta. */
+function doneMaintenanceTaskOf(done: MaintenanceDone): Parameters<TasksRepository['insert']> {
+  const day = brasiliaClock(new Date(done.performedAt)).day;
+
+  return [
+    {
+      area: 'infra',
+      title: `${maintenanceTypeLabel(done.type)} — ${done.computerName}`,
+      description: done.description,
+      origin: 'maintenance',
+      computerId: done.computerId,
+      ownerId: null,
+      startDate: day,
+      dueDate: day,
+      status: 'done',
+      finishedAt: new Date(),
+      createdBy: SYSTEM_ACTOR,
+    },
+    {
+      steps: [...DEFAULT_MAINTENANCE_TASK_STEPS],
+      links: [{ kind: 'computer', targetId: done.computerId }],
+      peopleIds: [],
+    },
+  ];
+}
+
+/** A linha da linha do tempo: o que foi feito, por quem, e a tarefa finalizada. */
+function maintenanceHistoryOf(
+  user: RequestUser,
+  task: { id: number; title: string },
+  done: MaintenanceDone,
+  peopleIds: string[],
+) {
+  const what = done.description?.trim();
+
+  return {
+    action: 'tasks.registerMaintenance',
+    actorId: user.id,
+    actorEmail: user.email,
+    targetType: 'tasks',
+    targetId: String(task.id),
+    targetLabel: task.title,
+    changes: [
+      {
+        field: 'maintenance',
+        from: null,
+        to: what ? `${maintenanceTypeLabel(done.type)}: ${what}` : maintenanceTypeLabel(done.type),
+      },
+      { field: 'performedByIds', from: null, to: peopleIds },
+      { field: 'status', from: null, to: 'done' },
+    ],
+  };
+}
+
 function maintenanceTaskOf(
   machine: MaintenanceCandidate,
   need: { dueDate: string; reason: 'scheduled' | 'preventive' },
