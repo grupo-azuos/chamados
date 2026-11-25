@@ -46,6 +46,8 @@
       fields: Record<InventoryFormField, FormFieldState>;
       photo: { previewUrl: string | null; fileName: string | null };
       departments?: string[];
+      /** Os nomes de produto que já existem — o campo de nome oferece estes antes de cadastrar outro. */
+      names?: string[];
       users?: { id: string; name: string }[];
       timeline?: {
         events: InventoryItemEvent[];
@@ -144,6 +146,17 @@
   }
 
 
+  /* Os nomes que já existem, e o que está no campo (um nome novo, ainda não salvo). Sem diferença
+     de maiúscula: o combobox só oferece "Cadastrar" quando nenhum nome bate. */
+  const nameOptions = $derived.by(() => {
+    const current = fields.name.value.trim();
+    const names = data.names ?? [];
+    const known = names.some((name) => name.toLowerCase() === current.toLowerCase());
+    const all = current && !known ? [current, ...names] : names;
+
+    return all.map((name) => ({ value: name, label: name }));
+  });
+
   const departmentOptions = $derived(
     buildDepartmentOptions(data.departments, fields.department?.value?.trim() ?? ''),
   );
@@ -233,23 +246,28 @@
       {#if !isEdit || activeTab === 'details'}
         <form novalidate class="flex flex-col gap-4.5" onsubmit={handleSubmit}>
 
-      <TextField
-        data={{
-          label: 'Nome do produto',
-          name: 'name',
-          value: fields.name.value,
-          placeholder: 'Ex: Cadeira giratória, Café em pó 500 g',
-        }}
-        state={{
-          error: fields.name.error,
-          isDisabled: dialogState.isSubmitting,
-          isAutoFocused: true,
-        }}
-        actions={{
-          onChange: (value: string) => actions.onChange('name', value),
-          onBlur: () => actions.onBlur('name'),
-        }}
-      />
+      <!-- O nome é ESCOLHIDO entre os que existem, ou cadastrado ali mesmo: o Depósito agrupa
+           pelo nome, e "CADEIRA" ao lado de "Cadeira" virariam dois produtos. -->
+      <div class="flex flex-col gap-1.5">
+        <span class="text-ink-700 text-sm font-medium">Nome do produto</span>
+        <ComboboxField
+          data={{ value: fields.name.value, options: nameOptions }}
+          ui={{
+            placeholder: 'Ex: Cadeira giratória, Café em pó 500 g',
+            searchPlaceholder: 'Buscar ou digitar o nome…',
+            createLabel: 'Cadastrar',
+            ariaLabel: 'Nome do produto',
+          }}
+          state={{ isDisabled: dialogState.isSubmitting, isInvalid: Boolean(fields.name.error) }}
+          actions={{
+            onChange: (value: string) => actions.onChange('name', value),
+            onCreate: (value: string) => actions.onChange('name', value.trim()),
+          }}
+        />
+        {#if fields.name.error}
+          <p class="text-destructive text-xs">{fields.name.error}</p>
+        {/if}
+      </div>
 
       <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
         <div class="flex flex-col gap-1.5">

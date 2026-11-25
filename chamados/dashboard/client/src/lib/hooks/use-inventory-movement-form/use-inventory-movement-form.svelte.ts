@@ -62,10 +62,13 @@ function productOf(item: InventoryItem | undefined): InventoryMovementFormModel[
 export function useInventoryMovementFormModel({
   type,
   item,
+  isByName = false,
   onSaved,
 }: {
   type: StockMovementType;
   item: InventoryItem | null;
+  /** O Depósito move pelo NOME do produto (todos os cadastros dele); o Descarte, pelo cadastro. */
+  isByName?: boolean;
   onSaved: () => void;
 }): InventoryMovementFormModel {
   const queryClient = useQueryClient();
@@ -84,13 +87,18 @@ export function useInventoryMovementFormModel({
 
   const save = mirrorStore(
     createMutation({
-      mutationFn: (values: InventoryMovementFormValues) =>
-        inventoryItemsApi.createMovement(Number(values.itemId), {
+      mutationFn: (values: InventoryMovementFormValues) => {
+        const body = {
           type: values.type,
           quantity: Number(values.quantity),
           reason: values.type === 'disposal' ? (values.reason as DisposalReason) : null,
           note: values.note,
-        }),
+        };
+        if (isByName && item)
+          return inventoryItemsApi.createStockMovement({ name: item.name, ...body });
+
+        return inventoryItemsApi.createMovement(Number(values.itemId), body);
+      },
       onSuccess: async () => {
         /* O saldo mora no produto e o extrato na mesma chave: uma invalidação recarrega o
            Depósito, o Descarte e o Inventário de uma vez. */

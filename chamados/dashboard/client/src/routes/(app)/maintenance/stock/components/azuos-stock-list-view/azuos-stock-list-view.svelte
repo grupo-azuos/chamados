@@ -3,7 +3,8 @@
   O DEPÓSITO DA MANUTENÇÃO: quanto há de cada produto, e os dois botões que mudam o número.
 
   São os mesmos produtos do Inventário, lidos de outro jeito: lá importa O QUE é o produto (foto,
-  lugar, etiqueta), aqui importa QUANTO há. Por isso o saldo é a caixinha de número do cartão
+  lugar, etiqueta), aqui importa QUANTO há — e por NOME: "Cadeira", "CADEIRA" e "cadeira" são um
+  cartão só, com a soma dos saldos e quantos cadastros o nome tem. Por isso o saldo é a caixinha de número do cartão
   (`AzuosRecordCard`), com a unidade, e a foto nem aparece. Tem a busca, o filtro de categoria e o atalho
   "Sem estoque" (com quantos zeraram);
   cada cartão mostra o nome, a categoria e o lugar, os chamados ligados, o saldo com a unidade,
@@ -13,10 +14,10 @@
   Função pura de props: não busca nada e não navega. Por isso abre no Storybook carregando, vazia,
   filtrada sem resultado e em erro.
 
-  - `data`: `items`, `total`, `outOfStock` e `filter`.
+  - `data`: `groups` (um por nome), `total`, `outOfStock` e `filter`.
   - `state`: `isLoading`, `isRefetching`, `isEmpty`, `isFilteredOut`, `isTruncated` e `error`.
   - `actions`: filtros (`onSearchChange`, `onCategoryChange`, `onOutOfStockOnlyChange`,
-    `onClearFilters`), `onRetry`, `onEntry(item)`, `onExit(item)` e `onOpenInventory`.
+    `onClearFilters`), `onRetry`, `onEntry(group)`, `onExit(group)` e `onOpenInventory`.
 -->
 <script lang="ts" module>
   import {
@@ -25,7 +26,7 @@
     inventoryUnitLabel,
     type InventoryCategory,
   } from '@template/shared/domain/inventory-catalog.util';
-  import { type InventoryItem } from '@template/shared/schemas/inventory-item.schema';
+  import { type StockGroup } from '$lib/utils/inventory-stock-group.util';
 
   /**
    * O DEPÓSITO DA MANUTENÇÃO: quanto há de cada produto, e os dois botões que mudam o número.
@@ -45,7 +46,7 @@
 
   export type AzuosStockListViewProps = {
     data: {
-      items: InventoryItem[];
+      groups: StockGroup[];
       total: number;
       outOfStock: number;
       filter: StockListFilterValues;
@@ -64,8 +65,8 @@
       onOutOfStockOnlyChange: (outOfStockOnly: boolean) => void;
       onClearFilters: () => void;
       onRetry: () => void;
-      onEntry: (item: InventoryItem) => void;
-      onExit: (item: InventoryItem) => void;
+      onEntry: (group: StockGroup) => void;
+      onExit: (group: StockGroup) => void;
       onOpenInventory: () => void;
     };
   };
@@ -94,7 +95,7 @@
 
   let { data, state: listState, actions }: AzuosStockListViewProps = $props();
   /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
-  const cardPage = useCardPage(() => data.items);
+  const cardPage = useCardPage(() => data.groups);
 
   const hasActiveFilter = $derived(
     data.filter.search.trim() !== '' || data.filter.category !== '' || data.filter.outOfStockOnly,
@@ -105,9 +106,12 @@
     data.outOfStock > 0 ? `Sem estoque (${data.outOfStock})` : 'Sem estoque',
   );
 
-  /* A linha de baixo do nome: categoria e lugar, sem repetir rótulo nenhum. */
-  function detailOf(item: InventoryItem): string {
-    return [inventoryCategoryLabel(item.category), item.location].filter(Boolean).join(' · ');
+  /* A linha de baixo do nome: a categoria e, com um cadastro só, o lugar; com vários, quantos
+     estão em uso (as cadeiras com pessoa e lugar no Inventário). */
+  function detailOf(group: StockGroup): string {
+    const where = group.items.length > 1 ? `${group.items.length} em uso` : group.items[0]?.location;
+
+    return [inventoryCategoryLabel(group.category), where].filter(Boolean).join(' · ');
   }
 </script>
 
@@ -209,12 +213,12 @@
       <!-- A grade padrão de cards (`card-grid`). O depósito não tem ficha: o cartão não abre nada,
            e as ações (Entrada, Saída) moram no rodapé. -->
       <div class="card-grid" data-slot="stock-cards">
-        {#each cardPage.items as item (item.id)}
+        {#each cardPage.items as item (item.key)}
           <RecordCard
             data={{
               label: item.name,
               title: item.name,
-              code: item.code,
+              code: item.items.length === 1 ? item.items[0]!.code : null,
               meta: detailOf(item),
               status:
                 item.balance === 0

@@ -1,6 +1,6 @@
 <script lang="ts" module>
   import { type StockMovementType } from '@template/shared/domain/inventory-stock.util';
-  import { type InventoryItem } from '@template/shared/schemas/inventory-item.schema';
+  import { type StockGroup } from '$lib/utils/inventory-stock-group.util';
 
   /**
    * A ponte entre a tela do Depósito e o formulário de entrada ou saída.
@@ -11,7 +11,8 @@
    */
   export type InventoryMovementSlotProps = {
     type: StockMovementType;
-    item: InventoryItem;
+    /** O produto do depósito: o movimento vai pelo NOME, e o servidor escolhe o cadastro. */
+    group: StockGroup;
     onClose: () => void;
   };
 </script>
@@ -19,13 +20,19 @@
 <script lang="ts">
   import InventoryMovementDialog from '$lib/components/azuos-inventory-movement-dialog/azuos-inventory-movement-dialog.svelte';
   import { useInventoryMovementFormModel } from '$lib/hooks/use-inventory-movement-form/use-inventory-movement-form.svelte';
+  import { stockItemOf } from '$lib/utils/inventory-stock-group.util';
 
-  let { type, item, onClose }: InventoryMovementSlotProps = $props();
+  let { type, group, onClose }: InventoryMovementSlotProps = $props();
 
   /* O compilador avisa que isto lê as props uma vez só — e é o que se quer: o formulário
      fotografa o produto e o tipo na montagem. Quem troca é o `{#key}` da rota. */
   // svelte-ignore state_referenced_locally
-  const form = useInventoryMovementFormModel({ type, item, onSaved: onClose });
+  const form = useInventoryMovementFormModel({
+    type,
+    item: stockItemOf(group),
+    isByName: true,
+    onSaved: onClose,
+  });
 </script>
 
 <InventoryMovementDialog

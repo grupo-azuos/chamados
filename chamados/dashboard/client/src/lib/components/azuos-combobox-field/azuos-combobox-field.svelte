@@ -70,6 +70,7 @@
   import * as Popover from '$lib/components/ui/popover';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import { cn } from '$lib/utils/cn';
+  import { computeCommandScore } from 'bits-ui';
 
   let { data, ui, state: fieldState, actions }: AzuosComboboxFieldProps = $props();
 
@@ -79,6 +80,12 @@
   const selectedOption = $derived(data.options.find((option) => option.value === data.value));
   const typed = $derived(term.trim());
   const canCreate = $derived(canCreateOption(data.options, typed, actions.onCreate));
+  /* O filtro é feito AQUI, com a mesma nota de semelhança do bits-ui ("ana s" ainda acha "Ana
+     Souza"): deixado com ele, a lista é reordenada direto na página e a linha "Criar «termo»" que
+     sai dela fica presa na tela. */
+  const visibleOptions = $derived(
+    typed ? data.options.filter((option) => computeCommandScore(option.label, typed) > 0) : data.options,
+  );
   const SelectedIcon = $derived(selectedOption?.icon);
 
   /* Fechar limpa a busca: reabrir com o termo antigo ainda filtrando mostra uma lista quase
@@ -154,10 +161,11 @@
         placeholder: ui?.searchPlaceholder ?? 'Pesquisar…',
         emptyLabel: ui?.emptyLabel ?? 'Nada encontrado.',
         className: 'rounded-surface bg-card',
+        isFilteredOutside: true,
       }}
       actions={{ onTermChange: (next) => (term = next) }}
     >
-      {#each data.options as option (option.value)}
+      {#each visibleOptions as option (option.value)}
         {@const OptionIcon = option.icon}
         <CommandSearchItem
           data={{ value: option.label }}

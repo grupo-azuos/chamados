@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -121,7 +121,11 @@ describe('AzuosComboboxField with people', () => {
   // feliz
   it('shows the initials next to the name, in the trigger and in each option', async () => {
     render(ComboboxField, {
-      props: { data: { value: 'ana', options: people }, ui: { ariaLabel: 'Responsável' }, actions: { onChange: vi.fn() } },
+      props: {
+        data: { value: 'ana', options: people },
+        ui: { ariaLabel: 'Responsável' },
+        actions: { onChange: vi.fn() },
+      },
     });
 
     const trigger = screen.getByRole('combobox', { name: 'Responsável' });
@@ -135,7 +139,11 @@ describe('AzuosComboboxField with people', () => {
   // triste
   it('draws no avatar for an option that is not a person', () => {
     render(ComboboxField, {
-      props: { data: { value: 'fin', options }, ui: { ariaLabel: 'Departamento' }, actions: { onChange: vi.fn() } },
+      props: {
+        data: { value: 'fin', options },
+        ui: { ariaLabel: 'Departamento' },
+        actions: { onChange: vi.fn() },
+      },
     });
 
     expect(document.querySelector('[data-slot="avatar"]')).toBeNull();
@@ -146,7 +154,11 @@ describe('AzuosComboboxField search row', () => {
   // feliz
   it('opens the flat search of the template, not the pill of ui/command', async () => {
     render(ComboboxField, {
-      props: { data: { value: '', options }, ui: { ariaLabel: 'Departamento' }, actions: { onChange: vi.fn() } },
+      props: {
+        data: { value: '', options },
+        ui: { ariaLabel: 'Departamento' },
+        actions: { onChange: vi.fn() },
+      },
     });
 
     await userEvent.click(screen.getByRole('combobox'));
@@ -154,7 +166,10 @@ describe('AzuosComboboxField search row', () => {
 
     expect(input.closest('[data-slot="command-input-wrapper"]')).toHaveClass('h-9', 'border-b');
     expect(document.querySelector('[data-slot="input-group"]')).toBeNull();
-    expect(document.querySelector('[data-slot="command"]')).toHaveClass('rounded-surface', 'bg-card');
+    expect(document.querySelector('[data-slot="command"]')).toHaveClass(
+      'rounded-surface',
+      'bg-card',
+    );
   });
 
   // triste
@@ -171,5 +186,36 @@ describe('AzuosComboboxField search row', () => {
     await userEvent.type(await screen.findByPlaceholderText('Pesquisar…'), 'zzz');
 
     expect(await screen.findByText('Nenhum departamento')).toBeInTheDocument();
+  });
+
+  // triste
+  /* O filtro do bits-ui reordenava as linhas na página, e o "Cadastrar «CADEIR»" ficava preso na
+     lista depois da última letra — uma linha por letra digitada. */
+  it('drops the create row as soon as the typed name matches one that exists', async () => {
+    render(ComboboxField, {
+      props: {
+        data: { value: '', options: [{ value: 'Cadeira', label: 'Cadeira' }] },
+        ui: { ariaLabel: 'Nome', createLabel: 'Cadastrar' },
+        actions: { onChange: vi.fn(), onCreate: vi.fn() },
+      },
+    });
+
+    await userEvent.click(screen.getByRole('combobox'));
+    const search = await screen.findByPlaceholderText('Pesquisar…');
+    await userEvent.type(search, 'CADEIRA');
+
+    await waitFor(() =>
+      expect(screen.getAllByRole('option').map((option) => option.textContent?.trim())).toEqual([
+        'Cadeira',
+      ]),
+    );
+
+    await userEvent.type(search, 'X');
+
+    await waitFor(() =>
+      expect(screen.getAllByRole('option').map((option) => option.textContent?.trim())).toEqual([
+        'Cadastrar “CADEIRAX”',
+      ]),
+    );
   });
 });

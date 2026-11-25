@@ -28,6 +28,7 @@ export type InventoryFormModel = {
       fileName: string | null;
     };
     departments: string[];
+    names: string[];
     users: { id: string; name: string }[];
   };
   state: { isSubmitting: boolean; error: string | null; photoError: string | null };
@@ -70,6 +71,13 @@ export function useInventoryFormModel({
     createQuery({
       queryKey: ['departments', 'catalog'],
       queryFn: departmentsApi.catalog,
+    }),
+  );
+
+  const namesQuery = mirrorStore(
+    createQuery({
+      queryKey: ['inventory-items', 'names'],
+      queryFn: inventoryItemsApi.names,
     }),
   );
 
@@ -143,9 +151,11 @@ export function useInventoryFormModel({
           if (current && !base.includes(current)) return [current, ...base];
           return base;
         })(),
-        users: (Array.isArray(usersQuery.current.data) ? usersQuery.current.data : []).map(
-          (u) => ({ id: u.id, name: u.name }),
-        ),
+        names: Array.isArray(namesQuery.current.data) ? namesQuery.current.data : [],
+        users: (Array.isArray(usersQuery.current.data) ? usersQuery.current.data : []).map((u) => ({
+          id: u.id,
+          name: u.name,
+        })),
       };
     },
     get state() {

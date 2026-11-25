@@ -221,6 +221,34 @@ describe.skipIf(!testDatabaseUrl)('Inventory items API (e2e)', () => {
     expect(disposals.body.total).toBe(1);
   });
 
+  // feliz
+  it('keeps one spelling per name and moves the deposit by name, across the registrations', async () => {
+    const first = await registerItem({ name: 'Cadeira', code: '01 Ana' }).expect(201);
+    const second = await registerItem({ name: 'CADEIRA', code: '02 Caio' }).expect(201);
+    expect(second.body.name).toBe('Cadeira');
+
+    const names = await api().get('/api/v1/inventory-items/names').set(asEdu()).expect(200);
+    expect(names.body).toEqual(['Cadeira']);
+
+    const stock = (body: Record<string, unknown>) =>
+      api().post('/api/v1/inventory-items/stock/movements').set(asDora()).send(body);
+    await stock({ name: 'cadeira', type: 'in', quantity: 3 }).expect(201);
+    await move(second.body.id, { type: 'in', quantity: 1 }).expect(201);
+    await stock({ name: 'CADEIRA', type: 'out', quantity: 4 }).expect(201);
+
+    const balances = await Promise.all(
+      [first.body.id, second.body.id].map(
+        async (id) =>
+          (await api().get(`/api/v1/inventory-items/${id}`).set(asDora()).expect(200)).body.balance,
+      ),
+    );
+    expect(balances).toEqual([0, 0]);
+
+    const refused = await stock({ name: 'Cadeira', type: 'out', quantity: 1 }).expect(422);
+    expect(refused.body.message).toContain('Não há Cadeira no depósito');
+    await stock({ name: 'Unicórnio', type: 'in', quantity: 1 }).expect(404);
+  });
+
   // triste
   it('refuses to take out more than the shelf has, saying the number', async () => {
     const created = await registerItem({ name: 'Copo' }).expect(201);

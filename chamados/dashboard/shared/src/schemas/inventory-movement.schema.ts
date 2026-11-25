@@ -76,6 +76,16 @@ export const createInventoryMovementSchema = z
 
 export type CreateInventoryMovementInput = z.input<typeof createInventoryMovementSchema>;
 
+/**
+ * O movimento do DEPÓSITO, pelo NOME do produto: o depósito conta "Cadeira", não cada cadeira
+ * cadastrada. O nome é comparado sem diferença de maiúscula ("CADEIRA" é "Cadeira").
+ */
+export const createStockMovementSchema = z
+  .object({ name: z.string().trim().min(1, 'Diga qual produto').max(120) })
+  .and(createInventoryMovementSchema);
+
+export type CreateStockMovementInput = z.input<typeof createStockMovementSchema>;
+
 export const inventoryMovementListQuerySchema = paginationQuerySchema.extend({
   itemId: z.coerce.number<number>().int().optional(),
   type: stockMovementTypeSchema.optional(),
