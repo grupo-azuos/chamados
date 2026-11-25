@@ -70,6 +70,11 @@
         subtitle?: string | null;
         /** A pessoa: com o `id`, o rosto acha a foto no diretório mesmo sem `avatarUrl`. */
         person?: { id?: string | null; name: string; avatarUrl?: string | null } | null;
+        /**
+         * Mais de uma pessoa (a manutenção feita por dois): os rostos, com a foto, um sobre o outro.
+         * Vence `person`.
+         */
+        people?: { id?: string | null; name: string; avatarUrl?: string | null }[];
       } | null;
       /** O texto da pílula do rodapé ("Ver ficha", "Abrir"). Só aparece com `actions.onOpen`. */
       openLabel?: string | null;
@@ -413,6 +418,19 @@
            ícone, o rosto fica depois do texto, como no cartão de empresa do Paralegal. -->
       {#if FooterIcon}
         <FooterIcon aria-hidden="true" class="text-muted-foreground size-4 shrink-0" />
+      {:else if data.footer?.people && data.footer.people.length > 0}
+        <span data-slot={`${slot}-people`} class="flex shrink-0 -space-x-2">
+          {#each data.footer.people as face (face.id ?? face.name)}
+            <span class="ring-card rounded-full ring-2">
+              <PersonAvatar
+                name={face.name}
+                avatarUrl={face.avatarUrl ?? null}
+                personId={face.id ?? null}
+                ui={{ size: 'sm' }}
+              />
+            </span>
+          {/each}
+        </span>
       {:else if data.footer?.person}
         <PersonAvatar
           name={data.footer.person.name}

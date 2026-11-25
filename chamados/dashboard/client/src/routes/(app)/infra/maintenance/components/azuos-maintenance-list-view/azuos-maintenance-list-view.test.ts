@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import MaintenanceListView, {
   machineLabelOf,
+  performersOf,
+  performersTitleOf,
   placeOf,
   type MaintenanceListFilter,
 } from './azuos-maintenance-list-view.svelte';
@@ -102,6 +104,42 @@ function hasCardsOnlyTable(): boolean {
     (element) => element.classList.contains('hidden') && !element.classList.contains('xl:block'),
   );
 }
+
+describe('performersOf', () => {
+  // feliz
+  it('gives one face per person who did it, pairing the names with the ids', () => {
+    expect(
+      performersOf({ performedBy: 'Wellington Queiroz, Guilherme Siqueira', performedByIds: ['u-w', 'u-g'] }),
+    ).toEqual([
+      { id: 'u-w', name: 'Wellington Queiroz' },
+      { id: 'u-g', name: 'Guilherme Siqueira' },
+    ]);
+  });
+
+  // triste
+  it('gives no list for one person or nobody, and keeps old records without ids by name', () => {
+    expect(performersOf({ performedBy: 'Wellington Queiroz', performedByIds: ['u-w'] })).toEqual([]);
+    expect(performersOf({ performedBy: null, performedByIds: [] })).toEqual([]);
+    expect(performersOf({ performedBy: 'Ana, Caio', performedByIds: [] })).toEqual([
+      { id: null, name: 'Ana' },
+      { id: null, name: 'Caio' },
+    ]);
+  });
+
+  // feliz
+  it('shows the photo of everyone who did it on the card', () => {
+    const { container } = renderView({
+      maintenances: [
+        maintenance({ performedBy: 'Wellington Queiroz, Guilherme Siqueira', performedByIds: ['u-w', 'u-g'] }),
+      ],
+    });
+
+    const faces = container.querySelector('[data-slot$="-people"]');
+    expect(faces?.querySelectorAll('[data-slot="avatar"]')).toHaveLength(2);
+    expect(screen.getByText('Wellington Queiroz e mais 1')).toBeInTheDocument();
+    expect(performersTitleOf({ performedBy: null, performedByIds: [] })).toBe('Sem responsável');
+  });
+});
 
 describe('machineLabelOf', () => {
   // feliz
