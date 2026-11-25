@@ -92,4 +92,24 @@ describe('AzuosPersonAvatar', () => {
 
     expect(screen.getByText('B')).toBeInTheDocument();
   });
+
+  // triste
+  /* O avatar do bits-ui escondia as iniciais assim que dava a foto por carregada, e o rosto ficava
+     em branco no seletor. Agora as iniciais ficam embaixo, e a foto que falha sai. */
+  it('keeps the initials under the photo and drops a photo that fails to load', async () => {
+    const { container } = render(PersonAvatar, {
+      props: { name: 'Guilherme Siqueira', avatarUrl: 'https://fotos.exemplo/quebrada.png' },
+    });
+
+    const image = container.querySelector('[data-slot="avatar-image"]') as HTMLImageElement;
+    expect(image).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="avatar-fallback"]')).toHaveTextContent('GS');
+
+    image.dispatchEvent(new Event('error'));
+
+    await vi.waitFor(() =>
+      expect(container.querySelector('[data-slot="avatar-image"]')).toBeNull(),
+    );
+    expect(screen.getByText('GS')).toBeVisible();
+  });
 });

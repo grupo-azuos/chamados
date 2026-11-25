@@ -47,27 +47,38 @@
 </script>
 
 <script lang="ts">
-  import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
   import { personPhotoOf } from '$lib/hooks/use-people-directory/people-directory.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { name, avatarUrl, personId, ui }: AzuosPersonAvatarProps = $props();
 
   const photo = $derived(avatarUrl || personPhotoOf({ id: personId, name }));
-
   const size = $derived(ui?.size ?? 'sm');
+  /* A foto que falhou ao carregar. Guardada pelo endereço: trocou de pessoa, tenta a foto nova. */
+  let failedPhoto = $state<string | null>(null);
+  const isPhotoShown = $derived(Boolean(photo) && photo !== failedPhoto);
 </script>
 
-<Avatar class={cn('relative flex shrink-0 overflow-hidden rounded-full aspect-square', SIZE_CLASS[size], ui?.className)}>
-  {#if photo}
-    <AvatarImage src={photo} alt={name} class="aspect-square size-full object-cover rounded-full" />
+<!-- As iniciais ficam SEMPRE embaixo, e a foto por cima. Com o avatar do bits-ui, as iniciais
+     sumiam assim que ele dava a foto por carregada — e a foto que vinha vazia, ou que trocava no
+     meio do carregamento, deixava o rosto em branco no seletor. Aqui, foto que falha sai e as
+     iniciais aparecem; foto que demora deixa as iniciais à vista até chegar. -->
+<span
+  data-slot="avatar"
+  class={cn(
+    'bg-primary text-primary-foreground relative inline-flex aspect-square shrink-0 items-center justify-center overflow-hidden rounded-full font-bold select-none',
+    SIZE_CLASS[size],
+    ui?.className,
+  )}
+>
+  <span data-slot="avatar-fallback" aria-hidden={isPhotoShown || undefined}>{initialsOf(name)}</span>
+  {#if isPhotoShown}
+    <img
+      data-slot="avatar-image"
+      src={photo}
+      alt={name}
+      class="absolute inset-0 size-full rounded-full object-cover"
+      onerror={() => (failedPhoto = photo)}
+    />
   {/if}
-  <AvatarFallback
-    class={cn(
-      'flex size-full items-center justify-center rounded-full aspect-square bg-primary font-bold text-primary-foreground select-none',
-      SIZE_CLASS[size]
-    )}
-  >
-    {initialsOf(name)}
-  </AvatarFallback>
-</Avatar>
+</span>
