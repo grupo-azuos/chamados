@@ -15,7 +15,7 @@ function maintenanceRow(overrides: Partial<MaintenanceRow> = {}): MaintenanceRow
     type: 'preventive',
     description: 'Limpeza interna',
     performedBy: 'Suporte TI',
-    performedById: null,
+    performedByIds: [],
     performedAt: new Date(AT),
     createdAt: new Date('2026-09-20T13:00:00.000Z'),
     createdBy: ANA,

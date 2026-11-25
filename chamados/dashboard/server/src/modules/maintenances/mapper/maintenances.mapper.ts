@@ -35,7 +35,7 @@ export function toMaintenance(row: MaintenanceWithComputer): Maintenance {
     type: maintenance.type,
     description: maintenance.description,
     performedBy: maintenance.performedBy,
-    performedById: maintenance.performedById ?? null,
+    performedByIds: maintenance.performedByIds ?? [],
     performedAt: maintenance.performedAt.toISOString(),
 
     createdAt: maintenance.createdAt.toISOString(),
@@ -68,7 +68,7 @@ export function toMaintenanceInsert(
     type: input.type,
     description: input.description ?? null,
     performedBy: input.performedBy ?? null,
-    performedById: input.performedById ?? null,
+    performedByIds: input.performedByIds ?? [],
     performedAt: new Date(input.performedAt),
     createdBy: actorEmail,
   };
@@ -89,7 +89,7 @@ export function toMaintenanceUpdate(
   setIfDefined(values, 'type', input.type);
   setIfDefined(values, 'description', input.description);
   setIfDefined(values, 'performedBy', input.performedBy);
-  setIfDefined(values, 'performedById', input.performedById);
+  setIfDefined(values, 'performedByIds', input.performedByIds);
 
   if (input.performedAt !== undefined) values.performedAt = new Date(input.performedAt);
 

@@ -73,18 +73,26 @@ export class MaintenancesService {
   ) {}
 
   /**
-   * QUEM FEZ, pela pessoa escolhida na lista: o nome dela no diretório vai para `performedBy`
-   * (o nome daquele dia, que a ordem de serviço mostra). Id que o diretório não conhece é recusado.
+   * QUEM FEZ, pelas pessoas escolhidas na lista: os nomes delas no diretório vão para `performedBy`
+   * (os nomes daquele dia, separados por vírgula — o que a ordem de serviço e a busca usam). Id que
+   * o diretório não conhece é recusado; lista vazia é ninguém.
    */
-  private async withPerformer<
-    T extends { performedById?: string | null; performedBy?: string | null },
+  private async withPerformers<
+    T extends { performedByIds?: string[]; performedBy?: string | null },
   >(input: T): Promise<T> {
-    if (input.performedById === null) return { ...input, performedBy: null };
-    if (!input.performedById || !this.directory) return input;
-    const person = await this.directory.getUserById(input.performedById);
-    if (!person) throw new UnprocessableEntityException('Escolha quem fez pela lista de pessoas.');
+    if (input.performedByIds === undefined || !this.directory) return input;
+    const ids = [...new Set(input.performedByIds)];
+    if (!ids.length) return { ...input, performedByIds: [], performedBy: null };
+    const people = await Promise.all(ids.map((id) => this.directory!.getUserById(id)));
+    if (people.some((person) => !person)) {
+      throw new UnprocessableEntityException('Escolha quem fez pela lista de pessoas.');
+    }
 
-    return { ...input, performedBy: person.name };
+    return {
+      ...input,
+      performedByIds: ids,
+      performedBy: people.map((person) => person!.name).join(', '),
+    };
   }
 
   async list(user: RequestUser, query: MaintenanceListQuery): Promise<Paginated<Maintenance>> {
@@ -120,7 +128,7 @@ export class MaintenancesService {
     assertCanCreate(user.role, 'manutenções');
 
     const id = await this.repository.insert(
-      toMaintenanceInsert(await this.withPerformer(input), user.email),
+      toMaintenanceInsert(await this.withPerformers(input), user.email),
     );
 
     /* Registrar a manutenção CUMPRE o agendamento: deixá-lo de pé faria a ficha continuar
@@ -146,7 +154,7 @@ export class MaintenancesService {
 
     await this.repository.update(
       id,
-      toMaintenanceUpdate(await this.withPerformer(input), user.email),
+      toMaintenanceUpdate(await this.withPerformers(input), user.email),
     );
 
     await this.followTasks(current.maintenance.computerId, input.computerId);

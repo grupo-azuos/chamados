@@ -126,10 +126,11 @@ export function useMaintenanceFormModel({
   let isNameMatched = Boolean(queryClient.getQueryData(PEOPLE_KEY));
   $effect(() => {
     const list = people.current.data;
-    if (isNameMatched || !list || !maintenance?.performedBy || maintenance.performedById) return;
+    if (isNameMatched || !list || !maintenance?.performedBy || maintenance.performedByIds?.length)
+      return;
     isNameMatched = true;
-    const id = personIdByName(list, maintenance.performedBy);
-    if (id) form.setFieldValue('performedById', id);
+    const ids = personIdsByNames(list, maintenance.performedBy);
+    if (ids.length) form.setFieldValue('performedByIds', ids.join(','));
   });
 
   const values = form.useSelector((state) => state.values);
@@ -149,7 +150,7 @@ export function useMaintenanceFormModel({
           otherMachine: field('otherMachine'),
           type: field('type'),
           description: field('description'),
-          performedById: field('performedById'),
+          performedByIds: field('performedByIds'),
           performedAt: field('performedAt'),
         },
         machines: toMachineOptions(machines.current.data?.items ?? []),
@@ -209,7 +210,7 @@ function blankForm(computerId?: number | null): MaintenanceFormValues {
     otherMachine: '',
     type: 'preventive',
     description: '',
-    performedById: '',
+    performedByIds: '',
     /* Serviço lançado hoje é o caso comum; quem fez no sábado troca a data. */
     performedAt: todayAsInputValue(),
   };
@@ -226,7 +227,7 @@ function toFormValues(
     otherMachine: maintenance.otherMachine ?? '',
     type: maintenance.type,
     description: maintenance.description ?? '',
-    performedById: maintenance.performedById ?? '',
+    performedByIds: (maintenance.performedByIds ?? []).join(','),
     /* Só a data, sem a hora: é o que o campo do navegador entende. */
     performedAt: maintenance.performedAt.slice(0, 10),
   };
@@ -247,7 +248,7 @@ function toInput(values: MaintenanceFormValues) {
     otherMachine: computerId ? null : values.otherMachine.trim() || null,
     type: values.type,
     description: values.description.trim() || null,
-    performedById: values.performedById || null,
+    performedByIds: values.performedByIds.split(',').filter(Boolean),
     performedAt: new Date(`${values.performedAt}T12:00:00.000Z`).toISOString(),
   };
 }
@@ -261,6 +262,20 @@ function peopleOf(
     name: person.name,
     photo: person.avatarUrl ?? null,
   }));
+}
+
+/**
+ * As pessoas dos nomes que o registro antigo guardou ("Ana Souza, Caio Reis"), pelo nome sem
+ * diferença de maiúscula nem de espaço sobrando. Nome que ninguém tem fica de fora.
+ */
+export function personIdsByNames(
+  list: readonly { id: string; name: string }[],
+  names: string,
+): string[] {
+  return names
+    .split(',')
+    .map((name) => personIdByName(list, name))
+    .filter((id): id is string => id !== null);
 }
 
 /** A pessoa pelo nome (sem diferença de maiúscula nem de espaço sobrando), para os registros antigos. */
@@ -281,7 +296,7 @@ function withKnownPerformer(
   maintenance: Maintenance | null,
   people: readonly { id: string; name: string }[] | undefined,
 ): MaintenanceFormValues {
-  if (values.performedById || !maintenance?.performedBy || !people) return values;
+  if (values.performedByIds || !maintenance?.performedBy || !people) return values;
 
-  return { ...values, performedById: personIdByName(people, maintenance.performedBy) ?? '' };
+  return { ...values, performedByIds: personIdsByNames(people, maintenance.performedBy).join(',') };
 }

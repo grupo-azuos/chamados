@@ -18,7 +18,7 @@
       otherMachine: field(),
       type: field('preventive'),
       description: field(),
-      performedById: field(),
+      performedByIds: field(),
       performedAt: field('2026-09-20'),
       ...over,
     };
@@ -82,7 +82,7 @@
       mode: 'edit',
       fields: fields({
         description: field('Limpeza interna, troca da pasta térmica e verificação dos cabos.'),
-        performedById: field('u-ana'),
+        performedByIds: field('u-ana,u-caio'),
       }),
       machines,
       people,

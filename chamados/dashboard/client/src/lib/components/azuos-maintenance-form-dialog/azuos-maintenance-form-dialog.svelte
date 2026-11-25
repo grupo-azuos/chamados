@@ -29,7 +29,7 @@
     | 'otherMachine'
     | 'type'
     | 'description'
-    | 'performedById'
+    | 'performedByIds'
     | 'performedAt';
 
   export type MachineOption = { value: string; label: string };
@@ -82,7 +82,7 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
-  import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
+  import PersonMultiPickerField from '$lib/components/azuos-person-multi-picker-field/azuos-person-multi-picker-field.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
@@ -178,17 +178,19 @@
       />
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        <div class="flex flex-col gap-1.5">
+        <!-- A linha inteira: com duas ou três pessoas, metade dela cortava os nomes. -->
+        <div class="flex flex-col gap-1.5 sm:col-span-2">
           <span class="text-ink-700 text-sm font-medium">Quem fez</span>
-          <PersonPickerField
+          <!-- Uma manutenção pode ter mais de um responsável: o campo de VÁRIAS pessoas, com a foto. -->
+          <PersonMultiPickerField
             data={{
-              value: fields.performedById.value,
+              values: fields.performedByIds.value ? fields.performedByIds.value.split(',') : [],
               people: data.people ?? [],
-              leading: [{ value: '', label: '(Sem pessoa)' }],
+              placeholder: 'Escolha quem fez o serviço',
             }}
-            ui={{ ariaLabel: 'Quem fez', placeholder: 'Escolha quem fez o serviço' }}
-            state={{ isDisabled: dialogState.isSubmitting, isInvalid: Boolean(fields.performedById.error) }}
-            actions={{ onChange: (id: string) => actions.onChange('performedById', id) }}
+            ui={{ ariaLabel: 'Quem fez' }}
+            state={{ isDisabled: dialogState.isSubmitting }}
+            actions={{ onChange: (ids: string[]) => actions.onChange('performedByIds', ids.join(',')) }}
           />
         </div>
 
