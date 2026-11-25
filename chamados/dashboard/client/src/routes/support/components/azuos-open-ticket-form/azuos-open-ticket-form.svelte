@@ -237,7 +237,7 @@
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import Timeline from '$lib/components/azuos-timeline/azuos-timeline.svelte';
   import TimelineStep from '$lib/components/azuos-timeline-step/azuos-timeline-step.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { fadeInUp } from '$lib/motion/motion';
   import { cn } from '$lib/utils/cn';
 
@@ -420,7 +420,9 @@
 
 <svelte:window onpaste={handlePaste} />
 
-<CardSurface ui={{ className: 'p-5' }}>
+<ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-5">
   {#if data.opened}
     <!-- O protocolo ocupa a tela inteira: é o que a pessoa precisa levar daqui. -->
     <div class="flex flex-col items-center gap-3 py-6 text-center">
@@ -914,4 +916,6 @@
       </div>
     </form>
   {/if}
-</CardSurface>
+</div>
+{/snippet}
+</ContentCard>

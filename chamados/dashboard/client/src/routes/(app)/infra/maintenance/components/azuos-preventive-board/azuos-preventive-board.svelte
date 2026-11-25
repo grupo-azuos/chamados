@@ -79,7 +79,7 @@
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { formatDate } from '$lib/utils/format-date';
 
   let { data, state: boardState, actions }: AzuosPreventiveBoardProps = $props();
@@ -90,7 +90,9 @@
   const upToDate = $derived(data.rows.length - pending.length);
 </script>
 
-<CardSurface ui={{ className: 'p-4' }}>
+<ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-4">
   <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
     <div>
       <h2 class="text-ink-900 text-sm font-semibold">Manutenção preventiva</h2>
@@ -192,4 +194,6 @@
       {/each}
     </ul>
   {/if}
-</CardSurface>
+</div>
+{/snippet}
+</ContentCard>

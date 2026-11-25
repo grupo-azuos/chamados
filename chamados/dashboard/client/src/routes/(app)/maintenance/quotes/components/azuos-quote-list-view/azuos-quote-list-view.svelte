@@ -98,15 +98,14 @@
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
-  import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+    import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import FileLinks from '$lib/components/azuos-file-links/azuos-file-links.svelte';
   import { formatDate, formatDay } from '$lib/utils/format-date';
 
@@ -138,7 +137,9 @@
     />
   </PageHeader>
 
-  <CardSurface ui={{ className: 'flex flex-col gap-3 p-4' }}>
+  <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-3 p-4">
     <TextField
       data={{
         label: 'Buscar',
@@ -176,7 +177,9 @@
         />
       {/if}
     </div>
-  </CardSurface>
+  </div>
+{/snippet}
+</ContentCard>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2). -->
   {#if listState.error}
@@ -223,7 +226,7 @@
            a correção. Editar e excluir moram no menu de três pontinhos. -->
       <div class="card-grid" data-slot="quote-cards">
         {#each cardPage.items as quote (quote.id)}
-          <RecordCard
+          <ContentCard
             data={{
               label: `Editar o orçamento de ${quote.supplier}`,
               title: quote.supplier,
@@ -275,7 +278,7 @@
                 </div>
               {/if}
             {/snippet}
-          </RecordCard>
+          </ContentCard>
         {/each}
       </div>
       <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última

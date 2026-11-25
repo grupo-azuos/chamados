@@ -74,7 +74,7 @@ const RIVAL_MARKUP = [
 const SOURCE = /\/client\/src\/.*\.(tsx?|svelte)$/;
 
 /* REGRAS DE UI DO GRUPO (13 sistemas), na hora da edição — a checagem de design reprova de novo
-   no CI. Cor de card vem do FUNDO (`AzuosToneCard`): borda/anel colorido é proibido em qualquer
+   no CI. Cor de card vem do ÍCONE (`AzuosContentCard`): borda/anel colorido é proibido em qualquer
    componente; fica só o anel de FOCO. E nunca `<select>` nativo. */
 const UI_TONE =
   '(?:primary|destructive|success|warning|info|accent|brand-[a-z]+-\\d{2,3}|azuos-(?!border\\b)[a-z-]+|tone-[a-z]+-border|(?:red|rose|green|emerald|blue|sky|amber|yellow|orange|lime|teal|cyan|indigo|violet|purple|fuchsia|pink)-\\d{2,3})';
@@ -110,7 +110,7 @@ export function nativeSelectIn(text) {
 
 const UI_HELP =
   'Regra do grupo, igual nos 13 sistemas (skill `app-shell-standard`): card colorido usa o FUNDO ' +
-  '(`AzuosToneCard`: `static` só colorido, `interactive` com o hover-fill do Chamados); borda, faixa ' +
+  '(o `AzuosContentCard`: a cor no ícone, nada se mexe no hover); borda, faixa ' +
   'ou anel colorido é proibido em qualquer componente (só o anel de foco fica). Select é sempre o ' +
   'combobox do projeto, nunca o `<select>` nativo. Pedido de exceção vai para o suporte: ' +
   'https://chamados.grupoazuos.com.br/support.';

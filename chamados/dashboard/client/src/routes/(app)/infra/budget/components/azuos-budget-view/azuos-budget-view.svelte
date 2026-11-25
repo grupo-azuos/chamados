@@ -115,7 +115,7 @@
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { formatDate } from '$lib/utils/format-date';
 
   let { data, state: viewState, actions }: AzuosBudgetViewProps = $props();
@@ -181,16 +181,22 @@
     </EmptyState>
   {:else if budget}
     {#if viewState.isCovered}
-      <CardSurface ui={{ className: 'p-4' }}>
+      <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-4">
         <p class="flex items-center gap-2 text-sm text-success">
           <PartyPopper class="size-4 shrink-0" aria-hidden="true" />
           Não precisa comprar nada: tudo o que o parque pede já está no depósito.
         </p>
-      </CardSurface>
+      </div>
+{/snippet}
+</ContentCard>
     {/if}
 
     {#each budget.needs as need (need.key)}
-      <CardSurface ui={{ className: 'p-4' }}>
+      <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="p-4">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0 flex-1">
             <h2 class="text-ink-900 text-sm font-semibold">{budgetNeedLabel(need.key)}</h2>
@@ -300,7 +306,9 @@
             {/each}
           </ul>
         </div>
-      </CardSurface>
+      </div>
+{/snippet}
+</ContentCard>
     {/each}
 
     <p class="text-ink-500 text-xs">

@@ -159,15 +159,14 @@
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import RecordCard, {
-    type AzuosRecordCardMenuItem,
-  } from '$lib/components/azuos-record-card/azuos-record-card.svelte';
+  import ContentCard, {
+    type AzuosContentCardMenuItem,
+  } from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
@@ -207,7 +206,7 @@
   const cardPage = useCardPage(() => people);
 
   /* O menu do cartão da pessoa: tirar cada módulo e dar mais um — só para o Super Admin. */
-  function menuItemsOf(person: RolePerson): AzuosRecordCardMenuItem[] {
+  function menuItemsOf(person: RolePerson): AzuosContentCardMenuItem[] {
     if (!canManage) return [];
 
     const canGrant = Boolean(actions.onGrantTo) && person.roles.length < ROLE_CONTEXTS.length;
@@ -367,26 +366,10 @@
 
   <!-- 3. Indicadores de Estatísticas (StatCards) -->
   <StatCardGrid>
-    <StatCard
-      data={{ label: 'Módulos liberados', value: data.roles.length }}
-      ui={{ tone: 'neutral', icon: ShieldCheck }}
-      state={{ isLoading: state.isLoading }}
-    />
-    <StatCard
-      data={{ label: 'Sistema', value: countByContext('sistema') }}
-      ui={{ tone: contextTone('sistema'), icon: MonitorCog }}
-      state={{ isLoading: state.isLoading }}
-    />
-    <StatCard
-      data={{ label: 'Infraestrutura', value: countByContext('infra') }}
-      ui={{ tone: contextTone('infra'), icon: Server }}
-      state={{ isLoading: state.isLoading }}
-    />
-    <StatCard
-      data={{ label: 'Manutenção', value: countByContext('manutencao') }}
-      ui={{ tone: contextTone('manutencao'), icon: Wrench }}
-      state={{ isLoading: state.isLoading }}
-    />
+    <ContentCard data={{ label: 'Módulos liberados', title: 'Módulos liberados', highlight: { value: data.roles.length } }} ui={{ icon: ShieldCheck, iconTone: 'neutral' }} state={{ isLoading: state.isLoading }} />
+    <ContentCard data={{ label: 'Sistema', title: 'Sistema', highlight: { value: countByContext('sistema') } }} ui={{ icon: MonitorCog, iconTone: contextTone('sistema') }} state={{ isLoading: state.isLoading }} />
+    <ContentCard data={{ label: 'Infraestrutura', title: 'Infraestrutura', highlight: { value: countByContext('infra') } }} ui={{ icon: Server, iconTone: contextTone('infra') }} state={{ isLoading: state.isLoading }} />
+    <ContentCard data={{ label: 'Manutenção', title: 'Manutenção', highlight: { value: countByContext('manutencao') } }} ui={{ icon: Wrench, iconTone: contextTone('manutencao') }} state={{ isLoading: state.isLoading }} />
   </StatCardGrid>
 
   <!-- 4. Filtros Padronizados -->
@@ -467,7 +450,7 @@
         {@const creators = creatorsOf(person)}
         <!-- O cartão de registro do sistema, com o rosto no lugar do ícone. A cor dos módulos mora
              nos selos, nunca no fundo do card; tirar e dar módulo ficam no menu de três pontinhos. -->
-        <RecordCard
+        <ContentCard
           data={{
             label: displayName,
             title: displayName,
@@ -496,7 +479,7 @@
               {/each}
             </div>
           {/snippet}
-        </RecordCard>
+        </ContentCard>
       {/each}
     </div>
       <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última

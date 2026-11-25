@@ -236,11 +236,10 @@
   } from '$lib/components/azuos-filter-panel/azuos-filter-panel.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
-  import PanelCard from '$lib/components/azuos-panel-card/azuos-panel-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import RadarChart from '$lib/components/azuos-radar-chart/azuos-radar-chart.svelte';
   import ReportExportActions from '$lib/components/azuos-report-export-actions/azuos-report-export-actions.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
-  import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
+    import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import {
     Table,
@@ -441,52 +440,12 @@
        "Resolvidos" contam mais de um estágio — e filtram pelo GRUPO inteiro, para o número do
        cartão e o tamanho da lista baterem. -->
   <StatCardGrid>
-    <StatCard
-      data={{ label: 'Abertos', value: dashboard?.open ?? 0 }}
-      ui={{ tone: 'danger', icon: CircleAlert }}
-      state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.status === 'open' }}
-      actions={{ onClick: () => filterByStatus('open') }}
-    />
-    <StatCard
-      data={{ label: 'Em atendimento', value: dashboard?.inProgress ?? 0 }}
-      ui={{ tone: 'info', icon: Headset }}
-      state={{
-        isLoading: state.isDashboardLoading,
-        isSelected: data.filter.status === 'in_progress',
-      }}
-      actions={{ onClick: () => filterByStatus('in_progress') }}
-    />
-    <StatCard
-      data={{
-        label: 'Aguardando',
-        value: dashboard?.waiting ?? 0,
-        hint: 'solicitante, terceiro ou peça',
-      }}
-      ui={{ tone: 'warning', icon: Hourglass }}
-      state={{
-        isLoading: state.isDashboardLoading,
-        isSelected: data.filter.statusGroup === 'waiting',
-      }}
-      actions={{ onClick: () => filterByGroup('waiting') }}
-    />
-    <StatCard
-      data={{
-        label: 'Resolvidos',
-        value: dashboard?.resolved ?? 0,
-        /* O tempo médio mora AQUI, e não num quinto cartão: quatro por linha é o limite do que
-           se compara de relance (ver `azuos-stat-card-grid`), e a média é uma leitura dos
-           resolvidos — não uma quinta contagem. */
-        hint: dashboard?.resolved
-          ? `tempo médio: ${formatAverage(dashboard.averageResolutionHours)}`
-          : 'nada resolvido ainda',
-      }}
-      ui={{ tone: 'success', icon: CircleCheck }}
-      state={{
-        isLoading: state.isDashboardLoading,
-        isSelected: data.filter.statusGroup === 'solved',
-      }}
-      actions={{ onClick: () => filterByGroup('solved') }}
-    />
+    <ContentCard data={{ label: 'Abertos', title: 'Abertos', highlight: { value: dashboard?.open ?? 0 } }} ui={{ icon: CircleAlert, iconTone: 'danger' }} state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.status === 'open' }} actions={{ onOpen: () => filterByStatus('open') }} />
+    <ContentCard data={{ label: 'Em atendimento', title: 'Em atendimento', highlight: { value: dashboard?.inProgress ?? 0 } }} ui={{ icon: Headset, iconTone: 'info' }} state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.status === 'in_progress' }} actions={{ onOpen: () => filterByStatus('in_progress') }} />
+    <ContentCard data={{ label: 'Aguardando', title: 'Aguardando', highlight: { value: dashboard?.waiting ?? 0, hint: 'solicitante, terceiro ou peça' } }} ui={{ icon: Hourglass, iconTone: 'warning' }} state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.statusGroup === 'waiting' }} actions={{ onOpen: () => filterByGroup('waiting') }} />
+    <!-- O tempo médio mora AQUI, e não num quinto cartão: quatro por linha é o limite do que se
+         compara de relance, e a média é uma leitura dos resolvidos — não uma quinta contagem. -->
+    <ContentCard data={{ label: 'Resolvidos', title: 'Resolvidos', highlight: { value: dashboard?.resolved ?? 0, hint: dashboard?.resolved ? `tempo médio: ${formatAverage(dashboard.averageResolutionHours)}` : 'nada resolvido ainda' } }} ui={{ icon: CircleCheck, iconTone: 'success' }} state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.statusGroup === 'solved' }} actions={{ onOpen: () => filterByGroup('solved') }} />
   </StatCardGrid>
 
   <!-- DOIS FORMATOS, porque são duas perguntas diferentes.
@@ -496,22 +455,21 @@
        ela vira um anel de fatias finas que só se lê pela legenda ao lado — e quem está lendo
        a legenda não está olhando o desenho. -->
   <div class="grid gap-4 lg:grid-cols-2">
-    <PanelCard
-      data={{ title: 'Problemas por tipo', hint: 'O perfil do que dá trabalho neste escritório' }}
-    >
+    <ContentCard data={{ label: 'Problemas por tipo', title: 'Problemas por tipo', meta: 'O perfil do que dá trabalho neste escritório' }}>
+{#snippet body()}
+<div class="pb-1">
       <RadarChart
         data={{ slices: problemSlices, seriesLabel: 'Chamados' }}
         state={{ isLoading: state.isDashboardLoading }}
         ui={{ emptyLabel: 'Ainda não há chamados para comparar.' }}
       />
-    </PanelCard>
+    </div>
+{/snippet}
+</ContentCard>
 
-    <PanelCard
-      data={{
-        title: 'Departamentos com mais chamados',
-        hint: 'Do que mais pediu para o que menos',
-      }}
-    >
+    <ContentCard data={{ label: 'Departamentos com mais chamados', title: 'Departamentos com mais chamados', meta: 'Do que mais pediu para o que menos' }}>
+{#snippet body()}
+<div class="pb-1">
       <div class="max-h-72 overflow-x-hidden overflow-y-auto">
         <ColumnChart
           data={{ slices: departmentSlices, seriesLabel: 'Chamados' }}
@@ -519,7 +477,9 @@
           ui={{ orientation: 'horizontal', emptyLabel: 'Ainda não há chamados para comparar.' }}
         />
       </div>
-    </PanelCard>
+    </div>
+{/snippet}
+</ContentCard>
   </div>
 
   <!-- Os filtros no MESMO desenho do Inventário (`azuos-filter-panel`): busca e departamento à

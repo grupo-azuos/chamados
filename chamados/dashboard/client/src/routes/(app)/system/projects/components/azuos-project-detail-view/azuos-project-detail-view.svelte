@@ -133,11 +133,10 @@
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
-
+  
   let { data, state, actions }: AzuosProjectDetailViewProps = $props();
 
   const progress = $derived(data.progress);
@@ -175,31 +174,17 @@
 
   <!-- 1. O andamento de relance. -->
   <StatCardGrid>
-    <StatCard
-      data={{ label: 'Em andamento', value: progress.openPullRequests.length, hint: 'PRs abertos' }}
-      ui={{ tone: 'info', icon: GitPullRequest }}
-    />
-    <StatCard
-      data={{ label: 'Issues pendentes', value: progress.openIssues.length }}
-      ui={{ tone: 'warning', icon: CircleDot }}
-    />
-    <StatCard
-      data={{
-        label: 'Entregas em 7 dias',
-        value: progress.deliveredLastWeek,
-        hint: 'PRs mergeados e merges sem PR',
-      }}
-      ui={{ tone: 'success', icon: PackageCheck }}
-    />
-    <StatCard
-      data={{ label: 'Chamados abertos', value: data.openTickets.length }}
-      ui={{ tone: 'danger', icon: LifeBuoy }}
-    />
+    <ContentCard data={{ label: 'Em andamento', title: 'Em andamento', highlight: { value: progress.openPullRequests.length, hint: 'PRs abertos' } }} ui={{ icon: GitPullRequest, iconTone: 'info' }} />
+    <ContentCard data={{ label: 'Issues pendentes', title: 'Issues pendentes', highlight: { value: progress.openIssues.length } }} ui={{ icon: CircleDot, iconTone: 'warning' }} />
+    <ContentCard data={{ label: 'Entregas em 7 dias', title: 'Entregas em 7 dias', highlight: { value: progress.deliveredLastWeek, hint: 'PRs mergeados e merges sem PR' } }} ui={{ icon: PackageCheck, iconTone: 'success' }} />
+    <ContentCard data={{ label: 'Chamados abertos', title: 'Chamados abertos', highlight: { value: data.openTickets.length } }} ui={{ icon: LifeBuoy, iconTone: 'danger' }} />
   </StatCardGrid>
 
   <!-- 2. O que está acontecendo agora, e os chamados que dependem disso. -->
   <div class="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-    <CardSurface ui={{ className: 'min-w-0' }}>
+    <ContentCard data={{ label: '', title: '' }} ui={{ className: 'min-w-0' }}>
+{#snippet body()}
+<div class="">
       <header class="border-border border-b px-4 py-3">
         <h2 class="text-ink-900 text-sm font-semibold">Em andamento agora</h2>
         <p class="text-ink-500 text-xs">PRs abertos e issues pendentes, do mais recente.</p>
@@ -235,9 +220,13 @@
           {/each}
         </ul>
       {/if}
-    </CardSurface>
+    </div>
+{/snippet}
+</ContentCard>
 
-    <CardSurface ui={{ className: 'min-w-0' }}>
+    <ContentCard data={{ label: '', title: '' }} ui={{ className: 'min-w-0' }}>
+{#snippet body()}
+<div class="">
       <header class="border-border border-b px-4 py-3">
         <h2 class="text-ink-900 text-sm font-semibold">Chamados abertos</h2>
         <p class="text-ink-500 text-xs">Os pedidos de suporte deste sistema ainda sem solução.</p>
@@ -269,11 +258,15 @@
           {/each}
         </ul>
       {/if}
-    </CardSurface>
+    </div>
+{/snippet}
+</ContentCard>
   </div>
 
   <!-- 3. A timeline, dia a dia. -->
-  <CardSurface ui={{ className: 'min-w-0' }}>
+  <ContentCard data={{ label: '', title: '' }} ui={{ className: 'min-w-0' }}>
+{#snippet body()}
+<div class="">
     <header
       class="border-border flex min-w-0 flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-end sm:justify-between"
     >
@@ -347,5 +340,7 @@
         </p>
       {/if}
     {/if}
-  </CardSurface>
+  </div>
+{/snippet}
+</ContentCard>
 </div>

@@ -1,7 +1,7 @@
 <!--
   @component
   A tela do INVENTÁRIO da Manutenção: busca, filtros e a grade de cartões com foto de tudo o que
-  existe no escritório. Cada cartão é o cartão de registro do sistema (`AzuosRecordCard`) — clicar
+  existe no escritório. Cada cartão é o cartão de registro do sistema (`AzuosContentCard`) — clicar
   nele abre a correção, e editar e excluir ficam no menu de três pontinhos. Use na rota do inventário; ela não
   busca nada, só desenha o que o view-model entrega.
 -->
@@ -81,9 +81,8 @@
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
-  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
-  import { formatDate } from '$lib/utils/format-date';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+    import { formatDate } from '$lib/utils/format-date';
   import { inventoryCategoryIconOf } from '$lib/utils/record-icon.util';
 
   let { data, state: listState, actions }: AzuosInventoryListViewProps = $props();
@@ -118,7 +117,9 @@
     />
   </PageHeader>
 
-  <CardSurface ui={{ className: 'flex flex-col gap-3 p-4' }}>
+  <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-3 p-4">
     <TextField
       data={{
         label: 'Buscar',
@@ -162,7 +163,9 @@
         />
       {/if}
     </div>
-  </CardSurface>
+  </div>
+{/snippet}
+</ContentCard>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2): a lista só é
        desenhada quando sobrou lista para desenhar. -->
@@ -215,7 +218,7 @@
           <!-- O cartão de registro do sistema: clicar em qualquer ponto abre a correção; com
                foto, ela entra pequena no lugar do ícone da categoria. Corrigir e excluir moram no
                menu de três pontinhos, nunca em ícone solto. -->
-          <RecordCard
+          <ContentCard
             data={{
               label: `Editar ${item.name}`,
               title: item.name,
@@ -253,7 +256,7 @@
                 <p class="text-muted-foreground line-clamp-2 text-xs" title={item.note}>{item.note}</p>
               {/if}
             {/snippet}
-          </RecordCard>
+          </ContentCard>
         {/each}
       </div>
       <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última

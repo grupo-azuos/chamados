@@ -779,11 +779,11 @@ export const RULES = [
   },
   /* REGRA DO GRUPO (13 sistemas): cor de card vem do FUNDO, nunca da borda. Faixa lateral/topo
      colorida, contorno no tom e anel colorido de seleção são proibidos em QUALQUER componente.
-     Fica só o anel de FOCO (acessibilidade). Card colorido: `AzuosToneCard`. */
+     Fica só o anel de FOCO (acessibilidade). Card: o `AzuosContentCard`, a cor no ícone. */
   {
     id: 'colored-border',
     description:
-      'Borda colorida é proibida em qualquer componente: a cor vem do fundo (`AzuosToneCard`). Só o anel de foco fica.',
+      'Borda colorida é proibida em qualquer componente: a cor vem do ícone do `AzuosContentCard`. Só o anel de foco fica.',
     check: (files) => coloredBorderViolations(files),
   },
   /* REGRA DO GRUPO (13 sistemas): nunca `<select>` nativo — sempre o combobox do projeto. O

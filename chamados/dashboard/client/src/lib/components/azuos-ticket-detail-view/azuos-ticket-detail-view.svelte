@@ -106,7 +106,8 @@
     formatMinutesSpent,
   } from '$lib/components/azuos-history-timeline/azuos-history-timeline.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import PanelCard from '$lib/components/azuos-panel-card/azuos-panel-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+  import { cn } from '$lib/utils/cn';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
 
   let {
@@ -251,7 +252,9 @@
     <!-- O PEDIDO, como a pessoa escreveu — só de leitura —, com os carimbos do atendimento. Quem
          atende precisa ler o pedido enquanto responde, mas corrigir o texto de outra pessoa
          apagaria o que ela disse. -->
-    <PanelCard data={{ title: 'O pedido' }} ui={{ bodyClassName: 'flex flex-col gap-4' }}>
+    <ContentCard data={{ label: 'O pedido', title: 'O pedido' }}>
+{#snippet body()}
+<div class={cn('pb-1', 'flex flex-col gap-4')}>
       <dl class="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
         {#each requestFacts as fact (fact.label)}
           <div class="min-w-0">
@@ -313,38 +316,37 @@
           {/each}
         </dl>
       </div>
-    </PanelCard>
+    </div>
+{/snippet}
+</ContentCard>
 
-    <PanelCard
-      data={{
-        title: 'Dados do chamado',
-        hint: 'O estágio não muda aqui — muda lançando um histórico.',
-      }}
-    >
+    <ContentCard data={{ label: 'Dados do chamado', title: 'Dados do chamado', meta: 'O estágio não muda aqui — muda lançando um histórico.' }}>
+{#snippet body()}
+<div class="pb-1">
       {@render dataForm()}
-    </PanelCard>
+    </div>
+{/snippet}
+</ContentCard>
 
-    <PanelCard
-      data={{
-        title: 'Linha do tempo',
-        hint: 'Tudo o que aconteceu com este chamado, do mais antigo para o mais novo.',
-      }}
-    >
+    <ContentCard data={{ label: 'Linha do tempo', title: 'Linha do tempo', meta: 'Tudo o que aconteceu com este chamado, do mais antigo para o mais novo.' }}>
+{#snippet body()}
+<div class="pb-1">
       <HistoryTimeline
         data={{ histories: data.histories }}
         state={{ isLoading: viewState?.isTimelineLoading, error: viewState?.timelineError }}
       />
-    </PanelCard>
+    </div>
+{/snippet}
+</ContentCard>
 
-    <PanelCard
-      data={{
-        title: isClosed ? 'Reabrir o chamado' : 'Novo histórico',
-        hint: isClosed
+    <ContentCard data={{ label: isClosed ? 'Reabrir o chamado' : 'Novo histórico', title: isClosed ? 'Reabrir o chamado' : 'Novo histórico', meta: isClosed
           ? 'Este chamado está encerrado. Para registrar algo novo, reabra-o.'
-          : 'É o histórico que muda o estágio do chamado.',
-      }}
-    >
+          : 'É o histórico que muda o estágio do chamado.' }}>
+{#snippet body()}
+<div class="pb-1">
       {@render historyForm()}
-    </PanelCard>
+    </div>
+{/snippet}
+</ContentCard>
   </div>
 </div>

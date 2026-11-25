@@ -239,7 +239,7 @@ describe('AzuosComputerCard', () => {
     expect(container.querySelector('[data-slot="computer-alert-badge"]')).toBeNull();
     expect(screen.getByText('(Sem responsável)')).toBeInTheDocument();
     expect(screen.getByText(/Sem departamento/)).toBeInTheDocument();
-    const wash = container.querySelector<HTMLElement>('[data-slot="card-wash"]')!;
-    expect(wash.style.getPropertyValue('--card-veil')).toBe('var(--hover-veil)');
+    /* O card de conteúdo não tem véu nem se mexe no hover. */
+    expect(container.querySelector('[data-slot="card-wash"]')).toBeNull();
   });
 });

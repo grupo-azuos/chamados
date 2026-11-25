@@ -34,7 +34,12 @@ function renderWidget(
   result: Result,
   options: { isEditing?: boolean; filterName?: string | null } = {},
 ) {
-  const actions = { onEdit: vi.fn(), onRemove: vi.fn(), onChangeKind: vi.fn(), onOpenItem: vi.fn() };
+  const actions = {
+    onEdit: vi.fn(),
+    onRemove: vi.fn(),
+    onChangeKind: vi.fn(),
+    onOpenItem: vi.fn(),
+  };
   render(BoardWidget, {
     props: {
       data: { widget, result, filterName: options.filterName ?? null },
@@ -67,7 +72,14 @@ describe('AzuosBoardWidget', () => {
   // feliz
   it('heads a chart with what it counts and the cut in chips', () => {
     renderWidget(
-      { ...WIDGET, kind: 'column', groupBy: 'status', period: '30d', onlyMine: true, filterId: 'f1' },
+      {
+        ...WIDGET,
+        kind: 'column',
+        groupBy: 'status',
+        period: '30d',
+        onlyMine: true,
+        filterId: 'f1',
+      },
       { data: DATA, isLoading: false, error: null },
       { filterName: 'Só os urgentes' },
     );
@@ -94,9 +106,11 @@ describe('AzuosBoardWidget', () => {
     expect(actions.onEdit).toHaveBeenCalledWith('w1');
     expect(screen.queryByRole('button', { name: 'Menu de Chamados' })).toBeNull();
     /* O bloco aparece como no painel: a barra flutua acima, fora do cabeçalho. */
-    expect(screen.getByRole('heading', { name: 'Chamados' }).closest('header')).not.toContainElement(
-      screen.getByRole('button', { name: 'Configurar Chamados' }),
-    );
+    expect(
+      screen
+        .getByRole('heading', { name: 'Chamados' })
+        .closest('[data-slot="content-card-header"]'),
+    ).not.toContainElement(screen.getByRole('button', { name: 'Configurar Chamados' }));
   });
 
   // triste

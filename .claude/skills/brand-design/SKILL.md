@@ -110,7 +110,7 @@ Forma por papel (tokens `--shape-*`, no Tailwind `rounded-<papel>`):
 
 - Controles com `44px` de altura (`h-control`, token `--control-height`).
 - Campos de texto: cinza cheio (`bg-muted`), sem contorno; o foco é o anel.
-- Sombra de cartão: `shadow-card` (fio de 1px + sombra difusa); no hover, `shadow-card-hover`.
+- Sombra de cartão: `shadow-card` (fio de 1px + sombra difusa). No hover o card não muda: nem sombra, nem posição.
 - Movimento: `350ms cubic-bezier(0.32, 0.72, 0, 1)` (`ease-brand`, `--motion-duration`).
 - Nunca raio, sombra ou altura arbitrários (`rounded-[13px]`): use o papel certo.
 - Referência de implementação: `design/reference.css` (classes `.pv-*` da prévia).

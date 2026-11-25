@@ -68,14 +68,13 @@
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
-  import { formatDate } from '$lib/utils/format-date';
+    import { formatDate } from '$lib/utils/format-date';
 
   let { data, state: listState, actions }: AzuosInventoryDisposalListViewProps = $props();
   /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
@@ -103,7 +102,9 @@
     />
   </PageHeader>
 
-  <CardSurface ui={{ className: 'flex flex-wrap items-end gap-x-4 gap-y-3 p-4' }}>
+  <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-wrap items-end gap-x-4 gap-y-3 p-4">
     <FilterField data={{ label: 'Motivo' }}>
       <OptionPicker
         data={{ value: data.filter.reason, options: REASON_FILTER_OPTIONS }}
@@ -121,7 +122,9 @@
         actions={{ onClick: actions.onClearFilters }}
       />
     {/if}
-  </CardSurface>
+  </div>
+{/snippet}
+</ContentCard>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2). -->
   {#if listState.error}
@@ -167,7 +170,7 @@
       <!-- A grade padrão de cards. O descarte é história: o cartão não abre nada nem tem ação. -->
       <div class="card-grid" data-slot="inventory-disposal-cards">
         {#each cardPage.items as disposal (disposal.id)}
-          <RecordCard
+          <ContentCard
             data={{
               label: disposal.itemName,
               title: disposal.itemName,
@@ -199,7 +202,7 @@
                 <p class="text-ink-700 line-clamp-3 text-xs">{disposal.note}</p>
               {/if}
             {/snippet}
-          </RecordCard>
+          </ContentCard>
         {/each}
       </div>
       <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última

@@ -145,7 +145,7 @@
   } from '$lib/components/azuos-history-timeline/azuos-history-timeline.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import FileLinks from '$lib/components/azuos-file-links/azuos-file-links.svelte';
   import { cn } from '$lib/utils/cn';
@@ -323,7 +323,9 @@
     {:else if ticket}
       {@const facts = factsOf(ticket)}
       {@const journey = journeyOf(ticket.status)}
-      <CardSurface ui={{ className: 'flex flex-col gap-6 p-5 sm:p-6' }}>
+      <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-6 p-5 sm:p-6">
         <header class="flex flex-col gap-4">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-foreground font-mono text-2xl font-bold">{ticket.protocol}</h2>
@@ -433,7 +435,9 @@
         </div>
 
         {@render slots?.ticketActions?.(ticket)}
-      </CardSurface>
+      </div>
+{/snippet}
+</ContentCard>
     {:else}
       <EmptyState
         data={{

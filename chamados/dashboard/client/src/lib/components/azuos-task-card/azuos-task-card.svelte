@@ -1,6 +1,6 @@
 <!--
   @component
-  A TAREFA EM CARD — sobre o cartão padrão do sistema (`AzuosRecordCard`), o mesmo formato do
+  A TAREFA EM CARD — sobre o cartão padrão do sistema (`AzuosContentCard`), o mesmo formato do
   card de computador e do de empresa do Paralegal.
 
   Na faixa: a situação e a origem; o selo vermelho pulsando quando atrasada. No corpo: o título,
@@ -33,7 +33,7 @@
     TASK_STATUS_TONES,
   } from '@template/shared/domain/task-flow.util';
 
-  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { formatTicketProtocol } from '@template/shared/domain/ticket-protocol.util';
   import { taskDueBadge } from '$lib/utils/task-due.util';
   import { situationOf } from '$lib/utils/task-stage.util';
@@ -66,7 +66,7 @@
   }
 </script>
 
-<RecordCard
+<ContentCard
   data={{
     label: `Abrir a tarefa ${task.title}`,
     title: task.title,

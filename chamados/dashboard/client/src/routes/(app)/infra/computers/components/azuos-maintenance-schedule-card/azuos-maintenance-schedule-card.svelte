@@ -112,7 +112,7 @@
   import Wrench from '@lucide/svelte/icons/wrench';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import { cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
@@ -122,13 +122,9 @@
   const summary = $derived(scheduleSummaryOf(data.schedule, data.lastPreventiveAt));
 </script>
 
-<CardSurface
-  data={{ label: 'Próxima manutenção' }}
-  ui={{
-    className:
-      'flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between',
-  }}
->
+<ContentCard data={{ label: 'Próxima manutenção', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
   <!-- `items-center`: o texto fica no meio da altura do ícone e do botão "Agendar manutenção",
        e não colado no alto da faixa. -->
   <div class="flex min-w-0 items-center gap-3">
@@ -198,4 +194,6 @@
       <ErrorState data={{ message: cardState.error }} ui={{ variant: 'inline' }} />
     </div>
   {/if}
-</CardSurface>
+</div>
+{/snippet}
+</ContentCard>

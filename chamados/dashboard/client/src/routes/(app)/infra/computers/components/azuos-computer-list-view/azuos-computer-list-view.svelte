@@ -41,7 +41,7 @@
   } from '@template/shared/schemas/computer.schema';
   import { type ReportFormat } from '@template/shared/schemas/report.schema';
   import type { LucideIcon } from '@lucide/svelte';
-  import { type StatCardTone } from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import { type AzuosCardTone as StatCardTone } from '$lib/utils/card-tone.util';
   import { type ComputerUpgradeFilter } from '@template/shared/domain/computer-upgrade.util';
   import { type AzuosPersonPickerPerson } from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
 
@@ -200,7 +200,7 @@
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import ReportExportActions from '$lib/components/azuos-report-export-actions/azuos-report-export-actions.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
@@ -345,54 +345,16 @@
        de novo desliga. Cartões de grupos diferentes se somam (saúde E alerta); do mesmo grupo,
        um troca o outro. -->
   <StatCardGrid>
-    <StatCard
-      data={{ label: 'Máquinas', value: summary?.total ?? 0 }}
-      ui={{ tone: 'brand', icon: Monitor }}
-      state={{
-        isLoading: state.isSummaryLoading,
-        isSelected: actions.onClearShortcuts ? hasNoShortcut(data.filter) : false,
-      }}
-      actions={actions.onClearShortcuts ? { onClick: showAll } : undefined}
-    />
-    <StatCard
-      data={{ label: 'Online agora', value: summary?.online ?? 0 }}
-      ui={{ tone: 'success', icon: Wifi }}
-      state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.onlyOnline }}
-      actions={{ onClick: filterByOnline }}
-    />
-    <StatCard
-      data={{ label: 'Saúde crítica', value: summary?.critical ?? 0 }}
-      ui={{ tone: 'danger', icon: HeartPulse }}
-      state={{
-        isLoading: state.isSummaryLoading,
-        isSelected: data.filter.healthStatus === 'critical',
-      }}
-      actions={{ onClick: () => filterByHealth('critical') }}
-    />
-    <StatCard
-      data={{
-        label: 'Em atenção',
-        value: summary?.attention ?? 0,
-        hint: summary?.neverSeen ? `${summary.neverSeen} sem o agente instalado` : null,
-      }}
-      ui={{ tone: 'warning', icon: TriangleAlert }}
-      state={{
-        isLoading: state.isSummaryLoading,
-        isSelected: data.filter.healthStatus === 'attention',
-      }}
-      actions={{ onClick: () => filterByHealth('attention') }}
-    />
+    <ContentCard data={{ label: 'Máquinas', title: 'Máquinas', highlight: { value: summary?.total ?? 0 } }} ui={{ icon: Monitor, iconTone: 'brand' }} state={{ isLoading: state.isSummaryLoading, isSelected: actions.onClearShortcuts ? hasNoShortcut(data.filter) : false }} actions={actions.onClearShortcuts ? { onOpen: showAll } : undefined} />
+    <ContentCard data={{ label: 'Online agora', title: 'Online agora', highlight: { value: summary?.online ?? 0 } }} ui={{ icon: Wifi, iconTone: 'success' }} state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.onlyOnline }} actions={{ onOpen: filterByOnline }} />
+    <ContentCard data={{ label: 'Saúde crítica', title: 'Saúde crítica', highlight: { value: summary?.critical ?? 0 } }} ui={{ icon: HeartPulse, iconTone: 'danger' }} state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.healthStatus === 'critical' }} actions={{ onOpen: () => filterByHealth('critical') }} />
+    <ContentCard data={{ label: 'Em atenção', title: 'Em atenção', highlight: { value: summary?.attention ?? 0, hint: summary?.neverSeen ? `${summary.neverSeen} sem o agente instalado` : null } }} ui={{ icon: TriangleAlert, iconTone: 'warning' }} state={{ isLoading: state.isSummaryLoading, isSelected: data.filter.healthStatus === 'attention' }} actions={{ onOpen: () => filterByHealth('attention') }} />
   </StatCardGrid>
 
   <!-- A segunda fileira: fora do ar, sofrendo AGORA e quem precisa de upgrade. -->
   <StatCardGrid data={{ items: secondRow }} ui={{ ariaLabel: 'Conexão, alertas e upgrade' }}>
     {#snippet card(shortcut: StatShortcut)}
-      <StatCard
-        data={{ label: shortcut.label, value: shortcut.value }}
-        ui={{ tone: shortcut.tone, icon: shortcut.icon }}
-        state={{ isLoading: state.isSummaryLoading, isSelected: shortcut.isSelected }}
-        actions={{ onClick: shortcut.onClick }}
-      />
+      <ContentCard data={{ label: shortcut.label, title: shortcut.label, highlight: { value: shortcut.value } }} ui={{ icon: shortcut.icon, iconTone: shortcut.tone }} state={{ isLoading: state.isSummaryLoading, isSelected: shortcut.isSelected }} actions={{ onOpen: shortcut.onClick }} />
     {/snippet}
   </StatCardGrid>
 

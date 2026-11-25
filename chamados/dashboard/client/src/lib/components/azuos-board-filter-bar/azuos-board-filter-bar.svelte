@@ -84,7 +84,7 @@
   } from '@template/shared/schemas/dashboard-board.schema';
 
   import AzuosActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import AzuosCardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import AzuosCollapsible from '$lib/components/azuos-collapsible/azuos-collapsible.svelte';
   import AzuosClearFiltersButton from '$lib/components/azuos-clear-filters-button/azuos-clear-filters-button.svelte';
   import { cn } from '$lib/utils/cn';
@@ -125,7 +125,9 @@
        dividem por igual — no celular, uma por linha; numa tela larga, todas lado a lado, sem sobra
        torta no fim. A ordem é a da lista de quem montou. O bloco que abre e fecha é transparente:
        o cartão é a superfície (card dentro de card não). -->
-  <AzuosCardSurface>
+  <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="">
     <AzuosCollapsible
       data={{ title: 'Filtros', badge: activeBadge(active.length) }}
       ui={{ className: 'rounded-none bg-transparent shadow-none' }}
@@ -144,7 +146,9 @@
         {/each}
       </div>
     </AzuosCollapsible>
-  </AzuosCardSurface>
+  </div>
+{/snippet}
+</ContentCard>
 {/snippet}
 
 {#if isEditing}

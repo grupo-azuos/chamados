@@ -121,7 +121,7 @@
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { TASK_VIEW_LABELS, TASK_VIEWS, type TaskView } from '$lib/hooks/use-task-list/use-task-list.svelte';
   import TaskBoard from '$lib/components/azuos-task-board/azuos-task-board.svelte';
   import TaskCalendar from '$lib/components/azuos-task-calendar/azuos-task-calendar.svelte';
@@ -174,18 +174,9 @@
   </PageHeader>
 
   <div class="grid gap-3 sm:grid-cols-3">
-    <StatCard
-      data={{ label: 'Tarefas', value: data.total, hint: 'no recorte' }}
-      ui={{ tone: 'info', icon: ClipboardList }}
-      state={{ isLoading: viewState.isLoading }}
-    />
+    <ContentCard data={{ label: 'Tarefas', title: 'Tarefas', highlight: { value: data.total, hint: 'no recorte' } }} ui={{ icon: ClipboardList, iconTone: 'info' }} state={{ isLoading: viewState.isLoading }} />
     <div class="relative">
-      <StatCard
-        data={{ label: 'Atrasadas', value: data.alerts.overdue, tooltip: 'Clique para ver só as atrasadas' }}
-        ui={{ tone: 'danger', icon: AlarmClock }}
-        state={{ isLoading: viewState.isLoading, isSelected: data.filter.overdue }}
-        actions={{ onClick: () => actions.onFilterChange('overdue', !data.filter.overdue) }}
-      />
+      <ContentCard data={{ label: 'Atrasadas', title: 'Atrasadas', meta: 'Clique para ver só as atrasadas', highlight: { value: data.alerts.overdue } }} ui={{ icon: AlarmClock, iconTone: 'danger' }} state={{ isLoading: viewState.isLoading, isSelected: data.filter.overdue }} actions={{ onOpen: () => actions.onFilterChange('overdue', !data.filter.overdue) }} />
       {#if data.alerts.overdue > 0}
         <span class="pointer-events-none absolute top-3 right-3 flex size-3" aria-hidden="true">
           <span class="bg-destructive absolute inline-flex size-full rounded-full motion-safe:animate-ping"></span>
@@ -193,11 +184,7 @@
         </span>
       {/if}
     </div>
-    <StatCard
-      data={{ label: 'Vencem na semana', value: data.alerts.dueSoon }}
-      ui={{ tone: 'warning', icon: CalendarClock }}
-      state={{ isLoading: viewState.isLoading }}
-    />
+    <ContentCard data={{ label: 'Vencem na semana', title: 'Vencem na semana', highlight: { value: data.alerts.dueSoon } }} ui={{ icon: CalendarClock, iconTone: 'warning' }} state={{ isLoading: viewState.isLoading }} />
   </div>
 
   <!-- O cartão de filtros do grupo (o do Inventário e dos Chamados, como o do Paralegal): à vista a

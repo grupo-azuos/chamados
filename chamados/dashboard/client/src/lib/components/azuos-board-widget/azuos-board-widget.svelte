@@ -91,6 +91,7 @@
 <script lang="ts">
   import GripVertical from '@lucide/svelte/icons/grip-vertical';
 
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import AzuosBoardPanelMenu from '$lib/components/azuos-board-panel-menu/azuos-board-panel-menu.svelte';
   import AzuosExpandableScreen from '$lib/components/azuos-expandable-screen/azuos-expandable-screen.svelte';
   import { cn } from '$lib/utils/cn';
@@ -156,56 +157,59 @@
   <!-- O cartão: a faixa do cabeçalho (ícone, título, o que conta, o recorte em selos) e as
        ferramentas dentro dela — nada solto embaixo (conectividade uniforme). Montando, quem
        desenha a seleção é o canvas (o contorno tracejado e os puxadores). -->
-  <section aria-label={widget.title} class="rounded-surface bg-card shadow-card relative flex h-full min-h-0 flex-col">
+  <section aria-label={widget.title} class="relative h-full min-h-0">
     {#if widgetState.isEditing}
       {@render editBar()}
     {/if}
-    <header
-      class={cn(
-        'border-border flex items-start gap-3 border-b px-4 pt-3.5 pb-3',
-        widgetState.isEditing && cn(DRAG_HANDLE, 'cursor-grab active:cursor-grabbing'),
-      )}
+    <ContentCard
+      data={{ label: widget.title, title: widget.title, meta: measureOf(widget) }}
+      ui={{
+        icon: Icon,
+        iconTone: 'blue',
+        className: 'h-full min-h-0',
+        headerClassName: widgetState.isEditing ? cn(DRAG_HANDLE, 'cursor-grab active:cursor-grabbing') : undefined,
+        isBodyFilling: true,
+      }}
     >
-      <span class="rounded-box bg-primary-soft text-primary flex size-10 shrink-0 items-center justify-center">
-        <Icon class="size-5" aria-hidden="true" />
-      </span>
-      <span class="min-w-0 flex-1">
-        <h3 class="text-ink-900 truncate text-sm font-bold tracking-tight">{widget.title}</h3>
-        <span class="text-ink-500 block truncate text-xs">{measureOf(widget)}</span>
-        {#if chips.length > 0}
-          <span class="mt-1.5 flex flex-wrap gap-1">
-            {#each chips as chip, index (chip)}
-              <span
-                class={cn(
-                  'rounded-chip px-2 py-0.5 text-xs font-semibold',
-                  index === 0 ? 'bg-primary-soft text-primary' : 'bg-muted text-ink-700',
-                )}
-              >
-                {chip}
-              </span>
-            {/each}
-          </span>
-        {/if}
-      </span>
-      <span class={cn('flex shrink-0 items-center gap-1', NO_DRAG)}>
+      {#snippet tools()}
         {#if !widgetState.isEditing && !widgetState.isPreview}
           <!-- O menu do título, como no Grafana: Ver, e — para quem monta — Editar, Duplicar e Remover. -->
-          <AzuosBoardPanelMenu
-            data={{ title: widget.title }}
-            state={{ canEdit: widgetState.canEdit }}
-            actions={{
-              onView: () => (isExpanded = true),
-              onEdit: () => actions.onEdit(widget.id),
-              onDuplicate: actions.onDuplicate ? () => actions.onDuplicate?.(widget.id) : undefined,
-              onRemove: () => actions.onRemove(widget.id),
-            }}
-          />
+          <span class={NO_DRAG}>
+            <AzuosBoardPanelMenu
+              data={{ title: widget.title }}
+              state={{ canEdit: widgetState.canEdit }}
+              actions={{
+                onView: () => (isExpanded = true),
+                onEdit: () => actions.onEdit(widget.id),
+                onDuplicate: actions.onDuplicate ? () => actions.onDuplicate?.(widget.id) : undefined,
+                onRemove: () => actions.onRemove(widget.id),
+              }}
+            />
+          </span>
         {/if}
-      </span>
-    </header>
-    <div class="min-h-0 flex-1 p-4">
-      <WidgetBody data={{ widget, result: data.result }} {actions} />
-    </div>
+      {/snippet}
+      {#snippet body()}
+        <div class="flex min-h-0 flex-1 flex-col gap-2 pb-4">
+          {#if chips.length > 0}
+            <span class="flex flex-wrap gap-1">
+              {#each chips as chip, index (chip)}
+                <span
+                  class={cn(
+                    'rounded-chip px-2 py-0.5 text-xs font-semibold',
+                    index === 0 ? 'bg-primary-soft text-primary' : 'bg-muted text-ink-700',
+                  )}
+                >
+                  {chip}
+                </span>
+              {/each}
+            </span>
+          {/if}
+          <div class="min-h-0 flex-1">
+            <WidgetBody data={{ widget, result: data.result }} {actions} />
+          </div>
+        </div>
+      {/snippet}
+    </ContentCard>
     <AzuosExpandableScreen
       data={{ title: widget.title, description: measureOf(widget) }}
       state={{ isOpen: isExpanded }}

@@ -105,7 +105,7 @@
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import StatCard from '$lib/components/azuos-stat-card/azuos-stat-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
@@ -119,8 +119,7 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
-  import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
+    import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
   import { formatDate } from '$lib/utils/format-date';
 
@@ -158,26 +157,9 @@
   <!-- "Com defeito" e "Lixo" são ATALHOS do filtro de tipo: clicar liga o mesmo filtro das
        pastilhas, clicar de novo desliga. "Máquinas fora de uso" é o total — não filtra nada. -->
   <StatCardGrid>
-    <StatCard
-      data={{ label: 'Máquinas fora de uso', value: data.summary.total }}
-      ui={{ tone: 'neutral', icon: Archive }}
-    />
-    <StatCard
-      data={{
-        label: 'Com defeito',
-        value: data.summary.defect,
-        hint: 'ainda rendem peça ou conserto',
-      }}
-      ui={{ tone: 'warning', icon: Wrench }}
-      state={{ isSelected: data.filter.type === 'defect' }}
-      actions={{ onClick: () => filterByType('defect') }}
-    />
-    <StatCard
-      data={{ label: 'Lixo', value: data.summary.scrap, hint: 'não ligam mais' }}
-      ui={{ tone: 'neutral', icon: Recycle }}
-      state={{ isSelected: data.filter.type === 'scrap' }}
-      actions={{ onClick: () => filterByType('scrap') }}
-    />
+    <ContentCard data={{ label: 'Máquinas fora de uso', title: 'Máquinas fora de uso', highlight: { value: data.summary.total } }} ui={{ icon: Archive, iconTone: 'neutral' }} />
+    <ContentCard data={{ label: 'Com defeito', title: 'Com defeito', highlight: { value: data.summary.defect, hint: 'ainda rendem peça ou conserto' } }} ui={{ icon: Wrench, iconTone: 'warning' }} state={{ isSelected: data.filter.type === 'defect' }} actions={{ onOpen: () => filterByType('defect') }} />
+    <ContentCard data={{ label: 'Lixo', title: 'Lixo', highlight: { value: data.summary.scrap, hint: 'não ligam mais' } }} ui={{ icon: Recycle, iconTone: 'neutral' }} state={{ isSelected: data.filter.type === 'scrap' }} actions={{ onOpen: () => filterByType('scrap') }} />
   </StatCardGrid>
 
   <!-- A falha de uma AÇÃO fica na tela, em vermelho, até resolver (CONTRIBUTING §15). -->
@@ -266,7 +248,7 @@
       {#each cardPage.items as computer (computer.id)}
         <!-- O cartão de registro do sistema: o card inteiro abre a ficha; "Voltar ao inventário"
              mora no menu, e pergunta antes. -->
-        <RecordCard
+        <ContentCard
           data={{
             label: `Ver ficha de ${machineLabelOf(computer)}`,
             title: machineLabelOf(computer),
@@ -299,7 +281,7 @@
               {computer.disposalReason ?? '—'}
             </p>
           {/snippet}
-        </RecordCard>
+        </ContentCard>
       {/each}
       <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
       <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">

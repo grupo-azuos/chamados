@@ -78,12 +78,9 @@
     AzuosButtonPrimitive as Button,
     AzuosDropdownMenuPrimitive as DropdownMenu,
   } from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
-  import Hint from '$lib/components/azuos-hint/azuos-hint.svelte';
-  import AzuosPersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
-  import AzuosStatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { cardToneClasses } from '$lib/utils/card-tone.util';
-  import { cn } from '$lib/utils/cn';
+  import AzuosStatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { formatDate } from '$lib/utils/format-date';
 
   let { data, ui, state: cardState, actions }: AzuosTicketKanbanCardProps = $props();
@@ -97,77 +94,57 @@
   );
   const assigneeName = $derived(ticket.assignee ?? 'Sem responsável');
   const isBusy = $derived(cardState?.isBusy ?? false);
-  const tone = $derived(cardToneClasses(ui.tone));
   const Icon = $derived(ui.icon);
 </script>
 
-<CardSurface
-  data={{ label: `Abrir o chamado ${ticket.protocol}` }}
-  ui={{ className: 'flex flex-col text-left' }}
-  actions={actions ? { onClick: () => actions.onOpen(ticket.id) } : undefined}
+<ContentCard
+  data={{
+    label: `Abrir o chamado ${ticket.protocol}`,
+    title: ticket.description,
+    status: { label: ui.stageLabel ?? '', tone: ui.tone },
+    tags: [{ label: ticket.protocol }],
+    footer: {
+      title: assigneeName,
+      subtitle: `${ticket.requesterName} · ${formatDate(ticket.createdAt)}`,
+      person: { id: ticket.assigneeId, name: assigneeName, avatarUrl: data.assigneePhoto },
+    },
+  }}
+  ui={{ icon: Icon, iconTone: ui.tone, className: 'flex flex-col' }}
+  actions={actions ? { onOpen: () => actions.onOpen(ticket.id) } : undefined}
 >
-  <!-- A FAIXA da situação, como no paralegal: a bolinha e o nome no tom da etapa; à direita, o
-       protocolo. -->
-  <div class="bg-muted flex items-center justify-between gap-2 px-4 py-1.5 text-xs font-semibold">
-    <span class={cn('flex min-w-0 items-center gap-1.5', tone.text)}>
-      <span aria-hidden="true" class={cn('size-1.5 shrink-0 rounded-full', tone.swatch)}></span>
-      <span class="truncate">{ui.stageLabel ?? ''}</span>
+  {#snippet body()}
+    <span class="flex flex-wrap items-center gap-1">
+      <AzuosStatusBadge data={{ label: subject }} ui={{ tone: 'neutral', size: 'sm' }} />
+      <AzuosStatusBadge
+        data={{ label: PRIORITY_LABELS[ticket.priority] ?? ticket.priority }}
+        ui={{ tone: PRIORITY_TONES[ticket.priority] ?? 'neutral', size: 'sm' }}
+      />
+      {#if labelText && data.label}
+        <AzuosStatusBadge data={{ label: labelText }} ui={{ tone: data.label, size: 'sm' }} />
+      {/if}
+      {#if ticket.githubIssueUrl && ticket.githubIssueNumber}
+        <!-- A issue abre noutra aba e não abre o chamado: o link sobe acima do botão do card. -->
+        <a
+          href={ticket.githubIssueUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-no-drag
+          class="rounded-chip bg-muted text-muted-foreground hover:text-foreground relative z-20 inline-flex items-center gap-0.5 px-2 py-0.5 font-mono text-xs hover:underline"
+        >
+          #{ticket.githubIssueNumber}
+          <ArrowUpRight aria-hidden="true" class="size-3" />
+        </a>
+      {/if}
+      {#if isBusy}
+        <span class="text-muted-foreground text-xs">Salvando…</span>
+      {/if}
     </span>
-    <span class="text-muted-foreground font-mono">{ticket.protocol}</span>
-  </div>
-
-  <div class="flex items-start gap-3 px-4 pt-3">
-    <span aria-hidden="true" class={cn('rounded-icon inline-flex size-9 shrink-0 items-center justify-center shadow-xs', tone.dot)}>
-      <Icon class="size-4.5" />
-    </span>
-    <div class="flex min-w-0 flex-1 flex-col">
-      <Hint data={{ text: ticket.description }}>
-        {#snippet child(props)}
-          <h3 {...props} class="text-foreground line-clamp-2 text-sm leading-tight font-semibold">{ticket.description}</h3>
-        {/snippet}
-      </Hint>
-      <span class="mt-1 flex flex-wrap items-center gap-1">
-        <AzuosStatusBadge data={{ label: subject }} ui={{ tone: 'neutral', size: 'sm' }} />
-        <AzuosStatusBadge
-          data={{ label: PRIORITY_LABELS[ticket.priority] ?? ticket.priority }}
-          ui={{ tone: PRIORITY_TONES[ticket.priority] ?? 'neutral', size: 'sm' }}
-        />
-        {#if labelText && data.label}
-          <AzuosStatusBadge data={{ label: labelText }} ui={{ tone: data.label, size: 'sm' }} />
-        {/if}
-        {#if ticket.githubIssueUrl && ticket.githubIssueNumber}
-          <!-- A issue abre noutra aba e não abre o chamado: o link sobe acima do botão do card. -->
-          <a
-            href={ticket.githubIssueUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-no-drag
-            class="rounded-chip bg-muted text-muted-foreground hover:text-foreground relative z-20 inline-flex items-center gap-0.5 px-2 py-0.5 font-mono text-xs hover:underline"
-          >
-            #{ticket.githubIssueNumber}
-            <ArrowUpRight aria-hidden="true" class="size-3" />
-          </a>
-        {/if}
-        {#if isBusy}
-          <span class="text-muted-foreground text-xs">Salvando…</span>
-        {/if}
-      </span>
-    </div>
-  </div>
-
-  <div aria-hidden="true" class="min-h-3 flex-1"></div>
-
-  <!-- O PÉ: quem atende (com a foto), quem abriu e quando; o menu da etiqueta no canto. -->
-  <div class="border-border flex items-center gap-2.5 border-t px-4 py-3">
-    <AzuosPersonAvatar name={assigneeName} avatarUrl={data.assigneePhoto} personId={ticket.assigneeId} ui={{ size: 'sm' }} />
-    <span class="flex min-w-0 flex-1 flex-col">
-      <span class="truncate text-xs font-semibold">{assigneeName}</span>
-      <span class="text-muted-foreground truncate text-xs">{ticket.requesterName} · {formatDate(ticket.createdAt)}</span>
-    </span>
+  {/snippet}
+  {#snippet footerActions()}
     {#if actions}
-      <!-- No rodapé, como no paralegal; sobe acima do botão que cobre o card (o clique não abre o
-           chamado) e não começa um arrasto (`data-no-drag`). -->
-      <div class="relative z-20 shrink-0" data-no-drag>
+      <!-- O menu da etiqueta no rodapé, como no paralegal: não abre o chamado nem começa um
+           arrasto (`data-no-drag`). -->
+      <div data-no-drag>
         <DropdownMenu.Root>
           <DropdownMenu.Trigger disabled={isBusy}>
             {#snippet child({ props })}
@@ -199,5 +176,5 @@
         </DropdownMenu.Root>
       </div>
     {/if}
-  </div>
-</CardSurface>
+  {/snippet}
+</ContentCard>

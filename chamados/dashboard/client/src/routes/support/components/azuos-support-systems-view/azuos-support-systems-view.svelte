@@ -28,7 +28,7 @@
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
-  import RecordCard from '$lib/components/azuos-record-card/azuos-record-card.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { formatDate } from '$lib/utils/format-date';
 
@@ -65,7 +65,7 @@
     <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Sistemas">
       {#each data.systems as system (system.id)}
         <li class="flex">
-          <RecordCard
+          <ContentCard
             data={{
               label: `Ver o andamento de ${system.name}`,
               title: system.name,

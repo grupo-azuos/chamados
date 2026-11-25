@@ -93,7 +93,7 @@
     formatMinutesSpent,
   } from '$lib/components/azuos-history-timeline/azuos-history-timeline.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, state: viewState, actions }: AzuosServiceOrderVerifyViewProps = $props();
@@ -142,7 +142,9 @@
   <p class="text-muted-foreground py-16 text-center text-sm">Procurando o registro…</p>
 {:else}
   <div class="flex flex-col gap-5">
-    <CardSurface ui={{ className: 'flex flex-col gap-4 p-5' }}>
+    <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-4 p-5">
       <header class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 class="text-foreground text-lg font-bold">Ordem de serviço {order.protocol}</h2>
@@ -206,9 +208,13 @@
           </div>
         </dl>
       </Collapsible>
-    </CardSurface>
+    </div>
+{/snippet}
+</ContentCard>
 
-    <CardSurface ui={{ className: 'flex flex-col gap-4 p-5' }}>
+    <ContentCard data={{ label: '', title: '' }}>
+{#snippet body()}
+<div class="flex flex-col gap-4 p-5">
       <header>
         <h2 class="text-foreground text-lg font-bold">Conferir o arquivo</h2>
         <p class="text-muted-foreground text-sm">
@@ -256,6 +262,8 @@
           </div>
         {/if}
       </div>
-    </CardSurface>
+    </div>
+{/snippet}
+</ContentCard>
   </div>
 {/if}

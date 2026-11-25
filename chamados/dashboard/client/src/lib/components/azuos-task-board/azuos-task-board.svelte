@@ -49,12 +49,10 @@
   import { DragDropProvider, DragOverlay, KeyboardSensor, PointerSensor } from '@dnd-kit/svelte';
   import Plus from '@lucide/svelte/icons/plus';
 
-  import CardSurface from '$lib/components/azuos-card-surface/azuos-card-surface.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import DraggableCard from '$lib/components/azuos-kanban-draggable-card/azuos-kanban-draggable-card.svelte';
   import StageColumn from '$lib/components/azuos-kanban-column/azuos-kanban-column.svelte';
-  import OwnerAvatar from '$lib/components/azuos-task-owner-avatar/azuos-task-owner-avatar.svelte';
   import ProgressBar from '$lib/components/azuos-progress-bar/azuos-progress-bar.svelte';
-  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { cardHueFromHex } from '$lib/utils/card-tone.util';
   import { taskDueBadge, taskPercentage } from '$lib/utils/task-due.util';
   import { columnIdOf, moveOfTaskDrop, type TaskColumn, taskColumnsOf } from '$lib/utils/task-stage.util';
@@ -135,28 +133,27 @@
 {#snippet card(task: Task)}
   {@const due = taskDueBadge(task, data.now)}
   {@const look = lookOfTask(task)}
-  <CardSurface
-    data={{ label: `Abrir a tarefa ${task.title}` }}
-    ui={{ mark: look.icon, markTone: look.tone, className: 'w-full' }}
-    actions={{ onClick: () => actions.onOpen(task) }}
+  <ContentCard
+    data={{
+      label: `Abrir a tarefa ${task.title}`,
+      title: task.title,
+      status: due ? { label: due.label, tone: due.tone } : { label: 'Sem prazo', tone: 'neutral' },
+      footer: {
+        title: task.owner ? (task.owner.name ?? 'Fora do diretório') : 'Sem responsável',
+        subtitle: 'Responsável',
+        person: task.owner?.name ? { id: task.owner.id, name: task.owner.name } : null,
+      },
+    }}
+    ui={{ icon: look.icon, iconTone: look.tone, className: 'w-full' }}
+    actions={{ onOpen: () => actions.onOpen(task) }}
   >
-  <div class="flex flex-col gap-2 p-3 text-left">
-    <span class="text-foreground line-clamp-2 text-sm font-semibold">{task.title}</span>
-    {#if due}
-      <span class="self-start">
-        <StatusBadge data={{ label: due.label }} ui={{ tone: due.tone, size: 'sm' }} />
-      </span>
-    {/if}
-    <ProgressBar
-      data={{ percentage: taskPercentage(task), done: task.progress.done, total: task.progress.total }}
-      ui={{ showCount: true, itemLabel: 'etapas', emptyLabel: 'Sem etapas' }}
-    />
-    <span class="text-muted-foreground flex items-center gap-2 text-xs">
-      <OwnerAvatar owner={task.owner} />
-      <span class="truncate">{task.owner ? (task.owner.name ?? 'Fora do diretório') : 'Sem responsável'}</span>
-    </span>
-  </div>
-  </CardSurface>
+    {#snippet body()}
+      <ProgressBar
+        data={{ percentage: taskPercentage(task), done: task.progress.done, total: task.progress.total }}
+        ui={{ showCount: true, itemLabel: 'etapas', emptyLabel: 'Sem etapas' }}
+      />
+    {/snippet}
+  </ContentCard>
 {/snippet}
 
 <section aria-label="Quadro das tarefas" class="flex flex-col gap-3">

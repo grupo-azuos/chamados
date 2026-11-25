@@ -115,7 +115,10 @@ describe('the ticket queue on the board, in each area', () => {
 
       renderPage(Screen as never, { area });
 
-      expect(await screen.findByRole('heading', { name: 'Em atendimento' })).toBeInTheDocument();
+      /* "Em atendimento" também é o título de um card de número: espera uma coluna que só o quadro tem. */
+      expect(
+        await screen.findByRole('heading', { name: 'Retorno do solicitante' }),
+      ).toBeInTheDocument();
       for (const title of [
         'Aberto',
         'Retorno do solicitante',
