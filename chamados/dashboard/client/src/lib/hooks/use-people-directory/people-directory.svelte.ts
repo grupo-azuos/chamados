@@ -13,9 +13,14 @@
 export type DirectoryPerson = { id: string; name: string; avatarUrl?: string | null };
 
 /* Objetos simples, trocados inteiros a cada carga: a reatividade vem da troca, não de mutação. */
-const state = $state<{ byId: Record<string, string>; byName: Record<string, string> }>({
+const state = $state<{
+  byId: Record<string, string>;
+  byName: Record<string, string>;
+  nameById: Record<string, string>;
+}>({
   byId: {},
   byName: {},
+  nameById: {},
 });
 
 /** O nome comparável: sem acento, sem diferença de maiúscula e com um espaço só. */
@@ -26,13 +31,21 @@ export function normalizePersonName(name: string): string {
 export function setPeopleDirectory(people: readonly DirectoryPerson[]): void {
   const byId: Record<string, string> = {};
   const byName: Record<string, string> = {};
+  const nameById: Record<string, string> = {};
   for (const person of people) {
+    nameById[person.id] = person.name;
     if (!person.avatarUrl) continue;
     byId[person.id] = person.avatarUrl;
     byName[normalizePersonName(person.name)] = person.avatarUrl;
   }
   state.byId = byId;
   state.byName = byName;
+  state.nameById = nameById;
+}
+
+/** O nome de hoje da pessoa, pelo id — para o registro que guardou o id e não o nome. */
+export function personNameOf(id: string | null | undefined): string | null {
+  return id ? (state.nameById[id] ?? null) : null;
 }
 
 /** A foto da pessoa: pelo id, ou pelo nome quando o registro só guardou o nome. */

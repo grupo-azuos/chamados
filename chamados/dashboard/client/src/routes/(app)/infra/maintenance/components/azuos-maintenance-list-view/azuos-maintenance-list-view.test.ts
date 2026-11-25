@@ -11,6 +11,7 @@ import MaintenanceListView, {
   type MaintenanceListFilter,
 } from './azuos-maintenance-list-view.svelte';
 import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
+import { setPeopleDirectory } from '$lib/hooks/use-people-directory/people-directory.svelte';
 
 function maintenance(over: Partial<Maintenance> = {}): Maintenance {
   return {
@@ -106,6 +107,21 @@ function hasCardsOnlyTable(): boolean {
 }
 
 describe('performersOf', () => {
+  // triste
+  /* Os ids dizem duas pessoas e o nome gravado só uma: conta pelos ids, e o nome vem do diretório. */
+  it('trusts the ids when the saved names are fewer, naming each one from the directory', () => {
+    setPeopleDirectory([
+      { id: 'u-g', name: 'Guilherme Siqueira', avatarUrl: null },
+      { id: 'u-w', name: 'Wellington Queiroz', avatarUrl: null },
+    ]);
+
+    expect(performersOf({ performedBy: 'Wellington Queiroz', performedByIds: ['u-g', 'u-w'] })).toEqual([
+      { id: 'u-g', name: 'Guilherme Siqueira' },
+      { id: 'u-w', name: 'Wellington Queiroz' },
+    ]);
+    setPeopleDirectory([]);
+  });
+
   // feliz
   it('gives one face per person who did it, pairing the names with the ids', () => {
     expect(
