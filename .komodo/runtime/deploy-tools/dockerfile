@@ -1,6 +1,4 @@
-# Ferramentas do Komodo. Nenhuma aplicação usa esta imagem.
-FROM infisical/cli:0.44.5
-USER root
-RUN apk add --no-cache docker-cli docker-cli-compose docker-cli-buildx git jq
-ENTRYPOINT []
-CMD ["infisical", "--help"]
+# Ferramentas do Komodo: docker, git, curl e jq para ler o Vault no deploy. Nenhuma aplicação usa esta imagem.
+FROM alpine:3.24.4
+RUN apk add --no-cache docker-cli docker-cli-compose docker-cli-buildx git jq curl
+CMD ["sh"]
