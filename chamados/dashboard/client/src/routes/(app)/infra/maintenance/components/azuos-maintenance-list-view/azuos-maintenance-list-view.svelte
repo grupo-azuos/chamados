@@ -22,6 +22,7 @@
     `onConfirmRemove`).
 -->
 <script lang="ts" module>
+  import { personNameOf } from '$lib/hooks/use-people-directory/people-directory.svelte';
   import { departmentLabel } from '@template/shared/domain/department.util';
   import {
     MAINTENANCE_TYPES,
@@ -123,11 +124,18 @@
     maintenance: Pick<Maintenance, 'performedBy' | 'performedByIds'>,
   ): { id: string | null; name: string }[] {
     const names = (maintenance.performedBy ?? '').split(',').map((name) => name.trim()).filter(Boolean);
-    if (names.length < 2) return [];
     const ids = maintenance.performedByIds ?? [];
+    /* Conta pelo que tiver mais: os ids (quem foi escolhido na lista) ou os nomes (o registro
+       antigo, que só guardou o nome). O nome vem do diretório pelo id e, sem ele, do registro. */
+    const count = Math.max(ids.length, names.length);
+    if (count < 2) return [];
 
-    return names.map((name, index) => ({ id: ids[index] ?? null, name }));
+    return Array.from({ length: count }, (_, index) => {
+      const id = ids[index] ?? null;
+      return { id, name: personNameOf(id) ?? names[index] ?? 'Sem cadastro' };
+    });
   }
+
 
   /** O nome do rodapé: com várias pessoas, a primeira "e mais N" — os nomes todos não cabem. */
   export function performersTitleOf(maintenance: Pick<Maintenance, 'performedBy' | 'performedByIds'>): string {
