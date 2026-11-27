@@ -23,7 +23,7 @@ const keeper: RequestUser = {
   email: 'ana@empresa.com.br',
   name: 'Ana',
   role: 'user',
-  roles: { infra: 'user', sistema: 'user', manutencao: 'manager' },
+  roles: { infra: 'user', sistema: 'user', manutencao: 'admin' },
 };
 
 /* Mesmo papel geral, cargo de CONSULTA na Manutenção: vê os orçamentos, não mexe neles. */

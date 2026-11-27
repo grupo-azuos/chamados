@@ -102,6 +102,32 @@ describe('IdentityProvider', () => {
     expect(user?.roles).toEqual({ infra: 'user' });
   });
 
+  /* Dono e gestor da operação respondem como gestor: acompanham pelos painéis e consultam. */
+  it('reads the owner and the operations manager as a manager, read-only in the module', async () => {
+    for (const role of ['owner', 'operations_manager']) {
+      const forwarded = readForwardedIdentity({ ...HEADERS, 'x-forwarded-user-role': role });
+      expect(forwarded?.role).toBe('manager');
+
+      const { db } = fakeDatabase({ modules: [{ context: 'infra' }] });
+      const user = await new IdentityProvider(db).resolve(forwarded!);
+
+      expect(user?.role).toBe('manager');
+      expect(user?.roles).toEqual({ infra: 'user' });
+    }
+  });
+
+  // triste
+  /* O usuário só abre chamado: um módulo dado a ele no banco não abre tela nenhuma. */
+  it('keeps a plain user out of the modules even with one granted', async () => {
+    const { db } = fakeDatabase({ modules: [{ context: 'infra' }] });
+
+    const user = await new IdentityProvider(db).resolve({ ...ANA, role: 'user' });
+
+    expect(user?.role).toBe('user');
+    expect(user?.roles).toEqual({});
+  });
+
+  // feliz
   it('gives the super-admin every module, and records the UUID the first time', async () => {
     const { db, update } = fakeDatabase({ superAdmins: [{ id: 7, userId: null }] });
 

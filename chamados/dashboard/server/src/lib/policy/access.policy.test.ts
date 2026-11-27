@@ -26,18 +26,23 @@ const BIA = 'bia@empresa.com.br';
 
 describe('access.policy', () => {
   // feliz
-  it('lets every role read and create', () => {
+  it('lets every role read, and only the administrator register', () => {
     for (const role of ['user', 'manager', 'admin', 'superadmin'] as const) {
       expect(canRead(role)).toBe(true);
-      expect(canCreate(role)).toBe(true);
     }
+    expect(canCreate('admin')).toBe(true);
+    expect(canCreate('superadmin')).toBe(true);
   });
 
-  it('keeps other people records for manager and admin only', () => {
-    expect(canManageAnyRecord('manager')).toBe(true);
+  // triste
+  /* O gestor acompanha pelos painéis; o usuário só abre chamado. */
+  it('keeps the manager and the user out of registering and editing', () => {
+    expect(canCreate('manager')).toBe(false);
+    expect(canCreate('user')).toBe(false);
+    expect(canManageAnyRecord('manager')).toBe(false);
+    expect(canManageAnyRecord('user')).toBe(false);
     expect(canManageAnyRecord('admin')).toBe(true);
     expect(canManageAnyRecord('superadmin')).toBe(true);
-    expect(canManageAnyRecord('user')).toBe(false);
   });
 
   it('knows who is an admin or superadmin', () => {
@@ -74,13 +79,17 @@ describe('isOwnRecord', () => {
 
 describe('canModifyRecord', () => {
   // feliz
-  it('lets anyone change their own record', () => {
-    expect(canModifyRecord('user', ANA, ANA)).toBe(true);
+  it('lets the administrator change any record', () => {
+    expect(canModifyRecord('admin', BIA, ANA)).toBe(true);
+    expect(canModifyRecord('superadmin', BIA, null)).toBe(true);
   });
 
-  it('lets manager and admin change what others created', () => {
-    expect(canModifyRecord('manager', BIA, ANA)).toBe(true);
-    expect(canModifyRecord('admin', BIA, ANA)).toBe(true);
+  // triste
+  /* Ser o autor não dá ao gestor o que o papel dele não dá. */
+  it('stops the manager and the user even on their own record', () => {
+    expect(canModifyRecord('user', ANA, ANA)).toBe(false);
+    expect(canModifyRecord('manager', ANA, ANA)).toBe(false);
+    expect(canModifyRecord('manager', BIA, ANA)).toBe(false);
   });
 
   // triste
@@ -88,18 +97,18 @@ describe('canModifyRecord', () => {
     expect(canModifyRecord('user', BIA, ANA)).toBe(false);
   });
 
-  /* Registro sem autor gravado não vira "de todo mundo": só quem manda em tudo mexe nele. */
+  /* Registro sem autor gravado não vira "de todo mundo": só o administrador mexe nele. */
   it('does not turn an authorless record into everyone record', () => {
     expect(canModifyRecord('user', BIA, null)).toBe(false);
-    expect(canModifyRecord('manager', BIA, null)).toBe(true);
+    expect(canModifyRecord('admin', BIA, null)).toBe(true);
   });
 });
 
 describe('policy-assert', () => {
   // feliz
   it('says nothing when the action is allowed', () => {
-    expect(() => assertCanCreate('user', 'chamados')).not.toThrow();
-    expect(() => assertCanModifyRecord('user', ANA, ANA, 'Este chamado')).not.toThrow();
+    expect(() => assertCanCreate('admin', 'computadores')).not.toThrow();
+    expect(() => assertCanModifyRecord('admin', BIA, ANA, 'Esta manutenção')).not.toThrow();
     expect(() => assertIsAdmin('admin', 'Gerenciar pessoas')).not.toThrow();
     expect(() => assertIsAdmin('superadmin', 'Gerenciar pessoas')).not.toThrow();
     expect(() => assertIsSuperAdmin('superadmin', 'Atribuir cargos')).not.toThrow();
@@ -107,11 +116,14 @@ describe('policy-assert', () => {
 
   // triste
   /* A mensagem é parte da regra: ela precisa dizer o que resolve, não só "sem permissão". */
-  it('explains who can change a record from someone else', () => {
-    expect(() => assertCanModifyRecord('user', BIA, ANA, 'Este chamado')).toThrow(
+  it('explains that only the administrator changes a record', () => {
+    expect(() => assertCanModifyRecord('manager', BIA, ANA, 'Esta manutenção')).toThrow(
       ForbiddenException,
     );
-    expect(() => assertCanModifyRecord('user', BIA, ANA, 'Este chamado')).toThrow(/gerente/i);
+    expect(() => assertCanModifyRecord('manager', BIA, ANA, 'Esta manutenção')).toThrow(
+      /administrador/i,
+    );
+    expect(() => assertCanCreate('manager', 'computadores')).toThrow(/painéis/i);
   });
 
   it('refuses an admin action for a manager', () => {
@@ -164,14 +176,14 @@ describe('getRoleInContext & canManageInContext', () => {
   };
 
   // feliz
-  it('resolves different roles for different contexts (user in infra, admin in sistema, manager in manutencao)', () => {
+  it('resolves different roles for different contexts, and only the admin one manages', () => {
     expect(getRoleInContext(user, 'infra')).toBe('user');
     expect(getRoleInContext(user, 'sistema')).toBe('admin');
     expect(getRoleInContext(user, 'manutencao')).toBe('manager');
 
     expect(canManageInContext(user, 'infra')).toBe(false);
     expect(canManageInContext(user, 'sistema')).toBe(true);
-    expect(canManageInContext(user, 'manutencao')).toBe(true);
+    expect(canManageInContext(user, 'manutencao')).toBe(false);
   });
 
   // triste

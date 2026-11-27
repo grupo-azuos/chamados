@@ -29,7 +29,7 @@ import {
 
 const GB = 1024 ** 3;
 
-const ana: RequestUser = { id: '1', email: 'ana@azuos.com.br', name: 'Ana', role: 'user' };
+const ana: RequestUser = { id: '1', email: 'ana@azuos.com.br', name: 'Ana', role: 'admin' };
 
 /** Ninguém identificado: é o que o guard bloquearia antes, e o que a policy recusa aqui. */
 const noRole = { ...ana, role: undefined } as unknown as RequestUser;
@@ -326,6 +326,57 @@ describe('ComputersService — responsible and department checks on save', () =>
   });
 });
 
+
+describe('ComputersService — "Não informado" department', () => {
+  function serviceWith(list: ReturnType<typeof vi.fn>, hr?: DepartmentsService) {
+    return new ComputersService(
+      { list } as unknown as ComputersRepository,
+      new AgentPresenceService(),
+      new LiveWatchService(),
+      undefined,
+      undefined,
+      hr,
+    );
+  }
+
+  // feliz
+  /* Sem departamento E no "Não informado" do RH: para a equipe, os dois dizem a mesma coisa. */
+  it('asks for the machines without a department and the ones in the HR "Não informado"', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    const hr = {
+      catalog: vi.fn().mockResolvedValue(null),
+      officialOptions: vi.fn().mockResolvedValue([
+        { id: 3, name: 'Fiscal' },
+        { id: 9, name: 'Não informado' },
+      ]),
+    } as unknown as DepartmentsService;
+
+    await serviceWith(list, hr).list(ana, query({ departmentId: 'none' }));
+
+    expect(list).toHaveBeenCalledWith(
+      expect.objectContaining({ departmentId: 'none', noDepartmentIds: [9] }),
+      undefined,
+      undefined,
+      undefined,
+      [],
+    );
+  });
+
+  // triste
+  it('still asks for the machines without a department when HR does not answer', async () => {
+    const list = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+
+    await serviceWith(list).list(ana, query({ departmentId: 'none' }));
+
+    expect(list).toHaveBeenCalledWith(
+      expect.objectContaining({ departmentId: 'none', noDepartmentIds: [] }),
+      undefined,
+      undefined,
+      undefined,
+      [],
+    );
+  });
+});
 
 describe('ComputersService — upgrade filter', () => {
   // feliz

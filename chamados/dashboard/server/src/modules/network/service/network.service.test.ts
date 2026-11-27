@@ -8,7 +8,7 @@ import { type NetworkEventRow } from '../../../lib/db/schema/network-events.sche
 import { type NetworkRepository } from '../repository/network.repository';
 import { NetworkService } from './network.service';
 
-const ana: RequestUser = { id: '1', email: 'ana@empresa.com.br', name: 'Ana', role: 'user' };
+const ana: RequestUser = { id: '1', email: 'ana@empresa.com.br', name: 'Ana', role: 'admin' };
 
 /* Identidade PELA METADE: chegou sem papel. O contrato não admite, e é por isso que o teste
    precisa forçar — a recusa existe justamente para o que não devia chegar. */

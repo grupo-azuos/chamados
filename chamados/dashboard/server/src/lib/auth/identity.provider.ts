@@ -41,15 +41,27 @@ export const FORWARDED_IDENTITY_HEADERS = {
 } as const;
 
 /**
- * Os três papéis que o admin-console manda. `superadmin` NÃO está aqui de propósito: ele não
- * vem de cabeçalho nenhum, só do banco deste sistema. Um cabeçalho dizendo `superadmin` é
- * identidade inválida, e não promoção.
+ * Os cinco papéis que o admin-console manda, em cascata. Aqui eles viram três: o administrador
+ * edita, o gestor — e o dono e o gestor da operação, que respondem como ele — consulta os módulos
+ * e os painéis, e o usuário só abre chamado. `superadmin` NÃO está aqui de propósito: ele não vem
+ * de cabeçalho nenhum, só do banco deste sistema. Um cabeçalho dizendo `superadmin` é identidade
+ * inválida, e não promoção.
  */
+const FORWARDED_ROLES = {
+  admin: 'admin',
+  owner: 'manager',
+  operations_manager: 'manager',
+  manager: 'manager',
+  user: 'user',
+} as const;
+
 const forwardedIdentitySchema = z.object({
   id: z.guid(),
   email: z.email(),
   name: z.string().min(1),
-  role: z.enum(['admin', 'manager', 'user']),
+  role: z
+    .enum(['admin', 'owner', 'operations_manager', 'manager', 'user'])
+    .transform((role) => FORWARDED_ROLES[role]),
 });
 
 export type ForwardedIdentity = z.infer<typeof forwardedIdentitySchema>;
@@ -207,13 +219,15 @@ function toSessionUser(
   isSuper: boolean,
   modules: RoleContext[],
 ): SessionUser | null {
+  /* O usuário só abre chamado, pela Central: módulo dado a ele no banco não abre nada. */
+  const reachable = !isSuper && forwarded.role === 'user' ? [] : modules;
   const parsed = sessionUserSchema.safeParse({
     id: forwarded.id,
     email: forwarded.email,
     name: forwarded.name,
     image: null,
-    role: primaryRole(forwarded, isSuper, modules),
-    roles: contextRoles(forwarded, isSuper, modules),
+    role: primaryRole(forwarded, isSuper, reachable),
+    roles: contextRoles(forwarded, isSuper, reachable),
   });
 
   return parsed.success ? parsed.data : null;
