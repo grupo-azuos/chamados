@@ -31,6 +31,15 @@
 </script>
 
 <script lang="ts">
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
+  import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+  } from '$lib/components/azuos-table/azuos-table';
   import { formatBytes, formatPercent } from '$lib/utils/format-machine';
 
   let { data, ui, state: viewState }: AzuosComputerProcessTableProps = $props();
@@ -38,44 +47,54 @@
   const limit = $derived(ui?.limit ?? DEFAULT_LIMIT);
   const shown = $derived(data.processes.slice(0, limit));
   const hidden = $derived(Math.max(0, data.processes.length - limit));
+
+  /* Cabeçalho em frase, e não em caixa alta espaçada (padrão Apple, `apple/sentence-case-labels`). */
+  const HEAD = 'normal-case tracking-normal px-0';
 </script>
 
 {#if viewState?.isLoading}
-  <p class="text-ink-500 text-sm">Lendo a máquina…</p>
+  <!-- O esqueleto tem a forma das linhas da tabela, e diz o que está esperando. -->
+  <div role="status" aria-label="Lendo a máquina…" aria-busy="true" class="flex flex-col gap-3 py-1">
+    {#each [0, 1, 2, 3] as row (row)}
+      <div class="flex items-center justify-between gap-4">
+        <Skeleton class="h-4 w-1/2" />
+        <Skeleton class="h-4 w-24" />
+      </div>
+    {/each}
+  </div>
 {:else if data.processes.length === 0}
   <p class="text-ink-500 text-sm">Nenhum aplicativo informado nesta leitura.</p>
 {:else}
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="text-ink-500 border-b text-left text-xs">
-          <th class="pb-2 font-medium">Aplicativo</th>
-          <th class="pb-2 text-right font-medium">Processador</th>
-          <th class="pb-2 text-right font-medium">Memória</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each shown as process (process.name)}
-          <tr class="border-b last:border-0">
-            <td class="text-ink-900 max-w-0 truncate py-2 pr-3">
-              {process.name}
-              {#if process.instanceCount > 1}
-                <!-- O Chrome abre um processo por aba: dizer quantos são explica um número de
-                     memória que, de outro modo, pareceria absurdo para um "programa só". -->
-                <span class="text-ink-500 text-xs">({process.instanceCount} processos)</span>
-              {/if}
-            </td>
-            <td class="text-ink-900 py-2 text-right tabular-nums">
-              {formatPercent(process.cpuPercent)}
-            </td>
-            <td class="text-ink-900 py-2 text-right tabular-nums">
-              {formatBytes(process.memBytes)}
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  </div>
+  <!-- A tabela da casa, sem a superfície: ela já mora dentro do bloco (card dentro de card não). -->
+  <Table containerClass="rounded-none bg-transparent shadow-none">
+    <TableHeader>
+      <TableRow>
+        <TableHead class={HEAD}>Aplicativo</TableHead>
+        <TableHead class={`${HEAD} text-right`}>Processador</TableHead>
+        <TableHead class={`${HEAD} text-right`}>Memória</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {#each shown as process (process.name)}
+        <TableRow>
+          <TableCell class="text-ink-900 max-w-0 truncate px-0 pr-3">
+            {process.name}
+            {#if process.instanceCount > 1}
+              <!-- O Chrome abre um processo por aba: dizer quantos são explica um número de
+                   memória que, de outro modo, pareceria absurdo para um "programa só". -->
+              <span class="text-ink-500 text-xs">({process.instanceCount} processos)</span>
+            {/if}
+          </TableCell>
+          <TableCell class="text-ink-900 px-0 text-right tabular-nums">
+            {formatPercent(process.cpuPercent)}
+          </TableCell>
+          <TableCell class="text-ink-900 px-0 text-right tabular-nums">
+            {formatBytes(process.memBytes)}
+          </TableCell>
+        </TableRow>
+      {/each}
+    </TableBody>
+  </Table>
 
   {#if hidden > 0}
     <p class="text-ink-500 mt-2 text-xs">

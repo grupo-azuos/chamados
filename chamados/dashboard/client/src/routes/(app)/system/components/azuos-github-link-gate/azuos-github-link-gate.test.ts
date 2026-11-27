@@ -22,7 +22,7 @@ function renderGate(overrides = {}) {
 describe('GitHub link gate', () => {
   it('requires linking and exposes a connect action', async () => {
     const actions = renderGate();
-    expect(screen.getByRole('heading')).toHaveTextContent('Vincule seu GitHub');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Vincule seu GitHub');
     await userEvent.click(screen.getByRole('button', { name: 'Vincular GitHub' }));
     expect(actions.onConnect).toHaveBeenCalledOnce();
   });

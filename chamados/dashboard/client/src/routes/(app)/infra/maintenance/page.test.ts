@@ -79,7 +79,8 @@ describe('the infra/maintenance route with history', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    await user.click(screen.getAllByRole('button', { name: 'Corrigir' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: /^Ações da manutenção de/ }).at(-1)!);
+    await user.click(await screen.findByRole('menuitem', { name: 'Corrigir' }));
     dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Corrigir manutenção');
   });

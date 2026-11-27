@@ -68,6 +68,7 @@
   import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
   import MultiSelectField from '$lib/components/azuos-multi-select-field/azuos-multi-select-field.svelte';
   import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import {
     buildProjectMap,
     type ProjectMapGraph,
@@ -104,9 +105,11 @@
   }
   const options = $derived(data.projects.map((project) => ({ value: String(project.id), label: project.name })));
 
-  function toggle(kind: ProjectMapKind) {
-    kinds = kinds.includes(kind) ? kinds.filter((item) => item !== kind) : [...kinds, kind];
-  }
+  const KIND_OPTIONS = PROJECT_MAP_KIND_TOGGLES.map((item) => ({ value: item.kind, label: item.label }));
+  const COMMIT_OPTIONS = [
+    { value: 'all', label: 'Todos os commits' },
+    { value: 'merges', label: 'Só merges e branches' },
+  ];
 </script>
 
 {#snippet toolbar()}
@@ -129,23 +132,18 @@
       ui={{ ariaLabel: 'Responsável', placeholder: 'Todos os responsáveis', className: 'w-64' }}
       actions={{ onChange: actions.onPersonChange }}
     />
-    <ActionButton
-      data={{ label: 'Só merges e branches' }}
-      ui={{ variant: data.onlyMerges ? 'primary' : 'secondary', size: 'sm' }}
-      state={{ isPressed: data.onlyMerges }}
-      actions={{ onClick: () => actions.onOnlyMergesChange(!data.onlyMerges) }}
+    <!-- Recorte de uma escolha: a pílula cinza do grupo, com a ligada em branco. -->
+    <SegmentedControl
+      data={{ value: data.onlyMerges ? 'merges' : 'all', options: COMMIT_OPTIONS }}
+      ui={{ ariaLabel: 'Commits no mapa' }}
+      actions={{ onChange: (value: string) => actions.onOnlyMergesChange(value === 'merges') }}
     />
-    <div role="group" aria-label="Mostrar no mapa" class="flex flex-wrap items-center gap-2">
-      <span class="text-muted-foreground text-sm font-medium">Mostrar</span>
-      {#each PROJECT_MAP_KIND_TOGGLES as item (item.kind)}
-        <ActionButton
-          data={{ label: item.label }}
-          ui={{ variant: kinds.includes(item.kind) ? 'primary' : 'secondary', size: 'sm' }}
-          state={{ isPressed: kinds.includes(item.kind) }}
-          actions={{ onClick: () => toggle(item.kind) }}
-        />
-      {/each}
-    </div>
+    <!-- O que entra no mapa é escolha de VÁRIAS opções: o select de marcar, e não pastilhas azuis. -->
+    <MultiSelectField
+      data={{ values: kinds, options: KIND_OPTIONS, placeholder: 'Nada no mapa', noun: 'tipos' }}
+      ui={{ ariaLabel: 'Mostrar no mapa', className: 'w-56' }}
+      actions={{ onChange: (values) => (kinds = values as ProjectMapKind[]) }}
+    />
     <ActionButton
       data={{ label: 'Arrumar de novo' }}
       ui={{ variant: 'ghost', size: 'sm', icon: LayoutGrid }}

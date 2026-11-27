@@ -12,6 +12,11 @@
   envio; `ui` traz a classe e o só leitura.
 -->
 <script lang="ts" module>
+  import CircleAlert from '@lucide/svelte/icons/circle-alert';
+  import Dot from '@lucide/svelte/icons/dot';
+  import Repeat from '@lucide/svelte/icons/repeat';
+  import StickyNote from '@lucide/svelte/icons/sticky-note';
+  import Wrench from '@lucide/svelte/icons/wrench';
   import {
     inventoryItemEventTypeLabel,
     inventoryItemEventTypeOptions,
@@ -45,14 +50,24 @@
 
   const EVENT_OPTIONS = inventoryItemEventTypeOptions();
 
-  const DOT_TONE_CLASSES = {
-    neutral: 'bg-muted-foreground',
-    info: 'bg-info',
-    success: 'bg-success',
-    warning: 'bg-warning',
-    danger: 'bg-destructive',
-    brand: 'bg-primary',
+  /* O tom do passo da linha do tempo (o ícone cheio só tem neutro, marca, sucesso e perigo): o
+     tom exato do tipo continua no selo, ao lado. */
+  const STEP_TONES = {
+    neutral: 'neutral',
+    info: 'brand',
+    success: 'success',
+    warning: 'neutral',
+    danger: 'danger',
+    brand: 'brand',
   } as const;
+
+  const EVENT_ICONS: Record<InventoryItemEventType, typeof CircleAlert> = {
+    defeito: CircleAlert,
+    troca: Repeat,
+    manutencao: Wrench,
+    observacao: StickyNote,
+    outro: Dot,
+  };
 
   export function formatEventDateTime(value: string): string {
     const date = new Date(value);
@@ -66,9 +81,12 @@
 <script lang="ts">
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
+  import Timeline from '$lib/components/azuos-timeline/azuos-timeline.svelte';
+  import TimelineStep from '$lib/components/azuos-timeline-step/azuos-timeline-step.svelte';
   import { cn } from '$lib/utils/cn';
 
   let { data, state, actions, ui }: AzuosInventoryItemTimelineProps = $props();
@@ -81,12 +99,11 @@
 
 <div class={cn('flex flex-col gap-6', ui?.className)}>
   {#if !ui?.readOnly && actions}
-    <form
-      onsubmit={handleSubmit}
-      class="rounded-card border-border bg-muted/40 flex flex-col gap-3.5 border p-3.5"
-    >
+    <!-- O formulário mora direto no diálogo, sem moldura: caixa com borda em volta é proibida, e a
+         divisória de baixo já separa o registrar da lista. -->
+    <form onsubmit={handleSubmit} class="border-border flex flex-col gap-3.5 border-b pb-5">
       <div class="flex flex-col gap-1">
-        <h4 class="text-foreground text-sm font-semibold">Registrar ocorrência / observação</h4>
+        <h4 class="text-foreground text-sm font-semibold">Registrar ocorrência ou observação</h4>
         <p class="text-muted-foreground text-xs">
           Adicione defeitos, trocas de peças, manutenções ou anotações sobre este patrimônio.
         </p>
@@ -133,53 +150,44 @@
     {#if state?.error}
       <ErrorState data={{ message: state.error }} ui={{ variant: 'inline' }} />
     {:else if state?.isLoading}
-      <p class="text-muted-foreground text-sm">Carregando a linha do tempo…</p>
+      <div class="flex flex-col gap-3" role="status" aria-busy="true" aria-label="Carregando a linha do tempo">
+        {#each [0, 1, 2] as index (index)}
+          <div class="flex gap-3.5">
+            <Skeleton class="size-8 shrink-0 rounded-full" />
+            <div class="flex flex-1 flex-col gap-2 pt-1">
+              <Skeleton class="h-3 w-1/3" />
+              <Skeleton class="h-10 w-full" />
+            </div>
+          </div>
+        {/each}
+      </div>
     {:else if data.events.length === 0}
       <p class="text-muted-foreground text-sm">
         Nenhuma ocorrência registrada ainda para este produto.
       </p>
     {:else}
-      <ol class="flex flex-col">
+      <!-- A linha do tempo da casa (`AzuosTimeline`): o ícone cheio no tom do tipo, quem registrou
+           e quando no título, e o selo com o tipo exato ao lado da descrição. -->
+      <Timeline>
         {#each data.events as event, index (event.id)}
           {@const tone = inventoryItemEventTypeTone(event.type)}
-          {@const isFirst = index === 0}
-          {@const isLast = index === data.events.length - 1}
-
-          <li class="flex gap-4">
-            <div class="flex w-3 shrink-0 flex-col items-center" aria-hidden="true">
-              <span class={cn('h-0.5 w-px', isFirst ? 'bg-transparent' : 'bg-border')}></span>
-              <span class={cn('my-1 size-3 shrink-0 rounded-full', DOT_TONE_CLASSES[tone])}></span>
-              {#if !isLast}
-                <span class="bg-border w-px flex-1"></span>
-              {/if}
-            </div>
-
-            <div class={cn('flex min-w-0 flex-1 flex-col gap-2', isLast ? 'pb-0' : 'pb-6')}>
-              <div class="flex min-h-6 flex-wrap items-center gap-x-2.5 gap-y-1">
-                <StatusBadge
-                  data={{ label: inventoryItemEventTypeLabel(event.type) }}
-                  ui={{ tone, size: 'sm' }}
-                />
-                <span class="text-foreground min-w-0 truncate text-sm leading-6 font-medium">
-                  {event.authorName}
-                </span>
-                <time
-                  class="text-muted-foreground ml-auto text-xs leading-6 tabular-nums"
-                  datetime={event.createdAt}
-                >
-                  {formatEventDateTime(event.createdAt)}
-                </time>
-              </div>
-
-              <p
-                class="rounded-box border-border bg-muted text-foreground border px-3.5 py-2.5 text-sm whitespace-pre-line"
-              >
-                {event.description}
-              </p>
-            </div>
-          </li>
+          <TimelineStep
+            data={{
+              title: event.authorName,
+              description: formatEventDateTime(event.createdAt),
+              icon: EVENT_ICONS[event.type] ?? Dot,
+            }}
+            ui={{ tone: STEP_TONES[tone], isLast: index === data.events.length - 1 }}
+          >
+            <span class="flex">
+              <StatusBadge data={{ label: inventoryItemEventTypeLabel(event.type) }} ui={{ tone, size: 'sm' }} />
+            </span>
+            <p class="bg-muted text-foreground rounded-box px-3.5 py-2.5 text-sm whitespace-pre-line">
+              {event.description}
+            </p>
+          </TimelineStep>
         {/each}
-      </ol>
+      </Timeline>
     {/if}
   </div>
 </div>

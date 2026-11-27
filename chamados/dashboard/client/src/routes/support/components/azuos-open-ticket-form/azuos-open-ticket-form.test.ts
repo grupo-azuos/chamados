@@ -94,8 +94,10 @@ describe('AzuosOpenTicketForm', () => {
 
     expect(screen.getByText('Quem vai te atender?')).toBeInTheDocument();
     // Sem escolha, fica com quem estiver livre — e dá para voltar a isso depois de escolher.
-    expect(screen.getByRole('radio', { name: /quem estiver livre/i })).toHaveAttribute('aria-checked', 'true');
-    await user.click(screen.getByRole('radio', { name: /ana lima/i }));
+    const field = screen.getByRole('combobox', { name: /responsável pelo chamado/i });
+    expect(field).toHaveTextContent('Quem estiver livre');
+    await user.click(field);
+    await user.click(await screen.findByRole('option', { name: /ana lima/i }));
     expect(actions.onChange).toHaveBeenCalledWith('assigneeId', 'u-ana');
   });
 
@@ -121,7 +123,7 @@ describe('AzuosOpenTicketForm', () => {
   });
 
   // triste
-  it('turns many attendants into a searchable list instead of a wall of cards', async () => {
+  it('picks one of many attendants in the person field, with search', async () => {
     const user = userEvent.setup();
     setup({
       data: {
@@ -137,7 +139,10 @@ describe('AzuosOpenTicketForm', () => {
     await advanceTo(user, 4);
 
     expect(screen.queryByRole('radio')).toBeNull();
-    expect(screen.getByRole('button', { name: /responsável pelo chamado/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: /responsável pelo chamado/i }));
+    await user.type(await screen.findByPlaceholderText(/pesquisar|buscar/i), 'dan');
+    await user.click(await screen.findByRole('option', { name: /Dani/ }));
+    expect(actions.onChange).toHaveBeenCalledWith('assigneeId', 'u-Dani');
   });
 
   it('opens on the area step, with the three cards to choose from', () => {
@@ -578,7 +583,10 @@ describe('AzuosOpenTicketForm', () => {
     await advanceTo(user, 4);
     // Já tem alguém vinculado: o campo vem aberto, sem precisar pedir.
     expect(screen.getByText('Quem mais acompanha')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Tirar Caio Reis' }));
+    const field = screen.getByRole('button', { name: /Pessoas vinculadas/ });
+    expect(field).toHaveTextContent('Caio Reis');
+    await user.click(field);
+    await user.click(await screen.findByRole('checkbox', { name: /Caio Reis/ }));
 
     expect(onWatchersChange).toHaveBeenCalledWith([]);
   });
@@ -871,7 +879,8 @@ describe('AzuosOpenTicketForm — every field reports to the model', () => {
     await advanceTo(user, 1);
     expect(screen.getByRole('textbox', { name: /Seu nome/ })).toBeDisabled();
     await advanceTo(user, 3);
-    await pickOption(/responsável pelo chamado/i, 'Caio');
+    await user.click(screen.getByRole('combobox', { name: /responsável pelo chamado/i }));
+    await user.click(await screen.findByRole('option', { name: /Caio/ }));
     expect(actions.onChange).toHaveBeenCalledWith('assigneeId', 'u-Caio');
   });
 });
@@ -938,6 +947,6 @@ describe('AzuosOpenTicketForm — linking people before anyone was linked', () =
     await user.click(screen.getByRole('button', { name: 'Vincular outras pessoas' }));
 
     expect(screen.getByText('Quem mais acompanha')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Tirar / })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pessoas vinculadas/ })).toHaveTextContent('Escolha as pessoas');
   });
 });

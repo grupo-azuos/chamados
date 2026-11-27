@@ -40,8 +40,8 @@
 <script lang="ts">
   import { disposalReasonLabel } from '@template/shared/domain/inventory-stock.util';
 
-  /* A bolinha de cada sentido: a saída no amarelo, a entrada no verde, o descarte no vermelho. */
-  const DIRECTION_TONES = { out: 'yellow', in: 'green', disposal: 'red' } as const;
+  /* O selo de cada sentido: a saída no amarelo, a entrada no verde, o descarte no vermelho. */
+  const DIRECTION_TONES = { out: 'warning', in: 'success', disposal: 'danger' } as const;
   import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import Link2 from '@lucide/svelte/icons/link-2';
   import Monitor from '@lucide/svelte/icons/monitor';
@@ -49,8 +49,8 @@
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
-  import { cardToneClasses } from '$lib/utils/card-tone.util';
-  import { cn } from '$lib/utils/cn';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
+  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { groupByMachine } from '$lib/utils/ticket-stock-link.util';
 
   let { data, ui, state: cardState, actions }: AzuosTicketStockItemsCardProps = $props();
@@ -75,7 +75,10 @@
   </div>
 
   {#if cardState?.isLoading}
-    <p class="text-muted-foreground text-xs">Carregando os itens…</p>
+    <div class="flex flex-col gap-2" aria-busy="true" aria-label="Carregando os itens">
+      <Skeleton class="h-8 w-full" />
+      <Skeleton class="h-8 w-2/3" />
+    </div>
   {:else if data.items.length === 0}
     <p class="text-muted-foreground/70 text-xs">Nenhum item do estoque neste chamado.</p>
   {:else}
@@ -84,24 +87,23 @@
       {#each groups as group (group.machineId)}
         <li class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-3">
           <span class="flex min-w-0 shrink-0 items-center gap-2 sm:w-56">
-            <span aria-hidden="true" class={cn('rounded-icon inline-flex size-7 shrink-0 items-center justify-center', cardToneClasses('blue').dot)}>
-              <Monitor class="size-3.5" />
-            </span>
+            <Monitor class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
             <span class="text-foreground truncate text-sm font-semibold">{group.machineName ?? 'Sem máquina'}</span>
           </span>
           <ArrowRight class="text-muted-foreground hidden size-4 shrink-0 sm:block" aria-hidden="true" />
-          <ul class="flex min-w-0 flex-1 flex-wrap gap-2" aria-label={`Itens de ${group.machineName ?? 'sem máquina'}`}>
+          <ul class="flex min-w-0 flex-1 flex-col gap-1" aria-label={`Itens de ${group.machineName ?? 'sem máquina'}`}>
             {#each group.items as item (item.id)}
-              <li class="rounded-chip bg-muted flex items-center gap-1.5 py-1 pr-1 pl-3 text-sm">
-                <span
-                  aria-hidden="true"
-                  class={cn('size-2 shrink-0 rounded-full', cardToneClasses(DIRECTION_TONES[item.direction]).swatch)}
-                ></span>
+              <!-- Uma linha por item: o sentido no selo da casa, o nome, a quantidade e a situação. -->
+              <li class="flex flex-wrap items-center gap-1.5 text-sm">
+                <StatusBadge
+                  data={{
+                    label: `${ticketStockDirectionLabel(item.direction)}${item.reason ? ` (${disposalReasonLabel(item.reason).toLowerCase()})` : ''}`,
+                  }}
+                  ui={{ tone: DIRECTION_TONES[item.direction], size: 'sm' }}
+                />
                 <span class="text-foreground font-medium">{item.name}</span>
                 <span class="text-muted-foreground tabular-nums">×{item.quantity}</span>
-                <span class="text-muted-foreground text-xs">
-                  · {ticketStockDirectionLabel(item.direction)}{item.reason ? ` (${disposalReasonLabel(item.reason).toLowerCase()})` : ''} · {item.settledAt ? 'baixado' : 'reservado'}
-                </span>
+                <span class="text-muted-foreground text-xs">· {item.settledAt ? 'baixado' : 'reservado'}</span>
                 {#if !cardState?.isClosed}
                   <ActionButton
                     data={{ label: `Tirar ${item.name} do chamado` }}

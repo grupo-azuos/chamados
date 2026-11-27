@@ -1,11 +1,12 @@
 <!--
   @component
-  A TELA DE TAREFAS — no molde do grupo: cabeçalho (título, modos de ver e "Nova tarefa") →
-  números (Tarefas, Atrasadas, Vencem na semana) → busca e filtros → o conteúdo do modo escolhido
-  → paginação (só lista e cards).
+  A TELA DE TAREFAS — no molde do grupo: cabeçalho (título e "Nova tarefa") → números (Tarefas,
+  Atrasadas, Vencem na semana) → barra de ferramentas (busca, filtros, o modo de ver) → o conteúdo
+  do modo escolhido → paginação (só a lista).
 
-  Os modos são os do Paralegal: Lista, Cards, Quadro, Calendário e Timeline. "Atrasadas" pisca
-  (só com `motion-safe`) quando há alguma, e clicar nele filtra as atrasadas.
+  Os modos são Lista, Quadro, Calendário, Timeline e Mapa. A lista é a tabela OU a grade de cards,
+  pela troca do sistema inteiro (`AzuosTableViewToggle`, no fim da barra). "Atrasadas" leva o selo
+  vermelho do card quando há alguma, e clicar nele filtra as atrasadas.
 
   Função pura de props: recebe o model da lista inteiro (`data`/`state`/`actions`) mais o que é
   da tela — `today`, `now`, `canCreate` e `onNew`/`onRefuse`.
@@ -113,6 +114,7 @@
   import ClipboardList from '@lucide/svelte/icons/clipboard-list';
   import ListChecks from '@lucide/svelte/icons/list-checks';
   import Plus from '@lucide/svelte/icons/plus';
+  import SearchX from '@lucide/svelte/icons/search-x';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import FilterPanel from '$lib/components/azuos-filter-panel/azuos-filter-panel.svelte';
@@ -121,18 +123,29 @@
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
+  import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { TASK_VIEW_LABELS, TASK_VIEWS, type TaskView } from '$lib/hooks/use-task-list/use-task-list.svelte';
   import TaskBoard from '$lib/components/azuos-task-board/azuos-task-board.svelte';
   import TaskCalendar from '$lib/components/azuos-task-calendar/azuos-task-calendar.svelte';
   import TaskCard from '$lib/components/azuos-task-card/azuos-task-card.svelte';
-  import TaskRow from '$lib/components/azuos-task-row/azuos-task-row.svelte';
+  import TaskTable from '$lib/components/azuos-task-table/azuos-task-table.svelte';
+  import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
+  import { cn } from '$lib/utils/cn';
   import TaskMap from '$lib/components/azuos-task-map/azuos-task-map.svelte';
   import TaskTimeline from '$lib/components/azuos-task-timeline/azuos-task-timeline.svelte';
 
   let { data, ui, state: viewState, actions }: AzuosTaskListViewProps = $props();
 
-  const paged = $derived(data.view === 'list' || data.view === 'cards');
+  const paged = $derived(data.view === 'list');
+  const tableView = useTableViewModel();
+  const cardActions = $derived({
+    onOpen: actions.onOpen,
+    onMove: actions.onMove,
+    onRemove: actions.onAskRemove,
+    onRestore: actions.onRestore,
+  });
 
   const WHO_OPTIONS = [
     { value: 'team', label: 'Da equipe' },
@@ -157,41 +170,37 @@
     data={{ title: 'Tarefas', description: AREA_TEXT[data.area].description }}
     ui={{ icon: ListChecks }}
   >
-    <div class="flex flex-wrap items-center gap-2">
-      <SegmentedControl
-        data={{ value: data.view, options: TASK_VIEWS.map((view) => ({ value: view, label: TASK_VIEW_LABELS[view] })) }}
-        ui={{ ariaLabel: 'Modo de ver as tarefas' }}
-        actions={{ onChange: (value: string) => actions.onViewChange(value as TaskView) }}
+    {#if ui?.canCreate !== false}
+      <ActionButton
+        data={{ label: 'Nova tarefa' }}
+        ui={{ variant: 'primary', icon: Plus }}
+        actions={{ onClick: actions.onNew }}
       />
-      {#if ui?.canCreate !== false}
-        <ActionButton
-          data={{ label: 'Nova tarefa' }}
-          ui={{ variant: 'primary', icon: Plus }}
-          actions={{ onClick: actions.onNew }}
-        />
-      {/if}
-    </div>
+    {/if}
   </PageHeader>
 
-  <div class="grid gap-3 sm:grid-cols-3">
+  <StatCardGrid>
     <ContentCard data={{ label: 'Tarefas', title: 'Tarefas', highlight: { value: data.total, hint: 'no recorte' } }} ui={{ icon: ClipboardList, iconTone: 'info' }} state={{ isLoading: viewState.isLoading }} />
-    <div class="relative">
-      <ContentCard data={{ label: 'Atrasadas', title: 'Atrasadas', meta: 'Clique para ver só as atrasadas', highlight: { value: data.alerts.overdue } }} ui={{ icon: AlarmClock, iconTone: 'danger' }} state={{ isLoading: viewState.isLoading, isSelected: data.filter.overdue }} actions={{ onOpen: () => actions.onFilterChange('overdue', !data.filter.overdue) }} />
-      {#if data.alerts.overdue > 0}
-        <span class="pointer-events-none absolute top-3 right-3 flex size-3" aria-hidden="true">
-          <span class="bg-destructive absolute inline-flex size-full rounded-full motion-safe:animate-ping"></span>
-          <span class="bg-destructive relative inline-flex size-3 rounded-full"></span>
-        </span>
-      {/if}
-    </div>
+    <ContentCard
+      data={{
+        label: 'Atrasadas',
+        title: 'Atrasadas',
+        meta: 'Clique para ver só as atrasadas',
+        highlight: { value: data.alerts.overdue },
+        alert: data.alerts.overdue > 0 ? { count: data.alerts.overdue, message: 'Há tarefas atrasadas' } : null,
+      }}
+      ui={{ icon: AlarmClock, iconTone: 'danger' }}
+      state={{ isLoading: viewState.isLoading, isSelected: data.filter.overdue }}
+      actions={{ onOpen: () => actions.onFilterChange('overdue', !data.filter.overdue) }}
+    />
     <ContentCard data={{ label: 'Vencem na semana', title: 'Vencem na semana', highlight: { value: data.alerts.dueSoon } }} ui={{ icon: CalendarClock, iconTone: 'warning' }} state={{ isLoading: viewState.isLoading }} />
-  </div>
+  </StatCardGrid>
 
   <!-- O cartão de filtros do grupo (o do Inventário e dos Chamados, como o do Paralegal): à vista a
        busca e o responsável; situação, origem e prazo atrás do "Filtros"; embaixo, o que MOSTRA. -->
   <FilterPanel
     data={taskFilterPanelOf(data)}
-    ui={{ ariaLabel: 'Filtros das tarefas' }}
+    ui={{ ariaLabel: 'Filtros das tarefas', showViewToggle: data.view === 'list' }}
     actions={{
       onSearchChange: actions.onSearchChange,
       onFieldChange: (key: string, value: string) => changeField(key, value),
@@ -200,6 +209,12 @@
     }}
   >
     {#snippet toggles()}
+      <span class="text-muted-foreground text-sm font-medium">Ver</span>
+      <SegmentedControl
+        data={{ value: data.view, options: TASK_VIEWS.map((view) => ({ value: view, label: TASK_VIEW_LABELS[view] })) }}
+        ui={{ ariaLabel: 'Modo de ver as tarefas' }}
+        actions={{ onChange: (value: string) => actions.onViewChange(value as TaskView) }}
+      />
       <span class="text-muted-foreground text-sm font-medium">Mostrar</span>
       {#if data.view !== 'map'}
         <SegmentedControl
@@ -221,27 +236,40 @@
   {/if}
 
   {#if viewState.error}
-    <ErrorState data={{ message: viewState.error }} actions={{ onRetry: actions.onRetry }} />
+    <ErrorState data={{ title: 'A lista de tarefas não carregou', message: viewState.error }} actions={{ onRetry: actions.onRetry }} />
+  {:else if viewState.isLoading && paged}
+    <!-- O esqueleto tem a forma da grade: sem ele, a tela pula quando a lista chega. -->
+    <div class="card-grid" aria-busy="true" aria-label="Carregando as tarefas">
+      {#each Array.from({ length: 6 }, (_, index) => index) as index (index)}
+        <div class="bg-card shadow-card rounded-surface flex flex-col gap-3 p-4">
+          <Skeleton class="h-3 w-1/4" />
+          <Skeleton class="h-4 w-2/3" />
+          <Skeleton class="h-3 w-full" />
+          <Skeleton class="mt-4 h-6 w-1/2" />
+        </div>
+      {/each}
+    </div>
   {:else if viewState.isEmpty && paged}
-    <EmptyState data={{ title: 'Nenhuma tarefa ainda', description: AREA_TEXT[data.area].empty }} />
+    <EmptyState data={{ title: 'Nenhuma tarefa ainda', description: AREA_TEXT[data.area].empty }} ui={{ icon: ListChecks }}>
+      {#if ui?.canCreate !== false}
+        <ActionButton data={{ label: 'Nova tarefa' }} ui={{ icon: Plus }} actions={{ onClick: actions.onNew }} />
+      {/if}
+    </EmptyState>
   {:else if viewState.isFilteredOut && paged}
-    <EmptyState data={{ title: 'Nada com esses filtros', description: 'Tire algum filtro para ver mais tarefas.' }} />
+    <EmptyState data={{ title: 'Nenhuma tarefa encontrada', description: 'Nada combina com a busca ou os filtros escolhidos.' }} ui={{ icon: SearchX }}>
+      <ActionButton data={{ label: 'Limpar filtros' }} ui={{ variant: 'secondary' }} actions={{ onClick: actions.onClearFilters }} />
+    </EmptyState>
   {:else if data.view === 'list'}
-    <ul class="flex flex-col gap-2" aria-label="Lista de tarefas">
+    <!-- A grade de cards: sempre na tela estreita (< xl), ou quando a pessoa pediu cards na troca.
+         Os cards são filhos diretos da grade: um invólucro entre eles quebra a altura igual. -->
+    <div class={cn('card-grid', !tableView.forceCards && 'xl:hidden')} data-slot="task-cards">
       {#each data.tasks as task (task.id)}
-        <li><TaskRow data={{ task, now: data.now }} actions={{ onOpen: actions.onOpen }} /></li>
+        <TaskCard data={{ task, now: data.now }} actions={cardActions} />
       {/each}
-    </ul>
-  {:else if data.view === 'cards'}
-    <!-- Os cards são filhos diretos da grade (como no Inventário): um invólucro entre eles quebra
-         a altura igual da linha. -->
-    <div class="card-grid" data-slot="task-cards">
-      {#each data.tasks as task (task.id)}
-        <TaskCard
-          data={{ task, now: data.now }}
-          actions={{ onOpen: actions.onOpen, onMove: actions.onMove, onRemove: actions.onAskRemove, onRestore: actions.onRestore }}
-        />
-      {/each}
+    </div>
+    <!-- A tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu cards. -->
+    <div class={cn('hidden', !tableView.forceCards && 'xl:block')} data-slot="task-table">
+      <TaskTable data={{ tasks: data.tasks, now: data.now }} actions={cardActions} />
     </div>
   {:else if data.view === 'board'}
     <TaskBoard

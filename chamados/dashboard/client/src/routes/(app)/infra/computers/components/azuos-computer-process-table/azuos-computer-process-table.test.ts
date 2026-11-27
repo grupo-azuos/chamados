@@ -36,6 +36,14 @@ describe('AzuosComputerProcessTable', () => {
     expect(screen.getByText('1,0 GB')).toBeInTheDocument();
   });
 
+  // feliz
+  it('draws the house table, with the headers in sentence case', () => {
+    render(ComputerProcessTable, { props: { data: { processes: [process()] } } });
+
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Processador' })).toBeInTheDocument();
+  });
+
   /* O Chrome abre um processo por aba: dizer quantos são explica um número de memória que,
      de outro modo, pareceria absurdo para um "programa só". */
   it('says how many processes an application opened when there is more than one', () => {
@@ -82,7 +90,7 @@ describe('AzuosComputerProcessTable', () => {
       props: { data: { processes: [] }, state: { isLoading: true } },
     });
 
-    expect(screen.getByText('Lendo a máquina…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Lendo a máquina…' })).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 

@@ -16,6 +16,7 @@ const sampleEvent = {
 };
 
 describe('AzuosInventoryItemTimeline', () => {
+  // feliz
   it('formats date and time properly', () => {
     const formatted = formatEventDateTime('2026-11-05T12:00:00.000Z');
     expect(formatted).toContain('05/11/2026');
@@ -58,5 +59,18 @@ describe('AzuosInventoryItemTimeline', () => {
     await fireEvent.click(submitBtn);
 
     expect(onSubmit).toHaveBeenCalled();
+  });
+
+  // triste
+  it('shows the skeleton, and not the empty sentence, while it loads', () => {
+    render(Timeline, {
+      props: {
+        data: { events: [], type: 'observacao', description: '' },
+        state: { isLoading: true },
+      },
+    });
+
+    expect(screen.getByRole('status', { name: 'Carregando a linha do tempo' })).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma ocorrência registrada ainda para este produto.')).toBeNull();
   });
 });

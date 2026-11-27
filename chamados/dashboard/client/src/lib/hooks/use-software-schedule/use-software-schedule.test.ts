@@ -130,9 +130,6 @@ describe('daily GitHub PRs', () => {
     expect(guilherme).toBeDefined();
     model.actions.onAuthorFilterChange(guilherme!.value);
     expect(model.data.githubEvents.map((event) => event.id)).toEqual([1]);
-    expect(
-      model.data.developerStats.find((developer) => developer.author === 'Guilherme Siqueira'),
-    ).toMatchObject({ localMerges: 1 });
   });
 
   // triste
@@ -471,11 +468,6 @@ describe('projects, people and the current time', () => {
       'bia',
       'bot[bot]',
       'Não informado',
-    ]);
-    expect(model.data.developerStats).toEqual([
-      { author: 'ana', mergedPullRequests: 2, localMerges: 0, resolvedIssues: 0 },
-      { author: 'bia', mergedPullRequests: 0, localMerges: 0, resolvedIssues: 1 },
-      { author: 'Não informado', mergedPullRequests: 0, localMerges: 1, resolvedIssues: 0 },
     ]);
   });
 

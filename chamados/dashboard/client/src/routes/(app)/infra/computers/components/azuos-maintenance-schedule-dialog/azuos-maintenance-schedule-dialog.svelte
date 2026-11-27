@@ -46,7 +46,6 @@
 </script>
 
 <script lang="ts">
-  import CalendarClock from '@lucide/svelte/icons/calendar-clock';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import DatePicker from '$lib/components/azuos-date-picker/azuos-date-picker.svelte';
@@ -78,16 +77,10 @@
 >
   <DialogContent>
     <form novalidate class="flex flex-col gap-4" onsubmit={handleSubmit}>
-      <DialogHeader class="gap-1.5">
-        <div class="flex items-center gap-2.5">
-          <span class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-muted text-primary">
-            <CalendarClock class="size-4" aria-hidden="true" />
-          </span>
-          <DialogTitle class="text-lg font-semibold tracking-tight">
-            {isEdit ? 'Remarcar manutenção' : 'Agendar manutenção'}
-          </DialogTitle>
-        </div>
-        <DialogDescription class="text-xs text-muted-foreground break-words">
+      <!-- O cabeçalho da casa: título e descrição, sem selo de ícone desenhado à mão. -->
+      <DialogHeader>
+        <DialogTitle>{isEdit ? 'Remarcar manutenção' : 'Agendar manutenção'}</DialogTitle>
+        <DialogDescription>
           {data.machineName} — quando registrarem a manutenção desta máquina, o agendamento é
           dado como cumprido.
         </DialogDescription>

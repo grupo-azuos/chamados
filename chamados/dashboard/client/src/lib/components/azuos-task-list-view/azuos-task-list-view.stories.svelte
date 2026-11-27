@@ -52,7 +52,7 @@
 </script>
 
 <Story name="Lista" args={{ data, state, actions }} />
-<Story name="Cards" args={{ data: { ...data, view: 'cards' }, state, actions }} />
+<Story name="Carregando" args={{ data: { ...data, tasks: [] }, state: { ...state, isLoading: true }, actions }} />
 <Story name="Quadro" args={{ data: { ...data, view: 'board' }, state, actions }} />
 <Story name="Calendario" args={{ data: { ...data, view: 'calendar' }, state, actions }} />
 <Story name="Timeline" args={{ data: { ...data, view: 'timeline' }, state, actions }} />

@@ -41,10 +41,10 @@ describe('AzuosRoleFormDialog', () => {
     expect(actions.onSubmit).toHaveBeenCalledOnce();
   });
 
-  it('allows choosing the module via interactive cards', async () => {
+  it('allows choosing the module by its checkbox', async () => {
     const actions = renderDialog();
 
-    await userEvent.click(screen.getByRole('button', { name: /Infraestrutura/i }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /Infraestrutura/i }));
     expect(actions.onContextsChange).toHaveBeenCalledWith(['infra']);
   });
 
@@ -53,11 +53,8 @@ describe('AzuosRoleFormDialog', () => {
       data: { mode: 'create', fields, contexts: ['infra', 'sistema'] },
     });
 
-    expect(screen.getByRole('button', { name: /Sistema/i })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    await userEvent.click(screen.getByRole('button', { name: /Infraestrutura/i }));
+    expect(screen.getByRole('checkbox', { name: /Sistema/i })).toBeChecked();
+    await userEvent.click(screen.getByRole('checkbox', { name: /Infraestrutura/i }));
     expect(actions.onContextsChange).toHaveBeenCalledWith(['sistema']);
     expect(screen.getByRole('button', { name: 'Liberar 2 módulos' })).toBeInTheDocument();
   });
@@ -73,8 +70,7 @@ describe('AzuosRoleFormDialog', () => {
   it('disables context selection in edit mode', () => {
     renderDialog({ data: { mode: 'edit', fields, contexts: ['sistema'] } });
 
-    const infraBtn = screen.getByRole('button', { name: /Infraestrutura/i });
-    expect(infraBtn).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: /Infraestrutura/i })).toBeDisabled();
   });
 
   // triste
@@ -244,7 +240,7 @@ describe('AzuosRoleFormDialog — picking people and the edit mode', () => {
     expect(screen.getByText('ID: usr_carlos')).toBeInTheDocument();
     expect(screen.getByText('1 módulo selecionado.')).toBeInTheDocument();
     expect(screen.getByText('Sem permissão.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Infraestrutura/i })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: /Infraestrutura/i })).toBeDisabled();
     expect(screen.queryByRole('combobox', { name: 'Pessoa' })).not.toBeInTheDocument();
   });
 

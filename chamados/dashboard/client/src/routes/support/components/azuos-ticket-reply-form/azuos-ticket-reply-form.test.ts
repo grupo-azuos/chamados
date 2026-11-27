@@ -62,4 +62,16 @@ describe('AzuosTicketReplyForm', () => {
 
     expect(screen.queryByText('Avisar por WhatsApp')).toBeNull();
   });
+
+  // triste
+  it('names the people to link with their photo field, and says when saving them failed', () => {
+    render(TicketReplyForm, {
+      data: { ...data, watcherIds: ['u-1'] },
+      state: { watchersError: 'Não consegui vincular agora.' },
+      actions: actions(),
+    });
+
+    expect(screen.getByRole('button', { name: /Pessoas vinculadas/ })).toHaveTextContent('Ana Lima');
+    expect(screen.getByRole('alert')).toHaveTextContent('Não consegui vincular agora.');
+  });
 });

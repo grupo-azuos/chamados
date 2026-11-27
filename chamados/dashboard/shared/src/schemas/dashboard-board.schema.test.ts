@@ -568,6 +568,7 @@ describe('module sources', () => {
     expect(sourcesOf('infra')).toContain('computers');
     expect(sourcesOf('sistema')).toEqual([
       'systemTickets',
+      'systemTasks',
       'softwareProjects',
       'softwareActivity',
       'scheduleEvents',
@@ -575,9 +576,18 @@ describe('module sources', () => {
     expect(isSourceOf('manutencao', 'quotes')).toBe(true);
   });
 
+  // feliz
+  /* A tarefa é entidade principal da Infraestrutura e do Sistema: cada um conta as suas. */
+  it('gives the modules with tasks their own task source', () => {
+    expect(sourcesOf('infra')).toContain('infraTasks');
+    expect(isSourceOf('sistema', 'systemTasks')).toBe(true);
+    expect(sourcesOf('manutencao').some((source) => source.endsWith('Tasks'))).toBe(false);
+  });
+
   // triste
   it('never lends a source to another module', () => {
     expect(sourcesOf('infra')).not.toContain('quotes');
+    expect(isSourceOf('infra', 'systemTasks')).toBe(false);
     expect(isSourceOf('sistema', 'computers')).toBe(false);
   });
 });

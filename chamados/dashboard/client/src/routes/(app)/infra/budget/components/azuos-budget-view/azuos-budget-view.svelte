@@ -114,8 +114,8 @@
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
-  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import { formatDate } from '$lib/utils/format-date';
 
   let { data, state: viewState, actions }: AzuosBudgetViewProps = $props();
@@ -164,7 +164,12 @@
       actions={{ onRetry: actions.onRetry }}
     />
   {:else if viewState.isLoading}
-    <p class="text-ink-500 py-10 text-center text-sm">Cruzando o parque com o depósito…</p>
+    <!-- O esqueleto tem a forma dos blocos de compra: a tela não pula quando o orçamento chega. -->
+    <div role="status" aria-label="Cruzando o parque com o depósito…" aria-busy="true" class="flex flex-col gap-6">
+      {#each [0, 1, 2] as slot (slot)}
+        <Skeleton class="rounded-surface h-40 w-full" />
+      {/each}
+    </div>
   {:else if viewState.isEmpty}
     <EmptyState
       data={{
@@ -181,39 +186,35 @@
     </EmptyState>
   {:else if budget}
     {#if viewState.isCovered}
-      <ContentCard data={{ label: '', title: '' }}>
-{#snippet body()}
-<div class="p-4">
-        <p class="flex items-center gap-2 text-sm text-success">
-          <PartyPopper class="size-4 shrink-0" aria-hidden="true" />
-          Não precisa comprar nada: tudo o que o parque pede já está no depósito.
-        </p>
-      </div>
-{/snippet}
-</ContentCard>
+      <ContentCard
+        data={{
+          label: 'Não precisa comprar nada',
+          title: 'Não precisa comprar nada',
+          meta: 'Tudo o que o parque pede já está no depósito.',
+        }}
+        ui={{ icon: PartyPopper, iconTone: 'success', slot: 'budget-covered' }}
+      />
     {/if}
 
     {#each budget.needs as need (need.key)}
-      <ContentCard data={{ label: '', title: '' }}>
+      <!-- Uma necessidade por bloco: a situação (comprar ou não) na faixa, o que é e por quê no
+           cabeçalho, e a conta, quem precisa e onde procurar no corpo. -->
+      <ContentCard
+        data={{
+          label: budgetNeedLabel(need.key),
+          title: budgetNeedLabel(need.key),
+          meta: budgetNeedHint(need.key),
+          status:
+            need.toBuy > 0
+              ? { label: `Comprar ${need.toBuy}`, tone: 'warning' }
+              : { label: 'Nada a comprar', tone: 'success' },
+        }}
+        ui={{ icon: ShoppingCart, iconTone: need.toBuy > 0 ? 'warning' : 'success', slot: 'budget-need' }}
+      >
 {#snippet body()}
-<div class="p-4">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0 flex-1">
-            <h2 class="text-ink-900 text-sm font-semibold">{budgetNeedLabel(need.key)}</h2>
-            <p class="text-ink-500 text-xs mt-0.5">{budgetNeedHint(need.key)}</p>
-          </div>
-
-          <div class="shrink-0 pt-0.5">
-            {#if need.toBuy > 0}
-              <StatusBadge data={{ label: `Comprar ${need.toBuy}` }} ui={{ tone: 'warning' }} />
-            {:else}
-              <StatusBadge data={{ label: 'Nada a comprar' }} ui={{ tone: 'success' }} />
-            {/if}
-          </div>
-        </div>
-
+<div class="pb-1">
         <!-- A conta inteira à vista: quem lê confere de onde saiu o número. -->
-        <p class="text-ink-700 mt-3 text-sm">{needSummaryOf(need)}</p>
+        <p class="text-ink-700 text-sm">{needSummaryOf(need)}</p>
 
         {#if estimateTextOf(need.key, need.toBuy)}
           <p class="text-ink-500 mt-1 text-xs">
@@ -268,16 +269,16 @@
             {/if}
 
             {#if need.needed > need.machines.length}
-              <p class="text-ink-500 mt-2 text-xs">
-                E mais {need.needed - need.machines.length} máquina(s) na mesma situação —
-                <button
-                  type="button"
-                  class="underline underline-offset-2"
-                  onclick={actions.onOpenComputers}
-                >
-                  ver no Inventário
-                </button>
-              </p>
+              <div class="mt-2 flex flex-wrap items-center gap-2">
+                <p class="text-ink-500 text-xs">
+                  E mais {need.needed - need.machines.length} máquina(s) na mesma situação.
+                </p>
+                <ActionButton
+                  data={{ label: 'Ver no Inventário' }}
+                  ui={{ variant: 'ghost', size: 'sm' }}
+                  actions={{ onClick: actions.onOpenComputers }}
+                />
+              </div>
             {/if}
           </div>
         {/if}

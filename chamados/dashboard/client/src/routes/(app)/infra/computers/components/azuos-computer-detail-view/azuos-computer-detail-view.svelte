@@ -338,8 +338,9 @@
   import UsageChart from '../azuos-usage-chart/azuos-usage-chart.svelte';
   import ComputerBlockDialog from '../azuos-computer-block-dialog/azuos-computer-block-dialog.svelte';
   import ComputerDisposalDialog from '../azuos-computer-disposal-dialog/azuos-computer-disposal-dialog.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
-      import { cn } from '$lib/utils/cn';
+  import { cn } from '$lib/utils/cn';
   import { formatDateTime } from '$lib/utils/format-date';
   import MaintenanceScheduleCard from '../azuos-maintenance-schedule-card/azuos-maintenance-schedule-card.svelte';
   import { formatPercent, formatTimeAgo } from '$lib/utils/format-machine';
@@ -354,6 +355,13 @@
   const facts = $derived(hardwareFacts(computer));
   const lastSample = $derived(data.samples.at(-1) ?? null);
   const live = $derived(data.live);
+
+  /* "Vista há 2 h · 22/09/2026 14:00": quando a máquina deu notícia pela última vez. */
+  const seenLabel = $derived(
+    computer.lastSeenAt
+      ? `${formatTimeAgo(computer.lastSeenAt)} · ${formatDateTime(computer.lastSeenAt)}`
+      : formatTimeAgo(computer.lastSeenAt),
+  );
 
   /* Os cartões do alto leem daqui, e não da última amostra: ver `nowReadingOf`. */
   const now = $derived(nowReadingOf(live, lastSample));
@@ -401,19 +409,33 @@
   }
 </script>
 
+<!-- Carregando, o bloco mostra linhas-esqueleto do tamanho de um item da lista: a ficha não pula
+     quando o histórico chega. O rótulo diz O QUE está carregando, para o leitor de tela. -->
+{#snippet loading(label: string)}
+  <div role="status" aria-label={label} aria-busy="true" class="flex flex-col gap-3 py-1">
+    {#each [0, 1, 2] as row (row)}
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex flex-1 flex-col gap-1.5">
+          <Skeleton class="h-4 w-2/3" />
+          <Skeleton class="h-3 w-1/3" />
+        </div>
+        <Skeleton class="h-5 w-16" />
+      </div>
+    {/each}
+  </div>
+{/snippet}
+
 <div class="flex w-full flex-col gap-6">
   <BackButton data={{ destination: data.backDestination ?? 'o inventário' }} actions={{ onClick: actions.onBack }} />
 
-  <ContentCard data={{ label: 'Identificação do computador', title: '' }} ui={{ className: 'min-w-0' }}>
-{#snippet body()}
-<div class="p-4 sm:p-5">
-    <PageHeader
-      data={{
-        title: computer.displayName?.trim() || computer.hardware?.hostname?.trim() || computer.name,
-        description: computer.hardware?.hostname?.trim() || computer.name,
-      }}
-      ui={{ className: 'sm:items-start [&>div:first-child]:flex-1' }}
-    >
+  <!-- O molde da tela: o cabeçalho (nome e ações) vem solto, sobre o fundo; a identificação é
+       o primeiro bloco, num card de conteúdo — e não o cabeçalho dentro de um card. -->
+  <PageHeader
+    data={{
+      title: computer.displayName?.trim() || computer.hardware?.hostname?.trim() || computer.name,
+      description: computer.hardware?.hostname?.trim() || computer.name,
+    }}
+  >
       {#if disposed}
         <ActionButton
           data={{ label: 'Voltar ao inventário' }}
@@ -448,9 +470,14 @@
           actions={{ onSelect: selectMenuAction }}
         />
       {/if}
-    </PageHeader>
+  </PageHeader>
 
-    <dl class="mt-5 grid gap-4 sm:grid-cols-2">
+  <ContentCard
+    data={{ label: 'Identificação', title: 'Identificação', meta: `Vista ${seenLabel}` }}
+    ui={{ icon: Building2, iconTone: 'brand', className: 'min-w-0' }}
+  >
+    {#snippet body()}
+    <dl class="grid gap-4 sm:grid-cols-2">
       <div class="flex min-w-0 items-start gap-2.5">
         <Building2 class="text-ink-500 mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <div class="min-w-0">
@@ -478,7 +505,7 @@
       {/if}
     </dl>
 
-    <div class="border-border mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
+    <div class="flex flex-wrap items-center gap-2 pb-1">
       <StatusBadge
         data={{ label: healthStatusLabel(computer.healthStatus) }}
         ui={{ tone: healthStatusTone(computer.healthStatus) }}
@@ -500,16 +527,9 @@
       {:else}
         <StatusBadge data={{ label: 'Offline' }} ui={{ tone: 'neutral' }} />
       {/if}
-      <span class="text-ink-500 w-full text-xs sm:ml-auto sm:w-auto">
-        Vista {formatTimeAgo(computer.lastSeenAt)}
-        {#if computer.lastSeenAt}
-          · {formatDateTime(computer.lastSeenAt)}
-        {/if}
-      </span>
     </div>
-  </div>
-{/snippet}
-</ContentCard>
+    {/snippet}
+  </ContentCard>
 
   <!-- A falha de uma AÇÃO aparece aqui em cima, em vermelho, e fica até resolver: gravação
        que falha calada vira "o sistema não salva" (CONTRIBUTING §15). -->
@@ -651,68 +671,47 @@
 <div class="pb-1">
     
     {#if viewState?.isAlertsLoading}
-      <p class="text-ink-500 py-6 text-center text-sm">Carregando os alertas…</p>
+      {@render loading('Carregando os alertas…')}
     {:else if data.alerts.length === 0}
       <p class="text-ink-500 text-sm">
         Nenhum alerta registrado. Um alerta abre quando a medida passa do limite e fecha quando ela
         volta ao normal.
       </p>
     {:else}
-      <!-- Lista de cartões para mobile (< xl) -->
-      <div
-        class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
+      <!-- Em lista (celular, tablet, ou quem pediu cards): uma linha por episódio, separada pelo
+           fio — o bloco já é o card, e card dentro de card é proibido. -->
+      <ul
+        class={cn('flex flex-col divide-y', !tableView.forceCards && 'xl:hidden')}
         data-slot="alert-cards-mobile"
       >
         {#each data.alerts as alert (alert.id)}
-          <!-- A situação está no selo: o hover do card é só o véu neutro (padrão Apple). -->
-          <ContentCard data={{ label: '', title: '' }}>
-{#snippet body()}
-<div class="p-3">
-            <div class="flex items-start justify-between gap-2">
-              <span class="font-medium text-ink-900 text-sm">
-                {metricLabel(alert.metric)}
-              </span>
+          <li class="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+            <div class="min-w-0 flex-1">
+              <p class="text-ink-900 text-sm leading-tight font-medium">{metricLabel(alert.metric)}</p>
+              <p class="text-ink-500 mt-1 text-xs leading-normal break-words">
+                Pico {formatPercent(alert.peakValue)} · {formatDateTime(alert.startedAt)}
+                {#if alert.causeProcess}
+                  · Causa provável: <span class="font-mono">{alert.causeProcess}</span>
+                {/if}
+              </p>
+            </div>
+            <div class="shrink-0 pt-0.5">
               {#if alert.recoveredAt}
                 <span class="text-ink-700 text-xs">{alertDurationLabel(alert)}</span>
               {:else}
-                <StatusBadge
-                  data={{ label: 'Acontecendo agora' }}
-                  ui={{ tone: 'danger', size: 'sm' }}
-                />
+                <StatusBadge data={{ label: 'Acontecendo agora' }} ui={{ tone: 'danger', size: 'sm' }} />
               {/if}
             </div>
-
-            <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span class="text-muted-foreground block text-xs">Pico</span>
-                <span class="tabular-nums font-medium text-ink-700">
-                  {formatPercent(alert.peakValue)}
-                </span>
-              </div>
-              <div>
-                <span class="text-muted-foreground block text-xs">Começou</span>
-                <span class="text-ink-500">{formatDateTime(alert.startedAt)}</span>
-              </div>
-            </div>
-
-            {#if alert.causeProcess}
-              <div class="border-border mt-2 border-t pt-1.5 text-xs">
-                <span class="text-muted-foreground text-xs">Causa provável: </span>
-                <span class="text-ink-700 font-mono text-xs break-words">{alert.causeProcess}</span>
-              </div>
-            {/if}
-          </div>
-{/snippet}
-</ContentCard>
+          </li>
         {/each}
-      </div>
+      </ul>
 
       <!-- Tabela para desktop (>= xl) -->
       <div
         class={cn('overflow-x-auto', tableView.forceCards ? 'hidden' : 'hidden xl:block')}
         data-slot="alert-table-desktop"
       >
-        <Table class="min-w-[620px]">
+        <Table class="min-w-[620px]" containerClass="rounded-none bg-transparent shadow-none">
           <TableHeader>
             <TableRow>
               <TableHead>Medida</TableHead>
@@ -787,7 +786,7 @@
     
 
     {#if viewState?.isMaintenancesLoading}
-      <p class="text-ink-500 py-6 text-center text-sm">Carregando o histórico…</p>
+      {@render loading('Carregando as manutenções…')}
     {:else if data.maintenances.length === 0}
       <p class="text-ink-500 text-sm">
         Nada registrado ainda. É por este histórico que se enxerga quando vale trocar a máquina em
@@ -827,7 +826,7 @@
 <div class="pb-1">
 
     {#if viewState?.isTicketsLoading}
-      <p class="text-ink-500 text-sm">Carregando os chamados…</p>
+      {@render loading('Carregando os chamados…')}
     {:else if data.tickets.length === 0}
       <p class="text-ink-500 text-sm">
         Nenhum chamado aponta para esta máquina. Quem atende é que faz esse vínculo, na tela de
@@ -877,7 +876,7 @@
 <div class="pb-1">
 
     {#if viewState?.isTransfersLoading}
-      <p class="text-ink-500 py-6 text-center text-sm">Carregando o histórico…</p>
+      {@render loading('Carregando as transferências…')}
     {:else if data.transfers.length === 0}
       <p class="text-ink-500 text-sm">
         Nenhuma transferência registrada. Ao mudar a máquina de departamento pelo botão
@@ -922,7 +921,7 @@
 <div class="pb-1">
 
     {#if viewState?.isPartsLoading}
-      <p class="text-ink-500 py-6 text-center text-sm">Carregando as peças…</p>
+      {@render loading('Carregando as peças…')}
     {:else if data.partMovements.length === 0}
       <p class="text-ink-500 text-sm">
         Nenhuma peça do depósito foi ligada a esta máquina. Ao dar baixa numa peça, escolha a

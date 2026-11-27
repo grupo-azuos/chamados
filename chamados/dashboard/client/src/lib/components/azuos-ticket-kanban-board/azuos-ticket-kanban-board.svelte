@@ -129,6 +129,7 @@
 
 <script lang="ts">
   import Maximize2 from '@lucide/svelte/icons/maximize-2';
+  import X from '@lucide/svelte/icons/x';
   import {
     Accessibility,
     AutoScroller,
@@ -139,6 +140,7 @@
   import { DragDropProvider, DragOverlay } from '@dnd-kit/svelte';
 
   import AzuosActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import AzuosExpandableScreen from '$lib/components/azuos-expandable-screen/azuos-expandable-screen.svelte';
   import DraggableCard, {
     KANBAN_CARD_SENSORS,
@@ -303,23 +305,15 @@
 
 <section aria-label="Quadro dos chamados" class="flex flex-col gap-2">
   {#if viewState?.moveError}
-    <div
-      class="rounded-box bg-destructive-soft text-destructive flex items-center justify-between gap-3 p-3 text-xs"
-      role="alert"
-    >
-      <div class="flex items-center gap-2">
-        <span class="font-semibold">Aviso do quadro:</span>
-        <span>{viewState.moveError}</span>
-      </div>
+    <!-- O aviso é o de falha da casa (inline); o "fechar" é um botão de ícone, não um ✕ à mão. -->
+    <div class="flex items-center gap-2">
+      <ErrorState data={{ message: viewState.moveError }} ui={{ variant: 'inline', className: 'flex-1' }} />
       {#if actions.onClearMoveError}
-        <button
-          type="button"
-          class="rounded-chip text-destructive hover:bg-muted px-2 py-0.5 text-xs font-semibold"
-          onclick={actions.onClearMoveError}
-          title="Fechar aviso"
-        >
-          ✕
-        </button>
+        <AzuosActionButton
+          data={{ label: 'Fechar aviso' }}
+          ui={{ variant: 'ghost', icon: X, isIconOnly: true }}
+          actions={{ onClick: actions.onClearMoveError }}
+        />
       {/if}
     </div>
   {/if}

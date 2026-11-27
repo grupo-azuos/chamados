@@ -424,7 +424,7 @@ describe('AzuosComputerListView', () => {
       },
     });
 
-    expect(screen.getByText('Carregando os computadores…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando os computadores…' })).toBeInTheDocument();
     expect(screen.queryByText('Nenhum computador cadastrado')).not.toBeInTheDocument();
   });
 });

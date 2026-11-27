@@ -53,7 +53,7 @@ export type TicketDataFormModel = {
      * Quem pode ser o responsável — só vem preenchido para o super admin, que é quem pode
      * trocar. Vazio esconde o campo.
      */
-    assignees: { value: string; label: string }[];
+    assignees: { value: string; label: string; avatarUrl: string | null }[];
   };
   state: {
     isSubmitting: boolean;
@@ -273,7 +273,11 @@ export function useTicketDataFormModel({ ticket }: { ticket: Ticket }): TicketDa
           assigneeId: fieldOf('assigneeId'),
         },
         problemTypes,
-        assignees: assignees.map((option) => ({ value: option.id, label: option.name })),
+        assignees: assignees.map((option) => ({
+          value: option.id,
+          label: option.name,
+          avatarUrl: option.avatarUrl ?? null,
+        })),
         machines: toMachineOptions(machines.current.data?.items ?? []),
         projects: toProjectOptions(projects.current.data?.items ?? []),
         availableParticipantAreas: toAvailableParticipantAreas(currentTicket),

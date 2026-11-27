@@ -49,6 +49,7 @@
   import { DragDropProvider, DragOverlay, KeyboardSensor, PointerSensor } from '@dnd-kit/svelte';
   import Plus from '@lucide/svelte/icons/plus';
 
+  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import DraggableCard from '$lib/components/azuos-kanban-draggable-card/azuos-kanban-draggable-card.svelte';
   import StageColumn from '$lib/components/azuos-kanban-column/azuos-kanban-column.svelte';
@@ -162,15 +163,14 @@
       {#each columns as { column, tasks } (column.id)}
         {@const look = lookOf(column)}
         {#if column.kind === 'status' && column.status === 'done' && ui?.canManageStages && actions.onNewStage}
-          <!-- O "+ Nova situação": uma coluna tracejada, no lugar onde a nova vai nascer. -->
-          <button
-            type="button"
-            onclick={actions.onNewStage}
-            class="rounded-surface border-input text-ink-500 hover:bg-accent hover:text-foreground focus-visible:ring-ring flex min-h-24 w-72 shrink-0 items-center justify-center gap-2 border-2 border-dashed text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:w-80"
-          >
-            <Plus aria-hidden="true" class="size-4" />
-            Nova situação
-          </button>
+          <!-- O "+ Nova situação": no lugar onde a nova coluna vai nascer, como ação secundária. -->
+          <div class="flex w-72 shrink-0 justify-center pt-1 sm:w-80">
+            <ActionButton
+              data={{ label: 'Nova situação' }}
+              ui={{ variant: 'secondary', icon: Plus }}
+              actions={{ onClick: actions.onNewStage }}
+            />
+          </div>
         {/if}
         <StageColumn
           data={{ title: column.title, count: tasks.length }}

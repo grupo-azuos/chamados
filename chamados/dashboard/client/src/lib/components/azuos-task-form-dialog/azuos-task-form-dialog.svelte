@@ -54,7 +54,6 @@
 </script>
 
 <script lang="ts">
-  import ClipboardCheck from '@lucide/svelte/icons/clipboard-check';
   import Plus from '@lucide/svelte/icons/plus';
   import X from '@lucide/svelte/icons/x';
   import { TASK_LINK_KIND_LABELS, TASK_LINK_KINDS } from '@template/shared/domain/task-flow.util';
@@ -116,14 +115,9 @@
   <DialogContent class="sm:max-w-2xl">
     <form novalidate class="flex flex-col gap-4" onsubmit={handleSubmit}>
       <DialogHeader class="gap-1.5">
-        <div class="flex items-center gap-2.5">
-          <span class="rounded-chip bg-muted text-primary flex size-7 shrink-0 items-center justify-center">
-            <ClipboardCheck class="size-4" aria-hidden="true" />
-          </span>
-          <DialogTitle class="text-lg font-semibold tracking-tight">
-            {isEdit ? 'Editar tarefa' : 'Nova tarefa'}
-          </DialogTitle>
-        </div>
+        <DialogTitle class="text-lg font-semibold tracking-tight">
+          {isEdit ? 'Editar tarefa' : 'Nova tarefa'}
+        </DialogTitle>
         <DialogDescription class="text-muted-foreground text-xs">
           Vincule a quantos chamados, computadores, peças e itens precisar.
         </DialogDescription>
@@ -148,7 +142,7 @@
 
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="flex flex-col gap-1.5">
-          <span class="text-ink-700 text-sm font-medium">Responsável</span>
+          <span class="text-foreground text-sm font-medium">Responsável</span>
           <PersonPickerField
             data={{ value: data.fields.ownerId.value, people: data.people }}
             ui={{ ariaLabel: 'Responsável', placeholder: 'Escolha a pessoa' }}
@@ -157,7 +151,7 @@
           />
         </div>
         <div class="flex flex-col gap-1.5">
-          <span class="text-ink-700 text-sm font-medium">Participantes</span>
+          <span class="text-foreground text-sm font-medium">Participantes</span>
           <PersonMultiPickerField
             data={{ values: data.peopleIds, people: data.people, placeholder: 'Ninguém além do responsável' }}
             ui={{ ariaLabel: 'Participantes' }}
@@ -169,7 +163,7 @@
 
       <div class="grid gap-4 sm:grid-cols-3">
         <div class="flex flex-col gap-1.5">
-          <span class="text-ink-700 text-sm font-medium">Início</span>
+          <span class="text-foreground text-sm font-medium">Início</span>
           <DatePicker
             name="startDate"
             ariaLabel="Início"
@@ -182,7 +176,7 @@
           {/if}
         </div>
         <div class="flex flex-col gap-1.5">
-          <span class="text-ink-700 text-sm font-medium">Prazo (opcional)</span>
+          <span class="text-foreground text-sm font-medium">Prazo (opcional)</span>
           <DatePicker
             name="dueDate"
             ariaLabel="Prazo"
@@ -204,40 +198,42 @@
       </div>
 
       <fieldset class="flex flex-col gap-2">
-        <legend class="text-ink-700 mb-1 text-sm font-medium">Etapas</legend>
+        <legend class="text-foreground mb-1 text-sm font-medium">Etapas</legend>
         {#each data.steps as step, index (step.id ?? `new-${index}`)}
-          <div class="flex items-center gap-2">
-            <span class="text-muted-foreground w-5 text-right text-xs tabular-nums">{index + 1}.</span>
-            <input
-              aria-label={`Etapa ${index + 1}`}
-              class="rounded-control bg-muted control-md text-foreground focus-visible:ring-ring/50 min-w-0 flex-1 border-transparent px-3 text-sm outline-none focus-visible:ring-3"
-              value={step.label}
-              disabled={dialogState.isSubmitting}
-              oninput={(event) => actions.onRenameStep(index, event.currentTarget.value)}
+          <div class="flex items-end gap-2">
+            <TextField
+              data={{ label: `Etapa ${index + 1}`, name: `step-${index}`, value: step.label }}
+              ui={{ className: 'min-w-0 flex-1' }}
+              state={{ isDisabled: dialogState.isSubmitting }}
+              actions={{ onChange: (value: string) => actions.onRenameStep(index, value) }}
             />
             <ActionButton
               data={{ label: `Tirar a etapa ${index + 1}` }}
-              ui={{ variant: 'ghost', icon: X, isIconOnly: true, size: 'sm' }}
+              ui={{ variant: 'ghost', icon: X, isIconOnly: true, size: 'lg' }}
               actions={{ onClick: () => actions.onRemoveStep(index) }}
             />
           </div>
         {/each}
-        <div class="flex items-center gap-2">
-          <input
-            aria-label="Nova etapa"
-            placeholder="Escreva uma etapa e aperte Enter"
-            class="rounded-control bg-muted control-md text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/50 min-w-0 flex-1 border-transparent px-3 text-sm outline-none focus-visible:ring-3"
-            bind:value={newStep}
-            disabled={dialogState.isSubmitting}
-            onkeydown={(event) => {
-              if (event.key !== 'Enter') return;
-              event.preventDefault();
-              addStep();
-            }}
+        <!-- Enter na etapa nova adiciona a etapa, e não envia o formulário: o aviso chega aqui pela
+             bolha do teclado, antes de o navegador enviar. -->
+        <div
+          class="flex items-end gap-2"
+          role="presentation"
+          onkeydown={(event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            addStep();
+          }}
+        >
+          <TextField
+            data={{ label: 'Nova etapa', name: 'newStep', value: newStep, placeholder: 'Escreva uma etapa e aperte Enter' }}
+            ui={{ className: 'min-w-0 flex-1' }}
+            state={{ isDisabled: dialogState.isSubmitting }}
+            actions={{ onChange: (value: string) => (newStep = value) }}
           />
           <ActionButton
             data={{ label: 'Adicionar etapa' }}
-            ui={{ variant: 'secondary', icon: Plus, size: 'sm' }}
+            ui={{ variant: 'secondary', icon: Plus, size: 'lg' }}
             state={{ isDisabled: !newStep.trim() }}
             actions={{ onClick: addStep }}
           />
@@ -245,7 +241,7 @@
       </fieldset>
 
       <fieldset class="flex flex-col gap-2">
-        <legend class="text-ink-700 mb-1 text-sm font-medium">Vínculos</legend>
+        <legend class="text-foreground mb-1 text-sm font-medium">Vínculos</legend>
         {#if data.links.length}
           <ul class="flex flex-wrap gap-1.5" aria-label="Vínculos escolhidos">
             {#each data.links as link, index (`${link.kind}-${link.targetId}`)}
@@ -264,7 +260,7 @@
             {/each}
           </ul>
         {/if}
-        <div class="grid gap-2 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_auto]">
+        <div class="grid items-end gap-2 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_auto]">
           <OptionPicker
             data={{
               value: linkKind,
@@ -278,20 +274,23 @@
               },
             }}
           />
-          <input
-            aria-label="Buscar o item para vincular"
-            placeholder="Nome, protocolo ou código"
-            class="rounded-control bg-muted control-md text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/50 min-w-0 border-transparent px-3 text-sm outline-none focus-visible:ring-3"
-            bind:value={linkTerm}
+          <div
+            class="min-w-0"
+            role="presentation"
             onkeydown={(event) => {
               if (event.key !== 'Enter') return;
               event.preventDefault();
               void searchLinks();
             }}
-          />
+          >
+            <TextField
+              data={{ label: 'Buscar o item para vincular', name: 'linkTerm', value: linkTerm, placeholder: 'Nome, protocolo ou código' }}
+              actions={{ onChange: (value: string) => (linkTerm = value) }}
+            />
+          </div>
           <ActionButton
             data={{ label: 'Buscar', loadingLabel: 'Buscando…' }}
-            ui={{ variant: 'secondary', size: 'sm' }}
+            ui={{ variant: 'secondary', size: 'lg' }}
             state={{ isLoading: isSearching }}
             actions={{ onClick: () => void searchLinks() }}
           />
@@ -305,7 +304,7 @@
                   class="hover:bg-hover-veil rounded-control text-foreground flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm"
                   onclick={() => actions.onAddLink({ kind: linkKind, targetId: option.id, label: option.label })}
                 >
-                  <Plus class="text-primary size-3.5 shrink-0" aria-hidden="true" />
+                  <Plus class="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
                   <span class="truncate">{option.label}</span>
                 </button>
               </li>

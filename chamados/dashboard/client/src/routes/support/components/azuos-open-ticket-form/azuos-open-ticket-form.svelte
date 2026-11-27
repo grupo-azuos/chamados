@@ -104,7 +104,7 @@
        * escolhido — qualquer pessoa ativa do admin-console. Sem opções, o campo some.
        */
       watcherIds?: string[];
-      peopleOptions?: { id: string; name: string }[];
+      peopleOptions?: { id: string; name: string; avatarUrl?: string | null }[];
     };
     state: {
       isSubmitting?: boolean;
@@ -208,16 +208,12 @@
       STEP_FIELDS[step].some((name) => Boolean(fields[name].error)),
     );
   }
-
-  /** Acima disso os responsáveis viram lista com busca, em vez de cartões. */
-  export const MAX_ASSIGNEE_CARDS = 4;
 </script>
 
 <script lang="ts">
   import { DESCRIPTION_MAX_LENGTH } from '@template/shared/schemas/ticket.schema';
 
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-  import CheckIcon from '@lucide/svelte/icons/check';
   import HeadsetIcon from '@lucide/svelte/icons/headset';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
@@ -226,9 +222,9 @@
   import UserIcon from '@lucide/svelte/icons/user';
   import XIcon from '@lucide/svelte/icons/x';
 
-  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import PeoplePicker from '$lib/components/azuos-people-picker/azuos-people-picker.svelte';
-  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
+  import ActionButton, { actionButton } from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import PersonMultiPickerField from '$lib/components/azuos-person-multi-picker-field/azuos-person-multi-picker-field.svelte';
+  import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import AttachmentPicker from '$lib/components/azuos-attachment-picker/azuos-attachment-picker.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
@@ -240,6 +236,7 @@
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { fadeInUp } from '$lib/motion/motion';
   import { cn } from '$lib/utils/cn';
+  import { pasteFilesIntoInput } from '$lib/utils/paste-files.util';
 
   let { data, state: formState, actions }: AzuosOpenTicketFormProps = $props();
 
@@ -248,11 +245,18 @@
   const assignees = $derived(data.assignees ?? []);
   /* Até quatro pessoas cabem como cartões, que se escolhem com um toque; mais que isso vira
      lista com busca — uma fileira longa de cartões é mais demorada de ler que procurar. */
-  const isFewAssignees = $derived(assignees.length <= MAX_ASSIGNEE_CARDS);
   const chosenAssignee = $derived(assignees.find((option) => option.value === fields.assigneeId.value));
   /* Quem atende já está no chamado: oferecê-lo também para "acompanhar" seria repetir. */
   const watcherOptions = $derived(
     (data.peopleOptions ?? []).filter((person) => person.id !== fields.assigneeId.value),
+  );
+  /* Pessoa se escolhe no campo de pessoa da casa (select-standard): a lista, a foto, a busca, e
+     o valor é o id. */
+  const assigneePeople = $derived(
+    assignees.map((option) => ({ id: option.value, name: option.label, photo: null })),
+  );
+  const watcherPeople = $derived(
+    watcherOptions.map((person) => ({ id: person.id, name: person.name, photo: person.avatarUrl ?? null })),
   );
   /* "Quem mais acompanha" fica fechado até a pessoa pedir — a maioria não vincula ninguém, e
      um campo a mais aberto é mais uma decisão no caminho de quem só quer enviar. */
@@ -262,6 +266,12 @@
   const areaCards = $derived(
     data.invite ? AREA_CARDS.filter((card) => data.invite?.areas.includes(card.value)) : AREA_CARDS,
   );
+  /* A área se escolhe em pastilhas (até três cabem numa linha); a descrição da escolhida vem
+     logo embaixo, para a pessoa confirmar que é o que ela precisa. */
+  const areaOptions = $derived(
+    areaCards.map((card) => ({ value: card.value, label: card.label, icon: card.icon })),
+  );
+  const chosenArea = $derived(areaCards.find((card) => card.value === fields.area.value));
 
   /* As opções de tipo de problema dependem da ÁREA escolhida — Manutenção não tem "rede
      caiu" na lista, nem Infra tem "ar-condicionado". */
@@ -400,6 +410,8 @@
    * segue normal: só uma imagem na área de transferência é tomada como print.
    */
   function handlePaste(event: ClipboardEvent): void {
+    /* Colado com o foco no próprio campo do print, quem cuidou foi o `pasteFilesIntoInput`. */
+    if (event.defaultPrevented) return;
     if (data.opened || stepId !== 'what' || formState.isSubmitting) return;
 
     const image = pastedImage(event.clipboardData);
@@ -438,7 +450,7 @@
         </p>
       {:else if data.opened.whatsAppLink}
         <a
-          class="bg-primary text-primary-foreground hover:bg-primary/90 control-md rounded-button inline-flex items-center px-4 text-sm font-semibold transition-colors"
+          class={actionButton({ variant: 'primary', size: 'md' })}
           href={data.opened.whatsAppLink}
           target="_blank"
           rel="noopener"
@@ -498,26 +510,18 @@
             data={{ title: 'Qual área atende seu pedido?', description: 'Escolha a que mais parece com o que você precisa.', icon: LayoutGridIcon }}
             ui={{ isLast: true, tone: 'brand' }}
           >
-            <div class="grid gap-3 sm:grid-cols-3">
-              {#each areaCards as card (card.value)}
-                {@const isSelected = fields.area.value === card.value}
-                <button
-                  type="button"
-                  disabled={formState.isSubmitting}
-                  aria-pressed={isSelected}
-                  onclick={() => handleAreaChange(card.value)}
-                  class={cn(
-                    'flex flex-col items-start gap-2 rounded-box p-4 text-left transition-colors',
-                    /* Sem borda (padrão Apple): a escolhida ganha o fundo claro da marca, como
-                       o responsável mais abaixo. */
-                    isSelected ? 'bg-primary-soft' : 'bg-muted hover:bg-hover-veil',
-                  )}
-                >
-                  <card.icon class="text-primary size-5" aria-hidden="true" />
-                  <span class="text-ink-900 text-sm font-semibold">{card.label}</span>
-                  <span class="text-ink-500 text-xs">{card.description}</span>
-                </button>
-              {/each}
+            <div class="flex flex-col gap-2">
+              <OptionPicker
+                data={{ value: fields.area.value, options: areaOptions }}
+                ui={{ ariaLabel: 'Área do pedido', fullWidth: true }}
+                state={{ isDisabled: formState.isSubmitting }}
+                actions={{ onChange: handleAreaChange }}
+              />
+              <p class="text-muted-foreground text-xs" aria-live="polite">
+                {chosenArea
+                  ? chosenArea.description
+                  : areaCards.map((card) => `${card.label}: ${card.description.toLowerCase()}`).join(' · ')}
+              </p>
             </div>
 
             {#if fields.area.error}
@@ -599,12 +603,12 @@
                   <div class="flex items-center justify-between gap-2">
                     <span class="text-ink-700 text-sm font-medium">Sistema relacionado (opcional)</span>
                     {#if systemValue}
-                      <button
-                        type="button"
-                        onclick={clearSystem}
-                        disabled={formState.isSubmitting}
-                        class="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline"
-                      >Deixar sem sistema</button>
+                      <ActionButton
+                        data={{ label: 'Deixar sem sistema' }}
+                        ui={{ variant: 'ghost', size: 'sm' }}
+                        state={{ isDisabled: formState.isSubmitting }}
+                        actions={{ onClick: clearSystem }}
+                      />
                     {/if}
                   </div>
                   <OptionPicker
@@ -720,14 +724,14 @@
                  é `sr-only`, que é `position: absolute`. Sem um ancestral posicionado, ele se
                  ancora num elemento lá em cima, e quando o seletor do sistema fecha o
                  navegador rola ESSE elemento para dentro da vista — a página pula sozinha. -->
-            <div class="relative flex flex-col gap-1.5">
+            <div class="relative flex flex-col gap-1.5" onpaste={pasteFilesIntoInput}>
               <label class="text-ink-700 text-sm font-medium" for="screenshot">
                 Print do erro (opcional)
               </label>
               <div class="flex items-center gap-2">
                 <label
                   for="screenshot"
-                  class="control-lg flex flex-1 cursor-pointer items-center gap-2 rounded-control border border-dashed border-border bg-muted text-xs text-muted-foreground transition-colors hover:bg-muted"
+                  class="control-lg rounded-control border-border bg-muted text-muted-foreground hover:bg-hover-veil flex flex-1 cursor-pointer items-center gap-2 border-2 border-dashed px-3 text-xs transition-colors"
                 >
                   <PaperclipIcon class="size-3.5 shrink-0" aria-hidden="true" />
                   <span class="truncate">
@@ -735,14 +739,11 @@
                   </span>
                 </label>
                 {#if data.screenshotName}
-                  <button
-                    type="button"
-                    onclick={removeFile}
-                    aria-label="Remover o print anexado"
-                    class="text-muted-foreground hover:text-destructive bg-muted hover:bg-hover-veil control-icon-lg flex shrink-0 items-center justify-center rounded-control transition-colors"
-                  >
-                    <XIcon class="size-4" aria-hidden="true" />
-                  </button>
+                  <ActionButton
+                    data={{ label: 'Remover o print anexado' }}
+                    ui={{ variant: 'secondary', size: 'lg', icon: XIcon, isIconOnly: true }}
+                    actions={{ onClick: removeFile }}
+                  />
                 {/if}
               </div>
               <input
@@ -786,44 +787,16 @@
               {#if assignees.length > 0}
                 <fieldset class="flex flex-col gap-2">
                   <legend class="text-ink-700 mb-2 text-sm font-medium">Quem vai te atender?</legend>
-                  {#if isFewAssignees}
-                    <!-- Cartões grandes (fáceis de acertar); o escolhido ganha FUNDO e o visto. -->
-                    <div class="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Responsável pelo chamado">
-                      {#each [{ value: '', label: 'Quem estiver livre' }, ...assignees] as option (option.value)}
-                        {@const isChosen = fields.assigneeId.value === option.value}
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={isChosen}
-                          disabled={formState.isSubmitting}
-                          onclick={() => actions.onChange('assigneeId', option.value)}
-                          class={cn(
-                            'rounded-control focus-visible:ring-ring flex min-h-12 cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60',
-                            isChosen ? 'bg-primary-soft text-primary font-semibold' : 'bg-muted text-foreground hover:bg-muted',
-                          )}
-                        >
-                          {#if option.value}
-                            <PersonAvatar name={option.label} />
-                          {:else}
-                            <span class="bg-card text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-full">
-                              <HeadsetIcon class="size-3.5" aria-hidden="true" />
-                            </span>
-                          {/if}
-                          <span class="min-w-0 flex-1 truncate">{option.label}</span>
-                          {#if isChosen}
-                            <CheckIcon class="size-4 shrink-0" aria-hidden="true" />
-                          {/if}
-                        </button>
-                      {/each}
-                    </div>
-                  {:else}
-                    <OptionPicker
-                      data={{ value: fields.assigneeId.value, options: [{ value: '', label: 'Quem estiver livre' }, ...assignees] }}
-                      ui={{ ariaLabel: 'Responsável pelo chamado', placeholder: 'Quem estiver livre', fullWidth: true }}
-                      state={{ isDisabled: formState.isSubmitting }}
-                      actions={{ onChange: (value: string) => actions.onChange('assigneeId', value) }}
-                    />
-                  {/if}
+                  <PersonPickerField
+                    data={{
+                      value: fields.assigneeId.value,
+                      people: assigneePeople,
+                      leading: [{ value: '', label: 'Quem estiver livre', icon: HeadsetIcon }],
+                    }}
+                    ui={{ ariaLabel: 'Responsável pelo chamado', placeholder: 'Quem estiver livre' }}
+                    state={{ isDisabled: formState.isSubmitting }}
+                    actions={{ onChange: (value: string) => actions.onChange('assigneeId', value) }}
+                  />
                 </fieldset>
               {/if}
 
@@ -862,9 +835,9 @@
               <div class="mt-3 flex flex-col gap-1.5">
                 {#if isLinkingShown}
                   <span class="text-ink-700 text-sm font-medium">Quem mais acompanha</span>
-                  <PeoplePicker
-                    data={{ selectedIds: data.watcherIds ?? [], options: watcherOptions }}
-                    ui={{ ariaLabel: 'Pessoas vinculadas', placeholder: 'Escolha as pessoas' }}
+                  <PersonMultiPickerField
+                    data={{ values: data.watcherIds ?? [], people: watcherPeople }}
+                    ui={{ ariaLabel: 'Pessoas vinculadas' }}
                     state={{ isDisabled: formState.isSubmitting }}
                     actions={{ onChange: actions.onWatchersChange }}
                   />

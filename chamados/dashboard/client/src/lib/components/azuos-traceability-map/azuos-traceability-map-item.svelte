@@ -60,9 +60,10 @@
     </span>
   </span>
   {#if data.isPending}
+    <!-- A pendência é o selo vermelho que pulsa (padrão do grupo), não um ponto azul. -->
     <span aria-hidden="true" class="absolute -top-1 -right-1 flex size-2.5">
-      <span class="bg-primary absolute inline-flex size-full rounded-full motion-safe:animate-ping"></span>
-      <span class="bg-primary relative inline-flex size-2.5 rounded-full"></span>
+      <span class="bg-destructive-fill absolute inline-flex size-full rounded-full motion-safe:animate-ping"></span>
+      <span class="bg-destructive-fill relative inline-flex size-2.5 rounded-full"></span>
     </span>
   {/if}
   <Handle type="source" position={Position.Right} class="opacity-0" isConnectable={false} />

@@ -178,6 +178,7 @@
 </script>
 
 <script lang="ts">
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import BellRing from '@lucide/svelte/icons/bell-ring';
   import CircleFadingArrowUp from '@lucide/svelte/icons/circle-fading-arrow-up';
   import Cpu from '@lucide/svelte/icons/cpu';
@@ -315,10 +316,8 @@
   }
 </script>
 
-<!-- max-w-(--breakpoint-2xl), e não 6xl como as outras listas: a tabela do inventário junta máquina,
-     responsável, saúde, manutenção com a próxima data, chamados, situação e visto por último, e
-     no 6xl a última coluna ficava cortada mesmo em tela cheia. -->
-<div class="mx-auto flex w-full max-w-(--breakpoint-2xl) flex-col gap-6">
+<!-- A largura é da casca (`page-frame`): a tela não define largura máxima. -->
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Inventário',
@@ -380,7 +379,12 @@
       actions={{ onRetry: actions.onRetry }}
     />
   {:else if state.isLoading}
-    <p class="text-ink-500 py-10 text-center text-sm">Carregando os computadores…</p>
+    <!-- O esqueleto tem a forma da grade de cards: a tela não pula quando a lista chega. -->
+    <div role="status" aria-label="Carregando os computadores…" aria-busy="true" class="card-grid">
+      {#each [0, 1, 2, 3, 4, 5] as slot (slot)}
+        <Skeleton class="rounded-surface h-52 w-full" />
+      {/each}
+    </div>
   {:else if state.isEmpty}
     <EmptyState
       data={{

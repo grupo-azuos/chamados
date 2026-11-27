@@ -227,8 +227,9 @@ describe('AzuosWeekScheduleGrid', () => {
   });
   it('explains navigation on keyboard focus without blocking the action', async () => {
     const actions = renderView();
-    await userEvent.tab();
+    /* O cabeçalho e o resumo vêm primeiro; a navegação do período, logo depois. */
     const previous = screen.getByRole('button', { name: 'Semana anterior' });
+    for (let index = 0; index < 10 && document.activeElement !== previous; index++) await userEvent.tab();
     expect(previous).toHaveFocus();
     await waitFor(() => expect(previous).toHaveAttribute('aria-describedby'));
     expect(document.getElementById(previous.getAttribute('aria-describedby')!)).toHaveTextContent(
@@ -240,7 +241,8 @@ describe('AzuosWeekScheduleGrid', () => {
 
   it('shows the new appointment hint when its button receives keyboard focus', async () => {
     renderView();
-    for (let index = 0; index < 7; index++) await userEvent.tab();
+    /* A ação principal mora no cabeçalho: é a primeira parada do teclado. */
+    await userEvent.tab();
     expect(screen.getByRole('button', { name: 'Novo agendamento' })).toHaveFocus();
     expect(
       await screen.findByText('Criar um agendamento na agenda de sistemas'),
@@ -303,7 +305,7 @@ describe('AzuosWeekScheduleGrid', () => {
     },
   );
 
-  it('shows synchronized GitHub activity, productivity, and event tooltip', async () => {
+  it('shows synchronized GitHub activity and the event tooltip', async () => {
     const githubEvent = {
       id: 41,
       projectId: 2,
@@ -324,7 +326,6 @@ describe('AzuosWeekScheduleGrid', () => {
         githubEvents: [githubEvent],
         mergedPullRequests: 1,
         resolvedIssues: 2,
-        developerStats: [{ author: 'vinicius-gpl', mergedPullRequests: 1, resolvedIssues: 2 }],
         days: [
           {
             dateString: '2026-10-06',
@@ -353,7 +354,6 @@ describe('AzuosWeekScheduleGrid', () => {
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('PRs mergeados no período')).toBeInTheDocument();
     expect(screen.getByText('Issues resolvidas no período')).toBeInTheDocument();
-    expect(screen.getByText('vinicius-gpl')).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: /Ajusta filtros do painel/ })).toHaveLength(2);
     await userEvent.click(screen.getByRole('button', { name: 'Ver 1 PR do dia 06/10/2026' }));
     expect(actions.onOpenGithubDay).toHaveBeenCalledWith('2026-10-06');
@@ -670,24 +670,6 @@ describe('AzuosWeekScheduleGrid — toolbar', () => {
       ).not.toBeInTheDocument(),
     );
     expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
-  });
-
-  // feliz
-  it('details the productivity of each developer, counting local merges', async () => {
-    renderView({
-      data: {
-        developerStats: [
-          { author: 'ana', mergedPullRequests: 3, localMerges: 2, resolvedIssues: 1 },
-          { author: 'bia', mergedPullRequests: 0, resolvedIssues: 0 },
-        ],
-      },
-    });
-    expect(screen.getByText('2 merges')).toBeInTheDocument();
-    expect(screen.getByText('0 merges')).toBeInTheDocument();
-    const tooltip = await hoverAndReadTooltip(screen.getByRole('button', { name: /^bia/ }));
-    expect(tooltip).toHaveTextContent(
-      'bia: 0 PRs mergeados, 0 merges locais e 0 issues resolvidas',
-    );
   });
 });
 

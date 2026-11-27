@@ -107,7 +107,7 @@ describe('AzuosMaintenanceScheduleCard — states', () => {
       },
     });
 
-    expect(screen.getByText('Próxima preventiva:')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Próxima preventiva' })).toBeInTheDocument();
     expect(screen.queryByText(/já aparece como pendente/)).not.toBeInTheDocument();
   });
 

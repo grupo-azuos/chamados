@@ -11,14 +11,16 @@ const options = [
 
 describe('AzuosTicketWatchersCard', () => {
   // feliz
-  it('lists the linked people and unlinks one with its button', async () => {
+  it('lists the linked people and unlinks one in the field', async () => {
     const onChange = vi.fn();
     render(TicketWatchersCard, {
       data: { selectedIds: ['u-bia', 'u-caio'], options },
       actions: { onChange },
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar Bia Costa' }));
+    expect(screen.getByRole('list', { name: 'Quem está vinculado' })).toHaveTextContent('Bia Costa');
+    await userEvent.click(screen.getByRole('button', { name: /^Pessoas vinculadas/ }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Bia Costa/ }));
 
     expect(onChange).toHaveBeenCalledWith(['u-caio']);
   });
@@ -49,6 +51,6 @@ describe('AzuosTicketWatchersCard', () => {
       actions: { onChange: vi.fn() },
     });
 
-    expect(screen.getByRole('button', { name: 'Pessoas vinculadas' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Pessoas vinculadas/ })).toBeDisabled();
   });
 });

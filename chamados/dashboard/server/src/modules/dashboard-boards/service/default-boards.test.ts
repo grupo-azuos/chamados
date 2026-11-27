@@ -32,6 +32,17 @@ describe('defaultBoard', () => {
     expect(personal.widgets.find((widget) => widget.id === 'agendadas')?.onlyMine).toBe(false);
   });
 
+  // feliz
+  /* Os gráficos que moravam na fila de Chamados e os números das Tarefas vivem no painel padrão. */
+  it('shows the tickets by type in the three modules and the tasks where there are tasks', () => {
+    for (const module of ROLE_CONTEXTS) {
+      const team = defaultBoard(module, 'team').widgets;
+      expect(team.some((widget) => widget.groupBy === 'problemType')).toBe(true);
+    }
+    expect(defaultBoard('infra', 'team').widgets.some((widget) => widget.source === 'infraTasks')).toBe(true);
+    expect(defaultBoard('sistema', 'team').widgets.some((widget) => widget.source === 'systemTasks')).toBe(true);
+  });
+
   // triste
   it('never uses a source of another module', () => {
     for (const { module, board } of BOARDS) {

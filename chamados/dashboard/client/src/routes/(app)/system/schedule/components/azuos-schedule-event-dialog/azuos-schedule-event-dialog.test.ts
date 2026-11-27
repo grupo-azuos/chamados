@@ -67,8 +67,8 @@ describe('AzuosScheduleEventDialog', () => {
     expect(screen.getByText('Novo Compromisso')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /Título do compromisso/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Data' })).toHaveTextContent('18 de out. de 2026');
-    expect(screen.getByRole('button', { name: 'Início' })).toHaveTextContent('09:00');
-    expect(screen.getByRole('button', { name: 'Fim' })).toHaveTextContent('10:00');
+    expect(screen.getByLabelText(/^Início/)).toHaveValue('09:00');
+    expect(screen.getByLabelText(/^Fim/)).toHaveValue('10:00');
   });
 
   it('calls onClose when close button is clicked', async () => {
@@ -95,8 +95,8 @@ describe('AzuosScheduleEventDialog', () => {
     render(ScheduleEventDialog, { props: { open: true, model, projects: [], onClose: vi.fn() } });
 
     expect(screen.getByText('Novo Registro')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Hora' })).toHaveTextContent('09:00');
-    expect(screen.queryByRole('button', { name: 'Fim' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^Hora/)).toHaveValue('09:00');
+    expect(screen.queryByLabelText(/^Fim/)).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Descrição' }).tagName).toBe('TEXTAREA');
     expect(screen.getByRole('button', { name: 'Salvar registro' })).toBeInTheDocument();
   });
@@ -257,13 +257,15 @@ describe('AzuosScheduleEventDialog — editing the fields', () => {
     expect(model.actions.onChange).toHaveBeenCalledWith('date', '2026-10-20');
     expect(model.actions.onBlur).toHaveBeenCalledWith('date');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Início' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Aplicar horário' }));
-    expect(model.actions.onChange).toHaveBeenCalledWith('startTime', '09:00');
+    const start = screen.getByLabelText(/^Início/);
+    await fireEvent.input(start, { target: { value: '09:30' } });
+    await fireEvent.blur(start);
+    expect(model.actions.onChange).toHaveBeenCalledWith('startTime', '09:30');
     expect(model.actions.onBlur).toHaveBeenCalledWith('startTime');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Fim' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Aplicar horário' }));
+    const end = screen.getByLabelText(/^Fim/);
+    await fireEvent.input(end, { target: { value: '10:00' } });
+    await fireEvent.blur(end);
     expect(model.actions.onChange).toHaveBeenCalledWith('endTime', '10:00');
     expect(model.actions.onBlur).toHaveBeenCalledWith('endTime');
   });

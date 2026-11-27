@@ -81,13 +81,13 @@
         Em {summary.tickets} chamado{summary.tickets === 1 ? '' : 's'}
         <ChevronDownIcon class="size-3 shrink-0" aria-hidden="true" />
       </PopoverTrigger>
-      <PopoverContent class="w-64 p-1" align="start">
+      <PopoverContent class="w-max max-w-[26rem] min-w-64 p-1" align="center">
         <ul class="max-h-72 overflow-y-auto" aria-label="Chamados que reservaram este item">
           {#each links as link, index (`${link.ticketId}-${link.direction}-${index}`)}
             <li>
               <a
                 href={`${data.ticketsPath}/${link.ticketId}`}
-                class="hover:bg-muted/60 flex min-h-10 items-center justify-between gap-2 rounded-chip px-3 py-2 text-sm"
+                class="hover:bg-hover-veil rounded-control flex min-h-10 items-center justify-between gap-2 px-3 py-2 text-sm"
               >
                 <span class="text-primary font-medium">{link.protocol}</span>
                 <span class="text-muted-foreground text-xs">{describeLink(link)}</span>

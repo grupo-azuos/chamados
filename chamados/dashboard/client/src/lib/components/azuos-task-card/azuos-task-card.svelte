@@ -22,6 +22,29 @@
       onRestore?: (task: Task) => void;
     };
   };
+
+  /**
+   * O menu de três pontinhos da tarefa — o mesmo no card e na linha da tabela. A tarefa de chamado
+   * se move pelo chamado; a arquivada fica parada. Excluir ARQUIVA, de qualquer origem, e a
+   * arquivada volta pelo Desarquivar (como no Paralegal).
+   */
+  export function taskMenuItems(task: Task): { id: string; label: string; isDestructive?: boolean }[] {
+    if (task.archive) return [{ id: 'restore', label: 'Desarquivar' }];
+    const move =
+      task.origin === 'ticket'
+        ? []
+        : [task.status === 'done' ? { id: 'reopen', label: 'Reabrir' } : { id: 'finish', label: 'Finalizar' }];
+
+    return [...move, { id: 'remove', label: 'Arquivar', isDestructive: true }];
+  }
+
+  /** O que cada item do menu faz. */
+  export function runTaskMenu(id: string, task: Task, actions: AzuosTaskCardProps['actions']): void {
+    if (id === 'finish') actions.onMove(task, 'done');
+    if (id === 'reopen') actions.onMove(task, 'reopened');
+    if (id === 'remove') actions.onRemove(task);
+    if (id === 'restore') actions.onRestore?.(task);
+  }
 </script>
 
 <script lang="ts">
@@ -45,25 +68,7 @@
   const icon = $derived(task.origin === 'ticket' ? Ticket : task.origin === 'maintenance' ? Wrench : ClipboardCheck);
   const ownerName = $derived(task.owner?.name ?? 'Sem responsável');
 
-  /* A tarefa de chamado se move pelo chamado; a arquivada fica parada. Excluir ARQUIVA, de qualquer
-     origem, e a arquivada volta pelo Desarquivar (como no Paralegal). */
-  const menuItems = $derived(task.archive ? [{ id: 'restore', label: 'Desarquivar' }] : activeMenu(task));
-
-  function activeMenu(item: Task) {
-    const move =
-      item.origin === 'ticket'
-        ? []
-        : [item.status === 'done' ? { id: 'reopen', label: 'Reabrir' } : { id: 'finish', label: 'Finalizar' }];
-
-    return [...move, { id: 'remove', label: 'Arquivar', isDestructive: true }];
-  }
-
-  function select(id: string): void {
-    if (id === 'finish') actions.onMove(task, 'done');
-    if (id === 'reopen') actions.onMove(task, 'reopened');
-    if (id === 'remove') actions.onRemove(task);
-    if (id === 'restore') actions.onRestore?.(task);
-  }
+  const menuItems = $derived(taskMenuItems(task));
 </script>
 
 <ContentCard
@@ -90,5 +95,5 @@
     menu: menuItems.length ? { label: `Ações da tarefa ${task.title}`, items: menuItems } : null,
   }}
   ui={{ icon, iconTone: TASK_STATUS_TONES[task.status], slot: 'task-card' }}
-  actions={{ onOpen: () => actions.onOpen(task), onMenuSelect: select }}
+  actions={{ onOpen: () => actions.onOpen(task), onMenuSelect: (id) => runTaskMenu(id, task, actions) }}
 />

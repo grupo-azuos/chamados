@@ -87,8 +87,6 @@
 </script>
 
 <script lang="ts">
-  import ArrowRight from '@lucide/svelte/icons/arrow-right';
-  import CheckIcon from '@lucide/svelte/icons/check';
   import Monitor from '@lucide/svelte/icons/monitor';
   import PackageSearch from '@lucide/svelte/icons/package-search';
   import Plus from '@lucide/svelte/icons/plus';
@@ -101,23 +99,25 @@
     DialogHeader,
     DialogTitle,
   } from '$lib/components/azuos-dialog/azuos-dialog';
+  import CheckboxField from '$lib/components/azuos-checkbox-field/azuos-checkbox-field.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
+  import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
   import NewItemForm from '$lib/components/azuos-ticket-stock-new-item/azuos-ticket-stock-new-item.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import { cn } from '$lib/utils/cn';
 
   let { data, state: dialogState, actions }: AzuosTicketStockLinkDialogProps = $props();
 
   const isBusy = $derived(Boolean(dialogState?.isSaving));
   const count = $derived(Object.keys(data.selection).length);
   const machineName = $derived(data.machines.find((machine) => machine.value === data.machineId)?.label ?? null);
-  const machineChoices = $derived([{ value: '', label: '(Sem máquina)' }, ...data.machines]);
-  /* Escolhido = fundo na cor cheia; o resto, a caixa cinza (dentro do diálogo branco). */
-  const CHOICE = 'rounded-box relative isolate flex w-full cursor-pointer items-center gap-3 p-3 text-left transition-colors before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-box hover:before:bg-hover-veil disabled:cursor-not-allowed disabled:opacity-60';
+  const machineChoices = $derived(
+    [{ value: '', label: '(Sem máquina)' }, ...data.machines].map((machine) => ({ ...machine, icon: Monitor })),
+  );
 </script>
 
 <Dialog open={dialogState?.isOpen ?? true} onOpenChange={(isOpen: boolean) => (isOpen ? undefined : actions.onClose())}>
@@ -153,31 +153,17 @@
       </div>
     {/if}
 
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-[18rem_auto_1fr]">
-      <section class="flex flex-col gap-2" aria-label="Máquina">
-        <p class="text-muted-foreground text-sm font-medium">Máquina</p>
-        <ul class="flex max-h-[45vh] flex-col gap-2 overflow-y-auto p-1">
-          {#each machineChoices as machine (machine.value)}
-            {@const isSelected = machine.value === data.machineId}
-            <li>
-              <button
-                type="button"
-                aria-pressed={isSelected}
-                disabled={isBusy}
-                onclick={() => actions.onMachineChange(machine.value)}
-                class={cn(CHOICE, isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground')}
-              >
-                <Monitor class="size-4 shrink-0" aria-hidden="true" />
-                <span class="min-w-0 truncate text-sm font-semibold">{machine.label}</span>
-              </button>
-            </li>
-          {/each}
-        </ul>
-      </section>
-
-      <div class="text-muted-foreground hidden items-center md:flex" aria-hidden="true">
-        <ArrowRight class="size-5" />
-      </div>
+    <!-- A máquina é um campo de escolha da casa (pastilhas quando são poucas, lista com busca
+         quando são muitas); os itens, uma lista de caixas de marcar com a quantidade ao lado. -->
+    <div class="flex flex-col gap-4">
+      <FilterField data={{ label: 'Máquina' }}>
+        <OptionPicker
+          data={{ value: data.machineId, options: machineChoices }}
+          ui={{ ariaLabel: 'Máquina', searchPlaceholder: 'Buscar máquina…' }}
+          state={{ isDisabled: isBusy }}
+          actions={{ onChange: actions.onMachineChange }}
+        />
+      </FilterField>
 
       <section class="flex min-w-0 flex-col gap-2" aria-label="Itens">
         <div class="flex items-end gap-2">
@@ -213,38 +199,25 @@
             ui={{ icon: PackageSearch }}
           />
         {:else}
-          <ul class="grid max-h-[45vh] grid-cols-1 gap-2 overflow-y-auto p-1 sm:grid-cols-2" aria-label="Itens do estoque">
+          <ul class="divide-border flex max-h-[45vh] flex-col divide-y overflow-y-auto" aria-label="Itens do estoque">
             {#each data.options as option (option.id)}
               {@const key = String(option.id)}
               {@const isSelected = key in data.selection}
-              <li class={cn('rounded-box flex flex-col gap-2 p-3', isSelected ? 'bg-primary-soft' : 'bg-muted')}>
-                <button
-                  type="button"
-                  aria-pressed={isSelected}
-                  disabled={isBusy}
-                  onclick={() => actions.onToggle(key)}
-                  class="flex w-full cursor-pointer items-start justify-between gap-2 text-left disabled:cursor-not-allowed"
-                >
-                  <span class="min-w-0">
-                    <span class="text-foreground block truncate text-sm font-semibold">{option.name}</span>
-                    <span class="text-muted-foreground block text-xs">
-                      {option.available} {option.available === 1 ? 'disponível' : 'disponíveis'}
-                    </span>
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    class={cn(
-                      'flex size-5 shrink-0 items-center justify-center rounded-full border',
-                      isSelected ? 'bg-primary text-primary-foreground border-transparent' : 'border-border',
-                    )}
-                  >
-                    {#if isSelected}<CheckIcon class="size-3.5" />{/if}
-                  </span>
-                </button>
+              <li class="flex flex-col gap-2 px-1 py-2 sm:flex-row sm:items-start sm:justify-between">
+                <CheckboxField
+                  data={{
+                    label: option.name,
+                    name: `stockItem${key}`,
+                    isChecked: isSelected,
+                    description: `${option.available} ${option.available === 1 ? 'disponível' : 'disponíveis'}`,
+                  }}
+                  state={{ isDisabled: isBusy }}
+                  actions={{ onChange: () => actions.onToggle(key) }}
+                />
                 {#if isSelected}
                   <TextField
                     data={{ label: `Quantidade de ${option.name}`, name: `stockQty${key}`, value: data.selection[key] ?? '1' }}
-                    ui={{ inputMode: 'numeric' }}
+                    ui={{ inputMode: 'numeric', className: 'sm:w-48' }}
                     state={{ error: data.errors?.[key], isDisabled: isBusy }}
                     actions={{ onChange: (value: string) => actions.onQuantityChange(key, value) }}
                   />

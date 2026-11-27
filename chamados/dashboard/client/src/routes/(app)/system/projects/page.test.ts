@@ -75,16 +75,16 @@ describe('the system/projects route with systems', () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
 
     await screen.findAllByText('Azuos Ticket');
-    await user.click(screen.getAllByRole('button', { name: 'Novo Sistema' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Novo sistema' })[0]!);
     let dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('Novo Sistema');
+    expect(dialog).toHaveTextContent('Novo sistema');
     await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     await user.click(screen.getAllByRole('button', { name: 'Ações de Azuos Ticket' })[0]!);
     await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
     dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('Editar Sistema');
+    expect(dialog).toHaveTextContent('Editar sistema');
     await user.click(within(dialog).getByRole('button', { name: 'Fechar diálogo' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 

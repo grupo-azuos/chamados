@@ -58,9 +58,9 @@
   import ArchivedList from '$lib/components/azuos-archived-list/azuos-archived-list.svelte';
   import ColorSwatchField from '$lib/components/azuos-color-swatch-field/azuos-color-swatch-field.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
+  import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import {
     Dialog,
-    DialogContent,
     DialogDescription,
     DialogFooter,
     DialogHeader,
@@ -128,7 +128,7 @@
       }}
     >
       <fieldset class="flex flex-col gap-4">
-        <legend class="text-ink-700 mb-2 text-xs font-semibold uppercase">Identificação</legend>
+        <legend class="text-muted-foreground mb-2 text-sm font-medium">Identificação</legend>
         <TextField
           data={{
             label: 'Nome da situação',
@@ -143,9 +143,9 @@
       </fieldset>
 
       <fieldset class="flex flex-col gap-4">
-        <legend class="text-ink-700 mb-2 text-xs font-semibold uppercase">Aparência</legend>
+        <legend class="text-muted-foreground mb-2 text-sm font-medium">Aparência</legend>
         <div class="flex flex-col gap-1.5">
-          <span class="text-ink-700 text-sm font-medium">Cor</span>
+          <span class="text-foreground text-sm font-medium">Cor</span>
           <ColorSwatchField
             data={{ value: values.color }}
             ui={{ allowRandom: false, ariaLabel: 'Cor da situação' }}
@@ -159,7 +159,7 @@
           state={{ isDisabled: dialogState.isSaving }}
           actions={{ onChange: (icon: string) => (values = { ...values, icon }) }}
         />
-        <p class="text-ink-500 flex items-center gap-2 text-sm">
+        <p class="text-muted-foreground flex items-center gap-2 text-sm">
           Prévia:
           <StatusBadge
             data={{ label: values.label.trim() || 'Nome da situação' }}
@@ -170,7 +170,7 @@
 
       {#if editing}
         <fieldset class="flex flex-col gap-2">
-          <legend class="text-ink-700 mb-2 text-xs font-semibold uppercase">Lugar no quadro</legend>
+          <legend class="text-muted-foreground mb-2 text-sm font-medium">Lugar no quadro</legend>
           <div role="group" aria-label="Lugar no quadro" class="flex flex-wrap gap-2">
             <ActionButton
               data={{ label: 'Mover para a esquerda' }}

@@ -129,7 +129,7 @@ describe('AzuosTicketKanbanBoard', () => {
     renderBoard({ state: { moveError: 'Não pode voltar.' }, actions: { onClearMoveError } });
 
     expect(screen.getByRole('alert')).toHaveTextContent('Não pode voltar.');
-    await fireEvent.click(screen.getByTitle('Fechar aviso'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Fechar aviso' }));
     expect(onClearMoveError).toHaveBeenCalled();
   });
 
@@ -138,7 +138,7 @@ describe('AzuosTicketKanbanBoard', () => {
     renderBoard({ state: { moveError: 'Aviso fixo.' } });
 
     expect(screen.getByRole('alert')).toHaveTextContent('Aviso fixo.');
-    expect(screen.queryByTitle('Fechar aviso')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Fechar aviso' })).not.toBeInTheDocument();
   });
 
   it('shows the initials when the assignee has no photo', () => {

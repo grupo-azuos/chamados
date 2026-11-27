@@ -137,12 +137,28 @@
   }
 
 
+  /**
+   * QUEM FEZ, uma pessoa — o rosto e o nome do rodapé. Vale o id escolhido em "Quem fez", com o
+   * nome de hoje no diretório; o nome gravado em `performedBy` é só o recurso do registro antigo,
+   * que não guardou o id. Ler o nome gravado primeiro deixava o card com o nome de antes da
+   * correção (quem registrou) mesmo depois de trocar a pessoa.
+   */
+  export function performerOf(
+    maintenance: Pick<Maintenance, 'performedBy' | 'performedByIds'>,
+  ): { id: string | null; name: string } | null {
+    const id = maintenance.performedByIds?.[0] ?? null;
+    const recorded = (maintenance.performedBy ?? '').split(',')[0]?.trim() || null;
+    const name = personNameOf(id) ?? recorded;
+
+    return name ? { id, name } : null;
+  }
+
   /** O nome do rodapé: com várias pessoas, a primeira "e mais N" — os nomes todos não cabem. */
   export function performersTitleOf(maintenance: Pick<Maintenance, 'performedBy' | 'performedByIds'>): string {
     const faces = performersOf(maintenance);
     if (faces.length > 1) return `${faces[0]!.name} e mais ${faces.length - 1}`;
 
-    return maintenance.performedBy ?? 'Sem responsável';
+    return performerOf(maintenance)?.name ?? 'Sem responsável';
   }
 
   export function placeOf(maintenance: Maintenance): string {
@@ -153,6 +169,7 @@
 </script>
 
 <script lang="ts">
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import FilterX from '@lucide/svelte/icons/filter-x';
   import Pencil from '@lucide/svelte/icons/pencil';
   import Plus from '@lucide/svelte/icons/plus';
@@ -161,6 +178,7 @@
   import Wrench from '@lucide/svelte/icons/wrench';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
@@ -173,7 +191,6 @@
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
-    TableActions,
     TableBody,
     TableCell,
     TableHead,
@@ -268,7 +285,12 @@
       actions={{ onRetry: actions.onRetry }}
     />
   {:else if viewState.isLoading}
-    <p class="text-ink-500 py-10 text-center text-sm">Carregando as manutenções…</p>
+    <!-- O esqueleto tem a forma da grade de cards: a tela não pula quando a lista chega. -->
+    <div role="status" aria-label="Carregando as manutenções…" aria-busy="true" class="card-grid">
+      {#each [0, 1, 2, 3, 4, 5] as slot (slot)}
+        <Skeleton class="rounded-surface h-52 w-full" />
+      {/each}
+    </div>
   {:else if viewState.isEmpty}
     <EmptyState
       data={{
@@ -317,9 +339,7 @@
             footer: {
               title: performersTitleOf(maintenance),
               subtitle: formatDate(maintenance.performedAt),
-              person: maintenance.performedBy
-                ? { id: maintenance.performedByIds?.[0] ?? null, name: maintenance.performedBy }
-                : null,
+              person: performerOf(maintenance),
               /* Quem fez pode ser mais de uma pessoa: o rosto de cada uma, com a foto. */
               people: performersOf(maintenance),
             },
@@ -368,7 +388,7 @@
             <TableHead class="min-w-[120px]">Tipo</TableHead>
             <TableHead class="min-w-[260px]">O que foi feito</TableHead>
             <TableHead class="min-w-[130px]">Quem fez</TableHead>
-            <TableHead class="min-w-[130px] text-right"><span class="sr-only">Ações</span></TableHead>
+            <TableHead class="w-14 text-right"><span class="sr-only">Ações</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -401,26 +421,23 @@
               <TableCell class="text-ink-700 max-w-[320px] break-words whitespace-normal">
                 {maintenance.description ?? '—'}
               </TableCell>
-              <TableCell class="text-ink-500 max-w-[140px] break-words whitespace-normal text-xs">{maintenance.performedBy ?? '—'}</TableCell>
+              <TableCell class="text-ink-500 max-w-[140px] break-words whitespace-normal text-xs">{performerOf(maintenance) ? performersTitleOf(maintenance) : '—'}</TableCell>
               <TableCell class="text-right whitespace-nowrap">
-                <TableActions>
-                  <ActionButton
-                    data={{ label: 'Corrigir' }}
-                    ui={{ variant: 'secondary', size: 'sm' }}
-                    actions={{ onClick: () => actions.onEdit(maintenance) }}
-                  />
-                  <ActionButton
-                    data={{ label: 'Excluir' }}
-                    ui={{
-                      variant: 'ghost',
-                      size: 'sm',
-                      icon: Trash2,
-                      isIconOnly: true,
-                      className: 'text-ink-500 hover:text-destructive hover:bg-muted',
-                    }}
-                    actions={{ onClick: () => actions.onAskRemove(maintenance) }}
-                  />
-                </TableActions>
+                <!-- A ação da linha mora no menu de três pontinhos, como no card. -->
+                <ActionMenu
+                  data={{
+                    label: `Ações da manutenção de ${machineLabelOf(maintenance)}`,
+                    items: [
+                      { id: 'edit', label: 'Corrigir', icon: Pencil },
+                      { id: 'remove', label: 'Excluir', icon: Trash2, isDestructive: true, separatorBefore: true },
+                    ],
+                  }}
+                  ui={{ isIconOnly: true }}
+                  actions={{
+                    onSelect: (id) =>
+                      id === 'remove' ? actions.onAskRemove(maintenance) : actions.onEdit(maintenance),
+                  }}
+                />
               </TableCell>
             </TableRow>
           {/each}

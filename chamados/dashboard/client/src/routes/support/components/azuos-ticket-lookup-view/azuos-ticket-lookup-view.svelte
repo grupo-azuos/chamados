@@ -143,12 +143,13 @@
   import HistoryTimeline, {
     formatHistoryDateTime,
   } from '$lib/components/azuos-history-timeline/azuos-history-timeline.svelte';
-  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import FileLinks from '$lib/components/azuos-file-links/azuos-file-links.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import { cn } from '$lib/utils/cn';
+  import { ticketProblemIconOf } from '$lib/utils/record-icon.util';
 
   let { data, state: viewState, actions, slots }: AzuosTicketLookupViewProps = $props();
 
@@ -248,51 +249,44 @@
     {#if viewState?.mineError}
       <ErrorState data={{ message: viewState.mineError }} ui={{ variant: 'inline' }} />
     {:else if viewState?.isLoadingMine}
-      <ul class="flex flex-col gap-2" aria-label="Carregando os seus chamados">
+      <ul class="flex flex-col gap-2" aria-label="Carregando os seus chamados" aria-busy="true">
         {#each [1, 2, 3] as item (item)}
-          <li class="bg-muted rounded-box h-20 animate-pulse"></li>
+          <li><Skeleton class="rounded-surface h-24 w-full" /></li>
         {/each}
       </ul>
     {:else if visible.length === 0}
-      <p class="text-muted-foreground bg-muted rounded-box p-4 text-center text-sm">
-        {tab === 'running'
-          ? 'Nenhum chamado andando agora.'
-          : 'Nenhum chamado encerrado ainda.'}
-      </p>
+      <EmptyState
+        data={{
+          title: tab === 'running' ? 'Nenhum chamado andando agora.' : 'Nenhum chamado encerrado ainda.',
+        }}
+        ui={{ icon: Inbox }}
+      />
     {:else}
-      <ul class="flex flex-col gap-1.5">
+      <!-- Cada chamado é o card da casa (`AzuosContentCard`): a situação na faixa, o protocolo em
+           mono, o que foi pedido no título. O aberto fica marcado como escolhido. -->
+      <ul class="flex flex-col gap-2">
         {#each visible as item (item.id)}
           {@const isOpen = ticket?.protocol === item.protocol}
-          <li>
-            <button
-              type="button"
-              aria-current={isOpen ? 'true' : undefined}
-              onclick={() => actions.onOpenMine(item.protocol)}
-              class={cn(
-                'rounded-box focus-visible:ring-ring flex w-full cursor-pointer flex-col gap-1.5 p-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
-                isOpen ? 'bg-primary-soft' : 'bg-card shadow-card hover:bg-hover-veil',
-              )}
-            >
-              <span class="flex items-center justify-between gap-2">
-                <span class="flex min-w-0 items-center gap-2">
-                  <span class={cn('font-mono text-sm font-bold', isOpen ? 'text-primary' : 'text-foreground')}>
-                    {item.protocol}
-                  </span>
-                  <!-- Está aqui por ter sido vinculado, não por ter aberto. -->
-                  {#if item.isWatching}
-                    <StatusBadge data={{ label: 'Vinculado' }} ui={{ tone: 'info', size: 'sm' }} />
-                  {/if}
-                </span>
-                <StatusBadge
-                  data={{ label: ticketStatusLabel(item.status) }}
-                  ui={{ tone: ticketStatusTone(item.status), size: 'sm' }}
-                />
-              </span>
-              <span class="text-foreground line-clamp-2 text-xs">{item.description}</span>
-              <span class="text-muted-foreground text-[0.6875rem]">
-                {ticketAreaLabel(item.area)} · {ticketProblemTypeLabel(item.problemType)} · {formatHistoryDateTime(item.createdAt)}
-              </span>
-            </button>
+          <li class="flex" aria-current={isOpen ? 'true' : undefined}>
+            <ContentCard
+              data={{
+                label: `Abrir o chamado ${item.protocol}`,
+                title: item.description,
+                code: item.protocol,
+                meta: `${ticketAreaLabel(item.area)} · ${ticketProblemTypeLabel(item.problemType)} · ${formatHistoryDateTime(item.createdAt)}`,
+                status: { label: ticketStatusLabel(item.status), tone: ticketStatusTone(item.status) },
+                /* Está aqui por ter sido vinculado, não por ter aberto. */
+                tags: item.isWatching ? [{ label: 'Vinculado', tone: 'info' }] : [],
+              }}
+              ui={{
+                icon: ticketProblemIconOf(item.problemType),
+                iconTone: ticketStatusTone(item.status),
+                className: 'w-full',
+                slot: 'my-ticket-card',
+              }}
+              state={{ isSelected: isOpen }}
+              actions={{ onOpen: () => actions.onOpenMine(item.protocol) }}
+            />
           </li>
         {/each}
       </ul>
@@ -323,24 +317,30 @@
     {:else if ticket}
       {@const facts = factsOf(ticket)}
       {@const journey = journeyOf(ticket.status)}
-      <ContentCard data={{ label: '', title: '' }}>
+      <!-- O chamado aberto é um bloco de conteúdo (`AzuosContentCard`): a situação e a urgência
+           na faixa, o protocolo no título, e o resto no corpo. -->
+      <ContentCard
+        data={{
+          label: `Chamado ${ticket.protocol}`,
+          title: ticket.protocol,
+          meta: `${ticketAreaLabel(ticket.area)} · ${ticketProblemTypeLabel(ticket.problemType)}`,
+          status: { label: ticketStatusLabel(ticket.status), tone: ticketStatusTone(ticket.status) },
+          tags: [
+            {
+              label: `Urgência ${ticketPriorityLabel(ticket.priority).toLowerCase()}`,
+              tone: ticketPriorityTone(ticket.priority),
+            },
+          ],
+        }}
+        ui={{
+          icon: ticketProblemIconOf(ticket.problemType),
+          iconTone: ticketStatusTone(ticket.status),
+          slot: 'public-ticket',
+        }}
+      >
 {#snippet body()}
-<div class="flex flex-col gap-6 p-5 sm:p-6">
+<div class="flex flex-col gap-6 pb-1">
         <header class="flex flex-col gap-4">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 class="text-foreground font-mono text-2xl font-bold">{ticket.protocol}</h2>
-            <div class="flex flex-wrap items-center gap-2">
-              <StatusBadge
-                data={{ label: ticketStatusLabel(ticket.status) }}
-                ui={{ tone: ticketStatusTone(ticket.status) }}
-              />
-              <StatusBadge
-                data={{ label: `Urgência ${ticketPriorityLabel(ticket.priority).toLowerCase()}` }}
-                ui={{ tone: ticketPriorityTone(ticket.priority) }}
-              />
-            </div>
-          </div>
-
           <!-- A TRILHA: segmentos preenchidos até onde o chamado chegou. -->
           <ol class="grid grid-cols-3 gap-2" aria-label="Em que pé está o chamado">
             {#each journey as step, index (index)}
@@ -349,7 +349,7 @@
                   class={cn(
                     'h-1.5 rounded-full',
                     step.state === 'next' ? 'bg-muted' : 'bg-primary',
-                    step.state === 'current' && 'animate-pulse',
+                    step.state === 'current' && 'motion-safe:animate-pulse',
                   )}
                 ></span>
                 <span
@@ -390,16 +390,16 @@
 
         {#if ticket.projectId}
           <!-- Quem pede vê o sistema inteiro: o que já está em andamento evita o chamado repetido. -->
-          <a
-            href={`/support/systems/${ticket.projectId}`}
-            class="rounded-box bg-muted hover:bg-hover-veil focus-visible:ring-ring/50 flex items-center gap-3 p-4 focus-visible:ring-3 focus-visible:outline-none"
-          >
-            <Network class="text-primary size-5 shrink-0" aria-hidden="true" />
-            <span class="flex min-w-0 flex-col">
-              <span class="text-foreground text-sm font-semibold">Ver o mapa do sistema {ticket.projectName ?? ''}</span>
-              <span class="text-muted-foreground text-xs">O que está em andamento: commits, issues, chamados e tarefas.</span>
-            </span>
-          </a>
+          <p class="flex flex-col gap-0.5">
+            <a
+              href={`/support/systems/${ticket.projectId}`}
+              class="text-primary inline-flex w-fit items-center gap-1.5 text-sm font-semibold hover:underline"
+            >
+              <Network class="size-4 shrink-0" aria-hidden="true" />
+              Ver o mapa do sistema {ticket.projectName ?? ''}
+            </a>
+            <span class="text-muted-foreground text-xs">O que está em andamento: commits, issues, chamados e tarefas.</span>
+          </p>
         {/if}
 
         {#if ownFiles.length > 0 || ticket.screenshotUrl}

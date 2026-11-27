@@ -180,7 +180,7 @@ describe('AzuosMaintenanceFormDialog — every field reports to the model', () =
     await choose('Equipamento', 'Recepção — balcão (RECEPCAO-01)');
     expect(actions.onChange).toHaveBeenCalledWith('computerId', '1');
     /* O tipo são pastilhas lado a lado: as seis cabem, e escolher é um toque. */
-    await userEvent.click(screen.getByRole('radio', { name: 'Limpeza' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Limpeza' }));
     expect(actions.onChange).toHaveBeenCalledWith('type', 'cleaning');
 
     await userEvent.type(screen.getByRole('textbox', { name: /Qual equipamento/ }), 'I');

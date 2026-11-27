@@ -15,6 +15,7 @@ import {
   SOFTWARE_PROJECT_STATUSES,
   TIMELINE_EVENT_TYPES,
 } from '../domain/software-project.util';
+import { TASK_ORIGINS, TASK_STATUSES } from '../domain/task-flow.util';
 import { TICKET_PRIORITIES, TICKET_STATUSES } from '../domain/ticket-status.util';
 import { archiveSchema } from './archive.schema';
 
@@ -252,6 +253,32 @@ const TICKET_DIMENSIONS = {
   openAge: { label: 'Dias em aberto (faixas)', kind: 'age' },
 } as const satisfies Record<string, DataDimension>;
 
+/**
+ * Os campos e agrupamentos de uma TAREFA — iguais na Infraestrutura e no Sistema, que são os
+ * módulos com tarefas. Como no chamado, cada módulo tem a SUA fonte: o painel de um nunca soma
+ * tarefa do outro. O responsável é o dono da tarefa, pelo nome de hoje no diretório.
+ */
+const TASK_FIELDS = {
+  status: { label: 'Situação', type: 'enum', options: TASK_STATUSES },
+  origin: { label: 'Origem', type: 'enum', options: TASK_ORIGINS },
+  owner: { label: 'Responsável', type: 'text', isPerson: true },
+  createdAt: { label: 'Criada em', type: 'date' },
+  dueDate: { label: 'Prazo', type: 'date' },
+  finishedAt: { label: 'Finalizada em', type: 'date' },
+} as const satisfies Record<string, DataField>;
+
+const TASK_DIMENSIONS = {
+  status: { label: 'Situação', kind: 'category' },
+  origin: { label: 'Origem', kind: 'category' },
+  owner: { label: 'Responsável', kind: 'category' },
+  createdDay: { label: 'Criadas (por dia)', kind: 'day' },
+  createdWeek: { label: 'Criadas (por semana)', kind: 'week' },
+  createdMonth: { label: 'Criadas (por mês)', kind: 'month' },
+  finishedMonth: { label: 'Finalizadas (por mês)', kind: 'month' },
+  /* Os dias desde o começo, só das que ainda não foram finalizadas. */
+  openAge: { label: 'Dias em aberto (faixas)', kind: 'age' },
+} as const satisfies Record<string, DataDimension>;
+
 export const DATA_SOURCES = {
   /* ------------------------------------------------------------ Infraestrutura */
   infraTickets: {
@@ -261,6 +288,14 @@ export const DATA_SOURCES = {
     description: 'Os chamados da Infraestrutura, contando os que têm a área como participante.',
     fields: TICKET_FIELDS,
     dimensions: TICKET_DIMENSIONS,
+  },
+  infraTasks: {
+    module: 'infra',
+    label: 'Tarefas',
+    noun: 'tarefas',
+    description: 'As tarefas da Infraestrutura — as arquivadas ficam de fora.',
+    fields: TASK_FIELDS,
+    dimensions: TASK_DIMENSIONS,
   },
   computers: {
     module: 'infra',
@@ -369,6 +404,14 @@ export const DATA_SOURCES = {
     description: 'Os chamados de Sistema, contando os que têm a área como participante.',
     fields: { ...TICKET_FIELDS, project: { label: 'Sistema', type: 'text' } },
     dimensions: { ...TICKET_DIMENSIONS, project: { label: 'Sistema', kind: 'category' } },
+  },
+  systemTasks: {
+    module: 'sistema',
+    label: 'Tarefas',
+    noun: 'tarefas',
+    description: 'As tarefas de Sistema — as arquivadas ficam de fora.',
+    fields: TASK_FIELDS,
+    dimensions: TASK_DIMENSIONS,
   },
   softwareProjects: {
     module: 'sistema',

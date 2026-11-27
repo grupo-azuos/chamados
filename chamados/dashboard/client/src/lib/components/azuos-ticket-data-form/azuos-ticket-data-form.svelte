@@ -49,7 +49,7 @@
         customSystemName?: FormFieldState;
       };
       /** Quem pode ser o responsável. Vazio (o padrão) esconde o campo. */
-      assignees?: { value: string; label: string }[];
+      assignees?: { value: string; label: string; avatarUrl?: string | null }[];
       /** As máquinas do inventário, para vincular o chamado a uma delas. */
       machines: { value: string; label: string }[];
       /**
@@ -119,8 +119,9 @@
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
+  import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
+  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
-  import { cn } from '$lib/utils/cn';
 
   let { data, state: formState, actions }: AzuosTicketDataFormProps = $props();
 
@@ -216,7 +217,9 @@
 
   <!-- Três colunas em tela larga: com a ficha na largura toda, duas colunas esticavam cada
        campo além do que ele precisa. Seis campos em duas linhas. -->
-  <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+  <!-- Um grupo só, com nome para o leitor de tela: são os dados que o "Salvar" grava juntos. -->
+  <fieldset class="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+  <legend class="sr-only">Dados do chamado</legend>
   <FilterField data={{ label: 'Urgência' }}>
     <OptionPicker
       data={{ value: fields.priority.value, options: PRIORITY_OPTIONS }}
@@ -241,9 +244,17 @@
   <!-- Trocar o responsável é do super admin: para os demais as opções não chegam e o campo some. -->
   {#if fields.assigneeId && data.assignees && data.assignees.length > 0}
     <FilterField data={{ label: 'Responsável' }}>
-      <OptionPicker
-        data={{ value: fields.assigneeId.value, options: data.assignees }}
-        ui={{ ariaLabel: 'Responsável', placeholder: 'Sem responsável', fullWidth: true, mode: 'combobox', searchPlaceholder: 'Buscar pessoa…' }}
+      <!-- Pessoa é sempre o campo de pessoa (select-standard): com a foto, busca e o id. -->
+      <PersonPickerField
+        data={{
+          value: fields.assigneeId.value,
+          people: data.assignees.map((option) => ({
+            id: option.value,
+            name: option.label,
+            photo: option.avatarUrl ?? null,
+          })),
+        }}
+        ui={{ ariaLabel: 'Responsável', placeholder: 'Sem responsável', className: 'w-full' }}
         state={{ isDisabled: formState?.isSubmitting }}
         actions={{ onChange: (value: string) => actions.onChange('assigneeId', value) }}
       />
@@ -329,16 +340,11 @@
   </FilterField>
   {/if}
 
-  </div>
+  </fieldset>
 
   {#if formState?.error}
     <ErrorState data={{ message: formState.error }} ui={{ variant: 'inline' }} />
   {/if}
-
-
-
-
-
 
   <!-- ÁREAS PARTICIPANTES (#13) — além da área original, de cima. Ex.: um chamado de Infra que
        também precisa de Manutenção. Mudança própria, fora do envio do formulário: adiciona e
@@ -354,49 +360,32 @@
     {#if data.ticket.participantAreas.length === 0}
       <p class="text-muted-foreground text-xs">Nenhuma área participante ainda.</p>
     {:else}
-      <ul class="flex flex-wrap items-center gap-1.5">
+      <ul class="flex flex-wrap items-center gap-2">
         {#each data.ticket.participantAreas as area (area)}
-          <li
-            class={cn(
-              'bg-muted text-primary inline-flex items-center gap-1 rounded-full py-1 pr-1 pl-3 text-xs font-semibold',
-              formState?.removingAreaArea === area && 'opacity-60',
-            )}
-          >
-            {ticketAreaLabel(area)}
-            <button
-              type="button"
-              onclick={() => actions.onRemoveParticipantArea(area)}
-              disabled={formState?.removingAreaArea === area}
-              aria-label={`Remover ${ticketAreaLabel(area)} do chamado`}
-              class="hover:bg-muted flex size-5 cursor-pointer items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
-            >
-              <XIcon class="size-3" aria-hidden="true" />
-            </button>
+          <li class="inline-flex items-center gap-0.5">
+            <StatusBadge data={{ label: ticketAreaLabel(area) }} ui={{ tone: 'brand' }} />
+            <ActionButton
+              data={{ label: `Remover ${ticketAreaLabel(area)} do chamado` }}
+              ui={{ variant: 'ghost', size: 'sm', icon: XIcon, isIconOnly: true }}
+              state={{ isDisabled: formState?.removingAreaArea === area }}
+              actions={{ onClick: () => actions.onRemoveParticipantArea(area) }}
+            />
           </li>
         {/each}
       </ul>
     {/if}
 
-    <!-- AS QUE PODEM ENTRAR: um botão tracejado cada, que adiciona com UM clique. Antes era
-         escolher numa fileira e depois apertar "Adicionar" — dois gestos, e a fileira parecia
-         um seletor do formulário de cima, que só vale ao salvar. O tracejado diz "ainda não
-         está aqui"; a pastilha cheia, acima, diz "já está". -->
+    <!-- AS QUE PODEM ENTRAR: um botão secundário cada, que adiciona com UM clique. O selo acima
+         diz "já está"; o botão com o +, "ainda não está aqui". -->
     {#if data.availableParticipantAreas.length > 0}
       <div class="flex flex-wrap items-center gap-1.5">
         {#each data.availableParticipantAreas as option (option.value)}
-          <button
-            type="button"
-            onclick={() => actions.onAddParticipantArea(option.value)}
-            disabled={formState?.isAddingArea}
-            aria-label={`Adicionar ${option.label} ao chamado`}
-            class={cn(
-              'control-sm border-border text-muted-foreground inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed text-xs font-medium transition-colors',
-              'hover:text-primary disabled:cursor-not-allowed disabled:opacity-60',
-            )}
-          >
-            <PlusIcon class="size-3" aria-hidden="true" />
-            {option.label}
-          </button>
+          <ActionButton
+            data={{ label: `Adicionar ${option.label}` }}
+            ui={{ variant: 'secondary', size: 'sm', icon: PlusIcon }}
+            state={{ isDisabled: formState?.isAddingArea }}
+            actions={{ onClick: () => actions.onAddParticipantArea(option.value) }}
+          />
         {/each}
       </div>
     {/if}

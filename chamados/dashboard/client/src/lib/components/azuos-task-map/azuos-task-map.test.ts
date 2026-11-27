@@ -61,16 +61,13 @@ describe('AzuosTaskMap', () => {
   it('shows only the islands of the chosen people, with "Mostrar" and the reset', async () => {
     const actions = setup({ positions: { '1': { x: 0, y: 0 } } });
 
-    expect(screen.getByRole('group', { name: 'Mostrar no mapa' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Chamados' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Computadores' }));
-    expect(screen.getByRole('button', { name: 'Computadores' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
+    /* O que entra no mapa é o select de marcar, com tudo marcado ao abrir. */
+    await userEvent.click(screen.getByRole('button', { name: /^Mostrar no mapa:/ }));
+    const computers = await screen.findByRole('checkbox', { name: 'Computadores' });
+    expect(computers).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(computers);
+    expect(await screen.findByRole('checkbox', { name: 'Computadores' })).toHaveAttribute('aria-checked', 'false');
+    await userEvent.keyboard('{Escape}');
     await userEvent.click(screen.getByRole('button', { name: 'Arrumar de novo' }));
     expect(actions.onResetLayout).toHaveBeenCalled();
   });
@@ -94,11 +91,10 @@ describe('AzuosTaskMap', () => {
   });
 
   // triste
-  it('in Sistema, "Mostrar" offers only tickets', () => {
+  it('in Sistema, with only tickets, there is no "Mostrar" to choose', () => {
     setup({ kinds: ['ticket'], positions: { '1': { x: 0, y: 0 } } });
 
-    expect(screen.getByRole('button', { name: 'Chamados' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Computadores' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Inventário' })).not.toBeInTheDocument();
+    /* Um tipo só: não há o que escolher, e o select some. */
+    expect(screen.queryByRole('button', { name: /^Mostrar no mapa:/ })).not.toBeInTheDocument();
   });
 });

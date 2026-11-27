@@ -86,7 +86,6 @@
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import { COMPUTER_NOTES_MAX_LENGTH } from '@template/shared/schemas/computer.schema';
-  import Monitor from '@lucide/svelte/icons/monitor';
 
   let { data, state, actions }: AzuosComputerFormDialogProps = $props();
 
@@ -108,17 +107,13 @@
 >
   <DialogContent>
     <form novalidate class="flex flex-col gap-4" onsubmit={handleSubmit}>
-      <DialogHeader class="gap-1.5">
-        <div class="flex items-center gap-2.5">
-          <span class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-muted text-primary">
-            <Monitor class="size-4" aria-hidden="true" />
-          </span>
-          <DialogTitle class="text-lg font-semibold tracking-tight">{isEdit ? 'Identificação da máquina' : 'Cadastrar computador'}</DialogTitle>
-        </div>
-        <DialogDescription class="text-xs text-muted-foreground">
+      <!-- O cabeçalho da casa: título e descrição, sem selo de ícone desenhado à mão. -->
+      <DialogHeader>
+        <DialogTitle>{isEdit ? 'Identificação da máquina' : 'Cadastrar computador'}</DialogTitle>
+        <DialogDescription>
           {isEdit
-            ? 'Apelido, responsável, departamento e observação. O resto a própria máquina informa.'
-            : 'Só o nome e o tipo são obrigatórios. Ao salvar, você recebe o token para instalar o agente nela.'}
+          ? 'Apelido, responsável, departamento e observação. O resto a própria máquina informa.'
+          : 'Só o nome e o tipo são obrigatórios. Ao salvar, você recebe o token para instalar o agente nela.'}
         </DialogDescription>
       </DialogHeader>
 
@@ -126,7 +121,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         {#if isEdit}
           <div class="flex flex-col gap-1 rounded-box bg-muted p-3 sm:col-span-2">
-            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nome informado pela máquina</span>
+            <span class="text-muted-foreground text-xs font-medium">Nome informado pela máquina</span>
             <span class="font-mono text-sm font-medium text-foreground">{fields.name.value}</span>
           </div>
         {:else}

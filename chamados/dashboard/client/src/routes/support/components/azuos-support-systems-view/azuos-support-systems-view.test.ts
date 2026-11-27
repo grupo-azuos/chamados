@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -32,14 +32,24 @@ describe('AzuosSupportSystemsView', () => {
   // feliz
   it('shows how each system is going and opens its map', async () => {
     const actions = setup();
+    const cards = within(screen.getByRole('list', { name: 'Sistemas' }));
 
-    expect(screen.getByText('Paralegal')).toBeInTheDocument();
-    expect(screen.getByText('Chamados abertos')).toBeInTheDocument();
-    expect(screen.getByText(/Último movimento em/)).toBeInTheDocument();
+    expect(cards.getByText('Paralegal')).toBeInTheDocument();
+    expect(cards.getByText('Chamados abertos')).toBeInTheDocument();
+    expect(cards.getByText(/Último movimento em/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Ver o andamento de Paralegal' }));
     expect(actions.onOpen).toHaveBeenCalledWith(1);
     await userEvent.type(screen.getByLabelText('Buscar'), 'p');
     expect(actions.onSearch).toHaveBeenCalledWith('p');
+  });
+
+  /* A tabela é o outro modo da mesma lista: a linha também abre o mapa. */
+  it('opens the map from the table row too', async () => {
+    const actions = setup();
+    const table = within(document.querySelector('[data-slot="support-system-table"]') as HTMLElement);
+
+    await userEvent.click(table.getByRole('button', { name: 'Ver o mapa' }));
+    expect(actions.onOpen).toHaveBeenCalledWith(1);
   });
 
   // triste

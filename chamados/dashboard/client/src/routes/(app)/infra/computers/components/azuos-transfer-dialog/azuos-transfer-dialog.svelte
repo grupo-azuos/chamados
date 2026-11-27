@@ -115,8 +115,6 @@
     DialogTitle,
   } from '$lib/components/azuos-dialog/azuos-dialog';
 
-  import ArrowRightLeft from '@lucide/svelte/icons/arrow-right-left';
-
   let { data, state: dialogState, actions }: AzuosTransferDialogProps = $props();
 
   const goingToShelf = $derived(data.toDepartment === '');
@@ -133,18 +131,10 @@
 >
   <DialogContent>
     <form novalidate class="flex flex-col gap-4.5" onsubmit={handleSubmit}>
-      <DialogHeader class="gap-1.5">
-        <div class="flex items-center gap-2.5">
-          <span
-            class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-muted text-primary"
-          >
-            <ArrowRightLeft class="size-4" aria-hidden="true" />
-          </span>
-          <DialogTitle class="text-lg font-semibold tracking-tight"
-            >Transferir de departamento</DialogTitle
-          >
-        </div>
-        <DialogDescription class="text-xs text-muted-foreground">
+      <!-- O cabeçalho da casa: título e descrição, sem selo de ícone desenhado à mão. -->
+      <DialogHeader>
+        <DialogTitle>Transferir de departamento</DialogTitle>
+        <DialogDescription>
           {machineLabelOf(data.computer)} · hoje em <strong>{currentPlaceOf(data.computer)}</strong>
         </DialogDescription>
       </DialogHeader>

@@ -19,7 +19,6 @@
     MAINTENANCE_TYPE_LABELS,
     PREVENTIVE_INTERVAL_MONTHS,
     type MaintenanceType,
-    maintenanceTypeTone,
     resetsPreventiveClock,
   } from '@template/shared/domain/maintenance.util';
   import { DESCRIPTION_MAX_LENGTH } from '@template/shared/schemas/maintenance.schema';
@@ -62,7 +61,6 @@
   const TYPE_OPTIONS = MAINTENANCE_TYPES.map((type) => ({
     value: type,
     label: MAINTENANCE_TYPE_LABELS[type],
-    tone: maintenanceTypeTone(type),
   }));
 
   /**
@@ -98,13 +96,6 @@
   }
 
   /** A bolinha de cada tipo, na cor do status dele (a mesma do selo do card). */
-  const TYPE_DOT: Record<ReturnType<typeof maintenanceTypeTone>, string> = {
-    neutral: 'bg-muted-foreground',
-    info: 'bg-info',
-    success: 'bg-success',
-    warning: 'bg-warning',
-    brand: 'bg-primary',
-  };
 
   /** A opção que libera o campo de texto: equipamento que não está no inventário. */
   export const OTHER_MACHINE_OPTION = {
@@ -124,6 +115,7 @@
   } from '$lib/components/ui/dialog';
   import DatePicker from '$lib/components/azuos-date-picker/azuos-date-picker.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PersonMultiPickerField from '$lib/components/azuos-person-multi-picker-field/azuos-person-multi-picker-field.svelte';
@@ -136,7 +128,6 @@
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import Wrench from '@lucide/svelte/icons/wrench';
   import SectionTitle from '$lib/components/azuos-section-title/azuos-section-title.svelte';
-  import { cn } from '$lib/utils/cn';
 
   let { data, state: dialogState, actions }: AzuosMaintenanceFormDialogProps = $props();
 
@@ -159,22 +150,14 @@
 >
   <DialogContent class="sm:max-w-2xl">
     <form novalidate class="flex flex-col gap-6" onsubmit={handleSubmit}>
-      <DialogHeader class="gap-1.5">
-        <div class="flex items-center gap-3">
-          <span class="rounded-icon bg-primary text-on-hue flex size-10 shrink-0 items-center justify-center">
-            <Wrench class="size-5" aria-hidden="true" />
-          </span>
-          <div class="min-w-0">
-            <DialogTitle class="text-xl font-semibold tracking-tight">
-              {isEdit ? 'Corrigir manutenção' : 'Registrar manutenção'}
-            </DialogTitle>
-            <DialogDescription class="text-muted-foreground text-sm">
-              {isEdit
-                ? 'Altere o que ficou errado e salve. O histórico guarda o antes e o depois.'
-                : 'Em qual equipamento, o que foi feito, quem fez e quando.'}
-            </DialogDescription>
-          </div>
-        </div>
+      <!-- O cabeçalho da casa: título e descrição, sem selo de ícone desenhado à mão. -->
+      <DialogHeader>
+        <DialogTitle>{isEdit ? 'Corrigir manutenção' : 'Registrar manutenção'}</DialogTitle>
+        <DialogDescription>
+          {isEdit
+          ? 'Altere o que ficou errado e salve. O histórico guarda o antes e o depois.'
+          : 'Em qual equipamento, o que foi feito, quem fez e quando.'}
+        </DialogDescription>
       </DialogHeader>
 
       <!-- 1. O EQUIPAMENTO -->
@@ -220,32 +203,14 @@
             ui={{ icon: Wrench, className: 'mb-1' }}
           />
         </legend>
-        <div role="radiogroup" aria-label="Tipo de manutenção" class="flex flex-wrap gap-2">
-          {#each TYPE_OPTIONS as option (option.value)}
-            {@const isChosen = fields.type.value === option.value}
-            <button
-              type="button"
-              role="radio"
-              aria-checked={isChosen}
-              disabled={dialogState.isSubmitting}
-              onclick={() => actions.onChange('type', option.value)}
-              class={cn(
-                'rounded-chip control-sm inline-flex items-center gap-1.5 px-3 text-sm font-medium transition-colors',
-                'focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px] disabled:opacity-50',
-                isChosen ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground hover:bg-hover-veil',
-              )}
-            >
-              <span
-                class={cn(
-                  'size-2 rounded-full',
-                  isChosen ? 'bg-primary-foreground' : TYPE_DOT[option.tone],
-                )}
-                aria-hidden="true"
-              ></span>
-              {option.label}
-            </button>
-          {/each}
-        </div>
+        <!-- Uma escolha entre poucas, à vista: o controle segmentado da casa (pílula cinza com a
+             escolhida em branco), e não pastilhas pintadas de azul. -->
+        <SegmentedControl
+          data={{ value: fields.type.value, options: TYPE_OPTIONS }}
+          ui={{ ariaLabel: 'Tipo de manutenção' }}
+          state={{ isDisabled: dialogState.isSubmitting }}
+          actions={{ onChange: (value: string) => actions.onChange('type', value) }}
+        />
         {#if preventiveHint}
           <p class="text-muted-foreground flex items-start gap-1.5 text-xs">
             <Info class="mt-px size-3.5 shrink-0" aria-hidden="true" />
@@ -273,14 +238,12 @@
             Frases prontas:
           </span>
           {#each DESCRIPTION_SUGGESTIONS as phrase (phrase)}
-            <button
-              type="button"
-              disabled={dialogState.isSubmitting}
-              onclick={() => actions.onChange('description', withSuggestion(fields.description.value, phrase))}
-              class="rounded-chip bg-muted text-foreground hover:bg-hover-veil focus-visible:ring-ring/50 px-2.5 py-1 text-xs outline-none focus-visible:ring-[3px] disabled:opacity-50"
-            >
-              {phrase}
-            </button>
+            <ActionButton
+              data={{ label: phrase }}
+              ui={{ variant: 'secondary', size: 'sm' }}
+              state={{ isDisabled: dialogState.isSubmitting }}
+              actions={{ onClick: () => actions.onChange('description', withSuggestion(fields.description.value, phrase)) }}
+            />
           {/each}
         </div>
       </fieldset>

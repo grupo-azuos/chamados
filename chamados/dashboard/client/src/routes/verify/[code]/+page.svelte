@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import { page } from '$app/state';
 
   import { useServiceOrderVerifyModel } from '$lib/hooks/use-service-order-verify/use-service-order-verify.svelte';
@@ -20,18 +21,15 @@
 </svelte:head>
 
 <div class="bg-background flex min-h-screen flex-col">
-  <header class="border-b">
-    <div class="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
-      <h1 class="text-ink-900 text-2xl font-bold">Conferir ordem de serviço</h1>
-      <p class="text-ink-500 mt-1 text-sm">
-        Veja se o documento que você recebeu é o que o sistema emitiu. Não precisa de senha.
-      </p>
-    </div>
-  </header>
-
   <!-- `flex-1` + `justify-center`: o conteúdo é curto, e sem isso ele nascia colado no topo com
        a tela inteira vazia embaixo — o mesmo cuidado da tela de abrir chamado. -->
-  <main class="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-8 sm:px-6">
+  <main class="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-6 px-4 py-8 sm:px-6">
+    <PageHeader
+      data={{
+        title: 'Conferir ordem de serviço',
+        description: 'Veja se o documento que você recebeu é o que o sistema emitiu. Não precisa de senha.',
+      }}
+    />
     <ServiceOrderVerifyView data={verify.data} state={verify.state} actions={verify.actions} />
   </main>
 </div>

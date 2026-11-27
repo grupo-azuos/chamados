@@ -56,6 +56,7 @@
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
 
   let { data, state: viewState, actions }: AzuosWhatsappNoticeListProps = $props();
@@ -66,12 +67,13 @@
     <h2 class="text-ink-900 text-sm font-semibold">Avisos por WhatsApp</h2>
 
     {#if viewState?.error}
-      <p role="alert" class="text-destructive text-sm">{viewState.error}</p>
+      <ErrorState data={{ message: viewState.error }} ui={{ variant: 'inline' }} />
     {/if}
 
-    <ul class="divide-y rounded-box border">
+    <!-- Borda só como divisória entre os avisos, nunca em volta da lista. -->
+    <ul class="divide-border divide-y">
       {#each data.notices as notice (notice.id)}
-        <li class="flex items-center justify-between gap-3 p-2.5">
+        <li class="flex items-center justify-between gap-3 py-2.5">
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2">
               <p class="text-ink-900 text-sm">{WHATSAPP_NOTICE_KIND_LABELS[notice.kind]}</p>

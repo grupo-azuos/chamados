@@ -11,7 +11,7 @@
 -->
 <script lang="ts" module>
   export type AzuosTicketWatchersCardProps = {
-    data: { selectedIds: string[]; options: { id: string; name: string }[] };
+    data: { selectedIds: string[]; options: { id: string; name: string; avatarUrl?: string | null }[] };
     /** Sem o título: quando o cartão mora dentro de uma seção que já tem o nome dele. */
     ui?: { isHeaderHidden?: boolean };
     state?: { isLoading?: boolean; isSaving?: boolean; error?: string | null };
@@ -20,9 +20,14 @@
 </script>
 
 <script lang="ts">
-  import PeoplePicker from '$lib/components/azuos-people-picker/azuos-people-picker.svelte';
+  import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
+  import PersonMultiPickerField from '$lib/components/azuos-person-multi-picker-field/azuos-person-multi-picker-field.svelte';
 
   let { data, ui, state: cardState, actions }: AzuosTicketWatchersCardProps = $props();
+
+  /* Quem já está vinculado, na ordem da lista de pessoas — com o rosto, à vista. */
+  const linked = $derived(data.options.filter((person) => data.selectedIds.includes(person.id)));
 </script>
 
 <div class={ui?.isHeaderHidden ? 'flex flex-col gap-3' : 'border-border flex flex-col gap-3 border-t pt-4'}>
@@ -37,18 +42,32 @@
     </div>
   {/if}
 
-  <PeoplePicker
-    data={data}
-    ui={{
-      ariaLabel: 'Pessoas vinculadas',
-      placeholder: 'Vincular pessoas',
-      emptyLabel: 'Ninguém vinculado ainda.',
+  <!-- Várias pessoas: o campo de várias pessoas da casa (select-standard), com a foto e o id. -->
+  <PersonMultiPickerField
+    data={{
+      values: data.selectedIds,
+      people: data.options.map((person) => ({ id: person.id, name: person.name, photo: person.avatarUrl ?? null })),
+      placeholder: cardState?.isLoading ? 'Carregando as pessoas…' : 'Vincular pessoas',
     }}
-    state={{
-      isLoading: cardState?.isLoading,
-      isDisabled: cardState?.isSaving,
-      error: cardState?.error,
-    }}
+    ui={{ ariaLabel: 'Pessoas vinculadas' }}
+    state={{ isDisabled: cardState?.isSaving || cardState?.isLoading }}
     actions={actions}
   />
+
+  {#if linked.length === 0}
+    <p class="text-muted-foreground text-xs">Ninguém vinculado ainda.</p>
+  {:else}
+    <ul class="flex flex-wrap gap-x-4 gap-y-2" aria-label="Quem está vinculado">
+      {#each linked as person (person.id)}
+        <li class="flex items-center gap-2 text-sm">
+          <PersonAvatar name={person.name} avatarUrl={person.avatarUrl ?? null} personId={person.id} ui={{ size: 'sm' }} />
+          {person.name}
+        </li>
+      {/each}
+    </ul>
+  {/if}
+
+  {#if cardState?.error}
+    <ErrorState data={{ message: cardState.error }} ui={{ variant: 'inline' }} />
+  {/if}
 </div>

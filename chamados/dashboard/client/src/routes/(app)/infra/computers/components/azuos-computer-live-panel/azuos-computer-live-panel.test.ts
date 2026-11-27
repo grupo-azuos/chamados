@@ -98,7 +98,7 @@ describe('AzuosComputerLivePanel', () => {
   it('says it is reading instead of saying nothing was ever measured', () => {
     render(ComputerLivePanel, { props: { data: { live: null }, state: { isLoading: true } } });
 
-    expect(screen.getByText('Lendo a máquina…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Lendo a máquina…' })).toBeInTheDocument();
     expect(screen.queryByText('Nada sendo medido ainda')).not.toBeInTheDocument();
   });
 

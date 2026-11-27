@@ -12,6 +12,8 @@ import {
 } from '@template/shared/domain/maintenance-quote.util';
 import { MAINTENANCE_TYPE_LABELS } from '@template/shared/domain/maintenance.util';
 import { MOVEMENT_TYPE_LABELS } from '@template/shared/domain/part-catalog.util';
+import { type RoleContext } from '@template/shared/domain/role-context.util';
+import { TASK_ORIGIN_LABELS, TASK_STATUS_LABELS } from '@template/shared/domain/task-flow.util';
 import {
   SCHEDULE_EVENT_CATEGORY_LABELS,
   SCHEDULE_EVENT_KIND_LABELS,
@@ -44,11 +46,13 @@ import { partMovements } from '../../../lib/db/schema/part-movements.schema';
 import { softwareProjects } from '../../../lib/db/schema/software-projects.schema';
 import { softwareScheduleEvents } from '../../../lib/db/schema/software-schedule-events.schema';
 import { softwareTimelineEvents } from '../../../lib/db/schema/software-timeline-events.schema';
+import { tasks } from '../../../lib/db/schema/tasks.schema';
 import { tickets } from '../../../lib/db/schema/tickets.schema';
 import { ticketInArea } from '../../../lib/db/ticket-area.util';
 import {
   computerDepartmentNameSql,
   computerResponsibleNameSql,
+  personNameSql,
 } from '../../../lib/db/reference-names.util';
 
 /**
@@ -226,6 +230,49 @@ function ticketSource(area: TicketArea, withProject = false): SourceTable {
   };
 }
 
+/* ------------------------------------------------------------------ tarefas */
+
+const taskCreatedDay = dayOf(tasks.createdAt);
+const taskFinishedDay = dayOf(tasks.finishedAt);
+const taskIsOpen = sql`${tasks.status} <> 'done'`;
+
+/**
+ * As tarefas de uma área. O dono mora pelo ID do diretório: o painel agrupa e filtra pelo NOME
+ * de hoje, lido da última lista do diretório (`reference-names.util`) — por isso `get`.
+ */
+function taskSource(area: RoleContext): SourceTable {
+  return {
+    table: tasks,
+    inCirculation: sql`${tasks.area} = ${area} and ${tasks.archivedAt} is null`,
+    fields: {
+      status: { expression: sql`${tasks.status}`, type: 'enum' },
+      origin: { expression: sql`${tasks.origin}`, type: 'enum' },
+      get owner(): SourceColumn {
+        return { expression: personNameSql(tasks.ownerId), type: 'text', person: 'name' };
+      },
+      createdAt: { expression: taskCreatedDay, type: 'date' },
+      dueDate: { expression: sql`${tasks.dueDate}`, type: 'date' },
+      finishedAt: { expression: taskFinishedDay, type: 'date' },
+    },
+    dimensions: {
+      status: sql`${tasks.status}`,
+      origin: sql`${tasks.origin}`,
+      get owner(): SQL {
+        return orNone(personNameSql(tasks.ownerId), '(Sem responsável)');
+      },
+      createdDay: dayKey(taskCreatedDay),
+      createdWeek: weekKey(taskCreatedDay),
+      createdMonth: monthKey(taskCreatedDay),
+      finishedMonth: monthKey(taskFinishedDay),
+    },
+    periodDay: taskCreatedDay,
+    dayDates: { createdDay: taskCreatedDay },
+    personField: 'owner',
+    labelOf: labelsFrom({ status: TASK_STATUS_LABELS, origin: TASK_ORIGIN_LABELS }),
+    ageDates: { openAge: { date: sql`${tasks.startDate}`, only: taskIsOpen } },
+  };
+}
+
 /* ------------------------------------------------------------------ infraestrutura */
 
 const computerInUse = sql`${computers.isArchived} = false and ${computers.disposedAt} is null`;
@@ -272,7 +319,9 @@ const quoteDecidedDay = dayOf(maintenanceQuotes.decidedAt);
 
 export const SOURCE_TABLES: Record<DataSourceKey, SourceTable> = {
   infraTickets: ticketSource('infra'),
+  infraTasks: taskSource('infra'),
   systemTickets: ticketSource('sistema', true),
+  systemTasks: taskSource('sistema'),
   maintenanceTickets: ticketSource('manutencao'),
 
   /* A máquina guarda o departamento e o responsável pelo ID (do RH e do diretório). O painel

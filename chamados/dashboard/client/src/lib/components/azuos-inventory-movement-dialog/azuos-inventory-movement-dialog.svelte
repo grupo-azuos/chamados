@@ -60,23 +60,15 @@
     disposal: { title: 'Registrar descarte', submit: 'Registrar descarte' },
   };
 
-  const TONE: Record<StockMovementType, string> = {
-    in: 'bg-muted text-success',
-    out: 'bg-muted text-warning-ink',
-    disposal: 'bg-muted text-destructive',
-  };
 </script>
 
 <script lang="ts">
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
-  import ArrowDownLeft from '@lucide/svelte/icons/arrow-down-left';
-  import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
-  import Trash2 from '@lucide/svelte/icons/trash-2';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
-  import SelectField from '$lib/components/azuos-select-field/azuos-select-field.svelte';
+  import ComboboxField from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
@@ -87,7 +79,6 @@
     DialogHeader,
     DialogTitle,
   } from '$lib/components/ui/dialog';
-  import { cn } from '$lib/utils/cn';
 
   let { data, state: dialogState, actions }: AzuosInventoryMovementDialogProps = $props();
 
@@ -109,23 +100,7 @@
   <DialogContent>
     <form novalidate class="flex flex-col gap-4.5" onsubmit={handleSubmit}>
       <DialogHeader class="gap-1.5">
-        <div class="flex items-center gap-2.5">
-          <span
-            class={cn(
-              'rounded-chip flex size-7 shrink-0 items-center justify-center',
-              TONE[data.type],
-            )}
-          >
-            {#if data.type === 'in'}
-              <ArrowDownLeft class="size-4" aria-hidden="true" />
-            {:else if data.type === 'out'}
-              <ArrowUpRight class="size-4" aria-hidden="true" />
-            {:else}
-              <Trash2 class="size-4" aria-hidden="true" />
-            {/if}
-          </span>
-          <DialogTitle class="text-lg font-semibold tracking-tight">{copy.title}</DialogTitle>
-        </div>
+        <DialogTitle>{copy.title}</DialogTitle>
         <DialogDescription class="text-muted-foreground text-xs">
           {#if data.product}
             {data.product.name} · hoje há
@@ -140,13 +115,16 @@
       {#if hasProductPicker}
         <div class="flex flex-col gap-1.5">
           <span class="text-ink-700 text-sm font-medium">Produto</span>
-          <SelectField
+          <!-- O inventário cresce: com busca, ninguém rola trinta produtos (select-standard). -->
+          <ComboboxField
             data={{ value: fields.itemId.value, options: data.productOptions }}
             ui={{
               ariaLabel: 'Produto',
               placeholder: dialogState.isProductsLoading
                 ? 'Carregando os produtos…'
                 : 'Escolha o produto',
+              searchPlaceholder: 'Buscar produto…',
+              emptyLabel: 'Nenhum produto com esse nome.',
             }}
             state={{ isDisabled: dialogState.isSubmitting || dialogState.isProductsLoading }}
             actions={{ onChange: (value: string) => actions.onChange('itemId', value) }}

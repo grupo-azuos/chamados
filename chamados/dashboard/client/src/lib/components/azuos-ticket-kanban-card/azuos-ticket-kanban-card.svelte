@@ -4,7 +4,8 @@
   três áreas (Infraestrutura, Sistema e Manutenção): a faixa cinza com a situação (bolinha e nome
   no tom da etapa) e o protocolo; o ícone cheio da etapa, o texto do chamado em até duas linhas e os
   selos (o assunto, a urgência, a etiqueta e, em Sistema, a issue do GitHub); no pé, quem atende
-  (com a foto), quem abriu e quando, e o menu da etiqueta. Mudou de coluna, a cor muda junto.
+  (com a foto), quem abriu e quando; o menu da etiqueta é o de três pontinhos do card, no canto.
+  Mudou de coluna, a cor muda junto.
 
   O primeiro selo diz DO QUE é o chamado: o sistema, em Sistema (o cadastrado ou o que quem abriu
   digitou); o tipo de problema, nas outras áreas ("Impressora", "Ar-condicionado").
@@ -71,15 +72,9 @@
 
 <script lang="ts">
   import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
-  import Ellipsis from '@lucide/svelte/icons/ellipsis';
+  import Tag from '@lucide/svelte/icons/tag';
 
-  import {
-    actionButton,
-    AzuosButtonPrimitive as Button,
-    AzuosDropdownMenuPrimitive as DropdownMenu,
-  } from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
-  import { cardToneClasses } from '$lib/utils/card-tone.util';
   import AzuosStatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { formatDate } from '$lib/utils/format-date';
 
@@ -95,6 +90,17 @@
   const assigneeName = $derived(ticket.assignee ?? 'Sem responsável');
   const isBusy = $derived(cardState?.isBusy ?? false);
   const Icon = $derived(ui.icon);
+
+  /* A etiqueta mora no menu de três pontinhos do próprio card (o padrão do grupo), e não num
+     menu montado à mão: o `id` de cada item é o tom da etiqueta. */
+  const labelMenu = $derived(
+    actions
+      ? {
+          label: `Etiqueta do chamado ${ticket.protocol}`,
+          items: TICKET_LABEL_OPTIONS.map((option) => ({ id: option.tone, label: option.label, icon: Tag })),
+        }
+      : null,
+  );
 </script>
 
 <ContentCard
@@ -108,9 +114,16 @@
       subtitle: `${ticket.requesterName} · ${formatDate(ticket.createdAt)}`,
       person: { id: ticket.assigneeId, name: assigneeName, avatarUrl: data.assigneePhoto },
     },
+    menu: labelMenu,
   }}
   ui={{ icon: Icon, iconTone: ui.tone, className: 'flex flex-col' }}
-  actions={actions ? { onOpen: () => actions.onOpen(ticket.id) } : undefined}
+  state={{ isMenuDisabled: isBusy }}
+  actions={actions
+    ? {
+        onOpen: () => actions.onOpen(ticket.id),
+        onMenuSelect: (tone) => actions.onSetLabel(ticket.id, tone as StatusBadgeTone),
+      }
+    : undefined}
 >
   {#snippet body()}
     <span class="flex flex-wrap items-center gap-1">
@@ -129,7 +142,7 @@
           target="_blank"
           rel="noopener noreferrer"
           data-no-drag
-          class="rounded-chip bg-muted text-muted-foreground hover:text-foreground relative z-20 inline-flex items-center gap-0.5 px-2 py-0.5 font-mono text-xs hover:underline"
+          class="text-primary relative z-20 inline-flex items-center gap-0.5 font-mono text-xs hover:underline"
         >
           #{ticket.githubIssueNumber}
           <ArrowUpRight aria-hidden="true" class="size-3" />
@@ -139,42 +152,5 @@
         <span class="text-muted-foreground text-xs">Salvando…</span>
       {/if}
     </span>
-  {/snippet}
-  {#snippet footerActions()}
-    {#if actions}
-      <!-- O menu da etiqueta no rodapé, como no paralegal: não abre o chamado nem começa um
-           arrasto (`data-no-drag`). -->
-      <div data-no-drag>
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger disabled={isBusy}>
-            {#snippet child({ props })}
-              <Button
-                {...props}
-                type="button"
-                aria-label={`Etiqueta do chamado ${ticket.protocol}`}
-                class={actionButton({ variant: 'ghost', size: 'sm', isIconOnly: true })}
-              >
-                <Ellipsis aria-hidden="true" />
-              </Button>
-            {/snippet}
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content
-            align="center"
-            class="rounded-surface ring-foreground/8 w-max max-w-[min(26rem,calc(100vw-2rem))] min-w-56 border-transparent p-1.5 shadow-xl"
-          >
-            <DropdownMenu.Label class="px-3">Etiqueta</DropdownMenu.Label>
-            {#each TICKET_LABEL_OPTIONS as option (option.tone)}
-              <DropdownMenu.Item
-                class="rounded-chip min-h-10 cursor-pointer gap-2 px-3 py-2"
-                onSelect={() => actions.onSetLabel(ticket.id, option.tone)}
-              >
-                <span aria-hidden="true" class={`size-2 shrink-0 rounded-full ${cardToneClasses(option.tone).swatch}`}></span>
-                {option.label}
-              </DropdownMenu.Item>
-            {/each}
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
-      </div>
-    {/if}
   {/snippet}
 </ContentCard>

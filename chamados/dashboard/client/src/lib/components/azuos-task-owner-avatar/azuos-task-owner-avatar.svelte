@@ -20,7 +20,7 @@
 </script>
 
 {#if owner}
-  <PersonAvatar name={owner.name ?? 'Fora do diretório'} avatarUrl={owner.avatarUrl} ui={{ size: 'sm' }} />
+  <PersonAvatar name={owner.name ?? 'Fora do diretório'} avatarUrl={owner.avatarUrl} personId={owner.id} ui={{ size: 'sm' }} />
 {:else}
   <span class="bg-muted text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-full" aria-hidden="true">
     <UserRound class="size-3.5" />

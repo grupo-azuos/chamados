@@ -53,6 +53,7 @@
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ExpandableScreen from '$lib/components/azuos-expandable-screen/azuos-expandable-screen.svelte';
   import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
+  import MultiSelectField from '$lib/components/azuos-multi-select-field/azuos-multi-select-field.svelte';
   import PersonMultiPickerField from '$lib/components/azuos-person-multi-picker-field/azuos-person-multi-picker-field.svelte';
   import {
     buildTaskMap,
@@ -74,9 +75,12 @@
   const map = $derived(buildTaskMap(shown, kinds, data.now, data.positions, data.base));
   const people = $derived(mapPeopleOf(data.tasks, data.people));
 
-  function toggle(kind: TaskLinkKind) {
-    kinds = kinds.includes(kind) ? kinds.filter((item) => item !== kind) : [...kinds, kind];
-  }
+  const kindOptions = $derived(
+    TASK_MAP_KIND_TOGGLES.filter((item) => !data.kinds || data.kinds.includes(item.kind)).map((item) => ({
+      value: item.kind,
+      label: item.label,
+    })),
+  );
 </script>
 
 {#snippet toolbar()}
@@ -86,17 +90,16 @@
       ui={{ ariaLabel: 'Pessoas no mapa', className: 'w-64' }}
       actions={{ onChange: actions.onPeopleChange }}
     />
-    <div role="group" aria-label="Mostrar no mapa" class="flex flex-wrap items-center gap-2">
-      <span class="text-muted-foreground text-sm font-medium">Mostrar</span>
-      {#each TASK_MAP_KIND_TOGGLES.filter((toggle) => !data.kinds || data.kinds.includes(toggle.kind)) as item (item.kind)}
-        <ActionButton
-          data={{ label: item.label }}
-          ui={{ variant: kinds.includes(item.kind) ? 'primary' : 'secondary', size: 'sm' }}
-          state={{ isPressed: kinds.includes(item.kind) }}
-          actions={{ onClick: () => toggle(item.kind) }}
-        />
-      {/each}
-    </div>
+    <!-- O que entra no mapa é escolha de VÁRIAS opções: o select de marcar do grupo, e não
+         pastilhas pintadas de azul (uma ação principal por área). Com um tipo só (Sistema), não
+         há o que escolher. -->
+    {#if kindOptions.length > 1}
+      <MultiSelectField
+        data={{ values: kinds, options: kindOptions, placeholder: 'Nada no mapa', noun: 'tipos' }}
+        ui={{ ariaLabel: 'Mostrar no mapa', className: 'w-56' }}
+        actions={{ onChange: (values) => (kinds = values as TaskLinkKind[]) }}
+      />
+    {/if}
     <ActionButton
       data={{ label: 'Arrumar de novo' }}
       ui={{ variant: 'ghost', size: 'sm', icon: LayoutGrid }}

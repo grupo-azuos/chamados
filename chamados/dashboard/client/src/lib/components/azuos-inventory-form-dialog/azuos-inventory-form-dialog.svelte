@@ -90,7 +90,6 @@
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import Camera from '@lucide/svelte/icons/camera';
   import ImagePlus from '@lucide/svelte/icons/image-plus';
-  import Package from '@lucide/svelte/icons/package';
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
@@ -206,16 +205,9 @@
   <DialogContent class="sm:max-w-xl">
     <div class="flex flex-col gap-4.5 p-1 sm:p-2">
       <DialogHeader class="gap-1.5">
-        <div class="flex items-center gap-2.5">
-          <span
-            class="rounded-chip bg-muted text-primary flex size-7 shrink-0 items-center justify-center"
-          >
-            <Package class="size-4" aria-hidden="true" />
-          </span>
-          <DialogTitle class="text-lg font-semibold tracking-tight">
-            {isEdit ? 'Corrigir produto' : 'Cadastrar produto'}
-          </DialogTitle>
-        </div>
+        <DialogTitle>
+          {isEdit ? 'Corrigir produto' : 'Cadastrar produto'}
+        </DialogTitle>
         <DialogDescription class="text-muted-foreground text-xs">
           {isEdit
             ? 'O que é o produto, como ele é contado e onde fica.'
@@ -246,6 +238,8 @@
       {#if !isEdit || activeTab === 'details'}
         <form novalidate class="flex flex-col gap-4.5" onsubmit={handleSubmit}>
 
+      <fieldset class="flex min-w-0 flex-col gap-3.5">
+        <legend class="text-foreground mb-3.5 text-sm font-semibold">O que é o produto</legend>
       <!-- O nome é ESCOLHIDO entre os que existem, ou cadastrado ali mesmo: o Depósito agrupa
            pelo nome, e "CADEIRA" ao lado de "Cadeira" virariam dois produtos. -->
       <div class="flex flex-col gap-1.5">
@@ -291,6 +285,10 @@
         </div>
       </div>
 
+      </fieldset>
+
+      <fieldset class="flex min-w-0 flex-col gap-3.5">
+        <legend class="text-foreground mb-3.5 text-sm font-semibold">Onde fica e com quem</legend>
       <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
         <TextField
           data={{
@@ -364,13 +362,17 @@
         </div>
       </div>
 
+      </fieldset>
+
+      <fieldset class="flex min-w-0 flex-col gap-3.5">
+        <legend class="text-foreground mb-3.5 text-sm font-semibold">Foto e observação</legend>
       <!-- A FOTO ao lado da prévia, e não um campo de arquivo solto: quem cadastra precisa ver
            que a imagem que escolheu é a certa antes de salvar. -->
       <div onpaste={pasteFilesIntoInput} class="flex flex-col gap-1.5">
         <span class="text-ink-700 text-sm font-medium">Foto</span>
         <div class="flex items-center gap-3">
           <div
-            class="rounded-control border-border bg-muted flex size-20 shrink-0 items-center justify-center overflow-hidden border"
+            class="rounded-box bg-muted flex size-20 shrink-0 items-center justify-center overflow-hidden"
           >
             {#if data.photo.previewUrl}
               <img
@@ -460,6 +462,7 @@
           onBlur: () => actions.onBlur('note'),
         }}
       />
+      </fieldset>
 
       {#if dialogState.error}
         <ErrorState data={{ message: dialogState.error }} ui={{ variant: 'inline' }} />

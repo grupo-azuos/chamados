@@ -91,15 +91,25 @@ describe('AzuosTaskListView', () => {
   it('lists the tasks, switches the view, filters the overdue ones and creates a new one', async () => {
     const actions = setup();
 
+    /* A lista é a grade de cards e a tabela (a troca do sistema esconde uma das duas pela largura). */
     expect(
-      screen.getByRole('button', { name: 'Abrir a tarefa Trocar o switch da sala 2' }),
-    ).toBeInTheDocument();
+      screen.getAllByRole('button', { name: 'Abrir a tarefa Trocar o switch da sala 2' }),
+    ).toHaveLength(2);
+    expect(screen.getByRole('table', { name: 'Lista de tarefas' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Quadro' }));
     expect(actions.onViewChange).toHaveBeenCalledWith('board');
     await userEvent.click(screen.getByRole('button', { name: /Atrasadas/ }));
     expect(actions.onFilterChange).toHaveBeenCalledWith('overdue', true);
     await userEvent.click(screen.getByRole('button', { name: 'Nova tarefa' }));
     expect(actions.onNew).toHaveBeenCalled();
+  });
+
+  // triste
+  it('shows the skeleton while the list loads, never "no tasks"', () => {
+    setup({ tasks: [], total: 0 }, { isLoading: true });
+
+    expect(screen.getByLabelText('Carregando as tarefas')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma tarefa ainda')).not.toBeInTheDocument();
   });
 
   // triste

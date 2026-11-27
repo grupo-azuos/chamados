@@ -2,10 +2,10 @@
   @component
   A tela de ACESSOS POR MÓDULO: quem é de Infraestrutura, de Sistema e de Manutenção.
 
-  Em cima, o cartão da pessoa que está usando, com os papéis dela; logo abaixo entra o que a tela
-  passar em `afterProfile` (hoje, o vínculo de WhatsApp). Com `ui.showTeam`, vem a parte da equipe:
+  Em cima, o card de conteúdo da pessoa que está usando, com os módulos dela. Com `ui.showTeam`,
+  vem a parte da equipe:
   cabeçalho com "Liberar módulo", os cards de contagem por módulo, a busca e o filtro de módulo, e a
-  lista de pessoas com os módulos de cada uma — com os estados de carregando, erro, vazio e
+  lista de pessoas com os módulos de cada uma (a ação da linha mora no menu de três pontinhos) — com os estados de carregando, erro, vazio e
   filtrado. Só o Super Admin libera e tira módulos; para os outros a tela avisa que é só consulta.
 
   - `data`: a pessoa atual, os acessos (`roles`), as pessoas do diretório, o total e o filtro.
@@ -15,7 +15,6 @@
     módulo, limpar filtros e tentar de novo.
 -->
 <script lang="ts" module>
-  import type { Snippet } from 'svelte';
   import { type InternalRole } from '@template/shared/schemas/internal-role.schema';
   import {
     ROLE_CONTEXT_LABELS,
@@ -31,11 +30,6 @@
   import { type RolesFilter } from '$lib/hooks/use-roles/use-roles.svelte';
 
   export type AzuosRoleListViewProps = {
-    /**
-     * O que a tela quer mostrar logo abaixo do cartão de perfil, antes da lista de acessos — hoje,
-     * o vínculo de WhatsApp. Entra pronto: este componente não sabe o que é.
-     */
-    afterProfile?: Snippet;
     data: {
       currentUser?: {
         name: string;
@@ -159,6 +153,8 @@
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import ContentCard, {
     type AzuosContentCardMenuItem,
   } from '$lib/components/azuos-content-card/azuos-content-card.svelte';
@@ -182,7 +178,7 @@
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
 
-  let { afterProfile, data, ui, state, actions }: AzuosRoleListViewProps = $props();
+  let { data, ui, state, actions }: AzuosRoleListViewProps = $props();
 
   const showTeam = $derived(ui?.showTeam ?? true);
 
@@ -237,102 +233,52 @@
 {#snippet moduleBadges(person: RolePerson)}
   <div class="flex flex-wrap items-center gap-1.5">
     {#each person.roles as role (role.id)}
-      <span class="inline-flex items-center gap-0.5">
-        <StatusBadge
-          data={{ label: ROLE_CONTEXT_LABELS[role.context] }}
-          ui={{ tone: contextTone(role.context), size: 'sm' }}
-        />
-        {#if canManage}
-          <ActionButton
-            data={{ label: `Tirar o módulo ${ROLE_CONTEXT_LABELS[role.context]}` }}
-            ui={{
-              icon: X,
-              variant: 'ghost',
-              size: 'sm',
-              isIconOnly: true,
-              className: 'size-6 text-muted-foreground hover:text-destructive',
-            }}
-            actions={{ onClick: () => actions.onAskDelete(role) }}
-          />
-        {/if}
-      </span>
-    {/each}
-    <!-- Dar módulo direto na pessoa, sem procurá-la de novo na lista do formulário. Some quando
-         ela já tem os três. -->
-    {#if canManage && actions.onGrantTo && person.roles.length < ROLE_CONTEXTS.length}
-      <ActionButton
-        data={{ label: 'Adicionar módulo' }}
-        ui={{ icon: Plus, variant: 'ghost', size: 'sm' }}
-        actions={{ onClick: () => actions.onGrantTo?.(person) }}
+      <StatusBadge
+        data={{ label: ROLE_CONTEXT_LABELS[role.context] }}
+        ui={{ tone: contextTone(role.context), size: 'sm' }}
       />
-    {/if}
+    {/each}
   </div>
 {/snippet}
 
 <div class="flex w-full flex-col gap-6">
-  <!-- 1. Meu Perfil -->
+  <!-- 1. Quem está usando: o card de conteúdo com o rosto no lugar do ícone, e os módulos dela
+       numa lista com divisória — sem caixinha com borda dentro do card. -->
   {#if data.currentUser}
-    <div class="rounded-box bg-card p-6 shadow-card">
-      <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-        <div class="flex items-center gap-4">
-          <div class="relative shrink-0">
-            <PersonAvatar
-              name={data.currentUser.name}
-              avatarUrl={data.currentUser.image}
-              ui={{ size: 'xl', className: 'size-16 shadow-xs' }}
-            />
-          </div>
-          <div class="min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-              <h1 class="text-xl font-bold tracking-tight text-foreground break-words">
-                {data.currentUser.name}
-              </h1>
-              <StatusBadge
-                data={{
-                  label:
-                    USER_ROLE_LABELS[data.currentUser.role as UserRole] ?? data.currentUser.role,
-                }}
-                ui={{ tone: roleTone(data.currentUser.role), size: 'sm' }}
-              />
-            </div>
-            <p class="text-xs font-mono text-muted-foreground mt-0.5 break-all">
-              {data.currentUser.email}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Os módulos da pessoa: o nível é o do papel no admin-console, módulo ausente é sem acesso. -->
-      <div class="mt-5 border-t border-border pt-4">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Seus módulos
-        </h2>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    {@const me = data.currentUser}
+    <ContentCard
+      data={{
+        label: me.name,
+        title: me.name,
+        code: me.email,
+        status: { label: USER_ROLE_LABELS[me.role as UserRole] ?? me.role, tone: roleTone(me.role) },
+      }}
+      ui={{ slot: 'role-profile' }}
+    >
+      {#snippet leading()}
+        <PersonAvatar name={me.name} avatarUrl={me.image} ui={{ size: 'md' }} />
+      {/snippet}
+      {#snippet body()}
+        <!-- Os módulos da pessoa: o nível é o do papel no admin-console, módulo ausente é sem acesso. -->
+        <h2 class="text-muted-foreground text-sm font-medium">Seus módulos</h2>
+        <ul class="divide-border flex flex-col divide-y">
           {#each ROLE_CONTEXTS as ctx (ctx)}
-            {@const role = (
-              data.currentUser.role === 'superadmin' ? 'superadmin' : data.currentUser.roles?.[ctx]
-            ) as UserRole | undefined}
-            <div class="flex flex-col justify-between rounded-control border border-border bg-muted p-3.5 transition-colors">
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-semibold text-foreground">
-                  {ROLE_CONTEXT_LABELS[ctx]}
-                </span>
-                <StatusBadge
-                  data={{ label: moduleAccessLabel(role) }}
-                  ui={{ tone: moduleAccessTone(role), size: 'sm' }}
-                />
-              </div>
-              <p class="mt-2 text-xs text-muted-foreground leading-snug">
-                {contextDescription(ctx)}
-              </p>
-            </div>
+            {@const role = (me.role === 'superadmin' ? 'superadmin' : me.roles?.[ctx]) as UserRole | undefined}
+            <li class="flex items-start justify-between gap-3 py-2.5">
+              <span class="flex min-w-0 flex-col">
+                <span class="text-foreground text-sm font-medium">{ROLE_CONTEXT_LABELS[ctx]}</span>
+                <span class="text-muted-foreground text-xs leading-snug">{contextDescription(ctx)}</span>
+              </span>
+              <StatusBadge
+                data={{ label: moduleAccessLabel(role) }}
+                ui={{ tone: moduleAccessTone(role), size: 'sm' }}
+              />
+            </li>
           {/each}
-        </div>
-      </div>
-    </div>
+        </ul>
+      {/snippet}
+    </ContentCard>
   {/if}
-
-  {@render afterProfile?.()}
 
   {#if showTeam}
   <!-- 2. Cabeçalho dos acessos da equipe -->
@@ -343,7 +289,6 @@
         'Quem é de Infraestrutura, de Sistema e de Manutenção. O que cada um pode lá dentro vem do papel no admin-console: Administrador mexe em tudo, Gestor e Usuário só consultam.',
     }}
   >
-    <TableViewToggle />
     {#if canManage}
       <ActionButton
         data={{ label: 'Liberar módulo' }}
@@ -354,14 +299,10 @@
   </PageHeader>
 
   {#if data.currentUser && data.currentUser.role !== 'superadmin'}
-    <div
-      class="flex items-center gap-2.5 rounded-box border border-border bg-muted p-3 text-xs text-muted-foreground"
-    >
-      <Info class="size-4 shrink-0 text-primary" aria-hidden="true" />
-      <span>
-        Modo de visualização da equipe. Só o <strong>Super Admin</strong> libera e tira módulos.
-      </span>
-    </div>
+    <p class="text-muted-foreground flex items-center gap-2 text-sm">
+      <Info class="size-4 shrink-0" aria-hidden="true" />
+      <span>Modo de visualização da equipe. Só o <strong>Super Admin</strong> libera e tira módulos.</span>
+    </p>
   {/if}
 
   <!-- 3. Indicadores de Estatísticas (StatCards) -->
@@ -385,19 +326,23 @@
     />
 
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <OptionPicker
-        data={{ value: data.filter.context, options: CONTEXT_PICKER_OPTIONS }}
-        ui={{ ariaLabel: 'Filtrar por contexto', allLabel: 'Todos os contextos' }}
-        actions={{ onChange: (val) => actions.onContextChange(val as RoleContext | '') }}
-      />
-
-      {#if isFiltered}
-        <ActionButton
-          data={{ label: 'Limpar filtros' }}
-          ui={{ variant: 'secondary', size: 'sm' }}
-          actions={{ onClick: actions.onClearFilters }}
+      <div class="flex flex-wrap items-center gap-3">
+        <OptionPicker
+          data={{ value: data.filter.context, options: CONTEXT_PICKER_OPTIONS }}
+          ui={{ ariaLabel: 'Filtrar por contexto', allLabel: 'Todos os contextos' }}
+          actions={{ onChange: (val) => actions.onContextChange(val as RoleContext | '') }}
         />
-      {/if}
+
+        {#if isFiltered}
+          <ActionButton
+            data={{ label: 'Limpar filtros' }}
+            ui={{ variant: 'secondary', size: 'sm' }}
+            actions={{ onClick: actions.onClearFilters }}
+          />
+        {/if}
+      </div>
+      <!-- O modo de ver fecha a barra de ferramentas (busca → filtros → modo de ver). -->
+      <TableViewToggle />
     </div>
   </div>
 
@@ -408,7 +353,15 @@
       actions={{ onRetry: actions.onRetry }}
     />
   {:else if state.isLoading}
-    <p class="text-ink-500 py-10 text-center text-sm">Carregando os acessos da equipe…</p>
+    <div class="card-grid" aria-busy="true" aria-label="Carregando os acessos da equipe…">
+      {#each [0, 1, 2] as index (index)}
+        <div class="rounded-surface bg-card shadow-card flex flex-col gap-3 p-4">
+          <Skeleton class="h-3 w-1/4" />
+          <Skeleton class="h-4 w-2/3" />
+          <Skeleton class="h-3 w-full" />
+        </div>
+      {/each}
+    </div>
   {:else if state.isEmpty}
     <EmptyState
       data={{
@@ -512,6 +465,9 @@
             <TableHead class="min-w-[260px]">Pessoa</TableHead>
             <TableHead class="min-w-[220px]">Módulos</TableHead>
             <TableHead class="min-w-[160px]">Liberado por</TableHead>
+            {#if canManage}
+              <TableHead class="w-12 text-right"><span class="sr-only">Ações</span></TableHead>
+            {/if}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -538,6 +494,17 @@
               <TableCell class="text-xs text-muted-foreground font-mono">
                 {creatorsOf(person) || '—'}
               </TableCell>
+              <!-- Tirar cada módulo e dar mais um ficam no menu de três pontinhos, como no card:
+                   botões enfileirados na linha da tabela não são o padrão. -->
+              {#if canManage}
+                <TableCell class="text-right">
+                  <ActionMenu
+                    data={{ label: `Ações de ${displayName}`, items: menuItemsOf(person) }}
+                    ui={{ isIconOnly: true }}
+                    actions={{ onSelect: (id) => chooseAction(id, person) }}
+                  />
+                </TableCell>
+              {/if}
             </TableRow>
           {/each}
         </TableBody>

@@ -1,6 +1,6 @@
 <!--
   @component
-  O GIT GRAPH — o desenho do lazygit: cada commit uma linha (o hash curto, as iniciais de quem fez,
+  O GIT GRAPH — o desenho do lazygit: cada commit uma linha (o hash curto, o rosto de quem fez,
   o ponto na lane e a mensagem). A develop corre numa lane; cada branch sai dela noutra lane e volta
   no merge (o ponto vazado). A cor da lane é a do git-flow; a ponta de cada branch leva o nome dela,
   e a branch nova pulsa tracejada. A versão (tag) é a etiqueta amarela no commit dela. As linhas vêm prontas de `buildGitGraph`.
@@ -13,7 +13,8 @@
   import Hint from '$lib/components/azuos-hint/azuos-hint.svelte';
   import { type AzuosCardHue, cardToneClasses } from '$lib/utils/card-tone.util';
   import { cn } from '$lib/utils/cn';
-  import { GIT_CATEGORY_HUES, GIT_ROW_HEIGHT, type GitGraphRow, initialsOf } from '$lib/utils/git-graph.util';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
+  import { GIT_CATEGORY_HUES, GIT_ROW_HEIGHT, type GitGraphRow } from '$lib/utils/git-graph.util';
 
   let { data }: { data: { rows: GitGraphRow[] } } = $props();
 
@@ -33,7 +34,8 @@
     {#each data.rows as row (row.commit.sha)}
       <li class="flex items-center gap-2 font-mono text-xs" style:height="{ROW}px">
         <span class="text-hue-steel w-14 shrink-0">{row.commit.sha.slice(0, 8)}</span>
-        <span class="text-hue-blue w-5 shrink-0 font-semibold">{initialsOf(row.commit.authorName)}</span>
+        <!-- Quem fez o commit é uma pessoa: o rosto do grupo, que acha a foto pelo nome. -->
+        <PersonAvatar name={row.commit.authorName} ui={{ size: 'sm' }} />
         <svg aria-hidden="true" class="shrink-0 overflow-visible" width={lanes * LANE} height={ROW}>
           {#each row.above as link, index (index)}
             {#if link.from < lanes && link.to < lanes}

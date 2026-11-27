@@ -236,6 +236,7 @@ describe('the module menus', () => {
       'stock',
       'disposal',
       'quotes',
+      'history',
     ]);
   });
 
@@ -248,8 +249,17 @@ describe('the module menus', () => {
       'schedule',
       'projects',
       'agent',
+      'history',
     ]);
     expect(INFRA_NAV_ITEMS.length).toBeGreaterThan(SYSTEM_NAV_ITEMS.length);
+  });
+
+  /* O Histórico é a última tela dos três módulos (regra `history-standard`). */
+  it('closes the menu of every module with its own history', () => {
+    for (const context of ROLE_CONTEXTS) {
+      expect(NAV_ITEMS_BY_CONTEXT[context].at(-1)?.feature).toBe('history');
+    }
+    expect(INFRA_NAV_ITEMS.at(-1)?.to).toBe('/infra/history');
   });
 
   it('offers agent downloads only in Infrastructure and System', () => {

@@ -88,12 +88,21 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import AttachmentPicker from '$lib/components/azuos-attachment-picker/azuos-attachment-picker.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
-  import PeoplePicker from '$lib/components/azuos-people-picker/azuos-people-picker.svelte';
+  import PersonMultiPickerField from '$lib/components/azuos-person-multi-picker-field/azuos-person-multi-picker-field.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
 
   let { data, state, actions }: AzuosTicketReplyFormProps = $props();
 
   const copy = $derived(copyOf(data.type));
+
+  /* As pessoas que o servidor devolveu, com a foto do admin-console, no campo de pessoa da casa
+     (select-standard): a lista, a foto, a busca, e o valor é o id. */
+  const notifiablePeople = $derived(data.notifiable.map(asPerson));
+  const watcherPeople = $derived(data.peopleOptions.map(asPerson));
+
+  function asPerson(person: TicketPerson) {
+    return { id: person.id, name: person.name, photo: person.avatarUrl ?? null };
+  }
 
   function handleSubmit(event: SubmitEvent): void {
     event.preventDefault();
@@ -105,7 +114,7 @@
   <form novalidate class="flex flex-col gap-3" onsubmit={handleSubmit} aria-label={copy.title}>
     <div class="flex flex-col gap-0.5">
       <p class="text-muted-foreground text-sm font-medium">{copy.title}</p>
-      <p class="text-ink-500 text-xs">{copy.hint}</p>
+      <p class="text-muted-foreground text-xs">{copy.hint}</p>
     </div>
 
     <TextAreaField
@@ -124,16 +133,17 @@
     {#if data.notifiable.length > 0}
       <div class="flex flex-col gap-1.5">
         <span class="text-foreground text-sm font-medium">Avisar por WhatsApp</span>
-        <PeoplePicker
-          data={{ selectedIds: data.notifyIds, options: data.notifiable }}
-          ui={{
-            ariaLabel: 'Avisar por WhatsApp',
+        <PersonMultiPickerField
+          data={{
+            values: data.notifyIds,
+            people: notifiablePeople,
             placeholder: 'Ninguém — só fica registrado',
-            emptyLabel: 'Só recebe aviso quem você marcar.',
           }}
+          ui={{ ariaLabel: 'Avisar por WhatsApp' }}
           state={{ isDisabled: state.isSubmitting }}
           actions={{ onChange: actions.onNotifyChange }}
         />
+        <p class="text-muted-foreground text-xs">Só recebe aviso quem você marcar.</p>
       </div>
     {/if}
 
@@ -157,18 +167,21 @@
     <p class="text-muted-foreground text-sm font-medium">
       Pessoas vinculadas
     </p>
-    <p class="text-ink-500 text-xs">
+    <p class="text-muted-foreground text-xs">
       Quem está vinculado vê o chamado em "Consultar chamado" e também pode escrever nele.
     </p>
-    <PeoplePicker
-      data={{ selectedIds: data.watcherIds, options: data.peopleOptions }}
-      ui={{ ariaLabel: 'Pessoas vinculadas', placeholder: 'Vincular pessoas', emptyLabel: 'Ninguém vinculado.' }}
-      state={{
-        isDisabled: state.isSavingWatchers,
-        isLoading: state.isLoadingPeople,
-        error: state.watchersError,
+    <PersonMultiPickerField
+      data={{
+        values: data.watcherIds,
+        people: watcherPeople,
+        placeholder: state.isLoadingPeople ? 'Carregando as pessoas…' : 'Vincular pessoas',
       }}
+      ui={{ ariaLabel: 'Pessoas vinculadas' }}
+      state={{ isDisabled: state.isSavingWatchers || state.isLoadingPeople }}
       actions={{ onChange: actions.onWatchersChange }}
     />
+    {#if state.watchersError}
+      <p class="text-destructive text-xs" role="alert">{state.watchersError}</p>
+    {/if}
   </section>
 </div>

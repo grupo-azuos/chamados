@@ -187,6 +187,7 @@
               <PersonAvatar
                 name={computer.responsibleName}
                 avatarUrl={computer.responsibleAvatarUrl ?? null}
+                personId={computer.responsibleId}
                 ui={{ size: 'sm' }}
               />
             {/if}

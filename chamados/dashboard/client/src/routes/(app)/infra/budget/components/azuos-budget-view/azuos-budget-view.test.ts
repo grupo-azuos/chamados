@@ -150,7 +150,7 @@ describe('AzuosBudgetView', () => {
 
     expect(screen.getByText(/E mais 33 máquina\(s\) na mesma situação/)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'ver no Inventário' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ver no Inventário' }));
 
     expect(actions.onOpenComputers).toHaveBeenCalled();
   });
@@ -208,7 +208,7 @@ describe('AzuosBudgetView', () => {
   it('says it is still crossing the data', () => {
     renderView({ data: { budget: null }, state: { ...settled, isLoading: true } });
 
-    expect(screen.getByText('Cruzando o parque com o depósito…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Cruzando o parque com o depósito…' })).toBeInTheDocument();
   });
 
   /* Parque vazio não é "nada a comprar": é não ter o que medir ainda, e o texto manda

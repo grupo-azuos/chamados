@@ -61,12 +61,11 @@
 </script>
 
 <script lang="ts">
+  import FilterX from '@lucide/svelte/icons/filter-x';
   import Plus from '@lucide/svelte/icons/plus';
+  import SearchX from '@lucide/svelte/icons/search-x';
   import Trash2 from '@lucide/svelte/icons/trash-2';
-  import UserRound from '@lucide/svelte/icons/user-round';
 
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
-  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
@@ -74,11 +73,29 @@
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-    import { formatDate } from '$lib/utils/format-date';
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
+  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+  } from '$lib/components/azuos-table/azuos-table';
+  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
+  import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
+  import { cn } from '$lib/utils/cn';
+  import { formatDate } from '$lib/utils/format-date';
 
   let { data, state: listState, actions }: AzuosInventoryDisposalListViewProps = $props();
-  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). A
+     tabela rola inteira (padrão do grupo). */
   const cardPage = useCardPage(() => data.disposals);
+  const tableView = useTableViewModel();
 
   /* "3 descartes · 7 unidades": linhas e unidades são números diferentes, e os dois importam. */
   const summary = $derived(
@@ -86,6 +103,10 @@
       data.units === 1 ? 'unidade' : 'unidades'
     }`,
   );
+
+  function reasonOf(disposal: InventoryMovement): string {
+    return disposal.reason ? disposalReasonLabel(disposal.reason) : 'Descarte';
+  }
 </script>
 
 <div class="flex w-full flex-col gap-6">
@@ -102,9 +123,9 @@
     />
   </PageHeader>
 
-  <ContentCard data={{ label: '', title: '' }}>
-{#snippet body()}
-<div class="flex flex-wrap items-end gap-x-4 gap-y-3 p-4">
+  <!-- A barra de ferramentas mora sobre o fundo da página, sem card em volta: filtros → modo de
+       ver (design-governance §11). -->
+  <div class="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4">
     <FilterField data={{ label: 'Motivo' }}>
       <OptionPicker
         data={{ value: data.filter.reason, options: REASON_FILTER_OPTIONS }}
@@ -115,16 +136,17 @@
       />
     </FilterField>
 
-    {#if data.filter.reason !== ''}
-      <ActionButton
-        data={{ label: 'Limpar filtros' }}
-        ui={{ variant: 'ghost', size: 'lg' }}
-        actions={{ onClick: actions.onClearFilters }}
-      />
-    {/if}
+    <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
+      {#if data.filter.reason !== '' && !listState.isFilteredOut}
+        <ActionButton
+          data={{ label: 'Limpar filtros' }}
+          ui={{ variant: 'ghost', size: 'lg', icon: FilterX }}
+          actions={{ onClick: actions.onClearFilters }}
+        />
+      {/if}
+      <TableViewToggle />
+    </div>
   </div>
-{/snippet}
-</ContentCard>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2). -->
   {#if listState.error}
@@ -134,7 +156,17 @@
       actions={{ onRetry: actions.onRetry }}
     />
   {:else if listState.isLoading}
-    <p class="text-muted-foreground p-6 text-center text-sm">Carregando os descartes…</p>
+    <!-- O esqueleto tem a FORMA da grade: sem isso, a tela pula quando o conteúdo chega. -->
+    <div class="card-grid" aria-busy="true" aria-label="Carregando os descartes" role="status">
+      {#each Array.from({ length: 6 }, (_, index) => index) as index (index)}
+        <div class="bg-card shadow-card rounded-surface flex flex-col gap-3 p-4">
+          <Skeleton class="h-3 w-1/4" />
+          <Skeleton class="h-4 w-2/3" />
+          <Skeleton class="h-10 w-full" />
+          <Skeleton class="mt-4 h-6 w-1/2" />
+        </div>
+      {/each}
+    </div>
   {:else if listState.isEmpty}
     <EmptyState
       data={{
@@ -155,7 +187,7 @@
         title: 'Nenhum descarte por esse motivo',
         description: 'Tente outro motivo, ou limpe o filtro para ver todos.',
       }}
-      ui={{ icon: Trash2 }}
+      ui={{ icon: SearchX }}
     >
       <ActionButton
         data={{ label: 'Limpar filtros' }}
@@ -164,11 +196,15 @@
       />
     </EmptyState>
   {:else}
-    <section class="flex flex-col gap-3">
+    <section class="flex flex-col gap-3" aria-label="Lista de descartes">
       <p class="text-muted-foreground text-xs">{summary}</p>
 
-      <!-- A grade padrão de cards. O descarte é história: o cartão não abre nada nem tem ação. -->
-      <div class="card-grid" data-slot="inventory-disposal-cards">
+      <!-- 1. Cards: sempre no estreito (< xl), ou quando a pessoa pediu cards. O descarte é
+           história: o cartão não abre nada nem tem ação. -->
+      <div
+        class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
+        data-slot="inventory-disposal-cards"
+      >
         {#each cardPage.items as disposal (disposal.id)}
           <ContentCard
             data={{
@@ -193,22 +229,25 @@
                   isOn: disposal.balanceAfter > 0,
                 },
               ],
-              footer: { title: disposal.createdBy, subtitle: 'Quem registrou' },
+              /* Quem registrou, com o rosto (o diretório acha a foto pelo nome). */
+              footer: {
+                title: disposal.createdBy,
+                subtitle: 'Quem registrou',
+                person: { name: disposal.createdBy },
+              },
             }}
-            ui={{ icon: Trash2, iconTone: 'danger', footerIcon: UserRound, slot: 'inventory-disposal-card' }}
+            ui={{ icon: Trash2, iconTone: 'danger', slot: 'inventory-disposal-card' }}
           >
             {#snippet body()}
               {#if disposal.note}
-                <p class="text-ink-700 line-clamp-3 text-xs">{disposal.note}</p>
+                <p class="text-muted-foreground line-clamp-3 text-xs">{disposal.note}</p>
               {/if}
             {/snippet}
           </ContentCard>
         {/each}
       </div>
-      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
-           fileira. A barra só aparece quando há mais de uma página. -->
       {#if cardPage.total > cardPage.pageSize}
-        <div class="flex justify-center">
+        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
           <PaginationBar
             data={{
               page: cardPage.page,
@@ -220,6 +259,56 @@
           />
         </div>
       {/if}
+
+      <!-- 2. Tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu cards. Rola inteira. -->
+      <div
+        class={cn('overflow-x-auto', tableView.forceCards ? 'hidden' : 'hidden xl:block')}
+        data-slot="inventory-disposal-table"
+      >
+        <Table class="min-w-[880px]">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Produto</TableHead>
+              <TableHead>Motivo</TableHead>
+              <TableHead>Descartado</TableHead>
+              <TableHead>No depósito</TableHead>
+              <TableHead>Quando</TableHead>
+              <TableHead>Quem registrou</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {#each data.disposals as disposal (disposal.id)}
+              <TableRow class="align-top">
+                <TableCell>
+                  <span class="text-foreground block font-medium break-words">{disposal.itemName}</span>
+                  {#if disposal.note}
+                    <span class="text-muted-foreground block text-xs break-words">{disposal.note}</span>
+                  {/if}
+                </TableCell>
+                <TableCell>
+                  <StatusBadge
+                    data={{ label: reasonOf(disposal) }}
+                    ui={{ tone: disposal.reason ? 'danger' : 'neutral', size: 'sm' }}
+                  />
+                </TableCell>
+                <TableCell class="tabular-nums">
+                  {disposal.quantity} {inventoryUnitShortLabel(disposal.itemUnit)}
+                </TableCell>
+                <TableCell class="tabular-nums">{disposal.balanceAfter}</TableCell>
+                <TableCell class="text-muted-foreground text-xs whitespace-nowrap">
+                  {formatDate(disposal.createdAt)}
+                </TableCell>
+                <TableCell>
+                  <span class="flex items-center gap-2">
+                    <PersonAvatar name={disposal.createdBy} ui={{ size: 'sm' }} />
+                    <span class="truncate">{disposal.createdBy}</span>
+                  </span>
+                </TableCell>
+              </TableRow>
+            {/each}
+          </TableBody>
+        </Table>
+      </div>
 
       {#if listState.isTruncated}
         <p class="text-muted-foreground text-xs">

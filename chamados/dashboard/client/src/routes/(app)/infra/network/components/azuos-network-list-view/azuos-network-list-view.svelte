@@ -129,6 +129,7 @@
 </script>
 
 <script lang="ts">
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import type { LucideIcon } from '@lucide/svelte';
   import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
   import Clock from '@lucide/svelte/icons/clock';
@@ -152,7 +153,7 @@
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
-    import {
+  import {
     Table,
     TableActions,
     TableBody,
@@ -284,7 +285,12 @@
       actions={{ onRetry: actions.onRetry }}
     />
   {:else if viewState.isLoading}
-    <p class="text-ink-500 py-10 text-center text-sm">Carregando os eventos…</p>
+    <!-- O esqueleto tem a forma da grade de cards: a tela não pula quando a lista chega. -->
+    <div role="status" aria-label="Carregando os eventos…" aria-busy="true" class="card-grid">
+      {#each [0, 1, 2, 3, 4, 5] as slot (slot)}
+        <Skeleton class="rounded-surface h-52 w-full" />
+      {/each}
+    </div>
   {:else if viewState.isEmpty}
     <!-- O silêncio não é notícia boa: o texto diz DE ONDE os eventos vêm. -->
     <EmptyState

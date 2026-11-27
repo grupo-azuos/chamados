@@ -20,12 +20,15 @@ import { type BoardItem } from '$lib/utils/widget-items.util';
  */
 export const DRILL_TARGETS: Record<DataSourceKey, string | null> = {
   infraTickets: contextPath('infra', '/tickets'),
+  /* A lista de Tarefas ainda não lê o recorte do painel: o bloco fica de leitura. */
+  infraTasks: null,
   computers: contextPath('infra', '/computers'),
   maintenances: contextPath('infra', '/maintenance'),
   maintenanceSchedules: null,
   partMovements: null,
   computerAlerts: null,
   systemTickets: contextPath('sistema', '/tickets'),
+  systemTasks: null,
   softwareProjects: contextPath('sistema', '/projects'),
   softwareActivity: null,
   scheduleEvents: null,

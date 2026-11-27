@@ -375,7 +375,7 @@ describe('AzuosTicketListView', () => {
     });
 
     expect(screen.queryByText(/nenhum chamado ainda/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/carregando os chamados/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/carregando os chamados/i)).toHaveAttribute('aria-busy', 'true');
   });
 
   it('shows the failure with a way to try again', () => {
