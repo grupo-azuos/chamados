@@ -508,8 +508,8 @@ describe('AzuosComputerDetailView', () => {
   it('says when the next preventive is due and how many days are left', () => {
     renderDetail({}, [maintenance()]);
 
-    expect(screen.getByText(/Próxima preventiva:/)).toBeInTheDocument();
-    expect(screen.getByText('faltam 82 dias')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Próxima preventiva' })).toBeInTheDocument();
+    expect(screen.getByText(/faltam 82 dias/)).toBeInTheDocument();
   });
 
   it('keeps a disposed machine read-only until it is restored', () => {
@@ -530,7 +530,7 @@ describe('AzuosComputerDetailView', () => {
     renderDetail({}, [maintenance({ type: 'part_replacement' })]);
 
     expect(screen.getByText(/Nenhuma preventiva registrada/)).toBeInTheDocument();
-    expect(screen.queryByText(/Próxima preventiva:/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Próxima preventiva' })).not.toBeInTheDocument();
   });
 
   it('shows the delay once the preventive has expired', () => {
@@ -538,7 +538,7 @@ describe('AzuosComputerDetailView', () => {
       maintenance({ performedAt: new Date(Date.now() - 100 * DAY).toISOString() }),
     ]);
 
-    expect(screen.getByText('venceu há 8 dias')).toBeInTheDocument();
+    expect(screen.getByText(/venceu há 8 dias/)).toBeInTheDocument();
   });
 
   /* Máquina sem medida nenhuma não pode mostrar "0%" como se estivesse parada. */
@@ -705,9 +705,10 @@ describe('AzuosComputerDetailView: the histories of the machine', () => {
       },
     );
 
-    expect(screen.getByText('Carregando os chamados…')).toBeInTheDocument();
-    expect(screen.getAllByText('Carregando o histórico…')).toHaveLength(2);
-    expect(screen.getByText('Carregando as peças…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando os chamados…' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando as manutenções…' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando as transferências…' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando as peças…' })).toBeInTheDocument();
   });
 
   it('explains each empty history', () => {
@@ -967,7 +968,7 @@ describe('AzuosComputerDetailView: live reading, alerts and pages', () => {
         isLiveLoading: true,
       },
     );
-    expect(screen.getByText('Carregando os alertas…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando os alertas…' })).toBeInTheDocument();
   });
 
   // triste

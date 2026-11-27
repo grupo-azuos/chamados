@@ -26,6 +26,7 @@
 </script>
 
 <script lang="ts">
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import UsageMeter from '$lib/components/azuos-usage-meter/azuos-usage-meter.svelte';
   import { formatBytes, formatPercent } from '$lib/utils/format-machine';
@@ -52,7 +53,12 @@
 </script>
 
 {#if viewState?.isLoading}
-  <p class="text-ink-500 text-sm">Lendo a máquina…</p>
+  <!-- O esqueleto tem a forma dos quatro blocos da leitura: a ficha não pula quando ela chega. -->
+  <div role="status" aria-label="Lendo a máquina…" aria-busy="true" class="grid gap-3 lg:grid-cols-2">
+    {#each [0, 1, 2, 3] as block (block)}
+      <Skeleton class="rounded-box h-28 w-full" />
+    {/each}
+  </div>
 {:else if !live}
   <EmptyState
     data={{

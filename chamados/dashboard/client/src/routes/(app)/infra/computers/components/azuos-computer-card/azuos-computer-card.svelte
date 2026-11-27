@@ -163,7 +163,7 @@
       title: computerResponsibleLabel(computer),
       subtitle: lastSeenLabelOf(computer),
       person: computer.responsibleName
-        ? { name: computer.responsibleName, avatarUrl: computer.responsibleAvatarUrl ?? null }
+        ? { id: computer.responsibleId, name: computer.responsibleName, avatarUrl: computer.responsibleAvatarUrl ?? null }
         : null,
     },
     openLabel: 'Ver ficha',

@@ -45,7 +45,6 @@
 
 <script lang="ts">
   import Download from '@lucide/svelte/icons/download';
-  import KeyRound from '@lucide/svelte/icons/key-round';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import CopyButton from '$lib/components/azuos-copy-button/azuos-copy-button.svelte';
@@ -68,18 +67,10 @@
   onOpenChange={(isOpen: boolean) => (isOpen ? undefined : actions.onClose())}
 >
   <DialogContent class="sm:max-w-xl">
-    <DialogHeader class="gap-1.5">
-      <div class="flex items-center gap-2.5">
-        <span
-          class="flex size-7 shrink-0 items-center justify-center rounded-icon bg-primary text-primary-foreground"
-        >
-          <KeyRound class="size-4" aria-hidden="true" />
-        </span>
-        <DialogTitle class="min-w-0 break-words pr-8 text-lg font-semibold tracking-tight">
-          Token de {data.computerName}
-        </DialogTitle>
-      </div>
-      <DialogDescription class="text-xs text-muted-foreground">
+    <!-- O cabeçalho da casa: título e descrição, sem selo de ícone desenhado à mão. -->
+    <DialogHeader>
+      <DialogTitle class="break-words">Token de {data.computerName}</DialogTitle>
+      <DialogDescription>
         Guarde agora: por segurança, este código não pode ser mostrado de novo. Se perder, gere
         outro pela ficha da máquina.
       </DialogDescription>
@@ -88,14 +79,15 @@
     <div class="flex min-w-0 flex-col gap-1.5">
       <span class="text-sm font-medium text-muted-foreground">Código da máquina</span>
       <!-- O botão mora dentro da caixa, à direita e no meio da altura: o código é uma linha só. -->
-      <div class="flex min-w-0 items-center gap-2 rounded-box bg-foreground py-2 pr-2 pl-4">
+      <!-- O bloco cinza da casa, como o do comando logo abaixo: caixa escura é faixa escura. -->
+      <div class="rounded-box bg-muted flex min-w-0 items-center gap-2 py-2 pr-2 pl-4">
         <span
-          class="min-w-0 flex-1 py-2 font-mono text-xs tracking-wider break-all text-background select-all"
+          class="text-foreground min-w-0 flex-1 py-2 font-mono text-xs break-all select-all"
           data-testid="agent-token"
         >
           {data.token}
         </span>
-        <CopyButton data={{ text: data.token, label: 'Copiar código' }} ui={{ tone: 'inverse' }} />
+        <CopyButton data={{ text: data.token, label: 'Copiar código' }} />
       </div>
     </div>
 

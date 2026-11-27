@@ -114,53 +114,40 @@
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
-  import { cardToneClasses } from '$lib/utils/card-tone.util';
-  import { cn } from '$lib/utils/cn';
 
   let { data, state: cardState, actions }: AzuosMaintenanceScheduleCardProps = $props();
 
   const summary = $derived(scheduleSummaryOf(data.schedule, data.lastPreventiveAt));
+
+  /* A linha de apoio: a data e quanto falta; sem prazo, o aviso de que já está pendente. */
+  const meta = $derived.by(() => {
+    if (cardState?.isLoading) return 'Conferindo a agenda da máquina…';
+    if (summary.date) return `${summary.date} · ${summary.countdown}`;
+
+    return data.schedule ? null : 'Esta máquina já aparece como pendente no quadro de preventivas.';
+  });
 </script>
 
-<ContentCard data={{ label: 'Próxima manutenção', title: '' }}>
-{#snippet body()}
-<div class="flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-  <!-- `items-center`: o texto fica no meio da altura do ícone e do botão "Agendar manutenção",
-       e não colado no alto da faixa. -->
-  <div class="flex min-w-0 items-center gap-3">
-    <span
-      class={cn(
-        'rounded-icon inline-flex size-9 shrink-0 items-center justify-center shadow-xs',
-        cardToneClasses(ICON_TONES[summary.tone]).dot,
-      )}
-    >
-      <CalendarClock class="size-5" aria-hidden="true" />
-    </span>
-    <div class="min-w-0">
-      {#if cardState?.isLoading}
-        <p class="text-ink-500 text-sm">Conferindo a agenda da máquina…</p>
-      {:else}
-        <p class="text-ink-900 text-sm break-words">
-          <span class="font-semibold">{summary.title}{summary.date ? ':' : ''}</span>
-          {#if summary.date}
-            <span class="font-medium">{summary.date}</span>
-            ·
-            <span class={summary.tone === 'danger' ? 'text-destructive font-semibold' : 'font-medium'}>{summary.countdown}</span>
-          {/if}
-        </p>
-        {#if data.schedule?.note}
-          <p class="text-ink-700 mt-0.5 text-xs break-words">{data.schedule.note}</p>
-        {:else if !data.schedule && summary.date === null}
-          <p class="text-ink-700 mt-0.5 text-xs">
-            Esta máquina já aparece como pendente no quadro de preventivas.
-          </p>
-        {/if}
-      {/if}
-    </div>
-  </div>
-
-  {#if !cardState?.isLoading}
-    <div class="flex shrink-0 flex-wrap items-center gap-2">
+<!-- O card de conteúdo da casa: o ícone cheio carrega a urgência (no tom), o título diz qual prazo
+     vale, a linha de apoio diz quando, e as ações moram no rodapé. -->
+<ContentCard
+  data={{
+    label: 'Próxima manutenção',
+    title: cardState?.isLoading ? 'Próxima manutenção' : summary.title,
+    meta,
+  }}
+  ui={{ icon: CalendarClock, iconTone: ICON_TONES[summary.tone], slot: 'maintenance-schedule-card' }}
+>
+  {#snippet notes()}
+    {#if !cardState?.isLoading && data.schedule?.note}
+      <p class="text-ink-700 text-xs break-words">{data.schedule.note}</p>
+    {/if}
+    {#if cardState?.error}
+      <ErrorState data={{ message: cardState.error }} ui={{ variant: 'inline' }} />
+    {/if}
+  {/snippet}
+  {#snippet footerActions()}
+    {#if !cardState?.isLoading}
       {#if data.schedule}
         <ActionButton
           data={{ label: 'Registrar manutenção' }}
@@ -186,14 +173,6 @@
           actions={{ onClick: actions.onSchedule }}
         />
       {/if}
-    </div>
-  {/if}
-
-  {#if cardState?.error}
-    <div class="w-full">
-      <ErrorState data={{ message: cardState.error }} ui={{ variant: 'inline' }} />
-    </div>
-  {/if}
-</div>
-{/snippet}
+    {/if}
+  {/snippet}
 </ContentCard>

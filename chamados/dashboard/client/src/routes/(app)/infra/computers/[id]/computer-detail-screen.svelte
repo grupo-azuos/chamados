@@ -1,4 +1,5 @@
 <script lang="ts">
+  import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
   import HardDrive from '@lucide/svelte/icons/hard-drive';
 
 
@@ -74,7 +75,7 @@
     />
   </div>
 {:else if detail.state.isLoading || !detail.data.computer}
-  <p class="text-ink-500 py-16 text-center text-sm">Carregando a ficha da máquina…</p>
+  <LoadingState data={{ label: 'Carregando a ficha da máquina…' }} ui={{ className: 'py-16' }} />
 {:else}
   <ComputerDetailView
     data={{
