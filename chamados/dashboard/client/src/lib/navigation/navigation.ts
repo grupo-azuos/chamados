@@ -4,6 +4,7 @@ import Boxes from '@lucide/svelte/icons/boxes';
 import Calendar from '@lucide/svelte/icons/calendar';
 import Code2 from '@lucide/svelte/icons/code-2';
 import FileText from '@lucide/svelte/icons/file-text';
+import History from '@lucide/svelte/icons/history';
 import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
 import LifeBuoy from '@lucide/svelte/icons/life-buoy';
 import ListChecks from '@lucide/svelte/icons/list-checks';
@@ -108,6 +109,8 @@ export const INFRA_NAV_ITEMS: readonly NavItem[] = [
   navItem('infra', 'network', 'Rede', Wifi),
   navItem('infra', 'budget', 'Orçamento', FileText),
   navItem('infra', 'agent', 'Agente Windows', Download),
+  /* O Histórico fecha o menu dos três módulos (regra `history-standard`): quem mudou o quê. */
+  navItem('infra', 'history', 'Histórico', History),
 ];
 
 /**
@@ -121,6 +124,7 @@ export const SYSTEM_NAV_ITEMS: readonly NavItem[] = [
   navItem('sistema', 'schedule', 'Cronograma', Calendar),
   navItem('sistema', 'projects', 'Projetos', Code2),
   navItem('sistema', 'agent', 'Agente Windows', Download),
+  navItem('sistema', 'history', 'Histórico', History),
 ];
 
 /**
@@ -137,6 +141,7 @@ export const MAINTENANCE_NAV_ITEMS: readonly NavItem[] = [
   navItem('manutencao', 'stock', 'Depósito', Package),
   navItem('manutencao', 'disposal', 'Descarte', Trash2),
   navItem('manutencao', 'quotes', 'Orçamentos', FileText),
+  navItem('manutencao', 'history', 'Histórico', History),
 ];
 
 /**
