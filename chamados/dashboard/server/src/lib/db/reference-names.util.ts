@@ -1,6 +1,6 @@
 import { type DepartmentOption } from '@template/shared/domain/department.util';
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
-import { sql, type SQL } from 'drizzle-orm';
+import { type Column, sql, type SQL } from 'drizzle-orm';
 
 import { qualified } from './sql-column.util';
 import { computers } from './schema/computers.schema';
@@ -67,6 +67,14 @@ export function computerDepartmentNameSql(): SQL<string | null> {
 
 /** O nome do responsável da máquina, em SQL — nulo sem responsável ou com id sem par. */
 export function computerResponsibleNameSql(): SQL<string | null> {
+  return personNameSql(computers.responsibleId);
+}
+
+/**
+ * O nome, em SQL, da pessoa cujo id do diretório mora nesta coluna (o responsável da máquina, o
+ * dono da tarefa) — nulo sem pessoa ou com id sem par.
+ */
+export function personNameSql(column: Column): SQL<string | null> {
   const entries = [...people.entries()];
   if (entries.length === 0) return sql<string | null>`null::text`;
 
@@ -77,5 +85,5 @@ export function computerResponsibleNameSql(): SQL<string | null> {
 
   return sql<
     string | null
-  >`(select "ref"."name" from (values ${values}) as "ref"("id", "name") where "ref"."id" = ${qualified(computers.responsibleId)})`;
+  >`(select "ref"."name" from (values ${values}) as "ref"("id", "name") where "ref"."id" = ${qualified(column)})`;
 }
