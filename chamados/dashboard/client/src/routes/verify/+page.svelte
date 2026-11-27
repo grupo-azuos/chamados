@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import { useServiceOrderLookupModel } from '$lib/hooks/use-service-order-lookup/use-service-order-lookup.svelte';
   import ServiceOrderLookupForm from './components/azuos-service-order-lookup-form/azuos-service-order-lookup-form.svelte';
 
@@ -19,16 +20,13 @@
 </svelte:head>
 
 <div class="bg-background flex min-h-screen flex-col">
-  <header class="border-b">
-    <div class="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
-      <h1 class="text-ink-900 text-2xl font-bold">Conferir ordem de serviço</h1>
-      <p class="text-ink-500 mt-1 text-sm">
-        Digite o código do documento para ver se ele é o que o sistema emitiu.
-      </p>
-    </div>
-  </header>
-
-  <main class="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-8 sm:px-6">
+  <main class="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-6 px-4 py-8 sm:px-6">
+    <PageHeader
+      data={{
+        title: 'Conferir ordem de serviço',
+        description: 'Digite o código do documento para ver se ele é o que o sistema emitiu.',
+      }}
+    />
     <ServiceOrderLookupForm data={lookup.data} state={lookup.state} actions={lookup.actions} />
   </main>
 </div>

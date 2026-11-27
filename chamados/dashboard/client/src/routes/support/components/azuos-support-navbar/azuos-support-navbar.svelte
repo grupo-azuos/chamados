@@ -71,7 +71,8 @@
       <span class="text-foreground hidden text-sm font-bold md:inline">Central de Chamados</span>
     </a>
 
-    <!-- A tela atual ganha FUNDO, não traço embaixo: barra colorida é proibida no grupo. -->
+    <!-- A tela atual ganha FUNDO cinza com o texto cheio (a escolhida do controle segmentado),
+         não traço embaixo nem pílula azul: barra colorida e aba tingida são proibidas no grupo. -->
     <nav class="flex min-w-0 flex-1 items-center gap-1" aria-label="Telas da Central">
       {#each SUPPORT_LINKS as link (link.href)}
         {@const Icon = ICONS[link.href]}
@@ -82,8 +83,8 @@
           class={cn(
             'control-sm rounded-control focus-visible:ring-ring inline-flex items-center gap-1.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none',
             isActive
-              ? 'bg-primary-soft text-primary'
-              : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+              ? 'bg-muted text-foreground'
+              : 'text-muted-foreground hover:bg-hover-veil hover:text-foreground',
           )}
         >
           <Icon class="size-4 shrink-0" aria-hidden="true" />
@@ -107,8 +108,8 @@
           aria-label={`Meu perfil — ${data.person.name}`}
           title="Meu perfil"
           class={cn(
-            'rounded-control focus-visible:ring-ring flex h-9 items-center gap-2 px-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none',
-            isOnProfile ? 'bg-primary-soft' : 'hover:bg-accent',
+            'control-md rounded-control focus-visible:ring-ring flex items-center gap-2 px-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none',
+            isOnProfile ? 'bg-muted' : 'hover:bg-hover-veil',
           )}
         >
           <PersonAvatar name={data.person.name} avatarUrl={data.person.avatarUrl} />

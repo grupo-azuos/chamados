@@ -80,6 +80,7 @@
 <script lang="ts">
   import CircleCheck from '@lucide/svelte/icons/circle-check';
   import CircleX from '@lucide/svelte/icons/circle-x';
+  import FileCheck2 from '@lucide/svelte/icons/file-check-2';
   import FileSearch from '@lucide/svelte/icons/file-search';
   import LoaderCircle from '@lucide/svelte/icons/loader-circle';
   import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
@@ -92,6 +93,7 @@
     formatHistoryDateTime,
     formatMinutesSpent,
   } from '$lib/components/azuos-history-timeline/azuos-history-timeline.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import { cn } from '$lib/utils/cn';
@@ -139,21 +141,34 @@
     ui={{ icon: FileSearch }}
   />
 {:else if viewState?.isLoading || !order}
-  <p class="text-muted-foreground py-16 text-center text-sm">Procurando o registro…</p>
+  <!-- O esqueleto tem a forma do registro: sem isso, a tela pula quando ele chega. -->
+  <div class="bg-card shadow-card rounded-surface flex flex-col gap-3 p-5" role="status" aria-busy="true">
+    <span class="sr-only">Procurando o registro…</span>
+    <Skeleton class="h-5 w-1/2" />
+    <Skeleton class="h-3 w-3/4" />
+    <div class="grid gap-4 sm:grid-cols-3">
+      {#each [0, 1, 2] as index (index)}
+        <Skeleton class="h-10 w-full" />
+      {/each}
+    </div>
+  </div>
 {:else}
   <div class="flex flex-col gap-5">
-    <ContentCard data={{ label: '', title: '' }}>
+    <!-- Os dois blocos são o card de conteúdo da casa: título, ícone cheio e o corpo. -->
+    <ContentCard
+      data={{
+        label: `Ordem de serviço ${order.protocol}`,
+        title: `Ordem de serviço ${order.protocol}`,
+        meta: 'Emitida pelo sistema',
+        tags: [{ label: `Versão ${order.version}`, tone: 'brand' }],
+      }}
+      ui={{ icon: FileCheck2, iconTone: 'success', slot: 'service-order' }}
+    >
 {#snippet body()}
-<div class="flex flex-col gap-4 p-5">
-      <header class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 class="text-foreground text-lg font-bold">Ordem de serviço {order.protocol}</h2>
-          <p class="text-muted-foreground text-sm">
-            Este documento foi emitido pelo sistema. Abaixo está o que ele registrou na emissão.
-          </p>
-        </div>
-        <StatusBadge data={{ label: `Versão ${order.version}` }} ui={{ tone: 'brand' }} />
-      </header>
+<div class="flex flex-col gap-4 pb-1">
+      <p class="text-muted-foreground text-sm">
+        Este documento foi emitido pelo sistema. Abaixo está o que ele registrou na emissão.
+      </p>
 
       {#if !order.isLatest}
         <p class="rounded-box bg-warning-soft text-foreground px-3.5 py-3 text-sm">
@@ -212,17 +227,17 @@
 {/snippet}
 </ContentCard>
 
-    <ContentCard data={{ label: '', title: '' }}>
+    <ContentCard
+      data={{ label: 'Conferir o arquivo', title: 'Conferir o arquivo', meta: 'No seu navegador, sem enviar' }}
+      ui={{ icon: Upload, iconTone: 'blue', slot: 'service-order-file' }}
+    >
 {#snippet body()}
-<div class="flex flex-col gap-4 p-5">
-      <header>
-        <h2 class="text-foreground text-lg font-bold">Conferir o arquivo</h2>
+<div class="flex flex-col gap-4 pb-1">
         <p class="text-muted-foreground text-sm">
           O registro acima prova que a emissão existe. Para ter certeza de que o PDF que você
           recebeu não foi alterado, escolha o arquivo: ele é conferido aqui, no seu navegador, e não
           é enviado para lugar nenhum.
         </p>
-      </header>
 
       <label onpaste={pasteFilesIntoInput}
         class={cn(
@@ -249,7 +264,7 @@
           {@const CheckIcon = CHECK_ICONS[fileCheck]}
           <div class={cn('rounded-box flex items-start gap-3 px-4 py-3.5', CHECK_CLASSES[fileCheck])}>
             <CheckIcon
-              class={cn('mt-0.5 size-5 shrink-0', fileCheck === 'checking' && 'animate-spin')}
+              class={cn('mt-0.5 size-5 shrink-0', fileCheck === 'checking' && 'motion-safe:animate-spin')}
               aria-hidden="true"
             />
             <div class="min-w-0">
