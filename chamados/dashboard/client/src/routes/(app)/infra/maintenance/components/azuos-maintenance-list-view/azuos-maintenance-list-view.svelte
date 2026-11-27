@@ -137,12 +137,28 @@
   }
 
 
+  /**
+   * QUEM FEZ, uma pessoa — o rosto e o nome do rodapé. Vale o id escolhido em "Quem fez", com o
+   * nome de hoje no diretório; o nome gravado em `performedBy` é só o recurso do registro antigo,
+   * que não guardou o id. Ler o nome gravado primeiro deixava o card com o nome de antes da
+   * correção (quem registrou) mesmo depois de trocar a pessoa.
+   */
+  export function performerOf(
+    maintenance: Pick<Maintenance, 'performedBy' | 'performedByIds'>,
+  ): { id: string | null; name: string } | null {
+    const id = maintenance.performedByIds?.[0] ?? null;
+    const recorded = (maintenance.performedBy ?? '').split(',')[0]?.trim() || null;
+    const name = personNameOf(id) ?? recorded;
+
+    return name ? { id, name } : null;
+  }
+
   /** O nome do rodapé: com várias pessoas, a primeira "e mais N" — os nomes todos não cabem. */
   export function performersTitleOf(maintenance: Pick<Maintenance, 'performedBy' | 'performedByIds'>): string {
     const faces = performersOf(maintenance);
     if (faces.length > 1) return `${faces[0]!.name} e mais ${faces.length - 1}`;
 
-    return maintenance.performedBy ?? 'Sem responsável';
+    return performerOf(maintenance)?.name ?? 'Sem responsável';
   }
 
   export function placeOf(maintenance: Maintenance): string {
@@ -323,9 +339,7 @@
             footer: {
               title: performersTitleOf(maintenance),
               subtitle: formatDate(maintenance.performedAt),
-              person: maintenance.performedBy
-                ? { id: maintenance.performedByIds?.[0] ?? null, name: maintenance.performedBy }
-                : null,
+              person: performerOf(maintenance),
               /* Quem fez pode ser mais de uma pessoa: o rosto de cada uma, com a foto. */
               people: performersOf(maintenance),
             },
@@ -407,7 +421,7 @@
               <TableCell class="text-ink-700 max-w-[320px] break-words whitespace-normal">
                 {maintenance.description ?? '—'}
               </TableCell>
-              <TableCell class="text-ink-500 max-w-[140px] break-words whitespace-normal text-xs">{maintenance.performedBy ?? '—'}</TableCell>
+              <TableCell class="text-ink-500 max-w-[140px] break-words whitespace-normal text-xs">{performerOf(maintenance) ? performersTitleOf(maintenance) : '—'}</TableCell>
               <TableCell class="text-right whitespace-nowrap">
                 <!-- A ação da linha mora no menu de três pontinhos, como no card. -->
                 <ActionMenu

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import MaintenanceListView, {
   machineLabelOf,
+  performerOf,
   performersOf,
   performersTitleOf,
   placeOf,
@@ -152,7 +153,50 @@ describe('performersOf', () => {
 
     const faces = container.querySelector('[data-slot$="-people"]');
     expect(faces?.querySelectorAll('[data-slot="avatar"]')).toHaveLength(2);
-    expect(screen.getByText('Wellington Queiroz e mais 1')).toBeInTheDocument();
+    expect(screen.getAllByText('Wellington Queiroz e mais 1').length).toBeGreaterThan(0);
+    expect(performersTitleOf({ performedBy: null, performedByIds: [] })).toBe('Sem responsável');
+  });
+});
+
+describe('performerOf — quem fez, e não quem registrou', () => {
+  // feliz
+  /* O bug do dono: corrigiu "Quem fez" para Guilherme, e o card seguia com Wellington (o nome
+     gravado, de quem registrou). O id escolhido vence, com o nome de hoje no diretório. */
+  it('shows on the card the person chosen in "Quem fez", even with an old name saved', () => {
+    setPeopleDirectory([
+      { id: 'u-g', name: 'Guilherme Siqueira', avatarUrl: null },
+      { id: 'u-w', name: 'Wellington Queiroz', avatarUrl: null },
+    ]);
+    const edited = maintenance({ performedBy: 'Wellington Queiroz', performedByIds: ['u-g'] });
+
+    expect(performerOf(edited)).toEqual({ id: 'u-g', name: 'Guilherme Siqueira' });
+    renderView({ maintenances: [edited] });
+    expect(screen.getAllByText('Guilherme Siqueira').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Wellington Queiroz')).not.toBeInTheDocument();
+    setPeopleDirectory([]);
+  });
+
+  // feliz
+  it('says "X e mais 1" when a second person was added', () => {
+    setPeopleDirectory([
+      { id: 'u-g', name: 'Guilherme Siqueira', avatarUrl: null },
+      { id: 'u-w', name: 'Wellington Queiroz', avatarUrl: null },
+    ]);
+
+    expect(performersTitleOf({ performedBy: 'Wellington Queiroz', performedByIds: ['u-g', 'u-w'] })).toBe(
+      'Guilherme Siqueira e mais 1',
+    );
+    setPeopleDirectory([]);
+  });
+
+  // triste
+  it('falls back to the saved name for an old record and to nobody when there is none', () => {
+    expect(performerOf({ performedBy: 'Ana Souza', performedByIds: [] })).toEqual({ id: null, name: 'Ana Souza' });
+    expect(performerOf({ performedBy: 'Ana Souza', performedByIds: ['u-fora'] })).toEqual({
+      id: 'u-fora',
+      name: 'Ana Souza',
+    });
+    expect(performerOf({ performedBy: null, performedByIds: [] })).toBeNull();
     expect(performersTitleOf({ performedBy: null, performedByIds: [] })).toBe('Sem responsável');
   });
 });
