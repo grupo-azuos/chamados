@@ -25,13 +25,6 @@ export const MIGRATIONS_SCHEMA = 'drizzle';
 export const MIGRATIONS_TABLE = '__chamados_migrations';
 
 /**
- * O schema deste sistema, também como caminho de busca da conexão: as tabelas são declaradas
- * com o schema (`chamadosSchema`), mas os scripts com SQL à mão (seed, truncate dos testes)
- * escrevem só `tickets` — e assim acham a tabela daqui, e não a de outro sistema.
- */
-export const DATABASE_SCHEMA = 'chamados';
-
-/**
  * Como o pool conversa com o Postgres — e por que é o pool do `pg` (node-postgres).
  *
  * O banco de produção fica atrás do pooler do Supabase em modo transação (porta 6543), que empresta

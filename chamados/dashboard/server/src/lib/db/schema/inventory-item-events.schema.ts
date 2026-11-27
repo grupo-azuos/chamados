@@ -2,7 +2,7 @@ import { INVENTORY_ITEM_EVENT_TYPES } from '@template/shared/domain/inventory-it
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { inventorySchema } from './schemas.schema';
 import { inventoryItems } from './inventory-items.schema';
 
 function valuesFor(values: readonly string[]) {
@@ -17,7 +17,7 @@ function valuesFor(values: readonly string[]) {
  *
  * Exclusão em cascata: excluir o produto leva a linha do tempo dele junto.
  */
-export const inventoryItemEvents = chamadosSchema.table(
+export const inventoryItemEvents = inventorySchema.table(
   'inventory_item_events',
   {
     id: serial('id').primaryKey(),

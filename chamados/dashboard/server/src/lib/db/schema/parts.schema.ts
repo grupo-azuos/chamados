@@ -2,7 +2,7 @@ import { PART_CATEGORIES, PART_CONDITIONS } from '@template/shared/domain/part-c
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp, unique } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { inventorySchema } from './schemas.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
 function valuesFor(values: readonly string[]) {
@@ -22,7 +22,7 @@ function valuesFor(values: readonly string[]) {
  * esconderia que os quatro SSDs do estoque são todos usados na hora de escolher o que
  * instalar numa máquina nova. Por isso a unicidade é por nome + condição.
  */
-export const parts = chamadosSchema.table(
+export const parts = inventorySchema.table(
   'parts',
   {
     id: serial('id').primaryKey(),

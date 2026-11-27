@@ -1,6 +1,6 @@
 import { bigserial, doublePrecision, index, integer, timestamp } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { inventorySchema } from './schemas.schema';
 
 import { computers } from './computers.schema';
 
@@ -17,7 +17,7 @@ import { computers } from './computers.schema';
  * computador, sem sentido próprio. É o único lugar do sistema onde apagar em cascata é certo,
  * e ainda assim máquina não se apaga — se arquiva.
  */
-export const computerSamples = chamadosSchema.table(
+export const computerSamples = inventorySchema.table(
   'computer_samples',
   {
     /* `bigserial`: numa frota de 50 máquinas enviando a cada 30 segundos, `serial` (int4)

@@ -2,7 +2,7 @@ import { isNull } from 'drizzle-orm';
 import { index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { ticketsSchema } from './schemas.schema';
 
 import { tickets } from './tickets.schema';
 
@@ -21,7 +21,7 @@ import { tickets } from './tickets.schema';
  * `author_name` do histórico: o chamado antigo continua dizendo quem estava envolvido mesmo que
  * a pessoa saia do admin-console.
  */
-export const ticketWatchers = chamadosSchema.table(
+export const ticketWatchers = ticketsSchema.table(
   'ticket_watchers',
   {
     id: serial('id').primaryKey(),

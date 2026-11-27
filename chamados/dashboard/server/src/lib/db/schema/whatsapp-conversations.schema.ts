@@ -1,7 +1,7 @@
 import { type AccessRequestDraft } from '@template/shared/domain/access-request.util';
 import { index, jsonb, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { messagingSchema } from './schemas.schema';
 
 /**
  * As conversas do bot que estão NO MEIO — hoje, o pedido de acesso (`/acesso`), que pergunta
@@ -13,7 +13,7 @@ import { chamadosSchema } from './chamados.schema';
  *
  * A chave é a mesma que o bot usa: o número vinculado (hash do id, nunca o id) e a conversa.
  */
-export const whatsappConversations = chamadosSchema.table(
+export const whatsappConversations = messagingSchema.table(
   'whatsapp_conversations',
   {
     /** `<sessionId>:<chatId>`. */
@@ -42,7 +42,7 @@ export type WhatsappConversationInsert = typeof whatsappConversations.$inferInse
  * registro, a mesma resposta seria lida duas vezes: a mesma pergunta pulada, ou o mesmo pedido
  * de acesso aberto em dobro. Só o identificador fica guardado, nunca o texto, e por 1 dia.
  */
-export const whatsappInboundMessages = chamadosSchema.table(
+export const whatsappInboundMessages = messagingSchema.table(
   'whatsapp_inbound_messages',
   {
     sessionId: text('session_id').notNull(),

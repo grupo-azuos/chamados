@@ -2,7 +2,7 @@ import { isNull } from 'drizzle-orm';
 import { index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { ticketsSchema } from './schemas.schema';
 
 import { computers } from './computers.schema';
 import { tickets } from './tickets.schema';
@@ -18,7 +18,7 @@ import { tickets } from './tickets.schema';
  * `cascade` nos dois lados: sem o chamado ou sem a máquina, o vínculo não diz mais nada. O
  * chamado continua contando, pela linha do tempo, que a máquina esteve nele.
  */
-export const ticketComputers = chamadosSchema.table(
+export const ticketComputers = ticketsSchema.table(
   'ticket_computers',
   {
     id: serial('id').primaryKey(),

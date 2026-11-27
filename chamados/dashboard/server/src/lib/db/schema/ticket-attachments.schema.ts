@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 import { bigint, check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { ticketsSchema } from './schemas.schema';
 
 import { ticketHistories } from './ticket-histories.schema';
 import { tickets } from './tickets.schema';
@@ -29,7 +29,7 @@ function valuesFor(values: readonly string[]) {
  * nome que veio do computador de quem enviou: ele volta para a tela e vai no download, mas
  * não é endereço de nada (ver `buildObjectKey`).
  */
-export const ticketAttachments = chamadosSchema.table(
+export const ticketAttachments = ticketsSchema.table(
   'ticket_attachments',
   {
     id: serial('id').primaryKey(),

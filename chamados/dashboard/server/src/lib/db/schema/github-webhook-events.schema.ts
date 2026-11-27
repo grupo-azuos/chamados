@@ -1,6 +1,6 @@
 import { index, jsonb, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { softwareSchema } from './schemas.schema';
 
 /**
  * CADA AVISO DO GITHUB, como chegou — o diário do webhook do GitHub App.
@@ -12,7 +12,7 @@ import { chamadosSchema } from './chamados.schema';
  * - as próximas telas (git graph, branch ao vivo, produtividade) leem DAQUI, sem perguntar nada
  *   ao GitHub.
  */
-export const githubWebhookEvents = chamadosSchema.table(
+export const githubWebhookEvents = softwareSchema.table(
   'github_webhook_events',
   {
     id: serial('id').primaryKey(),

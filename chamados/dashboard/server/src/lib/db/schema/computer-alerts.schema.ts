@@ -9,7 +9,7 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { inventorySchema } from './schemas.schema';
 
 import { computers } from './computers.schema';
 
@@ -35,7 +35,7 @@ function valuesFor(values: readonly string[]) {
  * `causeProcess` é o programa que mais consumia aquela medida no momento do estouro. É um
  * palpite honesto, não uma acusação — por isso o nome diz "causa provável" na tela.
  */
-export const computerAlerts = chamadosSchema.table(
+export const computerAlerts = inventorySchema.table(
   'computer_alerts',
   {
     id: serial('id').primaryKey(),

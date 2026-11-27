@@ -19,7 +19,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { tasksSchema } from './schemas.schema';
 import { computers } from './computers.schema';
 import { tickets } from './tickets.schema';
 
@@ -42,7 +42,7 @@ function valuesFor(values: readonly string[]) {
  * entre Reaberta e Finalizada. O nome repetido é recusado entre as em uso da área; a arquivada não
  * segura o nome.
  */
-export const taskStages = chamadosSchema.table(
+export const taskStages = tasksSchema.table(
   'task_stages',
   {
     id: serial('id').primaryKey(),
@@ -72,7 +72,7 @@ export const taskStages = chamadosSchema.table(
 
 export type TaskStageRow = typeof taskStages.$inferSelect;
 
-export const tasks = chamadosSchema.table(
+export const tasks = tasksSchema.table(
   'tasks',
   {
     id: serial('id').primaryKey(),
@@ -140,7 +140,7 @@ export type TaskRow = typeof tasks.$inferSelect;
 export type TaskInsert = typeof tasks.$inferInsert;
 
 /** O checklist da tarefa: marcar a última etapa finaliza (ver `taskStatusAfterSteps`). */
-export const taskSteps = chamadosSchema.table(
+export const taskSteps = tasksSchema.table(
   'task_steps',
   {
     id: serial('id').primaryKey(),
@@ -166,7 +166,7 @@ export type TaskStepRow = typeof taskSteps.$inferSelect;
  * A que a tarefa se liga — vários de cada tipo. Sem chave estrangeira de propósito: o alvo vive
  * em tabelas diferentes conforme o tipo; o nome é lido na hora, e um alvo apagado aparece sem nome.
  */
-export const taskLinks = chamadosSchema.table(
+export const taskLinks = tasksSchema.table(
   'task_links',
   {
     id: serial('id').primaryKey(),
@@ -188,7 +188,7 @@ export const taskLinks = chamadosSchema.table(
 export type TaskLinkRow = typeof taskLinks.$inferSelect;
 
 /** Quem mais participa da tarefa, além do responsável — pelo ID do diretório. */
-export const taskPeople = chamadosSchema.table(
+export const taskPeople = tasksSchema.table(
   'task_people',
   {
     taskId: integer('task_id')

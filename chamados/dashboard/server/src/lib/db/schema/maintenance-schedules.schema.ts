@@ -2,7 +2,7 @@ import { isNull } from 'drizzle-orm';
 import { date, index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { maintenanceSchema } from './schemas.schema';
 
 import { computers } from './computers.schema';
 
@@ -21,7 +21,7 @@ import { computers } from './computers.schema';
  * `date` e não `timestamp`: agenda-se um DIA, não um instante. Guardando instante, a meia-noite
  * de um fuso vira o dia anterior em outro, e a máquina apareceria agendada para a véspera.
  */
-export const maintenanceSchedules = chamadosSchema.table(
+export const maintenanceSchedules = maintenanceSchema.table(
   'maintenance_schedules',
   {
     id: serial('id').primaryKey(),

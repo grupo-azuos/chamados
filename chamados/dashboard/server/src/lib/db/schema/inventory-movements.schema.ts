@@ -5,7 +5,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { inventorySchema } from './schemas.schema';
 
 import { inventoryItems } from './inventory-items.schema';
 
@@ -27,7 +27,7 @@ function valuesFor(values: readonly string[]) {
  * `cascade` no produto: excluir um produto do inventário leva o extrato dele junto — sem o
  * produto, as linhas não explicam mais nada. Quem exclui é só quem gerencia a Manutenção.
  */
-export const inventoryMovements = chamadosSchema.table(
+export const inventoryMovements = inventorySchema.table(
   'inventory_movements',
   {
     id: serial('id').primaryKey(),

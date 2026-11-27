@@ -5,7 +5,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { check, doublePrecision, index, jsonb, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { inventorySchema } from './schemas.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
 function valuesFor(values: readonly string[]) {
@@ -26,7 +26,7 @@ function valuesFor(values: readonly string[]) {
  * Nada aqui se apaga: marcar como resolvido é escrever `resolved_at`, e o evento continua no
  * histórico. "A internet caiu três vezes este mês" é uma pergunta que só o histórico responde.
  */
-export const networkEvents = chamadosSchema.table(
+export const networkEvents = inventorySchema.table(
   'network_events',
   {
     id: serial('id').primaryKey(),

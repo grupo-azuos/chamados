@@ -8,7 +8,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { boolean, check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { ticketsSchema } from './schemas.schema';
 
 import { computers } from './computers.schema';
 import { softwareProjects } from './software-projects.schema';
@@ -39,7 +39,7 @@ function valuesFor(values: readonly string[]) {
  * precisaria do próprio gerador, e dois geradores acabam colidindo ou pulando — justamente
  * no dado que a pessoa levou anotado num papel.
  */
-export const tickets = chamadosSchema.table(
+export const tickets = ticketsSchema.table(
   'tickets',
   {
     id: serial('id').primaryKey(),

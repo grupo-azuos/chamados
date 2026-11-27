@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { inventorySchema } from './schemas.schema';
 
 import { computers } from './computers.schema';
 
@@ -18,7 +18,7 @@ import { computers } from './computers.schema';
  * `restrict` na máquina: apagar um computador com histórico é apagar a explicação de onde ele
  * andou. Máquina que saiu de uso é arquivada, não apagada.
  */
-export const computerTransfers = chamadosSchema.table(
+export const computerTransfers = inventorySchema.table(
   'computer_transfers',
   {
     id: serial('id').primaryKey(),

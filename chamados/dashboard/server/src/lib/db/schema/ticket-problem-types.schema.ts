@@ -2,7 +2,7 @@ import { TICKET_AREAS } from '@template/shared/domain/ticket-catalog.util';
 import { sql } from 'drizzle-orm';
 import { check, index, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { ticketsSchema } from './schemas.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
 function valuesFor(values: readonly string[]) {
@@ -20,7 +20,7 @@ function valuesFor(values: readonly string[]) {
  *
  * Um tipo é de UMA área: "Leitor de código de barras" de Infra não aparece em Manutenção.
  */
-export const ticketProblemTypes = chamadosSchema.table(
+export const ticketProblemTypes = ticketsSchema.table(
   'ticket_problem_types',
   {
     id: serial('id').primaryKey(),

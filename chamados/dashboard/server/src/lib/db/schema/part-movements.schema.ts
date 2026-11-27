@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { inventorySchema } from './schemas.schema';
 
 import { computers } from './computers.schema';
 import { parts } from './parts.schema';
@@ -29,7 +29,7 @@ function valuesFor(values: readonly string[]) {
  * `restrict` na peça: apagar uma peça com histórico é apagar a explicação do que saiu do
  * depósito. Peça que não se usa mais fica com saldo zero, não some.
  */
-export const partMovements = chamadosSchema.table(
+export const partMovements = inventorySchema.table(
   'part_movements',
   {
     id: serial('id').primaryKey(),
