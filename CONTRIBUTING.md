@@ -184,6 +184,24 @@ O que não precisa:
 
 * **Contrato antes do código.** O schema Zod vive em `shared/` (pacote `@template/shared`) e é importado pela API (DTO + Swagger via `nestjs-zod`) e pela web. Um schema, duas pontas.
 
+* **Schema de edição é `partialUpdate(schemaDeCriação)`, nunca `.partial()`.** No Zod 4 o
+  `.default()` vale dentro do `.optional()`, e a edição gravaria os valores padrão por cima do que
+  está salvo. O contrato de infra (`scripts/infra-contract.mjs`) reprova o `.partial()`.
+
+* **As armadilhas do Zod 4**, todas já vistas nos sistemas da casa:
+  - objeto com `.default({})` não preenche mais os padrões de dentro — use `.prefault({})`;
+  - `z.uuid()` só aceita UUID da RFC; identificador "parecido com UUID" (de teste, de outro
+    sistema) é `z.guid()`, que era o `.uuid()` do Zod 3;
+  - o objeto passado ao `.refine()` é reescrito no lugar: mensagem usada em mais de um
+    `.refine()`/`addIssue` sai de uma função (`const endAfterStart = () => ({ message, path })`),
+    nunca de uma constante objeto;
+  - `z.coerce.number()` aceita qualquer coisa na entrada; quando o formulário tipa o campo, use
+    `z.coerce.number<number>()`.
+
+* **Parâmetro de rota com tipo que não é classe leva `@ApiParam`.** O build (SWC) não guarda
+  o tipo de `@Param('area') area: TicketArea` quando `TicketArea` é um `type`, e o Swagger tira
+  o parâmetro do contrato: `@ApiParam({ name: 'area', type: String })` devolve.
+
 * **Swagger é obrigatório.** Endpoint sem `@ApiOperation` e sem tipo de resposta não entra.
 
 * **Quem editou vem da identidade**, nunca do corpo da requisição. `createdBy` e `updatedBy` são carimbados no mapper a partir da identidade autenticada. O cliente nunca pode escolher ou sobrescrever a identidade de quem realizou a operação.
@@ -365,7 +383,61 @@ Exemplos:
 [chore](docker): Sobe o Node da imagem para a 24 LTS
 ```
 
-Tipos:
+**Tipo** — o que a mudança é:
+
+| Tipo | Quando |
+|---|---|
+| `feat` | Funcionalidade nova |
+| `fix` | Correção de defeito |
+| `refactor` | Muda a forma, não o comportamento |
+| `test` | Só teste |
+| `docs` | Só documentação |
+| `style` | Só formatação, sem efeito em runtime |
+| `perf` | Ganho de desempenho |
+| `build` | Build, dependências, empacotamento |
+| `ci` | Pipeline |
+| `chore` | Manutenção que não cabe acima |
+| `merge` | Fechamento de uma branch (ver abaixo) |
+
+**Local** — onde a mudança aconteceu:
+
+| Local | Alcance |
+|---|---|
+| `backend` | `chamados/dashboard/server/` |
+| `web` | `chamados/dashboard/client/` |
+| `db` | `chamados/dashboard/server/drizzle/`, `chamados/dashboard/server/src/lib/db/` e `chamados/dashboard/scripts/seed/` |
+| `contracts` | `chamados/dashboard/shared/` (pacote `@template/shared`) |
+| `docker` | `chamados/dashboard/docker/` |
+| `ci` | `.github/` |
+| `docs` | `docs/` e documentação `.md` na raiz |
+| `deps` | Atualização de dependência |
+| `claude` | `.claude/` e `CLAUDE.md` |
+| `release` | Versão nova e tag `prod/vX.Y.Z` (só pelo `npm run release`) |
+| `agent` | `chamados/agent/` (o agente Windows) |
+
+**Mensagem** — em português, primeira letra maiúscula, sem ponto final, no que a mudança
+**faz** e não no que você mexeu. `Resolve o erro X` é melhor que `Alterações no service`.
+
+Uma mudança que toca dois locais são dois commits. Se não der para separar, use o local mais
+relevante — nunca `[feat](backend,web)`.
+
+**Merge segue o formato como qualquer outro commit**, com o tipo `merge`:
+
+```text
+[merge](deps): Abaixa o better-sqlite3 para a versão 12.11.1
+[merge](web): Tela de clientes com busca por nome
+```
+
+O fechamento de uma branch é a entrada mais importante do histórico — é ela que diz o que
+passou a existir no sistema —, e o texto automático do git (`Merge branch 'x' into develop`)
+desperdiça justamente a linha que alguém vai ler daqui a seis meses. Por isso o
+`defaultIgnores` do commitlint fica **desligado**: a mensagem automática é recusada, e todo
+`git merge` precisa de `-m`. Recusar é o certo — é exatamente o caso que a regra existe para
+evitar.
+
+O formato é verificado por `commitlint` no hook de `commit-msg`: commit fora do padrão é
+rejeitado antes de entrar. O `pre-commit` roda o lint. **`--no-verify` é proibido** — ele
+desliga as duas travas de uma vez. Para o template aparecer no editor, uma vez por clone:
 
 | Tipo       | Quando                             |
 | ---------- | ---------------------------------- |
@@ -394,7 +466,9 @@ Local:
 | `deps`      | Atualização de dependência  |
 | `claude`    | `.claude/` e `CLAUDE.md`    |
 
-Mensagem em português, primeira letra maiúscula, sem ponto final, descrevendo **o que a mudança faz**.
+O fluxo é o **Git-Flow do Tower**, instalado em todas as máquinas. O `npm install` configura o
+Git-Flow sozinho (`scripts/git/setup-git.mjs`): `main`, `develop`, prefixos `feature/`,
+`bugfix/`, `release/`, `hotfix/` e tag com `prod/v`. O Tower abre o repositório já inicializado.
 
 `[fix](backend): Alterações no service` é ruim.
 
@@ -402,7 +476,16 @@ Mensagem em português, primeira letra maiúscula, sem ponto final, descrevendo 
 
 Uma mudança que toca dois locais são dois commits. Se não der para separar, use o local mais relevante — nunca `[feat](backend,web)`.
 
-`--no-verify` é proibido.
+1. **Toda mudança de código nasce numa `feature/` ou `bugfix/`**, criada a partir da `develop`
+   atualizada — antes do primeiro arquivo editado.
+2. O trabalho é **commitado na branch**, em quantos commits for preciso.
+3. No fim, a **`develop` é trazida para a branch** (`git merge develop -m "[merge](…): …"`).
+   Conflito se resolve
+   **aqui**, na branch, nunca na develop.
+4. **Verificação** (§14) e o sistema rodando.
+5. **A pessoa que pediu confere e dá o OK** de que está funcionando. Sem OK, não há merge.
+6. **`git merge --no-ff -m "[merge](<escopo>): <o que passou a existir>"`** da branch na
+   `develop`, envio da develop, e a branch é apagada.
 
 ---
 
@@ -418,6 +501,12 @@ O fluxo é o Git-Flow.
 | `bugfix/<nome>`    | Todo mundo                         | `develop` | `develop`          |
 | `release/<versão>` | Só quem administra                 | —         | `main` e `develop` |
 | `hotfix/<versão>`  | Só quem administra                 | —         | `main` e `develop` |
+
+| Hook | Recusa |
+|---|---|
+| `pre-commit` | commit na `main`; commit direto na `develop` (concluir um merge é permitido) |
+| `pre-merge-commit` | merge na `main` |
+| `pre-push` | envio para a `main`; tag fora de `prod/vX.Y.Z`, tag leve, tag com versão diferente dos arquivos ou fora da main (`scripts/git/release-guard.sh`, vale até para quem administra) |
 
 Nome de branch em inglês, kebab-case.
 
@@ -440,6 +529,29 @@ bugfix/session-expiration
 7. `git merge --no-ff` da branch na `develop`.
 8. Envio da `develop`.
 9. Branch apagada.
+
+Conflito é normal quando várias pessoas mexem no mesmo sistema. Ele é explicado **pela tela
+afetada**, com **quem** mudou e **quando** — lido do `git log` —, e as duas mudanças são
+mantidas sempre que cabem juntas. Quando não cabem, quem decide é a pessoa, com as opções na
+frente dela. A skill `resolve-conflict` faz isso.
+
+A skill `git-flow` conduz o ciclo inteiro a partir de um pedido em português.
+
+### Versão e tag
+
+A versão do sistema é uma só e anda junta em três lugares: `package.json` (e lock), Build do Komodo
+e tag `prod/vX.Y.Z` na `main`. Quem administra lança com `npm run release -- X.Y.Z --notes "o que
+mudou"` (skill `release-standard`): o script grava a versão nos arquivos e commita na develop
+(`[chore](release): Versão X.Y.Z`), leva a develop para a main por `--no-ff`
+(`[merge](release): vX.Y.Z na main`), cria a tag anotada com `<Sistema> X.Y.Z: o que mudou.` e
+`Canal: prod.`, e envia. Tag à mão não sai da máquina.
+
+O **agente Windows** é o único artefato com versão e tag próprias, `agent/vX.Y.Z` (a trava do
+`pre-push` libera só esse outro formato). A versão dele vai para os arquivos antes da tag, num
+commit na `main`: `node .github/scripts/release/version.mjs bump agent/vX.Y.Z`, commit
+`[chore](agent): Versão X.Y.Z do agente`, tag anotada `agent/vX.Y.Z` nesse commit e envio da
+`main` com a tag. O `Release/Agent` confere que o commit da tag já tem a versão e recusa o resto;
+não existe bot que grave a versão depois.
 
 ---
 
