@@ -77,6 +77,7 @@
 <script lang="ts">
   import CalendarCheck from '@lucide/svelte/icons/calendar-check';
 
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
@@ -90,22 +91,22 @@
   const upToDate = $derived(data.rows.length - pending.length);
 </script>
 
-<ContentCard data={{ label: '', title: '' }}>
+<!-- O bloco da casa: título, a regra na linha de apoio e o "N em dia" no canto. -->
+<ContentCard
+  data={{
+    label: 'Manutenção preventiva',
+    title: 'Manutenção preventiva',
+    meta: `Toda máquina precisa de uma a cada ${PREVENTIVE_INTERVAL_MONTHS} meses. Corretiva conta como feita.`,
+  }}
+  ui={{ icon: CalendarCheck, iconTone: 'brand', slot: 'preventive-board' }}
+>
+{#snippet tools()}
+  {#if !boardState?.isLoading && data.rows.length > 0}
+    <span class="text-ink-500 text-xs whitespace-nowrap">{upToDate} em dia</span>
+  {/if}
+{/snippet}
 {#snippet body()}
-<div class="p-4">
-  <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-    <div>
-      <h2 class="text-ink-900 text-sm font-semibold">Manutenção preventiva</h2>
-      <p class="text-ink-500 text-xs">
-        Toda máquina precisa de uma a cada {PREVENTIVE_INTERVAL_MONTHS} meses. Corretiva conta como
-        feita.
-      </p>
-    </div>
-    {#if !boardState?.isLoading && data.rows.length > 0}
-      <span class="text-ink-500 text-xs">{upToDate} em dia</span>
-    {/if}
-  </div>
-
+<div class="pb-1">
   <!-- As agendadas ficam fora da cadeia de estados: com tudo em dia, ainda pode haver visita
        marcada, e ela não pode sumir atrás do "todas em dia". -->
   {#if !boardState?.isLoading && schedules.length > 0}
@@ -142,7 +143,18 @@
 
   <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
   {#if boardState?.isLoading}
-    <p class="text-ink-500 py-6 text-center text-sm">Conferindo as máquinas…</p>
+    <!-- O esqueleto tem a forma das linhas do quadro: o bloco não pula quando elas chegam. -->
+    <div role="status" aria-label="Conferindo as máquinas…" aria-busy="true" class="flex flex-col gap-3 py-1">
+      {#each [0, 1, 2] as row (row)}
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex flex-1 flex-col gap-1.5">
+            <Skeleton class="h-4 w-1/2" />
+            <Skeleton class="h-3 w-1/3" />
+          </div>
+          <Skeleton class="h-5 w-20" />
+        </div>
+      {/each}
+    </div>
   {:else if data.rows.length === 0}
     <p class="text-ink-500 text-sm">
       Nenhuma máquina no inventário ainda. Cadastre uma e ela passa a ser cobrada aqui.
@@ -170,7 +182,7 @@
                 sem preventiva ou corretiva registrada
               {/if}
               {#if scheduled}
-                · <span class="text-primary font-medium">agendada para {dayLabelOf(scheduled.scheduledFor)}</span>
+                · <span class="text-ink-700 font-medium">agendada para {dayLabelOf(scheduled.scheduledFor)}</span>
               {/if}
               {#if isFrequentlyServiced(row.maintenanceCount)}
                 · <span class="text-warning-ink font-medium">

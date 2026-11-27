@@ -99,7 +99,7 @@ describe('AzuosPreventiveBoard', () => {
       props: { data: { rows: [] }, state: { isLoading: true }, actions },
     });
 
-    expect(screen.getByText('Conferindo as máquinas…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Conferindo as máquinas…' })).toBeInTheDocument();
     expect(screen.queryByText(/Nenhuma máquina no inventário/)).not.toBeInTheDocument();
   });
 
@@ -203,7 +203,7 @@ describe('AzuosPreventiveBoard — scheduled rows, quiet machines and loading', 
       },
     });
 
-    expect(screen.getByText('Conferindo as máquinas…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Conferindo as máquinas…' })).toBeInTheDocument();
     expect(screen.queryByText(/em dia/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Agendadas/)).not.toBeInTheDocument();
   });
