@@ -66,28 +66,48 @@
 </script>
 
 <script lang="ts">
+  import FilterX from '@lucide/svelte/icons/filter-x';
   import Package from '@lucide/svelte/icons/package';
   import Pencil from '@lucide/svelte/icons/pencil';
   import Plus from '@lucide/svelte/icons/plus';
+  import SearchX from '@lucide/svelte/icons/search-x';
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
-  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
+  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import {
+    Table,
+    TableActions,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+  } from '$lib/components/azuos-table/azuos-table';
+  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
-    import { formatDate } from '$lib/utils/format-date';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
+  import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
+  import { cn } from '$lib/utils/cn';
+  import { formatDate } from '$lib/utils/format-date';
   import { inventoryCategoryIconOf } from '$lib/utils/record-icon.util';
 
   let { data, state: listState, actions }: AzuosInventoryListViewProps = $props();
-  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). A
+     tabela rola inteira (padrão do grupo). */
   const cardPage = useCardPage(() => data.items);
+  const tableView = useTableViewModel();
 
   const hasActiveFilter = $derived(
     data.filter.search.trim() !== '' ||
@@ -95,15 +115,38 @@
       data.filter.withoutPhotoOnly,
   );
 
+  /* Editar e excluir: o mesmo menu de três pontinhos no card e na linha da tabela. */
+  function menuOf(item: InventoryItem) {
+    return {
+      label: `Ações de ${item.name}`,
+      items: [
+        { id: 'edit', label: 'Editar', icon: Pencil },
+        { id: 'delete', label: 'Excluir', icon: Trash2, isDestructive: true, separatorBefore: true },
+      ],
+    };
+  }
+
+  function selectMenu(item: InventoryItem, id: string) {
+    if (id === 'delete') {
+      actions.onAskDelete(item);
+      return;
+    }
+    actions.onEdit(item);
+  }
+
   /* A linha de baixo do cartão: onde fica e como é contado, sem repetir rótulo nenhum. */
   function detailOf(item: InventoryItem): string {
     return [item.department, item.location, inventoryUnitLabel(item.unit)]
       .filter(Boolean)
       .join(' · ');
   }
+
+  function placeOf(item: InventoryItem): string {
+    return [item.department, item.location].filter(Boolean).join(' · ') || '—';
+  }
 </script>
 
-<div class="flex flex-col gap-6">
+<div class="flex w-full flex-col gap-6">
   <PageHeader
     data={{
       title: 'Inventário',
@@ -117,9 +160,9 @@
     />
   </PageHeader>
 
-  <ContentCard data={{ label: '', title: '' }}>
-{#snippet body()}
-<div class="flex flex-col gap-3 p-4">
+  <!-- A barra de ferramentas mora sobre o fundo da página, sem card em volta: busca → filtros →
+       modo de ver (design-governance §11). -->
+  <div class="flex flex-col gap-3">
     <TextField
       data={{
         label: 'Buscar',
@@ -155,17 +198,18 @@
         />
       </FilterField>
 
-      {#if hasActiveFilter}
-        <ActionButton
-          data={{ label: 'Limpar filtros' }}
-          ui={{ variant: 'ghost', size: 'lg' }}
-          actions={{ onClick: actions.onClearFilters }}
-        />
-      {/if}
+      <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
+        {#if hasActiveFilter && !listState.isFilteredOut}
+          <ActionButton
+            data={{ label: 'Limpar filtros' }}
+            ui={{ variant: 'ghost', size: 'lg', icon: FilterX }}
+            actions={{ onClick: actions.onClearFilters }}
+          />
+        {/if}
+        <TableViewToggle />
+      </div>
     </div>
   </div>
-{/snippet}
-</ContentCard>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2): a lista só é
        desenhada quando sobrou lista para desenhar. -->
@@ -176,7 +220,17 @@
       actions={{ onRetry: actions.onRetry }}
     />
   {:else if listState.isLoading}
-    <p class="text-muted-foreground p-6 text-center text-sm">Carregando o inventário…</p>
+    <!-- O esqueleto tem a FORMA da grade: sem isso, a tela pula quando o conteúdo chega. -->
+    <div class="card-grid" aria-busy="true" aria-label="Carregando o inventário" role="status">
+      {#each Array.from({ length: 6 }, (_, index) => index) as index (index)}
+        <div class="bg-card shadow-card rounded-surface flex flex-col gap-3 p-4">
+          <Skeleton class="h-3 w-1/4" />
+          <Skeleton class="h-4 w-2/3" />
+          <Skeleton class="h-3 w-full" />
+          <Skeleton class="mt-4 h-6 w-1/2" />
+        </div>
+      {/each}
+    </div>
   {:else if listState.isEmpty}
     <EmptyState
       data={{
@@ -197,7 +251,7 @@
         title: 'Nenhum produto com esse filtro',
         description: 'Tente outra categoria, ou limpe o filtro para ver tudo.',
       }}
-      ui={{ icon: Package }}
+      ui={{ icon: SearchX }}
     >
       <ActionButton
         data={{ label: 'Limpar filtros' }}
@@ -206,14 +260,15 @@
       />
     </EmptyState>
   {:else}
-    <section class="flex flex-col gap-3">
+    <section class="flex flex-col gap-3" aria-label="Lista do inventário">
       <p class="text-muted-foreground text-xs">
         {data.total}
         {data.total === 1 ? 'produto' : 'produtos'}
       </p>
 
-      <!-- A grade padrão de cards (`card-grid`): um por linha no celular, até quatro no monitor. -->
-      <div class="card-grid" data-slot="inventory-cards">
+      <!-- 1. Cards: sempre no estreito (< xl), ou quando a pessoa pediu cards no
+           `TableViewToggle`. A grade pagina. -->
+      <div class={cn('card-grid', !tableView.forceCards && 'xl:hidden')} data-slot="inventory-cards">
         {#each cardPage.items as item (item.id)}
           <!-- O cartão de registro do sistema: clicar em qualquer ponto abre a correção; com
                foto, ela entra pequena no lugar do ícone da categoria. Corrigir e excluir moram no
@@ -229,16 +284,10 @@
               footer: {
                 title: item.userName ?? 'Sem responsável',
                 subtitle: `Atualizado em ${formatDate(item.updatedAt ?? item.createdAt)}`,
-                person: item.userName ? { name: item.userName } : null,
+                person: item.userName ? { id: item.userId, name: item.userName } : null,
               },
               openLabel: 'Editar',
-              menu: {
-                label: `Ações de ${item.name}`,
-                items: [
-                  { id: 'edit', label: 'Editar', icon: Pencil },
-                  { id: 'delete', label: 'Excluir', icon: Trash2, isDestructive: true, separatorBefore: true },
-                ],
-              },
+              menu: menuOf(item),
             }}
             ui={{
               icon: inventoryCategoryIconOf(item.category),
@@ -248,21 +297,19 @@
             }}
             actions={{
               onOpen: () => actions.onEdit(item),
-              onMenuSelect: (id) => (id === 'delete' ? actions.onAskDelete(item) : actions.onEdit(item)),
+              onMenuSelect: (id) => selectMenu(item, id),
             }}
           >
             {#snippet notes()}
               {#if item.note}
-                <p class="text-muted-foreground line-clamp-2 text-xs" title={item.note}>{item.note}</p>
+                <p class="text-muted-foreground line-clamp-2 text-xs">{item.note}</p>
               {/if}
             {/snippet}
           </ContentCard>
         {/each}
       </div>
-      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
-           fileira. A barra só aparece quando há mais de uma página. -->
       {#if cardPage.total > cardPage.pageSize}
-        <div class="flex justify-center">
+        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
           <PaginationBar
             data={{
               page: cardPage.page,
@@ -274,6 +321,68 @@
           />
         </div>
       {/if}
+
+      <!-- 2. Tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu cards. Rola inteira. -->
+      <div
+        class={cn('overflow-x-auto', tableView.forceCards ? 'hidden' : 'hidden xl:block')}
+        data-slot="inventory-table"
+      >
+        <Table class="min-w-[880px]">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Produto</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead>Onde fica</TableHead>
+              <TableHead>Responsável</TableHead>
+              <TableHead>Atualizado em</TableHead>
+              <TableHead class="text-right"><span class="sr-only">Ações</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {#each data.items as item (item.id)}
+              <TableRow>
+                <TableCell>
+                  <span class="text-foreground block font-medium break-words">{item.name}</span>
+                  {#if item.code}
+                    <span class="text-muted-foreground block font-mono text-xs">{item.code}</span>
+                  {/if}
+                </TableCell>
+                <TableCell>
+                  <span class="flex flex-wrap items-center gap-1.5">
+                    <StatusBadge data={{ label: inventoryCategoryLabel(item.category) }} ui={{ size: 'sm' }} />
+                    {#if !item.photoUrl}
+                      <StatusBadge data={{ label: 'Sem foto' }} ui={{ size: 'sm' }} />
+                    {/if}
+                  </span>
+                </TableCell>
+                <TableCell class="text-muted-foreground">{placeOf(item)}</TableCell>
+                <TableCell>
+                  {#if item.userName}
+                    <span class="flex items-center gap-2">
+                      <PersonAvatar name={item.userName} personId={item.userId} ui={{ size: 'sm' }} />
+                      <span class="truncate">{item.userName}</span>
+                    </span>
+                  {:else}
+                    <span class="text-muted-foreground">Sem responsável</span>
+                  {/if}
+                </TableCell>
+                <TableCell class="text-muted-foreground text-xs whitespace-nowrap">
+                  {formatDate(item.updatedAt ?? item.createdAt)}
+                </TableCell>
+                <TableCell class="text-right">
+                  <TableActions>
+                    <ActionMenu
+                      data={menuOf(item)}
+                      ui={{ isIconOnly: true }}
+                      actions={{ onSelect: (id) => selectMenu(item, id) }}
+                    />
+                  </TableActions>
+                </TableCell>
+              </TableRow>
+            {/each}
+          </TableBody>
+        </Table>
+      </div>
 
       {#if listState.isTruncated}
         <p class="text-muted-foreground text-xs">
@@ -287,11 +396,11 @@
 <!-- Excluir arquiva, mas some da tela: pergunta antes, com o nome do produto na frase. -->
 <ConfirmDialog
   data={{
-    title: 'Excluir produto',
+    title: 'Excluir este produto?',
     description: data.deleting
       ? `"${data.deleting.name}" sai do inventário, com a foto e o extrato guardados. Ele fica em "Removidos", onde dá para desfazer.`
       : '',
-    confirmLabel: 'Excluir',
+    confirmLabel: 'Excluir produto',
     confirmingLabel: 'Excluindo…',
   }}
   ui={{ tone: 'danger' }}

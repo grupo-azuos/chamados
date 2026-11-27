@@ -66,20 +66,30 @@ function setup(props: Record<string, unknown> = {}) {
   });
 }
 
+/* A lista desenha os dois modos (o CSS escolhe qual aparece): as checagens do cartão olham só
+   a grade de cards. */
+function cards(): ReturnType<typeof within> {
+  return within(document.querySelector('[data-slot="quote-cards"]') as HTMLElement);
+}
+
+function table(): ReturnType<typeof within> {
+  return within(document.querySelector('[data-slot="quote-table"]') as HTMLElement);
+}
+
 describe('AzuosQuoteListView', () => {
   // feliz
   it('shows the quote with its company, kind, day, amount and status', () => {
     setup();
 
     expect(screen.getByRole('heading', { name: 'Clima Norte Refrigeração' })).toBeInTheDocument();
-    expect(screen.getByText('Serviço · 02/10/2026')).toBeInTheDocument();
-    expect(screen.getByText('R$ 960,00')).toBeInTheDocument();
+    expect(cards().getByText('Serviço · 02/10/2026')).toBeInTheDocument();
+    expect(cards().getByText('R$ 960,00')).toBeInTheDocument();
     /* Dentro do CARTÃO: "Aguardando" também é uma opção do filtro, no alto da tela. */
     const card = screen
       .getByRole('heading', { name: 'Clima Norte Refrigeração' })
       .closest('[data-slot="azuos-card-surface"]');
     expect(within(card as HTMLElement).getByText('Aguardando')).toBeInTheDocument();
-    expect(screen.getByText('Inclui a troca do filtro.')).toBeInTheDocument();
+    expect(cards().getByText('Inclui a troca do filtro.')).toBeInTheDocument();
     expect(screen.getByText('1 orçamento · R$ 960,00')).toBeInTheDocument();
   });
 
@@ -87,11 +97,11 @@ describe('AzuosQuoteListView', () => {
   it('links to the document that the company sent', () => {
     setup();
 
-    const link = screen.getByRole('link', { name: 'Abrir orcamento-clima-norte.pdf' });
+    const link = cards().getByRole('link', { name: 'Abrir orcamento-clima-norte.pdf' });
     expect(link).toHaveAttribute('href', 'https://r2.exemplo/doc?assinatura');
     expect(link).toHaveAttribute('target', '_blank');
     // Arquivo tem as duas ações: abrir e baixar com o nome original.
-    expect(screen.getByRole('link', { name: 'Baixar orcamento-clima-norte.pdf' })).toHaveAttribute(
+    expect(cards().getByRole('link', { name: 'Baixar orcamento-clima-norte.pdf' })).toHaveAttribute(
       'download',
       'orcamento-clima-norte.pdf',
     );
@@ -106,7 +116,7 @@ describe('AzuosQuoteListView', () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     await user.click(screen.getByRole('button', { name: 'Guardar orçamento' }));
     /* Editar e excluir moram no menu de três pontinhos do cartão. */
-    const menu = screen.getByRole('button', {
+    const menu = cards().getByRole('button', {
       name: 'Ações do orçamento de Clima Norte Refrigeração',
     });
     await user.click(menu);
@@ -115,6 +125,26 @@ describe('AzuosQuoteListView', () => {
     await user.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
 
     expect(onRegister).toHaveBeenCalledOnce();
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    expect(onAskDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+
+  /* A tabela é o outro modo da mesma lista: as mesmas ações, no menu da linha. */
+  it('edits and deletes from the menu of the table row', async () => {
+    const onEdit = vi.fn();
+    const onAskDelete = vi.fn();
+    setup({ actions: { ...actions, onEdit, onAskDelete } });
+
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const menu = table().getByRole('button', {
+      name: 'Ações do orçamento de Clima Norte Refrigeração',
+    });
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
+
+    expect(table().getByText('R$ 960,00')).toBeInTheDocument();
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     expect(onAskDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
@@ -147,7 +177,8 @@ describe('AzuosQuoteListView', () => {
       },
     });
 
-    expect(screen.getByText('Sem documento')).toBeInTheDocument();
+    expect(cards().getByText('Sem documento')).toBeInTheDocument();
+    expect(table().getByText('Sem documento')).toBeInTheDocument();
     expect(screen.queryByRole('link')).toBeNull();
   });
 
@@ -157,7 +188,10 @@ describe('AzuosQuoteListView', () => {
       state: { ...settled, isLoading: true },
     });
 
-    expect(screen.getByText('Carregando os orçamentos…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando os orçamentos' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
     expect(screen.queryByText('Nenhum orçamento guardado ainda')).toBeNull();
   });
 
@@ -214,7 +248,8 @@ describe('AzuosQuoteListView', () => {
       },
     });
 
-    expect(screen.getByText('R$ 0,00')).toBeInTheDocument();
+    expect(cards().getByText('R$ 0,00')).toBeInTheDocument();
+    expect(table().getByText('R$ 0,00')).toBeInTheDocument();
   });
 });
 
@@ -255,7 +290,7 @@ describe('AzuosQuoteListView — filters, a nameless document and the cut list',
       },
       state: { ...settled, isTruncated: true },
     });
-    expect(screen.getByText('Documento do orçamento')).toBeInTheDocument();
+    expect(cards().getByText('Documento do orçamento')).toBeInTheDocument();
     expect(screen.getByText(/2 orçamentos/)).toBeInTheDocument();
     expect(screen.getByText(/A lista mostra os orçamentos mais recentes/)).toBeInTheDocument();
   });

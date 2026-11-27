@@ -77,24 +77,43 @@
 <script lang="ts">
   import ArrowDownLeft from '@lucide/svelte/icons/arrow-down-left';
   import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
+  import FilterX from '@lucide/svelte/icons/filter-x';
   import Package from '@lucide/svelte/icons/package';
+  import SearchX from '@lucide/svelte/icons/search-x';
 
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
-  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
+  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
+  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
+  import {
+    Table,
+    TableActions,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+  } from '$lib/components/azuos-table/azuos-table';
+  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
-  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
-    import { inventoryCategoryIconOf } from '$lib/utils/record-icon.util';
+  import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
+  import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
+  import { cn } from '$lib/utils/cn';
+  import { inventoryCategoryIconOf } from '$lib/utils/record-icon.util';
 
   let { data, state: listState, actions }: AzuosStockListViewProps = $props();
-  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
+  /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). A
+     tabela rola inteira (padrão do grupo). */
   const cardPage = useCardPage(() => data.groups);
+  const tableView = useTableViewModel();
 
   const hasActiveFilter = $derived(
     data.filter.search.trim() !== '' || data.filter.category !== '' || data.filter.outOfStockOnly,
@@ -112,6 +131,26 @@
 
     return [inventoryCategoryLabel(group.category), where].filter(Boolean).join(' · ');
   }
+
+  /* Na linha da tabela, Entrada e Saída moram no menu de três pontinhos (nunca botões
+     enfileirados). Sem estoque não há o que tirar: a Saída nem aparece. */
+  function menuOf(group: StockGroup) {
+    return {
+      label: `Movimentar ${group.name}`,
+      items: [
+        { id: 'in', label: 'Entrada', icon: ArrowDownLeft },
+        ...(group.balance > 0 ? [{ id: 'out', label: 'Saída', icon: ArrowUpRight }] : []),
+      ],
+    };
+  }
+
+  function selectMenu(group: StockGroup, id: string) {
+    if (id === 'out') {
+      actions.onExit(group);
+      return;
+    }
+    actions.onEntry(group);
+  }
 </script>
 
 <div class="flex w-full flex-col gap-6">
@@ -122,9 +161,9 @@
     }}
   />
 
-  <ContentCard data={{ label: '', title: '' }}>
-{#snippet body()}
-<div class="flex flex-col gap-3 p-4">
+  <!-- A barra de ferramentas mora sobre o fundo da página, sem card em volta: busca → filtros →
+       modo de ver (design-governance §11). -->
+  <div class="flex flex-col gap-3">
     <TextField
       data={{
         label: 'Buscar',
@@ -160,17 +199,18 @@
         />
       </FilterField>
 
-      {#if hasActiveFilter}
-        <ActionButton
-          data={{ label: 'Limpar filtros' }}
-          ui={{ variant: 'ghost', size: 'lg' }}
-          actions={{ onClick: actions.onClearFilters }}
-        />
-      {/if}
+      <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
+        {#if hasActiveFilter && !listState.isFilteredOut}
+          <ActionButton
+            data={{ label: 'Limpar filtros' }}
+            ui={{ variant: 'ghost', size: 'lg', icon: FilterX }}
+            actions={{ onClick: actions.onClearFilters }}
+          />
+        {/if}
+        <TableViewToggle />
+      </div>
     </div>
   </div>
-{/snippet}
-</ContentCard>
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2). -->
   {#if listState.error}
@@ -180,7 +220,17 @@
       actions={{ onRetry: actions.onRetry }}
     />
   {:else if listState.isLoading}
-    <p class="text-muted-foreground p-6 text-center text-sm">Carregando o depósito…</p>
+    <!-- O esqueleto tem a FORMA da grade: sem isso, a tela pula quando o conteúdo chega. -->
+    <div class="card-grid" aria-busy="true" aria-label="Carregando o depósito" role="status">
+      {#each Array.from({ length: 6 }, (_, index) => index) as index (index)}
+        <div class="bg-card shadow-card rounded-surface flex flex-col gap-3 p-4">
+          <Skeleton class="h-3 w-1/4" />
+          <Skeleton class="h-4 w-2/3" />
+          <Skeleton class="h-10 w-full" />
+          <Skeleton class="mt-4 h-6 w-1/2" />
+        </div>
+      {/each}
+    </div>
   {:else if listState.isEmpty}
     <!-- Depósito vazio é inventário vazio: o produto nasce lá, e só depois ganha estoque. -->
     <EmptyState
@@ -198,7 +248,7 @@
         title: 'Nenhum produto com esse filtro',
         description: 'Tente outra categoria, ou limpe o filtro para ver tudo.',
       }}
-      ui={{ icon: Package }}
+      ui={{ icon: SearchX }}
     >
       <ActionButton
         data={{ label: 'Limpar filtros' }}
@@ -207,15 +257,15 @@
       />
     </EmptyState>
   {:else}
-    <section class="flex flex-col gap-3">
+    <section class="flex flex-col gap-3" aria-label="Saldo do depósito">
       <p class="text-muted-foreground text-xs">
         {data.total}
         {data.total === 1 ? 'produto' : 'produtos'}
       </p>
 
-      <!-- A grade padrão de cards (`card-grid`). O depósito não tem ficha: o cartão não abre nada,
-           e as ações (Entrada, Saída) moram no rodapé. -->
-      <div class="card-grid" data-slot="stock-cards">
+      <!-- 1. Cards: sempre no estreito (< xl), ou quando a pessoa pediu cards. O depósito não tem
+           ficha: o cartão não abre nada, e as ações (Entrada, Saída) moram no rodapé. -->
+      <div class={cn('card-grid', !tableView.forceCards && 'xl:hidden')} data-slot="stock-cards">
         {#each cardPage.items as item (item.key)}
           <ContentCard
             data={{
@@ -269,10 +319,8 @@
           </ContentCard>
         {/each}
       </div>
-      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
-           fileira. A barra só aparece quando há mais de uma página. -->
       {#if cardPage.total > cardPage.pageSize}
-        <div class="flex justify-center">
+        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
           <PaginationBar
             data={{
               page: cardPage.page,
@@ -284,6 +332,64 @@
           />
         </div>
       {/if}
+
+      <!-- 2. Tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu cards. Rola inteira. -->
+      <div
+        class={cn('overflow-x-auto', tableView.forceCards ? 'hidden' : 'hidden xl:block')}
+        data-slot="stock-table"
+      >
+        <Table class="min-w-[820px]">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Produto</TableHead>
+              <TableHead>Categoria e lugar</TableHead>
+              <TableHead>Saldo</TableHead>
+              <TableHead>Chamados</TableHead>
+              <TableHead class="text-right"><span class="sr-only">Ações</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {#each data.groups as group (group.key)}
+              <TableRow class="align-top">
+                <TableCell>
+                  <span class="text-foreground block font-medium break-words">{group.name}</span>
+                  {#if group.items.length === 1 && group.items[0]!.code}
+                    <span class="text-muted-foreground block font-mono text-xs">{group.items[0]!.code}</span>
+                  {/if}
+                </TableCell>
+                <TableCell class="text-muted-foreground">{detailOf(group)}</TableCell>
+                <TableCell>
+                  <span class="flex items-center gap-2">
+                    <span class="text-foreground font-semibold tabular-nums">{group.balance}</span>
+                    <span class="text-muted-foreground text-xs">{inventoryUnitLabel(group.unit)}</span>
+                    {#if group.balance === 0}
+                      <StatusBadge data={{ label: 'Sem estoque' }} ui={{ tone: 'danger', size: 'sm' }} />
+                    {/if}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <TicketStockLinks
+                    data={{
+                      links: group.ticketLinks,
+                      balance: group.balance,
+                      ticketsPath: '/maintenance/tickets',
+                    }}
+                  />
+                </TableCell>
+                <TableCell class="text-right">
+                  <TableActions>
+                    <ActionMenu
+                      data={menuOf(group)}
+                      ui={{ isIconOnly: true }}
+                      actions={{ onSelect: (id) => selectMenu(group, id) }}
+                    />
+                  </TableActions>
+                </TableCell>
+              </TableRow>
+            {/each}
+          </TableBody>
+        </Table>
+      </div>
 
       {#if listState.isTruncated}
         <p class="text-muted-foreground text-xs">

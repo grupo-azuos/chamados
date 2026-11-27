@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -153,9 +153,9 @@ describe('AzuosInventoryMovementDialog — pickers, the note and closing', () =>
 
     expect(screen.queryByText(/hoje há/)).not.toBeInTheDocument();
     const products = screen.getByRole('combobox', { name: 'Produto' });
-    await fireEvent.pointerDown(products);
-    await fireEvent.click(products);
-    await fireEvent.pointerUp(await screen.findByRole('option', { name: 'Lâmpada LED' }));
+    await userEvent.click(products);
+    await userEvent.type(await screen.findByPlaceholderText('Buscar produto…'), 'lâmp');
+    await userEvent.click(await screen.findByRole('option', { name: /Lâmpada LED/ }));
     expect(actions.onChange).toHaveBeenCalledWith('itemId', '9');
 
     const reasons = screen.queryByRole('group', { name: 'Motivo do descarte' });

@@ -95,6 +95,23 @@ describe('AzuosStockListView', () => {
     expect(onExit).toHaveBeenCalledWith(expect.objectContaining({ name: item().name }));
   });
 
+  /* A tabela é o outro modo da mesma lista: Entrada e Saída no menu de três pontinhos. */
+  it('moves the product from the menu of the table row', async () => {
+    const onEntry = vi.fn();
+    const onExit = vi.fn();
+    const { container } = setup({ actions: { ...actions, onEntry, onExit } });
+    const table = within(container.querySelector('[data-slot="stock-table"]') as HTMLElement);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    await user.click(table.getByRole('button', { name: 'Movimentar Café torrado e moído 500 g' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Saída' }));
+    await user.click(table.getByRole('button', { name: 'Movimentar Café torrado e moído 500 g' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Entrada' }));
+
+    expect(onExit).toHaveBeenCalledWith(expect.objectContaining({ name: item().name }));
+    expect(onEntry).toHaveBeenCalledWith(expect.objectContaining({ name: item().name }));
+  });
+
   /* O que zerou fica marcado, e não dá para tirar de onde não há. */
   it('marks what ran out and does not offer to take from it', () => {
     setup();
@@ -132,7 +149,10 @@ describe('AzuosStockListView', () => {
       state: { ...settled, isLoading: true },
     });
 
-    expect(screen.getByText('Carregando o depósito…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando o depósito' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
     expect(screen.queryByText('Nenhum produto para guardar ainda')).toBeNull();
   });
 

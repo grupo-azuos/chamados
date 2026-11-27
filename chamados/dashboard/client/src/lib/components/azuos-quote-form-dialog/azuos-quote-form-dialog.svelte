@@ -67,7 +67,6 @@
 
 <script lang="ts">
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
-  import FileText from '@lucide/svelte/icons/file-text';
   import Paperclip from '@lucide/svelte/icons/paperclip';
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
@@ -114,16 +113,9 @@
   <DialogContent>
     <form novalidate class="flex flex-col gap-4.5" onsubmit={handleSubmit}>
       <DialogHeader class="gap-1.5">
-        <div class="flex items-center gap-2.5">
-          <span
-            class="rounded-chip bg-muted text-primary flex size-7 shrink-0 items-center justify-center"
-          >
-            <FileText class="size-4" aria-hidden="true" />
-          </span>
-          <DialogTitle class="text-lg font-semibold tracking-tight">
-            {isEdit ? 'Corrigir orçamento' : 'Guardar orçamento'}
-          </DialogTitle>
-        </div>
+        <DialogTitle>
+          {isEdit ? 'Corrigir orçamento' : 'Guardar orçamento'}
+        </DialogTitle>
         <DialogDescription class="text-muted-foreground text-xs">
           {isEdit
             ? 'O que foi orçado, por quanto e o que foi decidido.'
@@ -131,6 +123,8 @@
         </DialogDescription>
       </DialogHeader>
 
+      <fieldset class="flex min-w-0 flex-col gap-3.5">
+        <legend class="text-foreground mb-3.5 text-sm font-semibold">A empresa e o que foi orçado</legend>
       <TextField
         data={{
           label: 'Empresa',
@@ -187,6 +181,10 @@
         </div>
       </div>
 
+      </fieldset>
+
+      <fieldset class="flex min-w-0 flex-col gap-3.5">
+        <legend class="text-foreground mb-3.5 text-sm font-semibold">Valor, data e documento</legend>
       <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
         <TextField
           data={{
@@ -276,6 +274,7 @@
           onBlur: () => actions.onBlur('note'),
         }}
       />
+      </fieldset>
 
       {#if dialogState.error}
         <ErrorState data={{ message: dialogState.error }} ui={{ variant: 'inline' }} />

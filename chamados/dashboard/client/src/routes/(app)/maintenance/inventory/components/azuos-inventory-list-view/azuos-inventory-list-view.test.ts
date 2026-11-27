@@ -71,12 +71,39 @@ function setup(props: Record<string, unknown> = {}) {
 describe('AzuosInventoryListView', () => {
   // feliz
   it('shows the product with its category, place and measure', () => {
-    setup();
+    const { container } = setup();
+    const cards = within(container.querySelector('[data-slot="inventory-cards"]') as HTMLElement);
 
-    expect(screen.getByRole('heading', { name: 'Cadeira giratória' })).toBeInTheDocument();
-    expect(screen.getByText('Mobiliário')).toBeInTheDocument();
-    expect(screen.getByText('Sala da contabilidade · Unidade')).toBeInTheDocument();
-    expect(screen.getByText('PAT-0101')).toBeInTheDocument();
+    expect(cards.getByRole('heading', { name: 'Cadeira giratória' })).toBeInTheDocument();
+    expect(cards.getByText('Mobiliário')).toBeInTheDocument();
+    expect(cards.getByText('Sala da contabilidade · Unidade')).toBeInTheDocument();
+    expect(cards.getByText('PAT-0101')).toBeInTheDocument();
+  });
+
+  /* A tabela é o outro modo da mesma lista (padrão do grupo): mesmas linhas, ações no menu. */
+  it('lists the same products in the table, with the person and the menu', async () => {
+    const onAskDelete = vi.fn();
+    const { container } = setup({
+      data: {
+        items: [item({ userId: 'u-1', userName: 'Marta Lima', department: 'Contabilidade' })],
+        total: 1,
+        filter: emptyFilter,
+        deleting: null,
+      },
+      actions: { ...actions, onAskDelete },
+    });
+    const table = within(container.querySelector('[data-slot="inventory-table"]') as HTMLElement);
+
+    expect(table.getByText('Cadeira giratória')).toBeInTheDocument();
+    expect(table.getByText('Contabilidade · Sala da contabilidade')).toBeInTheDocument();
+    expect(table.getByText('Marta Lima')).toBeInTheDocument();
+    expect(table.queryByText('Sem foto')).toBeNull();
+
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    await user.click(table.getByRole('button', { name: 'Ações de Cadeira giratória' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
+
+    expect(onAskDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
 
   /* A foto é o que faz reconhecer o produto antes de ler o nome. */
@@ -101,13 +128,14 @@ describe('AzuosInventoryListView', () => {
   it('asks to correct and to delete the product that was clicked', async () => {
     const onEdit = vi.fn();
     const onAskDelete = vi.fn();
-    setup({ actions: { ...actions, onEdit, onAskDelete } });
+    const { container } = setup({ actions: { ...actions, onEdit, onAskDelete } });
+    const cards = within(container.querySelector('[data-slot="inventory-cards"]') as HTMLElement);
 
     /* Editar e excluir moram no menu de três pontinhos do cartão, nunca em ícone solto. */
     const user = userEvent.setup({ pointerEventsCheck: 0 });
-    await user.click(screen.getByRole('button', { name: 'Ações de Cadeira giratória' }));
+    await user.click(cards.getByRole('button', { name: 'Ações de Cadeira giratória' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
-    await user.click(screen.getByRole('button', { name: 'Ações de Cadeira giratória' }));
+    await user.click(cards.getByRole('button', { name: 'Ações de Cadeira giratória' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
 
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
@@ -137,7 +165,10 @@ describe('AzuosInventoryListView', () => {
       state: { ...settled, isLoading: true },
     });
 
-    expect(screen.getByText('Carregando o inventário…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando o inventário' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
     expect(screen.queryByText('Nenhum produto cadastrado ainda')).toBeNull();
   });
 

@@ -53,23 +53,38 @@ function setup(props: Record<string, unknown> = {}) {
 describe('AzuosInventoryDisposalListView', () => {
   // feliz
   it('shows what was discarded, how much, why and what was left', () => {
-    setup();
+    const { container } = setup();
+    const cards = within(
+      container.querySelector('[data-slot="inventory-disposal-cards"]') as HTMLElement,
+    );
 
     expect(screen.getByRole('heading', { name: 'Cadeira giratória' })).toBeInTheDocument();
     /* `^…$`: "2 un" é a quantidade do cartão; "2 unidades" é o resumo no alto da lista. */
-    expect(screen.getByText(/^2\s+un$/)).toBeInTheDocument();
+    expect(cards.getByText(/^2\s+un$/)).toBeInTheDocument();
     /* Dentro do CARTÃO: "Quebrou" também é uma opção do filtro, no alto da tela. */
     const card = screen
       .getByRole('heading', { name: 'Cadeira giratória' })
       .closest('[data-slot="azuos-card-surface"]');
     expect(within(card as HTMLElement).getByText('Quebrou')).toBeInTheDocument();
-    expect(screen.getByText('Base rachou; sem conserto.')).toBeInTheDocument();
+    expect(cards.getByText('Base rachou; sem conserto.')).toBeInTheDocument();
     /* O que ficou no depósito é a caixinha de número ao lado do descartado. */
     const balance = (card as HTMLElement).querySelector(
       '[data-slot="inventory-disposal-card-balance"]',
     );
     expect(balance).toHaveTextContent('5');
     expect(balance).toHaveTextContent('No depósito');
+  });
+
+  /* A tabela é o outro modo da mesma lista: motivo no selo e quem registrou com o rosto. */
+  it('lists the same disposals in the table', () => {
+    const { container } = setup();
+    const table = within(
+      container.querySelector('[data-slot="inventory-disposal-table"]') as HTMLElement,
+    );
+
+    expect(table.getByText('Cadeira giratória')).toBeInTheDocument();
+    expect(table.getByText('Quebrou')).toBeInTheDocument();
+    expect(table.getByText(/^2\s+un$/)).toBeInTheDocument();
   });
 
   /* Linhas e unidades são números diferentes, e os dois aparecem. */
@@ -117,7 +132,10 @@ describe('AzuosInventoryDisposalListView', () => {
       state: { ...settled, isLoading: true },
     });
 
-    expect(screen.getByText('Carregando os descartes…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando os descartes' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
     expect(screen.queryByText('Nenhum descarte registrado')).toBeNull();
   });
 
