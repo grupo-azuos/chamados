@@ -114,6 +114,8 @@ describe('AzuosTraceabilityPicker', () => {
     });
 
     expect(screen.getByText('De qual máquina vem')).toBeInTheDocument();
+    /* Nada escolhido ainda (o id 3 não está na lista): a opção vazia não aparece marcada. */
+    expect(screen.getByRole('button', { name: '(Nenhuma máquina)' })).toHaveAttribute('aria-pressed', 'false');
     await userEvent.click(screen.getByRole('button', { name: '(Nenhuma máquina)' }));
     expect(actions.onPick).toHaveBeenCalledWith('');
   });

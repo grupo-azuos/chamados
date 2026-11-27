@@ -60,6 +60,8 @@
 <script lang="ts">
   import SearchX from '@lucide/svelte/icons/search-x';
 
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
+
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import {
     Dialog,
@@ -74,9 +76,9 @@
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
-  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { cn } from '$lib/utils/cn';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
 
   let { data, ui, state: pickerState, actions }: AzuosTraceabilityPickerProps = $props();
 
@@ -125,70 +127,50 @@
     </div>
 
     {#if pickerState?.isLoading}
-      <p class="text-muted-foreground py-10 text-center text-sm">Carregando…</p>
+      <!-- O esqueleto tem a forma da grade de escolhas: o diálogo não pula quando ela chega. -->
+      <div role="status" aria-label="Carregando…" aria-busy="true" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {#each [0, 1, 2, 3, 4, 5] as slot (slot)}
+          <Skeleton class="rounded-box h-20 w-full" />
+        {/each}
+      </div>
     {:else if data.picks.length === 0 && !ui?.noneLabel}
       <EmptyState data={{ title: text.empty, description: 'Confira a busca.' }} ui={{ icon: SearchX }} />
     {:else}
       <ul class="-mx-1 grid max-h-[55vh] grid-cols-1 gap-3 overflow-y-auto p-1 sm:grid-cols-2 lg:grid-cols-3" aria-label={text.title}>
+        <!-- Cada escolha é o card de conteúdo da casa: o card inteiro escolhe, e o escolhido fica
+             no fundo de "selecionado" (nunca borda nem pastilha pintada à mão). -->
         {#if ui?.noneLabel}
-          <li>
-            <button
-              type="button"
-              aria-pressed={data.selectedId === ''}
-              onclick={() => actions.onPick('')}
-              class={cn(
-                'rounded-box relative isolate flex w-full cursor-pointer items-center gap-3 p-4 text-left transition-colors',
-                'before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-box hover:before:bg-hover-veil',
-                data.selectedId === '' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
-              )}
-            >
-              <span class="text-sm font-semibold">{ui.noneLabel}</span>
-            </button>
+          <li class="flex">
+            <ContentCard
+              data={{ label: ui.noneLabel, title: ui.noneLabel }}
+              ui={{ className: 'w-full', slot: 'traceability-pick' }}
+              state={{ isSelected: data.selectedId === '' }}
+              actions={{ onOpen: () => actions.onPick('') }}
+            />
           </li>
         {/if}
         {#each data.picks as pick (pick.id)}
-          {@const isSelected = pick.id === data.selectedId}
-          <li>
-            <!-- Os cards cinza de "Máquinas do chamado": o escolhido na cor cheia, nunca borda. -->
-            <button
-              type="button"
-              aria-pressed={isSelected}
-              onclick={() => actions.onPick(pick.id)}
-              class={cn(
-                'rounded-box relative isolate flex w-full cursor-pointer items-start gap-3 p-4 text-left transition-colors',
-                'before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-box hover:before:bg-hover-veil',
-                isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
-              )}
+          <li class="flex">
+            <ContentCard
+              data={{
+                label: pick.subtitle ? `${pick.title} — ${pick.subtitle}` : pick.title,
+                title: pick.title,
+                meta: [pick.subtitle, pick.detail].filter(Boolean).join(' · ') || null,
+                tags:
+                  pick.isOnline === undefined
+                    ? []
+                    : [{ label: pick.isOnline ? 'Online' : 'Offline', tone: pick.isOnline ? 'success' : null }],
+              }}
+              ui={{ className: 'w-full', slot: 'traceability-pick' }}
+              state={{ isSelected: pick.id === data.selectedId }}
+              actions={{ onOpen: () => actions.onPick(pick.id) }}
             >
-              {#if pick.person}
-                <PersonAvatar name={pick.person.name} avatarUrl={pick.person.photo} personId={pick.person.id} ui={{ size: 'md' }} />
-              {/if}
-              <span class="flex min-w-0 flex-1 flex-col gap-1">
-                <span class="block truncate text-sm font-semibold">{pick.title}</span>
-                {#if pick.subtitle}
-                  <span class={cn('block truncate text-xs', isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
-                    {pick.subtitle}
-                  </span>
+              {#snippet leading()}
+                {#if pick.person}
+                  <PersonAvatar name={pick.person.name} avatarUrl={pick.person.photo} personId={pick.person.id} ui={{ size: 'md' }} />
                 {/if}
-                {#if pick.detail || pick.isOnline !== undefined}
-                  <span class="flex flex-wrap items-center gap-2 text-xs">
-                    {#if pick.detail}
-                      <span class={isSelected ? 'text-primary-foreground/90' : 'text-ink-700'}>{pick.detail}</span>
-                    {/if}
-                    {#if pick.isOnline !== undefined}
-                      <StatusBadge
-                        data={{ label: pick.isOnline ? 'Online' : 'Offline' }}
-                        ui={{
-                          tone: pick.isOnline ? 'success' : 'neutral',
-                          size: 'sm',
-                          className: isSelected ? 'bg-primary-foreground text-primary' : undefined,
-                        }}
-                      />
-                    {/if}
-                  </span>
-                {/if}
-              </span>
-            </button>
+              {/snippet}
+            </ContentCard>
           </li>
         {/each}
       </ul>

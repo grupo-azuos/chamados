@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, within } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import AgentDownloadView from './azuos-agent-download-view.svelte';
 const data = {
@@ -94,10 +95,11 @@ describe('AzuosAgentDownloadView', () => {
       actions: callbacks,
     });
 
-    const older = screen.getByText('1.0.2').closest('li') as HTMLElement;
-    await fireEvent.click(within(older).getByRole('button', { name: 'MSI' }));
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    await user.click(screen.getByRole('button', { name: 'Baixar arquivos da versão 1.0.2' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'MSI' }));
 
-    expect(screen.getByText('LTS')).toBeInTheDocument();
+    expect(screen.getAllByText('LTS').length).toBeGreaterThan(0);
     expect(callbacks.onDownloadVersion).toHaveBeenCalledWith('1.0.2', 'msi');
   });
 
