@@ -25,6 +25,7 @@
   export type TicketHistoryTypeOption = {
     value: ManualTicketHistoryType;
     label: string;
+    /** O tom do tipo — o mesmo da linha do tempo. */
     tone: TicketHistoryTone;
   };
 
@@ -42,7 +43,7 @@
       /** Quem recebe aviso por WhatsApp. Vazio: ninguém. */
       notifyUserIds: string[];
       /** Quem pode ser avisado. Vazio: a seção nem aparece. */
-      notifiable: { id: string; name: string }[];
+      notifiable: { id: string; name: string; avatarUrl?: string | null }[];
     };
     state?: {
       isSubmitting?: boolean;
@@ -62,21 +63,11 @@
     };
   };
 
-  /** A bolinha de cada opção, na cor do tipo — a mesma que ele terá na linha do tempo. */
-  const DOT_TONE_CLASSES: Record<TicketHistoryTone, string> = {
-    neutral: 'bg-muted-foreground',
-    info: 'bg-info',
-    success: 'bg-success',
-    warning: 'bg-warning',
-    danger: 'bg-destructive',
-    brand: 'bg-primary',
-  };
-
   /** O aviso do que o histórico faz: encerrar chama a atenção; o resto só informa. */
   const EFFECT_CLASSES: Record<TicketHistoryEffect, string> = {
     closes: 'bg-warning-soft text-foreground',
     moves: 'bg-info-soft text-foreground',
-    keeps: 'border-border bg-muted text-muted-foreground',
+    keeps: 'bg-muted text-muted-foreground',
   };
 </script>
 
@@ -87,7 +78,9 @@
   import StickyNote from '@lucide/svelte/icons/sticky-note';
 
   import AttachmentPicker from '$lib/components/azuos-attachment-picker/azuos-attachment-picker.svelte';
-  import PeoplePicker from '$lib/components/azuos-people-picker/azuos-people-picker.svelte';
+  import CheckboxField from '$lib/components/azuos-checkbox-field/azuos-checkbox-field.svelte';
+  import PersonMultiPickerField from '$lib/components/azuos-person-multi-picker-field/azuos-person-multi-picker-field.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
@@ -107,51 +100,27 @@
   }
 </script>
 
+<!-- Cada grupo é o controle segmentado da casa (pílula cinza, a escolhida em branco): a escolha
+     é UMA só, entre os dois grupos — o grupo que não tem o tipo escolhido fica sem destaque. -->
 {#snippet typeGroup(legend: string, options: TicketHistoryTypeOption[], isClosingGroup: boolean)}
-  <fieldset class="flex min-w-0 flex-col gap-2" disabled={formState?.isSubmitting}>
-    <legend class="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase">
+  <div class="flex min-w-0 flex-col gap-2">
+    <p class="text-muted-foreground flex items-center gap-1.5 text-sm font-medium" aria-hidden="true">
       {#if isClosingGroup}
-        <Lock class="size-3" aria-hidden="true" />
+        <Lock class="size-3.5" aria-hidden="true" />
       {/if}
       {legend}
-    </legend>
-
-    <div class="flex flex-wrap gap-2">
-      {#each options as option (option.value)}
-        <!-- Rádio de verdade por baixo da pastilha: o teclado e o leitor de tela recebem um
-             grupo de opções, e não uma fileira de botões soltos. `relative` porque o rádio é
-             `sr-only` (`position: absolute`): sem um ancestral posicionado ele se ancora lá em
-             cima, e ao receber o foco do clique o navegador rola a casca da tela para mostrá-lo
-             — a página "subia" e ficava cortada. -->
-        <label
-          class={cn(
-            'relative control-lg rounded-control bg-muted text-foreground inline-flex cursor-pointer items-center gap-2 border text-sm font-medium transition-colors border-transparent',
-            'hover:bg-muted has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2',
-            'has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
-            data.type === option.value &&
-              (isClosingGroup
-                ? 'bg-warning-soft'
-                : 'bg-primary-soft'),
-          )}
-        >
-          <input
-            type="radio"
-            name="history-type"
-            class="sr-only"
-            value={option.value}
-            checked={data.type === option.value}
-            onchange={() => actions.onTypeChange(option.value)}
-          />
-          <span class={cn('size-2 shrink-0 rounded-full', DOT_TONE_CLASSES[option.tone])} aria-hidden="true"></span>
-          {option.label}
-        </label>
-      {/each}
-    </div>
-  </fieldset>
+    </p>
+    <SegmentedControl
+      data={{ value: data.type, options: options.map((option) => ({ value: option.value, label: option.label })) }}
+      ui={{ ariaLabel: legend }}
+      state={{ isDisabled: formState?.isSubmitting }}
+      actions={{ onChange: (value) => actions.onTypeChange(value as ManualTicketHistoryType) }}
+    />
+  </div>
 {/snippet}
 
 <form novalidate class="flex flex-col gap-5" onsubmit={handleSubmit}>
-  <div class="flex flex-col gap-4" role="radiogroup" aria-label="Tipo de histórico">
+  <div class="flex flex-col gap-4" aria-label="Tipo de histórico" role="group">
     {#if data.groups.continuing.length > 0}
       {@render typeGroup('Dar andamento', data.groups.continuing, false)}
     {/if}
@@ -166,7 +135,7 @@
   <!-- O QUE ESTE HISTÓRICO FAZ, antes de a pessoa confirmar. `aria-live`: quem usa leitor de
        tela ouve a frase mudar quando troca de tipo — é a mesma informação que a cor dá. -->
   <p
-    class={cn('rounded-box flex items-start gap-2 border px-3.5 py-3 text-sm', EFFECT_CLASSES[data.effect])}
+    class={cn('rounded-box flex items-start gap-2 px-3.5 py-3 text-sm', EFFECT_CLASSES[data.effect])}
     aria-live="polite"
   >
     <EffectIcon class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -210,30 +179,19 @@
       }}
     />
 
-    <div class="flex min-w-0 flex-col gap-1.5">
-      <span class="text-ink-700 text-sm font-medium" aria-hidden="true">Visibilidade</span>
-      <label
-        class={cn(
-          'control-lg rounded-control bg-muted text-foreground flex cursor-pointer items-center gap-2.5 border text-sm transition-colors border-transparent',
-          'hover:bg-muted has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
-        )}
-      >
-        <input
-          type="checkbox"
-          class="shrink-0"
-          checked={data.isVisibleToRequester}
-          disabled={formState?.isSubmitting}
-          aria-describedby="history-visibility-hint"
-          onchange={(event) => actions.onVisibilityChange(event.currentTarget.checked)}
-        />
-        <span class="truncate">Quem abriu o chamado pode ver este histórico</span>
-      </label>
-      <p id="history-visibility-hint" class="text-muted-foreground text-xs">
-        {data.isVisibleToRequester
+    <CheckboxField
+      data={{
+        label: 'Quem abriu o chamado pode ver este histórico',
+        name: 'isVisibleToRequester',
+        isChecked: data.isVisibleToRequester,
+        description: data.isVisibleToRequester
           ? 'Desmarque para uma anotação interna do time.'
-          : 'Anotação interna: só o time vê.'}
-      </p>
-    </div>
+          : 'Anotação interna: só o time vê.',
+      }}
+      ui={{ className: 'sm:pt-6' }}
+      state={{ isDisabled: formState?.isSubmitting }}
+      actions={{ onChange: actions.onVisibilityChange }}
+    />
   </div>
 
   <!-- O "comunicar" da OS: quem escreve escolhe, a cada andamento, quem fica sabendo. Nada
@@ -241,11 +199,16 @@
        ser ignorado. -->
   {#if formState?.isLoadingPeople || data.notifiable.length > 0}
     <div class="flex flex-col gap-1.5">
-      <span class="text-ink-700 text-sm font-medium" id="history-notify-label">Avisar por WhatsApp</span>
-      <PeoplePicker
-        data={{ selectedIds: data.notifyUserIds, options: data.notifiable }}
-        ui={{ ariaLabel: 'Avisar por WhatsApp', placeholder: 'Ninguém será avisado' }}
-        state={{ isDisabled: formState?.isSubmitting, isLoading: formState?.isLoadingPeople }}
+      <span class="text-ink-700 text-sm font-medium" aria-hidden="true">Avisar por WhatsApp</span>
+      <!-- Várias pessoas: o campo de várias pessoas da casa, com a foto, e o valor é o id. -->
+      <PersonMultiPickerField
+        data={{
+          values: data.notifyUserIds,
+          people: data.notifiable.map((person) => ({ id: person.id, name: person.name, photo: person.avatarUrl ?? null })),
+          placeholder: formState?.isLoadingPeople ? 'Carregando as pessoas…' : 'Ninguém será avisado',
+        }}
+        ui={{ ariaLabel: 'Avisar por WhatsApp' }}
+        state={{ isDisabled: formState?.isSubmitting || formState?.isLoadingPeople }}
         actions={{ onChange: actions.onNotifyChange }}
       />
       <p class="text-muted-foreground text-xs">Só recebe quem você marcar.</p>

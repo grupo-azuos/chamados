@@ -29,7 +29,7 @@
       /* Um par novo a cada toque: a regra guarda o estado do arrasto que está medindo. */
       activationConstraints: () => [new PointerActivationConstraints.Distance({ value: 6 })],
       preventActivation: (event: PointerEvent) =>
-        event.target instanceof Element && event.target.closest('[data-no-drag]') !== null,
+        event.target instanceof Element && event.target.closest('[data-no-drag], [aria-haspopup="menu"]') !== null,
     }),
     KeyboardSensor,
   ];

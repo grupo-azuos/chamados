@@ -43,7 +43,7 @@ describe('AzuosTicketStockLinkDialog', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Computador 06 → 1 item');
     await userEvent.click(screen.getByRole('button', { name: '(Sem máquina)' }));
     expect(actions.onMachineChange).toHaveBeenCalledWith('');
-    await userEvent.click(screen.getByRole('button', { name: /Teclado/ }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /Teclado/ }));
     expect(actions.onToggle).toHaveBeenCalledWith('2');
     expect(screen.getByText('Só 2 disponível')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Vincular 1' }));

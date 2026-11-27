@@ -228,8 +228,8 @@
   import SearchX from '@lucide/svelte/icons/search-x';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-  import ColumnChart from '$lib/components/azuos-column-chart/azuos-column-chart.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterPanel, {
     type FilterPanelField,
@@ -237,9 +237,8 @@
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
-  import RadarChart from '$lib/components/azuos-radar-chart/azuos-radar-chart.svelte';
   import ReportExportActions from '$lib/components/azuos-report-export-actions/azuos-report-export-actions.svelte';
-    import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
+  import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import {
     Table,
@@ -279,20 +278,6 @@
      cadeira e mesa é um filtro que nunca devolve nada. `$derived`, e não constante: a pessoa
      troca de contexto no cabeçalho sem sair da tela. */
   const problemTypeFilterOptions = $derived(ticketProblemTypeOptionsForArea(data.area));
-
-  const problemSlices = $derived(
-    (dashboard?.byProblemType ?? []).map((row) => ({
-      label: ticketProblemTypeLabel(row.key as TicketProblemType),
-      value: row.count,
-    })),
-  );
-
-  const departmentSlices = $derived(
-    (dashboard?.byDepartment ?? []).map((row) => ({
-      label: ticketDepartmentLabel(row.key as TicketDepartment),
-      value: row.count,
-    })),
-  );
 
   /* Departamento à vista, ao lado da busca: os nomes vêm do RH e crescem. */
   const departmentField: FilterPanelField = $derived({
@@ -448,40 +433,6 @@
     <ContentCard data={{ label: 'Resolvidos', title: 'Resolvidos', highlight: { value: dashboard?.resolved ?? 0, hint: dashboard?.resolved ? `tempo médio: ${formatAverage(dashboard.averageResolutionHours)}` : 'nada resolvido ainda' } }} ui={{ icon: CircleCheck, iconTone: 'success' }} state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.statusGroup === 'solved' }} actions={{ onOpen: () => filterByGroup('solved') }} />
   </StatCardGrid>
 
-  <!-- DOIS FORMATOS, porque são duas perguntas diferentes.
-       "Em que este escritório dá problema" é um PERFIL — todos os tipos de uma vez, e a
-       forma da teia se reconhece de longe. "Qual departamento abriu mais" é uma ORDEM, e
-       ordem se lê em barra, na hora. A rosca não entra em nenhuma das duas: com nove tipos
-       ela vira um anel de fatias finas que só se lê pela legenda ao lado — e quem está lendo
-       a legenda não está olhando o desenho. -->
-  <div class="grid gap-4 lg:grid-cols-2">
-    <ContentCard data={{ label: 'Problemas por tipo', title: 'Problemas por tipo', meta: 'O perfil do que dá trabalho neste escritório' }}>
-{#snippet body()}
-<div class="pb-1">
-      <RadarChart
-        data={{ slices: problemSlices, seriesLabel: 'Chamados' }}
-        state={{ isLoading: state.isDashboardLoading }}
-        ui={{ emptyLabel: 'Ainda não há chamados para comparar.' }}
-      />
-    </div>
-{/snippet}
-</ContentCard>
-
-    <ContentCard data={{ label: 'Departamentos com mais chamados', title: 'Departamentos com mais chamados', meta: 'Do que mais pediu para o que menos' }}>
-{#snippet body()}
-<div class="pb-1">
-      <div class="max-h-72 overflow-x-hidden overflow-y-auto">
-        <ColumnChart
-          data={{ slices: departmentSlices, seriesLabel: 'Chamados' }}
-          state={{ isLoading: state.isDashboardLoading }}
-          ui={{ orientation: 'horizontal', emptyLabel: 'Ainda não há chamados para comparar.' }}
-        />
-      </div>
-    </div>
-{/snippet}
-</ContentCard>
-  </div>
-
   <!-- Os filtros no MESMO desenho do Inventário (`azuos-filter-panel`): busca e departamento à
        vista, o resto no painel "Filtros", com pastilhas e listas intercaladas e uma etiqueta
        por filtro ligado. A fila vem logo abaixo, no seu próprio cartão. -->
@@ -525,74 +476,68 @@
     {/if}
     {@render board?.()}
   {:else}
-  <div class="flex flex-col">
-    <div class="flex flex-col gap-3">
-      <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). Os estados
-           moram no cartão da lista; a grade de cards, não (card dentro de card é proibido). -->
-      {#if state.error}
-        <div class="rounded-surface bg-card shadow-card p-4">
-          <ErrorState
-            data={{ title: 'Não consegui carregar os chamados', message: state.error }}
-            state={{ isRetrying: state.isRefetching }}
-            actions={{ onRetry: actions.onRetry }}
+  <div class="flex flex-col gap-3">
+    <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). Os estados
+         ficam sobre o fundo da página, como no molde do template: nada de cartão em volta. -->
+    {#if state.error}
+      <ErrorState
+        data={{ title: 'Não consegui carregar os chamados', message: state.error }}
+        state={{ isRetrying: state.isRefetching }}
+        actions={{ onRetry: actions.onRetry }}
+      />
+    {:else if state.isLoading}
+      <!-- O esqueleto tem a FORMA da grade: sem isso, a tela pula quando o conteúdo chega. -->
+      <div class="card-grid" aria-busy="true" aria-label="Carregando os chamados" data-slot="ticket-list-skeleton">
+        {#each Array.from({ length: 6 }, (_, index) => index) as index (index)}
+          <div class="bg-card shadow-card rounded-surface flex flex-col gap-3 p-4">
+            <Skeleton class="h-3 w-1/4" />
+            <Skeleton class="h-4 w-2/3" />
+            <Skeleton class="h-3 w-full" />
+            <Skeleton class="mt-4 h-6 w-1/2" />
+          </div>
+        {/each}
+      </div>
+    {:else if state.isEmpty}
+      <EmptyState
+        data={{
+          title: 'Nenhum chamado ainda',
+          description: 'Quando alguém abrir um chamado na página pública, ele aparece aqui.',
+        }}
+        ui={{ icon: Inbox }}
+      />
+    {:else if state.isFilteredOut}
+      <EmptyState
+        data={{
+          title: 'Nenhum chamado com esses filtros',
+          description: 'Tente limpar os filtros para ver a fila inteira.',
+        }}
+        ui={{ icon: SearchX }}
+      >
+        <ActionButton
+          data={{ label: 'Limpar filtros' }}
+          ui={{ variant: 'secondary' }}
+          actions={{ onClick: actions.onClearFilters }}
+        />
+      </EmptyState>
+    {:else}
+      <!-- 1. Visualização em Cards: sempre que a tela é estreita (< xl), ou quando a pessoa
+       pediu para ver sempre assim (`TableViewToggle`, no cabeçalho dos filtros). -->
+      <div
+        class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
+        data-slot="ticket-cards-mobile"
+      >
+        {#each data.tickets as ticket (ticket.id)}
+          <TicketCard
+            data={{ ticket, assigneePhoto: photoOf(ticket.assigneeId) }}
+            actions={{ onOpen: actions.onAnswer }}
           />
-        </div>
-      {:else if state.isLoading}
-        <p class="rounded-surface bg-card shadow-card text-ink-500 py-10 text-center text-sm">
-          Carregando os chamados…
-        </p>
-      {:else if state.isEmpty}
-        <div class="rounded-surface bg-card shadow-card p-4">
-          <EmptyState
-            data={{
-              title: 'Nenhum chamado ainda',
-              description: 'Quando alguém abrir um chamado na página pública, ele aparece aqui.',
-            }}
-            ui={{ icon: Inbox }}
-          />
-        </div>
-      {:else if state.isFilteredOut}
-        <div class="rounded-surface bg-card shadow-card p-4">
-          <EmptyState
-            data={{
-              title: 'Nenhum chamado com esses filtros',
-              description: 'Tente limpar os filtros para ver a fila inteira.',
-            }}
-            ui={{ icon: SearchX }}
-          >
-            <ActionButton
-              data={{ label: 'Limpar filtros' }}
-              ui={{ variant: 'secondary' }}
-              actions={{ onClick: actions.onClearFilters }}
-            />
-          </EmptyState>
-        </div>
-      {:else}
-        <!-- 1. Visualização em Cards: sempre que a tela é estreita (< xl), ou quando a pessoa
-         pediu para ver sempre assim (`TableViewToggle`, no cabeçalho dos filtros). Os cards ficam
-         sobre o fundo da página, fora do cartão da tabela: card dentro de card é proibido. -->
-        <div
-          class={cn('card-grid', !tableView.forceCards && 'xl:hidden')}
-          data-slot="ticket-cards-mobile"
-        >
-          {#each data.tickets as ticket (ticket.id)}
-            <TicketCard
-              data={{ ticket, assigneePhoto: photoOf(ticket.assigneeId) }}
-              actions={{ onOpen: actions.onAnswer }}
-            />
-          {/each}
-        </div>
+        {/each}
+      </div>
 
-        <!-- 2. Visualização em Tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu
-         sempre cards. -->
-        <div
-          class={cn('rounded-surface bg-card shadow-card hidden', !tableView.forceCards && 'xl:block')}
-          data-slot="ticket-table-desktop"
-        >
-          <Table
-            class="min-w-[980px]"
-            containerClass="rounded-none border-0 bg-transparent shadow-none"
-          >
+      <!-- 2. Visualização em Tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu
+       sempre cards. A superfície é a da própria `AzuosTable`. -->
+      <div class={cn('hidden', !tableView.forceCards && 'xl:block')} data-slot="ticket-table-desktop">
+          <Table class="min-w-[980px]">
             <TableHeader>
               <TableRow>
                 <TableHead class="min-w-[110px]">Protocolo</TableHead>
@@ -666,9 +611,8 @@
               <span>{data.tickets.length} chamado(s) nesta página</span>
             {/snippet}
           </Table>
-        </div>
-      {/if}
-    </div>
+      </div>
+    {/if}
   </div>
   {/if}
   </div>

@@ -332,7 +332,7 @@ describe('AzuosTicketDetailView — other areas, the system, the issue and the p
     expect(screen.getByText('Sistema: Portal')).toBeInTheDocument();
     expect(screen.getByText('Portal')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Issue #/ })).toHaveAttribute('href', 'https://github.com/example/portal/issues/7');
-    expect(screen.getByRole('link', { name: /Abrir o print enviado/ })).toHaveAttribute('href', 'https://r2.example/print.png');
+    expect(screen.getByRole('link', { name: /Abrir print-/ })).toHaveAttribute('href', 'https://r2.example/print.png');
   });
 
   // triste

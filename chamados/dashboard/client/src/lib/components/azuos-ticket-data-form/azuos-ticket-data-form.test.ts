@@ -126,7 +126,7 @@ describe('AzuosTicketDataForm', () => {
 
     /* Sem área participante, a seção nasce fechada: abre-se e adiciona. */
     await userEvent.click(screen.getByRole('button', { name: /Áreas participantes/ }));
-    await userEvent.click(screen.getByRole('button', { name: 'Adicionar Sistema ao chamado' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar Sistema' }));
 
     expect(given.onAddParticipantArea).toHaveBeenCalledWith('sistema');
   });
@@ -147,7 +147,7 @@ describe('AzuosTicketDataForm', () => {
     setup({ state: { isAddingArea: true } });
     await userEvent.click(screen.getByRole('button', { name: /Áreas participantes/ }));
 
-    for (const button of screen.getAllByRole('button', { name: /adicionar .* ao chamado/i }))
+    for (const button of screen.getAllByRole('button', { name: /^adicionar /i }))
       expect(button).toBeDisabled();
   });
 
@@ -155,7 +155,7 @@ describe('AzuosTicketDataForm', () => {
     setup({ data: data({ availableParticipantAreas: [] }) });
 
     expect(
-      screen.queryByRole('button', { name: /adicionar .* ao chamado/i }),
+      screen.queryByRole('button', { name: /^adicionar /i }),
     ).not.toBeInTheDocument();
   });
 
@@ -265,7 +265,8 @@ describe('AzuosTicketDataForm — area, type, system and attendant', () => {
 
     await choose('Sistema / Software', 'Portal');
     expect(acts.onChange).toHaveBeenCalledWith('projectId', '1');
-    await choose('Responsável', 'Ana Lima');
+    await fireEvent.click(screen.getByRole('combobox', { name: 'Responsável' }));
+    await fireEvent.click(await screen.findByRole('option', { name: /Ana Lima/ }));
     expect(acts.onChange).toHaveBeenCalledWith('assigneeId', 'u-ana');
   });
 });

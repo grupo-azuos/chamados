@@ -429,7 +429,7 @@ describe('useTicketDataFormModel — assignees and touched fields', () => {
     vi.mocked(ticketsApi.assigneeOptions).mockResolvedValue([{ id: 'u-bia', name: 'Bia Costa' }]);
     const model = mountModel();
 
-    await waitFor(() => expect(model.data.assignees).toEqual([{ value: 'u-bia', label: 'Bia Costa' }]));
+    await waitFor(() => expect(model.data.assignees).toEqual([{ value: 'u-bia', label: 'Bia Costa', avatarUrl: null }]));
     expect(ticketsApi.assigneeOptions).toHaveBeenCalledWith('infra');
   });
 

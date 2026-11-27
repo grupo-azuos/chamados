@@ -80,17 +80,17 @@ describe('AzuosTicketHistoryForm', () => {
     const goingOn = screen.getByRole('group', { name: 'Dar andamento' });
     const closing = screen.getByRole('group', { name: 'Encerrar o chamado' });
 
-    expect(within(goingOn).getByRole('radio', { name: 'Andamento' })).toBeChecked();
-    expect(within(goingOn).queryByRole('radio', { name: 'Solução' })).not.toBeInTheDocument();
-    expect(within(closing).getByRole('radio', { name: 'Solução' })).toBeInTheDocument();
-    expect(within(closing).getByRole('radio', { name: 'Encerramento com ressalva' })).toBeInTheDocument();
-    expect(within(closing).getByRole('radio', { name: 'Cancelamento' })).toBeInTheDocument();
+    expect(within(goingOn).getByRole('button', { name: 'Andamento' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(goingOn).queryByRole('button', { name: 'Solução' })).not.toBeInTheDocument();
+    expect(within(closing).getByRole('button', { name: 'Solução' })).toBeInTheDocument();
+    expect(within(closing).getByRole('button', { name: 'Encerramento com ressalva' })).toBeInTheDocument();
+    expect(within(closing).getByRole('button', { name: 'Cancelamento' })).toBeInTheDocument();
   });
 
   it('asks to change the type when another one is picked', async () => {
     const { actions: given } = setup();
 
-    await userEvent.click(screen.getByRole('radio', { name: 'Solução' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Solução' }));
 
     expect(given.onTypeChange).toHaveBeenCalledWith('resolution');
   });
@@ -149,15 +149,16 @@ describe('AzuosTicketHistoryForm', () => {
   it('offers only the reopening on a closed ticket', () => {
     setup({ data: dataFor('resolved', 'reopening') });
 
-    expect(screen.getAllByRole('radio')).toHaveLength(1);
-    expect(screen.getByRole('radio', { name: 'Reabertura' })).toBeChecked();
+    const goingOn = screen.getByRole('group', { name: 'Dar andamento' });
+    expect(within(goingOn).getAllByRole('button')).toHaveLength(1);
+    expect(within(goingOn).getByRole('button', { name: 'Reabertura' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByRole('group', { name: 'Encerrar o chamado' })).not.toBeInTheDocument();
   });
 
   it('does not offer the start on a ticket that was already picked up', () => {
     setup();
 
-    expect(screen.queryByRole('radio', { name: 'Início do atendimento' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Início do atendimento' })).not.toBeInTheDocument();
   });
 
   it('shows the error under the field it belongs to', () => {
@@ -185,7 +186,8 @@ describe('AzuosTicketHistoryForm', () => {
   it('locks every choice while it is being sent', () => {
     setup({ state: { isSubmitting: true } });
 
-    for (const radio of screen.getAllByRole('radio')) expect(radio).toBeDisabled();
+    for (const group of screen.getAllByRole('group', { name: /Dar andamento|Encerrar o chamado/ }))
+      for (const choice of within(group).getAllByRole('button')) expect(choice).toBeDisabled();
     expect(screen.getByRole('checkbox', { name: /quem abriu o chamado pode ver/i })).toBeDisabled();
   });
 
@@ -200,7 +202,7 @@ describe('AzuosTicketHistoryForm', () => {
       }),
     });
 
-    expect(screen.getByRole('button', { name: 'Avisar por WhatsApp' })).toHaveTextContent(
+    expect(screen.getByRole('button', { name: /^Avisar por WhatsApp/ })).toHaveTextContent(
       'Ninguém será avisado',
     );
     expect(screen.getByText('Só recebe quem você marcar.')).toBeInTheDocument();
@@ -216,7 +218,8 @@ describe('AzuosTicketHistoryForm', () => {
       }),
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar Bia Costa' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Avisar por WhatsApp/ }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Bia Costa/ }));
 
     expect(given.onNotifyChange).toHaveBeenCalledWith([]);
   });
@@ -225,7 +228,7 @@ describe('AzuosTicketHistoryForm', () => {
   it('hides the notice when nobody can be notified', () => {
     setup();
 
-    expect(screen.queryByRole('button', { name: 'Avisar por WhatsApp' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Avisar por WhatsApp/ })).not.toBeInTheDocument();
   });
 });
 

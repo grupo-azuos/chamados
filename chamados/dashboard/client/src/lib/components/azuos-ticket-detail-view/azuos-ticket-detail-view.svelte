@@ -97,10 +97,12 @@
   import ImageIcon from '@lucide/svelte/icons/image';
   import MessageCircle from '@lucide/svelte/icons/message-circle';
 
-  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
-
+  import ActionButton, {
+    actionButton,
+  } from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import AttachmentList from '$lib/components/azuos-attachment-list/azuos-attachment-list.svelte';
+  import FileLinks from '$lib/components/azuos-file-links/azuos-file-links.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import HistoryTimeline, {
     formatMinutesSpent,
@@ -181,11 +183,12 @@
         actions={{ onClick: () => actions.onNotify?.() }}
       />
     {:else if data.whatsAppLink}
+      <!-- Link para fora (o WhatsApp), no desenho do botão secundário da casa. -->
       <a
-        class="control-md rounded-control bg-muted text-success hover:bg-muted inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+        class={actionButton({ variant: 'secondary', size: 'md' })}
         href={data.whatsAppLink}
         target="_blank"
-        rel="noopener"
+        rel="noopener noreferrer"
       >
         <MessageCircle class="size-4" aria-hidden="true" />
         {viewState?.notice ? 'Abrir a conversa e enviar' : 'Avisar no WhatsApp'}
@@ -228,15 +231,16 @@
       <StatusBadge data={{ label: `Sistema: ${ticket.projectName}` }} ui={{ tone: 'brand' }} />
     {/if}
     {#if ticket.githubIssueUrl}
+      <!-- A issue é um link (abre o GitHub noutra aba), e não um selo desenhado à mão. -->
       <a
-        class="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+        class="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
         href={ticket.githubIssueUrl}
         target="_blank"
-        rel="noopener"
+        rel="noopener noreferrer"
       >
-        <GitPullRequest class="size-3 text-primary" aria-hidden="true" />
+        <GitPullRequest class="size-3.5" aria-hidden="true" />
         <span>Issue #{ticket.githubIssueNumber ?? ''}</span>
-        <ExternalLink class="size-3 text-muted-foreground" aria-hidden="true" />
+        <ExternalLink class="size-3" aria-hidden="true" />
       </a>
     {/if}
   </div>
@@ -264,32 +268,29 @@
         {/each}
       </dl>
 
-      <div class="rounded-box border-border bg-muted border p-3.5">
-        <p class="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
-          Descrição do problema
-        </p>
+      <div class="rounded-box bg-muted p-3.5">
+        <p class="text-muted-foreground mb-1 text-sm font-medium">Descrição do problema</p>
         <p class="text-foreground text-sm whitespace-pre-line">{ticket.description}</p>
       </div>
 
       {#if ticket.screenshotUrl}
-        <a
-          class="control-sm rounded-control bg-muted text-primary hover:bg-accent inline-flex w-fit items-center gap-1.5 border text-xs font-semibold transition-colors border-transparent"
-          href={ticket.screenshotUrl}
-          target="_blank"
-          rel="noopener"
-        >
-          <ImageIcon class="size-3.5" aria-hidden="true" />
-          Abrir o print enviado
-        </a>
+        <!-- O print tem as duas ações de todo arquivo: abrir noutra aba e baixar. -->
+        <FileLinks
+          data={{
+            fileName: `print-${ticket.protocol}.png`,
+            viewUrl: ticket.screenshotUrl,
+            downloadUrl: ticket.screenshotUrl,
+            openLabel: 'Abrir o print enviado',
+          }}
+          ui={{ openIcon: ImageIcon }}
+        />
       {/if}
 
       <!-- OS ARQUIVOS DO CHAMADO. O que a pessoa mandou não tem botão de excluir, e não é
            esquecimento: é a prova de quem pediu socorro (ver `attachment-ownership.util`).
            Os arquivos de cada histórico aparecem dentro dele, na linha do tempo. -->
       <div class="flex flex-col gap-2">
-        <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-          Arquivos do chamado
-        </p>
+        <p class="text-muted-foreground text-sm font-medium">Arquivos do chamado</p>
         <AttachmentList
           data={{ attachments: data.attachments }}
           ui={{ emptyLabel: 'Nenhum arquivo foi enviado com o chamado.', actor: 'support' }}
@@ -304,9 +305,7 @@
 
       <!-- O ATENDIMENTO: os carimbos saem da linha do tempo, nenhum é digitado. -->
       <div class="border-border/70 flex flex-col gap-2 border-t pt-4">
-        <p class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-          Atendimento
-        </p>
+        <p class="text-muted-foreground text-sm font-medium">Atendimento</p>
         <dl class="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
           {#each stamps as stamp (stamp.label)}
             <div class="min-w-0">

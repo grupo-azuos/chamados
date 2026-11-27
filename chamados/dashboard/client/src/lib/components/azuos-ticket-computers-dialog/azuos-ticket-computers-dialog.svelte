@@ -61,7 +61,6 @@
 </script>
 
 <script lang="ts">
-  import CheckIcon from '@lucide/svelte/icons/check';
   import LaptopIcon from '@lucide/svelte/icons/laptop';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
@@ -72,14 +71,15 @@
     DialogHeader,
     DialogTitle,
   } from '$lib/components/azuos-dialog/azuos-dialog';
+  import CheckboxField from '$lib/components/azuos-checkbox-field/azuos-checkbox-field.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import { cn } from '$lib/utils/cn';
 
   let { data, state: dialogState, actions }: AzuosTicketComputersDialogProps = $props();
 
@@ -125,7 +125,11 @@
 
     <!-- Estados na frente, conteúdo por último (CONTRIBUTING §2). -->
     {#if dialogState?.isLoading}
-      <p class="text-muted-foreground py-10 text-center text-sm">Carregando as máquinas…</p>
+      <div class="flex flex-col gap-2" aria-busy="true" aria-label="Carregando as máquinas">
+        {#each [0, 1, 2, 3] as index (index)}
+          <Skeleton class="h-12 w-full" />
+        {/each}
+      </div>
     {:else if data.computers.length === 0}
       <EmptyState
         data={{
@@ -135,65 +139,32 @@
         ui={{ icon: LaptopIcon }}
       />
     {:else}
+      <!-- Uma caixa de marcar por máquina (a da casa), em lista com divisória: dentro do diálogo,
+           card seria card dentro de card. A situação de rede vai no selo ao lado. -->
       <ul
-        class="-mx-1 grid max-h-[55vh] grid-cols-1 gap-3 overflow-y-auto p-1 sm:grid-cols-2 lg:grid-cols-3"
+        class="divide-border grid max-h-[55vh] grid-cols-1 divide-y overflow-y-auto md:grid-cols-2 md:gap-x-6"
         aria-label="Máquinas do inventário"
       >
         {#each data.computers as computer (computer.id)}
           {@const isSelected = data.selectedIds.includes(computer.id)}
-          <li>
-            <!-- Escolhida = fundo na cor cheia (regra de UI do grupo), nunca borda colorida. As
-                 demais são a caixa cinza sem borda e sem sombra: dentro do diálogo branco, card
-                 branco seria card dentro de card da mesma cor. O hover é o véu neutro por cima. -->
-            <button
-              type="button"
-              aria-pressed={isSelected}
-              disabled={isBusy}
-              onclick={() => actions.onToggle(computer.id)}
-              class={cn(
-                'rounded-box relative isolate flex w-full cursor-pointer flex-col gap-2 p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
-                'before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-box hover:before:bg-hover-veil',
-                isSelected
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-foreground',
-              )}
-            >
-              <span class="flex items-start justify-between gap-2">
-                <span class="min-w-0">
-                  <span class="block truncate text-sm font-semibold">{computer.label}</span>
-                  <span
-                    class={cn(
-                      'block truncate text-xs',
-                      isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground',
-                    )}>{computer.hostname}</span
-                  >
-                </span>
-                <span
-                  class={cn(
-                    'flex size-5 shrink-0 items-center justify-center rounded-full border',
-                    isSelected ? 'bg-primary-foreground text-primary border-transparent' : 'border-border',
-                  )}
-                  aria-hidden="true"
-                >
-                  {#if isSelected}<CheckIcon class="size-3.5" />{/if}
-                </span>
-              </span>
-              <span class="flex flex-wrap items-center gap-2 text-xs">
-                <span class={isSelected ? 'text-primary-foreground/90' : 'text-ink-700'}>
-                  {computer.responsibleName ?? 'Sem responsável'}
-                  {#if computer.department}· {computer.department}{/if}
-                </span>
-                <!-- O selo fica também no escolhido: sem ele o card encolhia e a grade pulava. -->
-                <StatusBadge
-                  data={{ label: computer.isOnline ? 'Online' : 'Offline' }}
-                  ui={{
-                    tone: computer.isOnline ? 'success' : 'neutral',
-                    size: 'sm',
-                    className: isSelected ? 'bg-primary-foreground text-primary' : undefined,
-                  }}
-                />
-              </span>
-            </button>
+          <li class="flex items-center justify-between gap-3 px-1 py-1">
+            <CheckboxField
+              data={{
+                label: computer.label,
+                name: `ticketComputer${computer.id}`,
+                isChecked: isSelected,
+                description: [computer.hostname, computer.responsibleName ?? 'Sem responsável', computer.department]
+                  .filter(Boolean)
+                  .join(' · '),
+              }}
+              ui={{ className: 'min-w-0' }}
+              state={{ isDisabled: isBusy }}
+              actions={{ onChange: () => actions.onToggle(computer.id) }}
+            />
+            <StatusBadge
+              data={{ label: computer.isOnline ? 'Online' : 'Offline' }}
+              ui={{ tone: computer.isOnline ? 'success' : 'neutral', size: 'sm' }}
+            />
           </li>
         {/each}
       </ul>
@@ -207,11 +178,11 @@
       <p class="text-ink-700 text-sm font-medium" role="status">
         {selectionLabel(data.selectedIds.length)}
         {#if data.selectedIds.length > 0}
-          <button
-            type="button"
-            class="text-muted-foreground hover:text-foreground ml-2 cursor-pointer text-xs underline-offset-2 hover:underline"
-            onclick={actions.onClearSelection}
-          >Limpar</button>
+          <ActionButton
+            data={{ label: 'Limpar' }}
+            ui={{ variant: 'ghost', size: 'sm', className: 'ml-2' }}
+            actions={{ onClick: actions.onClearSelection }}
+          />
         {/if}
       </p>
       <div class="flex gap-2">

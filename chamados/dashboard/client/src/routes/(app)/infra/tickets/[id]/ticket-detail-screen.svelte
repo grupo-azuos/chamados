@@ -7,6 +7,7 @@
   import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import { useBackTarget } from '$lib/hooks/use-navigation-stack/use-navigation-stack.svelte';
   import { useTicketDetailModel } from '$lib/hooks/use-ticket-detail/use-ticket-detail.svelte';
   import TicketDetailView from '$lib/components/azuos-ticket-detail-view/azuos-ticket-detail-view.svelte';
@@ -47,7 +48,7 @@
 
 <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
 {#if detail.state.isMissing}
-  <div class="mx-auto w-full max-w-3xl py-10">
+  <div class="flex w-full flex-col py-10">
     <EmptyState
       data={{
         title: 'Não encontrei este chamado',
@@ -59,14 +60,20 @@
     </EmptyState>
   </div>
 {:else if detail.state.error}
-  <div class="mx-auto w-full max-w-3xl py-10">
+  <div class="flex w-full flex-col py-10">
     <ErrorState
       data={{ title: 'Não consegui abrir este chamado', message: detail.state.error }}
       actions={{ onRetry: detail.actions.onRetry }}
     />
   </div>
 {:else if detail.state.isLoading || !detail.data.ticket}
-  <p class="text-ink-500 py-16 text-center text-sm">Carregando o chamado…</p>
+  <!-- O esqueleto tem a forma da ficha: o título, a faixa de selos e os blocos. -->
+  <div class="flex w-full flex-col gap-5" aria-busy="true" aria-label="Carregando o chamado">
+    <Skeleton class="h-8 w-1/3" />
+    <Skeleton class="h-6 w-1/2" />
+    <Skeleton class="rounded-surface h-48 w-full" />
+    <Skeleton class="rounded-surface h-32 w-full" />
+  </div>
 {:else}
   {@const ticket = detail.data.ticket}
   <TicketDetailView

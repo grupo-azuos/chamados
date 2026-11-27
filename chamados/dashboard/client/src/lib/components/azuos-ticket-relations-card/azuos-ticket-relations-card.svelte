@@ -40,8 +40,6 @@
 </script>
 
 <script lang="ts">
-  import ExternalLink from '@lucide/svelte/icons/external-link';
-  import Link2 from '@lucide/svelte/icons/link-2';
   import Plus from '@lucide/svelte/icons/plus';
   import Search from '@lucide/svelte/icons/search';
   import Trash2 from '@lucide/svelte/icons/trash-2';
@@ -53,6 +51,9 @@
   } from '@template/shared/domain/ticket-status.util';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import InputGroup from '$lib/components/azuos-input-group/azuos-input-group.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
 
   let { data, ui, state: cardState, actions }: AzuosTicketRelationsCardProps = $props();
@@ -66,8 +67,7 @@
     }
   });
 
-  function handleInputChange(event: Event) {
-    const value = (event.target as HTMLInputElement).value;
+  function handleInputChange(value: string) {
     inputValue = value;
     actions.onSearchChange(value);
   }
@@ -88,66 +88,60 @@
   }
 </script>
 
+<!-- O protocolo, a área e a situação de um chamado — a mesma linha na busca e na lista. -->
+{#snippet summaryLine(item: RelatedTicketSummary)}
+  <div class="flex flex-wrap items-center gap-1.5 text-xs">
+    <span class="text-foreground font-mono font-semibold">{item.protocol}</span>
+    <StatusBadge data={{ label: ticketAreaLabel(item.area) }} ui={{ tone: 'neutral', size: 'sm' }} />
+    <StatusBadge
+      data={{ label: ticketStatusLabel(item.status) }}
+      ui={{ tone: ticketStatusTone(item.status), size: 'sm' }}
+    />
+  </div>
+  <p class="text-muted-foreground truncate text-xs">{item.description}</p>
+{/snippet}
+
 <div class={ui?.isHeaderHidden ? 'flex flex-col gap-3' : 'border-border flex flex-col gap-3 border-t pt-4'}>
   {#if ui?.isHeaderHidden}
     <p class="text-muted-foreground text-xs">Relacione chamados entre si para acompanhamento conjunto.</p>
   {:else}
-    <div class="flex items-center gap-2">
-      <Link2 class="text-primary size-4" aria-hidden="true" />
-      <div>
-        <p class="text-ink-700 text-sm font-medium">Chamados vinculados</p>
-        <p class="text-muted-foreground text-xs">
-          Relacione chamados entre si para acompanhamento conjunto.
-        </p>
-      </div>
+    <div>
+      <p class="text-ink-700 text-sm font-medium">Chamados vinculados</p>
+      <p class="text-muted-foreground text-xs">
+        Relacione chamados entre si para acompanhamento conjunto.
+      </p>
     </div>
   {/if}
 
-  <!-- Campo de busca de chamados para vincular -->
+  <!-- A busca é o campo da casa, com a lupa colada na frente. -->
   <div class="flex flex-col gap-2">
-    <div class="relative flex items-center">
-      <Search class="text-muted-foreground pointer-events-none absolute left-3 size-4" aria-hidden="true" />
-      <input
-        type="search"
-        value={inputValue}
-        oninput={handleInputChange}
-        placeholder="Buscar chamado por ID, protocolo ou assunto…"
-        aria-label="Buscar chamado para vincular"
-        disabled={cardState?.isAdding}
-        class="bg-muted text-foreground placeholder:text-muted-foreground focus:ring-primary h-10 w-full rounded-control border pr-3 pl-9 text-xs focus:ring-1 focus:outline-none disabled:bg-muted disabled:text-muted-foreground border-transparent"
-      />
-    </div>
+    <InputGroup
+      data={{
+        label: 'Buscar chamado para vincular',
+        name: 'relatedTicketSearch',
+        value: inputValue,
+        placeholder: 'ID, protocolo ou assunto',
+      }}
+      state={{ isDisabled: cardState?.isAdding }}
+      actions={{ onChange: handleInputChange }}
+    >
+      {#snippet prefix()}
+        <Search class="text-muted-foreground size-4" aria-hidden="true" />
+      {/snippet}
+    </InputGroup>
 
-    <!-- Resultados da busca -->
     {#if cardState?.isSearching}
-      <p class="text-muted-foreground py-1 text-center text-xs">Buscando chamados…</p>
+      <div class="flex flex-col gap-2" aria-busy="true" aria-label="Buscando chamados">
+        <Skeleton class="h-4 w-2/3" />
+        <Skeleton class="h-4 w-1/2" />
+      </div>
     {:else if data.searchResults && data.searchResults.length > 0}
-      <ul
-        class="bg-card rounded-box flex max-h-48 flex-col gap-1 overflow-y-auto p-1 shadow-card"
-        aria-label="Resultados da busca de chamados"
-      >
+      <ul class="divide-border flex max-h-48 flex-col divide-y overflow-y-auto" aria-label="Resultados da busca de chamados">
         {#each data.searchResults as item (item.id)}
-          <li
-            class="hover:bg-muted flex items-center justify-between gap-2 rounded-control p-2 transition-colors"
-          >
+          <li class="hover:bg-hover-veil rounded-control flex items-center justify-between gap-2 px-2 py-2">
             <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-              <div class="flex items-center gap-1.5 text-xs">
-                <span class="font-mono font-semibold text-primary">{item.protocol}</span>
-                <span
-                  class="rounded-chip bg-muted text-ink-700 shrink-0 px-1.5 py-0.5 text-xs font-medium"
-                >
-                  {ticketAreaLabel(item.area)}
-                </span>
-                <StatusBadge
-                  data={{ label: ticketStatusLabel(item.status) }}
-                  ui={{ tone: ticketStatusTone(item.status) }}
-                />
-              </div>
-              <p class="text-ink-700 truncate text-xs" title={item.description}>
-                {item.description}
-              </p>
+              {@render summaryLine(item)}
             </div>
-
             <ActionButton
               data={{ label: 'Vincular' }}
               ui={{ variant: 'secondary', size: 'sm', icon: Plus }}
@@ -162,46 +156,29 @@
     {/if}
   </div>
 
-  <!-- Mensagem de erro -->
   {#if cardState?.error}
-    <p role="alert" class="text-destructive text-xs">{cardState.error}</p>
+    <ErrorState data={{ message: cardState.error }} ui={{ variant: 'inline' }} />
   {/if}
 
-  <!-- Lista de chamados vinculados -->
   {#if cardState?.isLoading}
-    <p class="text-muted-foreground py-2 text-center text-xs">Carregando vínculos…</p>
+    <div class="flex flex-col gap-2" aria-busy="true" aria-label="Carregando vínculos">
+      <Skeleton class="h-10 w-full" />
+      <Skeleton class="h-10 w-full" />
+    </div>
   {:else if data.relations.length === 0}
     <p class="text-muted-foreground text-xs">Nenhum chamado vinculado a este ainda.</p>
   {:else}
-    <ul class="flex flex-col gap-2" aria-label="Lista de chamados vinculados">
+    <ul class="divide-border flex flex-col divide-y" aria-label="Lista de chamados vinculados">
       {#each data.relations as relation (relation.id)}
         {@const target = relation.relatedTicket}
-        <li
-          class="bg-muted rounded-control flex items-center justify-between gap-2 border p-2 border-transparent"
-        >
+        <li class="hover:bg-hover-veil rounded-control flex items-center justify-between gap-2 px-2 py-2">
           <a
             href={ticketHref(target)}
-            class="hover:text-primary flex min-w-0 flex-1 flex-col gap-0.5 transition-colors"
-            title={`Abrir chamado ${target.protocol}`}
+            class="flex min-w-0 flex-1 flex-col gap-0.5"
+            aria-label={`Abrir chamado ${target.protocol}`}
           >
-            <div class="flex items-center gap-1.5 text-xs">
-              <span class="font-mono font-semibold text-primary">{target.protocol}</span>
-              <span
-                class="rounded-chip bg-muted text-ink-700 shrink-0 px-1.5 py-0.5 text-xs font-medium"
-              >
-                {ticketAreaLabel(target.area)}
-              </span>
-              <StatusBadge
-                data={{ label: ticketStatusLabel(target.status) }}
-                ui={{ tone: ticketStatusTone(target.status) }}
-              />
-              <ExternalLink class="text-muted-foreground size-3 shrink-0" aria-hidden="true" />
-            </div>
-            <p class="text-ink-700 truncate text-xs" title={target.description}>
-              {target.description}
-            </p>
+            {@render summaryLine(target)}
           </a>
-
           <ActionButton
             data={{ label: `Desvincular chamado ${target.protocol}` }}
             ui={{ variant: 'ghost', size: 'sm', icon: Trash2, isIconOnly: true }}

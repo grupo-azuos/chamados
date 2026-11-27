@@ -58,8 +58,8 @@ describe('AzuosTicketComputersDialog', () => {
       actions: handlers,
     });
 
-    expect(screen.getByRole('button', { name: /COMPUTADOR - 06/ })).toHaveAttribute('aria-pressed', 'true');
-    await userEvent.click(screen.getByRole('button', { name: /COMPUTADOR - 07/ }));
+    expect(screen.getByRole('checkbox', { name: /COMPUTADOR - 06/ })).toBeChecked();
+    await userEvent.click(screen.getByRole('checkbox', { name: /COMPUTADOR - 07/ }));
     expect(handlers.onToggle).toHaveBeenCalledWith(7);
 
     await userEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
@@ -100,30 +100,27 @@ describe('AzuosTicketComputersDialog', () => {
   });
 });
 
-/* Dentro do diálogo branco, a máquina é a caixa cinza sem borda e sem sombra. */
+/* Dentro do diálogo, a máquina é a caixa de marcar da casa, nunca um card pintado à mão. */
 describe('AzuosTicketComputersDialog — inside the dialog surface', () => {
   // feliz
-  it('draws the machines as muted boxes, without border or shadow', () => {
+  it('lists the machines as checkboxes with the network state beside', () => {
     render(TicketComputersDialog, {
       data: { ...base, computers: [choice(), choice({ id: 7, label: 'COMPUTADOR - 07' })], selectedIds: [6] },
       actions: actions(),
     });
 
-    const other = screen.getByRole('button', { name: /COMPUTADOR - 07/ });
-    expect(other.className).toContain('bg-muted');
-    expect(other.className).toContain('rounded-box');
-    expect(other.className).not.toMatch(/shadow-xs|bg-card|\bborder\b/);
+    expect(screen.getByRole('checkbox', { name: /COMPUTADOR - 07/ })).not.toBeChecked();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2);
   });
 
   // triste
-  it('keeps the chosen machine on the full color, never a coloured border', () => {
+  it('locks the choices while the machines are being saved', () => {
     render(TicketComputersDialog, {
       data: { ...base, computers: [choice()], selectedIds: [6] },
+      state: { isSaving: true },
       actions: actions(),
     });
 
-    const chosen = screen.getByRole('button', { name: /COMPUTADOR - 06/ });
-    expect(chosen.className).toContain('bg-primary');
-    expect(chosen.className).not.toMatch(/\bborder\b|bg-muted/);
+    expect(screen.getByRole('checkbox', { name: /COMPUTADOR - 06/ })).toBeDisabled();
   });
 });
