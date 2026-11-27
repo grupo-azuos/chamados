@@ -317,7 +317,9 @@
             footer: {
               title: performersTitleOf(maintenance),
               subtitle: formatDate(maintenance.performedAt),
-              person: maintenance.performedBy ? { name: maintenance.performedBy } : null,
+              person: maintenance.performedBy
+                ? { id: maintenance.performedByIds?.[0] ?? null, name: maintenance.performedBy }
+                : null,
               /* Quem fez pode ser mais de uma pessoa: o rosto de cada uma, com a foto. */
               people: performersOf(maintenance),
             },

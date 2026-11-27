@@ -121,3 +121,39 @@ describe('TicketPeopleService', () => {
     expect(describeChange([], [])).toBe('');
   });
 });
+
+describe('TicketPeopleService.directoryWithPhotos', () => {
+  function serviceWith(everyone: unknown, access: unknown) {
+    return new TicketPeopleService(
+      {
+        listAllUsers: vi.fn(() => (everyone instanceof Error ? Promise.reject(everyone) : Promise.resolve(everyone))),
+        listUsers: vi.fn().mockResolvedValue(access),
+      } as unknown as UserDirectoryProvider,
+      {} as TicketWatchersRepository,
+      {} as TicketHistoriesRepository,
+    );
+  }
+
+  // feliz
+  /* O técnico que entra como super-admin não está na lista de acesso: o rosto dele vem do
+     diretório inteiro, com a foto. */
+  it('brings the photo of everyone in the directory, not only of who has access', async () => {
+    const everyone = [
+      { id: 'gs', name: 'Guilherme Siqueira', email: 'gs@azuos.com.br', image: 'https://x/gs.png' },
+      ...directoryUsers,
+    ];
+
+    const people = await serviceWith(everyone, directoryUsers).directoryWithPhotos();
+
+    expect(people).toContainEqual({ id: 'gs', name: 'Guilherme Siqueira', avatarUrl: 'https://x/gs.png' });
+    expect(people.find((person) => person.id === 'bia')?.avatarUrl).toBe('https://x/bia.png');
+  });
+
+  // triste
+  /* O diretório inteiro fora do ar não apaga as fotos de quem trabalha aqui. */
+  it('keeps the photos of the access list when the whole directory is down', async () => {
+    const people = await serviceWith(new Error('fora do ar'), directoryUsers).directoryWithPhotos();
+
+    expect(people.find((person) => person.id === 'bia')?.avatarUrl).toBe('https://x/bia.png');
+  });
+});

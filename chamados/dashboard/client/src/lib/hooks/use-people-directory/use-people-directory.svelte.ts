@@ -13,8 +13,8 @@ export function usePeopleDirectoryLoader(): void {
   const people = mirrorStore(
     createQuery(
       writable({
-        queryKey: ['tickets', 'people-options'],
-        queryFn: () => ticketsApi.peopleOptions(),
+        queryKey: ['tickets', 'people-directory'],
+        queryFn: () => ticketsApi.peopleDirectory(),
         staleTime: 5 * 60_000,
       }),
     ),
