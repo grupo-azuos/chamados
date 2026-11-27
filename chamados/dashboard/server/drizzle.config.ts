@@ -21,14 +21,24 @@ export default defineConfig({
   out: './drizzle',
   dbCredentials: { url: databaseUrl },
   /**
-   * Só o schema `chamados` entra nas migrations.
+   * Só os schemas deste sistema (um por assunto, ver `schemas.schema.ts`) entram nas migrations.
    *
    * O banco é o Postgres do Supabase da casa, COMPARTILHADO: os outros sistemas têm os schemas
    * deles (`paralegal`, `gestao_rh`, `admin_console`…). Sem este limite, `npm run db:generate`
    * veria aquelas tabelas como "não declaradas" e escreveria uma migration apagando os dados
    * dos outros sistemas.
    */
-  schemaFilter: ['chamados'],
+  schemaFilter: [
+    'tickets',
+    'inventory',
+    'maintenance',
+    'software',
+    'tasks',
+    'messaging',
+    'access',
+    'audit',
+    'dashboard',
+  ],
   /**
    * A lista de migrations aplicadas, PRÓPRIA deste sistema. A padrão do Drizzle
    * (`drizzle.__drizzle_migrations`) já é usada por outro sistema no mesmo banco: dividir a

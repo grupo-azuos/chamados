@@ -21,7 +21,7 @@ const SETTINGS = {
   'gitflow.prefix.release': 'release/',
   'gitflow.prefix.hotfix': 'hotfix/',
   'gitflow.prefix.support': 'support/',
-  'gitflow.prefix.versiontag': 'v',
+  'gitflow.prefix.versiontag': 'prod/v',
   'commit.template': '.gitmessage',
 };
 

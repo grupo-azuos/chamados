@@ -1,6 +1,6 @@
 import { index, integer, jsonb, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { softwareSchema } from './schemas.schema';
 import { softwareProjects } from './software-projects.schema';
 
 /**
@@ -8,7 +8,7 @@ import { softwareProjects } from './software-projects.schema';
  * linhas do grafo) e as branches. A sincronização lê a develop e a main no GitHub; o webhook avisa
  * a branch nova (que pulsa no mapa), o push e a branch apagada.
  */
-export const softwareCommits = chamadosSchema.table(
+export const softwareCommits = softwareSchema.table(
   'software_commits',
   {
     id: serial('id').primaryKey(),
@@ -34,7 +34,7 @@ export const softwareCommits = chamadosSchema.table(
 export type SoftwareCommitRow = typeof softwareCommits.$inferSelect;
 export type SoftwareCommitInsert = typeof softwareCommits.$inferInsert;
 
-export const softwareBranches = chamadosSchema.table(
+export const softwareBranches = softwareSchema.table(
   'software_branches',
   {
     id: serial('id').primaryKey(),
@@ -58,7 +58,7 @@ export const softwareBranches = chamadosSchema.table(
 export type SoftwareBranchRow = typeof softwareBranches.$inferSelect;
 
 /** As TAGS (versões) de cada sistema: a etiqueta e o commit dela. A versão fecha o que entrou antes. */
-export const softwareTags = chamadosSchema.table(
+export const softwareTags = softwareSchema.table(
   'software_tags',
   {
     id: serial('id').primaryKey(),

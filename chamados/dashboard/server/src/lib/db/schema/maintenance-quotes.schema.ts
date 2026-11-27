@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import { check, date, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { maintenanceSchema } from './schemas.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
 function valuesFor(values: readonly string[]) {
@@ -22,7 +22,7 @@ function valuesFor(values: readonly string[]) {
  * `attachment_key` é o endereço do arquivo no storage, nunca um link: o link é assinado a cada
  * leitura e expira, como a foto do inventário.
  */
-export const maintenanceQuotes = chamadosSchema.table(
+export const maintenanceQuotes = maintenanceSchema.table(
   'maintenance_quotes',
   {
     id: serial('id').primaryKey(),

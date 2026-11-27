@@ -6,6 +6,7 @@
 ^SUPORTE\.md$
 ^\.claude/
 ^\.github/
+^scripts/[^/]+\.mjs$
 ^chamados/dashboard/\.husky/
 ^chamados/dashboard/scripts/git/
 ^chamados/dashboard/scripts/tsconfig\.json$
@@ -41,3 +42,37 @@
 /client/src/lib/components/azuos-account-view/
 /client/src/lib/hooks/ui/use-mobile\.ts$
 /client/src/lib/motion/(use-)?sliding-indicator[^/]*$
+
+# DASHBOARD PADRÃO (skill dashboard-standard) — o MOTOR é igual em todo sistema e é ESTRITAMENTE
+# do suporte: nem outro administrador mexe em gráfico. Cada projeto muda só os DADOS, e esses
+# três arquivos ficam fora desta lista: shared/.../dashboard-sources.ts (as fontes),
+# server/.../repository/widget-sources.ts (as colunas) e server/.../service/default-boards.ts
+# (o painel padrão).
+/shared/src/schemas/dashboard-board\.schema(\.test)?\.ts$
+/shared/src/schemas/dashboard-source\.types\.ts$
+/server/src/lib/db/schema/dashboard-boards\.schema\.ts$
+/server/src/modules/dashboard-boards/dashboard-boards\.module\.ts$
+/server/src/modules/dashboard-boards/(controller|dto|mapper)/
+/server/src/modules/dashboard-boards/repository/(dashboard-boards|filter-sql|viewer-filter)[^/]*$
+/server/src/modules/dashboard-boards/service/dashboard-boards\.service[^/]*$
+/client/src/routes/dashboard/
+/client/src/lib/view-models/use-(dashboard-board|saved-filters)\.model[^/]*$
+/client/src/lib/api/dashboard-boards\.api[^/]*$
+/client/src/lib/components/azuos-[a-z-]*-chart/
+/client/src/lib/components/azuos-(echart|chart-legend|chart-value-list)/
+/client/src/lib/utils/(echarts|chart-slice)\.util[^/]*$
+
+# HISTÓRICO PADRÃO (skill history-standard) — tabela, API e tela iguais em todo sistema. Cada
+# projeto acrescenta só o VOCABULÁRIO (ações e tipos de alvo) em shared/.../history.schema.ts,
+# que fica fora desta lista.
+/server/src/lib/db/schema/history\.schema\.ts$
+/server/src/modules/history/
+/client/src/routes/history/
+/client/src/lib/view-models/use-history\.model[^/]*$
+/client/src/lib/api/history\.api[^/]*$
+
+# CAMPO DE PESSOA PADRÃO (skill select-standard) — a lista de quem usa o sistema, com foto,
+# guardando o id. A lista vem de server/src/modules/users/ (já protegida em protected-auth.txt).
+/client/src/lib/components/azuos-person-(multi-)?picker-field/
+/client/src/lib/view-models/use-people\.model[^/]*$
+/client/src/lib/api/users\.api[^/]*$

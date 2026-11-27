@@ -108,7 +108,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/infra-contract.mjs\" --hook"
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/production-contract.mjs\" --hook"
           }
         ]
       }

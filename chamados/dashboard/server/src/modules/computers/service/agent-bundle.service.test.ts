@@ -42,11 +42,13 @@ function setup(options: { msiHash?: string; missing?: string } = {}) {
   return { service, get, authenticateAgent, manifestOf };
 }
 
+/* O papel geral acompanha o do módulo: quem administra algum módulo é administrador (é o
+   admin-console que dá os dois), e quem só consulta é usuário. */
 const person = (roles: RequestUser['roles']): RequestUser => ({
   id: 'fixture',
   email: 'fixture@example.test',
   name: 'Pessoa',
-  role: 'user',
+  role: Object.values(roles ?? {}).includes('admin') ? 'admin' : 'user',
   roles,
 });
 

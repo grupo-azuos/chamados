@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  isNotInformed,
   LOCAL_DEPARTMENTS,
   departmentIdFromName,
   departmentChoices,
@@ -133,5 +134,18 @@ describe('departmentIdFromName', () => {
     expect(departmentIdFromName('Departamento X', options)).toBeNull();
     expect(departmentIdFromName('  ', options)).toBeNull();
     expect(departmentIdFromName('Fiscal', [...options, { id: 99, name: 'fiscal' }])).toBeNull();
+  });
+});
+
+describe('isNotInformed', () => {
+  // feliz
+  it('knows the "Não informado" department of HR, with or without accent', () => {
+    expect(isNotInformed('Não informado')).toBe(true);
+    expect(isNotInformed('  NAO INFORMADO ')).toBe(true);
+  });
+
+  // triste
+  it('does not take another department for it', () => {
+    expect(isNotInformed('Informática')).toBe(false);
   });
 });

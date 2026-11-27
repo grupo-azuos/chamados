@@ -6,7 +6,7 @@ import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { inventorySchema } from './schemas.schema';
 
 /** Monta a lista de valores aceitos para a checagem do banco, a partir da lista do domínio. */
 function valuesFor(values: readonly string[]) {
@@ -26,7 +26,7 @@ function valuesFor(values: readonly string[]) {
  * `photo_key` é o endereço do arquivo no storage, nunca um link: o link é assinado a cada leitura
  * e expira, como o print do chamado.
  */
-export const inventoryItems = chamadosSchema.table(
+export const inventoryItems = inventorySchema.table(
   'inventory_items',
   {
     id: serial('id').primaryKey(),

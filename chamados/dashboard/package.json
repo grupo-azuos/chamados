@@ -1,6 +1,6 @@
 {
   "name": "template-workspace",
-  "version": "0.1.0",
+  "version": "1.0.2",
   "private": true,
   "license": "MIT",
   "description": "Azuos Chamados — Nest de um lado, React do outro, SQLite no meio.",
@@ -48,7 +48,10 @@
     "seed:transfers": "npm run build -w @template/shared && tsx scripts/seed/transfers/seed-transfers.ts",
     "seed:users": "npm run build -w @template/shared && tsx scripts/seed/users/seed-users.ts",
     "superadmin:promote": "node scripts/promote-superadmin.mjs",
-    "prepare": "cd ../.. && husky chamados/dashboard/.husky && node chamados/dashboard/scripts/git/setup-git.mjs"
+    "prepare": "cd ../.. && husky chamados/dashboard/.husky && node chamados/dashboard/scripts/git/setup-git.mjs",
+    "check:design": "node ../../.claude/hooks/design/check-design.mjs",
+    "check:design:test": "node --test \"../../.claude/hooks/design/*.test.mjs\"",
+    "release": "node ../../scripts/release.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.5.0",

@@ -1,3 +1,4 @@
+node scripts/production-contract.mjs || exit $?
 if git diff --cached --name-only | grep -Eq '^(\.claude/hooks/|\.github/scripts/).*\.mjs$'; then
   npm exec --yes --package=eslint@9.39.5 -- eslint --config .github/scripts/eslint.config.mjs .github/scripts/project-metrics .claude/hooks --no-error-on-unmatched-pattern || exit $?
 fi

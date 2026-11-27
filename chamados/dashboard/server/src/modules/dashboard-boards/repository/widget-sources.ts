@@ -166,14 +166,14 @@ const ticketIsOpen = sql`${tickets.status} not in (${closedList})`;
    grava: um espaço só, sem pontas, em minúsculas. Assim "Trilha" e "trilha" gravados antes da
    regra já caem no MESMO grupo, mesmo sem a migration ter rodado. */
 const typedSystemName = sql.raw(
-  `nullif(lower(btrim(regexp_replace("chamados"."tickets"."custom_system_name", '\\s+', ' ', 'g'))), '')`,
+  `nullif(lower(btrim(regexp_replace("tickets"."tickets"."custom_system_name", '\\s+', ' ', 'g'))), '')`,
 );
 
 /* O sistema do chamado de Sistema: o cadastrado; senão, o cadastrado com o MESMO nome do
    digitado (sem olhar maiúscula) — "trilha" digitado e "Trilha" da lista são um sistema só;
    senão, o digitado. A correlação vai escrita por inteiro: dentro de um `sql` cru a coluna
    sairia sem a tabela. */
-const ticketProject = sql`coalesce((select project.name from ${softwareProjects} as project where project.id = "chamados"."tickets"."project_id"), (select project.name from ${softwareProjects} as project where lower(btrim(project.name)) = ${typedSystemName} order by project.id limit 1), ${typedSystemName}, '(Sem sistema)')`;
+const ticketProject = sql`coalesce((select project.name from ${softwareProjects} as project where project.id = "tickets"."tickets"."project_id"), (select project.name from ${softwareProjects} as project where lower(btrim(project.name)) = ${typedSystemName} order by project.id limit 1), ${typedSystemName}, '(Sem sistema)')`;
 
 const TICKET_LABELS = {
   status: TICKET_STATUS_LABELS as Record<string, string>,
@@ -235,7 +235,7 @@ const computerSeenDay = dayOf(computers.lastSeenAt);
 /* O nome da máquina de uma linha que aponta para ela — ou o equipamento digitado à mão. */
 function machineOf(computerIdColumn: string, fallback?: unknown): SQL {
   const name = sql.raw(
-    `(select coalesce(machine.display_name, machine.name) from "chamados"."computers" as machine where machine.id = ${computerIdColumn})`,
+    `(select coalesce(machine.display_name, machine.name) from "inventory"."computers" as machine where machine.id = ${computerIdColumn})`,
   );
 
   return fallback === undefined
@@ -244,29 +244,29 @@ function machineOf(computerIdColumn: string, fallback?: unknown): SQL {
 }
 
 const maintenanceDay = dayOf(maintenances.performedAt);
-const maintenanceMachine = machineOf('"chamados"."maintenances"."computer_id"', maintenances.otherMachine);
+const maintenanceMachine = machineOf('"maintenance"."maintenances"."computer_id"', maintenances.otherMachine);
 const scheduleDay = sql`${maintenanceSchedules.scheduledFor}::date`;
-const scheduleMachine = machineOf('"chamados"."maintenance_schedules"."computer_id"');
+const scheduleMachine = machineOf('"maintenance"."maintenance_schedules"."computer_id"');
 const movementDay = dayOf(partMovements.createdAt);
-const movementPart = sql`coalesce((select part.name from "chamados"."parts" as part where part.id = "chamados"."part_movements"."part_id"), '(Sem peça)')`;
+const movementPart = sql`coalesce((select part.name from "inventory"."parts" as part where part.id = "inventory"."part_movements"."part_id"), '(Sem peça)')`;
 const alertDay = dayOf(computerAlerts.startedAt);
-const alertMachine = machineOf('"chamados"."computer_alerts"."computer_id"');
+const alertMachine = machineOf('"inventory"."computer_alerts"."computer_id"');
 
 /* ------------------------------------------------------------------ sistema */
 
 const projectCreatedDay = dayOf(softwareProjects.createdAt);
 const activityDay = dayOf(softwareTimelineEvents.eventDate);
 const activityAuthor = sql`coalesce(nullif(btrim(${softwareTimelineEvents.authorName}), ''), nullif(btrim(${softwareTimelineEvents.author}), ''), '(Sem autoria)')`;
-const activityProject = sql`coalesce((select project.name from "chamados"."software_projects" as project where project.id = "chamados"."software_timeline_events"."project_id"), '(Sem sistema)')`;
+const activityProject = sql`coalesce((select project.name from "software"."software_projects" as project where project.id = "software"."software_timeline_events"."project_id"), '(Sem sistema)')`;
 const eventDay = sql`${softwareScheduleEvents.date}::date`;
 const eventAuthor = sql`coalesce(nullif(btrim(${softwareScheduleEvents.createdByName}), ''), ${softwareScheduleEvents.createdBy})`;
-const eventProject = sql`coalesce((select project.name from "chamados"."software_projects" as project where project.id = "chamados"."software_schedule_events"."project_id"), '(Sem sistema)')`;
+const eventProject = sql`coalesce((select project.name from "software"."software_projects" as project where project.id = "software"."software_schedule_events"."project_id"), '(Sem sistema)')`;
 
 /* ------------------------------------------------------------------ manutenção */
 
 const itemCreatedDay = dayOf(inventoryItems.createdAt);
 const stockMovementDay = dayOf(inventoryMovements.createdAt);
-const stockItem = sql`coalesce((select item.name from "chamados"."inventory_items" as item where item.id = "chamados"."inventory_movements"."item_id"), '(Sem produto)')`;
+const stockItem = sql`coalesce((select item.name from "inventory"."inventory_items" as item where item.id = "inventory"."inventory_movements"."item_id"), '(Sem produto)')`;
 const quoteCreatedDay = dayOf(maintenanceQuotes.createdAt);
 const quoteDecidedDay = dayOf(maintenanceQuotes.decidedAt);
 
@@ -337,7 +337,7 @@ export const SOURCE_TABLES: Record<DataSourceKey, SourceTable> = {
   },
   maintenanceSchedules: {
     table: maintenanceSchedules,
-    inCirculation: sql`${maintenanceSchedules.archivedAt} is null and exists (select 1 from "chamados"."computers" as machine where machine.id = "chamados"."maintenance_schedules"."computer_id" and machine.is_archived = false and machine.disposed_at is null)`,
+    inCirculation: sql`${maintenanceSchedules.archivedAt} is null and exists (select 1 from "inventory"."computers" as machine where machine.id = "maintenance"."maintenance_schedules"."computer_id" and machine.is_archived = false and machine.disposed_at is null)`,
     fields: {
       machine: { expression: scheduleMachine, type: 'text' },
       scheduledFor: { expression: scheduleDay, type: 'date' },
@@ -417,7 +417,7 @@ export const SOURCE_TABLES: Record<DataSourceKey, SourceTable> = {
   },
   softwareActivity: {
     table: softwareTimelineEvents,
-    inCirculation: sql`exists (select 1 from "chamados"."software_projects" as project where project.id = "chamados"."software_timeline_events"."project_id" and project.archived_at is null)`,
+    inCirculation: sql`exists (select 1 from "software"."software_projects" as project where project.id = "software"."software_timeline_events"."project_id" and project.archived_at is null)`,
     fields: {
       type: { expression: sql`${softwareTimelineEvents.type}`, type: 'enum' },
       author: { expression: activityAuthor, type: 'text', person: 'name' },

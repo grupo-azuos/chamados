@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { inventorySchema } from './schemas.schema';
 import { computers } from './computers.schema';
 
 /**
@@ -13,7 +13,7 @@ import { computers } from './computers.schema';
  * prateleira), fecha o período anterior e abre o novo. Nenhuma tela precisa lembrar de gravar.
  * Vale daqui para frente: o ponto de partida é o responsável de cada máquina no dia da migration.
  */
-export const computerResponsibleHistory = chamadosSchema.table(
+export const computerResponsibleHistory = inventorySchema.table(
   'computer_responsible_history',
   {
     id: serial('id').primaryKey(),

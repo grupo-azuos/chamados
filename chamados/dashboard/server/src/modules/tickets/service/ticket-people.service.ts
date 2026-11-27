@@ -29,6 +29,28 @@ export class TicketPeopleService {
     private readonly histories: TicketHistoriesRepository,
   ) {}
 
+  /**
+   * O DIRETÓRIO DE ROSTOS da tela: todas as pessoas do admin-console com a foto — não só quem tem
+   * acesso a este sistema. Um técnico que entra como super-admin, ou quem saiu da lista de acesso
+   * mas segue nos registros antigos, também tem rosto: o card mostra a FOTO, nunca as iniciais de
+   * quem tem foto. A lista de acesso entra junto, para o diretório completo fora do ar não
+   * apagar as fotos de quem trabalha aqui.
+   */
+  async directoryWithPhotos(): Promise<TicketPerson[]> {
+    const [everyone, access] = await Promise.all([
+      this.directory.listAllUsers().catch(() => []),
+      this.directory.listUsers().catch(() => []),
+    ]);
+    const byId = new Map<string, TicketPerson>();
+    for (const user of [...access, ...everyone]) {
+      const current = byId.get(user.id);
+      const avatarUrl = user.image ?? current?.avatarUrl ?? null;
+      byId.set(user.id, { id: user.id, name: displayName(user), avatarUrl });
+    }
+
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }
+
   /** Todas as pessoas ativas do admin-console, em ordem alfabética — o seletor de vínculo. */
   async options(): Promise<TicketPerson[]> {
     const users = await this.directory.listUsers();

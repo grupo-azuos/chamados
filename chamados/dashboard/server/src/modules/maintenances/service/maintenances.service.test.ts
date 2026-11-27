@@ -18,10 +18,16 @@ import {
 import { MaintenancesService } from './maintenances.service';
 
 /** Ana registra as manutenções nestes testes — dona do registro em `row()`. */
-const owner: RequestUser = { id: '1', email: 'ana@empresa.com.br', name: 'Ana', role: 'user' };
+const owner: RequestUser = { id: '1', email: 'ana@empresa.com.br', name: 'Ana', role: 'admin' };
 
 /** Bia tem o mesmo papel, mas não registrou nada: separa "meu" de "dos outros". */
-const otherUser: RequestUser = { ...owner, id: '2', email: 'bia@empresa.com.br', name: 'Bia' };
+const otherUser: RequestUser = {
+  ...owner,
+  id: '2',
+  email: 'bia@empresa.com.br',
+  name: 'Bia',
+  role: 'user',
+};
 
 const manager: RequestUser = { ...otherUser, id: '3', name: 'Caio', role: 'manager' };
 
@@ -314,13 +320,15 @@ describe('MaintenancesService.update', () => {
     );
   });
 
-  it('lets a manager fix a record registered by someone else', async () => {
+  /* Só o administrador edita: o gestor acompanha pelos painéis e consulta. */
+  it('refuses a manager, who only follows the panels, without writing anything', async () => {
     const update = vi.fn();
     const service = makeService({ findById: vi.fn().mockResolvedValue(row()), update });
 
-    await service.update(manager, 1, { description: 'Corrigido' });
-
-    expect(update).toHaveBeenCalled();
+    await expect(service.update(manager, 1, { description: 'Corrigido' })).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(update).not.toHaveBeenCalled();
   });
 
   // triste
@@ -378,7 +386,7 @@ describe('MaintenancesService.restore', () => {
       .mockResolvedValueOnce(row());
     const service = makeService({ findById, setArchived });
 
-    const restored = await service.restore(manager, 1);
+    const restored = await service.restore(owner, 1);
 
     expect(setArchived).toHaveBeenCalledWith(1, false, null);
     expect(restored.archive).toBeNull();

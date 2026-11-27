@@ -2,11 +2,10 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { currentVersion, validateTag } from "./version.mjs";
+import { checkVersion, validateTag } from "./version.mjs";
 
-const commitScript = resolve(import.meta.dirname, "commit-bump.mjs");
 function fixture() {
   const directory = mkdtempSync(join(tmpdir(), "release-git-"));
   const origin = join(directory, "origin.git"),
@@ -72,44 +71,16 @@ test("accepts main tag, rejects off-main tag and mismatched checkout", () => {
   }
 });
 
-test("commits only version files to main and develop and is idempotent", () => {
+test("releases only a commit that already carries the tagged version", () => {
   const f = fixture();
   try {
-    // feliz: o commit remoto avança normalmente; a tag original não é movida.
-    f.git("tag", "agent/v1.2.3");
-    const tagged = f.git("rev-parse", "agent/v1.2.3");
-    execFileSync(process.execPath, [commitScript, "agent/v1.2.3"], {
-      cwd: f.checkout,
-      stdio: "pipe",
+    // feliz: o commit da tag tem a versão nos arquivos
+    assert.deepEqual(checkVersion(f.checkout, "agent/v0.1.0"), {
+      component: "agent",
+      version: "0.1.0",
     });
-    for (const branch of ["main", "develop"]) {
-      const data = JSON.parse(
-        f.git("show", `origin/${branch}:chamados/agent/wails.json`),
-      );
-      assert.equal(data.info.productVersion, "1.2.3");
-      assert.equal(
-        f.git("show", `origin/${branch}:unrelated.txt`),
-        "keep this content",
-      );
-      assert.match(
-        f.git("log", "-1", "--format=%s", `origin/${branch}`),
-        /^\[chore\]\(agent\):/,
-      );
-    }
-    assert.equal(f.git("rev-parse", "agent/v1.2.3"), tagged);
-    const head = f.git("rev-parse", "origin/main");
-    execFileSync(process.execPath, [commitScript, "agent/v1.2.3"], {
-      cwd: f.checkout,
-      stdio: "pipe",
-    });
-    assert.equal(f.git("rev-parse", "origin/main"), head);
-    // triste: retry de versão antiga não rebaixa branches com versão maior.
-    execFileSync(process.execPath, [commitScript, "agent/v1.0.0"], {
-      cwd: f.checkout,
-      stdio: "pipe",
-    });
-    assert.equal(f.git("rev-parse", "origin/main"), head);
-    assert.equal(currentVersion(f.checkout, "agent"), "0.1.0");
+    // triste: tag sem o commit de versão é recusada
+    assert.throws(() => checkVersion(f.checkout, "agent/v1.2.3"), /bump the version files/);
   } finally {
     rmSync(f.directory, { recursive: true });
   }

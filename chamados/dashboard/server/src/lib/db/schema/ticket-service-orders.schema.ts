@@ -2,7 +2,7 @@ import { TICKET_STATUSES } from '@template/shared/domain/ticket-status.util';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { ticketsSchema } from './schemas.schema';
 
 import { tickets } from './tickets.schema';
 
@@ -22,7 +22,7 @@ function valuesFor(values: readonly string[]) {
  * emitido assim" que se reescreve não prova nada. Quem garante é o BANCO: um gatilho recusa
  * `update` e `delete` nesta tabela (migration `ticket_records_append_only`).
  */
-export const ticketServiceOrders = chamadosSchema.table(
+export const ticketServiceOrders = ticketsSchema.table(
   'ticket_service_orders',
   {
     id: serial('id').primaryKey(),

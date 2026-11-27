@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { ticketsSchema } from './schemas.schema';
 
 import { computers } from './computers.schema';
 import { inventoryItems } from './inventory-items.schema';
@@ -31,7 +31,7 @@ function valuesFor(values: readonly string[]) {
  * `restrict` na peça, como em `part_movements`: peça com histórico não se apaga. `cascade` no
  * produto, como em `inventory_movements`: excluir o produto leva o extrato junto.
  */
-export const ticketStockItems = chamadosSchema.table(
+export const ticketStockItems = ticketsSchema.table(
   'ticket_stock_items',
   {
     id: serial('id').primaryKey(),

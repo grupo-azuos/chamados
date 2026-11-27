@@ -2,7 +2,7 @@ import { isNull, sql } from 'drizzle-orm';
 import { check, index, integer, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { ticketsSchema } from './schemas.schema';
 import { tickets } from './tickets.schema';
 
 /**
@@ -11,7 +11,7 @@ import { tickets } from './tickets.schema';
  * Permite relacionar múltiplos chamados (duplicados, desdobramentos ou chamados
  * correlacionados ao mesmo incidente).
  */
-export const ticketRelations = chamadosSchema.table(
+export const ticketRelations = ticketsSchema.table(
   'ticket_relations',
   {
     id: serial('id').primaryKey(),

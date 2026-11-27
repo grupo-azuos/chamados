@@ -7,7 +7,7 @@ import {
 import { index, jsonb, serial, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { dashboardSchema } from './schemas.schema';
 
 /**
  * OS PAINÉIS MONTADOS — por MÓDULO e por contexto: em cada módulo, `team` e `manager` têm um só
@@ -18,7 +18,7 @@ import { chamadosSchema } from './chamados.schema';
  * garante só que não há dois painéis no mesmo lugar. `nullsNotDistinct`: sem ele, o Postgres
  * deixaria dois painéis da Equipe (dono nulo nos dois) no mesmo módulo.
  */
-export const dashboardBoards = chamadosSchema.table(
+export const dashboardBoards = dashboardSchema.table(
   'dashboard_boards',
   {
     id: serial('id').primaryKey(),
@@ -46,7 +46,7 @@ export type DashboardBoardRow = typeof dashboardBoards.$inferSelect;
  * criou vê; `shared` o módulo vê, e só quem criou (ou o administrador do módulo) muda. Não se
  * apagam: arquivam.
  */
-export const savedFilters = chamadosSchema.table(
+export const savedFilters = dashboardSchema.table(
   'saved_filters',
   {
     id: uuid('id').primaryKey().defaultRandom(),

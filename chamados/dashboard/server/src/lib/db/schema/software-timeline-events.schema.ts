@@ -14,7 +14,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { softwareSchema } from './schemas.schema';
 
 import { softwareProjects } from './software-projects.schema';
 
@@ -25,7 +25,7 @@ function valuesFor(values: readonly string[]) {
 /**
  * Eventos da Timeline dos Sistemas (Pull Requests do GitHub, releases, deploys e issues).
  */
-export const softwareTimelineEvents = chamadosSchema.table(
+export const softwareTimelineEvents = softwareSchema.table(
   'software_timeline_events',
   {
     id: serial('id').primaryKey(),

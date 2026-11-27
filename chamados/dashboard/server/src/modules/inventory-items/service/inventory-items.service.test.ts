@@ -32,13 +32,13 @@ vi.mock('./inventory-photo.util', () => ({
   }),
 }));
 
-/* Quem cuida da Manutenção: cargo de GESTÃO na área, que é o que deixa mexer no inventário. */
+/* Quem cuida da Manutenção: ADMINISTRADOR na área, o único cargo que mexe no inventário. */
 const keeper: RequestUser = {
   id: '1',
   email: 'ana@empresa.com.br',
   name: 'Ana',
   role: 'user',
-  roles: { infra: 'user', sistema: 'user', manutencao: 'manager' },
+  roles: { infra: 'user', sistema: 'user', manutencao: 'admin' },
 };
 
 /* Mesmo papel geral, cargo de CONSULTA na Manutenção: vê o inventário, não mexe nele. */

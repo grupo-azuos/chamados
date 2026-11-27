@@ -29,6 +29,8 @@ name = "homo_chamados"
 description = "Imagem azuos/chamados de homologação, construída no homo"
 tags = ["context:apps", "env:homo", "server:homo"]
 [build.config]
+version = "1.0.2"
+auto_increment_version = false
 builder = "homo"
 linked_repo = "homo_chamados"
 webhook_enabled = false
@@ -43,6 +45,7 @@ labels = """
 org.opencontainers.image.source=https://github.com/grupo-azuos/chamados
 azuos.app=chamados
 azuos.environment=homo
+azuos.version=1.0.2
 """
 links = ["https://chamados.homo.grupoazuos.com.br"]
 
@@ -129,6 +132,8 @@ name = "homo_chamados-bot"
 description = "Imagem azuos/chamados-bot de homologação: o bot do WhatsApp"
 tags = ["context:apps", "env:homo", "server:homo"]
 [build.config]
+version = "1.0.2"
+auto_increment_version = false
 builder = "homo"
 linked_repo = "homo_chamados"
 webhook_enabled = false
@@ -143,6 +148,7 @@ labels = """
 org.opencontainers.image.source=https://github.com/grupo-azuos/chamados
 azuos.app=chamados-bot
 azuos.environment=homo
+azuos.version=1.0.2
 """
 
 [[stack]]
@@ -240,6 +246,8 @@ name = "prod_chamados"
 description = "Imagem azuos/chamados de produção, construída no core"
 tags = ["context:apps", "env:core", "server:core"]
 [build.config]
+version = "1.0.2"
+auto_increment_version = false
 builder = "prod"
 linked_repo = "prod_chamados"
 webhook_enabled = false
@@ -254,6 +262,7 @@ labels = """
 org.opencontainers.image.source=https://github.com/grupo-azuos/chamados
 azuos.app=chamados
 azuos.environment=prod
+azuos.version=1.0.2
 """
 links = ["https://chamados.grupoazuos.com.br"]
 
@@ -340,6 +349,8 @@ name = "prod_chamados-bot"
 description = "Imagem azuos/chamados-bot de produção: o bot do WhatsApp"
 tags = ["context:apps", "env:core", "server:core"]
 [build.config]
+version = "1.0.2"
+auto_increment_version = false
 builder = "prod"
 linked_repo = "prod_chamados"
 webhook_enabled = false
@@ -354,6 +365,7 @@ labels = """
 org.opencontainers.image.source=https://github.com/grupo-azuos/chamados
 azuos.app=chamados-bot
 azuos.environment=prod
+azuos.version=1.0.2
 """
 
 [[stack]]

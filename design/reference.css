@@ -1,0 +1,480 @@
+/* Padrão Cupertino · acabamento Nenhum
+ * Referência tirada da prévia do brand design kit. As classes .pv-* são da prévia: use como
+ * modelo nos componentes do projeto, sempre com os tokens (design/tokens.css).
+ * Requer Tailwind v4 com design/tailwind.css importado (usa @apply, --alpha() e as cores de token).
+ * As texturas (grain.svg, paper.svg) não vão no kit: troque o url() pelo arquivo do projeto. */
+
+/*
+ * A estrutura da prévia (`.pv`). Forma, borda, sombra, densidade, tipografia, movimento e foco
+ * vêm das variáveis `--pv-*` do padrão escolhido (theme/patterns.ts, aplicadas no `style` do
+ * `.pv`); os valores daqui são o padrão Simples, usado quando nenhuma variável é passada.
+ * `patterns.css` acrescenta o que é próprio de cada padrão e `styles.css` os acabamentos.
+ *
+ * Requer Tailwind v4 com o tema de cores do kit (`design/tailwind.css`): as regras usam @apply
+ * com as classes de token (`bg-card`, `text-primary-strong`…).
+ */
+.pv {
+	--pv-shape-control: 10px;
+	--pv-shape-button: 10px;
+	--pv-shape-card: 12px;
+	--pv-shape-chip: 9999px;
+	--pv-shape-badge: 9999px;
+	--pv-border-width: 1px;
+	--pv-border-style: solid;
+	--pv-card-border-color: var(--color-border);
+	--pv-card-background: var(--color-card);
+	--pv-input-border-width: 1px;
+	--pv-input-bg: var(--color-background);
+	--pv-elevation-card: none;
+	--pv-elevation-button: none;
+	--pv-control-height: 40px;
+	--pv-heading-weight: 700;
+	--pv-heading-tracking: -0.025em;
+	--pv-heading-case: none;
+	--pv-body-size: 1rem;
+	--pv-motion-duration: 250ms;
+	--pv-motion-easing: cubic-bezier(0.2, 0, 0, 1);
+	--pv-focus-width: 2px;
+	--pv-focus-color: var(--color-ring);
+	--pv-link-decoration: underline;
+	--font-sans: var(--brand-font-sans);
+	--font-heading: var(--brand-font-heading);
+
+	@apply relative isolate overflow-hidden bg-background font-sans text-foreground;
+	font-size: var(--pv-body-size);
+}
+
+.pv :where(*) {
+	@apply transition-[background-color,color,border-color,box-shadow,border-radius,transform];
+	transition-duration: var(--pv-motion-duration);
+	transition-timing-function: var(--pv-motion-easing);
+}
+
+/* O conteúdo fica acima dos fundos decorativos (::before/::after dos padrões e acabamentos). */
+.pv > * {
+	@apply relative z-1;
+}
+
+.pv :where(h3, h4) {
+	@apply font-heading;
+	font-weight: var(--pv-heading-weight);
+	letter-spacing: var(--pv-heading-tracking);
+	text-transform: var(--pv-heading-case);
+}
+
+.pv :where(button, input, a):focus-visible {
+	outline: var(--pv-focus-width) solid var(--pv-focus-color);
+	outline-offset: 2px;
+}
+
+/* ---- estado (selos): cada selo lê --status e --status-soft ---- */
+.pv [data-status='success'] {
+	--status: var(--color-success);
+	--status-soft: var(--color-success-soft);
+}
+
+.pv [data-status='warning'] {
+	--status: var(--color-warning);
+	--status-soft: var(--color-warning-soft);
+}
+
+.pv [data-status='info'] {
+	--status: var(--color-info);
+	--status-soft: var(--color-info-soft);
+}
+
+.pv [data-status='destructive'] {
+	--status: var(--color-destructive);
+	--status-soft: var(--color-destructive-soft);
+}
+
+/* ---- marca ---- */
+.pv-wordmark {
+	@apply inline-flex items-center gap-2 font-heading text-lg font-extrabold tracking-tight;
+}
+
+.pv-wordmark-logo {
+	@apply size-9 object-contain;
+}
+
+.pv-wordmark-tag {
+	@apply rounded-(--pv-shape-badge) bg-primary px-1.5 py-0.5 font-mono text-xs font-bold tracking-wide text-primary-foreground;
+}
+
+/* ---- navegação ---- */
+.pv-nav {
+	@apply flex items-center justify-between gap-3 border-b border-border bg-sidebar px-5 py-3.5 md:px-6;
+}
+
+.pv-links {
+	@apply hidden gap-5 text-sm text-muted-foreground md:flex;
+
+	& [aria-current='page'] {
+		@apply font-semibold text-primary-strong;
+	}
+}
+
+/* ---- hero ---- */
+.pv-hero {
+	@apply px-4 pt-8 pb-6 sm:px-5 sm:pt-10 sm:pb-8 md:px-6 md:pt-14 md:pb-10;
+}
+
+.pv-eyebrow {
+	@apply font-mono text-xs font-bold tracking-widest text-accent-strong uppercase;
+}
+
+.pv-title {
+	@apply mt-3 mb-4 max-w-3xl text-[2rem] leading-none wrap-anywhere sm:text-4xl md:text-5xl lg:text-6xl;
+
+	& mark {
+		@apply bg-transparent text-primary-strong;
+	}
+}
+
+.pv-lead {
+	@apply mb-6 max-w-xl leading-relaxed text-muted-foreground;
+}
+
+/* ---- botões ---- */
+.pv-row {
+	@apply flex flex-wrap items-center gap-2.5;
+}
+
+.pv-row--nowrap {
+	@apply flex-nowrap;
+}
+
+.pv-btn {
+	@apply h-(--pv-control-height) cursor-pointer rounded-(--pv-shape-button) border-transparent bg-transparent px-4 text-sm font-semibold whitespace-nowrap text-foreground;
+	border-width: var(--pv-border-width);
+	border-style: solid;
+	box-shadow: var(--pv-elevation-button);
+}
+
+.pv-btn--primary {
+	@apply bg-primary text-primary-foreground;
+}
+
+.pv-btn--accent {
+	@apply bg-accent-hero text-accent-hero-foreground;
+}
+
+.pv-btn--ghost {
+	@apply border-border;
+	box-shadow: none;
+}
+
+.pv-btn--danger {
+	@apply bg-destructive text-destructive-foreground;
+}
+
+/* ---- conteúdo ---- */
+.pv-body {
+	@apply flex flex-col gap-4 px-4 pb-6 sm:px-5 sm:pb-7 md:px-6;
+}
+
+.pv-cards {
+	@apply grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-4;
+}
+
+.pv-split {
+	@apply grid gap-4 md:grid-cols-[1.3fr_1fr];
+}
+
+.pv-card {
+	@apply relative min-w-0 rounded-(--pv-shape-card) bg-(--pv-card-background) p-4;
+	border: var(--pv-border-width) var(--pv-border-style) var(--pv-card-border-color);
+	box-shadow: var(--pv-elevation-card);
+
+	& h4 {
+		@apply mt-2.5 mb-1.5 text-base;
+	}
+
+	& p {
+		@apply text-sm leading-normal text-muted-foreground;
+	}
+}
+
+.pv-card-title {
+	@apply font-sans text-sm;
+
+	.pv-card & {
+		@apply m-0;
+	}
+}
+
+.pv-card--form {
+	@apply flex flex-col gap-3;
+}
+
+.pv-tags {
+	@apply mt-3 flex flex-wrap gap-1.5;
+
+	& li {
+		@apply rounded-(--pv-shape-chip) bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground;
+	}
+}
+
+.pv-badge {
+	@apply inline-block rounded-(--pv-shape-badge) bg-(--status-soft) px-2.5 py-0.5 font-mono text-xs font-bold tracking-wide text-(--status) uppercase;
+}
+
+/* ---- gráfico ---- */
+.pv-bars {
+	@apply mt-3 flex h-36 items-end gap-2.5;
+
+	& span {
+		@apply flex-1 rounded-t-[min(var(--pv-shape-control),8px)] bg-(--bar) text-(--bar);
+	}
+}
+
+.pv-legend {
+	@apply mt-2.5 flex flex-wrap gap-3 text-xs text-muted-foreground;
+
+	& li::before {
+		content: '';
+		@apply mr-1.5 inline-block size-2.5 rounded-sm bg-(--bar) align-middle;
+	}
+}
+
+/* ---- formulário e texto ---- */
+.pv-input {
+	@apply h-(--pv-control-height) min-w-0 flex-1 rounded-(--pv-shape-control) bg-(--pv-input-bg) px-3 text-sm text-foreground;
+	border-color: var(--color-border);
+	border-style: solid;
+	border-width: var(--pv-input-border-width);
+}
+
+.pv-note {
+	@apply text-sm leading-normal text-muted-foreground;
+}
+
+.pv-link {
+	@apply font-semibold text-primary-strong underline-offset-3;
+	text-decoration-line: var(--pv-link-decoration);
+
+	&:hover {
+		@apply underline;
+	}
+}
+
+.pv-tertiary {
+	@apply text-tertiary-strong;
+}
+
+/* ---- movimento: carregando, progresso, esqueleto, controles e avisos ----
+ * Forma vem de --pv-shape-*, tempo e curva de --pv-motion-* (o padrão decide se é mola, curva
+ * suave ou corte seco). Com "reduzir movimento", tudo para (regra global do layout). */
+.pv-motion {
+	@apply grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-4;
+}
+
+.pv-card--stack {
+	@apply flex flex-col gap-3;
+}
+
+.pv-sr-status {
+	@apply sr-only;
+}
+
+.pv-btn--icon {
+	@apply inline-flex items-center gap-2;
+}
+
+.pv-spin {
+	@apply animate-spin;
+}
+
+.pv-spinner {
+	@apply inline-block size-6 animate-spin rounded-full border-3 border-muted border-t-primary;
+}
+
+.pv-progress-label {
+	@apply flex justify-between text-xs text-muted-foreground;
+}
+
+.pv-progress {
+	@apply relative h-2 overflow-hidden rounded-(--pv-shape-chip) bg-muted;
+
+	& span {
+		@apply absolute inset-y-0 left-0 rounded-(--pv-shape-chip) bg-primary;
+	}
+}
+
+.pv-progress--indeterminate span {
+	@apply w-2/5;
+	animation: pv-indeterminate 1.4s var(--pv-motion-easing) infinite;
+}
+
+@keyframes pv-indeterminate {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(260%);
+	}
+}
+
+.pv-skeleton {
+	@apply block h-3 animate-pulse rounded-(--pv-shape-control) bg-muted;
+}
+
+.pv-skeleton-row {
+	@apply flex items-center gap-3;
+}
+
+.pv-skeleton--avatar {
+	@apply size-10 shrink-0 rounded-(--pv-shape-badge);
+}
+
+.pv-skeleton--block {
+	@apply h-16 rounded-(--pv-shape-card);
+}
+
+.pv-switch-row {
+	@apply flex items-center justify-between gap-3 text-sm;
+}
+
+/* O switch tem alvo de 40px (a área clicável), com o trilho desenhado menor por dentro. */
+.pv-switch {
+	@apply relative h-(--pv-control-height) w-14 shrink-0 cursor-pointer bg-transparent;
+
+	&::before {
+		content: '';
+		@apply absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 rounded-(--pv-shape-chip) bg-muted;
+		border: var(--pv-border-width) solid var(--color-border);
+		transition: background-color var(--pv-motion-duration) var(--pv-motion-easing);
+	}
+
+	& span {
+		@apply absolute top-1/2 left-1 size-5 -translate-y-1/2 rounded-(--pv-shape-chip) bg-muted-foreground;
+		transition:
+			translate var(--pv-motion-duration) var(--pv-motion-easing),
+			background-color var(--pv-motion-duration) var(--pv-motion-easing);
+	}
+
+	&[aria-checked='true']::before {
+		@apply bg-primary;
+	}
+
+	&[aria-checked='true'] span {
+		@apply translate-x-7 bg-primary-foreground;
+	}
+}
+
+/* Abas com indicador que desliza até a opção ativa (--active de 0 a --count - 1). */
+.pv-tabs {
+	@apply relative grid rounded-(--pv-shape-control) bg-muted p-1;
+	grid-template-columns: repeat(var(--count), 1fr);
+
+	& button {
+		@apply relative z-1 h-(--pv-control-height) cursor-pointer text-sm font-medium text-muted-foreground;
+
+		&[aria-pressed='true'] {
+			@apply text-foreground;
+		}
+	}
+}
+
+.pv-tabs-indicator {
+	@apply absolute inset-y-1 left-1 rounded-(--pv-shape-button) bg-card;
+	box-shadow: var(--pv-elevation-button);
+	width: calc((100% - 0.5rem) / var(--count));
+	translate: calc(100% * var(--active)) 0;
+	transition: translate var(--pv-motion-duration) var(--pv-motion-easing);
+}
+
+/* Acordeão nativo; onde o navegador suporta, a altura anima até o conteúdo. */
+.pv-accordion {
+	@apply rounded-(--pv-shape-control) bg-muted px-3 text-sm;
+	interpolate-size: allow-keywords;
+
+	& summary {
+		@apply flex h-(--pv-control-height) cursor-pointer list-none items-center justify-between font-medium;
+	}
+
+	& summary::-webkit-details-marker {
+		display: none;
+	}
+
+	& p {
+		@apply pb-3 text-sm leading-normal text-muted-foreground;
+	}
+
+	&::details-content {
+		@apply h-0 overflow-hidden;
+		transition:
+			height var(--pv-motion-duration) var(--pv-motion-easing),
+			content-visibility var(--pv-motion-duration) allow-discrete;
+	}
+
+	&[open]::details-content {
+		height: auto;
+	}
+
+	&[open] .pv-accordion-icon {
+		@apply rotate-180;
+	}
+}
+
+.pv-accordion-icon {
+	transition: rotate var(--pv-motion-duration) var(--pv-motion-easing);
+}
+
+.pv-notice {
+	@apply flex items-start gap-2.5 rounded-(--pv-shape-card) bg-info-soft p-3 text-sm text-info;
+	border: var(--pv-border-width) var(--pv-border-style) currentColor;
+}
+
+.pv-live,
+.pv-typing {
+	@apply flex items-center gap-2 text-sm text-muted-foreground;
+}
+
+/* Ponto "ao vivo": o anel pulsa (ping) em volta de um ponto fixo. */
+.pv-live-dot {
+	@apply relative inline-flex size-2.5;
+
+	&::before {
+		content: '';
+		@apply absolute inset-0 animate-ping rounded-full bg-success opacity-70;
+	}
+
+	& span {
+		@apply relative inline-flex size-2.5 rounded-full bg-success;
+	}
+}
+
+.pv-typing-dots {
+	@apply inline-flex items-end gap-1;
+
+	& span {
+		@apply size-1.5 animate-bounce rounded-full bg-muted-foreground;
+	}
+
+	& span:nth-child(2) {
+		animation-delay: 120ms;
+	}
+
+	& span:nth-child(3) {
+		animation-delay: 240ms;
+	}
+}
+
+/* Cartões de projeto sobem um pouco no hover, no tempo e na curva do padrão. */
+.pv-cards .pv-card:hover {
+	@apply -translate-y-1;
+}
+
+/* @pattern cupertino — barra translúcida com desfoque e cantos contínuos (squircle). */
+.pv[data-pattern='cupertino'] {
+	& .pv-nav {
+		@apply border-b-border/60 bg-card/70 backdrop-blur-xl;
+	}
+
+	@supports (corner-shape: squircle) {
+		& :is(.pv-btn, .pv-card, .pv-input) {
+			corner-shape: squircle;
+		}
+	}
+}

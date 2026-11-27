@@ -50,11 +50,10 @@ export async function resetDatabase(): Promise<void> {
 
   const opened = await openDatabase(requireDatabaseUrl());
   try {
-    /* Só as tabelas DESTE sistema: a conexão procura no schema `chamados` (ver
-       `open-database.util.ts`), e o resto do banco é dos outros sistemas da casa. */
+    /* Só as tabelas DESTE sistema, cada uma no schema do assunto dela (ver `schemas.schema.ts`). */
     /* `cascade` leva junto as amostras e os alertas, que só existem presos a um computador. */
     await opened.db.execute(
-      sql`truncate table tickets, computers, computer_transfers, maintenances, parts, part_movements, network_events restart identity cascade`,
+      sql`truncate table tickets.tickets, inventory.computers, inventory.computer_transfers, maintenance.maintenances, inventory.parts, inventory.part_movements, inventory.network_events restart identity cascade`,
     );
   } finally {
     await opened.close();

@@ -21,44 +21,56 @@ validar uma ideia, e conta com você para escrever o código no padrão da casa.
 
 ## MODO ADMIN vs MODO PADRÃO
 
-Este repositório possui dois modos de operação para o git e o Claude:
+Este repositório tem dois modos de operação para o git e para o Claude:
 
 - **Modo Padrão (usuário/desenvolvedor comum):**
   A pessoa é leiga ou está desenvolvendo features de rotina. Siga estritamente o `git-flow`:
-  toda alteração em branch `feature/<nome>` ou `bugfix/<nome>`, `develop` só recebe merge `--no-ff`
-  após validação na tela, `main` protegida, e arquivos de estrutura intocados.
+  toda alteração em branch `feature/<nome>` ou `bugfix/<nome>`, `develop` só recebe merge
+  `--no-ff` após validação na tela, `main` protegida, e arquivos de estrutura intocados.
 
 - **Modo Admin (`git config project.admin true` ativo):**
   Quem está operando é o **administrador do projeto**.
   Para verificar se está ativo: `git config --get project.admin` (retorna `true`).
-  Se o usuário pedir para ativar o modo admin: execute `git config project.admin true`.
-  Se o usuário pedir para desativar: execute `git config --unset project.admin`.
+  Se o usuário pedir para ativar: execute `git config project.admin true`.
+  Se pedir para desativar: execute `git config --unset project.admin`.
 
-  **Quando o Modo Admin estiver ativo, o Claude tem autonomia total e obedece aos comandos de git solicitados:**
+  **Com o Modo Admin ativo, o Claude tem autonomia total e obedece aos comandos de git pedidos:**
   1. **Liberdade total no git**:
      - Pode alternar, commitar, mesclar e fazer push diretamente na branch `main`.
-     - Pode commitar diretamente na `develop` ou criar releases/hotfixes conforme o Git-Flow do Tower.
-     - Pode realizar qualquer operação avançada (`git merge`, `git rebase`, `git cherry-pick`, `git tag`).
+     - Pode commitar direto na `develop` ou criar releases/hotfixes conforme o Git-Flow.
+     - Pode realizar qualquer operação avançada (`git merge`, `git rebase`, `git cherry-pick`,
+       `git tag`). Versão nova e tag seguem a skill `release-standard` (`npm run release`): a tag
+       é sempre `prod/vX.Y.Z`, criada pelo script, e o pre-push recusa outra.
      - A validação de identidade e métricas não pode ser desativada, inclusive em modo admin.
-     - Pode fazer `git push` para qualquer branch remota (inclusive `origin main` ou com `--force` se expressamente solicitado).
+     - Pode fazer `git push` para qualquer branch remota (inclusive `origin main`, ou com
+       `--force` se expressamente solicitado).
   2. **Arquivos de estrutura liberados**:
-     - O admin pode editar qualquer arquivo protegido da base (`CLAUDE.md`, `.claude/`, regras de lint, `tsconfig`, scripts git, CI, Docker). Os hooks do Claude (`protect-paths.mjs`) e do git (`branch-guard.sh`) reconhecem o admin e não bloqueiam.
+     - O admin pode editar qualquer arquivo protegido da base (`CLAUDE.md`, `.claude/`, regras
+       de lint, `tsconfig`, scripts git, CI, Docker). Os hooks do Claude (`protect-paths.mjs`) e
+       do git (`branch-guard.sh`) reconhecem o admin e não bloqueiam.
   3. **Fluxo flexível**:
-     - Se o admin quiser criar uma branch de feature normal, segue o fluxo; se quiser commitar direto ou mexer na `main`, faça o que o admin pedir.
+     - Se o admin quiser uma branch de feature normal, segue o fluxo; se quiser commitar direto
+       ou mexer na `main`, faça o que o admin pedir.
 
-## REGRA DE OURO — git (vale para Modo Padrão)
+  A configuração fica no `.git/config` daquele clone e **não é versionada** — por isso não vaza
+  para a máquina de mais ninguém.
+
+## REGRA DE OURO — git (vale para o Modo Padrão)
 
 Siga a skill **`git-flow`** sempre que não estiver em Modo Admin com instruções diretas:
 
 1. **Antes de editar qualquer arquivo**, a mudança ganha uma branch `feature/<nome>` (ou
    `bugfix/<nome>`) criada **a partir da `develop`**.
 2. O trabalho é commitado **nessa branch** (`git-commit`).
-3. No fim: trazer a `develop` para a branch (`git merge develop`), rodar `verify`, subir o
-   sistema e mostrar à pessoa **como conferir**.
+3. No fim: trazer a `develop` para a branch (`git merge develop -m "[merge](…): …"` — todo
+   merge leva mensagem no formato, o texto automático do git é recusado), rodar `verify`, subir
+   o sistema e mostrar à pessoa **como conferir**.
 4. Perguntar: **"Está funcionando do jeito que você queria?"** e **esperar**.
-5. **Só com um OK explícito**: `git merge --no-ff` da branch na `develop` e enviar a develop.
-6. **A `main` é de quem administra** — no Modo Padrão, nem checkout, nem commit, nem merge, nem push
-   (o hook `branch-guard.sh` recusa). Em Modo Admin (`git config project.admin true`), a `main` é totalmente liberada.
+5. **Só com um OK explícito**: `git merge --no-ff -m "[merge](<escopo>): <o que passou a
+existir>"` da branch na `develop` e enviar a develop.
+6. **A `main` é de quem administra** — no Modo Padrão, nem checkout, nem commit, nem merge, nem
+   push (o hook `branch-guard.sh` recusa). Release e hotfix também. Em Modo Admin, a `main` é
+   totalmente liberada.
 7. **Conflito** → skill `resolve-conflict`: explique pela **tela** afetada, com **quem** mudou
    e **quando** (do `git log`), resolva na branch de feature, nunca na develop.
 
@@ -109,22 +121,26 @@ O padrão está em **`CONTRIBUTING.md`**, e ele manda. Os pontos que mais quebra
 
 Antes de começar uma tarefa, veja se há skill para ela em `.claude/skills/` e siga-a:
 
-| Pedido | Skill | Atalho pt-BR |
-|---|---|---|
-| Primeira vez no projeto, "como rodo isso?" | `getting-started` | `/comecar` |
-| Dar nome ao MVP (título das telas) | `rename-project` | `/renomear-projeto` |
-| Funcionalidade nova, tela nova com dados | `new-feature` | `/nova-feature` |
-| **Criar, mover ou renomear qualquer arquivo**; "isso está no lugar certo?" | `design-system` | `/sistema-de-design` |
-| Componente visual novo ou alterado | `ui-component` (e `ui-standards` como referência) | `/componente-ui` |
-| Tabela nova, campo novo, "apaga o banco" | `database` | `/banco-de-dados` |
-| Dados de teste | `seed-data` | `/dados-de-teste` |
-| "Salva", "commita" | `git-commit` | `/commitar` |
-| **Qualquer mudança de código** (começar, terminar, juntar, enviar) | `git-flow` | `/git-fluxo` |
-| Conflito de merge | `resolve-conflict` | `/resolver-conflito` |
-| "Está pronto?", antes de commit de feature | `verify` | `/verificar` |
-| Erro de ambiente, porta ocupada, instalação | `troubleshoot` | `/socorro` |
-| Dados em outro PC, servidor, internet | `mvp-limits` | `/limites-do-mvp` |
-| Erro estrutural grande, bloqueio de arquivo de estrutura | `support` | `/suporte` |
+| Pedido                                                                     | Skill                                             | Atalho pt-BR         |
+| -------------------------------------------------------------------------- | ------------------------------------------------- | -------------------- |
+| Primeira vez no projeto, "como rodo isso?"                                 | `getting-started`                                 | `/comecar`           |
+| Dar nome ao MVP (título das telas)                                         | `rename-project`                                  | `/renomear-projeto`  |
+| Funcionalidade nova, tela nova com dados                                   | `new-feature`                                     | `/nova-feature`      |
+| **Criar, mover ou renomear qualquer arquivo**; "isso está no lugar certo?" | `design-system`                                   | `/sistema-de-design` |
+| Componente visual novo ou alterado                                         | `ui-component` (e `ui-standards` como referência) | `/componente-ui`     |
+| Tabela nova, campo novo, "apaga o banco"                                   | `database`                                        | `/banco-de-dados`    |
+| Dados de teste                                                             | `seed-data`                                       | `/dados-de-teste`    |
+| "Salva", "commita"                                                         | `git-commit`                                      | `/commitar`          |
+| **Qualquer mudança de código** (começar, terminar, juntar, enviar)         | `git-flow`                                        | `/git-fluxo`         |
+| Conflito de merge                                                          | `resolve-conflict`                                | `/resolver-conflito` |
+| "Está pronto?", antes de commit de feature                                 | `verify`                                          | `/verificar`         |
+| Erro de ambiente, porta ocupada, instalação                                | `troubleshoot`                                    | `/socorro`           |
+| Dados em outro PC, servidor, internet                                      | `mvp-limits`                                      | `/limites-do-mvp`    |
+| Erro estrutural grande, bloqueio de arquivo de estrutura                   | `support`                                         | `/suporte`           |
+| **Versão nova, release, tag, "sobe para produção"** (só quem administra)   | `release-standard`                                | `/lancar-versao`     |
+| **Qualquer campo de escolher** (select, combobox, pessoa, várias pessoas)  | `select-standard`                                 | —                    |
+| Dashboard, gráfico, bloco, "mostrar no painel", fonte de dados             | `dashboard-standard`                              | —                    |
+| **Qualquer escrita** (cadastrar, alterar, arquivar); "quem mudou isso?"    | `history-standard`                                | —                    |
 
 A pessoa pode chamar pelo nome em inglês (`/troubleshoot`) ou pelo atalho em português
 (`/socorro`); os dois fazem o mesmo. `/help` não serve de atalho: é comando nativo do Claude Code.
@@ -188,6 +204,7 @@ npm run db:generate    # depois de mudar tabela
 npm run lint           # ESLint
 npm run typecheck      # TypeScript
 npm test               # unidade + componente
+npm run check:design   # estrutura e design (skill design-system)
 npm run test:e2e -w server   # E2E da API (banco de teste próprio, TEST_DATABASE_URL)
 npm run build          # build de produção
 ```
@@ -222,8 +239,9 @@ use o navegador em http://localhost:5005.
 - Reescrever componente existente além do que foi pedido, ou recriar à mão componente que o shadcn-svelte já tem.
 - Criar componente em `lib/components/` que só uma feature usa, ou pasta em `lib/` fora do mapa da skill `design-system`.
 - Colocar segredo em variável `VITE_` ou em arquivo versionado (`.env`).
+- Acrescentar linha nova à baseline do `check:design` para fazê-la passar — a baseline só diminui.
 - Colocar dado real de pessoa ou cliente em seed, story ou teste.
-- Dizer que terminou sem ter rodado `lint`, `typecheck` e os testes do que mudou (a menos que o admin tenha pedido especificamente para ignorar).
+- Dizer que terminou sem ter rodado `lint`, `typecheck`, `check:design` e os testes do que mudou (a menos que o admin tenha pedido especificamente para ignorar).
 
 ## Identificação e métricas
 
@@ -255,12 +273,45 @@ O menu (app-shell) e a tela "Meu perfil" são **iguais nos 13 sistemas do Grupo 
 
 ## REGRAS DE UI DO GRUPO — ABSOLUTAS
 
-- **Borda colorida é proibida em qualquer componente** (faixa lateral/topo, contorno no tom,
-  barra colorida, anel de seleção). Cor de card vem do FUNDO: `AzuosToneCard` (`static` só
-  colorido; `interactive` com o hover-fill do Chamados); selecionado = fundo na cor cheia. Ficam
-  só a borda neutra, o anel de foco e os spinners.
+- **Padrão Apple, um só visual** (regras completas em `.claude/rules/design-governance.md`):
+  card **sem borda** sobre o fundo cinza, separado pelo fio de 1px e pela sombra difusa
+  (`shadow-card`); cantos grandes; botões e chips em pílula; fonte do sistema. A cor do assunto
+  fica no **ícone cheio** (`rounded-icon`), no status e no gráfico — nunca no fundo do card, na
+  borda ou no número. Hover destaca (sobe, sombra, véu neutro) e **nunca cobre informação**.
+  Borda colorida é proibida; borda só como divisória.
 - **Nunca `<select>` nativo**: sempre o combobox/seletor do projeto.
 - **Pessoa sempre com a foto**: o rosto é o `AzuosPersonAvatar`, que acha a foto no diretório de
   pessoas pelo id (ou pelo nome, quando o registro só guardou o nome). Nunca `avatarUrl: null` à mão
   nem rosto montado com `ui/avatar` — a regra `person-photo` do `check:design` recusa.
+- **Ações duplas em arquivos (Download + Abrir via hyperlink)**: sempre que houver função de
+  arquivo, o sistema deve fornecer duas ações: download (`download={fileName}`) e abrir via
+  hyperlink em nova aba (`target="_blank" rel="noopener noreferrer"`). Componentes canônicos:
+  `AzuosFileLinks` e `AzuosAttachmentList`.
+- **Anexo de arquivos com Ctrl+V**: qualquer campo ou local de anexar arquivos (como
+  `AzuosAttachmentPicker`) deve obrigatoriamente aceitar colar arquivos via `Ctrl+V` (captura
+  direta de imagens/prints e arquivos do clipboard).
 - Checado no hook e no CI (`check:design`). Exceção só pelo suporte (Central de Chamados).
+
+## CAMPOS DE ESCOLHA, DASHBOARD E HISTÓRICO — PADRÃO DO GRUPO
+
+- **Campo de escolher — pergunte antes** (skill `select-standard`): é pessoa? várias? quantas
+  opções? dá para cadastrar ali mesmo? A régua decide, nesta ordem: **pessoa** →
+  `AzuosPersonPickerField` (sempre, com foto, guarda o id; sem outra opção); **várias pessoas** →
+  `AzuosPersonMultiPickerField`; **cadastrar ali mesmo** → combobox com "Cadastrar «termo»";
+  **mais de 10 opções** → combobox com busca; **até 10** → seletor simples. Opção de pessoa
+  montada à mão é recusada no CI (regra `person-field`).
+- **Dashboard** (skill `dashboard-standard`): todo sistema tem, primeiro no menu. O projeto muda
+  só as fontes (`dashboard-sources.ts`, `widget-sources.ts`) e o painel padrão
+  (`default-boards.ts`). O motor e **os gráficos são do suporte** — nem outro administrador
+  mexe: trava no Claude e no git (`protected-structure.txt`).
+- **Histórico** (skill `history-standard`): todo sistema tem a tabela, a API e a tela Histórico,
+  último no menu, exatamente neste padrão. Toda escrita grava uma linha. O projeto muda só o
+  vocabulário em `history.schema.ts`.
+- Faltar a tela, o módulo ou a entrada no menu do Dashboard ou do Histórico reprova o CI (regra
+  `standard-screens`).
+- **Biblioteca nova para algo que outro sistema já resolveu**: use a mesma, na mesma versão
+  (`docs/approved-libraries.md`).
+
+## Promoção para produção
+
+Ao sair do MVP ou preparar deploy, siga `.claude/skills/production-standard/SKILL.md`; nomes, Komodo, imagem e Valkey seguem `.claude/rules/infra.md`. SQLite fica no MVP; PostgreSQL e o Valkey isolado do ambiente são obrigatórios após promoção. O driver do PostgreSQL é sempre `pg` (`drizzle-orm/node-postgres`), nunca `postgres` (postgres.js) — o `production-contract` reprova. Execute `node scripts/production-contract.mjs`.

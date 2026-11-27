@@ -13,10 +13,16 @@ import {
 import { PartsService } from './parts.service';
 
 /** Ana cadastra as peças nestes testes — dona do registro em `partRow()`. */
-const owner: RequestUser = { id: '1', email: 'ana@empresa.com.br', name: 'Ana', role: 'user' };
+const owner: RequestUser = { id: '1', email: 'ana@empresa.com.br', name: 'Ana', role: 'admin' };
 
 /** Bia tem o mesmo papel, mas não cadastrou nada: separa "meu" de "dos outros". */
-const otherUser: RequestUser = { ...owner, id: '2', email: 'bia@empresa.com.br', name: 'Bia' };
+const otherUser: RequestUser = {
+  ...owner,
+  id: '2',
+  email: 'bia@empresa.com.br',
+  name: 'Bia',
+  role: 'user',
+};
 
 const manager: RequestUser = { ...otherUser, id: '3', name: 'Caio', role: 'manager' };
 
@@ -369,7 +375,8 @@ describe('PartsService.removeMovement', () => {
     expect(update).toHaveBeenCalledWith(1, { balance: 0 }, expect.anything());
   });
 
-  it('lets a manager reverse a movement registered by someone else', async () => {
+  /* Só o administrador desfaz: o gestor acompanha pelos painéis e consulta. */
+  it('refuses a manager, who only follows the panels, without reversing anything', async () => {
     const setMovementArchived = vi.fn();
     const service = makeService({
       findMovementById: vi.fn().mockResolvedValue(movementWithRefs()),
@@ -380,9 +387,9 @@ describe('PartsService.removeMovement', () => {
       updateMovement: vi.fn(),
     });
 
-    await service.removeMovement(manager, 10);
+    await expect(service.removeMovement(manager, 10)).rejects.toBeInstanceOf(ForbiddenException);
 
-    expect(setMovementArchived).toHaveBeenCalledWith(10, true, manager.id, expect.anything());
+    expect(setMovementArchived).not.toHaveBeenCalled();
   });
 
   // triste

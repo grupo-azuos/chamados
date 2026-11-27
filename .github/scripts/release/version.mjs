@@ -149,6 +149,20 @@ export function bumpVersion(root, tag) {
     );
 }
 
+/**
+ * A tag só é lançada com a versão já gravada e commitada nos arquivos (skill `release-standard`):
+ * o commit da tag é o commit de versão. Não existe mais bot que grave a versão depois.
+ */
+export function checkVersion(root, tag) {
+  const parsed = parseTag(tag);
+  const current = currentVersion(root, parsed.component);
+  if (current !== parsed.version)
+    throw new Error(
+      `The tagged commit is at ${parsed.component} ${current}: bump the version files to ${parsed.version} and commit them before the tag`,
+    );
+  return parsed;
+}
+
 export function validateTag(root, tag) {
   const parsed = parseTag(tag);
   const git = (...args) =>
@@ -183,8 +197,9 @@ if (
   const parsed =
     command === "validate" ? validateTag(root, tag) : parseTag(tag);
   if (command === "bump") bumpVersion(root, tag);
-  if (!["validate", "bump"].includes(command))
-    throw new Error("Use validate|bump TAG");
+  if (command === "check") checkVersion(root, tag);
+  if (!["validate", "bump", "check"].includes(command))
+    throw new Error("Use validate|bump|check TAG");
   if (process.env.GITHUB_OUTPUT)
     appendFileSync(
       process.env.GITHUB_OUTPUT,

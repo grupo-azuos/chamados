@@ -38,8 +38,10 @@ Para cada ambiente, nesta ordem no arquivo:
 1. `[[repo]] <ambiente>_<app>` — `server`, `repo`, `branch`, `links` para a árvore no GitHub.
 2. `[[build]] <ambiente>_<app>` — `builder`, `linked_repo = "<ambiente>_<app>"`, `build_path`,
    `dockerfile_path = "docker/dockerfile"`, `image_name = "azuos/<app>"`, `image_tag = "<ambiente>"`,
-   só `include_commit_tag = true`, `labels` (`org.opencontainers.image.source`, `azuos.app`,
-   `azuos.environment`) e `links` para o domínio.
+   só `include_commit_tag = true`, `version = "X.Y.Z"` e `auto_increment_version = false` (a versão
+   da tag `prod/v`, gravada pelo `scripts/release.mjs` — skill `release-standard`), `labels`
+   (`org.opencontainers.image.source`, `azuos.app`, `azuos.environment`, `azuos.version`) e `links`
+   para o domínio.
 3. `[[stack]] <ambiente>_<app>` — `swarm`, `project_name = "<ambiente>_<app>"`, `linked_repo`,
    `run_directory`, `file_paths = ["docker/compose.yml"]`,
    `extra_args = ["--resolve-image", "never", "--detach=false"]`,

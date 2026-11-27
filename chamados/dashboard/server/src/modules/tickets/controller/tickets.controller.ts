@@ -215,6 +215,28 @@ export class TicketsController {
     return this.service.listAssigneeOptions(query.area);
   }
 
+  @Get('staff-options')
+  @ApiOperation({
+    summary: 'Lista a equipe do sistema',
+    description:
+      'Gestores e administradores com algum módulo, e os super-admins — quem pode ter feito um serviço (o "Quem fez" da manutenção). O usuário comum não aparece: ele só abre chamado.',
+  })
+  @ApiOkResponse({ type: [TicketAssigneeOptionDto] })
+  async listStaffOptions(): Promise<TicketAssigneeOptionDto[]> {
+    return this.service.listStaffOptions();
+  }
+
+  @Get('people-directory')
+  @ApiOperation({
+    summary: 'Lista o diretório de rostos',
+    description:
+      'Todas as pessoas do admin-console com a foto, para o rosto de qualquer tela achar a foto pelo id ou pelo nome.',
+  })
+  @ApiOkResponse({ type: [TicketPersonDto] })
+  async listPeopleDirectory(): Promise<TicketPersonDto[]> {
+    return this.service.listPeopleDirectory();
+  }
+
   @Get('people-options')
   @ApiOperation({
     summary: 'Lista as pessoas que podem ser vinculadas a um chamado',

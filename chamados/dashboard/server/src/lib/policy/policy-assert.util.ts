@@ -34,7 +34,9 @@ export function assertCanRead(role: UserRole | null | undefined, what: string): 
 export function assertCanCreate(role: UserRole | null | undefined, what: string): void {
   if (canCreate(role)) return;
 
-  throw new ForbiddenException(`Seu perfil não permite criar ${what}.`);
+  throw new ForbiddenException(
+    `Seu perfil não permite criar ${what}: cadastrar é do administrador. Gestor consulta pelos painéis.`,
+  );
 }
 
 /** Atender um chamado: assumir, mudar a situação, registrar o que foi feito. */
@@ -90,7 +92,7 @@ export function assertCanModifyRecord(
   if (canModifyRecord(role, actorEmail, recordEmail)) return;
 
   throw new ForbiddenException(
-    `${what} foi criada por outra pessoa. Só quem criou, um gerente ou um administrador pode alterá-la.`,
+    `${what} só pode ser alterada por um administrador. Seu perfil permite consultar.`,
   );
 }
 

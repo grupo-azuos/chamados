@@ -1,8 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { readFileSync } from 'node:fs';
 
 import { type INestApplication, VersioningType } from '@nestjs/common';
 import { type NextFunction, type Request, type Response } from 'express';
+
+import { findPackageJson } from '../config/server-root';
 
 import { HttpExceptionFilter } from './http-exception.filter';
 
@@ -39,16 +40,6 @@ export function packageVersion(): string {
   ).version;
 
   return cachedVersion;
-}
-
-function findPackageJson(from: string): string {
-  const candidate = join(from, 'package.json');
-  if (existsSync(candidate)) return candidate;
-
-  const parent = dirname(from);
-  if (parent === from) throw new Error(`package.json not found above ${__dirname}`);
-
-  return findPackageJson(parent);
 }
 
 /**

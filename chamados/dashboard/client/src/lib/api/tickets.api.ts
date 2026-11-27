@@ -272,6 +272,12 @@ export const ticketsApi = {
   /** Todas as pessoas ativas do admin-console — quem pode ser vinculado a um chamado. */
   peopleOptions: () => apiRequest<TicketPerson[]>('/tickets/people-options'),
 
+  /** Todas as pessoas com a foto: o diretório de onde o rosto de qualquer tela tira a foto. */
+  peopleDirectory: () => apiRequest<TicketPerson[]>('/tickets/people-directory'),
+
+  /** A equipe do sistema: gestores e administradores com módulo — o "Quem fez" da manutenção. */
+  staffOptions: () => apiRequest<TicketAssigneeOption[]>('/tickets/staff-options'),
+
   /** As pessoas do chamado, no painel: os vinculados e quem pode ser avisado de um andamento. */
   people: (ticketId: number) => apiRequest<TicketPeople>(`/tickets/${ticketId}/people`),
 

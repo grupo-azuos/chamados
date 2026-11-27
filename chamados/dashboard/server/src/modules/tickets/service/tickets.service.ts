@@ -624,6 +624,16 @@ export class TicketsService {
     return rows.map((row) => toMyTicket(row, user.id));
   }
 
+  /** A equipe do sistema — gestores e administradores com módulo, e os super-admins. */
+  async listStaffOptions(): Promise<TicketAssigneeOption[]> {
+    return (await this.assignees?.listStaff()) ?? [];
+  }
+
+  /** Todas as pessoas do admin-console com a foto — de onde o rosto de qualquer tela a tira. */
+  async listPeopleDirectory(): Promise<TicketPerson[]> {
+    return (await this.people?.directoryWithPhotos()) ?? [];
+  }
+
   /** Todas as pessoas ativas do admin-console — quem pode ser vinculado a um chamado. */
   async listPeopleOptions(): Promise<TicketPerson[]> {
     return (await this.people?.options()) ?? [];

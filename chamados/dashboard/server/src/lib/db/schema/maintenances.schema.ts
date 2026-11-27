@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import { check, index, integer, jsonb, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
 import { archiveColumns } from '../archive.util';
-import { chamadosSchema } from './chamados.schema';
+import { maintenanceSchema } from './schemas.schema';
 
 import { computers } from './computers.schema';
 
@@ -28,7 +28,7 @@ function valuesFor(values: readonly string[]) {
  * algum dia alguém apagar um, o banco recusa antes de levar junto a prova de que a empresa
  * gastou três manutenções naquele equipamento.
  */
-export const maintenances = chamadosSchema.table(
+export const maintenances = maintenanceSchema.table(
   'maintenances',
   {
     id: serial('id').primaryKey(),

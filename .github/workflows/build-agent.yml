@@ -31,12 +31,13 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: node .github/scripts/release/version.mjs validate "$RELEASE_TAG"
-      - name: Apply tagged version before compiling
+      # A versão já vem commitada no commit da tag (skill release-standard); aqui só se confere.
+      - name: Check the tagged commit carries the version
         if: inputs.release
         shell: bash
         env:
           RELEASE_TAG: ${{ github.ref_name }}
-        run: node .github/scripts/release/version.mjs bump "$RELEASE_TAG"
+        run: node .github/scripts/release/version.mjs check "$RELEASE_TAG"
       - name: Resolve build version
         id: version
         shell: bash

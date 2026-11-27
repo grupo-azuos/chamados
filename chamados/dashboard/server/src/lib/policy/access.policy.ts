@@ -41,9 +41,13 @@ export function canRead(role: UserRole | null | undefined): boolean {
   return ROLES.includes(role);
 }
 
-/** Criar é de todo mundo: quem só pudesse olhar não teria por que entrar no sistema. */
+/**
+ * Cadastrar nos módulos (computador, manutenção, peça, rede) é do ADMINISTRADOR. O gestor — e o
+ * dono e o gestor da operação, que chegam como gestor — acompanha pelos painéis e consulta; o
+ * usuário só abre chamado, pela Central.
+ */
 export function canCreate(role: UserRole | null | undefined): boolean {
-  return canRead(role);
+  return isAdmin(role);
 }
 
 export function isSuperAdmin(role: UserRole | null | undefined): boolean {
@@ -55,13 +59,11 @@ export function isAdmin(role: UserRole | null | undefined): boolean {
 }
 
 /**
- * Mexer no que é DOS OUTROS — alterar ou excluir registro de outra pessoa.
- *
- * É o que separa `user` de `manager`: os dois trabalham, mas só o segundo responde pelo
- * trabalho alheio.
+ * Alterar ou excluir um registro dos módulos — de quem for. Só o administrador edita: o gestor
+ * consulta, e o usuário não entra nos módulos.
  */
 export function canManageAnyRecord(role: UserRole | null | undefined): boolean {
-  return role === 'manager' || isAdmin(role);
+  return isAdmin(role);
 }
 
 /**
@@ -96,18 +98,16 @@ export function canAttendTicket(role: UserRole | null | undefined): boolean {
 }
 
 /**
- * Alterar ou excluir um registro: o seu, sempre; o de outra pessoa, só gerente ou
- * administrador.
+ * Alterar ou excluir um registro dos módulos: só o administrador — o de quem for. Ser o autor
+ * não dá a um gestor o que o papel dele não dá; quem lançou e deixou de ser administrador pede
+ * a correção a quem é.
  */
 export function canModifyRecord(
   role: UserRole | null | undefined,
-  actorEmail: string | null | undefined,
-  recordEmail: string | null | undefined,
+  _actorEmail: string | null | undefined,
+  _recordEmail: string | null | undefined,
 ): boolean {
-  if (!canRead(role)) return false;
-  if (canManageAnyRecord(role)) return true;
-
-  return isOwnRecord(actorEmail, recordEmail);
+  return canManageAnyRecord(role);
 }
 
 /**

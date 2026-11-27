@@ -1,6 +1,6 @@
 import { bigserial, index, jsonb, text, timestamp } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { auditSchema } from './schemas.schema';
 
 /** Um campo que mudou: o nome dele, como estava e como ficou. */
 export type HistoryChange = { field: string; from: unknown; to: unknown };
@@ -18,7 +18,7 @@ export type HistoryChange = { field: string; from: unknown; to: unknown };
  * `actor_id` é texto, e não chave estrangeira: a pessoa mora no admin-console, em outro
  * schema. Nulo é máquina — o bot do WhatsApp, o webhook da rede, o agente dos computadores.
  */
-export const history = chamadosSchema.table(
+export const history = auditSchema.table(
   'history',
   {
     id: bigserial('id', { mode: 'number' }).primaryKey(),

@@ -312,6 +312,13 @@ const queryBooleanSchema = z.union([
  */
 export const COMPUTER_NO_RESPONSIBLE_FILTER = 'none';
 
+/**
+ * O valor do filtro "Departamento" que pede as máquinas SEM departamento — as que ninguém pôs em
+ * departamento nenhum e as que estão no "Não informado" do RH. Não colide com id do RH, que é
+ * número.
+ */
+export const COMPUTER_NO_DEPARTMENT_FILTER = 'none';
+
 export const computerListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().optional(),
   /**
@@ -319,8 +326,10 @@ export const computerListQuerySchema = paginationQuerySchema.extend({
    * `COMPUTER_NO_RESPONSIBLE_FILTER`.
    */
   responsibleId: z.string().trim().min(1).max(RESPONSIBLE_ID_MAX_LENGTH).optional(),
-  /** O departamento oficial pelo id do RH. */
-  departmentId: z.coerce.number<number>().int().positive().optional(),
+  /** O departamento oficial pelo id do RH, ou `COMPUTER_NO_DEPARTMENT_FILTER`. */
+  departmentId: z
+    .union([z.literal(COMPUTER_NO_DEPARTMENT_FILTER), z.coerce.number<number>().int().positive()])
+    .optional(),
   healthStatus: healthStatusSchema.optional(),
   kind: computerKindSchema.optional(),
   /** Query strings precisam distinguir "false" de true; Boolean("false") não serve. */

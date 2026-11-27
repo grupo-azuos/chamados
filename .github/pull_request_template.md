@@ -10,9 +10,9 @@
 
 - [ ] Commits no formato `[tipo](local): Mensagem`
 - [ ] Branch saiu de `develop` (ou de `main`, se for `hotfix/`)
-- [ ] `npm run lint`, `npm run typecheck` e `npm test` verdes
+- [ ] `npm run lint`, `npm run typecheck`, `npm run check:design` e `npm test` verdes
 - [ ] Caminho feliz **e** caminho triste testados
-- [ ] Story para todo primitivo/compositor novo ou alterado
+- [ ] Story e teste ao lado de todo `azuos-*` novo ou alterado
 - [ ] Endpoint novo documentado no Swagger
 - [ ] Mudança de banco com migration gerada (`npm run db:generate`) e seed atualizado
 - [ ] Nenhum hook de dado dentro de componente de UI

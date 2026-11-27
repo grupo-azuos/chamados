@@ -18,6 +18,7 @@ import { disposalTypeLabel } from '@template/shared/domain/disposal.util';
 import { type AgentSnapshot } from '@template/shared/schemas/agent-snapshot.schema';
 import { type ComputerLive } from '@template/shared/schemas/computer-live.schema';
 import {
+  COMPUTER_NO_DEPARTMENT_FILTER,
   type Computer,
   type ComputerListItem,
   type ComputerAlert,
@@ -30,6 +31,7 @@ import {
   type CreatedComputer,
   type UpdateComputerInput,
 } from '@template/shared/schemas/computer.schema';
+import { isNotInformed } from '@template/shared/domain/department.util';
 import { type DataSourceKey } from '@template/shared/schemas/dashboard-board.schema';
 import { type Paginated } from '@template/shared/schemas/pagination.schema';
 import { type DirectoryUser } from '@template/shared/schemas/user.schema';
@@ -215,7 +217,7 @@ export class ComputersService {
     const online = this.presence.onlineIds();
     const people = await this.loadReferences();
     const page = await this.repository.list(
-      query,
+      await this.withNoDepartment(query),
       presenceFilterOf(query, online),
       await this.drillOf(user, query),
       responsibleFilterOf(query.responsibleId),
@@ -240,7 +242,7 @@ export class ComputersService {
 
     const people = await this.loadReferences();
     const matching = await this.repository.listAll(
-      query,
+      await this.withNoDepartment(query),
       presenceFilterOf(query, this.presence.onlineIds()),
       await this.drillOf(user, query),
       responsibleFilterOf(query.responsibleId),
@@ -270,6 +272,24 @@ export class ComputersService {
    * O diretório guarda a lista por um minuto e o RH por cinco, então a lista que se atualiza a
    * cada 60 segundos não vira uma ida a outro serviço por cartão.
    */
+  /**
+   * "Sem departamento" é a máquina sem departamento E a que está no "Não informado" do RH: para a
+   * equipe, os dois dizem a mesma coisa. Os ids do "Não informado" saem da lista do RH; sem ela,
+   * fica só o que não tem departamento.
+   */
+  private async withNoDepartment<T extends { departmentId?: number | 'none' }>(
+    query: T,
+  ): Promise<T & { noDepartmentIds?: number[] }> {
+    if (query.departmentId !== COMPUTER_NO_DEPARTMENT_FILTER) return query;
+
+    const official = (await this.departments?.officialOptions().catch(() => null)) ?? [];
+
+    return {
+      ...query,
+      noDepartmentIds: official.filter((option) => isNotInformed(option.name)).map((option) => option.id),
+    };
+  }
+
   async loadReferences(): Promise<DirectoryUser[]> {
     const [people] = await Promise.all([
       this.directory

@@ -154,6 +154,15 @@ describe.skipIf(!testDatabaseUrl)('Computers API (e2e)', () => {
     expect(fiscal.body.total).toBe(2);
     expect(fiscal.body.items).toHaveLength(2);
 
+    /* "Não informado": a máquina sem departamento — a que o filtro antes não achava. */
+    const withoutDepartment = await request(app.getHttpServer())
+      .get('/api/v1/computers?departmentId=none')
+      .set(asCaio())
+      .expect(200);
+
+    expect(withoutDepartment.body.total).toBe(1);
+    expect(withoutDepartment.body.items[0].name).toBe('PC-RECEPCAO-01');
+
     /* O filtro de Local saiu: um link antigo com `location` não filtra nada nem dá erro. */
     const oldLink = await request(app.getHttpServer())
       .get(`/api/v1/computers?location=${encodeURIComponent('RECEPÇÃO')}`)

@@ -103,6 +103,7 @@ services:
         azuos.app: chamados
         azuos.environment: ${DEPLOY_ENV:?}
         azuos.revision: ${APP_REVISION:?}
+        azuos.version: ${APP_VERSION:?}
     extra_hosts: &id001
     - admin-console.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}
     - shared-api.${DEPLOY_DOMAIN:?}:${APP_EDGE_VPN_IP:?}

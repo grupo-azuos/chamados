@@ -17,7 +17,7 @@ vi.mock('$lib/api/computers.api', () => ({
 
 vi.mock('$lib/api/tickets.api', () => ({
   ticketsApi: {
-    peopleOptions: vi.fn().mockResolvedValue([
+    staffOptions: vi.fn().mockResolvedValue([
       { id: 'u-suporte', name: 'Suporte TI', avatarUrl: null },
       { id: 'u-ana', name: 'Ana Souza', avatarUrl: null },
     ]),

@@ -3,7 +3,7 @@ import { TICKET_STATUSES } from '@template/shared/domain/ticket-status.util';
 import { sql } from 'drizzle-orm';
 import { boolean, check, index, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
-import { chamadosSchema } from './chamados.schema';
+import { ticketsSchema } from './schemas.schema';
 
 import { tickets } from './tickets.schema';
 
@@ -24,7 +24,7 @@ function valuesFor(values: readonly string[]) {
  * Isso é garantido pelo BANCO, e não só pelo código: um gatilho recusa `update` e `delete`
  * nesta tabela (migration `ticket_records_append_only`), mesmo para quem escrever SQL à mão.
  */
-export const ticketHistories = chamadosSchema.table(
+export const ticketHistories = ticketsSchema.table(
   'ticket_histories',
   {
     id: serial('id').primaryKey(),

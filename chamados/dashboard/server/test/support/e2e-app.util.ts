@@ -2,7 +2,8 @@ import { type INestApplication } from '@nestjs/common';
 import { WsAdapter } from '@nestjs/platform-ws';
 import { Test } from '@nestjs/testing';
 import { type DirectoryUser, type SessionUser } from '@template/shared/schemas/user.schema';
-import { sql } from 'drizzle-orm';
+import { getTableName, isTable, sql } from 'drizzle-orm';
+import { getTableConfig, type PgTable } from 'drizzle-orm/pg-core';
 
 import { AppModule } from '../../src/app.module';
 import { setupApp } from '../../src/app.setup';
@@ -10,6 +11,7 @@ import { IdentityProvider, type ForwardedIdentity } from '../../src/lib/auth/ide
 import { parseEnv } from '../../src/lib/config/env.schema';
 import { DB } from '../../src/lib/db/db.token';
 import { type Database } from '../../src/lib/db/db.type';
+import { drizzleSchema } from '../../src/lib/db/drizzle-schema';
 import { type UserDirectoryProvider } from '../../src/lib/auth/user-directory.type';
 import { USER_DIRECTORY_PROVIDER } from '../../src/lib/auth/user-directory.token';
 import { HrDepartmentsRepository } from '../../src/modules/departments/repository/hr-departments.repository';
@@ -234,11 +236,23 @@ export async function createE2eApp(
     if (tables.length === 0) return;
 
     await db.execute(
-      sql.raw(
-        `truncate table ${tables.map((table) => `"chamados"."${table.replaceAll('"', '""')}"`).join(', ')} restart identity cascade`,
-      ),
+      sql.raw(`truncate table ${tables.map(qualifiedTable).join(', ')} restart identity cascade`),
     );
   };
 
   return { app, storage, db, truncate };
+}
+
+/** Cada tabela mora no schema do assunto dela: o nome da tabela diz em qual (ver `schemas.schema.ts`). */
+const SCHEMA_OF_TABLE = new Map<string, string>(
+  (Object.values(drizzleSchema) as unknown[])
+    .filter((value): value is PgTable => isTable(value))
+    .map((table) => [getTableName(table), getTableConfig(table).schema ?? 'public']),
+);
+
+function qualifiedTable(table: string): string {
+  const schema = SCHEMA_OF_TABLE.get(table);
+  if (!schema) throw new Error(`Unknown table for truncate: ${table}`);
+
+  return `"${schema}"."${table}"`;
 }
