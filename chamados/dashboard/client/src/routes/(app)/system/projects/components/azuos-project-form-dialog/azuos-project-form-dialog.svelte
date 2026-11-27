@@ -3,7 +3,7 @@
   CADASTRAR OU EDITAR UM SISTEMA (projeto de software), num diálogo.
 
   Campos: nome, repositório no GitHub (ambos obrigatórios), situação, cor identificadora,
-  responsável e descrição. O título muda entre "Novo Sistema" e "Editar Sistema" pelo modo do
+  responsável e descrição. O título muda entre "Novo sistema" e "Editar sistema" pelo modo do
   formulário; o erro geral aparece no alto. O responsável é só informação: diz quem responde pelo
   sistema, sem mudar a quem os chamados vão. Fechar o diálogo chama `onClose`.
 
@@ -16,6 +16,7 @@
 -->
 <script lang="ts">
   import { Dialog, DialogTitle } from '$lib/components/azuos-dialog/azuos-dialog';
+  import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import {
     SOFTWARE_PROJECT_COLORS,
@@ -58,14 +59,12 @@
   <DialogContent>
     <div class="flex items-center justify-between">
       <DialogTitle class="text-lg font-semibold text-foreground">
-        {isEdit ? 'Editar Sistema' : 'Novo Sistema'}
+        {isEdit ? 'Editar sistema' : 'Novo sistema'}
       </DialogTitle>
     </div>
 
     {#if model.state.error}
-      <div class="rounded-box bg-destructive-soft p-3 text-xs text-destructive">
-        {model.state.error}
-      </div>
+      <ErrorState data={{ message: model.state.error }} ui={{ variant: 'inline' }} />
     {/if}
 
     <form
@@ -113,7 +112,7 @@
 
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div class="flex flex-col gap-1">
-          <span class="text-xs font-medium text-foreground">Situação</span>
+          <span class="text-sm font-medium text-foreground">Situação</span>
           <SelectField
             data={{
               value: model.data.fields.status.value,
@@ -126,7 +125,7 @@
         </div>
 
         <div class="flex flex-col gap-1">
-          <span class="text-xs font-medium text-foreground">Cor identificadora</span>
+          <span class="text-sm font-medium text-foreground">Cor identificadora</span>
           <SelectField
             data={{
               value: model.data.fields.color.value,
@@ -141,7 +140,7 @@
 
       <!-- Só informação: diz quem responde pelo sistema, sem mudar a quem os chamados vão. -->
       <div class="flex flex-col gap-1">
-        <span class="text-xs font-medium text-foreground">Responsável</span>
+        <span class="text-sm font-medium text-foreground">Responsável</span>
         <SelectField
           data={{
             value: model.data.fields.responsibleId.value,

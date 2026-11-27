@@ -49,6 +49,7 @@
   import { TASK_STATUS_LABELS } from '@template/shared/domain/task-flow.util';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
@@ -154,7 +155,10 @@
       ui={{ icon: CalendarRange }}
     />
   {:else}
-    <div class="rounded-surface bg-card shadow-card overflow-x-auto">
+    <!-- A grade mora no card de conteúdo do grupo (o bloco sem cabeçalho), e rola de lado por dentro. -->
+    <ContentCard data={{ label: 'Tarefas por responsável e dia', title: '' }}>
+      {#snippet body()}
+    <div class="overflow-x-auto">
       <div role="table" aria-label="Tarefas por responsável e dia">
         <div role="row" class="border-border grid border-b" style={grid}>
           <span role="columnheader" class={cn(STICKY_NAME, 'text-muted-foreground px-3 py-2 text-xs font-semibold')}>
@@ -256,5 +260,7 @@
         {/each}
       </div>
     </div>
+      {/snippet}
+    </ContentCard>
   {/if}
 </section>

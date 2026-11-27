@@ -1,4 +1,5 @@
 <script lang="ts">
+  import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import FolderCode from '@lucide/svelte/icons/folder-code';
@@ -44,7 +45,7 @@
     />
   </div>
 {:else if detail.state.isLoading || !detail.data.project}
-  <p class="text-ink-500 py-10 text-center text-sm">Carregando o sistema…</p>
+  <LoadingState data={{ label: 'Carregando o sistema…' }} />
 {:else}
   <ProjectDetailView
     data={{ ...detail.data, project: detail.data.project, backDestination: back.destination }}

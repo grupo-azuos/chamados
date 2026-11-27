@@ -3,9 +3,10 @@
   A AGENDA DO MÓDULO SISTEMA: o calendário dos compromissos e registros da equipe, junto da
   atividade do GitHub.
 
-  Em cima, a barra: o mês e o ano, voltar/hoje/avançar, Dia/Semana/Mês e "Novo agendamento" (só
-  para quem edita), e os filtros de projeto, autor e tipo. Depois, o resumo por pessoa (PRs, merges
-  e issues no período, contando o que fez como co-autor). No mês, uma célula por dia com os itens
+  No molde do grupo: o cabeçalho com "Novo agendamento" (só para quem edita), o resumo do período
+  (PRs mergeados e issues resolvidas), a barra (o mês e o ano, voltar/hoje/avançar, Dia/Semana/Mês)
+  e os filtros de projeto, autor e tipo. A produtividade por pessoa não mora aqui: é indicador, e
+  indicador é do Painel (a fonte "Atividade no GitHub", por autor). No mês, uma célula por dia com os itens
   empilhados; no dia e na semana, a grade de horas das 08:00 às 18:00, com a atividade do GitHub no
   alto de cada dia e a linha da hora atual. Clicar num espaço vazio abre um agendamento naquele dia
   (e horário); clicar num item abre a edição. Os cartões saem na cor escolhida (a mesma tabela do
@@ -16,7 +17,7 @@
   da agenda (`use-software-schedule`).
 
   - `data`: `monthYearTitle`, `viewMode`, `days`, `events`, `githubEvents`, os totais
-    (`mergedPullRequests`, `resolvedIssues`, `developerStats`), `nowTopPx` e `filters`.
+    (`mergedPullRequests`, `resolvedIssues`), `nowTopPx` e `filters`.
   - `state`: `canEdit`, `isLoading`, `isRefetching` e `error`.
   - `actions`: navegação (`onPrev`, `onNext`, `onToday`, `onViewModeChange`), criação (`onNewEvent`,
     `onNewEventAt`), `onSelectEvent`, `onRetry`, `onOpenGithubDay` e os filtros
@@ -42,12 +43,6 @@
       githubEvents?: SoftwareTimelineEvent[];
       mergedPullRequests?: number;
       resolvedIssues?: number;
-      developerStats?: {
-        author: string;
-        mergedPullRequests: number;
-        localMerges?: number;
-        resolvedIssues: number;
-      }[];
       nowTopPx: number | null;
       filters?: ScheduleFilterData;
     };
@@ -115,11 +110,15 @@
   import LifeBuoy from '@lucide/svelte/icons/life-buoy';
   import Plus from '@lucide/svelte/icons/plus';
 
-  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ActionButton, { actionButton } from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
+  import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
+  import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
+  import { cn } from '$lib/utils/cn';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
-    import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
+  import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
   import GithubCalendarEvent from '../azuos-github-calendar-event/azuos-github-calendar-event.svelte';
   import {
@@ -220,84 +219,10 @@
 
 <Tooltip.Provider>
   <section class="flex w-full flex-col gap-6">
-    <!-- Toolbar: Mês/Ano, Navegação, Segmented Control e Botão Novo Evento -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-4">
-        <h1 class="text-xl font-bold text-foreground">
-          {data.monthYearTitle}
-        </h1>
-        <div class="flex items-center gap-1">
-          <Tooltip.Root
-            ><Tooltip.Trigger
-              >{#snippet child({ props })}
-                <button
-                  {...props}
-                  type="button"
-                  class="control-icon-lg bg-muted text-muted-foreground hover:bg-hover-veil hover:text-foreground grid place-items-center rounded-button transition-colors"
-                  onclick={actions.onPrev}
-                  aria-label={PERIOD_LABELS[data.viewMode].prev}
-                >
-                  <ChevronLeft class="size-4" />
-                </button>
-              {/snippet}</Tooltip.Trigger
-            ><Tooltip.Content
-              class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
-              >{PERIOD_LABELS[data.viewMode].prev}</Tooltip.Content
-            ></Tooltip.Root
-          >
-          <Tooltip.Root
-            ><Tooltip.Trigger
-              >{#snippet child({ props })}
-                <button
-                  {...props}
-                  type="button"
-                  class="control-md bg-muted text-foreground hover:bg-hover-veil rounded-button px-4 text-sm font-medium transition-colors"
-                  onclick={actions.onToday}
-                >
-                  Hoje
-                </button>
-              {/snippet}</Tooltip.Trigger
-            ><Tooltip.Content
-              class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
-              >Voltar para a data de hoje</Tooltip.Content
-            ></Tooltip.Root
-          >
-          <Tooltip.Root
-            ><Tooltip.Trigger
-              >{#snippet child({ props })}
-                <button
-                  {...props}
-                  type="button"
-                  class="control-icon-lg bg-muted text-muted-foreground hover:bg-hover-veil hover:text-foreground grid place-items-center rounded-button transition-colors"
-                  onclick={actions.onNext}
-                  aria-label={PERIOD_LABELS[data.viewMode].next}
-                >
-                  <ChevronRight class="size-4" />
-                </button>
-              {/snippet}</Tooltip.Trigger
-            ><Tooltip.Content
-              class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
-              >{PERIOD_LABELS[data.viewMode].next}</Tooltip.Content
-            ></Tooltip.Root
-          >
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <!-- Dia / Semana / Mês: o segmentado do padrão Apple (pílula cinza, escolhido em branco). -->
-        <SegmentedControl
-          data={{
-            value: data.viewMode,
-            options: [
-              { value: 'day', label: 'Dia' },
-              { value: 'week', label: 'Semana' },
-              { value: 'month', label: 'Mês' },
-            ],
-          }}
-          ui={{ ariaLabel: 'Período da agenda' }}
-          actions={{ onChange: (value) => actions.onViewModeChange(value as typeof data.viewMode) }}
-        />
-
+    <!-- O molde da tela: o cabeçalho (título e a ação principal) e, embaixo, o resumo e a barra. -->
+    <PageHeader
+      data={{ title: 'Cronograma', description: 'Os compromissos e registros da equipe, junto da atividade do GitHub.' }}
+    >
         <Tooltip.Root bind:open={newAppointmentTooltipOpen}
           ><Tooltip.Trigger
             >{#snippet child({ props })}<span
@@ -317,15 +242,97 @@
             >Criar um agendamento na agenda de sistemas</Tooltip.Content
           ></Tooltip.Root
         >
+    </PageHeader>
+
+    <!-- O resumo do período no card de painel padrão: ícone cheio no tom do assunto, número na cor
+         do texto, e a explicação de como cada um é contado. -->
+    <StatCardGrid>
+      <ContentCard data={{ label: 'PRs mergeados no período', title: 'PRs mergeados no período', meta: 'PRs mergeados nas datas exibidas no calendário. Cada PR conta no horário do merge.', highlight: { value: data.mergedPullRequests ?? 0 } }} ui={{ icon: GitMerge, iconTone: 'plum' }} />
+      <ContentCard data={{ label: 'Issues resolvidas no período', title: 'Issues resolvidas no período', meta: 'Issues resolvidas nas datas exibidas no calendário. Cada issue conta no horário de fechamento.', highlight: { value: data.resolvedIssues ?? 0 } }} ui={{ icon: CircleCheckBig, iconTone: 'success' }} />
+    </StatCardGrid>
+
+    <!-- A barra de ferramentas: o período à vista (mês e ano, voltar/hoje/avançar), Dia/Semana/Mês. -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <h2 class="text-foreground text-lg font-semibold">
+          {data.monthYearTitle}
+        </h2>
+        <div class="flex items-center gap-1">
+          <Tooltip.Root
+            ><Tooltip.Trigger
+              >{#snippet child({ props })}
+                <button
+                  {...props}
+                  type="button"
+                  class={actionButton({ variant: 'secondary', size: 'md', isIconOnly: true })}
+                  onclick={actions.onPrev}
+                  aria-label={PERIOD_LABELS[data.viewMode].prev}
+                >
+                  <ChevronLeft aria-hidden="true" />
+                </button>
+              {/snippet}</Tooltip.Trigger
+            ><Tooltip.Content
+              class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
+              >{PERIOD_LABELS[data.viewMode].prev}</Tooltip.Content
+            ></Tooltip.Root
+          >
+          <Tooltip.Root
+            ><Tooltip.Trigger
+              >{#snippet child({ props })}
+                <button
+                  {...props}
+                  type="button"
+                  class={actionButton({ variant: 'secondary', size: 'md' })}
+                  onclick={actions.onToday}
+                >
+                  Hoje
+                </button>
+              {/snippet}</Tooltip.Trigger
+            ><Tooltip.Content
+              class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
+              >Voltar para a data de hoje</Tooltip.Content
+            ></Tooltip.Root
+          >
+          <Tooltip.Root
+            ><Tooltip.Trigger
+              >{#snippet child({ props })}
+                <button
+                  {...props}
+                  type="button"
+                  class={actionButton({ variant: 'secondary', size: 'md', isIconOnly: true })}
+                  onclick={actions.onNext}
+                  aria-label={PERIOD_LABELS[data.viewMode].next}
+                >
+                  <ChevronRight aria-hidden="true" />
+                </button>
+              {/snippet}</Tooltip.Trigger
+            ><Tooltip.Content
+              class="max-h-64 max-w-sm flex-col items-start gap-1 overflow-y-auto whitespace-normal"
+              >{PERIOD_LABELS[data.viewMode].next}</Tooltip.Content
+            ></Tooltip.Root
+          >
+        </div>
       </div>
+      <!-- Dia / Semana / Mês: o segmentado do padrão Apple (pílula cinza, escolhido em branco). -->
+      <SegmentedControl
+        data={{
+          value: data.viewMode,
+          options: [
+            { value: 'day', label: 'Dia' },
+            { value: 'week', label: 'Semana' },
+            { value: 'month', label: 'Mês' },
+          ],
+        }}
+        ui={{ ariaLabel: 'Período da agenda' }}
+        actions={{ onChange: (value) => actions.onViewModeChange(value as typeof data.viewMode) }}
+      />
     </div>
 
     {#if data.filters}
       {@const filters = data.filters}
-      <ContentCard data={{ label: 'Filtros', title: '' }}>
-{#snippet body()}
-<div class="p-3 sm:p-4">
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <!-- Os filtros moram sobre o fundo da página, e não num card (filtro em card é proibido). -->
+      <div>
+        <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {#each [{ key: 'project', label: 'Projeto', hint: 'Filtrar agendamentos, PRs, issues e merges por projeto', value: filters.project, options: filters.projectOptions, onChange: actions.onProjectFilterChange }, { key: 'author', label: 'Autor', hint: 'Filtrar PRs, issues e merges pelo autor registrado no GitHub', value: filters.author, options: filters.authorOptions, onChange: actions.onAuthorFilterChange }, { key: 'type', label: 'Tipo', hint: 'Mostrar PRs, issues, merges ou todos na agenda', value: filters.type, options: [{ value: '', label: 'Todos' }, { value: 'pr', label: 'PRs' }, { value: 'issue', label: 'Issues' }, { value: 'merge', label: 'Merges locais' }], onChange: actions.onTypeFilterChange }] as filter (filter.key)}
             <div
               class="min-w-0 space-y-1.5 {filter.key === 'type'
@@ -370,7 +377,7 @@
                   <button
                     {...props}
                     type="button"
-                    class="control-lg w-full rounded-control px-3 text-xs font-medium text-primary hover:bg-primary-soft sm:col-span-2 sm:w-fit xl:col-span-3"
+                    class={cn(actionButton({ variant: 'ghost', size: 'lg' }), 'sm:col-span-2 sm:w-fit xl:col-span-3')}
                     onclick={actions.onClearFilters}>Limpar filtros</button
                   >
                 {/snippet}
@@ -382,68 +389,10 @@
           {/if}
         </div>
       </div>
-{/snippet}
-</ContentCard>
-    {/if}
-
-    <!-- Os dois números do período no card de painel padrão: ícone cheio no tom do assunto, número
-         na cor do texto, e o "i" com a explicação de como cada um é contado. -->
-    <div class="grid grid-cols-2 gap-3 sm:max-w-md">
-      <ContentCard data={{ label: 'PRs mergeados no período', title: 'PRs mergeados no período', meta: 'PRs mergeados nas datas exibidas no calendário. Cada PR conta no horário do merge.', highlight: { value: data.mergedPullRequests ?? 0 } }} ui={{ icon: GitMerge, iconTone: 'plum', className: 'px-4 py-3' }} />
-      <ContentCard data={{ label: 'Issues resolvidas no período', title: 'Issues resolvidas no período', meta: 'Issues resolvidas nas datas exibidas no calendário. Cada issue conta no horário de fechamento.', highlight: { value: data.resolvedIssues ?? 0 } }} ui={{ icon: CircleCheckBig, iconTone: 'success', className: 'px-4 py-3' }} />
-    </div>
-
-    {#if data.developerStats?.length}
-      <ContentCard data={{ label: '', title: '' }}>
-{#snippet body()}
-<div class="">
-        <div class="border-b border-border px-4 py-3">
-          <h2 class="text-sm font-semibold text-foreground">Produtividade por desenvolvedor</h2>
-          <p class="mt-1 text-xs text-muted-foreground">
-            PRs e merges contam na data do merge, para o autor e para quem fez commit junto
-            (co-autor); issues contam na data de fechamento e com quem fechou.
-          </p>
-        </div>
-        <div class="divide-y divide-border">
-          {#each data.developerStats as developer (developer.author)}
-            <Tooltip.Root
-              ><Tooltip.Trigger
-                >{#snippet child({ props })}<button
-                    {...props}
-                    type="button"
-                    class="w-full text-left grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-4 px-4 py-3 text-xs"
-                  >
-                    <span class="truncate font-medium text-foreground">{developer.author}</span>
-                    <span class="whitespace-nowrap text-muted-foreground"
-                      >{developer.mergedPullRequests} PRs</span
-                    >
-                    <span class="whitespace-nowrap text-muted-foreground"
-                      >{developer.localMerges ?? 0} merges</span
-                    >
-                    <span class="whitespace-nowrap text-muted-foreground"
-                      >{developer.resolvedIssues} issues</span
-                    >
-                  </button>{/snippet}</Tooltip.Trigger
-              ><Tooltip.Content class="max-w-sm whitespace-normal"
-                >{developer.author}: {developer.mergedPullRequests} PRs mergeados, {developer.localMerges ?? 0}
-                merges locais e {developer.resolvedIssues} issues resolvidas no período — contando
-                o que fez como co-autor.</Tooltip.Content
-              ></Tooltip.Root
-            >
-          {/each}
-        </div>
-      </div>
-{/snippet}
-</ContentCard>
     {/if}
 
     {#if gridState.isLoading}
-      <p
-        role="status"
-        class="p-8 text-center text-sm text-muted-foreground"
-      >
-        Carregando cronograma…
-      </p>
+      <LoadingState data={{ label: 'Carregando cronograma…' }} />
     {:else if gridState.error}
       <ErrorState
         data={{
@@ -454,7 +403,7 @@
       />
     {:else if data.viewMode === 'month'}
       <!-- Mês: calendário de 7 colunas, uma célula por dia, eventos empilhados -->
-      <ContentCard data={{ label: '', title: '' }}>
+      <ContentCard data={{ label: 'Calendário do mês', title: '' }}>
 {#snippet body()}
 <div class="">
         <div class="overflow-x-auto">
@@ -609,7 +558,7 @@
     {:else}
       <!-- Dia e Semana: grade de horas com 1 ou 7 colunas -->
       {@const columns = data.days.length}
-      <ContentCard data={{ label: '', title: '' }}>
+      <ContentCard data={{ label: 'Grade de horas', title: '' }}>
 {#snippet body()}
 <div class="">
         <div class="overflow-x-auto">
@@ -706,9 +655,12 @@
                   ? 'bg-muted'
                   : ''}"
               >
-                <div
-                  class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,var(--color-border)_1px,transparent_1px)] bg-[size:100%_56px] opacity-40"
-                ></div>
+                <!-- As linhas das horas: uma divisória por hora (56px), e não um gradiente pintado. -->
+                <div aria-hidden="true" class="pointer-events-none absolute inset-0 flex flex-col opacity-40">
+                  {#each hours as hour (hour)}
+                    <div class="border-border h-14 shrink-0 border-t"></div>
+                  {/each}
+                </div>
                 <!-- Clique numa hora vazia: agendamento novo naquele dia e horário. Os blocos vêm
                      depois no HTML e ficam por cima, então clicar num deles continua abrindo ele. -->
                 {#if gridState.canEdit}
@@ -857,10 +809,9 @@
 {/snippet}
 </ContentCard>
       {#if data.events.some(isOutsideScheduleGrid)}
-        <ContentCard data={{ label: '', title: '' }}>
+        <ContentCard data={{ label: 'Agendamentos fora do horário da grade', title: 'Agendamentos fora do horário da grade' }}>
 {#snippet body()}
-<div class="flex flex-col gap-2 p-4">
-          <h2 class="text-sm font-semibold">Agendamentos fora do horário da grade</h2>
+<div class="flex flex-col gap-2 pb-1">
           {#each data.events.filter(isOutsideScheduleGrid) as event (event.id)}
             <Tooltip.Root
               ><Tooltip.Trigger
@@ -893,15 +844,16 @@
       {/if}
     {/if}
 
-    <ContentCard data={{ label: '', title: '' }}>
+    <ContentCard
+      data={{
+        label: 'Atividade do GitHub no período',
+        title: 'Atividade do GitHub no período',
+        meta: 'PRs e merges locais usam a data do merge; issues resolvidas usam a data de fechamento.',
+      }}
+      ui={{ icon: GitPullRequest, iconTone: 'plum' }}
+    >
 {#snippet body()}
-<div class="p-4">
-      <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 class="text-sm font-semibold text-foreground">Atividade do GitHub no período</h2>
-        <p class="text-xs text-muted-foreground">
-          PRs e merges locais usam a data do merge; issues resolvidas usam a data de fechamento.
-        </p>
-      </div>
+<div class="pb-1">
       {#if !data.githubEvents?.length}
         <p class="rounded-box bg-muted p-4 text-center text-xs text-muted-foreground">
           {#if data.filters?.isActive}Nenhuma atividade encontrada com os filtros atuais.
@@ -909,7 +861,7 @@
             PRs, issues e merges locais.{/if}
         </p>
       {:else}
-        <div class="max-h-[32rem] space-y-4 overflow-y-auto pr-2">
+        <div class="max-h-128 space-y-4 overflow-y-auto pr-2">
           {#each data.days.filter((day) => day.githubEvents?.length) as day (day.dateString)}
             <div>
               <h3 class="mb-2 text-xs font-semibold text-muted-foreground">
@@ -923,7 +875,7 @@
                           {...props}
                           href={event.url ?? undefined}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           class="flex min-w-0 items-center gap-3 rounded-box bg-muted p-3 transition-colors hover:bg-hover-veil"
                         >
                           <span

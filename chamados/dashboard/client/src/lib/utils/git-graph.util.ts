@@ -319,14 +319,3 @@ function hueOfNew(commit: ProjectMapCommit, heads: GitGraphRow['heads']): AzuosC
 
   return GIT_CATEGORY_HUES[named ? named.category : categoryOfMessage(commit.message)];
 }
-
-/** "VG" — as iniciais de quem fez, como no lazygit. */
-export function initialsOf(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part[0] ?? '')
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-}

@@ -16,14 +16,6 @@ export type ScheduleViewMode = 'day' | 'week' | 'month';
 /** A visão com que o cronograma abre. */
 export const DEFAULT_SCHEDULE_VIEW_MODE: ScheduleViewMode = 'month';
 
-export type DeveloperActivitySummary = {
-  author: string;
-  mergedPullRequests: number;
-  /** Branches juntadas direto na develop, sem PR — o jeito de trabalhar de parte do time. */
-  localMerges: number;
-  resolvedIssues: number;
-};
-
 export type ScheduleFilters = { project: string; author: string; type: string };
 export type ScheduleFilterData = ScheduleFilters & {
   projectOptions: { value: string; label: string }[];
@@ -155,7 +147,6 @@ export type SoftwareScheduleModel = {
     githubEvents: SoftwareTimelineEvent[];
     mergedPullRequests: number;
     resolvedIssues: number;
-    developerStats: DeveloperActivitySummary[];
     projects: SoftwareProject[];
     nowTopPx: number | null; // Posição em pixels da linha vermelha 'agora' (null se fora das 08h-18h ou outro dia)
     currentDate: Date;
@@ -271,59 +262,6 @@ function countGithubEvents(
   return events.filter((event) => event.type === type && event.status === status).length;
 }
 
-function developerActivityKind(event: SoftwareTimelineEvent): 'pr' | 'merge' | 'issue' | null {
-  if (event.type === 'pr' && event.status === 'merged') return 'pr';
-  if (event.type === 'merge') return 'merge';
-  if (event.type === 'issue' && event.status === 'closed') return 'issue';
-  return null;
-}
-
-/** Robô não é desenvolvedor: o App que fecha a issue do chamado não entra na produtividade. */
-function isAutomation(person: { key: string; name: string }): boolean {
-  return person.key.endsWith('[bot]') || person.key === 'github chamados bot';
-}
-
-function countActivity(
-  activityByDeveloper: Map<string, DeveloperActivitySummary>,
-  person: { key: string; name: string },
-  kind: 'pr' | 'merge' | 'issue',
-) {
-  const summary = activityByDeveloper.get(person.key) ?? {
-    author: person.name,
-    mergedPullRequests: 0,
-    localMerges: 0,
-    resolvedIssues: 0,
-  };
-  if (kind === 'pr') summary.mergedPullRequests++;
-  else if (kind === 'merge') summary.localMerges++;
-  else summary.resolvedIssues++;
-  activityByDeveloper.set(person.key, summary);
-}
-
-function summarizeDeveloperActivity(
-  githubEvents: SoftwareTimelineEvent[],
-): DeveloperActivitySummary[] {
-  const activityByDeveloper = new SvelteMap<string, DeveloperActivitySummary>();
-  for (const event of githubEvents) {
-    const kind = developerActivityKind(event);
-    if (!kind) continue;
-
-    /* Conta para o autor E para cada co-autor: quem fez a branch entregou tanto quanto quem
-       a juntou. */
-    for (const person of peopleOf(event).filter((who) => !isAutomation(who))) {
-      countActivity(activityByDeveloper, person, kind);
-    }
-  }
-  const developerStats = [...activityByDeveloper.values()].sort(
-    (a, b) =>
-      b.mergedPullRequests + b.localMerges + b.resolvedIssues -
-        (a.mergedPullRequests + a.localMerges + a.resolvedIssues) ||
-      a.author.localeCompare(b.author),
-  );
-
-  return developerStats;
-}
-
 function currentTimePosition(): number | null {
   // Calcula posição da linha vermelha "Agora"
   const now = new SvelteDate();
@@ -435,7 +373,6 @@ function buildCalendar(input: CalendarInput): Omit<SoftwareScheduleModel['data']
     githubEvents,
     mergedPullRequests: countGithubEvents(githubEvents, 'pr', 'merged'),
     resolvedIssues: countGithubEvents(githubEvents, 'issue', 'closed'),
-    developerStats: summarizeDeveloperActivity(githubEvents),
     projects,
     nowTopPx: currentTimePosition(),
     currentDate: current,
@@ -562,9 +499,6 @@ export function useSoftwareScheduleModel(): SoftwareScheduleModel {
     },
     get resolvedIssues() {
       return calendar.resolvedIssues;
-    },
-    get developerStats() {
-      return calendar.developerStats;
     },
     get projects() {
       return calendar.projects;

@@ -71,6 +71,12 @@ function renderView(
   return actions;
 }
 
+/* A lista é a grade de cards E a tabela (a troca do sistema esconde uma pela largura): os testes do
+   card olham só a grade. */
+function cards() {
+  return within(document.querySelector<HTMLElement>('[data-slot="project-cards"]')!);
+}
+
 describe('AzuosProjectListView', () => {
   it('keeps team history accessible while hiding edit actions for managers', async () => {
     const actions = renderView({ state: { canEdit: false } });
@@ -79,16 +85,18 @@ describe('AzuosProjectListView', () => {
     /* Sem sincronizar nem editar, o card não tem menu. */
     expect(screen.queryByRole('button', { name: 'Ações de Azuos Ticket' })).not.toBeInTheDocument();
     /* O botão virou "Ver sistema" quando a página de cada sistema nasceu (a timeline mora nela). */
-    await userEvent.click(screen.getByRole('button', { name: /ver sistema/i }));
+    await userEvent.click(cards().getByRole('button', { name: /ver sistema/i }));
     expect(actions.onViewTimeline).toHaveBeenCalledWith(project);
   });
   // feliz
   it('renders project list and counters correctly', () => {
     renderView();
 
-    expect(screen.getByText('Azuos Ticket')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
-    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(cards().getByText('Azuos Ticket')).toBeInTheDocument();
+    expect(cards().getByText('3')).toBeInTheDocument();
+    expect(cards().getByText('7')).toBeInTheDocument();
+    /* A mesma lista, em tabela. */
+    expect(within(screen.getByRole('table', { name: 'Lista de sistemas' })).getByText('Azuos Ticket')).toBeInTheDocument();
   });
 
   it('triggers register action on clicking Novo Sistema', async () => {
@@ -104,7 +112,7 @@ describe('AzuosProjectListView', () => {
     const actions = renderView();
 
     /* Sincronizar mora no menu de três pontinhos do card. */
-    await userEvent.click(screen.getByRole('button', { name: 'Ações de Azuos Ticket' }));
+    await userEvent.click(cards().getByRole('button', { name: 'Ações de Azuos Ticket' }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Sincronizar' }));
 
     expect(actions.onSyncGithub).toHaveBeenCalledWith(1);
@@ -164,10 +172,10 @@ describe('AzuosProjectListView — messages, filters, cards and deletion', () =>
   // triste
   it('shows placeholders while loading and offers to clear a filter that hid everything', async () => {
     renderView({ state: { isLoading: true } });
-    expect(document.querySelectorAll('.animate-pulse')).toHaveLength(3);
+    expect(screen.getByLabelText('Carregando os sistemas')).toBeInTheDocument();
     cleanup();
     const actions = renderView({ state: { isFilteredOut: true } });
-    await userEvent.click(screen.getByRole('button', { name: 'Limpar Filtros' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
     expect(actions.onClearFilters).toHaveBeenCalledOnce();
   });
 
@@ -177,7 +185,7 @@ describe('AzuosProjectListView — messages, filters, cards and deletion', () =>
     expect(
       screen.getByText('Aguarde um administrador cadastrar os sistemas da equipe.'),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Cadastrar Sistema' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cadastrar sistema' })).not.toBeInTheDocument();
   });
 
   // feliz
@@ -209,15 +217,15 @@ describe('AzuosProjectListView — messages, filters, cards and deletion', () =>
         ],
       },
     });
-    expect(screen.getByText('Sem descrição cadastrada.')).toBeInTheDocument();
-    expect(screen.getByText('Ana Lima')).toBeInTheDocument();
-    const link = screen.getByRole('link');
+    expect(cards().getByText('Sem descrição cadastrada.')).toBeInTheDocument();
+    expect(cards().getByText('Ana Lima')).toBeInTheDocument();
+    const link = cards().getByRole('link');
     expect(link).toHaveAttribute('href', 'https://github.com/example/portal');
     expect(link).toHaveAttribute('target', '_blank');
-    await userEvent.click(screen.getByRole('button', { name: /^Ver sistema/ }));
+    await userEvent.click(cards().getByRole('button', { name: /^Ver sistema/ }));
     expect(actions.onViewTimeline).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     const user = userEvent.setup({ pointerEventsCheck: 0 });
-    const menu = screen.getByRole('button', { name: /^Ações de/ });
+    const menu = cards().getByRole('button', { name: /^Ações de/ });
     await user.click(menu);
     await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
     expect(actions.onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));

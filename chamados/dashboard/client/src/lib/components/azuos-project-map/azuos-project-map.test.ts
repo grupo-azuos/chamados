@@ -58,13 +58,14 @@ describe('AzuosProjectMap', () => {
   it('offers the projects, the kinds to show and the reset', async () => {
     const actions = setup();
 
-    expect(screen.getByRole('group', { name: 'Mostrar no mapa' })).toBeInTheDocument();
     expect(screen.getByText('Todos os projetos')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Pull requests' }));
-    expect(screen.getByRole('button', { name: 'Pull requests' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
+    /* O que entra no mapa é o select de marcar, com tudo marcado ao abrir. */
+    await userEvent.click(screen.getByRole('button', { name: /^Mostrar no mapa:/ }));
+    const prs = await screen.findByRole('checkbox', { name: 'Pull requests' });
+    expect(prs).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(prs);
+    expect(await screen.findByRole('checkbox', { name: 'Pull requests' })).toHaveAttribute('aria-checked', 'false');
+    await userEvent.keyboard('{Escape}');
     await userEvent.click(screen.getByRole('button', { name: 'Arrumar de novo' }));
     expect(actions.onResetLayout).toHaveBeenCalled();
     expect(screen.getByRole('combobox', { name: 'Responsável' })).toBeInTheDocument();

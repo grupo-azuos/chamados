@@ -26,15 +26,17 @@ import {
  * O MODEL DA TELA DE TAREFAS: os modos de ver, os filtros, a página, o mês do calendário e as
  * ações que não precisam de formulário (finalizar, reabrir, marcar etapa, apagar).
  *
- * Lista e cards são paginados; quadro, calendário e timeline trazem tudo o que cabe no recorte
+ * A lista é paginada; quadro, calendário e timeline trazem tudo o que cabe no recorte
  * (até `MAX_PAGE_SIZE`) — quadro e mapa sem paginação, calendário e timeline pelo período à vista.
+ *
+ * "Cards" não é um modo daqui: a lista é a tabela OU a grade de cards, e quem escolhe entre as
+ * duas é a troca do sistema inteiro (`AzuosTableViewToggle`), como em toda lista do grupo.
  */
-export const TASK_VIEWS = ['list', 'cards', 'board', 'calendar', 'timeline', 'map'] as const;
+export const TASK_VIEWS = ['list', 'board', 'calendar', 'timeline', 'map'] as const;
 export type TaskView = (typeof TASK_VIEWS)[number];
 
 export const TASK_VIEW_LABELS: Record<TaskView, string> = {
   list: 'Lista',
-  cards: 'Cards',
   board: 'Quadro',
   calendar: 'Calendário',
   timeline: 'Timeline',
@@ -131,6 +133,7 @@ const VIEW_STORAGE_KEY = 'azuos:tasks:view';
 function storedView(area: RoleContext): TaskView {
   try {
     const value = localStorage.getItem(`${VIEW_STORAGE_KEY}:${area}`);
+    /* Quem tinha guardado o antigo modo "cards" volta para a lista: os cards são a lista. */
     return TASK_VIEWS.includes(value as TaskView) ? (value as TaskView) : 'list';
   } catch {
     return 'list';
@@ -193,7 +196,7 @@ function queryOf(
   range: TaskRange | null = null,
   window: GanttWindow | null = null,
 ): Partial<TaskListQuery> & Pick<TaskListQuery, 'area'> {
-  const paged = view === 'list' || view === 'cards';
+  const paged = view === 'list';
   const ranged = view === 'calendar' || view === 'timeline';
 
   return {
@@ -396,7 +399,7 @@ export function useTaskListModel(area: RoleContext): TaskListModel {
         return !list.current.isPending && tasks.length === 0 && isFiltered;
       },
       get isTruncated() {
-        const paged = view.current === 'list' || view.current === 'cards';
+        const paged = view.current === 'list';
         return !paged && (list.current.data?.total ?? 0) > tasks.length;
       },
       get isMutating() {

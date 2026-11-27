@@ -383,7 +383,7 @@
               disabled={!actions?.onEventClick}
               onclick={() => actions?.onEventClick?.(entry.event.id)}
               class={cn(
-                'rounded-box bg-card shadow-card hover:bg-hover-veil flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors disabled:pointer-events-none',
+                'rounded-control hover:bg-hover-veil flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors disabled:pointer-events-none',
                 FOCUS,
               )}
             >

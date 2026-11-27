@@ -89,13 +89,14 @@
     TASK_STATUS_TONES,
   } from '@template/shared/domain/task-flow.util';
 
-  import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ActionButton, { actionButton } from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import BackButton from '$lib/components/azuos-back-button/azuos-back-button.svelte';
   import CheckboxField from '$lib/components/azuos-checkbox-field/azuos-checkbox-field.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import LoadingState from '$lib/components/azuos-loading-state/azuos-loading-state.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
+  import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import ProgressBar from '$lib/components/azuos-progress-bar/azuos-progress-bar.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
@@ -132,15 +133,48 @@
   {#if viewState.isLoading}
     <LoadingState data={{ label: 'Carregando a tarefa…' }} />
   {:else if viewState.error || !data.task}
-    <ErrorState data={{ message: viewState.error ?? 'Tarefa não encontrada.' }} ui={{ variant: 'inline' }} />
+    <ErrorState data={{ title: 'A tarefa não carregou', message: viewState.error ?? 'Tarefa não encontrada.' }} />
   {:else}
     {@const task = data.task}
     {@const due = taskDueBadge(task, data.now)}
     {@const isDone = task.status === 'done'}
-    <header class="rounded-surface bg-card shadow-card flex flex-col gap-4 p-4">
-      <div class="flex flex-wrap items-start gap-3">
-        <div class="flex min-w-0 flex-1 flex-col gap-2">
-          <h1 class="text-foreground text-xl font-semibold">{task.title}</h1>
+    <!-- O molde de toda ficha: o cabeçalho da tela (título e as ações) e, embaixo, os dados da
+         tarefa no card de conteúdo do grupo — e não um cabeçalho desenhado como card. -->
+    <PageHeader data={{ title: task.title, description: TASK_ORIGIN_LABELS[task.origin] }}>
+      <div class="flex flex-wrap gap-2">
+        {#if task.origin === 'ticket' && task.ticketId}
+          <!-- A tarefa do chamado acompanha o chamado: quem finaliza é ele. É um link (tem
+               endereço), com o desenho do botão principal. -->
+          <a href={`${data.base ?? '/infra'}/tickets/${task.ticketId}`} class={actionButton({ variant: 'primary' })}>
+            <ExternalLink aria-hidden="true" /> Abrir o chamado
+          </a>
+        {:else}
+          <ActionButton
+            data={{ label: isDone ? 'Reabrir' : 'Finalizar' }}
+            ui={{ icon: isDone ? RotateCcw : CheckCircle2, variant: isDone ? 'secondary' : 'primary' }}
+            state={{ isDisabled: viewState.isBusy || task.archive !== null }}
+            actions={{ onClick: isDone ? actions.onReopen : actions.onFinish }}
+          />
+        {/if}
+        <ActionButton
+          data={{ label: 'Editar' }}
+          ui={{ icon: Pencil, variant: 'secondary' }}
+          state={{ isDisabled: viewState.isBusy }}
+          actions={{ onClick: actions.onEdit }}
+        />
+        <!-- Excluir ARQUIVA (como no Paralegal): a tarefa sai de "Em uso" e volta pelo Desarquivar. -->
+        <ActionButton
+          data={{ label: task.archive ? 'Desarquivar' : 'Arquivar' }}
+          ui={{ icon: task.archive ? ArchiveRestore : Archive, variant: 'ghost' }}
+          state={{ isDisabled: viewState.isBusy }}
+          actions={{ onClick: task.archive ? actions.onRestore : actions.onRemove }}
+        />
+      </div>
+    </PageHeader>
+
+    <ContentCard data={{ label: 'Dados da tarefa', title: 'Dados da tarefa' }}>
+      {#snippet body()}
+        <div class="flex flex-col gap-4 pb-1">
           <div class="flex flex-wrap items-center gap-2 text-sm">
             <StatusBadge
               data={{ label: situationOf(task).label }}
@@ -148,83 +182,51 @@
             />
             {#if due}<StatusBadge data={{ label: due.label }} ui={{ tone: DUE_TONE[due.tone] }} />{/if}
             {#if task.archive}<StatusBadge data={{ label: 'Arquivada' }} ui={{ tone: 'neutral' }} />{/if}
-            <span class="text-muted-foreground">{TASK_ORIGIN_LABELS[task.origin]}</span>
           </div>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          {#if task.origin === 'ticket' && task.ticketId}
-            <!-- A tarefa do chamado acompanha o chamado: quem finaliza é ele. -->
-            <a
-              href={`${data.base ?? '/infra'}/tickets/${task.ticketId}`}
-              class="control-md rounded-button bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-2 px-4 text-sm font-semibold"
-            >
-              <ExternalLink aria-hidden="true" class="size-4" /> Abrir o chamado
-            </a>
-          {:else}
-            <ActionButton
-              data={{ label: isDone ? 'Reabrir' : 'Finalizar' }}
-              ui={{ icon: isDone ? RotateCcw : CheckCircle2, variant: isDone ? 'secondary' : 'primary' }}
-              state={{ isDisabled: viewState.isBusy || task.archive !== null }}
-              actions={{ onClick: isDone ? actions.onReopen : actions.onFinish }}
-            />
+          <dl class="grid gap-3 text-sm sm:grid-cols-3">
+            <div class="flex flex-col gap-1">
+              <dt class="text-muted-foreground">Responsável</dt>
+              <dd class="text-foreground flex items-center gap-2">
+                {#if task.owner}
+                  <PersonAvatar
+                    name={task.owner.name ?? 'Sem cadastro'}
+                    avatarUrl={task.owner.avatarUrl}
+                    personId={task.owner.id}
+                    ui={{ size: 'sm' }}
+                  />
+                  {task.owner.name ?? 'Sem cadastro'}
+                {:else}
+                  Sem responsável
+                {/if}
+              </dd>
+            </div>
+            {@render fact('Início', formatDay(task.startDate))}
+            {@render fact('Criada por', task.createdBy?.name ?? 'Sistema')}
+          </dl>
+          {#if task.people.length > 0}
+            <div class="flex flex-col gap-1 text-sm">
+              <span class="text-muted-foreground">Participantes</span>
+              <ul aria-label="Participantes" class="flex flex-wrap gap-x-4 gap-y-2">
+                {#each task.people as person (person.id)}
+                  <li class="text-foreground flex items-center gap-2">
+                    <PersonAvatar
+                      name={person.name ?? 'Sem cadastro'}
+                      avatarUrl={person.avatarUrl}
+                      personId={person.id}
+                      ui={{ size: 'sm' }}
+                    />
+                    {person.name ?? 'Sem cadastro'}
+                  </li>
+                {/each}
+              </ul>
+            </div>
           {/if}
-          <ActionButton
-            data={{ label: 'Editar' }}
-            ui={{ icon: Pencil, variant: 'secondary' }}
-            state={{ isDisabled: viewState.isBusy }}
-            actions={{ onClick: actions.onEdit }}
-          />
-          <!-- Excluir ARQUIVA (como no Paralegal): a tarefa sai de "Em uso" e volta pelo Desarquivar. -->
-          <ActionButton
-            data={{ label: task.archive ? 'Desarquivar' : 'Arquivar' }}
-            ui={{ icon: task.archive ? ArchiveRestore : Archive, variant: 'ghost' }}
-            state={{ isDisabled: viewState.isBusy }}
-            actions={{ onClick: task.archive ? actions.onRestore : actions.onRemove }}
-          />
+          {#if task.description}
+            <p class="text-foreground text-sm whitespace-pre-line">{task.description}</p>
+          {/if}
         </div>
-      </div>
-      <dl class="grid gap-3 text-sm sm:grid-cols-3">
-        <div class="flex flex-col gap-1">
-          <dt class="text-muted-foreground">Responsável</dt>
-          <dd class="text-foreground flex items-center gap-2">
-            {#if task.owner}
-              <PersonAvatar
-                name={task.owner.name ?? 'Sem cadastro'}
-                avatarUrl={task.owner.avatarUrl}
-                personId={task.owner.id}
-                ui={{ size: 'sm' }}
-              />
-              {task.owner.name ?? 'Sem cadastro'}
-            {:else}
-              Sem responsável
-            {/if}
-          </dd>
-        </div>
-        {@render fact('Início', formatDay(task.startDate))}
-        {@render fact('Criada por', task.createdBy?.name ?? 'Sistema')}
-      </dl>
-      {#if task.people.length > 0}
-        <div class="flex flex-col gap-1 text-sm">
-          <span class="text-muted-foreground">Participantes</span>
-          <ul aria-label="Participantes" class="flex flex-wrap gap-x-4 gap-y-2">
-            {#each task.people as person (person.id)}
-              <li class="text-foreground flex items-center gap-2">
-                <PersonAvatar
-                  name={person.name ?? 'Sem cadastro'}
-                  avatarUrl={person.avatarUrl}
-                  personId={person.id}
-                  ui={{ size: 'sm' }}
-                />
-                {person.name ?? 'Sem cadastro'}
-              </li>
-            {/each}
-          </ul>
-        </div>
-      {/if}
-      {#if task.description}
-        <p class="text-foreground text-sm whitespace-pre-line">{task.description}</p>
-      {/if}
-    </header>
+      {/snippet}
+    </ContentCard>
 
     {#if viewState.actionError}
       <ErrorState data={{ message: viewState.actionError }} ui={{ variant: 'inline' }} />

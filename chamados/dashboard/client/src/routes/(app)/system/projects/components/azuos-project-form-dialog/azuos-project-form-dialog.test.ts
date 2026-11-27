@@ -48,7 +48,7 @@ describe('AzuosProjectFormDialog', () => {
       },
     });
 
-    expect(screen.getByText('Novo Sistema')).toBeInTheDocument();
+    expect(screen.getByText('Novo sistema')).toBeInTheDocument();
     expect(screen.getByText('Nome do sistema')).toBeInTheDocument();
     expect(screen.getByText('Repositório no GitHub')).toBeInTheDocument();
   });
@@ -141,7 +141,7 @@ describe('AzuosProjectFormDialog — filling the form', () => {
     const model = createMockModel({ data: { mode: 'edit' } as never });
     render(ProjectFormDialog, { props: { open: true, model, onClose: vi.fn() } });
 
-    expect(screen.getByText('Editar Sistema')).toBeInTheDocument();
+    expect(screen.getByText('Editar sistema')).toBeInTheDocument();
     await fireEvent.submit(
       screen.getByRole('textbox', { name: /Nome do sistema/ }).closest('form')!,
     );

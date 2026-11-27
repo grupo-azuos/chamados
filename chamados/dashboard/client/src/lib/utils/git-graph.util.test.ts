@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildGitGraph, categoryOfBranch, categoryOfMessage, initialsOf } from './git-graph.util';
+import { buildGitGraph, categoryOfBranch, categoryOfMessage } from './git-graph.util';
 
 const commit = (
   sha: string,
@@ -90,7 +90,6 @@ describe('git graph', () => {
     expect(categoryOfBranch('wip')).toBe('other');
     expect(categoryOfMessage('fix: algo')).toBe('bugfix');
     expect(categoryOfMessage('qualquer')).toBe('other');
-    expect(initialsOf('Vinícius Gabriel')).toBe('VG');
   });
 
   // feliz

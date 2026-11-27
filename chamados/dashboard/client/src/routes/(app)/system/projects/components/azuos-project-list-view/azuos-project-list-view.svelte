@@ -2,9 +2,10 @@
   @component
   OS SISTEMAS E PROJETOS da empresa: a tela de lista do módulo Sistema.
 
-  Cabeçalho com "Sincronizar todos" (só com `canSyncAll`) e "Novo Sistema" (só para quem edita),
-  busca por nome ou repositório e filtro de situação. Cada sistema é o cartão de registro
-  (`AzuosContentCard`): situação na faixa, nome, link do repositório no GitHub (abre em nova aba),
+  Cabeçalho com "Sincronizar todos" (só com `canSyncAll`) e "Novo sistema" (só para quem edita);
+  a barra com busca, situação e o modo de ver (Lista ou Mapa; a lista em tabela ou cards pela troca
+  do sistema). Cada sistema é o cartão de registro (`AzuosContentCard`) ou a linha da
+  `AzuosProjectTable`: situação na faixa, nome, link do repositório no GitHub (abre em nova aba),
   descrição, chamados e PRs abertos e o responsável (ou "Sem responsável"). O card inteiro abre a
   página do sistema ("Ver sistema"); no menu de três pontinhos, "Sincronizar" (com `canSync`) e,
   para quem edita, "Editar" e "Excluir".
@@ -28,7 +29,6 @@
     type SoftwareProjectStatus,
   } from '@template/shared/domain/software-project.util';
   import { type SoftwareProject } from '@template/shared/schemas/software-project.schema';
-  import { type StatusBadgeTone } from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import { type SoftwareProjectListFilter } from '$lib/hooks/use-software-project-list/use-software-project-list.svelte';
 
   export type AzuosProjectListViewProps = {
@@ -77,25 +77,6 @@
     map?: Snippet;
   };
 
-  /** "dono/repositório" quando o GitHub já respondeu; senão, o endereço como foi cadastrado. */
-  export function repositoryLabelOf(project: SoftwareProject): string {
-    return project.githubRepoOwner
-      ? `${project.githubRepoOwner}/${project.githubRepoName}`
-      : project.repositoryUrl;
-  }
-
-  /** O link do repositório: o endereço cadastrado, ou o do GitHub quando veio só "dono/nome". */
-  export function repositoryHrefOf(project: SoftwareProject): string {
-    return project.repositoryUrl.startsWith('http')
-      ? project.repositoryUrl
-      : `https://github.com/${project.repositoryUrl}`;
-  }
-
-  const STATUS_TONES: Record<string, StatusBadgeTone> = {
-    active: 'success',
-    maintenance: 'warning',
-    deprecated: 'neutral',
-  };
 </script>
 
 <script lang="ts">
@@ -106,6 +87,15 @@
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
+  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
+  import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
+  import { cn } from '$lib/utils/cn';
+  import ProjectTable, {
+    projectStatusTone,
+    repositoryHrefOf,
+    repositoryLabelOf,
+  } from '../azuos-project-table/azuos-project-table.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
@@ -121,10 +111,12 @@
 
   let { data, state, actions, map }: AzuosProjectListViewProps = $props();
 
+  /* "Lista" é a tabela ou a grade de cards (a troca do sistema, ao lado); "Mapa", o desenho. */
   const VIEW_OPTIONS = [
-    { value: 'cards', label: 'Cards' },
+    { value: 'cards', label: 'Lista' },
     { value: 'map', label: 'Mapa' },
   ];
+  const tableView = useTableViewModel();
   /* A grade de cards pagina no navegador: a lista chega inteira (até o teto da consulta). */
   const cardPage = useCardPage(() => data.items);
 
@@ -164,13 +156,6 @@
         'Cadastre os softwares da empresa, acompanhe Pull Requests e vincule chamados de suporte.',
     }}
   >
-    {#if actions.onViewChange && map}
-      <SegmentedControl
-        data={{ value: data.view ?? 'cards', options: VIEW_OPTIONS }}
-        ui={{ ariaLabel: 'Modo de ver os sistemas' }}
-        actions={{ onChange: (value: string) => actions.onViewChange?.(value as 'cards' | 'map') }}
-      />
-    {/if}
     {#if state.canSyncAll}
       <ActionButton
         data={{ label: 'Sincronizar todos', loadingLabel: 'Sincronizando…' }}
@@ -181,7 +166,7 @@
     {/if}
     {#if state.canEdit !== false}
       <ActionButton
-        data={{ label: 'Novo Sistema' }}
+        data={{ label: 'Novo sistema' }}
         ui={{ variant: 'primary', icon: Plus }}
         actions={{ onClick: actions.onRegister }}
       />
@@ -189,30 +174,19 @@
   </PageHeader>
 
   {#if state.syncMessage}
-    <div
-      class="rounded-box bg-success-soft p-4 text-xs font-medium text-success"
-    >
+    <div role="status" class="rounded-box bg-success-soft text-success p-4 text-xs font-medium">
       {state.syncMessage}
     </div>
   {/if}
 
   {#if state.syncError}
-    <p
-      role="alert"
-      class="rounded-box bg-destructive-soft p-4 text-xs text-destructive"
-    >
-      {state.syncError}
-    </p>
+    <ErrorState data={{ message: state.syncError }} ui={{ variant: 'inline' }} />
   {/if}
 
-  {#if data.view === 'map' && map}
-    {@render map()}
-  {:else}
-  <!-- Filtros: no card, como em toda tela do grupo (a busca e o seletor soltos sumiam no fundo). -->
-  <ContentCard data={{ label: '', title: '' }}>
-{#snippet body()}
-<div class="p-4">
-    <div class="grid items-end gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+  <!-- A barra de ferramentas do molde: busca → filtro → modo de ver, sobre o fundo da página
+       (filtro dentro de card é proibido). -->
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+    {#if data.view !== 'map'}
       <TextField
         data={{
           label: 'Buscar',
@@ -220,30 +194,43 @@
           value: data.filter.search,
           placeholder: 'Buscar por nome ou repositório…',
         }}
+        ui={{ className: 'flex-1' }}
         actions={{ onChange: actions.onSearchChange }}
       />
-      <div class="flex flex-col gap-1.5">
-        <span class="text-ink-700 text-sm font-medium">Situação</span>
+      <div class="sm:w-56">
         <SelectField
-          data={{
-            value: data.filter.status,
-            options: statusFilterOptions,
-          }}
-          ui={{ ariaLabel: 'Filtrar por situação', placeholder: 'Todas as situações' }}
-          actions={{
-            onChange: (val) => actions.onStatusChange(val as SoftwareProjectStatus | ''),
-          }}
+          data={{ value: data.filter.status, options: statusFilterOptions }}
+          ui={{ ariaLabel: 'Filtrar por situação', placeholder: 'Todas as situações', className: 'w-full' }}
+          actions={{ onChange: (val) => actions.onStatusChange(val as SoftwareProjectStatus | '') }}
         />
       </div>
+    {/if}
+    <div class="flex items-center gap-2 sm:ml-auto">
+      {#if actions.onViewChange && map}
+        <SegmentedControl
+          data={{ value: data.view ?? 'cards', options: VIEW_OPTIONS }}
+          ui={{ ariaLabel: 'Modo de ver os sistemas' }}
+          actions={{ onChange: (value: string) => actions.onViewChange?.(value as 'cards' | 'map') }}
+        />
+      {/if}
+      {#if data.view !== 'map'}
+        <TableViewToggle />
+      {/if}
     </div>
   </div>
-{/snippet}
-</ContentCard>
 
+  {#if data.view === 'map' && map}
+    {@render map()}
+  {:else}
   {#if state.isLoading}
-    <div class="card-grid">
+    <div class="card-grid" aria-busy="true" aria-label="Carregando os sistemas">
       {#each [0, 1, 2] as idx (idx)}
-        <div class="h-56 animate-pulse rounded-surface bg-muted"></div>
+        <div class="bg-card shadow-card rounded-surface flex flex-col gap-3 p-4">
+          <Skeleton class="h-3 w-1/4" />
+          <Skeleton class="h-4 w-2/3" />
+          <Skeleton class="h-3 w-full" />
+          <Skeleton class="mt-4 h-6 w-1/2" />
+        </div>
       {/each}
     </div>
   {:else if state.error}
@@ -266,7 +253,7 @@
     >
       {#if state.canEdit !== false}
         <ActionButton
-          data={{ label: 'Cadastrar Sistema' }}
+          data={{ label: 'Cadastrar sistema' }}
           ui={{ variant: 'primary', icon: Plus }}
           actions={{ onClick: actions.onRegister }}
         />
@@ -280,7 +267,7 @@
       }}
     >
       <ActionButton
-        data={{ label: 'Limpar Filtros' }}
+        data={{ label: 'Limpar filtros' }}
         ui={{ variant: 'secondary' }}
         actions={{ onClick: actions.onClearFilters }}
       />
@@ -288,7 +275,7 @@
   {:else}
     <!-- A grade padrão de cards: cada sistema é o cartão de registro, e o card inteiro abre a
          página dele ("Ver sistema"). Sincronizar, corrigir e excluir moram no menu. -->
-    <div class="card-grid" data-slot="project-cards">
+    <div class={cn('card-grid', !tableView.forceCards && 'xl:hidden')} data-slot="project-cards">
       {#each cardPage.items as project (project.id)}
         <ContentCard
           data={{
@@ -298,7 +285,7 @@
             codeHref: repositoryHrefOf(project),
             status: {
               label: softwareProjectStatusLabel(project.status),
-              tone: STATUS_TONES[project.status] ?? 'neutral',
+              tone: projectStatusTone(project),
             },
             metrics: [
               {
@@ -342,10 +329,18 @@
         </ContentCard>
       {/each}
     </div>
+    <!-- A tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu cards. Rola inteira. -->
+    <div class={cn('hidden', !tableView.forceCards && 'xl:block')} data-slot="project-table">
+      <ProjectTable
+        data={{ items: data.items, menuItems }}
+        state={{ isMenuDisabled: state.isSyncing }}
+        actions={{ onOpen: actions.onViewTimeline, onMenuSelect: chooseAction }}
+      />
+    </div>
       <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
            fileira. A barra só aparece quando há mais de uma página. -->
       {#if cardPage.total > cardPage.pageSize}
-        <div class="flex justify-center">
+        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
           <PaginationBar
             data={{
               page: cardPage.page,

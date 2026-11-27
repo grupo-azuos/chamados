@@ -33,10 +33,14 @@
   aria-label="Vinculação obrigatória do GitHub"
   class="flex min-h-svh w-full items-center justify-center bg-background p-6"
 >
-  <ContentCard data={{ label: '', title: '' }} ui={{ className: 'w-full max-w-md' }}>
+  <!-- O card de conteúdo do grupo: o ícone do assunto cheio À ESQUERDA, no cabeçalho, e não um
+       ícone grande solto no meio. -->
+  <ContentCard
+    data={{ label: 'Vincular o GitHub', title: 'GitHub', meta: 'Obrigatório para entrar em Sistema' }}
+    ui={{ className: 'w-full max-w-md', icon: GitBranch, iconTone: 'info' }}
+  >
 {#snippet body()}
-<div class="flex flex-col items-center gap-5 p-8 text-center">
-    <GitBranch class="size-10 text-primary" aria-hidden="true" />
+<div class="flex flex-col gap-4 pb-1">
     <h1 class="text-xl font-semibold text-foreground">Vincule seu GitHub para acessar Sistema</h1>
     {#if state.isLoading}
       <p role="status" class="text-sm text-muted-foreground">Verificando sua vinculação…</p>

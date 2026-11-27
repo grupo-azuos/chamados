@@ -79,7 +79,6 @@
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import DatePicker from '$lib/components/azuos-date-picker/azuos-date-picker.svelte';
-  import TimePicker from '../azuos-time-picker/azuos-time-picker.svelte';
   import { type SoftwareScheduleFormModel } from '$lib/hooks/use-software-schedule-form/use-software-schedule-form.svelte';
 
   let {
@@ -143,18 +142,7 @@
        tela sem rolar. -->
   <DialogContent class="sm:max-w-2xl">
     <DialogHeader class="gap-1.5">
-      <div class="flex items-center gap-2.5">
-        <span
-          class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-muted text-primary"
-        >
-          {#if isRecord}
-            <CircleCheckBig class="size-4" aria-hidden="true" />
-          {:else}
-            <CalendarDays class="size-4" aria-hidden="true" />
-          {/if}
-        </span>
-        <DialogTitle class="text-lg font-semibold tracking-tight">{title}</DialogTitle>
-      </div>
+      <DialogTitle class="text-lg font-semibold tracking-tight">{title}</DialogTitle>
       <DialogDescription class="text-xs text-muted-foreground">{description}</DialogDescription>
     </DialogHeader>
 
@@ -166,16 +154,14 @@
     {/if}
 
     {#if deleteError}
-      <p
-        role="alert"
-        class="rounded-box bg-destructive-soft p-3 text-sm text-destructive"
-      >
-        {deleteError}
-      </p>
+      <ErrorState data={{ message: deleteError }} ui={{ variant: 'inline' }} />
     {/if}
     <form novalidate onsubmit={handleSubmit} class="flex flex-col gap-3.5">
+      <!-- Os campos em dois grupos (Lei de Miller): o que é, e quando — mais a descrição. -->
+      <fieldset class="flex flex-col gap-3.5">
+      <legend class="text-muted-foreground mb-2 text-sm font-medium">O que é</legend>
       <div class="flex flex-col gap-1.5">
-        <span class="text-xs font-medium text-foreground">Tipo</span>
+        <span class="text-sm font-medium text-foreground">Tipo</span>
         <OptionPicker
           data={{ value: model.data.fields.kind.value, options: kindOptions }}
           ui={{ ariaLabel: 'Tipo do item na agenda', fullWidth: true }}
@@ -206,7 +192,7 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div class="flex flex-col gap-1.5">
-          <span class="text-xs font-medium text-foreground">Categoria</span>
+          <span class="text-sm font-medium text-foreground">Categoria</span>
           <OptionPicker
             data={{
               value: model.data.fields.category.value,
@@ -226,7 +212,7 @@
 
         {#if projects.length > 0}
           <div class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium text-foreground"> Sistema vinculado (opcional) </span>
+            <span class="text-sm font-medium text-foreground">Sistema vinculado (opcional)</span>
             <OptionPicker
               data={{
                 value: model.data.fields.projectId.value ?? '',
@@ -246,12 +232,16 @@
         {/if}
       </div>
 
+      </fieldset>
+
+      <fieldset class="flex flex-col gap-3.5">
+      <legend class="text-muted-foreground mb-2 text-sm font-medium">Quando</legend>
       <!-- Data e horário numa linha só: no compromisso, Data · Início · Fim; no registro, que
            marca só o momento, Data · Hora. Empilhados, eram três linhas e a janela passava da
            altura da tela. -->
       <div class="grid grid-cols-1 gap-3 {isRecord ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}">
         <div class="flex min-w-0 flex-col gap-1.5">
-          <label for={dateId} class="text-sm font-medium text-ink-700">
+          <label for={dateId} class="text-sm font-medium text-foreground">
             Data <span class="text-destructive" aria-hidden="true">*</span>
           </label>
           <DatePicker
@@ -272,7 +262,9 @@
           {/if}
         </div>
 
-        <TimePicker
+        <!-- A hora é o campo de texto do grupo no tipo `time`: o mesmo da tarefa. -->
+        <TextField
+          ui={{ type: 'time' }}
           data={{
             label: isRecord ? 'Hora' : 'Início',
             name: 'startTime',
@@ -290,7 +282,8 @@
         />
 
         {#if !isRecord}
-          <TimePicker
+          <TextField
+            ui={{ type: 'time' }}
             data={{
               label: 'Fim',
               name: 'endTime',
@@ -311,7 +304,7 @@
 
       <!-- A cor numa linha só, sem caixa em volta: é um detalhe visual, não merece um bloco. -->
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <span class="text-xs font-medium text-foreground">
+        <span class="text-sm font-medium text-foreground">
           Cor na agenda
           <span class="font-normal text-muted-foreground">
             · {swatchOf(model.data.fields.color.value).label}
@@ -339,6 +332,8 @@
         </div>
       </div>
 
+      </fieldset>
+
       <TextAreaField
         data={{
           label: 'Descrição',
@@ -362,15 +357,12 @@
       <DialogFooter class="mt-1 flex items-center justify-between border-t border-border pt-3">
         <div>
           {#if isEdit && onDelete}
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 text-xs font-medium text-destructive hover:underline"
-              onclick={onDelete}
-              disabled={isDeleting || model.state.isSubmitting}
-            >
-              <Trash2 class="size-3.5" />
-              {isDeleting ? 'Excluindo…' : `Excluir ${kindLabel.toLowerCase()}`}
-            </button>
+            <ActionButton
+              data={{ label: `Excluir ${kindLabel.toLowerCase()}`, loadingLabel: 'Excluindo…' }}
+              ui={{ variant: 'danger-soft', icon: Trash2 }}
+              state={{ isLoading: isDeleting, isDisabled: model.state.isSubmitting }}
+              actions={{ onClick: onDelete }}
+            />
           {/if}
         </div>
 

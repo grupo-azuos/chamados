@@ -105,7 +105,7 @@ describe('the system/schedule route with data', () => {
     const day = today.split('-').reverse().join('/');
     await userEvent.click(screen.getByRole('button', { name: `Novo agendamento em ${day}` }));
     expect(await screen.findByText('Novo Compromisso')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Início' })).toHaveTextContent('09:00');
+    expect(screen.getByLabelText(/^Início/)).toHaveValue('09:00');
   });
 
   // feliz
