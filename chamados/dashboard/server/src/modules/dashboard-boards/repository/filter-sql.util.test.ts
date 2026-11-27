@@ -152,7 +152,7 @@ describe('filterToSql on the system name', () => {
     const grouped = dialect.sqlToQuery(SOURCE_TABLES.systemTickets.dimensions.project!);
 
     expect(grouped.sql).toContain(
-      `lower(btrim(regexp_replace("chamados"."tickets"."custom_system_name", '\\s+', ' ', 'g')))`,
+      `lower(btrim(regexp_replace("tickets"."tickets"."custom_system_name", '\\s+', ' ', 'g')))`,
     );
     expect(grouped.sql).toContain('lower(btrim(project.name)) =');
   });

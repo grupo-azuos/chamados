@@ -117,27 +117,28 @@ const SYSTEM_TICKETS_DEMO_SEED: (TicketInsert & { id: number })[] = [
   },
 ];
 
+/* Cada tabela com o schema do assunto dela (ver `schemas.schema.ts`). */
 const RESET_TABLES = [
-  'computer_alerts',
-  'computer_samples',
-  'computer_transfers',
-  'computers',
-  'github_oauth_states',
-  'inventory_items',
-  'inventory_movements',
-  'maintenance_quotes',
-  'maintenances',
-  'network_events',
-  'part_movements',
-  'parts',
-  'software_projects',
-  'software_schedule_events',
-  'software_timeline_events',
-  'ticket_areas',
-  'ticket_attachments',
-  'ticket_histories',
-  'ticket_service_orders',
-  'tickets',
+  'inventory.computer_alerts',
+  'inventory.computer_samples',
+  'inventory.computer_transfers',
+  'inventory.computers',
+  'software.github_oauth_states',
+  'inventory.inventory_items',
+  'inventory.inventory_movements',
+  'maintenance.maintenance_quotes',
+  'maintenance.maintenances',
+  'inventory.network_events',
+  'inventory.part_movements',
+  'inventory.parts',
+  'software.software_projects',
+  'software.software_schedule_events',
+  'software.software_timeline_events',
+  'tickets.ticket_areas',
+  'tickets.ticket_attachments',
+  'tickets.ticket_histories',
+  'tickets.ticket_service_orders',
+  'tickets.tickets',
 ] as const;
 
 async function clearStorageBucket(): Promise<number> {
@@ -204,7 +205,7 @@ async function main(): Promise<void> {
 
   try {
     await db.transaction(async (tx) => {
-      const tableList = RESET_TABLES.map((table) => `chamados."${table}"`).join(', ');
+      const tableList = RESET_TABLES.map((qualified) => qualified.replace('.', '."') + '"').join(', ');
       await tx.execute(sql.raw(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`));
       await seedSoftwareProjects(tx);
       await seedSystemTickets(tx);

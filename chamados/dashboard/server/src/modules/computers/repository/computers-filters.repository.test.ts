@@ -15,7 +15,7 @@ describe('responsibleCondition', () => {
   it('compares the stored person id with the chosen one, as a parameter', () => {
     const query = render(responsibleCondition({ kind: 'person', id: 'person-1' }));
 
-    expect(query?.sql).toContain('"chamados"."computers"."responsible_id" = $1');
+    expect(query?.sql).toContain('"inventory"."computers"."responsible_id" = $1');
     expect(query?.params).toEqual(['person-1']);
   });
 

@@ -60,7 +60,7 @@ async function main() {
   try {
     if (remove) {
       const res = await pool.query(
-        'DELETE FROM chamados.super_admins WHERE lower(user_email) = $1 RETURNING id',
+        'DELETE FROM access.super_admins WHERE lower(user_email) = $1 RETURNING id',
         [email],
       );
       console.log(res.rowCount ? `✅ ${email} deixou de ser super-admin.` : `ℹ️ ${email} não era super-admin.`);
@@ -68,7 +68,7 @@ async function main() {
     }
 
     await pool.query(
-      'INSERT INTO chamados.super_admins (user_email) VALUES ($1) ON CONFLICT (user_email) DO NOTHING',
+      'INSERT INTO access.super_admins (user_email) VALUES ($1) ON CONFLICT (user_email) DO NOTHING',
       [email],
     );
     console.log(`✅ ${email} agora é super-admin: vê e altera todas as telas e libera os módulos.`);

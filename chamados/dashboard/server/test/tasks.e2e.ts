@@ -249,7 +249,7 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
     expect(again).toEqual({ opened: 0, finished: 0 });
 
     await started.db.execute(
-      `insert into chamados.maintenances (computer_id, type, performed_at, created_by)
+      `insert into maintenance.maintenances (computer_id, type, performed_at, created_by)
        values (${machine!.id}, 'preventive', '2026-07-01T12:00:00Z', 'ti@empresa.com.br')`,
     );
     expect(await service.syncMaintenance(new Date('2026-11-23T12:00:00Z'))).toEqual({
@@ -270,7 +270,7 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
 
     /* A preventiva registrada: a máquina não pede mais, e a tarefa finaliza. */
     await started.db.execute(
-      `insert into chamados.maintenances (computer_id, type, performed_at, created_by)
+      `insert into maintenance.maintenances (computer_id, type, performed_at, created_by)
        values (${machine!.id}, 'preventive', '2026-11-23T11:00:00Z', 'ti@empresa.com.br')`,
     );
     expect(await service.syncMaintenance(new Date('2026-11-23T12:00:00Z'))).toEqual({
@@ -288,7 +288,7 @@ describe.skipIf(!testDatabaseUrl)('Tasks API (e2e)', () => {
       .values({ name: 'FISCAL-D02', tokenHash: 'hash-fiscal', createdBy: 'ti@empresa.com.br' })
       .returning();
     await started.db.execute(
-      `insert into chamados.maintenances (computer_id, type, performed_at, created_by)
+      `insert into maintenance.maintenances (computer_id, type, performed_at, created_by)
        values (${machine!.id}, 'preventive', '2026-07-01T12:00:00Z', 'ti@empresa.com.br')`,
     );
     await app.get(TasksService).syncMaintenance(new Date());

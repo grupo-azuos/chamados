@@ -39,7 +39,7 @@ export async function seedDashboardBoards(db: DatabaseExecutor): Promise<number>
   }
   /* Com o schema escrito: a conexão de migrations não procura no `chamados` sozinha. */
   await db.execute(
-    sql`select setval(pg_get_serial_sequence('chamados.dashboard_boards', 'id'), coalesce((select max(id) from chamados.dashboard_boards), 0) + 1, false)`,
+    sql`select setval(pg_get_serial_sequence('dashboard.dashboard_boards', 'id'), coalesce((select max(id) from dashboard.dashboard_boards), 0) + 1, false)`,
   );
 
   return BOARDS_SEED.length;
