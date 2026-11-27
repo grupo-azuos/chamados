@@ -33,6 +33,7 @@ Uma mudança que toca dois locais são **dois commits**. Os locais:
 | `docs` | `.md` da raiz |
 | `deps` | só `package.json`/`package-lock.json` por atualização de dependência |
 | `claude` | `.claude/`, `CLAUDE.md` |
+| `release` | versão nova e tag `prod/vX.Y.Z`, só pelo `npm run release` |
 
 Ordem quando é uma feature: `contracts` → `db` → `backend` → `web`.
 Arquivo que não cabe em nenhum (ex.: `chamados/dashboard/package.json` com script novo de seed): junte

@@ -62,3 +62,23 @@ Webhook do GitHub só na Procedure (`webhook_enabled = true`); Repo, Build, Stac
 - Tudo do agente fica em `.claude/` (skills, hooks, regras, comandos). Não existe `.agents/`.
 - `dockerfile`, `compose.yml`, `caddyfile` e scripts `.sh` em minúsculas; `.sh` passam no
   `shellcheck -s sh` e no `shfmt -i 2 -ci -bn`.
+
+## 6. Versão e tag (skill `release-standard`)
+
+- A versão é **uma só**, semântica (`X.Y.Z`), e mora em três lugares que andam juntos: os
+  `package.json` (e o lock), cada `[build.config]` do Komodo (`version = "X.Y.Z"`,
+  `auto_increment_version = false`, label `azuos.version=X.Y.Z`) e a tag anotada `prod/vX.Y.Z`
+  na `main`. O server a devolve no cabeçalho `API-Version` e em `GET /api/health`; o
+  `docker/komodo.sh` a exporta como `APP_VERSION` e o `compose.yml` a grava no label
+  `azuos.version` do serviço.
+- Quem grava tudo é o **`scripts/release.mjs`** (`npm run release -- X.Y.Z --notes "…"`): commit
+  `[chore](release): Versão X.Y.Z` na develop, `[merge](release): vX.Y.Z na main` por `--no-ff`
+  num worktree, tag e envio. Versão nova **nasce na develop e vai para a main**; nunca o
+  contrário, e nunca à mão.
+- A mensagem da tag é `<Sistema> X.Y.Z: o que mudou.`, uma linha em branco e `Canal: prod.`.
+- **Nenhuma outra tag** sai da máquina: o `scripts/git/release-guard.sh` (pre-push, vale também para
+  quem administra) recusa `v*`, tag leve, mensagem fora do padrão, commit com versão diferente nos
+  arquivos e commit fora da main. Artefato com tag própria (o agente do chamados) é exceção
+  declarada em `EXTRA_TAG_PATTERNS`.
+- Não existe bump por Action no GitHub: o `Release/Bump` foi removido e o `infra-contract` reprova
+  se ele voltar.

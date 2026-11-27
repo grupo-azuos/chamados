@@ -1,0 +1,103 @@
+/* Azuos · padrão Cupertino · Acabamento Nenhum · Neutros Tinta azulada
+ * Cores da marca oficial Azuos com tokens, formas, bordas e regras do padrão Cupertino. */
+
+:root {
+	--background: #f8fafc;
+	--card: #fbfbfd;
+	--muted: #f3f4f6;
+	--border: #d1d5db;
+	--foreground: #111827;
+	--muted-foreground: #6b7280;
+	--sidebar: #1b3a8c;
+	--primary: #1b3a8c;
+	--primary-foreground: #f8fafc;
+	--primary-strong: #142b69;
+	--primary-soft: #e1e6f5;
+	--accent-hero: #f5c518;
+	--accent-hero-foreground: #111827;
+	--accent-strong: #b45309;
+	--tertiary: #8b5cf6;
+	--tertiary-strong: #6d28d9;
+	--ring: #2e52b8;
+	--shadow: #111827;
+	--success-soft: #d1fae5;
+	--success: #047857;
+	--warning-soft: #fef3c7;
+	--warning: #b45309;
+	--info-soft: #dbeafe;
+	--info: #1d4ed8;
+	--destructive-soft: #fee2e2;
+	--destructive: #dc2626;
+	--destructive-foreground: #f8fafc;
+	--chart-1: #2e52b8;
+	--chart-2: #10b981;
+	--chart-3: #f5c518;
+	--chart-4: #ef4444;
+	--chart-5: #8b5cf6;
+
+	--brand-font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+	--brand-font-heading: 'IBM Plex Sans', system-ui, sans-serif;
+
+	/* Arredondamento "gordinho" canônico Azuos: controles 14px, botões 14px, cartões 20px, diálogos 16px. */
+	--shape-control: 14px;
+	--shape-button: 14px;
+	--shape-card: 20px;
+	--shape-dialog: 16px;
+	--shape-chip: 9999px;
+	--shape-badge: 9999px;
+	--border-width: 1px;
+	--border-style: solid;
+	--card-border-color: var(--border);
+	--card-background: var(--card);
+	--elevation-card: none;
+	--elevation-button: none;
+	--control-height: 44px;
+	--heading-weight: 700;
+	--heading-tracking: -0.02em;
+	--heading-case: none;
+	--body-size: 1.0625rem;
+	--motion-duration: 350ms;
+	--motion-easing: cubic-bezier(0.32, 0.72, 0, 1);
+	--focus-width: 3px;
+	--focus-color: var(--color-ring);
+	--link-decoration: none;
+
+	color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+	--background: #0b1220;
+	--card: #111827;
+	--muted: #1f2937;
+	--border: #2b2c3d;
+	--foreground: #f1f5f9;
+	--muted-foreground: #94a3b8;
+	--sidebar: #16265c;
+	--primary: #4265d4;
+	--primary-foreground: #f8fafc;
+	--primary-strong: #4265d4;
+	--primary-soft: #16265c;
+	--accent-hero: #f7ce3c;
+	--accent-hero-foreground: #111827;
+	--accent-strong: #f7ce3c;
+	--tertiary: #a78bfa;
+	--tertiary-strong: #a78bfa;
+	--ring: #4265d4;
+	--shadow: #060b14;
+	--success-soft: #022c22;
+	--success: #34d399;
+	--warning-soft: #451a03;
+	--warning: #fbbf24;
+	--info-soft: #172554;
+	--info: #60a5fa;
+	--destructive-soft: #450a0a;
+	--destructive: #f87171;
+	--destructive-foreground: #111827;
+	--chart-1: #4265d4;
+	--chart-2: #34d399;
+	--chart-3: #f7ce3c;
+	--chart-4: #f87171;
+	--chart-5: #a78bfa;
+
+	color-scheme: dark;
+}

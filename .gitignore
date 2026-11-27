@@ -10,6 +10,7 @@ reports/
 .tanstack/
 .svelte-kit/
 storybook-static/
+.wrangler/
 playwright-report/
 blob-report/
 test-results/

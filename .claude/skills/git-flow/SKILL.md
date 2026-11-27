@@ -16,7 +16,8 @@ que você fez.
 
 1. **A `main` não é tocada.** Não faça checkout, commit, merge, rebase nem push nela. Ela é de
    quem administra o projeto — e o git recusa (trava em `chamados/dashboard/scripts/git/branch-guard.sh`).
-   Release e hotfix também são dessa pessoa: se pedirem, explique que é com quem administra.
+   Release e hotfix também são dessa pessoa: se pedirem, explique que é com quem administra
+   (skill `release-standard`, `npm run release`).
 2. **Na `develop`, nada de commit direto.** Ela só recebe feature pronta, por
    `git merge --no-ff`.
 3. **Sem o OK explícito da pessoa, não há merge na develop.** "OK", "funcionou", "pode juntar",
