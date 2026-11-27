@@ -75,7 +75,7 @@
 
 <section
   aria-labelledby="whatsapp-link-title"
-  class="rounded-box bg-card flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between shadow-card"
+  class="rounded-surface bg-card flex flex-col gap-4 p-4 sm:p-6 md:flex-row md:items-center md:justify-between shadow-card"
 >
   <div class="flex min-w-0 items-start gap-3">
     <span

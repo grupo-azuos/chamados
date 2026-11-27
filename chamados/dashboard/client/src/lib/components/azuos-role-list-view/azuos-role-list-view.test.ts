@@ -103,11 +103,14 @@ describe('AzuosRoleListView', () => {
     expect(actions.onCreate).toHaveBeenCalledOnce();
   });
 
-  it('gives a module straight from the person card', async () => {
+  it('gives a module straight from the menu of the table row', async () => {
     const onGrantTo = vi.fn();
     renderView({ actions: { ...baseActions(), onGrantTo } });
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Adicionar módulo' })[0]!);
+    const table = document.querySelector('[data-slot="role-table-desktop"]') as HTMLElement;
+    await user.click(within(table).getByRole('button', { name: /^Ações de / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Adicionar módulo' }));
     expect(onGrantTo).toHaveBeenCalledWith(expect.objectContaining({ userId: 'usr_1' }));
   });
 
@@ -123,14 +126,16 @@ describe('AzuosRoleListView', () => {
       actions: { ...baseActions(), onGrantTo: vi.fn() },
     });
 
-    expect(screen.queryByRole('button', { name: 'Adicionar módulo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Ações de / })).not.toBeInTheDocument();
   });
 
-  it('takes out only the module whose x was clicked', async () => {
+  it('takes out only the module chosen in the menu of the table row', async () => {
     const actions = renderView();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
 
-    const removeSystem = screen.getAllByRole('button', { name: 'Tirar o módulo Sistema' });
-    await userEvent.click(removeSystem[0]!);
+    const table = document.querySelector('[data-slot="role-table-desktop"]') as HTMLElement;
+    await user.click(within(table).getByRole('button', { name: /^Ações de / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Tirar o módulo Sistema' }));
     expect(actions.onAskDelete).toHaveBeenCalledWith(mockRoles[1]);
   });
 
@@ -343,7 +348,7 @@ describe('AzuosRoleListView — filters, states and the rows', () => {
   // triste
   it('says it is loading, and offers to clear a filter that hid everything', async () => {
     renderView({ state: { isLoading: true, isEmpty: false, isFilteredOut: false, error: null } });
-    expect(screen.getByText('Carregando os acessos da equipe…')).toBeInTheDocument();
+    expect(screen.getByLabelText('Carregando os acessos da equipe…')).toHaveAttribute('aria-busy', 'true');
 
     cleanup();
     const actions = renderView({
@@ -384,7 +389,7 @@ describe('AzuosRoleListView — filters, states and the rows', () => {
 
 describe('AzuosRoleListView — unknown roles, people without e-mail and the table actions', () => {
   // feliz
-  it('shows an unknown role as it came, a person without e-mail by her id, and removes from the table', async () => {
+  it('shows an unknown role as it came, a person without e-mail by her id, and no menu to who only reads', () => {
     const actions = renderView({
       data: {
         currentUser: { name: 'Robô', email: 'robo@empresa.com.br', role: 'bot' },
@@ -396,9 +401,8 @@ describe('AzuosRoleListView — unknown roles, people without e-mail and the tab
 
     expect(screen.getAllByText('bot').length).toBeGreaterThan(0);
     expect(screen.getAllByText('usr_1').length).toBeGreaterThan(0);
-    const removes = screen.queryAllByRole('button', { name: /^Tirar o módulo / });
-    for (const button of removes) await userEvent.click(button);
-    expect(actions.onAskDelete).toHaveBeenCalledTimes(removes.length);
+    expect(screen.queryByRole('button', { name: /^Ações de / })).not.toBeInTheDocument();
+    expect(actions.onAskDelete).not.toHaveBeenCalled();
   });
 });
 

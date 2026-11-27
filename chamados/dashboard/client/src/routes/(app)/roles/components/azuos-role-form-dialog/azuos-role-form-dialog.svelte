@@ -61,6 +61,8 @@
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
+  import CheckboxField from '$lib/components/azuos-checkbox-field/azuos-checkbox-field.svelte';
+  import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import PersonPickerField from '$lib/components/azuos-person-picker-field/azuos-person-picker-field.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
@@ -73,9 +75,7 @@
     DialogHeader,
     DialogTitle,
   } from '$lib/components/azuos-dialog/azuos-dialog';
-  import { cn } from '$lib/utils/cn';
 
-  import Check from '@lucide/svelte/icons/check';
   import Info from '@lucide/svelte/icons/info';
   import Layers from '@lucide/svelte/icons/layers';
   import ShieldCheck from '@lucide/svelte/icons/shield-check';
@@ -124,9 +124,7 @@
 </script>
 
 <Dialog open={formState.isOpen} onOpenChange={(open) => !open && actions.onClose()}>
-  <!-- 2xl, e não xl: os três cartões de módulo, lado a lado, não cabem em 576px e vazavam pela
-       borda direita. -->
-  <DialogContent class="max-w-lg sm:max-w-2xl">
+  <DialogContent class="max-w-lg">
     <DialogHeader class="gap-1.5">
       <div class="flex items-center gap-2.5">
         <span
@@ -178,11 +176,7 @@
                     <span class="font-semibold text-sm text-foreground truncate">
                       {selectedUser?.name || fields.userEmail.value || fields.userId.value}
                     </span>
-                    <span
-                      class="text-xs font-medium text-muted-foreground bg-card px-1.5 py-0.5 rounded-chip"
-                    >
-                      Pessoa existente
-                    </span>
+                    <StatusBadge data={{ label: 'Pessoa existente' }} ui={{ tone: 'neutral', size: 'sm' }} />
                   </div>
                   {#if fields.userEmail.value}
                     <span class="block text-xs text-muted-foreground truncate">
@@ -232,37 +226,29 @@
             role="group"
             aria-label="Módulos para liberar"
             aria-describedby={data.contextsError ? 'role-contexts-error' : undefined}
-            class="grid grid-cols-1 sm:grid-cols-3 gap-2.5"
+            class="flex flex-col gap-1"
           >
+            <!-- Uma caixa de marcar por módulo (o campo canônico de "sim ou não"), com a frase do
+                 que ele abre embaixo do nome — e não um cartão-botão desenhado aqui. -->
             {#each ROLE_CONTEXTS as ctx (ctx)}
               {@const isSelected = data.contexts.includes(ctx)}
-              <button
-                type="button"
-                disabled={isEdit || formState.isSubmitting}
-                aria-pressed={isSelected}
-                aria-invalid={Boolean(data.contextsError)}
-                onclick={() => actions.onContextsChange(
-                  isSelected ? data.contexts.filter((context) => context !== ctx) : [...data.contexts, ctx],
-                )}
-                class={cn(
-                  'flex flex-col items-start gap-1 p-3 rounded-box text-left transition-colors',
-                  /* Sem borda (padrão Apple): o escolhido ganha o fundo claro da marca. */
-                  isSelected ? 'bg-primary-soft' : 'bg-muted hover:bg-hover-veil',
-                  (isEdit || formState.isSubmitting) && 'opacity-60 cursor-not-allowed',
-                )}
-              >
-                <div class="flex w-full items-center justify-between">
-                  <span class="text-xs font-semibold text-foreground">
-                    {CONTEXT_DETAILS[ctx].label}
-                  </span>
-                  {#if isSelected}
-                    <Check class="size-3.5 text-primary" aria-hidden="true" />
-                  {/if}
-                </div>
-                <span class="text-xs leading-snug text-muted-foreground">
-                  {CONTEXT_DETAILS[ctx].description}
-                </span>
-              </button>
+              <CheckboxField
+                data={{
+                  label: CONTEXT_DETAILS[ctx].label,
+                  name: `context-${ctx}`,
+                  isChecked: isSelected,
+                  description: CONTEXT_DETAILS[ctx].description,
+                }}
+                state={{ isDisabled: isEdit || formState.isSubmitting }}
+                actions={{
+                  onChange: (isChecked) =>
+                    actions.onContextsChange(
+                      isChecked
+                        ? [...data.contexts, ctx]
+                        : data.contexts.filter((context) => context !== ctx),
+                    ),
+                }}
+              />
             {/each}
           </div>
 
@@ -278,7 +264,7 @@
           <div
             class="flex items-start gap-2.5 rounded-box bg-muted p-3 text-xs leading-relaxed text-muted-foreground"
           >
-            <Info class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+            <Info class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>
               O que a pessoa pode no módulo vem do papel dela no <strong>admin-console</strong>:
               Administrador mexe em tudo, Gestor e Usuário só consultam. O <strong>Super Admin</strong>

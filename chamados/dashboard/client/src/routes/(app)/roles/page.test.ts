@@ -72,7 +72,8 @@ describe('the roles route with the access loaded', () => {
     await user.click(within(form).getByRole('button', { name: 'Cancelar' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    await user.click(screen.getAllByRole('button', { name: /^Tirar o módulo / })[0]!);
+    await user.click(screen.getAllByRole('button', { name: /^Ações de / })[0]!);
+    await user.click(await screen.findByRole('menuitem', { name: /^Tirar o módulo / }));
     const question = await screen.findByRole('dialog');
     expect(question).toHaveTextContent('Tirar este módulo?');
     expect(question).toHaveTextContent('bia@empresa.com.br');
