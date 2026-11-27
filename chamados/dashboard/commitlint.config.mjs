@@ -30,7 +30,13 @@ export default {
    * A consequência prática: merge precisa de `-m`. Um `git merge` ou `git pull` que gere a
    * mensagem sozinho vai ser recusado pelo hook — e recusar é o certo, porque é exatamente o
    * caso que se quer evitar.
+   *
+   * `defaultIgnores: false` é o que faz isso valer: o commitlint traz de fábrica uma lista
+   * que ignora `Merge branch ...`, `Merge pull request ...` e afins. Sem desligá-la, o tipo
+   * `merge` seria apenas *permitido*, e a mensagem automática continuaria passando — que é
+   * justamente o que esta regra existe para impedir.
    */
+  defaultIgnores: false,
 
   rules: {
     'type-empty': [2, 'never'],
@@ -44,7 +50,7 @@ export default {
     'scope-enum': [
       2,
       'always',
-      ['backend', 'web', 'db', 'contracts', 'docker', 'ci', 'docs', 'deps', 'claude', 'agent'],
+      ['backend', 'web', 'db', 'contracts', 'docker', 'ci', 'docs', 'deps', 'claude', 'release', 'agent'],
     ],
 
     'subject-empty': [2, 'never'],

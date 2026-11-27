@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Contrato de infraestrutura (.claude/rules/infra.md): nomes <ambiente>_<app>, recursos do Komodo,
-// namespace do Valkey e imagem sem node_modules. Igual em todos os apps; a base é o template.
+// namespace do Valkey, imagem sem node_modules e a versão única (package.json, Komodo e tag prod/v).
+// Igual em todos os apps; a base é o template.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -47,6 +48,9 @@ function resourceRules(resource, app) {
     ...rule(!['build', 'stack'].includes(resource.kind) || quoted(resource.field('linked_repo')) === `${env}_${app}`, `Komodo ${label}: read the files from the Repo ${env}_${app} (linked_repo)`),
     ...rule(resource.kind !== 'build' || (quoted(resource.field('builder')) === target.builder && quoted(resource.field('image_tag')) === env), `Komodo ${label}: build on the ${target.builder} builder with image_tag ${env}`),
     ...rule(resource.kind !== 'build' || (resource.text.includes(`azuos.app=${app}`) && resource.text.includes(`azuos.environment=${env}`)), `Komodo ${label}: label the image with azuos.app and azuos.environment`),
+    /* A versão do Build é a da tag prod/vX.Y.Z, gravada pelo scripts/release.mjs; o Komodo não a inventa. */
+    ...rule(resource.kind !== 'build' || (/^version = "\d+\.\d+\.\d+"$/m.test(resource.text) && resource.field('auto_increment_version') === 'false'), `Komodo ${label}: version = "X.Y.Z" and auto_increment_version = false (scripts/release.mjs writes them)`),
+    ...rule(resource.kind !== 'build' || !quoted(resource.field('version')) || resource.text.includes(`azuos.version=${quoted(resource.field('version'))}`), `Komodo ${label}: label the image with azuos.version=<the same version>`),
     ...rule(resource.kind !== 'stack' || (quoted(resource.field('swarm')) === target.swarm && quoted(resource.field('project_name')) === name), `Komodo ${label}: deploy ${name} on the ${target.swarm} swarm`),
     ...rule(resource.kind !== 'procedure' || !own || /name = "Pull"[\s\S]*name = "Build"[\s\S]*name = "Deploy"/.test(resource.text), `Komodo ${label}: stages Pull, Build and Deploy, in this order`),
   ];
@@ -131,11 +135,48 @@ function schemaRules(appDir) {
     .map((path) => `Use partialUpdate(schema) instead of schema.partial() for update schemas (Zod 4 applies defaults inside optional): ${path}`);
 }
 
+/* A versão é uma só: package.json, Build do Komodo e tag prod/vX.Y.Z andam juntos (release-standard). */
+function releaseRules(project, appDir, codeDir, toml) {
+  const read = (path) => (existsSync(path) ? readFileSync(path, 'utf8') : '');
+  const manifest = join(codeDir, 'package.json');
+  const version = existsSync(manifest) ? JSON.parse(readFileSync(manifest, 'utf8')).version : undefined;
+  const builds = [...toml.matchAll(/^\[build\.config\]\n((?:(?!\[).*\n?)*)/gm)].map((match) => match[1]);
+  const buildVersions = new Set(builds.map((build) => /^version = "([^"]+)"/m.exec(build)?.[1]));
+  const prePush = read(join(codeDir, '.husky/pre-push'));
+  const komodo = read(join(appDir, 'docker/komodo.sh'));
+  const compose = read(join(appDir, 'docker/compose.yml'));
+  return [
+    ...rule(existsSync(join(project, 'scripts/release.mjs')), 'scripts/release.mjs releases the version (copy it from the template)'),
+    ...rule(!existsSync(join(project, '.github/workflows/release-bump.yml')), 'The Release/Bump workflow is gone: the version is written locally by scripts/release.mjs'),
+    ...rule(existsSync(join(codeDir, 'scripts/git/release-guard.sh')) && prePush.includes('release-guard.sh'), 'The pre-push hook runs scripts/git/release-guard.sh before branch-guard.sh'),
+    ...rule(!version || (buildVersions.size === 1 && buildVersions.has(version)), `Komodo builds must be at version ${version}, the same as package.json (run npm run release)`),
+    ...rule(komodo.includes('APP_VERSION=') && komodo.includes('--env APP_VERSION'), 'docker/komodo.sh exports APP_VERSION from package.json'),
+    ...rule(compose.includes('azuos.version: ${APP_VERSION:?}'), 'docker/compose.yml labels the service with azuos.version: ${APP_VERSION:?}'),
+  ];
+}
+
+/**
+ * A pasta do CÓDIGO (package.json com os workspaces, `.husky`): quase sempre a do build. Num app
+ * aninhado o build é a pasta de fora (o docker fica nela) e o código numa subpasta — o certmonitor
+ * tem `certmonitor/docker` e `certmonitor/system`. Sem achar o código ali, as regras de build e de
+ * versão passariam sem conferir nada. App de pasta única (a shared-api) não tem workspaces: o
+ * `.husky` ao lado do package.json é o que diz que a subpasta é a do código.
+ */
+export function codeDirOf(appDir) {
+  if (existsSync(join(appDir, 'package.json'))) return appDir;
+  const nested = readdirSync(appDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => join(appDir, entry.name))
+    .find((dir) => existsSync(join(dir, 'package.json')) && ('workspaces' in JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) || existsSync(join(dir, '.husky'))));
+  return nested ?? appDir;
+}
+
 export function violations(project) {
   const toml = readFileSync(join(project, '.komodo/komodo.toml'), 'utf8');
   const app = /image_name = "azuos\/([a-z0-9-]+)"/.exec(toml)?.[1] ?? '';
   const appDir = join(project, /build_path = "([^"]+)"/.exec(toml)?.[1] ?? '.');
-  return [...new Set([...komodoRules(toml, app), ...dockerRules(appDir), ...buildRules(appDir), ...schemaRules(appDir)])];
+  const codeDir = codeDirOf(appDir);
+  return [...new Set([...komodoRules(toml, app), ...dockerRules(appDir), ...buildRules(codeDir), ...schemaRules(appDir), ...releaseRules(project, appDir, codeDir, toml)])];
 }
 
 function main() {

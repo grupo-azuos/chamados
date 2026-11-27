@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "private": true,
   "license": "MIT",
   "description": "API NestJS do template — um caminho de escrita por dado, SQLite por baixo.",
@@ -46,7 +46,6 @@
     "exceljs": "^4.4.0",
     "helmet": "^8.3.0",
     "iovalkey": "0.4.0",
-    "jose": "^6.2.12",
     "nestjs-pino": "^5.3.1",
     "pdfmake": "^0.3.11",
     "pg": "^8.23.1",
