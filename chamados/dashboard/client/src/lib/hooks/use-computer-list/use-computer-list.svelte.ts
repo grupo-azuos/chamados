@@ -11,10 +11,11 @@ import {
   type ComputerUpgradeFilter,
   matchesUpgradeFilter,
 } from '@template/shared/domain/computer-upgrade.util';
-import { type DepartmentChoice } from '@template/shared/domain/department.util';
+import { type DepartmentChoice, isNotInformed } from '@template/shared/domain/department.util';
 import { compareMachines, type NumberedMachine } from '@template/shared/domain/machine-number.util';
 import { type BoardDrill } from '@template/shared/schemas/board-drill.schema';
 import {
+  COMPUTER_NO_DEPARTMENT_FILTER,
   COMPUTER_ALERT_FILTERS,
   COMPUTER_PREVENTIVE_FILTERS,
   type Computer,
@@ -229,6 +230,27 @@ export const COMPUTER_LIST_FILTER_SCREEN = 'infra-computers';
 export const COMPUTERS_QUERY_KEY = ['computers'] as const;
 export const COMPUTER_NAME_REFRESH_MS = 60_000;
 
+/**
+ * As opções do filtro de departamento: "Não informado" logo abaixo de "Todos os departamentos" e,
+ * depois de uma linha, os departamentos do RH. "Não informado" junta a máquina sem departamento
+ * e a que está no "Não informado" do RH — é o recorte que mais se procura para arrumar o parque.
+ */
+export function inventoryDepartmentOptions(official: readonly DepartmentChoice[]): DepartmentChoice[] {
+  const departments = official.filter((option) => !isNotInformed(option.label));
+
+  return [
+    { value: COMPUTER_NO_DEPARTMENT_FILTER, label: 'Não informado' },
+    ...departments.map((option, index) => (index === 0 ? { ...option, separatorBefore: true } : option)),
+  ];
+}
+
+/** O departamento escolhido no formato da API: o id do RH, ou o recorte "sem departamento". */
+function departmentScopeOf(departmentId: string): number | typeof COMPUTER_NO_DEPARTMENT_FILTER | undefined {
+  if (departmentId === COMPUTER_NO_DEPARTMENT_FILTER) return COMPUTER_NO_DEPARTMENT_FILTER;
+
+  return departmentId ? Number(departmentId) : undefined;
+}
+
 /** O recorte de um clique no Painel SOMA ao filtro da lista, não o substitui. */
 function scopeOf(filter: ComputerListFilter, drill: BoardDrill | null = null) {
   return { drill: drill ?? undefined, ...filterScopeOf(filter) };
@@ -238,7 +260,7 @@ function scopeOf(filter: ComputerListFilter, drill: BoardDrill | null = null) {
 function filterScopeOf(filter: ComputerListFilter) {
   return {
     search: filter.search.trim() || undefined,
-    departmentId: filter.departmentId ? Number(filter.departmentId) : undefined,
+    departmentId: departmentScopeOf(filter.departmentId),
     healthStatus: filter.healthStatus || undefined,
     kind: filter.kind || undefined,
     ...presenceOf(filter),
@@ -505,7 +527,7 @@ export function useComputerListModel(): ComputerListModel {
         summary: summary.current.data ? summarizeComputers(summary.current.data.items) : null,
         filter: filter.current,
         scheduledFor: scheduledDayByComputer(schedules.current.data),
-        departmentOptions: departments.officialOptions,
+        departmentOptions: inventoryDepartmentOptions(departments.officialOptions),
         /* Do resumo, e não da lista: com a lista filtrada pela Ana, a Ana seria a única opção
            — e trocar de pessoa obrigaria a limpar o filtro antes. */
         responsibleOptions: responsibleOptionsOf(summary.current.data?.items ?? []),

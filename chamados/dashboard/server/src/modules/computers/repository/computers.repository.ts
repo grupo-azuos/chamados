@@ -20,6 +20,7 @@ import { type AlertMetric } from '@template/shared/domain/computer-alert.util';
 import { compareMachines } from '@template/shared/domain/machine-number.util';
 import { preventiveDueBefore } from '@template/shared/domain/maintenance.util';
 import {
+  COMPUTER_NO_DEPARTMENT_FILTER,
   type ComputerAlertListQuery,
   type ComputerListQuery,
   type ComputerReportQuery,
@@ -408,7 +409,10 @@ type ComputerFilter = Pick<
   | 'includeArchived'
   | 'onlyDisposed'
   | 'disposalType'
->;
+> & {
+  /** Os ids do RH que querem dizer "sem departamento" (o "Não informado"), para o filtro `none`. */
+  noDepartmentIds?: readonly number[];
+};
 
 /**
  * `ilike` é o `like` que ignora maiúscula e minúscula no Postgres.
@@ -436,6 +440,16 @@ function buildWhere(
 
 /** Onde a máquina está: o departamento oficial (id do RH). */
 function placeFilters(query: ComputerFilter): SQL[] {
+  if (query.departmentId === COMPUTER_NO_DEPARTMENT_FILTER) {
+    const informedAsNone = query.noDepartmentIds ?? [];
+
+    return [
+      informedAsNone.length > 0
+        ? (or(isNull(computers.departmentId), inArray(computers.departmentId, [...informedAsNone])) as SQL)
+        : isNull(computers.departmentId),
+    ];
+  }
+
   return query.departmentId ? [eq(computers.departmentId, query.departmentId)] : [];
 }
 

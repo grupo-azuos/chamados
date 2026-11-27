@@ -176,3 +176,17 @@ function normalize(text: string | null | undefined): string {
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+/**
+ * O departamento "Não informado" do RH — escrito com ou sem acento, em qualquer caixa. Para quem
+ * filtra o inventário ele é o mesmo que "sem departamento", e por isso fica junto, no topo.
+ */
+export function isNotInformed(name: string): boolean {
+  return (
+    name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase() === 'nao informado'
+  );
+}

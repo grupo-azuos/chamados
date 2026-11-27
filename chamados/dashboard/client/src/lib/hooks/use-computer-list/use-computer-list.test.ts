@@ -16,6 +16,7 @@ import {
   summarizeComputers,
   withSinglePresence,
   type ComputerListModel,
+  inventoryDepartmentOptions,
 } from './use-computer-list.svelte';
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
@@ -680,5 +681,28 @@ describe('useComputerListModel — upgrade filter', () => {
     model.actions.onUpgradeChange('memory');
 
     await waitFor(() => expect(model.state.isFilteredOut).toBe(true));
+  });
+});
+
+describe('inventoryDepartmentOptions', () => {
+  // feliz
+  /* "Não informado" logo abaixo de "Todos os departamentos", e os do RH depois de uma linha. */
+  it('puts "Não informado" on top and draws a line before the HR departments', () => {
+    const options = inventoryDepartmentOptions([
+      { value: '3', label: 'Fiscal' },
+      { value: '9', label: 'Não informado' },
+      { value: '4', label: 'Jurídico' },
+    ]);
+
+    expect(options).toEqual([
+      { value: 'none', label: 'Não informado' },
+      { value: '3', label: 'Fiscal', separatorBefore: true },
+      { value: '4', label: 'Jurídico' },
+    ]);
+  });
+
+  // triste
+  it('still offers "Não informado" while HR has not answered', () => {
+    expect(inventoryDepartmentOptions([])).toEqual([{ value: 'none', label: 'Não informado' }]);
   });
 });
