@@ -241,7 +241,7 @@ describe('AzuosDisposalListView', () => {
   it('does not announce an empty list while it is still loading', () => {
     renderView({ computers: [], state: { isLoading: true } });
 
-    expect(screen.getByText('Carregando o que saiu de uso…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando o que saiu de uso…' })).toBeInTheDocument();
     expect(screen.queryByText('Nenhuma máquina descartada')).not.toBeInTheDocument();
   });
 });
@@ -260,7 +260,7 @@ describe('AzuosDisposalListView — search, type filter, rows and the restore di
 
   // feliz
   it('opens the record and asks to restore from the cards and from the table', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     vi.mocked(actions.onOpenMachine).mockClear();
     vi.mocked(actions.onAskRestore).mockClear();
     renderView({
@@ -276,12 +276,14 @@ describe('AzuosDisposalListView — search, type filter, rows and the restore di
     });
 
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
-    const opens = screen.getAllByRole('button', { name: 'Ver ficha' });
-    const restores = screen.getAllByRole('button', { name: 'Voltar ao inventário' });
-    for (const button of opens) await user.click(button);
-    for (const button of restores) await user.click(button);
-    expect(actions.onOpenMachine).toHaveBeenCalledTimes(opens.length);
-    expect(actions.onAskRestore).toHaveBeenCalledTimes(restores.length);
+    /* Na tabela, ver a ficha e devolver moram no menu de três pontinhos da linha. */
+    const rowMenu = () => screen.getAllByRole('button', { name: /^Ações de / }).at(-1)!;
+    await user.click(rowMenu());
+    await user.click(await screen.findByRole('menuitem', { name: 'Ver ficha' }));
+    await user.click(rowMenu());
+    await user.click(await screen.findByRole('menuitem', { name: 'Voltar ao inventário' }));
+    expect(actions.onOpenMachine).toHaveBeenCalledOnce();
+    expect(actions.onAskRestore).toHaveBeenCalledOnce();
   });
 
   // triste
@@ -305,7 +307,7 @@ describe('disposal-list-view — the record card', () => {
     expect(strip).toHaveTextContent('Com defeito');
     await user.click(screen.getByRole('button', { name: /^Ver ficha de / }));
     expect(actions.onOpenMachine).toHaveBeenCalledOnce();
-    await user.click(screen.getByRole('button', { name: /^Ações de / }));
+    await user.click(screen.getAllByRole('button', { name: /^Ações de / })[0]!);
     await user.click(await screen.findByRole('menuitem', { name: 'Voltar ao inventário' }));
     expect(actions.onAskRestore).toHaveBeenCalledOnce();
   });

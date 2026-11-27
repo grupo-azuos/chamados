@@ -212,7 +212,7 @@ describe('AzuosPartLedgerDialog', () => {
       },
     });
 
-    expect(screen.getByText('Carregando o histórico…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando o histórico…' })).toBeInTheDocument();
   });
 });
 

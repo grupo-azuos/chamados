@@ -84,7 +84,8 @@ describe('the infra/parts route with parts', () => {
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     await closeDialog();
 
-    await user.click(screen.getAllByRole('button', { name: 'Corrigir' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: /^Ações de SSD/ }).at(-1)!);
+    await user.click(await screen.findByRole('menuitem', { name: 'Corrigir' }));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     await closeDialog();
 

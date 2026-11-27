@@ -74,9 +74,6 @@
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import ArrowDownLeft from '@lucide/svelte/icons/arrow-down-left';
-  import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
-  import { cn } from '$lib/utils/cn';
 
   let { data, state: dialogState, actions }: AzuosMovementFormDialogProps = $props();
 
@@ -100,21 +97,10 @@
 >
   <DialogContent>
     <form novalidate class="flex flex-col gap-4.5" onsubmit={handleSubmit}>
-      <DialogHeader class="gap-1.5">
-        <div class="flex items-center gap-2.5">
-          <span class={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-chip",
-            isOut ? "bg-muted text-warning-ink" : "bg-muted text-success"
-          )}>
-            {#if isOut}
-              <ArrowUpRight class="size-4" aria-hidden="true" />
-            {:else}
-              <ArrowDownLeft class="size-4" aria-hidden="true" />
-            {/if}
-          </span>
-          <DialogTitle class="text-lg font-semibold tracking-tight">{movementTypeLabel(data.type)} de peça</DialogTitle>
-        </div>
-        <DialogDescription class="text-xs text-muted-foreground">
+      <!-- O cabeçalho da casa: título e descrição, sem selo de ícone desenhado à mão. -->
+      <DialogHeader>
+        <DialogTitle>{movementTypeLabel(data.type)} de peça</DialogTitle>
+        <DialogDescription>
           {data.part.name} · {partConditionLabel(data.part.condition)} · hoje há
           <strong>{data.part.balance}</strong>
           na prateleira

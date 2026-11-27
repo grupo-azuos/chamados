@@ -86,8 +86,10 @@
 </script>
 
 <script lang="ts">
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import Archive from '@lucide/svelte/icons/archive';
   import Clock from '@lucide/svelte/icons/clock';
+  import Eye from '@lucide/svelte/icons/eye';
   import MonitorOff from '@lucide/svelte/icons/monitor-off';
   import FilterX from '@lucide/svelte/icons/filter-x';
   import Recycle from '@lucide/svelte/icons/recycle';
@@ -99,6 +101,7 @@
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
@@ -111,7 +114,6 @@
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
-    TableActions,
     TableBody,
     TableCell,
     TableHead,
@@ -119,7 +121,7 @@
     TableRow,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-    import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
+  import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
   import { formatDate } from '$lib/utils/format-date';
 
@@ -214,7 +216,12 @@
       actions={{ onRetry: actions.onRetry }}
     />
   {:else if viewState.isLoading}
-    <p class="text-ink-500 py-10 text-center text-sm">Carregando o que saiu de uso…</p>
+    <!-- O esqueleto tem a forma da grade de cards: a tela não pula quando a lista chega. -->
+    <div role="status" aria-label="Carregando o que saiu de uso…" aria-busy="true" class="card-grid">
+      {#each [0, 1, 2, 3, 4, 5] as slot (slot)}
+        <Skeleton class="rounded-surface h-52 w-full" />
+      {/each}
+    </div>
   {:else if viewState.isEmpty}
     <!-- Nada descartado é uma boa notícia, e o texto diz onde a ação acontece. -->
     <EmptyState
@@ -317,7 +324,7 @@
             <TableHead>Tipo</TableHead>
             <TableHead>Motivo</TableHead>
             <TableHead>Saiu em</TableHead>
-            <TableHead class="text-right"><span class="sr-only">Ações</span></TableHead>
+            <TableHead class="w-14 text-right"><span class="sr-only">Ações</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -349,18 +356,21 @@
                 {formatDate(computer.disposedAt)}
               </TableCell>
               <TableCell class="text-right whitespace-nowrap">
-                <TableActions>
-                  <ActionButton
-                    data={{ label: 'Ver ficha' }}
-                    ui={{ variant: 'secondary', size: 'sm' }}
-                    actions={{ onClick: () => actions.onOpenMachine(computer) }}
-                  />
-                  <ActionButton
-                    data={{ label: 'Voltar ao inventário' }}
-                    ui={{ variant: 'ghost', size: 'sm' }}
-                    actions={{ onClick: () => actions.onAskRestore(computer) }}
-                  />
-                </TableActions>
+                <!-- As ações da linha moram no menu de três pontinhos, como no card. -->
+                <ActionMenu
+                  data={{
+                    label: `Ações de ${machineLabelOf(computer)}`,
+                    items: [
+                      { id: 'open', label: 'Ver ficha', icon: Eye },
+                      { id: 'restore', label: 'Voltar ao inventário', icon: Undo2, separatorBefore: true },
+                    ],
+                  }}
+                  ui={{ isIconOnly: true }}
+                  actions={{
+                    onSelect: (id) =>
+                      id === 'restore' ? actions.onAskRestore(computer) : actions.onOpenMachine(computer),
+                  }}
+                />
               </TableCell>
             </TableRow>
           {/each}

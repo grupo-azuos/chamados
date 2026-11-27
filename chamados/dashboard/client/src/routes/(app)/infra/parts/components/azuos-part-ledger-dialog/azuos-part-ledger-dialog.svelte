@@ -98,6 +98,7 @@
 </script>
 
 <script lang="ts">
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import DialogContent from '$lib/components/azuos-responsive-dialog-content/azuos-responsive-dialog-content.svelte';
   import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import Trash2 from '@lucide/svelte/icons/trash-2';
@@ -157,7 +158,18 @@
         actions={{ onRetry: actions.onRetry }}
       />
     {:else if dialogState?.isLoading}
-      <p class="text-ink-500 py-8 text-center text-sm">Carregando o histórico…</p>
+      <!-- O esqueleto tem a forma das linhas do extrato: o diálogo não pula quando ele chega. -->
+      <div role="status" aria-label="Carregando o histórico…" aria-busy="true" class="flex flex-col gap-3 py-2">
+        {#each [0, 1, 2, 3] as row (row)}
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex flex-1 flex-col gap-1.5">
+              <Skeleton class="h-4 w-2/3" />
+              <Skeleton class="h-3 w-1/3" />
+            </div>
+            <Skeleton class="h-5 w-12" />
+          </div>
+        {/each}
+      </div>
     {:else if data.movements.length === 0}
       <p class="text-ink-500 py-6 text-sm">
         Esta peça ainda não teve entrada nem saída registrada.

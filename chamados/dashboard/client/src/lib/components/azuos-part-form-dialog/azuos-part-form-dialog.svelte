@@ -66,7 +66,6 @@
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
-  import Package from '@lucide/svelte/icons/package';
 
   let { data, state: dialogState, actions }: AzuosPartFormDialogProps = $props();
 
@@ -85,17 +84,13 @@
 >
   <DialogContent>
     <form novalidate class="flex flex-col gap-4.5" onsubmit={handleSubmit}>
-      <DialogHeader class="gap-1.5">
-        <div class="flex items-center gap-2.5">
-          <span class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-muted text-primary">
-            <Package class="size-4" aria-hidden="true" />
-          </span>
-          <DialogTitle class="text-lg font-semibold tracking-tight">{isEdit ? 'Corrigir peça' : 'Cadastrar peça'}</DialogTitle>
-        </div>
-        <DialogDescription class="text-xs text-muted-foreground">
+      <!-- O cabeçalho da casa: título e descrição, sem selo de ícone desenhado à mão. -->
+      <DialogHeader>
+        <DialogTitle>{isEdit ? 'Corrigir peça' : 'Cadastrar peça'}</DialogTitle>
+        <DialogDescription>
           {isEdit
-            ? 'Descrição, categoria e condição. O saldo muda por entrada e saída.'
-            : 'O que é a peça e quantas existem hoje na prateleira.'}
+          ? 'Descrição, categoria e condição. O saldo muda por entrada e saída.'
+          : 'O que é a peça e quantas existem hoje na prateleira.'}
         </DialogDescription>
       </DialogHeader>
 

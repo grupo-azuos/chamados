@@ -229,7 +229,7 @@ describe('AzuosNetworkListView', () => {
   it('does not announce an empty period while it is still loading', () => {
     renderView({ events: [], state: { isLoading: true } });
 
-    expect(screen.getByText('Carregando os eventos…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando os eventos…' })).toBeInTheDocument();
     expect(screen.queryByText('Nenhum evento no período')).not.toBeInTheDocument();
   });
 });

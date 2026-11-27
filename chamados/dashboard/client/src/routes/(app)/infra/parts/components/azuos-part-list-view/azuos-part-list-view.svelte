@@ -113,11 +113,15 @@
 </script>
 
 <script lang="ts">
+  import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import FilterX from '@lucide/svelte/icons/filter-x';
   import Layers from '@lucide/svelte/icons/layers';
   import Package from '@lucide/svelte/icons/package';
   import PackageCheck from '@lucide/svelte/icons/package-check';
   import PackageX from '@lucide/svelte/icons/package-x';
+  import ArrowDownToLine from '@lucide/svelte/icons/arrow-down-to-line';
+  import ArrowUpFromLine from '@lucide/svelte/icons/arrow-up-from-line';
+  import History from '@lucide/svelte/icons/history';
   import Pencil from '@lucide/svelte/icons/pencil';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
@@ -125,6 +129,7 @@
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
@@ -133,11 +138,10 @@
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-    import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
+  import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
-    TableActions,
     TableBody,
     TableCell,
     TableHead,
@@ -154,6 +158,23 @@
   const cardPage = useCardPage(() => data.parts);
 
   const summary = $derived(data.summary);
+
+  /* O menu da linha da tabela: o histórico, a entrada, a saída (só com saldo) e a correção. */
+  function rowMenuOf(part: Part) {
+    return [
+      { id: 'ledger', label: 'Ver o histórico', icon: History },
+      { id: 'in', label: 'Entrada', icon: ArrowDownToLine },
+      ...(part.balance > 0 ? [{ id: 'out', label: 'Saída', icon: ArrowUpFromLine }] : []),
+      { id: 'edit', label: 'Corrigir', icon: Pencil, separatorBefore: true },
+    ];
+  }
+
+  const ROW_ACTIONS: Record<string, (part: Part) => void> = {
+    ledger: (part) => actions.onOpenLedger(part),
+    in: (part) => actions.onMove(part, 'in'),
+    out: (part) => actions.onMove(part, 'out'),
+    edit: (part) => actions.onEdit(part),
+  };
   const tableView = useTableViewModel();
 
   const hasActiveFilter = $derived(
@@ -280,7 +301,12 @@
       actions={{ onRetry: actions.onRetry }}
     />
   {:else if viewState.isLoading}
-    <p class="text-ink-500 py-10 text-center text-sm">Carregando as peças…</p>
+    <!-- O esqueleto tem a forma da grade de cards: a tela não pula quando a lista chega. -->
+    <div role="status" aria-label="Carregando as peças…" aria-busy="true" class="card-grid">
+      {#each [0, 1, 2, 3, 4, 5] as slot (slot)}
+        <Skeleton class="rounded-surface h-52 w-full" />
+      {/each}
+    </div>
   {:else if viewState.isEmpty}
     <EmptyState
       data={{
@@ -403,7 +429,7 @@
             <TableHead>Categoria</TableHead>
             <TableHead>Condição</TableHead>
             <TableHead>Na prateleira</TableHead>
-            <TableHead class="text-right"><span class="sr-only">Ações</span></TableHead>
+            <TableHead class="w-14 text-right"><span class="sr-only">Ações</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -433,33 +459,22 @@
                   ui={{ tone: partConditionTone(part.condition), size: 'sm' }}
                 />
               </TableCell>
-              <TableCell
-                class={cn(
-                  'text-base font-semibold tabular-nums',
-                  part.balance === 0 ? 'text-destructive' : 'text-ink-900',
-                )}
-              >
-                {part.balance}
+              <!-- O número fica na cor do texto (a cor mora no selo): zerado, o selo diz "Sem estoque". -->
+              <TableCell class="text-foreground text-base font-semibold tabular-nums">
+                <span class="flex items-center gap-2">
+                  {part.balance}
+                  {#if part.balance === 0}
+                    <StatusBadge data={{ label: 'Sem estoque' }} ui={{ tone: 'danger', size: 'sm' }} />
+                  {/if}
+                </span>
               </TableCell>
               <TableCell class="text-right whitespace-nowrap">
-                <TableActions>
-                  <ActionButton
-                    data={{ label: 'Entrada' }}
-                    ui={{ variant: 'secondary', size: 'sm' }}
-                    actions={{ onClick: () => actions.onMove(part, 'in') }}
-                  />
-                  <ActionButton
-                    data={{ label: 'Saída' }}
-                    ui={{ variant: 'secondary', size: 'sm' }}
-                    state={{ isDisabled: part.balance === 0 }}
-                    actions={{ onClick: () => actions.onMove(part, 'out') }}
-                  />
-                  <ActionButton
-                    data={{ label: 'Corrigir' }}
-                    ui={{ variant: 'ghost', size: 'sm' }}
-                    actions={{ onClick: () => actions.onEdit(part) }}
-                  />
-                </TableActions>
+                <!-- As ações da linha moram no menu de três pontinhos. Sem saldo, não há saída. -->
+                <ActionMenu
+                  data={{ label: `Ações de ${part.name}`, items: rowMenuOf(part) }}
+                  ui={{ isIconOnly: true }}
+                  actions={{ onSelect: (id) => ROW_ACTIONS[id]?.(part) }}
+                />
               </TableCell>
             </TableRow>
           {/each}

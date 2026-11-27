@@ -194,11 +194,17 @@ describe('AzuosPartListView', () => {
     expect(screen.getAllByText('0')[0]).toBeInTheDocument();
   });
 
-  /* Sem peça não há saída possível: o botão trava antes de a pessoa levar uma recusa. */
-  it('blocks the exit button when there is nothing to take', () => {
+  /* Sem peça não há saída possível: o botão trava antes de a pessoa levar uma recusa, e o menu
+     da linha nem oferece a saída. */
+  it('blocks the exit when there is nothing to take', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderView({ parts: [part({ balance: 0 })] });
 
     expect(screen.getAllByRole('button', { name: 'Saída' })[0]).toBeDisabled();
+    expect(screen.getAllByText('Sem estoque').length).toBeGreaterThan(0);
+    await user.click(screen.getAllByRole('button', { name: 'Ações de SSD 240 GB Kingston' }).at(-1)!);
+    expect(await screen.findByRole('menuitem', { name: 'Entrada' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Saída' })).not.toBeInTheDocument();
   });
 
   it('shows the reason the storeroom did not load', () => {
@@ -222,7 +228,7 @@ describe('AzuosPartListView', () => {
   it('does not announce an empty storeroom while it is still loading', () => {
     renderView({ parts: [], state: { isLoading: true } });
 
-    expect(screen.getByText('Carregando as peças…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando as peças…' })).toBeInTheDocument();
     expect(screen.queryByText('Nenhuma peça cadastrada')).not.toBeInTheDocument();
   });
 
@@ -273,14 +279,27 @@ describe('AzuosPartListView — search, filters and the buttons of each row', ()
     vi.mocked(actions.onOpenLedger).mockClear();
     renderView();
 
+    /* No card, Entrada e Saída ficam no rodapé; na tabela, tudo mora no menu da linha. */
     const exits = screen.getAllByRole('button', { name: 'Saída' });
     const entries = screen.getAllByRole('button', { name: 'Entrada' });
-    const edits = screen.getAllByRole('button', { name: 'Corrigir' });
     for (const button of [...exits, ...entries]) await userEvent.click(button);
-    for (const button of edits) await userEvent.click(button);
     expect(actions.onMove).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), 'out');
     expect(actions.onMove).toHaveBeenCalledTimes(exits.length + entries.length);
-    expect(actions.onEdit).toHaveBeenCalledTimes(edits.length);
+
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const rowMenu = () => screen.getAllByRole('button', { name: 'Ações de SSD 240 GB Kingston' }).at(-1)!;
+    for (const item of ['Entrada', 'Saída']) {
+      await user.click(rowMenu());
+      await user.click(await screen.findByRole('menuitem', { name: item }));
+    }
+    expect(actions.onMove).toHaveBeenCalledTimes(exits.length + entries.length + 2);
+    await user.click(rowMenu());
+    await user.click(await screen.findByRole('menuitem', { name: 'Corrigir' }));
+    expect(actions.onEdit).toHaveBeenCalledTimes(1);
+    await user.click(rowMenu());
+    await user.click(await screen.findByRole('menuitem', { name: 'Ver o histórico' }));
+    expect(actions.onOpenLedger).toHaveBeenCalledTimes(1);
+    vi.mocked(actions.onOpenLedger).mockClear();
 
     const names = screen.getAllByRole('button', { name: 'SSD 240 GB Kingston' });
     for (const button of names) await userEvent.click(button);
@@ -300,7 +319,7 @@ describe('part-list-view — the record card', () => {
       screen.getByRole('button', { name: 'Ver o histórico de SSD 240 GB Kingston' }),
     );
     expect(actions.onOpenLedger).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
-    await user.click(screen.getByRole('button', { name: 'Ações de SSD 240 GB Kingston' }));
+    await user.click(screen.getAllByRole('button', { name: 'Ações de SSD 240 GB Kingston' })[0]!);
     await user.click(await screen.findByRole('menuitem', { name: 'Editar' }));
     expect(actions.onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
