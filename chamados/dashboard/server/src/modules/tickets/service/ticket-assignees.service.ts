@@ -13,6 +13,9 @@ import { RolesRepository } from '../../roles/repository/roles.repository';
 
 const ADMIN_ROLE = 'admin';
 
+/** Os papéis do admin-console que são da equipe: quem administra e quem gere. */
+const STAFF_ROLES = new Set(['admin', 'owner', 'operations_manager', 'manager']);
+
 /**
  * QUEM PODE SER O RESPONSÁVEL POR UM CHAMADO DE CADA ÁREA.
  *
@@ -38,6 +41,20 @@ export class TicketAssigneesService {
 
     return users
       .filter((user) => !user.banned && areasOf(user, grants).includes(area))
+      .map((user) => ({ id: user.id, name: displayName(user), avatarUrl: user.image ?? null }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }
+
+  /**
+   * A EQUIPE do sistema — quem pode ter feito um serviço (o "Quem fez" da manutenção): os
+   * gestores e os administradores com algum módulo, e os super-admins. O usuário comum só abre
+   * chamado, e não aparece.
+   */
+  async listStaff(): Promise<TicketAssigneeOption[]> {
+    const [users, grants] = await Promise.all([this.directory.listUsers(), this.loadGrants()]);
+
+    return users
+      .filter((user) => !user.banned && isStaff(user, grants))
       .map((user) => ({ id: user.id, name: displayName(user), avatarUrl: user.image ?? null }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }
@@ -90,6 +107,18 @@ function areasOf(user: DirectoryUser, grants: Grants): TicketArea[] {
   const own = grants.modules.filter((row) => row.userId === user.id);
 
   return TICKET_AREAS.filter((area) => own.some((row) => row.context === area));
+}
+
+/** Gestor (e dono e gestor da operação) ou administrador com módulo; o super-admin sempre. */
+function isStaff(user: DirectoryUser, grants: Grants): boolean {
+  const email = user.email.toLowerCase();
+  const isSuper = grants.superAdmins.some((row) =>
+    row.userId === null ? row.userEmail.toLowerCase() === email : row.userId === user.id,
+  );
+  if (isSuper) return true;
+  if (!user.role || !STAFF_ROLES.has(user.role)) return false;
+
+  return grants.modules.some((row) => row.userId === user.id);
 }
 
 function displayName(user: DirectoryUser): string {

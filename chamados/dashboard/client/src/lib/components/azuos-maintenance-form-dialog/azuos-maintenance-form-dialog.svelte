@@ -17,7 +17,10 @@
   import {
     MAINTENANCE_TYPES,
     MAINTENANCE_TYPE_LABELS,
+    PREVENTIVE_INTERVAL_MONTHS,
+    type MaintenanceType,
     maintenanceTypeTone,
+    resetsPreventiveClock,
   } from '@template/shared/domain/maintenance.util';
   import { DESCRIPTION_MAX_LENGTH } from '@template/shared/schemas/maintenance.schema';
 
@@ -62,6 +65,47 @@
     tone: maintenanceTypeTone(type),
   }));
 
+  /**
+   * As frases que a equipe mais escreve. Um toque põe a frase em "O que foi feito" — no fim do que
+   * já estiver escrito, separada por ponto — e a pessoa completa o que faltar.
+   */
+  export const DESCRIPTION_SUGGESTIONS = [
+    'Limpeza interna',
+    'Troca da pasta térmica',
+    'Troca de SSD',
+    'Troca de memória',
+    'Formatação e reinstalação',
+    'Atualização do sistema',
+  ] as const;
+
+  /** O texto com a frase pronta no fim, sem repetir a que já está lá. */
+  export function withSuggestion(current: string, phrase: string): string {
+    const text = current.trim();
+    if (text.toLocaleLowerCase('pt-BR').includes(phrase.toLocaleLowerCase('pt-BR'))) return text;
+    if (!text) return `${phrase}.`;
+
+    return `${text.replace(/[.\s]+$/, '')}. ${phrase}.`;
+  }
+
+  /** O que o tipo escolhido faz com o prazo da preventiva — a pessoa sabe antes de salvar. */
+  export function preventiveHintOf(type: string): string {
+    if (!MAINTENANCE_TYPES.includes(type as MaintenanceType)) return '';
+    if (resetsPreventiveClock(type as MaintenanceType)) {
+      return `Conta como preventiva: a máquina fica em dia por mais ${PREVENTIVE_INTERVAL_MONTHS} meses.`;
+    }
+
+    return 'Não conta como preventiva: o prazo da máquina continua o mesmo.';
+  }
+
+  /** A bolinha de cada tipo, na cor do status dele (a mesma do selo do card). */
+  const TYPE_DOT: Record<ReturnType<typeof maintenanceTypeTone>, string> = {
+    neutral: 'bg-muted-foreground',
+    info: 'bg-info',
+    success: 'bg-success',
+    warning: 'bg-warning',
+    brand: 'bg-primary',
+  };
+
   /** A opção que libera o campo de texto: equipamento que não está no inventário. */
   export const OTHER_MACHINE_OPTION = {
     value: '',
@@ -86,7 +130,13 @@
   import SubmitButton from '$lib/components/azuos-submit-button/azuos-submit-button.svelte';
   import TextAreaField from '$lib/components/azuos-text-area-field/azuos-text-area-field.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
+  import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+  import Info from '@lucide/svelte/icons/info';
+  import Monitor from '@lucide/svelte/icons/monitor';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
   import Wrench from '@lucide/svelte/icons/wrench';
+  import SectionTitle from '$lib/components/azuos-section-title/azuos-section-title.svelte';
+  import { cn } from '$lib/utils/cn';
 
   let { data, state: dialogState, actions }: AzuosMaintenanceFormDialogProps = $props();
 
@@ -95,6 +145,7 @@
 
   const machineOptions = $derived([OTHER_MACHINE_OPTION, ...data.machines]);
   const isOtherMachine = $derived(fields.computerId.value === '');
+  const preventiveHint = $derived(preventiveHintOf(fields.type.value));
 
   function handleSubmit(event: SubmitEvent): void {
     event.preventDefault();
@@ -106,112 +157,177 @@
   open={dialogState.isOpen}
   onOpenChange={(isOpen: boolean) => (isOpen ? undefined : actions.onClose())}
 >
-  <DialogContent>
-    <form novalidate class="flex flex-col gap-4" onsubmit={handleSubmit}>
+  <DialogContent class="sm:max-w-2xl">
+    <form novalidate class="flex flex-col gap-6" onsubmit={handleSubmit}>
       <DialogHeader class="gap-1.5">
-        <div class="flex items-center gap-2.5">
-          <span class="flex size-7 shrink-0 items-center justify-center rounded-chip bg-muted text-primary">
-            <Wrench class="size-4" aria-hidden="true" />
+        <div class="flex items-center gap-3">
+          <span class="rounded-icon bg-primary text-on-hue flex size-10 shrink-0 items-center justify-center">
+            <Wrench class="size-5" aria-hidden="true" />
           </span>
-          <DialogTitle class="text-lg font-semibold tracking-tight">{isEdit ? 'Corrigir manutenção' : 'Registrar manutenção'}</DialogTitle>
+          <div class="min-w-0">
+            <DialogTitle class="text-xl font-semibold tracking-tight">
+              {isEdit ? 'Corrigir manutenção' : 'Registrar manutenção'}
+            </DialogTitle>
+            <DialogDescription class="text-muted-foreground text-sm">
+              {isEdit
+                ? 'Altere o que ficou errado e salve. O histórico guarda o antes e o depois.'
+                : 'Em qual equipamento, o que foi feito, quem fez e quando.'}
+            </DialogDescription>
+          </div>
         </div>
-        <DialogDescription class="text-xs text-muted-foreground">
-          {isEdit
-            ? 'Altere o que ficou errado e salve.'
-            : 'O que foi feito, em qual equipamento e quando.'}
-        </DialogDescription>
       </DialogHeader>
 
-      <div class="flex flex-col gap-1.5">
-        <span class="text-ink-700 text-sm font-medium">Equipamento</span>
+      <!-- 1. O EQUIPAMENTO -->
+      <fieldset class="flex flex-col gap-3">
+        <legend class="contents">
+          <SectionTitle
+            data={{ title: 'Equipamento', description: 'Uma máquina do inventário, ou outro equipamento.' }}
+            ui={{ icon: Monitor, className: 'mb-1' }}
+          />
+        </legend>
         <OptionPicker
           data={{ value: fields.computerId.value, options: machineOptions }}
-          ui={{ ariaLabel: 'Equipamento', fullWidth: true }}
+          ui={{ ariaLabel: 'Equipamento', fullWidth: true, searchPlaceholder: 'Buscar máquina…' }}
           state={{ isDisabled: dialogState.isSubmitting || dialogState.isMachinesLoading }}
           actions={{ onChange: (value: string) => actions.onChange('computerId', value) }}
         />
         {#if dialogState.isMachinesLoading}
-          <span class="text-ink-500 text-xs">Carregando as máquinas do inventário…</span>
+          <span class="text-muted-foreground text-xs">Carregando as máquinas do inventário…</span>
         {/if}
-      </div>
-
-      <!-- Só quando nenhuma máquina foi escolhida: é a saída para o que não está no inventário. -->
-      {#if isOtherMachine}
-        <TextField
-          data={{
-            label: 'Qual equipamento',
-            name: 'otherMachine',
-            value: fields.otherMachine.value,
-            placeholder: 'Ex: impressora da recepção, notebook antigo',
-          }}
-          state={{ error: fields.otherMachine.error, isDisabled: dialogState.isSubmitting }}
-          actions={{
-            onChange: (value: string) => actions.onChange('otherMachine', value),
-            onBlur: () => actions.onBlur('otherMachine'),
-          }}
-        />
-      {/if}
-
-      <div class="flex flex-col gap-1.5">
-        <span class="text-ink-700 text-sm font-medium">Tipo</span>
-        <OptionPicker
-          data={{ value: fields.type.value, options: TYPE_OPTIONS }}
-          ui={{ ariaLabel: 'Tipo de manutenção', fullWidth: true }}
-          state={{ isDisabled: dialogState.isSubmitting }}
-          actions={{ onChange: (value: string) => actions.onChange('type', value) }}
-        />
-      </div>
-
-      <TextAreaField
-        data={{
-          label: 'O que foi feito',
-          name: 'description',
-          value: fields.description.value,
-          placeholder: 'Ex: troca de SSD, limpeza interna, troca de memória',
-          maxLength: DESCRIPTION_MAX_LENGTH,
-        }}
-        state={{ error: fields.description.error, isDisabled: dialogState.isSubmitting }}
-        actions={{
-          onChange: (value: string) => actions.onChange('description', value),
-          onBlur: () => actions.onBlur('description'),
-        }}
-      />
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        <!-- A linha inteira: com duas ou três pessoas, metade dela cortava os nomes. -->
-        <div class="flex flex-col gap-1.5 sm:col-span-2">
-          <span class="text-ink-700 text-sm font-medium">Quem fez</span>
-          <!-- Uma manutenção pode ter mais de um responsável: o campo de VÁRIAS pessoas, com a foto. -->
-          <PersonMultiPickerField
+        <!-- Só quando nenhuma máquina foi escolhida: é a saída para o que não está no inventário. -->
+        {#if isOtherMachine}
+          <TextField
             data={{
-              values: fields.performedByIds.value ? fields.performedByIds.value.split(',') : [],
-              people: data.people ?? [],
-              placeholder: 'Escolha quem fez o serviço',
+              label: 'Qual equipamento',
+              name: 'otherMachine',
+              value: fields.otherMachine.value,
+              placeholder: 'Ex: impressora da recepção, notebook antigo',
             }}
-            ui={{ ariaLabel: 'Quem fez' }}
-            state={{ isDisabled: dialogState.isSubmitting }}
-            actions={{ onChange: (ids: string[]) => actions.onChange('performedByIds', ids.join(',')) }}
+            state={{ error: fields.otherMachine.error, isDisabled: dialogState.isSubmitting }}
+            actions={{
+              onChange: (value: string) => actions.onChange('otherMachine', value),
+              onBlur: () => actions.onBlur('otherMachine'),
+            }}
           />
-        </div>
+        {/if}
+      </fieldset>
 
-        <div class="flex flex-col gap-1.5">
-          <span class="text-ink-700 text-sm font-medium">Data do serviço</span>
-          <DatePicker
-            name="performedAt"
-            ariaLabel="Data do serviço"
-            value={fields.performedAt.value}
-            disabled={dialogState.isSubmitting}
-            placeholder="Selecione a data"
-            onValueChange={(val) => {
-              actions.onChange('performedAt', val ?? '');
-              actions.onBlur('performedAt');
-            }}
+      <!-- 2. O SERVIÇO -->
+      <fieldset class="flex flex-col gap-3 border-t border-border/70 pt-5">
+        <legend class="contents">
+          <SectionTitle
+            data={{ title: 'O serviço', description: 'O tipo decide se a máquina fica em dia com a preventiva.' }}
+            ui={{ icon: Wrench, className: 'mb-1' }}
           />
-          {#if fields.performedAt.error}
-            <span class="text-xs text-destructive">{fields.performedAt.error}</span>
-          {/if}
+        </legend>
+        <div role="radiogroup" aria-label="Tipo de manutenção" class="flex flex-wrap gap-2">
+          {#each TYPE_OPTIONS as option (option.value)}
+            {@const isChosen = fields.type.value === option.value}
+            <button
+              type="button"
+              role="radio"
+              aria-checked={isChosen}
+              disabled={dialogState.isSubmitting}
+              onclick={() => actions.onChange('type', option.value)}
+              class={cn(
+                'rounded-chip control-sm inline-flex items-center gap-1.5 px-3 text-sm font-medium transition-colors',
+                'focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px] disabled:opacity-50',
+                isChosen ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground hover:bg-hover-veil',
+              )}
+            >
+              <span
+                class={cn(
+                  'size-2 rounded-full',
+                  isChosen ? 'bg-primary-foreground' : TYPE_DOT[option.tone],
+                )}
+                aria-hidden="true"
+              ></span>
+              {option.label}
+            </button>
+          {/each}
         </div>
-      </div>
+        {#if preventiveHint}
+          <p class="text-muted-foreground flex items-start gap-1.5 text-xs">
+            <Info class="mt-px size-3.5 shrink-0" aria-hidden="true" />
+            {preventiveHint}
+          </p>
+        {/if}
+
+        <TextAreaField
+          data={{
+            label: 'O que foi feito',
+            name: 'description',
+            value: fields.description.value,
+            placeholder: 'Ex: troca de SSD, limpeza interna, troca de memória',
+            maxLength: DESCRIPTION_MAX_LENGTH,
+          }}
+          state={{ error: fields.description.error, isDisabled: dialogState.isSubmitting }}
+          actions={{
+            onChange: (value: string) => actions.onChange('description', value),
+            onBlur: () => actions.onBlur('description'),
+          }}
+        />
+        <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Frases prontas">
+          <span class="text-muted-foreground inline-flex items-center gap-1 text-xs">
+            <Sparkles class="size-3.5" aria-hidden="true" />
+            Frases prontas:
+          </span>
+          {#each DESCRIPTION_SUGGESTIONS as phrase (phrase)}
+            <button
+              type="button"
+              disabled={dialogState.isSubmitting}
+              onclick={() => actions.onChange('description', withSuggestion(fields.description.value, phrase))}
+              class="rounded-chip bg-muted text-foreground hover:bg-hover-veil focus-visible:ring-ring/50 px-2.5 py-1 text-xs outline-none focus-visible:ring-[3px] disabled:opacity-50"
+            >
+              {phrase}
+            </button>
+          {/each}
+        </div>
+      </fieldset>
+
+      <!-- 3. QUEM E QUANDO -->
+      <fieldset class="flex flex-col gap-3 border-t border-border/70 pt-5">
+        <legend class="contents">
+          <SectionTitle
+            data={{ title: 'Quem e quando', description: 'Só a equipe do sistema: gestores e administradores.' }}
+            ui={{ icon: CalendarClock, className: 'mb-1' }}
+          />
+        </legend>
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+          <!-- Uma manutenção pode ter mais de um responsável: o campo de VÁRIAS pessoas, com a foto. -->
+          <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <span class="text-sm font-medium text-muted-foreground">Quem fez</span>
+            <PersonMultiPickerField
+              data={{
+                values: fields.performedByIds.value ? fields.performedByIds.value.split(',') : [],
+                people: data.people ?? [],
+                placeholder: 'Escolha quem fez o serviço',
+              }}
+              ui={{ ariaLabel: 'Quem fez' }}
+              state={{ isDisabled: dialogState.isSubmitting }}
+              actions={{ onChange: (ids: string[]) => actions.onChange('performedByIds', ids.join(',')) }}
+            />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-muted-foreground">Data do serviço</span>
+            <DatePicker
+              name="performedAt"
+              ariaLabel="Data do serviço"
+              value={fields.performedAt.value}
+              disabled={dialogState.isSubmitting}
+              placeholder="Selecione a data"
+              onValueChange={(val) => {
+                actions.onChange('performedAt', val ?? '');
+                actions.onBlur('performedAt');
+              }}
+            />
+            {#if fields.performedAt.error}
+              <span class="text-xs text-destructive">{fields.performedAt.error}</span>
+            {/if}
+          </div>
+        </div>
+      </fieldset>
 
       {#if dialogState.error}
         <ErrorState data={{ message: dialogState.error }} ui={{ variant: 'inline' }} />
@@ -226,7 +342,7 @@
         />
         <SubmitButton
           data={{
-            label: isEdit ? 'Salvar' : 'Registrar manutenção',
+            label: isEdit ? 'Salvar correção' : 'Registrar manutenção',
             loadingLabel: 'Salvando…',
           }}
           ui={{ className: 'sm:w-auto' }}

@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { type FormFieldState } from '$lib/types/form-field.type';
 import MaintenanceFormDialog, {
   type MaintenanceFormField,
+  preventiveHintOf,
+  withSuggestion,
 } from './azuos-maintenance-form-dialog.svelte';
 
 function field(value = '', error: string | null = null): FormFieldState {
@@ -177,7 +179,8 @@ describe('AzuosMaintenanceFormDialog — every field reports to the model', () =
 
     await choose('Equipamento', 'Recepção — balcão (RECEPCAO-01)');
     expect(actions.onChange).toHaveBeenCalledWith('computerId', '1');
-    await choose('Tipo de manutenção', 'Limpeza');
+    /* O tipo são pastilhas lado a lado: as seis cabem, e escolher é um toque. */
+    await userEvent.click(screen.getByRole('radio', { name: 'Limpeza' }));
     expect(actions.onChange).toHaveBeenCalledWith('type', 'cleaning');
 
     await userEvent.type(screen.getByRole('textbox', { name: /Qual equipamento/ }), 'I');
@@ -215,5 +218,42 @@ describe('AzuosMaintenanceFormDialog — every field reports to the model', () =
       },
     });
     expect(screen.getByText('Informe a data')).toBeInTheDocument();
+  });
+});
+
+describe('the ready-made phrases and the preventive hint', () => {
+  // feliz
+  it('puts a ready-made phrase at the end of what was written, once', () => {
+    expect(withSuggestion('', 'Limpeza interna')).toBe('Limpeza interna.');
+    expect(withSuggestion('Troca de SSD', 'Limpeza interna')).toBe('Troca de SSD. Limpeza interna.');
+    expect(withSuggestion('Troca de SSD. ', 'Limpeza interna')).toBe('Troca de SSD. Limpeza interna.');
+  });
+
+  // triste
+  it('does not repeat a phrase that is already there', () => {
+    expect(withSuggestion('Limpeza interna.', 'limpeza interna')).toBe('Limpeza interna.');
+  });
+
+  // feliz
+  it('says when the type keeps the machine up to date with the preventive', () => {
+    expect(preventiveHintOf('preventive')).toMatch(/Conta como preventiva/);
+    expect(preventiveHintOf('part_replacement')).toMatch(/Não conta como preventiva/);
+  });
+
+  // triste
+  it('says nothing before a type is chosen', () => {
+    expect(preventiveHintOf('')).toBe('');
+  });
+
+  // feliz
+  it('sends the phrase to the description when it is tapped', async () => {
+    vi.mocked(actions.onChange).mockClear();
+    render(MaintenanceFormDialog, {
+      props: { data: { mode: 'create', fields: fields(), machines }, state: { isOpen: true }, actions },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Troca da pasta térmica' }));
+
+    expect(actions.onChange).toHaveBeenCalledWith('description', expect.stringContaining('Troca da pasta térmica'));
   });
 });

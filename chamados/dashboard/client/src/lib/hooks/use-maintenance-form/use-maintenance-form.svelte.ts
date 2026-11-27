@@ -24,7 +24,7 @@ import { type FormFieldState } from '$lib/types/form-field.type';
 export type MachineOption = { value: string; label: string };
 
 /** A lista de pessoas — a mesma chave da casca, que já a carrega para os rostos. */
-const PEOPLE_KEY = ['tickets', 'people-options'] as const;
+const PEOPLE_KEY = ['tickets', 'staff-options'] as const;
 
 export type MaintenanceFormModel = {
   data: {
@@ -79,7 +79,7 @@ export function useMaintenanceFormModel({
     createQuery(
       writable({
         queryKey: PEOPLE_KEY,
-        queryFn: () => ticketsApi.peopleOptions(),
+        queryFn: () => ticketsApi.staffOptions(),
         staleTime: 5 * 60_000,
       }),
     ),

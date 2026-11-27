@@ -192,3 +192,26 @@ describe('TicketAssigneesService.areasOf', () => {
     expect(await service.areasOf('ghost')).toBeNull();
   });
 });
+
+describe('TicketAssigneesService.listStaff', () => {
+  // feliz
+  /* O "Quem fez" da manutenção: gestores e administradores com módulo, e o super-admin. */
+  it('lists the managers and administrators with a module, and the super-admin', async () => {
+    const staff = await makeService().listStaff();
+
+    expect(staff.map((person) => person.id)).toEqual(['u-both', 'u-infra', 'u-manager', 'u-super']);
+  });
+
+  // triste
+  /* O usuário comum só abre chamado, e quem foi banido não fez serviço nenhum hoje. */
+  it('leaves out the plain user, the banned one and a manager without a module', async () => {
+    const staff = await makeService(
+      [...USERS, user('u-lost', 'Fábio Sem Módulo', { role: 'owner' })],
+    ).listStaff();
+    const ids = staff.map((person) => person.id);
+
+    expect(ids).not.toContain('u-plain');
+    expect(ids).not.toContain('u-banned');
+    expect(ids).not.toContain('u-lost');
+  });
+});
