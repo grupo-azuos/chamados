@@ -13,6 +13,17 @@ describe('people directory', () => {
     expect(personPhotoOf({ name: '  wellington   QUEIROZ ' })).toBe('https://cdn/wq.png');
   });
 
+  // feliz
+  /* O registro que guardou o login (e-mail) no lugar do id também acha a foto. */
+  it('finds the photo by the e-mail, also when the name is the e-mail', () => {
+    setPeopleDirectory([
+      { id: 'gs', name: 'Guilherme Siqueira', email: 'GS@azuos.com.br', avatarUrl: 'https://cdn/gs.png' },
+    ]);
+
+    expect(personPhotoOf({ email: ' gs@azuos.com.br ' })).toBe('https://cdn/gs.png');
+    expect(personPhotoOf({ name: 'gs@azuos.com.br' })).toBe('https://cdn/gs.png');
+  });
+
   // triste
   it('gives no photo for someone unknown or without a photo', () => {
     setPeopleDirectory([{ id: 'ana', name: 'Ana', avatarUrl: null }]);

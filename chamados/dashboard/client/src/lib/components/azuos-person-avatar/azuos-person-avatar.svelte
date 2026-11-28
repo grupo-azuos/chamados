@@ -8,10 +8,12 @@
   - `name`: o nome de onde saem as iniciais.
   - `avatarUrl`: a foto, quando a tela já a tem.
   - `personId`: o id da pessoa no diretório.
+  - `email`: o e-mail, para o registro que guardou o login e não o id. Um `name` que é e-mail
+    também é procurado assim.
 
   REGRA DO GRUPO: onde aparece uma pessoa, aparece a FOTO dela. Sem `avatarUrl`, o rosto procura
-  a foto no diretório de pessoas (`people-directory`) pelo `personId` — ou pelo `name`, quando o
-  registro só guardou o nome. As iniciais só aparecem quando a pessoa não tem foto mesmo.
+  a foto no diretório de pessoas (`people-directory`) pelo `personId`, pelo `email` — ou pelo
+  `name`, quando o registro só guardou o nome. As iniciais só aparecem quando a pessoa não tem foto mesmo.
   - `ui`: o tamanho (`sm`, `md`, `lg`, `xl`) e classes extras.
 -->
 <script lang="ts" module>
@@ -24,6 +26,8 @@
      */
     avatarUrl?: string | null;
     personId?: string | null;
+    /** O e-mail da pessoa, para o registro que guardou o login e não o id. */
+    email?: string | null;
     ui?: { size?: 'sm' | 'md' | 'lg' | 'xl'; className?: string };
   };
 
@@ -50,9 +54,9 @@
   import { personPhotoOf } from '$lib/hooks/use-people-directory/people-directory.svelte';
   import { cn } from '$lib/utils/cn';
 
-  let { name, avatarUrl, personId, ui }: AzuosPersonAvatarProps = $props();
+  let { name, avatarUrl, personId, email, ui }: AzuosPersonAvatarProps = $props();
 
-  const photo = $derived(avatarUrl || personPhotoOf({ id: personId, name }));
+  const photo = $derived(avatarUrl || personPhotoOf({ id: personId, name, email }));
   const size = $derived(ui?.size ?? 'sm');
   /* A foto que falhou ao carregar. Guardada pelo endereço: trocou de pessoa, tenta a foto nova. */
   let failedPhoto = $state<string | null>(null);

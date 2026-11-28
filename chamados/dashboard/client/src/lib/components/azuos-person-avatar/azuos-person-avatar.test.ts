@@ -46,6 +46,20 @@ describe('AzuosPersonAvatar', () => {
   });
 
   // feliz
+  /* O registro que guardou o login (o e-mail) no lugar do id também mostra a foto. */
+  it('finds the photo by the e-mail', async () => {
+    vi.stubGlobal('Image', InstantLoadImage);
+    setPeopleDirectory([
+      { id: 'wq', name: 'Wellington Queiroz', email: 'wq@azuos.com.br', avatarUrl: 'https://example.com/wq.jpg' },
+    ]);
+
+    const { container } = render(PersonAvatar, { props: { name: 'W. Q.', email: 'WQ@azuos.com.br' } });
+
+    const image = await vi.waitUntil(() => container.querySelector('[data-slot="avatar-image"]'));
+    expect(image).toHaveAttribute('src', 'https://example.com/wq.jpg');
+  });
+
+  // feliz
   it('finds the photo by the person id', async () => {
     vi.stubGlobal('Image', InstantLoadImage);
     setPeopleDirectory([
