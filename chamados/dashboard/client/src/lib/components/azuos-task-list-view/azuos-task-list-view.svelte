@@ -121,7 +121,7 @@
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
@@ -200,11 +200,10 @@
        busca e o responsável; situação, origem e prazo atrás do "Filtros"; embaixo, o que MOSTRA. -->
   <FilterPanel
     data={taskFilterPanelOf(data)}
-    ui={{ ariaLabel: 'Filtros das tarefas', showViewToggle: data.view === 'list' }}
+    ui={{ ariaLabel: 'Filtros das tarefas' }}
     actions={{
       onSearchChange: actions.onSearchChange,
       onFieldChange: (key: string, value: string) => changeField(key, value),
-      onRemoveChip: (key: string) => changeField(key, ''),
       onClearFilters: actions.onClearFilters,
     }}
   >
@@ -230,6 +229,12 @@
       />
     {/snippet}
   </FilterPanel>
+
+  <!-- A barra da lista (só na lista, a única que pagina): cards ou tabela à esquerda, as páginas
+       à direita — a lista pagina no servidor nos dois formatos. -->
+  {#if paged && !viewState.isLoading && !viewState.error && !viewState.isEmpty}
+    {@render listToolbar('top')}
+  {/if}
 
   {#if viewState.actionError}
     <ErrorState data={{ message: viewState.actionError }} ui={{ variant: 'inline' }} />
@@ -324,10 +329,21 @@
   {/if}
 
   {#if paged}
-    <PaginationBar
-      data={{ page: data.page, pageSize: data.pageSize, total: data.total, noun: ['tarefa', 'tarefas'] }}
-      state={{ isLoading: viewState.isLoading }}
-      actions={{ onPageChange: actions.onPageChange }}
-    />
+    {@render listToolbar('bottom')}
   {/if}
 </section>
+
+{#snippet listToolbar(position: 'top' | 'bottom')}
+  <ListToolbar
+    data={{
+      layout: 'card',
+      scroll: { loaded: data.tasks.length, totalItems: data.total },
+      pages: { page: data.page, pageSize: data.pageSize, totalItems: data.total },
+      noun: ['tarefa', 'tarefas'],
+      gender: 'feminine',
+    }}
+    ui={{ position }}
+    state={{ isLoading: viewState.isLoading }}
+    actions={{ onPageChange: actions.onPageChange }}
+  />
+{/snippet}

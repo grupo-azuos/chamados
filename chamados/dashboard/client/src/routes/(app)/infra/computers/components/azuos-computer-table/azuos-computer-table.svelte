@@ -75,19 +75,19 @@
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import {
     Table,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
   import { cn } from '$lib/utils/cn';
   import { formatTimeAgo } from '$lib/utils/format-machine';
 
   let { data, actions }: AzuosComputerTableProps = $props();
-
-  /* Cabeçalho em frase, e não em caixa alta espaçada (padrão Apple, `apple/sentence-case-labels`). */
-  const HEAD = 'normal-case tracking-normal';
 
   const ROW_MENU = [{ id: 'open', label: 'Ver ficha', icon: Eye }];
 </script>
@@ -122,24 +122,24 @@
 <Table class="min-w-[1080px]">
   <TableHeader>
     <TableRow>
-      <TableHead class={cn(HEAD, 'min-w-[260px]')} aria-sort={ariaSortOf(data.sort, 'number')}>
+      <TableHead aria-sort={ariaSortOf(data.sort, 'number')}>
         {@render sortable('number', 'Máquina')}
       </TableHead>
-      <TableHead class={cn(HEAD, 'min-w-[180px]')} aria-sort={ariaSortOf(data.sort, 'responsible')}>
+      <TableHead aria-sort={ariaSortOf(data.sort, 'responsible')}>
         {@render sortable('responsible', 'Responsável')}
       </TableHead>
-      <TableHead class={cn(HEAD, 'min-w-[120px]')} aria-sort={ariaSortOf(data.sort, 'health')}>
+      <TableHead aria-sort={ariaSortOf(data.sort, 'health')}>
         {@render sortable('health', 'Saúde')}
       </TableHead>
-      <TableHead class={cn(HEAD, 'min-w-[200px]')}>Manutenção</TableHead>
-      <TableHead class={cn(HEAD, 'min-w-[110px]')} aria-sort={ariaSortOf(data.sort, 'tickets')}>
+      <TableHead>Manutenção</TableHead>
+      <TableHead aria-sort={ariaSortOf(data.sort, 'tickets')}>
         {@render sortable('tickets', 'Chamados no mês')}
       </TableHead>
-      <TableHead class={cn(HEAD, 'min-w-[110px]')}>Situação</TableHead>
-      <TableHead class={cn(HEAD, 'min-w-[110px]')} aria-sort={ariaSortOf(data.sort, 'lastSeen')}>
+      <TableHead>Situação</TableHead>
+      <TableHead aria-sort={ariaSortOf(data.sort, 'lastSeen')}>
         {@render sortable('lastSeen', 'Vista')}
       </TableHead>
-      <TableHead class={cn(HEAD, 'w-14 text-right')}><span class="sr-only">Ações</span></TableHead>
+      <TableActionsHead />
     </TableRow>
   </TableHeader>
   <TableBody>
@@ -154,7 +154,7 @@
         class="cursor-pointer"
         onclick={() => actions.onOpen(computer)}
       >
-        <TableCell class="max-w-[300px]">
+        <TableCell>
           <span class="flex min-w-0 items-start gap-2">
             <!-- Sem pendência, o espaço do selo fica, para os nomes se alinharem. -->
             {#if computerPendingOf(computer)}
@@ -170,17 +170,18 @@
                   event.stopPropagation();
                   actions.onOpen(computer);
                 }}
-                class="text-foreground block text-left leading-snug font-medium break-words focus-visible:underline focus-visible:outline-none"
+                class="text-foreground block max-w-72 text-left leading-snug font-medium focus-visible:underline focus-visible:outline-none"
               >
-                {name}
+                <!-- O nome numa linha só, cortado com "…" no teto da coluna (o inteiro no balão). -->
+                <TableText data={{ text: name }} ui={{ className: 'max-w-72' }} />
               </button>
-              <span class="text-muted-foreground mt-0.5 block font-mono text-xs break-words">
-                {computer.hardware?.hostname || computer.name}
+              <span class="text-muted-foreground mt-0.5 block font-mono text-xs">
+                <TableText data={{ text: computer.hardware?.hostname || computer.name }} ui={{ className: 'max-w-72' }} />
               </span>
             </span>
           </span>
         </TableCell>
-        <TableCell class="max-w-[220px]">
+        <TableCell>
           <!-- A foto do responsável vem do admin-console, como no cartão; sem ela, as iniciais. -->
           <span class="flex items-center gap-2">
             {#if computer.responsibleName}
@@ -192,11 +193,11 @@
               />
             {/if}
             <span class="min-w-0">
-              <span class="text-ink-700 block leading-snug break-words">
-                {computerResponsibleLabel(computer)}
+              <span class="text-ink-700 block leading-snug">
+                <TableText data={{ text: computerResponsibleLabel(computer) }} ui={{ className: 'max-w-48' }} />
               </span>
               <span class="text-muted-foreground mt-0.5 block text-xs">
-                {computerDepartmentLabel(computer)}
+                <TableText data={{ text: computerDepartmentLabel(computer) }} ui={{ className: 'max-w-48' }} />
               </span>
             </span>
           </span>
@@ -210,7 +211,7 @@
             {computer.healthScore}/100
           </span>
         </TableCell>
-        <TableCell class="max-w-[240px]">
+        <TableCell>
           <ComputerMaintenanceStatus
             data={{ computer, scheduledFor: data.scheduledFor?.[computer.id] ?? null }}
           />
@@ -235,14 +236,15 @@
         <TableCell class="text-muted-foreground text-xs whitespace-nowrap">
           {formatTimeAgo(computer.lastSeenAt)}
         </TableCell>
-        <!-- O menu não abre a ficha pela linha: o clique para aqui. -->
-        <TableCell class="text-right" onclick={(event: MouseEvent) => event.stopPropagation()}>
+        <!-- O menu, na coluna estreita presa à direita, não abre a ficha pela linha: o clique para
+             na célula. -->
+        <TableActionsCell>
           <ActionMenu
             data={{ label: `Ações de ${name}`, items: ROW_MENU }}
             ui={{ isIconOnly: true }}
             actions={{ onSelect: () => actions.onOpen(computer) }}
           />
-        </TableCell>
+        </TableActionsCell>
       </TableRow>
     {/each}
   </TableBody>

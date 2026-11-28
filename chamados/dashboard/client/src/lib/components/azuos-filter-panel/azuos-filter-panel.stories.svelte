@@ -75,7 +75,7 @@
     ],
   };
 
-  const actions = { onSearchChange: fn(), onFieldChange: fn(), onRemoveChip: fn(), onClearFilters: fn() };
+  const actions = { onSearchChange: fn(), onFieldChange: fn(), onClearFilters: fn() };
   const search = { value: '', placeholder: 'Buscar…' };
 
   const { Story } = defineMeta({
@@ -88,7 +88,7 @@
 <!-- Sem filtro: só a barra, painel fechado. -->
 <Story name="Default" args={{ data: { search, primary, fields, chips: [], canClear: false }, actions }} />
 
-<!-- Chegou filtrada: painel aberto, contagem no botão e etiquetas com X. -->
+<!-- Chegou filtrada: cartão aberto, a contagem no botão e o "Limpar filtros" na linha de cima. -->
 <Story
   name="Filtered"
   args={{
@@ -103,22 +103,11 @@
   }}
 />
 
-<!-- Caso limite: sem filtro principal e sem a troca tabela/cards, no celular. -->
+<!-- Caso limite: sem filtro principal, no celular. -->
 <Story
   name="MinimalOnMobile"
   globals={{ viewport: { value: 'celular' } }}
-  args={{ data: { search, fields, chips: [], canClear: false }, ui: { showViewToggle: false }, actions }}
-/>
-
-<!-- As filas de chamados: a troca ganha a terceira opção, o quadro — aqui, marcado. -->
-<Story
-  name="WithKanbanView"
-  args={{
-    data: { search, primary, fields, chips: [], canClear: false },
-    ui: { hasKanbanView: true },
-    state: { isKanbanView: true },
-    actions: { ...actions, onKanbanViewChange: () => {} },
-  }}
+  args={{ data: { search, fields, chips: [], canClear: false }, actions }}
 />
 
 <!-- O filtro escondeu tudo: "Limpar filtros" fica com o aviso de lista vazia. -->
@@ -131,7 +120,7 @@
   }}
 />
 
-<!-- Com o filtro de pessoa escolhido: painel aberto, a foto no campo e a etiqueta embaixo. -->
+<!-- Com o filtro de pessoa escolhido: cartão aberto e a foto no campo. -->
 <Story
   name="PersonField"
   args={{

@@ -1,7 +1,7 @@
 import { type ComputerListItem } from '@template/shared/schemas/computer.schema';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import ComputerListView, {
   hasNoShortcut,
@@ -238,11 +238,7 @@ describe('AzuosComputerListView — stat card shortcuts and filter bar', () => {
   it('announces and opens the grouped filters when the list arrives filtered', () => {
     renderWithFilter({ preventive: 'needed', onlyOffline: true });
 
-    expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
-    expect(screen.getByLabelText('2 ativos')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filtros · 2' })).toHaveAttribute('aria-pressed', 'true');
     /* Aberto sem clique: a lista da preventiva já mostra o que está escolhido. */
     expect(screen.getByRole('button', { name: 'Filtrar pela preventiva' })).toHaveTextContent(
       'Precisa de manutenção',
@@ -679,6 +675,10 @@ describe('AzuosComputerListView — Paralegal format', () => {
   // feliz
   it('pages the card grid and walks to the next page', async () => {
     const onPageChange = vi.fn();
+    /* Nos cards (a preferência "ver sempre em cards"), a barra da lista mostra as páginas. */
+    const tableView = useTableViewModel();
+    tableView.actions.onToggle();
+    onTestFinished(() => tableView.actions.onToggle());
     const { container } = renderWith(
       { computers: many, paging: { page: 2, pageSize: 24, total: 30 } },
       { onPageChange },
@@ -688,19 +688,21 @@ describe('AzuosComputerListView — Paralegal format', () => {
     /* A página 2 tem só as 6 que sobraram; a tabela continua com as 30 (ela rola). */
     expect(within(cards).getAllByRole('button', { name: /^Ver ficha de/ })).toHaveLength(6);
     expect(container.querySelectorAll('[data-slot="computer-row"]')).toHaveLength(30);
-    expect(screen.getByText('25–30 de 30 computadores')).toBeInTheDocument();
+    /* As páginas na barra de cima e no pé da grade. */
+    expect(screen.getAllByText('25–30 de 30 computadores')).toHaveLength(2);
 
     /* "Anterior" da paginação, e não o "Ver anteriores" da faixa de cartões do topo. */
-    await userEvent.click(screen.getByRole('button', { name: /^anterior/i }));
+    await userEvent.click(screen.getAllByRole('button', { name: /^anterior/i })[0]!);
     expect(onPageChange).toHaveBeenCalledWith(1);
   });
 
   // triste
   it('has no page bar when every card fits on one page', () => {
-    renderWith({ paging: { page: 1, pageSize: 24, total: 1 } }, { onPageChange: vi.fn() });
+    const { container } = renderWith({ paging: { page: 1, pageSize: 24, total: 1 } }, { onPageChange: vi.fn() });
 
     expect(screen.queryByRole('button', { name: /próxima/i })).toBeNull();
-    expect(screen.getByText('1 computador(es) listado(s)', { selector: 'p' })).toBeInTheDocument();
+    /* A barra da lista continua dizendo quantas há. */
+    expect(container.querySelector('[data-slot="list-toolbar"]')).toHaveTextContent(/computador/);
   });
 
   // feliz
