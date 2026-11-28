@@ -60,6 +60,14 @@
 /client/src/lib/api/dashboard-boards\.api[^/]*$
 /client/src/lib/components/azuos-[a-z-]*-chart/
 /client/src/lib/components/azuos-(echart|chart-legend|chart-value-list)/
+# O calendário dos blocos de calendário e de agenda (o do paralegal) e os feriados que ele
+# pinta: são do motor.
+/client/src/lib/components/azuos-event-calendar/
+/client/src/lib/hooks/use-holidays/
+/client/src/lib/utils/(holiday-state|widget-calendar)\.util[^/]*$
+/client/src/lib/api/holidays\.api[^/]*$
+/shared/src/schemas/holiday\.schema[^/]*$
+/server/src/modules/holidays/
 /client/src/lib/utils/(echarts|chart-slice)\.util[^/]*$
 
 # HISTÓRICO PADRÃO (skill history-standard) — tabela, API e tela iguais em todo sistema. Cada
