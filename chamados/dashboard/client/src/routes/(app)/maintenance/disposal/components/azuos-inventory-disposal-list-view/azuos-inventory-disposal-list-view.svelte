@@ -61,7 +61,6 @@
 </script>
 
 <script lang="ts">
-  import FilterX from '@lucide/svelte/icons/filter-x';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
   import Trash2 from '@lucide/svelte/icons/trash-2';
@@ -73,7 +72,8 @@
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import CollapsibleFilters from '$lib/components/azuos-collapsible-filters/azuos-collapsible-filters.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
@@ -84,8 +84,8 @@
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
@@ -123,30 +123,41 @@
     />
   </PageHeader>
 
-  <!-- A barra de ferramentas mora sobre o fundo da página, sem card em volta: filtros → modo de
-       ver (design-governance §11). -->
+  <!-- O cartão de filtros do grupo (o de Empresas do paralegal): os filtros à vista.
+       "Limpar filtros" só aparece quando há o que limpar; quando o filtro escondeu tudo,
+       quem o oferece é o aviso de lista vazia — dois botões iguais só confundem. -->
   <div class="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4">
-    <FilterField data={{ label: 'Motivo' }}>
-      <OptionPicker
-        data={{ value: data.filter.reason, options: REASON_FILTER_OPTIONS }}
-        ui={{ ariaLabel: 'Filtrar por motivo', allLabel: 'Todos os motivos' }}
-        actions={{
-          onChange: (value: string) => actions.onReasonChange(value as DisposalReason | ''),
-        }}
-      />
-    </FilterField>
-
-    <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
-      {#if data.filter.reason !== '' && !listState.isFilteredOut}
-        <ActionButton
-          data={{ label: 'Limpar filtros' }}
-          ui={{ variant: 'ghost', size: 'lg', icon: FilterX }}
-          actions={{ onClick: actions.onClearFilters }}
-        />
-      {/if}
-      <TableViewToggle />
-    </div>
+    <CollapsibleFilters
+      data={{ label: 'Filtros dos descartes', activeCount: 0 }}
+      state={{ hasFilter: data.filter.reason !== '' && !listState.isFilteredOut }}
+      actions={{ onClear: actions.onClearFilters }}
+    >
+      {#snippet primary()}
+        <FilterField ui={{ className: 'sm:w-full' }} data={{ label: 'Motivo' }}>
+          <OptionPicker
+            data={{ value: data.filter.reason, options: REASON_FILTER_OPTIONS }}
+            ui={{ ariaLabel: 'Filtrar por motivo', allLabel: 'Todos os motivos' }}
+            actions={{
+              onChange: (value: string) => actions.onReasonChange(value as DisposalReason | ''),
+            }}
+          />
+        </FilterField>
+      {/snippet}
+    </CollapsibleFilters>
   </div>
+
+  <!-- A barra da lista: cards ou tabela à esquerda; à direita as páginas (cards) ou a contagem
+       (tabela, que rola inteira). Carregando, vazia ou com erro, não há lista para contar. -->
+  {#if !listState.isLoading && !listState.error && !listState.isEmpty}
+    <ListToolbar
+      data={{
+        scroll: { loaded: data.disposals.length, totalItems: data.total },
+        pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+        noun: ['descarte', 'descartes'],
+      }}
+      actions={{ onPageChange: cardPage.actions.onPageChange }}
+    />
+  {/if}
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2). -->
   {#if listState.error}
@@ -246,19 +257,17 @@
           </ContentCard>
         {/each}
       </div>
-      {#if cardPage.total > cardPage.pageSize}
-        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
-          <PaginationBar
-            data={{
-              page: cardPage.page,
-              pageSize: cardPage.pageSize,
-              total: cardPage.total,
-              noun: ['descarte', 'descartes'],
-            }}
-            actions={{ onPageChange: cardPage.actions.onPageChange }}
-          />
-        </div>
-      {/if}
+    <!-- No pé dos cards, a mesma barra de páginas: quem chegou ao último card troca de página
+         sem rolar de volta. Na tabela, que rola inteira, ela não aparece. -->
+    <ListToolbar
+      data={{
+        scroll: { loaded: data.disposals.length, totalItems: data.total },
+        pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+        noun: ['descarte', 'descartes'],
+      }}
+      ui={{ position: 'bottom' }}
+      actions={{ onPageChange: cardPage.actions.onPageChange }}
+    />
 
       <!-- 2. Tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu cards. Rola inteira. -->
       <div
@@ -280,9 +289,14 @@
             {#each data.disposals as disposal (disposal.id)}
               <TableRow class="align-top">
                 <TableCell>
-                  <span class="text-foreground block font-medium break-words">{disposal.itemName}</span>
+                  <!-- O nome e a nota numa linha cada, cortados com "…" no teto da coluna. -->
+                  <span class="text-foreground block font-medium">
+                    <TableText data={{ text: disposal.itemName }} ui={{ className: 'max-w-72' }} />
+                  </span>
                   {#if disposal.note}
-                    <span class="text-muted-foreground block text-xs break-words">{disposal.note}</span>
+                    <span class="text-muted-foreground block text-xs">
+                      <TableText data={{ text: disposal.note }} ui={{ className: 'max-w-72' }} />
+                    </span>
                   {/if}
                 </TableCell>
                 <TableCell>
@@ -301,7 +315,7 @@
                 <TableCell>
                   <span class="flex items-center gap-2">
                     <PersonAvatar name={disposal.createdBy} ui={{ size: 'sm' }} />
-                    <span class="truncate">{disposal.createdBy}</span>
+                    <TableText data={{ text: disposal.createdBy }} ui={{ className: 'max-w-36' }} />
                   </span>
                 </TableCell>
               </TableRow>
