@@ -81,6 +81,13 @@ export function historyTargetLabel(type: string | null | undefined): string {
  * tela filtra e o que dá a cor do selo; o verbo vem do nome do handler (`createMovement`,
  * `restoreSchedule`, `removeLink`).
  */
+/**
+ * O que a busca do Histórico procura, dito com as coisas DESTE sistema: ela procura no nome que a
+ * pessoa viu (o rótulo do alvo) — o protocolo do chamado, o nome da máquina, o produto, o sistema.
+ * Também é vocabulário: cada sistema troca.
+ */
+export const HISTORY_SEARCH_PLACEHOLDER = 'Protocolo, nome da máquina, produto ou sistema';
+
 export const HISTORY_KINDS = ['created', 'updated', 'archived', 'restored'] as const;
 
 export type HistoryKind = (typeof HISTORY_KINDS)[number];
