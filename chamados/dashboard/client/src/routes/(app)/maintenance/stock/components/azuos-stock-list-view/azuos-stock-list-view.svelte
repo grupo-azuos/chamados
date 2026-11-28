@@ -77,7 +77,6 @@
 <script lang="ts">
   import ArrowDownLeft from '@lucide/svelte/icons/arrow-down-left';
   import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
-  import FilterX from '@lucide/svelte/icons/filter-x';
   import Package from '@lucide/svelte/icons/package';
   import SearchX from '@lucide/svelte/icons/search-x';
 
@@ -89,19 +88,21 @@
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import CollapsibleFilters from '$lib/components/azuos-collapsible-filters/azuos-collapsible-filters.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import {
     Table,
-    TableActions,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
@@ -161,56 +162,64 @@
     }}
   />
 
-  <!-- A barra de ferramentas mora sobre o fundo da página, sem card em volta: busca → filtros →
-       modo de ver (design-governance §11). -->
+  <!-- O cartão de filtros do grupo (o de Empresas do paralegal): a busca à vista, com o filtro principal; o resto atrás do "Filtros".
+       "Limpar filtros" só aparece quando há o que limpar; quando o filtro escondeu tudo,
+       quem o oferece é o aviso de lista vazia — dois botões iguais só confundem. -->
   <div class="flex flex-col gap-3">
-    <TextField
-      data={{
-        label: 'Buscar',
-        name: 'search',
-        value: data.filter.search,
-        placeholder: 'Nome do produto, onde fica ou código de patrimônio',
-      }}
-      actions={{ onChange: actions.onSearchChange }}
-    />
-
-    <div class="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4">
-      <FilterField data={{ label: 'Categoria' }}>
-        <OptionPicker
-          data={{ value: data.filter.category, options: CATEGORY_FILTER_OPTIONS }}
-          ui={{ ariaLabel: 'Filtrar por categoria', allLabel: 'Todas as categorias' }}
-          actions={{
-            onChange: (value: string) => actions.onCategoryChange(value as InventoryCategory | ''),
-          }}
-        />
-      </FilterField>
-
-      <!-- A lista de compras da semana: só o que zerou. -->
-      <FilterField data={{ label: 'Estoque' }}>
-        <OptionPicker
+    <CollapsibleFilters
+      data={{ label: 'Filtros do saldo', activeCount: data.filter.outOfStockOnly ? 1 : 0 }}
+      state={{ hasFilter: hasActiveFilter && !listState.isFilteredOut }}
+      actions={{ onClear: actions.onClearFilters }}
+    >
+      {#snippet primary()}
+        <TextField
           data={{
-            value: data.filter.outOfStockOnly ? 'empty' : '',
-            options: [{ value: 'empty', label: outOfStockLabel }],
+            label: 'Buscar',
+            name: 'search',
+            value: data.filter.search,
+            placeholder: 'Nome do produto, onde fica ou código de patrimônio',
           }}
-          ui={{ ariaLabel: 'Filtrar por estoque', allLabel: 'Todos' }}
-          actions={{
-            onChange: (value: string) => actions.onOutOfStockOnlyChange(value === 'empty'),
-          }}
+          actions={{ onChange: actions.onSearchChange }}
         />
-      </FilterField>
-
-      <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
-        {#if hasActiveFilter && !listState.isFilteredOut}
-          <ActionButton
-            data={{ label: 'Limpar filtros' }}
-            ui={{ variant: 'ghost', size: 'lg', icon: FilterX }}
-            actions={{ onClick: actions.onClearFilters }}
+        <FilterField ui={{ className: 'sm:w-full' }} data={{ label: 'Categoria' }}>
+          <OptionPicker
+            data={{ value: data.filter.category, options: CATEGORY_FILTER_OPTIONS }}
+            ui={{ ariaLabel: 'Filtrar por categoria', allLabel: 'Todas as categorias' }}
+            actions={{
+              onChange: (value: string) => actions.onCategoryChange(value as InventoryCategory | ''),
+            }}
           />
-        {/if}
-        <TableViewToggle />
+        </FilterField>
+      {/snippet}
+      <div class="grid grid-cols-1 items-end gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <FilterField ui={{ className: 'sm:w-full' }} data={{ label: 'Estoque' }}>
+          <OptionPicker
+            data={{
+              value: data.filter.outOfStockOnly ? 'empty' : '',
+              options: [{ value: 'empty', label: outOfStockLabel }],
+            }}
+            ui={{ ariaLabel: 'Filtrar por estoque', allLabel: 'Todos' }}
+            actions={{
+              onChange: (value: string) => actions.onOutOfStockOnlyChange(value === 'empty'),
+            }}
+          />
+        </FilterField>
       </div>
-    </div>
+    </CollapsibleFilters>
   </div>
+
+  <!-- A barra da lista: cards ou tabela à esquerda; à direita as páginas (cards) ou a contagem
+       (tabela, que rola inteira). Carregando, vazia ou com erro, não há lista para contar. -->
+  {#if !listState.isLoading && !listState.error && !listState.isEmpty}
+    <ListToolbar
+      data={{
+        scroll: { loaded: data.groups.length, totalItems: data.total },
+        pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+        noun: ['produto', 'produtos'],
+      }}
+      actions={{ onPageChange: cardPage.actions.onPageChange }}
+    />
+  {/if}
 
   <!-- Os estados vêm PRIMEIRO, e cada um encerra a leitura (CONTRIBUTING §2). -->
   {#if listState.error}
@@ -258,10 +267,6 @@
     </EmptyState>
   {:else}
     <section class="flex flex-col gap-3" aria-label="Saldo do depósito">
-      <p class="text-muted-foreground text-xs">
-        {data.total}
-        {data.total === 1 ? 'produto' : 'produtos'}
-      </p>
 
       <!-- 1. Cards: sempre no estreito (< xl), ou quando a pessoa pediu cards. O depósito não tem
            ficha: o cartão não abre nada, e as ações (Entrada, Saída) moram no rodapé. -->
@@ -319,19 +324,17 @@
           </ContentCard>
         {/each}
       </div>
-      {#if cardPage.total > cardPage.pageSize}
-        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
-          <PaginationBar
-            data={{
-              page: cardPage.page,
-              pageSize: cardPage.pageSize,
-              total: cardPage.total,
-              noun: ['produto', 'produtos'],
-            }}
-            actions={{ onPageChange: cardPage.actions.onPageChange }}
-          />
-        </div>
-      {/if}
+    <!-- No pé dos cards, a mesma barra de páginas: quem chegou ao último card troca de página
+         sem rolar de volta. Na tabela, que rola inteira, ela não aparece. -->
+    <ListToolbar
+      data={{
+        scroll: { loaded: data.groups.length, totalItems: data.total },
+        pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+        noun: ['produto', 'produtos'],
+      }}
+      ui={{ position: 'bottom' }}
+      actions={{ onPageChange: cardPage.actions.onPageChange }}
+    />
 
       <!-- 2. Tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu cards. Rola inteira. -->
       <div
@@ -345,19 +348,24 @@
               <TableHead>Categoria e lugar</TableHead>
               <TableHead>Saldo</TableHead>
               <TableHead>Chamados</TableHead>
-              <TableHead class="text-right"><span class="sr-only">Ações</span></TableHead>
+              <TableActionsHead />
             </TableRow>
           </TableHeader>
           <TableBody>
             {#each data.groups as group (group.key)}
               <TableRow class="align-top">
                 <TableCell>
-                  <span class="text-foreground block font-medium break-words">{group.name}</span>
+                  <!-- O nome numa linha só, cortado com "…" no teto da coluna (o inteiro no balão). -->
+                  <span class="text-foreground block font-medium">
+                    <TableText data={{ text: group.name }} ui={{ className: 'max-w-72' }} />
+                  </span>
                   {#if group.items.length === 1 && group.items[0]!.code}
                     <span class="text-muted-foreground block font-mono text-xs">{group.items[0]!.code}</span>
                   {/if}
                 </TableCell>
-                <TableCell class="text-muted-foreground">{detailOf(group)}</TableCell>
+                <TableCell class="text-muted-foreground">
+                  <TableText data={{ text: detailOf(group) }} ui={{ className: 'max-w-48' }} />
+                </TableCell>
                 <TableCell>
                   <span class="flex items-center gap-2">
                     <span class="text-foreground font-semibold tabular-nums">{group.balance}</span>
@@ -376,15 +384,13 @@
                     }}
                   />
                 </TableCell>
-                <TableCell class="text-right">
-                  <TableActions>
-                    <ActionMenu
-                      data={menuOf(group)}
-                      ui={{ isIconOnly: true }}
-                      actions={{ onSelect: (id) => selectMenu(group, id) }}
-                    />
-                  </TableActions>
-                </TableCell>
+                <TableActionsCell>
+                  <ActionMenu
+                    data={menuOf(group)}
+                    ui={{ isIconOnly: true }}
+                    actions={{ onSelect: (id) => selectMenu(group, id) }}
+                  />
+                </TableActionsCell>
               </TableRow>
             {/each}
           </TableBody>
