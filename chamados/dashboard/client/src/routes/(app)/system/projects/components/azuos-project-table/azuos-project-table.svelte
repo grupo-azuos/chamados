@@ -62,11 +62,14 @@
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import {
     Table,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
 
   let { data, state: tableState, actions }: AzuosProjectTableProps = $props();
@@ -76,11 +79,11 @@
   <TableHeader>
     <TableRow>
       <TableHead>Sistema</TableHead>
-      <TableHead class="w-36">Situação</TableHead>
-      <TableHead class="w-28 text-right">Chamados</TableHead>
-      <TableHead class="w-24 text-right">PRs</TableHead>
-      <TableHead class="w-56">Responsável</TableHead>
-      <TableHead class="w-14 text-right"><span class="sr-only">Ações</span></TableHead>
+      <TableHead>Situação</TableHead>
+      <TableHead class="text-right">Chamados</TableHead>
+      <TableHead class="text-right">PRs</TableHead>
+      <TableHead>Responsável</TableHead>
+      <TableActionsHead />
     </TableRow>
   </TableHeader>
   <TableBody>
@@ -90,16 +93,17 @@
           <button
             type="button"
             aria-label={`Ver sistema ${project.name}`}
-            class="text-foreground hover:text-primary focus-visible:ring-ring/50 rounded-control text-left font-medium break-words hover:underline focus-visible:ring-3 focus-visible:outline-none"
+            class="text-foreground hover:text-primary focus-visible:ring-ring/50 rounded-control block max-w-72 text-left font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none"
             onclick={() => actions.onOpen(project)}
           >
-            {project.name}
+            <!-- O nome numa linha só, cortado com "…" no teto da coluna (o inteiro no balão). -->
+            <TableText data={{ text: project.name }} ui={{ className: 'max-w-72' }} />
           </button>
           <a
             href={repositoryHrefOf(project)}
             target="_blank"
             rel="noopener noreferrer"
-            class="text-muted-foreground hover:text-foreground block truncate font-mono text-xs hover:underline"
+            class="text-muted-foreground hover:text-foreground block max-w-72 truncate font-mono text-xs hover:underline"
           >
             {repositoryLabelOf(project)}
           </a>
@@ -116,13 +120,13 @@
           {#if project.responsibleName}
             <span class="flex min-w-0 items-center gap-2">
               <PersonAvatar name={project.responsibleName} personId={project.responsibleId} ui={{ size: 'sm' }} />
-              <span class="truncate">{project.responsibleName}</span>
+              <TableText data={{ text: project.responsibleName }} ui={{ className: 'max-w-36' }} />
             </span>
           {:else}
             <span class="text-muted-foreground">Sem responsável</span>
           {/if}
         </TableCell>
-        <TableCell class="text-right">
+        <TableActionsCell>
           {#if data.menuItems.length > 0}
             <ActionMenu
               data={{ label: `Ações de ${project.name}`, items: data.menuItems }}
@@ -131,7 +135,7 @@
               actions={{ onSelect: (id) => actions.onMenuSelect(id, project) }}
             />
           {/if}
-        </TableCell>
+        </TableActionsCell>
       </TableRow>
     {/each}
   </TableBody>
