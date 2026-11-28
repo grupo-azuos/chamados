@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import SelectField from './azuos-select-field.svelte';
+import SelectField, { SELECT_SEARCH_FROM } from './azuos-select-field.svelte';
 
 const owners = [
   { value: '', label: 'Todos os responsáveis' },
@@ -189,5 +189,29 @@ describe('AzuosSelectField with people and in the dark theme', () => {
     expect(trigger).toHaveAttribute('data-size', 'default');
     expect(trigger).toHaveClass('data-[size=default]:h-(--control-lg)');
   });
-});
 
+  // feliz
+  /* A lista que cresceu com o cadastro vira busca sozinha: 15 opções ou mais, o combobox. */
+  it('turns into the combobox with search from fifteen options on', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const options = Array.from({ length: SELECT_SEARCH_FROM }, (_, index) => ({
+      value: `d${index}`,
+      label: `Departamento ${index}`,
+    }));
+    render(SelectField, { props: { data: { value: '', options }, ui: { ariaLabel: 'Departamento' }, actions: { onChange } } });
+
+    await user.click(screen.getByRole('combobox', { name: 'Departamento' }));
+    await user.click(await screen.findByRole('option', { name: 'Departamento 7' }));
+
+    expect(onChange).toHaveBeenCalledWith('d7');
+  });
+
+  // triste
+  it('keeps the simple select below fifteen options', () => {
+    const options = Array.from({ length: SELECT_SEARCH_FROM - 1 }, (_, index) => ({ value: `d${index}`, label: `D${index}` }));
+    render(SelectField, { props: { data: { value: '', options }, ui: { ariaLabel: 'Departamento' }, actions: { onChange: vi.fn() } } });
+
+    expect(document.querySelector('[data-slot="select-value"]')).not.toBeNull();
+  });
+});
