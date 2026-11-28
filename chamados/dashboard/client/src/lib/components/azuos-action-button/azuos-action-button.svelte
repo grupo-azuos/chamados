@@ -51,8 +51,11 @@
         md: 'control-md',
         lg: 'control-lg',
       },
-      /* Botão só de ícone é quadrado: a largura acompanha a altura, e não o ícone dentro. */
-      isIconOnly: { true: '', false: '' },
+      /* Botão só de ícone é quadrado: a largura acompanha a altura, e não o ícone dentro. E ele
+         NÃO ENCOLHE (`shrink-0`, `max-w-none`, sem respiro lateral): na coluna estreita da tabela
+         ou no canto do card, o `max-w-full` da base o espremia, o círculo do hover ficava oval e o
+         ícone saía do meio. */
+      isIconOnly: { true: 'inline-flex max-w-none shrink-0 items-center justify-center p-0', false: '' },
     },
     compoundVariants: [
       { size: 'sm', isIconOnly: true, class: 'control-icon-sm' },
@@ -135,6 +138,7 @@
   import Loader2 from '@lucide/svelte/icons/loader-2';
   import { cn } from '$lib/utils/cn';
   import { Button } from '$lib/components/ui/button';
+  import * as Tooltip from '$lib/components/azuos-tooltip/azuos-tooltip';
 
   let { data, ui, state, actions }: AzuosActionButtonProps = $props();
 
@@ -142,25 +146,50 @@
   const { Icon, label, accessibleName } = $derived(resolveContent(data, ui, isBusy));
 </script>
 
-<Button
-  type="button"
-  size={buttonSize(ui)}
-  disabled={isBusy || isDisabled}
-  aria-busy={isBusy}
-  aria-pressed={state?.isPressed}
-  aria-label={accessibleName}
-  title={accessibleName}
-  onclick={actions?.onClick}
-  class={cn(
-    actionButton({ variant: ui?.variant, size: ui?.size, isIconOnly: ui?.isIconOnly }),
-    ui?.className,
-  )}
->
-  {#if Icon}
-    <Icon class={cn(isBusy && 'animate-spin')} aria-hidden="true" />
-  {/if}
-  <!-- Rótulo longo numa coluna estreita: corta com "…" em vez de estourar a coluna. -->
-  {#if label}
-    <span class="min-w-0 truncate">{label}</span>
-  {/if}
-</Button>
+<!-- Só ícone: o nome aparece no balão do projeto, e não no `title` do navegador — que demora, some
+     no toque e tem a cara de cada sistema operacional. -->
+{#if accessibleName}
+  <!-- `ignoreNonKeyboardFocus`: o foco que o diálogo põe sozinho no primeiro botão não abre o
+       balão — senão o Esc fechava o balão, e não o diálogo. -->
+  <Tooltip.Provider delayDuration={300} ignoreNonKeyboardFocus>
+    <Tooltip.Root>
+      <Tooltip.Trigger>
+        {#snippet child({ props })}
+          {@render button(props)}
+        {/snippet}
+      </Tooltip.Trigger>
+      <Tooltip.Content>{accessibleName}</Tooltip.Content>
+    </Tooltip.Root>
+  </Tooltip.Provider>
+{:else}
+  {@render button({})}
+{/if}
+
+{#snippet button(props: Record<string, unknown>)}
+  <Button
+    {...props}
+    type="button"
+    size={buttonSize(ui)}
+    disabled={isBusy || isDisabled}
+    aria-busy={isBusy}
+    aria-pressed={state?.isPressed}
+    aria-label={accessibleName}
+    onclick={(event: MouseEvent) => {
+      /* O clique é do botão e do balão: o balão fecha, e a ação corre. */
+      (props.onclick as ((event: MouseEvent) => void) | undefined)?.(event);
+      actions?.onClick?.();
+    }}
+    class={cn(
+      actionButton({ variant: ui?.variant, size: ui?.size, isIconOnly: ui?.isIconOnly }),
+      ui?.className,
+    )}
+  >
+    {#if Icon}
+      <Icon class={cn('shrink-0', isBusy && 'animate-spin')} aria-hidden="true" />
+    {/if}
+    <!-- Rótulo longo numa coluna estreita: corta com "…" em vez de estourar a coluna. -->
+    {#if label}
+      <span class="min-w-0 truncate">{label}</span>
+    {/if}
+  </Button>
+{/snippet}

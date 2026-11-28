@@ -10,7 +10,7 @@
   estágio, nunca sumindo. E o estágio muda na FICHA do chamado, lançando um histórico — daqui só se
   abre a ficha.
 
-  DOIS MODOS de ver a mesma fila, na troca ao lado dos filtros: a LISTA (tabela ou cards, paginada)
+  DOIS MODOS de ver a mesma fila, na troca da barra da lista (`AzuosListToolbar`): a LISTA (tabela ou cards, paginada)
   e o QUADRO (`board`, o `AzuosTicketKanbanBoard` que a rota entrega), com todos os chamados do
   recorte em colunas por etapa. Os filtros, os cartões do topo e os estados (carregando, vazio,
   filtrado, erro) são os mesmos nos dois — muda só o desenho do conteúdo. No quadro não há páginas:
@@ -222,6 +222,7 @@
 <script lang="ts">
   import CircleAlert from '@lucide/svelte/icons/circle-alert';
   import CircleCheck from '@lucide/svelte/icons/circle-check';
+  import FolderOpen from '@lucide/svelte/icons/folder-open';
   import Headset from '@lucide/svelte/icons/headset';
   import Hourglass from '@lucide/svelte/icons/hourglass';
   import Inbox from '@lucide/svelte/icons/inbox';
@@ -235,19 +236,21 @@
     type FilterPanelField,
   } from '$lib/components/azuos-filter-panel/azuos-filter-panel.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import ReportExportActions from '$lib/components/azuos-report-export-actions/azuos-report-export-actions.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import {
     Table,
-    TableActions,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import TicketCard from '$lib/components/azuos-ticket-card/azuos-ticket-card.svelte';
@@ -433,9 +436,9 @@
     <ContentCard data={{ label: 'Resolvidos', title: 'Resolvidos', highlight: { value: dashboard?.resolved ?? 0, hint: dashboard?.resolved ? `tempo médio: ${formatAverage(dashboard.averageResolutionHours)}` : 'nada resolvido ainda' } }} ui={{ icon: CircleCheck, iconTone: 'success' }} state={{ isLoading: state.isDashboardLoading, isSelected: data.filter.statusGroup === 'solved' }} actions={{ onOpen: () => filterByGroup('solved') }} />
   </StatCardGrid>
 
-  <!-- Os filtros no MESMO desenho do Inventário (`azuos-filter-panel`): busca e departamento à
-       vista, o resto no painel "Filtros", com pastilhas e listas intercaladas e uma etiqueta
-       por filtro ligado. A fila vem logo abaixo, no seu próprio cartão. -->
+  <!-- Os filtros no cartão de filtros do grupo (`azuos-filter-panel`, o de Empresas do
+       paralegal): busca e departamento à vista, o resto atrás do "Filtros". Logo abaixo, a barra
+       da lista: lista ou quadro à esquerda, as páginas à direita. -->
   <!-- `scroll-mt-4`: quando um cartão de indicador rola a tela até aqui, sobra um respiro acima. -->
   <div bind:this={queueElement} class="flex scroll-mt-4 flex-col gap-4">
     <FilterPanel
@@ -454,16 +457,20 @@
         ),
         canClear: hasActiveFilter,
       }}
-      ui={{ ariaLabel: 'Filtros da fila de chamados', hasKanbanView: hasBoard }}
-      state={{ isFilteredOut: state.isFilteredOut, isKanbanView: isBoard }}
+      ui={{ ariaLabel: 'Filtros da fila de chamados' }}
+      state={{ isFilteredOut: state.isFilteredOut }}
       actions={{
         onSearchChange: actions.onSearchChange,
         onFieldChange: changeFilter,
-        onRemoveChip: (key) => changeFilter(key, ''),
         onClearFilters: actions.onClearFilters,
-        onKanbanViewChange: (isKanban) => actions.onViewChange?.(isKanban ? 'kanban' : 'list'),
       }}
     />
+
+    <!-- A fila pagina no servidor nos dois formatos (tabela e cards): a barra mostra as páginas em
+         ambos. No quadro, que traz tudo de uma vez, fica a contagem. -->
+    {#if !state.isLoading && !state.error && !state.isEmpty}
+      {@render listToolbar('top')}
+    {/if}
 
   <!-- O QUADRO fica fora do cartão da lista: as colunas já são superfícies, e card dentro de
        card da mesma cor é proibido. Os estados (erro, carregando, vazio) continuam no cartão. -->
@@ -540,44 +547,43 @@
           <Table class="min-w-[980px]">
             <TableHeader>
               <TableRow>
-                <TableHead class="min-w-[110px]">Protocolo</TableHead>
-                <TableHead class="min-w-[180px]">Quem abriu</TableHead>
-                <TableHead class="min-w-[110px]">Área</TableHead>
-                <TableHead class="min-w-[140px]">Tipo</TableHead>
-                <TableHead class="min-w-[160px]">Máquina</TableHead>
-                <TableHead class="min-w-[110px]">Urgência</TableHead>
-                <TableHead class="min-w-[120px]">Situação</TableHead>
-                <TableHead class="min-w-[110px]">Aberto em</TableHead>
-                <TableHead class="min-w-[90px] text-right"
-                  ><span class="sr-only">Ações</span></TableHead
-                >
+                <TableHead>Protocolo</TableHead>
+                <TableHead>Quem abriu</TableHead>
+                <TableHead>Área</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Máquina</TableHead>
+                <TableHead>Urgência</TableHead>
+                <TableHead>Situação</TableHead>
+                <TableHead>Aberto em</TableHead>
+                <TableActionsHead />
               </TableRow>
             </TableHeader>
             <TableBody>
               {#each data.tickets as ticket (ticket.id)}
                 <TableRow>
-                  <TableCell
-                    class="font-mono text-xs font-semibold text-ink-900"
-                    >{ticket.protocol}</TableCell
-                  >
+                  <TableCell class="text-ink-900 font-mono text-xs font-semibold whitespace-nowrap">
+                    {ticket.protocol}
+                  </TableCell>
+                  <!-- O nome numa linha só, cortado com "…" no teto da coluna (o texto inteiro no
+                       balão): quebrado em três linhas, ele espremia a tabela. -->
                   <TableCell>
-                    <span class="font-medium text-ink-900"
-                      >{ticket.requesterName}</span
-                    >
-                    <span class="block text-xs text-ink-500">
-                      {ticketDepartmentLabel(ticket.department)}
+                    <span class="text-ink-900 block font-medium">
+                      <TableText data={{ text: ticket.requesterName }} ui={{ className: 'max-w-72' }} />
+                    </span>
+                    <span class="text-ink-500 block text-xs">
+                      <TableText data={{ text: ticketDepartmentLabel(ticket.department) }} ui={{ className: 'max-w-72' }} />
                     </span>
                   </TableCell>
-                  <TableCell class="text-ink-700"
-                    >{ticketAreaLabel(ticket.area)}</TableCell
-                  >
-                  <TableCell class="text-ink-700"
-                    >{ticketProblemTypeLabel(ticket.problemType)}</TableCell
-                  >
+                  <TableCell class="text-ink-700">
+                    <TableText data={{ text: ticketAreaLabel(ticket.area) }} ui={{ className: 'max-w-36' }} />
+                  </TableCell>
+                  <TableCell class="text-ink-700">
+                    <TableText data={{ text: ticketProblemTypeLabel(ticket.problemType) }} ui={{ className: 'max-w-36' }} />
+                  </TableCell>
                   <!-- A maioria dos chamados não tem máquina: quem atende é que vincula. O traço diz
                    "ainda não vinculado" sem virar um vazio que parece defeito de tela. -->
                   <TableCell class="text-ink-700">
-                    {ticket.computerName ?? '—'}
+                    <TableText data={{ text: ticket.computerName, empty: '—' }} ui={{ className: 'max-w-36' }} />
                   </TableCell>
                   <TableCell>
                     <StatusBadge
@@ -594,15 +600,15 @@
                   <TableCell class="text-xs text-ink-500 whitespace-nowrap">
                     {formatDate(ticket.createdAt)}
                   </TableCell>
-                  <TableCell class="text-right whitespace-nowrap">
-                    <TableActions>
-                      <ActionButton
-                        data={{ label: 'Abrir' }}
-                        ui={{ variant: 'secondary', size: 'sm' }}
-                        actions={{ onClick: () => actions.onAnswer(ticket) }}
-                      />
-                    </TableActions>
-                  </TableCell>
+                  <!-- A ação da linha é só ícone, na coluna estreita presa à direita; o nome vai no
+                       balão e no leitor de tela. -->
+                  <TableActionsCell>
+                    <ActionButton
+                      data={{ label: `Abrir o chamado ${ticket.protocol}` }}
+                      ui={{ variant: 'ghost', size: 'sm', icon: FolderOpen, isIconOnly: true }}
+                      actions={{ onClick: () => actions.onAnswer(ticket) }}
+                    />
+                  </TableActionsCell>
                 </TableRow>
               {/each}
             </TableBody>
@@ -617,18 +623,9 @@
   {/if}
   </div>
 
-  <!-- Paginação da fila de chamados — só na lista: o quadro traz tudo de uma vez. -->
+  <!-- As páginas também no pé — só na lista: o quadro traz tudo de uma vez. -->
   {#if !isBoard && (data.paging ? data.paging.total : data.total) > 0}
-    <PaginationBar
-      data={{
-        page: data.paging?.page ?? 1,
-        pageSize: data.paging?.pageSize ?? data.tickets.length,
-        total: data.paging?.total ?? data.total,
-        noun: ['chamado', 'chamados'],
-      }}
-      state={{ isLoading: state.isLoading || state.isRefetching }}
-      actions={{ onPageChange: (newPage) => actions.onPageChange?.(newPage) }}
-    />
+    {@render listToolbar('bottom')}
   {/if}
 
   <!-- Truncar calado é mentir sobre o tamanho da fila. -->
@@ -638,3 +635,30 @@
     </p>
   {/if}
 </div>
+
+<!-- A barra da lista: lista ou quadro à esquerda; à direita, as páginas (a fila pagina no servidor
+     na tabela e nos cards) ou, no quadro, a contagem. -->
+{#snippet listToolbar(position: 'top' | 'bottom')}
+  <ListToolbar
+    data={{
+      layout: isBoard ? 'table' : 'card',
+      scroll: { loaded: data.tickets.length, totalItems: data.total },
+      pages: {
+        page: data.paging?.page ?? 1,
+        pageSize: data.paging?.pageSize ?? Math.max(1, data.tickets.length),
+        totalItems: data.paging?.total ?? data.total,
+      },
+      noun: ['chamado', 'chamados'],
+    }}
+    ui={{
+      position,
+      toggle: {
+        ui: { hasKanban: hasBoard },
+        state: { isKanban: isBoard },
+        actions: { onKanbanChange: (isKanban: boolean) => actions.onViewChange?.(isKanban ? 'kanban' : 'list') },
+      },
+    }}
+    state={{ isLoading: state.isLoading || state.isRefetching }}
+    actions={{ onPageChange: (newPage: number) => actions.onPageChange?.(newPage) }}
+  />
+{/snippet}

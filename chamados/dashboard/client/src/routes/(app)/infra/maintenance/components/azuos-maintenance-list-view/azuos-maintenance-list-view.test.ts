@@ -8,6 +8,7 @@ import MaintenanceListView, {
   performerOf,
   performersOf,
   performersTitleOf,
+  placeLineOf,
   placeOf,
   type MaintenanceListFilter,
 } from './azuos-maintenance-list-view.svelte';
@@ -312,7 +313,8 @@ describe('AzuosMaintenanceListView', () => {
       },
     });
 
-    const nextButton = screen.getByRole('button', { name: /Próxima/i });
+    /* As páginas na barra de cima e no pé. */
+    const nextButton = screen.getAllByRole('button', { name: /Próxima/i })[0]!;
     expect(nextButton).toBeInTheDocument();
     await user.click(nextButton);
     expect(onPageChange).toHaveBeenCalledWith(2);
@@ -506,5 +508,28 @@ describe('maintenance-list-view — the record card', () => {
   it('says where a machine outside the inventory lives', () => {
     expect(placeOf(maintenance({ computerId: null }))).toBe('Fora do inventário');
     expect(placeOf(maintenance({ computerDepartment: null }))).toBe('Sem departamento');
+  });
+
+  // feliz
+  /* A linha da tabela mostra a pessoa que FEZ, com a foto do diretório pelo id — como o card. */
+  it('shows who did it in the table row, with the photo found by the id', () => {
+    setPeopleDirectory([{ id: 'u-g', name: 'Guilherme Siqueira', avatarUrl: 'https://cdn/g.png' }]);
+    const { container } = renderView({
+      maintenances: [maintenance({ performedBy: 'Guilherme Siqueira', performedByIds: ['u-g'] })],
+    });
+
+    const table = container.querySelector('[data-slot="maintenance-table-desktop"]') as HTMLElement;
+    expect(table).toHaveTextContent('Guilherme Siqueira');
+    expect(table.querySelector('[data-slot="avatar"]')).not.toBeNull();
+    setPeopleDirectory([]);
+  });
+
+  // triste
+  it('shows the dash in the table when nobody was recorded', () => {
+    const { container } = renderView({ maintenances: [maintenance({ performedBy: null, performedByIds: [] })] });
+
+    const table = container.querySelector('[data-slot="maintenance-table-desktop"]') as HTMLElement;
+    expect(table.querySelector('[data-slot="avatar"]')).toBeNull();
+    expect(placeLineOf(maintenance({ computerId: null }))).toBe('Fora do inventário');
   });
 });

@@ -3,8 +3,9 @@
   O DEPÓSITO: as peças de reposição que a TI tem em mãos.
 
   Cabeçalho com "Cadastrar peça"; no alto, os números (tipos de peça, peças na prateleira e sem
-  estoque — os dois últimos são atalhos do filtro de estoque, e clicar de novo desliga). Depois,
-  busca, categoria, condição, estoque e a alternância entre cards (celular) e tabela (monitor).
+  estoque — os dois últimos são atalhos do filtro de estoque, e clicar de novo desliga). Depois, o
+  cartão de filtros do grupo (a busca à vista; categoria, condição e estoque atrás do "Filtros") e
+  a barra da lista (cards ou tabela à esquerda, as páginas ou a contagem à direita).
   Clicar na peça abre o extrato dela; cada uma tem "Entrada", "Saída" e "Corrigir" (no card, o
   cartão de registro `AzuosContentCard`, "Editar" mora no menu de três pontinhos).
 
@@ -104,6 +105,11 @@
     { value: 'out', label: 'Sem estoque', tone: 'danger' as const },
   ];
 
+  /** Quantos dos filtros de trás do "Filtros" estão valendo — o número do botão. */
+  export function advancedFilterCount(filter: PartListFilter): number {
+    return [filter.category, filter.condition, stockValueOf(filter)].filter(Boolean).length;
+  }
+
   /** As duas chaves do filtro (`inStockOnly`/`outOfStockOnly`) como UMA escolha de três. */
   function stockValueOf(filter: PartListFilter): string {
     if (filter.inStockOnly) return 'in';
@@ -114,7 +120,6 @@
 
 <script lang="ts">
   import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
-  import FilterX from '@lucide/svelte/icons/filter-x';
   import Layers from '@lucide/svelte/icons/layers';
   import Package from '@lucide/svelte/icons/package';
   import PackageCheck from '@lucide/svelte/icons/package-check';
@@ -126,7 +131,8 @@
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
 
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import CollapsibleFilters from '$lib/components/azuos-collapsible-filters/azuos-collapsible-filters.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
@@ -139,14 +145,16 @@
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TicketStockLinks from '$lib/components/azuos-ticket-stock-links/azuos-ticket-stock-links.svelte';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
@@ -237,61 +245,70 @@
     <ContentCard data={{ label: 'Sem estoque', title: 'Sem estoque', highlight: { value: summary?.outOfStock ?? 0, hint: summary?.outOfStock ? 'são as que podem precisar de compra' : null } }} ui={{ icon: PackageX, iconTone: 'danger' }} state={{ isLoading: viewState.isSummaryLoading, isSelected: data.filter.outOfStockOnly }} actions={{ onOpen: () => chooseStockFromCard('out') }} />
   </StatCardGrid>
 
-  <div bind:this={filtersElement} class="flex scroll-mt-4 flex-col gap-3">
-    <TextField
-      data={{
-        label: 'Buscar',
-        name: 'search',
-        value: data.filter.search,
-        placeholder: 'Descrição da peça',
-      }}
-      actions={{ onChange: actions.onSearchChange }}
-    />
-
-    <!-- Uma fileira, cada filtro com o nome em cima. "Estoque" era uma caixa de seleção solta
-         embaixo dos outros; agora é um filtro como os demais, com as duas escolhas à vista. -->
-    <div class="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4">
-      <FilterField data={{ label: 'Categoria' }}>
-        <OptionPicker
-          data={{ value: data.filter.category, options: CATEGORY_FILTER_OPTIONS }}
-          ui={{ ariaLabel: 'Filtrar por categoria', allLabel: 'Todas as categorias' }}
-          actions={{
-            onChange: (value: string) => actions.onCategoryChange(value as PartCategory | ''),
+  <!-- O cartão de filtros do grupo (o de Empresas do paralegal): a busca à vista; categoria,
+       condição e estoque atrás do "Filtros". "Limpar filtros" só aparece quando há o que limpar;
+       quando o filtro escondeu tudo, quem o oferece é o aviso de lista vazia — dois botões iguais
+       só confundem. -->
+  <div bind:this={filtersElement} class="scroll-mt-4">
+    <CollapsibleFilters
+      data={{ label: 'Filtros das peças', activeCount: advancedFilterCount(data.filter) }}
+      state={{ hasFilter: hasActiveFilter && !viewState.isFilteredOut }}
+      actions={{ onClear: actions.onClearFilters }}
+    >
+      {#snippet primary()}
+        <TextField
+          data={{
+            label: 'Buscar',
+            name: 'search',
+            value: data.filter.search,
+            placeholder: 'Descrição da peça',
           }}
+          actions={{ onChange: actions.onSearchChange }}
         />
-      </FilterField>
-      <FilterField data={{ label: 'Condição' }}>
-        <OptionPicker
-          data={{ value: data.filter.condition, options: CONDITION_FILTER_OPTIONS }}
-          ui={{ ariaLabel: 'Filtrar por condição', allLabel: 'Novas e usadas' }}
-          actions={{
-            onChange: (value: string) => actions.onConditionChange(value as PartCondition | ''),
-          }}
-        />
-      </FilterField>
-      <FilterField data={{ label: 'Estoque' }}>
-        <OptionPicker
-          data={{ value: stockValueOf(data.filter), options: STOCK_OPTIONS }}
-          ui={{ ariaLabel: 'Filtrar por estoque', allLabel: 'Todas' }}
-          actions={{ onChange: chooseStock }}
-        />
-      </FilterField>
-
-      <!-- À direita, o que age sobre a lista logo abaixo. "Limpar filtros" só aparece quando há
-           o que limpar; quando o filtro escondeu tudo, quem o oferece é o aviso de lista vazia
-           — dois botões iguais só confundem. -->
-      <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
-        {#if hasActiveFilter && !viewState.isFilteredOut}
-          <ActionButton
-            data={{ label: 'Limpar filtros' }}
-            ui={{ variant: 'ghost', size: 'lg', icon: FilterX }}
-            actions={{ onClick: actions.onClearFilters }}
+      {/snippet}
+      <div class="grid grid-cols-1 items-end gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <FilterField data={{ label: 'Categoria' }} ui={{ className: 'sm:w-full' }}>
+          <OptionPicker
+            data={{ value: data.filter.category, options: CATEGORY_FILTER_OPTIONS }}
+            ui={{ ariaLabel: 'Filtrar por categoria', allLabel: 'Todas as categorias' }}
+            actions={{
+              onChange: (value: string) => actions.onCategoryChange(value as PartCategory | ''),
+            }}
           />
-        {/if}
-        <TableViewToggle />
+        </FilterField>
+        <FilterField data={{ label: 'Condição' }} ui={{ className: 'sm:w-full' }}>
+          <OptionPicker
+            data={{ value: data.filter.condition, options: CONDITION_FILTER_OPTIONS }}
+            ui={{ ariaLabel: 'Filtrar por condição', allLabel: 'Novas e usadas' }}
+            actions={{
+              onChange: (value: string) => actions.onConditionChange(value as PartCondition | ''),
+            }}
+          />
+        </FilterField>
+        <FilterField data={{ label: 'Estoque' }} ui={{ className: 'sm:w-full' }}>
+          <OptionPicker
+            data={{ value: stockValueOf(data.filter), options: STOCK_OPTIONS }}
+            ui={{ ariaLabel: 'Filtrar por estoque', allLabel: 'Todas' }}
+            actions={{ onChange: chooseStock }}
+          />
+        </FilterField>
       </div>
-    </div>
+    </CollapsibleFilters>
   </div>
+
+  <!-- A barra da lista: cards ou tabela à esquerda; à direita as páginas (cards) ou a contagem
+       (tabela, que rola inteira). Carregando, vazia ou com erro, não há lista para contar. -->
+  {#if !viewState.isLoading && !viewState.error && !viewState.isEmpty}
+    <ListToolbar
+      data={{
+        scroll: { loaded: data.parts.length, totalItems: data.total },
+        pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+        noun: ['peça', 'peças'],
+        gender: 'feminine',
+      }}
+      actions={{ onPageChange: cardPage.actions.onPageChange }}
+    />
+  {/if}
 
   <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
   {#if viewState.error}
@@ -395,27 +412,19 @@
           {/snippet}
         </ContentCard>
       {/each}
-      <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
-      <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">
-        <span>Controle de estoque</span>
-        <span>{data.parts.length} item(ns)</span>
-      </div>
     </div>
-      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
-           fileira. A barra só aparece quando há mais de uma página. -->
-      {#if cardPage.total > cardPage.pageSize}
-        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
-          <PaginationBar
-            data={{
-              page: cardPage.page,
-              pageSize: cardPage.pageSize,
-              total: cardPage.total,
-              noun: ['peça', 'peças'],
-            }}
-            actions={{ onPageChange: cardPage.actions.onPageChange }}
-          />
-        </div>
-      {/if}
+    <!-- No pé dos cards, a mesma barra de páginas: quem chegou ao último card troca de página
+         sem rolar de volta. Na tabela, que rola inteira, ela não aparece. -->
+    <ListToolbar
+      data={{
+        scroll: { loaded: data.parts.length, totalItems: data.total },
+        pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+        noun: ['peça', 'peças'],
+        gender: 'feminine',
+      }}
+      ui={{ position: 'bottom' }}
+      actions={{ onPageChange: cardPage.actions.onPageChange }}
+    />
 
     <!-- Tabela para desktop (>= xl) -->
     <div
@@ -429,30 +438,30 @@
             <TableHead>Categoria</TableHead>
             <TableHead>Condição</TableHead>
             <TableHead>Na prateleira</TableHead>
-            <TableHead class="w-14 text-right"><span class="sr-only">Ações</span></TableHead>
+            <TableActionsHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {#each data.parts as part (part.id)}
             <TableRow class="align-top">
-              <!-- `style` (não classe) força a quebra de linha: o componente baixado do
-                   `ui/table` deixa toda célula com botão dentro em `white-space: nowrap`, e um
-                   nome comprido de peça atropelava a coluna de categoria (CONTRIBUTING §5: não
-                   se edita o componente baixado). Estilo inline vence a classe sem tocar nele. -->
-              <TableCell class="max-w-[280px]" style="white-space: normal;">
+              <!-- O nome numa linha só, cortado com "…" no teto da coluna (o texto inteiro no balão):
+                   quebrado em três linhas, ele espremia a tabela enquanto sobrava espaço ao lado. -->
+              <TableCell style="white-space: normal;">
                 <button
                   type="button"
-                  class="font-medium text-ink-900 text-left break-words hover:underline"
+                  class="text-ink-900 block max-w-72 text-left font-medium hover:underline"
                   onclick={() => actions.onOpenLedger(part)}
                 >
-                  {part.name}
+                  <TableText data={{ text: part.name }} ui={{ className: 'max-w-72' }} />
                 </button>
                 <span class="text-ink-500 block text-xs">Ver o histórico desta peça</span>
                 <TicketStockLinks
                   data={{ links: part.ticketLinks, balance: part.balance, ticketsPath: '/infra/tickets' }}
                 />
               </TableCell>
-              <TableCell class="text-ink-700">{partCategoryLabel(part.category)}</TableCell>
+              <TableCell class="text-ink-700">
+                <TableText data={{ text: partCategoryLabel(part.category) }} ui={{ className: 'max-w-36' }} />
+              </TableCell>
               <TableCell>
                 <StatusBadge
                   data={{ label: partConditionLabel(part.condition) }}
@@ -468,14 +477,15 @@
                   {/if}
                 </span>
               </TableCell>
-              <TableCell class="text-right whitespace-nowrap">
-                <!-- As ações da linha moram no menu de três pontinhos. Sem saldo, não há saída. -->
+              <!-- As ações da linha moram no menu de três pontinhos, na coluna estreita presa à
+                   direita. Sem saldo, não há saída. -->
+              <TableActionsCell>
                 <ActionMenu
                   data={{ label: `Ações de ${part.name}`, items: rowMenuOf(part) }}
                   ui={{ isIconOnly: true }}
                   actions={{ onSelect: (id) => ROW_ACTIONS[id]?.(part) }}
                 />
-              </TableCell>
+              </TableActionsCell>
             </TableRow>
           {/each}
         </TableBody>

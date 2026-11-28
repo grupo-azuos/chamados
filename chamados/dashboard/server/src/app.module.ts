@@ -26,6 +26,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DashboardBoardsModule } from './modules/dashboard-boards/dashboard-boards.module';
 import { HistoryModule } from './modules/history/history.module';
+import { HolidaysModule } from './modules/holidays/holidays.module';
 import { HealthModule } from './modules/health/health.module';
 import { MaintenancesModule } from './modules/maintenances/maintenances.module';
 import { NetworkModule } from './modules/network/network.module';
@@ -97,6 +98,7 @@ const CLIENT_DIST = join(__dirname, '..', '..', 'client', 'dist');
     MaintenanceDashboardModule,
     DashboardModule,
     DashboardBoardsModule,
+    HolidaysModule,
     NetworkModule,
     BudgetModule,
     TransfersModule,

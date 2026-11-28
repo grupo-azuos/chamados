@@ -70,6 +70,9 @@ describe('rangeLabelOf', () => {
   // triste
   it('says there is none instead of writing a range of zeros', () => {
     expect(rangeLabelOf({ page: 1, pageSize: 25, total: 0, noun })).toBe('Nenhum alerta');
+    expect(rangeLabelOf({ page: 1, pageSize: 25, total: 0, noun: ['peça', 'peças'], gender: 'feminine' })).toBe(
+      'Nenhuma peça',
+    );
   });
 });
 

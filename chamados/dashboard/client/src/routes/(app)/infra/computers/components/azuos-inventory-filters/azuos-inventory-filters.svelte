@@ -457,7 +457,6 @@
   actions={{
     onSearchChange: actions.onSearchChange,
     onFieldChange: (key, value) => ON_CHANGE[key]?.(value),
-    onRemoveChip: (key) => chips.find((chip) => chip.key === key)?.onRemove(),
     onClearFilters: actions.onClearFilters,
   }}
 />

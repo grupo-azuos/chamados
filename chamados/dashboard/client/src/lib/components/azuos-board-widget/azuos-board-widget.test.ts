@@ -1,4 +1,5 @@
-import { type Widget } from '@template/shared/schemas/dashboard-board.schema';
+import { todayIso } from '@template/shared/domain/calendar-date.util';
+import { DEFAULT_WINDOW, type Widget } from '@template/shared/schemas/dashboard-board.schema';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -158,5 +159,38 @@ describe('AzuosBoardWidget', () => {
         filterName: null,
       }),
     ).toEqual([]);
+  });
+
+  // feliz
+  /* A agenda é o calendário da casa: o dia com a contagem, o feriado no fundo e o dia clicado
+     abrindo a lista da fonte. */
+  it('draws the agenda on the house calendar, with the holiday, and opens the clicked day', async () => {
+    const today = todayIso();
+    const actions = { onEdit: vi.fn(), onRemove: vi.fn(), onOpenItem: vi.fn() };
+    render(BoardWidget, {
+      props: {
+        data: {
+          widget: { ...WIDGET, kind: 'agenda', groupBy: 'createdDay', window: DEFAULT_WINDOW },
+          result: {
+            data: { ...DATA, series: [{ key: today, label: today, value: 4 }] },
+            isLoading: false,
+            error: null,
+          },
+          filterName: null,
+          holidays: [{ date: today, name: 'Feriado de teste' }],
+        },
+        state: { isEditing: false },
+        actions,
+      },
+    });
+
+    expect(document.querySelector('[data-slot="event-calendar"]')).not.toBeNull();
+    expect(screen.getAllByText('Feriado de teste').length).toBeGreaterThan(0);
+    await fireEvent.click(screen.getByRole('button', { name: '4 chamados' }));
+
+    expect(actions.onOpenItem).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'agenda' }),
+      expect.objectContaining({ key: today }),
+    );
   });
 });

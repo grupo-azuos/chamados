@@ -30,11 +30,14 @@
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import {
     Table,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
   import { runTaskMenu, taskMenuItems } from '$lib/components/azuos-task-card/azuos-task-card.svelte';
   import OwnerAvatar from '$lib/components/azuos-task-owner-avatar/azuos-task-owner-avatar.svelte';
@@ -54,10 +57,10 @@
   <TableHeader>
     <TableRow>
       <TableHead>Tarefa</TableHead>
-      <TableHead class="w-52">Responsável</TableHead>
-      <TableHead class="w-48">Prazo</TableHead>
+      <TableHead>Responsável</TableHead>
+      <TableHead>Prazo</TableHead>
       <TableHead class="w-44">Etapas</TableHead>
-      <TableHead class="w-14 text-right"><span class="sr-only">Ações</span></TableHead>
+      <TableActionsHead />
     </TableRow>
   </TableHeader>
   <TableBody>
@@ -69,10 +72,11 @@
           <button
             type="button"
             aria-label={`Abrir a tarefa ${task.title}`}
-            class="text-foreground hover:text-primary focus-visible:ring-ring/50 rounded-control text-left font-medium break-words hover:underline focus-visible:ring-3 focus-visible:outline-none"
+            class="text-foreground hover:text-primary focus-visible:ring-ring/50 rounded-control block max-w-72 text-left font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none"
             onclick={() => actions.onOpen(task)}
           >
-            {task.title}
+            <!-- O título numa linha só, cortado com "…" no teto da coluna (o inteiro no balão). -->
+            <TableText data={{ text: task.title }} ui={{ className: 'max-w-72' }} />
           </button>
           <span class="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-xs">
             <StatusBadge
@@ -88,7 +92,7 @@
         <TableCell>
           <span class="flex min-w-0 items-center gap-2">
             <OwnerAvatar owner={task.owner} />
-            <span class="truncate">{ownerNameOf(task)}</span>
+            <TableText data={{ text: ownerNameOf(task) }} ui={{ className: 'max-w-36' }} />
           </span>
         </TableCell>
         <TableCell>
@@ -104,13 +108,13 @@
             ui={{ showCount: true, itemLabel: 'etapas', emptyLabel: 'Sem etapas' }}
           />
         </TableCell>
-        <TableCell class="text-right">
+        <TableActionsCell>
           <ActionMenu
             data={{ label: `Ações da tarefa ${task.title}`, items: taskMenuItems(task) }}
             ui={{ isIconOnly: true }}
             actions={{ onSelect: (id) => runTaskMenu(id, task, actions) }}
           />
-        </TableCell>
+        </TableActionsCell>
       </TableRow>
     {/each}
   </TableBody>

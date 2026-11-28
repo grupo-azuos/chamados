@@ -18,7 +18,21 @@ vi.mock('$lib/api/tickets.api', () => ({
   ticketsApi: { assigneeOptions: vi.fn().mockResolvedValue([]), peopleOptions: vi.fn().mockResolvedValue([]) },
 }));
 
+vi.mock('$lib/api/holidays.api', () => ({
+  holidaysApi: {
+    list: vi.fn((year: number, state: string) =>
+      Promise.resolve({
+        year,
+        state,
+        source: 'brasilapi',
+        holidays: [{ date: `${year}-11-20`, name: `Consciência Negra (${state})`, level: 'national' }],
+      }),
+    ),
+  },
+}));
+
 const { dashboardBoardsApi } = await import('$lib/api/dashboard-boards.api');
+const { holidaysApi } = await import('$lib/api/holidays.api');
 
 const WIDGET: Widget = {
   id: 'a',
@@ -140,5 +154,28 @@ describe('useDashboardBoardModel', () => {
 
     await waitFor(() => expect(model.state.error).toBe('Não salvei o painel: Passa da cota'));
     expect(model.state.isEditing).toBe(true);
+  });
+
+  // feliz
+  /* Os calendários do painel pintam os feriados deste ano e do próximo, da UF escolhida. */
+  it('brings the holidays of this year and the next, and follows the chosen state', async () => {
+    const model = mount();
+    const year = new Date().getFullYear();
+
+    await waitFor(() => expect(model.data.holidays).toHaveLength(2));
+    expect(model.data.holidayState.value).toBe('GO');
+    model.actions.onHolidayStateChange('SP');
+
+    await waitFor(() => expect(holidaysApi.list).toHaveBeenCalledWith(year, 'SP'));
+    expect(model.data.holidayState.value).toBe('SP');
+  });
+
+  // triste
+  it('ignores a state that does not exist', async () => {
+    const model = mount();
+
+    model.actions.onHolidayStateChange('XX');
+
+    expect(model.data.holidayState.value).toBe('GO');
   });
 });

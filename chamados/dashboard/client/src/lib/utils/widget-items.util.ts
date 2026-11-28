@@ -1,5 +1,7 @@
 import { type WidgetData } from '@template/shared/schemas/dashboard-board.schema';
 
+import { formatDay } from '$lib/utils/format-date';
+
 /**
  * O ITEM CLICADO NUM BLOCO, de volta à CHAVE do grupo. O gráfico devolve o que desenhou (o rótulo:
  * o nome da pessoa, "Em aberto"); o recorte precisa da chave que o servidor agrupou (o id da
@@ -66,4 +68,9 @@ export function timeItemOf(series: Series, at: string): BoardItem | null {
   const found = series.find((item) => item.key === day || `${item.key}-01` === day);
 
   return found ? { key: found.key, label: found.label } : null;
+}
+
+/** O dia de um calendário: a chave é o dia, e o rótulo, o dia escrito para quem lê. */
+export function dayItemOf(day: string): BoardItem {
+  return { key: day, label: formatDay(day) };
 }

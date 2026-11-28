@@ -43,12 +43,21 @@
     actions: { onChange: (value: string) => void };
   };
 
+  /**
+   * A PARTIR DE QUANTAS OPÇÕES o seletor vira combobox com busca (regra `select-standard` e
+   * design-governance §7). Abaixo disso, ler a lista é mais rápido que digitar; acima, a pessoa
+   * rola uma lista que não cabe na tela procurando o que podia digitar. A troca é feita AQUI, e
+   * não em cada tela: a tela não sabe quantas opções o cadastro vai ter daqui a um ano.
+   */
+  export const SELECT_SEARCH_FROM = 15;
+
   const EMPTY_VALUE = '__empty__';
   const NO_OPTIONS_LABEL = 'Nenhuma opção disponível';
 </script>
 
 <script lang="ts">
   import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+  import ComboboxField from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import { cn } from '$lib/utils/cn';
 
@@ -73,76 +82,86 @@
   const selectedLabel = $derived(selectedOption?.label ?? '');
 </script>
 
-<Select
-  type="single"
-  value={selectedValue}
-  onValueChange={(val: string | undefined) => {
-    if (val !== undefined) {
-      actions.onChange(val === EMPTY_VALUE ? '' : val);
-    }
-  }}
-  disabled={state?.isDisabled}
->
-  <!-- O degrau `lg` da RÉGUA DE MEDIDAS (`lib/theme/tokens.css`): este campo fica sempre ao
-       lado de um `TextField` ou dentro de um formulário, e vinha 4px mais baixo e com um raio
-       só dele (menor que o dos vizinhos), destoando de tudo em volta. A altura vai repetida na
-       variante do tamanho: o `data-[size=default]:h-9` do `ui/select` é mais específico que o
-       `control-lg` e ganhava — o campo ficava com 36px, e na peça do filtro (40px) sobrava uma
-       faixa embaixo que o hover não pintava.
+<!-- Lista longa (15 ou mais): o combobox com busca, no lugar do seletor simples. -->
+{#if data.options.length >= SELECT_SEARCH_FROM}
+  <ComboboxField
+    data={{ value: data.value, options: data.options }}
+    ui={{ placeholder: ui?.placeholder, ariaLabel: ui?.ariaLabel, className: ui?.className }}
+    state={{ isDisabled: state?.isDisabled }}
+    actions={{ onChange: actions.onChange }}
+  />
+{:else}
+  <Select
+    type="single"
+    value={selectedValue}
+    onValueChange={(val: string | undefined) => {
+      if (val !== undefined) {
+        actions.onChange(val === EMPTY_VALUE ? '' : val);
+      }
+    }}
+    disabled={state?.isDisabled}
+  >
+    <!-- O degrau `lg` da RÉGUA DE MEDIDAS (`lib/theme/tokens.css`): este campo fica sempre ao
+         lado de um `TextField` ou dentro de um formulário, e vinha 4px mais baixo e com um raio
+         só dele (menor que o dos vizinhos), destoando de tudo em volta. A altura vai repetida na
+         variante do tamanho: o `data-[size=default]:h-9` do `ui/select` é mais específico que o
+         `control-lg` e ganhava — o campo ficava com 36px, e na peça do filtro (40px) sobrava uma
+         faixa embaixo que o hover não pintava.
 
-       `max-w-full`: sem ele, uma opção de nome longo faz o gatilho crescer além do espaço que
-       ele tem e empurra a largura de quem está em volta. `min-w-40` é o piso: abaixo de 10rem o
-       gatilho cortava o próprio valor. O fundo sólido (`bg-muted`) repete no `dark:` para vencer
-       o `dark:bg-input/30` do `ui/select`. -->
-  <SelectTrigger
-    aria-label={ui?.ariaLabel}
-    title={selectedLabel || undefined}
-    class={cn(
-      'control-lg rounded-control border-input bg-muted dark:bg-muted dark:hover:bg-muted text-foreground max-w-full min-w-40 text-sm data-[size=default]:h-(--control-lg)',
-      ui?.className,
-    )}
-  >
-    <!-- `data-slot="select-value"` mantém o recorte de uma linha que o gatilho aplica ao
-         filho. O tom de "nada escolhido" continua vindo do próprio gatilho, que recebe
-         `data-placeholder` do componente baixado. -->
-    <span data-slot="select-value" class="flex min-w-0 items-center gap-2">
-      {#if selectedOption?.personName}
-        <span aria-hidden="true" class="flex shrink-0">
-          <PersonAvatar name={selectedOption.personName} avatarUrl={selectedOption.avatarUrl} ui={{ size: 'sm' }} />
-        </span>
-      {:else if selectedOption?.icon}
-        <selectedOption.icon class="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
-      {/if}
-      <span class="truncate">{selectedLabel || (ui?.placeholder ?? '')}</span>
-    </span>
-  </SelectTrigger>
-  <!-- A LARGURA DA LISTA É AMARRADA À DO GATILHO, entre um piso e um teto.
-       Sem isso ela se estica até o nome mais comprido da lista: com apelidos como
-       "Paralegal — estação compartilhada do corredor (PARALEGAL-08-…)", a lista nascia mais
-       larga do que o diálogo inteiro e vazava pelos dois lados. `--bits-select-anchor-width`
-       é a largura do gatilho, medida pelo próprio componente: a lista tem a largura do
-       conteúdo (`w-max`), nunca mais estreita que o gatilho, e abre centralizada embaixo dele. -->
-  <SelectContent
-    align="center"
-    sideOffset={6}
-    class="rounded-surface bg-popover ring-foreground/8 w-max max-w-[min(26rem,calc(100vw-2rem))] min-w-(--bits-select-anchor-width) border-transparent shadow-xl ring-1"
-  >
-    <!-- A lista vazia diz por quê, em texto solto — não é uma opção, não dá para escolher. Sem
-         isso o balão abria em branco e parecia travado. -->
-    {#if data.options.length === 0}
-      <p class="text-muted-foreground px-2 py-1.5 text-sm">{ui?.noOptionsLabel ?? NO_OPTIONS_LABEL}</p>
-    {/if}
-    {#each data.options as option (option.value || EMPTY_VALUE)}
-      <SelectItem value={option.value || EMPTY_VALUE} label={option.label} class="rounded-chip">
-        {#if option.personName}
+         `max-w-full`: sem ele, uma opção de nome longo faz o gatilho crescer além do espaço que
+         ele tem e empurra a largura de quem está em volta. `min-w-40` é o piso: abaixo de 10rem o
+         gatilho cortava o próprio valor. O fundo sólido (`bg-muted`) repete no `dark:` para vencer
+         o `dark:bg-input/30` do `ui/select`. -->
+    <SelectTrigger
+      aria-label={ui?.ariaLabel}
+      title={selectedLabel || undefined}
+      class={cn(
+        'control-lg rounded-control border-input bg-muted dark:bg-muted dark:hover:bg-muted text-foreground max-w-full min-w-40 text-sm data-[size=default]:h-(--control-lg)',
+        ui?.className,
+      )}
+    >
+      <!-- `data-slot="select-value"` mantém o recorte de uma linha que o gatilho aplica ao
+           filho. O tom de "nada escolhido" continua vindo do próprio gatilho, que recebe
+           `data-placeholder` do componente baixado. -->
+      <span data-slot="select-value" class="flex min-w-0 items-center gap-2">
+        {#if selectedOption?.personName}
           <span aria-hidden="true" class="flex shrink-0">
-            <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
+            <PersonAvatar name={selectedOption.personName} avatarUrl={selectedOption.avatarUrl} ui={{ size: 'sm' }} />
           </span>
-        {:else if option.icon}
-          <option.icon class="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
+        {:else if selectedOption?.icon}
+          <selectedOption.icon class="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
         {/if}
-        <span class="truncate">{option.label}</span>
-      </SelectItem>
-    {/each}
-  </SelectContent>
-</Select>
+        <span class="truncate">{selectedLabel || (ui?.placeholder ?? '')}</span>
+      </span>
+    </SelectTrigger>
+    <!-- A LARGURA DA LISTA É AMARRADA À DO GATILHO, entre um piso e um teto.
+         Sem isso ela se estica até o nome mais comprido da lista: com apelidos como
+         "Paralegal — estação compartilhada do corredor (PARALEGAL-08-…)", a lista nascia mais
+         larga do que o diálogo inteiro e vazava pelos dois lados. `--bits-select-anchor-width`
+         é a largura do gatilho, medida pelo próprio componente: a lista tem a largura do
+         conteúdo (`w-max`), nunca mais estreita que o gatilho, e abre centralizada embaixo dele. -->
+    <SelectContent
+      align="center"
+      sideOffset={6}
+      class="rounded-surface bg-popover ring-foreground/8 w-max max-w-[min(26rem,calc(100vw-2rem))] min-w-(--bits-select-anchor-width) border-transparent shadow-xl ring-1"
+    >
+      <!-- A lista vazia diz por quê, em texto solto — não é uma opção, não dá para escolher. Sem
+           isso o balão abria em branco e parecia travado. -->
+      {#if data.options.length === 0}
+        <p class="text-muted-foreground px-2 py-1.5 text-sm">{ui?.noOptionsLabel ?? NO_OPTIONS_LABEL}</p>
+      {/if}
+      {#each data.options as option (option.value || EMPTY_VALUE)}
+        <SelectItem value={option.value || EMPTY_VALUE} label={option.label} class="rounded-chip">
+          {#if option.personName}
+            <span aria-hidden="true" class="flex shrink-0">
+              <PersonAvatar name={option.personName} avatarUrl={option.avatarUrl} ui={{ size: 'sm' }} />
+            </span>
+          {:else if option.icon}
+            <option.icon class="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
+          {/if}
+          <span class="truncate">{option.label}</span>
+        </SelectItem>
+      {/each}
+    </SelectContent>
+  </Select>
+{/if}

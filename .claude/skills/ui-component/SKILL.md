@@ -19,7 +19,7 @@ Antes de criar, procure em `client/src/lib/components/`. O sistema de design já
 | Card (o único) | `AzuosContentCard` — registro clicável, número do painel (`data.highlight`) e bloco de conteúdo (`body`) · `AzuosStatCardGrid` (a fileira) |
 | Número | `AzuosProgressBar` · `AzuosUsageMeter` |
 | Selo e pessoa | `AzuosStatusBadge` · `AzuosPersonAvatar` · `AzuosBrandMark` |
-| Superfície | `AzuosTable` (+ `Header`/`Head`/`Row`/`Cell`/`Footer`/`Actions`) · `AzuosCollapsible` |
+| Superfície | `AzuosTable` (+ `Header`/`Head`/`Row`/`Cell`/`Footer`/`Actions`, `ActionsHead`/`ActionsCell` — a coluna de ação estreita presa à direita — e `TableText`, o texto que corta com "…" e mostra o inteiro no balão) · `AzuosCollapsible` · `AzuosCollapsibleFilters` (o cartão de filtros do grupo) · `AzuosListToolbar` (a barra da lista: formato e páginas) |
 | Gráfico (ECharts) | `AzuosEchart` (a moldura de todos: carregando, vazio, tema, tamanho, rolagem) · `AzuosChartLegend` · `AzuosChartValueList` (valores para leitor de tela) · `AzuosColumnChart` (em pé ou deitada) · `AzuosStackedBarChart` · `AzuosDonutChart` · `AzuosAreaChart` · `AzuosRadarChart` · `AzuosRadialChart` · `AzuosTreemapChart` · `AzuosHeatmapChart` · `AzuosCalendarChart` · `AzuosSankeyChart` |
 | Navegação | `AzuosAppShell` (+ `NavEntry`) · `AzuosNavigationMenu` · `AzuosBreadcrumb` · `AzuosPaginationBar` · `AzuosTableViewToggle` |
 | Diálogo | `AzuosResponsiveDialogContent` (troque o `DialogContent` por ele) · `AzuosConfirmDialog` |

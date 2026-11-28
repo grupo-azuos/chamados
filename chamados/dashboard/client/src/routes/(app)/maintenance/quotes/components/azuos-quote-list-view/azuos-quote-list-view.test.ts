@@ -274,6 +274,8 @@ describe('AzuosQuoteListView — filters, a nameless document and the cut list',
     expect(actions.onSearchChange).toHaveBeenCalledWith('c');
     await chooseSecond('Filtrar por situação');
     expect(actions.onStatusChange).toHaveBeenCalled();
+    /* O tipo mora atrás do "Filtros", no cartão de filtros do grupo. */
+    await userEvent.click(screen.getByRole('button', { name: 'Filtros' }));
     await chooseSecond('Filtrar por tipo');
     expect(actions.onKindChange).toHaveBeenCalled();
   });
@@ -291,7 +293,7 @@ describe('AzuosQuoteListView — filters, a nameless document and the cut list',
       state: { ...settled, isTruncated: true },
     });
     expect(cards().getByText('Documento do orçamento')).toBeInTheDocument();
-    expect(screen.getByText(/2 orçamentos/)).toBeInTheDocument();
+    expect(screen.getAllByText(/2 orçamentos/).length).toBeGreaterThan(0);
     expect(screen.getByText(/A lista mostra os orçamentos mais recentes/)).toBeInTheDocument();
   });
 });

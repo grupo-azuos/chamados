@@ -91,14 +91,14 @@
   import Clock from '@lucide/svelte/icons/clock';
   import Eye from '@lucide/svelte/icons/eye';
   import MonitorOff from '@lucide/svelte/icons/monitor-off';
-  import FilterX from '@lucide/svelte/icons/filter-x';
   import Recycle from '@lucide/svelte/icons/recycle';
   import SearchX from '@lucide/svelte/icons/search-x';
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import Undo2 from '@lucide/svelte/icons/undo-2';
   import Wrench from '@lucide/svelte/icons/wrench';
 
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import CollapsibleFilters from '$lib/components/azuos-collapsible-filters/azuos-collapsible-filters.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
@@ -111,14 +111,16 @@
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
@@ -171,42 +173,51 @@
     />
   {/if}
 
-  <div bind:this={filtersElement} class="flex scroll-mt-4 flex-col gap-3">
-    <TextField
-      data={{
-        label: 'Buscar',
-        name: 'search',
-        value: data.filter.search,
-        placeholder: 'Nome da máquina, apelido ou responsável',
-      }}
-      actions={{ onChange: actions.onSearchChange }}
-    />
-
-    <!-- O filtro com o nome em cima e, à direita, o que age sobre a lista logo abaixo: limpar
-         os filtros e trocar entre tabela e cards. -->
-    <div class="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4">
-      <FilterField data={{ label: 'Tipo de descarte' }}>
-        <OptionPicker
-          data={{ value: data.filter.type, options: TYPE_FILTER_OPTIONS }}
-          ui={{ ariaLabel: 'Filtrar por tipo de descarte', allLabel: 'Com defeito e lixo' }}
-          actions={{
-            onChange: (value: string) => actions.onTypeChange(value as DisposalType | ''),
+  <!-- O cartão de filtros do grupo (o de Empresas do paralegal): a busca à vista, com o filtro principal.
+       "Limpar filtros" só aparece quando há o que limpar; quando o filtro escondeu tudo,
+       quem o oferece é o aviso de lista vazia — dois botões iguais só confundem. -->
+  <div bind:this={filtersElement} class="scroll-mt-4">
+    <CollapsibleFilters
+      data={{ label: 'Filtros do descarte', activeCount: 0 }}
+      state={{ hasFilter: hasActiveFilter && !viewState.isFilteredOut }}
+      actions={{ onClear: actions.onClearFilters }}
+    >
+      {#snippet primary()}
+        <TextField
+          data={{
+            label: 'Buscar',
+            name: 'search',
+            value: data.filter.search,
+            placeholder: 'Nome da máquina, apelido ou responsável',
           }}
+          actions={{ onChange: actions.onSearchChange }}
         />
-      </FilterField>
-
-      <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
-        {#if hasActiveFilter && !viewState.isFilteredOut}
-          <ActionButton
-            data={{ label: 'Limpar filtros' }}
-            ui={{ variant: 'ghost', size: 'lg', icon: FilterX }}
-            actions={{ onClick: actions.onClearFilters }}
+        <FilterField ui={{ className: 'sm:w-full' }} data={{ label: 'Tipo de descarte' }}>
+          <OptionPicker
+            data={{ value: data.filter.type, options: TYPE_FILTER_OPTIONS }}
+            ui={{ ariaLabel: 'Filtrar por tipo de descarte', allLabel: 'Com defeito e lixo' }}
+            actions={{
+              onChange: (value: string) => actions.onTypeChange(value as DisposalType | ''),
+            }}
           />
-        {/if}
-        <TableViewToggle />
-      </div>
-    </div>
+        </FilterField>
+      {/snippet}
+    </CollapsibleFilters>
   </div>
+
+  <!-- A barra da lista: cards ou tabela à esquerda; à direita as páginas (cards) ou a contagem
+       (tabela, que rola inteira). Carregando, vazia ou com erro, não há lista para contar. -->
+  {#if !viewState.isLoading && !viewState.error && !viewState.isEmpty}
+    <ListToolbar
+      data={{
+        scroll: { loaded: data.computers.length, totalItems: data.computers.length },
+        pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+        noun: ['máquina', 'máquinas'],
+        gender: 'feminine',
+      }}
+      actions={{ onPageChange: cardPage.actions.onPageChange }}
+    />
+  {/if}
 
   <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
   {#if viewState.error}
@@ -290,27 +301,19 @@
           {/snippet}
         </ContentCard>
       {/each}
-      <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
-      <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">
-        <span>Máquinas baixadas e arquivadas</span>
-        <span>{data.computers.length} registro(s)</span>
-      </div>
     </div>
-      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
-           fileira. A barra só aparece quando há mais de uma página. -->
-      {#if cardPage.total > cardPage.pageSize}
-        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
-          <PaginationBar
-            data={{
-              page: cardPage.page,
-              pageSize: cardPage.pageSize,
-              total: cardPage.total,
-              noun: ['máquina', 'máquinas'],
-            }}
-            actions={{ onPageChange: cardPage.actions.onPageChange }}
-          />
-        </div>
-      {/if}
+    <!-- No pé dos cards, a mesma barra de páginas: quem chegou ao último card troca de página
+         sem rolar de volta. Na tabela, que rola inteira, ela não aparece. -->
+    <ListToolbar
+      data={{
+        scroll: { loaded: data.computers.length, totalItems: data.computers.length },
+        pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+        noun: ['máquina', 'máquinas'],
+        gender: 'feminine',
+      }}
+      ui={{ position: 'bottom' }}
+      actions={{ onPageChange: cardPage.actions.onPageChange }}
+    />
 
     <!-- Tabela para desktop (>= xl) -->
     <div
@@ -324,21 +327,26 @@
             <TableHead>Tipo</TableHead>
             <TableHead>Motivo</TableHead>
             <TableHead>Saiu em</TableHead>
-            <TableHead class="w-14 text-right"><span class="sr-only">Ações</span></TableHead>
+            <TableActionsHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {#each data.computers as computer (computer.id)}
             <TableRow class="align-top">
-              <TableCell class="max-w-[240px]">
-                <span class="font-medium text-ink-900 break-words">
-                  {machineLabelOf(computer)}
+              <!-- O nome numa linha só, cortado com "…" no teto da coluna (o inteiro no balão). -->
+              <TableCell>
+                <span class="text-ink-900 block font-medium">
+                  <TableText data={{ text: machineLabelOf(computer) }} ui={{ className: 'max-w-72' }} />
                 </span>
-                <span class="block text-xs text-ink-500 break-words">
-                  {computer.hardware?.hostname || computer.name}
-                  {#if computer.departmentId}
-                    · {computerDepartmentLabel(computer)}
-                  {/if}
+                <span class="text-ink-500 block text-xs">
+                  <TableText
+                    data={{
+                      text: [computer.hardware?.hostname || computer.name, computer.departmentId ? computerDepartmentLabel(computer) : null]
+                        .filter(Boolean)
+                        .join(' · '),
+                    }}
+                    ui={{ className: 'max-w-72' }}
+                  />
                 </span>
               </TableCell>
               <TableCell>
@@ -349,13 +357,13 @@
                   />
                 {/if}
               </TableCell>
-              <TableCell class="text-ink-700 max-w-[320px] break-words whitespace-normal">
-                {computer.disposalReason ?? '—'}
+              <TableCell class="text-ink-700">
+                <TableText data={{ text: computer.disposalReason, empty: '—' }} ui={{ className: 'max-w-72' }} />
               </TableCell>
               <TableCell class="text-ink-500 whitespace-nowrap text-xs">
                 {formatDate(computer.disposedAt)}
               </TableCell>
-              <TableCell class="text-right whitespace-nowrap">
+              <TableActionsCell>
                 <!-- As ações da linha moram no menu de três pontinhos, como no card. -->
                 <ActionMenu
                   data={{
@@ -371,7 +379,7 @@
                       id === 'restore' ? actions.onAskRestore(computer) : actions.onOpenMachine(computer),
                   }}
                 />
-              </TableCell>
+              </TableActionsCell>
             </TableRow>
           {/each}
         </TableBody>

@@ -86,9 +86,10 @@
   import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import CollapsibleFilters from '$lib/components/azuos-collapsible-filters/azuos-collapsible-filters.svelte';
+  import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
   import ProjectTable, {
@@ -183,41 +184,50 @@
     <ErrorState data={{ message: state.syncError }} ui={{ variant: 'inline' }} />
   {/if}
 
-  <!-- A barra de ferramentas do molde: busca → filtro → modo de ver, sobre o fundo da página
-       (filtro dentro de card é proibido). -->
-  <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-    {#if data.view !== 'map'}
-      <TextField
-        data={{
-          label: 'Buscar',
-          name: 'search',
-          value: data.filter.search,
-          placeholder: 'Buscar por nome ou repositório…',
-        }}
-        ui={{ className: 'flex-1' }}
-        actions={{ onChange: actions.onSearchChange }}
-      />
-      <div class="sm:w-56">
-        <SelectField
-          data={{ value: data.filter.status, options: statusFilterOptions }}
-          ui={{ ariaLabel: 'Filtrar por situação', placeholder: 'Todas as situações', className: 'w-full' }}
-          actions={{ onChange: (val) => actions.onStatusChange(val as SoftwareProjectStatus | '') }}
-        />
-      </div>
-    {/if}
-    <div class="flex items-center gap-2 sm:ml-auto">
-      {#if actions.onViewChange && map}
-        <SegmentedControl
-          data={{ value: data.view ?? 'cards', options: VIEW_OPTIONS }}
-          ui={{ ariaLabel: 'Modo de ver os sistemas' }}
-          actions={{ onChange: (value: string) => actions.onViewChange?.(value as 'cards' | 'map') }}
-        />
-      {/if}
+  <!-- O cartão de filtros do grupo (o de Empresas do paralegal): a busca e a situação à vista; na
+       faixa de baixo, o modo de ver (cards ou mapa). No mapa, a busca e a situação não se aplicam. -->
+  <CollapsibleFilters
+    data={{ label: 'Filtros dos sistemas', activeCount: 0 }}
+    state={{ hasFilter: data.view !== 'map' && Boolean(data.filter.search || data.filter.status) && !state.isFilteredOut }}
+    actions={{ onClear: actions.onClearFilters }}
+    toggles={actions.onViewChange && map ? viewToggles : undefined}
+  >
+    {#snippet primary()}
       {#if data.view !== 'map'}
-        <TableViewToggle />
+        <TextField
+          data={{
+            label: 'Buscar',
+            name: 'search',
+            value: data.filter.search,
+            placeholder: 'Buscar por nome ou repositório…',
+          }}
+          actions={{ onChange: actions.onSearchChange }}
+        />
+        <FilterField data={{ label: 'Situação' }} ui={{ className: 'sm:w-full' }}>
+          <SelectField
+            data={{ value: data.filter.status, options: statusFilterOptions }}
+            ui={{ ariaLabel: 'Filtrar por situação', placeholder: 'Todas as situações', className: 'w-full' }}
+            actions={{ onChange: (val) => actions.onStatusChange(val as SoftwareProjectStatus | '') }}
+          />
+        </FilterField>
       {/if}
-    </div>
-  </div>
+    {/snippet}
+  </CollapsibleFilters>
+
+  {#snippet viewToggles()}
+    <span class="text-muted-foreground text-sm font-medium">Ver</span>
+    <SegmentedControl
+      data={{ value: data.view ?? 'cards', options: VIEW_OPTIONS }}
+      ui={{ ariaLabel: 'Modo de ver os sistemas' }}
+      actions={{ onChange: (value: string) => actions.onViewChange?.(value as 'cards' | 'map') }}
+    />
+  {/snippet}
+
+  <!-- A barra da lista: cards ou tabela à esquerda; à direita as páginas (cards) ou a contagem
+       (tabela, que rola inteira). -->
+  {#if data.view !== 'map' && !state.isLoading && !state.error && !state.isEmpty}
+    {@render listToolbar('top')}
+  {/if}
 
   {#if data.view === 'map' && map}
     {@render map()}
@@ -337,21 +347,8 @@
         actions={{ onOpen: actions.onViewTimeline, onMenuSelect: chooseAction }}
       />
     </div>
-      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
-           fileira. A barra só aparece quando há mais de uma página. -->
-      {#if cardPage.total > cardPage.pageSize}
-        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
-          <PaginationBar
-            data={{
-              page: cardPage.page,
-              pageSize: cardPage.pageSize,
-              total: cardPage.total,
-              noun: ['sistema', 'sistemas'],
-            }}
-            actions={{ onPageChange: cardPage.actions.onPageChange }}
-          />
-        </div>
-      {/if}
+    <!-- No pé dos cards, a mesma barra de páginas. Na tabela, que rola inteira, ela não aparece. -->
+    {@render listToolbar('bottom')}
   {/if}
   {/if}
 
@@ -376,3 +373,15 @@
     />
   {/if}
 </div>
+
+{#snippet listToolbar(position: 'top' | 'bottom')}
+  <ListToolbar
+    data={{
+      scroll: { loaded: data.items.length, totalItems: data.items.length },
+      pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+      noun: ['sistema', 'sistemas'],
+    }}
+    ui={{ position }}
+    actions={{ onPageChange: cardPage.actions.onPageChange }}
+  />
+{/snippet}

@@ -127,7 +127,13 @@ código (hook do Claude e CI); o resto está aqui e no Storybook.
 - Tabela (`<AzuosTable>`): rola sem fim, virtualizada, com esqueletos da altura real da linha.
   Cabeçalho em frase, cinza, sem faixa de fundo.
 - Alternância entre os dois modos pelo `<AzuosTableViewToggle>`.
-- Ação em linha: menu de 3 pontinhos, nunca botões empilhados.
+- Ação em linha: menu de 3 pontinhos, nunca botões empilhados. Na tabela a ação é **só ícone**
+  (`AzuosActionMenu` com `isIconOnly`; a principal, se houver, `AzuosActionButton` só ícone com o
+  nome no balão), na coluna estreita presa à direita (`AzuosTableActionsHead`/`AzuosTableActionsCell`).
+  Botão com texto na linha ("Ações da marca X") corta e alarga a tabela.
+- Dentro da linha nada tem borda nem caixa: texto, selo (`AzuosStatusBadge`) e número ficam soltos
+  na célula. Texto livre vai no `AzuosTableText` com a largura máxima da coluna (corta com "…",
+  nunca quebra o nome em três linhas); vazio é o traço.
 - Notificação ou pendência num card: selo vermelho no canto, que pulsa só com `motion-safe:`.
 
 ## 9. Voltar, arquivos e anexos

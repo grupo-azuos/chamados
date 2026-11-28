@@ -126,6 +126,8 @@ describe('AzuosPartListView — stat card shortcuts and filter bar', () => {
 
   it('offers the stock choice as a named filter, not a loose checkbox', async () => {
     renderWithFilter();
+    /* Categoria, condição e estoque moram atrás do "Filtros", no cartão de filtros do grupo. */
+    await userEvent.click(screen.getByRole('button', { name: 'Filtros' }));
 
     expect(screen.getByText('Estoque')).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).toBeNull();
@@ -266,6 +268,7 @@ describe('AzuosPartListView — search, filters and the buttons of each row', ()
     renderView();
     await userEvent.type(screen.getByRole('textbox', { name: 'Buscar' }), 's');
     expect(actions.onSearchChange).toHaveBeenCalledWith('s');
+    await userEvent.click(screen.getByRole('button', { name: 'Filtros' }));
     await chooseSecond('Filtrar por categoria');
     expect(actions.onCategoryChange).toHaveBeenCalled();
     await chooseSecond('Filtrar por condição');

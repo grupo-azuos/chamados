@@ -136,7 +136,6 @@
     });
   }
 
-
   /**
    * QUEM FEZ, uma pessoa — o rosto e o nome do rodapé. Vale o id escolhido em "Quem fez", com o
    * nome de hoje no diretório; o nome gravado em `performedBy` é só o recurso do registro antigo,
@@ -161,6 +160,14 @@
     return performerOf(maintenance)?.name ?? 'Sem responsável';
   }
 
+  /** A segunda linha do equipamento na tabela: o nome da máquina e o departamento. */
+  export function placeLineOf(maintenance: Maintenance): string {
+    if (!maintenance.computerId) return 'Fora do inventário';
+    const department = maintenance.computerDepartment ? departmentLabel(maintenance.computerDepartment) : null;
+
+    return [maintenance.computerName, department].filter(Boolean).join(' · ');
+  }
+
   export function placeOf(maintenance: Maintenance): string {
     if (!maintenance.computerId) return 'Fora do inventário';
 
@@ -170,7 +177,6 @@
 
 <script lang="ts">
   import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
-  import FilterX from '@lucide/svelte/icons/filter-x';
   import Pencil from '@lucide/svelte/icons/pencil';
   import Plus from '@lucide/svelte/icons/plus';
   import SearchX from '@lucide/svelte/icons/search-x';
@@ -179,23 +185,27 @@
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import OptionPicker from '$lib/components/azuos-option-picker/azuos-option-picker.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import CollapsibleFilters from '$lib/components/azuos-collapsible-filters/azuos-collapsible-filters.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import PreventiveBoard from '../azuos-preventive-board/azuos-preventive-board.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
@@ -238,44 +248,43 @@
     <ErrorState data={{ title: 'Não consegui excluir', message: viewState.actionError }} />
   {/if}
 
+  <!-- O cartão de filtros do grupo (o de Empresas do paralegal): a busca à vista, com o filtro principal.
+       "Limpar filtros" só aparece quando há o que limpar; quando o filtro escondeu tudo,
+       quem o oferece é o aviso de lista vazia — dois botões iguais só confundem. -->
   <div class="flex flex-col gap-3">
-    <TextField
-      data={{
-        label: 'Buscar',
-        name: 'search',
-        value: data.filter.search,
-        placeholder: 'O que foi feito, quem fez ou o nome do equipamento',
-      }}
-      actions={{ onChange: actions.onSearchChange }}
-    />
-
-    <!-- O filtro com o nome em cima e, à direita, o que age sobre o histórico logo abaixo:
-         limpar os filtros e trocar entre tabela e cards. O seletor de formato morava no
-         cabeçalho da página, ao lado de "Registrar manutenção" e acima do quadro de
-         preventivas — longe da lista que ele controla. -->
-    <div class="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4">
-      <FilterField data={{ label: 'Tipo' }}>
-        <OptionPicker
-          data={{ value: data.filter.type, options: TYPE_FILTER_OPTIONS }}
-          ui={{ ariaLabel: 'Filtrar por tipo', allLabel: 'Todos os tipos' }}
-          actions={{
-            onChange: (value: string) => actions.onTypeChange(value as MaintenanceType | ''),
+    <CollapsibleFilters
+      data={{ label: 'Filtros das manutenções', activeCount: 0 }}
+      state={{ hasFilter: hasActiveFilter && !viewState.isFilteredOut }}
+      actions={{ onClear: actions.onClearFilters }}
+    >
+      {#snippet primary()}
+        <TextField
+          data={{
+            label: 'Buscar',
+            name: 'search',
+            value: data.filter.search,
+            placeholder: 'O que foi feito, quem fez ou o nome do equipamento',
           }}
+          actions={{ onChange: actions.onSearchChange }}
         />
-      </FilterField>
-
-      <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
-        {#if hasActiveFilter && !viewState.isFilteredOut}
-          <ActionButton
-            data={{ label: 'Limpar filtros' }}
-            ui={{ variant: 'ghost', size: 'lg', icon: FilterX }}
-            actions={{ onClick: actions.onClearFilters }}
+        <FilterField ui={{ className: 'sm:w-full' }} data={{ label: 'Tipo' }}>
+          <OptionPicker
+            data={{ value: data.filter.type, options: TYPE_FILTER_OPTIONS }}
+            ui={{ ariaLabel: 'Filtrar por tipo', allLabel: 'Todos os tipos' }}
+            actions={{
+              onChange: (value: string) => actions.onTypeChange(value as MaintenanceType | ''),
+            }}
           />
-        {/if}
-        <TableViewToggle />
-      </div>
-    </div>
+        </FilterField>
+      {/snippet}
+    </CollapsibleFilters>
   </div>
+
+  <!-- A barra da lista: cards ou tabela à esquerda; à direita as páginas — o histórico pagina no
+       servidor nos dois formatos. Carregando, vazia ou com erro, não há lista para contar. -->
+  {#if !viewState.isLoading && !viewState.error && !viewState.isEmpty}
+    {@render listToolbar('top')}
+  {/if}
 
   <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
   {#if viewState.error}
@@ -368,11 +377,6 @@
           {/snippet}
         </ContentCard>
       {/each}
-      <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
-      <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">
-        <span>Histórico de manutenções</span>
-        <span>{data.maintenances.length} registro(s)</span>
-      </div>
     </div>
 
     <!-- Tabela para desktop (>= xl) -->
@@ -383,12 +387,12 @@
       <Table class="min-w-[840px]">
         <TableHeader>
           <TableRow>
-            <TableHead class="min-w-[110px]">Data</TableHead>
-            <TableHead class="min-w-[240px]">Equipamento</TableHead>
-            <TableHead class="min-w-[120px]">Tipo</TableHead>
-            <TableHead class="min-w-[260px]">O que foi feito</TableHead>
-            <TableHead class="min-w-[130px]">Quem fez</TableHead>
-            <TableHead class="w-14 text-right"><span class="sr-only">Ações</span></TableHead>
+            <TableHead>Data</TableHead>
+            <TableHead>Equipamento</TableHead>
+            <TableHead>Tipo</TableHead>
+            <TableHead>O que foi feito</TableHead>
+            <TableHead>Quem fez</TableHead>
+            <TableActionsHead />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -397,19 +401,13 @@
               <TableCell class="text-ink-500 whitespace-nowrap text-xs">
                 {formatDate(maintenance.performedAt)}
               </TableCell>
-              <TableCell class="max-w-[280px]">
-                <span class="block font-medium text-ink-900 break-words leading-snug">
-                  {machineLabelOf(maintenance)}
+              <!-- O nome numa linha só, cortado com "…" no teto da coluna (o inteiro no balão). -->
+              <TableCell>
+                <span class="text-ink-900 block leading-snug font-medium">
+                  <TableText data={{ text: machineLabelOf(maintenance) }} ui={{ className: 'max-w-72' }} />
                 </span>
-                <span class="block text-xs text-ink-500 break-words leading-tight mt-0.5">
-                  {#if maintenance.computerId}
-                    {maintenance.computerName}
-                    {#if maintenance.computerDepartment}
-                      · {departmentLabel(maintenance.computerDepartment)}
-                    {/if}
-                  {:else}
-                    Fora do inventário
-                  {/if}
+                <span class="text-ink-500 mt-0.5 block text-xs leading-tight">
+                  <TableText data={{ text: placeLineOf(maintenance) }} ui={{ className: 'max-w-72' }} />
                 </span>
               </TableCell>
               <TableCell class="whitespace-nowrap">
@@ -418,27 +416,47 @@
                   ui={{ tone: maintenanceTypeTone(maintenance.type), size: 'sm' }}
                 />
               </TableCell>
-              <TableCell class="text-ink-700 max-w-[320px] break-words whitespace-normal">
-                {maintenance.description ?? '—'}
+              <TableCell class="text-ink-700">
+                <TableText data={{ text: maintenance.description, empty: '—' }} ui={{ className: 'max-w-72' }} />
               </TableCell>
-              <TableCell class="text-ink-500 max-w-[140px] break-words whitespace-normal text-xs">{performerOf(maintenance) ? performersTitleOf(maintenance) : '—'}</TableCell>
-              <TableCell class="text-right whitespace-nowrap">
+              <!-- Quem fez, com a FOTO de cada um (o rosto acha pelo id; o registro antigo, pelo
+                   nome) — como no card. -->
+              <TableCell class="text-ink-700 text-xs">
+                {#if performerOf(maintenance)}
+                  {@const one = performerOf(maintenance)!}
+                  {@const faces = performersOf(maintenance)}
+                  <span class="flex min-w-0 items-center gap-2">
+                    <span class="flex shrink-0 -space-x-2">
+                      {#each faces.length > 0 ? faces : [one] as face (face.id ?? face.name)}
+                        <span class="ring-card rounded-full ring-2">
+                          <PersonAvatar name={face.name} personId={face.id} ui={{ size: 'sm' }} />
+                        </span>
+                      {/each}
+                    </span>
+                    <TableText data={{ text: performersTitleOf(maintenance) }} ui={{ className: 'max-w-36' }} />
+                  </span>
+                {:else}
+                  —
+                {/if}
+              </TableCell>
+              <TableActionsCell>
                 <!-- A ação da linha mora no menu de três pontinhos, como no card. -->
-                <ActionMenu
-                  data={{
-                    label: `Ações da manutenção de ${machineLabelOf(maintenance)}`,
-                    items: [
-                      { id: 'edit', label: 'Corrigir', icon: Pencil },
-                      { id: 'remove', label: 'Excluir', icon: Trash2, isDestructive: true, separatorBefore: true },
-                    ],
-                  }}
-                  ui={{ isIconOnly: true }}
-                  actions={{
-                    onSelect: (id) =>
-                      id === 'remove' ? actions.onAskRemove(maintenance) : actions.onEdit(maintenance),
-                  }}
-                />
-              </TableCell>
+                  <ActionMenu
+                    data={{
+                      label: `Ações da manutenção de ${machineLabelOf(maintenance)}`,
+                      items: [
+                        { id: 'edit', label: 'Corrigir', icon: Pencil },
+                        { id: 'remove', label: 'Excluir', icon: Trash2, isDestructive: true, separatorBefore: true },
+                      ],
+                    }}
+                    ui={{ isIconOnly: true }}
+                    actions={{
+                      onSelect: (id) =>
+                        id === 'remove' ? actions.onAskRemove(maintenance) : actions.onEdit(maintenance),
+                    }}
+                  />
+
+              </TableActionsCell>
             </TableRow>
           {/each}
         </TableBody>
@@ -449,20 +467,9 @@
       </Table>
     </div>
 
+    <!-- As páginas também no pé: quem chegou ao fim troca de página sem rolar de volta. -->
     {#if data.paging && data.paging.total > data.paging.pageSize && actions.onPageChange}
-      <div class="mt-4">
-        <PaginationBar
-          data={{
-            page: data.paging.page,
-            pageSize: data.paging.pageSize,
-            total: data.paging.total,
-            noun: ['manutenção', 'manutenções'],
-          }}
-          actions={{
-            onPageChange: actions.onPageChange,
-          }}
-        />
-      </div>
+      {@render listToolbar('bottom')}
     {/if}
 
     <!-- Truncar calado é mentir sobre o tamanho do histórico. -->
@@ -492,3 +499,21 @@
   }}
   actions={{ onConfirm: actions.onConfirmRemove, onCancel: actions.onCancelRemove }}
 />
+
+{#snippet listToolbar(position: 'top' | 'bottom')}
+  <ListToolbar
+    data={{
+      layout: 'card',
+      scroll: { loaded: data.maintenances.length, totalItems: data.total },
+      pages: {
+        page: data.paging?.page ?? 1,
+        pageSize: data.paging?.pageSize ?? Math.max(1, data.maintenances.length),
+        totalItems: data.paging?.total ?? data.maintenances.length,
+      },
+      noun: ['manutenção', 'manutenções'],
+      gender: 'feminine',
+    }}
+    ui={{ position }}
+    actions={{ onPageChange: (page: number) => actions.onPageChange?.(page) }}
+  />
+{/snippet}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { cellItemOf, itemOfLabel, sankeyItemOf, statItemOf, timeItemOf } from './widget-items.util';
+import { cellItemOf, dayItemOf, itemOfLabel, sankeyItemOf, statItemOf, timeItemOf } from './widget-items.util';
 
 const SERIES = [
   { key: 'open', label: 'Em aberto', value: 7 },
@@ -53,5 +53,10 @@ describe('timeItemOf', () => {
   // triste
   it('finds nothing for a point outside the series', () => {
     expect(timeItemOf(TIME, '2025-01-01T12:00:00.000Z')).toBeNull();
+  });
+
+  // feliz
+  it('turns a clicked calendar day into the day key, written for who reads', () => {
+    expect(dayItemOf('2026-11-20')).toEqual({ key: '2026-11-20', label: '20/11/2026' });
   });
 });

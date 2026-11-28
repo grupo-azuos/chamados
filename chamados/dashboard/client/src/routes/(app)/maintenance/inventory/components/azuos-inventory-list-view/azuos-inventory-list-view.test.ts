@@ -1,7 +1,9 @@
 import { type InventoryItem } from '@template/shared/schemas/inventory-item.schema';
 import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
+
+import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
 
 import InventoryListView, {
   type InventoryListFilterValues,
@@ -261,6 +263,8 @@ describe('AzuosInventoryListView — the filters and the note of a product', () 
     await userEvent.type(screen.getByRole('textbox', { name: 'Buscar' }), 'c');
     expect(actions.onSearchChange).toHaveBeenCalledWith('c');
 
+    /* A foto mora atrás do "Filtros", no cartão de filtros do grupo. */
+    await userEvent.click(screen.getByRole('button', { name: 'Filtros' }));
     const photo = screen.getByRole('group', { name: 'Filtrar por foto' });
     await userEvent.click(within(photo).getByRole('button', { name: 'Sem foto' }));
     expect(actions.onWithoutPhotoOnlyChange).toHaveBeenCalledWith(true);
@@ -284,10 +288,14 @@ describe('AzuosInventoryListView — pages of cards', () => {
     const many = Array.from({ length: 14 }, (_, index) =>
       item({ id: index + 1, name: `Produto ${index + 1}` }),
     );
+    /* Nos cards (a preferência "ver sempre em cards"), a barra da lista mostra as páginas. */
+    const tableView = useTableViewModel();
+    tableView.actions.onToggle();
+    onTestFinished(() => tableView.actions.onToggle());
     setup({ data: { items: many, total: 14, filter: emptyFilter, deleting: null } });
 
     expect(screen.getAllByRole('heading', { name: /^Produto / })).toHaveLength(12);
-    await userEvent.click(screen.getByRole('button', { name: /próxima/i }));
+    await userEvent.click(screen.getAllByRole('button', { name: /próxima/i })[0]!);
     expect(screen.getAllByRole('heading', { name: /^Produto / })).toHaveLength(2);
   });
 

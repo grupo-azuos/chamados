@@ -13,8 +13,9 @@ API e a tela são travadas (`scripts/git/protected-structure.txt`, seção "HIST
 ## O que o projeto faz
 
 1. **Acrescenta o vocabulário** em `shared/src/schemas/history.schema.ts` — o único arquivo
-   livre: a ação (`'pedido.created'`), o tipo do alvo (`'pedido'`) e o rótulo de cada um em
-   português.
+   livre: a ação (`'pedido.created'`), o tipo do alvo (`'pedido'`), o rótulo de cada um em
+   português e o texto da busca da tela (`HISTORY_SEARCH_PLACEHOLDER`), que fala das coisas DESTE
+   sistema ("Número do pedido ou cliente") — a tela lê a constante, nunca escreve o texto.
 2. **Grava em toda escrita**, no service, logo depois de gravar:
 
 ```ts

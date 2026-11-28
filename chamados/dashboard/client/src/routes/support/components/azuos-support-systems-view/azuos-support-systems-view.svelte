@@ -22,6 +22,7 @@
 
 <script lang="ts">
   import CodeXml from '@lucide/svelte/icons/code-xml';
+  import MapIcon from '@lucide/svelte/icons/map';
   import SearchX from '@lucide/svelte/icons/search-x';
   import { softwareProjectStatusLabel } from '@template/shared/domain/software-project.util';
 
@@ -30,19 +31,21 @@
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import CollapsibleFilters from '$lib/components/azuos-collapsible-filters/azuos-collapsible-filters.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import {
     Table,
-    TableActions,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
@@ -70,15 +73,25 @@
     }}
   />
 
-  <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-    <div class="min-w-0 flex-1">
+  <!-- O cartão de filtros do grupo (o de Empresas do paralegal): só a busca, sem o que esconder. -->
+  <CollapsibleFilters
+    data={{ label: 'Filtros dos sistemas', activeCount: 0 }}
+    state={{ hasFilter: data.search.trim() !== '' && data.systems.length > 0 }}
+    actions={{ onClear: () => actions.onSearch('') }}
+  >
+    {#snippet primary()}
       <TextField
         data={{ label: 'Buscar', name: 'systemSearch', value: data.search, placeholder: 'Nome do sistema ou para que serve' }}
         actions={{ onChange: actions.onSearch }}
       />
-    </div>
-    <TableViewToggle />
-  </div>
+    {/snippet}
+  </CollapsibleFilters>
+
+  <!-- A barra da lista: cards ou tabela à esquerda; à direita as páginas (cards) ou a contagem
+       (tabela, que rola inteira). -->
+  {#if !viewState?.isLoading && !viewState?.error && data.systems.length > 0}
+    {@render listToolbar('top')}
+  {/if}
 
   {#if viewState?.error}
     <ErrorState data={{ message: viewState.error }} actions={{ onRetry: actions.onRetry }} />
@@ -126,19 +139,8 @@
         </li>
       {/each}
     </ul>
-    {#if cardPage.total > cardPage.pageSize}
-      <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
-        <PaginationBar
-          data={{
-            page: cardPage.page,
-            pageSize: cardPage.pageSize,
-            total: cardPage.total,
-            noun: ['sistema', 'sistemas'],
-          }}
-          actions={{ onPageChange: cardPage.actions.onPageChange }}
-        />
-      </div>
-    {/if}
+    <!-- No pé dos cards, a mesma barra de páginas. Na tabela, que rola inteira, ela não aparece. -->
+    {@render listToolbar('bottom')}
 
     <!-- 2. Tabela: só quando a tela cabe (>= xl) E a pessoa não preferiu cards. Rola inteira. -->
     <div
@@ -153,16 +155,21 @@
             <TableHead>Chamados abertos</TableHead>
             <TableHead>Issues abertas</TableHead>
             <TableHead>Último movimento</TableHead>
-            <TableHead class="text-right"><span class="sr-only">Ações</span></TableHead>
+            <TableActionsHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {#each data.systems as system (system.id)}
             <TableRow class="align-top">
               <TableCell>
-                <span class="text-foreground block font-medium">{system.name}</span>
+                <!-- Nome e descrição numa linha cada, cortados com "…" no teto da coluna. -->
+                <span class="text-foreground block font-medium">
+                  <TableText data={{ text: system.name }} ui={{ className: 'max-w-72' }} />
+                </span>
                 {#if system.description}
-                  <span class="text-muted-foreground block text-xs break-words">{system.description}</span>
+                  <span class="text-muted-foreground block text-xs">
+                    <TableText data={{ text: system.description }} ui={{ className: 'max-w-72' }} />
+                  </span>
                 {/if}
               </TableCell>
               <TableCell>
@@ -174,15 +181,14 @@
               <TableCell class="tabular-nums">{system.openTickets}</TableCell>
               <TableCell class="tabular-nums">{system.openIssues}</TableCell>
               <TableCell class="text-muted-foreground text-xs">{lastMoveOf(system)}</TableCell>
-              <TableCell class="text-right">
-                <TableActions>
-                  <ActionButton
-                    data={{ label: 'Ver o mapa' }}
-                    ui={{ variant: 'ghost', size: 'sm' }}
-                    actions={{ onClick: () => actions.onOpen(system.id) }}
-                  />
-                </TableActions>
-              </TableCell>
+              <!-- A ação da linha é só ícone, com o nome no balão, na coluna presa à direita. -->
+              <TableActionsCell>
+                <ActionButton
+                  data={{ label: `Ver o mapa de ${system.name}` }}
+                  ui={{ variant: 'ghost', size: 'sm', icon: MapIcon, isIconOnly: true }}
+                  actions={{ onClick: () => actions.onOpen(system.id) }}
+                />
+              </TableActionsCell>
             </TableRow>
           {/each}
         </TableBody>
@@ -190,3 +196,15 @@
     </div>
   {/if}
 </section>
+
+{#snippet listToolbar(position: 'top' | 'bottom')}
+  <ListToolbar
+    data={{
+      scroll: { loaded: data.systems.length, totalItems: data.systems.length },
+      pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+      noun: ['sistema', 'sistemas'],
+    }}
+    ui={{ position }}
+    actions={{ onPageChange: cardPage.actions.onPageChange }}
+  />
+{/snippet}

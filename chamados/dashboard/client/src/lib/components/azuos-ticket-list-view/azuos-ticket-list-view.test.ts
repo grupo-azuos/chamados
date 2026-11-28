@@ -318,7 +318,8 @@ describe('AzuosTicketListView', () => {
       actions: { ...actions, onAnswer },
     });
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Abrir' })[0]!);
+    /* Na tabela, a ação da linha é só ícone: o nome vai no balão e no leitor de tela. */
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir o chamado CH-0042' }));
 
     expect(onAnswer).toHaveBeenCalledWith(only);
   });
@@ -455,8 +456,9 @@ describe('AzuosTicketListView', () => {
       actions: { ...actions, onPageChange },
     });
 
-    expect(screen.getByText(/1–15 de 30 chamados/i)).toBeInTheDocument();
-    const nextBtn = screen.getByRole('button', { name: /próxima/i });
+    /* A barra da lista mostra as páginas em cima e no pé. */
+    expect(screen.getAllByText(/1–15 de 30 chamados/i)).toHaveLength(2);
+    const nextBtn = screen.getAllByRole('button', { name: /próxima/i })[0]!;
     expect(nextBtn).toBeInTheDocument();
 
     await userEvent.click(nextBtn);
@@ -554,9 +556,11 @@ describe('AzuosTicketListView — filters, chips, export and the table', () => {
   });
 
   // feliz
-  it('switches each filter off through its chip, the status group included', async () => {
+  /* O cartão de filtros do grupo: o "Filtros" conta os escondidos que estão ligados (o grupo de
+     estágios incluído), e o "Limpar filtros" da linha de cima desliga todos. */
+  it('counts each filter on, the status group included, and clears them from the top line', async () => {
     const onStatusGroupChange = vi.fn();
-    vi.mocked(actions.onProblemTypeChange).mockClear();
+    vi.mocked(actions.onClearFilters).mockClear();
     setup({
       data: {
         area: 'infra',
@@ -568,12 +572,9 @@ describe('AzuosTicketListView — filters, chips, export and the table', () => {
       actions: { ...actions, onStatusGroupChange },
     });
 
-    await userEvent.click(screen.getByRole('button', { name: /Tirar o filtro Situação:/ }));
-    expect(onStatusGroupChange).toHaveBeenCalledWith('');
-    await userEvent.click(screen.getByRole('button', { name: /Tirar o filtro Urgência:/ }));
-    expect(actions.onPriorityChange).toHaveBeenCalledWith('');
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Tipo de problema' }));
-    expect(actions.onProblemTypeChange).toHaveBeenCalledWith('');
+    expect(screen.getByRole('button', { name: 'Filtros · 3' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(actions.onClearFilters).toHaveBeenCalled();
   });
 
   // feliz
@@ -588,8 +589,7 @@ describe('AzuosTicketListView — filters, chips, export and the table', () => {
     expect(screen.getByText('Não consegui gerar o arquivo.')).toBeInTheDocument();
     expect(screen.getByText(/Mostrando 1 de 1 chamados/)).toBeInTheDocument();
 
-    const opens = screen.getAllByRole('button', { name: 'Abrir' });
-    await userEvent.click(opens.at(-1)!);
+    await userEvent.click(screen.getAllByRole('button', { name: /^Abrir o chamado/ }).at(-1)!);
     expect(actions.onAnswer).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
 });
@@ -722,7 +722,7 @@ describe('AzuosTicketListView — the system filter', () => {
   const projectOptions = [{ value: '7', label: 'Portal do cliente' }];
 
   // feliz
-  it('filters the System queue by system, with its chip', async () => {
+  it('filters the System queue by system, counted in the filters card', async () => {
     const onProjectChange = vi.fn();
     render(TicketListView, {
       props: {
@@ -739,10 +739,8 @@ describe('AzuosTicketListView — the system filter', () => {
       },
     });
 
-    expect(screen.getByText('Sistema: Portal do cliente')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Remover|Sistema: Portal do cliente/ }));
-
-    expect(onProjectChange).toHaveBeenCalledWith('');
+    expect(screen.getByRole('button', { name: 'Filtros · 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filtrar por sistema' })).toHaveTextContent('Portal do cliente');
   });
 
   // triste

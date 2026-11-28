@@ -640,6 +640,19 @@
   padding-inline: 0;
 }
 
+/* A COLUNA DE AÇÕES presa à direita da tabela (`TableActionsHead`/`TableActionsCell`): na tabela
+   larga que rola para o lado, o menu da linha continua à vista. O fundo é o do card (senão o texto
+   de baixo aparece por trás), e o véu da linha no hover passa por cima dele, como no resto da linha. */
+@utility table-sticky-end {
+  position: sticky;
+  right: 0;
+  background-color: var(--card);
+
+  tr:hover > & {
+    background-image: linear-gradient(var(--hover-veil), var(--hover-veil));
+  }
+}
+
 /* ==========================================================================
    A GRADE DE CARTÕES DAS LISTAS.
 

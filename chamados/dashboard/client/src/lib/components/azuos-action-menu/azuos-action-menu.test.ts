@@ -53,4 +53,55 @@ describe('AzuosActionMenu', () => {
 
     expect(onSelect).toHaveBeenCalledWith('archive');
   });
+
+  // feliz
+  /* A linha clicável da tabela não abre junto com o menu. */
+  it('keeps the click of the three dots away from the clickable row', async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    render(ActionMenu, { props: { data, ui: { isIconOnly: true }, actions: { onSelect: vi.fn() } } });
+    /* A linha mora acima do menu: o clique que sobe até ela é o que abriria o registro junto. */
+    document.body.addEventListener('click', onRowClick);
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+
+    expect(await screen.findByRole('menu')).toBeInTheDocument();
+    expect(onRowClick).not.toHaveBeenCalled();
+    document.body.removeEventListener('click', onRowClick);
+  });
+
+  // feliz
+  it('renders a link item that navigates instead of selecting', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(ActionMenu, {
+      props: {
+        data: { label: 'Mais ações', items: [{ id: 'open', label: 'Ver chamado', href: '/infra/tickets/7' }] },
+        actions: { onSelect },
+      },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+
+    const link = await screen.findByRole('menuitem', { name: 'Ver chamado' });
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', '/infra/tickets/7');
+  });
+
+  // triste
+  it('does not select a locked item', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const onSelect = vi.fn();
+    render(ActionMenu, {
+      props: {
+        data: { label: 'Mais ações', items: [{ id: 'archive', label: 'Arquivar', isDisabled: true }] },
+        actions: { onSelect },
+      },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Arquivar' }));
+
+    expect(onSelect).not.toHaveBeenCalled();
+  });
 });

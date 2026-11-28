@@ -199,7 +199,7 @@
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import ReportExportActions from '$lib/components/azuos-report-export-actions/azuos-report-export-actions.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
@@ -371,6 +371,12 @@
     />
   </div>
 
+  <!-- A barra da lista: cards ou tabela à esquerda; à direita, nos cards, as páginas; na tabela,
+       que rola inteira, a contagem. -->
+  {#if !state.isLoading && !state.error && !state.isEmpty}
+    {@render listToolbar('top')}
+  {/if}
+
   <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
   {#if state.error}
     <ErrorState
@@ -427,20 +433,8 @@
           />
         {/each}
       </div>
-      {#if showsPaging && data.paging && actions.onPageChange}
-        <PaginationBar
-          data={{
-            page: data.paging.page,
-            pageSize: data.paging.pageSize,
-            total: data.paging.total,
-            noun: ['computador', 'computadores'],
-          }}
-          actions={{ onPageChange: actions.onPageChange }}
-        />
-      {:else}
-        <p class="text-muted-foreground px-1 text-right text-xs">
-          {data.computers.length} computador(es) listado(s)
-        </p>
+      {#if showsPaging}
+        {@render listToolbar('bottom')}
       {/if}
     </div>
 
@@ -463,3 +457,19 @@
     {/if}
   {/if}
 </div>
+
+{#snippet listToolbar(position: 'top' | 'bottom')}
+  <ListToolbar
+    data={{
+      scroll: { loaded: data.computers.length, totalItems: data.total },
+      pages: {
+        page: data.paging?.page ?? 1,
+        pageSize: data.paging?.pageSize ?? Math.max(1, data.computers.length),
+        totalItems: data.paging?.total ?? data.computers.length,
+      },
+      noun: ['computador', 'computadores'],
+    }}
+    ui={{ position }}
+    actions={{ onPageChange: (page: number) => actions.onPageChange?.(page) }}
+  />
+{/snippet}

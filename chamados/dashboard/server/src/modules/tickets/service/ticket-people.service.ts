@@ -45,7 +45,8 @@ export class TicketPeopleService {
     for (const user of [...access, ...everyone]) {
       const current = byId.get(user.id);
       const avatarUrl = user.image ?? current?.avatarUrl ?? null;
-      byId.set(user.id, { id: user.id, name: displayName(user), avatarUrl });
+      /* O e-mail vai junto: o registro que guardou o login (e não o id) também acha a foto. */
+      byId.set(user.id, { id: user.id, name: displayName(user), email: user.email, avatarUrl });
     }
 
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));

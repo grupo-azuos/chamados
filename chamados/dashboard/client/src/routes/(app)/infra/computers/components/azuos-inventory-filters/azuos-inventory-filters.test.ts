@@ -104,7 +104,8 @@ describe('AzuosInventoryFilters — responsible', () => {
   });
 
   // feliz
-  it('shows the chosen person on a chip that switches the filter off', async () => {
+  /* O cartão de filtros do grupo: filtro escondido valendo abre o cartão, com o escolhido à vista. */
+  it('arrives open with the chosen person in sight', async () => {
     render(InventoryFilters, {
       props: {
         data: {
@@ -116,10 +117,8 @@ describe('AzuosInventoryFilters — responsible', () => {
       },
     });
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Tirar o filtro Responsável: Ana Lima' }),
-    );
-    expect(actions.onResponsibleChange).toHaveBeenLastCalledWith('');
+    expect(screen.getByRole('button', { name: 'Filtros · 1' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('combobox', { name: 'Filtrar por responsável' })).toHaveTextContent('Ana Lima');
   });
 
   // triste
@@ -147,13 +146,11 @@ describe('AzuosInventoryFilters — upgrade', () => {
   });
 
   // feliz
-  it('shows the reason on a chip that switches the filter off', async () => {
+  it('counts the upgrade reason and shows it in the open card', async () => {
     renderWith({ upgrade: 'memory' });
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Tirar o filtro Upgrade: Pouca memória' }),
-    );
-    expect(actions.onUpgradeChange).toHaveBeenLastCalledWith('');
+    expect(screen.getByRole('button', { name: 'Filtros · 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filtrar por upgrade' })).toHaveTextContent('Pouca memória');
   });
 
   // triste
@@ -170,10 +167,10 @@ describe('AzuosInventoryFilters', () => {
   it('opens the panel on demand and filters the machines that need maintenance', async () => {
     renderWith();
     const toggle = screen.getByRole('button', { name: /Filtros/ });
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
 
     await userEvent.click(toggle);
-    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
 
     await choose('Filtrar pela preventiva', 'Precisa de manutenção');
     expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('needed');
@@ -206,35 +203,26 @@ describe('AzuosInventoryFilters', () => {
     expect(actions.onResourceConditionChange).toHaveBeenLastCalledWith('memory-low');
   });
 
-  it('shows the resource condition as a chip that switches it off', async () => {
+  it('counts the resource condition and shows it in the open card', async () => {
     renderWith({ resourceCondition: 'disk-critical' });
 
-    await userEvent.click(screen.getByRole('button', { name: /Recursos: Disco quase cheio/ }));
-
-    expect(actions.onResourceConditionChange).toHaveBeenLastCalledWith('');
+    expect(screen.getByRole('button', { name: 'Filtros · 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filtrar pela condição dos recursos' })).toHaveTextContent(
+      /Disco/,
+    );
   });
 
-  it('turns each active filter into a chip that switches it off', async () => {
+  it('counts each active filter on the "Filtros" button', async () => {
     renderWith({ onlyOffline: true, preventive: 'needed' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Offline' }));
-    expect(actions.onOfflineChange).toHaveBeenLastCalledWith(false);
-
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Tirar o filtro Preventiva: Precisa de manutenção' }),
-    );
-    expect(actions.onPreventiveChange).toHaveBeenLastCalledWith('');
+    expect(screen.getByRole('button', { name: 'Filtros · 2' })).toBeInTheDocument();
   });
 
   /* Chegou filtrada lá dentro: o painel nasce aberto e o botão conta. */
   it('arrives open and counted when a grouped filter is already on', () => {
     renderWith({ kind: 'notebook' });
 
-    expect(screen.getByRole('button', { name: /Filtros/ })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
-    expect(screen.getByLabelText('1 ativo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filtros · 1' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   // triste
@@ -255,7 +243,7 @@ describe('AzuosInventoryFilters', () => {
     });
 
     expect(screen.queryByRole('button', { name: 'Limpar filtros' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Tirar o filtro Notebook' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filtros · 1' })).toBeInTheDocument();
   });
 
   it('offers to clear a search even though it does not become a chip', async () => {
@@ -326,7 +314,7 @@ describe('AzuosInventoryFilters — every grouped filter and its chip', () => {
   });
 
   // feliz
-  it('switches off health, alert, kind, archived and online through their chips', async () => {
+  it('counts health, alert, kind, archived and online, and clears them from the top line', async () => {
     renderWith({
       onlyOnline: true,
       healthStatus: 'critical',
@@ -335,16 +323,9 @@ describe('AzuosInventoryFilters — every grouped filter and its chip', () => {
       includeArchived: true,
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Online agora' }));
-    expect(actions.onOnlineChange).toHaveBeenLastCalledWith(false);
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Saúde: Crítica' }));
-    expect(actions.onHealthStatusChange).toHaveBeenLastCalledWith('');
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro CPU elevada' }));
-    expect(actions.onAlertChange).toHaveBeenLastCalledWith('');
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Notebook' }));
-    expect(actions.onKindChange).toHaveBeenLastCalledWith('');
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Com arquivadas' }));
-    expect(actions.onArchivedChange).toHaveBeenLastCalledWith(false);
+    expect(screen.getByRole('button', { name: 'Filtros · 5' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(actions.onClearFilters).toHaveBeenCalled();
   });
 
   // feliz

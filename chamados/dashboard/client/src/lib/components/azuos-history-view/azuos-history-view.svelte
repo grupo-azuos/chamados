@@ -22,6 +22,7 @@
     HISTORY_KIND_LABELS,
     HISTORY_KINDS,
     historyTargetLabel,
+    HISTORY_SEARCH_PLACEHOLDER,
     historyTargetsOf,
     type HistoryEntry,
     type HistoryKind,
@@ -114,10 +115,11 @@
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import SearchX from '@lucide/svelte/icons/search-x';
 
-  import ClearFiltersButton from '$lib/components/azuos-clear-filters-button/azuos-clear-filters-button.svelte';
+  import CollapsibleFilters from '$lib/components/azuos-collapsible-filters/azuos-collapsible-filters.svelte';
   import ComboboxField from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
   import DateRangeField from '$lib/components/azuos-date-range-field/azuos-date-range-field.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
+  import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import PageHeader from '$lib/components/azuos-page-header/azuos-page-header.svelte';
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
@@ -146,16 +148,24 @@
     ui={{ icon: History }}
   />
 
-  <!-- A barra de ferramentas, sobre o fundo da página (filtro não mora em card): busca → filtros
-       → de quem → limpar. -->
-  <div class="flex flex-col gap-3">
-    <div class="grid grid-cols-1 items-end gap-3 md:grid-cols-2 xl:grid-cols-4">
+  <!-- O CARTÃO DE FILTROS DO GRUPO, no mesmo desenho das outras telas: à vista a busca e o período;
+       atrás do "Filtros", o tipo e a ação; embaixo, sempre à vista, de quem. O "Limpar filtros"
+       fica na linha de cima. -->
+  <CollapsibleFilters
+    data={{
+      label: 'Filtros do histórico',
+      activeCount: [data.filter.targetType, data.filter.kind].filter(Boolean).length,
+    }}
+    state={{ hasFilter }}
+    actions={{ onClear: actions.onClearFilters }}
+  >
+    {#snippet primary()}
       <TextField
         data={{
           label: 'Buscar',
           name: 'historySearch',
           value: data.filter.search,
-          placeholder: 'Protocolo, nome da máquina, produto ou sistema',
+          placeholder: HISTORY_SEARCH_PLACEHOLDER,
         }}
         actions={{ onChange: (search) => actions.onFilterChange({ search }) }}
       />
@@ -164,28 +174,31 @@
         ui={{ placeholder: 'Qualquer dia' }}
         actions={{ onChange: (range) => actions.onFilterChange({ from: range.from, to: range.to }) }}
       />
-      <ComboboxField
-        data={{ value: data.filter.targetType, options: targetOptions }}
-        ui={{ ariaLabel: 'Tipo de registro', placeholder: 'Todos os tipos', searchPlaceholder: 'Buscar tipo…' }}
-        actions={{ onChange: (targetType) => actions.onFilterChange({ targetType }) }}
-      />
-      <SelectField
-        data={{ value: data.filter.kind, options: KIND_OPTIONS }}
-        ui={{ ariaLabel: 'Ação', placeholder: 'Todas as ações' }}
-        actions={{ onChange: (kind) => actions.onFilterChange({ kind: kind as HistoryKind | '' }) }}
-      />
-    </div>
-    <div class="flex flex-wrap items-center gap-3">
+    {/snippet}
+    {#snippet toggles()}
       <SegmentedControl
         data={{ value: data.filter.who, options: WHO_OPTIONS }}
         ui={{ ariaLabel: 'De quem' }}
         actions={{ onChange: (who) => actions.onFilterChange({ who: who as HistoryFilter['who'] }) }}
       />
-      {#if hasFilter}
-        <ClearFiltersButton state={{ hasFilter }} actions={{ onClear: actions.onClearFilters }} />
-      {/if}
+    {/snippet}
+    <div class="grid grid-cols-1 items-end gap-3 md:grid-cols-2">
+      <FilterField data={{ label: 'Tipo' }} ui={{ className: 'sm:w-full' }}>
+        <ComboboxField
+          data={{ value: data.filter.targetType, options: targetOptions }}
+          ui={{ ariaLabel: 'Tipo de registro', placeholder: 'Todos os tipos', searchPlaceholder: 'Buscar tipo…', className: 'w-full' }}
+          actions={{ onChange: (targetType) => actions.onFilterChange({ targetType }) }}
+        />
+      </FilterField>
+      <FilterField data={{ label: 'Ação' }} ui={{ className: 'sm:w-full' }}>
+        <SelectField
+          data={{ value: data.filter.kind, options: KIND_OPTIONS }}
+          ui={{ ariaLabel: 'Ação', placeholder: 'Todas as ações', className: 'w-full' }}
+          actions={{ onChange: (kind) => actions.onFilterChange({ kind: kind as HistoryKind | '' }) }}
+        />
+      </FilterField>
     </div>
-  </div>
+  </CollapsibleFilters>
 
   <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
   {#if state.error}

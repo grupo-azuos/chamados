@@ -34,7 +34,6 @@ const fields: FilterPanelField[] = [
 const actions = {
   onSearchChange: vi.fn(),
   onFieldChange: vi.fn(),
-  onRemoveChip: vi.fn(),
   onClearFilters: vi.fn(),
 };
 
@@ -66,7 +65,7 @@ describe('AzuosFilterPanel', () => {
   it('opens on demand and reports a pill and a dropdown choice by key', async () => {
     renderWith();
     const toggle = screen.getByRole('button', { name: /^Filtros/ });
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await userEvent.click(toggle);
 
     await userEvent.click(screen.getByRole('button', { name: 'Alta' }));
@@ -80,16 +79,14 @@ describe('AzuosFilterPanel', () => {
     expect(actions.onFieldChange).toHaveBeenLastCalledWith('status', 'resolved');
   });
 
-  it('arrives open and counted when a filter is on, and each chip switches it off', async () => {
+  /* O cartão de filtros do grupo: chega aberto e contado, e o "Limpar filtros" fica na linha de
+     cima, ao lado do "Filtros" — como no paralegal. */
+  it('arrives open and counted when a filter is on, and clears from the top line', async () => {
     renderWith({ chips: [{ key: 'priority', label: 'Urgência: Alta' }], canClear: true });
 
-    expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
-    expect(screen.getByLabelText('1 ativo')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Urgência: Alta' }));
-    expect(actions.onRemoveChip).toHaveBeenCalledWith('priority');
+    expect(screen.getByRole('button', { name: 'Filtros · 1' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(actions.onClearFilters).toHaveBeenCalledOnce();
   });
 
   // triste
@@ -147,46 +144,6 @@ describe('AzuosFilterPanel — person field', () => {
     renderPerson();
     expect(screen.getByRole('combobox', { name: 'Filtrar por responsável' })).toHaveTextContent(
       'Todos os responsáveis',
-    );
-  });
-});
-
-describe('AzuosFilterPanel: the board in the view toggle', () => {
-  function renderWithBoard(isKanbanView: boolean, onKanbanViewChange = vi.fn()) {
-    render(FilterPanel, {
-      props: {
-        data: { search: { value: '', placeholder: 'Buscar…' }, fields, chips: [], canClear: false },
-        ui: { hasKanbanView: true },
-        state: { isKanbanView },
-        actions: { ...actions, onKanbanViewChange },
-      },
-    });
-
-    return onKanbanViewChange;
-  }
-
-  // feliz
-  it('offers the board beside table and cards, and reports the choice', async () => {
-    const onKanbanViewChange = renderWithBoard(false);
-
-    await userEvent.click(screen.getByRole('button', { name: 'Ver em quadro' }));
-
-    expect(onKanbanViewChange).toHaveBeenCalledWith(true);
-  });
-
-  // triste
-  it('has only table and cards when the screen does not offer the board', () => {
-    renderWith();
-
-    expect(screen.queryByRole('button', { name: 'Ver em quadro' })).not.toBeInTheDocument();
-  });
-
-  it('marks the board while the screen is on it', () => {
-    renderWithBoard(true);
-
-    expect(screen.getByRole('button', { name: 'Ver em quadro' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
     );
   });
 });

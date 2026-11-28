@@ -150,7 +150,9 @@
   import Wrench from '@lucide/svelte/icons/wrench';
   import X from '@lucide/svelte/icons/x';
 
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import CollapsibleFilters from '$lib/components/azuos-collapsible-filters/azuos-collapsible-filters.svelte';
+  import FilterField from '$lib/components/azuos-filter-field/azuos-filter-field.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import ActionMenu from '$lib/components/azuos-action-menu/azuos-action-menu.svelte';
@@ -165,14 +167,16 @@
   import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
   import TextField from '$lib/components/azuos-text-field/azuos-text-field.svelte';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
@@ -256,7 +260,7 @@
       ui={{ slot: 'role-profile' }}
     >
       {#snippet leading()}
-        <PersonAvatar name={me.name} avatarUrl={me.image} ui={{ size: 'md' }} />
+        <PersonAvatar name={me.name} avatarUrl={me.image} email={me.email} ui={{ size: 'md' }} />
       {/snippet}
       {#snippet body()}
         <!-- Os módulos da pessoa: o nível é o do papel no admin-console, módulo ausente é sem acesso. -->
@@ -313,38 +317,38 @@
     <ContentCard data={{ label: 'Manutenção', title: 'Manutenção', highlight: { value: countByContext('manutencao') } }} ui={{ icon: Wrench, iconTone: contextTone('manutencao') }} state={{ isLoading: state.isLoading }} />
   </StatCardGrid>
 
-  <!-- 4. Filtros Padronizados -->
-  <div class="flex flex-col gap-3">
-    <TextField
-      data={{
-        label: 'Buscar na equipe',
-        name: 'search',
-        value: data.filter.search,
-        placeholder: 'Filtrar por e-mail ou identificador da pessoa…',
-      }}
-      actions={{ onChange: actions.onSearchChange }}
-    />
-
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex flex-wrap items-center gap-3">
+  <!-- 4. O cartão de filtros do grupo (o de Empresas do paralegal): a busca e o contexto à vista.
+       Quando o filtro escondeu tudo, quem oferece "Limpar filtros" é o aviso de lista vazia. -->
+  <CollapsibleFilters
+    data={{ label: 'Filtros dos acessos', activeCount: 0 }}
+    state={{ hasFilter: isFiltered && !state.isFilteredOut }}
+    actions={{ onClear: actions.onClearFilters }}
+  >
+    {#snippet primary()}
+      <TextField
+        data={{
+          label: 'Buscar na equipe',
+          name: 'search',
+          value: data.filter.search,
+          placeholder: 'Filtrar por e-mail ou identificador da pessoa…',
+        }}
+        actions={{ onChange: actions.onSearchChange }}
+      />
+      <FilterField data={{ label: 'Contexto' }} ui={{ className: 'sm:w-full' }}>
         <OptionPicker
           data={{ value: data.filter.context, options: CONTEXT_PICKER_OPTIONS }}
           ui={{ ariaLabel: 'Filtrar por contexto', allLabel: 'Todos os contextos' }}
           actions={{ onChange: (val) => actions.onContextChange(val as RoleContext | '') }}
         />
+      </FilterField>
+    {/snippet}
+  </CollapsibleFilters>
 
-        {#if isFiltered}
-          <ActionButton
-            data={{ label: 'Limpar filtros' }}
-            ui={{ variant: 'secondary', size: 'sm' }}
-            actions={{ onClick: actions.onClearFilters }}
-          />
-        {/if}
-      </div>
-      <!-- O modo de ver fecha a barra de ferramentas (busca → filtros → modo de ver). -->
-      <TableViewToggle />
-    </div>
-  </div>
+  <!-- A barra da lista: cards ou tabela à esquerda; à direita as páginas (cards) ou a contagem
+       (tabela, que rola inteira). -->
+  {#if !state.isLoading && !state.error && !state.isEmpty}
+    {@render listToolbar('top')}
+  {/if}
 
   <!-- 5. Tabela / Estados -->
   {#if state.error}
@@ -417,7 +421,13 @@
           actions={{ onMenuSelect: (id) => chooseAction(id, person) }}
         >
           {#snippet leading()}
-            <PersonAvatar name={displayName} avatarUrl={user?.image} ui={{ size: 'md' }} />
+            <PersonAvatar
+              name={displayName}
+              avatarUrl={user?.image}
+              personId={person.userId}
+              email={person.userEmail}
+              ui={{ size: 'md' }}
+            />
           {/snippet}
           {#snippet body()}
             <span class="text-xs font-medium text-muted-foreground">
@@ -435,21 +445,8 @@
         </ContentCard>
       {/each}
     </div>
-      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
-           fileira. A barra só aparece quando há mais de uma página. -->
-      {#if cardPage.total > cardPage.pageSize}
-        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
-          <PaginationBar
-            data={{
-              page: cardPage.page,
-              pageSize: cardPage.pageSize,
-              total: cardPage.total,
-              noun: ['pessoa', 'pessoas'],
-            }}
-            actions={{ onPageChange: cardPage.actions.onPageChange }}
-          />
-        </div>
-      {/if}
+    <!-- No pé dos cards, a mesma barra de páginas. Na tabela, que rola inteira, ela não aparece. -->
+    {@render listToolbar('bottom')}
 
     <!-- 2. Visualização em Tabela para Desktop (>= xl) -->
     <div
@@ -462,11 +459,11 @@
       <Table class="min-w-[640px]">
         <TableHeader>
           <TableRow>
-            <TableHead class="min-w-[260px]">Pessoa</TableHead>
-            <TableHead class="min-w-[220px]">Módulos</TableHead>
-            <TableHead class="min-w-[160px]">Liberado por</TableHead>
+            <TableHead>Pessoa</TableHead>
+            <TableHead>Módulos</TableHead>
+            <TableHead>Liberado por</TableHead>
             {#if canManage}
-              <TableHead class="w-12 text-right"><span class="sr-only">Ações</span></TableHead>
+              <TableActionsHead />
             {/if}
           </TableRow>
         </TableHeader>
@@ -475,35 +472,42 @@
             {@const user = resolveUser(person)}
             {@const displayName = user?.name || person.userEmail || person.userId}
             <TableRow>
-              <TableCell class="max-w-[280px]">
+              <TableCell>
                 <div class="flex items-center gap-3">
-                  <PersonAvatar name={displayName} avatarUrl={user?.image} ui={{ size: 'md' }} />
+                  <PersonAvatar
+                    name={displayName}
+                    avatarUrl={user?.image}
+                    personId={person.userId}
+                    email={person.userEmail}
+                    ui={{ size: 'md' }}
+                  />
+                  <!-- O nome numa linha só, cortado com "…" no teto da coluna (o inteiro no balão). -->
                   <div class="min-w-0">
-                    <span class="block font-medium text-foreground truncate">
-                      {displayName}
+                    <span class="text-foreground block font-medium">
+                      <TableText data={{ text: displayName }} ui={{ className: 'max-w-72' }} />
                     </span>
                     {#if person.userEmail && person.userId !== person.userEmail}
-                      <span class="block text-xs font-mono text-muted-foreground truncate">
-                        {person.userId}
+                      <span class="text-muted-foreground block font-mono text-xs">
+                        <TableText data={{ text: person.userId }} ui={{ className: 'max-w-72' }} />
                       </span>
                     {/if}
                   </div>
                 </div>
               </TableCell>
               <TableCell>{@render moduleBadges(person)}</TableCell>
-              <TableCell class="text-xs text-muted-foreground font-mono">
-                {creatorsOf(person) || '—'}
+              <TableCell class="text-muted-foreground font-mono text-xs">
+                <TableText data={{ text: creatorsOf(person), empty: '—' }} ui={{ className: 'max-w-48' }} />
               </TableCell>
               <!-- Tirar cada módulo e dar mais um ficam no menu de três pontinhos, como no card:
                    botões enfileirados na linha da tabela não são o padrão. -->
               {#if canManage}
-                <TableCell class="text-right">
+                <TableActionsCell>
                   <ActionMenu
                     data={{ label: `Ações de ${displayName}`, items: menuItemsOf(person) }}
                     ui={{ isIconOnly: true }}
                     actions={{ onSelect: (id) => chooseAction(id, person) }}
                   />
-                </TableCell>
+                </TableActionsCell>
               {/if}
             </TableRow>
           {/each}
@@ -513,3 +517,16 @@
   {/if}
   {/if}
 </div>
+
+{#snippet listToolbar(position: 'top' | 'bottom')}
+  <ListToolbar
+    data={{
+      scroll: { loaded: people.length, totalItems: people.length },
+      pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+      noun: ['pessoa', 'pessoas'],
+      gender: 'feminine',
+    }}
+    ui={{ position }}
+    actions={{ onPageChange: cardPage.actions.onPageChange }}
+  />
+{/snippet}

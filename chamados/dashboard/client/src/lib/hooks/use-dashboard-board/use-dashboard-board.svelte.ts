@@ -26,6 +26,7 @@ import {
   type WidgetKind,
   widgetQueryOf,
 } from '@template/shared/schemas/dashboard-board.schema';
+import { todayIso } from '@template/shared/domain/calendar-date.util';
 import { derived, writable } from 'svelte/store';
 
 import { dashboardBoardsApi } from '$lib/api/dashboard-boards.api';
@@ -33,6 +34,7 @@ import { ticketsApi } from '$lib/api/tickets.api';
 import { readError } from '$lib/api/http-client';
 import { mirrorStore } from '$lib/hooks/use-mirror-store/use-mirror-store.svelte';
 import { useDepartmentOptionsModel } from '$lib/hooks/use-department-options/use-department-options.svelte';
+import { useHolidaysModel } from '$lib/hooks/use-holidays/use-holidays.svelte';
 import { persistedFilterStore } from '$lib/hooks/use-persisted-filters/use-persisted-filters.svelte';
 import {
   activeValues,
@@ -222,6 +224,11 @@ export function useDashboardBoardModel(module: BoardModule) {
   /* A lista de departamentos (RH e os daqui), para o filtro mostrar também os que estão em zero. */
   const departments = useDepartmentOptionsModel();
 
+  /* Os calendários do painel olham este ano e o próximo (a agenda de dezembro já entra em
+     janeiro): os feriados dos dois, numa busca guardada por ano e UF. */
+  const thisYear = Number(todayIso().slice(0, 4));
+  const holidays = useHolidaysModel([thisYear, thisYear + 1]);
+
   const save = mirrorStore(
     createMutation({
       mutationFn: (content: BoardDraft) => dashboardBoardsApi.saveBoard(module, chosenScope.current.scope, content),
@@ -287,6 +294,8 @@ export function useDashboardBoardModel(module: BoardModule) {
         ),
         weight: boardWeight(shown.widgets),
         refreshEvery: chosenRefresh.current,
+        holidays: holidays.holidays,
+        holidayState: holidays.holidayState,
       };
     },
     get state() {
@@ -304,6 +313,7 @@ export function useDashboardBoardModel(module: BoardModule) {
       };
     },
     actions: {
+      onHolidayStateChange: holidays.onHolidayStateChange,
       onScopeChange: (next: string) => {
         if (!allowed.includes(next as DashboardScope)) return;
         draft = null;
