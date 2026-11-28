@@ -145,7 +145,12 @@ describe('TicketPeopleService.directoryWithPhotos', () => {
 
     const people = await serviceWith(everyone, directoryUsers).directoryWithPhotos();
 
-    expect(people).toContainEqual({ id: 'gs', name: 'Guilherme Siqueira', avatarUrl: 'https://x/gs.png' });
+    expect(people).toContainEqual({
+      id: 'gs',
+      name: 'Guilherme Siqueira',
+      email: 'gs@azuos.com.br',
+      avatarUrl: 'https://x/gs.png',
+    });
     expect(people.find((person) => person.id === 'bia')?.avatarUrl).toBe('https://x/bia.png');
   });
 
