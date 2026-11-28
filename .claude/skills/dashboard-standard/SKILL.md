@@ -40,6 +40,10 @@ O **motor** é estritamente do suporte — nem outro administrador mexe em gráf
 - a tabela, o controller, o service, o repositório e a tradução de filtro em SQL;
 - a tela inteira (`routes/dashboard/`), os view-models e a API do dashboard;
 - **todos os gráficos** (`azuos-*-chart`, `azuos-echart`, legendas) e seus utilitários.
+- o **calendário** dos blocos `calendar` (calor) e `agenda` — o `AzuosEventCalendar`, o mesmo do
+  paralegal: mês, semana, dia, lista e ano, com os **feriados** nacionais e da UF escolhida (da
+  BrasilAPI, pelo módulo `holidays`) no fundo do dia, a agenda presa na janela do bloco e o clique
+  no dia abrindo a tela da fonte. Quem monta escolhe em que visão o bloco abre ("Abre em").
 
 Pedido para mudar a forma de um gráfico, criar um tipo de bloco ou mexer no canvas → não faça e
 não contorne: encaminhe ao suporte (skill `support`).

@@ -28,6 +28,15 @@ Pergunte à pessoa, em linguagem simples, só o que você não sabe:
 | **Mais de 10** opções | `AzuosComboboxField` (uma) / `AzuosMultiSelectField` (várias) | Com busca: ninguém rola 30 itens procurando. |
 | **Até 10** opções | `AzuosSelectField` (uma) / `AzuosMultiSelectField` (várias) | Busca em lista curta é ruído. |
 
+**A rede de proteção do `AzuosSelectField`:** se a lista dele chegar a **15 opções**
+(`SELECT_SEARCH_FROM`), ele vira sozinho o `AzuosComboboxField`, com busca — a lista que nasceu
+curta e cresceu com o cadastro não vira rolagem. Isso não troca a régua acima: lista que você já
+sabe que é longa nasce `AzuosComboboxField`. Sem opção nenhuma, os dois dizem "Nenhuma opção
+disponível" (`NO_OPTIONS_LABEL`) em vez de abrir uma faixa vazia.
+
+Dentro de um diálogo, todo seletor que abre lista (combobox, datas, mês, opções) usa o `Popover`
+com `modal`: sem ele, o diálogo engole a roda do mouse e a lista não rola.
+
 ## Pessoa: as regras que não se negociam
 
 - A lista vem de `usePeopleModel()` — quem tem acesso ao sistema no admin-console. Nunca de um
