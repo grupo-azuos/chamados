@@ -132,16 +132,18 @@
   import { Skeleton } from '$lib/components/azuos-skeleton/azuos-skeleton';
   import type { LucideIcon } from '@lucide/svelte';
   import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
+  import CircleCheck from '@lucide/svelte/icons/circle-check';
   import Clock from '@lucide/svelte/icons/clock';
-  import FilterX from '@lucide/svelte/icons/filter-x';
   import Gauge from '@lucide/svelte/icons/gauge';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import SearchX from '@lucide/svelte/icons/search-x';
   import Timer from '@lucide/svelte/icons/timer';
   import Unplug from '@lucide/svelte/icons/unplug';
   import Wifi from '@lucide/svelte/icons/wifi';
   import WifiOff from '@lucide/svelte/icons/wifi-off';
 
-  import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
+  import CollapsibleFilters from '$lib/components/azuos-collapsible-filters/azuos-collapsible-filters.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
   import { useCardPage } from '$lib/hooks/use-card-page/use-card-page.svelte';
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
   import EmptyState from '$lib/components/azuos-empty-state/azuos-empty-state.svelte';
@@ -152,15 +154,16 @@
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
     Table,
-    TableActions,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
@@ -235,47 +238,55 @@
 
   <!-- Uma fileira, cada filtro com o nome em cima. "Andamento" era uma caixa de seleção solta
        embaixo dos outros; agora é um filtro como os demais, com as duas escolhas à vista. -->
+  <!-- O cartão de filtros do grupo (o de Empresas do paralegal): os filtros à vista.
+       "Limpar filtros" só aparece quando há o que limpar; quando o filtro escondeu tudo,
+       quem o oferece é o aviso de lista vazia — dois botões iguais só confundem. -->
   <div bind:this={filtersElement} class="flex scroll-mt-4 flex-wrap items-end gap-x-4 gap-y-3">
-    <FilterField data={{ label: 'Tipo de aviso' }}>
-      <OptionPicker
-        data={{ value: data.filter.type, options: TYPE_FILTER_OPTIONS }}
-        ui={{ ariaLabel: 'Filtrar por tipo de aviso', allLabel: 'Todos os avisos' }}
-        actions={{ onChange: (value: string) => actions.onTypeChange(value as NetworkEventType | '') }}
-      />
-    </FilterField>
-    <FilterField data={{ label: 'Gravidade' }}>
-      <OptionPicker
-        data={{ value: data.filter.severity, options: SEVERITY_FILTER_OPTIONS }}
-        ui={{ ariaLabel: 'Filtrar por gravidade', allLabel: 'Qualquer gravidade' }}
-        actions={{
-          onChange: (value: string) => actions.onSeverityChange(value as NetworkSeverity | ''),
-        }}
-      />
-    </FilterField>
-    <FilterField data={{ label: 'Andamento' }}>
-      <OptionPicker
-        data={{ value: data.filter.onlyOpen ? 'yes' : '', options: ONLY_OPEN_OPTIONS }}
-        ui={{ ariaLabel: 'Filtrar por andamento', allLabel: 'Todos' }}
-        actions={{ onChange: (value: string) => actions.onOnlyOpenChange(value === 'yes') }}
-      />
-    </FilterField>
-
-    <!-- Só aparece quando há o que limpar. Quando o filtro escondeu tudo, quem oferece a
-         limpeza é o aviso de lista vazia, logo abaixo — dois botões iguais só confundem. O
-         período (no cabeçalho) não conta: ele é o recorte da tela, não um filtro da lista. -->
-    <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
-      {#if hasActiveFilter && !viewState.isFilteredOut}
-        <ActionButton
-          data={{ label: 'Limpar filtros' }}
-          ui={{ variant: 'ghost', size: 'lg', icon: FilterX }}
-          actions={{ onClick: actions.onClearFilters }}
-        />
-      {/if}
-      <!-- Trocar entre tabela e cards age sobre a lista logo abaixo: mora aqui, e não no
-           cabeçalho da página. -->
-      <TableViewToggle />
-    </div>
+    <CollapsibleFilters
+      data={{ label: 'Filtros dos eventos de rede', activeCount: 0 }}
+      state={{ hasFilter: hasActiveFilter && !viewState.isFilteredOut }}
+      actions={{ onClear: actions.onClearFilters }}
+    >
+      {#snippet primary()}
+        <FilterField ui={{ className: 'sm:w-full' }} data={{ label: 'Tipo de aviso' }}>
+          <OptionPicker
+            data={{ value: data.filter.type, options: TYPE_FILTER_OPTIONS }}
+            ui={{ ariaLabel: 'Filtrar por tipo de aviso', allLabel: 'Todos os avisos' }}
+            actions={{ onChange: (value: string) => actions.onTypeChange(value as NetworkEventType | '') }}
+          />
+        </FilterField>
+        <FilterField ui={{ className: 'sm:w-full' }} data={{ label: 'Gravidade' }}>
+          <OptionPicker
+            data={{ value: data.filter.severity, options: SEVERITY_FILTER_OPTIONS }}
+            ui={{ ariaLabel: 'Filtrar por gravidade', allLabel: 'Qualquer gravidade' }}
+            actions={{
+              onChange: (value: string) => actions.onSeverityChange(value as NetworkSeverity | ''),
+            }}
+          />
+        </FilterField>
+        <FilterField ui={{ className: 'sm:w-full' }} data={{ label: 'Andamento' }}>
+          <OptionPicker
+            data={{ value: data.filter.onlyOpen ? 'yes' : '', options: ONLY_OPEN_OPTIONS }}
+            ui={{ ariaLabel: 'Filtrar por andamento', allLabel: 'Todos' }}
+            actions={{ onChange: (value: string) => actions.onOnlyOpenChange(value === 'yes') }}
+          />
+        </FilterField>
+      {/snippet}
+    </CollapsibleFilters>
   </div>
+
+  <!-- A barra da lista: cards ou tabela à esquerda; à direita as páginas (cards) ou a contagem
+       (tabela, que rola inteira). Carregando, vazia ou com erro, não há lista para contar. -->
+  {#if !viewState.isLoading && !viewState.error && !viewState.isEmpty}
+    <ListToolbar
+      data={{
+        scroll: { loaded: data.events.length, totalItems: data.total },
+        pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+        noun: ['evento', 'eventos'],
+      }}
+      actions={{ onPageChange: cardPage.actions.onPageChange }}
+    />
+  {/if}
 
   <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
   {#if viewState.error}
@@ -370,27 +381,18 @@
           {/snippet}
         </ContentCard>
       {/each}
-      <!-- Legenda da lista, não um cartão: ocupa a linha inteira embaixo da grade. -->
-      <div class="text-muted-foreground col-span-full flex justify-between px-1 text-xs">
-        <span>Monitoramento de instabilidade de rede e link</span>
-        <span>{data.events.length} evento(s)</span>
-      </div>
     </div>
-      <!-- A grade de cards pagina (a tabela rola inteira): doze por página, sem buraco na última
-           fileira. A barra só aparece quando há mais de uma página. -->
-      {#if cardPage.total > cardPage.pageSize}
-        <div class={cn('flex justify-center', !tableView.forceCards && 'xl:hidden')}>
-          <PaginationBar
-            data={{
-              page: cardPage.page,
-              pageSize: cardPage.pageSize,
-              total: cardPage.total,
-              noun: ['evento', 'eventos'],
-            }}
-            actions={{ onPageChange: cardPage.actions.onPageChange }}
-          />
-        </div>
-      {/if}
+    <!-- No pé dos cards, a mesma barra de páginas: quem chegou ao último card troca de página
+         sem rolar de volta. Na tabela, que rola inteira, ela não aparece. -->
+    <ListToolbar
+      data={{
+        scroll: { loaded: data.events.length, totalItems: data.total },
+        pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+        noun: ['evento', 'eventos'],
+      }}
+      ui={{ position: 'bottom' }}
+      actions={{ onPageChange: cardPage.actions.onPageChange }}
+    />
 
     <!-- Tabela para desktop (>= xl) -->
     <div
@@ -405,7 +407,7 @@
             <TableHead>Link</TableHead>
             <TableHead>Medidas</TableHead>
             <TableHead>Durou</TableHead>
-            <TableHead class="text-right"><span class="sr-only">Ações</span></TableHead>
+            <TableActionsHead />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -414,7 +416,7 @@
               <TableCell class="text-ink-500 whitespace-nowrap text-xs">
                 {formatDateTime(event.occurredAt)}
               </TableCell>
-              <TableCell class="max-w-[320px]">
+              <TableCell>
                 <div class="flex flex-wrap items-center gap-2">
                   <StatusBadge
                     data={{ label: networkSeverityLabel(event.severity) }}
@@ -424,12 +426,19 @@
                     {networkEventTypeLabel(event.type)}
                   </span>
                 </div>
-                <span class="text-ink-500 block text-xs break-words">{event.title}</span>
+                <!-- Título e mensagem numa linha cada, cortados com "…" no teto da coluna. -->
+                <span class="text-ink-500 block text-xs">
+                  <TableText data={{ text: event.title }} ui={{ className: 'max-w-80' }} />
+                </span>
                 {#if event.message}
-                  <span class="text-ink-500 block text-xs break-words">{event.message}</span>
+                  <span class="text-ink-500 block text-xs">
+                    <TableText data={{ text: event.message }} ui={{ className: 'max-w-80' }} />
+                  </span>
                 {/if}
               </TableCell>
-              <TableCell class="text-ink-700 break-words">{event.linkName ?? '—'}</TableCell>
+              <TableCell class="text-ink-700">
+                <TableText data={{ text: event.linkName, empty: '—' }} ui={{ className: 'max-w-48' }} />
+              </TableCell>
               <TableCell class="text-ink-700 whitespace-nowrap text-xs">{measuresOf(event) || '—'}</TableCell>
               <TableCell>
                 {#if event.resolvedAt}
@@ -438,25 +447,25 @@
                   <StatusBadge data={{ label: 'Em aberto' }} ui={{ tone: 'danger', size: 'sm' }} />
                 {/if}
               </TableCell>
-              <TableCell class="text-right whitespace-nowrap">
-                <TableActions>
-                  {#if event.resolvedAt}
-                    <ActionButton
-                      data={{ label: 'Reabrir' }}
-                      ui={{ variant: 'ghost', size: 'sm' }}
-                      state={{ isDisabled: viewState.isSaving }}
-                      actions={{ onClick: () => actions.onResolveChange(event, false) }}
-                    />
-                  {:else}
-                    <ActionButton
-                      data={{ label: 'Marcar como resolvido' }}
-                      ui={{ variant: 'secondary', size: 'sm' }}
-                      state={{ isDisabled: viewState.isSaving }}
-                      actions={{ onClick: () => actions.onResolveChange(event, true) }}
-                    />
-                  {/if}
-                </TableActions>
-              </TableCell>
+              <!-- A ação principal da linha é só ícone, com o nome no balão: botão com texto na
+                   coluna de ações cortava e alargava a tabela. -->
+              <TableActionsCell>
+                {#if event.resolvedAt}
+                  <ActionButton
+                    data={{ label: 'Reabrir' }}
+                    ui={{ variant: 'ghost', size: 'sm', icon: RotateCcw, isIconOnly: true }}
+                    state={{ isDisabled: viewState.isSaving }}
+                    actions={{ onClick: () => actions.onResolveChange(event, false) }}
+                  />
+                {:else}
+                  <ActionButton
+                    data={{ label: 'Marcar como resolvido' }}
+                    ui={{ variant: 'ghost', size: 'sm', icon: CircleCheck, isIconOnly: true }}
+                    state={{ isDisabled: viewState.isSaving }}
+                    actions={{ onClick: () => actions.onResolveChange(event, true) }}
+                  />
+                {/if}
+              </TableActionsCell>
             </TableRow>
           {/each}
         </TableBody>
