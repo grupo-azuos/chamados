@@ -114,15 +114,18 @@
   import ConfirmDialog from '$lib/components/azuos-confirm-dialog/azuos-confirm-dialog.svelte';
   import ErrorState from '$lib/components/azuos-error-state/azuos-error-state.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
-  import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
+  import ListToolbar from '$lib/components/azuos-list-toolbar/azuos-list-toolbar.svelte';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import {
     Table,
-    TableActions,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
   import { useTableViewModel } from '$lib/hooks/use-table-view/use-table-view.svelte';
   import { cn } from '$lib/utils/cn';
@@ -175,12 +178,18 @@
         Esta peça ainda não teve entrada nem saída registrada.
       </p>
     {:else}
-      <!-- A contagem e a alternância numa linha só, alinhadas com o cabeçalho do diálogo. -->
-      <div class="flex items-center justify-between gap-3" data-slot="part-ledger-toolbar">
-        <span class="text-muted-foreground text-sm font-medium">
-          {data.movements.length} movimentação(ões)
-        </span>
-        <TableViewToggle />
+      <!-- A barra da lista do grupo: o formato à esquerda, a contagem à direita. O extrato vem
+           inteiro, numa página só. -->
+      <div data-slot="part-ledger-toolbar">
+        <ListToolbar
+          data={{
+            scroll: { loaded: data.movements.length, totalItems: data.movements.length },
+            pages: { page: 1, pageSize: Math.max(1, data.movements.length), totalItems: data.movements.length },
+            noun: ['movimentação', 'movimentações'],
+            gender: 'feminine',
+          }}
+          actions={{ onPageChange: () => {} }}
+        />
       </div>
 
       <!-- 1. Visualização Mobile (< xl) -->
@@ -274,7 +283,7 @@
               <TableHead>Máquina</TableHead>
               <TableHead>Quem</TableHead>
               <TableHead>Saldo</TableHead>
-              <TableHead class="text-right"><span class="sr-only">Ações</span></TableHead>
+              <TableActionsHead />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -301,31 +310,40 @@
                     <span class="text-ink-500 block text-xs break-words">{movement.note}</span>
                   {/if}
                 </TableCell>
-                <TableCell class="text-ink-700 max-w-[200px] break-words">
-                  {destinationOf(movement)}
+                <TableCell class="text-ink-700">
+                  <TableText data={{ text: destinationOf(movement) }} ui={{ className: 'max-w-48' }} />
                 </TableCell>
-                <TableCell class="text-ink-500 break-words text-xs">{movement.handledBy ?? '—'}</TableCell>
+                <!-- Quem mexeu, com a foto: o rosto acha a pessoa pelo nome (ou pelo e-mail) no
+                     diretório. -->
+                <TableCell class="text-ink-500 text-xs">
+                  {#if movement.handledBy}
+                    <span class="flex min-w-0 items-center gap-2">
+                      <PersonAvatar name={movement.handledBy} ui={{ size: 'sm' }} />
+                      <TableText data={{ text: movement.handledBy }} ui={{ className: 'max-w-36' }} />
+                    </span>
+                  {:else}
+                    —
+                  {/if}
+                </TableCell>
                 <TableCell class="text-ink-900 font-semibold tabular-nums">
                   {movement.balanceAfter}
                 </TableCell>
-                <TableCell class="text-right whitespace-nowrap">
+                <TableActionsCell>
                   {#if !movement.ticketId}
-                    <TableActions>
-                      <ActionButton
-                        data={{ label: 'Excluir movimentação' }}
-                        ui={{
-                          variant: 'ghost',
-                          size: 'sm',
-                          icon: Trash2,
-                          isIconOnly: true,
-                          className:
-                            'text-ink-500 hover:text-destructive hover:bg-hover-veil',
-                        }}
-                        actions={{ onClick: () => actions.onAskRemove(movement) }}
-                      />
-                    </TableActions>
+                    <ActionButton
+                      data={{ label: 'Excluir movimentação' }}
+                      ui={{
+                        variant: 'ghost',
+                        size: 'sm',
+                        icon: Trash2,
+                        isIconOnly: true,
+                        className:
+                          'text-ink-500 hover:text-destructive hover:bg-hover-veil',
+                      }}
+                      actions={{ onClick: () => actions.onAskRemove(movement) }}
+                    />
                   {/if}
-                </TableCell>
+                </TableActionsCell>
               </TableRow>
             {/each}
           </TableBody>

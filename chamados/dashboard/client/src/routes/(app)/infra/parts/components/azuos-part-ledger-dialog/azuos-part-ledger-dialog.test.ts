@@ -341,6 +341,7 @@ describe('AzuosPartLedgerDialog — inside the dialog surface', () => {
     expect(table?.className).toContain('bg-transparent');
   });
 
+  /* A barra da lista do grupo: o formato à esquerda, a contagem à direita, numa linha só. */
   it('puts the count beside the toggle, in the same row', () => {
     render(PartLedgerDialog, {
       props: {
@@ -350,7 +351,8 @@ describe('AzuosPartLedgerDialog — inside the dialog surface', () => {
     });
 
     const toolbar = document.querySelector('[data-slot="part-ledger-toolbar"]') as HTMLElement;
-    expect(within(toolbar).getByText('2 movimentação(ões)')).toBeInTheDocument();
+    expect(within(toolbar).getByText('2 de 2 movimentações')).toBeInTheDocument();
+    expect(within(toolbar).getByRole('group', { name: 'Formato da lista' })).toBeInTheDocument();
   });
 
   // triste
