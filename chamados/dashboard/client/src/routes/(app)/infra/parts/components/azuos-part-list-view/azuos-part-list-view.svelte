@@ -297,16 +297,18 @@
   </div>
 
   <!-- A barra da lista: cards ou tabela à esquerda; à direita as páginas (cards) ou a contagem
-       (tabela, que rola inteira). -->
-  <ListToolbar
-    data={{
-      scroll: { loaded: data.parts.length, totalItems: data.total },
-      pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
-      noun: ['peça', 'peças'],
-    }}
-    state={{ isLoading: viewState.isLoading }}
-    actions={{ onPageChange: cardPage.actions.onPageChange }}
-  />
+       (tabela, que rola inteira). Carregando, vazia ou com erro, não há lista para contar. -->
+  {#if !viewState.isLoading && !viewState.error && !viewState.isEmpty}
+    <ListToolbar
+      data={{
+        scroll: { loaded: data.parts.length, totalItems: data.total },
+        pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
+        noun: ['peça', 'peças'],
+        gender: 'feminine',
+      }}
+      actions={{ onPageChange: cardPage.actions.onPageChange }}
+    />
+  {/if}
 
   <!-- Estados na frente, conteúdo por último e sem aninhamento (CONTRIBUTING §2). -->
   {#if viewState.error}
@@ -418,6 +420,7 @@
         scroll: { loaded: data.parts.length, totalItems: data.total },
         pages: { page: cardPage.page, pageSize: cardPage.pageSize, totalItems: cardPage.total },
         noun: ['peça', 'peças'],
+        gender: 'feminine',
       }}
       ui={{ position: 'bottom' }}
       actions={{ onPageChange: cardPage.actions.onPageChange }}

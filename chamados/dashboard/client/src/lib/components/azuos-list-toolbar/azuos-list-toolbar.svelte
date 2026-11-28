@@ -30,6 +30,8 @@
       scroll: { loaded: number; totalItems: number };
       pages: { page: number; pageSize: number; totalItems: number };
       noun: [singular: string, plural: string];
+      /** O gênero do substantivo, para "Nenhuma peça" concordar. @default 'masculine' */
+      gender?: 'masculine' | 'feminine';
     };
     ui?: { position?: 'top' | 'bottom'; className?: string; toggle?: AzuosTableViewToggleProps };
     state?: { isLoading?: boolean };
@@ -99,6 +101,7 @@
         pageSize: data.pages.pageSize,
         total: data.pages.totalItems,
         noun: data.noun,
+        gender: data.gender,
       }}
       state={{ isLoading: toolbarState?.isLoading }}
       actions={{ onPageChange: actions.onPageChange }}

@@ -29,6 +29,11 @@
       total: number;
       /** O que está sendo contado, no singular e no plural: "alerta" / "alertas". */
       noun: [singular: string, plural: string];
+      /**
+       * O gênero do substantivo, para a lista vazia concordar: "Nenhuma peça", e não "Nenhum
+       * peça". @default 'masculine'
+       */
+      gender?: 'masculine' | 'feminine';
     };
     state?: { isLoading?: boolean };
     ui?: { className?: string };
@@ -50,7 +55,7 @@
    */
   export function rangeLabelOf(data: AzuosPaginationBarProps['data']): string {
     const [singular, plural] = data.noun;
-    if (data.total === 0) return `Nenhum ${singular}`;
+    if (data.total === 0) return `${data.gender === 'feminine' ? 'Nenhuma' : 'Nenhum'} ${singular}`;
 
     const first = (data.page - 1) * data.pageSize + 1;
     const last = Math.min(data.total, data.page * data.pageSize);
