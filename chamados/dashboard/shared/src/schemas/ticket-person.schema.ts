@@ -21,6 +21,8 @@ export const MAX_TICKET_WATCHERS = 20;
 export const ticketPersonSchema = z.object({
   id: z.string(),
   name: z.string(),
+  /** O e-mail, para o rosto achar a foto do registro que guardou o login e não o id. */
+  email: z.string().nullable().optional(),
   /** A foto do admin-console — quem escolhe uma pessoa a reconhece pelo rosto. */
   avatarUrl: z.string().nullable().optional(),
 });
