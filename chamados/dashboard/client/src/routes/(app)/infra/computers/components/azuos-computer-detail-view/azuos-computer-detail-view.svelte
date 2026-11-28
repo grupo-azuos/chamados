@@ -325,6 +325,7 @@
   import PaginationBar from '$lib/components/azuos-pagination-bar/azuos-pagination-bar.svelte';
   import ContentCard from '$lib/components/azuos-content-card/azuos-content-card.svelte';
   import StatCardGrid from '$lib/components/azuos-stat-card-grid/azuos-stat-card-grid.svelte';
+  import PersonAvatar from '$lib/components/azuos-person-avatar/azuos-person-avatar.svelte';
   import StatusBadge from '$lib/components/azuos-status-badge/azuos-status-badge.svelte';
   import TableViewToggle from '$lib/components/azuos-table-view-toggle/azuos-table-view-toggle.svelte';
   import {
@@ -334,6 +335,7 @@
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from '$lib/components/azuos-table/azuos-table';
   import UsageChart from '../azuos-usage-chart/azuos-usage-chart.svelte';
   import ComputerBlockDialog from '../azuos-computer-block-dialog/azuos-computer-block-dialog.svelte';
@@ -741,9 +743,9 @@
                     />
                   {/if}
                 </TableCell>
-                <TableCell class="text-ink-500 break-words text-xs"
-                  >{alert.causeProcess ?? '—'}</TableCell
-                >
+                <TableCell class="text-ink-500 font-mono text-xs">
+                  <TableText data={{ text: alert.causeProcess, empty: '—' }} ui={{ className: 'max-w-48' }} />
+                </TableCell>
               </TableRow>
             {/each}
           </TableBody>
@@ -796,6 +798,14 @@
       <ul class="flex flex-col divide-y">
         {#each data.maintenances as maintenance (maintenance.id)}
           <li class="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+            <!-- Quem fez, com a foto (pelo id; o registro antigo, pelo nome). -->
+            {#if maintenance.performedBy}
+              <PersonAvatar
+                name={maintenance.performedBy.split(',')[0]?.trim() || maintenance.performedBy}
+                personId={maintenance.performedByIds?.[0] ?? null}
+                ui={{ size: 'sm', className: 'mt-0.5' }}
+              />
+            {/if}
             <div class="min-w-0 flex-1">
               <p class="text-ink-900 text-sm break-words leading-tight">
                 {maintenance.description ?? '—'}
@@ -836,6 +846,8 @@
       <ul class="divide-y">
         {#each data.tickets as ticket (ticket.id)}
           <li class="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+            <!-- Quem abriu, com a foto: o rosto acha pelo nome no diretório. -->
+            <PersonAvatar name={ticket.requesterName} ui={{ size: 'sm', className: 'mt-0.5' }} />
             <div class="min-w-0 flex-1">
               <p class="text-ink-900 text-sm break-words leading-tight">
                 <span class="font-mono text-xs">{ticket.protocol}</span>
@@ -886,6 +898,9 @@
       <ul class="flex flex-col divide-y">
         {#each data.transfers as transfer (transfer.id)}
           <li class="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+            {#if transfer.responsible}
+              <PersonAvatar name={transfer.responsible} ui={{ size: 'sm', className: 'mt-0.5' }} />
+            {/if}
             <div class="min-w-0 flex-1">
               <p class="text-ink-900 text-sm break-words leading-tight">
                 {transferRouteOf(transfer)}
@@ -931,6 +946,9 @@
       <ul class="flex flex-col divide-y">
         {#each data.partMovements as movement (movement.id)}
           <li class="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+            {#if movement.handledBy}
+              <PersonAvatar name={movement.handledBy} ui={{ size: 'sm', className: 'mt-0.5' }} />
+            {/if}
             <div class="min-w-0 flex-1">
               <p class="text-ink-900 text-sm break-words leading-tight">{movement.partName}</p>
               <p class="text-ink-500 text-xs mt-1 break-words leading-normal">
