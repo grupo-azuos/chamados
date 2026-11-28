@@ -48,7 +48,8 @@ describe('AzuosSupportSystemsView', () => {
     const actions = setup();
     const table = within(document.querySelector('[data-slot="support-system-table"]') as HTMLElement);
 
-    await userEvent.click(table.getByRole('button', { name: 'Ver o mapa' }));
+    /* Na linha, a ação é só ícone: o nome fica no balão e no leitor de tela. */
+    await userEvent.click(table.getByRole('button', { name: /^Ver o mapa de / }));
     expect(actions.onOpen).toHaveBeenCalledWith(1);
   });
 
