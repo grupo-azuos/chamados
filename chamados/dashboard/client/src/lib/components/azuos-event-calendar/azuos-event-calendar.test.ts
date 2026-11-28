@@ -88,4 +88,42 @@ describe('AzuosEventCalendar', () => {
     expect(contrastColorOf('#1d4ed8')).toBe('var(--primary-foreground)');
     expect(contrastColorOf('var(--success)')).toBe('var(--primary-foreground)');
   });
+
+  // feliz
+  /* Com a UF e a ação, a barra oferece "Feriados de" — e a troca chega à tela. */
+  it('offers the state of the holidays and reports the choice', async () => {
+    const user = userEvent.setup();
+    const onHolidayStateChange = vi.fn();
+    render(EventCalendar, {
+      props: {
+        data: {
+          events: [],
+          initialDate: '2026-11-23',
+          holidays: [{ date: '2026-11-20', name: 'Consciência Negra' }],
+          holidayState: {
+            value: 'GO',
+            options: [
+              { value: 'GO', label: 'Goiás (GO)' },
+              { value: 'SP', label: 'São Paulo (SP)' },
+            ],
+          },
+        },
+        ui: { ariaLabel: 'Calendário' },
+        actions: { onHolidayStateChange },
+      },
+    });
+
+    expect(screen.getByText('Consciência Negra')).toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: 'Estado dos feriados' }));
+    await user.click(await screen.findByRole('option', { name: 'São Paulo (SP)' }));
+
+    expect(onHolidayStateChange).toHaveBeenCalledWith('SP');
+  });
+
+  // triste
+  it('has no holiday state picker without the action', () => {
+    setup();
+
+    expect(screen.queryByRole('combobox', { name: 'Estado dos feriados' })).toBeNull();
+  });
 });

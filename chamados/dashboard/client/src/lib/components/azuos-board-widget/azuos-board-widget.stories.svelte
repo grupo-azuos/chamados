@@ -1,6 +1,6 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
-  import { type Widget, type WidgetData } from '@template/shared/schemas/dashboard-board.schema';
+  import { DEFAULT_WINDOW, type Widget, type WidgetData } from '@template/shared/schemas/dashboard-board.schema';
 
   import BoardWidget from './azuos-board-widget.svelte';
 
@@ -60,6 +60,11 @@
     state: { isEditing: false },
     actions,
   });
+  const agendaWidget: Widget = { ...base, kind: 'agenda', groupBy: 'createdDay', title: 'Agenda', window: DEFAULT_WINDOW };
+  const agenda = {
+    ...view(agendaWidget, days),
+    data: { ...view(agendaWidget, days).data, holidays: [{ date: '2026-11-15', name: 'Proclamação da República' }] },
+  };
 </script>
 
 <Story name="Default" args={view(base, categories)}>
@@ -76,6 +81,11 @@
 
 <Story name="AreaInTime" args={view({ ...base, kind: 'area', groupBy: 'createdDay', title: 'Abertos por dia' }, days)}>
   {#snippet template(args)}<div class="h-80"><BoardWidget {...args} /></div>{/snippet}
+</Story>
+
+<!-- A agenda: o calendário da casa preso na janela do bloco, com o feriado no fundo do dia. -->
+<Story name="Agenda" args={agenda}>
+  {#snippet template(args)}<div class="h-96"><BoardWidget {...args} /></div>{/snippet}
 </Story>
 
 <Story name="Empty" args={view({ ...base, kind: 'list' }, { total: 0, grandTotal: 0, series: [], cells: [] })}>

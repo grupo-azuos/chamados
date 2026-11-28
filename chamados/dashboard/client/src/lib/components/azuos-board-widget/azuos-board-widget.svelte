@@ -29,6 +29,10 @@
       filterName: string | null;
       /** A nota da data que o "Período" do painel recorta nesta fonte. @default nenhuma */
       periodNote?: string | null;
+      /** Os feriados nacionais e da UF escolhida — o fundo do dia nos blocos de calendário. */
+      holidays?: readonly { date: string; name: string }[];
+      /** A UF dos feriados estaduais — o seletor "Feriados de" dos blocos de calendário. */
+      holidayState?: { value: string; options: { value: string; label: string }[] };
     };
     /**
      * `isPreview`: o bloco desenhado dentro do editor. Ali não expande — uma tela cheia aberta de
@@ -48,6 +52,8 @@
        * ela — montando, ou com os itens não clicáveis — o bloco fica de leitura.
        */
       onOpenItem?: (widget: Widget, item: BoardItem) => void;
+      /** Trocou a UF dos feriados no seletor do calendário. */
+      onHolidayStateChange?: (state: string) => void;
     };
   };
 
@@ -147,7 +153,7 @@
       </span>
     {/if}
     <div class="min-h-0 flex-1">
-      <WidgetBody data={{ widget, result: data.result }} {actions} />
+      <WidgetBody data={{ widget, result: data.result, holidays: data.holidays, holidayState: data.holidayState }} {actions} />
     </div>
     {#if widgetState.isEditing}
       {@render editBar()}
@@ -205,7 +211,7 @@
             </span>
           {/if}
           <div class="min-h-0 flex-1">
-            <WidgetBody data={{ widget, result: data.result }} {actions} />
+            <WidgetBody data={{ widget, result: data.result, holidays: data.holidays, holidayState: data.holidayState }} {actions} />
           </div>
         </div>
       {/snippet}
@@ -216,7 +222,7 @@
       actions={{ onClose: () => (isExpanded = false) }}
     >
       <div class="h-[70vh] p-6">
-        <WidgetBody data={{ widget, result: data.result }} {actions} />
+        <WidgetBody data={{ widget, result: data.result, holidays: data.holidays, holidayState: data.holidayState }} {actions} />
       </div>
     </AzuosExpandableScreen>
   </section>

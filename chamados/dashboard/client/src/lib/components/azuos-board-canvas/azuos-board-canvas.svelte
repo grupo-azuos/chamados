@@ -34,6 +34,10 @@
       filterNames: Record<string, string>;
       /** O "Período" escolhido no painel — nulo é "O de cada bloco". @default nenhum */
       boardPeriod?: WidgetWindow | null;
+      /** Os feriados, para os blocos de calendário. @default nenhum */
+      holidays?: readonly { date: string; name: string }[];
+      /** A UF dos feriados estaduais — o seletor dos blocos de calendário. @default sem seletor */
+      holidayState?: { value: string; options: { value: string; label: string }[] };
     };
     /** `canDrop`: aceita um tipo de bloco arrastado da lateral (montando, e com vaga). */
     /** `canEdit`: quem vê pode montar — o menu de cada bloco oferece editar, duplicar e remover. */
@@ -44,6 +48,8 @@
       onRemoveWidget: (id: string) => void;
       onChangeKind?: (id: string, kind: Widget['kind']) => void;
       onDuplicateWidget?: (id: string) => void;
+      /** Trocou a UF dos feriados num bloco de calendário. */
+      onHolidayStateChange?: (state: string) => void;
       /** Clicou num item de um bloco (barra, fatia, linha, card): abre a lista do que ele conta. */
       onOpenItem?: (widget: Widget, item: BoardItem) => void;
       /** Um tipo solto numa casa da grade: o bloco novo nasce ali, naquele tamanho. */
@@ -411,6 +417,8 @@
       result: data.results[widget.id] ?? EMPTY_RESULT,
       filterName: widget.filterId ? (data.filterNames[widget.filterId] ?? null) : null,
       periodNote: boardPeriodNote(widget.source, data.boardPeriod ?? null),
+      holidays: data.holidays,
+      holidayState: data.holidayState,
     }}
     state={{ isEditing: canvasState.isEditing, canEdit: canvasState.canEdit }}
     actions={{
@@ -418,6 +426,7 @@
       onRemove: actions.onRemoveWidget,
       onChangeKind: actions.onChangeKind,
       onDuplicate: actions.onDuplicateWidget,
+      onHolidayStateChange: actions.onHolidayStateChange,
       /* Montando, o clique é para arrumar o bloco, não para sair da tela. */
       onOpenItem: canvasState.isEditing ? undefined : actions.onOpenItem,
     }}

@@ -3,8 +3,8 @@
   O DESENHO DE UM BLOCO — um por tipo; trocar o gráfico é trocar o ramo daqui. Com
   `actions.onOpenItem`, o item clicado (barra, fatia, linha, card) vira o recorte da lista.
 
-  - `data`: o bloco e o resultado dele.
-  - `actions`: `onOpenItem`.
+  - `data`: o bloco, o resultado dele e, nos blocos de calendário, os feriados e a UF deles.
+  - `actions`: `onOpenItem` e `onHolidayStateChange`.
 -->
 <script lang="ts" module>
   import { type Widget } from '@template/shared/schemas/dashboard-board.schema';
@@ -13,21 +13,39 @@
   import { type BoardItem } from '$lib/utils/widget-items.util';
 
   export type AzuosBoardWidgetBodyProps = {
-    data: { widget: Widget; result: WidgetState };
-    actions: { onOpenItem?: (widget: Widget, item: BoardItem) => void };
+    data: {
+      widget: Widget;
+      result: WidgetState;
+      /** Os feriados nacionais e da UF escolhida — o fundo do dia nos blocos de calendário. */
+      holidays?: readonly { date: string; name: string }[];
+      /** A UF dos feriados estaduais — o seletor "Feriados de" dos blocos de calendário. */
+      holidayState?: { value: string; options: { value: string; label: string }[] };
+    };
+    actions: {
+      onOpenItem?: (widget: Widget, item: BoardItem) => void;
+      /** Trocou a UF dos feriados no seletor do calendário. */
+      onHolidayStateChange?: (state: string) => void;
+    };
   };
 </script>
 
 <script lang="ts">
   import Hash from '@lucide/svelte/icons/hash';
-  import { DATA_SOURCES, widgetIsClickable } from '@template/shared/schemas/dashboard-board.schema';
+  import { todayIso } from '@template/shared/domain/calendar-date.util';
+  import {
+    DATA_SOURCES,
+    DEFAULT_WINDOW,
+    widgetCalendarView,
+    widgetIsClickable,
+    windowRange,
+  } from '@template/shared/schemas/dashboard-board.schema';
 
   import AreaChart from '$lib/components/azuos-area-chart/azuos-area-chart.svelte';
-  import CalendarChart from '$lib/components/azuos-calendar-chart/azuos-calendar-chart.svelte';
   import ColumnChart from '$lib/components/azuos-column-chart/azuos-column-chart.svelte';
   import DashboardHeroCard from '$lib/components/azuos-dashboard-hero-card/azuos-dashboard-hero-card.svelte';
   import DonutChart from '$lib/components/azuos-donut-chart/azuos-donut-chart.svelte';
   import Echart from '$lib/components/azuos-echart/azuos-echart.svelte';
+  import EventCalendar from '$lib/components/azuos-event-calendar/azuos-event-calendar.svelte';
   import HeatmapChart from '$lib/components/azuos-heatmap-chart/azuos-heatmap-chart.svelte';
   import RadarChart from '$lib/components/azuos-radar-chart/azuos-radar-chart.svelte';
   import RadialChart from '$lib/components/azuos-radial-chart/azuos-radial-chart.svelte';
@@ -50,8 +68,16 @@
     toStacked,
   } from '$lib/utils/widget-chart.util';
   import { hasDrillTarget } from '$lib/utils/board-drill.util';
-  import { cellItemOf, itemOfLabel, sankeyItemOf, statItemOf, timeItemOf } from '$lib/utils/widget-items.util';
-  import { calendarDaysOf, timePointsOf } from '$lib/utils/widget-view.util';
+  import { dayCountEvents } from '$lib/utils/widget-calendar.util';
+  import {
+    cellItemOf,
+    dayItemOf,
+    itemOfLabel,
+    sankeyItemOf,
+    statItemOf,
+    timeItemOf,
+  } from '$lib/utils/widget-items.util';
+  import { timePointsOf } from '$lib/utils/widget-view.util';
 
   let { data, actions }: AzuosBoardWidgetBodyProps = $props();
 
@@ -209,7 +235,25 @@
     </ol>
   {/if}
 {:else if widget.kind === 'calendar' || widget.kind === 'agenda'}
-  <CalendarChart data={{ days: calendarDaysOf(result.data ?? null), seriesLabel: noun }} />
+  <!-- O calendário da casa (o do paralegal), nos dois blocos de dia. O de calor pinta cada dia
+       com a cor da escala e abre no ano; a agenda fica presa na janela do bloco (até 90 dias,
+       contada a partir de hoje) — fora dela não se navega. Feriado é o fundo do dia, com o nome. -->
+  {@const range = widget.kind === 'agenda' ? windowRange(widget.window ?? DEFAULT_WINDOW, todayIso()) : undefined}
+  <EventCalendar
+    data={{
+      events: dayCountEvents(series, noun, { heat: widget.kind === 'calendar' }),
+      holidays: data.holidays,
+      holidayState: data.holidayState,
+      initialDate: range?.from,
+      validRange: range,
+    }}
+    ui={{ ariaLabel: widget.title, initialView: widgetCalendarView(widget), height: '100%', className: 'min-h-40' }}
+    state={{ isLoading }}
+    actions={{
+      onHolidayStateChange: actions.onHolidayStateChange,
+      onEventClick: onItem ? (day: string) => onItem(dayItemOf(day)) : undefined,
+    }}
+  />
 {:else if widget.kind === 'area'}
   <AreaChart
     data={{

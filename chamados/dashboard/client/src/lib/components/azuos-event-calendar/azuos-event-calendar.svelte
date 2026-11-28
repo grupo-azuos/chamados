@@ -9,10 +9,12 @@
   `data`/`ui` são só as iniciais. Quem busca os dados do período à mostra é a tela, avisada por
   `onRangeChange` — também na abertura.
 
-  - `data`: `events`, `holidays`, `initialDate`, `validRange`.
+  - `data`: `events`, `holidays`, `holidayState` (a UF dos feriados e as 27 para escolher),
+    `initialDate`, `validRange`.
   - `ui`: `ariaLabel`, `views`, `initialView`, `height`, `className`.
   - `state`: `isLoading`.
-  - `actions`: `onEventClick`, `onDateClick`, `onRangeChange`.
+  - `actions`: `onEventClick`, `onDateClick`, `onRangeChange`, `onHolidayStateChange` (com
+    `data.holidayState`, o seletor "Feriados de" aparece na barra).
 -->
 <script lang="ts" module>
   import { type AzuosCalendarView } from './event-calendar.util';
@@ -37,6 +39,11 @@
     data: {
       events: readonly AzuosCalendarEvent[];
       holidays?: readonly { date: string; name: string }[];
+      /**
+       * A UF dos feriados estaduais e as UFs para escolher. Com ela (e `onHolidayStateChange`), o
+       * seletor "Feriados de" aparece na barra do calendário.
+       */
+      holidayState?: { value: string; options: { value: string; label: string }[] };
       /** O dia em que o calendário abre (`aaaa-mm-dd`). @default hoje */
       initialDate?: string;
       /** Fora deste período nada se navega nem se clica. */
@@ -57,6 +64,8 @@
       onEventClick?: (id: string) => void;
       onDateClick?: (day: string) => void;
       onRangeChange?: (range: AzuosCalendarRange) => void;
+      /** Trocou a UF dos feriados no seletor "Feriados de". */
+      onHolidayStateChange?: (state: string) => void;
     };
   };
 
@@ -78,6 +87,7 @@
   import { untrack } from 'svelte';
 
   import ActionButton from '$lib/components/azuos-action-button/azuos-action-button.svelte';
+  import ComboboxField from '$lib/components/azuos-combobox-field/azuos-combobox-field.svelte';
   import SegmentedControl from '$lib/components/azuos-segmented-control/azuos-segmented-control.svelte';
   import { cn } from '$lib/utils/cn';
   import {
@@ -462,8 +472,9 @@
       Carregando…
     </span>
   {/if}
-  <!-- A barra: hoje, anterior e próximo e o título à esquerda; as visões à direita, no mesmo
-       segmentado de "Lista | Cards | Quadro" — um jeito só de trocar de visão no sistema. -->
+  <!-- A barra: hoje, anterior e próximo e o título à esquerda; "Feriados de" e as visões à
+       direita, no mesmo segmentado de "Lista | Cards | Quadro" — um jeito só de trocar de visão
+       no sistema. -->
   <header class="border-border flex flex-wrap items-center justify-between gap-3 border-b p-3">
     <div class="flex min-w-0 flex-wrap items-center gap-2">
       <ActionButton
@@ -484,13 +495,34 @@
       </div>
       <h2 class="truncate text-lg font-semibold first-letter:uppercase">{titleOf(view, anchor)}</h2>
     </div>
-    {#if views.length > 1}
-      <SegmentedControl
-        data={{ value: view, options: views.map((value) => ({ value, label: VIEW_LABELS[value] })) }}
-        ui={{ ariaLabel: 'Visualização do calendário' }}
-        actions={{ onChange: (value) => (view = value as AzuosCalendarView) }}
-      />
-    {/if}
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- "Feriados de: Goiás (GO)" — a UF dos feriados estaduais. Combobox, e não select: são 27
+           UFs, e digitar "par" acha Paraná, Paraíba e Pará mais rápido do que rolar. -->
+      {#if data.holidayState && actions?.onHolidayStateChange}
+        {@const onHolidayStateChange = actions.onHolidayStateChange}
+        <div class="flex items-center gap-2">
+          <span aria-hidden="true" class="text-muted-foreground text-sm">Feriados de</span>
+          <ComboboxField
+            data={{ value: data.holidayState.value, options: data.holidayState.options }}
+            ui={{
+              ariaLabel: 'Estado dos feriados',
+              placeholder: 'Escolha a UF',
+              searchPlaceholder: 'Buscar estado…',
+              emptyLabel: 'Nenhum estado com esse nome',
+              className: 'w-52',
+            }}
+            actions={{ onChange: onHolidayStateChange }}
+          />
+        </div>
+      {/if}
+      {#if views.length > 1}
+        <SegmentedControl
+          data={{ value: view, options: views.map((value) => ({ value, label: VIEW_LABELS[value] })) }}
+          ui={{ ariaLabel: 'Visualização do calendário' }}
+          actions={{ onChange: (value) => (view = value as AzuosCalendarView) }}
+        />
+      {/if}
+    </div>
   </header>
   <div class={cn('min-h-0', isFill && 'flex-1 overflow-auto')}>
     {#if view === 'week'}

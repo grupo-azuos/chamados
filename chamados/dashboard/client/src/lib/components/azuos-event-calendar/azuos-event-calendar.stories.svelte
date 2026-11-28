@@ -30,6 +30,20 @@
 
 <Story name="Mes" args={{ data: { events, holidays, initialDate: '2026-11-23' }, ui: { ariaLabel: 'Calendário' }, actions }} />
 <Story name="Semana" args={{ data: { events, holidays, initialDate: '2026-11-23' }, ui: { ariaLabel: 'Calendário', initialView: 'week' }, actions }} />
+<!-- Com a UF dos feriados: o seletor "Feriados de" na barra. -->
+<Story
+  name="Feriados de"
+  args={{
+    data: {
+      events,
+      holidays,
+      initialDate: '2026-11-23',
+      holidayState: { value: 'GO', options: [{ value: 'GO', label: 'Goiás (GO)' }, { value: 'SP', label: 'São Paulo (SP)' }] },
+    },
+    ui: { ariaLabel: 'Calendário' },
+    actions: { ...actions, onHolidayStateChange: fn() },
+  }}
+/>
 <Story name="Ano" args={{ data: { events, holidays, initialDate: '2026-11-23' }, ui: { ariaLabel: 'Calendário', initialView: 'year' }, actions }} />
 <Story
   name="SoLista"

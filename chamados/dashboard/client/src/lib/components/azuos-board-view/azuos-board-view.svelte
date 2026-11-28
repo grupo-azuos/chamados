@@ -59,6 +59,10 @@
       filterValues: BoardFilterValues;
       filterCounts: Record<string, FilterCounts>;
       weight: number;
+      /** Os feriados (nacionais e da UF escolhida) deste ano e do próximo, para os calendários. */
+      holidays?: readonly { date: string; name: string }[];
+      /** A UF dos feriados estaduais e as 27 para escolher — o seletor "Feriados de". */
+      holidayState?: { value: string; options: { value: string; label: string }[] };
       /** De quanto em quanto o painel se renova sozinho (uma das `REFRESH_OPTIONS`). */
       refreshEvery?: string;
       savedFilters: SavedFilter[];
@@ -98,6 +102,8 @@
       onRefreshEveryChange?: (value: string) => void;
       /** O clique num item de um bloco: abre a lista da fonte com o recorte. */
       onOpenItem?: (widget: Widget, item: BoardItem) => void;
+      /** Trocou a UF dos feriados dos blocos de calendário. */
+      onHolidayStateChange?: (state: string) => void;
       onPreviewChange: (widget: Widget) => void;
       onFilterValueChange: (patch: Partial<BoardFilterValues>) => void;
       onClearFilterValues: () => void;
@@ -317,6 +323,8 @@
         results: data.results,
         filterNames,
         boardPeriod: data.filterValues.period,
+        holidays: data.holidays,
+        holidayState: data.holidayState,
       }}
       state={{ isEditing: viewState.isEditing, canEdit: viewState.canEdit }}
       actions={{
@@ -325,6 +333,7 @@
         onRemoveWidget: actions.onRemoveWidget,
         onDuplicateWidget: actions.onDuplicateWidget,
         onChangeKind: changeKind,
+        onHolidayStateChange: actions.onHolidayStateChange,
         onOpenItem: actions.onOpenItem,
       }}
     />
