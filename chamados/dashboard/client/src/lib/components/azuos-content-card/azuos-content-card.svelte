@@ -69,12 +69,12 @@
         title: string;
         subtitle?: string | null;
         /** A pessoa: com o `id`, o rosto acha a foto no diretório mesmo sem `avatarUrl`. */
-        person?: { id?: string | null; name: string; avatarUrl?: string | null } | null;
+        person?: { id?: string | null; name: string; email?: string | null; avatarUrl?: string | null } | null;
         /**
          * Mais de uma pessoa (a manutenção feita por dois): os rostos, com a foto, um sobre o outro.
          * Vence `person`.
          */
-        people?: { id?: string | null; name: string; avatarUrl?: string | null }[];
+        people?: { id?: string | null; name: string; email?: string | null; avatarUrl?: string | null }[];
       } | null;
       /** O texto da pílula do rodapé ("Ver ficha", "Abrir"). Só aparece com `actions.onOpen`. */
       openLabel?: string | null;
@@ -319,7 +319,9 @@
       <span class="relative z-20 shrink-0">{@render tools()}</span>
     {/if}
     {#if menu}
-      <span class="relative z-20 -mt-1 -mr-2 shrink-0">
+      <!-- `inline-flex`: o botão é um item flexível, e não um bloco de linha de texto — dentro de
+           um `span` comum ele herdava a altura da linha e os três pontinhos desciam do meio. -->
+      <span class="relative z-20 -mt-1 -mr-2 inline-flex shrink-0 items-center justify-center">
         <ActionMenu
           data={menu}
           ui={{ isIconOnly: true }}
@@ -426,6 +428,7 @@
                 name={face.name}
                 avatarUrl={face.avatarUrl ?? null}
                 personId={face.id ?? null}
+                email={face.email ?? null}
                 ui={{ size: 'sm' }}
               />
             </span>
@@ -436,6 +439,7 @@
           name={data.footer.person.name}
           avatarUrl={data.footer.person.avatarUrl ?? null}
           personId={data.footer.person.id ?? null}
+          email={data.footer.person.email ?? null}
           ui={{ size: 'sm' }}
         />
       {/if}
@@ -455,6 +459,7 @@
           name={data.footer.person.name}
           avatarUrl={data.footer.person.avatarUrl ?? null}
           personId={data.footer.person.id ?? null}
+          email={data.footer.person.email ?? null}
           ui={{ size: 'sm' }}
         />
       {/if}
