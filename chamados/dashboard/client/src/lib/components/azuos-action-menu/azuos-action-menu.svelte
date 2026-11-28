@@ -95,7 +95,8 @@
     <!-- Só ícone: um quadrado da régua com os três pontinhos CENTRADOS, que não encolhe na coluna
          estreita — encolhido, o círculo do hover ficava oval e os pontinhos saíam do meio. O nome
          vai no `aria-label` e no balão. -->
-    <Tooltip.Provider delayDuration={300}>
+    <!-- `ignoreNonKeyboardFocus`: o foco que o diálogo põe sozinho no botão não abre o balão. -->
+    <Tooltip.Provider delayDuration={300} ignoreNonKeyboardFocus>
       <Tooltip.Root disabled={menuState?.isDisabled}>
         <Tooltip.Trigger>
           {#snippet child({ props: tooltipProps })}

@@ -149,7 +149,9 @@
 <!-- Só ícone: o nome aparece no balão do projeto, e não no `title` do navegador — que demora, some
      no toque e tem a cara de cada sistema operacional. -->
 {#if accessibleName}
-  <Tooltip.Provider delayDuration={300}>
+  <!-- `ignoreNonKeyboardFocus`: o foco que o diálogo põe sozinho no primeiro botão não abre o
+       balão — senão o Esc fechava o balão, e não o diálogo. -->
+  <Tooltip.Provider delayDuration={300} ignoreNonKeyboardFocus>
     <Tooltip.Root>
       <Tooltip.Trigger>
         {#snippet child({ props })}
