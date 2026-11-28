@@ -6,18 +6,27 @@
   import {
     Table,
     TableActions,
+    TableActionsCell,
+    TableActionsHead,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
+    TableText,
   } from './azuos-table';
 
   let {
     hasFooter = false,
     containerClass,
     cellClass,
-  }: { hasFooter?: boolean; containerClass?: string; cellClass?: string } = $props();
+    onRowClick,
+  }: {
+    hasFooter?: boolean;
+    containerClass?: string;
+    cellClass?: string;
+    onRowClick?: () => void;
+  } = $props();
 </script>
 
 {#snippet content()}
@@ -33,6 +42,14 @@
       <TableCell>
         <TableActions><button type="button">Ver histórico</button></TableActions>
       </TableCell>
+    </TableRow>
+    <TableRow onclick={onRowClick}>
+      <TableCell><TableText data={{ text: 'Placa-mãe com nome comprido' }} ui={{ className: 'max-w-72' }} /></TableCell>
+      <TableActionsCell><button type="button">Mais ações</button></TableActionsCell>
+    </TableRow>
+    <TableRow>
+      <TableCell><TableText data={{ text: '  ' }} /></TableCell>
+      <TableActionsHead />
     </TableRow>
   </TableBody>
 {/snippet}

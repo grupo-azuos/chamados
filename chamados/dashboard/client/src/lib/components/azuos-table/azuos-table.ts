@@ -7,9 +7,12 @@
  */
 export { default as Table } from './azuos-table.svelte';
 export { default as TableActions } from './azuos-table-actions.svelte';
+export { default as TableActionsCell } from './azuos-table-actions-cell.svelte';
+export { default as TableActionsHead } from './azuos-table-actions-head.svelte';
 export { default as TableCell } from './azuos-table-cell.svelte';
 export { default as TableFooter } from './azuos-table-footer.svelte';
 export { default as TableHead } from './azuos-table-head.svelte';
 export { default as TableHeader } from './azuos-table-header.svelte';
 export { default as TableRow } from './azuos-table-row.svelte';
+export { default as TableText } from './azuos-table-text.svelte';
 export { TableBody, TableCaption } from '$lib/components/ui/table';

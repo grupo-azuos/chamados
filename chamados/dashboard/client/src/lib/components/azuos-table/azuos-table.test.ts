@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import Harness from './azuos-table-harness.test.svelte';
 
@@ -54,5 +55,48 @@ describe('AzuosTable', () => {
     const surface = container.querySelector('[data-slot="table-surface"]');
     expect(surface?.className).toContain('rounded-none');
     expect(surface?.className).not.toContain('rounded-surface');
+  });
+
+  // feliz
+  /* A ação da linha é a coluna estreita presa à direita, e o clique nela não abre a linha. */
+  it('keeps the row actions in a narrow sticky column that does not open the row', async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    render(Harness, { props: { onRowClick } });
+
+    const button = screen.getByRole('button', { name: 'Mais ações' });
+    const cell = button.closest('[data-slot="table-actions-cell"]');
+    expect(cell?.className).toContain('table-sticky-end');
+    expect(cell?.className).toContain('w-px');
+    await user.click(button);
+
+    expect(onRowClick).not.toHaveBeenCalled();
+    const head = document.querySelector('[data-slot="table-actions-head"]');
+    expect(head).toHaveTextContent('Ações');
+    expect(head?.querySelector('.sr-only')).not.toBeNull();
+  });
+
+  // feliz
+  it('cuts long cell text in one line, with the column ceiling', () => {
+    const { container } = render(Harness);
+
+    const text = container.querySelector('[data-slot="table-text"] > span');
+    expect(text).toHaveTextContent('Placa-mãe com nome comprido');
+    expect(text?.className).toContain('truncate');
+    expect(text?.className).toContain('max-w-72');
+  });
+
+  // triste
+  it('shows the dash for an empty cell text', () => {
+    render(Harness);
+
+    expect(screen.getByText('-')).toBeInTheDocument();
+  });
+
+  it('writes the header as a sentence, not in spaced capitals', () => {
+    render(Harness);
+
+    const head = screen.getByRole('columnheader', { name: 'Peça' });
+    expect(head.className).not.toContain('uppercase');
   });
 });
